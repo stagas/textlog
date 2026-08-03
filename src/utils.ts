@@ -14,7 +14,8 @@ export async function verifyPassword(password: string, storedHash: string) {
   return storedHash === hash(password)
 }
 export const token = () => randomBytes(32).toString('hex')
-export function currentUser(req: Request): User | null { const t = req.headers.get('cookie')?.match(/root=([^;]+)/)?.[1]; if (!t) return null; return db.query('SELECT u.id,u.handle,u.email,u.bio,u.suspended_at FROM sessions s JOIN users u ON u.id=s.user_id WHERE s.token=? AND s.expires_at>? AND u.deleted_at IS NULL AND u.suspended_at IS NULL').get(t, Date.now()) as User | null }
+export const sessionToken = (req: Request) => req.headers.get('cookie')?.match(/(?:^|;\s*)root=([^;]+)/)?.[1] || null
+export function currentUser(req: Request): User | null { const t = sessionToken(req); if (!t) return null; return db.query('SELECT u.id,u.handle,u.email,u.bio,u.suspended_at,u.email_verified_at FROM sessions s JOIN users u ON u.id=s.user_id WHERE s.token=? AND s.expires_at>? AND u.deleted_at IS NULL AND u.suspended_at IS NULL').get(t, Date.now()) as User | null }
 const timestamp = (d: string) => new Date(d.replace(' ', 'T') + 'Z')
 export function fmt(d: string) {
   const seconds = Math.max(0, Math.floor((Date.now() - timestamp(d).getTime()) / 1000))
@@ -40,7 +41,7 @@ export function linkify(body: string) {
     if (/^https?:\/\//i.test(token)) {
       const url = token.replace(/[.,!?;:]+$/, '')
       const punctuation = token.slice(url.length)
-      html += `<a href="${esc(url)}" rel="nofollow ugc">${esc(url)}</a>${esc(punctuation)}`
+      html += `<a href="${esc(url)}" target="_blank" rel="nofollow ugc noopener noreferrer">${esc(url)}</a>${esc(punctuation)}`
     }
     else {
       const value = token.slice(1)

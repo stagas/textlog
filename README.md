@@ -19,6 +19,10 @@ Set `OPENAI_API_KEY` in the server environment to moderate posts and replies bef
 
 Password reset emails use Resend. Set `RESEND_API_KEY`, `EMAIL_FROM` (a verified sender such as `root.mx <hello@root.mx>`), and the public `APP_URL` (such as `https://root.mx`). Reset links are single-use and expire after one hour.
 
+The same email configuration powers signup verification and confirmed email changes. Verification is non-blocking, while
+an email change is applied only after the one-hour link sent to the new address is opened. Account security settings also
+support password changes and individual or bulk session revocation.
+
 `APP_URL` is also used for absolute Open Graph URLs. Each post exposes a dynamically rendered 1200×630 PNG at `/post/:id/og.png`.
 When `APP_URL` uses HTTPS, authentication cookies are automatically marked `Secure` for production transport protection.
 

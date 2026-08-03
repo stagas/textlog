@@ -1,4 +1,4 @@
-export async function sendPasswordReset(email: string, resetUrl: string) {
+async function sendEmail(email: string, subject: string, text: string, html: string) {
   const apiKey = Bun.env.RESEND_API_KEY
   const from = Bun.env.EMAIL_FROM
   if (!apiKey || !from) throw new Error('RESEND_API_KEY and EMAIL_FROM must be configured')
@@ -12,10 +12,24 @@ export async function sendPasswordReset(email: string, resetUrl: string) {
     body: JSON.stringify({
       from,
       to: [email],
-      subject: 'Reset your root.mx password',
-      text: `Use this link to reset your root.mx password:\n\n${resetUrl}\n\nThis link expires in one hour. If you did not request it, you can ignore this email.`,
-      html: `<p>Use the link below to reset your root.mx password.</p><p><a href="${resetUrl}">Reset password</a></p><p>This link expires in one hour. If you did not request it, you can ignore this email.</p>`,
+      subject,
+      text,
+      html,
     }),
+    signal: AbortSignal.timeout(8_000),
   })
   if (!response.ok) throw new Error(`Resend returned ${response.status}: ${await response.text()}`)
+}
+
+export function sendPasswordReset(email: string, resetUrl: string) {
+  return sendEmail(email, 'Reset your root.mx password',
+    `Use this link to reset your root.mx password:\n\n${resetUrl}\n\nThis link expires in one hour. If you did not request it, you can ignore this email.`,
+    `<p>Use the link below to reset your root.mx password.</p><p><a href="${resetUrl}">Reset password</a></p><p>This link expires in one hour. If you did not request it, you can ignore this email.</p>`)
+}
+
+export function sendEmailVerification(email: string, verificationUrl: string, changing = false) {
+  const action = changing ? 'Confirm new email' : 'Verify email'
+  return sendEmail(email, `${action} for root.mx`,
+    `${action} by opening this link:\n\n${verificationUrl}\n\nThis link expires in one hour. If you did not request it, you can ignore this email.`,
+    `<p>${action} by using the link below.</p><p><a href="${verificationUrl}">${action}</a></p><p>This link expires in one hour. If you did not request it, you can ignore this email.</p>`)
 }

@@ -49,6 +49,9 @@ export function anonymizeUser(database: Database, userId: number, actorId?: numb
   }
   database.query('DELETE FROM reports WHERE reporter_id=?').run(userId)
   database.query('DELETE FROM password_resets WHERE user_id=?').run(userId)
+  if (database.query("SELECT 1 FROM sqlite_master WHERE type='table' AND name='email_tokens'").get()) {
+    database.query('DELETE FROM email_tokens WHERE user_id=?').run(userId)
+  }
   database.query('DELETE FROM sessions WHERE user_id=?').run(userId)
   database.query(`UPDATE users SET handle=?,email=?,bio='',password='!',suspended_at=NULL,deleted_at=CURRENT_TIMESTAMP
     WHERE id=?`).run(`deleted-${userId}`, `deleted-${userId}@root.mx`, userId)

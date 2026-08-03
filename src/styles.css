@@ -567,6 +567,7 @@ nav form {
 .auth input,
 .bio-form input,
 .account-delete-form input,
+.security-form input,
 textarea {
   width: 100%;
   padding: 13px;
@@ -581,6 +582,7 @@ textarea {
 .auth input:focus-visible,
 .bio-form input:focus-visible,
 .account-delete-form input:focus-visible,
+.security-form input:focus-visible,
 textarea:focus-visible {
   outline: 2px solid var(--accent);
   outline-offset: -2px;
@@ -640,6 +642,56 @@ textarea {
   gap: var(--space-2);
   color: var(--muted);
   font-size: 11px;
+}
+
+.security-page {
+  padding: 0 var(--gutter) var(--space-7);
+}
+
+.security-section {
+  padding: var(--space-6) 0;
+  border-bottom: 1px solid var(--soft);
+}
+
+.security-section h2,
+.security-section p {
+  margin-top: 0;
+}
+
+.security-section p,
+.session-list span {
+  color: var(--muted);
+  font-size: 11px;
+}
+
+.security-form {
+  display: grid;
+  gap: var(--space-4);
+  max-width: 480px;
+  margin-top: var(--space-5);
+}
+
+.security-form label {
+  display: grid;
+  gap: var(--space-2);
+  color: var(--muted);
+  font-size: 11px;
+}
+
+.security-form .button {
+  justify-self: start;
+}
+
+.session-list article {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+  padding: var(--space-4) 0;
+}
+
+.session-list article > div {
+  display: grid;
 }
 
 .report-status {

@@ -8,6 +8,7 @@ export const AUTH_LIMITS = {
   forgotAccount: { attempts: 3, windowSeconds: 60 * 60 },
   resetIp: { attempts: 10, windowSeconds: 60 * 60 },
   resetToken: { attempts: 5, windowSeconds: 60 * 60 },
+  sensitiveAccount: { attempts: 5, windowSeconds: 15 * 60 },
 } as const
 
 export function rateLimitKey(value: string) {

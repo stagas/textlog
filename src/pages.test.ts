@@ -1,7 +1,7 @@
 import { describe, expect, test } from 'bun:test'
 import React from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
-import { Auth, postTitle } from './components/pages'
+import { AccountSecurity, Auth, postTitle } from './components/pages'
 import { Post } from './components/post'
 
 describe('postTitle', () => {
@@ -34,6 +34,21 @@ describe('Auth', () => {
 
     expect(html).toContain('pattern="[A-Za-z0-9_]{2,24}"')
   })
+})
+
+test('AccountSecurity renders verification and safe session controls', () => {
+  const html = renderToStaticMarkup(React.createElement(AccountSecurity, {
+    user: { id: 1, handle: 'reader', email: 'reader@example.com', bio: '', email_verified_at: null },
+    sessions: [
+      { token: 'current-id', created_at: 1, expires_at: Date.now() + 1000, user_agent: 'Browser A', current: true },
+      { token: 'revocable-id', created_at: 1, expires_at: Date.now() + 1000, user_agent: 'Browser B', current: false },
+    ],
+  }))
+
+  expect(html).toContain('send verification email')
+  expect(html).toContain('/account/password')
+  expect(html).toContain('value="revocable-id"')
+  expect(html).not.toContain('value="current-id"')
 })
 
 test('Post renders preloaded parent and reply data', () => {

@@ -1,8 +1,8 @@
-import { About, Activity, activityTotal, AdminConfirm, AdminDashboard, AdminUser, Auth, Compose, ConfirmAccountDelete,
+import { About, AccountSecurity, Activity, activityTotal, AdminConfirm, AdminDashboard, AdminUser, Auth, Compose, ConfirmAccountDelete,
   ConfirmDelete, Connections, EditPost, Explore, Feed, ForgotPassword, HotFeed, Legal, Profile, PublicFeed,
   PublicThread, Reply, ResetPassword, TagFeed } from './components/pages'
 import { moderateText, moderationMessage } from './moderation'
-import { currentUser, hash, hashPassword, token, verifyPassword } from './utils'
+import { currentUser, hash, hashPassword, sessionToken, token, verifyPassword } from './utils'
 
 import { Hono } from 'hono'
 import { getConnInfo } from 'hono/bun'
@@ -10,7 +10,7 @@ import React from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
 import { configureDevReload } from './components/layout'
 import { db } from './db'
-import { sendPasswordReset } from './email'
+import { sendEmailVerification, sendPasswordReset } from './email'
 import { renderDefaultOg, renderPostOg, renderProfileOg, renderTagOg } from './og'
 import { postRateLimitMessage } from './post-rate-limit'
 import { clearSessionCookie, feedPreference, feedPreferenceCookie, isSameOriginRequest, safeLocalPath, safeRefererPath,
@@ -78,6 +78,32 @@ function retryPage(response: Response, retryAfter: number) {
 function adminUser(req: Request) {
   const user = currentUser(req)
   return user && isAdmin(user) ? user : null
+}
+async function issueEmailToken(userId: number, email: string, kind: 'verify' | 'change') {
+  const appUrl = Bun.env.APP_URL?.replace(/\/$/, '')
+  if (!appUrl) throw new Error('APP_URL is not configured')
+  const value = token()
+  db.query('DELETE FROM email_tokens WHERE user_id=? AND kind=?').run(userId, kind)
+  db.query('INSERT INTO email_tokens(token_hash,user_id,kind,email,expires_at) VALUES(?,?,?,?,?)')
+    .run(hash(value), userId, kind, email, Date.now() + 3600000)
+  try {
+    await sendEmailVerification(email, `${appUrl}/verify-email?token=${encodeURIComponent(value)}`, kind === 'change')
+  }
+  catch (error) {
+    db.query('DELETE FROM email_tokens WHERE token_hash=?').run(hash(value))
+    throw error
+  }
+}
+
+function securityPage(req: Request, error?: string, success?: string, status = 200) {
+  const user = currentUser(req)
+  if (!user) return redirect('/login?next=' + encodeURIComponent('/account/security'))
+  const current = sessionToken(req)
+  const rows = db.query(`SELECT token,created_at,expires_at,user_agent FROM sessions
+    WHERE user_id=? AND expires_at>? ORDER BY created_at DESC`).all(user.id, Date.now()) as
+    { token: string; created_at: number; expires_at: number; user_agent: string }[]
+  const sessions = rows.map(row => ({ ...row, token: hash(row.token), current: row.token === current }))
+  return page(<AccountSecurity user={user} sessions={sessions} error={error} success={success} />, status)
 }
 async function form(req: Request) {
   const data = await req.formData()
@@ -332,7 +358,14 @@ app.post('/signup', async c => {
     const result = db.query('INSERT INTO users(handle,email,password) VALUES(?,?,?) RETURNING id')
       .get(handle, email, passwordHash) as { id: number }
     const session = token()
-    db.query('INSERT INTO sessions VALUES(?,?,?)').run(session, result.id, Date.now() + 2592000000)
+    db.query('INSERT INTO sessions(token,user_id,expires_at,created_at,user_agent) VALUES(?,?,?,?,?)')
+      .run(session, result.id, Date.now() + 2592000000, Date.now(), c.req.header('user-agent') || '')
+    try {
+      await issueEmailToken(result.id, email, 'verify')
+    }
+    catch (error) {
+      console.error('Could not send verification email', error)
+    }
     return redirect('/explore?welcome=1', sessionCookie(session))
   }
   catch {
@@ -358,7 +391,8 @@ app.post('/login', async c => {
     db.query('UPDATE users SET password=? WHERE id=?').run(await hashPassword(f.password), found.id)
   }
   const session = token()
-  db.query('INSERT INTO sessions VALUES(?,?,?)').run(session, found.id, Date.now() + 2592000000)
+  db.query('INSERT INTO sessions(token,user_id,expires_at,created_at,user_agent) VALUES(?,?,?,?,?)')
+    .run(session, found.id, Date.now() + 2592000000, Date.now(), c.req.header('user-agent') || '')
   return redirect(safeNext(f.next), sessionCookie(session))
 })
 
@@ -366,6 +400,118 @@ app.post('/logout', c => {
   const session = c.req.header('cookie')?.match(/root=([^;]+)/)?.[1]
   if (session) db.query('DELETE FROM sessions WHERE token=?').run(session)
   return redirect('/', clearSessionCookie())
+})
+
+app.get('/account/security', c => securityPage(c.req.raw,
+  undefined,
+  c.req.query('changed') === 'password' ? 'Password changed. Other sessions were revoked.'
+    : c.req.query('changed') === 'email' ? 'Email address verified and changed.'
+    : c.req.query('verified') === '1' ? 'Email address verified.' : undefined))
+
+app.post('/account/email/verify', async c => {
+  const user = currentUser(c.req.raw)
+  if (!user) return redirect('/login')
+  if (user.email_verified_at) return securityPage(c.req.raw, undefined, 'Your email is already verified.')
+  const limited = authLimit(c, 'verify-email', `${user.id}:${clientAddress(c)}`, AUTH_LIMITS.forgotAccount)
+  if (limited) return retryPage(securityPage(c.req.raw, authRateLimitMessage(limited.retryAfter), undefined, 429), limited.retryAfter)
+  try {
+    await issueEmailToken(user.id, user.email, 'verify')
+    return securityPage(c.req.raw, undefined, 'Verification email sent.')
+  }
+  catch (error) {
+    console.error('Could not send verification email', error)
+    return securityPage(c.req.raw, 'Verification email could not be sent. Please try again later.', undefined, 503)
+  }
+})
+
+app.post('/account/email/change', async c => {
+  const user = currentUser(c.req.raw)
+  if (!user) return redirect('/login')
+  if (isAdmin(user)) return securityPage(c.req.raw, 'Hardcoded admin accounts cannot change their protected email.', undefined, 403)
+  const limited = authLimit(c, 'account-email', `${user.id}:${clientAddress(c)}`, AUTH_LIMITS.sensitiveAccount)
+  if (limited) return retryPage(securityPage(c.req.raw, authRateLimitMessage(limited.retryAfter), undefined, 429), limited.retryAfter)
+  const f = await form(c.req.raw)
+  const email = (f.email || '').trim().toLowerCase()
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || email.length > 254) {
+    return securityPage(c.req.raw, 'Enter a valid email address.', undefined, 400)
+  }
+  const account = db.query('SELECT password FROM users WHERE id=?').get(user.id) as { password: string }
+  if (!await verifyPassword(f.password || '', account.password)) {
+    return securityPage(c.req.raw, 'Your current password is incorrect.', undefined, 401)
+  }
+  if (db.query('SELECT 1 FROM users WHERE email=? AND id!=?').get(email, user.id)) {
+    return securityPage(c.req.raw, 'That email address is unavailable.', undefined, 400)
+  }
+  try {
+    await issueEmailToken(user.id, email, 'change')
+    return securityPage(c.req.raw, undefined, 'A confirmation link was sent to your new email address.')
+  }
+  catch (error) {
+    console.error('Could not send email-change confirmation', error)
+    return securityPage(c.req.raw, 'Confirmation email could not be sent. Please try again later.', undefined, 503)
+  }
+})
+
+app.get('/verify-email', c => {
+  const value = c.req.query('token') || ''
+  const record = value && db.query(`SELECT token_hash,user_id,kind,email FROM email_tokens
+    WHERE token_hash=? AND expires_at>?`).get(hash(value), Date.now()) as
+    { token_hash: string; user_id: number; kind: 'verify' | 'change'; email: string } | null
+  if (!record) return c.text('This verification link is invalid or expired.', 400)
+  try {
+    db.transaction(() => {
+      if (record.kind === 'change') {
+        db.query('UPDATE users SET email=?,email_verified_at=CURRENT_TIMESTAMP WHERE id=?').run(record.email, record.user_id)
+      }
+      else db.query('UPDATE users SET email_verified_at=CURRENT_TIMESTAMP WHERE id=?').run(record.user_id)
+      db.query('DELETE FROM email_tokens WHERE user_id=?').run(record.user_id)
+    })()
+  }
+  catch {
+    return c.text('That email address is no longer available.', 400)
+  }
+  return redirect(`/account/security?${record.kind === 'change' ? 'changed=email' : 'verified=1'}`)
+})
+
+app.post('/account/password', async c => {
+  const user = currentUser(c.req.raw)
+  if (!user) return redirect('/login')
+  const limited = authLimit(c, 'account-password', `${user.id}:${clientAddress(c)}`, AUTH_LIMITS.sensitiveAccount)
+  if (limited) return retryPage(securityPage(c.req.raw, authRateLimitMessage(limited.retryAfter), undefined, 429), limited.retryAfter)
+  const f = await form(c.req.raw)
+  const account = db.query('SELECT password FROM users WHERE id=?').get(user.id) as { password: string }
+  if (!await verifyPassword(f.currentPassword || '', account.password)) {
+    return securityPage(c.req.raw, 'Your current password is incorrect.', undefined, 401)
+  }
+  if ((f.password || '').length < 8 || f.password !== f.confirmPassword) {
+    return securityPage(c.req.raw, 'New passwords must match and contain at least 8 characters.', undefined, 400)
+  }
+  const current = sessionToken(c.req.raw)
+  const password = await hashPassword(f.password)
+  db.transaction(() => {
+    db.query('UPDATE users SET password=? WHERE id=?').run(password, user.id)
+    db.query('DELETE FROM sessions WHERE user_id=? AND token!=?').run(user.id, current)
+    db.query('DELETE FROM password_resets WHERE user_id=?').run(user.id)
+  })()
+  return redirect('/account/security?changed=password')
+})
+
+app.post('/account/sessions/revoke', async c => {
+  const user = currentUser(c.req.raw)
+  if (!user) return redirect('/login')
+  const f = await form(c.req.raw)
+  const current = sessionToken(c.req.raw)
+  const sessions = db.query('SELECT token FROM sessions WHERE user_id=?').all(user.id) as { token: string }[]
+  const target = sessions.find(session => hash(session.token) === f.token && session.token !== current)
+  if (target) db.query('DELETE FROM sessions WHERE token=? AND user_id=?').run(target.token, user.id)
+  return redirect('/account/security')
+})
+
+app.post('/account/sessions/revoke-others', c => {
+  const user = currentUser(c.req.raw)
+  if (!user) return redirect('/login')
+  db.query('DELETE FROM sessions WHERE user_id=? AND token!=?').run(user.id, sessionToken(c.req.raw))
+  return redirect('/account/security')
 })
 
 app.get('/account/delete', c => {
@@ -924,41 +1070,34 @@ app.post('/u/:handle/profile', async c => {
   const submittedBio = f.bio || ''
   const bio = submittedBio.trim() ? submittedBio : ''
   const handle = (f.handle || '').toLowerCase().replace(/^@/, '')
-  const email = (f.email || '').trim().toLowerCase()
   const posts = enrichPosts(db, db.query(
     'SELECT p.*,u.handle FROM posts p JOIN users u ON u.id=p.user_id WHERE p.user_id=? AND p.deleted_at IS NULL ORDER BY p.created_at DESC',
   ).all(user.id) as PostView[], user.id)
-  if (!/^[a-z0-9_]{2,24}$/.test(handle) || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)
-    || email.length > 254 || bio.length > 160)
+  if (!/^[a-z0-9_]{2,24}$/.test(handle) || bio.length > 160)
   {
     return page(
-      <Profile user={user} profile={user} posts={posts} following={false} bio={bio} editHandle={handle}
-        editEmail={email} editing
-        error="Use a valid email, a 2–24 character username, and a bio up to 160 characters." />,
+      <Profile user={user} profile={user} posts={posts} following={false} bio={bio} editHandle={handle} editing
+        error="Use a 2–24 character username and a bio up to 160 characters." />,
       400,
     )
-  }
-  if (isAdmin(user) && email !== user.email.toLowerCase()) {
-    return page(<Profile user={user} profile={user} posts={posts} following={false} bio={bio} editHandle={handle}
-      editEmail={email} editing error="Hardcoded admin accounts cannot change their protected email." />, 400)
   }
   if (handle || bio) {
     const moderation = await moderateText(`username: ${handle}\nbio: ${bio}`)
     if (!moderation.ok) {
       return page(
         <Profile user={user} profile={user} posts={posts} following={false} bio={bio} editHandle={handle}
-          editEmail={email} editing error={moderationMessage(moderation.reason)} />,
+          editing error={moderationMessage(moderation.reason)} />,
         moderation.reason === 'flagged' ? 422 : 503,
       )
     }
   }
   try {
-    db.query('UPDATE users SET handle=?,email=?,bio=? WHERE id=?').run(handle, email, bio, user.id)
+    db.query('UPDATE users SET handle=?,bio=? WHERE id=?').run(handle, bio, user.id)
   }
   catch {
     return page(
       <Profile user={user} profile={user} posts={posts} following={false} bio={bio} editHandle={handle}
-        editEmail={email} editing error="That username or email is unavailable." />,
+        editing error="That username is unavailable." />,
       400,
     )
   }

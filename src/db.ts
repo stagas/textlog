@@ -10,6 +10,7 @@ PRAGMA foreign_keys = ON;
 CREATE TABLE IF NOT EXISTS users (id INTEGER PRIMARY KEY AUTOINCREMENT, handle TEXT UNIQUE NOT NULL, email TEXT UNIQUE NOT NULL, bio TEXT DEFAULT '', password TEXT NOT NULL, created_at TEXT DEFAULT CURRENT_TIMESTAMP);
 CREATE TABLE IF NOT EXISTS sessions (token TEXT PRIMARY KEY, user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE, expires_at INTEGER NOT NULL);
 CREATE TABLE IF NOT EXISTS password_resets (token_hash TEXT PRIMARY KEY, user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE, expires_at INTEGER NOT NULL);
+CREATE TABLE IF NOT EXISTS email_tokens (token_hash TEXT PRIMARY KEY, user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE, kind TEXT NOT NULL CHECK(kind IN ('verify','change')), email TEXT NOT NULL, expires_at INTEGER NOT NULL);
 CREATE TABLE IF NOT EXISTS posts (id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE, parent_id INTEGER REFERENCES posts(id) ON DELETE CASCADE, body TEXT NOT NULL CHECK(length(body) BETWEEN 1 AND 280), created_at TEXT DEFAULT CURRENT_TIMESTAMP);
 CREATE TABLE IF NOT EXISTS follows (follower_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE, following_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE, created_at TEXT DEFAULT CURRENT_TIMESTAMP, PRIMARY KEY(follower_id, following_id));
 CREATE TABLE IF NOT EXISTS hashtag_follows (user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE, tag TEXT NOT NULL, PRIMARY KEY(user_id, tag));
@@ -65,6 +66,18 @@ if (!userColumns.some(column => column.name === 'deleted_at')) {
 if (!userColumns.some(column => column.name === 'suspended_at')) {
   db.run('ALTER TABLE users ADD COLUMN suspended_at TEXT')
 }
+if (!userColumns.some(column => column.name === 'email_verified_at')) {
+  db.run('ALTER TABLE users ADD COLUMN email_verified_at TEXT')
+}
+
+const sessionColumns = db.query('PRAGMA table_info(sessions)').all() as { name: string }[]
+if (!sessionColumns.some(column => column.name === 'created_at')) {
+  db.run('ALTER TABLE sessions ADD COLUMN created_at INTEGER')
+  db.run('UPDATE sessions SET created_at=expires_at-2592000000 WHERE created_at IS NULL')
+}
+if (!sessionColumns.some(column => column.name === 'user_agent')) {
+  db.run("ALTER TABLE sessions ADD COLUMN user_agent TEXT NOT NULL DEFAULT ''")
+}
 
 const reportColumns = db.query('PRAGMA table_info(reports)').all() as { name: string }[]
 if (!reportColumns.some(column => column.name === 'status')) {
@@ -88,10 +101,12 @@ db.run(`CREATE TABLE IF NOT EXISTS admin_actions (
 )`)
 db.run('CREATE INDEX IF NOT EXISTS admin_actions_created ON admin_actions(created_at DESC)')
 
-export type User = { id: number; handle: string; email: string; bio: string; suspended_at?: string | null }
+export type User = { id: number; handle: string; email: string; bio: string; suspended_at?: string | null;
+  email_verified_at?: string | null }
 
 // Keep short-lived authentication tables bounded without requiring a scheduler.
 const now = Date.now()
 db.query('DELETE FROM sessions WHERE expires_at<=?').run(now)
 db.query('DELETE FROM password_resets WHERE expires_at<=?').run(now)
+db.query('DELETE FROM email_tokens WHERE expires_at<=?').run(now)
 db.query('DELETE FROM auth_rate_limits WHERE created_at<=?').run(now - 24 * 60 * 60 * 1000)
