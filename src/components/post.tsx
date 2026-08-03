@@ -5,7 +5,7 @@ import type { PostView } from '../types'
 import { enrichPosts } from '../posts'
 import { isAdmin } from '../admin'
 
-export function Post({ p, user, showReplyAction = true, showOwnerActions = false, showParent = true, showReplyCount = false, replyHref, replyLabel = 'reply', reportHref }: { p: PostView; user: User | null; showReplyAction?: boolean; showOwnerActions?: boolean; showParent?: boolean; showReplyCount?: boolean; replyHref?: string; replyLabel?: string; reportHref?: string }) {
+export function Post({ p, user, showReplyAction = true, showOwnerActions = false, showModerateAction = false, showParent = true, showReplyCount = false, replyHref, replyLabel = 'reply', reportHref }: { p: PostView; user: User | null; showReplyAction?: boolean; showOwnerActions?: boolean; showModerateAction?: boolean; showParent?: boolean; showReplyCount?: boolean; replyHref?: string; replyLabel?: string; reportHref?: string }) {
   const parent = showParent ? p.parent : null
   const replyCount = p.reply_count || 0
   if (p.deleted_at) return <article className="post deleted-post">
@@ -26,7 +26,7 @@ export function Post({ p, user, showReplyAction = true, showOwnerActions = false
         <a className="quiet" href={'/post/' + p.id + '/edit'} aria-label="edit this post">edit</a>
         <a className="quiet danger" href={'/post/' + p.id + '/delete'} aria-label="delete this post">delete</a>
       </div>}
-      {isAdmin(user) && <div className="post-actions admin-post-actions">
+      {showModerateAction && isAdmin(user) && <div className="post-actions admin-post-actions">
         <a className="quiet danger" href={'/admin/posts/' + p.id + '/delete'} aria-label="moderate this post">
           moderate
         </a>

@@ -13,7 +13,8 @@ import { db } from './db'
 import { sendPasswordReset } from './email'
 import { renderDefaultOg, renderPostOg, renderProfileOg, renderTagOg } from './og'
 import { postRateLimitMessage } from './post-rate-limit'
-import { clearSessionCookie, isSameOriginRequest, safeLocalPath, safeRefererPath, securityHeaders, sessionCookie, stringField } from './http'
+import { clearSessionCookie, feedPreference, feedPreferenceCookie, isSameOriginRequest, safeLocalPath, safeRefererPath,
+  securityHeaders, sessionCookie, stringField } from './http'
 import { createPost, enrichPosts, updatePost } from './posts'
 import type { PostRow, PostView, ProfileRow } from './types'
 import { AUTH_LIMITS, authRateLimitMessage, consumeAuthAttempt, rateLimitKey } from './auth-rate-limit'
@@ -32,6 +33,10 @@ function redirect(path: string, cookie?: string) {
   const h = new Headers({ location: path })
   if (cookie) h.append('set-cookie', cookie)
   return new Response(null, { status: 303, headers: h })
+}
+function rememberFeed(response: Response, feed: 'following' | 'hot' | 'latest') {
+  response.headers.append('set-cookie', feedPreferenceCookie(feed))
+  return response
 }
 function safeNext(value?: string) {
   return safeLocalPath(value)
@@ -155,34 +160,58 @@ app.get('/og.png', c => {
 
 app.get('/', c => {
   const user = currentUser(c.req.raw)
+  const preferredFeed = feedPreference(c.req.raw)
   const feedPage = currentPage(c.req.query('page'))
-  const total = user
-    ? (db.query(`SELECT count(*) count FROM posts p WHERE p.deleted_at IS NULL AND
+  if (preferredFeed === 'latest') {
+    const outOfRange = paginationRedirect(feedPage, visiblePostCount(user?.id), '/')
+    if (outOfRange) return outOfRange
+    return page(<PublicFeed user={user} page={feedPage} path="/latest" />)
+  }
+  if (preferredFeed === 'hot' || !user) {
+    const outOfRange = paginationRedirect(feedPage, visiblePostCount(user?.id), '/')
+    if (outOfRange) return outOfRange
+    return page(<HotFeed user={user} page={feedPage} />)
+  }
+  const total = (db.query(`SELECT count(*) count FROM posts p WHERE p.deleted_at IS NULL AND
       (p.user_id=? OR p.user_id IN (SELECT following_id FROM follows WHERE follower_id=?) OR
         p.id IN (SELECT ph.post_id FROM post_hashtags ph JOIN hashtag_follows hf ON hf.tag=ph.tag WHERE hf.user_id=?))
       AND NOT EXISTS (SELECT 1 FROM blocks b WHERE (b.blocker_id=? AND b.blocked_id=p.user_id)
         OR (b.blocker_id=p.user_id AND b.blocked_id=?))`)
-      .get(user.id, user.id, user.id, user.id, user.id) as { count: number }).count
-    : visiblePostCount()
+    .get(user.id, user.id, user.id, user.id, user.id) as { count: number }).count
   const outOfRange = paginationRedirect(feedPage, total, '/')
   if (outOfRange) return outOfRange
-  return user ? page(<Feed user={user} page={feedPage} />) : page(<HotFeed user={null} page={feedPage} />)
+  return page(<Feed user={user} page={feedPage} />)
+})
+
+app.get('/for-you', c => {
+  const user = currentUser(c.req.raw)
+  if (!user) return redirect('/login?next=' + encodeURIComponent('/for-you'))
+  const feedPage = currentPage(c.req.query('page'))
+  const total = (db.query(`SELECT count(*) count FROM posts p WHERE p.deleted_at IS NULL AND
+      (p.user_id=? OR p.user_id IN (SELECT following_id FROM follows WHERE follower_id=?) OR
+        p.id IN (SELECT ph.post_id FROM post_hashtags ph JOIN hashtag_follows hf ON hf.tag=ph.tag WHERE hf.user_id=?))
+      AND NOT EXISTS (SELECT 1 FROM blocks b WHERE (b.blocker_id=? AND b.blocked_id=p.user_id)
+        OR (b.blocker_id=p.user_id AND b.blocked_id=?))`)
+    .get(user.id, user.id, user.id, user.id, user.id) as { count: number }).count
+  const outOfRange = paginationRedirect(feedPage, total, '/for-you')
+  if (outOfRange) return rememberFeed(outOfRange, 'following')
+  return rememberFeed(page(<Feed user={user} page={feedPage} />), 'following')
 })
 
 app.get('/latest', c => {
   const user = currentUser(c.req.raw)
   const feedPage = currentPage(c.req.query('page'))
   const outOfRange = paginationRedirect(feedPage, visiblePostCount(user?.id), '/latest')
-  if (outOfRange) return outOfRange
-  return page(<PublicFeed user={user} page={feedPage} path="/latest" />)
+  if (outOfRange) return rememberFeed(outOfRange, 'latest')
+  return rememberFeed(page(<PublicFeed user={user} page={feedPage} path="/latest" />), 'latest')
 })
 
 app.get('/hot', c => {
   const user = currentUser(c.req.raw)
   const feedPage = currentPage(c.req.query('page'))
   const outOfRange = paginationRedirect(feedPage, visiblePostCount(user?.id), '/hot')
-  if (outOfRange) return outOfRange
-  return page(<HotFeed user={user} page={feedPage} title="hot" />)
+  if (outOfRange) return rememberFeed(outOfRange, 'hot')
+  return rememberFeed(page(<HotFeed user={user} page={feedPage} title="hot" />), 'hot')
 })
 
 app.get('/activity', c => {

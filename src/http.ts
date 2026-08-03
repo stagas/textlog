@@ -87,3 +87,14 @@ export function sessionCookie(value: string, maxAge = 30 * 24 * 60 * 60) {
 export function clearSessionCookie() {
   return sessionCookie('', 0)
 }
+
+export type FeedPreference = 'following' | 'hot' | 'latest'
+
+export function feedPreference(request: Request): FeedPreference | null {
+  const value = request.headers.get('cookie')?.match(/(?:^|;\s*)feed=(following|hot|latest)(?:;|$)/)?.[1]
+  return value as FeedPreference | undefined || null
+}
+
+export function feedPreferenceCookie(value: FeedPreference) {
+  return `feed=${value}; Max-Age=${365 * 24 * 60 * 60}; HttpOnly; Path=/; SameSite=Lax${secureCookie()}`
+}

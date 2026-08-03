@@ -51,7 +51,7 @@ export function Layout({
             <meta name="twitter:image:alt" content={share.imageAlt || `Post by ${title || 'a root.mx user'}`} />
           </>
         <link rel="icon" href="/root.svg" type="image/svg+xml" />
-        <link rel="stylesheet" href="/styles.css?v=33" />
+        <link rel="stylesheet" href="/styles.css?v=34" />
       </head>
       <body>
         <a className="skip-link" href="#main-content">skip to content</a>

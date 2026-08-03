@@ -197,7 +197,7 @@ function FeedTabs({ active, user }: { active: 'following' | 'hot' | 'latest'; us
     <nav className="feed-tabs" aria-label="Feed">
       {user && (
         <a className={active === 'following' ? 'active' : ''} aria-current={active === 'following' ? 'page' : undefined}
-          href="/"
+          href="/for-you"
         >
           for you
         </a>
@@ -316,10 +316,10 @@ export function Feed({ user, page }: { user: User; page: number }) {
         )
         : (
           <div className="empty">
-            No notes on this page. <a href="/">Return to the first page</a>.
+            No notes on this page. <a href="/for-you">Return to the first page</a>.
           </div>
         )}
-      <Pagination page={page} totalPages={totalPages} path="/" />
+      <Pagination page={page} totalPages={totalPages} path="/for-you" />
     </Layout>
   )
 }
@@ -667,7 +667,7 @@ export function Reply(
   return (
     <Layout user={user} title={postTitle(post.body)} social={social}>
       <div className="thread-root">
-        <Post p={post} user={user} showReplyAction={!showForm} showOwnerActions
+        <Post p={post} user={user} showReplyAction={!showForm} showOwnerActions showModerateAction
           reportHref={user.id !== post.user_id && !showReport && !reported ? `/post/${post.id}?report=1` : undefined} />
       </div>
       {user.id !== post.user_id && <ReportPanel post={post} showForm={showReport} reported={reported} />}

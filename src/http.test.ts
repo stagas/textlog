@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, test } from 'bun:test'
-import { clearSessionCookie, isSameOriginRequest, safeLocalPath, safeRefererPath, securityHeaders, sessionCookie, stringField } from './http'
+import { clearSessionCookie, feedPreference, feedPreferenceCookie, isSameOriginRequest, safeLocalPath, safeRefererPath,
+  securityHeaders, sessionCookie, stringField } from './http'
 
 const previousAppUrl = Bun.env.APP_URL
 afterEach(() => {
@@ -52,6 +53,13 @@ describe('request values and cookies', () => {
     Bun.env.APP_URL = 'https://root.mx'
     expect(sessionCookie('token')).toContain('; Secure')
     expect(clearSessionCookie()).toContain('Max-Age=0')
+  })
+
+  test('stores and reads a valid feed preference', () => {
+    expect(feedPreference(new Request('https://root.mx/', { headers: { cookie: 'root=token; feed=latest' } })))
+      .toBe('latest')
+    expect(feedPreference(new Request('https://root.mx/', { headers: { cookie: 'feed=unknown' } }))).toBeNull()
+    expect(feedPreferenceCookie('hot')).toContain('feed=hot; Max-Age=31536000; HttpOnly; Path=/; SameSite=Lax')
   })
 })
 
