@@ -867,15 +867,15 @@ function ProfileHeader({ user, profile, following, blocked = false, editing = fa
           </>
         )}
         {user && user.id !== profile.id && <>
+          <form method="post" action={'/block/' + profile.handle}>
+            <button className={blocked ? 'button' : 'quiet danger'}
+              aria-label={`${blocked ? 'unblock' : 'block'} @${profile.handle}`}>{blocked ? 'unblock' : 'block'}</button>
+          </form>
           {!blocked && <form method="post" action={'/follow/' + profile.handle}>
             <button className="button" aria-label={`${following ? 'unfollow' : 'follow'} @${profile.handle}`}>
               {following ? 'unfollow' : 'follow'}
             </button>
           </form>}
-          <form method="post" action={'/block/' + profile.handle}>
-            <button className={blocked ? 'button' : 'quiet danger'}
-              aria-label={`${blocked ? 'unblock' : 'block'} @${profile.handle}`}>{blocked ? 'unblock' : 'block'}</button>
-          </form>
         </>}
         {!user && <a className="button" href="/login">log in to follow</a>}
       </div>

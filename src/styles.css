@@ -393,6 +393,10 @@ nav form {
   border-top: 1px solid var(--soft);
 }
 
+.feed-tabs + .post {
+  border-top: 0;
+}
+
 .deleted-post a,
 .deleted-parent a {
   color: var(--muted);
