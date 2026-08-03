@@ -15,6 +15,7 @@ import { registerProfilesRoutes } from './routes/profiles'
 import { registerTagsRoutes } from './routes/tags'
 import { loadStylesAsset, stylesResponse } from './styles'
 import { clientIp, logError, logHttp, logReady, shouldLogHttp } from './log'
+import { recordVisit } from './visitors'
 
 const devReloadEnabled = Bun.env.DEV_RELOAD === 'true'
 const bootId = crypto.randomUUID()
@@ -22,6 +23,12 @@ configureDevReload(devReloadEnabled ? bootId : undefined)
 const app = new Hono()
 const stylesPath = new URL('./styles.css', import.meta.url).pathname
 const styles = devReloadEnabled ? undefined : await loadStylesAsset(stylesPath)
+
+app.use('*', async (c, next) => {
+  await next()
+  if (c.req.method !== 'GET' || c.res.status >= 400 || !c.res.headers.get('content-type')?.includes('text/html')) return
+  recordVisit(db, c.req.header('x-root-client-ip') || '-')
+})
 
 app.use('*', async (c, next) => {
   const started = performance.now()

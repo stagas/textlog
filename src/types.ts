@@ -40,6 +40,8 @@ export type DashboardStats = {
   users7d: number
   posts24h: number
   posts7d: number
+  visitorsToday: number
+  visitors7d: number
 }
 
 export type AdminReportView = {

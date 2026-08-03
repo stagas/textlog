@@ -19,6 +19,7 @@ CREATE TABLE IF NOT EXISTS post_mentions (post_id INTEGER NOT NULL REFERENCES po
 CREATE TABLE IF NOT EXISTS blocks (blocker_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE, blocked_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE, created_at TEXT DEFAULT CURRENT_TIMESTAMP, PRIMARY KEY(blocker_id, blocked_id), CHECK(blocker_id != blocked_id));
 CREATE TABLE IF NOT EXISTS reports (id INTEGER PRIMARY KEY AUTOINCREMENT, reporter_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE, post_id INTEGER NOT NULL REFERENCES posts(id) ON DELETE CASCADE, reason TEXT NOT NULL CHECK(reason IN ('harassment','spam','impersonation','other')), created_at TEXT DEFAULT CURRENT_TIMESTAMP, UNIQUE(reporter_id, post_id));
 CREATE TABLE IF NOT EXISTS auth_rate_limits (id INTEGER PRIMARY KEY AUTOINCREMENT, scope TEXT NOT NULL, key_hash TEXT NOT NULL, created_at INTEGER NOT NULL);
+CREATE TABLE IF NOT EXISTS daily_visitors (day TEXT NOT NULL, visitor_hash TEXT NOT NULL, PRIMARY KEY(day,visitor_hash));
 CREATE INDEX IF NOT EXISTS posts_created ON posts(created_at DESC);`)
 
 const postColumns = db.query('PRAGMA table_info(posts)').all() as { name: string }[]
@@ -35,6 +36,7 @@ db.run('CREATE INDEX IF NOT EXISTS post_hashtags_tag ON post_hashtags(tag, post_
 db.run('CREATE INDEX IF NOT EXISTS blocks_blocked ON blocks(blocked_id, blocker_id)')
 db.run('CREATE INDEX IF NOT EXISTS reports_created ON reports(created_at DESC)')
 db.run('CREATE INDEX IF NOT EXISTS auth_rate_limits_lookup ON auth_rate_limits(scope,key_hash,created_at)')
+db.run('CREATE INDEX IF NOT EXISTS daily_visitors_hash_day ON daily_visitors(visitor_hash,day)')
 
 const followColumns = db.query('PRAGMA table_info(follows)').all() as { name: string }[]
 if (!followColumns.some(column => column.name === 'created_at')) {
@@ -110,3 +112,4 @@ db.query('DELETE FROM sessions WHERE expires_at<=?').run(now)
 db.query('DELETE FROM password_resets WHERE expires_at<=?').run(now)
 db.query('DELETE FROM email_tokens WHERE expires_at<=?').run(now)
 db.query('DELETE FROM auth_rate_limits WHERE created_at<=?').run(now - 24 * 60 * 60 * 1000)
+db.query("DELETE FROM daily_visitors WHERE day<date('now','-90 days')").run()

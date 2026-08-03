@@ -14,6 +14,7 @@ import { adminUser, currentPage, form, page, paginationRedirect, redirect } from
 import type { Hono } from 'hono'
 import { db } from '../db'
 import { currentUser } from '../utils'
+import { visitorStats } from '../visitors'
 
 export function registerAdminRoutes(app: Hono) {
   app.get('/admin', c => {
@@ -34,7 +35,8 @@ export function registerAdminRoutes(app: Hono) {
     (SELECT count(*) FROM users WHERE deleted_at IS NULL AND created_at>=datetime('now','-7 days')) users7d,
     (SELECT count(*) FROM posts WHERE deleted_at IS NULL AND created_at>=datetime('now','-1 day')) posts24h,
     (SELECT count(*) FROM posts WHERE deleted_at IS NULL AND created_at>=datetime('now','-7 days')) posts7d`) as any
-    const dashboardStats = stats.get() as DashboardStats
+    const dashboardStats = { ...(stats.get() as Omit<DashboardStats, 'visitorsToday' | 'visitors7d'>),
+      ...visitorStats(db) }
     const total = (db.query('SELECT count(*) count FROM reports WHERE status=?').get(status) as { count: number }).count
     const outOfRange = paginationRedirect(reportPage, total, `/admin?status=${status}`)
     if (outOfRange) return outOfRange
