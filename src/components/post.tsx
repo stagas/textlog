@@ -54,7 +54,7 @@ export function ThreadReplies({ parentId, user }: { parentId: number; user: User
         (SELECT 1 FROM blocks b WHERE (b.blocker_id=? AND b.blocked_id=p.user_id) OR (b.blocker_id=p.user_id AND b.blocked_id=?)))
     ) SELECT id,user_id,parent_id,body,created_at,deleted_at,handle,depth
       FROM thread ORDER BY created_at ASC,id ASC`).all(parentId, viewerId, viewerId, viewerId, viewerId, viewerId, viewerId) as (PostView & { depth: number })[]
-  const replies = enrichPosts(db, rows)
+  const replies = enrichPosts(db, rows, viewerId)
   if (!replies.length) return null
   const children = new Map<number, PostView[]>()
   for (const reply of replies) {

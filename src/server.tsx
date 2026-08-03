@@ -276,7 +276,9 @@ app.get('/post/:id', c => {
     'SELECT p.*,u.handle FROM posts p JOIN users u ON u.id=p.user_id WHERE p.id=?',
   ).get(id) as PostView | null
   if (!foundPost) return c.text('Not found', 404)
-  const post = enrichPosts(db, [foundPost])[0]
+  const user = currentUser(c.req.raw)
+  if (user && usersBlocked(user.id, foundPost.user_id)) return c.text('Not found', 404)
+  const post = enrichPosts(db, [foundPost], user?.id ?? -1)[0]
   const configuredOrigin = Bun.env.APP_URL?.replace(/\/$/, '')
   const origin = configuredOrigin || new URL(c.req.url).origin
   const postUrl = `${origin}/post/${post.id}`
@@ -285,8 +287,6 @@ app.get('/post/:id', c => {
     image: `${postUrl}/og.png`,
     url: postUrl,
   }
-  const user = currentUser(c.req.raw)
-  if (user && usersBlocked(user.id, post.user_id)) return c.text('Not found', 404)
   if (user) return page(<Reply user={user} post={post} showForm={c.req.query('reply') === '1'}
     showReport={c.req.query('report') === '1'} reported={c.req.query('reported') === '1'} social={social} />)
   return page(<PublicThread post={post} social={social} />)
@@ -551,7 +551,7 @@ app.get('/u/:handle', c => {
   if (tab && tab !== 'following' && tab !== 'followers') return c.text('Not found', 404)
   const posts = enrichPosts(db, db.query(
     'SELECT p.*,u.handle FROM posts p JOIN users u ON u.id=p.user_id WHERE p.user_id=? AND p.deleted_at IS NULL ORDER BY p.created_at DESC LIMIT 20 OFFSET ?',
-  ).all(profile.id, (profilePage - 1) * 20) as PostView[])
+  ).all(profile.id, (profilePage - 1) * 20) as PostView[], user?.id ?? -1)
   const total =
     (db.query('SELECT count(*) AS count FROM posts WHERE user_id=? AND deleted_at IS NULL').get(profile.id) as { count: number }).count
   const following = !!user
@@ -560,12 +560,17 @@ app.get('/u/:handle', c => {
     && !!db.query('SELECT 1 FROM blocks WHERE blocker_id=? AND blocked_id=?').get(user.id, profile.id)
   const blockedByProfile = !!user
     && !!db.query('SELECT 1 FROM blocks WHERE blocker_id=? AND blocked_id=?').get(profile.id, user.id)
+  const viewerId = user?.id ?? -1
   const counts = db.query(
     `SELECT
-      (SELECT count(*) FROM follows WHERE following_id=?) followerCount,
-      (SELECT count(*) FROM follows WHERE follower_id=?) followingCount,
+      (SELECT count(*) FROM follows f WHERE following_id=? AND (? < 0 OR NOT EXISTS
+        (SELECT 1 FROM blocks b WHERE (b.blocker_id=? AND b.blocked_id=f.follower_id)
+          OR (b.blocker_id=f.follower_id AND b.blocked_id=?)))) followerCount,
+      (SELECT count(*) FROM follows f WHERE follower_id=? AND (? < 0 OR NOT EXISTS
+        (SELECT 1 FROM blocks b WHERE (b.blocker_id=? AND b.blocked_id=f.following_id)
+          OR (b.blocker_id=f.following_id AND b.blocked_id=?)))) followingCount,
       (SELECT count(*) FROM hashtag_follows WHERE user_id=?) followingTagCount`,
-  ).get(profile.id, profile.id, profile.id) as {
+  ).get(profile.id, viewerId, viewerId, viewerId, profile.id, viewerId, viewerId, viewerId, profile.id) as {
     followerCount: number; followingCount: number; followingTagCount: number
   }
   const configuredOrigin = Bun.env.APP_URL?.replace(/\/$/, '')
@@ -590,20 +595,30 @@ app.get('/u/:handle', c => {
     const people = db.query(
       `SELECT u.*, (SELECT count(*) FROM posts p WHERE p.user_id=u.id AND p.deleted_at IS NULL) posts,
         EXISTS(SELECT 1 FROM follows vf WHERE vf.follower_id=? AND vf.following_id=u.id) viewerFollowing
-        FROM users u ${join} ORDER BY u.handle LIMIT 20 OFFSET ?`,
-    ).all(user?.id ?? -1, profile.id, (profilePage - 1) * 20) as import('./types').PersonView[]
+        FROM users u ${join} AND (? < 0 OR NOT EXISTS (SELECT 1 FROM blocks b WHERE
+          (b.blocker_id=? AND b.blocked_id=u.id) OR (b.blocker_id=u.id AND b.blocked_id=?)))
+        ORDER BY u.handle LIMIT 20 OFFSET ?`,
+    ).all(viewerId, profile.id, viewerId, viewerId, viewerId,
+      (profilePage - 1) * 20) as import('./types').PersonView[]
     const countWhere = tab === 'following' ? 'follower_id=?' : 'following_id=?'
-    const connectionTotal = (db.query(`SELECT count(*) AS count FROM follows WHERE ${countWhere}`)
-      .get(profile.id) as { count: number }).count
+    const counterpart = tab === 'following' ? 'f.following_id' : 'f.follower_id'
+    const connectionTotal = (db.query(`SELECT count(*) AS count FROM follows f WHERE ${countWhere}
+      AND (? < 0 OR NOT EXISTS (SELECT 1 FROM blocks b WHERE
+        (b.blocker_id=? AND b.blocked_id=${counterpart}) OR (b.blocker_id=${counterpart} AND b.blocked_id=?)))`)
+      .get(profile.id, viewerId, viewerId, viewerId) as { count: number }).count
     const tags = tab === 'following'
       ? db.query(
-        `SELECT hf.tag, count(ph.post_id) count,
+        `SELECT hf.tag,
+          (SELECT count(*) FROM post_hashtags ph JOIN posts hp ON hp.id=ph.post_id
+            WHERE ph.tag=hf.tag AND hp.deleted_at IS NULL AND (? < 0 OR NOT EXISTS
+              (SELECT 1 FROM blocks b WHERE (b.blocker_id=? AND b.blocked_id=hp.user_id)
+                OR (b.blocker_id=hp.user_id AND b.blocked_id=?)))) count,
           EXISTS(SELECT 1 FROM hashtag_follows vhf WHERE vhf.user_id=? AND vhf.tag=hf.tag) viewerFollowing
           FROM hashtag_follows hf
-          LEFT JOIN post_hashtags ph ON ph.tag=hf.tag
           WHERE hf.user_id=?
-          GROUP BY hf.tag ORDER BY hf.tag`,
-      ).all(user?.id ?? -1, profile.id) as { tag: string; count: number; viewerFollowing: boolean }[]
+          ORDER BY hf.tag`,
+      ).all(viewerId, viewerId, viewerId, viewerId, profile.id) as
+        { tag: string; count: number; viewerFollowing: boolean }[]
       : []
     return page(<Connections user={user} profile={profile} people={people} tags={tags} kind={tab}
       page={profilePage} total={connectionTotal} noteCount={total} {...counts} following={following} social={social} />)
@@ -630,7 +645,7 @@ app.post('/u/:handle/profile', async c => {
   const email = (f.email || '').trim().toLowerCase()
   const posts = enrichPosts(db, db.query(
     'SELECT p.*,u.handle FROM posts p JOIN users u ON u.id=p.user_id WHERE p.user_id=? AND p.deleted_at IS NULL ORDER BY p.created_at DESC',
-  ).all(user.id) as PostView[])
+  ).all(user.id) as PostView[], user.id)
   if (!/^[a-z0-9_]{2,24}$/.test(handle) || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)
     || email.length > 254 || bio.length > 160)
   {
@@ -692,7 +707,7 @@ app.get('/tag/:tag', c => {
       WHERE ph.tag=? AND p.deleted_at IS NULL AND (? < 0 OR NOT EXISTS (SELECT 1 FROM blocks b WHERE
         (b.blocker_id=? AND b.blocked_id=p.user_id) OR (b.blocker_id=p.user_id AND b.blocked_id=?)))
       ORDER BY p.created_at DESC LIMIT 20 OFFSET ?`,
-  ).all(tag, viewerId, viewerId, viewerId, (tagPage - 1) * 20) as PostView[])
+  ).all(tag, viewerId, viewerId, viewerId, (tagPage - 1) * 20) as PostView[], viewerId)
   const total =
     (db.query(`SELECT count(*) AS count FROM post_hashtags ph JOIN posts p ON p.id=ph.post_id
       WHERE ph.tag=? AND p.deleted_at IS NULL AND (? < 0 OR NOT EXISTS (SELECT 1 FROM blocks b WHERE

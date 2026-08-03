@@ -77,6 +77,8 @@ describe('hot feed ranking', () => {
       .run(2, 2, null, 'hidden', '2026-08-03 12:00:00', null)
     database.query('INSERT INTO blocks VALUES(?,?)').run(2, 1)
 
-    expect(getHotPosts(database, 20, 0, asOf, 1).map(result => result.id)).toEqual([1])
+    const results = getHotPosts(database, 20, 0, asOf, 1)
+    expect(results.map(result => result.id)).toEqual([1])
+    expect(results[0].hot_score).toBeCloseTo(Math.pow(0.5, 1 / 24))
   })
 })
