@@ -6,6 +6,7 @@ import { compressResponse } from './compression'
 import { db } from './db'
 import { renderDefaultOg } from './og'
 import { registerAccountRoutes } from './routes/account'
+import { registerApiRoutes } from './routes/api'
 import { registerAdminRoutes } from './routes/admin'
 import { registerAuthRoutes } from './routes/auth'
 import { registerFeedsRoutes } from './routes/feeds'
@@ -108,6 +109,7 @@ app.get('/og.png', () => {
   })
 })
 
+registerApiRoutes(app)
 registerFeedsRoutes(app)
 registerAuthRoutes(app)
 registerAccountRoutes(app)

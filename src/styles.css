@@ -269,6 +269,29 @@ nav form {
   letter-spacing: -1.5px;
 }
 
+.api-docs h2 {
+  margin-top: var(--space-6);
+}
+
+.api-docs pre {
+  overflow-x: auto;
+  padding: var(--space-4);
+  border: 1px solid var(--soft);
+  background: var(--panel);
+  white-space: pre;
+}
+
+.api-endpoints {
+  display: grid;
+  grid-template-columns: minmax(180px, auto) 1fr;
+  gap: var(--space-3) var(--space-4);
+}
+
+.api-endpoints dt,
+.api-endpoints dd {
+  margin: 0;
+}
+
 .static-page h2 {
   margin: var(--space-6) 0 var(--space-2);
   font-size: 14px;

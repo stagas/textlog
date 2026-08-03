@@ -1,4 +1,5 @@
 export * from './about'
+export * from './api-docs'
 export * from './account-security'
 export * from './activity'
 export * from './admin-confirm'

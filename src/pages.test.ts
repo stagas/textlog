@@ -1,7 +1,7 @@
 import { describe, expect, test } from 'bun:test'
 import React from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
-import { AccountSecurity, Auth, Profile, postTitle } from './components/pages'
+import { AccountSecurity, ApiDocs, Auth, Profile, postTitle } from './components/pages'
 import { Post } from './components/post'
 
 describe('postTitle', () => {
@@ -18,6 +18,14 @@ describe('postTitle', () => {
     expect(title).toBe(`${'x'.repeat(59)}…`)
     expect(Array.from(title)).toHaveLength(60)
   })
+})
+
+test('API documentation is linked from the footer and describes the firehose', () => {
+  const html = renderToStaticMarkup(React.createElement(ApiDocs, { user: null }))
+  expect(html).toContain('href="/api">api</a>')
+  expect(html).toContain('/api/openapi.json')
+  expect(html).toContain('GET /firehose')
+  expect(html).toContain('120 requests per minute')
 })
 
 describe('Auth', () => {

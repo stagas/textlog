@@ -1,0 +1,126 @@
+import type { Database } from 'bun:sqlite'
+import { extractHashtags, extractMentions } from './content'
+
+export const API_DEFAULT_LIMIT = 20
+export const API_MAX_LIMIT = 100
+
+type ApiPostRow = {
+  id: number
+  body: string
+  parent_id: number | null
+  created_at: string
+  handle: string
+  reply_count: number
+}
+
+export type ApiPost = {
+  id: number
+  body: string
+  created_at: string
+  parent_id: number | null
+  reply_count: number
+  tags: string[]
+  mentions: string[]
+  url: string
+  api_url: string
+  author: { handle: string; url: string; api_url: string }
+}
+
+export function apiOrigin(requestUrl: string) {
+  return Bun.env.APP_URL?.replace(/\/$/, '') || new URL(requestUrl).origin
+}
+
+export function isoTimestamp(value: string) {
+  return new Date(value.replace(' ', 'T') + 'Z').toISOString()
+}
+
+export function encodeCursor(id: number) {
+  return btoa(String(id)).replace(/=+$/, '')
+}
+
+export function parseCollectionParams(limitValue?: string, cursorValue?: string) {
+  let limit = API_DEFAULT_LIMIT
+  if (limitValue !== undefined) {
+    limit = Number(limitValue)
+    if (!Number.isInteger(limit) || limit < 1 || limit > API_MAX_LIMIT) return null
+  }
+  let before: number | null = null
+  if (cursorValue !== undefined) {
+    try {
+      const decoded = atob(cursorValue.replace(/-/g, '+').replace(/_/g, '/'))
+      before = Number(decoded)
+      if (!Number.isInteger(before) || before < 1 || encodeCursor(before) !== cursorValue) return null
+    }
+    catch {
+      return null
+    }
+  }
+  return { limit, before }
+}
+
+export function serializePost(row: ApiPostRow, origin: string): ApiPost {
+  const handle = row.handle.toLowerCase()
+  return {
+    id: row.id,
+    body: row.body,
+    created_at: isoTimestamp(row.created_at),
+    parent_id: row.parent_id,
+    reply_count: row.reply_count,
+    tags: extractHashtags(row.body),
+    mentions: extractMentions(row.body),
+    url: `${origin}/post/${row.id}`,
+    api_url: `${origin}/api/v1/posts/${row.id}`,
+    author: {
+      handle,
+      url: `${origin}/u/${encodeURIComponent(handle)}`,
+      api_url: `${origin}/api/v1/users/${encodeURIComponent(handle)}`,
+    },
+  }
+}
+
+const postSelect = `SELECT p.id,p.body,p.parent_id,p.created_at,u.handle,
+  (SELECT count(*) FROM posts r JOIN users ru ON ru.id=r.user_id
+    WHERE r.parent_id=p.id AND r.deleted_at IS NULL AND ru.deleted_at IS NULL) reply_count
+  FROM posts p JOIN users u ON u.id=p.user_id`
+
+export function apiPost(database: Database, id: number, origin: string) {
+  const row = database.query(`${postSelect} WHERE p.id=? AND p.deleted_at IS NULL AND u.deleted_at IS NULL`)
+    .get(id) as ApiPostRow | null
+  return row ? serializePost(row, origin) : null
+}
+
+export function apiPosts(database: Database, origin: string, options: {
+  limit: number
+  before: number | null
+  handle?: string
+  parentId?: number
+  tag?: string
+}) {
+  const filters = ['p.deleted_at IS NULL', 'u.deleted_at IS NULL']
+  const parameters: Array<string | number> = []
+  if (options.before !== null) {
+    filters.push('p.id < ?')
+    parameters.push(options.before)
+  }
+  if (options.handle !== undefined) {
+    filters.push('u.handle = ? COLLATE NOCASE')
+    parameters.push(options.handle)
+  }
+  if (options.parentId !== undefined) {
+    filters.push('p.parent_id = ?')
+    parameters.push(options.parentId)
+  }
+  if (options.tag !== undefined) {
+    filters.push('EXISTS (SELECT 1 FROM post_hashtags ph WHERE ph.post_id=p.id AND ph.tag=?)')
+    parameters.push(options.tag)
+  }
+  const rows = database.query(`${postSelect} WHERE ${filters.join(' AND ')}
+    ORDER BY p.id DESC LIMIT ?`).all(...parameters, options.limit + 1) as ApiPostRow[]
+  const hasMore = rows.length > options.limit
+  const pageRows = rows.slice(0, options.limit)
+  return {
+    data: pageRows.map(row => serializePost(row, origin)),
+    pagination: { next_cursor: hasMore ? encodeCursor(pageRows[pageRows.length - 1].id) : null },
+  }
+}
+

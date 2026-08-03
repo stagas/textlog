@@ -1,0 +1,215 @@
+import type { Database } from 'bun:sqlite'
+import type { Hono } from 'hono'
+import { consumeAuthAttempt, rateLimitKey } from '../auth-rate-limit'
+import { apiOrigin, apiPost, apiPosts, parseCollectionParams, isoTimestamp } from '../api'
+import { subscribeToPosts } from '../api-broker'
+import { ApiDocs } from '../components/pages'
+import { db } from '../db'
+import { logError } from '../log'
+import { currentUser } from '../utils'
+import { page } from './shared'
+
+const JSON_LIMIT = 120
+const JSON_WINDOW_SECONDS = 60
+const SSE_LIMIT = 3
+const SSE_RETRY_AFTER = 30
+const activeStreams = new Map<string, number>()
+
+function jsonResponse(value: unknown, status = 200, cache = 'public, max-age=15, stale-while-revalidate=30') {
+  return new Response(JSON.stringify(value), {
+    status,
+    headers: { 'content-type': 'application/json; charset=utf-8', 'cache-control': cache },
+  })
+}
+
+function apiError(code: string, message: string, status: number, retryAfter?: number) {
+  const response = jsonResponse({ error: { code, message } }, status, 'no-store')
+  if (retryAfter !== undefined) response.headers.set('retry-after', String(retryAfter))
+  return response
+}
+
+function collection(c: any, database: Database, filters: { handle?: string; parentId?: number; tag?: string } = {}) {
+  const parsed = parseCollectionParams(c.req.query('limit'), c.req.query('cursor'))
+  if (!parsed) return apiError('invalid_pagination', 'limit must be 1–100 and cursor must be a valid opaque cursor', 400)
+  return jsonResponse(apiPosts(database, apiOrigin(c.req.url), { ...parsed, ...filters }))
+}
+
+function openApiDocument() {
+  const postSchema = {
+    type: 'object',
+    required: ['id', 'body', 'created_at', 'parent_id', 'reply_count', 'tags', 'mentions', 'url', 'api_url', 'author'],
+    properties: {
+      id: { type: 'integer' }, body: { type: 'string', maxLength: 280 },
+      created_at: { type: 'string', format: 'date-time' }, parent_id: { type: ['integer', 'null'] },
+      reply_count: { type: 'integer' }, tags: { type: 'array', items: { type: 'string' } },
+      mentions: { type: 'array', items: { type: 'string' } }, url: { type: 'string', format: 'uri' },
+      api_url: { type: 'string', format: 'uri' },
+      author: { type: 'object', required: ['handle', 'url', 'api_url'], properties: {
+        handle: { type: 'string' }, url: { type: 'string', format: 'uri' }, api_url: { type: 'string', format: 'uri' },
+      } },
+    },
+  }
+  const collectionParameters = [
+    { name: 'limit', in: 'query', schema: { type: 'integer', minimum: 1, maximum: 100, default: 20 } },
+    { name: 'cursor', in: 'query', schema: { type: 'string' } },
+  ]
+  const jsonResponses = { '200': { description: 'Successful response' }, '400': { description: 'Invalid request' },
+    '404': { description: 'Not found' }, '429': { description: 'Rate limited' } }
+  return {
+    openapi: '3.1.0',
+    info: { title: 'root.mx public API', version: '1.0.0', description: 'Read-only access to public root.mx content.' },
+    servers: [{ url: '/api/v1' }],
+    paths: {
+      '/posts': { get: { summary: 'Latest posts', parameters: collectionParameters, responses: jsonResponses } },
+      '/posts/{id}': { get: { summary: 'Single post', parameters: [{ name: 'id', in: 'path', required: true,
+        schema: { type: 'integer', minimum: 1 } }], responses: jsonResponses } },
+      '/posts/{id}/replies': { get: { summary: 'Post replies', parameters: [{ name: 'id', in: 'path', required: true,
+        schema: { type: 'integer', minimum: 1 } }, ...collectionParameters], responses: jsonResponses } },
+      '/users/{handle}': { get: { summary: 'Public profile', parameters: [{ name: 'handle', in: 'path', required: true,
+        schema: { type: 'string' } }], responses: jsonResponses } },
+      '/users/{handle}/posts': { get: { summary: "User's latest posts", parameters: [{ name: 'handle', in: 'path',
+        required: true, schema: { type: 'string' } }, ...collectionParameters], responses: jsonResponses } },
+      '/tags/{tag}/posts': { get: { summary: 'Posts with a hashtag', parameters: [{ name: 'tag', in: 'path',
+        required: true, schema: { type: 'string' } }, ...collectionParameters], responses: jsonResponses } },
+      '/firehose': { get: { summary: 'Live post stream', responses: { '200': { description: 'Server-sent events',
+        content: { 'text/event-stream': { schema: { type: 'string' } } } }, '429': { description: 'Too many streams' } } } },
+    },
+    components: { schemas: { Post: postSchema } },
+  }
+}
+
+export function registerApiRoutes(app: Hono, database: Database = db) {
+  app.get('/api', c => page(<ApiDocs user={currentUser(c.req.raw)} />))
+
+  app.use('/api/*', async (c, next) => {
+    if (c.req.method === 'OPTIONS') {
+      return new Response(null, { status: 204, headers: {
+        'access-control-allow-origin': '*', 'access-control-allow-methods': 'GET, HEAD, OPTIONS',
+        'access-control-allow-headers': 'Accept, Content-Type', 'access-control-max-age': '86400',
+      } })
+    }
+    if (c.req.method !== 'GET' && c.req.method !== 'HEAD') {
+      const response = apiError('method_not_allowed', 'Only GET, HEAD, and OPTIONS are supported', 405)
+      response.headers.set('allow', 'GET, HEAD, OPTIONS')
+      response.headers.set('access-control-allow-origin', '*')
+      return response
+    }
+    try {
+      await next()
+    }
+    catch (error) {
+      logError(`${c.req.method} ${c.req.path}`, error)
+      c.res = apiError('internal_error', 'Something went wrong', 500)
+    }
+    c.header('access-control-allow-origin', '*')
+    c.header('vary', 'Origin')
+  })
+
+  app.use('/api/v1/*', async (c, next) => {
+    if (c.req.method === 'OPTIONS' || c.req.path === '/api/v1/firehose') return next()
+    const ip = c.req.header('x-root-client-ip') || '-'
+    const limited = consumeAuthAttempt(database, 'api-json', rateLimitKey(ip), JSON_LIMIT, JSON_WINDOW_SECONDS)
+    if (limited) return apiError('rate_limited', 'Too many API requests', 429, limited.retryAfter)
+    return next()
+  })
+
+  app.get('/api/openapi.json', () => jsonResponse(openApiDocument(), 200, 'public, max-age=3600'))
+
+  app.get('/api/v1/posts', c => collection(c, database))
+
+  app.get('/api/v1/posts/:id', c => {
+    const id = Number(c.req.param('id'))
+    if (!Number.isInteger(id) || id < 1) return apiError('invalid_post_id', 'Post ID must be a positive integer', 400)
+    const post = apiPost(database, id, apiOrigin(c.req.url))
+    return post ? jsonResponse({ data: post }) : apiError('not_found', 'Post not found', 404)
+  })
+
+  app.get('/api/v1/posts/:id/replies', c => {
+    const id = Number(c.req.param('id'))
+    if (!Number.isInteger(id) || id < 1) return apiError('invalid_post_id', 'Post ID must be a positive integer', 400)
+    if (!apiPost(database, id, apiOrigin(c.req.url))) return apiError('not_found', 'Post not found', 404)
+    return collection(c, database, { parentId: id })
+  })
+
+  app.get('/api/v1/users/:handle', c => {
+    const handle = c.req.param('handle')
+    if (!/^[A-Za-z0-9_]{2,24}$/.test(handle)) return apiError('invalid_handle', 'Handle is invalid', 400)
+    const found = database.query(`SELECT u.handle,u.bio,u.created_at,
+      (SELECT count(*) FROM posts p WHERE p.user_id=u.id AND p.deleted_at IS NULL) post_count,
+      (SELECT count(*) FROM follows f JOIN users follower ON follower.id=f.follower_id
+        WHERE f.following_id=u.id AND follower.deleted_at IS NULL) follower_count,
+      (SELECT count(*) FROM follows f JOIN users followed ON followed.id=f.following_id
+        WHERE f.follower_id=u.id AND followed.deleted_at IS NULL) following_count
+      FROM users u WHERE u.handle=? COLLATE NOCASE AND u.deleted_at IS NULL`).get(handle) as {
+        handle: string; bio: string; created_at: string; post_count: number; follower_count: number; following_count: number
+      } | null
+    if (!found) return apiError('not_found', 'User not found', 404)
+    const origin = apiOrigin(c.req.url)
+    const normalized = found.handle.toLowerCase()
+    return jsonResponse({ data: { handle: normalized, bio: found.bio, created_at: isoTimestamp(found.created_at),
+      post_count: found.post_count, follower_count: found.follower_count, following_count: found.following_count,
+      url: `${origin}/u/${encodeURIComponent(normalized)}`,
+      api_url: `${origin}/api/v1/users/${encodeURIComponent(normalized)}` } })
+  })
+
+  app.get('/api/v1/users/:handle/posts', c => {
+    const handle = c.req.param('handle')
+    if (!/^[A-Za-z0-9_]{2,24}$/.test(handle)) return apiError('invalid_handle', 'Handle is invalid', 400)
+    const user = database.query('SELECT 1 FROM users WHERE handle=? COLLATE NOCASE AND deleted_at IS NULL').get(handle)
+    if (!user) return apiError('not_found', 'User not found', 404)
+    return collection(c, database, { handle })
+  })
+
+  app.get('/api/v1/tags/:tag/posts', c => {
+    const tag = c.req.param('tag').toLowerCase()
+    if (!/^[a-z0-9_]+$/.test(tag)) return apiError('invalid_tag', 'Tag is invalid', 400)
+    return collection(c, database, { tag })
+  })
+
+  app.get('/api/v1/firehose', c => {
+    const ip = c.req.header('x-root-client-ip') || '-'
+    const count = activeStreams.get(ip) || 0
+    if (count >= SSE_LIMIT) return apiError('rate_limited', 'Too many firehose connections', 429, SSE_RETRY_AFTER)
+    activeStreams.set(ip, count + 1)
+    const encoder = new TextEncoder()
+    let cleanup = () => {}
+    const stream = new ReadableStream<Uint8Array>({
+      start(controller) {
+        let closed = false
+        const send = (value: string) => {
+          if (!closed) controller.enqueue(encoder.encode(value))
+        }
+        const unsubscribe = subscribeToPosts(postId => {
+          try {
+            const post = apiPost(database, postId, apiOrigin(c.req.url))
+            if (post) send(`id: ${post.id}\nevent: post\ndata: ${JSON.stringify(post)}\n\n`)
+          }
+          catch {
+            cleanup()
+          }
+        })
+        const heartbeat = setInterval(() => send(': heartbeat\n\n'), 15_000)
+        cleanup = () => {
+          if (closed) return
+          closed = true
+          clearInterval(heartbeat)
+          unsubscribe()
+          const remaining = (activeStreams.get(ip) || 1) - 1
+          if (remaining > 0) activeStreams.set(ip, remaining)
+          else activeStreams.delete(ip)
+          try { controller.close() }
+          catch {}
+        }
+        c.req.raw.signal.addEventListener('abort', cleanup, { once: true })
+        send('event: ready\ndata: {"status":"connected"}\n\n')
+      },
+      cancel() { cleanup() },
+    })
+    return new Response(stream, { headers: {
+      'content-type': 'text/event-stream; charset=utf-8', 'cache-control': 'no-store, no-transform',
+      connection: 'keep-alive', 'x-accel-buffering': 'no',
+    } })
+  })
+
+  app.all('/api/*', () => apiError('not_found', 'API endpoint not found', 404))
+}

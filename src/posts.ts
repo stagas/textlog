@@ -2,6 +2,7 @@ import type { Database } from 'bun:sqlite'
 import { extractHashtags, extractMentions } from './content'
 import { insertRateLimitedPost } from './post-rate-limit'
 import type { ParentPost, PostView } from './types'
+import { publishPost } from './api-broker'
 
 export function syncPostMetadata(database: Database, postId: number, body: string) {
   database.query('DELETE FROM post_hashtags WHERE post_id=?').run(postId)
@@ -23,8 +24,10 @@ export function createPost(
   body: string,
   parentId: number | null = null,
 ) {
-  return insertRateLimitedPost(database, userId, body, parentId,
+  const result = insertRateLimitedPost(database, userId, body, parentId,
     postId => syncPostMetadata(database, postId, body))
+  if ('id' in result) publishPost(result.id)
+  return result
 }
 
 export function updatePost(database: Database, postId: number, body: string) {
