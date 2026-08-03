@@ -1,0 +1,21 @@
+{
+  "name": "root",
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "DEV_RELOAD=true bun --watch src/server.tsx",
+    "start": "bun src/server.tsx",
+    "seed": "bun src/seed.ts"
+  },
+  "dependencies": {
+    "@types/react": "latest",
+    "@types/react-dom": "latest",
+    "canvas": "^3.2.3",
+    "hono": "^4.12.33",
+    "react": "latest",
+    "react-dom": "latest"
+  },
+  "devDependencies": {
+    "bun-types": "latest"
+  }
+}

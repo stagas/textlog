@@ -1,0 +1,618 @@
+import { About, Activity, Auth, Compose, ConfirmAccountDelete, ConfirmDelete, Connections, EditPost, Explore, Feed, ForgotPassword, HotFeed, Legal, Profile, PublicFeed, PublicThread, Reply, ResetPassword,
+  TagFeed } from './components/pages'
+import { extractHashtags, extractMentions } from './content'
+import { moderateText, moderationMessage } from './moderation'
+import { currentUser, hash, hashPassword, token, verifyPassword } from './utils'
+
+import { Hono } from 'hono'
+import React from 'react'
+import { renderToStaticMarkup } from 'react-dom/server'
+import { configureDevReload } from './components/layout'
+import { db } from './db'
+import { sendPasswordReset } from './email'
+import { renderDefaultOg, renderPostOg, renderProfileOg, renderTagOg } from './og'
+import { insertRateLimitedPost, postRateLimitMessage } from './post-rate-limit'
+
+const devReloadEnabled = Bun.env.DEV_RELOAD === 'true'
+const bootId = crypto.randomUUID()
+configureDevReload(devReloadEnabled ? bootId : undefined)
+
+function page(node: React.ReactNode, status = 200) {
+  return new Response('<!doctype html>' + renderToStaticMarkup(node), { status,
+    headers: { 'content-type': 'text/html;charset=utf-8', 'cache-control': 'no-cache' } })
+}
+function redirect(path: string, cookie?: string) {
+  const h = new Headers({ location: path })
+  if (cookie) h.append('set-cookie', cookie)
+  return new Response(null, { status: 303, headers: h })
+}
+function safeNext(value?: string) {
+  return value?.startsWith('/') && !value.startsWith('//') ? value : '/'
+}
+function currentPage(value?: string) {
+  const parsed = Number(value)
+  return Number.isInteger(parsed) && parsed > 0 ? parsed : 1
+}
+async function form(req: Request) {
+  return Object.fromEntries(await req.formData()) as Record<string, string>
+}
+function syncPostMetadata(postId: number, body: string) {
+  db.query('DELETE FROM post_hashtags WHERE post_id=?').run(postId)
+  db.query('DELETE FROM post_mentions WHERE post_id=?').run(postId)
+  for (const tag of extractHashtags(body)) {
+    db.query('INSERT OR IGNORE INTO post_hashtags VALUES(?,?)').run(postId, tag)
+  }
+  for (const handle of extractMentions(body)) {
+    const mentioned = db.query('SELECT id FROM users WHERE handle=?').get(handle) as { id: number } | null
+    if (mentioned) db.query('INSERT OR IGNORE INTO post_mentions VALUES(?,?)').run(postId, mentioned.id)
+  }
+}
+const app = new Hono()
+
+if (devReloadEnabled) {
+  app.get('/__dev/restart', c =>
+    c.json({ bootId }, 200, {
+      'cache-control': 'no-store, no-cache, must-revalidate',
+    }))
+}
+
+app.get('/styles.css', c => {
+  return new Response(Bun.file(new URL('./styles.css', import.meta.url)), {
+    headers: { 'content-type': 'text/css; charset=utf-8', 'cache-control': 'no-cache' },
+  })
+})
+
+app.get('/root.svg', c => {
+  return new Response(Bun.file(new URL('./root.svg', import.meta.url)), {
+    headers: { 'content-type': 'image/svg+xml; charset=utf-8', 'cache-control': 'no-cache' },
+  })
+})
+
+app.get('/og.png', c => {
+  const image = renderDefaultOg()
+  const body = image.buffer.slice(image.byteOffset, image.byteOffset + image.byteLength) as ArrayBuffer
+  return new Response(body, {
+    headers: {
+      'content-type': 'image/png',
+      'cache-control': 'public, max-age=86400, stale-while-revalidate=604800',
+    },
+  })
+})
+
+app.get('/', c => {
+  const user = currentUser(c.req.raw)
+  const feedPage = currentPage(c.req.query('page'))
+  return user ? page(<Feed user={user} page={feedPage} />) : page(<HotFeed user={null} page={feedPage} />)
+})
+
+app.get('/latest', c => {
+  const user = currentUser(c.req.raw)
+  return page(<PublicFeed user={user} page={currentPage(c.req.query('page'))} path="/latest" />)
+})
+
+app.get('/hot', c => {
+  return page(<HotFeed user={currentUser(c.req.raw)} page={currentPage(c.req.query('page'))} title="hot" />)
+})
+
+app.get('/activity', c => {
+  const user = currentUser(c.req.raw)
+  if (!user) return redirect('/login?next=' + encodeURIComponent('/activity'))
+  return page(<Activity user={user} page={currentPage(c.req.query('page'))} />)
+})
+
+app.get('/about', c => page(<About user={currentUser(c.req.raw)} />))
+app.get('/legal', c => page(<Legal user={currentUser(c.req.raw)} />))
+
+app.get('/login',
+  c =>
+    page(
+      <Auth mode="login" next={safeNext(c.req.query('next'))}
+        success={c.req.query('reset') === '1' ? 'Your password has been reset. You can log in now.' : undefined} />,
+    ))
+app.get('/signup', c => page(<Auth mode="signup" />))
+app.get('/forgot-password', c => page(<ForgotPassword />))
+
+app.post('/forgot-password', async c => {
+  const f = await form(c.req.raw)
+  const email = (f.email || '').trim().toLowerCase()
+  const user = db.query('SELECT id,email FROM users WHERE email=?').get(email) as { id: number; email: string } | null
+  if (user) {
+    const resetToken = token()
+    db.query('DELETE FROM password_resets WHERE user_id=? OR expires_at<=?').run(user.id, Date.now())
+    db.query('INSERT INTO password_resets(token_hash,user_id,expires_at) VALUES(?,?,?)')
+      .run(hash(resetToken), user.id, Date.now() + 3600000)
+    const appUrl = Bun.env.APP_URL?.replace(/\/$/, '')
+    if (appUrl) {
+      try {
+        await sendPasswordReset(user.email, `${appUrl}/reset-password?token=${encodeURIComponent(resetToken)}`)
+      }
+      catch (error) {
+        console.error('Could not send password reset email', error)
+        db.query('DELETE FROM password_resets WHERE token_hash=?').run(hash(resetToken))
+      }
+    }
+    else {
+      console.error('Could not send password reset email: APP_URL is not configured')
+      db.query('DELETE FROM password_resets WHERE token_hash=?').run(hash(resetToken))
+    }
+  }
+  return page(<ForgotPassword sent />)
+})
+
+app.get('/reset-password', c => {
+  const resetToken = c.req.query('token') || ''
+  const reset = resetToken && db.query('SELECT 1 FROM password_resets WHERE token_hash=? AND expires_at>?')
+    .get(hash(resetToken), Date.now())
+  return page(<ResetPassword resetToken={resetToken} invalid={!reset} />)
+})
+
+app.post('/reset-password', async c => {
+  const f = await form(c.req.raw)
+  const resetToken = f.token || ''
+  const reset = resetToken && db.query('SELECT user_id FROM password_resets WHERE token_hash=? AND expires_at>?')
+    .get(hash(resetToken), Date.now()) as { user_id: number } | null
+  if (!reset) return page(<ResetPassword invalid />, 400)
+  if ((f.password || '').length < 8 || f.password !== f.confirmPassword) {
+    return page(
+      <ResetPassword resetToken={resetToken} error="Passwords must match and contain at least 8 characters." />,
+      400,
+    )
+  }
+  const passwordHash = await hashPassword(f.password)
+  db.transaction(() => {
+    db.query('UPDATE users SET password=? WHERE id=?').run(passwordHash, reset.user_id)
+    db.query('DELETE FROM sessions WHERE user_id=?').run(reset.user_id)
+    db.query('DELETE FROM password_resets WHERE user_id=?').run(reset.user_id)
+  })()
+  return redirect('/login?reset=1')
+})
+
+app.post('/signup', async c => {
+  const f = await form(c.req.raw)
+  const handle = (f.handle || '').toLowerCase().replace(/^@/, '')
+  const email = (f.email || '').trim().toLowerCase()
+  if (!/^[a-z0-9_]{2,24}$/.test(handle) || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || email.length > 254
+    || (f.password || '').length < 8)
+  {
+    return page(
+      <Auth mode="signup" handle={handle} email={email}
+        error="Use a valid email, a 2–24 character handle, and a password of at least 8 characters." />,
+      400,
+    )
+  }
+  const moderation = await moderateText(`handle: ${handle}`)
+  if (!moderation.ok) {
+    const error = moderation.reason === 'flagged'
+      ? 'That handle may violate our content rules. Please change it and try again.'
+      : moderationMessage(moderation.reason)
+    return page(
+      <Auth mode="signup" handle={handle} email={email} error={error} />,
+      moderation.reason === 'flagged' ? 422 : 503,
+    )
+  }
+  const passwordHash = await hashPassword(f.password)
+  try {
+    const result = db.query('INSERT INTO users(handle,email,password) VALUES(?,?,?) RETURNING id')
+      .get(handle, email, passwordHash) as { id: number }
+    const session = token()
+    db.query('INSERT INTO sessions VALUES(?,?,?)').run(session, result.id, Date.now() + 2592000000)
+    return redirect('/explore?welcome=1', `root=${session}; HttpOnly; Path=/; SameSite=Lax`)
+  }
+  catch {
+    return page(<Auth mode="signup" handle={handle} email={email} error="That handle or email is unavailable." />, 400)
+  }
+})
+
+app.post('/login', async c => {
+  const f = await form(c.req.raw)
+  const handle = (f.handle || '').toLowerCase().replace(/^@/, '')
+  const found = db.query('SELECT id,password FROM users WHERE handle=? AND deleted_at IS NULL')
+    .get(handle) as { id: number; password: string } | null
+  if (!found || !await verifyPassword(f.password || '', found.password)) {
+    return page(<Auth mode="login" handle={handle} next={safeNext(f.next)} />, 401)
+  }
+  if (!found.password.startsWith('$argon2id$')) {
+    db.query('UPDATE users SET password=? WHERE id=?').run(await hashPassword(f.password), found.id)
+  }
+  const session = token()
+  db.query('INSERT INTO sessions VALUES(?,?,?)').run(session, found.id, Date.now() + 2592000000)
+  return redirect(safeNext(f.next), `root=${session}; HttpOnly; Path=/; SameSite=Lax`)
+})
+
+app.post('/logout', c => {
+  const session = c.req.header('cookie')?.match(/root=([^;]+)/)?.[1]
+  if (session) db.query('DELETE FROM sessions WHERE token=?').run(session)
+  return redirect('/', 'root=; Max-Age=0; Path=/')
+})
+
+app.get('/account/delete', c => {
+  const user = currentUser(c.req.raw)
+  return user ? page(<ConfirmAccountDelete user={user} />) : redirect('/login')
+})
+
+app.post('/account/delete', c => {
+  const user = currentUser(c.req.raw)
+  if (!user) return redirect('/login')
+  db.transaction(() => {
+    db.query("UPDATE posts SET body='(deleted)',deleted_at=COALESCE(deleted_at,CURRENT_TIMESTAMP) WHERE user_id=?")
+      .run(user.id)
+    db.query('DELETE FROM post_hashtags WHERE post_id IN (SELECT id FROM posts WHERE user_id=?)')
+      .run(user.id)
+    db.query('DELETE FROM post_mentions WHERE post_id IN (SELECT id FROM posts WHERE user_id=?)')
+      .run(user.id)
+    db.query('DELETE FROM post_mentions WHERE user_id=?').run(user.id)
+    db.query('DELETE FROM follows WHERE follower_id=? OR following_id=?').run(user.id, user.id)
+    db.query('DELETE FROM hashtag_follows WHERE user_id=?').run(user.id)
+    db.query('DELETE FROM password_resets WHERE user_id=?').run(user.id)
+    db.query('DELETE FROM sessions WHERE user_id=?').run(user.id)
+    db.query(`UPDATE users SET handle=?,email=?,bio='',password='!',deleted_at=CURRENT_TIMESTAMP WHERE id=?`)
+      .run(`deleted-${user.id}`, `deleted-${user.id}@root.mx`, user.id)
+  })()
+  return redirect('/', 'root=; Max-Age=0; Path=/; HttpOnly; SameSite=Lax')
+})
+
+app.get('/compose', c => {
+  const user = currentUser(c.req.raw)
+  return user ? page(<Compose user={user} />) : redirect('/login')
+})
+app.get('/post', c => c.redirect('/compose', 303))
+
+app.get('/post/:id', c => {
+  const id = Number(c.req.param('id'))
+  if (!Number.isInteger(id) || id < 1) return c.text('Not found', 404)
+  const post = db.query(
+    'SELECT p.*,u.handle FROM posts p JOIN users u ON u.id=p.user_id WHERE p.id=?',
+  ).get(id) as any
+  if (!post) return c.text('Not found', 404)
+  const configuredOrigin = Bun.env.APP_URL?.replace(/\/$/, '')
+  const origin = configuredOrigin || new URL(c.req.url).origin
+  const postUrl = `${origin}/post/${post.id}`
+  const social = {
+    description: post.body.replace(/\s+/g, ' ').trim(),
+    image: `${postUrl}/og.png`,
+    url: postUrl,
+  }
+  const user = currentUser(c.req.raw)
+  if (user) return page(<Reply user={user} post={post} showForm={c.req.query('reply') === '1'} social={social} />)
+  return page(<PublicThread post={post} social={social} />)
+})
+
+app.get('/post/:id/og.png', c => {
+  const id = Number(c.req.param('id'))
+  const post = Number.isInteger(id) && id > 0
+    ? db.query('SELECT p.body,u.handle FROM posts p JOIN users u ON u.id=p.user_id WHERE p.id=? AND p.deleted_at IS NULL')
+      .get(id) as { body: string; handle: string } | null
+    : null
+  if (!post) return c.text('Not found', 404)
+  const image = renderPostOg(post.body, post.handle)
+  const body = image.buffer.slice(image.byteOffset, image.byteOffset + image.byteLength) as ArrayBuffer
+  return new Response(body, {
+    headers: {
+      'content-type': 'image/png',
+      'cache-control': 'public, max-age=3600, stale-while-revalidate=86400',
+    },
+  })
+})
+
+app.post('/post', async c => {
+  const user = currentUser(c.req.raw)
+  if (!user) return redirect('/login')
+  const f = await form(c.req.raw)
+  const body = f.body || ''
+  if (body.trim().length < 1 || body.length > 280) return page(<Compose user={user} />, 400)
+  const moderation = await moderateText(body)
+  if (!moderation.ok) {
+    return page(<Compose user={user} body={body} error={moderationMessage(moderation.reason)} />,
+      moderation.reason === 'flagged' ? 422 : 503)
+  }
+  const result = insertRateLimitedPost(db, user.id, body)
+  if ('retryAfter' in result) {
+    return page(<Compose user={user} body={body} error={postRateLimitMessage(result.retryAfter)} />, 429)
+  }
+  syncPostMetadata(result.id, body)
+  return redirect('/')
+})
+
+app.get('/post/:id/edit', c => {
+  const user = currentUser(c.req.raw)
+  if (!user) return redirect('/login?next=' + encodeURIComponent(c.req.path))
+  const id = Number(c.req.param('id'))
+  const post = Number.isInteger(id) ? db.query('SELECT * FROM posts WHERE id=? AND deleted_at IS NULL').get(id) as any : null
+  if (!post) return c.text('Not found', 404)
+  if (post.user_id !== user.id) return c.text('Forbidden', 403)
+  return page(<EditPost user={user} post={post} />)
+})
+
+app.post('/post/:id/edit', async c => {
+  const user = currentUser(c.req.raw)
+  if (!user) return redirect('/login')
+  const id = Number(c.req.param('id'))
+  const post = Number.isInteger(id) ? db.query('SELECT * FROM posts WHERE id=? AND deleted_at IS NULL').get(id) as any : null
+  if (!post) return c.text('Not found', 404)
+  if (post.user_id !== user.id) return c.text('Forbidden', 403)
+  const f = await form(c.req.raw)
+  const body = f.body || ''
+  if (body.trim().length < 1 || body.length > 280) {
+    return page(<EditPost user={user} post={post} body={body}
+      error="Posts must contain between 1 and 280 characters." />, 400)
+  }
+  const moderation = await moderateText(body)
+  if (!moderation.ok) {
+    return page(<EditPost user={user} post={post} body={body} error={moderationMessage(moderation.reason)} />,
+      moderation.reason === 'flagged' ? 422 : 503)
+  }
+  db.transaction(() => {
+    db.query('UPDATE posts SET body=? WHERE id=?').run(body, id)
+    syncPostMetadata(id, body)
+  })()
+  return redirect('/post/' + id)
+})
+
+app.get('/post/:id/delete', c => {
+  const user = currentUser(c.req.raw)
+  if (!user) return redirect('/login?next=' + encodeURIComponent(c.req.path))
+  const id = Number(c.req.param('id'))
+  const post = Number.isInteger(id)
+    ? db.query('SELECT * FROM posts WHERE id=? AND deleted_at IS NULL').get(id) as any
+    : null
+  if (!post) return c.text('Not found', 404)
+  if (post.user_id !== user.id) return c.text('Forbidden', 403)
+  return page(<ConfirmDelete user={user} post={post} />)
+})
+
+app.post('/post/:id/delete', c => {
+  const user = currentUser(c.req.raw)
+  if (!user) return redirect('/login')
+  const id = Number(c.req.param('id'))
+  const post = Number.isInteger(id)
+    ? db.query('SELECT user_id,parent_id FROM posts WHERE id=? AND deleted_at IS NULL').get(id) as { user_id: number; parent_id: number | null } | null
+    : null
+  if (!post) return c.text('Not found', 404)
+  if (post.user_id !== user.id) return c.text('Forbidden', 403)
+  db.transaction(() => {
+    db.query("UPDATE posts SET body='(deleted)',deleted_at=CURRENT_TIMESTAMP WHERE id=?").run(id)
+    db.query('DELETE FROM post_hashtags WHERE post_id=?').run(id)
+    db.query('DELETE FROM post_mentions WHERE post_id=?').run(id)
+  })()
+  return redirect(post.parent_id ? '/post/' + post.parent_id : '/')
+})
+
+app.post('/post/:id/reply', async c => {
+  const user = currentUser(c.req.raw)
+  if (!user) return redirect('/login')
+  const parentId = Number(c.req.param('id'))
+  const parent = Number.isInteger(parentId)
+    ? db.query('SELECT p.*,u.handle FROM posts p JOIN users u ON u.id=p.user_id WHERE p.id=?').get(
+      parentId,
+    ) as any
+    : null
+  if (!parent) return c.text('Not found', 404)
+  const f = await form(c.req.raw)
+  const body = f.body || ''
+  if (body.trim().length < 1 || body.length > 280) {
+    return page(
+      <Reply user={user} post={parent} showForm error="Replies must contain between 1 and 280 characters."
+        body={body} />,
+      400,
+    )
+  }
+  const moderation = await moderateText(body)
+  if (!moderation.ok) {
+    return page(<Reply user={user} post={parent} showForm error={moderationMessage(moderation.reason)} body={body} />,
+      moderation.reason === 'flagged' ? 422 : 503)
+  }
+  const result = insertRateLimitedPost(db, user.id, body, parentId)
+  if ('retryAfter' in result) {
+    return page(<Reply user={user} post={parent} showForm error={postRateLimitMessage(result.retryAfter)} body={body} />,
+      429)
+  }
+  syncPostMetadata(result.id, body)
+  return redirect('/post/' + parentId)
+})
+
+app.post('/follow/:handle', c => {
+  const user = currentUser(c.req.raw)
+  if (!user) return redirect('/login')
+  const target = db.query('SELECT id FROM users WHERE handle=?').get(c.req.param('handle')) as { id: number } | null
+  if (target && target.id !== user.id) {
+    const exists = db.query('SELECT 1 FROM follows WHERE follower_id=? AND following_id=?').get(user.id, target.id)
+    exists
+      ? db.query('DELETE FROM follows WHERE follower_id=? AND following_id=?').run(user.id, target.id)
+      : db.query('INSERT OR IGNORE INTO follows VALUES(?,?)').run(user.id, target.id)
+  }
+  return redirect(c.req.header('referer') || '/')
+})
+
+app.post('/tag-follow/:tag', c => {
+  const user = currentUser(c.req.raw)
+  if (!user) return redirect('/login')
+  const tag = c.req.param('tag').toLowerCase()
+  const exists = db.query('SELECT 1 FROM hashtag_follows WHERE user_id=? AND tag=?').get(user.id, tag)
+  exists
+    ? db.query('DELETE FROM hashtag_follows WHERE user_id=? AND tag=?').run(user.id, tag)
+    : db.query('INSERT OR IGNORE INTO hashtag_follows VALUES(?,?)').run(user.id, tag)
+  return redirect('/tag/' + tag)
+})
+
+app.get('/explore', c => page(
+  <Explore user={currentUser(c.req.raw)} welcome={c.req.query('welcome') === '1'} />,
+))
+
+app.get('/u/:handle/og.png', c => {
+  const profile = db.query(
+    `SELECT u.handle,u.bio,
+      (SELECT count(*) FROM posts p WHERE p.user_id=u.id AND p.deleted_at IS NULL) notes,
+      (SELECT count(*) FROM follows f WHERE f.follower_id=u.id) following,
+      (SELECT count(*) FROM follows f WHERE f.following_id=u.id) followers
+      FROM users u WHERE u.handle=? AND u.deleted_at IS NULL`,
+  ).get(c.req.param('handle')) as {
+    handle: string; bio: string; notes: number; following: number; followers: number
+  } | null
+  if (!profile) return c.text('Not found', 404)
+  const image = renderProfileOg(profile.handle, profile.bio, profile)
+  const body = image.buffer.slice(image.byteOffset, image.byteOffset + image.byteLength) as ArrayBuffer
+  return new Response(body, {
+    headers: {
+      'content-type': 'image/png',
+      'cache-control': 'public, max-age=3600, stale-while-revalidate=86400',
+    },
+  })
+})
+
+app.get('/u/:handle/:kind', c => {
+  const kind = c.req.param('kind')
+  if (kind !== 'following' && kind !== 'followers') return c.text('Not found', 404)
+  const pageQuery = c.req.query('page') ? `&page=${encodeURIComponent(c.req.query('page')!)}` : ''
+  return redirect(`/u/${c.req.param('handle')}?tab=${kind}${pageQuery}`)
+})
+
+app.get('/u/:handle', c => {
+  const user = currentUser(c.req.raw)
+  const profilePage = currentPage(c.req.query('page'))
+  const profile = db.query('SELECT * FROM users WHERE handle=? AND deleted_at IS NULL').get(c.req.param('handle')) as any
+  if (!profile) return c.text('Not found', 404)
+  const tab = c.req.query('tab')
+  if (tab && tab !== 'following' && tab !== 'followers') return c.text('Not found', 404)
+  const posts = db.query(
+    'SELECT p.*,u.handle FROM posts p JOIN users u ON u.id=p.user_id WHERE p.user_id=? AND p.deleted_at IS NULL ORDER BY p.created_at DESC LIMIT 20 OFFSET ?',
+  ).all(profile.id, (profilePage - 1) * 20) as any[]
+  const total =
+    (db.query('SELECT count(*) AS count FROM posts WHERE user_id=? AND deleted_at IS NULL').get(profile.id) as { count: number }).count
+  const following = !!user
+    && !!db.query('SELECT 1 FROM follows WHERE follower_id=? AND following_id=?').get(user.id, profile.id)
+  const counts = db.query(
+    `SELECT
+      (SELECT count(*) FROM follows WHERE following_id=?) followerCount,
+      (SELECT count(*) FROM follows WHERE follower_id=?) followingCount`,
+  ).get(profile.id, profile.id) as { followerCount: number; followingCount: number }
+  const configuredOrigin = Bun.env.APP_URL?.replace(/\/$/, '')
+  const origin = configuredOrigin || new URL(c.req.url).origin
+  const profileUrl = `${origin}/u/${profile.handle}`
+  const description = profile.bio.replace(/\s+/g, ' ').trim() || `@${profile.handle} on root.mx`
+  const social = {
+    description,
+    image: `${profileUrl}/og.png`,
+    url: profileUrl,
+    type: 'profile' as const,
+    imageAlt: `Profile for @${profile.handle}: ${description}`,
+  }
+  if (tab === 'following' || tab === 'followers') {
+    const join = tab === 'following'
+      ? 'JOIN follows f ON f.following_id=u.id WHERE f.follower_id=?'
+      : 'JOIN follows f ON f.follower_id=u.id WHERE f.following_id=?'
+    const people = db.query(
+      `SELECT u.*, (SELECT count(*) FROM posts p WHERE p.user_id=u.id AND p.deleted_at IS NULL) posts,
+        EXISTS(SELECT 1 FROM follows vf WHERE vf.follower_id=? AND vf.following_id=u.id) viewerFollowing
+        FROM users u ${join} ORDER BY u.handle LIMIT 20 OFFSET ?`,
+    ).all(user?.id ?? -1, profile.id, (profilePage - 1) * 20) as any[]
+    const countWhere = tab === 'following' ? 'follower_id=?' : 'following_id=?'
+    const connectionTotal = (db.query(`SELECT count(*) AS count FROM follows WHERE ${countWhere}`)
+      .get(profile.id) as { count: number }).count
+    return page(<Connections user={user} profile={profile} people={people} kind={tab}
+      page={profilePage} total={connectionTotal} noteCount={total} {...counts} following={following} social={social} />)
+  }
+  return page(
+    <Profile user={user} profile={profile} posts={posts} following={following}
+      editing={user?.id === profile.id && c.req.query('edit') === '1'} page={profilePage}
+      total={total} followerCount={counts.followerCount} followingCount={counts.followingCount} social={social} />,
+  )
+})
+
+app.post('/u/:handle/profile', async c => {
+  const user = currentUser(c.req.raw)
+  if (!user) return redirect('/login')
+  if (user.handle !== c.req.param('handle')) return c.text('Forbidden', 403)
+  const f = await form(c.req.raw)
+  // Preserve whitespace because spaces and line breaks can be meaningful in ASCII art.
+  // Treat an entirely blank submission as an empty bio, though.
+  const submittedBio = f.bio || ''
+  const bio = submittedBio.trim() ? submittedBio : ''
+  const handle = (f.handle || '').toLowerCase().replace(/^@/, '')
+  const email = (f.email || '').trim().toLowerCase()
+  const posts = db.query(
+    'SELECT p.*,u.handle FROM posts p JOIN users u ON u.id=p.user_id WHERE p.user_id=? AND p.deleted_at IS NULL ORDER BY p.created_at DESC',
+  ).all(user.id) as any[]
+  if (!/^[a-z0-9_]{2,24}$/.test(handle) || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)
+    || email.length > 254 || bio.length > 160)
+  {
+    return page(
+      <Profile user={user} profile={user} posts={posts} following={false} bio={bio} editHandle={handle}
+        editEmail={email} editing
+        error="Use a valid email, a 2–24 character username, and a bio up to 160 characters." />,
+      400,
+    )
+  }
+  if (handle || bio) {
+    const moderation = await moderateText(`username: ${handle}\nbio: ${bio}`)
+    if (!moderation.ok) {
+      return page(
+        <Profile user={user} profile={user} posts={posts} following={false} bio={bio} editHandle={handle}
+          editEmail={email} editing error={moderationMessage(moderation.reason)} />,
+        moderation.reason === 'flagged' ? 422 : 503,
+      )
+    }
+  }
+  try {
+    db.query('UPDATE users SET handle=?,email=?,bio=? WHERE id=?').run(handle, email, bio, user.id)
+  }
+  catch {
+    return page(
+      <Profile user={user} profile={user} posts={posts} following={false} bio={bio} editHandle={handle}
+        editEmail={email} editing error="That username or email is unavailable." />,
+      400,
+    )
+  }
+  return redirect('/u/' + handle)
+})
+
+app.get('/tag/:tag/og.png', c => {
+  const tag = c.req.param('tag').toLowerCase()
+  const total = (db.query('SELECT count(*) AS count FROM post_hashtags WHERE tag=?')
+    .get(tag) as { count: number }).count
+  const image = renderTagOg(tag, total)
+  const body = image.buffer.slice(image.byteOffset, image.byteOffset + image.byteLength) as ArrayBuffer
+  return new Response(body, {
+    headers: {
+      'content-type': 'image/png',
+      'cache-control': 'public, max-age=3600, stale-while-revalidate=86400',
+    },
+  })
+})
+
+app.get('/tag/:tag', c => {
+  const user = currentUser(c.req.raw)
+  const tagPage = currentPage(c.req.query('page'))
+  const tag = c.req.param('tag').toLowerCase()
+  const following = !!user && !!db.query(
+    'SELECT 1 FROM hashtag_follows WHERE user_id=? AND tag=?',
+  ).get(user.id, tag)
+  const posts = db.query(
+    'SELECT p.*,u.handle FROM posts p JOIN users u ON u.id=p.user_id JOIN post_hashtags ph ON ph.post_id=p.id WHERE ph.tag=? ORDER BY p.created_at DESC LIMIT 20 OFFSET ?',
+  ).all(tag, (tagPage - 1) * 20) as any[]
+  const total =
+    (db.query('SELECT count(*) AS count FROM post_hashtags WHERE tag=?').get(tag) as { count: number }).count
+  const configuredOrigin = Bun.env.APP_URL?.replace(/\/$/, '')
+  const origin = configuredOrigin || new URL(c.req.url).origin
+  const tagUrl = `${origin}/tag/${encodeURIComponent(tag)}`
+  const description = `${total} ${total === 1 ? 'note' : 'notes'} tagged #${tag} on root.mx`
+  const social = {
+    description,
+    image: `${tagUrl}/og.png`,
+    url: tagUrl,
+    type: 'website' as const,
+    imageAlt: `#${tag}: ${description}`,
+  }
+  return page(
+    <TagFeed user={user} tag={tag} following={following} posts={posts} page={tagPage}
+      total={total} social={social} />,
+  )
+})
+
+app.notFound(c => c.text('Not found', 404))
+app.onError((error, c) => {
+  console.error(error)
+  return c.text('Something went wrong', 500)
+})
+
+export default { port: 3000, host: '0.0.0.0', fetch: app.fetch }
+console.log('root listening on http://localhost:3000')

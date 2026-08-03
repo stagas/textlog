@@ -1,0 +1,3 @@
+{
+  "compilerOptions": { "target": "ESNext", "module": "ESNext", "moduleResolution": "bundler", "jsx": "react-jsx", "jsxImportSource": "react", "strict": true, "types": ["bun-types"] }
+}
