@@ -1,7 +1,7 @@
 import { describe, expect, test } from 'bun:test'
 import React from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
-import { AccountSecurity, Auth, postTitle } from './components/pages'
+import { AccountSecurity, Auth, Profile, postTitle } from './components/pages'
 import { Post } from './components/post'
 
 describe('postTitle', () => {
@@ -49,6 +49,37 @@ test('AccountSecurity renders verification and safe session controls', () => {
   expect(html).toContain('/account/password')
   expect(html).toContain('value="revocable-id"')
   expect(html).not.toContain('value="current-id"')
+})
+
+test('Profile edit offers a data download without rendering notes', () => {
+  const user = { id: 1, handle: 'reader', email: 'reader@example.com', bio: '' }
+  const html = renderToStaticMarkup(React.createElement(Profile, {
+    user,
+    profile: user,
+    following: false,
+    editing: true,
+    posts: [{
+      id: 1, user_id: 1, parent_id: null, body: 'hidden while editing', handle: 'reader',
+      created_at: '2026-08-03 12:00:00', deleted_at: null,
+    }],
+  }))
+
+  expect(html).toContain('href="/account/export"')
+  expect(html).toContain('download data')
+  expect(html).toContain('href="/u/reader">back</a>')
+  expect(html).not.toContain('hidden while editing')
+})
+
+test('Profile places owner actions in the handle row', () => {
+  const user = { id: 1, handle: 'reader', email: 'reader@example.com', bio: '' }
+  const html = renderToStaticMarkup(React.createElement(Profile, {
+    user, profile: user, following: false, posts: [],
+  }))
+
+  expect(html).toContain('class="profile-title-row"')
+  expect(html).toContain('class="identity-prefix">@</span>reader')
+  expect(html).toContain('href="/u/reader?edit=1">edit</a>')
+  expect(html).toContain('action="/logout"')
 })
 
 test('Post renders preloaded parent and reply data', () => {

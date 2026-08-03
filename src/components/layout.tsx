@@ -85,7 +85,8 @@ export function Layout({
           <span>root.mx</span>
           <nav aria-label="Footer">
             <a href="/about">about</a>
-            <a href="https://github.com/stagas/root-mx">github</a>
+            <a href="https://github.com/stagas/root-mx" target="_blank" rel="noopener noreferrer">github</a>
+            <a href="https://buymeacoffee.com/stagas" target="_blank" rel="noopener noreferrer">donate</a>
             <a href="/legal">legal</a>
           </nav>
         </footer>

@@ -991,7 +991,21 @@ export function Profile(
     <Layout user={user} title={`@${profile.handle}`} social={social}>
       <ProfileHeader user={user} profile={profile} following={following} blocked={blocked} editing={editing}>
         <div className="profile-content">
-          <h1>@{profile.handle}</h1>
+          <div className="profile-title-row">
+            <h1><span className="identity-prefix">@</span>{profile.handle}</h1>
+            {user?.id === profile.id && (
+              editing
+                ? <a className="profile-edit-link" href={'/u/' + profile.handle}>back</a>
+                : (
+                  <div className="profile-owner-actions">
+                    <a className="profile-edit-link" href={'/u/' + profile.handle + '?edit=1'}>edit</a>
+                    <form method="post" action="/logout">
+                      <button className="profile-edit-link profile-logout">logout</button>
+                    </form>
+                  </div>
+                )
+            )}
+          </div>
           {user?.id === profile.id && editing
             ? (
               <>
@@ -1015,6 +1029,13 @@ export function Profile(
                     <span>Manage your email, password, and signed-in sessions.</span>
                   </div>
                   <a className="button" href="/account/security">manage security</a>
+                </div>
+                <div className="account-danger-zone">
+                  <div>
+                    <strong>Download data</strong>
+                    <span>Export your account, notes, connections, and activity as a JSON file.</span>
+                  </div>
+                  <a className="button" href="/account/export" download>download data</a>
                 </div>
                 <div className="account-danger-zone">
                   <div>
@@ -1054,10 +1075,20 @@ function ProfileHeader({ user, profile, following, blocked = false, editing = fa
   children?: React.ReactNode
 }) {
   return (
-    <section className={`page-header profile${editing ? ' profile-editing' : ''}`}>
+    <section className={`page-header profile${user?.id === profile.id ? ' profile-owner' : ''}${editing ? ' profile-editing' : ''}`}>
       {children || (
         <div className="profile-content">
-          <h1>@{profile.handle}</h1>
+          <div className="profile-title-row">
+            <h1><span className="identity-prefix">@</span>{profile.handle}</h1>
+            {user?.id === profile.id && (
+              <div className="profile-owner-actions">
+                <a className="profile-edit-link" href={'/u/' + profile.handle + '?edit=1'}>edit</a>
+                <form method="post" action="/logout">
+                  <button className="profile-edit-link profile-logout">logout</button>
+                </form>
+              </div>
+            )}
+          </div>
           <p className="profile-bio">{profile.bio || 'No bio yet.'}</p>
         </div>
       )}
@@ -1066,14 +1097,6 @@ function ProfileHeader({ user, profile, following, blocked = false, editing = fa
           <a className="quiet danger" href={`/admin/users/${profile.id}`}>
             moderate
           </a>
-        )}
-        {user?.id === profile.id && !editing && (
-          <>
-            <a className="profile-edit-link" href={'/u/' + profile.handle + '?edit=1'}>edit</a>
-            <form method="post" action="/logout">
-              <button className="profile-edit-link profile-logout">logout</button>
-            </form>
-          </>
         )}
         {user && user.id !== profile.id && (
           <>
@@ -1251,7 +1274,7 @@ export function TagFeed(
     <Layout user={user} title={`#${tag}`} social={social}>
       <section className="page-header tag-header">
         <h1>
-          <span>#{tag}</span>
+          <span><span className="identity-prefix">#</span>{tag}</span>
           <span className="tag-note-count" aria-label={`${total} ${total === 1 ? 'note' : 'notes'}`}>
             {total}
           </span>

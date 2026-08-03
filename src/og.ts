@@ -196,14 +196,17 @@ export function renderProfileOg(
   const ctx = canvas.getContext('2d')
   drawBackground(ctx)
 
-  ctx.fillStyle = accentColor
   let handleSize = 76
   ctx.font = `700 ${handleSize}px monospace`
   while (ctx.measureText(`@${handle}`).width > maxTextWidth && handleSize > 48) {
     handleSize -= 2
     ctx.font = `700 ${handleSize}px monospace`
   }
-  ctx.fillText(`@${handle}`, 80, 245)
+  ctx.fillStyle = accentColor
+  ctx.fillText('@', 80, 245)
+  const prefixWidth = ctx.measureText('@').width
+  ctx.fillStyle = textColor
+  ctx.fillText(handle, 80 + prefixWidth, 245)
 
   const profileBio = bio || 'No bio yet.'
   let size = 46

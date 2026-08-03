@@ -20,6 +20,7 @@ import type { PostRow, PostView, ProfileRow } from './types'
 import { AUTH_LIMITS, authRateLimitMessage, consumeAuthAttempt, rateLimitKey } from './auth-rate-limit'
 import { anonymizeUser, isAdmin, isAdminEmail, recordAdminAction, resolvePostReports, softDeletePost } from './admin'
 import type { AdminActionView, AdminReportView, DashboardStats } from './types'
+import { exportUserData } from './data-export'
 
 const devReloadEnabled = Bun.env.DEV_RELOAD === 'true'
 const bootId = crypto.randomUUID()
@@ -407,6 +408,19 @@ app.get('/account/security', c => securityPage(c.req.raw,
   c.req.query('changed') === 'password' ? 'Password changed. Other sessions were revoked.'
     : c.req.query('changed') === 'email' ? 'Email address verified and changed.'
     : c.req.query('verified') === '1' ? 'Email address verified.' : undefined))
+
+app.get('/account/export', c => {
+  const user = currentUser(c.req.raw)
+  if (!user) return redirect('/login?next=' + encodeURIComponent('/account/export'))
+  const data = exportUserData(db, user.id, sessionToken(c.req.raw))
+  return new Response(JSON.stringify(data, null, 2), {
+    headers: {
+      'content-type': 'application/json; charset=utf-8',
+      'content-disposition': `attachment; filename="root-mx-${user.handle}-data.json"`,
+      'cache-control': 'no-store',
+    },
+  })
+})
 
 app.post('/account/email/verify', async c => {
   const user = currentUser(c.req.raw)

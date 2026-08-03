@@ -155,7 +155,7 @@ button,
 header,
 main,
 .site-footer {
-  max-width: 760px;
+  max-width: 640px;
   width: 100%;
   margin: auto;
 }
@@ -419,7 +419,7 @@ nav form {
   border-top: 1px solid var(--soft);
 }
 
-.feed-tabs + .post {
+.feed-tabs+.post {
   border-top: 0;
 }
 
@@ -690,7 +690,7 @@ textarea {
   padding: var(--space-4) 0;
 }
 
-.session-list article > div {
+.session-list article>div {
   display: grid;
 }
 
@@ -836,6 +836,27 @@ textarea {
   white-space: nowrap;
 }
 
+.profile-title-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+}
+
+.identity-prefix {
+  color: var(--accent);
+}
+
+.profile-owner-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+}
+
+.profile-owner-actions form {
+  display: flex;
+}
+
 .profile-edit-link {
   display: inline-flex;
   align-items: center;
@@ -856,8 +877,13 @@ textarea {
   appearance: none;
 }
 
+.profile-owner,
 .profile-editing {
   grid-template-columns: minmax(0, 1fr);
+}
+
+.profile-owner>.profile-action {
+  display: none;
 }
 
 .profile-editing .profile-action {
@@ -932,7 +958,7 @@ textarea {
   border-top: 1px solid var(--soft);
 }
 
-.account-danger-zone > div {
+.account-danger-zone>div {
   display: grid;
   gap: var(--space-1);
 }
@@ -966,6 +992,7 @@ textarea {
     width: auto;
   }
 
+  .profile.profile-owner,
   .profile.profile-editing {
     grid-template-columns: minmax(0, 1fr);
   }
@@ -1065,7 +1092,7 @@ textarea {
   border-bottom: 1px solid var(--soft);
 }
 
-.admin-section > h2 {
+.admin-section>h2 {
   margin: 0 0 var(--space-4);
   color: var(--muted);
   font-size: 12px;
@@ -1074,7 +1101,7 @@ textarea {
   letter-spacing: 1px;
 }
 
-.admin-section > h2 span {
+.admin-section>h2 span {
   margin-left: 6px;
   color: var(--ink);
 }
@@ -1098,7 +1125,7 @@ textarea {
   justify-content: space-between;
 }
 
-.admin-report > p {
+.admin-report>p {
   margin: var(--space-4) 0;
   font-size: 13px;
   white-space: pre-wrap;
