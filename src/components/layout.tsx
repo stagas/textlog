@@ -26,7 +26,7 @@ export function Layout({
     imageAlt: 'root.mx logo',
   }
   return (
-    <html>
+    <html lang="en">
       <head>
         <meta charSet="utf-8" />
         <meta name="viewport" content="width=device-width,initial-scale=1" />
@@ -53,6 +53,7 @@ export function Layout({
         <link rel="stylesheet" href="/styles.css?v=32" />
       </head>
       <body>
+        <a className="skip-link" href="#main-content">skip to content</a>
         <header>
           <a className="brand" href="/" aria-label="root.mx home">
             <img className="brand-logo" src="/root.svg" alt="" />
@@ -77,7 +78,7 @@ export function Layout({
               </nav>
             )}
         </header>
-        <main>{children}</main>
+        <main id="main-content">{children}</main>
         <footer className="site-footer">
           <span>root.mx</span>
           <nav aria-label="Footer">

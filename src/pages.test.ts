@@ -53,3 +53,20 @@ test('Post renders preloaded parent and reply data', () => {
   expect(html).toContain('@author')
   expect(html).toContain('parent')
 })
+
+test('Post only renders owner actions when requested by the detail view', () => {
+  const props = {
+    user: { id: 1, handle: 'writer', email: 'writer@example.com', bio: '' },
+    p: {
+      id: 2, user_id: 1, parent_id: null, body: 'note', handle: 'writer',
+      created_at: '2026-08-03 12:00:00', deleted_at: null,
+    },
+  }
+  const feedHtml = renderToStaticMarkup(React.createElement(Post, props))
+  const detailHtml = renderToStaticMarkup(React.createElement(Post, { ...props, showOwnerActions: true }))
+
+  expect(feedHtml).not.toContain('/post/2/edit')
+  expect(feedHtml).not.toContain('/post/2/delete')
+  expect(detailHtml).toContain('/post/2/edit')
+  expect(detailHtml).toContain('/post/2/delete')
+})

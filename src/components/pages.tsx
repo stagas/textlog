@@ -164,6 +164,7 @@ export function Feed({ user, page }: { user: User; page: number }) {
   ).all(user.id, user.id, user.id, user.id, user.id, user.id, pageSize, (page - 1) * pageSize) as PostView[])
   return (
     <Layout user={user}>
+      <h1 className="visually-hidden">Your feed</h1>
       <FeedTabs active="following" user={user} />
       {posts.length
         ? posts.map(p => <Post key={p.id} p={p} user={user} showReplyCount />)
@@ -202,6 +203,7 @@ export function PublicFeed(
   ).all(viewerId, viewerId, viewerId, pageSize, (page - 1) * pageSize) as PostView[])
   return (
     <Layout user={user} title={path === '/latest' ? 'latest' : undefined}>
+      <h1 className="visually-hidden">Latest notes</h1>
       <FeedTabs active="latest" user={user} />
       {posts.length
         ? posts.map(post => <Post key={post.id} p={post} user={user} showReplyCount />)
@@ -226,6 +228,7 @@ export function HotFeed({ page, user, title }: { page: number; user: User | null
   const posts = enrichPosts(db, getHotPosts(db, pageSize, (page - 1) * pageSize, new Date(), user?.id ?? -1))
   return (
     <Layout user={user} title={title}>
+      <h1 className="visually-hidden">Hot notes</h1>
       <FeedTabs active="hot" user={user} />
       {posts.length
         ? posts.map(post => <Post key={post.id} p={post} user={user} showReplyCount />)
@@ -613,7 +616,9 @@ export function Explore({ user, welcome = false, peopleIds }: {
       <div className="columns">
         <section>
           <h2>Popular tags</h2>
-          <TagPeopleList user={user} tags={tags} />
+          {tags.length
+            ? <TagPeopleList user={user} tags={tags} />
+            : <p className="section-empty">No hashtags yet.</p>}
         </section>
         <section>
           <h2>{user ? 'People to follow' : 'People'}</h2>
@@ -635,6 +640,7 @@ export function Explore({ user, welcome = false, peopleIds }: {
                 <p className="profile-bio">{p.bio || 'No bio yet.'}</p>
               </article>
             ))}
+            {!people.length && <p className="section-empty">No people to suggest yet.</p>}
           </div>
         </section>
       </div>

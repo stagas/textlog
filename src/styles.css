@@ -85,6 +85,35 @@ body {
   flex-direction: column;
 }
 
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.skip-link {
+  position: fixed;
+  z-index: 10;
+  top: 8px;
+  left: 8px;
+  padding: 10px 12px;
+  color: var(--button-ink);
+  background: var(--button-bg);
+  border: 0;
+  transform: translateY(-150%);
+}
+
+.skip-link:focus {
+  color: var(--button-ink);
+  transform: translateY(0);
+}
+
 a {
   color: var(--accent);
   text-decoration: none;
@@ -93,6 +122,13 @@ a {
 
 a:hover {
   color: var(--accent-dark);
+}
+
+a:focus-visible,
+button:focus-visible,
+select:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
 }
 
 button,
@@ -935,6 +971,13 @@ textarea {
   font-weight: 400;
   text-transform: uppercase;
   letter-spacing: 1px;
+}
+
+.section-empty {
+  padding-top: 11px;
+  color: var(--muted);
+  font-size: 11px;
+  border-top: 1px solid var(--soft);
 }
 
 .tags {
