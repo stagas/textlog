@@ -39,7 +39,8 @@ export function Post({
         <a className="postauthor" href={'/u/' + p.handle}>@{p.handle}</a>
         <a className="postdate" href={'/post/' + p.id}>
           <time dateTime={p.created_at} title={fmtFull(p.created_at)}>{fmt(p.created_at)}</time>
-          {showReplyCount && replyCount > 0 && <span>· {replyCount} {replyCount === 1 ? 'reply' : 'replies'}</span>}
+          {showReplyCount && replyCount > 0 && <span>{' '}· {replyCount} {replyCount === 1 ? 'reply' : 'replies'}
+          </span>}
         </a>
         {showReplyAction && (
           <a className="quiet" href={replyHref || '/post/' + p.id + '?reply=1'}
@@ -79,7 +80,7 @@ export function Post({
                       {fmt(parent.created_at)}
                     </time>
                     {parent.reply_count > 0 && (
-                      <span>· {parent.reply_count} {parent.reply_count === 1 ? 'reply' : 'replies'}</span>
+                      <span>{' '}· {parent.reply_count} {parent.reply_count === 1 ? 'reply' : 'replies'}</span>
                     )}
                   </a>
                 </div>

@@ -114,15 +114,15 @@ export function renderDefaultOg() {
   ctx.fillRect(0, 0, width, height)
 
   const scale = 6
-  const markWidth = (21 - 2.47) * scale
+  const markWidth = (23 - 2.47) * scale
   const gap = 38
-  ctx.font = '700 100px monospace'
+  ctx.font = '700 125px monospace'
   const rootWidth = ctx.measureText('root').width
   const dotWidth = ctx.measureText('.').width
   const mxWidth = ctx.measureText('mx').width
   const lockupWidth = markWidth + gap + rootWidth + dotWidth + mxWidth
   const left = (width - lockupWidth) / 2
-  const markTop = height / 2 - (7 + 19) * scale / 2
+  const markTop = height / 2 - (7 + 16.6) * scale / 2
   drawLogo(ctx, left - 2.47 * scale, markTop, scale)
 
   const textX = left + markWidth + gap
