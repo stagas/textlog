@@ -1,5 +1,7 @@
 import { describe, expect, test } from 'bun:test'
-import { postTitle } from './components/pages'
+import React from 'react'
+import { renderToStaticMarkup } from 'react-dom/server'
+import { Auth, postTitle } from './components/pages'
 
 describe('postTitle', () => {
   test('uses short post text as-is', () => {
@@ -14,5 +16,21 @@ describe('postTitle', () => {
     const title = postTitle('x'.repeat(61))
     expect(title).toBe(`${'x'.repeat(59)}…`)
     expect(Array.from(title)).toHaveLength(60)
+  })
+})
+
+describe('Auth', () => {
+  test('login accepts an email address or handle', () => {
+    const html = renderToStaticMarkup(React.createElement(Auth, { mode: 'login' }))
+
+    expect(html).toContain('email or handle')
+    expect(html).toContain('autoComplete="username"')
+    expect(html).not.toContain('pattern="[A-Za-z0-9_]{2,24}"')
+  })
+
+  test('signup keeps handle validation', () => {
+    const html = renderToStaticMarkup(React.createElement(Auth, { mode: 'signup' }))
+
+    expect(html).toContain('pattern="[A-Za-z0-9_]{2,24}"')
   })
 })

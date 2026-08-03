@@ -205,11 +205,11 @@ app.post('/signup', async c => {
 
 app.post('/login', async c => {
   const f = await form(c.req.raw)
-  const handle = (f.handle || '').toLowerCase().replace(/^@/, '')
-  const found = db.query('SELECT id,password FROM users WHERE handle=? AND deleted_at IS NULL')
-    .get(handle) as { id: number; password: string } | null
+  const login = (f.handle || '').trim().toLowerCase().replace(/^@/, '')
+  const found = db.query('SELECT id,password FROM users WHERE (handle=? OR email=?) AND deleted_at IS NULL')
+    .get(login, login) as { id: number; password: string } | null
   if (!found || !await verifyPassword(f.password || '', found.password)) {
-    return page(<Auth mode="login" handle={handle} next={safeNext(f.next)} />, 401)
+    return page(<Auth mode="login" handle={login} next={safeNext(f.next)} />, 401)
   }
   if (!found.password.startsWith('$argon2id$')) {
     db.query('UPDATE users SET password=? WHERE id=?').run(await hashPassword(f.password), found.id)
@@ -410,17 +410,27 @@ app.post('/post/:id/reply', async c => {
   return redirect('/post/' + parentId)
 })
 
-app.post('/follow/:handle', c => {
+app.post('/follow/:handle', async c => {
   const user = currentUser(c.req.raw)
   if (!user) return redirect('/login')
+  const f = await form(c.req.raw)
   const target = db.query('SELECT id FROM users WHERE handle=?').get(c.req.param('handle')) as { id: number } | null
   if (target && target.id !== user.id) {
     const exists = db.query('SELECT 1 FROM follows WHERE follower_id=? AND following_id=?').get(user.id, target.id)
     exists
       ? db.query('DELETE FROM follows WHERE follower_id=? AND following_id=?').run(user.id, target.id)
-      : db.query('INSERT OR IGNORE INTO follows VALUES(?,?)').run(user.id, target.id)
+      : db.query('INSERT OR IGNORE INTO follows(follower_id,following_id,created_at) VALUES(?,?,CURRENT_TIMESTAMP)')
+        .run(user.id, target.id)
   }
-  return redirect(c.req.header('referer') || '/')
+  const referer = c.req.header('referer')
+  if (referer && URL.canParse(referer)) {
+    const url = new URL(referer)
+    if (url.pathname === '/explore' && /^\d+(,\d+){0,5}$/.test(f.explorePeople || '')) {
+      return redirect(url.pathname + url.search,
+        `explore_people=${f.explorePeople}; HttpOnly; Path=/explore; SameSite=Lax`)
+    }
+  }
+  return redirect(referer || '/')
 })
 
 app.post('/tag-follow/:tag', c => {
@@ -434,9 +444,17 @@ app.post('/tag-follow/:tag', c => {
   return redirect('/tag/' + tag)
 })
 
-app.get('/explore', c => page(
-  <Explore user={currentUser(c.req.raw)} welcome={c.req.query('welcome') === '1'} />,
-))
+app.get('/explore', c => {
+  const savedPeople = c.req.header('cookie')?.match(/(?:^|;\s*)explore_people=([\d,]+)/)?.[1]
+  const peopleIds = savedPeople?.split(',').map(Number)
+  const response = page(
+    <Explore user={currentUser(c.req.raw)} welcome={c.req.query('welcome') === '1'} peopleIds={peopleIds} />,
+  )
+  if (savedPeople) {
+    response.headers.append('set-cookie', 'explore_people=; Max-Age=0; Path=/explore; HttpOnly; SameSite=Lax')
+  }
+  return response
+})
 
 app.get('/u/:handle/og.png', c => {
   const profile = db.query(

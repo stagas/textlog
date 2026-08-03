@@ -77,7 +77,7 @@ db.transaction(() => {
 
   for (let index = 0; index < users.length; index++) {
     for (let offset = 1; offset <= 3; offset++) {
-      db.query('INSERT OR IGNORE INTO follows VALUES(?,?)')
+      db.query('INSERT OR IGNORE INTO follows(follower_id,following_id) VALUES(?,?)')
         .run(users[index].id, users[(index + offset) % users.length].id)
     }
     db.query('INSERT OR IGNORE INTO hashtag_follows VALUES(?,?)')

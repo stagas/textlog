@@ -11,7 +11,7 @@ CREATE TABLE IF NOT EXISTS users (id INTEGER PRIMARY KEY AUTOINCREMENT, handle T
 CREATE TABLE IF NOT EXISTS sessions (token TEXT PRIMARY KEY, user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE, expires_at INTEGER NOT NULL);
 CREATE TABLE IF NOT EXISTS password_resets (token_hash TEXT PRIMARY KEY, user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE, expires_at INTEGER NOT NULL);
 CREATE TABLE IF NOT EXISTS posts (id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE, parent_id INTEGER REFERENCES posts(id) ON DELETE CASCADE, body TEXT NOT NULL CHECK(length(body) BETWEEN 1 AND 280), created_at TEXT DEFAULT CURRENT_TIMESTAMP);
-CREATE TABLE IF NOT EXISTS follows (follower_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE, following_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE, PRIMARY KEY(follower_id, following_id));
+CREATE TABLE IF NOT EXISTS follows (follower_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE, following_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE, created_at TEXT DEFAULT CURRENT_TIMESTAMP, PRIMARY KEY(follower_id, following_id));
 CREATE TABLE IF NOT EXISTS hashtag_follows (user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE, tag TEXT NOT NULL, PRIMARY KEY(user_id, tag));
 CREATE TABLE IF NOT EXISTS post_hashtags (post_id INTEGER NOT NULL REFERENCES posts(id) ON DELETE CASCADE, tag TEXT NOT NULL, PRIMARY KEY(post_id, tag));
 CREATE TABLE IF NOT EXISTS post_mentions (post_id INTEGER NOT NULL REFERENCES posts(id) ON DELETE CASCADE, user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE, PRIMARY KEY(post_id, user_id));
@@ -27,6 +27,13 @@ if (!postColumns.some(column => column.name === 'deleted_at')) {
 db.run('CREATE INDEX IF NOT EXISTS posts_parent ON posts(parent_id, created_at)')
 db.run('CREATE INDEX IF NOT EXISTS posts_user_created ON posts(user_id, created_at DESC)')
 db.run('CREATE INDEX IF NOT EXISTS post_mentions_user ON post_mentions(user_id, post_id)')
+
+const followColumns = db.query('PRAGMA table_info(follows)').all() as { name: string }[]
+if (!followColumns.some(column => column.name === 'created_at')) {
+  // Leave pre-existing follows undated so a deployment does not turn them into new activity.
+  db.run('ALTER TABLE follows ADD COLUMN created_at TEXT')
+}
+db.run('CREATE INDEX IF NOT EXISTS follows_activity ON follows(following_id, created_at DESC)')
 
 if (!postMentionsExisted) {
   const users = db.query('SELECT id,handle FROM users').all() as { id: number; handle: string }[]

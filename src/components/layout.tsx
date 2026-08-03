@@ -50,7 +50,7 @@ export function Layout({
             <meta name="twitter:image:alt" content={share.imageAlt || `Post by ${title || 'a root.mx user'}`} />
           </>
         <link rel="icon" href="/root.svg" type="image/svg+xml" />
-        <link rel="stylesheet" href="/styles.css?v=29" />
+        <link rel="stylesheet" href="/styles.css?v=32" />
       </head>
       <body>
         <header>
@@ -67,13 +67,11 @@ export function Layout({
                 <a href="/explore">explore</a>
                 <a href="/activity">activity</a>
                 <a href="/compose">write</a>
-                <form method="post" action="/logout">
-                  <button className="nav-action">logout</button>
-                </form>
               </nav>
             )
             : (
               <nav className="guest-nav">
+                <a href="/explore">explore</a>
                 <a href="/login">login</a>
                 <a className="button" href="/signup">join</a>
               </nav>

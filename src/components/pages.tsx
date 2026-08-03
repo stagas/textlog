@@ -230,41 +230,75 @@ export function HotFeed({ page, user, title }: { page: number; user: User | null
 }
 
 export function Activity({ user, page }: { user: User; page: number }) {
-  const total = (db.query(
-    `SELECT count(DISTINCT p.id) count
-      FROM posts p
+  const postActivityWhere = `p.deleted_at IS NULL AND
+    (parent.user_id=? OR (pm.user_id IS NOT NULL AND p.user_id != ?))`
+  const postTotal = (db.query(
+    `SELECT count(DISTINCT p.id) count FROM posts p
       LEFT JOIN posts parent ON parent.id=p.parent_id
       LEFT JOIN post_mentions pm ON pm.post_id=p.id AND pm.user_id=?
-      WHERE p.deleted_at IS NULL AND (parent.user_id=? OR (pm.user_id IS NOT NULL AND p.user_id != ?))`,
+      WHERE ${postActivityWhere}`,
   ).get(user.id, user.id, user.id) as { count: number }).count
+  const followTotal = (db.query(
+    'SELECT count(*) count FROM follows WHERE following_id=? AND created_at IS NOT NULL',
+  ).get(user.id) as { count: number }).count
+  const total = postTotal + followTotal
   const posts = db.query(
-    `SELECT p.*,u.handle,CASE WHEN parent.user_id=? THEN 'reply' ELSE 'mention' END activity_kind
-      FROM posts p
-      JOIN users u ON u.id=p.user_id
-      LEFT JOIN posts parent ON parent.id=p.parent_id
-      LEFT JOIN post_mentions pm ON pm.post_id=p.id AND pm.user_id=?
-      WHERE p.deleted_at IS NULL AND (parent.user_id=? OR (pm.user_id IS NOT NULL AND p.user_id != ?))
-      GROUP BY p.id
-      ORDER BY p.created_at DESC LIMIT ? OFFSET ?`,
-  ).all(user.id, user.id, user.id, user.id, pageSize, (page - 1) * pageSize) as any[]
+    `SELECT * FROM (
+      SELECT p.*,u.handle,CASE WHEN parent.user_id=? THEN 'reply' ELSE 'mention' END activity_kind,
+        NULL bio,NULL posts,NULL viewerFollowing
+        FROM posts p
+        JOIN users u ON u.id=p.user_id
+        LEFT JOIN posts parent ON parent.id=p.parent_id
+        LEFT JOIN post_mentions pm ON pm.post_id=p.id AND pm.user_id=?
+        WHERE ${postActivityWhere}
+        GROUP BY p.id
+      UNION ALL
+      SELECT NULL id,f.follower_id user_id,NULL parent_id,NULL body,f.created_at,NULL deleted_at,
+        u.handle,'follow' activity_kind,u.bio,
+        (SELECT count(*) FROM posts fp WHERE fp.user_id=u.id AND fp.deleted_at IS NULL) posts,
+        EXISTS(SELECT 1 FROM follows vf WHERE vf.follower_id=? AND vf.following_id=u.id) viewerFollowing
+        FROM follows f JOIN users u ON u.id=f.follower_id
+        WHERE f.following_id=? AND f.created_at IS NOT NULL
+      ) ORDER BY created_at DESC LIMIT ? OFFSET ?`,
+  ).all(user.id, user.id, user.id, user.id, user.id, user.id, pageSize, (page - 1) * pageSize) as any[]
   return (
     <Layout user={user} title="activity">
       <section className="page-header activity-header">
         <h1>activity</h1>
       </section>
       {posts.length
-        ? posts.map(post => (
-          <div className="activity-item" key={post.id}>
+        ? posts.map((post, index) => (
+          <div className="activity-item"
+            key={post.activity_kind === 'follow' ? `follow-${post.user_id}-${index}` : post.id}>
             <div className="activity-context">
-              {post.activity_kind === 'reply' ? 'replied to you' : 'mentioned you'}
+              {post.activity_kind === 'reply' ? 'replied to you'
+                : post.activity_kind === 'mention' ? 'mentioned you'
+                : 'followed you'}
             </div>
-            <Post p={post} user={user} showReplyCount />
+            {post.activity_kind === 'follow'
+              ? (
+                <div className="post people activity-follow">
+                  <article className="activity-person">
+                    <div>
+                      <div>
+                        <a href={'/u/' + post.handle}>@{post.handle}</a>
+                        <small>{post.posts} {post.posts === 1 ? 'note' : 'notes'}</small>
+                      </div>
+                      <form method="post" action={'/follow/' + post.handle}>
+                        <button className="button">{post.viewerFollowing ? 'unfollow' : 'follow'}</button>
+                      </form>
+                    </div>
+                    <p className="profile-bio">{post.bio || 'No bio yet.'}</p>
+                  </article>
+                </div>
+              )
+              : <Post p={post} user={user} showReplyCount />}
           </div>
         ))
         : total === 0
         ? (
           <div className="empty empty-actions">
-            <p>No replies or mentions yet.</p>
+            <p>No activity yet.</p>
             <div>
               <a className="button" href="/latest">browse latest</a>
               <a href="/compose">write a note</a>
@@ -293,13 +327,15 @@ export function Auth(
           <FormMessage error={error} success={success} />
           {mode === 'signup' && (
             <label>
-              email<input type="email" name="email" required maxLength={254} autoComplete="email" defaultValue={email}
+              email<input type="email" name="email" required maxLength={254} autoComplete="email" autoFocus defaultValue={email}
                 placeholder="you@example.com" />
             </label>
           )}
           <label>
-            handle<input name="handle" required pattern="[A-Za-z0-9_]{2,24}" defaultValue={handle}
-              placeholder="your_handle" />
+            {mode === 'login' ? 'email or handle' : 'handle'}
+            <input name="handle" required pattern={mode === 'signup' ? '[A-Za-z0-9_]{2,24}' : undefined}
+              maxLength={mode === 'login' ? 254 : undefined} autoComplete="username" autoFocus={mode === 'login'}
+              defaultValue={handle} placeholder={mode === 'login' ? 'you@example.com or your_handle' : 'your_handle'} />
           </label>
           <label>
             password<input type="password" name="password" required minLength={8} placeholder="8+ characters" />
@@ -496,10 +532,22 @@ export function Reply(
   )
 }
 
-export function Explore({ user, welcome = false }: { user: User | null; welcome?: boolean }) {
-  const people = db.query(
-    'SELECT u.*, (SELECT count(*) FROM posts p WHERE p.user_id=u.id AND p.deleted_at IS NULL) posts, EXISTS(SELECT 1 FROM follows f WHERE f.follower_id=? AND f.following_id=u.id) following FROM users u WHERE u.id != ? AND NOT EXISTS (SELECT 1 FROM follows f WHERE f.follower_id=? AND f.following_id=u.id) AND EXISTS (SELECT 1 FROM posts p WHERE p.user_id=u.id AND p.deleted_at IS NULL) ORDER BY RANDOM() LIMIT 6',
-  ).all(user?.id ?? -1, user?.id ?? -1, user?.id ?? -1) as any[]
+export function Explore({ user, welcome = false, peopleIds }: {
+  user: User | null; welcome?: boolean; peopleIds?: number[]
+}) {
+  const viewerId = user?.id ?? -1
+  const savedIds = peopleIds?.filter((id, index, ids) => Number.isInteger(id) && id > 0 && ids.indexOf(id) === index)
+    .slice(0, 6)
+  const people = savedIds?.length
+    ? (db.query(
+      `SELECT u.*, (SELECT count(*) FROM posts p WHERE p.user_id=u.id AND p.deleted_at IS NULL) posts,
+        EXISTS(SELECT 1 FROM follows f WHERE f.follower_id=? AND f.following_id=u.id) following
+        FROM users u WHERE u.id IN (${savedIds.map(() => '?').join(',')}) AND u.deleted_at IS NULL`,
+    ).all(viewerId, ...savedIds) as any[]).sort((a, b) => savedIds.indexOf(a.id) - savedIds.indexOf(b.id))
+    : db.query(
+      'SELECT u.*, (SELECT count(*) FROM posts p WHERE p.user_id=u.id AND p.deleted_at IS NULL) posts, EXISTS(SELECT 1 FROM follows f WHERE f.follower_id=? AND f.following_id=u.id) following FROM users u WHERE u.id != ? AND u.deleted_at IS NULL AND NOT EXISTS (SELECT 1 FROM follows f WHERE f.follower_id=? AND f.following_id=u.id) AND EXISTS (SELECT 1 FROM posts p WHERE p.user_id=u.id AND p.deleted_at IS NULL) ORDER BY RANDOM() LIMIT 6',
+    ).all(viewerId, viewerId, viewerId) as any[]
+  const explorePeople = people.map(p => p.id).join(',')
   const tags = db.query('SELECT tag,count(*) count FROM post_hashtags GROUP BY tag ORDER BY count DESC LIMIT 12')
     .all() as any[]
   return (
@@ -517,7 +565,17 @@ export function Explore({ user, welcome = false }: { user: User | null; welcome?
       )}
       <div className="columns">
         <section>
-          <h2>People to follow</h2>
+          <h2>Popular tags</h2>
+          <div className="tags">
+            {tags.map(t => (
+              <a href={'/tag/' + t.tag} key={t.tag}>
+                #{t.tag} <small>{t.count}</small>
+              </a>
+            ))}
+          </div>
+        </section>
+        <section>
+          <h2>{user ? 'People to follow' : 'People'}</h2>
           <div className="people">
             {people.map(p => (
               <article key={p.id}>
@@ -526,22 +584,15 @@ export function Explore({ user, welcome = false }: { user: User | null; welcome?
                     <a href={'/u/' + p.handle}>@{p.handle}</a>
                     <small>{p.posts} {p.posts === 1 ? 'note' : 'notes'}</small>
                   </div>
-                  <form method="post" action={'/follow/' + p.handle}>
-                    <button className="button">{p.following ? 'unfollow' : 'follow'}</button>
-                  </form>
+                  {user && (
+                    <form method="post" action={'/follow/' + p.handle}>
+                      <input type="hidden" name="explorePeople" value={explorePeople} />
+                      <button className="button">{p.following ? 'unfollow' : 'follow'}</button>
+                    </form>
+                  )}
                 </div>
                 <p className="profile-bio">{p.bio || 'No bio yet.'}</p>
               </article>
-            ))}
-          </div>
-        </section>
-        <section>
-          <h2>Popular tags</h2>
-          <div className="tags">
-            {tags.map(t => (
-              <a href={'/tag/' + t.tag} key={t.tag}>
-                #{t.tag} <small>{t.count}</small>
-              </a>
             ))}
           </div>
         </section>
@@ -628,13 +679,19 @@ function ProfileHeader({ user, profile, following, editing = false, children }: 
       )}
       <div className="profile-action">
         {user?.id === profile.id && !editing && (
-          <a className="profile-edit-link" href={'/u/' + profile.handle + '?edit=1'}>edit</a>
+          <>
+            <a className="profile-edit-link" href={'/u/' + profile.handle + '?edit=1'}>edit</a>
+            <form method="post" action="/logout">
+              <button className="profile-edit-link profile-logout">logout</button>
+            </form>
+          </>
         )}
         {user && user.id !== profile.id && (
           <form method="post" action={'/follow/' + profile.handle}>
             <button className="button">{following ? 'unfollow' : 'follow'} @{profile.handle}</button>
           </form>
         )}
+        {!user && <a className="button" href="/login">log in to follow</a>}
       </div>
     </section>
   )
