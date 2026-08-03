@@ -22,6 +22,9 @@ Password reset emails use Resend. Set `RESEND_API_KEY`, `EMAIL_FROM` (a verified
 `APP_URL` is also used for absolute Open Graph URLs. Each post exposes a dynamically rendered 1200×630 PNG at `/post/:id/og.png`.
 When `APP_URL` uses HTTPS, authentication cookies are automatically marked `Secure` for production transport protection.
 
+Authentication endpoints use the direct client address for rate limiting. When running behind a trusted reverse proxy
+that overwrites `CF-Connecting-IP`, `X-Real-IP`, or `X-Forwarded-For`, set `TRUST_PROXY=true` to use that forwarded address.
+
 To temporarily disable moderation, set `MODERATION_DISABLED=true`. Remove the variable or set it to `false` to re-enable it.
 
 ## Included

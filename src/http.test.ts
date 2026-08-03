@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, test } from 'bun:test'
-import { clearSessionCookie, isSameOriginRequest, safeLocalPath, safeRefererPath, sessionCookie, stringField } from './http'
+import { clearSessionCookie, isSameOriginRequest, safeLocalPath, safeRefererPath, securityHeaders, sessionCookie, stringField } from './http'
 
 const previousAppUrl = Bun.env.APP_URL
 afterEach(() => {
@@ -52,5 +52,20 @@ describe('request values and cookies', () => {
     Bun.env.APP_URL = 'https://root.mx'
     expect(sessionCookie('token')).toContain('; Secure')
     expect(clearSessionCookie()).toContain('Max-Age=0')
+  })
+})
+
+describe('security headers', () => {
+  test('disables scripts in production and only permits the inline development reloader in development', () => {
+    expect(securityHeaders()['Content-Security-Policy']).toContain("script-src 'none'")
+    expect(securityHeaders(true)['Content-Security-Policy']).toContain("script-src 'self' 'unsafe-inline'")
+    expect(securityHeaders()['X-Frame-Options']).toBe('DENY')
+  })
+
+  test('only emits HSTS for a configured HTTPS origin', () => {
+    Bun.env.APP_URL = 'http://localhost:3000'
+    expect(securityHeaders()['Strict-Transport-Security']).toBeUndefined()
+    Bun.env.APP_URL = 'https://root.mx'
+    expect(securityHeaders()['Strict-Transport-Security']).toContain('max-age=31536000')
   })
 })

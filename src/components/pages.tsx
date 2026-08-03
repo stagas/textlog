@@ -389,7 +389,7 @@ export function Auth(
   )
 }
 
-export function ForgotPassword({ sent = false }: { sent?: boolean }) {
+export function ForgotPassword({ sent = false, error }: { sent?: boolean; error?: string }) {
   return (
     <Layout title="forgot password">
       <div className="panel auth">
@@ -405,6 +405,7 @@ export function ForgotPassword({ sent = false }: { sent?: boolean }) {
           : (
             <>
               <form method="post" action="/forgot-password">
+                <FormMessage error={error} />
                 <label>
                   email<input type="email" name="email" required maxLength={254} autoComplete="email"
                     placeholder="you@example.com" />

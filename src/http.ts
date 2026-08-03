@@ -41,6 +41,35 @@ export function isSameOriginRequest(request: Request) {
   }
 }
 
+export function securityHeaders(devReload = false) {
+  const headers: Record<string, string> = {
+    'Content-Security-Policy': [
+      "default-src 'self'",
+      "base-uri 'none'",
+      "form-action 'self'",
+      "frame-ancestors 'none'",
+      "object-src 'none'",
+      "img-src 'self' data:",
+      "style-src 'self'",
+      devReload ? "script-src 'self' 'unsafe-inline'" : "script-src 'none'",
+      "connect-src 'self'",
+    ].join('; '),
+    'Permissions-Policy': 'camera=(), microphone=(), geolocation=(), payment=(), usb=()',
+    'Referrer-Policy': 'same-origin',
+    'X-Content-Type-Options': 'nosniff',
+    'X-Frame-Options': 'DENY',
+  }
+  try {
+    if (Bun.env.APP_URL && new URL(Bun.env.APP_URL).protocol === 'https:') {
+      headers['Strict-Transport-Security'] = 'max-age=31536000; includeSubDomains'
+    }
+  }
+  catch {
+    // Invalid deployment URLs are handled elsewhere; do not emit HSTS for them.
+  }
+  return headers
+}
+
 function secureCookie() {
   if (!Bun.env.APP_URL) return ''
   try {

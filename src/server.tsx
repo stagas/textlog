@@ -4,6 +4,7 @@ import { moderateText, moderationMessage } from './moderation'
 import { currentUser, hash, hashPassword, token, verifyPassword } from './utils'
 
 import { Hono } from 'hono'
+import { getConnInfo } from 'hono/bun'
 import React from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
 import { configureDevReload } from './components/layout'
@@ -11,9 +12,10 @@ import { db } from './db'
 import { sendPasswordReset } from './email'
 import { renderDefaultOg, renderPostOg, renderProfileOg, renderTagOg } from './og'
 import { postRateLimitMessage } from './post-rate-limit'
-import { clearSessionCookie, isSameOriginRequest, safeLocalPath, safeRefererPath, sessionCookie, stringField } from './http'
+import { clearSessionCookie, isSameOriginRequest, safeLocalPath, safeRefererPath, securityHeaders, sessionCookie, stringField } from './http'
 import { createPost, enrichPosts, updatePost } from './posts'
 import type { PostRow, PostView, ProfileRow } from './types'
+import { AUTH_LIMITS, authRateLimitMessage, consumeAuthAttempt, rateLimitKey } from './auth-rate-limit'
 
 const devReloadEnabled = Bun.env.DEV_RELOAD === 'true'
 const bootId = crypto.randomUUID()
@@ -39,6 +41,21 @@ function usersBlocked(firstId: number, secondId: number) {
   return !!db.query(`SELECT 1 FROM blocks WHERE
     (blocker_id=? AND blocked_id=?) OR (blocker_id=? AND blocked_id=?)`).get(firstId, secondId, secondId, firstId)
 }
+function clientAddress(c: any) {
+  if (Bun.env.TRUST_PROXY === 'true') {
+    const forwarded = c.req.header('cf-connecting-ip') || c.req.header('x-real-ip')
+      || c.req.header('x-forwarded-for')?.split(',')[0]?.trim()
+    if (forwarded) return forwarded
+  }
+  return getConnInfo(c).remote.address || 'unknown'
+}
+function authLimit(c: any, scope: string, identity: string, policy: { attempts: number; windowSeconds: number }) {
+  return consumeAuthAttempt(db, scope, rateLimitKey(identity), policy.attempts, policy.windowSeconds)
+}
+function retryPage(response: Response, retryAfter: number) {
+  response.headers.set('retry-after', String(retryAfter))
+  return response
+}
 async function form(req: Request) {
   const data = await req.formData()
   return new Proxy({} as Record<string, string>, {
@@ -48,8 +65,25 @@ async function form(req: Request) {
 const app = new Hono()
 
 app.use('*', async (c, next) => {
+  await next()
+  for (const [name, value] of Object.entries(securityHeaders(devReloadEnabled))) c.header(name, value)
+})
+
+app.use('*', async (c, next) => {
   if (c.req.method === 'POST' && !isSameOriginRequest(c.req.raw)) return c.text('Forbidden', 403)
   await next()
+})
+
+app.get('/health', c => {
+  try {
+    const result = db.query('SELECT 1 AS ok').get() as { ok: number } | null
+    if (result?.ok !== 1) throw new Error('Database health check failed')
+    return c.json({ status: 'ok' }, 200, { 'cache-control': 'no-store' })
+  }
+  catch (error) {
+    console.error('Health check failed', error)
+    return c.json({ status: 'unavailable' }, 503, { 'cache-control': 'no-store' })
+  }
 })
 
 if (devReloadEnabled) {
@@ -118,6 +152,9 @@ app.get('/forgot-password', c => page(<ForgotPassword />))
 app.post('/forgot-password', async c => {
   const f = await form(c.req.raw)
   const email = (f.email || '').trim().toLowerCase()
+  const limited = authLimit(c, 'forgot-ip', clientAddress(c), AUTH_LIMITS.forgotIp)
+    || authLimit(c, 'forgot-account', email || '(blank)', AUTH_LIMITS.forgotAccount)
+  if (limited) return retryPage(page(<ForgotPassword error={authRateLimitMessage(limited.retryAfter)} />, 429), limited.retryAfter)
   const user = db.query('SELECT id,email FROM users WHERE email=?').get(email) as { id: number; email: string } | null
   if (user) {
     const resetToken = token()
@@ -152,6 +189,12 @@ app.get('/reset-password', c => {
 app.post('/reset-password', async c => {
   const f = await form(c.req.raw)
   const resetToken = f.token || ''
+  const limited = authLimit(c, 'reset-ip', clientAddress(c), AUTH_LIMITS.resetIp)
+    || authLimit(c, 'reset-token', resetToken || '(blank)', AUTH_LIMITS.resetToken)
+  if (limited) return retryPage(page(
+    <ResetPassword resetToken={resetToken} error={authRateLimitMessage(limited.retryAfter)} invalid={!resetToken} />,
+    429,
+  ), limited.retryAfter)
   const reset = resetToken && db.query('SELECT user_id FROM password_resets WHERE token_hash=? AND expires_at>?')
     .get(hash(resetToken), Date.now()) as { user_id: number } | null
   if (!reset) return page(<ResetPassword invalid />, 400)
@@ -174,6 +217,11 @@ app.post('/signup', async c => {
   const f = await form(c.req.raw)
   const handle = (f.handle || '').toLowerCase().replace(/^@/, '')
   const email = (f.email || '').trim().toLowerCase()
+  const limited = authLimit(c, 'signup-ip', clientAddress(c), AUTH_LIMITS.signup)
+  if (limited) return retryPage(page(
+    <Auth mode="signup" handle={handle} email={email} error={authRateLimitMessage(limited.retryAfter)} />,
+    429,
+  ), limited.retryAfter)
   if (!/^[a-z0-9_]{2,24}$/.test(handle) || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || email.length > 254
     || (f.password || '').length < 8)
   {
@@ -209,6 +257,11 @@ app.post('/signup', async c => {
 app.post('/login', async c => {
   const f = await form(c.req.raw)
   const login = (f.handle || '').trim().toLowerCase().replace(/^@/, '')
+  const limited = authLimit(c, 'login-ip', clientAddress(c), AUTH_LIMITS.login)
+  if (limited) return retryPage(page(
+    <Auth mode="login" handle={login} next={safeNext(f.next)} error={authRateLimitMessage(limited.retryAfter)} />,
+    429,
+  ), limited.retryAfter)
   const found = db.query('SELECT id,password FROM users WHERE (handle=? OR email=?) AND deleted_at IS NULL')
     .get(login, login) as { id: number; password: string } | null
   if (!found || !await verifyPassword(f.password || '', found.password)) {

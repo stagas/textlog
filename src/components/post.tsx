@@ -65,7 +65,7 @@ export function ThreadReplies({ parentId, user }: { parentId: number; user: User
   const renderBranch = (id: number, depth: number): React.ReactNode => {
     const branch = children.get(id) || []
     if (!branch.length) return null
-    return <div className="reply-branch" style={{ '--depth': depth } as React.CSSProperties}>
+    return <div className="reply-branch">
       {branch.map(reply => reply.deleted_at
         ? <React.Fragment key={reply.id}>{renderBranch(reply.id, depth + 1)}</React.Fragment>
         : <div className="reply-node" key={reply.id}>
