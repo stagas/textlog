@@ -441,6 +441,11 @@ app.post('/tag-follow/:tag', c => {
   exists
     ? db.query('DELETE FROM hashtag_follows WHERE user_id=? AND tag=?').run(user.id, tag)
     : db.query('INSERT OR IGNORE INTO hashtag_follows VALUES(?,?)').run(user.id, tag)
+  const referer = c.req.header('referer')
+  if (referer && URL.canParse(referer)) {
+    const returnUrl = new URL(referer)
+    if (returnUrl.origin === new URL(c.req.url).origin) return redirect(returnUrl.pathname + returnUrl.search)
+  }
   return redirect('/tag/' + tag)
 })
 
@@ -461,10 +466,11 @@ app.get('/u/:handle/og.png', c => {
     `SELECT u.handle,u.bio,
       (SELECT count(*) FROM posts p WHERE p.user_id=u.id AND p.deleted_at IS NULL) notes,
       (SELECT count(*) FROM follows f WHERE f.follower_id=u.id) following,
+      (SELECT count(*) FROM hashtag_follows hf WHERE hf.user_id=u.id) followingTags,
       (SELECT count(*) FROM follows f WHERE f.following_id=u.id) followers
       FROM users u WHERE u.handle=? AND u.deleted_at IS NULL`,
   ).get(c.req.param('handle')) as {
-    handle: string; bio: string; notes: number; following: number; followers: number
+    handle: string; bio: string; notes: number; following: number; followingTags: number; followers: number
   } | null
   if (!profile) return c.text('Not found', 404)
   const image = renderProfileOg(profile.handle, profile.bio, profile)
@@ -501,8 +507,11 @@ app.get('/u/:handle', c => {
   const counts = db.query(
     `SELECT
       (SELECT count(*) FROM follows WHERE following_id=?) followerCount,
-      (SELECT count(*) FROM follows WHERE follower_id=?) followingCount`,
-  ).get(profile.id, profile.id) as { followerCount: number; followingCount: number }
+      (SELECT count(*) FROM follows WHERE follower_id=?) followingCount,
+      (SELECT count(*) FROM hashtag_follows WHERE user_id=?) followingTagCount`,
+  ).get(profile.id, profile.id, profile.id) as {
+    followerCount: number; followingCount: number; followingTagCount: number
+  }
   const configuredOrigin = Bun.env.APP_URL?.replace(/\/$/, '')
   const origin = configuredOrigin || new URL(c.req.url).origin
   const profileUrl = `${origin}/u/${profile.handle}`
@@ -526,13 +535,24 @@ app.get('/u/:handle', c => {
     const countWhere = tab === 'following' ? 'follower_id=?' : 'following_id=?'
     const connectionTotal = (db.query(`SELECT count(*) AS count FROM follows WHERE ${countWhere}`)
       .get(profile.id) as { count: number }).count
-    return page(<Connections user={user} profile={profile} people={people} kind={tab}
+    const tags = tab === 'following'
+      ? db.query(
+        `SELECT hf.tag, count(ph.post_id) count,
+          EXISTS(SELECT 1 FROM hashtag_follows vhf WHERE vhf.user_id=? AND vhf.tag=hf.tag) viewerFollowing
+          FROM hashtag_follows hf
+          LEFT JOIN post_hashtags ph ON ph.tag=hf.tag
+          WHERE hf.user_id=?
+          GROUP BY hf.tag ORDER BY hf.tag`,
+      ).all(user?.id ?? -1, profile.id) as { tag: string; count: number; viewerFollowing: boolean }[]
+      : []
+    return page(<Connections user={user} profile={profile} people={people} tags={tags} kind={tab}
       page={profilePage} total={connectionTotal} noteCount={total} {...counts} following={following} social={social} />)
   }
   return page(
     <Profile user={user} profile={profile} posts={posts} following={following}
       editing={user?.id === profile.id && c.req.query('edit') === '1'} page={profilePage}
-      total={total} followerCount={counts.followerCount} followingCount={counts.followingCount} social={social} />,
+      total={total} followerCount={counts.followerCount} followingCount={counts.followingCount}
+      followingTagCount={counts.followingTagCount} social={social} />,
   )
 })
 

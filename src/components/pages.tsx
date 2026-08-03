@@ -548,8 +548,12 @@ export function Explore({ user, welcome = false, peopleIds }: {
       'SELECT u.*, (SELECT count(*) FROM posts p WHERE p.user_id=u.id AND p.deleted_at IS NULL) posts, EXISTS(SELECT 1 FROM follows f WHERE f.follower_id=? AND f.following_id=u.id) following FROM users u WHERE u.id != ? AND u.deleted_at IS NULL AND NOT EXISTS (SELECT 1 FROM follows f WHERE f.follower_id=? AND f.following_id=u.id) AND EXISTS (SELECT 1 FROM posts p WHERE p.user_id=u.id AND p.deleted_at IS NULL) ORDER BY RANDOM() LIMIT 6',
     ).all(viewerId, viewerId, viewerId) as any[]
   const explorePeople = people.map(p => p.id).join(',')
-  const tags = db.query('SELECT tag,count(*) count FROM post_hashtags GROUP BY tag ORDER BY count DESC LIMIT 12')
-    .all() as any[]
+  const tags = db.query(
+    `SELECT ph.tag,count(*) count,
+      EXISTS(SELECT 1 FROM hashtag_follows hf WHERE hf.user_id=? AND hf.tag=ph.tag) following
+      FROM post_hashtags ph
+      GROUP BY ph.tag ORDER BY count DESC LIMIT 12`,
+  ).all(viewerId) as any[]
   return (
     <Layout user={user} title="explore">
       {user && welcome && (
@@ -566,13 +570,7 @@ export function Explore({ user, welcome = false, peopleIds }: {
       <div className="columns">
         <section>
           <h2>Popular tags</h2>
-          <div className="tags">
-            {tags.map(t => (
-              <a href={'/tag/' + t.tag} key={t.tag}>
-                #{t.tag} <small>{t.count}</small>
-              </a>
-            ))}
-          </div>
+          <TagPeopleList user={user} tags={tags} />
         </section>
         <section>
           <h2>{user ? 'People to follow' : 'People'}</h2>
@@ -603,7 +601,8 @@ export function Explore({ user, welcome = false, peopleIds }: {
 
 export function Profile(
   { user, profile, posts, following, bio = profile.bio || '', editHandle = profile.handle, editEmail = profile.email,
-    error, editing = false, page = 1, total = posts.length, followerCount = 0, followingCount = 0, social }: {
+    error, editing = false, page = 1, total = posts.length, followerCount = 0, followingCount = 0,
+    followingTagCount = 0, social }: {
       user: User | null
       profile: any
       posts: any[]
@@ -617,6 +616,7 @@ export function Profile(
       total?: number
       followerCount?: number
       followingCount?: number
+      followingTagCount?: number
       social?: { description: string; image: string; url: string; type?: 'article' | 'profile'; imageAlt?: string }
     },
 ) {
@@ -659,7 +659,7 @@ export function Profile(
         </div>
       </ProfileHeader>
       {!editing && <ProfileTabs profile={profile} active="notes" notes={total} followers={followerCount}
-        following={followingCount} />}
+        following={followingCount} followingTags={followingTagCount} />}
       {posts.map(post => <Post key={post.id} p={post} user={user} />)}
       <Pagination page={page} totalPages={Math.ceil(total / pageSize)} path={'/u/' + profile.handle} />
     </Layout>
@@ -688,7 +688,7 @@ function ProfileHeader({ user, profile, following, editing = false, children }: 
         )}
         {user && user.id !== profile.id && (
           <form method="post" action={'/follow/' + profile.handle}>
-            <button className="button">{following ? 'unfollow' : 'follow'} @{profile.handle}</button>
+            <button className="button">{following ? 'unfollow' : 'follow'}</button>
           </form>
         )}
         {!user && <a className="button" href="/login">log in to follow</a>}
@@ -697,8 +697,9 @@ function ProfileHeader({ user, profile, following, editing = false, children }: 
   )
 }
 
-function ProfileTabs({ profile, active, notes, followers, following }: {
-  profile: any; active: 'notes' | 'followers' | 'following'; notes: number; followers: number; following: number
+function ProfileTabs({ profile, active, notes, followers, following, followingTags }: {
+  profile: any; active: 'notes' | 'followers' | 'following'; notes: number; followers: number
+  following: number; followingTags: number
 }) {
   const base = `/u/${profile.handle}`
   return (
@@ -707,7 +708,7 @@ function ProfileTabs({ profile, active, notes, followers, following }: {
         href={base}>{notes} {notes === 1 ? 'note' : 'notes'}</a>
       <a className={active === 'following' ? 'active' : ''}
         aria-current={active === 'following' ? 'page' : undefined} href={`${base}?tab=following`}>
-        {following} following
+        {followingTags} {followingTags === 1 ? 'tag' : 'tags'}, {following} {following === 1 ? 'user' : 'users'} following
       </a>
       <a className={active === 'followers' ? 'active' : ''}
         aria-current={active === 'followers' ? 'page' : undefined} href={`${base}?tab=followers`}>
@@ -718,9 +719,12 @@ function ProfileTabs({ profile, active, notes, followers, following }: {
 }
 
 export function Connections(
-  { user, profile, people, kind, page, total, noteCount, followerCount, followingCount, following, social }: {
-    user: User | null; profile: any; people: any[]; kind: 'following' | 'followers'; page: number; total: number
-    noteCount: number; followerCount: number; followingCount: number; following: boolean
+  { user, profile, people, tags = [], kind, page, total, noteCount, followerCount, followingCount,
+    followingTagCount, following, social }: {
+    user: User | null; profile: any; people: any[]
+    tags?: { tag: string; count: number; viewerFollowing: boolean }[]
+    kind: 'following' | 'followers'; page: number; total: number
+    noteCount: number; followerCount: number; followingCount: number; followingTagCount: number; following: boolean
     social?: { description: string; image: string; url: string; type?: 'article' | 'profile'; imageAlt?: string }
   },
 ) {
@@ -728,27 +732,27 @@ export function Connections(
     <Layout user={user} title={`${kind} @${profile.handle}`} social={social}>
       <ProfileHeader user={user} profile={profile} following={following} />
       <ProfileTabs profile={profile} active={kind} notes={noteCount} followers={followerCount}
-        following={followingCount} />
-      {people.length
+        following={followingCount} followingTags={followingTagCount} />
+      {kind === 'following' && (people.length || tags.length)
         ? (
-          <div className="people connections-list">
-            {people.map(person => (
-              <article key={person.id}>
-                <div>
-                  <div>
-                    <a href={`/u/${person.handle}`}>@{person.handle}</a>
-                    <small>{person.posts} {person.posts === 1 ? 'note' : 'notes'}</small>
-                  </div>
-                  {user && user.id !== person.id && (
-                    <form method="post" action={`/follow/${person.handle}`}>
-                      <button className="button">{person.viewerFollowing ? 'unfollow' : 'follow'}</button>
-                    </form>
-                  )}
-                </div>
-                <p className="profile-bio">{person.bio || 'No bio yet.'}</p>
-              </article>
-            ))}
+          <div className="columns connections-columns">
+            <section>
+              <h2>Tags</h2>
+              {tags.length
+                ? <TagPeopleList user={user} tags={tags} followingKey="viewerFollowing" />
+                : <div className="empty connections-empty">No followed tags yet.</div>}
+            </section>
+            <section>
+              <h2>People</h2>
+              {people.length
+                ? <ConnectionPeople user={user} people={people} />
+                : <div className="empty connections-empty">No followed people yet.</div>}
+            </section>
           </div>
+        )
+        : people.length
+        ? (
+          <ConnectionPeople user={user} people={people} className="connections-list" />
         )
         : (
           <div className="empty">
@@ -757,6 +761,55 @@ export function Connections(
         )}
       <Pagination page={page} totalPages={Math.ceil(total / pageSize)} path={`/u/${profile.handle}?tab=${kind}`} />
     </Layout>
+  )
+}
+
+function TagPeopleList({ user, tags, followingKey = 'following' }: {
+  user: User | null; tags: any[]; followingKey?: 'following' | 'viewerFollowing'
+}) {
+  return (
+    <div className="people tag-people">
+      {tags.map(tag => (
+        <article key={tag.tag}>
+          <div>
+            <div>
+              <a href={`/tag/${tag.tag}`}>#{tag.tag}</a>
+              <small>{tag.count} {tag.count === 1 ? 'note' : 'notes'}</small>
+            </div>
+            {user && (
+              <form method="post" action={`/tag-follow/${tag.tag}`}>
+                <button className="button">{tag[followingKey] ? 'unfollow' : 'follow'}</button>
+              </form>
+            )}
+          </div>
+        </article>
+      ))}
+    </div>
+  )
+}
+
+function ConnectionPeople({ user, people, className = '' }: {
+  user: User | null; people: any[]; className?: string
+}) {
+  return (
+    <div className={`people ${className}`.trim()}>
+      {people.map(person => (
+        <article key={person.id}>
+          <div>
+            <div>
+              <a href={`/u/${person.handle}`}>@{person.handle}</a>
+              <small>{person.posts} {person.posts === 1 ? 'note' : 'notes'}</small>
+            </div>
+            {user && user.id !== person.id && (
+              <form method="post" action={`/follow/${person.handle}`}>
+                <button className="button">{person.viewerFollowing ? 'unfollow' : 'follow'}</button>
+              </form>
+            )}
+          </div>
+          <p className="profile-bio">{person.bio || 'No bio yet.'}</p>
+        </article>
+      ))}
+    </div>
   )
 }
 

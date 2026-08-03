@@ -190,7 +190,7 @@ export function renderPostOg(body: string, handle: string) {
 export function renderProfileOg(
   handle: string,
   bio: string,
-  counts: { notes: number; following: number; followers: number },
+  counts: { notes: number; following: number; followingTags: number; followers: number },
 ) {
   const canvas = createCanvas(width, height)
   const ctx = canvas.getContext('2d')
@@ -231,13 +231,24 @@ export function renderProfileOg(
   }
 
   const stats = [
-    { value: String(counts.notes), label: counts.notes === 1 ? 'note' : 'notes' },
-    { value: String(counts.following), label: 'following' },
-    { value: String(counts.followers), label: counts.followers === 1 ? 'follower' : 'followers' },
+    [
+      { text: String(counts.notes), accent: true },
+      { text: ` ${counts.notes === 1 ? 'note' : 'notes'}` },
+    ],
+    [
+      { text: String(counts.followingTags), accent: true },
+      { text: ` ${counts.followingTags === 1 ? 'tag' : 'tags'}, ` },
+      { text: String(counts.following), accent: true },
+      { text: ` ${counts.following === 1 ? 'user' : 'users'} following` },
+    ],
+    [
+      { text: String(counts.followers), accent: true },
+      { text: ` ${counts.followers === 1 ? 'follower' : 'followers'}` },
+    ],
   ]
   let statsSize = 30
   ctx.font = `500 ${statsSize}px monospace`
-  const statsText = stats.map(stat => `${stat.value} ${stat.label}`).join('  ·  ')
+  const statsText = stats.map(stat => stat.map(part => part.text).join('')).join('  ·  ')
   while (ctx.measureText(statsText).width > maxTextWidth && statsSize > 20) {
     statsSize -= 2
     ctx.font = `500 ${statsSize}px monospace`
@@ -250,12 +261,12 @@ export function renderProfileOg(
       ctx.fillText('·', statsX, 565)
       statsX += ctx.measureText('·  ').width
     }
-    ctx.fillStyle = accentColor
-    ctx.fillText(stat.value, statsX, 565)
-    statsX += ctx.measureText(`${stat.value} `).width
-    ctx.fillStyle = textColor
-    ctx.fillText(stat.label, statsX, 565)
-    statsX += ctx.measureText(`${stat.label}  `).width
+    for (const part of stat) {
+      ctx.fillStyle = part.accent ? accentColor : textColor
+      ctx.fillText(part.text, statsX, 565)
+      statsX += ctx.measureText(part.text).width
+    }
+    statsX += ctx.measureText('  ').width
   }
 
   return canvas.toBuffer('image/png')

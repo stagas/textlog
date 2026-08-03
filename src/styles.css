@@ -691,6 +691,20 @@ textarea {
   padding: 0 var(--gutter);
 }
 
+.connections-columns {
+  padding-top: 24px;
+}
+
+.connections-empty {
+  margin-top: 11px;
+  padding-inline: 0;
+  border-top: 1px solid var(--soft);
+}
+
+.tag-people {
+  margin-bottom: 36px;
+}
+
 .profile-bio {
   white-space: pre-wrap;
   overflow-wrap: anywhere;

@@ -2,7 +2,7 @@ import { describe, expect, test } from 'bun:test'
 import { renderDefaultOg, renderProfileOg, renderTagOg } from './og'
 
 describe('renderProfileOg', () => {
-  const counts = { notes: 12, following: 34, followers: 56 }
+  const counts = { notes: 12, following: 34, followingTags: 5, followers: 56 }
 
   test('renders a 1200 by 630 PNG', () => {
     const image = renderProfileOg('tester', 'A short bio about the profile owner.', counts)
