@@ -19,6 +19,8 @@
   --danger-button-hover-bg: #65332e;
   --danger-button-active-bg: #542a26;
   --danger-link-hover: #542a26;
+  --report-ink: #a05f19;
+  --report-hover: #77440f;
   --quote-ink: #6f766c;
   --quote-bg: rgb(116 150 104 / 6%);
   --error-ink: #7a3f39;
@@ -54,6 +56,8 @@
     --danger-button-hover-bg: #7a4741;
     --danger-button-active-bg: #56312e;
     --danger-link-hover: #ffc8bf;
+    --report-ink: #e5a85f;
+    --report-hover: #ffc37d;
     --quote-ink: #a8afa4;
     --quote-bg: rgb(154 189 142 / 8%);
     --error-ink: #efb3aa;
@@ -390,6 +394,14 @@ nav form {
   color: var(--danger-link-hover);
 }
 
+.report-link {
+  color: var(--report-ink);
+}
+
+.report-link:hover {
+  color: var(--report-hover);
+}
+
 .postdate {
   color: var(--accent);
 }
@@ -488,6 +500,7 @@ nav form {
 
 .auth input,
 .bio-form input,
+.account-delete-form input,
 textarea {
   width: 100%;
   padding: 13px;
@@ -501,6 +514,7 @@ textarea {
 
 .auth input:focus-visible,
 .bio-form input:focus-visible,
+.account-delete-form input:focus-visible,
 textarea:focus-visible {
   outline: 2px solid var(--accent);
   outline-offset: -2px;
@@ -550,6 +564,46 @@ textarea {
 
 .confirm-delete form {
   margin: 0;
+}
+
+.account-delete-form {
+  display: grid;
+  gap: 20px;
+  margin-top: 24px;
+}
+
+.account-delete-form label {
+  display: grid;
+  gap: 7px;
+  color: var(--muted);
+  font-size: 11px;
+}
+
+.report-status {
+  margin: 0;
+  padding: 0 var(--gutter) 18px;
+  color: var(--muted);
+  font-size: 11px;
+}
+
+.report-panel {
+  margin-block: 0 28px;
+}
+
+.report-panel form,
+.report-panel label {
+  display: grid;
+  gap: 12px;
+  color: var(--muted);
+  font-size: 11px;
+}
+
+.report-panel select {
+  padding: 12px;
+  color: var(--ink);
+  font: inherit;
+  background: var(--panel);
+  border: 1px solid var(--soft);
 }
 
 .delete-button {

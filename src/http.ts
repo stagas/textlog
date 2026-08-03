@@ -27,6 +27,20 @@ export function safeRefererPath(referer: string | undefined, requestUrl: string,
   }
 }
 
+export function isSameOriginRequest(request: Request) {
+  try {
+    const expectedOrigin = new URL(Bun.env.APP_URL || request.url).origin
+    const origin = request.headers.get('origin')
+    if (origin) return new URL(origin).origin === expectedOrigin
+
+    const referer = request.headers.get('referer')
+    return Boolean(referer && new URL(referer).origin === expectedOrigin)
+  }
+  catch {
+    return false
+  }
+}
+
 function secureCookie() {
   if (!Bun.env.APP_URL) return ''
   try {

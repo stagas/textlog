@@ -11,7 +11,7 @@ import { db } from './db'
 import { sendPasswordReset } from './email'
 import { renderDefaultOg, renderPostOg, renderProfileOg, renderTagOg } from './og'
 import { postRateLimitMessage } from './post-rate-limit'
-import { clearSessionCookie, safeLocalPath, safeRefererPath, sessionCookie, stringField } from './http'
+import { clearSessionCookie, isSameOriginRequest, safeLocalPath, safeRefererPath, sessionCookie, stringField } from './http'
 import { createPost, enrichPosts, updatePost } from './posts'
 import type { PostRow, PostView, ProfileRow } from './types'
 
@@ -35,6 +35,10 @@ function currentPage(value?: string) {
   const parsed = Number(value)
   return Number.isInteger(parsed) && parsed > 0 ? parsed : 1
 }
+function usersBlocked(firstId: number, secondId: number) {
+  return !!db.query(`SELECT 1 FROM blocks WHERE
+    (blocker_id=? AND blocked_id=?) OR (blocker_id=? AND blocked_id=?)`).get(firstId, secondId, secondId, firstId)
+}
 async function form(req: Request) {
   const data = await req.formData()
   return new Proxy({} as Record<string, string>, {
@@ -42,6 +46,11 @@ async function form(req: Request) {
   })
 }
 const app = new Hono()
+
+app.use('*', async (c, next) => {
+  if (c.req.method === 'POST' && !isSameOriginRequest(c.req.raw)) return c.text('Forbidden', 403)
+  await next()
+})
 
 if (devReloadEnabled) {
   app.get('/__dev/restart', c =>
@@ -225,9 +234,15 @@ app.get('/account/delete', c => {
   return user ? page(<ConfirmAccountDelete user={user} />) : redirect('/login')
 })
 
-app.post('/account/delete', c => {
+app.post('/account/delete', async c => {
   const user = currentUser(c.req.raw)
   if (!user) return redirect('/login')
+  const f = await form(c.req.raw)
+  const account = db.query('SELECT password FROM users WHERE id=? AND deleted_at IS NULL')
+    .get(user.id) as { password: string } | null
+  if (!account || !await verifyPassword(f.password || '', account.password)) {
+    return page(<ConfirmAccountDelete user={user} error="Your password is incorrect." />, 401)
+  }
   db.transaction(() => {
     db.query("UPDATE posts SET body='(deleted)',deleted_at=COALESCE(deleted_at,CURRENT_TIMESTAMP) WHERE user_id=?")
       .run(user.id)
@@ -238,6 +253,8 @@ app.post('/account/delete', c => {
     db.query('DELETE FROM post_mentions WHERE user_id=?').run(user.id)
     db.query('DELETE FROM follows WHERE follower_id=? OR following_id=?').run(user.id, user.id)
     db.query('DELETE FROM hashtag_follows WHERE user_id=?').run(user.id)
+    db.query('DELETE FROM blocks WHERE blocker_id=? OR blocked_id=?').run(user.id, user.id)
+    db.query('DELETE FROM reports WHERE reporter_id=?').run(user.id)
     db.query('DELETE FROM password_resets WHERE user_id=?').run(user.id)
     db.query('DELETE FROM sessions WHERE user_id=?').run(user.id)
     db.query(`UPDATE users SET handle=?,email=?,bio='',password='!',deleted_at=CURRENT_TIMESTAMP WHERE id=?`)
@@ -269,7 +286,9 @@ app.get('/post/:id', c => {
     url: postUrl,
   }
   const user = currentUser(c.req.raw)
-  if (user) return page(<Reply user={user} post={post} showForm={c.req.query('reply') === '1'} social={social} />)
+  if (user && usersBlocked(user.id, post.user_id)) return c.text('Not found', 404)
+  if (user) return page(<Reply user={user} post={post} showForm={c.req.query('reply') === '1'}
+    showReport={c.req.query('report') === '1'} reported={c.req.query('reported') === '1'} social={social} />)
   return page(<PublicThread post={post} social={social} />)
 })
 
@@ -384,6 +403,7 @@ app.post('/post/:id/reply', async c => {
     ) as PostView | null
     : null
   if (!parent) return c.text('Not found', 404)
+  if (usersBlocked(user.id, parent.user_id)) return c.text('Forbidden', 403)
   const f = await form(c.req.raw)
   const body = f.body || ''
   if (body.trim().length < 1 || body.length > 280) {
@@ -413,7 +433,7 @@ app.post('/follow/:handle', async c => {
   if (!/^[a-z0-9_]{2,24}$/.test(handle)) return c.text('Invalid handle', 400)
   const f = await form(c.req.raw)
   const target = db.query('SELECT id FROM users WHERE handle=? AND deleted_at IS NULL').get(handle) as { id: number } | null
-  if (target && target.id !== user.id) {
+  if (target && target.id !== user.id && !usersBlocked(user.id, target.id)) {
     const exists = db.query('SELECT 1 FROM follows WHERE follower_id=? AND following_id=?').get(user.id, target.id)
     exists
       ? db.query('DELETE FROM follows WHERE follower_id=? AND following_id=?').run(user.id, target.id)
@@ -430,6 +450,41 @@ app.post('/follow/:handle', async c => {
     }
   }
   return redirect(returnPath)
+})
+
+app.post('/block/:handle', c => {
+  const user = currentUser(c.req.raw)
+  if (!user) return redirect('/login')
+  const handle = c.req.param('handle').toLowerCase()
+  const target = db.query('SELECT id FROM users WHERE handle=? AND deleted_at IS NULL').get(handle) as { id: number } | null
+  if (!target || target.id === user.id) return c.text('Not found', 404)
+  const exists = db.query('SELECT 1 FROM blocks WHERE blocker_id=? AND blocked_id=?').get(user.id, target.id)
+  db.transaction(() => {
+    if (exists) db.query('DELETE FROM blocks WHERE blocker_id=? AND blocked_id=?').run(user.id, target.id)
+    else {
+      db.query('INSERT INTO blocks(blocker_id,blocked_id) VALUES(?,?)').run(user.id, target.id)
+      db.query('DELETE FROM follows WHERE (follower_id=? AND following_id=?) OR (follower_id=? AND following_id=?)')
+        .run(user.id, target.id, target.id, user.id)
+    }
+  })()
+  return redirect('/u/' + handle)
+})
+
+app.post('/post/:id/report', async c => {
+  const user = currentUser(c.req.raw)
+  if (!user) return redirect('/login')
+  const postId = Number(c.req.param('id'))
+  const post = Number.isInteger(postId) ? db.query('SELECT user_id FROM posts WHERE id=? AND deleted_at IS NULL')
+    .get(postId) as { user_id: number } | null : null
+  if (!post) return c.text('Not found', 404)
+  if (post.user_id === user.id) return c.text('You cannot report your own post', 400)
+  if (usersBlocked(user.id, post.user_id)) return c.text('Not found', 404)
+  const f = await form(c.req.raw)
+  if (!['harassment', 'spam', 'impersonation', 'other'].includes(f.reason)) return c.text('Invalid reason', 400)
+  db.query(`INSERT INTO reports(reporter_id,post_id,reason) VALUES(?,?,?)
+    ON CONFLICT(reporter_id,post_id) DO UPDATE SET reason=excluded.reason,created_at=CURRENT_TIMESTAMP`)
+    .run(user.id, postId, f.reason)
+  return redirect(`/post/${postId}?reported=1`)
 })
 
 app.post('/tag-follow/:tag', c => {
@@ -501,6 +556,10 @@ app.get('/u/:handle', c => {
     (db.query('SELECT count(*) AS count FROM posts WHERE user_id=? AND deleted_at IS NULL').get(profile.id) as { count: number }).count
   const following = !!user
     && !!db.query('SELECT 1 FROM follows WHERE follower_id=? AND following_id=?').get(user.id, profile.id)
+  const blocked = !!user
+    && !!db.query('SELECT 1 FROM blocks WHERE blocker_id=? AND blocked_id=?').get(user.id, profile.id)
+  const blockedByProfile = !!user
+    && !!db.query('SELECT 1 FROM blocks WHERE blocker_id=? AND blocked_id=?').get(profile.id, user.id)
   const counts = db.query(
     `SELECT
       (SELECT count(*) FROM follows WHERE following_id=?) followerCount,
@@ -519,6 +578,10 @@ app.get('/u/:handle', c => {
     url: profileUrl,
     type: 'profile' as const,
     imageAlt: `Profile for @${profile.handle}: ${description}`,
+  }
+  if (blocked || blockedByProfile) {
+    return page(<Profile user={user} profile={profile} posts={[]} following={false} blocked={blocked}
+      total={0} followerCount={0} followingCount={0} followingTagCount={0} social={social} />)
   }
   if (tab === 'following' || tab === 'followers') {
     const join = tab === 'following'
@@ -546,7 +609,8 @@ app.get('/u/:handle', c => {
       page={profilePage} total={connectionTotal} noteCount={total} {...counts} following={following} social={social} />)
   }
   return page(
-    <Profile user={user} profile={profile} posts={posts} following={following}
+    <Profile user={user} profile={profile} posts={blocked || blockedByProfile ? [] : posts} following={following}
+      blocked={blocked}
       editing={user?.id === profile.id && c.req.query('edit') === '1'} page={profilePage}
       total={total} followerCount={counts.followerCount} followingCount={counts.followingCount}
       followingTagCount={counts.followingTagCount} social={social} />,
@@ -622,12 +686,18 @@ app.get('/tag/:tag', c => {
   const following = !!user && !!db.query(
     'SELECT 1 FROM hashtag_follows WHERE user_id=? AND tag=?',
   ).get(user.id, tag)
+  const viewerId = user?.id ?? -1
   const posts = enrichPosts(db, db.query(
-    'SELECT p.*,u.handle FROM posts p JOIN users u ON u.id=p.user_id JOIN post_hashtags ph ON ph.post_id=p.id WHERE ph.tag=? AND p.deleted_at IS NULL ORDER BY p.created_at DESC LIMIT 20 OFFSET ?',
-  ).all(tag, (tagPage - 1) * 20) as PostView[])
+    `SELECT p.*,u.handle FROM posts p JOIN users u ON u.id=p.user_id JOIN post_hashtags ph ON ph.post_id=p.id
+      WHERE ph.tag=? AND p.deleted_at IS NULL AND (? < 0 OR NOT EXISTS (SELECT 1 FROM blocks b WHERE
+        (b.blocker_id=? AND b.blocked_id=p.user_id) OR (b.blocker_id=p.user_id AND b.blocked_id=?)))
+      ORDER BY p.created_at DESC LIMIT 20 OFFSET ?`,
+  ).all(tag, viewerId, viewerId, viewerId, (tagPage - 1) * 20) as PostView[])
   const total =
     (db.query(`SELECT count(*) AS count FROM post_hashtags ph JOIN posts p ON p.id=ph.post_id
-      WHERE ph.tag=? AND p.deleted_at IS NULL`).get(tag) as { count: number }).count
+      WHERE ph.tag=? AND p.deleted_at IS NULL AND (? < 0 OR NOT EXISTS (SELECT 1 FROM blocks b WHERE
+        (b.blocker_id=? AND b.blocked_id=p.user_id) OR (b.blocker_id=p.user_id AND b.blocked_id=?)))`)
+      .get(tag, viewerId, viewerId, viewerId) as { count: number }).count
   const configuredOrigin = Bun.env.APP_URL?.replace(/\/$/, '')
   const origin = configuredOrigin || new URL(c.req.url).origin
   const tagUrl = `${origin}/tag/${encodeURIComponent(tag)}`

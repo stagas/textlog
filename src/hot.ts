@@ -17,8 +17,16 @@ export function getHotPosts(
   limit: number,
   offset: number,
   asOf: Date | string = new Date(),
+  viewerId = -1,
 ) {
   const timestamp = asOf instanceof Date ? asOf.toISOString() : asOf
+  const blockFilter = viewerId < 0 ? '' : `WHERE NOT EXISTS (
+    SELECT 1 FROM blocks b
+    WHERE (b.blocker_id=? AND b.blocked_id=p.user_id) OR (b.blocker_id=p.user_id AND b.blocked_id=?)
+  )`
+  const parameters = viewerId < 0
+    ? [timestamp, limit, offset]
+    : [timestamp, viewerId, viewerId, limit, offset]
   return database.query(`
     WITH RECURSIVE activity(candidate_id,event_id,created_at,deleted_at) AS (
       SELECT id,id,created_at,deleted_at
@@ -40,7 +48,8 @@ export function getHotPosts(
     FROM ranked
     JOIN posts p ON p.id=ranked.candidate_id
     JOIN users u ON u.id=p.user_id
+    ${blockFilter}
     ORDER BY ranked.hot_score DESC,ranked.latest_activity_at DESC,p.created_at DESC,p.id DESC
     LIMIT ? OFFSET ?
-  `).all(timestamp, limit, offset) as HotPost[]
+  `).all(...parameters) as HotPost[]
 }

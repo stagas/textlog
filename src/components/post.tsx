@@ -4,7 +4,7 @@ import { fmt, fmtFull, linkify } from '../utils'
 import type { PostView } from '../types'
 import { enrichPosts } from '../posts'
 
-export function Post({ p, user, showReplyAction = true, showParent = true, showReplyCount = false, replyHref, replyLabel = 'reply' }: { p: PostView; user: User | null; showReplyAction?: boolean; showParent?: boolean; showReplyCount?: boolean; replyHref?: string; replyLabel?: string }) {
+export function Post({ p, user, showReplyAction = true, showOwnerActions = false, showParent = true, showReplyCount = false, replyHref, replyLabel = 'reply', reportHref }: { p: PostView; user: User | null; showReplyAction?: boolean; showOwnerActions?: boolean; showParent?: boolean; showReplyCount?: boolean; replyHref?: string; replyLabel?: string; reportHref?: string }) {
   const parent = showParent ? p.parent : null
   const replyCount = p.reply_count || 0
   if (p.deleted_at) return <article className="post deleted-post">
@@ -19,7 +19,8 @@ export function Post({ p, user, showReplyAction = true, showParent = true, showR
         <time dateTime={p.created_at} title={fmtFull(p.created_at)}>{fmt(p.created_at)}</time>{showReplyCount && replyCount > 0 && <span> · {replyCount} {replyCount === 1 ? 'reply' : 'replies'}</span>}
       </a>
       {showReplyAction && <a className="quiet" href={replyHref || '/post/' + p.id + '?reply=1'}>{replyLabel}</a>}
-      {user?.id === p.user_id && <div className="post-actions">
+      {reportHref && <a className="quiet report-link" href={reportHref}>report</a>}
+      {showOwnerActions && user?.id === p.user_id && <div className="post-actions">
         <a className="quiet" href={'/post/' + p.id + '/edit'}>edit</a>
         <a className="quiet danger" href={'/post/' + p.id + '/delete'}>delete</a>
       </div>}
@@ -43,13 +44,16 @@ export function Post({ p, user, showReplyAction = true, showParent = true, showR
 }
 
 export function ThreadReplies({ parentId, user }: { parentId: number; user: User | null }) {
+  const viewerId = user?.id ?? -1
   const rows = db.query(`WITH RECURSIVE thread AS (
-      SELECT p.*,u.handle,1 depth FROM posts p JOIN users u ON u.id=p.user_id WHERE p.parent_id=?
+      SELECT p.*,u.handle,1 depth FROM posts p JOIN users u ON u.id=p.user_id WHERE p.parent_id=? AND (? < 0 OR NOT EXISTS
+        (SELECT 1 FROM blocks b WHERE (b.blocker_id=? AND b.blocked_id=p.user_id) OR (b.blocker_id=p.user_id AND b.blocked_id=?)))
       UNION ALL
       SELECT p.*,u.handle,thread.depth+1 FROM posts p JOIN users u ON u.id=p.user_id
-        JOIN thread ON p.parent_id=thread.id
+        JOIN thread ON p.parent_id=thread.id WHERE (? < 0 OR NOT EXISTS
+        (SELECT 1 FROM blocks b WHERE (b.blocker_id=? AND b.blocked_id=p.user_id) OR (b.blocker_id=p.user_id AND b.blocked_id=?)))
     ) SELECT id,user_id,parent_id,body,created_at,deleted_at,handle,depth
-      FROM thread ORDER BY created_at ASC,id ASC`).all(parentId) as (PostView & { depth: number })[]
+      FROM thread ORDER BY created_at ASC,id ASC`).all(parentId, viewerId, viewerId, viewerId, viewerId, viewerId, viewerId) as (PostView & { depth: number })[]
   const replies = enrichPosts(db, rows)
   if (!replies.length) return null
   const children = new Map<number, PostView[]>()

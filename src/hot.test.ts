@@ -17,6 +17,7 @@ beforeEach(() => {
       created_at TEXT NOT NULL,
       deleted_at TEXT
     );
+    CREATE TABLE blocks (blocker_id INTEGER NOT NULL, blocked_id INTEGER NOT NULL);
   `)
   database.query('INSERT INTO users(id,handle) VALUES(?,?)').run(1, 'tester')
 })
@@ -67,5 +68,15 @@ describe('hot feed ranking', () => {
 
     expect(getHotPosts(database, 2, 0, asOf).map(result => result.id)).toEqual([2, 1])
     expect(getHotPosts(database, 2, 2, asOf).map(result => result.id)).toEqual([3])
+  })
+
+  test('hides posts when either user has blocked the other', () => {
+    database.query('INSERT INTO users(id,handle) VALUES(?,?)').run(2, 'blocked')
+    post(1, '2026-08-03 11:00:00')
+    database.query('INSERT INTO posts VALUES(?,?,?,?,?,?)')
+      .run(2, 2, null, 'hidden', '2026-08-03 12:00:00', null)
+    database.query('INSERT INTO blocks VALUES(?,?)').run(2, 1)
+
+    expect(getHotPosts(database, 20, 0, asOf, 1).map(result => result.id)).toEqual([1])
   })
 })

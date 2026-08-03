@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, test } from 'bun:test'
-import { clearSessionCookie, safeLocalPath, safeRefererPath, sessionCookie, stringField } from './http'
+import { clearSessionCookie, isSameOriginRequest, safeLocalPath, safeRefererPath, sessionCookie, stringField } from './http'
 
 const previousAppUrl = Bun.env.APP_URL
 afterEach(() => {
@@ -24,6 +24,20 @@ describe('local redirects', () => {
 })
 
 describe('request values and cookies', () => {
+  test('accepts same-origin POSTs and rejects missing or cross-origin request metadata', () => {
+    const url = 'https://root.mx/post'
+    expect(isSameOriginRequest(new Request(url, { headers: { origin: 'https://root.mx' } }))).toBe(true)
+    expect(isSameOriginRequest(new Request(url, { headers: { referer: 'https://root.mx/compose' } }))).toBe(true)
+    expect(isSameOriginRequest(new Request(url, { headers: { origin: 'https://evil.example' } }))).toBe(false)
+    expect(isSameOriginRequest(new Request(url))).toBe(false)
+  })
+
+  test('uses the configured public origin behind a proxy', () => {
+    Bun.env.APP_URL = 'https://root.mx'
+    const request = new Request('http://internal:3000/post', { headers: { origin: 'https://root.mx' } })
+    expect(isSameOriginRequest(request)).toBe(true)
+  })
+
   test('ignores uploaded files when a text field is expected', () => {
     const data = new FormData()
     data.set('body', new File(['text'], 'body.txt'))

@@ -153,12 +153,15 @@ export function Legal({ user }: { user: User | null }) {
 
 export function Feed({ user, page }: { user: User; page: number }) {
   const total = (db.query(
-    `SELECT count(*) AS count FROM posts p WHERE p.deleted_at IS NULL AND (p.user_id=? OR p.user_id IN (SELECT following_id FROM follows WHERE follower_id=?) OR p.id IN (SELECT ph.post_id FROM post_hashtags ph JOIN hashtag_follows hf ON hf.tag=ph.tag WHERE hf.user_id=?))`,
-  ).get(user.id, user.id, user.id) as { count: number }).count
+    `SELECT count(*) AS count FROM posts p WHERE p.deleted_at IS NULL AND (p.user_id=? OR p.user_id IN (SELECT following_id FROM follows WHERE follower_id=?) OR p.id IN (SELECT ph.post_id FROM post_hashtags ph JOIN hashtag_follows hf ON hf.tag=ph.tag WHERE hf.user_id=?))
+      AND NOT EXISTS (SELECT 1 FROM blocks b WHERE (b.blocker_id=? AND b.blocked_id=p.user_id) OR (b.blocker_id=p.user_id AND b.blocked_id=?))`,
+  ).get(user.id, user.id, user.id, user.id, user.id) as { count: number }).count
   const totalPages = Math.ceil(total / pageSize)
   const posts = enrichPosts(db, db.query(
-    `SELECT p.*,u.handle, EXISTS(SELECT 1 FROM follows f WHERE f.follower_id=? AND f.following_id=p.user_id) following FROM posts p JOIN users u ON u.id=p.user_id WHERE p.deleted_at IS NULL AND (p.user_id=? OR p.user_id IN (SELECT following_id FROM follows WHERE follower_id=?) OR p.id IN (SELECT ph.post_id FROM post_hashtags ph JOIN hashtag_follows hf ON hf.tag=ph.tag WHERE hf.user_id=?)) ORDER BY p.created_at DESC LIMIT ? OFFSET ?`,
-  ).all(user.id, user.id, user.id, user.id, pageSize, (page - 1) * pageSize) as PostView[])
+    `SELECT p.*,u.handle, EXISTS(SELECT 1 FROM follows f WHERE f.follower_id=? AND f.following_id=p.user_id) following FROM posts p JOIN users u ON u.id=p.user_id WHERE p.deleted_at IS NULL AND (p.user_id=? OR p.user_id IN (SELECT following_id FROM follows WHERE follower_id=?) OR p.id IN (SELECT ph.post_id FROM post_hashtags ph JOIN hashtag_follows hf ON hf.tag=ph.tag WHERE hf.user_id=?))
+      AND NOT EXISTS (SELECT 1 FROM blocks b WHERE (b.blocker_id=? AND b.blocked_id=p.user_id) OR (b.blocker_id=p.user_id AND b.blocked_id=?))
+      ORDER BY p.created_at DESC LIMIT ? OFFSET ?`,
+  ).all(user.id, user.id, user.id, user.id, user.id, user.id, pageSize, (page - 1) * pageSize) as PostView[])
   return (
     <Layout user={user}>
       <FeedTabs active="following" user={user} />
@@ -188,11 +191,15 @@ export function Feed({ user, page }: { user: User; page: number }) {
 export function PublicFeed(
   { page, user = null, path = '/' }: { page: number; user?: User | null; path?: string },
 ) {
-  const total =
-    (db.query('SELECT count(*) AS count FROM posts WHERE deleted_at IS NULL').get() as { count: number }).count
+  const viewerId = user?.id ?? -1
+  const total = (db.query(`SELECT count(*) AS count FROM posts p WHERE deleted_at IS NULL AND (? < 0 OR NOT EXISTS
+    (SELECT 1 FROM blocks b WHERE (b.blocker_id=? AND b.blocked_id=p.user_id) OR (b.blocker_id=p.user_id AND b.blocked_id=?)))`)
+    .get(viewerId, viewerId, viewerId) as { count: number }).count
   const posts = enrichPosts(db, db.query(
-    'SELECT p.*,u.handle FROM posts p JOIN users u ON u.id=p.user_id WHERE p.deleted_at IS NULL ORDER BY p.created_at DESC LIMIT ? OFFSET ?',
-  ).all(pageSize, (page - 1) * pageSize) as PostView[])
+    `SELECT p.*,u.handle FROM posts p JOIN users u ON u.id=p.user_id WHERE p.deleted_at IS NULL AND (? < 0 OR NOT EXISTS
+      (SELECT 1 FROM blocks b WHERE (b.blocker_id=? AND b.blocked_id=p.user_id) OR (b.blocker_id=p.user_id AND b.blocked_id=?)))
+      ORDER BY p.created_at DESC LIMIT ? OFFSET ?`,
+  ).all(viewerId, viewerId, viewerId, pageSize, (page - 1) * pageSize) as PostView[])
   return (
     <Layout user={user} title={path === '/latest' ? 'latest' : undefined}>
       <FeedTabs active="latest" user={user} />
@@ -211,9 +218,12 @@ export function PublicFeed(
 }
 
 export function HotFeed({ page, user, title }: { page: number; user: User | null; title?: string }) {
-  const total =
-    (db.query('SELECT count(*) AS count FROM posts WHERE deleted_at IS NULL').get() as { count: number }).count
-  const posts = enrichPosts(db, getHotPosts(db, pageSize, (page - 1) * pageSize))
+  const viewerId = user?.id ?? -1
+  const total = (db.query(`SELECT count(*) AS count FROM posts p WHERE deleted_at IS NULL AND (? < 0 OR NOT EXISTS
+    (SELECT 1 FROM blocks b WHERE (b.blocker_id=? AND b.blocked_id=p.user_id)
+      OR (b.blocker_id=p.user_id AND b.blocked_id=?)))`)
+    .get(viewerId, viewerId, viewerId) as { count: number }).count
+  const posts = enrichPosts(db, getHotPosts(db, pageSize, (page - 1) * pageSize, new Date(), user?.id ?? -1))
   return (
     <Layout user={user} title={title}>
       <FeedTabs active="hot" user={user} />
@@ -233,16 +243,20 @@ export function HotFeed({ page, user, title }: { page: number; user: User | null
 
 export function Activity({ user, page }: { user: User; page: number }) {
   const postActivityWhere = `p.deleted_at IS NULL AND
-    (parent.user_id=? OR (pm.user_id IS NOT NULL AND p.user_id != ?))`
+    (parent.user_id=? OR (pm.user_id IS NOT NULL AND p.user_id != ?)) AND
+    NOT EXISTS (SELECT 1 FROM blocks b WHERE
+      (b.blocker_id=? AND b.blocked_id=p.user_id) OR (b.blocker_id=p.user_id AND b.blocked_id=?))`
   const postTotal = (db.query(
     `SELECT count(DISTINCT p.id) count FROM posts p
       LEFT JOIN posts parent ON parent.id=p.parent_id
       LEFT JOIN post_mentions pm ON pm.post_id=p.id AND pm.user_id=?
       WHERE ${postActivityWhere}`,
-  ).get(user.id, user.id, user.id) as { count: number }).count
+  ).get(user.id, user.id, user.id, user.id, user.id) as { count: number }).count
   const followTotal = (db.query(
-    'SELECT count(*) count FROM follows WHERE following_id=? AND created_at IS NOT NULL',
-  ).get(user.id) as { count: number }).count
+    `SELECT count(*) count FROM follows f WHERE following_id=? AND created_at IS NOT NULL AND NOT EXISTS
+      (SELECT 1 FROM blocks b WHERE (b.blocker_id=? AND b.blocked_id=f.follower_id)
+        OR (b.blocker_id=f.follower_id AND b.blocked_id=?))`,
+  ).get(user.id, user.id, user.id) as { count: number }).count
   const total = postTotal + followTotal
   const posts = db.query(
     `SELECT * FROM (
@@ -260,9 +274,12 @@ export function Activity({ user, page }: { user: User; page: number }) {
         (SELECT count(*) FROM posts fp WHERE fp.user_id=u.id AND fp.deleted_at IS NULL) posts,
         EXISTS(SELECT 1 FROM follows vf WHERE vf.follower_id=? AND vf.following_id=u.id) viewerFollowing
         FROM follows f JOIN users u ON u.id=f.follower_id
-        WHERE f.following_id=? AND f.created_at IS NOT NULL
+        WHERE f.following_id=? AND f.created_at IS NOT NULL AND NOT EXISTS
+          (SELECT 1 FROM blocks b WHERE (b.blocker_id=? AND b.blocked_id=f.follower_id)
+            OR (b.blocker_id=f.follower_id AND b.blocked_id=?))
       ) ORDER BY created_at DESC LIMIT ? OFFSET ?`,
-  ).all(user.id, user.id, user.id, user.id, user.id, user.id, pageSize, (page - 1) * pageSize) as
+  ).all(user.id, user.id, user.id, user.id, user.id, user.id, user.id, user.id, user.id, user.id,
+    pageSize, (page - 1) * pageSize) as
     (PostView & { activity_kind: 'reply' | 'mention' | 'follow'; posts: number | null;
       viewerFollowing: boolean | null; bio: string | null })[]
   const activity = enrichPosts(db, posts.filter(post => post.activity_kind !== 'follow'))
@@ -494,7 +511,7 @@ export function ConfirmDelete({ user, post }: { user: User; post: PostRow }) {
   )
 }
 
-export function ConfirmAccountDelete({ user }: { user: User }) {
+export function ConfirmAccountDelete({ user, error }: { user: User; error?: string }) {
   return (
     <Layout user={user} title="delete account">
       <div className="panel confirm-delete">
@@ -503,26 +520,33 @@ export function ConfirmAccountDelete({ user }: { user: User }) {
           This cannot be undone. Your profile and account data will be removed, and all your notes will become
           “(deleted)” tombstones so existing conversations remain readable.
         </p>
-        <div className="form-actions">
-          <a className="quiet" href={`/u/${user.handle}?edit=1`}>cancel</a>
-          <form method="post" action="/account/delete">
+        <form className="account-delete-form" method="post" action="/account/delete">
+          <FormMessage error={error} />
+          <label>
+            confirm your password
+            <input type="password" name="password" required autoComplete="current-password" autoFocus />
+          </label>
+          <div className="form-actions">
+            <a className="quiet" href={`/u/${user.handle}?edit=1`}>cancel</a>
             <button className="button delete-button" type="submit">delete account</button>
-          </form>
-        </div>
+          </div>
+        </form>
       </div>
     </Layout>
   )
 }
 
 export function Reply(
-  { user, post, showForm, error, body = '', social }: { user: User; post: PostView; showForm: boolean; error?: string;
+  { user, post, showForm, showReport = false, reported = false, error, body = '', social }: { user: User; post: PostView; showForm: boolean; showReport?: boolean; reported?: boolean; error?: string;
     social?: { description: string; image: string; url: string }; body?: string },
 ) {
   return (
     <Layout user={user} title={postTitle(post.body)} social={social}>
       <div className="thread-root">
-        <Post p={post} user={user} showReplyAction={!showForm} />
+        <Post p={post} user={user} showReplyAction={!showForm} showOwnerActions
+          reportHref={user.id !== post.user_id && !showReport && !reported ? `/post/${post.id}?report=1` : undefined} />
       </div>
+      {user.id !== post.user_id && <ReportPanel post={post} showForm={showReport} reported={reported} />}
       {showForm && (
         <div className="panel replybox">
           <form method="post" action={'/post/' + post.id + '/reply'}>
@@ -551,18 +575,28 @@ export function Explore({ user, welcome = false, peopleIds }: {
     ? (db.query(
       `SELECT u.*, (SELECT count(*) FROM posts p WHERE p.user_id=u.id AND p.deleted_at IS NULL) posts,
         EXISTS(SELECT 1 FROM follows f WHERE f.follower_id=? AND f.following_id=u.id) following
-        FROM users u WHERE u.id IN (${savedIds.map(() => '?').join(',')}) AND u.deleted_at IS NULL`,
-    ).all(viewerId, ...savedIds) as PersonView[]).sort((a, b) => savedIds.indexOf(a.id) - savedIds.indexOf(b.id))
+        FROM users u WHERE u.id IN (${savedIds.map(() => '?').join(',')}) AND u.deleted_at IS NULL
+        AND (? < 0 OR NOT EXISTS (SELECT 1 FROM blocks b WHERE
+          (b.blocker_id=? AND b.blocked_id=u.id) OR (b.blocker_id=u.id AND b.blocked_id=?)))`,
+    ).all(viewerId, ...savedIds, viewerId, viewerId, viewerId) as PersonView[])
+      .sort((a, b) => savedIds.indexOf(a.id) - savedIds.indexOf(b.id))
     : db.query(
-      'SELECT u.*, (SELECT count(*) FROM posts p WHERE p.user_id=u.id AND p.deleted_at IS NULL) posts, EXISTS(SELECT 1 FROM follows f WHERE f.follower_id=? AND f.following_id=u.id) following FROM users u WHERE u.id != ? AND u.deleted_at IS NULL AND NOT EXISTS (SELECT 1 FROM follows f WHERE f.follower_id=? AND f.following_id=u.id) AND EXISTS (SELECT 1 FROM posts p WHERE p.user_id=u.id AND p.deleted_at IS NULL) ORDER BY RANDOM() LIMIT 6',
-    ).all(viewerId, viewerId, viewerId) as PersonView[]
+      `SELECT u.*, (SELECT count(*) FROM posts p WHERE p.user_id=u.id AND p.deleted_at IS NULL) posts,
+       EXISTS(SELECT 1 FROM follows f WHERE f.follower_id=? AND f.following_id=u.id) following FROM users u
+       WHERE u.id != ? AND u.deleted_at IS NULL AND NOT EXISTS (SELECT 1 FROM follows f WHERE f.follower_id=? AND f.following_id=u.id)
+       AND (? < 0 OR NOT EXISTS (SELECT 1 FROM blocks b WHERE
+         (b.blocker_id=? AND b.blocked_id=u.id) OR (b.blocker_id=u.id AND b.blocked_id=?)))
+       AND EXISTS (SELECT 1 FROM posts p WHERE p.user_id=u.id AND p.deleted_at IS NULL) ORDER BY RANDOM() LIMIT 6`,
+    ).all(viewerId, viewerId, viewerId, viewerId, viewerId, viewerId) as PersonView[]
   const explorePeople = people.map(p => p.id).join(',')
   const tags = db.query(
     `SELECT ph.tag,count(*) count,
       EXISTS(SELECT 1 FROM hashtag_follows hf WHERE hf.user_id=? AND hf.tag=ph.tag) following
-      FROM post_hashtags ph
+      FROM post_hashtags ph JOIN posts p ON p.id=ph.post_id
+      WHERE p.deleted_at IS NULL AND (? < 0 OR NOT EXISTS (SELECT 1 FROM blocks b WHERE
+        (b.blocker_id=? AND b.blocked_id=p.user_id) OR (b.blocker_id=p.user_id AND b.blocked_id=?)))
       GROUP BY ph.tag ORDER BY count DESC LIMIT 12`,
-  ).all(viewerId) as { tag: string; count: number; following: boolean }[]
+  ).all(viewerId, viewerId, viewerId, viewerId) as { tag: string; count: number; following: boolean }[]
   return (
     <Layout user={user} title="explore">
       {user && welcome && (
@@ -611,7 +645,7 @@ export function Explore({ user, welcome = false, peopleIds }: {
 export function Profile(
   { user, profile, posts, following, bio = profile.bio || '', editHandle = profile.handle, editEmail = profile.email,
     error, editing = false, page = 1, total = posts.length, followerCount = 0, followingCount = 0,
-    followingTagCount = 0, social }: {
+    followingTagCount = 0, blocked = false, social }: {
       user: User | null
       profile: ProfileRow
       posts: PostView[]
@@ -626,12 +660,13 @@ export function Profile(
       followerCount?: number
       followingCount?: number
       followingTagCount?: number
+      blocked?: boolean
       social?: { description: string; image: string; url: string; type?: 'article' | 'profile'; imageAlt?: string }
     },
 ) {
   return (
     <Layout user={user} title={`@${profile.handle}`} social={social}>
-      <ProfileHeader user={user} profile={profile} following={following} editing={editing}>
+      <ProfileHeader user={user} profile={profile} following={following} blocked={blocked} editing={editing}>
         <div className="profile-content">
           <h1>@{profile.handle}</h1>
           {user?.id === profile.id && editing
@@ -675,8 +710,8 @@ export function Profile(
   )
 }
 
-function ProfileHeader({ user, profile, following, editing = false, children }: {
-  user: User | null; profile: ProfileRow; following: boolean; editing?: boolean; children?: React.ReactNode
+function ProfileHeader({ user, profile, following, blocked = false, editing = false, children }: {
+  user: User | null; profile: ProfileRow; following: boolean; blocked?: boolean; editing?: boolean; children?: React.ReactNode
 }) {
   return (
     <section className={`page-header profile${editing ? ' profile-editing' : ''}`}>
@@ -695,11 +730,14 @@ function ProfileHeader({ user, profile, following, editing = false, children }: 
             </form>
           </>
         )}
-        {user && user.id !== profile.id && (
-          <form method="post" action={'/follow/' + profile.handle}>
+        {user && user.id !== profile.id && <>
+          {!blocked && <form method="post" action={'/follow/' + profile.handle}>
             <button className="button">{following ? 'unfollow' : 'follow'}</button>
+          </form>}
+          <form method="post" action={'/block/' + profile.handle}>
+            <button className={blocked ? 'button' : 'quiet danger'}>{blocked ? 'unblock' : 'block'}</button>
           </form>
-        )}
+        </>}
         {!user && <a className="button" href="/login">log in to follow</a>}
       </div>
     </section>
@@ -864,4 +902,26 @@ export function PublicThread(
       <ThreadReplies parentId={post.id} user={null} />
     </Layout>
   )
+}
+
+function ReportPanel({ post, showForm, reported }: { post: PostView; showForm: boolean; reported: boolean }) {
+  if (reported) return <p className="report-status" role="status">Report received. Thank you.</p>
+  if (!showForm) return null
+  return <div className="panel report-panel">
+    <form method="post" action={`/post/${post.id}/report`}>
+      <label>reason
+        <select name="reason" required defaultValue="">
+          <option value="" disabled>choose a reason</option>
+          <option value="harassment">harassment</option>
+          <option value="spam">spam</option>
+          <option value="impersonation">impersonation</option>
+          <option value="other">other</option>
+        </select>
+      </label>
+      <div className="form-actions">
+        <a className="quiet" href={`/post/${post.id}`}>cancel</a>
+        <button className="button delete-button">submit report</button>
+      </div>
+    </form>
+  </div>
 }
