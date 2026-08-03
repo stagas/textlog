@@ -14,6 +14,7 @@ import { registerPostsRoutes } from './routes/posts'
 import { registerProfilesRoutes } from './routes/profiles'
 import { registerTagsRoutes } from './routes/tags'
 import { loadStylesAsset, stylesResponse } from './styles'
+import { logError, logHttp, logReady, shouldLogHttp } from './log'
 
 const devReloadEnabled = Bun.env.DEV_RELOAD === 'true'
 const bootId = crypto.randomUUID()
@@ -21,6 +22,17 @@ configureDevReload(devReloadEnabled ? bootId : undefined)
 const app = new Hono()
 const stylesPath = new URL('./styles.css', import.meta.url).pathname
 const styles = devReloadEnabled ? undefined : await loadStylesAsset(stylesPath)
+
+app.use('*', async (c, next) => {
+  const started = performance.now()
+  try {
+    await next()
+  }
+  finally {
+    const path = new URL(c.req.url).pathname
+    if (shouldLogHttp(path, c.res.status)) logHttp(c.req.method, path, c.res.status, performance.now() - started)
+  }
+})
 
 app.use('*', async (c, next) => {
   await next()
@@ -59,7 +71,7 @@ app.get('/health', c => {
     return c.json({ status: 'ok' }, 200, { 'cache-control': 'no-store' })
   }
   catch (error) {
-    console.error('Health check failed', error)
+    logError('health check failed', error)
     return c.json({ status: 'unavailable' }, 503, { 'cache-control': 'no-store' })
   }
 })
@@ -96,9 +108,9 @@ registerProfilesRoutes(app)
 registerTagsRoutes(app)
 app.notFound(c => c.text('Not found', 404))
 app.onError((error, c) => {
-  console.error(error)
+  logError(`${c.req.method} ${new URL(c.req.url).pathname}`, error)
   return c.text('Something went wrong', 500)
 })
 
 export default { port: 3000, host: '0.0.0.0', fetch: app.fetch }
-console.log('root listening on http://localhost:3000')
+logReady('http://localhost:3000', Bun.env.NODE_ENV || (devReloadEnabled ? 'development' : 'production'))
