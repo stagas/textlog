@@ -29,7 +29,7 @@ export function Feed({ user, page, title }: { user: User; page: number; title?: 
             <div>
               <a className="button" href="/explore">explore</a>
               <a href="/latest">browse latest</a>
-              <a href="/compose">write your first note</a>
+              <a href="/write">write your first note</a>
             </div>
           </div>
         )

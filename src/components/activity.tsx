@@ -100,7 +100,7 @@ export function Activity({ user, page }: { user: User; page: number }) {
             <p>No activity yet.</p>
             <div>
               <a className="button" href="/latest">browse latest</a>
-              <a href="/compose">write a note</a>
+              <a href="/write">write a note</a>
             </div>
           </div>
         )

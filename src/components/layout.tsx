@@ -50,14 +50,14 @@ export function Layout({
             <meta name="twitter:image" content={share.image} />
             <meta name="twitter:image:alt" content={share.imageAlt || `Post by ${title || 'a root.mx user'}`} />
           </>
-        <link rel="icon" href="/root.svg" type="image/svg+xml" />
+        <link rel="icon" href="/root.svg?v=1" type="image/svg+xml" />
         <link rel="stylesheet" href="/styles.css?v=34" />
       </head>
       <body>
         <a className="skip-link" href="#main-content">skip to content</a>
         <header>
           <a className="brand" href="/" aria-label="root.mx home">
-            <img className="brand-logo" src="/root.svg" alt="" />
+            <img className="brand-logo" src="/root.svg?v=1" alt="" />
             <span>
               root<span className="brand-dot">.</span>mx
             </span>
@@ -68,7 +68,7 @@ export function Layout({
                 <a href={`/u/${user.handle}`}>@{user.handle}</a>
                 <a href="/explore">explore</a>
                 <a href="/activity">activity</a>
-                <a href="/compose">write</a>
+                <a href="/write">write</a>
                 {isAdmin(user) && <a href="/admin">admin</a>}
               </nav>
             )

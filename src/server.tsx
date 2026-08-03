@@ -2,6 +2,7 @@ import { isSameOriginRequest, securityHeaders } from './http'
 
 import { Hono } from 'hono'
 import { configureDevReload } from './components/layout'
+import { compressResponse } from './compression'
 import { db } from './db'
 import { renderDefaultOg } from './og'
 import { registerAccountRoutes } from './routes/account'
@@ -12,11 +13,19 @@ import { registerInteractionsRoutes } from './routes/interactions'
 import { registerPostsRoutes } from './routes/posts'
 import { registerProfilesRoutes } from './routes/profiles'
 import { registerTagsRoutes } from './routes/tags'
+import { loadStylesAsset, stylesResponse } from './styles'
 
 const devReloadEnabled = Bun.env.DEV_RELOAD === 'true'
 const bootId = crypto.randomUUID()
 configureDevReload(devReloadEnabled ? bootId : undefined)
 const app = new Hono()
+const stylesPath = new URL('./styles.css', import.meta.url).pathname
+const styles = devReloadEnabled ? undefined : await loadStylesAsset(stylesPath)
+
+app.use('*', async (c, next) => {
+  await next()
+  c.res = await compressResponse(c.req.raw, c.res)
+})
 
 app.use('*', async (c, next) => {
   await next()
@@ -27,7 +36,7 @@ app.use('*', async (c, next) => {
   if (c.req.method !== 'GET' || !c.res.headers.get('content-type')?.includes('text/html')) return
   const url = new URL(c.req.url)
   const privatePath =
-    /^\/(?:login|signup|forgot-password|reset-password|compose|activity|admin|account\/delete)(?:\/|$)/
+    /^\/(?:login|signup|forgot-password|reset-password|write|compose|activity|admin|account\/delete)(?:\/|$)/
       .test(url.pathname) || /^\/post\/\d+\/(?:edit|delete)$/.test(url.pathname)
   const transientParameters = ['reply', 'report', 'reported', 'edit', 'welcome', 'reset', 'token']
   const transient = transientParameters.some(name => url.searchParams.has(name))
@@ -57,15 +66,17 @@ app.get('/health', c => {
 if (devReloadEnabled) {
   app.get('/__dev/restart', c => c.json({ bootId }, 200, { 'cache-control': 'no-store, no-cache, must-revalidate' }))
 }
-app.get('/styles.css',
-  () =>
-    new Response(Bun.file(new URL('./styles.css', import.meta.url)), {
-      headers: { 'content-type': 'text/css; charset=utf-8', 'cache-control': 'no-cache' },
-    }))
+app.get('/styles.css', async c => {
+  const asset = styles ?? await loadStylesAsset(stylesPath)
+  return stylesResponse(asset, c.req.raw, !devReloadEnabled)
+})
 app.get('/root.svg',
   () =>
     new Response(Bun.file(new URL('./root.svg', import.meta.url)), {
-      headers: { 'content-type': 'image/svg+xml; charset=utf-8', 'cache-control': 'no-cache' },
+      headers: {
+        'content-type': 'image/svg+xml; charset=utf-8',
+        'cache-control': 'public, max-age=31536000, immutable',
+      },
     }))
 app.get('/og.png', () => {
   const image = renderDefaultOg()

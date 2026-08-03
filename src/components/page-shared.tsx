@@ -266,7 +266,7 @@ export function GlobalFeedEmpty({ user }: { user: User | null }) {
       <p>No notes have been posted yet.</p>
       <div>
         {user
-          ? <a className="button" href="/compose">write the first note →</a>
+          ? <a className="button" href="/write">write the first note →</a>
           : <a className="button" href="/signup">join and write →</a>}
         <a href="/explore">explore</a>
       </div>

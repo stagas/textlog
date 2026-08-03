@@ -2,6 +2,7 @@
   --bg: #f4f3ee;
   --ink: #20231f;
   --muted: #8a9085;
+  --tab-hover: #a2a79e;
   --soft: #d9dbd4;
   --accent: #749668;
   --accent-dark: #55734a;
@@ -50,6 +51,7 @@
     --bg: #171a17;
     --ink: #e5e8e1;
     --muted: #969d92;
+    --tab-hover: #b4bab0;
     --soft: #343a33;
     --accent: #9abd8e;
     --accent-dark: #b2d1a8;
@@ -220,6 +222,10 @@ nav form {
   padding: var(--space-2) var(--space-3);
   color: var(--muted);
   border-bottom: 2px solid transparent;
+}
+
+.feed-tabs a:hover {
+  color: var(--tab-hover);
 }
 
 .feed-tabs a.active {

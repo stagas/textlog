@@ -28,7 +28,7 @@ describe('request values and cookies', () => {
   test('accepts same-origin POSTs and rejects missing or cross-origin request metadata', () => {
     const url = 'https://root.mx/post'
     expect(isSameOriginRequest(new Request(url, { headers: { origin: 'https://root.mx' } }))).toBe(true)
-    expect(isSameOriginRequest(new Request(url, { headers: { referer: 'https://root.mx/compose' } }))).toBe(true)
+    expect(isSameOriginRequest(new Request(url, { headers: { referer: 'https://root.mx/write' } }))).toBe(true)
     expect(isSameOriginRequest(new Request(url, { headers: { origin: 'https://evil.example' } }))).toBe(false)
     expect(isSameOriginRequest(new Request(url))).toBe(false)
   })

@@ -45,7 +45,7 @@ export function Explore({ user, welcome = false, peopleIds }: {
           <h1>Make this place yours.</h1>
           <p>Follow a few people or hashtags below, or start with a note of your own.</p>
           <div className="welcome-actions">
-            <a className="button" href="/compose">write your first note →</a>
+            <a className="button" href="/write">write your first note →</a>
             <a href="/latest">browse latest</a>
           </div>
         </section>

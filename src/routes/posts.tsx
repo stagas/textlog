@@ -17,11 +17,12 @@ import { postRateLimitMessage } from '../post-rate-limit'
 import { currentUser } from '../utils'
 
 export function registerPostsRoutes(app: Hono) {
-  app.get('/compose', c => {
+  app.get('/write', c => {
     const user = currentUser(c.req.raw)
-    return user ? page(<Compose user={user} />) : redirect('/login?next=' + encodeURIComponent('/compose'))
+    return user ? page(<Compose user={user} />) : redirect('/login?next=' + encodeURIComponent('/write'))
   })
-  app.get('/post', c => c.redirect('/compose', 303))
+  app.get('/compose', c => c.redirect('/write', 301))
+  app.get('/post', c => c.redirect('/write', 303))
 
   app.get('/post/:id', c => {
     const id = Number(c.req.param('id'))
