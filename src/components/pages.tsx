@@ -1,13 +1,13 @@
 import React from 'react'
+import { isAdmin, isAdminEmail } from '../admin'
 import { db, type User } from '../db'
 import { getHotPosts } from '../hot'
-import { Layout } from './layout'
-import { Post, ThreadReplies } from './post'
 import { enrichPosts } from '../posts'
 import type { PersonView, PostRow, PostView, ProfileRow } from '../types'
 import type { AdminActionView, AdminReportView, DashboardStats } from '../types'
-import { isAdmin, isAdminEmail } from '../admin'
 import { fmtFull } from '../utils'
+import { Layout } from './layout'
+import { Post, ThreadReplies } from './post'
 
 const pageSize = 20
 const postTitleLength = 60
@@ -80,116 +80,215 @@ function Pagination({ page, totalPages, path }: { page: number; totalPages: numb
 }
 
 export function AdminDashboard({ user, stats, reports, actions, status, page, total, suspended = [] }: {
-  user: User; stats: DashboardStats; reports: AdminReportView[]; actions: AdminActionView[]
-  status: 'open' | 'resolved' | 'dismissed'; page: number; total: number; suspended?: ProfileRow[]
+  user: User
+  stats: DashboardStats
+  reports: AdminReportView[]
+  actions: AdminActionView[]
+  status: 'open' | 'resolved' | 'dismissed'
+  page: number
+  total: number
+  suspended?: ProfileRow[]
 }) {
   const labels: [keyof DashboardStats, string][] = [
-    ['users', 'users'], ['suspendedUsers', 'suspended'], ['activePosts', 'active posts'],
-    ['replies', 'replies'], ['openReports', 'open reports'], ['users24h', 'new users · 24h'],
-    ['users7d', 'new users · 7d'], ['posts24h', 'new posts · 24h'], ['posts7d', 'new posts · 7d'],
+    ['users', 'users'],
+    ['suspendedUsers', 'suspended'],
+    ['activePosts', 'active posts'],
+    ['replies', 'replies'],
+    ['openReports', 'open reports'],
+    ['users24h', 'new users · 24h'],
+    ['users7d', 'new users · 7d'],
+    ['posts24h', 'new posts · 24h'],
+    ['posts7d', 'new posts · 7d'],
   ]
-  return <Layout user={user} title="admin">
-    <section className="page-header admin-header"><div><p className="eyebrow">operations</p><h1>admin dashboard</h1></div></section>
-    <section className="admin-stats" aria-label="Application statistics">
-      {labels.map(([key, label]) => <article key={key}><strong>{stats[key]}</strong><span>{label}</span></article>)}
-    </section>
-    <nav className="feed-tabs admin-tabs" aria-label="Report status">
-      {(['open', 'resolved', 'dismissed'] as const).map(value => <a key={value}
-        className={status === value ? 'active' : ''} aria-current={status === value ? 'page' : undefined}
-        href={`/admin?status=${value}`}>{value}</a>)}
-    </nav>
-    <section className="admin-section">
-      <h2>{status} reports <span>{total}</span></h2>
-      {reports.length ? <div className="report-list">{reports.map(report => <article className="admin-report" key={report.id}>
-        <div className="admin-report-meta">
-          <span>#{report.id} · {report.reason} · <time dateTime={report.created_at}>{fmtFull(report.created_at)}</time></span>
-          <span>reported by <a href={`/u/${report.reporter_handle}`}>@{report.reporter_handle}</a></span>
+  return (
+    <Layout user={user} title="admin">
+      <section className="page-header admin-header">
+        <div>
+          <p className="eyebrow">operations</p>
+          <h1>admin dashboard</h1>
         </div>
-        <p>{report.post_deleted_at ? '(deleted)' : report.post_body}</p>
-        <div className="admin-report-targets">
-          <a href={`/post/${report.post_id}`}>post #{report.post_id}</a>
-          <a href={`/u/${report.author_handle}`}>@{report.author_handle}</a>
-          {report.resolver_handle && <span>handled by @{report.resolver_handle}</span>}
-        </div>
-        {report.status === 'open' && <div className="admin-inline-actions">
-          <form method="post" action={`/admin/reports/${report.id}/resolve`}>
-            <input name="note" maxLength={500} aria-label="Optional resolution note" placeholder="optional note" />
-            <button className="quiet">resolve</button>
-          </form>
-          <form method="post" action={`/admin/reports/${report.id}/dismiss`}>
-            <input name="note" maxLength={500} aria-label="Optional dismissal note" placeholder="optional note" />
-            <button className="quiet">dismiss</button>
-          </form>
-          {!report.post_deleted_at && <a className="quiet danger" href={`/admin/posts/${report.post_id}/delete?report=${report.id}`}>delete post</a>}
-          <a className="quiet danger" href={`/admin/users/${report.author_id}`}>moderate user</a>
-        </div>}
-      </article>)}</div> : <div className="empty admin-empty">No {status} reports.</div>}
-      <Pagination page={page} totalPages={Math.ceil(total / pageSize)} path={`/admin?status=${status}`} />
-    </section>
-    <section className="admin-section admin-suspended">
-      <h2>suspended users <span>{stats.suspendedUsers}</span></h2>
-      {suspended.length ? <div className="admin-user-list">{suspended.map(target => <article key={target.id}>
-        <a href={`/u/${target.handle}`}>@{target.handle}</a>
-        <span>{target.suspended_at && fmtFull(target.suspended_at)}</span>
-        <a className="quiet" href={`/admin/users/${target.id}`}>review</a>
-      </article>)}</div> : <p className="section-empty">No suspended users.</p>}
-    </section>
-    <section className="admin-section admin-actions-log">
-      <h2>recent admin actions</h2>
-      {actions.length ? actions.map(action => <article key={action.id}>
-        <span><a href={`/u/${action.actor_handle}`}>@{action.actor_handle}</a> {action.action.replaceAll('_', ' ')}</span>
-        <span>{action.target_handle && `@${action.target_handle}`}{action.target_post_id && ` post #${action.target_post_id}`}</span>
-        {action.note && <p>{action.note}</p>}
-        <time dateTime={action.created_at}>{fmtFull(action.created_at)}</time>
-      </article>) : <p className="section-empty">No moderation actions yet.</p>}
-    </section>
-  </Layout>
+      </section>
+      <section className="admin-stats" aria-label="Application statistics">
+        {labels.map(([key, label]) => (
+          <article key={key}>
+            <strong>{stats[key]}</strong>
+            <span>{label}</span>
+          </article>
+        ))}
+      </section>
+      <nav className="feed-tabs admin-tabs" aria-label="Report status">
+        {(['open', 'resolved', 'dismissed'] as const).map(value => (
+          <a key={value} className={status === value ? 'active' : ''}
+            aria-current={status === value ? 'page' : undefined} href={`/admin?status=${value}`}
+          >
+            {value}
+          </a>
+        ))}
+      </nav>
+      <section className="admin-section">
+        <h2>
+          {status} reports <span>{total}</span>
+        </h2>
+        {reports.length
+          ? (
+            <div className="report-list">
+              {reports.map(report => (
+                <article className="admin-report" key={report.id}>
+                  <div className="admin-report-meta">
+                    <span>
+                      #{report.id} · {report.reason} ·{' '}
+                      <time dateTime={report.created_at}>{fmtFull(report.created_at)}</time>
+                    </span>
+                    <span>
+                      reported by <a href={`/u/${report.reporter_handle}`}>@{report.reporter_handle}</a>
+                    </span>
+                  </div>
+                  <p>{report.post_deleted_at ? '(deleted)' : report.post_body}</p>
+                  <div className="admin-report-targets">
+                    <a href={`/post/${report.post_id}`}>post #{report.post_id}</a>
+                    <a href={`/u/${report.author_handle}`}>@{report.author_handle}</a>
+                    {report.resolver_handle && <span>handled by @{report.resolver_handle}</span>}
+                  </div>
+                  {report.status === 'open' && (
+                    <div className="admin-inline-actions">
+                      <form method="post" action={`/admin/reports/${report.id}/resolve`}>
+                        <input name="note" maxLength={500} aria-label="Optional resolution note"
+                          placeholder="optional note" />
+                        <button className="quiet">resolve</button>
+                      </form>
+                      <form method="post" action={`/admin/reports/${report.id}/dismiss`}>
+                        <input name="note" maxLength={500} aria-label="Optional dismissal note"
+                          placeholder="optional note" />
+                        <button className="quiet">dismiss</button>
+                      </form>
+                      {!report.post_deleted_at && (
+                        <a className="quiet danger" href={`/admin/posts/${report.post_id}/delete?report=${report.id}`}>
+                          delete post
+                        </a>
+                      )}
+                      <a className="quiet danger" href={`/admin/users/${report.author_id}`}>moderate user</a>
+                    </div>
+                  )}
+                </article>
+              ))}
+            </div>
+          )
+          : <div className="empty admin-empty">No {status} reports.</div>}
+        <Pagination page={page} totalPages={Math.ceil(total / pageSize)} path={`/admin?status=${status}`} />
+      </section>
+      <section className="admin-section admin-suspended">
+        <h2>
+          suspended users <span>{stats.suspendedUsers}</span>
+        </h2>
+        {suspended.length
+          ? (
+            <div className="admin-user-list">
+              {suspended.map(target => (
+                <article key={target.id}>
+                  <a href={`/u/${target.handle}`}>@{target.handle}</a>
+                  <span>{target.suspended_at && fmtFull(target.suspended_at)}</span>
+                  <a className="quiet" href={`/admin/users/${target.id}`}>review</a>
+                </article>
+              ))}
+            </div>
+          )
+          : <p className="section-empty">No suspended users.</p>}
+      </section>
+      <section className="admin-section admin-actions-log">
+        <h2>recent admin actions</h2>
+        {actions.length
+          ? actions.map(action => (
+            <article key={action.id}>
+              <span>
+                <a href={`/u/${action.actor_handle}`}>@{action.actor_handle}</a> {action.action.replaceAll('_', ' ')}
+              </span>
+              <span>
+                {action.target_handle && `@${action.target_handle}`}
+                {action.target_post_id && ` post #${action.target_post_id}`}
+              </span>
+              {action.note && <p>{action.note}</p>}
+              <time dateTime={action.created_at}>{fmtFull(action.created_at)}</time>
+            </article>
+          ))
+          : <p className="section-empty">No moderation actions yet.</p>}
+      </section>
+    </Layout>
+  )
 }
 
 export function AdminConfirm({ user, kind, target, post, returnTo = '/admin' }: {
-  user: User; kind: 'delete_post' | 'suspend_user' | 'restore_user' | 'delete_user'
-  target?: ProfileRow; post?: PostRow & { handle?: string }; returnTo?: string
+  user: User
+  kind: 'delete_post' | 'suspend_user' | 'restore_user' | 'delete_user'
+  target?: ProfileRow
+  post?: PostRow & { handle?: string }
+  returnTo?: string
 }) {
-  const copy = kind === 'delete_post' ? ['Delete this post?', 'The post becomes a permanent tombstone; replies remain.']
-    : kind === 'suspend_user' ? [`Suspend @${target!.handle}?`, 'Their sessions will end and they cannot log in until restored. Content remains visible.']
-    : kind === 'restore_user' ? [`Restore @${target!.handle}?`, 'They will be able to log in and use the account again.']
-    : [`Permanently delete @${target!.handle}?`, 'This anonymizes the account and turns all of its posts into tombstones. It cannot be undone.']
-  const action = kind === 'delete_post' ? `/admin/posts/${post!.id}/delete` : `/admin/users/${target!.id}/${kind.replace('_user', '')}`
-  return <Layout user={user} title="admin moderation">
-    <div className="panel confirm-delete admin-confirm">
-      <p className="eyebrow">admin moderation</p><h1>{copy[0]}</h1><p>{copy[1]}</p>
-      {post && <blockquote>{post.body}</blockquote>}
-      <form method="post" action={action}>
-        <input type="hidden" name="returnTo" value={returnTo} />
-        <label>moderation note (optional)
-          <textarea name="note" maxLength={500} placeholder="Context for the audit log…" />
-        </label>
-        <div className="form-actions"><a className="quiet" href={returnTo}>cancel</a>
-          <button className={`button ${kind.includes('delete') || kind === 'suspend_user' ? 'delete-button' : ''}`}>
-            {kind.replaceAll('_', ' ')}
-          </button>
-        </div>
-      </form>
-    </div>
-  </Layout>
+  const copy = kind === 'delete_post'
+    ? ['Delete this post?', 'The post becomes a permanent tombstone; replies remain.']
+    : kind === 'suspend_user'
+    ? [`Suspend @${target!.handle}?`,
+      'Their sessions will end and they cannot log in until restored. Content remains visible.']
+    : kind === 'restore_user'
+    ? [`Restore @${target!.handle}?`, 'They will be able to log in and use the account again.']
+    : [`Permanently delete @${target!.handle}?`,
+      'This anonymizes the account and turns all of its posts into tombstones. It cannot be undone.']
+  const action = kind === 'delete_post'
+    ? `/admin/posts/${post!.id}/delete`
+    : `/admin/users/${target!.id}/${kind.replace('_user', '')}`
+  return (
+    <Layout user={user} title="admin moderation">
+      <div className="panel confirm-delete admin-confirm">
+        <p className="eyebrow">admin moderation</p>
+        <h1>{copy[0]}</h1>
+        <p>{copy[1]}</p>
+        {post && <blockquote>{post.body}</blockquote>}
+        <form method="post" action={action}>
+          <input type="hidden" name="returnTo" value={returnTo} />
+          <label>
+            moderation note (optional)
+            <textarea name="note" maxLength={500} placeholder="Context for the audit log…" />
+          </label>
+          <div className="form-actions">
+            <a className="quiet" href={returnTo}>cancel</a>
+            <button className={`button ${kind.includes('delete') || kind === 'suspend_user' ? 'delete-button' : ''}`}>
+              {kind.replaceAll('_', ' ')}
+            </button>
+          </div>
+        </form>
+      </div>
+    </Layout>
+  )
 }
 
 export function AdminUser({ user, target }: { user: User; target: ProfileRow }) {
   const protectedAdmin = isAdminEmail(target.email)
-  return <Layout user={user} title={`moderate @${target.handle}`}>
-    <section className="page-header profile admin-user-header">
-      <div className="profile-content"><p className="eyebrow">admin moderation</p><h1>@{target.handle}</h1>
-        <p>{target.email}</p><p>{target.suspended_at ? `Suspended ${fmtFull(target.suspended_at)}` : 'Account active'}</p></div>
-      <div className="profile-action"><a href={`/u/${target.handle}`}>view profile</a></div>
-    </section>
-    {protectedAdmin ? <div className="empty relationship-notice">Hardcoded admin accounts are protected from moderation.</div>
-      : <section className="admin-user-actions">
-        <a className={`button ${target.suspended_at ? '' : 'delete-button'}`}
-          href={`/admin/users/${target.id}/${target.suspended_at ? 'restore' : 'suspend'}`}>
-          {target.suspended_at ? 'restore account' : 'suspend account'}</a>
-        <a className="quiet danger" href={`/admin/users/${target.id}/delete`}>permanently delete account</a>
-      </section>}
-  </Layout>
+  return (
+    <Layout user={user} title={`moderate @${target.handle}`}>
+      <section className="page-header profile admin-user-header">
+        <div className="profile-content">
+          <p className="eyebrow">admin moderation</p>
+          <h1>@{target.handle}</h1>
+          <p>{target.email}</p>
+          <p>{target.suspended_at ? `Suspended ${fmtFull(target.suspended_at)}` : 'Account active'}</p>
+        </div>
+        <div className="profile-action">
+          <a href={`/u/${target.handle}`}>view profile</a>
+        </div>
+      </section>
+      {protectedAdmin
+        ? <div className="empty relationship-notice">Hardcoded admin accounts are protected from moderation.</div>
+        : (
+          <section className="admin-user-actions">
+            <a className={`button ${target.suspended_at ? '' : 'delete-button'}`}
+              href={`/admin/users/${target.id}/${target.suspended_at ? 'restore' : 'suspend'}`}
+            >
+              {target.suspended_at ? 'restore account' : 'suspend account'}
+            </a>
+            <a className="quiet danger" href={`/admin/users/${target.id}/delete`}>permanently delete account</a>
+          </section>
+        )}
+    </Layout>
+  )
 }
 
 function FeedTabs({ active, user }: { active: 'following' | 'hot' | 'latest'; user: User | null }) {
@@ -401,9 +500,8 @@ export function Activity({ user, page }: { user: User; page: number }) {
           (SELECT 1 FROM blocks b WHERE (b.blocker_id=? AND b.blocked_id=f.follower_id)
             OR (b.blocker_id=f.follower_id AND b.blocked_id=?))
       ) ORDER BY created_at DESC LIMIT ? OFFSET ?`,
-  ).all(user.id, user.id, user.id, user.id, user.id, user.id, user.id, user.id, user.id, user.id,
-    pageSize, (page - 1) * pageSize) as
-    (PostView & { activity_kind: 'reply' | 'mention' | 'follow'; posts: number | null;
+  ).all(user.id, user.id, user.id, user.id, user.id, user.id, user.id, user.id, user.id, user.id, pageSize,
+    (page - 1) * pageSize) as (PostView & { activity_kind: 'reply' | 'mention' | 'follow'; posts: number | null;
       viewerFollowing: boolean | null; bio: string | null })[]
   const activity = enrichPosts(db, posts.filter(post => post.activity_kind !== 'follow'), user.id)
   const activityById = new Map(activity.map(post => [post.id, post]))
@@ -417,10 +515,13 @@ export function Activity({ user, page }: { user: User; page: number }) {
           const post = rawPost.activity_kind === 'follow' ? rawPost : activityById.get(rawPost.id)!
           return (
             <div className="activity-item"
-              key={rawPost.activity_kind === 'follow' ? `follow-${rawPost.user_id}-${index}` : rawPost.id}>
+              key={rawPost.activity_kind === 'follow' ? `follow-${rawPost.user_id}-${index}` : rawPost.id}
+            >
               <div className="activity-context">
-                {rawPost.activity_kind === 'reply' ? 'replied to you'
-                  : rawPost.activity_kind === 'mention' ? 'mentioned you'
+                {rawPost.activity_kind === 'reply'
+                  ? 'replied to you'
+                  : rawPost.activity_kind === 'mention'
+                  ? 'mentioned you'
                   : 'followed you'}
               </div>
               {rawPost.activity_kind === 'follow'
@@ -433,7 +534,9 @@ export function Activity({ user, page }: { user: User; page: number }) {
                           <small>{rawPost.posts} {rawPost.posts === 1 ? 'note' : 'notes'}</small>
                         </div>
                         <form method="post" action={'/follow/' + rawPost.handle}>
-                          <button className="button">{rawPost.viewerFollowing ? 'unfollow' : 'follow'}</button>
+                          <button className={`button${rawPost.viewerFollowing ? ' unfollow-button' : ''}`}>
+                            {rawPost.viewerFollowing ? 'unfollow' : 'follow'}
+                          </button>
                         </form>
                       </div>
                       <p className="profile-bio">{rawPost.bio || 'No bio yet.'}</p>
@@ -476,8 +579,8 @@ export function Auth(
           <FormMessage error={error} success={success} />
           {mode === 'signup' && (
             <label>
-              email<input type="email" name="email" required maxLength={254} autoComplete="email" autoFocus defaultValue={email}
-                placeholder="you@example.com" />
+              email<input type="email" name="email" required maxLength={254} autoComplete="email" autoFocus
+                defaultValue={email} placeholder="you@example.com" />
             </label>
           )}
           <label>
@@ -661,7 +764,8 @@ export function ConfirmAccountDelete({ user, error }: { user: User; error?: stri
 }
 
 export function Reply(
-  { user, post, showForm, showReport = false, reported = false, error, body = '', social }: { user: User; post: PostView; showForm: boolean; showReport?: boolean; reported?: boolean; error?: string;
+  { user, post, showForm, showReport = false, reported = false, error, body = '', social }: { user: User;
+    post: PostView; showForm: boolean; showReport?: boolean; reported?: boolean; error?: string;
     social?: { description: string; image: string; url: string }; body?: string },
 ) {
   return (
@@ -690,7 +794,9 @@ export function Reply(
 }
 
 export function Explore({ user, welcome = false, peopleIds }: {
-  user: User | null; welcome?: boolean; peopleIds?: number[]
+  user: User | null
+  welcome?: boolean
+  peopleIds?: number[]
 }) {
   const viewerId = user?.id ?? -1
   const savedIds = peopleIds?.filter((id, index, ids) => Number.isInteger(id) && id > 0 && ids.indexOf(id) === index)
@@ -754,7 +860,9 @@ export function Explore({ user, welcome = false, peopleIds }: {
                   {user && (
                     <form method="post" action={'/follow/' + p.handle}>
                       <input type="hidden" name="explorePeople" value={explorePeople} />
-                      <button className="button">{p.following ? 'unfollow' : 'follow'}</button>
+                      <button className={`button${p.following ? ' unfollow-button' : ''}`}>
+                        {p.following ? 'unfollow' : 'follow'}
+                      </button>
                     </form>
                   )}
                 </div>
@@ -831,20 +939,29 @@ export function Profile(
         </div>
       </ProfileHeader>
       {blocked || blockedByProfile
-        ? <div className="empty relationship-notice">
-          {blocked ? 'You blocked this user. Unblock them to see their notes.' : 'This profile is unavailable.'}
-        </div>
-        : !editing && <ProfileTabs profile={profile} active="notes" notes={total} followers={followerCount}
-        following={followingCount} followingTags={followingTagCount} />}
+        ? (
+          <div className="empty relationship-notice">
+            {blocked ? 'You blocked this user. Unblock them to see their notes.' : 'This profile is unavailable.'}
+          </div>
+        )
+        : !editing && (
+          <ProfileTabs profile={profile} active="notes" notes={total} followers={followerCount}
+            following={followingCount} followingTags={followingTagCount} />
+        )}
       {!blocked && !blockedByProfile && posts.map(post => <Post key={post.id} p={post} user={user} />)}
-      {!blocked && !blockedByProfile &&
-        <Pagination page={page} totalPages={Math.ceil(total / pageSize)} path={'/u/' + profile.handle} />}
+      {!blocked && !blockedByProfile
+        && <Pagination page={page} totalPages={Math.ceil(total / pageSize)} path={'/u/' + profile.handle} />}
     </Layout>
   )
 }
 
 function ProfileHeader({ user, profile, following, blocked = false, editing = false, children }: {
-  user: User | null; profile: ProfileRow; following: boolean; blocked?: boolean; editing?: boolean; children?: React.ReactNode
+  user: User | null
+  profile: ProfileRow
+  following: boolean
+  blocked?: boolean
+  editing?: boolean
+  children?: React.ReactNode
 }) {
   return (
     <section className={`page-header profile${editing ? ' profile-editing' : ''}`}>
@@ -855,9 +972,11 @@ function ProfileHeader({ user, profile, following, blocked = false, editing = fa
         </div>
       )}
       <div className="profile-action">
-        {isAdmin(user) && user?.id !== profile.id && <a className="quiet danger" href={`/admin/users/${profile.id}`}>
-          moderate
-        </a>}
+        {isAdmin(user) && user?.id !== profile.id && (
+          <a className="quiet danger" href={`/admin/users/${profile.id}`}>
+            moderate
+          </a>
+        )}
         {user?.id === profile.id && !editing && (
           <>
             <a className="profile-edit-link" href={'/u/' + profile.handle + '?edit=1'}>edit</a>
@@ -866,17 +985,26 @@ function ProfileHeader({ user, profile, following, blocked = false, editing = fa
             </form>
           </>
         )}
-        {user && user.id !== profile.id && <>
-          <form method="post" action={'/block/' + profile.handle}>
-            <button className={blocked ? 'button' : 'quiet danger'}
-              aria-label={`${blocked ? 'unblock' : 'block'} @${profile.handle}`}>{blocked ? 'unblock' : 'block'}</button>
-          </form>
-          {!blocked && <form method="post" action={'/follow/' + profile.handle}>
-            <button className="button" aria-label={`${following ? 'unfollow' : 'follow'} @${profile.handle}`}>
-              {following ? 'unfollow' : 'follow'}
-            </button>
-          </form>}
-        </>}
+        {user && user.id !== profile.id && (
+          <>
+            <form method="post" action={'/block/' + profile.handle}>
+              <button className={blocked ? 'button' : 'quiet danger'}
+                aria-label={`${blocked ? 'unblock' : 'block'} @${profile.handle}`}
+              >
+                {blocked ? 'unblock' : 'block'}
+              </button>
+            </form>
+            {!blocked && (
+              <form method="post" action={'/follow/' + profile.handle}>
+                <button className={`button${following ? ' unfollow-button' : ''}`}
+                  aria-label={`${following ? 'unfollow' : 'follow'} @${profile.handle}`}
+                >
+                  {following ? 'unfollow' : 'follow'}
+                </button>
+              </form>
+            )}
+          </>
+        )}
         {!user && <a className="button" href="/login">log in to follow</a>}
       </div>
     </section>
@@ -884,20 +1012,30 @@ function ProfileHeader({ user, profile, following, blocked = false, editing = fa
 }
 
 function ProfileTabs({ profile, active, notes, followers, following, followingTags }: {
-  profile: ProfileRow; active: 'notes' | 'followers' | 'following'; notes: number; followers: number
-  following: number; followingTags: number
+  profile: ProfileRow
+  active: 'notes' | 'followers' | 'following'
+  notes: number
+  followers: number
+  following: number
+  followingTags: number
 }) {
   const base = `/u/${profile.handle}`
   return (
     <nav className="feed-tabs profile-tabs" aria-label={`@${profile.handle} profile`}>
       <a className={active === 'notes' ? 'active' : ''} aria-current={active === 'notes' ? 'page' : undefined}
-        href={base}>{notes} {notes === 1 ? 'note' : 'notes'}</a>
-      <a className={active === 'following' ? 'active' : ''}
-        aria-current={active === 'following' ? 'page' : undefined} href={`${base}?tab=following`}>
-        {followingTags} {followingTags === 1 ? 'tag' : 'tags'}, {following} {following === 1 ? 'user' : 'users'} following
+        href={base}
+      >
+        {notes} {notes === 1 ? 'note' : 'notes'}
       </a>
-      <a className={active === 'followers' ? 'active' : ''}
-        aria-current={active === 'followers' ? 'page' : undefined} href={`${base}?tab=followers`}>
+      <a className={active === 'following' ? 'active' : ''} aria-current={active === 'following' ? 'page' : undefined}
+        href={`${base}?tab=following`}
+      >
+        {followingTags} {followingTags === 1 ? 'tag' : 'tags'}, {following} {following === 1 ? 'user' : 'users'}{' '}
+        following
+      </a>
+      <a className={active === 'followers' ? 'active' : ''} aria-current={active === 'followers' ? 'page' : undefined}
+        href={`${base}?tab=followers`}
+      >
         {followers} {followers === 1 ? 'follower' : 'followers'}
       </a>
     </nav>
@@ -905,14 +1043,22 @@ function ProfileTabs({ profile, active, notes, followers, following, followingTa
 }
 
 export function Connections(
-  { user, profile, people, tags = [], kind, page, total, noteCount, followerCount, followingCount,
-    followingTagCount, following, social }: {
-    user: User | null; profile: ProfileRow; people: PersonView[]
-    tags?: { tag: string; count: number; viewerFollowing: boolean }[]
-    kind: 'following' | 'followers'; page: number; total: number
-    noteCount: number; followerCount: number; followingCount: number; followingTagCount: number; following: boolean
-    social?: { description: string; image: string; url: string; type?: 'article' | 'profile'; imageAlt?: string }
-  },
+  { user, profile, people, tags = [], kind, page, total, noteCount, followerCount, followingCount, followingTagCount,
+    following, social }: {
+      user: User | null
+      profile: ProfileRow
+      people: PersonView[]
+      tags?: { tag: string; count: number; viewerFollowing: boolean }[]
+      kind: 'following' | 'followers'
+      page: number
+      total: number
+      noteCount: number
+      followerCount: number
+      followingCount: number
+      followingTagCount: number
+      following: boolean
+      social?: { description: string; image: string; url: string; type?: 'article' | 'profile'; imageAlt?: string }
+    },
 ) {
   return (
     <Layout user={user} title={`${kind} @${profile.handle}`} social={social}>
@@ -937,9 +1083,7 @@ export function Connections(
           </div>
         )
         : people.length
-        ? (
-          <ConnectionPeople user={user} people={people} className="connections-list" />
-        )
+        ? <ConnectionPeople user={user} people={people} className="connections-list" />
         : (
           <div className="empty">
             @{profile.handle} {kind === 'following' ? 'isn’t following anyone yet.' : 'has no followers yet.'}
@@ -951,7 +1095,9 @@ export function Connections(
 }
 
 function TagPeopleList({ user, tags, followingKey = 'following' }: {
-  user: User | null; tags: any[]; followingKey?: 'following' | 'viewerFollowing'
+  user: User | null
+  tags: any[]
+  followingKey?: 'following' | 'viewerFollowing'
 }) {
   return (
     <div className="people tag-people">
@@ -964,7 +1110,9 @@ function TagPeopleList({ user, tags, followingKey = 'following' }: {
             </div>
             {user && (
               <form method="post" action={`/tag-follow/${tag.tag}`}>
-                <button className="button">{tag[followingKey] ? 'unfollow' : 'follow'}</button>
+                <button className={`button${tag[followingKey] ? ' unfollow-button' : ''}`}>
+                  {tag[followingKey] ? 'unfollow' : 'follow'}
+                </button>
               </form>
             )}
           </div>
@@ -975,7 +1123,9 @@ function TagPeopleList({ user, tags, followingKey = 'following' }: {
 }
 
 function ConnectionPeople({ user, people, className = '' }: {
-  user: User | null; people: any[]; className?: string
+  user: User | null
+  people: any[]
+  className?: string
 }) {
   return (
     <div className={`people ${className}`.trim()}>
@@ -988,7 +1138,9 @@ function ConnectionPeople({ user, people, className = '' }: {
             </div>
             {user && user.id !== person.id && (
               <form method="post" action={`/follow/${person.handle}`}>
-                <button className="button">{person.viewerFollowing ? 'unfollow' : 'follow'}</button>
+                <button className={`button${person.viewerFollowing ? ' unfollow-button' : ''}`}>
+                  {person.viewerFollowing ? 'unfollow' : 'follow'}
+                </button>
               </form>
             )}
           </div>
@@ -1002,7 +1154,8 @@ function ConnectionPeople({ user, people, className = '' }: {
 export function TagFeed(
   { user, tag, following, posts, page, total, social }: { user: User | null; tag: string; following: boolean;
     posts: PostView[]; page: number; total: number;
-    social?: { description: string; image: string; url: string; type?: 'article' | 'profile' | 'website'; imageAlt?: string } },
+    social?: { description: string; image: string; url: string; type?: 'article' | 'profile' | 'website';
+      imageAlt?: string } },
 ) {
   return (
     <Layout user={user} title={`#${tag}`} social={social}>
@@ -1016,7 +1169,9 @@ export function TagFeed(
         {user
           ? (
             <form method="post" action={'/tag-follow/' + tag}>
-              <button className="button">{following ? 'unfollow' : 'follow hashtag'}</button>
+              <button className={`button${following ? ' unfollow-button' : ''}`}>
+                {following ? 'unfollow' : 'follow'}
+              </button>
             </form>
           )
           : <a className="button" href="/login">log in to follow</a>}
@@ -1044,40 +1199,49 @@ export function PublicThread(
 }
 
 function ReportPanel({ post, showForm, reported }: { post: PostView; showForm: boolean; reported: boolean }) {
-  if (reported) return <div className="report-status" role="status">
-    <span>Report received. Thank you.</span>
-    <form method="post" action={`/block/${post.handle}`}>
-      <button className="quiet danger" aria-label={`block @${post.handle}`}>block @{post.handle}</button>
-    </form>
-  </div>
-  if (!showForm) return null
-  return <div className="panel report-panel">
-    <form method="post" action={`/post/${post.id}/report`}>
-      <label>reason
-        <select name="reason" required defaultValue="">
-          <option value="" disabled>choose a reason</option>
-          <option value="harassment">harassment</option>
-          <option value="spam">spam</option>
-          <option value="impersonation">impersonation</option>
-          <option value="other">other</option>
-        </select>
-      </label>
-      <div className="form-actions">
-        <a className="quiet" href={`/post/${post.id}`}>cancel</a>
-        <button className="button delete-button">submit report</button>
+  if (reported) {
+    return (
+      <div className="report-status" role="status">
+        <span>Report received. Thank you.</span>
+        <form method="post" action={`/block/${post.handle}`}>
+          <button className="quiet danger" aria-label={`block @${post.handle}`}>block @{post.handle}</button>
+        </form>
       </div>
-    </form>
-  </div>
+    )
+  }
+  if (!showForm) return null
+  return (
+    <div className="panel report-panel">
+      <form method="post" action={`/post/${post.id}/report`}>
+        <label>
+          reason
+          <select name="reason" required defaultValue="">
+            <option value="" disabled>choose a reason</option>
+            <option value="harassment">harassment</option>
+            <option value="spam">spam</option>
+            <option value="impersonation">impersonation</option>
+            <option value="other">other</option>
+          </select>
+        </label>
+        <div className="form-actions">
+          <a className="quiet" href={`/post/${post.id}`}>cancel</a>
+          <button className="button delete-button">submit report</button>
+        </div>
+      </form>
+    </div>
+  )
 }
 
 function GlobalFeedEmpty({ user }: { user: User | null }) {
-  return <div className="empty empty-actions">
-    <p>No notes have been posted yet.</p>
-    <div>
-      {user
-        ? <a className="button" href="/compose">write the first note →</a>
-        : <a className="button" href="/signup">join and write →</a>}
-      <a href="/explore">explore</a>
+  return (
+    <div className="empty empty-actions">
+      <p>No notes have been posted yet.</p>
+      <div>
+        {user
+          ? <a className="button" href="/compose">write the first note →</a>
+          : <a className="button" href="/signup">join and write →</a>}
+        <a href="/explore">explore</a>
+      </div>
     </div>
-  </div>
+  )
 }

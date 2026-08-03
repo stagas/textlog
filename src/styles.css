@@ -13,6 +13,9 @@
   --button-ink: #fff;
   --button-hover-bg: #55734a;
   --button-active-bg: #405c38;
+  --unfollow-button-bg: #65775e;
+  --unfollow-button-hover-bg: #72886a;
+  --unfollow-button-active-bg: #566650;
   --button-disabled-bg: #d9dbd4;
   --button-disabled-ink: #777d73;
   --danger-button-bg: #7a3f39;
@@ -58,6 +61,9 @@
     --button-ink: #e5e8e1;
     --button-hover-bg: #4b664d;
     --button-active-bg: #314434;
+    --unfollow-button-bg: #58705a;
+    --unfollow-button-hover-bg: #668267;
+    --unfollow-button-active-bg: #4a5f4c;
     --button-disabled-bg: #292f29;
     --button-disabled-ink: #747c72;
     --danger-button-bg: #663b37;
@@ -301,6 +307,18 @@ nav form {
 
 .button:not(:disabled):not([aria-disabled="true"]):active {
   background: var(--button-active-bg);
+}
+
+.button.unfollow-button {
+  background: var(--unfollow-button-bg);
+}
+
+.button.unfollow-button:not(:disabled):not([aria-disabled="true"]):hover {
+  background: var(--unfollow-button-hover-bg);
+}
+
+.button.unfollow-button:not(:disabled):not([aria-disabled="true"]):active {
+  background: var(--unfollow-button-active-bg);
 }
 
 .button:focus-visible {
