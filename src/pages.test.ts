@@ -70,3 +70,19 @@ test('Post only renders owner actions when requested by the detail view', () => 
   expect(detailHtml).toContain('/post/2/edit')
   expect(detailHtml).toContain('/post/2/delete')
 })
+
+test('Post renders moderation controls only for admins viewing another user post', () => {
+  const p = {
+    id: 2, user_id: 2, parent_id: null, body: 'note', handle: 'writer',
+    created_at: '2026-08-03 12:00:00', deleted_at: null,
+  }
+  const adminHtml = renderToStaticMarkup(React.createElement(Post, {
+    user: { id: 1, handle: 'admin', email: 'GSTAGAS@gmail.com', bio: '' }, p,
+  }))
+  const userHtml = renderToStaticMarkup(React.createElement(Post, {
+    user: { id: 3, handle: 'reader', email: 'reader@example.com', bio: '' }, p,
+  }))
+
+  expect(adminHtml).toContain('/admin/posts/2/delete')
+  expect(userHtml).not.toContain('/admin/posts/2/delete')
+})

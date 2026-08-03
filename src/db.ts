@@ -62,8 +62,33 @@ if (userColumns.some(column => column.name === 'name')) db.run('ALTER TABLE user
 if (!userColumns.some(column => column.name === 'deleted_at')) {
   db.run('ALTER TABLE users ADD COLUMN deleted_at TEXT')
 }
+if (!userColumns.some(column => column.name === 'suspended_at')) {
+  db.run('ALTER TABLE users ADD COLUMN suspended_at TEXT')
+}
 
-export type User = { id: number; handle: string; email: string; bio: string }
+const reportColumns = db.query('PRAGMA table_info(reports)').all() as { name: string }[]
+if (!reportColumns.some(column => column.name === 'status')) {
+  db.run("ALTER TABLE reports ADD COLUMN status TEXT NOT NULL DEFAULT 'open'")
+}
+if (!reportColumns.some(column => column.name === 'resolved_at')) {
+  db.run('ALTER TABLE reports ADD COLUMN resolved_at TEXT')
+}
+if (!reportColumns.some(column => column.name === 'resolved_by')) {
+  db.run('ALTER TABLE reports ADD COLUMN resolved_by INTEGER REFERENCES users(id)')
+}
+db.run('CREATE INDEX IF NOT EXISTS reports_status_created ON reports(status,created_at DESC)')
+db.run(`CREATE TABLE IF NOT EXISTS admin_actions (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  actor_id INTEGER NOT NULL REFERENCES users(id),
+  action TEXT NOT NULL CHECK(action IN ('delete_post','suspend_user','restore_user','delete_user','resolve_report','dismiss_report')),
+  target_user_id INTEGER REFERENCES users(id),
+  target_post_id INTEGER REFERENCES posts(id),
+  note TEXT NOT NULL DEFAULT '',
+  created_at TEXT DEFAULT CURRENT_TIMESTAMP
+)`)
+db.run('CREATE INDEX IF NOT EXISTS admin_actions_created ON admin_actions(created_at DESC)')
+
+export type User = { id: number; handle: string; email: string; bio: string; suspended_at?: string | null }
 
 // Keep short-lived authentication tables bounded without requiring a scheduler.
 const now = Date.now()

@@ -3,6 +3,7 @@ import { db, type User } from '../db'
 import { fmt, fmtFull, linkify } from '../utils'
 import type { PostView } from '../types'
 import { enrichPosts } from '../posts'
+import { isAdmin } from '../admin'
 
 export function Post({ p, user, showReplyAction = true, showOwnerActions = false, showParent = true, showReplyCount = false, replyHref, replyLabel = 'reply', reportHref }: { p: PostView; user: User | null; showReplyAction?: boolean; showOwnerActions?: boolean; showParent?: boolean; showReplyCount?: boolean; replyHref?: string; replyLabel?: string; reportHref?: string }) {
   const parent = showParent ? p.parent : null
@@ -24,6 +25,11 @@ export function Post({ p, user, showReplyAction = true, showOwnerActions = false
       {showOwnerActions && user?.id === p.user_id && <div className="post-actions">
         <a className="quiet" href={'/post/' + p.id + '/edit'} aria-label="edit this post">edit</a>
         <a className="quiet danger" href={'/post/' + p.id + '/delete'} aria-label="delete this post">delete</a>
+      </div>}
+      {isAdmin(user) && <div className="post-actions admin-post-actions">
+        <a className="quiet danger" href={'/admin/posts/' + p.id + '/delete'} aria-label="moderate this post">
+          moderate
+        </a>
       </div>}
     </div>
     <p dangerouslySetInnerHTML={{ __html: linkify(p.body) }} />

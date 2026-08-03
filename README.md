@@ -27,6 +27,16 @@ that overwrites `CF-Connecting-IP`, `X-Real-IP`, or `X-Forwarded-For`, set `TRUS
 
 To temporarily disable moderation, set `MODERATION_DISABLED=true`. Remove the variable or set it to `false` to re-enable it.
 
+## Administration
+
+Admin access is granted by a case-insensitive email allowlist in `src/admin.ts`. The initial admin is
+`gstagas@gmail.com`. Add future administrator email addresses to `ADMIN_EMAILS`; authorized accounts receive an
+`admin` navigation link to the protected dashboard at `/admin`.
+
+The dashboard contains report review, suspension and deletion controls, operational statistics, and an append-only
+moderation action log. Hardcoded admin accounts cannot change their protected email or be suspended/deleted through
+the moderation interface.
+
 ## Included
 
 - Accounts with secure random cookie sessions and hashed passwords

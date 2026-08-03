@@ -1,5 +1,6 @@
 import React from 'react'
 import type { User } from '../db'
+import { isAdmin } from '../admin'
 
 let devReloadBootId: string | undefined
 
@@ -50,7 +51,7 @@ export function Layout({
             <meta name="twitter:image:alt" content={share.imageAlt || `Post by ${title || 'a root.mx user'}`} />
           </>
         <link rel="icon" href="/root.svg" type="image/svg+xml" />
-        <link rel="stylesheet" href="/styles.css?v=32" />
+        <link rel="stylesheet" href="/styles.css?v=33" />
       </head>
       <body>
         <a className="skip-link" href="#main-content">skip to content</a>
@@ -68,6 +69,7 @@ export function Layout({
                 <a href="/explore">explore</a>
                 <a href="/activity">activity</a>
                 <a href="/compose">write</a>
+                {isAdmin(user) && <a href="/admin">admin</a>}
               </nav>
             )
             : (

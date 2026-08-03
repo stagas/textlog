@@ -938,6 +938,170 @@ textarea {
   border-bottom: 1px solid var(--soft);
 }
 
+.admin-header .eyebrow,
+.admin-user-header .eyebrow,
+.admin-confirm .eyebrow {
+  margin: 0 0 6px;
+  color: var(--accent);
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.admin-stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+  gap: 1px;
+  padding: 0 var(--gutter) 28px;
+}
+
+.admin-stats article {
+  display: grid;
+  gap: 5px;
+  padding: 18px;
+  background: var(--panel);
+  border: 1px solid var(--soft);
+}
+
+.admin-stats strong {
+  font-size: 24px;
+  font-weight: 500;
+}
+
+.admin-stats span,
+.admin-report-meta,
+.admin-report-targets,
+.admin-actions-log time,
+.admin-user-list span {
+  color: var(--muted);
+  font-size: 10px;
+}
+
+.admin-tabs {
+  padding-top: 0;
+}
+
+.admin-section {
+  padding: 30px var(--gutter);
+  border-bottom: 1px solid var(--soft);
+}
+
+.admin-section > h2 {
+  margin: 0 0 16px;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 400;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.admin-section > h2 span {
+  margin-left: 6px;
+  color: var(--ink);
+}
+
+.admin-report {
+  padding: 18px 0;
+  border-top: 1px solid var(--soft);
+}
+
+.admin-report-meta,
+.admin-report-targets,
+.admin-inline-actions,
+.admin-user-list article {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 14px;
+}
+
+.admin-report-meta {
+  justify-content: space-between;
+}
+
+.admin-report > p {
+  margin: 14px 0;
+  font-size: 13px;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.admin-inline-actions {
+  margin-top: 14px;
+}
+
+.admin-inline-actions form {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+}
+
+.admin-inline-actions input {
+  width: min(180px, 30vw);
+  padding: 6px 8px;
+  color: var(--ink);
+  font: inherit;
+  background: var(--panel);
+  border: 1px solid var(--soft);
+}
+
+.admin-empty,
+.admin-section .pagination {
+  margin-inline: 0;
+  padding-inline: 0;
+}
+
+.admin-actions-log article,
+.admin-user-list article {
+  padding: 12px 0;
+  border-top: 1px solid var(--soft);
+  font-size: 11px;
+}
+
+.admin-actions-log article {
+  display: grid;
+  grid-template-columns: minmax(150px, 1fr) minmax(100px, 1fr) auto;
+  gap: 12px;
+}
+
+.admin-actions-log p {
+  grid-column: 1 / -1;
+  margin: 0;
+  color: var(--quote-ink);
+}
+
+.admin-user-list article .quiet {
+  margin-left: auto;
+}
+
+.admin-user-actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 22px;
+  padding: 30px var(--gutter) 60px;
+}
+
+.admin-confirm form,
+.admin-confirm label {
+  display: grid;
+  gap: 10px;
+  color: var(--muted);
+  font-size: 11px;
+}
+
+.admin-confirm .form-actions {
+  display: flex;
+  margin-top: 10px;
+}
+
+@media (max-width: 600px) {
+  .admin-actions-log article {
+    grid-template-columns: 1fr;
+  }
+}
+
 .activity-item {
   position: relative;
 }

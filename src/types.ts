@@ -23,7 +23,46 @@ export type ProfileRow = {
   handle: string
   email: string
   bio: string
+  suspended_at?: string | null
   deleted_at?: string | null
+}
+
+export type DashboardStats = {
+  users: number
+  suspendedUsers: number
+  activePosts: number
+  replies: number
+  openReports: number
+  users24h: number
+  users7d: number
+  posts24h: number
+  posts7d: number
+}
+
+export type AdminReportView = {
+  id: number
+  reason: string
+  status: 'open' | 'resolved' | 'dismissed'
+  created_at: string
+  resolved_at: string | null
+  post_id: number
+  post_body: string
+  post_deleted_at: string | null
+  author_id: number
+  author_handle: string
+  reporter_handle: string
+  resolver_handle: string | null
+}
+
+export type AdminActionView = {
+  id: number
+  action: string
+  note: string
+  created_at: string
+  actor_handle: string
+  target_user_id: number | null
+  target_handle: string | null
+  target_post_id: number | null
 }
 
 export type PersonView = ProfileRow & {

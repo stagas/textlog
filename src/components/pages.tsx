@@ -5,6 +5,9 @@ import { Layout } from './layout'
 import { Post, ThreadReplies } from './post'
 import { enrichPosts } from '../posts'
 import type { PersonView, PostRow, PostView, ProfileRow } from '../types'
+import type { AdminActionView, AdminReportView, DashboardStats } from '../types'
+import { isAdmin, isAdminEmail } from '../admin'
+import { fmtFull } from '../utils'
 
 const pageSize = 20
 const postTitleLength = 60
@@ -74,6 +77,119 @@ function Pagination({ page, totalPages, path }: { page: number; totalPages: numb
         : <span className="pagination-edge placeholder" />}
     </nav>
   )
+}
+
+export function AdminDashboard({ user, stats, reports, actions, status, page, total, suspended = [] }: {
+  user: User; stats: DashboardStats; reports: AdminReportView[]; actions: AdminActionView[]
+  status: 'open' | 'resolved' | 'dismissed'; page: number; total: number; suspended?: ProfileRow[]
+}) {
+  const labels: [keyof DashboardStats, string][] = [
+    ['users', 'users'], ['suspendedUsers', 'suspended'], ['activePosts', 'active posts'],
+    ['replies', 'replies'], ['openReports', 'open reports'], ['users24h', 'new users · 24h'],
+    ['users7d', 'new users · 7d'], ['posts24h', 'new posts · 24h'], ['posts7d', 'new posts · 7d'],
+  ]
+  return <Layout user={user} title="admin">
+    <section className="page-header admin-header"><div><p className="eyebrow">operations</p><h1>admin dashboard</h1></div></section>
+    <section className="admin-stats" aria-label="Application statistics">
+      {labels.map(([key, label]) => <article key={key}><strong>{stats[key]}</strong><span>{label}</span></article>)}
+    </section>
+    <nav className="feed-tabs admin-tabs" aria-label="Report status">
+      {(['open', 'resolved', 'dismissed'] as const).map(value => <a key={value}
+        className={status === value ? 'active' : ''} aria-current={status === value ? 'page' : undefined}
+        href={`/admin?status=${value}`}>{value}</a>)}
+    </nav>
+    <section className="admin-section">
+      <h2>{status} reports <span>{total}</span></h2>
+      {reports.length ? <div className="report-list">{reports.map(report => <article className="admin-report" key={report.id}>
+        <div className="admin-report-meta">
+          <span>#{report.id} · {report.reason} · <time dateTime={report.created_at}>{fmtFull(report.created_at)}</time></span>
+          <span>reported by <a href={`/u/${report.reporter_handle}`}>@{report.reporter_handle}</a></span>
+        </div>
+        <p>{report.post_deleted_at ? '(deleted)' : report.post_body}</p>
+        <div className="admin-report-targets">
+          <a href={`/post/${report.post_id}`}>post #{report.post_id}</a>
+          <a href={`/u/${report.author_handle}`}>@{report.author_handle}</a>
+          {report.resolver_handle && <span>handled by @{report.resolver_handle}</span>}
+        </div>
+        {report.status === 'open' && <div className="admin-inline-actions">
+          <form method="post" action={`/admin/reports/${report.id}/resolve`}>
+            <input name="note" maxLength={500} aria-label="Optional resolution note" placeholder="optional note" />
+            <button className="quiet">resolve</button>
+          </form>
+          <form method="post" action={`/admin/reports/${report.id}/dismiss`}>
+            <input name="note" maxLength={500} aria-label="Optional dismissal note" placeholder="optional note" />
+            <button className="quiet">dismiss</button>
+          </form>
+          {!report.post_deleted_at && <a className="quiet danger" href={`/admin/posts/${report.post_id}/delete?report=${report.id}`}>delete post</a>}
+          <a className="quiet danger" href={`/admin/users/${report.author_id}`}>moderate user</a>
+        </div>}
+      </article>)}</div> : <div className="empty admin-empty">No {status} reports.</div>}
+      <Pagination page={page} totalPages={Math.ceil(total / pageSize)} path={`/admin?status=${status}`} />
+    </section>
+    <section className="admin-section admin-suspended">
+      <h2>suspended users <span>{stats.suspendedUsers}</span></h2>
+      {suspended.length ? <div className="admin-user-list">{suspended.map(target => <article key={target.id}>
+        <a href={`/u/${target.handle}`}>@{target.handle}</a>
+        <span>{target.suspended_at && fmtFull(target.suspended_at)}</span>
+        <a className="quiet" href={`/admin/users/${target.id}`}>review</a>
+      </article>)}</div> : <p className="section-empty">No suspended users.</p>}
+    </section>
+    <section className="admin-section admin-actions-log">
+      <h2>recent admin actions</h2>
+      {actions.length ? actions.map(action => <article key={action.id}>
+        <span><a href={`/u/${action.actor_handle}`}>@{action.actor_handle}</a> {action.action.replaceAll('_', ' ')}</span>
+        <span>{action.target_handle && `@${action.target_handle}`}{action.target_post_id && ` post #${action.target_post_id}`}</span>
+        {action.note && <p>{action.note}</p>}
+        <time dateTime={action.created_at}>{fmtFull(action.created_at)}</time>
+      </article>) : <p className="section-empty">No moderation actions yet.</p>}
+    </section>
+  </Layout>
+}
+
+export function AdminConfirm({ user, kind, target, post, returnTo = '/admin' }: {
+  user: User; kind: 'delete_post' | 'suspend_user' | 'restore_user' | 'delete_user'
+  target?: ProfileRow; post?: PostRow & { handle?: string }; returnTo?: string
+}) {
+  const copy = kind === 'delete_post' ? ['Delete this post?', 'The post becomes a permanent tombstone; replies remain.']
+    : kind === 'suspend_user' ? [`Suspend @${target!.handle}?`, 'Their sessions will end and they cannot log in until restored. Content remains visible.']
+    : kind === 'restore_user' ? [`Restore @${target!.handle}?`, 'They will be able to log in and use the account again.']
+    : [`Permanently delete @${target!.handle}?`, 'This anonymizes the account and turns all of its posts into tombstones. It cannot be undone.']
+  const action = kind === 'delete_post' ? `/admin/posts/${post!.id}/delete` : `/admin/users/${target!.id}/${kind.replace('_user', '')}`
+  return <Layout user={user} title="admin moderation">
+    <div className="panel confirm-delete admin-confirm">
+      <p className="eyebrow">admin moderation</p><h1>{copy[0]}</h1><p>{copy[1]}</p>
+      {post && <blockquote>{post.body}</blockquote>}
+      <form method="post" action={action}>
+        <input type="hidden" name="returnTo" value={returnTo} />
+        <label>moderation note (optional)
+          <textarea name="note" maxLength={500} placeholder="Context for the audit log…" />
+        </label>
+        <div className="form-actions"><a className="quiet" href={returnTo}>cancel</a>
+          <button className={`button ${kind.includes('delete') || kind === 'suspend_user' ? 'delete-button' : ''}`}>
+            {kind.replaceAll('_', ' ')}
+          </button>
+        </div>
+      </form>
+    </div>
+  </Layout>
+}
+
+export function AdminUser({ user, target }: { user: User; target: ProfileRow }) {
+  const protectedAdmin = isAdminEmail(target.email)
+  return <Layout user={user} title={`moderate @${target.handle}`}>
+    <section className="page-header profile admin-user-header">
+      <div className="profile-content"><p className="eyebrow">admin moderation</p><h1>@{target.handle}</h1>
+        <p>{target.email}</p><p>{target.suspended_at ? `Suspended ${fmtFull(target.suspended_at)}` : 'Account active'}</p></div>
+      <div className="profile-action"><a href={`/u/${target.handle}`}>view profile</a></div>
+    </section>
+    {protectedAdmin ? <div className="empty relationship-notice">Hardcoded admin accounts are protected from moderation.</div>
+      : <section className="admin-user-actions">
+        <a className={`button ${target.suspended_at ? '' : 'delete-button'}`}
+          href={`/admin/users/${target.id}/${target.suspended_at ? 'restore' : 'suspend'}`}>
+          {target.suspended_at ? 'restore account' : 'suspend account'}</a>
+        <a className="quiet danger" href={`/admin/users/${target.id}/delete`}>permanently delete account</a>
+      </section>}
+  </Layout>
 }
 
 function FeedTabs({ active, user }: { active: 'following' | 'hot' | 'latest'; user: User | null }) {
@@ -739,6 +855,9 @@ function ProfileHeader({ user, profile, following, blocked = false, editing = fa
         </div>
       )}
       <div className="profile-action">
+        {isAdmin(user) && user?.id !== profile.id && <a className="quiet danger" href={`/admin/users/${profile.id}`}>
+          moderate
+        </a>}
         {user?.id === profile.id && !editing && (
           <>
             <a className="profile-edit-link" href={'/u/' + profile.handle + '?edit=1'}>edit</a>
