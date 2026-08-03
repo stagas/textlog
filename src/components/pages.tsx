@@ -286,7 +286,7 @@ export function Legal({ user }: { user: User | null }) {
   )
 }
 
-export function Feed({ user, page }: { user: User; page: number }) {
+export function Feed({ user, page, title }: { user: User; page: number; title?: string }) {
   const total = (db.query(
     `SELECT count(*) AS count FROM posts p WHERE p.deleted_at IS NULL AND (p.user_id=? OR p.user_id IN (SELECT following_id FROM follows WHERE follower_id=?) OR p.id IN (SELECT ph.post_id FROM post_hashtags ph JOIN hashtag_follows hf ON hf.tag=ph.tag WHERE hf.user_id=?))
       AND NOT EXISTS (SELECT 1 FROM blocks b WHERE (b.blocker_id=? AND b.blocked_id=p.user_id) OR (b.blocker_id=p.user_id AND b.blocked_id=?))`,
@@ -298,7 +298,7 @@ export function Feed({ user, page }: { user: User; page: number }) {
       ORDER BY p.created_at DESC LIMIT ? OFFSET ?`,
   ).all(user.id, user.id, user.id, user.id, user.id, user.id, pageSize, (page - 1) * pageSize) as PostView[], user.id)
   return (
-    <Layout user={user}>
+    <Layout user={user} title={title}>
       <h1 className="visually-hidden">Your feed</h1>
       <FeedTabs active="following" user={user} />
       {posts.length

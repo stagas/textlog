@@ -195,7 +195,7 @@ app.get('/for-you', c => {
     .get(user.id, user.id, user.id, user.id, user.id) as { count: number }).count
   const outOfRange = paginationRedirect(feedPage, total, '/for-you')
   if (outOfRange) return rememberFeed(outOfRange, 'following')
-  return rememberFeed(page(<Feed user={user} page={feedPage} />), 'following')
+  return rememberFeed(page(<Feed user={user} page={feedPage} title="for you" />), 'following')
 })
 
 app.get('/latest', c => {
