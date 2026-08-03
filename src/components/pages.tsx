@@ -3,6 +3,8 @@ import { db, type User } from '../db'
 import { getHotPosts } from '../hot'
 import { Layout } from './layout'
 import { Post, ThreadReplies } from './post'
+import { enrichPosts } from '../posts'
+import type { PersonView, PostRow, PostView, ProfileRow } from '../types'
 
 const pageSize = 20
 const postTitleLength = 60
@@ -154,9 +156,9 @@ export function Feed({ user, page }: { user: User; page: number }) {
     `SELECT count(*) AS count FROM posts p WHERE p.deleted_at IS NULL AND (p.user_id=? OR p.user_id IN (SELECT following_id FROM follows WHERE follower_id=?) OR p.id IN (SELECT ph.post_id FROM post_hashtags ph JOIN hashtag_follows hf ON hf.tag=ph.tag WHERE hf.user_id=?))`,
   ).get(user.id, user.id, user.id) as { count: number }).count
   const totalPages = Math.ceil(total / pageSize)
-  const posts = db.query(
+  const posts = enrichPosts(db, db.query(
     `SELECT p.*,u.handle, EXISTS(SELECT 1 FROM follows f WHERE f.follower_id=? AND f.following_id=p.user_id) following FROM posts p JOIN users u ON u.id=p.user_id WHERE p.deleted_at IS NULL AND (p.user_id=? OR p.user_id IN (SELECT following_id FROM follows WHERE follower_id=?) OR p.id IN (SELECT ph.post_id FROM post_hashtags ph JOIN hashtag_follows hf ON hf.tag=ph.tag WHERE hf.user_id=?)) ORDER BY p.created_at DESC LIMIT ? OFFSET ?`,
-  ).all(user.id, user.id, user.id, user.id, pageSize, (page - 1) * pageSize) as any[]
+  ).all(user.id, user.id, user.id, user.id, pageSize, (page - 1) * pageSize) as PostView[])
   return (
     <Layout user={user}>
       <FeedTabs active="following" user={user} />
@@ -188,9 +190,9 @@ export function PublicFeed(
 ) {
   const total =
     (db.query('SELECT count(*) AS count FROM posts WHERE deleted_at IS NULL').get() as { count: number }).count
-  const posts = db.query(
+  const posts = enrichPosts(db, db.query(
     'SELECT p.*,u.handle FROM posts p JOIN users u ON u.id=p.user_id WHERE p.deleted_at IS NULL ORDER BY p.created_at DESC LIMIT ? OFFSET ?',
-  ).all(pageSize, (page - 1) * pageSize) as any[]
+  ).all(pageSize, (page - 1) * pageSize) as PostView[])
   return (
     <Layout user={user} title={path === '/latest' ? 'latest' : undefined}>
       <FeedTabs active="latest" user={user} />
@@ -211,7 +213,7 @@ export function PublicFeed(
 export function HotFeed({ page, user, title }: { page: number; user: User | null; title?: string }) {
   const total =
     (db.query('SELECT count(*) AS count FROM posts WHERE deleted_at IS NULL').get() as { count: number }).count
-  const posts = getHotPosts(db, pageSize, (page - 1) * pageSize)
+  const posts = enrichPosts(db, getHotPosts(db, pageSize, (page - 1) * pageSize))
   return (
     <Layout user={user} title={title}>
       <FeedTabs active="hot" user={user} />
@@ -260,41 +262,48 @@ export function Activity({ user, page }: { user: User; page: number }) {
         FROM follows f JOIN users u ON u.id=f.follower_id
         WHERE f.following_id=? AND f.created_at IS NOT NULL
       ) ORDER BY created_at DESC LIMIT ? OFFSET ?`,
-  ).all(user.id, user.id, user.id, user.id, user.id, user.id, pageSize, (page - 1) * pageSize) as any[]
+  ).all(user.id, user.id, user.id, user.id, user.id, user.id, pageSize, (page - 1) * pageSize) as
+    (PostView & { activity_kind: 'reply' | 'mention' | 'follow'; posts: number | null;
+      viewerFollowing: boolean | null; bio: string | null })[]
+  const activity = enrichPosts(db, posts.filter(post => post.activity_kind !== 'follow'))
+  const activityById = new Map(activity.map(post => [post.id, post]))
   return (
     <Layout user={user} title="activity">
       <section className="page-header activity-header">
         <h1>activity</h1>
       </section>
       {posts.length
-        ? posts.map((post, index) => (
-          <div className="activity-item"
-            key={post.activity_kind === 'follow' ? `follow-${post.user_id}-${index}` : post.id}>
-            <div className="activity-context">
-              {post.activity_kind === 'reply' ? 'replied to you'
-                : post.activity_kind === 'mention' ? 'mentioned you'
-                : 'followed you'}
-            </div>
-            {post.activity_kind === 'follow'
-              ? (
-                <div className="post people activity-follow">
-                  <article className="activity-person">
-                    <div>
+        ? posts.map((rawPost, index) => {
+          const post = rawPost.activity_kind === 'follow' ? rawPost : activityById.get(rawPost.id)!
+          return (
+            <div className="activity-item"
+              key={rawPost.activity_kind === 'follow' ? `follow-${rawPost.user_id}-${index}` : rawPost.id}>
+              <div className="activity-context">
+                {rawPost.activity_kind === 'reply' ? 'replied to you'
+                  : rawPost.activity_kind === 'mention' ? 'mentioned you'
+                  : 'followed you'}
+              </div>
+              {rawPost.activity_kind === 'follow'
+                ? (
+                  <div className="post people activity-follow">
+                    <article className="activity-person">
                       <div>
-                        <a href={'/u/' + post.handle}>@{post.handle}</a>
-                        <small>{post.posts} {post.posts === 1 ? 'note' : 'notes'}</small>
+                        <div>
+                          <a href={'/u/' + rawPost.handle}>@{rawPost.handle}</a>
+                          <small>{rawPost.posts} {rawPost.posts === 1 ? 'note' : 'notes'}</small>
+                        </div>
+                        <form method="post" action={'/follow/' + rawPost.handle}>
+                          <button className="button">{rawPost.viewerFollowing ? 'unfollow' : 'follow'}</button>
+                        </form>
                       </div>
-                      <form method="post" action={'/follow/' + post.handle}>
-                        <button className="button">{post.viewerFollowing ? 'unfollow' : 'follow'}</button>
-                      </form>
-                    </div>
-                    <p className="profile-bio">{post.bio || 'No bio yet.'}</p>
-                  </article>
-                </div>
-              )
-              : <Post p={post} user={user} showReplyCount />}
-          </div>
-        ))
+                      <p className="profile-bio">{rawPost.bio || 'No bio yet.'}</p>
+                    </article>
+                  </div>
+                )
+                : <Post p={post} user={user} showReplyCount />}
+            </div>
+          )
+        })
         : total === 0
         ? (
           <div className="empty empty-actions">
@@ -446,7 +455,7 @@ export function Compose({ user, error, body = '' }: { user: User; error?: string
 }
 
 export function EditPost(
-  { user, post, error, body = post.body }: { user: User; post: any; error?: string; body?: string },
+  { user, post, error, body = post.body }: { user: User; post: PostRow; error?: string; body?: string },
 ) {
   return (
     <Layout user={user} title="edit post">
@@ -467,7 +476,7 @@ export function EditPost(
   )
 }
 
-export function ConfirmDelete({ user, post }: { user: User; post: any }) {
+export function ConfirmDelete({ user, post }: { user: User; post: PostRow }) {
   return (
     <Layout user={user} title="delete post">
       <div className="panel confirm-delete">
@@ -506,7 +515,7 @@ export function ConfirmAccountDelete({ user }: { user: User }) {
 }
 
 export function Reply(
-  { user, post, showForm, error, body = '', social }: { user: User; post: any; showForm: boolean; error?: string;
+  { user, post, showForm, error, body = '', social }: { user: User; post: PostView; showForm: boolean; error?: string;
     social?: { description: string; image: string; url: string }; body?: string },
 ) {
   return (
@@ -543,17 +552,17 @@ export function Explore({ user, welcome = false, peopleIds }: {
       `SELECT u.*, (SELECT count(*) FROM posts p WHERE p.user_id=u.id AND p.deleted_at IS NULL) posts,
         EXISTS(SELECT 1 FROM follows f WHERE f.follower_id=? AND f.following_id=u.id) following
         FROM users u WHERE u.id IN (${savedIds.map(() => '?').join(',')}) AND u.deleted_at IS NULL`,
-    ).all(viewerId, ...savedIds) as any[]).sort((a, b) => savedIds.indexOf(a.id) - savedIds.indexOf(b.id))
+    ).all(viewerId, ...savedIds) as PersonView[]).sort((a, b) => savedIds.indexOf(a.id) - savedIds.indexOf(b.id))
     : db.query(
       'SELECT u.*, (SELECT count(*) FROM posts p WHERE p.user_id=u.id AND p.deleted_at IS NULL) posts, EXISTS(SELECT 1 FROM follows f WHERE f.follower_id=? AND f.following_id=u.id) following FROM users u WHERE u.id != ? AND u.deleted_at IS NULL AND NOT EXISTS (SELECT 1 FROM follows f WHERE f.follower_id=? AND f.following_id=u.id) AND EXISTS (SELECT 1 FROM posts p WHERE p.user_id=u.id AND p.deleted_at IS NULL) ORDER BY RANDOM() LIMIT 6',
-    ).all(viewerId, viewerId, viewerId) as any[]
+    ).all(viewerId, viewerId, viewerId) as PersonView[]
   const explorePeople = people.map(p => p.id).join(',')
   const tags = db.query(
     `SELECT ph.tag,count(*) count,
       EXISTS(SELECT 1 FROM hashtag_follows hf WHERE hf.user_id=? AND hf.tag=ph.tag) following
       FROM post_hashtags ph
       GROUP BY ph.tag ORDER BY count DESC LIMIT 12`,
-  ).all(viewerId) as any[]
+  ).all(viewerId) as { tag: string; count: number; following: boolean }[]
   return (
     <Layout user={user} title="explore">
       {user && welcome && (
@@ -604,8 +613,8 @@ export function Profile(
     error, editing = false, page = 1, total = posts.length, followerCount = 0, followingCount = 0,
     followingTagCount = 0, social }: {
       user: User | null
-      profile: any
-      posts: any[]
+      profile: ProfileRow
+      posts: PostView[]
       following: boolean
       bio?: string
       editHandle?: string
@@ -667,7 +676,7 @@ export function Profile(
 }
 
 function ProfileHeader({ user, profile, following, editing = false, children }: {
-  user: User | null; profile: any; following: boolean; editing?: boolean; children?: React.ReactNode
+  user: User | null; profile: ProfileRow; following: boolean; editing?: boolean; children?: React.ReactNode
 }) {
   return (
     <section className={`page-header profile${editing ? ' profile-editing' : ''}`}>
@@ -698,7 +707,7 @@ function ProfileHeader({ user, profile, following, editing = false, children }: 
 }
 
 function ProfileTabs({ profile, active, notes, followers, following, followingTags }: {
-  profile: any; active: 'notes' | 'followers' | 'following'; notes: number; followers: number
+  profile: ProfileRow; active: 'notes' | 'followers' | 'following'; notes: number; followers: number
   following: number; followingTags: number
 }) {
   const base = `/u/${profile.handle}`
@@ -721,7 +730,7 @@ function ProfileTabs({ profile, active, notes, followers, following, followingTa
 export function Connections(
   { user, profile, people, tags = [], kind, page, total, noteCount, followerCount, followingCount,
     followingTagCount, following, social }: {
-    user: User | null; profile: any; people: any[]
+    user: User | null; profile: ProfileRow; people: PersonView[]
     tags?: { tag: string; count: number; viewerFollowing: boolean }[]
     kind: 'following' | 'followers'; page: number; total: number
     noteCount: number; followerCount: number; followingCount: number; followingTagCount: number; following: boolean
@@ -815,7 +824,7 @@ function ConnectionPeople({ user, people, className = '' }: {
 
 export function TagFeed(
   { user, tag, following, posts, page, total, social }: { user: User | null; tag: string; following: boolean;
-    posts: any[]; page: number; total: number;
+    posts: PostView[]; page: number; total: number;
     social?: { description: string; image: string; url: string; type?: 'article' | 'profile' | 'website'; imageAlt?: string } },
 ) {
   return (
@@ -844,7 +853,7 @@ export function TagFeed(
 }
 
 export function PublicThread(
-  { post, social }: { post: any; social?: { description: string; image: string; url: string } },
+  { post, social }: { post: PostView; social?: { description: string; image: string; url: string } },
 ) {
   return (
     <Layout title={postTitle(post.body)} social={social}>

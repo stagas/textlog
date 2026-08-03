@@ -2,6 +2,7 @@ import { describe, expect, test } from 'bun:test'
 import React from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
 import { Auth, postTitle } from './components/pages'
+import { Post } from './components/post'
 
 describe('postTitle', () => {
   test('uses short post text as-is', () => {
@@ -33,4 +34,22 @@ describe('Auth', () => {
 
     expect(html).toContain('pattern="[A-Za-z0-9_]{2,24}"')
   })
+})
+
+test('Post renders preloaded parent and reply data', () => {
+  const html = renderToStaticMarkup(React.createElement(Post, {
+    user: null,
+    showReplyCount: true,
+    p: {
+      id: 2, user_id: 1, parent_id: 1, body: 'child', handle: 'writer',
+      created_at: '2026-08-03 12:00:00', deleted_at: null, reply_count: 2,
+      parent: {
+        id: 1, body: 'parent', handle: 'author', created_at: '2026-08-03 11:00:00',
+        deleted_at: null, reply_count: 1,
+      },
+    },
+  }))
+  expect(html).toContain('2 replies')
+  expect(html).toContain('@author')
+  expect(html).toContain('parent')
 })

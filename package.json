@@ -5,7 +5,10 @@
   "scripts": {
     "dev": "DEV_RELOAD=true bun --watch src/server.tsx",
     "start": "bun src/server.tsx",
-    "seed": "bun src/seed.ts"
+    "seed": "bun src/seed.ts",
+    "test": "bun test",
+    "typecheck": "tsc --noEmit",
+    "check": "bun run typecheck && bun run test"
   },
   "dependencies": {
     "@types/react": "latest",
@@ -16,6 +19,7 @@
     "react-dom": "latest"
   },
   "devDependencies": {
-    "bun-types": "latest"
+    "bun-types": "latest",
+    "typescript": "^5.9.2"
   }
 }

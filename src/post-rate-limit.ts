@@ -10,6 +10,7 @@ export function insertRateLimitedPost(
   userId: number,
   body: string,
   parentId: number | null = null,
+  afterInsert?: (postId: number) => void,
 ): PostInsert {
   return database.transaction(() => {
     const limited = database.query(`
@@ -26,8 +27,10 @@ export function insertRateLimitedPost(
 
     if (limited) return { retryAfter: limited.retry_after }
 
-    return database.query('INSERT INTO posts(user_id,parent_id,body) VALUES(?,?,?) RETURNING id')
+    const inserted = database.query('INSERT INTO posts(user_id,parent_id,body) VALUES(?,?,?) RETURNING id')
       .get(userId, parentId, body) as { id: number }
+    afterInsert?.(inserted.id)
+    return inserted
   })()
 }
 

@@ -27,6 +27,7 @@ if (!postColumns.some(column => column.name === 'deleted_at')) {
 db.run('CREATE INDEX IF NOT EXISTS posts_parent ON posts(parent_id, created_at)')
 db.run('CREATE INDEX IF NOT EXISTS posts_user_created ON posts(user_id, created_at DESC)')
 db.run('CREATE INDEX IF NOT EXISTS post_mentions_user ON post_mentions(user_id, post_id)')
+db.run('CREATE INDEX IF NOT EXISTS post_hashtags_tag ON post_hashtags(tag, post_id)')
 
 const followColumns = db.query('PRAGMA table_info(follows)').all() as { name: string }[]
 if (!followColumns.some(column => column.name === 'created_at')) {
@@ -57,3 +58,8 @@ if (!userColumns.some(column => column.name === 'deleted_at')) {
 }
 
 export type User = { id: number; handle: string; email: string; bio: string }
+
+// Keep short-lived authentication tables bounded without requiring a scheduler.
+const now = Date.now()
+db.query('DELETE FROM sessions WHERE expires_at<=?').run(now)
+db.query('DELETE FROM password_resets WHERE expires_at<=?').run(now)

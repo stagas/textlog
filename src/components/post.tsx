@@ -1,16 +1,12 @@
 import React from 'react'
 import { db, type User } from '../db'
 import { fmt, fmtFull, linkify } from '../utils'
+import type { PostView } from '../types'
+import { enrichPosts } from '../posts'
 
-export function Post({ p, user, showReplyAction = true, showParent = true, showReplyCount = false, replyHref, replyLabel = 'reply' }: { p: any; user: User | null; showReplyAction?: boolean; showParent?: boolean; showReplyCount?: boolean; replyHref?: string; replyLabel?: string }) {
-  const parent = showParent && p.parent_id
-    ? db.query(`SELECT p.id,p.body,p.created_at,p.deleted_at,u.handle,
-        (SELECT count(*) FROM posts replies WHERE replies.parent_id=p.id) reply_count
-        FROM posts p JOIN users u ON u.id=p.user_id WHERE p.id=?`).get(p.parent_id) as any
-    : null
-  const replyCount = showReplyCount
-    ? (db.query('SELECT count(*) AS count FROM posts WHERE parent_id=?').get(p.id) as { count: number }).count
-    : 0
+export function Post({ p, user, showReplyAction = true, showParent = true, showReplyCount = false, replyHref, replyLabel = 'reply' }: { p: PostView; user: User | null; showReplyAction?: boolean; showParent?: boolean; showReplyCount?: boolean; replyHref?: string; replyLabel?: string }) {
+  const parent = showParent ? p.parent : null
+  const replyCount = p.reply_count || 0
   if (p.deleted_at) return <article className="post deleted-post">
     <a href={'/post/' + p.id}>(deleted){showReplyCount && replyCount > 0
       ? ` · ${replyCount} ${replyCount === 1 ? 'reply' : 'replies'}`
@@ -47,18 +43,34 @@ export function Post({ p, user, showReplyAction = true, showParent = true, showR
 }
 
 export function ThreadReplies({ parentId, user }: { parentId: number; user: User | null }) {
-  const replies = db.query(
-    'SELECT p.*,u.handle FROM posts p JOIN users u ON u.id=p.user_id WHERE p.parent_id=? ORDER BY p.created_at ASC',
-  ).all(parentId) as any[]
+  const rows = db.query(`WITH RECURSIVE thread AS (
+      SELECT p.*,u.handle,1 depth FROM posts p JOIN users u ON u.id=p.user_id WHERE p.parent_id=?
+      UNION ALL
+      SELECT p.*,u.handle,thread.depth+1 FROM posts p JOIN users u ON u.id=p.user_id
+        JOIN thread ON p.parent_id=thread.id
+    ) SELECT id,user_id,parent_id,body,created_at,deleted_at,handle,depth
+      FROM thread ORDER BY created_at ASC,id ASC`).all(parentId) as (PostView & { depth: number })[]
+  const replies = enrichPosts(db, rows)
   if (!replies.length) return null
-  return <div className="reply-branch" style={{ '--depth': 1 } as React.CSSProperties}>
-    {replies.map(reply => reply.deleted_at
-      ? <ThreadReplies key={reply.id} parentId={reply.id} user={user} />
-      : <div className="reply-node" key={reply.id}>
-        <Post p={reply} user={user} showParent={false}
-          replyHref={user ? undefined : '/login?next=' + encodeURIComponent('/post/' + reply.id + '?reply=1')}
-          replyLabel={user ? 'reply' : 'log in to reply'} />
-        <ThreadReplies parentId={reply.id} user={user} />
-      </div>)}
-  </div>
+  const children = new Map<number, PostView[]>()
+  for (const reply of replies) {
+    const siblings = children.get(reply.parent_id!) || []
+    siblings.push(reply)
+    children.set(reply.parent_id!, siblings)
+  }
+  const renderBranch = (id: number, depth: number): React.ReactNode => {
+    const branch = children.get(id) || []
+    if (!branch.length) return null
+    return <div className="reply-branch" style={{ '--depth': depth } as React.CSSProperties}>
+      {branch.map(reply => reply.deleted_at
+        ? <React.Fragment key={reply.id}>{renderBranch(reply.id, depth + 1)}</React.Fragment>
+        : <div className="reply-node" key={reply.id}>
+          <Post p={reply} user={user} showParent={false}
+            replyHref={user ? undefined : '/login?next=' + encodeURIComponent('/post/' + reply.id + '?reply=1')}
+            replyLabel={user ? 'reply' : 'log in to reply'} />
+          {renderBranch(reply.id, depth + 1)}
+        </div>)}
+    </div>
+  }
+  return renderBranch(parentId, 1)
 }

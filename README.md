@@ -11,6 +11,8 @@ bun run dev
 
 Open http://localhost:3000. Data is stored in `storage/root.sqlite` using Bun's current `Database` API.
 
+Run the full local quality check with `bun run check`; it performs strict TypeScript checking and the complete test suite.
+
 In development, the browser automatically reloads after Bun restarts the server.
 
 Set `OPENAI_API_KEY` in the server environment to moderate posts and replies before insertion. root.mx uses OpenAI's free Moderation endpoint with `omni-moderation-latest` and rejects submissions when moderation is unavailable.
@@ -18,6 +20,7 @@ Set `OPENAI_API_KEY` in the server environment to moderate posts and replies bef
 Password reset emails use Resend. Set `RESEND_API_KEY`, `EMAIL_FROM` (a verified sender such as `root.mx <hello@root.mx>`), and the public `APP_URL` (such as `https://root.mx`). Reset links are single-use and expire after one hour.
 
 `APP_URL` is also used for absolute Open Graph URLs. Each post exposes a dynamically rendered 1200×630 PNG at `/post/:id/og.png`.
+When `APP_URL` uses HTTPS, authentication cookies are automatically marked `Secure` for production transport protection.
 
 To temporarily disable moderation, set `MODERATION_DISABLED=true`. Remove the variable or set it to `false` to re-enable it.
 

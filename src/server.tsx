@@ -1,6 +1,5 @@
 import { About, Activity, Auth, Compose, ConfirmAccountDelete, ConfirmDelete, Connections, EditPost, Explore, Feed, ForgotPassword, HotFeed, Legal, Profile, PublicFeed, PublicThread, Reply, ResetPassword,
   TagFeed } from './components/pages'
-import { extractHashtags, extractMentions } from './content'
 import { moderateText, moderationMessage } from './moderation'
 import { currentUser, hash, hashPassword, token, verifyPassword } from './utils'
 
@@ -11,7 +10,10 @@ import { configureDevReload } from './components/layout'
 import { db } from './db'
 import { sendPasswordReset } from './email'
 import { renderDefaultOg, renderPostOg, renderProfileOg, renderTagOg } from './og'
-import { insertRateLimitedPost, postRateLimitMessage } from './post-rate-limit'
+import { postRateLimitMessage } from './post-rate-limit'
+import { clearSessionCookie, safeLocalPath, safeRefererPath, sessionCookie, stringField } from './http'
+import { createPost, enrichPosts, updatePost } from './posts'
+import type { PostRow, PostView, ProfileRow } from './types'
 
 const devReloadEnabled = Bun.env.DEV_RELOAD === 'true'
 const bootId = crypto.randomUUID()
@@ -27,25 +29,17 @@ function redirect(path: string, cookie?: string) {
   return new Response(null, { status: 303, headers: h })
 }
 function safeNext(value?: string) {
-  return value?.startsWith('/') && !value.startsWith('//') ? value : '/'
+  return safeLocalPath(value)
 }
 function currentPage(value?: string) {
   const parsed = Number(value)
   return Number.isInteger(parsed) && parsed > 0 ? parsed : 1
 }
 async function form(req: Request) {
-  return Object.fromEntries(await req.formData()) as Record<string, string>
-}
-function syncPostMetadata(postId: number, body: string) {
-  db.query('DELETE FROM post_hashtags WHERE post_id=?').run(postId)
-  db.query('DELETE FROM post_mentions WHERE post_id=?').run(postId)
-  for (const tag of extractHashtags(body)) {
-    db.query('INSERT OR IGNORE INTO post_hashtags VALUES(?,?)').run(postId, tag)
-  }
-  for (const handle of extractMentions(body)) {
-    const mentioned = db.query('SELECT id FROM users WHERE handle=?').get(handle) as { id: number } | null
-    if (mentioned) db.query('INSERT OR IGNORE INTO post_mentions VALUES(?,?)').run(postId, mentioned.id)
-  }
+  const data = await req.formData()
+  return new Proxy({} as Record<string, string>, {
+    get: (_, property) => typeof property === 'string' ? stringField(data, property) : undefined,
+  })
 }
 const app = new Hono()
 
@@ -196,7 +190,7 @@ app.post('/signup', async c => {
       .get(handle, email, passwordHash) as { id: number }
     const session = token()
     db.query('INSERT INTO sessions VALUES(?,?,?)').run(session, result.id, Date.now() + 2592000000)
-    return redirect('/explore?welcome=1', `root=${session}; HttpOnly; Path=/; SameSite=Lax`)
+    return redirect('/explore?welcome=1', sessionCookie(session))
   }
   catch {
     return page(<Auth mode="signup" handle={handle} email={email} error="That handle or email is unavailable." />, 400)
@@ -209,20 +203,21 @@ app.post('/login', async c => {
   const found = db.query('SELECT id,password FROM users WHERE (handle=? OR email=?) AND deleted_at IS NULL')
     .get(login, login) as { id: number; password: string } | null
   if (!found || !await verifyPassword(f.password || '', found.password)) {
-    return page(<Auth mode="login" handle={login} next={safeNext(f.next)} />, 401)
+    return page(<Auth mode="login" handle={login} next={safeNext(f.next)}
+      error="Invalid email, handle, or password." />, 401)
   }
   if (!found.password.startsWith('$argon2id$')) {
     db.query('UPDATE users SET password=? WHERE id=?').run(await hashPassword(f.password), found.id)
   }
   const session = token()
   db.query('INSERT INTO sessions VALUES(?,?,?)').run(session, found.id, Date.now() + 2592000000)
-  return redirect(safeNext(f.next), `root=${session}; HttpOnly; Path=/; SameSite=Lax`)
+  return redirect(safeNext(f.next), sessionCookie(session))
 })
 
 app.post('/logout', c => {
   const session = c.req.header('cookie')?.match(/root=([^;]+)/)?.[1]
   if (session) db.query('DELETE FROM sessions WHERE token=?').run(session)
-  return redirect('/', 'root=; Max-Age=0; Path=/')
+  return redirect('/', clearSessionCookie())
 })
 
 app.get('/account/delete', c => {
@@ -248,7 +243,7 @@ app.post('/account/delete', c => {
     db.query(`UPDATE users SET handle=?,email=?,bio='',password='!',deleted_at=CURRENT_TIMESTAMP WHERE id=?`)
       .run(`deleted-${user.id}`, `deleted-${user.id}@root.mx`, user.id)
   })()
-  return redirect('/', 'root=; Max-Age=0; Path=/; HttpOnly; SameSite=Lax')
+  return redirect('/', clearSessionCookie())
 })
 
 app.get('/compose', c => {
@@ -260,10 +255,11 @@ app.get('/post', c => c.redirect('/compose', 303))
 app.get('/post/:id', c => {
   const id = Number(c.req.param('id'))
   if (!Number.isInteger(id) || id < 1) return c.text('Not found', 404)
-  const post = db.query(
+  const foundPost = db.query(
     'SELECT p.*,u.handle FROM posts p JOIN users u ON u.id=p.user_id WHERE p.id=?',
-  ).get(id) as any
-  if (!post) return c.text('Not found', 404)
+  ).get(id) as PostView | null
+  if (!foundPost) return c.text('Not found', 404)
+  const post = enrichPosts(db, [foundPost])[0]
   const configuredOrigin = Bun.env.APP_URL?.replace(/\/$/, '')
   const origin = configuredOrigin || new URL(c.req.url).origin
   const postUrl = `${origin}/post/${post.id}`
@@ -305,11 +301,10 @@ app.post('/post', async c => {
     return page(<Compose user={user} body={body} error={moderationMessage(moderation.reason)} />,
       moderation.reason === 'flagged' ? 422 : 503)
   }
-  const result = insertRateLimitedPost(db, user.id, body)
+  const result = createPost(db, user.id, body)
   if ('retryAfter' in result) {
     return page(<Compose user={user} body={body} error={postRateLimitMessage(result.retryAfter)} />, 429)
   }
-  syncPostMetadata(result.id, body)
   return redirect('/')
 })
 
@@ -317,7 +312,9 @@ app.get('/post/:id/edit', c => {
   const user = currentUser(c.req.raw)
   if (!user) return redirect('/login?next=' + encodeURIComponent(c.req.path))
   const id = Number(c.req.param('id'))
-  const post = Number.isInteger(id) ? db.query('SELECT * FROM posts WHERE id=? AND deleted_at IS NULL').get(id) as any : null
+  const post = Number.isInteger(id) ? db.query(
+    'SELECT id,user_id,parent_id,body,created_at,deleted_at FROM posts WHERE id=? AND deleted_at IS NULL',
+  ).get(id) as PostRow | null : null
   if (!post) return c.text('Not found', 404)
   if (post.user_id !== user.id) return c.text('Forbidden', 403)
   return page(<EditPost user={user} post={post} />)
@@ -327,7 +324,9 @@ app.post('/post/:id/edit', async c => {
   const user = currentUser(c.req.raw)
   if (!user) return redirect('/login')
   const id = Number(c.req.param('id'))
-  const post = Number.isInteger(id) ? db.query('SELECT * FROM posts WHERE id=? AND deleted_at IS NULL').get(id) as any : null
+  const post = Number.isInteger(id) ? db.query(
+    'SELECT id,user_id,parent_id,body,created_at,deleted_at FROM posts WHERE id=? AND deleted_at IS NULL',
+  ).get(id) as PostRow | null : null
   if (!post) return c.text('Not found', 404)
   if (post.user_id !== user.id) return c.text('Forbidden', 403)
   const f = await form(c.req.raw)
@@ -341,10 +340,7 @@ app.post('/post/:id/edit', async c => {
     return page(<EditPost user={user} post={post} body={body} error={moderationMessage(moderation.reason)} />,
       moderation.reason === 'flagged' ? 422 : 503)
   }
-  db.transaction(() => {
-    db.query('UPDATE posts SET body=? WHERE id=?').run(body, id)
-    syncPostMetadata(id, body)
-  })()
+  updatePost(db, id, body)
   return redirect('/post/' + id)
 })
 
@@ -353,7 +349,8 @@ app.get('/post/:id/delete', c => {
   if (!user) return redirect('/login?next=' + encodeURIComponent(c.req.path))
   const id = Number(c.req.param('id'))
   const post = Number.isInteger(id)
-    ? db.query('SELECT * FROM posts WHERE id=? AND deleted_at IS NULL').get(id) as any
+    ? db.query('SELECT id,user_id,parent_id,body,created_at,deleted_at FROM posts WHERE id=? AND deleted_at IS NULL')
+      .get(id) as PostRow | null
     : null
   if (!post) return c.text('Not found', 404)
   if (post.user_id !== user.id) return c.text('Forbidden', 403)
@@ -384,7 +381,7 @@ app.post('/post/:id/reply', async c => {
   const parent = Number.isInteger(parentId)
     ? db.query('SELECT p.*,u.handle FROM posts p JOIN users u ON u.id=p.user_id WHERE p.id=?').get(
       parentId,
-    ) as any
+    ) as PostView | null
     : null
   if (!parent) return c.text('Not found', 404)
   const f = await form(c.req.raw)
@@ -401,20 +398,21 @@ app.post('/post/:id/reply', async c => {
     return page(<Reply user={user} post={parent} showForm error={moderationMessage(moderation.reason)} body={body} />,
       moderation.reason === 'flagged' ? 422 : 503)
   }
-  const result = insertRateLimitedPost(db, user.id, body, parentId)
+  const result = createPost(db, user.id, body, parentId)
   if ('retryAfter' in result) {
     return page(<Reply user={user} post={parent} showForm error={postRateLimitMessage(result.retryAfter)} body={body} />,
       429)
   }
-  syncPostMetadata(result.id, body)
   return redirect('/post/' + parentId)
 })
 
 app.post('/follow/:handle', async c => {
   const user = currentUser(c.req.raw)
   if (!user) return redirect('/login')
+  const handle = c.req.param('handle').toLowerCase()
+  if (!/^[a-z0-9_]{2,24}$/.test(handle)) return c.text('Invalid handle', 400)
   const f = await form(c.req.raw)
-  const target = db.query('SELECT id FROM users WHERE handle=?').get(c.req.param('handle')) as { id: number } | null
+  const target = db.query('SELECT id FROM users WHERE handle=? AND deleted_at IS NULL').get(handle) as { id: number } | null
   if (target && target.id !== user.id) {
     const exists = db.query('SELECT 1 FROM follows WHERE follower_id=? AND following_id=?').get(user.id, target.id)
     exists
@@ -423,6 +421,7 @@ app.post('/follow/:handle', async c => {
         .run(user.id, target.id)
   }
   const referer = c.req.header('referer')
+  const returnPath = safeRefererPath(referer, c.req.url)
   if (referer && URL.canParse(referer)) {
     const url = new URL(referer)
     if (url.pathname === '/explore' && /^\d+(,\d+){0,5}$/.test(f.explorePeople || '')) {
@@ -430,23 +429,19 @@ app.post('/follow/:handle', async c => {
         `explore_people=${f.explorePeople}; HttpOnly; Path=/explore; SameSite=Lax`)
     }
   }
-  return redirect(referer || '/')
+  return redirect(returnPath)
 })
 
 app.post('/tag-follow/:tag', c => {
   const user = currentUser(c.req.raw)
   if (!user) return redirect('/login')
   const tag = c.req.param('tag').toLowerCase()
+  if (!/^[a-z0-9_]{1,280}$/.test(tag)) return c.text('Invalid tag', 400)
   const exists = db.query('SELECT 1 FROM hashtag_follows WHERE user_id=? AND tag=?').get(user.id, tag)
   exists
     ? db.query('DELETE FROM hashtag_follows WHERE user_id=? AND tag=?').run(user.id, tag)
     : db.query('INSERT OR IGNORE INTO hashtag_follows VALUES(?,?)').run(user.id, tag)
-  const referer = c.req.header('referer')
-  if (referer && URL.canParse(referer)) {
-    const returnUrl = new URL(referer)
-    if (returnUrl.origin === new URL(c.req.url).origin) return redirect(returnUrl.pathname + returnUrl.search)
-  }
-  return redirect('/tag/' + tag)
+  return redirect(safeRefererPath(c.req.header('referer'), c.req.url, '/tag/' + tag))
 })
 
 app.get('/explore', c => {
@@ -493,13 +488,15 @@ app.get('/u/:handle/:kind', c => {
 app.get('/u/:handle', c => {
   const user = currentUser(c.req.raw)
   const profilePage = currentPage(c.req.query('page'))
-  const profile = db.query('SELECT * FROM users WHERE handle=? AND deleted_at IS NULL').get(c.req.param('handle')) as any
+  const profile = db.query(
+    'SELECT id,handle,email,bio,deleted_at FROM users WHERE handle=? AND deleted_at IS NULL',
+  ).get(c.req.param('handle')) as ProfileRow | null
   if (!profile) return c.text('Not found', 404)
   const tab = c.req.query('tab')
   if (tab && tab !== 'following' && tab !== 'followers') return c.text('Not found', 404)
-  const posts = db.query(
+  const posts = enrichPosts(db, db.query(
     'SELECT p.*,u.handle FROM posts p JOIN users u ON u.id=p.user_id WHERE p.user_id=? AND p.deleted_at IS NULL ORDER BY p.created_at DESC LIMIT 20 OFFSET ?',
-  ).all(profile.id, (profilePage - 1) * 20) as any[]
+  ).all(profile.id, (profilePage - 1) * 20) as PostView[])
   const total =
     (db.query('SELECT count(*) AS count FROM posts WHERE user_id=? AND deleted_at IS NULL').get(profile.id) as { count: number }).count
   const following = !!user
@@ -531,7 +528,7 @@ app.get('/u/:handle', c => {
       `SELECT u.*, (SELECT count(*) FROM posts p WHERE p.user_id=u.id AND p.deleted_at IS NULL) posts,
         EXISTS(SELECT 1 FROM follows vf WHERE vf.follower_id=? AND vf.following_id=u.id) viewerFollowing
         FROM users u ${join} ORDER BY u.handle LIMIT 20 OFFSET ?`,
-    ).all(user?.id ?? -1, profile.id, (profilePage - 1) * 20) as any[]
+    ).all(user?.id ?? -1, profile.id, (profilePage - 1) * 20) as import('./types').PersonView[]
     const countWhere = tab === 'following' ? 'follower_id=?' : 'following_id=?'
     const connectionTotal = (db.query(`SELECT count(*) AS count FROM follows WHERE ${countWhere}`)
       .get(profile.id) as { count: number }).count
@@ -567,9 +564,9 @@ app.post('/u/:handle/profile', async c => {
   const bio = submittedBio.trim() ? submittedBio : ''
   const handle = (f.handle || '').toLowerCase().replace(/^@/, '')
   const email = (f.email || '').trim().toLowerCase()
-  const posts = db.query(
+  const posts = enrichPosts(db, db.query(
     'SELECT p.*,u.handle FROM posts p JOIN users u ON u.id=p.user_id WHERE p.user_id=? AND p.deleted_at IS NULL ORDER BY p.created_at DESC',
-  ).all(user.id) as any[]
+  ).all(user.id) as PostView[])
   if (!/^[a-z0-9_]{2,24}$/.test(handle) || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)
     || email.length > 254 || bio.length > 160)
   {
@@ -605,7 +602,8 @@ app.post('/u/:handle/profile', async c => {
 
 app.get('/tag/:tag/og.png', c => {
   const tag = c.req.param('tag').toLowerCase()
-  const total = (db.query('SELECT count(*) AS count FROM post_hashtags WHERE tag=?')
+  const total = (db.query(`SELECT count(*) AS count FROM post_hashtags ph JOIN posts p ON p.id=ph.post_id
+    WHERE ph.tag=? AND p.deleted_at IS NULL`)
     .get(tag) as { count: number }).count
   const image = renderTagOg(tag, total)
   const body = image.buffer.slice(image.byteOffset, image.byteOffset + image.byteLength) as ArrayBuffer
@@ -624,11 +622,12 @@ app.get('/tag/:tag', c => {
   const following = !!user && !!db.query(
     'SELECT 1 FROM hashtag_follows WHERE user_id=? AND tag=?',
   ).get(user.id, tag)
-  const posts = db.query(
-    'SELECT p.*,u.handle FROM posts p JOIN users u ON u.id=p.user_id JOIN post_hashtags ph ON ph.post_id=p.id WHERE ph.tag=? ORDER BY p.created_at DESC LIMIT 20 OFFSET ?',
-  ).all(tag, (tagPage - 1) * 20) as any[]
+  const posts = enrichPosts(db, db.query(
+    'SELECT p.*,u.handle FROM posts p JOIN users u ON u.id=p.user_id JOIN post_hashtags ph ON ph.post_id=p.id WHERE ph.tag=? AND p.deleted_at IS NULL ORDER BY p.created_at DESC LIMIT 20 OFFSET ?',
+  ).all(tag, (tagPage - 1) * 20) as PostView[])
   const total =
-    (db.query('SELECT count(*) AS count FROM post_hashtags WHERE tag=?').get(tag) as { count: number }).count
+    (db.query(`SELECT count(*) AS count FROM post_hashtags ph JOIN posts p ON p.id=ph.post_id
+      WHERE ph.tag=? AND p.deleted_at IS NULL`).get(tag) as { count: number }).count
   const configuredOrigin = Bun.env.APP_URL?.replace(/\/$/, '')
   const origin = configuredOrigin || new URL(c.req.url).origin
   const tagUrl = `${origin}/tag/${encodeURIComponent(tag)}`
