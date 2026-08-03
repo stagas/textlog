@@ -64,7 +64,16 @@ export function shouldLogHttp(path: string, status: number) {
   return path !== '/__dev/restart' || status >= 400
 }
 
-export function logHttp(method: string, path: string, status: number, durationMs: number) {
+export function clientIp(request: Request, socketIp?: string) {
+  if (Bun.env.TRUST_PROXY === 'true') {
+    const forwarded = request.headers.get('x-forwarded-for')?.split(',', 1)[0]?.trim()
+    return forwarded || request.headers.get('cf-connecting-ip')?.trim()
+      || request.headers.get('x-real-ip')?.trim() || socketIp || '-'
+  }
+  return socketIp || '-'
+}
+
+export function logHttp(method: string, path: string, status: number, durationMs: number, ip = '-') {
   const action = semanticAction(method, path)
   const timing = durationMs < 1000 ? `${durationMs.toFixed(0)}ms` : `${(durationMs / 1000).toFixed(2)}s`
   const parts = [
@@ -72,6 +81,7 @@ export function logHttp(method: string, path: string, status: number, durationMs
     paint(method.padEnd(6), 'blue'),
     paint(String(status), statusColor(status)),
     paint(timing.padStart(7), durationMs >= 1000 ? 'yellow' : 'dim'),
+    paint(ip, 'dim'),
     path,
   ]
   if (action) parts.push(paint(action, status >= 400 ? 'yellow' : 'magenta'))

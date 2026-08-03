@@ -14,7 +14,7 @@ import { registerPostsRoutes } from './routes/posts'
 import { registerProfilesRoutes } from './routes/profiles'
 import { registerTagsRoutes } from './routes/tags'
 import { loadStylesAsset, stylesResponse } from './styles'
-import { logError, logHttp, logReady, shouldLogHttp } from './log'
+import { clientIp, logError, logHttp, logReady, shouldLogHttp } from './log'
 
 const devReloadEnabled = Bun.env.DEV_RELOAD === 'true'
 const bootId = crypto.randomUUID()
@@ -30,7 +30,10 @@ app.use('*', async (c, next) => {
   }
   finally {
     const path = new URL(c.req.url).pathname
-    if (shouldLogHttp(path, c.res.status)) logHttp(c.req.method, path, c.res.status, performance.now() - started)
+    if (shouldLogHttp(path, c.res.status)) {
+      logHttp(c.req.method, path, c.res.status, performance.now() - started,
+        c.req.header('x-root-client-ip') || '-')
+    }
   }
 })
 
@@ -112,5 +115,13 @@ app.onError((error, c) => {
   return c.text('Something went wrong', 500)
 })
 
-export default { port: 3000, host: '0.0.0.0', fetch: app.fetch }
+export default {
+  port: 3000,
+  host: '0.0.0.0',
+  fetch(request: Request, server: Bun.Server<unknown>) {
+    const headers = new Headers(request.headers)
+    headers.set('x-root-client-ip', clientIp(request, server.requestIP(request)?.address))
+    return app.fetch(new Request(request, { headers }))
+  },
+}
 logReady('http://localhost:3000', Bun.env.NODE_ENV || (devReloadEnabled ? 'development' : 'production'))
