@@ -1,0 +1,44 @@
+import { db, type User } from '../db'
+import { enrichPosts } from '../posts'
+import type { PostView } from '../types'
+import { Layout } from './layout'
+import { FeedTabs, pageSize, Pagination } from './page-shared'
+import { Post } from './post'
+
+export function Feed({ user, page, title }: { user: User; page: number; title?: string }) {
+  const total = (db.query(
+    `SELECT count(*) AS count FROM posts p WHERE p.deleted_at IS NULL AND (p.user_id=? OR p.user_id IN (SELECT following_id FROM follows WHERE follower_id=?) OR p.id IN (SELECT ph.post_id FROM post_hashtags ph JOIN hashtag_follows hf ON hf.tag=ph.tag WHERE hf.user_id=?))
+      AND NOT EXISTS (SELECT 1 FROM blocks b WHERE (b.blocker_id=? AND b.blocked_id=p.user_id) OR (b.blocker_id=p.user_id AND b.blocked_id=?))`,
+  ).get(user.id, user.id, user.id, user.id, user.id) as { count: number }).count
+  const totalPages = Math.ceil(total / pageSize)
+  const posts = enrichPosts(db, db.query(
+    `SELECT p.*,u.handle, EXISTS(SELECT 1 FROM follows f WHERE f.follower_id=? AND f.following_id=p.user_id) following FROM posts p JOIN users u ON u.id=p.user_id WHERE p.deleted_at IS NULL AND (p.user_id=? OR p.user_id IN (SELECT following_id FROM follows WHERE follower_id=?) OR p.id IN (SELECT ph.post_id FROM post_hashtags ph JOIN hashtag_follows hf ON hf.tag=ph.tag WHERE hf.user_id=?))
+      AND NOT EXISTS (SELECT 1 FROM blocks b WHERE (b.blocker_id=? AND b.blocked_id=p.user_id) OR (b.blocker_id=p.user_id AND b.blocked_id=?))
+      ORDER BY p.created_at DESC LIMIT ? OFFSET ?`,
+  ).all(user.id, user.id, user.id, user.id, user.id, user.id, pageSize, (page - 1) * pageSize) as PostView[], user.id)
+  return (
+    <Layout user={user} title={title}>
+      <h1 className="visually-hidden">Your feed</h1>
+      <FeedTabs active="following" user={user} />
+      {posts.length
+        ? posts.map(p => <Post key={p.id} p={p} user={user} showReplyCount />)
+        : total === 0
+        ? (
+          <div className="empty empty-actions">
+            <p>Your timeline is empty. Follow people or hashtags to shape it.</p>
+            <div>
+              <a className="button" href="/explore">explore</a>
+              <a href="/latest">browse latest</a>
+              <a href="/compose">write your first note</a>
+            </div>
+          </div>
+        )
+        : (
+          <div className="empty">
+            No notes on this page. <a href="/for-you">Return to the first page</a>.
+          </div>
+        )}
+      <Pagination page={page} totalPages={totalPages} path="/for-you" />
+    </Layout>
+  )
+}

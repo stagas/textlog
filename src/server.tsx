@@ -1,7 +1,47 @@
-import { About, AccountSecurity, Activity, activityTotal, AdminConfirm, AdminDashboard, AdminUser, Auth, Compose, ConfirmAccountDelete,
-  ConfirmDelete, Connections, EditPost, Explore, Feed, ForgotPassword, HotFeed, Legal, Profile, PublicFeed,
-  PublicThread, Reply, ResetPassword, TagFeed } from './components/pages'
+import { anonymizeUser, isAdmin, isAdminEmail, recordAdminAction, resolvePostReports, softDeletePost } from './admin'
+import { AUTH_LIMITS, authRateLimitMessage, consumeAuthAttempt, rateLimitKey } from './auth-rate-limit'
+import {
+  About,
+  AccountSecurity,
+  Activity,
+  activityTotal,
+  AdminConfirm,
+  AdminDashboard,
+  AdminUser,
+  Auth,
+  Compose,
+  ConfirmAccountDelete,
+  ConfirmDelete,
+  Connections,
+  EditPost,
+  Explore,
+  Feed,
+  ForgotPassword,
+  HotFeed,
+  Legal,
+  Profile,
+  PublicFeed,
+  PublicThread,
+  Reply,
+  ResetPassword,
+  TagFeed,
+} from './components/pages'
+import { sendEmailVerification, sendPasswordReset } from './email'
+import {
+  clearSessionCookie,
+  feedPreference,
+  feedPreferenceCookie,
+  isSameOriginRequest,
+  safeLocalPath,
+  safeRefererPath,
+  securityHeaders,
+  sessionCookie,
+  stringField,
+} from './http'
 import { moderateText, moderationMessage } from './moderation'
+import { renderDefaultOg, renderPostOg, renderProfileOg, renderTagOg } from './og'
+import { createPost, enrichPosts, updatePost } from './posts'
+import type { AdminActionView, AdminReportView, DashboardStats, PostRow, PostView, ProfileRow } from './types'
 import { currentUser, hash, hashPassword, sessionToken, token, verifyPassword } from './utils'
 
 import { Hono } from 'hono'
@@ -9,18 +49,9 @@ import { getConnInfo } from 'hono/bun'
 import React from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
 import { configureDevReload } from './components/layout'
-import { db } from './db'
-import { sendEmailVerification, sendPasswordReset } from './email'
-import { renderDefaultOg, renderPostOg, renderProfileOg, renderTagOg } from './og'
-import { postRateLimitMessage } from './post-rate-limit'
-import { clearSessionCookie, feedPreference, feedPreferenceCookie, isSameOriginRequest, safeLocalPath, safeRefererPath,
-  securityHeaders, sessionCookie, stringField } from './http'
-import { createPost, enrichPosts, updatePost } from './posts'
-import type { PostRow, PostView, ProfileRow } from './types'
-import { AUTH_LIMITS, authRateLimitMessage, consumeAuthAttempt, rateLimitKey } from './auth-rate-limit'
-import { anonymizeUser, isAdmin, isAdminEmail, recordAdminAction, resolvePostReports, softDeletePost } from './admin'
-import type { AdminActionView, AdminReportView, DashboardStats } from './types'
 import { exportUserData } from './data-export'
+import { db } from './db'
+import { postRateLimitMessage } from './post-rate-limit'
 
 const devReloadEnabled = Bun.env.DEV_RELOAD === 'true'
 const bootId = crypto.randomUUID()
@@ -101,8 +132,8 @@ function securityPage(req: Request, error?: string, success?: string, status = 2
   if (!user) return redirect('/login?next=' + encodeURIComponent('/account/security'))
   const current = sessionToken(req)
   const rows = db.query(`SELECT token,created_at,expires_at,user_agent FROM sessions
-    WHERE user_id=? AND expires_at>? ORDER BY created_at DESC`).all(user.id, Date.now()) as
-    { token: string; created_at: number; expires_at: number; user_agent: string }[]
+    WHERE user_id=? AND expires_at>? ORDER BY created_at DESC`).all(user.id, Date.now()) as { token: string;
+    created_at: number; expires_at: number; user_agent: string }[]
   const sessions = rows.map(row => ({ ...row, token: hash(row.token), current: row.token === current }))
   return page(<AccountSecurity user={user} sessions={sessions} error={error} success={success} />, status)
 }
@@ -123,8 +154,9 @@ app.use('*', async (c, next) => {
   await next()
   if (c.req.method !== 'GET' || !c.res.headers.get('content-type')?.includes('text/html')) return
   const url = new URL(c.req.url)
-  const privatePath = /^\/(?:login|signup|forgot-password|reset-password|compose|activity|admin|account\/delete)(?:\/|$)/
-    .test(url.pathname) || /^\/post\/\d+\/(?:edit|delete)$/.test(url.pathname)
+  const privatePath =
+    /^\/(?:login|signup|forgot-password|reset-password|compose|activity|admin|account\/delete)(?:\/|$)/
+      .test(url.pathname) || /^\/post\/\d+\/(?:edit|delete)$/.test(url.pathname)
   const transientParameters = ['reply', 'report', 'reported', 'edit', 'welcome', 'reset', 'token']
   const transient = transientParameters.some(name => url.searchParams.has(name))
   if (privatePath || transient || c.res.status >= 400) c.header('X-Robots-Tag', 'noindex, nofollow')
@@ -253,12 +285,11 @@ app.get('/activity', c => {
 app.get('/about', c => page(<About user={currentUser(c.req.raw)} />))
 app.get('/legal', c => page(<Legal user={currentUser(c.req.raw)} />))
 
-app.get('/login',
-  c =>
-    page(
-      <Auth mode="login" next={safeNext(c.req.query('next'))}
-        success={c.req.query('reset') === '1' ? 'Your password has been reset. You can log in now.' : undefined} />,
-    ))
+app.get('/login', c =>
+  page(
+    <Auth mode="login" next={safeNext(c.req.query('next'))}
+      success={c.req.query('reset') === '1' ? 'Your password has been reset. You can log in now.' : undefined} />,
+  ))
 app.get('/signup', c => page(<Auth mode="signup" />))
 app.get('/forgot-password', c => page(<ForgotPassword />))
 
@@ -267,7 +298,9 @@ app.post('/forgot-password', async c => {
   const email = (f.email || '').trim().toLowerCase()
   const limited = authLimit(c, 'forgot-ip', clientAddress(c), AUTH_LIMITS.forgotIp)
     || authLimit(c, 'forgot-account', email || '(blank)', AUTH_LIMITS.forgotAccount)
-  if (limited) return retryPage(page(<ForgotPassword error={authRateLimitMessage(limited.retryAfter)} />, 429), limited.retryAfter)
+  if (limited) {
+    return retryPage(page(<ForgotPassword error={authRateLimitMessage(limited.retryAfter)} />, 429), limited.retryAfter)
+  }
   const user = db.query('SELECT id,email FROM users WHERE email=?').get(email) as { id: number; email: string } | null
   if (user) {
     const resetToken = token()
@@ -304,10 +337,12 @@ app.post('/reset-password', async c => {
   const resetToken = f.token || ''
   const limited = authLimit(c, 'reset-ip', clientAddress(c), AUTH_LIMITS.resetIp)
     || authLimit(c, 'reset-token', resetToken || '(blank)', AUTH_LIMITS.resetToken)
-  if (limited) return retryPage(page(
-    <ResetPassword resetToken={resetToken} error={authRateLimitMessage(limited.retryAfter)} invalid={!resetToken} />,
-    429,
-  ), limited.retryAfter)
+  if (limited) {
+    return retryPage(page(
+      <ResetPassword resetToken={resetToken} error={authRateLimitMessage(limited.retryAfter)} invalid={!resetToken} />,
+      429,
+    ), limited.retryAfter)
+  }
   const reset = resetToken && db.query('SELECT user_id FROM password_resets WHERE token_hash=? AND expires_at>?')
     .get(hash(resetToken), Date.now()) as { user_id: number } | null
   if (!reset) return page(<ResetPassword invalid />, 400)
@@ -331,10 +366,12 @@ app.post('/signup', async c => {
   const handle = (f.handle || '').toLowerCase().replace(/^@/, '')
   const email = (f.email || '').trim().toLowerCase()
   const limited = authLimit(c, 'signup-ip', clientAddress(c), AUTH_LIMITS.signup)
-  if (limited) return retryPage(page(
-    <Auth mode="signup" handle={handle} email={email} error={authRateLimitMessage(limited.retryAfter)} />,
-    429,
-  ), limited.retryAfter)
+  if (limited) {
+    return retryPage(page(
+      <Auth mode="signup" handle={handle} email={email} error={authRateLimitMessage(limited.retryAfter)} />,
+      429,
+    ), limited.retryAfter)
+  }
   if (!/^[a-z0-9_]{2,24}$/.test(handle) || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || email.length > 254
     || (f.password || '').length < 8)
   {
@@ -378,15 +415,21 @@ app.post('/login', async c => {
   const f = await form(c.req.raw)
   const login = (f.handle || '').trim().toLowerCase().replace(/^@/, '')
   const limited = authLimit(c, 'login-ip', clientAddress(c), AUTH_LIMITS.login)
-  if (limited) return retryPage(page(
-    <Auth mode="login" handle={login} next={safeNext(f.next)} error={authRateLimitMessage(limited.retryAfter)} />,
-    429,
-  ), limited.retryAfter)
-  const found = db.query('SELECT id,password FROM users WHERE (handle=? OR email=?) AND deleted_at IS NULL AND suspended_at IS NULL')
+  if (limited) {
+    return retryPage(page(
+      <Auth mode="login" handle={login} next={safeNext(f.next)} error={authRateLimitMessage(limited.retryAfter)} />,
+      429,
+    ), limited.retryAfter)
+  }
+  const found = db.query(
+    'SELECT id,password FROM users WHERE (handle=? OR email=?) AND deleted_at IS NULL AND suspended_at IS NULL',
+  )
     .get(login, login) as { id: number; password: string } | null
   if (!found || !await verifyPassword(f.password || '', found.password)) {
-    return page(<Auth mode="login" handle={login} next={safeNext(f.next)}
-      error="Invalid email, handle, or password." />, 401)
+    return page(
+      <Auth mode="login" handle={login} next={safeNext(f.next)} error="Invalid email, handle, or password." />,
+      401,
+    )
   }
   if (!found.password.startsWith('$argon2id$')) {
     db.query('UPDATE users SET password=? WHERE id=?').run(await hashPassword(f.password), found.id)
@@ -403,11 +446,14 @@ app.post('/logout', c => {
   return redirect('/', clearSessionCookie())
 })
 
-app.get('/account/security', c => securityPage(c.req.raw,
-  undefined,
-  c.req.query('changed') === 'password' ? 'Password changed. Other sessions were revoked.'
-    : c.req.query('changed') === 'email' ? 'Email address verified and changed.'
-    : c.req.query('verified') === '1' ? 'Email address verified.' : undefined))
+app.get('/account/security', c =>
+  securityPage(c.req.raw, undefined, c.req.query('changed') === 'password'
+    ? 'Password changed. Other sessions were revoked.'
+    : c.req.query('changed') === 'email'
+    ? 'Email address verified and changed.'
+    : c.req.query('verified') === '1'
+    ? 'Email address verified.'
+    : undefined))
 
 app.get('/account/export', c => {
   const user = currentUser(c.req.raw)
@@ -427,7 +473,10 @@ app.post('/account/email/verify', async c => {
   if (!user) return redirect('/login')
   if (user.email_verified_at) return securityPage(c.req.raw, undefined, 'Your email is already verified.')
   const limited = authLimit(c, 'verify-email', `${user.id}:${clientAddress(c)}`, AUTH_LIMITS.forgotAccount)
-  if (limited) return retryPage(securityPage(c.req.raw, authRateLimitMessage(limited.retryAfter), undefined, 429), limited.retryAfter)
+  if (limited) {
+    return retryPage(securityPage(c.req.raw, authRateLimitMessage(limited.retryAfter), undefined, 429),
+      limited.retryAfter)
+  }
   try {
     await issueEmailToken(user.id, user.email, 'verify')
     return securityPage(c.req.raw, undefined, 'Verification email sent.')
@@ -441,9 +490,14 @@ app.post('/account/email/verify', async c => {
 app.post('/account/email/change', async c => {
   const user = currentUser(c.req.raw)
   if (!user) return redirect('/login')
-  if (isAdmin(user)) return securityPage(c.req.raw, 'Hardcoded admin accounts cannot change their protected email.', undefined, 403)
+  if (isAdmin(user)) {
+    return securityPage(c.req.raw, 'Hardcoded admin accounts cannot change their protected email.', undefined, 403)
+  }
   const limited = authLimit(c, 'account-email', `${user.id}:${clientAddress(c)}`, AUTH_LIMITS.sensitiveAccount)
-  if (limited) return retryPage(securityPage(c.req.raw, authRateLimitMessage(limited.retryAfter), undefined, 429), limited.retryAfter)
+  if (limited) {
+    return retryPage(securityPage(c.req.raw, authRateLimitMessage(limited.retryAfter), undefined, 429),
+      limited.retryAfter)
+  }
   const f = await form(c.req.raw)
   const email = (f.email || '').trim().toLowerCase()
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || email.length > 254) {
@@ -469,13 +523,14 @@ app.post('/account/email/change', async c => {
 app.get('/verify-email', c => {
   const value = c.req.query('token') || ''
   const record = value && db.query(`SELECT token_hash,user_id,kind,email FROM email_tokens
-    WHERE token_hash=? AND expires_at>?`).get(hash(value), Date.now()) as
-    { token_hash: string; user_id: number; kind: 'verify' | 'change'; email: string } | null
+    WHERE token_hash=? AND expires_at>?`).get(hash(value), Date.now()) as { token_hash: string; user_id: number;
+    kind: 'verify' | 'change'; email: string } | null
   if (!record) return c.text('This verification link is invalid or expired.', 400)
   try {
     db.transaction(() => {
       if (record.kind === 'change') {
-        db.query('UPDATE users SET email=?,email_verified_at=CURRENT_TIMESTAMP WHERE id=?').run(record.email, record.user_id)
+        db.query('UPDATE users SET email=?,email_verified_at=CURRENT_TIMESTAMP WHERE id=?').run(record.email,
+          record.user_id)
       }
       else db.query('UPDATE users SET email_verified_at=CURRENT_TIMESTAMP WHERE id=?').run(record.user_id)
       db.query('DELETE FROM email_tokens WHERE user_id=?').run(record.user_id)
@@ -491,7 +546,10 @@ app.post('/account/password', async c => {
   const user = currentUser(c.req.raw)
   if (!user) return redirect('/login')
   const limited = authLimit(c, 'account-password', `${user.id}:${clientAddress(c)}`, AUTH_LIMITS.sensitiveAccount)
-  if (limited) return retryPage(securityPage(c.req.raw, authRateLimitMessage(limited.retryAfter), undefined, 429), limited.retryAfter)
+  if (limited) {
+    return retryPage(securityPage(c.req.raw, authRateLimitMessage(limited.retryAfter), undefined, 429),
+      limited.retryAfter)
+  }
   const f = await form(c.req.raw)
   const account = db.query('SELECT password FROM users WHERE id=?').get(user.id) as { password: string }
   if (!await verifyPassword(f.currentPassword || '', account.password)) {
@@ -571,15 +629,21 @@ app.get('/post/:id', c => {
     image: `${postUrl}/og.png`,
     url: postUrl,
   }
-  if (user) return page(<Reply user={user} post={post} showForm={c.req.query('reply') === '1'}
-    showReport={c.req.query('report') === '1'} reported={c.req.query('reported') === '1'} social={social} />)
+  if (user) {
+    return page(
+      <Reply user={user} post={post} showForm={c.req.query('reply') === '1'} showReport={c.req.query('report') === '1'}
+        reported={c.req.query('reported') === '1'} social={social} />,
+    )
+  }
   return page(<PublicThread post={post} social={social} />)
 })
 
 app.get('/post/:id/og.png', c => {
   const id = Number(c.req.param('id'))
   const post = Number.isInteger(id) && id > 0
-    ? db.query('SELECT p.body,u.handle FROM posts p JOIN users u ON u.id=p.user_id WHERE p.id=? AND p.deleted_at IS NULL')
+    ? db.query(
+      'SELECT p.body,u.handle FROM posts p JOIN users u ON u.id=p.user_id WHERE p.id=? AND p.deleted_at IS NULL',
+    )
       .get(id) as { body: string; handle: string } | null
     : null
   if (!post) return c.text('Not found', 404)
@@ -615,9 +679,11 @@ app.get('/post/:id/edit', c => {
   const user = currentUser(c.req.raw)
   if (!user) return redirect('/login?next=' + encodeURIComponent(c.req.path))
   const id = Number(c.req.param('id'))
-  const post = Number.isInteger(id) ? db.query(
-    'SELECT id,user_id,parent_id,body,created_at,deleted_at FROM posts WHERE id=? AND deleted_at IS NULL',
-  ).get(id) as PostRow | null : null
+  const post = Number.isInteger(id)
+    ? db.query(
+      'SELECT id,user_id,parent_id,body,created_at,deleted_at FROM posts WHERE id=? AND deleted_at IS NULL',
+    ).get(id) as PostRow | null
+    : null
   if (!post) return c.text('Not found', 404)
   if (post.user_id !== user.id) return c.text('Forbidden', 403)
   return page(<EditPost user={user} post={post} />)
@@ -627,16 +693,20 @@ app.post('/post/:id/edit', async c => {
   const user = currentUser(c.req.raw)
   if (!user) return redirect('/login')
   const id = Number(c.req.param('id'))
-  const post = Number.isInteger(id) ? db.query(
-    'SELECT id,user_id,parent_id,body,created_at,deleted_at FROM posts WHERE id=? AND deleted_at IS NULL',
-  ).get(id) as PostRow | null : null
+  const post = Number.isInteger(id)
+    ? db.query(
+      'SELECT id,user_id,parent_id,body,created_at,deleted_at FROM posts WHERE id=? AND deleted_at IS NULL',
+    ).get(id) as PostRow | null
+    : null
   if (!post) return c.text('Not found', 404)
   if (post.user_id !== user.id) return c.text('Forbidden', 403)
   const f = await form(c.req.raw)
   const body = f.body || ''
   if (body.trim().length < 1 || body.length > 280) {
-    return page(<EditPost user={user} post={post} body={body}
-      error="Posts must contain between 1 and 280 characters." />, 400)
+    return page(
+      <EditPost user={user} post={post} body={body} error="Posts must contain between 1 and 280 characters." />,
+      400,
+    )
   }
   const moderation = await moderateText(body)
   if (!moderation.ok) {
@@ -665,12 +735,13 @@ app.post('/post/:id/delete', c => {
   if (!user) return redirect('/login')
   const id = Number(c.req.param('id'))
   const post = Number.isInteger(id)
-    ? db.query('SELECT user_id,parent_id FROM posts WHERE id=? AND deleted_at IS NULL').get(id) as { user_id: number; parent_id: number | null } | null
+    ? db.query('SELECT user_id,parent_id FROM posts WHERE id=? AND deleted_at IS NULL').get(id) as { user_id: number;
+      parent_id: number | null } | null
     : null
   if (!post) return c.text('Not found', 404)
   if (post.user_id !== user.id) return c.text('Forbidden', 403)
   db.transaction(() => {
-    db.query("UPDATE posts SET body='(deleted)',deleted_at=CURRENT_TIMESTAMP WHERE id=?").run(id)
+    db.query('UPDATE posts SET body=\'(deleted)\',deleted_at=CURRENT_TIMESTAMP WHERE id=?').run(id)
     db.query('DELETE FROM post_hashtags WHERE post_id=?').run(id)
     db.query('DELETE FROM post_mentions WHERE post_id=?').run(id)
   })()
@@ -704,8 +775,10 @@ app.post('/post/:id/reply', async c => {
   }
   const result = createPost(db, user.id, body, parentId)
   if ('retryAfter' in result) {
-    return page(<Reply user={user} post={parent} showForm error={postRateLimitMessage(result.retryAfter)} body={body} />,
-      429)
+    return page(
+      <Reply user={user} post={parent} showForm error={postRateLimitMessage(result.retryAfter)} body={body} />,
+      429,
+    )
   }
   return redirect('/post/' + parentId)
 })
@@ -716,7 +789,9 @@ app.post('/follow/:handle', async c => {
   const handle = c.req.param('handle').toLowerCase()
   if (!/^[a-z0-9_]{2,24}$/.test(handle)) return c.text('Invalid handle', 400)
   const f = await form(c.req.raw)
-  const target = db.query('SELECT id FROM users WHERE handle=? AND deleted_at IS NULL').get(handle) as { id: number } | null
+  const target = db.query('SELECT id FROM users WHERE handle=? AND deleted_at IS NULL').get(handle) as
+    | { id: number }
+    | null
   if (target && target.id !== user.id && !usersBlocked(user.id, target.id)) {
     const exists = db.query('SELECT 1 FROM follows WHERE follower_id=? AND following_id=?').get(user.id, target.id)
     exists
@@ -740,7 +815,9 @@ app.post('/block/:handle', c => {
   const user = currentUser(c.req.raw)
   if (!user) return redirect('/login')
   const handle = c.req.param('handle').toLowerCase()
-  const target = db.query('SELECT id FROM users WHERE handle=? AND deleted_at IS NULL').get(handle) as { id: number } | null
+  const target = db.query('SELECT id FROM users WHERE handle=? AND deleted_at IS NULL').get(handle) as
+    | { id: number }
+    | null
   if (!target || target.id === user.id) return c.text('Not found', 404)
   const exists = db.query('SELECT 1 FROM blocks WHERE blocker_id=? AND blocked_id=?').get(user.id, target.id)
   db.transaction(() => {
@@ -758,8 +835,10 @@ app.post('/post/:id/report', async c => {
   const user = currentUser(c.req.raw)
   if (!user) return redirect('/login')
   const postId = Number(c.req.param('id'))
-  const post = Number.isInteger(postId) ? db.query('SELECT user_id FROM posts WHERE id=? AND deleted_at IS NULL')
-    .get(postId) as { user_id: number } | null : null
+  const post = Number.isInteger(postId)
+    ? db.query('SELECT user_id FROM posts WHERE id=? AND deleted_at IS NULL')
+      .get(postId) as { user_id: number } | null
+    : null
   if (!post) return c.text('Not found', 404)
   if (post.user_id === user.id) return c.text('You cannot report your own post', 400)
   if (usersBlocked(user.id, post.user_id)) return c.text('Not found', 404)
@@ -831,8 +910,10 @@ app.get('/admin', c => {
     .all() as AdminActionView[]
   const suspended = db.query(`SELECT id,handle,email,bio,suspended_at,deleted_at FROM users
     WHERE deleted_at IS NULL AND suspended_at IS NOT NULL ORDER BY suspended_at DESC LIMIT 20`).all() as ProfileRow[]
-  return page(<AdminDashboard user={signedIn} stats={dashboardStats} reports={reports} actions={actions}
-    status={status} page={reportPage} total={total} suspended={suspended} />)
+  return page(
+    <AdminDashboard user={signedIn} stats={dashboardStats} reports={reports} actions={actions} status={status}
+      page={reportPage} total={total} suspended={suspended} />,
+  )
 })
 
 app.post('/admin/reports/:id/:decision', async c => {
@@ -843,14 +924,15 @@ app.post('/admin/reports/:id/:decision', async c => {
   const decision = c.req.param('decision')
   if (!Number.isInteger(id) || !['resolve', 'dismiss'].includes(decision)) return c.text('Not found', 404)
   const report = db.query('SELECT post_id FROM reports WHERE id=? AND status=\'open\'').get(id) as
-    { post_id: number } | null
+    | { post_id: number }
+    | null
   if (!report) return c.text('Report is not open', 409)
   const f = await form(c.req.raw)
   db.transaction(() => {
     db.query(`UPDATE reports SET status=?,resolved_at=CURRENT_TIMESTAMP,resolved_by=? WHERE id=? AND status='open'`)
       .run(decision === 'resolve' ? 'resolved' : 'dismissed', user.id, id)
-    recordAdminAction(db, user.id, decision === 'resolve' ? 'resolve_report' : 'dismiss_report', null,
-      report.post_id, f.note || '')
+    recordAdminAction(db, user.id, decision === 'resolve' ? 'resolve_report' : 'dismiss_report', null, report.post_id,
+      f.note || '')
   })()
   return redirect('/admin')
 })
@@ -860,9 +942,12 @@ app.get('/admin/posts/:id/delete', c => {
   if (!signedIn) return redirect('/login?next=' + encodeURIComponent(c.req.path))
   if (!isAdmin(signedIn)) return c.text('Forbidden', 403)
   const id = Number(c.req.param('id'))
-  const post = Number.isInteger(id) ? db.query(`SELECT p.id,p.user_id,p.parent_id,p.body,p.created_at,p.deleted_at,
+  const post = Number.isInteger(id)
+    ? db.query(`SELECT p.id,p.user_id,p.parent_id,p.body,p.created_at,p.deleted_at,
     u.handle FROM posts p JOIN users u ON u.id=p.user_id WHERE p.id=? AND p.deleted_at IS NULL`).get(id) as
-    (PostRow & { handle: string }) | null : null
+      | (PostRow & { handle: string })
+      | null
+    : null
   if (!post) return c.text('Not found', 404)
   const returnTo = c.req.query('report') ? '/admin' : safeRefererPath(c.req.header('referer'), c.req.url, `/post/${id}`)
   return page(<AdminConfirm user={signedIn} kind="delete_post" post={post} returnTo={returnTo} />)
@@ -873,8 +958,9 @@ app.post('/admin/posts/:id/delete', async c => {
   if (!signedIn) return redirect('/login?next=' + encodeURIComponent('/admin'))
   if (!isAdmin(signedIn)) return c.text('Forbidden', 403)
   const id = Number(c.req.param('id'))
-  const post = Number.isInteger(id) ? db.query('SELECT user_id FROM posts WHERE id=? AND deleted_at IS NULL').get(id) as
-    { user_id: number } | null : null
+  const post = Number.isInteger(id)
+    ? db.query('SELECT user_id FROM posts WHERE id=? AND deleted_at IS NULL').get(id) as { user_id: number } | null
+    : null
   if (!post) return c.text('Not found', 404)
   const f = await form(c.req.raw)
   db.transaction(() => {
@@ -890,8 +976,10 @@ app.get('/admin/users/:id', c => {
   if (!signedIn) return redirect('/login?next=' + encodeURIComponent(c.req.path))
   if (!isAdmin(signedIn)) return c.text('Forbidden', 403)
   const id = Number(c.req.param('id'))
-  const target = Number.isInteger(id) ? db.query(`SELECT id,handle,email,bio,suspended_at,deleted_at FROM users
-    WHERE id=? AND deleted_at IS NULL`).get(id) as ProfileRow | null : null
+  const target = Number.isInteger(id)
+    ? db.query(`SELECT id,handle,email,bio,suspended_at,deleted_at FROM users
+    WHERE id=? AND deleted_at IS NULL`).get(id) as ProfileRow | null
+    : null
   if (!target) return c.text('Not found', 404)
   return page(<AdminUser user={signedIn} target={target} />)
 })
@@ -903,15 +991,19 @@ app.get('/admin/users/:id/:action', c => {
   const id = Number(c.req.param('id'))
   const action = c.req.param('action')
   if (!['suspend', 'restore', 'delete'].includes(action)) return c.text('Not found', 404)
-  const target = Number.isInteger(id) ? db.query(`SELECT id,handle,email,bio,suspended_at,deleted_at FROM users
-    WHERE id=? AND deleted_at IS NULL`).get(id) as ProfileRow | null : null
+  const target = Number.isInteger(id)
+    ? db.query(`SELECT id,handle,email,bio,suspended_at,deleted_at FROM users
+    WHERE id=? AND deleted_at IS NULL`).get(id) as ProfileRow | null
+    : null
   if (!target) return c.text('Not found', 404)
   if (target.id === signedIn.id || isAdminEmail(target.email)) return c.text('Protected admin account', 403)
   if (action === 'suspend' && target.suspended_at) return c.text('Account is already suspended', 409)
   if (action === 'restore' && !target.suspended_at) return c.text('Account is not suspended', 409)
-  return page(<AdminConfirm user={signedIn} target={target}
-    kind={action === 'suspend' ? 'suspend_user' : action === 'restore' ? 'restore_user' : 'delete_user'}
-    returnTo={`/admin/users/${id}`} />)
+  return page(
+    <AdminConfirm user={signedIn} target={target}
+      kind={action === 'suspend' ? 'suspend_user' : action === 'restore' ? 'restore_user' : 'delete_user'}
+      returnTo={`/admin/users/${id}`} />,
+  )
 })
 
 app.post('/admin/users/:id/:action', async c => {
@@ -921,8 +1013,11 @@ app.post('/admin/users/:id/:action', async c => {
   const id = Number(c.req.param('id'))
   const action = c.req.param('action')
   if (!Number.isInteger(id) || !['suspend', 'restore', 'delete'].includes(action)) return c.text('Not found', 404)
-  const target = db.query('SELECT id,email,suspended_at FROM users WHERE id=? AND deleted_at IS NULL').get(id) as
-    { id: number; email: string; suspended_at: string | null } | null
+  const target = db.query('SELECT id,email,suspended_at FROM users WHERE id=? AND deleted_at IS NULL').get(id) as {
+    id: number
+    email: string
+    suspended_at: string | null
+  } | null
   if (!target) return c.text('Not found', 404)
   if (target.id === signedIn.id || isAdminEmail(target.email)) return c.text('Protected admin account', 403)
   if (action === 'suspend' && target.suspended_at) return c.text('Account is already suspended', 409)
@@ -955,7 +1050,12 @@ app.get('/u/:handle/og.png', c => {
       (SELECT count(*) FROM follows f WHERE f.following_id=u.id) followers
       FROM users u WHERE u.handle=? AND u.deleted_at IS NULL`,
   ).get(c.req.param('handle')) as {
-    handle: string; bio: string; notes: number; following: number; followingTags: number; followers: number
+    handle: string
+    bio: string
+    notes: number
+    following: number
+    followingTags: number
+    followers: number
   } | null
   if (!profile) return c.text('Not found', 404)
   const image = renderProfileOg(profile.handle, profile.bio, profile)
@@ -988,7 +1088,9 @@ app.get('/u/:handle', c => {
     'SELECT p.*,u.handle FROM posts p JOIN users u ON u.id=p.user_id WHERE p.user_id=? AND p.deleted_at IS NULL ORDER BY p.created_at DESC LIMIT 20 OFFSET ?',
   ).all(profile.id, (profilePage - 1) * 20) as PostView[], user?.id ?? -1)
   const total =
-    (db.query('SELECT count(*) AS count FROM posts WHERE user_id=? AND deleted_at IS NULL').get(profile.id) as { count: number }).count
+    (db.query('SELECT count(*) AS count FROM posts WHERE user_id=? AND deleted_at IS NULL').get(profile.id) as {
+      count: number
+    }).count
   const following = !!user
     && !!db.query('SELECT 1 FROM follows WHERE follower_id=? AND following_id=?').get(user.id, profile.id)
   const blocked = !!user
@@ -1006,7 +1108,9 @@ app.get('/u/:handle', c => {
           OR (b.blocker_id=f.following_id AND b.blocked_id=?)))) followingCount,
       (SELECT count(*) FROM hashtag_follows WHERE user_id=?) followingTagCount`,
   ).get(profile.id, viewerId, viewerId, viewerId, profile.id, viewerId, viewerId, viewerId, profile.id) as {
-    followerCount: number; followingCount: number; followingTagCount: number
+    followerCount: number
+    followingCount: number
+    followingTagCount: number
   }
   const configuredOrigin = Bun.env.APP_URL?.replace(/\/$/, '')
   const origin = configuredOrigin || new URL(c.req.url).origin
@@ -1020,9 +1124,11 @@ app.get('/u/:handle', c => {
     imageAlt: `Profile for @${profile.handle}: ${description}`,
   }
   if (blocked || blockedByProfile) {
-    return page(<Profile user={user} profile={profile} posts={[]} following={false} blocked={blocked}
-      blockedByProfile={blockedByProfile} total={0} followerCount={0} followingCount={0}
-      followingTagCount={0} social={social} />)
+    return page(
+      <Profile user={user} profile={profile} posts={[]} following={false} blocked={blocked}
+        blockedByProfile={blockedByProfile} total={0} followerCount={0} followingCount={0} followingTagCount={0}
+        social={social} />,
+    )
   }
   if (!tab) {
     const outOfRange = paginationRedirect(profilePage, total, `/u/${profile.handle}`)
@@ -1038,8 +1144,7 @@ app.get('/u/:handle', c => {
         FROM users u ${join} AND (? < 0 OR NOT EXISTS (SELECT 1 FROM blocks b WHERE
           (b.blocker_id=? AND b.blocked_id=u.id) OR (b.blocker_id=u.id AND b.blocked_id=?)))
         ORDER BY u.handle LIMIT 20 OFFSET ?`,
-    ).all(viewerId, profile.id, viewerId, viewerId, viewerId,
-      (profilePage - 1) * 20) as import('./types').PersonView[]
+    ).all(viewerId, profile.id, viewerId, viewerId, viewerId, (profilePage - 1) * 20) as import('./types').PersonView[]
     const countWhere = tab === 'following' ? 'follower_id=?' : 'following_id=?'
     const counterpart = tab === 'following' ? 'f.following_id' : 'f.follower_id'
     const connectionTotal = (db.query(`SELECT count(*) AS count FROM follows f WHERE ${countWhere}
@@ -1059,16 +1164,17 @@ app.get('/u/:handle', c => {
           FROM hashtag_follows hf
           WHERE hf.user_id=?
           ORDER BY hf.tag`,
-      ).all(viewerId, viewerId, viewerId, viewerId, profile.id) as
-        { tag: string; count: number; viewerFollowing: boolean }[]
+      ).all(viewerId, viewerId, viewerId, viewerId, profile.id) as { tag: string; count: number;
+        viewerFollowing: boolean }[]
       : []
-    return page(<Connections user={user} profile={profile} people={people} tags={tags} kind={tab}
-      page={profilePage} total={connectionTotal} noteCount={total} {...counts} following={following} social={social} />)
+    return page(
+      <Connections user={user} profile={profile} people={people} tags={tags} kind={tab} page={profilePage}
+        total={connectionTotal} noteCount={total} {...counts} following={following} social={social} />,
+    )
   }
   return page(
     <Profile user={user} profile={profile} posts={blocked || blockedByProfile ? [] : posts} following={following}
-      blocked={blocked}
-      editing={user?.id === profile.id && c.req.query('edit') === '1'} page={profilePage}
+      blocked={blocked} editing={user?.id === profile.id && c.req.query('edit') === '1'} page={profilePage}
       total={total} followerCount={counts.followerCount} followingCount={counts.followingCount}
       followingTagCount={counts.followingTagCount} social={social} />,
   )
@@ -1087,8 +1193,7 @@ app.post('/u/:handle/profile', async c => {
   const posts = enrichPosts(db, db.query(
     'SELECT p.*,u.handle FROM posts p JOIN users u ON u.id=p.user_id WHERE p.user_id=? AND p.deleted_at IS NULL ORDER BY p.created_at DESC',
   ).all(user.id) as PostView[], user.id)
-  if (!/^[a-z0-9_]{2,24}$/.test(handle) || bio.length > 160)
-  {
+  if (!/^[a-z0-9_]{2,24}$/.test(handle) || bio.length > 160) {
     return page(
       <Profile user={user} profile={user} posts={posts} following={false} bio={bio} editHandle={handle} editing
         error="Use a 2–24 character username and a bio up to 160 characters." />,
@@ -1099,8 +1204,8 @@ app.post('/u/:handle/profile', async c => {
     const moderation = await moderateText(`username: ${handle}\nbio: ${bio}`)
     if (!moderation.ok) {
       return page(
-        <Profile user={user} profile={user} posts={posts} following={false} bio={bio} editHandle={handle}
-          editing error={moderationMessage(moderation.reason)} />,
+        <Profile user={user} profile={user} posts={posts} following={false} bio={bio} editHandle={handle} editing
+          error={moderationMessage(moderation.reason)} />,
         moderation.reason === 'flagged' ? 422 : 503,
       )
     }
@@ -1110,8 +1215,8 @@ app.post('/u/:handle/profile', async c => {
   }
   catch {
     return page(
-      <Profile user={user} profile={user} posts={posts} following={false} bio={bio} editHandle={handle}
-        editing error="That username is unavailable." />,
+      <Profile user={user} profile={user} posts={posts} following={false} bio={bio} editHandle={handle} editing
+        error="That username is unavailable." />,
       400,
     )
   }
@@ -1147,11 +1252,10 @@ app.get('/tag/:tag', c => {
         (b.blocker_id=? AND b.blocked_id=p.user_id) OR (b.blocker_id=p.user_id AND b.blocked_id=?)))
       ORDER BY p.created_at DESC LIMIT 20 OFFSET ?`,
   ).all(tag, viewerId, viewerId, viewerId, (tagPage - 1) * 20) as PostView[], viewerId)
-  const total =
-    (db.query(`SELECT count(*) AS count FROM post_hashtags ph JOIN posts p ON p.id=ph.post_id
+  const total = (db.query(`SELECT count(*) AS count FROM post_hashtags ph JOIN posts p ON p.id=ph.post_id
       WHERE ph.tag=? AND p.deleted_at IS NULL AND (? < 0 OR NOT EXISTS (SELECT 1 FROM blocks b WHERE
         (b.blocker_id=? AND b.blocked_id=p.user_id) OR (b.blocker_id=p.user_id AND b.blocked_id=?)))`)
-      .get(tag, viewerId, viewerId, viewerId) as { count: number }).count
+    .get(tag, viewerId, viewerId, viewerId) as { count: number }).count
   const outOfRange = paginationRedirect(tagPage, total, `/tag/${tag}`)
   if (outOfRange) return outOfRange
   const configuredOrigin = Bun.env.APP_URL?.replace(/\/$/, '')
@@ -1166,8 +1270,7 @@ app.get('/tag/:tag', c => {
     imageAlt: `#${tag}: ${description}`,
   }
   return page(
-    <TagFeed user={user} tag={tag} following={following} posts={posts} page={tagPage}
-      total={total} social={social} />,
+    <TagFeed user={user} tag={tag} following={following} posts={posts} page={tagPage} total={total} social={social} />,
   )
 })
 

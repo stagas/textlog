@@ -1,0 +1,92 @@
+import { type User } from '../db'
+import type { SessionView } from '../types'
+import { Layout } from './layout'
+import { FormMessage } from './page-shared'
+
+export function AccountSecurity({ user, sessions, error, success }: {
+  user: User
+  sessions: SessionView[]
+  error?: string
+  success?: string
+}) {
+  return (
+    <Layout user={user} title="account security">
+      <section className="page-header security-header">
+        <div>
+          <p className="eyebrow">account</p>
+          <h1>security</h1>
+        </div>
+      </section>
+      <div className="security-page">
+        <FormMessage error={error} success={success} />
+        <section className="security-section">
+          <h2>email</h2>
+          <p>{user.email} · {user.email_verified_at ? 'verified' : 'not verified'}</p>
+          {!user.email_verified_at && (
+            <form method="post" action="/account/email/verify">
+              <button className="button">send verification email</button>
+            </form>
+          )}
+          <form className="security-form" method="post" action="/account/email/change">
+            <label>
+              new email
+              <input type="email" name="email" required maxLength={254} autoComplete="email" />
+            </label>
+            <label>
+              current password
+              <input type="password" name="password" required autoComplete="current-password" />
+            </label>
+            <button className="button">confirm new email →</button>
+          </form>
+        </section>
+        <section className="security-section">
+          <h2>password</h2>
+          <form className="security-form" method="post" action="/account/password">
+            <label>
+              current password
+              <input type="password" name="currentPassword" required autoComplete="current-password" />
+            </label>
+            <label>
+              new password
+              <input type="password" name="password" required minLength={8} autoComplete="new-password" />
+            </label>
+            <label>
+              confirm new password
+              <input type="password" name="confirmPassword" required minLength={8} autoComplete="new-password" />
+            </label>
+            <button className="button">change password →</button>
+          </form>
+        </section>
+        <section className="security-section">
+          <h2>sessions</h2>
+          <div className="session-list">
+            {sessions.map(session => (
+              <article key={session.token}>
+                <div>
+                  <strong>{session.current ? 'this session' : 'signed-in session'}</strong>
+                  <span>
+                    {session.user_agent || 'Unknown browser'} · expires{' '}
+                    <time dateTime={new Date(session.expires_at).toISOString()}>
+                      {new Date(session.expires_at).toLocaleDateString('en')}
+                    </time>
+                  </span>
+                </div>
+                {!session.current && (
+                  <form method="post" action="/account/sessions/revoke">
+                    <input type="hidden" name="token" value={session.token} />
+                    <button className="quiet danger">revoke</button>
+                  </form>
+                )}
+              </article>
+            ))}
+          </div>
+          {sessions.length > 1 && (
+            <form method="post" action="/account/sessions/revoke-others">
+              <button className="quiet danger">revoke all other sessions</button>
+            </form>
+          )}
+        </section>
+      </div>
+    </Layout>
+  )
+}
