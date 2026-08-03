@@ -8,6 +8,25 @@ import type { PersonView, PostRow, PostView, ProfileRow } from '../types'
 
 const pageSize = 20
 const postTitleLength = 60
+const activityPostWhere = `p.deleted_at IS NULL AND
+  (parent.user_id=? OR (pm.user_id IS NOT NULL AND p.user_id != ?)) AND
+  NOT EXISTS (SELECT 1 FROM blocks b WHERE
+    (b.blocker_id=? AND b.blocked_id=p.user_id) OR (b.blocker_id=p.user_id AND b.blocked_id=?))`
+
+export function activityTotal(userId: number) {
+  const postTotal = (db.query(
+    `SELECT count(DISTINCT p.id) count FROM posts p
+      LEFT JOIN posts parent ON parent.id=p.parent_id
+      LEFT JOIN post_mentions pm ON pm.post_id=p.id AND pm.user_id=?
+      WHERE ${activityPostWhere}`,
+  ).get(userId, userId, userId, userId, userId) as { count: number }).count
+  const followTotal = (db.query(
+    `SELECT count(*) count FROM follows f WHERE following_id=? AND created_at IS NOT NULL AND NOT EXISTS
+      (SELECT 1 FROM blocks b WHERE (b.blocker_id=? AND b.blocked_id=f.follower_id)
+        OR (b.blocker_id=f.follower_id AND b.blocked_id=?))`,
+  ).get(userId, userId, userId) as { count: number }).count
+  return postTotal + followTotal
+}
 
 export function postTitle(body: string) {
   const text = body.replace(/\s+/g, ' ').trim()
@@ -208,7 +227,7 @@ export function PublicFeed(
       {posts.length
         ? posts.map(post => <Post key={post.id} p={post} user={user} showReplyCount />)
         : total === 0
-        ? <div className="empty">No notes have been posted yet.</div>
+        ? <GlobalFeedEmpty user={user} />
         : (
           <div className="empty">
             No notes on this page. <a href={path}>Return to the first page</a>.
@@ -233,7 +252,7 @@ export function HotFeed({ page, user, title }: { page: number; user: User | null
       {posts.length
         ? posts.map(post => <Post key={post.id} p={post} user={user} showReplyCount />)
         : total === 0
-        ? <div className="empty">No notes have been posted yet.</div>
+        ? <GlobalFeedEmpty user={user} />
         : (
           <div className="empty">
             No notes on this page. <a href="/hot">Return to the first page</a>.
@@ -245,22 +264,7 @@ export function HotFeed({ page, user, title }: { page: number; user: User | null
 }
 
 export function Activity({ user, page }: { user: User; page: number }) {
-  const postActivityWhere = `p.deleted_at IS NULL AND
-    (parent.user_id=? OR (pm.user_id IS NOT NULL AND p.user_id != ?)) AND
-    NOT EXISTS (SELECT 1 FROM blocks b WHERE
-      (b.blocker_id=? AND b.blocked_id=p.user_id) OR (b.blocker_id=p.user_id AND b.blocked_id=?))`
-  const postTotal = (db.query(
-    `SELECT count(DISTINCT p.id) count FROM posts p
-      LEFT JOIN posts parent ON parent.id=p.parent_id
-      LEFT JOIN post_mentions pm ON pm.post_id=p.id AND pm.user_id=?
-      WHERE ${postActivityWhere}`,
-  ).get(user.id, user.id, user.id, user.id, user.id) as { count: number }).count
-  const followTotal = (db.query(
-    `SELECT count(*) count FROM follows f WHERE following_id=? AND created_at IS NOT NULL AND NOT EXISTS
-      (SELECT 1 FROM blocks b WHERE (b.blocker_id=? AND b.blocked_id=f.follower_id)
-        OR (b.blocker_id=f.follower_id AND b.blocked_id=?))`,
-  ).get(user.id, user.id, user.id) as { count: number }).count
-  const total = postTotal + followTotal
+  const total = activityTotal(user.id)
   const posts = db.query(
     `SELECT * FROM (
       SELECT p.*,u.handle,CASE WHEN parent.user_id=? THEN 'reply' ELSE 'mention' END activity_kind,
@@ -269,7 +273,7 @@ export function Activity({ user, page }: { user: User; page: number }) {
         JOIN users u ON u.id=p.user_id
         LEFT JOIN posts parent ON parent.id=p.parent_id
         LEFT JOIN post_mentions pm ON pm.post_id=p.id AND pm.user_id=?
-        WHERE ${postActivityWhere}
+        WHERE ${activityPostWhere}
         GROUP BY p.id
       UNION ALL
       SELECT NULL id,f.follower_id user_id,NULL parent_id,NULL body,f.created_at,NULL deleted_at,
@@ -652,7 +656,7 @@ export function Explore({ user, welcome = false, peopleIds }: {
 export function Profile(
   { user, profile, posts, following, bio = profile.bio || '', editHandle = profile.handle, editEmail = profile.email,
     error, editing = false, page = 1, total = posts.length, followerCount = 0, followingCount = 0,
-    followingTagCount = 0, blocked = false, social }: {
+    followingTagCount = 0, blocked = false, blockedByProfile = false, social }: {
       user: User | null
       profile: ProfileRow
       posts: PostView[]
@@ -668,6 +672,7 @@ export function Profile(
       followingCount?: number
       followingTagCount?: number
       blocked?: boolean
+      blockedByProfile?: boolean
       social?: { description: string; image: string; url: string; type?: 'article' | 'profile'; imageAlt?: string }
     },
 ) {
@@ -709,10 +714,15 @@ export function Profile(
             : <p className="profile-bio">{profile.bio || 'No bio yet.'}</p>}
         </div>
       </ProfileHeader>
-      {!editing && <ProfileTabs profile={profile} active="notes" notes={total} followers={followerCount}
+      {blocked || blockedByProfile
+        ? <div className="empty relationship-notice">
+          {blocked ? 'You blocked this user. Unblock them to see their notes.' : 'This profile is unavailable.'}
+        </div>
+        : !editing && <ProfileTabs profile={profile} active="notes" notes={total} followers={followerCount}
         following={followingCount} followingTags={followingTagCount} />}
-      {posts.map(post => <Post key={post.id} p={post} user={user} />)}
-      <Pagination page={page} totalPages={Math.ceil(total / pageSize)} path={'/u/' + profile.handle} />
+      {!blocked && !blockedByProfile && posts.map(post => <Post key={post.id} p={post} user={user} />)}
+      {!blocked && !blockedByProfile &&
+        <Pagination page={page} totalPages={Math.ceil(total / pageSize)} path={'/u/' + profile.handle} />}
     </Layout>
   )
 }
@@ -739,10 +749,13 @@ function ProfileHeader({ user, profile, following, blocked = false, editing = fa
         )}
         {user && user.id !== profile.id && <>
           {!blocked && <form method="post" action={'/follow/' + profile.handle}>
-            <button className="button">{following ? 'unfollow' : 'follow'}</button>
+            <button className="button" aria-label={`${following ? 'unfollow' : 'follow'} @${profile.handle}`}>
+              {following ? 'unfollow' : 'follow'}
+            </button>
           </form>}
           <form method="post" action={'/block/' + profile.handle}>
-            <button className={blocked ? 'button' : 'quiet danger'}>{blocked ? 'unblock' : 'block'}</button>
+            <button className={blocked ? 'button' : 'quiet danger'}
+              aria-label={`${blocked ? 'unblock' : 'block'} @${profile.handle}`}>{blocked ? 'unblock' : 'block'}</button>
           </form>
         </>}
         {!user && <a className="button" href="/login">log in to follow</a>}
@@ -912,7 +925,12 @@ export function PublicThread(
 }
 
 function ReportPanel({ post, showForm, reported }: { post: PostView; showForm: boolean; reported: boolean }) {
-  if (reported) return <p className="report-status" role="status">Report received. Thank you.</p>
+  if (reported) return <div className="report-status" role="status">
+    <span>Report received. Thank you.</span>
+    <form method="post" action={`/block/${post.handle}`}>
+      <button className="quiet danger" aria-label={`block @${post.handle}`}>block @{post.handle}</button>
+    </form>
+  </div>
   if (!showForm) return null
   return <div className="panel report-panel">
     <form method="post" action={`/post/${post.id}/report`}>
@@ -930,5 +948,17 @@ function ReportPanel({ post, showForm, reported }: { post: PostView; showForm: b
         <button className="button delete-button">submit report</button>
       </div>
     </form>
+  </div>
+}
+
+function GlobalFeedEmpty({ user }: { user: User | null }) {
+  return <div className="empty empty-actions">
+    <p>No notes have been posted yet.</p>
+    <div>
+      {user
+        ? <a className="button" href="/compose">write the first note →</a>
+        : <a className="button" href="/signup">join and write →</a>}
+      <a href="/explore">explore</a>
+    </div>
   </div>
 }

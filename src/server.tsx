@@ -1,4 +1,4 @@
-import { About, Activity, Auth, Compose, ConfirmAccountDelete, ConfirmDelete, Connections, EditPost, Explore, Feed, ForgotPassword, HotFeed, Legal, Profile, PublicFeed, PublicThread, Reply, ResetPassword,
+import { About, Activity, activityTotal, Auth, Compose, ConfirmAccountDelete, ConfirmDelete, Connections, EditPost, Explore, Feed, ForgotPassword, HotFeed, Legal, Profile, PublicFeed, PublicThread, Reply, ResetPassword,
   TagFeed } from './components/pages'
 import { moderateText, moderationMessage } from './moderation'
 import { currentUser, hash, hashPassword, token, verifyPassword } from './utils'
@@ -37,6 +37,17 @@ function currentPage(value?: string) {
   const parsed = Number(value)
   return Number.isInteger(parsed) && parsed > 0 ? parsed : 1
 }
+function paginationRedirect(requestedPage: number, total: number, path: string) {
+  const lastPage = Math.max(1, Math.ceil(total / 20))
+  if (requestedPage <= lastPage) return null
+  if (lastPage === 1) return redirect(path)
+  return redirect(`${path}${path.includes('?') ? '&' : '?'}page=${lastPage}`)
+}
+function visiblePostCount(userId = -1) {
+  return (db.query(`SELECT count(*) count FROM posts p WHERE p.deleted_at IS NULL AND (? < 0 OR NOT EXISTS
+    (SELECT 1 FROM blocks b WHERE (b.blocker_id=? AND b.blocked_id=p.user_id)
+      OR (b.blocker_id=p.user_id AND b.blocked_id=?)))`).get(userId, userId, userId) as { count: number }).count
+}
 function usersBlocked(firstId: number, secondId: number) {
   return !!db.query(`SELECT 1 FROM blocks WHERE
     (blocker_id=? AND blocked_id=?) OR (blocker_id=? AND blocked_id=?)`).get(firstId, secondId, secondId, firstId)
@@ -67,6 +78,25 @@ const app = new Hono()
 app.use('*', async (c, next) => {
   await next()
   for (const [name, value] of Object.entries(securityHeaders(devReloadEnabled))) c.header(name, value)
+})
+
+app.use('*', async (c, next) => {
+  await next()
+  if (c.req.method !== 'GET' || !c.res.headers.get('content-type')?.includes('text/html')) return
+  const url = new URL(c.req.url)
+  const privatePath = /^\/(?:login|signup|forgot-password|reset-password|compose|activity|account\/delete)(?:\/|$)/
+    .test(url.pathname) || /^\/post\/\d+\/(?:edit|delete)$/.test(url.pathname)
+  const transientParameters = ['reply', 'report', 'reported', 'edit', 'welcome', 'reset', 'token']
+  const transient = transientParameters.some(name => url.searchParams.has(name))
+  if (privatePath || transient || c.res.status >= 400) c.header('X-Robots-Tag', 'noindex, nofollow')
+
+  if (!privatePath && c.res.status < 400) {
+    for (const name of transientParameters) url.searchParams.delete(name)
+    if (url.searchParams.get('page') === '1') url.searchParams.delete('page')
+    const configuredOrigin = Bun.env.APP_URL ? new URL(Bun.env.APP_URL).origin : url.origin
+    const canonical = configuredOrigin + url.pathname + url.search
+    c.header('Link', `<${canonical}>; rel="canonical"`)
+  }
 })
 
 app.use('*', async (c, next) => {
@@ -119,22 +149,42 @@ app.get('/og.png', c => {
 app.get('/', c => {
   const user = currentUser(c.req.raw)
   const feedPage = currentPage(c.req.query('page'))
+  const total = user
+    ? (db.query(`SELECT count(*) count FROM posts p WHERE p.deleted_at IS NULL AND
+      (p.user_id=? OR p.user_id IN (SELECT following_id FROM follows WHERE follower_id=?) OR
+        p.id IN (SELECT ph.post_id FROM post_hashtags ph JOIN hashtag_follows hf ON hf.tag=ph.tag WHERE hf.user_id=?))
+      AND NOT EXISTS (SELECT 1 FROM blocks b WHERE (b.blocker_id=? AND b.blocked_id=p.user_id)
+        OR (b.blocker_id=p.user_id AND b.blocked_id=?))`)
+      .get(user.id, user.id, user.id, user.id, user.id) as { count: number }).count
+    : visiblePostCount()
+  const outOfRange = paginationRedirect(feedPage, total, '/')
+  if (outOfRange) return outOfRange
   return user ? page(<Feed user={user} page={feedPage} />) : page(<HotFeed user={null} page={feedPage} />)
 })
 
 app.get('/latest', c => {
   const user = currentUser(c.req.raw)
-  return page(<PublicFeed user={user} page={currentPage(c.req.query('page'))} path="/latest" />)
+  const feedPage = currentPage(c.req.query('page'))
+  const outOfRange = paginationRedirect(feedPage, visiblePostCount(user?.id), '/latest')
+  if (outOfRange) return outOfRange
+  return page(<PublicFeed user={user} page={feedPage} path="/latest" />)
 })
 
 app.get('/hot', c => {
-  return page(<HotFeed user={currentUser(c.req.raw)} page={currentPage(c.req.query('page'))} title="hot" />)
+  const user = currentUser(c.req.raw)
+  const feedPage = currentPage(c.req.query('page'))
+  const outOfRange = paginationRedirect(feedPage, visiblePostCount(user?.id), '/hot')
+  if (outOfRange) return outOfRange
+  return page(<HotFeed user={user} page={feedPage} title="hot" />)
 })
 
 app.get('/activity', c => {
   const user = currentUser(c.req.raw)
   if (!user) return redirect('/login?next=' + encodeURIComponent('/activity'))
-  return page(<Activity user={user} page={currentPage(c.req.query('page'))} />)
+  const activityPage = currentPage(c.req.query('page'))
+  const outOfRange = paginationRedirect(activityPage, activityTotal(user.id), '/activity')
+  if (outOfRange) return outOfRange
+  return page(<Activity user={user} page={activityPage} />)
 })
 
 app.get('/about', c => page(<About user={currentUser(c.req.raw)} />))
@@ -318,7 +368,7 @@ app.post('/account/delete', async c => {
 
 app.get('/compose', c => {
   const user = currentUser(c.req.raw)
-  return user ? page(<Compose user={user} />) : redirect('/login')
+  return user ? page(<Compose user={user} />) : redirect('/login?next=' + encodeURIComponent('/compose'))
 })
 app.get('/post', c => c.redirect('/compose', 303))
 
@@ -639,7 +689,12 @@ app.get('/u/:handle', c => {
   }
   if (blocked || blockedByProfile) {
     return page(<Profile user={user} profile={profile} posts={[]} following={false} blocked={blocked}
-      total={0} followerCount={0} followingCount={0} followingTagCount={0} social={social} />)
+      blockedByProfile={blockedByProfile} total={0} followerCount={0} followingCount={0}
+      followingTagCount={0} social={social} />)
+  }
+  if (!tab) {
+    const outOfRange = paginationRedirect(profilePage, total, `/u/${profile.handle}`)
+    if (outOfRange) return outOfRange
   }
   if (tab === 'following' || tab === 'followers') {
     const join = tab === 'following'
@@ -659,6 +714,8 @@ app.get('/u/:handle', c => {
       AND (? < 0 OR NOT EXISTS (SELECT 1 FROM blocks b WHERE
         (b.blocker_id=? AND b.blocked_id=${counterpart}) OR (b.blocker_id=${counterpart} AND b.blocked_id=?)))`)
       .get(profile.id, viewerId, viewerId, viewerId) as { count: number }).count
+    const outOfRange = paginationRedirect(profilePage, connectionTotal, `/u/${profile.handle}?tab=${tab}`)
+    if (outOfRange) return outOfRange
     const tags = tab === 'following'
       ? db.query(
         `SELECT hf.tag,
@@ -766,6 +823,8 @@ app.get('/tag/:tag', c => {
       WHERE ph.tag=? AND p.deleted_at IS NULL AND (? < 0 OR NOT EXISTS (SELECT 1 FROM blocks b WHERE
         (b.blocker_id=? AND b.blocked_id=p.user_id) OR (b.blocker_id=p.user_id AND b.blocked_id=?)))`)
       .get(tag, viewerId, viewerId, viewerId) as { count: number }).count
+  const outOfRange = paginationRedirect(tagPage, total, `/tag/${tag}`)
+  if (outOfRange) return outOfRange
   const configuredOrigin = Bun.env.APP_URL?.replace(/\/$/, '')
   const origin = configuredOrigin || new URL(c.req.url).origin
   const tagUrl = `${origin}/tag/${encodeURIComponent(tag)}`

@@ -18,11 +18,12 @@ export function Post({ p, user, showReplyAction = true, showOwnerActions = false
       <a className="postdate" href={'/post/' + p.id}>
         <time dateTime={p.created_at} title={fmtFull(p.created_at)}>{fmt(p.created_at)}</time>{showReplyCount && replyCount > 0 && <span> · {replyCount} {replyCount === 1 ? 'reply' : 'replies'}</span>}
       </a>
-      {showReplyAction && <a className="quiet" href={replyHref || '/post/' + p.id + '?reply=1'}>{replyLabel}</a>}
-      {reportHref && <a className="quiet report-link" href={reportHref}>report</a>}
+      {showReplyAction && <a className="quiet" href={replyHref || '/post/' + p.id + '?reply=1'}
+        aria-label={`${replyLabel} to @${p.handle}`}>{replyLabel}</a>}
+      {reportHref && <a className="quiet report-link" href={reportHref} aria-label={`report post by @${p.handle}`}>report</a>}
       {showOwnerActions && user?.id === p.user_id && <div className="post-actions">
-        <a className="quiet" href={'/post/' + p.id + '/edit'}>edit</a>
-        <a className="quiet danger" href={'/post/' + p.id + '/delete'}>delete</a>
+        <a className="quiet" href={'/post/' + p.id + '/edit'} aria-label="edit this post">edit</a>
+        <a className="quiet danger" href={'/post/' + p.id + '/delete'} aria-label="delete this post">delete</a>
       </div>}
     </div>
     <p dangerouslySetInnerHTML={{ __html: linkify(p.body) }} />

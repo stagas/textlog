@@ -616,10 +616,18 @@ textarea {
 }
 
 .report-status {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
   margin: 0;
   padding: 0 var(--gutter) 18px;
   color: var(--muted);
   font-size: 11px;
+}
+
+.report-status form {
+  margin: 0;
 }
 
 .report-panel {
