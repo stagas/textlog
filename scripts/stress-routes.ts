@@ -52,6 +52,9 @@ function seedDatabase(path: string, users: number, posts: number) {
         createdAt) as { id: number }).id)
     }
   })()
+  // Direct inserts intentionally bypass createPost(), so initialize representative hot scores explicitly. Without
+  // this, the migration trigger leaves every score at zero and the /hot benchmark measures an empty page.
+  database.run(`UPDATE post_hot SET score=1,score_updated_at=latest_activity_at`)
   database.run('ANALYZE')
   database.query('PRAGMA wal_checkpoint(TRUNCATE)').get()
   database.close()

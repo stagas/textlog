@@ -1,4 +1,4 @@
-import { brotliCompressSync, gzipSync } from 'node:zlib'
+import { brotliCompressSync, constants, gzipSync } from 'node:zlib'
 import { preferredStylesEncoding } from './styles'
 
 const compressibleType = /^(?:text\/|application\/(?:json|javascript|xml|rss\+xml|atom\+xml|xhtml\+xml|svg\+xml))/i
@@ -27,7 +27,13 @@ export async function compressResponse(request: Request, response: Response, thr
   const source = new Uint8Array(await response.arrayBuffer())
   if (source.byteLength < threshold) return new Response(source, response)
 
-  const compressed = encoding === 'br' ? brotliCompressSync(source) : gzipSync(source)
+  // Dynamic HTML is compressed on Bun's main thread. The zlib Brotli default favors maximum compression and can
+  // spend tens of milliseconds on a feed response, serializing otherwise independent requests. Moderate settings
+  // retain nearly all of the transfer-size benefit while keeping per-request CPU bounded. Static assets are still
+  // precompressed separately by the styles pipeline.
+  const compressed = encoding === 'br'
+    ? brotliCompressSync(source, { params: { [constants.BROTLI_PARAM_QUALITY]: 4 } })
+    : gzipSync(source, { level: 4 })
   const headers = new Headers(response.headers)
   headers.delete('content-length')
   headers.set('content-encoding', encoding)
