@@ -1,8 +1,23 @@
 import React from 'react'
 import { isAdmin } from '../admin'
+import { hasUnreadActivity } from '../activity-state'
 import type { User } from '../db'
 
 let devReloadBootId: string | undefined
+
+function ActivityLink({ unread, className }: { unread: boolean; className?: string }) {
+  return (
+    <a className={`activity-link${className ? ` ${className}` : ''}`} href="/activity">
+      {unread && (
+        <>
+          <span className="activity-unread-dot" aria-hidden="true" />
+          <span className="sr-only">unread </span>
+        </>
+      )}
+      activity
+    </a>
+  )
+}
 
 export function configureDevReload(bootId?: string) {
   devReloadBootId = bootId
@@ -27,11 +42,12 @@ export function Layout({
     type: 'website' as const,
     imageAlt: 'root.mx logo',
   }
+  const activityUnread = user ? hasUnreadActivity(user.id) : false
   const navigation = user
     ? (
       <>
         <a className="mobile-footer-link" href="/explore">explore</a>
-        <a className="mobile-footer-link" href="/activity">activity</a>
+        <ActivityLink unread={activityUnread} className="mobile-footer-link" />
         <a href="/write">write</a>
         {isAdmin(user) && <a href="/admin">admin</a>}
         <a href={`/u/${user.handle}`}>@{user.handle}</a>
@@ -70,7 +86,7 @@ export function Layout({
         </>
         <link rel="icon" href="/root.svg?v=1" type="image/svg+xml" />
         <link rel="sitemap" href="/sitemap.xml" type="application/xml" />
-        <link rel="stylesheet" href="/styles.css?v=47" />
+        <link rel="stylesheet" href="/styles.css?v=48" />
       </head>
       <body>
         <a className="skip-link" href="#main-content">skip to content</a>
@@ -91,7 +107,7 @@ export function Layout({
           {user && (
             <nav className="mobile-account-footer" aria-label="Account shortcuts">
               <a href="/explore">explore</a>
-              <a href="/activity">activity</a>
+              <ActivityLink unread={activityUnread} />
             </nav>
           )}
           <nav aria-label="Footer">

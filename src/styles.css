@@ -1480,7 +1480,40 @@ form.report-panel {
   position: relative;
 }
 
+.activity-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  white-space: nowrap;
+}
+
+.activity-unread-dot {
+  display: inline-block;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--accent);
+  flex: 0 0 auto;
+}
+
+.activity-item-unread .activity-context::before {
+  position: absolute;
+  top: calc(50% + var(--space-2));
+  left: calc(var(--gutter) - 10px);
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: var(--accent);
+  content: '';
+  transform: translateY(-50%);
+}
+
+.activity-item-unread {
+  background: color-mix(in srgb, var(--accent) 6%, transparent);
+}
+
 .activity-context {
+  position: relative;
   padding: var(--space-4) var(--gutter) 0;
   color: var(--muted);
   font-size: 10px;

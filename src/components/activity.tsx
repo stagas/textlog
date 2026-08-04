@@ -1,4 +1,5 @@
 import { db, type User } from '../db'
+import { markActivityEntriesRead } from '../activity-state'
 import { PAGE_SIZE } from '../pagination'
 import { enrichPosts } from '../posts'
 import type { PostView } from '../types'
@@ -29,9 +30,9 @@ export function activityTotal(userId: number) {
 export function Activity({ user, page }: { user: User; page: number }) {
   const total = activityTotal(user.id)
   const posts = db.query(
-    `SELECT * FROM (
+    `SELECT activity.*,ar.event_key IS NULL unread FROM (
       SELECT p.*,u.handle,CASE WHEN parent.user_id=? THEN 'reply' ELSE 'mention' END activity_kind,
-        NULL bio,NULL posts,NULL viewerFollowing
+        NULL bio,NULL posts,NULL viewerFollowing,'post:' || p.id activity_key
         FROM posts p
         JOIN users u ON u.id=p.user_id
         LEFT JOIN posts parent ON parent.id=p.parent_id
@@ -42,15 +43,18 @@ export function Activity({ user, page }: { user: User; page: number }) {
       SELECT NULL id,f.follower_id user_id,NULL parent_id,NULL body,f.created_at,NULL deleted_at,
         u.handle,'follow' activity_kind,u.bio,
         (SELECT count(*) FROM posts fp WHERE fp.user_id=u.id AND fp.deleted_at IS NULL) posts,
-        EXISTS(SELECT 1 FROM follows vf WHERE vf.follower_id=? AND vf.following_id=u.id) viewerFollowing
+        EXISTS(SELECT 1 FROM follows vf WHERE vf.follower_id=? AND vf.following_id=u.id) viewerFollowing,
+        'follow:' || f.follower_id || ':' || f.created_at activity_key
         FROM follows f JOIN users u ON u.id=f.follower_id
         WHERE f.following_id=? AND f.created_at IS NOT NULL AND NOT EXISTS
           (SELECT 1 FROM blocks b WHERE (b.blocker_id=? AND b.blocked_id=f.follower_id)
             OR (b.blocker_id=f.follower_id AND b.blocked_id=?))
-      ) ORDER BY created_at DESC LIMIT ? OFFSET ?`,
-  ).all(user.id, user.id, user.id, user.id, user.id, user.id, user.id, user.id, user.id, user.id, PAGE_SIZE,
+      ) activity LEFT JOIN activity_reads ar ON ar.user_id=? AND ar.event_key=activity.activity_key
+      ORDER BY created_at DESC LIMIT ? OFFSET ?`,
+  ).all(user.id, user.id, user.id, user.id, user.id, user.id, user.id, user.id, user.id, user.id, user.id, PAGE_SIZE,
     (page - 1) * PAGE_SIZE) as (PostView & { activity_kind: 'reply' | 'mention' | 'follow'; posts: number | null;
-      viewerFollowing: boolean | null; bio: string | null })[]
+      viewerFollowing: boolean | null; bio: string | null; activity_key: string; unread: number })[]
+  markActivityEntriesRead(user.id, posts.filter(post => post.unread).map(post => post.activity_key))
   const activity = enrichPosts(db, posts.filter(post => post.activity_kind !== 'follow'), user.id)
   const activityById = new Map(activity.map(post => [post.id, post]))
   return (
@@ -62,7 +66,7 @@ export function Activity({ user, page }: { user: User; page: number }) {
         ? posts.map((rawPost, index) => {
           const post = rawPost.activity_kind === 'follow' ? rawPost : activityById.get(rawPost.id)!
           return (
-            <div className="activity-item"
+            <div className={`activity-item${rawPost.unread ? ' activity-item-unread' : ''}`}
               key={rawPost.activity_kind === 'follow' ? `follow-${rawPost.user_id}-${index}` : rawPost.id}
             >
               <div className="activity-context">

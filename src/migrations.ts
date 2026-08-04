@@ -224,6 +224,22 @@ export const migrations: Migration[] = [
       CREATE INDEX api_rate_limit_buckets_expiry ON api_rate_limit_buckets(bucket_start);`)
     },
   },
+  {
+    version: 15,
+    name: 'activity_read_status',
+    up(database) {
+      addColumn(database, 'users', 'activity_read_at', 'TEXT')
+    },
+  },
+  {
+    version: 16,
+    name: 'per_entry_activity_reads',
+    up(database) {
+      database.run(`CREATE TABLE activity_reads (
+        user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,event_key TEXT NOT NULL,
+        read_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,PRIMARY KEY(user_id,event_key));`)
+    },
+  },
 ]
 
 export const latestMigrationVersion = migrations.at(-1)!.version
