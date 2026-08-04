@@ -1,4 +1,5 @@
 import type { Database } from 'bun:sqlite'
+import { sessionHash } from './sessions'
 
 export function exportUserData(database: Database, userId: number, currentSession?: string | null) {
   const account = database.query(`SELECT id,handle,email,bio,created_at,email_verified_at,suspended_at
@@ -16,9 +17,10 @@ export function exportUserData(database: Database, userId: number, currentSessio
   for (const row of hashtags) tagsByPost.set(row.post_id, [...(tagsByPost.get(row.post_id) || []), row.tag])
   for (const row of mentions) mentionsByPost.set(row.post_id, [...(mentionsByPost.get(row.post_id) || []), row.handle])
 
-  const sessions = database.query(`SELECT token,created_at,expires_at,user_agent FROM sessions
+  const sessions = database.query(`SELECT token_hash,created_at,expires_at,user_agent FROM sessions
     WHERE user_id=? ORDER BY created_at`).all(userId) as
-    { token: string; created_at: number; expires_at: number; user_agent: string }[]
+    { token_hash: string; created_at: number; expires_at: number; user_agent: string }[]
+  const currentSessionHash = sessionHash(currentSession)
 
   return {
     exported_at: new Date().toISOString(),
@@ -37,6 +39,6 @@ export function exportUserData(database: Database, userId: number, currentSessio
       WHERE b.blocker_id=? ORDER BY u.handle`).all(userId),
     reports: database.query(`SELECT id,post_id,reason,status,created_at,resolved_at FROM reports
       WHERE reporter_id=? ORDER BY created_at,id`).all(userId),
-    sessions: sessions.map(({ token, ...session }) => ({ ...session, current: token === currentSession })),
+    sessions: sessions.map(({ token_hash, ...session }) => ({ ...session, current: token_hash === currentSessionHash })),
   }
 }

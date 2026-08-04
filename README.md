@@ -43,7 +43,7 @@ the moderation interface.
 
 ## Included
 
-- Accounts with secure random cookie sessions and hashed passwords
+- Accounts with hashed session tokens, secure random cookies, and Argon2id passwords
 - Reserved previous handles with redirects to each account's current profile
 - 280-character posts with safe hashtag and mention links
 - Following, global-hot, and global-latest feeds with first-run guidance

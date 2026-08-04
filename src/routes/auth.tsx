@@ -16,6 +16,7 @@ import type { Hono } from 'hono'
 import { db } from '../db'
 import { sendPasswordReset } from '../email'
 import { createAccount } from '../handles'
+import { insertSession, sessionHash } from '../sessions'
 
 export function registerAuthRoutes(app: Hono) {
   app.get('/login', c =>
@@ -130,8 +131,7 @@ export function registerAuthRoutes(app: Hono) {
     try {
       const result = createAccount(db, handle, email, passwordHash)
       const session = token()
-      db.query('INSERT INTO sessions(token,user_id,expires_at,created_at,user_agent) VALUES(?,?,?,?,?)')
-        .run(session, result.id, Date.now() + 2592000000, Date.now(), c.req.header('user-agent') || '')
+      insertSession(db, session, result.id, Date.now() + 2592000000, Date.now(), c.req.header('user-agent') || '')
       try {
         await issueEmailToken(result.id, email, 'verify')
       }
@@ -170,14 +170,13 @@ export function registerAuthRoutes(app: Hono) {
       db.query('UPDATE users SET password=? WHERE id=?').run(await hashPassword(f.password), found.id)
     }
     const session = token()
-    db.query('INSERT INTO sessions(token,user_id,expires_at,created_at,user_agent) VALUES(?,?,?,?,?)')
-      .run(session, found.id, Date.now() + 2592000000, Date.now(), c.req.header('user-agent') || '')
+    insertSession(db, session, found.id, Date.now() + 2592000000, Date.now(), c.req.header('user-agent') || '')
     return redirect(safeNext(f.next), sessionCookie(session))
   })
 
   app.post('/logout', c => {
     const session = c.req.header('cookie')?.match(/root=([^;]+)/)?.[1]
-    if (session) db.query('DELETE FROM sessions WHERE token=?').run(session)
+    if (session) db.query('DELETE FROM sessions WHERE token_hash=?').run(sessionHash(session))
     return redirect('/', clearSessionCookie())
   })
 }

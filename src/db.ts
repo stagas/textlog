@@ -1,5 +1,6 @@
 import { Database } from 'bun:sqlite'
 import { extractMentions } from './content'
+import { migrateLegacySessionTokens } from './sessions'
 
 export const db = new Database('storage/root.sqlite', { create: true })
 const postMentionsExisted = !!db.query(
@@ -9,7 +10,7 @@ db.run(`PRAGMA journal_mode = WAL;
 PRAGMA foreign_keys = ON;
 CREATE TABLE IF NOT EXISTS users (id INTEGER PRIMARY KEY AUTOINCREMENT, handle TEXT UNIQUE NOT NULL, email TEXT UNIQUE NOT NULL, bio TEXT DEFAULT '', password TEXT NOT NULL, created_at TEXT DEFAULT CURRENT_TIMESTAMP);
 CREATE TABLE IF NOT EXISTS handle_history (handle TEXT PRIMARY KEY COLLATE NOCASE, user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE, created_at TEXT DEFAULT CURRENT_TIMESTAMP);
-CREATE TABLE IF NOT EXISTS sessions (token TEXT PRIMARY KEY, user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE, expires_at INTEGER NOT NULL);
+CREATE TABLE IF NOT EXISTS sessions (token_hash TEXT PRIMARY KEY, user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE, expires_at INTEGER NOT NULL);
 CREATE TABLE IF NOT EXISTS password_resets (token_hash TEXT PRIMARY KEY, user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE, expires_at INTEGER NOT NULL);
 CREATE TABLE IF NOT EXISTS email_tokens (token_hash TEXT PRIMARY KEY, user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE, kind TEXT NOT NULL CHECK(kind IN ('verify','change')), email TEXT NOT NULL, expires_at INTEGER NOT NULL);
 CREATE TABLE IF NOT EXISTS posts (id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE, parent_id INTEGER REFERENCES posts(id) ON DELETE CASCADE, body TEXT NOT NULL CHECK(length(body) BETWEEN 1 AND 280), created_at TEXT DEFAULT CURRENT_TIMESTAMP);
@@ -82,6 +83,7 @@ if (!sessionColumns.some(column => column.name === 'created_at')) {
 if (!sessionColumns.some(column => column.name === 'user_agent')) {
   db.run("ALTER TABLE sessions ADD COLUMN user_agent TEXT NOT NULL DEFAULT ''")
 }
+migrateLegacySessionTokens(db)
 
 const reportColumns = db.query('PRAGMA table_info(reports)').all() as { name: string }[]
 if (!reportColumns.some(column => column.name === 'status')) {

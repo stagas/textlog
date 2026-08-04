@@ -8,6 +8,7 @@ import { isAdmin } from '../admin'
 import { AccountSecurity } from '../components/pages'
 import { db } from '../db'
 import { sendEmailVerification } from '../email'
+import { sessionHash } from '../sessions'
 
 export function page(node: React.ReactNode, status = 200) {
   return new Response('<!doctype html>' + renderToStaticMarkup(node), { status,
@@ -83,11 +84,11 @@ export async function issueEmailToken(userId: number, email: string, kind: 'veri
 export function securityPage(req: Request, error?: string, success?: string, status = 200) {
   const user = currentUser(req)
   if (!user) return redirect('/login?next=' + encodeURIComponent('/account/security'))
-  const current = sessionToken(req)
-  const rows = db.query(`SELECT token,created_at,expires_at,user_agent FROM sessions
-    WHERE user_id=? AND expires_at>? ORDER BY created_at DESC`).all(user.id, Date.now()) as { token: string;
+  const current = sessionHash(sessionToken(req))
+  const rows = db.query(`SELECT token_hash,created_at,expires_at,user_agent FROM sessions
+    WHERE user_id=? AND expires_at>? ORDER BY created_at DESC`).all(user.id, Date.now()) as { token_hash: string;
     created_at: number; expires_at: number; user_agent: string }[]
-  const sessions = rows.map(row => ({ ...row, token: hash(row.token), current: row.token === current }))
+  const sessions = rows.map(({ token_hash, ...row }) => ({ ...row, token: token_hash, current: token_hash === current }))
   return page(<AccountSecurity user={user} sessions={sessions} error={error} success={success} />, status)
 }
 export async function form(req: Request) {

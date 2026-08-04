@@ -1,5 +1,6 @@
 import { createHash, randomBytes } from 'node:crypto'
 import { db, type User } from './db'
+import { sessionHash } from './sessions'
 
 export const esc = (v: unknown) => String(v ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]!))
 export const hash = (p: string) => createHash('sha256').update(p).digest('hex')
@@ -15,7 +16,7 @@ export async function verifyPassword(password: string, storedHash: string) {
 }
 export const token = () => randomBytes(32).toString('hex')
 export const sessionToken = (req: Request) => req.headers.get('cookie')?.match(/(?:^|;\s*)root=([^;]+)/)?.[1] || null
-export function currentUser(req: Request): User | null { const t = sessionToken(req); if (!t) return null; return db.query('SELECT u.id,u.handle,u.email,u.bio,u.suspended_at,u.email_verified_at FROM sessions s JOIN users u ON u.id=s.user_id WHERE s.token=? AND s.expires_at>? AND u.deleted_at IS NULL AND u.suspended_at IS NULL').get(t, Date.now()) as User | null }
+export function currentUser(req: Request): User | null { const t = sessionHash(sessionToken(req)); if (!t) return null; return db.query('SELECT u.id,u.handle,u.email,u.bio,u.suspended_at,u.email_verified_at FROM sessions s JOIN users u ON u.id=s.user_id WHERE s.token_hash=? AND s.expires_at>? AND u.deleted_at IS NULL AND u.suspended_at IS NULL').get(t, Date.now()) as User | null }
 const timestamp = (d: string) => new Date(d.replace(' ', 'T') + 'Z')
 export function fmt(d: string) {
   const seconds = Math.max(0, Math.floor((Date.now() - timestamp(d).getTime()) / 1000))

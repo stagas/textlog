@@ -15,6 +15,7 @@ import {
   clearSessionCookie,
 } from '../http'
 import { updateProfileHandle } from '../handles'
+import { sessionHash } from '../sessions'
 
 export function registerAccountRoutes(app: Hono) {
   app.get('/account/edit', c => {
@@ -174,11 +175,11 @@ export function registerAccountRoutes(app: Hono) {
     if ((f.password || '').length < 8 || f.password !== f.confirmPassword) {
       return securityPage(c.req.raw, 'New passwords must match and contain at least 8 characters.', undefined, 400)
     }
-    const current = sessionToken(c.req.raw)
+    const current = sessionHash(sessionToken(c.req.raw))
     const password = await hashPassword(f.password)
     db.transaction(() => {
       db.query('UPDATE users SET password=? WHERE id=?').run(password, user.id)
-      db.query('DELETE FROM sessions WHERE user_id=? AND token!=?').run(user.id, current)
+      db.query('DELETE FROM sessions WHERE user_id=? AND token_hash!=?').run(user.id, current)
       db.query('DELETE FROM password_resets WHERE user_id=?').run(user.id)
     })()
     return redirect('/account/security?changed=password')
@@ -188,17 +189,19 @@ export function registerAccountRoutes(app: Hono) {
     const user = currentUser(c.req.raw)
     if (!user) return redirect('/login')
     const f = await form(c.req.raw)
-    const current = sessionToken(c.req.raw)
-    const sessions = db.query('SELECT token FROM sessions WHERE user_id=?').all(user.id) as { token: string }[]
-    const target = sessions.find(session => hash(session.token) === f.token && session.token !== current)
-    if (target) db.query('DELETE FROM sessions WHERE token=? AND user_id=?').run(target.token, user.id)
+    const current = sessionHash(sessionToken(c.req.raw))
+    const sessions = db.query('SELECT token_hash FROM sessions WHERE user_id=?').all(user.id) as
+      { token_hash: string }[]
+    const target = sessions.find(session => session.token_hash === f.token && session.token_hash !== current)
+    if (target) db.query('DELETE FROM sessions WHERE token_hash=? AND user_id=?').run(target.token_hash, user.id)
     return redirect('/account/security')
   })
 
   app.post('/account/sessions/revoke-others', c => {
     const user = currentUser(c.req.raw)
     if (!user) return redirect('/login')
-    db.query('DELETE FROM sessions WHERE user_id=? AND token!=?').run(user.id, sessionToken(c.req.raw))
+    db.query('DELETE FROM sessions WHERE user_id=? AND token_hash!=?')
+      .run(user.id, sessionHash(sessionToken(c.req.raw)))
     return redirect('/account/security')
   })
 
