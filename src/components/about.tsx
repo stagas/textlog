@@ -15,11 +15,6 @@ export function About({ user }: { user: User | null }) {
           Posts are limited to 280 characters. That constraint is intentional—it keeps the site quick to read and
           encourages people to say one thing at a time.
         </p>
-        <h2>Read with RSS or Atom</h2>
-        <p>
-          The hot and latest feeds, user notes, and hashtag pages are available as RSS and Atom. Add <code>.rss</code>
-          {' '}or <code>.atom</code> to the end of the page URL, then enter the resulting address in your feed reader.
-        </p>
         <h2>Be a good neighbour</h2>
         <p>
           Share what is yours to share, treat other people with respect, and don’t use the service for harassment,
