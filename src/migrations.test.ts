@@ -15,6 +15,8 @@ describe('database migrations', () => {
       .toContain('token_hash')
     expect(database.query("SELECT count(*) count FROM sqlite_master WHERE type='table' AND name='handle_history'").get())
       .toEqual({ count: 1 })
+    expect(database.query("SELECT count(*) count FROM sqlite_master WHERE type='table' AND name='post_hot'").get())
+      .toEqual({ count: 1 })
 
     const reapplied: number[] = []
     expect(runMigrations(database, migration => reapplied.push(migration.version))).toBe(latestMigrationVersion)
@@ -39,6 +41,7 @@ describe('database migrations', () => {
     expect(database.query('SELECT created_at FROM follows WHERE follower_id=1').get()).toEqual({ created_at: null })
     expect(database.query('SELECT token_hash FROM sessions').get())
       .toEqual({ token_hash: sessionHash('legacy-cookie') })
+    expect(database.query('SELECT score FROM post_hot WHERE post_id=1').get()).toEqual({ score: 1 })
     expect(database.query('PRAGMA foreign_key_check').all()).toEqual([])
   })
 

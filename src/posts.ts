@@ -4,6 +4,7 @@ import { insertRateLimitedPost } from './post-rate-limit'
 import type { ParentPost, PostView } from './types'
 import { publishPost } from './api-broker'
 import { resolveHandle } from './handles'
+import { recordHotActivity } from './hot'
 
 export function syncPostMetadata(database: Database, postId: number, body: string) {
   database.query('DELETE FROM post_hashtags WHERE post_id=?').run(postId)
@@ -25,7 +26,10 @@ export function createPost(
   parentId: number | null = null,
 ) {
   const result = insertRateLimitedPost(database, userId, body, parentId,
-    postId => syncPostMetadata(database, postId, body))
+    postId => {
+      syncPostMetadata(database, postId, body)
+      recordHotActivity(database, postId)
+    })
   if ('id' in result) publishPost(result.id)
   return result
 }

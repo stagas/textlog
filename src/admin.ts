@@ -1,5 +1,6 @@
 import type { Database } from 'bun:sqlite'
 import type { User } from './db'
+import { removeHotActivity } from './hot'
 
 export const ADMIN_EMAILS = new Set([
   'gstagas@gmail.com',
@@ -25,6 +26,7 @@ export function recordAdminAction(database: Database, actorId: number, action: A
 export function softDeletePost(database: Database, postId: number) {
   database.query("UPDATE posts SET body='(deleted)',deleted_at=CURRENT_TIMESTAMP WHERE id=? AND deleted_at IS NULL")
     .run(postId)
+  removeHotActivity(database, postId)
   database.query('DELETE FROM post_hashtags WHERE post_id=?').run(postId)
   database.query('DELETE FROM post_mentions WHERE post_id=?').run(postId)
 }
@@ -37,8 +39,7 @@ export function resolvePostReports(database: Database, postId: number, actorId: 
 export function anonymizeUser(database: Database, userId: number, actorId?: number) {
   const account = database.query('SELECT handle FROM users WHERE id=?').get(userId) as { handle: string } | null
   const postIds = database.query('SELECT id FROM posts WHERE user_id=?').all(userId) as { id: number }[]
-  database.query("UPDATE posts SET body='(deleted)',deleted_at=COALESCE(deleted_at,CURRENT_TIMESTAMP) WHERE user_id=?")
-    .run(userId)
+  for (const post of postIds) softDeletePost(database, post.id)
   database.query('DELETE FROM post_hashtags WHERE post_id IN (SELECT id FROM posts WHERE user_id=?)').run(userId)
   database.query('DELETE FROM post_mentions WHERE post_id IN (SELECT id FROM posts WHERE user_id=?)').run(userId)
   database.query('DELETE FROM post_mentions WHERE user_id=?').run(userId)

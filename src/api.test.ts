@@ -3,6 +3,7 @@ import { describe, expect, test } from 'bun:test'
 import { Hono } from 'hono'
 import { publishPost } from './api-broker'
 import { registerApiRoutes } from './routes/api'
+import { rebuildHotPosts } from './hot'
 
 function fixture() {
   const database = new Database(':memory:')
@@ -17,6 +18,8 @@ function fixture() {
     CREATE TABLE post_hashtags (post_id INTEGER NOT NULL,tag TEXT NOT NULL);
     CREATE TABLE auth_rate_limits (id INTEGER PRIMARY KEY AUTOINCREMENT,scope TEXT NOT NULL,key_hash TEXT NOT NULL,
       created_at INTEGER NOT NULL);
+    CREATE TABLE post_hot (post_id INTEGER PRIMARY KEY,score REAL NOT NULL DEFAULT 0,
+      score_updated_at TEXT NOT NULL,latest_activity_at TEXT NOT NULL);
     INSERT INTO users(id,handle,email,bio,created_at) VALUES
       (1,'Alice','alice@example.com','builder','2026-08-01 10:00:00'),
       (2,'Bob','bob@example.com','reader','2026-08-02 10:00:00'),
@@ -32,7 +35,9 @@ function fixture() {
     INSERT INTO post_hashtags(post_id,tag) VALUES(1,'root');
     INSERT INTO follows(follower_id,following_id) VALUES(2,1);
     INSERT INTO handle_history(handle,user_id) VALUES('oldalice',1);
+    INSERT INTO post_hot SELECT id,0,created_at,created_at FROM posts;
   `)
+  rebuildHotPosts(database)
   const app = new Hono()
   registerApiRoutes(app, database)
   return { app, database }
@@ -88,6 +93,7 @@ describe('public API', () => {
       `/api/v1/feeds/hot?limit=2&cursor=${encodeURIComponent(first.pagination.next_cursor)}`)).json() as any
     expect(second.data).toHaveLength(1)
     expect(new Set([...first.data, ...second.data].map(post => post.id)).size).toBe(3)
+    expect((await request(app, '/api/v1/feeds/hot?cursor=broken')).status).toBe(400)
   })
 
   test('serves single posts, replies, users, and tags with documented errors', async () => {

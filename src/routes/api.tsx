@@ -9,6 +9,7 @@ import { logError } from '../log'
 import { currentUser } from '../utils'
 import { page } from './shared'
 import { resolveHandle } from '../handles'
+import { decodeHotCursor } from '../hot'
 
 const JSON_LIMIT = 120
 const JSON_WINDOW_SECONDS = 60
@@ -120,9 +121,14 @@ export function registerApiRoutes(app: Hono, database: Database = db) {
   app.get('/api/v1/feeds/latest', c => collection(c, database))
 
   app.get('/api/v1/feeds/hot', c => {
-    const parsed = parseCollectionParams(c.req.query('limit'), c.req.query('cursor'))
+    const parsed = parseCollectionParams(c.req.query('limit'))
     if (!parsed) return apiError('invalid_pagination', 'limit must be 1–100 and cursor must be a valid opaque cursor', 400)
-    return jsonResponse(apiHotPosts(database, apiOrigin(c.req.url), parsed.limit, parsed.before || 0))
+    const cursorValue = c.req.query('cursor')
+    const cursor = decodeHotCursor(cursorValue)
+    if (cursorValue && !cursor) {
+      return apiError('invalid_pagination', 'limit must be 1–100 and cursor must be a valid opaque cursor', 400)
+    }
+    return jsonResponse(apiHotPosts(database, apiOrigin(c.req.url), parsed.limit, cursor))
   })
 
   app.get('/api/v1/posts/:id', c => {

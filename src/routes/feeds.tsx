@@ -16,6 +16,7 @@ import {
   feedPreference,
 } from '../http'
 import { currentUser } from '../utils'
+import { decodeHotCursor } from '../hot'
 
 export function registerFeedsRoutes(app: Hono) {
   app.get('/', c => {
@@ -28,9 +29,10 @@ export function registerFeedsRoutes(app: Hono) {
       return page(<PublicFeed user={user} page={feedPage} path="/latest" />)
     }
     if (preferredFeed === 'hot' || !user) {
-      const outOfRange = paginationRedirect(feedPage, visiblePostCount(user?.id), '/')
-      if (outOfRange) return outOfRange
-      return page(<HotFeed user={user} page={feedPage} />)
+      const cursorValue = c.req.query('cursor')
+      const cursor = decodeHotCursor(cursorValue)
+      if (cursorValue && !cursor) return c.text('Invalid cursor', 400)
+      return page(<HotFeed user={user} cursor={cursor} path="/" />)
     }
     const total = (db.query(`SELECT count(*) count FROM posts p WHERE p.deleted_at IS NULL AND
       (p.user_id=? OR p.user_id IN (SELECT following_id FROM follows WHERE follower_id=?) OR
@@ -68,10 +70,10 @@ export function registerFeedsRoutes(app: Hono) {
 
   app.get('/hot', c => {
     const user = currentUser(c.req.raw)
-    const feedPage = currentPage(c.req.query('page'))
-    const outOfRange = paginationRedirect(feedPage, visiblePostCount(user?.id), '/hot')
-    if (outOfRange) return rememberFeed(outOfRange, 'hot')
-    return rememberFeed(page(<HotFeed user={user} page={feedPage} title="hot" />), 'hot')
+    const cursorValue = c.req.query('cursor')
+    const cursor = decodeHotCursor(cursorValue)
+    if (cursorValue && !cursor) return c.text('Invalid cursor', 400)
+    return rememberFeed(page(<HotFeed user={user} cursor={cursor} title="hot" />), 'hot')
   })
 
   app.get('/activity', c => {

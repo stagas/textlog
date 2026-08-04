@@ -1,6 +1,6 @@
 import type { Database } from 'bun:sqlite'
 import { extractHashtags, extractMentions } from './content'
-import { getHotPosts } from './hot'
+import { encodeHotCursor, getHotPosts, hotCursor, type HotCursor } from './hot'
 
 export const API_DEFAULT_LIMIT = 20
 export const API_MAX_LIMIT = 100
@@ -125,8 +125,9 @@ export function apiPosts(database: Database, origin: string, options: {
   }
 }
 
-export function apiHotPosts(database: Database, origin: string, limit: number, offset: number) {
-  const rows = getHotPosts(database, limit + 1, offset, new Date(), -1, true)
+export function apiHotPosts(database: Database, origin: string, limit: number, cursor: HotCursor | null) {
+  const asOf = cursor?.asOf || new Date().toISOString()
+  const rows = getHotPosts(database, limit + 1, cursor, asOf, -1, true)
   const hasMore = rows.length > limit
   const pageRows = rows.slice(0, limit).map(row => ({
     ...row,
@@ -135,6 +136,6 @@ export function apiHotPosts(database: Database, origin: string, limit: number, o
   }))
   return {
     data: pageRows.map(row => serializePost(row, origin)),
-    pagination: { next_cursor: hasMore ? encodeCursor(offset + limit) : null },
+    pagination: { next_cursor: hasMore ? encodeHotCursor(hotCursor(rows[limit - 1], asOf)) : null },
   }
 }

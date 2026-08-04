@@ -1,6 +1,7 @@
 import type { Database } from 'bun:sqlite'
 import { extractMentions } from './content'
 import { migrateLegacySessionTokens } from './sessions'
+import { rebuildHotPosts } from './hot'
 
 type Migration = { version: number; name: string; up(database: Database): void }
 
@@ -140,6 +141,25 @@ export const migrations: Migration[] = [
     name: 'hashed_session_tokens',
     up(database) {
       migrateLegacySessionTokens(database)
+    },
+  },
+  {
+    version: 7,
+    name: 'materialized_hot_scores',
+    up(database) {
+      database.run(`CREATE TABLE IF NOT EXISTS post_hot (
+        post_id INTEGER PRIMARY KEY REFERENCES posts(id) ON DELETE CASCADE,
+        score REAL NOT NULL DEFAULT 0,score_updated_at TEXT NOT NULL,
+        latest_activity_at TEXT NOT NULL);
+      INSERT OR IGNORE INTO post_hot(post_id,score,score_updated_at,latest_activity_at)
+        SELECT id,0,created_at,created_at FROM posts;
+      CREATE INDEX IF NOT EXISTS post_hot_ranking
+        ON post_hot(score DESC,latest_activity_at DESC,post_id DESC);
+      CREATE TRIGGER IF NOT EXISTS post_hot_insert AFTER INSERT ON posts BEGIN
+        INSERT INTO post_hot(post_id,score,score_updated_at,latest_activity_at)
+        VALUES(new.id,0,new.created_at,new.created_at);
+      END;`)
+      rebuildHotPosts(database)
     },
   },
 ]

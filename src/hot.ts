@@ -12,53 +12,149 @@ export type HotPost = {
   latest_activity_at: string
 }
 
+export type HotCursor = {
+  asOf: string
+  score: number
+  latestActivityAt: string
+  createdAt: string
+  id: number
+}
+
+const cursorVersion = 1
+
+function hasHotTable(database: Database) {
+  return Boolean(database.query("SELECT 1 FROM sqlite_master WHERE type='table' AND name='post_hot'").get())
+}
+
+export function encodeHotCursor(cursor: HotCursor) {
+  return Buffer.from(JSON.stringify([cursorVersion, cursor.asOf, cursor.score, cursor.latestActivityAt,
+    cursor.createdAt, cursor.id])).toString('base64url')
+}
+
+export function decodeHotCursor(value?: string): HotCursor | null {
+  if (!value) return null
+  try {
+    const decoded = JSON.parse(Buffer.from(value, 'base64url').toString())
+    if (!Array.isArray(decoded) || decoded.length !== 6 || decoded[0] !== cursorVersion
+      || typeof decoded[1] !== 'string' || !Number.isFinite(Date.parse(decoded[1]))
+      || typeof decoded[2] !== 'number' || !Number.isFinite(decoded[2]) || decoded[2] < 0
+      || typeof decoded[3] !== 'string' || typeof decoded[4] !== 'string'
+      || !Number.isInteger(decoded[5]) || decoded[5] < 1)
+    {
+      return null
+    }
+    return { asOf: decoded[1], score: decoded[2], latestActivityAt: decoded[3], createdAt: decoded[4], id: decoded[5] }
+  }
+  catch {
+    return null
+  }
+}
+
+export function hotCursor(post: HotPost, asOf: string): HotCursor {
+  return { asOf, score: post.hot_score, latestActivityAt: post.latest_activity_at,
+    createdAt: post.created_at, id: post.id }
+}
+
+export function recordHotActivity(database: Database, postId: number) {
+  if (!hasHotTable(database)) return
+  const event = database.query('SELECT created_at FROM posts WHERE id=?').get(postId) as { created_at: string } | null
+  if (!event) return
+  const ancestors = database.query(`WITH RECURSIVE ancestors(id) AS (
+    SELECT ? UNION ALL SELECT p.parent_id FROM posts p JOIN ancestors a ON p.id=a.id WHERE p.parent_id IS NOT NULL
+  ) SELECT id FROM ancestors`).all(postId) as { id: number }[]
+  const update = database.query(`UPDATE post_hot SET
+    score=score*pow(0.5,max(0,(julianday(?) - julianday(score_updated_at))*24)/24.0)+1,
+    score_updated_at=?,latest_activity_at=max(latest_activity_at,?) WHERE post_id=?`)
+  for (const ancestor of ancestors) update.run(event.created_at, event.created_at, event.created_at, ancestor.id)
+}
+
+export function rebuildHotPosts(database: Database, postIds?: number[]) {
+  if (!hasHotTable(database)) return
+  if (!postIds) {
+    const rankings = database.query(`WITH RECURSIVE activity(candidate_id,event_id,created_at,deleted_at) AS (
+      SELECT id,id,created_at,deleted_at FROM posts
+      UNION ALL
+      SELECT activity.candidate_id,child.id,child.created_at,child.deleted_at
+      FROM activity JOIN posts child ON child.parent_id=activity.event_id
+    ), latest AS (
+      SELECT candidate_id,max(created_at) latest_activity_at FROM activity WHERE deleted_at IS NULL GROUP BY candidate_id
+    ) SELECT activity.candidate_id post_id,latest.latest_activity_at,
+      sum(pow(0.5,max(0,(julianday(latest.latest_activity_at)-julianday(activity.created_at))*24)/24.0)) score
+      FROM activity JOIN latest ON latest.candidate_id=activity.candidate_id
+      WHERE activity.deleted_at IS NULL GROUP BY activity.candidate_id`).all() as
+      { post_id: number; latest_activity_at: string; score: number }[]
+    database.query("UPDATE post_hot SET score=0,score_updated_at='1970-01-01 00:00:00',latest_activity_at='1970-01-01 00:00:00'")
+      .run()
+    const update = database.query('UPDATE post_hot SET score=?,score_updated_at=?,latest_activity_at=? WHERE post_id=?')
+    for (const ranking of rankings) {
+      update.run(ranking.score, ranking.latest_activity_at, ranking.latest_activity_at, ranking.post_id)
+    }
+    return
+  }
+  const filter = postIds?.length ? `WHERE p.id IN (${postIds.map(() => '?').join(',')})` : ''
+  const candidates = database.query(`SELECT p.id FROM posts p ${filter}`).all(...(postIds || [])) as { id: number }[]
+  const activity = database.query(`WITH RECURSIVE activity(id,created_at,deleted_at) AS (
+    SELECT id,created_at,deleted_at FROM posts WHERE id=?
+    UNION ALL
+    SELECT child.id,child.created_at,child.deleted_at FROM activity JOIN posts child ON child.parent_id=activity.id
+  ) SELECT created_at FROM activity WHERE deleted_at IS NULL`)
+  const update = database.query('UPDATE post_hot SET score=?,score_updated_at=?,latest_activity_at=? WHERE post_id=?')
+  for (const candidate of candidates) {
+    const events = activity.all(candidate.id) as { created_at: string }[]
+    if (!events.length) {
+      update.run(0, '1970-01-01 00:00:00', '1970-01-01 00:00:00', candidate.id)
+      continue
+    }
+    const latest = events.reduce((value, event) => event.created_at > value ? event.created_at : value,
+      events[0].created_at)
+    const score = events.reduce((sum, event) => sum
+      + Math.pow(0.5, Math.max(0, (Date.parse(`${latest.replace(' ', 'T')}Z`)
+        - Date.parse(`${event.created_at.replace(' ', 'T')}Z`)) / 86_400_000)), 0)
+    update.run(score, latest, latest, candidate.id)
+  }
+}
+
+export function removeHotActivity(database: Database, postId: number) {
+  if (!hasHotTable(database)) return
+  const ancestors = database.query(`WITH RECURSIVE ancestors(id,parent_id) AS (
+    SELECT id,parent_id FROM posts WHERE id=?
+    UNION ALL SELECT p.id,p.parent_id FROM posts p JOIN ancestors a ON p.id=a.parent_id
+  ) SELECT id FROM ancestors`).all(postId) as { id: number }[]
+  rebuildHotPosts(database, ancestors.map(row => row.id))
+}
+
 export function getHotPosts(
   database: Database,
   limit: number,
-  offset: number,
+  cursor: HotCursor | null = null,
   asOf: Date | string = new Date(),
   viewerId = -1,
   publicOnly = false,
 ) {
-  const timestamp = asOf instanceof Date ? asOf.toISOString() : asOf
-  const activityFilter = viewerId < 0 ? '' : `AND NOT EXISTS (
-    SELECT 1 FROM blocks b
-    WHERE (b.blocker_id=? AND b.blocked_id=event_user_id) OR (b.blocker_id=event_user_id AND b.blocked_id=?)
-  )`
-  const candidateFilter = viewerId < 0 ? '' : `WHERE NOT EXISTS (
-    SELECT 1 FROM blocks b
-    WHERE (b.blocker_id=? AND b.blocked_id=p.user_id) OR (b.blocker_id=p.user_id AND b.blocked_id=?)
-  )`
-  const publicUserFilter = publicOnly
-    ? `${candidateFilter ? 'AND' : 'WHERE'} u.deleted_at IS NULL`
-    : ''
-  const parameters = viewerId < 0
-    ? [timestamp, limit, offset]
-    : [timestamp, viewerId, viewerId, viewerId, viewerId, limit, offset]
-  return database.query(`
-    WITH RECURSIVE activity(candidate_id,event_id,event_user_id,created_at,deleted_at) AS (
-      SELECT id,id,user_id,created_at,deleted_at
-      FROM posts
-      WHERE deleted_at IS NULL
-      UNION ALL
-      SELECT activity.candidate_id,child.id,child.user_id,child.created_at,child.deleted_at
-      FROM activity
-      JOIN posts child ON child.parent_id=activity.event_id
-    ), ranked AS (
-      SELECT candidate_id,
-        sum(pow(0.5, max(0, (julianday(?) - julianday(created_at)) * 24) / 24.0)) hot_score,
-        max(created_at) latest_activity_at
-      FROM activity
-      WHERE deleted_at IS NULL ${activityFilter}
-      GROUP BY candidate_id
-    )
-    SELECT p.*,u.handle,ranked.hot_score,ranked.latest_activity_at
-    FROM ranked
-    JOIN posts p ON p.id=ranked.candidate_id
-    JOIN users u ON u.id=p.user_id
-    ${candidateFilter}
-    ${publicUserFilter}
-    ORDER BY ranked.hot_score DESC,ranked.latest_activity_at DESC,p.created_at DESC,p.id DESC
-    LIMIT ? OFFSET ?
-  `).all(...parameters) as HotPost[]
+  const timestamp = cursor?.asOf || (asOf instanceof Date ? asOf.toISOString() : asOf)
+  const filters = ['p.deleted_at IS NULL', 'ranked.hot_score > 0']
+  const parameters: Array<string | number> = [timestamp]
+  if (viewerId >= 0) {
+    filters.push(`NOT EXISTS (SELECT 1 FROM blocks b WHERE
+      (b.blocker_id=? AND b.blocked_id=p.user_id) OR (b.blocker_id=p.user_id AND b.blocked_id=?))`)
+    parameters.push(viewerId, viewerId)
+  }
+  if (publicOnly) filters.push('u.deleted_at IS NULL')
+  if (cursor) {
+    filters.push(`(ranked.hot_score < ? OR (ranked.hot_score = ? AND
+      (h.latest_activity_at < ? OR (h.latest_activity_at = ? AND
+      (p.created_at < ? OR (p.created_at = ? AND p.id < ?))))))`)
+    parameters.push(cursor.score, cursor.score, cursor.latestActivityAt, cursor.latestActivityAt,
+      cursor.createdAt, cursor.createdAt, cursor.id)
+  }
+  parameters.push(limit)
+  return database.query(`WITH ranked AS (
+    SELECT post_id,score*pow(0.5,max(0,(julianday(?) - julianday(score_updated_at))*24)/24.0) hot_score
+    FROM post_hot
+  ) SELECT p.*,u.handle,ranked.hot_score,h.latest_activity_at
+    FROM ranked JOIN post_hot h ON h.post_id=ranked.post_id
+    JOIN posts p ON p.id=ranked.post_id JOIN users u ON u.id=p.user_id
+    WHERE ${filters.join(' AND ')}
+    ORDER BY ranked.hot_score DESC,h.latest_activity_at DESC,p.created_at DESC,p.id DESC LIMIT ?`)
+    .all(...parameters) as HotPost[]
 }

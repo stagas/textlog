@@ -218,6 +218,9 @@ test('consequential account, content, reporting, and admin flows work over HTTP'
   const publicPost = await request(`/post/${post.id}`)
   expect(publicPost.status).toBe(200)
   expect(await publicPost.text()).toContain(post.body)
+  const hotFeed = await request('/hot')
+  expect(hotFeed.status).toBe(200)
+  expect(await hotFeed.text()).toContain(post.body)
 
   const bobCookie = await signup('bob', 'bob@example.com', 'bob password 123')
   const bob = database.query('SELECT id FROM users WHERE handle=?').get('bob') as { id: number }

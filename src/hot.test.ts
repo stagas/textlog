@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, test } from 'bun:test'
 import { Database } from 'bun:sqlite'
-import { getHotPosts } from './hot'
+import { getHotPosts, hotCursor, recordHotActivity, removeHotActivity } from './hot'
 
 const asOf = '2026-08-03T12:00:00.000Z'
 let database: Database
@@ -18,13 +18,21 @@ beforeEach(() => {
       deleted_at TEXT
     );
     CREATE TABLE blocks (blocker_id INTEGER NOT NULL, blocked_id INTEGER NOT NULL);
+    CREATE TABLE post_hot (post_id INTEGER PRIMARY KEY,score REAL NOT NULL DEFAULT 0,
+      score_updated_at TEXT NOT NULL,latest_activity_at TEXT NOT NULL);
   `)
   database.query('INSERT INTO users(id,handle) VALUES(?,?)').run(1, 'tester')
 })
 
 function post(id: number, createdAt: string, parentId: number | null = null, deletedAt: string | null = null) {
   database.query('INSERT INTO posts VALUES(?,?,?,?,?,?)')
-    .run(id, 1, parentId, `post ${id}`, createdAt, deletedAt)
+    .run(id, 1, parentId, `post ${id}`, createdAt, null)
+  database.query('INSERT INTO post_hot VALUES(?,0,?,?)').run(id, createdAt, createdAt)
+  recordHotActivity(database, id)
+  if (deletedAt) {
+    database.query('UPDATE posts SET deleted_at=? WHERE id=?').run(deletedAt, id)
+    removeHotActivity(database, id)
+  }
 }
 
 describe('hot feed ranking', () => {
@@ -32,7 +40,7 @@ describe('hot feed ranking', () => {
     post(1, '2026-08-03 12:00:00')
     post(2, '2026-08-02 12:00:00')
 
-    const results = getHotPosts(database, 20, 0, asOf)
+    const results = getHotPosts(database, 20, null, asOf)
     expect(results.map(result => result.id)).toEqual([1, 2])
     expect(results[0].hot_score).toBeCloseTo(1)
     expect(results[1].hot_score).toBeCloseTo(0.5)
@@ -43,7 +51,7 @@ describe('hot feed ranking', () => {
     post(2, '2026-08-03 10:00:00', 1)
     post(3, '2026-08-03 11:00:00', 2)
 
-    const results = getHotPosts(database, 20, 0, asOf)
+    const results = getHotPosts(database, 20, null, asOf)
     expect(results.map(result => result.id)).toEqual([1, 2, 3])
     expect(results[0].hot_score).toBeGreaterThan(results[1].hot_score)
     expect(results[1].hot_score).toBeGreaterThan(results[2].hot_score)
@@ -55,7 +63,7 @@ describe('hot feed ranking', () => {
     post(2, '2026-08-03 10:00:00', 1, '2026-08-03 10:30:00')
     post(3, '2026-08-03 11:00:00', 2)
 
-    const results = getHotPosts(database, 20, 0, asOf)
+    const results = getHotPosts(database, 20, null, asOf)
     expect(results.map(result => result.id)).toEqual([1, 3])
     expect(results[0].latest_activity_at).toBe('2026-08-03 11:00:00')
     expect(results[0].hot_score).toBeCloseTo(results[1].hot_score + 0.0625)
@@ -66,8 +74,9 @@ describe('hot feed ranking', () => {
     post(2, '2026-08-03 11:00:00')
     post(3, '2026-08-03 10:00:00')
 
-    expect(getHotPosts(database, 2, 0, asOf).map(result => result.id)).toEqual([2, 1])
-    expect(getHotPosts(database, 2, 2, asOf).map(result => result.id)).toEqual([3])
+    const first = getHotPosts(database, 2, null, asOf)
+    expect(first.map(result => result.id)).toEqual([2, 1])
+    expect(getHotPosts(database, 2, hotCursor(first[1], asOf), asOf).map(result => result.id)).toEqual([3])
   })
 
   test('hides posts when either user has blocked the other', () => {
@@ -75,9 +84,12 @@ describe('hot feed ranking', () => {
     post(1, '2026-08-03 11:00:00')
     database.query('INSERT INTO posts VALUES(?,?,?,?,?,?)')
       .run(2, 2, null, 'hidden', '2026-08-03 12:00:00', null)
+    database.query('INSERT INTO post_hot VALUES(?,0,?,?)')
+      .run(2, '2026-08-03 12:00:00', '2026-08-03 12:00:00')
+    recordHotActivity(database, 2)
     database.query('INSERT INTO blocks VALUES(?,?)').run(2, 1)
 
-    const results = getHotPosts(database, 20, 0, asOf, 1)
+    const results = getHotPosts(database, 20, null, asOf, 1)
     expect(results.map(result => result.id)).toEqual([1])
     expect(results[0].hot_score).toBeCloseTo(Math.pow(0.5, 1 / 24))
   })

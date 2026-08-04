@@ -15,6 +15,7 @@ import { db } from '../db'
 import { renderPostOg } from '../og'
 import { postRateLimitMessage } from '../post-rate-limit'
 import { currentUser } from '../utils'
+import { softDeletePost } from '../admin'
 
 export function registerPostsRoutes(app: Hono) {
   app.get('/write', c => {
@@ -155,9 +156,7 @@ export function registerPostsRoutes(app: Hono) {
     if (!post) return c.text('Not found', 404)
     if (post.user_id !== user.id) return c.text('Forbidden', 403)
     db.transaction(() => {
-      db.query('UPDATE posts SET body=\'(deleted)\',deleted_at=CURRENT_TIMESTAMP WHERE id=?').run(id)
-      db.query('DELETE FROM post_hashtags WHERE post_id=?').run(id)
-      db.query('DELETE FROM post_mentions WHERE post_id=?').run(id)
+      softDeletePost(db, id)
     })()
     return redirect(post.parent_id ? '/post/' + post.parent_id : '/')
   })
