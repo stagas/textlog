@@ -1,9 +1,0 @@
-{
-  "quarter": "2026-Q3",
-  "performedAt": "2026-08-04T20:11:09.271Z",
-  "sourceBackup": "/media/stagas/buba/work/stagas/root-mx/storage/backups/root-daily-2026-08-04.sqlite",
-  "rpoSeconds": 0,
-  "rtoMilliseconds": 5.06,
-  "databaseVersion": 14,
-  "status": "passed"
-}
