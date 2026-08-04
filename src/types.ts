@@ -70,6 +70,11 @@ export type AdminActionView = {
   target_post_id: number | null
 }
 
+export type IllegalActivityReportView = {
+  id: number; post_id: number; content_url: string; details: string; reporter_email: string | null;
+  reporter_name: string | null; reference: string; category: string; status: string;
+  resolution_note: string | null; created_at: string; resolved_at: string | null
+}
 export type PersonView = ProfileRow & {
   posts: number
   following?: boolean

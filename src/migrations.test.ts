@@ -17,6 +17,8 @@ describe('database migrations', () => {
       .toEqual({ count: 1 })
     expect(database.query("SELECT count(*) count FROM sqlite_master WHERE type='table' AND name='post_hot'").get())
       .toEqual({ count: 1 })
+    expect(database.query("SELECT count(*) count FROM sqlite_master WHERE type='table' AND name='illegal_activity_reports'").get())
+      .toEqual({ count: 1 })
 
     const reapplied: number[] = []
     expect(runMigrations(database, migration => reapplied.push(migration.version))).toBe(latestMigrationVersion)
@@ -57,5 +59,13 @@ describe('database migrations', () => {
     database.query('INSERT INTO daily_visitors VALUES(?,?)').run('2026-08-04', 'legacy-unsalted-hash')
     migrations.find(migration => migration.name === 'rotating_ip_pseudonyms')!.up(database)
     expect(database.query('SELECT count(*) count FROM daily_visitors').get()).toEqual({ count: 0 })
+  })
+
+  test('removes the withdrawn illegal-content notice table from version 9 databases', () => {
+    const database = new Database(':memory:')
+    database.run('CREATE TABLE illegal_content_notices(id INTEGER); PRAGMA user_version=9')
+    migrations.find(migration => migration.version === 10)!.up(database)
+    expect(database.query("SELECT count(*) count FROM sqlite_master WHERE name='illegal_content_notices'").get())
+      .toEqual({ count: 0 })
   })
 })

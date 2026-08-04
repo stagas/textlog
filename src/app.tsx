@@ -11,6 +11,7 @@ import { registerAdminRoutes } from './routes/admin'
 import { registerAuthRoutes } from './routes/auth'
 import { registerFeedsRoutes } from './routes/feeds'
 import { registerInteractionsRoutes } from './routes/interactions'
+import { registerIllegalActivityRoutes } from './routes/illegal-activity'
 import { registerPostsRoutes } from './routes/posts'
 import { registerProfilesRoutes } from './routes/profiles'
 import { registerTagsRoutes } from './routes/tags'
@@ -115,6 +116,7 @@ registerAuthRoutes(app)
 registerAccountRoutes(app)
 registerPostsRoutes(app)
 registerInteractionsRoutes(app)
+registerIllegalActivityRoutes(app)
 registerAdminRoutes(app)
 registerProfilesRoutes(app)
 registerTagsRoutes(app)

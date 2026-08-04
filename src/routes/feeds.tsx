@@ -3,6 +3,7 @@ import {
   Activity,
   activityTotal,
   Contact,
+  Dmca,
   Feed,
   HotFeed,
   Legal,
@@ -87,5 +88,6 @@ export function registerFeedsRoutes(app: Hono) {
 
   app.get('/about', c => page(<About user={currentUser(c.req.raw)} />))
   app.get('/contact', c => page(<Contact user={currentUser(c.req.raw)} />))
+  app.get('/dmca', c => page(<Dmca user={currentUser(c.req.raw)} />))
   app.get('/legal', c => page(<Legal user={currentUser(c.req.raw)} />))
 }

@@ -170,6 +170,41 @@ export const migrations: Migration[] = [
       database.run('DELETE FROM daily_visitors')
     },
   },
+  {
+    version: 9,
+    name: 'reserved_removed_illegal_content_notices',
+    up() {},
+  },
+  {
+    version: 10,
+    name: 'remove_illegal_content_notices',
+    up(database) {
+      database.run('DROP TABLE IF EXISTS illegal_content_notices')
+    },
+  },
+  {
+    version: 11,
+    name: 'illegal_activity_reports',
+    up(database) {
+      database.run(`CREATE TABLE illegal_activity_reports (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,post_id INTEGER NOT NULL REFERENCES posts(id),content_url TEXT NOT NULL,
+        details TEXT NOT NULL,reporter_email TEXT,status TEXT NOT NULL DEFAULT 'open',resolution_note TEXT,
+        created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,resolved_at TEXT);
+      CREATE INDEX illegal_activity_reports_status_created ON illegal_activity_reports(status,created_at DESC);`)
+    },
+  },
+  {
+    version: 12,
+    name: 'report_receipts_and_notifier_details',
+    up(database) {
+      addColumn(database, 'illegal_activity_reports', 'reference', 'TEXT')
+      addColumn(database, 'illegal_activity_reports', 'category', "TEXT NOT NULL DEFAULT 'other'")
+      addColumn(database, 'illegal_activity_reports', 'reporter_name', 'TEXT')
+      addColumn(database, 'illegal_activity_reports', 'good_faith', 'INTEGER NOT NULL DEFAULT 1')
+      database.run("UPDATE illegal_activity_reports SET reference='RPT-' || printf('%08d',id) WHERE reference IS NULL")
+      database.run('CREATE UNIQUE INDEX illegal_activity_reports_reference ON illegal_activity_reports(reference)')
+    },
+  },
 ]
 
 export const latestMigrationVersion = migrations.at(-1)!.version

@@ -239,6 +239,26 @@ test('consequential account, content, reporting, and admin flows work over HTTP'
   expect(hotFeed.status).toBe(200)
   expect(await hotFeed.text()).toContain(post.body)
 
+  const illegalActivity = await request('/report-illegal-activity', {
+    method: 'POST',
+    form: {
+      contentUrl: `${origin}/post/${post.id}`,
+      category: 'fraud',
+      details: 'This integration report provides enough detail about the allegedly illegal activity.',
+      name: 'Public Reporter',
+      email: 'reporter-public@example.com',
+      goodFaith: 'yes',
+    },
+  })
+  expect(illegalActivity.status).toBe(201)
+  expect(await illegalActivity.text()).toContain('Your report was received')
+  const illegalReport = database.query(`SELECT id,reference,status,reporter_email
+    FROM illegal_activity_reports WHERE post_id=?`).get(post.id) as
+    { id: number; reference: string; status: string; reporter_email: string }
+  expect(illegalReport).toMatchObject({ status: 'open', reporter_email: 'reporter-public@example.com' })
+  expect(capturedEmails().some(email => email.to === 'reporter-public@example.com'
+    && email.subject.includes('Report received'))).toBe(true)
+
   const bobCookie = await signup('bob', 'bob@example.com', 'bob password 123')
   const bob = database.query('SELECT id FROM users WHERE handle=?').get('bob') as { id: number }
   const unverifiedWritePage = await request('/write', { cookie: bobCookie })
@@ -273,6 +293,14 @@ test('consequential account, content, reporting, and admin flows work over HTTP'
   const dashboard = await request('/admin', { cookie: adminCookie })
   expect(dashboard.status).toBe(200)
   expect(await dashboard.text()).toContain('A route-level integration post')
+  const resolveIllegalReport = await request(`/admin/illegal-reports/${illegalReport.id}/resolve`, {
+    method: 'POST', cookie: adminCookie, form: { reasons: 'Confirmed and actioned after human review of the report.' },
+  })
+  expect(resolveIllegalReport.status).toBe(303)
+  expect((database.query('SELECT status FROM illegal_activity_reports WHERE id=?')
+    .get(illegalReport.id) as { status: string }).status).toBe('resolved')
+  expect(capturedEmails().some(email => email.to === 'reporter-public@example.com'
+    && email.subject.includes('Report decision'))).toBe(true)
 
   const resolveReport = await request(`/admin/reports/${reportRow.id}/resolve`, {
     method: 'POST',

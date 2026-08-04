@@ -29,7 +29,7 @@ export function Auth(
           <button className="button wide">{mode === 'signup' ? 'create account →' : 'log in →'}</button>
           {mode === 'signup' && (
             <p className="signup-terms">
-              By signing up, you agree to our <a href="/legal">Terms of Service</a>.
+              By signing up, you agree to our <a href="/legal">Terms of Service</a> and Privacy Notice.
             </p>
           )}
         </form>

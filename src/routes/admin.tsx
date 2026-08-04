@@ -8,13 +8,14 @@ import {
   safeLocalPath,
   safeRefererPath,
 } from '../http'
-import type { AdminActionView, AdminReportView, DashboardStats, PostRow, ProfileRow } from '../types'
+import type { AdminActionView, AdminReportView, DashboardStats, IllegalActivityReportView, PostRow, ProfileRow } from '../types'
 import { adminUser, currentPage, form, page, paginationRedirect, redirect } from './shared'
 
 import type { Hono } from 'hono'
 import { db } from '../db'
 import { currentUser } from '../utils'
 import { visitorStats } from '../visitors'
+import { sendReportDecision } from '../email'
 
 export function registerAdminRoutes(app: Hono) {
   app.get('/admin', c => {
@@ -54,10 +55,37 @@ export function registerAdminRoutes(app: Hono) {
       .all() as AdminActionView[]
     const suspended = db.query(`SELECT id,handle,email,bio,suspended_at,deleted_at FROM users
     WHERE deleted_at IS NULL AND suspended_at IS NOT NULL ORDER BY suspended_at DESC LIMIT 20`).all() as ProfileRow[]
+    const illegalReports = db.query(`SELECT * FROM illegal_activity_reports
+      WHERE status='open' ORDER BY created_at,id LIMIT 20`).all() as IllegalActivityReportView[]
     return page(
-      <AdminDashboard user={signedIn} stats={dashboardStats} reports={reports} actions={actions} status={status}
+      <AdminDashboard user={signedIn} stats={dashboardStats} reports={reports} actions={actions}
+        illegalReports={illegalReports} status={status}
         page={reportPage} total={total} suspended={suspended} />,
     )
+  })
+
+  app.post('/admin/illegal-reports/:id/:decision', async c => {
+    const user = adminUser(c.req.raw)
+    if (!currentUser(c.req.raw)) return redirect('/login?next=' + encodeURIComponent('/admin'))
+    if (!user) return c.text('Forbidden', 403)
+    const id = Number(c.req.param('id'))
+    const decision = c.req.param('decision')
+    if (!Number.isInteger(id) || !['resolve', 'dismiss'].includes(decision)) return c.text('Not found', 404)
+    const report = db.query(`SELECT reference,reporter_email FROM illegal_activity_reports
+      WHERE id=? AND status='open'`).get(id) as { reference: string; reporter_email: string | null } | null
+    if (!report) return c.text('Report is not open', 409)
+    const f = await form(c.req.raw)
+    const reasons = (f.reasons || '').trim()
+    if (reasons.length < 20) return c.text('Specific reasons are required', 400)
+    const updated = db.query(`UPDATE illegal_activity_reports SET status=?,resolution_note=?,resolved_at=CURRENT_TIMESTAMP
+      WHERE id=? AND status='open'`).run(decision === 'resolve' ? 'resolved' : 'dismissed', reasons.slice(0, 2000), id)
+    if (!updated.changes) return c.text('Report is not open', 409)
+    if (report.reporter_email) {
+      try { await sendReportDecision(report.reporter_email, report.reference,
+        decision === 'resolve' ? 'action taken' : 'no action', reasons) }
+      catch (error) { console.error('Could not send report decision', error) }
+    }
+    return redirect('/admin')
   })
 
   app.post('/admin/reports/:id/:decision', async c => {

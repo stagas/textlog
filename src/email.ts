@@ -44,3 +44,16 @@ export function sendEmailVerification(email: string, verificationUrl: string, ch
     `${action} by opening this link:\n\n${verificationUrl}\n\nThis link expires in one hour. If you did not request it, you can ignore this email.`,
     `<p>${action} by using the link below.</p><p><a href="${verificationUrl}">${action}</a></p><p>This link expires in one hour. If you did not request it, you can ignore this email.</p>`)
 }
+
+export function sendReportReceipt(email: string, reference: string) {
+  return sendEmail(email, `Report received · ${reference}`,
+    `We received your report of allegedly illegal activity. Reference: ${reference}. We will email our decision and available redress.`,
+    `<p>We received your report of allegedly illegal activity.</p><p>Reference: <strong>${reference}</strong></p><p>We will email our decision and available redress.</p>`)
+}
+
+export function sendReportDecision(email: string, reference: string, decision: string, reasons: string) {
+  const redress = 'You may reply to request human reconsideration and may pursue any available out-of-court or judicial remedy.'
+  return sendEmail(email, `Report decision · ${reference}`,
+    `Decision: ${decision}\n\nReasons: ${reasons}\n\nNo automated means made this decision.\n\n${redress}`,
+    `<p>Decision: <strong>${decision}</strong></p><p>Reasons: ${reasons}</p><p>No automated means made this decision.</p><p>${redress}</p>`)
+}

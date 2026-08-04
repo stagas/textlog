@@ -33,7 +33,7 @@ Also add a login rate-limit bucket keyed by account as well as IP; the current l
 
 ## Trust and legal readiness
 
-The current contact address is explicitly placeholder-like—“42 Quiet Street”—and should be removed or replaced before launch. See [contact.tsx](/home/stagas/work/stagas/root-mx/src/components/contact.tsx:17).
+The controller and contact is identified as Georgios Stagakis, with a Kallikratis postal address and telephone number. See [contact.tsx](/home/stagas/work/stagas/root-mx/src/components/contact.tsx:17).
 
 The combined legal page is too thin for an EU-based social service. A privacy notice should identify the controller, purposes and legal bases, retention, processors such as Resend/OpenAI, international transfers, user rights, and the relevant supervisory authority. Those are among the disclosures described by the [European Commission’s GDPR guidance](https://commission.europa.eu/law/law-topic/data-protection/rules-business-and-organisations/principles-gdpr/what-information-must-be-given-individuals-whose-data-collected_en). The current page provides only a short general paragraph; see [legal.tsx](/home/stagas/work/stagas/root-mx/src/components/legal.tsx:34).
 

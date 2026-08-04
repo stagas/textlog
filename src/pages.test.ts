@@ -31,11 +31,13 @@ test('API documentation is linked from the footer and describes the firehose', (
   expect(html).toContain('120 requests per minute')
 })
 
-test('Contact page shows placeholder details and is linked before legal in the footer', () => {
+test('Contact page shows operator details and is linked before legal in the footer', () => {
   const html = renderToStaticMarkup(React.createElement(Contact, { user: null }))
 
   expect(html).toContain('href="mailto:hello@root.mx"')
-  expect(html).toContain('42 Quiet Street')
+  expect(html).toContain('Kallikratis, Crete, Greece 730 11')
+  expect(html).toContain('href="tel:+306946600152"')
+  expect(html).toContain('href="/report-illegal-activity"')
   expect(html.indexOf('href="/contact"')).toBeLessThan(html.indexOf('href="/legal"'))
 })
 
@@ -52,7 +54,7 @@ describe('Auth', () => {
     const html = renderToStaticMarkup(React.createElement(Auth, { mode: 'signup' }))
 
     expect(html).toContain('pattern="[A-Za-z0-9_]{2,24}"')
-    expect(html).toContain('By signing up, you agree to our <a href="/legal">Terms of Service</a>.')
+    expect(html).toContain('By signing up, you agree to our <a href="/legal">Terms of Service</a> and Privacy Notice.')
   })
 
   test('login does not show the signup terms notice', () => {
