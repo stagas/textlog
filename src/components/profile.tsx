@@ -1,7 +1,8 @@
 import { type User } from '../db'
+import { PAGE_SIZE } from '../pagination'
 import type { PostView, ProfileRow } from '../types'
 import { Layout } from './layout'
-import { FormMessage, pageSize, Pagination, ProfileHeader, ProfileTabs } from './page-shared'
+import { FormMessage, Pagination, ProfileHeader, ProfileTabs } from './page-shared'
 import { Post } from './post'
 
 export function Profile(
@@ -104,7 +105,7 @@ export function Profile(
         )}
       {!editing && !blocked && !blockedByProfile && posts.map(post => <Post key={post.id} p={post} user={user} />)}
       {!editing && !blocked && !blockedByProfile
-        && <Pagination page={page} totalPages={Math.ceil(total / pageSize)} path={'/u/' + profile.handle} />}
+        && <Pagination page={page} totalPages={Math.ceil(total / PAGE_SIZE)} path={'/u/' + profile.handle} />}
     </Layout>
   )
 }

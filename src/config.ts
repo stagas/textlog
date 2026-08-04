@@ -18,6 +18,13 @@ export type StartupConfiguration = {
   moderationDisabled: boolean
 }
 
+const allowedEnvironments = ['development', 'test', 'production'] as const
+type StartupEnvironment = StartupConfiguration['environment']
+
+function isStartupEnvironment(value: string): value is StartupEnvironment {
+  return allowedEnvironments.some(environment => environment === value)
+}
+
 export class ConfigurationError extends Error {
   constructor(public readonly problems: string[]) {
     super(`Invalid startup configuration:\n- ${problems.join('\n- ')}`)
@@ -86,11 +93,9 @@ export function validateStartupConfiguration(env: Environment = Bun.env, options
   const problems: string[] = []
   const devReload = booleanValue(env, 'DEV_RELOAD', problems)
   const requestedEnvironment = (env.NODE_ENV || (devReload ? 'development' : 'production')).trim().toLowerCase()
-  const allowedEnvironments = ['development', 'test', 'production'] as const
-  const environment = allowedEnvironments.includes(requestedEnvironment as any)
-    ? requestedEnvironment as StartupConfiguration['environment']
-    : 'production'
-  if (!allowedEnvironments.includes(requestedEnvironment as any)) {
+  const validEnvironment = isStartupEnvironment(requestedEnvironment)
+  const environment: StartupEnvironment = validEnvironment ? requestedEnvironment : 'production'
+  if (!validEnvironment) {
     problems.push('NODE_ENV must be development, test, or production')
   }
   if (environment === 'production' && devReload) problems.push('DEV_RELOAD cannot be enabled in production')

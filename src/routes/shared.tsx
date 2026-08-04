@@ -1,7 +1,9 @@
 import { consumeAuthAttempt, rateLimitKey } from '../auth-rate-limit'
 import { feedPreferenceCookie, safeLocalPath, stringField } from '../http'
+import { PAGE_SIZE } from '../pagination'
 import { currentUser, hash, sessionToken, token } from '../utils'
 
+import type { Context } from 'hono'
 import React from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
 import { isAdmin } from '../admin'
@@ -31,7 +33,7 @@ export function currentPage(value?: string) {
   return Number.isInteger(parsed) && parsed > 0 ? parsed : 1
 }
 export function paginationRedirect(requestedPage: number, total: number, path: string) {
-  const lastPage = Math.max(1, Math.ceil(total / 20))
+  const lastPage = Math.max(1, Math.ceil(total / PAGE_SIZE))
   if (requestedPage <= lastPage) return null
   if (lastPage === 1) return redirect(path)
   return redirect(`${path}${path.includes('?') ? '&' : '?'}page=${lastPage}`)
@@ -45,7 +47,7 @@ export function usersBlocked(firstId: number, secondId: number) {
   return !!db.query(`SELECT 1 FROM blocks WHERE
     (blocker_id=? AND blocked_id=?) OR (blocker_id=? AND blocked_id=?)`).get(firstId, secondId, secondId, firstId)
 }
-export function clientAddress(c: any) {
+export function clientAddress(c: Context) {
   if (Bun.env.TRUST_PROXY === 'true') {
     const forwarded = c.req.header('cf-connecting-ip') || c.req.header('x-real-ip')
       || c.req.header('x-forwarded-for')?.split(',')[0]?.trim()
@@ -53,7 +55,7 @@ export function clientAddress(c: any) {
   }
   return c.req.header('x-root-client-ip') || 'unknown'
 }
-export function authLimit(c: any, scope: string, identity: string,
+export function authLimit(c: Context, scope: string, identity: string,
   policy: { attempts: number; windowSeconds: number })
 {
   return consumeAuthAttempt(db, scope, rateLimitKey(identity), policy.attempts, policy.windowSeconds)

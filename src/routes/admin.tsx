@@ -9,13 +9,14 @@ import {
   safeRefererPath,
 } from '../http'
 import type { AdminActionView, AdminReportView, DashboardStats, IllegalActivityReportView, PostRow, ProfileRow } from '../types'
-import { adminUser, currentPage, form, page, paginationRedirect, redirect } from './shared'
+import { currentPage, form, page, paginationRedirect, redirect } from './shared'
 
 import type { Hono } from 'hono'
 import { db } from '../db'
 import { currentUser } from '../utils'
 import { visitorStats } from '../visitors'
 import { sendReportDecision } from '../email'
+import { PAGE_SIZE } from '../pagination'
 
 export function registerAdminRoutes(app: Hono) {
   app.get('/admin', c => {
@@ -35,7 +36,7 @@ export function registerAdminRoutes(app: Hono) {
     (SELECT count(*) FROM users WHERE deleted_at IS NULL AND created_at>=datetime('now','-1 day')) users24h,
     (SELECT count(*) FROM users WHERE deleted_at IS NULL AND created_at>=datetime('now','-7 days')) users7d,
     (SELECT count(*) FROM posts WHERE deleted_at IS NULL AND created_at>=datetime('now','-1 day')) posts24h,
-    (SELECT count(*) FROM posts WHERE deleted_at IS NULL AND created_at>=datetime('now','-7 days')) posts7d`) as any
+    (SELECT count(*) FROM posts WHERE deleted_at IS NULL AND created_at>=datetime('now','-7 days')) posts7d`)
     const dashboardStats = { ...(stats.get() as Omit<DashboardStats, 'visitorsToday' | 'visitors7d'>),
       ...visitorStats(db) }
     const total = (db.query('SELECT count(*) count FROM reports WHERE status=?').get(status) as { count: number }).count
@@ -46,8 +47,8 @@ export function registerAdminRoutes(app: Hono) {
     reporter.handle reporter_handle,resolver.handle resolver_handle
     FROM reports r JOIN posts p ON p.id=r.post_id JOIN users author ON author.id=p.user_id
     JOIN users reporter ON reporter.id=r.reporter_id LEFT JOIN users resolver ON resolver.id=r.resolved_by
-    WHERE r.status=? ORDER BY r.created_at DESC,r.id DESC LIMIT 20 OFFSET ?`)
-      .all(status, (reportPage - 1) * 20) as AdminReportView[]
+    WHERE r.status=? ORDER BY r.created_at DESC,r.id DESC LIMIT ? OFFSET ?`)
+      .all(status, PAGE_SIZE, (reportPage - 1) * PAGE_SIZE) as AdminReportView[]
     const actions = db.query(`SELECT aa.id,aa.action,aa.note,aa.created_at,actor.handle actor_handle,
     aa.target_user_id,target.handle target_handle,aa.target_post_id
     FROM admin_actions aa JOIN users actor ON actor.id=aa.actor_id
@@ -65,9 +66,9 @@ export function registerAdminRoutes(app: Hono) {
   })
 
   app.post('/admin/illegal-reports/:id/:decision', async c => {
-    const user = adminUser(c.req.raw)
-    if (!currentUser(c.req.raw)) return redirect('/login?next=' + encodeURIComponent('/admin'))
-    if (!user) return c.text('Forbidden', 403)
+    const signedIn = currentUser(c.req.raw)
+    if (!signedIn) return redirect('/login?next=' + encodeURIComponent('/admin'))
+    if (!isAdmin(signedIn)) return c.text('Forbidden', 403)
     const id = Number(c.req.param('id'))
     const decision = c.req.param('decision')
     if (!Number.isInteger(id) || !['resolve', 'dismiss'].includes(decision)) return c.text('Not found', 404)
@@ -89,9 +90,9 @@ export function registerAdminRoutes(app: Hono) {
   })
 
   app.post('/admin/reports/:id/:decision', async c => {
-    const user = adminUser(c.req.raw)
-    if (!currentUser(c.req.raw)) return redirect('/login?next=' + encodeURIComponent('/admin'))
-    if (!user) return c.text('Forbidden', 403)
+    const signedIn = currentUser(c.req.raw)
+    if (!signedIn) return redirect('/login?next=' + encodeURIComponent('/admin'))
+    if (!isAdmin(signedIn)) return c.text('Forbidden', 403)
     const id = Number(c.req.param('id'))
     const decision = c.req.param('decision')
     if (!Number.isInteger(id) || !['resolve', 'dismiss'].includes(decision)) return c.text('Not found', 404)
@@ -102,8 +103,8 @@ export function registerAdminRoutes(app: Hono) {
     const f = await form(c.req.raw)
     db.transaction(() => {
       db.query(`UPDATE reports SET status=?,resolved_at=CURRENT_TIMESTAMP,resolved_by=? WHERE id=? AND status='open'`)
-        .run(decision === 'resolve' ? 'resolved' : 'dismissed', user.id, id)
-      recordAdminAction(db, user.id, decision === 'resolve' ? 'resolve_report' : 'dismiss_report', null, report.post_id,
+        .run(decision === 'resolve' ? 'resolved' : 'dismissed', signedIn.id, id)
+      recordAdminAction(db, signedIn.id, decision === 'resolve' ? 'resolve_report' : 'dismiss_report', null, report.post_id,
         f.note || '')
     })()
     return redirect('/admin')

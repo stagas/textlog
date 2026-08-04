@@ -1,7 +1,8 @@
 import { type User } from '../db'
+import { PAGE_SIZE } from '../pagination'
 import type { PersonView, ProfileRow } from '../types'
 import { Layout } from './layout'
-import { ConnectionPeople, pageSize, Pagination, ProfileHeader, ProfileTabs, TagPeopleList } from './page-shared'
+import { ConnectionPeople, Pagination, ProfileHeader, ProfileTabs, TagPeopleList } from './page-shared'
 
 export function Connections(
   { user, profile, people, tags = [], kind, page, total, noteCount, followerCount, followingCount, followingTagCount,
@@ -50,7 +51,7 @@ export function Connections(
             @{profile.handle} {kind === 'following' ? 'isn’t following anyone yet.' : 'has no followers yet.'}
           </div>
         )}
-      <Pagination page={page} totalPages={Math.ceil(total / pageSize)} path={`/u/${profile.handle}?tab=${kind}`} />
+      <Pagination page={page} totalPages={Math.ceil(total / PAGE_SIZE)} path={`/u/${profile.handle}?tab=${kind}`} />
     </Layout>
   )
 }

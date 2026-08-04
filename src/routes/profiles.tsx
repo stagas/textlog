@@ -2,12 +2,13 @@ import {
   Connections,
   Profile,
 } from '../components/pages'
-import type { PostView, ProfileRow } from '../types'
+import type { PersonView, PostView, ProfileRow } from '../types'
 import { currentPage, page, paginationRedirect, redirect } from './shared'
 
 import type { Hono } from 'hono'
 import { db } from '../db'
 import { renderProfileOg } from '../og'
+import { PAGE_SIZE } from '../pagination'
 import { enrichPosts } from '../posts'
 import { currentUser } from '../utils'
 import { resolveHandle } from '../handles'
@@ -69,8 +70,8 @@ export function registerProfilesRoutes(app: Hono) {
     const tab = c.req.query('tab')
     if (tab && tab !== 'following' && tab !== 'followers') return c.text('Not found', 404)
     const posts = enrichPosts(db, db.query(
-      'SELECT p.*,u.handle FROM posts p JOIN users u ON u.id=p.user_id WHERE p.user_id=? AND p.deleted_at IS NULL ORDER BY p.created_at DESC LIMIT 20 OFFSET ?',
-    ).all(profile.id, (profilePage - 1) * 20) as PostView[], user?.id ?? -1)
+      'SELECT p.*,u.handle FROM posts p JOIN users u ON u.id=p.user_id WHERE p.user_id=? AND p.deleted_at IS NULL ORDER BY p.created_at DESC LIMIT ? OFFSET ?',
+    ).all(profile.id, PAGE_SIZE, (profilePage - 1) * PAGE_SIZE) as PostView[], user?.id ?? -1)
     const total =
       (db.query('SELECT count(*) AS count FROM posts WHERE user_id=? AND deleted_at IS NULL').get(profile.id) as {
         count: number
@@ -127,9 +128,9 @@ export function registerProfilesRoutes(app: Hono) {
         EXISTS(SELECT 1 FROM follows vf WHERE vf.follower_id=? AND vf.following_id=u.id) viewerFollowing
         FROM users u ${join} AND (? < 0 OR NOT EXISTS (SELECT 1 FROM blocks b WHERE
           (b.blocker_id=? AND b.blocked_id=u.id) OR (b.blocker_id=u.id AND b.blocked_id=?)))
-        ORDER BY u.handle LIMIT 20 OFFSET ?`,
+        ORDER BY u.handle LIMIT ? OFFSET ?`,
       ).all(viewerId, profile.id, viewerId, viewerId, viewerId,
-        (profilePage - 1) * 20) as import('../types').PersonView[]
+        PAGE_SIZE, (profilePage - 1) * PAGE_SIZE) as PersonView[]
       const countWhere = tab === 'following' ? 'follower_id=?' : 'following_id=?'
       const counterpart = tab === 'following' ? 'f.following_id' : 'f.follower_id'
       const connectionTotal = (db.query(`SELECT count(*) AS count FROM follows f WHERE ${countWhere}

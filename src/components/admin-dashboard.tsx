@@ -1,8 +1,9 @@
 import { type User } from '../db'
+import { PAGE_SIZE } from '../pagination'
 import type { AdminActionView, AdminReportView, DashboardStats, IllegalActivityReportView, ProfileRow } from '../types'
 import { fmtFull } from '../utils'
 import { Layout } from './layout'
-import { pageSize, Pagination } from './page-shared'
+import { Pagination } from './page-shared'
 
 export function AdminDashboard({ user, stats, reports, actions, illegalReports = [], status, page, total, suspended = [] }: {
   user: User
@@ -117,7 +118,7 @@ export function AdminDashboard({ user, stats, reports, actions, illegalReports =
             </div>
           )
           : <div className="empty admin-empty">No {status} reports.</div>}
-        <Pagination page={page} totalPages={Math.ceil(total / pageSize)} path={`/admin?status=${status}`} />
+        <Pagination page={page} totalPages={Math.ceil(total / PAGE_SIZE)} path={`/admin?status=${status}`} />
       </section>
       <section className="admin-section admin-suspended">
         <h2>

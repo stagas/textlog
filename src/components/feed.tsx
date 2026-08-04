@@ -1,8 +1,9 @@
 import { db, type User } from '../db'
+import { PAGE_SIZE } from '../pagination'
 import { enrichPosts } from '../posts'
 import type { PostView } from '../types'
 import { Layout } from './layout'
-import { FeedTabs, pageSize, Pagination } from './page-shared'
+import { FeedTabs, Pagination } from './page-shared'
 import { Post } from './post'
 
 export function Feed({ user, page, title }: { user: User; page: number; title?: string }) {
@@ -10,12 +11,12 @@ export function Feed({ user, page, title }: { user: User; page: number; title?: 
     `SELECT count(*) AS count FROM posts p WHERE p.deleted_at IS NULL AND (p.user_id=? OR p.user_id IN (SELECT following_id FROM follows WHERE follower_id=?) OR p.id IN (SELECT ph.post_id FROM post_hashtags ph JOIN hashtag_follows hf ON hf.tag=ph.tag WHERE hf.user_id=?))
       AND NOT EXISTS (SELECT 1 FROM blocks b WHERE (b.blocker_id=? AND b.blocked_id=p.user_id) OR (b.blocker_id=p.user_id AND b.blocked_id=?))`,
   ).get(user.id, user.id, user.id, user.id, user.id) as { count: number }).count
-  const totalPages = Math.ceil(total / pageSize)
+  const totalPages = Math.ceil(total / PAGE_SIZE)
   const posts = enrichPosts(db, db.query(
     `SELECT p.*,u.handle, EXISTS(SELECT 1 FROM follows f WHERE f.follower_id=? AND f.following_id=p.user_id) following FROM posts p JOIN users u ON u.id=p.user_id WHERE p.deleted_at IS NULL AND (p.user_id=? OR p.user_id IN (SELECT following_id FROM follows WHERE follower_id=?) OR p.id IN (SELECT ph.post_id FROM post_hashtags ph JOIN hashtag_follows hf ON hf.tag=ph.tag WHERE hf.user_id=?))
       AND NOT EXISTS (SELECT 1 FROM blocks b WHERE (b.blocker_id=? AND b.blocked_id=p.user_id) OR (b.blocker_id=p.user_id AND b.blocked_id=?))
       ORDER BY p.created_at DESC LIMIT ? OFFSET ?`,
-  ).all(user.id, user.id, user.id, user.id, user.id, user.id, pageSize, (page - 1) * pageSize) as PostView[], user.id)
+  ).all(user.id, user.id, user.id, user.id, user.id, user.id, PAGE_SIZE, (page - 1) * PAGE_SIZE) as PostView[], user.id)
   return (
     <Layout user={user} title={title}>
       <h1 className="visually-hidden">Your feed</h1>

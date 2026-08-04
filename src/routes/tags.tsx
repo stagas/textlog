@@ -6,6 +6,7 @@ import {
 } from '../components/pages'
 import { db } from '../db'
 import { renderTagOg } from '../og'
+import { PAGE_SIZE } from '../pagination'
 import { enrichPosts } from '../posts'
 import type { PostView } from '../types'
 import { currentUser } from '../utils'
@@ -38,8 +39,8 @@ export function registerTagsRoutes(app: Hono) {
       `SELECT p.*,u.handle FROM posts p JOIN users u ON u.id=p.user_id JOIN post_hashtags ph ON ph.post_id=p.id
       WHERE ph.tag=? AND p.deleted_at IS NULL AND (? < 0 OR NOT EXISTS (SELECT 1 FROM blocks b WHERE
         (b.blocker_id=? AND b.blocked_id=p.user_id) OR (b.blocker_id=p.user_id AND b.blocked_id=?)))
-      ORDER BY p.created_at DESC LIMIT 20 OFFSET ?`,
-    ).all(tag, viewerId, viewerId, viewerId, (tagPage - 1) * 20) as PostView[], viewerId)
+      ORDER BY p.created_at DESC LIMIT ? OFFSET ?`,
+    ).all(tag, viewerId, viewerId, viewerId, PAGE_SIZE, (tagPage - 1) * PAGE_SIZE) as PostView[], viewerId)
     const total = (db.query(`SELECT count(*) AS count FROM post_hashtags ph JOIN posts p ON p.id=ph.post_id
       WHERE ph.tag=? AND p.deleted_at IS NULL AND (? < 0 OR NOT EXISTS (SELECT 1 FROM blocks b WHERE
         (b.blocker_id=? AND b.blocked_id=p.user_id) OR (b.blocker_id=p.user_id AND b.blocked_id=?)))`)

@@ -1,8 +1,9 @@
 import { db, type User } from '../db'
+import { PAGE_SIZE } from '../pagination'
 import { enrichPosts } from '../posts'
 import type { PostView } from '../types'
 import { Layout } from './layout'
-import { pageSize, Pagination } from './page-shared'
+import { Pagination } from './page-shared'
 import { Post } from './post'
 
 const activityPostWhere = `p.deleted_at IS NULL AND
@@ -47,8 +48,8 @@ export function Activity({ user, page }: { user: User; page: number }) {
           (SELECT 1 FROM blocks b WHERE (b.blocker_id=? AND b.blocked_id=f.follower_id)
             OR (b.blocker_id=f.follower_id AND b.blocked_id=?))
       ) ORDER BY created_at DESC LIMIT ? OFFSET ?`,
-  ).all(user.id, user.id, user.id, user.id, user.id, user.id, user.id, user.id, user.id, user.id, pageSize,
-    (page - 1) * pageSize) as (PostView & { activity_kind: 'reply' | 'mention' | 'follow'; posts: number | null;
+  ).all(user.id, user.id, user.id, user.id, user.id, user.id, user.id, user.id, user.id, user.id, PAGE_SIZE,
+    (page - 1) * PAGE_SIZE) as (PostView & { activity_kind: 'reply' | 'mention' | 'follow'; posts: number | null;
       viewerFollowing: boolean | null; bio: string | null })[]
   const activity = enrichPosts(db, posts.filter(post => post.activity_kind !== 'follow'), user.id)
   const activityById = new Map(activity.map(post => [post.id, post]))
@@ -109,7 +110,7 @@ export function Activity({ user, page }: { user: User; page: number }) {
             No activity on this page. <a href="/activity">Return to the first page</a>.
           </div>
         )}
-      <Pagination page={page} totalPages={Math.ceil(total / pageSize)} path="/activity" />
+      <Pagination page={page} totalPages={Math.ceil(total / PAGE_SIZE)} path="/activity" />
     </Layout>
   )
 }

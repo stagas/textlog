@@ -1,9 +1,8 @@
-import React from "react"
-import { isAdmin } from "../admin"
-import type { User } from "../db"
-import type { PostView, ProfileRow } from "../types"
+import React from 'react'
+import { isAdmin } from '../admin'
+import type { User } from '../db'
+import type { PersonView, PostView, ProfileRow, TagView } from '../types'
 
-export const pageSize = 20
 const postTitleLength = 60
 
 export function postTitle(body: string) {
@@ -179,7 +178,7 @@ export function ProfileTabs({ profile, active, notes, followers, following, foll
 
 export function TagPeopleList({ user, tags, followingKey = 'following' }: {
   user: User | null
-  tags: any[]
+  tags: TagView[]
   followingKey?: 'following' | 'viewerFollowing'
 }) {
   return (
@@ -207,7 +206,7 @@ export function TagPeopleList({ user, tags, followingKey = 'following' }: {
 
 export function ConnectionPeople({ user, people, className = '' }: {
   user: User | null
-  people: any[]
+  people: PersonView[]
   className?: string
 }) {
   return (

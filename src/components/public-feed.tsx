@@ -1,8 +1,9 @@
 import { db, type User } from '../db'
+import { PAGE_SIZE } from '../pagination'
 import { enrichPosts } from '../posts'
 import type { PostView } from '../types'
 import { Layout } from './layout'
-import { FeedTabs, GlobalFeedEmpty, pageSize, Pagination } from './page-shared'
+import { FeedTabs, GlobalFeedEmpty, Pagination } from './page-shared'
 import { Post } from './post'
 
 export function PublicFeed(
@@ -16,7 +17,7 @@ export function PublicFeed(
     `SELECT p.*,u.handle FROM posts p JOIN users u ON u.id=p.user_id WHERE p.deleted_at IS NULL AND (? < 0 OR NOT EXISTS
       (SELECT 1 FROM blocks b WHERE (b.blocker_id=? AND b.blocked_id=p.user_id) OR (b.blocker_id=p.user_id AND b.blocked_id=?)))
       ORDER BY p.created_at DESC LIMIT ? OFFSET ?`,
-  ).all(viewerId, viewerId, viewerId, pageSize, (page - 1) * pageSize) as PostView[], viewerId)
+  ).all(viewerId, viewerId, viewerId, PAGE_SIZE, (page - 1) * PAGE_SIZE) as PostView[], viewerId)
   return (
     <Layout user={user} title={path === '/latest' ? 'latest' : undefined}>
       <h1 className="visually-hidden">Latest notes</h1>
@@ -30,7 +31,7 @@ export function PublicFeed(
             No notes on this page. <a href={path}>Return to the first page</a>.
           </div>
         )}
-      <Pagination page={page} totalPages={Math.ceil(total / pageSize)} path={path} />
+      <Pagination page={page} totalPages={Math.ceil(total / PAGE_SIZE)} path={path} />
     </Layout>
   )
 }

@@ -1,5 +1,5 @@
 import type { Database } from 'bun:sqlite'
-import type { Hono } from 'hono'
+import type { Context, Hono } from 'hono'
 import { consumeAuthAttempt, rateLimitKey } from '../auth-rate-limit'
 import { apiHotPosts, apiOrigin, apiPost, apiPosts, parseCollectionParams, isoTimestamp } from '../api'
 import { subscribeToPosts } from '../api-broker'
@@ -30,7 +30,9 @@ function apiError(code: string, message: string, status: number, retryAfter?: nu
   return response
 }
 
-function collection(c: any, database: Database, filters: { handle?: string; parentId?: number; tag?: string } = {}) {
+function collection(c: Context, database: Database,
+  filters: { handle?: string; parentId?: number; tag?: string } = {})
+{
   const parsed = parseCollectionParams(c.req.query('limit'), c.req.query('cursor'))
   if (!parsed) return apiError('invalid_pagination', 'limit must be 1–100 and cursor must be a valid opaque cursor', 400)
   return jsonResponse(apiPosts(database, apiOrigin(c.req.url), { ...parsed, ...filters }))

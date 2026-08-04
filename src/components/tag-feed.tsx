@@ -1,7 +1,8 @@
 import { type User } from '../db'
+import { PAGE_SIZE } from '../pagination'
 import type { PostView } from '../types'
 import { Layout } from './layout'
-import { pageSize, Pagination } from './page-shared'
+import { Pagination } from './page-shared'
 import { Post } from './post'
 
 export function TagFeed(
@@ -35,7 +36,7 @@ export function TagFeed(
       {posts.length
         ? posts.map(post => <Post p={post} user={user} key={post.id} />)
         : <div className="empty">No notes use this hashtag yet.</div>}
-      <Pagination page={page} totalPages={Math.ceil(total / pageSize)} path={'/tag/' + tag} />
+      <Pagination page={page} totalPages={Math.ceil(total / PAGE_SIZE)} path={'/tag/' + tag} />
     </Layout>
   )
 }

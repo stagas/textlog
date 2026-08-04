@@ -80,3 +80,10 @@ export type PersonView = ProfileRow & {
   following?: boolean
   viewerFollowing?: boolean
 }
+
+export type TagView = {
+  tag: string
+  count: number
+  following?: boolean
+  viewerFollowing?: boolean
+}

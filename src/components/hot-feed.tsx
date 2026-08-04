@@ -1,18 +1,19 @@
 import { db, type User } from '../db'
 import { encodeHotCursor, getHotPosts, hotCursor, type HotCursor } from '../hot'
+import { PAGE_SIZE } from '../pagination'
 import { enrichPosts } from '../posts'
 import { Layout } from './layout'
-import { FeedTabs, GlobalFeedEmpty, pageSize } from './page-shared'
+import { FeedTabs, GlobalFeedEmpty } from './page-shared'
 import { Post } from './post'
 
 export function HotFeed({ cursor, user, title, path = '/hot' }: { cursor: HotCursor | null; user: User | null;
   title?: string; path?: string }) {
   const viewerId = user?.id ?? -1
   const asOf = cursor?.asOf || new Date().toISOString()
-  const ranked = getHotPosts(db, pageSize + 1, cursor, asOf, viewerId)
-  const hasMore = ranked.length > pageSize
+  const ranked = getHotPosts(db, PAGE_SIZE + 1, cursor, asOf, viewerId)
+  const hasMore = ranked.length > PAGE_SIZE
   const pageRows = cursor?.direction === 'previous' && hasMore
-    ? ranked.slice(1) : ranked.slice(0, pageSize)
+    ? ranked.slice(1) : ranked.slice(0, PAGE_SIZE)
   const posts = enrichPosts(db, pageRows, viewerId)
   const canGoBack = Boolean(cursor) && (cursor!.direction === 'next' || hasMore)
   const canGoNext = cursor?.direction === 'previous' || hasMore
