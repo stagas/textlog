@@ -392,6 +392,19 @@ nav form {
   line-height: 1.75;
 }
 
+.about-actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--space-4);
+  margin-top: var(--space-4);
+  font-size: 11px;
+}
+
+.about-actions span {
+  color: var(--muted);
+}
+
 .static-page .legal-updated {
   margin-top: calc(-1 * var(--space-5));
   color: var(--muted);

@@ -12,8 +12,19 @@ export function About({ user }: { user: User | null }) {
           without turning every thought into a performance.
         </p>
         <p>
-          Posts are limited to 280 characters. That constraint is intentional—it keeps the site quick to read and
-          encourages people to say one thing at a time.
+          Notes are limited to 280 characters. The constraint keeps them quick to write and read, making room for one
+          thought at a time.
+        </p>
+        <h2>Small by design</h2>
+        <p>
+          root.mx is built around words: notes, people, hashtags, and conversations. It is intentionally small,
+          straightforward, and easy to follow. There are no engagement tricks or pressure to build an audience.
+        </p>
+        <p>
+          Your profile and notes are public. Joining is free, and you can download or delete your account data whenever
+          you like. If you feel like it, you can also{' '}
+          <a href="https://buymeacoffee.com/stagas" target="_blank" rel="noopener noreferrer">donate</a>{' '}
+          to support the service.
         </p>
         <h2>Be a good neighbour</h2>
         <p>
@@ -21,6 +32,16 @@ export function About({ user }: { user: User | null }) {
           abuse, spam, impersonation, or anything unlawful. We may moderate or remove content that puts the community or
           the service at risk.
         </p>
+        {!user && (
+          <>
+            <h2>What's next?</h2>
+            <div className="about-actions">
+              <a className="button" href="/signup">join the community</a>
+              <span>or</span>
+              <a href="/">browse notes</a>
+            </div>
+          </>
+        )}
       </article>
     </Layout>
   )

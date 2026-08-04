@@ -44,6 +44,28 @@ test('Contact page shows operator details and is linked before legal in the foot
   expect(html.indexOf('href="/contact"')).toBeLessThan(html.indexOf('href="/legal"'))
 })
 
+describe('About', () => {
+  test('offers guest visitors a way to join or browse notes', () => {
+    const html = renderToStaticMarkup(React.createElement(About, { user: null }))
+
+    expect(html).toContain('Small by design')
+    expect(html).toContain('Your profile and notes are public')
+    expect(html).toContain('download or delete your account data')
+    expect(html).toContain('class="about-actions"')
+    expect(html).toContain('class="button" href="/signup">join</a>')
+    expect(html).toContain('href="/">browse notes</a>')
+  })
+
+  test('does not show the guest calls to action to signed-in visitors', () => {
+    const html = renderToStaticMarkup(React.createElement(About, {
+      user: { id: 1, handle: 'reader', email: 'reader@example.com', bio: '' },
+    }))
+
+    expect(html).not.toContain('class="about-actions"')
+    expect(html).not.toContain('>browse notes</a>')
+  })
+})
+
 describe('Auth', () => {
   test('login accepts an email address or handle', () => {
     const html = renderToStaticMarkup(React.createElement(Auth, { mode: 'login' }))
