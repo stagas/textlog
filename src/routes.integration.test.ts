@@ -233,6 +233,32 @@ test('consequential account, content, reporting, and admin flows work over HTTP'
   })
   expect(createPost.status).toBe(303)
   expect(createPost.headers.get('location')).toBe('/latest')
+
+  const routeOversizedPost = await request('/post', {
+    method: 'POST',
+    cookie: aliceCookie,
+    form: { body: 'x'.repeat(9 * 1024) },
+  })
+  expect(routeOversizedPost.status).toBe(413)
+  expect(await routeOversizedPost.text()).toBe('Payload Too Large')
+
+  const globallyOversizedPost = await request('/post', {
+    method: 'POST',
+    cookie: aliceCookie,
+    form: { body: 'x'.repeat(65 * 1024) },
+  })
+  expect(globallyOversizedPost.status).toBe(413)
+  expect(await globallyOversizedPost.text()).toBe('Payload Too Large')
+
+  const unsupportedPost = await fetch(`${origin}/post`, {
+    method: 'POST',
+    headers: { origin, cookie: aliceCookie, 'content-type': 'application/json' },
+    body: '{}',
+    redirect: 'manual',
+  })
+  expect(unsupportedPost.status).toBe(415)
+  expect(await unsupportedPost.text()).toBe('Unsupported Media Type')
+
   const post = database.query('SELECT id,body FROM posts WHERE user_id=? ORDER BY id DESC LIMIT 1')
     .get(alice.id) as { id: number; body: string }
   expect(post.body).toBe('A route-level integration post')

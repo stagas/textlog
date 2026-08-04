@@ -1,5 +1,5 @@
 import { consumeAuthAttempt, rateLimitKey } from '../auth-rate-limit'
-import { feedPreferenceCookie, safeLocalPath, stringField } from '../http'
+import { feedPreferenceCookie, limitedFormData, safeLocalPath, stringField } from '../http'
 import { PAGE_SIZE } from '../pagination'
 import { currentUser, hash, sessionToken, token } from '../utils'
 
@@ -95,8 +95,8 @@ export function securityPage(req: Request, error?: string, success?: string, sta
   )
   return page(<AccountSecurity user={user} sessions={sessions} error={error} success={success} />, status)
 }
-export async function form(req: Request) {
-  const data = await req.formData()
+export async function form(req: Request, maxBytes?: number) {
+  const data = await limitedFormData(req, maxBytes)
   return new Proxy({} as Record<string, string>, {
     get: (_, property) => typeof property === 'string' ? stringField(data, property) : undefined,
   })

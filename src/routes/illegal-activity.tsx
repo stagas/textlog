@@ -3,6 +3,7 @@ import { AUTH_LIMITS, authRateLimitMessage } from '../auth-rate-limit'
 import { IllegalActivityReport } from '../components/pages'
 import { db } from '../db'
 import { sendReportReceipt } from '../email'
+import { ILLEGAL_REPORT_BODY_LIMIT } from '../http'
 import { currentUser, token } from '../utils'
 import { form, page } from './shared'
 import { authLimit, clientAddress, retryPage } from './shared'
@@ -16,7 +17,7 @@ export function registerIllegalActivityRoutes(app: Hono) {
 
   app.post('/report-illegal-activity', async c => {
     const user = currentUser(c.req.raw)
-    const values = await form(c.req.raw)
+    const values = await form(c.req.raw, ILLEGAL_REPORT_BODY_LIMIT)
     const limited = authLimit(c, 'illegal-report-ip', clientAddress(c), AUTH_LIMITS.illegalReportIp)
     if (limited) {
       return retryPage(

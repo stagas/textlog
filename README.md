@@ -22,6 +22,9 @@ characters, and `OPENAI_API_KEY` unless moderation has been
 explicitly disabled. Invalid URLs, booleans, ports, retention values, database files, and storage permissions stop
 startup with a combined error message that does not print secret values.
 
+Request bodies are capped at 64 KiB globally. Form endpoints accept only URL-encoded or multipart form data and use an
+8 KiB limit by default; the detailed illegal-activity report form allows 16 KiB. Oversized bodies return HTTP 413.
+
 `DATABASE_PATH` and `DATABASE_BACKUP_DIR` must be writable. Set `TRUST_PROXY=true` only behind a trusted proxy that
 overwrites forwarded client-address headers. Development remains integration-optional through `bun run dev`.
 

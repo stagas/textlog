@@ -1,6 +1,7 @@
-import { isSameOriginRequest, securityHeaders } from './http'
+import { GLOBAL_REQUEST_BODY_LIMIT, isSameOriginRequest, RequestBodyError, securityHeaders } from './http'
 
 import { Hono } from 'hono'
+import { bodyLimit } from 'hono/body-limit'
 import { configureDevReload } from './components/layout'
 import { compressResponse } from './compression'
 import { db } from './db'
@@ -25,6 +26,11 @@ configureDevReload(devReloadEnabled ? bootId : undefined)
 const app = new Hono()
 const stylesPath = new URL('./styles.css', import.meta.url).pathname
 const styles = devReloadEnabled ? undefined : await loadStylesAsset(stylesPath)
+
+app.use('*', bodyLimit({
+  maxSize: GLOBAL_REQUEST_BODY_LIMIT,
+  onError: c => c.text('Payload Too Large', 413),
+}))
 
 app.use('*', async (c, next) => {
   await next()
@@ -120,6 +126,7 @@ registerProfilesRoutes(app)
 registerTagsRoutes(app)
 app.notFound(c => c.text('Not found', 404))
 app.onError((error, c) => {
+  if (error instanceof RequestBodyError) return c.text(error.message, error.status)
   logError(`${c.req.method} ${new URL(c.req.url).pathname}`, error)
   return c.text('Something went wrong', 500)
 })

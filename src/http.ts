@@ -3,6 +3,45 @@ export function stringField(data: FormData, name: string) {
   return typeof value === 'string' ? value : ''
 }
 
+export const GLOBAL_REQUEST_BODY_LIMIT = 64 * 1024
+export const FORM_REQUEST_BODY_LIMIT = 8 * 1024
+export const ILLEGAL_REPORT_BODY_LIMIT = 16 * 1024
+
+export class RequestBodyError extends Error {
+  constructor(public readonly status: 400 | 413 | 415, message: string) {
+    super(message)
+    this.name = 'RequestBodyError'
+  }
+}
+
+export async function limitedFormData(request: Request, maxBytes = FORM_REQUEST_BODY_LIMIT) {
+  const contentType = request.headers.get('content-type')?.toLowerCase() || ''
+  const mediaType = contentType.split(';', 1)[0].trim()
+  if (mediaType !== 'application/x-www-form-urlencoded' && mediaType !== 'multipart/form-data')
+  {
+    throw new RequestBodyError(415, 'Unsupported Media Type')
+  }
+
+  const declaredLength = Number(request.headers.get('content-length'))
+  if (Number.isFinite(declaredLength) && declaredLength > maxBytes) {
+    throw new RequestBodyError(413, 'Payload Too Large')
+  }
+
+  const body = await request.arrayBuffer()
+  if (body.byteLength > maxBytes) throw new RequestBodyError(413, 'Payload Too Large')
+
+  try {
+    return await new Request(request.url, {
+      method: request.method,
+      headers: request.headers,
+      body,
+    }).formData()
+  }
+  catch {
+    throw new RequestBodyError(400, 'Invalid Form Body')
+  }
+}
+
 export function safeLocalPath(value: string | undefined, requestUrl?: string, fallback = '/') {
   if (!value || !value.startsWith('/') || value.startsWith('//') || value.includes('\\')) return fallback
   try {

@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, test } from 'bun:test'
-import { clearSessionCookie, feedPreference, feedPreferenceCookie, isSameOriginRequest, safeLocalPath, safeRefererPath,
-  securityHeaders, sessionCookie, stringField } from './http'
+import { clearSessionCookie, feedPreference, feedPreferenceCookie, FORM_REQUEST_BODY_LIMIT, isSameOriginRequest,
+  limitedFormData, RequestBodyError, safeLocalPath, safeRefererPath, securityHeaders, sessionCookie, stringField } from './http'
 
 const previousAppUrl = Bun.env.APP_URL
 afterEach(() => {
@@ -43,6 +43,49 @@ describe('request values and cookies', () => {
     const data = new FormData()
     data.set('body', new File(['text'], 'body.txt'))
     expect(stringField(data, 'body')).toBe('')
+  })
+
+  test('parses supported form bodies within the application limit', async () => {
+    const request = new Request('https://root.mx/post', {
+      method: 'POST',
+      headers: { 'content-type': 'application/x-www-form-urlencoded' },
+      body: 'body=hello+root',
+    })
+    const data = await limitedFormData(request)
+    expect(stringField(data, 'body')).toBe('hello root')
+  })
+
+  test('rejects oversized form bodies even without relying on content-length', async () => {
+    const request = new Request('https://root.mx/post', {
+      method: 'POST',
+      headers: { 'content-type': 'application/x-www-form-urlencoded' },
+      body: `body=${'x'.repeat(FORM_REQUEST_BODY_LIMIT)}`,
+    })
+    request.headers.delete('content-length')
+    expect(limitedFormData(request)).rejects.toMatchObject({ status: 413, message: 'Payload Too Large' })
+  })
+
+  test('parses multipart forms and ignores file values', async () => {
+    const body = new FormData()
+    body.set('message', 'hello')
+    body.set('attachment', new File(['text'], 'note.txt'))
+    const data = await limitedFormData(new Request('https://root.mx/report', { method: 'POST', body }))
+    expect(stringField(data, 'message')).toBe('hello')
+    expect(stringField(data, 'attachment')).toBe('')
+  })
+
+  test('rejects unsupported form content types', async () => {
+    const request = new Request('https://root.mx/post', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: '{}',
+    })
+    expect(limitedFormData(request)).rejects.toBeInstanceOf(RequestBodyError)
+    expect(limitedFormData(new Request('https://root.mx/post', {
+      method: 'POST',
+      headers: { 'content-type': 'text/plain' },
+      body: 'body=hello',
+    }))).rejects.toMatchObject({ status: 415, message: 'Unsupported Media Type' })
   })
 
   test('hardens session cookies and enables Secure for HTTPS deployments', () => {
