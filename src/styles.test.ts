@@ -26,6 +26,7 @@ describe('in-memory stylesheet', () => {
       headers: { 'if-none-match': asset.etag },
     }))
     expect(response.status).toBe(304)
+    expect(response.headers.get('cache-control')).toBe('public, max-age=31536000, immutable')
   })
 
   test('disables caching and revalidation in development', async () => {

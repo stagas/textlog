@@ -50,7 +50,7 @@ export async function loadStylesAsset(path: string): Promise<StylesAsset> {
 export function stylesResponse(asset: StylesAsset, request: Request, cache = true) {
   const headers = new Headers({
     'content-type': 'text/css; charset=utf-8',
-    'cache-control': cache ? 'public, max-age=0, must-revalidate' : 'no-store',
+    'cache-control': cache ? 'public, max-age=31536000, immutable' : 'no-store',
     vary: 'Accept-Encoding',
   })
   if (cache) {
