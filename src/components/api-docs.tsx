@@ -20,7 +20,7 @@ export function ApiDocs({ user }: { user: User | null }) {
 
         <h2>Base URL</h2>
         <pre><code>https://root.mx/api/v1</code></pre>
-        <p>All JSON endpoints allow cross-origin requests. The machine-readable specification is at{' '}
+        <p>All API endpoints allow cross-origin requests. The machine-readable specification is at{' '}
           <a href="/api/openapi.json">/api/openapi.json</a>.</p>
 
         <h2>Endpoints</h2>
@@ -43,6 +43,14 @@ export function ApiDocs({ user }: { user: User | null }) {
           <dd>New posts as a live server-sent event stream.</dd>
         </dl>
 
+        <h2>RSS and Atom</h2>
+        <p>Feed collections are also available as RSS 2.0 or Atom 1.0. Add <code>.rss</code> or{' '}
+          <code>.atom</code> to the collection address and enter it manually in a feed reader.</p>
+        <pre><code>{`/feeds/latest.rss
+/feeds/hot.atom
+/users/:handle/posts.rss
+/tags/:tag/posts.atom`}</code></pre>
+
         <h2>Pagination</h2>
         <p>Collections accept <code>limit</code> from 1–100 (default 20). Pass the opaque{' '}
           <code>pagination.next_cursor</code> value back as <code>cursor</code> to fetch the next page.</p>
@@ -57,7 +65,7 @@ events.addEventListener('post', event => {
 })`}</code></pre>
 
         <h2>Limits and errors</h2>
-        <p>JSON reads are limited to 120 requests per minute per IP. Firehose clients may hold three simultaneous
+        <p>API reads are limited to 120 requests per minute per IP. Firehose clients may hold three simultaneous
           connections per IP. A limited response uses <code>429</code> and includes <code>Retry-After</code>.</p>
         <pre><code>{`{
   "error": { "code": "not_found", "message": "Post not found" }

@@ -125,13 +125,17 @@ describe('public API', () => {
   test('supports preflight, publishes OpenAPI, and rejects mutation methods', async () => {
     const { app } = fixture()
     const preflight = await request(app, '/api/v1/feeds/latest', { method: 'OPTIONS' })
+    const rss = await request(app, '/api/v1/feeds/latest.rss')
     const spec = await (await request(app, '/api/openapi.json')).json() as any
     const mutation = await request(app, '/api/v1/feeds/latest', { method: 'POST' })
 
     expect(preflight.status).toBe(204)
     expect(preflight.headers.get('access-control-allow-methods')).toContain('OPTIONS')
+    expect(rss.headers.get('content-type')).toBe('application/rss+xml; charset=utf-8')
+    expect(rss.headers.get('access-control-allow-origin')).toBe('*')
     expect(spec.openapi).toBe('3.1.0')
-    expect(Object.keys(spec.paths)).toHaveLength(8)
+    expect(Object.keys(spec.paths)).toHaveLength(12)
+    expect(spec.paths['/feeds/latest.{format}'].get.parameters[0].schema.enum).toEqual(['rss', 'atom'])
     expect(mutation.status).toBe(405)
     expect(mutation.headers.get('allow')).toBe('GET, HEAD, OPTIONS')
     const missing = await request(app, '/api/v1/unknown')

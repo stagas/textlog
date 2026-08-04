@@ -10,6 +10,7 @@ import { currentUser } from '../utils'
 import { page } from './shared'
 import { resolveHandle } from '../handles'
 import { decodeHotCursor } from '../hot'
+import { registerSyndicationRoutes } from './syndication'
 
 const JSON_LIMIT = 120
 const JSON_WINDOW_SECONDS = 60
@@ -59,6 +60,12 @@ function openApiDocument() {
   ]
   const jsonResponses = { '200': { description: 'Successful response' }, '400': { description: 'Invalid request' },
     '404': { description: 'Not found' }, '429': { description: 'Rate limited' } }
+  const formatParameter = { name: 'format', in: 'path', required: true,
+    schema: { type: 'string', enum: ['rss', 'atom'] } }
+  const syndicationResponses = { '200': { description: 'RSS 2.0 or Atom 1.0 XML feed', content: {
+    'application/rss+xml': { schema: { type: 'string' } },
+    'application/atom+xml': { schema: { type: 'string' } },
+  } }, '404': { description: 'Not found' }, '429': { description: 'Rate limited' } }
   return {
     openapi: '3.1.0',
     info: { title: 'root.mx public API', version: '1.0.0', description: 'Read-only access to public root.mx content.' },
@@ -66,6 +73,10 @@ function openApiDocument() {
     paths: {
       '/feeds/latest': { get: { summary: 'Latest posts', parameters: collectionParameters, responses: jsonResponses } },
       '/feeds/hot': { get: { summary: 'Hot posts', parameters: collectionParameters, responses: jsonResponses } },
+      '/feeds/latest.{format}': { get: { summary: 'Latest posts as RSS or Atom', parameters: [formatParameter],
+        responses: syndicationResponses } },
+      '/feeds/hot.{format}': { get: { summary: 'Hot posts as RSS or Atom', parameters: [formatParameter],
+        responses: syndicationResponses } },
       '/posts/{id}': { get: { summary: 'Single post', parameters: [{ name: 'id', in: 'path', required: true,
         schema: { type: 'integer', minimum: 1 } }], responses: jsonResponses } },
       '/posts/{id}/replies': { get: { summary: 'Post replies', parameters: [{ name: 'id', in: 'path', required: true,
@@ -74,8 +85,14 @@ function openApiDocument() {
         schema: { type: 'string' } }], responses: jsonResponses } },
       '/users/{handle}/posts': { get: { summary: "User's latest posts", parameters: [{ name: 'handle', in: 'path',
         required: true, schema: { type: 'string' } }, ...collectionParameters], responses: jsonResponses } },
+      '/users/{handle}/posts.{format}': { get: { summary: "User's latest posts as RSS or Atom", parameters: [
+        { name: 'handle', in: 'path', required: true, schema: { type: 'string' } }, formatParameter,
+      ], responses: syndicationResponses } },
       '/tags/{tag}/posts': { get: { summary: 'Posts with a hashtag', parameters: [{ name: 'tag', in: 'path',
         required: true, schema: { type: 'string' } }, ...collectionParameters], responses: jsonResponses } },
+      '/tags/{tag}/posts.{format}': { get: { summary: 'Hashtag posts as RSS or Atom', parameters: [
+        { name: 'tag', in: 'path', required: true, schema: { type: 'string' } }, formatParameter,
+      ], responses: syndicationResponses } },
       '/firehose': { get: { summary: 'Live post stream', responses: { '200': { description: 'Server-sent events',
         content: { 'text/event-stream': { schema: { type: 'string' } } } }, '429': { description: 'Too many streams' } } } },
     },
@@ -117,6 +134,8 @@ export function registerApiRoutes(app: Hono, database: Database = db) {
     if (limited) return apiError('rate_limited', 'Too many API requests', 429, limited.retryAfter)
     return next()
   })
+
+  registerSyndicationRoutes(app, database)
 
   app.get('/api/openapi.json', () => jsonResponse(openApiDocument(), 200, 'public, max-age=3600'))
 

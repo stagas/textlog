@@ -1,7 +1,7 @@
 import { describe, expect, test } from 'bun:test'
 import React from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
-import { AccountSecurity, ApiDocs, Auth, ConfirmEmail, Contact, Profile, postTitle } from './components/pages'
+import { About, AccountSecurity, ApiDocs, Auth, ConfirmEmail, Contact, Profile, postTitle } from './components/pages'
 import { Post } from './components/post'
 
 describe('postTitle', () => {
@@ -29,6 +29,17 @@ test('API documentation is linked from the footer and describes the firehose', (
   expect(html).toContain('class="api-method">GET</span>')
   expect(html).toContain('class="api-path">/firehose</span>')
   expect(html).toContain('120 requests per minute')
+  expect(html).toContain('/users/:handle/posts.rss')
+  expect(html).toContain('/tags/:tag/posts.atom')
+})
+
+test('About documents manual RSS and Atom URL extensions without feed links', () => {
+  const html = renderToStaticMarkup(React.createElement(About, { user: null }))
+
+  expect(html).toContain('<code>.rss</code>')
+  expect(html).toContain('<code>.atom</code>')
+  expect(html).toContain('enter the resulting address in your feed reader')
+  expect(html).not.toMatch(/href="[^"]+\.(?:rss|atom)"/)
 })
 
 test('Contact page shows operator details and is linked before legal in the footer', () => {
