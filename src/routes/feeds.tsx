@@ -9,11 +9,12 @@ import {
   Legal,
   PublicFeed,
 } from '../components/pages'
-import { currentPage, page, paginationRedirect, redirect, rememberFeed, visiblePostCount } from './shared'
+import { currentPage, page, paginationRedirect, redirect, rememberFeed } from './shared'
 
 import type { Hono } from 'hono'
 import { db } from '../db'
 import { decodeHotCursor } from '../hot'
+import { decodePostCursor } from '../pagination'
 import {
   feedPreference,
 } from '../http'
@@ -23,11 +24,11 @@ export function registerFeedsRoutes(app: Hono) {
   app.get('/', c => {
     const user = currentUser(c.req.raw)
     const preferredFeed = feedPreference(c.req.raw)
-    const feedPage = currentPage(c.req.query('page'))
     if (preferredFeed === 'latest') {
-      const outOfRange = paginationRedirect(feedPage, visiblePostCount(user?.id), '/')
-      if (outOfRange) return outOfRange
-      return page(<PublicFeed user={user} page={feedPage} path="/latest" />)
+      const cursorValue = c.req.query('cursor')
+      const cursor = decodePostCursor(cursorValue)
+      if (cursorValue && !cursor) return c.text('Invalid cursor', 400)
+      return page(<PublicFeed user={user} cursor={cursor} path="/latest" />)
     }
     if (preferredFeed === 'hot' || !user) {
       const cursorValue = c.req.query('cursor')
@@ -35,6 +36,7 @@ export function registerFeedsRoutes(app: Hono) {
       if (cursorValue && !cursor) return c.text('Invalid cursor', 400)
       return page(<HotFeed user={user} cursor={cursor} path="/" />)
     }
+    const feedPage = currentPage(c.req.query('page'))
     const total = (db.query(`SELECT count(*) count FROM posts p WHERE p.deleted_at IS NULL AND
       (p.user_id=? OR p.user_id IN (SELECT following_id FROM follows WHERE follower_id=?) OR
         p.id IN (SELECT ph.post_id FROM post_hashtags ph JOIN hashtag_follows hf ON hf.tag=ph.tag WHERE hf.user_id=?))
@@ -63,10 +65,10 @@ export function registerFeedsRoutes(app: Hono) {
 
   app.get('/latest', c => {
     const user = currentUser(c.req.raw)
-    const feedPage = currentPage(c.req.query('page'))
-    const outOfRange = paginationRedirect(feedPage, visiblePostCount(user?.id), '/latest')
-    if (outOfRange) return rememberFeed(outOfRange, 'latest')
-    return rememberFeed(page(<PublicFeed user={user} page={feedPage} path="/latest" />), 'latest')
+    const cursorValue = c.req.query('cursor')
+    const cursor = decodePostCursor(cursorValue)
+    if (cursorValue && !cursor) return c.text('Invalid cursor', 400)
+    return rememberFeed(page(<PublicFeed user={user} cursor={cursor} path="/latest" />), 'latest')
   })
 
   app.get('/hot', c => {

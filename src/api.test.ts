@@ -92,6 +92,7 @@ describe('public API', () => {
     expect(firstResponse.status).toBe(200)
     expect(first.data).toHaveLength(2)
     expect(first.data[0].id).toBe(1)
+    expect(first.data[0].reply_count).toBe(1)
     expect(first.pagination.next_cursor).toBeTruthy()
 
     const second =

@@ -9,7 +9,7 @@ import type { Hono } from 'hono'
 import { db } from '../db'
 import { resolveHandle } from '../handles'
 import { renderProfileOg } from '../og'
-import { PAGE_SIZE } from '../pagination'
+import { decodePostCursor, PAGE_SIZE, postCursorPage } from '../pagination'
 import { enrichPosts } from '../posts'
 import { currentUser } from '../utils'
 
@@ -69,9 +69,6 @@ export function registerProfilesRoutes(app: Hono) {
     ).get(resolved.id) as ProfileRow
     const tab = c.req.query('tab')
     if (tab && tab !== 'following' && tab !== 'followers') return c.text('Not found', 404)
-    const posts = enrichPosts(db, db.query(
-      'SELECT p.*,u.handle FROM posts p JOIN users u ON u.id=p.user_id WHERE p.user_id=? AND p.deleted_at IS NULL ORDER BY p.created_at DESC LIMIT ? OFFSET ?',
-    ).all(profile.id, PAGE_SIZE, (profilePage - 1) * PAGE_SIZE) as PostView[], user?.id ?? -1)
     const total =
       (db.query('SELECT count(*) AS count FROM posts WHERE user_id=? AND deleted_at IS NULL').get(profile.id) as {
         count: number
@@ -115,10 +112,6 @@ export function registerProfilesRoutes(app: Hono) {
           social={social} />,
       )
     }
-    if (!tab) {
-      const outOfRange = paginationRedirect(profilePage, total, `/u/${profile.handle}`)
-      if (outOfRange) return outOfRange
-    }
     if (tab === 'following' || tab === 'followers') {
       const join = tab === 'following'
         ? 'JOIN follows f ON f.following_id=u.id WHERE f.follower_id=?'
@@ -158,10 +151,22 @@ export function registerProfilesRoutes(app: Hono) {
           total={connectionTotal} noteCount={total} {...counts} following={following} social={social} />,
       )
     }
+    const cursorValue = c.req.query('cursor')
+    const cursor = decodePostCursor(cursorValue)
+    if (cursorValue && !cursor) return c.text('Invalid cursor', 400)
+    const cursorFilter = cursor ? `AND p.id ${cursor.direction === 'previous' ? '>' : '<'} ?` : ''
+    const parameters = cursor ? [profile.id, cursor.id, PAGE_SIZE + 1] : [profile.id, PAGE_SIZE + 1]
+    const rows = db.query(`SELECT p.*,u.handle FROM posts p JOIN users u ON u.id=p.user_id
+      WHERE p.user_id=? AND p.deleted_at IS NULL ${cursorFilter}
+      ORDER BY p.id ${cursor?.direction === 'previous' ? 'ASC' : 'DESC'} LIMIT ?`)
+      .all(...parameters) as PostView[]
+    const result = postCursorPage(rows, cursor)
+    const posts = enrichPosts(db, result.rows, viewerId)
     return page(
       <Profile user={user} profile={profile} posts={blocked || blockedByProfile ? [] : posts} following={following}
-        blocked={blocked} page={profilePage} total={total} followerCount={counts.followerCount}
-        followingCount={counts.followingCount} followingTagCount={counts.followingTagCount} social={social} />,
+        blocked={blocked} total={total} followerCount={counts.followerCount}
+        followingCount={counts.followingCount} followingTagCount={counts.followingTagCount} social={social}
+        previousCursor={result.previousCursor} nextCursor={result.nextCursor} />,
     )
   })
 }

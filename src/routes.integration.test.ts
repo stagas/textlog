@@ -275,6 +275,26 @@ test('consequential account, content, reporting, and admin flows work over HTTP'
   expect(hotFeed.status).toBe(200)
   expect(await hotFeed.text()).toContain(post.body)
 
+  const insertFeedPost = database.query('INSERT INTO posts(user_id,body) VALUES(?,?)')
+  for (let index = 1; index <= 21; index++) insertFeedPost.run(alice.id, `cursor note ${index}`)
+  const latestFirst = await request('/latest')
+  const latestFirstBody = await latestFirst.text()
+  const latestNext = latestFirstBody.match(/href="(\/latest\?cursor=[^"]+)"/)?.[1]
+  expect(latestNext).toBeTruthy()
+  expect(latestFirstBody).toContain('cursor note 21')
+  expect(latestFirstBody).not.toContain(post.body)
+  const latestSecondBody = await (await request(latestNext!)).text()
+  expect(latestSecondBody).toContain(post.body)
+  expect(latestSecondBody).toContain('← back')
+
+  const profileFirstBody = await (await request('/u/alice')).text()
+  const profileNext = profileFirstBody.match(/href="(\/u\/alice\?cursor=[^"]+)"/)?.[1]
+  expect(profileNext).toBeTruthy()
+  expect(profileFirstBody).not.toContain(post.body)
+  expect(await (await request(profileNext!)).text()).toContain(post.body)
+  expect((await request('/latest?cursor=broken')).status).toBe(400)
+  expect((await request('/u/alice?cursor=broken')).status).toBe(400)
+
   const illegalActivity = await request('/report-illegal-activity', {
     method: 'POST',
     form: {

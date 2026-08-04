@@ -1,14 +1,14 @@
 import { type User } from '../db'
-import { PAGE_SIZE } from '../pagination'
 import type { PostView, ProfileRow } from '../types'
 import { Layout } from './layout'
-import { FormMessage, Pagination, ProfileHeader, ProfileTabs } from './page-shared'
+import { CursorPagination, FormMessage, ProfileHeader, ProfileTabs } from './page-shared'
 import { Post } from './post'
 
 export function Profile(
   { user, profile, posts, following, bio = profile.bio || '', editHandle = profile.handle, editEmail = profile.email,
-    error, editing = false, page = 1, total = posts.length, followerCount = 0, followingCount = 0,
-    followingTagCount = 0, blocked = false, blockedByProfile = false, social }: {
+    error, editing = false, total = posts.length, followerCount = 0, followingCount = 0,
+    followingTagCount = 0, blocked = false, blockedByProfile = false, social, previousCursor = null,
+    nextCursor = null }: {
       user: User | null
       profile: ProfileRow
       posts: PostView[]
@@ -18,13 +18,14 @@ export function Profile(
       editEmail?: string
       error?: string
       editing?: boolean
-      page?: number
       total?: number
       followerCount?: number
       followingCount?: number
       followingTagCount?: number
       blocked?: boolean
       blockedByProfile?: boolean
+      previousCursor?: string | null
+      nextCursor?: string | null
       social?: { description: string; image: string; url: string; type?: 'article' | 'profile'; imageAlt?: string }
     },
 ) {
@@ -105,7 +106,7 @@ export function Profile(
         )}
       {!editing && !blocked && !blockedByProfile && posts.map(post => <Post key={post.id} p={post} user={user} />)}
       {!editing && !blocked && !blockedByProfile
-        && <Pagination page={page} totalPages={Math.ceil(total / PAGE_SIZE)} path={'/u/' + profile.handle} />}
+        && <CursorPagination path={'/u/' + profile.handle} previousCursor={previousCursor} nextCursor={nextCursor} />}
     </Layout>
   )
 }

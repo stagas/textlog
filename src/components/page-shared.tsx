@@ -61,6 +61,35 @@ export function Pagination({ page, totalPages, path }: { page: number; totalPage
   )
 }
 
+export function CursorPagination({ path, previousCursor, nextCursor }: {
+  path: string
+  previousCursor: string | null
+  nextCursor: string | null
+}) {
+  if (!previousCursor && !nextCursor) return null
+  const separator = path.includes('?') ? '&' : '?'
+  return (
+    <nav className="pagination hot-pagination" aria-label="Pagination">
+      {previousCursor
+        ? (
+          <a className="pagination-edge" href={`${path}${separator}cursor=${encodeURIComponent(previousCursor)}`}>
+            ← back
+          </a>
+        )
+        : <span className="pagination-edge placeholder" />}
+      {nextCursor
+        ? (
+          <a className="pagination-edge hot-pagination-next"
+            href={`${path}${separator}cursor=${encodeURIComponent(nextCursor)}`}
+          >
+            next →
+          </a>
+        )
+        : <span className="pagination-edge placeholder" />}
+    </nav>
+  )
+}
+
 export function FeedTabs({ active, user }: { active: 'following' | 'hot' | 'latest'; user: User | null }) {
   return (
     <nav className="feed-tabs" aria-label="Feed">

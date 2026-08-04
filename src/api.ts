@@ -129,11 +129,17 @@ export function apiHotPosts(database: Database, origin: string, limit: number, c
   const asOf = cursor?.asOf || new Date().toISOString()
   const rows = getHotPosts(database, limit + 1, cursor, asOf, -1, true)
   const hasMore = rows.length > limit
-  const pageRows = rows.slice(0, limit).map(row => ({
-    ...row,
-    reply_count: (database.query(`SELECT count(*) count FROM posts r JOIN users u ON u.id=r.user_id
-      WHERE r.parent_id=? AND r.deleted_at IS NULL AND u.deleted_at IS NULL`).get(row.id) as { count: number }).count,
-  }))
+  const selected = rows.slice(0, limit)
+  const counts = new Map<number, number>()
+  if (selected.length) {
+    const placeholders = selected.map(() => '?').join(',')
+    const replyCounts = database.query(`SELECT r.parent_id,count(*) count FROM posts r
+      JOIN users u ON u.id=r.user_id WHERE r.parent_id IN (${placeholders})
+      AND r.deleted_at IS NULL AND u.deleted_at IS NULL GROUP BY r.parent_id`)
+      .all(...selected.map(row => row.id)) as { parent_id: number; count: number }[]
+    for (const row of replyCounts) counts.set(row.parent_id, row.count)
+  }
+  const pageRows = selected.map(row => ({ ...row, reply_count: counts.get(row.id) || 0 }))
   return {
     data: pageRows.map(row => serializePost(row, origin)),
     pagination: { next_cursor: hasMore ? encodeHotCursor(hotCursor(rows[limit - 1], asOf)) : null },

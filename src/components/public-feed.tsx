@@ -1,37 +1,40 @@
 import { db, type User } from '../db'
-import { PAGE_SIZE } from '../pagination'
+import { PAGE_SIZE, type PostCursor, postCursorPage } from '../pagination'
 import { enrichPosts } from '../posts'
 import type { PostView } from '../types'
 import { Layout } from './layout'
-import { FeedTabs, GlobalFeedEmpty, Pagination } from './page-shared'
+import { CursorPagination, FeedTabs, GlobalFeedEmpty } from './page-shared'
 import { Post } from './post'
 
 export function PublicFeed(
-  { page, user = null, path = '/' }: { page: number; user?: User | null; path?: string },
+  { cursor, user = null, path = '/' }: { cursor: PostCursor | null; user?: User | null; path?: string },
 ) {
   const viewerId = user?.id ?? -1
-  const total = (db.query(`SELECT count(*) AS count FROM posts p WHERE deleted_at IS NULL AND (? < 0 OR NOT EXISTS
-    (SELECT 1 FROM blocks b WHERE (b.blocker_id=? AND b.blocked_id=p.user_id) OR (b.blocker_id=p.user_id AND b.blocked_id=?)))`)
-    .get(viewerId, viewerId, viewerId) as { count: number }).count
-  const posts = enrichPosts(db, db.query(
+  const cursorFilter = cursor ? `AND p.id ${cursor.direction === 'previous' ? '>' : '<'} ?` : ''
+  const parameters: number[] = [viewerId, viewerId, viewerId]
+  if (cursor) parameters.push(cursor.id)
+  parameters.push(PAGE_SIZE + 1)
+  const rows = db.query(
     `SELECT p.*,u.handle FROM posts p JOIN users u ON u.id=p.user_id WHERE p.deleted_at IS NULL AND (? < 0 OR NOT EXISTS
       (SELECT 1 FROM blocks b WHERE (b.blocker_id=? AND b.blocked_id=p.user_id) OR (b.blocker_id=p.user_id AND b.blocked_id=?)))
-      ORDER BY p.created_at DESC LIMIT ? OFFSET ?`,
-  ).all(viewerId, viewerId, viewerId, PAGE_SIZE, (page - 1) * PAGE_SIZE) as PostView[], viewerId)
+      ${cursorFilter} ORDER BY p.id ${cursor?.direction === 'previous' ? 'ASC' : 'DESC'} LIMIT ?`,
+  ).all(...parameters) as PostView[]
+  const result = postCursorPage(rows, cursor)
+  const posts = enrichPosts(db, result.rows, viewerId)
   return (
     <Layout user={user} title={path === '/latest' ? 'latest' : undefined}>
       <h1 className="visually-hidden">Latest notes</h1>
       <FeedTabs active="latest" user={user} />
       {posts.length
         ? posts.map(post => <Post key={post.id} p={post} user={user} showReplyCount />)
-        : total === 0
+        : !cursor
         ? <GlobalFeedEmpty user={user} />
         : (
           <div className="empty">
             No notes on this page. <a href={path}>Return to the first page</a>.
           </div>
         )}
-      <Pagination page={page} totalPages={Math.ceil(total / PAGE_SIZE)} path={path} />
+      <CursorPagination path={path} previousCursor={result.previousCursor} nextCursor={result.nextCursor} />
     </Layout>
   )
 }

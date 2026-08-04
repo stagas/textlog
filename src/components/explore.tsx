@@ -1,4 +1,5 @@
 import { db, type User } from '../db'
+import { suggestedPeople } from '../explore'
 import type { PersonView } from '../types'
 import { Layout } from './layout'
 import { TagPeopleList } from './page-shared'
@@ -20,14 +21,7 @@ export function Explore({ user, welcome = false, peopleIds }: {
           (b.blocker_id=? AND b.blocked_id=u.id) OR (b.blocker_id=u.id AND b.blocked_id=?)))`,
     ).all(viewerId, ...savedIds, viewerId, viewerId, viewerId) as PersonView[])
       .sort((a, b) => savedIds.indexOf(a.id) - savedIds.indexOf(b.id))
-    : db.query(
-      `SELECT u.*, (SELECT count(*) FROM posts p WHERE p.user_id=u.id AND p.deleted_at IS NULL) posts,
-       EXISTS(SELECT 1 FROM follows f WHERE f.follower_id=? AND f.following_id=u.id) following FROM users u
-       WHERE u.id != ? AND u.deleted_at IS NULL AND NOT EXISTS (SELECT 1 FROM follows f WHERE f.follower_id=? AND f.following_id=u.id)
-       AND (? < 0 OR NOT EXISTS (SELECT 1 FROM blocks b WHERE
-         (b.blocker_id=? AND b.blocked_id=u.id) OR (b.blocker_id=u.id AND b.blocked_id=?)))
-       AND EXISTS (SELECT 1 FROM posts p WHERE p.user_id=u.id AND p.deleted_at IS NULL) ORDER BY RANDOM() LIMIT 6`,
-    ).all(viewerId, viewerId, viewerId, viewerId, viewerId, viewerId) as PersonView[]
+    : suggestedPeople(db, viewerId)
   const explorePeople = people.map(p => p.id).join(',')
   const tags = db.query(
     `SELECT ph.tag,count(*) count,

@@ -207,6 +207,13 @@ export const migrations: Migration[] = [
       database.run('CREATE UNIQUE INDEX illegal_activity_reports_reference ON illegal_activity_reports(reference)')
     },
   },
+  {
+    version: 13,
+    name: 'post_cursor_indexes',
+    up(database) {
+      database.run('CREATE INDEX IF NOT EXISTS posts_user_id_desc ON posts(user_id,id DESC)')
+    },
+  },
 ]
 
 export const latestMigrationVersion = migrations.at(-1)!.version
