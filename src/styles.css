@@ -188,17 +188,6 @@ header>nav {
   justify-content: flex-end;
 }
 
-@media (max-width: 600px) {
-  .authenticated-header>.brand {
-    margin-inline: auto;
-  }
-
-  header>.account-nav {
-    flex-basis: 100%;
-    justify-content: center;
-  }
-}
-
 .brand {
   color: var(--ink);
   display: inline-flex;
@@ -271,7 +260,15 @@ nav form {
   font-size: 11px;
 }
 
+.site-footer .mobile-account-footer {
+  display: none;
+}
+
 @media (max-width: 600px) {
+  .account-nav .mobile-footer-link {
+    display: none;
+  }
+
   .site-footer {
     align-items: center;
     flex-direction: column;
@@ -283,6 +280,10 @@ nav form {
     justify-content: center;
     flex-wrap: wrap;
     row-gap: var(--space-2);
+  }
+
+  .site-footer .mobile-account-footer {
+    display: flex;
   }
 }
 

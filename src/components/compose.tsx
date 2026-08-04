@@ -1,9 +1,10 @@
 import { type User } from '../db'
+import { canPublishPosts } from '../posting-policy'
 import { Layout } from './layout'
 import { FormMessage, VerificationRequired } from './page-shared'
 
 export function Compose({ user, error, body = '' }: { user: User; error?: string; body?: string }) {
-  if (!user.email_verified_at) {
+  if (!canPublishPosts(user)) {
     return <Layout user={user} title="write"><VerificationRequired /></Layout>
   }
   return (

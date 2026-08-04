@@ -132,6 +132,8 @@ test('Profile places owner actions in the handle row', () => {
   expect(html).toContain('class="identity-prefix">@</span>reader')
   expect(html).toContain('href="/account/edit">edit</a>')
   expect(html).toContain('action="/logout"')
+  expect(html).toContain('class="mobile-account-footer" aria-label="Account shortcuts"')
+  expect(html.indexOf('href="/write"')).toBeLessThan(html.indexOf('href="/u/reader"'))
 })
 
 test('Post renders preloaded parent and reply data', () => {

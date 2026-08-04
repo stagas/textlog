@@ -1,4 +1,5 @@
 import { type User } from '../db'
+import { canPublishPosts } from '../posting-policy'
 import type { PostView } from '../types'
 import { Layout } from './layout'
 import { FormMessage, postTitle, ReportPanel, VerificationRequired } from './page-shared'
@@ -17,7 +18,7 @@ export function Reply(
       </div>
       {user.id !== post.user_id && <ReportPanel post={post} showForm={showReport} reported={reported} />}
       {showForm && (
-        user.email_verified_at
+        canPublishPosts(user)
           ? <div className="panel replybox">
           <form method="post" action={'/post/' + post.id + '/reply'}>
             <FormMessage error={error} />

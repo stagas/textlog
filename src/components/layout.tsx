@@ -29,11 +29,11 @@ export function Layout({
   const navigation = user
     ? (
       <>
-        <a href={`/u/${user.handle}`}>@{user.handle}</a>
-        <a href="/explore">explore</a>
-        <a href="/activity">activity</a>
+        <a className="mobile-footer-link" href="/explore">explore</a>
+        <a className="mobile-footer-link" href="/activity">activity</a>
         <a href="/write">write</a>
         {isAdmin(user) && <a href="/admin">admin</a>}
+        <a href={`/u/${user.handle}`}>@{user.handle}</a>
       </>
     )
     : (
@@ -68,7 +68,7 @@ export function Layout({
             <meta name="twitter:image:alt" content={share.imageAlt || `Post by ${title || 'a root.mx user'}`} />
           </>
         <link rel="icon" href="/root.svg?v=1" type="image/svg+xml" />
-        <link rel="stylesheet" href="/styles.css?v=43" />
+        <link rel="stylesheet" href="/styles.css?v=47" />
       </head>
       <body>
         <a className="skip-link" href="#main-content">skip to content</a>
@@ -86,6 +86,12 @@ export function Layout({
         <main id="main-content">{children}</main>
         <footer className="site-footer">
           <span>root.mx</span>
+          {user && (
+            <nav className="mobile-account-footer" aria-label="Account shortcuts">
+              <a href="/explore">explore</a>
+              <a href="/activity">activity</a>
+            </nav>
+          )}
           <nav aria-label="Footer">
             <a href="/about">about</a>
             <a href="/api">api</a>
