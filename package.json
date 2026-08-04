@@ -14,12 +14,12 @@
     "@types/react": "latest",
     "@types/react-dom": "latest",
     "canvas": "^3.2.3",
-    "hono": "^4.12.33",
+    "hono": "^4.13.0",
     "react": "latest",
     "react-dom": "latest"
   },
   "devDependencies": {
     "bun-types": "latest",
-    "typescript": "^5.9.2"
+    "typescript": "^5.9.3"
   }
 }
