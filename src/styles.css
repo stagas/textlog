@@ -1435,6 +1435,7 @@ textarea {
 
 .reply-branch {
   margin-left: clamp(18px, 3vw, 28px);
+  border-left: 1px solid var(--soft);
 }
 
 .reply-node>.post {
