@@ -54,13 +54,23 @@ describe('Auth', () => {
     const html = renderToStaticMarkup(React.createElement(Auth, { mode: 'signup' }))
 
     expect(html).toContain('pattern="[A-Za-z0-9_]{2,24}"')
-    expect(html).toContain('By signing up, you agree to our <a href="/legal">Terms of Service</a> and Privacy Notice.')
+    expect(html).toContain('<a href="/legal#privacy">Privacy Notice</a>')
   })
 
   test('login does not show the signup terms notice', () => {
     const html = renderToStaticMarkup(React.createElement(Auth, { mode: 'login' }))
 
     expect(html).not.toContain('By signing up')
+  })
+
+  test('carries a next destination between login and signup', () => {
+    const next = '/post/42?reply=1'
+    const login = renderToStaticMarkup(React.createElement(Auth, { mode: 'login', next }))
+    const signup = renderToStaticMarkup(React.createElement(Auth, { mode: 'signup', next }))
+
+    expect(login).toContain('name="next" value="/post/42?reply=1"')
+    expect(login).toContain('href="/signup?next=%2Fpost%2F42%3Freply%3D1"')
+    expect(signup).toContain('href="/login?next=%2Fpost%2F42%3Freply%3D1"')
   })
 })
 
@@ -140,6 +150,8 @@ test('Post renders preloaded parent and reply data', () => {
   expect(html).toContain('2 replies')
   expect(html).toContain('@author')
   expect(html).toContain('parent')
+  expect(html).toContain('href="/login?next=%2Fpost%2F2%3Freply%3D1"')
+  expect(html).toContain('aria-label="log in to reply to @writer">log in to reply</a>')
   expect(html).toContain('href="/login?next=%2Fpost%2F1%3Freply%3D1"')
   expect(html).toContain('aria-label="reply to @author">log in to reply</a>')
 })

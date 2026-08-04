@@ -18,9 +18,10 @@ export type HotCursor = {
   latestActivityAt: string
   createdAt: string
   id: number
+  direction: 'next' | 'previous'
 }
 
-const cursorVersion = 1
+const cursorVersion = 2
 
 function hasHotTable(database: Database) {
   return Boolean(database.query("SELECT 1 FROM sqlite_master WHERE type='table' AND name='post_hot'").get())
@@ -28,31 +29,34 @@ function hasHotTable(database: Database) {
 
 export function encodeHotCursor(cursor: HotCursor) {
   return Buffer.from(JSON.stringify([cursorVersion, cursor.asOf, cursor.score, cursor.latestActivityAt,
-    cursor.createdAt, cursor.id])).toString('base64url')
+    cursor.createdAt, cursor.id, cursor.direction])).toString('base64url')
 }
 
 export function decodeHotCursor(value?: string): HotCursor | null {
   if (!value) return null
   try {
     const decoded = JSON.parse(Buffer.from(value, 'base64url').toString())
-    if (!Array.isArray(decoded) || decoded.length !== 6 || decoded[0] !== cursorVersion
+    const legacy = Array.isArray(decoded) && decoded.length === 6 && decoded[0] === 1
+    if (!Array.isArray(decoded) || (!legacy && (decoded.length !== 7 || decoded[0] !== cursorVersion))
       || typeof decoded[1] !== 'string' || !Number.isFinite(Date.parse(decoded[1]))
       || typeof decoded[2] !== 'number' || !Number.isFinite(decoded[2]) || decoded[2] < 0
       || typeof decoded[3] !== 'string' || typeof decoded[4] !== 'string'
-      || !Number.isInteger(decoded[5]) || decoded[5] < 1)
+      || !Number.isInteger(decoded[5]) || decoded[5] < 1
+      || (!legacy && !['next', 'previous'].includes(decoded[6])))
     {
       return null
     }
-    return { asOf: decoded[1], score: decoded[2], latestActivityAt: decoded[3], createdAt: decoded[4], id: decoded[5] }
+    return { asOf: decoded[1], score: decoded[2], latestActivityAt: decoded[3], createdAt: decoded[4], id: decoded[5],
+      direction: legacy || decoded[6] === 'next' ? 'next' : 'previous' }
   }
   catch {
     return null
   }
 }
 
-export function hotCursor(post: HotPost, asOf: string): HotCursor {
+export function hotCursor(post: HotPost, asOf: string, direction: HotCursor['direction'] = 'next'): HotCursor {
   return { asOf, score: post.hot_score, latestActivityAt: post.latest_activity_at,
-    createdAt: post.created_at, id: post.id }
+    createdAt: post.created_at, id: post.id, direction }
 }
 
 export function recordHotActivity(database: Database, postId: number) {
@@ -141,20 +145,25 @@ export function getHotPosts(
   }
   if (publicOnly) filters.push('u.deleted_at IS NULL')
   if (cursor) {
-    filters.push(`(ranked.hot_score < ? OR (ranked.hot_score = ? AND
-      (h.latest_activity_at < ? OR (h.latest_activity_at = ? AND
-      (p.created_at < ? OR (p.created_at = ? AND p.id < ?))))))`)
+    const comparison = cursor.direction === 'previous' ? '>' : '<'
+    filters.push(`(ranked.hot_score ${comparison} ? OR (ranked.hot_score = ? AND
+      (h.latest_activity_at ${comparison} ? OR (h.latest_activity_at = ? AND
+      (p.created_at ${comparison} ? OR (p.created_at = ? AND p.id ${comparison} ?))))))`)
     parameters.push(cursor.score, cursor.score, cursor.latestActivityAt, cursor.latestActivityAt,
       cursor.createdAt, cursor.createdAt, cursor.id)
   }
   parameters.push(limit)
-  return database.query(`WITH ranked AS (
+  const rows = database.query(`WITH ranked AS (
     SELECT post_id,score*pow(0.5,max(0,(julianday(?) - julianday(score_updated_at))*24)/24.0) hot_score
     FROM post_hot
   ) SELECT p.*,u.handle,ranked.hot_score,h.latest_activity_at
     FROM ranked JOIN post_hot h ON h.post_id=ranked.post_id
     JOIN posts p ON p.id=ranked.post_id JOIN users u ON u.id=p.user_id
     WHERE ${filters.join(' AND ')}
-    ORDER BY ranked.hot_score DESC,h.latest_activity_at DESC,p.created_at DESC,p.id DESC LIMIT ?`)
+    ORDER BY ranked.hot_score ${cursor?.direction === 'previous' ? 'ASC' : 'DESC'},
+      h.latest_activity_at ${cursor?.direction === 'previous' ? 'ASC' : 'DESC'},
+      p.created_at ${cursor?.direction === 'previous' ? 'ASC' : 'DESC'},
+      p.id ${cursor?.direction === 'previous' ? 'ASC' : 'DESC'} LIMIT ?`)
     .all(...parameters) as HotPost[]
+  return cursor?.direction === 'previous' ? rows.reverse() : rows
 }

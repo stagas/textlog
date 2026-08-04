@@ -605,6 +605,14 @@ nav form {
   justify-self: end;
 }
 
+.hot-pagination {
+  grid-template-columns: 1fr 1fr;
+}
+
+.hot-pagination-next {
+  grid-column: 2;
+}
+
 .pagination .placeholder {
   visibility: hidden;
 }

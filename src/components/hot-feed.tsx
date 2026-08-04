@@ -11,9 +11,15 @@ export function HotFeed({ cursor, user, title, path = '/hot' }: { cursor: HotCur
   const asOf = cursor?.asOf || new Date().toISOString()
   const ranked = getHotPosts(db, pageSize + 1, cursor, asOf, viewerId)
   const hasMore = ranked.length > pageSize
-  const pageRows = ranked.slice(0, pageSize)
+  const pageRows = cursor?.direction === 'previous' && hasMore
+    ? ranked.slice(1) : ranked.slice(0, pageSize)
   const posts = enrichPosts(db, pageRows, viewerId)
-  const nextCursor = hasMore ? encodeHotCursor(hotCursor(pageRows[pageRows.length - 1], asOf)) : null
+  const canGoBack = Boolean(cursor) && (cursor!.direction === 'next' || hasMore)
+  const canGoNext = cursor?.direction === 'previous' || hasMore
+  const previousCursor = canGoBack && pageRows.length
+    ? encodeHotCursor(hotCursor(pageRows[0], asOf, 'previous')) : null
+  const nextCursor = canGoNext && pageRows.length
+    ? encodeHotCursor(hotCursor(pageRows[pageRows.length - 1], asOf, 'next')) : null
   return (
     <Layout user={user} title={title}>
       <h1 className="visually-hidden">Hot notes</h1>
@@ -27,9 +33,12 @@ export function HotFeed({ cursor, user, title, path = '/hot' }: { cursor: HotCur
             No notes on this page. <a href="/hot">Return to the first page</a>.
           </div>
         )}
-      {nextCursor && (
-        <nav className="pagination" aria-label="Pagination">
-          <a className="pagination-edge" href={`${path}?cursor=${encodeURIComponent(nextCursor)}`}>next →</a>
+      {(previousCursor || nextCursor) && (
+        <nav className="pagination hot-pagination" aria-label="Pagination">
+          {previousCursor && <a className="pagination-edge"
+            href={`${path}?cursor=${encodeURIComponent(previousCursor)}`}>← back</a>}
+          {nextCursor && <a className="pagination-edge hot-pagination-next"
+            href={`${path}?cursor=${encodeURIComponent(nextCursor)}`}>next →</a>}
         </nav>
       )}
     </Layout>

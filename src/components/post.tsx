@@ -14,7 +14,7 @@ export function Post({
   showParent = true,
   showReplyCount = false,
   replyHref,
-  replyLabel = 'reply',
+  replyLabel,
   reportHref,
   foldControlId,
 }: { p: PostView; user: User | null; showReplyAction?: boolean; showOwnerActions?: boolean;
@@ -23,6 +23,10 @@ export function Post({
 {
   const parent = showParent ? p.parent : null
   const replyCount = p.reply_count || 0
+  const defaultReplyPath = '/post/' + p.id + '?reply=1'
+  const resolvedReplyHref = replyHref
+    ?? (user ? defaultReplyPath : '/login?next=' + encodeURIComponent(defaultReplyPath))
+  const resolvedReplyLabel = replyLabel ?? (user ? 'reply' : 'log in to reply')
   if (p.deleted_at) {
     return (
       <article className="post deleted-post">
@@ -44,10 +48,10 @@ export function Post({
           </span>}
         </a>
         {showReplyAction && (
-          <a className="quiet" href={replyHref || '/post/' + p.id + '?reply=1'}
-            aria-label={`${replyLabel} to @${p.handle}`}
+          <a className="quiet" href={resolvedReplyHref}
+            aria-label={`${resolvedReplyLabel} to @${p.handle}`}
           >
-            {replyLabel}
+            {resolvedReplyLabel}
           </a>
         )}
         {reportHref && (

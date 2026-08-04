@@ -5,6 +5,7 @@ export function Auth(
   { mode, error, success, handle = '', email = '', next }: { mode: 'login' | 'signup'; error?: string; success?: string;
     handle?: string; email?: string; next?: string },
 ) {
+  const nextQuery = next ? `?next=${encodeURIComponent(next)}` : ''
   return (
     <Layout title={mode === 'login' ? 'log in' : 'sign up'}>
       <div className="panel auth">
@@ -29,7 +30,8 @@ export function Auth(
           <button className="button wide">{mode === 'signup' ? 'create account →' : 'log in →'}</button>
           {mode === 'signup' && (
             <p className="signup-terms">
-              By signing up, you agree to our <a href="/legal">Terms of Service</a> and Privacy Notice.
+              By signing up, you agree to our <a href="/legal">Terms of Service</a> and{' '}
+              <a href="/legal#privacy">Privacy Notice</a>.
             </p>
           )}
         </form>
@@ -37,12 +39,12 @@ export function Auth(
           {mode === 'signup'
             ? (
               <>
-                Already here? <a href="/login">Log in</a>
+                Already here? <a href={`/login${nextQuery}`}>Log in</a>
               </>
             )
             : (
               <>
-                New here? <a href="/signup">Create an account</a> · <a href="/forgot-password">Forgot password?</a>
+                New here? <a href={`/signup${nextQuery}`}>Create an account</a> · <a href="/forgot-password">Forgot password?</a>
               </>
             )}
         </p>

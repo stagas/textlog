@@ -24,7 +24,10 @@ export function registerAuthRoutes(app: Hono) {
       <Auth mode="login" next={safeNext(c.req.query('next'))}
         success={c.req.query('reset') === '1' ? 'Your password has been reset. You can log in now.' : undefined} />,
     ))
-  app.get('/signup', c => page(<Auth mode="signup" />))
+  app.get('/signup', c => {
+    const requestedNext = c.req.query('next')
+    return page(<Auth mode="signup" next={requestedNext ? safeNext(requestedNext) : undefined} />)
+  })
   app.get('/forgot-password', c => page(<ForgotPassword />))
 
   app.post('/forgot-password', async c => {
@@ -101,10 +104,12 @@ export function registerAuthRoutes(app: Hono) {
     const f = await form(c.req.raw)
     const handle = (f.handle || '').toLowerCase().replace(/^@/, '')
     const email = (f.email || '').trim().toLowerCase()
+    const next = safeNext(f.next)
     const limited = authLimit(c, 'signup-ip', clientAddress(c), AUTH_LIMITS.signup)
     if (limited) {
       return retryPage(page(
-        <Auth mode="signup" handle={handle} email={email} error={authRateLimitMessage(limited.retryAfter)} />,
+        <Auth mode="signup" handle={handle} email={email} next={next}
+          error={authRateLimitMessage(limited.retryAfter)} />,
         429,
       ), limited.retryAfter)
     }
@@ -112,7 +117,7 @@ export function registerAuthRoutes(app: Hono) {
       || (f.password || '').length < 8)
     {
       return page(
-        <Auth mode="signup" handle={handle} email={email}
+        <Auth mode="signup" handle={handle} email={email} next={next}
           error="Use a valid email, a 2–24 character handle, and a password of at least 8 characters." />,
         400,
       )
@@ -123,7 +128,7 @@ export function registerAuthRoutes(app: Hono) {
         ? 'That handle may violate our content rules. Please change it and try again.'
         : moderationMessage(moderation.reason)
       return page(
-        <Auth mode="signup" handle={handle} email={email} error={error} />,
+        <Auth mode="signup" handle={handle} email={email} next={next} error={error} />,
         moderation.reason === 'flagged' ? 422 : 503,
       )
     }
@@ -138,10 +143,11 @@ export function registerAuthRoutes(app: Hono) {
       catch (error) {
         console.error('Could not send verification email', error)
       }
-      return redirect('/explore?welcome=1', sessionCookie(session))
+      return redirect(f.next ? next : '/explore?welcome=1', sessionCookie(session))
     }
     catch {
-      return page(<Auth mode="signup" handle={handle} email={email} error="That handle or email is unavailable." />,
+      return page(<Auth mode="signup" handle={handle} email={email} next={next}
+        error="That handle or email is unavailable." />,
         400)
     }
   })

@@ -76,7 +76,10 @@ describe('hot feed ranking', () => {
 
     const first = getHotPosts(database, 2, null, asOf)
     expect(first.map(result => result.id)).toEqual([2, 1])
-    expect(getHotPosts(database, 2, hotCursor(first[1], asOf), asOf).map(result => result.id)).toEqual([3])
+    const second = getHotPosts(database, 2, hotCursor(first[1], asOf), asOf)
+    expect(second.map(result => result.id)).toEqual([3])
+    expect(getHotPosts(database, 2, hotCursor(second[0], asOf, 'previous'), asOf)
+      .map(result => result.id)).toEqual([2, 1])
   })
 
   test('hides posts when either user has blocked the other', () => {

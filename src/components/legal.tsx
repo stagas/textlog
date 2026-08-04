@@ -36,7 +36,7 @@ export function Legal({ user }: { user: User | null }) {
           liability that cannot legally be excluded.
         </p>
 
-        <h2>Privacy</h2>
+        <h2 id="privacy">Privacy</h2>
         <h3>Controller and contact</h3>
         <p>Georgios Stagakis is the controller and contact for root.mx. Contact: <a href="mailto:hello@root.mx">hello@root.mx</a>,{' '}
           <a href="tel:+306946600152">+30 694 660 0152</a>, Kallikratis, Crete, Greece 730 11.</p>
