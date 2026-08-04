@@ -10,6 +10,7 @@
     "db:restore": "bun scripts/restore-database.ts",
     "db:verify": "bun scripts/verify-database.ts",
     "db:load-test": "bun scripts/load-database.ts",
+    "stress:routes": "bun scripts/stress-routes.ts",
     "test": "bun test",
     "typecheck": "tsc --noEmit",
     "check": "bun run typecheck && bun run test"

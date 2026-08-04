@@ -86,6 +86,18 @@ bun run db:load-test -- --workers=4 --operations=1000
 The command creates an isolated temporary WAL database, starts multiple processes, reports latency and busy errors,
 verifies every committed write, and removes the database afterward. It never opens the configured application database.
 
+Measure the real HTTP feed routes against a seeded disposable database:
+
+```sh
+bun run stress:routes -- --posts=10000 --duration=5 --concurrency=1,10,25
+```
+
+The route stress test launches the application on an ephemeral loopback port and exercises `/hot` and `/latest` by
+default. It reports requests per second, response throughput, error/status counts, and mean/p50/p95/p99/max latency.
+It also reports the highest tested concurrent-client level that had no errors and met `--p95-target` (250 ms by
+default). Use `--help` for dataset, route, concurrency, duration, and JSON-output options. The temporary database and
+server are removed when the command exits; the configured application database is never opened.
+
 In development, the browser automatically reloads after Bun restarts the server.
 
 Set `OPENAI_API_KEY` in the server environment to moderate posts and replies before insertion. root.mx uses OpenAI's free Moderation endpoint with `omni-moderation-latest` and rejects submissions when moderation is unavailable.
