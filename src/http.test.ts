@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, test } from 'bun:test'
-import { clearSessionCookie, feedPreference, feedPreferenceCookie, FORM_REQUEST_BODY_LIMIT, isSameOriginRequest,
-  limitedFormData, RequestBodyError, safeLocalPath, safeRefererPath, securityHeaders, sessionCookie, stringField } from './http'
+import { applyHtmlCachePolicy, clearSessionCookie, feedPreference, feedPreferenceCookie, FORM_REQUEST_BODY_LIMIT,
+  htmlCacheControl, isSameOriginRequest, limitedFormData, RequestBodyError, safeLocalPath, safeRefererPath, securityHeaders,
+  sessionCookie, stringField } from './http'
 
 const previousAppUrl = Bun.env.APP_URL
 afterEach(() => {
@@ -118,5 +119,33 @@ describe('security headers', () => {
     expect(securityHeaders()['Strict-Transport-Security']).toBeUndefined()
     Bun.env.APP_URL = 'https://root.mx'
     expect(securityHeaders()['Strict-Transport-Security']).toContain('max-age=31536000')
+  })
+})
+
+describe('HTML cache policy', () => {
+  const html = () => new Response('page', { headers: { 'content-type': 'text/html' } })
+
+  test('allows short shared caching for anonymous public pages', () => {
+    const request = new Request('https://root.mx/u/alice?page=2')
+    const response = html()
+    applyHtmlCachePolicy(request, response)
+    expect(response.headers.get('cache-control')).toBe('public, max-age=30, stale-while-revalidate=120')
+    expect(response.headers.get('vary')).toBe('Cookie')
+  })
+
+  test('prevents storage for authenticated and sensitive pages', () => {
+    expect(htmlCacheControl(new Request('https://root.mx/u/alice', { headers: { cookie: 'root=token' } }), html()))
+      .toBe('private, no-store')
+    expect(htmlCacheControl(new Request('https://root.mx/login'), html())).toBe('private, no-store')
+    expect(htmlCacheControl(new Request('https://root.mx/post/1?reply=1'), html())).toBe('private, no-store')
+  })
+
+  test('prevents storage for errors, mutations, and responses that set cookies', () => {
+    expect(htmlCacheControl(new Request('https://root.mx/post/1'), new Response('missing', { status: 404 })))
+      .toBe('private, no-store')
+    expect(htmlCacheControl(new Request('https://root.mx/post/1', { method: 'POST', body: '' }), html()))
+      .toBe('private, no-store')
+    expect(htmlCacheControl(new Request('https://root.mx/latest'),
+      new Response('page', { headers: { 'set-cookie': 'feed=latest' } }))).toBe('private, no-store')
   })
 })

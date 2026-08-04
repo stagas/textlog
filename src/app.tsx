@@ -1,4 +1,5 @@
-import { GLOBAL_REQUEST_BODY_LIMIT, isSameOriginRequest, RequestBodyError, securityHeaders } from './http'
+import { applyHtmlCachePolicy, GLOBAL_REQUEST_BODY_LIMIT, isSameOriginRequest, RequestBodyError,
+  securityHeaders } from './http'
 
 import { Hono } from 'hono'
 import { bodyLimit } from 'hono/body-limit'
@@ -60,6 +61,11 @@ app.use('*', async (c, next) => {
 app.use('*', async (c, next) => {
   await next()
   for (const [name, value] of Object.entries(securityHeaders(devReloadEnabled))) c.header(name, value)
+})
+app.use('*', async (c, next) => {
+  await next()
+  if (!c.res.headers.get('content-type')?.includes('text/html')) return
+  applyHtmlCachePolicy(c.req.raw, c.res)
 })
 app.use('*', async (c, next) => {
   await next()

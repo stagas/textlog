@@ -14,7 +14,7 @@ import { sessionHash } from '../sessions'
 
 export function page(node: React.ReactNode, status = 200) {
   return new Response('<!doctype html>' + renderToStaticMarkup(node), { status,
-    headers: { 'content-type': 'text/html;charset=utf-8', 'cache-control': 'no-cache' } })
+    headers: { 'content-type': 'text/html;charset=utf-8', 'cache-control': 'private, no-store' } })
 }
 export function redirect(path: string, cookie?: string) {
   const h = new Headers({ location: path })
