@@ -6,14 +6,61 @@ import { authLimit, clientAddress, form, issueEmailToken, page, redirect, retryP
 import type { Hono } from 'hono'
 import {
   ConfirmAccountDelete,
+  Profile,
 } from '../components/pages'
 import { exportUserData } from '../data-export'
 import { db } from '../db'
+import { moderateText, moderationMessage } from '../moderation'
 import {
   clearSessionCookie,
 } from '../http'
 
 export function registerAccountRoutes(app: Hono) {
+  app.get('/account/edit', c => {
+    const user = currentUser(c.req.raw)
+    if (!user) return redirect('/login?next=' + encodeURIComponent('/account/edit'))
+    return page(<Profile user={user} profile={user} posts={[]} following={false} editing />)
+  })
+
+  app.post('/account/edit', async c => {
+    const user = currentUser(c.req.raw)
+    if (!user) return redirect('/login')
+    const f = await form(c.req.raw)
+    // Preserve whitespace because spaces and line breaks can be meaningful in ASCII art.
+    // Treat an entirely blank submission as an empty bio, though.
+    const submittedBio = f.bio || ''
+    const bio = submittedBio.trim() ? submittedBio : ''
+    const handle = (f.handle || '').toLowerCase().replace(/^@/, '')
+    if (!/^[a-z0-9_]{2,24}$/.test(handle) || bio.length > 160) {
+      return page(
+        <Profile user={user} profile={user} posts={[]} following={false} bio={bio} editHandle={handle} editing
+          error="Use a 2–24 character username and a bio up to 160 characters." />,
+        400,
+      )
+    }
+    if (handle || bio) {
+      const moderation = await moderateText(`username: ${handle}\nbio: ${bio}`)
+      if (!moderation.ok) {
+        return page(
+          <Profile user={user} profile={user} posts={[]} following={false} bio={bio} editHandle={handle} editing
+            error={moderationMessage(moderation.reason)} />,
+          moderation.reason === 'flagged' ? 422 : 503,
+        )
+      }
+    }
+    try {
+      db.query('UPDATE users SET handle=?,bio=? WHERE id=?').run(handle, bio, user.id)
+    }
+    catch {
+      return page(
+        <Profile user={user} profile={user} posts={[]} following={false} bio={bio} editHandle={handle} editing
+          error="That username is unavailable." />,
+        400,
+      )
+    }
+    return redirect('/u/' + handle)
+  })
+
   app.get('/account/security', c =>
     securityPage(c.req.raw, undefined, c.req.query('changed') === 'password'
       ? 'Password changed. Other sessions were revoked.'

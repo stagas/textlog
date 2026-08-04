@@ -27,6 +27,11 @@ export function Auth(
             password<input type="password" name="password" required minLength={8} placeholder="8+ characters" />
           </label>
           <button className="button wide">{mode === 'signup' ? 'create account →' : 'log in →'}</button>
+          {mode === 'signup' && (
+            <p className="signup-terms">
+              By signing up, you agree to our <a href="/legal">Terms of Service</a>.
+            </p>
+          )}
         </form>
         <p className="switch">
           {mode === 'signup'

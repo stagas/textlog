@@ -26,6 +26,23 @@ export function Layout({
     type: 'website' as const,
     imageAlt: 'root.mx logo',
   }
+  const navigation = user
+    ? (
+      <>
+        <a href={`/u/${user.handle}`}>@{user.handle}</a>
+        <a href="/explore">explore</a>
+        <a href="/activity">activity</a>
+        <a href="/write">write</a>
+        {isAdmin(user) && <a href="/admin">admin</a>}
+      </>
+    )
+    : (
+      <>
+        <a href="/explore">explore</a>
+        <a href="/login">login</a>
+        <a className="button" href="/signup">join</a>
+      </>
+    )
   return (
     <html lang="en">
       <head>
@@ -51,34 +68,20 @@ export function Layout({
             <meta name="twitter:image:alt" content={share.imageAlt || `Post by ${title || 'a root.mx user'}`} />
           </>
         <link rel="icon" href="/root.svg?v=1" type="image/svg+xml" />
-        <link rel="stylesheet" href="/styles.css?v=36" />
+        <link rel="stylesheet" href="/styles.css?v=43" />
       </head>
       <body>
         <a className="skip-link" href="#main-content">skip to content</a>
-        <header>
+        <header className={user ? 'authenticated-header' : undefined}>
           <a className="brand" href="/" aria-label="root.mx home">
             <img className="brand-logo" src="/root.svg?v=1" alt="" />
             <span>
               root<span className="brand-dot">.</span>mx
             </span>
           </a>
-          {user
-            ? (
-              <nav className="account-nav">
-                <a href={`/u/${user.handle}`}>@{user.handle}</a>
-                <a href="/explore">explore</a>
-                <a href="/activity">activity</a>
-                <a href="/write">write</a>
-                {isAdmin(user) && <a href="/admin">admin</a>}
-              </nav>
-            )
-            : (
-              <nav className="guest-nav">
-                <a href="/explore">explore</a>
-                <a href="/login">login</a>
-                <a className="button" href="/signup">join</a>
-              </nav>
-            )}
+          <nav className={user ? 'account-nav' : 'guest-nav'}>
+            {navigation}
+          </nav>
         </header>
         <main id="main-content">{children}</main>
         <footer className="site-footer">

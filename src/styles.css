@@ -170,12 +170,33 @@ main {
 }
 
 header {
-  height: 82px;
-  padding: 0 var(--gutter);
+  min-height: 82px;
+  padding: var(--space-4) var(--gutter);
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
+  column-gap: var(--space-4);
+  row-gap: var(--space-3);
   border-bottom: 1px solid var(--soft);
+}
+
+header>nav {
+  max-width: 100%;
+  margin-left: auto;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+@media (max-width: 600px) {
+  .authenticated-header>.brand {
+    margin-inline: auto;
+  }
+
+  header>.account-nav {
+    flex-basis: 100%;
+    justify-content: center;
+  }
 }
 
 .brand {
@@ -699,9 +720,19 @@ textarea {
 }
 
 .switch,
+.signup-terms,
 .composefoot {
   color: var(--muted);
   font-size: 11px;
+}
+
+.switch,
+.signup-terms {
+  text-align: center;
+}
+
+.signup-terms {
+  margin: calc(-1 * var(--space-2)) 0 0;
 }
 
 .form-actions {
@@ -751,6 +782,10 @@ textarea {
   border-bottom: 1px solid var(--soft);
 }
 
+.security-section:last-child {
+  border-bottom: 0;
+}
+
 .security-section h2,
 .security-section p {
   margin-top: 0;
@@ -762,10 +797,13 @@ textarea {
   font-size: 11px;
 }
 
+.security-section .email-unverified {
+  color: var(--report-ink);
+}
+
 .security-form {
   display: grid;
   gap: var(--space-4);
-  max-width: 480px;
   margin-top: var(--space-5);
 }
 
@@ -939,6 +977,14 @@ textarea {
   align-items: center;
   justify-content: space-between;
   gap: var(--space-4);
+}
+
+.security-header .profile-title-row {
+  width: 100%;
+}
+
+.security-header {
+  border-bottom: 1px solid var(--soft);
 }
 
 .identity-prefix {
@@ -1329,16 +1375,6 @@ textarea {
 .people .activity-person {
   padding: var(--space-3) 0 0;
   border-top: 0;
-}
-
-@media (max-width: 600px) {
-  header {
-    gap: var(--space-4);
-  }
-
-  header>.account-nav {
-    gap: var(--space-4);
-  }
 }
 
 .columns h2 {

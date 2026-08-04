@@ -2,9 +2,8 @@ import {
   Connections,
   Profile,
 } from '../components/pages'
-import { moderateText, moderationMessage } from '../moderation'
 import type { PostView, ProfileRow } from '../types'
-import { currentPage, form, page, paginationRedirect, redirect } from './shared'
+import { currentPage, page, paginationRedirect, redirect } from './shared'
 
 import type { Hono } from 'hono'
 import { db } from '../db'
@@ -147,52 +146,10 @@ export function registerProfilesRoutes(app: Hono) {
     }
     return page(
       <Profile user={user} profile={profile} posts={blocked || blockedByProfile ? [] : posts} following={following}
-        blocked={blocked} editing={user?.id === profile.id && c.req.query('edit') === '1'} page={profilePage}
+        blocked={blocked} page={profilePage}
         total={total} followerCount={counts.followerCount} followingCount={counts.followingCount}
         followingTagCount={counts.followingTagCount} social={social} />,
     )
   })
 
-  app.post('/u/:handle/profile', async c => {
-    const user = currentUser(c.req.raw)
-    if (!user) return redirect('/login')
-    if (user.handle !== c.req.param('handle')) return c.text('Forbidden', 403)
-    const f = await form(c.req.raw)
-    // Preserve whitespace because spaces and line breaks can be meaningful in ASCII art.
-    // Treat an entirely blank submission as an empty bio, though.
-    const submittedBio = f.bio || ''
-    const bio = submittedBio.trim() ? submittedBio : ''
-    const handle = (f.handle || '').toLowerCase().replace(/^@/, '')
-    const posts = enrichPosts(db, db.query(
-      'SELECT p.*,u.handle FROM posts p JOIN users u ON u.id=p.user_id WHERE p.user_id=? AND p.deleted_at IS NULL ORDER BY p.created_at DESC',
-    ).all(user.id) as PostView[], user.id)
-    if (!/^[a-z0-9_]{2,24}$/.test(handle) || bio.length > 160) {
-      return page(
-        <Profile user={user} profile={user} posts={posts} following={false} bio={bio} editHandle={handle} editing
-          error="Use a 2–24 character username and a bio up to 160 characters." />,
-        400,
-      )
-    }
-    if (handle || bio) {
-      const moderation = await moderateText(`username: ${handle}\nbio: ${bio}`)
-      if (!moderation.ok) {
-        return page(
-          <Profile user={user} profile={user} posts={posts} following={false} bio={bio} editHandle={handle} editing
-            error={moderationMessage(moderation.reason)} />,
-          moderation.reason === 'flagged' ? 422 : 503,
-        )
-      }
-    }
-    try {
-      db.query('UPDATE users SET handle=?,bio=? WHERE id=?').run(handle, bio, user.id)
-    }
-    catch {
-      return page(
-        <Profile user={user} profile={user} posts={posts} following={false} bio={bio} editHandle={handle} editing
-          error="That username is unavailable." />,
-        400,
-      )
-    }
-    return redirect('/u/' + handle)
-  })
 }

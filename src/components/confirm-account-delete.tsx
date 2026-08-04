@@ -18,7 +18,7 @@ export function ConfirmAccountDelete({ user, error }: { user: User; error?: stri
             <input type="password" name="password" required autoComplete="current-password" autoFocus />
           </label>
           <div className="form-actions">
-            <a className="quiet" href={`/u/${user.handle}?edit=1`}>cancel</a>
+            <a className="quiet" href="/account/edit">cancel</a>
             <button className="button delete-button" type="submit">delete account</button>
           </div>
         </form>

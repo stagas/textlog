@@ -12,16 +12,20 @@ export function AccountSecurity({ user, sessions, error, success }: {
   return (
     <Layout user={user} title="account security">
       <section className="page-header security-header">
-        <div>
-          <p className="eyebrow">account</p>
+        <div className="profile-title-row">
           <h1>security</h1>
+          <a className="profile-edit-link" href="/account/edit">back</a>
         </div>
       </section>
       <div className="security-page">
         <FormMessage error={error} success={success} />
         <section className="security-section">
           <h2>email</h2>
-          <p>{user.email} · {user.email_verified_at ? 'verified' : 'not verified'}</p>
+          <p>
+            {user.email} · {user.email_verified_at
+              ? 'verified'
+              : <span className="email-unverified">not verified</span>}
+          </p>
           {!user.email_verified_at && (
             <form method="post" action="/account/email/verify">
               <button className="button">send verification email</button>

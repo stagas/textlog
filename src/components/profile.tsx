@@ -41,7 +41,7 @@ export function Profile(
                 ? <a className="profile-edit-link" href={'/u/' + profile.handle}>back</a>
                 : (
                   <div className="profile-owner-actions">
-                    <a className="profile-edit-link" href={'/u/' + profile.handle + '?edit=1'}>edit</a>
+                    <a className="profile-edit-link" href="/account/edit">edit</a>
                     <form method="post" action="/logout">
                       <button className="profile-edit-link profile-logout">logout</button>
                     </form>
@@ -52,7 +52,7 @@ export function Profile(
           {user?.id === profile.id && editing
             ? (
               <>
-                <form className="bio-form" method="post" action={'/u/' + profile.handle + '/profile'}>
+                <form className="bio-form" method="post" action="/account/edit">
                   <FormMessage error={error} />
                   <label>
                     handle<input name="handle" required pattern="[A-Za-z0-9_]{2,24}" defaultValue={editHandle} />
@@ -75,7 +75,7 @@ export function Profile(
                 </div>
                 <div className="account-danger-zone">
                   <div>
-                    <strong>Download data</strong>
+                    <strong>Download your data</strong>
                     <span>Export your account, notes, connections, and activity as a JSON file.</span>
                   </div>
                   <a className="button" href="/account/export" download>download data</a>

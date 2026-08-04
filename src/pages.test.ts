@@ -52,6 +52,13 @@ describe('Auth', () => {
     const html = renderToStaticMarkup(React.createElement(Auth, { mode: 'signup' }))
 
     expect(html).toContain('pattern="[A-Za-z0-9_]{2,24}"')
+    expect(html).toContain('By signing up, you agree to our <a href="/legal">Terms of Service</a>.')
+  })
+
+  test('login does not show the signup terms notice', () => {
+    const html = renderToStaticMarkup(React.createElement(Auth, { mode: 'login' }))
+
+    expect(html).not.toContain('By signing up')
   })
 })
 
@@ -65,6 +72,8 @@ test('AccountSecurity renders verification and safe session controls', () => {
   }))
 
   expect(html).toContain('send verification email')
+  expect(html).toContain('class="email-unverified">not verified</span>')
+  expect(html).toContain('href="/account/edit">back</a>')
   expect(html).toContain('/account/password')
   expect(html).toContain('value="revocable-id"')
   expect(html).not.toContain('value="current-id"')
@@ -84,6 +93,7 @@ test('Profile edit offers a data download without rendering notes', () => {
   }))
 
   expect(html).toContain('href="/account/export"')
+  expect(html).toContain('action="/account/edit"')
   expect(html).toContain('download data')
   expect(html).toContain('href="/u/reader">back</a>')
   expect(html).not.toContain('hidden while editing')
@@ -97,7 +107,7 @@ test('Profile places owner actions in the handle row', () => {
 
   expect(html).toContain('class="profile-title-row"')
   expect(html).toContain('class="identity-prefix">@</span>reader')
-  expect(html).toContain('href="/u/reader?edit=1">edit</a>')
+  expect(html).toContain('href="/account/edit">edit</a>')
   expect(html).toContain('action="/logout"')
 })
 
