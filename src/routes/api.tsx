@@ -2,7 +2,7 @@ import type { Database } from 'bun:sqlite'
 import type { Context, Hono } from 'hono'
 import { apiHotPosts, apiOrigin, apiPost, apiPosts, isoTimestamp, parseCollectionParams } from '../api'
 import { subscribeToPosts } from '../api-broker'
-import { consumeAuthAttempt, rateLimitKey } from '../auth-rate-limit'
+import { consumeBucketedAttempt, rateLimitKey } from '../auth-rate-limit'
 import { ApiDocs } from '../components/pages'
 import { db } from '../db'
 import { resolveHandle } from '../handles'
@@ -164,7 +164,7 @@ export function registerApiRoutes(app: Hono, database: Database = db) {
   app.use('/api/v1/*', async (c, next) => {
     if (c.req.method === 'OPTIONS' || c.req.path === '/api/v1/firehose') return next()
     const ip = c.req.header('x-root-client-ip') || '-'
-    const limited = consumeAuthAttempt(database, 'api-json', rateLimitKey(ip), JSON_LIMIT, JSON_WINDOW_SECONDS)
+    const limited = consumeBucketedAttempt(database, 'api-json', rateLimitKey(ip), JSON_LIMIT, JSON_WINDOW_SECONDS)
     if (limited) return apiError('rate_limited', 'Too many API requests', 429, limited.retryAfter)
     return next()
   })

@@ -40,6 +40,30 @@ export function consumeAuthAttempt(
   })()
 }
 
+export function consumeBucketedAttempt(
+  database: Database,
+  scope: string,
+  keyHash: string,
+  limit: number,
+  bucketSeconds: number,
+  now = Date.now(),
+) {
+  const bucketMs = bucketSeconds * 1000
+  const bucketStart = Math.floor(now / bucketMs) * bucketMs
+  return database.transaction(() => {
+    const current = database.query(
+      'SELECT count FROM api_rate_limit_buckets WHERE scope=? AND key_hash=? AND bucket_start=?',
+    ).get(scope, keyHash, bucketStart) as { count: number } | null
+    if (current && current.count >= limit) {
+      return { retryAfter: Math.max(1, Math.ceil((bucketStart + bucketMs - now) / 1000)) }
+    }
+    database.query(`INSERT INTO api_rate_limit_buckets(scope,key_hash,bucket_start,count) VALUES(?,?,?,1)
+      ON CONFLICT(scope,key_hash,bucket_start) DO UPDATE SET count=count+1`)
+      .run(scope, keyHash, bucketStart)
+    return null
+  })()
+}
+
 export function authRateLimitMessage(retryAfter: number) {
   const minutes = Math.max(1, Math.ceil(retryAfter / 60))
   return `Too many attempts. Try again in about ${minutes} ${minutes === 1 ? 'minute' : 'minutes'}.`

@@ -8,6 +8,7 @@ import { compressResponse } from './compression'
 import { databaseHealth } from './database-health'
 import { db } from './db'
 import { clientIp, logError, logHttp, logReady, shouldLogHttp } from './log'
+import { startMaintenance } from './maintenance'
 import { renderDefaultOg } from './og'
 import { registerAccountRoutes } from './routes/account'
 import { registerAdminRoutes } from './routes/admin'
@@ -21,7 +22,7 @@ import { registerProfilesRoutes } from './routes/profiles'
 import { registerSeoRoutes } from './routes/seo'
 import { registerTagsRoutes } from './routes/tags'
 import { loadStylesAsset, stylesResponse } from './styles'
-import { recordVisit } from './visitors'
+import { VisitorBuffer } from './visitors'
 
 const devReloadEnabled = Bun.env.DEV_RELOAD === 'true'
 const bootId = crypto.randomUUID()
@@ -29,6 +30,8 @@ configureDevReload(devReloadEnabled ? bootId : undefined)
 const app = new Hono()
 const stylesPath = new URL('./styles.css', import.meta.url).pathname
 const styles = devReloadEnabled ? undefined : await loadStylesAsset(stylesPath)
+const visitorBuffer = new VisitorBuffer(db)
+startMaintenance(db, visitorBuffer, error => logError('database maintenance failed', error))
 
 app.use('*', bodyLimit({
   maxSize: GLOBAL_REQUEST_BODY_LIMIT,
@@ -38,7 +41,8 @@ app.use('*', bodyLimit({
 app.use('*', async (c, next) => {
   await next()
   if (c.req.method !== 'GET' || c.res.status >= 400 || !c.res.headers.get('content-type')?.includes('text/html')) return
-  recordVisit(db, c.req.header('x-root-client-ip') || '-')
+  try { visitorBuffer.record(c.req.header('x-root-client-ip') || '-') }
+  catch (error) { logError('visitor buffer flush failed', error) }
 })
 
 app.use('*', async (c, next) => {

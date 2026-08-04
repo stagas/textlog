@@ -18,6 +18,8 @@ function fixture() {
     CREATE TABLE post_hashtags (post_id INTEGER NOT NULL,tag TEXT NOT NULL);
     CREATE TABLE auth_rate_limits (id INTEGER PRIMARY KEY AUTOINCREMENT,scope TEXT NOT NULL,key_hash TEXT NOT NULL,
       created_at INTEGER NOT NULL);
+    CREATE TABLE api_rate_limit_buckets (scope TEXT NOT NULL,key_hash TEXT NOT NULL,bucket_start INTEGER NOT NULL,
+      count INTEGER NOT NULL,PRIMARY KEY(scope,key_hash,bucket_start));
     CREATE TABLE post_hot (post_id INTEGER PRIMARY KEY,score REAL NOT NULL DEFAULT 0,
       score_updated_at TEXT NOT NULL,latest_activity_at TEXT NOT NULL);
     INSERT INTO users(id,handle,email,bio,created_at) VALUES
@@ -151,7 +153,7 @@ describe('public API', () => {
   })
 
   test('rate limits JSON requests independently by IP', async () => {
-    const { app } = fixture()
+    const { app, database } = fixture()
     for (let i = 0; i < 120; i++) {
       expect((await request(app, '/api/v1/feeds/latest', { headers: { 'x-root-client-ip': 'busy' } })).status).toBe(200)
     }
@@ -160,6 +162,7 @@ describe('public API', () => {
     expect(limited.status).toBe(429)
     expect(limited.headers.get('retry-after')).toBeTruthy()
     expect(other.status).toBe(200)
+    expect((database.query('SELECT count(*) count FROM api_rate_limit_buckets').get() as { count: number }).count).toBe(2)
   })
 
   test('streams ready and live post events with non-buffering headers', async () => {

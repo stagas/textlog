@@ -214,6 +214,16 @@ export const migrations: Migration[] = [
       database.run('CREATE INDEX IF NOT EXISTS posts_user_id_desc ON posts(user_id,id DESC)')
     },
   },
+  {
+    version: 14,
+    name: 'bucketed_api_rate_limits',
+    up(database) {
+      database.run(`CREATE TABLE api_rate_limit_buckets (
+        scope TEXT NOT NULL,key_hash TEXT NOT NULL,bucket_start INTEGER NOT NULL,count INTEGER NOT NULL,
+        PRIMARY KEY(scope,key_hash,bucket_start));
+      CREATE INDEX api_rate_limit_buckets_expiry ON api_rate_limit_buckets(bucket_start);`)
+    },
+  },
 ]
 
 export const latestMigrationVersion = migrations.at(-1)!.version

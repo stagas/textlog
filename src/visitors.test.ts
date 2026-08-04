@@ -1,6 +1,6 @@
 import { Database } from 'bun:sqlite'
 import { describe, expect, test } from 'bun:test'
-import { recordVisit, visitorHash } from './visitors'
+import { VisitorBuffer, visitorHash } from './visitors'
 
 function testDatabase() {
   const database = new Database(':memory:')
@@ -16,8 +16,11 @@ describe('visitor analytics', () => {
   test('stores only a hash and deduplicates a visitor within a day', () => {
     const database = testDatabase()
     const visitedAt = new Date('2026-08-04T01:00:00Z')
-    recordVisit(database, '203.0.113.4', visitedAt)
-    recordVisit(database, '203.0.113.4', new Date('2026-08-04T23:00:00Z'))
+    const buffer = new VisitorBuffer(database)
+    buffer.record('203.0.113.4', visitedAt)
+    buffer.record('203.0.113.4', new Date('2026-08-04T23:00:00Z'))
+    expect(database.query('SELECT count(*) count FROM daily_visitors').get()).toEqual({ count: 0 })
+    buffer.flush()
 
     expect(database.query('SELECT * FROM daily_visitors').all()).toEqual([{
       day: '2026-08-04',
@@ -28,8 +31,10 @@ describe('visitor analytics', () => {
 
   test('records the same visitor again on a new day', () => {
     const database = testDatabase()
-    recordVisit(database, '203.0.113.4', new Date('2026-08-03T23:59:59Z'))
-    recordVisit(database, '203.0.113.4', new Date('2026-08-04T00:00:00Z'))
+    const buffer = new VisitorBuffer(database)
+    buffer.record('203.0.113.4', new Date('2026-08-03T23:59:59Z'))
+    buffer.record('203.0.113.4', new Date('2026-08-04T00:00:00Z'))
+    buffer.flush()
 
     expect(database.query('SELECT * FROM daily_visitors').all()).toHaveLength(2)
     const rows = database.query('SELECT visitor_hash FROM daily_visitors ORDER BY day').all() as {
@@ -38,10 +43,13 @@ describe('visitor analytics', () => {
     expect(rows[0].visitor_hash).not.toBe(rows[1].visitor_hash)
   })
 
-  test('removes visitor pseudonyms after seven days', () => {
+  test('flushes in bounded batches', () => {
     const database = testDatabase()
-    recordVisit(database, '203.0.113.4', new Date('2026-08-01T12:00:00Z'))
-    recordVisit(database, '203.0.113.5', new Date('2026-08-08T12:00:00Z'))
-    expect(database.query('SELECT day FROM daily_visitors').all()).toEqual([{ day: '2026-08-08' }])
+    const buffer = new VisitorBuffer(database, 2)
+    buffer.record('203.0.113.4', new Date('2026-08-08T12:00:00Z'))
+    expect(buffer.size).toBe(1)
+    buffer.record('203.0.113.5', new Date('2026-08-08T12:00:00Z'))
+    expect(buffer.size).toBe(0)
+    expect(database.query('SELECT day FROM daily_visitors').all()).toHaveLength(2)
   })
 })

@@ -34,6 +34,11 @@ overwrites forwarded client-address headers. Development remains integration-opt
 latency reaches 250 ms or the WAL reaches 64 MiB. Scrape the endpoint with production monitoring and alert on failures
 or sustained warnings.
 
+Successful HTML visits are deduplicated in memory and written in transactions of at most 500 visitor-days, normally
+every five seconds. Public API limits use one aggregate row per client and minute instead of one row per request.
+Expired sessions, tokens, rate-limit buckets, and visitor pseudonyms are removed every five minutes in batches of 500
+rows per table, keeping maintenance transactions short under load.
+
 ## Database migrations and recovery
 
 The database schema is upgraded through ordered, transactional migrations tracked by SQLite's `user_version`.
