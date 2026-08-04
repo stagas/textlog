@@ -117,6 +117,13 @@ export function validateStartupConfiguration(env: Environment = Bun.env, options
 
   const resendConfigured = Boolean(env.RESEND_API_KEY?.trim())
   const emailFromConfigured = Boolean(env.EMAIL_FROM?.trim())
+  const emailCaptureConfigured = Boolean(env.EMAIL_CAPTURE_PATH?.trim())
+  if (emailCaptureConfigured && environment !== 'test') {
+    problems.push('EMAIL_CAPTURE_PATH is only allowed in test')
+  }
+  if (emailCaptureConfigured && (resendConfigured || emailFromConfigured)) {
+    problems.push('EMAIL_CAPTURE_PATH cannot be combined with RESEND_API_KEY or EMAIL_FROM')
+  }
   if (resendConfigured !== emailFromConfigured) {
     problems.push('RESEND_API_KEY and EMAIL_FROM must be configured together')
   }

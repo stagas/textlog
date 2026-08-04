@@ -1,4 +1,15 @@
+import { appendFileSync, mkdirSync } from 'node:fs'
+import { dirname } from 'node:path'
+
 async function sendEmail(email: string, subject: string, text: string, html: string) {
+  const capturePath = Bun.env.EMAIL_CAPTURE_PATH
+  if (capturePath) {
+    if (Bun.env.NODE_ENV !== 'test') throw new Error('EMAIL_CAPTURE_PATH is only available in test')
+    mkdirSync(dirname(capturePath), { recursive: true })
+    appendFileSync(capturePath, `${JSON.stringify({ to: email, subject, text, html })}\n`, { mode: 0o600 })
+    return
+  }
+
   const apiKey = Bun.env.RESEND_API_KEY
   const from = Bun.env.EMAIL_FROM
   if (!apiKey || !from) throw new Error('RESEND_API_KEY and EMAIL_FROM must be configured')
