@@ -8,6 +8,7 @@ import { db } from '../db'
 import { logError } from '../log'
 import { currentUser } from '../utils'
 import { page } from './shared'
+import { resolveHandle } from '../handles'
 
 const JSON_LIMIT = 120
 const JSON_WINDOW_SECONDS = 60
@@ -141,13 +142,18 @@ export function registerApiRoutes(app: Hono, database: Database = db) {
   app.get('/api/v1/users/:handle', c => {
     const handle = c.req.param('handle')
     if (!/^[A-Za-z0-9_]{2,24}$/.test(handle)) return apiError('invalid_handle', 'Handle is invalid', 400)
+    const resolved = resolveHandle(database, handle)
+    if (!resolved) return apiError('not_found', 'User not found', 404)
+    if (resolved.alias) {
+      return c.redirect(`/api/v1/users/${encodeURIComponent(resolved.handle)}`, 308)
+    }
     const found = database.query(`SELECT u.handle,u.bio,u.created_at,
       (SELECT count(*) FROM posts p WHERE p.user_id=u.id AND p.deleted_at IS NULL) post_count,
       (SELECT count(*) FROM follows f JOIN users follower ON follower.id=f.follower_id
         WHERE f.following_id=u.id AND follower.deleted_at IS NULL) follower_count,
       (SELECT count(*) FROM follows f JOIN users followed ON followed.id=f.following_id
         WHERE f.follower_id=u.id AND followed.deleted_at IS NULL) following_count
-      FROM users u WHERE u.handle=? COLLATE NOCASE AND u.deleted_at IS NULL`).get(handle) as {
+      FROM users u WHERE u.id=? AND u.deleted_at IS NULL`).get(resolved.id) as {
         handle: string; bio: string; created_at: string; post_count: number; follower_count: number; following_count: number
       } | null
     if (!found) return apiError('not_found', 'User not found', 404)
@@ -162,9 +168,12 @@ export function registerApiRoutes(app: Hono, database: Database = db) {
   app.get('/api/v1/users/:handle/posts', c => {
     const handle = c.req.param('handle')
     if (!/^[A-Za-z0-9_]{2,24}$/.test(handle)) return apiError('invalid_handle', 'Handle is invalid', 400)
-    const user = database.query('SELECT 1 FROM users WHERE handle=? COLLATE NOCASE AND deleted_at IS NULL').get(handle)
-    if (!user) return apiError('not_found', 'User not found', 404)
-    return collection(c, database, { handle })
+    const resolved = resolveHandle(database, handle)
+    if (!resolved) return apiError('not_found', 'User not found', 404)
+    if (resolved.alias) {
+      return c.redirect(`/api/v1/users/${encodeURIComponent(resolved.handle)}/posts${new URL(c.req.url).search}`, 308)
+    }
+    return collection(c, database, { handle: resolved.handle })
   })
 
   app.get('/api/v1/tags/:tag/posts', c => {

@@ -35,6 +35,7 @@ export function resolvePostReports(database: Database, postId: number, actorId: 
 }
 
 export function anonymizeUser(database: Database, userId: number, actorId?: number) {
+  const account = database.query('SELECT handle FROM users WHERE id=?').get(userId) as { handle: string } | null
   const postIds = database.query('SELECT id FROM posts WHERE user_id=?').all(userId) as { id: number }[]
   database.query("UPDATE posts SET body='(deleted)',deleted_at=COALESCE(deleted_at,CURRENT_TIMESTAMP) WHERE user_id=?")
     .run(userId)
@@ -51,6 +52,10 @@ export function anonymizeUser(database: Database, userId: number, actorId?: numb
   database.query('DELETE FROM password_resets WHERE user_id=?').run(userId)
   if (database.query("SELECT 1 FROM sqlite_master WHERE type='table' AND name='email_tokens'").get()) {
     database.query('DELETE FROM email_tokens WHERE user_id=?').run(userId)
+  }
+  if (account && database.query("SELECT 1 FROM sqlite_master WHERE type='table' AND name='handle_history'").get()) {
+    database.query('INSERT OR IGNORE INTO handle_history(handle,user_id) VALUES(?,?)')
+      .run(account.handle.toLowerCase(), userId)
   }
   database.query('DELETE FROM sessions WHERE user_id=?').run(userId)
   database.query(`UPDATE users SET handle=?,email=?,bio='',password='!',suspended_at=NULL,deleted_at=CURRENT_TIMESTAMP

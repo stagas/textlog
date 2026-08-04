@@ -9,6 +9,7 @@ function fixture() {
   database.run(`
     CREATE TABLE users (id INTEGER PRIMARY KEY,handle TEXT NOT NULL,email TEXT,bio TEXT NOT NULL DEFAULT '',
       created_at TEXT DEFAULT CURRENT_TIMESTAMP,deleted_at TEXT,suspended_at TEXT);
+    CREATE TABLE handle_history (handle TEXT PRIMARY KEY COLLATE NOCASE,user_id INTEGER NOT NULL);
     CREATE TABLE posts (id INTEGER PRIMARY KEY,user_id INTEGER NOT NULL,parent_id INTEGER,body TEXT NOT NULL,
       created_at TEXT DEFAULT CURRENT_TIMESTAMP,deleted_at TEXT);
     CREATE TABLE follows (follower_id INTEGER NOT NULL,following_id INTEGER NOT NULL);
@@ -30,6 +31,7 @@ function fixture() {
     UPDATE posts SET deleted_at='2026-08-03 15:00:00' WHERE id=5;
     INSERT INTO post_hashtags(post_id,tag) VALUES(1,'root');
     INSERT INTO follows(follower_id,following_id) VALUES(2,1);
+    INSERT INTO handle_history(handle,user_id) VALUES('oldalice',1);
   `)
   const app = new Hono()
   registerApiRoutes(app, database)
@@ -106,6 +108,12 @@ describe('public API', () => {
     expect((await request(app, '/api/v1/posts/nope')).status).toBe(400)
     expect((await request(app, '/api/v1/posts/5')).status).toBe(404)
     expect((await request(app, '/api/v1/users/gone')).status).toBe(404)
+    const oldProfile = await request(app, '/api/v1/users/oldalice')
+    const oldPosts = await request(app, '/api/v1/users/oldalice/posts?limit=5')
+    expect(oldProfile.status).toBe(308)
+    expect(oldProfile.headers.get('location')).toBe('/api/v1/users/Alice')
+    expect(oldPosts.status).toBe(308)
+    expect(oldPosts.headers.get('location')).toBe('/api/v1/users/Alice/posts?limit=5')
   })
 
   test('supports preflight, publishes OpenAPI, and rejects mutation methods', async () => {

@@ -14,6 +14,7 @@ import { moderateText, moderationMessage } from '../moderation'
 import {
   clearSessionCookie,
 } from '../http'
+import { updateProfileHandle } from '../handles'
 
 export function registerAccountRoutes(app: Hono) {
   app.get('/account/edit', c => {
@@ -49,7 +50,7 @@ export function registerAccountRoutes(app: Hono) {
       }
     }
     try {
-      db.query('UPDATE users SET handle=?,bio=? WHERE id=?').run(handle, bio, user.id)
+      updateProfileHandle(db, user.id, handle, bio)
     }
     catch {
       return page(

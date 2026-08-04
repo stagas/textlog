@@ -3,17 +3,17 @@ import { extractHashtags, extractMentions } from './content'
 import { insertRateLimitedPost } from './post-rate-limit'
 import type { ParentPost, PostView } from './types'
 import { publishPost } from './api-broker'
+import { resolveHandle } from './handles'
 
 export function syncPostMetadata(database: Database, postId: number, body: string) {
   database.query('DELETE FROM post_hashtags WHERE post_id=?').run(postId)
   database.query('DELETE FROM post_mentions WHERE post_id=?').run(postId)
   const insertTag = database.query('INSERT OR IGNORE INTO post_hashtags(post_id,tag) VALUES(?,?)')
-  const findUser = database.query('SELECT id FROM users WHERE handle=? AND deleted_at IS NULL')
   const insertMention = database.query('INSERT OR IGNORE INTO post_mentions(post_id,user_id) VALUES(?,?)')
 
   for (const tag of extractHashtags(body)) insertTag.run(postId, tag)
   for (const handle of extractMentions(body)) {
-    const mentioned = findUser.get(handle) as { id: number } | null
+    const mentioned = resolveHandle(database, handle)
     if (mentioned) insertMention.run(postId, mentioned.id)
   }
 }

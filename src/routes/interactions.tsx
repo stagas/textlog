@@ -9,6 +9,7 @@ import {
   safeRefererPath,
 } from '../http'
 import { currentUser } from '../utils'
+import { resolveHandle } from '../handles'
 
 export function registerInteractionsRoutes(app: Hono) {
   app.post('/follow/:handle', async c => {
@@ -17,9 +18,7 @@ export function registerInteractionsRoutes(app: Hono) {
     const handle = c.req.param('handle').toLowerCase()
     if (!/^[a-z0-9_]{2,24}$/.test(handle)) return c.text('Invalid handle', 400)
     const f = await form(c.req.raw)
-    const target = db.query('SELECT id FROM users WHERE handle=? AND deleted_at IS NULL').get(handle) as
-      | { id: number }
-      | null
+    const target = resolveHandle(db, handle)
     if (target && target.id !== user.id && !usersBlocked(user.id, target.id)) {
       const exists = db.query('SELECT 1 FROM follows WHERE follower_id=? AND following_id=?').get(user.id, target.id)
       exists
@@ -43,9 +42,7 @@ export function registerInteractionsRoutes(app: Hono) {
     const user = currentUser(c.req.raw)
     if (!user) return redirect('/login')
     const handle = c.req.param('handle').toLowerCase()
-    const target = db.query('SELECT id FROM users WHERE handle=? AND deleted_at IS NULL').get(handle) as
-      | { id: number }
-      | null
+    const target = resolveHandle(db, handle)
     if (!target || target.id === user.id) return c.text('Not found', 404)
     const exists = db.query('SELECT 1 FROM blocks WHERE blocker_id=? AND blocked_id=?').get(user.id, target.id)
     db.transaction(() => {
@@ -56,7 +53,7 @@ export function registerInteractionsRoutes(app: Hono) {
           .run(user.id, target.id, target.id, user.id)
       }
     })()
-    return redirect('/u/' + handle)
+    return redirect('/u/' + target.handle)
   })
 
   app.post('/post/:id/report', async c => {

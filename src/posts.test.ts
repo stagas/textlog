@@ -7,6 +7,7 @@ function database() {
   const db = new Database(':memory:')
   db.run(`
     CREATE TABLE users (id INTEGER PRIMARY KEY, handle TEXT NOT NULL, deleted_at TEXT);
+    CREATE TABLE handle_history (handle TEXT PRIMARY KEY COLLATE NOCASE,user_id INTEGER NOT NULL);
     CREATE TABLE posts (id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER NOT NULL, parent_id INTEGER,
       body TEXT NOT NULL, created_at TEXT DEFAULT CURRENT_TIMESTAMP, deleted_at TEXT);
     CREATE TABLE post_hashtags (post_id INTEGER NOT NULL, tag TEXT NOT NULL CHECK(tag != 'fail'), PRIMARY KEY(post_id,tag));
@@ -28,6 +29,15 @@ describe('post persistence', () => {
     const result = createPost(db, 1, 'hello #build @reader')
     expect(result).toHaveProperty('id')
     expect(db.query('SELECT tag FROM post_hashtags').all()).toEqual([{ tag: 'build' }])
+    expect(db.query('SELECT user_id FROM post_mentions').all()).toEqual([{ user_id: 2 }])
+  })
+
+  test('resolves mentions made with a previous handle', () => {
+    const db = database()
+    db.run("INSERT INTO handle_history(handle,user_id) VALUES('old_reader',2)")
+
+    createPost(db, 1, 'hello @old_reader')
+
     expect(db.query('SELECT user_id FROM post_mentions').all()).toEqual([{ user_id: 2 }])
   })
 

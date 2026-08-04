@@ -10,17 +10,23 @@ import { db } from '../db'
 import { renderProfileOg } from '../og'
 import { enrichPosts } from '../posts'
 import { currentUser } from '../utils'
+import { resolveHandle } from '../handles'
 
 export function registerProfilesRoutes(app: Hono) {
   app.get('/u/:handle/og.png', c => {
+    const resolved = resolveHandle(db, c.req.param('handle'))
+    if (!resolved) return c.text('Not found', 404)
+    if (resolved.alias) {
+      return c.redirect(`/u/${resolved.handle}/og.png`, 301)
+    }
     const profile = db.query(
       `SELECT u.handle,u.bio,
       (SELECT count(*) FROM posts p WHERE p.user_id=u.id AND p.deleted_at IS NULL) notes,
       (SELECT count(*) FROM follows f WHERE f.follower_id=u.id) following,
       (SELECT count(*) FROM hashtag_follows hf WHERE hf.user_id=u.id) followingTags,
       (SELECT count(*) FROM follows f WHERE f.following_id=u.id) followers
-      FROM users u WHERE u.handle=? AND u.deleted_at IS NULL`,
-    ).get(c.req.param('handle')) as {
+      FROM users u WHERE u.id=? AND u.deleted_at IS NULL`,
+    ).get(resolved.id) as {
       handle: string
       bio: string
       notes: number
@@ -42,17 +48,24 @@ export function registerProfilesRoutes(app: Hono) {
   app.get('/u/:handle/:kind', c => {
     const kind = c.req.param('kind')
     if (kind !== 'following' && kind !== 'followers') return c.text('Not found', 404)
+    const resolved = resolveHandle(db, c.req.param('handle'))
+    if (!resolved) return c.text('Not found', 404)
     const pageQuery = c.req.query('page') ? `&page=${encodeURIComponent(c.req.query('page')!)}` : ''
-    return redirect(`/u/${c.req.param('handle')}?tab=${kind}${pageQuery}`)
+    return redirect(`/u/${resolved.handle}?tab=${kind}${pageQuery}`)
   })
 
   app.get('/u/:handle', c => {
+    const requestedHandle = c.req.param('handle')
+    const resolved = resolveHandle(db, requestedHandle)
+    if (!resolved) return c.text('Not found', 404)
+    if (resolved.alias) {
+      return c.redirect(`/u/${resolved.handle}${new URL(c.req.url).search}`, 301)
+    }
     const user = currentUser(c.req.raw)
     const profilePage = currentPage(c.req.query('page'))
     const profile = db.query(
-      'SELECT id,handle,email,bio,suspended_at,deleted_at FROM users WHERE handle=? AND deleted_at IS NULL',
-    ).get(c.req.param('handle')) as ProfileRow | null
-    if (!profile) return c.text('Not found', 404)
+      'SELECT id,handle,email,bio,suspended_at,deleted_at FROM users WHERE id=? AND deleted_at IS NULL',
+    ).get(resolved.id) as ProfileRow
     const tab = c.req.query('tab')
     if (tab && tab !== 'following' && tab !== 'followers') return c.text('Not found', 404)
     const posts = enrichPosts(db, db.query(
