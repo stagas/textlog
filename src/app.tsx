@@ -16,6 +16,7 @@ import { registerIllegalActivityRoutes } from './routes/illegal-activity'
 import { registerInteractionsRoutes } from './routes/interactions'
 import { registerPostsRoutes } from './routes/posts'
 import { registerProfilesRoutes } from './routes/profiles'
+import { registerSeoRoutes } from './routes/seo'
 import { registerTagsRoutes } from './routes/tags'
 import { loadStylesAsset, stylesResponse } from './styles'
 import { recordVisit } from './visitors'
@@ -124,6 +125,7 @@ registerIllegalActivityRoutes(app)
 registerAdminRoutes(app)
 registerProfilesRoutes(app)
 registerTagsRoutes(app)
+registerSeoRoutes(app)
 app.notFound(c => c.text('Not found', 404))
 app.onError((error, c) => {
   if (error instanceof RequestBodyError) return c.text(error.message, error.status)

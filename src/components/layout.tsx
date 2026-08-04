@@ -69,6 +69,7 @@ export function Layout({
           <meta name="twitter:image:alt" content={share.imageAlt || `Post by ${title || 'a root.mx user'}`} />
         </>
         <link rel="icon" href="/root.svg?v=1" type="image/svg+xml" />
+        <link rel="sitemap" href="/sitemap.xml" type="application/xml" />
         <link rel="stylesheet" href="/styles.css?v=47" />
       </head>
       <body>
