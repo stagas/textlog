@@ -1,7 +1,7 @@
 import { type User } from '../db'
 import type { PostView } from '../types'
 import { Layout } from './layout'
-import { FormMessage, postTitle, ReportPanel } from './page-shared'
+import { FormMessage, postTitle, ReportPanel, VerificationRequired } from './page-shared'
 import { Post, ThreadReplies } from './post'
 
 export function Reply(
@@ -17,7 +17,8 @@ export function Reply(
       </div>
       {user.id !== post.user_id && <ReportPanel post={post} showForm={showReport} reported={reported} />}
       {showForm && (
-        <div className="panel replybox">
+        user.email_verified_at
+          ? <div className="panel replybox">
           <form method="post" action={'/post/' + post.id + '/reply'}>
             <FormMessage error={error} />
             <textarea name="body" maxLength={280} required autoFocus defaultValue={body}
@@ -28,6 +29,7 @@ export function Reply(
             </div>
           </form>
         </div>
+          : <VerificationRequired />
       )}
       <ThreadReplies parentId={post.id} user={user} />
     </Layout>

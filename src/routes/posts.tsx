@@ -73,6 +73,7 @@ export function registerPostsRoutes(app: Hono) {
   app.post('/post', async c => {
     const user = currentUser(c.req.raw)
     if (!user) return redirect('/login')
+    if (!user.email_verified_at) return page(<Compose user={user} />, 403)
     const f = await form(c.req.raw)
     const body = f.body || ''
     if (body.trim().length < 1 || body.length > 280) return page(<Compose user={user} />, 400)
@@ -172,6 +173,7 @@ export function registerPostsRoutes(app: Hono) {
       : null
     if (!parent) return c.text('Not found', 404)
     if (usersBlocked(user.id, parent.user_id)) return c.text('Forbidden', 403)
+    if (!user.email_verified_at) return page(<Reply user={user} post={parent} showForm />, 403)
     const f = await form(c.req.raw)
     const body = f.body || ''
     if (body.trim().length < 1 || body.length > 280) {

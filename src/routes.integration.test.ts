@@ -221,6 +221,23 @@ test('consequential account, content, reporting, and admin flows work over HTTP'
 
   const bobCookie = await signup('bob', 'bob@example.com', 'bob password 123')
   const bob = database.query('SELECT id FROM users WHERE handle=?').get('bob') as { id: number }
+  const unverifiedWritePage = await request('/write', { cookie: bobCookie })
+  expect(unverifiedWritePage.status).toBe(200)
+  expect(await unverifiedWritePage.text()).toContain('Confirm your email address before posting')
+  const unverifiedPost = await request('/post', {
+    method: 'POST',
+    cookie: bobCookie,
+    form: { body: 'This must not become public' },
+  })
+  expect(unverifiedPost.status).toBe(403)
+  expect((database.query('SELECT count(*) count FROM posts WHERE user_id=?').get(bob.id) as any).count).toBe(0)
+  const unverifiedReply = await request(`/post/${post.id}/reply`, {
+    method: 'POST',
+    cookie: bobCookie,
+    form: { body: 'Neither should this reply' },
+  })
+  expect(unverifiedReply.status).toBe(403)
+  expect((database.query('SELECT count(*) count FROM posts WHERE user_id=?').get(bob.id) as any).count).toBe(0)
   const report = await request(`/post/${post.id}/report`, {
     method: 'POST',
     cookie: bobCookie,

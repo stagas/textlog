@@ -23,6 +23,15 @@ export function FormMessage({ error, success }: { error?: string; success?: stri
   )
 }
 
+export function VerificationRequired() {
+  return (
+    <div className="panel form-error" role="alert">
+      Confirm your email address before posting.{' '}
+      <a href="/account/security">Verify your email</a>
+    </div>
+  )
+}
+
 export function Pagination({ page, totalPages, path }: { page: number; totalPages: number; path: string }) {
   if (totalPages <= 1) return null
   const separator = path.includes('?') ? '&' : '?'
