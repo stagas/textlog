@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test'
-import { gunzipSync, brotliDecompressSync } from 'node:zlib'
+import { brotliDecompressSync, gunzipSync } from 'node:zlib'
 import { compressResponse } from './compression'
 
 const text = 'normal response content '.repeat(100)

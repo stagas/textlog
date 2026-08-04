@@ -16,7 +16,8 @@ export async function compressResponse(request: Request, response: Response, thr
   if (
     request.method === 'HEAD' || response.status === 204 || response.status === 205 || response.status === 206
     || response.status === 304 || !response.body || response.headers.has('content-encoding')
-    || !compressibleType.test(contentType) || /(?:^|,)\s*no-transform\s*(?:,|$)/i.test(response.headers.get('cache-control') || '')
+    || !compressibleType.test(contentType)
+    || /(?:^|,)\s*no-transform\s*(?:,|$)/i.test(response.headers.get('cache-control') || '')
     || (contentLength !== undefined && Number.isFinite(contentLength) && contentLength < threshold)
   ) return response
 

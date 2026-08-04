@@ -1,7 +1,7 @@
 import type { Database } from 'bun:sqlite'
 import { extractMentions } from './content'
-import { migrateLegacySessionTokens } from './sessions'
 import { rebuildHotPosts } from './hot'
+import { migrateLegacySessionTokens } from './sessions'
 
 type Migration = { version: number; name: string; up(database: Database): void }
 
@@ -16,8 +16,8 @@ function addColumn(database: Database, table: string, name: string, definition: 
 function backfillMentions(database: Database) {
   const users = database.query('SELECT id,handle FROM users').all() as { id: number; handle: string }[]
   const userIds = new Map(users.map(user => [user.handle.toLowerCase(), user.id]))
-  const posts = database.query('SELECT id,body FROM posts WHERE deleted_at IS NULL').all() as
-    { id: number; body: string }[]
+  const posts = database.query('SELECT id,body FROM posts WHERE deleted_at IS NULL').all() as { id: number;
+    body: string }[]
   const insert = database.query('INSERT OR IGNORE INTO post_mentions(post_id,user_id) VALUES(?,?)')
   for (const post of posts) {
     for (const handle of extractMentions(post.body)) {
@@ -60,7 +60,7 @@ export const migrations: Migration[] = [
     name: 'conversations_and_safety',
     up(database) {
       const mentionsExisted = !!database.query(
-        "SELECT 1 FROM sqlite_master WHERE type='table' AND name='post_mentions'",
+        'SELECT 1 FROM sqlite_master WHERE type=\'table\' AND name=\'post_mentions\'',
       ).get()
       addColumn(database, 'posts', 'parent_id', 'INTEGER REFERENCES posts(id) ON DELETE CASCADE')
       addColumn(database, 'posts', 'deleted_at', 'TEXT')
@@ -98,7 +98,7 @@ export const migrations: Migration[] = [
       addColumn(database, 'users', 'email_verified_at', 'TEXT')
       addColumn(database, 'sessions', 'created_at', 'INTEGER')
       database.run('UPDATE sessions SET created_at=expires_at-2592000000 WHERE created_at IS NULL')
-      addColumn(database, 'sessions', 'user_agent', "TEXT NOT NULL DEFAULT ''")
+      addColumn(database, 'sessions', 'user_agent', 'TEXT NOT NULL DEFAULT \'\'')
       database.run(`CREATE TABLE IF NOT EXISTS email_tokens (
         token_hash TEXT PRIMARY KEY,user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
         kind TEXT NOT NULL CHECK(kind IN ('verify','change')),email TEXT NOT NULL,expires_at INTEGER NOT NULL);`)
@@ -112,7 +112,7 @@ export const migrations: Migration[] = [
         id INTEGER PRIMARY KEY AUTOINCREMENT,scope TEXT NOT NULL,key_hash TEXT NOT NULL,created_at INTEGER NOT NULL);
       CREATE TABLE IF NOT EXISTS daily_visitors (
         day TEXT NOT NULL,visitor_hash TEXT NOT NULL,PRIMARY KEY(day,visitor_hash));`)
-      addColumn(database, 'reports', 'status', "TEXT NOT NULL DEFAULT 'open'")
+      addColumn(database, 'reports', 'status', 'TEXT NOT NULL DEFAULT \'open\'')
       addColumn(database, 'reports', 'resolved_at', 'TEXT')
       addColumn(database, 'reports', 'resolved_by', 'INTEGER REFERENCES users(id)')
       database.run(`CREATE TABLE IF NOT EXISTS admin_actions (
@@ -198,10 +198,12 @@ export const migrations: Migration[] = [
     name: 'report_receipts_and_notifier_details',
     up(database) {
       addColumn(database, 'illegal_activity_reports', 'reference', 'TEXT')
-      addColumn(database, 'illegal_activity_reports', 'category', "TEXT NOT NULL DEFAULT 'other'")
+      addColumn(database, 'illegal_activity_reports', 'category', 'TEXT NOT NULL DEFAULT \'other\'')
       addColumn(database, 'illegal_activity_reports', 'reporter_name', 'TEXT')
       addColumn(database, 'illegal_activity_reports', 'good_faith', 'INTEGER NOT NULL DEFAULT 1')
-      database.run("UPDATE illegal_activity_reports SET reference='RPT-' || printf('%08d',id) WHERE reference IS NULL")
+      database.run(
+        'UPDATE illegal_activity_reports SET reference=\'RPT-\' || printf(\'%08d\',id) WHERE reference IS NULL',
+      )
       database.run('CREATE UNIQUE INDEX illegal_activity_reports_reference ON illegal_activity_reports(reference)')
     },
   },
@@ -227,6 +229,8 @@ export function runMigrations(database: Database, onMigration?: (migration: Migr
     onMigration?.(migration)
   }
   const integrity = database.query('PRAGMA foreign_key_check').all()
-  if (integrity.length) throw new Error(`Database foreign-key check failed after migration: ${JSON.stringify(integrity)}`)
+  if (integrity.length) {
+    throw new Error(`Database foreign-key check failed after migration: ${JSON.stringify(integrity)}`)
+  }
   return databaseVersion(database)
 }

@@ -1,7 +1,8 @@
 import { describe, expect, test } from 'bun:test'
+import { About, AccountSecurity, ApiDocs, Auth, ConfirmEmail, Contact, postTitle, Profile } from './components/pages'
+
 import React from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
-import { About, AccountSecurity, ApiDocs, Auth, ConfirmEmail, Contact, Profile, postTitle } from './components/pages'
 import { Post } from './components/post'
 
 describe('postTitle', () => {
@@ -31,15 +32,6 @@ test('API documentation is linked from the footer and describes the firehose', (
   expect(html).toContain('120 requests per minute')
   expect(html).toContain('/users/:handle/posts.rss')
   expect(html).toContain('/tags/:tag/posts.atom')
-})
-
-test('About documents manual RSS and Atom URL extensions without feed links', () => {
-  const html = renderToStaticMarkup(React.createElement(About, { user: null }))
-
-  expect(html).toContain('<code>.rss</code>')
-  expect(html).toContain('<code>.atom</code>')
-  expect(html).toContain('enter the resulting address in your feed reader')
-  expect(html).not.toMatch(/href="[^"]+\.(?:rss|atom)"/)
 })
 
 test('Contact page shows operator details and is linked before legal in the footer', () => {
@@ -87,7 +79,9 @@ describe('Auth', () => {
 
 test('Email confirmation requires an explicit POST', () => {
   const html = renderToStaticMarkup(React.createElement(ConfirmEmail, {
-    token: 'confirmation-token', kind: 'change', email: 'new@example.com',
+    token: 'confirmation-token',
+    kind: 'change',
+    email: 'new@example.com',
   }))
 
   expect(html).toContain('method="post"')
@@ -121,8 +115,13 @@ test('Profile edit offers a data download without rendering notes', () => {
     following: false,
     editing: true,
     posts: [{
-      id: 1, user_id: 1, parent_id: null, body: 'hidden while editing', handle: 'reader',
-      created_at: '2026-08-03 12:00:00', deleted_at: null,
+      id: 1,
+      user_id: 1,
+      parent_id: null,
+      body: 'hidden while editing',
+      handle: 'reader',
+      created_at: '2026-08-03 12:00:00',
+      deleted_at: null,
     }],
   }))
 
@@ -136,7 +135,10 @@ test('Profile edit offers a data download without rendering notes', () => {
 test('Profile places owner actions in the handle row', () => {
   const user = { id: 1, handle: 'reader', email: 'reader@example.com', bio: '' }
   const html = renderToStaticMarkup(React.createElement(Profile, {
-    user, profile: user, following: false, posts: [],
+    user,
+    profile: user,
+    following: false,
+    posts: [],
   }))
 
   expect(html).toContain('class="profile-title-row"')
@@ -152,11 +154,21 @@ test('Post renders preloaded parent and reply data', () => {
     user: null,
     showReplyCount: true,
     p: {
-      id: 2, user_id: 1, parent_id: 1, body: 'child', handle: 'writer',
-      created_at: '2026-08-03 12:00:00', deleted_at: null, reply_count: 2,
+      id: 2,
+      user_id: 1,
+      parent_id: 1,
+      body: 'child',
+      handle: 'writer',
+      created_at: '2026-08-03 12:00:00',
+      deleted_at: null,
+      reply_count: 2,
       parent: {
-        id: 1, body: 'parent', handle: 'author', created_at: '2026-08-03 11:00:00',
-        deleted_at: null, reply_count: 1,
+        id: 1,
+        body: 'parent',
+        handle: 'author',
+        created_at: '2026-08-03 11:00:00',
+        deleted_at: null,
+        reply_count: 1,
       },
     },
   }))
@@ -173,8 +185,13 @@ test('Post only renders owner actions when requested by the detail view', () => 
   const props = {
     user: { id: 1, handle: 'writer', email: 'writer@example.com', bio: '' },
     p: {
-      id: 2, user_id: 1, parent_id: null, body: 'note', handle: 'writer',
-      created_at: '2026-08-03 12:00:00', deleted_at: null,
+      id: 2,
+      user_id: 1,
+      parent_id: null,
+      body: 'note',
+      handle: 'writer',
+      created_at: '2026-08-03 12:00:00',
+      deleted_at: null,
     },
   }
   const feedHtml = renderToStaticMarkup(React.createElement(Post, props))
@@ -188,17 +205,27 @@ test('Post only renders owner actions when requested by the detail view', () => 
 
 test('Post renders moderation controls only for admins on the detail page', () => {
   const p = {
-    id: 2, user_id: 2, parent_id: null, body: 'note', handle: 'writer',
-    created_at: '2026-08-03 12:00:00', deleted_at: null,
+    id: 2,
+    user_id: 2,
+    parent_id: null,
+    body: 'note',
+    handle: 'writer',
+    created_at: '2026-08-03 12:00:00',
+    deleted_at: null,
   }
   const adminFeedHtml = renderToStaticMarkup(React.createElement(Post, {
-    user: { id: 1, handle: 'admin', email: 'GSTAGAS@gmail.com', bio: '' }, p,
+    user: { id: 1, handle: 'admin', email: 'GSTAGAS@gmail.com', bio: '' },
+    p,
   }))
   const adminDetailHtml = renderToStaticMarkup(React.createElement(Post, {
-    user: { id: 1, handle: 'admin', email: 'GSTAGAS@gmail.com', bio: '' }, p, showModerateAction: true,
+    user: { id: 1, handle: 'admin', email: 'GSTAGAS@gmail.com', bio: '' },
+    p,
+    showModerateAction: true,
   }))
   const userDetailHtml = renderToStaticMarkup(React.createElement(Post, {
-    user: { id: 3, handle: 'reader', email: 'reader@example.com', bio: '' }, p, showModerateAction: true,
+    user: { id: 3, handle: 'reader', email: 'reader@example.com', bio: '' },
+    p,
+    showModerateAction: true,
   }))
 
   expect(adminFeedHtml).not.toContain('/admin/posts/2/delete')

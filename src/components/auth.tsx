@@ -44,7 +44,8 @@ export function Auth(
             )
             : (
               <>
-                New here? <a href={`/signup${nextQuery}`}>Create an account</a> · <a href="/forgot-password">Forgot password?</a>
+                New here? <a href={`/signup${nextQuery}`}>Create an account</a> ·{' '}
+                <a href="/forgot-password">Forgot password?</a>
               </>
             )}
         </p>

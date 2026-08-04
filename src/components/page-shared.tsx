@@ -25,8 +25,7 @@ export function FormMessage({ error, success }: { error?: string; success?: stri
 export function VerificationRequired() {
   return (
     <div className="panel form-error" role="alert">
-      Confirm your email address before posting.{' '}
-      <a href="/account/security">Verify your email</a>
+      Confirm your email address before posting. <a href="/account/security">Verify your email</a>
     </div>
   )
 }
@@ -62,7 +61,6 @@ export function Pagination({ page, totalPages, path }: { page: number; totalPage
   )
 }
 
-
 export function FeedTabs({ active, user }: { active: 'following' | 'hot' | 'latest'; user: User | null }) {
   return (
     <nav className="feed-tabs" aria-label="Feed">
@@ -85,7 +83,6 @@ export function FeedTabs({ active, user }: { active: 'following' | 'hot' | 'late
   )
 }
 
-
 export function ProfileHeader({ user, profile, following, blocked = false, editing = false, children }: {
   user: User | null
   profile: ProfileRow
@@ -95,11 +92,18 @@ export function ProfileHeader({ user, profile, following, blocked = false, editi
   children?: React.ReactNode
 }) {
   return (
-    <section className={`page-header profile${user?.id === profile.id ? ' profile-owner' : ''}${editing ? ' profile-editing' : ''}`}>
+    <section
+      className={`page-header profile${user?.id === profile.id ? ' profile-owner' : ''}${
+        editing ? ' profile-editing' : ''
+      }`}
+    >
       {children || (
         <div className="profile-content">
           <div className="profile-title-row">
-            <h1><span className="identity-prefix">@</span>{profile.handle}</h1>
+            <h1>
+              <span className="identity-prefix">@</span>
+              {profile.handle}
+            </h1>
             {user?.id === profile.id && (
               <div className="profile-owner-actions">
                 <a className="profile-edit-link" href="/account/edit">edit</a>
@@ -175,7 +179,6 @@ export function ProfileTabs({ profile, active, notes, followers, following, foll
   )
 }
 
-
 export function TagPeopleList({ user, tags, followingKey = 'following' }: {
   user: User | null
   tags: TagView[]
@@ -232,7 +235,6 @@ export function ConnectionPeople({ user, people, className = '' }: {
     </div>
   )
 }
-
 
 export function ReportPanel({ post, showForm, reported }: { post: PostView; showForm: boolean; reported: boolean }) {
   if (reported) {

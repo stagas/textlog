@@ -34,7 +34,7 @@ describe('post persistence', () => {
 
   test('resolves mentions made with a previous handle', () => {
     const db = database()
-    db.run("INSERT INTO handle_history(handle,user_id) VALUES('old_reader',2)")
+    db.run('INSERT INTO handle_history(handle,user_id) VALUES(\'old_reader\',2)')
 
     createPost(db, 1, 'hello @old_reader')
 

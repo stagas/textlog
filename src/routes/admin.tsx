@@ -8,15 +8,16 @@ import {
   safeLocalPath,
   safeRefererPath,
 } from '../http'
-import type { AdminActionView, AdminReportView, DashboardStats, IllegalActivityReportView, PostRow, ProfileRow } from '../types'
+import type { AdminActionView, AdminReportView, DashboardStats, IllegalActivityReportView, PostRow,
+  ProfileRow } from '../types'
 import { currentPage, form, page, paginationRedirect, redirect } from './shared'
 
 import type { Hono } from 'hono'
 import { db } from '../db'
-import { currentUser } from '../utils'
-import { visitorStats } from '../visitors'
 import { sendReportDecision } from '../email'
 import { PAGE_SIZE } from '../pagination'
+import { currentUser } from '../utils'
+import { visitorStats } from '../visitors'
 
 export function registerAdminRoutes(app: Hono) {
   app.get('/admin', c => {
@@ -60,8 +61,7 @@ export function registerAdminRoutes(app: Hono) {
       WHERE status='open' ORDER BY created_at,id LIMIT 20`).all() as IllegalActivityReportView[]
     return page(
       <AdminDashboard user={signedIn} stats={dashboardStats} reports={reports} actions={actions}
-        illegalReports={illegalReports} status={status}
-        page={reportPage} total={total} suspended={suspended} />,
+        illegalReports={illegalReports} status={status} page={reportPage} total={total} suspended={suspended} />,
     )
   })
 
@@ -78,13 +78,19 @@ export function registerAdminRoutes(app: Hono) {
     const f = await form(c.req.raw)
     const reasons = (f.reasons || '').trim()
     if (reasons.length < 20) return c.text('Specific reasons are required', 400)
-    const updated = db.query(`UPDATE illegal_activity_reports SET status=?,resolution_note=?,resolved_at=CURRENT_TIMESTAMP
-      WHERE id=? AND status='open'`).run(decision === 'resolve' ? 'resolved' : 'dismissed', reasons.slice(0, 2000), id)
+    const updated = db.query(
+      `UPDATE illegal_activity_reports SET status=?,resolution_note=?,resolved_at=CURRENT_TIMESTAMP
+      WHERE id=? AND status='open'`,
+    ).run(decision === 'resolve' ? 'resolved' : 'dismissed', reasons.slice(0, 2000), id)
     if (!updated.changes) return c.text('Report is not open', 409)
     if (report.reporter_email) {
-      try { await sendReportDecision(report.reporter_email, report.reference,
-        decision === 'resolve' ? 'action taken' : 'no action', reasons) }
-      catch (error) { console.error('Could not send report decision', error) }
+      try {
+        await sendReportDecision(report.reporter_email, report.reference,
+          decision === 'resolve' ? 'action taken' : 'no action', reasons)
+      }
+      catch (error) {
+        console.error('Could not send report decision', error)
+      }
     }
     return redirect('/admin')
   })
@@ -104,8 +110,8 @@ export function registerAdminRoutes(app: Hono) {
     db.transaction(() => {
       db.query(`UPDATE reports SET status=?,resolved_at=CURRENT_TIMESTAMP,resolved_by=? WHERE id=? AND status='open'`)
         .run(decision === 'resolve' ? 'resolved' : 'dismissed', signedIn.id, id)
-      recordAdminAction(db, signedIn.id, decision === 'resolve' ? 'resolve_report' : 'dismiss_report', null, report.post_id,
-        f.note || '')
+      recordAdminAction(db, signedIn.id, decision === 'resolve' ? 'resolve_report' : 'dismiss_report', null,
+        report.post_id, f.note || '')
     })()
     return redirect('/admin')
   })

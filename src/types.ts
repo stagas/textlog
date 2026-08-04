@@ -28,7 +28,8 @@ export type ProfileRow = {
   email_verified_at?: string | null
 }
 
-export type SessionView = { token: string; created_at: number; expires_at: number; user_agent: string; current: boolean }
+export type SessionView = { token: string; created_at: number; expires_at: number; user_agent: string;
+  current: boolean }
 
 export type DashboardStats = {
   users: number
@@ -71,9 +72,18 @@ export type AdminActionView = {
 }
 
 export type IllegalActivityReportView = {
-  id: number; post_id: number; content_url: string; details: string; reporter_email: string | null;
-  reporter_name: string | null; reference: string; category: string; status: string;
-  resolution_note: string | null; created_at: string; resolved_at: string | null
+  id: number
+  post_id: number
+  content_url: string
+  details: string
+  reporter_email: string | null
+  reporter_name: string | null
+  reference: string
+  category: string
+  status: string
+  resolution_note: string | null
+  created_at: string
+  resolved_at: string | null
 }
 export type PersonView = ProfileRow & {
   posts: number

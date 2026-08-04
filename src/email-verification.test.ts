@@ -1,6 +1,6 @@
-import { createHash } from 'node:crypto'
 import { Database } from 'bun:sqlite'
 import { describe, expect, test } from 'bun:test'
+import { createHash } from 'node:crypto'
 import { confirmEmailToken, findEmailToken } from './email-verification'
 
 const hash = (value: string) => createHash('sha256').update(value).digest('hex')
@@ -49,7 +49,7 @@ describe('email confirmation', () => {
     expect(database.query('SELECT email FROM users WHERE id=1').get()).toEqual({ email: 'reader@example.com' })
     expect(database.query('SELECT count(*) count FROM email_tokens').get()).toEqual({ count: 1 })
 
-    database.query("UPDATE email_tokens SET email='new@example.com'").run()
+    database.query('UPDATE email_tokens SET email=\'new@example.com\'').run()
     expect(confirmEmailToken(database, 'change-token', 1000)).toEqual({ ok: true, kind: 'change' })
     expect(database.query('SELECT email,email_verified_at IS NOT NULL verified FROM users WHERE id=1').get())
       .toEqual({ email: 'new@example.com', verified: 1 })

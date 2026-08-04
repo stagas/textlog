@@ -25,12 +25,12 @@ function itemTitle(post: ApiPost) {
 }
 
 function updated(posts: ApiPost[]) {
-  return posts.reduce((latest, post) => post.created_at > latest ? post.created_at : latest,
-    '1970-01-01T00:00:00.000Z')
+  return posts.reduce((latest, post) => post.created_at > latest ? post.created_at : latest, '1970-01-01T00:00:00.000Z')
 }
 
 function atom(feed: SyndicationFeed) {
-  const entries = feed.posts.map(post => `  <entry>
+  const entries = feed.posts.map(post =>
+    `  <entry>
     <title>${xml(itemTitle(post))}</title>
     <id>${xml(post.url)}</id>
     <link rel="alternate" href="${xml(post.url)}" />
@@ -38,7 +38,8 @@ function atom(feed: SyndicationFeed) {
     <updated>${xml(post.created_at)}</updated>
     <author><name>${xml(`@${post.author.handle}`)}</name><uri>${xml(post.author.url)}</uri></author>
     <content type="text">${xml(post.body)}</content>
-  </entry>`).join('\n')
+  </entry>`
+  ).join('\n')
   return `<?xml version="1.0" encoding="utf-8"?>
 <feed xmlns="http://www.w3.org/2005/Atom">
   <title>${xml(feed.title)}</title>
@@ -52,14 +53,16 @@ ${entries}${entries ? '\n' : ''}</feed>
 }
 
 function rss(feed: SyndicationFeed) {
-  const items = feed.posts.map(post => `    <item>
+  const items = feed.posts.map(post =>
+    `    <item>
       <title>${xml(itemTitle(post))}</title>
       <link>${xml(post.url)}</link>
       <guid isPermaLink="true">${xml(post.url)}</guid>
       <pubDate>${new Date(post.created_at).toUTCString()}</pubDate>
       <dc:creator>${xml(`@${post.author.handle}`)}</dc:creator>
       <description>${xml(post.body)}</description>
-    </item>`).join('\n')
+    </item>`
+  ).join('\n')
   return `<?xml version="1.0" encoding="utf-8"?>
 <rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom" xmlns:dc="http://purl.org/dc/elements/1.1/">
   <channel>

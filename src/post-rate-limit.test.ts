@@ -35,7 +35,7 @@ describe('post rate limit', () => {
   })
 
   test('allows posting after the rolling window has passed', () => {
-    database.run("INSERT INTO posts(user_id,body,created_at) VALUES(1,'old',datetime('now','-6 minutes'))")
+    database.run('INSERT INTO posts(user_id,body,created_at) VALUES(1,\'old\',datetime(\'now\',\'-6 minutes\'))')
     expect(insertRateLimitedPost(database, 1, 'new')).toHaveProperty('id')
   })
 

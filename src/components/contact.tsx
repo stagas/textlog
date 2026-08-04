@@ -12,10 +12,14 @@ export function Contact({ user }: { user: User | null }) {
         </p>
 
         <h2>Email</h2>
-        <p><a href="mailto:hello@root.mx">hello@root.mx</a></p>
+        <p>
+          <a href="mailto:hello@root.mx">hello@root.mx</a>
+        </p>
 
         <h2>Phone</h2>
-        <p><a href="tel:+306946600152">+30 694 660 0152</a></p>
+        <p>
+          <a href="tel:+306946600152">+30 694 660 0152</a>
+        </p>
 
         <h2>Post</h2>
         <p>
@@ -27,8 +31,11 @@ export function Contact({ user }: { user: User | null }) {
         <p>Monday–Friday, 10:00–17:00 EEST</p>
 
         <h2>Safety</h2>
-        <p><a href="/report-illegal-activity">Report illegal activity</a> involving a root.mx post. Copyright owners can
-          also review the <a href="/dmca">DMCA notice and counter-notice process</a>.</p>
+        <p>
+          <a href="/report-illegal-activity">Report illegal activity</a>{' '}
+          involving a root.mx post. Copyright owners can also review the{' '}
+          <a href="/dmca">DMCA notice and counter-notice process</a>.
+        </p>
       </article>
     </Layout>
   )

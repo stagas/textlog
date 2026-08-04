@@ -2,8 +2,8 @@ import { Database } from 'bun:sqlite'
 import { describe, expect, test } from 'bun:test'
 import { Hono } from 'hono'
 import { publishPost } from './api-broker'
-import { registerApiRoutes } from './routes/api'
 import { rebuildHotPosts } from './hot'
+import { registerApiRoutes } from './routes/api'
 
 function fixture() {
   const database = new Database(':memory:')
@@ -59,8 +59,12 @@ describe('public API', () => {
     expect(response.headers.get('access-control-allow-origin')).toBe('*')
     expect(payload.data.map((post: any) => post.id)).toEqual([3, 2, 1])
     expect(payload.data[2]).toMatchObject({
-      body: 'hello #Root @bob', created_at: '2026-08-03T10:00:00.000Z', reply_count: 1,
-      tags: ['root'], mentions: ['bob'], url: 'https://root.mx/post/1',
+      body: 'hello #Root @bob',
+      created_at: '2026-08-03T10:00:00.000Z',
+      reply_count: 1,
+      tags: ['root'],
+      mentions: ['bob'],
+      url: 'https://root.mx/post/1',
       author: { handle: 'alice', url: 'https://root.mx/u/alice' },
     })
     expect(JSON.stringify(payload)).not.toContain('alice@example.com')
@@ -70,8 +74,9 @@ describe('public API', () => {
   test('uses stable cursor pagination and validates pagination input', async () => {
     const { app } = fixture()
     const first = await (await request(app, '/api/v1/feeds/latest?limit=2')).json() as any
-    const second = await (await request(app,
-      `/api/v1/feeds/latest?limit=2&cursor=${encodeURIComponent(first.pagination.next_cursor)}`)).json() as any
+    const second =
+      await (await request(app,
+        `/api/v1/feeds/latest?limit=2&cursor=${encodeURIComponent(first.pagination.next_cursor)}`)).json() as any
 
     expect(first.data.map((post: any) => post.id)).toEqual([3, 2])
     expect(second.data.map((post: any) => post.id)).toEqual([1])
@@ -89,8 +94,9 @@ describe('public API', () => {
     expect(first.data[0].id).toBe(1)
     expect(first.pagination.next_cursor).toBeTruthy()
 
-    const second = await (await request(app,
-      `/api/v1/feeds/hot?limit=2&cursor=${encodeURIComponent(first.pagination.next_cursor)}`)).json() as any
+    const second =
+      await (await request(app, `/api/v1/feeds/hot?limit=2&cursor=${encodeURIComponent(first.pagination.next_cursor)}`))
+        .json() as any
     expect(second.data).toHaveLength(1)
     expect(new Set([...first.data, ...second.data].map(post => post.id)).size).toBe(3)
     expect((await request(app, '/api/v1/feeds/hot?cursor=broken')).status).toBe(400)
@@ -106,8 +112,8 @@ describe('public API', () => {
 
     expect(post.data.id).toBe(1)
     expect(replies.data.map((item: any) => item.id)).toEqual([2])
-    expect(user.data).toMatchObject({ handle: 'alice', bio: 'builder', post_count: 2,
-      follower_count: 1, following_count: 0 })
+    expect(user.data).toMatchObject({ handle: 'alice', bio: 'builder', post_count: 2, follower_count: 1,
+      following_count: 0 })
     expect(user.data.email).toBeUndefined()
     expect(userPosts.data.map((item: any) => item.id)).toEqual([3, 1])
     expect(tags.data.map((item: any) => item.id)).toEqual([1])
@@ -167,7 +173,9 @@ describe('public API', () => {
     expect(response.headers.get('cache-control')).toContain('no-transform')
     expect(response.headers.get('x-accel-buffering')).toBe('no')
 
-    database.run("INSERT INTO posts(id,user_id,parent_id,body,created_at) VALUES(6,1,NULL,'live #root','2026-08-03 16:00:00')")
+    database.run(
+      'INSERT INTO posts(id,user_id,parent_id,body,created_at) VALUES(6,1,NULL,\'live #root\',\'2026-08-03 16:00:00\')',
+    )
     publishPost(6)
     const event = decoder.decode((await reader.read()).value)
     expect(event).toContain('id: 6')
@@ -178,9 +186,11 @@ describe('public API', () => {
 
   test('limits simultaneous firehose connections per IP and releases cancelled streams', async () => {
     const { app } = fixture()
-    const responses = await Promise.all([1, 2, 3].map(() => request(app, '/api/v1/firehose', {
-      headers: { 'x-root-client-ip': 'crowded' },
-    })))
+    const responses = await Promise.all([1, 2, 3].map(() =>
+      request(app, '/api/v1/firehose', {
+        headers: { 'x-root-client-ip': 'crowded' },
+      })
+    ))
     expect(responses.every(response => response.status === 200)).toBe(true)
     const limited = await request(app, '/api/v1/firehose', { headers: { 'x-root-client-ip': 'crowded' } })
     expect(limited.status).toBe(429)

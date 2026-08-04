@@ -36,5 +36,7 @@ export function insertRateLimitedPost(
 
 export function postRateLimitMessage(retryAfter: number) {
   const minutes = Math.max(1, Math.ceil(retryAfter / 60))
-  return `You can post up to ${POST_LIMIT} times every 5 minutes. Try again in about ${minutes} ${minutes === 1 ? 'minute' : 'minutes'}.`
+  return `You can post up to ${POST_LIMIT} times every 5 minutes. Try again in about ${minutes} ${
+    minutes === 1 ? 'minute' : 'minutes'
+  }.`
 }

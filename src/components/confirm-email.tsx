@@ -22,8 +22,16 @@ export function ConfirmEmail({ token, kind, email, invalid = false }: {
               <h1>{kind === 'change' ? 'Change your email?' : 'Verify your email?'}</h1>
               <p>
                 {kind === 'change'
-                  ? <>Confirm changing your root.mx account email to <strong>{email}</strong>.</>
-                  : <>Confirm <strong>{email}</strong> as your root.mx account email.</>}
+                  ? (
+                    <>
+                      Confirm changing your root.mx account email to <strong>{email}</strong>.
+                    </>
+                  )
+                  : (
+                    <>
+                      Confirm <strong>{email}</strong> as your root.mx account email.
+                    </>
+                  )}
               </p>
               <form method="post" action="/verify-email">
                 <input type="hidden" name="token" value={token} />

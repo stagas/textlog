@@ -1,15 +1,15 @@
 import type { Database } from 'bun:sqlite'
 import type { Context, Hono } from 'hono'
-import { consumeAuthAttempt, rateLimitKey } from '../auth-rate-limit'
-import { apiHotPosts, apiOrigin, apiPost, apiPosts, parseCollectionParams, isoTimestamp } from '../api'
+import { apiHotPosts, apiOrigin, apiPost, apiPosts, isoTimestamp, parseCollectionParams } from '../api'
 import { subscribeToPosts } from '../api-broker'
+import { consumeAuthAttempt, rateLimitKey } from '../auth-rate-limit'
 import { ApiDocs } from '../components/pages'
 import { db } from '../db'
+import { resolveHandle } from '../handles'
+import { decodeHotCursor } from '../hot'
 import { logError } from '../log'
 import { currentUser } from '../utils'
 import { page } from './shared'
-import { resolveHandle } from '../handles'
-import { decodeHotCursor } from '../hot'
 import { registerSyndicationRoutes } from './syndication'
 
 const JSON_LIMIT = 120
@@ -35,7 +35,9 @@ function collection(c: Context, database: Database,
   filters: { handle?: string; parentId?: number; tag?: string } = {})
 {
   const parsed = parseCollectionParams(c.req.query('limit'), c.req.query('cursor'))
-  if (!parsed) return apiError('invalid_pagination', 'limit must be 1–100 and cursor must be a valid opaque cursor', 400)
+  if (!parsed) {
+    return apiError('invalid_pagination', 'limit must be 1–100 and cursor must be a valid opaque cursor', 400)
+  }
   return jsonResponse(apiPosts(database, apiOrigin(c.req.url), { ...parsed, ...filters }))
 }
 
@@ -44,13 +46,19 @@ function openApiDocument() {
     type: 'object',
     required: ['id', 'body', 'created_at', 'parent_id', 'reply_count', 'tags', 'mentions', 'url', 'api_url', 'author'],
     properties: {
-      id: { type: 'integer' }, body: { type: 'string', maxLength: 280 },
-      created_at: { type: 'string', format: 'date-time' }, parent_id: { type: ['integer', 'null'] },
-      reply_count: { type: 'integer' }, tags: { type: 'array', items: { type: 'string' } },
-      mentions: { type: 'array', items: { type: 'string' } }, url: { type: 'string', format: 'uri' },
+      id: { type: 'integer' },
+      body: { type: 'string', maxLength: 280 },
+      created_at: { type: 'string', format: 'date-time' },
+      parent_id: { type: ['integer', 'null'] },
+      reply_count: { type: 'integer' },
+      tags: { type: 'array', items: { type: 'string' } },
+      mentions: { type: 'array', items: { type: 'string' } },
+      url: { type: 'string', format: 'uri' },
       api_url: { type: 'string', format: 'uri' },
       author: { type: 'object', required: ['handle', 'url', 'api_url'], properties: {
-        handle: { type: 'string' }, url: { type: 'string', format: 'uri' }, api_url: { type: 'string', format: 'uri' },
+        handle: { type: 'string' },
+        url: { type: 'string', format: 'uri' },
+        api_url: { type: 'string', format: 'uri' },
       } },
     },
   }
@@ -73,28 +81,52 @@ function openApiDocument() {
     paths: {
       '/feeds/latest': { get: { summary: 'Latest posts', parameters: collectionParameters, responses: jsonResponses } },
       '/feeds/hot': { get: { summary: 'Hot posts', parameters: collectionParameters, responses: jsonResponses } },
-      '/feeds/latest.{format}': { get: { summary: 'Latest posts as RSS or Atom', parameters: [formatParameter],
-        responses: syndicationResponses } },
-      '/feeds/hot.{format}': { get: { summary: 'Hot posts as RSS or Atom', parameters: [formatParameter],
-        responses: syndicationResponses } },
-      '/posts/{id}': { get: { summary: 'Single post', parameters: [{ name: 'id', in: 'path', required: true,
-        schema: { type: 'integer', minimum: 1 } }], responses: jsonResponses } },
-      '/posts/{id}/replies': { get: { summary: 'Post replies', parameters: [{ name: 'id', in: 'path', required: true,
-        schema: { type: 'integer', minimum: 1 } }, ...collectionParameters], responses: jsonResponses } },
-      '/users/{handle}': { get: { summary: 'Public profile', parameters: [{ name: 'handle', in: 'path', required: true,
-        schema: { type: 'string' } }], responses: jsonResponses } },
-      '/users/{handle}/posts': { get: { summary: "User's latest posts", parameters: [{ name: 'handle', in: 'path',
-        required: true, schema: { type: 'string' } }, ...collectionParameters], responses: jsonResponses } },
-      '/users/{handle}/posts.{format}': { get: { summary: "User's latest posts as RSS or Atom", parameters: [
-        { name: 'handle', in: 'path', required: true, schema: { type: 'string' } }, formatParameter,
+      '/feeds/latest.{format}': {
+        get: { summary: 'Latest posts as RSS or Atom', parameters: [formatParameter], responses: syndicationResponses },
+      },
+      '/feeds/hot.{format}': {
+        get: { summary: 'Hot posts as RSS or Atom', parameters: [formatParameter], responses: syndicationResponses },
+      },
+      '/posts/{id}': {
+        get: { summary: 'Single post',
+          parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'integer', minimum: 1 } }],
+          responses: jsonResponses },
+      },
+      '/posts/{id}/replies': {
+        get: { summary: 'Post replies',
+          parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'integer', minimum: 1 } },
+            ...collectionParameters], responses: jsonResponses },
+      },
+      '/users/{handle}': {
+        get: { summary: 'Public profile',
+          parameters: [{ name: 'handle', in: 'path', required: true, schema: { type: 'string' } }],
+          responses: jsonResponses },
+      },
+      '/users/{handle}/posts': {
+        get: { summary: 'User\'s latest posts',
+          parameters: [{ name: 'handle', in: 'path', required: true, schema: { type: 'string' } },
+            ...collectionParameters], responses: jsonResponses },
+      },
+      '/users/{handle}/posts.{format}': { get: { summary: 'User\'s latest posts as RSS or Atom', parameters: [
+        { name: 'handle', in: 'path', required: true, schema: { type: 'string' } },
+        formatParameter,
       ], responses: syndicationResponses } },
-      '/tags/{tag}/posts': { get: { summary: 'Posts with a hashtag', parameters: [{ name: 'tag', in: 'path',
-        required: true, schema: { type: 'string' } }, ...collectionParameters], responses: jsonResponses } },
+      '/tags/{tag}/posts': {
+        get: { summary: 'Posts with a hashtag',
+          parameters: [{ name: 'tag', in: 'path', required: true, schema: { type: 'string' } },
+            ...collectionParameters], responses: jsonResponses },
+      },
       '/tags/{tag}/posts.{format}': { get: { summary: 'Hashtag posts as RSS or Atom', parameters: [
-        { name: 'tag', in: 'path', required: true, schema: { type: 'string' } }, formatParameter,
+        { name: 'tag', in: 'path', required: true, schema: { type: 'string' } },
+        formatParameter,
       ], responses: syndicationResponses } },
-      '/firehose': { get: { summary: 'Live post stream', responses: { '200': { description: 'Server-sent events',
-        content: { 'text/event-stream': { schema: { type: 'string' } } } }, '429': { description: 'Too many streams' } } } },
+      '/firehose': {
+        get: { summary: 'Live post stream', responses: {
+          '200': { description: 'Server-sent events',
+            content: { 'text/event-stream': { schema: { type: 'string' } } } },
+          '429': { description: 'Too many streams' },
+        } },
+      },
     },
     components: { schemas: { Post: postSchema } },
   }
@@ -106,8 +138,10 @@ export function registerApiRoutes(app: Hono, database: Database = db) {
   app.use('/api/*', async (c, next) => {
     if (c.req.method === 'OPTIONS') {
       return new Response(null, { status: 204, headers: {
-        'access-control-allow-origin': '*', 'access-control-allow-methods': 'GET, HEAD, OPTIONS',
-        'access-control-allow-headers': 'Accept, Content-Type', 'access-control-max-age': '86400',
+        'access-control-allow-origin': '*',
+        'access-control-allow-methods': 'GET, HEAD, OPTIONS',
+        'access-control-allow-headers': 'Accept, Content-Type',
+        'access-control-max-age': '86400',
       } })
     }
     if (c.req.method !== 'GET' && c.req.method !== 'HEAD') {
@@ -143,7 +177,9 @@ export function registerApiRoutes(app: Hono, database: Database = db) {
 
   app.get('/api/v1/feeds/hot', c => {
     const parsed = parseCollectionParams(c.req.query('limit'))
-    if (!parsed) return apiError('invalid_pagination', 'limit must be 1–100 and cursor must be a valid opaque cursor', 400)
+    if (!parsed) {
+      return apiError('invalid_pagination', 'limit must be 1–100 and cursor must be a valid opaque cursor', 400)
+    }
     const cursorValue = c.req.query('cursor')
     const cursor = decodeHotCursor(cursorValue)
     if (cursorValue && !cursor) {
@@ -181,15 +217,22 @@ export function registerApiRoutes(app: Hono, database: Database = db) {
       (SELECT count(*) FROM follows f JOIN users followed ON followed.id=f.following_id
         WHERE f.follower_id=u.id AND followed.deleted_at IS NULL) following_count
       FROM users u WHERE u.id=? AND u.deleted_at IS NULL`).get(resolved.id) as {
-        handle: string; bio: string; created_at: string; post_count: number; follower_count: number; following_count: number
-      } | null
+      handle: string
+      bio: string
+      created_at: string
+      post_count: number
+      follower_count: number
+      following_count: number
+    } | null
     if (!found) return apiError('not_found', 'User not found', 404)
     const origin = apiOrigin(c.req.url)
     const normalized = found.handle.toLowerCase()
-    return jsonResponse({ data: { handle: normalized, bio: found.bio, created_at: isoTimestamp(found.created_at),
-      post_count: found.post_count, follower_count: found.follower_count, following_count: found.following_count,
-      url: `${origin}/u/${encodeURIComponent(normalized)}`,
-      api_url: `${origin}/api/v1/users/${encodeURIComponent(normalized)}` } })
+    return jsonResponse({
+      data: { handle: normalized, bio: found.bio, created_at: isoTimestamp(found.created_at),
+        post_count: found.post_count, follower_count: found.follower_count, following_count: found.following_count,
+        url: `${origin}/u/${encodeURIComponent(normalized)}`,
+        api_url: `${origin}/api/v1/users/${encodeURIComponent(normalized)}` },
+    })
   })
 
   app.get('/api/v1/users/:handle/posts', c => {
@@ -240,17 +283,23 @@ export function registerApiRoutes(app: Hono, database: Database = db) {
           const remaining = (activeStreams.get(ip) || 1) - 1
           if (remaining > 0) activeStreams.set(ip, remaining)
           else activeStreams.delete(ip)
-          try { controller.close() }
+          try {
+            controller.close()
+          }
           catch {}
         }
         c.req.raw.signal.addEventListener('abort', cleanup, { once: true })
         send('event: ready\ndata: {"status":"connected"}\n\n')
       },
-      cancel() { cleanup() },
+      cancel() {
+        cleanup()
+      },
     })
     return new Response(stream, { headers: {
-      'content-type': 'text/event-stream; charset=utf-8', 'cache-control': 'no-store, no-transform',
-      connection: 'keep-alive', 'x-accel-buffering': 'no',
+      'content-type': 'text/event-stream; charset=utf-8',
+      'cache-control': 'no-store, no-transform',
+      connection: 'keep-alive',
+      'x-accel-buffering': 'no',
     } })
   })
 

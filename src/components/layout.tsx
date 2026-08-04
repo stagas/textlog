@@ -1,6 +1,6 @@
 import React from 'react'
-import type { User } from '../db'
 import { isAdmin } from '../admin'
+import type { User } from '../db'
 
 let devReloadBootId: string | undefined
 
@@ -16,7 +16,8 @@ export function Layout({
 }: {
   title?: string
   user?: User | null
-  social?: { description: string; image: string; url: string; type?: 'article' | 'profile' | 'website'; imageAlt?: string }
+  social?: { description: string; image: string; url: string; type?: 'article' | 'profile' | 'website';
+    imageAlt?: string }
   children: React.ReactNode
 }) {
   const appOrigin = Bun.env.APP_URL?.replace(/\/$/, '') || ''
@@ -51,22 +52,22 @@ export function Layout({
         <meta name="color-scheme" content="light dark" />
         <title>{`${title ? `${title} · ` : ''}root.mx`}</title>
         <>
-            <meta name="description" content={share.description} />
-            <meta property="og:type" content={share.type || 'article'} />
-            <meta property="og:site_name" content="root.mx" />
-            <meta property="og:title" content={title || 'root.mx'} />
-            <meta property="og:description" content={share.description} />
-            {social && <meta property="og:url" content={social.url} />}
-            <meta property="og:image" content={share.image} />
-            <meta property="og:image:width" content="1200" />
-            <meta property="og:image:height" content="630" />
-            <meta property="og:image:alt" content={share.imageAlt || `Post by ${title || 'a root.mx user'}`} />
-            <meta name="twitter:card" content="summary_large_image" />
-            <meta name="twitter:title" content={title || 'root.mx'} />
-            <meta name="twitter:description" content={share.description} />
-            <meta name="twitter:image" content={share.image} />
-            <meta name="twitter:image:alt" content={share.imageAlt || `Post by ${title || 'a root.mx user'}`} />
-          </>
+          <meta name="description" content={share.description} />
+          <meta property="og:type" content={share.type || 'article'} />
+          <meta property="og:site_name" content="root.mx" />
+          <meta property="og:title" content={title || 'root.mx'} />
+          <meta property="og:description" content={share.description} />
+          {social && <meta property="og:url" content={social.url} />}
+          <meta property="og:image" content={share.image} />
+          <meta property="og:image:width" content="1200" />
+          <meta property="og:image:height" content="630" />
+          <meta property="og:image:alt" content={share.imageAlt || `Post by ${title || 'a root.mx user'}`} />
+          <meta name="twitter:card" content="summary_large_image" />
+          <meta name="twitter:title" content={title || 'root.mx'} />
+          <meta name="twitter:description" content={share.description} />
+          <meta name="twitter:image" content={share.image} />
+          <meta name="twitter:image:alt" content={share.imageAlt || `Post by ${title || 'a root.mx user'}`} />
+        </>
         <link rel="icon" href="/root.svg?v=1" type="image/svg+xml" />
         <link rel="stylesheet" href="/styles.css?v=47" />
       </head>

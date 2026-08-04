@@ -1,5 +1,5 @@
-import { afterAll, beforeAll, expect, setDefaultTimeout, test } from 'bun:test'
 import { Database } from 'bun:sqlite'
+import { afterAll, beforeAll, expect, setDefaultTimeout, test } from 'bun:test'
 import { existsSync, mkdtempSync, readFileSync, rmSync } from 'node:fs'
 import { createServer } from 'node:net'
 import { tmpdir } from 'node:os'
@@ -135,8 +135,10 @@ test('consequential account, content, reporting, and admin flows work over HTTP'
   expect(storedSession.token_hash).toHaveLength(64)
   expect(storedSession.token_hash).not.toBe(rawSession)
 
-  const verificationEmail = capturedEmails().find(email => email.to === 'alice@example.com'
-    && email.subject.includes('Verify email'))
+  const verificationEmail = capturedEmails().find(email =>
+    email.to === 'alice@example.com'
+    && email.subject.includes('Verify email')
+  )
   expect(verificationEmail).toBeDefined()
   const verificationToken = linkToken(verificationEmail!)
 
@@ -179,7 +181,7 @@ test('consequential account, content, reporting, and admin flows work over HTTP'
   })
   expect(accountLimitedLogin.status).toBe(429)
   expect(accountLimitedLogin.headers.get('retry-after')).toBeTruthy()
-  database.query("DELETE FROM auth_rate_limits WHERE scope='login-account' AND key_hash=?").run(accountLimitKey)
+  database.query('DELETE FROM auth_rate_limits WHERE scope=\'login-account\' AND key_hash=?').run(accountLimitKey)
 
   const login = await request('/login', {
     method: 'POST',
@@ -195,8 +197,10 @@ test('consequential account, content, reporting, and admin flows work over HTTP'
   })
   expect(forgot.status).toBe(200)
   expect(await forgot.text()).toContain('Check your email')
-  const resetEmail = capturedEmails().find(email => email.to === 'alice@example.com'
-    && email.subject.includes('Reset your'))
+  const resetEmail = capturedEmails().find(email =>
+    email.to === 'alice@example.com'
+    && email.subject.includes('Reset your')
+  )
   expect(resetEmail).toBeDefined()
   const resetToken = linkToken(resetEmail!)
 
@@ -253,11 +257,13 @@ test('consequential account, content, reporting, and admin flows work over HTTP'
   expect(illegalActivity.status).toBe(201)
   expect(await illegalActivity.text()).toContain('Your report was received')
   const illegalReport = database.query(`SELECT id,reference,status,reporter_email
-    FROM illegal_activity_reports WHERE post_id=?`).get(post.id) as
-    { id: number; reference: string; status: string; reporter_email: string }
+    FROM illegal_activity_reports WHERE post_id=?`).get(post.id) as { id: number; reference: string; status: string;
+    reporter_email: string }
   expect(illegalReport).toMatchObject({ status: 'open', reporter_email: 'reporter-public@example.com' })
-  expect(capturedEmails().some(email => email.to === 'reporter-public@example.com'
-    && email.subject.includes('Report received'))).toBe(true)
+  expect(capturedEmails().some(email =>
+    email.to === 'reporter-public@example.com'
+    && email.subject.includes('Report received')
+  )).toBe(true)
 
   const bobCookie = await signup('bob', 'bob@example.com', 'bob password 123')
   const bob = database.query('SELECT id FROM users WHERE handle=?').get('bob') as { id: number }
@@ -294,13 +300,17 @@ test('consequential account, content, reporting, and admin flows work over HTTP'
   expect(dashboard.status).toBe(200)
   expect(await dashboard.text()).toContain('A route-level integration post')
   const resolveIllegalReport = await request(`/admin/illegal-reports/${illegalReport.id}/resolve`, {
-    method: 'POST', cookie: adminCookie, form: { reasons: 'Confirmed and actioned after human review of the report.' },
+    method: 'POST',
+    cookie: adminCookie,
+    form: { reasons: 'Confirmed and actioned after human review of the report.' },
   })
   expect(resolveIllegalReport.status).toBe(303)
   expect((database.query('SELECT status FROM illegal_activity_reports WHERE id=?')
     .get(illegalReport.id) as { status: string }).status).toBe('resolved')
-  expect(capturedEmails().some(email => email.to === 'reporter-public@example.com'
-    && email.subject.includes('Report decision'))).toBe(true)
+  expect(capturedEmails().some(email =>
+    email.to === 'reporter-public@example.com'
+    && email.subject.includes('Report decision')
+  )).toBe(true)
 
   const resolveReport = await request(`/admin/reports/${reportRow.id}/resolve`, {
     method: 'POST',

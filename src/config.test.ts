@@ -37,38 +37,46 @@ describe('startup configuration', () => {
   })
 
   test('rejects unsafe URLs, conflicting modes, malformed booleans, and invalid numeric settings', () => {
-    expect(() => validateStartupConfiguration({
-      ...production,
-      APP_URL: 'http://user:pass@root.mx/private?token=secret',
-      DEV_RELOAD: 'true',
-      TRUST_PROXY: 'sometimes',
-      PORT: '70000',
-      DATABASE_BACKUP_RETENTION_DAYS: '0',
-    }, { checkFilesystem: false })).toThrow('Invalid startup configuration')
+    expect(() =>
+      validateStartupConfiguration({
+        ...production,
+        APP_URL: 'http://user:pass@root.mx/private?token=secret',
+        DEV_RELOAD: 'true',
+        TRUST_PROXY: 'sometimes',
+        PORT: '70000',
+        DATABASE_BACKUP_RETENTION_DAYS: '0',
+      }, { checkFilesystem: false })
+    ).toThrow('Invalid startup configuration')
   })
 
   test('keeps integrations optional in development but rejects partial email configuration', () => {
     expect(validateStartupConfiguration({ NODE_ENV: 'development' }, { checkFilesystem: false }))
       .toMatchObject({ production: false, appUrl: null })
-    expect(() => validateStartupConfiguration({ NODE_ENV: 'development', RESEND_API_KEY: 'only-one' }, {
-      checkFilesystem: false,
-    })).toThrow('RESEND_API_KEY and EMAIL_FROM must be configured together')
+    expect(() =>
+      validateStartupConfiguration({ NODE_ENV: 'development', RESEND_API_KEY: 'only-one' }, {
+        checkFilesystem: false,
+      })
+    ).toThrow('RESEND_API_KEY and EMAIL_FROM must be configured together')
   })
 
   test('allows captured email only in isolated tests', () => {
     expect(validateStartupConfiguration({ NODE_ENV: 'test', EMAIL_CAPTURE_PATH: '/tmp/root-mx-mail.jsonl' }, {
       checkFilesystem: false,
     }).environment).toBe('test')
-    expect(() => validateStartupConfiguration({
-      NODE_ENV: 'development',
-      EMAIL_CAPTURE_PATH: '/tmp/root-mx-mail.jsonl',
-    }, { checkFilesystem: false })).toThrow('EMAIL_CAPTURE_PATH is only allowed in test')
-    expect(() => validateStartupConfiguration({
-      NODE_ENV: 'test',
-      EMAIL_CAPTURE_PATH: '/tmp/root-mx-mail.jsonl',
-      RESEND_API_KEY: 'configured-secret',
-      EMAIL_FROM: 'root.mx <hello@root.mx>',
-    }, { checkFilesystem: false })).toThrow('EMAIL_CAPTURE_PATH cannot be combined')
+    expect(() =>
+      validateStartupConfiguration({
+        NODE_ENV: 'development',
+        EMAIL_CAPTURE_PATH: '/tmp/root-mx-mail.jsonl',
+      }, { checkFilesystem: false })
+    ).toThrow('EMAIL_CAPTURE_PATH is only allowed in test')
+    expect(() =>
+      validateStartupConfiguration({
+        NODE_ENV: 'test',
+        EMAIL_CAPTURE_PATH: '/tmp/root-mx-mail.jsonl',
+        RESEND_API_KEY: 'configured-secret',
+        EMAIL_FROM: 'root.mx <hello@root.mx>',
+      }, { checkFilesystem: false })
+    ).toThrow('EMAIL_CAPTURE_PATH cannot be combined')
   })
 
   test('allows an explicit production moderation bypass', () => {

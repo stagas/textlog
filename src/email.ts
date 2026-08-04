@@ -52,7 +52,8 @@ export function sendReportReceipt(email: string, reference: string) {
 }
 
 export function sendReportDecision(email: string, reference: string, decision: string, reasons: string) {
-  const redress = 'You may reply to request human reconsideration and may pursue any available out-of-court or judicial remedy.'
+  const redress =
+    'You may reply to request human reconsideration and may pursue any available out-of-court or judicial remedy.'
   return sendEmail(email, `Report decision · ${reference}`,
     `Decision: ${decision}\n\nReasons: ${reasons}\n\nNo automated means made this decision.\n\n${redress}`,
     `<p>Decision: <strong>${decision}</strong></p><p>Reasons: ${reasons}</p><p>No automated means made this decision.</p><p>${redress}</p>`)

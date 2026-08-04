@@ -1,5 +1,5 @@
-import { db } from './db'
 import { extractHashtags, extractMentions } from './content'
+import { db } from './db'
 import { hashPassword } from './utils'
 
 const userCount = 20
@@ -35,14 +35,16 @@ db.transaction(() => {
     db.query(`DELETE FROM users WHERE id IN (${placeholders})`).run(...ids)
   }
 
-  const users = handles.map((handle, index) => db.query(
-    'INSERT INTO users(handle,email,bio,password) VALUES(?,?,?,?) RETURNING id,handle',
-  ).get(
-    handle,
-    `${handle}@example.com`,
-    `Demo account ${index + 1}. Posting small observations from around the web.`,
-    passwordHashes[index],
-  ) as { id: number; handle: string })
+  const users = handles.map((handle, index) =>
+    db.query(
+      'INSERT INTO users(handle,email,bio,password) VALUES(?,?,?,?) RETURNING id,handle',
+    ).get(
+      handle,
+      `${handle}@example.com`,
+      `Demo account ${index + 1}. Posting small observations from around the web.`,
+      passwordHashes[index],
+    ) as { id: number; handle: string }
+  )
 
   const postIds: number[] = []
   for (let index = 0; index < postCount; index++) {
@@ -86,7 +88,9 @@ db.transaction(() => {
 })()
 
 const seededPosts = (db.query(
-  `SELECT count(*) AS count FROM posts WHERE user_id IN (SELECT id FROM users WHERE handle IN (${handles.map(() => '?').join(',')}))`,
+  `SELECT count(*) AS count FROM posts WHERE user_id IN (SELECT id FROM users WHERE handle IN (${
+    handles.map(() => '?').join(',')
+  }))`,
 ).get(...handles) as { count: number }).count
 
 console.log(`Seeded ${userCount} demo users and ${seededPosts} demo posts.`)

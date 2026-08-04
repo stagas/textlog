@@ -146,9 +146,10 @@ export function registerAuthRoutes(app: Hono) {
       return redirect(f.next ? next : '/explore?welcome=1', sessionCookie(session))
     }
     catch {
-      return page(<Auth mode="signup" handle={handle} email={email} next={next}
-        error="That handle or email is unavailable." />,
-        400)
+      return page(
+        <Auth mode="signup" handle={handle} email={email} next={next} error="That handle or email is unavailable." />,
+        400,
+      )
     }
   })
 

@@ -10,8 +10,8 @@ export function sessionHash(token: string | null | undefined) {
   return token === null || token === undefined ? null : hashToken(token)
 }
 
-export function insertSession(database: Database, token: string, userId: number, expiresAt: number,
-  createdAt: number, userAgent: string)
+export function insertSession(database: Database, token: string, userId: number, expiresAt: number, createdAt: number,
+  userAgent: string)
 {
   database.query('INSERT INTO sessions(token_hash,user_id,expires_at,created_at,user_agent) VALUES(?,?,?,?,?)')
     .run(hashToken(token), userId, expiresAt, createdAt, userAgent)

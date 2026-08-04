@@ -1,5 +1,5 @@
-import { describe, expect, test } from 'bun:test'
 import { Database } from 'bun:sqlite'
+import { describe, expect, test } from 'bun:test'
 import { recordVisit, visitorHash } from './visitors'
 
 function testDatabase() {
@@ -32,8 +32,9 @@ describe('visitor analytics', () => {
     recordVisit(database, '203.0.113.4', new Date('2026-08-04T00:00:00Z'))
 
     expect(database.query('SELECT * FROM daily_visitors').all()).toHaveLength(2)
-    const rows = database.query('SELECT visitor_hash FROM daily_visitors ORDER BY day').all() as
-      { visitor_hash: string }[]
+    const rows = database.query('SELECT visitor_hash FROM daily_visitors ORDER BY day').all() as {
+      visitor_hash: string
+    }[]
     expect(rows[0].visitor_hash).not.toBe(rows[1].visitor_hash)
   })
 

@@ -1,5 +1,6 @@
 import { Database } from 'bun:sqlite'
-import { defaultBackupDirectory, defaultDatabasePath, restoreDatabase, verifyDatabaseFile } from '../src/database-backup'
+import { defaultBackupDirectory, defaultDatabasePath, restoreDatabase,
+  verifyDatabaseFile } from '../src/database-backup'
 import { latestMigrationVersion, runMigrations } from '../src/migrations'
 
 const args = Bun.argv.slice(2)

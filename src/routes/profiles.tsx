@@ -7,11 +7,11 @@ import { currentPage, page, paginationRedirect, redirect } from './shared'
 
 import type { Hono } from 'hono'
 import { db } from '../db'
+import { resolveHandle } from '../handles'
 import { renderProfileOg } from '../og'
 import { PAGE_SIZE } from '../pagination'
 import { enrichPosts } from '../posts'
 import { currentUser } from '../utils'
-import { resolveHandle } from '../handles'
 
 export function registerProfilesRoutes(app: Hono) {
   app.get('/u/:handle/og.png', c => {
@@ -129,8 +129,8 @@ export function registerProfilesRoutes(app: Hono) {
         FROM users u ${join} AND (? < 0 OR NOT EXISTS (SELECT 1 FROM blocks b WHERE
           (b.blocker_id=? AND b.blocked_id=u.id) OR (b.blocker_id=u.id AND b.blocked_id=?)))
         ORDER BY u.handle LIMIT ? OFFSET ?`,
-      ).all(viewerId, profile.id, viewerId, viewerId, viewerId,
-        PAGE_SIZE, (profilePage - 1) * PAGE_SIZE) as PersonView[]
+      ).all(viewerId, profile.id, viewerId, viewerId, viewerId, PAGE_SIZE,
+        (profilePage - 1) * PAGE_SIZE) as PersonView[]
       const countWhere = tab === 'following' ? 'follower_id=?' : 'following_id=?'
       const counterpart = tab === 'following' ? 'f.following_id' : 'f.follower_id'
       const connectionTotal = (db.query(`SELECT count(*) AS count FROM follows f WHERE ${countWhere}
@@ -160,10 +160,8 @@ export function registerProfilesRoutes(app: Hono) {
     }
     return page(
       <Profile user={user} profile={profile} posts={blocked || blockedByProfile ? [] : posts} following={following}
-        blocked={blocked} page={profilePage}
-        total={total} followerCount={counts.followerCount} followingCount={counts.followingCount}
-        followingTagCount={counts.followingTagCount} social={social} />,
+        blocked={blocked} page={profilePage} total={total} followerCount={counts.followerCount}
+        followingCount={counts.followingCount} followingTagCount={counts.followingTagCount} social={social} />,
     )
   })
-
 }

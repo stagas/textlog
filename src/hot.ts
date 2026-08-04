@@ -24,12 +24,14 @@ export type HotCursor = {
 const cursorVersion = 2
 
 function hasHotTable(database: Database) {
-  return Boolean(database.query("SELECT 1 FROM sqlite_master WHERE type='table' AND name='post_hot'").get())
+  return Boolean(database.query('SELECT 1 FROM sqlite_master WHERE type=\'table\' AND name=\'post_hot\'').get())
 }
 
 export function encodeHotCursor(cursor: HotCursor) {
-  return Buffer.from(JSON.stringify([cursorVersion, cursor.asOf, cursor.score, cursor.latestActivityAt,
-    cursor.createdAt, cursor.id, cursor.direction])).toString('base64url')
+  return Buffer.from(
+    JSON.stringify([cursorVersion, cursor.asOf, cursor.score, cursor.latestActivityAt, cursor.createdAt, cursor.id,
+      cursor.direction]),
+  ).toString('base64url')
 }
 
 export function decodeHotCursor(value?: string): HotCursor | null {
@@ -55,8 +57,8 @@ export function decodeHotCursor(value?: string): HotCursor | null {
 }
 
 export function hotCursor(post: HotPost, asOf: string, direction: HotCursor['direction'] = 'next'): HotCursor {
-  return { asOf, score: post.hot_score, latestActivityAt: post.latest_activity_at,
-    createdAt: post.created_at, id: post.id, direction }
+  return { asOf, score: post.hot_score, latestActivityAt: post.latest_activity_at, createdAt: post.created_at,
+    id: post.id, direction }
 }
 
 export function recordHotActivity(database: Database, postId: number) {
@@ -85,9 +87,11 @@ export function rebuildHotPosts(database: Database, postIds?: number[]) {
     ) SELECT activity.candidate_id post_id,latest.latest_activity_at,
       sum(pow(0.5,max(0,(julianday(latest.latest_activity_at)-julianday(activity.created_at))*24)/24.0)) score
       FROM activity JOIN latest ON latest.candidate_id=activity.candidate_id
-      WHERE activity.deleted_at IS NULL GROUP BY activity.candidate_id`).all() as
-      { post_id: number; latest_activity_at: string; score: number }[]
-    database.query("UPDATE post_hot SET score=0,score_updated_at='1970-01-01 00:00:00',latest_activity_at='1970-01-01 00:00:00'")
+      WHERE activity.deleted_at IS NULL GROUP BY activity.candidate_id`).all() as { post_id: number;
+      latest_activity_at: string; score: number }[]
+    database.query(
+      'UPDATE post_hot SET score=0,score_updated_at=\'1970-01-01 00:00:00\',latest_activity_at=\'1970-01-01 00:00:00\'',
+    )
       .run()
     const update = database.query('UPDATE post_hot SET score=?,score_updated_at=?,latest_activity_at=? WHERE post_id=?')
     for (const ranking of rankings) {
@@ -111,7 +115,8 @@ export function rebuildHotPosts(database: Database, postIds?: number[]) {
     }
     const latest = events.reduce((value, event) => event.created_at > value ? event.created_at : value,
       events[0].created_at)
-    const score = events.reduce((sum, event) => sum
+    const score = events.reduce((sum, event) =>
+      sum
       + Math.pow(0.5, Math.max(0, (Date.parse(`${latest.replace(' ', 'T')}Z`)
         - Date.parse(`${event.created_at.replace(' ', 'T')}Z`)) / 86_400_000)), 0)
     update.run(score, latest, latest, candidate.id)
@@ -149,8 +154,8 @@ export function getHotPosts(
     filters.push(`(ranked.hot_score ${comparison} ? OR (ranked.hot_score = ? AND
       (h.latest_activity_at ${comparison} ? OR (h.latest_activity_at = ? AND
       (p.created_at ${comparison} ? OR (p.created_at = ? AND p.id ${comparison} ?))))))`)
-    parameters.push(cursor.score, cursor.score, cursor.latestActivityAt, cursor.latestActivityAt,
-      cursor.createdAt, cursor.createdAt, cursor.id)
+    parameters.push(cursor.score, cursor.score, cursor.latestActivityAt, cursor.latestActivityAt, cursor.createdAt,
+      cursor.createdAt, cursor.id)
   }
   parameters.push(limit)
   const rows = database.query(`WITH ranked AS (

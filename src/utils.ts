@@ -2,13 +2,16 @@ import { createHash, randomBytes } from 'node:crypto'
 import { db, type User } from './db'
 import { sessionHash } from './sessions'
 
-export const esc = (v: unknown) => String(v ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]!))
+export const esc = (v: unknown) =>
+  String(v ?? '').replace(/[&<>"']/g,
+    c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', '\'': '&#39;' }[c]!))
 export const hash = (p: string) => createHash('sha256').update(p).digest('hex')
-export const hashPassword = (password: string) => Bun.password.hash(password, {
-  algorithm: 'argon2id',
-  memoryCost: 65536,
-  timeCost: 3,
-})
+export const hashPassword = (password: string) =>
+  Bun.password.hash(password, {
+    algorithm: 'argon2id',
+    memoryCost: 65536,
+    timeCost: 3,
+  })
 export async function verifyPassword(password: string, storedHash: string) {
   if (storedHash.startsWith('$argon2id$')) return Bun.password.verify(password, storedHash)
   // Accounts created before Argon2id are upgraded after their next successful login.
@@ -49,7 +52,9 @@ export function linkify(body: string) {
     if (/^https?:\/\//i.test(token)) {
       const url = token.replace(/[.,!?;:]+$/, '')
       const punctuation = token.slice(url.length)
-      html += `<a href="${esc(url)}" target="_blank" rel="nofollow ugc noopener noreferrer">${esc(url)}</a>${esc(punctuation)}`
+      html += `<a href="${esc(url)}" target="_blank" rel="nofollow ugc noopener noreferrer">${esc(url)}</a>${
+        esc(punctuation)
+      }`
     }
     else {
       const value = token.slice(1)

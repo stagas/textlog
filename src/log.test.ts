@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test'
-import { clientIp, semanticAction, shouldLogHttp } from './log'
 import { ipPseudonym, logIpPseudonym } from './ip-privacy'
+import { clientIp, semanticAction, shouldLogHttp } from './log'
 
 describe('semanticAction', () => {
   test('names user actions without including identifiers', () => {

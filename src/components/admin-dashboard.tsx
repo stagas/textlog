@@ -5,17 +5,19 @@ import { fmtFull } from '../utils'
 import { Layout } from './layout'
 import { Pagination } from './page-shared'
 
-export function AdminDashboard({ user, stats, reports, actions, illegalReports = [], status, page, total, suspended = [] }: {
-  user: User
-  stats: DashboardStats
-  reports: AdminReportView[]
-  actions: AdminActionView[]
-  illegalReports?: IllegalActivityReportView[]
-  status: 'open' | 'resolved' | 'dismissed'
-  page: number
-  total: number
-  suspended?: ProfileRow[]
-}) {
+export function AdminDashboard(
+  { user, stats, reports, actions, illegalReports = [], status, page, total, suspended = [] }: {
+    user: User
+    stats: DashboardStats
+    reports: AdminReportView[]
+    actions: AdminActionView[]
+    illegalReports?: IllegalActivityReportView[]
+    status: 'open' | 'resolved' | 'dismissed'
+    page: number
+    total: number
+    suspended?: ProfileRow[]
+  },
+) {
   const labels: [keyof DashboardStats, string][] = [
     ['users', 'users'],
     ['suspendedUsers', 'suspended'],
@@ -45,20 +47,33 @@ export function AdminDashboard({ user, stats, reports, actions, illegalReports =
         ))}
       </section>
       <section className="admin-section">
-        <h2>illegal activity reports <span>{illegalReports.length}</span></h2>
-        {illegalReports.length ? <div className="report-list">{illegalReports.map(report =>
-          <article className="admin-report" key={report.id}>
-            <div className="admin-report-meta"><span>{report.reference} · {report.category} · post #{report.post_id}</span>
-              <span>{report.reporter_name || 'identity exception'} · {report.reporter_email || 'no email'}</span></div>
-            <p>{report.details}</p><a href={report.content_url}>view post</a>
-            <div className="admin-inline-actions">
-              {(['resolve', 'dismiss'] as const).map(decision => <form method="post"
-                action={`/admin/illegal-reports/${report.id}/${decision}`} key={decision}>
-                <input name="reasons" minLength={20} maxLength={2000} required placeholder="specific reasons" />
-                <button className="quiet">{decision}</button>
-              </form>)}
+        <h2>
+          illegal activity reports <span>{illegalReports.length}</span>
+        </h2>
+        {illegalReports.length
+          ? (
+            <div className="report-list">
+              {illegalReports.map(report => (
+                <article className="admin-report" key={report.id}>
+                  <div className="admin-report-meta">
+                    <span>{report.reference} · {report.category} · post #{report.post_id}</span>
+                    <span>{report.reporter_name || 'identity exception'} · {report.reporter_email || 'no email'}</span>
+                  </div>
+                  <p>{report.details}</p>
+                  <a href={report.content_url}>view post</a>
+                  <div className="admin-inline-actions">
+                    {(['resolve', 'dismiss'] as const).map(decision => (
+                      <form method="post" action={`/admin/illegal-reports/${report.id}/${decision}`} key={decision}>
+                        <input name="reasons" minLength={20} maxLength={2000} required placeholder="specific reasons" />
+                        <button className="quiet">{decision}</button>
+                      </form>
+                    ))}
+                  </div>
+                </article>
+              ))}
             </div>
-          </article>)}</div> : <p className="section-empty">No open illegal activity reports.</p>}
+          )
+          : <p className="section-empty">No open illegal activity reports.</p>}
       </section>
       <nav className="feed-tabs admin-tabs" aria-label="Report status">
         {(['open', 'resolved', 'dismissed'] as const).map(value => (

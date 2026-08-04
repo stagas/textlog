@@ -7,8 +7,8 @@ export function exportUserData(database: Database, userId: number, currentSessio
   const posts = database.query(`SELECT id,parent_id,body,created_at,deleted_at
     FROM posts WHERE user_id=? ORDER BY created_at,id`).all(userId) as { id: number }[]
   const hashtags = database.query(`SELECT ph.post_id,ph.tag FROM post_hashtags ph
-    JOIN posts p ON p.id=ph.post_id WHERE p.user_id=? ORDER BY ph.post_id,ph.tag`).all(userId) as
-    { post_id: number; tag: string }[]
+    JOIN posts p ON p.id=ph.post_id WHERE p.user_id=? ORDER BY ph.post_id,ph.tag`).all(userId) as { post_id: number;
+    tag: string }[]
   const mentions = database.query(`SELECT pm.post_id,u.handle FROM post_mentions pm
     JOIN posts p ON p.id=pm.post_id JOIN users u ON u.id=pm.user_id
     WHERE p.user_id=? ORDER BY pm.post_id,u.handle`).all(userId) as { post_id: number; handle: string }[]
@@ -18,8 +18,8 @@ export function exportUserData(database: Database, userId: number, currentSessio
   for (const row of mentions) mentionsByPost.set(row.post_id, [...(mentionsByPost.get(row.post_id) || []), row.handle])
 
   const sessions = database.query(`SELECT token_hash,created_at,expires_at,user_agent FROM sessions
-    WHERE user_id=? ORDER BY created_at`).all(userId) as
-    { token_hash: string; created_at: number; expires_at: number; user_agent: string }[]
+    WHERE user_id=? ORDER BY created_at`).all(userId) as { token_hash: string; created_at: number; expires_at: number;
+    user_agent: string }[]
   const currentSessionHash = sessionHash(currentSession)
 
   return {
@@ -39,6 +39,8 @@ export function exportUserData(database: Database, userId: number, currentSessio
       WHERE b.blocker_id=? ORDER BY u.handle`).all(userId),
     reports: database.query(`SELECT id,post_id,reason,status,created_at,resolved_at FROM reports
       WHERE reporter_id=? ORDER BY created_at,id`).all(userId),
-    sessions: sessions.map(({ token_hash, ...session }) => ({ ...session, current: token_hash === currentSessionHash })),
+    sessions: sessions.map(({ token_hash, ...session }) => ({ ...session,
+      current: token_hash === currentSessionHash })
+    ),
   }
 }

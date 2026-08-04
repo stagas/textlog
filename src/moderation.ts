@@ -40,7 +40,8 @@ export async function moderateText(input: string): Promise<ModerationResult> {
     const data = await response.json() as { results?: { flagged?: boolean }[] }
     if (!data.results?.length) return { ok: false, reason: 'unavailable' }
     return data.results[0].flagged ? { ok: false, reason: 'flagged' } : { ok: true }
-  } catch (error) {
+  }
+  catch (error) {
     console.error('Moderation request failed', error)
     return { ok: false, reason: 'unavailable' }
   }

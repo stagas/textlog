@@ -52,7 +52,7 @@ export function createDatabaseBackup(database: Database, options: {
   const filename = `root-${options.kind}${label}-${timestamp()}.sqlite`
   const finalPath = resolve(directory, filename)
   const temporaryPath = `${finalPath}.tmp`
-  const escapedPath = temporaryPath.replaceAll("'", "''")
+  const escapedPath = temporaryPath.replaceAll('\'', '\'\'')
   database.run(`VACUUM INTO '${escapedPath}'`)
   chmodSync(temporaryPath, 0o600)
   verifyDatabaseFile(temporaryPath)

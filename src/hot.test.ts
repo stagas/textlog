@@ -1,5 +1,5 @@
-import { beforeEach, describe, expect, test } from 'bun:test'
 import { Database } from 'bun:sqlite'
+import { beforeEach, describe, expect, test } from 'bun:test'
 import { getHotPosts, hotCursor, recordHotActivity, removeHotActivity } from './hot'
 
 const asOf = '2026-08-03T12:00:00.000Z'

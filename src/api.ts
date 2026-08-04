@@ -1,6 +1,6 @@
 import type { Database } from 'bun:sqlite'
 import { extractHashtags, extractMentions } from './content'
-import { encodeHotCursor, getHotPosts, hotCursor, type HotCursor } from './hot'
+import { encodeHotCursor, getHotPosts, type HotCursor, hotCursor } from './hot'
 
 export const API_DEFAULT_LIMIT = 20
 export const API_MAX_LIMIT = 100

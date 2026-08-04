@@ -133,7 +133,9 @@ export function validateStartupConfiguration(env: Environment = Bun.env, options
     problems.push('RESEND_API_KEY and EMAIL_FROM must be configured together')
   }
   if (emailFromConfigured && !validEmailFrom(env.EMAIL_FROM!)) problems.push('EMAIL_FROM must contain a valid email')
-  if ((resendConfigured || emailFromConfigured) && !appUrl) problems.push('APP_URL is required when email is configured')
+  if ((resendConfigured || emailFromConfigured) && !appUrl) {
+    problems.push('APP_URL is required when email is configured')
+  }
   if (environment === 'production' && !resendConfigured) problems.push('RESEND_API_KEY is required in production')
   if (environment === 'production' && !emailFromConfigured) problems.push('EMAIL_FROM is required in production')
   if (environment === 'production' && (env.IP_PSEUDONYM_SECRET?.trim().length || 0) < 32) {

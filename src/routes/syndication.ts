@@ -3,7 +3,7 @@ import type { Context, Hono, Next } from 'hono'
 import { API_DEFAULT_LIMIT, apiHotPosts, apiOrigin, apiPosts } from '../api'
 import { db } from '../db'
 import { resolveHandle } from '../handles'
-import { syndicationResponse, type SyndicationFormat } from '../syndication'
+import { type SyndicationFormat, syndicationResponse } from '../syndication'
 
 function publicPosts(database: Database, origin: string, filters: { handle?: string; tag?: string } = {}) {
   return apiPosts(database, origin, { limit: API_DEFAULT_LIMIT, before: null, ...filters }).data

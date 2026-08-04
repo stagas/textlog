@@ -4,19 +4,19 @@ import { Hono } from 'hono'
 import { configureDevReload } from './components/layout'
 import { compressResponse } from './compression'
 import { db } from './db'
+import { clientIp, logError, logHttp, logReady, shouldLogHttp } from './log'
 import { renderDefaultOg } from './og'
 import { registerAccountRoutes } from './routes/account'
-import { registerApiRoutes } from './routes/api'
 import { registerAdminRoutes } from './routes/admin'
+import { registerApiRoutes } from './routes/api'
 import { registerAuthRoutes } from './routes/auth'
 import { registerFeedsRoutes } from './routes/feeds'
-import { registerInteractionsRoutes } from './routes/interactions'
 import { registerIllegalActivityRoutes } from './routes/illegal-activity'
+import { registerInteractionsRoutes } from './routes/interactions'
 import { registerPostsRoutes } from './routes/posts'
 import { registerProfilesRoutes } from './routes/profiles'
 import { registerTagsRoutes } from './routes/tags'
 import { loadStylesAsset, stylesResponse } from './styles'
-import { clientIp, logError, logHttp, logReady, shouldLogHttp } from './log'
 import { recordVisit } from './visitors'
 
 const devReloadEnabled = Bun.env.DEV_RELOAD === 'true'
@@ -40,8 +40,7 @@ app.use('*', async (c, next) => {
   finally {
     const path = new URL(c.req.url).pathname
     if (shouldLogHttp(path, c.res.status)) {
-      logHttp(c.req.method, path, c.res.status, performance.now() - started,
-        c.req.header('x-root-client-ip') || '-')
+      logHttp(c.req.method, path, c.res.status, performance.now() - started, c.req.header('x-root-client-ip') || '-')
     }
   }
 })
@@ -94,14 +93,13 @@ app.get('/styles.css', async c => {
   const asset = styles ?? await loadStylesAsset(stylesPath)
   return stylesResponse(asset, c.req.raw, !devReloadEnabled)
 })
-app.get('/root.svg',
-  () =>
-    new Response(Bun.file(new URL('./root.svg', import.meta.url)), {
-      headers: {
-        'content-type': 'image/svg+xml; charset=utf-8',
-        'cache-control': 'public, max-age=31536000, immutable',
-      },
-    }))
+app.get('/root.svg', () =>
+  new Response(Bun.file(new URL('./root.svg', import.meta.url)), {
+    headers: {
+      'content-type': 'image/svg+xml; charset=utf-8',
+      'cache-control': 'public, max-age=31536000, immutable',
+    },
+  }))
 app.get('/og.png', () => {
   const image = renderDefaultOg()
   const body = image.buffer.slice(image.byteOffset, image.byteOffset + image.byteLength) as ArrayBuffer

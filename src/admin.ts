@@ -6,8 +6,8 @@ export const ADMIN_EMAILS = new Set([
   'gstagas@gmail.com',
 ])
 
-export type AdminActionType = 'delete_post' | 'suspend_user' | 'restore_user' | 'delete_user'
-  | 'resolve_report' | 'dismiss_report'
+export type AdminActionType = 'delete_post' | 'suspend_user' | 'restore_user' | 'delete_user' | 'resolve_report'
+  | 'dismiss_report'
 
 export function isAdmin(user: Pick<User, 'email'> | null | undefined) {
   return !!user && ADMIN_EMAILS.has(user.email.trim().toLowerCase())
@@ -18,13 +18,14 @@ export function isAdminEmail(email: string) {
 }
 
 export function recordAdminAction(database: Database, actorId: number, action: AdminActionType,
-  targetUserId: number | null, targetPostId: number | null, note: string) {
+  targetUserId: number | null, targetPostId: number | null, note: string)
+{
   database.query(`INSERT INTO admin_actions(actor_id,action,target_user_id,target_post_id,note)
     VALUES(?,?,?,?,?)`).run(actorId, action, targetUserId, targetPostId, note.trim().slice(0, 500))
 }
 
 export function softDeletePost(database: Database, postId: number) {
-  database.query("UPDATE posts SET body='(deleted)',deleted_at=CURRENT_TIMESTAMP WHERE id=? AND deleted_at IS NULL")
+  database.query('UPDATE posts SET body=\'(deleted)\',deleted_at=CURRENT_TIMESTAMP WHERE id=? AND deleted_at IS NULL')
     .run(postId)
   removeHotActivity(database, postId)
   database.query('DELETE FROM post_hashtags WHERE post_id=?').run(postId)
@@ -51,10 +52,10 @@ export function anonymizeUser(database: Database, userId: number, actorId?: numb
   }
   database.query('DELETE FROM reports WHERE reporter_id=?').run(userId)
   database.query('DELETE FROM password_resets WHERE user_id=?').run(userId)
-  if (database.query("SELECT 1 FROM sqlite_master WHERE type='table' AND name='email_tokens'").get()) {
+  if (database.query('SELECT 1 FROM sqlite_master WHERE type=\'table\' AND name=\'email_tokens\'').get()) {
     database.query('DELETE FROM email_tokens WHERE user_id=?').run(userId)
   }
-  if (account && database.query("SELECT 1 FROM sqlite_master WHERE type='table' AND name='handle_history'").get()) {
+  if (account && database.query('SELECT 1 FROM sqlite_master WHERE type=\'table\' AND name=\'handle_history\'').get()) {
     database.query('INSERT OR IGNORE INTO handle_history(handle,user_id) VALUES(?,?)')
       .run(account.handle.toLowerCase(), userId)
   }

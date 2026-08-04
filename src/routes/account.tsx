@@ -11,13 +11,13 @@ import {
 } from '../components/pages'
 import { exportUserData } from '../data-export'
 import { db } from '../db'
-import { moderateText, moderationMessage } from '../moderation'
+import { confirmEmailToken, findEmailToken } from '../email-verification'
+import { updateProfileHandle } from '../handles'
 import {
   clearSessionCookie,
 } from '../http'
-import { updateProfileHandle } from '../handles'
+import { moderateText, moderationMessage } from '../moderation'
 import { sessionHash } from '../sessions'
-import { confirmEmailToken, findEmailToken } from '../email-verification'
 
 export function registerAccountRoutes(app: Hono) {
   app.get('/account/edit', c => {
@@ -185,8 +185,9 @@ export function registerAccountRoutes(app: Hono) {
     if (!user) return redirect('/login')
     const f = await form(c.req.raw)
     const current = sessionHash(sessionToken(c.req.raw))
-    const sessions = db.query('SELECT token_hash FROM sessions WHERE user_id=?').all(user.id) as
-      { token_hash: string }[]
+    const sessions = db.query('SELECT token_hash FROM sessions WHERE user_id=?').all(user.id) as {
+      token_hash: string
+    }[]
     const target = sessions.find(session => session.token_hash === f.token && session.token_hash !== current)
     if (target) db.query('DELETE FROM sessions WHERE token_hash=? AND user_id=?').run(target.token_hash, user.id)
     return redirect('/account/security')

@@ -6,17 +6,17 @@ import {
   Reply,
 } from '../components/pages'
 import { moderateText, moderationMessage } from '../moderation'
-import { createPost, enrichPosts, updatePost } from '../posts'
 import { canPublishPosts } from '../posting-policy'
+import { createPost, enrichPosts, updatePost } from '../posts'
 import type { PostRow, PostView } from '../types'
 import { form, page, redirect, rememberFeed, usersBlocked } from './shared'
 
 import type { Hono } from 'hono'
+import { softDeletePost } from '../admin'
 import { db } from '../db'
 import { renderPostOg } from '../og'
 import { postRateLimitMessage } from '../post-rate-limit'
 import { currentUser } from '../utils'
-import { softDeletePost } from '../admin'
 
 export function registerPostsRoutes(app: Hono) {
   app.get('/write', c => {

@@ -5,11 +5,11 @@ import {
   Explore,
 } from '../components/pages'
 import { db } from '../db'
+import { resolveHandle } from '../handles'
 import {
   safeRefererPath,
 } from '../http'
 import { currentUser } from '../utils'
-import { resolveHandle } from '../handles'
 
 export function registerInteractionsRoutes(app: Hono) {
   app.post('/follow/:handle', async c => {

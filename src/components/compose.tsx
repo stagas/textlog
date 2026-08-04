@@ -5,7 +5,11 @@ import { FormMessage, VerificationRequired } from './page-shared'
 
 export function Compose({ user, error, body = '' }: { user: User; error?: string; body?: string }) {
   if (!canPublishPosts(user)) {
-    return <Layout user={user} title="write"><VerificationRequired /></Layout>
+    return (
+      <Layout user={user} title="write">
+        <VerificationRequired />
+      </Layout>
+    )
   }
   return (
     <Layout user={user} title="write">

@@ -13,11 +13,11 @@ import { currentPage, page, paginationRedirect, redirect, rememberFeed, visibleP
 
 import type { Hono } from 'hono'
 import { db } from '../db'
+import { decodeHotCursor } from '../hot'
 import {
   feedPreference,
 } from '../http'
 import { currentUser } from '../utils'
-import { decodeHotCursor } from '../hot'
 
 export function registerFeedsRoutes(app: Hono) {
   app.get('/', c => {

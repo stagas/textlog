@@ -94,6 +94,10 @@ export function logError(message: string, error: unknown) {
 }
 
 export function logReady(url: string, environment: string) {
-  console.log(`${paint('ready', 'green')} ${paint('◆', 'magenta')} root listening on ${paint(url, 'cyan')} ${paint(`(${environment})`, 'dim')}`)
+  console.log(
+    `${paint('ready', 'green')} ${paint('◆', 'magenta')} root listening on ${paint(url, 'cyan')} ${
+      paint(`(${environment})`, 'dim')
+    }`,
+  )
 }
 import { logIpPseudonym } from './ip-privacy'

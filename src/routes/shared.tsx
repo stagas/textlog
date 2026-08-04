@@ -90,7 +90,9 @@ export function securityPage(req: Request, error?: string, success?: string, sta
   const rows = db.query(`SELECT token_hash,created_at,expires_at,user_agent FROM sessions
     WHERE user_id=? AND expires_at>? ORDER BY created_at DESC`).all(user.id, Date.now()) as { token_hash: string;
     created_at: number; expires_at: number; user_agent: string }[]
-  const sessions = rows.map(({ token_hash, ...row }) => ({ ...row, token: token_hash, current: token_hash === current }))
+  const sessions = rows.map(({ token_hash, ...row }) => ({ ...row, token: token_hash,
+    current: token_hash === current })
+  )
   return page(<AccountSecurity user={user} sessions={sessions} error={error} success={success} />, status)
 }
 export async function form(req: Request) {

@@ -13,11 +13,17 @@ describe('database migrations', () => {
     expect(applied).toEqual(migrations.map(migration => migration.version))
     expect((database.query('PRAGMA table_info(sessions)').all() as { name: string }[]).map(column => column.name))
       .toContain('token_hash')
-    expect(database.query("SELECT count(*) count FROM sqlite_master WHERE type='table' AND name='handle_history'").get())
+    expect(
+      database.query('SELECT count(*) count FROM sqlite_master WHERE type=\'table\' AND name=\'handle_history\'').get(),
+    )
       .toEqual({ count: 1 })
-    expect(database.query("SELECT count(*) count FROM sqlite_master WHERE type='table' AND name='post_hot'").get())
+    expect(database.query('SELECT count(*) count FROM sqlite_master WHERE type=\'table\' AND name=\'post_hot\'').get())
       .toEqual({ count: 1 })
-    expect(database.query("SELECT count(*) count FROM sqlite_master WHERE type='table' AND name='illegal_activity_reports'").get())
+    expect(
+      database.query(
+        'SELECT count(*) count FROM sqlite_master WHERE type=\'table\' AND name=\'illegal_activity_reports\'',
+      ).get(),
+    )
       .toEqual({ count: 1 })
 
     const reapplied: number[] = []
@@ -65,7 +71,7 @@ describe('database migrations', () => {
     const database = new Database(':memory:')
     database.run('CREATE TABLE illegal_content_notices(id INTEGER); PRAGMA user_version=9')
     migrations.find(migration => migration.version === 10)!.up(database)
-    expect(database.query("SELECT count(*) count FROM sqlite_master WHERE name='illegal_content_notices'").get())
+    expect(database.query('SELECT count(*) count FROM sqlite_master WHERE name=\'illegal_content_notices\'').get())
       .toEqual({ count: 0 })
   })
 })
