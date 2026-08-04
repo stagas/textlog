@@ -13,6 +13,35 @@ Open http://localhost:3000. Data is stored in `storage/root.sqlite` using Bun's 
 
 Run the full local quality check with `bun run check`; it performs strict TypeScript checking and the complete test suite.
 
+## Database migrations and recovery
+
+The database schema is upgraded through ordered, transactional migrations tracked by SQLite's `user_version`.
+Before upgrading an existing database, startup writes and verifies a consistent snapshot in `storage/backups`, then
+checkpoints the WAL after the migration completes. A database created by a newer app version is refused rather than
+being modified.
+
+Create an additional backup at any time with:
+
+```sh
+bun run db:backup
+```
+
+Backups are private (`0600`), verified with SQLite `quick_check`, and retained for 14 days by default. Configure the
+database path, backup directory, or retention with `DATABASE_PATH`, `DATABASE_BACKUP_DIR`, and
+`DATABASE_BACKUP_RETENTION_DAYS`. Schedule `bun run db:backup` at least daily in production and replicate the backup
+directory to encrypted off-host storage; local snapshots alone do not cover host or disk loss.
+
+To restore, stop every running app instance first, then run:
+
+```sh
+bun run db:restore -- storage/backups/<backup>.sqlite --confirm
+bun run db:verify
+```
+
+Restore verifies the source, creates a `pre-restore` safety snapshot of the live database, safely replaces the database
+and WAL sidecars, applies any newer migrations, and verifies the result. Practice the workflow without touching
+production by setting `DATABASE_PATH` to a temporary file and `DATABASE_BACKUP_DIR` to a temporary directory.
+
 In development, the browser automatically reloads after Bun restarts the server.
 
 Set `OPENAI_API_KEY` in the server environment to moderate posts and replies before insertion. root.mx uses OpenAI's free Moderation endpoint with `omni-moderation-latest` and rejects submissions when moderation is unavailable.
