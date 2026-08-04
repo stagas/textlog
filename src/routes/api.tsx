@@ -1,7 +1,7 @@
 import type { Database } from 'bun:sqlite'
 import type { Hono } from 'hono'
 import { consumeAuthAttempt, rateLimitKey } from '../auth-rate-limit'
-import { apiOrigin, apiPost, apiPosts, parseCollectionParams, isoTimestamp } from '../api'
+import { apiHotPosts, apiOrigin, apiPost, apiPosts, parseCollectionParams, isoTimestamp } from '../api'
 import { subscribeToPosts } from '../api-broker'
 import { ApiDocs } from '../components/pages'
 import { db } from '../db'
@@ -60,7 +60,8 @@ function openApiDocument() {
     info: { title: 'root.mx public API', version: '1.0.0', description: 'Read-only access to public root.mx content.' },
     servers: [{ url: '/api/v1' }],
     paths: {
-      '/posts': { get: { summary: 'Latest posts', parameters: collectionParameters, responses: jsonResponses } },
+      '/feeds/latest': { get: { summary: 'Latest posts', parameters: collectionParameters, responses: jsonResponses } },
+      '/feeds/hot': { get: { summary: 'Hot posts', parameters: collectionParameters, responses: jsonResponses } },
       '/posts/{id}': { get: { summary: 'Single post', parameters: [{ name: 'id', in: 'path', required: true,
         schema: { type: 'integer', minimum: 1 } }], responses: jsonResponses } },
       '/posts/{id}/replies': { get: { summary: 'Post replies', parameters: [{ name: 'id', in: 'path', required: true,
@@ -115,7 +116,13 @@ export function registerApiRoutes(app: Hono, database: Database = db) {
 
   app.get('/api/openapi.json', () => jsonResponse(openApiDocument(), 200, 'public, max-age=3600'))
 
-  app.get('/api/v1/posts', c => collection(c, database))
+  app.get('/api/v1/feeds/latest', c => collection(c, database))
+
+  app.get('/api/v1/feeds/hot', c => {
+    const parsed = parseCollectionParams(c.req.query('limit'), c.req.query('cursor'))
+    if (!parsed) return apiError('invalid_pagination', 'limit must be 1–100 and cursor must be a valid opaque cursor', 400)
+    return jsonResponse(apiHotPosts(database, apiOrigin(c.req.url), parsed.limit, parsed.before || 0))
+  })
 
   app.get('/api/v1/posts/:id', c => {
     const id = Number(c.req.param('id'))

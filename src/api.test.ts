@@ -12,6 +12,7 @@ function fixture() {
     CREATE TABLE posts (id INTEGER PRIMARY KEY,user_id INTEGER NOT NULL,parent_id INTEGER,body TEXT NOT NULL,
       created_at TEXT DEFAULT CURRENT_TIMESTAMP,deleted_at TEXT);
     CREATE TABLE follows (follower_id INTEGER NOT NULL,following_id INTEGER NOT NULL);
+    CREATE TABLE blocks (blocker_id INTEGER NOT NULL,blocked_id INTEGER NOT NULL);
     CREATE TABLE post_hashtags (post_id INTEGER NOT NULL,tag TEXT NOT NULL);
     CREATE TABLE auth_rate_limits (id INTEGER PRIMARY KEY AUTOINCREMENT,scope TEXT NOT NULL,key_hash TEXT NOT NULL,
       created_at INTEGER NOT NULL);
@@ -44,7 +45,7 @@ function request(app: Hono, path: string, init?: RequestInit) {
 describe('public API', () => {
   test('returns serialized public posts without private account data', async () => {
     const { app } = fixture()
-    const response = await request(app, '/api/v1/posts')
+    const response = await request(app, '/api/v1/feeds/latest')
     const payload = await response.json() as any
 
     expect(response.status).toBe(200)
@@ -61,15 +62,30 @@ describe('public API', () => {
 
   test('uses stable cursor pagination and validates pagination input', async () => {
     const { app } = fixture()
-    const first = await (await request(app, '/api/v1/posts?limit=2')).json() as any
+    const first = await (await request(app, '/api/v1/feeds/latest?limit=2')).json() as any
     const second = await (await request(app,
-      `/api/v1/posts?limit=2&cursor=${encodeURIComponent(first.pagination.next_cursor)}`)).json() as any
+      `/api/v1/feeds/latest?limit=2&cursor=${encodeURIComponent(first.pagination.next_cursor)}`)).json() as any
 
     expect(first.data.map((post: any) => post.id)).toEqual([3, 2])
     expect(second.data.map((post: any) => post.id)).toEqual([1])
     expect(second.pagination.next_cursor).toBeNull()
-    expect((await request(app, '/api/v1/posts?limit=101')).status).toBe(400)
-    expect((await request(app, '/api/v1/posts?cursor=broken')).status).toBe(400)
+    expect((await request(app, '/api/v1/feeds/latest?limit=101')).status).toBe(400)
+    expect((await request(app, '/api/v1/feeds/latest?cursor=broken')).status).toBe(400)
+  })
+
+  test('returns hot posts using the existing activity ranking with cursor pagination', async () => {
+    const { app } = fixture()
+    const firstResponse = await request(app, '/api/v1/feeds/hot?limit=2')
+    const first = await firstResponse.json() as any
+    expect(firstResponse.status).toBe(200)
+    expect(first.data).toHaveLength(2)
+    expect(first.data[0].id).toBe(1)
+    expect(first.pagination.next_cursor).toBeTruthy()
+
+    const second = await (await request(app,
+      `/api/v1/feeds/hot?limit=2&cursor=${encodeURIComponent(first.pagination.next_cursor)}`)).json() as any
+    expect(second.data).toHaveLength(1)
+    expect(new Set([...first.data, ...second.data].map(post => post.id)).size).toBe(3)
   })
 
   test('serves single posts, replies, users, and tags with documented errors', async () => {
@@ -94,14 +110,14 @@ describe('public API', () => {
 
   test('supports preflight, publishes OpenAPI, and rejects mutation methods', async () => {
     const { app } = fixture()
-    const preflight = await request(app, '/api/v1/posts', { method: 'OPTIONS' })
+    const preflight = await request(app, '/api/v1/feeds/latest', { method: 'OPTIONS' })
     const spec = await (await request(app, '/api/openapi.json')).json() as any
-    const mutation = await request(app, '/api/v1/posts', { method: 'POST' })
+    const mutation = await request(app, '/api/v1/feeds/latest', { method: 'POST' })
 
     expect(preflight.status).toBe(204)
     expect(preflight.headers.get('access-control-allow-methods')).toContain('OPTIONS')
     expect(spec.openapi).toBe('3.1.0')
-    expect(Object.keys(spec.paths)).toHaveLength(7)
+    expect(Object.keys(spec.paths)).toHaveLength(8)
     expect(mutation.status).toBe(405)
     expect(mutation.headers.get('allow')).toBe('GET, HEAD, OPTIONS')
     const missing = await request(app, '/api/v1/unknown')
@@ -112,10 +128,10 @@ describe('public API', () => {
   test('rate limits JSON requests independently by IP', async () => {
     const { app } = fixture()
     for (let i = 0; i < 120; i++) {
-      expect((await request(app, '/api/v1/posts', { headers: { 'x-root-client-ip': 'busy' } })).status).toBe(200)
+      expect((await request(app, '/api/v1/feeds/latest', { headers: { 'x-root-client-ip': 'busy' } })).status).toBe(200)
     }
-    const limited = await request(app, '/api/v1/posts', { headers: { 'x-root-client-ip': 'busy' } })
-    const other = await request(app, '/api/v1/posts', { headers: { 'x-root-client-ip': 'other' } })
+    const limited = await request(app, '/api/v1/feeds/latest', { headers: { 'x-root-client-ip': 'busy' } })
+    const other = await request(app, '/api/v1/feeds/latest', { headers: { 'x-root-client-ip': 'other' } })
     expect(limited.status).toBe(429)
     expect(limited.headers.get('retry-after')).toBeTruthy()
     expect(other.status).toBe(200)

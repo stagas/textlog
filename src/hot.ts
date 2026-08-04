@@ -18,6 +18,7 @@ export function getHotPosts(
   offset: number,
   asOf: Date | string = new Date(),
   viewerId = -1,
+  publicOnly = false,
 ) {
   const timestamp = asOf instanceof Date ? asOf.toISOString() : asOf
   const activityFilter = viewerId < 0 ? '' : `AND NOT EXISTS (
@@ -28,6 +29,9 @@ export function getHotPosts(
     SELECT 1 FROM blocks b
     WHERE (b.blocker_id=? AND b.blocked_id=p.user_id) OR (b.blocker_id=p.user_id AND b.blocked_id=?)
   )`
+  const publicUserFilter = publicOnly
+    ? `${candidateFilter ? 'AND' : 'WHERE'} u.deleted_at IS NULL`
+    : ''
   const parameters = viewerId < 0
     ? [timestamp, limit, offset]
     : [timestamp, viewerId, viewerId, viewerId, viewerId, limit, offset]
@@ -53,6 +57,7 @@ export function getHotPosts(
     JOIN posts p ON p.id=ranked.candidate_id
     JOIN users u ON u.id=p.user_id
     ${candidateFilter}
+    ${publicUserFilter}
     ORDER BY ranked.hot_score DESC,ranked.latest_activity_at DESC,p.created_at DESC,p.id DESC
     LIMIT ? OFFSET ?
   `).all(...parameters) as HotPost[]

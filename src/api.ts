@@ -1,5 +1,6 @@
 import type { Database } from 'bun:sqlite'
 import { extractHashtags, extractMentions } from './content'
+import { getHotPosts } from './hot'
 
 export const API_DEFAULT_LIMIT = 20
 export const API_MAX_LIMIT = 100
@@ -124,3 +125,16 @@ export function apiPosts(database: Database, origin: string, options: {
   }
 }
 
+export function apiHotPosts(database: Database, origin: string, limit: number, offset: number) {
+  const rows = getHotPosts(database, limit + 1, offset, new Date(), -1, true)
+  const hasMore = rows.length > limit
+  const pageRows = rows.slice(0, limit).map(row => ({
+    ...row,
+    reply_count: (database.query(`SELECT count(*) count FROM posts r JOIN users u ON u.id=r.user_id
+      WHERE r.parent_id=? AND r.deleted_at IS NULL AND u.deleted_at IS NULL`).get(row.id) as { count: number }).count,
+  }))
+  return {
+    data: pageRows.map(row => serializePost(row, origin)),
+    pagination: { next_cursor: hasMore ? encodeCursor(offset + limit) : null },
+  }
+}

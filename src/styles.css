@@ -269,6 +269,23 @@ nav form {
   letter-spacing: -1.5px;
 }
 
+.api-docs {
+  max-width: none;
+}
+
+.api-title-brand {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  vertical-align: -.28em;
+  white-space: nowrap;
+}
+
+.api-title-brand img {
+  width: 1.25em;
+  height: 1.25em;
+}
+
 .api-docs h2 {
   margin-top: var(--space-6);
 }
@@ -284,12 +301,43 @@ nav form {
 .api-endpoints {
   display: grid;
   grid-template-columns: minmax(180px, auto) 1fr;
-  gap: var(--space-3) var(--space-4);
+  gap: 1px;
+  overflow: hidden;
+  border: 1px solid var(--soft);
+  background: var(--soft);
 }
 
 .api-endpoints dt,
 .api-endpoints dd {
   margin: 0;
+  padding: var(--space-3) var(--space-4);
+  background: var(--panel);
+}
+
+.api-endpoints dd {
+  display: flex;
+  align-items: center;
+  color: var(--quote-ink);
+  font-size: 13px;
+}
+
+.api-endpoints code {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.api-method {
+  padding: 2px 6px;
+  color: var(--accent-dark);
+  background: var(--tag-bg);
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: .5px;
+}
+
+.api-path {
+  color: var(--ink);
 }
 
 .static-page h2 {

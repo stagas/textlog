@@ -6,7 +6,13 @@ export function ApiDocs({ user }: { user: User | null }) {
     <Layout user={user} title="API">
       <article className="static-page api-docs">
         <p className="eyebrow">developers</p>
-        <h1>Build on root.mx</h1>
+        <h1>
+          Build on{' '}
+          <span className="api-title-brand">
+            <img src="/root.svg?v=1" alt="" />
+            <span>root<span className="brand-dot">.</span>mx</span>
+          </span>
+        </h1>
         <p>
           The public API is a small, read-only way to build feeds, profile cards, post embeds, and live widgets.
           It needs no account or API key.
@@ -19,19 +25,28 @@ export function ApiDocs({ user }: { user: User | null }) {
 
         <h2>Endpoints</h2>
         <dl className="api-endpoints">
-          <dt><code>GET /posts</code></dt><dd>Latest public posts and replies.</dd>
-          <dt><code>GET /posts/:id</code></dt><dd>A single public post.</dd>
-          <dt><code>GET /posts/:id/replies</code></dt><dd>Latest direct replies.</dd>
-          <dt><code>GET /users/:handle</code></dt><dd>A public profile and its counts.</dd>
-          <dt><code>GET /users/:handle/posts</code></dt><dd>A user's latest posts and replies.</dd>
-          <dt><code>GET /tags/:tag/posts</code></dt><dd>Latest posts carrying a hashtag.</dd>
-          <dt><code>GET /firehose</code></dt><dd>New posts as a live server-sent event stream.</dd>
+          <dt><code><span className="api-method">GET</span><span className="api-path">/feeds/latest</span></code></dt>
+          <dd>Latest public posts and replies.</dd>
+          <dt><code><span className="api-method">GET</span><span className="api-path">/feeds/hot</span></code></dt>
+          <dd>Posts ranked by recent activity and replies.</dd>
+          <dt><code><span className="api-method">GET</span><span className="api-path">/posts/:id</span></code></dt>
+          <dd>A single public post.</dd>
+          <dt><code><span className="api-method">GET</span><span className="api-path">/posts/:id/replies</span></code></dt>
+          <dd>Latest direct replies.</dd>
+          <dt><code><span className="api-method">GET</span><span className="api-path">/users/:handle</span></code></dt>
+          <dd>A public profile and its counts.</dd>
+          <dt><code><span className="api-method">GET</span><span className="api-path">/users/:handle/posts</span></code></dt>
+          <dd>A user's latest posts and replies.</dd>
+          <dt><code><span className="api-method">GET</span><span className="api-path">/tags/:tag/posts</span></code></dt>
+          <dd>Latest posts carrying a hashtag.</dd>
+          <dt><code><span className="api-method">GET</span><span className="api-path">/firehose</span></code></dt>
+          <dd>New posts as a live server-sent event stream.</dd>
         </dl>
 
         <h2>Pagination</h2>
         <p>Collections accept <code>limit</code> from 1–100 (default 20). Pass the opaque{' '}
           <code>pagination.next_cursor</code> value back as <code>cursor</code> to fetch the next page.</p>
-        <pre><code>{`curl 'https://root.mx/api/v1/posts?limit=10'`}</code></pre>
+        <pre><code>{`curl 'https://root.mx/api/v1/feeds/latest?limit=10'`}</code></pre>
 
         <h2>Firehose</h2>
         <p>The firehose is live-only and includes top-level posts and replies. Each new post arrives as a{' '}
@@ -51,4 +66,3 @@ events.addEventListener('post', event => {
     </Layout>
   )
 }
-

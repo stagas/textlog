@@ -23,8 +23,11 @@ describe('postTitle', () => {
 test('API documentation is linked from the footer and describes the firehose', () => {
   const html = renderToStaticMarkup(React.createElement(ApiDocs, { user: null }))
   expect(html).toContain('href="/api">api</a>')
+  expect(html).toContain('class="api-title-brand"')
+  expect(html).toContain('class="brand-dot">.</span>mx')
   expect(html).toContain('/api/openapi.json')
-  expect(html).toContain('GET /firehose')
+  expect(html).toContain('class="api-method">GET</span>')
+  expect(html).toContain('class="api-path">/firehose</span>')
   expect(html).toContain('120 requests per minute')
 })
 
