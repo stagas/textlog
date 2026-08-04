@@ -1525,7 +1525,8 @@ form.report-panel {
   padding-top: var(--space-2);
 }
 
-.activity-follow {
+.people.activity-follow {
+  margin-bottom: 0;
   padding-bottom: var(--space-5);
 }
 
