@@ -1,11 +1,12 @@
 import { anonymizeUser, isAdmin } from '../admin'
 import { AUTH_LIMITS, authRateLimitMessage } from '../auth-rate-limit'
-import { currentUser, hash, hashPassword, sessionToken, verifyPassword } from '../utils'
+import { currentUser, hashPassword, sessionToken, verifyPassword } from '../utils'
 import { authLimit, clientAddress, form, issueEmailToken, page, redirect, retryPage, securityPage } from './shared'
 
 import type { Hono } from 'hono'
 import {
   ConfirmAccountDelete,
+  ConfirmEmail,
   Profile,
 } from '../components/pages'
 import { exportUserData } from '../data-export'
@@ -16,6 +17,7 @@ import {
 } from '../http'
 import { updateProfileHandle } from '../handles'
 import { sessionHash } from '../sessions'
+import { confirmEmailToken, findEmailToken } from '../email-verification'
 
 export function registerAccountRoutes(app: Hono) {
   app.get('/account/edit', c => {
@@ -139,24 +141,17 @@ export function registerAccountRoutes(app: Hono) {
 
   app.get('/verify-email', c => {
     const value = c.req.query('token') || ''
-    const record = value && db.query(`SELECT token_hash,user_id,kind,email FROM email_tokens
-    WHERE token_hash=? AND expires_at>?`).get(hash(value), Date.now()) as { token_hash: string; user_id: number;
-      kind: 'verify' | 'change'; email: string } | null
-    if (!record) return c.text('This verification link is invalid or expired.', 400)
-    try {
-      db.transaction(() => {
-        if (record.kind === 'change') {
-          db.query('UPDATE users SET email=?,email_verified_at=CURRENT_TIMESTAMP WHERE id=?').run(record.email,
-            record.user_id)
-        }
-        else db.query('UPDATE users SET email_verified_at=CURRENT_TIMESTAMP WHERE id=?').run(record.user_id)
-        db.query('DELETE FROM email_tokens WHERE user_id=?').run(record.user_id)
-      })()
-    }
-    catch {
-      return c.text('That email address is no longer available.', 400)
-    }
-    return redirect(`/account/security?${record.kind === 'change' ? 'changed=email' : 'verified=1'}`)
+    const record = findEmailToken(db, value)
+    return record
+      ? page(<ConfirmEmail token={value} kind={record.kind} email={record.email} />)
+      : page(<ConfirmEmail invalid />, 400)
+  })
+
+  app.post('/verify-email', async c => {
+    const f = await form(c.req.raw)
+    const result = confirmEmailToken(db, f.token || '')
+    if (!result.ok) return page(<ConfirmEmail invalid />, 400)
+    return redirect(`/account/security?${result.kind === 'change' ? 'changed=email' : 'verified=1'}`)
   })
 
   app.post('/account/password', async c => {

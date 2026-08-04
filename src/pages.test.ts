@@ -1,7 +1,7 @@
 import { describe, expect, test } from 'bun:test'
 import React from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
-import { AccountSecurity, ApiDocs, Auth, Contact, Profile, postTitle } from './components/pages'
+import { AccountSecurity, ApiDocs, Auth, ConfirmEmail, Contact, Profile, postTitle } from './components/pages'
 import { Post } from './components/post'
 
 describe('postTitle', () => {
@@ -60,6 +60,17 @@ describe('Auth', () => {
 
     expect(html).not.toContain('By signing up')
   })
+})
+
+test('Email confirmation requires an explicit POST', () => {
+  const html = renderToStaticMarkup(React.createElement(ConfirmEmail, {
+    token: 'confirmation-token', kind: 'change', email: 'new@example.com',
+  }))
+
+  expect(html).toContain('method="post"')
+  expect(html).toContain('action="/verify-email"')
+  expect(html).toContain('type="hidden" name="token" value="confirmation-token"')
+  expect(html).toContain('Change your email?')
 })
 
 test('AccountSecurity renders verification and safe session controls', () => {
