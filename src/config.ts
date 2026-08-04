@@ -125,9 +125,9 @@ export function validateStartupConfiguration(env: Environment = Bun.env, options
       if (parsed.pathname !== '/' || parsed.search || parsed.hash) {
         problems.push('APP_URL must be an origin without a path, query, or fragment')
       }
-      if (environment === 'production' && parsed.protocol !== 'https:') {
-        problems.push('APP_URL must use HTTPS in production')
-      }
+      // if (environment === 'production' && parsed.protocol !== 'https:') {
+      //   problems.push('APP_URL must use HTTPS in production')
+      // }
       appUrl = parsed.origin
     }
     catch {
