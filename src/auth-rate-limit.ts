@@ -2,7 +2,8 @@ import { createHash } from 'node:crypto'
 import type { Database } from 'bun:sqlite'
 
 export const AUTH_LIMITS = {
-  login: { attempts: 10, windowSeconds: 15 * 60 },
+  loginIp: { attempts: 10, windowSeconds: 15 * 60 },
+  loginAccount: { attempts: 10, windowSeconds: 15 * 60 },
   signup: { attempts: 5, windowSeconds: 60 * 60 },
   forgotIp: { attempts: 5, windowSeconds: 60 * 60 },
   forgotAccount: { attempts: 3, windowSeconds: 60 * 60 },

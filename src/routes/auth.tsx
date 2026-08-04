@@ -149,17 +149,26 @@ export function registerAuthRoutes(app: Hono) {
   app.post('/login', async c => {
     const f = await form(c.req.raw)
     const login = (f.handle || '').trim().toLowerCase().replace(/^@/, '')
-    const limited = authLimit(c, 'login-ip', clientAddress(c), AUTH_LIMITS.login)
-    if (limited) {
+    const ipLimited = authLimit(c, 'login-ip', clientAddress(c), AUTH_LIMITS.loginIp)
+    if (ipLimited) {
       return retryPage(page(
-        <Auth mode="login" handle={login} next={safeNext(f.next)} error={authRateLimitMessage(limited.retryAfter)} />,
+        <Auth mode="login" handle={login} next={safeNext(f.next)} error={authRateLimitMessage(ipLimited.retryAfter)} />,
         429,
-      ), limited.retryAfter)
+      ), ipLimited.retryAfter)
     }
     const found = db.query(
       'SELECT id,password FROM users WHERE (handle=? OR email=?) AND deleted_at IS NULL AND suspended_at IS NULL',
     )
       .get(login, login) as { id: number; password: string } | null
+    const accountLimited = authLimit(c, 'login-account', found ? `user:${found.id}` : `login:${login || '(blank)'}`,
+      AUTH_LIMITS.loginAccount)
+    if (accountLimited) {
+      return retryPage(page(
+        <Auth mode="login" handle={login} next={safeNext(f.next)}
+          error={authRateLimitMessage(accountLimited.retryAfter)} />,
+        429,
+      ), accountLimited.retryAfter)
+    }
     if (!found || !await verifyPassword(f.password || '', found.password)) {
       return page(
         <Auth mode="login" handle={login} next={safeNext(f.next)} error="Invalid email, handle, or password." />,

@@ -4,6 +4,7 @@ import { existsSync, mkdtempSync, readFileSync, rmSync } from 'node:fs'
 import { createServer } from 'node:net'
 import { tmpdir } from 'node:os'
 import { dirname, join, resolve } from 'node:path'
+import { AUTH_LIMITS, rateLimitKey } from './auth-rate-limit'
 
 setDefaultTimeout(30_000)
 
@@ -163,6 +164,22 @@ test('consequential account, content, reporting, and admin flows work over HTTP'
     form: { handle: 'alice', password: 'incorrect password' },
   })
   expect(rejectedLogin.status).toBe(401)
+
+  const accountLimitKey = rateLimitKey(`user:${alice.id}`)
+  const attempts = (database.query(`SELECT count(*) count FROM auth_rate_limits
+    WHERE scope='login-account' AND key_hash=?`).get(accountLimitKey) as { count: number }).count
+  const addAttempt = database.query(`INSERT INTO auth_rate_limits(scope,key_hash,created_at)
+    VALUES('login-account',?,?)`)
+  for (let index = attempts; index < AUTH_LIMITS.loginAccount.attempts; index++) {
+    addAttempt.run(accountLimitKey, Date.now())
+  }
+  const accountLimitedLogin = await request('/login', {
+    method: 'POST',
+    form: { handle: 'alice@example.com', password: originalPassword },
+  })
+  expect(accountLimitedLogin.status).toBe(429)
+  expect(accountLimitedLogin.headers.get('retry-after')).toBeTruthy()
+  database.query("DELETE FROM auth_rate_limits WHERE scope='login-account' AND key_hash=?").run(accountLimitKey)
 
   const login = await request('/login', {
     method: 'POST',
