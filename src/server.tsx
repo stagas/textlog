@@ -12,6 +12,7 @@ Bun.env.DATABASE_PATH = configuration.databasePath
 Bun.env.DATABASE_BUSY_TIMEOUT_MS = String(configuration.databaseBusyTimeoutMs)
 Bun.env.DATABASE_BACKUP_DIR = configuration.backupDirectory
 Bun.env.DATABASE_BACKUP_RETENTION_DAYS = String(configuration.backupRetentionDays)
+if (configuration.backupAlertWebhookUrl) Bun.env.BACKUP_ALERT_WEBHOOK_URL = configuration.backupAlertWebhookUrl
 if (configuration.appUrl) Bun.env.APP_URL = configuration.appUrl
 if (configuration.moderationDisabled && configuration.production) {
   console.warn('configuration warning  content moderation is disabled in production')

@@ -46,6 +46,7 @@ describe('startup configuration', () => {
         PORT: '70000',
         DATABASE_BUSY_TIMEOUT_MS: '60000',
         DATABASE_BACKUP_RETENTION_DAYS: '0',
+        BACKUP_ALERT_WEBHOOK_URL: 'http://user:pass@example.com',
       }, { checkFilesystem: false })
     ).toThrow('Invalid startup configuration')
   })

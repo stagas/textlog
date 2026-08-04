@@ -14,6 +14,7 @@ export type StartupConfiguration = {
   databaseBusyTimeoutMs: number
   backupDirectory: string
   backupRetentionDays: number
+  backupAlertWebhookUrl: string | null
   trustProxy: boolean
   logColor: boolean
   moderationDisabled: boolean
@@ -58,6 +59,20 @@ function integerValue(env: Environment, name: string, fallback: number, minimum:
 function validEmailFrom(value: string) {
   const email = value.match(/<([^<>]+)>\s*$/)?.[1] || value
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())
+}
+
+function optionalHttpsUrl(env: Environment, name: string, problems: string[]) {
+  const value = env[name]?.trim()
+  if (!value) return null
+  try {
+    const url = new URL(value)
+    if (url.protocol !== 'https:' || url.username || url.password) throw new Error('unsafe URL')
+    return url.toString()
+  }
+  catch {
+    problems.push(`${name} must be an HTTPS URL without credentials`)
+    return null
+  }
 }
 
 function ensureDirectory(path: string, label: string, problems: string[]) {
@@ -157,6 +172,7 @@ export function validateStartupConfiguration(env: Environment = Bun.env, options
   const databaseBusyTimeoutMs = integerValue(env, 'DATABASE_BUSY_TIMEOUT_MS', 5000, 100, 30000, problems)
   const backupDirectory = env.DATABASE_BACKUP_DIR?.trim() || 'storage/backups'
   const backupRetentionDays = integerValue(env, 'DATABASE_BACKUP_RETENTION_DAYS', 14, 1, 3650, problems)
+  const backupAlertWebhookUrl = optionalHttpsUrl(env, 'BACKUP_ALERT_WEBHOOK_URL', problems)
   if (options.checkFilesystem !== false) validateStorage(databasePath, backupDirectory, problems)
 
   if (problems.length) throw new ConfigurationError([...new Set(problems)])
@@ -171,6 +187,7 @@ export function validateStartupConfiguration(env: Environment = Bun.env, options
     databaseBusyTimeoutMs,
     backupDirectory,
     backupRetentionDays,
+    backupAlertWebhookUrl,
     trustProxy,
     logColor,
     moderationDisabled,

@@ -4,6 +4,7 @@ import { applyHtmlCachePolicy, GLOBAL_REQUEST_BODY_LIMIT, isSameOriginRequest, R
 import { Hono } from 'hono'
 import { bodyLimit } from 'hono/body-limit'
 import { configureDevReload } from './components/layout'
+import { startAutomatedBackups } from './backup-automation'
 import { compressResponse } from './compression'
 import { databaseHealth } from './database-health'
 import { db } from './db'
@@ -32,6 +33,12 @@ const stylesPath = new URL('./styles.css', import.meta.url).pathname
 const styles = devReloadEnabled ? undefined : await loadStylesAsset(stylesPath)
 const visitorBuffer = new VisitorBuffer(db)
 startMaintenance(db, visitorBuffer, error => logError('database maintenance failed', error))
+if (Bun.env.NODE_ENV === 'production') {
+  startAutomatedBackups(db, {
+    directory: Bun.env.DATABASE_BACKUP_DIR || 'storage/backups',
+    alertWebhookUrl: Bun.env.BACKUP_ALERT_WEBHOOK_URL || null,
+  })
+}
 
 app.use('*', bodyLimit({
   maxSize: GLOBAL_REQUEST_BODY_LIMIT,

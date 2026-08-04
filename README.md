@@ -52,10 +52,19 @@ Create an additional backup at any time with:
 bun run db:backup
 ```
 
-Backups are private (`0600`), verified with SQLite `quick_check`, and retained for 14 days by default. Configure the
-database path, backup directory, or retention with `DATABASE_PATH`, `DATABASE_BACKUP_DIR`, and
-`DATABASE_BACKUP_RETENTION_DAYS`. Schedule `bun run db:backup` at least daily in production and replicate the backup
-directory to encrypted off-host storage; local snapshots alone do not cover host or disk loss.
+Backups are private (`0600`), verified with SQLite `quick_check`, and retained locally for 14 days by default. Configure
+the database path, backup directory, or retention with `DATABASE_PATH`, `DATABASE_BACKUP_DIR`, and
+`DATABASE_BACKUP_RETENTION_DAYS`.
+
+Production automatically checks once at startup and hourly thereafter for the current UTC day's local backup. It reuses
+and verifies the deterministic daily snapshot when present, so application restarts cannot duplicate or skip that day's
+backup. Failures are logged and retried on the next hourly check. Set the optional `BACKUP_ALERT_WEBHOOK_URL` to an HTTPS
+incident-management endpoint to receive immediate failure notifications.
+
+Once per UTC quarter the scheduler restores that day's snapshot into an isolated temporary database and verifies SQLite
+integrity. Reports containing measured RPO and RTO are stored under `storage/backups/drills`. The report's presence makes
+the drill restart-safe; alert operationally if a new report does not appear during the quarter. These backups remain on
+the same host for now and therefore do not protect against host or disk loss.
 
 To restore, stop every running app instance first, then run:
 

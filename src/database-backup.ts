@@ -32,7 +32,7 @@ export function pruneBackups(directory = defaultBackupDirectory, now = Date.now(
   const cutoff = now - retentionDays() * 24 * 60 * 60 * 1000
   let removed = 0
   for (const entry of readdirSync(directory)) {
-    if (!/^root-(?:pre-migration|manual|pre-restore)-.*\.sqlite$/.test(entry)) continue
+    if (!/^root-(?:(?:pre-migration|manual|pre-restore)-.*|daily-\d{4}-\d{2}-\d{2})\.sqlite$/.test(entry)) continue
     const path = join(directory, entry)
     if (statSync(path).mtimeMs >= cutoff) continue
     rmSync(path)
@@ -60,6 +60,38 @@ export function createDatabaseBackup(database: Database, options: {
   chmodSync(finalPath, 0o600)
   pruneBackups(directory)
   return finalPath
+}
+
+export function dailyBackupPath(directory = defaultBackupDirectory, day = new Date().toISOString().slice(0, 10)) {
+  return resolve(directory, `root-daily-${day}.sqlite`)
+}
+
+export function createDailyDatabaseBackup(database: Database, directory = defaultBackupDirectory,
+  day = new Date().toISOString().slice(0, 10)) {
+  mkdirSync(directory, { recursive: true, mode: 0o700 })
+  const finalPath = dailyBackupPath(directory, day)
+  if (existsSync(finalPath)) {
+    verifyDatabaseFile(finalPath)
+    pruneBackups(directory)
+    return { path: finalPath, created: false }
+  }
+  const temporaryPath = `${finalPath}.${process.pid}.tmp`
+  const escapedPath = temporaryPath.replaceAll('\'', '\'\'')
+  try {
+    database.run(`VACUUM INTO '${escapedPath}'`)
+    chmodSync(temporaryPath, 0o600)
+    verifyDatabaseFile(temporaryPath)
+    // A same-host second process may have won the daily race while this snapshot was being made.
+    if (!existsSync(finalPath)) renameSync(temporaryPath, finalPath)
+    else rmSync(temporaryPath, { force: true })
+    chmodSync(finalPath, 0o600)
+    verifyDatabaseFile(finalPath)
+    pruneBackups(directory)
+    return { path: finalPath, created: true }
+  }
+  finally {
+    rmSync(temporaryPath, { force: true })
+  }
 }
 
 export function restoreDatabase(livePath: string, backupPath: string, backupDirectory = defaultBackupDirectory) {
