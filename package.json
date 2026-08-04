@@ -9,6 +9,7 @@
     "db:backup": "bun scripts/backup-database.ts",
     "db:restore": "bun scripts/restore-database.ts",
     "db:verify": "bun scripts/verify-database.ts",
+    "db:load-test": "bun scripts/load-database.ts",
     "test": "bun test",
     "typecheck": "tsc --noEmit",
     "check": "bun run typecheck && bun run test"

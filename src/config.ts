@@ -11,6 +11,7 @@ export type StartupConfiguration = {
   host: string
   port: number
   databasePath: string
+  databaseBusyTimeoutMs: number
   backupDirectory: string
   backupRetentionDays: number
   trustProxy: boolean
@@ -153,6 +154,7 @@ export function validateStartupConfiguration(env: Environment = Bun.env, options
   if (/\s|\//.test(host)) problems.push('HOST must be a hostname or IP address')
   const port = integerValue(env, 'PORT', 3000, 1, 65535, problems)
   const databasePath = env.DATABASE_PATH?.trim() || 'storage/root.sqlite'
+  const databaseBusyTimeoutMs = integerValue(env, 'DATABASE_BUSY_TIMEOUT_MS', 5000, 100, 30000, problems)
   const backupDirectory = env.DATABASE_BACKUP_DIR?.trim() || 'storage/backups'
   const backupRetentionDays = integerValue(env, 'DATABASE_BACKUP_RETENTION_DAYS', 14, 1, 3650, problems)
   if (options.checkFilesystem !== false) validateStorage(databasePath, backupDirectory, problems)
@@ -166,6 +168,7 @@ export function validateStartupConfiguration(env: Environment = Bun.env, options
     host,
     port,
     databasePath,
+    databaseBusyTimeoutMs,
     backupDirectory,
     backupRetentionDays,
     trustProxy,

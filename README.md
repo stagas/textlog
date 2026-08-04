@@ -25,8 +25,14 @@ startup with a combined error message that does not print secret values.
 Request bodies are capped at 64 KiB globally. Form endpoints accept only URL-encoded or multipart form data and use an
 8 KiB limit by default; the detailed illegal-activity report form allows 16 KiB. Oversized bodies return HTTP 413.
 
-`DATABASE_PATH` and `DATABASE_BACKUP_DIR` must be writable. Set `TRUST_PROXY=true` only behind a trusted proxy that
+`DATABASE_PATH` and `DATABASE_BACKUP_DIR` must be writable. SQLite lock waits default to 5 seconds; tune the bounded
+`DATABASE_BUSY_TIMEOUT_MS` setting only after measuring contention. Set `TRUST_PROXY=true` only behind a trusted proxy that
 overwrites forwarded client-address headers. Development remains integration-optional through `bun run dev`.
+
+`GET /health` acquires and immediately releases a SQLite write reservation, then reports `writeLockLatencyMs`,
+`walBytes`, and `busyTimeoutMs`. It returns 503 when the write lock cannot be acquired and logs a warning when lock
+latency reaches 250 ms or the WAL reaches 64 MiB. Scrape the endpoint with production monitoring and alert on failures
+or sustained warnings.
 
 ## Database migrations and recovery
 
@@ -56,6 +62,15 @@ bun run db:verify
 Restore verifies the source, creates a `pre-restore` safety snapshot of the live database, safely replaces the database
 and WAL sidecars, applies any newer migrations, and verifies the result. Practice the workflow without touching
 production by setting `DATABASE_PATH` to a temporary file and `DATABASE_BACKUP_DIR` to a temporary directory.
+
+Exercise concurrent reads and writes against a disposable database before changing capacity or timeout settings:
+
+```sh
+bun run db:load-test -- --workers=4 --operations=1000
+```
+
+The command creates an isolated temporary WAL database, starts multiple processes, reports latency and busy errors,
+verifies every committed write, and removes the database afterward. It never opens the configured application database.
 
 In development, the browser automatically reloads after Bun restarts the server.
 

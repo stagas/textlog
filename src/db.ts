@@ -3,7 +3,9 @@ import { createDatabaseBackup, defaultBackupDirectory, defaultDatabasePath } fro
 import { databaseVersion, latestMigrationVersion, runMigrations } from './migrations'
 
 export const db = new Database(defaultDatabasePath, { create: true, strict: true })
-db.run('PRAGMA journal_mode=WAL; PRAGMA foreign_keys=ON; PRAGMA wal_autocheckpoint=1000;')
+const busyTimeoutMs = Number(Bun.env.DATABASE_BUSY_TIMEOUT_MS || 5000)
+db.run(`PRAGMA journal_mode=WAL; PRAGMA foreign_keys=ON; PRAGMA wal_autocheckpoint=1000;
+  PRAGMA busy_timeout=${busyTimeoutMs};`)
 
 const startingVersion = databaseVersion(db)
 const hasUserTables = !!db.query(

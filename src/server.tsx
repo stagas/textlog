@@ -9,6 +9,7 @@ Bun.env.MODERATION_DISABLED = String(configuration.moderationDisabled)
 Bun.env.HOST = configuration.host
 Bun.env.PORT = String(configuration.port)
 Bun.env.DATABASE_PATH = configuration.databasePath
+Bun.env.DATABASE_BUSY_TIMEOUT_MS = String(configuration.databaseBusyTimeoutMs)
 Bun.env.DATABASE_BACKUP_DIR = configuration.backupDirectory
 Bun.env.DATABASE_BACKUP_RETENTION_DAYS = String(configuration.backupRetentionDays)
 if (configuration.appUrl) Bun.env.APP_URL = configuration.appUrl

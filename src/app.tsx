@@ -5,6 +5,7 @@ import { Hono } from 'hono'
 import { bodyLimit } from 'hono/body-limit'
 import { configureDevReload } from './components/layout'
 import { compressResponse } from './compression'
+import { databaseHealth } from './database-health'
 import { db } from './db'
 import { clientIp, logError, logHttp, logReady, shouldLogHttp } from './log'
 import { renderDefaultOg } from './og'
@@ -90,9 +91,14 @@ app.use('*', async (c, next) => {
 })
 app.get('/health', c => {
   try {
-    const result = db.query('SELECT 1 AS ok').get() as { ok: number } | null
-    if (result?.ok !== 1) throw new Error('Database health check failed')
-    return c.json({ status: 'ok' }, 200, { 'cache-control': 'no-store' })
+    const database = databaseHealth(db, Bun.env.DATABASE_PATH || 'storage/root.sqlite')
+    if (database.writeLockLatencyMs >= 250 || database.walBytes >= 64 * 1024 * 1024) {
+      console.warn('database health warning', {
+        writeLockLatencyMs: database.writeLockLatencyMs,
+        walBytes: database.walBytes,
+      })
+    }
+    return c.json({ status: 'ok', database }, 200, { 'cache-control': 'no-store' })
   }
   catch (error) {
     logError('health check failed', error)
