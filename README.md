@@ -13,6 +13,17 @@ Open http://localhost:3000. Data is stored in `storage/root.sqlite` using Bun's 
 
 Run the full local quality check with `bun run check`; it performs strict TypeScript checking and the complete test suite.
 
+## Production configuration
+
+`bun run start` defaults to production mode and validates configuration before importing the application, opening
+SQLite, running migrations, or binding the HTTP port. Copy `.env.example` and configure the deployment. Production
+requires an HTTPS `APP_URL`, `RESEND_API_KEY`, valid `EMAIL_FROM`, and `OPENAI_API_KEY` unless moderation has been
+explicitly disabled. Invalid URLs, booleans, ports, retention values, database files, and storage permissions stop
+startup with a combined error message that does not print secret values.
+
+`DATABASE_PATH` and `DATABASE_BACKUP_DIR` must be writable. Set `TRUST_PROXY=true` only behind a trusted proxy that
+overwrites forwarded client-address headers. Development remains integration-optional through `bun run dev`.
+
 ## Database migrations and recovery
 
 The database schema is upgraded through ordered, transactional migrations tracked by SQLite's `user_version`.
