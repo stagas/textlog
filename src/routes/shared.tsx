@@ -2,7 +2,6 @@ import { consumeAuthAttempt, rateLimitKey } from '../auth-rate-limit'
 import { feedPreferenceCookie, safeLocalPath, stringField } from '../http'
 import { currentUser, hash, sessionToken, token } from '../utils'
 
-import { getConnInfo } from 'hono/bun'
 import React from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
 import { isAdmin } from '../admin'
@@ -51,7 +50,7 @@ export function clientAddress(c: any) {
       || c.req.header('x-forwarded-for')?.split(',')[0]?.trim()
     if (forwarded) return forwarded
   }
-  return getConnInfo(c).remote.address || 'unknown'
+  return c.req.header('x-root-client-ip') || 'unknown'
 }
 export function authLimit(c: any, scope: string, identity: string,
   policy: { attempts: number; windowSeconds: number })

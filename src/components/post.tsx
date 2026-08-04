@@ -16,9 +16,10 @@ export function Post({
   replyHref,
   replyLabel = 'reply',
   reportHref,
+  foldControlId,
 }: { p: PostView; user: User | null; showReplyAction?: boolean; showOwnerActions?: boolean;
   showModerateAction?: boolean; showParent?: boolean; showReplyCount?: boolean; replyHref?: string; replyLabel?: string;
-  reportHref?: string })
+  reportHref?: string; foldControlId?: string })
 {
   const parent = showParent ? p.parent : null
   const replyCount = p.reply_count || 0
@@ -65,6 +66,11 @@ export function Post({
             </a>
           </div>
         )}
+        {foldControlId && (
+          <label className="quiet thread-fold" htmlFor={foldControlId} title="fold or unfold replies">
+            <span className="sr-only">fold or unfold replies</span>
+          </label>
+        )}
       </div>
       <p dangerouslySetInnerHTML={{ __html: linkify(p.body) }} />
       {parent && (
@@ -82,6 +88,14 @@ export function Post({
                     {parent.reply_count > 0 && (
                       <span>{' '}· {parent.reply_count} {parent.reply_count === 1 ? 'reply' : 'replies'}</span>
                     )}
+                  </a>
+                  <a className="quiet"
+                    href={user
+                      ? '/post/' + parent.id + '?reply=1'
+                      : '/login?next=' + encodeURIComponent('/post/' + parent.id + '?reply=1')}
+                    aria-label={`reply to @${parent.handle}`}
+                  >
+                    {user ? 'reply' : 'log in to reply'}
                   </a>
                 </div>
                 <p dangerouslySetInnerHTML={{ __html: linkify(parent.body) }} />
@@ -118,18 +132,20 @@ export function ThreadReplies({ parentId, user }: { parentId: number; user: User
     if (!branch.length) return null
     return (
       <div className="reply-branch">
-        {branch.map(reply =>
-          reply.deleted_at
-            ? <React.Fragment key={reply.id}>{renderBranch(reply.id, depth + 1)}</React.Fragment>
-            : (
-              <div className="reply-node" key={reply.id}>
-                <Post p={reply} user={user} showParent={false}
-                  replyHref={user ? undefined : '/login?next=' + encodeURIComponent('/post/' + reply.id + '?reply=1')}
-                  replyLabel={user ? 'reply' : 'log in to reply'} />
-                {renderBranch(reply.id, depth + 1)}
-              </div>
-            )
-        )}
+        {branch.map(reply => {
+          const childBranch = renderBranch(reply.id, depth + 1)
+          if (reply.deleted_at) return <React.Fragment key={reply.id}>{childBranch}</React.Fragment>
+          const foldControlId = childBranch ? `thread-fold-${reply.id}` : undefined
+          return (
+            <div className="reply-node" key={reply.id}>
+              {foldControlId && <input className="thread-fold-input" type="checkbox" id={foldControlId} />}
+              <Post p={reply} user={user} showParent={false} foldControlId={foldControlId}
+                replyHref={user ? undefined : '/login?next=' + encodeURIComponent('/post/' + reply.id + '?reply=1')}
+                replyLabel={user ? 'reply' : 'log in to reply'} />
+              {childBranch}
+            </div>
+          )
+        })}
       </div>
     )
   }

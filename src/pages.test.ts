@@ -1,7 +1,7 @@
 import { describe, expect, test } from 'bun:test'
 import React from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
-import { AccountSecurity, ApiDocs, Auth, Profile, postTitle } from './components/pages'
+import { AccountSecurity, ApiDocs, Auth, Contact, Profile, postTitle } from './components/pages'
 import { Post } from './components/post'
 
 describe('postTitle', () => {
@@ -29,6 +29,14 @@ test('API documentation is linked from the footer and describes the firehose', (
   expect(html).toContain('class="api-method">GET</span>')
   expect(html).toContain('class="api-path">/firehose</span>')
   expect(html).toContain('120 requests per minute')
+})
+
+test('Contact page shows placeholder details and is linked before legal in the footer', () => {
+  const html = renderToStaticMarkup(React.createElement(Contact, { user: null }))
+
+  expect(html).toContain('href="mailto:hello@root.mx"')
+  expect(html).toContain('42 Quiet Street')
+  expect(html.indexOf('href="/contact"')).toBeLessThan(html.indexOf('href="/legal"'))
 })
 
 describe('Auth', () => {
@@ -109,6 +117,8 @@ test('Post renders preloaded parent and reply data', () => {
   expect(html).toContain('2 replies')
   expect(html).toContain('@author')
   expect(html).toContain('parent')
+  expect(html).toContain('href="/login?next=%2Fpost%2F1%3Freply%3D1"')
+  expect(html).toContain('aria-label="reply to @author">log in to reply</a>')
 })
 
 test('Post only renders owner actions when requested by the detail view', () => {

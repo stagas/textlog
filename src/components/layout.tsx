@@ -51,7 +51,7 @@ export function Layout({
             <meta name="twitter:image:alt" content={share.imageAlt || `Post by ${title || 'a root.mx user'}`} />
           </>
         <link rel="icon" href="/root.svg?v=1" type="image/svg+xml" />
-        <link rel="stylesheet" href="/styles.css?v=34" />
+        <link rel="stylesheet" href="/styles.css?v=36" />
       </head>
       <body>
         <a className="skip-link" href="#main-content">skip to content</a>
@@ -88,6 +88,7 @@ export function Layout({
             <a href="/api">api</a>
             <a href="https://github.com/stagas/root-mx" target="_blank" rel="noopener noreferrer">github</a>
             <a href="https://buymeacoffee.com/stagas" target="_blank" rel="noopener noreferrer">donate</a>
+            <a href="/contact">contact</a>
             <a href="/legal">legal</a>
           </nav>
         </footer>

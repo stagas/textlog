@@ -9,6 +9,7 @@
   --selection-bg: var(--accent);
   --selection-ink: var(--ink);
   --panel: #fff;
+  --pagination-hover-bg: #f7f8f5;
   --link-border: #afb4a9;
   --button-bg: #273126;
   --button-ink: #fff;
@@ -58,6 +59,7 @@
     --selection-bg: var(--accent);
     --selection-ink: var(--bg);
     --panel: #20241f;
+    --pagination-hover-bg: #292e28;
     --link-border: #50594d;
     --button-bg: #3b503d;
     --button-ink: #e5e8e1;
@@ -246,6 +248,21 @@ nav form {
 
 .site-footer nav {
   font-size: 11px;
+}
+
+@media (max-width: 600px) {
+  .site-footer {
+    align-items: center;
+    flex-direction: column;
+    gap: var(--space-3);
+    text-align: center;
+  }
+
+  .site-footer nav {
+    justify-content: center;
+    flex-wrap: wrap;
+    row-gap: var(--space-2);
+  }
 }
 
 .static-page {
@@ -465,6 +482,10 @@ nav form {
 .pagination-pages a {
   background: var(--panel);
   border: 1px solid var(--soft);
+}
+
+.pagination-pages a:hover {
+  background: var(--pagination-hover-bg);
 }
 
 .pagination .current {
@@ -1424,4 +1445,51 @@ textarea {
 
 .reply-node .post p {
   font-size: 13px;
+}
+
+.thread-fold-input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.thread-fold {
+  cursor: pointer;
+  user-select: none;
+}
+
+.thread-fold:hover {
+  color: var(--accent-dark);
+}
+
+.thread-fold::after {
+  content: '\2212';
+}
+
+.thread-fold-input:checked+.post .thread-fold::after {
+  content: '+';
+}
+
+.thread-fold-input:checked~.reply-branch {
+  display: none;
+}
+
+.thread-fold-input:focus-visible+.post .thread-fold {
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
 }

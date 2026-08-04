@@ -8,7 +8,7 @@ import {
 import { moderateText, moderationMessage } from '../moderation'
 import { createPost, enrichPosts, updatePost } from '../posts'
 import type { PostRow, PostView } from '../types'
-import { form, page, redirect, usersBlocked } from './shared'
+import { form, page, redirect, rememberFeed, usersBlocked } from './shared'
 
 import type { Hono } from 'hono'
 import { db } from '../db'
@@ -85,7 +85,7 @@ export function registerPostsRoutes(app: Hono) {
     if ('retryAfter' in result) {
       return page(<Compose user={user} body={body} error={postRateLimitMessage(result.retryAfter)} />, 429)
     }
-    return redirect('/')
+    return rememberFeed(redirect('/latest'), 'latest')
   })
 
   app.get('/post/:id/edit', c => {
