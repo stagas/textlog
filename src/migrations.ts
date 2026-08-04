@@ -162,6 +162,14 @@ export const migrations: Migration[] = [
       rebuildHotPosts(database)
     },
   },
+  {
+    version: 8,
+    name: 'rotating_ip_pseudonyms',
+    up(database) {
+      // Legacy values were unkeyed and cannot be transformed without retaining the source address.
+      database.run('DELETE FROM daily_visitors')
+    },
+  },
 ]
 
 export const latestMigrationVersion = migrations.at(-1)!.version

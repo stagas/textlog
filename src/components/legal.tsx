@@ -7,7 +7,7 @@ export function Legal({ user }: { user: User | null }) {
       <article className="static-page">
         <p className="eyebrow">legal</p>
         <h1>Terms, privacy &amp; liability</h1>
-        <p className="legal-updated">Last updated: August 3, 2026</p>
+        <p className="legal-updated">Last updated: August 4, 2026</p>
 
         <h2>Your content and conduct</h2>
         <p>
@@ -36,6 +36,13 @@ export function Legal({ user }: { user: User | null }) {
           We process account details, posts, and basic technical information needed to provide, secure, and improve the
           service. Public posts, handles, and profiles can be seen by anyone. Do not post sensitive information you want
           to keep private. We do not sell your personal information.
+        </p>
+        <p>
+          For security and aggregate visitor counts, network addresses are converted immediately into keyed pseudonyms;
+          raw addresses are not written to application HTTP logs or visitor-count storage. The key is combined with the
+          UTC date so identifiers rotate daily, and separate keys are derived for logging and analytics. HTTP logs show
+          only the first five characters of the daily pseudonym. Visitor-count records are kept for seven days. Application
+          HTTP logs have a maximum retention of 14 days.
         </p>
 
         <h2>Changes</h2>

@@ -1,5 +1,6 @@
 import { describe, expect, test } from 'bun:test'
 import { clientIp, semanticAction, shouldLogHttp } from './log'
+import { ipPseudonym, logIpPseudonym } from './ip-privacy'
 
 describe('semanticAction', () => {
   test('names user actions without including identifiers', () => {
@@ -39,5 +40,21 @@ describe('clientIp', () => {
       if (previous === undefined) delete Bun.env.TRUST_PROXY
       else Bun.env.TRUST_PROXY = previous
     }
+  })
+})
+
+describe('IP pseudonyms', () => {
+  test('uses daily rotation and purpose-separated keyed hashes', () => {
+    const address = '203.0.113.4'
+    const secret = 'test-secret-that-is-at-least-32-characters'
+    const firstDay = new Date('2026-08-04T12:00:00Z')
+    const nextDay = new Date('2026-08-05T12:00:00Z')
+    const logging = ipPseudonym(address, 'http-log', firstDay, secret)
+    expect(logging).toHaveLength(64)
+    expect(logIpPseudonym(address, firstDay)).toHaveLength(5)
+    expect(logging).not.toContain(address)
+    expect(logging).not.toBe(ipPseudonym(address, 'visitor-count', firstDay, secret))
+    expect(logging).not.toBe(ipPseudonym(address, 'http-log', nextDay, secret))
+    expect(logging).not.toBe(ipPseudonym(address, 'http-log', firstDay, `${secret}-different`))
   })
 })

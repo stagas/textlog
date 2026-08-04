@@ -7,6 +7,7 @@ const production = {
   RESEND_API_KEY: 'configured-secret',
   EMAIL_FROM: 'root.mx <hello@root.mx>',
   OPENAI_API_KEY: 'configured-secret',
+  IP_PSEUDONYM_SECRET: 'configured-secret-at-least-32-characters',
 }
 
 describe('startup configuration', () => {
@@ -31,6 +32,7 @@ describe('startup configuration', () => {
       expect(message).toContain('RESEND_API_KEY is required')
       expect(message).toContain('EMAIL_FROM is required')
       expect(message).toContain('OPENAI_API_KEY is required')
+      expect(message).toContain('IP_PSEUDONYM_SECRET must be at least 32 characters')
     }
   })
 

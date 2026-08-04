@@ -17,7 +17,8 @@ Run the full local quality check with `bun run check`; it performs strict TypeSc
 
 `bun run start` defaults to production mode and validates configuration before importing the application, opening
 SQLite, running migrations, or binding the HTTP port. Copy `.env.example` and configure the deployment. Production
-requires an HTTPS `APP_URL`, `RESEND_API_KEY`, valid `EMAIL_FROM`, and `OPENAI_API_KEY` unless moderation has been
+requires an HTTPS `APP_URL`, `RESEND_API_KEY`, valid `EMAIL_FROM`, a random `IP_PSEUDONYM_SECRET` of at least 32
+characters, and `OPENAI_API_KEY` unless moderation has been
 explicitly disabled. Invalid URLs, booleans, ports, retention values, database files, and storage permissions stop
 startup with a combined error message that does not print secret values.
 
@@ -68,6 +69,13 @@ When `APP_URL` uses HTTPS, authentication cookies are automatically marked `Secu
 
 Authentication endpoints use the direct client address for rate limiting. When running behind a trusted reverse proxy
 that overwrites `CF-Connecting-IP`, `X-Real-IP`, or `X-Forwarded-For`, set `TRUST_PROXY=true` to use that forwarded address.
+
+Raw client addresses are not written to application HTTP logs or visitor-count storage. Set `IP_PSEUDONYM_SECRET` to a
+random deployment secret; HMAC-based logging and analytics pseudonyms use separate purposes and rotate each UTC day.
+HTTP logs display only five hexadecimal characters. Visitor pseudonyms are retained for seven days, and the seven-day
+dashboard value is a visitor-day count because daily rotation intentionally prevents cross-day tracking. Configure the
+deployment log collector to delete application HTTP logs after at most 14 days; the app writes logs to standard output
+and cannot enforce retention in an external collector.
 
 To temporarily disable moderation, set `MODERATION_DISABLED=true`. Remove the variable or set it to `false` to re-enable it.
 

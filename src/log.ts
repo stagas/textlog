@@ -81,7 +81,7 @@ export function logHttp(method: string, path: string, status: number, durationMs
     paint(method.padEnd(6), 'blue'),
     paint(String(status), statusColor(status)),
     paint(timing.padStart(7), durationMs >= 1000 ? 'yellow' : 'dim'),
-    paint(ip, 'dim'),
+    paint(logIpPseudonym(ip), 'dim'),
     path,
   ]
   if (action) parts.push(paint(action, status >= 400 ? 'yellow' : 'magenta'))
@@ -96,3 +96,4 @@ export function logError(message: string, error: unknown) {
 export function logReady(url: string, environment: string) {
   console.log(`${paint('ready', 'green')} ${paint('◆', 'magenta')} root listening on ${paint(url, 'cyan')} ${paint(`(${environment})`, 'dim')}`)
 }
+import { logIpPseudonym } from './ip-privacy'

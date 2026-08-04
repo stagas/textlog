@@ -20,7 +20,7 @@ export function AdminDashboard({ user, stats, reports, actions, status, page, to
     ['activePosts', 'active posts'],
     ['replies', 'replies'],
     ['visitorsToday', 'unique visitors · today'],
-    ['visitors7d', 'unique visitors · 7d'],
+    ['visitors7d', 'visitor-days · 7d'],
     ['users24h', 'new users · 24h'],
     ['users7d', 'new users · 7d'],
     ['posts24h', 'new posts · 24h'],

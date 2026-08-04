@@ -131,6 +131,9 @@ export function validateStartupConfiguration(env: Environment = Bun.env, options
   if ((resendConfigured || emailFromConfigured) && !appUrl) problems.push('APP_URL is required when email is configured')
   if (environment === 'production' && !resendConfigured) problems.push('RESEND_API_KEY is required in production')
   if (environment === 'production' && !emailFromConfigured) problems.push('EMAIL_FROM is required in production')
+  if (environment === 'production' && (env.IP_PSEUDONYM_SECRET?.trim().length || 0) < 32) {
+    problems.push('IP_PSEUDONYM_SECRET must be at least 32 characters in production')
+  }
 
   const moderationDisabled = booleanValue(env, 'MODERATION_DISABLED', problems)
   if (!moderationDisabled && environment === 'production' && !env.OPENAI_API_KEY?.trim()) {

@@ -50,4 +50,12 @@ describe('database migrations', () => {
     database.run(`PRAGMA user_version=${latestMigrationVersion + 1}`)
     expect(() => runMigrations(database)).toThrow('newer than supported')
   })
+
+  test('discards legacy unkeyed visitor hashes during the privacy migration', () => {
+    const database = new Database(':memory:')
+    database.run('CREATE TABLE daily_visitors(day TEXT,visitor_hash TEXT)')
+    database.query('INSERT INTO daily_visitors VALUES(?,?)').run('2026-08-04', 'legacy-unsalted-hash')
+    migrations.find(migration => migration.name === 'rotating_ip_pseudonyms')!.up(database)
+    expect(database.query('SELECT count(*) count FROM daily_visitors').get()).toEqual({ count: 0 })
+  })
 })
