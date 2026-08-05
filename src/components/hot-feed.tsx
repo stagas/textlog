@@ -42,7 +42,7 @@ export function HotFeed(
       {(previousCursor || nextCursor) && (
         <nav className="pagination hot-pagination" aria-label="Pagination">
           {previousCursor && (
-            <a className="pagination-edge" href={`${path}?cursor=${encodeURIComponent(previousCursor)}`}>← back</a>
+            <a className="pagination-edge" href={`${path}?cursor=${encodeURIComponent(previousCursor)}`}>← prev</a>
           )}
           {nextCursor && (
             <a className="pagination-edge hot-pagination-next"

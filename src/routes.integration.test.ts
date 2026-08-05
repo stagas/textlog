@@ -285,7 +285,7 @@ test('consequential account, content, reporting, and admin flows work over HTTP'
   expect(latestFirstBody).not.toContain(post.body)
   const latestSecondBody = await (await request(latestNext!)).text()
   expect(latestSecondBody).toContain(post.body)
-  expect(latestSecondBody).toContain('← back')
+  expect(latestSecondBody).toContain('← prev')
 
   const forYouFirstBody = await (await request('/for-you', { cookie: aliceCookie })).text()
   const forYouNext = forYouFirstBody.match(/href="(\/for-you\?cursor=[^"]+)"/)?.[1]
@@ -294,7 +294,7 @@ test('consequential account, content, reporting, and admin flows work over HTTP'
   expect(forYouFirstBody).not.toContain(post.body)
   const forYouSecondBody = await (await request(forYouNext!, { cookie: aliceCookie })).text()
   expect(forYouSecondBody).toContain(post.body)
-  expect(forYouSecondBody).toContain('← back')
+  expect(forYouSecondBody).toContain('← prev')
 
   const profileFirstBody = await (await request('/u/alice')).text()
   const profileNext = profileFirstBody.match(/href="(\/u\/alice\?cursor=[^"]+)"/)?.[1]

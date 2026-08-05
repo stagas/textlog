@@ -73,7 +73,7 @@ export function CursorPagination({ path, previousCursor, nextCursor }: {
       {previousCursor
         ? (
           <a className="pagination-edge" href={`${path}${separator}cursor=${encodeURIComponent(previousCursor)}`}>
-            ← back
+            ← prev
           </a>
         )
         : <span className="pagination-edge placeholder" />}
