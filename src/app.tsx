@@ -21,7 +21,7 @@ import { registerInteractionsRoutes } from './routes/interactions'
 import { registerPostsRoutes } from './routes/posts'
 import { registerProfilesRoutes } from './routes/profiles'
 import { registerSeoRoutes } from './routes/seo'
-import { notFoundPage } from './routes/shared'
+import { clientErrorPage, notFoundPage, serverErrorPage } from './routes/shared'
 import { registerTagsRoutes } from './routes/tags'
 import { loadStylesAsset, stylesResponse } from './styles'
 import { currentUser } from './utils'
@@ -44,8 +44,16 @@ if (Bun.env.NODE_ENV === 'production') {
 
 app.use('*', bodyLimit({
   maxSize: GLOBAL_REQUEST_BODY_LIMIT,
-  onError: c => c.text('Payload Too Large', 413),
+  onError: c => clientErrorPage(c.req.raw, 413),
 }))
+
+app.use('*', async (c, next) => {
+  await next()
+  if (c.res.status < 400 || c.res.status >= 500 || c.req.method !== 'GET') return
+  if (!c.req.header('accept')?.includes('text/html')) return
+  if (!c.res.headers.get('content-type')?.includes('text/plain')) return
+  c.res = clientErrorPage(c.req.raw, c.res.status)
+})
 
 app.use('*', async (c, next) => {
   await next()
@@ -155,6 +163,11 @@ app.get('/og.png', () => {
   })
 })
 
+app.get('/client-error', c => clientErrorPage(c.req.raw))
+app.get('/server-error', () => {
+  throw new Error('Intentional server error route')
+})
+
 registerApiRoutes(app)
 registerFeedsRoutes(app)
 registerAuthRoutes(app)
@@ -168,9 +181,9 @@ registerTagsRoutes(app)
 registerSeoRoutes(app)
 app.notFound(c => notFoundPage(c.req.raw))
 app.onError((error, c) => {
-  if (error instanceof RequestBodyError) return c.text(error.message, error.status)
+  if (error instanceof RequestBodyError) return clientErrorPage(c.req.raw, error.status)
   logError(`${c.req.method} ${new URL(c.req.url).pathname}`, error)
-  return c.text('Something went wrong', 500)
+  return serverErrorPage(c.req.raw)
 })
 
 export default {

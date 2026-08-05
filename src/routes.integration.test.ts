@@ -155,6 +155,16 @@ test('consequential account, content, reporting, and admin flows work over HTTP'
   const missingProfileHtml = await missingProfile.text()
   expect(missingProfileHtml).toContain('<title>page not found · root.mx</title>')
   expect(missingProfileHtml).toContain('class="account-nav"')
+  const clientError = await request('/client-error')
+  expect(clientError.status).toBe(400)
+  expect(await clientError.text()).toContain("We couldn&#x27;t process that request.")
+  expect(clientError.headers.get('x-robots-tag')).toBe('noindex, nofollow')
+  const serverError = await request('/server-error')
+  expect(serverError.status).toBe(500)
+  const serverErrorHtml = await serverError.text()
+  expect(serverErrorHtml).toContain('Something went wrong.')
+  expect(serverErrorHtml).not.toContain('Intentional server error route')
+  expect(serverError.headers.get('x-robots-tag')).toBe('noindex, nofollow')
   expect(await publicProfile.text()).toContain('@alice')
   const publicTag = await request('/tag/onboarding', { cookie: aliceCookie })
   expect(publicTag.status).toBe(200)
@@ -186,7 +196,7 @@ test('consequential account, content, reporting, and admin flows work over HTTP'
     form: { body: 'x'.repeat(9 * 1024) },
   })
   expect(routeOversizedPost.status).toBe(413)
-  expect(await routeOversizedPost.text()).toBe('Payload Too Large')
+  expect(await routeOversizedPost.text()).toContain('That request was too large.')
 
   const globallyOversizedPost = await request('/post', {
     method: 'POST',
@@ -194,7 +204,7 @@ test('consequential account, content, reporting, and admin flows work over HTTP'
     form: { body: 'x'.repeat(65 * 1024) },
   })
   expect(globallyOversizedPost.status).toBe(413)
-  expect(await globallyOversizedPost.text()).toBe('Payload Too Large')
+  expect(await globallyOversizedPost.text()).toContain('That request was too large.')
 
   const unsupportedPost = await fetch(`${origin}/post`, {
     method: 'POST',
@@ -203,7 +213,7 @@ test('consequential account, content, reporting, and admin flows work over HTTP'
     redirect: 'manual',
   })
   expect(unsupportedPost.status).toBe(415)
-  expect(await unsupportedPost.text()).toBe('Unsupported Media Type')
+  expect(await unsupportedPost.text()).toContain("We couldn&#x27;t read that request.")
 
   const post = database.query('SELECT id,body FROM posts WHERE user_id=? ORDER BY id DESC LIMIT 1')
     .get(alice.id) as { id: number; body: string }

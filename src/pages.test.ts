@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test'
-import { About, AccountSecurity, ApiDocs, Auth, ChooseHandle, ConfirmEmail, Contact, NotFound, postTitle,
+import { About, AccountSecurity, ApiDocs, Auth, ChooseHandle, ConfirmEmail, Contact, ErrorPage, NotFound, postTitle,
   Profile } from './components/pages'
 
 import React from 'react'
@@ -53,6 +53,17 @@ test('Not found page gives visitors useful ways back into the site', () => {
   expect(html).toContain('This page doesn&#x27;t exist.')
   expect(html).toContain('class="button" href="/">browse notes</a>')
   expect(html).toContain('<span>or</span><a href="/explore">explore</a>')
+})
+
+test('Error pages explain client and server failures without exposing details', () => {
+  const client = renderToStaticMarkup(React.createElement(ErrorPage, { user: null, status: 400 }))
+  const server = renderToStaticMarkup(React.createElement(ErrorPage, { user: null, status: 500 }))
+
+  expect(client).toContain('aria-hidden="true">4xx</p>')
+  expect(client).toContain("We couldn&#x27;t process that request.")
+  expect(server).toContain('aria-hidden="true">5xx</p>')
+  expect(server).toContain('Something went wrong.')
+  expect(server).not.toContain('Intentional server error')
 })
 
 describe('About', () => {

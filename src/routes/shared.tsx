@@ -7,7 +7,7 @@ import type { Context } from 'hono'
 import React from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
 import { isAdmin } from '../admin'
-import { AccountSecurity, NotFound } from '../components/pages'
+import { AccountSecurity, ErrorPage } from '../components/pages'
 import { db } from '../db'
 import { sendEmailVerification } from '../email'
 import { sessionHash } from '../sessions'
@@ -17,7 +17,14 @@ export function page(node: React.ReactNode, status = 200) {
     headers: { 'content-type': 'text/html;charset=utf-8', 'cache-control': 'private, no-store' } })
 }
 export function notFoundPage(req: Request) {
-  return page(<NotFound user={currentUser(req)} />, 404)
+  return page(<ErrorPage user={currentUser(req)} status={404} />, 404)
+}
+export function clientErrorPage(req: Request, status = 400) {
+  const clientStatus = status >= 400 && status < 500 ? status : 400
+  return page(<ErrorPage user={currentUser(req)} status={clientStatus} />, clientStatus)
+}
+export function serverErrorPage(req: Request) {
+  return page(<ErrorPage user={currentUser(req)} status={500} />, 500)
 }
 export function redirect(path: string, cookie?: string) {
   const h = new Headers({ location: path })
