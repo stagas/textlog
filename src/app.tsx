@@ -1,10 +1,10 @@
-import { applyHtmlCachePolicy, GLOBAL_REQUEST_BODY_LIMIT, isSameOriginRequest, RequestBodyError,
-  safeLocalPath, securityHeaders } from './http'
+import { applyHtmlCachePolicy, GLOBAL_REQUEST_BODY_LIMIT, isSameOriginRequest, RequestBodyError, safeLocalPath,
+  securityHeaders } from './http'
 
 import { Hono } from 'hono'
 import { bodyLimit } from 'hono/body-limit'
-import { configureDevReload } from './components/layout'
 import { startAutomatedBackups } from './backup-automation'
+import { configureDevReload } from './components/layout'
 import { compressResponse } from './compression'
 import { databaseHealth } from './database-health'
 import { db } from './db'
@@ -21,11 +21,11 @@ import { registerInteractionsRoutes } from './routes/interactions'
 import { registerPostsRoutes } from './routes/posts'
 import { registerProfilesRoutes } from './routes/profiles'
 import { registerSeoRoutes } from './routes/seo'
-import { registerTagsRoutes } from './routes/tags'
 import { notFoundPage } from './routes/shared'
+import { registerTagsRoutes } from './routes/tags'
 import { loadStylesAsset, stylesResponse } from './styles'
-import { VisitorBuffer } from './visitors'
 import { currentUser } from './utils'
+import { VisitorBuffer } from './visitors'
 
 const devReloadEnabled = Bun.env.DEV_RELOAD === 'true'
 const bootId = crypto.randomUUID()
@@ -50,8 +50,12 @@ app.use('*', bodyLimit({
 app.use('*', async (c, next) => {
   await next()
   if (c.req.method !== 'GET' || c.res.status >= 400 || !c.res.headers.get('content-type')?.includes('text/html')) return
-  try { visitorBuffer.record(c.req.header('x-root-client-ip') || '-') }
-  catch (error) { logError('visitor buffer flush failed', error) }
+  try {
+    visitorBuffer.record(c.req.header('x-root-client-ip') || '-')
+  }
+  catch (error) {
+    logError('visitor buffer flush failed', error)
+  }
 })
 
 app.use('*', async (c, next) => {
@@ -85,9 +89,8 @@ app.use('*', async (c, next) => {
   await next()
   if (c.req.method !== 'GET' || !c.res.headers.get('content-type')?.includes('text/html')) return
   const url = new URL(c.req.url)
-  const privatePath =
-    /^\/(?:enter|choose-handle|write|compose|activity|admin|account\/delete)(?:\/|$)/
-      .test(url.pathname) || /^\/post\/\d+\/(?:edit|delete)$/.test(url.pathname)
+  const privatePath = /^\/(?:enter|choose-handle|write|compose|activity|admin|account\/delete)(?:\/|$)/
+    .test(url.pathname) || /^\/post\/\d+\/(?:edit|delete)$/.test(url.pathname)
   const transientParameters = ['reply', 'report', 'reported', 'edit', 'welcome', 'reset', 'token']
   const transient = transientParameters.some(name => url.searchParams.has(name))
   if (privatePath || transient || c.res.status >= 400) c.header('X-Robots-Tag', 'noindex, nofollow')

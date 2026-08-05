@@ -1,5 +1,6 @@
 import { describe, expect, test } from 'bun:test'
-import { About, AccountSecurity, ApiDocs, Auth, ChooseHandle, ConfirmEmail, Contact, NotFound, postTitle, Profile } from './components/pages'
+import { About, AccountSecurity, ApiDocs, Auth, ChooseHandle, ConfirmEmail, Contact, NotFound, postTitle,
+  Profile } from './components/pages'
 
 import React from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'

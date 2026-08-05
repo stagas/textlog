@@ -19,13 +19,17 @@ async function alertFailure(configuration: BackupConfiguration, error: unknown, 
   if (!configuration.alertWebhookUrl) return
   try {
     const response = await fetcher(configuration.alertWebhookUrl, {
-      method: 'POST', headers: { 'content-type': 'application/json' }, signal: AbortSignal.timeout(10_000),
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      signal: AbortSignal.timeout(10_000),
       body: JSON.stringify({ event: 'database_backup_failed', service: 'root.mx', error: String(error),
         occurredAt: new Date().toISOString() }),
     })
     if (!response.ok) console.error(`backup alert webhook returned ${response.status}`)
   }
-  catch (alertError) { console.error('backup alert delivery failed', alertError) }
+  catch (alertError) {
+    console.error('backup alert delivery failed', alertError)
+  }
 }
 
 function restoreDrill(configuration: BackupConfiguration, backupPath: string, backupCreatedAt: number, now: Date) {
@@ -52,11 +56,14 @@ function restoreDrill(configuration: BackupConfiguration, backupPath: string, ba
     writeFileSync(reportPath, `${JSON.stringify(report, null, 2)}\n`, { mode: 0o600 })
     return report
   }
-  finally { rmSync(drillDirectory, { recursive: true, force: true }) }
+  finally {
+    rmSync(drillDirectory, { recursive: true, force: true })
+  }
 }
 
-export async function runAutomatedBackup(database: Database, configuration: BackupConfiguration,
-  now = new Date(), fetcher: typeof fetch = fetch) {
+export async function runAutomatedBackup(database: Database, configuration: BackupConfiguration, now = new Date(),
+  fetcher: typeof fetch = fetch)
+{
   try {
     pruneBackups(configuration.directory, now.getTime())
     const day = now.toISOString().slice(0, 10)
@@ -75,9 +82,14 @@ export function startAutomatedBackups(database: Database, configuration: BackupC
   const run = async () => {
     if (running) return
     running = true
-    try { await runAutomatedBackup(database, configuration) }
-    catch {}
-    finally { running = false }
+    try {
+      await runAutomatedBackup(database, configuration)
+    }
+    catch {
+    }
+    finally {
+      running = false
+    }
   }
   void run()
   const timer = setInterval(run, BACKUP_CHECK_INTERVAL_MS)

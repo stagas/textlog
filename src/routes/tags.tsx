@@ -42,10 +42,12 @@ export function registerTagsRoutes(app: Hono) {
         (b.blocker_id=? AND b.blocked_id=p.user_id) OR (b.blocker_id=p.user_id AND b.blocked_id=?)))
       ORDER BY p.created_at DESC LIMIT ? OFFSET ?`,
     ).all(tag, viewerId, viewerId, viewerId, PAGE_SIZE, (tagPage - 1) * PAGE_SIZE) as PostView[], viewerId)
-    const total = blocked ? 0 : (db.query(`SELECT count(*) AS count FROM post_hashtags ph JOIN posts p ON p.id=ph.post_id
+    const total = blocked
+      ? 0
+      : (db.query(`SELECT count(*) AS count FROM post_hashtags ph JOIN posts p ON p.id=ph.post_id
       WHERE ph.tag=? AND p.deleted_at IS NULL AND (? < 0 OR NOT EXISTS (SELECT 1 FROM blocks b WHERE
         (b.blocker_id=? AND b.blocked_id=p.user_id) OR (b.blocker_id=p.user_id AND b.blocked_id=?)))`)
-      .get(tag, viewerId, viewerId, viewerId) as { count: number }).count
+        .get(tag, viewerId, viewerId, viewerId) as { count: number }).count
     const outOfRange = paginationRedirect(tagPage, total, `/tag/${tag}`)
     if (outOfRange) return outOfRange
     const configuredOrigin = Bun.env.APP_URL?.replace(/\/$/, '')

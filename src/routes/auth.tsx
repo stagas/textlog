@@ -19,8 +19,10 @@ function temporaryHandle() {
 
 export function registerAuthRoutes(app: Hono) {
   app.get('/enter', c => page(<Auth next={safeNext(c.req.query('next'))} />))
-  app.get('/login', c => redirect('/enter' + (c.req.query('next') ? `?next=${encodeURIComponent(safeNext(c.req.query('next')))}` : '')))
-  app.get('/signup', c => redirect('/enter' + (c.req.query('next') ? `?next=${encodeURIComponent(safeNext(c.req.query('next')))}` : '')))
+  app.get('/login',
+    c => redirect('/enter' + (c.req.query('next') ? `?next=${encodeURIComponent(safeNext(c.req.query('next')))}` : '')))
+  app.get('/signup',
+    c => redirect('/enter' + (c.req.query('next') ? `?next=${encodeURIComponent(safeNext(c.req.query('next')))}` : '')))
 
   app.post('/enter', async c => {
     const f = await form(c.req.raw)
@@ -39,8 +41,8 @@ export function registerAuthRoutes(app: Hono) {
     }
 
     const account = db.query(`SELECT id,handle,handle_chosen_at FROM users
-      WHERE email=? AND deleted_at IS NULL AND suspended_at IS NULL`).get(email) as
-      { id: number; handle: string; handle_chosen_at: string | null } | null
+      WHERE email=? AND deleted_at IS NULL AND suspended_at IS NULL`).get(email) as { id: number; handle: string;
+      handle_chosen_at: string | null } | null
     const value = token()
     db.query('DELETE FROM magic_links WHERE email=? OR expires_at<=?').run(email, Date.now())
     db.query(`INSERT INTO magic_links(token_hash,email,user_id,next_path,expires_at,created_at)
@@ -54,7 +56,10 @@ export function registerAuthRoutes(app: Hono) {
       catch (error) {
         console.error('Could not send magic link', error)
         db.query('DELETE FROM magic_links WHERE token_hash=?').run(hash(value))
-        return page(<Auth email={email} next={next} error="The magic link could not be sent. Please try again later." />, 503)
+        return page(
+          <Auth email={email} next={next} error="The magic link could not be sent. Please try again later." />,
+          503,
+        )
       }
     }
     return page(<MagicLinkSent email={email} magicUrl={development() ? magicUrl : undefined} />)
@@ -63,8 +68,8 @@ export function registerAuthRoutes(app: Hono) {
   app.get('/enter/magic', c => {
     const value = c.req.query('token') || ''
     const link = value && db.query(`SELECT token_hash,email,user_id,next_path FROM magic_links
-      WHERE token_hash=? AND expires_at>?`).get(hash(value), Date.now()) as
-      { token_hash: string; email: string; user_id: number | null; next_path: string } | null
+      WHERE token_hash=? AND expires_at>?`).get(hash(value), Date.now()) as { token_hash: string; email: string;
+      user_id: number | null; next_path: string } | null
     if (!link) return page(<Auth error="That magic link is invalid or has expired. Request a new one." />, 400)
 
     let userId = link.user_id
@@ -74,8 +79,9 @@ export function registerAuthRoutes(app: Hono) {
       db.transaction(() => {
         db.query('DELETE FROM magic_links WHERE token_hash=?').run(link.token_hash)
         if (userId) {
-          const account = db.query('SELECT handle_chosen_at FROM users WHERE id=?').get(userId) as
-            { handle_chosen_at: string | null } | null
+          const account = db.query('SELECT handle_chosen_at FROM users WHERE id=?').get(userId) as {
+            handle_chosen_at: string | null
+          } | null
           if (!account) throw new Error('Account is unavailable')
           chosen = Boolean(account.handle_chosen_at)
           db.query('UPDATE users SET email_verified_at=COALESCE(email_verified_at,CURRENT_TIMESTAMP) WHERE id=?')
@@ -102,7 +108,9 @@ export function registerAuthRoutes(app: Hono) {
     catch {
       return page(<Auth error="That account is unavailable. Request a new magic link." />, 400)
     }
-    const destination = chosen ? safeLocalPath(link.next_path) : `/choose-handle?next=${encodeURIComponent(link.next_path)}`
+    const destination = chosen
+      ? safeLocalPath(link.next_path)
+      : `/choose-handle?next=${encodeURIComponent(link.next_path)}`
     return redirect(destination, sessionCookie(session))
   })
 

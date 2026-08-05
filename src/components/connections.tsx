@@ -37,21 +37,34 @@ export function Connections(
             <section>
               <h2>Tags</h2>
               {tags.length
-                ? kind === 'blocked' ? <BlockedTagList tags={tags} />
-                : <TagPeopleList user={user} tags={tags} followingKey="viewerFollowing" />
-                : <div className="empty connections-empty">
-                  {kind === 'blocked' ? 'You haven’t blocked any tags yet.'
-                    : user?.id === profile.id ? 'You haven’t followed any tags yet.' : 'No followed tags yet.'}
-                </div>}
+                ? kind === 'blocked'
+                  ? <BlockedTagList tags={tags} />
+                  : <TagPeopleList user={user} tags={tags} followingKey="viewerFollowing" />
+                : (
+                  <div className="empty connections-empty">
+                    {kind === 'blocked'
+                      ? 'You haven’t blocked any tags yet.'
+                      : user?.id === profile.id
+                      ? 'You haven’t followed any tags yet.'
+                      : 'No followed tags yet.'}
+                  </div>
+                )}
             </section>
             <section>
               <h2>People</h2>
               {people.length
-                ? kind === 'blocked' ? <BlockedPeopleList people={people} /> : <ConnectionPeople user={user} people={people} />
-                : <div className="empty connections-empty">
-                  {kind === 'blocked' ? 'You haven’t blocked anyone yet.'
-                    : user?.id === profile.id ? 'You haven’t followed anyone yet.' : 'No followed people yet.'}
-                </div>}
+                ? kind === 'blocked'
+                  ? <BlockedPeopleList people={people} />
+                  : <ConnectionPeople user={user} people={people} />
+                : (
+                  <div className="empty connections-empty">
+                    {kind === 'blocked'
+                      ? 'You haven’t blocked anyone yet.'
+                      : user?.id === profile.id
+                      ? 'You haven’t followed anyone yet.'
+                      : 'No followed people yet.'}
+                  </div>
+                )}
             </section>
           </div>
         )
@@ -60,9 +73,11 @@ export function Connections(
         : (
           <div className="empty">
             {user?.id === profile.id
-              ? kind === 'blocked' ? 'You haven’t blocked anyone or any tags.'
-              : kind === 'following' ? 'You aren’t following anyone or any tags yet.'
-              : 'You don’t have any followers yet.'
+              ? kind === 'blocked'
+                ? 'You haven’t blocked anyone or any tags.'
+                : kind === 'following'
+                ? 'You aren’t following anyone or any tags yet.'
+                : 'You don’t have any followers yet.'
               : <>@{profile.handle} {kind === 'following' ? 'isn’t following anyone yet.' : 'has no followers yet.'}</>}
           </div>
         )}

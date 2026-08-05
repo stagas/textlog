@@ -21,7 +21,9 @@ export function ConfirmEmail({ token, kind, email, invalid = false, pending = fa
               <p className="verify-email-copy">
                 We sent a link to <strong>{email}</strong>. Open it to finish setting up your account.
               </p>
-              {sent && <p className="success verify-email-notice" role="status">A fresh verification link has been sent.</p>}
+              {sent && (
+                <p className="success verify-email-notice" role="status">A fresh verification link has been sent.</p>
+              )}
               {error && <p className="error verify-email-notice" role="alert">{error}</p>}
               <div className="welcome-actions verify-email-actions">
                 <form method="post" action="/account/email/verify">

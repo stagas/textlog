@@ -17,8 +17,7 @@ export class RequestBodyError extends Error {
 export async function limitedFormData(request: Request, maxBytes = FORM_REQUEST_BODY_LIMIT) {
   const contentType = request.headers.get('content-type')?.toLowerCase() || ''
   const mediaType = contentType.split(';', 1)[0].trim()
-  if (mediaType !== 'application/x-www-form-urlencoded' && mediaType !== 'multipart/form-data')
-  {
+  if (mediaType !== 'application/x-www-form-urlencoded' && mediaType !== 'multipart/form-data') {
     throw new RequestBodyError(415, 'Unsupported Media Type')
   }
 
@@ -55,7 +54,8 @@ export function safeLocalPath(value: string | undefined, requestUrl?: string, fa
 }
 
 export function safeRefererPath(referer: string | undefined, requestUrl: string, fallback = '/',
-  appUrl: string | null | undefined = Bun.env.APP_URL) {
+  appUrl: string | null | undefined = Bun.env.APP_URL)
+{
   if (!referer) return fallback
   try {
     const request = new URL(appUrl || requestUrl)

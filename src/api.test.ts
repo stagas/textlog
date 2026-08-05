@@ -162,7 +162,9 @@ describe('public API', () => {
     expect(limited.status).toBe(429)
     expect(limited.headers.get('retry-after')).toBeTruthy()
     expect(other.status).toBe(200)
-    expect((database.query('SELECT count(*) count FROM api_rate_limit_buckets').get() as { count: number }).count).toBe(2)
+    expect((database.query('SELECT count(*) count FROM api_rate_limit_buckets').get() as { count: number }).count).toBe(
+      2,
+    )
   })
 
   test('streams ready and live post events with non-buffering headers', async () => {

@@ -56,8 +56,9 @@ if (args[0] === '--worker') {
 else {
   const workers = Math.max(1, Math.min(16, Number(args.find(value => value.startsWith('--workers='))?.split('=')[1]
     || 4)))
-  const operations = Math.max(10, Math.min(100_000,
-    Number(args.find(value => value.startsWith('--operations='))?.split('=')[1] || 1000)))
+  const operations = Math.max(10, Math.min(100_000, Number(args.find(value =>
+    value.startsWith('--operations=')
+  )?.split('=')[1] || 1000)))
   const directory = mkdtempSync(join(tmpdir(), 'root-mx-load-'))
   const path = join(directory, 'load.sqlite')
   try {
@@ -67,10 +68,11 @@ else {
       INSERT INTO counters VALUES(1,0);
       CREATE TABLE events(id INTEGER PRIMARY KEY AUTOINCREMENT,worker INTEGER NOT NULL);`)
     database.close()
-    const processes = Array.from({ length: workers }, () => Bun.spawn(
-      [process.execPath, import.meta.path, '--worker', path, String(operations)],
-      { stdout: 'pipe', stderr: 'pipe' },
-    ))
+    const processes = Array.from({ length: workers }, () =>
+      Bun.spawn(
+        [process.execPath, import.meta.path, '--worker', path, String(operations)],
+        { stdout: 'pipe', stderr: 'pipe' },
+      ))
     const results = await Promise.all(processes.map(async process => {
       const output = await new Response(process.stdout).text()
       const error = await new Response(process.stderr).text()

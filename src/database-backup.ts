@@ -67,7 +67,8 @@ export function dailyBackupPath(directory = defaultBackupDirectory, day = new Da
 }
 
 export function createDailyDatabaseBackup(database: Database, directory = defaultBackupDirectory,
-  day = new Date().toISOString().slice(0, 10)) {
+  day = new Date().toISOString().slice(0, 10))
+{
   mkdirSync(directory, { recursive: true, mode: 0o700 })
   const finalPath = dailyBackupPath(directory, day)
   if (existsSync(finalPath)) {

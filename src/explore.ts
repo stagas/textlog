@@ -13,8 +13,9 @@ export function suggestedPeople(database: Database, viewerId: number, limit = 6,
 {
   const maxUserId = (database.query('SELECT coalesce(max(id),0) id FROM users').get() as { id: number }).id
   const pivot = explorePivot(maxUserId, viewerId, day)
-  const find = (operator: '>=' | '<', boundary: number, count: number) => database.query(
-    `SELECT u.*, (SELECT count(*) FROM posts p WHERE p.user_id=u.id AND p.deleted_at IS NULL) posts,
+  const find = (operator: '>=' | '<', boundary: number, count: number) =>
+    database.query(
+      `SELECT u.*, (SELECT count(*) FROM posts p WHERE p.user_id=u.id AND p.deleted_at IS NULL) posts,
       EXISTS(SELECT 1 FROM follows f WHERE f.follower_id=? AND f.following_id=u.id) following FROM users u
       WHERE u.id != ? AND u.deleted_at IS NULL
       AND NOT EXISTS (SELECT 1 FROM follows f WHERE f.follower_id=? AND f.following_id=u.id)
@@ -22,7 +23,7 @@ export function suggestedPeople(database: Database, viewerId: number, limit = 6,
         (b.blocker_id=? AND b.blocked_id=u.id) OR (b.blocker_id=u.id AND b.blocked_id=?)))
       AND EXISTS (SELECT 1 FROM posts p WHERE p.user_id=u.id AND p.deleted_at IS NULL)
       AND u.id ${operator} ? ORDER BY u.id LIMIT ?`,
-  ).all(viewerId, viewerId, viewerId, viewerId, viewerId, viewerId, boundary, count) as PersonView[]
+    ).all(viewerId, viewerId, viewerId, viewerId, viewerId, viewerId, boundary, count) as PersonView[]
 
   const people = find('>=', pivot, limit)
   if (people.length < limit) people.push(...find('<', pivot, limit - people.length))

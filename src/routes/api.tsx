@@ -31,8 +31,8 @@ function apiError(code: string, message: string, status: number, retryAfter?: nu
   return response
 }
 
-function collection(c: Context, database: Database,
-  filters: { handle?: string; parentId?: number; tag?: string } = {}, appUrl?: string | null)
+function collection(c: Context, database: Database, filters: { handle?: string; parentId?: number; tag?: string } = {},
+  appUrl?: string | null)
 {
   const parsed = parseCollectionParams(c.req.query('limit'), c.req.query('cursor'))
   if (!parsed) {
@@ -133,7 +133,8 @@ function openApiDocument() {
 }
 
 export function registerApiRoutes(app: Hono, database: Database = db,
-  appUrl: string | null | undefined = Bun.env.APP_URL) {
+  appUrl: string | null | undefined = Bun.env.APP_URL)
+{
   app.get('/api', c => page(<ApiDocs user={currentUser(c.req.raw)} />))
 
   app.use('/api/*', async (c, next) => {

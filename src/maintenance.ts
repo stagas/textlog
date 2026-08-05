@@ -23,10 +23,15 @@ export function runBoundedCleanup(database: Database, now = Date.now()) {
 }
 
 export function startMaintenance(database: Database, visitors: VisitorBuffer,
-  onError: (error: unknown) => void = console.error) {
+  onError: (error: unknown) => void = console.error)
+{
   const safely = (task: () => unknown) => {
-    try { task() }
-    catch (error) { onError(error) }
+    try {
+      task()
+    }
+    catch (error) {
+      onError(error)
+    }
   }
   safely(() => runBoundedCleanup(database))
   const visitorTimer = setInterval(() => safely(() => visitors.flush()), 5_000)

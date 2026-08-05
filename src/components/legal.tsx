@@ -58,8 +58,8 @@ export function Legal({ user }: { user: User | null }) {
         <h3>Data, purposes and legal bases</h3>
         <ul>
           <li>
-            Account email, handle, profile, sessions and preferences: to create and perform your account
-            contract, authenticate you and provide requested features.
+            Account email, handle, profile, sessions and preferences: to create and perform your account contract,
+            authenticate you and provide requested features.
           </li>
           <li>
             Posts, replies, follows and other public activity: to publish and distribute content at your request and
@@ -91,11 +91,11 @@ export function Legal({ user }: { user: User | null }) {
 
         <h3>Retention</h3>
         <p>
-          Session records expire after 30 days; magic and email-change links after one hour; daily visitor
-          pseudonyms after seven days; and application HTTP logs after at most 14 days. Public account and content data
-          is held until you delete it or your account. Deletion anonymizes the account and content, while limited
-          moderation, resolved report and audit records are retained for three years where needed to document decisions,
-          establish legal claims and protect users. Open reports remain until reviewed. Backups follow the configured
+          Session records expire after 30 days; magic and email-change links after one hour; daily visitor pseudonyms
+          after seven days; and application HTTP logs after at most 14 days. Public account and content data is held
+          until you delete it or your account. Deletion anonymizes the account and content, while limited moderation,
+          resolved report and audit records are retained for three years where needed to document decisions, establish
+          legal claims and protect users. Open reports remain until reviewed. Backups follow the configured
           backup-retention period (14 days by default), after which deleted data ages out.
         </p>
 
@@ -121,8 +121,9 @@ export function Legal({ user }: { user: User | null }) {
         <h3>Required and optional data</h3>
         <p>
           Email is required to create an account, and a handle is required before participating; without them we cannot
-          provide those features. Profile text and public activity are optional. Data normally comes from you; public interactions and reports about your
-          content come from other users. For privacy questions or content notices, use the{' '}
+          provide those features. Profile text and public activity are optional. Data normally comes from you; public
+          interactions and reports about your content come from other users. For privacy questions or content notices,
+          use the{' '}
           <a href="/contact">
             contact details
           </a>. We do not sell personal information.

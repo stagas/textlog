@@ -11,12 +11,13 @@ function publicPosts(database: Database, origin: string, filters: { handle?: str
 
 function feedResponse(c: Context, database: Database, format: SyndicationFormat, appUrl: string | null | undefined,
   details: {
-  title: string
-  description: string
-  pagePath: string
-  feedPath?: string
-  posts: ReturnType<typeof publicPosts>
-}) {
+    title: string
+    description: string
+    pagePath: string
+    feedPath?: string
+    posts: ReturnType<typeof publicPosts>
+  })
+{
   const origin = apiOrigin(c.req.url, appUrl)
   return syndicationResponse(format, {
     ...details,
@@ -31,7 +32,8 @@ function suffixed(value: string): { name: string; format: SyndicationFormat } | 
 }
 
 export function registerSyndicationRoutes(app: Hono, database: Database = db,
-  appUrl: string | null | undefined = Bun.env.APP_URL) {
+  appUrl: string | null | undefined = Bun.env.APP_URL)
+{
   const latest = (c: Context, format: SyndicationFormat, feedPath?: string) => {
     const origin = apiOrigin(c.req.url, appUrl)
     return feedResponse(c, database, format, appUrl, {

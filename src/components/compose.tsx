@@ -14,7 +14,10 @@ export function Compose({ user, error, body = '' }: { user: User; error?: string
   return (
     <Layout user={user} title="write">
       <div className="panel compose write-compose">
-        <h1 className="compose-heading">What's on your mind, <span className="compose-at">@</span>{user.handle}?</h1>
+        <h1 className="compose-heading">
+          What's on your mind, <span className="compose-at">@</span>
+          {user.handle}?
+        </h1>
         <form method="post" action="/post">
           <FormMessage error={error} />
           <textarea name="body" maxLength={280} required autoFocus defaultValue={body} />

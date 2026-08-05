@@ -1,7 +1,7 @@
 import { describe, expect, test } from 'bun:test'
 import { applyHtmlCachePolicy, clearSessionCookie, feedPreference, feedPreferenceCookie, FORM_REQUEST_BODY_LIMIT,
-  htmlCacheControl, isSameOriginRequest, limitedFormData, RequestBodyError, safeLocalPath, safeRefererPath, securityHeaders,
-  sessionCookie, stringField } from './http'
+  htmlCacheControl, isSameOriginRequest, limitedFormData, RequestBodyError, safeLocalPath, safeRefererPath,
+  securityHeaders, sessionCookie, stringField } from './http'
 
 describe('local redirects', () => {
   test('accepts local paths and rejects ambiguous or external targets', () => {
@@ -134,7 +134,9 @@ describe('HTML cache policy', () => {
       .toBe('private, no-store')
     expect(htmlCacheControl(new Request('https://root.mx/post/1', { method: 'POST', body: '' }), html()))
       .toBe('private, no-store')
-    expect(htmlCacheControl(new Request('https://root.mx/latest'),
-      new Response('page', { headers: { 'set-cookie': 'feed=latest' } }))).toBe('private, no-store')
+    expect(
+      htmlCacheControl(new Request('https://root.mx/latest'),
+        new Response('page', { headers: { 'set-cookie': 'feed=latest' } })),
+    ).toBe('private, no-store')
   })
 })

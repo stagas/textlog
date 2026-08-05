@@ -6,10 +6,9 @@ import { Post } from './post'
 
 export function Profile(
   { user, profile, posts, following, bio = profile.bio || '', editHandle = profile.handle, editEmail = profile.email,
-    error, editing = false, total = posts.length, followerCount = 0, followingCount = 0,
-    followingTagCount = 0, blockedPeopleCount = 0, blockedTagCount = 0, blocked = false, blockedByProfile = false,
-    social, previousCursor = null,
-    nextCursor = null }: {
+    error, editing = false, total = posts.length, followerCount = 0, followingCount = 0, followingTagCount = 0,
+    blockedPeopleCount = 0, blockedTagCount = 0, blocked = false, blockedByProfile = false, social,
+    previousCursor = null, nextCursor = null }: {
       user: User | null
       profile: ProfileRow
       posts: PostView[]
@@ -111,7 +110,9 @@ export function Profile(
       {!editing && !blocked && !blockedByProfile && posts.map(post => <Post key={post.id} p={post} user={user} />)}
       {!editing && !blocked && !blockedByProfile && total === 0 && (
         <div className="empty">
-          {user?.id === profile.id ? 'You haven’t posted any notes yet.' : `@${profile.handle} hasn’t posted any notes yet.`}
+          {user?.id === profile.id
+            ? 'You haven’t posted any notes yet.'
+            : `@${profile.handle} hasn’t posted any notes yet.`}
         </div>
       )}
       {!editing && !blocked && !blockedByProfile

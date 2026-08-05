@@ -21,9 +21,14 @@ describe('database migrations', () => {
       .toEqual({ count: 1 })
     expect((database.query('PRAGMA table_info(users)').all() as { name: string }[]).map(column => column.name))
       .toContain('activity_read_at')
-    expect(database.query('SELECT count(*) count FROM sqlite_master WHERE type=\'table\' AND name=\'activity_reads\'').get())
+    expect(
+      database.query('SELECT count(*) count FROM sqlite_master WHERE type=\'table\' AND name=\'activity_reads\'').get(),
+    )
       .toEqual({ count: 1 })
-    expect(database.query("SELECT count(*) count FROM sqlite_master WHERE type='table' AND name='blocked_hashtags'").get())
+    expect(
+      database.query('SELECT count(*) count FROM sqlite_master WHERE type=\'table\' AND name=\'blocked_hashtags\'')
+        .get(),
+    )
       .toEqual({ count: 1 })
     expect(
       database.query(

@@ -98,8 +98,9 @@ export function registerProfilesRoutes(app: Hono) {
     const blockCounts = user?.id === profile.id
       ? db.query(`SELECT (SELECT count(*) FROM blocks WHERE blocker_id=?) blockedPeople,
         (SELECT count(*) FROM blocked_hashtags WHERE user_id=?) blockedTags`).get(profile.id, profile.id) as {
-          blockedPeople: number; blockedTags: number
-        }
+        blockedPeople: number
+        blockedTags: number
+      }
       : { blockedPeople: 0, blockedTags: 0 }
     const configuredOrigin = Bun.env.APP_URL?.replace(/\/$/, '')
     const origin = configuredOrigin || new URL(c.req.url).origin
@@ -123,20 +124,22 @@ export function registerProfilesRoutes(app: Hono) {
       const people = db.query(`SELECT u.*,
         (SELECT count(*) FROM posts p WHERE p.user_id=u.id AND p.deleted_at IS NULL) posts
         FROM blocks b JOIN users u ON u.id=b.blocked_id WHERE b.blocker_id=?
-        ORDER BY u.handle LIMIT ? OFFSET ?`).all(profile.id, PAGE_SIZE,
-        (profilePage - 1) * PAGE_SIZE) as PersonView[]
+        ORDER BY u.handle LIMIT ? OFFSET ?`).all(profile.id, PAGE_SIZE, (profilePage - 1) * PAGE_SIZE) as PersonView[]
       const tags = db.query(`SELECT bh.tag,
         (SELECT count(*) FROM post_hashtags ph JOIN posts p ON p.id=ph.post_id
           WHERE ph.tag=bh.tag AND p.deleted_at IS NULL) count
         FROM blocked_hashtags bh WHERE bh.user_id=? ORDER BY bh.tag`).all(profile.id) as {
-          tag: string; count: number; viewerFollowing: boolean
-        }[]
-      const outOfRange = paginationRedirect(profilePage, blockCounts.blockedPeople,
-        `/u/${profile.handle}?tab=blocked`)
+        tag: string
+        count: number
+        viewerFollowing: boolean
+      }[]
+      const outOfRange = paginationRedirect(profilePage, blockCounts.blockedPeople, `/u/${profile.handle}?tab=blocked`)
       if (outOfRange) return outOfRange
-      return page(<Connections user={user} profile={profile} people={people} tags={tags} kind="blocked"
-        page={profilePage} total={blockCounts.blockedPeople} noteCount={total} {...counts} following={following}
-        blockedPeopleCount={blockCounts.blockedPeople} blockedTagCount={blockCounts.blockedTags} social={social} />)
+      return page(
+        <Connections user={user} profile={profile} people={people} tags={tags} kind="blocked" page={profilePage}
+          total={blockCounts.blockedPeople} noteCount={total} {...counts} following={following}
+          blockedPeopleCount={blockCounts.blockedPeople} blockedTagCount={blockCounts.blockedTags} social={social} />,
+      )
     }
     if (tab === 'following' || tab === 'followers') {
       const join = tab === 'following'
@@ -192,10 +195,10 @@ export function registerProfilesRoutes(app: Hono) {
     const posts = enrichPosts(db, result.rows, viewerId)
     return page(
       <Profile user={user} profile={profile} posts={blocked || blockedByProfile ? [] : posts} following={following}
-        blocked={blocked} total={total} followerCount={counts.followerCount}
-        followingCount={counts.followingCount} followingTagCount={counts.followingTagCount}
-        blockedPeopleCount={blockCounts.blockedPeople} blockedTagCount={blockCounts.blockedTags} social={social}
-        previousCursor={result.previousCursor} nextCursor={result.nextCursor} />,
+        blocked={blocked} total={total} followerCount={counts.followerCount} followingCount={counts.followingCount}
+        followingTagCount={counts.followingTagCount} blockedPeopleCount={blockCounts.blockedPeople}
+        blockedTagCount={blockCounts.blockedTags} social={social} previousCursor={result.previousCursor}
+        nextCursor={result.nextCursor} />,
     )
   })
 }
