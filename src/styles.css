@@ -757,6 +757,10 @@ nav form {
   gap: var(--space-4);
 }
 
+.welcome-actions span {
+  color: var(--muted);
+}
+
 .empty-actions .button {
   border: 0;
 }
@@ -1314,6 +1318,30 @@ form.report-panel {
   margin: var(--space-2) 0 var(--space-5);
   color: var(--quote-ink);
   font-size: 12px;
+}
+
+.verify-email-panel {
+  width: calc(100% - (2 * var(--gutter)));
+  max-width: 620px;
+  margin: var(--space-7) auto 0;
+}
+
+.verify-email-panel>.verify-email-copy {
+  max-width: 480px;
+  overflow-wrap: anywhere;
+}
+
+.verify-email-notice {
+  max-width: 440px;
+  margin: 0 0 var(--space-5);
+}
+
+.verify-email-actions {
+  margin: 0;
+}
+
+.verify-email-actions form {
+  margin: 0;
 }
 
 .welcome-actions {

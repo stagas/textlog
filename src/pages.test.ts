@@ -112,6 +112,21 @@ test('Email confirmation requires an explicit POST', () => {
   expect(html).toContain('Change your email?')
 })
 
+test('Email verification prompt makes confirmation the next onboarding step', () => {
+  const html = renderToStaticMarkup(React.createElement(ConfirmEmail, {
+    pending: true,
+    email: 'reader@example.com',
+  }))
+
+  expect(html).toContain('one last step')
+  expect(html).toContain('reader@example.com')
+  expect(html).toContain('action="/account/email/verify"')
+  expect(html).toContain('send another link')
+  expect(html).not.toContain('class="guest-nav"')
+  expect(html).toContain('action="/logout"')
+  expect(html).toContain('>logout</button>')
+})
+
 test('AccountSecurity renders verification and safe session controls', () => {
   const html = renderToStaticMarkup(React.createElement(AccountSecurity, {
     user: { id: 1, handle: 'reader', email: 'reader@example.com', bio: '', email_verified_at: null },

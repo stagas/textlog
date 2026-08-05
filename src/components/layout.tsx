@@ -27,10 +27,12 @@ export function Layout({
   title,
   user,
   social,
+  logoutNavigation = false,
   children,
 }: {
   title?: string
   user?: User | null
+  logoutNavigation?: boolean
   social?: { description: string; image: string; url: string; type?: 'article' | 'profile' | 'website';
     imageAlt?: string }
   children: React.ReactNode
@@ -97,9 +99,19 @@ export function Layout({
               root<span className="brand-dot">.</span>mx
             </span>
           </a>
-          <nav className={user ? 'account-nav' : 'guest-nav'}>
-            {navigation}
-          </nav>
+          {logoutNavigation
+            ? (
+              <nav aria-label="Account">
+                <form method="post" action="/logout">
+                  <button className="quiet">logout</button>
+                </form>
+              </nav>
+            )
+            : (
+            <nav className={user ? 'account-nav' : 'guest-nav'}>
+              {navigation}
+            </nav>
+            )}
         </header>
         <main id="main-content">{children}</main>
         <footer className="site-footer">

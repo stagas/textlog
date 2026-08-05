@@ -84,7 +84,7 @@ async function request(path: string, options: {
 async function signup(handle: string, email: string, password: string) {
   const response = await request('/signup', { method: 'POST', form: { handle, email, password } })
   expect(response.status).toBe(303)
-  expect(response.headers.get('location')).toBe('/explore?welcome=1')
+  expect(response.headers.get('location')).toBe('/verify-email')
   return sessionCookie(response)
 }
 
@@ -129,6 +129,16 @@ test('consequential account, content, reporting, and admin flows work over HTTP'
     .get('alice') as { id: number; email_verified_at: string | null }
   expect(alice.email_verified_at).toBeNull()
 
+  const verificationPrompt = await request('/verify-email', { cookie: aliceCookie })
+  expect(verificationPrompt.status).toBe(200)
+  expect(await verificationPrompt.text()).toContain('Verify your email')
+  const skippedVerification = await request('/explore?welcome=1', { cookie: aliceCookie })
+  expect(skippedVerification.status).toBe(303)
+  expect(skippedVerification.headers.get('location')).toBe('/verify-email')
+  const guestHome = await request('/', { cookie: aliceCookie })
+  expect(guestHome.status).toBe(200)
+  expect(await guestHome.text()).toContain('class="guest-nav"')
+
   const rawSession = aliceCookie.slice('root='.length)
   const storedSession = database.query('SELECT token_hash FROM sessions WHERE user_id=?')
     .get(alice.id) as { token_hash: string }
@@ -153,7 +163,7 @@ test('consequential account, content, reporting, and admin flows work over HTTP'
     form: { token: verificationToken },
   })
   expect(verification.status).toBe(303)
-  expect(verification.headers.get('location')).toBe('/account/security?verified=1')
+  expect(verification.headers.get('location')).toBe('/explore?welcome=1')
   expect((database.query('SELECT email_verified_at FROM users WHERE id=?').get(alice.id) as any).email_verified_at)
     .not.toBeNull()
 
@@ -330,6 +340,24 @@ test('consequential account, content, reporting, and admin flows work over HTTP'
 
   const bobCookie = await signup('bob', 'bob@example.com', 'bob password 123')
   const bob = database.query('SELECT id FROM users WHERE handle=?').get('bob') as { id: number }
+  const unverifiedWritePage = await request('/write', { cookie: bobCookie })
+  expect(unverifiedWritePage.status).toBe(303)
+  expect(unverifiedWritePage.headers.get('location')).toBe('/verify-email')
+  const unverifiedPost = await request('/post', {
+    method: 'POST',
+    cookie: bobCookie,
+    form: { body: 'This must not become public' },
+  })
+  expect(unverifiedPost.status).toBe(303)
+  expect(unverifiedPost.headers.get('location')).toBe('/verify-email')
+  expect((database.query('SELECT count(*) count FROM posts WHERE user_id=?').get(bob.id) as any).count).toBe(0)
+  const bobEmail = capturedEmails().find(email => email.to === 'bob@example.com' && email.subject.includes('Verify email'))
+  expect(bobEmail).toBeDefined()
+  const bobVerification = await request('/verify-email', {
+    method: 'POST',
+    form: { token: linkToken(bobEmail!) },
+  })
+  expect(bobVerification.headers.get('location')).toBe('/explore?welcome=1')
   const followAlice = await request('/follow/alice', { method: 'POST', cookie: bobCookie, form: {} })
   expect(followAlice.status).toBe(303)
   expect(database.query('SELECT 1 FROM follows WHERE follower_id=? AND following_id=?').get(bob.id, alice.id))
@@ -350,23 +378,6 @@ test('consequential account, content, reporting, and admin flows work over HTTP'
   expect(database.query('SELECT 1 FROM follows WHERE follower_id=? AND following_id=?').get(alice.id, bob.id)).toBeNull()
   expect(database.query('SELECT 1 FROM follows WHERE follower_id=? AND following_id=?').get(bob.id, alice.id))
     .toBeTruthy()
-  const unverifiedWritePage = await request('/write', { cookie: bobCookie })
-  expect(unverifiedWritePage.status).toBe(200)
-  expect(await unverifiedWritePage.text()).toContain('Confirm your email address before posting')
-  const unverifiedPost = await request('/post', {
-    method: 'POST',
-    cookie: bobCookie,
-    form: { body: 'This must not become public' },
-  })
-  expect(unverifiedPost.status).toBe(403)
-  expect((database.query('SELECT count(*) count FROM posts WHERE user_id=?').get(bob.id) as any).count).toBe(0)
-  const unverifiedReply = await request(`/post/${post.id}/reply`, {
-    method: 'POST',
-    cookie: bobCookie,
-    form: { body: 'Neither should this reply' },
-  })
-  expect(unverifiedReply.status).toBe(403)
-  expect((database.query('SELECT count(*) count FROM posts WHERE user_id=?').get(bob.id) as any).count).toBe(0)
   const report = await request(`/post/${post.id}/report`, {
     method: 'POST',
     cookie: bobCookie,
@@ -379,6 +390,11 @@ test('consequential account, content, reporting, and admin flows work over HTTP'
   expect(reportRow).toMatchObject({ status: 'open', reason: 'spam' })
 
   const adminCookie = await signup('admin', 'gstagas@gmail.com', 'admin password 123')
+  const adminEmail = capturedEmails().find(email =>
+    email.to === 'gstagas@gmail.com' && email.subject.includes('Verify email')
+  )
+  expect(adminEmail).toBeDefined()
+  await request('/verify-email', { method: 'POST', form: { token: linkToken(adminEmail!) } })
   const dashboard = await request('/admin', { cookie: adminCookie })
   expect(dashboard.status).toBe(200)
   expect(await dashboard.text()).toContain('A route-level integration post')

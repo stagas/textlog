@@ -143,7 +143,7 @@ export function registerAuthRoutes(app: Hono) {
       catch (error) {
         console.error('Could not send verification email', error)
       }
-      return redirect(f.next ? next : '/explore?welcome=1', sessionCookie(session))
+      return redirect('/verify-email', sessionCookie(session))
     }
     catch {
       return page(
@@ -164,9 +164,10 @@ export function registerAuthRoutes(app: Hono) {
       ), ipLimited.retryAfter)
     }
     const found = db.query(
-      'SELECT id,password FROM users WHERE (handle=? OR email=?) AND deleted_at IS NULL AND suspended_at IS NULL',
+      `SELECT id,password,email_verified_at FROM users
+        WHERE (handle=? OR email=?) AND deleted_at IS NULL AND suspended_at IS NULL`,
     )
-      .get(login, login) as { id: number; password: string } | null
+      .get(login, login) as { id: number; password: string; email_verified_at: string | null } | null
     const accountLimited = authLimit(c, 'login-account', found ? `user:${found.id}` : `login:${login || '(blank)'}`,
       AUTH_LIMITS.loginAccount)
     if (accountLimited) {
@@ -187,7 +188,7 @@ export function registerAuthRoutes(app: Hono) {
     }
     const session = token()
     insertSession(db, session, found.id, Date.now() + 2592000000, Date.now(), c.req.header('user-agent') || '')
-    return redirect(safeNext(f.next), sessionCookie(session))
+    return redirect(found.email_verified_at ? safeNext(f.next) : '/verify-email', sessionCookie(session))
   })
 
   app.post('/logout', c => {

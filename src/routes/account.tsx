@@ -90,19 +90,20 @@ export function registerAccountRoutes(app: Hono) {
   app.post('/account/email/verify', async c => {
     const user = currentUser(c.req.raw)
     if (!user) return redirect('/login')
-    if (user.email_verified_at) return securityPage(c.req.raw, undefined, 'Your email is already verified.')
+    if (user.email_verified_at) return redirect('/explore?welcome=1')
     const limited = authLimit(c, 'verify-email', `${user.id}:${clientAddress(c)}`, AUTH_LIMITS.forgotAccount)
     if (limited) {
-      return retryPage(securityPage(c.req.raw, authRateLimitMessage(limited.retryAfter), undefined, 429),
-        limited.retryAfter)
+      return retryPage(page(<ConfirmEmail pending email={user.email}
+        error={authRateLimitMessage(limited.retryAfter)} />, 429), limited.retryAfter)
     }
     try {
       await issueEmailToken(user.id, user.email, 'verify')
-      return securityPage(c.req.raw, undefined, 'Verification email sent.')
+      return redirect('/verify-email?sent=1')
     }
     catch (error) {
       console.error('Could not send verification email', error)
-      return securityPage(c.req.raw, 'Verification email could not be sent. Please try again later.', undefined, 503)
+      return page(<ConfirmEmail pending email={user.email}
+        error="Verification email could not be sent. Please try again later." />, 503)
     }
   })
 
@@ -141,6 +142,12 @@ export function registerAccountRoutes(app: Hono) {
 
   app.get('/verify-email', c => {
     const value = c.req.query('token') || ''
+    if (!value) {
+      const user = currentUser(c.req.raw)
+      if (!user) return redirect('/login')
+      if (user.email_verified_at) return redirect('/explore?welcome=1')
+      return page(<ConfirmEmail pending email={user.email} sent={c.req.query('sent') === '1'} />)
+    }
     const record = findEmailToken(db, value)
     return record
       ? page(<ConfirmEmail token={value} kind={record.kind} email={record.email} />)
@@ -151,7 +158,16 @@ export function registerAccountRoutes(app: Hono) {
     const f = await form(c.req.raw)
     const result = confirmEmailToken(db, f.token || '')
     if (!result.ok) return page(<ConfirmEmail invalid />, 400)
-    return redirect(`/account/security?${result.kind === 'change' ? 'changed=email' : 'verified=1'}`)
+    return redirect(result.kind === 'change' ? '/account/security?changed=email' : '/explore?welcome=1')
+  })
+
+  app.post('/verify-email/dev', c => {
+    if (Bun.env.NODE_ENV !== 'development' && Bun.env.DEV_RELOAD !== 'true') return c.notFound()
+    const user = currentUser(c.req.raw)
+    if (!user) return redirect('/login')
+    db.query('UPDATE users SET email_verified_at=CURRENT_TIMESTAMP WHERE id=?').run(user.id)
+    db.query("DELETE FROM email_tokens WHERE user_id=? AND kind='verify'").run(user.id)
+    return redirect('/explore?welcome=1')
   })
 
   app.post('/account/password', async c => {

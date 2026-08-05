@@ -42,7 +42,8 @@ export function Explore({ user, welcome = false, peopleIds }: {
           <p>Follow a few people or hashtags below, or start with a note of your own.</p>
           <div className="welcome-actions">
             <a className="button" href="/write">write your first note →</a>
-            <a href="/latest">browse latest</a>
+            <span>or</span>
+            <a href="/">browse notes</a>
           </div>
         </section>
       )}

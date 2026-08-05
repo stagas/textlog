@@ -24,6 +24,7 @@ import { registerSeoRoutes } from './routes/seo'
 import { registerTagsRoutes } from './routes/tags'
 import { loadStylesAsset, stylesResponse } from './styles'
 import { VisitorBuffer } from './visitors'
+import { currentUser } from './utils'
 
 const devReloadEnabled = Bun.env.DEV_RELOAD === 'true'
 const bootId = crypto.randomUUID()
@@ -98,6 +99,18 @@ app.use('*', async (c, next) => {
 })
 app.use('*', async (c, next) => {
   if (c.req.method === 'POST' && !isSameOriginRequest(c.req.raw)) return c.text('Forbidden', 403)
+  await next()
+})
+app.use('*', async (c, next) => {
+  const path = new URL(c.req.url).pathname
+  const verificationPath = path === '/verify-email' || path === '/verify-email/dev'
+    || path === '/account/email/verify' || path === '/logout'
+  const infrastructurePath = path === '/health' || path === '/styles.css' || path === '/root.svg' || path === '/og.png'
+  const guestHome = c.req.method === 'GET' && path === '/'
+  const user = verificationPath || infrastructurePath || guestHome ? null : currentUser(c.req.raw)
+  if (user && !user.email_verified_at) {
+    return c.redirect('/verify-email', 303)
+  }
   await next()
 })
 app.get('/health', c => {
