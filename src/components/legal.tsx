@@ -7,7 +7,7 @@ export function Legal({ user }: { user: User | null }) {
       <article className="static-page legal-page">
         <p className="eyebrow">legal</p>
         <h1>Terms, privacy &amp; liability</h1>
-        <p className="legal-updated">Last updated: August 4, 2026</p>
+        <p className="legal-updated">Last updated: August 5, 2026</p>
 
         <h2>Your content and conduct</h2>
         <p>
@@ -44,6 +44,15 @@ export function Legal({ user }: { user: User | null }) {
           Georgios Stagakis is the controller and contact for root.mx. Contact:{' '}
           <a href="mailto:hello@root.mx">hello@root.mx</a>,{' '}
           <a href="tel:+306946600152">+30 694 660 0152</a>, Kallikratis, Crete, Greece 730 11.
+        </p>
+
+        <h3>Our privacy commitment</h3>
+        <p>
+          We use your personal information only as reasonably necessary to provide, maintain, secure and support
+          root.mx, respond to actions or requests you make, and meet our legal obligations. We do not sell or rent your
+          personal information, share it for targeted advertising, or use it to build advertising profiles. We do not
+          send newsletters, promotions or other unnecessary email. We email you only for essential account and security
+          messages, actions you request, or notices we are required to send.
         </p>
 
         <h3>Data, purposes and legal bases</h3>
