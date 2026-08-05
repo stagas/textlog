@@ -60,7 +60,7 @@ export function linkify(body: string, mentionBios: Record<string, string> = {}) 
       const value = token.slice(1)
       html += token[0] === '@'
         ? `<a href="/u/${value.toLowerCase()}"${mentionBios[value.toLowerCase()] !== undefined
-          ? ` title="${esc(mentionBios[value.toLowerCase()])}"`
+          ? ` title="${esc(mentionBios[value.toLowerCase()] || 'No bio yet.')}"`
           : ''}>@${value}</a>`
         : `<a href="/tag/${value}">#${value}</a>`
     }

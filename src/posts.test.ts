@@ -26,6 +26,8 @@ describe('post persistence', () => {
   test('adds escaped bios to linkified post mentions', () => {
     expect(linkify('hello @Reader', { reader: 'Builder & "tester"' }))
       .toContain('<a href="/u/reader" title="Builder &amp; &quot;tester&quot;">@Reader</a>')
+    expect(linkify('hello @Reader', { reader: '' }))
+      .toContain('<a href="/u/reader" title="No bio yet.">@Reader</a>')
   })
   test('writes content and metadata atomically', () => {
     const db = database()
