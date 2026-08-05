@@ -3,7 +3,7 @@ import {
   Profile,
 } from '../components/pages'
 import type { PersonView, PostView, ProfileRow } from '../types'
-import { currentPage, page, paginationRedirect, redirect } from './shared'
+import { currentPage, notFoundPage, page, paginationRedirect, redirect } from './shared'
 
 import type { Hono } from 'hono'
 import { db } from '../db'
@@ -48,9 +48,9 @@ export function registerProfilesRoutes(app: Hono) {
 
   app.get('/u/:handle/:kind', c => {
     const kind = c.req.param('kind')
-    if (kind !== 'following' && kind !== 'followers' && kind !== 'blocked') return c.text('Not found', 404)
+    if (kind !== 'following' && kind !== 'followers' && kind !== 'blocked') return notFoundPage(c.req.raw)
     const resolved = resolveHandle(db, c.req.param('handle'))
-    if (!resolved) return c.text('Not found', 404)
+    if (!resolved) return notFoundPage(c.req.raw)
     const pageQuery = c.req.query('page') ? `&page=${encodeURIComponent(c.req.query('page')!)}` : ''
     return redirect(`/u/${resolved.handle}?tab=${kind}${pageQuery}`)
   })
@@ -58,7 +58,7 @@ export function registerProfilesRoutes(app: Hono) {
   app.get('/u/:handle', c => {
     const requestedHandle = c.req.param('handle')
     const resolved = resolveHandle(db, requestedHandle)
-    if (!resolved) return c.text('Not found', 404)
+    if (!resolved) return notFoundPage(c.req.raw)
     if (resolved.alias) {
       return c.redirect(`/u/${resolved.handle}${new URL(c.req.url).search}`, 301)
     }
@@ -68,8 +68,8 @@ export function registerProfilesRoutes(app: Hono) {
       'SELECT id,handle,email,bio,suspended_at,deleted_at FROM users WHERE id=? AND deleted_at IS NULL',
     ).get(resolved.id) as ProfileRow
     const tab = c.req.query('tab')
-    if (tab && tab !== 'following' && tab !== 'followers' && tab !== 'blocked') return c.text('Not found', 404)
-    if (tab === 'blocked' && user?.id !== profile.id) return c.text('Not found', 404)
+    if (tab && tab !== 'following' && tab !== 'followers' && tab !== 'blocked') return notFoundPage(c.req.raw)
+    if (tab === 'blocked' && user?.id !== profile.id) return notFoundPage(c.req.raw)
     const total =
       (db.query('SELECT count(*) AS count FROM posts WHERE user_id=? AND deleted_at IS NULL').get(profile.id) as {
         count: number

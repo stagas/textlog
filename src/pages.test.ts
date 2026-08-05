@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test'
-import { About, AccountSecurity, ApiDocs, Auth, ConfirmEmail, Contact, postTitle, Profile } from './components/pages'
+import { About, AccountSecurity, ApiDocs, Auth, ConfirmEmail, Contact, NotFound, postTitle, Profile } from './components/pages'
 
 import React from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
@@ -42,6 +42,16 @@ test('Contact page shows operator details and is linked before legal in the foot
   expect(html).toContain('href="tel:+306946600152"')
   expect(html).toContain('href="/report-illegal-activity"')
   expect(html.indexOf('href="/contact"')).toBeLessThan(html.indexOf('href="/legal"'))
+})
+
+test('Not found page gives visitors useful ways back into the site', () => {
+  const html = renderToStaticMarkup(React.createElement(NotFound, { user: null }))
+
+  expect(html).toContain('<title>page not found · root.mx</title>')
+  expect(html).toContain('aria-hidden="true">404</p>')
+  expect(html).toContain('This page doesn&#x27;t exist.')
+  expect(html).toContain('class="button" href="/">browse notes</a>')
+  expect(html).toContain('<span>or</span><a href="/explore">explore</a>')
 })
 
 describe('About', () => {

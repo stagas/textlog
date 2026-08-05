@@ -88,7 +88,7 @@ export function Layout({
         </>
         <link rel="icon" href="/root.svg?v=1" type="image/svg+xml" />
         <link rel="sitemap" href="/sitemap.xml" type="application/xml" />
-        <link rel="stylesheet" href="/styles.css?v=48" />
+        <link rel="stylesheet" href="/styles.css?v=49" />
       </head>
       <body>
         <a className="skip-link" href="#main-content">skip to content</a>

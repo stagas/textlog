@@ -22,6 +22,7 @@ import { registerPostsRoutes } from './routes/posts'
 import { registerProfilesRoutes } from './routes/profiles'
 import { registerSeoRoutes } from './routes/seo'
 import { registerTagsRoutes } from './routes/tags'
+import { notFoundPage } from './routes/shared'
 import { loadStylesAsset, stylesResponse } from './styles'
 import { VisitorBuffer } from './visitors'
 import { currentUser } from './utils'
@@ -166,7 +167,7 @@ registerAdminRoutes(app)
 registerProfilesRoutes(app)
 registerTagsRoutes(app)
 registerSeoRoutes(app)
-app.notFound(c => c.text('Not found', 404))
+app.notFound(c => notFoundPage(c.req.raw))
 app.onError((error, c) => {
   if (error instanceof RequestBodyError) return c.text(error.message, error.status)
   logError(`${c.req.method} ${new URL(c.req.url).pathname}`, error)
