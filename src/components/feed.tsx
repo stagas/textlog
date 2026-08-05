@@ -37,7 +37,7 @@ export function Feed({ user, cursor, title, path = '/for-you' }: {
             <p>Your timeline is empty. Follow people or hashtags to shape it.</p>
             <div>
               <a className="button" href="/explore">explore</a>
-              <a href="/latest">browse latest</a>
+              <a href="/">browse notes</a>
               <a href="/write">write your first note</a>
             </div>
           </div>

@@ -1,5 +1,5 @@
-import { db, type User } from '../db'
 import { markActivityEntriesRead } from '../activity-state'
+import { db, type User } from '../db'
 import { PAGE_SIZE } from '../pagination'
 import { enrichPosts } from '../posts'
 import type { PostView } from '../types'
@@ -53,7 +53,8 @@ export function Activity({ user, page }: { user: User; page: number }) {
             OR (b.blocker_id=f.follower_id AND b.blocked_id=?))
       ) activity LEFT JOIN activity_reads ar ON ar.user_id=? AND ar.event_key=activity.activity_key
       ORDER BY created_at DESC LIMIT ? OFFSET ?`,
-  ).all(user.id, user.id, user.id, user.id, user.id, user.id, user.id, user.id, user.id, user.id, user.id, user.id, PAGE_SIZE,
+  ).all(user.id, user.id, user.id, user.id, user.id, user.id, user.id, user.id, user.id, user.id, user.id, user.id,
+    PAGE_SIZE,
     (page - 1) * PAGE_SIZE) as (PostView & { activity_kind: 'reply' | 'mention' | 'follow'; posts: number | null;
       viewerFollowing: boolean | null; bio: string | null; activity_key: string; unread: number })[]
   markActivityEntriesRead(user.id, posts.filter(post => post.unread).map(post => post.activity_key))
@@ -106,7 +107,7 @@ export function Activity({ user, page }: { user: User; page: number }) {
           <div className="empty empty-actions">
             <p>No activity yet.</p>
             <div>
-              <a className="button" href="/latest">browse latest</a>
+              <a className="button" href="/">browse notes</a>
               <a href="/write">write a note</a>
             </div>
           </div>
