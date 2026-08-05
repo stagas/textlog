@@ -771,6 +771,18 @@ nav form {
   margin-top: var(--space-5);
 }
 
+.compose-heading {
+  margin: 0 0 var(--space-3);
+  overflow-wrap: anywhere;
+  font-size: 20px;
+  font-weight: 400;
+  letter-spacing: -1px;
+}
+
+.compose-at {
+  color: var(--accent);
+}
+
 .auth form,
 .bio-form {
   display: grid;
