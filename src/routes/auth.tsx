@@ -72,6 +72,7 @@ export function registerAuthRoutes(app: Hono) {
       user_id: number | null; next_path: string } | null
     if (!link) return page(<Auth error="That magic link is invalid or has expired. Request a new one." />, 400)
 
+    const newAccount = !link.user_id
     let userId = link.user_id
     let chosen = true
     const session = token()
@@ -108,9 +109,8 @@ export function registerAuthRoutes(app: Hono) {
     catch {
       return page(<Auth error="That account is unavailable. Request a new magic link." />, 400)
     }
-    const destination = chosen
-      ? safeLocalPath(link.next_path)
-      : `/choose-handle?next=${encodeURIComponent(link.next_path)}`
+    const nextPath = newAccount && link.next_path === '/' ? '/explore?welcome=1' : safeLocalPath(link.next_path)
+    const destination = chosen ? nextPath : `/choose-handle?next=${encodeURIComponent(nextPath)}`
     return redirect(destination, sessionCookie(session))
   })
 

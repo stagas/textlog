@@ -45,7 +45,7 @@ export function Profile(
                 ? <a className="profile-edit-link" href={'/u/' + profile.handle}>back</a>
                 : (
                   <div className="profile-owner-actions">
-                    <a className="profile-edit-link" href="/account/edit">edit</a>
+                    <a className="profile-edit-link" href="/account/edit">account</a>
                     <form method="post" action="/logout">
                       <button className="profile-edit-link profile-logout">logout</button>
                     </form>

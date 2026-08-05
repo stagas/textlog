@@ -135,7 +135,7 @@ export function ProfileHeader({ user, profile, following, blocked = false, editi
             </h1>
             {user?.id === profile.id && (
               <div className="profile-owner-actions">
-                <a className="profile-edit-link" href="/account/edit">edit</a>
+                <a className="profile-edit-link" href="/account/edit">account</a>
                 <form method="post" action="/logout">
                   <button className="profile-edit-link profile-logout">logout</button>
                 </form>

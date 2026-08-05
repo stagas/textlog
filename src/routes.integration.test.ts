@@ -90,8 +90,11 @@ async function signup(handle: string, email: string, _password: string) {
   expect(magic.status).toBe(303)
   const cookie = sessionCookie(magic)
   if (magic.headers.get('location')?.startsWith('/choose-handle')) {
-    const chosen = await request('/choose-handle', { method: 'POST', cookie, form: { handle } })
+    const chooseLocation = magic.headers.get('location')!
+    const next = new URL(chooseLocation, origin).searchParams.get('next') || '/'
+    const chosen = await request('/choose-handle', { method: 'POST', cookie, form: { handle, next } })
     expect(chosen.status).toBe(303)
+    expect(chosen.headers.get('location')).toBe('/explore?welcome=1')
   }
   return cookie
 }
