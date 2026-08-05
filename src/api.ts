@@ -27,8 +27,8 @@ export type ApiPost = {
   author: { handle: string; url: string; api_url: string }
 }
 
-export function apiOrigin(requestUrl: string) {
-  return Bun.env.APP_URL?.replace(/\/$/, '') || new URL(requestUrl).origin
+export function apiOrigin(requestUrl: string, appUrl: string | null | undefined = Bun.env.APP_URL) {
+  return appUrl?.replace(/\/$/, '') || new URL(requestUrl).origin
 }
 
 export function isoTimestamp(value: string) {

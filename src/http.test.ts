@@ -1,13 +1,7 @@
-import { afterEach, describe, expect, test } from 'bun:test'
+import { describe, expect, test } from 'bun:test'
 import { applyHtmlCachePolicy, clearSessionCookie, feedPreference, feedPreferenceCookie, FORM_REQUEST_BODY_LIMIT,
   htmlCacheControl, isSameOriginRequest, limitedFormData, RequestBodyError, safeLocalPath, safeRefererPath, securityHeaders,
   sessionCookie, stringField } from './http'
-
-const previousAppUrl = Bun.env.APP_URL
-afterEach(() => {
-  if (previousAppUrl === undefined) delete Bun.env.APP_URL
-  else Bun.env.APP_URL = previousAppUrl
-})
 
 describe('local redirects', () => {
   test('accepts local paths and rejects ambiguous or external targets', () => {
@@ -19,25 +13,24 @@ describe('local redirects', () => {
 
   test('only accepts same-origin referers', () => {
     const request = 'https://root.mx/follow/tester'
-    expect(safeRefererPath('https://root.mx/explore?page=2', request)).toBe('/explore?page=2')
-    expect(safeRefererPath('https://evil.example/explore', request)).toBe('/')
-    expect(safeRefererPath('not a url', request)).toBe('/')
+    expect(safeRefererPath('https://root.mx/explore?page=2', request, '/', null)).toBe('/explore?page=2')
+    expect(safeRefererPath('https://evil.example/explore', request, '/', null)).toBe('/')
+    expect(safeRefererPath('not a url', request, '/', null)).toBe('/')
   })
 })
 
 describe('request values and cookies', () => {
   test('accepts same-origin POSTs and rejects missing or cross-origin request metadata', () => {
     const url = 'https://root.mx/post'
-    expect(isSameOriginRequest(new Request(url, { headers: { origin: 'https://root.mx' } }))).toBe(true)
-    expect(isSameOriginRequest(new Request(url, { headers: { referer: 'https://root.mx/write' } }))).toBe(true)
-    expect(isSameOriginRequest(new Request(url, { headers: { origin: 'https://evil.example' } }))).toBe(false)
-    expect(isSameOriginRequest(new Request(url))).toBe(false)
+    expect(isSameOriginRequest(new Request(url, { headers: { origin: 'https://root.mx' } }), null)).toBe(true)
+    expect(isSameOriginRequest(new Request(url, { headers: { referer: 'https://root.mx/write' } }), null)).toBe(true)
+    expect(isSameOriginRequest(new Request(url, { headers: { origin: 'https://evil.example' } }), null)).toBe(false)
+    expect(isSameOriginRequest(new Request(url), null)).toBe(false)
   })
 
   test('uses the configured public origin behind a proxy', () => {
-    Bun.env.APP_URL = 'https://root.mx'
     const request = new Request('http://internal:3000/post', { headers: { origin: 'https://root.mx' } })
-    expect(isSameOriginRequest(request)).toBe(true)
+    expect(isSameOriginRequest(request, 'https://root.mx')).toBe(true)
   })
 
   test('ignores uploaded files when a text field is expected', () => {
@@ -90,13 +83,11 @@ describe('request values and cookies', () => {
   })
 
   test('hardens session cookies and enables Secure for HTTPS deployments', () => {
-    Bun.env.APP_URL = 'http://localhost:3000'
-    expect(sessionCookie('token')).toContain('HttpOnly; Path=/; SameSite=Lax')
-    expect(sessionCookie('token')).not.toContain('Secure')
+    expect(sessionCookie('token', undefined, 'http://localhost:3000')).toContain('HttpOnly; Path=/; SameSite=Lax')
+    expect(sessionCookie('token', undefined, 'http://localhost:3000')).not.toContain('Secure')
 
-    Bun.env.APP_URL = 'https://root.mx'
-    expect(sessionCookie('token')).toContain('; Secure')
-    expect(clearSessionCookie()).toContain('Max-Age=0')
+    expect(sessionCookie('token', undefined, 'https://root.mx')).toContain('; Secure')
+    expect(clearSessionCookie('https://root.mx')).toContain('Max-Age=0')
   })
 
   test('stores and reads a valid feed preference', () => {
@@ -115,10 +106,8 @@ describe('security headers', () => {
   })
 
   test('only emits HSTS for a configured HTTPS origin', () => {
-    Bun.env.APP_URL = 'http://localhost:3000'
-    expect(securityHeaders()['Strict-Transport-Security']).toBeUndefined()
-    Bun.env.APP_URL = 'https://root.mx'
-    expect(securityHeaders()['Strict-Transport-Security']).toContain('max-age=31536000')
+    expect(securityHeaders(false, 'http://localhost:3000')['Strict-Transport-Security']).toBeUndefined()
+    expect(securityHeaders(false, 'https://root.mx')['Strict-Transport-Security']).toContain('max-age=31536000')
   })
 })
 

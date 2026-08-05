@@ -54,10 +54,11 @@ export function safeLocalPath(value: string | undefined, requestUrl?: string, fa
   }
 }
 
-export function safeRefererPath(referer: string | undefined, requestUrl: string, fallback = '/') {
+export function safeRefererPath(referer: string | undefined, requestUrl: string, fallback = '/',
+  appUrl: string | null | undefined = Bun.env.APP_URL) {
   if (!referer) return fallback
   try {
-    const request = new URL(Bun.env.APP_URL || requestUrl)
+    const request = new URL(appUrl || requestUrl)
     const target = new URL(referer)
     return target.origin === request.origin ? target.pathname + target.search : fallback
   }
@@ -66,9 +67,9 @@ export function safeRefererPath(referer: string | undefined, requestUrl: string,
   }
 }
 
-export function isSameOriginRequest(request: Request) {
+export function isSameOriginRequest(request: Request, appUrl: string | null | undefined = Bun.env.APP_URL) {
   try {
-    const expectedOrigin = new URL(Bun.env.APP_URL || request.url).origin
+    const expectedOrigin = new URL(appUrl || request.url).origin
     const origin = request.headers.get('origin')
     if (origin) return new URL(origin).origin === expectedOrigin
 
@@ -80,7 +81,7 @@ export function isSameOriginRequest(request: Request) {
   }
 }
 
-export function securityHeaders(devReload = false) {
+export function securityHeaders(devReload = false, appUrl: string | undefined = Bun.env.APP_URL) {
   const headers: Record<string, string> = {
     'Content-Security-Policy': [
       'default-src \'self\'',
@@ -99,7 +100,7 @@ export function securityHeaders(devReload = false) {
     'X-Frame-Options': 'DENY',
   }
   try {
-    if (Bun.env.APP_URL && new URL(Bun.env.APP_URL).protocol === 'https:') {
+    if (appUrl && new URL(appUrl).protocol === 'https:') {
       headers['Strict-Transport-Security'] = 'max-age=31536000; includeSubDomains'
     }
   }
@@ -109,22 +110,22 @@ export function securityHeaders(devReload = false) {
   return headers
 }
 
-function secureCookie() {
-  if (!Bun.env.APP_URL) return ''
+function secureCookie(appUrl: string | undefined = Bun.env.APP_URL) {
+  if (!appUrl) return ''
   try {
-    return new URL(Bun.env.APP_URL).protocol === 'https:' ? '; Secure' : ''
+    return new URL(appUrl).protocol === 'https:' ? '; Secure' : ''
   }
   catch {
     return ''
   }
 }
 
-export function sessionCookie(value: string, maxAge = 30 * 24 * 60 * 60) {
-  return `root=${value}; Max-Age=${maxAge}; HttpOnly; Path=/; SameSite=Lax${secureCookie()}`
+export function sessionCookie(value: string, maxAge = 30 * 24 * 60 * 60, appUrl: string | undefined = Bun.env.APP_URL) {
+  return `root=${value}; Max-Age=${maxAge}; HttpOnly; Path=/; SameSite=Lax${secureCookie(appUrl)}`
 }
 
-export function clearSessionCookie() {
-  return sessionCookie('', 0)
+export function clearSessionCookie(appUrl: string | undefined = Bun.env.APP_URL) {
+  return sessionCookie('', 0, appUrl)
 }
 
 const publicHtmlPaths = new Set(['/', '/hot', '/latest', '/explore', '/about', '/contact', '/dmca', '/legal', '/api'])

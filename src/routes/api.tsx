@@ -32,13 +32,13 @@ function apiError(code: string, message: string, status: number, retryAfter?: nu
 }
 
 function collection(c: Context, database: Database,
-  filters: { handle?: string; parentId?: number; tag?: string } = {})
+  filters: { handle?: string; parentId?: number; tag?: string } = {}, appUrl?: string | null)
 {
   const parsed = parseCollectionParams(c.req.query('limit'), c.req.query('cursor'))
   if (!parsed) {
     return apiError('invalid_pagination', 'limit must be 1–100 and cursor must be a valid opaque cursor', 400)
   }
-  return jsonResponse(apiPosts(database, apiOrigin(c.req.url), { ...parsed, ...filters }))
+  return jsonResponse(apiPosts(database, apiOrigin(c.req.url, appUrl), { ...parsed, ...filters }))
 }
 
 function openApiDocument() {
@@ -132,7 +132,8 @@ function openApiDocument() {
   }
 }
 
-export function registerApiRoutes(app: Hono, database: Database = db) {
+export function registerApiRoutes(app: Hono, database: Database = db,
+  appUrl: string | null | undefined = Bun.env.APP_URL) {
   app.get('/api', c => page(<ApiDocs user={currentUser(c.req.raw)} />))
 
   app.use('/api/*', async (c, next) => {
@@ -169,11 +170,11 @@ export function registerApiRoutes(app: Hono, database: Database = db) {
     return next()
   })
 
-  registerSyndicationRoutes(app, database)
+  registerSyndicationRoutes(app, database, appUrl)
 
   app.get('/api/openapi.json', () => jsonResponse(openApiDocument(), 200, 'public, max-age=3600'))
 
-  app.get('/api/v1/feeds/latest', c => collection(c, database))
+  app.get('/api/v1/feeds/latest', c => collection(c, database, {}, appUrl))
 
   app.get('/api/v1/feeds/hot', c => {
     const parsed = parseCollectionParams(c.req.query('limit'))
@@ -185,21 +186,21 @@ export function registerApiRoutes(app: Hono, database: Database = db) {
     if (cursorValue && !cursor) {
       return apiError('invalid_pagination', 'limit must be 1–100 and cursor must be a valid opaque cursor', 400)
     }
-    return jsonResponse(apiHotPosts(database, apiOrigin(c.req.url), parsed.limit, cursor))
+    return jsonResponse(apiHotPosts(database, apiOrigin(c.req.url, appUrl), parsed.limit, cursor))
   })
 
   app.get('/api/v1/posts/:id', c => {
     const id = Number(c.req.param('id'))
     if (!Number.isInteger(id) || id < 1) return apiError('invalid_post_id', 'Post ID must be a positive integer', 400)
-    const post = apiPost(database, id, apiOrigin(c.req.url))
+    const post = apiPost(database, id, apiOrigin(c.req.url, appUrl))
     return post ? jsonResponse({ data: post }) : apiError('not_found', 'Post not found', 404)
   })
 
   app.get('/api/v1/posts/:id/replies', c => {
     const id = Number(c.req.param('id'))
     if (!Number.isInteger(id) || id < 1) return apiError('invalid_post_id', 'Post ID must be a positive integer', 400)
-    if (!apiPost(database, id, apiOrigin(c.req.url))) return apiError('not_found', 'Post not found', 404)
-    return collection(c, database, { parentId: id })
+    if (!apiPost(database, id, apiOrigin(c.req.url, appUrl))) return apiError('not_found', 'Post not found', 404)
+    return collection(c, database, { parentId: id }, appUrl)
   })
 
   app.get('/api/v1/users/:handle', c => {
@@ -225,7 +226,7 @@ export function registerApiRoutes(app: Hono, database: Database = db) {
       following_count: number
     } | null
     if (!found) return apiError('not_found', 'User not found', 404)
-    const origin = apiOrigin(c.req.url)
+    const origin = apiOrigin(c.req.url, appUrl)
     const normalized = found.handle.toLowerCase()
     return jsonResponse({
       data: { handle: normalized, bio: found.bio, created_at: isoTimestamp(found.created_at),
@@ -243,13 +244,13 @@ export function registerApiRoutes(app: Hono, database: Database = db) {
     if (resolved.alias) {
       return c.redirect(`/api/v1/users/${encodeURIComponent(resolved.handle)}/posts${new URL(c.req.url).search}`, 308)
     }
-    return collection(c, database, { handle: resolved.handle })
+    return collection(c, database, { handle: resolved.handle }, appUrl)
   })
 
   app.get('/api/v1/tags/:tag/posts', c => {
     const tag = c.req.param('tag').toLowerCase()
     if (!/^[a-z0-9_]+$/.test(tag)) return apiError('invalid_tag', 'Tag is invalid', 400)
-    return collection(c, database, { tag })
+    return collection(c, database, { tag }, appUrl)
   })
 
   app.get('/api/v1/firehose', c => {
@@ -267,7 +268,7 @@ export function registerApiRoutes(app: Hono, database: Database = db) {
         }
         const unsubscribe = subscribeToPosts(postId => {
           try {
-            const post = apiPost(database, postId, apiOrigin(c.req.url))
+            const post = apiPost(database, postId, apiOrigin(c.req.url, appUrl))
             if (post) send(`id: ${post.id}\nevent: post\ndata: ${JSON.stringify(post)}\n\n`)
           }
           catch {

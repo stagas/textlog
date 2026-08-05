@@ -12,7 +12,6 @@ import {
 import { currentPage, page, paginationRedirect, redirect, rememberFeed } from './shared'
 
 import type { Hono } from 'hono'
-import { db } from '../db'
 import { decodeHotCursor } from '../hot'
 import { decodePostCursor } from '../pagination'
 import {
@@ -36,31 +35,19 @@ export function registerFeedsRoutes(app: Hono) {
       if (cursorValue && !cursor) return c.text('Invalid cursor', 400)
       return page(<HotFeed user={user} cursor={cursor} path="/" />)
     }
-    const feedPage = currentPage(c.req.query('page'))
-    const total = (db.query(`SELECT count(*) count FROM posts p WHERE p.deleted_at IS NULL AND
-      (p.user_id=? OR p.user_id IN (SELECT following_id FROM follows WHERE follower_id=?) OR
-        p.id IN (SELECT ph.post_id FROM post_hashtags ph JOIN hashtag_follows hf ON hf.tag=ph.tag WHERE hf.user_id=?))
-      AND NOT EXISTS (SELECT 1 FROM blocks b WHERE (b.blocker_id=? AND b.blocked_id=p.user_id)
-        OR (b.blocker_id=p.user_id AND b.blocked_id=?))`)
-      .get(user.id, user.id, user.id, user.id, user.id) as { count: number }).count
-    const outOfRange = paginationRedirect(feedPage, total, '/')
-    if (outOfRange) return outOfRange
-    return page(<Feed user={user} page={feedPage} />)
+    const cursorValue = c.req.query('cursor')
+    const cursor = decodePostCursor(cursorValue)
+    if (cursorValue && !cursor) return c.text('Invalid cursor', 400)
+    return page(<Feed user={user} cursor={cursor} path="/" />)
   })
 
   app.get('/for-you', c => {
     const user = currentUser(c.req.raw)
     if (!user) return redirect('/login?next=' + encodeURIComponent('/for-you'))
-    const feedPage = currentPage(c.req.query('page'))
-    const total = (db.query(`SELECT count(*) count FROM posts p WHERE p.deleted_at IS NULL AND
-      (p.user_id=? OR p.user_id IN (SELECT following_id FROM follows WHERE follower_id=?) OR
-        p.id IN (SELECT ph.post_id FROM post_hashtags ph JOIN hashtag_follows hf ON hf.tag=ph.tag WHERE hf.user_id=?))
-      AND NOT EXISTS (SELECT 1 FROM blocks b WHERE (b.blocker_id=? AND b.blocked_id=p.user_id)
-        OR (b.blocker_id=p.user_id AND b.blocked_id=?))`)
-      .get(user.id, user.id, user.id, user.id, user.id) as { count: number }).count
-    const outOfRange = paginationRedirect(feedPage, total, '/for-you')
-    if (outOfRange) return rememberFeed(outOfRange, 'following')
-    return rememberFeed(page(<Feed user={user} page={feedPage} title="for you" />), 'following')
+    const cursorValue = c.req.query('cursor')
+    const cursor = decodePostCursor(cursorValue)
+    if (cursorValue && !cursor) return c.text('Invalid cursor', 400)
+    return rememberFeed(page(<Feed user={user} cursor={cursor} title="for you" />), 'following')
   })
 
   app.get('/latest', c => {

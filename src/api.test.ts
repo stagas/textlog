@@ -41,7 +41,7 @@ function fixture() {
   `)
   rebuildHotPosts(database)
   const app = new Hono()
-  registerApiRoutes(app, database)
+  registerApiRoutes(app, database, null)
   return { app, database }
 }
 

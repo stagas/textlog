@@ -1,12 +1,6 @@
 import { Database } from 'bun:sqlite'
-import { afterEach, describe, expect, test } from 'bun:test'
+import { describe, expect, test } from 'bun:test'
 import { robots, sitemapIndex, sitemapSection } from './seo'
-
-const previousAppUrl = Bun.env.APP_URL
-afterEach(() => {
-  if (previousAppUrl === undefined) delete Bun.env.APP_URL
-  else Bun.env.APP_URL = previousAppUrl
-})
 
 function fixture() {
   const database = new Database(':memory:')
@@ -33,7 +27,7 @@ describe('crawler metadata', () => {
   })
 
   test('indexes static and populated segmented sitemaps', async () => {
-    const response = sitemapIndex(fixture(), 'https://root.mx/sitemap.xml')
+    const response = sitemapIndex(fixture(), 'https://root.mx/sitemap.xml', null)
     const body = await response.text()
     expect(response.headers.get('content-type')).toBe('application/xml; charset=utf-8')
     expect(body).toContain('<sitemapindex xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">')
@@ -45,9 +39,9 @@ describe('crawler metadata', () => {
 
   test('only exposes active public profiles, posts, and tags', async () => {
     const database = fixture()
-    const users = await sitemapSection(database, 'https://root.mx/sitemaps/users-1.xml', 'users-1.xml')!.text()
-    const posts = await sitemapSection(database, 'https://root.mx/sitemaps/posts-1.xml', 'posts-1.xml')!.text()
-    const tags = await sitemapSection(database, 'https://root.mx/sitemaps/tags-1.xml', 'tags-1.xml')!.text()
+    const users = await sitemapSection(database, 'https://root.mx/sitemaps/users-1.xml', 'users-1.xml', null)!.text()
+    const posts = await sitemapSection(database, 'https://root.mx/sitemaps/posts-1.xml', 'posts-1.xml', null)!.text()
+    const tags = await sitemapSection(database, 'https://root.mx/sitemaps/tags-1.xml', 'tags-1.xml', null)!.text()
     expect(users).toContain('<loc>https://root.mx/u/alice</loc>')
     expect(users).not.toContain('gone')
     expect(posts).toContain('<loc>https://root.mx/post/10</loc>')
@@ -56,6 +50,6 @@ describe('crawler metadata', () => {
     expect(tags).toContain('<loc>https://root.mx/tag/root</loc>')
     expect(tags).not.toContain('deleted')
     expect(tags).not.toContain('gone')
-    expect(sitemapSection(database, 'https://root.mx/sitemaps/users-2.xml', 'users-2.xml')).toBeNull()
+    expect(sitemapSection(database, 'https://root.mx/sitemaps/users-2.xml', 'users-2.xml', null)).toBeNull()
   })
 })

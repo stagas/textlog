@@ -26,7 +26,7 @@ function fixture() {
   `)
   rebuildHotPosts(database)
   const app = new Hono()
-  registerSyndicationRoutes(app, database)
+  registerSyndicationRoutes(app, database, null)
   app.get('/u/:handle', c => c.text(`profile ${c.req.param('handle')}`))
   app.get('/tag/:tag', c => c.text(`tag ${c.req.param('tag')}`))
   return app

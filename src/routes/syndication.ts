@@ -9,14 +9,15 @@ function publicPosts(database: Database, origin: string, filters: { handle?: str
   return apiPosts(database, origin, { limit: API_DEFAULT_LIMIT, before: null, ...filters }).data
 }
 
-function feedResponse(c: Context, database: Database, format: SyndicationFormat, details: {
+function feedResponse(c: Context, database: Database, format: SyndicationFormat, appUrl: string | null | undefined,
+  details: {
   title: string
   description: string
   pagePath: string
   feedPath?: string
   posts: ReturnType<typeof publicPosts>
 }) {
-  const origin = apiOrigin(c.req.url)
+  const origin = apiOrigin(c.req.url, appUrl)
   return syndicationResponse(format, {
     ...details,
     pageUrl: `${origin}${details.pagePath}`,
@@ -29,10 +30,11 @@ function suffixed(value: string): { name: string; format: SyndicationFormat } | 
   return match ? { name: match[1], format: match[2] as SyndicationFormat } : null
 }
 
-export function registerSyndicationRoutes(app: Hono, database: Database = db) {
+export function registerSyndicationRoutes(app: Hono, database: Database = db,
+  appUrl: string | null | undefined = Bun.env.APP_URL) {
   const latest = (c: Context, format: SyndicationFormat, feedPath?: string) => {
-    const origin = apiOrigin(c.req.url)
-    return feedResponse(c, database, format, {
+    const origin = apiOrigin(c.req.url, appUrl)
+    return feedResponse(c, database, format, appUrl, {
       title: 'Latest notes on root.mx',
       description: 'The latest public notes posted on root.mx.',
       pagePath: '/latest',
@@ -41,8 +43,8 @@ export function registerSyndicationRoutes(app: Hono, database: Database = db) {
     })
   }
   const hot = (c: Context, format: SyndicationFormat, feedPath?: string) => {
-    const origin = apiOrigin(c.req.url)
-    return feedResponse(c, database, format, {
+    const origin = apiOrigin(c.req.url, appUrl)
+    return feedResponse(c, database, format, appUrl, {
       title: 'Hot notes on root.mx',
       description: 'Public notes currently ranked hot on root.mx.',
       pagePath: '/hot',
@@ -60,9 +62,9 @@ export function registerSyndicationRoutes(app: Hono, database: Database = db) {
         : `/u/${encodeURIComponent(resolved.handle)}.${format}`
       return c.redirect(path, 301)
     }
-    const origin = apiOrigin(c.req.url)
+    const origin = apiOrigin(c.req.url, appUrl)
     const pagePath = `/u/${encodeURIComponent(resolved.handle)}`
-    return feedResponse(c, database, format, {
+    return feedResponse(c, database, format, appUrl, {
       title: `Notes by @${resolved.handle} on root.mx`,
       description: `The latest public notes posted by @${resolved.handle}.`,
       pagePath,
@@ -73,9 +75,9 @@ export function registerSyndicationRoutes(app: Hono, database: Database = db) {
   const tag = (c: Context, requestedTag: string, format: SyndicationFormat, feedPath?: string) => {
     const normalizedTag = requestedTag.toLowerCase()
     if (!/^[a-z0-9_]+$/.test(normalizedTag)) return c.text('Not found', 404)
-    const origin = apiOrigin(c.req.url)
+    const origin = apiOrigin(c.req.url, appUrl)
     const pagePath = `/tag/${encodeURIComponent(normalizedTag)}`
-    return feedResponse(c, database, format, {
+    return feedResponse(c, database, format, appUrl, {
       title: `#${normalizedTag} notes on root.mx`,
       description: `The latest public notes tagged #${normalizedTag}.`,
       pagePath,

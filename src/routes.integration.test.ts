@@ -287,12 +287,23 @@ test('consequential account, content, reporting, and admin flows work over HTTP'
   expect(latestSecondBody).toContain(post.body)
   expect(latestSecondBody).toContain('← back')
 
+  const forYouFirstBody = await (await request('/for-you', { cookie: aliceCookie })).text()
+  const forYouNext = forYouFirstBody.match(/href="(\/for-you\?cursor=[^"]+)"/)?.[1]
+  expect(forYouNext).toBeTruthy()
+  expect(forYouFirstBody).toContain('cursor note 21')
+  expect(forYouFirstBody).not.toContain(post.body)
+  const forYouSecondBody = await (await request(forYouNext!, { cookie: aliceCookie })).text()
+  expect(forYouSecondBody).toContain(post.body)
+  expect(forYouSecondBody).toContain('← back')
+
   const profileFirstBody = await (await request('/u/alice')).text()
   const profileNext = profileFirstBody.match(/href="(\/u\/alice\?cursor=[^"]+)"/)?.[1]
   expect(profileNext).toBeTruthy()
   expect(profileFirstBody).not.toContain(post.body)
   expect(await (await request(profileNext!)).text()).toContain(post.body)
   expect((await request('/latest?cursor=broken')).status).toBe(400)
+  expect((await request('/for-you?cursor=broken', { cookie: aliceCookie })).status).toBe(400)
+  expect((await request('/?cursor=broken', { cookie: aliceCookie })).status).toBe(400)
   expect((await request('/u/alice?cursor=broken')).status).toBe(400)
 
   const illegalActivity = await request('/report-illegal-activity', {

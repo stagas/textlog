@@ -13,8 +13,8 @@ function xml(value: string) {
     .replace(/'/g, '&apos;')
 }
 
-export function publicOrigin(requestUrl: string) {
-  return Bun.env.APP_URL ? new URL(Bun.env.APP_URL).origin : new URL(requestUrl).origin
+export function publicOrigin(requestUrl: string, appUrl: string | null | undefined = Bun.env.APP_URL) {
+  return appUrl ? new URL(appUrl).origin : new URL(requestUrl).origin
 }
 
 function xmlResponse(body: string) {
@@ -36,8 +36,8 @@ function count(database: Database, sql: string) {
   return (database.query(sql).get() as { count: number }).count
 }
 
-export function sitemapIndex(database: Database, requestUrl: string) {
-  const origin = publicOrigin(requestUrl)
+export function sitemapIndex(database: Database, requestUrl: string, appUrl?: string | null) {
+  const origin = publicOrigin(requestUrl, appUrl)
   const sections = [
     ['users', count(database, 'SELECT count(*) count FROM users WHERE deleted_at IS NULL')],
     ['posts', count(database, `SELECT count(*) count FROM posts p JOIN users u ON u.id=p.user_id
@@ -60,8 +60,8 @@ ${sitemaps}
 `)
 }
 
-export function sitemapSection(database: Database, requestUrl: string, file: string) {
-  const origin = publicOrigin(requestUrl)
+export function sitemapSection(database: Database, requestUrl: string, file: string, appUrl?: string | null) {
+  const origin = publicOrigin(requestUrl, appUrl)
   if (file === 'static.xml') return urlSet(origin, staticPaths)
   const match = file.match(/^(users|posts|tags)-([1-9]\d*)\.xml$/)
   if (!match) return null
