@@ -10,8 +10,8 @@ export function PublicThread(
   return (
     <Layout title={postTitle(post.body)} social={social}>
       <div className="thread-root">
-        <Post p={post} user={null} replyHref={'/login?next=' + encodeURIComponent('/post/' + post.id + '?reply=1')}
-          replyLabel="log in to reply" />
+        <Post p={post} user={null} replyHref={'/enter?next=' + encodeURIComponent('/post/' + post.id + '?reply=1')}
+          replyLabel="enter to reply" />
       </div>
       <ThreadReplies parentId={post.id} user={null} />
     </Layout>

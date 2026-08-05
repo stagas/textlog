@@ -1,55 +1,70 @@
+import React from 'react'
 import { Layout } from './layout'
-import { FormMessage } from './page-shared'
 
-export function Auth(
-  { mode, error, success, handle = '', email = '', next }: { mode: 'login' | 'signup'; error?: string; success?: string;
-    handle?: string; email?: string; next?: string },
-) {
-  const nextQuery = next ? `?next=${encodeURIComponent(next)}` : ''
+export function Auth({ error, email = '', next }: { error?: string; email?: string; next?: string }) {
   return (
-    <Layout title={mode === 'login' ? 'log in' : 'sign up'}>
-      <div className="panel auth">
-        <form method="post" action={'/' + mode}>
-          {next && <input type="hidden" name="next" value={next} />}
-          <FormMessage error={error} success={success} />
-          {mode === 'signup' && (
-            <label>
-              email<input type="email" name="email" required maxLength={254} autoComplete="email" autoFocus
-                defaultValue={email} placeholder="you@example.com" />
+    <Layout title="enter">
+      <section className="auth-shell enter-shell">
+        <div className="panel auth-panel enter-panel">
+          {error && <p className="error" role="alert">{error}</p>}
+          <form method="post" action="/enter" autoComplete="on">
+            {next && <input type="hidden" name="next" value={next} />}
+            <label htmlFor="enter-email">
+              <span>email address</span>
             </label>
-          )}
-          <label>
-            {mode === 'login' ? 'email or handle' : 'handle'}
-            <input name="handle" required pattern={mode === 'signup' ? '[A-Za-z0-9_]{2,24}' : undefined}
-              maxLength={mode === 'login' ? 254 : undefined} autoComplete="username" autoFocus={mode === 'login'}
-              defaultValue={handle} placeholder={mode === 'login' ? 'you@example.com or your_handle' : 'your_handle'} />
-          </label>
-          <label>
-            password<input type="password" name="password" required minLength={8} placeholder="8+ characters" />
-          </label>
-          <button className="button wide">{mode === 'signup' ? 'create account →' : 'log in →'}</button>
-          {mode === 'signup' && (
-            <p className="signup-terms">
-              By signing up, you agree to our <a href="/legal">Terms of Service</a> and{' '}
-              <a href="/legal#privacy">Privacy Notice</a>.
+            <input id="enter-email" type="email" name="email" required maxLength={254} autoComplete="email" autoFocus
+              autoCapitalize="none" spellCheck={false} defaultValue={email} placeholder="you@example.com" />
+            <button className="button">
+              send magic link <span aria-hidden="true">→</span>
+            </button>
+          </form>
+          <p className="auth-legal">
+            The link expires in one hour. By entering, you agree to the <a href="/legal#terms">Terms of Service</a> and
+            {' '}
+            <a href="/legal#privacy">Privacy Notice</a>.
+          </p>
+        </div>
+      </section>
+    </Layout>
+  )
+}
+
+export function MagicLinkSent({ email, magicUrl }: { email: string; magicUrl?: string }) {
+  return (
+    <Layout title="check your email">
+      <section className="auth-shell">
+        <div className="panel auth-panel magic-sent-panel">
+          <h1>Check your email</h1>
+          <p>
+            We’ve sent an entry link to <strong>{email}</strong>.
+          </p>
+          {magicUrl && (
+            <p>
+              <a className="button" href={magicUrl}>open development magic link</a>
             </p>
           )}
-        </form>
-        <p className="switch">
-          {mode === 'signup'
-            ? (
-              <>
-                Already here? <a href={`/login${nextQuery}`}>Log in</a>
-              </>
-            )
-            : (
-              <>
-                New here? <a href={`/signup${nextQuery}`}>Create an account</a> ·{' '}
-                <a href="/forgot-password">Forgot password?</a>
-              </>
-            )}
-        </p>
-      </div>
+        </div>
+      </section>
+    </Layout>
+  )
+}
+
+export function ChooseHandle({ error, handle = '', next }: { error?: string; handle?: string; next?: string }) {
+  return (
+    <Layout title="choose your handle" logoutNavigation>
+      <section className="auth-shell">
+        <div className="panel auth-panel choose-handle-panel">
+          <h1>Choose your handle</h1>
+          <p>Pick the handle that people will see.</p>
+          {error && <p className="error" role="alert">{error}</p>}
+          <form method="post" action="/choose-handle">
+            {next && <input type="hidden" name="next" value={next} />}
+            <input name="handle" aria-label="handle" required pattern="[A-Za-z0-9_]{2,24}" autoFocus
+              defaultValue={handle} placeholder="your_handle" />
+            <button className="button">continue</button>
+          </form>
+        </div>
+      </section>
     </Layout>
   )
 }

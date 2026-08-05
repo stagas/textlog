@@ -6,7 +6,7 @@ export function Legal({ user }: { user: User | null }) {
     <Layout user={user} title="legal">
       <article className="static-page legal-page">
         <p className="eyebrow">legal</p>
-        <h1>Terms, privacy &amp; liability</h1>
+        <h1 id="terms">Terms, privacy &amp; liability</h1>
         <p className="legal-updated">Last updated: August 5, 2026</p>
 
         <h2>Your content and conduct</h2>
@@ -58,7 +58,7 @@ export function Legal({ user }: { user: User | null }) {
         <h3>Data, purposes and legal bases</h3>
         <ul>
           <li>
-            Account email, handle, password hash, profile, sessions and preferences: to create and perform your account
+            Account email, handle, profile, sessions and preferences: to create and perform your account
             contract, authenticate you and provide requested features.
           </li>
           <li>
@@ -91,7 +91,7 @@ export function Legal({ user }: { user: User | null }) {
 
         <h3>Retention</h3>
         <p>
-          Session records expire after 30 days; verification and password-reset tokens after one hour; daily visitor
+          Session records expire after 30 days; magic and email-change links after one hour; daily visitor
           pseudonyms after seven days; and application HTTP logs after at most 14 days. Public account and content data
           is held until you delete it or your account. Deletion anonymizes the account and content, while limited
           moderation, resolved report and audit records are retained for three years where needed to document decisions,
@@ -120,8 +120,8 @@ export function Legal({ user }: { user: User | null }) {
 
         <h3>Required and optional data</h3>
         <p>
-          Email, handle and password are required to create an account; without them we cannot provide one. Profile text
-          and public activity are optional. Data normally comes from you; public interactions and reports about your
+          Email is required to create an account, and a handle is required before participating; without them we cannot
+          provide those features. Profile text and public activity are optional. Data normally comes from you; public interactions and reports about your
           content come from other users. For privacy questions or content notices, use the{' '}
           <a href="/contact">
             contact details

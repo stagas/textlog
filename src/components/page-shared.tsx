@@ -171,7 +171,7 @@ export function ProfileHeader({ user, profile, following, blocked = false, editi
             )}
           </>
         )}
-        {!user && <a className="button" href="/login">log in to follow</a>}
+        {!user && <a className="button" href="/enter">log in to follow</a>}
       </div>
     </section>
   )
@@ -333,7 +333,7 @@ export function GlobalFeedEmpty({ user }: { user: User | null }) {
       <div>
         {user
           ? <a className="button" href="/write">write the first note →</a>
-          : <a className="button" href="/signup">join and write →</a>}
+          : <a className="button" href="/enter">join and write →</a>}
         <a href="/explore">explore</a>
       </div>
     </div>

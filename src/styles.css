@@ -840,6 +840,140 @@ nav form {
   padding: 0 var(--gutter);
 }
 
+.auth-shell {
+  display: grid;
+  min-height: min(620px, calc(100dvh - 190px));
+  padding: var(--space-6) var(--gutter) var(--space-8);
+  place-items: center;
+}
+
+.auth-panel {
+  width: min(100%, 440px);
+  margin: 0;
+  padding: clamp(26px, 6vw, 42px);
+  background: var(--panel);
+  border: 1px solid var(--soft);
+}
+
+.magic-sent-panel {
+  width: min(100%, 560px);
+}
+
+.choose-handle-panel {
+  width: min(100%, 560px);
+}
+
+.auth-panel.magic-sent-panel h1 {
+  font-size: clamp(20px, 4vw, 26px);
+  letter-spacing: -1px;
+}
+
+.auth-panel.choose-handle-panel h1 {
+  font-size: clamp(20px, 4vw, 26px);
+  letter-spacing: -1px;
+}
+
+.magic-sent-panel>p {
+  font-size: 12px;
+}
+
+.choose-handle-panel>p {
+  font-size: 12px;
+}
+
+.magic-sent-panel strong {
+  color: var(--accent-dark);
+  font-weight: 700;
+}
+
+.magic-sent-panel .button {
+  min-height: 0;
+  margin-top: 0;
+  padding: var(--space-3) var(--space-4);
+}
+
+.auth-panel h1 {
+  margin: 0;
+  font-size: clamp(28px, 7vw, 42px);
+  line-height: 1.08;
+  letter-spacing: -2px;
+}
+
+.auth-panel form {
+  display: grid;
+  gap: var(--space-3);
+}
+
+.auth-panel h1+form,
+.auth-panel .error+form {
+  margin-top: var(--space-6);
+}
+
+.auth-panel label {
+  display: grid;
+  gap: var(--space-2);
+}
+
+.auth-panel label>span {
+  color: var(--muted);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: .8px;
+  text-transform: uppercase;
+}
+
+.auth-panel input {
+  width: 100%;
+  min-height: 50px;
+  padding: 13px 14px;
+  color: var(--ink);
+  font-family: inherit;
+  font-size: 13px;
+  line-height: 1.5;
+  background: var(--bg);
+  border: 1px solid var(--soft);
+  border-radius: 0;
+  outline: none;
+}
+
+.auth-panel input::placeholder {
+  color: var(--muted);
+  opacity: .7;
+}
+
+.auth-panel input:focus-visible {
+  border-color: var(--accent);
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+}
+
+.auth-panel .button {
+  min-height: 48px;
+  justify-content: space-between;
+  margin-top: var(--space-1);
+  padding-inline: var(--space-4);
+}
+
+.auth-legal {
+  margin: var(--space-4) 0 0;
+  color: var(--muted);
+  font-size: 10px;
+  line-height: 1.6;
+}
+
+@media (max-width: 520px) {
+  .auth-shell {
+    min-height: auto;
+    padding-inline: 0;
+    place-items: start stretch;
+  }
+
+  .auth-panel {
+    width: 100%;
+    border-inline: 0;
+  }
+}
+
 .write-compose {
   margin-top: var(--space-5);
 }

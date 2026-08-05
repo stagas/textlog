@@ -99,10 +99,8 @@ Disallow: /activity
 Disallow: /admin
 Disallow: /api/
 Disallow: /compose
-Disallow: /forgot-password
-Disallow: /login
-Disallow: /reset-password
-Disallow: /signup
+Disallow: /enter
+Disallow: /choose-handle
 Disallow: /verify-email
 Disallow: /write
 

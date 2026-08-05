@@ -4,7 +4,6 @@ import { existsSync, mkdtempSync, readFileSync, rmSync } from 'node:fs'
 import { createServer } from 'node:net'
 import { tmpdir } from 'node:os'
 import { dirname, join, resolve } from 'node:path'
-import { AUTH_LIMITS, rateLimitKey } from './auth-rate-limit'
 
 setDefaultTimeout(30_000)
 
@@ -81,11 +80,19 @@ async function request(path: string, options: {
   })
 }
 
-async function signup(handle: string, email: string, password: string) {
-  const response = await request('/signup', { method: 'POST', form: { handle, email, password } })
-  expect(response.status).toBe(303)
-  expect(response.headers.get('location')).toBe('/verify-email')
-  return sessionCookie(response)
+async function signup(handle: string, email: string, _password: string) {
+  const response = await request('/enter', { method: 'POST', form: { email } })
+  expect(response.status).toBe(200)
+  const emailMessage = capturedEmails().filter(message => message.to === email && message.subject.includes('root.mx')).at(-1)
+  expect(emailMessage).toBeDefined()
+  const magic = await request(`/enter/magic?token=${encodeURIComponent(linkToken(emailMessage!))}`)
+  expect(magic.status).toBe(303)
+  const cookie = sessionCookie(magic)
+  if (magic.headers.get('location')?.startsWith('/choose-handle')) {
+    const chosen = await request('/choose-handle', { method: 'POST', cookie, form: { handle } })
+    expect(chosen.status).toBe(303)
+  }
+  return cookie
 }
 
 beforeAll(async () => {
@@ -121,20 +128,10 @@ afterAll(async () => {
 })
 
 test('consequential account, content, reporting, and admin flows work over HTTP', async () => {
-  const originalPassword = 'correct horse battery staple'
-  const newPassword = 'new correct horse battery staple'
-
-  let aliceCookie = await signup('alice', 'alice@example.com', originalPassword)
+  let aliceCookie = await signup('alice', 'alice@example.com', 'unused')
   const alice = database.query('SELECT id,email_verified_at FROM users WHERE handle=?')
     .get('alice') as { id: number; email_verified_at: string | null }
-  expect(alice.email_verified_at).toBeNull()
-
-  const verificationPrompt = await request('/verify-email', { cookie: aliceCookie })
-  expect(verificationPrompt.status).toBe(200)
-  expect(await verificationPrompt.text()).toContain('Verify your email')
-  const skippedVerification = await request('/explore?welcome=1', { cookie: aliceCookie })
-  expect(skippedVerification.status).toBe(303)
-  expect(skippedVerification.headers.get('location')).toBe('/verify-email')
+  expect(alice.email_verified_at).not.toBeNull()
   const authenticatedHome = await request('/', { cookie: aliceCookie })
   expect(authenticatedHome.status).toBe(200)
   const authenticatedHomeHtml = await authenticatedHome.text()
@@ -165,96 +162,11 @@ test('consequential account, content, reporting, and admin flows work over HTTP'
   expect(storedSession.token_hash).toHaveLength(64)
   expect(storedSession.token_hash).not.toBe(rawSession)
 
-  const verificationEmail = capturedEmails().find(email =>
-    email.to === 'alice@example.com'
-    && email.subject.includes('Verify email')
-  )
-  expect(verificationEmail).toBeDefined()
-  const verificationToken = linkToken(verificationEmail!)
-
-  const scannerVisit = await request(`/verify-email?token=${encodeURIComponent(verificationToken)}`)
-  expect(scannerVisit.status).toBe(200)
-  expect(await scannerVisit.text()).toContain('Verify your email?')
-  expect((database.query('SELECT email_verified_at FROM users WHERE id=?').get(alice.id) as any).email_verified_at)
-    .toBeNull()
-
-  const verification = await request('/verify-email', {
-    method: 'POST',
-    form: { token: verificationToken },
-  })
-  expect(verification.status).toBe(303)
-  expect(verification.headers.get('location')).toBe('/explore?welcome=1')
-  expect((database.query('SELECT email_verified_at FROM users WHERE id=?').get(alice.id) as any).email_verified_at)
-    .not.toBeNull()
-
   const logout = await request('/logout', { method: 'POST', cookie: aliceCookie })
   expect(logout.status).toBe(303)
   expect((database.query('SELECT count(*) count FROM sessions WHERE user_id=?').get(alice.id) as any).count).toBe(0)
 
-  const rejectedLogin = await request('/login', {
-    method: 'POST',
-    form: { handle: 'alice', password: 'incorrect password' },
-  })
-  expect(rejectedLogin.status).toBe(401)
-
-  const accountLimitKey = rateLimitKey(`user:${alice.id}`)
-  const attempts = (database.query(`SELECT count(*) count FROM auth_rate_limits
-    WHERE scope='login-account' AND key_hash=?`).get(accountLimitKey) as { count: number }).count
-  const addAttempt = database.query(`INSERT INTO auth_rate_limits(scope,key_hash,created_at)
-    VALUES('login-account',?,?)`)
-  for (let index = attempts; index < AUTH_LIMITS.loginAccount.attempts; index++) {
-    addAttempt.run(accountLimitKey, Date.now())
-  }
-  const accountLimitedLogin = await request('/login', {
-    method: 'POST',
-    form: { handle: 'alice@example.com', password: originalPassword },
-  })
-  expect(accountLimitedLogin.status).toBe(429)
-  expect(accountLimitedLogin.headers.get('retry-after')).toBeTruthy()
-  database.query('DELETE FROM auth_rate_limits WHERE scope=\'login-account\' AND key_hash=?').run(accountLimitKey)
-
-  const login = await request('/login', {
-    method: 'POST',
-    form: { handle: 'alice', password: originalPassword, next: '/write' },
-  })
-  expect(login.status).toBe(303)
-  expect(login.headers.get('location')).toBe('/write')
-  aliceCookie = sessionCookie(login)
-
-  const forgot = await request('/forgot-password', {
-    method: 'POST',
-    form: { email: 'alice@example.com' },
-  })
-  expect(forgot.status).toBe(200)
-  expect(await forgot.text()).toContain('Check your email')
-  const resetEmail = capturedEmails().find(email =>
-    email.to === 'alice@example.com'
-    && email.subject.includes('Reset your')
-  )
-  expect(resetEmail).toBeDefined()
-  const resetToken = linkToken(resetEmail!)
-
-  const resetPage = await request(`/reset-password?token=${encodeURIComponent(resetToken)}`)
-  expect(resetPage.status).toBe(200)
-  const reset = await request('/reset-password', {
-    method: 'POST',
-    form: { token: resetToken, password: newPassword, confirmPassword: newPassword },
-  })
-  expect(reset.status).toBe(303)
-  expect(reset.headers.get('location')).toBe('/login?reset=1')
-  expect((database.query('SELECT count(*) count FROM sessions WHERE user_id=?').get(alice.id) as any).count).toBe(0)
-
-  const oldPasswordLogin = await request('/login', {
-    method: 'POST',
-    form: { handle: 'alice', password: originalPassword },
-  })
-  expect(oldPasswordLogin.status).toBe(401)
-  const newPasswordLogin = await request('/login', {
-    method: 'POST',
-    form: { handle: 'alice', password: newPassword },
-  })
-  expect(newPasswordLogin.status).toBe(303)
-  aliceCookie = sessionCookie(newPasswordLogin)
+  aliceCookie = await signup('alice', 'alice@example.com', 'unused')
 
   const createPost = await request('/post', {
     method: 'POST',
@@ -360,24 +272,6 @@ test('consequential account, content, reporting, and admin flows work over HTTP'
 
   const bobCookie = await signup('bob', 'bob@example.com', 'bob password 123')
   const bob = database.query('SELECT id FROM users WHERE handle=?').get('bob') as { id: number }
-  const unverifiedWritePage = await request('/write', { cookie: bobCookie })
-  expect(unverifiedWritePage.status).toBe(303)
-  expect(unverifiedWritePage.headers.get('location')).toBe('/verify-email')
-  const unverifiedPost = await request('/post', {
-    method: 'POST',
-    cookie: bobCookie,
-    form: { body: 'This must not become public' },
-  })
-  expect(unverifiedPost.status).toBe(303)
-  expect(unverifiedPost.headers.get('location')).toBe('/verify-email')
-  expect((database.query('SELECT count(*) count FROM posts WHERE user_id=?').get(bob.id) as any).count).toBe(0)
-  const bobEmail = capturedEmails().find(email => email.to === 'bob@example.com' && email.subject.includes('Verify email'))
-  expect(bobEmail).toBeDefined()
-  const bobVerification = await request('/verify-email', {
-    method: 'POST',
-    form: { token: linkToken(bobEmail!) },
-  })
-  expect(bobVerification.headers.get('location')).toBe('/explore?welcome=1')
   const followAlice = await request('/follow/alice', { method: 'POST', cookie: bobCookie, form: {} })
   expect(followAlice.status).toBe(303)
   expect(database.query('SELECT 1 FROM follows WHERE follower_id=? AND following_id=?').get(bob.id, alice.id))
@@ -410,11 +304,6 @@ test('consequential account, content, reporting, and admin flows work over HTTP'
   expect(reportRow).toMatchObject({ status: 'open', reason: 'spam' })
 
   const adminCookie = await signup('admin', 'gstagas@gmail.com', 'admin password 123')
-  const adminEmail = capturedEmails().find(email =>
-    email.to === 'gstagas@gmail.com' && email.subject.includes('Verify email')
-  )
-  expect(adminEmail).toBeDefined()
-  await request('/verify-email', { method: 'POST', form: { token: linkToken(adminEmail!) } })
   const dashboard = await request('/admin', { cookie: adminCookie })
   expect(dashboard.status).toBe(200)
   expect(await dashboard.text()).toContain('A route-level integration post')

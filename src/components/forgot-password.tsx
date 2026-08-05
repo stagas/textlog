@@ -25,7 +25,7 @@ export function ForgotPassword({ sent = false, error }: { sent?: boolean; error?
                 <button className="button wide">send reset link →</button>
               </form>
               <p className="switch">
-                <a href="/login">Back to login</a>
+                <a href="/enter">Back to login</a>
               </p>
             </>
           )}

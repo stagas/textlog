@@ -14,7 +14,7 @@ import { currentUser } from '../utils'
 export function registerInteractionsRoutes(app: Hono) {
   app.post('/follow/:handle', async c => {
     const user = currentUser(c.req.raw)
-    if (!user) return redirect('/login')
+    if (!user) return redirect('/enter')
     const handle = c.req.param('handle').toLowerCase()
     if (!/^[a-z0-9_]{2,24}$/.test(handle)) return c.text('Invalid handle', 400)
     const f = await form(c.req.raw)
@@ -40,7 +40,7 @@ export function registerInteractionsRoutes(app: Hono) {
 
   app.post('/block/:handle', c => {
     const user = currentUser(c.req.raw)
-    if (!user) return redirect('/login')
+    if (!user) return redirect('/enter')
     const handle = c.req.param('handle').toLowerCase()
     const target = resolveHandle(db, handle)
     if (!target || target.id === user.id) return c.text('Not found', 404)
@@ -57,7 +57,7 @@ export function registerInteractionsRoutes(app: Hono) {
 
   app.post('/post/:id/report', async c => {
     const user = currentUser(c.req.raw)
-    if (!user) return redirect('/login')
+    if (!user) return redirect('/enter')
     const postId = Number(c.req.param('id'))
     const post = Number.isInteger(postId)
       ? db.query('SELECT user_id FROM posts WHERE id=? AND deleted_at IS NULL')
@@ -76,7 +76,7 @@ export function registerInteractionsRoutes(app: Hono) {
 
   app.post('/tag-follow/:tag', c => {
     const user = currentUser(c.req.raw)
-    if (!user) return redirect('/login')
+    if (!user) return redirect('/enter')
     const tag = c.req.param('tag').toLowerCase()
     if (!/^[a-z0-9_]{1,280}$/.test(tag)) return c.text('Invalid tag', 400)
     const exists = db.query('SELECT 1 FROM hashtag_follows WHERE user_id=? AND tag=?').get(user.id, tag)
@@ -88,7 +88,7 @@ export function registerInteractionsRoutes(app: Hono) {
 
   app.post('/tag-block/:tag', c => {
     const user = currentUser(c.req.raw)
-    if (!user) return redirect('/login')
+    if (!user) return redirect('/enter')
     const tag = c.req.param('tag').toLowerCase()
     if (!/^[a-z0-9_]{1,280}$/.test(tag)) return c.text('Invalid tag', 400)
     const exists = db.query('SELECT 1 FROM blocked_hashtags WHERE user_id=? AND tag=?').get(user.id, tag)

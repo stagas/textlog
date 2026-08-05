@@ -1,6 +1,6 @@
 import { anonymizeUser, isAdmin } from '../admin'
 import { AUTH_LIMITS, authRateLimitMessage } from '../auth-rate-limit'
-import { currentUser, hashPassword, sessionToken, verifyPassword } from '../utils'
+import { currentUser, sessionToken } from '../utils'
 import { authLimit, clientAddress, form, issueEmailToken, page, redirect, retryPage, securityPage } from './shared'
 
 import type { Hono } from 'hono'
@@ -22,13 +22,13 @@ import { sessionHash } from '../sessions'
 export function registerAccountRoutes(app: Hono) {
   app.get('/account/edit', c => {
     const user = currentUser(c.req.raw)
-    if (!user) return redirect('/login?next=' + encodeURIComponent('/account/edit'))
+    if (!user) return redirect('/enter?next=' + encodeURIComponent('/account/edit'))
     return page(<Profile user={user} profile={user} posts={[]} following={false} editing />)
   })
 
   app.post('/account/edit', async c => {
     const user = currentUser(c.req.raw)
-    if (!user) return redirect('/login')
+    if (!user) return redirect('/enter')
     const f = await form(c.req.raw)
     // Preserve whitespace because spaces and line breaks can be meaningful in ASCII art.
     // Treat an entirely blank submission as an empty bio, though.
@@ -76,7 +76,7 @@ export function registerAccountRoutes(app: Hono) {
 
   app.get('/account/export', c => {
     const user = currentUser(c.req.raw)
-    if (!user) return redirect('/login?next=' + encodeURIComponent('/account/export'))
+    if (!user) return redirect('/enter?next=' + encodeURIComponent('/account/export'))
     const data = exportUserData(db, user.id, sessionToken(c.req.raw))
     return new Response(JSON.stringify(data, null, 2), {
       headers: {
@@ -87,29 +87,9 @@ export function registerAccountRoutes(app: Hono) {
     })
   })
 
-  app.post('/account/email/verify', async c => {
-    const user = currentUser(c.req.raw)
-    if (!user) return redirect('/login')
-    if (user.email_verified_at) return redirect('/explore?welcome=1')
-    const limited = authLimit(c, 'verify-email', `${user.id}:${clientAddress(c)}`, AUTH_LIMITS.forgotAccount)
-    if (limited) {
-      return retryPage(page(<ConfirmEmail pending email={user.email}
-        error={authRateLimitMessage(limited.retryAfter)} />, 429), limited.retryAfter)
-    }
-    try {
-      await issueEmailToken(user.id, user.email, 'verify')
-      return redirect('/verify-email?sent=1')
-    }
-    catch (error) {
-      console.error('Could not send verification email', error)
-      return page(<ConfirmEmail pending email={user.email}
-        error="Verification email could not be sent. Please try again later." />, 503)
-    }
-  })
-
   app.post('/account/email/change', async c => {
     const user = currentUser(c.req.raw)
-    if (!user) return redirect('/login')
+    if (!user) return redirect('/enter')
     if (isAdmin(user)) {
       return securityPage(c.req.raw, 'Hardcoded admin accounts cannot change their protected email.', undefined, 403)
     }
@@ -122,10 +102,6 @@ export function registerAccountRoutes(app: Hono) {
     const email = (f.email || '').trim().toLowerCase()
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || email.length > 254) {
       return securityPage(c.req.raw, 'Enter a valid email address.', undefined, 400)
-    }
-    const account = db.query('SELECT password FROM users WHERE id=?').get(user.id) as { password: string }
-    if (!await verifyPassword(f.password || '', account.password)) {
-      return securityPage(c.req.raw, 'Your current password is incorrect.', undefined, 401)
     }
     if (db.query('SELECT 1 FROM users WHERE email=? AND id!=?').get(email, user.id)) {
       return securityPage(c.req.raw, 'That email address is unavailable.', undefined, 400)
@@ -142,12 +118,7 @@ export function registerAccountRoutes(app: Hono) {
 
   app.get('/verify-email', c => {
     const value = c.req.query('token') || ''
-    if (!value) {
-      const user = currentUser(c.req.raw)
-      if (!user) return redirect('/login')
-      if (user.email_verified_at) return redirect('/explore?welcome=1')
-      return page(<ConfirmEmail pending email={user.email} sent={c.req.query('sent') === '1'} />)
-    }
+    if (!value) return redirect('/account/security')
     const record = findEmailToken(db, value)
     return record
       ? page(<ConfirmEmail token={value} kind={record.kind} email={record.email} />)
@@ -161,44 +132,9 @@ export function registerAccountRoutes(app: Hono) {
     return redirect(result.kind === 'change' ? '/account/security?changed=email' : '/explore?welcome=1')
   })
 
-  app.post('/verify-email/dev', c => {
-    if (Bun.env.NODE_ENV !== 'development' && Bun.env.DEV_RELOAD !== 'true') return c.notFound()
-    const user = currentUser(c.req.raw)
-    if (!user) return redirect('/login')
-    db.query('UPDATE users SET email_verified_at=CURRENT_TIMESTAMP WHERE id=?').run(user.id)
-    db.query("DELETE FROM email_tokens WHERE user_id=? AND kind='verify'").run(user.id)
-    return redirect('/explore?welcome=1')
-  })
-
-  app.post('/account/password', async c => {
-    const user = currentUser(c.req.raw)
-    if (!user) return redirect('/login')
-    const limited = authLimit(c, 'account-password', `${user.id}:${clientAddress(c)}`, AUTH_LIMITS.sensitiveAccount)
-    if (limited) {
-      return retryPage(securityPage(c.req.raw, authRateLimitMessage(limited.retryAfter), undefined, 429),
-        limited.retryAfter)
-    }
-    const f = await form(c.req.raw)
-    const account = db.query('SELECT password FROM users WHERE id=?').get(user.id) as { password: string }
-    if (!await verifyPassword(f.currentPassword || '', account.password)) {
-      return securityPage(c.req.raw, 'Your current password is incorrect.', undefined, 401)
-    }
-    if ((f.password || '').length < 8 || f.password !== f.confirmPassword) {
-      return securityPage(c.req.raw, 'New passwords must match and contain at least 8 characters.', undefined, 400)
-    }
-    const current = sessionHash(sessionToken(c.req.raw))
-    const password = await hashPassword(f.password)
-    db.transaction(() => {
-      db.query('UPDATE users SET password=? WHERE id=?').run(password, user.id)
-      db.query('DELETE FROM sessions WHERE user_id=? AND token_hash!=?').run(user.id, current)
-      db.query('DELETE FROM password_resets WHERE user_id=?').run(user.id)
-    })()
-    return redirect('/account/security?changed=password')
-  })
-
   app.post('/account/sessions/revoke', async c => {
     const user = currentUser(c.req.raw)
-    if (!user) return redirect('/login')
+    if (!user) return redirect('/enter')
     const f = await form(c.req.raw)
     const current = sessionHash(sessionToken(c.req.raw))
     const sessions = db.query('SELECT token_hash FROM sessions WHERE user_id=?').all(user.id) as {
@@ -211,7 +147,7 @@ export function registerAccountRoutes(app: Hono) {
 
   app.post('/account/sessions/revoke-others', c => {
     const user = currentUser(c.req.raw)
-    if (!user) return redirect('/login')
+    if (!user) return redirect('/enter')
     db.query('DELETE FROM sessions WHERE user_id=? AND token_hash!=?')
       .run(user.id, sessionHash(sessionToken(c.req.raw)))
     return redirect('/account/security')
@@ -219,19 +155,13 @@ export function registerAccountRoutes(app: Hono) {
 
   app.get('/account/delete', c => {
     const user = currentUser(c.req.raw)
-    return user ? page(<ConfirmAccountDelete user={user} />) : redirect('/login')
+    return user ? page(<ConfirmAccountDelete user={user} />) : redirect('/enter')
   })
 
   app.post('/account/delete', async c => {
     const user = currentUser(c.req.raw)
-    if (!user) return redirect('/login')
+    if (!user) return redirect('/enter')
     if (isAdmin(user)) return c.text('Admin accounts cannot delete themselves', 403)
-    const f = await form(c.req.raw)
-    const account = db.query('SELECT password FROM users WHERE id=? AND deleted_at IS NULL')
-      .get(user.id) as { password: string } | null
-    if (!account || !await verifyPassword(f.password || '', account.password)) {
-      return page(<ConfirmAccountDelete user={user} error="Your password is incorrect." />, 401)
-    }
     db.transaction(() => anonymizeUser(db, user.id))()
     return redirect('/', clearSessionCookie())
   })

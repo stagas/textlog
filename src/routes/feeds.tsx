@@ -43,7 +43,7 @@ export function registerFeedsRoutes(app: Hono) {
 
   app.get('/for-you', c => {
     const user = currentUser(c.req.raw)
-    if (!user) return redirect('/login?next=' + encodeURIComponent('/for-you'))
+    if (!user) return redirect('/enter?next=' + encodeURIComponent('/for-you'))
     const cursorValue = c.req.query('cursor')
     const cursor = decodePostCursor(cursorValue)
     if (cursorValue && !cursor) return c.text('Invalid cursor', 400)
@@ -68,7 +68,7 @@ export function registerFeedsRoutes(app: Hono) {
 
   app.get('/activity', c => {
     const user = currentUser(c.req.raw)
-    if (!user) return redirect('/login?next=' + encodeURIComponent('/activity'))
+    if (!user) return redirect('/enter?next=' + encodeURIComponent('/activity'))
     const activityPage = currentPage(c.req.query('page'))
     const outOfRange = paginationRedirect(activityPage, activityTotal(user.id), '/activity')
     if (outOfRange) return outOfRange

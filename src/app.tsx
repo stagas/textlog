@@ -1,5 +1,5 @@
 import { applyHtmlCachePolicy, GLOBAL_REQUEST_BODY_LIMIT, isSameOriginRequest, RequestBodyError,
-  securityHeaders } from './http'
+  safeLocalPath, securityHeaders } from './http'
 
 import { Hono } from 'hono'
 import { bodyLimit } from 'hono/body-limit'
@@ -86,7 +86,7 @@ app.use('*', async (c, next) => {
   if (c.req.method !== 'GET' || !c.res.headers.get('content-type')?.includes('text/html')) return
   const url = new URL(c.req.url)
   const privatePath =
-    /^\/(?:login|signup|forgot-password|reset-password|write|compose|activity|admin|account\/delete)(?:\/|$)/
+    /^\/(?:enter|choose-handle|write|compose|activity|admin|account\/delete)(?:\/|$)/
       .test(url.pathname) || /^\/post\/\d+\/(?:edit|delete)$/.test(url.pathname)
   const transientParameters = ['reply', 'report', 'reported', 'edit', 'welcome', 'reset', 'token']
   const transient = transientParameters.some(name => url.searchParams.has(name))
@@ -103,18 +103,14 @@ app.use('*', async (c, next) => {
   await next()
 })
 app.use('*', async (c, next) => {
-  const url = new URL(c.req.url)
-  const path = url.pathname
-  const verificationPath = path === '/verify-email' || path === '/verify-email/dev'
-    || path === '/account/email/verify' || path === '/logout'
-  const infrastructurePath = path === '/health' || path === '/styles.css' || path === '/root.svg' || path === '/og.png'
-  const publicBrowsing = c.req.method === 'GET'
-    && (path === '/'
-      || (path === '/explore' && url.searchParams.get('welcome') !== '1')
-      || /^\/(?:u|tag)\/[^/]+$/.test(path))
-  const user = verificationPath || infrastructurePath || publicBrowsing ? null : currentUser(c.req.raw)
-  if (user && !user.email_verified_at) {
-    return c.redirect('/verify-email', 303)
+  if (c.req.method !== 'POST' || ['/enter', '/choose-handle', '/logout'].includes(c.req.path)) return next()
+  const user = currentUser(c.req.raw)
+  if (user && !user.handle_chosen_at) {
+    const referer = c.req.header('referer')
+    const fallback = referer && new URL(referer).origin === new URL(c.req.url).origin
+      ? safeLocalPath(new URL(referer).pathname + new URL(referer).search)
+      : '/'
+    return c.redirect('/choose-handle?next=' + encodeURIComponent(fallback), 303)
   }
   await next()
 })

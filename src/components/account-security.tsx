@@ -21,44 +21,13 @@ export function AccountSecurity({ user, sessions, error, success }: {
         <FormMessage error={error} success={success} />
         <section className="security-section">
           <h2>email</h2>
-          <p>
-            {user.email} · {user.email_verified_at
-              ? 'verified'
-              : <span className="email-unverified">not verified</span>}
-          </p>
-          {!user.email_verified_at && (
-            <form method="post" action="/account/email/verify">
-              <button className="button">send verification email</button>
-            </form>
-          )}
+          <p>{user.email}</p>
           <form className="security-form" method="post" action="/account/email/change">
             <label>
               new email
               <input type="email" name="email" required maxLength={254} autoComplete="email" />
             </label>
-            <label>
-              current password
-              <input type="password" name="password" required autoComplete="current-password" />
-            </label>
             <button className="button">confirm new email →</button>
-          </form>
-        </section>
-        <section className="security-section">
-          <h2>password</h2>
-          <form className="security-form" method="post" action="/account/password">
-            <label>
-              current password
-              <input type="password" name="currentPassword" required autoComplete="current-password" />
-            </label>
-            <label>
-              new password
-              <input type="password" name="password" required minLength={8} autoComplete="new-password" />
-            </label>
-            <label>
-              confirm new password
-              <input type="password" name="confirmPassword" required minLength={8} autoComplete="new-password" />
-            </label>
-            <button className="button">change password →</button>
           </form>
         </section>
         <section className="security-section">

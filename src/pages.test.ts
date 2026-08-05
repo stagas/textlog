@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test'
-import { About, AccountSecurity, ApiDocs, Auth, ConfirmEmail, Contact, NotFound, postTitle, Profile } from './components/pages'
+import { About, AccountSecurity, ApiDocs, Auth, ChooseHandle, ConfirmEmail, Contact, NotFound, postTitle, Profile } from './components/pages'
 
 import React from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
@@ -62,7 +62,7 @@ describe('About', () => {
     expect(html).toContain('Your profile and notes are public')
     expect(html).toContain('download or delete your account data')
     expect(html).toContain('class="about-actions"')
-    expect(html).toContain('class="button" href="/signup">join</a>')
+    expect(html).toContain('class="button" href="/enter">join the community</a>')
     expect(html).toContain('href="/">browse notes</a>')
   })
 
@@ -77,35 +77,26 @@ describe('About', () => {
 })
 
 describe('Auth', () => {
-  test('login accepts an email address or handle', () => {
-    const html = renderToStaticMarkup(React.createElement(Auth, { mode: 'login' }))
+  test('enter requests only an email address', () => {
+    const html = renderToStaticMarkup(React.createElement(Auth))
 
-    expect(html).toContain('email or handle')
-    expect(html).toContain('autoComplete="username"')
-    expect(html).not.toContain('pattern="[A-Za-z0-9_]{2,24}"')
+    expect(html).toContain('action="/enter"')
+    expect(html).toContain('type="email"')
+    expect(html).not.toContain('type="password"')
   })
 
-  test('signup keeps handle validation', () => {
-    const html = renderToStaticMarkup(React.createElement(Auth, { mode: 'signup' }))
+  test('handle choice keeps handle validation', () => {
+    const html = renderToStaticMarkup(React.createElement(ChooseHandle))
 
     expect(html).toContain('pattern="[A-Za-z0-9_]{2,24}"')
-    expect(html).toContain('<a href="/legal#privacy">Privacy Notice</a>')
+    expect(html).toContain('action="/choose-handle"')
   })
 
-  test('login does not show the signup terms notice', () => {
-    const html = renderToStaticMarkup(React.createElement(Auth, { mode: 'login' }))
-
-    expect(html).not.toContain('By signing up')
-  })
-
-  test('carries a next destination between login and signup', () => {
+  test('carries a next destination through entry', () => {
     const next = '/post/42?reply=1'
-    const login = renderToStaticMarkup(React.createElement(Auth, { mode: 'login', next }))
-    const signup = renderToStaticMarkup(React.createElement(Auth, { mode: 'signup', next }))
+    const enter = renderToStaticMarkup(React.createElement(Auth, { next }))
 
-    expect(login).toContain('name="next" value="/post/42?reply=1"')
-    expect(login).toContain('href="/signup?next=%2Fpost%2F42%3Freply%3D1"')
-    expect(signup).toContain('href="/login?next=%2Fpost%2F42%3Freply%3D1"')
+    expect(enter).toContain('name="next" value="/post/42?reply=1"')
   })
 })
 
@@ -122,22 +113,7 @@ test('Email confirmation requires an explicit POST', () => {
   expect(html).toContain('Change your email?')
 })
 
-test('Email verification prompt makes confirmation the next onboarding step', () => {
-  const html = renderToStaticMarkup(React.createElement(ConfirmEmail, {
-    pending: true,
-    email: 'reader@example.com',
-  }))
-
-  expect(html).toContain('one last step')
-  expect(html).toContain('reader@example.com')
-  expect(html).toContain('action="/account/email/verify"')
-  expect(html).toContain('send another link')
-  expect(html).not.toContain('class="guest-nav"')
-  expect(html).toContain('action="/logout"')
-  expect(html).toContain('>logout</button>')
-})
-
-test('AccountSecurity renders verification and safe session controls', () => {
+test('AccountSecurity renders email and safe session controls without passwords', () => {
   const html = renderToStaticMarkup(React.createElement(AccountSecurity, {
     user: { id: 1, handle: 'reader', email: 'reader@example.com', bio: '', email_verified_at: null },
     sessions: [
@@ -146,10 +122,9 @@ test('AccountSecurity renders verification and safe session controls', () => {
     ],
   }))
 
-  expect(html).toContain('send verification email')
-  expect(html).toContain('class="email-unverified">not verified</span>')
+  expect(html).toContain('reader@example.com')
   expect(html).toContain('href="/account/edit">back</a>')
-  expect(html).toContain('/account/password')
+  expect(html).not.toContain('type="password"')
   expect(html).toContain('value="revocable-id"')
   expect(html).not.toContain('value="current-id"')
 })
@@ -222,10 +197,10 @@ test('Post renders preloaded parent and reply data', () => {
   expect(html).toContain('2 replies')
   expect(html).toContain('@author')
   expect(html).toContain('parent')
-  expect(html).toContain('href="/login?next=%2Fpost%2F2%3Freply%3D1"')
-  expect(html).toContain('aria-label="log in to reply to @writer">log in to reply</a>')
-  expect(html).toContain('href="/login?next=%2Fpost%2F1%3Freply%3D1"')
-  expect(html).toContain('aria-label="reply to @author">log in to reply</a>')
+  expect(html).toContain('href="/enter?next=%2Fpost%2F2%3Freply%3D1"')
+  expect(html).toContain('aria-label="enter to reply to @writer">enter to reply</a>')
+  expect(html).toContain('href="/enter?next=%2Fpost%2F1%3Freply%3D1"')
+  expect(html).toContain('aria-label="reply to @author">enter to reply</a>')
 })
 
 test('Post only renders owner actions when requested by the detail view', () => {

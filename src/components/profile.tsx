@@ -74,7 +74,7 @@ export function Profile(
                 <div className="account-danger-zone">
                   <div>
                     <strong>Account security</strong>
-                    <span>Manage your email, password, and signed-in sessions.</span>
+                    <span>Manage your email and signed-in sessions.</span>
                   </div>
                   <a className="button" href="/account/security">manage security</a>
                 </div>

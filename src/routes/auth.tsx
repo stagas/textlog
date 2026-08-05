@@ -1,194 +1,145 @@
 import { AUTH_LIMITS, authRateLimitMessage } from '../auth-rate-limit'
-import {
-  Auth,
-  ForgotPassword,
-  ResetPassword,
-} from '../components/pages'
-import {
-  clearSessionCookie,
-  sessionCookie,
-} from '../http'
+import { Auth, ChooseHandle, MagicLinkSent } from '../components/pages'
+import { db } from '../db'
+import { sendMagicLink } from '../email'
+import { clearSessionCookie, safeLocalPath, sessionCookie } from '../http'
 import { moderateText, moderationMessage } from '../moderation'
-import { hash, hashPassword, token, verifyPassword } from '../utils'
-import { authLimit, clientAddress, form, issueEmailToken, page, redirect, retryPage, safeNext } from './shared'
+import { insertSession, sessionHash } from '../sessions'
+import { currentUser, hash, token } from '../utils'
+import { authLimit, clientAddress, form, page, redirect, retryPage, safeNext } from './shared'
 
 import type { Hono } from 'hono'
-import { db } from '../db'
-import { sendPasswordReset } from '../email'
-import { createAccount } from '../handles'
-import { insertSession, sessionHash } from '../sessions'
+
+const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+const development = () => Bun.env.NODE_ENV === 'development' || Bun.env.DEV_RELOAD === 'true'
+
+function temporaryHandle() {
+  return `anon${crypto.randomUUID().replaceAll('-', '').slice(0, 12)}`
+}
 
 export function registerAuthRoutes(app: Hono) {
-  app.get('/login', c =>
-    page(
-      <Auth mode="login" next={safeNext(c.req.query('next'))}
-        success={c.req.query('reset') === '1' ? 'Your password has been reset. You can log in now.' : undefined} />,
-    ))
-  app.get('/signup', c => {
-    const requestedNext = c.req.query('next')
-    return page(<Auth mode="signup" next={requestedNext ? safeNext(requestedNext) : undefined} />)
-  })
-  app.get('/forgot-password', c => page(<ForgotPassword />))
+  app.get('/enter', c => page(<Auth next={safeNext(c.req.query('next'))} />))
+  app.get('/login', c => redirect('/enter' + (c.req.query('next') ? `?next=${encodeURIComponent(safeNext(c.req.query('next')))}` : '')))
+  app.get('/signup', c => redirect('/enter' + (c.req.query('next') ? `?next=${encodeURIComponent(safeNext(c.req.query('next')))}` : '')))
 
-  app.post('/forgot-password', async c => {
+  app.post('/enter', async c => {
     const f = await form(c.req.raw)
-    const email = (f.email || '').trim().toLowerCase()
-    const limited = authLimit(c, 'forgot-ip', clientAddress(c), AUTH_LIMITS.forgotIp)
-      || authLimit(c, 'forgot-account', email || '(blank)', AUTH_LIMITS.forgotAccount)
-    if (limited) {
-      return retryPage(page(<ForgotPassword error={authRateLimitMessage(limited.retryAfter)} />, 429),
-        limited.retryAfter)
-    }
-    const user = db.query('SELECT id,email FROM users WHERE email=?').get(email) as { id: number; email: string } | null
-    if (user) {
-      const resetToken = token()
-      db.query('DELETE FROM password_resets WHERE user_id=? OR expires_at<=?').run(user.id, Date.now())
-      db.query('INSERT INTO password_resets(token_hash,user_id,expires_at) VALUES(?,?,?)')
-        .run(hash(resetToken), user.id, Date.now() + 3600000)
-      const appUrl = Bun.env.APP_URL?.replace(/\/$/, '')
-      if (appUrl) {
-        try {
-          await sendPasswordReset(user.email, `${appUrl}/reset-password?token=${encodeURIComponent(resetToken)}`)
-        }
-        catch (error) {
-          console.error('Could not send password reset email', error)
-          db.query('DELETE FROM password_resets WHERE token_hash=?').run(hash(resetToken))
-        }
-      }
-      else {
-        console.error('Could not send password reset email: APP_URL is not configured')
-        db.query('DELETE FROM password_resets WHERE token_hash=?').run(hash(resetToken))
-      }
-    }
-    return page(<ForgotPassword sent />)
-  })
-
-  app.get('/reset-password', c => {
-    const resetToken = c.req.query('token') || ''
-    const reset = resetToken && db.query('SELECT 1 FROM password_resets WHERE token_hash=? AND expires_at>?')
-      .get(hash(resetToken), Date.now())
-    return page(<ResetPassword resetToken={resetToken} invalid={!reset} />)
-  })
-
-  app.post('/reset-password', async c => {
-    const f = await form(c.req.raw)
-    const resetToken = f.token || ''
-    const limited = authLimit(c, 'reset-ip', clientAddress(c), AUTH_LIMITS.resetIp)
-      || authLimit(c, 'reset-token', resetToken || '(blank)', AUTH_LIMITS.resetToken)
-    if (limited) {
-      return retryPage(page(
-        <ResetPassword resetToken={resetToken} error={authRateLimitMessage(limited.retryAfter)}
-          invalid={!resetToken} />,
-        429,
-      ), limited.retryAfter)
-    }
-    const reset = resetToken && db.query('SELECT user_id FROM password_resets WHERE token_hash=? AND expires_at>?')
-      .get(hash(resetToken), Date.now()) as { user_id: number } | null
-    if (!reset) return page(<ResetPassword invalid />, 400)
-    if ((f.password || '').length < 8 || f.password !== f.confirmPassword) {
-      return page(
-        <ResetPassword resetToken={resetToken} error="Passwords must match and contain at least 8 characters." />,
-        400,
-      )
-    }
-    const passwordHash = await hashPassword(f.password)
-    db.transaction(() => {
-      db.query('UPDATE users SET password=? WHERE id=?').run(passwordHash, reset.user_id)
-      db.query('DELETE FROM sessions WHERE user_id=?').run(reset.user_id)
-      db.query('DELETE FROM password_resets WHERE user_id=?').run(reset.user_id)
-    })()
-    return redirect('/login?reset=1')
-  })
-
-  app.post('/signup', async c => {
-    const f = await form(c.req.raw)
-    const handle = (f.handle || '').toLowerCase().replace(/^@/, '')
     const email = (f.email || '').trim().toLowerCase()
     const next = safeNext(f.next)
-    const limited = authLimit(c, 'signup-ip', clientAddress(c), AUTH_LIMITS.signup)
+    const limited = development()
+      ? null
+      : authLimit(c, 'enter-ip', clientAddress(c), AUTH_LIMITS.loginIp)
+        || authLimit(c, 'enter-email', email || '(blank)', AUTH_LIMITS.forgotAccount)
     if (limited) {
-      return retryPage(page(
-        <Auth mode="signup" handle={handle} email={email} next={next}
-          error={authRateLimitMessage(limited.retryAfter)} />,
-        429,
-      ), limited.retryAfter)
+      return retryPage(page(<Auth email={email} next={next} error={authRateLimitMessage(limited.retryAfter)} />, 429),
+        limited.retryAfter)
     }
-    if (!/^[a-z0-9_]{2,24}$/.test(handle) || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || email.length > 254
-      || (f.password || '').length < 8)
-    {
-      return page(
-        <Auth mode="signup" handle={handle} email={email} next={next}
-          error="Use a valid email, a 2–24 character handle, and a password of at least 8 characters." />,
-        400,
-      )
+    if (!emailPattern.test(email) || email.length > 254) {
+      return page(<Auth email={email} next={next} error="Enter a valid email address." />, 400)
+    }
+
+    const account = db.query(`SELECT id,handle,handle_chosen_at FROM users
+      WHERE email=? AND deleted_at IS NULL AND suspended_at IS NULL`).get(email) as
+      { id: number; handle: string; handle_chosen_at: string | null } | null
+    const value = token()
+    db.query('DELETE FROM magic_links WHERE email=? OR expires_at<=?').run(email, Date.now())
+    db.query(`INSERT INTO magic_links(token_hash,email,user_id,next_path,expires_at,created_at)
+      VALUES(?,?,?,?,?,?)`).run(hash(value), email, account?.id ?? null, next, Date.now() + 3600000, Date.now())
+    const origin = Bun.env.APP_URL?.replace(/\/$/, '') || new URL(c.req.url).origin
+    const magicUrl = `${origin}/enter/magic?token=${encodeURIComponent(value)}`
+    if (!development()) {
+      try {
+        await sendMagicLink(email, magicUrl, account?.handle_chosen_at ? account.handle : undefined)
+      }
+      catch (error) {
+        console.error('Could not send magic link', error)
+        db.query('DELETE FROM magic_links WHERE token_hash=?').run(hash(value))
+        return page(<Auth email={email} next={next} error="The magic link could not be sent. Please try again later." />, 503)
+      }
+    }
+    return page(<MagicLinkSent email={email} magicUrl={development() ? magicUrl : undefined} />)
+  })
+
+  app.get('/enter/magic', c => {
+    const value = c.req.query('token') || ''
+    const link = value && db.query(`SELECT token_hash,email,user_id,next_path FROM magic_links
+      WHERE token_hash=? AND expires_at>?`).get(hash(value), Date.now()) as
+      { token_hash: string; email: string; user_id: number | null; next_path: string } | null
+    if (!link) return page(<Auth error="That magic link is invalid or has expired. Request a new one." />, 400)
+
+    let userId = link.user_id
+    let chosen = true
+    const session = token()
+    try {
+      db.transaction(() => {
+        db.query('DELETE FROM magic_links WHERE token_hash=?').run(link.token_hash)
+        if (userId) {
+          const account = db.query('SELECT handle_chosen_at FROM users WHERE id=?').get(userId) as
+            { handle_chosen_at: string | null } | null
+          if (!account) throw new Error('Account is unavailable')
+          chosen = Boolean(account.handle_chosen_at)
+          db.query('UPDATE users SET email_verified_at=COALESCE(email_verified_at,CURRENT_TIMESTAMP) WHERE id=?')
+            .run(userId)
+        }
+        else {
+          for (let attempt = 0; attempt < 5; attempt++) {
+            try {
+              const created = db.query(`INSERT INTO users(handle,email,password,email_verified_at)
+                VALUES(?,?,'!',CURRENT_TIMESTAMP) RETURNING id`).get(temporaryHandle(), link.email) as { id: number }
+              userId = created.id
+              chosen = false
+              break
+            }
+            catch (error) {
+              if (db.query('SELECT id FROM users WHERE email=?').get(link.email)) throw error
+            }
+          }
+          if (!userId) throw new Error('Could not allocate temporary handle')
+        }
+        insertSession(db, session, userId!, Date.now() + 2592000000, Date.now(), c.req.header('user-agent') || '')
+      })()
+    }
+    catch {
+      return page(<Auth error="That account is unavailable. Request a new magic link." />, 400)
+    }
+    const destination = chosen ? safeLocalPath(link.next_path) : `/choose-handle?next=${encodeURIComponent(link.next_path)}`
+    return redirect(destination, sessionCookie(session))
+  })
+
+  app.get('/choose-handle', c => {
+    const user = currentUser(c.req.raw)
+    if (!user) return redirect('/enter?next=' + encodeURIComponent(c.req.path))
+    if (user.handle_chosen_at) return redirect(safeNext(c.req.query('next')))
+    return page(<ChooseHandle next={safeNext(c.req.query('next'))} />)
+  })
+
+  app.post('/choose-handle', async c => {
+    const user = currentUser(c.req.raw)
+    if (!user) return redirect('/enter')
+    if (user.handle_chosen_at) return redirect('/')
+    const f = await form(c.req.raw)
+    const handle = (f.handle || '').trim().toLowerCase().replace(/^@/, '')
+    const next = safeNext(f.next)
+    if (!/^[a-z0-9_]{2,24}$/.test(handle)) {
+      return page(<ChooseHandle handle={handle} next={next} error="Use 2–24 letters, numbers, or underscores." />, 400)
     }
     const moderation = await moderateText(`handle: ${handle}`)
     if (!moderation.ok) {
-      const error = moderation.reason === 'flagged'
-        ? 'That handle may violate our content rules. Please change it and try again.'
-        : moderationMessage(moderation.reason)
-      return page(
-        <Auth mode="signup" handle={handle} email={email} next={next} error={error} />,
-        moderation.reason === 'flagged' ? 422 : 503,
-      )
+      return page(<ChooseHandle handle={handle} next={next} error={moderation.reason === 'flagged'
+        ? 'That handle may violate our content rules. Please choose another.'
+        : moderationMessage(moderation.reason)} />, moderation.reason === 'flagged' ? 422 : 503)
     }
-    const passwordHash = await hashPassword(f.password)
     try {
-      const result = createAccount(db, handle, email, passwordHash)
-      const session = token()
-      insertSession(db, session, result.id, Date.now() + 2592000000, Date.now(), c.req.header('user-agent') || '')
-      try {
-        await issueEmailToken(result.id, email, 'verify')
-      }
-      catch (error) {
-        console.error('Could not send verification email', error)
-      }
-      return redirect('/verify-email', sessionCookie(session))
+      db.transaction(() => {
+        if (db.query('SELECT 1 FROM users WHERE handle=? COLLATE NOCASE AND id!=?').get(handle, user.id)
+          || db.query('SELECT 1 FROM handle_history WHERE handle=? COLLATE NOCASE').get(handle)) throw new Error()
+        db.query('UPDATE users SET handle=?,handle_chosen_at=CURRENT_TIMESTAMP WHERE id=?').run(handle, user.id)
+      })()
     }
     catch {
-      return page(
-        <Auth mode="signup" handle={handle} email={email} next={next} error="That handle or email is unavailable." />,
-        400,
-      )
+      return page(<ChooseHandle handle={handle} next={next} error="That handle is unavailable." />, 400)
     }
-  })
-
-  app.post('/login', async c => {
-    const f = await form(c.req.raw)
-    const login = (f.handle || '').trim().toLowerCase().replace(/^@/, '')
-    const ipLimited = authLimit(c, 'login-ip', clientAddress(c), AUTH_LIMITS.loginIp)
-    if (ipLimited) {
-      return retryPage(page(
-        <Auth mode="login" handle={login} next={safeNext(f.next)} error={authRateLimitMessage(ipLimited.retryAfter)} />,
-        429,
-      ), ipLimited.retryAfter)
-    }
-    const found = db.query(
-      `SELECT id,password,email_verified_at FROM users
-        WHERE (handle=? OR email=?) AND deleted_at IS NULL AND suspended_at IS NULL`,
-    )
-      .get(login, login) as { id: number; password: string; email_verified_at: string | null } | null
-    const accountLimited = authLimit(c, 'login-account', found ? `user:${found.id}` : `login:${login || '(blank)'}`,
-      AUTH_LIMITS.loginAccount)
-    if (accountLimited) {
-      return retryPage(page(
-        <Auth mode="login" handle={login} next={safeNext(f.next)}
-          error={authRateLimitMessage(accountLimited.retryAfter)} />,
-        429,
-      ), accountLimited.retryAfter)
-    }
-    if (!found || !await verifyPassword(f.password || '', found.password)) {
-      return page(
-        <Auth mode="login" handle={login} next={safeNext(f.next)} error="Invalid email, handle, or password." />,
-        401,
-      )
-    }
-    if (!found.password.startsWith('$argon2id$')) {
-      db.query('UPDATE users SET password=? WHERE id=?').run(await hashPassword(f.password), found.id)
-    }
-    const session = token()
-    insertSession(db, session, found.id, Date.now() + 2592000000, Date.now(), c.req.header('user-agent') || '')
-    return redirect(found.email_verified_at ? safeNext(f.next) : '/verify-email', sessionCookie(session))
+    return redirect(next)
   })
 
   app.post('/logout', c => {

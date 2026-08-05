@@ -251,6 +251,18 @@ export const migrations: Migration[] = [
       CREATE INDEX blocked_hashtags_tag ON blocked_hashtags(tag,user_id);`)
     },
   },
+  {
+    version: 18,
+    name: 'magic_link_authentication',
+    up(database) {
+      addColumn(database, 'users', 'handle_chosen_at', 'TEXT')
+      database.run('UPDATE users SET handle_chosen_at=COALESCE(handle_chosen_at,created_at,CURRENT_TIMESTAMP)')
+      database.run(`CREATE TABLE magic_links (
+        token_hash TEXT PRIMARY KEY,email TEXT NOT NULL,user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+        next_path TEXT NOT NULL DEFAULT '/',expires_at INTEGER NOT NULL,created_at INTEGER NOT NULL);
+      CREATE INDEX magic_links_expiry ON magic_links(expires_at);`)
+    },
+  },
 ]
 
 export const latestMigrationVersion = migrations.at(-1)!.version

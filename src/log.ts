@@ -27,14 +27,10 @@ function statusColor(status: number): Color {
 }
 
 const actionRoutes: Array<[RegExp, string]> = [
-  [/^\/login$/, 'auth.login'],
-  [/^\/signup$/, 'auth.signup'],
+  [/^\/enter$/, 'auth.magic_link.request'],
+  [/^\/choose-handle$/, 'auth.handle.choose'],
   [/^\/logout$/, 'auth.logout'],
-  [/^\/forgot-password$/, 'auth.password.request_reset'],
-  [/^\/reset-password$/, 'auth.password.reset'],
-  [/^\/account\/email\/verify$/, 'account.email.verify'],
   [/^\/account\/email\/change$/, 'account.email.change'],
-  [/^\/account\/password$/, 'account.password.change'],
   [/^\/account\/sessions\/revoke$/, 'account.session.revoke'],
   [/^\/account\/sessions\/revoke-others$/, 'account.sessions.revoke_others'],
   [/^\/account\/delete$/, 'account.delete'],

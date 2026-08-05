@@ -25,8 +25,8 @@ export function Post({
   const replyCount = p.reply_count || 0
   const defaultReplyPath = '/post/' + p.id + '?reply=1'
   const resolvedReplyHref = replyHref
-    ?? (user ? defaultReplyPath : '/login?next=' + encodeURIComponent(defaultReplyPath))
-  const resolvedReplyLabel = replyLabel ?? (user ? 'reply' : 'log in to reply')
+    ?? (user ? defaultReplyPath : '/enter?next=' + encodeURIComponent(defaultReplyPath))
+  const resolvedReplyLabel = replyLabel ?? (user ? 'reply' : 'enter to reply')
   if (p.deleted_at) {
     return (
       <article className="post deleted-post">
@@ -95,10 +95,10 @@ export function Post({
                   </a>
                   <a className="quiet" href={user
                     ? '/post/' + parent.id + '?reply=1'
-                    : '/login?next=' + encodeURIComponent('/post/' + parent.id + '?reply=1')}
+                    : '/enter?next=' + encodeURIComponent('/post/' + parent.id + '?reply=1')}
                     aria-label={`reply to @${parent.handle}`}
                   >
-                    {user ? 'reply' : 'log in to reply'}
+                    {user ? 'reply' : 'enter to reply'}
                   </a>
                 </div>
                 <p dangerouslySetInnerHTML={{ __html: linkify(parent.body, parent.mention_bios) }} />
@@ -147,8 +147,8 @@ export function ThreadReplies({ parentId, user }: { parentId: number; user: User
             <div className="reply-node" key={reply.id}>
               {foldControlId && <input className="thread-fold-input" type="checkbox" id={foldControlId} />}
               <Post p={reply} user={user} showParent={false} foldControlId={foldControlId}
-                replyHref={user ? undefined : '/login?next=' + encodeURIComponent('/post/' + reply.id + '?reply=1')}
-                replyLabel={user ? 'reply' : 'log in to reply'} />
+                replyHref={user ? undefined : '/enter?next=' + encodeURIComponent('/post/' + reply.id + '?reply=1')}
+                replyLabel={user ? 'reply' : 'enter to reply'} />
               {childBranch}
             </div>
           )

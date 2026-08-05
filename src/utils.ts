@@ -22,7 +22,7 @@ export const sessionToken = (req: Request) => req.headers.get('cookie')?.match(/
 export function currentUser(req: Request): User | null {
   const tokenHash = sessionHash(sessionToken(req))
   if (!tokenHash) return null
-  return db.query(`SELECT u.id,u.handle,u.email,u.bio,u.suspended_at,u.email_verified_at
+  return db.query(`SELECT u.id,u.handle,u.email,u.bio,u.suspended_at,u.email_verified_at,u.handle_chosen_at
     FROM sessions s JOIN users u ON u.id=s.user_id
     WHERE s.token_hash=? AND s.expires_at>? AND u.deleted_at IS NULL AND u.suspended_at IS NULL`)
     .get(tokenHash, Date.now()) as User | null

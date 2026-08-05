@@ -36,7 +36,7 @@ export function About({ user }: { user: User | null }) {
           <>
             <h2>What's next?</h2>
             <div className="about-actions">
-              <a className="button" href="/signup">join the community</a>
+              <a className="button" href="/enter">join the community</a>
               <span>or</span>
               <a href="/">browse notes</a>
             </div>

@@ -44,22 +44,25 @@ export function Layout({
     type: 'website' as const,
     imageAlt: 'root.mx',
   }
-  const activityUnread = user ? hasUnreadActivity(user.id) : false
+  // Older callers that predate the marker already represent established accounts.
+  const ready = user?.handle_chosen_at !== null
+  const activityUnread = user && ready ? hasUnreadActivity(user.id) : false
   const navigation = user
     ? (
       <>
         <a className="mobile-footer-link" href="/explore">explore</a>
-        <ActivityLink unread={activityUnread} className="mobile-footer-link" />
-        <a href="/write">write</a>
-        {isAdmin(user) && <a href="/admin">admin</a>}
-        <a href={`/u/${user.handle}`}>@{user.handle}</a>
+        {ready && <ActivityLink unread={activityUnread} className="mobile-footer-link" />}
+        {ready && <a href="/write">write</a>}
+        {ready && isAdmin(user) && <a href="/admin">admin</a>}
+        {ready
+          ? <a href={`/u/${user.handle}`}>@{user.handle}</a>
+          : <a className="button" href="/choose-handle">choose handle</a>}
       </>
     )
     : (
       <>
         <a href="/explore">explore</a>
-        <a href="/login">login</a>
-        <a className="button" href="/signup">join</a>
+        <a className="button" href="/enter">enter</a>
       </>
     )
   return (
@@ -88,7 +91,7 @@ export function Layout({
         </>
         <link rel="icon" href="/root.svg?v=1" type="image/svg+xml" />
         <link rel="sitemap" href="/sitemap.xml" type="application/xml" />
-        <link rel="stylesheet" href="/styles.css?v=49" />
+        <link rel="stylesheet" href="/styles.css?v=51" />
       </head>
       <body>
         <a className="skip-link" href="#main-content">skip to content</a>
@@ -116,7 +119,7 @@ export function Layout({
         <main id="main-content">{children}</main>
         <footer className="site-footer">
           <span>root.mx</span>
-          {user && (
+          {user && ready && (
             <nav className="mobile-account-footer" aria-label="Account shortcuts">
               <a href="/explore">explore</a>
               <ActivityLink unread={activityUnread} />

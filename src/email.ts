@@ -45,6 +45,13 @@ export function sendEmailVerification(email: string, verificationUrl: string, ch
     `<p>${action} by using the link below.</p><p><a href="${verificationUrl}">${action}</a></p><p>This link expires in one hour. If you did not request it, you can ignore this email.</p>`)
 }
 
+export function sendMagicLink(email: string, magicUrl: string, handle?: string) {
+  const heading = handle ? `Welcome back, @${handle}` : 'Join the community'
+  return sendEmail(email, `${heading} · root.mx`,
+    `${heading}\n\nOpen this magic link to enter root.mx:\n\n${magicUrl}\n\nThis link expires in one hour and can only be used once. If you did not request it, you can ignore this email.`,
+    `<h1>${heading}</h1><p>Use this magic link to enter root.mx:</p><p><a href="${magicUrl}">Enter root.mx</a></p><p>This link expires in one hour and can only be used once. If you did not request it, you can ignore this email.</p>`)
+}
+
 export function sendReportReceipt(email: string, reference: string) {
   return sendEmail(email, `Report received · ${reference}`,
     `We received your report of allegedly illegal activity. Reference: ${reference}. We will email our decision and available redress.`,

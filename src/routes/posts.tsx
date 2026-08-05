@@ -21,7 +21,7 @@ import { currentUser } from '../utils'
 export function registerPostsRoutes(app: Hono) {
   app.get('/write', c => {
     const user = currentUser(c.req.raw)
-    return user ? page(<Compose user={user} />) : redirect('/login?next=' + encodeURIComponent('/write'))
+    return user ? page(<Compose user={user} />) : redirect('/enter?next=' + encodeURIComponent('/write'))
   })
   app.get('/compose', c => c.redirect('/write', 301))
   app.get('/post', c => c.redirect('/write', 303))
@@ -34,6 +34,10 @@ export function registerPostsRoutes(app: Hono) {
     ).get(id) as PostView | null
     if (!foundPost) return c.text('Not found', 404)
     const user = currentUser(c.req.raw)
+    if (user && !user.handle_chosen_at && c.req.query('reply') === '1') {
+      const next = `/post/${id}?reply=1`
+      return redirect('/choose-handle?next=' + encodeURIComponent(next))
+    }
     if (user && usersBlocked(user.id, foundPost.user_id)) return c.text('Not found', 404)
     if (user && db.query(`SELECT 1 FROM post_hashtags ph JOIN blocked_hashtags bh ON bh.tag=ph.tag
       WHERE ph.post_id=? AND bh.user_id=?`).get(id, user.id)) return c.text('Not found', 404)
@@ -76,7 +80,7 @@ export function registerPostsRoutes(app: Hono) {
 
   app.post('/post', async c => {
     const user = currentUser(c.req.raw)
-    if (!user) return redirect('/login')
+    if (!user) return redirect('/enter')
     if (!canPublishPosts(user)) return page(<Compose user={user} />, 403)
     const f = await form(c.req.raw)
     const body = f.body || ''
@@ -95,7 +99,7 @@ export function registerPostsRoutes(app: Hono) {
 
   app.get('/post/:id/edit', c => {
     const user = currentUser(c.req.raw)
-    if (!user) return redirect('/login?next=' + encodeURIComponent(c.req.path))
+    if (!user) return redirect('/enter?next=' + encodeURIComponent(c.req.path))
     const id = Number(c.req.param('id'))
     const post = Number.isInteger(id)
       ? db.query(
@@ -109,7 +113,7 @@ export function registerPostsRoutes(app: Hono) {
 
   app.post('/post/:id/edit', async c => {
     const user = currentUser(c.req.raw)
-    if (!user) return redirect('/login')
+    if (!user) return redirect('/enter')
     const id = Number(c.req.param('id'))
     const post = Number.isInteger(id)
       ? db.query(
@@ -137,7 +141,7 @@ export function registerPostsRoutes(app: Hono) {
 
   app.get('/post/:id/delete', c => {
     const user = currentUser(c.req.raw)
-    if (!user) return redirect('/login?next=' + encodeURIComponent(c.req.path))
+    if (!user) return redirect('/enter?next=' + encodeURIComponent(c.req.path))
     const id = Number(c.req.param('id'))
     const post = Number.isInteger(id)
       ? db.query('SELECT id,user_id,parent_id,body,created_at,deleted_at FROM posts WHERE id=? AND deleted_at IS NULL')
@@ -150,7 +154,7 @@ export function registerPostsRoutes(app: Hono) {
 
   app.post('/post/:id/delete', c => {
     const user = currentUser(c.req.raw)
-    if (!user) return redirect('/login')
+    if (!user) return redirect('/enter')
     const id = Number(c.req.param('id'))
     const post = Number.isInteger(id)
       ? db.query('SELECT user_id,parent_id FROM posts WHERE id=? AND deleted_at IS NULL').get(id) as { user_id: number;
@@ -166,7 +170,7 @@ export function registerPostsRoutes(app: Hono) {
 
   app.post('/post/:id/reply', async c => {
     const user = currentUser(c.req.raw)
-    if (!user) return redirect('/login')
+    if (!user) return redirect('/enter')
     const parentId = Number(c.req.param('id'))
     const parent = Number.isInteger(parentId)
       ? db.query('SELECT p.*,u.handle,u.bio FROM posts p JOIN users u ON u.id=p.user_id WHERE p.id=?').get(

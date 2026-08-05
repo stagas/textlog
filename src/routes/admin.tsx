@@ -22,7 +22,7 @@ import { visitorStats } from '../visitors'
 export function registerAdminRoutes(app: Hono) {
   app.get('/admin', c => {
     const signedIn = currentUser(c.req.raw)
-    if (!signedIn) return redirect('/login?next=' + encodeURIComponent(c.req.path))
+    if (!signedIn) return redirect('/enter?next=' + encodeURIComponent(c.req.path))
     if (!isAdmin(signedIn)) return c.text('Forbidden', 403)
     const statusValue = c.req.query('status') || 'open'
     if (!['open', 'resolved', 'dismissed'].includes(statusValue)) return c.text('Invalid report status', 400)
@@ -67,7 +67,7 @@ export function registerAdminRoutes(app: Hono) {
 
   app.post('/admin/illegal-reports/:id/:decision', async c => {
     const signedIn = currentUser(c.req.raw)
-    if (!signedIn) return redirect('/login?next=' + encodeURIComponent('/admin'))
+    if (!signedIn) return redirect('/enter?next=' + encodeURIComponent('/admin'))
     if (!isAdmin(signedIn)) return c.text('Forbidden', 403)
     const id = Number(c.req.param('id'))
     const decision = c.req.param('decision')
@@ -97,7 +97,7 @@ export function registerAdminRoutes(app: Hono) {
 
   app.post('/admin/reports/:id/:decision', async c => {
     const signedIn = currentUser(c.req.raw)
-    if (!signedIn) return redirect('/login?next=' + encodeURIComponent('/admin'))
+    if (!signedIn) return redirect('/enter?next=' + encodeURIComponent('/admin'))
     if (!isAdmin(signedIn)) return c.text('Forbidden', 403)
     const id = Number(c.req.param('id'))
     const decision = c.req.param('decision')
@@ -118,7 +118,7 @@ export function registerAdminRoutes(app: Hono) {
 
   app.get('/admin/posts/:id/delete', c => {
     const signedIn = currentUser(c.req.raw)
-    if (!signedIn) return redirect('/login?next=' + encodeURIComponent(c.req.path))
+    if (!signedIn) return redirect('/enter?next=' + encodeURIComponent(c.req.path))
     if (!isAdmin(signedIn)) return c.text('Forbidden', 403)
     const id = Number(c.req.param('id'))
     const post = Number.isInteger(id)
@@ -136,7 +136,7 @@ export function registerAdminRoutes(app: Hono) {
 
   app.post('/admin/posts/:id/delete', async c => {
     const signedIn = currentUser(c.req.raw)
-    if (!signedIn) return redirect('/login?next=' + encodeURIComponent('/admin'))
+    if (!signedIn) return redirect('/enter?next=' + encodeURIComponent('/admin'))
     if (!isAdmin(signedIn)) return c.text('Forbidden', 403)
     const id = Number(c.req.param('id'))
     const post = Number.isInteger(id)
@@ -154,7 +154,7 @@ export function registerAdminRoutes(app: Hono) {
 
   app.get('/admin/users/:id', c => {
     const signedIn = currentUser(c.req.raw)
-    if (!signedIn) return redirect('/login?next=' + encodeURIComponent(c.req.path))
+    if (!signedIn) return redirect('/enter?next=' + encodeURIComponent(c.req.path))
     if (!isAdmin(signedIn)) return c.text('Forbidden', 403)
     const id = Number(c.req.param('id'))
     const target = Number.isInteger(id)
@@ -167,7 +167,7 @@ export function registerAdminRoutes(app: Hono) {
 
   app.get('/admin/users/:id/:action', c => {
     const signedIn = currentUser(c.req.raw)
-    if (!signedIn) return redirect('/login?next=' + encodeURIComponent(c.req.path))
+    if (!signedIn) return redirect('/enter?next=' + encodeURIComponent(c.req.path))
     if (!isAdmin(signedIn)) return c.text('Forbidden', 403)
     const id = Number(c.req.param('id'))
     const action = c.req.param('action')
@@ -189,7 +189,7 @@ export function registerAdminRoutes(app: Hono) {
 
   app.post('/admin/users/:id/:action', async c => {
     const signedIn = currentUser(c.req.raw)
-    if (!signedIn) return redirect('/login?next=' + encodeURIComponent('/admin'))
+    if (!signedIn) return redirect('/enter?next=' + encodeURIComponent('/admin'))
     if (!isAdmin(signedIn)) return c.text('Forbidden', 403)
     const id = Number(c.req.param('id'))
     const action = c.req.param('action')

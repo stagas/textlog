@@ -37,7 +37,7 @@ export function TagFeed(
               </form>}
             </div>
           )
-          : <a className="button" href="/login">log in to follow</a>}
+          : <a className="button" href="/enter">log in to follow</a>}
       </section>
       {blocked
         ? <div className="empty relationship-notice">You blocked this tag. Unblock it to see its notes.</div>

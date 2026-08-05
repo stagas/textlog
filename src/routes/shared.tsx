@@ -73,7 +73,7 @@ export function adminUser(req: Request) {
   const user = currentUser(req)
   return user && isAdmin(user) ? user : null
 }
-export async function issueEmailToken(userId: number, email: string, kind: 'verify' | 'change') {
+export async function issueEmailToken(userId: number, email: string, kind: 'change') {
   const appUrl = Bun.env.APP_URL?.replace(/\/$/, '')
   if (!appUrl) throw new Error('APP_URL is not configured')
   const value = token()
@@ -90,7 +90,7 @@ export async function issueEmailToken(userId: number, email: string, kind: 'veri
 }
 export function securityPage(req: Request, error?: string, success?: string, status = 200) {
   const user = currentUser(req)
-  if (!user) return redirect('/login?next=' + encodeURIComponent('/account/security'))
+  if (!user) return redirect('/enter?next=' + encodeURIComponent('/account/security'))
   const current = sessionHash(sessionToken(req))
   const rows = db.query(`SELECT token_hash,created_at,expires_at,user_agent FROM sessions
     WHERE user_id=? AND expires_at>? ORDER BY created_at DESC`).all(user.id, Date.now()) as { token_hash: string;
