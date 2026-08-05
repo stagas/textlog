@@ -21,8 +21,7 @@ import { currentUser } from '../utils'
 
 export function registerFeedsRoutes(app: Hono) {
   app.get('/', c => {
-    const sessionUser = currentUser(c.req.raw)
-    const user = sessionUser?.email_verified_at ? sessionUser : null
+    const user = currentUser(c.req.raw)
     const preferredFeed = feedPreference(c.req.raw)
     if (preferredFeed === 'latest') {
       const cursorValue = c.req.query('cursor')

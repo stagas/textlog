@@ -102,12 +102,16 @@ app.use('*', async (c, next) => {
   await next()
 })
 app.use('*', async (c, next) => {
-  const path = new URL(c.req.url).pathname
+  const url = new URL(c.req.url)
+  const path = url.pathname
   const verificationPath = path === '/verify-email' || path === '/verify-email/dev'
     || path === '/account/email/verify' || path === '/logout'
   const infrastructurePath = path === '/health' || path === '/styles.css' || path === '/root.svg' || path === '/og.png'
-  const guestHome = c.req.method === 'GET' && path === '/'
-  const user = verificationPath || infrastructurePath || guestHome ? null : currentUser(c.req.raw)
+  const publicBrowsing = c.req.method === 'GET'
+    && (path === '/'
+      || (path === '/explore' && url.searchParams.get('welcome') !== '1')
+      || /^\/(?:u|tag)\/[^/]+$/.test(path))
+  const user = verificationPath || infrastructurePath || publicBrowsing ? null : currentUser(c.req.raw)
   if (user && !user.email_verified_at) {
     return c.redirect('/verify-email', 303)
   }
