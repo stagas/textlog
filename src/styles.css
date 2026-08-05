@@ -1571,8 +1571,12 @@ form.report-panel {
 }
 
 .people .activity-person {
-  padding: var(--space-3) 0 0;
+  padding: 0;
   border-top: 0;
+}
+
+.people .activity-person > form {
+  margin-top: var(--space-3);
 }
 
 .columns h2 {

@@ -88,13 +88,13 @@ export function Activity({ user, page }: { user: User; page: number }) {
                           <a href={'/u/' + rawPost.handle}>@{rawPost.handle}</a>
                           <small>{rawPost.posts} {rawPost.posts === 1 ? 'note' : 'notes'}</small>
                         </div>
-                        <form method="post" action={'/follow/' + rawPost.handle}>
-                          <button className={`button${rawPost.viewerFollowing ? ' unfollow-button' : ''}`}>
-                            {rawPost.viewerFollowing ? 'unfollow' : 'follow'}
-                          </button>
-                        </form>
                       </div>
                       <p className="profile-bio">{rawPost.bio || 'No bio yet.'}</p>
+                      <form method="post" action={'/follow/' + rawPost.handle}>
+                        <button className={`button${rawPost.viewerFollowing ? ' unfollow-button' : ''}`}>
+                          {rawPost.viewerFollowing ? 'unfollow' : 'follow'}
+                        </button>
+                      </form>
                     </article>
                   </div>
                 )
