@@ -49,8 +49,7 @@ export function registerInteractionsRoutes(app: Hono) {
       if (exists) db.query('DELETE FROM blocks WHERE blocker_id=? AND blocked_id=?').run(user.id, target.id)
       else {
         db.query('INSERT INTO blocks(blocker_id,blocked_id) VALUES(?,?)').run(user.id, target.id)
-        db.query('DELETE FROM follows WHERE (follower_id=? AND following_id=?) OR (follower_id=? AND following_id=?)')
-          .run(user.id, target.id, target.id, user.id)
+        db.query('DELETE FROM follows WHERE follower_id=? AND following_id=?').run(user.id, target.id)
       }
     })()
     return redirect(safeRefererPath(c.req.header('referer'), c.req.url, '/u/' + target.handle))
