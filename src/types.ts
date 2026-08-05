@@ -9,11 +9,15 @@ export type PostRow = {
 
 export type ParentPost = Pick<PostRow, 'id' | 'body' | 'created_at' | 'deleted_at'> & {
   handle: string
+  bio?: string
+  mention_bios?: Record<string, string>
   reply_count: number
 }
 
 export type PostView = PostRow & {
   handle: string
+  bio?: string
+  mention_bios?: Record<string, string>
   reply_count?: number
   parent?: ParentPost | null
 }

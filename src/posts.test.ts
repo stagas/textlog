@@ -2,11 +2,12 @@ import { Database } from 'bun:sqlite'
 import { describe, expect, test } from 'bun:test'
 import { createPost, enrichPosts } from './posts'
 import type { PostView } from './types'
+import { linkify } from './utils'
 
 function database() {
   const db = new Database(':memory:')
   db.run(`
-    CREATE TABLE users (id INTEGER PRIMARY KEY, handle TEXT NOT NULL, deleted_at TEXT);
+    CREATE TABLE users (id INTEGER PRIMARY KEY, handle TEXT NOT NULL, bio TEXT DEFAULT '', deleted_at TEXT);
     CREATE TABLE handle_history (handle TEXT PRIMARY KEY COLLATE NOCASE,user_id INTEGER NOT NULL);
     CREATE TABLE posts (id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER NOT NULL, parent_id INTEGER,
       body TEXT NOT NULL, created_at TEXT DEFAULT CURRENT_TIMESTAMP, deleted_at TEXT);
@@ -22,6 +23,10 @@ function database() {
 }
 
 describe('post persistence', () => {
+  test('adds escaped bios to linkified post mentions', () => {
+    expect(linkify('hello @Reader', { reader: 'Builder & "tester"' }))
+      .toContain('<a href="/u/reader" title="Builder &amp; &quot;tester&quot;">@Reader</a>')
+  })
   test('writes content and metadata atomically', () => {
     const db = database()
     expect(() => createPost(db, 1, 'rollback #fail @reader')).toThrow()

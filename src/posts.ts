@@ -43,6 +43,22 @@ export function updatePost(database: Database, postId: number, body: string) {
 export function enrichPosts(database: Database, posts: PostView[], viewerId = -1) {
   if (!posts.length) return posts
   const ids = posts.map(post => post.id)
+  const userIds = [...new Set(posts.map(post => post.user_id))]
+  const userPlaceholders = userIds.map(() => '?').join(',')
+  const authors = database.query(`SELECT id,bio FROM users WHERE id IN (${userPlaceholders})`)
+    .all(...userIds) as { id: number; bio: string }[]
+  const bioByUserId = new Map(authors.map(author => [author.id, author.bio]))
+
+  const mentionedHandles = [...new Set(posts.flatMap(post => extractMentions(post.body)))]
+  const mentionBios: Record<string, string> = {}
+  const addMentionBio = (handle: string) => {
+    if (mentionBios[handle] !== undefined) return
+    const mentioned = resolveHandle(database, handle)
+    if (!mentioned) return
+    const account = database.query('SELECT bio FROM users WHERE id=?').get(mentioned.id) as { bio: string } | null
+    if (account) mentionBios[handle] = account.bio
+  }
+  for (const handle of mentionedHandles) addMentionBio(handle)
   const parentIds = [...new Set(posts.flatMap(post => post.parent_id ? [post.parent_id] : []))]
   const placeholders = ids.map(() => '?').join(',')
   const visibleReply = viewerId < 0 ? '' : `AND NOT EXISTS (SELECT 1 FROM blocks b WHERE
@@ -71,14 +87,20 @@ export function enrichPosts(database: Database, posts: PostView[], viewerId = -1
       ? parentIds
       : [viewerId, viewerId, viewerId, ...parentIds, viewerId, viewerId, viewerId]
     const rows = database.query(
-      `SELECT p.id,p.body,p.created_at,p.deleted_at,u.handle,
+      `SELECT p.id,p.body,p.created_at,p.deleted_at,u.handle,u.bio,
         (SELECT count(*) FROM posts r WHERE r.parent_id=p.id AND r.deleted_at IS NULL ${parentReplyFilter}) reply_count
         FROM posts p JOIN users u ON u.id=p.user_id WHERE p.id IN (${parentPlaceholders}) ${parentFilter}`,
     ).all(...parentParameters) as ParentPost[]
+    for (const parent of rows) {
+      for (const handle of extractMentions(parent.body)) addMentionBio(handle)
+      parent.mention_bios = mentionBios
+    }
     parents = new Map(rows.map(parent => [parent.id, parent]))
   }
   return posts.map(post => ({
     ...post,
+    bio: bioByUserId.get(post.user_id) ?? post.bio ?? '',
+    mention_bios: mentionBios,
     reply_count: countById.get(post.id) || 0,
     parent: post.parent_id ? parents.get(post.parent_id) || null : null,
   }))

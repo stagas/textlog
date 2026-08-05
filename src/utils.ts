@@ -42,7 +42,7 @@ export function fmt(d: string) {
   return `${Math.floor(days / 365)}y`
 }
 export const fmtFull = (d: string) => timestamp(d).toLocaleString('en', { dateStyle: 'medium', timeStyle: 'short' })
-export function linkify(body: string) {
+export function linkify(body: string, mentionBios: Record<string, string> = {}) {
   const tokens = /https?:\/\/[^\s<>"']+|(?<![A-Za-z0-9_])[@#][A-Za-z0-9_]+/gi
   let html = ''
   let end = 0
@@ -59,7 +59,9 @@ export function linkify(body: string) {
     else {
       const value = token.slice(1)
       html += token[0] === '@'
-        ? `<a href="/u/${value.toLowerCase()}">@${value}</a>`
+        ? `<a href="/u/${value.toLowerCase()}"${mentionBios[value.toLowerCase()] !== undefined
+          ? ` title="${esc(mentionBios[value.toLowerCase()])}"`
+          : ''}>@${value}</a>`
         : `<a href="/tag/${value}">#${value}</a>`
     }
     end = match.index + token.length

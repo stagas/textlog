@@ -169,7 +169,7 @@ export function registerPostsRoutes(app: Hono) {
     if (!user) return redirect('/login')
     const parentId = Number(c.req.param('id'))
     const parent = Number.isInteger(parentId)
-      ? db.query('SELECT p.*,u.handle FROM posts p JOIN users u ON u.id=p.user_id WHERE p.id=?').get(
+      ? db.query('SELECT p.*,u.handle,u.bio FROM posts p JOIN users u ON u.id=p.user_id WHERE p.id=?').get(
         parentId,
       ) as PostView | null
       : null

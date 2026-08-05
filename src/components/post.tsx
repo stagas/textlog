@@ -41,7 +41,7 @@ export function Post({
   return (
     <article className="post">
       <div className="posttop">
-        <a className="postauthor" href={'/u/' + p.handle}>@{p.handle}</a>
+        <a className="postauthor" href={'/u/' + p.handle} title={p.bio}>@{p.handle}</a>
         <a className="postdate" href={'/post/' + p.id}>
           <time dateTime={p.created_at} title={fmtFull(p.created_at)}>{fmt(p.created_at)}</time>
           {showReplyCount && replyCount > 0 && <span>{' '}· {replyCount} {replyCount === 1 ? 'reply' : 'replies'}
@@ -74,7 +74,7 @@ export function Post({
           </label>
         )}
       </div>
-      <p dangerouslySetInnerHTML={{ __html: linkify(p.body) }} />
+      <p dangerouslySetInnerHTML={{ __html: linkify(p.body, p.mention_bios) }} />
       {parent && (
         <blockquote className={'parent-quote' + (parent.deleted_at ? ' deleted-parent' : '')}>
           {parent.deleted_at
@@ -82,7 +82,7 @@ export function Post({
             : (
               <>
                 <div className="parent-quote-top">
-                  <a className="postauthor" href={'/u/' + parent.handle}>@{parent.handle}</a>
+                  <a className="postauthor" href={'/u/' + parent.handle} title={parent.bio}>@{parent.handle}</a>
                   <a className="postdate" href={'/post/' + parent.id}>
                     <time dateTime={parent.created_at} title={fmtFull(parent.created_at)}>
                       {fmt(parent.created_at)}
@@ -99,7 +99,7 @@ export function Post({
                     {user ? 'reply' : 'log in to reply'}
                   </a>
                 </div>
-                <p dangerouslySetInnerHTML={{ __html: linkify(parent.body) }} />
+                <p dangerouslySetInnerHTML={{ __html: linkify(parent.body, parent.mention_bios) }} />
               </>
             )}
         </blockquote>
