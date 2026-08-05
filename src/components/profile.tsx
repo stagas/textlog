@@ -7,7 +7,8 @@ import { Post } from './post'
 export function Profile(
   { user, profile, posts, following, bio = profile.bio || '', editHandle = profile.handle, editEmail = profile.email,
     error, editing = false, total = posts.length, followerCount = 0, followingCount = 0,
-    followingTagCount = 0, blocked = false, blockedByProfile = false, social, previousCursor = null,
+    followingTagCount = 0, blockedPeopleCount = 0, blockedTagCount = 0, blocked = false, blockedByProfile = false,
+    social, previousCursor = null,
     nextCursor = null }: {
       user: User | null
       profile: ProfileRow
@@ -22,6 +23,8 @@ export function Profile(
       followerCount?: number
       followingCount?: number
       followingTagCount?: number
+      blockedPeopleCount?: number
+      blockedTagCount?: number
       blocked?: boolean
       blockedByProfile?: boolean
       previousCursor?: string | null
@@ -102,9 +105,15 @@ export function Profile(
         )
         : !editing && (
           <ProfileTabs profile={profile} active="notes" notes={total} followers={followerCount}
-            following={followingCount} followingTags={followingTagCount} />
+            following={followingCount} followingTags={followingTagCount} showBlocked={user?.id === profile.id}
+            blockedPeople={blockedPeopleCount} blockedTags={blockedTagCount} />
         )}
       {!editing && !blocked && !blockedByProfile && posts.map(post => <Post key={post.id} p={post} user={user} />)}
+      {!editing && !blocked && !blockedByProfile && total === 0 && (
+        <div className="empty">
+          {user?.id === profile.id ? 'You haven’t posted any notes yet.' : `@${profile.handle} hasn’t posted any notes yet.`}
+        </div>
+      )}
       {!editing && !blocked && !blockedByProfile
         && <CursorPagination path={'/u/' + profile.handle} previousCursor={previousCursor} nextCursor={nextCursor} />}
     </Layout>

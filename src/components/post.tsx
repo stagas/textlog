@@ -113,13 +113,17 @@ export function ThreadReplies({ parentId, user }: { parentId: number; user: User
   const rows = db.query(`WITH RECURSIVE thread AS (
       SELECT p.*,u.handle,1 depth FROM posts p JOIN users u ON u.id=p.user_id WHERE p.parent_id=? AND (? < 0 OR NOT EXISTS
         (SELECT 1 FROM blocks b WHERE (b.blocker_id=? AND b.blocked_id=p.user_id) OR (b.blocker_id=p.user_id AND b.blocked_id=?)))
+        AND (? < 0 OR NOT EXISTS (SELECT 1 FROM post_hashtags ph JOIN blocked_hashtags bh ON bh.tag=ph.tag
+          WHERE ph.post_id=p.id AND bh.user_id=?))
       UNION ALL
       SELECT p.*,u.handle,thread.depth+1 FROM posts p JOIN users u ON u.id=p.user_id
         JOIN thread ON p.parent_id=thread.id WHERE (? < 0 OR NOT EXISTS
         (SELECT 1 FROM blocks b WHERE (b.blocker_id=? AND b.blocked_id=p.user_id) OR (b.blocker_id=p.user_id AND b.blocked_id=?)))
+        AND (? < 0 OR NOT EXISTS (SELECT 1 FROM post_hashtags ph JOIN blocked_hashtags bh ON bh.tag=ph.tag
+          WHERE ph.post_id=p.id AND bh.user_id=?))
     ) SELECT id,user_id,parent_id,body,created_at,deleted_at,handle,depth
       FROM thread ORDER BY created_at ASC,id ASC`).all(parentId, viewerId, viewerId, viewerId, viewerId, viewerId,
-    viewerId) as (PostView & { depth: number })[]
+    viewerId, viewerId, viewerId, viewerId, viewerId) as (PostView & { depth: number })[]
   const replies = enrichPosts(db, rows, viewerId)
   if (!replies.length) return null
   const children = new Map<number, PostView[]>()

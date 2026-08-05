@@ -35,6 +35,8 @@ export function registerPostsRoutes(app: Hono) {
     if (!foundPost) return c.text('Not found', 404)
     const user = currentUser(c.req.raw)
     if (user && usersBlocked(user.id, foundPost.user_id)) return c.text('Not found', 404)
+    if (user && db.query(`SELECT 1 FROM post_hashtags ph JOIN blocked_hashtags bh ON bh.tag=ph.tag
+      WHERE ph.post_id=? AND bh.user_id=?`).get(id, user.id)) return c.text('Not found', 404)
     const post = enrichPosts(db, [foundPost], user?.id ?? -1)[0]
     const configuredOrigin = Bun.env.APP_URL?.replace(/\/$/, '')
     const origin = configuredOrigin || new URL(c.req.url).origin

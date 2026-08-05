@@ -10,7 +10,9 @@ import { Post } from './post'
 const activityPostWhere = `p.deleted_at IS NULL AND
   (parent.user_id=? OR (pm.user_id IS NOT NULL AND p.user_id != ?)) AND
   NOT EXISTS (SELECT 1 FROM blocks b WHERE
-    (b.blocker_id=? AND b.blocked_id=p.user_id) OR (b.blocker_id=p.user_id AND b.blocked_id=?))`
+    (b.blocker_id=? AND b.blocked_id=p.user_id) OR (b.blocker_id=p.user_id AND b.blocked_id=?)) AND
+  NOT EXISTS (SELECT 1 FROM post_hashtags ph JOIN blocked_hashtags bh ON bh.tag=ph.tag
+    WHERE ph.post_id=p.id AND bh.user_id=?)`
 
 export function activityTotal(userId: number) {
   const postTotal = (db.query(
@@ -18,7 +20,7 @@ export function activityTotal(userId: number) {
       LEFT JOIN posts parent ON parent.id=p.parent_id
       LEFT JOIN post_mentions pm ON pm.post_id=p.id AND pm.user_id=?
       WHERE ${activityPostWhere}`,
-  ).get(userId, userId, userId, userId, userId) as { count: number }).count
+  ).get(userId, userId, userId, userId, userId, userId) as { count: number }).count
   const followTotal = (db.query(
     `SELECT count(*) count FROM follows f WHERE following_id=? AND created_at IS NOT NULL AND NOT EXISTS
       (SELECT 1 FROM blocks b WHERE (b.blocker_id=? AND b.blocked_id=f.follower_id)
@@ -51,7 +53,7 @@ export function Activity({ user, page }: { user: User; page: number }) {
             OR (b.blocker_id=f.follower_id AND b.blocked_id=?))
       ) activity LEFT JOIN activity_reads ar ON ar.user_id=? AND ar.event_key=activity.activity_key
       ORDER BY created_at DESC LIMIT ? OFFSET ?`,
-  ).all(user.id, user.id, user.id, user.id, user.id, user.id, user.id, user.id, user.id, user.id, user.id, PAGE_SIZE,
+  ).all(user.id, user.id, user.id, user.id, user.id, user.id, user.id, user.id, user.id, user.id, user.id, user.id, PAGE_SIZE,
     (page - 1) * PAGE_SIZE) as (PostView & { activity_kind: 'reply' | 'mention' | 'follow'; posts: number | null;
       viewerFollowing: boolean | null; bio: string | null; activity_key: string; unread: number })[]
   markActivityEntriesRead(user.id, posts.filter(post => post.unread).map(post => post.activity_key))

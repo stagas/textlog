@@ -147,6 +147,9 @@ export function getHotPosts(
     filters.push(`NOT EXISTS (SELECT 1 FROM blocks b WHERE
       (b.blocker_id=? AND b.blocked_id=p.user_id) OR (b.blocker_id=p.user_id AND b.blocked_id=?))`)
     parameters.push(viewerId, viewerId)
+    filters.push(`NOT EXISTS (SELECT 1 FROM post_hashtags ph JOIN blocked_hashtags bh ON bh.tag=ph.tag
+      WHERE ph.post_id=p.id AND bh.user_id=?)`)
+    parameters.push(viewerId)
   }
   if (publicOnly) filters.push('u.deleted_at IS NULL')
   if (cursor) {

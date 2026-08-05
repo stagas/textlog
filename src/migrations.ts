@@ -240,6 +240,17 @@ export const migrations: Migration[] = [
         read_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,PRIMARY KEY(user_id,event_key));`)
     },
   },
+  {
+    version: 17,
+    name: 'blocked_hashtags',
+    up(database) {
+      database.run(`CREATE TABLE blocked_hashtags (
+        user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        tag TEXT NOT NULL,created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        PRIMARY KEY(user_id,tag));
+      CREATE INDEX blocked_hashtags_tag ON blocked_hashtags(tag,user_id);`)
+    },
+  },
 ]
 
 export const latestMigrationVersion = migrations.at(-1)!.version

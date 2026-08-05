@@ -6,7 +6,8 @@ import { Pagination } from './page-shared'
 import { Post } from './post'
 
 export function TagFeed(
-  { user, tag, following, posts, page, total, social }: { user: User | null; tag: string; following: boolean;
+  { user, tag, following, blocked = false, posts, page, total, social }: { user: User | null; tag: string;
+    following: boolean; blocked?: boolean;
     posts: PostView[]; page: number; total: number;
     social?: { description: string; image: string; url: string; type?: 'article' | 'profile' | 'website';
       imageAlt?: string } },
@@ -25,15 +26,22 @@ export function TagFeed(
         </h1>
         {user
           ? (
-            <form method="post" action={'/tag-follow/' + tag}>
-              <button className={`button${following ? ' unfollow-button' : ''}`}>
-                {following ? 'unfollow' : 'follow'}
-              </button>
-            </form>
+            <div className="profile-action">
+              <form method="post" action={'/tag-block/' + tag}>
+                <button className={blocked ? 'button' : 'quiet danger'}>{blocked ? 'unblock' : 'block'}</button>
+              </form>
+              {!blocked && <form method="post" action={'/tag-follow/' + tag}>
+                <button className={`button${following ? ' unfollow-button' : ''}`}>
+                  {following ? 'unfollow' : 'follow'}
+                </button>
+              </form>}
+            </div>
           )
           : <a className="button" href="/login">log in to follow</a>}
       </section>
-      {posts.length
+      {blocked
+        ? <div className="empty relationship-notice">You blocked this tag. Unblock it to see its notes.</div>
+        : posts.length
         ? posts.map(post => <Post p={post} user={user} key={post.id} />)
         : <div className="empty">No notes use this hashtag yet.</div>}
       <Pagination page={page} totalPages={Math.ceil(total / PAGE_SIZE)} path={'/tag/' + tag} />

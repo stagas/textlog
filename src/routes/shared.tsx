@@ -41,7 +41,9 @@ export function paginationRedirect(requestedPage: number, total: number, path: s
 export function visiblePostCount(userId = -1) {
   return (db.query(`SELECT count(*) count FROM posts p WHERE p.deleted_at IS NULL AND (? < 0 OR NOT EXISTS
     (SELECT 1 FROM blocks b WHERE (b.blocker_id=? AND b.blocked_id=p.user_id)
-      OR (b.blocker_id=p.user_id AND b.blocked_id=?)))`).get(userId, userId, userId) as { count: number }).count
+      OR (b.blocker_id=p.user_id AND b.blocked_id=?))) AND (? < 0 OR NOT EXISTS
+    (SELECT 1 FROM post_hashtags ph JOIN blocked_hashtags bh ON bh.tag=ph.tag
+      WHERE ph.post_id=p.id AND bh.user_id=?))`).get(userId, userId, userId, userId, userId) as { count: number }).count
 }
 export function usersBlocked(firstId: number, secondId: number) {
   return !!db.query(`SELECT 1 FROM blocks WHERE

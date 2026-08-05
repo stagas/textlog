@@ -23,6 +23,8 @@ describe('database migrations', () => {
       .toContain('activity_read_at')
     expect(database.query('SELECT count(*) count FROM sqlite_master WHERE type=\'table\' AND name=\'activity_reads\'').get())
       .toEqual({ count: 1 })
+    expect(database.query("SELECT count(*) count FROM sqlite_master WHERE type='table' AND name='blocked_hashtags'").get())
+      .toEqual({ count: 1 })
     expect(
       database.query(
         'SELECT count(*) count FROM sqlite_master WHERE type=\'table\' AND name=\'illegal_activity_reports\'',

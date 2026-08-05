@@ -8,7 +8,9 @@ export function hasUnreadActivity(userId: number) {
       WHERE p.deleted_at IS NULL AND
         (parent.user_id=? OR (pm.user_id IS NOT NULL AND p.user_id!=?)) AND
         NOT EXISTS (SELECT 1 FROM blocks b WHERE
-          (b.blocker_id=? AND b.blocked_id=p.user_id) OR (b.blocker_id=p.user_id AND b.blocked_id=?))
+          (b.blocker_id=? AND b.blocked_id=p.user_id) OR (b.blocker_id=p.user_id AND b.blocked_id=?)) AND
+        NOT EXISTS (SELECT 1 FROM post_hashtags ph JOIN blocked_hashtags bh ON bh.tag=ph.tag
+          WHERE ph.post_id=p.id AND bh.user_id=?)
     UNION ALL
     SELECT 'follow:' || f.follower_id || ':' || f.created_at FROM follows f
       WHERE f.following_id=? AND f.created_at IS NOT NULL AND
@@ -17,7 +19,7 @@ export function hasUnreadActivity(userId: number) {
           (b.blocker_id=f.follower_id AND b.blocked_id=?))
   ) SELECT 1 FROM activity_events event WHERE NOT EXISTS
     (SELECT 1 FROM activity_reads seen WHERE seen.user_id=? AND seen.event_key=event.event_key) LIMIT 1`)
-    .get(userId, userId, userId, userId, userId, userId, userId, userId, userId)
+    .get(userId, userId, userId, userId, userId, userId, userId, userId, userId, userId)
 }
 
 export function markActivityEntriesRead(userId: number, eventKeys: string[]) {

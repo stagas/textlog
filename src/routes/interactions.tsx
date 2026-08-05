@@ -53,7 +53,7 @@ export function registerInteractionsRoutes(app: Hono) {
           .run(user.id, target.id, target.id, user.id)
       }
     })()
-    return redirect('/u/' + target.handle)
+    return redirect(safeRefererPath(c.req.header('referer'), c.req.url, '/u/' + target.handle))
   })
 
   app.post('/post/:id/report', async c => {
@@ -84,6 +84,22 @@ export function registerInteractionsRoutes(app: Hono) {
     exists
       ? db.query('DELETE FROM hashtag_follows WHERE user_id=? AND tag=?').run(user.id, tag)
       : db.query('INSERT OR IGNORE INTO hashtag_follows VALUES(?,?)').run(user.id, tag)
+    return redirect(safeRefererPath(c.req.header('referer'), c.req.url, '/tag/' + tag))
+  })
+
+  app.post('/tag-block/:tag', c => {
+    const user = currentUser(c.req.raw)
+    if (!user) return redirect('/login')
+    const tag = c.req.param('tag').toLowerCase()
+    if (!/^[a-z0-9_]{1,280}$/.test(tag)) return c.text('Invalid tag', 400)
+    const exists = db.query('SELECT 1 FROM blocked_hashtags WHERE user_id=? AND tag=?').get(user.id, tag)
+    db.transaction(() => {
+      if (exists) db.query('DELETE FROM blocked_hashtags WHERE user_id=? AND tag=?').run(user.id, tag)
+      else {
+        db.query('INSERT INTO blocked_hashtags(user_id,tag) VALUES(?,?)').run(user.id, tag)
+        db.query('DELETE FROM hashtag_follows WHERE user_id=? AND tag=?').run(user.id, tag)
+      }
+    })()
     return redirect(safeRefererPath(c.req.header('referer'), c.req.url, '/tag/' + tag))
   })
 

@@ -46,8 +46,10 @@ export function enrichPosts(database: Database, posts: PostView[], viewerId = -1
   const parentIds = [...new Set(posts.flatMap(post => post.parent_id ? [post.parent_id] : []))]
   const placeholders = ids.map(() => '?').join(',')
   const visibleReply = viewerId < 0 ? '' : `AND NOT EXISTS (SELECT 1 FROM blocks b WHERE
-    (b.blocker_id=? AND b.blocked_id=posts.user_id) OR (b.blocker_id=posts.user_id AND b.blocked_id=?))`
-  const countParameters = viewerId < 0 ? ids : [...ids, viewerId, viewerId]
+    (b.blocker_id=? AND b.blocked_id=posts.user_id) OR (b.blocker_id=posts.user_id AND b.blocked_id=?))
+    AND NOT EXISTS (SELECT 1 FROM post_hashtags ph JOIN blocked_hashtags bh ON bh.tag=ph.tag
+      WHERE ph.post_id=posts.id AND bh.user_id=?)`
+  const countParameters = viewerId < 0 ? ids : [...ids, viewerId, viewerId, viewerId]
   const counts = database.query(
     `SELECT parent_id,count(*) reply_count FROM posts
       WHERE deleted_at IS NULL AND parent_id IN (${placeholders}) ${visibleReply} GROUP BY parent_id`,
@@ -58,12 +60,16 @@ export function enrichPosts(database: Database, posts: PostView[], viewerId = -1
   if (parentIds.length) {
     const parentPlaceholders = parentIds.map(() => '?').join(',')
     const parentReplyFilter = viewerId < 0 ? '' : `AND NOT EXISTS (SELECT 1 FROM blocks b WHERE
-      (b.blocker_id=? AND b.blocked_id=r.user_id) OR (b.blocker_id=r.user_id AND b.blocked_id=?))`
+      (b.blocker_id=? AND b.blocked_id=r.user_id) OR (b.blocker_id=r.user_id AND b.blocked_id=?))
+      AND NOT EXISTS (SELECT 1 FROM post_hashtags ph JOIN blocked_hashtags bh ON bh.tag=ph.tag
+        WHERE ph.post_id=r.id AND bh.user_id=?)`
     const parentFilter = viewerId < 0 ? '' : `AND NOT EXISTS (SELECT 1 FROM blocks b WHERE
-      (b.blocker_id=? AND b.blocked_id=p.user_id) OR (b.blocker_id=p.user_id AND b.blocked_id=?))`
+      (b.blocker_id=? AND b.blocked_id=p.user_id) OR (b.blocker_id=p.user_id AND b.blocked_id=?))
+      AND NOT EXISTS (SELECT 1 FROM post_hashtags ph JOIN blocked_hashtags bh ON bh.tag=ph.tag
+        WHERE ph.post_id=p.id AND bh.user_id=?)`
     const parentParameters = viewerId < 0
       ? parentIds
-      : [viewerId, viewerId, ...parentIds, viewerId, viewerId]
+      : [viewerId, viewerId, viewerId, ...parentIds, viewerId, viewerId, viewerId]
     const rows = database.query(
       `SELECT p.id,p.body,p.created_at,p.deleted_at,u.handle,
         (SELECT count(*) FROM posts r WHERE r.parent_id=p.id AND r.deleted_at IS NULL ${parentReplyFilter}) reply_count

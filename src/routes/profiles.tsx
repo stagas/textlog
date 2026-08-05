@@ -48,7 +48,7 @@ export function registerProfilesRoutes(app: Hono) {
 
   app.get('/u/:handle/:kind', c => {
     const kind = c.req.param('kind')
-    if (kind !== 'following' && kind !== 'followers') return c.text('Not found', 404)
+    if (kind !== 'following' && kind !== 'followers' && kind !== 'blocked') return c.text('Not found', 404)
     const resolved = resolveHandle(db, c.req.param('handle'))
     if (!resolved) return c.text('Not found', 404)
     const pageQuery = c.req.query('page') ? `&page=${encodeURIComponent(c.req.query('page')!)}` : ''
@@ -68,7 +68,8 @@ export function registerProfilesRoutes(app: Hono) {
       'SELECT id,handle,email,bio,suspended_at,deleted_at FROM users WHERE id=? AND deleted_at IS NULL',
     ).get(resolved.id) as ProfileRow
     const tab = c.req.query('tab')
-    if (tab && tab !== 'following' && tab !== 'followers') return c.text('Not found', 404)
+    if (tab && tab !== 'following' && tab !== 'followers' && tab !== 'blocked') return c.text('Not found', 404)
+    if (tab === 'blocked' && user?.id !== profile.id) return c.text('Not found', 404)
     const total =
       (db.query('SELECT count(*) AS count FROM posts WHERE user_id=? AND deleted_at IS NULL').get(profile.id) as {
         count: number
@@ -94,6 +95,12 @@ export function registerProfilesRoutes(app: Hono) {
       followingCount: number
       followingTagCount: number
     }
+    const blockCounts = user?.id === profile.id
+      ? db.query(`SELECT (SELECT count(*) FROM blocks WHERE blocker_id=?) blockedPeople,
+        (SELECT count(*) FROM blocked_hashtags WHERE user_id=?) blockedTags`).get(profile.id, profile.id) as {
+          blockedPeople: number; blockedTags: number
+        }
+      : { blockedPeople: 0, blockedTags: 0 }
     const configuredOrigin = Bun.env.APP_URL?.replace(/\/$/, '')
     const origin = configuredOrigin || new URL(c.req.url).origin
     const profileUrl = `${origin}/u/${profile.handle}`
@@ -111,6 +118,25 @@ export function registerProfilesRoutes(app: Hono) {
           blockedByProfile={blockedByProfile} total={0} followerCount={0} followingCount={0} followingTagCount={0}
           social={social} />,
       )
+    }
+    if (tab === 'blocked') {
+      const people = db.query(`SELECT u.*,
+        (SELECT count(*) FROM posts p WHERE p.user_id=u.id AND p.deleted_at IS NULL) posts
+        FROM blocks b JOIN users u ON u.id=b.blocked_id WHERE b.blocker_id=?
+        ORDER BY u.handle LIMIT ? OFFSET ?`).all(profile.id, PAGE_SIZE,
+        (profilePage - 1) * PAGE_SIZE) as PersonView[]
+      const tags = db.query(`SELECT bh.tag,
+        (SELECT count(*) FROM post_hashtags ph JOIN posts p ON p.id=ph.post_id
+          WHERE ph.tag=bh.tag AND p.deleted_at IS NULL) count
+        FROM blocked_hashtags bh WHERE bh.user_id=? ORDER BY bh.tag`).all(profile.id) as {
+          tag: string; count: number; viewerFollowing: boolean
+        }[]
+      const outOfRange = paginationRedirect(profilePage, blockCounts.blockedPeople,
+        `/u/${profile.handle}?tab=blocked`)
+      if (outOfRange) return outOfRange
+      return page(<Connections user={user} profile={profile} people={people} tags={tags} kind="blocked"
+        page={profilePage} total={blockCounts.blockedPeople} noteCount={total} {...counts} following={following}
+        blockedPeopleCount={blockCounts.blockedPeople} blockedTagCount={blockCounts.blockedTags} social={social} />)
     }
     if (tab === 'following' || tab === 'followers') {
       const join = tab === 'following'
@@ -148,24 +174,27 @@ export function registerProfilesRoutes(app: Hono) {
         : []
       return page(
         <Connections user={user} profile={profile} people={people} tags={tags} kind={tab} page={profilePage}
-          total={connectionTotal} noteCount={total} {...counts} following={following} social={social} />,
+          total={connectionTotal} noteCount={total} {...counts} following={following}
+          blockedPeopleCount={blockCounts.blockedPeople} blockedTagCount={blockCounts.blockedTags} social={social} />,
       )
     }
     const cursorValue = c.req.query('cursor')
     const cursor = decodePostCursor(cursorValue)
     if (cursorValue && !cursor) return c.text('Invalid cursor', 400)
     const cursorFilter = cursor ? `AND p.id ${cursor.direction === 'previous' ? '>' : '<'} ?` : ''
-    const parameters = cursor ? [profile.id, cursor.id, PAGE_SIZE + 1] : [profile.id, PAGE_SIZE + 1]
     const rows = db.query(`SELECT p.*,u.handle FROM posts p JOIN users u ON u.id=p.user_id
-      WHERE p.user_id=? AND p.deleted_at IS NULL ${cursorFilter}
+      WHERE p.user_id=? AND p.deleted_at IS NULL AND (? < 0 OR NOT EXISTS
+        (SELECT 1 FROM post_hashtags ph JOIN blocked_hashtags bh ON bh.tag=ph.tag
+          WHERE ph.post_id=p.id AND bh.user_id=?)) ${cursorFilter}
       ORDER BY p.id ${cursor?.direction === 'previous' ? 'ASC' : 'DESC'} LIMIT ?`)
-      .all(...parameters) as PostView[]
+      .all(profile.id, viewerId, viewerId, ...(cursor ? [cursor.id] : []), PAGE_SIZE + 1) as PostView[]
     const result = postCursorPage(rows, cursor)
     const posts = enrichPosts(db, result.rows, viewerId)
     return page(
       <Profile user={user} profile={profile} posts={blocked || blockedByProfile ? [] : posts} following={following}
         blocked={blocked} total={total} followerCount={counts.followerCount}
-        followingCount={counts.followingCount} followingTagCount={counts.followingTagCount} social={social}
+        followingCount={counts.followingCount} followingTagCount={counts.followingTagCount}
+        blockedPeopleCount={blockCounts.blockedPeople} blockedTagCount={blockCounts.blockedTags} social={social}
         previousCursor={result.previousCursor} nextCursor={result.nextCursor} />,
     )
   })

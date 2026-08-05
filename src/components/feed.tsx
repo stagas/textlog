@@ -19,8 +19,10 @@ export function Feed({ user, cursor, title, path = '/for-you' }: {
   const rows = db.query(
     `SELECT p.*,u.handle, EXISTS(SELECT 1 FROM follows f WHERE f.follower_id=? AND f.following_id=p.user_id) following FROM posts p JOIN users u ON u.id=p.user_id WHERE p.deleted_at IS NULL AND (p.user_id=? OR p.user_id IN (SELECT following_id FROM follows WHERE follower_id=?) OR p.id IN (SELECT ph.post_id FROM post_hashtags ph JOIN hashtag_follows hf ON hf.tag=ph.tag WHERE hf.user_id=?))
       AND NOT EXISTS (SELECT 1 FROM blocks b WHERE (b.blocker_id=? AND b.blocked_id=p.user_id) OR (b.blocker_id=p.user_id AND b.blocked_id=?))
+      AND NOT EXISTS (SELECT 1 FROM post_hashtags tph JOIN blocked_hashtags bh ON bh.tag=tph.tag
+        WHERE tph.post_id=p.id AND bh.user_id=?)
       ${cursorFilter} ORDER BY p.id ${cursor?.direction === 'previous' ? 'ASC' : 'DESC'} LIMIT ?`,
-  ).all(...parameters) as PostView[]
+  ).all(...parameters.slice(0, 6), user.id, ...parameters.slice(6)) as PostView[]
   const result = postCursorPage(rows, cursor)
   const posts = enrichPosts(db, result.rows, user.id)
   return (

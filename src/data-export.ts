@@ -37,6 +37,8 @@ export function exportUserData(database: Database, userId: number, currentSessio
     followed_hashtags: database.query('SELECT tag FROM hashtag_follows WHERE user_id=? ORDER BY tag').all(userId),
     blocked_accounts: database.query(`SELECT u.handle,b.created_at FROM blocks b JOIN users u ON u.id=b.blocked_id
       WHERE b.blocker_id=? ORDER BY u.handle`).all(userId),
+    blocked_hashtags: database.query('SELECT tag,created_at FROM blocked_hashtags WHERE user_id=? ORDER BY tag')
+      .all(userId),
     reports: database.query(`SELECT id,post_id,reason,status,created_at,resolved_at FROM reports
       WHERE reporter_id=? ORDER BY created_at,id`).all(userId),
     sessions: sessions.map(({ token_hash, ...session }) => ({ ...session,

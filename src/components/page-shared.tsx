@@ -177,13 +177,17 @@ export function ProfileHeader({ user, profile, following, blocked = false, editi
   )
 }
 
-export function ProfileTabs({ profile, active, notes, followers, following, followingTags }: {
+export function ProfileTabs({ profile, active, notes, followers, following, followingTags, showBlocked = false,
+  blockedPeople = 0, blockedTags = 0 }: {
   profile: ProfileRow
-  active: 'notes' | 'followers' | 'following'
+  active: 'notes' | 'followers' | 'following' | 'blocked'
   notes: number
   followers: number
   following: number
   followingTags: number
+  showBlocked?: boolean
+  blockedPeople?: number
+  blockedTags?: number
 }) {
   const base = `/u/${profile.handle}`
   return (
@@ -204,6 +208,10 @@ export function ProfileTabs({ profile, active, notes, followers, following, foll
       >
         {followers} {followers === 1 ? 'follower' : 'followers'}
       </a>
+      {showBlocked && <a className={active === 'blocked' ? 'active' : ''}
+        aria-current={active === 'blocked' ? 'page' : undefined} href={`${base}?tab=blocked`}>
+        {blockedTags} {blockedTags === 1 ? 'tag' : 'tags'}, {blockedPeople} {blockedPeople === 1 ? 'user' : 'users'} blocked
+      </a>}
     </nav>
   )
 }
@@ -234,6 +242,25 @@ export function TagPeopleList({ user, tags, followingKey = 'following' }: {
       ))}
     </div>
   )
+}
+
+export function BlockedTagList({ tags }: { tags: TagView[] }) {
+  return (
+    <div className="people tag-people">
+      {tags.map(tag => <article key={tag.tag}><div><div><a href={`/tag/${tag.tag}`}>#{tag.tag}</a>
+        <small>{tag.count} {tag.count === 1 ? 'note' : 'notes'}</small></div>
+        <form method="post" action={`/tag-block/${tag.tag}`}><button className="button">unblock</button></form>
+      </div></article>)}
+    </div>
+  )
+}
+
+export function BlockedPeopleList({ people }: { people: PersonView[] }) {
+  return <div className="people">{people.map(person => <article key={person.id}><div><div>
+    <a href={`/u/${person.handle}`}>@{person.handle}</a>
+    <small>{person.posts} {person.posts === 1 ? 'note' : 'notes'}</small></div>
+    <form method="post" action={`/block/${person.handle}`}><button className="button">unblock</button></form>
+  </div></article>)}</div>
 }
 
 export function ConnectionPeople({ user, people, className = '' }: {

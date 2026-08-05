@@ -18,6 +18,8 @@ beforeEach(() => {
       deleted_at TEXT
     );
     CREATE TABLE blocks (blocker_id INTEGER NOT NULL, blocked_id INTEGER NOT NULL);
+    CREATE TABLE post_hashtags (post_id INTEGER NOT NULL,tag TEXT NOT NULL);
+    CREATE TABLE blocked_hashtags (user_id INTEGER NOT NULL,tag TEXT NOT NULL);
     CREATE TABLE post_hot (post_id INTEGER PRIMARY KEY,score REAL NOT NULL DEFAULT 0,
       score_updated_at TEXT NOT NULL,latest_activity_at TEXT NOT NULL);
   `)
@@ -95,5 +97,14 @@ describe('hot feed ranking', () => {
     const results = getHotPosts(database, 20, null, asOf, 1)
     expect(results.map(result => result.id)).toEqual([1])
     expect(results[0].hot_score).toBeCloseTo(Math.pow(0.5, 1 / 24))
+  })
+
+  test('hides every post carrying a blocked hashtag', () => {
+    post(1, '2026-08-03 11:00:00')
+    post(2, '2026-08-03 12:00:00')
+    database.run(`INSERT INTO post_hashtags VALUES(2,'spoilers');
+      INSERT INTO blocked_hashtags VALUES(1,'spoilers');`)
+
+    expect(getHotPosts(database, 20, null, asOf, 1).map(result => result.id)).toEqual([1])
   })
 })

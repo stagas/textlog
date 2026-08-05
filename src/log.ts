@@ -46,6 +46,7 @@ const actionRoutes: Array<[RegExp, string]> = [
   [/^\/follow\/[^/]+$/, 'user.follow.toggle'],
   [/^\/block\/[^/]+$/, 'user.block.toggle'],
   [/^\/tag-follow\/[^/]+$/, 'tag.follow.toggle'],
+  [/^\/tag-block\/[^/]+$/, 'tag.block.toggle'],
   [/^\/u\/[^/]+\/profile$/, 'profile.update'],
   [/^\/admin\/reports\/\d+\/resolve$/, 'admin.report.resolve'],
   [/^\/admin\/reports\/\d+\/dismiss$/, 'admin.report.dismiss'],
