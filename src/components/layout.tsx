@@ -1,6 +1,6 @@
 import React from 'react'
-import { isAdmin } from '../admin'
 import { hasUnreadActivity } from '../activity-state'
+import { isAdmin } from '../admin'
 import type { User } from '../db'
 
 let devReloadBootId: string | undefined
@@ -11,7 +11,7 @@ function ActivityLink({ unread, className }: { unread: boolean; className?: stri
       {unread && (
         <>
           <span className="activity-unread-dot" aria-hidden="true" />
-          <span className="sr-only">unread </span>
+          <span className="sr-only">unread</span>
         </>
       )}
       activity
@@ -42,7 +42,7 @@ export function Layout({
     description: 'A quieter place for your thoughts.',
     image: `${appOrigin}/og.png`,
     type: 'website' as const,
-    imageAlt: 'root.mx logo',
+    imageAlt: 'root.mx',
   }
   const activityUnread = user ? hasUnreadActivity(user.id) : false
   const navigation = user
@@ -108,9 +108,9 @@ export function Layout({
               </nav>
             )
             : (
-            <nav className={user ? 'account-nav' : 'guest-nav'}>
-              {navigation}
-            </nav>
+              <nav className={user ? 'account-nav' : 'guest-nav'}>
+                {navigation}
+              </nav>
             )}
         </header>
         <main id="main-content">{children}</main>
