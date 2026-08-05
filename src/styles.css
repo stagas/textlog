@@ -42,7 +42,7 @@
   --space-6: 32px;
   --space-7: 48px;
   --space-8: 64px;
-  font: 16px/1.5 ui-monospace, SFMono-Regular, Menlo, monospace;
+  font: 16px/1.5 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
   color: var(--ink);
   background: var(--bg);
 }
