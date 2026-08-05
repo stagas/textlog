@@ -13,7 +13,7 @@ export function EditPost(
           <FormMessage error={error} />
           <textarea name="body" maxLength={280} required autoFocus defaultValue={body} />
           <div className="composefoot">
-            <span>280 characters max</span>
+            <span>280 characters max · use #hashtags and @mentions</span>
             <div className="form-actions">
               <a className="quiet" href={'/post/' + post.id}>cancel</a>
               <button className="button">save changes →</button>

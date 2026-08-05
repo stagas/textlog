@@ -26,7 +26,7 @@ export function Reply(
                 <textarea name="body" maxLength={280} required autoFocus defaultValue={body}
                   placeholder={'Reply to @' + post.handle + '…'} />
                 <div className="composefoot">
-                  <span>280 characters max</span>
+                  <span>280 characters max · use #hashtags and @mentions</span>
                   <button className="button">post →</button>
                 </div>
               </form>
