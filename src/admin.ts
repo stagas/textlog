@@ -61,5 +61,5 @@ export function anonymizeUser(database: Database, userId: number, actorId?: numb
   }
   database.query('DELETE FROM sessions WHERE user_id=?').run(userId)
   database.query(`UPDATE users SET handle=?,email=?,bio='',password='!',suspended_at=NULL,deleted_at=CURRENT_TIMESTAMP
-    WHERE id=?`).run(`deleted-${userId}`, `deleted-${userId}@root.mx`, userId)
+    WHERE id=?`).run(`deleted-${userId}`, `deleted-${userId}@textlog.cc`, userId)
 }

@@ -3,7 +3,7 @@
   "configVersion": 1,
   "workspaces": {
     "": {
-      "name": "root",
+      "name": "textlog",
       "dependencies": {
         "@types/react": "latest",
         "@types/react-dom": "latest",

@@ -76,7 +76,7 @@ function openApiDocument() {
   } }, '404': { description: 'Not found' }, '429': { description: 'Rate limited' } }
   return {
     openapi: '3.1.0',
-    info: { title: 'root.mx public API', version: '1.0.0', description: 'Read-only access to public root.mx content.' },
+    info: { title: 'textlog public API', version: '1.0.0', description: 'Read-only access to public textlog content.' },
     servers: [{ url: '/api/v1' }],
     paths: {
       '/feeds/latest': { get: { summary: 'Latest posts', parameters: collectionParameters, responses: jsonResponses } },
@@ -165,7 +165,7 @@ export function registerApiRoutes(app: Hono, database: Database = db,
 
   app.use('/api/v1/*', async (c, next) => {
     if (c.req.method === 'OPTIONS' || c.req.path === '/api/v1/firehose') return next()
-    const ip = c.req.header('x-root-client-ip') || '-'
+    const ip = c.req.header('x-textlog-client-ip') || '-'
     const limited = consumeBucketedAttempt(database, 'api-json', rateLimitKey(ip), JSON_LIMIT, JSON_WINDOW_SECONDS)
     if (limited) return apiError('rate_limited', 'Too many API requests', 429, limited.retryAfter)
     return next()
@@ -255,7 +255,7 @@ export function registerApiRoutes(app: Hono, database: Database = db,
   })
 
   app.get('/api/v1/firehose', c => {
-    const ip = c.req.header('x-root-client-ip') || '-'
+    const ip = c.req.header('x-textlog-client-ip') || '-'
     const count = activeStreams.get(ip) || 0
     if (count >= SSE_LIMIT) return apiError('rate_limited', 'Too many firehose connections', 429, SSE_RETRY_AFTER)
     activeStreams.set(ip, count + 1)

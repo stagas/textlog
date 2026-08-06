@@ -71,9 +71,9 @@ describe('post persistence', () => {
         (2,2,1,'visible reply','2026-08-03 11:00:00'),
         (3,3,1,'blocked reply','2026-08-03 12:00:00');
       INSERT INTO blocks VALUES(2,3);`)
-    const root = db.query('SELECT p.*,u.handle FROM posts p JOIN users u ON u.id=p.user_id WHERE p.id=1')
+    const parentPost = db.query('SELECT p.*,u.handle FROM posts p JOIN users u ON u.id=p.user_id WHERE p.id=1')
       .get() as PostView
-    expect(enrichPosts(db, [root], 2)[0].reply_count).toBe(1)
+    expect(enrichPosts(db, [parentPost], 2)[0].reply_count).toBe(1)
 
     db.query('INSERT INTO blocks VALUES(?,?)').run(2, 1)
     const child = db.query('SELECT p.*,u.handle FROM posts p JOIN users u ON u.id=p.user_id WHERE p.id=2')
@@ -89,9 +89,9 @@ describe('post persistence', () => {
       (3,1,1,'hidden reply #spoilers','2026-08-03 12:00:00');
       INSERT INTO post_hashtags VALUES(1,'spoilers'),(3,'spoilers');
       INSERT INTO blocked_hashtags VALUES(2,'spoilers');`)
-    const root = db.query('SELECT p.*,u.handle FROM posts p JOIN users u ON u.id=p.user_id WHERE p.id=1')
+    const parentPost = db.query('SELECT p.*,u.handle FROM posts p JOIN users u ON u.id=p.user_id WHERE p.id=1')
       .get() as PostView
-    expect(enrichPosts(db, [root], 2)[0].reply_count).toBe(1)
+    expect(enrichPosts(db, [parentPost], 2)[0].reply_count).toBe(1)
     const child = db.query('SELECT p.*,u.handle FROM posts p JOIN users u ON u.id=p.user_id WHERE p.id=2')
       .get() as PostView
     expect(enrichPosts(db, [child], 2)[0].parent).toBeNull()

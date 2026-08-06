@@ -8,12 +8,12 @@ describe('response compression', () => {
   test('prefers Brotli and preserves the response', async () => {
     const response = await compressResponse(
       new Request('http://localhost', { headers: { 'accept-encoding': 'gzip, br' } }),
-      new Response(text, { headers: { 'content-type': 'text/html', etag: '"page"', 'set-cookie': 'root=token' } }),
+      new Response(text, { headers: { 'content-type': 'text/html', etag: '"page"', 'set-cookie': 'textlog=token' } }),
     )
     expect(response.headers.get('content-encoding')).toBe('br')
     expect(response.headers.get('vary')).toContain('Accept-Encoding')
     expect(response.headers.get('etag')).toBe('W/"page"')
-    expect(response.headers.get('set-cookie')).toBe('root=token')
+    expect(response.headers.get('set-cookie')).toBe('textlog=token')
     expect(brotliDecompressSync(await response.arrayBuffer()).toString()).toBe(text)
   })
 

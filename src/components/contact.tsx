@@ -13,7 +13,7 @@ export function Contact({ user }: { user: User | null }) {
 
         <h2>Email</h2>
         <p>
-          <a href="mailto:hello@root.mx">hello@root.mx</a>
+          <a href="mailto:hello@textlog.cc">hello@textlog.cc</a>
         </p>
 
         <h2>Phone</h2>
@@ -23,7 +23,7 @@ export function Contact({ user }: { user: User | null }) {
 
         <h2>Post</h2>
         <p>
-          Georgios Stagakis · root.mx<br />
+          Georgios Stagakis · textlog<br />
           Kallikratis, Crete, Greece 730 11
         </p>
 
@@ -33,7 +33,7 @@ export function Contact({ user }: { user: User | null }) {
         <h2>Safety</h2>
         <p>
           <a href="/report-illegal-activity">Report illegal activity</a>{' '}
-          involving a root.mx post. Copyright owners can also review the{' '}
+          involving a textlog post. Copyright owners can also review the{' '}
           <a href="/dmca">DMCA notice and counter-notice process</a>.
         </p>
       </article>

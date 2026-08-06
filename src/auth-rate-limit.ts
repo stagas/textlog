@@ -14,7 +14,7 @@ export const AUTH_LIMITS = {
 } as const
 
 export function rateLimitKey(value: string) {
-  return createHash('sha256').update(`root.mx auth rate limit\0${value}`).digest('hex')
+  return createHash('sha256').update(`textlog auth rate limit\0${value}`).digest('hex')
 }
 
 export function consumeAuthAttempt(

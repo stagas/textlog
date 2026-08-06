@@ -105,10 +105,10 @@ export function registerProfilesRoutes(app: Hono) {
     const configuredOrigin = Bun.env.APP_URL?.replace(/\/$/, '')
     const origin = configuredOrigin || new URL(c.req.url).origin
     const profileUrl = `${origin}/u/${profile.handle}`
-    const description = profile.bio.replace(/\s+/g, ' ').trim() || `@${profile.handle} on root.mx`
+    const description = profile.bio.replace(/\s+/g, ' ').trim() || `@${profile.handle} on textlog`
     const social = {
       description,
-      image: `${profileUrl}/og.png`,
+      image: `${profileUrl}/og.png?v=2`,
       url: profileUrl,
       type: 'profile' as const,
       imageAlt: `Profile for @${profile.handle}: ${description}`,

@@ -3,20 +3,20 @@ import { ConfigurationError, validateStartupConfiguration } from './config'
 
 const production = {
   NODE_ENV: 'production',
-  APP_URL: 'https://root.mx',
+  APP_URL: 'https://textlog.cc',
   RESEND_API_KEY: 'configured-secret',
-  EMAIL_FROM: 'root.mx <hello@root.mx>',
+  EMAIL_FROM: 'textlog <hello@textlog.cc>',
   OPENAI_API_KEY: 'configured-secret',
   IP_PSEUDONYM_SECRET: 'configured-secret-at-least-32-characters',
 }
 
 describe('startup configuration', () => {
   test('accepts a complete production configuration and normalizes its public origin', () => {
-    const config = validateStartupConfiguration({ ...production, APP_URL: 'https://root.mx/' }, {
+    const config = validateStartupConfiguration({ ...production, APP_URL: 'https://textlog.cc/' }, {
       checkFilesystem: false,
     })
 
-    expect(config).toMatchObject({ production: true, appUrl: 'https://root.mx', host: '0.0.0.0', port: 3000,
+    expect(config).toMatchObject({ production: true, appUrl: 'https://textlog.cc', host: '0.0.0.0', port: 3000,
       databaseBusyTimeoutMs: 5000, backupRetentionDays: 14, moderationDisabled: false })
   })
 
@@ -40,7 +40,7 @@ describe('startup configuration', () => {
     expect(() =>
       validateStartupConfiguration({
         ...production,
-        APP_URL: 'http://user:pass@root.mx/private?token=secret',
+        APP_URL: 'http://user:pass@textlog.cc/private?token=secret',
         DEV_RELOAD: 'true',
         TRUST_PROXY: 'sometimes',
         PORT: '70000',
@@ -62,21 +62,21 @@ describe('startup configuration', () => {
   })
 
   test('allows captured email only in isolated tests', () => {
-    expect(validateStartupConfiguration({ NODE_ENV: 'test', EMAIL_CAPTURE_PATH: '/tmp/root-mx-mail.jsonl' }, {
+    expect(validateStartupConfiguration({ NODE_ENV: 'test', EMAIL_CAPTURE_PATH: '/tmp/textlog-mail.jsonl' }, {
       checkFilesystem: false,
     }).environment).toBe('test')
     expect(() =>
       validateStartupConfiguration({
         NODE_ENV: 'development',
-        EMAIL_CAPTURE_PATH: '/tmp/root-mx-mail.jsonl',
+        EMAIL_CAPTURE_PATH: '/tmp/textlog-mail.jsonl',
       }, { checkFilesystem: false })
     ).toThrow('EMAIL_CAPTURE_PATH is only allowed in test')
     expect(() =>
       validateStartupConfiguration({
         NODE_ENV: 'test',
-        EMAIL_CAPTURE_PATH: '/tmp/root-mx-mail.jsonl',
+        EMAIL_CAPTURE_PATH: '/tmp/textlog-mail.jsonl',
         RESEND_API_KEY: 'configured-secret',
-        EMAIL_FROM: 'root.mx <hello@root.mx>',
+        EMAIL_FROM: 'textlog <hello@textlog.cc>',
       }, { checkFilesystem: false })
     ).toThrow('EMAIL_CAPTURE_PATH cannot be combined')
   })

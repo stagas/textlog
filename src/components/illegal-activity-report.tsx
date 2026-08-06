@@ -19,12 +19,12 @@ export function IllegalActivityReport(
           )
           : (
             <>
-              <p>Use this form to report a specific root.mx post that you believe involves illegal activity.</p>
+              <p>Use this form to report a specific textlog post that you believe involves illegal activity.</p>
               <form className="panel report-panel" method="post" action="/report-illegal-activity">
                 <FormMessage error={error} />
                 <label>
                   post URL<input type="url" name="contentUrl" required defaultValue={values.contentUrl}
-                    placeholder="https://root.mx/post/123" />
+                    placeholder="https://textlog.cc/post/123" />
                 </label>
                 <label>
                   category<select name="category" required defaultValue={values.category || ''}>

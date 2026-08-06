@@ -59,7 +59,7 @@ db.transaction(() => {
       : variation === 2
       ? `${thought}. More at https://example.com/notes/${index + 1} #${tag}`
       : variation === 3
-      ? `Today: ${thought}. #${tag} #root`
+      ? `Today: ${thought}. #${tag} #textlog`
       : `${thought}. Keeping this one here for later. #${tag}`
     const parentId = index >= 12 && index % 9 === 0 ? postIds[index - 7] : null
     const createdAt = new Date(Date.now() - (postCount - index) * 37 * 60 * 1000)

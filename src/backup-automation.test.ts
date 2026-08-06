@@ -11,7 +11,7 @@ afterEach(() => {
 })
 
 function fixture() {
-  const directory = mkdtempSync(join(tmpdir(), 'root-backup-automation-'))
+  const directory = mkdtempSync(join(tmpdir(), 'textlog-backup-automation-'))
   directories.push(directory)
   const database = new Database(join(directory, 'live.sqlite'), { create: true })
   database.run('CREATE TABLE state(value TEXT); INSERT INTO state VALUES(\'recoverable\'); PRAGMA user_version=14')
@@ -28,7 +28,7 @@ describe('automated local backups', () => {
     expect(first.created).toBe(true)
     expect(first.drill).toMatchObject({ quarter: '2026-Q3', status: 'passed', databaseVersion: 14 })
     expect(second).toMatchObject({ created: false, drill: null, path: first.path })
-    expect(readdirSync(configuration.directory).filter(name => name.startsWith('root-daily-'))).toHaveLength(1)
+    expect(readdirSync(configuration.directory).filter(name => name.startsWith('textlog-daily-'))).toHaveLength(1)
     expect(readdirSync(join(configuration.directory, 'drills'))).toEqual(['2026-Q3.json'])
     database.close()
   })

@@ -53,10 +53,10 @@ export function registerTagsRoutes(app: Hono) {
     const configuredOrigin = Bun.env.APP_URL?.replace(/\/$/, '')
     const origin = configuredOrigin || new URL(c.req.url).origin
     const tagUrl = `${origin}/tag/${encodeURIComponent(tag)}`
-    const description = `${total} ${total === 1 ? 'note' : 'notes'} tagged #${tag} on root.mx`
+    const description = `${total} ${total === 1 ? 'note' : 'notes'} tagged #${tag} on textlog`
     const social = {
       description,
-      image: `${tagUrl}/og.png`,
+      image: `${tagUrl}/og.png?v=2`,
       url: tagUrl,
       type: 'website' as const,
       imageAlt: `#${tag}: ${description}`,

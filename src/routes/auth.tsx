@@ -151,7 +151,7 @@ export function registerAuthRoutes(app: Hono) {
   })
 
   app.post('/logout', c => {
-    const session = c.req.header('cookie')?.match(/root=([^;]+)/)?.[1]
+    const session = c.req.header('cookie')?.match(/textlog=([^;]+)/)?.[1]
     if (session) db.query('DELETE FROM sessions WHERE token_hash=?').run(sessionHash(session))
     return redirect('/', clearSessionCookie())
   })

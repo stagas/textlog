@@ -33,23 +33,23 @@ async function sendEmail(email: string, subject: string, text: string, html: str
 }
 
 export function sendPasswordReset(email: string, resetUrl: string) {
-  return sendEmail(email, 'Reset your root.mx password',
-    `Use this link to reset your root.mx password:\n\n${resetUrl}\n\nThis link expires in one hour. If you did not request it, you can ignore this email.`,
-    `<p>Use the link below to reset your root.mx password.</p><p><a href="${resetUrl}">Reset password</a></p><p>This link expires in one hour. If you did not request it, you can ignore this email.</p>`)
+  return sendEmail(email, 'Reset your textlog password',
+    `Use this link to reset your textlog password:\n\n${resetUrl}\n\nThis link expires in one hour. If you did not request it, you can ignore this email.`,
+    `<p>Use the link below to reset your textlog password.</p><p><a href="${resetUrl}">Reset password</a></p><p>This link expires in one hour. If you did not request it, you can ignore this email.</p>`)
 }
 
 export function sendEmailVerification(email: string, verificationUrl: string, changing = false) {
   const action = changing ? 'Confirm new email' : 'Verify email'
-  return sendEmail(email, `${action} for root.mx`,
+  return sendEmail(email, `${action} for textlog`,
     `${action} by opening this link:\n\n${verificationUrl}\n\nThis link expires in one hour. If you did not request it, you can ignore this email.`,
     `<p>${action} by using the link below.</p><p><a href="${verificationUrl}">${action}</a></p><p>This link expires in one hour. If you did not request it, you can ignore this email.</p>`)
 }
 
 export function sendMagicLink(email: string, magicUrl: string, handle?: string) {
   const heading = handle ? `Welcome back, @${handle}` : 'Join the community'
-  return sendEmail(email, `${heading} · root.mx`,
-    `${heading}\n\nOpen this magic link to enter root.mx:\n\n${magicUrl}\n\nThis link expires in one hour and can only be used once. If you did not request it, you can ignore this email.`,
-    `<h1>${heading}</h1><p>Use this magic link to enter root.mx:</p><p><a href="${magicUrl}">Enter root.mx</a></p><p>This link expires in one hour and can only be used once. If you did not request it, you can ignore this email.</p>`)
+  return sendEmail(email, `${heading} · textlog`,
+    `${heading}\n\nOpen this magic link to enter textlog:\n\n${magicUrl}\n\nThis link expires in one hour and can only be used once. If you did not request it, you can ignore this email.`,
+    `<h1>${heading}</h1><p>Use this magic link to enter textlog:</p><p><a href="${magicUrl}">Enter textlog</a></p><p>This link expires in one hour and can only be used once. If you did not request it, you can ignore this email.</p>`)
 }
 
 export function sendReportReceipt(email: string, reference: string) {

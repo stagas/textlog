@@ -26,7 +26,7 @@ test('API documentation is linked from the footer and describes the firehose', (
   const html = renderToStaticMarkup(React.createElement(ApiDocs, { user: null }))
   expect(html).toContain('href="/api">api</a>')
   expect(html).toContain('class="api-title-brand"')
-  expect(html).toContain('class="brand-dot">.</span>mx')
+  expect(html).toContain('<span>textlog</span>')
   expect(html).toContain('/api/openapi.json')
   expect(html).toContain('class="api-method">GET</span>')
   expect(html).toContain('class="api-path">/firehose</span>')
@@ -38,7 +38,7 @@ test('API documentation is linked from the footer and describes the firehose', (
 test('Contact page shows operator details and is linked before legal in the footer', () => {
   const html = renderToStaticMarkup(React.createElement(Contact, { user: null }))
 
-  expect(html).toContain('href="mailto:hello@root.mx"')
+  expect(html).toContain('href="mailto:hello@textlog.cc"')
   expect(html).toContain('Kallikratis, Crete, Greece 730 11')
   expect(html).toContain('href="tel:+306946600152"')
   expect(html).toContain('href="/report-illegal-activity"')
@@ -48,7 +48,7 @@ test('Contact page shows operator details and is linked before legal in the foot
 test('Not found page gives visitors useful ways back into the site', () => {
   const html = renderToStaticMarkup(React.createElement(NotFound, { user: null }))
 
-  expect(html).toContain('<title>page not found · root.mx</title>')
+  expect(html).toContain('<title>page not found · textlog</title>')
   expect(html).toContain('aria-hidden="true">404</p>')
   expect(html).toContain('This page doesn&#x27;t exist.')
   expect(html).toContain('class="button" href="/">browse notes</a>')

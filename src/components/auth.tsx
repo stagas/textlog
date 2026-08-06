@@ -1,4 +1,3 @@
-import React from 'react'
 import { Layout } from './layout'
 
 export function Auth({ error, email = '', next }: { error?: string; email?: string; next?: string }) {

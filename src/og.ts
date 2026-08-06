@@ -8,6 +8,9 @@ const contentBottom = 510
 const maxTextHeight = contentBottom - contentTop
 const textColor = '#f0f3ee'
 const accentColor = '#9abd8e'
+const brand = 'textlog'
+const headerWordmarkOffsetY = 8
+const defaultWordmarkOffsetY = 10
 
 function drawBackground(ctx: CanvasRenderingContext2D) {
   ctx.fillStyle = '#111512'
@@ -17,14 +20,8 @@ function drawBackground(ctx: CanvasRenderingContext2D) {
   ctx.fillStyle = textColor
   ctx.font = '700 62px monospace'
   const brandX = 158
-  const brandBaseline = 102
-  ctx.fillText('root', brandX, brandBaseline)
-  const rootWidth = ctx.measureText('root').width
-  ctx.fillStyle = accentColor
-  ctx.fillText('.', brandX + rootWidth, brandBaseline)
-  const dotWidth = ctx.measureText('.').width
-  ctx.fillStyle = textColor
-  ctx.fillText('mx', brandX + rootWidth + dotWidth, brandBaseline)
+  const brandBaseline = 94 + headerWordmarkOffsetY
+  ctx.fillText(brand, brandX, brandBaseline)
 }
 
 function linesFor(ctx: CanvasRenderingContext2D, text: string, maxWidth: number) {
@@ -117,23 +114,19 @@ export function renderDefaultOg() {
   const markWidth = (23 - 2.47) * scale
   const gap = 38
   ctx.font = '700 125px monospace'
-  const rootWidth = ctx.measureText('root').width
-  const dotWidth = ctx.measureText('.').width
-  const mxWidth = ctx.measureText('mx').width
-  const lockupWidth = markWidth + gap + rootWidth + dotWidth + mxWidth
+  const brandWidth = ctx.measureText(brand).width
+  const lockupWidth = markWidth + gap + brandWidth
   const left = (width - lockupWidth) / 2
   const markTop = height / 2 - (7 + 16.6) * scale / 2
   drawLogo(ctx, left - 2.47 * scale, markTop, scale)
 
   const textX = left + markWidth + gap
-  const metrics = ctx.measureText('root.mx')
-  const baseline = height / 2 + (metrics.actualBoundingBoxAscent - metrics.actualBoundingBoxDescent) / 2
+  const metrics = ctx.measureText(brand)
+  const baseline = height / 2
+    + (metrics.actualBoundingBoxAscent - metrics.actualBoundingBoxDescent) / 2
+    + defaultWordmarkOffsetY
   ctx.fillStyle = textColor
-  ctx.fillText('root', textX, baseline)
-  ctx.fillStyle = accentColor
-  ctx.fillText('.', textX + rootWidth, baseline)
-  ctx.fillStyle = textColor
-  ctx.fillText('mx', textX + rootWidth + dotWidth, baseline)
+  ctx.fillText(brand, textX, baseline)
 
   return canvas.toBuffer('image/png')
 }

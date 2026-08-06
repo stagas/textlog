@@ -11,7 +11,7 @@ export function ipPseudonym(address: string, purpose: 'http-log' | 'visitor-coun
 {
   if (!address || address === '-') return '-'
   return createHmac('sha256', secret)
-    .update(`root.mx\0${purpose}\0${rotationDay(at)}\0${address}`)
+    .update(`textlog\0${purpose}\0${rotationDay(at)}\0${address}`)
     .digest('hex')
 }
 

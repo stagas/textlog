@@ -37,8 +37,8 @@ export function registerSyndicationRoutes(app: Hono, database: Database = db,
   const latest = (c: Context, format: SyndicationFormat, feedPath?: string) => {
     const origin = apiOrigin(c.req.url, appUrl)
     return feedResponse(c, database, format, appUrl, {
-      title: 'Latest notes on root.mx',
-      description: 'The latest public notes posted on root.mx.',
+      title: 'Latest notes on textlog',
+      description: 'The latest public notes posted on textlog.',
       pagePath: '/latest',
       feedPath,
       posts: publicPosts(database, origin),
@@ -47,8 +47,8 @@ export function registerSyndicationRoutes(app: Hono, database: Database = db,
   const hot = (c: Context, format: SyndicationFormat, feedPath?: string) => {
     const origin = apiOrigin(c.req.url, appUrl)
     return feedResponse(c, database, format, appUrl, {
-      title: 'Hot notes on root.mx',
-      description: 'Public notes currently ranked hot on root.mx.',
+      title: 'Hot notes on textlog',
+      description: 'Public notes currently ranked hot on textlog.',
       pagePath: '/hot',
       feedPath,
       posts: apiHotPosts(database, origin, API_DEFAULT_LIMIT, null).data,
@@ -67,7 +67,7 @@ export function registerSyndicationRoutes(app: Hono, database: Database = db,
     const origin = apiOrigin(c.req.url, appUrl)
     const pagePath = `/u/${encodeURIComponent(resolved.handle)}`
     return feedResponse(c, database, format, appUrl, {
-      title: `Notes by @${resolved.handle} on root.mx`,
+      title: `Notes by @${resolved.handle} on textlog`,
       description: `The latest public notes posted by @${resolved.handle}.`,
       pagePath,
       feedPath,
@@ -80,7 +80,7 @@ export function registerSyndicationRoutes(app: Hono, database: Database = db,
     const origin = apiOrigin(c.req.url, appUrl)
     const pagePath = `/tag/${encodeURIComponent(normalizedTag)}`
     return feedResponse(c, database, format, appUrl, {
-      title: `#${normalizedTag} notes on root.mx`,
+      title: `#${normalizedTag} notes on textlog`,
       description: `The latest public notes tagged #${normalizedTag}.`,
       pagePath,
       feedPath,

@@ -52,12 +52,12 @@ export function ConfirmEmail({ token, kind, email, invalid = false, pending = fa
                 {kind === 'change'
                   ? (
                     <>
-                      Confirm changing your root.mx account email to <strong>{email}</strong>.
+                      Confirm changing your textlog account email to <strong>{email}</strong>.
                     </>
                   )
                   : (
                     <>
-                      Confirm <strong>{email}</strong> as your root.mx account email.
+                      Confirm <strong>{email}</strong> as your textlog account email.
                     </>
                   )}
               </p>

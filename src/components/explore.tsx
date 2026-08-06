@@ -37,7 +37,7 @@ export function Explore({ user, welcome = false, peopleIds }: {
     <Layout user={user} title="explore">
       {user && welcome && (
         <section className="welcome-panel" role="status">
-          <p className="eyebrow">welcome to root.mx</p>
+          <p className="eyebrow">welcome to textlog</p>
           <h1>Make this place yours.</h1>
           <p>Follow a few people or hashtags below, or start with a note of your own.</p>
           <div className="welcome-actions">

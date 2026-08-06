@@ -92,7 +92,7 @@ export function logError(message: string, error: unknown) {
 
 export function logReady(url: string, environment: string) {
   console.log(
-    `${paint('ready', 'green')} ${paint('◆', 'magenta')} root listening on ${paint(url, 'cyan')} ${
+    `${paint('ready', 'green')} ${paint('◆', 'magenta')} textlog listening on ${paint(url, 'cyan')} ${
       paint(`(${environment})`, 'dim')
     }`,
   )

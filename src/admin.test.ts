@@ -59,7 +59,7 @@ describe('admin moderation persistence', () => {
     anonymizeUser(database, 2, 1)
 
     expect(database.query('SELECT handle,email,deleted_at FROM users WHERE id=2').get())
-      .toMatchObject({ handle: 'deleted-2', email: 'deleted-2@root.mx' })
+      .toMatchObject({ handle: 'deleted-2', email: 'deleted-2@textlog.cc' })
     expect(database.query('SELECT * FROM sessions WHERE user_id=2').all()).toHaveLength(0)
     expect(database.query('SELECT body,deleted_at FROM posts WHERE id=10').get()).toMatchObject({ body: '(deleted)' })
     expect(database.query('SELECT status,resolved_by FROM reports WHERE id=20').get())

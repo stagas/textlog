@@ -65,7 +65,7 @@ export function clientAddress(c: Context) {
       || c.req.header('x-forwarded-for')?.split(',')[0]?.trim()
     if (forwarded) return forwarded
   }
-  return c.req.header('x-root-client-ip') || 'unknown'
+  return c.req.header('x-textlog-client-ip') || 'unknown'
 }
 export function authLimit(c: Context, scope: string, identity: string,
   policy: { attempts: number; windowSeconds: number })

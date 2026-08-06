@@ -121,7 +121,7 @@ function secureCookie(appUrl: string | undefined = Bun.env.APP_URL) {
 }
 
 export function sessionCookie(value: string, maxAge = 30 * 24 * 60 * 60, appUrl: string | undefined = Bun.env.APP_URL) {
-  return `root=${value}; Max-Age=${maxAge}; HttpOnly; Path=/; SameSite=Lax${secureCookie(appUrl)}`
+  return `textlog=${value}; Max-Age=${maxAge}; HttpOnly; Path=/; SameSite=Lax${secureCookie(appUrl)}`
 }
 
 export function clearSessionCookie(appUrl: string | undefined = Bun.env.APP_URL) {

@@ -22,7 +22,7 @@ async function alertFailure(configuration: BackupConfiguration, error: unknown, 
       method: 'POST',
       headers: { 'content-type': 'application/json' },
       signal: AbortSignal.timeout(10_000),
-      body: JSON.stringify({ event: 'database_backup_failed', service: 'root.mx', error: String(error),
+      body: JSON.stringify({ event: 'database_backup_failed', service: 'textlog', error: String(error),
         occurredAt: new Date().toISOString() }),
     })
     if (!response.ok) console.error(`backup alert webhook returned ${response.status}`)

@@ -59,7 +59,7 @@ app.use('*', async (c, next) => {
   await next()
   if (c.req.method !== 'GET' || c.res.status >= 400 || !c.res.headers.get('content-type')?.includes('text/html')) return
   try {
-    visitorBuffer.record(c.req.header('x-root-client-ip') || '-')
+    visitorBuffer.record(c.req.header('x-textlog-client-ip') || '-')
   }
   catch (error) {
     logError('visitor buffer flush failed', error)
@@ -74,7 +74,7 @@ app.use('*', async (c, next) => {
   finally {
     const path = new URL(c.req.url).pathname
     if (shouldLogHttp(path, c.res.status)) {
-      logHttp(c.req.method, path, c.res.status, performance.now() - started, c.req.header('x-root-client-ip') || '-')
+      logHttp(c.req.method, path, c.res.status, performance.now() - started, c.req.header('x-textlog-client-ip') || '-')
     }
   }
 })
@@ -127,7 +127,7 @@ app.use('*', async (c, next) => {
 })
 app.get('/health', c => {
   try {
-    const database = databaseHealth(db, Bun.env.DATABASE_PATH || 'storage/root.sqlite')
+    const database = databaseHealth(db, Bun.env.DATABASE_PATH || 'storage/textlog.sqlite')
     if (database.writeLockLatencyMs >= 250 || database.walBytes >= 64 * 1024 * 1024) {
       console.warn('database health warning', {
         writeLockLatencyMs: database.writeLockLatencyMs,
@@ -148,8 +148,8 @@ app.get('/styles.css', async c => {
   const asset = styles ?? await loadStylesAsset(stylesPath)
   return stylesResponse(asset, c.req.raw, !devReloadEnabled)
 })
-app.get('/root.svg', () =>
-  new Response(Bun.file(new URL('./root.svg', import.meta.url)), {
+app.get('/textlog.svg', () =>
+  new Response(Bun.file(new URL('./textlog.svg', import.meta.url)), {
     headers: {
       'content-type': 'image/svg+xml; charset=utf-8',
       'cache-control': 'public, max-age=31536000, immutable',
@@ -191,7 +191,7 @@ export default {
   host: Bun.env.HOST || '0.0.0.0',
   fetch(request: Request, server: Bun.Server<unknown>) {
     const headers = new Headers(request.headers)
-    headers.set('x-root-client-ip', clientIp(request, server.requestIP(request)?.address))
+    headers.set('x-textlog-client-ip', clientIp(request, server.requestIP(request)?.address))
     return app.fetch(new Request(request, { headers }))
   },
 }

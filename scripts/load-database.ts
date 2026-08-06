@@ -59,7 +59,7 @@ else {
   const operations = Math.max(10, Math.min(100_000, Number(args.find(value =>
     value.startsWith('--operations=')
   )?.split('=')[1] || 1000)))
-  const directory = mkdtempSync(join(tmpdir(), 'root-mx-load-'))
+  const directory = mkdtempSync(join(tmpdir(), 'textlog-load-'))
   const path = join(directory, 'load.sqlite')
   try {
     const database = new Database(path, { create: true })

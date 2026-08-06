@@ -12,8 +12,8 @@ describe('local redirects', () => {
   })
 
   test('only accepts same-origin referers', () => {
-    const request = 'https://root.mx/follow/tester'
-    expect(safeRefererPath('https://root.mx/explore?page=2', request, '/', null)).toBe('/explore?page=2')
+    const request = 'https://textlog.cc/follow/tester'
+    expect(safeRefererPath('https://textlog.cc/explore?page=2', request, '/', null)).toBe('/explore?page=2')
     expect(safeRefererPath('https://evil.example/explore', request, '/', null)).toBe('/')
     expect(safeRefererPath('not a url', request, '/', null)).toBe('/')
   })
@@ -21,16 +21,16 @@ describe('local redirects', () => {
 
 describe('request values and cookies', () => {
   test('accepts same-origin POSTs and rejects missing or cross-origin request metadata', () => {
-    const url = 'https://root.mx/post'
-    expect(isSameOriginRequest(new Request(url, { headers: { origin: 'https://root.mx' } }), null)).toBe(true)
-    expect(isSameOriginRequest(new Request(url, { headers: { referer: 'https://root.mx/write' } }), null)).toBe(true)
+    const url = 'https://textlog.cc/post'
+    expect(isSameOriginRequest(new Request(url, { headers: { origin: 'https://textlog.cc' } }), null)).toBe(true)
+    expect(isSameOriginRequest(new Request(url, { headers: { referer: 'https://textlog.cc/write' } }), null)).toBe(true)
     expect(isSameOriginRequest(new Request(url, { headers: { origin: 'https://evil.example' } }), null)).toBe(false)
     expect(isSameOriginRequest(new Request(url), null)).toBe(false)
   })
 
   test('uses the configured public origin behind a proxy', () => {
-    const request = new Request('http://internal:3000/post', { headers: { origin: 'https://root.mx' } })
-    expect(isSameOriginRequest(request, 'https://root.mx')).toBe(true)
+    const request = new Request('http://internal:3000/post', { headers: { origin: 'https://textlog.cc' } })
+    expect(isSameOriginRequest(request, 'https://textlog.cc')).toBe(true)
   })
 
   test('ignores uploaded files when a text field is expected', () => {
@@ -40,17 +40,17 @@ describe('request values and cookies', () => {
   })
 
   test('parses supported form bodies within the application limit', async () => {
-    const request = new Request('https://root.mx/post', {
+    const request = new Request('https://textlog.cc/post', {
       method: 'POST',
       headers: { 'content-type': 'application/x-www-form-urlencoded' },
-      body: 'body=hello+root',
+      body: 'body=hello+textlog',
     })
     const data = await limitedFormData(request)
-    expect(stringField(data, 'body')).toBe('hello root')
+    expect(stringField(data, 'body')).toBe('hello textlog')
   })
 
   test('rejects oversized form bodies even without relying on content-length', async () => {
-    const request = new Request('https://root.mx/post', {
+    const request = new Request('https://textlog.cc/post', {
       method: 'POST',
       headers: { 'content-type': 'application/x-www-form-urlencoded' },
       body: `body=${'x'.repeat(FORM_REQUEST_BODY_LIMIT)}`,
@@ -63,19 +63,19 @@ describe('request values and cookies', () => {
     const body = new FormData()
     body.set('message', 'hello')
     body.set('attachment', new File(['text'], 'note.txt'))
-    const data = await limitedFormData(new Request('https://root.mx/report', { method: 'POST', body }))
+    const data = await limitedFormData(new Request('https://textlog.cc/report', { method: 'POST', body }))
     expect(stringField(data, 'message')).toBe('hello')
     expect(stringField(data, 'attachment')).toBe('')
   })
 
   test('rejects unsupported form content types', async () => {
-    const request = new Request('https://root.mx/post', {
+    const request = new Request('https://textlog.cc/post', {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
       body: '{}',
     })
     expect(limitedFormData(request)).rejects.toBeInstanceOf(RequestBodyError)
-    expect(limitedFormData(new Request('https://root.mx/post', {
+    expect(limitedFormData(new Request('https://textlog.cc/post', {
       method: 'POST',
       headers: { 'content-type': 'text/plain' },
       body: 'body=hello',
@@ -86,14 +86,14 @@ describe('request values and cookies', () => {
     expect(sessionCookie('token', undefined, 'http://localhost:3000')).toContain('HttpOnly; Path=/; SameSite=Lax')
     expect(sessionCookie('token', undefined, 'http://localhost:3000')).not.toContain('Secure')
 
-    expect(sessionCookie('token', undefined, 'https://root.mx')).toContain('; Secure')
-    expect(clearSessionCookie('https://root.mx')).toContain('Max-Age=0')
+    expect(sessionCookie('token', undefined, 'https://textlog.cc')).toContain('; Secure')
+    expect(clearSessionCookie('https://textlog.cc')).toContain('Max-Age=0')
   })
 
   test('stores and reads a valid feed preference', () => {
-    expect(feedPreference(new Request('https://root.mx/', { headers: { cookie: 'root=token; feed=latest' } })))
+    expect(feedPreference(new Request('https://textlog.cc/', { headers: { cookie: 'textlog=token; feed=latest' } })))
       .toBe('latest')
-    expect(feedPreference(new Request('https://root.mx/', { headers: { cookie: 'feed=unknown' } }))).toBeNull()
+    expect(feedPreference(new Request('https://textlog.cc/', { headers: { cookie: 'feed=unknown' } }))).toBeNull()
     expect(feedPreferenceCookie('hot')).toContain('feed=hot; Max-Age=31536000; HttpOnly; Path=/; SameSite=Lax')
   })
 })
@@ -107,7 +107,7 @@ describe('security headers', () => {
 
   test('only emits HSTS for a configured HTTPS origin', () => {
     expect(securityHeaders(false, 'http://localhost:3000')['Strict-Transport-Security']).toBeUndefined()
-    expect(securityHeaders(false, 'https://root.mx')['Strict-Transport-Security']).toContain('max-age=31536000')
+    expect(securityHeaders(false, 'https://textlog.cc')['Strict-Transport-Security']).toContain('max-age=31536000')
   })
 })
 
@@ -115,7 +115,7 @@ describe('HTML cache policy', () => {
   const html = () => new Response('page', { headers: { 'content-type': 'text/html' } })
 
   test('allows short shared caching for anonymous public pages', () => {
-    const request = new Request('https://root.mx/u/alice?page=2')
+    const request = new Request('https://textlog.cc/u/alice?page=2')
     const response = html()
     applyHtmlCachePolicy(request, response)
     expect(response.headers.get('cache-control')).toBe('public, max-age=30, stale-while-revalidate=120')
@@ -123,19 +123,19 @@ describe('HTML cache policy', () => {
   })
 
   test('prevents storage for authenticated and sensitive pages', () => {
-    expect(htmlCacheControl(new Request('https://root.mx/u/alice', { headers: { cookie: 'root=token' } }), html()))
+    expect(htmlCacheControl(new Request('https://textlog.cc/u/alice', { headers: { cookie: 'textlog=token' } }), html()))
       .toBe('private, no-store')
-    expect(htmlCacheControl(new Request('https://root.mx/login'), html())).toBe('private, no-store')
-    expect(htmlCacheControl(new Request('https://root.mx/post/1?reply=1'), html())).toBe('private, no-store')
+    expect(htmlCacheControl(new Request('https://textlog.cc/login'), html())).toBe('private, no-store')
+    expect(htmlCacheControl(new Request('https://textlog.cc/post/1?reply=1'), html())).toBe('private, no-store')
   })
 
   test('prevents storage for errors, mutations, and responses that set cookies', () => {
-    expect(htmlCacheControl(new Request('https://root.mx/post/1'), new Response('missing', { status: 404 })))
+    expect(htmlCacheControl(new Request('https://textlog.cc/post/1'), new Response('missing', { status: 404 })))
       .toBe('private, no-store')
-    expect(htmlCacheControl(new Request('https://root.mx/post/1', { method: 'POST', body: '' }), html()))
+    expect(htmlCacheControl(new Request('https://textlog.cc/post/1', { method: 'POST', body: '' }), html()))
       .toBe('private, no-store')
     expect(
-      htmlCacheControl(new Request('https://root.mx/latest'),
+      htmlCacheControl(new Request('https://textlog.cc/latest'),
         new Response('page', { headers: { 'set-cookie': 'feed=latest' } })),
     ).toBe('private, no-store')
   })

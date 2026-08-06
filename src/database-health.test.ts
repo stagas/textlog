@@ -11,7 +11,7 @@ afterEach(() => {
 })
 
 function fixture() {
-  const directory = mkdtempSync(join(tmpdir(), 'root-mx-health-'))
+  const directory = mkdtempSync(join(tmpdir(), 'textlog-health-'))
   directories.push(directory)
   const path = join(directory, 'health.sqlite')
   const database = new Database(path, { create: true })

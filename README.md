@@ -1,4 +1,4 @@
-# root.mx
+# textlog
 
 Server-rendered, text-first social web app powered by Bun, SQLite, and TSX. There is no client-side JavaScript bundle: pages are composed on the backend and returned as static HTML.
 
@@ -9,7 +9,7 @@ bun install
 bun run dev
 ```
 
-Open http://localhost:3000. Data is stored in `storage/root.sqlite` using Bun's current `Database` API.
+Open http://localhost:3000. Data is stored in `storage/textlog.sqlite` using Bun's current `Database` API.
 
 Run the full local quality check with `bun run check`; it performs strict TypeScript checking and the complete test suite.
 
@@ -100,10 +100,10 @@ server are removed when the command exits; the configured application database i
 
 In development, the browser automatically reloads after Bun restarts the server.
 
-Set `OPENAI_API_KEY` in the server environment to moderate posts and replies before insertion. root.mx uses OpenAI's free Moderation endpoint with `omni-moderation-latest` and rejects submissions when moderation is unavailable.
+Set `OPENAI_API_KEY` in the server environment to moderate posts and replies before insertion. textlog uses OpenAI's free Moderation endpoint with `omni-moderation-latest` and rejects submissions when moderation is unavailable.
 
 Magic-link entry uses Resend. Set `RESEND_API_KEY`, `EMAIL_FROM` (a verified sender such as
-`root.mx <hello@root.mx>`), and the public `APP_URL` (such as `https://root.mx`). Links are single-use and expire after
+`textlog <hello@textlog.cc>`), and the public `APP_URL` (such as `https://textlog.cc`). Links are single-use and expire after
 one hour. In development, the confirmation page displays the link directly instead of sending email. The same email
 configuration powers confirmed email changes. Account security settings support individual or bulk session revocation.
 

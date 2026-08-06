@@ -142,7 +142,7 @@ if (routes.some(route => !route.startsWith('/') || route.startsWith('//'))) {
   throw new Error('--routes values must begin with one /')
 }
 
-const directory = mkdtempSync(join(tmpdir(), 'root-mx-routes-'))
+const directory = mkdtempSync(join(tmpdir(), 'textlog-routes-'))
 const databasePath = join(directory, 'stress.sqlite')
 const port = reservePort()
 const origin = `http://127.0.0.1:${port}`

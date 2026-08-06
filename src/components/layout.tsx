@@ -40,9 +40,9 @@ export function Layout({
   const appOrigin = Bun.env.APP_URL?.replace(/\/$/, '') || ''
   const share = social || {
     description: 'A quieter place for your thoughts.',
-    image: `${appOrigin}/og.png`,
+    image: `${appOrigin}/og.png?v=2`,
     type: 'website' as const,
-    imageAlt: 'root.mx',
+    imageAlt: 'textlog',
   }
   // Older callers that predate the marker already represent established accounts.
   const ready = user?.handle_chosen_at !== null
@@ -71,36 +71,34 @@ export function Layout({
         <meta charSet="utf-8" />
         <meta name="viewport" content="width=device-width,initial-scale=1" />
         <meta name="color-scheme" content="light dark" />
-        <title>{`${title ? `${title} · ` : ''}root.mx`}</title>
+        <title>{`${title ? `${title} · ` : ''}textlog`}</title>
         <>
           <meta name="description" content={share.description} />
           <meta property="og:type" content={share.type || 'article'} />
-          <meta property="og:site_name" content="root.mx" />
-          <meta property="og:title" content={title || 'root.mx'} />
+          <meta property="og:site_name" content="textlog" />
+          <meta property="og:title" content={title || 'textlog'} />
           <meta property="og:description" content={share.description} />
           {social && <meta property="og:url" content={social.url} />}
           <meta property="og:image" content={share.image} />
           <meta property="og:image:width" content="1200" />
           <meta property="og:image:height" content="630" />
-          <meta property="og:image:alt" content={share.imageAlt || `Post by ${title || 'a root.mx user'}`} />
+          <meta property="og:image:alt" content={share.imageAlt || `Post by ${title || 'a textlog user'}`} />
           <meta name="twitter:card" content="summary_large_image" />
-          <meta name="twitter:title" content={title || 'root.mx'} />
+          <meta name="twitter:title" content={title || 'textlog'} />
           <meta name="twitter:description" content={share.description} />
           <meta name="twitter:image" content={share.image} />
-          <meta name="twitter:image:alt" content={share.imageAlt || `Post by ${title || 'a root.mx user'}`} />
+          <meta name="twitter:image:alt" content={share.imageAlt || `Post by ${title || 'a textlog user'}`} />
         </>
-        <link rel="icon" href="/root.svg?v=1" type="image/svg+xml" />
+        <link rel="icon" href="/textlog.svg?v=1" type="image/svg+xml" />
         <link rel="sitemap" href="/sitemap.xml" type="application/xml" />
         <link rel="stylesheet" href="/styles.css?v=51" />
       </head>
       <body>
         <a className="skip-link" href="#main-content">skip to content</a>
         <header className={user ? 'authenticated-header' : undefined}>
-          <a className="brand" href="/" aria-label="root.mx home">
-            <img className="brand-logo" src="/root.svg?v=1" alt="" />
-            <span>
-              root<span className="brand-dot">.</span>mx
-            </span>
+          <a className="brand" href="/" aria-label="textlog home">
+            <img className="brand-logo" src="/textlog.svg?v=1" alt="" />
+            <span>textlog</span>
           </a>
           {logoutNavigation
             ? (
@@ -118,7 +116,7 @@ export function Layout({
         </header>
         <main id="main-content">{children}</main>
         <footer className="site-footer">
-          <span>root.mx</span>
+          <span>textlog.cc</span>
           {user && ready && (
             <nav className="mobile-account-footer" aria-label="Account shortcuts">
               <a href="/explore">explore</a>
@@ -128,8 +126,8 @@ export function Layout({
           <nav aria-label="Footer">
             <a href="/about">about</a>
             <a href="/api">api</a>
-            <a href="ircs://irc.libera.chat/#root.mx" target="_blank" rel="noopener noreferrer">irc</a>
-            <a href="https://github.com/stagas/root-mx" target="_blank" rel="noopener noreferrer">github</a>
+            <a href="ircs://irc.libera.chat/#textlog" target="_blank" rel="noopener noreferrer">irc</a>
+            <a href="https://github.com/stagas/textlog" target="_blank" rel="noopener noreferrer">github</a>
             <a href="https://buymeacoffee.com/stagas" target="_blank" rel="noopener noreferrer">donate</a>
             <a href="/contact">contact</a>
             <a href="/legal">legal</a>

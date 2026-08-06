@@ -6,7 +6,7 @@ type ErrorCopy = { eyebrow: string; title: string; message: string }
 const errors: Record<number, ErrorCopy> = {
   400: { eyebrow: 'request error', title: "We couldn't process that request.",
     message: 'Check what you entered and try again.' },
-  404: { eyebrow: 'lost root', title: "This page doesn't exist.",
+  404: { eyebrow: 'lost textlog', title: "This page doesn't exist.",
     message: 'The link may be outdated, or the page may have moved.' },
   413: { eyebrow: 'request too large', title: 'That request was too large.',
     message: 'Try again with less content.' },

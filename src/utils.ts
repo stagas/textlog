@@ -18,7 +18,7 @@ export async function verifyPassword(password: string, storedHash: string) {
   return storedHash === hash(password)
 }
 export const token = () => randomBytes(32).toString('hex')
-export const sessionToken = (req: Request) => req.headers.get('cookie')?.match(/(?:^|;\s*)root=([^;]+)/)?.[1] || null
+export const sessionToken = (req: Request) => req.headers.get('cookie')?.match(/(?:^|;\s*)textlog=([^;]+)/)?.[1] || null
 export function currentUser(req: Request): User | null {
   const tokenHash = sessionHash(sessionToken(req))
   if (!tokenHash) return null

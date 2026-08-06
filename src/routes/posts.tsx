@@ -47,7 +47,7 @@ export function registerPostsRoutes(app: Hono) {
     const postUrl = `${origin}/post/${post.id}`
     const social = {
       description: post.body.replace(/\s+/g, ' ').trim(),
-      image: `${postUrl}/og.png`,
+      image: `${postUrl}/og.png?v=2`,
       url: postUrl,
     }
     if (user) {

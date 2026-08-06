@@ -8,12 +8,12 @@ export function Dmca({ user }: { user: User | null }) {
         <p className="eyebrow">copyright</p>
         <h1>DMCA notices and counter-notices</h1>
         <p>
-          Send copyright notices to Georgios Stagakis at <a href="mailto:hello@root.mx">hello@root.mx</a>,{' '}
+          Send copyright notices to Georgios Stagakis at <a href="mailto:hello@textlog.cc">hello@textlog.cc</a>,{' '}
           <a href="tel:+306946600152">+30 694 660 0152</a>, Kallikratis, Crete, Greece 730 11.
         </p>
         <h2>Copyright notice</h2>
         <p>
-          Identify the copyrighted work, the exact root.mx URL, the allegedly infringing material, your contact details,
+          Identify the copyrighted work, the exact textlog URL, the allegedly infringing material, your contact details,
           and include the statements and signature required by 17 U.S.C. §512(c)(3).
         </p>
         <h2>Counter-notice</h2>

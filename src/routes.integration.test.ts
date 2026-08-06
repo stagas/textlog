@@ -10,7 +10,7 @@ setDefaultTimeout(30_000)
 type CapturedEmail = { to: string; subject: string; text: string; html: string }
 
 const projectRoot = resolve(dirname(import.meta.path), '..')
-const temporaryDirectory = mkdtempSync(join(tmpdir(), 'root-mx-routes-'))
+const temporaryDirectory = mkdtempSync(join(tmpdir(), 'textlog-routes-'))
 const databasePath = join(temporaryDirectory, 'route-tests.sqlite')
 const emailCapturePath = join(temporaryDirectory, 'emails.jsonl')
 let origin = ''
@@ -58,7 +58,7 @@ function linkToken(email: CapturedEmail) {
 }
 
 function sessionCookie(response: Response) {
-  const cookie = response.headers.get('set-cookie')?.match(/(?:^|,\s*)(root=[^;]+)/)?.[1]
+  const cookie = response.headers.get('set-cookie')?.match(/(?:^|,\s*)(textlog=[^;]+)/)?.[1]
   if (!cookie) throw new Error('Response did not set a session cookie')
   return cookie
 }
@@ -83,7 +83,7 @@ async function request(path: string, options: {
 async function signup(handle: string, email: string, _password: string) {
   const response = await request('/enter', { method: 'POST', form: { email } })
   expect(response.status).toBe(200)
-  const emailMessage = capturedEmails().filter(message => message.to === email && message.subject.includes('root.mx'))
+  const emailMessage = capturedEmails().filter(message => message.to === email && message.subject.includes('textlog'))
     .at(-1)
   expect(emailMessage).toBeDefined()
   const magic = await request(`/enter/magic?token=${encodeURIComponent(linkToken(emailMessage!))}`)
@@ -153,7 +153,7 @@ test('consequential account, content, reporting, and admin flows work over HTTP'
   expect(missingProfile.status).toBe(404)
   expect(missingProfile.headers.get('content-type')).toContain('text/html')
   const missingProfileHtml = await missingProfile.text()
-  expect(missingProfileHtml).toContain('<title>page not found · root.mx</title>')
+  expect(missingProfileHtml).toContain('<title>page not found · textlog</title>')
   expect(missingProfileHtml).toContain('class="account-nav"')
   const clientError = await request('/client-error')
   expect(clientError.status).toBe(400)
@@ -170,7 +170,7 @@ test('consequential account, content, reporting, and admin flows work over HTTP'
   expect(publicTag.status).toBe(200)
   expect(await publicTag.text()).toContain('#onboarding')
 
-  const rawSession = aliceCookie.slice('root='.length)
+  const rawSession = aliceCookie.slice('textlog='.length)
   const storedSession = database.query('SELECT token_hash FROM sessions WHERE user_id=?')
     .get(alice.id) as { token_hash: string }
   expect(storedSession.token_hash).toHaveLength(64)

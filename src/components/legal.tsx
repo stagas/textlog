@@ -11,7 +11,7 @@ export function Legal({ user }: { user: User | null }) {
 
         <h2>Your content and conduct</h2>
         <p>
-          You keep ownership of content you post. By posting, you give root.mx permission to host, display, and
+          You keep ownership of content you post. By posting, you give textlog permission to host, display, and
           distribute that content as needed to operate the service. You are responsible for your account, your content,
           and ensuring that your use of the service follows applicable law and does not infringe anyone else’s rights.
         </p>
@@ -25,14 +25,14 @@ export function Legal({ user }: { user: User | null }) {
 
         <h2>Service availability</h2>
         <p>
-          root.mx is provided “as is” and “as available,” without warranties of any kind. We do not promise that the
+          textlog is provided “as is” and “as available,” without warranties of any kind. We do not promise that the
           service will always be available, secure, accurate, or free of errors. Features may change, and content or
           accounts may be suspended or removed when necessary to operate or protect the service.
         </p>
 
         <h2>Limitation of liability</h2>
         <p>
-          To the fullest extent permitted by law, root.mx and its operators will not be liable for indirect, incidental,
+          To the fullest extent permitted by law, textlog and its operators will not be liable for indirect, incidental,
           special, consequential, or punitive damages, or for lost data, profits, goodwill, or other losses resulting
           from your use of—or inability to use—the service or from content posted by others. Nothing here excludes
           liability that cannot legally be excluded.
@@ -41,15 +41,15 @@ export function Legal({ user }: { user: User | null }) {
         <h2 id="privacy">Privacy</h2>
         <h3>Controller and contact</h3>
         <p>
-          Georgios Stagakis is the controller and contact for root.mx. Contact:{' '}
-          <a href="mailto:hello@root.mx">hello@root.mx</a>,{' '}
+          Georgios Stagakis is the controller and contact for textlog. Contact:{' '}
+          <a href="mailto:hello@textlog.cc">hello@textlog.cc</a>,{' '}
           <a href="tel:+306946600152">+30 694 660 0152</a>, Kallikratis, Crete, Greece 730 11.
         </p>
 
         <h3>Our privacy commitment</h3>
         <p>
           We use your personal information only as reasonably necessary to provide, maintain, secure and support
-          root.mx, respond to actions or requests you make, and meet our legal obligations. We do not sell or rent your
+          textlog, respond to actions or requests you make, and meet our legal obligations. We do not sell or rent your
           personal information, share it for targeted advertising, or use it to build advertising profiles. We do not
           send newsletters, promotions or other unnecessary email. We email you only for essential account and security
           messages, actions you request, or notices we are required to send.
@@ -105,7 +105,7 @@ export function Legal({ user }: { user: User | null }) {
           object to processing based on legitimate interests. Where processing relies on consent, you may withdraw it
           without affecting earlier processing. You can download account data and delete your account in profile
           settings, or email
-          <a href="mailto:hello@root.mx">hello@root.mx</a>. We may need to verify your identity and may retain data
+          <a href="mailto:hello@textlog.cc">hello@textlog.cc</a>. We may need to verify your identity and may retain data
           where law permits or requires it.
         </p>
 

@@ -8,7 +8,7 @@ export function About({ user }: { user: User | null }) {
         <p className="eyebrow">about</p>
         <h1>A quieter place for your thoughts.</h1>
         <p>
-          root.mx is a simple social text log: write short notes, follow people and hashtags, and join conversations
+          textlog is a simple social text log: write short notes, follow people and hashtags, and join conversations
           without turning every thought into a performance.
         </p>
         <p>
@@ -17,7 +17,7 @@ export function About({ user }: { user: User | null }) {
         </p>
         <h2>Small by design</h2>
         <p>
-          root.mx is built around words: notes, people, hashtags, and conversations. It is intentionally small,
+          textlog is built around words: notes, people, hashtags, and conversations. It is intentionally small,
           straightforward, and easy to follow. There are no engagement tricks or pressure to build an audience.
         </p>
         <p>

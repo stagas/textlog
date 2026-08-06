@@ -11,7 +11,7 @@ afterEach(() => {
 })
 
 function temporaryDirectory() {
-  const directory = mkdtempSync(join(tmpdir(), 'root-mx-database-'))
+  const directory = mkdtempSync(join(tmpdir(), 'textlog-database-'))
   temporaryDirectories.push(directory)
   return directory
 }

@@ -168,7 +168,7 @@ export function validateStartupConfiguration(env: Environment = Bun.env, options
   const host = env.HOST?.trim() || '0.0.0.0'
   if (/\s|\//.test(host)) problems.push('HOST must be a hostname or IP address')
   const port = integerValue(env, 'PORT', 3000, 1, 65535, problems)
-  const databasePath = env.DATABASE_PATH?.trim() || 'storage/root.sqlite'
+  const databasePath = env.DATABASE_PATH?.trim() || 'storage/textlog.sqlite'
   const databaseBusyTimeoutMs = integerValue(env, 'DATABASE_BUSY_TIMEOUT_MS', 5000, 100, 30000, problems)
   const backupDirectory = env.DATABASE_BACKUP_DIR?.trim() || 'storage/backups'
   const backupRetentionDays = integerValue(env, 'DATABASE_BACKUP_RETENTION_DAYS', 14, 1, 3650, problems)

@@ -28,13 +28,13 @@ function fixture() {
       (3,'Gone','gone@example.com','hidden','2026-08-02 10:00:00');
     UPDATE users SET deleted_at='2026-08-03 00:00:00' WHERE id=3;
     INSERT INTO posts(id,user_id,parent_id,body,created_at) VALUES
-      (1,1,NULL,'hello #Root @bob','2026-08-03 10:00:00'),
+      (1,1,NULL,'hello #textlog @bob','2026-08-03 10:00:00'),
       (2,2,1,'a reply','2026-08-03 11:00:00'),
       (3,1,NULL,'latest','2026-08-03 12:00:00'),
       (4,3,NULL,'private by deletion','2026-08-03 13:00:00'),
       (5,1,NULL,'deleted post','2026-08-03 14:00:00');
     UPDATE posts SET deleted_at='2026-08-03 15:00:00' WHERE id=5;
-    INSERT INTO post_hashtags(post_id,tag) VALUES(1,'root');
+    INSERT INTO post_hashtags(post_id,tag) VALUES(1,'textlog');
     INSERT INTO follows(follower_id,following_id) VALUES(2,1);
     INSERT INTO handle_history(handle,user_id) VALUES('oldalice',1);
     INSERT INTO post_hot SELECT id,0,created_at,created_at FROM posts;
@@ -47,8 +47,8 @@ function fixture() {
 
 function request(app: Hono, path: string, init?: RequestInit) {
   const headers = new Headers(init?.headers)
-  headers.set('x-root-client-ip', headers.get('x-root-client-ip') || 'test-ip')
-  return app.fetch(new Request(`https://root.mx${path}`, { ...init, headers }))
+  headers.set('x-textlog-client-ip', headers.get('x-textlog-client-ip') || 'test-ip')
+  return app.fetch(new Request(`https://textlog.cc${path}`, { ...init, headers }))
 }
 
 describe('public API', () => {
@@ -61,13 +61,13 @@ describe('public API', () => {
     expect(response.headers.get('access-control-allow-origin')).toBe('*')
     expect(payload.data.map((post: any) => post.id)).toEqual([3, 2, 1])
     expect(payload.data[2]).toMatchObject({
-      body: 'hello #Root @bob',
+      body: 'hello #textlog @bob',
       created_at: '2026-08-03T10:00:00.000Z',
       reply_count: 1,
-      tags: ['root'],
+      tags: ['textlog'],
       mentions: ['bob'],
-      url: 'https://root.mx/post/1',
-      author: { handle: 'alice', url: 'https://root.mx/u/alice' },
+      url: 'https://textlog.cc/post/1',
+      author: { handle: 'alice', url: 'https://textlog.cc/u/alice' },
     })
     expect(JSON.stringify(payload)).not.toContain('alice@example.com')
     expect(JSON.stringify(payload)).not.toContain('user_id')
@@ -111,7 +111,7 @@ describe('public API', () => {
     const replies = await (await request(app, '/api/v1/posts/1/replies')).json() as any
     const user = await (await request(app, '/api/v1/users/ALICE')).json() as any
     const userPosts = await (await request(app, '/api/v1/users/alice/posts')).json() as any
-    const tags = await (await request(app, '/api/v1/tags/root/posts')).json() as any
+    const tags = await (await request(app, '/api/v1/tags/textlog/posts')).json() as any
 
     expect(post.data.id).toBe(1)
     expect(replies.data.map((item: any) => item.id)).toEqual([2])
@@ -155,10 +155,10 @@ describe('public API', () => {
   test('rate limits JSON requests independently by IP', async () => {
     const { app, database } = fixture()
     for (let i = 0; i < 120; i++) {
-      expect((await request(app, '/api/v1/feeds/latest', { headers: { 'x-root-client-ip': 'busy' } })).status).toBe(200)
+      expect((await request(app, '/api/v1/feeds/latest', { headers: { 'x-textlog-client-ip': 'busy' } })).status).toBe(200)
     }
-    const limited = await request(app, '/api/v1/feeds/latest', { headers: { 'x-root-client-ip': 'busy' } })
-    const other = await request(app, '/api/v1/feeds/latest', { headers: { 'x-root-client-ip': 'other' } })
+    const limited = await request(app, '/api/v1/feeds/latest', { headers: { 'x-textlog-client-ip': 'busy' } })
+    const other = await request(app, '/api/v1/feeds/latest', { headers: { 'x-textlog-client-ip': 'other' } })
     expect(limited.status).toBe(429)
     expect(limited.headers.get('retry-after')).toBeTruthy()
     expect(other.status).toBe(200)
@@ -171,7 +171,7 @@ describe('public API', () => {
     const { app, database } = fixture()
     const controller = new AbortController()
     const response = await request(app, '/api/v1/firehose', { signal: controller.signal,
-      headers: { 'x-root-client-ip': 'streamer' } })
+      headers: { 'x-textlog-client-ip': 'streamer' } })
     const reader = response.body!.getReader()
     const decoder = new TextDecoder()
     const ready = decoder.decode((await reader.read()).value)
@@ -180,13 +180,13 @@ describe('public API', () => {
     expect(response.headers.get('x-accel-buffering')).toBe('no')
 
     database.run(
-      'INSERT INTO posts(id,user_id,parent_id,body,created_at) VALUES(6,1,NULL,\'live #root\',\'2026-08-03 16:00:00\')',
+      'INSERT INTO posts(id,user_id,parent_id,body,created_at) VALUES(6,1,NULL,\'live #textlog\',\'2026-08-03 16:00:00\')',
     )
     publishPost(6)
     const event = decoder.decode((await reader.read()).value)
     expect(event).toContain('id: 6')
     expect(event).toContain('event: post')
-    expect(event).toContain('live #root')
+    expect(event).toContain('live #textlog')
     await reader.cancel()
   })
 
@@ -194,16 +194,16 @@ describe('public API', () => {
     const { app } = fixture()
     const responses = await Promise.all([1, 2, 3].map(() =>
       request(app, '/api/v1/firehose', {
-        headers: { 'x-root-client-ip': 'crowded' },
+        headers: { 'x-textlog-client-ip': 'crowded' },
       })
     ))
     expect(responses.every(response => response.status === 200)).toBe(true)
-    const limited = await request(app, '/api/v1/firehose', { headers: { 'x-root-client-ip': 'crowded' } })
+    const limited = await request(app, '/api/v1/firehose', { headers: { 'x-textlog-client-ip': 'crowded' } })
     expect(limited.status).toBe(429)
     expect(limited.headers.get('retry-after')).toBe('30')
 
     await responses[0].body!.cancel()
-    const replacement = await request(app, '/api/v1/firehose', { headers: { 'x-root-client-ip': 'crowded' } })
+    const replacement = await request(app, '/api/v1/firehose', { headers: { 'x-textlog-client-ip': 'crowded' } })
     expect(replacement.status).toBe(200)
     await Promise.all([...responses.slice(1), replacement].map(response => response.body!.cancel()))
   })

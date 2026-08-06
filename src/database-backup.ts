@@ -2,7 +2,7 @@ import { Database } from 'bun:sqlite'
 import { chmodSync, copyFileSync, existsSync, mkdirSync, readdirSync, renameSync, rmSync, statSync } from 'node:fs'
 import { basename, dirname, join, resolve } from 'node:path'
 
-export const defaultDatabasePath = Bun.env.DATABASE_PATH || 'storage/root.sqlite'
+export const defaultDatabasePath = Bun.env.DATABASE_PATH || 'storage/textlog.sqlite'
 export const defaultBackupDirectory = Bun.env.DATABASE_BACKUP_DIR || 'storage/backups'
 
 function timestamp() {
@@ -32,7 +32,7 @@ export function pruneBackups(directory = defaultBackupDirectory, now = Date.now(
   const cutoff = now - retentionDays() * 24 * 60 * 60 * 1000
   let removed = 0
   for (const entry of readdirSync(directory)) {
-    if (!/^root-(?:(?:pre-migration|manual|pre-restore)-.*|daily-\d{4}-\d{2}-\d{2})\.sqlite$/.test(entry)) continue
+    if (!/^textlog-(?:(?:pre-migration|manual|pre-restore)-.*|daily-\d{4}-\d{2}-\d{2})\.sqlite$/.test(entry)) continue
     const path = join(directory, entry)
     if (statSync(path).mtimeMs >= cutoff) continue
     rmSync(path)
@@ -49,7 +49,7 @@ export function createDatabaseBackup(database: Database, options: {
   const directory = options.directory || defaultBackupDirectory
   mkdirSync(directory, { recursive: true, mode: 0o700 })
   const label = options.label ? `-${options.label.replace(/[^a-zA-Z0-9_-]/g, '_')}` : ''
-  const filename = `root-${options.kind}${label}-${timestamp()}.sqlite`
+  const filename = `textlog-${options.kind}${label}-${timestamp()}.sqlite`
   const finalPath = resolve(directory, filename)
   const temporaryPath = `${finalPath}.tmp`
   const escapedPath = temporaryPath.replaceAll('\'', '\'\'')
@@ -63,7 +63,7 @@ export function createDatabaseBackup(database: Database, options: {
 }
 
 export function dailyBackupPath(directory = defaultBackupDirectory, day = new Date().toISOString().slice(0, 10)) {
-  return resolve(directory, `root-daily-${day}.sqlite`)
+  return resolve(directory, `textlog-daily-${day}.sqlite`)
 }
 
 export function createDailyDatabaseBackup(database: Database, directory = defaultBackupDirectory,

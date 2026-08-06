@@ -81,7 +81,7 @@ export function registerAccountRoutes(app: Hono) {
     return new Response(JSON.stringify(data, null, 2), {
       headers: {
         'content-type': 'application/json; charset=utf-8',
-        'content-disposition': `attachment; filename="root-mx-${user.handle}-data.json"`,
+        'content-disposition': `attachment; filename="textlog-${user.handle}-data.json"`,
         'cache-control': 'no-store',
       },
     })
