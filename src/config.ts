@@ -7,6 +7,7 @@ export type StartupConfiguration = {
   environment: 'development' | 'test' | 'production'
   production: boolean
   devReload: boolean
+  devResendEmails: boolean
   appUrl: string | null
   host: string
   port: number
@@ -108,6 +109,7 @@ export function validateStartupConfiguration(env: Environment = Bun.env, options
 } = {}): StartupConfiguration {
   const problems: string[] = []
   const devReload = booleanValue(env, 'DEV_RELOAD', problems)
+  const devResendEmails = booleanValue(env, 'DEV_RESEND_EMAILS', problems)
   const requestedEnvironment = (env.NODE_ENV || (devReload ? 'development' : 'production')).trim().toLowerCase()
   const validEnvironment = isStartupEnvironment(requestedEnvironment)
   const environment: StartupEnvironment = validEnvironment ? requestedEnvironment : 'production'
@@ -139,6 +141,9 @@ export function validateStartupConfiguration(env: Environment = Bun.env, options
   const resendConfigured = Boolean(env.RESEND_API_KEY?.trim())
   const emailFromConfigured = Boolean(env.EMAIL_FROM?.trim())
   const emailCaptureConfigured = Boolean(env.EMAIL_CAPTURE_PATH?.trim())
+  if (environment === 'development' && devResendEmails && !resendConfigured) {
+    problems.push('RESEND_API_KEY and EMAIL_FROM are required when DEV_RESEND_EMAILS is enabled')
+  }
   if (emailCaptureConfigured && environment !== 'test') {
     problems.push('EMAIL_CAPTURE_PATH is only allowed in test')
   }
@@ -180,6 +185,7 @@ export function validateStartupConfiguration(env: Environment = Bun.env, options
     environment,
     production: environment === 'production',
     devReload,
+    devResendEmails,
     appUrl,
     host,
     port,

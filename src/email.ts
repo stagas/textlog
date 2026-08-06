@@ -10,6 +10,8 @@ async function sendEmail(email: string, subject: string, text: string, html: str
     return
   }
 
+  if (Bun.env.NODE_ENV === 'development' && Bun.env.DEV_RESEND_EMAILS !== 'true') return
+
   const apiKey = Bun.env.RESEND_API_KEY
   const from = Bun.env.EMAIL_FROM
   if (!apiKey || !from) throw new Error('RESEND_API_KEY and EMAIL_FROM must be configured')

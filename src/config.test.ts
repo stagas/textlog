@@ -53,12 +53,24 @@ describe('startup configuration', () => {
 
   test('keeps integrations optional in development but rejects partial email configuration', () => {
     expect(validateStartupConfiguration({ NODE_ENV: 'development' }, { checkFilesystem: false }))
-      .toMatchObject({ production: false, appUrl: null })
+      .toMatchObject({ production: false, appUrl: null, devResendEmails: false })
     expect(() =>
       validateStartupConfiguration({ NODE_ENV: 'development', RESEND_API_KEY: 'only-one' }, {
         checkFilesystem: false,
       })
     ).toThrow('RESEND_API_KEY and EMAIL_FROM must be configured together')
+    expect(() =>
+      validateStartupConfiguration({ NODE_ENV: 'development', DEV_RESEND_EMAILS: 'true' }, {
+        checkFilesystem: false,
+      })
+    ).toThrow('RESEND_API_KEY and EMAIL_FROM are required when DEV_RESEND_EMAILS is enabled')
+    expect(validateStartupConfiguration({
+      NODE_ENV: 'development',
+      DEV_RESEND_EMAILS: 'true',
+      APP_URL: 'http://localhost:3000',
+      RESEND_API_KEY: 'configured-secret',
+      EMAIL_FROM: 'textlog <hello@textlog.cc>',
+    }, { checkFilesystem: false }).devResendEmails).toBe(true)
   })
 
   test('allows captured email only in isolated tests', () => {

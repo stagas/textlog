@@ -104,8 +104,10 @@ Set `OPENAI_API_KEY` in the server environment to moderate posts and replies bef
 
 Magic-link entry uses Resend. Set `RESEND_API_KEY`, `EMAIL_FROM` (a verified sender such as
 `textlog <hello@textlog.cc>`), and the public `APP_URL` (such as `https://textlog.cc`). Links are single-use and expire after
-one hour. In development, the confirmation page displays the link directly instead of sending email. The same email
-configuration powers confirmed email changes. Account security settings support individual or bulk session revocation.
+one hour. In development, the confirmation page displays the link directly and Resend delivery is disabled by default.
+Set `DEV_RESEND_EMAILS=true` alongside the Resend configuration to send real development emails. The same toggle and
+email configuration apply to confirmed email changes and other transactional messages. Account security settings
+support individual or bulk session revocation.
 
 `APP_URL` is also used for absolute Open Graph URLs. Each post exposes a dynamically rendered 1200×630 PNG at `/post/:id/og.png`.
 When `APP_URL` uses HTTPS, authentication cookies are automatically marked `Secure` for production transport protection.

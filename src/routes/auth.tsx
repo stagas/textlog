@@ -49,18 +49,16 @@ export function registerAuthRoutes(app: Hono) {
       VALUES(?,?,?,?,?,?)`).run(hash(value), email, account?.id ?? null, next, Date.now() + 3600000, Date.now())
     const origin = Bun.env.APP_URL?.replace(/\/$/, '') || new URL(c.req.url).origin
     const magicUrl = `${origin}/enter/magic?token=${encodeURIComponent(value)}`
-    if (!development()) {
-      try {
-        await sendMagicLink(email, magicUrl, account?.handle_chosen_at ? account.handle : undefined)
-      }
-      catch (error) {
-        console.error('Could not send magic link', error)
-        db.query('DELETE FROM magic_links WHERE token_hash=?').run(hash(value))
-        return page(
-          <Auth email={email} next={next} error="The magic link could not be sent. Please try again later." />,
-          503,
-        )
-      }
+    try {
+      await sendMagicLink(email, magicUrl, account?.handle_chosen_at ? account.handle : undefined)
+    }
+    catch (error) {
+      console.error('Could not send magic link', error)
+      db.query('DELETE FROM magic_links WHERE token_hash=?').run(hash(value))
+      return page(
+        <Auth email={email} next={next} error="The magic link could not be sent. Please try again later." />,
+        503,
+      )
     }
     return page(<MagicLinkSent email={email} magicUrl={development() ? magicUrl : undefined} />)
   })
