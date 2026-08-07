@@ -1,5 +1,5 @@
 import { db, type User } from '../db'
-import { suggestedPeople } from '../explore'
+import { suggestedPeople, trendingTags } from '../explore'
 import type { PersonView } from '../types'
 import { Layout } from './layout'
 import { TagPeopleList } from './page-shared'
@@ -23,16 +23,7 @@ export function Explore({ user, welcome = false, peopleIds }: {
       .sort((a, b) => savedIds.indexOf(a.id) - savedIds.indexOf(b.id))
     : suggestedPeople(db, viewerId)
   const explorePeople = people.map(p => p.id).join(',')
-  const tags = db.query(
-    `SELECT ph.tag,count(*) count,
-      EXISTS(SELECT 1 FROM hashtag_follows hf WHERE hf.user_id=? AND hf.tag=ph.tag) following
-      FROM post_hashtags ph JOIN posts p ON p.id=ph.post_id
-      WHERE p.deleted_at IS NULL AND (? < 0 OR NOT EXISTS (SELECT 1 FROM blocks b WHERE
-        (b.blocker_id=? AND b.blocked_id=p.user_id) OR (b.blocker_id=p.user_id AND b.blocked_id=?)))
-      AND (? < 0 OR NOT EXISTS (SELECT 1 FROM blocked_hashtags bh WHERE bh.user_id=? AND bh.tag=ph.tag))
-      GROUP BY ph.tag ORDER BY count DESC LIMIT 12`,
-  ).all(viewerId, viewerId, viewerId, viewerId, viewerId, viewerId) as { tag: string; count: number;
-    following: boolean }[]
+  const tags = trendingTags(db, viewerId)
   return (
     <Layout user={user} title="explore">
       {user && welcome && (
@@ -49,7 +40,7 @@ export function Explore({ user, welcome = false, peopleIds }: {
       )}
       <div className="columns">
         <section>
-          <h2>Popular tags</h2>
+          <h2>Trending tags</h2>
           {tags.length
             ? <TagPeopleList user={user} tags={tags} />
             : <p className="section-empty">No hashtags yet.</p>}
