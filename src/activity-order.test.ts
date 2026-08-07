@@ -38,3 +38,25 @@ test('activity ordering normalizes production Unix follow timestamps', () => {
     { activity_key: 'post:1' },
   ])
 })
+
+test('follow union columns align with migrated post column order', () => {
+  const database = new Database(':memory:')
+  database.run(`CREATE TABLE posts (
+      id INTEGER,user_id INTEGER,body TEXT,created_at TEXT,parent_id INTEGER,deleted_at TEXT);
+    CREATE TABLE follows(follower_id INTEGER,created_at TEXT);
+    INSERT INTO posts VALUES(1,1,'reply','2026-08-07 15:54:06',10,NULL);
+    INSERT INTO follows VALUES(2,'2026-08-07 15:54:38');`)
+
+  const events = database.query(`SELECT activity_kind,created_at FROM (
+      SELECT p.id,p.user_id,p.parent_id,p.body,p.created_at,p.deleted_at,'reply' activity_kind,
+        'post:' || p.id activity_key
+        FROM posts p
+      UNION ALL
+      SELECT NULL,f.follower_id,NULL,NULL,f.created_at,NULL,'follow','follow:' || f.follower_id FROM follows f
+    ) activity ORDER BY ${activityOrderBy}`).all()
+
+  expect(events).toEqual([
+    { activity_kind: 'follow', created_at: '2026-08-07 15:54:38' },
+    { activity_kind: 'reply', created_at: '2026-08-07 15:54:06' },
+  ])
+})

@@ -34,7 +34,8 @@ export function Activity({ user, page }: { user: User; page: number }) {
   const total = activityTotal(user.id)
   const posts = db.query(
     `SELECT activity.*,ar.event_key IS NULL unread FROM (
-      SELECT p.*,u.handle,CASE WHEN parent.user_id=? THEN 'reply' ELSE 'mention' END activity_kind,
+      SELECT p.id,p.user_id,p.parent_id,p.body,p.created_at,p.deleted_at,u.handle,
+        CASE WHEN parent.user_id=? THEN 'reply' ELSE 'mention' END activity_kind,
         NULL bio,NULL posts,NULL viewerFollowing,'post:' || p.id activity_key
         FROM posts p
         JOIN users u ON u.id=p.user_id
