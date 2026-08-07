@@ -38,3 +38,7 @@ bun run dev
 ```
 
 Open [localhost:3000](http://localhost:3000). Run `bun run check` to type-check and test the project.
+
+## License
+
+textlog is open-source software licensed under the [AGPLv3 License](LICENSE).
