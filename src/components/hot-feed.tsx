@@ -27,7 +27,7 @@ export function HotFeed(
     ? encodeHotCursor(hotCursor(pageRows[pageRows.length - 1], asOf, 'next'))
     : null
   return (
-    <Layout user={user} title={title}>
+    <Layout user={user} title={title} feeds={{ title: 'Hot notes', rss: '/hot.rss', atom: '/hot.atom' }}>
       <h1 className="visually-hidden">Hot notes</h1>
       <FeedTabs active="hot" user={user} />
       {posts.length

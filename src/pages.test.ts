@@ -5,6 +5,24 @@ import { About, AccountSecurity, ApiDocs, Auth, ChooseHandle, ConfirmEmail, Cont
 import React from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
 import { Post } from './components/post'
+import { HotFeed } from './components/hot-feed'
+import { PublicFeed } from './components/public-feed'
+import { TagFeed } from './components/tag-feed'
+
+test('public collection pages advertise their RSS and Atom feeds', () => {
+  const hot = renderToStaticMarkup(React.createElement(HotFeed, { user: null, cursor: null }))
+  const latest = renderToStaticMarkup(React.createElement(PublicFeed, { user: null, cursor: null, path: '/latest' }))
+  const tag = renderToStaticMarkup(React.createElement(TagFeed, {
+    user: null, tag: 'ascii_art', following: false, posts: [], page: 1, total: 0,
+  }))
+
+  expect(hot).toContain('type="application/rss+xml" title="Hot notes (RSS)" href="/hot.rss"')
+  expect(hot).toContain('type="application/atom+xml" title="Hot notes (Atom)" href="/hot.atom"')
+  expect(latest).toContain('href="/latest.rss"')
+  expect(latest).toContain('href="/latest.atom"')
+  expect(tag).toContain('href="/tag/ascii_art.rss"')
+  expect(tag).toContain('href="/tag/ascii_art.atom"')
+})
 
 describe('postTitle', () => {
   test('uses short post text as-is', () => {
@@ -179,6 +197,8 @@ test('Profile places owner actions in the handle row', () => {
   expect(html).toContain('class="identity-prefix">@</span>reader')
   expect(html).toContain('href="/account/edit">account</a>')
   expect(html).toContain('action="/logout"')
+  expect(html).toContain('type="application/rss+xml" title="Notes by @reader (RSS)" href="/u/reader.rss"')
+  expect(html).toContain('type="application/atom+xml" title="Notes by @reader (Atom)" href="/u/reader.atom"')
   expect(html).toContain('class="mobile-account-footer" aria-label="Account shortcuts"')
   expect(html.indexOf('href="/write"')).toBeLessThan(html.indexOf('href="/u/reader"'))
 })

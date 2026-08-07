@@ -12,7 +12,11 @@ export function TagFeed(
       imageAlt?: string } },
 ) {
   return (
-    <Layout user={user} title={`#${tag}`} social={social}>
+    <Layout user={user} title={`#${tag}`} social={social} feeds={{
+      title: `#${tag} notes`,
+      rss: `/tag/${encodeURIComponent(tag)}.rss`,
+      atom: `/tag/${encodeURIComponent(tag)}.atom`,
+    }}>
       <section className="page-header tag-header">
         <h1>
           <span>

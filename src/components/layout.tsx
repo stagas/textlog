@@ -27,6 +27,7 @@ export function Layout({
   title,
   user,
   social,
+  feeds,
   logoutNavigation = false,
   children,
 }: {
@@ -35,6 +36,7 @@ export function Layout({
   logoutNavigation?: boolean
   social?: { description: string; image: string; url: string; type?: 'article' | 'profile' | 'website';
     imageAlt?: string }
+  feeds?: { title: string; rss: string; atom: string }
   children: React.ReactNode
 }) {
   const appOrigin = Bun.env.APP_URL?.replace(/\/$/, '') || ''
@@ -91,6 +93,12 @@ export function Layout({
         </>
         <link rel="icon" href="/textlog.svg?v=1" type="image/svg+xml" />
         <link rel="sitemap" href="/sitemap.xml" type="application/xml" />
+        {feeds && (
+          <>
+            <link rel="alternate" type="application/rss+xml" title={`${feeds.title} (RSS)`} href={feeds.rss} />
+            <link rel="alternate" type="application/atom+xml" title={`${feeds.title} (Atom)`} href={feeds.atom} />
+          </>
+        )}
         <link rel="stylesheet" href="/styles.css?v=51" />
       </head>
       <body>

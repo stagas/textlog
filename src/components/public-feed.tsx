@@ -24,7 +24,8 @@ export function PublicFeed(
   const result = postCursorPage(rows, cursor)
   const posts = enrichPosts(db, result.rows, viewerId)
   return (
-    <Layout user={user} title={path === '/latest' ? 'latest' : undefined}>
+    <Layout user={user} title={path === '/latest' ? 'latest' : undefined}
+      feeds={{ title: 'Latest notes', rss: '/latest.rss', atom: '/latest.atom' }}>
       <h1 className="visually-hidden">Latest notes</h1>
       <FeedTabs active="latest" user={user} />
       {posts.length

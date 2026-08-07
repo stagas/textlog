@@ -32,7 +32,11 @@ export function Profile(
     },
 ) {
   return (
-    <Layout user={user} title={`@${profile.handle}`} social={social}>
+    <Layout user={user} title={`@${profile.handle}`} social={social} feeds={{
+      title: `Notes by @${profile.handle}`,
+      rss: `/u/${encodeURIComponent(profile.handle)}.rss`,
+      atom: `/u/${encodeURIComponent(profile.handle)}.atom`,
+    }}>
       <ProfileHeader user={user} profile={profile} following={following} blocked={blocked} editing={editing}>
         <div className="profile-content">
           <div className="profile-title-row">
