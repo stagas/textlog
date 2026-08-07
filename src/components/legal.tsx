@@ -91,7 +91,7 @@ export function Legal({ user }: { user: User | null }) {
 
         <h3>Retention</h3>
         <p>
-          Session records expire after 30 days; magic and email-change links after one hour; daily visitor pseudonyms
+          Session records expire after 365 days of inactivity; magic and email-change links after one hour; daily visitor pseudonyms
           after seven days; and application HTTP logs after at most 14 days. Public account and content data is held
           until you delete it or your account. Deletion anonymizes the account and content, while limited moderation,
           resolved report and audit records are retained for three years where needed to document decisions, establish

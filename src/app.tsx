@@ -1,5 +1,5 @@
 import { applyHtmlCachePolicy, GLOBAL_REQUEST_BODY_LIMIT, isSameOriginRequest, RequestBodyError, safeLocalPath,
-  securityHeaders } from './http'
+  securityHeaders, sessionCookie } from './http'
 
 import { Hono } from 'hono'
 import { bodyLimit } from 'hono/body-limit'
@@ -23,8 +23,9 @@ import { registerProfilesRoutes } from './routes/profiles'
 import { registerSeoRoutes } from './routes/seo'
 import { clientErrorPage, notFoundPage, serverErrorPage } from './routes/shared'
 import { registerTagsRoutes } from './routes/tags'
+import { renewSession } from './sessions'
 import { loadStylesAsset, stylesResponse } from './styles'
-import { currentUser } from './utils'
+import { currentUser, sessionToken } from './utils'
 import { VisitorBuffer } from './visitors'
 
 const devReloadEnabled = Bun.env.DEV_RELOAD === 'true'
@@ -51,6 +52,12 @@ app.use('*', bodyLimit({
   maxSize: GLOBAL_REQUEST_BODY_LIMIT,
   onError: c => clientErrorPage(c.req.raw, 413),
 }))
+
+app.use('*', async (c, next) => {
+  await next()
+  const value = sessionToken(c.req.raw)
+  if (value && renewSession(db, value)) c.header('Set-Cookie', sessionCookie(value), { append: true })
+})
 
 app.use('*', async (c, next) => {
   await next()

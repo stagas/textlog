@@ -83,6 +83,7 @@ describe('request values and cookies', () => {
   })
 
   test('hardens session cookies and enables Secure for HTTPS deployments', () => {
+    expect(sessionCookie('token')).toContain('Max-Age=31536000')
     expect(sessionCookie('token', undefined, 'http://localhost:3000')).toContain('HttpOnly; Path=/; SameSite=Lax')
     expect(sessionCookie('token', undefined, 'http://localhost:3000')).not.toContain('Secure')
 

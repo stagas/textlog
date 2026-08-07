@@ -4,7 +4,7 @@ import { db } from '../db'
 import { sendMagicLink } from '../email'
 import { clearSessionCookie, safeLocalPath, sessionCookie } from '../http'
 import { moderateText, moderationMessage } from '../moderation'
-import { insertSession, sessionHash } from '../sessions'
+import { insertSession, SESSION_LIFETIME_MS, sessionHash } from '../sessions'
 import { currentUser, hash, token } from '../utils'
 import { authLimit, clientAddress, form, page, redirect, retryPage, safeNext } from './shared'
 
@@ -101,7 +101,8 @@ export function registerAuthRoutes(app: Hono) {
           }
           if (!userId) throw new Error('Could not allocate temporary handle')
         }
-        insertSession(db, session, userId!, Date.now() + 2592000000, Date.now(), c.req.header('user-agent') || '')
+        insertSession(db, session, userId!, Date.now() + SESSION_LIFETIME_MS, Date.now(),
+          c.req.header('user-agent') || '')
       })()
     }
     catch {
