@@ -1,10 +1,12 @@
 import { anonymizeUser, isAdmin } from '../admin'
 import { AUTH_LIMITS, authRateLimitMessage } from '../auth-rate-limit'
 import { currentUser, sessionToken } from '../utils'
-import { authLimit, clientAddress, form, issueEmailToken, page, redirect, retryPage, securityPage } from './shared'
+import { authLimit, clientAddress, form, issueEmailToken, issueMagicLink, page, redirect, retryPage,
+  securityPage } from './shared'
 
 import type { Hono } from 'hono'
 import {
+  AccountMagicLink,
   ConfirmAccountDelete,
   ConfirmEmail,
   Profile,
@@ -73,6 +75,19 @@ export function registerAccountRoutes(app: Hono) {
       : c.req.query('verified') === '1'
       ? 'Email address verified.'
       : undefined))
+
+  app.post('/account/magic-link', c => {
+    const user = currentUser(c.req.raw)
+    if (!user) return redirect('/enter?next=' + encodeURIComponent('/account/security'))
+    const limited = authLimit(c, 'account-magic-link', `${user.id}:${clientAddress(c)}`, AUTH_LIMITS.sensitiveAccount)
+    if (limited) {
+      return retryPage(securityPage(c.req.raw, authRateLimitMessage(limited.retryAfter), undefined, 429),
+        limited.retryAfter)
+    }
+    const origin = Bun.env.APP_URL?.replace(/\/$/, '') || new URL(c.req.url).origin
+    const magicUrl = issueMagicLink(user.email, user.id, '/', origin)
+    return page(<AccountMagicLink user={user} magicUrl={magicUrl} />)
+  })
 
   app.get('/account/export', c => {
     const user = currentUser(c.req.raw)

@@ -6,7 +6,7 @@ import { clearSessionCookie, safeLocalPath, sessionCookie } from '../http'
 import { moderateText, moderationMessage } from '../moderation'
 import { insertSession, SESSION_LIFETIME_MS, sessionHash } from '../sessions'
 import { currentUser, hash, token } from '../utils'
-import { authLimit, clientAddress, form, page, redirect, retryPage, safeNext } from './shared'
+import { authLimit, clientAddress, form, issueMagicLink, page, redirect, retryPage, safeNext } from './shared'
 
 import type { Hono } from 'hono'
 
@@ -43,17 +43,14 @@ export function registerAuthRoutes(app: Hono) {
     const account = db.query(`SELECT id,handle,handle_chosen_at FROM users
       WHERE email=? AND deleted_at IS NULL AND suspended_at IS NULL`).get(email) as { id: number; handle: string;
       handle_chosen_at: string | null } | null
-    const value = token()
-    db.query('DELETE FROM magic_links WHERE email=? OR expires_at<=?').run(email, Date.now())
-    db.query(`INSERT INTO magic_links(token_hash,email,user_id,next_path,expires_at,created_at)
-      VALUES(?,?,?,?,?,?)`).run(hash(value), email, account?.id ?? null, next, Date.now() + 3600000, Date.now())
     const origin = Bun.env.APP_URL?.replace(/\/$/, '') || new URL(c.req.url).origin
-    const magicUrl = `${origin}/enter/magic?token=${encodeURIComponent(value)}`
+    const magicUrl = issueMagicLink(email, account?.id ?? null, next, origin)
     try {
       await sendMagicLink(email, magicUrl, account?.handle_chosen_at ? account.handle : undefined)
     }
     catch (error) {
       console.error('Could not send magic link', error)
+      const value = new URL(magicUrl).searchParams.get('token') || ''
       db.query('DELETE FROM magic_links WHERE token_hash=?').run(hash(value))
       return page(
         <Auth email={email} next={next} error="The magic link could not be sent. Please try again later." />,

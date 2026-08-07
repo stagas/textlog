@@ -1,5 +1,6 @@
 import { describe, expect, test } from 'bun:test'
-import { About, AccountSecurity, ApiDocs, Auth, ChooseHandle, ConfirmEmail, Contact, ErrorPage, NotFound, postTitle,
+import { About, AccountMagicLink, AccountSecurity, ApiDocs, Auth, ChooseHandle, ConfirmEmail, Contact, ErrorPage,
+  NotFound, postTitle,
   Profile } from './components/pages'
 
 import React from 'react'
@@ -153,10 +154,24 @@ test('AccountSecurity renders email and safe session controls without passwords'
   }))
 
   expect(html).toContain('reader@example.com')
+  expect(html).toContain('action="/account/magic-link"')
+  expect(html).toContain('generate magic link')
   expect(html).toContain('href="/account/edit">back</a>')
   expect(html).not.toContain('type="password"')
   expect(html).toContain('value="revocable-id"')
   expect(html).not.toContain('value="current-id"')
+})
+
+test('AccountMagicLink renders a generated magic link on its own page for copying', () => {
+  const html = renderToStaticMarkup(React.createElement(AccountMagicLink, {
+    user: { id: 1, handle: 'reader', email: 'reader@example.com', bio: '', email_verified_at: null },
+    magicUrl: 'https://textlog.cc/enter/magic?token=secret-token',
+  }))
+
+  expect(html).toContain('<textarea')
+  expect(html).toContain('readOnly=""')
+  expect(html).toContain('https://textlog.cc/enter/magic?token=secret-token</textarea>')
+  expect(html).toContain('href="/account/security"')
 })
 
 test('Profile edit offers a data download without rendering notes', () => {

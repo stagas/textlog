@@ -95,6 +95,14 @@ export async function issueEmailToken(userId: number, email: string, kind: 'chan
     throw error
   }
 }
+export function issueMagicLink(email: string, userId: number | null, nextPath: string, origin: string) {
+  const value = token()
+  const now = Date.now()
+  db.query('DELETE FROM magic_links WHERE email=? OR expires_at<=?').run(email, now)
+  db.query(`INSERT INTO magic_links(token_hash,email,user_id,next_path,expires_at,created_at)
+    VALUES(?,?,?,?,?,?)`).run(hash(value), email, userId, safeLocalPath(nextPath), now + 3600000, now)
+  return `${origin.replace(/\/$/, '')}/enter/magic?token=${encodeURIComponent(value)}`
+}
 export function securityPage(req: Request, error?: string, success?: string, status = 200) {
   const user = currentUser(req)
   if (!user) return redirect('/enter?next=' + encodeURIComponent('/account/security'))

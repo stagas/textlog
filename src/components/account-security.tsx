@@ -31,6 +31,13 @@ export function AccountSecurity({ user, sessions, error, success }: {
           </form>
         </section>
         <section className="security-section">
+          <h2>magic link</h2>
+          <p>Generate a one-time sign-in link to copy to another device. It expires after one hour.</p>
+          <form className="security-form" method="post" action="/account/magic-link">
+            <button className="button">generate magic link →</button>
+          </form>
+        </section>
+        <section className="security-section">
           <h2>sessions</h2>
           <div className="session-list">
             {sessions.map(session => (
@@ -59,6 +66,22 @@ export function AccountSecurity({ user, sessions, error, success }: {
             </form>
           )}
         </section>
+      </div>
+    </Layout>
+  )
+}
+
+export function AccountMagicLink({ user, magicUrl }: { user: User; magicUrl: string }) {
+  return (
+    <Layout user={user} title="magic link">
+      <div className="panel magic-link-page">
+        <h1>magic link</h1>
+        <p>Copy this one-time sign-in link to your other device. It expires after one hour.</p>
+        <label className="magic-link-output">
+          magic link
+          <textarea readOnly value={magicUrl} autoFocus spellCheck={false} aria-label="magic link URL" />
+        </label>
+        <a className="quiet" href="/account/security">back to account security</a>
       </div>
     </Layout>
   )
