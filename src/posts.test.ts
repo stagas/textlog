@@ -29,6 +29,10 @@ describe('post persistence', () => {
     expect(linkify('hello @Reader', { reader: '' }))
       .toContain('<a href="/u/reader" title="No bio yet.">@Reader</a>')
   })
+  test('keeps apostrophes in linkified URLs', () => {
+    expect(linkify("read https://example.com/people/O'Brien/profile"))
+      .toBe("read <a href=\"https://example.com/people/O&#39;Brien/profile\" target=\"_blank\" rel=\"nofollow ugc noopener noreferrer\">https://example.com/people/O&#39;Brien/profile</a>")
+  })
   test('writes content and metadata atomically', () => {
     const db = database()
     expect(() => createPost(db, 1, 'rollback #fail @reader')).toThrow()

@@ -43,7 +43,7 @@ export function fmt(d: string) {
 }
 export const fmtFull = (d: string) => timestamp(d).toLocaleString('en', { dateStyle: 'medium', timeStyle: 'short' })
 export function linkify(body: string, mentionBios: Record<string, string> = {}) {
-  const tokens = /https?:\/\/[^\s<>"']+|(?<![A-Za-z0-9_])[@#][A-Za-z0-9_]+/gi
+  const tokens = /https?:\/\/[^\s<>"]+|(?<![A-Za-z0-9_])[@#][A-Za-z0-9_]+/gi
   let html = ''
   let end = 0
   for (const match of body.matchAll(tokens)) {
