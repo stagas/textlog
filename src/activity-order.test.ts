@@ -17,3 +17,24 @@ test('activity ordering interleaves follows and posts by normalized event time',
 
   expect(events).toEqual([{ kind: 'post' }, { kind: 'follow' }, { kind: 'post' }, { kind: 'follow' }])
 })
+
+test('activity ordering normalizes production Unix follow timestamps', () => {
+  const database = new Database(':memory:')
+  database.run(`CREATE TABLE events(kind TEXT,created_at,activity_key TEXT);
+    INSERT INTO events VALUES
+      ('post','2026-08-07 13:00:00','post:1'),
+      ('follow',1786111200,'follow:seconds'),
+      ('follow',1786114800000,'follow:milliseconds'),
+      ('follow',1786118400000000,'follow:microseconds');`)
+
+  const events = database.query(
+    `SELECT activity.activity_key FROM events activity ORDER BY ${activityOrderBy}`,
+  ).all()
+
+  expect(events).toEqual([
+    { activity_key: 'follow:microseconds' },
+    { activity_key: 'follow:milliseconds' },
+    { activity_key: 'follow:seconds' },
+    { activity_key: 'post:1' },
+  ])
+})
