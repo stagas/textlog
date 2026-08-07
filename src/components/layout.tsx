@@ -99,7 +99,7 @@ export function Layout({
             <link rel="alternate" type="application/atom+xml" title={`${feeds.title} (Atom)`} href={feeds.atom} />
           </>
         )}
-        <link rel="stylesheet" href="/styles.css?v=51" />
+        <link rel="stylesheet" href="/styles.css?v=52" />
       </head>
       <body>
         <a className="skip-link" href="#main-content">skip to content</a>
