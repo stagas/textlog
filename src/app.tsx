@@ -33,6 +33,11 @@ configureDevReload(devReloadEnabled ? bootId : undefined)
 const app = new Hono()
 const stylesPath = new URL('./styles.css', import.meta.url).pathname
 const styles = devReloadEnabled ? undefined : await loadStylesAsset(stylesPath)
+const defaultOgImage = renderDefaultOg()
+const defaultOgBody = defaultOgImage.buffer.slice(
+  defaultOgImage.byteOffset,
+  defaultOgImage.byteOffset + defaultOgImage.byteLength,
+) as ArrayBuffer
 const visitorBuffer = new VisitorBuffer(db)
 startMaintenance(db, visitorBuffer, error => logError('database maintenance failed', error))
 if (Bun.env.NODE_ENV === 'production') {
@@ -156,9 +161,7 @@ app.get('/textlog.svg', () =>
     },
   }))
 app.get('/og.png', () => {
-  const image = renderDefaultOg()
-  const body = image.buffer.slice(image.byteOffset, image.byteOffset + image.byteLength) as ArrayBuffer
-  return new Response(body, {
+  return new Response(defaultOgBody, {
     headers: { 'content-type': 'image/png', 'cache-control': 'public, max-age=86400, stale-while-revalidate=604800' },
   })
 })
