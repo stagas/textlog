@@ -27,6 +27,30 @@ function backfillMentions(database: Database) {
   }
 }
 
+function backfillLegacyActivityReads(database: Database) {
+  database.run(`INSERT OR IGNORE INTO activity_reads(user_id,event_key,read_at)
+    SELECT recipient_id,event_key,read_at FROM (
+      SELECT recipient.id recipient_id,'post:' || p.id event_key,recipient.activity_read_at read_at
+        FROM users recipient
+        JOIN posts parent ON parent.user_id=recipient.id
+        JOIN posts p ON p.parent_id=parent.id
+        WHERE recipient.activity_read_at IS NOT NULL AND p.created_at<=recipient.activity_read_at
+      UNION
+      SELECT recipient.id,'post:' || p.id,recipient.activity_read_at
+        FROM users recipient
+        JOIN post_mentions pm ON pm.user_id=recipient.id
+        JOIN posts p ON p.id=pm.post_id
+        WHERE recipient.activity_read_at IS NOT NULL AND p.user_id!=recipient.id
+          AND p.created_at<=recipient.activity_read_at
+      UNION
+      SELECT recipient.id,'follow:' || f.follower_id || ':' || f.created_at,recipient.activity_read_at
+        FROM users recipient
+        JOIN follows f ON f.following_id=recipient.id
+        WHERE recipient.activity_read_at IS NOT NULL AND f.created_at IS NOT NULL
+          AND f.created_at<=recipient.activity_read_at
+    )`)
+}
+
 export const migrations: Migration[] = [
   {
     version: 1,
@@ -238,6 +262,7 @@ export const migrations: Migration[] = [
       database.run(`CREATE TABLE activity_reads (
         user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,event_key TEXT NOT NULL,
         read_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,PRIMARY KEY(user_id,event_key));`)
+      backfillLegacyActivityReads(database)
     },
   },
   {
@@ -261,6 +286,14 @@ export const migrations: Migration[] = [
         token_hash TEXT PRIMARY KEY,email TEXT NOT NULL,user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
         next_path TEXT NOT NULL DEFAULT '/',expires_at INTEGER NOT NULL,created_at INTEGER NOT NULL);
       CREATE INDEX magic_links_expiry ON magic_links(expires_at);`)
+    },
+  },
+  {
+    version: 19,
+    name: 'backfill_legacy_activity_reads',
+    up(database) {
+      // Version 16 initially created the per-entry table without carrying over the old per-user cutoff.
+      backfillLegacyActivityReads(database)
     },
   },
 ]

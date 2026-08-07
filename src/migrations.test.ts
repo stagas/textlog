@@ -64,6 +64,29 @@ describe('database migrations', () => {
     expect(database.query('PRAGMA foreign_key_check').all()).toEqual([])
   })
 
+  test('preserves the legacy activity read cutoff when upgrading per-entry reads', () => {
+    const database = new Database(':memory:')
+    database.run('PRAGMA foreign_keys=ON')
+    runMigrations(database)
+    database.run(`INSERT INTO users(id,handle,email,password,activity_read_at) VALUES
+        (1,'reader','reader@example.com','x','2026-08-05 12:00:00'),
+        (2,'author','author@example.com','x',NULL);
+      INSERT INTO posts(id,user_id,body,created_at) VALUES
+        (1,1,'root','2026-08-05 09:00:00'),
+        (2,2,'old reply','2026-08-05 10:00:00'),
+        (3,2,'new reply','2026-08-05 13:00:00');
+      UPDATE posts SET parent_id=1 WHERE id IN (2,3);
+      INSERT INTO follows(follower_id,following_id,created_at) VALUES
+        (2,1,'2026-08-05 11:00:00');
+      DELETE FROM activity_reads;
+      PRAGMA user_version=18;`)
+
+    runMigrations(database)
+
+    expect(database.query('SELECT event_key FROM activity_reads ORDER BY event_key').all())
+      .toEqual([{ event_key: 'follow:2:2026-08-05 11:00:00' }, { event_key: 'post:2' }])
+  })
+
   test('refuses a database created by a newer application version', () => {
     const database = new Database(':memory:')
     database.run(`PRAGMA user_version=${latestMigrationVersion + 1}`)
