@@ -11,6 +11,7 @@ import { db } from './db'
 import { clientIp, logError, logHttp, logReady, shouldLogHttp } from './log'
 import { startMaintenance } from './maintenance'
 import { renderDefaultOg } from './og'
+import { rateLimitedResponse, RequestRateLimiter } from './request-rate-limit'
 import { registerAccountRoutes } from './routes/account'
 import { registerAdminRoutes } from './routes/admin'
 import { registerApiRoutes } from './routes/api'
@@ -40,6 +41,7 @@ const defaultOgBody = defaultOgImage.buffer.slice(
   defaultOgImage.byteOffset + defaultOgImage.byteLength,
 ) as ArrayBuffer
 const visitorBuffer = new VisitorBuffer(db)
+const requestRateLimiter = new RequestRateLimiter()
 startMaintenance(db, visitorBuffer, error => logError('database maintenance failed', error))
 if (Bun.env.NODE_ENV === 'production') {
   startAutomatedBackups(db, {
@@ -200,8 +202,11 @@ export default {
   port: Number(Bun.env.PORT || 3000),
   host: Bun.env.HOST || '0.0.0.0',
   fetch(request: Request, server: Bun.Server<unknown>) {
+    const address = clientIp(request, server.requestIP(request)?.address)
+    const limited = requestRateLimiter.consume(address)
+    if (limited) return rateLimitedResponse(limited.retryAfter)
     const headers = new Headers(request.headers)
-    headers.set('x-textlog-client-ip', clientIp(request, server.requestIP(request)?.address))
+    headers.set('x-textlog-client-ip', address)
     return app.fetch(new Request(request, { headers }))
   },
 }
