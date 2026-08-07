@@ -3,6 +3,7 @@ import type { PostView, ProfileRow } from '../types'
 import { Layout } from './layout'
 import { CursorPagination, FormMessage, ProfileHeader, ProfileTabs } from './page-shared'
 import { Post } from './post'
+import { linkify } from '../utils'
 
 export function Profile(
   { user, profile, posts, following, bio = profile.bio || '', editHandle = profile.handle, editEmail = profile.email,
@@ -97,7 +98,8 @@ export function Profile(
                 </div>
               </>
             )
-            : <p className="profile-bio">{profile.bio || 'No bio yet.'}</p>}
+            : <p className="profile-bio"
+              dangerouslySetInnerHTML={{ __html: linkify(profile.bio || 'No bio yet.') }} />}
         </div>
       </ProfileHeader>
       {blocked || blockedByProfile

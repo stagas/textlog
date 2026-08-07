@@ -203,6 +203,24 @@ test('Profile places owner actions in the handle row', () => {
   expect(html.indexOf('href="/write"')).toBeLessThan(html.indexOf('href="/u/reader"'))
 })
 
+test('Profile linkifies links and tags in the bio', () => {
+  const profile = {
+    id: 1,
+    handle: 'reader',
+    email: 'reader@example.com',
+    bio: 'Writing about #TextLog at https://example.com.',
+  }
+  const html = renderToStaticMarkup(React.createElement(Profile, {
+    user: null,
+    profile,
+    following: false,
+    posts: [],
+  }))
+
+  expect(html).toContain('<a href="/tag/TextLog">#TextLog</a>')
+  expect(html).toContain('<a href="https://example.com" target="_blank" rel="nofollow ugc noopener noreferrer">https://example.com</a>.')
+})
+
 test('Post renders preloaded parent and reply data', () => {
   const html = renderToStaticMarkup(React.createElement(Post, {
     user: null,
