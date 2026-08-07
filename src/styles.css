@@ -1778,7 +1778,7 @@ form.report-panel {
   border-top: 0;
 }
 
-.people .activity-person > form {
+.people .activity-person>form {
   margin-top: var(--space-3);
 }
 
@@ -1937,5 +1937,5 @@ form.report-panel {
 }
 
 .post p.ascii-art {
-  line-height: 1;
+  line-height: 1.15;
 }
