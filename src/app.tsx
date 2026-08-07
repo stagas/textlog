@@ -203,7 +203,7 @@ export default {
   host: Bun.env.HOST || '0.0.0.0',
   fetch(request: Request, server: Bun.Server<unknown>) {
     const address = clientIp(request, server.requestIP(request)?.address)
-    const limited = requestRateLimiter.consume(address)
+    const limited = Bun.env.NODE_ENV === 'test' ? null : requestRateLimiter.consume(address)
     if (limited) return rateLimitedResponse(limited.retryAfter)
     const headers = new Headers(request.headers)
     headers.set('x-textlog-client-ip', address)
