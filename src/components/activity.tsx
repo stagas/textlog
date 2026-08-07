@@ -1,4 +1,5 @@
 import { markActivityEntriesRead } from '../activity-state'
+import { activityOrderBy } from '../activity-order'
 import { db, type User } from '../db'
 import { PAGE_SIZE } from '../pagination'
 import { enrichPosts } from '../posts'
@@ -52,7 +53,7 @@ export function Activity({ user, page }: { user: User; page: number }) {
           (SELECT 1 FROM blocks b WHERE (b.blocker_id=? AND b.blocked_id=f.follower_id)
             OR (b.blocker_id=f.follower_id AND b.blocked_id=?))
       ) activity LEFT JOIN activity_reads ar ON ar.user_id=? AND ar.event_key=activity.activity_key
-      ORDER BY created_at DESC LIMIT ? OFFSET ?`,
+      ORDER BY ${activityOrderBy} LIMIT ? OFFSET ?`,
   ).all(user.id, user.id, user.id, user.id, user.id, user.id, user.id, user.id, user.id, user.id, user.id, user.id,
     PAGE_SIZE,
     (page - 1) * PAGE_SIZE) as (PostView & { activity_kind: 'reply' | 'mention' | 'follow'; posts: number | null;
