@@ -235,6 +235,45 @@ test('Post renders preloaded parent and reply data', () => {
   expect(html).toContain('aria-label="reply to @author">enter to reply</a>')
 })
 
+test('Post marks ascii art bodies and quoted parents for tight line spacing', () => {
+  const html = renderToStaticMarkup(React.createElement(Post, {
+    user: null,
+    p: {
+      id: 2,
+      user_id: 1,
+      parent_id: 1,
+      body: ' /\\_/\\\n( o.o )\n #ASCII_ART',
+      handle: 'writer',
+      created_at: '2026-08-03 12:00:00',
+      deleted_at: null,
+      parent: {
+        id: 1,
+        body: 'parent art\n#ascii_art',
+        handle: 'author',
+        created_at: '2026-08-03 11:00:00',
+        deleted_at: null,
+        reply_count: 1,
+      },
+    },
+  }))
+
+  expect(html.match(/class="ascii-art"/g)).toHaveLength(2)
+
+  const regularHtml = renderToStaticMarkup(React.createElement(Post, {
+    user: null,
+    p: {
+      id: 3,
+      user_id: 1,
+      parent_id: null,
+      body: 'not #ascii_artwork',
+      handle: 'writer',
+      created_at: '2026-08-03 12:00:00',
+      deleted_at: null,
+    },
+  }))
+  expect(regularHtml).not.toContain('class="ascii-art"')
+})
+
 test('Post only renders owner actions when requested by the detail view', () => {
   const props = {
     user: { id: 1, handle: 'writer', email: 'writer@example.com', bio: '' },

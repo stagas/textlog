@@ -1,5 +1,6 @@
 import React from 'react'
 import { isAdmin } from '../admin'
+import { extractHashtags } from '../content'
 import { db, type User } from '../db'
 import { enrichPosts } from '../posts'
 import type { PostView } from '../types'
@@ -22,6 +23,7 @@ export function Post({
   reportHref?: string; foldControlId?: string })
 {
   const parent = showParent ? p.parent : null
+  const isAsciiArt = extractHashtags(p.body).includes('ascii_art')
   const replyCount = p.reply_count || 0
   const defaultReplyPath = '/post/' + p.id + '?reply=1'
   const resolvedReplyHref = replyHref
@@ -74,7 +76,8 @@ export function Post({
           </label>
         )}
       </div>
-      <p dangerouslySetInnerHTML={{ __html: linkify(p.body, p.mention_bios) }} />
+      <p className={isAsciiArt ? 'ascii-art' : undefined}
+        dangerouslySetInnerHTML={{ __html: linkify(p.body, p.mention_bios) }} />
       {parent && (
         <blockquote className={'parent-quote' + (parent.deleted_at ? ' deleted-parent' : '')}>
           {parent.deleted_at
@@ -101,7 +104,8 @@ export function Post({
                     {user ? 'reply' : 'enter to reply'}
                   </a>
                 </div>
-                <p dangerouslySetInnerHTML={{ __html: linkify(parent.body, parent.mention_bios) }} />
+                <p className={extractHashtags(parent.body).includes('ascii_art') ? 'ascii-art' : undefined}
+                  dangerouslySetInnerHTML={{ __html: linkify(parent.body, parent.mention_bios) }} />
               </>
             )}
         </blockquote>

@@ -1935,3 +1935,7 @@ form.report-panel {
   outline: 2px solid var(--accent);
   outline-offset: 3px;
 }
+
+.post p.ascii-art {
+  line-height: 1;
+}
