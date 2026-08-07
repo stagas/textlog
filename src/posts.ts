@@ -29,7 +29,7 @@ export function createPost(
     syncPostMetadata(database, postId, body)
     recordHotActivity(database, postId)
   })
-  if ('id' in result) publishPost(result.id)
+  if ('id' in result && !result.duplicate) publishPost(result.id)
   return result
 }
 

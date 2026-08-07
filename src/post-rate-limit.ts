@@ -2,8 +2,9 @@ import type { Database } from 'bun:sqlite'
 
 export const POST_LIMIT = 3
 export const POST_WINDOW_SECONDS = 5 * 60
+export const DUPLICATE_POST_WINDOW_SECONDS = 15
 
-export type PostInsert = { id: number } | { retryAfter: number }
+export type PostInsert = { id: number; duplicate: boolean } | { retryAfter: number }
 
 export function insertRateLimitedPost(
   database: Database,
@@ -13,6 +14,15 @@ export function insertRateLimitedPost(
   afterInsert?: (postId: number) => void,
 ): PostInsert {
   return database.transaction(() => {
+    const duplicate = database.query(`
+      SELECT id FROM posts
+      WHERE user_id=? AND parent_id IS ? AND body=? AND deleted_at IS NULL
+        AND created_at >= datetime('now', '-' || ? || ' seconds')
+      ORDER BY id DESC LIMIT 1
+    `).get(userId, parentId, body, DUPLICATE_POST_WINDOW_SECONDS) as { id: number } | null
+
+    if (duplicate) return { id: duplicate.id, duplicate: true }
+
     const limited = database.query(`
       SELECT MAX(1, ? - (unixepoch('now') - unixepoch(MIN(created_at)))) AS retry_after
       FROM (
@@ -30,7 +40,7 @@ export function insertRateLimitedPost(
     const inserted = database.query('INSERT INTO posts(user_id,parent_id,body) VALUES(?,?,?) RETURNING id')
       .get(userId, parentId, body) as { id: number }
     afterInsert?.(inserted.id)
-    return inserted
+    return { id: inserted.id, duplicate: false }
   })()
 }
 
