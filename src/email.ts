@@ -51,7 +51,7 @@ export function sendMagicLink(email: string, magicUrl: string, handle?: string) 
   const heading = handle ? `Welcome back, @${handle}` : 'Join the community'
   return sendEmail(email, `${heading} · textlog`,
     `${heading}\n\nOpen this magic link to enter textlog:\n\n${magicUrl}\n\nThis link expires in one hour and can only be used once. If you did not request it, you can ignore this email.`,
-    `<h1>${heading}</h1><p>Use this magic link to enter textlog:</p><p><a href="${magicUrl}">Enter textlog</a></p><p>This link expires in one hour and can only be used once. If you did not request it, you can ignore this email.</p>`)
+    `<h1>${heading}</h1><p>Use this magic link to enter textlog:</p><p><a href="${magicUrl}" style="font-size: 24px;">Enter textlog</a></p><p>This link expires in one hour and can only be used once. If you did not request it, you can ignore this email.</p>`)
 }
 
 export function sendReportReceipt(email: string, reference: string) {
