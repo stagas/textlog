@@ -22,6 +22,20 @@ export function FormMessage({ error, success }: { error?: string; success?: stri
   )
 }
 
+export function ActionPair({ primary, secondary, className = '' }: {
+  primary: React.ReactNode
+  secondary: React.ReactNode
+  className?: string
+}) {
+  return (
+    <div className={`action-pair${className ? ` ${className}` : ''}`}>
+      {primary}
+      <span className="action-separator">or</span>
+      {secondary}
+    </div>
+  )
+}
+
 export function VerificationRequired() {
   return (
     <div className="panel form-error" role="alert">
@@ -358,12 +372,12 @@ export function GlobalFeedEmpty({ user }: { user: User | null }) {
   return (
     <div className="empty empty-actions">
       <p>No notes have been posted yet.</p>
-      <div>
-        {user
+      <ActionPair
+        primary={user
           ? <a className="button" href="/write">write the first note →</a>
           : <a className="button" href="/enter">join and write →</a>}
-        <a href="/explore">explore</a>
-      </div>
+        secondary={<a href="/explore">explore</a>}
+      />
     </div>
   )
 }

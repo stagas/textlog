@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test'
-import { About, AccountMagicLink, AccountSecurity, ApiDocs, Auth, ChooseHandle, ConfirmEmail, Contact, ErrorPage,
+import { About, AccountMagicLink, AccountSecurity, ApiDocs, Auth, ChooseHandle, ConfirmEmail, Connections, Contact, ErrorPage,
   NotFound, postTitle,
   Profile } from './components/pages'
 
@@ -89,8 +89,9 @@ test('Not found page gives visitors useful ways back into the site', () => {
   expect(html).toContain('<title>page not found · textlog</title>')
   expect(html).toContain('aria-hidden="true">404</p>')
   expect(html).toContain('This page doesn&#x27;t exist.')
+  expect(html).toContain('class="action-pair not-found-actions status-page-actions"')
   expect(html).toContain('class="button" href="/">browse notes</a>')
-  expect(html).toContain('<span>or</span><a href="/explore">explore</a>')
+  expect(html).toContain('<span class="action-separator">or</span><a href="/explore">explore</a>')
 })
 
 test('Error pages explain client and server failures without exposing details', () => {
@@ -111,7 +112,8 @@ describe('About', () => {
     expect(html).toContain('Small by design')
     expect(html).toContain('Your profile and notes are public')
     expect(html).toContain('download or delete your account data')
-    expect(html).toContain('class="about-actions"')
+    expect(html).toContain('class="action-pair about-actions"')
+    expect(html).toContain('<span class="action-separator">or</span>')
     expect(html).toContain('class="button" href="/enter">join the community</a>')
     expect(html).toContain('href="/">browse notes</a>')
   })
@@ -235,6 +237,39 @@ test('Profile places owner actions in the handle row', () => {
   expect(html).toContain('type="application/atom+xml" title="Notes by @reader (Atom)" href="/u/reader.atom"')
   expect(html).toContain('class="mobile-account-footer" aria-label="Account shortcuts"')
   expect(html.indexOf('href="/write"')).toBeLessThan(html.indexOf('href="/u/reader"'))
+  expect(html).toContain('<a class="button" href="/write">write a note</a>')
+})
+
+test('An empty profile only offers its owner a way to write a note', () => {
+  const profile = { id: 1, handle: 'reader', email: 'reader@example.com', bio: '' }
+  const html = renderToStaticMarkup(React.createElement(Profile, {
+    user: { id: 2, handle: 'visitor', email: 'visitor@example.com', bio: '' },
+    profile,
+    following: false,
+    posts: [],
+  }))
+
+  expect(html).toContain('@reader hasn’t posted any notes yet.')
+  expect(html).not.toContain('>write a note</a>')
+})
+
+test('An empty following tab offers its owner a way to explore', () => {
+  const user = { id: 1, handle: 'reader', email: 'reader@example.com', bio: '' }
+  const html = renderToStaticMarkup(React.createElement(Connections, {
+    user,
+    profile: user,
+    people: [],
+    kind: 'following',
+    page: 1,
+    total: 0,
+    noteCount: 0,
+    followerCount: 0,
+    followingCount: 0,
+    followingTagCount: 0,
+    following: false,
+  }))
+
+  expect(html).toContain('<a class="button" href="/explore">explore tags &amp; people</a>')
 })
 
 test('Profile linkifies Markdown links and tags in the bio', () => {

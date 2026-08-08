@@ -1,5 +1,6 @@
 import type { User } from '../db'
 import { Layout } from './layout'
+import { ActionPair } from './page-shared'
 
 type ErrorCopy = { eyebrow: string; title: string; message: string }
 
@@ -27,11 +28,10 @@ export function ErrorPage({ user, status }: { user: User | null; status: number 
           <p className="eyebrow">{error.eyebrow}</p>
           <h1 id="status-page-title">{error.title}</h1>
           <p>{error.message}</p>
-          <div className="not-found-actions status-page-actions">
-            <a className="button" href="/">browse notes</a>
-            <span>or</span>
-            <a href="/explore">explore</a>
-          </div>
+          <ActionPair className="not-found-actions status-page-actions"
+            primary={<a className="button" href="/">browse notes</a>}
+            secondary={<a href="/explore">explore</a>}
+          />
         </div>
       </section>
     </Layout>

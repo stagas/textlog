@@ -392,17 +392,20 @@ nav form {
   line-height: 1.75;
 }
 
-.about-actions {
+.action-pair {
   display: flex;
   align-items: center;
   flex-wrap: wrap;
   gap: var(--space-4);
-  margin-top: var(--space-4);
   font-size: 11px;
 }
 
-.about-actions span {
+.action-separator {
   color: var(--muted);
+}
+
+.about-actions {
+  margin-top: var(--space-4);
 }
 
 .static-page .legal-updated {
@@ -749,18 +752,6 @@ nav form {
   margin: 0 0 var(--space-4);
 }
 
-.empty-actions>div,
-.welcome-actions {
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: var(--space-4);
-}
-
-.welcome-actions span {
-  color: var(--muted);
-}
-
 .empty-actions .button {
   border: 0;
 }
@@ -805,15 +796,7 @@ nav form {
 
 .not-found-actions {
   margin-top: var(--space-5);
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: var(--space-4);
   font-size: 12px;
-}
-
-.not-found-actions span {
-  color: var(--muted);
 }
 
 .not-found-actions .button {
@@ -1596,10 +1579,6 @@ form.report-panel {
 
 .verify-email-actions form {
   margin: 0;
-}
-
-.welcome-actions {
-  font-size: 11px;
 }
 
 .activity-header {

@@ -1,5 +1,6 @@
 import { type User } from '../db'
 import { Layout } from './layout'
+import { ActionPair } from './page-shared'
 
 export function About({ user }: { user: User | null }) {
   return (
@@ -35,11 +36,10 @@ export function About({ user }: { user: User | null }) {
         {!user && (
           <>
             <h2>What's next?</h2>
-            <div className="about-actions">
-              <a className="button" href="/enter">join the community</a>
-              <span>or</span>
-              <a href="/">browse notes</a>
-            </div>
+            <ActionPair className="about-actions"
+              primary={<a className="button" href="/enter">join the community</a>}
+              secondary={<a href="/">browse notes</a>}
+            />
           </>
         )}
       </article>

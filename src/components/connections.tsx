@@ -71,12 +71,17 @@ export function Connections(
         : people.length
         ? <ConnectionPeople user={user} people={people} className="connections-list" />
         : (
-          <div className="empty">
-            {user?.id === profile.id
+          <div className={`empty${user?.id === profile.id && kind === 'following' ? ' empty-actions' : ''}`}>
+            {user?.id === profile.id && kind === 'following'
+              ? (
+                <>
+                  <p>You aren’t following anyone or any tags yet.</p>
+                  <a className="button" href="/explore">explore tags &amp; people</a>
+                </>
+              )
+              : user?.id === profile.id
               ? kind === 'blocked'
                 ? 'You haven’t blocked anyone or any tags.'
-                : kind === 'following'
-                ? 'You aren’t following anyone or any tags yet.'
                 : 'You don’t have any followers yet.'
               : <>@{profile.handle} {kind === 'following' ? 'isn’t following anyone yet.' : 'has no followers yet.'}</>}
           </div>

@@ -3,7 +3,7 @@ import { PAGE_SIZE, type PostCursor, postCursorPage } from '../pagination'
 import { enrichPosts } from '../posts'
 import type { PostView } from '../types'
 import { Layout } from './layout'
-import { CursorPagination, FeedTabs } from './page-shared'
+import { ActionPair, CursorPagination, FeedTabs } from './page-shared'
 import { Post } from './post'
 
 export function Feed({ user, cursor, title, path = '/for-you' }: {
@@ -35,11 +35,16 @@ export function Feed({ user, cursor, title, path = '/for-you' }: {
         ? (
           <div className="empty empty-actions">
             <p>Your timeline is empty. Follow people or hashtags to shape it.</p>
-            <div>
-              <a className="button" href="/explore">explore</a>
-              <a href="/">browse notes</a>
-              <a href="/write">write your first note</a>
-            </div>
+            <ActionPair
+              primary={<a className="button" href="/explore">explore tags &amp; people</a>}
+              secondary={(
+                <>
+                  <a href="/">browse notes</a>
+                  <span className="action-separator">or</span>
+                  <a href="/write">write your first note</a>
+                </>
+              )}
+            />
           </div>
         )
         : (

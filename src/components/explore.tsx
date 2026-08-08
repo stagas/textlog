@@ -2,7 +2,7 @@ import { db, type User } from '../db'
 import { suggestedPeople, trendingTags } from '../explore'
 import type { PersonView } from '../types'
 import { Layout } from './layout'
-import { TagPeopleList } from './page-shared'
+import { ActionPair, TagPeopleList } from './page-shared'
 
 export function Explore({ user, welcome = false, peopleIds }: {
   user: User | null
@@ -31,11 +31,10 @@ export function Explore({ user, welcome = false, peopleIds }: {
           <p className="eyebrow">welcome to textlog</p>
           <h1>Make this place yours.</h1>
           <p>Follow a few people or hashtags below, or start with a note of your own.</p>
-          <div className="welcome-actions">
-            <a className="button" href="/write">write your first note →</a>
-            <span>or</span>
-            <a href="/">browse notes</a>
-          </div>
+          <ActionPair className="welcome-actions"
+            primary={<a className="button" href="/write">write your first note →</a>}
+            secondary={<a href="/">browse notes</a>}
+          />
         </section>
       )}
       <div className="columns">

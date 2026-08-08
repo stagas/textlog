@@ -115,9 +115,14 @@ export function Profile(
         )}
       {!editing && !blocked && !blockedByProfile && posts.map(post => <Post key={post.id} p={post} user={user} />)}
       {!editing && !blocked && !blockedByProfile && total === 0 && (
-        <div className="empty">
+        <div className={`empty${user?.id === profile.id ? ' empty-actions' : ''}`}>
           {user?.id === profile.id
-            ? 'You haven’t posted any notes yet.'
+            ? (
+              <>
+                <p>You haven’t posted any notes yet.</p>
+                <a className="button" href="/write">write a note</a>
+              </>
+            )
             : `@${profile.handle} hasn’t posted any notes yet.`}
         </div>
       )}

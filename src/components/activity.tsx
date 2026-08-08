@@ -5,7 +5,7 @@ import { PAGE_SIZE } from '../pagination'
 import { enrichPosts } from '../posts'
 import type { PostView } from '../types'
 import { Layout } from './layout'
-import { Pagination } from './page-shared'
+import { ActionPair, Pagination } from './page-shared'
 import { Post } from './post'
 
 const activityPostWhere = `p.deleted_at IS NULL AND
@@ -108,10 +108,10 @@ export function Activity({ user, page }: { user: User; page: number }) {
         ? (
           <div className="empty empty-actions">
             <p>No activity yet.</p>
-            <div>
-              <a className="button" href="/">browse notes</a>
-              <a href="/write">write a note</a>
-            </div>
+            <ActionPair
+              primary={<a className="button" href="/">browse notes</a>}
+              secondary={<a href="/write">write a note</a>}
+            />
           </div>
         )
         : (
