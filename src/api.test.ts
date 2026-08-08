@@ -5,7 +5,7 @@ import { publishPost } from './api-broker'
 import { rebuildHotPosts } from './hot'
 import { registerApiRoutes } from './routes/api'
 
-function fixture() {
+function fixture(now?: () => number) {
   const database = new Database(':memory:')
   database.run(`
     CREATE TABLE users (id INTEGER PRIMARY KEY,handle TEXT NOT NULL,email TEXT,bio TEXT NOT NULL DEFAULT '',
@@ -41,7 +41,7 @@ function fixture() {
   `)
   rebuildHotPosts(database)
   const app = new Hono()
-  registerApiRoutes(app, database, null)
+  registerApiRoutes(app, database, null, now)
   return { app, database }
 }
 
@@ -153,7 +153,7 @@ describe('public API', () => {
   })
 
   test('rate limits JSON requests independently by IP', async () => {
-    const { app, database } = fixture()
+    const { app, database } = fixture(() => 61_000)
     for (let i = 0; i < 120; i++) {
       expect((await request(app, '/api/v1/feeds/latest', { headers: { 'x-textlog-client-ip': 'busy' } })).status).toBe(200)
     }

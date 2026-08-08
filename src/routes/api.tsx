@@ -134,7 +134,7 @@ function openApiDocument() {
 }
 
 export function registerApiRoutes(app: Hono, database: Database = db,
-  appUrl: string | null | undefined = Bun.env.APP_URL)
+  appUrl: string | null | undefined = Bun.env.APP_URL, now: () => number = Date.now)
 {
   app.get('/api', c => page(<ApiDocs user={currentUser(c.req.raw)} />))
 
@@ -167,7 +167,9 @@ export function registerApiRoutes(app: Hono, database: Database = db,
   app.use('/api/v1/*', async (c, next) => {
     if (c.req.method === 'OPTIONS' || c.req.path === '/api/v1/firehose') return next()
     const ip = c.req.header('x-textlog-client-ip') || '-'
-    const limited = consumeBucketedAttempt(database, 'api-json', rateLimitKey(ip), JSON_LIMIT, JSON_WINDOW_SECONDS)
+    const limited = consumeBucketedAttempt(
+      database, 'api-json', rateLimitKey(ip), JSON_LIMIT, JSON_WINDOW_SECONDS, now(),
+    )
     if (limited) return apiError('rate_limited', 'Too many API requests', 429, limited.retryAfter)
     return next()
   })
