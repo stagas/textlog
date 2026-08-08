@@ -2,6 +2,7 @@ import { applyHtmlCachePolicy, GLOBAL_REQUEST_BODY_LIMIT, isSameOriginRequest, R
   securityHeaders, sessionCookie } from './http'
 
 import { Hono } from 'hono'
+import { serveStatic } from 'hono/bun'
 import { bodyLimit } from 'hono/body-limit'
 import { startAutomatedBackups } from './backup-automation'
 import { configureDevReload } from './components/layout'
@@ -158,6 +159,7 @@ app.get('/health', c => {
 if (devReloadEnabled) {
   app.get('/__dev/restart', c => c.json({ bootId }, 200, { 'cache-control': 'no-store, no-cache, must-revalidate' }))
 }
+app.use('/*', serveStatic({ root: './public' }))
 app.get('/styles.css', async c => {
   const asset = styles ?? await loadStylesAsset(stylesPath)
   return stylesResponse(asset, c.req.raw, !devReloadEnabled)

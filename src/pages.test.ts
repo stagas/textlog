@@ -10,6 +10,17 @@ import { HotFeed } from './components/hot-feed'
 import { PublicFeed } from './components/public-feed'
 import { TagFeed } from './components/tag-feed'
 
+test('pages advertise the public app icons and manifest', () => {
+  const html = renderToStaticMarkup(React.createElement(About, { user: null }))
+
+  expect(html).toContain('rel="icon" href="/favicon.ico" sizes="any"')
+  expect(html).toContain('href="/favicon-32x32.png" type="image/png" sizes="32x32"')
+  expect(html).toContain('href="/favicon-16x16.png" type="image/png" sizes="16x16"')
+  expect(html).toContain('rel="apple-touch-icon" href="/apple-touch-icon.png"')
+  expect(html).toContain('rel="manifest" href="/site.webmanifest"')
+  expect(html).not.toContain('rel="icon" href="/textlog.svg')
+})
+
 test('public collection pages advertise their RSS and Atom feeds', () => {
   const hot = renderToStaticMarkup(React.createElement(HotFeed, { user: null, cursor: null }))
   const latest = renderToStaticMarkup(React.createElement(PublicFeed, { user: null, cursor: null, path: '/latest' }))

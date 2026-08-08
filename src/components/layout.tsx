@@ -91,7 +91,11 @@ export function Layout({
           <meta name="twitter:image" content={share.image} />
           <meta name="twitter:image:alt" content={share.imageAlt || `Post by ${title || 'a textlog user'}`} />
         </>
-        <link rel="icon" href="/textlog.svg?v=1" type="image/svg+xml" />
+        <link rel="icon" href="/favicon.ico" sizes="any" />
+        <link rel="icon" href="/favicon-32x32.png" type="image/png" sizes="32x32" />
+        <link rel="icon" href="/favicon-16x16.png" type="image/png" sizes="16x16" />
+        <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+        <link rel="manifest" href="/site.webmanifest" />
         <link rel="sitemap" href="/sitemap.xml" type="application/xml" />
         {feeds && (
           <>
