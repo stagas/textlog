@@ -1,5 +1,15 @@
 import { describe, expect, test } from 'bun:test'
-import { renderDefaultOg, renderProfileOg, renderTagOg } from './og'
+import { postOgText, renderDefaultOg, renderPostOg, renderProfileOg, renderTagOg } from './og'
+
+describe('renderPostOg', () => {
+  test('renders markdown links as their label without the URL', () => {
+    expect(postOgText('Read [the docs](https://example.com/docs) today')).toEqual({
+      text: 'Read the docs today',
+      links: [{ start: 5, end: 13 }],
+    })
+    expect(renderPostOg('Read [the docs](https://example.com/docs) today', 'tester')).not.toHaveLength(0)
+  })
+})
 
 describe('renderProfileOg', () => {
   const counts = { notes: 12, following: 34, followingTags: 5, followers: 56 }
