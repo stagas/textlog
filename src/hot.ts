@@ -22,6 +22,7 @@ export type HotCursor = {
 }
 
 const cursorVersion = 2
+const hotScoreHalfLifeHours = 6
 
 function hasHotTable(database: Database) {
   return Boolean(database.query('SELECT 1 FROM sqlite_master WHERE type=\'table\' AND name=\'post_hot\'').get())
@@ -69,7 +70,7 @@ export function recordHotActivity(database: Database, postId: number) {
     SELECT ? UNION ALL SELECT p.parent_id FROM posts p JOIN ancestors a ON p.id=a.id WHERE p.parent_id IS NOT NULL
   ) SELECT id FROM ancestors`).all(postId) as { id: number }[]
   const update = database.query(`UPDATE post_hot SET
-    score=score*pow(0.5,max(0,(julianday(?) - julianday(score_updated_at))*24)/24.0)+1,
+    score=score*pow(0.5,max(0,(julianday(?) - julianday(score_updated_at))*24)/${hotScoreHalfLifeHours}.0)+1,
     score_updated_at=?,latest_activity_at=max(latest_activity_at,?) WHERE post_id=?`)
   for (const ancestor of ancestors) update.run(event.created_at, event.created_at, event.created_at, ancestor.id)
 }
@@ -85,7 +86,7 @@ export function rebuildHotPosts(database: Database, postIds?: number[]) {
     ), latest AS (
       SELECT candidate_id,max(created_at) latest_activity_at FROM activity WHERE deleted_at IS NULL GROUP BY candidate_id
     ) SELECT activity.candidate_id post_id,latest.latest_activity_at,
-      sum(pow(0.5,max(0,(julianday(latest.latest_activity_at)-julianday(activity.created_at))*24)/24.0)) score
+      sum(pow(0.5,max(0,(julianday(latest.latest_activity_at)-julianday(activity.created_at))*24)/${hotScoreHalfLifeHours}.0)) score
       FROM activity JOIN latest ON latest.candidate_id=activity.candidate_id
       WHERE activity.deleted_at IS NULL GROUP BY activity.candidate_id`).all() as { post_id: number;
       latest_activity_at: string; score: number }[]
@@ -118,7 +119,7 @@ export function rebuildHotPosts(database: Database, postIds?: number[]) {
     const score = events.reduce((sum, event) =>
       sum
       + Math.pow(0.5, Math.max(0, (Date.parse(`${latest.replace(' ', 'T')}Z`)
-        - Date.parse(`${event.created_at.replace(' ', 'T')}Z`)) / 86_400_000)), 0)
+        - Date.parse(`${event.created_at.replace(' ', 'T')}Z`)) / (hotScoreHalfLifeHours * 3_600_000))), 0)
     update.run(score, latest, latest, candidate.id)
   }
 }
@@ -162,7 +163,7 @@ export function getHotPosts(
   }
   parameters.push(limit)
   const rows = database.query(`WITH ranked AS (
-    SELECT post_id,score*pow(0.5,max(0,(julianday(?) - julianday(score_updated_at))*24)/24.0) hot_score
+    SELECT post_id,score*pow(0.5,max(0,(julianday(?) - julianday(score_updated_at))*24)/${hotScoreHalfLifeHours}.0) hot_score
     FROM post_hot
   ) SELECT p.*,u.handle,ranked.hot_score,h.latest_activity_at
     FROM ranked JOIN post_hot h ON h.post_id=ranked.post_id

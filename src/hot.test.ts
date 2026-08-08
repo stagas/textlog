@@ -38,14 +38,25 @@ function post(id: number, createdAt: string, parentId: number | null = null, del
 }
 
 describe('hot feed ranking', () => {
-  test('decays standalone post activity with a 24-hour half-life', () => {
+  test('decays standalone post activity with a 6-hour half-life', () => {
     post(1, '2026-08-03 12:00:00')
     post(2, '2026-08-02 12:00:00')
 
     const results = getHotPosts(database, 20, null, asOf)
     expect(results.map(result => result.id)).toEqual([1, 2])
     expect(results[0].hot_score).toBeCloseTo(1)
-    expect(results[1].hot_score).toBeCloseTo(0.5)
+    expect(results[1].hot_score).toBeCloseTo(0.0625)
+  })
+
+  test('surfaces a new event above a busier thread from yesterday', () => {
+    post(1, '2026-08-02 12:00:00')
+    post(2, '2026-08-02 12:00:00', 1)
+    post(3, '2026-08-02 12:00:00', 1)
+    post(4, '2026-08-03 12:00:00')
+
+    const results = getHotPosts(database, 20, null, asOf)
+    expect(results[0].id).toBe(4)
+    expect(results.find(result => result.id === 1)?.hot_score).toBeCloseTo(0.1875)
   })
 
   test('direct and nested replies boost each ancestor while ranking independently', () => {
@@ -68,7 +79,7 @@ describe('hot feed ranking', () => {
     const results = getHotPosts(database, 20, null, asOf)
     expect(results.map(result => result.id)).toEqual([1, 3])
     expect(results[0].latest_activity_at).toBe('2026-08-03 11:00:00')
-    expect(results[0].hot_score).toBeCloseTo(results[1].hot_score + 0.0625)
+    expect(results[0].hot_score).toBeCloseTo(results[1].hot_score + Math.pow(0.5, 16))
   })
 
   test('uses deterministic tie-breakers and pagination', () => {
@@ -96,7 +107,7 @@ describe('hot feed ranking', () => {
 
     const results = getHotPosts(database, 20, null, asOf, 1)
     expect(results.map(result => result.id)).toEqual([1])
-    expect(results[0].hot_score).toBeCloseTo(Math.pow(0.5, 1 / 24))
+    expect(results[0].hot_score).toBeCloseTo(Math.pow(0.5, 1 / 6))
   })
 
   test('hides every post carrying a blocked hashtag', () => {
