@@ -978,6 +978,11 @@ nav form {
   margin-top: var(--space-5);
 }
 
+.compose,
+.replybox {
+  max-width: none;
+}
+
 .compose-heading {
   margin: 0 0 var(--space-3);
   overflow-wrap: anywhere;
