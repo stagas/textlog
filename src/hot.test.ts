@@ -1,6 +1,6 @@
 import { Database } from 'bun:sqlite'
 import { beforeEach, describe, expect, test } from 'bun:test'
-import { getHotPosts, hotCursor, recordHotActivity, removeHotActivity } from './hot'
+import { getHotPosts, hotCursor, rebuildHotPosts, recordHotActivity, removeHotActivity } from './hot'
 
 const asOf = '2026-08-03T12:00:00.000Z'
 let database: Database
@@ -59,27 +59,31 @@ describe('hot feed ranking', () => {
     expect(results.find(result => result.id === 1)?.hot_score).toBeCloseTo(3 * Math.pow(0.5, 12))
   })
 
-  test('direct and nested replies boost each ancestor while ranking independently', () => {
+  test('only direct replies boost a post while nested replies rank independently', () => {
     post(1, '2026-07-30 12:00:00')
     post(2, '2026-08-03 10:00:00', 1)
     post(3, '2026-08-03 11:00:00', 2)
 
     const results = getHotPosts(database, 20, null, asOf)
-    expect(results.map(result => result.id)).toEqual([1, 2, 3])
+    expect(results.map(result => result.id)).toEqual([2, 3, 1])
     expect(results[0].hot_score).toBeGreaterThan(results[1].hot_score)
-    expect(results[1].hot_score).toBeGreaterThan(results[2].hot_score)
-    expect(results[0].latest_activity_at).toBe('2026-08-03 11:00:00')
+    expect(results[2].latest_activity_at).toBe('2026-08-03 10:00:00')
+
+    rebuildHotPosts(database)
+    const rebuilt = getHotPosts(database, 20, null, asOf)
+    expect(rebuilt.map(result => result.id)).toEqual([2, 3, 1])
+    expect(rebuilt[2].latest_activity_at).toBe('2026-08-03 10:00:00')
   })
 
-  test('excludes deleted posts and events but traverses through a deleted intermediary', () => {
+  test('excludes deleted direct replies without promoting their nested replies', () => {
     post(1, '2026-07-30 12:00:00')
     post(2, '2026-08-03 10:00:00', 1, '2026-08-03 10:30:00')
     post(3, '2026-08-03 11:00:00', 2)
 
     const results = getHotPosts(database, 20, null, asOf)
-    expect(results.map(result => result.id)).toEqual([1, 3])
-    expect(results[0].latest_activity_at).toBe('2026-08-03 11:00:00')
-    expect(results[0].hot_score).toBeCloseTo(results[1].hot_score + Math.pow(0.5, 16))
+    expect(results.map(result => result.id)).toEqual([3, 1])
+    expect(results[1].latest_activity_at).toBe('2026-07-30 12:00:00')
+    expect(results[1].hot_score).toBeCloseTo(Math.pow(0.5, 48))
   })
 
   test('uses deterministic tie-breakers and pagination', () => {

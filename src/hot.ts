@@ -65,25 +65,26 @@ export function hotCursor(post: HotPost, asOf: string, direction: HotCursor['dir
 
 export function recordHotActivity(database: Database, postId: number) {
   if (!hasHotTable(database)) return
-  const event = database.query('SELECT created_at FROM posts WHERE id=?').get(postId) as { created_at: string } | null
+  const event = database.query('SELECT parent_id,created_at FROM posts WHERE id=?').get(postId) as {
+    parent_id: number | null; created_at: string
+  } | null
   if (!event) return
-  const ancestors = database.query(`WITH RECURSIVE ancestors(id) AS (
-    SELECT ? UNION ALL SELECT p.parent_id FROM posts p JOIN ancestors a ON p.id=a.id WHERE p.parent_id IS NOT NULL
-  ) SELECT id FROM ancestors`).all(postId) as { id: number }[]
   const update = database.query(`UPDATE post_hot SET
     score=score*pow(0.5,max(0,(julianday(?) - julianday(score_updated_at))*24)/${activityHalfLifeHours}.0)+1,
     score_updated_at=?,latest_activity_at=max(latest_activity_at,?) WHERE post_id=?`)
-  for (const ancestor of ancestors) update.run(event.created_at, event.created_at, event.created_at, ancestor.id)
+  update.run(event.created_at, event.created_at, event.created_at, postId)
+  if (event.parent_id !== null) {
+    update.run(event.created_at, event.created_at, event.created_at, event.parent_id)
+  }
 }
 
 export function rebuildHotPosts(database: Database, postIds?: number[]) {
   if (!hasHotTable(database)) return
   if (!postIds) {
-    const rankings = database.query(`WITH RECURSIVE activity(candidate_id,event_id,created_at,deleted_at) AS (
-      SELECT id,id,created_at,deleted_at FROM posts
+    const rankings = database.query(`WITH activity(candidate_id,created_at,deleted_at) AS (
+      SELECT id,created_at,deleted_at FROM posts
       UNION ALL
-      SELECT activity.candidate_id,child.id,child.created_at,child.deleted_at
-      FROM activity JOIN posts child ON child.parent_id=activity.event_id
+      SELECT parent_id,created_at,deleted_at FROM posts WHERE parent_id IS NOT NULL
     ), latest AS (
       SELECT candidate_id,max(created_at) latest_activity_at FROM activity WHERE deleted_at IS NULL GROUP BY candidate_id
     ) SELECT activity.candidate_id post_id,latest.latest_activity_at,
@@ -103,14 +104,14 @@ export function rebuildHotPosts(database: Database, postIds?: number[]) {
   }
   const filter = postIds?.length ? `WHERE p.id IN (${postIds.map(() => '?').join(',')})` : ''
   const candidates = database.query(`SELECT p.id FROM posts p ${filter}`).all(...(postIds || [])) as { id: number }[]
-  const activity = database.query(`WITH RECURSIVE activity(id,created_at,deleted_at) AS (
+  const activity = database.query(`WITH activity(id,created_at,deleted_at) AS (
     SELECT id,created_at,deleted_at FROM posts WHERE id=?
     UNION ALL
-    SELECT child.id,child.created_at,child.deleted_at FROM activity JOIN posts child ON child.parent_id=activity.id
+    SELECT id,created_at,deleted_at FROM posts WHERE parent_id=?
   ) SELECT created_at FROM activity WHERE deleted_at IS NULL`)
   const update = database.query('UPDATE post_hot SET score=?,score_updated_at=?,latest_activity_at=? WHERE post_id=?')
   for (const candidate of candidates) {
-    const events = activity.all(candidate.id) as { created_at: string }[]
+    const events = activity.all(candidate.id, candidate.id) as { created_at: string }[]
     if (!events.length) {
       update.run(0, '1970-01-01 00:00:00', '1970-01-01 00:00:00', candidate.id)
       continue
@@ -127,11 +128,11 @@ export function rebuildHotPosts(database: Database, postIds?: number[]) {
 
 export function removeHotActivity(database: Database, postId: number) {
   if (!hasHotTable(database)) return
-  const ancestors = database.query(`WITH RECURSIVE ancestors(id,parent_id) AS (
-    SELECT id,parent_id FROM posts WHERE id=?
-    UNION ALL SELECT p.id,p.parent_id FROM posts p JOIN ancestors a ON p.id=a.parent_id
-  ) SELECT id FROM ancestors`).all(postId) as { id: number }[]
-  rebuildHotPosts(database, ancestors.map(row => row.id))
+  const post = database.query('SELECT id,parent_id FROM posts WHERE id=?').get(postId) as {
+    id: number; parent_id: number | null
+  } | null
+  if (!post) return
+  rebuildHotPosts(database, post.parent_id === null ? [post.id] : [post.id, post.parent_id])
 }
 
 export function getHotPosts(
