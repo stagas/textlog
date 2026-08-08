@@ -6,6 +6,8 @@ import { enrichPosts } from '../posts'
 import type { PostView } from '../types'
 import { fmt, fmtFull, linkify } from '../utils'
 
+export const MAX_VISIBLE_REPLY_DEPTH = 5
+
 function containsAsciiArt(body: string) {
   return extractHashtags(body).some(tag => tag === 'ascii' || tag === 'ascii_art')
 }
@@ -142,13 +144,24 @@ export function ThreadReplies({ parentId, user }: { parentId: number; user: User
     siblings.push(reply)
     children.set(reply.parent_id!, siblings)
   }
+  const descendantCounts = new Map<number, number>()
+  const visibleDescendantCount = (id: number): number => {
+    const cached = descendantCounts.get(id)
+    if (cached !== undefined) return cached
+    const count = (children.get(id) || [])
+      .reduce((total, reply) => total + (reply.deleted_at ? 0 : 1) + visibleDescendantCount(reply.id), 0)
+    descendantCounts.set(id, count)
+    return count
+  }
   const renderBranch = (id: number, depth: number): React.ReactNode => {
     const branch = children.get(id) || []
     if (!branch.length) return null
     return (
       <div className="reply-branch">
         {branch.map(reply => {
-          const childBranch = renderBranch(reply.id, depth + 1)
+          const descendantCount = visibleDescendantCount(reply.id)
+          const continuesElsewhere = !reply.deleted_at && depth >= MAX_VISIBLE_REPLY_DEPTH && descendantCount > 0
+          const childBranch = continuesElsewhere ? null : renderBranch(reply.id, depth + 1)
           if (reply.deleted_at) return <React.Fragment key={reply.id}>{childBranch}</React.Fragment>
           const foldControlId = childBranch ? `thread-fold-${reply.id}` : undefined
           return (
@@ -158,6 +171,13 @@ export function ThreadReplies({ parentId, user }: { parentId: number; user: User
                 replyHref={user ? undefined : '/enter?next=' + encodeURIComponent('/post/' + reply.id + '?reply=1')}
                 replyLabel={user ? 'reply' : 'enter to reply'} />
               {childBranch}
+              {continuesElsewhere && (
+                <div className="thread-continuation">
+                  <a className="quiet" href={'/post/' + reply.id}>
+                    more ({descendantCount} {descendantCount === 1 ? 'reply' : 'replies'})
+                  </a>
+                </div>
+              )}
             </div>
           )
         })}

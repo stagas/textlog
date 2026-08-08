@@ -1923,6 +1923,15 @@ form.report-panel {
   font-size: 13px;
 }
 
+.thread-continuation {
+  padding: 0 var(--gutter) var(--space-4);
+  font-size: 12px;
+}
+
+.thread-continuation .quiet {
+  font-size: inherit;
+}
+
 .thread-fold-input {
   position: absolute;
   width: 1px;
