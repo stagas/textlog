@@ -36,6 +36,14 @@ test('public collection pages advertise their RSS and Atom feeds', () => {
   expect(tag).toContain('href="/tag/ascii_art.atom"')
 })
 
+test('root feed variants use the unqualified site title', () => {
+  const hot = renderToStaticMarkup(React.createElement(HotFeed, { user: null, cursor: null, path: '/' }))
+  const latest = renderToStaticMarkup(React.createElement(PublicFeed, { user: null, cursor: null, path: '/' }))
+
+  expect(hot).toContain('<title>textlog</title>')
+  expect(latest).toContain('<title>textlog</title>')
+})
+
 describe('postTitle', () => {
   test('uses short post text as-is', () => {
     expect(postTitle('A short note')).toBe('A short note')

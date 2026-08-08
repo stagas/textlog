@@ -2,7 +2,6 @@ import { applyHtmlCachePolicy, GLOBAL_REQUEST_BODY_LIMIT, isSameOriginRequest, R
   securityHeaders, sessionCookie } from './http'
 
 import { Hono } from 'hono'
-import { serveStatic } from 'hono/bun'
 import { bodyLimit } from 'hono/body-limit'
 import { startAutomatedBackups } from './backup-automation'
 import { configureDevReload } from './components/layout'
@@ -36,6 +35,20 @@ configureDevReload(devReloadEnabled ? bootId : undefined)
 const app = new Hono()
 const stylesPath = new URL('./styles.css', import.meta.url).pathname
 const styles = devReloadEnabled ? undefined : await loadStylesAsset(stylesPath)
+const publicAssets = await Promise.all([
+  ['/favicon.ico', 'image/x-icon'],
+  ['/favicon-16x16.png', 'image/png'],
+  ['/favicon-32x32.png', 'image/png'],
+  ['/apple-touch-icon.png', 'image/png'],
+  ['/android-chrome-192x192.png', 'image/png'],
+  ['/android-chrome-512x512.png', 'image/png'],
+  ['/maskable-icon-512x512.png', 'image/png'],
+  ['/site.webmanifest', 'application/manifest+json; charset=utf-8'],
+].map(async ([path, contentType]) => ({
+  path,
+  contentType,
+  body: await Bun.file(new URL(`../public${path}`, import.meta.url)).arrayBuffer(),
+})))
 const defaultOgImage = renderDefaultOg()
 const defaultOgBody = defaultOgImage.buffer.slice(
   defaultOgImage.byteOffset,
@@ -159,7 +172,14 @@ app.get('/health', c => {
 if (devReloadEnabled) {
   app.get('/__dev/restart', c => c.json({ bootId }, 200, { 'cache-control': 'no-store, no-cache, must-revalidate' }))
 }
-app.use('/*', serveStatic({ root: './public' }))
+for (const asset of publicAssets) {
+  app.get(asset.path, () => new Response(asset.body, {
+    headers: {
+      'content-type': asset.contentType,
+      'cache-control': 'public, max-age=31536000, immutable',
+    },
+  }))
+}
 app.get('/styles.css', async c => {
   const asset = styles ?? await loadStylesAsset(stylesPath)
   return stylesResponse(asset, c.req.raw, !devReloadEnabled)

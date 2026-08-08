@@ -1,7 +1,11 @@
 import { describe, expect, test } from 'bun:test'
-import { rateLimitedResponse, RequestRateLimiter } from './request-rate-limit'
+import { rateLimitedResponse, REQUEST_RATE_LIMIT, RequestRateLimiter } from './request-rate-limit'
 
 describe('in-memory request rate limiter', () => {
+  test('allows a modestly higher site-wide request burst', () => {
+    expect(REQUEST_RATE_LIMIT).toBe(50)
+  })
+
   test('hard-blocks an address after it exceeds the window allowance', () => {
     const limiter = new RequestRateLimiter({ limit: 3, windowSeconds: 10, blockSeconds: 60 })
     expect(limiter.consume('203.0.113.1', 1_000)).toBeNull()

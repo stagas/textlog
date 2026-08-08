@@ -1,4 +1,4 @@
-export const REQUEST_RATE_LIMIT = 20
+export const REQUEST_RATE_LIMIT = 50
 export const REQUEST_RATE_WINDOW_SECONDS = 10
 export const REQUEST_BLOCK_SECONDS = 5 * 60
 export const REQUEST_RATE_MAX_IPS = 50_000

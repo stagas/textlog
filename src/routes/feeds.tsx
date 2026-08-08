@@ -27,7 +27,7 @@ export function registerFeedsRoutes(app: Hono) {
       const cursorValue = c.req.query('cursor')
       const cursor = decodePostCursor(cursorValue)
       if (cursorValue && !cursor) return c.text('Invalid cursor', 400)
-      return page(<PublicFeed user={user} cursor={cursor} path="/latest" />)
+      return page(<PublicFeed user={user} cursor={cursor} path="/" />)
     }
     if (preferredFeed === 'hot' || !user) {
       const cursorValue = c.req.query('cursor')
