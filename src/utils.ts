@@ -43,13 +43,18 @@ export function fmt(d: string) {
 }
 export const fmtFull = (d: string) => timestamp(d).toLocaleString('en', { dateStyle: 'medium', timeStyle: 'short' })
 export function linkify(body: string, mentionBios: Record<string, string> = {}) {
-  const tokens = /https?:\/\/[^\s<>"]+|(?<![A-Za-z0-9_])[@#][A-Za-z0-9_]+/gi
+  const tokens = /\[([^\]\r\n]+)\]\((https?:\/\/[^\s<>")]+)\)|https?:\/\/[^\s<>"]+|(?<![A-Za-z0-9_])[@#][A-Za-z0-9_]+/gi
   let html = ''
   let end = 0
   for (const match of body.matchAll(tokens)) {
     html += esc(body.slice(end, match.index))
     const token = match[0]
-    if (/^https?:\/\//i.test(token)) {
+    if (match[1] !== undefined && match[2] !== undefined) {
+      html += `<a href="${esc(match[2])}" title="${esc(match[2])}" target="_blank" rel="nofollow ugc noopener noreferrer">${
+        esc(match[1])
+      }</a>`
+    }
+    else if (/^https?:\/\//i.test(token)) {
       const url = token.replace(/[.,!?;:)]+$/, '')
       const punctuation = token.slice(url.length)
       html += `<a href="${esc(url)}" target="_blank" rel="nofollow ugc noopener noreferrer">${esc(url)}</a>${

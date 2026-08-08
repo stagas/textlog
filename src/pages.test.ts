@@ -237,12 +237,12 @@ test('Profile places owner actions in the handle row', () => {
   expect(html.indexOf('href="/write"')).toBeLessThan(html.indexOf('href="/u/reader"'))
 })
 
-test('Profile linkifies links and tags in the bio', () => {
+test('Profile linkifies Markdown links and tags in the bio', () => {
   const profile = {
     id: 1,
     handle: 'reader',
     email: 'reader@example.com',
-    bio: 'Writing about #TextLog at https://example.com.',
+    bio: 'Writing about #TextLog at [my site](https://example.com/).',
   }
   const html = renderToStaticMarkup(React.createElement(Profile, {
     user: null,
@@ -252,7 +252,7 @@ test('Profile linkifies links and tags in the bio', () => {
   }))
 
   expect(html).toContain('<a href="/tag/TextLog">#TextLog</a>')
-  expect(html).toContain('<a href="https://example.com" target="_blank" rel="nofollow ugc noopener noreferrer">https://example.com</a>.')
+  expect(html).toContain('<a href="https://example.com/" title="https://example.com/" target="_blank" rel="nofollow ugc noopener noreferrer">my site</a>.')
 })
 
 test('Post renders preloaded parent and reply data', () => {
@@ -263,14 +263,14 @@ test('Post renders preloaded parent and reply data', () => {
       id: 2,
       user_id: 1,
       parent_id: 1,
-      body: 'child',
+      body: 'child [link](https://example.com/reply)',
       handle: 'writer',
       created_at: '2026-08-03 12:00:00',
       deleted_at: null,
       reply_count: 2,
       parent: {
         id: 1,
-        body: 'parent',
+        body: 'parent [link](https://example.com/post)',
         handle: 'author',
         created_at: '2026-08-03 11:00:00',
         deleted_at: null,
@@ -281,6 +281,8 @@ test('Post renders preloaded parent and reply data', () => {
   expect(html).toContain('2 replies')
   expect(html).toContain('@author')
   expect(html).toContain('parent')
+  expect(html).toContain('href="https://example.com/reply" title="https://example.com/reply" target="_blank" rel="nofollow ugc noopener noreferrer">link</a>')
+  expect(html).toContain('href="https://example.com/post" title="https://example.com/post" target="_blank" rel="nofollow ugc noopener noreferrer">link</a>')
   expect(html).toContain('href="/enter?next=%2Fpost%2F2%3Freply%3D1"')
   expect(html).toContain('aria-label="enter to reply to @writer">enter to reply</a>')
   expect(html).toContain('href="/enter?next=%2Fpost%2F1%3Freply%3D1"')
