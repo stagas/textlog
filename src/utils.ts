@@ -50,7 +50,7 @@ export function linkify(body: string, mentionBios: Record<string, string> = {}) 
     html += esc(body.slice(end, match.index))
     const token = match[0]
     if (/^https?:\/\//i.test(token)) {
-      const url = token.replace(/[.,!?;:]+$/, '')
+      const url = token.replace(/[.,!?;:)]+$/, '')
       const punctuation = token.slice(url.length)
       html += `<a href="${esc(url)}" target="_blank" rel="nofollow ugc noopener noreferrer">${esc(url)}</a>${
         esc(punctuation)

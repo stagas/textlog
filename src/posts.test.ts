@@ -33,6 +33,10 @@ describe('post persistence', () => {
     expect(linkify("read https://example.com/people/O'Brien/profile"))
       .toBe("read <a href=\"https://example.com/people/O&#39;Brien/profile\" target=\"_blank\" rel=\"nofollow ugc noopener noreferrer\">https://example.com/people/O&#39;Brien/profile</a>")
   })
+  test('excludes trailing closing parentheses from linkified URLs', () => {
+    expect(linkify('[test](https://example.com)'))
+      .toBe('[test](<a href="https://example.com" target="_blank" rel="nofollow ugc noopener noreferrer">https://example.com</a>)')
+  })
   test('writes content and metadata atomically', () => {
     const db = database()
     expect(() => createPost(db, 1, 'rollback #fail @reader')).toThrow()
