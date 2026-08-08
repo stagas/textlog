@@ -37,6 +37,13 @@ function post(id: number, createdAt: string, parentId: number | null = null, del
   }
 }
 
+function postBy(userId: number, id: number, createdAt: string, parentId: number | null = null) {
+  database.query('INSERT INTO posts VALUES(?,?,?,?,?,?)')
+    .run(id, userId, parentId, `post ${id}`, createdAt, null)
+  database.query('INSERT INTO post_hot VALUES(?,0,?,?)').run(id, createdAt, createdAt)
+  recordHotActivity(database, id)
+}
+
 describe('hot feed ranking', () => {
   test('applies a steep 2-hour exponential penalty to age', () => {
     post(1, '2026-08-03 12:00:00')
@@ -60,8 +67,9 @@ describe('hot feed ranking', () => {
   })
 
   test('only direct replies boost a post while nested replies rank independently', () => {
+    database.query('INSERT INTO users(id,handle) VALUES(?,?)').run(2, 'replier')
     post(1, '2026-07-30 12:00:00')
-    post(2, '2026-08-03 10:00:00', 1)
+    postBy(2, 2, '2026-08-03 10:00:00', 1)
     post(3, '2026-08-03 11:00:00', 2)
 
     const results = getHotPosts(database, 20, null, asOf)
@@ -73,6 +81,22 @@ describe('hot feed ranking', () => {
     const rebuilt = getHotPosts(database, 20, null, asOf)
     expect(rebuilt.map(result => result.id)).toEqual([2, 3, 1])
     expect(rebuilt[2].latest_activity_at).toBe('2026-08-03 10:00:00')
+  })
+
+  test('does not let authors boost their own posts with direct replies', () => {
+    post(1, '2026-08-03 08:00:00')
+    post(2, '2026-08-03 11:00:00', 1)
+
+    let root = getHotPosts(database, 20, null, asOf).find(result => result.id === 1)!
+    expect(root.latest_activity_at).toBe('2026-08-03 08:00:00')
+    expect(root.hot_score).toBeCloseTo(Math.pow(0.5, 2))
+
+    database.query(`UPDATE post_hot SET score=99,score_updated_at='2026-08-03 11:00:00',
+      latest_activity_at='2026-08-03 11:00:00' WHERE post_id=1`).run()
+    rebuildHotPosts(database)
+    root = getHotPosts(database, 20, null, asOf).find(result => result.id === 1)!
+    expect(root.latest_activity_at).toBe('2026-08-03 08:00:00')
+    expect(root.hot_score).toBeCloseTo(Math.pow(0.5, 2))
   })
 
   test('excludes deleted direct replies without promoting their nested replies', () => {

@@ -304,6 +304,13 @@ export const migrations: Migration[] = [
       rebuildHotPosts(database)
     },
   },
+  {
+    version: 21,
+    name: 'exclude_self_replies_from_hot_scores',
+    up(database) {
+      rebuildHotPosts(database)
+    },
+  },
 ]
 
 export const latestMigrationVersion = migrations.at(-1)!.version

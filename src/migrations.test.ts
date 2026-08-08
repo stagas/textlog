@@ -113,10 +113,11 @@ describe('database migrations', () => {
     const database = new Database(':memory:')
     database.run('PRAGMA foreign_keys=ON')
     runMigrations(database)
-    database.run(`INSERT INTO users(id,handle,email,password) VALUES(1,'author','author@example.com','x');
+    database.run(`INSERT INTO users(id,handle,email,password) VALUES
+        (1,'author','author@example.com','x'),(2,'replier','replier@example.com','x');
       INSERT INTO posts(id,user_id,parent_id,body,created_at) VALUES
         (1,1,NULL,'root','2026-08-05 09:00:00'),
-        (2,1,1,'direct','2026-08-05 10:00:00'),
+        (2,2,1,'direct','2026-08-05 10:00:00'),
         (3,1,2,'nested','2026-08-05 11:00:00');
       UPDATE post_hot SET score=99,score_updated_at='2026-08-05 11:00:00',
         latest_activity_at='2026-08-05 11:00:00' WHERE post_id=1;
@@ -127,5 +128,23 @@ describe('database migrations', () => {
     expect(database.query('SELECT latest_activity_at FROM post_hot WHERE post_id=1').get())
       .toEqual({ latest_activity_at: '2026-08-05 10:00:00' })
     expect(database.query('SELECT score FROM post_hot WHERE post_id=1').get()).not.toEqual({ score: 99 })
+  })
+
+  test('rebuilds hot scores to exclude replies by the parent author', () => {
+    const database = new Database(':memory:')
+    database.run('PRAGMA foreign_keys=ON')
+    runMigrations(database)
+    database.run(`INSERT INTO users(id,handle,email,password) VALUES(1,'author','author@example.com','x');
+      INSERT INTO posts(id,user_id,parent_id,body,created_at) VALUES
+        (1,1,NULL,'root','2026-08-05 09:00:00'),
+        (2,1,1,'self reply','2026-08-05 10:00:00');
+      UPDATE post_hot SET score=2,score_updated_at='2026-08-05 10:00:00',
+        latest_activity_at='2026-08-05 10:00:00' WHERE post_id=1;
+      PRAGMA user_version=20;`)
+
+    runMigrations(database)
+
+    expect(database.query('SELECT score,latest_activity_at FROM post_hot WHERE post_id=1').get())
+      .toEqual({ score: 1, latest_activity_at: '2026-08-05 09:00:00' })
   })
 })

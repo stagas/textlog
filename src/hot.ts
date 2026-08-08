@@ -65,15 +65,16 @@ export function hotCursor(post: HotPost, asOf: string, direction: HotCursor['dir
 
 export function recordHotActivity(database: Database, postId: number) {
   if (!hasHotTable(database)) return
-  const event = database.query('SELECT parent_id,created_at FROM posts WHERE id=?').get(postId) as {
-    parent_id: number | null; created_at: string
+  const event = database.query(`SELECT p.parent_id,p.user_id,p.created_at,parent.user_id parent_user_id
+    FROM posts p LEFT JOIN posts parent ON parent.id=p.parent_id WHERE p.id=?`).get(postId) as {
+    parent_id: number | null; user_id: number; created_at: string; parent_user_id: number | null
   } | null
   if (!event) return
   const update = database.query(`UPDATE post_hot SET
     score=score*pow(0.5,max(0,(julianday(?) - julianday(score_updated_at))*24)/${activityHalfLifeHours}.0)+1,
     score_updated_at=?,latest_activity_at=max(latest_activity_at,?) WHERE post_id=?`)
   update.run(event.created_at, event.created_at, event.created_at, postId)
-  if (event.parent_id !== null) {
+  if (event.parent_id !== null && event.user_id !== event.parent_user_id) {
     update.run(event.created_at, event.created_at, event.created_at, event.parent_id)
   }
 }
@@ -84,7 +85,8 @@ export function rebuildHotPosts(database: Database, postIds?: number[]) {
     const rankings = database.query(`WITH activity(candidate_id,created_at,deleted_at) AS (
       SELECT id,created_at,deleted_at FROM posts
       UNION ALL
-      SELECT parent_id,created_at,deleted_at FROM posts WHERE parent_id IS NOT NULL
+      SELECT child.parent_id,child.created_at,child.deleted_at FROM posts child
+      JOIN posts parent ON parent.id=child.parent_id WHERE child.user_id!=parent.user_id
     ), latest AS (
       SELECT candidate_id,max(created_at) latest_activity_at FROM activity WHERE deleted_at IS NULL GROUP BY candidate_id
     ) SELECT activity.candidate_id post_id,latest.latest_activity_at,
@@ -107,7 +109,8 @@ export function rebuildHotPosts(database: Database, postIds?: number[]) {
   const activity = database.query(`WITH activity(id,created_at,deleted_at) AS (
     SELECT id,created_at,deleted_at FROM posts WHERE id=?
     UNION ALL
-    SELECT id,created_at,deleted_at FROM posts WHERE parent_id=?
+    SELECT child.id,child.created_at,child.deleted_at FROM posts child
+    JOIN posts parent ON parent.id=child.parent_id WHERE child.parent_id=? AND child.user_id!=parent.user_id
   ) SELECT created_at FROM activity WHERE deleted_at IS NULL`)
   const update = database.query('UPDATE post_hot SET score=?,score_updated_at=?,latest_activity_at=? WHERE post_id=?')
   for (const candidate of candidates) {
