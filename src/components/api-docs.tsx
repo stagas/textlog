@@ -9,7 +9,7 @@ export function ApiDocs({ user }: { user: User | null }) {
         <h1>
           Build on{' '}
           <span className="api-title-brand">
-            <img src="/textlog.svg?v=1" alt="" />
+            <img src="/textlog.svg?v=2" alt="" />
             <span>textlog</span>
           </span>
         </h1>

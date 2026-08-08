@@ -1,0 +1,104 @@
+export const THEME_CHOICES = ['system', 'light', 'dark', 'sepia', 'dracula'] as const
+export const ACCENT_CHOICES = ['theme', 'sage', 'purple', 'cyan', 'pink', 'amber', 'blue', 'rust'] as const
+
+export type ThemeChoice = typeof THEME_CHOICES[number]
+export type AccentChoice = typeof ACCENT_CHOICES[number]
+export type Appearance = { theme: ThemeChoice; accent: AccentChoice }
+
+const appearanceContext = new AsyncLocalStorage<Appearance>()
+
+const palettes = {
+  light: { bg: '#f4f3ee', ink: '#20231f', muted: '#8a9085', soft: '#d9dbd4', accent: '#749668',
+    accentDark: '#55734a', panel: '#ffffff', tagBg: '#e6e9df', quoteInk: '#6f766c',
+    quoteBg: 'rgb(116 150 104 / 6%)', errorInk: '#7a3f39', linkBorder: '#afb4a9',
+    buttonBg: '#273126', buttonInk: '#ffffff', buttonHoverBg: '#55734a', buttonActiveBg: '#405c38' },
+  dark: { bg: '#171a17', ink: '#e5e8e1', muted: '#969d92', soft: '#343a33', accent: '#9abd8e',
+    accentDark: '#b2d1a8', panel: '#20241f', tagBg: '#292f28', quoteInk: '#a8afa4',
+    quoteBg: 'rgb(154 189 142 / 8%)', errorInk: '#efb3aa', linkBorder: '#50594d',
+    buttonBg: '#3b503d', buttonInk: '#e5e8e1', buttonHoverBg: '#4b664d', buttonActiveBg: '#314434' },
+  sepia: { bg: '#f4ecd8', ink: '#433422', muted: '#8c7a5e', soft: '#e0d4b8', accent: '#8a6d3b',
+    accentDark: '#6b5228', panel: '#fbf6e9', tagBg: '#eae0c6', quoteInk: '#6b5a42',
+    quoteBg: 'rgb(138 109 59 / 7%)', errorInk: '#8a3f39', linkBorder: '#c4b593',
+    buttonBg: '#59482d', buttonInk: '#fbf6e9', buttonHoverBg: '#6b5228', buttonActiveBg: '#4b3a21' },
+  dracula: { bg: '#282a36', ink: '#f8f8f2', muted: '#6272a4', soft: '#44475a', accent: '#bd93f9',
+    accentDark: '#d6b3ff', panel: '#21222c', tagBg: '#343746', quoteInk: '#b9bcd0',
+    quoteBg: 'rgb(189 147 249 / 10%)', errorInk: '#ff5555', linkBorder: '#4b4f6b',
+    buttonBg: '#554276', buttonInk: '#f8f8f2', buttonHoverBg: '#684f91', buttonActiveBg: '#463660' },
+} as const
+
+const accents = {
+  sage: ['#749668', '#9abd8e'], purple: ['#7c5cbf', '#bd93f9'], cyan: ['#2f7f8f', '#8be9fd'],
+  pink: ['#b5487f', '#ff79c6'], amber: ['#9a6614', '#ffb86c'], blue: ['#3a6ea5', '#7aa2f7'],
+  rust: ['#a33b32', '#ff7b72'],
+} as const
+
+export function appearance(request: Request): Appearance {
+  const value = request.headers.get('cookie')?.match(/(?:^|;\s*)appearance=([^;]+)/)?.[1] || ''
+  const [themeValue, accentValue] = value.split('.')
+  return {
+    theme: THEME_CHOICES.includes(themeValue as ThemeChoice) ? themeValue as ThemeChoice : 'system',
+    accent: ACCENT_CHOICES.includes(accentValue as AccentChoice) ? accentValue as AccentChoice : 'theme',
+  }
+}
+
+export function withAppearance<T>(request: Request, callback: () => T) {
+  return appearanceContext.run(appearance(request), callback)
+}
+
+export function activeAppearance() {
+  return appearanceContext.getStore() || { theme: 'system', accent: 'theme' } as Appearance
+}
+
+export function appearanceCookie(value: Appearance, appUrl: string | undefined = Bun.env.APP_URL) {
+  let secure = ''
+  try { secure = appUrl && new URL(appUrl).protocol === 'https:' ? '; Secure' : '' }
+  catch {}
+  return `appearance=${value.theme}.${value.accent}; Max-Age=${365 * 24 * 60 * 60}; HttpOnly; Path=/; SameSite=Lax${secure}`
+}
+
+function rules(name: keyof typeof palettes, accentChoice: AccentChoice) {
+  const p = palettes[name]
+  const dark = name === 'dark' || name === 'dracula'
+  const accent = accentChoice === 'theme' ? p.accent : accents[accentChoice][dark ? 1 : 0]
+  const button = accentChoice === 'theme' ? {
+    bg: p.buttonBg, hover: p.buttonHoverBg, active: p.buttonActiveBg,
+  } : dark ? {
+    bg: mix(accent, p.bg, .45), hover: mix(accent, p.bg, .55), active: mix(accent, p.bg, .35),
+  } : {
+    bg: mix(accent, p.ink, .60), hover: mix(accent, p.ink, .70), active: mix(accent, p.ink, .50),
+  }
+  return `:root{color-scheme:${dark ? 'dark' : 'light'};--bg:${p.bg};--ink:${p.ink};--muted:${p.muted};--soft:${p.soft};--accent:${accent};--accent-dark:${accentChoice === 'theme' ? p.accentDark : accent};--selection-bg:${accent};--selection-ink:${p.bg};--panel:${p.panel};--pagination-hover-bg:${p.tagBg};--link-border:${p.linkBorder};--button-bg:${button.bg};--button-ink:${p.buttonInk};--button-hover-bg:${button.hover};--button-active-bg:${button.active};--quote-ink:${p.quoteInk};--quote-bg:${p.quoteBg};--error-ink:${p.errorInk};--tag-bg:${p.tagBg}}`
+}
+
+function mix(foreground: string, background: string, amount: number) {
+  const channel = (value: string, offset: number) => Number.parseInt(value.slice(offset, offset + 2), 16)
+  const mixed = [1, 3, 5].map(offset => Math.round(
+    channel(foreground, offset) * amount + channel(background, offset) * (1 - amount),
+  ).toString(16).padStart(2, '0'))
+  return `#${mixed.join('')}`
+}
+
+export function themeStyles(request: Request) {
+  const selected = appearance(request)
+  if (selected.theme === 'system') {
+    return `${rules('light', selected.accent)}@media(prefers-color-scheme:dark){${rules('dark', selected.accent)}}`
+  }
+  return rules(selected.theme, selected.accent)
+}
+
+function accentFor(name: keyof typeof palettes, choice: AccentChoice) {
+  if (choice === 'theme') return palettes[name].accent
+  return accents[choice][name === 'dark' || name === 'dracula' ? 1 : 0]
+}
+
+export function themeLogoSvg(request: Request) {
+  const selected = appearance(request)
+  const drawing = 'M13,19V16H21V19H13M8.5,13L2.47,7H6.71L11.67,11.95C12.25,12.54 12.25,13.5 11.67,14.07L6.74,19H2.5L8.5,13Z'
+  if (selected.theme === 'system') {
+    const light = accentFor('light', selected.accent)
+    const dark = accentFor('dark', selected.accent)
+    return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><style>path{fill:${light}}@media(prefers-color-scheme:dark){path{fill:${dark}}}</style><path d="${drawing}"/></svg>`
+  }
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path fill="${accentFor(selected.theme, selected.accent)}" d="${drawing}"/></svg>`
+}
+import { AsyncLocalStorage } from 'node:async_hooks'

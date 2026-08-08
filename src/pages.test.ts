@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test'
-import { About, AccountMagicLink, AccountSecurity, ApiDocs, Auth, ChooseHandle, ConfirmEmail, Connections, Contact, ErrorPage,
+import { About, AccountMagicLink, AccountSecurity, ApiDocs, Auth, ChangeTheme, ChooseHandle, ConfirmEmail, Connections, Contact, ErrorPage,
   NotFound, postTitle,
   Profile } from './components/pages'
 
@@ -10,15 +10,35 @@ import { HotFeed } from './components/hot-feed'
 import { PublicFeed } from './components/public-feed'
 import { TagFeed } from './components/tag-feed'
 
-test('pages advertise the public app icons and manifest', () => {
+test('pages advertise the dynamic favicon, touch icon, and manifest', () => {
   const html = renderToStaticMarkup(React.createElement(About, { user: null }))
 
-  expect(html).toContain('rel="icon" href="/favicon.ico" sizes="any"')
-  expect(html).toContain('href="/favicon-32x32.png" type="image/png" sizes="32x32"')
-  expect(html).toContain('href="/favicon-16x16.png" type="image/png" sizes="16x16"')
+  expect(html).toContain('href="/favicon-theme.svg?v=system.theme" type="image/svg+xml" sizes="any"')
   expect(html).toContain('rel="apple-touch-icon" href="/apple-touch-icon.png"')
   expect(html).toContain('rel="manifest" href="/site.webmanifest"')
   expect(html).not.toContain('rel="icon" href="/textlog.svg')
+})
+
+test('pages use the cookie-aware logo URL instead of its legacy immutable version', () => {
+  const html = renderToStaticMarkup(React.createElement(About, { user: null }))
+  expect(html).toContain('src="/textlog.svg?v=2"')
+  expect(html).not.toContain('src="/textlog.svg?v=1"')
+})
+
+test('theme selection is a server-rendered form with mobile appearance choices', () => {
+  const html = renderToStaticMarkup(React.createElement(ChangeTheme, {
+    user: { id: 1, handle: 'reader', email: 'reader@example.com', bio: '' },
+    selected: { theme: 'sepia', accent: 'amber' },
+  }))
+  expect(html).toContain('action="/account/edit/theme"')
+  expect(html).toContain('name="theme" value="dracula"')
+  expect(html).toContain('name="accent" value="rust"')
+  expect(html).toContain('class="accent-swatch accent-swatch-rust"')
+  expect(html).toContain('class="accent-swatch accent-swatch-theme accent-swatch-theme-sepia"')
+  expect(html).toContain('name="theme" checked="" value="sepia"')
+  expect(html).toContain('name="accent" checked="" value="amber"')
+  expect(html).not.toContain('<script')
+  expect(html).not.toContain('style=')
 })
 
 test('signed-in pages put the write shortcut before skip to content', () => {

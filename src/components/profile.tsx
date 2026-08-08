@@ -77,6 +77,13 @@ export function Profile(
                 </form>
                 <div className="account-danger-zone">
                   <div>
+                    <strong>Appearance</strong>
+                    <span>Choose a theme and accent color for textlog.</span>
+                  </div>
+                  <a className="button" href="/account/edit/theme">change theme</a>
+                </div>
+                <div className="account-danger-zone">
+                  <div>
                     <strong>Account security</strong>
                     <span>Manage your email and signed-in sessions.</span>
                   </div>
