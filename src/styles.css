@@ -264,6 +264,10 @@ nav form {
   display: none;
 }
 
+.site-footer .mobile-app-footer {
+  display: none;
+}
+
 @media (max-width: 600px) {
   .account-nav .mobile-footer-link {
     display: none;
@@ -284,6 +288,10 @@ nav form {
 
   .site-footer .mobile-account-footer {
     display: flex;
+  }
+
+  .site-footer .mobile-app-footer {
+    display: block;
   }
 }
 

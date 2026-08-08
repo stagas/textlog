@@ -103,7 +103,7 @@ export function Layout({
             <link rel="alternate" type="application/atom+xml" title={`${feeds.title} (Atom)`} href={feeds.atom} />
           </>
         )}
-        <link rel="stylesheet" href="/styles.css?v=58" />
+        <link rel="stylesheet" href="/styles.css?v=59" />
       </head>
       <body>
         <a className="skip-link" href="#main-content">skip to content</a>
@@ -129,6 +129,14 @@ export function Layout({
         <main id="main-content">{children}</main>
         <footer className="site-footer">
           <span>textlog.cc</span>
+          <a
+            className="button mobile-app-footer"
+            href="https://github.com/Faultless/textlog_flutter"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            get mobile app
+          </a>
           {user && ready && (
             <nav className="mobile-account-footer" aria-label="Account shortcuts">
               <a href="/explore">explore</a>

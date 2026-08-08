@@ -73,6 +73,15 @@ test('API documentation is linked from the footer and describes the firehose', (
   expect(html).toContain('/tags/:tag/posts.atom')
 })
 
+test('footer offers the mobile app in a mobile-only row', () => {
+  const html = renderToStaticMarkup(React.createElement(About, { user: null }))
+
+  expect(html).toContain(
+    'class="button mobile-app-footer" href="https://github.com/Faultless/textlog_flutter"',
+  )
+  expect(html).toContain('get mobile app</a>')
+})
+
 test('Contact page shows operator details and is linked before legal in the footer', () => {
   const html = renderToStaticMarkup(React.createElement(Contact, { user: null }))
 
