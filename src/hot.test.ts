@@ -63,7 +63,24 @@ describe('hot feed ranking', () => {
 
     const results = getHotPosts(database, 20, null, asOf)
     expect(results[0].id).toBe(4)
-    expect(results.find(result => result.id === 1)?.hot_score).toBeCloseTo(3 * Math.pow(0.5, 12))
+    expect(results.find(result => result.id === 1)?.hot_score).toBeCloseTo(9 * Math.pow(0.5, 12))
+  })
+
+  test('direct replies give active threads substantially more staying power', () => {
+    database.query('INSERT INTO users(id,handle) VALUES(?,?)').run(2, 'replier')
+    post(1, '2026-08-03 04:00:00')
+    postBy(2, 2, '2026-08-03 06:00:00', 1)
+    postBy(2, 3, '2026-08-03 06:00:00', 1)
+    postBy(2, 4, '2026-08-03 06:00:00', 1)
+    postBy(2, 5, '2026-08-03 06:00:00', 1)
+    post(6, '2026-08-03 11:00:00')
+
+    const results = getHotPosts(database, 20, null, asOf)
+    expect(results[0].id).toBe(1)
+    expect(results[0].hot_score).toBeGreaterThan(1)
+
+    rebuildHotPosts(database)
+    expect(getHotPosts(database, 20, null, asOf)[0].id).toBe(1)
   })
 
   test('only direct replies boost a post while nested replies rank independently', () => {
@@ -73,14 +90,14 @@ describe('hot feed ranking', () => {
     post(3, '2026-08-03 11:00:00', 2)
 
     const results = getHotPosts(database, 20, null, asOf)
-    expect(results.map(result => result.id)).toEqual([2, 3, 1])
+    expect(results.map(result => result.id)).toEqual([2, 1, 3])
     expect(results[0].hot_score).toBeGreaterThan(results[1].hot_score)
-    expect(results[2].latest_activity_at).toBe('2026-08-03 10:00:00')
+    expect(results.find(result => result.id === 1)?.latest_activity_at).toBe('2026-08-03 10:00:00')
 
     rebuildHotPosts(database)
     const rebuilt = getHotPosts(database, 20, null, asOf)
-    expect(rebuilt.map(result => result.id)).toEqual([2, 3, 1])
-    expect(rebuilt[2].latest_activity_at).toBe('2026-08-03 10:00:00')
+    expect(rebuilt.map(result => result.id)).toEqual([2, 1, 3])
+    expect(rebuilt.find(result => result.id === 1)?.latest_activity_at).toBe('2026-08-03 10:00:00')
   })
 
   test('does not let authors boost their own posts with direct replies', () => {

@@ -24,6 +24,7 @@ export type HotCursor = {
 const cursorVersion = 2
 const activityHalfLifeHours = 6
 const recencyHalfLifeHours = 2
+const directReplyWeight = 4
 
 function hasHotTable(database: Database) {
   return Boolean(database.query('SELECT 1 FROM sqlite_master WHERE type=\'table\' AND name=\'post_hot\'').get())
@@ -75,22 +76,26 @@ export function recordHotActivity(database: Database, postId: number) {
     score_updated_at=?,latest_activity_at=max(latest_activity_at,?) WHERE post_id=?`)
   update.run(event.created_at, event.created_at, event.created_at, postId)
   if (event.parent_id !== null && event.user_id !== event.parent_user_id) {
-    update.run(event.created_at, event.created_at, event.created_at, event.parent_id)
+    database.query(`UPDATE post_hot SET
+      score=score*pow(0.5,max(0,(julianday(?) - julianday(score_updated_at))*24)/${activityHalfLifeHours}.0)
+        +${directReplyWeight},
+      score_updated_at=?,latest_activity_at=max(latest_activity_at,?) WHERE post_id=?`)
+      .run(event.created_at, event.created_at, event.created_at, event.parent_id)
   }
 }
 
 export function rebuildHotPosts(database: Database, postIds?: number[]) {
   if (!hasHotTable(database)) return
   if (!postIds) {
-    const rankings = database.query(`WITH activity(candidate_id,created_at,deleted_at) AS (
-      SELECT id,created_at,deleted_at FROM posts
+    const rankings = database.query(`WITH activity(candidate_id,created_at,deleted_at,weight) AS (
+      SELECT id,created_at,deleted_at,1 FROM posts
       UNION ALL
-      SELECT child.parent_id,child.created_at,child.deleted_at FROM posts child
+      SELECT child.parent_id,child.created_at,child.deleted_at,${directReplyWeight} FROM posts child
       JOIN posts parent ON parent.id=child.parent_id WHERE child.user_id!=parent.user_id
     ), latest AS (
       SELECT candidate_id,max(created_at) latest_activity_at FROM activity WHERE deleted_at IS NULL GROUP BY candidate_id
     ) SELECT activity.candidate_id post_id,latest.latest_activity_at,
-      sum(pow(0.5,max(0,(julianday(latest.latest_activity_at)-julianday(activity.created_at))*24)/${activityHalfLifeHours}.0)) score
+      sum(weight*pow(0.5,max(0,(julianday(latest.latest_activity_at)-julianday(activity.created_at))*24)/${activityHalfLifeHours}.0)) score
       FROM activity JOIN latest ON latest.candidate_id=activity.candidate_id
       WHERE activity.deleted_at IS NULL GROUP BY activity.candidate_id`).all() as { post_id: number;
       latest_activity_at: string; score: number }[]
@@ -106,15 +111,15 @@ export function rebuildHotPosts(database: Database, postIds?: number[]) {
   }
   const filter = postIds?.length ? `WHERE p.id IN (${postIds.map(() => '?').join(',')})` : ''
   const candidates = database.query(`SELECT p.id FROM posts p ${filter}`).all(...(postIds || [])) as { id: number }[]
-  const activity = database.query(`WITH activity(id,created_at,deleted_at) AS (
-    SELECT id,created_at,deleted_at FROM posts WHERE id=?
+  const activity = database.query(`WITH activity(id,created_at,deleted_at,weight) AS (
+    SELECT id,created_at,deleted_at,1 FROM posts WHERE id=?
     UNION ALL
-    SELECT child.id,child.created_at,child.deleted_at FROM posts child
+    SELECT child.id,child.created_at,child.deleted_at,${directReplyWeight} FROM posts child
     JOIN posts parent ON parent.id=child.parent_id WHERE child.parent_id=? AND child.user_id!=parent.user_id
-  ) SELECT created_at FROM activity WHERE deleted_at IS NULL`)
+  ) SELECT created_at,weight FROM activity WHERE deleted_at IS NULL`)
   const update = database.query('UPDATE post_hot SET score=?,score_updated_at=?,latest_activity_at=? WHERE post_id=?')
   for (const candidate of candidates) {
-    const events = activity.all(candidate.id, candidate.id) as { created_at: string }[]
+    const events = activity.all(candidate.id, candidate.id) as { created_at: string; weight: number }[]
     if (!events.length) {
       update.run(0, '1970-01-01 00:00:00', '1970-01-01 00:00:00', candidate.id)
       continue
@@ -123,7 +128,7 @@ export function rebuildHotPosts(database: Database, postIds?: number[]) {
       events[0].created_at)
     const score = events.reduce((sum, event) =>
       sum
-      + Math.pow(0.5, Math.max(0, (Date.parse(`${latest.replace(' ', 'T')}Z`)
+      + event.weight * Math.pow(0.5, Math.max(0, (Date.parse(`${latest.replace(' ', 'T')}Z`)
         - Date.parse(`${event.created_at.replace(' ', 'T')}Z`)) / (activityHalfLifeHours * 3_600_000))), 0)
     update.run(score, latest, latest, candidate.id)
   }
