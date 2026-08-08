@@ -83,7 +83,35 @@ describe('hot feed ranking', () => {
     expect(getHotPosts(database, 20, null, asOf)[0].id).toBe(1)
   })
 
-  test('only direct replies boost a post while nested replies rank independently', () => {
+  test('nested reply boosts halve at each level', () => {
+    database.query('INSERT INTO users(id,handle) VALUES(?,?)').run(2, 'replier')
+    post(1, '2026-08-03 12:00:00')
+    postBy(2, 2, '2026-08-03 12:00:00', 1)
+    postBy(2, 3, '2026-08-03 12:00:00', 2)
+    postBy(2, 4, '2026-08-03 12:00:00', 3)
+
+    expect((database.query('SELECT score FROM post_hot WHERE post_id=1').get() as { score: number }).score)
+      .toBeCloseTo(1 + 4 + 2 + 1)
+
+    rebuildHotPosts(database)
+    expect((database.query('SELECT score FROM post_hot WHERE post_id=1').get() as { score: number }).score)
+      .toBeCloseTo(1 + 4 + 2 + 1)
+  })
+
+  test('deleting a nested reply removes its branch credit from every ancestor', () => {
+    database.query('INSERT INTO users(id,handle) VALUES(?,?)').run(2, 'replier')
+    post(1, '2026-08-03 12:00:00')
+    postBy(2, 2, '2026-08-03 12:00:00', 1)
+    postBy(2, 3, '2026-08-03 12:00:00', 2)
+    postBy(2, 4, '2026-08-03 12:00:00', 3)
+    database.query('UPDATE posts SET deleted_at=? WHERE id=?').run('2026-08-03 12:00:00', 2)
+    removeHotActivity(database, 2)
+
+    expect((database.query('SELECT score FROM post_hot WHERE post_id=1').get() as { score: number }).score)
+      .toBeCloseTo(1)
+  })
+
+  test('direct replies boost a post most while nested replies also rank independently', () => {
     database.query('INSERT INTO users(id,handle) VALUES(?,?)').run(2, 'replier')
     post(1, '2026-07-30 12:00:00')
     postBy(2, 2, '2026-08-03 10:00:00', 1)
