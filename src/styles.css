@@ -1925,6 +1925,10 @@ form.report-panel {
   letter-spacing: -.5px;
 }
 
+.post-page-thread {
+  margin-bottom: var(--space-5);
+}
+
 .reply-branch {
   margin-left: clamp(18px, 3vw, 28px);
   border-left: 1px solid var(--soft);

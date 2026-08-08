@@ -12,29 +12,31 @@ export function Reply(
 ) {
   return (
     <Layout user={user} title={postTitle(post.body)} social={social}>
-      <div className="thread-root">
-        <Post p={post} user={user} showReplyAction={!showForm} showOwnerActions showModerateAction
-          reportHref={user.id !== post.user_id && !showReport && !reported ? `/post/${post.id}?report=1` : undefined} />
+      <div className="post-page-thread">
+        <div className="thread-root">
+          <Post p={post} user={user} showReplyAction={!showForm} showOwnerActions showModerateAction
+            reportHref={user.id !== post.user_id && !showReport && !reported ? `/post/${post.id}?report=1` : undefined} />
+        </div>
+        {user.id !== post.user_id && <ReportPanel post={post} showForm={showReport} reported={reported} />}
+        {showForm && (
+          canPublishPosts(user)
+            ? (
+              <div className="panel replybox">
+                <form method="post" action={'/post/' + post.id + '/reply'}>
+                  <FormMessage error={error} />
+                  <textarea name="body" maxLength={280} required autoFocus defaultValue={body}
+                    placeholder={'Reply to @' + post.handle + '…'} />
+                  <div className="composefoot">
+                    <span>280 characters max · use #hashtags and @mentions</span>
+                    <button className="button">post →</button>
+                  </div>
+                </form>
+              </div>
+            )
+            : <VerificationRequired />
+        )}
+        <ThreadReplies parentId={post.id} user={user} />
       </div>
-      {user.id !== post.user_id && <ReportPanel post={post} showForm={showReport} reported={reported} />}
-      {showForm && (
-        canPublishPosts(user)
-          ? (
-            <div className="panel replybox">
-              <form method="post" action={'/post/' + post.id + '/reply'}>
-                <FormMessage error={error} />
-                <textarea name="body" maxLength={280} required autoFocus defaultValue={body}
-                  placeholder={'Reply to @' + post.handle + '…'} />
-                <div className="composefoot">
-                  <span>280 characters max · use #hashtags and @mentions</span>
-                  <button className="button">post →</button>
-                </div>
-              </form>
-            </div>
-          )
-          : <VerificationRequired />
-      )}
-      <ThreadReplies parentId={post.id} user={user} />
     </Layout>
   )
 }
