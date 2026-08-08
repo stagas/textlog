@@ -287,14 +287,14 @@ test('Post renders preloaded parent and reply data', () => {
   expect(html).toContain('aria-label="reply to @author">enter to reply</a>')
 })
 
-test('Post marks ascii art bodies and quoted parents for tight line spacing', () => {
+test('Post marks #ascii and #ascii_art bodies and quoted parents for tight line spacing', () => {
   const html = renderToStaticMarkup(React.createElement(Post, {
     user: null,
     p: {
       id: 2,
       user_id: 1,
       parent_id: 1,
-      body: ' /\\_/\\\n( o.o )\n #ASCII_ART',
+      body: ' /\\_/\\\n( o.o )\n #ASCII',
       handle: 'writer',
       created_at: '2026-08-03 12:00:00',
       deleted_at: null,

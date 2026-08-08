@@ -6,6 +6,10 @@ import { enrichPosts } from '../posts'
 import type { PostView } from '../types'
 import { fmt, fmtFull, linkify } from '../utils'
 
+function containsAsciiArt(body: string) {
+  return extractHashtags(body).some(tag => tag === 'ascii' || tag === 'ascii_art')
+}
+
 export function Post({
   p,
   user,
@@ -23,7 +27,7 @@ export function Post({
   reportHref?: string; foldControlId?: string })
 {
   const parent = showParent ? p.parent : null
-  const isAsciiArt = extractHashtags(p.body).includes('ascii_art')
+  const isAsciiArt = containsAsciiArt(p.body)
   const replyCount = p.reply_count || 0
   const defaultReplyPath = '/post/' + p.id + '?reply=1'
   const resolvedReplyHref = replyHref
@@ -104,7 +108,7 @@ export function Post({
                     {user ? 'reply' : 'enter to reply'}
                   </a>
                 </div>
-                <p className={extractHashtags(parent.body).includes('ascii_art') ? 'ascii-art' : undefined}
+                <p className={containsAsciiArt(parent.body) ? 'ascii-art' : undefined}
                   dangerouslySetInnerHTML={{ __html: linkify(parent.body, parent.mention_bios) }} />
               </>
             )}
