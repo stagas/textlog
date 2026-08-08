@@ -21,9 +21,9 @@ export type HotCursor = {
   direction: 'next' | 'previous'
 }
 
-const cursorVersion = 2
+const cursorVersion = 3
 const activityHalfLifeHours = 6
-const recencyHalfLifeHours = 2
+const recencyHalfLifeHours = 8
 const directReplyWeight = 4
 
 function hasHotTable(database: Database) {
