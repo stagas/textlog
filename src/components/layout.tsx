@@ -106,6 +106,7 @@ export function Layout({
         <link rel="stylesheet" href="/styles.css?v=59" />
       </head>
       <body>
+        {user && ready && <a className="skip-link" href="/write">write</a>}
         <a className="skip-link" href="#main-content">skip to content</a>
         <header className={user ? 'authenticated-header' : undefined}>
           <a className="brand" href="/" aria-label="textlog home">

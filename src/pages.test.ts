@@ -21,6 +21,24 @@ test('pages advertise the public app icons and manifest', () => {
   expect(html).not.toContain('rel="icon" href="/textlog.svg')
 })
 
+test('signed-in pages put the write shortcut before skip to content', () => {
+  const html = renderToStaticMarkup(React.createElement(About, {
+    user: { id: 1, handle: 'reader', email: 'reader@example.com', bio: '' },
+  }))
+
+  const writeShortcut = '<a class="skip-link" href="/write">write</a>'
+  const contentShortcut = '<a class="skip-link" href="#main-content">skip to content</a>'
+  expect(html).toContain(writeShortcut)
+  expect(html.indexOf(writeShortcut)).toBeLessThan(html.indexOf(contentShortcut))
+})
+
+test('guest pages keep skip to content as their first shortcut', () => {
+  const html = renderToStaticMarkup(React.createElement(About, { user: null }))
+
+  expect(html).not.toContain('<a class="skip-link" href="/write">write</a>')
+  expect(html).toContain('<body><a class="skip-link" href="#main-content">skip to content</a>')
+})
+
 test('public collection pages advertise their RSS and Atom feeds', () => {
   const hot = renderToStaticMarkup(React.createElement(HotFeed, { user: null, cursor: null }))
   const latest = renderToStaticMarkup(React.createElement(PublicFeed, { user: null, cursor: null, path: '/latest' }))
