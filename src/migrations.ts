@@ -296,6 +296,14 @@ export const migrations: Migration[] = [
       backfillLegacyActivityReads(database)
     },
   },
+  {
+    version: 20,
+    name: 'direct_reply_hot_scores',
+    up(database) {
+      // Scores materialized before this version include replies at every nesting depth.
+      rebuildHotPosts(database)
+    },
+  },
 ]
 
 export const latestMigrationVersion = migrations.at(-1)!.version
