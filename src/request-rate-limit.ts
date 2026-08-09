@@ -2,6 +2,8 @@ export const REQUEST_RATE_LIMIT = 50
 export const REQUEST_RATE_WINDOW_SECONDS = 10
 export const REQUEST_BLOCK_SECONDS = 5 * 60
 export const REQUEST_RATE_MAX_IPS = 50_000
+export const CLIENT_ERROR_RATE_LIMIT = 10
+export const CLIENT_ERROR_RATE_WINDOW_SECONDS = 5 * 60
 
 type Entry = {
   windowStartedAt: number
@@ -14,6 +16,12 @@ export type RequestRateLimitOptions = {
   limit?: number
   windowSeconds?: number
   blockSeconds?: number
+  maxAddresses?: number
+}
+
+export type ClientErrorRateLimitOptions = {
+  limit?: number
+  windowSeconds?: number
   maxAddresses?: number
 }
 
@@ -71,6 +79,69 @@ export class RequestRateLimiter {
     const staleBefore = now - Math.max(this.windowMs, this.blockMs)
     for (const [address, entry] of this.entries) {
       if (entry.blockedUntil <= now && entry.lastSeenAt <= staleBefore) this.entries.delete(address)
+    }
+  }
+}
+
+/** Tracks repeated 4xx responses without penalizing an address for valid requests. */
+export class ClientErrorRateLimiter {
+  private readonly entries = new Map<string, number[]>()
+  private readonly limit: number
+  private readonly windowMs: number
+  private readonly maxAddresses: number
+  private operations = 0
+
+  constructor(options: ClientErrorRateLimitOptions = {}) {
+    this.limit = options.limit ?? CLIENT_ERROR_RATE_LIMIT
+    this.windowMs = (options.windowSeconds ?? CLIENT_ERROR_RATE_WINDOW_SECONDS) * 1000
+    this.maxAddresses = options.maxAddresses ?? REQUEST_RATE_MAX_IPS
+  }
+
+  check(address: string, now = Date.now()): { retryAfter: number } | null {
+    if (!address || address === '-') return null
+    if (++this.operations % 1024 === 0) this.removeExpired(now)
+
+    const misses = this.entries.get(address)
+    if (!misses) return null
+    this.removeOldMisses(misses, now)
+    if (misses.length === 0) {
+      this.entries.delete(address)
+      return null
+    }
+    return misses.length > this.limit ? this.retryAfter(misses, now) : null
+  }
+
+  record(address: string, now = Date.now()): { retryAfter: number } | null {
+    if (!address || address === '-') return null
+    let misses = this.entries.get(address)
+    if (!misses) {
+      if (this.entries.size >= this.maxAddresses) this.removeExpired(now)
+      // Miss tracking is defensive; do not reject an unrelated new address if
+      // a rotating-address attack fills the bounded map.
+      if (this.entries.size >= this.maxAddresses) return null
+      misses = []
+      this.entries.set(address, misses)
+    }
+
+    this.removeOldMisses(misses, now)
+    misses.push(now)
+    return misses.length > this.limit ? this.retryAfter(misses, now) : null
+  }
+
+  private retryAfter(misses: number[], now: number) {
+    return { retryAfter: Math.max(1, Math.ceil((misses[0] + this.windowMs - now) / 1000)) }
+  }
+
+  private removeOldMisses(misses: number[], now: number) {
+    let count = 0
+    while (count < misses.length && misses[count] <= now - this.windowMs) count++
+    if (count) misses.splice(0, count)
+  }
+
+  private removeExpired(now: number) {
+    for (const [address, misses] of this.entries) {
+      this.removeOldMisses(misses, now)
+      if (misses.length === 0) this.entries.delete(address)
     }
   }
 }

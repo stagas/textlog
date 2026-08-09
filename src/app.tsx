@@ -11,7 +11,7 @@ import { db } from './db'
 import { clientIp, logError, logHttp, logReady, shouldLogHttp } from './log'
 import { startMaintenance } from './maintenance'
 import { renderDefaultOg } from './og'
-import { rateLimitedResponse, RequestRateLimiter } from './request-rate-limit'
+import { ClientErrorRateLimiter, rateLimitedResponse, RequestRateLimiter } from './request-rate-limit'
 import { registerAccountRoutes } from './routes/account'
 import { registerAdminRoutes } from './routes/admin'
 import { registerApiRoutes } from './routes/api'
@@ -58,6 +58,7 @@ const defaultOgBody = defaultOgImage.buffer.slice(
 ) as ArrayBuffer
 const visitorBuffer = new VisitorBuffer(db)
 const requestRateLimiter = new RequestRateLimiter()
+const clientErrorRateLimiter = new ClientErrorRateLimiter()
 startMaintenance(db, visitorBuffer, error => logError('database maintenance failed', error))
 if (Bun.env.NODE_ENV === 'production') {
   startAutomatedBackups(db, {
@@ -244,13 +245,19 @@ app.onError((error, c) => {
 export default {
   port: Number(Bun.env.PORT || 3000),
   host: Bun.env.HOST || '0.0.0.0',
-  fetch(request: Request, server: Bun.Server<unknown>) {
+  async fetch(request: Request, server: Bun.Server<unknown>) {
     const address = clientIp(request, server.requestIP(request)?.address)
-    const limited = Bun.env.NODE_ENV === 'test' ? null : requestRateLimiter.consume(address)
+    const isTest = Bun.env.NODE_ENV === 'test'
+    const limited = isTest ? null : requestRateLimiter.consume(address) ?? clientErrorRateLimiter.check(address)
     if (limited) return rateLimitedResponse(limited.retryAfter)
     const headers = new Headers(request.headers)
     headers.set('x-textlog-client-ip', address)
-    return app.fetch(new Request(request, { headers }))
+    const response = await app.fetch(new Request(request, { headers }))
+    if (!isTest && response.status >= 400 && response.status < 500) {
+      const clientErrorLimited = clientErrorRateLimiter.record(address)
+      if (clientErrorLimited) return rateLimitedResponse(clientErrorLimited.retryAfter)
+    }
+    return response
   },
 }
 logReady(`http://${Bun.env.HOST || 'localhost'}:${Bun.env.PORT || 3000}`,

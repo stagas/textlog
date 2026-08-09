@@ -1,5 +1,6 @@
 import { describe, expect, test } from 'bun:test'
-import { rateLimitedResponse, REQUEST_RATE_LIMIT, RequestRateLimiter } from './request-rate-limit'
+import { ClientErrorRateLimiter, CLIENT_ERROR_RATE_LIMIT, CLIENT_ERROR_RATE_WINDOW_SECONDS, rateLimitedResponse,
+  REQUEST_RATE_LIMIT, RequestRateLimiter } from './request-rate-limit'
 
 describe('in-memory request rate limiter', () => {
   test('allows a modestly higher site-wide request burst', () => {
@@ -42,5 +43,35 @@ describe('in-memory request rate limiter', () => {
     expect(response.status).toBe(429)
     expect(response.headers.get('retry-after')).toBe('42')
     expect(response.headers.get('cache-control')).toBe('no-store')
+  })
+})
+
+describe('client-error rate limiter', () => {
+  test('allows ten client errors in five minutes and limits the eleventh', () => {
+    expect(CLIENT_ERROR_RATE_LIMIT).toBe(10)
+    expect(CLIENT_ERROR_RATE_WINDOW_SECONDS).toBe(300)
+    const limiter = new ClientErrorRateLimiter()
+    for (let count = 0; count < 10; count++) expect(limiter.record('203.0.113.10', 1_000 + count)).toBeNull()
+    expect(limiter.record('203.0.113.10', 2_000)).toEqual({ retryAfter: 299 })
+    expect(limiter.check('203.0.113.10', 3_000)).toEqual({ retryAfter: 298 })
+    expect(limiter.check('203.0.113.10', 301_000)).toBeNull()
+  })
+
+  test('isolates addresses and only advances when a miss is recorded', () => {
+    const limiter = new ClientErrorRateLimiter({ limit: 1, windowSeconds: 60 })
+    expect(limiter.record('203.0.113.11', 1_000)).toBeNull()
+    expect(limiter.check('203.0.113.11', 2_000)).toBeNull()
+    expect(limiter.record('203.0.113.12', 2_000)).toBeNull()
+    expect(limiter.record('203.0.113.11', 3_000)).toEqual({ retryAfter: 58 })
+    expect(limiter.check('203.0.113.12', 3_000)).toBeNull()
+  })
+
+  test('does not share unresolved addresses or fail closed at capacity', () => {
+    const limiter = new ClientErrorRateLimiter({ limit: 1, maxAddresses: 1 })
+    expect(limiter.record('-', 1_000)).toBeNull()
+    expect(limiter.record('-', 2_000)).toBeNull()
+    expect(limiter.record('203.0.113.13', 1_000)).toBeNull()
+    expect(limiter.record('203.0.113.14', 1_000)).toBeNull()
+    expect(limiter.check('203.0.113.14', 2_000)).toBeNull()
   })
 })
