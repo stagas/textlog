@@ -100,7 +100,7 @@ export function Activity({ user, page }: { user: User; page: number }) {
                     </article>
                   </div>
                 )
-                : <Post p={post} user={user} showReplyCount />}
+                : <Post p={post} user={user} showReplyCount tappable />}
             </div>
           )
         })
