@@ -9,7 +9,7 @@ import type { Hono } from 'hono'
 import { db } from '../db'
 import { resolveHandle } from '../handles'
 import { renderProfileOg } from '../og'
-import { decodePostCursor, PAGE_SIZE, postCursorPage } from '../pagination'
+import { CONNECTION_PAGE_SIZE, decodePostCursor, PAGE_SIZE, postCursorPage } from '../pagination'
 import { enrichPosts } from '../posts'
 import { currentUser } from '../utils'
 
@@ -151,8 +151,8 @@ export function registerProfilesRoutes(app: Hono) {
         FROM users u ${join} AND (? < 0 OR NOT EXISTS (SELECT 1 FROM blocks b WHERE
           (b.blocker_id=? AND b.blocked_id=u.id) OR (b.blocker_id=u.id AND b.blocked_id=?)))
         ORDER BY u.handle LIMIT ? OFFSET ?`,
-      ).all(viewerId, profile.id, viewerId, viewerId, viewerId, PAGE_SIZE,
-        (profilePage - 1) * PAGE_SIZE) as PersonView[]
+      ).all(viewerId, profile.id, viewerId, viewerId, viewerId, CONNECTION_PAGE_SIZE,
+        (profilePage - 1) * CONNECTION_PAGE_SIZE) as PersonView[]
       const countWhere = tab === 'following' ? 'follower_id=?' : 'following_id=?'
       const counterpart = tab === 'following' ? 'f.following_id' : 'f.follower_id'
       const connectionTotal = (db.query(`SELECT count(*) AS count FROM follows f WHERE ${countWhere}

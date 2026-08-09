@@ -1,4 +1,5 @@
 export const PAGE_SIZE = 20
+export const CONNECTION_PAGE_SIZE = 10
 
 export type PostCursor = { id: number; direction: 'next' | 'previous' }
 

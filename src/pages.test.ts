@@ -337,6 +337,27 @@ test('An empty following tab offers its owner a way to explore', () => {
   expect(html).toContain('<a class="button" href="/explore">explore tags &amp; people</a>')
 })
 
+test('Following and followers paginate every 10 people', () => {
+  const profile = { id: 1, handle: 'reader', email: 'reader@example.com', bio: '' }
+  for (const kind of ['following', 'followers'] as const) {
+    const html = renderToStaticMarkup(React.createElement(Connections, {
+      user: null,
+      profile,
+      people: [],
+      kind,
+      page: 1,
+      total: 11,
+      noteCount: 0,
+      followerCount: 11,
+      followingCount: 11,
+      followingTagCount: 0,
+      following: false,
+    }))
+
+    expect(html).toContain(`href="/u/reader?tab=${kind}&amp;page=2"`)
+  }
+})
+
 test('Profile linkifies Markdown links and tags in the bio', () => {
   const profile = {
     id: 1,

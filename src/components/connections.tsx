@@ -1,5 +1,5 @@
 import { type User } from '../db'
-import { PAGE_SIZE } from '../pagination'
+import { CONNECTION_PAGE_SIZE, PAGE_SIZE } from '../pagination'
 import type { PersonView, ProfileRow } from '../types'
 import { Layout } from './layout'
 import { BlockedPeopleList, BlockedTagList, ConnectionPeople, Pagination, ProfileHeader, ProfileTabs,
@@ -86,7 +86,8 @@ export function Connections(
               : <>@{profile.handle} {kind === 'following' ? 'isn’t following anyone yet.' : 'has no followers yet.'}</>}
           </div>
         )}
-      <Pagination page={page} totalPages={Math.ceil(total / PAGE_SIZE)} path={`/u/${profile.handle}?tab=${kind}`} />
+      <Pagination page={page} totalPages={Math.ceil(total / (kind === 'blocked' ? PAGE_SIZE : CONNECTION_PAGE_SIZE))}
+        path={`/u/${profile.handle}?tab=${kind}`} />
     </Layout>
   )
 }
