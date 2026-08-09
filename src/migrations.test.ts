@@ -38,6 +38,9 @@ describe('database migrations', () => {
       ).get(),
     )
       .toEqual({ count: 1 })
+    expect(database.query(
+      'SELECT count(*) count FROM sqlite_master WHERE type=\'table\' AND name=\'post_search\'',
+    ).get()).toEqual({ count: 1 })
 
     const reapplied: number[] = []
     expect(runMigrations(database, migration => reapplied.push(migration.version))).toBe(latestMigrationVersion)
@@ -63,6 +66,7 @@ describe('database migrations', () => {
     expect(database.query('SELECT token_hash FROM sessions').get())
       .toEqual({ token_hash: sessionHash('legacy-cookie') })
     expect(database.query('SELECT score FROM post_hot WHERE post_id=1').get()).toEqual({ score: 1 })
+    expect(database.query('SELECT rowid FROM post_search WHERE post_search MATCH \'hello\'').get()).toEqual({ rowid: 1 })
     expect(database.query('PRAGMA foreign_key_check').all()).toEqual([])
   })
 

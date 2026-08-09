@@ -41,6 +41,11 @@ describe('post persistence', () => {
     expect(linkify('[<test>](https://example.com/a\'b)'))
       .toBe('<a href="https://example.com/a&#39;b" title="https://example.com/a&#39;b" target="_blank" rel="nofollow ugc noopener noreferrer">&lt;test&gt;</a>')
   })
+
+  test('highlights search terms without breaking escaping or links', () => {
+    expect(linkify('Search <notes> at #Searchable', {}, ['sear']))
+      .toBe('<mark>Sear</mark>ch &lt;notes&gt; at <a href="/tag/Searchable">#<mark>Sear</mark>chable</a>')
+  })
   test('writes content and metadata atomically', () => {
     const db = database()
     expect(() => createPost(db, 1, 'rollback #fail @reader')).toThrow()

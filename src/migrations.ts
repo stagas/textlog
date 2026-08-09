@@ -344,6 +344,26 @@ export const migrations: Migration[] = [
       dropColumn(database, 'users', 'api_writes_enabled_at')
     },
   },
+  {
+    version: 26,
+    name: 'post_full_text_search',
+    up(database) {
+      database.run(`CREATE VIRTUAL TABLE IF NOT EXISTS post_search USING fts5(
+        body,content='posts',content_rowid='id',tokenize='unicode61'
+      );
+      CREATE TRIGGER IF NOT EXISTS post_search_insert AFTER INSERT ON posts BEGIN
+        INSERT INTO post_search(rowid,body) VALUES(new.id,new.body);
+      END;
+      CREATE TRIGGER IF NOT EXISTS post_search_delete AFTER DELETE ON posts BEGIN
+        INSERT INTO post_search(post_search,rowid,body) VALUES('delete',old.id,old.body);
+      END;
+      CREATE TRIGGER IF NOT EXISTS post_search_update AFTER UPDATE OF body ON posts BEGIN
+        INSERT INTO post_search(post_search,rowid,body) VALUES('delete',old.id,old.body);
+        INSERT INTO post_search(rowid,body) VALUES(new.id,new.body);
+      END;
+      INSERT INTO post_search(post_search) VALUES('rebuild');`)
+    },
+  },
 ]
 
 export const latestMigrationVersion = migrations.at(-1)!.version

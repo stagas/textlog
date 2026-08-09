@@ -3,6 +3,7 @@ import { suggestedPeople, trendingTags } from '../explore'
 import type { PersonView } from '../types'
 import { Layout } from './layout'
 import { ActionPair, TagPeopleList } from './page-shared'
+import { SearchForm } from './search'
 
 export function Explore({ user, welcome = false, peopleIds }: {
   user: User | null
@@ -35,6 +36,12 @@ export function Explore({ user, welcome = false, peopleIds }: {
             primary={<a className="button" href="/write">write your first note →</a>}
             secondary={<a href="/">browse notes</a>}
           />
+        </section>
+      )}
+      {!welcome && (
+        <section className="explore-search" aria-labelledby="explore-search-heading">
+          <h1 id="explore-search-heading">Search</h1>
+          <SearchForm />
         </section>
       )}
       <div className="columns">

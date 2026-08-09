@@ -22,6 +22,7 @@ import { registerInteractionsRoutes } from './routes/interactions'
 import { registerPostsRoutes } from './routes/posts'
 import { registerProfilesRoutes } from './routes/profiles'
 import { registerSeoRoutes } from './routes/seo'
+import { registerSearchRoutes } from './routes/search'
 import { clientErrorPage, notFoundPage, serverErrorPage } from './routes/shared'
 import { registerTagsRoutes } from './routes/tags'
 import { renewSession } from './sessions'
@@ -131,7 +132,7 @@ app.use('*', async (c, next) => {
   await next()
   if (c.req.method !== 'GET' || !c.res.headers.get('content-type')?.includes('text/html')) return
   const url = new URL(c.req.url)
-  const privatePath = /^\/(?:enter|choose-handle|write|compose|activity|admin|account\/delete)(?:\/|$)/
+  const privatePath = /^\/(?:enter|choose-handle|write|compose|activity|admin|search|account\/delete)(?:\/|$)/
     .test(url.pathname) || /^\/post\/\d+\/(?:edit|delete)$/.test(url.pathname)
   const transientParameters = ['reply', 'report', 'reported', 'edit', 'welcome', 'reset', 'token']
   const transient = transientParameters.some(name => url.searchParams.has(name))
@@ -234,6 +235,7 @@ registerIllegalActivityRoutes(app)
 registerAdminRoutes(app)
 registerProfilesRoutes(app)
 registerTagsRoutes(app)
+registerSearchRoutes(app)
 registerSeoRoutes(app)
 app.notFound(c => notFoundPage(c.req.raw))
 app.onError((error, c) => {

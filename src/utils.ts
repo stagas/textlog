@@ -52,22 +52,37 @@ export function fmt(d: string) {
   return `${Math.floor(days / 365)}y`
 }
 export const fmtFull = (d: string) => timestamp(d).toLocaleString('en', { dateStyle: 'medium', timeStyle: 'short' })
-export function linkify(body: string, mentionBios: Record<string, string> = {}) {
+function highlighted(text: string, terms: string[]) {
+  if (!terms.length) return esc(text)
+  const pattern = terms.map(term => term.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|')
+  if (!pattern) return esc(text)
+  let html = ''
+  let end = 0
+  for (const match of text.matchAll(new RegExp(pattern, 'giu'))) {
+    html += esc(text.slice(end, match.index)) + `<mark>${esc(match[0])}</mark>`
+    end = match.index + match[0].length
+  }
+  return html + esc(text.slice(end))
+}
+
+export function linkify(body: string, mentionBios: Record<string, string> = {}, highlightTerms: string[] = []) {
   const tokens = /\[([^\]\r\n]+)\]\((https?:\/\/[^\s<>")]+)\)|https?:\/\/[^\s<>"]+|(?<![A-Za-z0-9_])[@#][A-Za-z0-9_]+/gi
   let html = ''
   let end = 0
   for (const match of body.matchAll(tokens)) {
-    html += esc(body.slice(end, match.index))
+    html += highlighted(body.slice(end, match.index), highlightTerms)
     const token = match[0]
     if (match[1] !== undefined && match[2] !== undefined) {
       html += `<a href="${esc(match[2])}" title="${esc(match[2])}" target="_blank" rel="nofollow ugc noopener noreferrer">${
-        esc(match[1])
+        highlighted(match[1], highlightTerms)
       }</a>`
     }
     else if (/^https?:\/\//i.test(token)) {
       const url = token.replace(/[.,!?;:)]+$/, '')
       const punctuation = token.slice(url.length)
-      html += `<a href="${esc(url)}" target="_blank" rel="nofollow ugc noopener noreferrer">${esc(url)}</a>${
+      html += `<a href="${esc(url)}" target="_blank" rel="nofollow ugc noopener noreferrer">${
+        highlighted(url, highlightTerms)
+      }</a>${
         esc(punctuation)
       }`
     }
@@ -78,10 +93,10 @@ export function linkify(body: string, mentionBios: Record<string, string> = {}) 
           mentionBios[value.toLowerCase()] !== undefined
             ? ` title="${esc(mentionBios[value.toLowerCase()] || 'No bio yet.')}"`
             : ''
-        }>@${value}</a>`
-        : `<a href="/tag/${value}">#${value}</a>`
+        }>${highlighted(`@${value}`, highlightTerms)}</a>`
+        : `<a href="/tag/${value}">${highlighted(`#${value}`, highlightTerms)}</a>`
     }
     end = match.index + token.length
   }
-  return html + esc(body.slice(end))
+  return html + highlighted(body.slice(end), highlightTerms)
 }

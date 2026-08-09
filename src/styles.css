@@ -1049,6 +1049,7 @@ nav form {
 .bio-form input,
 .account-delete-form input,
 .security-form input,
+.search-form input,
 textarea {
   width: 100%;
   padding: 13px;
@@ -1064,6 +1065,7 @@ textarea {
 .bio-form input:focus-visible,
 .account-delete-form input:focus-visible,
 .security-form input:focus-visible,
+.search-form input:focus-visible,
 textarea:focus-visible {
   outline: 2px solid var(--accent);
   outline-offset: -2px;
@@ -1636,6 +1638,59 @@ form.report-panel {
   grid-template-columns: repeat(auto-fit, minmax(min(100%, 280px), 1fr));
   gap: clamp(20px, 8vw, 70px);
   padding: var(--space-6) var(--gutter) 0;
+}
+
+.explore-search,
+.search-header {
+  padding: var(--space-6) var(--gutter) 0;
+}
+
+.explore-search h1,
+.search-header h1 {
+  margin: 0 0 var(--space-3);
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 400;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.search-form {
+  display: flex;
+  gap: var(--space-2);
+}
+
+.search-form input {
+  min-width: 0;
+  font-size: 12px;
+}
+
+.search-form input::-webkit-search-cancel-button {
+  width: 10px;
+  height: 10px;
+  box-sizing: content-box;
+  padding: var(--space-2);
+  appearance: none;
+  background: var(--muted);
+  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 10 10'%3E%3Cpath d='M1 1l8 8M9 1L1 9' stroke='black' stroke-width='1.5'/%3E%3C/svg%3E") center / 10px 10px no-repeat;
+  cursor: pointer;
+}
+
+.search-form input::-webkit-search-cancel-button:hover {
+  background: var(--ink);
+}
+
+.search-summary {
+  margin: 0;
+  padding: var(--space-5) var(--gutter);
+  color: var(--muted);
+  font-size: 11px;
+  border-bottom: 1px solid var(--soft);
+}
+
+.post mark {
+  color: inherit;
+  background: color-mix(in srgb, var(--accent) 35%, transparent);
 }
 
 .welcome-panel {

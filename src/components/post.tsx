@@ -24,9 +24,10 @@ export function Post({
   replyLabel,
   reportHref,
   foldControlId,
+  highlightTerms = [],
 }: { p: PostView; user: User | null; showReplyAction?: boolean; showOwnerActions?: boolean;
   showModerateAction?: boolean; showParent?: boolean; showReplyCount?: boolean; replyHref?: string; replyLabel?: string;
-  reportHref?: string; foldControlId?: string })
+  reportHref?: string; foldControlId?: string; highlightTerms?: string[] })
 {
   const parent = showParent ? p.parent : null
   const isAsciiArt = containsAsciiArt(p.body)
@@ -83,7 +84,7 @@ export function Post({
         )}
       </div>
       <p className={isAsciiArt ? 'ascii-art' : undefined}
-        dangerouslySetInnerHTML={{ __html: linkify(p.body, p.mention_bios) }} />
+        dangerouslySetInnerHTML={{ __html: linkify(p.body, p.mention_bios, highlightTerms) }} />
       {parent && (
         <blockquote className={'parent-quote' + (parent.deleted_at ? ' deleted-parent' : '')}>
           {parent.deleted_at
