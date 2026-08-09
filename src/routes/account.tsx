@@ -167,14 +167,6 @@ export function registerAccountRoutes(app: Hono) {
     return redirect(result.kind === 'change' ? '/account/security?changed=email' : '/explore?welcome=1')
   })
 
-  app.post('/account/api-writes', c => {
-    const user = currentUser(c.req.raw)
-    if (!user) return redirect('/enter?next=' + encodeURIComponent('/account/security'))
-    db.query('UPDATE users SET api_writes_enabled_at=? WHERE id=?')
-      .run(user.api_writes_enabled_at ? null : new Date().toISOString(), user.id)
-    return redirect('/account/security')
-  })
-
   app.post('/account/sessions/revoke', async c => {
     const user = currentUser(c.req.raw)
     if (!user) return redirect('/enter')

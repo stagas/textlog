@@ -54,12 +54,6 @@ const text = (value: unknown) => typeof value === 'string' ? value : ''
 function writer(database: Database, c: Context) {
   const user = apiUser(c.req.raw, database)
   if (!user) return { error: fail('unauthorized', 'Provide a bearer token from /api/v1/auth/verify', 401) }
-  if (!user.api_writes_enabled_at) {
-    return {
-      error: fail('api_writes_disabled',
-        'Turn on API access under account security to write from an app', 403),
-    }
-  }
   const limited = consumeBucketedAttempt(database, 'api-write', rateLimitKey(`user:${user.id}`), WRITE_LIMIT,
     WRITE_WINDOW_SECONDS)
   if (limited) return { error: fail('rate_limited', 'Too many writes', 429, limited.retryAfter) }
@@ -143,7 +137,7 @@ export function registerApiWriteRoutes(app: Hono, database: Database, appUrl?: s
         .run(link.user_id)
       insertSession(database, session, link.user_id!, expiresAt, Date.now(), c.req.header('user-agent') || '')
     })()
-    const user = database.query(`SELECT id,handle,email,bio,email_verified_at,api_writes_enabled_at
+    const user = database.query(`SELECT id,handle,email,bio,email_verified_at
       FROM users WHERE id=?`).get(link.user_id) as User
     return json({ data: { token: session, expires_at: new Date(expiresAt).toISOString(), user: serialize(user) } })
   })
@@ -158,7 +152,7 @@ export function registerApiWriteRoutes(app: Hono, database: Database, appUrl?: s
   app.get('/api/v1/me', c => {
     const user = apiUser(c.req.raw, database)
     if (!user) return fail('unauthorized', 'Provide a bearer token from /api/v1/auth/verify', 401)
-    return json({ data: { ...serialize(user), api_writes_enabled: Boolean(user.api_writes_enabled_at) } })
+    return json({ data: serialize(user) })
   })
 
   app.patch('/api/v1/me', async c => {

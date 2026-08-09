@@ -1,6 +1,30 @@
 import type { User } from '../db'
 import { Layout } from './layout'
 
+const endpoints = [
+  ['POST', '/auth/request', 'Email a sign-in code to an existing account.'],
+  ['POST', '/auth/verify', 'Exchange the code for a session token.'],
+  ['DELETE', '/auth/session', 'Sign out by revoking the token you are using.'],
+  ['GET', '/me', 'Get the signed-in account.'],
+  ['PATCH', '/me', 'Update your bio.'],
+  ['POST', '/posts', <>Create a post, or reply by including <code>parent_id</code>.</>],
+  ['GET', '/posts/:id', 'Get a single public post.'],
+  ['PATCH', '/posts/:id', 'Edit a post you own.'],
+  ['DELETE', '/posts/:id', 'Delete a post you own. Replies remain and the post becomes a “(deleted)” tombstone.'],
+  ['GET', '/posts/:id/replies', 'Get the latest direct replies.'],
+  ['POST', '/posts/:id/report', 'Report a post.'],
+  ['GET', '/users/:handle', 'Get a public profile and its counts.'],
+  ['GET', '/users/:handle/posts', "Get a user's latest posts and replies."],
+  ['POST', '/users/:handle/follow', 'Follow a user.'],
+  ['DELETE', '/users/:handle/follow', 'Unfollow a user.'],
+  ['POST', '/users/:handle/block', 'Block a user.'],
+  ['DELETE', '/users/:handle/block', 'Unblock a user.'],
+  ['GET', '/feeds/latest', 'Get the latest public posts and replies.'],
+  ['GET', '/feeds/hot', 'Get posts ranked by recent activity and replies.'],
+  ['GET', '/tags/:tag/posts', 'Get the latest posts carrying a hashtag.'],
+  ['GET', '/firehose', 'Stream new posts as server-sent events.'],
+] as const
+
 export function ApiDocs({ user }: { user: User | null }) {
   return (
     <Layout user={user} title="API">
@@ -15,7 +39,7 @@ export function ApiDocs({ user }: { user: User | null }) {
         </h1>
         <p>
           The public API is a small way to build feeds, profile cards, post embeds, and live widgets. Reading needs
-          no account or API key. Writing needs a token and has to be turned on for your account first.
+          no account or API key. Writing is available to every account with a bearer token.
         </p>
 
         <h2>Base URL</h2>
@@ -27,62 +51,17 @@ export function ApiDocs({ user }: { user: User | null }) {
 
         <h2>Endpoints</h2>
         <dl className="api-endpoints">
-          <dt>
-            <code>
-              <span className="api-method">GET</span>
-              <span className="api-path">/feeds/latest</span>
-            </code>
-          </dt>
-          <dd>Latest public posts and replies.</dd>
-          <dt>
-            <code>
-              <span className="api-method">GET</span>
-              <span className="api-path">/feeds/hot</span>
-            </code>
-          </dt>
-          <dd>Posts ranked by recent activity and replies.</dd>
-          <dt>
-            <code>
-              <span className="api-method">GET</span>
-              <span className="api-path">/posts/:id</span>
-            </code>
-          </dt>
-          <dd>A single public post.</dd>
-          <dt>
-            <code>
-              <span className="api-method">GET</span>
-              <span className="api-path">/posts/:id/replies</span>
-            </code>
-          </dt>
-          <dd>Latest direct replies.</dd>
-          <dt>
-            <code>
-              <span className="api-method">GET</span>
-              <span className="api-path">/users/:handle</span>
-            </code>
-          </dt>
-          <dd>A public profile and its counts.</dd>
-          <dt>
-            <code>
-              <span className="api-method">GET</span>
-              <span className="api-path">/users/:handle/posts</span>
-            </code>
-          </dt>
-          <dd>A user's latest posts and replies.</dd>
-          <dt>
-            <code>
-              <span className="api-method">GET</span>
-              <span className="api-path">/tags/:tag/posts</span>
-            </code>
-          </dt>
-          <dd>Latest posts carrying a hashtag.</dd>
-          <dt>
-            <code>
-              <span className="api-method">GET</span>
-              <span className="api-path">/firehose</span>
-            </code>
-          </dt>
-          <dd>New posts as a live server-sent event stream.</dd>
+          {endpoints.map(([method, path, description]) => (
+            <div className="api-endpoint" key={`${method}:${path}`}>
+              <dt>
+                <code>
+                  <span className="api-method" data-method={method}>{method}</span>
+                  <span className="api-path">{path}</span>
+                </code>
+              </dt>
+              <dd><span>{description}</span></dd>
+            </div>
+          ))}
         </dl>
 
         <h2>RSS and Atom</h2>
@@ -114,9 +93,8 @@ events.addEventListener('post', event => {
 
         <h2>Writing</h2>
         <p>
-          Writing is off until you turn on API access under{' '}
-          <a href="/account/security">account security</a>. Until then write endpoints answer{' '}
-          <code>403 api_writes_disabled</code>.
+          Every account can use the write endpoints. Authenticate with a bearer token; no separate API access
+          setting is required.
         </p>
         <p>
           Sign in with the code emailed alongside your magic link. Accounts are only created in a browser, so the
@@ -134,86 +112,6 @@ curl -X POST https://textlog.cc/api/v1/auth/verify \\
         <pre><code>{`curl -X POST https://textlog.cc/api/v1/posts \\
   -H "authorization: Bearer $TOKEN" \\
   -H 'content-type: application/json' -d '{"body":"hello from an app"}'`}</code></pre>
-        <dl className="api-endpoints">
-          <dt>
-            <code>
-              <span className="api-method">POST</span>
-              <span className="api-path">/auth/request</span>
-            </code>
-          </dt>
-          <dd>Email a sign-in code to an existing account.</dd>
-          <dt>
-            <code>
-              <span className="api-method">POST</span>
-              <span className="api-path">/auth/verify</span>
-            </code>
-          </dt>
-          <dd>Exchange the code for a session token.</dd>
-          <dt>
-            <code>
-              <span className="api-method">DELETE</span>
-              <span className="api-path">/auth/session</span>
-            </code>
-          </dt>
-          <dd>Revoke the token you are using.</dd>
-          <dt>
-            <code>
-              <span className="api-method">GET</span>
-              <span className="api-path">/me</span>
-            </code>
-          </dt>
-          <dd>The signed-in account.</dd>
-          <dt>
-            <code>
-              <span className="api-method">PATCH</span>
-              <span className="api-path">/me</span>
-            </code>
-          </dt>
-          <dd>Update your bio.</dd>
-          <dt>
-            <code>
-              <span className="api-method">POST</span>
-              <span className="api-path">/posts</span>
-            </code>
-          </dt>
-          <dd>Post, or reply with <code>parent_id</code>.</dd>
-          <dt>
-            <code>
-              <span className="api-method">PATCH</span>
-              <span className="api-path">/posts/:id</span>
-            </code>
-          </dt>
-          <dd>Edit your own post.</dd>
-          <dt>
-            <code>
-              <span className="api-method">DELETE</span>
-              <span className="api-path">/posts/:id</span>
-            </code>
-          </dt>
-          <dd>Delete your own post.</dd>
-          <dt>
-            <code>
-              <span className="api-method">POST</span>
-              <span className="api-path">/posts/:id/report</span>
-            </code>
-          </dt>
-          <dd>Report a post.</dd>
-          <dt>
-            <code>
-              <span className="api-method">POST</span>
-              <span className="api-path">/users/:handle/follow</span>
-            </code>
-          </dt>
-          <dd>Follow. <code>DELETE</code> unfollows.</dd>
-          <dt>
-            <code>
-              <span className="api-method">POST</span>
-              <span className="api-path">/users/:handle/block</span>
-            </code>
-          </dt>
-          <dd>Block. <code>DELETE</code> unblocks.</dd>
-        </dl>
-
         <h2>Limits and errors</h2>
         <p>
           API reads are limited to 120 requests per minute per IP. Firehose clients may hold three simultaneous
