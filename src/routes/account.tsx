@@ -85,7 +85,7 @@ export function registerAccountRoutes(app: Hono) {
         limited.retryAfter)
     }
     const origin = Bun.env.APP_URL?.replace(/\/$/, '') || new URL(c.req.url).origin
-    const magicUrl = issueMagicLink(user.email, user.id, '/', origin)
+    const magicUrl = issueMagicLink(user.email, user.id, '/', origin).url
     return page(<AccountMagicLink user={user} magicUrl={magicUrl} />)
   })
 
@@ -145,6 +145,14 @@ export function registerAccountRoutes(app: Hono) {
     const result = confirmEmailToken(db, f.token || '')
     if (!result.ok) return page(<ConfirmEmail invalid />, 400)
     return redirect(result.kind === 'change' ? '/account/security?changed=email' : '/explore?welcome=1')
+  })
+
+  app.post('/account/api-writes', c => {
+    const user = currentUser(c.req.raw)
+    if (!user) return redirect('/enter?next=' + encodeURIComponent('/account/security'))
+    db.query('UPDATE users SET api_writes_enabled_at=? WHERE id=?')
+      .run(user.api_writes_enabled_at ? null : new Date().toISOString(), user.id)
+    return redirect('/account/security')
   })
 
   app.post('/account/sessions/revoke', async c => {

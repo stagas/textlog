@@ -38,6 +38,18 @@ export function AccountSecurity({ user, sessions, error, success }: {
           </form>
         </section>
         <section className="security-section">
+          <h2>api access</h2>
+          <p>
+            Off by default. Turn it on to post, reply and follow from an app using the API. Sessions an app
+            creates appear below and can be revoked here.
+          </p>
+          <form className="security-form" method="post" action="/account/api-writes">
+            <button className="button">
+              {user.api_writes_enabled_at ? 'turn off api access →' : 'turn on api access →'}
+            </button>
+          </form>
+        </section>
+        <section className="security-section">
           <h2>sessions</h2>
           <div className="session-list">
             {sessions.map(session => (
