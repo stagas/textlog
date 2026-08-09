@@ -12,6 +12,7 @@ import { clientIp, logError, logHttp, logReady, shouldLogHttp } from './log'
 import { startMaintenance } from './maintenance'
 import { renderDefaultOg } from './og'
 import { ClientErrorRateLimiter, rateLimitedResponse, RequestRateLimiter } from './request-rate-limit'
+import { isDevelopment } from './environment'
 import { registerAccountRoutes } from './routes/account'
 import { registerAdminRoutes } from './routes/admin'
 import { registerApiRoutes } from './routes/api'
@@ -249,13 +250,13 @@ export default {
   host: Bun.env.HOST || '0.0.0.0',
   async fetch(request: Request, server: Bun.Server<unknown>) {
     const address = clientIp(request, server.requestIP(request)?.address)
-    const isTest = Bun.env.NODE_ENV === 'test'
-    const limited = isTest ? null : requestRateLimiter.consume(address) ?? clientErrorRateLimiter.check(address)
+    const bypassRateLimits = Bun.env.NODE_ENV === 'test' || isDevelopment()
+    const limited = bypassRateLimits ? null : requestRateLimiter.consume(address) ?? clientErrorRateLimiter.check(address)
     if (limited) return rateLimitedResponse(limited.retryAfter)
     const headers = new Headers(request.headers)
     headers.set('x-textlog-client-ip', address)
     const response = await app.fetch(new Request(request, { headers }))
-    if (!isTest && response.status >= 400 && response.status < 500) {
+    if (!bypassRateLimits && response.status >= 400 && response.status < 500) {
       const clientErrorLimited = clientErrorRateLimiter.record(address)
       if (clientErrorLimited) return rateLimitedResponse(clientErrorLimited.retryAfter)
     }

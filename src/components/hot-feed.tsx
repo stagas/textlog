@@ -31,7 +31,7 @@ export function HotFeed(
       <h1 className="visually-hidden">Hot notes</h1>
       <FeedTabs active="hot" user={user} />
       {posts.length
-        ? posts.map(post => <Post key={post.id} p={post} user={user} showReplyCount />)
+        ? posts.map(post => <Post key={post.id} p={post} user={user} showReplyCount tappable />)
         : !cursor
         ? <GlobalFeedEmpty user={user} />
         : (

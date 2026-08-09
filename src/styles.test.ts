@@ -38,4 +38,16 @@ describe('in-memory stylesheet', () => {
     expect(response.headers.get('cache-control')).toBe('no-store')
     expect(response.headers.get('etag')).toBeNull()
   })
+
+  test('keeps the quoted-post hit area out of the generic inner-link positioning rule', async () => {
+    const css = await Bun.file(new URL('./styles.css', import.meta.url)).text()
+    expect(css).toContain('.tappable-post a:not(.post-hit-area):not(.parent-hit-area)')
+    expect(css).toContain('.tappable-post .parent-hit-area {\n    position: absolute;')
+  })
+
+  test('uses the active accent for the mobile tap highlight', async () => {
+    const css = await Bun.file(new URL('./styles.css', import.meta.url)).text()
+    expect(css).toContain('--tap-highlight: color-mix(in srgb, var(--accent) 24%, transparent);')
+    expect(css).toContain('-webkit-tap-highlight-color: var(--tap-highlight);')
+  })
 })

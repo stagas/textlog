@@ -30,7 +30,7 @@ export function Feed({ user, cursor, title, path = '/for-you' }: {
       <h1 className="visually-hidden">Your feed</h1>
       <FeedTabs active="following" user={user} />
       {posts.length
-        ? posts.map(p => <Post key={p.id} p={p} user={user} showReplyCount />)
+        ? posts.map(p => <Post key={p.id} p={p} user={user} showReplyCount tappable />)
         : !cursor
         ? (
           <div className="empty empty-actions">

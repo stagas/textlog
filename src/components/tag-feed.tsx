@@ -47,7 +47,7 @@ export function TagFeed(
       {blocked
         ? <div className="empty relationship-notice">You blocked this tag. Unblock it to see its notes.</div>
         : posts.length
-        ? posts.map(post => <Post p={post} user={user} key={post.id} />)
+        ? posts.map(post => <Post p={post} user={user} key={post.id} tappable />)
         : <div className="empty">No notes use this hashtag yet.</div>}
       <Pagination page={page} totalPages={Math.ceil(total / PAGE_SIZE)} path={'/tag/' + tag} />
     </Layout>

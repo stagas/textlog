@@ -440,6 +440,81 @@ test('Post only renders owner actions when requested by the detail view', () => 
   expect(detailHtml).toContain('/post/2/delete')
 })
 
+test('Post renders an opt-in feed hit area without changing detail posts', () => {
+  const props = {
+    user: null,
+    p: {
+      id: 2,
+      user_id: 1,
+      parent_id: null,
+      body: 'note',
+      handle: 'writer',
+      created_at: '2026-08-03 12:00:00',
+      deleted_at: null,
+    },
+  }
+  const feedHtml = renderToStaticMarkup(React.createElement(Post, { ...props, tappable: true }))
+  const detailHtml = renderToStaticMarkup(React.createElement(Post, props))
+
+  expect(feedHtml).toContain('class="post tappable-post"')
+  expect(feedHtml).toContain('class="post-hit-area" href="/post/2" aria-label="open post by @writer"')
+  expect(detailHtml).not.toContain('post-hit-area')
+})
+
+test('A quoted post gets its own higher-priority hit area in tappable feeds', () => {
+  const html = renderToStaticMarkup(React.createElement(Post, {
+    user: null,
+    tappable: true,
+    p: {
+      id: 2,
+      user_id: 1,
+      parent_id: 1,
+      body: 'reply',
+      handle: 'writer',
+      created_at: '2026-08-03 12:00:00',
+      deleted_at: null,
+      parent: {
+        id: 1,
+        body: 'quoted note',
+        handle: 'parent',
+        created_at: '2026-08-03 11:00:00',
+        deleted_at: null,
+        reply_count: 1,
+      },
+    },
+  }))
+
+  expect(html).toContain('parent-quote tappable-parent')
+  expect(html).toContain('class="parent-hit-area" href="/post/1" aria-label="open quoted post by @parent"')
+})
+
+test('Post detail can make only its quoted parent tappable', () => {
+  const html = renderToStaticMarkup(React.createElement(Post, {
+    user: null,
+    tappableParent: true,
+    p: {
+      id: 2,
+      user_id: 1,
+      parent_id: 1,
+      body: 'reply',
+      handle: 'writer',
+      created_at: '2026-08-03 12:00:00',
+      deleted_at: null,
+      parent: {
+        id: 1,
+        body: 'quoted note',
+        handle: 'parent',
+        created_at: '2026-08-03 11:00:00',
+        deleted_at: null,
+        reply_count: 1,
+      },
+    },
+  }))
+
+  expect(html).toContain('class="parent-hit-area" href="/post/1"')
+  expect(html).not.toContain('class="post-hit-area"')
+})
+
 test('Post renders moderation controls only for admins on the detail page', () => {
   const p = {
     id: 2,

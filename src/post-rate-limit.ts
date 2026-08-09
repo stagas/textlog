@@ -1,4 +1,5 @@
 import type { Database } from 'bun:sqlite'
+import { isDevelopment } from './environment'
 
 export const POST_LIMIT = 3
 export const POST_WINDOW_SECONDS = 5 * 60
@@ -23,7 +24,7 @@ export function insertRateLimitedPost(
 
     if (duplicate) return { id: duplicate.id, duplicate: true }
 
-    const limited = database.query(`
+    const limited = isDevelopment() ? null : database.query(`
       SELECT MAX(1, ? - (unixepoch('now') - unixepoch(MIN(created_at)))) AS retry_after
       FROM (
         SELECT created_at FROM posts

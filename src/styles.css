@@ -6,6 +6,7 @@
   --soft: #d9dbd4;
   --accent: #749668;
   --accent-dark: #55734a;
+  --tap-highlight: color-mix(in srgb, var(--accent) 24%, transparent);
   --selection-bg: var(--accent);
   --selection-ink: var(--ink);
   --panel: #fff;
@@ -51,6 +52,7 @@
   font: 16px/1.5 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
   color: var(--ink);
   background: var(--bg);
+  -webkit-tap-highlight-color: var(--tap-highlight);
 }
 
 @media (prefers-color-scheme: dark) {
@@ -694,6 +696,55 @@ nav form {
 
 .post {
   border-top: 1px solid var(--soft);
+}
+
+.post-hit-area {
+  display: none;
+}
+
+.parent-hit-area {
+  display: none;
+}
+
+@media (max-width: 700px), (hover: none) and (pointer: coarse) {
+  .tappable-post {
+    position: relative;
+  }
+
+  .tappable-post .post-hit-area {
+    position: absolute;
+    z-index: 1;
+    inset: 0;
+    display: block;
+    border: 0;
+  }
+
+  .tappable-post .tappable-parent {
+    position: relative;
+    z-index: 2;
+  }
+
+  .tappable-post .parent-hit-area {
+    position: absolute;
+    z-index: 1;
+    inset: 0;
+    display: block;
+    border: 0;
+  }
+
+  .tappable-post a:not(.post-hit-area):not(.parent-hit-area),
+  .tappable-post button,
+  .tappable-post label,
+  .tappable-post input {
+    position: relative;
+    z-index: 2;
+  }
+
+  .tappable-post .post-hit-area:focus-visible,
+  .tappable-post .parent-hit-area:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: -2px;
+  }
 }
 
 .feed-tabs+.post {

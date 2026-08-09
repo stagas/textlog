@@ -120,7 +120,9 @@ export function Profile(
             following={followingCount} followingTags={followingTagCount} showBlocked={user?.id === profile.id}
             blockedPeople={blockedPeopleCount} blockedTags={blockedTagCount} />
         )}
-      {!editing && !blocked && !blockedByProfile && posts.map(post => <Post key={post.id} p={post} user={user} />)}
+      {!editing && !blocked && !blockedByProfile && posts.map(post => (
+        <Post key={post.id} p={post} user={user} tappable />
+      ))}
       {!editing && !blocked && !blockedByProfile && total === 0 && (
         <div className={`empty${user?.id === profile.id ? ' empty-actions' : ''}`}>
           {user?.id === profile.id

@@ -3,6 +3,7 @@ import type { Context, Hono } from 'hono'
 import { apiHotPosts, apiOrigin, apiPost, apiPosts, apiSearchPosts, isoTimestamp, parseCollectionParams } from '../api'
 import { subscribeToPosts } from '../api-broker'
 import { consumeBucketedAttempt, rateLimitKey } from '../auth-rate-limit'
+import { isDevelopment } from '../environment'
 import { ApiDocs } from '../components/pages'
 import { db } from '../db'
 import { resolveHandle } from '../handles'
@@ -309,7 +310,9 @@ export function registerApiRoutes(app: Hono, database: Database = db,
   app.get('/api/v1/firehose', c => {
     const ip = c.req.header('x-textlog-client-ip') || '-'
     const count = activeStreams.get(ip) || 0
-    if (count >= SSE_LIMIT) return apiError('rate_limited', 'Too many firehose connections', 429, SSE_RETRY_AFTER)
+    if (!isDevelopment() && count >= SSE_LIMIT) {
+      return apiError('rate_limited', 'Too many firehose connections', 429, SSE_RETRY_AFTER)
+    }
     activeStreams.set(ip, count + 1)
     const encoder = new TextEncoder()
     let cleanup = () => {}

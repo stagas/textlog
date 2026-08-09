@@ -3,6 +3,7 @@ import { Auth, ChooseHandle, MagicLinkSent } from '../components/pages'
 import { db } from '../db'
 import { sendMagicLink } from '../email'
 import { clearSessionCookie, safeLocalPath, sessionCookie } from '../http'
+import { isDevelopment } from '../environment'
 import { moderateText, moderationMessage } from '../moderation'
 import { insertSession, SESSION_LIFETIME_MS, sessionHash } from '../sessions'
 import { currentUser, hash, token } from '../utils'
@@ -11,8 +12,6 @@ import { authLimit, clientAddress, form, issueMagicLink, page, redirect, retryPa
 import type { Hono } from 'hono'
 
 export const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
-const development = () => Bun.env.NODE_ENV === 'development' || Bun.env.DEV_RELOAD === 'true'
-
 function temporaryHandle() {
   return `anon${crypto.randomUUID().replaceAll('-', '').slice(0, 12)}`
 }
@@ -28,7 +27,7 @@ export function registerAuthRoutes(app: Hono) {
     const f = await form(c.req.raw)
     const email = (f.email || '').trim().toLowerCase()
     const next = safeNext(f.next)
-    const limited = development()
+    const limited = isDevelopment()
       ? null
       : authLimit(c, 'enter-ip', clientAddress(c), AUTH_LIMITS.loginIp)
         || authLimit(c, 'enter-email', email || '(blank)', AUTH_LIMITS.forgotAccount)
@@ -57,7 +56,7 @@ export function registerAuthRoutes(app: Hono) {
         503,
       )
     }
-    return page(<MagicLinkSent email={email} magicUrl={development() ? link.url : undefined} />)
+    return page(<MagicLinkSent email={email} magicUrl={isDevelopment() ? link.url : undefined} />)
   })
 
   app.get('/enter/magic', c => {

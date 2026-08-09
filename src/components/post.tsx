@@ -25,11 +25,14 @@ export function Post({
   reportHref,
   foldControlId,
   highlightTerms = [],
+  tappable = false,
+  tappableParent = false,
 }: { p: PostView; user: User | null; showReplyAction?: boolean; showOwnerActions?: boolean;
   showModerateAction?: boolean; showParent?: boolean; showReplyCount?: boolean; replyHref?: string; replyLabel?: string;
-  reportHref?: string; foldControlId?: string; highlightTerms?: string[] })
+  reportHref?: string; foldControlId?: string; highlightTerms?: string[]; tappable?: boolean; tappableParent?: boolean })
 {
   const parent = showParent ? p.parent : null
+  const hasTappableParent = Boolean(parent && (tappable || tappableParent))
   const isAsciiArt = containsAsciiArt(p.body)
   const replyCount = p.reply_count || 0
   const defaultReplyPath = '/post/' + p.id + '?reply=1'
@@ -48,7 +51,10 @@ export function Post({
     )
   }
   return (
-    <article className="post">
+    <article className={`post${tappable || hasTappableParent ? ' tappable-post' : ''}`}>
+      {tappable && (
+        <a className="post-hit-area" href={'/post/' + p.id} aria-label={`open post by @${p.handle}`} />
+      )}
       <div className="posttop">
         <a className="postauthor" href={'/u/' + p.handle} title={p.bio || 'No bio yet.'}>@{p.handle}</a>
         <a className="postdate" href={'/post/' + p.id}>
@@ -86,7 +92,12 @@ export function Post({
       <p className={isAsciiArt ? 'ascii-art' : undefined}
         dangerouslySetInnerHTML={{ __html: linkify(p.body, p.mention_bios, highlightTerms) }} />
       {parent && (
-        <blockquote className={'parent-quote' + (parent.deleted_at ? ' deleted-parent' : '')}>
+        <blockquote className={'parent-quote' + (parent.deleted_at ? ' deleted-parent' : '')
+          + (hasTappableParent ? ' tappable-parent' : '')}>
+          {hasTappableParent && (
+            <a className="parent-hit-area" href={'/post/' + parent.id}
+              aria-label={`open quoted post by @${parent.handle}`} />
+          )}
           {parent.deleted_at
             ? <a href={'/post/' + parent.id}>(deleted)</a>
             : (
@@ -170,7 +181,7 @@ export function ThreadReplies({ parentId, user }: { parentId: number; user: User
               {foldControlId && <input className="thread-fold-input" type="checkbox" id={foldControlId} />}
               <Post p={reply} user={user} showParent={false} foldControlId={foldControlId}
                 replyHref={user ? undefined : '/enter?next=' + encodeURIComponent('/post/' + reply.id + '?reply=1')}
-                replyLabel={user ? 'reply' : 'enter to reply'} />
+                replyLabel={user ? 'reply' : 'enter to reply'} tappable />
               {childBranch}
               {continuesElsewhere && (
                 <div className="thread-continuation">

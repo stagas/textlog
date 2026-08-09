@@ -12,7 +12,7 @@ export function PublicThread(
       <div className="post-page-thread">
         <div className="thread-root">
           <Post p={post} user={null} replyHref={'/enter?next=' + encodeURIComponent('/post/' + post.id + '?reply=1')}
-            replyLabel="enter to reply" />
+            replyLabel="enter to reply" tappableParent />
         </div>
         <ThreadReplies parentId={post.id} user={null} />
       </div>

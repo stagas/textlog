@@ -1,5 +1,6 @@
 import type { Database } from 'bun:sqlite'
 import { createHash } from 'node:crypto'
+import { isDevelopment } from './environment'
 
 export const AUTH_LIMITS = {
   loginIp: { attempts: 10, windowSeconds: 15 * 60 },
@@ -25,6 +26,7 @@ export function consumeAuthAttempt(
   windowSeconds: number,
   now = Date.now(),
 ) {
+  if (isDevelopment()) return null
   return database.transaction(() => {
     const cutoff = now - windowSeconds * 1000
     database.query('DELETE FROM auth_rate_limits WHERE scope=? AND key_hash=? AND created_at<=?')
@@ -48,6 +50,7 @@ export function consumeBucketedAttempt(
   bucketSeconds: number,
   now = Date.now(),
 ) {
+  if (isDevelopment()) return null
   const bucketMs = bucketSeconds * 1000
   const bucketStart = Math.floor(now / bucketMs) * bucketMs
   return database.transaction(() => {
