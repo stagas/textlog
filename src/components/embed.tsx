@@ -15,7 +15,7 @@ export function Embed({ posts, title, href, theme, accent }: { posts: PostView[]
         <meta charSet="utf-8" />
         <meta name="viewport" content="width=device-width,initial-scale=1" />
         <meta name="color-scheme" content="light dark" />
-        <title>{title} · textlog</title>
+        <title>{`${title} · textlog`}</title>
         <link rel="stylesheet" href="/embed.css?v=2" />
         <link rel="stylesheet" href={`/theme.css?${query}`} />
       </head>
