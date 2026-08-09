@@ -16,6 +16,7 @@ import { softDeletePost } from '../admin'
 import { db } from '../db'
 import { renderPostOg } from '../og'
 import { postRateLimitMessage } from '../post-rate-limit'
+import { normalizePostBody, validPostBody } from '../post-body'
 import { currentUser } from '../utils'
 
 export function registerPostsRoutes(app: Hono) {
@@ -83,8 +84,8 @@ export function registerPostsRoutes(app: Hono) {
     if (!user) return redirect('/enter')
     if (!canPublishPosts(user)) return page(<Compose user={user} />, 403)
     const f = await form(c.req.raw)
-    const body = f.body || ''
-    if (body.trim().length < 1 || body.length > 280) return page(<Compose user={user} />, 400)
+    const body = normalizePostBody(f.body || '')
+    if (!validPostBody(body)) return page(<Compose user={user} />, 400)
     const moderation = await moderateText(body)
     if (!moderation.ok) {
       return page(<Compose user={user} body={body} error={moderationMessage(moderation.reason)} />,
@@ -123,8 +124,8 @@ export function registerPostsRoutes(app: Hono) {
     if (!post) return c.text('Not found', 404)
     if (post.user_id !== user.id) return c.text('Forbidden', 403)
     const f = await form(c.req.raw)
-    const body = f.body || ''
-    if (body.trim().length < 1 || body.length > 280) {
+    const body = normalizePostBody(f.body || '')
+    if (!validPostBody(body)) {
       return page(
         <EditPost user={user} post={post} body={body} error="Posts must contain between 1 and 280 characters." />,
         400,
@@ -181,8 +182,8 @@ export function registerPostsRoutes(app: Hono) {
     if (usersBlocked(user.id, parent.user_id)) return c.text('Forbidden', 403)
     if (!canPublishPosts(user)) return page(<Reply user={user} post={parent} showForm />, 403)
     const f = await form(c.req.raw)
-    const body = f.body || ''
-    if (body.trim().length < 1 || body.length > 280) {
+    const body = normalizePostBody(f.body || '')
+    if (!validPostBody(body)) {
       return page(
         <Reply user={user} post={parent} showForm error="Replies must contain between 1 and 280 characters."
           body={body} />,

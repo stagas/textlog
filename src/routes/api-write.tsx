@@ -9,6 +9,7 @@ import { resolveHandle } from '../handles'
 import { emailPattern } from './auth'
 import { moderateText, moderationMessage } from '../moderation'
 import { postRateLimitMessage } from '../post-rate-limit'
+import { normalizePostBody, POST_MAX, validPostBody } from '../post-body'
 import { canPublishPosts } from '../posting-policy'
 import { createPost, updatePost } from '../posts'
 import { insertSession, SESSION_LIFETIME_MS, sessionHash } from '../sessions'
@@ -19,7 +20,7 @@ export const CODE_ATTEMPT_LIMIT = 5
 export const WRITE_LIMIT = 60
 export const WRITE_WINDOW_SECONDS = 60 * 60
 export const BIO_MAX = 160
-export const POST_MAX = 280
+export { POST_MAX } from '../post-body'
 
 function json(value: unknown, status = 200) {
   return new Response(JSON.stringify(value), {
@@ -179,8 +180,8 @@ export function registerApiWriteRoutes(app: Hono, database: Database, appUrl?: s
     if (!canPublishPosts(user)) return fail('email_unverified', 'Verify your email address before posting', 403)
 
     const payload = await body(c)
-    const content = text(payload?.body)
-    if (content.trim().length < 1 || content.length > POST_MAX) {
+    const content = normalizePostBody(text(payload?.body))
+    if (!validPostBody(content)) {
       return fail('invalid_body', `Posts contain between 1 and ${POST_MAX} characters`, 400)
     }
     let parentId: number | null = null
@@ -220,8 +221,8 @@ export function registerApiWriteRoutes(app: Hono, database: Database, appUrl?: s
     if (post.user_id !== guard.user!.id) return fail('forbidden', 'That post belongs to someone else', 403)
 
     const payload = await body(c)
-    const content = text(payload?.body)
-    if (content.trim().length < 1 || content.length > POST_MAX) {
+    const content = normalizePostBody(text(payload?.body))
+    if (!validPostBody(content)) {
       return fail('invalid_body', `Posts contain between 1 and ${POST_MAX} characters`, 400)
     }
     const moderation = await moderateText(content)
