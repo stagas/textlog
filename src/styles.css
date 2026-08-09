@@ -359,6 +359,36 @@ nav form {
   white-space: pre;
 }
 
+.embed-example-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 360px), 1fr));
+  gap: var(--space-6);
+  margin-top: var(--space-6);
+}
+
+.embed-example {
+  min-width: 0;
+}
+
+.embed-example h2 {
+  margin-top: 0;
+}
+
+.embed-example iframe {
+  display: block;
+  border: 0;
+}
+
+.embed-example > code {
+  display: block;
+  overflow: hidden;
+  margin-top: var(--space-2);
+  color: var(--muted);
+  font-size: 10px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .api-endpoints {
   display: grid;
   grid-template-columns: minmax(260px, auto) 1fr;

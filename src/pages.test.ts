@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test'
-import { About, AccountMagicLink, AccountSecurity, ApiDocs, Auth, ChangeTheme, ChooseHandle, ConfirmEmail, Connections, Contact, ErrorPage,
+import { About, AccountMagicLink, AccountSecurity, ApiDocs, Auth, ChangeTheme, ChooseHandle, ConfirmEmail, Connections, Contact, EmbedExamples, ErrorPage,
   Legal, NotFound, postTitle,
   Profile } from './components/pages'
 
@@ -109,11 +109,24 @@ test('API documentation is linked from the footer and describes the firehose', (
   expect(html).toContain('120 requests per minute')
   expect(html).toContain('/users/:handle/posts.rss')
   expect(html).toContain('/tags/:tag/posts.atom')
+  expect(html).toContain('href="/api/embed-examples"')
   expect(html.match(/class="api-endpoints"/g)).toHaveLength(1)
   expect(html).toContain('data-method="DELETE">DELETE</span><span class="api-path">/auth/session</span>')
   expect(html).toContain('data-method="DELETE">DELETE</span><span class="api-path">/posts/:id</span>')
   expect(html).toContain('data-method="DELETE">DELETE</span><span class="api-path">/users/:handle/follow</span>')
   expect(html).toContain('data-method="DELETE">DELETE</span><span class="api-path">/users/:handle/block</span>')
+})
+
+test('embed examples show every format and use stagas for the user feed', () => {
+  const html = renderToStaticMarkup(React.createElement(EmbedExamples, {
+    user: null, handle: 'stagas', tag: 'notes', postId: 42,
+  }))
+  expect(html).toContain('/embed/latest?theme=light&amp;accent=sage')
+  expect(html).toContain('/embed/hot?theme=dark&amp;accent=purple')
+  expect(html).toContain('/embed/user/stagas?theme=dracula&amp;accent=cyan')
+  expect(html).toContain('/embed/tag/notes?theme=sepia&amp;accent=amber')
+  expect(html).toContain('/embed/post/42?theme=system&amp;accent=blue')
+  expect(html.match(/<iframe/g)).toHaveLength(5)
 })
 
 test('footer offers the mobile app in a mobile-only row', () => {

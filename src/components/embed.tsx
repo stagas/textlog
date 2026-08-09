@@ -1,6 +1,7 @@
 import type { PostView } from '../types'
 import { fmt, fmtFull, linkify } from '../utils'
 import type { AccentChoice, ThemeChoice } from '../theme'
+import { containsAsciiArt } from '../content'
 
 export function Embed({ posts, title, href, theme, accent }: { posts: PostView[]; title: string; href: string;
   theme: ThemeChoice; accent: AccentChoice })
@@ -15,7 +16,7 @@ export function Embed({ posts, title, href, theme, accent }: { posts: PostView[]
         <meta name="viewport" content="width=device-width,initial-scale=1" />
         <meta name="color-scheme" content="light dark" />
         <title>{title} · textlog</title>
-        <link rel="stylesheet" href="/embed.css?v=1" />
+        <link rel="stylesheet" href="/embed.css?v=2" />
         <link rel="stylesheet" href={`/theme.css?${query}`} />
       </head>
       <body className="embed-body">
@@ -38,7 +39,8 @@ export function Embed({ posts, title, href, theme, accent }: { posts: PostView[]
                       {(post.reply_count || 0) > 0 && <span> · {post.reply_count} {post.reply_count === 1 ? 'reply' : 'replies'}</span>}
                     </a>
                   </div>
-                  <p dangerouslySetInnerHTML={{ __html: embedLinks(post) }} />
+                  <p className={containsAsciiArt(post.body) ? 'ascii-art' : undefined}
+                    dangerouslySetInnerHTML={{ __html: embedLinks(post) }} />
                 </article>
               ))
               : <p className="embed-empty">No notes here yet.</p>}

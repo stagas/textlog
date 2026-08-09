@@ -75,10 +75,11 @@ export function ApiDocs({ user }: { user: User | null }) {
 /users/:handle/posts.rss
 /tags/:tag/posts.atom`}</code></pre>
 
-        <h2>Embeds</h2>
+        <h2 id="embeds">Embeds</h2>
         <p>
           Add a read-only textlog card to any website with an iframe. Copy an example and replace the handle,
           hashtag, or post number. Feed embeds show the five newest notes and all links open textlog.
+          See every format together on the <a href="/api/embed-examples">live embed examples page</a>.
         </p>
         <pre><code>{`<iframe
   src="https://textlog.cc/embed/user/alice?theme=system&accent=sage"
@@ -160,6 +161,46 @@ curl -X POST https://textlog.cc/api/v1/auth/verify \\
         <pre><code>{`{
   "error": { "code": "not_found", "message": "Post not found" }
 }`}</code></pre>
+      </article>
+    </Layout>
+  )
+}
+
+export function EmbedExamples({ user, handle, tag, postId }: { user: User | null; handle: string | null;
+  tag: string | null; postId: number | null })
+{
+  const examples = [
+    { title: 'Latest feed', src: '/embed/latest?theme=light&accent=sage', height: 520 },
+    { title: 'Hot feed', src: '/embed/hot?theme=dark&accent=purple', height: 520 },
+    ...(handle ? [{ title: `User feed · @${handle}`,
+      src: `/embed/user/${encodeURIComponent(handle)}?theme=dracula&accent=cyan`, height: 520 }] : []),
+    ...(tag ? [{ title: `Tag feed · #${tag}`,
+      src: `/embed/tag/${encodeURIComponent(tag)}?theme=sepia&accent=amber`, height: 520 }] : []),
+    ...(postId ? [{ title: `Single post · ${postId}`,
+      src: `/embed/post/${postId}?theme=system&accent=blue`, height: 240 }] : []),
+  ]
+  return (
+    <Layout user={user} title="embed examples">
+      <article className="static-page api-docs embed-examples">
+        <p className="eyebrow">developers</p>
+        <h1>Live embed examples</h1>
+        <p>
+          These are the same cross-domain iframes you can place on another website, shown with different themes and
+          accents. See the <a href="/api#embeds">embed documentation</a> for copy-paste code and every option.
+        </p>
+        <div className="embed-example-grid">
+          {examples.map(example => (
+            <section className="embed-example" key={example.src}>
+              <h2>{example.title}</h2>
+              <iframe src={example.src} title={`${example.title} on textlog`} width="100%" height={example.height}
+                loading="lazy" />
+              <code>{example.src}</code>
+            </section>
+          ))}
+        </div>
+        {(!handle || !tag || !postId) && (
+          <p className="quiet">User, tag, and single-post examples appear as soon as the site has a public note.</p>
+        )}
       </article>
     </Layout>
   )

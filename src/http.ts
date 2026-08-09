@@ -137,7 +137,9 @@ export function clearSessionCookie(appUrl: string | undefined = Bun.env.APP_URL)
   return sessionCookie('', 0, appUrl)
 }
 
-const publicHtmlPaths = new Set(['/', '/hot', '/latest', '/explore', '/about', '/contact', '/dmca', '/legal', '/api'])
+const publicHtmlPaths = new Set([
+  '/', '/hot', '/latest', '/explore', '/about', '/contact', '/dmca', '/legal', '/api', '/api/embed-examples',
+])
 const publicHtmlPattern = /^\/(?:u\/[a-z0-9_]{2,24}|post\/[1-9]\d*|tag\/[a-z0-9_]+|embed\/.+)$/i
 const transientHtmlParameters = ['reply', 'report', 'reported', 'edit', 'welcome', 'reset', 'token']
 

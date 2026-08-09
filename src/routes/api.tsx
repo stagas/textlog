@@ -4,7 +4,7 @@ import { apiHotPosts, apiOrigin, apiPost, apiPosts, apiSearchPosts, isoTimestamp
 import { subscribeToPosts } from '../api-broker'
 import { consumeBucketedAttempt, rateLimitKey } from '../auth-rate-limit'
 import { isDevelopment } from '../environment'
-import { ApiDocs } from '../components/pages'
+import { ApiDocs, EmbedExamples } from '../components/pages'
 import { db } from '../db'
 import { resolveHandle } from '../handles'
 import { decodeHotCursor } from '../hot'
@@ -177,6 +177,20 @@ export function registerApiRoutes(app: Hono, database: Database = db,
   appUrl: string | null | undefined = Bun.env.APP_URL, now: () => number = Date.now)
 {
   app.get('/api', c => page(<ApiDocs user={currentUser(c.req.raw)} />))
+  app.get('/api/embed-examples', c => {
+    const sample = database.query(`SELECT p.id,
+      (SELECT ph.tag FROM post_hashtags ph WHERE ph.post_id=p.id ORDER BY ph.tag LIMIT 1) tag
+      FROM posts p JOIN users u ON u.id=p.user_id
+      WHERE p.deleted_at IS NULL AND u.deleted_at IS NULL
+      ORDER BY p.id DESC LIMIT 1`).get() as { id: number; tag: string | null } | null
+    const fallbackTag = sample?.tag || (database.query(`SELECT ph.tag FROM post_hashtags ph
+      JOIN posts p ON p.id=ph.post_id JOIN users u ON u.id=p.user_id
+      WHERE p.deleted_at IS NULL AND u.deleted_at IS NULL ORDER BY p.id DESC LIMIT 1`).get() as {
+      tag: string
+    } | null)?.tag || null
+    return page(<EmbedExamples user={currentUser(c.req.raw)} handle="stagas"
+      tag={fallbackTag} postId={sample?.id || null} />)
+  })
 
   app.use('/api/*', async (c, next) => {
     if (c.req.method === 'OPTIONS') {

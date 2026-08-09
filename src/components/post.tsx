@@ -1,16 +1,12 @@
 import React from 'react'
 import { isAdmin } from '../admin'
-import { extractHashtags } from '../content'
+import { containsAsciiArt } from '../content'
 import { db, type User } from '../db'
 import { enrichPosts } from '../posts'
 import type { PostView } from '../types'
 import { fmt, fmtFull, linkify } from '../utils'
 
 export const MAX_VISIBLE_REPLY_DEPTH = 5
-
-function containsAsciiArt(body: string) {
-  return extractHashtags(body).some(tag => tag === 'ascii' || tag === 'ascii_art')
-}
 
 export function Post({
   p,
