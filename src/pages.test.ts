@@ -379,6 +379,42 @@ test('Post renders preloaded parent and reply data', () => {
   expect(html).toContain('aria-label="reply to @author">enter to reply</a>')
 })
 
+test('Profile and hashtag feeds show cumulative reply counts beside post dates', () => {
+  const post = {
+    id: 2,
+    user_id: 1,
+    parent_id: null,
+    body: 'A note with a conversation',
+    handle: 'writer',
+    created_at: '2026-08-03 12:00:00',
+    deleted_at: null,
+    reply_count: 3,
+  }
+  const profile = {
+    id: 1,
+    handle: 'writer',
+    email: 'writer@example.com',
+    bio: '',
+  }
+  const profileHtml = renderToStaticMarkup(React.createElement(Profile, {
+    user: null,
+    profile,
+    following: false,
+    posts: [post],
+  }))
+  const tagHtml = renderToStaticMarkup(React.createElement(TagFeed, {
+    user: null,
+    tag: 'notes',
+    following: false,
+    posts: [post],
+    page: 1,
+    total: 1,
+  }))
+
+  expect(profileHtml).toContain('· 3 replies</span>')
+  expect(tagHtml).toContain('· 3 replies</span>')
+})
+
 test('Post marks #ascii and #ascii_art bodies and quoted parents for tight line spacing', () => {
   const html = renderToStaticMarkup(React.createElement(Post, {
     user: null,
