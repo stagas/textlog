@@ -72,6 +72,13 @@ function linkAttributes(url: string, appUrl: string | undefined) {
     : ' rel="nofollow ugc"'
 }
 
+function linkLabel(url: string, appUrl: string | undefined) {
+  if (!appUrl || !url.startsWith(appUrl)) return url
+  const relative = url.slice(appUrl.length)
+  if (!relative) return '/'
+  return relative.startsWith('/') ? relative : `/${relative}`
+}
+
 export function linkify(body: string, mentionBios: Record<string, string> = {}, highlightTerms: string[] = [],
   appUrl: string | undefined = Bun.env.APP_URL) {
   const tokens = /\[([^\]\r\n]+)\]\((https?:\/\/[^\s<>")]+)\)|https?:\/\/[^\s<>"]+|(?<![A-Za-z0-9_])[@#][A-Za-z0-9_]+/gi
@@ -88,8 +95,9 @@ export function linkify(body: string, mentionBios: Record<string, string> = {}, 
     else if (/^https?:\/\//i.test(token)) {
       const url = token.replace(/[.,!?;:)]+$/, '')
       const punctuation = token.slice(url.length)
-      html += `<a href="${esc(url)}"${linkAttributes(url, appUrl)}>${
-        highlighted(url, highlightTerms)
+      const label = linkLabel(url, appUrl)
+      html += `<a href="${esc(url)}"${label === url ? '' : ` title="${esc(url)}"`}${linkAttributes(url, appUrl)}>${
+        highlighted(label, highlightTerms)
       }</a>${
         esc(punctuation)
       }`
