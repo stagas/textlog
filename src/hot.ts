@@ -73,29 +73,12 @@ export function hotCursor(post: HotPost, asOf: string, direction: HotCursor['dir
 
 export function recordHotActivity(database: Database, postId: number) {
   if (!hasHotTable(database)) return
-  const event = database.query('SELECT user_id,created_at FROM posts WHERE id=?').get(postId) as {
-    user_id: number; created_at: string
-  } | null
-  if (!event) return
-  const update = database.query(`UPDATE post_hot SET
-    score=score*pow(0.5,max(0,(julianday(?) - julianday(score_updated_at))*24)/${activityHalfLifeHours}.0)+1,
-    score_updated_at=?,latest_activity_at=max(latest_activity_at,?) WHERE post_id=?`)
-  update.run(event.created_at, event.created_at, event.created_at, postId)
-  const ancestors = database.query(`WITH RECURSIVE ancestors(id,user_id,depth) AS (
-    SELECT parent.id,parent.user_id,1 FROM posts child JOIN posts parent ON parent.id=child.parent_id WHERE child.id=?
+  const affected = database.query(`WITH RECURSIVE ancestors(id,parent_id) AS (
+    SELECT id,parent_id FROM posts WHERE id=?
     UNION ALL
-    SELECT parent.id,parent.user_id,ancestors.depth+1 FROM ancestors
-    JOIN posts child ON child.id=ancestors.id JOIN posts parent ON parent.id=child.parent_id
-  ) SELECT id,depth FROM ancestors WHERE user_id!=?`).all(postId, event.user_id) as { id: number; depth: number }[]
-  for (const ancestor of ancestors) {
-    const weight = directReplyWeight * Math.pow(0.5, ancestor.depth - 1)
-    database.query(`UPDATE post_hot SET
-      score=score*pow(0.5,max(0,(julianday(?) - julianday(score_updated_at))*24)/${activityHalfLifeHours}.0)
-        +?,
-      reply_count=reply_count+1,
-      score_updated_at=?,latest_activity_at=max(latest_activity_at,?) WHERE post_id=?`)
-      .run(event.created_at, weight, event.created_at, event.created_at, ancestor.id)
-  }
+    SELECT parent.id,parent.parent_id FROM ancestors JOIN posts parent ON parent.id=ancestors.parent_id
+  ) SELECT id FROM ancestors`).all(postId) as { id: number }[]
+  if (affected.length) rebuildHotPosts(database, affected.map(post => post.id))
 }
 
 export function rebuildHotPosts(database: Database, postIds?: number[]) {
@@ -108,18 +91,24 @@ export function rebuildHotPosts(database: Database, postIds?: number[]) {
       SELECT parent.parent_id,descendants.id,descendants.user_id,descendants.created_at,descendants.deleted_at,
         descendants.depth+1 FROM descendants JOIN posts parent ON parent.id=descendants.candidate_id
       WHERE parent.parent_id IS NOT NULL AND descendants.deleted_at IS NULL
-    ), activity(candidate_id,created_at,deleted_at,weight) AS (
-      SELECT id,created_at,deleted_at,1 FROM posts
+    ), ranked_replies AS (
+      SELECT descendants.*,row_number() OVER (
+        PARTITION BY descendants.candidate_id,descendants.user_id
+        ORDER BY descendants.depth,descendants.created_at DESC,descendants.id DESC
+      ) reply_rank FROM descendants
+      JOIN posts candidate ON candidate.id=descendants.candidate_id
+      WHERE descendants.deleted_at IS NULL AND descendants.user_id!=candidate.user_id
+    ), activity(candidate_id,created_at,weight) AS (
+      SELECT id,created_at,1 FROM posts WHERE deleted_at IS NULL
       UNION ALL
-      SELECT descendants.candidate_id,descendants.created_at,descendants.deleted_at,
-        ${directReplyWeight}*pow(0.5,descendants.depth-1) FROM descendants
-      JOIN posts candidate ON candidate.id=descendants.candidate_id WHERE descendants.user_id!=candidate.user_id
+      SELECT candidate_id,created_at,${directReplyWeight}*pow(0.5,depth-1)
+      FROM ranked_replies WHERE reply_rank=1
     ), latest AS (
-      SELECT candidate_id,max(created_at) latest_activity_at FROM activity WHERE deleted_at IS NULL GROUP BY candidate_id
+      SELECT candidate_id,max(created_at) latest_activity_at FROM activity GROUP BY candidate_id
     ) SELECT activity.candidate_id post_id,latest.latest_activity_at,count(*)-1 reply_count,
       sum(weight*pow(0.5,max(0,(julianday(latest.latest_activity_at)-julianday(activity.created_at))*24)/${activityHalfLifeHours}.0)) score
       FROM activity JOIN latest ON latest.candidate_id=activity.candidate_id
-      WHERE activity.deleted_at IS NULL GROUP BY activity.candidate_id`).all() as { post_id: number;
+      GROUP BY activity.candidate_id`).all() as { post_id: number;
       latest_activity_at: string; reply_count: number; score: number }[]
     database.query(tracksReplyCount
       ? 'UPDATE post_hot SET score=0,reply_count=0,score_updated_at=\'1970-01-01 00:00:00\',latest_activity_at=\'1970-01-01 00:00:00\''
@@ -144,13 +133,18 @@ export function rebuildHotPosts(database: Database, postIds?: number[]) {
     UNION ALL
     SELECT child.id,child.user_id,child.created_at,child.deleted_at,descendants.depth+1 FROM descendants
     JOIN posts child ON child.parent_id=descendants.id WHERE descendants.deleted_at IS NULL
-  ), activity(id,created_at,deleted_at,weight) AS (
-    SELECT id,created_at,deleted_at,1 FROM posts WHERE id=?
+  ), ranked_replies AS (
+    SELECT descendants.*,row_number() OVER (
+      PARTITION BY descendants.user_id
+      ORDER BY descendants.depth,descendants.created_at DESC,descendants.id DESC
+    ) reply_rank FROM descendants
+    JOIN posts candidate ON candidate.id=?
+    WHERE descendants.deleted_at IS NULL AND descendants.user_id!=candidate.user_id
+  ), activity(id,created_at,weight) AS (
+    SELECT id,created_at,1 FROM posts WHERE id=? AND deleted_at IS NULL
     UNION ALL
-    SELECT descendants.id,descendants.created_at,descendants.deleted_at,
-      ${directReplyWeight}*pow(0.5,descendants.depth-1) FROM descendants
-    JOIN posts candidate ON candidate.id=? WHERE descendants.user_id!=candidate.user_id
-  ) SELECT created_at,weight FROM activity WHERE deleted_at IS NULL`)
+    SELECT id,created_at,${directReplyWeight}*pow(0.5,depth-1) FROM ranked_replies WHERE reply_rank=1
+  ) SELECT created_at,weight FROM activity`)
   const update = database.query(tracksReplyCount
     ? 'UPDATE post_hot SET score=?,reply_count=?,score_updated_at=?,latest_activity_at=? WHERE post_id=?'
     : 'UPDATE post_hot SET score=?,score_updated_at=?,latest_activity_at=? WHERE post_id=?')

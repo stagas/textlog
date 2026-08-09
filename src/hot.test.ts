@@ -56,10 +56,10 @@ describe('hot feed ranking', () => {
   })
 
   test('lets a busy thread from yesterday outrank a new post', () => {
-    database.query('INSERT INTO users(id,handle) VALUES(?,?)').run(2, 'replier')
+    database.run("INSERT INTO users VALUES(2,'replier'); INSERT INTO users VALUES(3,'another');")
     post(1, '2026-08-02 12:00:00')
     postBy(2, 2, '2026-08-02 12:00:00', 1)
-    postBy(2, 3, '2026-08-02 12:00:00', 1)
+    postBy(3, 3, '2026-08-02 12:00:00', 1)
     post(4, '2026-08-03 12:00:00')
 
     const results = getHotPosts(database, 20, null, asOf)
@@ -69,12 +69,13 @@ describe('hot feed ranking', () => {
   })
 
   test('direct replies give active threads substantially more staying power', () => {
-    database.query('INSERT INTO users(id,handle) VALUES(?,?)').run(2, 'replier')
+    database.run(`INSERT INTO users VALUES(2,'r2'); INSERT INTO users VALUES(3,'r3');
+      INSERT INTO users VALUES(4,'r4'); INSERT INTO users VALUES(5,'r5');`)
     post(1, '2026-08-03 04:00:00')
     postBy(2, 2, '2026-08-03 06:00:00', 1)
-    postBy(2, 3, '2026-08-03 06:00:00', 1)
-    postBy(2, 4, '2026-08-03 06:00:00', 1)
-    postBy(2, 5, '2026-08-03 06:00:00', 1)
+    postBy(3, 3, '2026-08-03 06:00:00', 1)
+    postBy(4, 4, '2026-08-03 06:00:00', 1)
+    postBy(5, 5, '2026-08-03 06:00:00', 1)
     post(6, '2026-08-03 11:00:00')
 
     const results = getHotPosts(database, 20, null, asOf)
@@ -86,11 +87,10 @@ describe('hot feed ranking', () => {
   })
 
   test('cumulative replies exponentially extend the recency half-life', () => {
-    database.query('INSERT INTO users(id,handle) VALUES(?,?)').run(2, 'replier')
     for (const [rootId, replies] of [[1, 1], [100, 5], [200, 20]] as const) {
       post(rootId, '2026-08-01 20:00:00')
       for (let index = 1; index <= replies; index++) {
-        postBy(2, rootId + index, '2026-08-01 20:00:00', rootId)
+        postBy(1_000 + rootId + index, rootId + index, '2026-08-01 20:00:00', rootId)
       }
     }
 
@@ -106,11 +106,10 @@ describe('hot feed ranking', () => {
   })
 
   test('nested reply boosts halve at each level', () => {
-    database.query('INSERT INTO users(id,handle) VALUES(?,?)').run(2, 'replier')
     post(1, '2026-08-03 12:00:00')
     postBy(2, 2, '2026-08-03 12:00:00', 1)
-    postBy(2, 3, '2026-08-03 12:00:00', 2)
-    postBy(2, 4, '2026-08-03 12:00:00', 3)
+    postBy(3, 3, '2026-08-03 12:00:00', 2)
+    postBy(4, 4, '2026-08-03 12:00:00', 3)
 
     expect((database.query('SELECT score FROM post_hot WHERE post_id=1').get() as { score: number }).score)
       .toBeCloseTo(1 + 4 + 2 + 1)
@@ -118,6 +117,29 @@ describe('hot feed ranking', () => {
     rebuildHotPosts(database)
     expect((database.query('SELECT score FROM post_hot WHERE post_id=1').get() as { score: number }).score)
       .toBeCloseTo(1 + 4 + 2 + 1)
+  })
+
+  test('counts only the highest-weight reply from each user for a thread', () => {
+    database.query('INSERT INTO users(id,handle) VALUES(?,?)').run(2, 'replier')
+    post(1, '2026-08-03 08:00:00')
+    postBy(2, 2, '2026-08-03 09:00:00', 1)
+    postBy(2, 3, '2026-08-03 10:00:00', 2)
+    postBy(2, 4, '2026-08-03 11:00:00', 1)
+
+    let stored = database.query('SELECT score,reply_count,latest_activity_at FROM post_hot WHERE post_id=1').get() as {
+      score: number; reply_count: number; latest_activity_at: string
+    }
+    expect(stored.reply_count).toBe(1)
+    expect(stored.latest_activity_at).toBe('2026-08-03 11:00:00')
+    expect(stored.score).toBeCloseTo(1 * Math.pow(0.5, 3 / 6) + 4)
+
+    rebuildHotPosts(database)
+    stored = database.query('SELECT score,reply_count,latest_activity_at FROM post_hot WHERE post_id=1').get() as {
+      score: number; reply_count: number; latest_activity_at: string
+    }
+    expect(stored.reply_count).toBe(1)
+    expect(stored.latest_activity_at).toBe('2026-08-03 11:00:00')
+    expect(stored.score).toBeCloseTo(1 * Math.pow(0.5, 3 / 6) + 4)
   })
 
   test('deleting a nested reply removes its branch credit from every ancestor', () => {

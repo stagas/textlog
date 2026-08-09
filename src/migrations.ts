@@ -372,6 +372,13 @@ export const migrations: Migration[] = [
       rebuildHotPosts(database)
     },
   },
+  {
+    version: 28,
+    name: 'deduplicate_hot_replies_by_user',
+    up(database) {
+      rebuildHotPosts(database)
+    },
+  },
 ]
 
 export const latestMigrationVersion = migrations.at(-1)!.version
