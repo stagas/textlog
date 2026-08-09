@@ -46,6 +46,7 @@ export function Layout({
   const share = social || {
     description: 'A quieter place for your thoughts.',
     image: `${appOrigin}/og.png?v=2`,
+    url: appOrigin ? `${appOrigin}/` : '',
     type: 'website' as const,
     imageAlt: 'textlog',
   }
@@ -83,8 +84,10 @@ export function Layout({
           <meta property="og:site_name" content="textlog" />
           <meta property="og:title" content={title || 'textlog'} />
           <meta property="og:description" content={share.description} />
-          {social && <meta property="og:url" content={social.url} />}
+          {share.url && <meta property="og:url" content={share.url} />}
           <meta property="og:image" content={share.image} />
+          <meta property="og:image:secure_url" content={share.image} />
+          <meta property="og:image:type" content="image/png" />
           <meta property="og:image:width" content="1200" />
           <meta property="og:image:height" content="630" />
           <meta property="og:image:alt" content={share.imageAlt || `Post by ${title || 'a textlog user'}`} />
@@ -92,6 +95,8 @@ export function Layout({
           <meta name="twitter:title" content={title || 'textlog'} />
           <meta name="twitter:description" content={share.description} />
           <meta name="twitter:image" content={share.image} />
+          <meta name="twitter:image:width" content="1200" />
+          <meta name="twitter:image:height" content="630" />
           <meta name="twitter:image:alt" content={share.imageAlt || `Post by ${title || 'a textlog user'}`} />
         </>
         <link rel="icon" href={`/favicon-theme.svg?v=${appearanceVersion}`} type="image/svg+xml" sizes="any" />
