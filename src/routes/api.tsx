@@ -75,7 +75,7 @@ function openApiDocument() {
   const postIdParameter = { name: 'id', in: 'path', required: true, schema: { type: 'integer', minimum: 1 } }
   const handleParameter = { name: 'handle', in: 'path', required: true, schema: { type: 'string' } }
   const writeResponses = { ...jsonResponses, '401': { description: 'Missing or invalid token' },
-    '403': { description: 'API writes are not enabled for this account' } }
+    '403': { description: 'The authenticated account cannot perform this operation' } }
   const syndicationResponses = { '200': { description: 'RSS 2.0 or Atom 1.0 XML feed', content: {
     'application/rss+xml': { schema: { type: 'string' } },
     'application/atom+xml': { schema: { type: 'string' } },
@@ -83,7 +83,7 @@ function openApiDocument() {
   return {
     openapi: '3.1.0',
     info: { title: 'textlog public API', version: '1.1.0',
-      description: 'Public reads, plus writes for accounts that have turned on API access.' },
+      description: 'Public reads and authenticated writes for every account.' },
     servers: [{ url: '/api/v1' }],
     paths: {
       '/feeds/latest': { get: { summary: 'Latest posts', parameters: collectionParameters, responses: jsonResponses } },

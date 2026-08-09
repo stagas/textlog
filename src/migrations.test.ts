@@ -19,8 +19,10 @@ describe('database migrations', () => {
       .toEqual({ count: 1 })
     expect(database.query('SELECT count(*) count FROM sqlite_master WHERE type=\'table\' AND name=\'post_hot\'').get())
       .toEqual({ count: 1 })
-    expect((database.query('PRAGMA table_info(users)').all() as { name: string }[]).map(column => column.name))
-      .toContain('activity_read_at')
+    const userColumns = (database.query('PRAGMA table_info(users)').all() as { name: string }[])
+      .map(column => column.name)
+    expect(userColumns).toContain('activity_read_at')
+    expect(userColumns).not.toContain('api_writes_enabled_at')
     expect(
       database.query('SELECT count(*) count FROM sqlite_master WHERE type=\'table\' AND name=\'activity_reads\'').get(),
     )
@@ -91,6 +93,17 @@ describe('database migrations', () => {
     const database = new Database(':memory:')
     database.run(`PRAGMA user_version=${latestMigrationVersion + 1}`)
     expect(() => runMigrations(database)).toThrow('newer than supported')
+  })
+
+  test('removes the obsolete per-account API write flag from version 24 databases', () => {
+    const database = new Database(':memory:')
+    runMigrations(database)
+    database.run('ALTER TABLE users ADD COLUMN api_writes_enabled_at TEXT; PRAGMA user_version=24')
+
+    runMigrations(database)
+
+    expect((database.query('PRAGMA table_info(users)').all() as { name: string }[]).map(column => column.name))
+      .not.toContain('api_writes_enabled_at')
   })
 
   test('discards legacy unkeyed visitor hashes during the privacy migration', () => {

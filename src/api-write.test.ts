@@ -10,7 +10,7 @@ function fixture() {
   database.run(`
     CREATE TABLE users (id INTEGER PRIMARY KEY,handle TEXT NOT NULL,email TEXT,bio TEXT NOT NULL DEFAULT '',
       created_at TEXT DEFAULT CURRENT_TIMESTAMP,deleted_at TEXT,suspended_at TEXT,email_verified_at TEXT,
-      handle_chosen_at TEXT,api_writes_enabled_at TEXT);
+      handle_chosen_at TEXT);
     CREATE TABLE handle_history (handle TEXT PRIMARY KEY COLLATE NOCASE,user_id INTEGER NOT NULL);
     CREATE TABLE posts (id INTEGER PRIMARY KEY,user_id INTEGER NOT NULL,parent_id INTEGER,body TEXT NOT NULL,
       created_at TEXT DEFAULT CURRENT_TIMESTAMP,deleted_at TEXT);
@@ -34,9 +34,9 @@ function fixture() {
       count INTEGER NOT NULL,PRIMARY KEY(scope,key_hash,bucket_start));
     CREATE TABLE post_hot (post_id INTEGER PRIMARY KEY,score REAL NOT NULL DEFAULT 0,
       score_updated_at TEXT NOT NULL,latest_activity_at TEXT NOT NULL);
-    INSERT INTO users(id,handle,email,email_verified_at,handle_chosen_at,api_writes_enabled_at) VALUES
-      (1,'alice','alice@example.com','2026-08-01','2026-08-01','2026-08-01'),
-      (2,'bob','bob@example.com','2026-08-01','2026-08-01',NULL);
+    INSERT INTO users(id,handle,email,email_verified_at,handle_chosen_at) VALUES
+      (1,'alice','alice@example.com','2026-08-01','2026-08-01'),
+      (2,'bob','bob@example.com','2026-08-01','2026-08-01');
     INSERT INTO posts(id,user_id,parent_id,body) VALUES (1,2,NULL,'a post by bob');
     INSERT INTO sessions(token_hash,user_id,expires_at,created_at) VALUES
       ('${hash('alice-token')}',1,${Date.now() + 86400000},${Date.now()}),
@@ -84,14 +84,9 @@ describe('API writes', () => {
     expect(withCookie.status).toBe(401)
   })
 
-  test('refuses until the account turns API access on', async () => {
-    const { app, database } = fixture()
+  test('allows every account to use authenticated writes', async () => {
+    const { app } = fixture()
 
-    const off = await post(app, 'bob-token', { body: 'hi' })
-    expect(off.status).toBe(403)
-    expect(await off.json()).toMatchObject({ error: { code: 'api_writes_disabled' } })
-
-    database.query('UPDATE users SET api_writes_enabled_at=? WHERE id=2').run('2026-08-09')
     expect((await post(app, 'bob-token', { body: 'hi' })).status).toBe(201)
   })
 
@@ -214,7 +209,9 @@ describe('API writes', () => {
     const { app } = fixture()
 
     const me = await call(app, '/api/v1/me', { token: 'alice-token' })
-    expect(await me.json()).toMatchObject({ data: { handle: 'alice', api_writes_enabled: true, can_post: true } })
+    const account = await me.json() as any
+    expect(account).toMatchObject({ data: { handle: 'alice', can_post: true } })
+    expect(account.data).not.toHaveProperty('api_writes_enabled')
 
     const updated = await call(app, '/api/v1/me', { method: 'PATCH', token: 'alice-token', body: { bio: 'builder' } })
     expect((await updated.json() as any).data.bio).toBe('builder')
