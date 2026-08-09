@@ -320,14 +320,18 @@ export const migrations: Migration[] = [
   },
   {
     version: 23,
+    name: 'increase_direct_reply_hot_weight',
+    up(database) {
+      rebuildHotPosts(database)
+    },
+  },
+  {
+    version: 24,
     name: 'api_writes',
     up(database) {
       addColumn(database, 'users', 'api_writes_enabled_at', 'TEXT')
       addColumn(database, 'magic_links', 'code_hash', 'TEXT')
       addColumn(database, 'magic_links', 'attempts', 'INTEGER NOT NULL DEFAULT 0')
-    name: 'increase_direct_reply_hot_weight',
-    up(database) {
-      rebuildHotPosts(database)
     },
   }, 
 ]
