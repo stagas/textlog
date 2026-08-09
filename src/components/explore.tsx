@@ -34,8 +34,7 @@ export function Explore({ user, welcome = false, peopleIds }: {
           <p>Follow a few people or hashtags below, or start with a note of your own.</p>
           <ActionPair className="welcome-actions"
             primary={<a className="button" href="/write">write your first note →</a>}
-            secondary={<a href="/">browse notes</a>}
-          />
+            secondary={<a href="/">browse notes</a>} />
         </section>
       )}
       {!welcome && (
@@ -73,7 +72,7 @@ export function Explore({ user, welcome = false, peopleIds }: {
                 <p className="profile-bio">{p.bio || 'No bio yet.'}</p>
               </article>
             ))}
-            {!people.length && <p className="section-empty">No people to suggest yet.</p>}
+            {!people.length && <p className="section-empty">No people to suggest.</p>}
           </div>
         </section>
       </div>
