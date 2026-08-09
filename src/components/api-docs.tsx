@@ -75,6 +75,39 @@ export function ApiDocs({ user }: { user: User | null }) {
 /users/:handle/posts.rss
 /tags/:tag/posts.atom`}</code></pre>
 
+        <h2>Embeds</h2>
+        <p>
+          Add a read-only textlog card to any website with an iframe. Copy an example and replace the handle,
+          hashtag, or post number. Feed embeds show the five newest notes and all links open textlog.
+        </p>
+        <pre><code>{`<iframe
+  src="https://textlog.cc/embed/user/alice?theme=system&accent=sage"
+  title="@alice on textlog"
+  width="100%" height="520" loading="lazy"
+  style="border:0"
+></iframe>`}</code></pre>
+        <pre><code>{`<!-- latest notes -->
+<iframe src="https://textlog.cc/embed/latest?theme=dark&accent=purple"
+  title="Latest notes on textlog" width="100%" height="520" style="border:0"></iframe>
+
+<!-- hot notes -->
+<iframe src="https://textlog.cc/embed/hot?theme=light&accent=blue"
+  title="Hot notes on textlog" width="100%" height="520" style="border:0"></iframe>
+
+<!-- a hashtag -->
+<iframe src="https://textlog.cc/embed/tag/photography?theme=system&accent=theme"
+  title="#photography on textlog" width="100%" height="520" style="border:0"></iframe>
+
+<!-- one post -->
+<iframe src="https://textlog.cc/embed/post/123?theme=sepia&accent=rust"
+  title="Post 123 on textlog" width="100%" height="220" style="border:0"></iframe>`}</code></pre>
+        <p>
+          Themes: <code>system</code>, <code>light</code>, <code>dark</code>, <code>sepia</code>, and{' '}
+          <code>dracula</code>. Accents: <code>theme</code>, <code>sage</code>, <code>purple</code>,{' '}
+          <code>cyan</code>, <code>pink</code>, <code>amber</code>, <code>blue</code>, and <code>rust</code>.
+          Invalid values safely fall back to <code>system</code> and <code>theme</code>.
+        </p>
+
         <h2>Pagination</h2>
         <p>
           Collections accept <code>limit</code> from 1–100 (default 20). Pass the opaque{' '}

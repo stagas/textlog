@@ -104,6 +104,8 @@ describe('security headers', () => {
     expect(securityHeaders()['Content-Security-Policy']).toContain('script-src \'none\'')
     expect(securityHeaders(true)['Content-Security-Policy']).toContain('script-src \'self\' \'unsafe-inline\'')
     expect(securityHeaders()['X-Frame-Options']).toBe('DENY')
+    expect(securityHeaders(false, undefined, true)['X-Frame-Options']).toBeUndefined()
+    expect(securityHeaders(false, undefined, true)['Content-Security-Policy']).toContain('frame-ancestors *')
   })
 
   test('only emits HSTS for a configured HTTPS origin', () => {

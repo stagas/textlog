@@ -84,7 +84,13 @@ function mix(foreground: string, background: string, amount: number) {
 }
 
 export function themeStyles(request: Request) {
-  const selected = appearance(request)
+  const url = new URL(request.url)
+  const requestedTheme = url.searchParams.get('theme')
+  const requestedAccent = url.searchParams.get('accent')
+  const selected = requestedTheme || requestedAccent ? {
+    theme: THEME_CHOICES.includes(requestedTheme as ThemeChoice) ? requestedTheme as ThemeChoice : 'system',
+    accent: ACCENT_CHOICES.includes(requestedAccent as AccentChoice) ? requestedAccent as AccentChoice : 'theme',
+  } : appearance(request)
   if (selected.theme === 'system') {
     return `${rules('light', selected.accent)}@media(prefers-color-scheme:dark){${rules('dark', selected.accent)}}`
   }

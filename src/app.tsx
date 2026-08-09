@@ -18,6 +18,7 @@ import { registerAdminRoutes } from './routes/admin'
 import { registerApiRoutes } from './routes/api'
 import { registerAuthRoutes } from './routes/auth'
 import { registerFeedsRoutes } from './routes/feeds'
+import { registerEmbedRoutes } from './routes/embed'
 import { registerIllegalActivityRoutes } from './routes/illegal-activity'
 import { registerInteractionsRoutes } from './routes/interactions'
 import { registerPostsRoutes } from './routes/posts'
@@ -119,7 +120,8 @@ app.use('*', async (c, next) => {
 
 app.use('*', async (c, next) => {
   await next()
-  for (const [name, value] of Object.entries(securityHeaders(devReloadEnabled))) c.header(name, value)
+  const embeddable = c.req.path.startsWith('/embed/')
+  for (const [name, value] of Object.entries(securityHeaders(devReloadEnabled, undefined, embeddable))) c.header(name, value)
   if (c.req.path === '/textlog.svg' || c.req.path === '/favicon-theme.svg') {
     c.header('Content-Security-Policy', "default-src 'none'; style-src 'unsafe-inline'")
   }
@@ -194,6 +196,10 @@ app.get('/styles.css', async c => {
   const asset = styles ?? await loadStylesAsset(stylesPath)
   return stylesResponse(asset, c.req.raw, !devReloadEnabled)
 })
+const embedStyles = await Bun.file(new URL('./embed.css', import.meta.url)).text()
+app.get('/embed.css', () => new Response(embedStyles, { headers: {
+  'content-type': 'text/css; charset=utf-8', 'cache-control': 'public, max-age=86400',
+} }))
 app.get('/theme.css', c => new Response(themeStyles(c.req.raw), {
   headers: { 'content-type': 'text/css; charset=utf-8', 'cache-control': 'private, no-store' },
 }))
@@ -227,6 +233,7 @@ app.get('/server-error', () => {
 })
 
 registerApiRoutes(app)
+registerEmbedRoutes(app)
 registerFeedsRoutes(app)
 registerAuthRoutes(app)
 registerAccountRoutes(app)

@@ -88,13 +88,15 @@ export function isSameOriginRequest(request: Request, appUrl: string | null | un
   }
 }
 
-export function securityHeaders(devReload = false, appUrl: string | undefined = Bun.env.APP_URL) {
+export function securityHeaders(devReload = false, appUrl: string | undefined = Bun.env.APP_URL,
+  embeddable = false)
+{
   const headers: Record<string, string> = {
     'Content-Security-Policy': [
       'default-src \'self\'',
       'base-uri \'none\'',
       'form-action \'self\'',
-      'frame-ancestors \'none\'',
+      embeddable ? 'frame-ancestors *' : 'frame-ancestors \'none\'',
       'object-src \'none\'',
       'img-src \'self\' data:',
       'style-src \'self\'',
@@ -104,8 +106,8 @@ export function securityHeaders(devReload = false, appUrl: string | undefined = 
     'Permissions-Policy': 'camera=(), microphone=(), geolocation=(), payment=(), usb=()',
     'Referrer-Policy': 'same-origin',
     'X-Content-Type-Options': 'nosniff',
-    'X-Frame-Options': 'DENY',
   }
+  if (!embeddable) headers['X-Frame-Options'] = 'DENY'
   try {
     if (appUrl && new URL(appUrl).protocol === 'https:') {
       headers['Strict-Transport-Security'] = 'max-age=31536000; includeSubDomains'
@@ -136,7 +138,7 @@ export function clearSessionCookie(appUrl: string | undefined = Bun.env.APP_URL)
 }
 
 const publicHtmlPaths = new Set(['/', '/hot', '/latest', '/explore', '/about', '/contact', '/dmca', '/legal', '/api'])
-const publicHtmlPattern = /^\/(?:u\/[a-z0-9_]{2,24}|post\/[1-9]\d*|tag\/[a-z0-9_]+)$/i
+const publicHtmlPattern = /^\/(?:u\/[a-z0-9_]{2,24}|post\/[1-9]\d*|tag\/[a-z0-9_]+|embed\/.+)$/i
 const transientHtmlParameters = ['reply', 'report', 'reported', 'edit', 'welcome', 'reset', 'token']
 
 export function htmlCacheControl(request: Request, response: Response) {
