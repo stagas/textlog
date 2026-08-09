@@ -2022,6 +2022,10 @@ form.report-panel {
   background: var(--accent);
 }
 
+.activity-item-unread {
+  background: color-mix(in srgb, var(--accent) 6%, transparent);
+}
+
 .activity-follow {
   padding: var(--space-4) var(--gutter);
   border-top: 1px solid var(--soft);
