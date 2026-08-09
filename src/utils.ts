@@ -65,7 +65,15 @@ function highlighted(text: string, terms: string[]) {
   return html + esc(text.slice(end))
 }
 
-export function linkify(body: string, mentionBios: Record<string, string> = {}, highlightTerms: string[] = []) {
+function linkAttributes(url: string, appUrl: string | undefined) {
+  const opensInNewTab = !appUrl || !url.startsWith(appUrl)
+  return opensInNewTab
+    ? ' target="_blank" rel="nofollow ugc noopener noreferrer"'
+    : ' rel="nofollow ugc"'
+}
+
+export function linkify(body: string, mentionBios: Record<string, string> = {}, highlightTerms: string[] = [],
+  appUrl: string | undefined = Bun.env.APP_URL) {
   const tokens = /\[([^\]\r\n]+)\]\((https?:\/\/[^\s<>")]+)\)|https?:\/\/[^\s<>"]+|(?<![A-Za-z0-9_])[@#][A-Za-z0-9_]+/gi
   let html = ''
   let end = 0
@@ -73,14 +81,14 @@ export function linkify(body: string, mentionBios: Record<string, string> = {}, 
     html += highlighted(body.slice(end, match.index), highlightTerms)
     const token = match[0]
     if (match[1] !== undefined && match[2] !== undefined) {
-      html += `<a href="${esc(match[2])}" title="${esc(match[2])}" target="_blank" rel="nofollow ugc noopener noreferrer">${
+      html += `<a href="${esc(match[2])}" title="${esc(match[2])}"${linkAttributes(match[2], appUrl)}>${
         highlighted(match[1], highlightTerms)
       }</a>`
     }
     else if (/^https?:\/\//i.test(token)) {
       const url = token.replace(/[.,!?;:)]+$/, '')
       const punctuation = token.slice(url.length)
-      html += `<a href="${esc(url)}" target="_blank" rel="nofollow ugc noopener noreferrer">${
+      html += `<a href="${esc(url)}"${linkAttributes(url, appUrl)}>${
         highlighted(url, highlightTerms)
       }</a>${
         esc(punctuation)

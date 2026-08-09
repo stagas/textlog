@@ -37,6 +37,12 @@ describe('post persistence', () => {
     expect(linkify('[test](https://example.com/)'))
       .toBe('<a href="https://example.com/" title="https://example.com/" target="_blank" rel="nofollow ugc noopener noreferrer">test</a>')
   })
+  test('opens links starting with APP_URL in the current tab', () => {
+    expect(linkify('https://textlog.test/post/1', {}, [], 'https://textlog.test'))
+      .toBe('<a href="https://textlog.test/post/1" rel="nofollow ugc">https://textlog.test/post/1</a>')
+    expect(linkify('[post](https://textlog.test/post/1)', {}, [], 'https://textlog.test'))
+      .toBe('<a href="https://textlog.test/post/1" title="https://textlog.test/post/1" rel="nofollow ugc">post</a>')
+  })
   test('escapes Markdown link labels and destinations', () => {
     expect(linkify('[<test>](https://example.com/a\'b)'))
       .toBe('<a href="https://example.com/a&#39;b" title="https://example.com/a&#39;b" target="_blank" rel="nofollow ugc noopener noreferrer">&lt;test&gt;</a>')
