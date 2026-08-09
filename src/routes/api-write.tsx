@@ -86,14 +86,14 @@ export function registerApiWriteRoutes(app: Hono, database: Database, appUrl?: s
 
     // Accounts are only ever created in a browser. An unknown address gets the same
     // answer as a known one so the API cannot be used to discover who has an account.
-    const account = database.query(`SELECT id FROM users
+    const account = database.query(`SELECT id,handle FROM users
       WHERE email=? AND handle_chosen_at IS NOT NULL AND deleted_at IS NULL AND suspended_at IS NULL`)
-      .get(email) as { id: number } | null
+      .get(email) as { id: number; handle: string } | null
     if (account) {
       const origin = apiOrigin(c.req.url, appUrl)
       const link = issueMagicLink(email, account.id, '/', origin, database)
       try {
-        await sendMagicLink(email, link.url, link.code)
+        await sendMagicLink(email, link.url, link.code, account.handle)
       }
       catch {
         return fail('email_failed', 'The code could not be sent. Please try again later', 503)

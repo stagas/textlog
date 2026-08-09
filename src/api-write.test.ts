@@ -1,5 +1,6 @@
 import { Database } from 'bun:sqlite'
 import { beforeEach, describe, expect, test } from 'bun:test'
+import { readFileSync, unlinkSync } from 'node:fs'
 import { Hono } from 'hono'
 import { registerApiRoutes } from './routes/api'
 import { WRITE_LIMIT } from './routes/api-write'
@@ -248,7 +249,8 @@ describe('API sign in', () => {
   test('answers the same whether or not the address has an account', async () => {
     const { app } = fixture()
     Bun.env.NODE_ENV = 'test'
-    Bun.env.EMAIL_CAPTURE_PATH = `/tmp/textlog-api-auth-${Date.now()}.jsonl`
+    const capturePath = `/tmp/textlog-api-auth-${Date.now()}.jsonl`
+    Bun.env.EMAIL_CAPTURE_PATH = capturePath
 
     const known = await call(app, '/api/v1/auth/request', {
       method: 'POST',
@@ -264,7 +266,11 @@ describe('API sign in', () => {
     expect(known.status).toBe(202)
     expect(unknown.status).toBe(202)
     expect(await known.json()).toEqual(await unknown.json())
+    const messages = readFileSync(capturePath, 'utf8').trim().split('\n').map(line => JSON.parse(line))
+    expect(messages).toHaveLength(1)
+    expect(messages[0].subject).toBe('Welcome back, @alice · textlog')
     delete Bun.env.EMAIL_CAPTURE_PATH
+    unlinkSync(capturePath)
   })
 
   test('exchanges a code for a token that can write', async () => {
