@@ -1186,7 +1186,8 @@ textarea {
   font-size: 11px;
 }
 
-.magic-link-output textarea {
+.magic-link-output textarea,
+.magic-link-output input {
   width: 100%;
   height: auto;
   min-height: 132px;
@@ -1203,7 +1204,13 @@ textarea {
   outline: none;
 }
 
-.magic-link-output textarea:focus-visible {
+.magic-link-output input {
+  min-height: 0;
+  letter-spacing: 4px;
+}
+
+.magic-link-output textarea:focus-visible,
+.magic-link-output input:focus-visible {
   outline: 2px solid var(--accent);
   outline-offset: -2px;
 }

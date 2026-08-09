@@ -71,7 +71,7 @@ export function AccountSecurity({ user, sessions, error, success }: {
   )
 }
 
-export function AccountMagicLink({ user, magicUrl }: { user: User; magicUrl: string }) {
+export function AccountMagicLink({ user, magicUrl, code }: { user: User; magicUrl: string; code: string }) {
   return (
     <Layout user={user} title="magic link">
       <div className="panel magic-link-page">
@@ -80,6 +80,10 @@ export function AccountMagicLink({ user, magicUrl }: { user: User; magicUrl: str
         <label className="magic-link-output">
           magic link
           <textarea readOnly value={magicUrl} autoFocus spellCheck={false} aria-label="magic link URL" />
+        </label>
+        <label className="magic-link-output app-entry-code">
+          app entry code
+          <input readOnly value={code} inputMode="numeric" aria-label="app entry code" />
         </label>
         <a className="quiet" href="/account/security">back to account security</a>
       </div>

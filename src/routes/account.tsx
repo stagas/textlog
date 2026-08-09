@@ -105,8 +105,8 @@ export function registerAccountRoutes(app: Hono) {
         limited.retryAfter)
     }
     const origin = Bun.env.APP_URL?.replace(/\/$/, '') || new URL(c.req.url).origin
-    const magicUrl = issueMagicLink(user.email, user.id, '/', origin).url
-    return page(<AccountMagicLink user={user} magicUrl={magicUrl} />)
+    const { url: magicUrl, code } = issueMagicLink(user.email, user.id, '/', origin)
+    return page(<AccountMagicLink user={user} magicUrl={magicUrl} code={code} />)
   })
 
   app.get('/account/export', c => {

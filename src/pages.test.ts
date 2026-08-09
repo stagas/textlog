@@ -239,11 +239,14 @@ test('AccountMagicLink renders a generated magic link on its own page for copyin
   const html = renderToStaticMarkup(React.createElement(AccountMagicLink, {
     user: { id: 1, handle: 'reader', email: 'reader@example.com', bio: '', email_verified_at: null },
     magicUrl: 'https://textlog.cc/enter/magic?token=secret-token',
+    code: '123456',
   }))
 
   expect(html).toContain('<textarea')
   expect(html).toContain('readOnly=""')
   expect(html).toContain('https://textlog.cc/enter/magic?token=secret-token</textarea>')
+  expect(html).toContain('app entry code')
+  expect(html).toContain('value="123456"')
   expect(html).toContain('href="/account/security"')
 })
 
