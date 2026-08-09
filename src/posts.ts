@@ -60,38 +60,44 @@ export function enrichPosts(database: Database, posts: PostView[], viewerId = -1
   }
   for (const handle of mentionedHandles) addMentionBio(handle)
   const parentIds = [...new Set(posts.flatMap(post => post.parent_id ? [post.parent_id] : []))]
-  const placeholders = ids.map(() => '?').join(',')
+  const countRootIds = [...new Set([...ids, ...parentIds])]
+  const placeholders = countRootIds.map(() => '?').join(',')
   const visibleReply = viewerId < 0 ? '' : `AND NOT EXISTS (SELECT 1 FROM blocks b WHERE
-    (b.blocker_id=? AND b.blocked_id=posts.user_id) OR (b.blocker_id=posts.user_id AND b.blocked_id=?))
+    (b.blocker_id=? AND b.blocked_id=p.user_id) OR (b.blocker_id=p.user_id AND b.blocked_id=?))
     AND NOT EXISTS (SELECT 1 FROM post_hashtags ph JOIN blocked_hashtags bh ON bh.tag=ph.tag
-      WHERE ph.post_id=posts.id AND bh.user_id=?)`
-  const countParameters = viewerId < 0 ? ids : [...ids, viewerId, viewerId, viewerId]
+      WHERE ph.post_id=p.id AND bh.user_id=?)`
+  const countParameters = viewerId < 0
+    ? countRootIds
+    : [...countRootIds, viewerId, viewerId, viewerId]
   const counts = database.query(
-    `SELECT parent_id,count(*) reply_count FROM posts
-      WHERE deleted_at IS NULL AND parent_id IN (${placeholders}) ${visibleReply} GROUP BY parent_id`,
-  ).all(...countParameters) as { parent_id: number; reply_count: number }[]
-  const countById = new Map(counts.map(row => [row.parent_id, row.reply_count]))
+    `WITH RECURSIVE descendants(root_id,id,deleted_at) AS (
+      SELECT id,id,deleted_at FROM posts WHERE id IN (${placeholders})
+      UNION ALL
+      SELECT descendants.root_id,p.id,p.deleted_at FROM posts p
+        JOIN descendants ON p.parent_id=descendants.id WHERE 1=1 ${visibleReply}
+    )
+    SELECT root_id,count(*) reply_count FROM descendants
+      WHERE id != root_id AND deleted_at IS NULL GROUP BY root_id`,
+  ).all(...countParameters) as { root_id: number; reply_count: number }[]
+  const countById = new Map(counts.map(row => [row.root_id, row.reply_count]))
 
   let parents = new Map<number, ParentPost>()
   if (parentIds.length) {
     const parentPlaceholders = parentIds.map(() => '?').join(',')
-    const parentReplyFilter = viewerId < 0 ? '' : `AND NOT EXISTS (SELECT 1 FROM blocks b WHERE
-      (b.blocker_id=? AND b.blocked_id=r.user_id) OR (b.blocker_id=r.user_id AND b.blocked_id=?))
-      AND NOT EXISTS (SELECT 1 FROM post_hashtags ph JOIN blocked_hashtags bh ON bh.tag=ph.tag
-        WHERE ph.post_id=r.id AND bh.user_id=?)`
     const parentFilter = viewerId < 0 ? '' : `AND NOT EXISTS (SELECT 1 FROM blocks b WHERE
       (b.blocker_id=? AND b.blocked_id=p.user_id) OR (b.blocker_id=p.user_id AND b.blocked_id=?))
       AND NOT EXISTS (SELECT 1 FROM post_hashtags ph JOIN blocked_hashtags bh ON bh.tag=ph.tag
         WHERE ph.post_id=p.id AND bh.user_id=?)`
     const parentParameters = viewerId < 0
       ? parentIds
-      : [viewerId, viewerId, viewerId, ...parentIds, viewerId, viewerId, viewerId]
+      : [...parentIds, viewerId, viewerId, viewerId]
     const rows = database.query(
       `SELECT p.id,p.body,p.created_at,p.deleted_at,u.handle,u.bio,
-        (SELECT count(*) FROM posts r WHERE r.parent_id=p.id AND r.deleted_at IS NULL ${parentReplyFilter}) reply_count
+        0 reply_count
         FROM posts p JOIN users u ON u.id=p.user_id WHERE p.id IN (${parentPlaceholders}) ${parentFilter}`,
     ).all(...parentParameters) as ParentPost[]
     for (const parent of rows) {
+      parent.reply_count = countById.get(parent.id) || 0
       for (const handle of extractMentions(parent.body)) addMentionBio(handle)
       parent.mention_bios = mentionBios
     }
