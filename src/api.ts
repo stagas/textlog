@@ -81,14 +81,32 @@ export function serializePost(row: ApiPostRow, origin: string): ApiPost {
 }
 
 const postSelect = `SELECT p.id,p.body,p.parent_id,p.created_at,u.handle,
-  (SELECT count(*) FROM posts r JOIN users ru ON ru.id=r.user_id
-    WHERE r.parent_id=p.id AND r.deleted_at IS NULL AND ru.deleted_at IS NULL) reply_count
+  0 reply_count
   FROM posts p JOIN users u ON u.id=p.user_id`
+
+function withReplyCounts<T extends Omit<ApiPostRow, 'reply_count'>>(
+  database: Database,
+  rows: T[],
+): Array<T & { reply_count: number }> {
+  if (!rows.length) return []
+  const placeholders = rows.map(() => '?').join(',')
+  const counts = database.query(`WITH RECURSIVE descendants(root_id,id,user_id,deleted_at) AS (
+    SELECT id,id,user_id,deleted_at FROM posts WHERE id IN (${placeholders})
+    UNION ALL
+    SELECT descendants.root_id,p.id,p.user_id,p.deleted_at FROM posts p
+      JOIN descendants ON p.parent_id=descendants.id
+  ) SELECT descendants.root_id,count(*) reply_count FROM descendants
+    JOIN users u ON u.id=descendants.user_id
+    WHERE descendants.id!=descendants.root_id AND descendants.deleted_at IS NULL AND u.deleted_at IS NULL
+    GROUP BY descendants.root_id`).all(...rows.map(row => row.id)) as { root_id: number; reply_count: number }[]
+  const countById = new Map(counts.map(row => [row.root_id, row.reply_count]))
+  return rows.map(row => ({ ...row, reply_count: countById.get(row.id) || 0 }))
+}
 
 export function apiPost(database: Database, id: number, origin: string) {
   const row = database.query(`${postSelect} WHERE p.id=? AND p.deleted_at IS NULL AND u.deleted_at IS NULL`)
     .get(id) as ApiPostRow | null
-  return row ? serializePost(row, origin) : null
+  return row ? serializePost(withReplyCounts(database, [row])[0], origin) : null
 }
 
 export function apiPosts(database: Database, origin: string, options: {
@@ -119,7 +137,7 @@ export function apiPosts(database: Database, origin: string, options: {
   const rows = database.query(`${postSelect} WHERE ${filters.join(' AND ')}
     ORDER BY p.id DESC LIMIT ?`).all(...parameters, options.limit + 1) as ApiPostRow[]
   const hasMore = rows.length > options.limit
-  const pageRows = rows.slice(0, options.limit)
+  const pageRows = withReplyCounts(database, rows.slice(0, options.limit))
   return {
     data: pageRows.map(row => serializePost(row, origin)),
     pagination: { next_cursor: hasMore ? encodeCursor(pageRows[pageRows.length - 1].id) : null },
@@ -131,16 +149,7 @@ export function apiHotPosts(database: Database, origin: string, limit: number, c
   const rows = getHotPosts(database, limit + 1, cursor, asOf, -1, true)
   const hasMore = rows.length > limit
   const selected = rows.slice(0, limit)
-  const counts = new Map<number, number>()
-  if (selected.length) {
-    const placeholders = selected.map(() => '?').join(',')
-    const replyCounts = database.query(`SELECT r.parent_id,count(*) count FROM posts r
-      JOIN users u ON u.id=r.user_id WHERE r.parent_id IN (${placeholders})
-      AND r.deleted_at IS NULL AND u.deleted_at IS NULL GROUP BY r.parent_id`)
-      .all(...selected.map(row => row.id)) as { parent_id: number; count: number }[]
-    for (const row of replyCounts) counts.set(row.parent_id, row.count)
-  }
-  const pageRows = selected.map(row => ({ ...row, reply_count: counts.get(row.id) || 0 }))
+  const pageRows = withReplyCounts(database, selected)
   return {
     data: pageRows.map(row => serializePost(row, origin)),
     pagination: { next_cursor: hasMore ? encodeHotCursor(hotCursor(rows[limit - 1], asOf)) : null },
@@ -154,7 +163,7 @@ export function apiSearchPosts(database: Database, origin: string, query: string
     ORDER BY bm25(post_search),p.id DESC LIMIT ? OFFSET ?`)
     .all(expression, limit + 1, offset) as ApiPostRow[]
   const hasMore = rows.length > limit
-  const pageRows = rows.slice(0, limit)
+  const pageRows = withReplyCounts(database, rows.slice(0, limit))
   return {
     data: pageRows.map(row => serializePost(row, origin)),
     pagination: { next_cursor: hasMore ? encodeCursor(offset + limit) : null },

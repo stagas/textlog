@@ -149,6 +149,25 @@ describe('public API', () => {
     expect(oldPosts.headers.get('location')).toBe('/api/v1/users/Alice/posts?limit=5')
   })
 
+  test('reports aggregate descendant counts without embedding reply bodies', async () => {
+    const { app, database } = fixture()
+    database.run(`INSERT INTO posts(id,user_id,parent_id,body,created_at) VALUES
+      (6,1,2,'a nested reply','2026-08-03 14:30:00'),
+      (7,2,6,'a deleted descendant','2026-08-03 14:40:00')`)
+    database.run(`UPDATE posts SET deleted_at='2026-08-03 14:50:00' WHERE id=7`)
+    database.run(`INSERT INTO post_hot VALUES(6,0,0,'2026-08-03 14:30:00','2026-08-03 14:30:00')`)
+    rebuildHotPosts(database)
+
+    const latest = await (await request(app, '/api/v1/feeds/latest')).json() as any
+    const hot = await (await request(app, '/api/v1/feeds/hot')).json() as any
+    const post = await (await request(app, '/api/v1/posts/1')).json() as any
+
+    expect(latest.data.find((item: any) => item.id === 1).reply_count).toBe(2)
+    expect(hot.data.find((item: any) => item.id === 1).reply_count).toBe(2)
+    expect(post.data.reply_count).toBe(2)
+    expect(post.data.replies).toBeUndefined()
+  })
+
   test('supports preflight, publishes OpenAPI, and rejects mutation methods', async () => {
     const { app } = fixture()
     const preflight = await request(app, '/api/v1/feeds/latest', { method: 'OPTIONS' })
