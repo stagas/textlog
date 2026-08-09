@@ -4,6 +4,7 @@ import { db, type User } from '../db'
 import { PAGE_SIZE } from '../pagination'
 import { enrichPosts } from '../posts'
 import type { PostView } from '../types'
+import { fmt, fmtFull } from '../utils'
 import { Layout } from './layout'
 import { ActionPair, Pagination } from './page-shared'
 import { Post } from './post'
@@ -74,33 +75,35 @@ export function Activity({ user, page }: { user: User; page: number }) {
             <div className={`activity-item${rawPost.unread ? ' activity-item-unread' : ''}`}
               key={rawPost.activity_kind === 'follow' ? `follow-${rawPost.user_id}-${index}` : rawPost.id}
             >
-              <div className="activity-context">
-                {rawPost.activity_kind === 'reply'
-                  ? 'replied to you'
-                  : rawPost.activity_kind === 'mention'
-                  ? 'mentioned you'
-                  : 'followed you'}
-              </div>
               {rawPost.activity_kind === 'follow'
                 ? (
-                  <div className="post people activity-follow">
-                    <article className="activity-person">
-                      <div>
-                        <div>
-                          <a href={'/u/' + rawPost.handle}>@{rawPost.handle}</a>
-                          <small>{rawPost.posts} {rawPost.posts === 1 ? 'note' : 'notes'}</small>
-                        </div>
+                  <article className="activity-follow">
+                    <div className="activity-follow-content">
+                      <div className="activity-follow-main">
+                        {!!rawPost.unread && <span className="activity-item-unread-dot" aria-label="unread" />}
+                        <a href={'/u/' + rawPost.handle}>@{rawPost.handle}</a>
+                        <span>followed you:</span>
+                      <time dateTime={rawPost.created_at} title={fmtFull(rawPost.created_at)}>
+                        {fmt(rawPost.created_at)}
+                      </time>
+                      <span aria-hidden="true">·</span>
+                      <small>{rawPost.posts} {rawPost.posts === 1 ? 'note' : 'notes'}</small>
                       </div>
                       <p className="profile-bio">{rawPost.bio || 'No bio yet.'}</p>
-                      <form method="post" action={'/follow/' + rawPost.handle}>
-                        <button className={`button${rawPost.viewerFollowing ? ' unfollow-button' : ''}`}>
-                          {rawPost.viewerFollowing ? 'unfollow' : 'follow'}
-                        </button>
-                      </form>
-                    </article>
-                  </div>
+                    </div>
+                    <form method="post" action={'/follow/' + rawPost.handle}>
+                      <button className={`button${rawPost.viewerFollowing ? ' unfollow-button' : ''}`}>
+                        {rawPost.viewerFollowing ? 'unfollow' : 'follow'}
+                      </button>
+                    </form>
+                  </article>
                 )
-                : <Post p={post} user={user} showReplyCount tappable />}
+                : (
+                  <Post p={post} user={user} showReplyCount tappable
+                    contextLabel={rawPost.activity_kind === 'reply' ? 'replied:' : 'mentioned you:'}
+                    contextUnread={!!rawPost.unread}
+                  />
+                )}
             </div>
           )
         })

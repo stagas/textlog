@@ -27,9 +27,12 @@ export function Post({
   highlightTerms = [],
   tappable = false,
   tappableParent = false,
+  contextLabel,
+  contextUnread = false,
 }: { p: PostView; user: User | null; showReplyAction?: boolean; showOwnerActions?: boolean;
   showModerateAction?: boolean; showParent?: boolean; showReplyCount?: boolean; replyHref?: string; replyLabel?: string;
-  reportHref?: string; foldControlId?: string; highlightTerms?: string[]; tappable?: boolean; tappableParent?: boolean })
+  reportHref?: string; foldControlId?: string; highlightTerms?: string[]; tappable?: boolean; tappableParent?: boolean;
+  contextLabel?: string; contextUnread?: boolean })
 {
   const parent = showParent ? p.parent : null
   const hasTappableParent = Boolean(parent && (tappable || tappableParent))
@@ -56,7 +59,9 @@ export function Post({
         <a className="post-hit-area" href={'/post/' + p.id} aria-label={`open post by @${p.handle}`} />
       )}
       <div className="posttop">
+        {contextUnread && <span className="activity-item-unread-dot" aria-label="unread" />}
         <a className="postauthor" href={'/u/' + p.handle} title={p.bio || 'No bio yet.'}>@{p.handle}</a>
+        {contextLabel && <span className="post-context">{contextLabel}</span>}
         <a className="postdate" href={'/post/' + p.id}>
           <time dateTime={p.created_at} title={fmtFull(p.created_at)}>{fmt(p.created_at)}</time>
           {showReplyCount && replyCount > 0 && <span>{' '}· {replyCount} {replyCount === 1 ? 'reply' : 'replies'}
