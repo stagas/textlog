@@ -22,23 +22,26 @@ import { currentUser } from '../utils'
 export function registerFeedsRoutes(app: Hono) {
   app.get('/', c => {
     const user = currentUser(c.req.raw)
+    const requestUrl = new URL(c.req.url)
+    const configuredOrigin = Bun.env.APP_URL?.replace(/\/$/, '')
+    const pageUrl = `${configuredOrigin || requestUrl.origin}/${requestUrl.search}`
     const preferredFeed = feedPreference(c.req.raw)
     if (preferredFeed === 'latest') {
       const cursorValue = c.req.query('cursor')
       const cursor = decodePostCursor(cursorValue)
       if (cursorValue && !cursor) return c.text('Invalid cursor', 400)
-      return page(<PublicFeed user={user} cursor={cursor} path="/" />)
+      return page(<PublicFeed user={user} cursor={cursor} path="/" pageUrl={pageUrl} />)
     }
     if (preferredFeed === 'hot' || !user) {
       const cursorValue = c.req.query('cursor')
       const cursor = decodeHotCursor(cursorValue)
       if (cursorValue && !cursor) return c.text('Invalid cursor', 400)
-      return page(<HotFeed user={user} cursor={cursor} path="/" />)
+      return page(<HotFeed user={user} cursor={cursor} path="/" pageUrl={pageUrl} />)
     }
     const cursorValue = c.req.query('cursor')
     const cursor = decodePostCursor(cursorValue)
     if (cursorValue && !cursor) return c.text('Invalid cursor', 400)
-    return page(<Feed user={user} cursor={cursor} path="/" />)
+    return page(<Feed user={user} cursor={cursor} path="/" pageUrl={pageUrl} />)
   })
 
   app.get('/for-you', c => {

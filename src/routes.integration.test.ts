@@ -142,6 +142,8 @@ test('consequential account, content, reporting, and admin flows work over HTTP'
   expect(authenticatedHomeHtml).toContain('class="account-nav"')
   expect(authenticatedHomeHtml).toContain('@alice')
   expect(authenticatedHomeHtml).not.toContain('href="/login">login</a>')
+  const cacheBustedHomeHtml = await (await request('/?v=94721')).text()
+  expect(cacheBustedHomeHtml).toContain(`property="og:url" content="${origin}/?v=94721"`)
   const publicExplore = await request('/explore', { cookie: aliceCookie })
   expect(publicExplore.status).toBe(200)
   const publicExploreHtml = await publicExplore.text()

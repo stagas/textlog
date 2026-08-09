@@ -7,7 +7,8 @@ import { CursorPagination, FeedTabs, GlobalFeedEmpty } from './page-shared'
 import { Post } from './post'
 
 export function PublicFeed(
-  { cursor, user = null, path = '/' }: { cursor: PostCursor | null; user?: User | null; path?: string },
+  { cursor, user = null, path = '/', pageUrl }: { cursor: PostCursor | null; user?: User | null; path?: string;
+    pageUrl?: string },
 ) {
   const viewerId = user?.id ?? -1
   const cursorFilter = cursor ? `AND p.id ${cursor.direction === 'previous' ? '>' : '<'} ?` : ''
@@ -24,7 +25,7 @@ export function PublicFeed(
   const result = postCursorPage(rows, cursor)
   const posts = enrichPosts(db, result.rows, viewerId)
   return (
-    <Layout user={user} title={path === '/latest' ? 'latest' : undefined}
+    <Layout user={user} title={path === '/latest' ? 'latest' : undefined} pageUrl={pageUrl}
       feeds={{ title: 'Latest notes', rss: '/latest.rss', atom: '/latest.atom' }}>
       <h1 className="visually-hidden">Latest notes</h1>
       <FeedTabs active="latest" user={user} />

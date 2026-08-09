@@ -28,6 +28,7 @@ export function Layout({
   title,
   user,
   social,
+  pageUrl,
   feeds,
   logoutNavigation = false,
   children,
@@ -37,6 +38,7 @@ export function Layout({
   logoutNavigation?: boolean
   social?: { description: string; image: string; url: string; type?: 'article' | 'profile' | 'website';
     imageAlt?: string }
+  pageUrl?: string
   feeds?: { title: string; rss: string; atom: string }
   children: React.ReactNode
 }) {
@@ -46,7 +48,7 @@ export function Layout({
   const share = social || {
     description: 'A quieter place for your thoughts.',
     image: `${appOrigin}/og.png?v=2`,
-    url: appOrigin ? `${appOrigin}/` : '',
+    url: pageUrl || (appOrigin ? `${appOrigin}/` : ''),
     type: 'website' as const,
     imageAlt: 'textlog',
   }

@@ -6,11 +6,12 @@ import { Layout } from './layout'
 import { ActionPair, CursorPagination, FeedTabs } from './page-shared'
 import { Post } from './post'
 
-export function Feed({ user, cursor, title, path = '/for-you' }: {
+export function Feed({ user, cursor, title, path = '/for-you', pageUrl }: {
   user: User
   cursor: PostCursor | null
   title?: string
   path?: string
+  pageUrl?: string
 }) {
   const cursorFilter = cursor ? `AND p.id ${cursor.direction === 'previous' ? '>' : '<'} ?` : ''
   const parameters = [user.id, user.id, user.id, user.id, user.id, user.id]
@@ -26,7 +27,7 @@ export function Feed({ user, cursor, title, path = '/for-you' }: {
   const result = postCursorPage(rows, cursor)
   const posts = enrichPosts(db, result.rows, user.id)
   return (
-    <Layout user={user} title={title}>
+    <Layout user={user} title={title} pageUrl={pageUrl}>
       <h1 className="visually-hidden">Your feed</h1>
       <FeedTabs active="following" user={user} />
       {posts.length
