@@ -74,6 +74,7 @@ export function registerPostsRoutes(app: Hono) {
     return new Response(body, {
       headers: {
         'content-type': 'image/png',
+        'content-length': String(image.byteLength),
         'cache-control': 'public, max-age=3600, stale-while-revalidate=86400',
       },
     })

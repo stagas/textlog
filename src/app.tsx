@@ -223,7 +223,11 @@ app.get('/favicon-theme.svg', c =>
   }))
 app.get('/og.png', () => {
   return new Response(defaultOgBody, {
-    headers: { 'content-type': 'image/png', 'cache-control': 'public, max-age=86400, stale-while-revalidate=604800' },
+    headers: {
+      'content-type': 'image/png',
+      'content-length': String(defaultOgBody.byteLength),
+      'cache-control': 'public, max-age=86400, stale-while-revalidate=604800',
+    },
   })
 })
 
