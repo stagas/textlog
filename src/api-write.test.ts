@@ -33,7 +33,7 @@ function fixture() {
       created_at INTEGER NOT NULL);
     CREATE TABLE api_rate_limit_buckets (scope TEXT NOT NULL,key_hash TEXT NOT NULL,bucket_start INTEGER NOT NULL,
       count INTEGER NOT NULL,PRIMARY KEY(scope,key_hash,bucket_start));
-    CREATE TABLE post_hot (post_id INTEGER PRIMARY KEY,score REAL NOT NULL DEFAULT 0,
+    CREATE TABLE post_hot (post_id INTEGER PRIMARY KEY,score REAL NOT NULL DEFAULT 0,reply_count INTEGER NOT NULL DEFAULT 0,
       score_updated_at TEXT NOT NULL,latest_activity_at TEXT NOT NULL);
     INSERT INTO users(id,handle,email,email_verified_at,handle_chosen_at) VALUES
       (1,'alice','alice@example.com','2026-08-01','2026-08-01'),

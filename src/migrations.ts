@@ -364,6 +364,14 @@ export const migrations: Migration[] = [
       INSERT INTO post_search(post_search) VALUES('rebuild');`)
     },
   },
+  {
+    version: 27,
+    name: 'exponential_reply_hot_decay',
+    up(database) {
+      addColumn(database, 'post_hot', 'reply_count', 'INTEGER NOT NULL DEFAULT 0')
+      rebuildHotPosts(database)
+    },
+  },
 ]
 
 export const latestMigrationVersion = migrations.at(-1)!.version

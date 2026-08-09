@@ -20,7 +20,7 @@ beforeEach(() => {
     CREATE TABLE blocks (blocker_id INTEGER NOT NULL, blocked_id INTEGER NOT NULL);
     CREATE TABLE post_hashtags (post_id INTEGER NOT NULL,tag TEXT NOT NULL);
     CREATE TABLE blocked_hashtags (user_id INTEGER NOT NULL,tag TEXT NOT NULL);
-    CREATE TABLE post_hot (post_id INTEGER PRIMARY KEY,score REAL NOT NULL DEFAULT 0,
+    CREATE TABLE post_hot (post_id INTEGER PRIMARY KEY,score REAL NOT NULL DEFAULT 0,reply_count INTEGER NOT NULL DEFAULT 0,
       score_updated_at TEXT NOT NULL,latest_activity_at TEXT NOT NULL);
   `)
   database.query('INSERT INTO users(id,handle) VALUES(?,?)').run(1, 'tester')
@@ -29,7 +29,7 @@ beforeEach(() => {
 function post(id: number, createdAt: string, parentId: number | null = null, deletedAt: string | null = null) {
   database.query('INSERT INTO posts VALUES(?,?,?,?,?,?)')
     .run(id, 1, parentId, `post ${id}`, createdAt, null)
-  database.query('INSERT INTO post_hot VALUES(?,0,?,?)').run(id, createdAt, createdAt)
+  database.query('INSERT INTO post_hot VALUES(?,0,0,?,?)').run(id, createdAt, createdAt)
   recordHotActivity(database, id)
   if (deletedAt) {
     database.query('UPDATE posts SET deleted_at=? WHERE id=?').run(deletedAt, id)
@@ -40,7 +40,7 @@ function post(id: number, createdAt: string, parentId: number | null = null, del
 function postBy(userId: number, id: number, createdAt: string, parentId: number | null = null) {
   database.query('INSERT INTO posts VALUES(?,?,?,?,?,?)')
     .run(id, userId, parentId, `post ${id}`, createdAt, null)
-  database.query('INSERT INTO post_hot VALUES(?,0,?,?)').run(id, createdAt, createdAt)
+  database.query('INSERT INTO post_hot VALUES(?,0,0,?,?)').run(id, createdAt, createdAt)
   recordHotActivity(database, id)
 }
 
@@ -64,7 +64,8 @@ describe('hot feed ranking', () => {
 
     const results = getHotPosts(database, 20, null, asOf)
     expect(results[0].id).toBe(1)
-    expect(results.find(result => result.id === 1)?.hot_score).toBeCloseTo(9 * Math.pow(0.5, 3))
+    expect(results.find(result => result.id === 1)?.hot_score)
+      .toBeCloseTo(9 * Math.pow(0.5, 24 / (8 * Math.pow(2, 2 / 5))))
   })
 
   test('direct replies give active threads substantially more staying power', () => {
@@ -82,6 +83,26 @@ describe('hot feed ranking', () => {
 
     rebuildHotPosts(database)
     expect(getHotPosts(database, 20, null, asOf)[0].id).toBe(1)
+  })
+
+  test('cumulative replies exponentially extend the recency half-life', () => {
+    database.query('INSERT INTO users(id,handle) VALUES(?,?)').run(2, 'replier')
+    for (const [rootId, replies] of [[1, 1], [100, 5], [200, 20]] as const) {
+      post(rootId, '2026-08-01 20:00:00')
+      for (let index = 1; index <= replies; index++) {
+        postBy(2, rootId + index, '2026-08-01 20:00:00', rootId)
+      }
+    }
+
+    const results = getHotPosts(database, 100, null, asOf)
+    for (const [rootId, replies, halfLife] of [[1, 1, 8 * Math.pow(2, 1 / 5)], [100, 5, 16], [200, 20, 128]] as const) {
+      const stored = database.query('SELECT score,reply_count FROM post_hot WHERE post_id=?').get(rootId) as {
+        score: number; reply_count: number
+      }
+      const ranked = results.find(result => result.id === rootId)!
+      expect(stored.reply_count).toBe(replies)
+      expect(ranked.hot_score / stored.score).toBeCloseTo(Math.pow(0.5, 40 / halfLife))
+    }
   })
 
   test('nested reply boosts halve at each level', () => {
@@ -174,7 +195,7 @@ describe('hot feed ranking', () => {
     post(1, '2026-08-03 11:00:00')
     database.query('INSERT INTO posts VALUES(?,?,?,?,?,?)')
       .run(2, 2, null, 'hidden', '2026-08-03 12:00:00', null)
-    database.query('INSERT INTO post_hot VALUES(?,0,?,?)')
+    database.query('INSERT INTO post_hot VALUES(?,0,0,?,?)')
       .run(2, '2026-08-03 12:00:00', '2026-08-03 12:00:00')
     recordHotActivity(database, 2)
     database.query('INSERT INTO blocks VALUES(?,?)').run(2, 1)

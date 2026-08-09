@@ -25,9 +25,16 @@ const cursorVersion = 3
 const activityHalfLifeHours = 6
 const recencyHalfLifeHours = 8
 const directReplyWeight = 4
+const repliesPerHalfLifeDoubling = 5
+const maxReplyDecayBoost = 20
 
 function hasHotTable(database: Database) {
   return Boolean(database.query('SELECT 1 FROM sqlite_master WHERE type=\'table\' AND name=\'post_hot\'').get())
+}
+
+function hasReplyCount(database: Database) {
+  return (database.query('PRAGMA table_info(post_hot)').all() as { name: string }[])
+    .some(column => column.name === 'reply_count')
 }
 
 export function encodeHotCursor(cursor: HotCursor) {
@@ -85,6 +92,7 @@ export function recordHotActivity(database: Database, postId: number) {
     database.query(`UPDATE post_hot SET
       score=score*pow(0.5,max(0,(julianday(?) - julianday(score_updated_at))*24)/${activityHalfLifeHours}.0)
         +?,
+      reply_count=reply_count+1,
       score_updated_at=?,latest_activity_at=max(latest_activity_at,?) WHERE post_id=?`)
       .run(event.created_at, weight, event.created_at, event.created_at, ancestor.id)
   }
@@ -92,6 +100,7 @@ export function recordHotActivity(database: Database, postId: number) {
 
 export function rebuildHotPosts(database: Database, postIds?: number[]) {
   if (!hasHotTable(database)) return
+  const tracksReplyCount = hasReplyCount(database)
   if (!postIds) {
     const rankings = database.query(`WITH RECURSIVE descendants(candidate_id,id,user_id,created_at,deleted_at,depth) AS (
       SELECT parent_id,id,user_id,created_at,deleted_at,1 FROM posts WHERE parent_id IS NOT NULL
@@ -107,18 +116,24 @@ export function rebuildHotPosts(database: Database, postIds?: number[]) {
       JOIN posts candidate ON candidate.id=descendants.candidate_id WHERE descendants.user_id!=candidate.user_id
     ), latest AS (
       SELECT candidate_id,max(created_at) latest_activity_at FROM activity WHERE deleted_at IS NULL GROUP BY candidate_id
-    ) SELECT activity.candidate_id post_id,latest.latest_activity_at,
+    ) SELECT activity.candidate_id post_id,latest.latest_activity_at,count(*)-1 reply_count,
       sum(weight*pow(0.5,max(0,(julianday(latest.latest_activity_at)-julianday(activity.created_at))*24)/${activityHalfLifeHours}.0)) score
       FROM activity JOIN latest ON latest.candidate_id=activity.candidate_id
       WHERE activity.deleted_at IS NULL GROUP BY activity.candidate_id`).all() as { post_id: number;
-      latest_activity_at: string; score: number }[]
-    database.query(
-      'UPDATE post_hot SET score=0,score_updated_at=\'1970-01-01 00:00:00\',latest_activity_at=\'1970-01-01 00:00:00\'',
-    )
+      latest_activity_at: string; reply_count: number; score: number }[]
+    database.query(tracksReplyCount
+      ? 'UPDATE post_hot SET score=0,reply_count=0,score_updated_at=\'1970-01-01 00:00:00\',latest_activity_at=\'1970-01-01 00:00:00\''
+      : 'UPDATE post_hot SET score=0,score_updated_at=\'1970-01-01 00:00:00\',latest_activity_at=\'1970-01-01 00:00:00\'')
       .run()
-    const update = database.query('UPDATE post_hot SET score=?,score_updated_at=?,latest_activity_at=? WHERE post_id=?')
+    const update = database.query(tracksReplyCount
+      ? 'UPDATE post_hot SET score=?,reply_count=?,score_updated_at=?,latest_activity_at=? WHERE post_id=?'
+      : 'UPDATE post_hot SET score=?,score_updated_at=?,latest_activity_at=? WHERE post_id=?')
     for (const ranking of rankings) {
-      update.run(ranking.score, ranking.latest_activity_at, ranking.latest_activity_at, ranking.post_id)
+      if (tracksReplyCount) {
+        update.run(ranking.score, ranking.reply_count, ranking.latest_activity_at, ranking.latest_activity_at,
+          ranking.post_id)
+      }
+      else update.run(ranking.score, ranking.latest_activity_at, ranking.latest_activity_at, ranking.post_id)
     }
     return
   }
@@ -136,11 +151,14 @@ export function rebuildHotPosts(database: Database, postIds?: number[]) {
       ${directReplyWeight}*pow(0.5,descendants.depth-1) FROM descendants
     JOIN posts candidate ON candidate.id=? WHERE descendants.user_id!=candidate.user_id
   ) SELECT created_at,weight FROM activity WHERE deleted_at IS NULL`)
-  const update = database.query('UPDATE post_hot SET score=?,score_updated_at=?,latest_activity_at=? WHERE post_id=?')
+  const update = database.query(tracksReplyCount
+    ? 'UPDATE post_hot SET score=?,reply_count=?,score_updated_at=?,latest_activity_at=? WHERE post_id=?'
+    : 'UPDATE post_hot SET score=?,score_updated_at=?,latest_activity_at=? WHERE post_id=?')
   for (const candidate of candidates) {
     const events = activity.all(candidate.id, candidate.id, candidate.id) as { created_at: string; weight: number }[]
     if (!events.length) {
-      update.run(0, '1970-01-01 00:00:00', '1970-01-01 00:00:00', candidate.id)
+      if (tracksReplyCount) update.run(0, 0, '1970-01-01 00:00:00', '1970-01-01 00:00:00', candidate.id)
+      else update.run(0, '1970-01-01 00:00:00', '1970-01-01 00:00:00', candidate.id)
       continue
     }
     const latest = events.reduce((value, event) => event.created_at > value ? event.created_at : value,
@@ -149,7 +167,8 @@ export function rebuildHotPosts(database: Database, postIds?: number[]) {
       sum
       + event.weight * Math.pow(0.5, Math.max(0, (Date.parse(`${latest.replace(' ', 'T')}Z`)
         - Date.parse(`${event.created_at.replace(' ', 'T')}Z`)) / (activityHalfLifeHours * 3_600_000))), 0)
-    update.run(score, latest, latest, candidate.id)
+    if (tracksReplyCount) update.run(score, events.length - 1, latest, latest, candidate.id)
+    else update.run(score, latest, latest, candidate.id)
   }
 }
 
@@ -194,7 +213,8 @@ export function getHotPosts(
   }
   parameters.push(limit)
   const rows = database.query(`WITH ranked AS (
-    SELECT post_id,score*pow(0.5,max(0,(julianday(?) - julianday(score_updated_at))*24)/${recencyHalfLifeHours}.0) hot_score
+    SELECT post_id,score*pow(0.5,max(0,(julianday(?) - julianday(score_updated_at))*24)
+      /(${recencyHalfLifeHours}.0*pow(2.0,min(reply_count,${maxReplyDecayBoost})/${repliesPerHalfLifeDoubling}.0))) hot_score
     FROM post_hot
   ) SELECT p.*,u.handle,ranked.hot_score,h.latest_activity_at
     FROM ranked JOIN post_hot h ON h.post_id=ranked.post_id
