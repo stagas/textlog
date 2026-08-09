@@ -1,7 +1,7 @@
 import { describe, expect, test } from 'bun:test'
 import { applyHtmlCachePolicy, clearSessionCookie, feedPreference, feedPreferenceCookie, FORM_REQUEST_BODY_LIMIT,
-  htmlCacheControl, isSameOriginRequest, limitedFormData, RequestBodyError, safeLocalPath, safeRefererPath,
-  securityHeaders, sessionCookie, stringField } from './http'
+  htmlCacheControl, isSameOriginRequest, limitedFormData, requiresSameOrigin, RequestBodyError, safeLocalPath,
+  safeRefererPath, securityHeaders, sessionCookie, stringField } from './http'
 
 describe('local redirects', () => {
   test('accepts local paths and rejects ambiguous or external targets', () => {
@@ -139,5 +139,21 @@ describe('HTML cache policy', () => {
       htmlCacheControl(new Request('https://textlog.cc/latest'),
         new Response('page', { headers: { 'set-cookie': 'feed=latest' } })),
     ).toBe('private, no-store')
+  })
+})
+
+describe('same-origin enforcement', () => {
+  test('guards browser form submissions', () => {
+    expect(requiresSameOrigin('POST', '/post')).toBe(true)
+    expect(requiresSameOrigin('POST', '/follow/alice')).toBe(true)
+    expect(requiresSameOrigin('GET', '/post')).toBe(false)
+  })
+
+  test('exempts the API, which authenticates with a bearer token', () => {
+    // A native client sends neither Origin nor Referer, and a bearer token cannot be
+    // attached by another site, so there is nothing to forge.
+    expect(requiresSameOrigin('POST', '/api/v1/posts')).toBe(false)
+    expect(requiresSameOrigin('DELETE', '/api/v1/posts/1')).toBe(false)
+    expect(requiresSameOrigin('POST', '/api/v1/auth/verify')).toBe(false)
   })
 })

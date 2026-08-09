@@ -13,6 +13,10 @@ function addColumn(database: Database, table: string, name: string, definition: 
   if (!columns(database, table).includes(name)) database.run(`ALTER TABLE ${table} ADD COLUMN ${name} ${definition}`)
 }
 
+function dropColumn(database: Database, table: string, name: string) {
+  if (columns(database, table).includes(name)) database.run(`ALTER TABLE ${table} DROP COLUMN ${name}`)
+}
+
 function backfillMentions(database: Database) {
   const users = database.query('SELECT id,handle FROM users').all() as { id: number; handle: string }[]
   const userIds = new Map(users.map(user => [user.handle.toLowerCase(), user.id]))
@@ -323,6 +327,21 @@ export const migrations: Migration[] = [
     name: 'include_decaying_nested_replies_in_hot_scores',
     up(database) {
       rebuildHotPosts(database)
+    },
+  },
+  {
+    version: 24,
+    name: 'api_writes',
+    up(database) {
+      addColumn(database, 'magic_links', 'code_hash', 'TEXT')
+      addColumn(database, 'magic_links', 'attempts', 'INTEGER NOT NULL DEFAULT 0')
+    },
+  },
+  {
+    version: 25,
+    name: 'api_writes_for_all_accounts',
+    up(database) {
+      dropColumn(database, 'users', 'api_writes_enabled_at')
     },
   },
 ]

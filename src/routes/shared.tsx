@@ -1,3 +1,5 @@
+import type { Database } from 'bun:sqlite'
+import { randomInt } from 'node:crypto'
 import { consumeAuthAttempt, rateLimitKey } from '../auth-rate-limit'
 import { feedPreferenceCookie, limitedFormData, safeLocalPath, stringField } from '../http'
 import { PAGE_SIZE } from '../pagination'
@@ -55,8 +57,8 @@ export function visiblePostCount(userId = -1) {
     (SELECT 1 FROM post_hashtags ph JOIN blocked_hashtags bh ON bh.tag=ph.tag
       WHERE ph.post_id=p.id AND bh.user_id=?))`).get(userId, userId, userId, userId, userId) as { count: number }).count
 }
-export function usersBlocked(firstId: number, secondId: number) {
-  return !!db.query(`SELECT 1 FROM blocks WHERE
+export function usersBlocked(firstId: number, secondId: number, database: Database = db) {
+  return !!database.query(`SELECT 1 FROM blocks WHERE
     (blocker_id=? AND blocked_id=?) OR (blocker_id=? AND blocked_id=?)`).get(firstId, secondId, secondId, firstId)
 }
 export function clientAddress(c: Context) {
@@ -95,13 +97,17 @@ export async function issueEmailToken(userId: number, email: string, kind: 'chan
     throw error
   }
 }
-export function issueMagicLink(email: string, userId: number | null, nextPath: string, origin: string) {
+export function issueMagicLink(email: string, userId: number | null, nextPath: string, origin: string,
+  database: Database = db)
+{
   const value = token()
+  const code = String(randomInt(100000, 1000000))
   const now = Date.now()
-  db.query('DELETE FROM magic_links WHERE email=? OR expires_at<=?').run(email, now)
-  db.query(`INSERT INTO magic_links(token_hash,email,user_id,next_path,expires_at,created_at)
-    VALUES(?,?,?,?,?,?)`).run(hash(value), email, userId, safeLocalPath(nextPath), now + 3600000, now)
-  return `${origin.replace(/\/$/, '')}/enter/magic?token=${encodeURIComponent(value)}`
+  database.query('DELETE FROM magic_links WHERE email=? OR expires_at<=?').run(email, now)
+  database.query(`INSERT INTO magic_links(token_hash,email,user_id,next_path,expires_at,created_at,code_hash)
+    VALUES(?,?,?,?,?,?,?)`)
+    .run(hash(value), email, userId, safeLocalPath(nextPath), now + 3600000, now, hash(code))
+  return { url: `${origin.replace(/\/$/, '')}/enter/magic?token=${encodeURIComponent(value)}`, code }
 }
 export function securityPage(req: Request, error?: string, success?: string, status = 200) {
   const user = currentUser(req)

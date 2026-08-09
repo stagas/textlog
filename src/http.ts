@@ -67,6 +67,13 @@ export function safeRefererPath(referer: string | undefined, requestUrl: string,
   }
 }
 
+// Browser forms are same-origin checked. The API is not, because it authenticates
+// with a bearer token that a browser cannot attach to a cross-site request, and a
+// native client sends neither Origin nor Referer.
+export function requiresSameOrigin(method: string, path: string) {
+  return method !== 'GET' && method !== 'HEAD' && !path.startsWith('/api/')
+}
+
 export function isSameOriginRequest(request: Request, appUrl: string | null | undefined = Bun.env.APP_URL) {
   try {
     const expectedOrigin = new URL(appUrl || request.url).origin

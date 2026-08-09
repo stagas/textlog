@@ -104,11 +104,16 @@ test('API documentation is linked from the footer and describes the firehose', (
   expect(html).toContain('class="api-title-brand"')
   expect(html).toContain('<span>textlog</span>')
   expect(html).toContain('/api/openapi.json')
-  expect(html).toContain('class="api-method">GET</span>')
+  expect(html).toContain('class="api-method" data-method="GET">GET</span>')
   expect(html).toContain('class="api-path">/firehose</span>')
   expect(html).toContain('120 requests per minute')
   expect(html).toContain('/users/:handle/posts.rss')
   expect(html).toContain('/tags/:tag/posts.atom')
+  expect(html.match(/class="api-endpoints"/g)).toHaveLength(1)
+  expect(html).toContain('data-method="DELETE">DELETE</span><span class="api-path">/auth/session</span>')
+  expect(html).toContain('data-method="DELETE">DELETE</span><span class="api-path">/posts/:id</span>')
+  expect(html).toContain('data-method="DELETE">DELETE</span><span class="api-path">/users/:handle/follow</span>')
+  expect(html).toContain('data-method="DELETE">DELETE</span><span class="api-path">/users/:handle/block</span>')
 })
 
 test('footer offers the mobile app in a mobile-only row', () => {

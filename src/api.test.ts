@@ -143,7 +143,7 @@ describe('public API', () => {
     expect(rss.headers.get('content-type')).toBe('application/rss+xml; charset=utf-8')
     expect(rss.headers.get('access-control-allow-origin')).toBe('*')
     expect(spec.openapi).toBe('3.1.0')
-    expect(Object.keys(spec.paths)).toHaveLength(12)
+    expect(Object.keys(spec.paths)).toHaveLength(20)
     expect(spec.paths['/feeds/latest.{format}'].get.parameters[0].schema.enum).toEqual(['rss', 'atom'])
     expect(mutation.status).toBe(405)
     expect(mutation.headers.get('allow')).toBe('GET, HEAD, OPTIONS')

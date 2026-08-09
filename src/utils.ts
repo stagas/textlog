@@ -1,3 +1,4 @@
+import type { Database } from 'bun:sqlite'
 import { createHash, randomBytes } from 'node:crypto'
 import { db, type User } from './db'
 import { sessionHash } from './sessions'
@@ -19,13 +20,22 @@ export async function verifyPassword(password: string, storedHash: string) {
 }
 export const token = () => randomBytes(32).toString('hex')
 export const sessionToken = (req: Request) => req.headers.get('cookie')?.match(/(?:^|;\s*)textlog=([^;]+)/)?.[1] || null
-export function currentUser(req: Request): User | null {
-  const tokenHash = sessionHash(sessionToken(req))
+export const bearerToken = (req: Request) => req.headers.get('authorization')?.match(/^Bearer\s+(\S+)$/i)?.[1] || null
+function userForSession(token: string | null, database: Database): User | null {
+  const tokenHash = sessionHash(token)
   if (!tokenHash) return null
-  return db.query(`SELECT u.id,u.handle,u.email,u.bio,u.suspended_at,u.email_verified_at,u.handle_chosen_at
+  return database.query(`SELECT u.id,u.handle,u.email,u.bio,u.suspended_at,u.email_verified_at,u.handle_chosen_at
     FROM sessions s JOIN users u ON u.id=s.user_id
     WHERE s.token_hash=? AND s.expires_at>? AND u.deleted_at IS NULL AND u.suspended_at IS NULL`)
     .get(tokenHash, Date.now()) as User | null
+}
+export function currentUser(req: Request, database: Database = db): User | null {
+  return userForSession(sessionToken(req), database)
+}
+// The API never reads the cookie. A bearer token cannot be attached by another site,
+// so write endpoints are not reachable by cross-site requests.
+export function apiUser(req: Request, database: Database = db): User | null {
+  return userForSession(bearerToken(req), database)
 }
 const timestamp = (d: string) => new Date(d.replace(' ', 'T') + 'Z')
 export function fmt(d: string) {

@@ -1,4 +1,4 @@
-import { applyHtmlCachePolicy, GLOBAL_REQUEST_BODY_LIMIT, isSameOriginRequest, RequestBodyError, safeLocalPath,
+import { applyHtmlCachePolicy, GLOBAL_REQUEST_BODY_LIMIT, isSameOriginRequest, requiresSameOrigin, RequestBodyError, safeLocalPath,
   securityHeaders, sessionCookie } from './http'
 
 import { Hono } from 'hono'
@@ -143,7 +143,9 @@ app.use('*', async (c, next) => {
   }
 })
 app.use('*', async (c, next) => {
-  if (c.req.method === 'POST' && !isSameOriginRequest(c.req.raw)) return c.text('Forbidden', 403)
+  if (requiresSameOrigin(c.req.method, c.req.path) && !isSameOriginRequest(c.req.raw)) {
+    return c.text('Forbidden', 403)
+  }
   await next()
 })
 app.use('*', async (c, next) => {

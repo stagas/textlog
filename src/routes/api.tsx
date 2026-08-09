@@ -10,6 +10,7 @@ import { decodeHotCursor } from '../hot'
 import { logError } from '../log'
 import { currentUser } from '../utils'
 import { page } from './shared'
+import { registerApiWriteRoutes } from './api-write'
 import { registerSyndicationRoutes } from './syndication'
 
 const JSON_LIMIT = 120
@@ -71,13 +72,18 @@ function openApiDocument() {
     '404': { description: 'Not found' }, '429': { description: 'Rate limited' } }
   const formatParameter = { name: 'format', in: 'path', required: true,
     schema: { type: 'string', enum: ['rss', 'atom'] } }
+  const postIdParameter = { name: 'id', in: 'path', required: true, schema: { type: 'integer', minimum: 1 } }
+  const handleParameter = { name: 'handle', in: 'path', required: true, schema: { type: 'string' } }
+  const writeResponses = { ...jsonResponses, '401': { description: 'Missing or invalid token' },
+    '403': { description: 'The authenticated account cannot perform this operation' } }
   const syndicationResponses = { '200': { description: 'RSS 2.0 or Atom 1.0 XML feed', content: {
     'application/rss+xml': { schema: { type: 'string' } },
     'application/atom+xml': { schema: { type: 'string' } },
   } }, '404': { description: 'Not found' }, '429': { description: 'Rate limited' } }
   return {
     openapi: '3.1.0',
-    info: { title: 'textlog public API', version: '1.0.0', description: 'Read-only access to public textlog content.' },
+    info: { title: 'textlog public API', version: '1.1.0',
+      description: 'Public reads and authenticated writes for every account.' },
     servers: [{ url: '/api/v1' }],
     paths: {
       '/feeds/latest': { get: { summary: 'Latest posts', parameters: collectionParameters, responses: jsonResponses } },
@@ -89,9 +95,9 @@ function openApiDocument() {
         get: { summary: 'Hot posts as RSS or Atom', parameters: [formatParameter], responses: syndicationResponses },
       },
       '/posts/{id}': {
-        get: { summary: 'Single post',
-          parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'integer', minimum: 1 } }],
-          responses: jsonResponses },
+        get: { summary: 'Single post', parameters: [postIdParameter], responses: jsonResponses },
+        patch: { summary: 'Edit your own post', parameters: [postIdParameter], responses: writeResponses },
+        delete: { summary: 'Delete your own post', parameters: [postIdParameter], responses: writeResponses },
       },
       '/posts/{id}/replies': {
         get: { summary: 'Post replies',
@@ -128,8 +134,35 @@ function openApiDocument() {
           '429': { description: 'Too many streams' },
         } },
       },
+      '/auth/request': {
+        post: { summary: 'Email a sign-in code to an existing account', security: [], responses: writeResponses },
+      },
+      '/auth/verify': {
+        post: { summary: 'Exchange a sign-in code for a session token', security: [], responses: writeResponses },
+      },
+      '/auth/session': { delete: { summary: 'Revoke the current token', responses: writeResponses } },
+      '/me': {
+        get: { summary: 'The signed-in account', responses: writeResponses },
+        patch: { summary: 'Update your bio', responses: writeResponses },
+      },
+      '/posts': { post: { summary: 'Create a post or reply', responses: writeResponses } },
+      '/posts/{id}/report': {
+        post: { summary: 'Report a post', parameters: [postIdParameter], responses: writeResponses },
+      },
+      '/users/{handle}/follow': {
+        post: { summary: 'Follow a user', parameters: [handleParameter], responses: writeResponses },
+        delete: { summary: 'Unfollow a user', parameters: [handleParameter], responses: writeResponses },
+      },
+      '/users/{handle}/block': {
+        post: { summary: 'Block a user', parameters: [handleParameter], responses: writeResponses },
+        delete: { summary: 'Unblock a user', parameters: [handleParameter], responses: writeResponses },
+      },
     },
-    components: { schemas: { Post: postSchema } },
+    security: [{ bearerAuth: [] }],
+    components: {
+      schemas: { Post: postSchema },
+      securitySchemes: { bearerAuth: { type: 'http', scheme: 'bearer' } },
+    },
   }
 }
 
@@ -142,16 +175,10 @@ export function registerApiRoutes(app: Hono, database: Database = db,
     if (c.req.method === 'OPTIONS') {
       return new Response(null, { status: 204, headers: {
         'access-control-allow-origin': '*',
-        'access-control-allow-methods': 'GET, HEAD, OPTIONS',
-        'access-control-allow-headers': 'Accept, Content-Type',
+        'access-control-allow-methods': 'GET, HEAD, POST, PATCH, DELETE, OPTIONS',
+        'access-control-allow-headers': 'Accept, Authorization, Content-Type',
         'access-control-max-age': '86400',
       } })
-    }
-    if (c.req.method !== 'GET' && c.req.method !== 'HEAD') {
-      const response = apiError('method_not_allowed', 'Only GET, HEAD, and OPTIONS are supported', 405)
-      response.headers.set('allow', 'GET, HEAD, OPTIONS')
-      response.headers.set('access-control-allow-origin', '*')
-      return response
     }
     try {
       await next()
@@ -175,6 +202,7 @@ export function registerApiRoutes(app: Hono, database: Database = db,
   })
 
   registerSyndicationRoutes(app, database, appUrl)
+  registerApiWriteRoutes(app, database, appUrl)
 
   app.get('/api/openapi.json', () => jsonResponse(openApiDocument(), 200, 'public, max-age=3600'))
 
@@ -317,5 +345,12 @@ export function registerApiRoutes(app: Hono, database: Database = db,
     } })
   })
 
-  app.all('/api/*', () => apiError('not_found', 'API endpoint not found', 404))
+  app.all('/api/*', c => {
+    if (c.req.method !== 'GET' && c.req.method !== 'HEAD') {
+      const response = apiError('method_not_allowed', 'That endpoint does not accept this method', 405)
+      response.headers.set('allow', 'GET, HEAD, OPTIONS')
+      return response
+    }
+    return apiError('not_found', 'API endpoint not found', 404)
+  })
 }
