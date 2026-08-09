@@ -34,6 +34,15 @@ async function sendEmail(email: string, subject: string, text: string, html: str
   if (!response.ok) throw new Error(`Resend returned ${response.status}: ${await response.text()}`)
 }
 
+function escapeHtml(value: string) {
+  return value.replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;')
+    .replaceAll('"', '&quot;').replaceAll("'", '&#39;')
+}
+
+export function sendAdminEmail(email: string, subject: string, body: string) {
+  return sendEmail(email, subject, body, `<div style="white-space: pre-wrap">${escapeHtml(body)}</div>`)
+}
+
 export function sendPasswordReset(email: string, resetUrl: string) {
   return sendEmail(email, 'Reset your textlog password',
     `Use this link to reset your textlog password:\n\n${resetUrl}\n\nThis link expires in one hour. If you did not request it, you can ignore this email.`,

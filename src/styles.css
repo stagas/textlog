@@ -1994,6 +1994,47 @@ form.report-panel {
   padding: var(--space-6) var(--gutter) var(--space-8);
 }
 
+.admin-email {
+  max-width: 720px;
+  padding: var(--space-6) var(--gutter) var(--space-8);
+}
+
+.admin-email form,
+.admin-email label {
+  display: grid;
+  gap: var(--space-2);
+}
+
+.admin-email form {
+  gap: var(--space-5);
+}
+
+.admin-email label {
+  color: var(--muted);
+  font-size: 11px;
+}
+
+.admin-email input {
+  width: 100%;
+  padding: 13px;
+  color: var(--ink);
+  font: inherit;
+  background: var(--panel);
+  border: 1px solid var(--soft);
+  border-radius: 0;
+  outline: none;
+}
+
+.admin-email input:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+}
+
+.admin-email-success {
+  margin: 0 0 var(--space-5);
+  color: var(--accent);
+}
+
 .admin-confirm form,
 .admin-confirm label {
   display: grid;

@@ -37,6 +37,7 @@ export function AdminDashboard(
           <p className="eyebrow">operations</p>
           <h1>admin dashboard</h1>
         </div>
+        <a className="quiet" href="/admin/email">send email</a>
       </section>
       <section className="admin-stats" aria-label="Application statistics">
         {labels.map(([key, label]) => (

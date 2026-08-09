@@ -2,6 +2,7 @@ import { anonymizeUser, isAdmin, isAdminEmail, recordAdminAction, resolvePostRep
 import {
   AdminConfirm,
   AdminDashboard,
+  AdminEmail,
   AdminUser,
 } from '../components/pages'
 import {
@@ -14,12 +15,34 @@ import { currentPage, form, page, paginationRedirect, redirect } from './shared'
 
 import type { Hono } from 'hono'
 import { db } from '../db'
-import { sendReportDecision } from '../email'
+import { sendAdminEmail, sendReportDecision } from '../email'
 import { PAGE_SIZE } from '../pagination'
 import { currentUser } from '../utils'
 import { visitorStats } from '../visitors'
 
 export function registerAdminRoutes(app: Hono) {
+  app.get('/admin/email', c => {
+    const signedIn = currentUser(c.req.raw)
+    if (!signedIn) return redirect('/enter?next=' + encodeURIComponent(c.req.path))
+    if (!isAdmin(signedIn)) return c.text('Forbidden', 403)
+    return page(<AdminEmail user={signedIn} sent={c.req.query('sent') === '1'} />)
+  })
+
+  app.post('/admin/email', async c => {
+    const signedIn = currentUser(c.req.raw)
+    if (!signedIn) return redirect('/enter?next=' + encodeURIComponent('/admin/email'))
+    if (!isAdmin(signedIn)) return c.text('Forbidden', 403)
+    const fields = await form(c.req.raw)
+    const email = (fields.email || '').trim()
+    const title = (fields.title || '').trim()
+    const body = (fields.body || '').trim()
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || email.length > 254) return c.text('Invalid email', 400)
+    if (!title || title.length > 200) return c.text('Invalid title', 400)
+    if (!body || body.length > 20_000) return c.text('Invalid body', 400)
+    await sendAdminEmail(email, title, body)
+    return redirect('/admin/email?sent=1')
+  })
+
   app.get('/admin', c => {
     const signedIn = currentUser(c.req.raw)
     if (!signedIn) return redirect('/enter?next=' + encodeURIComponent(c.req.path))
