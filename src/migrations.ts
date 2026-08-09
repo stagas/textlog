@@ -311,6 +311,15 @@ export const migrations: Migration[] = [
       rebuildHotPosts(database)
     },
   },
+  {
+    version: 22,
+    name: 'api_writes',
+    up(database) {
+      addColumn(database, 'users', 'api_writes_enabled_at', 'TEXT')
+      addColumn(database, 'magic_links', 'code_hash', 'TEXT')
+      addColumn(database, 'magic_links', 'attempts', 'INTEGER NOT NULL DEFAULT 0')
+    },
+  },
 ]
 
 export const latestMigrationVersion = migrations.at(-1)!.version
