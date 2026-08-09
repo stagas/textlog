@@ -7,7 +7,7 @@ export function Legal({ user }: { user: User | null }) {
       <article className="static-page legal-page">
         <p className="eyebrow">legal</p>
         <h1 id="terms">Terms, privacy &amp; liability</h1>
-        <p className="legal-updated">Last updated: August 5, 2026</p>
+        <p className="legal-updated">Last updated: August 9, 2026</p>
 
         <h2>Your content and conduct</h2>
         <p>
@@ -58,12 +58,23 @@ export function Legal({ user }: { user: User | null }) {
         <h3>Data, purposes and legal bases</h3>
         <ul>
           <li>
-            Account email, handle, profile, sessions and preferences: to create and perform your account contract,
-            authenticate you and provide requested features.
+            Account email, handle, bio, email-verification status and, when enabled, a one-way password hash: to create
+            and perform your account contract, authenticate you and provide requested account features. We never store
+            your password in readable form.
           </li>
           <li>
-            Posts, replies, follows and other public activity: to publish and distribute content at your request and
-            perform the service contract. Public content can be copied or indexed by others.
+            Sign-in sessions, browser information, and short-lived password-reset, email-change and magic-link records
+            (including hashed app entry codes): to authenticate you, let you manage signed-in devices and protect your
+            account. Secret links, session tokens and app entry codes are stored as hashes rather than in readable form.
+          </li>
+          <li>
+            Theme and accent choices: to remember your appearance settings. These are stored only in an appearance
+            cookie on your device and are not tied to your account in our database.
+          </li>
+          <li>
+            Posts, replies, follows, followed hashtags, blocks and other activity: to publish and distribute content at
+            your request, personalize what you see, provide safety controls and perform the service contract. Public
+            content and public connections can be copied or indexed by others; blocks are not public.
           </li>
           <li>
             Reports, moderation records and limited security events: legitimate interests in protecting users and the
@@ -91,22 +102,23 @@ export function Legal({ user }: { user: User | null }) {
 
         <h3>Retention</h3>
         <p>
-          Session records expire after 365 days of inactivity; magic and email-change links after one hour; daily visitor pseudonyms
-          after seven days; and application HTTP logs after at most 14 days. Public account and content data is held
-          until you delete it or your account. Deletion anonymizes the account and content, while limited moderation,
-          resolved report and audit records are retained for three years where needed to document decisions, establish
-          legal claims and protect users. Open reports remain until reviewed. Backups follow the configured
-          backup-retention period (14 days by default), after which deleted data ages out.
+          Session records expire after 365 days of inactivity; password-reset, magic-link and email-change records after
+          one hour; the appearance cookie after one year; daily visitor pseudonyms after seven days; and application
+          HTTP logs after at most 14 days. Public account and content data, connections, followed hashtags and blocks
+          are held until you remove them or delete your account. Deletion anonymizes the account and content, while
+          limited moderation, resolved report and audit records are retained for three years where needed to document
+          decisions, establish legal claims and protect users. Open reports remain until reviewed. Backups follow the
+          configured backup-retention period (14 days by default), after which deleted data ages out.
         </p>
 
         <h3>Your rights</h3>
         <p>
           Depending on the circumstances, you may request access, correction, erasure, restriction, portability, or
           object to processing based on legitimate interests. Where processing relies on consent, you may withdraw it
-          without affecting earlier processing. You can download account data and delete your account in profile
-          settings, or email
-          <a href="mailto:hello@textlog.cc">hello@textlog.cc</a>. We may need to verify your identity and may retain data
-          where law permits or requires it.
+          without affecting earlier processing. In account settings you can correct your handle and bio, change your
+          email, manage your password and sessions, download a JSON copy of your account data, and delete your account.
+          You can also email <a href="mailto:hello@textlog.cc">hello@textlog.cc</a>. We may need to verify your identity
+          and may retain data where law permits or requires it.
         </p>
 
         <h3>Complaints</h3>

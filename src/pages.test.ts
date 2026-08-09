@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test'
 import { About, AccountMagicLink, AccountSecurity, ApiDocs, Auth, ChangeTheme, ChooseHandle, ConfirmEmail, Connections, Contact, ErrorPage,
-  NotFound, postTitle,
+  Legal, NotFound, postTitle,
   Profile } from './components/pages'
 
 import React from 'react'
@@ -133,6 +133,16 @@ test('Contact page shows operator details and is linked before legal in the foot
   expect(html).toContain('href="tel:+306946600152"')
   expect(html).toContain('href="/report-illegal-activity"')
   expect(html.indexOf('href="/contact"')).toBeLessThan(html.indexOf('href="/legal"'))
+})
+
+test('Legal privacy disclosures cover current account settings data', () => {
+  const html = renderToStaticMarkup(React.createElement(Legal, { user: null }))
+
+  expect(html).toContain('one-way password hash')
+  expect(html).toContain('hashed app entry codes')
+  expect(html).toContain('appearance cookie')
+  expect(html).toContain('manage your password and sessions')
+  expect(html).toContain('download a JSON copy of your account data')
 })
 
 test('Not found page gives visitors useful ways back into the site', () => {
