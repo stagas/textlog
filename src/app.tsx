@@ -27,12 +27,14 @@ import { registerTagsRoutes } from './routes/tags'
 import { renewSession } from './sessions'
 import { loadStylesAsset, stylesResponse } from './styles'
 import { currentUser, sessionToken } from './utils'
+import { themeLogoSvg, themeStyles, withAppearance } from './theme'
 import { VisitorBuffer } from './visitors'
 
 const devReloadEnabled = Bun.env.DEV_RELOAD === 'true'
 const bootId = crypto.randomUUID()
 configureDevReload(devReloadEnabled ? bootId : undefined)
 const app = new Hono()
+app.use('*', (c, next) => withAppearance(c.req.raw, next))
 const stylesPath = new URL('./styles.css', import.meta.url).pathname
 const styles = devReloadEnabled ? undefined : await loadStylesAsset(stylesPath)
 const publicAssets = await Promise.all([
@@ -115,6 +117,9 @@ app.use('*', async (c, next) => {
 app.use('*', async (c, next) => {
   await next()
   for (const [name, value] of Object.entries(securityHeaders(devReloadEnabled))) c.header(name, value)
+  if (c.req.path === '/textlog.svg' || c.req.path === '/favicon-theme.svg') {
+    c.header('Content-Security-Policy', "default-src 'none'; style-src 'unsafe-inline'")
+  }
 })
 app.use('*', async (c, next) => {
   await next()
@@ -186,11 +191,25 @@ app.get('/styles.css', async c => {
   const asset = styles ?? await loadStylesAsset(stylesPath)
   return stylesResponse(asset, c.req.raw, !devReloadEnabled)
 })
-app.get('/textlog.svg', () =>
-  new Response(Bun.file(new URL('./textlog.svg', import.meta.url)), {
+app.get('/theme.css', c => new Response(themeStyles(c.req.raw), {
+  headers: { 'content-type': 'text/css; charset=utf-8', 'cache-control': 'private, no-store' },
+}))
+app.get('/textlog.svg', c =>
+  new Response(themeLogoSvg(c.req.raw), {
     headers: {
       'content-type': 'image/svg+xml; charset=utf-8',
-      'cache-control': 'public, max-age=31536000, immutable',
+      'cache-control': 'private, no-store, no-cache, must-revalidate',
+      'pragma': 'no-cache',
+      'expires': '0',
+    },
+  }))
+app.get('/favicon-theme.svg', c =>
+  new Response(themeLogoSvg(c.req.raw), {
+    headers: {
+      'content-type': 'image/svg+xml; charset=utf-8',
+      'cache-control': 'private, no-store, no-cache, must-revalidate',
+      'pragma': 'no-cache',
+      'expires': '0',
     },
   }))
 app.get('/og.png', () => {

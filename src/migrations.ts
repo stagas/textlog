@@ -311,15 +311,25 @@ export const migrations: Migration[] = [
       rebuildHotPosts(database)
     },
   },
-  {
+   {
     version: 22,
+    name: 'include_decaying_nested_replies_in_hot_scores',
+    up(database) {
+      rebuildHotPosts(database)
+    },
+  },
+  {
+    version: 23,
     name: 'api_writes',
     up(database) {
       addColumn(database, 'users', 'api_writes_enabled_at', 'TEXT')
       addColumn(database, 'magic_links', 'code_hash', 'TEXT')
       addColumn(database, 'magic_links', 'attempts', 'INTEGER NOT NULL DEFAULT 0')
+    name: 'increase_direct_reply_hot_weight',
+    up(database) {
+      rebuildHotPosts(database)
     },
-  },
+  }, 
 ]
 
 export const latestMigrationVersion = migrations.at(-1)!.version

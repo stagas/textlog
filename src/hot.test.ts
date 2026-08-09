@@ -45,42 +45,88 @@ function postBy(userId: number, id: number, createdAt: string, parentId: number 
 }
 
 describe('hot feed ranking', () => {
-  test('applies a steep 2-hour exponential penalty to age', () => {
+  test('uses an 8-hour half-life so older posts retain meaningful rank', () => {
     post(1, '2026-08-03 12:00:00')
     post(2, '2026-08-02 12:00:00')
 
     const results = getHotPosts(database, 20, null, asOf)
     expect(results.map(result => result.id)).toEqual([1, 2])
     expect(results[0].hot_score).toBeCloseTo(1)
-    expect(results[1].hot_score).toBeCloseTo(Math.pow(0.5, 12))
+    expect(results[1].hot_score).toBeCloseTo(Math.pow(0.5, 3))
   })
 
-  test('surfaces a new event above a busier thread from yesterday', () => {
+  test('lets a busy thread from yesterday outrank a new post', () => {
+    database.query('INSERT INTO users(id,handle) VALUES(?,?)').run(2, 'replier')
     post(1, '2026-08-02 12:00:00')
-    post(2, '2026-08-02 12:00:00', 1)
-    post(3, '2026-08-02 12:00:00', 1)
+    postBy(2, 2, '2026-08-02 12:00:00', 1)
+    postBy(2, 3, '2026-08-02 12:00:00', 1)
     post(4, '2026-08-03 12:00:00')
 
     const results = getHotPosts(database, 20, null, asOf)
-    expect(results[0].id).toBe(4)
-    expect(results.find(result => result.id === 1)?.hot_score).toBeCloseTo(3 * Math.pow(0.5, 12))
+    expect(results[0].id).toBe(1)
+    expect(results.find(result => result.id === 1)?.hot_score).toBeCloseTo(9 * Math.pow(0.5, 3))
   })
 
-  test('only direct replies boost a post while nested replies rank independently', () => {
+  test('direct replies give active threads substantially more staying power', () => {
+    database.query('INSERT INTO users(id,handle) VALUES(?,?)').run(2, 'replier')
+    post(1, '2026-08-03 04:00:00')
+    postBy(2, 2, '2026-08-03 06:00:00', 1)
+    postBy(2, 3, '2026-08-03 06:00:00', 1)
+    postBy(2, 4, '2026-08-03 06:00:00', 1)
+    postBy(2, 5, '2026-08-03 06:00:00', 1)
+    post(6, '2026-08-03 11:00:00')
+
+    const results = getHotPosts(database, 20, null, asOf)
+    expect(results[0].id).toBe(1)
+    expect(results[0].hot_score).toBeGreaterThan(1)
+
+    rebuildHotPosts(database)
+    expect(getHotPosts(database, 20, null, asOf)[0].id).toBe(1)
+  })
+
+  test('nested reply boosts halve at each level', () => {
+    database.query('INSERT INTO users(id,handle) VALUES(?,?)').run(2, 'replier')
+    post(1, '2026-08-03 12:00:00')
+    postBy(2, 2, '2026-08-03 12:00:00', 1)
+    postBy(2, 3, '2026-08-03 12:00:00', 2)
+    postBy(2, 4, '2026-08-03 12:00:00', 3)
+
+    expect((database.query('SELECT score FROM post_hot WHERE post_id=1').get() as { score: number }).score)
+      .toBeCloseTo(1 + 4 + 2 + 1)
+
+    rebuildHotPosts(database)
+    expect((database.query('SELECT score FROM post_hot WHERE post_id=1').get() as { score: number }).score)
+      .toBeCloseTo(1 + 4 + 2 + 1)
+  })
+
+  test('deleting a nested reply removes its branch credit from every ancestor', () => {
+    database.query('INSERT INTO users(id,handle) VALUES(?,?)').run(2, 'replier')
+    post(1, '2026-08-03 12:00:00')
+    postBy(2, 2, '2026-08-03 12:00:00', 1)
+    postBy(2, 3, '2026-08-03 12:00:00', 2)
+    postBy(2, 4, '2026-08-03 12:00:00', 3)
+    database.query('UPDATE posts SET deleted_at=? WHERE id=?').run('2026-08-03 12:00:00', 2)
+    removeHotActivity(database, 2)
+
+    expect((database.query('SELECT score FROM post_hot WHERE post_id=1').get() as { score: number }).score)
+      .toBeCloseTo(1)
+  })
+
+  test('direct replies boost a post most while nested replies also rank independently', () => {
     database.query('INSERT INTO users(id,handle) VALUES(?,?)').run(2, 'replier')
     post(1, '2026-07-30 12:00:00')
     postBy(2, 2, '2026-08-03 10:00:00', 1)
     post(3, '2026-08-03 11:00:00', 2)
 
     const results = getHotPosts(database, 20, null, asOf)
-    expect(results.map(result => result.id)).toEqual([2, 3, 1])
+    expect(results.map(result => result.id)).toEqual([2, 1, 3])
     expect(results[0].hot_score).toBeGreaterThan(results[1].hot_score)
-    expect(results[2].latest_activity_at).toBe('2026-08-03 10:00:00')
+    expect(results.find(result => result.id === 1)?.latest_activity_at).toBe('2026-08-03 10:00:00')
 
     rebuildHotPosts(database)
     const rebuilt = getHotPosts(database, 20, null, asOf)
-    expect(rebuilt.map(result => result.id)).toEqual([2, 3, 1])
-    expect(rebuilt[2].latest_activity_at).toBe('2026-08-03 10:00:00')
+    expect(rebuilt.map(result => result.id)).toEqual([2, 1, 3])
+    expect(rebuilt.find(result => result.id === 1)?.latest_activity_at).toBe('2026-08-03 10:00:00')
   })
 
   test('does not let authors boost their own posts with direct replies', () => {
@@ -89,14 +135,14 @@ describe('hot feed ranking', () => {
 
     let root = getHotPosts(database, 20, null, asOf).find(result => result.id === 1)!
     expect(root.latest_activity_at).toBe('2026-08-03 08:00:00')
-    expect(root.hot_score).toBeCloseTo(Math.pow(0.5, 2))
+    expect(root.hot_score).toBeCloseTo(Math.pow(0.5, 1 / 2))
 
     database.query(`UPDATE post_hot SET score=99,score_updated_at='2026-08-03 11:00:00',
       latest_activity_at='2026-08-03 11:00:00' WHERE post_id=1`).run()
     rebuildHotPosts(database)
     root = getHotPosts(database, 20, null, asOf).find(result => result.id === 1)!
     expect(root.latest_activity_at).toBe('2026-08-03 08:00:00')
-    expect(root.hot_score).toBeCloseTo(Math.pow(0.5, 2))
+    expect(root.hot_score).toBeCloseTo(Math.pow(0.5, 1 / 2))
   })
 
   test('excludes deleted direct replies without promoting their nested replies', () => {
@@ -107,7 +153,7 @@ describe('hot feed ranking', () => {
     const results = getHotPosts(database, 20, null, asOf)
     expect(results.map(result => result.id)).toEqual([3, 1])
     expect(results[1].latest_activity_at).toBe('2026-07-30 12:00:00')
-    expect(results[1].hot_score).toBeCloseTo(Math.pow(0.5, 48))
+    expect(results[1].hot_score).toBeCloseTo(Math.pow(0.5, 12))
   })
 
   test('uses deterministic tie-breakers and pagination', () => {
@@ -135,7 +181,7 @@ describe('hot feed ranking', () => {
 
     const results = getHotPosts(database, 20, null, asOf, 1)
     expect(results.map(result => result.id)).toEqual([1])
-    expect(results[0].hot_score).toBeCloseTo(Math.pow(0.5, 1 / 2))
+    expect(results[0].hot_score).toBeCloseTo(Math.pow(0.5, 1 / 8))
   })
 
   test('hides every post carrying a blocked hashtag', () => {

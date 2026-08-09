@@ -2,6 +2,7 @@ import React from 'react'
 import { hasUnreadActivity } from '../activity-state'
 import { isAdmin } from '../admin'
 import type { User } from '../db'
+import { activeAppearance } from '../theme'
 
 let devReloadBootId: string | undefined
 
@@ -39,6 +40,8 @@ export function Layout({
   feeds?: { title: string; rss: string; atom: string }
   children: React.ReactNode
 }) {
+  const selectedAppearance = activeAppearance()
+  const appearanceVersion = `${selectedAppearance.theme}.${selectedAppearance.accent}`
   const appOrigin = Bun.env.APP_URL?.replace(/\/$/, '') || ''
   const share = social || {
     description: 'A quieter place for your thoughts.',
@@ -91,9 +94,7 @@ export function Layout({
           <meta name="twitter:image" content={share.image} />
           <meta name="twitter:image:alt" content={share.imageAlt || `Post by ${title || 'a textlog user'}`} />
         </>
-        <link rel="icon" href="/favicon.ico" sizes="any" />
-        <link rel="icon" href="/favicon-32x32.png" type="image/png" sizes="32x32" />
-        <link rel="icon" href="/favicon-16x16.png" type="image/png" sizes="16x16" />
+        <link rel="icon" href={`/favicon-theme.svg?v=${appearanceVersion}`} type="image/svg+xml" sizes="any" />
         <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
         <link rel="manifest" href="/site.webmanifest" />
         <link rel="sitemap" href="/sitemap.xml" type="application/xml" />
@@ -103,13 +104,15 @@ export function Layout({
             <link rel="alternate" type="application/atom+xml" title={`${feeds.title} (Atom)`} href={feeds.atom} />
           </>
         )}
-        <link rel="stylesheet" href="/styles.css?v=57" />
+        <link rel="stylesheet" href="/styles.css?v=60" />
+        <link rel="stylesheet" href="/theme.css" />
       </head>
       <body>
+        {user && ready && <a className="skip-link" href="/write">write</a>}
         <a className="skip-link" href="#main-content">skip to content</a>
         <header className={user ? 'authenticated-header' : undefined}>
           <a className="brand" href="/" aria-label="textlog home">
-            <img className="brand-logo" src="/textlog.svg?v=1" alt="" />
+            <img className="brand-logo" src="/textlog.svg?v=2" alt="" />
             <span>textlog</span>
           </a>
           {logoutNavigation
@@ -129,6 +132,14 @@ export function Layout({
         <main id="main-content">{children}</main>
         <footer className="site-footer">
           <span>textlog.cc</span>
+          <a
+            className="button mobile-app-footer"
+            href="https://github.com/Faultless/textlog_flutter"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            get mobile app
+          </a>
           {user && ready && (
             <nav className="mobile-account-footer" aria-label="Account shortcuts">
               <a href="/explore">explore</a>

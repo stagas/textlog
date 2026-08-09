@@ -7,6 +7,7 @@ import { authLimit, clientAddress, form, issueEmailToken, issueMagicLink, page, 
 import type { Hono } from 'hono'
 import {
   AccountMagicLink,
+  ChangeTheme,
   ConfirmAccountDelete,
   ConfirmEmail,
   Profile,
@@ -20,6 +21,7 @@ import {
 } from '../http'
 import { moderateText, moderationMessage } from '../moderation'
 import { sessionHash } from '../sessions'
+import { ACCENT_CHOICES, appearance, appearanceCookie, THEME_CHOICES, type AccentChoice, type ThemeChoice } from '../theme'
 
 export function registerAccountRoutes(app: Hono) {
   app.get('/account/edit', c => {
@@ -65,6 +67,24 @@ export function registerAccountRoutes(app: Hono) {
       )
     }
     return redirect('/u/' + handle)
+  })
+
+  app.get('/account/edit/theme', c => {
+    const user = currentUser(c.req.raw)
+    if (!user) return redirect('/enter?next=' + encodeURIComponent('/account/edit/theme'))
+    return page(<ChangeTheme user={user} selected={appearance(c.req.raw)} />)
+  })
+
+  app.post('/account/edit/theme', async c => {
+    const user = currentUser(c.req.raw)
+    if (!user) return redirect('/enter')
+    const f = await form(c.req.raw)
+    const theme = f.theme as ThemeChoice
+    const accent = f.accent as AccentChoice
+    if (!THEME_CHOICES.includes(theme) || !ACCENT_CHOICES.includes(accent)) {
+      return page(<ChangeTheme user={user} selected={appearance(c.req.raw)} />, 400)
+    }
+    return redirect('/account/edit/theme', appearanceCookie({ theme, accent }))
   })
 
   app.get('/account/security', c =>

@@ -85,6 +85,22 @@ function fitPost(ctx: CanvasRenderingContext2D, body: string) {
   return { lines: visibleLines, lineHeight, size }
 }
 
+export function postOgText(body: string) {
+  const links: Array<{ start: number; end: number }> = []
+  const markdownLink = /\[([^\]\r\n]+)\]\((https?:\/\/[^\s<>")]+)\)/gi
+  let text = ''
+  let end = 0
+  for (const match of body.matchAll(markdownLink)) {
+    text += body.slice(end, match.index)
+    const start = text.length
+    text += match[1]
+    links.push({ start, end: text.length })
+    end = match.index + match[0].length
+  }
+  text += body.slice(end)
+  return { text, links }
+}
+
 function drawLogo(ctx: CanvasRenderingContext2D, x: number, y: number, scale = 3) {
   ctx.save()
   ctx.translate(x, y)
@@ -131,10 +147,24 @@ export function renderDefaultOg() {
   return canvas.toBuffer('image/png')
 }
 
-function drawPostLine(ctx: CanvasRenderingContext2D, line: string, x: number, y: number) {
+function drawPostLine(
+  ctx: CanvasRenderingContext2D,
+  line: string,
+  x: number,
+  y: number,
+  lineStart: number,
+  markdownLinks: Array<{ start: number; end: number }>,
+) {
   const tokens = /https?:\/\/[^\s<>"']+|(?<![A-Za-z0-9_])[@#][A-Za-z0-9_]+/gi
-  let cursor = 0
   let drawX = x
+  const accented = Array.from({ length: line.length }, (_, index) =>
+    markdownLinks.some(link => lineStart + index >= link.start && lineStart + index < link.end))
+
+  for (const match of line.matchAll(tokens)) {
+    const token = match[0]
+    const accentLength = /^https?:\/\//i.test(token) ? token.replace(/[.,!?;:]+$/, '').length : token.length
+    for (let index = match.index; index < match.index + accentLength; index++) accented[index] = true
+  }
 
   const draw = (text: string, color: string) => {
     if (!text) return
@@ -143,18 +173,14 @@ function drawPostLine(ctx: CanvasRenderingContext2D, line: string, x: number, y:
     drawX += ctx.measureText(text).width
   }
 
-  for (const match of line.matchAll(tokens)) {
-    draw(line.slice(cursor, match.index), textColor)
-    const token = match[0]
-    if (/^https?:\/\//i.test(token)) {
-      const url = token.replace(/[.,!?;:]+$/, '')
-      draw(url, accentColor)
-      draw(token.slice(url.length), textColor)
-    }
-    else draw(token, accentColor)
-    cursor = match.index + token.length
+  let cursor = 0
+  while (cursor < line.length) {
+    const accent = accented[cursor]
+    let next = cursor + 1
+    while (next < line.length && accented[next] === accent) next++
+    draw(line.slice(cursor, next), accent ? accentColor : textColor)
+    cursor = next
   }
-  draw(line.slice(cursor), textColor)
 }
 
 export function renderPostOg(body: string, handle: string) {
@@ -163,12 +189,16 @@ export function renderPostOg(body: string, handle: string) {
 
   drawBackground(ctx)
 
-  const fitted = fitPost(ctx, body)
+  const post = postOgText(body)
+  const fitted = fitPost(ctx, post.text)
   ctx.font = `500 ${fitted.size}px monospace`
   const textBlockHeight = fitted.lines.length * fitted.lineHeight
   let y = contentTop + Math.max(0, (maxTextHeight - textBlockHeight) / 2) + fitted.size
+  let searchFrom = 0
   for (const line of fitted.lines) {
-    drawPostLine(ctx, line, 80, y)
+    const lineStart = post.text.indexOf(line, searchFrom)
+    drawPostLine(ctx, line, 80, y, lineStart < 0 ? searchFrom : lineStart, post.links)
+    searchFrom = (lineStart < 0 ? searchFrom : lineStart) + line.length
     y += fitted.lineHeight
   }
 

@@ -17,6 +17,7 @@ const JSON_LIMIT = 120
 const JSON_WINDOW_SECONDS = 60
 const SSE_LIMIT = 3
 const SSE_RETRY_AFTER = 30
+const SSE_HEARTBEAT_MS = 5_000
 const activeStreams = new Map<string, number>()
 
 function jsonResponse(value: unknown, status = 200, cache = 'public, max-age=15, stale-while-revalidate=30') {
@@ -166,7 +167,7 @@ function openApiDocument() {
 }
 
 export function registerApiRoutes(app: Hono, database: Database = db,
-  appUrl: string | null | undefined = Bun.env.APP_URL)
+  appUrl: string | null | undefined = Bun.env.APP_URL, now: () => number = Date.now)
 {
   app.get('/api', c => page(<ApiDocs user={currentUser(c.req.raw)} />))
 
@@ -193,7 +194,9 @@ export function registerApiRoutes(app: Hono, database: Database = db,
   app.use('/api/v1/*', async (c, next) => {
     if (c.req.method === 'OPTIONS' || c.req.path === '/api/v1/firehose') return next()
     const ip = c.req.header('x-textlog-client-ip') || '-'
-    const limited = consumeBucketedAttempt(database, 'api-json', rateLimitKey(ip), JSON_LIMIT, JSON_WINDOW_SECONDS)
+    const limited = consumeBucketedAttempt(
+      database, 'api-json', rateLimitKey(ip), JSON_LIMIT, JSON_WINDOW_SECONDS, now(),
+    )
     if (limited) return apiError('rate_limited', 'Too many API requests', 429, limited.retryAfter)
     return next()
   })
@@ -292,23 +295,12 @@ export function registerApiRoutes(app: Hono, database: Database = db,
     const stream = new ReadableStream<Uint8Array>({
       start(controller) {
         let closed = false
-        const send = (value: string) => {
-          if (!closed) controller.enqueue(encoder.encode(value))
-        }
-        const unsubscribe = subscribeToPosts(postId => {
-          try {
-            const post = apiPost(database, postId, apiOrigin(c.req.url, appUrl))
-            if (post) send(`id: ${post.id}\nevent: post\ndata: ${JSON.stringify(post)}\n\n`)
-          }
-          catch {
-            cleanup()
-          }
-        })
-        const heartbeat = setInterval(() => send(': heartbeat\n\n'), 15_000)
-        cleanup = () => {
+        let unsubscribe = () => {}
+        let heartbeat: ReturnType<typeof setInterval> | undefined
+        const close = () => {
           if (closed) return
           closed = true
-          clearInterval(heartbeat)
+          if (heartbeat) clearInterval(heartbeat)
           unsubscribe()
           const remaining = (activeStreams.get(ip) || 1) - 1
           if (remaining > 0) activeStreams.set(ip, remaining)
@@ -318,6 +310,26 @@ export function registerApiRoutes(app: Hono, database: Database = db,
           }
           catch {}
         }
+        const send = (value: string) => {
+          if (closed) return
+          try {
+            controller.enqueue(encoder.encode(value))
+          }
+          catch {
+            close()
+          }
+        }
+        unsubscribe = subscribeToPosts(postId => {
+          try {
+            const post = apiPost(database, postId, apiOrigin(c.req.url, appUrl))
+            if (post) send(`id: ${post.id}\nevent: post\ndata: ${JSON.stringify(post)}\n\n`)
+          }
+          catch {
+            cleanup()
+          }
+        })
+        heartbeat = setInterval(() => send(': heartbeat\n\n'), SSE_HEARTBEAT_MS)
+        cleanup = close
         c.req.raw.signal.addEventListener('abort', cleanup, { once: true })
         send('event: ready\ndata: {"status":"connected"}\n\n')
       },
