@@ -67,7 +67,12 @@ function rules(name: keyof typeof palettes, accentChoice: AccentChoice) {
   } : {
     bg: mix(accent, p.ink, .60), hover: mix(accent, p.ink, .70), active: mix(accent, p.ink, .50),
   }
-  return `:root{color-scheme:${dark ? 'dark' : 'light'};--bg:${p.bg};--ink:${p.ink};--muted:${p.muted};--soft:${p.soft};--accent:${accent};--accent-dark:${accentChoice === 'theme' ? p.accentDark : accent};--selection-bg:${accent};--selection-ink:${p.bg};--panel:${p.panel};--pagination-hover-bg:${p.tagBg};--link-border:${p.linkBorder};--button-bg:${button.bg};--button-ink:${p.buttonInk};--button-hover-bg:${button.hover};--button-active-bg:${button.active};--quote-ink:${p.quoteInk};--quote-bg:${p.quoteBg};--error-ink:${p.errorInk};--tag-bg:${p.tagBg}}`
+  const unfollowButton = dark ? {
+    bg: mix(accent, p.bg, .35), hover: mix(accent, p.bg, .45), active: mix(accent, p.bg, .25),
+  } : {
+    bg: mix(accent, p.ink, .45), hover: mix(accent, p.ink, .55), active: mix(accent, p.ink, .35),
+  }
+  return `:root{color-scheme:${dark ? 'dark' : 'light'};--bg:${p.bg};--ink:${p.ink};--muted:${p.muted};--soft:${p.soft};--accent:${accent};--accent-dark:${accentChoice === 'theme' ? p.accentDark : accent};--selection-bg:${accent};--selection-ink:${p.bg};--panel:${p.panel};--pagination-hover-bg:${p.tagBg};--link-border:${p.linkBorder};--button-bg:${button.bg};--button-ink:${p.buttonInk};--button-hover-bg:${button.hover};--button-active-bg:${button.active};--unfollow-button-bg:${unfollowButton.bg};--unfollow-button-hover-bg:${unfollowButton.hover};--unfollow-button-active-bg:${unfollowButton.active};--quote-ink:${p.quoteInk};--quote-bg:${p.quoteBg};--error-ink:${p.errorInk};--tag-bg:${p.tagBg}}`
 }
 
 function mix(foreground: string, background: string, amount: number) {

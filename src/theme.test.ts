@@ -28,6 +28,9 @@ test('theme stylesheet uses mobile palettes and follows the OS for system', () =
   expect(sepia).toContain('--button-bg:#7d382c')
   expect(sepia).toContain('--button-hover-bg:#86392d')
   expect(sepia).toContain('--button-active-bg:#73382a')
+  expect(sepia).toContain('--unfollow-button-bg:#6e3729')
+  expect(sepia).toContain('--unfollow-button-hover-bg:#78382b')
+  expect(sepia).toContain('--unfollow-button-active-bg:#653628')
   expect(sepia).not.toContain('prefers-color-scheme')
 
   const system = themeStyles(new Request('http://localhost'))
@@ -38,6 +41,9 @@ test('theme stylesheet uses mobile palettes and follows the OS for system', () =
   expect(system).toContain('--button-ink:#e5e8e1')
   expect(system).toContain('--button-hover-bg:#4b664d')
   expect(system).toContain('--button-active-bg:#314434')
+  expect(system).toContain('--unfollow-button-bg:#455341')
+  expect(system).toContain('--unfollow-button-hover-bg:#52634d')
+  expect(system).toContain('--unfollow-button-active-bg:#384335')
 })
 
 test('logo SVG follows the selected accent and system brightness', () => {
