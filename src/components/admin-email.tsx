@@ -27,7 +27,7 @@ export function AdminEmail({ user, sent = false }: { user: User; sent?: boolean 
             <textarea name="body" maxLength={20_000} required />
           </label>
           <div className="form-actions">
-            <button>send email</button>
+            <button className="button">send email →</button>
           </div>
         </form>
       </section>

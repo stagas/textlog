@@ -1995,7 +1995,7 @@ form.report-panel {
 }
 
 .admin-email {
-  max-width: 720px;
+  width: 100%;
   padding: var(--space-6) var(--gutter) var(--space-8);
 }
 
@@ -2014,8 +2014,12 @@ form.report-panel {
   font-size: 11px;
 }
 
-.admin-email input {
+.admin-email input,
+.admin-email textarea {
   width: 100%;
+}
+
+.admin-email input {
   padding: 13px;
   color: var(--ink);
   font: inherit;
