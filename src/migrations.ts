@@ -313,14 +313,14 @@ export const migrations: Migration[] = [
   },
    {
     version: 22,
-    name: 'include_decaying_nested_replies_in_hot_scores',
+    name: 'increase_direct_reply_hot_weight',
     up(database) {
       rebuildHotPosts(database)
     },
   },
   {
     version: 23,
-    name: 'increase_direct_reply_hot_weight',
+    name: 'include_decaying_nested_replies_in_hot_scores',
     up(database) {
       rebuildHotPosts(database)
     },
