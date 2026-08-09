@@ -1,6 +1,6 @@
 import type { Database } from 'bun:sqlite'
 import type { Context, Hono } from 'hono'
-import { apiHotPosts, apiOrigin, apiPost, apiPosts, isoTimestamp, parseCollectionParams } from '../api'
+import { apiHotPosts, apiOrigin, apiPost, apiPosts, apiSearchPosts, isoTimestamp, parseCollectionParams } from '../api'
 import { subscribeToPosts } from '../api-broker'
 import { consumeBucketedAttempt, rateLimitKey } from '../auth-rate-limit'
 import { ApiDocs } from '../components/pages'
@@ -10,6 +10,7 @@ import { decodeHotCursor } from '../hot'
 import { logError } from '../log'
 import { currentUser } from '../utils'
 import { page } from './shared'
+import { MAX_SEARCH_LENGTH, normalizeSearchQuery, searchExpression } from '../search'
 import { registerApiWriteRoutes } from './api-write'
 import { registerSyndicationRoutes } from './syndication'
 
@@ -88,6 +89,11 @@ function openApiDocument() {
     paths: {
       '/feeds/latest': { get: { summary: 'Latest posts', parameters: collectionParameters, responses: jsonResponses } },
       '/feeds/hot': { get: { summary: 'Hot posts', parameters: collectionParameters, responses: jsonResponses } },
+      '/search': { get: { summary: 'Search public posts', security: [], parameters: [
+        { name: 'q', in: 'query', required: true, schema: { type: 'string', minLength: 1,
+          maxLength: MAX_SEARCH_LENGTH } },
+        ...collectionParameters,
+      ], responses: jsonResponses } },
       '/feeds/latest.{format}': {
         get: { summary: 'Latest posts as RSS or Atom', parameters: [formatParameter], responses: syndicationResponses },
       },
@@ -207,6 +213,21 @@ export function registerApiRoutes(app: Hono, database: Database = db,
   app.get('/api/openapi.json', () => jsonResponse(openApiDocument(), 200, 'public, max-age=3600'))
 
   app.get('/api/v1/feeds/latest', c => collection(c, database, {}, appUrl))
+
+  app.get('/api/v1/search', c => {
+    const rawQuery = c.req.query('q') || ''
+    const query = normalizeSearchQuery(rawQuery)
+    if (!query || rawQuery.trim().length > MAX_SEARCH_LENGTH || !searchExpression(query)) {
+      return apiError('invalid_query', `q must contain searchable text up to ${MAX_SEARCH_LENGTH} characters`, 400)
+    }
+    const parsed = parseCollectionParams(c.req.query('limit'), c.req.query('cursor'))
+    if (!parsed) {
+      return apiError('invalid_pagination', 'limit must be 1–100 and cursor must be a valid opaque cursor', 400)
+    }
+    return jsonResponse(apiSearchPosts(
+      database, apiOrigin(c.req.url, appUrl), query, parsed.limit, parsed.before || 0,
+    ))
+  })
 
   app.get('/api/v1/feeds/hot', c => {
     const parsed = parseCollectionParams(c.req.query('limit'))

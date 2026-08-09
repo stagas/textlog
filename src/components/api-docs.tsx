@@ -22,6 +22,7 @@ const endpoints = [
   ['GET', '/feeds/latest', 'Get the latest public posts and replies.'],
   ['GET', '/feeds/hot', 'Get posts ranked by recent activity and replies.'],
   ['GET', '/tags/:tag/posts', 'Get the latest posts carrying a hashtag.'],
+  ['GET', '/search?q=:query', 'Search public posts by text.'],
   ['GET', '/firehose', 'Stream new posts as server-sent events.'],
 ] as const
 
@@ -80,6 +81,10 @@ export function ApiDocs({ user }: { user: User | null }) {
           <code>pagination.next_cursor</code> value back as <code>cursor</code> to fetch the next page.
         </p>
         <pre><code>{`curl 'https://textlog.cc/api/v1/feeds/latest?limit=10'`}</code></pre>
+
+        <h2>Search</h2>
+        <p>Search is public and uses the same prefix matching as the website. Separate words must all match.</p>
+        <pre><code>{`curl 'https://textlog.cc/api/v1/search?q=quiet+notes&limit=10'`}</code></pre>
 
         <h2>Firehose</h2>
         <p>

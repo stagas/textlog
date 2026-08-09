@@ -30,7 +30,7 @@ function fixture(now?: () => number) {
     INSERT INTO posts(id,user_id,parent_id,body,created_at) VALUES
       (1,1,NULL,'hello #textlog @bob','2026-08-03 10:00:00'),
       (2,2,1,'a reply','2026-08-03 11:00:00'),
-      (3,1,NULL,'latest','2026-08-03 12:00:00'),
+      (3,1,NULL,'a latest','2026-08-03 12:00:00'),
       (4,3,NULL,'private by deletion','2026-08-03 13:00:00'),
       (5,1,NULL,'deleted post','2026-08-03 14:00:00');
     UPDATE posts SET deleted_at='2026-08-03 15:00:00' WHERE id=5;
@@ -38,6 +38,8 @@ function fixture(now?: () => number) {
     INSERT INTO follows(follower_id,following_id) VALUES(2,1);
     INSERT INTO handle_history(handle,user_id) VALUES('oldalice',1);
     INSERT INTO post_hot SELECT id,0,created_at,created_at FROM posts;
+    CREATE VIRTUAL TABLE post_search USING fts5(body,content='posts',content_rowid='id',tokenize='unicode61');
+    INSERT INTO post_search(post_search) VALUES('rebuild');
   `)
   rebuildHotPosts(database)
   const app = new Hono()
@@ -105,6 +107,22 @@ describe('public API', () => {
     expect((await request(app, '/api/v1/feeds/hot?cursor=broken')).status).toBe(400)
   })
 
+  test('searches public posts without authentication and paginates results', async () => {
+    const { app } = fixture()
+    const firstResponse = await request(app, '/api/v1/search?q=a&limit=1')
+    const first = await firstResponse.json() as any
+    expect(firstResponse.status).toBe(200)
+    expect(first.data).toHaveLength(1)
+    expect(first.pagination.next_cursor).toBeTruthy()
+    const second = await (await request(app,
+      `/api/v1/search?q=a&limit=1&cursor=${encodeURIComponent(first.pagination.next_cursor)}`)).json() as any
+    expect(second.data).toHaveLength(1)
+    expect(second.data[0].id).not.toBe(first.data[0].id)
+    expect((await request(app, '/api/v1/search')).status).toBe(400)
+    expect((await request(app, '/api/v1/search?q=!!!')).status).toBe(400)
+    expect((await request(app, `/api/v1/search?q=${'x'.repeat(101)}`)).status).toBe(400)
+  })
+
   test('serves single posts, replies, users, and tags with documented errors', async () => {
     const { app } = fixture()
     const post = await (await request(app, '/api/v1/posts/1')).json() as any
@@ -143,7 +161,8 @@ describe('public API', () => {
     expect(rss.headers.get('content-type')).toBe('application/rss+xml; charset=utf-8')
     expect(rss.headers.get('access-control-allow-origin')).toBe('*')
     expect(spec.openapi).toBe('3.1.0')
-    expect(Object.keys(spec.paths)).toHaveLength(20)
+    expect(Object.keys(spec.paths)).toHaveLength(21)
+    expect(spec.paths['/search'].get.security).toEqual([])
     expect(spec.paths['/feeds/latest.{format}'].get.parameters[0].schema.enum).toEqual(['rss', 'atom'])
     expect(mutation.status).toBe(405)
     expect(mutation.headers.get('allow')).toBe('GET, HEAD, OPTIONS')

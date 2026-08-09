@@ -1,6 +1,7 @@
 import type { Database } from 'bun:sqlite'
 import { extractHashtags, extractMentions } from './content'
 import { encodeHotCursor, getHotPosts, type HotCursor, hotCursor } from './hot'
+import { searchExpression } from './search'
 
 export const API_DEFAULT_LIMIT = 20
 export const API_MAX_LIMIT = 100
@@ -143,5 +144,19 @@ export function apiHotPosts(database: Database, origin: string, limit: number, c
   return {
     data: pageRows.map(row => serializePost(row, origin)),
     pagination: { next_cursor: hasMore ? encodeHotCursor(hotCursor(rows[limit - 1], asOf)) : null },
+  }
+}
+
+export function apiSearchPosts(database: Database, origin: string, query: string, limit: number, offset = 0) {
+  const expression = searchExpression(query)
+  const rows = database.query(`${postSelect} JOIN post_search ON post_search.rowid=p.id
+    WHERE post_search MATCH ? AND p.deleted_at IS NULL AND u.deleted_at IS NULL
+    ORDER BY bm25(post_search),p.id DESC LIMIT ? OFFSET ?`)
+    .all(expression, limit + 1, offset) as ApiPostRow[]
+  const hasMore = rows.length > limit
+  const pageRows = rows.slice(0, limit)
+  return {
+    data: pageRows.map(row => serializePost(row, origin)),
+    pagination: { next_cursor: hasMore ? encodeCursor(offset + limit) : null },
   }
 }
