@@ -3,9 +3,10 @@ import type { SessionView } from '../types'
 import { Layout } from './layout'
 import { FormMessage } from './page-shared'
 
-export function AccountSecurity({ user, sessions, error, success }: {
+export function AccountSecurity({ user, sessions, passwordEnabled, error, success }: {
   user: User
   sessions: SessionView[]
+  passwordEnabled?: boolean
   error?: string
   success?: string
 }) {
@@ -38,6 +39,15 @@ export function AccountSecurity({ user, sessions, error, success }: {
           </form>
         </section>
         <section className="security-section">
+          <h2>password login</h2>
+          <p>{passwordEnabled
+            ? 'Change the password you use to log in.'
+            : 'Add a password as an alternative to email magic links.'}</p>
+          <a className="button" href={passwordEnabled ? '/account/password/change' : '/account/password/enable'}>
+            {passwordEnabled ? 'change password →' : 'enable password login →'}
+          </a>
+        </section>
+        <section className="security-section">
           <h2>sessions</h2>
           <div className="session-list">
             {sessions.map(session => (
@@ -67,6 +77,31 @@ export function AccountSecurity({ user, sessions, error, success }: {
           )}
         </section>
       </div>
+    </Layout>
+  )
+}
+
+export function AccountPassword({ user, enabled, error }: { user: User; enabled: boolean; error?: string }) {
+  return (
+    <Layout user={user} title={enabled ? 'change password' : 'enable password login'}>
+      <section className="auth-shell">
+        <div className="panel auth-panel password-panel">
+          <h1>{enabled ? 'Change password' : 'Set a password'}</h1>
+          {error && <p className="error" role="alert">{error}</p>}
+          <form method="post" action={enabled ? '/account/password/change' : '/account/password/enable'}>
+            {enabled && <>
+              <label htmlFor="old-password"><span>old password</span></label>
+              <input id="old-password" type="password" name="oldPassword" required maxLength={128}
+                autoComplete="current-password" autoFocus />
+            </>}
+            <label htmlFor="new-password"><span>{enabled ? 'new password' : 'password'}</span></label>
+            <input id="new-password" type="password" name="newPassword" required minLength={8} maxLength={128}
+              autoComplete="new-password" autoFocus={!enabled} placeholder="8–128 characters" />
+            <button className="button">{enabled ? 'change password' : 'enable password login'} <span>→</span></button>
+          </form>
+          <p className="auth-secondary"><a href="/account/security">Back to account security</a></p>
+        </div>
+      </section>
     </Layout>
   )
 }

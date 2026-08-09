@@ -1,12 +1,13 @@
 import { anonymizeUser, isAdmin } from '../admin'
 import { AUTH_LIMITS, authRateLimitMessage } from '../auth-rate-limit'
-import { currentUser, sessionToken } from '../utils'
+import { currentUser, hashPassword, sessionToken, verifyPassword } from '../utils'
 import { authLimit, clientAddress, form, issueEmailToken, issueMagicLink, page, redirect, retryPage,
   securityPage } from './shared'
 
 import type { Hono } from 'hono'
 import {
   AccountMagicLink,
+  AccountPassword,
   ChangeTheme,
   ConfirmAccountDelete,
   ConfirmEmail,
@@ -88,13 +89,72 @@ export function registerAccountRoutes(app: Hono) {
   })
 
   app.get('/account/security', c =>
-    securityPage(c.req.raw, undefined, c.req.query('changed') === 'password'
+    securityPage(c.req.raw, undefined, c.req.query('enabled') === 'password'
+      ? 'Password login enabled.'
+      : c.req.query('changed') === 'password'
       ? 'Password changed. Other sessions were revoked.'
       : c.req.query('changed') === 'email'
       ? 'Email address verified and changed.'
       : c.req.query('verified') === '1'
       ? 'Email address verified.'
       : undefined))
+
+  app.get('/account/password/enable', c => {
+    const user = currentUser(c.req.raw)
+    if (!user) return redirect('/enter?next=' + encodeURIComponent('/account/password/enable'))
+    const credentials = db.query('SELECT password FROM users WHERE id=?').get(user.id) as { password: string }
+    return credentials.password === '!' ? page(<AccountPassword user={user} enabled={false} />)
+      : redirect('/account/password/change')
+  })
+  app.post('/account/password/enable', async c => {
+    const user = currentUser(c.req.raw)
+    if (!user) return redirect('/enter')
+    const limited = authLimit(c, 'password-enable', `${user.id}:${clientAddress(c)}`, AUTH_LIMITS.sensitiveAccount)
+    if (limited) return retryPage(page(<AccountPassword user={user} enabled={false}
+      error={authRateLimitMessage(limited.retryAfter)} />, 429), limited.retryAfter)
+    const current = db.query('SELECT password FROM users WHERE id=?').get(user.id) as { password: string }
+    if (current.password !== '!') return redirect('/account/password/change')
+    const f = await form(c.req.raw)
+    const password = f.newPassword || ''
+    if (password.length < 8 || password.length > 128) return page(<AccountPassword user={user} enabled={false}
+      error="Use a password between 8 and 128 characters." />, 400)
+    db.query('UPDATE users SET password=? WHERE id=? AND password=?').run(await hashPassword(password), user.id, '!')
+    return redirect('/account/security?enabled=password')
+  })
+
+  app.get('/account/password/change', c => {
+    const user = currentUser(c.req.raw)
+    if (!user) return redirect('/enter?next=' + encodeURIComponent('/account/password/change'))
+    const credentials = db.query('SELECT password FROM users WHERE id=?').get(user.id) as { password: string }
+    return credentials.password === '!' ? redirect('/account/password/enable')
+      : page(<AccountPassword user={user} enabled />)
+  })
+  app.post('/account/password/change', async c => {
+    const user = currentUser(c.req.raw)
+    if (!user) return redirect('/enter')
+    const limited = authLimit(c, 'password-change', `${user.id}:${clientAddress(c)}`, AUTH_LIMITS.sensitiveAccount)
+    if (limited) return retryPage(page(<AccountPassword user={user} enabled
+      error={authRateLimitMessage(limited.retryAfter)} />, 429), limited.retryAfter)
+    const f = await form(c.req.raw)
+    const oldPassword = f.oldPassword || ''
+    const newPassword = f.newPassword || ''
+    const credentials = db.query('SELECT password FROM users WHERE id=?').get(user.id) as { password: string }
+    if (credentials.password === '!') return redirect('/account/password/enable')
+    if (!await verifyPassword(oldPassword, credentials.password)) return page(<AccountPassword user={user} enabled
+      error="Old password is incorrect." />, 400)
+    if (newPassword.length < 8 || newPassword.length > 128) return page(<AccountPassword user={user} enabled
+      error="Use a password between 8 and 128 characters." />, 400)
+    if (oldPassword === newPassword) return page(<AccountPassword user={user} enabled
+      error="Choose a password different from your old password." />, 400)
+    const currentSession = sessionHash(sessionToken(c.req.raw))
+    const newPasswordHash = await hashPassword(newPassword)
+    db.transaction(() => {
+      db.query('UPDATE users SET password=? WHERE id=?').run(newPasswordHash, user.id)
+      db.query('DELETE FROM password_resets WHERE user_id=?').run(user.id)
+      db.query('DELETE FROM sessions WHERE user_id=? AND token_hash!=?').run(user.id, currentSession)
+    })()
+    return redirect('/account/security?changed=password')
+  })
 
   app.post('/account/magic-link', c => {
     const user = currentUser(c.req.raw)

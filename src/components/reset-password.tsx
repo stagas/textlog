@@ -6,7 +6,7 @@ export function ResetPassword(
 ) {
   return (
     <Layout title="reset password">
-      <div className="panel auth">
+      <section className="auth-shell"><div className="panel auth-panel password-panel">
         {invalid
           ? (
             <>
@@ -31,7 +31,7 @@ export function ResetPassword(
               <button className="button wide">reset password →</button>
             </form>
           )}
-      </div>
+      </div></section>
     </Layout>
   )
 }

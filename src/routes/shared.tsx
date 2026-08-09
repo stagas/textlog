@@ -119,7 +119,9 @@ export function securityPage(req: Request, error?: string, success?: string, sta
   const sessions = rows.map(({ token_hash, ...row }) => ({ ...row, token: token_hash,
     current: token_hash === current })
   )
-  return page(<AccountSecurity user={user} sessions={sessions} error={error} success={success} />, status)
+  const credentials = db.query('SELECT password FROM users WHERE id=?').get(user.id) as { password: string }
+  return page(<AccountSecurity user={user} sessions={sessions} passwordEnabled={credentials.password !== '!'}
+    error={error} success={success} />, status)
 }
 export async function form(req: Request, maxBytes?: number) {
   const data = await limitedFormData(req, maxBytes)

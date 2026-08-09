@@ -133,7 +133,7 @@ app.use('*', async (c, next) => {
   await next()
   if (c.req.method !== 'GET' || !c.res.headers.get('content-type')?.includes('text/html')) return
   const url = new URL(c.req.url)
-  const privatePath = /^\/(?:enter|choose-handle|write|compose|activity|admin|search|account\/delete)(?:\/|$)/
+  const privatePath = /^\/(?:enter|forgot-password|reset-password|choose-handle|write|compose|activity|admin|search|account)(?:\/|$)/
     .test(url.pathname) || /^\/post\/\d+\/(?:edit|delete)$/.test(url.pathname)
   const transientParameters = ['reply', 'report', 'reported', 'edit', 'welcome', 'reset', 'token']
   const transient = transientParameters.some(name => url.searchParams.has(name))

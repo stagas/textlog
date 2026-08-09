@@ -1,17 +1,18 @@
 import { AUTH_LIMITS, authRateLimitMessage } from '../auth-rate-limit'
-import { Auth, ChooseHandle, MagicLinkSent } from '../components/pages'
+import { Auth, ChooseHandle, ForgotPassword, MagicLinkSent, PasswordLogin, ResetPassword } from '../components/pages'
 import { db } from '../db'
-import { sendMagicLink } from '../email'
+import { sendMagicLink, sendPasswordReset } from '../email'
 import { clearSessionCookie, safeLocalPath, sessionCookie } from '../http'
 import { isDevelopment } from '../environment'
 import { moderateText, moderationMessage } from '../moderation'
 import { insertSession, SESSION_LIFETIME_MS, sessionHash } from '../sessions'
-import { currentUser, hash, token } from '../utils'
+import { currentUser, hash, hashPassword, token, verifyPassword } from '../utils'
 import { authLimit, clientAddress, form, issueMagicLink, page, redirect, retryPage, safeNext } from './shared'
 
 import type { Hono } from 'hono'
 
 export const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+const dummyPasswordHash = hashPassword(crypto.randomUUID())
 function temporaryHandle() {
   return `anon${crypto.randomUUID().replaceAll('-', '').slice(0, 12)}`
 }
@@ -22,6 +23,87 @@ export function registerAuthRoutes(app: Hono) {
     c => redirect('/enter' + (c.req.query('next') ? `?next=${encodeURIComponent(safeNext(c.req.query('next')))}` : '')))
   app.get('/signup',
     c => redirect('/enter' + (c.req.query('next') ? `?next=${encodeURIComponent(safeNext(c.req.query('next')))}` : '')))
+
+  app.get('/enter/password', c => page(<PasswordLogin next={safeNext(c.req.query('next'))}
+    reset={c.req.query('reset') === '1'} />))
+  app.post('/enter/password', async c => {
+    const f = await form(c.req.raw)
+    const identifier = (f.identifier || '').trim().toLowerCase().replace(/^@/, '')
+    const password = f.password || ''
+    const next = safeNext(f.next)
+    const limited = authLimit(c, 'password-login-ip', clientAddress(c), AUTH_LIMITS.loginIp)
+      || authLimit(c, 'password-login-account', identifier || '(blank)', AUTH_LIMITS.loginAccount)
+    if (limited) return retryPage(page(<PasswordLogin identifier={identifier} next={next}
+      error={authRateLimitMessage(limited.retryAfter)} />, 429), limited.retryAfter)
+    const account = db.query(`SELECT id,password FROM users WHERE (email=? OR handle=? COLLATE NOCASE)
+      AND deleted_at IS NULL AND suspended_at IS NULL`).get(identifier, identifier) as { id: number; password: string } | null
+    const valid = await verifyPassword(password, account?.password !== '!' && account?.password
+      ? account.password : await dummyPasswordHash)
+    if (!account || account.password === '!' || !valid) {
+      return page(<PasswordLogin identifier={identifier} next={next} error="Email, handle, or password is incorrect." />, 400)
+    }
+    if (!account.password.startsWith('$argon2id$')) {
+      db.query('UPDATE users SET password=? WHERE id=?').run(await hashPassword(password), account.id)
+    }
+    const session = token()
+    insertSession(db, session, account.id, Date.now() + SESSION_LIFETIME_MS, Date.now(),
+      c.req.header('user-agent') || '')
+    return redirect(next, sessionCookie(session))
+  })
+
+  app.get('/forgot-password', c => page(<ForgotPassword />))
+  app.post('/forgot-password', async c => {
+    const f = await form(c.req.raw)
+    const email = (f.email || '').trim().toLowerCase()
+    const limited = authLimit(c, 'forgot-password-ip', clientAddress(c), AUTH_LIMITS.forgotIp)
+      || authLimit(c, 'forgot-password-account', email || '(blank)', AUTH_LIMITS.forgotAccount)
+    if (limited) return retryPage(page(<ForgotPassword error={authRateLimitMessage(limited.retryAfter)} />, 429),
+      limited.retryAfter)
+    if (!emailPattern.test(email) || email.length > 254) return page(<ForgotPassword error="Enter a valid email address." />, 400)
+    const account = db.query(`SELECT id,password FROM users WHERE email=? AND deleted_at IS NULL
+      AND suspended_at IS NULL`).get(email) as { id: number; password: string } | null
+    if (account && account.password !== '!') {
+      const value = token()
+      db.query('DELETE FROM password_resets WHERE user_id=? OR expires_at<=?').run(account.id, Date.now())
+      db.query('INSERT INTO password_resets(token_hash,user_id,expires_at) VALUES(?,?,?)')
+        .run(hash(value), account.id, Date.now() + 3600000)
+      const origin = Bun.env.APP_URL?.replace(/\/$/, '') || new URL(c.req.url).origin
+      try { await sendPasswordReset(email, `${origin}/reset-password?token=${encodeURIComponent(value)}`) }
+      catch (error) {
+        console.error('Could not send password reset', error)
+        db.query('DELETE FROM password_resets WHERE token_hash=?').run(hash(value))
+        return page(<ForgotPassword error="The reset email could not be sent. Please try again later." />, 503)
+      }
+    }
+    return page(<ForgotPassword sent />)
+  })
+
+  app.get('/reset-password', c => {
+    const value = c.req.query('token') || ''
+    const reset = value && db.query('SELECT 1 FROM password_resets WHERE token_hash=? AND expires_at>?')
+      .get(hash(value), Date.now())
+    return page(<ResetPassword resetToken={value} invalid={!reset} />, reset ? 200 : 400)
+  })
+  app.post('/reset-password', async c => {
+    const f = await form(c.req.raw)
+    const value = f.token || ''
+    const password = f.password || ''
+    const limited = authLimit(c, 'reset-password-ip', clientAddress(c), AUTH_LIMITS.resetIp)
+      || authLimit(c, 'reset-password-token', hash(value), AUTH_LIMITS.resetToken)
+    if (limited) return retryPage(page(<ResetPassword resetToken={value} error={authRateLimitMessage(limited.retryAfter)} />, 429), limited.retryAfter)
+    const reset = value && db.query('SELECT user_id FROM password_resets WHERE token_hash=? AND expires_at>?')
+      .get(hash(value), Date.now()) as { user_id: number } | null
+    if (!reset) return page(<ResetPassword invalid />, 400)
+    if (password.length < 8 || password.length > 128) return page(<ResetPassword resetToken={value} error="Use a password between 8 and 128 characters." />, 400)
+    if (password !== (f.confirmPassword || '')) return page(<ResetPassword resetToken={value} error="Passwords do not match." />, 400)
+    const passwordHash = await hashPassword(password)
+    db.transaction(() => {
+      db.query('UPDATE users SET password=? WHERE id=?').run(passwordHash, reset.user_id)
+      db.query('DELETE FROM password_resets WHERE user_id=?').run(reset.user_id)
+      db.query('DELETE FROM sessions WHERE user_id=?').run(reset.user_id)
+    })()
+    return redirect('/enter/password?reset=1')
+  })
 
   app.post('/enter', async c => {
     const f = await form(c.req.raw)

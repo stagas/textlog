@@ -22,6 +22,39 @@ export function Auth({ error, email = '', next }: { error?: string; email?: stri
             {' '}
             <a href="/legal#privacy">Privacy Notice</a>.
           </p>
+          <p className="auth-alternative">
+            Alternatively, <a href={`/enter/password${next ? `?next=${encodeURIComponent(next)}` : ''}`}>
+              log in using your password
+            </a>.
+          </p>
+        </div>
+      </section>
+    </Layout>
+  )
+}
+
+export function PasswordLogin({ error, identifier = '', next, reset = false }: {
+  error?: string; identifier?: string; next?: string; reset?: boolean
+}) {
+  return (
+    <Layout title="password login">
+      <section className="auth-shell">
+        <div className="panel auth-panel password-panel">
+          <h1>Log in</h1>
+          {reset && <p className="success" role="status">Password reset. You can log in now.</p>}
+          {error && <p className="error" role="alert">{error}</p>}
+          <form method="post" action="/enter/password" autoComplete="on">
+            {next && <input type="hidden" name="next" value={next} />}
+            <label htmlFor="login-identifier"><span>email or handle</span></label>
+            <input id="login-identifier" name="identifier" required maxLength={254} autoComplete="username"
+              autoCapitalize="none" spellCheck={false} autoFocus defaultValue={identifier} />
+            <label htmlFor="login-password"><span>password</span></label>
+            <input id="login-password" type="password" name="password" required maxLength={128}
+              autoComplete="current-password" />
+            <button className="button">log in <span aria-hidden="true">→</span></button>
+          </form>
+          <p className="auth-secondary"><a href="/forgot-password">Forgot password?</a></p>
+          <p className="auth-secondary"><a href="/enter">Use a magic link instead</a></p>
         </div>
       </section>
     </Layout>

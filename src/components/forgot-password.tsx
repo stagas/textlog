@@ -4,7 +4,7 @@ import { FormMessage } from './page-shared'
 export function ForgotPassword({ sent = false, error }: { sent?: boolean; error?: string }) {
   return (
     <Layout title="forgot password">
-      <div className="panel auth">
+      <section className="auth-shell"><div className="panel auth-panel password-panel">
         {sent
           ? (
             <>
@@ -19,7 +19,7 @@ export function ForgotPassword({ sent = false, error }: { sent?: boolean; error?
               <form method="post" action="/forgot-password">
                 <FormMessage error={error} />
                 <label>
-                  email<input type="email" name="email" required maxLength={254} autoComplete="email"
+                  email<input type="email" name="email" required maxLength={254} autoComplete="email" autoFocus
                     placeholder="you@example.com" />
                 </label>
                 <button className="button wide">send reset link →</button>
@@ -29,7 +29,7 @@ export function ForgotPassword({ sent = false, error }: { sent?: boolean; error?
               </p>
             </>
           )}
-      </div>
+      </div></section>
     </Layout>
   )
 }

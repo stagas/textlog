@@ -184,6 +184,45 @@ test('consequential account, content, reporting, and admin flows work over HTTP'
   expect((database.query('SELECT count(*) count FROM sessions WHERE user_id=?').get(alice.id) as any).count).toBe(0)
 
   aliceCookie = await signup('alice', 'alice@example.com', 'unused')
+  const enablePasswordPage = await request('/account/password/enable', { cookie: aliceCookie })
+  expect(enablePasswordPage.status).toBe(200)
+  expect(await enablePasswordPage.text()).toContain('Set a password')
+  const enabledPassword = await request('/account/password/enable', {
+    method: 'POST', cookie: aliceCookie, form: { newPassword: 'alice password 123' },
+  })
+  expect(enabledPassword.status).toBe(303)
+  expect(enabledPassword.headers.get('location')).toBe('/account/security?enabled=password')
+  const passwordLogin = await request('/enter/password', {
+    method: 'POST', form: { identifier: '@alice', password: 'alice password 123', next: '/account/security' },
+  })
+  expect(passwordLogin.status).toBe(303)
+  expect(passwordLogin.headers.get('location')).toBe('/account/security')
+  aliceCookie = sessionCookie(passwordLogin)
+  const changedPassword = await request('/account/password/change', {
+    method: 'POST', cookie: aliceCookie,
+    form: { oldPassword: 'alice password 123', newPassword: 'alice password 456' },
+  })
+  expect(changedPassword.status).toBe(303)
+  const forgotPassword = await request('/forgot-password', {
+    method: 'POST', form: { email: 'alice@example.com' },
+  })
+  expect(forgotPassword.status).toBe(200)
+  const resetEmail = capturedEmails().filter(message => message.to === 'alice@example.com'
+    && message.subject.includes('Reset your')).at(-1)
+  expect(resetEmail).toBeDefined()
+  const resetToken = linkToken(resetEmail!)
+  const resetPassword = await request('/reset-password', {
+    method: 'POST', form: { token: resetToken, password: 'alice password 789', confirmPassword: 'alice password 789' },
+  })
+  expect(resetPassword.status).toBe(303)
+  expect(resetPassword.headers.get('location')).toBe('/enter/password?reset=1')
+  const reusedReset = await request(`/reset-password?token=${encodeURIComponent(resetToken)}`)
+  expect(reusedReset.status).toBe(400)
+  const resetLogin = await request('/enter/password', {
+    method: 'POST', form: { identifier: 'alice@example.com', password: 'alice password 789' },
+  })
+  expect(resetLogin.status).toBe(303)
+  aliceCookie = sessionCookie(resetLogin)
 
   const createPost = await request('/post', {
     method: 'POST',
