@@ -10,7 +10,7 @@ import { authLimit, clientAddress, form, issueMagicLink, page, redirect, retryPa
 
 import type { Hono } from 'hono'
 
-const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+export const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 const development = () => Bun.env.NODE_ENV === 'development' || Bun.env.DEV_RELOAD === 'true'
 
 function temporaryHandle() {
@@ -44,20 +44,20 @@ export function registerAuthRoutes(app: Hono) {
       WHERE email=? AND deleted_at IS NULL AND suspended_at IS NULL`).get(email) as { id: number; handle: string;
       handle_chosen_at: string | null } | null
     const origin = Bun.env.APP_URL?.replace(/\/$/, '') || new URL(c.req.url).origin
-    const magicUrl = issueMagicLink(email, account?.id ?? null, next, origin)
+    const link = issueMagicLink(email, account?.id ?? null, next, origin)
     try {
-      await sendMagicLink(email, magicUrl, account?.handle_chosen_at ? account.handle : undefined)
+      await sendMagicLink(email, link.url, link.code, account?.handle_chosen_at ? account.handle : undefined)
     }
     catch (error) {
       console.error('Could not send magic link', error)
-      const value = new URL(magicUrl).searchParams.get('token') || ''
+      const value = new URL(link.url).searchParams.get('token') || ''
       db.query('DELETE FROM magic_links WHERE token_hash=?').run(hash(value))
       return page(
         <Auth email={email} next={next} error="The magic link could not be sent. Please try again later." />,
         503,
       )
     }
-    return page(<MagicLinkSent email={email} magicUrl={development() ? magicUrl : undefined} />)
+    return page(<MagicLinkSent email={email} magicUrl={development() ? link.url : undefined} />)
   })
 
   app.get('/enter/magic', c => {

@@ -47,11 +47,11 @@ export function sendEmailVerification(email: string, verificationUrl: string, ch
     `<p>${action} by using the link below.</p><p><a href="${verificationUrl}">${action}</a></p><p>This link expires in one hour. If you did not request it, you can ignore this email.</p>`)
 }
 
-export function sendMagicLink(email: string, magicUrl: string, handle?: string) {
+export function sendMagicLink(email: string, magicUrl: string, code: string, handle?: string) {
   const heading = handle ? `Welcome back, @${handle}` : 'Join the community'
   return sendEmail(email, `${heading} · textlog`,
-    `${heading}\n\nOpen this magic link to enter textlog:\n\n${magicUrl}\n\nThis link expires in one hour and can only be used once. If you did not request it, you can ignore this email.`,
-    `<h1>${heading}</h1><p>Use this magic link to enter textlog:</p><p><a href="${magicUrl}" style="font-size: 24px;">Enter textlog</a></p><p>This link expires in one hour and can only be used once. If you did not request it, you can ignore this email.</p>`)
+    `${heading}\n\nOpen this magic link to enter textlog:\n\n${magicUrl}\n\nSigning in from an app? Enter this code instead: ${code}\n\nThe link and the code expire in one hour and can only be used once. If you did not request them, you can ignore this email.`,
+    `<h1>${heading}</h1><p>Use this magic link to enter textlog:</p><p><a href="${magicUrl}" style="font-size: 24px;">Enter textlog</a></p><p>Signing in from an app? Enter this code instead:</p><p style="font-size: 24px; letter-spacing: 4px;"><strong>${code}</strong></p><p>The link and the code expire in one hour and can only be used once. If you did not request them, you can ignore this email.</p>`)
 }
 
 export function sendReportReceipt(email: string, reference: string) {
