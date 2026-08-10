@@ -20,8 +20,10 @@
     "@types/react-dom": "latest",
     "canvas": "^3.2.3",
     "hono": "^4.13.0",
+    "linkify-it": "^6.1.0",
     "react": "latest",
-    "react-dom": "latest"
+    "react-dom": "latest",
+    "tlds": "^1.261.0"
   },
   "devDependencies": {
     "bun-types": "latest",

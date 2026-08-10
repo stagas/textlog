@@ -1,5 +1,7 @@
 import type { Database } from 'bun:sqlite'
 import { createHash, randomBytes } from 'node:crypto'
+import { LinkifyIt } from 'linkify-it'
+import tlds from 'tlds'
 import { db, type User } from './db'
 import { markSessionUsed, sessionHash } from './sessions'
 
@@ -81,28 +83,55 @@ function linkLabel(url: string, appUrl: string | undefined) {
   return relative.startsWith('/') ? relative : `/${relative}`
 }
 
+const urlMatcher = new LinkifyIt({ fuzzyLink: true, fuzzyEmail: false })
+  .tlds(tlds)
+
+type LinkToken = {
+  index: number
+  lastIndex: number
+  kind: 'markdown' | 'url' | 'reference'
+  raw: string
+  url?: string
+  label?: string
+}
+
+function linkTokens(body: string): LinkToken[] {
+  const tokens: LinkToken[] = []
+  for (const match of body.matchAll(/\[([^\]\r\n]+)\]\((https?:\/\/[^\s<>")]+)\)/gi)) {
+    tokens.push({ index: match.index, lastIndex: match.index + match[0].length, kind: 'markdown',
+      raw: match[0], label: match[1], url: match[2] })
+  }
+  for (const match of urlMatcher.match(body) || []) {
+    // Protocol-less domains default to HTTPS. Explicit schemes remain untouched.
+    const url = match.schema ? match.url : `https://${match.raw}`
+    tokens.push({ index: match.index, lastIndex: match.lastIndex, kind: 'url', raw: match.raw, url })
+  }
+  for (const match of body.matchAll(/(?<![A-Za-z0-9_])[@#][A-Za-z0-9_]+/g)) {
+    tokens.push({ index: match.index, lastIndex: match.index + match[0].length, kind: 'reference', raw: match[0] })
+  }
+  const priority = { markdown: 0, url: 1, reference: 2 }
+  return tokens.sort((a, b) => a.index - b.index || priority[a.kind] - priority[b.kind])
+}
+
 export function linkify(body: string, mentionBios: Record<string, string> = {}, highlightTerms: string[] = [],
   appUrl: string | undefined = Bun.env.APP_URL) {
-  const tokens = /\[([^\]\r\n]+)\]\((https?:\/\/[^\s<>")]+)\)|https?:\/\/[^\s<>"]+|(?<![A-Za-z0-9_])[@#][A-Za-z0-9_]+/gi
   let html = ''
   let end = 0
-  for (const match of body.matchAll(tokens)) {
+  for (const match of linkTokens(body)) {
+    if (match.index < end) continue
     html += highlighted(body.slice(end, match.index), highlightTerms)
-    const token = match[0]
-    if (match[1] !== undefined && match[2] !== undefined) {
-      html += `<a href="${esc(match[2])}" title="${esc(match[2])}"${linkAttributes(match[2], appUrl)}>${
-        highlighted(match[1], highlightTerms)
+    const token = match.raw
+    if (match.kind === 'markdown') {
+      html += `<a href="${esc(match.url)}" title="${esc(match.url)}"${linkAttributes(match.url!, appUrl)}>${
+        highlighted(match.label!, highlightTerms)
       }</a>`
     }
-    else if (/^https?:\/\//i.test(token)) {
-      const url = token.replace(/[.,!?;:)]+$/, '')
-      const punctuation = token.slice(url.length)
+    else if (match.kind === 'url') {
+      const url = match.url!
       const label = linkLabel(url, appUrl)
       html += `<a href="${esc(url)}"${label === url ? '' : ` title="${esc(url)}"`}${linkAttributes(url, appUrl)}>${
-        highlighted(label, highlightTerms)
-      }</a>${
-        esc(punctuation)
-      }`
+        highlighted(label === url ? token : label, highlightTerms)
+      }</a>`
     }
     else {
       const value = token.slice(1)
@@ -114,7 +143,7 @@ export function linkify(body: string, mentionBios: Record<string, string> = {}, 
         }>${highlighted(`@${value}`, highlightTerms)}</a>`
         : `<a href="/tag/${value}">${highlighted(`#${value}`, highlightTerms)}</a>`
     }
-    end = match.index + token.length
+    end = match.lastIndex
   }
   return html + highlighted(body.slice(end), highlightTerms)
 }

@@ -37,11 +37,23 @@ describe('post persistence', () => {
     expect(linkify('[test](https://example.com/)'))
       .toBe('<a href="https://example.com/" title="https://example.com/" target="_blank" rel="nofollow ugc noopener noreferrer">test</a>')
   })
+  test('linkifies protocol-less domains using the public TLD list', () => {
+    expect(linkify('visit example.com or docs.example.dev/guide?q=links.'))
+      .toBe('visit <a href="https://example.com" target="_blank" rel="nofollow ugc noopener noreferrer">example.com</a> or <a href="https://docs.example.dev/guide?q=links" target="_blank" rel="nofollow ugc noopener noreferrer">docs.example.dev/guide?q=links</a>.')
+    expect(linkify('not links: version 1.2.3, example.invalid, or a@example.com'))
+      .toBe('not links: version 1.2.3, example.invalid, or a@example.com')
+  })
+  test('does not treat references inside protocol-less URLs as mentions or tags', () => {
+    expect(linkify('example.com/@reader#notes', { reader: 'Reader' }))
+      .toBe('<a href="https://example.com/@reader#notes" target="_blank" rel="nofollow ugc noopener noreferrer">example.com/@reader#notes</a>')
+  })
   test('opens links starting with APP_URL in the current tab', () => {
     expect(linkify('https://textlog.test/post/1', {}, [], 'https://textlog.test'))
       .toBe('<a href="https://textlog.test/post/1" title="https://textlog.test/post/1" rel="nofollow ugc">/post/1</a>')
     expect(linkify('[post](https://textlog.test/post/1)', {}, [], 'https://textlog.test'))
       .toBe('<a href="https://textlog.test/post/1" title="https://textlog.test/post/1" rel="nofollow ugc">post</a>')
+    expect(linkify('textlog.cc/post/1', {}, [], 'https://textlog.cc'))
+      .toBe('<a href="https://textlog.cc/post/1" title="https://textlog.cc/post/1" rel="nofollow ugc">/post/1</a>')
   })
   test('normalizes literal APP_URL links when APP_URL has a trailing slash', () => {
     expect(linkify('https://textlog.test/post/1', {}, [], 'https://textlog.test/'))
