@@ -45,14 +45,14 @@ function postBy(userId: number, id: number, createdAt: string, parentId: number 
 }
 
 describe('hot feed ranking', () => {
-  test('uses an 8-hour half-life so older posts retain meaningful rank', () => {
+  test('gives reply-free posts only a short, modest freshness boost', () => {
     post(1, '2026-08-03 12:00:00')
     post(2, '2026-08-02 12:00:00')
 
     const results = getHotPosts(database, 20, null, asOf)
     expect(results.map(result => result.id)).toEqual([1, 2])
-    expect(results[0].hot_score).toBeCloseTo(1)
-    expect(results[1].hot_score).toBeCloseTo(Math.pow(0.5, 3))
+    expect(results[0].hot_score).toBeCloseTo(0.25)
+    expect(results[1].hot_score).toBeCloseTo(0.25 * Math.pow(0.5, 4))
   })
 
   test('lets a busy thread from yesterday outrank a new post', () => {
@@ -65,7 +65,7 @@ describe('hot feed ranking', () => {
     const results = getHotPosts(database, 20, null, asOf)
     expect(results[0].id).toBe(1)
     expect(results.find(result => result.id === 1)?.hot_score)
-      .toBeCloseTo(9 * Math.pow(0.5, 24 / (8 * Math.pow(2, 2 / 5))))
+      .toBeCloseTo(4.25 * Math.pow(0.5, 24 / 18))
   })
 
   test('direct replies give active threads substantially more staying power', () => {
@@ -86,7 +86,7 @@ describe('hot feed ranking', () => {
     expect(getHotPosts(database, 20, null, asOf)[0].id).toBe(1)
   })
 
-  test('cumulative replies exponentially extend the recency half-life', () => {
+  test('more distinct replies extend the recency half-life from hours into days', () => {
     for (const [rootId, replies] of [[1, 1], [100, 5], [200, 20]] as const) {
       post(rootId, '2026-08-01 20:00:00')
       for (let index = 1; index <= replies; index++) {
@@ -95,7 +95,7 @@ describe('hot feed ranking', () => {
     }
 
     const results = getHotPosts(database, 100, null, asOf)
-    for (const [rootId, replies, halfLife] of [[1, 1, 8 * Math.pow(2, 1 / 5)], [100, 5, 16], [200, 20, 128]] as const) {
+    for (const [rootId, replies, halfLife] of [[1, 1, 12], [100, 5, 36], [200, 20, 126]] as const) {
       const stored = database.query('SELECT score,reply_count FROM post_hot WHERE post_id=?').get(rootId) as {
         score: number; reply_count: number
       }
@@ -105,6 +105,18 @@ describe('hot feed ranking', () => {
     }
   })
 
+  test('keeps an older widely discussed thread above a brand-new post', () => {
+    post(1, '2026-07-27 12:00:00')
+    for (let index = 1; index <= 30; index++) {
+      postBy(100 + index, 100 + index, '2026-07-27 12:00:00', 1)
+    }
+    post(2, '2026-08-03 12:00:00')
+
+    const results = getHotPosts(database, 50, null, asOf)
+    expect(results[0].id).toBe(1)
+    expect(results[0].hot_score).toBeGreaterThan(results.find(result => result.id === 2)!.hot_score)
+  })
+
   test('nested reply boosts halve at each level', () => {
     post(1, '2026-08-03 12:00:00')
     postBy(2, 2, '2026-08-03 12:00:00', 1)
@@ -112,11 +124,11 @@ describe('hot feed ranking', () => {
     postBy(4, 4, '2026-08-03 12:00:00', 3)
 
     expect((database.query('SELECT score FROM post_hot WHERE post_id=1').get() as { score: number }).score)
-      .toBeCloseTo(1 + 4 + 2 + 1)
+      .toBeCloseTo(0.25 + 2 + 1 + 0.5)
 
     rebuildHotPosts(database)
     expect((database.query('SELECT score FROM post_hot WHERE post_id=1').get() as { score: number }).score)
-      .toBeCloseTo(1 + 4 + 2 + 1)
+      .toBeCloseTo(0.25 + 2 + 1 + 0.5)
   })
 
   test('counts only the highest-weight reply from each user for a thread', () => {
@@ -131,7 +143,7 @@ describe('hot feed ranking', () => {
     }
     expect(stored.reply_count).toBe(1)
     expect(stored.latest_activity_at).toBe('2026-08-03 11:00:00')
-    expect(stored.score).toBeCloseTo(1 * Math.pow(0.5, 3 / 6) + 4)
+    expect(stored.score).toBeCloseTo(0.25 * Math.pow(0.5, 3 / 6) + 2)
 
     rebuildHotPosts(database)
     stored = database.query('SELECT score,reply_count,latest_activity_at FROM post_hot WHERE post_id=1').get() as {
@@ -139,7 +151,7 @@ describe('hot feed ranking', () => {
     }
     expect(stored.reply_count).toBe(1)
     expect(stored.latest_activity_at).toBe('2026-08-03 11:00:00')
-    expect(stored.score).toBeCloseTo(1 * Math.pow(0.5, 3 / 6) + 4)
+    expect(stored.score).toBeCloseTo(0.25 * Math.pow(0.5, 3 / 6) + 2)
   })
 
   test('deleting a nested reply removes its branch credit from every ancestor', () => {
@@ -152,7 +164,7 @@ describe('hot feed ranking', () => {
     removeHotActivity(database, 2)
 
     expect((database.query('SELECT score FROM post_hot WHERE post_id=1').get() as { score: number }).score)
-      .toBeCloseTo(1)
+      .toBeCloseTo(0.25)
   })
 
   test('direct replies boost a post most while nested replies also rank independently', () => {
@@ -178,14 +190,14 @@ describe('hot feed ranking', () => {
 
     let root = getHotPosts(database, 20, null, asOf).find(result => result.id === 1)!
     expect(root.latest_activity_at).toBe('2026-08-03 08:00:00')
-    expect(root.hot_score).toBeCloseTo(Math.pow(0.5, 1 / 2))
+    expect(root.hot_score).toBeCloseTo(0.25 * Math.pow(0.5, 4 / 6))
 
     database.query(`UPDATE post_hot SET score=99,score_updated_at='2026-08-03 11:00:00',
       latest_activity_at='2026-08-03 11:00:00' WHERE post_id=1`).run()
     rebuildHotPosts(database)
     root = getHotPosts(database, 20, null, asOf).find(result => result.id === 1)!
     expect(root.latest_activity_at).toBe('2026-08-03 08:00:00')
-    expect(root.hot_score).toBeCloseTo(Math.pow(0.5, 1 / 2))
+    expect(root.hot_score).toBeCloseTo(0.25 * Math.pow(0.5, 4 / 6))
   })
 
   test('excludes deleted direct replies without promoting their nested replies', () => {
@@ -196,7 +208,7 @@ describe('hot feed ranking', () => {
     const results = getHotPosts(database, 20, null, asOf)
     expect(results.map(result => result.id)).toEqual([3, 1])
     expect(results[1].latest_activity_at).toBe('2026-07-30 12:00:00')
-    expect(results[1].hot_score).toBeCloseTo(Math.pow(0.5, 12))
+    expect(results[1].hot_score).toBeCloseTo(0.25 * Math.pow(0.5, 96 / 6))
   })
 
   test('uses deterministic tie-breakers and pagination', () => {
@@ -224,7 +236,7 @@ describe('hot feed ranking', () => {
 
     const results = getHotPosts(database, 20, null, asOf, 1)
     expect(results.map(result => result.id)).toEqual([1])
-    expect(results[0].hot_score).toBeCloseTo(Math.pow(0.5, 1 / 8))
+    expect(results[0].hot_score).toBeCloseTo(0.25 * Math.pow(0.5, 1 / 6))
   })
 
   test('hides every post carrying a blocked hashtag', () => {

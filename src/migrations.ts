@@ -428,6 +428,13 @@ export const migrations: Migration[] = [
       CREATE INDEX IF NOT EXISTS email_change_authorizations_user ON email_change_authorizations(user_id);`)
     },
   },
+  {
+    version: 34,
+    name: 'discussion_steam_hot_scores',
+    up(database) {
+      rebuildHotPosts(database)
+    },
+  },
 ]
 
 export const latestMigrationVersion = migrations.at(-1)!.version

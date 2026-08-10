@@ -21,12 +21,13 @@ export type HotCursor = {
   direction: 'next' | 'previous'
 }
 
-const cursorVersion = 3
+const cursorVersion = 4
 const activityHalfLifeHours = 6
-const recencyHalfLifeHours = 8
-const directReplyWeight = 4
-const repliesPerHalfLifeDoubling = 5
-const maxReplyDecayBoost = 20
+const postWeight = 0.25
+const directReplyWeight = 2
+const baseRecencyHalfLifeHours = 6
+const recencyHoursPerReply = 6
+const maxRecencyHalfLifeHours = 336
 
 function hasHotTable(database: Database) {
   return Boolean(database.query('SELECT 1 FROM sqlite_master WHERE type=\'table\' AND name=\'post_hot\'').get())
@@ -99,7 +100,7 @@ export function rebuildHotPosts(database: Database, postIds?: number[]) {
       JOIN posts candidate ON candidate.id=descendants.candidate_id
       WHERE descendants.deleted_at IS NULL AND descendants.user_id!=candidate.user_id
     ), activity(candidate_id,created_at,weight) AS (
-      SELECT id,created_at,1 FROM posts WHERE deleted_at IS NULL
+      SELECT id,created_at,${postWeight} FROM posts WHERE deleted_at IS NULL
       UNION ALL
       SELECT candidate_id,created_at,${directReplyWeight}*pow(0.5,depth-1)
       FROM ranked_replies WHERE reply_rank=1
@@ -141,7 +142,7 @@ export function rebuildHotPosts(database: Database, postIds?: number[]) {
     JOIN posts candidate ON candidate.id=?
     WHERE descendants.deleted_at IS NULL AND descendants.user_id!=candidate.user_id
   ), activity(id,created_at,weight) AS (
-    SELECT id,created_at,1 FROM posts WHERE id=? AND deleted_at IS NULL
+    SELECT id,created_at,${postWeight} FROM posts WHERE id=? AND deleted_at IS NULL
     UNION ALL
     SELECT id,created_at,${directReplyWeight}*pow(0.5,depth-1) FROM ranked_replies WHERE reply_rank=1
   ) SELECT created_at,weight FROM activity`)
@@ -208,7 +209,8 @@ export function getHotPosts(
   parameters.push(limit)
   const rows = database.query(`WITH ranked AS (
     SELECT post_id,score*pow(0.5,max(0,(julianday(?) - julianday(score_updated_at))*24)
-      /(${recencyHalfLifeHours}.0*pow(2.0,min(reply_count,${maxReplyDecayBoost})/${repliesPerHalfLifeDoubling}.0))) hot_score
+      /min(${maxRecencyHalfLifeHours}.0,${baseRecencyHalfLifeHours}.0
+        + reply_count*${recencyHoursPerReply}.0)) hot_score
     FROM post_hot
   ) SELECT p.*,u.handle,ranked.hot_score,h.latest_activity_at
     FROM ranked JOIN post_hot h ON h.post_id=ranked.post_id

@@ -67,7 +67,7 @@ describe('database migrations', () => {
     expect(database.query('SELECT created_at FROM follows WHERE follower_id=1').get()).toEqual({ created_at: null })
     expect(database.query('SELECT token_hash FROM sessions').get())
       .toEqual({ token_hash: sessionHash('legacy-cookie') })
-    expect(database.query('SELECT score FROM post_hot WHERE post_id=1').get()).toEqual({ score: 1 })
+    expect(database.query('SELECT score FROM post_hot WHERE post_id=1').get()).toEqual({ score: 0.25 })
     expect(database.query('SELECT rowid FROM post_search WHERE post_search MATCH \'hello\'').get()).toEqual({ rowid: 1 })
     expect(database.query('PRAGMA foreign_key_check').all()).toEqual([])
   })
@@ -183,6 +183,6 @@ describe('database migrations', () => {
     runMigrations(database)
 
     expect(database.query('SELECT score,latest_activity_at FROM post_hot WHERE post_id=1').get())
-      .toEqual({ score: 1, latest_activity_at: '2026-08-05 09:00:00' })
+      .toEqual({ score: 0.25, latest_activity_at: '2026-08-05 09:00:00' })
   })
 })
