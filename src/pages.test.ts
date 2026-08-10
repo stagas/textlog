@@ -168,6 +168,13 @@ test('API documentation is linked from the footer and describes the firehose', (
   expect(html).toContain('data-method="DELETE">DELETE</span><span class="api-path">/users/:handle/block</span>')
 })
 
+test('API documentation links to the privacy-filtered public archive', () => {
+  const html = renderToStaticMarkup(React.createElement(ApiDocs, { user: null }))
+  expect(html).toContain('id="public-archive"')
+  expect(html).toContain('href="/dump.zip"')
+  expect(html).toContain('record timestamps')
+})
+
 test('embed examples show every format and use stagas for the user feed', () => {
   const html = renderToStaticMarkup(React.createElement(EmbedExamples, {
     user: null, handle: 'stagas', tag: 'notes', postId: 42,

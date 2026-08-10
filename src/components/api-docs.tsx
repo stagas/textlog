@@ -75,6 +75,15 @@ export function ApiDocs({ user }: { user: User | null }) {
 /users/:handle/posts.rss
 /tags/:tag/posts.atom`}</code></pre>
 
+        <h2 id="public-archive">Public data archive</h2>
+        <p>
+          Download the latest daily, read-only snapshot as <a href="/dump.zip">dump.zip</a>. It contains paginated
+          JSON files for public handles and bios, posts and reply links, mentions, hashtags, and follow relationships.
+          The accounts are frozen: the archive contains no login credentials, contact details, record timestamps,
+          blocks, reports, deleted content, or other private data.
+        </p>
+        <pre><code>{`curl -O https://textlog.cc/dump.zip`}</code></pre>
+
         <h2 id="embeds">Embeds</h2>
         <p>
           Add a read-only textlog card to any website with an iframe. Copy an example and replace the handle,
