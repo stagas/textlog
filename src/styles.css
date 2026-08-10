@@ -1232,6 +1232,53 @@ textarea {
   font-size: 11px;
 }
 
+.account-delete-shell {
+  min-height: min(600px, calc(100dvh - 190px));
+}
+
+.account-delete-panel {
+  width: min(100%, 560px);
+}
+
+.account-delete-panel .eyebrow {
+  margin: 0 0 var(--space-2);
+  color: var(--danger-link-hover);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+}
+
+.account-delete-panel h1 {
+  margin-bottom: var(--space-3);
+  font-size: clamp(24px, 5vw, 34px);
+  letter-spacing: -1.5px;
+}
+
+.account-delete-copy {
+  margin: 0;
+  color: var(--quote-ink);
+  font-size: 12px;
+  line-height: 1.7;
+}
+
+.account-delete-confirmation-note,
+.account-delete-expiry {
+  margin: 0;
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 1.6;
+}
+
+.account-delete-sent strong {
+  color: var(--accent-dark);
+  overflow-wrap: anywhere;
+}
+
+.account-delete-sent>.account-delete-expiry {
+  margin: calc(-1 * var(--space-3)) 0 var(--space-5);
+}
+
 .security-page {
   padding: 0 var(--gutter) var(--space-7);
 }

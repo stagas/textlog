@@ -72,6 +72,25 @@ describe('database migrations', () => {
     expect(database.query('PRAGMA foreign_key_check').all()).toEqual([])
   })
 
+  test('repairs account deletion tables created by the original version 30 migration', () => {
+    const database = new Database(':memory:')
+    database.run('PRAGMA foreign_keys=ON')
+    runMigrations(database)
+    database.run(`DROP TABLE account_deletion_tokens;
+      CREATE TABLE account_deletion_tokens (
+        token_hash TEXT PRIMARY KEY,user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        expires_at INTEGER NOT NULL);
+      INSERT INTO users(id,handle,email,password) VALUES(1,'reader','reader@example.com','!');
+      INSERT INTO account_deletion_tokens VALUES('token',1,9999999999999);
+      PRAGMA user_version=30;`)
+
+    runMigrations(database)
+
+    expect(databaseVersion(database)).toBe(latestMigrationVersion)
+    expect(database.query('SELECT email FROM account_deletion_tokens WHERE user_id=1').get())
+      .toEqual({ email: 'reader@example.com' })
+  })
+
   test('preserves the legacy activity read cutoff when upgrading per-entry reads', () => {
     const database = new Database(':memory:')
     database.run('PRAGMA foreign_keys=ON')

@@ -1,6 +1,7 @@
 import { anonymizeUser, isAdmin } from '../admin'
+import { accountForDeletionToken, issueAccountDeletionToken } from '../account-deletion'
 import { AUTH_LIMITS, authRateLimitMessage } from '../auth-rate-limit'
-import { currentUser, hashPassword, sessionToken, verifyPassword } from '../utils'
+import { currentUser, hash, hashPassword, sessionToken, verifyPassword } from '../utils'
 import { authLimit, clientAddress, form, issueEmailToken, issueMagicLink, page, redirect, retryPage,
   securityPage } from './shared'
 
@@ -15,6 +16,7 @@ import {
 } from '../components/pages'
 import { exportUserData } from '../data-export'
 import { db } from '../db'
+import { sendAccountDeletionConfirmation } from '../email'
 import { confirmEmailToken, findEmailToken } from '../email-verification'
 import { updateProfileHandle } from '../handles'
 import {
@@ -249,15 +251,54 @@ export function registerAccountRoutes(app: Hono) {
   })
 
   app.get('/account/delete', c => {
+    const value = c.req.query('token') || ''
+    if (value) {
+      return accountForDeletionToken(db, value)
+        ? page(<ConfirmAccountDelete user={currentUser(c.req.raw)} token={value} />)
+        : page(<ConfirmAccountDelete user={currentUser(c.req.raw)} invalid />, 400)
+    }
     const user = currentUser(c.req.raw)
-    return user ? page(<ConfirmAccountDelete user={user} />) : redirect('/enter')
+    if (!user) return redirect('/enter')
+    const credentials = db.query('SELECT password FROM users WHERE id=?').get(user.id) as { password: string }
+    return page(<ConfirmAccountDelete user={user} passwordEnabled={credentials.password !== '!'} />)
   })
 
   app.post('/account/delete', async c => {
     const user = currentUser(c.req.raw)
+    const f = await form(c.req.raw)
+    const deletionAccount = accountForDeletionToken(db, f.token || '')
+    if (deletionAccount) {
+      if (isAdmin({ email: deletionAccount.email })) return c.text('Admin accounts cannot delete themselves', 403)
+      db.transaction(() => anonymizeUser(db, deletionAccount.id))()
+      return redirect('/', clearSessionCookie())
+    }
+    if (f.token) return page(<ConfirmAccountDelete user={user} invalid />, 400)
     if (!user) return redirect('/enter')
     if (isAdmin(user)) return c.text('Admin accounts cannot delete themselves', 403)
-    db.transaction(() => anonymizeUser(db, user.id))()
-    return redirect('/', clearSessionCookie())
+    const limited = authLimit(c, 'account-delete', `${user.id}:${clientAddress(c)}`, AUTH_LIMITS.sensitiveAccount)
+    const credentials = db.query('SELECT password FROM users WHERE id=?').get(user.id) as { password: string }
+    const passwordEnabled = credentials.password !== '!'
+    if (limited) return retryPage(page(<ConfirmAccountDelete user={user} passwordEnabled={passwordEnabled}
+      error={authRateLimitMessage(limited.retryAfter)} />, 429), limited.retryAfter)
+    if (passwordEnabled) {
+      if (!await verifyPassword(f.password || '', credentials.password)) {
+        return page(<ConfirmAccountDelete user={user} passwordEnabled error="Password is incorrect." />, 400)
+      }
+      db.transaction(() => anonymizeUser(db, user.id))()
+      return redirect('/', clearSessionCookie())
+    }
+    const origin = Bun.env.APP_URL?.replace(/\/$/, '') || new URL(c.req.url).origin
+    const value = issueAccountDeletionToken(db, user.id, user.email)
+    try {
+      await sendAccountDeletionConfirmation(user.email,
+        `${origin}/account/delete?token=${encodeURIComponent(value)}`)
+    }
+    catch (error) {
+      db.query('DELETE FROM account_deletion_tokens WHERE token_hash=?').run(hash(value))
+      console.error('Could not send account-deletion confirmation', error)
+      return page(<ConfirmAccountDelete user={user}
+        error="Confirmation email could not be sent. Please try again later." />, 503)
+    }
+    return page(<ConfirmAccountDelete user={user} sent />)
   })
 }

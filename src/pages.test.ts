@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test'
-import { About, AccountMagicLink, AccountSecurity, AdminDashboard, ApiDocs, Auth, ChangeTheme, ChooseHandle, ConfirmEmail, Connections, Contact, EmbedExamples, ErrorPage,
+import { About, AccountMagicLink, AccountSecurity, AdminDashboard, ApiDocs, Auth, ChangeTheme, ChooseHandle, ConfirmAccountDelete, ConfirmEmail, Connections, Contact, EmbedExamples, ErrorPage,
   Legal, NotFound, postTitle,
   Profile } from './components/pages'
 
@@ -269,6 +269,31 @@ test('Email confirmation requires an explicit POST', () => {
   expect(html).toContain('action="/verify-email"')
   expect(html).toContain('type="hidden" name="token" value="confirmation-token"')
   expect(html).toContain('Change your email?')
+})
+
+test('Account deletion asks for the configured second factor', () => {
+  const user = { id: 1, handle: 'reader', email: 'reader@example.com', bio: '' }
+  const passwordHtml = renderToStaticMarkup(React.createElement(ConfirmAccountDelete, {
+    user, passwordEnabled: true,
+  }))
+  expect(passwordHtml).toContain('type="password"')
+  expect(passwordHtml).toContain('name="password"')
+
+  const emailHtml = renderToStaticMarkup(React.createElement(ConfirmAccountDelete, { user }))
+  expect(emailHtml).not.toContain('type="password"')
+  expect(emailHtml).toContain('send confirmation link')
+
+  const tokenHtml = renderToStaticMarkup(React.createElement(ConfirmAccountDelete, {
+    token: 'deletion-token',
+  }))
+  expect(tokenHtml).toContain('type="hidden" name="token" value="deletion-token"')
+  expect(tokenHtml).toContain('>delete account</button>')
+
+  const sentHtml = renderToStaticMarkup(React.createElement(ConfirmAccountDelete, { user, sent: true }))
+  expect(sentHtml).toContain('Check your email.')
+  expect(sentHtml).toContain('reader@example.com')
+  expect(sentHtml).toContain('Your account has not been deleted.')
+  expect(sentHtml).not.toContain('action="/account/delete"')
 })
 
 test('AccountSecurity renders email and safe session controls without passwords', () => {

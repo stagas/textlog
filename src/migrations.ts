@@ -388,6 +388,26 @@ export const migrations: Migration[] = [
       database.run('CREATE INDEX IF NOT EXISTS sessions_last_used ON sessions(last_used_at,user_id)')
     },
   },
+  {
+    version: 30,
+    name: 'account_deletion_confirmation',
+    up(database) {
+      database.run(`CREATE TABLE IF NOT EXISTS account_deletion_tokens (
+        token_hash TEXT PRIMARY KEY,user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        email TEXT NOT NULL,expires_at INTEGER NOT NULL);
+      CREATE INDEX IF NOT EXISTS account_deletion_tokens_user ON account_deletion_tokens(user_id);`)
+    },
+  },
+  {
+    version: 31,
+    name: 'account_deletion_token_email',
+    up(database) {
+      addColumn(database, 'account_deletion_tokens', 'email', "TEXT NOT NULL DEFAULT ''")
+      database.run(`UPDATE account_deletion_tokens SET email=(
+        SELECT email FROM users WHERE users.id=account_deletion_tokens.user_id
+      ) WHERE email=''`)
+    },
+  },
 ]
 
 export const latestMigrationVersion = migrations.at(-1)!.version

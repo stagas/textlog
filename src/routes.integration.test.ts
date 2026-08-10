@@ -369,6 +369,43 @@ test('consequential account, content, reporting, and admin flows work over HTTP'
     .get(bob.id, post.id) as { id: number; status: string; reason: string }
   expect(reportRow).toMatchObject({ status: 'open', reason: 'spam' })
 
+  const emailDeleteCookie = await signup('emaildelete', 'email-delete@example.com', 'unused')
+  const emailDeleteRequest = await request('/account/delete', {
+    method: 'POST', cookie: emailDeleteCookie, form: {},
+  })
+  expect(emailDeleteRequest.status).toBe(200)
+  expect((database.query('SELECT deleted_at FROM users WHERE handle=?').get('emaildelete') as
+    { deleted_at: string | null }).deleted_at).toBeNull()
+  const deleteEmail = capturedEmails().filter(message => message.to === 'email-delete@example.com'
+    && message.subject.includes('Confirm account deletion')).at(-1)
+  expect(deleteEmail).toBeDefined()
+  const deletionToken = linkToken(deleteEmail!)
+  const deletionReview = await request(`/account/delete?token=${encodeURIComponent(deletionToken)}`)
+  expect(deletionReview.status).toBe(200)
+  expect((database.query('SELECT deleted_at FROM users WHERE handle=?').get('emaildelete') as
+    { deleted_at: string | null }).deleted_at).toBeNull()
+  const confirmedDeletion = await request('/account/delete', {
+    method: 'POST', form: { token: deletionToken },
+  })
+  expect(confirmedDeletion.status).toBe(303)
+  expect(database.query('SELECT 1 FROM users WHERE handle=?').get('emaildelete')).toBeNull()
+
+  const passwordDeleteCookie = await signup('passworddelete', 'password-delete@example.com', 'unused')
+  await request('/account/password/enable', {
+    method: 'POST', cookie: passwordDeleteCookie, form: { newPassword: 'delete password 123' },
+  })
+  const rejectedDeletion = await request('/account/delete', {
+    method: 'POST', cookie: passwordDeleteCookie, form: { password: 'wrong password' },
+  })
+  expect(rejectedDeletion.status).toBe(400)
+  expect(database.query('SELECT 1 FROM users WHERE handle=? AND deleted_at IS NULL').get('passworddelete'))
+    .toBeTruthy()
+  const passwordDeletion = await request('/account/delete', {
+    method: 'POST', cookie: passwordDeleteCookie, form: { password: 'delete password 123' },
+  })
+  expect(passwordDeletion.status).toBe(303)
+  expect(database.query('SELECT 1 FROM users WHERE handle=?').get('passworddelete')).toBeNull()
+
   const adminCookie = await signup('admin', 'gstagas@gmail.com', 'admin password 123')
   const dashboard = await request('/admin', { cookie: adminCookie })
   expect(dashboard.status).toBe(200)
