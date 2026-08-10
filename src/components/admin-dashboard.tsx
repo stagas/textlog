@@ -20,6 +20,7 @@ export function AdminDashboard(
 ) {
   const labels: [keyof DashboardStats, string][] = [
     ['users', 'users'],
+    ['usersOnline', 'users online · 30m'],
     ['suspendedUsers', 'suspended'],
     ['activePosts', 'active posts'],
     ['replies', 'replies'],

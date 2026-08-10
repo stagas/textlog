@@ -379,6 +379,15 @@ export const migrations: Migration[] = [
       rebuildHotPosts(database)
     },
   },
+  {
+    version: 29,
+    name: 'session_activity',
+    up(database) {
+      addColumn(database, 'sessions', 'last_used_at', 'INTEGER')
+      database.run('UPDATE sessions SET last_used_at=created_at WHERE last_used_at IS NULL')
+      database.run('CREATE INDEX IF NOT EXISTS sessions_last_used ON sessions(last_used_at,user_id)')
+    },
+  },
 ]
 
 export const latestMigrationVersion = migrations.at(-1)!.version

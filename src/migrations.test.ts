@@ -13,6 +13,8 @@ describe('database migrations', () => {
     expect(applied).toEqual(migrations.map(migration => migration.version))
     expect((database.query('PRAGMA table_info(sessions)').all() as { name: string }[]).map(column => column.name))
       .toContain('token_hash')
+    expect((database.query('PRAGMA table_info(sessions)').all() as { name: string }[]).map(column => column.name))
+      .toContain('last_used_at')
     expect(
       database.query('SELECT count(*) count FROM sqlite_master WHERE type=\'table\' AND name=\'handle_history\'').get(),
     )

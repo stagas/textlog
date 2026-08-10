@@ -5,6 +5,7 @@ const hashToken = (token: string) => createHash('sha256').update(token).digest('
 
 export const SESSION_LIFETIME_MS = 365 * 24 * 60 * 60 * 1000
 export const SESSION_RENEWAL_WINDOW_MS = 24 * 60 * 60 * 1000
+export const ONLINE_WINDOW_MS = 30 * 60 * 1000
 
 export function sessionHash(token: string): string
 export function sessionHash(token: null | undefined): null
@@ -16,8 +17,24 @@ export function sessionHash(token: string | null | undefined) {
 export function insertSession(database: Database, token: string, userId: number, expiresAt: number, createdAt: number,
   userAgent: string)
 {
-  database.query('INSERT INTO sessions(token_hash,user_id,expires_at,created_at,user_agent) VALUES(?,?,?,?,?)')
-    .run(hashToken(token), userId, expiresAt, createdAt, userAgent)
+  database.query(`INSERT INTO sessions(token_hash,user_id,expires_at,created_at,user_agent,last_used_at)
+    VALUES(?,?,?,?,?,?)`).run(hashToken(token), userId, expiresAt, createdAt, userAgent, createdAt)
+}
+
+export function markSessionUsed(database: Database, token: string, now = Date.now()) {
+  return database.query(`UPDATE sessions SET last_used_at=?
+    WHERE token_hash=? AND expires_at>?
+      AND EXISTS (SELECT 1 FROM users WHERE users.id=sessions.user_id
+        AND users.deleted_at IS NULL AND users.suspended_at IS NULL)`)
+    .run(now, hashToken(token), now).changes > 0
+}
+
+export function onlineUserCount(database: Database, now = Date.now(), windowMs = ONLINE_WINDOW_MS) {
+  return (database.query(`SELECT count(DISTINCT s.user_id) count
+    FROM sessions s JOIN users u ON u.id=s.user_id
+    WHERE s.last_used_at>=? AND s.expires_at>?
+      AND u.deleted_at IS NULL AND u.suspended_at IS NULL`)
+    .get(now - windowMs, now) as { count: number }).count
 }
 
 export function renewSession(database: Database, token: string, now = Date.now()) {

@@ -1,7 +1,7 @@
 import type { Database } from 'bun:sqlite'
 import { createHash, randomBytes } from 'node:crypto'
 import { db, type User } from './db'
-import { sessionHash } from './sessions'
+import { markSessionUsed, sessionHash } from './sessions'
 
 export const esc = (v: unknown) =>
   String(v ?? '').replace(/[&<>"']/g,
@@ -24,10 +24,12 @@ export const bearerToken = (req: Request) => req.headers.get('authorization')?.m
 function userForSession(token: string | null, database: Database): User | null {
   const tokenHash = sessionHash(token)
   if (!tokenHash) return null
-  return database.query(`SELECT u.id,u.handle,u.email,u.bio,u.suspended_at,u.email_verified_at,u.handle_chosen_at
+  const user = database.query(`SELECT u.id,u.handle,u.email,u.bio,u.suspended_at,u.email_verified_at,u.handle_chosen_at
     FROM sessions s JOIN users u ON u.id=s.user_id
     WHERE s.token_hash=? AND s.expires_at>? AND u.deleted_at IS NULL AND u.suspended_at IS NULL`)
     .get(tokenHash, Date.now()) as User | null
+  if (user) markSessionUsed(database, token!, Date.now())
+  return user
 }
 export function currentUser(req: Request, database: Database = db): User | null {
   return userForSession(sessionToken(req), database)

@@ -37,6 +37,7 @@ export type SessionView = { token: string; created_at: number; expires_at: numbe
 
 export type DashboardStats = {
   users: number
+  usersOnline: number
   suspendedUsers: number
   activePosts: number
   replies: number

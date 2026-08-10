@@ -25,7 +25,7 @@ function fixture() {
     CREATE TABLE post_hashtags (post_id INTEGER NOT NULL,tag TEXT NOT NULL,PRIMARY KEY(post_id,tag));
     CREATE TABLE post_mentions (post_id INTEGER NOT NULL,user_id INTEGER NOT NULL,PRIMARY KEY(post_id,user_id));
     CREATE TABLE sessions (token_hash TEXT PRIMARY KEY,user_id INTEGER NOT NULL,expires_at INTEGER NOT NULL,
-      created_at INTEGER NOT NULL,user_agent TEXT NOT NULL DEFAULT '');
+      created_at INTEGER NOT NULL,user_agent TEXT NOT NULL DEFAULT '',last_used_at INTEGER);
     CREATE TABLE magic_links (token_hash TEXT PRIMARY KEY,email TEXT NOT NULL,user_id INTEGER,
       next_path TEXT NOT NULL DEFAULT '/',expires_at INTEGER NOT NULL,created_at INTEGER NOT NULL,
       code_hash TEXT,attempts INTEGER NOT NULL DEFAULT 0);
