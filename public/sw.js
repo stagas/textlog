@@ -2,6 +2,7 @@ self.addEventListener('push', event => {
   const data = event.data ? event.data.json() : {}
   event.waitUntil(self.registration.showNotification(data.title || 'textlog', {
     body: data.body || '',
+    icon: '/android-chrome-192x192.png',
     data: { url: data.url || '/' },
   }))
 })

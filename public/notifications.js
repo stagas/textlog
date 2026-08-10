@@ -55,7 +55,11 @@
     return
   }
 
-  navigator.serviceWorker.getRegistration('/').then(registration => registration?.pushManager.getSubscription())
+  navigator.serviceWorker.getRegistration('/').then(async registration => {
+    if (!registration) return undefined
+    await registration.update()
+    return registration.pushManager.getSubscription()
+  })
     .then(async subscription => {
       if (subscription) {
         await loadPreferences(subscription)
