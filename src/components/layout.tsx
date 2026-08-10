@@ -111,7 +111,7 @@ export function Layout({
             <link rel="alternate" type="application/atom+xml" title={`${feeds.title} (Atom)`} href={feeds.atom} />
           </>
         )}
-        <link rel="stylesheet" href="/styles.css?v=91" />
+        <link rel="stylesheet" href="/styles.css?v=92" />
         <link rel="stylesheet" href="/theme.css" />
       </head>
       <body>
