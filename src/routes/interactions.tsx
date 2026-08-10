@@ -1,4 +1,4 @@
-import { form, page, redirect, usersBlocked } from './shared'
+import { currentPage, form, page, redirect, usersBlocked } from './shared'
 
 import type { Hono } from 'hono'
 import {
@@ -106,7 +106,8 @@ export function registerInteractionsRoutes(app: Hono) {
     const savedPeople = c.req.header('cookie')?.match(/(?:^|;\s*)explore_people=([\d,]+)/)?.[1]
     const peopleIds = savedPeople?.split(',').map(Number)
     const response = page(
-      <Explore user={currentUser(c.req.raw)} welcome={c.req.query('welcome') === '1'} peopleIds={peopleIds} />,
+      <Explore user={currentUser(c.req.raw)} welcome={c.req.query('welcome') === '1'} peopleIds={peopleIds}
+        tagsPage={currentPage(c.req.query('tagsPage'))} peoplePage={currentPage(c.req.query('peoplePage'))} />,
     )
     if (savedPeople) {
       response.headers.append('set-cookie', 'explore_people=; Max-Age=0; Path=/explore; HttpOnly; SameSite=Lax')

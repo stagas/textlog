@@ -44,32 +44,38 @@ export function VerificationRequired() {
   )
 }
 
-export function Pagination({ page, totalPages, path }: { page: number; totalPages: number; path: string }) {
+export function Pagination({ page, totalPages, path, pageParam = 'page', label = 'Pagination', compact = false }: {
+  page: number; totalPages: number; path: string; pageParam?: string; label?: string; compact?: boolean
+}) {
   if (totalPages <= 1) return null
   const separator = path.includes('?') ? '&' : '?'
   const windowStart = Math.max(1, Math.min(page - 1, totalPages - 2))
   const windowPages = Array.from({ length: Math.min(3, totalPages) }, (_, index) => windowStart + index)
-  const pages = [...new Set([1, ...windowPages, totalPages])].sort((a, b) => a - b)
+  const pages = compact
+    ? [...new Set([1, page === 1 ? Math.min(2, totalPages) : page === totalPages ? totalPages - 1 : page, totalPages])]
+      .sort((a, b) => a - b)
+    : [...new Set([1, ...windowPages, totalPages])].sort((a, b) => a - b)
   return (
-    <nav className="pagination" aria-label="Pagination">
+    <nav className={`pagination${compact ? ' pagination-compact' : ''}`} aria-label={label}>
       {page > 1
-        ? <a className="pagination-edge" href={`${path}${separator}page=${page - 1}`}>← prev</a>
+        ? <a className="pagination-edge" href={`${path}${separator}${pageParam}=${page - 1}`}>← prev</a>
         : <span className="pagination-edge placeholder" />}
       <div className="pagination-pages">
         {pages.map((value, index) => (
           <React.Fragment key={value}>
-            {index > 0 && value - pages[index - 1] === 2 && (
-              <a href={`${path}${separator}page=${value - 1}`} aria-label={`Page ${value - 1}`}>{value - 1}</a>
+            {!compact && index > 0 && value - pages[index - 1] === 2 && (
+              <a href={`${path}${separator}${pageParam}=${value - 1}`} aria-label={`Page ${value - 1}`}>{value - 1}</a>
             )}
-            {index > 0 && value - pages[index - 1] > 2 && <span className="ellipsis" aria-hidden="true">…</span>}
+            {index > 0 && value - pages[index - 1] > (compact ? 1 : 2)
+              && <span className="ellipsis" aria-hidden="true">…</span>}
             {value === page
               ? <span className="current" aria-current="page">{value}</span>
-              : <a href={`${path}${separator}page=${value}`} aria-label={`Page ${value}`}>{value}</a>}
+              : <a href={`${path}${separator}${pageParam}=${value}`} aria-label={`Page ${value}`}>{value}</a>}
           </React.Fragment>
         ))}
       </div>
       {page < totalPages
-        ? <a className="pagination-edge" href={`${path}${separator}page=${page + 1}`}>next →</a>
+        ? <a className="pagination-edge" href={`${path}${separator}${pageParam}=${page + 1}`}>next →</a>
         : <span className="pagination-edge placeholder" />}
     </nav>
   )

@@ -6,7 +6,8 @@ import { BlockedPeopleList, BlockedTagList, ConnectionPeople, Pagination, Profil
   TagPeopleList } from './page-shared'
 
 export function Connections(
-  { user, profile, people, tags = [], kind, page, total, noteCount, followerCount, followingCount, followingTagCount,
+  { user, profile, people, tags = [], kind, page, total, tagsPage = 1, tagsTotal = 0, noteCount, followerCount,
+    followingCount, followingTagCount,
     following, social, blockedPeopleCount = 0, blockedTagCount = 0 }: {
       user: User | null
       profile: ProfileRow
@@ -15,6 +16,8 @@ export function Connections(
       kind: 'following' | 'followers' | 'blocked'
       page: number
       total: number
+      tagsPage?: number
+      tagsTotal?: number
       noteCount: number
       followerCount: number
       followingCount: number
@@ -49,6 +52,10 @@ export function Connections(
                       : 'No followed tags yet.'}
                   </div>
                 )}
+              {kind === 'following' && <Pagination page={tagsPage}
+                totalPages={Math.ceil(tagsTotal / CONNECTION_PAGE_SIZE)}
+                path={`/u/${profile.handle}?tab=following${page > 1 ? `&page=${page}` : ''}`}
+                pageParam="tagsPage" label="Tags pagination" compact />}
             </section>
             <section>
               <h2>People</h2>
@@ -65,6 +72,11 @@ export function Connections(
                       : 'No followed people yet.'}
                   </div>
                 )}
+              <Pagination page={page}
+                totalPages={Math.ceil(total / (kind === 'blocked' ? PAGE_SIZE : CONNECTION_PAGE_SIZE))}
+                path={`/u/${profile.handle}?tab=${kind}${kind === 'following' && tagsPage > 1
+                  ? `&tagsPage=${tagsPage}` : ''}`}
+                label="People pagination" compact />
             </section>
           </div>
         )
@@ -86,8 +98,12 @@ export function Connections(
               : <>@{profile.handle} {kind === 'following' ? 'isn’t following anyone yet.' : 'has no followers yet.'}</>}
           </div>
         )}
-      <Pagination page={page} totalPages={Math.ceil(total / (kind === 'blocked' ? PAGE_SIZE : CONNECTION_PAGE_SIZE))}
-        path={`/u/${profile.handle}?tab=${kind}`} />
+      {kind !== 'following' && kind !== 'blocked' && <Pagination page={page}
+        totalPages={Math.ceil(total / CONNECTION_PAGE_SIZE)} path={`/u/${profile.handle}?tab=${kind}`} />}
+      {kind === 'following' && !people.length && !tags.length && <Pagination page={page}
+        totalPages={Math.ceil(total / CONNECTION_PAGE_SIZE)}
+        path={`/u/${profile.handle}?tab=following${tagsPage > 1 ? `&tagsPage=${tagsPage}` : ''}`}
+        label="People pagination" compact />}
     </Layout>
   )
 }

@@ -4,7 +4,7 @@ import type { PersonView } from './types'
 export type TrendingTag = { tag: string; count: number; following: boolean }
 
 export function trendingTags(database: Database, viewerId: number, limit = 12,
-  now = new Date().toISOString())
+  now = new Date().toISOString(), offset = 0)
 {
   return database.query(
     `SELECT ph.tag,count(*) count,
@@ -16,8 +16,17 @@ export function trendingTags(database: Database, viewerId: number, limit = 12,
       AND (? < 0 OR NOT EXISTS (SELECT 1 FROM blocks b WHERE
         (b.blocker_id=? AND b.blocked_id=p.user_id) OR (b.blocker_id=p.user_id AND b.blocked_id=?)))
       AND (? < 0 OR NOT EXISTS (SELECT 1 FROM blocked_hashtags bh WHERE bh.user_id=? AND bh.tag=ph.tag))
-      GROUP BY ph.tag ORDER BY trend_score DESC,latest_post_at DESC,ph.tag LIMIT ?`,
-  ).all(viewerId, now, now, viewerId, viewerId, viewerId, viewerId, viewerId, limit) as TrendingTag[]
+      GROUP BY ph.tag ORDER BY trend_score DESC,latest_post_at DESC,ph.tag LIMIT ? OFFSET ?`,
+  ).all(viewerId, now, now, viewerId, viewerId, viewerId, viewerId, viewerId, limit, offset) as TrendingTag[]
+}
+
+export function trendingTagCount(database: Database, viewerId: number, now = new Date().toISOString()) {
+  return (database.query(`SELECT count(DISTINCT ph.tag) count FROM post_hashtags ph JOIN posts p ON p.id=ph.post_id
+    WHERE p.deleted_at IS NULL AND p.created_at>=datetime(?,'-7 days')
+    AND (? < 0 OR NOT EXISTS (SELECT 1 FROM blocks b WHERE
+      (b.blocker_id=? AND b.blocked_id=p.user_id) OR (b.blocker_id=p.user_id AND b.blocked_id=?)))
+    AND (? < 0 OR NOT EXISTS (SELECT 1 FROM blocked_hashtags bh WHERE bh.user_id=? AND bh.tag=ph.tag))`)
+    .get(now, viewerId, viewerId, viewerId, viewerId, viewerId) as { count: number }).count
 }
 
 export function explorePivot(maxUserId: number, viewerId: number, day = new Date().toISOString().slice(0, 10)) {
@@ -28,12 +37,11 @@ export function explorePivot(maxUserId: number, viewerId: number, day = new Date
 }
 
 export function suggestedPeople(database: Database, viewerId: number, limit = 6,
-  day = new Date().toISOString().slice(0, 10))
+  day = new Date().toISOString().slice(0, 10), offset = 0)
 {
   const maxUserId = (database.query('SELECT coalesce(max(id),0) id FROM users').get() as { id: number }).id
   const pivot = explorePivot(maxUserId, viewerId, day)
-  const find = (operator: '>=' | '<', boundary: number, count: number) =>
-    database.query(
+  return database.query(
       `SELECT u.*, (SELECT count(*) FROM posts p WHERE p.user_id=u.id AND p.deleted_at IS NULL) posts,
       EXISTS(SELECT 1 FROM follows f WHERE f.follower_id=? AND f.following_id=u.id) following FROM users u
       WHERE u.id != ? AND u.deleted_at IS NULL
@@ -41,10 +49,15 @@ export function suggestedPeople(database: Database, viewerId: number, limit = 6,
       AND (? < 0 OR NOT EXISTS (SELECT 1 FROM blocks b WHERE
         (b.blocker_id=? AND b.blocked_id=u.id) OR (b.blocker_id=u.id AND b.blocked_id=?)))
       AND EXISTS (SELECT 1 FROM posts p WHERE p.user_id=u.id AND p.deleted_at IS NULL)
-      AND u.id ${operator} ? ORDER BY u.id LIMIT ?`,
-    ).all(viewerId, viewerId, viewerId, viewerId, viewerId, viewerId, boundary, count) as PersonView[]
+      ORDER BY u.id < ?,u.id LIMIT ? OFFSET ?`,
+    ).all(viewerId, viewerId, viewerId, viewerId, viewerId, viewerId, pivot, limit, offset) as PersonView[]
+}
 
-  const people = find('>=', pivot, limit)
-  if (people.length < limit) people.push(...find('<', pivot, limit - people.length))
-  return people
+export function suggestedPeopleCount(database: Database, viewerId: number) {
+  return (database.query(`SELECT count(*) count FROM users u WHERE u.id != ? AND u.deleted_at IS NULL
+    AND NOT EXISTS (SELECT 1 FROM follows f WHERE f.follower_id=? AND f.following_id=u.id)
+    AND (? < 0 OR NOT EXISTS (SELECT 1 FROM blocks b WHERE
+      (b.blocker_id=? AND b.blocked_id=u.id) OR (b.blocker_id=u.id AND b.blocked_id=?)))
+    AND EXISTS (SELECT 1 FROM posts p WHERE p.user_id=u.id AND p.deleted_at IS NULL)`)
+    .get(viewerId, viewerId, viewerId, viewerId, viewerId) as { count: number }).count
 }

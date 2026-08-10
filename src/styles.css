@@ -724,6 +724,10 @@ nav form {
   padding-inline: 1px;
 }
 
+.pagination-compact {
+  padding-inline: 0;
+}
+
 .post {
   border-top: 1px solid var(--soft);
 }

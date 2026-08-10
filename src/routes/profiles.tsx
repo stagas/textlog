@@ -65,6 +65,7 @@ export function registerProfilesRoutes(app: Hono) {
     }
     const user = currentUser(c.req.raw)
     const profilePage = currentPage(c.req.query('page'))
+    const tagsPage = currentPage(c.req.query('tagsPage'))
     const profile = db.query(
       'SELECT id,handle,email,bio,suspended_at,deleted_at FROM users WHERE id=? AND deleted_at IS NULL',
     ).get(resolved.id) as ProfileRow
@@ -143,6 +144,7 @@ export function registerProfilesRoutes(app: Hono) {
       )
     }
     if (tab === 'following' || tab === 'followers') {
+      const connectionPage = profilePage
       const join = tab === 'following'
         ? 'JOIN follows f ON f.following_id=u.id WHERE f.follower_id=?'
         : 'JOIN follows f ON f.follower_id=u.id WHERE f.following_id=?'
@@ -153,15 +155,23 @@ export function registerProfilesRoutes(app: Hono) {
           (b.blocker_id=? AND b.blocked_id=u.id) OR (b.blocker_id=u.id AND b.blocked_id=?)))
         ORDER BY u.handle LIMIT ? OFFSET ?`,
       ).all(viewerId, profile.id, viewerId, viewerId, viewerId, CONNECTION_PAGE_SIZE,
-        (profilePage - 1) * CONNECTION_PAGE_SIZE) as PersonView[]
+        (connectionPage - 1) * CONNECTION_PAGE_SIZE) as PersonView[]
       const countWhere = tab === 'following' ? 'follower_id=?' : 'following_id=?'
       const counterpart = tab === 'following' ? 'f.following_id' : 'f.follower_id'
       const connectionTotal = (db.query(`SELECT count(*) AS count FROM follows f WHERE ${countWhere}
       AND (? < 0 OR NOT EXISTS (SELECT 1 FROM blocks b WHERE
         (b.blocker_id=? AND b.blocked_id=${counterpart}) OR (b.blocker_id=${counterpart} AND b.blocked_id=?)))`)
         .get(profile.id, viewerId, viewerId, viewerId) as { count: number }).count
-      const outOfRange = paginationRedirect(profilePage, connectionTotal, `/u/${profile.handle}?tab=${tab}`)
-      if (outOfRange) return outOfRange
+      const lastConnectionPage = Math.max(1, Math.ceil(connectionTotal / CONNECTION_PAGE_SIZE))
+      if (connectionPage > lastConnectionPage) {
+        const query = new URLSearchParams({ tab })
+        if (tab === 'following') {
+          if (lastConnectionPage > 1) query.set('page', String(lastConnectionPage))
+          if (tagsPage > 1) query.set('tagsPage', String(tagsPage))
+        }
+        else if (lastConnectionPage > 1) query.set('page', String(lastConnectionPage))
+        return redirect(`/u/${profile.handle}?${query}`)
+      }
       const tags = tab === 'following'
         ? db.query(
           `SELECT hf.tag,
@@ -172,13 +182,24 @@ export function registerProfilesRoutes(app: Hono) {
           EXISTS(SELECT 1 FROM hashtag_follows vhf WHERE vhf.user_id=? AND vhf.tag=hf.tag) viewerFollowing
           FROM hashtag_follows hf
           WHERE hf.user_id=?
-          ORDER BY hf.tag`,
-        ).all(viewerId, viewerId, viewerId, viewerId, profile.id) as { tag: string; count: number;
+          ORDER BY hf.tag LIMIT ? OFFSET ?`,
+        ).all(viewerId, viewerId, viewerId, viewerId, profile.id, CONNECTION_PAGE_SIZE,
+          (tagsPage - 1) * CONNECTION_PAGE_SIZE) as { tag: string; count: number;
           viewerFollowing: boolean }[]
         : []
+      if (tab === 'following') {
+        const lastTagPage = Math.max(1, Math.ceil(counts.followingTagCount / CONNECTION_PAGE_SIZE))
+        if (tagsPage > lastTagPage) {
+          const query = new URLSearchParams({ tab: 'following' })
+          if (connectionPage > 1) query.set('page', String(connectionPage))
+          if (lastTagPage > 1) query.set('tagsPage', String(lastTagPage))
+          return redirect(`/u/${profile.handle}?${query}`)
+        }
+      }
       return page(
-        <Connections user={user} profile={profile} people={people} tags={tags} kind={tab} page={profilePage}
-          total={connectionTotal} noteCount={total} {...counts} following={following}
+        <Connections user={user} profile={profile} people={people} tags={tags} kind={tab} page={connectionPage}
+          total={connectionTotal} tagsPage={tagsPage} tagsTotal={counts.followingTagCount} noteCount={total}
+          {...counts} following={following}
           blockedPeopleCount={blockCounts.blockedPeople} blockedTagCount={blockCounts.blockedTags} social={social} />,
       )
     }
