@@ -27,9 +27,11 @@ export function AdminDashboard(
     ['visitorsToday', 'unique visitors · today'],
     ['visitorsYesterday', 'unique visitors · yesterday'],
     ['visitors7d', 'visitor-days · 7d'],
+    ['activeUsersYesterday', 'active users · yesterday'],
     ['usersYesterday', 'new users · yesterday'],
     ['users24h', 'new users · 24h'],
     ['users7d', 'new users · 7d'],
+    ['postsYesterday', 'new posts · yesterday'],
     ['posts24h', 'new posts · 24h'],
     ['posts7d', 'new posts · 7d'],
   ]
