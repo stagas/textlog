@@ -58,6 +58,9 @@ export function registerAdminRoutes(app: Hono) {
     (SELECT count(*) FROM posts WHERE deleted_at IS NULL) activePosts,
     (SELECT count(*) FROM posts WHERE deleted_at IS NULL AND parent_id IS NOT NULL) replies,
     (SELECT count(*) FROM reports WHERE status='open') openReports,
+    (SELECT count(*) FROM users WHERE deleted_at IS NULL
+      AND created_at>=datetime('now','start of day','-1 day')
+      AND created_at<datetime('now','start of day')) usersYesterday,
     (SELECT count(*) FROM users WHERE deleted_at IS NULL AND created_at>=datetime('now','-1 day')) users24h,
     (SELECT count(*) FROM users WHERE deleted_at IS NULL AND created_at>=datetime('now','-7 days')) users7d,
     (SELECT count(*) FROM posts WHERE deleted_at IS NULL AND created_at>=datetime('now','-1 day')) posts24h,

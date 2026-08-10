@@ -42,6 +42,7 @@ export type DashboardStats = {
   activePosts: number
   replies: number
   openReports: number
+  usersYesterday: number
   users24h: number
   users7d: number
   posts24h: number
