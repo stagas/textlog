@@ -56,8 +56,10 @@ export async function sendPushForPost(postId: number, actorId: number, actorHand
   database: Database = db, vapid: VapidConfiguration | null = vapidConfiguration())
 {
   if (!vapid) return
-  const post = database.query('SELECT body,parent_id FROM posts WHERE id=?').get(postId) as {
-    body: string; parent_id: number | null
+  const post = database.query(`SELECT child.body,child.parent_id,parent_user.handle parent_handle
+    FROM posts child LEFT JOIN posts parent ON parent.id=child.parent_id
+    LEFT JOIN users parent_user ON parent_user.id=parent.user_id WHERE child.id=?`).get(postId) as {
+    body: string; parent_id: number | null; parent_handle: string | null
   } | null
   if (!post) return
   const subscriptions = database.query(`SELECT ps.endpoint,ps.p256dh,ps.auth,
@@ -84,7 +86,9 @@ export async function sendPushForPost(postId: number, actorId: number, actorHand
     const kind = item.is_reply && item.notify_replies ? 'reply'
       : item.is_mention && item.notify_mentions ? 'mention' : 'latest'
     return {
-      title: `@${actorHandle} ${kind === 'reply' ? 'replied to you' : kind === 'mention' ? 'mentioned you' : 'posted in /latest'}`,
+      title: `@${actorHandle} ${kind === 'reply' ? 'replied to you'
+        : kind === 'mention' ? 'mentioned you'
+        : post.parent_handle ? `replied to @${post.parent_handle}` : 'wrote'}`,
       body: post.body,
       url: `/post/${postId}`,
     }

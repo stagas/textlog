@@ -69,7 +69,7 @@ describe('Web Push activity delivery', () => {
     await sendPushForPost(3, 1, 'author', database, vapid)
 
     expect(payloads.map(value => JSON.parse(value))).toEqual([{
-      title: '@author posted in /latest', body: 'an ordinary note', url: '/post/3',
+      title: '@author wrote', body: 'an ordinary note', url: '/post/3',
     }])
   })
 
@@ -100,7 +100,7 @@ describe('Web Push activity delivery', () => {
     await sendPushForPost(2, 1, 'author', database, vapid)
 
     expect(payloads.map(value => JSON.parse(value))).toEqual([{
-      title: '@author posted in /latest', body: 'hello @recipient', url: '/post/2',
+      title: '@author replied to @recipient', body: 'hello @recipient', url: '/post/2',
     }])
   })
 })
