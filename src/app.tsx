@@ -125,7 +125,10 @@ app.use('*', async (c, next) => {
 app.use('*', async (c, next) => {
   await next()
   const embeddable = c.req.path.startsWith('/embed/')
-  for (const [name, value] of Object.entries(securityHeaders(devReloadEnabled, undefined, embeddable))) c.header(name, value)
+  const notificationSettings = c.req.path === '/account/edit/notifications'
+  for (const [name, value] of Object.entries(
+    securityHeaders(devReloadEnabled, undefined, embeddable, notificationSettings),
+  )) c.header(name, value)
   if (c.req.path === '/textlog.svg' || c.req.path === '/favicon-theme.svg') {
     c.header('Content-Security-Policy', "default-src 'none'; style-src 'unsafe-inline'")
   }
@@ -216,6 +219,15 @@ const embedStyles = await Bun.file(new URL('./embed.css', import.meta.url)).text
 app.get('/embed.css', () => new Response(embedStyles, { headers: {
   'content-type': 'text/css; charset=utf-8', 'cache-control': 'public, max-age=86400',
 } }))
+for (const path of ['/notifications.js', '/sw.js']) {
+  const assetUrl = new URL(`../public${path}`, import.meta.url)
+  const body = devReloadEnabled ? undefined : await Bun.file(assetUrl).text()
+  app.get(path, async () => new Response(body ?? await Bun.file(assetUrl).text(), { headers: {
+    'content-type': 'text/javascript; charset=utf-8',
+    'cache-control': 'no-cache',
+    ...(path === '/sw.js' ? { 'service-worker-allowed': '/' } : {}),
+  } }))
+}
 app.get('/theme.css', c => new Response(themeStyles(c.req.raw), {
   headers: { 'content-type': 'text/css; charset=utf-8', 'cache-control': 'private, no-store' },
 }))

@@ -89,7 +89,7 @@ export function isSameOriginRequest(request: Request, appUrl: string | null | un
 }
 
 export function securityHeaders(devReload = false, appUrl: string | undefined = Bun.env.APP_URL,
-  embeddable = false)
+  embeddable = false, scripts = false)
 {
   const headers: Record<string, string> = {
     'Content-Security-Policy': [
@@ -100,7 +100,7 @@ export function securityHeaders(devReload = false, appUrl: string | undefined = 
       'object-src \'none\'',
       'img-src \'self\' data:',
       'style-src \'self\' \'unsafe-inline\'',
-      devReload ? 'script-src \'self\' \'unsafe-inline\'' : 'script-src \'none\'',
+      devReload ? 'script-src \'self\' \'unsafe-inline\'' : scripts ? 'script-src \'self\'' : 'script-src \'none\'',
       'connect-src \'self\'',
     ].join('; '),
     'Permissions-Policy': 'camera=(), microphone=(), geolocation=(), payment=(), usb=()',

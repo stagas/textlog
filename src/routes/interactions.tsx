@@ -10,6 +10,8 @@ import {
   safeRefererPath,
 } from '../http'
 import { currentUser } from '../utils'
+import { sendPushForFollow } from '../push'
+import { logError } from '../log'
 
 export function registerInteractionsRoutes(app: Hono) {
   app.post('/follow/:handle', async c => {
@@ -21,10 +23,16 @@ export function registerInteractionsRoutes(app: Hono) {
     const target = resolveHandle(db, handle)
     if (target && target.id !== user.id && !usersBlocked(user.id, target.id)) {
       const exists = db.query('SELECT 1 FROM follows WHERE follower_id=? AND following_id=?').get(user.id, target.id)
-      exists
-        ? db.query('DELETE FROM follows WHERE follower_id=? AND following_id=?').run(user.id, target.id)
-        : db.query('INSERT OR IGNORE INTO follows(follower_id,following_id,created_at) VALUES(?,?,CURRENT_TIMESTAMP)')
-          .run(user.id, target.id)
+      if (exists) db.query('DELETE FROM follows WHERE follower_id=? AND following_id=?').run(user.id, target.id)
+      else {
+        const inserted = db.query(
+          'INSERT OR IGNORE INTO follows(follower_id,following_id,created_at) VALUES(?,?,CURRENT_TIMESTAMP)',
+        ).run(user.id, target.id)
+        if (inserted.changes) {
+          void sendPushForFollow(user.id, user.handle, target.id)
+            .catch(error => logError('follow push failed', error))
+        }
+      }
     }
     const referer = c.req.header('referer')
     const returnPath = safeRefererPath(referer, c.req.url)

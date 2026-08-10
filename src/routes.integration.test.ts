@@ -70,18 +70,21 @@ function sessionCookie(response: Response) {
 }
 
 async function request(path: string, options: {
-  method?: 'GET' | 'POST'
+  method?: 'GET' | 'POST' | 'DELETE'
   cookie?: string
   form?: Record<string, string>
+  json?: unknown
 } = {}) {
   const method = options.method || 'GET'
   const headers = new Headers()
   if (options.cookie) headers.set('cookie', options.cookie)
-  if (method === 'POST') headers.set('origin', origin)
+  if (method !== 'GET') headers.set('origin', origin)
+  if (options.json !== undefined) headers.set('content-type', 'application/json')
   return await fetch(`${origin}${path}`, {
     method,
     headers,
-    body: options.form ? new URLSearchParams(options.form) : undefined,
+    body: options.json !== undefined ? JSON.stringify(options.json)
+      : options.form ? new URLSearchParams(options.form) : undefined,
     redirect: 'manual',
   })
 }
@@ -187,6 +190,24 @@ test('consequential account, content, reporting, and admin flows work over HTTP'
   expect(authenticatedHomeHtml).toContain('class="account-nav"')
   expect(authenticatedHomeHtml).toContain('@alice')
   expect(authenticatedHomeHtml).not.toContain('href="/login">login</a>')
+  const notificationSettings = await request('/account/edit/notifications', { cookie: aliceCookie })
+  expect(notificationSettings.status).toBe(200)
+  expect(await notificationSettings.text()).toContain('name="latest" checked=""')
+  const endpoint = 'https://push.example/alice-browser'
+  const savedPush = await request('/account/push-subscription', {
+    method: 'POST',
+    cookie: aliceCookie,
+    json: { endpoint, keys: { p256dh: 'test-key', auth: 'test-auth' },
+      preferences: { latest: false, replies: true, mentions: false, follows: true } },
+  })
+  expect(savedPush.status).toBe(200)
+  const pushPreferences = await request(
+    '/account/push-subscription?endpoint=' + encodeURIComponent(endpoint),
+    { cookie: aliceCookie },
+  )
+  expect(await pushPreferences.json()).toEqual({
+    preferences: { latest: 0, replies: 1, mentions: 0, follows: 1 },
+  })
   const cacheBustedHomeHtml = await (await request('/?v=94721')).text()
   expect(cacheBustedHomeHtml).toContain(`property="og:url" content="${origin}/?v=94721"`)
   const publicExplore = await request('/explore', { cookie: aliceCookie })

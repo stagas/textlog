@@ -50,4 +50,9 @@ describe('in-memory stylesheet', () => {
     expect(css).toContain('--tap-highlight: color-mix(in srgb, var(--accent) 24%, transparent);')
     expect(css).toContain('-webkit-tap-highlight-color: var(--tap-highlight);')
   })
+
+  test('keeps inactive notification actions hidden despite button display styles', async () => {
+    const css = await Bun.file(new URL('./styles.css', import.meta.url)).text()
+    expect(css).toContain('.notification-actions [hidden] { display: none; }')
+  })
 })

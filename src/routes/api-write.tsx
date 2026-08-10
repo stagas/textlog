@@ -14,6 +14,8 @@ import { canPublishPosts } from '../posting-policy'
 import { createPost, updatePost } from '../posts'
 import { insertSession, SESSION_LIFETIME_MS, sessionHash } from '../sessions'
 import { apiUser, bearerToken, hash, token } from '../utils'
+import { sendPushForFollow, sendPushForPost } from '../push'
+import { logError } from '../log'
 import { clientAddress, issueMagicLink, usersBlocked } from './shared'
 
 export const CODE_ATTEMPT_LIMIT = 5
@@ -206,6 +208,10 @@ export function registerApiWriteRoutes(app: Hono, database: Database, appUrl?: s
     if ('retryAfter' in result) {
       return fail('post_rate_limited', postRateLimitMessage(result.retryAfter), 429, result.retryAfter)
     }
+    if (!result.duplicate) {
+      void sendPushForPost(result.id, user.id, user.handle, database)
+        .catch(error => logError('API activity push failed', error))
+    }
     const created = apiPost(database, result.id, apiOrigin(c.req.url, appUrl))
     return json({ data: created }, result.duplicate ? 200 : 201)
   })
@@ -262,8 +268,12 @@ export function registerApiWriteRoutes(app: Hono, database: Database, appUrl?: s
     const other = target(c, guard.user!.id)
     if (other.error || !other.id) return other.error ?? fail('not_found', 'User not found', 404)
     if (usersBlocked(guard.user!.id, other.id, database)) return fail('not_found', 'User not found', 404)
-    database.query(`INSERT OR IGNORE INTO follows(follower_id,following_id,created_at)
+    const inserted = database.query(`INSERT OR IGNORE INTO follows(follower_id,following_id,created_at)
       VALUES(?,?,CURRENT_TIMESTAMP)`).run(guard.user!.id, other.id)
+    if (inserted.changes) {
+      void sendPushForFollow(guard.user!.id, guard.user!.handle, other.id, database)
+        .catch(error => logError('API follow push failed', error))
+    }
     return json({ data: { following: true } })
   })
 

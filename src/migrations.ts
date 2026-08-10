@@ -435,6 +435,26 @@ export const migrations: Migration[] = [
       rebuildHotPosts(database)
     },
   },
+  {
+    version: 35,
+    name: 'push_subscriptions',
+    up(database) {
+      database.run(`CREATE TABLE IF NOT EXISTS push_subscriptions (
+        endpoint TEXT PRIMARY KEY,user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        p256dh TEXT NOT NULL,auth TEXT NOT NULL);
+      CREATE INDEX IF NOT EXISTS push_subscriptions_user ON push_subscriptions(user_id);`)
+    },
+  },
+  {
+    version: 36,
+    name: 'push_notification_preferences',
+    up(database) {
+      addColumn(database, 'push_subscriptions', 'notify_latest', 'INTEGER NOT NULL DEFAULT 1')
+      addColumn(database, 'push_subscriptions', 'notify_replies', 'INTEGER NOT NULL DEFAULT 1')
+      addColumn(database, 'push_subscriptions', 'notify_mentions', 'INTEGER NOT NULL DEFAULT 1')
+      addColumn(database, 'push_subscriptions', 'notify_follows', 'INTEGER NOT NULL DEFAULT 1')
+    },
+  },
 ]
 
 export const latestMigrationVersion = migrations.at(-1)!.version

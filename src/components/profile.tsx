@@ -94,6 +94,13 @@ export function Profile(
                 </div>
                 <div className="account-danger-zone">
                   <div>
+                    <strong>Notifications</strong>
+                    <span>Choose browser notifications for new notes, replies, mentions, and follows.</span>
+                  </div>
+                  <a className="button" href="/account/edit/notifications">manage notifications</a>
+                </div>
+                <div className="account-danger-zone">
+                  <div>
                     <strong>Download your data</strong>
                     <span>Export your account, notes, connections, and activity as a JSON file.</span>
                   </div>

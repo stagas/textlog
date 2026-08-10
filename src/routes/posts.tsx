@@ -18,6 +18,12 @@ import { renderPostOg } from '../og'
 import { postRateLimitMessage } from '../post-rate-limit'
 import { normalizePostBody, validPostBody } from '../post-body'
 import { currentUser } from '../utils'
+import { sendPushForPost } from '../push'
+import { logError } from '../log'
+
+function notifyPost(postId: number, userId: number, handle: string) {
+  void sendPushForPost(postId, userId, handle).catch(error => logError('activity push failed', error))
+}
 
 export function registerPostsRoutes(app: Hono) {
   app.get('/write', c => {
@@ -96,6 +102,7 @@ export function registerPostsRoutes(app: Hono) {
     if ('retryAfter' in result) {
       return page(<Compose user={user} body={body} error={postRateLimitMessage(result.retryAfter)} />, 429)
     }
+    if (!result.duplicate) notifyPost(result.id, user.id, user.handle)
     return rememberFeed(redirect('/latest'), 'latest')
   })
 
@@ -203,6 +210,7 @@ export function registerPostsRoutes(app: Hono) {
         429,
       )
     }
+    if (!result.duplicate) notifyPost(result.id, user.id, user.handle)
     return redirect('/post/' + parentId)
   })
 }

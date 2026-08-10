@@ -162,6 +162,14 @@ export function validateStartupConfiguration(env: Environment = Bun.env, options
   if (environment === 'production' && (env.IP_PSEUDONYM_SECRET?.trim().length || 0) < 32) {
     problems.push('IP_PSEUDONYM_SECRET must be at least 32 characters in production')
   }
+  const vapidValues = ['VAPID_SUBJECT', 'VAPID_PUBLIC_KEY', 'VAPID_PRIVATE_KEY']
+    .filter(name => Boolean(env[name]?.trim()))
+  if (vapidValues.length > 0 && vapidValues.length < 3) {
+    problems.push('VAPID_SUBJECT, VAPID_PUBLIC_KEY, and VAPID_PRIVATE_KEY must be configured together')
+  }
+  if (env.VAPID_SUBJECT?.trim() && !/^(mailto:|https:)/.test(env.VAPID_SUBJECT.trim())) {
+    problems.push('VAPID_SUBJECT must be a mailto: or HTTPS URI')
+  }
 
   const moderationDisabled = booleanValue(env, 'MODERATION_DISABLED', problems)
   if (!moderationDisabled && environment === 'production' && !env.OPENAI_API_KEY?.trim()) {

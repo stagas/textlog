@@ -43,6 +43,15 @@ describe('database migrations', () => {
     expect(database.query(
       'SELECT count(*) count FROM sqlite_master WHERE type=\'table\' AND name=\'post_search\'',
     ).get()).toEqual({ count: 1 })
+    expect(database.query(
+      'SELECT count(*) count FROM sqlite_master WHERE type=\'table\' AND name=\'push_subscriptions\'',
+    ).get()).toEqual({ count: 1 })
+    const pushColumns = (database.query('PRAGMA table_info(push_subscriptions)').all() as { name: string }[])
+      .map(column => column.name)
+    expect(pushColumns).toContain('notify_latest')
+    expect(pushColumns).toContain('notify_replies')
+    expect(pushColumns).toContain('notify_mentions')
+    expect(pushColumns).toContain('notify_follows')
 
     const reapplied: number[] = []
     expect(runMigrations(database, migration => reapplied.push(migration.version))).toBe(latestMigrationVersion)

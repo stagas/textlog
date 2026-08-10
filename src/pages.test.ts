@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test'
-import { About, AccountMagicLink, AccountPassword, AccountSecurity, AdminDashboard, ApiDocs, Auth, ChangeFont, ChangeTheme, ChooseHandle, ConfirmAccountDelete, ConfirmEmail, Connections, Contact, EmbedExamples, ErrorPage, MagicLinkSent,
+import { About, AccountMagicLink, AccountPassword, AccountSecurity, AdminDashboard, ApiDocs, Auth, ChangeFont, ChangeTheme, ChooseHandle, ConfirmAccountDelete, ConfirmEmail, Connections, Contact, EmbedExamples, ErrorPage, MagicLinkSent, NotificationSettings,
   Legal, NotFound, postTitle,
   Profile } from './components/pages'
 
@@ -72,6 +72,30 @@ test('theme selection is a server-rendered form with mobile appearance choices',
   expect(html).toContain('name="accent" checked="" value="amber"')
   expect(html).not.toContain('<script')
   expect(html).not.toContain('style=')
+})
+
+test('notification settings are the only account page that loads their client script', () => {
+  const user = { id: 1, handle: 'reader', email: 'reader@example.com', bio: '' }
+  const notifications = renderToStaticMarkup(React.createElement(NotificationSettings, {
+    user,
+    publicKey: 'public-key',
+  }))
+  const profile = renderToStaticMarkup(React.createElement(Profile, {
+    user,
+    profile: user,
+    posts: [],
+    following: false,
+    editing: true,
+  }))
+  expect(notifications).toContain('src="/notifications.js"')
+  expect(notifications).toContain('enable notifications')
+  expect(notifications).toContain('name="latest" checked=""')
+  expect(notifications).toContain('name="replies" checked=""')
+  expect(notifications).toContain('name="mentions" checked=""')
+  expect(notifications).toContain('name="follows" checked=""')
+  expect(notifications).toContain('save preferences</button>')
+  expect(profile).toContain('href="/account/edit/notifications"')
+  expect(profile).not.toContain('<script')
 })
 
 test('font selection lists local monospace fonts in their own families', () => {

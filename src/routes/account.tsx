@@ -13,6 +13,7 @@ import {
   ChangeFont,
   ConfirmAccountDelete,
   ConfirmEmail,
+  NotificationSettings,
   Profile,
 } from '../components/pages'
 import { exportUserData } from '../data-export'
@@ -27,9 +28,69 @@ import {
 import { moderateText, moderationMessage } from '../moderation'
 import { sessionHash } from '../sessions'
 import { accountForPasswordEnableToken, issuePasswordEnableToken } from '../password-enable'
+import { vapidPublicKey } from '../push'
 import { ACCENT_CHOICES, appearance, appearanceCookie, FONT_CHOICES, fontChoice, fontCookie, FONT_SIZE_CHOICES, fontSizeChoice, fontSizeCookie, THEME_CHOICES, type AccentChoice, type FontChoice, type FontSizeChoice, type ThemeChoice } from '../theme'
 
 export function registerAccountRoutes(app: Hono) {
+  app.get('/account/edit/notifications', c => {
+    const user = currentUser(c.req.raw)
+    if (!user) return redirect('/enter?next=' + encodeURIComponent('/account/edit/notifications'))
+    return page(<NotificationSettings user={user} publicKey={vapidPublicKey()} />)
+  })
+
+  app.get('/account/push-subscription', c => {
+    const user = currentUser(c.req.raw)
+    if (!user) return c.json({ error: 'Unauthorized' }, 401)
+    const endpoint = c.req.query('endpoint') || ''
+    const preferences = endpoint
+      ? db.query(`SELECT notify_latest latest,notify_replies replies,notify_mentions mentions,notify_follows follows
+        FROM push_subscriptions WHERE endpoint=? AND user_id=?`).get(endpoint, user.id) as Record<string, number> | null
+      : null
+    return c.json({ preferences: preferences || { latest: 1, replies: 1, mentions: 1, follows: 1 } })
+  })
+
+  app.post('/account/push-subscription', async c => {
+    const user = currentUser(c.req.raw)
+    if (!user) return c.json({ error: 'Unauthorized' }, 401)
+    let subscription: unknown
+    try { subscription = await c.req.json() }
+    catch { return c.json({ error: 'Invalid subscription' }, 400) }
+    const value = subscription as { endpoint?: unknown; keys?: { p256dh?: unknown; auth?: unknown };
+      preferences?: Record<string, unknown> }
+    const endpoint = typeof value?.endpoint === 'string' ? value.endpoint : ''
+    const p256dh = typeof value?.keys?.p256dh === 'string' ? value.keys.p256dh : ''
+    const auth = typeof value?.keys?.auth === 'string' ? value.keys.auth : ''
+    if (!endpoint.startsWith('https://') || endpoint.length > 2048 || !p256dh || p256dh.length > 256
+      || !auth || auth.length > 256) return c.json({ error: 'Invalid subscription' }, 400)
+    const preference = (name: string) => value.preferences && typeof value.preferences[name] === 'boolean'
+      ? Number(value.preferences[name]) : null
+    const latest = preference('latest')
+    const replies = preference('replies')
+    const mentions = preference('mentions')
+    const follows = preference('follows')
+    db.query(`INSERT INTO push_subscriptions(endpoint,user_id,p256dh,auth,
+        notify_latest,notify_replies,notify_mentions,notify_follows) VALUES(?,?,?,?,?,?,?,?)
+      ON CONFLICT(endpoint) DO UPDATE SET user_id=excluded.user_id,p256dh=excluded.p256dh,auth=excluded.auth,
+        notify_latest=coalesce(?,push_subscriptions.notify_latest),
+        notify_replies=coalesce(?,push_subscriptions.notify_replies),
+        notify_mentions=coalesce(?,push_subscriptions.notify_mentions),
+        notify_follows=coalesce(?,push_subscriptions.notify_follows)`)
+      .run(endpoint, user.id, p256dh, auth, latest ?? 1, replies ?? 1, mentions ?? 1, follows ?? 1,
+        latest, replies, mentions, follows)
+    return c.json({ saved: true })
+  })
+
+  app.delete('/account/push-subscription', async c => {
+    const user = currentUser(c.req.raw)
+    if (!user) return c.json({ error: 'Unauthorized' }, 401)
+    let value: { endpoint?: unknown }
+    try { value = await c.req.json() }
+    catch { return c.json({ error: 'Invalid subscription' }, 400) }
+    if (typeof value.endpoint !== 'string') return c.json({ error: 'Invalid subscription' }, 400)
+    db.query('DELETE FROM push_subscriptions WHERE endpoint=? AND user_id=?').run(value.endpoint, user.id)
+    return c.json({ removed: true })
+  })
+
   app.get('/account/edit', c => {
     const user = currentUser(c.req.raw)
     if (!user) return redirect('/enter?next=' + encodeURIComponent('/account/edit'))
