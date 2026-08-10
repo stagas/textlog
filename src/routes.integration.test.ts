@@ -188,9 +188,22 @@ test('consequential account, content, reporting, and admin flows work over HTTP'
   aliceCookie = await signup('alice', 'alice@example.com', 'unused')
   const enablePasswordPage = await request('/account/password/enable', { cookie: aliceCookie })
   expect(enablePasswordPage.status).toBe(200)
-  expect(await enablePasswordPage.text()).toContain('Set a password')
+  expect(await enablePasswordPage.text()).toContain('Enable password login')
+  const passwordSetupRequest = await request('/account/password/enable', {
+    method: 'POST', cookie: aliceCookie, form: {},
+  })
+  expect(passwordSetupRequest.status).toBe(200)
+  const passwordSetupEmail = capturedEmails().filter(message => message.to === 'alice@example.com'
+    && message.subject.includes('Enable password login')).at(-1)
+  expect(passwordSetupEmail).toBeDefined()
+  const passwordSetupToken = linkToken(passwordSetupEmail!)
+  const passwordSetupPage = await request(
+    `/account/password/enable?token=${encodeURIComponent(passwordSetupToken)}`, { cookie: aliceCookie },
+  )
+  expect(await passwordSetupPage.text()).toContain('Set a password')
   const enabledPassword = await request('/account/password/enable', {
-    method: 'POST', cookie: aliceCookie, form: { newPassword: 'alice password 123' },
+    method: 'POST', cookie: aliceCookie,
+    form: { token: passwordSetupToken, newPassword: 'alice password 123' },
   })
   expect(enabledPassword.status).toBe(303)
   expect(enabledPassword.headers.get('location')).toBe('/account/security?enabled=password')
@@ -391,8 +404,13 @@ test('consequential account, content, reporting, and admin flows work over HTTP'
   expect(database.query('SELECT 1 FROM users WHERE handle=?').get('emaildelete')).toBeNull()
 
   const passwordDeleteCookie = await signup('passworddelete', 'password-delete@example.com', 'unused')
+  await request('/account/password/enable', { method: 'POST', cookie: passwordDeleteCookie, form: {} })
+  const deletePasswordEmail = capturedEmails().filter(message => message.to === 'password-delete@example.com'
+    && message.subject.includes('Enable password login')).at(-1)
+  expect(deletePasswordEmail).toBeDefined()
   await request('/account/password/enable', {
-    method: 'POST', cookie: passwordDeleteCookie, form: { newPassword: 'delete password 123' },
+    method: 'POST', cookie: passwordDeleteCookie,
+    form: { token: linkToken(deletePasswordEmail!), newPassword: 'delete password 123' },
   })
   const rejectedDeletion = await request('/account/delete', {
     method: 'POST', cookie: passwordDeleteCookie, form: { password: 'wrong password' },

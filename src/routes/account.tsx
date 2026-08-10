@@ -16,7 +16,7 @@ import {
 } from '../components/pages'
 import { exportUserData } from '../data-export'
 import { db } from '../db'
-import { sendAccountDeletionConfirmation } from '../email'
+import { sendAccountDeletionConfirmation, sendPasswordEnableConfirmation } from '../email'
 import { confirmEmailToken, findEmailToken } from '../email-verification'
 import { updateProfileHandle } from '../handles'
 import {
@@ -24,6 +24,7 @@ import {
 } from '../http'
 import { moderateText, moderationMessage } from '../moderation'
 import { sessionHash } from '../sessions'
+import { accountForPasswordEnableToken, issuePasswordEnableToken } from '../password-enable'
 import { ACCENT_CHOICES, appearance, appearanceCookie, THEME_CHOICES, type AccentChoice, type ThemeChoice } from '../theme'
 
 export function registerAccountRoutes(app: Hono) {
@@ -103,24 +104,52 @@ export function registerAccountRoutes(app: Hono) {
 
   app.get('/account/password/enable', c => {
     const user = currentUser(c.req.raw)
+    const value = c.req.query('token') || ''
+    if (value) return accountForPasswordEnableToken(db, value)
+      ? page(<AccountPassword user={user} enabled={false} token={value} />)
+      : page(<AccountPassword user={user} enabled={false} invalid />, 400)
     if (!user) return redirect('/enter?next=' + encodeURIComponent('/account/password/enable'))
     const credentials = db.query('SELECT password FROM users WHERE id=?').get(user.id) as { password: string }
-    return credentials.password === '!' ? page(<AccountPassword user={user} enabled={false} />)
+    return credentials.password === '!' ? page(<AccountPassword user={user} enabled={false} request />)
       : redirect('/account/password/change')
   })
   app.post('/account/password/enable', async c => {
     const user = currentUser(c.req.raw)
     if (!user) return redirect('/enter')
-    const limited = authLimit(c, 'password-enable', `${user.id}:${clientAddress(c)}`, AUTH_LIMITS.sensitiveAccount)
-    if (limited) return retryPage(page(<AccountPassword user={user} enabled={false}
-      error={authRateLimitMessage(limited.retryAfter)} />, 429), limited.retryAfter)
-    const current = db.query('SELECT password FROM users WHERE id=?').get(user.id) as { password: string }
-    if (current.password !== '!') return redirect('/account/password/change')
     const f = await form(c.req.raw)
+    const limited = authLimit(c, 'password-enable', `${user.id}:${clientAddress(c)}`, AUTH_LIMITS.sensitiveAccount)
+    if (limited) return retryPage(page(<AccountPassword user={user} enabled={false} request={!f.token}
+      token={f.token || undefined}
+      error={authRateLimitMessage(limited.retryAfter)} />, 429), limited.retryAfter)
+    const tokenAccount = accountForPasswordEnableToken(db, f.token || '')
+    if (!f.token) {
+      const current = db.query('SELECT password FROM users WHERE id=?').get(user.id) as { password: string }
+      if (current.password !== '!') return redirect('/account/password/change')
+      const origin = Bun.env.APP_URL?.replace(/\/$/, '') || new URL(c.req.url).origin
+      const value = issuePasswordEnableToken(db, user.id, user.email)
+      try {
+        await sendPasswordEnableConfirmation(user.email,
+          `${origin}/account/password/enable?token=${encodeURIComponent(value)}`)
+      }
+      catch (error) {
+        db.query('DELETE FROM password_enable_tokens WHERE token_hash=?').run(hash(value))
+        console.error('Could not send password-enable confirmation', error)
+        return page(<AccountPassword user={user} enabled={false} request
+          error="Setup email could not be sent. Please try again later." />, 503)
+      }
+      return page(<AccountPassword user={user} enabled={false} sent />)
+    }
+    if (!tokenAccount) return page(<AccountPassword user={user} enabled={false} invalid />, 400)
     const password = f.newPassword || ''
     if (password.length < 8 || password.length > 128) return page(<AccountPassword user={user} enabled={false}
+      token={f.token}
       error="Use a password between 8 and 128 characters." />, 400)
-    db.query('UPDATE users SET password=? WHERE id=? AND password=?').run(await hashPassword(password), user.id, '!')
+    const passwordHash = await hashPassword(password)
+    db.transaction(() => {
+      db.query('UPDATE users SET password=? WHERE id=? AND password=?')
+        .run(passwordHash, tokenAccount.id, '!')
+      db.query('DELETE FROM password_enable_tokens WHERE user_id=?').run(tokenAccount.id)
+    })()
     return redirect('/account/security?enabled=password')
   })
 

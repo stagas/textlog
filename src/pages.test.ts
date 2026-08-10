@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test'
-import { About, AccountMagicLink, AccountSecurity, AdminDashboard, ApiDocs, Auth, ChangeTheme, ChooseHandle, ConfirmAccountDelete, ConfirmEmail, Connections, Contact, EmbedExamples, ErrorPage,
+import { About, AccountMagicLink, AccountPassword, AccountSecurity, AdminDashboard, ApiDocs, Auth, ChangeTheme, ChooseHandle, ConfirmAccountDelete, ConfirmEmail, Connections, Contact, EmbedExamples, ErrorPage,
   Legal, NotFound, postTitle,
   Profile } from './components/pages'
 
@@ -312,6 +312,21 @@ test('AccountSecurity renders email and safe session controls without passwords'
   expect(html).not.toContain('type="password"')
   expect(html).toContain('value="revocable-id"')
   expect(html).not.toContain('value="current-id"')
+})
+
+test('enabling password login requests email confirmation before showing password fields', () => {
+  const user = { id: 1, handle: 'reader', email: 'reader@example.com', bio: '' }
+  const requestHtml = renderToStaticMarkup(React.createElement(AccountPassword, {
+    user, enabled: false, request: true,
+  }))
+  expect(requestHtml).toContain('send setup link')
+  expect(requestHtml).not.toContain('name="newPassword"')
+
+  const confirmedHtml = renderToStaticMarkup(React.createElement(AccountPassword, {
+    user, enabled: false, token: 'setup-token',
+  }))
+  expect(confirmedHtml).toContain('name="token" value="setup-token"')
+  expect(confirmedHtml).toContain('name="newPassword"')
 })
 
 test('AccountMagicLink renders a generated magic link on its own page for copying', () => {

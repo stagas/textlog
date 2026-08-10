@@ -62,6 +62,12 @@ export function sendAccountDeletionConfirmation(email: string, confirmationUrl: 
     `<p>Confirm deletion of your textlog account using the link below.</p><p><a href="${confirmationUrl}">Review account deletion</a></p><p>This link expires in one hour. If you did not request it, secure your account by signing out other sessions.</p>`)
 }
 
+export function sendPasswordEnableConfirmation(email: string, confirmationUrl: string) {
+  return sendEmail(email, 'Enable password login · textlog',
+    `Use this link to set a password for your textlog account:\n\n${confirmationUrl}\n\nThis link expires in one hour. If you did not request it, you can ignore this email.`,
+    `<p>Use the link below to set a password for your textlog account.</p><p><a href="${confirmationUrl}">Set a password</a></p><p>This link expires in one hour. If you did not request it, you can ignore this email.</p>`)
+}
+
 export function sendMagicLink(email: string, magicUrl: string, code: string, handle?: string) {
   const heading = handle ? `Welcome back, @${handle}` : 'Join the community'
   return sendEmail(email, `${heading} · textlog`,

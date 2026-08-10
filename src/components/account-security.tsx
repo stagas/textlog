@@ -81,14 +81,35 @@ export function AccountSecurity({ user, sessions, passwordEnabled, error, succes
   )
 }
 
-export function AccountPassword({ user, enabled, error }: { user: User; enabled: boolean; error?: string }) {
+export function AccountPassword({ user, enabled, token, request = false, sent = false, invalid = false, error }: {
+  user?: User | null
+  enabled: boolean
+  token?: string
+  request?: boolean
+  sent?: boolean
+  invalid?: boolean
+  error?: string
+}) {
   return (
     <Layout user={user} title={enabled ? 'change password' : 'enable password login'}>
       <section className="auth-shell">
         <div className="panel auth-panel password-panel">
-          <h1>{enabled ? 'Change password' : 'Set a password'}</h1>
+          <h1>{invalid ? 'Link unavailable' : sent ? 'Check your email' : request ? 'Enable password login' : enabled
+            ? 'Change password' : 'Set a password'}</h1>
           {error && <p className="error" role="alert">{error}</p>}
-          <form method="post" action={enabled ? '/account/password/change' : '/account/password/enable'}>
+          {invalid
+            ? <p className="switch">This link is invalid, expired, or already used.</p>
+            : sent
+            ? <p className="switch">We sent a secure setup link to <strong>{user?.email}</strong>. It expires in one hour.</p>
+            : request
+            ? <>
+              <p className="switch">We’ll email you a secure link before you can set a password.</p>
+              <form method="post" action="/account/password/enable">
+                <button className="button">send setup link <span>→</span></button>
+              </form>
+            </>
+            : <form method="post" action={enabled ? '/account/password/change' : '/account/password/enable'}>
+            {!enabled && <input type="hidden" name="token" value={token} />}
             {enabled && <>
               <label htmlFor="old-password"><span>old password</span></label>
               <input id="old-password" type="password" name="oldPassword" required maxLength={128}
@@ -98,7 +119,7 @@ export function AccountPassword({ user, enabled, error }: { user: User; enabled:
             <input id="new-password" type="password" name="newPassword" required minLength={8} maxLength={128}
               autoComplete="new-password" autoFocus={!enabled} placeholder="8–128 characters" />
             <button className="button">{enabled ? 'change password' : 'enable password login'} <span>→</span></button>
-          </form>
+          </form>}
           <p className="auth-secondary"><a href="/account/security">Back to account security</a></p>
         </div>
       </section>
