@@ -1017,6 +1017,32 @@ nav form {
   padding: var(--space-3) var(--space-4);
 }
 
+.entry-code-row {
+  display: flex;
+  gap: var(--space-3);
+  align-items: stretch;
+}
+
+.auth-panel .entry-code-row input {
+  width: 9rem;
+  letter-spacing: .18em;
+}
+
+.magic-sent-panel .entry-code-row .button {
+  flex: 0 0 auto;
+  justify-content: space-between;
+}
+
+.magic-sent-panel .entry-code-copy {
+  margin: var(--space-5) 0 0;
+  color: var(--ink);
+  font-size: 0.75rem;
+}
+
+.magic-sent-panel .entry-code-copy + form {
+  margin-top: var(--space-3);
+}
+
 .auth-panel h1 {
   margin: 0;
   font-size: clamp(1.75rem, 7vw, 2.625rem);

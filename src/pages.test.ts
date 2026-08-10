@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test'
-import { About, AccountMagicLink, AccountPassword, AccountSecurity, AdminDashboard, ApiDocs, Auth, ChangeFont, ChangeTheme, ChooseHandle, ConfirmAccountDelete, ConfirmEmail, Connections, Contact, EmbedExamples, ErrorPage,
+import { About, AccountMagicLink, AccountPassword, AccountSecurity, AdminDashboard, ApiDocs, Auth, ChangeFont, ChangeTheme, ChooseHandle, ConfirmAccountDelete, ConfirmEmail, Connections, Contact, EmbedExamples, ErrorPage, MagicLinkSent,
   Legal, NotFound, postTitle,
   Profile } from './components/pages'
 
@@ -275,6 +275,19 @@ describe('Auth', () => {
     const enter = renderToStaticMarkup(React.createElement(Auth, { next }))
 
     expect(enter).toContain('name="next" value="/post/42?reply=1"')
+  })
+
+  test('check-your-email page accepts the one-time code', () => {
+    const html = renderToStaticMarkup(React.createElement(MagicLinkSent, { email: 'reader@example.com' }))
+
+    expect(html).toContain('action="/enter/code"')
+    expect(html).toContain('or enter the six-digit code')
+    expect(html).toContain('name="email" value="reader@example.com"')
+    expect(html).toContain('name="code"')
+    expect(html).toContain('pattern="[0-9]{6}"')
+    expect(html).toContain('placeholder="123456"')
+    expect(html).not.toContain('autofocus=""')
+    expect(html).toContain('expire in 15 minutes')
   })
 })
 

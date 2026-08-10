@@ -17,6 +17,45 @@ function temporaryHandle() {
   return `anon${crypto.randomUUID().replaceAll('-', '').slice(0, 12)}`
 }
 
+type MagicLink = { token_hash: string; email: string; user_id: number | null; next_path: string }
+
+function completeMagicEntry(link: MagicLink, userAgent: string) {
+  const newAccount = !link.user_id
+  let userId = link.user_id
+  let chosen = true
+  const session = token()
+  db.transaction(() => {
+    db.query('DELETE FROM magic_links WHERE token_hash=?').run(link.token_hash)
+    if (userId) {
+      const account = db.query('SELECT handle_chosen_at FROM users WHERE id=?').get(userId) as {
+        handle_chosen_at: string | null
+      } | null
+      if (!account) throw new Error('Account is unavailable')
+      chosen = Boolean(account.handle_chosen_at)
+      db.query('UPDATE users SET email_verified_at=COALESCE(email_verified_at,CURRENT_TIMESTAMP) WHERE id=?')
+        .run(userId)
+    }
+    else {
+      for (let attempt = 0; attempt < 5; attempt++) {
+        try {
+          const created = db.query(`INSERT INTO users(handle,email,password,email_verified_at)
+            VALUES(?,?,'!',CURRENT_TIMESTAMP) RETURNING id`).get(temporaryHandle(), link.email) as { id: number }
+          userId = created.id
+          chosen = false
+          break
+        }
+        catch (error) {
+          if (db.query('SELECT id FROM users WHERE email=?').get(link.email)) throw error
+        }
+      }
+      if (!userId) throw new Error('Could not allocate temporary handle')
+    }
+    insertSession(db, session, userId!, Date.now() + SESSION_LIFETIME_MS, Date.now(), userAgent)
+  })()
+  const nextPath = newAccount && link.next_path === '/' ? '/explore?welcome=1' : safeLocalPath(link.next_path)
+  return { session, destination: chosen ? nextPath : `/choose-handle?next=${encodeURIComponent(nextPath)}` }
+}
+
 export function registerAuthRoutes(app: Hono) {
   app.get('/enter', c => page(<Auth next={safeNext(c.req.query('next'))} />))
   app.get('/login',
@@ -141,54 +180,52 @@ export function registerAuthRoutes(app: Hono) {
     return page(<MagicLinkSent email={email} magicUrl={isDevelopment() ? link.url : undefined} />)
   })
 
+  app.post('/enter/code', async c => {
+    const f = await form(c.req.raw)
+    const email = (f.email || '').trim().toLowerCase()
+    const code = (f.code || '').trim()
+    const invalid = () => page(<MagicLinkSent email={email} error="That code is invalid or has expired." />, 400)
+    if (!emailPattern.test(email) || !/^\d{6}$/.test(code)) return invalid()
+    const limited = authLimit(c, 'enter-code-ip', clientAddress(c), AUTH_LIMITS.resetIp)
+      || authLimit(c, 'enter-code-account', email, AUTH_LIMITS.resetToken)
+    if (limited) return retryPage(page(<MagicLinkSent email={email}
+      error={authRateLimitMessage(limited.retryAfter)} />, 429), limited.retryAfter)
+    const link = db.query(`SELECT token_hash,email,user_id,next_path,attempts FROM magic_links
+      WHERE email=? AND code_hash IS NOT NULL AND expires_at>?`).get(email, Date.now()) as (MagicLink & {
+        attempts: number
+      }) | null
+    const match = link && db.query('SELECT 1 FROM magic_links WHERE token_hash=? AND code_hash=?')
+      .get(link.token_hash, hash(code))
+    if (!link || !match) {
+      if (link) {
+        const attempts = link.attempts + 1
+        if (attempts >= 5) db.query('DELETE FROM magic_links WHERE token_hash=?').run(link.token_hash)
+        else db.query('UPDATE magic_links SET attempts=? WHERE token_hash=?').run(attempts, link.token_hash)
+      }
+      return invalid()
+    }
+    try {
+      const result = completeMagicEntry(link, c.req.header('user-agent') || '')
+      return redirect(result.destination, sessionCookie(result.session))
+    }
+    catch {
+      return page(<Auth error="That account is unavailable. Request a new magic link." />, 400)
+    }
+  })
+
   app.get('/enter/magic', c => {
     const value = c.req.query('token') || ''
     const link = value && db.query(`SELECT token_hash,email,user_id,next_path FROM magic_links
       WHERE token_hash=? AND expires_at>?`).get(hash(value), Date.now()) as { token_hash: string; email: string;
       user_id: number | null; next_path: string } | null
     if (!link) return page(<Auth error="That magic link is invalid or has expired. Request a new one." />, 400)
-
-    const newAccount = !link.user_id
-    let userId = link.user_id
-    let chosen = true
-    const session = token()
     try {
-      db.transaction(() => {
-        db.query('DELETE FROM magic_links WHERE token_hash=?').run(link.token_hash)
-        if (userId) {
-          const account = db.query('SELECT handle_chosen_at FROM users WHERE id=?').get(userId) as {
-            handle_chosen_at: string | null
-          } | null
-          if (!account) throw new Error('Account is unavailable')
-          chosen = Boolean(account.handle_chosen_at)
-          db.query('UPDATE users SET email_verified_at=COALESCE(email_verified_at,CURRENT_TIMESTAMP) WHERE id=?')
-            .run(userId)
-        }
-        else {
-          for (let attempt = 0; attempt < 5; attempt++) {
-            try {
-              const created = db.query(`INSERT INTO users(handle,email,password,email_verified_at)
-                VALUES(?,?,'!',CURRENT_TIMESTAMP) RETURNING id`).get(temporaryHandle(), link.email) as { id: number }
-              userId = created.id
-              chosen = false
-              break
-            }
-            catch (error) {
-              if (db.query('SELECT id FROM users WHERE email=?').get(link.email)) throw error
-            }
-          }
-          if (!userId) throw new Error('Could not allocate temporary handle')
-        }
-        insertSession(db, session, userId!, Date.now() + SESSION_LIFETIME_MS, Date.now(),
-          c.req.header('user-agent') || '')
-      })()
+      const result = completeMagicEntry(link, c.req.header('user-agent') || '')
+      return redirect(result.destination, sessionCookie(result.session))
     }
     catch {
       return page(<Auth error="That account is unavailable. Request a new magic link." />, 400)
     }
-    const nextPath = newAccount && link.next_path === '/' ? '/explore?welcome=1' : safeLocalPath(link.next_path)
-    const destination = chosen ? nextPath : `/choose-handle?next=${encodeURIComponent(nextPath)}`
-    return redirect(destination, sessionCookie(session))
   })
 
   app.get('/choose-handle', c => {

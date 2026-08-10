@@ -97,6 +97,8 @@ export async function issueEmailToken(userId: number, email: string, kind: 'chan
     throw error
   }
 }
+export const MAGIC_LINK_LIFETIME_MS = 15 * 60 * 1000
+
 export function issueMagicLink(email: string, userId: number | null, nextPath: string, origin: string,
   database: Database = db)
 {
@@ -106,7 +108,7 @@ export function issueMagicLink(email: string, userId: number | null, nextPath: s
   database.query('DELETE FROM magic_links WHERE email=? OR expires_at<=?').run(email, now)
   database.query(`INSERT INTO magic_links(token_hash,email,user_id,next_path,expires_at,created_at,code_hash)
     VALUES(?,?,?,?,?,?,?)`)
-    .run(hash(value), email, userId, safeLocalPath(nextPath), now + 3600000, now, hash(code))
+    .run(hash(value), email, userId, safeLocalPath(nextPath), now + MAGIC_LINK_LIFETIME_MS, now, hash(code))
   return { url: `${origin.replace(/\/$/, '')}/enter/magic?token=${encodeURIComponent(value)}`, code }
 }
 export function securityPage(req: Request, error?: string, success?: string, status = 200) {

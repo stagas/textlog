@@ -37,7 +37,7 @@ export function AccountSecurity({ user, sessions, passwordEnabled, error, succes
         </section>
         <section className="security-section">
           <h2>magic link</h2>
-          <p>Generate a one-time sign-in link to copy to another device. It expires after one hour.</p>
+          <p>Generate a one-time sign-in link to copy to another device. It expires after 15 minutes.</p>
           <form className="security-form" method="post" action="/account/magic-link">
             <button className="button">generate magic link →</button>
           </form>
@@ -139,7 +139,7 @@ export function AccountMagicLink({ user, magicUrl, code }: { user: User; magicUr
     <Layout user={user} title="magic link">
       <div className="panel magic-link-page">
         <h1>magic link</h1>
-        <p>Copy this one-time sign-in link to your other device. It expires after one hour.</p>
+        <p>Copy this one-time sign-in link to your other device. It expires after 15 minutes.</p>
         <label className="magic-link-output">
           magic link
           <textarea readOnly value={magicUrl} autoFocus spellCheck={false} aria-label="magic link URL" />

@@ -18,7 +18,7 @@ export function Auth({ error, email = '', next }: { error?: string; email?: stri
             </button>
           </form>
           <p className="auth-legal">
-            The link expires in one hour. By entering, you agree to the <a href="/legal#terms">Terms of Service</a> and
+            The link and code expire in 15 minutes. By entering, you agree to the <a href="/legal#terms">Terms of Service</a> and
             {' '}
             <a href="/legal#privacy">Privacy Notice</a>.
           </p>
@@ -61,7 +61,7 @@ export function PasswordLogin({ error, identifier = '', next, reset = false }: {
   )
 }
 
-export function MagicLinkSent({ email, magicUrl }: { email: string; magicUrl?: string }) {
+export function MagicLinkSent({ email, magicUrl, error }: { email: string; magicUrl?: string; error?: string }) {
   return (
     <Layout title="check your email">
       <section className="auth-shell">
@@ -71,6 +71,18 @@ export function MagicLinkSent({ email, magicUrl }: { email: string; magicUrl?: s
             We’ve sent an entry link to <strong>{email}</strong>.
           </p>
           <p className="email-delivery-hint">Can’t find it? Check your spam or junk folder.</p>
+          <p className="entry-code-copy">or enter the six-digit code</p>
+          {error && <p className="error" role="alert">{error}</p>}
+          <form method="post" action="/enter/code" autoComplete="one-time-code">
+            <input type="hidden" name="email" value={email} />
+            <div className="entry-code-row">
+              <input id="entry-code" name="code" aria-label="six-digit code" required inputMode="numeric"
+                autoComplete="one-time-code"
+                pattern="[0-9]{6}" maxLength={6} placeholder="123456" aria-describedby="entry-code-help" />
+              <button className="button">enter <span aria-hidden="true">→</span></button>
+            </div>
+            <p id="entry-code-help" className="auth-secondary">The link and code expire in 15 minutes and can only be used once.</p>
+          </form>
           {magicUrl && (
             <p>
               <a className="button" href={magicUrl}>open development magic link</a>

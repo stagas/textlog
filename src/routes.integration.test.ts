@@ -57,6 +57,12 @@ function linkToken(email: CapturedEmail) {
   return value
 }
 
+function entryCode(email: CapturedEmail) {
+  const value = email.text.match(/six-digit code: (\d{6})/)?.[1]
+  if (!value) throw new Error(`No entry code found in captured email: ${email.subject}`)
+  return value
+}
+
 function sessionCookie(response: Response) {
   const cookie = response.headers.get('set-cookie')?.match(/(?:^|,\s*)(textlog=[^;]+)/)?.[1]
   if (!cookie) throw new Error('Response did not set a session cookie')
@@ -147,6 +153,27 @@ test('stats are public without exposing admin operations', async () => {
   expect(html).not.toContain('admin dashboard')
   expect(html).not.toContain('illegal activity reports')
   expect(html).not.toContain('recent admin actions')
+})
+
+test('email code signs up and invalidates its matching magic link', async () => {
+  const email = 'code-signup@example.com'
+  const sent = await request('/enter', { method: 'POST', form: { email, next: '/about' } })
+  expect(sent.status).toBe(200)
+  const sentHtml = await sent.text()
+  expect(sentHtml).toContain('action="/enter/code"')
+  expect(sentHtml).toContain('or enter the six-digit code')
+
+  const message = capturedEmails().filter(item => item.to === email).at(-1)
+  expect(message).toBeDefined()
+  const value = linkToken(message!)
+  const entered = await request('/enter/code', { method: 'POST', form: { email, code: entryCode(message!) } })
+  expect(entered.status).toBe(303)
+  expect(entered.headers.get('location')).toBe('/choose-handle?next=%2Fabout')
+  expect(sessionCookie(entered)).toStartWith('textlog=')
+
+  const reusedLink = await request(`/enter/magic?token=${encodeURIComponent(value)}`)
+  expect(reusedLink.status).toBe(400)
+  expect(await reusedLink.text()).toContain('magic link is invalid or has expired')
 })
 
 test('consequential account, content, reporting, and admin flows work over HTTP', async () => {
