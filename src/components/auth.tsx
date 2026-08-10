@@ -70,6 +70,7 @@ export function MagicLinkSent({ email, magicUrl }: { email: string; magicUrl?: s
           <p>
             We’ve sent an entry link to <strong>{email}</strong>.
           </p>
+          <p className="email-delivery-hint">Can’t find it? Check your spam or junk folder.</p>
           {magicUrl && (
             <p>
               <a className="button" href={magicUrl}>open development magic link</a>

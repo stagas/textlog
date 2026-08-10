@@ -1197,6 +1197,16 @@ textarea {
   font-size: 0.6875rem;
 }
 
+.email-delivery-hint {
+  margin: var(--space-2) 0 0;
+  color: var(--muted);
+  font-size: 0.625rem;
+}
+
+.password-panel .email-delivery-hint {
+  text-align: center;
+}
+
 .switch,
 .signup-terms {
   text-align: center;

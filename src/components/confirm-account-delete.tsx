@@ -22,6 +22,7 @@ export function ConfirmAccountDelete({ user, passwordEnabled = false, token, sen
               We sent a confirmation link to <strong>{user?.email}</strong>. Your account has not been deleted.
             </p>
             <p className="account-delete-expiry">The link expires in one hour. Open it to review and confirm deletion.</p>
+            <p className="email-delivery-hint">Can’t find it? Check your spam or junk folder.</p>
             <div className="welcome-actions verify-email-actions">
               <a className="button" href="/account/edit">back to account</a>
             </div>

@@ -104,7 +104,10 @@ export function AccountPassword({ user, enabled, token, request = false, sent = 
           {invalid
             ? <p className="switch">This link is invalid, expired, or already used.</p>
             : sent
-            ? <p className="switch">We sent a secure setup link to <strong>{user?.email}</strong>. It expires in one hour.</p>
+            ? <>
+              <p className="switch">We sent a secure setup link to <strong>{user?.email}</strong>. It expires in one hour.</p>
+              <p className="email-delivery-hint">Can’t find it? Check your spam or junk folder.</p>
+            </>
             : request
             ? <>
               <p className="switch">We’ll email you a secure link before you can set a password.</p>

@@ -12,6 +12,7 @@ export function ForgotPassword({ sent = false, error }: { sent?: boolean; error?
               <p className="switch">
                 If an account uses that address, a password reset link is on its way. It expires in one hour.
               </p>
+              <p className="email-delivery-hint">Can’t find it? Check your spam or junk folder.</p>
             </>
           )
           : (
