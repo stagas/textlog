@@ -86,4 +86,21 @@ describe('Web Push activity delivery', () => {
 
     expect(deliveries).toBe(0)
   })
+
+  test('sends an author their own post as latest without self-activity wording', async () => {
+    const database = fixture()
+    database.run(`INSERT INTO push_subscriptions(endpoint,user_id,p256dh,auth)
+      VALUES('https://push.example/author',1,'author-key','author-auth')`)
+    const payloads: string[] = []
+    webpush.sendNotification = (async (subscription, payload) => {
+      if (subscription.endpoint.endsWith('/author')) payloads.push(String(payload))
+      return {} as never
+    }) as typeof webpush.sendNotification
+
+    await sendPushForPost(2, 1, 'author', database, vapid)
+
+    expect(payloads.map(value => JSON.parse(value))).toEqual([{
+      title: '@author posted in /latest', body: 'hello @recipient', url: '/post/2',
+    }])
+  })
 })

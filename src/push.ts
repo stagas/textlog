@@ -61,20 +61,22 @@ export async function sendPushForPost(postId: number, actorId: number, actorHand
   } | null
   if (!post) return
   const subscriptions = database.query(`SELECT ps.endpoint,ps.p256dh,ps.auth,
-      EXISTS(SELECT 1 FROM posts child JOIN posts parent ON parent.id=child.parent_id
-        WHERE child.id=? AND parent.user_id=ps.user_id) is_reply,
-      EXISTS(SELECT 1 FROM post_mentions pm WHERE pm.post_id=? AND pm.user_id=ps.user_id) is_mention,
+      (ps.user_id!=? AND EXISTS(SELECT 1 FROM posts child JOIN posts parent ON parent.id=child.parent_id
+        WHERE child.id=? AND parent.user_id=ps.user_id)) is_reply,
+      (ps.user_id!=? AND EXISTS(SELECT 1 FROM post_mentions pm
+        WHERE pm.post_id=? AND pm.user_id=ps.user_id)) is_mention,
       ps.notify_replies,ps.notify_mentions
-    FROM push_subscriptions ps WHERE ps.user_id!=? AND NOT EXISTS (SELECT 1 FROM blocks b WHERE
+    FROM push_subscriptions ps WHERE NOT EXISTS (SELECT 1 FROM blocks b WHERE
       (b.blocker_id=? AND b.blocked_id=ps.user_id) OR (b.blocker_id=ps.user_id AND b.blocked_id=?))
     AND NOT EXISTS (SELECT 1 FROM post_hashtags ph JOIN blocked_hashtags bh ON bh.tag=ph.tag
       WHERE ph.post_id=? AND bh.user_id=ps.user_id)
     AND (ps.notify_latest=1
-      OR (ps.notify_replies=1 AND EXISTS(SELECT 1 FROM posts child JOIN posts parent ON parent.id=child.parent_id
+      OR (ps.notify_replies=1 AND ps.user_id!=? AND EXISTS(
+        SELECT 1 FROM posts child JOIN posts parent ON parent.id=child.parent_id
         WHERE child.id=? AND parent.user_id=ps.user_id))
-      OR (ps.notify_mentions=1 AND EXISTS(SELECT 1 FROM post_mentions pm
-        WHERE pm.post_id=? AND pm.user_id=ps.user_id)))`)
-    .all(postId, postId, actorId, actorId, actorId, postId, postId, postId) as (PushSubscriptionRow & {
+      OR (ps.notify_mentions=1 AND ps.user_id!=? AND EXISTS(
+        SELECT 1 FROM post_mentions pm WHERE pm.post_id=? AND pm.user_id=ps.user_id)))`)
+    .all(actorId, postId, actorId, postId, actorId, actorId, postId, actorId, postId, actorId, postId) as (PushSubscriptionRow & {
       is_reply: number; is_mention: number; notify_replies: number; notify_mentions: number
     })[]
   await sendToSubscriptions(subscriptions, subscription => {
