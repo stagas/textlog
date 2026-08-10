@@ -1,6 +1,6 @@
 import { Database } from 'bun:sqlite'
 import { describe, expect, test } from 'bun:test'
-import { VisitorBuffer, visitorHash } from './visitors'
+import { VisitorBuffer, visitorHash, visitorStats } from './visitors'
 
 function testDatabase() {
   const database = new Database(':memory:')
@@ -41,6 +41,16 @@ describe('visitor analytics', () => {
       visitor_hash: string
     }[]
     expect(rows[0].visitor_hash).not.toBe(rows[1].visitor_hash)
+  })
+
+  test('reports yesterday as a separate UTC calendar day', () => {
+    const database = testDatabase()
+    database.run(`INSERT INTO daily_visitors(day,visitor_hash) VALUES
+      (date('now'),'today'),
+      (date('now','-1 day'),'yesterday-1'),
+      (date('now','-1 day'),'yesterday-2')`)
+
+    expect(visitorStats(database)).toEqual({ visitorsToday: 1, visitorsYesterday: 2, visitors7d: 3 })
   })
 
   test('flushes in bounded batches', () => {

@@ -25,6 +25,7 @@ export function AdminDashboard(
     ['activePosts', 'active posts'],
     ['replies', 'replies'],
     ['visitorsToday', 'unique visitors · today'],
+    ['visitorsYesterday', 'unique visitors · yesterday'],
     ['visitors7d', 'visitor-days · 7d'],
     ['usersYesterday', 'new users · yesterday'],
     ['users24h', 'new users · 24h'],

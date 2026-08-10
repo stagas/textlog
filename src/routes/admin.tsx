@@ -66,7 +66,7 @@ export function registerAdminRoutes(app: Hono) {
     (SELECT count(*) FROM posts WHERE deleted_at IS NULL AND created_at>=datetime('now','-1 day')) posts24h,
     (SELECT count(*) FROM posts WHERE deleted_at IS NULL AND created_at>=datetime('now','-7 days')) posts7d`)
     const dashboardStats = {
-      ...(stats.get() as Omit<DashboardStats, 'visitorsToday' | 'visitors7d' | 'usersOnline'>),
+      ...(stats.get() as Omit<DashboardStats, 'visitorsToday' | 'visitorsYesterday' | 'visitors7d' | 'usersOnline'>),
       usersOnline: onlineUserCount(db),
       ...visitorStats(db),
     }

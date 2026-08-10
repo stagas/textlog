@@ -48,6 +48,7 @@ export type DashboardStats = {
   posts24h: number
   posts7d: number
   visitorsToday: number
+  visitorsYesterday: number
   visitors7d: number
 }
 

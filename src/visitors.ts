@@ -40,6 +40,7 @@ export class VisitorBuffer {
 export function visitorStats(database: Database) {
   return database.query(`SELECT
     (SELECT count(*) FROM daily_visitors WHERE day=date('now')) visitorsToday,
+    (SELECT count(*) FROM daily_visitors WHERE day=date('now','-1 day')) visitorsYesterday,
     (SELECT count(*) FROM daily_visitors WHERE day>=date('now','-6 days')) visitors7d`)
-    .get() as { visitorsToday: number; visitors7d: number }
+    .get() as { visitorsToday: number; visitorsYesterday: number; visitors7d: number }
 }
