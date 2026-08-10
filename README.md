@@ -39,6 +39,16 @@ bun run dev
 
 Open [localhost:3000](http://localhost:3000). Run `bun run check` to type-check and test the project.
 
+## Public archive
+
+In production, textlog creates `public/dump.zip` at startup, refreshes it once per UTC day, and streams it from
+[`/dump.zip`](https://textlog.cc/dump.zip). The archive is a paginated
+read-only snapshot of public handles, bios, posts, reply links, mentions, hashtags, and follow relationships. It
+deliberately excludes emails, passwords, sessions, deleted or suspended accounts and posts, blocks, reports,
+moderation records, record timestamps, network identifiers, and other private or authentication data.
+
+Run `bun run archive:public` to refresh it manually. Set `PUBLIC_ARCHIVE_PATH` to write and serve it elsewhere.
+
 ## License
 
 textlog is open-source software licensed under the [AGPLv3 License](LICENSE).

@@ -11,6 +11,7 @@ import { db } from './db'
 import { clientIp, logError, logHttp, logReady, shouldLogHttp } from './log'
 import { startMaintenance } from './maintenance'
 import { renderDefaultOg } from './og'
+import { startPublicArchive } from './public-archive'
 import { ClientErrorRateLimiter, rateLimitedResponse, RequestRateLimiter } from './request-rate-limit'
 import { isDevelopment } from './environment'
 import { registerAccountRoutes } from './routes/account'
@@ -35,6 +36,7 @@ import { themeLogoSvg, themeStyles, withAppearance } from './theme'
 import { VisitorBuffer } from './visitors'
 
 const devReloadEnabled = Bun.env.DEV_RELOAD === 'true'
+const publicArchivePath = Bun.env.PUBLIC_ARCHIVE_PATH || 'public/dump.zip'
 const bootId = crypto.randomUUID()
 configureDevReload(devReloadEnabled ? bootId : undefined)
 const app = new Hono()
@@ -69,6 +71,7 @@ if (Bun.env.NODE_ENV === 'production') {
     directory: Bun.env.DATABASE_BACKUP_DIR || 'storage/backups',
     alertWebhookUrl: Bun.env.BACKUP_ALERT_WEBHOOK_URL || null,
   })
+  startPublicArchive(db, { path: publicArchivePath })
 }
 
 app.use('*', bodyLimit({
@@ -181,6 +184,18 @@ app.get('/health', c => {
     logError('health check failed', error)
     return c.json({ status: 'unavailable' }, 503, { 'cache-control': 'no-store' })
   }
+})
+app.get('/dump.zip', async c => {
+  const archive = Bun.file(publicArchivePath)
+  if (!await archive.exists()) return c.text('Archive is not available yet', 404)
+  return new Response(archive, {
+    headers: {
+      'content-type': 'application/zip',
+      'content-disposition': 'attachment; filename="dump.zip"',
+      'cache-control': 'public, max-age=3600, must-revalidate',
+      'x-content-type-options': 'nosniff',
+    },
+  })
 })
 if (devReloadEnabled) {
   app.get('/__dev/restart', c => c.json({ bootId }, 200, { 'cache-control': 'no-store, no-cache, must-revalidate' }))
