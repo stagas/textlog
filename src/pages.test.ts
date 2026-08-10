@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test'
-import { About, AccountMagicLink, AccountSecurity, ApiDocs, Auth, ChangeTheme, ChooseHandle, ConfirmEmail, Connections, Contact, EmbedExamples, ErrorPage,
+import { About, AccountMagicLink, AccountSecurity, AdminDashboard, ApiDocs, Auth, ChangeTheme, ChooseHandle, ConfirmEmail, Connections, Contact, EmbedExamples, ErrorPage,
   Legal, NotFound, postTitle,
   Profile } from './components/pages'
 
@@ -9,6 +9,35 @@ import { Post } from './components/post'
 import { HotFeed } from './components/hot-feed'
 import { PublicFeed } from './components/public-feed'
 import { TagFeed } from './components/tag-feed'
+
+test('admin metrics use locale-aware number formatting', () => {
+  const html = renderToStaticMarkup(React.createElement(AdminDashboard, {
+    user: { id: 1, handle: 'admin', email: 'gstagas@gmail.com', bio: '' },
+    stats: {
+      users: 1234567,
+      usersOnline: 0,
+      suspendedUsers: 0,
+      activePosts: 0,
+      replies: 0,
+      openReports: 0,
+      usersYesterday: 0,
+      users24h: 0,
+      users7d: 0,
+      posts24h: 0,
+      posts7d: 0,
+      visitorsToday: 0,
+      visitorsYesterday: 0,
+      visitors7d: 0,
+    },
+    reports: [],
+    actions: [],
+    status: 'open',
+    page: 1,
+    total: 0,
+  }))
+
+  expect(html).toContain(`<strong>${(1234567).toLocaleString()}</strong><span>users</span>`)
+})
 
 test('pages advertise the dynamic favicon, touch icon, and manifest', () => {
   const html = renderToStaticMarkup(React.createElement(About, { user: null }))

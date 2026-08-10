@@ -45,7 +45,7 @@ export function AdminDashboard(
       <section className="admin-stats" aria-label="Application statistics">
         {labels.map(([key, label]) => (
           <article key={key}>
-            <strong>{stats[key]}</strong>
+            <strong>{stats[key].toLocaleString()}</strong>
             <span>{label}</span>
           </article>
         ))}
