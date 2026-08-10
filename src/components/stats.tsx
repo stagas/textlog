@@ -20,8 +20,10 @@ const labels: [keyof DashboardStats, string][] = [
   ['posts7d', 'new posts · 7d'],
 ]
 
-export function StatsGrid({ stats, showSuspended = true }: { stats: DashboardStats; showSuspended?: boolean }) {
-  const visibleLabels = showSuspended ? labels : labels.filter(([key]) => key !== 'suspendedUsers')
+export function StatsGrid({ stats, publicOnly = false }: { stats: DashboardStats; publicOnly?: boolean }) {
+  const visibleLabels = publicOnly
+    ? labels.filter(([key]) => !['suspendedUsers', 'usersOnline'].includes(key))
+    : labels
   return (
     <section className="admin-stats" aria-label="Application statistics">
       {visibleLabels.map(([key, label]) => (
@@ -42,7 +44,7 @@ export function Stats({ user, stats }: { user: User | null; stats: DashboardStat
           <h1>stats</h1>
         </div>
       </section>
-      <StatsGrid stats={stats} showSuspended={false} />
+      <StatsGrid stats={stats} publicOnly />
     </Layout>
   )
 }
