@@ -202,6 +202,17 @@ header>nav {
   justify-content: flex-end;
 }
 
+header>.account-nav {
+  align-items: center;
+}
+
+.account-nav-row {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: clamp(12px, 3vw, 22px);
+}
+
 .brand {
   color: var(--ink);
   display: inline-flex;
@@ -274,17 +285,19 @@ nav form {
   font-size: 0.6875rem;
 }
 
-.site-footer .mobile-account-footer {
-  display: none;
-}
-
 .site-footer .mobile-app-footer {
   display: none;
 }
 
 @media (max-width: 600px) {
-  .account-nav .mobile-footer-link {
-    display: none;
+  header>.account-nav {
+    align-items: flex-end;
+    flex-direction: column;
+    gap: var(--space-2);
+  }
+
+  .account-nav-primary {
+    order: -1;
   }
 
   .site-footer {
@@ -298,10 +311,6 @@ nav form {
     justify-content: center;
     flex-wrap: wrap;
     row-gap: var(--space-2);
-  }
-
-  .site-footer .mobile-account-footer {
-    display: flex;
   }
 
   .site-footer .mobile-app-footer {

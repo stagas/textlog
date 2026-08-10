@@ -55,18 +55,22 @@ export function Layout({
   // Older callers that predate the marker already represent established accounts.
   const ready = user?.handle_chosen_at !== null
   const activityUnread = user && ready ? hasUnreadActivity(user.id) : false
-  const navigation = user
+  const navigation = user && ready
     ? (
       <>
-        <a className="mobile-footer-link" href="/explore">explore</a>
-        {ready && <ActivityLink unread={activityUnread} className="mobile-footer-link" />}
-        {ready && <a href="/write">write</a>}
-        {ready && isAdmin(user) && <a href="/admin">admin</a>}
-        {ready
-          ? <a href={`/u/${user.handle}`}>@{user.handle}</a>
-          : <a className="button" href="/choose-handle">choose handle</a>}
+        <span className="account-nav-row account-nav-secondary">
+          <a href="/explore">explore</a>
+          <ActivityLink unread={activityUnread} />
+        </span>
+        <span className="account-nav-row account-nav-primary">
+          <a href="/write">write</a>
+          {isAdmin(user) && <a href="/admin">admin</a>}
+          <a href={`/u/${user.handle}`}>@{user.handle}</a>
+        </span>
       </>
     )
+    : user
+    ? <a className="button" href="/choose-handle">choose handle</a>
     : (
       <>
         <a href="/explore">explore</a>
@@ -111,7 +115,7 @@ export function Layout({
             <link rel="alternate" type="application/atom+xml" title={`${feeds.title} (Atom)`} href={feeds.atom} />
           </>
         )}
-        <link rel="stylesheet" href="/styles.css?v=97" />
+        <link rel="stylesheet" href="/styles.css?v=101" />
         <link rel="stylesheet" href="/theme.css" />
       </head>
       <body>
@@ -147,12 +151,6 @@ export function Layout({
           >
             get mobile app
           </a>
-          {user && ready && (
-            <nav className="mobile-account-footer" aria-label="Account shortcuts">
-              <a href="/explore">explore</a>
-              <ActivityLink unread={activityUnread} />
-            </nav>
-          )}
           <nav aria-label="Footer">
             <a href="/about">about</a>
             <a href="/api">api</a>
