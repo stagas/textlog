@@ -2,7 +2,7 @@ import React from 'react'
 import { hasUnreadActivity } from '../activity-state'
 import { isAdmin } from '../admin'
 import type { User } from '../db'
-import { activeAppearance } from '../theme'
+import { activeAppearance, activeThemeLogoSvg, activeThemeStyles } from '../theme'
 
 let devReloadBootId: string | undefined
 
@@ -44,6 +44,8 @@ export function Layout({
 }) {
   const selectedAppearance = activeAppearance()
   const appearanceVersion = `${selectedAppearance.theme}.${selectedAppearance.accent}`
+  const themeCss = activeThemeStyles()
+  const logoSvg = activeThemeLogoSvg()
   const appOrigin = Bun.env.APP_URL?.replace(/\/$/, '') || ''
   const share = social || {
     description: 'A quieter place for your thoughts.',
@@ -116,14 +118,14 @@ export function Layout({
           </>
         )}
         <link rel="stylesheet" href="/styles.css?v=102" />
-        <link rel="stylesheet" href="/theme.css" />
+        <style>{themeCss}</style>
       </head>
       <body>
         {user && ready && <a className="skip-link" href="/write">write</a>}
         <a className="skip-link" href="#main-content">skip to content</a>
         <header className={user ? 'authenticated-header' : undefined}>
           <a className="brand" href="/" aria-label="textlog home">
-            <img className="brand-logo" src="/textlog.svg?v=2" alt="" />
+            <span className="brand-logo" aria-hidden="true" dangerouslySetInnerHTML={{ __html: logoSvg }} />
             <span>textlog</span>
           </a>
           {logoutNavigation

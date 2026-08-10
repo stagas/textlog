@@ -40,7 +40,7 @@ export const EMBED_FONT_CHOICES = {
 } as const satisfies Record<string, FontChoice>
 export type EmbedFontChoice = keyof typeof EMBED_FONT_CHOICES
 
-const appearanceContext = new AsyncLocalStorage<Appearance>()
+const appearanceContext = new AsyncLocalStorage<{ appearance: Appearance; request: Request }>()
 
 const palettes = {
   light: { bg: '#f4f3ee', ink: '#20231f', muted: '#8a9085', soft: '#d9dbd4', accent: '#749668',
@@ -77,11 +77,21 @@ export function appearance(request: Request): Appearance {
 }
 
 export function withAppearance<T>(request: Request, callback: () => T) {
-  return appearanceContext.run(appearance(request), callback)
+  return appearanceContext.run({ appearance: appearance(request), request }, callback)
 }
 
 export function activeAppearance() {
-  return appearanceContext.getStore() || { theme: 'system', accent: 'theme' } as Appearance
+  return appearanceContext.getStore()?.appearance || { theme: 'system', accent: 'theme' } as Appearance
+}
+
+export function activeThemeStyles() {
+  const request = appearanceContext.getStore()?.request || new Request('http://localhost')
+  return themeStyles(request)
+}
+
+export function activeThemeLogoSvg() {
+  const request = appearanceContext.getStore()?.request || new Request('http://localhost')
+  return themeLogoSvg(request)
 }
 
 export function appearanceCookie(value: Appearance, appUrl: string | undefined = Bun.env.APP_URL) {

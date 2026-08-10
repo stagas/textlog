@@ -99,7 +99,7 @@ export function securityHeaders(devReload = false, appUrl: string | undefined = 
       embeddable ? 'frame-ancestors *' : 'frame-ancestors \'none\'',
       'object-src \'none\'',
       'img-src \'self\' data:',
-      'style-src \'self\'',
+      'style-src \'self\' \'unsafe-inline\'',
       devReload ? 'script-src \'self\' \'unsafe-inline\'' : 'script-src \'none\'',
       'connect-src \'self\'',
     ].join('; '),

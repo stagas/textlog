@@ -226,8 +226,14 @@ header>.account-nav {
 }
 
 .brand-logo {
+  display: inline-flex;
   width: 24px;
   height: 24px;
+}
+
+.brand-logo svg {
+  width: 100%;
+  height: 100%;
 }
 
 .brand-dot {

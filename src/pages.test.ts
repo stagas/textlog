@@ -50,10 +50,12 @@ test('pages advertise the dynamic favicon, touch icon, and manifest', () => {
   expect(html).not.toContain('rel="icon" href="/textlog.svg')
 })
 
-test('pages use the cookie-aware logo URL instead of its legacy immutable version', () => {
+test('pages inline the cookie-aware theme and logo', () => {
   const html = renderToStaticMarkup(React.createElement(About, { user: null }))
-  expect(html).toContain('src="/textlog.svg?v=2"')
-  expect(html).not.toContain('src="/textlog.svg?v=1"')
+  expect(html).toContain('<style>:root{color-scheme:light')
+  expect(html).not.toContain('href="/theme.css"')
+  expect(html).toContain('<span class="brand-logo" aria-hidden="true"><svg')
+  expect(html).not.toContain('src="/textlog.svg')
 })
 
 test('theme selection is a server-rendered form with mobile appearance choices', () => {
