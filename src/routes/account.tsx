@@ -43,10 +43,11 @@ export function registerAccountRoutes(app: Hono) {
     if (!user) return c.json({ error: 'Unauthorized' }, 401)
     const endpoint = c.req.query('endpoint') || ''
     const preferences = endpoint
-      ? db.query(`SELECT notify_latest latest,notify_replies replies,notify_mentions mentions,notify_follows follows
+      ? db.query(`SELECT notify_latest latest,notify_replies replies,notify_mentions mentions,notify_follows follows,
+          notify_own_posts ownPosts
         FROM push_subscriptions WHERE endpoint=? AND user_id=?`).get(endpoint, user.id) as Record<string, number> | null
       : null
-    return c.json({ preferences: preferences || { latest: 1, replies: 1, mentions: 1, follows: 1 } })
+    return c.json({ preferences: preferences || { latest: 1, replies: 1, mentions: 1, follows: 1, ownPosts: 1 } })
   })
 
   app.post('/account/push-subscription', async c => {
@@ -68,15 +69,17 @@ export function registerAccountRoutes(app: Hono) {
     const replies = preference('replies')
     const mentions = preference('mentions')
     const follows = preference('follows')
+    const ownPosts = preference('ownPosts')
     db.query(`INSERT INTO push_subscriptions(endpoint,user_id,p256dh,auth,
-        notify_latest,notify_replies,notify_mentions,notify_follows) VALUES(?,?,?,?,?,?,?,?)
+        notify_latest,notify_replies,notify_mentions,notify_follows,notify_own_posts) VALUES(?,?,?,?,?,?,?,?,?)
       ON CONFLICT(endpoint) DO UPDATE SET user_id=excluded.user_id,p256dh=excluded.p256dh,auth=excluded.auth,
         notify_latest=coalesce(?,push_subscriptions.notify_latest),
         notify_replies=coalesce(?,push_subscriptions.notify_replies),
         notify_mentions=coalesce(?,push_subscriptions.notify_mentions),
-        notify_follows=coalesce(?,push_subscriptions.notify_follows)`)
-      .run(endpoint, user.id, p256dh, auth, latest ?? 1, replies ?? 1, mentions ?? 1, follows ?? 1,
-        latest, replies, mentions, follows)
+        notify_follows=coalesce(?,push_subscriptions.notify_follows),
+        notify_own_posts=coalesce(?,push_subscriptions.notify_own_posts)`)
+      .run(endpoint, user.id, p256dh, auth, latest ?? 1, replies ?? 1, mentions ?? 1, follows ?? 1, ownPosts ?? 1,
+        latest, replies, mentions, follows, ownPosts)
     return c.json({ saved: true })
   })
 

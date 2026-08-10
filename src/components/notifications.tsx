@@ -20,11 +20,14 @@ export function NotificationSettings({ user, publicKey }: { user: User; publicKe
             <legend>notify me about</legend>
             {[
               ['latest', 'new notes', 'Everything newly published in /latest'],
+              ['ownPosts', 'include own messages', 'Also notify you about notes you publish'],
               ['replies', 'replies', 'When someone replies to one of your notes'],
               ['mentions', 'mentions', 'When someone mentions your handle'],
               ['follows', 'new followers', 'When someone starts following you'],
             ].map(([name, label, description]) => (
-              <label className="notification-toggle" key={name}>
+              <label className={`notification-toggle${name === 'latest' ? ' notification-toggle-parent' : ''}${
+                name === 'ownPosts' ? ' notification-toggle-dependent' : ''}`}
+                key={name}>
                 <span><strong>{label}</strong><small>{description}</small></span>
                 <input type="checkbox" name={name} defaultChecked />
                 <span className="notification-toggle-track" aria-hidden="true"><span /></span>

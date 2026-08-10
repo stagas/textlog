@@ -1811,6 +1811,28 @@ form.report-panel {
 .notification-toggle small { color: var(--muted); font-size: 0.625rem; }
 .notification-toggle input { position: absolute; opacity: 0; pointer-events: none; }
 
+.notification-toggle-parent {
+  padding-bottom: var(--space-2);
+  border-bottom: 0;
+}
+
+.notification-toggle-dependent {
+  position: relative;
+  padding-top: var(--space-2);
+  padding-left: var(--space-7);
+}
+
+.notification-toggle-dependent::before {
+  position: absolute;
+  top: calc(-1 * var(--space-2));
+  left: var(--space-4);
+  width: var(--space-3);
+  height: calc(var(--space-5) + var(--space-2));
+  border-bottom: 1px solid var(--soft);
+  border-left: 1px solid var(--soft);
+  content: '';
+}
+
 .notification-toggle-track {
   position: relative;
   flex: none;

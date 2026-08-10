@@ -198,7 +198,7 @@ test('consequential account, content, reporting, and admin flows work over HTTP'
     method: 'POST',
     cookie: aliceCookie,
     json: { endpoint, keys: { p256dh: 'test-key', auth: 'test-auth' },
-      preferences: { latest: false, replies: true, mentions: false, follows: true } },
+      preferences: { latest: false, replies: true, mentions: false, follows: true, ownPosts: false } },
   })
   expect(savedPush.status).toBe(200)
   const pushPreferences = await request(
@@ -206,7 +206,7 @@ test('consequential account, content, reporting, and admin flows work over HTTP'
     { cookie: aliceCookie },
   )
   expect(await pushPreferences.json()).toEqual({
-    preferences: { latest: 0, replies: 1, mentions: 0, follows: 1 },
+    preferences: { latest: 0, replies: 1, mentions: 0, follows: 1, ownPosts: 0 },
   })
   const cacheBustedHomeHtml = await (await request('/?v=94721')).text()
   expect(cacheBustedHomeHtml).toContain(`property="og:url" content="${origin}/?v=94721"`)

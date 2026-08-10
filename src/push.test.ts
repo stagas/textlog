@@ -100,7 +100,40 @@ describe('Web Push activity delivery', () => {
     await sendPushForPost(2, 1, 'author', database, vapid)
 
     expect(payloads.map(value => JSON.parse(value))).toEqual([{
-      title: '@author replied to @recipient', body: 'hello @recipient', url: '/post/2',
+      title: 'You replied to @recipient', body: 'hello @recipient', url: '/post/2',
     }])
+  })
+
+  test('uses first-person wording for an author own ordinary post', async () => {
+    const database = fixture()
+    database.run(`INSERT INTO push_subscriptions(endpoint,user_id,p256dh,auth)
+      VALUES('https://push.example/author',1,'author-key','author-auth');
+      INSERT INTO posts(id,user_id,body) VALUES(3,1,'my note')`)
+    const payloads: string[] = []
+    webpush.sendNotification = (async (subscription, payload) => {
+      if (subscription.endpoint.endsWith('/author')) payloads.push(String(payload))
+      return {} as never
+    }) as typeof webpush.sendNotification
+
+    await sendPushForPost(3, 1, 'author', database, vapid)
+
+    expect(payloads.map(value => JSON.parse(value))).toEqual([{
+      title: 'You wrote', body: 'my note', url: '/post/3',
+    }])
+  })
+
+  test('can exclude an author own posts while keeping latest enabled', async () => {
+    const database = fixture()
+    database.run(`INSERT INTO push_subscriptions(endpoint,user_id,p256dh,auth,notify_own_posts)
+      VALUES('https://push.example/author',1,'author-key','author-auth',0)`)
+    let authorDeliveries = 0
+    webpush.sendNotification = (async subscription => {
+      if (subscription.endpoint.endsWith('/author')) authorDeliveries++
+      return {} as never
+    }) as typeof webpush.sendNotification
+
+    await sendPushForPost(2, 1, 'author', database, vapid)
+
+    expect(authorDeliveries).toBe(0)
   })
 })

@@ -62,7 +62,7 @@ export async function sendPushForPost(postId: number, actorId: number, actorHand
     body: string; parent_id: number | null; parent_handle: string | null
   } | null
   if (!post) return
-  const subscriptions = database.query(`SELECT ps.endpoint,ps.p256dh,ps.auth,
+  const subscriptions = database.query(`SELECT ps.endpoint,ps.p256dh,ps.auth,ps.user_id,
       (ps.user_id!=? AND EXISTS(SELECT 1 FROM posts child JOIN posts parent ON parent.id=child.parent_id
         WHERE child.id=? AND parent.user_id=ps.user_id)) is_reply,
       (ps.user_id!=? AND EXISTS(SELECT 1 FROM post_mentions pm
@@ -72,21 +72,24 @@ export async function sendPushForPost(postId: number, actorId: number, actorHand
       (b.blocker_id=? AND b.blocked_id=ps.user_id) OR (b.blocker_id=ps.user_id AND b.blocked_id=?))
     AND NOT EXISTS (SELECT 1 FROM post_hashtags ph JOIN blocked_hashtags bh ON bh.tag=ph.tag
       WHERE ph.post_id=? AND bh.user_id=ps.user_id)
-    AND (ps.notify_latest=1
+    AND ((ps.notify_latest=1 AND (ps.user_id!=? OR ps.notify_own_posts=1))
       OR (ps.notify_replies=1 AND ps.user_id!=? AND EXISTS(
         SELECT 1 FROM posts child JOIN posts parent ON parent.id=child.parent_id
         WHERE child.id=? AND parent.user_id=ps.user_id))
       OR (ps.notify_mentions=1 AND ps.user_id!=? AND EXISTS(
         SELECT 1 FROM post_mentions pm WHERE pm.post_id=? AND pm.user_id=ps.user_id)))`)
-    .all(actorId, postId, actorId, postId, actorId, actorId, postId, actorId, postId, actorId, postId) as (PushSubscriptionRow & {
-      is_reply: number; is_mention: number; notify_replies: number; notify_mentions: number
+    .all(actorId, postId, actorId, postId, actorId, actorId, postId, actorId, actorId, postId, actorId, postId) as (PushSubscriptionRow & {
+      user_id: number; is_reply: number; is_mention: number; notify_replies: number; notify_mentions: number
     })[]
   await sendToSubscriptions(subscriptions, subscription => {
     const item = subscription as typeof subscriptions[number]
     const kind = item.is_reply && item.notify_replies ? 'reply'
       : item.is_mention && item.notify_mentions ? 'mention' : 'latest'
+    const ownPost = item.user_id === actorId
     return {
-      title: `@${actorHandle} ${kind === 'reply' ? 'replied to you'
+      title: ownPost
+        ? `You ${post.parent_handle ? `replied to @${post.parent_handle}` : 'wrote'}`
+        : `@${actorHandle} ${kind === 'reply' ? 'replied to you'
         : kind === 'mention' ? 'mentioned you'
         : post.parent_handle ? `replied to @${post.parent_handle}` : 'wrote'}`,
       body: post.body,
