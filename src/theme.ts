@@ -94,6 +94,14 @@ export function activeThemeLogoSvg() {
   return themeLogoSvg(request)
 }
 
+export function versionedAppearance(value: string | null | undefined): Appearance | null {
+  if (!value) return null
+  const [theme, accent, extra] = value.split('.')
+  if (extra !== undefined || !THEME_CHOICES.includes(theme as ThemeChoice)
+    || !ACCENT_CHOICES.includes(accent as AccentChoice)) return null
+  return { theme: theme as ThemeChoice, accent: accent as AccentChoice }
+}
+
 export function appearanceCookie(value: Appearance, appUrl: string | undefined = Bun.env.APP_URL) {
   let secure = ''
   try { secure = appUrl && new URL(appUrl).protocol === 'https:' ? '; Secure' : '' }
@@ -178,8 +186,7 @@ function accentFor(name: keyof typeof palettes, choice: AccentChoice) {
   return accents[choice][name === 'dark' || name === 'dracula' ? 1 : 0]
 }
 
-export function themeLogoSvg(request: Request) {
-  const selected = appearance(request)
+export function themeLogoSvg(request: Request, selected: Appearance = appearance(request)) {
   const drawing = 'M13,19V16H21V19H13M8.5,13L2.47,7H6.71L11.67,11.95C12.25,12.54 12.25,13.5 11.67,14.07L6.74,19H2.5L8.5,13Z'
   if (selected.theme === 'system') {
     const light = accentFor('light', selected.accent)

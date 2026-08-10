@@ -1,5 +1,5 @@
 import { expect, test } from 'bun:test'
-import { activeAppearance, appearance, appearanceCookie, fontChoice, fontCookie, fontSizeChoice, fontSizeCookie, themeLogoSvg, themeStyles, withAppearance } from './theme'
+import { activeAppearance, appearance, appearanceCookie, fontChoice, fontCookie, fontSizeChoice, fontSizeCookie, themeLogoSvg, themeStyles, versionedAppearance, withAppearance } from './theme'
 
 test('appearance reads valid choices and falls back safely', () => {
   expect(appearance(new Request('http://localhost', { headers: { cookie: 'appearance=sepia.amber' } })))
@@ -82,4 +82,17 @@ test('logo SVG follows the selected accent and system brightness', () => {
   }))
   expect(system).toContain('path{fill:#3a6ea5}')
   expect(system).toContain('@media(prefers-color-scheme:dark){path{fill:#7aa2f7}}')
+})
+
+test('versioned favicon appearances are validated independently of cookies', () => {
+  expect(versionedAppearance('sepia.rust')).toEqual({ theme: 'sepia', accent: 'rust' })
+  expect(versionedAppearance('system.blue')).toEqual({ theme: 'system', accent: 'blue' })
+  expect(versionedAppearance('broken.blue')).toBeNull()
+  expect(versionedAppearance('dark.nope')).toBeNull()
+  expect(versionedAppearance('dark.blue.extra')).toBeNull()
+  expect(versionedAppearance(undefined)).toBeNull()
+
+  const request = new Request('http://localhost', { headers: { cookie: 'appearance=light.sage' } })
+  const versioned = themeLogoSvg(request, versionedAppearance('dracula.pink')!)
+  expect(versioned).toContain('fill="#ff79c6"')
 })

@@ -32,7 +32,7 @@ import { registerTagsRoutes } from './routes/tags'
 import { renewSession } from './sessions'
 import { loadStylesAsset, stylesResponse } from './styles'
 import { currentUser, sessionToken } from './utils'
-import { themeLogoSvg, themeStyles, withAppearance } from './theme'
+import { themeLogoSvg, themeStyles, versionedAppearance, withAppearance } from './theme'
 import { VisitorBuffer } from './visitors'
 
 const devReloadEnabled = Bun.env.DEV_RELOAD === 'true'
@@ -228,15 +228,20 @@ app.get('/textlog.svg', c =>
       'expires': '0',
     },
   }))
-app.get('/favicon-theme.svg', c =>
-  new Response(themeLogoSvg(c.req.raw), {
-    headers: {
+app.get('/favicon-theme.svg', c => {
+  const selected = versionedAppearance(c.req.query('v'))
+  return new Response(themeLogoSvg(c.req.raw, selected || undefined), {
+    headers: selected ? {
+      'content-type': 'image/svg+xml; charset=utf-8',
+      'cache-control': 'public, max-age=31536000, immutable',
+    } : {
       'content-type': 'image/svg+xml; charset=utf-8',
       'cache-control': 'private, no-store, no-cache, must-revalidate',
       'pragma': 'no-cache',
       'expires': '0',
     },
-  }))
+  })
+})
 app.get('/og.png', () => {
   return new Response(defaultOgBody, {
     headers: {
