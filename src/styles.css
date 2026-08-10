@@ -1789,6 +1789,20 @@ form.report-panel {
 .notification-heading .eyebrow { margin-bottom: 0; }
 .notification-heading > .quiet { margin-top: var(--space-2); }
 
+.ios-notification-help {
+  margin: var(--space-5) 0;
+  padding: var(--space-4);
+  color: var(--quote-ink);
+  background: var(--quote-bg);
+  border-left: 2px solid var(--accent);
+  font-size: 0.6875rem;
+  line-height: 1.6;
+}
+
+.ios-notification-help p { margin: var(--space-2) 0; }
+.ios-notification-help ol { margin: var(--space-3) 0; padding-left: var(--space-5); }
+.ios-notification-help li + li { margin-top: var(--space-1); }
+
 .notification-preferences legend {
   padding: 0 var(--space-2);
   color: var(--muted);

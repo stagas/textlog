@@ -99,6 +99,20 @@ test('notification settings are the only account page that loads their client sc
   expect(profile).not.toContain('<script')
 })
 
+test('notification settings show Home Screen installation steps only for iOS', () => {
+  const user = { id: 1, handle: 'reader', email: 'reader@example.com', bio: '' }
+  const ios = renderToStaticMarkup(React.createElement(NotificationSettings, {
+    user, publicKey: 'public-key', ios: true,
+  }))
+  const other = renderToStaticMarkup(React.createElement(NotificationSettings, {
+    user, publicKey: 'public-key', ios: false,
+  }))
+  expect(ios).toContain('Install textlog first')
+  expect(ios).toContain('Add to Home Screen')
+  expect(ios).toContain('Open as Web App')
+  expect(other).not.toContain('Install textlog first')
+})
+
 test('font selection lists local monospace fonts in their own families', () => {
   const html = renderToStaticMarkup(React.createElement(ChangeFont, {
     user: { id: 1, handle: 'reader', email: 'reader@example.com', bio: '' },

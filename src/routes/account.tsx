@@ -35,7 +35,8 @@ export function registerAccountRoutes(app: Hono) {
   app.get('/account/edit/notifications', c => {
     const user = currentUser(c.req.raw)
     if (!user) return redirect('/enter?next=' + encodeURIComponent('/account/edit/notifications'))
-    return page(<NotificationSettings user={user} publicKey={vapidPublicKey()} />)
+    const ios = /(?:iPhone|iPad|iPod)/i.test(c.req.header('user-agent') || '')
+    return page(<NotificationSettings user={user} publicKey={vapidPublicKey()} ios={ios} />)
   })
 
   app.get('/account/push-subscription', c => {

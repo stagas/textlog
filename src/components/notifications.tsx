@@ -1,7 +1,9 @@
 import type { User } from '../db'
 import { Layout } from './layout'
 
-export function NotificationSettings({ user, publicKey }: { user: User; publicKey: string | null }) {
+export function NotificationSettings({ user, publicKey, ios = false }: {
+  user: User; publicKey: string | null; ios?: boolean
+}) {
   return (
     <Layout user={user} title="notifications">
       <article className="static-page">
@@ -15,6 +17,20 @@ export function NotificationSettings({ user, publicKey }: { user: User; publicKe
             : 'Notifications are unavailable.'}
         </p>
         <p id="notification-preference-hint" hidden>Choose which activity reaches this browser.</p>
+        {ios && (
+          <aside className="ios-notification-help">
+            <strong>Install textlog first</strong>
+            <p>On iPhone and iPad, notifications work only when textlog is opened as a Home Screen web app.</p>
+            <ol>
+              <li>Open textlog in Safari and tap Share.</li>
+              <li>Choose Add to Home Screen and turn on Open as Web App.</li>
+              <li>Tap Add, then open textlog from its new Home Screen icon.</li>
+              <li>Return to this page and enable notifications.</li>
+            </ol>
+            <a className="quiet" href="https://support.apple.com/guide/iphone/iphea86e5236/ios"
+              target="_blank" rel="noopener noreferrer">Apple’s instructions</a>
+          </aside>
+        )}
         <form id="notification-preference-form">
           <fieldset className="notification-preferences" id="notification-preferences" disabled hidden>
             <legend>notify me about</legend>
