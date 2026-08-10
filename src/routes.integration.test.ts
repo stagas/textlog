@@ -142,6 +142,7 @@ test('stats are public without exposing admin operations', async () => {
   expect(html).not.toContain('<p class="eyebrow">textlog</p>')
   expect(html).toContain('aria-label="Application statistics"')
   expect(html).toContain('<span>users</span>')
+  expect(html).not.toContain('<span>suspended</span>')
   expect(html).not.toContain('admin dashboard')
   expect(html).not.toContain('illegal activity reports')
   expect(html).not.toContain('recent admin actions')
