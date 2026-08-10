@@ -10,6 +10,7 @@ import {
   AccountMagicLink,
   AccountPassword,
   ChangeTheme,
+  ChangeFont,
   ConfirmAccountDelete,
   ConfirmEmail,
   Profile,
@@ -26,7 +27,7 @@ import {
 import { moderateText, moderationMessage } from '../moderation'
 import { sessionHash } from '../sessions'
 import { accountForPasswordEnableToken, issuePasswordEnableToken } from '../password-enable'
-import { ACCENT_CHOICES, appearance, appearanceCookie, THEME_CHOICES, type AccentChoice, type ThemeChoice } from '../theme'
+import { ACCENT_CHOICES, appearance, appearanceCookie, FONT_CHOICES, fontChoice, fontCookie, THEME_CHOICES, type AccentChoice, type FontChoice, type ThemeChoice } from '../theme'
 
 export function registerAccountRoutes(app: Hono) {
   app.get('/account/edit', c => {
@@ -90,6 +91,22 @@ export function registerAccountRoutes(app: Hono) {
       return page(<ChangeTheme user={user} selected={appearance(c.req.raw)} />, 400)
     }
     return redirect('/account/edit/theme', appearanceCookie({ theme, accent }))
+  })
+
+  app.get('/account/edit/font', c => {
+    const user = currentUser(c.req.raw)
+    if (!user) return redirect('/enter?next=' + encodeURIComponent('/account/edit/font'))
+    return page(<ChangeFont user={user} selected={fontChoice(c.req.raw)} />)
+  })
+
+  app.post('/account/edit/font', async c => {
+    const user = currentUser(c.req.raw)
+    if (!user) return redirect('/enter')
+    const selected = (await form(c.req.raw)).font as FontChoice
+    if (!FONT_CHOICES.some(font => font.value === selected)) {
+      return page(<ChangeFont user={user} selected={fontChoice(c.req.raw)} />, 400)
+    }
+    return redirect('/account/edit/font', fontCookie(selected))
   })
 
   app.get('/account/security', c =>

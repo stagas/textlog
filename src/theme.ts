@@ -1,9 +1,30 @@
 export const THEME_CHOICES = ['system', 'light', 'dark', 'sepia', 'dracula'] as const
 export const ACCENT_CHOICES = ['theme', 'sage', 'purple', 'cyan', 'pink', 'amber', 'blue', 'rust'] as const
+export const FONT_CHOICES = [
+  { value: 'system', label: 'System monospace', family: 'ui-monospace, SFMono-Regular, Menlo, Consolas, monospace' },
+  { value: 'sf-mono', label: 'SF Mono', family: '"SF Mono", SFMono-Regular, monospace' },
+  { value: 'menlo', label: 'Menlo', family: 'Menlo, monospace' },
+  { value: 'monaco', label: 'Monaco', family: 'Monaco, monospace' },
+  { value: 'consolas', label: 'Consolas', family: 'Consolas, monospace' },
+  { value: 'cascadia-mono', label: 'Cascadia Mono', family: '"Cascadia Mono", monospace' },
+  { value: 'courier-new', label: 'Courier New', family: '"Courier New", monospace' },
+  { value: 'lucida-console', label: 'Lucida Console', family: '"Lucida Console", monospace' },
+  { value: 'dejavu-sans-mono', label: 'DejaVu Sans Mono', family: '"DejaVu Sans Mono", monospace' },
+  { value: 'liberation-mono', label: 'Liberation Mono', family: '"Liberation Mono", monospace' },
+  { value: 'ubuntu-mono', label: 'Ubuntu Mono', family: '"Ubuntu Mono", monospace' },
+  { value: 'noto-sans-mono', label: 'Noto Sans Mono', family: '"Noto Sans Mono", monospace' },
+  { value: 'droid-sans-mono', label: 'Droid Sans Mono', family: '"Droid Sans Mono", monospace' },
+  { value: 'source-code-pro', label: 'Source Code Pro', family: '"Source Code Pro", monospace' },
+  { value: 'roboto-mono', label: 'Roboto Mono', family: '"Roboto Mono", monospace' },
+  { value: 'fira-mono', label: 'Fira Mono', family: '"Fira Mono", monospace' },
+  { value: 'jetbrains-mono', label: 'JetBrains Mono', family: '"JetBrains Mono", monospace' },
+  { value: 'hack', label: 'Hack', family: 'Hack, monospace' },
+] as const
 
 export type ThemeChoice = typeof THEME_CHOICES[number]
 export type AccentChoice = typeof ACCENT_CHOICES[number]
 export type Appearance = { theme: ThemeChoice; accent: AccentChoice }
+export type FontChoice = typeof FONT_CHOICES[number]['value']
 
 const appearanceContext = new AsyncLocalStorage<Appearance>()
 
@@ -56,6 +77,18 @@ export function appearanceCookie(value: Appearance, appUrl: string | undefined =
   return `appearance=${value.theme}.${value.accent}; Max-Age=${365 * 24 * 60 * 60}; HttpOnly; Path=/; SameSite=Lax${secure}`
 }
 
+export function fontChoice(request: Request): FontChoice {
+  const value = request.headers.get('cookie')?.match(/(?:^|;\s*)font=([^;]+)/)?.[1] || ''
+  return FONT_CHOICES.some(font => font.value === value) ? value as FontChoice : 'system'
+}
+
+export function fontCookie(value: FontChoice, appUrl: string | undefined = Bun.env.APP_URL) {
+  let secure = ''
+  try { secure = appUrl && new URL(appUrl).protocol === 'https:' ? '; Secure' : '' }
+  catch {}
+  return `font=${value}; Max-Age=${365 * 24 * 60 * 60}; HttpOnly; Path=/; SameSite=Lax${secure}`
+}
+
 function rules(name: keyof typeof palettes, accentChoice: AccentChoice) {
   const p = palettes[name]
   const dark = name === 'dark' || name === 'dracula'
@@ -91,10 +124,12 @@ export function themeStyles(request: Request) {
     theme: THEME_CHOICES.includes(requestedTheme as ThemeChoice) ? requestedTheme as ThemeChoice : 'system',
     accent: ACCENT_CHOICES.includes(requestedAccent as AccentChoice) ? requestedAccent as AccentChoice : 'theme',
   } : appearance(request)
+  const font = FONT_CHOICES.find(choice => choice.value === fontChoice(request)) || FONT_CHOICES[0]
+  const fontRule = `:root{font-family:${font.family}}`
   if (selected.theme === 'system') {
-    return `${rules('light', selected.accent)}@media(prefers-color-scheme:dark){${rules('dark', selected.accent)}}`
+    return `${rules('light', selected.accent)}@media(prefers-color-scheme:dark){${rules('dark', selected.accent)}}${fontRule}`
   }
-  return rules(selected.theme, selected.accent)
+  return rules(selected.theme, selected.accent) + fontRule
 }
 
 function accentFor(name: keyof typeof palettes, choice: AccentChoice) {

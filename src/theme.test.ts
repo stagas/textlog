@@ -1,5 +1,5 @@
 import { expect, test } from 'bun:test'
-import { activeAppearance, appearance, appearanceCookie, themeLogoSvg, themeStyles, withAppearance } from './theme'
+import { activeAppearance, appearance, appearanceCookie, fontChoice, fontCookie, themeLogoSvg, themeStyles, withAppearance } from './theme'
 
 test('appearance reads valid choices and falls back safely', () => {
   expect(appearance(new Request('http://localhost', { headers: { cookie: 'appearance=sepia.amber' } })))
@@ -44,6 +44,19 @@ test('theme stylesheet uses mobile palettes and follows the OS for system', () =
   expect(system).toContain('--unfollow-button-bg:#455341')
   expect(system).toContain('--unfollow-button-hover-bg:#52634d')
   expect(system).toContain('--unfollow-button-active-bg:#384335')
+})
+
+test('font preference is validated and emitted by the theme stylesheet', () => {
+  const request = new Request('https://textlog.cc', { headers: { cookie: 'font=dejavu-sans-mono' } })
+  expect(fontChoice(request)).toBe('dejavu-sans-mono')
+  expect(themeStyles(request)).toContain(':root{font-family:"DejaVu Sans Mono", monospace}')
+  expect(fontCookie('menlo', 'https://textlog.cc')).toContain('font=menlo')
+  expect(fontCookie('menlo', 'https://textlog.cc')).toContain('Secure')
+
+  const invalid = new Request('http://localhost', { headers: { cookie: 'font=bad%7Dbody%7Bdisplay:none' } })
+  expect(fontChoice(invalid)).toBe('system')
+  expect(themeStyles(invalid)).toContain('font-family:ui-monospace, SFMono-Regular, Menlo, Consolas, monospace')
+  expect(themeStyles(invalid)).not.toContain('display:none')
 })
 
 test('logo SVG follows the selected accent and system brightness', () => {

@@ -78,9 +78,12 @@ export function Profile(
                 <div className="account-danger-zone">
                   <div>
                     <strong>Appearance</strong>
-                    <span>Choose a theme and accent color for textlog.</span>
+                    <span>Choose a theme, accent color, and monospace font for textlog.</span>
                   </div>
-                  <a className="button" href="/account/edit/theme">change theme</a>
+                  <div className="account-appearance-actions">
+                    <a className="button" href="/account/edit/theme">change theme</a>
+                    <a className="button" href="/account/edit/font">change font</a>
+                  </div>
                 </div>
                 <div className="account-danger-zone">
                   <div>

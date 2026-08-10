@@ -1709,6 +1709,12 @@ form.report-panel {
   flex: none;
 }
 
+.account-danger-zone > .account-appearance-actions {
+  display: flex;
+  flex-flow: row nowrap;
+  gap: var(--space-2);
+}
+
 .appearance-page {
   padding: var(--space-7) var(--gutter) var(--space-8);
 }
@@ -1761,6 +1767,33 @@ form.report-panel {
 .accent-option input:checked + .accent-swatch { border: 2px solid var(--ink); padding: 5px; }
 .accent-option input:checked ~ span:last-child { color: var(--ink); }
 
+.font-options { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: var(--space-3); }
+.font-option { display: grid; gap: var(--space-2); padding: var(--space-3); color: var(--muted); font-size: 10px; border: 1px solid var(--soft); cursor: pointer; }
+.font-option input { position: absolute; opacity: 0; pointer-events: none; }
+.font-sample { color: var(--ink); font-size: 18px; white-space: nowrap; }
+.font-option:has(input:checked) { border-color: var(--accent); box-shadow: inset 0 0 0 2px var(--accent); }
+.font-option:has(input:checked)>span:last-child { color: var(--ink); }
+.font-option:has(input:focus-visible) { outline: 2px solid var(--accent); outline-offset: 3px; }
+.font-note { max-width: 620px; margin: calc(-1 * var(--space-4)) 0 var(--space-5); color: var(--muted); font-size: 10px; }
+.font-preview-system { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+.font-preview-sf-mono { font-family: "SF Mono", SFMono-Regular, monospace; }
+.font-preview-menlo { font-family: Menlo, monospace; }
+.font-preview-monaco { font-family: Monaco, monospace; }
+.font-preview-consolas { font-family: Consolas, monospace; }
+.font-preview-cascadia-mono { font-family: "Cascadia Mono", monospace; }
+.font-preview-courier-new { font-family: "Courier New", monospace; }
+.font-preview-lucida-console { font-family: "Lucida Console", monospace; }
+.font-preview-dejavu-sans-mono { font-family: "DejaVu Sans Mono", monospace; }
+.font-preview-liberation-mono { font-family: "Liberation Mono", monospace; }
+.font-preview-ubuntu-mono { font-family: "Ubuntu Mono", monospace; }
+.font-preview-noto-sans-mono { font-family: "Noto Sans Mono", monospace; }
+.font-preview-droid-sans-mono { font-family: "Droid Sans Mono", monospace; }
+.font-preview-source-code-pro { font-family: "Source Code Pro", monospace; }
+.font-preview-roboto-mono { font-family: "Roboto Mono", monospace; }
+.font-preview-fira-mono { font-family: "Fira Mono", monospace; }
+.font-preview-jetbrains-mono { font-family: "JetBrains Mono", monospace; }
+.font-preview-hack { font-family: Hack, monospace; }
+
 @media (max-width: 600px) { .theme-options { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
 
 .bio-form textarea {
@@ -1788,6 +1821,7 @@ form.report-panel {
     align-items: flex-start;
     flex-direction: column;
   }
+
 }
 
 .columns {

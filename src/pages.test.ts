@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test'
-import { About, AccountMagicLink, AccountPassword, AccountSecurity, AdminDashboard, ApiDocs, Auth, ChangeTheme, ChooseHandle, ConfirmAccountDelete, ConfirmEmail, Connections, Contact, EmbedExamples, ErrorPage,
+import { About, AccountMagicLink, AccountPassword, AccountSecurity, AdminDashboard, ApiDocs, Auth, ChangeFont, ChangeTheme, ChooseHandle, ConfirmAccountDelete, ConfirmEmail, Connections, Contact, EmbedExamples, ErrorPage,
   Legal, NotFound, postTitle,
   Profile } from './components/pages'
 
@@ -68,6 +68,22 @@ test('theme selection is a server-rendered form with mobile appearance choices',
   expect(html).toContain('class="accent-swatch accent-swatch-theme accent-swatch-theme-sepia"')
   expect(html).toContain('name="theme" checked="" value="sepia"')
   expect(html).toContain('name="accent" checked="" value="amber"')
+  expect(html).not.toContain('<script')
+  expect(html).not.toContain('style=')
+})
+
+test('font selection lists local monospace fonts in their own families', () => {
+  const html = renderToStaticMarkup(React.createElement(ChangeFont, {
+    user: { id: 1, handle: 'reader', email: 'reader@example.com', bio: '' },
+    selected: 'consolas',
+  }))
+  expect(html).toContain('action="/account/edit/font"')
+  expect(html).toContain('name="font" checked="" value="consolas"')
+  expect(html).toContain('font-preview-sf-mono')
+  expect(html).toContain('font-preview-dejavu-sans-mono')
+  expect(html).toContain('font-preview-jetbrains-mono')
+  expect(html).toContain('<span class="font-sample">textlog</span>')
+  expect(html).toContain('Fonts are used from your device.')
   expect(html).not.toContain('<script')
   expect(html).not.toContain('style=')
 })
