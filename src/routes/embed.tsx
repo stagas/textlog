@@ -5,7 +5,7 @@ import { db } from '../db'
 import { resolveHandle } from '../handles'
 import { getHotPosts } from '../hot'
 import { enrichPosts } from '../posts'
-import { ACCENT_CHOICES, THEME_CHOICES, type AccentChoice, type ThemeChoice } from '../theme'
+import { ACCENT_CHOICES, EMBED_FONT_CHOICES, THEME_CHOICES, type AccentChoice, type EmbedFontChoice, type ThemeChoice } from '../theme'
 import type { PostView } from '../types'
 
 const LIMIT = 5
@@ -16,10 +16,13 @@ function choice<T extends readonly string[]>(value: string | undefined, choices:
 
 function response(request: Request, posts: PostView[], title: string, href: string) {
   const url = new URL(request.url)
-  const theme = choice(url.searchParams.get('theme') || undefined, THEME_CHOICES, 'system') as ThemeChoice
+  const themeValue = url.searchParams.get('theme') || ''
+  const theme = THEME_CHOICES.includes(themeValue as ThemeChoice) ? themeValue as ThemeChoice : undefined
   const accent = choice(url.searchParams.get('accent') || undefined, ACCENT_CHOICES, 'theme') as AccentChoice
+  const fontValue = url.searchParams.get('font') || ''
+  const font = Object.hasOwn(EMBED_FONT_CHOICES, fontValue) ? fontValue as EmbedFontChoice : undefined
   return new Response('<!doctype html>' + renderToStaticMarkup(
-    <Embed posts={posts} title={title} href={href} theme={theme} accent={accent} />,
+    <Embed posts={posts} title={title} href={href} theme={theme} accent={accent} font={font} />,
   ), { headers: { 'content-type': 'text/html;charset=utf-8' } })
 }
 

@@ -5,9 +5,33 @@ import React from 'react'
 import { Embed } from './components/embed'
 
 test('embed appearance query parameters select known themes and accents', () => {
-  const css = themeStyles(new Request('https://textlog.cc/theme.css?theme=dracula&accent=cyan'))
+  const css = themeStyles(new Request('https://textlog.cc/theme.css?theme=dracula&accent=cyan&font=dejavu'))
   expect(css).toContain('--bg:#282a36')
   expect(css).toContain('--accent:#8be9fd')
+  expect(css).toContain('font-family:"DejaVu Sans Mono", monospace')
+})
+
+test('embed font short names are optional and invalid values fall back safely', () => {
+  const invalid = themeStyles(new Request('https://textlog.cc/theme.css?theme=light&font=not-a-font'))
+  expect(invalid).toContain('font-family:ui-monospace, SFMono-Regular, Menlo, Consolas, monospace')
+
+  const html = renderToStaticMarkup(React.createElement(Embed, {
+    posts: [], title: 'latest', href: '/latest', theme: 'light', accent: 'sage', font: 'jetbrains',
+  }))
+  expect(html).toContain('/theme.css?theme=light&amp;accent=sage&amp;font=jetbrains')
+})
+
+test('embed system font uses the full system name', () => {
+  const css = themeStyles(new Request('https://textlog.cc/theme.css?font=system'))
+  expect(css).toContain('font-family:ui-monospace, SFMono-Regular, Menlo, Consolas, monospace')
+})
+
+test('embed theme can be omitted from the generated stylesheet URL', () => {
+  const html = renderToStaticMarkup(React.createElement(Embed, {
+    posts: [], title: 'hot', href: '/hot', accent: 'purple', font: 'consolas',
+  }))
+  expect(html).toContain('/theme.css?accent=purple&amp;font=consolas')
+  expect(html).not.toContain('theme=')
 })
 
 test('invalid embed appearance values use safe defaults', () => {

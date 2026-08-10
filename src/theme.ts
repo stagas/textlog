@@ -25,6 +25,13 @@ export type ThemeChoice = typeof THEME_CHOICES[number]
 export type AccentChoice = typeof ACCENT_CHOICES[number]
 export type Appearance = { theme: ThemeChoice; accent: AccentChoice }
 export type FontChoice = typeof FONT_CHOICES[number]['value']
+export const EMBED_FONT_CHOICES = {
+  system: 'system', sf: 'sf-mono', menlo: 'menlo', monaco: 'monaco', consolas: 'consolas',
+  cascadia: 'cascadia-mono', courier: 'courier-new', lucida: 'lucida-console', dejavu: 'dejavu-sans-mono',
+  liberation: 'liberation-mono', ubuntu: 'ubuntu-mono', noto: 'noto-sans-mono', droid: 'droid-sans-mono',
+  source: 'source-code-pro', roboto: 'roboto-mono', fira: 'fira-mono', jetbrains: 'jetbrains-mono', hack: 'hack',
+} as const satisfies Record<string, FontChoice>
+export type EmbedFontChoice = keyof typeof EMBED_FONT_CHOICES
 
 const appearanceContext = new AsyncLocalStorage<Appearance>()
 
@@ -124,7 +131,11 @@ export function themeStyles(request: Request) {
     theme: THEME_CHOICES.includes(requestedTheme as ThemeChoice) ? requestedTheme as ThemeChoice : 'system',
     accent: ACCENT_CHOICES.includes(requestedAccent as AccentChoice) ? requestedAccent as AccentChoice : 'theme',
   } : appearance(request)
-  const font = FONT_CHOICES.find(choice => choice.value === fontChoice(request)) || FONT_CHOICES[0]
+  const requestedFont = url.searchParams.get('font')
+  const selectedFont = requestedFont
+    ? EMBED_FONT_CHOICES[requestedFont as EmbedFontChoice] || 'system'
+    : fontChoice(request)
+  const font = FONT_CHOICES.find(choice => choice.value === selectedFont) || FONT_CHOICES[0]
   const fontRule = `:root{font-family:${font.family}}`
   if (selected.theme === 'system') {
     return `${rules('light', selected.accent)}@media(prefers-color-scheme:dark){${rules('dark', selected.accent)}}${fontRule}`

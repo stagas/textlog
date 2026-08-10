@@ -168,9 +168,9 @@ test('embed examples show every format and use stagas for the user feed', () => 
   const html = renderToStaticMarkup(React.createElement(EmbedExamples, {
     user: null, handle: 'stagas', tag: 'notes', postId: 42,
   }))
-  expect(html).toContain('/embed/latest?theme=light&amp;accent=sage')
-  expect(html).toContain('/embed/hot?theme=dark&amp;accent=purple')
-  expect(html).toContain('/embed/user/stagas?theme=dracula&amp;accent=cyan')
+  expect(html).toContain('/embed/latest?theme=light&amp;accent=sage&amp;font=menlo')
+  expect(html).toContain('/embed/hot?accent=purple&amp;font=consolas')
+  expect(html).toContain('/embed/user/stagas?theme=dracula&amp;accent=cyan&amp;font=jetbrains')
   expect(html).toContain('/embed/tag/notes?theme=sepia&amp;accent=amber')
   expect(html).toContain('/embed/post/42?theme=system&amp;accent=blue')
   expect(html.match(/<iframe/g)).toHaveLength(5)

@@ -82,7 +82,7 @@ export function ApiDocs({ user }: { user: User | null }) {
           See every format together on the <a href="/api/embed-examples">live embed examples page</a>.
         </p>
         <pre><code>{`<iframe
-  src="https://textlog.cc/embed/user/alice?theme=system&accent=sage"
+  src="https://textlog.cc/embed/user/alice?theme=system&accent=sage&font=menlo"
   title="@alice on textlog"
   width="100%" height="520" loading="lazy"
   style="border:0"
@@ -103,10 +103,23 @@ export function ApiDocs({ user }: { user: User | null }) {
 <iframe src="https://textlog.cc/embed/post/123?theme=sepia&accent=rust"
   title="Post 123 on textlog" width="100%" height="220" style="border:0"></iframe>`}</code></pre>
         <p>
+          Appearance uses the <code className="api-query-param">theme</code>,{' '}
+          <code className="api-query-param">accent</code>, and <code className="api-query-param">font</code> query parameters.
+        </p>
+        <p>
           Themes: <code>system</code>, <code>light</code>, <code>dark</code>, <code>sepia</code>, and{' '}
-          <code>dracula</code>. Accents: <code>theme</code>, <code>sage</code>, <code>purple</code>,{' '}
-          <code>cyan</code>, <code>pink</code>, <code>amber</code>, <code>blue</code>, and <code>rust</code>.
-          Invalid values safely fall back to <code>system</code> and <code>theme</code>.
+          <code>dracula</code>.
+        </p>
+        <p>
+          Accents: <code>theme</code>, <code>sage</code>, <code>purple</code>, <code>cyan</code>, <code>pink</code>,{' '}
+          <code>amber</code>, <code>blue</code>, and <code>rust</code>.
+        </p>
+        <p>
+          Fonts: <code>system</code>, <code>sf</code>, <code>menlo</code>,{' '}
+          <code>monaco</code>, <code>consolas</code>, <code>cascadia</code>, <code>courier</code>,{' '}
+          <code>lucida</code>, <code>dejavu</code>, <code>liberation</code>, <code>ubuntu</code>,{' '}
+          <code>noto</code>, <code>droid</code>, <code>source</code>, <code>roboto</code>, <code>fira</code>,{' '}
+          <code>jetbrains</code>, and <code>hack</code>.
         </p>
 
         <h2>Pagination</h2>
@@ -170,10 +183,10 @@ export function EmbedExamples({ user, handle, tag, postId }: { user: User | null
   tag: string | null; postId: number | null })
 {
   const examples = [
-    { title: 'Latest feed', src: '/embed/latest?theme=light&accent=sage', height: 520 },
-    { title: 'Hot feed', src: '/embed/hot?theme=dark&accent=purple', height: 520 },
+    { title: 'Latest feed', src: '/embed/latest?theme=light&accent=sage&font=menlo', height: 520 },
+    { title: 'Hot feed', src: '/embed/hot?accent=purple&font=consolas', height: 520 },
     ...(handle ? [{ title: `User feed · @${handle}`,
-      src: `/embed/user/${encodeURIComponent(handle)}?theme=dracula&accent=cyan`, height: 520 }] : []),
+      src: `/embed/user/${encodeURIComponent(handle)}?theme=dracula&accent=cyan&font=jetbrains`, height: 520 }] : []),
     ...(tag ? [{ title: `Tag feed · #${tag}`,
       src: `/embed/tag/${encodeURIComponent(tag)}?theme=sepia&accent=amber`, height: 520 }] : []),
     ...(postId ? [{ title: `Single post · ${postId}`,

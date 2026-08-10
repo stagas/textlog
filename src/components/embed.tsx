@@ -1,12 +1,15 @@
 import type { PostView } from '../types'
 import { fmt, fmtFull, linkify } from '../utils'
-import type { AccentChoice, ThemeChoice } from '../theme'
+import type { AccentChoice, EmbedFontChoice, ThemeChoice } from '../theme'
 import { containsAsciiArt } from '../content'
 
-export function Embed({ posts, title, href, theme, accent }: { posts: PostView[]; title: string; href: string;
-  theme: ThemeChoice; accent: AccentChoice })
+export function Embed({ posts, title, href, theme, accent, font }: { posts: PostView[]; title: string; href: string;
+  theme?: ThemeChoice; accent: AccentChoice; font?: EmbedFontChoice })
 {
-  const query = new URLSearchParams({ theme, accent })
+  const query = new URLSearchParams()
+  if (theme) query.set('theme', theme)
+  query.set('accent', accent)
+  if (font) query.set('font', font)
   const embedLinks = (body: string, mentionBios?: Record<string, string>) => linkify(body, mentionBios)
     .replace(/<a (?![^>]*\btarget=)/g, '<a target="_blank" rel="noopener noreferrer" ')
   return (

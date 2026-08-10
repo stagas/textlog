@@ -351,6 +351,10 @@ nav form {
   margin-top: var(--space-6);
 }
 
+.api-query-param {
+  color: var(--ink);
+}
+
 .api-docs pre {
   overflow-x: auto;
   padding: var(--space-4);
