@@ -483,6 +483,26 @@ test('Following and followers paginate every 10 people', () => {
   }
 })
 
+test('Followed tags paginate every 12 tags', () => {
+  const html = renderToStaticMarkup(React.createElement(Connections, {
+    user: null,
+    profile: { id: 1, handle: 'reader', email: 'reader@example.com', bio: '' },
+    people: [],
+    tags: [{ tag: 'notes', count: 1, viewerFollowing: false }],
+    kind: 'following',
+    page: 1,
+    total: 0,
+    tagsTotal: 13,
+    noteCount: 0,
+    followerCount: 0,
+    followingCount: 0,
+    followingTagCount: 13,
+    following: false,
+  }))
+
+  expect(html).toContain('href="/u/reader?tab=following&amp;tagsPage=2"')
+})
+
 test('Profile linkifies Markdown links and tags in the bio', () => {
   const profile = {
     id: 1,

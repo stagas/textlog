@@ -9,7 +9,7 @@ import type { Hono } from 'hono'
 import { db } from '../db'
 import { resolveHandle } from '../handles'
 import { renderProfileOg } from '../og'
-import { CONNECTION_PAGE_SIZE, decodePostCursor, PAGE_SIZE, postCursorPage } from '../pagination'
+import { CONNECTION_PAGE_SIZE, decodePostCursor, PAGE_SIZE, postCursorPage, TAG_PAGE_SIZE } from '../pagination'
 import { enrichPosts } from '../posts'
 import { currentUser } from '../utils'
 
@@ -183,12 +183,12 @@ export function registerProfilesRoutes(app: Hono) {
           FROM hashtag_follows hf
           WHERE hf.user_id=?
           ORDER BY hf.tag LIMIT ? OFFSET ?`,
-        ).all(viewerId, viewerId, viewerId, viewerId, profile.id, CONNECTION_PAGE_SIZE,
-          (tagsPage - 1) * CONNECTION_PAGE_SIZE) as { tag: string; count: number;
+        ).all(viewerId, viewerId, viewerId, viewerId, profile.id, TAG_PAGE_SIZE,
+          (tagsPage - 1) * TAG_PAGE_SIZE) as { tag: string; count: number;
           viewerFollowing: boolean }[]
         : []
       if (tab === 'following') {
-        const lastTagPage = Math.max(1, Math.ceil(counts.followingTagCount / CONNECTION_PAGE_SIZE))
+        const lastTagPage = Math.max(1, Math.ceil(counts.followingTagCount / TAG_PAGE_SIZE))
         if (tagsPage > lastTagPage) {
           const query = new URLSearchParams({ tab: 'following' })
           if (connectionPage > 1) query.set('page', String(connectionPage))

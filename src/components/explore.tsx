@@ -2,10 +2,10 @@ import { db, type User } from '../db'
 import { suggestedPeople, suggestedPeopleCount, trendingTagCount, trendingTags } from '../explore'
 import type { PersonView } from '../types'
 import { Layout } from './layout'
+import { TAG_PAGE_SIZE } from '../pagination'
 import { ActionPair, Pagination, TagPeopleList } from './page-shared'
 import { SearchForm } from './search'
 
-const TAG_PAGE_SIZE = 12
 const PEOPLE_PAGE_SIZE = 6
 
 export function Explore({ user, welcome = false, peopleIds, tagsPage = 1, peoplePage = 1 }: {
