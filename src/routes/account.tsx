@@ -27,7 +27,7 @@ import {
 import { moderateText, moderationMessage } from '../moderation'
 import { sessionHash } from '../sessions'
 import { accountForPasswordEnableToken, issuePasswordEnableToken } from '../password-enable'
-import { ACCENT_CHOICES, appearance, appearanceCookie, FONT_CHOICES, fontChoice, fontCookie, THEME_CHOICES, type AccentChoice, type FontChoice, type ThemeChoice } from '../theme'
+import { ACCENT_CHOICES, appearance, appearanceCookie, FONT_CHOICES, fontChoice, fontCookie, FONT_SIZE_CHOICES, fontSizeChoice, fontSizeCookie, THEME_CHOICES, type AccentChoice, type FontChoice, type FontSizeChoice, type ThemeChoice } from '../theme'
 
 export function registerAccountRoutes(app: Hono) {
   app.get('/account/edit', c => {
@@ -96,17 +96,23 @@ export function registerAccountRoutes(app: Hono) {
   app.get('/account/edit/font', c => {
     const user = currentUser(c.req.raw)
     if (!user) return redirect('/enter?next=' + encodeURIComponent('/account/edit/font'))
-    return page(<ChangeFont user={user} selected={fontChoice(c.req.raw)} />)
+    return page(<ChangeFont user={user} selected={fontChoice(c.req.raw)} selectedSize={fontSizeChoice(c.req.raw)} />)
   })
 
   app.post('/account/edit/font', async c => {
     const user = currentUser(c.req.raw)
     if (!user) return redirect('/enter')
-    const selected = (await form(c.req.raw)).font as FontChoice
-    if (!FONT_CHOICES.some(font => font.value === selected)) {
-      return page(<ChangeFont user={user} selected={fontChoice(c.req.raw)} />, 400)
+    const f = await form(c.req.raw)
+    const selected = f.font as FontChoice
+    const selectedSize = f.fontSize as FontSizeChoice
+    if (!FONT_CHOICES.some(font => font.value === selected)
+      || !FONT_SIZE_CHOICES.some(size => size.value === selectedSize)) {
+      return page(<ChangeFont user={user} selected={fontChoice(c.req.raw)}
+        selectedSize={fontSizeChoice(c.req.raw)} />, 400)
     }
-    return redirect('/account/edit/font', fontCookie(selected))
+    const response = redirect('/account/edit/font', fontCookie(selected))
+    response.headers.append('set-cookie', fontSizeCookie(selectedSize))
+    return response
   })
 
   app.get('/account/security', c =>

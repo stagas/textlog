@@ -207,7 +207,7 @@ header>nav {
   display: inline-flex;
   align-items: center;
   gap: var(--space-2);
-  font-size: 20px;
+  font-size: 1.25rem;
   font-weight: 800;
   letter-spacing: -1px;
   line-height: 1;
@@ -227,7 +227,7 @@ nav {
   display: flex;
   align-items: center;
   gap: clamp(12px, 3vw, 22px);
-  font-size: 12px;
+  font-size: 0.75rem;
 }
 
 nav a {
@@ -267,11 +267,11 @@ nav form {
   padding: var(--space-5) var(--gutter) var(--space-6);
   color: var(--muted);
   border-top: 1px solid var(--soft);
-  font-size: 10px;
+  font-size: 0.625rem;
 }
 
 .site-footer nav {
-  font-size: 11px;
+  font-size: 0.6875rem;
 }
 
 .site-footer .mobile-account-footer {
@@ -317,7 +317,7 @@ nav form {
 .static-page .eyebrow {
   margin: 0 0 var(--space-2);
   color: var(--accent);
-  font-size: 11px;
+  font-size: 0.6875rem;
   text-transform: uppercase;
   letter-spacing: 1.5px;
 }
@@ -325,7 +325,7 @@ nav form {
 .static-page h1 {
   max-width: 20ch;
   margin: 0 0 var(--space-6);
-  font-size: clamp(26px, 5vw, 40px);
+  font-size: clamp(1.625rem, 5vw, 2.5rem);
   line-height: 1.18;
   letter-spacing: -1.5px;
 }
@@ -388,7 +388,7 @@ nav form {
   overflow: hidden;
   margin-top: var(--space-2);
   color: var(--muted);
-  font-size: 10px;
+  font-size: 0.625rem;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
@@ -417,7 +417,7 @@ nav form {
   display: flex;
   align-items: center;
   color: var(--quote-ink);
-  font-size: 13px;
+  font-size: 0.8125rem;
 }
 
 .api-endpoints dt > code {
@@ -433,7 +433,7 @@ nav form {
   padding: 2px 6px;
   color: var(--accent-dark);
   background: var(--tag-bg);
-  font-size: 10px;
+  font-size: 0.625rem;
   font-weight: 800;
   letter-spacing: .5px;
   text-align: center;
@@ -470,14 +470,14 @@ nav form {
 
 .static-page h2 {
   margin: var(--space-6) 0 var(--space-2);
-  font-size: 14px;
+  font-size: 0.875rem;
 }
 
 .static-page p {
   max-width: 68ch;
   margin: 0 0 var(--space-4);
   color: var(--quote-ink);
-  font-size: 13px;
+  font-size: 0.8125rem;
   line-height: 1.75;
 }
 
@@ -486,7 +486,7 @@ nav form {
   align-items: center;
   flex-wrap: wrap;
   gap: var(--space-4);
-  font-size: 11px;
+  font-size: 0.6875rem;
 }
 
 .action-separator {
@@ -500,7 +500,7 @@ nav form {
 .static-page .legal-updated {
   margin-top: calc(-1 * var(--space-5));
   color: var(--muted);
-  font-size: 10px;
+  font-size: 0.625rem;
 }
 
 .legal-page {
@@ -531,21 +531,21 @@ nav form {
   padding-top: var(--space-5);
   border-top: 1px solid var(--soft);
   color: var(--ink);
-  font-size: 17px;
+  font-size: 1.0625rem;
   line-height: 1.35;
 }
 
 .legal-page h3 {
   margin: var(--space-6) 0 var(--space-2);
   color: var(--ink);
-  font-size: 13px;
+  font-size: 0.8125rem;
   line-height: 1.4;
 }
 
 .legal-page p,
 .legal-page li {
   max-width: 72ch;
-  font-size: 13px;
+  font-size: 0.8125rem;
   line-height: 1.75;
 }
 
@@ -598,7 +598,7 @@ nav form {
   padding: var(--space-3) var(--space-4);
   color: var(--button-ink);
   background: var(--button-bg);
-  font-size: 12px;
+  font-size: 0.75rem;
 }
 
 .button:not(:disabled):not([aria-disabled="true"]):hover {
@@ -638,7 +638,7 @@ nav form {
   padding: 0;
   color: var(--accent);
   background: none;
-  font-size: 11px;
+  font-size: 0.6875rem;
 }
 
 .feedhead,
@@ -650,7 +650,7 @@ nav form {
   display: flex;
   justify-content: space-between;
   color: var(--muted);
-  font-size: 11px;
+  font-size: 0.6875rem;
 }
 
 .feedhead a {
@@ -669,7 +669,7 @@ nav form {
   gap: var(--space-3);
   padding: var(--space-5) var(--gutter);
   color: var(--muted);
-  font-size: 12px;
+  font-size: 0.75rem;
   border-top: 1px solid var(--soft);
 }
 
@@ -792,7 +792,7 @@ nav form {
 .deleted-post a,
 .deleted-parent a {
   color: var(--muted);
-  font-size: 12px;
+  font-size: 0.75rem;
 }
 
 .posttop,
@@ -800,7 +800,7 @@ nav form {
   display: flex;
   align-items: baseline;
   gap: var(--space-4);
-  font-size: 12px;
+  font-size: 0.75rem;
 }
 
 .posttop .quiet {
@@ -847,7 +847,7 @@ nav form {
 
 .post p {
   margin: var(--space-3) 0 0;
-  font-size: 13px;
+  font-size: 0.8125rem;
   line-height: 1.65;
   white-space: pre-wrap;
   overflow-wrap: anywhere;
@@ -868,18 +868,18 @@ nav form {
   padding: var(--space-3);
   color: var(--quote-ink);
   background: var(--quote-bg);
-  font-size: 11px;
+  font-size: 0.6875rem;
 }
 
 .parent-quote-top {
   gap: var(--space-3);
-  font-size: 11px;
+  font-size: 0.6875rem;
 }
 
 .post .parent-quote p {
   margin: var(--space-2) 0 0;
   color: var(--quote-ink);
-  font-size: 12px;
+  font-size: 0.75rem;
   line-height: 1.55;
 }
 
@@ -887,7 +887,7 @@ nav form {
   margin: 0 var(--gutter);
   padding: var(--space-7) 0;
   color: var(--muted);
-  font-size: 13px;
+  font-size: 0.8125rem;
 }
 
 .empty-actions p {
@@ -910,7 +910,7 @@ nav form {
 .not-found-code {
   margin: 0;
   color: var(--soft);
-  font-size: clamp(96px, 22vw, 180px);
+  font-size: clamp(6rem, 22vw, 11.25rem);
   font-weight: 800;
   letter-spacing: -0.12em;
   line-height: 0.8;
@@ -924,7 +924,7 @@ nav form {
 
 .not-found-copy h1 {
   margin: 0;
-  font-size: clamp(24px, 5vw, 36px);
+  font-size: clamp(1.5rem, 5vw, 2.25rem);
   line-height: 1.15;
   letter-spacing: -2px;
 }
@@ -933,12 +933,12 @@ nav form {
   max-width: 36ch;
   margin: var(--space-4) 0 0;
   color: var(--muted);
-  font-size: 13px;
+  font-size: 0.8125rem;
 }
 
 .not-found-actions {
   margin-top: var(--space-5);
-  font-size: 12px;
+  font-size: 0.75rem;
 }
 
 .not-found-actions .button {
@@ -955,7 +955,7 @@ nav form {
   }
 
   .not-found-code {
-    font-size: clamp(96px, 42vw, 150px);
+    font-size: clamp(6rem, 42vw, 9.375rem);
   }
 }
 
@@ -989,21 +989,21 @@ nav form {
 }
 
 .auth-panel.magic-sent-panel h1 {
-  font-size: clamp(20px, 4vw, 26px);
+  font-size: clamp(1.25rem, 4vw, 1.625rem);
   letter-spacing: -1px;
 }
 
 .auth-panel.choose-handle-panel h1 {
-  font-size: clamp(20px, 4vw, 26px);
+  font-size: clamp(1.25rem, 4vw, 1.625rem);
   letter-spacing: -1px;
 }
 
 .magic-sent-panel>p {
-  font-size: 12px;
+  font-size: 0.75rem;
 }
 
 .choose-handle-panel>p {
-  font-size: 12px;
+  font-size: 0.75rem;
 }
 
 .magic-sent-panel strong {
@@ -1019,7 +1019,7 @@ nav form {
 
 .auth-panel h1 {
   margin: 0;
-  font-size: clamp(28px, 7vw, 42px);
+  font-size: clamp(1.75rem, 7vw, 2.625rem);
   line-height: 1.08;
   letter-spacing: -2px;
 }
@@ -1041,7 +1041,7 @@ nav form {
 
 .auth-panel label>span {
   color: var(--muted);
-  font-size: 10px;
+  font-size: 0.625rem;
   font-weight: 700;
   letter-spacing: .8px;
   text-transform: uppercase;
@@ -1053,7 +1053,7 @@ nav form {
   padding: 13px 14px;
   color: var(--ink);
   font-family: inherit;
-  font-size: 13px;
+  font-size: 0.8125rem;
   line-height: 1.5;
   background: var(--bg);
   border: 1px solid var(--soft);
@@ -1082,7 +1082,7 @@ nav form {
 .auth-legal {
   margin: var(--space-4) 0 0;
   color: var(--muted);
-  font-size: 10px;
+  font-size: 0.625rem;
   line-height: 1.6;
 }
 
@@ -1090,13 +1090,13 @@ nav form {
 .auth-secondary {
   margin: var(--space-3) 0 0;
   color: var(--muted);
-  font-size: 11px;
+  font-size: 0.6875rem;
   text-align: center;
 }
 
 .password-panel h1 {
   margin-bottom: var(--space-5);
-  font-size: clamp(22px, 5vw, 30px);
+  font-size: clamp(1.375rem, 5vw, 1.875rem);
   letter-spacing: -1px;
 }
 
@@ -1129,7 +1129,7 @@ nav form {
 .compose-heading {
   margin: 0 0 var(--space-3);
   overflow-wrap: anywhere;
-  font-size: 20px;
+  font-size: 1.25rem;
   font-weight: 400;
   letter-spacing: -1px;
 }
@@ -1149,7 +1149,7 @@ nav form {
   display: grid;
   gap: var(--space-2);
   color: var(--muted);
-  font-size: 11px;
+  font-size: 0.6875rem;
 }
 
 .auth input,
@@ -1181,7 +1181,7 @@ textarea:focus-visible {
 textarea {
   height: 150px;
   resize: vertical;
-  font-size: 13px;
+  font-size: 0.8125rem;
   line-height: 1.7;
 }
 
@@ -1194,7 +1194,7 @@ textarea {
 .signup-terms,
 .composefoot {
   color: var(--muted);
-  font-size: 11px;
+  font-size: 0.6875rem;
 }
 
 .switch,
@@ -1215,7 +1215,7 @@ textarea {
 }
 
 .confirm-delete h1 {
-  font-size: 20px;
+  font-size: 1.25rem;
 }
 
 .confirm-delete blockquote {
@@ -1241,7 +1241,7 @@ textarea {
   display: grid;
   gap: var(--space-2);
   color: var(--muted);
-  font-size: 11px;
+  font-size: 0.6875rem;
 }
 
 .account-delete-shell {
@@ -1255,7 +1255,7 @@ textarea {
 .account-delete-panel .eyebrow {
   margin: 0 0 var(--space-2);
   color: var(--danger-link-hover);
-  font-size: 10px;
+  font-size: 0.625rem;
   font-weight: 700;
   letter-spacing: 1px;
   text-transform: uppercase;
@@ -1263,14 +1263,14 @@ textarea {
 
 .account-delete-panel h1 {
   margin-bottom: var(--space-3);
-  font-size: clamp(24px, 5vw, 34px);
+  font-size: clamp(1.5rem, 5vw, 2.125rem);
   letter-spacing: -1.5px;
 }
 
 .account-delete-copy {
   margin: 0;
   color: var(--quote-ink);
-  font-size: 12px;
+  font-size: 0.75rem;
   line-height: 1.7;
 }
 
@@ -1278,7 +1278,7 @@ textarea {
 .account-delete-expiry {
   margin: 0;
   color: var(--muted);
-  font-size: 11px;
+  font-size: 0.6875rem;
   line-height: 1.6;
 }
 
@@ -1312,7 +1312,7 @@ textarea {
 .security-section p,
 .session-list span {
   color: var(--muted);
-  font-size: 11px;
+  font-size: 0.6875rem;
 }
 
 .security-section .email-unverified {
@@ -1329,7 +1329,7 @@ textarea {
   display: grid;
   gap: var(--space-2);
   color: var(--muted);
-  font-size: 11px;
+  font-size: 0.6875rem;
 }
 
 .magic-link-output {
@@ -1337,7 +1337,7 @@ textarea {
   gap: var(--space-2);
   margin-top: var(--space-5);
   color: var(--muted);
-  font-size: 11px;
+  font-size: 0.6875rem;
 }
 
 .magic-link-output textarea,
@@ -1377,7 +1377,7 @@ textarea {
 
 .magic-link-page>p {
   color: var(--muted);
-  font-size: 12px;
+  font-size: 0.75rem;
 }
 
 .magic-link-page>.quiet {
@@ -1409,7 +1409,7 @@ textarea {
   margin: 0;
   padding: 0 var(--gutter) var(--space-4);
   color: var(--muted);
-  font-size: 11px;
+  font-size: 0.6875rem;
 }
 
 .report-status form {
@@ -1425,7 +1425,7 @@ textarea {
   display: grid;
   gap: var(--space-3);
   color: var(--muted);
-  font-size: 11px;
+  font-size: 0.6875rem;
 }
 
 form.report-panel {
@@ -1475,7 +1475,7 @@ form.report-panel {
   padding: var(--space-2) var(--space-3);
   color: var(--error-ink);
   background: var(--error-bg);
-  font-size: 12px;
+  font-size: 0.75rem;
 }
 
 .form-success {
@@ -1483,7 +1483,7 @@ form.report-panel {
   padding: var(--space-2) var(--space-3);
   color: var(--success-ink);
   background: var(--success-bg);
-  font-size: 12px;
+  font-size: 0.75rem;
 }
 
 .composefoot {
@@ -1493,7 +1493,7 @@ form.report-panel {
   flex-wrap: wrap;
   gap: var(--space-5);
   margin-top: var(--space-3);
-  font-size: 10px;
+  font-size: 0.625rem;
 }
 
 .composefoot .button {
@@ -1517,7 +1517,7 @@ form.report-panel {
   min-width: 0;
   margin: 0;
   overflow-wrap: anywhere;
-  font-size: 20px;
+  font-size: 1.25rem;
   font-weight: 400;
   letter-spacing: -1px;
 }
@@ -1535,7 +1535,7 @@ form.report-panel {
 }
 
 .profile.page-header h1 {
-  font-size: clamp(22px, 4vw, 28px);
+  font-size: clamp(1.375rem, 4vw, 1.75rem);
   font-weight: 600;
 }
 
@@ -1543,7 +1543,7 @@ form.report-panel {
   max-width: 62ch;
   margin: var(--space-2) 0 0;
   color: var(--quote-ink);
-  font-size: 13px;
+  font-size: 0.8125rem;
 }
 
 .profile-tabs {
@@ -1601,7 +1601,7 @@ form.report-panel {
   color: var(--accent);
   background: none;
   font-family: inherit;
-  font-size: 11px;
+  font-size: 0.6875rem;
   line-height: 1.2;
   border-bottom: 1px solid var(--link-border);
 }
@@ -1668,7 +1668,7 @@ form.report-panel {
   padding: 4px 8px;
   color: var(--accent-dark);
   background: var(--tag-bg);
-  font-size: 11px;
+  font-size: 0.6875rem;
   font-weight: 700;
   line-height: 1.4;
   letter-spacing: 0;
@@ -1677,7 +1677,7 @@ form.report-panel {
 
 .tag-header .button {
   flex: none;
-  font-size: 13px;
+  font-size: 0.8125rem;
   border: 0;
 }
 
@@ -1701,12 +1701,12 @@ form.report-panel {
 }
 
 .account-danger-zone strong {
-  font-size: 12px;
+  font-size: 0.75rem;
 }
 
 .account-danger-zone span {
   color: var(--muted);
-  font-size: 10px;
+  font-size: 0.625rem;
 }
 
 .account-danger-zone .button {
@@ -1730,14 +1730,14 @@ form.report-panel {
   margin-bottom: var(--space-7);
 }
 
-.appearance-heading h1 { margin: var(--space-1) 0 0; font-size: clamp(24px, 5vw, 34px); }
-.appearance-heading .eyebrow, .appearance-page legend { color: var(--muted); font-size: 10px; }
+.appearance-heading h1 { margin: var(--space-1) 0 0; font-size: clamp(1.5rem, 5vw, 2.125rem); }
+.appearance-heading .eyebrow, .appearance-page legend { color: var(--muted); font-size: 0.625rem; }
 .appearance-page fieldset { padding: 0; margin: 0 0 var(--space-7); border: 0; }
 .appearance-page legend { margin-bottom: var(--space-3); }
 .theme-options { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: var(--space-2); }
 .theme-option, .accent-option { cursor: pointer; }
 .theme-option input, .accent-option input { position: absolute; opacity: 0; pointer-events: none; }
-.theme-option { display: grid; gap: var(--space-2); color: var(--muted); font-size: 11px; }
+.theme-option { display: grid; gap: var(--space-2); color: var(--muted); font-size: 0.6875rem; }
 .theme-preview { height: 70px; padding: 12px; display: grid; align-content: center; gap: 7px; border: 1px solid var(--soft); background: var(--preview-bg); }
 .theme-preview i { display: block; height: 3px; background: var(--preview-ink); }
 .theme-preview i:nth-child(2) { width: 72%; background: var(--preview-accent); }
@@ -1751,7 +1751,7 @@ form.report-panel {
 .theme-option input:checked ~ span:last-child { color: var(--ink); }
 .theme-option input:focus-visible + .theme-preview, .accent-option input:focus-visible + .accent-swatch { outline: 2px solid var(--accent); outline-offset: 3px; }
 .accent-options { display: flex; flex-wrap: wrap; gap: var(--space-4); }
-.accent-option { display: grid; justify-items: center; gap: var(--space-2); color: var(--muted); font-size: 9px; }
+.accent-option { display: grid; justify-items: center; gap: var(--space-2); color: var(--muted); font-size: 0.5625rem; }
 .accent-swatch { display: block; width: 30px; height: 30px; padding: 4px; border: 1px solid var(--soft); border-radius: 50%; background: var(--swatch); background-clip: content-box; }
 .accent-swatch-theme-system,
 .accent-swatch-theme-light { --swatch: #749668; }
@@ -1772,13 +1772,28 @@ form.report-panel {
 .accent-option input:checked ~ span:last-child { color: var(--ink); }
 
 .font-options { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: var(--space-3); }
-.font-option { display: grid; gap: var(--space-2); padding: var(--space-3); color: var(--muted); font-size: 10px; border: 1px solid var(--soft); cursor: pointer; }
+.font-option { display: grid; gap: var(--space-2); padding: var(--space-3); color: var(--muted); font-size: 0.625rem; border: 0.0625rem solid var(--soft); cursor: pointer; }
 .font-option input { position: absolute; opacity: 0; pointer-events: none; }
-.font-sample { color: var(--ink); font-size: 18px; white-space: nowrap; }
+.font-sample { color: var(--ink); font-size: 1.125rem; white-space: nowrap; }
 .font-option:has(input:checked) { border-color: var(--accent); box-shadow: inset 0 0 0 2px var(--accent); }
 .font-option:has(input:checked)>span:last-child { color: var(--ink); }
 .font-option:has(input:focus-visible) { outline: 2px solid var(--accent); outline-offset: 3px; }
-.font-note { max-width: 620px; margin: calc(-1 * var(--space-4)) 0 var(--space-5); color: var(--muted); font-size: 10px; }
+.font-note { max-width: 38.75rem; margin: calc(-1 * var(--space-4)) 0 var(--space-5); color: var(--muted); font-size: 0.625rem; }
+.font-size-options { display: flex; align-items: stretch; flex-wrap: wrap; gap: var(--space-3); }
+.font-size-option { display: grid; min-width: 110px; gap: var(--space-1); padding: var(--space-3); color: var(--muted); border: 1px solid var(--soft); cursor: pointer; }
+.font-size-option input { position: absolute; opacity: 0; pointer-events: none; }
+.font-size-option>span:first-of-type { color: var(--ink); }
+.font-size-option:has(input:checked) { border-color: var(--accent); box-shadow: inset 0 0 0 2px var(--accent); }
+.font-size-option:has(input:checked)>span:last-child { color: var(--ink); }
+.font-size-option:has(input:focus-visible) { outline: 2px solid var(--accent); outline-offset: 3px; }
+.font-size-small>span:first-of-type { font-size: 14px; }
+.font-size-regular>span:first-of-type { font-size: 16px; }
+.font-size-large>span:first-of-type { font-size: 18px; }
+.font-size-larger>span:first-of-type { font-size: 20px; }
+.font-size-small>span:last-child { font-size: 10px; }
+.font-size-regular>span:last-child { font-size: 11px; }
+.font-size-large>span:last-child { font-size: 12px; }
+.font-size-larger>span:last-child { font-size: 13px; }
 .font-preview-system { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
 .font-preview-sf-mono { font-family: "SF Mono", SFMono-Regular, monospace; }
 .font-preview-menlo { font-family: Menlo, monospace; }
@@ -1844,7 +1859,7 @@ form.report-panel {
 .search-header h1 {
   margin: 0 0 var(--space-3);
   color: var(--muted);
-  font-size: 12px;
+  font-size: 0.75rem;
   font-weight: 400;
   text-transform: uppercase;
   letter-spacing: 1px;
@@ -1857,7 +1872,7 @@ form.report-panel {
 
 .search-form input {
   min-width: 0;
-  font-size: 12px;
+  font-size: 0.75rem;
 }
 
 .search-form input::-webkit-search-cancel-button {
@@ -1879,7 +1894,7 @@ form.report-panel {
   margin: 0;
   padding: var(--space-5) var(--gutter);
   color: var(--muted);
-  font-size: 11px;
+  font-size: 0.6875rem;
   border-bottom: 1px solid var(--soft);
 }
 
@@ -1898,20 +1913,20 @@ form.report-panel {
 .welcome-panel .eyebrow {
   margin: 0 0 var(--space-2);
   color: var(--accent);
-  font-size: 10px;
+  font-size: 0.625rem;
   text-transform: uppercase;
   letter-spacing: 1px;
 }
 
 .welcome-panel h1 {
   margin: 0;
-  font-size: clamp(20px, 4vw, 28px);
+  font-size: clamp(1.25rem, 4vw, 1.75rem);
 }
 
 .welcome-panel>p:not(.eyebrow) {
   margin: var(--space-2) 0 var(--space-5);
   color: var(--quote-ink);
-  font-size: 12px;
+  font-size: 0.75rem;
 }
 
 .verify-email-panel {
@@ -1961,7 +1976,7 @@ form.report-panel {
 .admin-confirm .eyebrow {
   margin: 0 0 var(--space-2);
   color: var(--accent);
-  font-size: 10px;
+  font-size: 0.625rem;
   text-transform: uppercase;
   letter-spacing: 1px;
 }
@@ -1982,7 +1997,7 @@ form.report-panel {
 }
 
 .admin-stats strong {
-  font-size: 24px;
+  font-size: 1.5rem;
   font-weight: 500;
 }
 
@@ -1992,7 +2007,7 @@ form.report-panel {
 .admin-actions-log time,
 .admin-user-list span {
   color: var(--muted);
-  font-size: 10px;
+  font-size: 0.625rem;
 }
 
 .admin-tabs {
@@ -2007,7 +2022,7 @@ form.report-panel {
 .admin-section>h2 {
   margin: 0 0 var(--space-4);
   color: var(--muted);
-  font-size: 12px;
+  font-size: 0.75rem;
   font-weight: 400;
   text-transform: uppercase;
   letter-spacing: 1px;
@@ -2039,7 +2054,7 @@ form.report-panel {
 
 .admin-report>p {
   margin: var(--space-4) 0;
-  font-size: 13px;
+  font-size: 0.8125rem;
   white-space: pre-wrap;
   overflow-wrap: anywhere;
 }
@@ -2074,7 +2089,7 @@ form.report-panel {
 .admin-user-list article {
   padding: var(--space-3) 0;
   border-top: 1px solid var(--soft);
-  font-size: 11px;
+  font-size: 0.6875rem;
 }
 
 .admin-actions-log article {
@@ -2118,7 +2133,7 @@ form.report-panel {
 
 .admin-email label {
   color: var(--muted);
-  font-size: 11px;
+  font-size: 0.6875rem;
 }
 
 .admin-email input,
@@ -2151,7 +2166,7 @@ form.report-panel {
   display: grid;
   gap: var(--space-2);
   color: var(--muted);
-  font-size: 11px;
+  font-size: 0.6875rem;
 }
 
 .admin-confirm .form-actions {
@@ -2188,7 +2203,7 @@ form.report-panel {
 .post-context {
   margin-left: calc(-1 * var(--space-2) + 1ch);
   color: var(--muted);
-  font-size: 11px;
+  font-size: 0.6875rem;
 }
 
 .activity-item .posttop {
@@ -2211,7 +2226,7 @@ form.report-panel {
 .activity-follow {
   padding: var(--space-4) var(--gutter);
   border-top: 1px solid var(--soft);
-  font-size: 12px;
+  font-size: 0.75rem;
 }
 
 .activity-follow-content {
@@ -2237,17 +2252,17 @@ form.report-panel {
 
 .activity-follow-main small {
   color: var(--muted);
-  font-size: 11px;
+  font-size: 0.6875rem;
 }
 
 .activity-follow-main time {
-  font-size: 11px;
+  font-size: 0.6875rem;
 }
 
 .activity-follow .profile-bio {
   margin: var(--space-3) 0 0;
   color: var(--quote-ink);
-  font-size: 11px;
+  font-size: 0.6875rem;
   line-height: 1.45;
 }
 
@@ -2258,12 +2273,12 @@ form.report-panel {
 .activity-follow .button {
   padding: 7px 10px;
   white-space: nowrap;
-  font-size: 10px;
+  font-size: 0.625rem;
 }
 
 .columns h2 {
   color: var(--muted);
-  font-size: 12px;
+  font-size: 0.75rem;
   font-weight: 400;
   text-transform: uppercase;
   letter-spacing: 1px;
@@ -2273,7 +2288,7 @@ form.report-panel {
   margin: 0;
   padding-top: var(--space-3);
   color: var(--muted);
-  font-size: 11px;
+  font-size: 0.6875rem;
   border-top: 1px solid var(--soft);
 }
 
@@ -2290,7 +2305,7 @@ form.report-panel {
   color: var(--ink);
   background: var(--tag-bg);
   border: 0;
-  font-size: 12px;
+  font-size: 0.75rem;
 }
 
 .tags small {
@@ -2311,7 +2326,7 @@ form.report-panel {
   align-items: center;
   justify-content: space-between;
   gap: var(--space-3);
-  font-size: 12px;
+  font-size: 0.75rem;
 }
 
 .people article>div>div {
@@ -2321,7 +2336,7 @@ form.report-panel {
 .people small {
   margin-left: 7px;
   color: var(--muted);
-  font-size: 10px;
+  font-size: 0.625rem;
 }
 
 .people form {
@@ -2331,13 +2346,13 @@ form.report-panel {
 
 .people .button {
   padding: 7px 10px;
-  font-size: 10px;
+  font-size: 0.625rem;
 }
 
 .people p {
   margin: var(--space-1) 0 0;
   color: var(--quote-ink);
-  font-size: 11px;
+  font-size: 0.6875rem;
   line-height: 1.45;
 }
 
@@ -2348,7 +2363,7 @@ form.report-panel {
 
 .thread-root>.post>p {
   margin-bottom: 0;
-  font-size: clamp(16px, 2.5vw, 20px);
+  font-size: clamp(1rem, 2.5vw, 1.25rem);
   line-height: 1.55;
   letter-spacing: -.5px;
 }
@@ -2369,12 +2384,12 @@ form.report-panel {
 }
 
 .reply-node .post p {
-  font-size: 13px;
+  font-size: 0.8125rem;
 }
 
 .thread-continuation {
   padding: 0 var(--gutter) var(--space-4);
-  font-size: 12px;
+  font-size: 0.75rem;
 }
 
 .thread-continuation .quiet {

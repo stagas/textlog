@@ -1,8 +1,9 @@
 import type { User } from '../db'
-import { FONT_CHOICES, type FontChoice } from '../theme'
+import { FONT_CHOICES, FONT_SIZE_CHOICES, type FontChoice, type FontSizeChoice } from '../theme'
 import { Layout } from './layout'
 
-export function ChangeFont({ user, selected }: { user: User; selected: FontChoice }) {
+export function ChangeFont({ user, selected, selectedSize = 'regular' }: { user: User; selected: FontChoice;
+  selectedSize?: FontSizeChoice }) {
   return (
     <Layout user={user} title="change font">
       <section className="appearance-page">
@@ -19,6 +20,19 @@ export function ChangeFont({ user, selected }: { user: User; selected: FontChoic
                   <input type="radio" name="font" value={font.value} defaultChecked={selected === font.value} />
                   <span className="font-sample">textlog</span>
                   <span>{font.label}</span>
+                </label>
+              ))}
+            </div>
+          </fieldset>
+          <fieldset>
+            <legend>font size</legend>
+            <div className="font-size-options">
+              {FONT_SIZE_CHOICES.map(choice => (
+                <label key={choice.value} className={`font-size-option font-size-${choice.value}`}>
+                  <input type="radio" name="fontSize" value={choice.value}
+                    defaultChecked={selectedSize === choice.value} />
+                  <span>textlog</span>
+                  <span>{choice.label}</span>
                 </label>
               ))}
             </div>

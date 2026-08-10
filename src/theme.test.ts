@@ -1,5 +1,5 @@
 import { expect, test } from 'bun:test'
-import { activeAppearance, appearance, appearanceCookie, fontChoice, fontCookie, themeLogoSvg, themeStyles, withAppearance } from './theme'
+import { activeAppearance, appearance, appearanceCookie, fontChoice, fontCookie, fontSizeChoice, fontSizeCookie, themeLogoSvg, themeStyles, withAppearance } from './theme'
 
 test('appearance reads valid choices and falls back safely', () => {
   expect(appearance(new Request('http://localhost', { headers: { cookie: 'appearance=sepia.amber' } })))
@@ -49,7 +49,7 @@ test('theme stylesheet uses mobile palettes and follows the OS for system', () =
 test('font preference is validated and emitted by the theme stylesheet', () => {
   const request = new Request('https://textlog.cc', { headers: { cookie: 'font=dejavu-sans-mono' } })
   expect(fontChoice(request)).toBe('dejavu-sans-mono')
-  expect(themeStyles(request)).toContain(':root{font-family:"DejaVu Sans Mono", monospace}')
+  expect(themeStyles(request)).toContain(':root{font-family:"DejaVu Sans Mono", monospace;font-size:16px}')
   expect(fontCookie('menlo', 'https://textlog.cc')).toContain('font=menlo')
   expect(fontCookie('menlo', 'https://textlog.cc')).toContain('Secure')
 
@@ -57,6 +57,17 @@ test('font preference is validated and emitted by the theme stylesheet', () => {
   expect(fontChoice(invalid)).toBe('system')
   expect(themeStyles(invalid)).toContain('font-family:ui-monospace, SFMono-Regular, Menlo, Consolas, monospace')
   expect(themeStyles(invalid)).not.toContain('display:none')
+})
+
+test('font size preference is validated and emitted by the theme stylesheet', () => {
+  const request = new Request('https://textlog.cc', { headers: { cookie: 'font-size=larger' } })
+  expect(fontSizeChoice(request)).toBe('larger')
+  expect(themeStyles(request)).toContain('font-size:20px')
+  expect(themeStyles(request)).not.toContain('zoom:')
+  expect(fontSizeCookie('small', 'https://textlog.cc')).toContain('font-size=small')
+  expect(fontSizeChoice(new Request('http://localhost', {
+    headers: { cookie: 'font-size=enormous' },
+  }))).toBe('regular')
 })
 
 test('logo SVG follows the selected accent and system brightness', () => {

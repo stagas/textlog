@@ -20,11 +20,18 @@ export const FONT_CHOICES = [
   { value: 'jetbrains-mono', label: 'JetBrains Mono', family: '"JetBrains Mono", monospace' },
   { value: 'hack', label: 'Hack', family: 'Hack, monospace' },
 ] as const
+export const FONT_SIZE_CHOICES = [
+  { value: 'small', label: 'small', size: '14px' },
+  { value: 'regular', label: 'regular', size: '16px' },
+  { value: 'large', label: 'large', size: '18px' },
+  { value: 'larger', label: 'larger', size: '20px' },
+] as const
 
 export type ThemeChoice = typeof THEME_CHOICES[number]
 export type AccentChoice = typeof ACCENT_CHOICES[number]
 export type Appearance = { theme: ThemeChoice; accent: AccentChoice }
 export type FontChoice = typeof FONT_CHOICES[number]['value']
+export type FontSizeChoice = typeof FONT_SIZE_CHOICES[number]['value']
 export const EMBED_FONT_CHOICES = {
   system: 'system', sf: 'sf-mono', menlo: 'menlo', monaco: 'monaco', consolas: 'consolas',
   cascadia: 'cascadia-mono', courier: 'courier-new', lucida: 'lucida-console', dejavu: 'dejavu-sans-mono',
@@ -96,6 +103,18 @@ export function fontCookie(value: FontChoice, appUrl: string | undefined = Bun.e
   return `font=${value}; Max-Age=${365 * 24 * 60 * 60}; HttpOnly; Path=/; SameSite=Lax${secure}`
 }
 
+export function fontSizeChoice(request: Request): FontSizeChoice {
+  const value = request.headers.get('cookie')?.match(/(?:^|;\s*)font-size=([^;]+)/)?.[1] || ''
+  return FONT_SIZE_CHOICES.some(choice => choice.value === value) ? value as FontSizeChoice : 'regular'
+}
+
+export function fontSizeCookie(value: FontSizeChoice, appUrl: string | undefined = Bun.env.APP_URL) {
+  let secure = ''
+  try { secure = appUrl && new URL(appUrl).protocol === 'https:' ? '; Secure' : '' }
+  catch {}
+  return `font-size=${value}; Max-Age=${365 * 24 * 60 * 60}; HttpOnly; Path=/; SameSite=Lax${secure}`
+}
+
 function rules(name: keyof typeof palettes, accentChoice: AccentChoice) {
   const p = palettes[name]
   const dark = name === 'dark' || name === 'dracula'
@@ -136,7 +155,8 @@ export function themeStyles(request: Request) {
     ? EMBED_FONT_CHOICES[requestedFont as EmbedFontChoice] || 'system'
     : fontChoice(request)
   const font = FONT_CHOICES.find(choice => choice.value === selectedFont) || FONT_CHOICES[0]
-  const fontRule = `:root{font-family:${font.family}}`
+  const fontSize = FONT_SIZE_CHOICES.find(choice => choice.value === fontSizeChoice(request)) || FONT_SIZE_CHOICES[1]
+  const fontRule = `:root{font-family:${font.family};font-size:${fontSize.size}}`
   if (selected.theme === 'system') {
     return `${rules('light', selected.accent)}@media(prefers-color-scheme:dark){${rules('dark', selected.accent)}}${fontRule}`
   }
