@@ -25,6 +25,7 @@ import { registerPostsRoutes } from './routes/posts'
 import { registerProfilesRoutes } from './routes/profiles'
 import { registerSeoRoutes } from './routes/seo'
 import { registerSearchRoutes } from './routes/search'
+import { registerStatsRoutes } from './routes/stats'
 import { clientErrorPage, notFoundPage, serverErrorPage } from './routes/shared'
 import { registerTagsRoutes } from './routes/tags'
 import { renewSession } from './sessions'
@@ -245,6 +246,7 @@ registerPostsRoutes(app)
 registerInteractionsRoutes(app)
 registerIllegalActivityRoutes(app)
 registerAdminRoutes(app)
+registerStatsRoutes(app)
 registerProfilesRoutes(app)
 registerTagsRoutes(app)
 registerSearchRoutes(app)

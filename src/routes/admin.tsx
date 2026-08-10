@@ -9,7 +9,7 @@ import {
   safeLocalPath,
   safeRefererPath,
 } from '../http'
-import type { AdminActionView, AdminReportView, DashboardStats, IllegalActivityReportView, PostRow,
+import type { AdminActionView, AdminReportView, IllegalActivityReportView, PostRow,
   ProfileRow } from '../types'
 import { currentPage, form, page, paginationRedirect, redirect } from './shared'
 
@@ -17,9 +17,8 @@ import type { Hono } from 'hono'
 import { db } from '../db'
 import { sendAdminEmail, sendReportDecision } from '../email'
 import { PAGE_SIZE } from '../pagination'
-import { onlineUserCount } from '../sessions'
+import { dashboardStats } from '../stats'
 import { currentUser } from '../utils'
-import { visitorStats } from '../visitors'
 
 export function registerAdminRoutes(app: Hono) {
   app.get('/admin/email', c => {
@@ -52,36 +51,7 @@ export function registerAdminRoutes(app: Hono) {
     if (!['open', 'resolved', 'dismissed'].includes(statusValue)) return c.text('Invalid report status', 400)
     const status = statusValue as 'open' | 'resolved' | 'dismissed'
     const reportPage = currentPage(c.req.query('page'))
-    const stats = db.query(`SELECT
-    (SELECT count(*) FROM users WHERE deleted_at IS NULL) users,
-    (SELECT count(*) FROM users WHERE deleted_at IS NULL AND suspended_at IS NOT NULL) suspendedUsers,
-    (SELECT count(*) FROM posts WHERE deleted_at IS NULL) activePosts,
-    (SELECT count(*) FROM posts WHERE deleted_at IS NULL AND parent_id IS NOT NULL) replies,
-    (SELECT count(*) FROM reports WHERE status='open') openReports,
-    (SELECT count(DISTINCT activity.user_id) FROM (
-      SELECT user_id,created_at FROM posts
-      UNION ALL SELECT follower_id,created_at FROM follows
-      UNION ALL SELECT blocker_id,created_at FROM blocks
-      UNION ALL SELECT reporter_id,created_at FROM reports
-    ) activity JOIN users ON users.id=activity.user_id
-      WHERE users.deleted_at IS NULL
-        AND activity.created_at>=datetime('now','start of day','-1 day')
-        AND activity.created_at<datetime('now','start of day')) activeUsersYesterday,
-    (SELECT count(*) FROM users WHERE deleted_at IS NULL
-      AND created_at>=datetime('now','start of day','-1 day')
-      AND created_at<datetime('now','start of day')) usersYesterday,
-    (SELECT count(*) FROM users WHERE deleted_at IS NULL AND created_at>=datetime('now','-1 day')) users24h,
-    (SELECT count(*) FROM users WHERE deleted_at IS NULL AND created_at>=datetime('now','-7 days')) users7d,
-    (SELECT count(*) FROM posts WHERE deleted_at IS NULL
-      AND created_at>=datetime('now','start of day','-1 day')
-      AND created_at<datetime('now','start of day')) postsYesterday,
-    (SELECT count(*) FROM posts WHERE deleted_at IS NULL AND created_at>=datetime('now','-1 day')) posts24h,
-    (SELECT count(*) FROM posts WHERE deleted_at IS NULL AND created_at>=datetime('now','-7 days')) posts7d`)
-    const dashboardStats = {
-      ...(stats.get() as Omit<DashboardStats, 'visitorsToday' | 'visitorsYesterday' | 'visitors7d' | 'usersOnline'>),
-      usersOnline: onlineUserCount(db),
-      ...visitorStats(db),
-    }
+    const stats = dashboardStats(db)
     const total = (db.query('SELECT count(*) count FROM reports WHERE status=?').get(status) as { count: number }).count
     const outOfRange = paginationRedirect(reportPage, total, `/admin?status=${status}`)
     if (outOfRange) return outOfRange
@@ -102,7 +72,7 @@ export function registerAdminRoutes(app: Hono) {
     const illegalReports = db.query(`SELECT * FROM illegal_activity_reports
       WHERE status='open' ORDER BY created_at,id LIMIT 20`).all() as IllegalActivityReportView[]
     return page(
-      <AdminDashboard user={signedIn} stats={dashboardStats} reports={reports} actions={actions}
+      <AdminDashboard user={signedIn} stats={stats} reports={reports} actions={actions}
         illegalReports={illegalReports} status={status} page={reportPage} total={total} suspended={suspended} />,
     )
   })

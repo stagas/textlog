@@ -131,6 +131,22 @@ afterAll(async () => {
   rmSync(temporaryDirectory, { recursive: true, force: true })
 })
 
+test('stats are public without exposing admin operations', async () => {
+  const response = await request('/stats')
+  expect(response.status).toBe(200)
+  expect(response.headers.get('x-robots-tag')).toBeNull()
+  expect(response.headers.get('link')).toContain(`${origin}/stats`)
+
+  const html = await response.text()
+  expect(html).toContain('<h1>stats</h1>')
+  expect(html).not.toContain('<p class="eyebrow">textlog</p>')
+  expect(html).toContain('aria-label="Application statistics"')
+  expect(html).toContain('<span>users</span>')
+  expect(html).not.toContain('admin dashboard')
+  expect(html).not.toContain('illegal activity reports')
+  expect(html).not.toContain('recent admin actions')
+})
+
 test('consequential account, content, reporting, and admin flows work over HTTP', async () => {
   let aliceCookie = await signup('alice', 'alice@example.com', 'unused')
   const alice = database.query('SELECT id,email_verified_at FROM users WHERE handle=?')

@@ -4,6 +4,7 @@ import type { AdminActionView, AdminReportView, DashboardStats, IllegalActivityR
 import { fmtFull } from '../utils'
 import { Layout } from './layout'
 import { Pagination } from './page-shared'
+import { StatsGrid } from './stats'
 
 export function AdminDashboard(
   { user, stats, reports, actions, illegalReports = [], status, page, total, suspended = [] }: {
@@ -18,23 +19,6 @@ export function AdminDashboard(
     suspended?: ProfileRow[]
   },
 ) {
-  const labels: [keyof DashboardStats, string][] = [
-    ['users', 'users'],
-    ['usersOnline', 'users online · 30m'],
-    ['suspendedUsers', 'suspended'],
-    ['activePosts', 'active posts'],
-    ['replies', 'replies'],
-    ['visitorsToday', 'unique visitors · today'],
-    ['visitorsYesterday', 'unique visitors · yesterday'],
-    ['visitors7d', 'visitor-days · 7d'],
-    ['activeUsersYesterday', 'active users · yesterday'],
-    ['usersYesterday', 'new users · yesterday'],
-    ['users24h', 'new users · 24h'],
-    ['users7d', 'new users · 7d'],
-    ['postsYesterday', 'new posts · yesterday'],
-    ['posts24h', 'new posts · 24h'],
-    ['posts7d', 'new posts · 7d'],
-  ]
   return (
     <Layout user={user} title="admin">
       <section className="page-header admin-header">
@@ -44,14 +28,7 @@ export function AdminDashboard(
         </div>
         <a className="quiet" href="/admin/email">send email</a>
       </section>
-      <section className="admin-stats" aria-label="Application statistics">
-        {labels.map(([key, label]) => (
-          <article key={key}>
-            <strong>{stats[key].toLocaleString()}</strong>
-            <span>{label}</span>
-          </article>
-        ))}
-      </section>
+      <StatsGrid stats={stats} />
       <section className="admin-section">
         <h2>
           illegal activity reports <span>{illegalReports.length}</span>
