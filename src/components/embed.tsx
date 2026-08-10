@@ -7,7 +7,7 @@ export function Embed({ posts, title, href, theme, accent }: { posts: PostView[]
   theme: ThemeChoice; accent: AccentChoice })
 {
   const query = new URLSearchParams({ theme, accent })
-  const embedLinks = (post: PostView) => linkify(post.body, post.mention_bios)
+  const embedLinks = (body: string, mentionBios?: Record<string, string>) => linkify(body, mentionBios)
     .replace(/<a (?![^>]*\btarget=)/g, '<a target="_blank" rel="noopener noreferrer" ')
   return (
     <html lang="en">
@@ -16,7 +16,7 @@ export function Embed({ posts, title, href, theme, accent }: { posts: PostView[]
         <meta name="viewport" content="width=device-width,initial-scale=1" />
         <meta name="color-scheme" content="light dark" />
         <title>{`${title} · textlog`}</title>
-        <link rel="stylesheet" href="/embed.css?v=2" />
+        <link rel="stylesheet" href="/embed.css?v=3" />
         <link rel="stylesheet" href={`/theme.css?${query}`} />
       </head>
       <body className="embed-body">
@@ -40,7 +40,35 @@ export function Embed({ posts, title, href, theme, accent }: { posts: PostView[]
                     </a>
                   </div>
                   <p className={containsAsciiArt(post.body) ? 'ascii-art' : undefined}
-                    dangerouslySetInnerHTML={{ __html: embedLinks(post) }} />
+                    dangerouslySetInnerHTML={{ __html: embedLinks(post.body, post.mention_bios) }} />
+                  {post.parent && (
+                    <blockquote className={'embed-parent' + (post.parent.deleted_at ? ' deleted-parent' : '')}>
+                      {post.parent.deleted_at
+                        ? <a href={`/post/${post.parent.id}`} target="_blank" rel="noopener noreferrer">(deleted)</a>
+                        : (
+                          <>
+                            <div className="embed-parent-top">
+                              <a href={`/u/${post.parent.handle}`} target="_blank" rel="noopener noreferrer">
+                                @{post.parent.handle}
+                              </a>
+                              <a className="embed-date" href={`/post/${post.parent.id}`} target="_blank"
+                                rel="noopener noreferrer">
+                                <time dateTime={post.parent.created_at} title={fmtFull(post.parent.created_at)}>
+                                  {fmt(post.parent.created_at)}
+                                </time>
+                                {post.parent.reply_count > 0 && (
+                                  <span> · {post.parent.reply_count} {post.parent.reply_count === 1 ? 'reply' : 'replies'}</span>
+                                )}
+                              </a>
+                            </div>
+                            <p className={containsAsciiArt(post.parent.body) ? 'ascii-art' : undefined}
+                              dangerouslySetInnerHTML={{
+                                __html: embedLinks(post.parent.body, post.parent.mention_bios),
+                              }} />
+                          </>
+                        )}
+                    </blockquote>
+                  )}
                 </article>
               ))
               : <p className="embed-empty">No notes here yet.</p>}
