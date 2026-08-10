@@ -2,7 +2,7 @@ import { Layout } from './layout'
 
 export function ConfirmEmail({ token, kind, email, invalid = false, pending = false, sent = false, error }: {
   token?: string
-  kind?: 'verify' | 'change'
+  kind?: 'verify' | 'change' | 'authorize-change'
   email?: string
   invalid?: boolean
   pending?: boolean
@@ -10,9 +10,12 @@ export function ConfirmEmail({ token, kind, email, invalid = false, pending = fa
   error?: string
 }) {
   const allowDevelopmentVerification = Bun.env.NODE_ENV === 'development' || Bun.env.DEV_RELOAD === 'true'
+  const authorizingChange = kind === 'authorize-change'
   return (
     <Layout title="confirm email" logoutNavigation={pending}>
-      <div className={pending ? 'welcome-panel verify-email-panel' : 'panel confirm-delete'}>
+      <div className={pending || authorizingChange
+        ? `welcome-panel verify-email-panel${authorizingChange ? ' email-change-approval' : ''}`
+        : 'panel confirm-delete'}>
         {pending
           ? (
             <>
@@ -47,9 +50,13 @@ export function ConfirmEmail({ token, kind, email, invalid = false, pending = fa
           )
           : (
             <>
-              <h1>{kind === 'change' ? 'Change your email?' : 'Verify your email?'}</h1>
+              {authorizingChange && <p className="eyebrow">security confirmation</p>}
+              <h1>{kind === 'authorize-change' ? 'Approve this email change?'
+                : kind === 'change' ? 'Change your email?' : 'Verify your email?'}</h1>
               <p>
-                {kind === 'change'
+                {kind === 'authorize-change'
+                  ? <>Allow your textlog account email to be changed to <strong>{email}</strong>.</>
+                  : kind === 'change'
                   ? (
                     <>
                       Confirm changing your textlog account email to <strong>{email}</strong>.
@@ -61,11 +68,14 @@ export function ConfirmEmail({ token, kind, email, invalid = false, pending = fa
                     </>
                   )}
               </p>
-              <form method="post" action="/verify-email">
+              {error && <p className="form-error" role="alert">{error}</p>}
+              <form method="post" action={kind === 'authorize-change'
+                ? '/account/email/change/authorize' : '/verify-email'}>
                 <input type="hidden" name="token" value={token} />
                 <div className="form-actions">
                   <a className="quiet" href="/">cancel</a>
-                  <button className="button">{kind === 'change' ? 'change email' : 'verify email'}</button>
+                  <button className="button">{kind === 'authorize-change' ? 'approve change'
+                    : kind === 'change' ? 'change email' : 'verify email'}</button>
                 </div>
               </form>
             </>

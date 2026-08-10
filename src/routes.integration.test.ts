@@ -383,13 +383,37 @@ test('consequential account, content, reporting, and admin flows work over HTTP'
   expect(reportRow).toMatchObject({ status: 'open', reason: 'spam' })
 
   const emailDeleteCookie = await signup('emaildelete', 'email-delete@example.com', 'unused')
+  const emailChangeRequest = await request('/account/email/change', {
+    method: 'POST', cookie: emailDeleteCookie, form: { email: 'email-delete-new@example.com' },
+  })
+  expect(emailChangeRequest.status).toBe(200)
+  expect((database.query('SELECT email FROM users WHERE handle=?').get('emaildelete') as { email: string }).email)
+    .toBe('email-delete@example.com')
+  const approvalEmail = capturedEmails().filter(message => message.to === 'email-delete@example.com'
+    && message.subject.includes('Approve email change')).at(-1)
+  expect(approvalEmail).toBeDefined()
+  const approvalToken = linkToken(approvalEmail!)
+  expect((await request(`/account/email/change/authorize?token=${encodeURIComponent(approvalToken)}`)).status).toBe(200)
+  const approvedChange = await request('/account/email/change/authorize', {
+    method: 'POST', form: { token: approvalToken },
+  })
+  expect(approvedChange.status).toBe(200)
+  const newEmailConfirmation = capturedEmails().filter(message => message.to === 'email-delete-new@example.com'
+    && message.subject.includes('Confirm new email')).at(-1)
+  expect(newEmailConfirmation).toBeDefined()
+  const newEmailToken = linkToken(newEmailConfirmation!)
+  const changedEmail = await request('/verify-email', { method: 'POST', form: { token: newEmailToken } })
+  expect(changedEmail.status).toBe(303)
+  expect((database.query('SELECT email FROM users WHERE handle=?').get('emaildelete') as { email: string }).email)
+    .toBe('email-delete-new@example.com')
+
   const emailDeleteRequest = await request('/account/delete', {
     method: 'POST', cookie: emailDeleteCookie, form: {},
   })
   expect(emailDeleteRequest.status).toBe(200)
   expect((database.query('SELECT deleted_at FROM users WHERE handle=?').get('emaildelete') as
     { deleted_at: string | null }).deleted_at).toBeNull()
-  const deleteEmail = capturedEmails().filter(message => message.to === 'email-delete@example.com'
+  const deleteEmail = capturedEmails().filter(message => message.to === 'email-delete-new@example.com'
     && message.subject.includes('Confirm account deletion')).at(-1)
   expect(deleteEmail).toBeDefined()
   const deletionToken = linkToken(deleteEmail!)

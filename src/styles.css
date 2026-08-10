@@ -1092,6 +1092,10 @@ nav form {
   letter-spacing: -1px;
 }
 
+.enable-password-panel {
+  width: min(100%, 560px);
+}
+
 @media (max-width: 520px) {
   .auth-shell {
     min-height: auto;
@@ -1890,6 +1894,20 @@ form.report-panel {
 
 .verify-email-actions form {
   margin: 0;
+}
+
+.email-change-approval>p:not(.eyebrow) {
+  max-width: 480px;
+  overflow-wrap: anywhere;
+}
+
+.email-change-approval form {
+  margin: 0;
+}
+
+.email-change-approval .form-actions {
+  justify-content: flex-end;
+  margin-top: var(--space-5);
 }
 
 .activity-header {

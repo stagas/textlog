@@ -271,6 +271,15 @@ test('Email confirmation requires an explicit POST', () => {
   expect(html).toContain('Change your email?')
 })
 
+test('Email change approval uses the action panel', () => {
+  const html = renderToStaticMarkup(React.createElement(ConfirmEmail, {
+    token: 'approval-token', kind: 'authorize-change', email: 'new@example.com',
+  }))
+  expect(html).toContain('welcome-panel verify-email-panel email-change-approval')
+  expect(html).toContain('security confirmation')
+  expect(html).toContain('action="/account/email/change/authorize"')
+})
+
 test('Account deletion asks for the configured second factor', () => {
   const user = { id: 1, handle: 'reader', email: 'reader@example.com', bio: '' }
   const passwordHtml = renderToStaticMarkup(React.createElement(ConfirmAccountDelete, {
@@ -314,12 +323,24 @@ test('AccountSecurity renders email and safe session controls without passwords'
   expect(html).not.toContain('value="current-id"')
 })
 
+test('AccountSecurity asks for the current password when email changes require it', () => {
+  const html = renderToStaticMarkup(React.createElement(AccountSecurity, {
+    user: { id: 1, handle: 'reader', email: 'reader@example.com', bio: '' },
+    sessions: [],
+    passwordEnabled: true,
+  }))
+  expect(html).toContain('action="/account/email/change"')
+  expect(html).toContain('name="password"')
+  expect(html).toContain('autoComplete="current-password"')
+})
+
 test('enabling password login requests email confirmation before showing password fields', () => {
   const user = { id: 1, handle: 'reader', email: 'reader@example.com', bio: '' }
   const requestHtml = renderToStaticMarkup(React.createElement(AccountPassword, {
     user, enabled: false, request: true,
   }))
   expect(requestHtml).toContain('send setup link')
+  expect(requestHtml).toContain('password-panel enable-password-panel')
   expect(requestHtml).not.toContain('name="newPassword"')
 
   const confirmedHtml = renderToStaticMarkup(React.createElement(AccountPassword, {

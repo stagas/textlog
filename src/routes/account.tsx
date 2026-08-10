@@ -16,7 +16,8 @@ import {
 } from '../components/pages'
 import { exportUserData } from '../data-export'
 import { db } from '../db'
-import { sendAccountDeletionConfirmation, sendPasswordEnableConfirmation } from '../email'
+import { sendAccountDeletionConfirmation, sendEmailChangeAuthorization, sendPasswordEnableConfirmation } from '../email'
+import { emailChangeForToken, issueEmailChangeAuthorization } from '../email-change-authorization'
 import { confirmEmailToken, findEmailToken } from '../email-verification'
 import { updateProfileHandle } from '../handles'
 import {
@@ -232,13 +233,49 @@ export function registerAccountRoutes(app: Hono) {
     if (db.query('SELECT 1 FROM users WHERE email=? AND id!=?').get(email, user.id)) {
       return securityPage(c.req.raw, 'That email address is unavailable.', undefined, 400)
     }
+    const credentials = db.query('SELECT password FROM users WHERE id=?').get(user.id) as { password: string }
+    if (credentials.password !== '!' && !await verifyPassword(f.password || '', credentials.password)) {
+      return securityPage(c.req.raw, 'Password is incorrect.', undefined, 400)
+    }
     try {
-      await issueEmailToken(user.id, email, 'change')
-      return securityPage(c.req.raw, undefined, 'A confirmation link was sent to your new email address.')
+      if (credentials.password !== '!') {
+        await issueEmailToken(user.id, email, 'change')
+        return securityPage(c.req.raw, undefined, 'A confirmation link was sent to your new email address.')
+      }
+      const origin = Bun.env.APP_URL?.replace(/\/$/, '') || new URL(c.req.url).origin
+      const value = issueEmailChangeAuthorization(db, user.id, user.email, email)
+      await sendEmailChangeAuthorization(user.email,
+        `${origin}/account/email/change/authorize?token=${encodeURIComponent(value)}`)
+      return securityPage(c.req.raw, undefined, 'An approval link was sent to your current email address.')
     }
     catch (error) {
+      db.query('DELETE FROM email_change_authorizations WHERE user_id=?').run(user.id)
       console.error('Could not send email-change confirmation', error)
       return securityPage(c.req.raw, 'Confirmation email could not be sent. Please try again later.', undefined, 503)
+    }
+  })
+
+  app.get('/account/email/change/authorize', c => {
+    const value = c.req.query('token') || ''
+    const change = emailChangeForToken(db, value)
+    return change ? page(<ConfirmEmail token={value} kind="authorize-change" email={change.new_email} />)
+      : page(<ConfirmEmail invalid />, 400)
+  })
+
+  app.post('/account/email/change/authorize', async c => {
+    const f = await form(c.req.raw)
+    const value = f.token || ''
+    const change = emailChangeForToken(db, value)
+    if (!change) return page(<ConfirmEmail invalid />, 400)
+    try {
+      await issueEmailToken(change.user_id, change.new_email, 'change')
+      db.query('DELETE FROM email_change_authorizations WHERE user_id=?').run(change.user_id)
+      return page(<ConfirmEmail pending email={change.new_email} />)
+    }
+    catch (error) {
+      console.error('Could not send new-email confirmation', error)
+      return page(<ConfirmEmail token={value} kind="authorize-change" email={change.new_email}
+        error="Confirmation email could not be sent. Please try again later." />, 503)
     }
   })
 

@@ -418,6 +418,16 @@ export const migrations: Migration[] = [
       CREATE INDEX IF NOT EXISTS password_enable_tokens_user ON password_enable_tokens(user_id);`)
     },
   },
+  {
+    version: 33,
+    name: 'email_change_authorization',
+    up(database) {
+      database.run(`CREATE TABLE IF NOT EXISTS email_change_authorizations (
+        token_hash TEXT PRIMARY KEY,user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        current_email TEXT NOT NULL,new_email TEXT NOT NULL,expires_at INTEGER NOT NULL);
+      CREATE INDEX IF NOT EXISTS email_change_authorizations_user ON email_change_authorizations(user_id);`)
+    },
+  },
 ]
 
 export const latestMigrationVersion = migrations.at(-1)!.version

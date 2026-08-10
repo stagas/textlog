@@ -28,6 +28,10 @@ export function AccountSecurity({ user, sessions, passwordEnabled, error, succes
               new email
               <input type="email" name="email" required maxLength={254} autoComplete="email" />
             </label>
+            {passwordEnabled && <label>
+              current password
+              <input type="password" name="password" required maxLength={128} autoComplete="current-password" />
+            </label>}
             <button className="button">confirm new email →</button>
           </form>
         </section>
@@ -93,7 +97,7 @@ export function AccountPassword({ user, enabled, token, request = false, sent = 
   return (
     <Layout user={user} title={enabled ? 'change password' : 'enable password login'}>
       <section className="auth-shell">
-        <div className="panel auth-panel password-panel">
+        <div className={`panel auth-panel password-panel${enabled ? '' : ' enable-password-panel'}`}>
           <h1>{invalid ? 'Link unavailable' : sent ? 'Check your email' : request ? 'Enable password login' : enabled
             ? 'Change password' : 'Set a password'}</h1>
           {error && <p className="error" role="alert">{error}</p>}
