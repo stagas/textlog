@@ -1858,7 +1858,12 @@ form.report-panel {
 .font-preview-jetbrains-mono { font-family: "JetBrains Mono", monospace; }
 .font-preview-hack { font-family: Hack, monospace; }
 
-@media (max-width: 600px) { .theme-options { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+@media (max-width: 600px) {
+  .theme-options { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .accent-options { gap: var(--space-2); }
+  .accent-option { gap: var(--space-1); }
+  .accent-swatch { width: 26px; height: 26px; }
+}
 
 .bio-form textarea {
   height: 96px;
