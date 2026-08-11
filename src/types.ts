@@ -5,9 +5,13 @@ export type PostRow = {
   body: string
   created_at: string
   deleted_at: string | null
+  has_latex?: number | null
+  has_links?: number | null
+  has_code?: number | null
 }
 
-export type ParentPost = Pick<PostRow, 'id' | 'body' | 'created_at' | 'deleted_at'> & {
+export type ParentPost = Pick<PostRow, 'id' | 'body' | 'created_at' | 'deleted_at' | 'has_latex' | 'has_links'
+  | 'has_code'> & {
   handle: string
   bio?: string
   mention_bios?: Record<string, string>

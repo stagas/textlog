@@ -14,7 +14,7 @@ function fixture() {
       handle_chosen_at TEXT);
     CREATE TABLE handle_history (handle TEXT PRIMARY KEY COLLATE NOCASE,user_id INTEGER NOT NULL);
     CREATE TABLE posts (id INTEGER PRIMARY KEY,user_id INTEGER NOT NULL,parent_id INTEGER,body TEXT NOT NULL,
-      created_at TEXT DEFAULT CURRENT_TIMESTAMP,deleted_at TEXT);
+      created_at TEXT DEFAULT CURRENT_TIMESTAMP,deleted_at TEXT,has_latex INTEGER,has_links INTEGER,has_code INTEGER);
     CREATE TABLE follows (follower_id INTEGER NOT NULL,following_id INTEGER NOT NULL,created_at TEXT,
       PRIMARY KEY(follower_id,following_id));
     CREATE TABLE blocks (blocker_id INTEGER NOT NULL,blocked_id INTEGER NOT NULL,

@@ -7,6 +7,9 @@ export type HotPost = {
   body: string
   created_at: string
   deleted_at: string | null
+  has_latex?: number | null
+  has_links?: number | null
+  has_code?: number | null
   handle: string
   hot_score: number
   latest_activity_at: string

@@ -6,6 +6,7 @@ import { userForApiKey } from './api-keys'
 import { sessionCookieName } from './brand'
 import { db, type User } from './db'
 import { texToMathML } from './math'
+import type { PostContentFlags } from './content'
 import { markSessionUsed, sessionHash } from './sessions'
 
 export const esc = (v: unknown) =>
@@ -168,32 +169,35 @@ function mathTokens(body: string, protectedTokens: LinkToken[]) {
   return tokens
 }
 
-function linkTokens(body: string): LinkToken[] {
+function linkTokens(body: string, flags?: PostContentFlags): LinkToken[] {
   const tokens: LinkToken[] = []
-  for (const match of body.matchAll(/^```([^\r\n]*)\r?\n([\s\S]*?)\r?\n```(?=\r?$)/gm)) {
-    const language = match[1].trim().toLowerCase()
-    tokens.push({ index: match.index, lastIndex: match.index + match[0].length,
-      kind: language === 'latex' || language === 'tex' ? 'latex-fence' : 'code-fence', raw: match[0], label: match[2] })
+  if (!flags || flags.has_code || flags.has_latex) {
+    for (const match of body.matchAll(/^```([^\r\n]*)\r?\n([\s\S]*?)\r?\n```(?=\r?$)/gm)) {
+      const language = match[1].trim().toLowerCase()
+      tokens.push({ index: match.index, lastIndex: match.index + match[0].length,
+        kind: language === 'latex' || language === 'tex' ? 'latex-fence' : 'code-fence', raw: match[0], label: match[2] })
+    }
+    for (const match of body.matchAll(/`([^`\r\n]+)`/g)) {
+      tokens.push({ index: match.index, lastIndex: match.index + match[0].length, kind: 'code', raw: match[0],
+        label: match[1] })
+    }
   }
-  for (const match of body.matchAll(/`([^`\r\n]+)`/g)) {
-    tokens.push({ index: match.index, lastIndex: match.index + match[0].length, kind: 'code', raw: match[0],
-      label: match[1] })
-  }
-  tokens.push(...mathTokens(body, tokens))
-  for (const match of body.matchAll(/\[([^\]\r\n]+)\]\((https?:\/\/[^\s<>")]+)\)/gi)) {
-    tokens.push({ index: match.index, lastIndex: match.index + match[0].length, kind: 'markdown', raw: match[0],
-      label: match[1], url: match[2] })
-  }
-  for (const match of urlMatcher.match(body) || []) {
-    // Protocol-less domains default to HTTPS. Explicit schemes remain untouched.
-    const url = match.schema ? match.url : `https://${match.raw}`
-    tokens.push({ index: match.index, lastIndex: match.lastIndex, kind: 'url', raw: match.raw, url })
-  }
-  for (const match of body.matchAll(/(?<![A-Za-z0-9_])@[A-Za-z0-9_]+/g)) {
-    tokens.push({ index: match.index, lastIndex: match.index + match[0].length, kind: 'reference', raw: match[0] })
-  }
-  for (const match of body.matchAll(/(?<![\p{L}\p{M}\p{N}_])#[\p{L}\p{M}\p{N}_]+/gu)) {
-    tokens.push({ index: match.index, lastIndex: match.index + match[0].length, kind: 'reference', raw: match[0] })
+  if (!flags || flags.has_latex) tokens.push(...mathTokens(body, tokens))
+  if (!flags || flags.has_links) {
+    for (const match of body.matchAll(/\[([^\]\r\n]+)\]\((https?:\/\/[^\s<>")]+)\)/gi)) {
+      tokens.push({ index: match.index, lastIndex: match.index + match[0].length, kind: 'markdown', raw: match[0],
+        label: match[1], url: match[2] })
+    }
+    for (const match of urlMatcher.match(body) || []) {
+      const url = match.schema ? match.url : `https://${match.raw}`
+      tokens.push({ index: match.index, lastIndex: match.lastIndex, kind: 'url', raw: match.raw, url })
+    }
+    for (const match of body.matchAll(/(?<![A-Za-z0-9_])@[A-Za-z0-9_]+/g)) {
+      tokens.push({ index: match.index, lastIndex: match.index + match[0].length, kind: 'reference', raw: match[0] })
+    }
+    for (const match of body.matchAll(/(?<![\p{L}\p{M}\p{N}_])#[\p{L}\p{M}\p{N}_]+/gu)) {
+      tokens.push({ index: match.index, lastIndex: match.index + match[0].length, kind: 'reference', raw: match[0] })
+    }
   }
   const priority = { 'code-fence': 0, 'latex-fence': 0, code: 1, math: 2, markdown: 3, url: 4, reference: 5 }
   return tokens.sort((a, b) => a.index - b.index || priority[a.kind] - priority[b.kind])
@@ -217,11 +221,12 @@ function renderedMath(source: string, display: boolean) {
 }
 
 export function linkify(body: string, mentionBios: Record<string, string> = {}, highlightTerms: string[] = [],
-  appUrl: string | undefined = Bun.env.APP_URL)
+  appUrl: string | undefined = Bun.env.APP_URL, flags?: PostContentFlags)
 {
+  if (flags && !flags.has_latex && !flags.has_links && !flags.has_code) return highlighted(body, highlightTerms)
   let html = ''
   let end = 0
-  for (const match of linkTokens(body)) {
+  for (const match of linkTokens(body, flags)) {
     if (match.index < end) continue
     html += renderedText(body.slice(end, match.index), highlightTerms)
     const token = match.raw

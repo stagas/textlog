@@ -59,7 +59,7 @@ export function Feed({ user, cursor, title, path = '/for-you', pageUrl, notifica
   const rows = db.query(`SELECT timeline.*,
     NOT EXISTS(SELECT 1 FROM for_you_reads fyr WHERE fyr.user_id=$viewer AND fyr.event_key=timeline.event_key) unread
     FROM (
-    SELECT p.id,p.user_id,p.body,p.created_at,p.parent_id,p.deleted_at,u.handle,
+    SELECT p.id,p.user_id,p.body,p.created_at,p.parent_id,p.deleted_at,p.has_latex,p.has_links,p.has_code,u.handle,
       EXISTS(SELECT 1 FROM follows vf WHERE vf.follower_id=$viewer AND vf.following_id=p.user_id) following,
       'post' activity_kind,'post:' || printf('%020d',p.id) event_key,p.user_id actor_id,
       u.handle actor_handle,NULL target_handle,NULL target_tag,NULL target_bio,0 target_is_viewer
@@ -74,7 +74,8 @@ export function Feed({ user, cursor, title, path = '/for-you', pageUrl, notifica
         AND NOT EXISTS (SELECT 1 FROM post_hashtags tph JOIN blocked_hashtags bh ON bh.tag=tph.tag
           WHERE tph.post_id=p.id AND bh.user_id=$viewer)
     UNION ALL
-    SELECT NULL id,actor.id user_id,NULL body,f.created_at,NULL parent_id,NULL deleted_at,actor.handle,
+    SELECT NULL id,actor.id user_id,NULL body,f.created_at,NULL parent_id,NULL deleted_at,NULL has_latex,NULL has_links,
+      NULL has_code,actor.handle,
       EXISTS(SELECT 1 FROM follows target_follow WHERE target_follow.follower_id=$viewer
         AND target_follow.following_id=target.id) following,'user_follow' activity_kind,
       'user-follow:' || printf('%020d',actor.id) || ':' || printf('%020d',target.id) || ':' || f.created_at event_key,
@@ -90,7 +91,8 @@ export function Feed({ user, cursor, title, path = '/for-you', pageUrl, notifica
           b.blocker_id=$viewer AND b.blocked_id IN (actor.id,target.id) OR
           b.blocked_id=$viewer AND b.blocker_id IN (actor.id,target.id))
     UNION ALL
-    SELECT NULL id,actor.id user_id,NULL body,hf.created_at,NULL parent_id,NULL deleted_at,actor.handle,
+    SELECT NULL id,actor.id user_id,NULL body,hf.created_at,NULL parent_id,NULL deleted_at,NULL has_latex,NULL has_links,
+      NULL has_code,actor.handle,
       EXISTS(SELECT 1 FROM hashtag_follows viewer_tag WHERE viewer_tag.user_id=$viewer
         AND viewer_tag.tag=hf.tag) following,
       'tag_follow' activity_kind,

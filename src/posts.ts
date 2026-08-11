@@ -1,12 +1,15 @@
 import type { Database } from 'bun:sqlite'
 import { publishPost } from './api-broker'
-import { extractHashtags, extractMentions } from './content'
+import { extractHashtags, extractMentions, postContentFlags } from './content'
 import { resolveHandle } from './handles'
 import { recordHotActivity } from './hot'
 import { insertRateLimitedPost } from './post-rate-limit'
 import type { ParentPost, PostView } from './types'
 
 export function syncPostMetadata(database: Database, postId: number, body: string) {
+  const flags = postContentFlags(body)
+  database.query('UPDATE posts SET has_latex=?,has_links=?,has_code=? WHERE id=?')
+    .run(flags.has_latex, flags.has_links, flags.has_code, postId)
   database.query('DELETE FROM post_hashtags WHERE post_id=?').run(postId)
   database.query('DELETE FROM post_mentions WHERE post_id=?').run(postId)
   const insertTag = database.query('INSERT OR IGNORE INTO post_hashtags(post_id,tag) VALUES(?,?)')
@@ -94,7 +97,7 @@ export function enrichPosts(database: Database, posts: PostView[], viewerId = -1
       ? parentIds
       : [...parentIds, viewerId, viewerId, viewerId]
     const rows = database.query(
-      `SELECT p.id,p.body,p.created_at,p.deleted_at,u.handle,u.bio,
+      `SELECT p.id,p.body,p.created_at,p.deleted_at,p.has_latex,p.has_links,p.has_code,u.handle,u.bio,
         0 reply_count
         FROM posts p JOIN users u ON u.id=p.user_id WHERE p.id IN (${parentPlaceholders}) ${parentFilter}`,
     ).all(...parentParameters) as ParentPost[]

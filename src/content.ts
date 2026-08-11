@@ -19,3 +19,20 @@ export function extractMentions(body: string) {
   return [...new Set([...body.matchAll(/(?<![A-Za-z0-9_])@([A-Za-z0-9_]{2,24})(?![A-Za-z0-9_])/g)]
     .map(match => match[1].toLowerCase()))]
 }
+
+export type PostContentFlags = {
+  has_latex: number
+  has_links: number
+  has_code: number
+}
+
+// These checks run once when a post is written. They are deliberately conservative:
+// a false positive only invokes a parser, while a false negative would change rendering.
+export function postContentFlags(body: string): PostContentFlags {
+  return {
+    has_latex: body.includes('$') || /```\s*(?:latex|tex)(?:\s|$)/im.test(body) ? 1 : 0,
+    has_links: /(?:https?:\/\/|www\.|[A-Za-z0-9-]+\.[A-Za-z]{2,}|\[[^\]\r\n]+\]\(|(?<![A-Za-z0-9_])@[A-Za-z0-9_]+|(?<![\p{L}\p{M}\p{N}_])#[\p{L}\p{M}\p{N}_]+)/u
+      .test(body) ? 1 : 0,
+    has_code: body.includes('`') ? 1 : 0,
+  }
+}

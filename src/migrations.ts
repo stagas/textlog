@@ -1,5 +1,5 @@
 import type { Database } from 'bun:sqlite'
-import { extractHashtags, extractMentions } from './content'
+import { extractHashtags, extractMentions, postContentFlags } from './content'
 import { rebuildHotPosts } from './hot'
 import { migrateLegacySessionTokens } from './sessions'
 
@@ -618,6 +618,21 @@ export const migrations: Migration[] = [
       CREATE TABLE IF NOT EXISTS password_captcha_challenges (
         token TEXT PRIMARY KEY,answer_hash TEXT NOT NULL,expires_at INTEGER NOT NULL);
       CREATE INDEX IF NOT EXISTS password_captcha_challenges_expiry ON password_captcha_challenges(expires_at);`)
+    },
+  },
+  {
+    version: 52,
+    name: 'post_content_flags',
+    up(database) {
+      addColumn(database, 'posts', 'has_latex', 'INTEGER CHECK(has_latex IN (0,1))')
+      addColumn(database, 'posts', 'has_links', 'INTEGER CHECK(has_links IN (0,1))')
+      addColumn(database, 'posts', 'has_code', 'INTEGER CHECK(has_code IN (0,1))')
+      const posts = database.query('SELECT id,body FROM posts').all() as { id: number; body: string }[]
+      const update = database.query('UPDATE posts SET has_latex=?,has_links=?,has_code=? WHERE id=?')
+      for (const post of posts) {
+        const flags = postContentFlags(post.body)
+        update.run(flags.has_latex, flags.has_links, flags.has_code, post.id)
+      }
     },
   },
 ]

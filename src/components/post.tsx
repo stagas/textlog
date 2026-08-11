@@ -6,6 +6,12 @@ import { enrichPosts } from '../posts'
 import type { PostView } from '../types'
 import { fmt, fmtFull, linkify } from '../utils'
 
+function renderFlags(post: PostView | NonNullable<PostView['parent']>) {
+  return post.has_latex == null || post.has_links == null || post.has_code == null
+    ? undefined
+    : { has_latex: post.has_latex, has_links: post.has_links, has_code: post.has_code }
+}
+
 export const MAX_VISIBLE_REPLY_DEPTH = 5
 
 export function Post({
@@ -90,7 +96,8 @@ export function Post({
         )}
       </div>
       <p className={isAsciiArt ? 'ascii-art' : undefined}
-        dangerouslySetInnerHTML={{ __html: linkify(p.body, p.mention_bios, highlightTerms) }} />
+        dangerouslySetInnerHTML={{ __html: linkify(p.body, p.mention_bios, highlightTerms, undefined,
+          renderFlags(p)) }} />
       {parent && (
         <blockquote className={'parent-quote' + (parent.deleted_at ? ' deleted-parent' : '')
           + (hasTappableParent ? ' tappable-parent' : '')}
@@ -125,7 +132,8 @@ export function Post({
                   </a>
                 </div>
                 <p className={containsAsciiArt(parent.body) ? 'ascii-art' : undefined}
-                  dangerouslySetInnerHTML={{ __html: linkify(parent.body, parent.mention_bios) }} />
+                  dangerouslySetInnerHTML={{ __html: linkify(parent.body, parent.mention_bios, [], undefined,
+                    renderFlags(parent)) }} />
               </>
             )}
         </blockquote>
@@ -147,7 +155,7 @@ export function ThreadReplies({ parentId, user }: { parentId: number; user: User
         (SELECT 1 FROM blocks b WHERE (b.blocker_id=? AND b.blocked_id=p.user_id) OR (b.blocker_id=p.user_id AND b.blocked_id=?)))
         AND (? < 0 OR NOT EXISTS (SELECT 1 FROM post_hashtags ph JOIN blocked_hashtags bh ON bh.tag=ph.tag
           WHERE ph.post_id=p.id AND bh.user_id=?))
-    ) SELECT id,user_id,parent_id,body,created_at,deleted_at,handle,depth
+    ) SELECT id,user_id,parent_id,body,created_at,deleted_at,has_latex,has_links,has_code,handle,depth
       FROM thread ORDER BY created_at ASC,id ASC`).all(parentId, viewerId, viewerId, viewerId, viewerId, viewerId,
     viewerId, viewerId, viewerId, viewerId, viewerId) as (PostView & { depth: number })[]
   const replies = enrichPosts(db, rows, viewerId)

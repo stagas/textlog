@@ -31,12 +31,13 @@ function reservePort() {
   return port
 }
 
-function seedDatabase(path: string, users: number, posts: number) {
+function seedDatabase(path: string, users: number, posts: number, fullParsing: boolean) {
   const database = new Database(path, { create: true, strict: true })
   database.run('PRAGMA journal_mode=WAL; PRAGMA foreign_keys=ON; PRAGMA synchronous=NORMAL')
   runMigrations(database)
   const insertUser = database.query('INSERT INTO users(handle,email,bio,password) VALUES(?,?,?,?) RETURNING id')
-  const insertPost = database.query('INSERT INTO posts(user_id,parent_id,body,created_at) VALUES(?,?,?,?) RETURNING id')
+  const insertPost = database.query(`INSERT INTO posts(user_id,parent_id,body,created_at,has_latex,has_links,has_code)
+    VALUES(?,?,?,?,?,?,?) RETURNING id`)
   const userIds: number[] = []
   const postIds: number[] = []
   database.transaction(() => {
@@ -51,8 +52,8 @@ function seedDatabase(path: string, users: number, posts: number) {
       const createdAt = new Date(Date.now() - (posts - index) * 15_000).toISOString().slice(0, 19).replace('T', ' ')
       postIds.push(
         (insertPost.get(userIds[index % userIds.length], parentId,
-          `Offline benchmark post ${index + 1}: representative text for server-side feed rendering. #stress`,
-          createdAt) as { id: number }).id,
+          `Offline benchmark post ${index + 1}: representative text for server-side feed rendering.`, createdAt,
+          fullParsing ? null : 0, fullParsing ? null : 0, fullParsing ? null : 0) as { id: number }).id,
       )
     }
   })()
@@ -124,7 +125,7 @@ async function benchmark(origin: string, route: string, concurrency: number, dur
 
 if (Bun.argv.includes('--help')) {
   console.log(
-    `Usage: bun run stress:routes -- [options]\n\nOptions:\n  --users=N          Seed users (default 200, max 10000)\n  --posts=N          Seed posts (default 10000, max 1000000)\n  --duration=N       Seconds per route/concurrency run (default 5, max 300)\n  --concurrency=LIST Concurrent clients, e.g. 1,10,25,50 (default 1,10,25)\n  --routes=LIST      Routes to test (default /hot,/latest)\n  --p95-target=N     Sustainable-capacity p95 threshold in ms (default 250)\n  --json             Emit machine-readable JSON only`,
+    `Usage: bun run stress:routes -- [options]\n\nOptions:\n  --users=N          Seed users (default 200, max 10000)\n  --posts=N          Seed posts (default 10000, max 1000000)\n  --duration=N       Seconds per route/concurrency run (default 5, max 300)\n  --concurrency=LIST Concurrent clients, e.g. 1,10,25,50 (default 1,10,25)\n  --routes=LIST      Routes to test (default /hot,/latest)\n  --p95-target=N     Sustainable-capacity p95 threshold in ms (default 250)\n  --full-parsing     Ignore content flags to provide an A/B benchmark control\n  --json             Emit machine-readable JSON only`,
   )
   process.exit(0)
 }
@@ -133,6 +134,7 @@ const users = numberArgument('users', 200, 1, 10_000)
 const posts = numberArgument('posts', 10_000, 1, 1_000_000)
 const durationSeconds = numberArgument('duration', 5, 1, 300)
 const p95TargetMs = numberArgument('p95-target', 250, 1, 60_000)
+const fullParsing = Bun.argv.includes('--full-parsing')
 const concurrencies = [...new Set(listArgument('concurrency', '1,10,25').split(',').map(Number))]
 if (concurrencies.some(value => !Number.isInteger(value) || value < 1 || value > 1000)) {
   throw new Error('--concurrency values must be integers from 1 to 1000')
@@ -149,7 +151,7 @@ const origin = `http://127.0.0.1:${port}`
 let server: Bun.Subprocess | undefined
 try {
   if (!Bun.argv.includes('--json')) console.log(`Seeding disposable database with ${users} users and ${posts} posts...`)
-  seedDatabase(databasePath, users, posts)
+  seedDatabase(databasePath, users, posts, fullParsing)
   server = Bun.spawn([process.execPath, 'src/server.tsx'], { cwd: join(import.meta.dir, '..'),
     env: { ...process.env, NODE_ENV: 'test', DEV_RELOAD: 'false', HOST: '127.0.0.1', PORT: String(port),
       DATABASE_PATH: databasePath, DATABASE_BACKUP_DIR: join(directory, 'backups'), MODERATION_DISABLED: 'true',
@@ -175,7 +177,7 @@ try {
         p95Ms: best.latencyMs.p95 }
       : null]
   }))
-  const report = { generatedAt: new Date().toISOString(), dataset: { users, posts },
+  const report = { generatedAt: new Date().toISOString(), dataset: { users, posts, fullParsing },
     target: { p95Ms: p95TargetMs, zeroErrors: true },
     note:
       'Concurrent clients are active request loops, not clients per second. Sustainable values are bounded by the tested concurrency levels.',

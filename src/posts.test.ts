@@ -10,7 +10,8 @@ function database() {
     CREATE TABLE users (id INTEGER PRIMARY KEY, handle TEXT NOT NULL, bio TEXT DEFAULT '', deleted_at TEXT);
     CREATE TABLE handle_history (handle TEXT PRIMARY KEY COLLATE NOCASE,user_id INTEGER NOT NULL);
     CREATE TABLE posts (id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER NOT NULL, parent_id INTEGER,
-      body TEXT NOT NULL, created_at TEXT DEFAULT CURRENT_TIMESTAMP, deleted_at TEXT);
+      body TEXT NOT NULL, created_at TEXT DEFAULT CURRENT_TIMESTAMP, deleted_at TEXT,
+      has_latex INTEGER,has_links INTEGER,has_code INTEGER);
     CREATE TABLE post_hashtags (post_id INTEGER NOT NULL, tag TEXT NOT NULL CHECK(tag != 'fail'), PRIMARY KEY(post_id,tag));
     CREATE TABLE post_mentions (post_id INTEGER NOT NULL, user_id INTEGER NOT NULL, PRIMARY KEY(post_id,user_id));
     CREATE TABLE for_you_reads (user_id INTEGER NOT NULL, event_key TEXT NOT NULL,
@@ -79,6 +80,13 @@ describe('post persistence', () => {
   test('renders inline code without linkifying its contents', () => {
     expect(linkify('run `curl https://example.com/@reader` now'))
       .toBe('run <code>curl https://example.com/@reader</code> now')
+  })
+
+  test('uses persisted flags while preserving plain-text escaping', () => {
+    expect(linkify('plain <text>', {}, [], undefined, { has_latex: 0, has_links: 0, has_code: 0 }))
+      .toBe('plain &lt;text&gt;')
+    expect(linkify('visit example.com', {}, [], undefined, { has_latex: 0, has_links: 1, has_code: 0 }))
+      .toContain('href="https://example.com"')
   })
 
   test('renders fenced code without linkifying its contents', () => {
