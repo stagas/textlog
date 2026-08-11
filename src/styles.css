@@ -878,9 +878,12 @@ nav form {
   color: var(--accent-dark);
 }
 
-.post p code,
-.parent-quote code {
+.post p code {
   color: var(--quote-ink);
+}
+
+.post .parent-quote code {
+  color: color-mix(in srgb, var(--quote-ink), var(--muted));
 }
 
 .parent-quote {
