@@ -1,4 +1,5 @@
 import { appName } from '../brand'
+import { isAdmin } from '../admin'
 import type { User } from '../db'
 import { Layout } from './layout'
 
@@ -50,6 +51,9 @@ export function NotificationSettings({ user, publicKey, ios = false }: {
               ['replies', 'replies', 'When someone replies to one of your notes'],
               ['mentions', 'mentions', 'When someone mentions your handle'],
               ['follows', 'new followers', 'When someone starts following you'],
+              ...(isAdmin(user)
+                ? [['signups', 'new user signups', 'When a new user creates an account']]
+                : []),
             ].map(([name, label, description]) => (
               <label
                 className={`notification-toggle${name === 'latest' ? ' notification-toggle-parent' : ''}${

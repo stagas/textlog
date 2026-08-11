@@ -8,6 +8,8 @@ import { clearSessionCookie, safeLocalPath, sessionCookie } from '../http'
 import { moderateText, moderationMessage } from '../moderation'
 import { insertSession, SESSION_LIFETIME_MS, sessionHash } from '../sessions'
 import { currentUser, hash, hashPassword, token, verifyPassword } from '../utils'
+import { sendPushForSignup } from '../push'
+import { logError } from '../log'
 import { authLimit, clientAddress, form, issueMagicLink, page, redirect, retryPage, safeNext } from './shared'
 
 import type { Hono } from 'hono'
@@ -288,6 +290,7 @@ export function registerAuthRoutes(app: Hono) {
     catch {
       return page(<ChooseHandle handle={handle} next={next} error="That handle is unavailable." />, 400)
     }
+    void sendPushForSignup(user.id, handle).catch(error => logError('signup push failed', error))
     return redirect(next)
   })
 

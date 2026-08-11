@@ -508,6 +508,13 @@ export const migrations: Migration[] = [
       INSERT INTO tag_search(tag_search) VALUES('rebuild');`)
     },
   },
+  {
+    version: 40,
+    name: 'admin_signup_push_preference',
+    up(database) {
+      addColumn(database, 'push_subscriptions', 'notify_signups', 'INTEGER NOT NULL DEFAULT 1')
+    },
+  },
 ]
 
 export const latestMigrationVersion = migrations.at(-1)!.version

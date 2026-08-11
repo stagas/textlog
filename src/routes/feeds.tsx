@@ -18,6 +18,7 @@ import {
 } from '../http'
 import { decodePostCursor } from '../pagination'
 import { currentUser } from '../utils'
+import { markAllActivityRead } from '../activity-state'
 
 export function registerFeedsRoutes(app: Hono) {
   app.get('/', c => {
@@ -76,6 +77,13 @@ export function registerFeedsRoutes(app: Hono) {
     const outOfRange = paginationRedirect(activityPage, activityTotal(user.id), '/activity')
     if (outOfRange) return outOfRange
     return page(<Activity user={user} page={activityPage} />)
+  })
+
+  app.post('/activity/read-all', c => {
+    const user = currentUser(c.req.raw)
+    if (!user) return redirect('/enter?next=' + encodeURIComponent('/activity'))
+    markAllActivityRead(user.id)
+    return redirect('/activity')
   })
 
   app.get('/about', c => page(<About user={currentUser(c.req.raw)} />))

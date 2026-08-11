@@ -2,6 +2,7 @@ import type { Database } from 'bun:sqlite'
 import webpush from 'web-push'
 import { db } from './db'
 import { logError } from './log'
+import { ADMIN_EMAILS } from './admin'
 
 export type PushMessage = { title: string; body: string; url: string }
 type PushSubscriptionRow = { endpoint: string; p256dh: string; auth: string }
@@ -125,5 +126,22 @@ export async function sendPushForFollow(followerId: number, followerHandle: stri
     title: `@${followerHandle} followed you`,
     body: `@${followerHandle} is now following you.`,
     url: `/u/${encodeURIComponent(followerHandle)}`,
+  }), database, vapid)
+}
+
+export async function sendPushForSignup(userId: number, handle: string, database: Database = db,
+  vapid: VapidConfiguration | null = vapidConfiguration())
+{
+  if (!vapid || !ADMIN_EMAILS.size) return
+  const administratorEmails = [...ADMIN_EMAILS]
+  const placeholders = administratorEmails.map(() => '?').join(',')
+  const subscriptions = database.query(`SELECT ps.endpoint,ps.p256dh,ps.auth
+    FROM push_subscriptions ps JOIN users u ON u.id=ps.user_id
+    WHERE lower(u.email) IN (${placeholders}) AND ps.notify_signups=1
+      AND u.deleted_at IS NULL AND u.suspended_at IS NULL`).all(...administratorEmails) as PushSubscriptionRow[]
+  await sendToSubscriptions(subscriptions, () => ({
+    title: `@${handle} signed up`,
+    body: `@${handle} signed up`,
+    url: `/admin/users/${userId}`,
   }), database, vapid)
 }

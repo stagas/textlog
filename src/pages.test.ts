@@ -116,9 +116,19 @@ test('notification settings are the only account page that loads their client sc
   expect(notifications).toContain('name="mentions" checked=""')
   expect(notifications).toContain('name="follows" checked=""')
   expect(notifications).toContain('name="ownPosts" checked=""')
+  expect(notifications).not.toContain('name="signups"')
   expect(notifications).toContain('save preferences</button>')
   expect(profile).toContain('href="/account/edit/notifications"')
   expect(profile).not.toContain('<script')
+})
+
+test('notification settings show new-user alerts only to administrators', () => {
+  const notifications = renderToStaticMarkup(React.createElement(NotificationSettings, {
+    user: { id: 1, handle: 'admin', email: 'gstagas@gmail.com', bio: '' },
+    publicKey: 'public-key',
+  }))
+  expect(notifications).toContain('name="signups" checked=""')
+  expect(notifications).toContain('new user signups')
 })
 
 test('notification settings show Home Screen installation steps only for iOS', () => {

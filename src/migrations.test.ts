@@ -62,6 +62,7 @@ describe('database migrations', () => {
     expect(pushColumns).toContain('notify_mentions')
     expect(pushColumns).toContain('notify_follows')
     expect(pushColumns).toContain('notify_own_posts')
+    expect(pushColumns).toContain('notify_signups')
 
     const reapplied: number[] = []
     expect(runMigrations(database, migration => reapplied.push(migration.version))).toBe(latestMigrationVersion)

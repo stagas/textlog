@@ -2,7 +2,7 @@ import { Database } from 'bun:sqlite'
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test'
 import webpush from 'web-push'
 import { runMigrations } from './migrations'
-import { sendPushForPost, sendPushToUser } from './push'
+import { sendPushForPost, sendPushForSignup, sendPushToUser } from './push'
 
 let originalSend: typeof webpush.sendNotification
 let vapid: ReturnType<typeof webpush.generateVAPIDKeys> & { subject: string }
@@ -145,5 +145,29 @@ describe('Web Push activity delivery', () => {
     await sendPushForPost(2, 1, 'author', database, vapid)
 
     expect(authorDeliveries).toBe(0)
+  })
+
+  test('sends signup alerts only to administrators who enabled them', async () => {
+    const database = fixture()
+    database.run(`INSERT INTO users(id,handle,email,password) VALUES
+      (3,'admin','gstagas@gmail.com','!'),(4,'other','other@example.com','!'),(5,'new_user','new@example.com','!');
+      INSERT INTO push_subscriptions(endpoint,user_id,p256dh,auth,notify_signups) VALUES
+      ('https://push.example/admin',3,'admin-key','admin-auth',1),
+      ('https://push.example/other',4,'other-key','other-auth',1),
+      ('https://push.example/disabled-admin',3,'disabled-key','disabled-auth',0)`)
+    const deliveries: { endpoint: string; payload: string }[] = []
+    webpush.sendNotification = (async (subscription, payload) => {
+      deliveries.push({ endpoint: subscription.endpoint, payload: String(payload) })
+      return {} as never
+    }) as typeof webpush.sendNotification
+
+    await sendPushForSignup(5, 'new_user', database, vapid)
+
+    expect(deliveries).toEqual([{
+      endpoint: 'https://push.example/admin',
+      payload: JSON.stringify({
+        title: '@new_user signed up', body: '@new_user signed up', url: '/admin/users/5',
+      }),
+    }])
   })
 })
