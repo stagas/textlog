@@ -1910,10 +1910,14 @@ form.report-panel {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: var(--space-5);
-  margin-top: var(--space-7);
-  padding-top: var(--space-5);
+  gap: var(--space-3);
+  margin-top: 0;
+  padding-block: var(--space-4);
   border-top: 1px solid var(--soft);
+}
+
+.bio-form + .account-danger-zone {
+  margin-top: var(--space-5);
 }
 
 .account-danger-zone>div {
