@@ -43,6 +43,13 @@ export function registerFeedsRoutes(app: Hono) {
     const configuredOrigin = Bun.env.APP_URL?.replace(/\/$/, '')
     const pageUrl = `${configuredOrigin || requestUrl.origin}/${requestUrl.search}`
     const preferredFeed = feedPreference(c.req.raw)
+    if (preferredFeed === 'activity' && user) {
+      const cursorValue = c.req.query('cursor')
+      const cursor = decodeActivityCursor(cursorValue)
+      if (cursorValue && !cursor) return c.text('Invalid cursor', 400)
+      return page(<Activity user={user} cursor={cursor} path="/" pageUrl={pageUrl}
+        notificationBanner={notificationBanner} />)
+    }
     if (preferredFeed === 'latest') {
       const cursorValue = c.req.query('cursor')
       const cursor = decodePostCursor(cursorValue)
@@ -112,8 +119,8 @@ export function registerFeedsRoutes(app: Hono) {
     const cursorValue = c.req.query('cursor')
     const cursor = decodeActivityCursor(cursorValue)
     if (cursorValue && !cursor) return c.text('Invalid cursor', 400)
-    return page(<Activity user={user} cursor={cursor}
-      notificationBanner={showNotificationBanner(c.req.raw, user)} />)
+    return rememberFeed(page(<Activity user={user} cursor={cursor} title="activity"
+      notificationBanner={showNotificationBanner(c.req.raw, user)} />), 'activity')
   })
 
   app.post('/activity/read-all', c => {

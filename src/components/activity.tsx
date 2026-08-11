@@ -17,9 +17,12 @@ const activityPostWhere = `p.deleted_at IS NULL AND
   NOT EXISTS (SELECT 1 FROM post_hashtags ph JOIN blocked_hashtags bh ON bh.tag=ph.tag
     WHERE ph.post_id=p.id AND bh.user_id=?)`
 
-export function Activity({ user, cursor, notificationBanner = false }: {
+export function Activity({ user, cursor, title, path = '/activity', pageUrl, notificationBanner = false }: {
   user: User
   cursor: ActivityCursor | null
+  title?: string
+  path?: string
+  pageUrl?: string
   notificationBanner?: boolean
 }) {
   const hasUnread = hasUnreadActivity(user.id)
@@ -85,7 +88,7 @@ export function Activity({ user, cursor, notificationBanner = false }: {
     || post.activity_kind === 'mention'), user.id)
   const activityById = new Map(activity.map(post => [post.id, post]))
   return (
-    <Layout user={user} title="activity" notificationBanner={notificationBanner}>
+    <Layout user={user} title={title} pageUrl={pageUrl} notificationBanner={notificationBanner}>
       <h1 className="visually-hidden">activity</h1>
       <FeedTabs active="activity" user={user} activityReadStatus={hasUnread} />
       {activityPage.length
@@ -167,10 +170,10 @@ export function Activity({ user, cursor, notificationBanner = false }: {
         )
         : (
           <div className="empty">
-            No activity on this page. <a href="/activity">Return to the first page</a>.
+            No activity on this page. <a href={path}>Return to the first page</a>.
           </div>
         )}
-      <CursorPagination path="/activity" previousCursor={previousCursor} nextCursor={nextCursor} />
+      <CursorPagination path={path} previousCursor={previousCursor} nextCursor={nextCursor} />
     </Layout>
   )
 }

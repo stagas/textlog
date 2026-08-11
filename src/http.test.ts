@@ -94,6 +94,8 @@ describe('request values and cookies', () => {
   test('stores and reads a valid feed preference', () => {
     expect(feedPreference(new Request('https://textlog.cc/', { headers: { cookie: 'textlog=token; feed=latest' } })))
       .toBe('latest')
+    expect(feedPreference(new Request('https://textlog.cc/', { headers: { cookie: 'feed=activity' } })))
+      .toBe('activity')
     expect(feedPreference(new Request('https://textlog.cc/', { headers: { cookie: 'feed=unknown' } }))).toBeNull()
     expect(feedPreferenceCookie('hot')).toContain('feed=hot; Max-Age=31536000; HttpOnly; Path=/; SameSite=Lax')
   })

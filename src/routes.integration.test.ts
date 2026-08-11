@@ -240,6 +240,11 @@ test('consequential account, content, reporting, and admin flows work over HTTP'
   expect(authenticatedHomeHtml).toContain('@alice')
   expect(authenticatedHomeHtml).not.toContain('href="/login">login</a>')
   expect(authenticatedHomeHtml).toContain('class="notification-banner"')
+  const rememberedActivity = await request('/activity', { cookie: aliceCookie })
+  expect(rememberedActivity.headers.get('set-cookie')).toContain('feed=activity')
+  const activityHomeHtml = await (await request('/', { cookie: `${aliceCookie}; feed=activity` })).text()
+  expect(activityHomeHtml).toContain('class="active" aria-current="page" href="/activity"')
+  expect(activityHomeHtml).toContain('<title>textlog</title>')
   for (const path of ['/for-you', '/activity', '/hot', '/latest']) {
     expect(await (await request(path, { cookie: aliceCookie })).text()).toContain('class="notification-banner"')
   }

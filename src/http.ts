@@ -203,10 +203,10 @@ export function applyHtmlCachePolicy(request: Request, response: Response) {
   if (!values.includes('cookie')) response.headers.set('vary', vary ? `${vary}, Cookie` : 'Cookie')
 }
 
-export type FeedPreference = 'following' | 'hot' | 'latest'
+export type FeedPreference = 'following' | 'activity' | 'hot' | 'latest'
 
 export function feedPreference(request: Request): FeedPreference | null {
-  const value = request.headers.get('cookie')?.match(/(?:^|;\s*)feed=(following|hot|latest)(?:;|$)/)?.[1]
+  const value = request.headers.get('cookie')?.match(/(?:^|;\s*)feed=(following|activity|hot|latest)(?:;|$)/)?.[1]
   return value as FeedPreference | undefined || null
 }
 
