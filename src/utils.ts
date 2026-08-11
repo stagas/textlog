@@ -6,6 +6,7 @@ import { db, type User } from './db'
 import { markSessionUsed, sessionHash } from './sessions'
 import { userForApiKey } from './api-keys'
 import { sessionCookieName } from './brand'
+import { texToMathML } from './math'
 
 export const esc = (v: unknown) =>
   String(v ?? '').replace(/[&<>"']/g,
@@ -96,22 +97,89 @@ const urlMatcher = new LinkifyIt({ fuzzyLink: true, fuzzyEmail: false })
 type LinkToken = {
   index: number
   lastIndex: number
-  kind: 'code' | 'code-fence' | 'markdown' | 'url' | 'reference'
+  kind: 'code' | 'code-fence' | 'latex-fence' | 'math' | 'markdown' | 'url' | 'reference'
   raw: string
   url?: string
   label?: string
+  display?: boolean
+}
+
+function escapedAt(body: string, index: number) {
+  let slashes = 0
+  while (index > slashes && body[index - slashes - 1] === '\\') slashes++
+  return slashes % 2 === 1
+}
+
+function mathTokens(body: string, protectedTokens: LinkToken[]) {
+  const tokens: LinkToken[] = []
+  const protectedRanges = protectedTokens
+    .filter(token => token.kind === 'code' || token.kind === 'code-fence' || token.kind === 'latex-fence')
+    .sort((a, b) => a.index - b.index)
+  let range = 0
+  let index = 0
+
+  while (index < body.length) {
+    while (protectedRanges[range] && index >= protectedRanges[range].lastIndex) range++
+    const protectedToken = protectedRanges[range]
+    if (protectedToken && index >= protectedToken.index) {
+      index = protectedToken.lastIndex
+      continue
+    }
+    if (body[index] !== '$' || escapedAt(body, index)) {
+      index++
+      continue
+    }
+
+    const display = body[index + 1] === '$'
+    const width = display ? 2 : 1
+    const contentStart = index + width
+    if (contentStart >= body.length || (!display && /\s/.test(body[contentStart]))) {
+      index += width
+      continue
+    }
+
+    let close = contentStart
+    while (close < body.length) {
+      const candidateRange = protectedRanges.find(token => close >= token.index && close < token.lastIndex)
+      if (candidateRange) {
+        close = candidateRange.lastIndex
+        continue
+      }
+      if (body[close] === '$' && !escapedAt(body, close)
+        && (!display || body[close + 1] === '$')) {
+        const after = close + width
+        const validInlineClose = display || (!/\s/.test(body[close - 1]) && !/\d/.test(body[after] || ''))
+        if (validInlineClose) break
+      }
+      if (!display && (body[close] === '\n' || body[close] === '\r')) break
+      close++
+    }
+    if (close >= body.length || body[close] !== '$' || (display && body[close + 1] !== '$')) {
+      index += width
+      continue
+    }
+
+    const lastIndex = close + width
+    tokens.push({ index, lastIndex, kind: 'math', raw: body.slice(index, lastIndex),
+      label: body.slice(contentStart, close), display })
+    index = lastIndex
+  }
+  return tokens
 }
 
 function linkTokens(body: string): LinkToken[] {
   const tokens: LinkToken[] = []
-  for (const match of body.matchAll(/^```[^\r\n]*\r?\n([\s\S]*?)\r?\n```(?=\r?$)/gm)) {
-    tokens.push({ index: match.index, lastIndex: match.index + match[0].length, kind: 'code-fence',
-      raw: match[0], label: match[1] })
+  for (const match of body.matchAll(/^```([^\r\n]*)\r?\n([\s\S]*?)\r?\n```(?=\r?$)/gm)) {
+    const language = match[1].trim().toLowerCase()
+    tokens.push({ index: match.index, lastIndex: match.index + match[0].length,
+      kind: language === 'latex' || language === 'tex' ? 'latex-fence' : 'code-fence',
+      raw: match[0], label: match[2] })
   }
   for (const match of body.matchAll(/`([^`\r\n]+)`/g)) {
     tokens.push({ index: match.index, lastIndex: match.index + match[0].length, kind: 'code',
       raw: match[0], label: match[1] })
   }
+  tokens.push(...mathTokens(body, tokens))
   for (const match of body.matchAll(/\[([^\]\r\n]+)\]\((https?:\/\/[^\s<>")]+)\)/gi)) {
     tokens.push({ index: match.index, lastIndex: match.index + match[0].length, kind: 'markdown',
       raw: match[0], label: match[1], url: match[2] })
@@ -124,8 +192,20 @@ function linkTokens(body: string): LinkToken[] {
   for (const match of body.matchAll(/(?<![A-Za-z0-9_])[@#][A-Za-z0-9_]+/g)) {
     tokens.push({ index: match.index, lastIndex: match.index + match[0].length, kind: 'reference', raw: match[0] })
   }
-  const priority = { 'code-fence': 0, code: 1, markdown: 2, url: 3, reference: 4 }
+  const priority = { 'code-fence': 0, 'latex-fence': 0, code: 1, math: 2, markdown: 3, url: 4, reference: 5 }
   return tokens.sort((a, b) => a.index - b.index || priority[a.kind] - priority[b.kind])
+}
+
+function renderedText(value: string, highlightTerms: string[]) {
+  let html = ''
+  let start = 0
+  for (let index = 0; index < value.length - 1; index++) {
+    if (value[index] !== '\\' || value[index + 1] !== '$' || !escapedAt(value, index + 1)) continue
+    html += highlighted(value.slice(start, index), highlightTerms) + '$'
+    start = index + 2
+    index++
+  }
+  return html + highlighted(value.slice(start), highlightTerms)
 }
 
 export function linkify(body: string, mentionBios: Record<string, string> = {}, highlightTerms: string[] = [],
@@ -134,10 +214,16 @@ export function linkify(body: string, mentionBios: Record<string, string> = {}, 
   let end = 0
   for (const match of linkTokens(body)) {
     if (match.index < end) continue
-    html += highlighted(body.slice(end, match.index), highlightTerms)
+    html += renderedText(body.slice(end, match.index), highlightTerms)
     const token = match.raw
     if (match.kind === 'code' || match.kind === 'code-fence') {
       html += `<code${match.kind === 'code-fence' ? ' class="code-fence"' : ''}>${esc(match.label)}</code>`
+    }
+    else if (match.kind === 'latex-fence') {
+      html += texToMathML(match.label!, true) || `<code class="code-fence">${esc(match.label)}</code>`
+    }
+    else if (match.kind === 'math') {
+      html += texToMathML(match.label!, match.display!) || renderedText(match.raw, highlightTerms)
     }
     else if (match.kind === 'markdown') {
       html += `<a href="${esc(match.url)}" title="${esc(match.url)}"${linkAttributes(match.url!, appUrl)}>${
@@ -163,5 +249,5 @@ export function linkify(body: string, mentionBios: Record<string, string> = {}, 
     }
     end = match.lastIndex
   }
-  return html + highlighted(body.slice(end), highlightTerms)
+  return html + renderedText(body.slice(end), highlightTerms)
 }

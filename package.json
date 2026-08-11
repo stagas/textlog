@@ -23,6 +23,7 @@
     "hono": "^4.13.0",
     "jszip": "^3.10.1",
     "linkify-it": "^6.1.0",
+    "mathjax-full": "^3.2.2",
     "nodemailer": "^9.0.5",
     "react": "latest",
     "react-dom": "latest",

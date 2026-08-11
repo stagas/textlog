@@ -74,6 +74,61 @@ describe('post persistence', () => {
       .toBe('before\n<code class="code-fence">const tag = &quot;#notes&quot;</code>\nafter')
   })
 
+  test('renders inline TeX as native MathML', () => {
+    const html = linkify('Energy: $E = mc^2$.')
+    expect(html).toStartWith('Energy: <math xmlns="http://www.w3.org/1998/Math/MathML">')
+    expect(html).toContain('<msup>')
+    expect(html).toEndWith('</math>.')
+  })
+
+  test('renders display TeX as native block MathML', () => {
+    const html = linkify('$$\n\\frac{-b \\pm \\sqrt{b^2 - 4ac}}{2a}\n$$')
+    expect(html).toContain('<math xmlns="http://www.w3.org/1998/Math/MathML" display="block">')
+    expect(html).toContain('<mfrac>')
+    expect(html).toContain('<msqrt>')
+  })
+
+  test('renders fenced LaTeX and TeX blocks as display MathML', () => {
+    for (const language of ['latex', 'tex']) {
+      const html = linkify(`\`\`\`${language}\n\\frac{1}{2}\n\`\`\``)
+      expect(html).toContain('<math xmlns="http://www.w3.org/1998/Math/MathML" display="block">')
+      expect(html).toContain('<mfrac>')
+    }
+  })
+
+  test('falls back to a code block for malformed fenced LaTeX', () => {
+    expect(linkify('```latex\n\\frac{\n```')).toBe('<code class="code-fence">\\frac{</code>')
+  })
+
+  test('does not interpret dollar amounts as math', () => {
+    expect(linkify('It costs $20, or $30 tomorrow.')).toBe('It costs $20, or $30 tomorrow.')
+  })
+
+  test('turns escaped math delimiters into literal dollars', () => {
+    expect(linkify('Pay \\$20; write \\$x\\$ literally.')).toBe('Pay $20; write $x$ literally.')
+  })
+
+  test('renders multiple equations independently', () => {
+    const html = linkify('$x^2$ plus $y^2$')
+    expect(html.match(/<math\b/g)).toHaveLength(2)
+  })
+
+  test('ignores math delimiters in code spans and blocks', () => {
+    expect(linkify('`$x$`\n```js\n$$y$$\n```'))
+      .toBe('<code>$x$</code>\n<code class="code-fence">$$y$$</code>')
+  })
+
+  test('falls back to escaped source for malformed TeX', () => {
+    expect(linkify('bad $\\frac{$ source')).toBe('bad $\\frac{$ source')
+  })
+
+  test('does not allow TeX or fallback text to inject HTML', () => {
+    const html = linkify('$\\text{</math><script>alert(1)</script>}$ <img src=x>')
+    expect(html).not.toContain('<script>')
+    expect(html).not.toContain('<img')
+    expect(html).toContain('&lt;')
+  })
+
   test('highlights search terms without breaking escaping or links', () => {
     expect(linkify('Search <notes> at #Searchable', {}, ['sear']))
       .toBe('<mark>Sear</mark>ch &lt;notes&gt; at <a href="/tag/searchable">#<mark>Sear</mark>chable</a>')
