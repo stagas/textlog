@@ -1,3 +1,5 @@
+import { sessionCookieName } from './brand'
+
 export function stringField(data: FormData, name: string) {
   const value = data.get(name)
   return typeof value === 'string' ? value : ''
@@ -130,7 +132,7 @@ function secureCookie(appUrl: string | undefined = Bun.env.APP_URL) {
 }
 
 export function sessionCookie(value: string, maxAge = 365 * 24 * 60 * 60, appUrl: string | undefined = Bun.env.APP_URL) {
-  return `textlog=${value}; Max-Age=${maxAge}; HttpOnly; Path=/; SameSite=Lax${secureCookie(appUrl)}`
+  return `${sessionCookieName()}=${value}; Max-Age=${maxAge}; HttpOnly; Path=/; SameSite=Lax${secureCookie(appUrl)}`
 }
 
 export function clearSessionCookie(appUrl: string | undefined = Bun.env.APP_URL) {

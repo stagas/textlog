@@ -14,6 +14,7 @@ import { page } from './shared'
 import { MAX_SEARCH_LENGTH, normalizeSearchQuery, searchExpression } from '../search'
 import { registerApiWriteRoutes } from './api-write'
 import { registerSyndicationRoutes } from './syndication'
+import { appName, clientIpHeaderName } from '../brand'
 
 const JSON_LIMIT = 120
 const JSON_WINDOW_SECONDS = 60
@@ -84,7 +85,7 @@ function openApiDocument() {
   } }, '404': { description: 'Not found' }, '429': { description: 'Rate limited' } }
   return {
     openapi: '3.1.0',
-    info: { title: 'textlog public API', version: '1.1.0',
+    info: { title: `${appName()} public API`, version: '1.1.0',
       description: 'Public reads and authenticated writes for every account.' },
     servers: [{ url: '/api/v1' }],
     paths: {
@@ -214,7 +215,7 @@ export function registerApiRoutes(app: Hono, database: Database = db,
 
   app.use('/api/v1/*', async (c, next) => {
     if (c.req.method === 'OPTIONS' || c.req.path === '/api/v1/firehose') return next()
-    const ip = c.req.header('x-textlog-client-ip') || '-'
+    const ip = c.req.header(clientIpHeaderName()) || '-'
     const limited = consumeBucketedAttempt(
       database, 'api-json', rateLimitKey(ip), JSON_LIMIT, JSON_WINDOW_SECONDS, now(),
     )
@@ -322,7 +323,7 @@ export function registerApiRoutes(app: Hono, database: Database = db,
   })
 
   app.get('/api/v1/firehose', c => {
-    const ip = c.req.header('x-textlog-client-ip') || '-'
+    const ip = c.req.header(clientIpHeaderName()) || '-'
     const count = activeStreams.get(ip) || 0
     if (!isDevelopment() && count >= SSE_LIMIT) {
       return apiError('rate_limited', 'Too many firehose connections', 429, SSE_RETRY_AFTER)

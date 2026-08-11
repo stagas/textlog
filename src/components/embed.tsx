@@ -2,10 +2,12 @@ import type { PostView } from '../types'
 import { fmt, fmtFull, linkify } from '../utils'
 import type { AccentChoice, EmbedFontChoice, ThemeChoice } from '../theme'
 import { containsAsciiArt } from '../content'
+import { appName } from '../brand'
 
 export function Embed({ posts, title, href, theme, accent, font }: { posts: PostView[]; title: string; href: string;
   theme?: ThemeChoice; accent: AccentChoice; font?: EmbedFontChoice })
 {
+  const name = appName()
   const query = new URLSearchParams()
   if (theme) query.set('theme', theme)
   query.set('accent', accent)
@@ -18,16 +20,16 @@ export function Embed({ posts, title, href, theme, accent, font }: { posts: Post
         <meta charSet="utf-8" />
         <meta name="viewport" content="width=device-width,initial-scale=1" />
         <meta name="color-scheme" content="light dark" />
-        <title>{`${title} · textlog`}</title>
+        <title>{`${title} · ${name}`}</title>
         <link rel="stylesheet" href="/embed.css?v=3" />
         <link rel="stylesheet" href={`/theme.css?${query}`} />
       </head>
       <body className="embed-body">
         <div className="embed-card">
           <header className="embed-header">
-            <a className="embed-brand" href="/" target="_blank" rel="noopener noreferrer" aria-label="textlog home">
+            <a className="embed-brand" href="/" target="_blank" rel="noopener noreferrer" aria-label={`${name} home`}>
               <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M13,19V16H21V19H13M8.5,13L2.47,7H6.71L11.67,11.95C12.25,12.54 12.25,13.5 11.67,14.07L6.74,19H2.5L8.5,13Z" /></svg>
-              <span>textlog</span>
+              <span>{name}</span>
             </a>
             <a className="embed-title" href={href} target="_blank" rel="noopener noreferrer">{title}</a>
           </header>
@@ -76,7 +78,7 @@ export function Embed({ posts, title, href, theme, accent, font }: { posts: Post
               ))
               : <p className="embed-empty">No notes here yet.</p>}
           </main>
-          <footer><a href={href} target="_blank" rel="noopener noreferrer">view on textlog →</a></footer>
+          <footer><a href={href} target="_blank" rel="noopener noreferrer">view on {name} →</a></footer>
         </div>
       </body>
     </html>

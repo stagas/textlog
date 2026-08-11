@@ -34,6 +34,7 @@ import { loadStylesAsset, stylesResponse } from './styles'
 import { currentUser, sessionToken } from './utils'
 import { themeLogoSvg, themeStyles, versionedAppearance, withAppearance } from './theme'
 import { VisitorBuffer } from './visitors'
+import { appName, clientIpHeaderName } from './brand'
 
 const devReloadEnabled = Bun.env.DEV_RELOAD === 'true'
 const publicArchivePath = Bun.env.PUBLIC_ARCHIVE_PATH || 'public/dump.zip'
@@ -51,7 +52,6 @@ const publicAssets = await Promise.all([
   ['/android-chrome-192x192.png', 'image/png'],
   ['/android-chrome-512x512.png', 'image/png'],
   ['/maskable-icon-512x512.png', 'image/png'],
-  ['/site.webmanifest', 'application/manifest+json; charset=utf-8'],
 ].map(async ([path, contentType]) => ({
   path,
   contentType,
@@ -97,7 +97,7 @@ app.use('*', async (c, next) => {
   await next()
   if (c.req.method !== 'GET' || c.res.status >= 400 || !c.res.headers.get('content-type')?.includes('text/html')) return
   try {
-    visitorBuffer.record(c.req.header('x-textlog-client-ip') || '-')
+    visitorBuffer.record(c.req.header(clientIpHeaderName()) || '-')
   }
   catch (error) {
     logError('visitor buffer flush failed', error)
@@ -112,7 +112,7 @@ app.use('*', async (c, next) => {
   finally {
     const path = new URL(c.req.url).pathname
     if (shouldLogHttp(path, c.res.status)) {
-      logHttp(c.req.method, path, c.res.status, performance.now() - started, c.req.header('x-textlog-client-ip') || '-')
+      logHttp(c.req.method, path, c.res.status, performance.now() - started, c.req.header(clientIpHeaderName()) || '-')
     }
   }
 })
@@ -211,6 +211,15 @@ for (const asset of publicAssets) {
     },
   }))
 }
+app.get('/site.webmanifest', c => c.json({
+  name: appName(), short_name: appName(),
+  icons: [
+    { src: '/android-chrome-192x192.png', sizes: '192x192', type: 'image/png' },
+    { src: '/android-chrome-512x512.png', sizes: '512x512', type: 'image/png' },
+    { src: '/maskable-icon-512x512.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' },
+  ],
+  theme_color: '#20231f', background_color: '#f4f3ee', display: 'standalone', start_url: '/',
+}, 200, { 'cache-control': 'no-cache' }))
 app.get('/styles.css', async c => {
   const asset = styles ?? await loadStylesAsset(stylesPath)
   return stylesResponse(asset, c.req.raw, !devReloadEnabled)
@@ -222,7 +231,8 @@ app.get('/embed.css', () => new Response(embedStyles, { headers: {
 for (const path of ['/notifications.js', '/sw.js']) {
   const assetUrl = new URL(`../public${path}`, import.meta.url)
   const body = devReloadEnabled ? undefined : await Bun.file(assetUrl).text()
-  app.get(path, async () => new Response(body ?? await Bun.file(assetUrl).text(), { headers: {
+  app.get(path, async () => new Response(
+    (body ?? await Bun.file(assetUrl).text()).replaceAll('__APP_NAME__', appName()), { headers: {
     'content-type': 'text/javascript; charset=utf-8',
     'cache-control': 'no-cache',
     ...(path === '/sw.js' ? { 'service-worker-allowed': '/' } : {}),
@@ -299,7 +309,7 @@ export default {
     const limited = bypassRateLimits ? null : requestRateLimiter.consume(address) ?? clientErrorRateLimiter.check(address)
     if (limited) return rateLimitedResponse(limited.retryAfter)
     const headers = new Headers(request.headers)
-    headers.set('x-textlog-client-ip', address)
+    headers.set(clientIpHeaderName(), address)
     const response = await app.fetch(new Request(request, { headers }))
     if (!bypassRateLimits && response.status >= 400 && response.status < 500) {
       const clientErrorLimited = clientErrorRateLimiter.record(address)

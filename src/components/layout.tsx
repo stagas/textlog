@@ -4,6 +4,8 @@ import React from 'react'
 import { hasUnreadActivity } from '../activity-state'
 import { isAdmin } from '../admin'
 import type { User } from '../db'
+import { appHost, appName, appOrigin } from '../brand'
+import { instance } from '../../instance.config'
 
 let devReloadBootId: string | undefined
 
@@ -47,13 +49,14 @@ export function Layout({
   const appearanceVersion = `${selectedAppearance.theme}.${selectedAppearance.accent}`
   const themeCss = activeThemeStyles()
   const logoSvg = activeThemeLogoSvg()
-  const appOrigin = Bun.env.APP_URL?.replace(/\/$/, '') || ''
+  const name = appName()
+  const origin = appOrigin()
   const share = social || {
     description: 'A quieter place for your thoughts.',
-    image: `${appOrigin}/og.png?v=2`,
-    url: pageUrl || (appOrigin ? `${appOrigin}/` : ''),
+    image: `${origin}/og.png?v=2`,
+    url: pageUrl || (origin ? `${origin}/` : ''),
     type: 'website' as const,
-    imageAlt: 'textlog',
+    imageAlt: name,
   }
   // Older callers that predate the marker already represent established accounts.
   const ready = user?.handle_chosen_at !== null
@@ -86,12 +89,12 @@ export function Layout({
         <meta charSet="utf-8" />
         <meta name="viewport" content="width=device-width,initial-scale=1" />
         <meta name="color-scheme" content="light dark" />
-        <title>{`${title ? `${title} · ` : ''}textlog`}</title>
+        <title>{`${title ? `${title} · ` : ''}${name}`}</title>
         <>
           <meta name="description" content={share.description} />
           <meta property="og:type" content={share.type || 'article'} />
-          <meta property="og:site_name" content="textlog" />
-          <meta property="og:title" content={title || 'textlog'} />
+          <meta property="og:site_name" content={name} />
+          <meta property="og:title" content={title || name} />
           <meta property="og:description" content={share.description} />
           {share.url && <meta property="og:url" content={share.url} />}
           <meta property="og:image" content={share.image} />
@@ -99,14 +102,14 @@ export function Layout({
           <meta property="og:image:type" content="image/png" />
           <meta property="og:image:width" content="1200" />
           <meta property="og:image:height" content="630" />
-          <meta property="og:image:alt" content={share.imageAlt || `Post by ${title || 'a textlog user'}`} />
+          <meta property="og:image:alt" content={share.imageAlt || `Post by ${title || `a ${name} user`}`} />
           <meta name="twitter:card" content="summary_large_image" />
-          <meta name="twitter:title" content={title || 'textlog'} />
+          <meta name="twitter:title" content={title || name} />
           <meta name="twitter:description" content={share.description} />
           <meta name="twitter:image" content={share.image} />
           <meta name="twitter:image:width" content="1200" />
           <meta name="twitter:image:height" content="630" />
-          <meta name="twitter:image:alt" content={share.imageAlt || `Post by ${title || 'a textlog user'}`} />
+          <meta name="twitter:image:alt" content={share.imageAlt || `Post by ${title || `a ${name} user`}`} />
         </>
         <link rel="icon" href={`/favicon-theme.svg?v=${appearanceVersion}`} type="image/svg+xml" sizes="any" />
         <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
@@ -125,9 +128,9 @@ export function Layout({
         {user && ready && <a className="skip-link" href="/write">write</a>}
         <a className="skip-link" href="#main-content">skip to content</a>
         <header className={user ? 'authenticated-header' : undefined}>
-          <a className="brand" href="/" aria-label="textlog home">
+          <a className="brand" href="/" aria-label={`${name} home`}>
             <span className="brand-logo" aria-hidden="true" dangerouslySetInnerHTML={{ __html: logoSvg }} />
-            <span>textlog</span>
+            <span>{name}</span>
           </a>
           {logoutNavigation
             ? (
@@ -145,21 +148,23 @@ export function Layout({
         </header>
         <main id="main-content">{children}</main>
         <footer className="site-footer">
-          <span>textlog.cc</span>
-          <a
+          <span>{appHost()}</span>
+          {instance.links.getMobileApp && <a
             className="button mobile-app-footer"
-            href="https://github.com/Faultless/textlog_flutter"
+            href={instance.links.getMobileApp}
             target="_blank"
             rel="noopener noreferrer"
           >
             get mobile app
-          </a>
+          </a>}
           <nav aria-label="Footer">
             <a href="/about">about</a>
             <a href="/api">api</a>
-            <a href="ircs://irc.libera.chat/#textlog" target="_blank" rel="noopener noreferrer">irc</a>
-            <a href="https://github.com/stagas/textlog" target="_blank" rel="noopener noreferrer">github</a>
-            <a href="https://buymeacoffee.com/stagas" target="_blank" rel="noopener noreferrer">donate</a>
+            {instance.links.irc && <a href={instance.links.irc} target="_blank" rel="noopener noreferrer">irc</a>}
+            {instance.links.github && <a href={instance.links.github} target="_blank"
+              rel="noopener noreferrer">github</a>}
+            {instance.links.donate && <a href={instance.links.donate} target="_blank"
+              rel="noopener noreferrer">donate</a>}
             <a href="/contact">contact</a>
             <a href="/legal">legal</a>
           </nav>

@@ -8,6 +8,7 @@ import { moderateText, moderationMessage } from '../moderation'
 import { insertSession, SESSION_LIFETIME_MS, sessionHash } from '../sessions'
 import { currentUser, hash, hashPassword, token, verifyPassword } from '../utils'
 import { authLimit, clientAddress, form, issueMagicLink, page, redirect, retryPage, safeNext } from './shared'
+import { sessionCookieName } from '../brand'
 
 import type { Hono } from 'hono'
 
@@ -265,7 +266,9 @@ export function registerAuthRoutes(app: Hono) {
   })
 
   app.post('/logout', c => {
-    const session = c.req.header('cookie')?.match(/textlog=([^;]+)/)?.[1]
+    const cookieName = sessionCookieName()
+    const session = c.req.header('cookie')?.split(';').map(cookie => cookie.trim())
+      .find(cookie => cookie.startsWith(`${cookieName}=`))?.slice(cookieName.length + 1)
     if (session) db.query('DELETE FROM sessions WHERE token_hash=?').run(sessionHash(session))
     return redirect('/', clearSessionCookie())
   })

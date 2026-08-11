@@ -5,6 +5,7 @@ import { Layout } from './layout'
 import { TAG_PAGE_SIZE } from '../pagination'
 import { ActionPair, Pagination, TagPeopleList } from './page-shared'
 import { SearchForm } from './search'
+import { appName } from '../brand'
 
 const PEOPLE_PAGE_SIZE = 6
 
@@ -38,7 +39,7 @@ export function Explore({ user, welcome = false, peopleIds, tagsPage = 1, people
     <Layout user={user} title="explore">
       {user && welcome && (
         <section className="welcome-panel" role="status">
-          <p className="eyebrow">welcome to textlog</p>
+          <p className="eyebrow">welcome to {appName()}</p>
           <h1>Make this place yours.</h1>
           <p>Follow a few people or hashtags below, or start with a note of your own.</p>
           <ActionPair className="welcome-actions"

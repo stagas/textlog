@@ -1,11 +1,14 @@
 import type { User } from '../db'
 import { Layout } from './layout'
 import { FormMessage } from './page-shared'
+import { appName, appOrigin } from '../brand'
 
 export function IllegalActivityReport(
   { user, error, reference, values = {} }: { user: User | null; error?: string; reference?: string;
     values?: Record<string, string> },
 ) {
+  const name = appName()
+  const origin = appOrigin() || 'http://localhost:3000'
   return (
     <Layout user={user} title="report illegal activity">
       <article className="static-page illegal-activity-page">
@@ -19,12 +22,12 @@ export function IllegalActivityReport(
           )
           : (
             <>
-              <p>Use this form to report a specific textlog post that you believe involves illegal activity.</p>
+              <p>Use this form to report a specific {name} post that you believe involves illegal activity.</p>
               <form className="panel report-panel" method="post" action="/report-illegal-activity">
                 <FormMessage error={error} />
                 <label>
                   post URL<input type="url" name="contentUrl" required defaultValue={values.contentUrl}
-                    placeholder="https://textlog.cc/post/123" />
+                    placeholder={`${origin}/post/123`} />
                 </label>
                 <label>
                   category<select name="category" required defaultValue={values.category || ''}>

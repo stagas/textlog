@@ -37,6 +37,15 @@ bun install
 bun run dev
 ```
 
+Set `APP_NAME` and `APP_URL` in `.env` to give a self-hosted instance its own identity and public origin. The name is
+used throughout pages, feeds, emails, embeds, API documentation, and install metadata. See `.env.example` for all
+available settings. Session cookies and the trusted internal client-IP header also use a lowercase, URL-safe form of
+the name; for example, `Notebook Garden` uses the `notebook-garden` cookie and `x-notebook-garden-client-ip` header.
+
+Public instance details—operator contact information, administrator emails, privacy authority, and optional IRC,
+GitHub, mobile-app, and donation links—live in `instance.config.ts`. Set an optional entry to `null` to omit it from the
+rendered pages or footer.
+
 Open [localhost:3000](http://localhost:3000). Run `bun run check` to type-check and test the project.
 
 ## Public archive

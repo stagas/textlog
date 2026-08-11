@@ -10,6 +10,7 @@ import { PAGE_SIZE } from '../pagination'
 import { enrichPosts } from '../posts'
 import type { PostView } from '../types'
 import { currentUser } from '../utils'
+import { appName } from '../brand'
 
 export function registerTagsRoutes(app: Hono) {
   app.get('/tag/:tag/og.png', c => {
@@ -58,7 +59,7 @@ export function registerTagsRoutes(app: Hono) {
     const configuredOrigin = Bun.env.APP_URL?.replace(/\/$/, '')
     const origin = configuredOrigin || new URL(c.req.url).origin
     const tagUrl = `${origin}/tag/${encodeURIComponent(tag)}`
-    const description = `${total} ${total === 1 ? 'note' : 'notes'} tagged #${tag} on textlog`
+    const description = `${total} ${total === 1 ? 'note' : 'notes'} tagged #${tag} on ${appName()}`
     const social = {
       description,
       image: `${tagUrl}/og.png?v=2`,

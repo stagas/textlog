@@ -1,7 +1,10 @@
 import { type User } from '../db'
 import { Layout } from './layout'
+import { appName } from '../brand'
+import { instance } from '../../instance.config'
 
 export function Legal({ user }: { user: User | null }) {
+  const name = appName()
   return (
     <Layout user={user} title="legal">
       <article className="static-page legal-page">
@@ -11,7 +14,7 @@ export function Legal({ user }: { user: User | null }) {
 
         <h2>Your content and conduct</h2>
         <p>
-          You keep ownership of content you post. By posting, you give textlog permission to host, display, and
+          You keep ownership of content you post. By posting, you give {name} permission to host, display, and
           distribute that content as needed to operate the service. You are responsible for your account, your content,
           and ensuring that your use of the service follows applicable law and does not infringe anyone else’s rights.
         </p>
@@ -25,14 +28,14 @@ export function Legal({ user }: { user: User | null }) {
 
         <h2>Service availability</h2>
         <p>
-          textlog is provided “as is” and “as available,” without warranties of any kind. We do not promise that the
+          {name} is provided “as is” and “as available,” without warranties of any kind. We do not promise that the
           service will always be available, secure, accurate, or free of errors. Features may change, and content or
           accounts may be suspended or removed when necessary to operate or protect the service.
         </p>
 
         <h2>Limitation of liability</h2>
         <p>
-          To the fullest extent permitted by law, textlog and its operators will not be liable for indirect, incidental,
+          To the fullest extent permitted by law, {name} and its operators will not be liable for indirect, incidental,
           special, consequential, or punitive damages, or for lost data, profits, goodwill, or other losses resulting
           from your use of—or inability to use—the service or from content posted by others. Nothing here excludes
           liability that cannot legally be excluded.
@@ -41,15 +44,18 @@ export function Legal({ user }: { user: User | null }) {
         <h2 id="privacy">Privacy</h2>
         <h3>Controller and contact</h3>
         <p>
-          Georgios Stagakis is the controller and contact for textlog. Contact:{' '}
-          <a href="mailto:hello@textlog.cc">hello@textlog.cc</a>,{' '}
-          <a href="tel:+306946600152">+30 694 660 0152</a>, Kallikratis, Crete, Greece 730 11.
+          {instance.operator.name} is the controller and contact for {name}. Contact:{' '}
+          {instance.operator.email
+            ? <a href={`mailto:${instance.operator.email}`}>{instance.operator.email}</a>
+            : 'email not configured'}
+          {instance.operator.phone && <>, <a href={instance.operator.phone.url}>{instance.operator.phone.display}</a></>}
+          {instance.operator.address && <>, {instance.operator.address}</>}.
         </p>
 
         <h3>Our privacy commitment</h3>
         <p>
           We use your personal information only as reasonably necessary to provide, maintain, secure and support
-          textlog, respond to actions or requests you make, and meet our legal obligations. We do not sell or rent your
+          {name}, respond to actions or requests you make, and meet our legal obligations. We do not sell or rent your
           personal information, share it for targeted advertising, or use it to build advertising profiles. We do not
           send newsletters, promotions or other unnecessary email. We email you only for essential account and security
           messages, actions you request, or notices we are required to send.
@@ -117,17 +123,19 @@ export function Legal({ user }: { user: User | null }) {
           object to processing based on legitimate interests. Where processing relies on consent, you may withdraw it
           without affecting earlier processing. In account settings you can correct your handle and bio, change your
           email, manage your password and sessions, download a JSON copy of your account data, and delete your account.
-          You can also email <a href="mailto:hello@textlog.cc">hello@textlog.cc</a>. We may need to verify your identity
+          {instance.operator.email && <>You can also email{' '}
+            <a href={`mailto:${instance.operator.email}`}>{instance.operator.email}</a>. </>}We may need to verify your identity
           and may retain data where law permits or requires it.
         </p>
 
         <h3>Complaints</h3>
         <p>
-          You may complain to the{' '}
-          <a href="https://www.dpa.gr/en" target="_blank" rel="noopener noreferrer">
-            Hellenic Data Protection Authority
-          </a>, 1–3 Kifisias, 115 23 Athens, Greece, or another competent supervisory authority, particularly where you
-          live or work.
+          You may complain to {instance.privacyAuthority
+            ? <><a href={instance.privacyAuthority.url} target="_blank" rel="noopener noreferrer">
+                {instance.privacyAuthority.name}
+              </a>{instance.privacyAuthority.address && <>, {instance.privacyAuthority.address}</>}</>
+            : 'a competent supervisory authority'}, or another competent supervisory authority, particularly where
+          you live or work.
         </p>
 
         <h3>Required and optional data</h3>

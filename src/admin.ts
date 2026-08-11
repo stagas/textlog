@@ -1,10 +1,10 @@
 import type { Database } from 'bun:sqlite'
 import type { User } from './db'
 import { removeHotActivity } from './hot'
+import { appHostname } from './brand'
+import { instance } from '../instance.config'
 
-export const ADMIN_EMAILS = new Set([
-  'gstagas@gmail.com',
-])
+export const ADMIN_EMAILS = new Set(instance.administrators.map(email => email.trim().toLowerCase()))
 
 export type AdminActionType = 'delete_post' | 'suspend_user' | 'restore_user' | 'delete_user' | 'resolve_report'
   | 'dismiss_report'
@@ -67,5 +67,5 @@ export function anonymizeUser(database: Database, userId: number, actorId?: numb
   }
   database.query('DELETE FROM sessions WHERE user_id=?').run(userId)
   database.query(`UPDATE users SET handle=?,email=?,bio='',password='!',suspended_at=NULL,deleted_at=CURRENT_TIMESTAMP
-    WHERE id=?`).run(`deleted-${userId}`, `deleted-${userId}@textlog.cc`, userId)
+    WHERE id=?`).run(`deleted-${userId}`, `deleted-${userId}@${appHostname()}`, userId)
 }

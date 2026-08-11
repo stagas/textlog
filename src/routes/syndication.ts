@@ -4,6 +4,7 @@ import { API_DEFAULT_LIMIT, apiHotPosts, apiOrigin, apiPosts } from '../api'
 import { db } from '../db'
 import { resolveHandle } from '../handles'
 import { type SyndicationFormat, syndicationResponse } from '../syndication'
+import { appName } from '../brand'
 
 function publicPosts(database: Database, origin: string, filters: { handle?: string; tag?: string } = {}) {
   return apiPosts(database, origin, { limit: API_DEFAULT_LIMIT, before: null, ...filters }).data
@@ -34,11 +35,12 @@ function suffixed(value: string): { name: string; format: SyndicationFormat } | 
 export function registerSyndicationRoutes(app: Hono, database: Database = db,
   appUrl: string | null | undefined = Bun.env.APP_URL)
 {
+  const name = appName()
   const latest = (c: Context, format: SyndicationFormat, feedPath?: string) => {
     const origin = apiOrigin(c.req.url, appUrl)
     return feedResponse(c, database, format, appUrl, {
-      title: 'Latest notes on textlog',
-      description: 'The latest public notes posted on textlog.',
+      title: `Latest notes on ${name}`,
+      description: `The latest public notes posted on ${name}.`,
       pagePath: '/latest',
       feedPath,
       posts: publicPosts(database, origin),
@@ -47,8 +49,8 @@ export function registerSyndicationRoutes(app: Hono, database: Database = db,
   const hot = (c: Context, format: SyndicationFormat, feedPath?: string) => {
     const origin = apiOrigin(c.req.url, appUrl)
     return feedResponse(c, database, format, appUrl, {
-      title: 'Hot notes on textlog',
-      description: 'Public notes currently ranked hot on textlog.',
+      title: `Hot notes on ${name}`,
+      description: `Public notes currently ranked hot on ${name}.`,
       pagePath: '/hot',
       feedPath,
       posts: apiHotPosts(database, origin, API_DEFAULT_LIMIT, null).data,
@@ -67,7 +69,7 @@ export function registerSyndicationRoutes(app: Hono, database: Database = db,
     const origin = apiOrigin(c.req.url, appUrl)
     const pagePath = `/u/${encodeURIComponent(resolved.handle)}`
     return feedResponse(c, database, format, appUrl, {
-      title: `Notes by @${resolved.handle} on textlog`,
+      title: `Notes by @${resolved.handle} on ${name}`,
       description: `The latest public notes posted by @${resolved.handle}.`,
       pagePath,
       feedPath,
@@ -80,7 +82,7 @@ export function registerSyndicationRoutes(app: Hono, database: Database = db,
     const origin = apiOrigin(c.req.url, appUrl)
     const pagePath = `/tag/${encodeURIComponent(normalizedTag)}`
     return feedResponse(c, database, format, appUrl, {
-      title: `#${normalizedTag} notes on textlog`,
+      title: `#${normalizedTag} notes on ${name}`,
       description: `The latest public notes tagged #${normalizedTag}.`,
       pagePath,
       feedPath,

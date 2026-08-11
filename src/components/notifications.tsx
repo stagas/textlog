@@ -1,9 +1,11 @@
 import type { User } from '../db'
 import { Layout } from './layout'
+import { appName } from '../brand'
 
 export function NotificationSettings({ user, publicKey, ios = false }: {
   user: User; publicKey: string | null; ios?: boolean
 }) {
+  const name = appName()
   return (
     <Layout user={user} title="notifications">
       <article className="static-page">
@@ -19,12 +21,12 @@ export function NotificationSettings({ user, publicKey, ios = false }: {
         <p id="notification-preference-hint" hidden>Choose which activity reaches this browser.</p>
         {ios && (
           <aside className="ios-notification-help">
-            <strong>Install textlog first</strong>
-            <p>On iPhone and iPad, notifications work only when textlog is opened as a Home Screen web app.</p>
+            <strong>Install {name} first</strong>
+            <p>On iPhone and iPad, notifications work only when {name} is opened as a Home Screen web app.</p>
             <ol>
-              <li>Open textlog in Safari and tap Share.</li>
+              <li>Open {name} in Safari and tap Share.</li>
               <li>Choose Add to Home Screen and turn on Open as Web App.</li>
-              <li>Tap Add, then open textlog from its new Home Screen icon.</li>
+              <li>Tap Add, then open {name} from its new Home Screen icon.</li>
               <li>Return to this page and enable notifications.</li>
             </ol>
             <a className="quiet" href="https://support.apple.com/guide/iphone/iphea86e5236/ios"

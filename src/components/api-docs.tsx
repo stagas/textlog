@@ -1,5 +1,6 @@
 import type { User } from '../db'
 import { Layout } from './layout'
+import { appName, appOrigin } from '../brand'
 
 const endpoints = [
   ['POST', '/auth/request', 'Email a sign-in code to an existing account.'],
@@ -27,6 +28,8 @@ const endpoints = [
 ] as const
 
 export function ApiDocs({ user }: { user: User | null }) {
+  const name = appName()
+  const origin = appOrigin() || 'http://localhost:3000'
   return (
     <Layout user={user} title="API">
       <article className="static-page api-docs">
@@ -35,7 +38,7 @@ export function ApiDocs({ user }: { user: User | null }) {
           Build on{' '}
           <span className="api-title-brand">
             <img src="/textlog.svg?v=2" alt="" />
-            <span>textlog</span>
+            <span>{name}</span>
           </span>
         </h1>
         <p>
@@ -44,7 +47,7 @@ export function ApiDocs({ user }: { user: User | null }) {
         </p>
 
         <h2>Base URL</h2>
-        <pre><code>https://textlog.cc/api/v1</code></pre>
+        <pre><code>{origin}/api/v1</code></pre>
         <p>
           All API endpoints allow cross-origin requests. The machine-readable specification is at{' '}
           <a href="/api/openapi.json">/api/openapi.json</a>.
@@ -82,35 +85,35 @@ export function ApiDocs({ user }: { user: User | null }) {
           The accounts are frozen: the archive contains no login credentials, contact details, record timestamps,
           blocks, reports, deleted content, or other private data.
         </p>
-        <pre><code>{`curl -O https://textlog.cc/dump.zip`}</code></pre>
+        <pre><code>{`curl -O ${origin}/dump.zip`}</code></pre>
 
         <h2 id="embeds">Embeds</h2>
         <p>
-          Add a read-only textlog card to any website with an iframe. Copy an example and replace the handle,
-          hashtag, or post number. Feed embeds show the five newest notes and all links open textlog.
+          Add a read-only {name} card to any website with an iframe. Copy an example and replace the handle,
+          hashtag, or post number. Feed embeds show the five newest notes and all links open {name}.
           See every format together on the <a href="/api/embed-examples">live embed examples page</a>.
         </p>
         <pre><code>{`<iframe
-  src="https://textlog.cc/embed/user/alice?theme=system&accent=sage&font=menlo"
-  title="@alice on textlog"
+  src="${origin}/embed/user/alice?theme=system&accent=sage&font=menlo"
+  title="@alice on ${name}"
   width="100%" height="520" loading="lazy"
   style="border:0"
 ></iframe>`}</code></pre>
         <pre><code>{`<!-- latest notes -->
-<iframe src="https://textlog.cc/embed/latest?theme=dark&accent=purple"
-  title="Latest notes on textlog" width="100%" height="520" style="border:0"></iframe>
+<iframe src="${origin}/embed/latest?theme=dark&accent=purple"
+  title="Latest notes on ${name}" width="100%" height="520" style="border:0"></iframe>
 
 <!-- hot notes -->
-<iframe src="https://textlog.cc/embed/hot?theme=light&accent=blue"
-  title="Hot notes on textlog" width="100%" height="520" style="border:0"></iframe>
+<iframe src="${origin}/embed/hot?theme=light&accent=blue"
+  title="Hot notes on ${name}" width="100%" height="520" style="border:0"></iframe>
 
 <!-- a hashtag -->
-<iframe src="https://textlog.cc/embed/tag/photography?theme=system&accent=theme"
-  title="#photography on textlog" width="100%" height="520" style="border:0"></iframe>
+<iframe src="${origin}/embed/tag/photography?theme=system&accent=theme"
+  title="#photography on ${name}" width="100%" height="520" style="border:0"></iframe>
 
 <!-- one post -->
-<iframe src="https://textlog.cc/embed/post/123?theme=sepia&accent=rust"
-  title="Post 123 on textlog" width="100%" height="220" style="border:0"></iframe>`}</code></pre>
+<iframe src="${origin}/embed/post/123?theme=sepia&accent=rust"
+  title="Post 123 on ${name}" width="100%" height="220" style="border:0"></iframe>`}</code></pre>
         <p>
           Appearance uses the <code className="api-query-param">theme</code>,{' '}
           <code className="api-query-param">accent</code>, and <code className="api-query-param">font</code> query parameters.
@@ -136,18 +139,18 @@ export function ApiDocs({ user }: { user: User | null }) {
           Collections accept <code>limit</code> from 1–100 (default 20). Pass the opaque{' '}
           <code>pagination.next_cursor</code> value back as <code>cursor</code> to fetch the next page.
         </p>
-        <pre><code>{`curl 'https://textlog.cc/api/v1/feeds/latest?limit=10'`}</code></pre>
+        <pre><code>{`curl '${origin}/api/v1/feeds/latest?limit=10'`}</code></pre>
 
         <h2>Search</h2>
         <p>Search is public and uses the same prefix matching as the website. Separate words must all match.</p>
-        <pre><code>{`curl 'https://textlog.cc/api/v1/search?q=quiet+notes&limit=10'`}</code></pre>
+        <pre><code>{`curl '${origin}/api/v1/search?q=quiet+notes&limit=10'`}</code></pre>
 
         <h2>Firehose</h2>
         <p>
           The firehose is live-only and includes top-level posts and replies. Each new post arrives as a{' '}
           <code>post</code> event. Reconnects begin from that moment and do not replay missed events.
         </p>
-        <pre><code>{`const events = new EventSource('https://textlog.cc/api/v1/firehose')
+        <pre><code>{`const events = new EventSource('${origin}/api/v1/firehose')
 events.addEventListener('post', event => {
   const post = JSON.parse(event.data)
 })`}</code></pre>
@@ -162,16 +165,16 @@ events.addEventListener('post', event => {
           Sign in with the code emailed alongside your magic link. Accounts are only created in a browser, so the
           API cannot sign anyone up.
         </p>
-        <pre><code>{`curl -X POST https://textlog.cc/api/v1/auth/request \\
+        <pre><code>{`curl -X POST ${origin}/api/v1/auth/request \\
   -H 'content-type: application/json' -d '{"email":"you@example.com"}'
 
-curl -X POST https://textlog.cc/api/v1/auth/verify \\
+curl -X POST ${origin}/api/v1/auth/verify \\
   -H 'content-type: application/json' -d '{"email":"you@example.com","code":"123456"}'`}</code></pre>
         <p>
           The returned token is an ordinary session. Both session tokens and generated API keys can be sent as bearer
           tokens and revoked under account security. Cookies are never accepted for writes.
         </p>
-        <pre><code>{`curl -X POST https://textlog.cc/api/v1/posts \\
+        <pre><code>{`curl -X POST ${origin}/api/v1/posts \\
   -H "authorization: Bearer $TOKEN" \\
   -H 'content-type: application/json' -d '{"body":"hello from an app"}'`}</code></pre>
         <h2>Limits and errors</h2>
@@ -192,6 +195,7 @@ curl -X POST https://textlog.cc/api/v1/auth/verify \\
 export function EmbedExamples({ user, handle, tag, postId }: { user: User | null; handle: string | null;
   tag: string | null; postId: number | null })
 {
+  const name = appName()
   const examples = [
     { title: 'Latest feed', src: '/embed/latest?theme=light&accent=sage&font=menlo', height: 520 },
     { title: 'Hot feed', src: '/embed/hot?accent=purple&font=consolas', height: 520 },
@@ -215,7 +219,7 @@ export function EmbedExamples({ user, handle, tag, postId }: { user: User | null
           {examples.map(example => (
             <section className="embed-example" key={example.src}>
               <h2>{example.title}</h2>
-              <iframe src={example.src} title={`${example.title} on textlog`} width="100%" height={example.height}
+              <iframe src={example.src} title={`${example.title} on ${name}`} width="100%" height={example.height}
                 loading="lazy" />
               <code>{example.src}</code>
             </section>

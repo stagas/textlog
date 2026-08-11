@@ -1,4 +1,5 @@
 import { type CanvasRenderingContext2D, createCanvas } from 'canvas'
+import { appName } from './brand'
 
 const width = 1200
 const height = 630
@@ -8,11 +9,11 @@ const contentBottom = 510
 const maxTextHeight = contentBottom - contentTop
 const textColor = '#f0f3ee'
 const accentColor = '#9abd8e'
-const brand = 'textlog'
 const headerWordmarkOffsetY = 8
 const defaultWordmarkOffsetY = 10
 
 function drawBackground(ctx: CanvasRenderingContext2D) {
+  const brand = appName()
   ctx.fillStyle = '#111512'
   ctx.fillRect(0, 0, width, height)
   drawLogo(ctx, 70, 45)
@@ -121,6 +122,7 @@ function drawLogo(ctx: CanvasRenderingContext2D, x: number, y: number, scale = 3
 }
 
 export function renderDefaultOg() {
+  const brand = appName()
   const canvas = createCanvas(width, height)
   const ctx = canvas.getContext('2d')
   ctx.fillStyle = '#111512'

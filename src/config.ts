@@ -4,6 +4,7 @@ import { dirname, resolve } from 'node:path'
 type Environment = Record<string, string | undefined>
 
 export type StartupConfiguration = {
+  appName: string
   environment: 'development' | 'test' | 'production'
   production: boolean
   devReload: boolean
@@ -108,6 +109,10 @@ export function validateStartupConfiguration(env: Environment = Bun.env, options
   checkFilesystem?: boolean
 } = {}): StartupConfiguration {
   const problems: string[] = []
+  const appName = env.APP_NAME?.trim() || 'textlog'
+  if (appName.length > 80 || /[\r\n<>]/.test(appName)) {
+    problems.push('APP_NAME must be at most 80 characters and cannot contain markup or newlines')
+  }
   const devReload = booleanValue(env, 'DEV_RELOAD', problems)
   const devResendEmails = booleanValue(env, 'DEV_RESEND_EMAILS', problems)
   const requestedEnvironment = (env.NODE_ENV || (devReload ? 'development' : 'production')).trim().toLowerCase()
@@ -190,6 +195,7 @@ export function validateStartupConfiguration(env: Environment = Bun.env, options
 
   if (problems.length) throw new ConfigurationError([...new Set(problems)])
   return {
+    appName,
     environment,
     production: environment === 'production',
     devReload,

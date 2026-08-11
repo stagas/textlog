@@ -5,6 +5,7 @@ import tlds from 'tlds'
 import { db, type User } from './db'
 import { markSessionUsed, sessionHash } from './sessions'
 import { userForApiKey } from './api-keys'
+import { sessionCookieName } from './brand'
 
 export const esc = (v: unknown) =>
   String(v ?? '').replace(/[&<>"']/g,
@@ -22,7 +23,11 @@ export async function verifyPassword(password: string, storedHash: string) {
   return storedHash === hash(password)
 }
 export const token = () => randomBytes(32).toString('hex')
-export const sessionToken = (req: Request) => req.headers.get('cookie')?.match(/(?:^|;\s*)textlog=([^;]+)/)?.[1] || null
+export const sessionToken = (req: Request) => {
+  const name = sessionCookieName()
+  return req.headers.get('cookie')?.split(';').map(cookie => cookie.trim())
+    .find(cookie => cookie.startsWith(`${name}=`))?.slice(name.length + 1) || null
+}
 export const bearerToken = (req: Request) => req.headers.get('authorization')?.match(/^Bearer\s+(\S+)$/i)?.[1] || null
 function userForSession(token: string | null, database: Database): User | null {
   const tokenHash = sessionHash(token)

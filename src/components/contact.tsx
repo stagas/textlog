@@ -1,7 +1,10 @@
 import { type User } from '../db'
 import { Layout } from './layout'
+import { appName } from '../brand'
+import { instance } from '../../instance.config'
 
 export function Contact({ user }: { user: User | null }) {
+  const name = appName()
   return (
     <Layout user={user} title="contact">
       <article className="static-page">
@@ -13,27 +16,26 @@ export function Contact({ user }: { user: User | null }) {
 
         <h2>Email</h2>
         <p>
-          <a href="mailto:hello@textlog.cc">hello@textlog.cc</a>
+          {instance.operator.email
+            ? <a href={`mailto:${instance.operator.email}`}>{instance.operator.email}</a>
+            : 'Contact email is not configured.'}
         </p>
 
-        <h2>Phone</h2>
-        <p>
-          <a href="tel:+306946600152">+30 694 660 0152</a>
-        </p>
+        {instance.operator.phone && <><h2>Phone</h2><p>
+          <a href={instance.operator.phone.url}>{instance.operator.phone.display}</a>
+        </p></>}
 
-        <h2>Post</h2>
-        <p>
-          Georgios Stagakis · textlog<br />
-          Kallikratis, Crete, Greece 730 11
-        </p>
+        {instance.operator.address && <><h2>Post</h2><p>
+          {instance.operator.name} · {name}<br />
+          {instance.operator.address}
+        </p></>}
 
-        <h2>Hours</h2>
-        <p>Monday–Friday, 10:00–17:00 EEST</p>
+        {instance.operator.hours && <><h2>Hours</h2><p>{instance.operator.hours}</p></>}
 
         <h2>Safety</h2>
         <p>
           <a href="/report-illegal-activity">Report illegal activity</a>{' '}
-          involving a textlog post. Copyright owners can also review the{' '}
+          involving a {name} post. Copyright owners can also review the{' '}
           <a href="/dmca">DMCA notice and counter-notice process</a>.
         </p>
       </article>

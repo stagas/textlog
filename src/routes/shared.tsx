@@ -13,6 +13,7 @@ import { AccountSecurity, ErrorPage } from '../components/pages'
 import { db } from '../db'
 import { sendEmailVerification } from '../email'
 import { sessionHash } from '../sessions'
+import { clientIpHeaderName } from '../brand'
 
 export function page(node: React.ReactNode, status = 200) {
   return new Response('<!doctype html>' + renderToStaticMarkup(node), { status,
@@ -67,7 +68,7 @@ export function clientAddress(c: Context) {
       || c.req.header('x-forwarded-for')?.split(',')[0]?.trim()
     if (forwarded) return forwarded
   }
-  return c.req.header('x-textlog-client-ip') || 'unknown'
+  return c.req.header(clientIpHeaderName()) || 'unknown'
 }
 export function authLimit(c: Context, scope: string, identity: string,
   policy: { attempts: number; windowSeconds: number })

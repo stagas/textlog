@@ -12,6 +12,7 @@ import { renderProfileOg } from '../og'
 import { CONNECTION_PAGE_SIZE, decodePostCursor, PAGE_SIZE, postCursorPage, TAG_PAGE_SIZE } from '../pagination'
 import { enrichPosts } from '../posts'
 import { currentUser } from '../utils'
+import { appName } from '../brand'
 
 export function registerProfilesRoutes(app: Hono) {
   app.get('/u/:handle/og.png', c => {
@@ -107,7 +108,7 @@ export function registerProfilesRoutes(app: Hono) {
     const configuredOrigin = Bun.env.APP_URL?.replace(/\/$/, '')
     const origin = configuredOrigin || new URL(c.req.url).origin
     const profileUrl = `${origin}/u/${profile.handle}`
-    const description = profile.bio.replace(/\s+/g, ' ').trim() || `@${profile.handle} on textlog`
+    const description = profile.bio.replace(/\s+/g, ' ').trim() || `@${profile.handle} on ${appName()}`
     const social = {
       description,
       image: `${profileUrl}/og.png?v=2`,
