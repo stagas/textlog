@@ -91,7 +91,7 @@ const urlMatcher = new LinkifyIt({ fuzzyLink: true, fuzzyEmail: false })
 type LinkToken = {
   index: number
   lastIndex: number
-  kind: 'markdown' | 'url' | 'reference'
+  kind: 'code' | 'code-fence' | 'markdown' | 'url' | 'reference'
   raw: string
   url?: string
   label?: string
@@ -99,6 +99,14 @@ type LinkToken = {
 
 function linkTokens(body: string): LinkToken[] {
   const tokens: LinkToken[] = []
+  for (const match of body.matchAll(/^```[^\r\n]*\r?\n([\s\S]*?)\r?\n```(?=\r?$)/gm)) {
+    tokens.push({ index: match.index, lastIndex: match.index + match[0].length, kind: 'code-fence',
+      raw: match[0], label: match[1] })
+  }
+  for (const match of body.matchAll(/`([^`\r\n]+)`/g)) {
+    tokens.push({ index: match.index, lastIndex: match.index + match[0].length, kind: 'code',
+      raw: match[0], label: match[1] })
+  }
   for (const match of body.matchAll(/\[([^\]\r\n]+)\]\((https?:\/\/[^\s<>")]+)\)/gi)) {
     tokens.push({ index: match.index, lastIndex: match.index + match[0].length, kind: 'markdown',
       raw: match[0], label: match[1], url: match[2] })
@@ -111,7 +119,7 @@ function linkTokens(body: string): LinkToken[] {
   for (const match of body.matchAll(/(?<![A-Za-z0-9_])[@#][A-Za-z0-9_]+/g)) {
     tokens.push({ index: match.index, lastIndex: match.index + match[0].length, kind: 'reference', raw: match[0] })
   }
-  const priority = { markdown: 0, url: 1, reference: 2 }
+  const priority = { 'code-fence': 0, code: 1, markdown: 2, url: 3, reference: 4 }
   return tokens.sort((a, b) => a.index - b.index || priority[a.kind] - priority[b.kind])
 }
 
@@ -123,7 +131,10 @@ export function linkify(body: string, mentionBios: Record<string, string> = {}, 
     if (match.index < end) continue
     html += highlighted(body.slice(end, match.index), highlightTerms)
     const token = match.raw
-    if (match.kind === 'markdown') {
+    if (match.kind === 'code' || match.kind === 'code-fence') {
+      html += `<code${match.kind === 'code-fence' ? ' class="code-fence"' : ''}>${esc(match.label)}</code>`
+    }
+    else if (match.kind === 'markdown') {
       html += `<a href="${esc(match.url)}" title="${esc(match.url)}"${linkAttributes(match.url!, appUrl)}>${
         highlighted(match.label!, highlightTerms)
       }</a>`

@@ -878,6 +878,11 @@ nav form {
   color: var(--accent-dark);
 }
 
+.post p code,
+.parent-quote code {
+  color: var(--muted);
+}
+
 .parent-quote {
   margin: var(--space-2) 0 0 clamp(16px, 3vw, 24px);
   padding: var(--space-3);

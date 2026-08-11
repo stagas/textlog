@@ -64,6 +64,16 @@ describe('post persistence', () => {
       .toBe('<a href="https://example.com/a&#39;b" title="https://example.com/a&#39;b" target="_blank" rel="nofollow ugc noopener noreferrer">&lt;test&gt;</a>')
   })
 
+  test('renders inline code without linkifying its contents', () => {
+    expect(linkify('run `curl https://example.com/@reader` now'))
+      .toBe('run <code>curl https://example.com/@reader</code> now')
+  })
+
+  test('renders fenced code without linkifying its contents', () => {
+    expect(linkify('before\n```ts\nconst tag = "#notes"\n```\nafter'))
+      .toBe('before\n<code class="code-fence">const tag = &quot;#notes&quot;</code>\nafter')
+  })
+
   test('highlights search terms without breaking escaping or links', () => {
     expect(linkify('Search <notes> at #Searchable', {}, ['sear']))
       .toBe('<mark>Sear</mark>ch &lt;notes&gt; at <a href="/tag/Searchable">#<mark>Sear</mark>chable</a>')
