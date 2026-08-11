@@ -21,12 +21,11 @@ export type HotCursor = {
   direction: 'next' | 'previous'
 }
 
-const cursorVersion = 4
+const cursorVersion = 5
 const activityHalfLifeHours = 6
 const postWeight = 0.25
 const directReplyWeight = 2
 const baseRecencyHalfLifeHours = 6
-const recencyHoursPerReply = 6
 const maxRecencyHalfLifeHours = 336
 
 function hasHotTable(database: Database) {
@@ -210,8 +209,7 @@ export function getHotPosts(
   parameters.push(limit)
   const rows = database.query(`WITH ranked AS (
     SELECT post_id,score*pow(0.5,max(0,(julianday(?) - julianday(score_updated_at))*24)
-      /min(${maxRecencyHalfLifeHours}.0,${baseRecencyHalfLifeHours}.0
-        + reply_count*${recencyHoursPerReply}.0)) hot_score
+      /min(${maxRecencyHalfLifeHours}.0,${baseRecencyHalfLifeHours}.0*pow(2,reply_count))) hot_score
     FROM post_hot
   ) SELECT p.*,u.handle,ranked.hot_score,h.latest_activity_at
     FROM ranked JOIN post_hot h ON h.post_id=ranked.post_id

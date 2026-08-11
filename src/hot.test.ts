@@ -65,7 +65,7 @@ describe('hot feed ranking', () => {
     const results = getHotPosts(database, 20, null, asOf)
     expect(results[0].id).toBe(1)
     expect(results.find(result => result.id === 1)?.hot_score)
-      .toBeCloseTo(4.25 * Math.pow(0.5, 24 / 18))
+      .toBeCloseTo(4.25 * Math.pow(0.5, 24 / 24))
   })
 
   test('direct replies give active threads substantially more staying power', () => {
@@ -86,7 +86,7 @@ describe('hot feed ranking', () => {
     expect(getHotPosts(database, 20, null, asOf)[0].id).toBe(1)
   })
 
-  test('more distinct replies extend the recency half-life from hours into days', () => {
+  test('each distinct replier doubles the recency half-life up to the cap', () => {
     for (const [rootId, replies] of [[1, 1], [100, 5], [200, 20]] as const) {
       post(rootId, '2026-08-01 20:00:00')
       for (let index = 1; index <= replies; index++) {
@@ -95,7 +95,7 @@ describe('hot feed ranking', () => {
     }
 
     const results = getHotPosts(database, 100, null, asOf)
-    for (const [rootId, replies, halfLife] of [[1, 1, 12], [100, 5, 36], [200, 20, 126]] as const) {
+    for (const [rootId, replies, halfLife] of [[1, 1, 12], [100, 5, 192], [200, 20, 336]] as const) {
       const stored = database.query('SELECT score,reply_count FROM post_hot WHERE post_id=?').get(rootId) as {
         score: number
         reply_count: number
