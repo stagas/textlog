@@ -1,11 +1,11 @@
+import { appHost, appName, appOrigin } from '../brand'
 import { activeAppearance, activeThemeLogoSvg, activeThemeStyles } from '../theme'
 
 import React from 'react'
+import { instance } from '../../instance.config'
 import { hasUnreadActivity } from '../activity-state'
 import { isAdmin } from '../admin'
 import type { User } from '../db'
-import { appHost, appName, appOrigin } from '../brand'
-import { instance } from '../../instance.config'
 
 let devReloadBootId: string | undefined
 
@@ -121,7 +121,7 @@ export function Layout({
             <link rel="alternate" type="application/atom+xml" title={`${feeds.title} (Atom)`} href={feeds.atom} />
           </>
         )}
-        <link rel="stylesheet" href="/styles.css?v=123" />
+        <link rel="stylesheet" href="/styles.css?v=124" />
         <style>{themeCss}</style>
       </head>
       <body>
@@ -149,22 +149,26 @@ export function Layout({
         <main id="main-content">{children}</main>
         <footer className="site-footer">
           <span>{appHost()}</span>
-          {instance.links.getMobileApp && <a
-            className="button mobile-app-footer"
-            href={instance.links.getMobileApp}
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            get mobile app
-          </a>}
+          {instance.links.getMobileApp && (
+            <a
+              className="button mobile-app-footer"
+              href={instance.links.getMobileApp}
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              get mobile app
+            </a>
+          )}
           <nav aria-label="Footer">
             <a href="/about">about</a>
             <a href="/api">api</a>
             {instance.links.irc && <a href={instance.links.irc} target="_blank" rel="noopener noreferrer">irc</a>}
-            {instance.links.github && <a href={instance.links.github} target="_blank"
-              rel="noopener noreferrer">github</a>}
-            {instance.links.donate && <a href={instance.links.donate} target="_blank"
-              rel="noopener noreferrer">donate</a>}
+            {instance.links.github && (
+              <a href={instance.links.github} target="_blank" rel="noopener noreferrer">github</a>
+            )}
+            {instance.links.donate && (
+              <a href={instance.links.donate} target="_blank" rel="noopener noreferrer">donate</a>
+            )}
             <a href="/contact">contact</a>
             <a href="/legal">legal</a>
           </nav>
