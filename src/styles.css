@@ -741,6 +741,10 @@ nav form {
   gap: var(--space-2);
 }
 
+.feed-relationship-main .activity-item-unread-dot {
+  margin-right: calc(1ch - var(--space-2));
+}
+
 .feed-relationship-main a {
   overflow: hidden;
   text-overflow: ellipsis;
