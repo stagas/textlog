@@ -230,7 +230,7 @@ export function ProfileHeader({ user, profile, following, blocked = false, editi
             )}
           </>
         )}
-        {!user && <a className="button" href="/enter">enter to follow</a>}
+        {!user && <a className="button" href="/enter" rel="nofollow">enter to follow</a>}
       </div>
     </section>
   )
@@ -444,7 +444,7 @@ export function GlobalFeedEmpty({ user }: { user: User | null }) {
       <ActionPair
         primary={user
           ? <a className="button" href="/write">write the first note →</a>
-          : <a className="button" href="/enter">join and write →</a>}
+          : <a className="button" href="/enter" rel="nofollow">join and write →</a>}
         secondary={<a href="/explore">explore</a>}
       />
     </div>

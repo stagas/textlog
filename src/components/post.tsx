@@ -62,7 +62,8 @@ export function Post({
           </span>}
         </a>
         {showReplyAction && (
-          <a className="quiet" href={resolvedReplyHref} aria-label={`${resolvedReplyLabel} to @${p.handle}`}>
+          <a className="quiet" href={resolvedReplyHref} rel="nofollow"
+            aria-label={`${resolvedReplyLabel} to @${p.handle}`}>
             {resolvedReplyLabel}
           </a>
         )}
@@ -117,6 +118,7 @@ export function Post({
                   <a className="quiet" href={user
                     ? '/post/' + parent.id + '?reply=1'
                     : '/enter?next=' + encodeURIComponent('/post/' + parent.id + '?reply=1')}
+                    rel="nofollow"
                     aria-label={`reply to @${parent.handle}`}
                   >
                     {user ? 'reply' : 'enter to reply'}

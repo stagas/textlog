@@ -42,7 +42,7 @@ export function TagFeed(
               )}
             </div>
           )
-          : <a className="button" href="/enter">enter to follow</a>}
+          : <a className="button" href="/enter" rel="nofollow">enter to follow</a>}
       </section>
       {blocked
         ? <div className="empty relationship-notice">You blocked this tag. Unblock it to see its notes.</div>

@@ -23,7 +23,7 @@ export function Auth({ error, email = '', next }: { error?: string; email?: stri
           </p>
           <p className="auth-alternative">
             Alternatively,{' '}
-            <a href={`/enter/password${next ? `?next=${encodeURIComponent(next)}` : ''}`}>
+            <a href={`/enter/password${next ? `?next=${encodeURIComponent(next)}` : ''}`} rel="nofollow">
               log in using your password
             </a>.
           </p>
@@ -76,7 +76,7 @@ export function PasswordLogin({ nonce, error, identifier = '', next, reset = fal
             <a href="/forgot-password">Forgot password?</a>
           </p>
           <p className="auth-secondary">
-            <a href="/enter">Use a magic link instead</a>
+            <a href="/enter" rel="nofollow">Use a magic link instead</a>
           </p>
         </div>
       </section>

@@ -65,7 +65,7 @@ export function Layout({
     : (
       <>
         <a href="/explore">explore</a>
-        <a className="button" href="/enter">enter</a>
+        <a className="button" href="/enter" rel="nofollow">enter</a>
       </>
     )
   return (

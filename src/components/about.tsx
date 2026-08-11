@@ -45,7 +45,8 @@ export function About({ user }: { user: User | null }) {
         {!user && (
           <>
             <h2>What's next?</h2>
-            <ActionPair className="about-actions" primary={<a className="button" href="/enter">join the community</a>}
+            <ActionPair className="about-actions"
+              primary={<a className="button" href="/enter" rel="nofollow">join the community</a>}
               secondary={<a href="/">browse notes</a>} />
           </>
         )}
