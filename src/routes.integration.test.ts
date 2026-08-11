@@ -465,7 +465,7 @@ test('consequential account, content, reporting, and admin flows work over HTTP'
   expect(forYouFirstBody).toContain('cursor note 21')
   expect(forYouFirstBody).not.toContain(post.body)
   expect(forYouFirstBody).toContain('action="/for-you/read-all"')
-  expect(forYouFirstBody).toContain('class="activity-item activity-item-unread"')
+  expect(forYouFirstBody).toContain('class="for-you-item activity-item-unread"')
   expect(forYouFirstBody).toContain('aria-label="unread"')
   const forYouSecondBody = await (await request(forYouNext!, { cookie: aliceCookie })).text()
   expect(forYouSecondBody).toContain(post.body)

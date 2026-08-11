@@ -134,7 +134,7 @@ export function Feed({ user, cursor, title, path = '/for-you', pageUrl, notifica
       <FeedTabs active="following" user={user} forYouReadStatus={hasUnread} />
       {timeline.length
         ? timeline.map(row => row.activity_kind === 'post'
-          ? <div className={`activity-item${row.unread ? ' activity-item-unread' : ''}`} key={row.event_key}>
+          ? <div className={`for-you-item${row.unread ? ' activity-item-unread' : ''}`} key={row.event_key}>
               <Post p={posts.get(row.id)!} user={user} showReplyCount tappable contextUnread={!!row.unread} />
             </div>
           : (
