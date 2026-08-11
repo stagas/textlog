@@ -905,6 +905,11 @@ nav form {
   border-top: 0;
 }
 
+.feed-tabs+.activity-item .post,
+.feed-tabs+.feed-relationship {
+  border-top: 0;
+}
+
 .deleted-post a,
 .deleted-parent a {
   color: var(--muted);
