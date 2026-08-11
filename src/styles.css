@@ -277,7 +277,11 @@ nav form {
 }
 
 .notification-banner form { margin: 0; }
-.notification-banner button { font: inherit; }
+.notification-banner button {
+  color: var(--muted);
+  font: inherit;
+}
+.notification-banner button:hover { color: var(--tab-hover); }
 
 .feed-tabs a {
   display: inline-flex;
