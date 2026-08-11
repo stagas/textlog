@@ -13,6 +13,8 @@ function database() {
       body TEXT NOT NULL, created_at TEXT DEFAULT CURRENT_TIMESTAMP, deleted_at TEXT);
     CREATE TABLE post_hashtags (post_id INTEGER NOT NULL, tag TEXT NOT NULL CHECK(tag != 'fail'), PRIMARY KEY(post_id,tag));
     CREATE TABLE post_mentions (post_id INTEGER NOT NULL, user_id INTEGER NOT NULL, PRIMARY KEY(post_id,user_id));
+    CREATE TABLE for_you_reads (user_id INTEGER NOT NULL, event_key TEXT NOT NULL,
+      read_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP, PRIMARY KEY(user_id,event_key));
     CREATE TABLE blocks (blocker_id INTEGER NOT NULL, blocked_id INTEGER NOT NULL, PRIMARY KEY(blocker_id,blocked_id));
     CREATE TABLE blocked_hashtags (user_id INTEGER NOT NULL, tag TEXT NOT NULL, PRIMARY KEY(user_id,tag));
     CREATE TRIGGER reject_failed_tag BEFORE INSERT ON post_hashtags WHEN NEW.tag='fail'
@@ -152,6 +154,9 @@ describe('post persistence', () => {
     expect(result).toHaveProperty('id')
     expect(db.query('SELECT tag FROM post_hashtags').all()).toEqual([{ tag: 'build' }])
     expect(db.query('SELECT user_id FROM post_mentions').all()).toEqual([{ user_id: 2 }])
+    expect(db.query('SELECT user_id,event_key FROM for_you_reads').all()).toEqual([
+      { user_id: 1, event_key: 'post:00000000000000000001' },
+    ])
   })
 
   test('resolves mentions made with a previous handle', () => {

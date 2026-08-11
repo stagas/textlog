@@ -24,6 +24,8 @@ function fixture() {
       PRIMARY KEY(reporter_id,post_id));
     CREATE TABLE post_hashtags (post_id INTEGER NOT NULL,tag TEXT NOT NULL,PRIMARY KEY(post_id,tag));
     CREATE TABLE post_mentions (post_id INTEGER NOT NULL,user_id INTEGER NOT NULL,PRIMARY KEY(post_id,user_id));
+    CREATE TABLE for_you_reads (user_id INTEGER NOT NULL,event_key TEXT NOT NULL,
+      read_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,PRIMARY KEY(user_id,event_key));
     CREATE TABLE sessions (token_hash TEXT PRIMARY KEY,user_id INTEGER NOT NULL,expires_at INTEGER NOT NULL,
       created_at INTEGER NOT NULL,user_agent TEXT NOT NULL DEFAULT '',last_used_at INTEGER);
     CREATE TABLE api_keys (id INTEGER PRIMARY KEY AUTOINCREMENT,token_hash TEXT NOT NULL UNIQUE,
@@ -93,7 +95,7 @@ describe('API writes', () => {
   })
 
   test('creates a post and returns it in the read shape', async () => {
-    const { app } = fixture()
+    const { app, database } = fixture()
     const response = await post(app, 'alice-token', { body: 'hello #api from an app' })
 
     expect(response.status).toBe(201)
@@ -101,6 +103,10 @@ describe('API writes', () => {
     expect(data).toMatchObject({ body: 'hello #api from an app', parent_id: null, tags: ['api'] })
     expect(data.author.handle).toBe('alice')
     expect(data.url).toBe(`https://textlog.test/post/${data.id}`)
+    expect(database.query('SELECT user_id,event_key FROM for_you_reads WHERE user_id=?').get(1)).toEqual({
+      user_id: 1,
+      event_key: `post:${String(data.id).padStart(20, '0')}`,
+    })
   })
 
   test('replies, and refuses to reply to a post that is gone', async () => {

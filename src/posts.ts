@@ -28,6 +28,8 @@ export function createPost(
   const result = insertRateLimitedPost(database, userId, body, parentId, postId => {
     syncPostMetadata(database, postId, body)
     recordHotActivity(database, postId)
+    database.query(`INSERT OR IGNORE INTO for_you_reads(user_id,event_key)
+      VALUES(?,'post:' || printf('%020d',?))`).run(userId, postId)
   })
   if ('id' in result && !result.duplicate) publishPost(result.id)
   return result
