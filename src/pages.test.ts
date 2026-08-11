@@ -110,6 +110,7 @@ test('notification settings are the only account page that loads their client sc
     editing: true,
   }))
   expect(notifications).toContain('src="/notifications.js"')
+  expect(notifications).toContain('class="static-page notifications-page"')
   expect(notifications).toContain('enable notifications')
   expect(notifications).toContain('name="noteScope" checked="" value="latest"')
   expect(notifications).toContain('name="noteScope" value="following"')

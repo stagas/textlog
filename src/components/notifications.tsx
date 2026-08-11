@@ -11,7 +11,7 @@ export function NotificationSettings({ user, publicKey, ios = false }: {
   const name = appName()
   return (
     <Layout user={user} title="notifications">
-      <article className="static-page">
+      <article className="static-page notifications-page">
         <div className="notification-heading">
           <div>
             <p className="eyebrow">account</p>

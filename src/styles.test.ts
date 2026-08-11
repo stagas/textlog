@@ -55,4 +55,9 @@ describe('in-memory stylesheet', () => {
     const css = await Bun.file(new URL('./styles.css', import.meta.url)).text()
     expect(css).toContain('.notification-actions [hidden] { display: none; }')
   })
+
+  test('lets notification settings use the full page width', async () => {
+    const css = await Bun.file(new URL('./styles.css', import.meta.url)).text()
+    expect(css).toContain('.notifications-page {\n  max-width: none;\n}')
+  })
 })

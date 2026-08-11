@@ -1952,6 +1952,10 @@ form.report-panel {
   border: 1px solid var(--soft);
 }
 
+.notifications-page {
+  max-width: none;
+}
+
 .notification-heading {
   display: flex;
   align-items: flex-start;
