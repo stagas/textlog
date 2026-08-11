@@ -1,10 +1,11 @@
 import { describe, expect, test } from 'bun:test'
 import { ipPseudonym, logIpPseudonym } from './ip-privacy'
-import { clientIp, semanticAction, shouldLogHttp } from './log'
+import { clientIp, logHttp, semanticAction, shouldLogHttp } from './log'
 
 describe('semanticAction', () => {
   test('names user actions without including identifiers', () => {
     expect(semanticAction('POST', '/post/42/reply')).toBe('post.reply')
+    expect(semanticAction('POST', '/post/42/reply?from=thread')).toBe('post.reply')
     expect(semanticAction('POST', '/follow/alice')).toBe('user.follow.toggle')
     expect(semanticAction('POST', '/admin/users/9/suspend')).toBe('admin.user.suspend')
   })
@@ -13,6 +14,19 @@ describe('semanticAction', () => {
     expect(semanticAction('GET', '/post/42/edit')).toBeUndefined()
     expect(semanticAction('POST', '/something-new')).toBe('http.mutate')
   })
+})
+
+test('HTTP logs include query parameters', () => {
+  const original = console.log
+  let output = ''
+  console.log = (...values: unknown[]) => { output = values.join(' ') }
+  try {
+    logHttp('GET', '/latest?limit=20&cursor=next', 200, 12, '-')
+  }
+  finally {
+    console.log = original
+  }
+  expect(output).toContain('/latest?limit=20&cursor=next')
 })
 
 describe('shouldLogHttp', () => {

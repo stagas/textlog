@@ -54,7 +54,8 @@ const actionRoutes: Array<[RegExp, string]> = [
 
 export function semanticAction(method: string, path: string) {
   if (method !== 'POST') return undefined
-  return actionRoutes.find(([pattern]) => pattern.test(path))?.[1] ?? 'http.mutate'
+  const pathname = path.split('?', 1)[0]
+  return actionRoutes.find(([pattern]) => pattern.test(pathname))?.[1] ?? 'http.mutate'
 }
 
 export function shouldLogHttp(path: string, status: number) {

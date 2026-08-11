@@ -111,9 +111,11 @@ app.use('*', async (c, next) => {
     await next()
   }
   finally {
-    const path = new URL(c.req.url).pathname
+    const url = new URL(c.req.url)
+    const path = url.pathname
     if (shouldLogHttp(path, c.res.status)) {
-      logHttp(c.req.method, path, c.res.status, performance.now() - started, c.req.header(clientIpHeaderName()) || '-')
+      logHttp(c.req.method, `${path}${url.search}`, c.res.status, performance.now() - started,
+        c.req.header(clientIpHeaderName()) || '-')
     }
   }
 })
