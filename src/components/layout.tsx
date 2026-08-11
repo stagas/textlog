@@ -3,25 +3,10 @@ import { activeAppearance, activeThemeLogoSvg, activeThemeStyles } from '../them
 
 import React from 'react'
 import { instance } from '../../instance.config'
-import { hasUnreadActivity } from '../activity-state'
 import { isAdmin } from '../admin'
 import type { User } from '../db'
 
 let devReloadBootId: string | undefined
-
-function ActivityLink({ unread, className }: { unread: boolean; className?: string }) {
-  return (
-    <a className={`activity-link${className ? ` ${className}` : ''}`} href="/activity">
-      {unread && (
-        <>
-          <span className="activity-unread-dot" aria-hidden="true" />
-          <span className="sr-only">unread</span>
-        </>
-      )}
-      activity
-    </a>
-  )
-}
 
 export function configureDevReload(bootId?: string) {
   devReloadBootId = bootId
@@ -62,13 +47,11 @@ export function Layout({
   }
   // Older callers that predate the marker already represent established accounts.
   const ready = user?.handle_chosen_at !== null
-  const activityUnread = user && ready ? hasUnreadActivity(user.id) : false
   const navigation = user && ready
     ? (
       <>
         <span className="account-nav-row account-nav-secondary">
           <a href="/explore">explore</a>
-          <ActivityLink unread={activityUnread} />
         </span>
         <span className="account-nav-row account-nav-primary">
           <a href="/write">write</a>
@@ -123,7 +106,7 @@ export function Layout({
             <link rel="alternate" type="application/atom+xml" title={`${feeds.title} (Atom)`} href={feeds.atom} />
           </>
         )}
-        <link rel="stylesheet" href="/styles.css?v=149" />
+        <link rel="stylesheet" href="/styles.css?v=151" />
         <style>{themeCss}</style>
       </head>
       <body>

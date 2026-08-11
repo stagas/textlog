@@ -332,16 +332,6 @@ nav form {
 }
 
 @media (max-width: 600px) {
-  header>.account-nav {
-    align-items: flex-end;
-    flex-direction: column;
-    gap: var(--space-2);
-  }
-
-  .account-nav-primary {
-    order: -1;
-  }
-
   .site-footer {
     align-items: center;
     flex-direction: column;
@@ -915,6 +905,11 @@ nav form {
 
 .feed-tabs+.for-you-item .post,
 .feed-tabs+.feed-relationship {
+  border-top: 0;
+}
+
+.feed-tabs+.activity-item .post,
+.feed-tabs+.activity-item .activity-follow {
   border-top: 0;
 }
 
@@ -2757,7 +2752,7 @@ form.report-panel {
 }
 
 .activity-follow {
-  padding: var(--space-4) var(--gutter);
+  padding: var(--space-5) var(--gutter);
   border-top: 1px solid var(--soft);
   font-size: 0.75rem;
 }

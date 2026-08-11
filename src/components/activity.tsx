@@ -7,7 +7,7 @@ import { enrichPosts } from '../posts'
 import type { PostView } from '../types'
 import { fmt, fmtFull } from '../utils'
 import { Layout } from './layout'
-import { ActionPair, CursorPagination } from './page-shared'
+import { ActionPair, CursorPagination, FeedTabs } from './page-shared'
 import { Post } from './post'
 
 const activityPostWhere = `p.deleted_at IS NULL AND
@@ -17,7 +17,11 @@ const activityPostWhere = `p.deleted_at IS NULL AND
   NOT EXISTS (SELECT 1 FROM post_hashtags ph JOIN blocked_hashtags bh ON bh.tag=ph.tag
     WHERE ph.post_id=p.id AND bh.user_id=?)`
 
-export function Activity({ user, cursor }: { user: User; cursor: ActivityCursor | null }) {
+export function Activity({ user, cursor, notificationBanner = false }: {
+  user: User
+  cursor: ActivityCursor | null
+  notificationBanner?: boolean
+}) {
   const hasUnread = hasUnreadActivity(user.id)
   const comparison = cursor?.direction === 'previous' ? '>' : '<'
   const cursorFilter = cursor
@@ -81,17 +85,9 @@ export function Activity({ user, cursor }: { user: User; cursor: ActivityCursor 
     || post.activity_kind === 'mention'), user.id)
   const activityById = new Map(activity.map(post => [post.id, post]))
   return (
-    <Layout user={user} title="activity">
-      <section className="page-header activity-header">
-        <h1>activity</h1>
-        {hasUnread
-          ? (
-          <form method="post" action="/activity/read-all">
-            <button className="activity-side-link">mark all as read</button>
-          </form>
-          )
-          : <span className="activity-side-status">you've seen it all</span>}
-      </section>
+    <Layout user={user} title="activity" notificationBanner={notificationBanner}>
+      <h1 className="visually-hidden">activity</h1>
+      <FeedTabs active="activity" user={user} activityReadStatus={hasUnread} />
       {activityPage.length
         ? activityPage.map((rawPost, index) => {
           const post = rawPost.activity_kind === 'reply' || rawPost.activity_kind === 'mention'

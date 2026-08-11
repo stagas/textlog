@@ -112,7 +112,8 @@ export function registerFeedsRoutes(app: Hono) {
     const cursorValue = c.req.query('cursor')
     const cursor = decodeActivityCursor(cursorValue)
     if (cursorValue && !cursor) return c.text('Invalid cursor', 400)
-    return page(<Activity user={user} cursor={cursor} />)
+    return page(<Activity user={user} cursor={cursor}
+      notificationBanner={showNotificationBanner(c.req.raw, user)} />)
   })
 
   app.post('/activity/read-all', c => {

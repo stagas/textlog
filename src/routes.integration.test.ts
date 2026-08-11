@@ -240,7 +240,7 @@ test('consequential account, content, reporting, and admin flows work over HTTP'
   expect(authenticatedHomeHtml).toContain('@alice')
   expect(authenticatedHomeHtml).not.toContain('href="/login">login</a>')
   expect(authenticatedHomeHtml).toContain('class="notification-banner"')
-  for (const path of ['/for-you', '/hot', '/latest']) {
+  for (const path of ['/for-you', '/activity', '/hot', '/latest']) {
     expect(await (await request(path, { cookie: aliceCookie })).text()).toContain('class="notification-banner"')
   }
   const notificationSettings = await request('/account/edit/notifications', { cookie: aliceCookie })

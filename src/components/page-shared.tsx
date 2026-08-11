@@ -1,6 +1,7 @@
 import type { PersonView, PostView, ProfileRow, TagView } from '../types'
 
 import React from 'react'
+import { hasUnreadActivity } from '../activity-state'
 import { isAdmin } from '../admin'
 import type { User } from '../db'
 import { hasUnreadForYou } from '../for-you-state'
@@ -119,12 +120,14 @@ export function CursorPagination({ path, previousCursor, nextCursor }: {
   )
 }
 
-export function FeedTabs({ active, user, forYouReadStatus }: {
-  active: 'following' | 'hot' | 'latest'
+export function FeedTabs({ active, user, forYouReadStatus, activityReadStatus }: {
+  active: 'following' | 'activity' | 'hot' | 'latest'
   user: User | null
   forYouReadStatus?: boolean
+  activityReadStatus?: boolean
 }) {
   const forYouUnread = user ? hasUnreadForYou(user.id) : false
+  const activityUnread = user ? hasUnreadActivity(user.id) : false
   return (
     <nav className="feed-tabs" aria-label="Feed">
       {user && (
@@ -136,6 +139,15 @@ export function FeedTabs({ active, user, forYouReadStatus }: {
           for you
         </a>
       )}
+      {user && (
+        <a className={active === 'activity' ? 'active' : ''}
+          aria-current={active === 'activity' ? 'page' : undefined} href="/activity"
+        >
+          {activityUnread && <span className="activity-unread-dot" aria-hidden="true" />}
+          {activityUnread && <span className="sr-only">unread </span>}
+          activity
+        </a>
+      )}
       <a className={active === 'hot' ? 'active' : ''} aria-current={active === 'hot' ? 'page' : undefined} href="/hot">
         hot
       </a>
@@ -144,11 +156,11 @@ export function FeedTabs({ active, user, forYouReadStatus }: {
       >
         latest
       </a>
-      {forYouReadStatus !== undefined && (
+      {(forYouReadStatus !== undefined || activityReadStatus !== undefined) && (
         <span className="feed-tabs-read-status">
-          {forYouReadStatus
+          {(forYouReadStatus ?? activityReadStatus)
             ? (
-              <form method="post" action="/for-you/read-all">
+              <form method="post" action={activityReadStatus !== undefined ? '/activity/read-all' : '/for-you/read-all'}>
                 <button className="activity-side-link">mark all as read</button>
               </form>
             )
