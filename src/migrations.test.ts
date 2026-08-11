@@ -44,6 +44,12 @@ describe('database migrations', () => {
       'SELECT count(*) count FROM sqlite_master WHERE type=\'table\' AND name=\'post_search\'',
     ).get()).toEqual({ count: 1 })
     expect(database.query(
+      'SELECT count(*) count FROM sqlite_master WHERE type=\'table\' AND name=\'user_search\'',
+    ).get()).toEqual({ count: 1 })
+    expect(database.query(
+      'SELECT count(*) count FROM sqlite_master WHERE type=\'table\' AND name=\'tag_search\'',
+    ).get()).toEqual({ count: 1 })
+    expect(database.query(
       'SELECT count(*) count FROM sqlite_master WHERE type=\'table\' AND name=\'push_subscriptions\'',
     ).get()).toEqual({ count: 1 })
     expect(database.query(

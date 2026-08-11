@@ -474,6 +474,40 @@ export const migrations: Migration[] = [
       CREATE INDEX IF NOT EXISTS api_keys_user_created ON api_keys(user_id,created_at DESC);`)
     },
   },
+  {
+    version: 39,
+    name: 'people_and_tag_full_text_search',
+    up(database) {
+      database.run(`CREATE VIRTUAL TABLE IF NOT EXISTS user_search USING fts5(
+        handle,bio,content='users',content_rowid='id',tokenize='unicode61'
+      );
+      CREATE TRIGGER IF NOT EXISTS user_search_insert AFTER INSERT ON users BEGIN
+        INSERT INTO user_search(rowid,handle,bio) VALUES(new.id,new.handle,new.bio);
+      END;
+      CREATE TRIGGER IF NOT EXISTS user_search_delete AFTER DELETE ON users BEGIN
+        INSERT INTO user_search(user_search,rowid,handle,bio) VALUES('delete',old.id,old.handle,old.bio);
+      END;
+      CREATE TRIGGER IF NOT EXISTS user_search_update AFTER UPDATE OF handle,bio ON users BEGIN
+        INSERT INTO user_search(user_search,rowid,handle,bio) VALUES('delete',old.id,old.handle,old.bio);
+        INSERT INTO user_search(rowid,handle,bio) VALUES(new.id,new.handle,new.bio);
+      END;
+      INSERT INTO user_search(user_search) VALUES('rebuild');
+      CREATE VIRTUAL TABLE IF NOT EXISTS tag_search USING fts5(
+        tag,content='post_hashtags',content_rowid='rowid',tokenize='unicode61'
+      );
+      CREATE TRIGGER IF NOT EXISTS tag_search_insert AFTER INSERT ON post_hashtags BEGIN
+        INSERT INTO tag_search(rowid,tag) VALUES(new.rowid,new.tag);
+      END;
+      CREATE TRIGGER IF NOT EXISTS tag_search_delete AFTER DELETE ON post_hashtags BEGIN
+        INSERT INTO tag_search(tag_search,rowid,tag) VALUES('delete',old.rowid,old.tag);
+      END;
+      CREATE TRIGGER IF NOT EXISTS tag_search_update AFTER UPDATE OF tag ON post_hashtags BEGIN
+        INSERT INTO tag_search(tag_search,rowid,tag) VALUES('delete',old.rowid,old.tag);
+        INSERT INTO tag_search(rowid,tag) VALUES(new.rowid,new.tag);
+      END;
+      INSERT INTO tag_search(tag_search) VALUES('rebuild');`)
+    },
+  },
 ]
 
 export const latestMigrationVersion = migrations.at(-1)!.version

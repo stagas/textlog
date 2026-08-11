@@ -1,6 +1,7 @@
 import type { Database } from 'bun:sqlite'
 import { PAGE_SIZE } from './pagination'
 import type { PostView } from './types'
+import type { PersonView, TagView } from './types'
 
 export const MAX_SEARCH_LENGTH = 100
 
@@ -40,5 +41,44 @@ export function searchPosts(database: Database, query: string, viewerId = -1, pa
     WHERE post_search MATCH ? AND ${visibilityFilter}
     ORDER BY bm25(post_search),p.id DESC LIMIT ? OFFSET ?`)
     .all(expression, ...visible, PAGE_SIZE, (page - 1) * PAGE_SIZE) as PostView[]
+  return { rows, total }
+}
+
+export function searchPeople(database: Database, query: string, viewerId = -1, page = 1) {
+  const expression = searchExpression(query)
+  if (!expression) return { rows: [] as PersonView[], total: 0 }
+  const visibility = `u.deleted_at IS NULL AND (? < 0 OR NOT EXISTS (SELECT 1 FROM blocks b WHERE
+    (b.blocker_id=? AND b.blocked_id=u.id) OR (b.blocker_id=u.id AND b.blocked_id=?)))`
+  const parameters = [viewerId, viewerId, viewerId]
+  const total = (database.query(`SELECT count(*) count FROM user_search
+    JOIN users u ON u.id=user_search.rowid WHERE user_search MATCH ? AND ${visibility}`)
+    .get(expression, ...parameters) as { count: number }).count
+  const rows = database.query(`SELECT u.*,
+    (SELECT count(*) FROM posts p WHERE p.user_id=u.id AND p.deleted_at IS NULL) posts,
+    EXISTS(SELECT 1 FROM follows f WHERE f.follower_id=? AND f.following_id=u.id) viewerFollowing
+    FROM user_search JOIN users u ON u.id=user_search.rowid
+    WHERE user_search MATCH ? AND ${visibility}
+    ORDER BY bm25(user_search),u.handle LIMIT ? OFFSET ?`)
+    .all(viewerId, expression, ...parameters, PAGE_SIZE, (page - 1) * PAGE_SIZE) as PersonView[]
+  return { rows, total }
+}
+
+export function searchTags(database: Database, query: string, viewerId = -1, page = 1) {
+  const expression = searchExpression(query)
+  if (!expression) return { rows: [] as TagView[], total: 0 }
+  const visibility = `p.deleted_at IS NULL AND u.deleted_at IS NULL
+    AND (? < 0 OR NOT EXISTS (SELECT 1 FROM blocks b WHERE
+      (b.blocker_id=? AND b.blocked_id=p.user_id) OR (b.blocker_id=p.user_id AND b.blocked_id=?)))
+    AND (? < 0 OR NOT EXISTS (SELECT 1 FROM blocked_hashtags bh WHERE bh.user_id=? AND bh.tag=ph.tag))`
+  const parameters = visibilityParameters(viewerId)
+  const matches = `FROM tag_search JOIN post_hashtags ph ON ph.rowid=tag_search.rowid
+    JOIN posts p ON p.id=ph.post_id JOIN users u ON u.id=p.user_id
+    WHERE tag_search MATCH ? AND ${visibility}`
+  const total = (database.query(`SELECT count(*) count FROM (SELECT ph.tag ${matches} GROUP BY ph.tag)`)
+    .get(expression, ...parameters) as { count: number }).count
+  const rows = database.query(`SELECT ph.tag,count(*) count,
+    EXISTS(SELECT 1 FROM hashtag_follows hf WHERE hf.user_id=? AND hf.tag=ph.tag) viewerFollowing
+    ${matches} GROUP BY ph.tag ORDER BY count DESC,ph.tag LIMIT ? OFFSET ?`)
+    .all(viewerId, expression, ...parameters, PAGE_SIZE, (page - 1) * PAGE_SIZE) as TagView[]
   return { rows, total }
 }

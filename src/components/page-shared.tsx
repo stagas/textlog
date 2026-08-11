@@ -243,10 +243,21 @@ export function ProfileTabs(
   )
 }
 
-export function TagPeopleList({ user, tags, followingKey = 'following' }: {
+function HighlightedText({ text, terms = [] }: { text: string; terms?: string[] }) {
+  const matches = [...new Set(terms.filter(Boolean))].sort((a, b) => b.length - a.length)
+  if (!matches.length) return <>{text}</>
+  const expression = new RegExp(`(${matches.map(term => term.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|')})`, 'giu')
+  return <>{text.split(expression).map((part, index) =>
+    matches.some(term => part.toLocaleLowerCase() === term.toLocaleLowerCase())
+      ? <mark key={index}>{part}</mark>
+      : part)}</>
+}
+
+export function TagPeopleList({ user, tags, followingKey = 'following', highlightTerms = [] }: {
   user: User | null
   tags: TagView[]
   followingKey?: 'following' | 'viewerFollowing'
+  highlightTerms?: string[]
 }) {
   return (
     <div className="people tag-people">
@@ -254,7 +265,7 @@ export function TagPeopleList({ user, tags, followingKey = 'following' }: {
         <article key={tag.tag}>
           <div>
             <div>
-              <a href={`/tag/${tag.tag}`}>#{tag.tag}</a>
+              <a href={`/tag/${tag.tag}`}>#<HighlightedText text={tag.tag} terms={highlightTerms} /></a>
               <small>{tag.count} {tag.count === 1 ? 'note' : 'notes'}</small>
             </div>
             {user && (
@@ -311,10 +322,11 @@ export function BlockedPeopleList({ people }: { people: PersonView[] }) {
   )
 }
 
-export function ConnectionPeople({ user, people, className = '' }: {
+export function ConnectionPeople({ user, people, className = '', highlightTerms = [] }: {
   user: User | null
   people: PersonView[]
   className?: string
+  highlightTerms?: string[]
 }) {
   return (
     <div className={`people ${className}`.trim()}>
@@ -322,7 +334,7 @@ export function ConnectionPeople({ user, people, className = '' }: {
         <article key={person.id}>
           <div>
             <div>
-              <a href={`/u/${person.handle}`}>@{person.handle}</a>
+              <a href={`/u/${person.handle}`}>@<HighlightedText text={person.handle} terms={highlightTerms} /></a>
               <small>{person.posts} {person.posts === 1 ? 'note' : 'notes'}</small>
             </div>
             {user && user.id !== person.id && (
@@ -333,7 +345,9 @@ export function ConnectionPeople({ user, people, className = '' }: {
               </form>
             )}
           </div>
-          <p className="profile-bio">{person.bio || 'No bio yet.'}</p>
+          <p className="profile-bio">
+            <HighlightedText text={person.bio || 'No bio yet.'} terms={person.bio ? highlightTerms : []} />
+          </p>
         </article>
       ))}
     </div>

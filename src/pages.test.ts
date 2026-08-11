@@ -9,6 +9,29 @@ import { Post } from './components/post'
 import { HotFeed } from './components/hot-feed'
 import { PublicFeed } from './components/public-feed'
 import { TagFeed } from './components/tag-feed'
+import { ConnectionPeople, TagPeopleList } from './components/page-shared'
+
+test('search result cards highlight tag, handle, and bio matches while keeping follow controls', () => {
+  const user = { id: 1, handle: 'reader', email: 'reader@example.com', bio: '' }
+  const tags = renderToStaticMarkup(React.createElement(TagPeopleList, {
+    user,
+    tags: [{ tag: 'typescript', count: 2, viewerFollowing: false }],
+    followingKey: 'viewerFollowing',
+    highlightTerms: ['type'],
+  }))
+  const people = renderToStaticMarkup(React.createElement(ConnectionPeople, {
+    user,
+    people: [{ id: 2, handle: 'typewriter', email: '', bio: 'Types useful notes', posts: 3,
+      viewerFollowing: true }],
+    highlightTerms: ['type'],
+  }))
+
+  expect(tags).toContain('#<mark>type</mark>script')
+  expect(tags).toContain('>follow</button>')
+  expect(people).toContain('@<mark>type</mark>writer')
+  expect(people).toContain('<mark>Type</mark>s useful notes')
+  expect(people).toContain('>unfollow</button>')
+})
 
 test('admin metrics use locale-aware number formatting', () => {
   const html = renderToStaticMarkup(React.createElement(AdminDashboard, {

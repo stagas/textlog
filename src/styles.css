@@ -2174,15 +2174,16 @@ form.report-panel {
   background: var(--ink);
 }
 
-.search-summary {
-  margin: 0;
-  padding: var(--space-5) var(--gutter);
-  color: var(--muted);
-  font-size: 0.6875rem;
-  border-bottom: 1px solid var(--soft);
+.search-tabs {
+  padding-top: var(--space-3);
 }
 
-.post mark {
+.search-tabs + .people {
+  padding: 0 var(--gutter);
+}
+
+.post mark,
+.people mark {
   color: inherit;
   background: color-mix(in srgb, var(--accent) 35%, transparent);
 }
