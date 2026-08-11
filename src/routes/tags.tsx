@@ -1,6 +1,7 @@
 import { currentPage, page, paginationRedirect } from './shared'
 
 import type { Hono } from 'hono'
+import { appName } from '../brand'
 import {
   TagFeed,
 } from '../components/pages'
@@ -10,7 +11,6 @@ import { PAGE_SIZE } from '../pagination'
 import { enrichPosts } from '../posts'
 import type { PostView } from '../types'
 import { currentUser } from '../utils'
-import { appName } from '../brand'
 
 export function registerTagsRoutes(app: Hono) {
   app.get('/tag/:tag/og.png', c => {

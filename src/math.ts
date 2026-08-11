@@ -1,7 +1,7 @@
 import { liteAdaptor } from 'mathjax-full/js/adaptors/liteAdaptor.js'
 import { SerializedMmlVisitor } from 'mathjax-full/js/core/MmlTree/SerializedMmlVisitor.js'
-import { HTMLMathItem } from 'mathjax-full/js/handlers/html/HTMLMathItem.js'
 import { RegisterHTMLHandler } from 'mathjax-full/js/handlers/html.js'
+import { HTMLMathItem } from 'mathjax-full/js/handlers/html/HTMLMathItem.js'
 import { TeX } from 'mathjax-full/js/input/tex.js'
 import TexError from 'mathjax-full/js/input/tex/TexError.js'
 import { mathjax } from 'mathjax-full/js/mathjax.js'

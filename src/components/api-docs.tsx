@@ -1,6 +1,6 @@
+import { appName, appOrigin } from '../brand'
 import type { User } from '../db'
 import { Layout } from './layout'
-import { appName, appOrigin } from '../brand'
 
 const endpoints = [
   ['POST', '/auth/request', 'Email a sign-in code to an existing account.'],
@@ -8,14 +8,16 @@ const endpoints = [
   ['DELETE', '/auth/session', 'Sign out by revoking the token you are using.'],
   ['GET', '/me', 'Get the signed-in account.'],
   ['PATCH', '/me', 'Update your bio.'],
-  ['POST', '/posts', <>Create a post, or reply by including <code>parent_id</code>.</>],
+  ['POST', '/posts', <>
+    Create a post, or reply by including <code>parent_id</code>.
+  </>],
   ['GET', '/posts/:id', 'Get a single public post.'],
   ['PATCH', '/posts/:id', 'Edit a post you own.'],
   ['DELETE', '/posts/:id', 'Delete a post you own. Replies remain and the post becomes a “(deleted)” tombstone.'],
   ['GET', '/posts/:id/replies', 'Get the latest direct replies.'],
   ['POST', '/posts/:id/report', 'Report a post.'],
   ['GET', '/users/:handle', 'Get a public profile and its counts.'],
-  ['GET', '/users/:handle/posts', "Get a user's latest posts and replies."],
+  ['GET', '/users/:handle/posts', 'Get a user\'s latest posts and replies.'],
   ['POST', '/users/:handle/follow', 'Follow a user.'],
   ['DELETE', '/users/:handle/follow', 'Unfollow a user.'],
   ['POST', '/users/:handle/block', 'Block a user.'],
@@ -42,8 +44,8 @@ export function ApiDocs({ user }: { user: User | null }) {
           </span>
         </h1>
         <p>
-          The public API is a small way to build feeds, profile cards, post embeds, and live widgets. Reading needs
-          no account or API key. Writing is available to every account with a bearer token.
+          The public API is a small way to build feeds, profile cards, post embeds, and live widgets. Reading needs no
+          account or API key. Writing is available to every account with a bearer token.
         </p>
 
         <h2>Base URL</h2>
@@ -63,7 +65,9 @@ export function ApiDocs({ user }: { user: User | null }) {
                   <span className="api-path">{path}</span>
                 </code>
               </dt>
-              <dd><span>{description}</span></dd>
+              <dd>
+                <span>{description}</span>
+              </dd>
             </div>
           ))}
         </dl>
@@ -80,18 +84,20 @@ export function ApiDocs({ user }: { user: User | null }) {
 
         <h2 id="public-archive">Public data archive</h2>
         <p>
-          Download the latest daily, read-only snapshot as <a href="/dump.zip">dump.zip</a>. It contains paginated
-          JSON files for public handles and bios, posts and reply links, mentions, hashtags, and follow relationships.
-          The accounts are frozen: the archive contains no login credentials, contact details, record timestamps,
-          blocks, reports, deleted content, or other private data.
+          Download the latest daily, read-only snapshot as{' '}
+          <a href="/dump.zip">dump.zip</a>. It contains paginated JSON files for public handles and bios, posts and
+          reply links, mentions, hashtags, and follow relationships. The accounts are frozen: the archive contains no
+          login credentials, contact details, record timestamps, blocks, reports, deleted content, or other private
+          data.
         </p>
         <pre><code>{`curl -O ${origin}/dump.zip`}</code></pre>
 
         <h2 id="embeds">Embeds</h2>
         <p>
-          Add a read-only {name} card to any website with an iframe. Copy an example and replace the handle,
-          hashtag, or post number. Feed embeds show the five newest notes and all links open {name}.
-          See every format together on the <a href="/api/embed-examples">live embed examples page</a>.
+          Add a read-only {name}{' '}
+          card to any website with an iframe. Copy an example and replace the handle, hashtag, or post number. Feed
+          embeds show the five newest notes and all links open {name}. See every format together on the{' '}
+          <a href="/api/embed-examples">live embed examples page</a>.
         </p>
         <pre><code>{`<iframe
   src="${origin}/embed/user/alice?theme=system&accent=sage&font=menlo"
@@ -116,22 +122,24 @@ export function ApiDocs({ user }: { user: User | null }) {
   title="Post 123 on ${name}" width="100%" height="220" style="border:0"></iframe>`}</code></pre>
         <p>
           Appearance uses the <code className="api-query-param">theme</code>,{' '}
-          <code className="api-query-param">accent</code>, and <code className="api-query-param">font</code> query parameters.
+          <code className="api-query-param">accent</code>, and <code className="api-query-param">font</code>{' '}
+          query parameters.
         </p>
         <p>
           Themes: <code>system</code>, <code>light</code>, <code>dark</code>, <code>sepia</code>, and{' '}
           <code>dracula</code>.
         </p>
         <p>
-          Accents: <code>theme</code>, <code>sage</code>, <code>purple</code>, <code>cyan</code>, <code>pink</code>,{' '}
+          Accents: <code>theme</code>, <code>sage</code>, <code>purple</code>, <code>cyan</code>, <code>pink</code>,
+          {' '}
           <code>amber</code>, <code>blue</code>, and <code>rust</code>.
         </p>
         <p>
-          Fonts: <code>system</code>, <code>sf</code>, <code>menlo</code>,{' '}
-          <code>monaco</code>, <code>consolas</code>, <code>cascadia</code>, <code>courier</code>,{' '}
-          <code>lucida</code>, <code>dejavu</code>, <code>liberation</code>, <code>ubuntu</code>,{' '}
-          <code>noto</code>, <code>droid</code>, <code>source</code>, <code>roboto</code>, <code>fira</code>,{' '}
-          <code>jetbrains</code>, and <code>hack</code>.
+          Fonts: <code>system</code>, <code>sf</code>, <code>menlo</code>, <code>monaco</code>, <code>consolas</code>,
+          {' '}
+          <code>cascadia</code>, <code>courier</code>, <code>lucida</code>, <code>dejavu</code>,{' '}
+          <code>liberation</code>, <code>ubuntu</code>, <code>noto</code>, <code>droid</code>, <code>source</code>,{' '}
+          <code>roboto</code>, <code>fira</code>, <code>jetbrains</code>, and <code>hack</code>.
         </p>
 
         <h2>Pagination</h2>
@@ -157,13 +165,12 @@ events.addEventListener('post', event => {
 
         <h2>Writing</h2>
         <p>
-          Every account can use the write endpoints. Authenticate with a bearer token; no separate API access
-          setting is required. For long-running integrations,{' '}
-          <a href="/account/api-keys/new">generate a revocable API key</a>.
+          Every account can use the write endpoints. Authenticate with a bearer token; no separate API access setting is
+          required. For long-running integrations, <a href="/account/api-keys/new">generate a revocable API key</a>.
         </p>
         <p>
-          Sign in with the code emailed alongside your magic link. Accounts are only created in a browser, so the
-          API cannot sign anyone up.
+          Sign in with the code emailed alongside your magic link. Accounts are only created in a browser, so the API
+          cannot sign anyone up.
         </p>
         <pre><code>{`curl -X POST ${origin}/api/v1/auth/request \\
   -H 'content-type: application/json' -d '{"email":"you@example.com"}'
@@ -192,19 +199,25 @@ curl -X POST ${origin}/api/v1/auth/verify \\
   )
 }
 
-export function EmbedExamples({ user, handle, tag, postId }: { user: User | null; handle: string | null;
-  tag: string | null; postId: number | null })
-{
+export function EmbedExamples(
+  { user, handle, tag, postId }: { user: User | null; handle: string | null; tag: string | null;
+    postId: number | null },
+) {
   const name = appName()
   const examples = [
     { title: 'Latest feed', src: '/embed/latest?theme=light&accent=sage&font=menlo', height: 520 },
     { title: 'Hot feed', src: '/embed/hot?accent=purple&font=consolas', height: 520 },
-    ...(handle ? [{ title: `User feed · @${handle}`,
-      src: `/embed/user/${encodeURIComponent(handle)}?theme=dracula&accent=cyan&font=jetbrains`, height: 520 }] : []),
-    ...(tag ? [{ title: `Tag feed · #${tag}`,
-      src: `/embed/tag/${encodeURIComponent(tag)}?theme=sepia&accent=amber`, height: 520 }] : []),
-    ...(postId ? [{ title: `Single post · ${postId}`,
-      src: `/embed/post/${postId}?theme=system&accent=blue`, height: 240 }] : []),
+    ...(handle
+      ? [{ title: `User feed · @${handle}`,
+        src: `/embed/user/${encodeURIComponent(handle)}?theme=dracula&accent=cyan&font=jetbrains`, height: 520 }]
+      : []),
+    ...(tag
+      ? [{ title: `Tag feed · #${tag}`, src: `/embed/tag/${encodeURIComponent(tag)}?theme=sepia&accent=amber`,
+        height: 520 }]
+      : []),
+    ...(postId
+      ? [{ title: `Single post · ${postId}`, src: `/embed/post/${postId}?theme=system&accent=blue`, height: 240 }]
+      : []),
   ]
   return (
     <Layout user={user} title="embed examples">

@@ -9,11 +9,11 @@ import type { Context } from 'hono'
 import React from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
 import { isAdmin } from '../admin'
+import { clientIpHeaderName } from '../brand'
 import { AccountSecurity, ErrorPage } from '../components/pages'
 import { db } from '../db'
 import { sendEmailVerification } from '../email'
 import { sessionHash } from '../sessions'
-import { clientIpHeaderName } from '../brand'
 
 export function page(node: React.ReactNode, status = 200) {
   return new Response('<!doctype html>' + renderToStaticMarkup(node), { status,
@@ -125,9 +125,11 @@ export function securityPage(req: Request, error?: string, success?: string, sta
   const credentials = db.query('SELECT password FROM users WHERE id=?').get(user.id) as { password: string }
   const apiKeys = db.query(`SELECT id,name,created_at,expires_at,last_used_at FROM api_keys
     WHERE user_id=? ORDER BY created_at DESC`).all(user.id) as import('../types').ApiKeyView[]
-  return page(<AccountSecurity user={user} sessions={sessions} apiKeys={apiKeys}
-    passwordEnabled={credentials.password !== '!'}
-    error={error} success={success} />, status)
+  return page(
+    <AccountSecurity user={user} sessions={sessions} apiKeys={apiKeys} passwordEnabled={credentials.password !== '!'}
+      error={error} success={success} />,
+    status,
+  )
 }
 export async function form(req: Request, maxBytes?: number) {
   const data = await limitedFormData(req, maxBytes)

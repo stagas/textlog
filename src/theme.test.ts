@@ -1,5 +1,6 @@
 import { expect, test } from 'bun:test'
-import { activeAppearance, appearance, appearanceCookie, fontChoice, fontCookie, fontSizeChoice, fontSizeCookie, themeLogoSvg, themeStyles, versionedAppearance, withAppearance } from './theme'
+import { activeAppearance, appearance, appearanceCookie, fontChoice, fontCookie, fontSizeChoice, fontSizeCookie,
+  themeLogoSvg, themeStyles, versionedAppearance, withAppearance } from './theme'
 
 test('appearance reads valid choices and falls back safely', () => {
   expect(appearance(new Request('http://localhost', { headers: { cookie: 'appearance=sepia.amber' } })))

@@ -9,9 +9,9 @@ import { resolveHandle } from '../handles'
 import {
   safeRefererPath,
 } from '../http'
-import { currentUser } from '../utils'
-import { sendPushForFollow } from '../push'
 import { logError } from '../log'
+import { sendPushForFollow } from '../push'
+import { currentUser } from '../utils'
 
 export function registerInteractionsRoutes(app: Hono) {
   app.post('/follow/:handle', async c => {

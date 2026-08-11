@@ -159,8 +159,8 @@ function drawPostLine(
 ) {
   const tokens = /https?:\/\/[^\s<>"']+|(?<![A-Za-z0-9_])[@#][A-Za-z0-9_]+/gi
   let drawX = x
-  const accented = Array.from({ length: line.length }, (_, index) =>
-    markdownLinks.some(link => lineStart + index >= link.start && lineStart + index < link.end))
+  const accented = Array.from({ length: line.length },
+    (_, index) => markdownLinks.some(link => lineStart + index >= link.start && lineStart + index < link.end))
 
   for (const match of line.matchAll(tokens)) {
     const token = match[0]

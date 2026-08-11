@@ -86,7 +86,8 @@ export function rebuildHotPosts(database: Database, postIds?: number[]) {
   if (!hasHotTable(database)) return
   const tracksReplyCount = hasReplyCount(database)
   if (!postIds) {
-    const rankings = database.query(`WITH RECURSIVE descendants(candidate_id,id,user_id,created_at,deleted_at,depth) AS (
+    const rankings = database.query(
+      `WITH RECURSIVE descendants(candidate_id,id,user_id,created_at,deleted_at,depth) AS (
       SELECT parent_id,id,user_id,created_at,deleted_at,1 FROM posts WHERE parent_id IS NOT NULL
       UNION ALL
       SELECT parent.parent_id,descendants.id,descendants.user_id,descendants.created_at,descendants.deleted_at,
@@ -109,8 +110,8 @@ export function rebuildHotPosts(database: Database, postIds?: number[]) {
     ) SELECT activity.candidate_id post_id,latest.latest_activity_at,count(*)-1 reply_count,
       sum(weight*pow(0.5,max(0,(julianday(latest.latest_activity_at)-julianday(activity.created_at))*24)/${activityHalfLifeHours}.0)) score
       FROM activity JOIN latest ON latest.candidate_id=activity.candidate_id
-      GROUP BY activity.candidate_id`).all() as { post_id: number;
-      latest_activity_at: string; reply_count: number; score: number }[]
+      GROUP BY activity.candidate_id`,
+    ).all() as { post_id: number; latest_activity_at: string; reply_count: number; score: number }[]
     database.query(tracksReplyCount
       ? 'UPDATE post_hot SET score=0,reply_count=0,score_updated_at=\'1970-01-01 00:00:00\',latest_activity_at=\'1970-01-01 00:00:00\''
       : 'UPDATE post_hot SET score=0,score_updated_at=\'1970-01-01 00:00:00\',latest_activity_at=\'1970-01-01 00:00:00\'')
@@ -161,7 +162,7 @@ export function rebuildHotPosts(database: Database, postIds?: number[]) {
     const score = events.reduce((sum, event) =>
       sum
       + event.weight * Math.pow(0.5, Math.max(0, (Date.parse(`${latest.replace(' ', 'T')}Z`)
-        - Date.parse(`${event.created_at.replace(' ', 'T')}Z`)) / (activityHalfLifeHours * 3_600_000))), 0)
+          - Date.parse(`${event.created_at.replace(' ', 'T')}Z`)) / (activityHalfLifeHours * 3_600_000))), 0)
     if (tracksReplyCount) update.run(score, events.length - 1, latest, latest, candidate.id)
     else update.run(score, latest, latest, candidate.id)
   }

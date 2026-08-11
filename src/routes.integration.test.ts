@@ -85,8 +85,11 @@ async function request(path: string, options: {
   return await fetch(`${origin}${path}`, {
     method,
     headers,
-    body: options.json !== undefined ? JSON.stringify(options.json)
-      : options.form ? new URLSearchParams(options.form) : undefined,
+    body: options.json !== undefined
+      ? JSON.stringify(options.json)
+      : options.form
+      ? new URLSearchParams(options.form)
+      : undefined,
     redirect: 'manual',
   })
 }
@@ -187,7 +190,9 @@ test('account security creates one-time, revocable API keys', async () => {
   expect(form.status).toBe(200)
   expect(await form.text()).toContain('action="/account/api-keys"')
   const created = await request('/account/api-keys', {
-    method: 'POST', cookie, form: { name: 'test integration', lifetime: 'never' },
+    method: 'POST',
+    cookie,
+    form: { name: 'test integration', lifetime: 'never' },
   })
   expect(created.status).toBe(200)
   expect(created.headers.get('cache-control')).toContain('no-store')
@@ -202,11 +207,14 @@ test('account security creates one-time, revocable API keys', async () => {
   expect(await authenticated.json()).toMatchObject({ data: { handle: 'keyuser' } })
 
   const key = database.query('SELECT id,last_used_at FROM api_keys WHERE name=?').get('test integration') as {
-    id: number; last_used_at: number | null
+    id: number
+    last_used_at: number | null
   }
   expect(key.last_used_at).not.toBeNull()
   const revoked = await request('/account/api-keys/revoke', {
-    method: 'POST', cookie, form: { id: String(key.id) },
+    method: 'POST',
+    cookie,
+    form: { id: String(key.id) },
   })
   expect(revoked.status).toBe(303)
   expect((await request('/api/v1/me', { token: value })).status).toBe(401)
@@ -249,12 +257,12 @@ test('consequential account, content, reporting, and admin flows work over HTTP'
   expect(publicExploreHtml).toContain('class="account-nav"')
   expect(publicExploreHtml).toContain('@alice')
   expect(publicExploreHtml).toContain('action="/search"')
-    const welcomeExplore = await request('/explore?welcome=1', { cookie: aliceCookie })
-    const welcomeExploreHtml = await welcomeExplore.text()
-    expect(welcomeExploreHtml).not.toContain('action="/search"')
-    expect(welcomeExploreHtml).toContain('href="/account/edit/notifications">enable notifications</a>')
-    expect(welcomeExploreHtml).toContain('href="/account/edit/theme">customize theme</a>')
-    expect(welcomeExploreHtml).toContain('href="/account/password/enable">set up a password</a>')
+  const welcomeExplore = await request('/explore?welcome=1', { cookie: aliceCookie })
+  const welcomeExploreHtml = await welcomeExplore.text()
+  expect(welcomeExploreHtml).not.toContain('action="/search"')
+  expect(welcomeExploreHtml).toContain('href="/account/edit/notifications">enable notifications</a>')
+  expect(welcomeExploreHtml).toContain('href="/account/edit/theme">customize theme</a>')
+  expect(welcomeExploreHtml).toContain('href="/account/password/enable">set up a password</a>')
   const publicProfile = await request('/u/alice', { cookie: aliceCookie })
   expect(publicProfile.status).toBe(200)
   const missingProfile = await request('/u/foo', { cookie: aliceCookie })
@@ -265,7 +273,7 @@ test('consequential account, content, reporting, and admin flows work over HTTP'
   expect(missingProfileHtml).toContain('class="account-nav"')
   const clientError = await request('/client-error')
   expect(clientError.status).toBe(400)
-  expect(await clientError.text()).toContain("We couldn&#x27;t process that request.")
+  expect(await clientError.text()).toContain('We couldn&#x27;t process that request.')
   expect(clientError.headers.get('x-robots-tag')).toBe('noindex, nofollow')
   const serverError = await request('/server-error')
   expect(serverError.status).toBe(500)
@@ -296,51 +304,64 @@ test('consequential account, content, reporting, and admin flows work over HTTP'
   expect(enablePasswordPage.status).toBe(200)
   expect(await enablePasswordPage.text()).toContain('Enable password login')
   const passwordSetupRequest = await request('/account/password/enable', {
-    method: 'POST', cookie: aliceCookie, form: {},
+    method: 'POST',
+    cookie: aliceCookie,
+    form: {},
   })
   expect(passwordSetupRequest.status).toBe(200)
-  const passwordSetupEmail = capturedEmails().filter(message => message.to === 'alice@example.com'
-    && message.subject.includes('Enable password login')).at(-1)
+  const passwordSetupEmail = capturedEmails().filter(message =>
+    message.to === 'alice@example.com'
+    && message.subject.includes('Enable password login')
+  ).at(-1)
   expect(passwordSetupEmail).toBeDefined()
   const passwordSetupToken = linkToken(passwordSetupEmail!)
   const passwordSetupPage = await request(
-    `/account/password/enable?token=${encodeURIComponent(passwordSetupToken)}`, { cookie: aliceCookie },
+    `/account/password/enable?token=${encodeURIComponent(passwordSetupToken)}`,
+    { cookie: aliceCookie },
   )
   expect(await passwordSetupPage.text()).toContain('Set a password')
   const enabledPassword = await request('/account/password/enable', {
-    method: 'POST', cookie: aliceCookie,
+    method: 'POST',
+    cookie: aliceCookie,
     form: { token: passwordSetupToken, newPassword: 'alice password 123' },
   })
   expect(enabledPassword.status).toBe(303)
   expect(enabledPassword.headers.get('location')).toBe('/account/security?enabled=password')
   const passwordLogin = await request('/enter/password', {
-    method: 'POST', form: { identifier: '@alice', password: 'alice password 123', next: '/account/security' },
+    method: 'POST',
+    form: { identifier: '@alice', password: 'alice password 123', next: '/account/security' },
   })
   expect(passwordLogin.status).toBe(303)
   expect(passwordLogin.headers.get('location')).toBe('/account/security')
   aliceCookie = sessionCookie(passwordLogin)
   const changedPassword = await request('/account/password/change', {
-    method: 'POST', cookie: aliceCookie,
+    method: 'POST',
+    cookie: aliceCookie,
     form: { oldPassword: 'alice password 123', newPassword: 'alice password 456' },
   })
   expect(changedPassword.status).toBe(303)
   const forgotPassword = await request('/forgot-password', {
-    method: 'POST', form: { email: 'alice@example.com' },
+    method: 'POST',
+    form: { email: 'alice@example.com' },
   })
   expect(forgotPassword.status).toBe(200)
-  const resetEmail = capturedEmails().filter(message => message.to === 'alice@example.com'
-    && message.subject.includes('Reset your')).at(-1)
+  const resetEmail = capturedEmails().filter(message =>
+    message.to === 'alice@example.com'
+    && message.subject.includes('Reset your')
+  ).at(-1)
   expect(resetEmail).toBeDefined()
   const resetToken = linkToken(resetEmail!)
   const resetPassword = await request('/reset-password', {
-    method: 'POST', form: { token: resetToken, password: 'alice password 789', confirmPassword: 'alice password 789' },
+    method: 'POST',
+    form: { token: resetToken, password: 'alice password 789', confirmPassword: 'alice password 789' },
   })
   expect(resetPassword.status).toBe(303)
   expect(resetPassword.headers.get('location')).toBe('/enter/password?reset=1')
   const reusedReset = await request(`/reset-password?token=${encodeURIComponent(resetToken)}`)
   expect(reusedReset.status).toBe(400)
   const resetLogin = await request('/enter/password', {
-    method: 'POST', form: { identifier: 'alice@example.com', password: 'alice password 789' },
+    method: 'POST',
+    form: { identifier: 'alice@example.com', password: 'alice password 789' },
   })
   expect(resetLogin.status).toBe(303)
   aliceCookie = sessionCookie(resetLogin)
@@ -376,7 +397,7 @@ test('consequential account, content, reporting, and admin flows work over HTTP'
     redirect: 'manual',
   })
   expect(unsupportedPost.status).toBe(415)
-  expect(await unsupportedPost.text()).toContain("We couldn&#x27;t read that request.")
+  expect(await unsupportedPost.text()).toContain('We couldn&#x27;t read that request.')
 
   const post = database.query('SELECT id,body FROM posts WHERE user_id=? ORDER BY id DESC LIMIT 1')
     .get(alice.id) as { id: number; body: string }
@@ -492,22 +513,29 @@ test('consequential account, content, reporting, and admin flows work over HTTP'
 
   const emailDeleteCookie = await signup('emaildelete', 'email-delete@example.com', 'unused')
   const emailChangeRequest = await request('/account/email/change', {
-    method: 'POST', cookie: emailDeleteCookie, form: { email: 'email-delete-new@example.com' },
+    method: 'POST',
+    cookie: emailDeleteCookie,
+    form: { email: 'email-delete-new@example.com' },
   })
   expect(emailChangeRequest.status).toBe(200)
   expect((database.query('SELECT email FROM users WHERE handle=?').get('emaildelete') as { email: string }).email)
     .toBe('email-delete@example.com')
-  const approvalEmail = capturedEmails().filter(message => message.to === 'email-delete@example.com'
-    && message.subject.includes('Approve email change')).at(-1)
+  const approvalEmail = capturedEmails().filter(message =>
+    message.to === 'email-delete@example.com'
+    && message.subject.includes('Approve email change')
+  ).at(-1)
   expect(approvalEmail).toBeDefined()
   const approvalToken = linkToken(approvalEmail!)
   expect((await request(`/account/email/change/authorize?token=${encodeURIComponent(approvalToken)}`)).status).toBe(200)
   const approvedChange = await request('/account/email/change/authorize', {
-    method: 'POST', form: { token: approvalToken },
+    method: 'POST',
+    form: { token: approvalToken },
   })
   expect(approvedChange.status).toBe(200)
-  const newEmailConfirmation = capturedEmails().filter(message => message.to === 'email-delete-new@example.com'
-    && message.subject.includes('Confirm new email')).at(-1)
+  const newEmailConfirmation = capturedEmails().filter(message =>
+    message.to === 'email-delete-new@example.com'
+    && message.subject.includes('Confirm new email')
+  ).at(-1)
   expect(newEmailConfirmation).toBeDefined()
   const newEmailToken = linkToken(newEmailConfirmation!)
   const changedEmail = await request('/verify-email', { method: 'POST', form: { token: newEmailToken } })
@@ -516,42 +544,58 @@ test('consequential account, content, reporting, and admin flows work over HTTP'
     .toBe('email-delete-new@example.com')
 
   const emailDeleteRequest = await request('/account/delete', {
-    method: 'POST', cookie: emailDeleteCookie, form: {},
+    method: 'POST',
+    cookie: emailDeleteCookie,
+    form: {},
   })
   expect(emailDeleteRequest.status).toBe(200)
-  expect((database.query('SELECT deleted_at FROM users WHERE handle=?').get('emaildelete') as
-    { deleted_at: string | null }).deleted_at).toBeNull()
-  const deleteEmail = capturedEmails().filter(message => message.to === 'email-delete-new@example.com'
-    && message.subject.includes('Confirm account deletion')).at(-1)
+  expect(
+    (database.query('SELECT deleted_at FROM users WHERE handle=?').get('emaildelete') as { deleted_at: string | null })
+      .deleted_at,
+  ).toBeNull()
+  const deleteEmail = capturedEmails().filter(message =>
+    message.to === 'email-delete-new@example.com'
+    && message.subject.includes('Confirm account deletion')
+  ).at(-1)
   expect(deleteEmail).toBeDefined()
   const deletionToken = linkToken(deleteEmail!)
   const deletionReview = await request(`/account/delete?token=${encodeURIComponent(deletionToken)}`)
   expect(deletionReview.status).toBe(200)
-  expect((database.query('SELECT deleted_at FROM users WHERE handle=?').get('emaildelete') as
-    { deleted_at: string | null }).deleted_at).toBeNull()
+  expect(
+    (database.query('SELECT deleted_at FROM users WHERE handle=?').get('emaildelete') as { deleted_at: string | null })
+      .deleted_at,
+  ).toBeNull()
   const confirmedDeletion = await request('/account/delete', {
-    method: 'POST', form: { token: deletionToken },
+    method: 'POST',
+    form: { token: deletionToken },
   })
   expect(confirmedDeletion.status).toBe(303)
   expect(database.query('SELECT 1 FROM users WHERE handle=?').get('emaildelete')).toBeNull()
 
   const passwordDeleteCookie = await signup('passworddelete', 'password-delete@example.com', 'unused')
   await request('/account/password/enable', { method: 'POST', cookie: passwordDeleteCookie, form: {} })
-  const deletePasswordEmail = capturedEmails().filter(message => message.to === 'password-delete@example.com'
-    && message.subject.includes('Enable password login')).at(-1)
+  const deletePasswordEmail = capturedEmails().filter(message =>
+    message.to === 'password-delete@example.com'
+    && message.subject.includes('Enable password login')
+  ).at(-1)
   expect(deletePasswordEmail).toBeDefined()
   await request('/account/password/enable', {
-    method: 'POST', cookie: passwordDeleteCookie,
+    method: 'POST',
+    cookie: passwordDeleteCookie,
     form: { token: linkToken(deletePasswordEmail!), newPassword: 'delete password 123' },
   })
   const rejectedDeletion = await request('/account/delete', {
-    method: 'POST', cookie: passwordDeleteCookie, form: { password: 'wrong password' },
+    method: 'POST',
+    cookie: passwordDeleteCookie,
+    form: { password: 'wrong password' },
   })
   expect(rejectedDeletion.status).toBe(400)
   expect(database.query('SELECT 1 FROM users WHERE handle=? AND deleted_at IS NULL').get('passworddelete'))
     .toBeTruthy()
   const passwordDeletion = await request('/account/delete', {
-    method: 'POST', cookie: passwordDeleteCookie, form: { password: 'delete password 123' },
+    method: 'POST',
+    cookie: passwordDeleteCookie,
+    form: { password: 'delete password 123' },
   })
   expect(passwordDeletion.status).toBe(303)
   expect(database.query('SELECT 1 FROM users WHERE handle=?').get('passworddelete')).toBeNull()

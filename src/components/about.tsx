@@ -1,8 +1,8 @@
+import { instance } from '../../instance.config'
+import { appName } from '../brand'
 import { type User } from '../db'
 import { Layout } from './layout'
 import { ActionPair } from './page-shared'
-import { appName } from '../brand'
-import { instance } from '../../instance.config'
 
 export function About({ user }: { user: User | null }) {
   const name = appName()
@@ -12,8 +12,9 @@ export function About({ user }: { user: User | null }) {
         <p className="eyebrow">about</p>
         <h1>A quieter place for your thoughts.</h1>
         <p>
-          {name} is a simple social text log: write short notes, follow people and hashtags, and join conversations
-          without turning every thought into a performance.
+          {name}{' '}
+          is a simple social text log: write short notes, follow people and hashtags, and join conversations without
+          turning every thought into a performance.
         </p>
         <p>
           Notes are limited to 280 characters. The constraint keeps them quick to write and read, making room for one
@@ -21,14 +22,19 @@ export function About({ user }: { user: User | null }) {
         </p>
         <h2>Small by design</h2>
         <p>
-          {name} is built around words: notes, people, hashtags, and conversations. It is intentionally small,
-          straightforward, and easy to follow. There are no engagement tricks or pressure to build an audience.
+          {name}{' '}
+          is built around words: notes, people, hashtags, and conversations. It is intentionally small, straightforward,
+          and easy to follow. There are no engagement tricks or pressure to build an audience.
         </p>
         <p>
           Your profile and notes are public. Joining is free, and you can download or delete your account data whenever
-          you like. {instance.links.donate && <>If you feel like it, you can also{' '}
-            <a href={instance.links.donate} target="_blank" rel="noopener noreferrer">donate</a>{' '}
-            to support the service.</>}
+          you like. {instance.links.donate && (
+            <>
+              If you feel like it, you can also{' '}
+              <a href={instance.links.donate} target="_blank" rel="noopener noreferrer">donate</a>{' '}
+              to support the service.
+            </>
+          )}
         </p>
         <h2>Be a good neighbour</h2>
         <p>
@@ -39,10 +45,8 @@ export function About({ user }: { user: User | null }) {
         {!user && (
           <>
             <h2>What's next?</h2>
-            <ActionPair className="about-actions"
-              primary={<a className="button" href="/enter">join the community</a>}
-              secondary={<a href="/">browse notes</a>}
-            />
+            <ActionPair className="about-actions" primary={<a className="button" href="/enter">join the community</a>}
+              secondary={<a href="/">browse notes</a>} />
           </>
         )}
       </article>

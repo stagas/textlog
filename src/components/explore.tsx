@@ -1,11 +1,11 @@
+import { appName } from '../brand'
 import { db, type User } from '../db'
 import { suggestedPeople, suggestedPeopleCount, trendingTagCount, trendingTags } from '../explore'
+import { TAG_PAGE_SIZE } from '../pagination'
 import type { PersonView } from '../types'
 import { Layout } from './layout'
-import { TAG_PAGE_SIZE } from '../pagination'
 import { ActionPair, Pagination, TagPeopleList } from './page-shared'
 import { SearchForm } from './search'
-import { appName } from '../brand'
 
 const PEOPLE_PAGE_SIZE = 6
 

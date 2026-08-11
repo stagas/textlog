@@ -28,7 +28,7 @@ export async function createPublicArchive(database: Database, path: string, now 
     datasets.push({ name, count, pages })
     const query = database.query(pageSql)
     for (let page = 0; page < pages; page++) {
-      const stream = Readable.from((async function* () {
+      const stream = Readable.from((async function*() {
         // The query is deferred until JSZip requests this file, keeping only one page resident.
         // Yield bytes explicitly: JSZip's Node stream adapter treats string chunks as binary and
         // otherwise writes code points U+0080–U+00FF as invalid single-byte UTF-8.
@@ -78,9 +78,9 @@ export async function createPublicArchive(database: Database, path: string, now 
     `SELECT u.handle AS user,h.tag FROM hashtag_follows h JOIN users u ON u.id=h.user_id
       WHERE u.deleted_at IS NULL AND u.suspended_at IS NULL
       ORDER BY u.handle COLLATE NOCASE,h.tag LIMIT ? OFFSET ?`)
-  zip.file('manifest.json', json({ format: 'textlog-public-archive', version: 1, generated_at: generatedAt,
-    page_size: pageSize, datasets,
-    privacy: 'Public handles and public content only. Accounts are frozen and contain no authentication data.' }))
+  zip.file('manifest.json',
+    json({ format: 'textlog-public-archive', version: 1, generated_at: generatedAt, page_size: pageSize, datasets,
+      privacy: 'Public handles and public content only. Accounts are frozen and contain no authentication data.' }))
 
   mkdirSync(dirname(path), { recursive: true, mode: 0o755 })
   const temporaryPath = `${path}.${process.pid}.tmp`

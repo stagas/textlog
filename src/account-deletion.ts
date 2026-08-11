@@ -14,6 +14,5 @@ export function accountForDeletionToken(database: Database, value: string, now =
   return database.query(`SELECT u.id,u.email FROM account_deletion_tokens t
     JOIN users u ON u.id=t.user_id
     WHERE t.token_hash=? AND t.expires_at>? AND u.deleted_at IS NULL AND u.password='!'
-      AND u.email=t.email`).get(hash(value), now) as
-    { id: number; email: string } | null
+      AND u.email=t.email`).get(hash(value), now) as { id: number; email: string } | null
 }

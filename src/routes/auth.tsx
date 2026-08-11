@@ -1,14 +1,14 @@
 import { AUTH_LIMITS, authRateLimitMessage } from '../auth-rate-limit'
+import { sessionCookieName } from '../brand'
 import { Auth, ChooseHandle, ForgotPassword, MagicLinkSent, PasswordLogin, ResetPassword } from '../components/pages'
 import { db } from '../db'
 import { sendMagicLink, sendPasswordReset } from '../email'
-import { clearSessionCookie, safeLocalPath, sessionCookie } from '../http'
 import { isDevelopment } from '../environment'
+import { clearSessionCookie, safeLocalPath, sessionCookie } from '../http'
 import { moderateText, moderationMessage } from '../moderation'
 import { insertSession, SESSION_LIFETIME_MS, sessionHash } from '../sessions'
 import { currentUser, hash, hashPassword, token, verifyPassword } from '../utils'
 import { authLimit, clientAddress, form, issueMagicLink, page, redirect, retryPage, safeNext } from './shared'
-import { sessionCookieName } from '../brand'
 
 import type { Hono } from 'hono'
 
@@ -64,8 +64,8 @@ export function registerAuthRoutes(app: Hono) {
   app.get('/signup',
     c => redirect('/enter' + (c.req.query('next') ? `?next=${encodeURIComponent(safeNext(c.req.query('next')))}` : '')))
 
-  app.get('/enter/password', c => page(<PasswordLogin next={safeNext(c.req.query('next'))}
-    reset={c.req.query('reset') === '1'} />))
+  app.get('/enter/password',
+    c => page(<PasswordLogin next={safeNext(c.req.query('next'))} reset={c.req.query('reset') === '1'} />))
   app.post('/enter/password', async c => {
     const f = await form(c.req.raw)
     const identifier = (f.identifier || '').trim().toLowerCase().replace(/^@/, '')
@@ -73,14 +73,25 @@ export function registerAuthRoutes(app: Hono) {
     const next = safeNext(f.next)
     const limited = authLimit(c, 'password-login-ip', clientAddress(c), AUTH_LIMITS.loginIp)
       || authLimit(c, 'password-login-account', identifier || '(blank)', AUTH_LIMITS.loginAccount)
-    if (limited) return retryPage(page(<PasswordLogin identifier={identifier} next={next}
-      error={authRateLimitMessage(limited.retryAfter)} />, 429), limited.retryAfter)
+    if (limited) {
+      return retryPage(
+        page(<PasswordLogin identifier={identifier} next={next} error={authRateLimitMessage(limited.retryAfter)} />,
+          429),
+        limited.retryAfter,
+      )
+    }
     const account = db.query(`SELECT id,password FROM users WHERE (email=? OR handle=? COLLATE NOCASE)
-      AND deleted_at IS NULL AND suspended_at IS NULL`).get(identifier, identifier) as { id: number; password: string } | null
+      AND deleted_at IS NULL AND suspended_at IS NULL`).get(identifier, identifier) as
+      | { id: number; password: string }
+      | null
     const valid = await verifyPassword(password, account?.password !== '!' && account?.password
-      ? account.password : await dummyPasswordHash)
+      ? account.password
+      : await dummyPasswordHash)
     if (!account || account.password === '!' || !valid) {
-      return page(<PasswordLogin identifier={identifier} next={next} error="Email, handle, or password is incorrect." />, 400)
+      return page(
+        <PasswordLogin identifier={identifier} next={next} error="Email, handle, or password is incorrect." />,
+        400,
+      )
     }
     if (!account.password.startsWith('$argon2id$')) {
       db.query('UPDATE users SET password=? WHERE id=?').run(await hashPassword(password), account.id)
@@ -97,9 +108,13 @@ export function registerAuthRoutes(app: Hono) {
     const email = (f.email || '').trim().toLowerCase()
     const limited = authLimit(c, 'forgot-password-ip', clientAddress(c), AUTH_LIMITS.forgotIp)
       || authLimit(c, 'forgot-password-account', email || '(blank)', AUTH_LIMITS.forgotAccount)
-    if (limited) return retryPage(page(<ForgotPassword error={authRateLimitMessage(limited.retryAfter)} />, 429),
-      limited.retryAfter)
-    if (!emailPattern.test(email) || email.length > 254) return page(<ForgotPassword error="Enter a valid email address." />, 400)
+    if (limited) {
+      return retryPage(page(<ForgotPassword error={authRateLimitMessage(limited.retryAfter)} />, 429),
+        limited.retryAfter)
+    }
+    if (!emailPattern.test(email) || email.length > 254) {
+      return page(<ForgotPassword error="Enter a valid email address." />, 400)
+    }
     const account = db.query(`SELECT id,password FROM users WHERE email=? AND deleted_at IS NULL
       AND suspended_at IS NULL`).get(email) as { id: number; password: string } | null
     if (account && account.password !== '!') {
@@ -108,7 +123,9 @@ export function registerAuthRoutes(app: Hono) {
       db.query('INSERT INTO password_resets(token_hash,user_id,expires_at) VALUES(?,?,?)')
         .run(hash(value), account.id, Date.now() + 3600000)
       const origin = Bun.env.APP_URL?.replace(/\/$/, '') || new URL(c.req.url).origin
-      try { await sendPasswordReset(email, `${origin}/reset-password?token=${encodeURIComponent(value)}`) }
+      try {
+        await sendPasswordReset(email, `${origin}/reset-password?token=${encodeURIComponent(value)}`)
+      }
       catch (error) {
         console.error('Could not send password reset', error)
         db.query('DELETE FROM password_resets WHERE token_hash=?').run(hash(value))
@@ -130,12 +147,19 @@ export function registerAuthRoutes(app: Hono) {
     const password = f.password || ''
     const limited = authLimit(c, 'reset-password-ip', clientAddress(c), AUTH_LIMITS.resetIp)
       || authLimit(c, 'reset-password-token', hash(value), AUTH_LIMITS.resetToken)
-    if (limited) return retryPage(page(<ResetPassword resetToken={value} error={authRateLimitMessage(limited.retryAfter)} />, 429), limited.retryAfter)
+    if (limited) {
+      return retryPage(page(<ResetPassword resetToken={value} error={authRateLimitMessage(limited.retryAfter)} />, 429),
+        limited.retryAfter)
+    }
     const reset = value && db.query('SELECT user_id FROM password_resets WHERE token_hash=? AND expires_at>?')
       .get(hash(value), Date.now()) as { user_id: number } | null
     if (!reset) return page(<ResetPassword invalid />, 400)
-    if (password.length < 8 || password.length > 128) return page(<ResetPassword resetToken={value} error="Use a password between 8 and 128 characters." />, 400)
-    if (password !== (f.confirmPassword || '')) return page(<ResetPassword resetToken={value} error="Passwords do not match." />, 400)
+    if (password.length < 8 || password.length > 128) {
+      return page(<ResetPassword resetToken={value} error="Use a password between 8 and 128 characters." />, 400)
+    }
+    if (password !== (f.confirmPassword || '')) {
+      return page(<ResetPassword resetToken={value} error="Passwords do not match." />, 400)
+    }
     const passwordHash = await hashPassword(password)
     db.transaction(() => {
       db.query('UPDATE users SET password=? WHERE id=?').run(passwordHash, reset.user_id)
@@ -189,12 +213,14 @@ export function registerAuthRoutes(app: Hono) {
     if (!emailPattern.test(email) || !/^\d{6}$/.test(code)) return invalid()
     const limited = authLimit(c, 'enter-code-ip', clientAddress(c), AUTH_LIMITS.resetIp)
       || authLimit(c, 'enter-code-account', email, AUTH_LIMITS.resetToken)
-    if (limited) return retryPage(page(<MagicLinkSent email={email}
-      error={authRateLimitMessage(limited.retryAfter)} />, 429), limited.retryAfter)
+    if (limited) {
+      return retryPage(page(<MagicLinkSent email={email} error={authRateLimitMessage(limited.retryAfter)} />, 429),
+        limited.retryAfter)
+    }
     const link = db.query(`SELECT token_hash,email,user_id,next_path,attempts FROM magic_links
       WHERE email=? AND code_hash IS NOT NULL AND expires_at>?`).get(email, Date.now()) as (MagicLink & {
-        attempts: number
-      }) | null
+      attempts: number
+    }) | null
     const match = link && db.query('SELECT 1 FROM magic_links WHERE token_hash=? AND code_hash=?')
       .get(link.token_hash, hash(code))
     if (!link || !match) {

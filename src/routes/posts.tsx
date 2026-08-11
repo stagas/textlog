@@ -14,12 +14,12 @@ import { form, page, redirect, rememberFeed, usersBlocked } from './shared'
 import type { Hono } from 'hono'
 import { softDeletePost } from '../admin'
 import { db } from '../db'
-import { renderPostOg } from '../og'
-import { postRateLimitMessage } from '../post-rate-limit'
-import { normalizePostBody, validPostBody } from '../post-body'
-import { currentUser } from '../utils'
-import { sendPushForPost } from '../push'
 import { logError } from '../log'
+import { renderPostOg } from '../og'
+import { normalizePostBody, validPostBody } from '../post-body'
+import { postRateLimitMessage } from '../post-rate-limit'
+import { sendPushForPost } from '../push'
+import { currentUser } from '../utils'
 
 function notifyPost(postId: number, userId: number, handle: string) {
   void sendPushForPost(postId, userId, handle).catch(error => logError('activity push failed', error))

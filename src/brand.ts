@@ -1,10 +1,11 @@
 export const appName = () => Bun.env.APP_NAME?.trim() || 'textlog'
 
-export const appIdentifier = () => appName().toLowerCase()
-  .normalize('NFKD')
-  .replace(/[\u0300-\u036f]/g, '')
-  .replace(/[^a-z0-9]+/g, '-')
-  .replace(/^-|-$/g, '') || 'app'
+export const appIdentifier = () =>
+  appName().toLowerCase()
+    .normalize('NFKD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-|-$/g, '') || 'app'
 
 export const sessionCookieName = () => appIdentifier()
 

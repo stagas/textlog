@@ -16,5 +16,6 @@ export function emailChangeForToken(database: Database, value: string, now = Dat
   return database.query(`SELECT a.user_id,a.new_email FROM email_change_authorizations a
     JOIN users u ON u.id=a.user_id WHERE a.token_hash=? AND a.expires_at>? AND u.deleted_at IS NULL
       AND u.password='!' AND u.email=a.current_email`).get(hash(value), now) as
-    { user_id: number; new_email: string } | null
+    | { user_id: number; new_email: string }
+    | null
 }

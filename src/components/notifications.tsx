@@ -1,16 +1,21 @@
+import { appName } from '../brand'
 import type { User } from '../db'
 import { Layout } from './layout'
-import { appName } from '../brand'
 
 export function NotificationSettings({ user, publicKey, ios = false }: {
-  user: User; publicKey: string | null; ios?: boolean
+  user: User
+  publicKey: string | null
+  ios?: boolean
 }) {
   const name = appName()
   return (
     <Layout user={user} title="notifications">
       <article className="static-page">
         <div className="notification-heading">
-          <div><p className="eyebrow">account</p><h1>notifications</h1></div>
+          <div>
+            <p className="eyebrow">account</p>
+            <h1>notifications</h1>
+          </div>
           <a className="quiet" href="/account/edit">back</a>
         </div>
         <p id="notification-status">
@@ -29,8 +34,11 @@ export function NotificationSettings({ user, publicKey, ios = false }: {
               <li>Tap Add, then open {name} from its new Home Screen icon.</li>
               <li>Return to this page and enable notifications.</li>
             </ol>
-            <a className="quiet" href="https://support.apple.com/guide/iphone/iphea86e5236/ios"
-              target="_blank" rel="noopener noreferrer">Apple’s instructions</a>
+            <a className="quiet" href="https://support.apple.com/guide/iphone/iphea86e5236/ios" target="_blank"
+              rel="noopener noreferrer"
+            >
+              Apple’s instructions
+            </a>
           </aside>
         )}
         <form id="notification-preference-form">
@@ -43,18 +51,28 @@ export function NotificationSettings({ user, publicKey, ios = false }: {
               ['mentions', 'mentions', 'When someone mentions your handle'],
               ['follows', 'new followers', 'When someone starts following you'],
             ].map(([name, label, description]) => (
-              <label className={`notification-toggle${name === 'latest' ? ' notification-toggle-parent' : ''}${
-                name === 'ownPosts' ? ' notification-toggle-dependent' : ''}`}
-                key={name}>
-                <span><strong>{label}</strong><small>{description}</small></span>
+              <label
+                className={`notification-toggle${name === 'latest' ? ' notification-toggle-parent' : ''}${
+                  name === 'ownPosts' ? ' notification-toggle-dependent' : ''
+                }`}
+                key={name}
+              >
+                <span>
+                  <strong>{label}</strong>
+                  <small>{description}</small>
+                </span>
                 <input type="checkbox" name={name} defaultChecked />
-                <span className="notification-toggle-track" aria-hidden="true"><span /></span>
+                <span className="notification-toggle-track" aria-hidden="true">
+                  <span />
+                </span>
               </label>
             ))}
           </fieldset>
         </form>
         <div className="notification-actions">
-          <button className="button" id="enable-notifications" disabled={!publicKey} hidden>enable notifications</button>
+          <button className="button" id="enable-notifications" disabled={!publicKey} hidden>
+            enable notifications
+          </button>
           <button className="button" id="save-notification-preferences" form="notification-preference-form" hidden>
             save preferences
           </button>

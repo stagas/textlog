@@ -1,8 +1,8 @@
 import type { User } from '../db'
+import { db } from '../db'
 import { PAGE_SIZE } from '../pagination'
 import { enrichPosts } from '../posts'
 import { searchPeople, searchPosts, searchTags, searchTerms } from '../search'
-import { db } from '../db'
 import { Layout } from './layout'
 import { ConnectionPeople, Pagination, TagPeopleList } from './page-shared'
 import { Post } from './post'
@@ -10,7 +10,9 @@ import { Post } from './post'
 export type SearchTab = 'notes' | 'tags' | 'people'
 
 export function SearchForm({ query = '', autoFocus = false, tab = 'notes' }: {
-  query?: string; autoFocus?: boolean; tab?: SearchTab
+  query?: string
+  autoFocus?: boolean
+  tab?: SearchTab
 }) {
   return (
     <form className="search-form" method="get" action="/search" role="search">
@@ -24,7 +26,10 @@ export function SearchForm({ query = '', autoFocus = false, tab = 'notes' }: {
 }
 
 export function SearchResults({ user, query, page, tab = 'notes' }: {
-  user: User | null; query: string; page: number; tab?: SearchTab
+  user: User | null
+  query: string
+  page: number
+  tab?: SearchTab
 }) {
   const viewerId = user?.id ?? -1
   const results = {
@@ -49,14 +54,19 @@ export function SearchResults({ user, query, page, tab = 'notes' }: {
       <nav className="feed-tabs search-tabs" aria-label="Search type">
         {(['notes', 'tags', 'people'] as SearchTab[]).map(value => (
           <a key={value} href={tabPath(value)} className={tab === value ? 'active' : ''}
-            aria-current={tab === value ? 'page' : undefined}>{results[value].total} {value}</a>
+            aria-current={tab === value ? 'page' : undefined}
+          >
+            {results[value].total} {value}
+          </a>
         ))}
       </nav>
       {posts.map(post => <Post key={post.id} p={post} user={user} showReplyCount highlightTerms={highlights} />)}
-      {!!tags.length && <TagPeopleList user={user} tags={tags} followingKey="viewerFollowing"
-        highlightTerms={highlights} />}
-      {!!people.length && <ConnectionPeople user={user} people={people} className="search-people"
-        highlightTerms={highlights} />}
+      {!!tags.length && (
+        <TagPeopleList user={user} tags={tags} followingKey="viewerFollowing" highlightTerms={highlights} />
+      )}
+      {!!people.length && (
+        <ConnectionPeople user={user} people={people} className="search-people" highlightTerms={highlights} />
+      )}
       {query && !result.rows.length && <div className="empty">No matching {tab}.</div>}
       <Pagination page={page} totalPages={totalPages}
         path={`/search?q=${encodeURIComponent(query)}${tab === 'notes' ? '' : `&tab=${tab}`}`} />

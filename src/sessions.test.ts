@@ -1,7 +1,7 @@
 import { Database } from 'bun:sqlite'
 import { describe, expect, test } from 'bun:test'
-import { insertSession, markSessionUsed, migrateLegacySessionTokens, onlineUserCount, renewSession,
-  SESSION_LIFETIME_MS, SESSION_RENEWAL_WINDOW_MS, sessionHash } from './sessions'
+import { insertSession, markSessionUsed, migrateLegacySessionTokens, onlineUserCount, renewSession, SESSION_LIFETIME_MS,
+  SESSION_RENEWAL_WINDOW_MS, sessionHash } from './sessions'
 
 describe('session token storage', () => {
   test('hashes new session tokens before insertion', () => {

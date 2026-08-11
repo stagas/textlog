@@ -28,7 +28,8 @@ export function HotFeed(
     : null
   return (
     <Layout user={user} title={title} pageUrl={pageUrl}
-      feeds={{ title: 'Hot notes', rss: '/hot.rss', atom: '/hot.atom' }}>
+      feeds={{ title: 'Hot notes', rss: '/hot.rss', atom: '/hot.atom' }}
+    >
       <h1 className="visually-hidden">Hot notes</h1>
       <FeedTabs active="hot" user={user} />
       {posts.length

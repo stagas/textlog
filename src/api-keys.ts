@@ -20,9 +20,10 @@ export function userForApiKey(database: Database, value: string | null, now = Da
     FROM api_keys k JOIN users u ON u.id=k.user_id
     WHERE k.token_hash=? AND (k.expires_at IS NULL OR k.expires_at>?)
       AND u.deleted_at IS NULL AND u.suspended_at IS NULL`)
-    .get(apiKeyHash(value), now) as ({ id: number; handle: string; email: string; bio: string;
-      suspended_at?: string | null; email_verified_at?: string | null; handle_chosen_at?: string | null;
-      key_id: number }) | null
+    .get(apiKeyHash(value), now) as
+      | ({ id: number; handle: string; email: string; bio: string; suspended_at?: string | null;
+        email_verified_at?: string | null; handle_chosen_at?: string | null; key_id: number })
+      | null
   if (!row) return null
   database.query('UPDATE api_keys SET last_used_at=? WHERE id=?').run(now, row.key_id)
   const { key_id: _, ...user } = row

@@ -402,7 +402,7 @@ export const migrations: Migration[] = [
     version: 31,
     name: 'account_deletion_token_email',
     up(database) {
-      addColumn(database, 'account_deletion_tokens', 'email', "TEXT NOT NULL DEFAULT ''")
+      addColumn(database, 'account_deletion_tokens', 'email', 'TEXT NOT NULL DEFAULT \'\'')
       database.run(`UPDATE account_deletion_tokens SET email=(
         SELECT email FROM users WHERE users.id=account_deletion_tokens.user_id
       ) WHERE email=''`)

@@ -89,16 +89,20 @@ describe('startup configuration', () => {
       GOOGLE_SMTP_APP_PASSWORD: 'app-password',
     }, { checkFilesystem: false }).emailProvider).toBe('google')
 
-    expect(() => validateStartupConfiguration({
-      ...production,
-      EMAIL_PROVIDER: 'google',
-      RESEND_API_KEY: undefined,
-      GOOGLE_SMTP_USER: 'sender@example.com',
-    }, { checkFilesystem: false })).toThrow('GOOGLE_SMTP_USER and GOOGLE_SMTP_APP_PASSWORD must be configured together')
+    expect(() =>
+      validateStartupConfiguration({
+        ...production,
+        EMAIL_PROVIDER: 'google',
+        RESEND_API_KEY: undefined,
+        GOOGLE_SMTP_USER: 'sender@example.com',
+      }, { checkFilesystem: false })
+    ).toThrow('GOOGLE_SMTP_USER and GOOGLE_SMTP_APP_PASSWORD must be configured together')
 
-    expect(() => validateStartupConfiguration({ ...production, EMAIL_PROVIDER: 'unknown' }, {
-      checkFilesystem: false,
-    })).toThrow('EMAIL_PROVIDER must be resend, sendgrid, or google')
+    expect(() =>
+      validateStartupConfiguration({ ...production, EMAIL_PROVIDER: 'unknown' }, {
+        checkFilesystem: false,
+      })
+    ).toThrow('EMAIL_PROVIDER must be resend, sendgrid, or google')
   })
 
   test('allows captured email only in isolated tests', () => {

@@ -3,8 +3,8 @@ import type { PersonView } from './types'
 
 export type TrendingTag = { tag: string; count: number; following: boolean }
 
-export function trendingTags(database: Database, viewerId: number, limit = 12,
-  now = new Date().toISOString(), offset = 0)
+export function trendingTags(database: Database, viewerId: number, limit = 12, now = new Date().toISOString(),
+  offset = 0)
 {
   return database.query(
     `SELECT ph.tag,count(*) count,
@@ -42,7 +42,7 @@ export function suggestedPeople(database: Database, viewerId: number, limit = 6,
   const maxUserId = (database.query('SELECT coalesce(max(id),0) id FROM users').get() as { id: number }).id
   const pivot = explorePivot(maxUserId, viewerId, day)
   return database.query(
-      `SELECT u.*, (SELECT count(*) FROM posts p WHERE p.user_id=u.id AND p.deleted_at IS NULL) posts,
+    `SELECT u.*, (SELECT count(*) FROM posts p WHERE p.user_id=u.id AND p.deleted_at IS NULL) posts,
       EXISTS(SELECT 1 FROM follows f WHERE f.follower_id=? AND f.following_id=u.id) following FROM users u
       WHERE u.id != ? AND u.deleted_at IS NULL
       AND NOT EXISTS (SELECT 1 FROM follows f WHERE f.follower_id=? AND f.following_id=u.id)
@@ -50,7 +50,7 @@ export function suggestedPeople(database: Database, viewerId: number, limit = 6,
         (b.blocker_id=? AND b.blocked_id=u.id) OR (b.blocker_id=u.id AND b.blocked_id=?)))
       AND EXISTS (SELECT 1 FROM posts p WHERE p.user_id=u.id AND p.deleted_at IS NULL)
       ORDER BY u.id < ?,u.id LIMIT ? OFFSET ?`,
-    ).all(viewerId, viewerId, viewerId, viewerId, viewerId, viewerId, pivot, limit, offset) as PersonView[]
+  ).all(viewerId, viewerId, viewerId, viewerId, viewerId, viewerId, pivot, limit, offset) as PersonView[]
 }
 
 export function suggestedPeopleCount(database: Database, viewerId: number) {

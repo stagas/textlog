@@ -1,6 +1,6 @@
 import { Database } from 'bun:sqlite'
 import { describe, expect, test } from 'bun:test'
-import { apiKeyHash, API_KEY_PREFIX, issueApiKey, userForApiKey } from './api-keys'
+import { API_KEY_PREFIX, apiKeyHash, issueApiKey, userForApiKey } from './api-keys'
 
 function fixture() {
   const database = new Database(':memory:')
@@ -38,7 +38,7 @@ describe('API keys', () => {
     expect(userForApiKey(database, 'not-an-api-key', 2_000)).toBeNull()
 
     const suspended = issueApiKey(database, 1, 'suspended', null, 1_000)
-    database.query("UPDATE users SET suspended_at='2026-01-01' WHERE id=1").run()
+    database.query('UPDATE users SET suspended_at=\'2026-01-01\' WHERE id=1').run()
     expect(userForApiKey(database, suspended.value, 2_000)).toBeNull()
   })
 })

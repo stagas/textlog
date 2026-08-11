@@ -51,9 +51,7 @@ export function Post({
   }
   return (
     <article className={`post${tappable || hasTappableParent ? ' tappable-post' : ''}`}>
-      {tappable && (
-        <a className="post-hit-area" href={'/post/' + p.id} aria-label={`open post by @${p.handle}`} />
-      )}
+      {tappable && <a className="post-hit-area" href={'/post/' + p.id} aria-label={`open post by @${p.handle}`} />}
       <div className="posttop">
         {contextUnread && <span className="activity-item-unread-dot" aria-label="unread" />}
         <a className="postauthor" href={'/u/' + p.handle} title={p.bio || 'No bio yet.'}>@{p.handle}</a>
@@ -94,7 +92,8 @@ export function Post({
         dangerouslySetInnerHTML={{ __html: linkify(p.body, p.mention_bios, highlightTerms) }} />
       {parent && (
         <blockquote className={'parent-quote' + (parent.deleted_at ? ' deleted-parent' : '')
-          + (hasTappableParent ? ' tappable-parent' : '')}>
+          + (hasTappableParent ? ' tappable-parent' : '')}
+        >
           {hasTappableParent && (
             <a className="parent-hit-area" href={'/post/' + parent.id}
               aria-label={`open quoted post by @${parent.handle}`} />

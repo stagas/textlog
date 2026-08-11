@@ -70,7 +70,9 @@ function googleTransport(user: string, password: string): EmailTransport {
     greetingTimeout: 8_000,
     socketTimeout: 12_000,
   })
-  return { send: async message => { await transporter.sendMail(message) } }
+  return { send: async message => {
+    await transporter.sendMail(message)
+  } }
 }
 
 export function emailProvider(env: Environment = Bun.env) {

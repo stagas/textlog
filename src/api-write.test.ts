@@ -1,7 +1,7 @@
 import { Database } from 'bun:sqlite'
 import { beforeEach, describe, expect, test } from 'bun:test'
-import { readFileSync, unlinkSync } from 'node:fs'
 import { Hono } from 'hono'
+import { readFileSync, unlinkSync } from 'node:fs'
 import { registerApiRoutes } from './routes/api'
 import { WRITE_LIMIT } from './routes/api-write'
 import { hash } from './utils'
@@ -66,8 +66,7 @@ function call(app: Hono, path: string, options: {
   }))
 }
 
-const post = (app: Hono, token: string, body: unknown) =>
-  call(app, '/api/v1/posts', { method: 'POST', token, body })
+const post = (app: Hono, token: string, body: unknown) => call(app, '/api/v1/posts', { method: 'POST', token, body })
 
 beforeEach(() => {
   Bun.env.MODERATION_DISABLED = 'true'
@@ -157,7 +156,9 @@ describe('API writes', () => {
       .status).toBe(403)
     expect((await call(app, '/api/v1/posts/1', { method: 'DELETE', token: 'alice-token' })).status).toBe(403)
 
-    expect((await call(app, `/api/v1/posts/${created.id}`, { method: 'DELETE', token: 'alice-token' })).status).toBe(200)
+    expect((await call(app, `/api/v1/posts/${created.id}`, { method: 'DELETE', token: 'alice-token' })).status).toBe(
+      200,
+    )
     expect((await call(app, `/api/v1/posts/${created.id}`)).status).toBe(404)
   })
 

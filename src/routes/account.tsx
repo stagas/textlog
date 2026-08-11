@@ -1,5 +1,5 @@
-import { anonymizeUser, isAdmin } from '../admin'
 import { accountForDeletionToken, issueAccountDeletionToken } from '../account-deletion'
+import { anonymizeUser, isAdmin } from '../admin'
 import { issueApiKey } from '../api-keys'
 import { AUTH_LIMITS, authRateLimitMessage } from '../auth-rate-limit'
 import { currentUser, hash, hashPassword, sessionToken, verifyPassword } from '../utils'
@@ -12,8 +12,8 @@ import {
   AccountApiKeyCreate,
   AccountMagicLink,
   AccountPassword,
-  ChangeTheme,
   ChangeFont,
+  ChangeTheme,
   ConfirmAccountDelete,
   ConfirmEmail,
   NotificationSettings,
@@ -29,10 +29,12 @@ import {
   clearSessionCookie,
 } from '../http'
 import { moderateText, moderationMessage } from '../moderation'
-import { sessionHash } from '../sessions'
 import { accountForPasswordEnableToken, issuePasswordEnableToken } from '../password-enable'
 import { vapidPublicKey } from '../push'
-import { ACCENT_CHOICES, appearance, appearanceCookie, FONT_CHOICES, fontChoice, fontCookie, FONT_SIZE_CHOICES, fontSizeChoice, fontSizeCookie, THEME_CHOICES, type AccentChoice, type FontChoice, type FontSizeChoice, type ThemeChoice } from '../theme'
+import { sessionHash } from '../sessions'
+import { ACCENT_CHOICES, type AccentChoice, appearance, appearanceCookie, FONT_CHOICES, FONT_SIZE_CHOICES,
+  type FontChoice, fontChoice, fontCookie, type FontSizeChoice, fontSizeChoice, fontSizeCookie, THEME_CHOICES,
+  type ThemeChoice } from '../theme'
 
 export function registerAccountRoutes(app: Hono) {
   app.get('/account/edit/notifications', c => {
@@ -58,8 +60,12 @@ export function registerAccountRoutes(app: Hono) {
     const user = currentUser(c.req.raw)
     if (!user) return c.json({ error: 'Unauthorized' }, 401)
     let subscription: unknown
-    try { subscription = await c.req.json() }
-    catch { return c.json({ error: 'Invalid subscription' }, 400) }
+    try {
+      subscription = await c.req.json()
+    }
+    catch {
+      return c.json({ error: 'Invalid subscription' }, 400)
+    }
     const value = subscription as { endpoint?: unknown; keys?: { p256dh?: unknown; auth?: unknown };
       preferences?: Record<string, unknown> }
     const endpoint = typeof value?.endpoint === 'string' ? value.endpoint : ''
@@ -67,8 +73,10 @@ export function registerAccountRoutes(app: Hono) {
     const auth = typeof value?.keys?.auth === 'string' ? value.keys.auth : ''
     if (!endpoint.startsWith('https://') || endpoint.length > 2048 || !p256dh || p256dh.length > 256
       || !auth || auth.length > 256) return c.json({ error: 'Invalid subscription' }, 400)
-    const preference = (name: string) => value.preferences && typeof value.preferences[name] === 'boolean'
-      ? Number(value.preferences[name]) : null
+    const preference = (name: string) =>
+      value.preferences && typeof value.preferences[name] === 'boolean'
+        ? Number(value.preferences[name])
+        : null
     const latest = preference('latest')
     const replies = preference('replies')
     const mentions = preference('mentions')
@@ -91,8 +99,12 @@ export function registerAccountRoutes(app: Hono) {
     const user = currentUser(c.req.raw)
     if (!user) return c.json({ error: 'Unauthorized' }, 401)
     let value: { endpoint?: unknown }
-    try { value = await c.req.json() }
-    catch { return c.json({ error: 'Invalid subscription' }, 400) }
+    try {
+      value = await c.req.json()
+    }
+    catch {
+      return c.json({ error: 'Invalid subscription' }, 400)
+    }
     if (typeof value.endpoint !== 'string') return c.json({ error: 'Invalid subscription' }, 400)
     db.query('DELETE FROM push_subscriptions WHERE endpoint=? AND user_id=?').run(value.endpoint, user.id)
     return c.json({ removed: true })
@@ -174,9 +186,10 @@ export function registerAccountRoutes(app: Hono) {
     const selected = f.font as FontChoice
     const selectedSize = f.fontSize as FontSizeChoice
     if (!FONT_CHOICES.some(font => font.value === selected)
-      || !FONT_SIZE_CHOICES.some(size => size.value === selectedSize)) {
-      return page(<ChangeFont user={user} selected={fontChoice(c.req.raw)}
-        selectedSize={fontSizeChoice(c.req.raw)} />, 400)
+      || !FONT_SIZE_CHOICES.some(size => size.value === selectedSize))
+    {
+      return page(<ChangeFont user={user} selected={fontChoice(c.req.raw)} selectedSize={fontSizeChoice(c.req.raw)} />,
+        400)
     }
     const response = redirect('/account/edit/font', fontCookie(selected))
     response.headers.append('set-cookie', fontSizeCookie(selectedSize))
@@ -196,7 +209,8 @@ export function registerAccountRoutes(app: Hono) {
 
   app.get('/account/api-keys/new', c => {
     const user = currentUser(c.req.raw)
-    return user ? page(<AccountApiKeyCreate user={user} />)
+    return user
+      ? page(<AccountApiKeyCreate user={user} />)
       : redirect('/enter?next=' + encodeURIComponent('/account/api-keys/new'))
   })
 
@@ -204,8 +218,10 @@ export function registerAccountRoutes(app: Hono) {
     const user = currentUser(c.req.raw)
     if (!user) return redirect('/enter')
     const limited = authLimit(c, 'api-key-create', `${user.id}:${clientAddress(c)}`, AUTH_LIMITS.sensitiveAccount)
-    if (limited) return retryPage(page(<AccountApiKeyCreate user={user}
-      error={authRateLimitMessage(limited.retryAfter)} />, 429), limited.retryAfter)
+    if (limited) {
+      return retryPage(page(<AccountApiKeyCreate user={user} error={authRateLimitMessage(limited.retryAfter)} />, 429),
+        limited.retryAfter)
+    }
     const f = await form(c.req.raw)
     const name = (f.name || '').trim()
     const lifetimes: Record<string, number | null> = {
@@ -214,14 +230,22 @@ export function registerAccountRoutes(app: Hono) {
       never: null,
     }
     if (!name || name.length > 64 || !Object.hasOwn(lifetimes, f.lifetime)) {
-      return page(<AccountApiKeyCreate user={user} name={name} lifetime={f.lifetime}
-        error="Enter a key name and choose a valid expiration." />, 400)
+      return page(
+        <AccountApiKeyCreate user={user} name={name} lifetime={f.lifetime}
+          error="Enter a key name and choose a valid expiration." />,
+        400,
+      )
     }
     const count = (db.query(`SELECT count(*) count FROM api_keys
       WHERE user_id=? AND (expires_at IS NULL OR expires_at>?)`)
       .get(user.id, Date.now()) as { count: number }).count
-    if (count >= 20) return page(<AccountApiKeyCreate user={user} name={name} lifetime={f.lifetime}
-      error="Revoke an existing key before creating another." />, 400)
+    if (count >= 20) {
+      return page(
+        <AccountApiKeyCreate user={user} name={name} lifetime={f.lifetime}
+          error="Revoke an existing key before creating another." />,
+        400,
+      )
+    }
     const lifetime = lifetimes[f.lifetime]
     const issued = issueApiKey(db, user.id, name, lifetime === null ? null : Date.now() + lifetime)
     return page(<AccountApiKey user={user} name={name} value={issued.value} />)
@@ -238,12 +262,15 @@ export function registerAccountRoutes(app: Hono) {
   app.get('/account/password/enable', c => {
     const user = currentUser(c.req.raw)
     const value = c.req.query('token') || ''
-    if (value) return accountForPasswordEnableToken(db, value)
-      ? page(<AccountPassword user={user} enabled={false} token={value} />)
-      : page(<AccountPassword user={user} enabled={false} invalid />, 400)
+    if (value) {
+      return accountForPasswordEnableToken(db, value)
+        ? page(<AccountPassword user={user} enabled={false} token={value} />)
+        : page(<AccountPassword user={user} enabled={false} invalid />, 400)
+    }
     if (!user) return redirect('/enter?next=' + encodeURIComponent('/account/password/enable'))
     const credentials = db.query('SELECT password FROM users WHERE id=?').get(user.id) as { password: string }
-    return credentials.password === '!' ? page(<AccountPassword user={user} enabled={false} request />)
+    return credentials.password === '!'
+      ? page(<AccountPassword user={user} enabled={false} request />)
       : redirect('/account/password/change')
   })
   app.post('/account/password/enable', async c => {
@@ -251,9 +278,16 @@ export function registerAccountRoutes(app: Hono) {
     if (!user) return redirect('/enter')
     const f = await form(c.req.raw)
     const limited = authLimit(c, 'password-enable', `${user.id}:${clientAddress(c)}`, AUTH_LIMITS.sensitiveAccount)
-    if (limited) return retryPage(page(<AccountPassword user={user} enabled={false} request={!f.token}
-      token={f.token || undefined}
-      error={authRateLimitMessage(limited.retryAfter)} />, 429), limited.retryAfter)
+    if (limited) {
+      return retryPage(
+        page(
+          <AccountPassword user={user} enabled={false} request={!f.token} token={f.token || undefined}
+            error={authRateLimitMessage(limited.retryAfter)} />,
+          429,
+        ),
+        limited.retryAfter,
+      )
+    }
     const tokenAccount = accountForPasswordEnableToken(db, f.token || '')
     if (!f.token) {
       const current = db.query('SELECT password FROM users WHERE id=?').get(user.id) as { password: string }
@@ -267,16 +301,23 @@ export function registerAccountRoutes(app: Hono) {
       catch (error) {
         db.query('DELETE FROM password_enable_tokens WHERE token_hash=?').run(hash(value))
         console.error('Could not send password-enable confirmation', error)
-        return page(<AccountPassword user={user} enabled={false} request
-          error="Setup email could not be sent. Please try again later." />, 503)
+        return page(
+          <AccountPassword user={user} enabled={false} request
+            error="Setup email could not be sent. Please try again later." />,
+          503,
+        )
       }
       return page(<AccountPassword user={user} enabled={false} sent />)
     }
     if (!tokenAccount) return page(<AccountPassword user={user} enabled={false} invalid />, 400)
     const password = f.newPassword || ''
-    if (password.length < 8 || password.length > 128) return page(<AccountPassword user={user} enabled={false}
-      token={f.token}
-      error="Use a password between 8 and 128 characters." />, 400)
+    if (password.length < 8 || password.length > 128) {
+      return page(
+        <AccountPassword user={user} enabled={false} token={f.token}
+          error="Use a password between 8 and 128 characters." />,
+        400,
+      )
+    }
     const passwordHash = await hashPassword(password)
     db.transaction(() => {
       db.query('UPDATE users SET password=? WHERE id=? AND password=?')
@@ -290,26 +331,35 @@ export function registerAccountRoutes(app: Hono) {
     const user = currentUser(c.req.raw)
     if (!user) return redirect('/enter?next=' + encodeURIComponent('/account/password/change'))
     const credentials = db.query('SELECT password FROM users WHERE id=?').get(user.id) as { password: string }
-    return credentials.password === '!' ? redirect('/account/password/enable')
+    return credentials.password === '!'
+      ? redirect('/account/password/enable')
       : page(<AccountPassword user={user} enabled />)
   })
   app.post('/account/password/change', async c => {
     const user = currentUser(c.req.raw)
     if (!user) return redirect('/enter')
     const limited = authLimit(c, 'password-change', `${user.id}:${clientAddress(c)}`, AUTH_LIMITS.sensitiveAccount)
-    if (limited) return retryPage(page(<AccountPassword user={user} enabled
-      error={authRateLimitMessage(limited.retryAfter)} />, 429), limited.retryAfter)
+    if (limited) {
+      return retryPage(
+        page(<AccountPassword user={user} enabled error={authRateLimitMessage(limited.retryAfter)} />, 429),
+        limited.retryAfter,
+      )
+    }
     const f = await form(c.req.raw)
     const oldPassword = f.oldPassword || ''
     const newPassword = f.newPassword || ''
     const credentials = db.query('SELECT password FROM users WHERE id=?').get(user.id) as { password: string }
     if (credentials.password === '!') return redirect('/account/password/enable')
-    if (!await verifyPassword(oldPassword, credentials.password)) return page(<AccountPassword user={user} enabled
-      error="Old password is incorrect." />, 400)
-    if (newPassword.length < 8 || newPassword.length > 128) return page(<AccountPassword user={user} enabled
-      error="Use a password between 8 and 128 characters." />, 400)
-    if (oldPassword === newPassword) return page(<AccountPassword user={user} enabled
-      error="Choose a password different from your old password." />, 400)
+    if (!await verifyPassword(oldPassword, credentials.password)) {
+      return page(<AccountPassword user={user} enabled error="Old password is incorrect." />, 400)
+    }
+    if (newPassword.length < 8 || newPassword.length > 128) {
+      return page(<AccountPassword user={user} enabled error="Use a password between 8 and 128 characters." />, 400)
+    }
+    if (oldPassword === newPassword) {
+      return page(<AccountPassword user={user} enabled error="Choose a password different from your old password." />,
+        400)
+    }
     const currentSession = sessionHash(sessionToken(c.req.raw))
     const newPasswordHash = await hashPassword(newPassword)
     db.transaction(() => {
@@ -390,7 +440,8 @@ export function registerAccountRoutes(app: Hono) {
   app.get('/account/email/change/authorize', c => {
     const value = c.req.query('token') || ''
     const change = emailChangeForToken(db, value)
-    return change ? page(<ConfirmEmail token={value} kind="authorize-change" email={change.new_email} />)
+    return change
+      ? page(<ConfirmEmail token={value} kind="authorize-change" email={change.new_email} />)
       : page(<ConfirmEmail invalid />, 400)
   })
 
@@ -406,8 +457,11 @@ export function registerAccountRoutes(app: Hono) {
     }
     catch (error) {
       console.error('Could not send new-email confirmation', error)
-      return page(<ConfirmEmail token={value} kind="authorize-change" email={change.new_email}
-        error="Confirmation email could not be sent. Please try again later." />, 503)
+      return page(
+        <ConfirmEmail token={value} kind="authorize-change" email={change.new_email}
+          error="Confirmation email could not be sent. Please try again later." />,
+        503,
+      )
     }
   })
 
@@ -476,8 +530,16 @@ export function registerAccountRoutes(app: Hono) {
     const limited = authLimit(c, 'account-delete', `${user.id}:${clientAddress(c)}`, AUTH_LIMITS.sensitiveAccount)
     const credentials = db.query('SELECT password FROM users WHERE id=?').get(user.id) as { password: string }
     const passwordEnabled = credentials.password !== '!'
-    if (limited) return retryPage(page(<ConfirmAccountDelete user={user} passwordEnabled={passwordEnabled}
-      error={authRateLimitMessage(limited.retryAfter)} />, 429), limited.retryAfter)
+    if (limited) {
+      return retryPage(
+        page(
+          <ConfirmAccountDelete user={user} passwordEnabled={passwordEnabled}
+            error={authRateLimitMessage(limited.retryAfter)} />,
+          429,
+        ),
+        limited.retryAfter,
+      )
+    }
     if (passwordEnabled) {
       if (!await verifyPassword(f.password || '', credentials.password)) {
         return page(<ConfirmAccountDelete user={user} passwordEnabled error="Password is incorrect." />, 400)
@@ -488,14 +550,15 @@ export function registerAccountRoutes(app: Hono) {
     const origin = Bun.env.APP_URL?.replace(/\/$/, '') || new URL(c.req.url).origin
     const value = issueAccountDeletionToken(db, user.id, user.email)
     try {
-      await sendAccountDeletionConfirmation(user.email,
-        `${origin}/account/delete?token=${encodeURIComponent(value)}`)
+      await sendAccountDeletionConfirmation(user.email, `${origin}/account/delete?token=${encodeURIComponent(value)}`)
     }
     catch (error) {
       db.query('DELETE FROM account_deletion_tokens WHERE token_hash=?').run(hash(value))
       console.error('Could not send account-deletion confirmation', error)
-      return page(<ConfirmAccountDelete user={user}
-        error="Confirmation email could not be sent. Please try again later." />, 503)
+      return page(
+        <ConfirmAccountDelete user={user} error="Confirmation email could not be sent. Please try again later." />,
+        503,
+      )
     }
     return page(<ConfirmAccountDelete user={user} sent />)
   })

@@ -1,15 +1,15 @@
 import { describe, expect, test } from 'bun:test'
-import { About, AccountApiKeyCreate, AccountMagicLink, AccountPassword, AccountSecurity, AdminDashboard, ApiDocs, Auth, ChangeFont, ChangeTheme, ChooseHandle, ConfirmAccountDelete, ConfirmEmail, Connections, Contact, EmbedExamples, ErrorPage, MagicLinkSent, NotificationSettings,
-  Legal, NotFound, postTitle,
-  Profile } from './components/pages'
+import { About, AccountApiKeyCreate, AccountMagicLink, AccountPassword, AccountSecurity, AdminDashboard, ApiDocs, Auth,
+  ChangeFont, ChangeTheme, ChooseHandle, ConfirmAccountDelete, ConfirmEmail, Connections, Contact, EmbedExamples,
+  ErrorPage, Legal, MagicLinkSent, NotFound, NotificationSettings, postTitle, Profile } from './components/pages'
 
 import React from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
-import { Post } from './components/post'
 import { HotFeed } from './components/hot-feed'
+import { ConnectionPeople, TagPeopleList } from './components/page-shared'
+import { Post } from './components/post'
 import { PublicFeed } from './components/public-feed'
 import { TagFeed } from './components/tag-feed'
-import { ConnectionPeople, TagPeopleList } from './components/page-shared'
 
 test('search result cards highlight tag, handle, and bio matches while keeping follow controls', () => {
   const user = { id: 1, handle: 'reader', email: 'reader@example.com', bio: '' }
@@ -21,8 +21,7 @@ test('search result cards highlight tag, handle, and bio matches while keeping f
   }))
   const people = renderToStaticMarkup(React.createElement(ConnectionPeople, {
     user,
-    people: [{ id: 2, handle: 'typewriter', email: '', bio: 'Types useful notes', posts: 3,
-      viewerFollowing: true }],
+    people: [{ id: 2, handle: 'typewriter', email: '', bio: 'Types useful notes', posts: 3, viewerFollowing: true }],
     highlightTerms: ['type'],
   }))
 
@@ -125,10 +124,14 @@ test('notification settings are the only account page that loads their client sc
 test('notification settings show Home Screen installation steps only for iOS', () => {
   const user = { id: 1, handle: 'reader', email: 'reader@example.com', bio: '' }
   const ios = renderToStaticMarkup(React.createElement(NotificationSettings, {
-    user, publicKey: 'public-key', ios: true,
+    user,
+    publicKey: 'public-key',
+    ios: true,
   }))
   const other = renderToStaticMarkup(React.createElement(NotificationSettings, {
-    user, publicKey: 'public-key', ios: false,
+    user,
+    publicKey: 'public-key',
+    ios: false,
   }))
   expect(ios).toContain('Install textlog first')
   expect(ios).toContain('Add to Home Screen')
@@ -178,7 +181,12 @@ test('public collection pages advertise their RSS and Atom feeds', () => {
   const hot = renderToStaticMarkup(React.createElement(HotFeed, { user: null, cursor: null }))
   const latest = renderToStaticMarkup(React.createElement(PublicFeed, { user: null, cursor: null, path: '/latest' }))
   const tag = renderToStaticMarkup(React.createElement(TagFeed, {
-    user: null, tag: 'ascii_art', following: false, posts: [], page: 1, total: 0,
+    user: null,
+    tag: 'ascii_art',
+    following: false,
+    posts: [],
+    page: 1,
+    total: 0,
   }))
 
   expect(hot).toContain('type="application/rss+xml" title="Hot notes (RSS)" href="/hot.rss"')
@@ -241,7 +249,10 @@ test('API documentation links to the privacy-filtered public archive', () => {
 
 test('embed examples show every format and use stagas for the user feed', () => {
   const html = renderToStaticMarkup(React.createElement(EmbedExamples, {
-    user: null, handle: 'stagas', tag: 'notes', postId: 42,
+    user: null,
+    handle: 'stagas',
+    tag: 'notes',
+    postId: 42,
   }))
   expect(html).toContain('/embed/latest?theme=light&amp;accent=sage&amp;font=menlo')
   expect(html).toContain('/embed/hot?accent=purple&amp;font=consolas')
@@ -296,7 +307,7 @@ test('Error pages explain client and server failures without exposing details', 
   const server = renderToStaticMarkup(React.createElement(ErrorPage, { user: null, status: 500 }))
 
   expect(client).toContain('aria-hidden="true">4xx</p>')
-  expect(client).toContain("We couldn&#x27;t process that request.")
+  expect(client).toContain('We couldn&#x27;t process that request.')
   expect(server).toContain('aria-hidden="true">5xx</p>')
   expect(server).toContain('Something went wrong.')
   expect(server).not.toContain('Intentional server error')
@@ -377,7 +388,9 @@ test('Email confirmation requires an explicit POST', () => {
 
 test('Email change approval uses the action panel', () => {
   const html = renderToStaticMarkup(React.createElement(ConfirmEmail, {
-    token: 'approval-token', kind: 'authorize-change', email: 'new@example.com',
+    token: 'approval-token',
+    kind: 'authorize-change',
+    email: 'new@example.com',
   }))
   expect(html).toContain('welcome-panel verify-email-panel email-change-approval')
   expect(html).toContain('security confirmation')
@@ -387,7 +400,8 @@ test('Email change approval uses the action panel', () => {
 test('Account deletion asks for the configured second factor', () => {
   const user = { id: 1, handle: 'reader', email: 'reader@example.com', bio: '' }
   const passwordHtml = renderToStaticMarkup(React.createElement(ConfirmAccountDelete, {
-    user, passwordEnabled: true,
+    user,
+    passwordEnabled: true,
   }))
   expect(passwordHtml).toContain('type="password"')
   expect(passwordHtml).toContain('name="password"')
@@ -455,14 +469,18 @@ test('AccountSecurity asks for the current password when email changes require i
 test('enabling password login requests email confirmation before showing password fields', () => {
   const user = { id: 1, handle: 'reader', email: 'reader@example.com', bio: '' }
   const requestHtml = renderToStaticMarkup(React.createElement(AccountPassword, {
-    user, enabled: false, request: true,
+    user,
+    enabled: false,
+    request: true,
   }))
   expect(requestHtml).toContain('send setup link')
   expect(requestHtml).toContain('password-panel enable-password-panel')
   expect(requestHtml).not.toContain('name="newPassword"')
 
   const confirmedHtml = renderToStaticMarkup(React.createElement(AccountPassword, {
-    user, enabled: false, token: 'setup-token',
+    user,
+    enabled: false,
+    token: 'setup-token',
   }))
   expect(confirmedHtml).toContain('name="token" value="setup-token"')
   expect(confirmedHtml).toContain('name="newPassword"')
@@ -618,7 +636,9 @@ test('Profile linkifies Markdown links and tags in the bio', () => {
   }))
 
   expect(html).toContain('<a href="/tag/textlog">#TextLog</a>')
-  expect(html).toContain('<a href="https://example.com/" title="https://example.com/" target="_blank" rel="nofollow ugc noopener noreferrer">my site</a>.')
+  expect(html).toContain(
+    '<a href="https://example.com/" title="https://example.com/" target="_blank" rel="nofollow ugc noopener noreferrer">my site</a>.',
+  )
 })
 
 test('Post renders preloaded parent and reply data', () => {
@@ -647,8 +667,12 @@ test('Post renders preloaded parent and reply data', () => {
   expect(html).toContain('2 replies')
   expect(html).toContain('@author')
   expect(html).toContain('parent')
-  expect(html).toContain('href="https://example.com/reply" title="https://example.com/reply" target="_blank" rel="nofollow ugc noopener noreferrer">link</a>')
-  expect(html).toContain('href="https://example.com/post" title="https://example.com/post" target="_blank" rel="nofollow ugc noopener noreferrer">link</a>')
+  expect(html).toContain(
+    'href="https://example.com/reply" title="https://example.com/reply" target="_blank" rel="nofollow ugc noopener noreferrer">link</a>',
+  )
+  expect(html).toContain(
+    'href="https://example.com/post" title="https://example.com/post" target="_blank" rel="nofollow ugc noopener noreferrer">link</a>',
+  )
   expect(html).toContain('href="/enter?next=%2Fpost%2F2%3Freply%3D1"')
   expect(html).toContain('aria-label="enter to reply to @writer">enter to reply</a>')
   expect(html).toContain('href="/enter?next=%2Fpost%2F1%3Freply%3D1"')

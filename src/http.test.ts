@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test'
 import { applyHtmlCachePolicy, clearSessionCookie, feedPreference, feedPreferenceCookie, FORM_REQUEST_BODY_LIMIT,
-  htmlCacheControl, isSameOriginRequest, limitedFormData, requiresSameOrigin, RequestBodyError, safeLocalPath,
+  htmlCacheControl, isSameOriginRequest, limitedFormData, RequestBodyError, requiresSameOrigin, safeLocalPath,
   safeRefererPath, securityHeaders, sessionCookie, stringField } from './http'
 
 describe('local redirects', () => {
@@ -102,7 +102,7 @@ describe('request values and cookies', () => {
 describe('security headers', () => {
   test('disables scripts in production and only permits the inline development reloader in development', () => {
     expect(securityHeaders()['Content-Security-Policy']).toContain('script-src \'none\'')
-    expect(securityHeaders()['Content-Security-Policy']).toContain("style-src 'self' 'unsafe-inline'")
+    expect(securityHeaders()['Content-Security-Policy']).toContain('style-src \'self\' \'unsafe-inline\'')
     expect(securityHeaders(true)['Content-Security-Policy']).toContain('script-src \'self\' \'unsafe-inline\'')
     expect(securityHeaders()['X-Frame-Options']).toBe('DENY')
     expect(securityHeaders(false, undefined, true)['X-Frame-Options']).toBeUndefined()
@@ -127,7 +127,9 @@ describe('HTML cache policy', () => {
   })
 
   test('prevents storage for authenticated and sensitive pages', () => {
-    expect(htmlCacheControl(new Request('https://textlog.cc/u/alice', { headers: { cookie: 'textlog=token' } }), html()))
+    expect(
+      htmlCacheControl(new Request('https://textlog.cc/u/alice', { headers: { cookie: 'textlog=token' } }), html()),
+    )
       .toBe('private, no-store')
     expect(htmlCacheControl(new Request('https://textlog.cc/login'), html())).toBe('private, no-store')
     expect(htmlCacheControl(new Request('https://textlog.cc/post/1?reply=1'), html())).toBe('private, no-store')

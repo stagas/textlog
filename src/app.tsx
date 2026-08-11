@@ -1,40 +1,40 @@
-import { applyHtmlCachePolicy, GLOBAL_REQUEST_BODY_LIMIT, isSameOriginRequest, requiresSameOrigin, RequestBodyError, safeLocalPath,
-  securityHeaders, sessionCookie } from './http'
+import { applyHtmlCachePolicy, GLOBAL_REQUEST_BODY_LIMIT, isSameOriginRequest, RequestBodyError, requiresSameOrigin,
+  safeLocalPath, securityHeaders, sessionCookie } from './http'
 
 import { Hono } from 'hono'
 import { bodyLimit } from 'hono/body-limit'
 import { startAutomatedBackups } from './backup-automation'
+import { appName, clientIpHeaderName } from './brand'
 import { configureDevReload } from './components/layout'
 import { compressResponse } from './compression'
 import { databaseHealth } from './database-health'
 import { db } from './db'
+import { isDevelopment } from './environment'
 import { clientIp, logError, logHttp, logReady, shouldLogHttp } from './log'
 import { startMaintenance } from './maintenance'
 import { renderDefaultOg } from './og'
 import { startPublicArchive } from './public-archive'
 import { ClientErrorRateLimiter, rateLimitedResponse, RequestRateLimiter } from './request-rate-limit'
-import { isDevelopment } from './environment'
 import { registerAccountRoutes } from './routes/account'
 import { registerAdminRoutes } from './routes/admin'
 import { registerApiRoutes } from './routes/api'
 import { registerAuthRoutes } from './routes/auth'
-import { registerFeedsRoutes } from './routes/feeds'
 import { registerEmbedRoutes } from './routes/embed'
+import { registerFeedsRoutes } from './routes/feeds'
 import { registerIllegalActivityRoutes } from './routes/illegal-activity'
 import { registerInteractionsRoutes } from './routes/interactions'
 import { registerPostsRoutes } from './routes/posts'
 import { registerProfilesRoutes } from './routes/profiles'
-import { registerSeoRoutes } from './routes/seo'
 import { registerSearchRoutes } from './routes/search'
-import { registerStatsRoutes } from './routes/stats'
+import { registerSeoRoutes } from './routes/seo'
 import { clientErrorPage, notFoundPage, serverErrorPage } from './routes/shared'
+import { registerStatsRoutes } from './routes/stats'
 import { registerTagsRoutes } from './routes/tags'
 import { renewSession } from './sessions'
 import { loadStylesAsset, stylesResponse } from './styles'
-import { currentUser, sessionToken } from './utils'
 import { themeLogoSvg, themeStyles, versionedAppearance, withAppearance } from './theme'
+import { currentUser, sessionToken } from './utils'
 import { VisitorBuffer } from './visitors'
-import { appName, clientIpHeaderName } from './brand'
 
 const devReloadEnabled = Bun.env.DEV_RELOAD === 'true'
 const publicArchivePath = Bun.env.PUBLIC_ARCHIVE_PATH || 'public/dump.zip'
@@ -130,7 +130,7 @@ app.use('*', async (c, next) => {
     securityHeaders(devReloadEnabled, undefined, embeddable, notificationSettings),
   )) c.header(name, value)
   if (c.req.path === '/textlog.svg' || c.req.path === '/favicon-theme.svg') {
-    c.header('Content-Security-Policy', "default-src 'none'; style-src 'unsafe-inline'")
+    c.header('Content-Security-Policy', 'default-src \'none\'; style-src \'unsafe-inline\'')
   }
 })
 app.use('*', async (c, next) => {
@@ -142,8 +142,9 @@ app.use('*', async (c, next) => {
   await next()
   if (c.req.method !== 'GET' || !c.res.headers.get('content-type')?.includes('text/html')) return
   const url = new URL(c.req.url)
-  const privatePath = /^\/(?:enter|forgot-password|reset-password|choose-handle|write|compose|activity|admin|search|account)(?:\/|$)/
-    .test(url.pathname) || /^\/post\/\d+\/(?:edit|delete)$/.test(url.pathname)
+  const privatePath =
+    /^\/(?:enter|forgot-password|reset-password|choose-handle|write|compose|activity|admin|search|account)(?:\/|$)/
+      .test(url.pathname) || /^\/post\/\d+\/(?:edit|delete)$/.test(url.pathname)
   const transientParameters = ['reply', 'report', 'reported', 'edit', 'welcome', 'reset', 'token']
   const transient = transientParameters.some(name => url.searchParams.has(name))
   if (privatePath || transient || c.res.status >= 400) c.header('X-Robots-Tag', 'noindex, nofollow')
@@ -204,43 +205,55 @@ if (devReloadEnabled) {
   app.get('/__dev/restart', c => c.json({ bootId }, 200, { 'cache-control': 'no-store, no-cache, must-revalidate' }))
 }
 for (const asset of publicAssets) {
-  app.get(asset.path, () => new Response(asset.body, {
-    headers: {
-      'content-type': asset.contentType,
-      'cache-control': 'public, max-age=31536000, immutable',
-    },
-  }))
+  app.get(asset.path, () =>
+    new Response(asset.body, {
+      headers: {
+        'content-type': asset.contentType,
+        'cache-control': 'public, max-age=31536000, immutable',
+      },
+    }))
 }
-app.get('/site.webmanifest', c => c.json({
-  name: appName(), short_name: appName(),
-  icons: [
-    { src: '/android-chrome-192x192.png', sizes: '192x192', type: 'image/png' },
-    { src: '/android-chrome-512x512.png', sizes: '512x512', type: 'image/png' },
-    { src: '/maskable-icon-512x512.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' },
-  ],
-  theme_color: '#20231f', background_color: '#f4f3ee', display: 'standalone', start_url: '/',
-}, 200, { 'cache-control': 'no-cache' }))
+app.get('/site.webmanifest', c =>
+  c.json({
+    name: appName(),
+    short_name: appName(),
+    icons: [
+      { src: '/android-chrome-192x192.png', sizes: '192x192', type: 'image/png' },
+      { src: '/android-chrome-512x512.png', sizes: '512x512', type: 'image/png' },
+      { src: '/maskable-icon-512x512.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' },
+    ],
+    theme_color: '#20231f',
+    background_color: '#f4f3ee',
+    display: 'standalone',
+    start_url: '/',
+  }, 200, { 'cache-control': 'no-cache' }))
 app.get('/styles.css', async c => {
   const asset = styles ?? await loadStylesAsset(stylesPath)
   return stylesResponse(asset, c.req.raw, !devReloadEnabled)
 })
 const embedStyles = await Bun.file(new URL('./embed.css', import.meta.url)).text()
-app.get('/embed.css', () => new Response(embedStyles, { headers: {
-  'content-type': 'text/css; charset=utf-8', 'cache-control': 'public, max-age=86400',
-} }))
+app.get('/embed.css', () =>
+  new Response(embedStyles, { headers: {
+    'content-type': 'text/css; charset=utf-8',
+    'cache-control': 'public, max-age=86400',
+  } }))
 for (const path of ['/notifications.js', '/sw.js']) {
   const assetUrl = new URL(`../public${path}`, import.meta.url)
   const body = devReloadEnabled ? undefined : await Bun.file(assetUrl).text()
-  app.get(path, async () => new Response(
-    (body ?? await Bun.file(assetUrl).text()).replaceAll('__APP_NAME__', appName()), { headers: {
-    'content-type': 'text/javascript; charset=utf-8',
-    'cache-control': 'no-cache',
-    ...(path === '/sw.js' ? { 'service-worker-allowed': '/' } : {}),
-  } }))
+  app.get(path, async () =>
+    new Response(
+      (body ?? await Bun.file(assetUrl).text()).replaceAll('__APP_NAME__', appName()),
+      { headers: {
+        'content-type': 'text/javascript; charset=utf-8',
+        'cache-control': 'no-cache',
+        ...(path === '/sw.js' ? { 'service-worker-allowed': '/' } : {}),
+      } },
+    ))
 }
-app.get('/theme.css', c => new Response(themeStyles(c.req.raw), {
-  headers: { 'content-type': 'text/css; charset=utf-8', 'cache-control': 'private, no-store' },
-}))
+app.get('/theme.css', c =>
+  new Response(themeStyles(c.req.raw), {
+    headers: { 'content-type': 'text/css; charset=utf-8', 'cache-control': 'private, no-store' },
+  }))
 app.get('/textlog.svg', c =>
   new Response(themeLogoSvg(c.req.raw), {
     headers: {
@@ -253,15 +266,17 @@ app.get('/textlog.svg', c =>
 app.get('/favicon-theme.svg', c => {
   const selected = versionedAppearance(c.req.query('v'))
   return new Response(themeLogoSvg(c.req.raw, selected || undefined), {
-    headers: selected ? {
-      'content-type': 'image/svg+xml; charset=utf-8',
-      'cache-control': 'public, max-age=31536000, immutable',
-    } : {
-      'content-type': 'image/svg+xml; charset=utf-8',
-      'cache-control': 'private, no-store, no-cache, must-revalidate',
-      'pragma': 'no-cache',
-      'expires': '0',
-    },
+    headers: selected
+      ? {
+        'content-type': 'image/svg+xml; charset=utf-8',
+        'cache-control': 'public, max-age=31536000, immutable',
+      }
+      : {
+        'content-type': 'image/svg+xml; charset=utf-8',
+        'cache-control': 'private, no-store, no-cache, must-revalidate',
+        'pragma': 'no-cache',
+        'expires': '0',
+      },
   })
 })
 app.get('/og.png', () => {
@@ -306,7 +321,9 @@ export default {
   async fetch(request: Request, server: Bun.Server<unknown>) {
     const address = clientIp(request, server.requestIP(request)?.address)
     const bypassRateLimits = Bun.env.NODE_ENV === 'test' || isDevelopment()
-    const limited = bypassRateLimits ? null : requestRateLimiter.consume(address) ?? clientErrorRateLimiter.check(address)
+    const limited = bypassRateLimits
+      ? null
+      : requestRateLimiter.consume(address) ?? clientErrorRateLimiter.check(address)
     if (limited) return rateLimitedResponse(limited.retryAfter)
     const headers = new Headers(request.headers)
     headers.set(clientIpHeaderName(), address)

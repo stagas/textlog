@@ -1,12 +1,12 @@
 import type { Database } from 'bun:sqlite'
-import { createHash, randomBytes } from 'node:crypto'
 import { LinkifyIt } from 'linkify-it'
+import { createHash, randomBytes } from 'node:crypto'
 import tlds from 'tlds'
-import { db, type User } from './db'
-import { markSessionUsed, sessionHash } from './sessions'
 import { userForApiKey } from './api-keys'
 import { sessionCookieName } from './brand'
+import { db, type User } from './db'
 import { texToMathML } from './math'
+import { markSessionUsed, sessionHash } from './sessions'
 
 export const esc = (v: unknown) =>
   String(v ?? '').replace(/[&<>"']/g,
@@ -146,7 +146,8 @@ function mathTokens(body: string, protectedTokens: LinkToken[]) {
         continue
       }
       if (body[close] === '$' && !escapedAt(body, close)
-        && (!display || body[close + 1] === '$')) {
+        && (!display || body[close + 1] === '$'))
+      {
         const after = close + width
         const validInlineClose = display || (!/\s/.test(body[close - 1]) && !/\d/.test(body[after] || ''))
         if (validInlineClose) break
@@ -172,17 +173,16 @@ function linkTokens(body: string): LinkToken[] {
   for (const match of body.matchAll(/^```([^\r\n]*)\r?\n([\s\S]*?)\r?\n```(?=\r?$)/gm)) {
     const language = match[1].trim().toLowerCase()
     tokens.push({ index: match.index, lastIndex: match.index + match[0].length,
-      kind: language === 'latex' || language === 'tex' ? 'latex-fence' : 'code-fence',
-      raw: match[0], label: match[2] })
+      kind: language === 'latex' || language === 'tex' ? 'latex-fence' : 'code-fence', raw: match[0], label: match[2] })
   }
   for (const match of body.matchAll(/`([^`\r\n]+)`/g)) {
-    tokens.push({ index: match.index, lastIndex: match.index + match[0].length, kind: 'code',
-      raw: match[0], label: match[1] })
+    tokens.push({ index: match.index, lastIndex: match.index + match[0].length, kind: 'code', raw: match[0],
+      label: match[1] })
   }
   tokens.push(...mathTokens(body, tokens))
   for (const match of body.matchAll(/\[([^\]\r\n]+)\]\((https?:\/\/[^\s<>")]+)\)/gi)) {
-    tokens.push({ index: match.index, lastIndex: match.index + match[0].length, kind: 'markdown',
-      raw: match[0], label: match[1], url: match[2] })
+    tokens.push({ index: match.index, lastIndex: match.index + match[0].length, kind: 'markdown', raw: match[0],
+      label: match[1], url: match[2] })
   }
   for (const match of urlMatcher.match(body) || []) {
     // Protocol-less domains default to HTTPS. Explicit schemes remain untouched.
@@ -214,7 +214,8 @@ function renderedMath(source: string, display: boolean) {
 }
 
 export function linkify(body: string, mentionBios: Record<string, string> = {}, highlightTerms: string[] = [],
-  appUrl: string | undefined = Bun.env.APP_URL) {
+  appUrl: string | undefined = Bun.env.APP_URL)
+{
   let html = ''
   let end = 0
   for (const match of linkTokens(body)) {

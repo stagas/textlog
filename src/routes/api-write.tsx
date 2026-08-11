@@ -6,16 +6,16 @@ import { AUTH_LIMITS, consumeAuthAttempt, consumeBucketedAttempt, rateLimitKey }
 import type { User } from '../db'
 import { sendMagicLink } from '../email'
 import { resolveHandle } from '../handles'
-import { emailPattern } from './auth'
+import { logError } from '../log'
 import { moderateText, moderationMessage } from '../moderation'
-import { postRateLimitMessage } from '../post-rate-limit'
 import { normalizePostBody, POST_MAX, validPostBody } from '../post-body'
+import { postRateLimitMessage } from '../post-rate-limit'
 import { canPublishPosts } from '../posting-policy'
 import { createPost, updatePost } from '../posts'
+import { sendPushForFollow, sendPushForPost } from '../push'
 import { insertSession, SESSION_LIFETIME_MS, sessionHash } from '../sessions'
 import { apiUser, bearerToken, hash, token } from '../utils'
-import { sendPushForFollow, sendPushForPost } from '../push'
-import { logError } from '../log'
+import { emailPattern } from './auth'
 import { clientAddress, issueMagicLink, usersBlocked } from './shared'
 
 export const CODE_ATTEMPT_LIMIT = 5
@@ -167,8 +167,8 @@ export function registerApiWriteRoutes(app: Hono, database: Database, appUrl?: s
     if (bio) {
       const moderation = await moderateText(`bio: ${bio}`)
       if (!moderation.ok) {
-        return fail(moderation.reason === 'flagged' ? 'flagged' : 'unavailable',
-          moderationMessage(moderation.reason), moderation.reason === 'flagged' ? 422 : 503)
+        return fail(moderation.reason === 'flagged' ? 'flagged' : 'unavailable', moderationMessage(moderation.reason),
+          moderation.reason === 'flagged' ? 422 : 503)
       }
     }
     database.query('UPDATE users SET bio=? WHERE id=?').run(bio, guard.user!.id)
@@ -200,8 +200,8 @@ export function registerApiWriteRoutes(app: Hono, database: Database, appUrl?: s
 
     const moderation = await moderateText(content)
     if (!moderation.ok) {
-      return fail(moderation.reason === 'flagged' ? 'flagged' : 'unavailable',
-        moderationMessage(moderation.reason), moderation.reason === 'flagged' ? 422 : 503)
+      return fail(moderation.reason === 'flagged' ? 'flagged' : 'unavailable', moderationMessage(moderation.reason),
+        moderation.reason === 'flagged' ? 422 : 503)
     }
 
     const result = createPost(database, user.id, content, parentId)
@@ -233,8 +233,8 @@ export function registerApiWriteRoutes(app: Hono, database: Database, appUrl?: s
     }
     const moderation = await moderateText(content)
     if (!moderation.ok) {
-      return fail(moderation.reason === 'flagged' ? 'flagged' : 'unavailable',
-        moderationMessage(moderation.reason), moderation.reason === 'flagged' ? 422 : 503)
+      return fail(moderation.reason === 'flagged' ? 'flagged' : 'unavailable', moderationMessage(moderation.reason),
+        moderation.reason === 'flagged' ? 422 : 503)
     }
     updatePost(database, id, content)
     return json({ data: apiPost(database, id, apiOrigin(c.req.url, appUrl)) })

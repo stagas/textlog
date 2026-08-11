@@ -1,7 +1,7 @@
+import { appName, appOrigin } from '../brand'
 import type { User } from '../db'
 import { Layout } from './layout'
 import { FormMessage } from './page-shared'
-import { appName, appOrigin } from '../brand'
 
 export function IllegalActivityReport(
   { user, error, reference, values = {} }: { user: User | null; error?: string; reference?: string;

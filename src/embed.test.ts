@@ -1,8 +1,8 @@
 import { expect, test } from 'bun:test'
-import { themeStyles } from './theme'
-import { renderToStaticMarkup } from 'react-dom/server'
 import React from 'react'
+import { renderToStaticMarkup } from 'react-dom/server'
 import { Embed } from './components/embed'
+import { themeStyles } from './theme'
 
 test('embed appearance query parameters select known themes and accents', () => {
   const css = themeStyles(new Request('https://textlog.cc/theme.css?theme=dracula&accent=cyan&font=dejavu'))
@@ -16,7 +16,12 @@ test('embed font short names are optional and invalid values fall back safely', 
   expect(invalid).toContain('font-family:ui-monospace, SFMono-Regular, Menlo, Consolas, monospace')
 
   const html = renderToStaticMarkup(React.createElement(Embed, {
-    posts: [], title: 'latest', href: '/latest', theme: 'light', accent: 'sage', font: 'jetbrains',
+    posts: [],
+    title: 'latest',
+    href: '/latest',
+    theme: 'light',
+    accent: 'sage',
+    font: 'jetbrains',
   }))
   expect(html).toContain('/theme.css?theme=light&amp;accent=sage&amp;font=jetbrains')
 })
@@ -28,7 +33,11 @@ test('embed system font uses the full system name', () => {
 
 test('embed theme can be omitted from the generated stylesheet URL', () => {
   const html = renderToStaticMarkup(React.createElement(Embed, {
-    posts: [], title: 'hot', href: '/hot', accent: 'purple', font: 'consolas',
+    posts: [],
+    title: 'hot',
+    href: '/hot',
+    accent: 'purple',
+    font: 'consolas',
   }))
   expect(html).toContain('/theme.css?accent=purple&amp;font=consolas')
   expect(html).not.toContain('theme=')
@@ -42,7 +51,11 @@ test('invalid embed appearance values use safe defaults', () => {
 
 test('embed document title renders as one text child', () => {
   const html = renderToStaticMarkup(React.createElement(Embed, {
-    posts: [], title: 'post 1093', href: '/post/1093', theme: 'system', accent: 'theme',
+    posts: [],
+    title: 'post 1093',
+    href: '/post/1093',
+    theme: 'system',
+    accent: 'theme',
   }))
   expect(html).toContain('<title>post 1093 · textlog</title>')
 })
@@ -50,14 +63,27 @@ test('embed document title renders as one text child', () => {
 test('feed embeds render a quoted parent with its metadata and links', () => {
   const html = renderToStaticMarkup(React.createElement(Embed, {
     posts: [{
-      id: 2, user_id: 1, parent_id: 1, body: 'reply', created_at: '2026-08-10 12:00:00',
-      deleted_at: null, handle: 'alice', reply_count: 0,
+      id: 2,
+      user_id: 1,
+      parent_id: 1,
+      body: 'reply',
+      created_at: '2026-08-10 12:00:00',
+      deleted_at: null,
+      handle: 'alice',
+      reply_count: 0,
       parent: {
-        id: 1, body: 'quoted #note', created_at: '2026-08-10 11:00:00', deleted_at: null,
-        handle: 'bob', reply_count: 2,
+        id: 1,
+        body: 'quoted #note',
+        created_at: '2026-08-10 11:00:00',
+        deleted_at: null,
+        handle: 'bob',
+        reply_count: 2,
       },
     }],
-    title: '@alice', href: '/u/alice', theme: 'system', accent: 'theme',
+    title: '@alice',
+    href: '/u/alice',
+    theme: 'system',
+    accent: 'theme',
   }))
 
   expect(html).toContain('class="embed-parent"')

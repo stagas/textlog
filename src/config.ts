@@ -159,11 +159,13 @@ export function validateStartupConfiguration(env: Environment = Bun.env, options
   const providerConfigured = emailProvider === 'resend'
     ? Boolean(env.RESEND_API_KEY?.trim())
     : emailProvider === 'sendgrid'
-      ? Boolean(env.SENDGRID_API_KEY?.trim())
-      : Boolean(env.GOOGLE_SMTP_USER?.trim() && env.GOOGLE_SMTP_APP_PASSWORD?.trim())
+    ? Boolean(env.SENDGRID_API_KEY?.trim())
+    : Boolean(env.GOOGLE_SMTP_USER?.trim() && env.GOOGLE_SMTP_APP_PASSWORD?.trim())
   const emailConfigured = providerConfigured || emailFromConfigured
   if (environment === 'development' && devSendEmails && (!providerConfigured || !emailFromConfigured)) {
-    problems.push(`credentials for EMAIL_PROVIDER=${emailProvider} and EMAIL_FROM are required when DEV_SEND_EMAILS is enabled`)
+    problems.push(
+      `credentials for EMAIL_PROVIDER=${emailProvider} and EMAIL_FROM are required when DEV_SEND_EMAILS is enabled`,
+    )
   }
   if (emailCaptureConfigured && environment !== 'test') {
     problems.push('EMAIL_CAPTURE_PATH is only allowed in test')
@@ -175,7 +177,8 @@ export function validateStartupConfiguration(env: Environment = Bun.env, options
     problems.push(`credentials for EMAIL_PROVIDER=${emailProvider} and EMAIL_FROM must be configured together`)
   }
   if (emailProvider === 'google'
-    && Boolean(env.GOOGLE_SMTP_USER?.trim()) !== Boolean(env.GOOGLE_SMTP_APP_PASSWORD?.trim())) {
+    && Boolean(env.GOOGLE_SMTP_USER?.trim()) !== Boolean(env.GOOGLE_SMTP_APP_PASSWORD?.trim()))
+  {
     problems.push('GOOGLE_SMTP_USER and GOOGLE_SMTP_APP_PASSWORD must be configured together')
   }
   if (emailFromConfigured && !validEmailFrom(env.EMAIL_FROM!)) problems.push('EMAIL_FROM must contain a valid email')

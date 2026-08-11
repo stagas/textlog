@@ -1,9 +1,9 @@
 import { type User } from '../db'
 import type { PostView, ProfileRow } from '../types'
+import { linkify } from '../utils'
 import { Layout } from './layout'
 import { CursorPagination, FormMessage, ProfileHeader, ProfileTabs } from './page-shared'
 import { Post } from './post'
-import { linkify } from '../utils'
 
 export function Profile(
   { user, profile, posts, following, bio = profile.bio || '', editHandle = profile.handle, editEmail = profile.email,
@@ -115,8 +115,7 @@ export function Profile(
                 </div>
               </>
             )
-            : <p className="profile-bio"
-              dangerouslySetInnerHTML={{ __html: linkify(profile.bio || 'No bio yet.') }} />}
+            : <p className="profile-bio" dangerouslySetInnerHTML={{ __html: linkify(profile.bio || 'No bio yet.') }} />}
         </div>
       </ProfileHeader>
       {blocked || blockedByProfile
@@ -130,9 +129,8 @@ export function Profile(
             following={followingCount} followingTags={followingTagCount} showBlocked={user?.id === profile.id}
             blockedPeople={blockedPeopleCount} blockedTags={blockedTagCount} />
         )}
-      {!editing && !blocked && !blockedByProfile && posts.map(post => (
-        <Post key={post.id} p={post} user={user} showReplyCount tappable />
-      ))}
+      {!editing && !blocked && !blockedByProfile
+        && posts.map(post => <Post key={post.id} p={post} user={user} showReplyCount tappable />)}
       {!editing && !blocked && !blockedByProfile && total === 0 && (
         <div className={`empty${user?.id === profile.id ? ' empty-actions' : ''}`}>
           {user?.id === profile.id

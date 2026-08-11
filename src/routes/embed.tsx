@@ -5,7 +5,8 @@ import { db } from '../db'
 import { resolveHandle } from '../handles'
 import { getHotPosts } from '../hot'
 import { enrichPosts } from '../posts'
-import { ACCENT_CHOICES, EMBED_FONT_CHOICES, THEME_CHOICES, type AccentChoice, type EmbedFontChoice, type ThemeChoice } from '../theme'
+import { ACCENT_CHOICES, type AccentChoice, EMBED_FONT_CHOICES, type EmbedFontChoice, THEME_CHOICES,
+  type ThemeChoice } from '../theme'
 import type { PostView } from '../types'
 
 const LIMIT = 5
@@ -34,8 +35,8 @@ function latest(where = '', parameters: Array<string | number> = []) {
 
 export function registerEmbedRoutes(app: Hono) {
   app.get('/embed/latest', c => response(c.req.raw, latest(), 'latest', '/latest'))
-  app.get('/embed/hot', c => response(c.req.raw,
-    enrichPosts(db, getHotPosts(db, LIMIT, null, new Date(), -1, true), -1), 'hot', '/hot'))
+  app.get('/embed/hot',
+    c => response(c.req.raw, enrichPosts(db, getHotPosts(db, LIMIT, null, new Date(), -1, true), -1), 'hot', '/hot'))
   app.get('/embed/user/:handle', c => {
     const resolved = resolveHandle(db, c.req.param('handle'))
     if (!resolved) return c.text('Not found', 404)

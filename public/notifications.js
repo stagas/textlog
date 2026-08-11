@@ -1,4 +1,4 @@
-(() => {
+;(() => {
   const script = document.currentScript
   const publicKey = script.dataset.vapidPublicKey
   const status = document.getElementById('notification-status')
@@ -30,11 +30,13 @@
     return Uint8Array.from(bytes, character => character.charCodeAt(0))
   }
   const preferenceValues = () => Object.fromEntries(preferenceInputs.map(input => [input.name, input.checked]))
-  const save = (subscription, includePreferences = true) => fetch('/account/push-subscription', {
-    method: 'POST',
-    headers: { 'content-type': 'application/json' },
-    body: JSON.stringify({ ...subscription.toJSON(), ...(includePreferences ? { preferences: preferenceValues() } : {}) }),
-  })
+  const save = (subscription, includePreferences = true) =>
+    fetch('/account/push-subscription', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ ...subscription.toJSON(),
+        ...(includePreferences ? { preferences: preferenceValues() } : {}) }),
+    })
   const loadPreferences = async subscription => {
     const response = await fetch('/account/push-subscription?endpoint=' + encodeURIComponent(subscription.endpoint))
     if (!response.ok) throw new Error('Could not load preferences')

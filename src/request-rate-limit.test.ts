@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test'
-import { ClientErrorRateLimiter, CLIENT_ERROR_RATE_LIMIT, CLIENT_ERROR_RATE_WINDOW_SECONDS, rateLimitedResponse,
+import { CLIENT_ERROR_RATE_LIMIT, CLIENT_ERROR_RATE_WINDOW_SECONDS, ClientErrorRateLimiter, rateLimitedResponse,
   REQUEST_RATE_LIMIT, RequestRateLimiter } from './request-rate-limit'
 
 describe('in-memory request rate limiter', () => {

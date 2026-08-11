@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, test } from 'bun:test'
-import { renderToStaticMarkup } from 'react-dom/server'
 import React from 'react'
+import { renderToStaticMarkup } from 'react-dom/server'
 import { appHost, appHostname, appIdentifier, appName, appOrigin, clientIpHeaderName, sessionCookieName } from './brand'
 import { Layout } from './components/layout'
 import { sessionCookie } from './http'

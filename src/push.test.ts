@@ -44,13 +44,17 @@ describe('Web Push activity delivery', () => {
 
     expect(payloads).toHaveLength(1)
     expect(JSON.parse(payloads[0])).toEqual({
-      title: '@author replied to you', body: 'hello @recipient', url: '/post/2',
+      title: '@author replied to you',
+      body: 'hello @recipient',
+      url: '/post/2',
     })
   })
 
   test('deletes a subscription after a 410 response', async () => {
     const database = fixture()
-    webpush.sendNotification = (async () => { throw { statusCode: 410 } }) as typeof webpush.sendNotification
+    webpush.sendNotification = (async () => {
+      throw { statusCode: 410 }
+    }) as typeof webpush.sendNotification
 
     await sendPushToUser(2, { title: 'test', body: 'test', url: '/' }, database, vapid)
 
@@ -59,7 +63,7 @@ describe('Web Push activity delivery', () => {
 
   test('sends ordinary new posts to subscriptions that enabled latest', async () => {
     const database = fixture()
-    database.run("INSERT INTO posts(id,user_id,body) VALUES(3,1,'an ordinary note')")
+    database.run('INSERT INTO posts(id,user_id,body) VALUES(3,1,\'an ordinary note\')')
     const payloads: string[] = []
     webpush.sendNotification = (async (_subscription, payload) => {
       payloads.push(String(payload))
@@ -69,7 +73,9 @@ describe('Web Push activity delivery', () => {
     await sendPushForPost(3, 1, 'author', database, vapid)
 
     expect(payloads.map(value => JSON.parse(value))).toEqual([{
-      title: '@author wrote', body: 'an ordinary note', url: '/post/3',
+      title: '@author wrote',
+      body: 'an ordinary note',
+      url: '/post/3',
     }])
   })
 
@@ -100,7 +106,9 @@ describe('Web Push activity delivery', () => {
     await sendPushForPost(2, 1, 'author', database, vapid)
 
     expect(payloads.map(value => JSON.parse(value))).toEqual([{
-      title: 'You replied to @recipient', body: 'hello @recipient', url: '/post/2',
+      title: 'You replied to @recipient',
+      body: 'hello @recipient',
+      url: '/post/2',
     }])
   })
 
@@ -118,7 +126,9 @@ describe('Web Push activity delivery', () => {
     await sendPushForPost(3, 1, 'author', database, vapid)
 
     expect(payloads.map(value => JSON.parse(value))).toEqual([{
-      title: 'You wrote', body: 'my note', url: '/post/3',
+      title: 'You wrote',
+      body: 'my note',
+      url: '/post/3',
     }])
   })
 

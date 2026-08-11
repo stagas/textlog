@@ -1,10 +1,10 @@
 import type { Database } from 'bun:sqlite'
 import type { Context, Hono, Next } from 'hono'
 import { API_DEFAULT_LIMIT, apiHotPosts, apiOrigin, apiPosts } from '../api'
+import { appName } from '../brand'
 import { db } from '../db'
 import { resolveHandle } from '../handles'
 import { type SyndicationFormat, syndicationResponse } from '../syndication'
-import { appName } from '../brand'
 
 function publicPosts(database: Database, origin: string, filters: { handle?: string; tag?: string } = {}) {
   return apiPosts(database, origin, { limit: API_DEFAULT_LIMIT, before: null, ...filters }).data

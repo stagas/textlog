@@ -1,7 +1,7 @@
+import { instance } from '../../instance.config'
+import { appName } from '../brand'
 import { type User } from '../db'
 import { Layout } from './layout'
-import { appName } from '../brand'
-import { instance } from '../../instance.config'
 
 export function Contact({ user }: { user: User | null }) {
   const name = appName()
@@ -21,22 +21,37 @@ export function Contact({ user }: { user: User | null }) {
             : 'Contact email is not configured.'}
         </p>
 
-        {instance.operator.phone && <><h2>Phone</h2><p>
-          <a href={instance.operator.phone.url}>{instance.operator.phone.display}</a>
-        </p></>}
+        {instance.operator.phone && (
+          <>
+            <h2>Phone</h2>
+            <p>
+              <a href={instance.operator.phone.url}>{instance.operator.phone.display}</a>
+            </p>
+          </>
+        )}
 
-        {instance.operator.address && <><h2>Post</h2><p>
-          {instance.operator.name} · {name}<br />
-          {instance.operator.address}
-        </p></>}
+        {instance.operator.address && (
+          <>
+            <h2>Post</h2>
+            <p>
+              {instance.operator.name} · {name}
+              <br />
+              {instance.operator.address}
+            </p>
+          </>
+        )}
 
-        {instance.operator.hours && <><h2>Hours</h2><p>{instance.operator.hours}</p></>}
+        {instance.operator.hours && (
+          <>
+            <h2>Hours</h2>
+            <p>{instance.operator.hours}</p>
+          </>
+        )}
 
         <h2>Safety</h2>
         <p>
-          <a href="/report-illegal-activity">Report illegal activity</a>{' '}
-          involving a {name} post. Copyright owners can also review the{' '}
-          <a href="/dmca">DMCA notice and counter-notice process</a>.
+          <a href="/report-illegal-activity">Report illegal activity</a> involving a {name}{' '}
+          post. Copyright owners can also review the <a href="/dmca">DMCA notice and counter-notice process</a>.
         </p>
       </article>
     </Layout>

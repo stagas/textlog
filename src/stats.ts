@@ -1,6 +1,6 @@
 import type { Database } from 'bun:sqlite'
-import type { DashboardStats } from './types'
 import { onlineUserCount } from './sessions'
+import type { DashboardStats } from './types'
 import { visitorStats } from './visitors'
 
 export function dashboardStats(database: Database): DashboardStats {

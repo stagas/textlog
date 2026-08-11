@@ -29,10 +29,12 @@ export function AccountSecurity({ user, sessions, apiKeys = [], passwordEnabled,
               new email
               <input type="email" name="email" required maxLength={254} autoComplete="email" />
             </label>
-            {passwordEnabled && <label>
-              current password
-              <input type="password" name="password" required maxLength={128} autoComplete="current-password" />
-            </label>}
+            {passwordEnabled && (
+              <label>
+                current password
+                <input type="password" name="password" required maxLength={128} autoComplete="current-password" />
+              </label>
+            )}
             <button className="button">confirm new email →</button>
           </form>
         </section>
@@ -45,9 +47,11 @@ export function AccountSecurity({ user, sessions, apiKeys = [], passwordEnabled,
         </section>
         <section className="security-section">
           <h2>password login</h2>
-          <p>{passwordEnabled
-            ? 'Change the password you use to log in.'
-            : 'Add a password as an alternative to email magic links.'}</p>
+          <p>
+            {passwordEnabled
+              ? 'Change the password you use to log in.'
+              : 'Add a password as an alternative to email magic links.'}
+          </p>
           <a className="button" href={passwordEnabled ? '/account/password/change' : '/account/password/enable'}>
             {passwordEnabled ? 'change password →' : 'enable password login →'}
           </a>
@@ -56,27 +60,37 @@ export function AccountSecurity({ user, sessions, apiKeys = [], passwordEnabled,
           <h2>API keys</h2>
           <p>Create a bearer token for scripts and apps. Keys are shown once and can be revoked at any time.</p>
           <a className="button" href="/account/api-keys/new">generate API key →</a>
-          {apiKeys.length > 0 && <div className="session-list api-key-list">
-            {apiKeys.map(key => (
-              <article key={key.id}>
-                <div>
-                  <strong>{key.name}</strong>
-                  <span>
-                    {key.last_used_at ? `last used ${new Date(key.last_used_at).toLocaleDateString('en')}` : 'never used'}
-                    {' · '}{key.expires_at
-                      ? <>expires <time dateTime={new Date(key.expires_at).toISOString()}>
-                        {new Date(key.expires_at).toLocaleDateString('en')}
-                      </time></>
-                      : 'never expires'}
-                  </span>
-                </div>
-                <form method="post" action="/account/api-keys/revoke">
-                  <input type="hidden" name="id" value={key.id} />
-                  <button className="quiet danger">revoke</button>
-                </form>
-              </article>
-            ))}
-          </div>}
+          {apiKeys.length > 0 && (
+            <div className="session-list api-key-list">
+              {apiKeys.map(key => (
+                <article key={key.id}>
+                  <div>
+                    <strong>{key.name}</strong>
+                    <span>
+                      {key.last_used_at
+                        ? `last used ${new Date(key.last_used_at).toLocaleDateString('en')}`
+                        : 'never used'}
+                      {' · '}
+                      {key.expires_at
+                        ? (
+                          <>
+                            expires{' '}
+                            <time dateTime={new Date(key.expires_at).toISOString()}>
+                              {new Date(key.expires_at).toLocaleDateString('en')}
+                            </time>
+                          </>
+                        )
+                        : 'never expires'}
+                    </span>
+                  </div>
+                  <form method="post" action="/account/api-keys/revoke">
+                    <input type="hidden" name="id" value={key.id} />
+                    <button className="quiet danger">revoke</button>
+                  </form>
+                </article>
+              ))}
+            </div>
+          )}
         </section>
         <section className="security-section">
           <h2>sessions</h2>
@@ -113,7 +127,10 @@ export function AccountSecurity({ user, sessions, apiKeys = [], passwordEnabled,
 }
 
 export function AccountApiKeyCreate({ user, name = '', lifetime = 'year', error }: {
-  user: User; name?: string; lifetime?: string; error?: string
+  user: User
+  name?: string
+  lifetime?: string
+  error?: string
 }) {
   return (
     <Layout user={user} title="generate API key">
@@ -124,8 +141,8 @@ export function AccountApiKeyCreate({ user, name = '', lifetime = 'year', error 
         <form className="security-form api-key-form" method="post" action="/account/api-keys">
           <label>
             key name
-            <input name="name" required minLength={1} maxLength={64} placeholder="my integration"
-              defaultValue={name} autoFocus />
+            <input name="name" required minLength={1} maxLength={64} placeholder="my integration" defaultValue={name}
+              autoFocus />
           </label>
           <fieldset className="api-key-lifetimes">
             <legend>expiration</legend>
@@ -135,7 +152,10 @@ export function AccountApiKeyCreate({ user, name = '', lifetime = 'year', error 
               ['never', 'never', 'Remains valid until you revoke it'],
             ].map(([value, label, description]) => (
               <label className="api-key-lifetime" key={value}>
-                <span><strong>{label}</strong><small>{description}</small></span>
+                <span>
+                  <strong>{label}</strong>
+                  <small>{description}</small>
+                </span>
                 <input type="radio" name="lifetime" value={value} defaultChecked={value === lifetime} />
                 <span className="api-key-radio" aria-hidden="true" />
               </label>
@@ -154,12 +174,16 @@ export function AccountApiKey({ user, name, value }: { user: User; name: string;
     <Layout user={user} title="API key created">
       <div className="panel magic-link-page">
         <h1>API key created</h1>
-        <p>Copy <strong>{name}</strong> now. For your security, this key will not be shown again.</p>
+        <p>
+          Copy <strong>{name}</strong> now. For your security, this key will not be shown again.
+        </p>
         <label className="magic-link-output">
           bearer token
           <textarea readOnly value={value} autoFocus spellCheck={false} aria-label="API key" />
         </label>
-        <p>Store it like a password and send it as <code>Authorization: Bearer &lt;key&gt;</code>.</p>
+        <p>
+          Store it like a password and send it as <code>Authorization: Bearer &lt;key&gt;</code>.
+        </p>
         <a className="button" href="/account/security">I saved it</a>
       </div>
     </Layout>
@@ -179,36 +203,59 @@ export function AccountPassword({ user, enabled, token, request = false, sent = 
     <Layout user={user} title={enabled ? 'change password' : 'enable password login'}>
       <section className="auth-shell">
         <div className={`panel auth-panel password-panel${enabled ? '' : ' enable-password-panel'}`}>
-          <h1>{invalid ? 'Link unavailable' : sent ? 'Check your email' : request ? 'Enable password login' : enabled
-            ? 'Change password' : 'Set a password'}</h1>
+          <h1>
+            {invalid ? 'Link unavailable' : sent ? 'Check your email' : request ? 'Enable password login' : enabled
+              ? 'Change password'
+              : 'Set a password'}
+          </h1>
           {error && <p className="error" role="alert">{error}</p>}
           {invalid
             ? <p className="switch">This link is invalid, expired, or already used.</p>
             : sent
-            ? <>
-              <p className="switch">We sent a secure setup link to <strong>{user?.email}</strong>. It expires in one hour.</p>
-              <p className="email-delivery-hint">Can’t find it? Check your spam or junk folder.</p>
-            </>
+            ? (
+              <>
+                <p className="switch">
+                  We sent a secure setup link to <strong>{user?.email}</strong>. It expires in one hour.
+                </p>
+                <p className="email-delivery-hint">Can’t find it? Check your spam or junk folder.</p>
+              </>
+            )
             : request
-            ? <>
-              <p className="switch">We’ll email you a secure link before you can set a password.</p>
-              <form method="post" action="/account/password/enable">
-                <button className="button">send setup link <span>→</span></button>
+            ? (
+              <>
+                <p className="switch">We’ll email you a secure link before you can set a password.</p>
+                <form method="post" action="/account/password/enable">
+                  <button className="button">
+                    send setup link <span>→</span>
+                  </button>
+                </form>
+              </>
+            )
+            : (
+              <form method="post" action={enabled ? '/account/password/change' : '/account/password/enable'}>
+                {!enabled && <input type="hidden" name="token" value={token} />}
+                {enabled && (
+                  <>
+                    <label htmlFor="old-password">
+                      <span>old password</span>
+                    </label>
+                    <input id="old-password" type="password" name="oldPassword" required maxLength={128}
+                      autoComplete="current-password" autoFocus />
+                  </>
+                )}
+                <label htmlFor="new-password">
+                  <span>{enabled ? 'new password' : 'password'}</span>
+                </label>
+                <input id="new-password" type="password" name="newPassword" required minLength={8} maxLength={128}
+                  autoComplete="new-password" autoFocus={!enabled} placeholder="8–128 characters" />
+                <button className="button">
+                  {enabled ? 'change password' : 'enable password login'} <span>→</span>
+                </button>
               </form>
-            </>
-            : <form method="post" action={enabled ? '/account/password/change' : '/account/password/enable'}>
-            {!enabled && <input type="hidden" name="token" value={token} />}
-            {enabled && <>
-              <label htmlFor="old-password"><span>old password</span></label>
-              <input id="old-password" type="password" name="oldPassword" required maxLength={128}
-                autoComplete="current-password" autoFocus />
-            </>}
-            <label htmlFor="new-password"><span>{enabled ? 'new password' : 'password'}</span></label>
-            <input id="new-password" type="password" name="newPassword" required minLength={8} maxLength={128}
-              autoComplete="new-password" autoFocus={!enabled} placeholder="8–128 characters" />
-            <button className="button">{enabled ? 'change password' : 'enable password login'} <span>→</span></button>
-          </form>}
-          <p className="auth-secondary"><a href="/account/security">Back to account security</a></p>
+            )}
+          <p className="auth-secondary">
+            <a href="/account/security">Back to account security</a>
+          </p>
         </div>
       </section>
     </Layout>

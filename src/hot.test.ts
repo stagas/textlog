@@ -56,7 +56,7 @@ describe('hot feed ranking', () => {
   })
 
   test('lets a busy thread from yesterday outrank a new post', () => {
-    database.run("INSERT INTO users VALUES(2,'replier'); INSERT INTO users VALUES(3,'another');")
+    database.run('INSERT INTO users VALUES(2,\'replier\'); INSERT INTO users VALUES(3,\'another\');')
     post(1, '2026-08-02 12:00:00')
     postBy(2, 2, '2026-08-02 12:00:00', 1)
     postBy(3, 3, '2026-08-02 12:00:00', 1)
@@ -97,7 +97,8 @@ describe('hot feed ranking', () => {
     const results = getHotPosts(database, 100, null, asOf)
     for (const [rootId, replies, halfLife] of [[1, 1, 12], [100, 5, 36], [200, 20, 126]] as const) {
       const stored = database.query('SELECT score,reply_count FROM post_hot WHERE post_id=?').get(rootId) as {
-        score: number; reply_count: number
+        score: number
+        reply_count: number
       }
       const ranked = results.find(result => result.id === rootId)!
       expect(stored.reply_count).toBe(replies)
@@ -139,7 +140,9 @@ describe('hot feed ranking', () => {
     postBy(2, 4, '2026-08-03 11:00:00', 1)
 
     let stored = database.query('SELECT score,reply_count,latest_activity_at FROM post_hot WHERE post_id=1').get() as {
-      score: number; reply_count: number; latest_activity_at: string
+      score: number
+      reply_count: number
+      latest_activity_at: string
     }
     expect(stored.reply_count).toBe(1)
     expect(stored.latest_activity_at).toBe('2026-08-03 11:00:00')
@@ -147,7 +150,9 @@ describe('hot feed ranking', () => {
 
     rebuildHotPosts(database)
     stored = database.query('SELECT score,reply_count,latest_activity_at FROM post_hot WHERE post_id=1').get() as {
-      score: number; reply_count: number; latest_activity_at: string
+      score: number
+      reply_count: number
+      latest_activity_at: string
     }
     expect(stored.reply_count).toBe(1)
     expect(stored.latest_activity_at).toBe('2026-08-03 11:00:00')

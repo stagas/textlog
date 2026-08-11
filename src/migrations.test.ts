@@ -87,7 +87,9 @@ describe('database migrations', () => {
     expect(database.query('SELECT token_hash FROM sessions').get())
       .toEqual({ token_hash: sessionHash('legacy-cookie') })
     expect(database.query('SELECT score FROM post_hot WHERE post_id=1').get()).toEqual({ score: 0.25 })
-    expect(database.query('SELECT rowid FROM post_search WHERE post_search MATCH \'hello\'').get()).toEqual({ rowid: 1 })
+    expect(database.query('SELECT rowid FROM post_search WHERE post_search MATCH \'hello\'').get()).toEqual({
+      rowid: 1,
+    })
     expect(database.query('PRAGMA foreign_key_check').all()).toEqual([])
   })
 

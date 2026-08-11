@@ -3,18 +3,18 @@ import type { Context, Hono } from 'hono'
 import { apiHotPosts, apiOrigin, apiPost, apiPosts, apiSearchPosts, isoTimestamp, parseCollectionParams } from '../api'
 import { subscribeToPosts } from '../api-broker'
 import { consumeBucketedAttempt, rateLimitKey } from '../auth-rate-limit'
-import { isDevelopment } from '../environment'
+import { appName, clientIpHeaderName } from '../brand'
 import { ApiDocs, EmbedExamples } from '../components/pages'
 import { db } from '../db'
+import { isDevelopment } from '../environment'
 import { resolveHandle } from '../handles'
 import { decodeHotCursor } from '../hot'
 import { logError } from '../log'
-import { currentUser } from '../utils'
-import { page } from './shared'
 import { MAX_SEARCH_LENGTH, normalizeSearchQuery, searchExpression } from '../search'
+import { currentUser } from '../utils'
 import { registerApiWriteRoutes } from './api-write'
+import { page } from './shared'
 import { registerSyndicationRoutes } from './syndication'
-import { appName, clientIpHeaderName } from '../brand'
 
 const JSON_LIMIT = 120
 const JSON_WINDOW_SECONDS = 60
@@ -92,8 +92,8 @@ function openApiDocument() {
       '/feeds/latest': { get: { summary: 'Latest posts', parameters: collectionParameters, responses: jsonResponses } },
       '/feeds/hot': { get: { summary: 'Hot posts', parameters: collectionParameters, responses: jsonResponses } },
       '/search': { get: { summary: 'Search public posts', security: [], parameters: [
-        { name: 'q', in: 'query', required: true, schema: { type: 'string', minLength: 1,
-          maxLength: MAX_SEARCH_LENGTH } },
+        { name: 'q', in: 'query', required: true,
+          schema: { type: 'string', minLength: 1, maxLength: MAX_SEARCH_LENGTH } },
         ...collectionParameters,
       ], responses: jsonResponses } },
       '/feeds/latest.{format}': {
@@ -189,8 +189,9 @@ export function registerApiRoutes(app: Hono, database: Database = db,
       WHERE p.deleted_at IS NULL AND u.deleted_at IS NULL ORDER BY p.id DESC LIMIT 1`).get() as {
       tag: string
     } | null)?.tag || null
-    return page(<EmbedExamples user={currentUser(c.req.raw)} handle="stagas"
-      tag={fallbackTag} postId={sample?.id || null} />)
+    return page(
+      <EmbedExamples user={currentUser(c.req.raw)} handle="stagas" tag={fallbackTag} postId={sample?.id || null} />,
+    )
   })
 
   app.use('/api/*', async (c, next) => {
@@ -217,7 +218,12 @@ export function registerApiRoutes(app: Hono, database: Database = db,
     if (c.req.method === 'OPTIONS' || c.req.path === '/api/v1/firehose') return next()
     const ip = c.req.header(clientIpHeaderName()) || '-'
     const limited = consumeBucketedAttempt(
-      database, 'api-json', rateLimitKey(ip), JSON_LIMIT, JSON_WINDOW_SECONDS, now(),
+      database,
+      'api-json',
+      rateLimitKey(ip),
+      JSON_LIMIT,
+      JSON_WINDOW_SECONDS,
+      now(),
     )
     if (limited) return apiError('rate_limited', 'Too many API requests', 429, limited.retryAfter)
     return next()
@@ -241,7 +247,11 @@ export function registerApiRoutes(app: Hono, database: Database = db,
       return apiError('invalid_pagination', 'limit must be 1–100 and cursor must be a valid opaque cursor', 400)
     }
     return jsonResponse(apiSearchPosts(
-      database, apiOrigin(c.req.url, appUrl), query, parsed.limit, parsed.before || 0,
+      database,
+      apiOrigin(c.req.url, appUrl),
+      query,
+      parsed.limit,
+      parsed.before || 0,
     ))
   })
 

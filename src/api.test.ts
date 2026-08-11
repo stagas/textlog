@@ -114,8 +114,9 @@ describe('public API', () => {
     expect(firstResponse.status).toBe(200)
     expect(first.data).toHaveLength(1)
     expect(first.pagination.next_cursor).toBeTruthy()
-    const second = await (await request(app,
-      `/api/v1/search?q=a&limit=1&cursor=${encodeURIComponent(first.pagination.next_cursor)}`)).json() as any
+    const second =
+      await (await request(app,
+        `/api/v1/search?q=a&limit=1&cursor=${encodeURIComponent(first.pagination.next_cursor)}`)).json() as any
     expect(second.data).toHaveLength(1)
     expect(second.data[0].id).not.toBe(first.data[0].id)
     expect((await request(app, '/api/v1/search')).status).toBe(400)
@@ -193,7 +194,9 @@ describe('public API', () => {
   test('rate limits JSON requests independently by IP', async () => {
     const { app, database } = fixture(() => 61_000)
     for (let i = 0; i < 120; i++) {
-      expect((await request(app, '/api/v1/feeds/latest', { headers: { 'x-textlog-client-ip': 'busy' } })).status).toBe(200)
+      expect((await request(app, '/api/v1/feeds/latest', { headers: { 'x-textlog-client-ip': 'busy' } })).status).toBe(
+        200,
+      )
     }
     const limited = await request(app, '/api/v1/feeds/latest', { headers: { 'x-textlog-client-ip': 'busy' } })
     const other = await request(app, '/api/v1/feeds/latest', { headers: { 'x-textlog-client-ip': 'other' } })

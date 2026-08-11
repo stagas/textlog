@@ -6,13 +6,13 @@ import type { PersonView, PostView, ProfileRow } from '../types'
 import { currentPage, notFoundPage, page, paginationRedirect, redirect } from './shared'
 
 import type { Hono } from 'hono'
+import { appName } from '../brand'
 import { db } from '../db'
 import { resolveHandle } from '../handles'
 import { renderProfileOg } from '../og'
 import { CONNECTION_PAGE_SIZE, decodePostCursor, PAGE_SIZE, postCursorPage, TAG_PAGE_SIZE } from '../pagination'
 import { enrichPosts } from '../posts'
 import { currentUser } from '../utils'
-import { appName } from '../brand'
 
 export function registerProfilesRoutes(app: Hono) {
   app.get('/u/:handle/og.png', c => {
@@ -184,9 +184,11 @@ export function registerProfilesRoutes(app: Hono) {
           FROM hashtag_follows hf
           WHERE hf.user_id=?
           ORDER BY hf.tag LIMIT ? OFFSET ?`,
-        ).all(viewerId, viewerId, viewerId, viewerId, profile.id, TAG_PAGE_SIZE,
-          (tagsPage - 1) * TAG_PAGE_SIZE) as { tag: string; count: number;
-          viewerFollowing: boolean }[]
+        ).all(viewerId, viewerId, viewerId, viewerId, profile.id, TAG_PAGE_SIZE, (tagsPage - 1) * TAG_PAGE_SIZE) as {
+          tag: string
+          count: number
+          viewerFollowing: boolean
+        }[]
         : []
       if (tab === 'following') {
         const lastTagPage = Math.max(1, Math.ceil(counts.followingTagCount / TAG_PAGE_SIZE))
@@ -199,9 +201,9 @@ export function registerProfilesRoutes(app: Hono) {
       }
       return page(
         <Connections user={user} profile={profile} people={people} tags={tags} kind={tab} page={connectionPage}
-          total={connectionTotal} tagsPage={tagsPage} tagsTotal={counts.followingTagCount} noteCount={total}
-          {...counts} following={following}
-          blockedPeopleCount={blockCounts.blockedPeople} blockedTagCount={blockCounts.blockedTags} social={social} />,
+          total={connectionTotal} tagsPage={tagsPage} tagsTotal={counts.followingTagCount} noteCount={total} {...counts}
+          following={following} blockedPeopleCount={blockCounts.blockedPeople} blockedTagCount={blockCounts.blockedTags}
+          social={social} />,
       )
     }
     const cursorValue = c.req.query('cursor')

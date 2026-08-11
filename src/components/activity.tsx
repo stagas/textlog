@@ -1,5 +1,5 @@
-import { markActivityEntriesRead } from '../activity-state'
 import { activityOrderBy } from '../activity-order'
+import { markActivityEntriesRead } from '../activity-state'
 import { db, type User } from '../db'
 import { PAGE_SIZE } from '../pagination'
 import { enrichPosts } from '../posts'
@@ -83,11 +83,11 @@ export function Activity({ user, page }: { user: User; page: number }) {
                         {!!rawPost.unread && <span className="activity-item-unread-dot" aria-label="unread" />}
                         <a href={'/u/' + rawPost.handle}>@{rawPost.handle}</a>
                         <span>followed you:</span>
-                      <time dateTime={rawPost.created_at} title={fmtFull(rawPost.created_at)}>
-                        {fmt(rawPost.created_at)}
-                      </time>
-                      <span aria-hidden="true">·</span>
-                      <small>{rawPost.posts} {rawPost.posts === 1 ? 'note' : 'notes'}</small>
+                        <time dateTime={rawPost.created_at} title={fmtFull(rawPost.created_at)}>
+                          {fmt(rawPost.created_at)}
+                        </time>
+                        <span aria-hidden="true">·</span>
+                        <small>{rawPost.posts} {rawPost.posts === 1 ? 'note' : 'notes'}</small>
                       </div>
                       <p className="profile-bio">{rawPost.bio || 'No bio yet.'}</p>
                     </div>
@@ -101,8 +101,7 @@ export function Activity({ user, page }: { user: User; page: number }) {
                 : (
                   <Post p={post} user={user} showReplyCount tappable
                     contextLabel={rawPost.activity_kind === 'reply' ? 'replied:' : 'mentioned you:'}
-                    contextUnread={!!rawPost.unread}
-                  />
+                    contextUnread={!!rawPost.unread} />
                 )}
             </div>
           )

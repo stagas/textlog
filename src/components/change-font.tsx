@@ -2,13 +2,17 @@ import type { User } from '../db'
 import { FONT_CHOICES, FONT_SIZE_CHOICES, type FontChoice, type FontSizeChoice } from '../theme'
 import { Layout } from './layout'
 
-export function ChangeFont({ user, selected, selectedSize = 'regular' }: { user: User; selected: FontChoice;
-  selectedSize?: FontSizeChoice }) {
+export function ChangeFont(
+  { user, selected, selectedSize = 'regular' }: { user: User; selected: FontChoice; selectedSize?: FontSizeChoice },
+) {
   return (
     <Layout user={user} title="change font">
       <section className="appearance-page">
         <div className="appearance-heading">
-          <div><span className="eyebrow">appearance</span><h1>change font</h1></div>
+          <div>
+            <span className="eyebrow">appearance</span>
+            <h1>change font</h1>
+          </div>
           <a className="quiet" href="/account/edit">back</a>
         </div>
         <form method="post" action="/account/edit/font">
@@ -37,7 +41,9 @@ export function ChangeFont({ user, selected, selectedSize = 'regular' }: { user:
               ))}
             </div>
           </fieldset>
-          <p className="font-note">Fonts are used from your device. If one is not installed, your system monospace font is shown.</p>
+          <p className="font-note">
+            Fonts are used from your device. If one is not installed, your system monospace font is shown.
+          </p>
           <button className="button">save font →</button>
         </form>
       </section>

@@ -15,7 +15,8 @@ export function ConfirmEmail({ token, kind, email, invalid = false, pending = fa
     <Layout title="confirm email" logoutNavigation={pending}>
       <div className={pending || authorizingChange
         ? `welcome-panel verify-email-panel${authorizingChange ? ' email-change-approval' : ''}`
-        : 'panel confirm-delete'}>
+        : 'panel confirm-delete'}
+      >
         {pending
           ? (
             <>
@@ -51,11 +52,20 @@ export function ConfirmEmail({ token, kind, email, invalid = false, pending = fa
           : (
             <>
               {authorizingChange && <p className="eyebrow">security confirmation</p>}
-              <h1>{kind === 'authorize-change' ? 'Approve this email change?'
-                : kind === 'change' ? 'Change your email?' : 'Verify your email?'}</h1>
+              <h1>
+                {kind === 'authorize-change'
+                  ? 'Approve this email change?'
+                  : kind === 'change'
+                  ? 'Change your email?'
+                  : 'Verify your email?'}
+              </h1>
               <p>
                 {kind === 'authorize-change'
-                  ? <>Allow your textlog account email to be changed to <strong>{email}</strong>.</>
+                  ? (
+                    <>
+                      Allow your textlog account email to be changed to <strong>{email}</strong>.
+                    </>
+                  )
                   : kind === 'change'
                   ? (
                     <>
@@ -70,12 +80,19 @@ export function ConfirmEmail({ token, kind, email, invalid = false, pending = fa
               </p>
               {error && <p className="form-error" role="alert">{error}</p>}
               <form method="post" action={kind === 'authorize-change'
-                ? '/account/email/change/authorize' : '/verify-email'}>
+                ? '/account/email/change/authorize'
+                : '/verify-email'}
+              >
                 <input type="hidden" name="token" value={token} />
                 <div className="form-actions">
                   <a className="quiet" href="/">cancel</a>
-                  <button className="button">{kind === 'authorize-change' ? 'approve change'
-                    : kind === 'change' ? 'change email' : 'verify email'}</button>
+                  <button className="button">
+                    {kind === 'authorize-change'
+                      ? 'approve change'
+                      : kind === 'change'
+                      ? 'change email'
+                      : 'verify email'}
+                  </button>
                 </div>
               </form>
             </>

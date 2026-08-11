@@ -27,7 +27,7 @@ describe('post search', () => {
     const database = testDatabase()
     expect(searchPosts(database, 'sear').rows.map(post => post.id)).toEqual([2, 1])
 
-    database.run("UPDATE posts SET body='Now contains a telescope' WHERE id=3")
+    database.run('UPDATE posts SET body=\'Now contains a telescope\' WHERE id=3')
     expect(searchPosts(database, 'telescope').rows.map(post => post.id)).toEqual([3])
     database.run('DELETE FROM posts WHERE id=3')
     expect(searchPosts(database, 'telescope').total).toBe(0)
@@ -46,7 +46,7 @@ describe('post search', () => {
 
   test('searches people by handle and bio and keeps the index current', () => {
     const database = testDatabase()
-    database.run("UPDATE users SET bio='Makes ceramic instruments' WHERE id=2")
+    database.run('UPDATE users SET bio=\'Makes ceramic instruments\' WHERE id=2')
     expect(searchPeople(database, 'ceram').rows.map(person => person.handle)).toEqual(['bob'])
     expect(searchPeople(database, 'ali').rows.map(person => person.handle)).toEqual(['alice'])
 
@@ -64,7 +64,7 @@ describe('post search', () => {
       INSERT INTO blocked_hashtags(user_id,tag) VALUES(1,'sqlite-tips');`)
     expect(searchTags(database, 'quiet', 1).rows).toMatchObject([{ tag: 'quiet-life', count: 1 }])
     expect(searchTags(database, 'sqlite', 1).total).toBe(0)
-    database.run("UPDATE post_hashtags SET tag='database-tips' WHERE post_id=3")
+    database.run('UPDATE post_hashtags SET tag=\'database-tips\' WHERE post_id=3')
     expect(searchTags(database, 'database').total).toBe(1)
   })
 })

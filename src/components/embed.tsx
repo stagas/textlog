@@ -1,19 +1,21 @@
+import { appName } from '../brand'
+import { containsAsciiArt } from '../content'
+import type { AccentChoice, EmbedFontChoice, ThemeChoice } from '../theme'
 import type { PostView } from '../types'
 import { fmt, fmtFull, linkify } from '../utils'
-import type { AccentChoice, EmbedFontChoice, ThemeChoice } from '../theme'
-import { containsAsciiArt } from '../content'
-import { appName } from '../brand'
 
-export function Embed({ posts, title, href, theme, accent, font }: { posts: PostView[]; title: string; href: string;
-  theme?: ThemeChoice; accent: AccentChoice; font?: EmbedFontChoice })
-{
+export function Embed(
+  { posts, title, href, theme, accent, font }: { posts: PostView[]; title: string; href: string; theme?: ThemeChoice;
+    accent: AccentChoice; font?: EmbedFontChoice },
+) {
   const name = appName()
   const query = new URLSearchParams()
   if (theme) query.set('theme', theme)
   query.set('accent', accent)
   if (font) query.set('font', font)
-  const embedLinks = (body: string, mentionBios?: Record<string, string>) => linkify(body, mentionBios)
-    .replace(/<a (?![^>]*\btarget=)/g, '<a target="_blank" rel="noopener noreferrer" ')
+  const embedLinks = (body: string, mentionBios?: Record<string, string>) =>
+    linkify(body, mentionBios)
+      .replace(/<a (?![^>]*\btarget=)/g, '<a target="_blank" rel="noopener noreferrer" ')
   return (
     <html lang="en">
       <head>
@@ -28,7 +30,9 @@ export function Embed({ posts, title, href, theme, accent, font }: { posts: Post
         <div className="embed-card">
           <header className="embed-header">
             <a className="embed-brand" href="/" target="_blank" rel="noopener noreferrer" aria-label={`${name} home`}>
-              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M13,19V16H21V19H13M8.5,13L2.47,7H6.71L11.67,11.95C12.25,12.54 12.25,13.5 11.67,14.07L6.74,19H2.5L8.5,13Z" /></svg>
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M13,19V16H21V19H13M8.5,13L2.47,7H6.71L11.67,11.95C12.25,12.54 12.25,13.5 11.67,14.07L6.74,19H2.5L8.5,13Z" />
+              </svg>
               <span>{name}</span>
             </a>
             <a className="embed-title" href={href} target="_blank" rel="noopener noreferrer">{title}</a>
@@ -41,7 +45,9 @@ export function Embed({ posts, title, href, theme, accent, font }: { posts: Post
                     <a href={`/u/${post.handle}`} target="_blank" rel="noopener noreferrer">@{post.handle}</a>
                     <a className="embed-date" href={`/post/${post.id}`} target="_blank" rel="noopener noreferrer">
                       <time dateTime={post.created_at} title={fmtFull(post.created_at)}>{fmt(post.created_at)}</time>
-                      {(post.reply_count || 0) > 0 && <span> · {post.reply_count} {post.reply_count === 1 ? 'reply' : 'replies'}</span>}
+                      {(post.reply_count || 0) > 0 && (
+                        <span>· {post.reply_count} {post.reply_count === 1 ? 'reply' : 'replies'}</span>
+                      )}
                     </a>
                   </div>
                   <p className={containsAsciiArt(post.body) ? 'ascii-art' : undefined}
@@ -57,12 +63,15 @@ export function Embed({ posts, title, href, theme, accent, font }: { posts: Post
                                 @{post.parent.handle}
                               </a>
                               <a className="embed-date" href={`/post/${post.parent.id}`} target="_blank"
-                                rel="noopener noreferrer">
+                                rel="noopener noreferrer"
+                              >
                                 <time dateTime={post.parent.created_at} title={fmtFull(post.parent.created_at)}>
                                   {fmt(post.parent.created_at)}
                                 </time>
                                 {post.parent.reply_count > 0 && (
-                                  <span> · {post.parent.reply_count} {post.parent.reply_count === 1 ? 'reply' : 'replies'}</span>
+                                  <span>
+                                    · {post.parent.reply_count} {post.parent.reply_count === 1 ? 'reply' : 'replies'}
+                                  </span>
                                 )}
                               </a>
                             </div>
@@ -78,7 +87,9 @@ export function Embed({ posts, title, href, theme, accent, font }: { posts: Post
               ))
               : <p className="embed-empty">No notes here yet.</p>}
           </main>
-          <footer><a href={href} target="_blank" rel="noopener noreferrer">view on {name} →</a></footer>
+          <footer>
+            <a href={href} target="_blank" rel="noopener noreferrer">view on {name} →</a>
+          </footer>
         </div>
       </body>
     </html>

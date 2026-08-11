@@ -9,8 +9,7 @@ import {
   safeLocalPath,
   safeRefererPath,
 } from '../http'
-import type { AdminActionView, AdminReportView, IllegalActivityReportView, PostRow,
-  ProfileRow } from '../types'
+import type { AdminActionView, AdminReportView, IllegalActivityReportView, PostRow, ProfileRow } from '../types'
 import { currentPage, form, page, paginationRedirect, redirect } from './shared'
 
 import type { Hono } from 'hono'
@@ -72,8 +71,8 @@ export function registerAdminRoutes(app: Hono) {
     const illegalReports = db.query(`SELECT * FROM illegal_activity_reports
       WHERE status='open' ORDER BY created_at,id LIMIT 20`).all() as IllegalActivityReportView[]
     return page(
-      <AdminDashboard user={signedIn} stats={stats} reports={reports} actions={actions}
-        illegalReports={illegalReports} status={status} page={reportPage} total={total} suspended={suspended} />,
+      <AdminDashboard user={signedIn} stats={stats} reports={reports} actions={actions} illegalReports={illegalReports}
+        status={status} page={reportPage} total={total} suspended={suspended} />,
     )
   })
 

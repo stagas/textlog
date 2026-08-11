@@ -38,13 +38,13 @@ export function Feed({ user, cursor, title, path = '/for-you', pageUrl }: {
             <p>Your timeline is empty. Follow people or hashtags to shape it.</p>
             <ActionPair
               primary={<a className="button" href="/explore">explore tags &amp; people</a>}
-              secondary={(
+              secondary={
                 <>
                   <a href="/">browse notes</a>
                   <span className="action-separator">or</span>
                   <a href="/write">write your first note</a>
                 </>
-              )}
+              }
             />
           </div>
         )

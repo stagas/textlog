@@ -1,7 +1,7 @@
+import { instance } from '../../instance.config'
+import { appName } from '../brand'
 import type { User } from '../db'
 import { Layout } from './layout'
-import { appName } from '../brand'
-import { instance } from '../../instance.config'
 
 export function Dmca({ user }: { user: User | null }) {
   const name = appName()
@@ -11,17 +11,21 @@ export function Dmca({ user }: { user: User | null }) {
         <p className="eyebrow">copyright</p>
         <h1>DMCA notices and counter-notices</h1>
         <p>
-          Send copyright notices to {instance.operator.name} at{' '}
-          {instance.operator.email
+          Send copyright notices to {instance.operator.name} at {instance.operator.email
             ? <a href={`mailto:${instance.operator.email}`}>{instance.operator.email}</a>
             : 'the configured contact email'}
-          {instance.operator.phone && <>, <a href={instance.operator.phone.url}>{instance.operator.phone.display}</a></>}
+          {instance.operator.phone && (
+            <>
+              , <a href={instance.operator.phone.url}>{instance.operator.phone.display}</a>
+            </>
+          )}
           {instance.operator.address && <>, {instance.operator.address}</>}.
         </p>
         <h2>Copyright notice</h2>
         <p>
-          Identify the copyrighted work, the exact {name} URL, the allegedly infringing material, your contact details,
-          and include the statements and signature required by 17 U.S.C. §512(c)(3).
+          Identify the copyrighted work, the exact {name}{' '}
+          URL, the allegedly infringing material, your contact details, and include the statements and signature
+          required by 17 U.S.C. §512(c)(3).
         </p>
         <h2>Counter-notice</h2>
         <p>

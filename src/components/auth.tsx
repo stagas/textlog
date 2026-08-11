@@ -18,12 +18,12 @@ export function Auth({ error, email = '', next }: { error?: string; email?: stri
             </button>
           </form>
           <p className="auth-legal">
-            The link and code expire in 15 minutes. By entering, you agree to the <a href="/legal#terms">Terms of Service</a> and
-            {' '}
-            <a href="/legal#privacy">Privacy Notice</a>.
+            The link and code expire in 15 minutes. By entering, you agree to the{' '}
+            <a href="/legal#terms">Terms of Service</a> and <a href="/legal#privacy">Privacy Notice</a>.
           </p>
           <p className="auth-alternative">
-            Alternatively, <a href={`/enter/password${next ? `?next=${encodeURIComponent(next)}` : ''}`}>
+            Alternatively,{' '}
+            <a href={`/enter/password${next ? `?next=${encodeURIComponent(next)}` : ''}`}>
               log in using your password
             </a>.
           </p>
@@ -34,7 +34,10 @@ export function Auth({ error, email = '', next }: { error?: string; email?: stri
 }
 
 export function PasswordLogin({ error, identifier = '', next, reset = false }: {
-  error?: string; identifier?: string; next?: string; reset?: boolean
+  error?: string
+  identifier?: string
+  next?: string
+  reset?: boolean
 }) {
   return (
     <Layout title="password login">
@@ -45,16 +48,26 @@ export function PasswordLogin({ error, identifier = '', next, reset = false }: {
           {error && <p className="error" role="alert">{error}</p>}
           <form method="post" action="/enter/password" autoComplete="on">
             {next && <input type="hidden" name="next" value={next} />}
-            <label htmlFor="login-identifier"><span>email or handle</span></label>
+            <label htmlFor="login-identifier">
+              <span>email or handle</span>
+            </label>
             <input id="login-identifier" name="identifier" required maxLength={254} autoComplete="username"
               autoCapitalize="none" spellCheck={false} autoFocus defaultValue={identifier} />
-            <label htmlFor="login-password"><span>password</span></label>
+            <label htmlFor="login-password">
+              <span>password</span>
+            </label>
             <input id="login-password" type="password" name="password" required maxLength={128}
               autoComplete="current-password" />
-            <button className="button">log in <span aria-hidden="true">→</span></button>
+            <button className="button">
+              log in <span aria-hidden="true">→</span>
+            </button>
           </form>
-          <p className="auth-secondary"><a href="/forgot-password">Forgot password?</a></p>
-          <p className="auth-secondary"><a href="/enter">Use a magic link instead</a></p>
+          <p className="auth-secondary">
+            <a href="/forgot-password">Forgot password?</a>
+          </p>
+          <p className="auth-secondary">
+            <a href="/enter">Use a magic link instead</a>
+          </p>
         </div>
       </section>
     </Layout>
@@ -77,11 +90,15 @@ export function MagicLinkSent({ email, magicUrl, error }: { email: string; magic
             <input type="hidden" name="email" value={email} />
             <div className="entry-code-row">
               <input id="entry-code" name="code" aria-label="six-digit code" required inputMode="numeric"
-                autoComplete="one-time-code"
-                pattern="[0-9]{6}" maxLength={6} placeholder="123456" aria-describedby="entry-code-help" />
-              <button className="button">enter <span aria-hidden="true">→</span></button>
+                autoComplete="one-time-code" pattern="[0-9]{6}" maxLength={6} placeholder="123456"
+                aria-describedby="entry-code-help" />
+              <button className="button">
+                enter <span aria-hidden="true">→</span>
+              </button>
             </div>
-            <p id="entry-code-help" className="auth-secondary">The link and code expire in 15 minutes and can only be used once.</p>
+            <p id="entry-code-help" className="auth-secondary">
+              The link and code expire in 15 minutes and can only be used once.
+            </p>
           </form>
           {magicUrl && (
             <p>

@@ -30,22 +30,30 @@ describe('post persistence', () => {
       .toContain('<a href="/u/reader" title="No bio yet.">@Reader</a>')
   })
   test('keeps apostrophes in linkified URLs', () => {
-    expect(linkify("read https://example.com/people/O'Brien/profile"))
-      .toBe("read <a href=\"https://example.com/people/O&#39;Brien/profile\" target=\"_blank\" rel=\"nofollow ugc noopener noreferrer\">https://example.com/people/O&#39;Brien/profile</a>")
+    expect(linkify('read https://example.com/people/O\'Brien/profile'))
+      .toBe(
+        'read <a href="https://example.com/people/O&#39;Brien/profile" target="_blank" rel="nofollow ugc noopener noreferrer">https://example.com/people/O&#39;Brien/profile</a>',
+      )
   })
   test('supports Markdown links', () => {
     expect(linkify('[test](https://example.com/)'))
-      .toBe('<a href="https://example.com/" title="https://example.com/" target="_blank" rel="nofollow ugc noopener noreferrer">test</a>')
+      .toBe(
+        '<a href="https://example.com/" title="https://example.com/" target="_blank" rel="nofollow ugc noopener noreferrer">test</a>',
+      )
   })
   test('linkifies protocol-less domains using the public TLD list', () => {
     expect(linkify('visit example.com or docs.example.dev/guide?q=links.'))
-      .toBe('visit <a href="https://example.com" target="_blank" rel="nofollow ugc noopener noreferrer">example.com</a> or <a href="https://docs.example.dev/guide?q=links" target="_blank" rel="nofollow ugc noopener noreferrer">docs.example.dev/guide?q=links</a>.')
+      .toBe(
+        'visit <a href="https://example.com" target="_blank" rel="nofollow ugc noopener noreferrer">example.com</a> or <a href="https://docs.example.dev/guide?q=links" target="_blank" rel="nofollow ugc noopener noreferrer">docs.example.dev/guide?q=links</a>.',
+      )
     expect(linkify('not links: version 1.2.3, example.invalid, or a@example.com'))
       .toBe('not links: version 1.2.3, example.invalid, or a@example.com')
   })
   test('does not treat references inside protocol-less URLs as mentions or tags', () => {
     expect(linkify('example.com/@reader#notes', { reader: 'Reader' }))
-      .toBe('<a href="https://example.com/@reader#notes" target="_blank" rel="nofollow ugc noopener noreferrer">example.com/@reader#notes</a>')
+      .toBe(
+        '<a href="https://example.com/@reader#notes" target="_blank" rel="nofollow ugc noopener noreferrer">example.com/@reader#notes</a>',
+      )
   })
   test('opens links starting with APP_URL in the current tab', () => {
     expect(linkify('https://textlog.test/post/1', {}, [], 'https://textlog.test'))
@@ -61,7 +69,9 @@ describe('post persistence', () => {
   })
   test('escapes Markdown link labels and destinations', () => {
     expect(linkify('[<test>](https://example.com/a\'b)'))
-      .toBe('<a href="https://example.com/a&#39;b" title="https://example.com/a&#39;b" target="_blank" rel="nofollow ugc noopener noreferrer">&lt;test&gt;</a>')
+      .toBe(
+        '<a href="https://example.com/a&#39;b" title="https://example.com/a&#39;b" target="_blank" rel="nofollow ugc noopener noreferrer">&lt;test&gt;</a>',
+      )
   })
 
   test('renders inline code without linkifying its contents', () => {
@@ -176,7 +186,9 @@ describe('post persistence', () => {
       (4,2,3,'deleted descendant','2026-08-03 13:00:00'),
       (5,1,4,'visible below tombstone','2026-08-03 14:00:00');
       UPDATE posts SET deleted_at='2026-08-03 13:30:00' WHERE id=4;`)
-    const posts = db.query('SELECT p.*,u.handle FROM posts p JOIN users u ON u.id=p.user_id WHERE p.id IN (1,2) ORDER BY p.id')
+    const posts = db.query(
+      'SELECT p.*,u.handle FROM posts p JOIN users u ON u.id=p.user_id WHERE p.id IN (1,2) ORDER BY p.id',
+    )
       .all() as PostView[]
     const [root, child] = enrichPosts(db, posts)
 

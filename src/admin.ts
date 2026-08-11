@@ -1,8 +1,8 @@
 import type { Database } from 'bun:sqlite'
+import { instance } from '../instance.config'
+import { appHostname } from './brand'
 import type { User } from './db'
 import { removeHotActivity } from './hot'
-import { appHostname } from './brand'
-import { instance } from '../instance.config'
 
 export const ADMIN_EMAILS = new Set(instance.administrators.map(email => email.trim().toLowerCase()))
 
@@ -58,7 +58,9 @@ export function anonymizeUser(database: Database, userId: number, actorId?: numb
   if (database.query('SELECT 1 FROM sqlite_master WHERE type=\'table\' AND name=\'password_enable_tokens\'').get()) {
     database.query('DELETE FROM password_enable_tokens WHERE user_id=?').run(userId)
   }
-  if (database.query('SELECT 1 FROM sqlite_master WHERE type=\'table\' AND name=\'email_change_authorizations\'').get()) {
+  if (database.query('SELECT 1 FROM sqlite_master WHERE type=\'table\' AND name=\'email_change_authorizations\'')
+    .get())
+  {
     database.query('DELETE FROM email_change_authorizations WHERE user_id=?').run(userId)
   }
   if (account && database.query('SELECT 1 FROM sqlite_master WHERE type=\'table\' AND name=\'handle_history\'').get()) {

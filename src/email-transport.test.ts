@@ -21,7 +21,9 @@ describe('email transports', () => {
 
     expect(request?.url).toBe('https://api.resend.com/emails')
     expect(JSON.parse(String(request?.init.body))).toMatchObject({
-      from: message.from, to: [message.to], subject: message.subject,
+      from: message.from,
+      to: [message.to],
+      subject: message.subject,
     })
   })
 
