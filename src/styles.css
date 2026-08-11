@@ -2431,6 +2431,11 @@ form.report-panel {
   color: var(--accent-dark);
 }
 
+.activity-side-status {
+  color: var(--muted);
+  font-size: 0.6875rem;
+}
+
 .admin-header .eyebrow,
 .admin-user-header .eyebrow,
 .admin-confirm .eyebrow {

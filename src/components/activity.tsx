@@ -1,5 +1,5 @@
 import { activityOrderBy } from '../activity-order'
-import { markActivityEntriesRead } from '../activity-state'
+import { hasUnreadActivity, markActivityEntriesRead } from '../activity-state'
 import { isAdmin } from '../admin'
 import { db, type User } from '../db'
 import { PAGE_SIZE } from '../pagination'
@@ -39,6 +39,7 @@ export function activityTotal(userId: number) {
 
 export function Activity({ user, page }: { user: User; page: number }) {
   const total = activityTotal(user.id)
+  const hasUnread = hasUnreadActivity(user.id)
   const posts = db.query(
     `SELECT activity.*,ar.event_key IS NULL unread FROM (
       SELECT p.id,p.user_id,p.parent_id,p.body,p.created_at,p.deleted_at,u.handle,
@@ -82,11 +83,13 @@ export function Activity({ user, page }: { user: User; page: number }) {
     <Layout user={user} title="activity">
       <section className="page-header activity-header">
         <h1>activity</h1>
-        {total > 0 && (
+        {hasUnread
+          ? (
           <form method="post" action="/activity/read-all">
             <button className="activity-side-link">mark all as read</button>
           </form>
-        )}
+          )
+          : <span className="activity-side-status">you've seen it all</span>}
       </section>
       {posts.length
         ? posts.map((rawPost, index) => {
