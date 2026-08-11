@@ -65,7 +65,7 @@ describe('hot feed ranking', () => {
     const results = getHotPosts(database, 20, null, asOf)
     expect(results[0].id).toBe(1)
     expect(results.find(result => result.id === 1)?.hot_score)
-      .toBeCloseTo(4.25 * Math.pow(0.5, 24 / 24))
+      .toBeCloseTo(4.25 * 2 * Math.pow(0.5, 24 / 18))
   })
 
   test('direct replies give active threads substantially more staying power', () => {
@@ -86,7 +86,7 @@ describe('hot feed ranking', () => {
     expect(getHotPosts(database, 20, null, asOf)[0].id).toBe(1)
   })
 
-  test('each distinct replier doubles the recency half-life up to the cap', () => {
+  test('each distinct replier doubles the discussion weight while extending the recency half-life', () => {
     for (const [rootId, replies] of [[1, 1], [100, 5], [200, 20]] as const) {
       post(rootId, '2026-08-01 20:00:00')
       for (let index = 1; index <= replies; index++) {
@@ -95,15 +95,27 @@ describe('hot feed ranking', () => {
     }
 
     const results = getHotPosts(database, 100, null, asOf)
-    for (const [rootId, replies, halfLife] of [[1, 1, 12], [100, 5, 192], [200, 20, 336]] as const) {
+    for (const [rootId, replies, halfLife] of [[1, 1, 12], [100, 5, 36], [200, 20, 126]] as const) {
       const stored = database.query('SELECT score,reply_count FROM post_hot WHERE post_id=?').get(rootId) as {
         score: number
         reply_count: number
       }
       const ranked = results.find(result => result.id === rootId)!
       expect(stored.reply_count).toBe(replies)
-      expect(ranked.hot_score / stored.score).toBeCloseTo(Math.pow(0.5, 40 / halfLife))
+      expect(ranked.hot_score / stored.score)
+        .toBeCloseTo(Math.pow(2, Math.max(0, replies - 1)) * Math.pow(0.5, 40 / halfLife))
     }
+  })
+
+  test('nine unique repliers outweigh six even when the six-reply thread is older', () => {
+    post(1, '2026-07-31 12:00:00')
+    for (let index = 1; index <= 6; index++) postBy(100 + index, 100 + index, '2026-07-31 12:00:00', 1)
+    post(2, '2026-08-02 15:00:00')
+    for (let index = 1; index <= 9; index++) postBy(200 + index, 200 + index, '2026-08-02 15:00:00', 2)
+
+    const results = getHotPosts(database, 20, null, asOf)
+    expect(results.indexOf(results.find(result => result.id === 2)!))
+      .toBeLessThan(results.indexOf(results.find(result => result.id === 1)!))
   })
 
   test('keeps an older widely discussed thread above a brand-new post', () => {
