@@ -7,6 +7,7 @@ Bun.env.DEV_SEND_EMAILS = String(configuration.devSendEmails)
 Bun.env.TRUST_PROXY = String(configuration.trustProxy)
 Bun.env.LOG_COLOR = String(configuration.logColor)
 Bun.env.MODERATION_DISABLED = String(configuration.moderationDisabled)
+Bun.env.ENABLE_CAPTCHA_ALWAYS = String(configuration.enableCaptchaAlways)
 Bun.env.HOST = configuration.host
 Bun.env.PORT = String(configuration.port)
 Bun.env.DATABASE_PATH = configuration.databasePath

@@ -380,6 +380,15 @@ describe('Auth', () => {
     expect(html).toContain('type="hidden" name="nonce" value="one-time-value"')
   })
 
+  test('password login renders a server-issued CAPTCHA when requested', () => {
+    const html = renderToStaticMarkup(React.createElement(PasswordLogin, {
+      nonce: 'one-time-value', captcha: { token: 'captcha-token', image: 'data:image/svg+xml;base64,PHN2Zy8+' },
+    }))
+    expect(html).toContain('name="captchaToken" value="captcha-token"')
+    expect(html).toContain('name="captchaAnswer"')
+    expect(html).toContain('data:image/svg+xml;base64,PHN2Zy8+')
+  })
+
   test('check-your-email page accepts the one-time code', () => {
     const html = renderToStaticMarkup(React.createElement(MagicLinkSent, { email: 'reader@example.com' }))
 

@@ -28,6 +28,7 @@
     "nodemailer": "^9.0.5",
     "react": "latest",
     "react-dom": "latest",
+    "svg-captcha": "^1.4.0",
     "tlds": "^1.261.0",
     "web-push": "^3.6.7"
   },

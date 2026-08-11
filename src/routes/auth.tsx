@@ -7,6 +7,8 @@ import { isDevelopment } from '../environment'
 import { clearSessionCookie, safeLocalPath, sessionCookie } from '../http'
 import { moderateText, moderationMessage } from '../moderation'
 import { consumePasswordLoginNonce, issuePasswordLoginNonce } from '../password-login-nonce'
+import { consumePasswordCaptcha, issuePasswordCaptcha, passwordCaptchaRequired, recordFailedPassword }
+  from '../password-login-captcha'
 import { insertSession, SESSION_LIFETIME_MS, sessionHash } from '../sessions'
 import { currentUser, hash, hashPassword, token, verifyPassword } from '../utils'
 import { sendPushForSignup } from '../push'
@@ -67,18 +69,27 @@ export function registerAuthRoutes(app: Hono) {
   app.get('/signup',
     c => redirect('/enter' + (c.req.query('next') ? `?next=${encodeURIComponent(safeNext(c.req.query('next')))}` : '')))
 
-  app.get('/enter/password',
-    c => page(<PasswordLogin nonce={issuePasswordLoginNonce(db, clientAddress(c))}
-      next={safeNext(c.req.query('next'))} reset={c.req.query('reset') === '1'} />))
+  app.get('/enter/password', c => {
+    const captcha = passwordCaptchaRequired(db) ? issuePasswordCaptcha(db) : undefined
+    return page(<PasswordLogin nonce={issuePasswordLoginNonce(db, clientAddress(c))} captcha={captcha}
+      next={safeNext(c.req.query('next'))} reset={c.req.query('reset') === '1'} />)
+  })
   app.post('/enter/password', async c => {
     const f = await form(c.req.raw)
     const identifier = (f.identifier || '').trim().toLowerCase().replace(/^@/, '')
     const password = f.password || ''
     const next = safeNext(f.next)
     const address = clientAddress(c)
+    const loginCaptcha = () => passwordCaptchaRequired(db) ? issuePasswordCaptcha(db) : undefined
     if (!consumePasswordLoginNonce(db, f.nonce || '', address)) {
       return page(<PasswordLogin nonce={issuePasswordLoginNonce(db, address)} identifier={identifier} next={next}
+        captcha={loginCaptcha()}
         error="This login form has expired or was already used. Please try again." />, 400)
+    }
+    if (passwordCaptchaRequired(db)
+      && !consumePasswordCaptcha(db, f.captchaToken || '', f.captchaAnswer || '')) {
+      return page(<PasswordLogin nonce={issuePasswordLoginNonce(db, address)} identifier={identifier} next={next}
+        captcha={issuePasswordCaptcha(db)} error="Complete the security check and try again." />, 400)
     }
     const limited = authLimit(c, 'password-login-ip', address, AUTH_LIMITS.loginIp)
       || authLimit(c, 'password-login-subnet', loginSubnet(address), AUTH_LIMITS.loginSubnet)
@@ -86,6 +97,7 @@ export function registerAuthRoutes(app: Hono) {
     if (limited) {
       return retryPage(
         page(<PasswordLogin nonce={issuePasswordLoginNonce(db, address)} identifier={identifier} next={next}
+          captcha={loginCaptcha()}
           error={authRateLimitMessage(limited.retryAfter)} />,
           429),
         limited.retryAfter,
@@ -99,8 +111,10 @@ export function registerAuthRoutes(app: Hono) {
       ? account.password
       : await dummyPasswordHash)
     if (!account || account.password === '!' || !valid) {
+      recordFailedPassword(db)
       return page(
         <PasswordLogin nonce={issuePasswordLoginNonce(db, address)} identifier={identifier} next={next}
+          captcha={loginCaptcha()}
           error="Email, handle, or password is incorrect." />,
         400,
       )

@@ -606,6 +606,20 @@ export const migrations: Migration[] = [
       CREATE INDEX IF NOT EXISTS password_login_nonces_expiry ON password_login_nonces(expires_at);`)
     },
   },
+  {
+    version: 51,
+    name: 'global_password_captcha',
+    up(database) {
+      database.run(`CREATE TABLE IF NOT EXISTS password_login_failures (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,created_at INTEGER NOT NULL);
+      CREATE INDEX IF NOT EXISTS password_login_failures_created ON password_login_failures(created_at);
+      CREATE TABLE IF NOT EXISTS password_captcha_state (
+        id INTEGER PRIMARY KEY CHECK(id=1),required_until INTEGER NOT NULL);
+      CREATE TABLE IF NOT EXISTS password_captcha_challenges (
+        token TEXT PRIMARY KEY,answer_hash TEXT NOT NULL,expires_at INTEGER NOT NULL);
+      CREATE INDEX IF NOT EXISTS password_captcha_challenges_expiry ON password_captcha_challenges(expires_at);`)
+    },
+  },
 ]
 
 export const latestMigrationVersion = migrations.at(-1)!.version

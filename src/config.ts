@@ -23,6 +23,7 @@ export type StartupConfiguration = {
   trustProxy: boolean
   logColor: boolean
   moderationDisabled: boolean
+  enableCaptchaAlways: boolean
 }
 
 const allowedEnvironments = ['development', 'test', 'production'] as const
@@ -202,6 +203,7 @@ export function validateStartupConfiguration(env: Environment = Bun.env, options
   }
 
   const moderationDisabled = booleanValue(env, 'MODERATION_DISABLED', problems)
+  const enableCaptchaAlways = booleanValue(env, 'ENABLE_CAPTCHA_ALWAYS', problems)
   if (!moderationDisabled && environment === 'production' && !env.OPENAI_API_KEY?.trim()) {
     problems.push('OPENAI_API_KEY is required in production unless MODERATION_DISABLED=true')
   }
@@ -238,5 +240,6 @@ export function validateStartupConfiguration(env: Environment = Bun.env, options
     trustProxy,
     logColor,
     moderationDisabled,
+    enableCaptchaAlways,
   }
 }
