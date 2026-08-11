@@ -76,7 +76,7 @@ describe('post persistence', () => {
 
   test('highlights search terms without breaking escaping or links', () => {
     expect(linkify('Search <notes> at #Searchable', {}, ['sear']))
-      .toBe('<mark>Sear</mark>ch &lt;notes&gt; at <a href="/tag/Searchable">#<mark>Sear</mark>chable</a>')
+      .toBe('<mark>Sear</mark>ch &lt;notes&gt; at <a href="/tag/searchable">#<mark>Sear</mark>chable</a>')
   })
   test('writes content and metadata atomically', () => {
     const db = database()

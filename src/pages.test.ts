@@ -617,7 +617,7 @@ test('Profile linkifies Markdown links and tags in the bio', () => {
     posts: [],
   }))
 
-  expect(html).toContain('<a href="/tag/TextLog">#TextLog</a>')
+  expect(html).toContain('<a href="/tag/textlog">#TextLog</a>')
   expect(html).toContain('<a href="https://example.com/" title="https://example.com/" target="_blank" rel="nofollow ugc noopener noreferrer">my site</a>.')
 })
 

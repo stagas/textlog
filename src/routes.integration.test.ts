@@ -273,6 +273,9 @@ test('consequential account, content, reporting, and admin flows work over HTTP'
   const publicTag = await request('/tag/onboarding', { cookie: aliceCookie })
   expect(publicTag.status).toBe(200)
   expect(await publicTag.text()).toContain('#onboarding')
+  const mixedCaseTag = await request('/tag/OnBoarding?page=2', { cookie: aliceCookie })
+  expect(mixedCaseTag.status).toBe(301)
+  expect(mixedCaseTag.headers.get('location')).toBe('/tag/onboarding?page=2')
 
   const rawSession = aliceCookie.slice('textlog='.length)
   const storedSession = database.query('SELECT token_hash FROM sessions WHERE user_id=?')

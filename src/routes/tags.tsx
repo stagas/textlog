@@ -29,9 +29,13 @@ export function registerTagsRoutes(app: Hono) {
   })
 
   app.get('/tag/:tag', c => {
+    const requestedTag = c.req.param('tag')
+    const tag = requestedTag.toLowerCase()
+    if (requestedTag !== tag) {
+      return c.redirect(`/tag/${encodeURIComponent(tag)}${new URL(c.req.url).search}`, 301)
+    }
     const user = currentUser(c.req.raw)
     const tagPage = currentPage(c.req.query('page'))
-    const tag = c.req.param('tag').toLowerCase()
     const following = !!user && !!db.query(
       'SELECT 1 FROM hashtag_follows WHERE user_id=? AND tag=?',
     ).get(user.id, tag)

@@ -154,7 +154,7 @@ export function linkify(body: string, mentionBios: Record<string, string> = {}, 
             ? ` title="${esc(mentionBios[value.toLowerCase()] || 'No bio yet.')}"`
             : ''
         }>${highlighted(`@${value}`, highlightTerms)}</a>`
-        : `<a href="/tag/${value}">${highlighted(`#${value}`, highlightTerms)}</a>`
+        : `<a href="/tag/${value.toLowerCase()}">${highlighted(`#${value}`, highlightTerms)}</a>`
     }
     end = match.lastIndex
   }
