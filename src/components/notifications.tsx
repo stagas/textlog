@@ -45,9 +45,29 @@ export function NotificationSettings({ user, publicKey, ios = false }: {
         <form id="notification-preference-form">
           <fieldset className="notification-preferences" id="notification-preferences" disabled hidden>
             <legend>notify me about</legend>
+            <fieldset className="notification-radio-group">
+              <legend className="visually-hidden">new notes</legend>
+              <div className="notification-radio-heading">
+                <strong>new notes</strong>
+                <label className="notification-radio-enable">
+                  <span className="sr-only">enable new note notifications</span>
+                  <input type="checkbox" name="notesEnabled" defaultChecked />
+                  <span className="notification-toggle-track" aria-hidden="true"><span /></span>
+                </label>
+              </div>
+              <div className="notification-radio-options">
+                <label>
+                  <input type="radio" name="noteScope" value="latest" defaultChecked />
+                  <span><strong>latest</strong><small>Everything in /latest</small></span>
+                </label>
+                <label>
+                  <input type="radio" name="noteScope" value="following" />
+                  <span><strong>following</strong><small>People and tags you follow</small></span>
+                </label>
+              </div>
+            </fieldset>
             {[
-              ['latest', 'new notes', 'Everything newly published in /latest'],
-              ['ownPosts', 'include own messages', 'Also notify you about notes you publish'],
+              ['ownPosts', 'include own messages', 'Also notify for own notes'],
               ['replies', 'replies', 'When someone replies to one of your notes'],
               ['mentions', 'mentions', 'When someone mentions your handle'],
               ['follows', 'new followers', 'When someone starts following you'],
@@ -57,9 +77,7 @@ export function NotificationSettings({ user, publicKey, ios = false }: {
                 : []),
             ].map(([name, label, description]) => (
               <label
-                className={`notification-toggle${name === 'latest' ? ' notification-toggle-parent' : ''}${
-                  name === 'ownPosts' ? ' notification-toggle-dependent' : ''
-                }`}
+                className={`notification-toggle${name === 'ownPosts' ? ' notification-toggle-dependent' : ''}`}
                 key={name}
               >
                 <span>

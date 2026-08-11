@@ -546,6 +546,13 @@ export const migrations: Migration[] = [
       addColumn(database, 'push_subscriptions', 'notify_follow_activity', 'INTEGER NOT NULL DEFAULT 1')
     },
   },
+  {
+    version: 45,
+    name: 'following_notes_push_preference',
+    up(database) {
+      addColumn(database, 'push_subscriptions', 'notify_following_notes', 'INTEGER NOT NULL DEFAULT 0')
+    },
+  },
 ]
 
 export const latestMigrationVersion = migrations.at(-1)!.version

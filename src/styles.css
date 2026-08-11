@@ -1979,6 +1979,69 @@ form.report-panel {
   font-size: 0.625rem;
 }
 
+.notification-radio-group {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-bottom: 0;
+}
+
+.notification-radio-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-5);
+  padding: var(--space-4) var(--space-4) var(--space-3);
+}
+
+.notification-radio-heading > strong { font-size: 0.75rem; }
+
+.notification-radio-enable {
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+}
+
+.notification-radio-enable .notification-toggle-track {
+  display: block;
+}
+
+.notification-radio-enable input {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.notification-radio-options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-4);
+  padding: 0 var(--space-4) var(--space-4);
+}
+
+.notification-radio-options label {
+  display: flex;
+  flex: 1 1 180px;
+  align-items: flex-start;
+  gap: var(--space-2);
+  color: var(--muted);
+  cursor: pointer;
+}
+
+.notification-radio-options input {
+  margin: 2px 0 0;
+  accent-color: var(--accent);
+}
+
+.notification-radio-options span { display: grid; gap: 2px; }
+.notification-radio-options strong { color: var(--ink); font-size: 0.6875rem; }
+.notification-radio-options small { font-size: 0.625rem; }
+
+.notification-radio-options label:has(input:disabled) {
+  opacity: 0.5;
+  cursor: default;
+}
+
 .notification-toggle {
   display: flex;
   align-items: center;
@@ -1994,11 +2057,6 @@ form.report-panel {
 .notification-toggle strong { font-size: 0.75rem; }
 .notification-toggle small { color: var(--muted); font-size: 0.625rem; }
 .notification-toggle input { position: absolute; opacity: 0; pointer-events: none; }
-
-.notification-toggle-parent {
-  padding-bottom: var(--space-2);
-  border-bottom: 0;
-}
 
 .notification-toggle-dependent {
   position: relative;
@@ -2048,6 +2106,21 @@ form.report-panel {
 }
 
 .notification-toggle input:focus-visible + .notification-toggle-track {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.notification-radio-enable input:checked + .notification-toggle-track {
+  background: var(--tag-bg);
+  border-color: var(--accent);
+}
+
+.notification-radio-enable input:checked + .notification-toggle-track span {
+  background: var(--accent);
+  transform: translateX(18px);
+}
+
+.notification-radio-enable input:focus-visible + .notification-toggle-track {
   outline: 2px solid var(--accent);
   outline-offset: 2px;
 }

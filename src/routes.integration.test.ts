@@ -233,7 +233,7 @@ test('consequential account, content, reporting, and admin flows work over HTTP'
   expect(authenticatedHomeHtml).not.toContain('href="/login">login</a>')
   const notificationSettings = await request('/account/edit/notifications', { cookie: aliceCookie })
   expect(notificationSettings.status).toBe(200)
-  expect(await notificationSettings.text()).toContain('name="latest" checked=""')
+  expect(await notificationSettings.text()).toContain('name="noteScope" checked="" value="latest"')
   const endpoint = 'https://push.example/alice-browser'
   const savedPush = await request('/account/push-subscription', {
     method: 'POST',
@@ -247,7 +247,8 @@ test('consequential account, content, reporting, and admin flows work over HTTP'
     { cookie: aliceCookie },
   )
   expect(await pushPreferences.json()).toEqual({
-    preferences: { latest: 0, replies: 1, mentions: 0, follows: 1, ownPosts: 0, followActivity: 1 },
+    preferences: { latest: 0, replies: 1, mentions: 0, follows: 1, ownPosts: 0, followActivity: 1,
+      followingNotes: 1 },
   })
   const cacheBustedHomeHtml = await (await request('/?v=94721')).text()
   expect(cacheBustedHomeHtml).toContain(`property="og:url" content="${origin}/?v=94721"`)

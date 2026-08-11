@@ -9,6 +9,8 @@
   const preferenceForm = document.getElementById('notification-preference-form')
   const preferenceHint = document.getElementById('notification-preference-hint')
   const preferenceInputs = [...preferences.querySelectorAll('input')]
+  const notesEnabled = preferenceInputs.find(input => input.name === 'notesEnabled')
+  const noteScopes = preferenceInputs.filter(input => input.name === 'noteScope')
 
   const supported = 'serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window
   const setActions = enabled => {
@@ -29,7 +31,18 @@
     const bytes = atob((value + padding).replace(/-/g, '+').replace(/_/g, '/'))
     return Uint8Array.from(bytes, character => character.charCodeAt(0))
   }
-  const preferenceValues = () => Object.fromEntries(preferenceInputs.map(input => [input.name, input.checked]))
+  const preferenceValues = () => {
+    const values = Object.fromEntries(preferenceInputs
+      .filter(input => input.name !== 'noteScope' && input.name !== 'notesEnabled')
+      .map(input => [input.name, input.checked]))
+    const noteScope = preferenceInputs.find(input => input.name === 'noteScope' && input.checked)?.value || 'latest'
+    return { ...values,
+      latest: notesEnabled.checked && noteScope === 'latest',
+      followingNotes: notesEnabled.checked && noteScope === 'following' }
+  }
+  const syncNoteScope = () => {
+    for (const input of noteScopes) input.disabled = !notesEnabled.checked
+  }
   const save = (subscription, includePreferences = true) =>
     fetch('/account/push-subscription', {
       method: 'POST',
@@ -41,8 +54,17 @@
     const response = await fetch('/account/push-subscription?endpoint=' + encodeURIComponent(subscription.endpoint))
     if (!response.ok) throw new Error('Could not load preferences')
     const saved = (await response.json()).preferences
-    for (const input of preferenceInputs) input.checked = saved[input.name] !== 0
+    for (const input of preferenceInputs) {
+      input.checked = input.name === 'notesEnabled'
+        ? saved.latest !== 0 || saved.followingNotes !== 0
+        : input.name === 'noteScope'
+        ? input.value === (saved.followingNotes !== 0 && saved.latest === 0 ? 'following' : 'latest')
+        : saved[input.name] !== 0
+    }
+    syncNoteScope()
   }
+
+  notesEnabled.addEventListener('change', syncNoteScope)
 
   if (!supported) {
     enable.disabled = true

@@ -93,6 +93,32 @@ describe('Web Push activity delivery', () => {
     expect(deliveries).toBe(0)
   })
 
+  test('sends notes from followed people or tags without enabling all new notes', async () => {
+    const database = fixture()
+    database.run(`UPDATE push_subscriptions SET notify_latest=0,notify_following_notes=1;
+      INSERT INTO follows(follower_id,following_id,created_at) VALUES(2,1,CURRENT_TIMESTAMP);
+      INSERT INTO posts(id,user_id,body) VALUES(3,1,'followed person note')`)
+    const payloads: string[] = []
+    webpush.sendNotification = (async (_subscription, payload) => {
+      payloads.push(String(payload))
+      return {} as never
+    }) as typeof webpush.sendNotification
+
+    await sendPushForPost(3, 1, 'author', database, vapid)
+    database.run(`DELETE FROM follows WHERE follower_id=2 AND following_id=1;
+      INSERT INTO hashtag_follows(user_id,tag,created_at) VALUES(2,'bun',CURRENT_TIMESTAMP);
+      INSERT INTO posts(id,user_id,body) VALUES(4,1,'followed tag note');
+      INSERT INTO post_hashtags(post_id,tag) VALUES(4,'bun')`)
+    await sendPushForPost(4, 1, 'author', database, vapid)
+    database.run(`INSERT INTO posts(id,user_id,body) VALUES(5,1,'unrelated note')`)
+    await sendPushForPost(5, 1, 'author', database, vapid)
+
+    expect(payloads.map(payload => JSON.parse(payload).body)).toEqual([
+      'followed person note',
+      'followed tag note',
+    ])
+  })
+
   test('sends an author their own post as latest without self-activity wording', async () => {
     const database = fixture()
     database.run(`INSERT INTO push_subscriptions(endpoint,user_id,p256dh,auth)
