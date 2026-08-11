@@ -1,4 +1,4 @@
-import { AUTH_LIMITS, authRateLimitMessage } from '../auth-rate-limit'
+import { AUTH_LIMITS, authRateLimitMessage, loginSubnet } from '../auth-rate-limit'
 import { sessionCookieName } from '../brand'
 import { Auth, ChooseHandle, ForgotPassword, MagicLinkSent, PasswordLogin, ResetPassword } from '../components/pages'
 import { db } from '../db'
@@ -73,7 +73,9 @@ export function registerAuthRoutes(app: Hono) {
     const identifier = (f.identifier || '').trim().toLowerCase().replace(/^@/, '')
     const password = f.password || ''
     const next = safeNext(f.next)
-    const limited = authLimit(c, 'password-login-ip', clientAddress(c), AUTH_LIMITS.loginIp)
+    const address = clientAddress(c)
+    const limited = authLimit(c, 'password-login-ip', address, AUTH_LIMITS.loginIp)
+      || authLimit(c, 'password-login-subnet', loginSubnet(address), AUTH_LIMITS.loginSubnet)
       || authLimit(c, 'password-login-account', identifier || '(blank)', AUTH_LIMITS.loginAccount)
     if (limited) {
       return retryPage(

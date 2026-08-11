@@ -1,6 +1,7 @@
 import { Database } from 'bun:sqlite'
 import { describe, expect, test } from 'bun:test'
-import { authRateLimitMessage, consumeAuthAttempt, consumeBucketedAttempt, rateLimitKey } from './auth-rate-limit'
+import { authRateLimitMessage, consumeAuthAttempt, consumeBucketedAttempt, loginSubnet,
+  rateLimitKey } from './auth-rate-limit'
 
 function database() {
   const db = new Database(':memory:')
@@ -14,6 +15,16 @@ function database() {
 }
 
 describe('authentication rate limits', () => {
+  test('groups login addresses into IPv4 /24 and IPv6 /64 subnets', () => {
+    expect(loginSubnet('192.0.2.17')).toBe('192.0.2.0/24')
+    expect(loginSubnet('192.0.2.240')).toBe('192.0.2.0/24')
+    expect(loginSubnet('192.0.3.1')).toBe('192.0.3.0/24')
+    expect(loginSubnet('2001:db8:abcd:12::1')).toBe('2001:db8:abcd:12::/64')
+    expect(loginSubnet('2001:0db8:abcd:0012:ffff::9')).toBe('2001:db8:abcd:12::/64')
+    expect(loginSubnet('::ffff:192.0.2.17')).toBe('192.0.2.0/24')
+    expect(loginSubnet('unknown')).toBe('unknown')
+  })
+
   test('rejects attempts after the limit and reports when the window reopens', () => {
     const db = database()
     const key = rateLimitKey('127.0.0.1')
