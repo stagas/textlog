@@ -55,6 +55,9 @@ describe('database migrations', () => {
     expect(database.query(
       'SELECT count(*) count FROM sqlite_master WHERE type=\'table\' AND name=\'api_keys\'',
     ).get()).toEqual({ count: 1 })
+    expect(database.query(
+      'SELECT count(*) count FROM sqlite_master WHERE type=\'table\' AND name=\'password_login_nonces\'',
+    ).get()).toEqual({ count: 1 })
     const pushColumns = (database.query('PRAGMA table_info(push_subscriptions)').all() as { name: string }[])
       .map(column => column.name)
     expect(pushColumns).toContain('notify_latest')

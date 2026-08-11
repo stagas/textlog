@@ -6,6 +6,7 @@ import { sendMagicLink, sendPasswordReset } from '../email'
 import { isDevelopment } from '../environment'
 import { clearSessionCookie, safeLocalPath, sessionCookie } from '../http'
 import { moderateText, moderationMessage } from '../moderation'
+import { consumePasswordLoginNonce, issuePasswordLoginNonce } from '../password-login-nonce'
 import { insertSession, SESSION_LIFETIME_MS, sessionHash } from '../sessions'
 import { currentUser, hash, hashPassword, token, verifyPassword } from '../utils'
 import { sendPushForSignup } from '../push'
@@ -67,19 +68,25 @@ export function registerAuthRoutes(app: Hono) {
     c => redirect('/enter' + (c.req.query('next') ? `?next=${encodeURIComponent(safeNext(c.req.query('next')))}` : '')))
 
   app.get('/enter/password',
-    c => page(<PasswordLogin next={safeNext(c.req.query('next'))} reset={c.req.query('reset') === '1'} />))
+    c => page(<PasswordLogin nonce={issuePasswordLoginNonce(db, clientAddress(c))}
+      next={safeNext(c.req.query('next'))} reset={c.req.query('reset') === '1'} />))
   app.post('/enter/password', async c => {
     const f = await form(c.req.raw)
     const identifier = (f.identifier || '').trim().toLowerCase().replace(/^@/, '')
     const password = f.password || ''
     const next = safeNext(f.next)
     const address = clientAddress(c)
+    if (!consumePasswordLoginNonce(db, f.nonce || '', address)) {
+      return page(<PasswordLogin nonce={issuePasswordLoginNonce(db, address)} identifier={identifier} next={next}
+        error="This login form has expired or was already used. Please try again." />, 400)
+    }
     const limited = authLimit(c, 'password-login-ip', address, AUTH_LIMITS.loginIp)
       || authLimit(c, 'password-login-subnet', loginSubnet(address), AUTH_LIMITS.loginSubnet)
       || authLimit(c, 'password-login-account', identifier || '(blank)', AUTH_LIMITS.loginAccount)
     if (limited) {
       return retryPage(
-        page(<PasswordLogin identifier={identifier} next={next} error={authRateLimitMessage(limited.retryAfter)} />,
+        page(<PasswordLogin nonce={issuePasswordLoginNonce(db, address)} identifier={identifier} next={next}
+          error={authRateLimitMessage(limited.retryAfter)} />,
           429),
         limited.retryAfter,
       )
@@ -93,7 +100,8 @@ export function registerAuthRoutes(app: Hono) {
       : await dummyPasswordHash)
     if (!account || account.password === '!' || !valid) {
       return page(
-        <PasswordLogin identifier={identifier} next={next} error="Email, handle, or password is incorrect." />,
+        <PasswordLogin nonce={issuePasswordLoginNonce(db, address)} identifier={identifier} next={next}
+          error="Email, handle, or password is incorrect." />,
         400,
       )
     }

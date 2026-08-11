@@ -63,6 +63,13 @@ function entryCode(email: CapturedEmail) {
   return value
 }
 
+async function passwordLoginNonce() {
+  const response = await request('/enter/password')
+  const value = (await response.text()).match(/name="nonce" value="([^"]+)"/)?.[1]
+  if (!value) throw new Error('Password login form did not contain a nonce')
+  return value
+}
+
 function sessionCookie(response: Response) {
   const cookie = response.headers.get('set-cookie')?.match(/(?:^|,\s*)(textlog=[^;]+)/)?.[1]
   if (!cookie) throw new Error('Response did not set a session cookie')
@@ -356,13 +363,21 @@ test('consequential account, content, reporting, and admin flows work over HTTP'
   })
   expect(enabledPassword.status).toBe(303)
   expect(enabledPassword.headers.get('location')).toBe('/account/security?enabled=password')
+  const firstLoginNonce = await passwordLoginNonce()
   const passwordLogin = await request('/enter/password', {
     method: 'POST',
-    form: { identifier: '@alice', password: 'alice password 123', next: '/account/security' },
+    form: { nonce: firstLoginNonce, identifier: '@alice', password: 'alice password 123',
+      next: '/account/security' },
   })
   expect(passwordLogin.status).toBe(303)
   expect(passwordLogin.headers.get('location')).toBe('/account/security')
   aliceCookie = sessionCookie(passwordLogin)
+  const replayedLogin = await request('/enter/password', {
+    method: 'POST',
+    form: { nonce: firstLoginNonce, identifier: '@alice', password: 'alice password 123' },
+  })
+  expect(replayedLogin.status).toBe(400)
+  expect(await replayedLogin.text()).toContain('already used')
   const changedPassword = await request('/account/password/change', {
     method: 'POST',
     cookie: aliceCookie,
@@ -390,7 +405,7 @@ test('consequential account, content, reporting, and admin flows work over HTTP'
   expect(reusedReset.status).toBe(400)
   const resetLogin = await request('/enter/password', {
     method: 'POST',
-    form: { identifier: 'alice@example.com', password: 'alice password 789' },
+    form: { nonce: await passwordLoginNonce(), identifier: 'alice@example.com', password: 'alice password 789' },
   })
   expect(resetLogin.status).toBe(303)
   aliceCookie = sessionCookie(resetLogin)

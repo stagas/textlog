@@ -1,7 +1,8 @@
 import { describe, expect, test } from 'bun:test'
 import { About, AccountApiKeyCreate, AccountMagicLink, AccountPassword, AccountSecurity, AdminDashboard, ApiDocs, Auth,
   ChangeFont, ChangeTheme, ChooseHandle, ConfirmAccountDelete, ConfirmEmail, Connections, Contact, EmbedExamples,
-  ErrorPage, Legal, MagicLinkSent, NotFound, NotificationSettings, postTitle, Profile } from './components/pages'
+  ErrorPage, Legal, MagicLinkSent, NotFound, NotificationSettings, PasswordLogin, postTitle, Profile }
+  from './components/pages'
 
 import React from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
@@ -371,6 +372,12 @@ describe('Auth', () => {
     const enter = renderToStaticMarkup(React.createElement(Auth, { next }))
 
     expect(enter).toContain('name="next" value="/post/42?reply=1"')
+  })
+
+  test('password login submits its server-issued nonce', () => {
+    const html = renderToStaticMarkup(React.createElement(PasswordLogin, { nonce: 'one-time-value' }))
+
+    expect(html).toContain('type="hidden" name="nonce" value="one-time-value"')
   })
 
   test('check-your-email page accepts the one-time code', () => {

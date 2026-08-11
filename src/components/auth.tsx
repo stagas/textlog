@@ -33,7 +33,8 @@ export function Auth({ error, email = '', next }: { error?: string; email?: stri
   )
 }
 
-export function PasswordLogin({ error, identifier = '', next, reset = false }: {
+export function PasswordLogin({ nonce, error, identifier = '', next, reset = false }: {
+  nonce: string
   error?: string
   identifier?: string
   next?: string
@@ -47,6 +48,7 @@ export function PasswordLogin({ error, identifier = '', next, reset = false }: {
           {reset && <p className="success" role="status">Password reset. You can log in now.</p>}
           {error && <p className="error" role="alert">{error}</p>}
           <form method="post" action="/enter/password" autoComplete="on">
+            <input type="hidden" name="nonce" value={nonce} />
             {next && <input type="hidden" name="next" value={next} />}
             <label htmlFor="login-identifier">
               <span>email or handle</span>

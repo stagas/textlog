@@ -597,6 +597,15 @@ export const migrations: Migration[] = [
       }
     },
   },
+  {
+    version: 50,
+    name: 'password_login_nonces',
+    up(database) {
+      database.run(`CREATE TABLE IF NOT EXISTS password_login_nonces (
+        token_hash TEXT PRIMARY KEY,expires_at INTEGER NOT NULL);
+      CREATE INDEX IF NOT EXISTS password_login_nonces_expiry ON password_login_nonces(expires_at);`)
+    },
+  },
 ]
 
 export const latestMigrationVersion = migrations.at(-1)!.version

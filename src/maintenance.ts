@@ -19,6 +19,7 @@ export function runBoundedCleanup(database: Database, now = Date.now()) {
     passwordEnableTokens: deleteBatch(database, 'password_enable_tokens', 'expires_at<=?', now),
     emailChangeAuthorizations: deleteBatch(database, 'email_change_authorizations', 'expires_at<=?', now),
     magicLinks: deleteBatch(database, 'magic_links', 'expires_at<=?', now),
+    passwordLoginNonces: deleteBatch(database, 'password_login_nonces', 'expires_at<=?', now),
     authRateLimits: deleteBatch(database, 'auth_rate_limits', 'created_at<=?', now - 24 * 60 * 60 * 1000),
     apiRateLimits: deleteBatch(database, 'api_rate_limit_buckets', 'bucket_start<?', now - 2 * 60 * 1000),
     visitors: deleteBatch(database, 'daily_visitors', 'day<date(?,\'-6 days\')', new Date(now).toISOString()),
