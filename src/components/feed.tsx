@@ -64,7 +64,7 @@ export function Feed({ user, cursor, title, path = '/for-you', pageUrl, notifica
       'post' activity_kind,'post:' || printf('%020d',p.id) event_key,p.user_id actor_id,
       u.handle actor_handle,NULL target_handle,NULL target_tag,NULL target_bio,0 target_is_viewer
       FROM posts p JOIN users u ON u.id=p.user_id
-      WHERE p.deleted_at IS NULL AND (p.user_id=$viewer OR p.user_id IN
+      WHERE p.deleted_at IS NULL AND p.user_id!=$viewer AND (p.user_id IN
         (SELECT following_id FROM follows WHERE follower_id=$viewer) OR p.id IN
         (SELECT ph.post_id FROM post_hashtags ph JOIN hashtag_follows hf ON hf.tag=ph.tag
           WHERE hf.user_id=$viewer))

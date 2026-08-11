@@ -465,16 +465,11 @@ test('consequential account, content, reporting, and admin flows work over HTTP'
   expect(latestSecondBody).toContain('← prev')
 
   const forYouFirstBody = await (await request('/for-you', { cookie: aliceCookie })).text()
-  const forYouNext = forYouFirstBody.match(/href="(\/for-you\?cursor=[^"]+)"/)?.[1]
-  expect(forYouNext).toBeTruthy()
-  expect(forYouFirstBody).toContain('cursor note 21')
+  expect(forYouFirstBody).not.toContain('/for-you?cursor=')
+  expect(forYouFirstBody).not.toContain('cursor note 21')
   expect(forYouFirstBody).not.toContain(post.body)
-  expect(forYouFirstBody).toContain('action="/for-you/read-all"')
-  expect(forYouFirstBody).toContain('class="for-you-item activity-item-unread"')
-  expect(forYouFirstBody).toContain('aria-label="unread"')
-  const forYouSecondBody = await (await request(forYouNext!, { cookie: aliceCookie })).text()
-  expect(forYouSecondBody).toContain(post.body)
-  expect(forYouSecondBody).toContain('← prev')
+  expect(forYouFirstBody).not.toContain('action="/for-you/read-all"')
+  expect(forYouFirstBody).not.toContain('class="for-you-item activity-item-unread"')
 
   const profileFirstBody = await (await request('/u/alice')).text()
   const profileNext = profileFirstBody.match(/href="(\/u\/alice\?cursor=[^"]+)"/)?.[1]
