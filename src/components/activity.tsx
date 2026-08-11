@@ -87,10 +87,14 @@ export function Activity({ user, cursor, title, path = '/activity', pageUrl, not
   const activity = enrichPosts(db, activityPage.filter(post => post.activity_kind === 'reply'
     || post.activity_kind === 'mention'), user.id)
   const activityById = new Map(activity.map(post => [post.id, post]))
+  const hasNotes = activityPage.length > 0 || !!db.query(
+    'SELECT 1 FROM posts WHERE user_id=? AND deleted_at IS NULL LIMIT 1',
+  ).get(user.id)
   return (
     <Layout user={user} title={title} pageUrl={pageUrl} notificationBanner={notificationBanner}>
       <h1 className="visually-hidden">activity</h1>
-      <FeedTabs active="activity" user={user} activityReadStatus={hasUnread} />
+      <FeedTabs active="activity" user={user}
+        activityReadStatus={activityPage.length ? hasUnread : undefined} />
       {activityPage.length
         ? activityPage.map((rawPost, index) => {
           const post = rawPost.activity_kind === 'reply' || rawPost.activity_kind === 'mention'
@@ -161,10 +165,14 @@ export function Activity({ user, cursor, title, path = '/activity', pageUrl, not
         : !cursor
         ? (
           <div className="empty empty-actions">
-            <p>No activity yet.</p>
+            <p>
+              When someone replies to or mentions you, or starts following you, it’ll show up here.
+              {isAdmin(user) && ' You’ll also see new signups.'}
+            </p>
             <ActionPair
-              primary={<a className="button" href="/">browse notes</a>}
-              secondary={<a href="/write">write a note</a>}
+              primary={<a className="button" href="/latest">browse latest notes</a>}
+              secondary={<><a href="/explore">explore</a><span className="action-separator">or</span>
+                <a href="/write">{hasNotes ? 'write a note' : 'write your first note'}</a></>}
             />
           </div>
         )

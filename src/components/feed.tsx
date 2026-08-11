@@ -131,7 +131,8 @@ export function Feed({ user, cursor, title, path = '/for-you', pageUrl, notifica
   return (
     <Layout user={user} title={title} pageUrl={pageUrl} notificationBanner={notificationBanner}>
       <h1 className="visually-hidden">Your feed</h1>
-      <FeedTabs active="following" user={user} forYouReadStatus={hasUnread} />
+      <FeedTabs active="following" user={user}
+        forYouReadStatus={timeline.length ? hasUnread : undefined} />
       {timeline.length
         ? timeline.map(row => row.activity_kind === 'post'
           ? <div className={`for-you-item${row.unread ? ' activity-item-unread' : ''}`} key={row.event_key}>
