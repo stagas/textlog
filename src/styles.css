@@ -880,7 +880,7 @@ nav form {
 
 .post p code,
 .parent-quote code {
-  color: var(--muted);
+  color: var(--quote-ink);
 }
 
 .parent-quote {
