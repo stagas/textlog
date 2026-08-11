@@ -59,7 +59,7 @@ export function Pagination({ page, totalPages, path, pageParam = 'page', label =
   const windowStart = Math.max(1, Math.min(page - 1, totalPages - 2))
   const windowPages = Array.from({ length: Math.min(3, totalPages) }, (_, index) => windowStart + index)
   const pages = compact
-    ? [...new Set([1, Math.max(1, page - 1), page, Math.min(totalPages, page + 1), totalPages])]
+    ? [...new Set([1, ...windowPages, totalPages])]
       .sort((a, b) => a - b)
     : [...new Set([1, ...windowPages, totalPages])].sort((a, b) => a - b)
   return (
