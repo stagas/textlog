@@ -99,7 +99,8 @@ export function Legal({ user }: { user: User | null }) {
         <h3>Recipients, moderation and transfers</h3>
         <p>
           Authorized operators and infrastructure providers can access data where needed to run and secure the service.
-          Resend processes email addresses and message content to deliver transactional email. OpenAI processes text
+          Our configured email delivery provider processes email addresses and message content to deliver transactional
+          email. OpenAI processes text
           submitted for automated content-safety classification; the classification can block publication, but
           moderation and moderation decisions are not made solely by automated means. These providers may process data
           outside the EEA. Transfers must be covered by an applicable adequacy decision or safeguards such as the

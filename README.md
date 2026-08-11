@@ -42,6 +42,9 @@ used throughout pages, feeds, emails, embeds, API documentation, and install met
 available settings. Session cookies and the trusted internal client-IP header also use a lowercase, URL-safe form of
 the name; for example, `Notebook Garden` uses the `notebook-garden` cookie and `x-notebook-garden-client-ip` header.
 
+Transactional email supports Resend, SendGrid, and Google SMTP through `EMAIL_PROVIDER`. Configure the selected
+provider's credentials and `EMAIL_FROM` as documented in `.env.example`. Resend remains the default for compatibility.
+
 Public instance details—operator contact information, administrator emails, privacy authority, and optional IRC,
 GitHub, mobile-app, and donation links—live in `instance.config.ts`. Set an optional entry to `null` to omit it from the
 rendered pages or footer.

@@ -23,12 +23,14 @@
     "hono": "^4.13.0",
     "jszip": "^3.10.1",
     "linkify-it": "^6.1.0",
+    "nodemailer": "^9.0.5",
     "react": "latest",
     "react-dom": "latest",
     "tlds": "^1.261.0",
     "web-push": "^3.6.7"
   },
   "devDependencies": {
+    "@types/nodemailer": "^8.0.1",
     "@types/web-push": "^3.6.4",
     "bun-types": "latest",
     "typescript": "latest"

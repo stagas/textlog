@@ -8,7 +8,10 @@ export type StartupConfiguration = {
   environment: 'development' | 'test' | 'production'
   production: boolean
   devReload: boolean
+  devSendEmails: boolean
+  /** @deprecated Use devSendEmails. */
   devResendEmails: boolean
+  emailProvider: 'resend' | 'sendgrid' | 'google'
   appUrl: string | null
   host: string
   port: number
@@ -114,7 +117,8 @@ export function validateStartupConfiguration(env: Environment = Bun.env, options
     problems.push('APP_NAME must be at most 80 characters and cannot contain markup or newlines')
   }
   const devReload = booleanValue(env, 'DEV_RELOAD', problems)
-  const devResendEmails = booleanValue(env, 'DEV_RESEND_EMAILS', problems)
+  const legacyDevResendEmails = booleanValue(env, 'DEV_RESEND_EMAILS', problems)
+  const devSendEmails = booleanValue(env, 'DEV_SEND_EMAILS', problems, legacyDevResendEmails)
   const requestedEnvironment = (env.NODE_ENV || (devReload ? 'development' : 'production')).trim().toLowerCase()
   const validEnvironment = isStartupEnvironment(requestedEnvironment)
   const environment: StartupEnvironment = validEnvironment ? requestedEnvironment : 'production'
@@ -143,26 +147,44 @@ export function validateStartupConfiguration(env: Environment = Bun.env, options
   }
   else if (environment === 'production') problems.push('APP_URL is required in production')
 
-  const resendConfigured = Boolean(env.RESEND_API_KEY?.trim())
+  const requestedEmailProvider = env.EMAIL_PROVIDER?.trim().toLowerCase() || 'resend'
+  const supportedEmailProviders = ['resend', 'sendgrid', 'google'] as const
+  const emailProvider = supportedEmailProviders.find(provider => provider === requestedEmailProvider) || 'resend'
+  if (!supportedEmailProviders.some(provider => provider === requestedEmailProvider)) {
+    problems.push('EMAIL_PROVIDER must be resend, sendgrid, or google')
+  }
   const emailFromConfigured = Boolean(env.EMAIL_FROM?.trim())
   const emailCaptureConfigured = Boolean(env.EMAIL_CAPTURE_PATH?.trim())
-  if (environment === 'development' && devResendEmails && !resendConfigured) {
-    problems.push('RESEND_API_KEY and EMAIL_FROM are required when DEV_RESEND_EMAILS is enabled')
+  const providerVariables = ['RESEND_API_KEY', 'SENDGRID_API_KEY', 'GOOGLE_SMTP_USER', 'GOOGLE_SMTP_APP_PASSWORD']
+  const providerConfigured = emailProvider === 'resend'
+    ? Boolean(env.RESEND_API_KEY?.trim())
+    : emailProvider === 'sendgrid'
+      ? Boolean(env.SENDGRID_API_KEY?.trim())
+      : Boolean(env.GOOGLE_SMTP_USER?.trim() && env.GOOGLE_SMTP_APP_PASSWORD?.trim())
+  const emailConfigured = providerConfigured || emailFromConfigured
+  if (environment === 'development' && devSendEmails && (!providerConfigured || !emailFromConfigured)) {
+    problems.push(`credentials for EMAIL_PROVIDER=${emailProvider} and EMAIL_FROM are required when DEV_SEND_EMAILS is enabled`)
   }
   if (emailCaptureConfigured && environment !== 'test') {
     problems.push('EMAIL_CAPTURE_PATH is only allowed in test')
   }
-  if (emailCaptureConfigured && (resendConfigured || emailFromConfigured)) {
-    problems.push('EMAIL_CAPTURE_PATH cannot be combined with RESEND_API_KEY or EMAIL_FROM')
+  if (emailCaptureConfigured && (providerVariables.some(name => Boolean(env[name]?.trim())) || emailFromConfigured)) {
+    problems.push('EMAIL_CAPTURE_PATH cannot be combined with email provider credentials or EMAIL_FROM')
   }
-  if (resendConfigured !== emailFromConfigured) {
-    problems.push('RESEND_API_KEY and EMAIL_FROM must be configured together')
+  if (emailConfigured && providerConfigured !== emailFromConfigured) {
+    problems.push(`credentials for EMAIL_PROVIDER=${emailProvider} and EMAIL_FROM must be configured together`)
+  }
+  if (emailProvider === 'google'
+    && Boolean(env.GOOGLE_SMTP_USER?.trim()) !== Boolean(env.GOOGLE_SMTP_APP_PASSWORD?.trim())) {
+    problems.push('GOOGLE_SMTP_USER and GOOGLE_SMTP_APP_PASSWORD must be configured together')
   }
   if (emailFromConfigured && !validEmailFrom(env.EMAIL_FROM!)) problems.push('EMAIL_FROM must contain a valid email')
-  if ((resendConfigured || emailFromConfigured) && !appUrl) {
+  if (emailConfigured && !appUrl) {
     problems.push('APP_URL is required when email is configured')
   }
-  if (environment === 'production' && !resendConfigured) problems.push('RESEND_API_KEY is required in production')
+  if (environment === 'production' && !providerConfigured) {
+    problems.push(`credentials for EMAIL_PROVIDER=${emailProvider} are required in production`)
+  }
   if (environment === 'production' && !emailFromConfigured) problems.push('EMAIL_FROM is required in production')
   if (environment === 'production' && (env.IP_PSEUDONYM_SECRET?.trim().length || 0) < 32) {
     problems.push('IP_PSEUDONYM_SECRET must be at least 32 characters in production')
@@ -199,7 +221,9 @@ export function validateStartupConfiguration(env: Environment = Bun.env, options
     environment,
     production: environment === 'production',
     devReload,
-    devResendEmails,
+    devSendEmails,
+    devResendEmails: devSendEmails,
+    emailProvider,
     appUrl,
     host,
     port,

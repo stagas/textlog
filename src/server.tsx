@@ -3,7 +3,7 @@ import { validateStartupConfiguration } from './config'
 const configuration = validateStartupConfiguration()
 Bun.env.NODE_ENV = configuration.environment
 Bun.env.DEV_RELOAD = String(configuration.devReload)
-Bun.env.DEV_RESEND_EMAILS = String(configuration.devResendEmails)
+Bun.env.DEV_SEND_EMAILS = String(configuration.devSendEmails)
 Bun.env.TRUST_PROXY = String(configuration.trustProxy)
 Bun.env.LOG_COLOR = String(configuration.logColor)
 Bun.env.MODERATION_DISABLED = String(configuration.moderationDisabled)

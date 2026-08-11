@@ -29,7 +29,7 @@ describe('startup configuration', () => {
     catch (error) {
       const message = String(error)
       expect(message).toContain('APP_URL is required')
-      expect(message).toContain('RESEND_API_KEY is required')
+      expect(message).toContain('credentials for EMAIL_PROVIDER=resend are required')
       expect(message).toContain('EMAIL_FROM is required')
       expect(message).toContain('OPENAI_API_KEY is required')
       expect(message).toContain('IP_PSEUDONYM_SECRET must be at least 32 characters')
@@ -53,17 +53,17 @@ describe('startup configuration', () => {
 
   test('keeps integrations optional in development but rejects partial email configuration', () => {
     expect(validateStartupConfiguration({ NODE_ENV: 'development' }, { checkFilesystem: false }))
-      .toMatchObject({ production: false, appUrl: null, devResendEmails: false })
+      .toMatchObject({ production: false, appUrl: null, devSendEmails: false, emailProvider: 'resend' })
     expect(() =>
       validateStartupConfiguration({ NODE_ENV: 'development', RESEND_API_KEY: 'only-one' }, {
         checkFilesystem: false,
       })
-    ).toThrow('RESEND_API_KEY and EMAIL_FROM must be configured together')
+    ).toThrow('credentials for EMAIL_PROVIDER=resend and EMAIL_FROM must be configured together')
     expect(() =>
       validateStartupConfiguration({ NODE_ENV: 'development', DEV_RESEND_EMAILS: 'true' }, {
         checkFilesystem: false,
       })
-    ).toThrow('RESEND_API_KEY and EMAIL_FROM are required when DEV_RESEND_EMAILS is enabled')
+    ).toThrow('credentials for EMAIL_PROVIDER=resend and EMAIL_FROM are required when DEV_SEND_EMAILS is enabled')
     expect(validateStartupConfiguration({
       NODE_ENV: 'development',
       DEV_RESEND_EMAILS: 'true',
@@ -71,6 +71,34 @@ describe('startup configuration', () => {
       RESEND_API_KEY: 'configured-secret',
       EMAIL_FROM: 'textlog <hello@textlog.cc>',
     }, { checkFilesystem: false }).devResendEmails).toBe(true)
+  })
+
+  test('validates SendGrid and Google provider credentials', () => {
+    expect(validateStartupConfiguration({
+      ...production,
+      EMAIL_PROVIDER: 'sendgrid',
+      RESEND_API_KEY: undefined,
+      SENDGRID_API_KEY: 'sendgrid-secret',
+    }, { checkFilesystem: false }).emailProvider).toBe('sendgrid')
+
+    expect(validateStartupConfiguration({
+      ...production,
+      EMAIL_PROVIDER: 'google',
+      RESEND_API_KEY: undefined,
+      GOOGLE_SMTP_USER: 'sender@example.com',
+      GOOGLE_SMTP_APP_PASSWORD: 'app-password',
+    }, { checkFilesystem: false }).emailProvider).toBe('google')
+
+    expect(() => validateStartupConfiguration({
+      ...production,
+      EMAIL_PROVIDER: 'google',
+      RESEND_API_KEY: undefined,
+      GOOGLE_SMTP_USER: 'sender@example.com',
+    }, { checkFilesystem: false })).toThrow('GOOGLE_SMTP_USER and GOOGLE_SMTP_APP_PASSWORD must be configured together')
+
+    expect(() => validateStartupConfiguration({ ...production, EMAIL_PROVIDER: 'unknown' }, {
+      checkFilesystem: false,
+    })).toThrow('EMAIL_PROVIDER must be resend, sendgrid, or google')
   })
 
   test('allows captured email only in isolated tests', () => {

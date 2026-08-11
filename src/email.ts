@@ -1,6 +1,7 @@
 import { appendFileSync, mkdirSync } from 'node:fs'
 import { dirname } from 'node:path'
 import { appName } from './brand'
+import { createEmailTransport } from './email-transport'
 
 async function sendEmail(email: string, subject: string, text: string, html: string) {
   const capturePath = Bun.env.EMAIL_CAPTURE_PATH
@@ -11,28 +12,12 @@ async function sendEmail(email: string, subject: string, text: string, html: str
     return
   }
 
-  if (Bun.env.NODE_ENV === 'development' && Bun.env.DEV_RESEND_EMAILS !== 'true') return
+  const sendDevelopmentEmail = Bun.env.DEV_SEND_EMAILS === 'true' || Bun.env.DEV_RESEND_EMAILS === 'true'
+  if (Bun.env.NODE_ENV === 'development' && !sendDevelopmentEmail) return
 
-  const apiKey = Bun.env.RESEND_API_KEY
   const from = Bun.env.EMAIL_FROM
-  if (!apiKey || !from) throw new Error('RESEND_API_KEY and EMAIL_FROM must be configured')
-
-  const response = await fetch('https://api.resend.com/emails', {
-    method: 'POST',
-    headers: {
-      authorization: `Bearer ${apiKey}`,
-      'content-type': 'application/json',
-    },
-    body: JSON.stringify({
-      from,
-      to: [email],
-      subject,
-      text,
-      html,
-    }),
-    signal: AbortSignal.timeout(8_000),
-  })
-  if (!response.ok) throw new Error(`Resend returned ${response.status}: ${await response.text()}`)
+  if (!from) throw new Error('EMAIL_FROM must be configured')
+  await createEmailTransport().send({ from, to: email, subject, text, html })
 }
 
 function escapeHtml(value: string) {
