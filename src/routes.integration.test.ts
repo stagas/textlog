@@ -478,6 +478,7 @@ test('consequential account, content, reporting, and admin flows work over HTTP'
   expect(await (await request(profileNext!)).text()).toContain(post.body)
   expect((await request('/latest?cursor=broken')).status).toBe(400)
   expect((await request('/for-you?cursor=broken', { cookie: aliceCookie })).status).toBe(400)
+  expect((await request('/activity?cursor=broken', { cookie: aliceCookie })).status).toBe(400)
   expect((await request('/?cursor=broken', { cookie: aliceCookie })).status).toBe(400)
   expect((await request('/u/alice?cursor=broken')).status).toBe(400)
 
@@ -548,6 +549,44 @@ test('consequential account, content, reporting, and admin flows work over HTTP'
   const followedTagFeed = await (await request('/for-you', { cookie: aliceCookie })).text()
   expect(followedTagFeed).toContain('@bob</a><span>followed</span><a href="/tag/shared">#shared</a>')
   expect(followedTagFeed).not.toContain('@alice</a><span>followed</span><a href="/tag/shared">#shared</a>')
+  const sharedReplyResponse = await request(`/post/${post.id}/reply`, {
+    method: 'POST', cookie: bobCookie, form: { body: 'shared reply #shared' },
+  })
+  expect(sharedReplyResponse.status).toBe(303)
+  const sharedReply = database.query('SELECT id FROM posts WHERE user_id=? AND body=?').get(
+    bob.id,
+    'shared reply #shared',
+  ) as { id: number }
+  const activityReadKey = `post:${sharedReply.id}`
+  const forYouReadKey = `post:${String(sharedReply.id).padStart(20, '0')}`
+
+  await request('/for-you', { cookie: aliceCookie })
+  expect(database.query('SELECT 1 FROM activity_reads WHERE user_id=? AND event_key=?')
+    .get(alice.id, activityReadKey)).toBeTruthy()
+
+  database.query('DELETE FROM activity_reads WHERE user_id=? AND event_key=?').run(alice.id, activityReadKey)
+  database.query('DELETE FROM for_you_reads WHERE user_id=? AND event_key=?').run(alice.id, forYouReadKey)
+  await request('/activity', { cookie: aliceCookie })
+  expect(database.query('SELECT 1 FROM for_you_reads WHERE user_id=? AND event_key=?')
+    .get(alice.id, forYouReadKey)).toBeTruthy()
+
+  const insertActivityReply = database.query(
+    'INSERT INTO posts(user_id,parent_id,body,created_at) VALUES(?,?,?,?)',
+  )
+  for (let index = 1; index <= 21; index++) {
+    insertActivityReply.run(bob.id, post.id, index === 1 ? 'oldest cursor boundary' : `activity cursor reply ${index}`,
+      `2080-01-${String(index).padStart(2, '0')} 12:00:00`)
+  }
+  const activityFirstBody = await (await request('/activity', { cookie: aliceCookie })).text()
+  const activityNext = activityFirstBody.match(/href="(\/activity\?cursor=[^"]+)"/)?.[1]
+  expect(activityNext).toBeTruthy()
+  expect(activityFirstBody).toContain('activity cursor reply 21')
+  expect(activityFirstBody).not.toContain('oldest cursor boundary')
+  insertActivityReply.run(bob.id, post.id, 'newer activity after cursor', '2080-02-01 12:00:00')
+  const activitySecondBody = await (await request(activityNext!, { cookie: aliceCookie })).text()
+  expect(activitySecondBody).toContain('oldest cursor boundary')
+  expect(activitySecondBody).not.toContain('activity cursor reply 21')
+  expect(activitySecondBody).toContain('← prev')
   const report = await request(`/post/${post.id}/report`, {
     method: 'POST',
     cookie: bobCookie,

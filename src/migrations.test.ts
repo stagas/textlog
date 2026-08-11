@@ -147,6 +147,23 @@ describe('database migrations', () => {
       .toEqual([{ event_key: 'follow:2:2026-08-05 11:00:00' }, { event_key: 'post:2' }])
   })
 
+  test('synchronizes existing post reads between activity and for-you', () => {
+    const database = new Database(':memory:')
+    runMigrations(database)
+    database.run(`INSERT INTO users(id,handle,email,password) VALUES
+        (1,'one','one@example.com','x'),(2,'two','two@example.com','x');
+      INSERT INTO activity_reads(user_id,event_key) VALUES(1,'post:12');
+      INSERT INTO for_you_reads(user_id,event_key) VALUES(2,'post:00000000000000000034');
+      PRAGMA user_version=47;`)
+
+    runMigrations(database)
+
+    expect(database.query('SELECT event_key FROM for_you_reads WHERE user_id=1').get())
+      .toEqual({ event_key: 'post:00000000000000000012' })
+    expect(database.query('SELECT event_key FROM activity_reads WHERE user_id=2').get())
+      .toEqual({ event_key: 'post:34' })
+  })
+
   test('refuses a database created by a newer application version', () => {
     const database = new Database(':memory:')
     database.run(`PRAGMA user_version=${latestMigrationVersion + 1}`)

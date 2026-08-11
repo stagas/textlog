@@ -1,6 +1,14 @@
 import { Database } from 'bun:sqlite'
 import { expect, test } from 'bun:test'
-import { activityOrderBy } from './activity-order'
+import { activityOrderBy, decodeActivityCursor, encodeActivityCursor } from './activity-order'
+
+test('activity cursors round trip and reject malformed boundaries', () => {
+  const cursor = { timestamp: 1786118400, key: 'post:42', direction: 'next' as const }
+  expect(decodeActivityCursor(encodeActivityCursor(cursor))).toEqual(cursor)
+  expect(decodeActivityCursor('broken')).toBeNull()
+  expect(decodeActivityCursor(Buffer.from(JSON.stringify([1, null, 'post:42', 'next'])).toString('base64url')))
+    .toBeNull()
+})
 
 test('activity ordering interleaves follows and posts by normalized event time', () => {
   const database = new Database(':memory:')

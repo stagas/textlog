@@ -570,6 +570,18 @@ export const migrations: Migration[] = [
         read_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,PRIMARY KEY(user_id,event_key));`)
     },
   },
+  {
+    version: 48,
+    name: 'sync_post_read_status',
+    up(database) {
+      database.run(`INSERT OR IGNORE INTO for_you_reads(user_id,event_key,read_at)
+        SELECT user_id,'post:' || printf('%020d',CAST(substr(event_key,6) AS INTEGER)),read_at
+        FROM activity_reads WHERE event_key GLOB 'post:[0-9]*';
+        INSERT OR IGNORE INTO activity_reads(user_id,event_key,read_at)
+        SELECT user_id,'post:' || CAST(substr(event_key,6) AS INTEGER),read_at
+        FROM for_you_reads WHERE event_key GLOB 'post:[0-9]*';`)
+    },
+  },
 ]
 
 export const latestMigrationVersion = migrations.at(-1)!.version

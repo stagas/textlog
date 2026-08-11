@@ -31,15 +31,22 @@ export function hasUnreadActivity(userId: number) {
 export function markActivityEntriesRead(userId: number, eventKeys: string[]) {
   if (!eventKeys.length) return
   const insert = db.query('INSERT OR IGNORE INTO activity_reads(user_id,event_key) VALUES(?,?)')
+  const insertForYou = db.query(`INSERT OR IGNORE INTO for_you_reads(user_id,event_key)
+    VALUES(?,'post:' || printf('%020d',?))`)
   db.transaction(() => {
-    for (const eventKey of eventKeys) insert.run(userId, eventKey)
+    for (const eventKey of eventKeys) {
+      insert.run(userId, eventKey)
+      const postId = eventKey.match(/^post:(\d+)$/)?.[1]
+      if (postId) insertForYou.run(userId, postId)
+    }
   })()
 }
 
 export function markAllActivityRead(userId: number) {
   const account = db.query('SELECT email FROM users WHERE id=?').get(userId) as { email: string } | null
   const administrator = !!account && isAdminEmail(account.email)
-  db.query(`INSERT OR IGNORE INTO activity_reads(user_id,event_key)
+  db.transaction(() => {
+    db.query(`INSERT OR IGNORE INTO activity_reads(user_id,event_key)
     SELECT ?,event_key FROM (
       SELECT 'post:' || p.id event_key FROM posts p
         LEFT JOIN posts parent ON parent.id=p.parent_id
@@ -60,5 +67,9 @@ export function markAllActivityRead(userId: number) {
       SELECT 'signup:' || u.id || ':' || u.handle_chosen_at FROM users u
         WHERE ?=1 AND u.handle_chosen_at IS NOT NULL AND u.deleted_at IS NULL AND u.suspended_at IS NULL
     )`).run(userId, userId, userId, userId, userId, userId, userId, userId, userId, userId,
-    Number(administrator))
+      Number(administrator))
+    db.query(`INSERT OR IGNORE INTO for_you_reads(user_id,event_key)
+      SELECT user_id,'post:' || printf('%020d',CAST(substr(event_key,6) AS INTEGER))
+      FROM activity_reads WHERE user_id=? AND event_key GLOB 'post:[0-9]*'`).run(userId)
+  })()
 }

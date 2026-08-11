@@ -1,7 +1,6 @@
 import {
   About,
   Activity,
-  activityTotal,
   Contact,
   decodeForYouCursor,
   Dmca,
@@ -10,9 +9,10 @@ import {
   Legal,
   PublicFeed,
 } from '../components/pages'
-import { currentPage, page, paginationRedirect, redirect, rememberFeed } from './shared'
+import { page, redirect, rememberFeed } from './shared'
 
 import type { Hono } from 'hono'
+import { decodeActivityCursor } from '../activity-order'
 import { decodeHotCursor } from '../hot'
 import {
   feedPreference,
@@ -109,10 +109,10 @@ export function registerFeedsRoutes(app: Hono) {
   app.get('/activity', c => {
     const user = currentUser(c.req.raw)
     if (!user) return redirect('/enter?next=' + encodeURIComponent('/activity'))
-    const activityPage = currentPage(c.req.query('page'))
-    const outOfRange = paginationRedirect(activityPage, activityTotal(user.id), '/activity')
-    if (outOfRange) return outOfRange
-    return page(<Activity user={user} page={activityPage} />)
+    const cursorValue = c.req.query('cursor')
+    const cursor = decodeActivityCursor(cursorValue)
+    if (cursorValue && !cursor) return c.text('Invalid cursor', 400)
+    return page(<Activity user={user} cursor={cursor} />)
   })
 
   app.post('/activity/read-all', c => {

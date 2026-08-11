@@ -42,10 +42,21 @@ export function hasUnreadForYou(userId: number) {
 export function markForYouEntriesRead(userId: number, eventKeys: string[]) {
   if (!eventKeys.length) return
   const insert = db.query('INSERT OR IGNORE INTO for_you_reads(user_id,event_key) VALUES(?,?)')
-  db.transaction(() => eventKeys.forEach(eventKey => insert.run(userId, eventKey)))()
+  const insertActivity = db.query(`INSERT OR IGNORE INTO activity_reads(user_id,event_key)
+    VALUES(?,'post:' || CAST(? AS INTEGER))`)
+  db.transaction(() => eventKeys.forEach(eventKey => {
+    insert.run(userId, eventKey)
+    const postId = eventKey.match(/^post:(\d+)$/)?.[1]
+    if (postId) insertActivity.run(userId, postId)
+  }))()
 }
 
 export function markAllForYouRead(userId: number) {
-  db.query(`INSERT OR IGNORE INTO for_you_reads(user_id,event_key)
-    SELECT $viewer,event_key FROM (${visibleEvents})`).run({ viewer: userId })
+  db.transaction(() => {
+    db.query(`INSERT OR IGNORE INTO for_you_reads(user_id,event_key)
+      SELECT $viewer,event_key FROM (${visibleEvents})`).run({ viewer: userId })
+    db.query(`INSERT OR IGNORE INTO activity_reads(user_id,event_key)
+      SELECT user_id,'post:' || CAST(substr(event_key,6) AS INTEGER)
+      FROM for_you_reads WHERE user_id=? AND event_key GLOB 'post:[0-9]*'`).run(userId)
+  })()
 }

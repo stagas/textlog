@@ -1,4 +1,4 @@
-import { activityOrderBy } from '../activity-order'
+import { activityTimestamp, encodeActivityCursor, type ActivityCursor } from '../activity-order'
 import { hasUnreadActivity, markActivityEntriesRead } from '../activity-state'
 import { isAdmin } from '../admin'
 import { db, type User } from '../db'
@@ -7,7 +7,7 @@ import { enrichPosts } from '../posts'
 import type { PostView } from '../types'
 import { fmt, fmtFull } from '../utils'
 import { Layout } from './layout'
-import { ActionPair, Pagination } from './page-shared'
+import { ActionPair, CursorPagination } from './page-shared'
 import { Post } from './post'
 
 const activityPostWhere = `p.deleted_at IS NULL AND
@@ -17,31 +17,16 @@ const activityPostWhere = `p.deleted_at IS NULL AND
   NOT EXISTS (SELECT 1 FROM post_hashtags ph JOIN blocked_hashtags bh ON bh.tag=ph.tag
     WHERE ph.post_id=p.id AND bh.user_id=?)`
 
-export function activityTotal(userId: number) {
-  const postTotal = (db.query(
-    `SELECT count(DISTINCT p.id) count FROM posts p
-      LEFT JOIN posts parent ON parent.id=p.parent_id
-      LEFT JOIN post_mentions pm ON pm.post_id=p.id AND pm.user_id=?
-      WHERE ${activityPostWhere}`,
-  ).get(userId, userId, userId, userId, userId, userId) as { count: number }).count
-  const followTotal = (db.query(
-    `SELECT count(*) count FROM follows f WHERE following_id=? AND created_at IS NOT NULL AND NOT EXISTS
-      (SELECT 1 FROM blocks b WHERE (b.blocker_id=? AND b.blocked_id=f.follower_id)
-        OR (b.blocker_id=f.follower_id AND b.blocked_id=?))`,
-  ).get(userId, userId, userId) as { count: number }).count
-  const account = db.query('SELECT email FROM users WHERE id=?').get(userId) as { email: string } | null
-  const signupTotal = isAdmin(account)
-    ? (db.query(`SELECT count(*) count FROM users WHERE handle_chosen_at IS NOT NULL
-        AND deleted_at IS NULL AND suspended_at IS NULL`).get() as { count: number }).count
-    : 0
-  return postTotal + followTotal + signupTotal
-}
-
-export function Activity({ user, page }: { user: User; page: number }) {
-  const total = activityTotal(user.id)
+export function Activity({ user, cursor }: { user: User; cursor: ActivityCursor | null }) {
   const hasUnread = hasUnreadActivity(user.id)
+  const comparison = cursor?.direction === 'previous' ? '>' : '<'
+  const cursorFilter = cursor
+    ? `WHERE (${activityTimestamp} ${comparison} ? OR
+        (${activityTimestamp}=? AND activity.activity_key ${comparison} ?))`
+    : ''
+  const direction = cursor?.direction === 'previous' ? 'ASC' : 'DESC'
   const posts = db.query(
-    `SELECT activity.*,ar.event_key IS NULL unread FROM (
+    `SELECT activity.*,${activityTimestamp} activity_timestamp,ar.event_key IS NULL unread FROM (
       SELECT p.id,p.user_id,p.parent_id,p.body,p.created_at,p.deleted_at,u.handle,
         CASE WHEN parent.user_id=? THEN 'reply' ELSE 'mention' END activity_kind,
         NULL bio,NULL posts,NULL viewerFollowing,'post:' || p.id activity_key
@@ -70,13 +55,29 @@ export function Activity({ user, page }: { user: User; page: number }) {
         FROM users u WHERE ?=1 AND u.handle_chosen_at IS NOT NULL
           AND u.deleted_at IS NULL AND u.suspended_at IS NULL
       ) activity LEFT JOIN activity_reads ar ON ar.user_id=? AND ar.event_key=activity.activity_key
-      ORDER BY ${activityOrderBy} LIMIT ? OFFSET ?`,
+      ${cursorFilter} ORDER BY activity_timestamp ${direction},activity.activity_key ${direction} LIMIT ?`,
   ).all(user.id, user.id, user.id, user.id, user.id, user.id, user.id, user.id, user.id, user.id, user.id,
-    user.id, Number(isAdmin(user)), user.id, PAGE_SIZE,
-    (page - 1) * PAGE_SIZE) as (PostView & { activity_kind: 'reply' | 'mention' | 'follow' | 'signup'; posts: number | null;
-      viewerFollowing: boolean | null; bio: string | null; activity_key: string; unread: number })[]
-  markActivityEntriesRead(user.id, posts.filter(post => post.unread).map(post => post.activity_key))
-  const activity = enrichPosts(db, posts.filter(post => post.activity_kind === 'reply'
+    user.id, Number(isAdmin(user)), user.id,
+    ...(cursor ? [cursor.timestamp, cursor.timestamp, cursor.key] : []), PAGE_SIZE + 1) as (PostView & {
+        activity_kind: 'reply' | 'mention' | 'follow' | 'signup'; posts: number | null;
+        viewerFollowing: boolean | null; bio: string | null; activity_key: string; activity_timestamp: number;
+        unread: number
+      })[]
+  const ordered = cursor?.direction === 'previous' ? [...posts].reverse() : posts
+  const hasMore = ordered.length > PAGE_SIZE
+  const activityPage = cursor?.direction === 'previous' && hasMore ? ordered.slice(1) : ordered.slice(0, PAGE_SIZE)
+  const canGoBack = Boolean(cursor) && (cursor!.direction === 'next' || hasMore)
+  const canGoNext = cursor?.direction === 'previous' || hasMore
+  const previousCursor = canGoBack && activityPage.length
+    ? encodeActivityCursor({ timestamp: activityPage[0].activity_timestamp, key: activityPage[0].activity_key,
+      direction: 'previous' })
+    : null
+  const nextCursor = canGoNext && activityPage.length
+    ? encodeActivityCursor({ timestamp: activityPage.at(-1)!.activity_timestamp,
+      key: activityPage.at(-1)!.activity_key, direction: 'next' })
+    : null
+  markActivityEntriesRead(user.id, activityPage.filter(post => post.unread).map(post => post.activity_key))
+  const activity = enrichPosts(db, activityPage.filter(post => post.activity_kind === 'reply'
     || post.activity_kind === 'mention'), user.id)
   const activityById = new Map(activity.map(post => [post.id, post]))
   return (
@@ -91,8 +92,8 @@ export function Activity({ user, page }: { user: User; page: number }) {
           )
           : <span className="activity-side-status">you've seen it all</span>}
       </section>
-      {posts.length
-        ? posts.map((rawPost, index) => {
+      {activityPage.length
+        ? activityPage.map((rawPost, index) => {
           const post = rawPost.activity_kind === 'reply' || rawPost.activity_kind === 'mention'
             ? activityById.get(rawPost.id)!
             : rawPost
@@ -158,7 +159,7 @@ export function Activity({ user, page }: { user: User; page: number }) {
             </div>
           )
         })
-        : total === 0
+        : !cursor
         ? (
           <div className="empty empty-actions">
             <p>No activity yet.</p>
@@ -173,7 +174,7 @@ export function Activity({ user, page }: { user: User; page: number }) {
             No activity on this page. <a href="/activity">Return to the first page</a>.
           </div>
         )}
-      <Pagination page={page} totalPages={Math.ceil(total / PAGE_SIZE)} path="/activity" />
+      <CursorPagination path="/activity" previousCursor={previousCursor} nextCursor={nextCursor} />
     </Layout>
   )
 }
