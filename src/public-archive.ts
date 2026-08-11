@@ -9,6 +9,20 @@ export const PUBLIC_ARCHIVE_CHECK_INTERVAL_MS = 60 * 60 * 1000
 
 type ArchiveConfiguration = { path: string; pageSize?: number }
 
+function utcDay(date: Date) {
+  return date.toISOString().slice(0, 10)
+}
+
+export function publicArchiveIsCurrent(path: string, now = new Date()) {
+  try {
+    return utcDay(statSync(path).mtime) === utcDay(now)
+  }
+  catch (error) {
+    if ((error as NodeJS.ErrnoException).code === 'ENOENT') return false
+    throw error
+  }
+}
+
 function json(value: unknown) {
   return `${JSON.stringify(value, null, 2)}\n`
 }
@@ -95,15 +109,12 @@ export async function createPublicArchive(database: Database, path: string, now 
 
 export function startPublicArchive(database: Database, configuration: ArchiveConfiguration) {
   let running = false
-  let archivedDay: string | null = null
   const run = async () => {
     const now = new Date()
-    const day = now.toISOString().slice(0, 10)
-    if (running || archivedDay === day) return
+    if (running || publicArchiveIsCurrent(configuration.path, now)) return
     running = true
     try {
       const result = await createPublicArchive(database, configuration.path, now, configuration.pageSize)
-      archivedDay = day
       console.log(`public archive    ${result.path}`)
     }
     catch (error) {

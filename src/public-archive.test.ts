@@ -1,10 +1,10 @@
 import { Database } from 'bun:sqlite'
 import { afterEach, describe, expect, test } from 'bun:test'
 import JSZip from 'jszip'
-import { mkdtempSync, rmSync } from 'node:fs'
+import { mkdtempSync, rmSync, utimesSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import { createPublicArchive } from './public-archive'
+import { createPublicArchive, publicArchiveIsCurrent } from './public-archive'
 
 const directories: string[] = []
 afterEach(() => {
@@ -12,6 +12,18 @@ afterEach(() => {
 })
 
 describe('public archive', () => {
+  test('uses the archive file UTC day to decide whether it is current', () => {
+    const directory = mkdtempSync(join(tmpdir(), 'textlog-public-archive-'))
+    directories.push(directory)
+    const path = join(directory, 'dump.zip')
+    writeFileSync(path, '')
+
+    utimesSync(path, new Date('2026-08-10T23:30:00Z'), new Date('2026-08-10T23:30:00Z'))
+    expect(publicArchiveIsCurrent(path, new Date('2026-08-10T00:01:00Z'))).toBe(true)
+    expect(publicArchiveIsCurrent(path, new Date('2026-08-11T00:01:00Z'))).toBe(false)
+    expect(publicArchiveIsCurrent(join(directory, 'missing.zip'), new Date('2026-08-10T00:01:00Z'))).toBe(false)
+  })
+
   test('paginates public data and excludes private and unavailable data', async () => {
     const directory = mkdtempSync(join(tmpdir(), 'textlog-public-archive-'))
     directories.push(directory)
