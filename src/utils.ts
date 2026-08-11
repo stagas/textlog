@@ -4,6 +4,7 @@ import { LinkifyIt } from 'linkify-it'
 import tlds from 'tlds'
 import { db, type User } from './db'
 import { markSessionUsed, sessionHash } from './sessions'
+import { userForApiKey } from './api-keys'
 
 export const esc = (v: unknown) =>
   String(v ?? '').replace(/[&<>"']/g,
@@ -39,7 +40,8 @@ export function currentUser(req: Request, database: Database = db): User | null 
 // The API never reads the cookie. A bearer token cannot be attached by another site,
 // so write endpoints are not reachable by cross-site requests.
 export function apiUser(req: Request, database: Database = db): User | null {
-  return userForSession(bearerToken(req), database)
+  const value = bearerToken(req)
+  return userForApiKey(database, value) || userForSession(value, database)
 }
 const timestamp = (d: string) => new Date(d.replace(' ', 'T') + 'Z')
 export function fmt(d: string) {

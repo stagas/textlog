@@ -1,8 +1,9 @@
+import { activeAppearance, activeThemeLogoSvg, activeThemeStyles } from '../theme'
+
 import React from 'react'
 import { hasUnreadActivity } from '../activity-state'
 import { isAdmin } from '../admin'
 import type { User } from '../db'
-import { activeAppearance, activeThemeLogoSvg, activeThemeStyles } from '../theme'
 
 let devReloadBootId: string | undefined
 
@@ -117,7 +118,7 @@ export function Layout({
             <link rel="alternate" type="application/atom+xml" title={`${feeds.title} (Atom)`} href={feeds.atom} />
           </>
         )}
-        <link rel="stylesheet" href="/styles.css?v=117" />
+        <link rel="stylesheet" href="/styles.css?v=118" />
         <style>{themeCss}</style>
       </head>
       <body>

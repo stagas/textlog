@@ -1,11 +1,12 @@
 import { type User } from '../db'
-import type { SessionView } from '../types'
+import type { ApiKeyView, SessionView } from '../types'
 import { Layout } from './layout'
 import { FormMessage } from './page-shared'
 
-export function AccountSecurity({ user, sessions, passwordEnabled, error, success }: {
+export function AccountSecurity({ user, sessions, apiKeys = [], passwordEnabled, error, success }: {
   user: User
   sessions: SessionView[]
+  apiKeys?: ApiKeyView[]
   passwordEnabled?: boolean
   error?: string
   success?: string
@@ -52,6 +53,32 @@ export function AccountSecurity({ user, sessions, passwordEnabled, error, succes
           </a>
         </section>
         <section className="security-section">
+          <h2>API keys</h2>
+          <p>Create a bearer token for scripts and apps. Keys are shown once and can be revoked at any time.</p>
+          <a className="button" href="/account/api-keys/new">generate API key →</a>
+          {apiKeys.length > 0 && <div className="session-list api-key-list">
+            {apiKeys.map(key => (
+              <article key={key.id}>
+                <div>
+                  <strong>{key.name}</strong>
+                  <span>
+                    {key.last_used_at ? `last used ${new Date(key.last_used_at).toLocaleDateString('en')}` : 'never used'}
+                    {' · '}{key.expires_at
+                      ? <>expires <time dateTime={new Date(key.expires_at).toISOString()}>
+                        {new Date(key.expires_at).toLocaleDateString('en')}
+                      </time></>
+                      : 'never expires'}
+                  </span>
+                </div>
+                <form method="post" action="/account/api-keys/revoke">
+                  <input type="hidden" name="id" value={key.id} />
+                  <button className="quiet danger">revoke</button>
+                </form>
+              </article>
+            ))}
+          </div>}
+        </section>
+        <section className="security-section">
           <h2>sessions</h2>
           <div className="session-list">
             {sessions.map(session => (
@@ -80,6 +107,60 @@ export function AccountSecurity({ user, sessions, passwordEnabled, error, succes
             </form>
           )}
         </section>
+      </div>
+    </Layout>
+  )
+}
+
+export function AccountApiKeyCreate({ user, name = '', lifetime = 'year', error }: {
+  user: User; name?: string; lifetime?: string; error?: string
+}) {
+  return (
+    <Layout user={user} title="generate API key">
+      <div className="panel magic-link-page api-key-create-page">
+        <h1>generate API key</h1>
+        <p>Create a bearer token for a script or app. You’ll only see the key once.</p>
+        <FormMessage error={error} />
+        <form className="security-form api-key-form" method="post" action="/account/api-keys">
+          <label>
+            key name
+            <input name="name" required minLength={1} maxLength={64} placeholder="my integration"
+              defaultValue={name} autoFocus />
+          </label>
+          <fieldset className="api-key-lifetimes">
+            <legend>expiration</legend>
+            {[
+              ['90-days', '90 days', 'For temporary scripts and short projects'],
+              ['year', '1 year', 'A safer default for ongoing integrations'],
+              ['never', 'never', 'Remains valid until you revoke it'],
+            ].map(([value, label, description]) => (
+              <label className="api-key-lifetime" key={value}>
+                <span><strong>{label}</strong><small>{description}</small></span>
+                <input type="radio" name="lifetime" value={value} defaultChecked={value === lifetime} />
+                <span className="api-key-radio" aria-hidden="true" />
+              </label>
+            ))}
+          </fieldset>
+          <button className="button">generate API key →</button>
+        </form>
+        <a className="quiet" href="/account/security">cancel</a>
+      </div>
+    </Layout>
+  )
+}
+
+export function AccountApiKey({ user, name, value }: { user: User; name: string; value: string }) {
+  return (
+    <Layout user={user} title="API key created">
+      <div className="panel magic-link-page">
+        <h1>API key created</h1>
+        <p>Copy <strong>{name}</strong> now. For your security, this key will not be shown again.</p>
+        <label className="magic-link-output">
+          bearer token
+          <textarea readOnly value={value} autoFocus spellCheck={false} aria-label="API key" />
+        </label>
+        <p>Store it like a password and send it as <code>Authorization: Bearer &lt;key&gt;</code>.</p>
+        <a className="quiet" href="/account/security">i saved it</a>
       </div>
     </Layout>
   )

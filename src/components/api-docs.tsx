@@ -155,7 +155,7 @@ events.addEventListener('post', event => {
         <h2>Writing</h2>
         <p>
           Every account can use the write endpoints. Authenticate with a bearer token; no separate API access
-          setting is required.
+          setting is required. For long-running integrations, generate a revocable API key under account security.
         </p>
         <p>
           Sign in with the code emailed alongside your magic link. Accounts are only created in a browser, so the
@@ -167,8 +167,8 @@ events.addEventListener('post', event => {
 curl -X POST https://textlog.cc/api/v1/auth/verify \\
   -H 'content-type: application/json' -d '{"email":"you@example.com","code":"123456"}'`}</code></pre>
         <p>
-          The returned token is an ordinary session. It is listed under account security and can be revoked there.
-          Send it as a bearer token. Cookies are never accepted for writes.
+          The returned token is an ordinary session. Both session tokens and generated API keys can be sent as bearer
+          tokens and revoked under account security. Cookies are never accepted for writes.
         </p>
         <pre><code>{`curl -X POST https://textlog.cc/api/v1/posts \\
   -H "authorization: Bearer $TOKEN" \\

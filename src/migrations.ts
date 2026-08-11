@@ -462,6 +462,18 @@ export const migrations: Migration[] = [
       addColumn(database, 'push_subscriptions', 'notify_own_posts', 'INTEGER NOT NULL DEFAULT 1')
     },
   },
+  {
+    version: 38,
+    name: 'api_keys',
+    up(database) {
+      database.run(`CREATE TABLE IF NOT EXISTS api_keys (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,token_hash TEXT NOT NULL UNIQUE,
+        user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        name TEXT NOT NULL CHECK(length(name) BETWEEN 1 AND 64),created_at INTEGER NOT NULL,
+        expires_at INTEGER,last_used_at INTEGER);
+      CREATE INDEX IF NOT EXISTS api_keys_user_created ON api_keys(user_id,created_at DESC);`)
+    },
+  },
 ]
 
 export const latestMigrationVersion = migrations.at(-1)!.version

@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test'
-import { About, AccountMagicLink, AccountPassword, AccountSecurity, AdminDashboard, ApiDocs, Auth, ChangeFont, ChangeTheme, ChooseHandle, ConfirmAccountDelete, ConfirmEmail, Connections, Contact, EmbedExamples, ErrorPage, MagicLinkSent, NotificationSettings,
+import { About, AccountApiKeyCreate, AccountMagicLink, AccountPassword, AccountSecurity, AdminDashboard, ApiDocs, Auth, ChangeFont, ChangeTheme, ChooseHandle, ConfirmAccountDelete, ConfirmEmail, Connections, Contact, EmbedExamples, ErrorPage, MagicLinkSent, NotificationSettings,
   Legal, NotFound, postTitle,
   Profile } from './components/pages'
 
@@ -398,10 +398,24 @@ test('AccountSecurity renders email and safe session controls without passwords'
   expect(html).toContain('reader@example.com')
   expect(html).toContain('action="/account/magic-link"')
   expect(html).toContain('generate magic link')
+  expect(html).toContain('href="/account/api-keys/new">generate API key')
+  expect(html).not.toContain('name="lifetime"')
   expect(html).toContain('href="/account/edit">back</a>')
   expect(html).not.toContain('type="password"')
   expect(html).toContain('value="revocable-id"')
   expect(html).not.toContain('value="current-id"')
+})
+
+test('API key creation has a focused form with themed expiration radios', () => {
+  const html = renderToStaticMarkup(React.createElement(AccountApiKeyCreate, {
+    user: { id: 1, handle: 'reader', email: 'reader@example.com', bio: '' },
+  }))
+  expect(html).toContain('action="/account/api-keys"')
+  expect(html).toContain('name="name"')
+  expect(html).toContain('type="radio" name="lifetime" checked="" value="year"')
+  expect(html).toContain('class="api-key-radio"')
+  expect(html).not.toContain('<select name="lifetime"')
+  expect(html).toContain('href="/account/security">cancel</a>')
 })
 
 test('AccountSecurity asks for the current password when email changes require it', () => {

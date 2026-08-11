@@ -72,12 +72,14 @@ function sessionCookie(response: Response) {
 async function request(path: string, options: {
   method?: 'GET' | 'POST' | 'DELETE'
   cookie?: string
+  token?: string
   form?: Record<string, string>
   json?: unknown
 } = {}) {
   const method = options.method || 'GET'
   const headers = new Headers()
   if (options.cookie) headers.set('cookie', options.cookie)
+  if (options.token) headers.set('authorization', `Bearer ${options.token}`)
   if (method !== 'GET') headers.set('origin', origin)
   if (options.json !== undefined) headers.set('content-type', 'application/json')
   return await fetch(`${origin}${path}`, {
@@ -177,6 +179,37 @@ test('email code signs up and invalidates its matching magic link', async () => 
   const reusedLink = await request(`/enter/magic?token=${encodeURIComponent(value)}`)
   expect(reusedLink.status).toBe(400)
   expect(await reusedLink.text()).toContain('magic link is invalid or has expired')
+})
+
+test('account security creates one-time, revocable API keys', async () => {
+  const cookie = await signup('keyuser', 'keyuser@example.com', 'unused')
+  const form = await request('/account/api-keys/new', { cookie })
+  expect(form.status).toBe(200)
+  expect(await form.text()).toContain('action="/account/api-keys"')
+  const created = await request('/account/api-keys', {
+    method: 'POST', cookie, form: { name: 'test integration', lifetime: 'never' },
+  })
+  expect(created.status).toBe(200)
+  expect(created.headers.get('cache-control')).toContain('no-store')
+  const html = await created.text()
+  const value = html.match(/tlk_[A-Za-z0-9_-]{43}/)?.[0]
+  expect(value).toBeDefined()
+  expect(database.query('SELECT token_hash FROM api_keys WHERE name=?').get('test integration'))
+    .not.toMatchObject({ token_hash: value })
+
+  const authenticated = await request('/api/v1/me', { token: value })
+  expect(authenticated.status).toBe(200)
+  expect(await authenticated.json()).toMatchObject({ data: { handle: 'keyuser' } })
+
+  const key = database.query('SELECT id,last_used_at FROM api_keys WHERE name=?').get('test integration') as {
+    id: number; last_used_at: number | null
+  }
+  expect(key.last_used_at).not.toBeNull()
+  const revoked = await request('/account/api-keys/revoke', {
+    method: 'POST', cookie, form: { id: String(key.id) },
+  })
+  expect(revoked.status).toBe(303)
+  expect((await request('/api/v1/me', { token: value })).status).toBe(401)
 })
 
 test('consequential account, content, reporting, and admin flows work over HTTP', async () => {

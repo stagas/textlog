@@ -122,7 +122,10 @@ export function securityPage(req: Request, error?: string, success?: string, sta
     current: token_hash === current })
   )
   const credentials = db.query('SELECT password FROM users WHERE id=?').get(user.id) as { password: string }
-  return page(<AccountSecurity user={user} sessions={sessions} passwordEnabled={credentials.password !== '!'}
+  const apiKeys = db.query(`SELECT id,name,created_at,expires_at,last_used_at FROM api_keys
+    WHERE user_id=? ORDER BY created_at DESC`).all(user.id) as import('../types').ApiKeyView[]
+  return page(<AccountSecurity user={user} sessions={sessions} apiKeys={apiKeys}
+    passwordEnabled={credentials.password !== '!'}
     error={error} success={success} />, status)
 }
 export async function form(req: Request, maxBytes?: number) {

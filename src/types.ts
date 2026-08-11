@@ -35,6 +35,9 @@ export type ProfileRow = {
 export type SessionView = { token: string; created_at: number; expires_at: number; user_agent: string;
   current: boolean }
 
+export type ApiKeyView = { id: number; name: string; created_at: number; expires_at: number | null;
+  last_used_at: number | null }
+
 export type DashboardStats = {
   users: number
   usersOnline: number

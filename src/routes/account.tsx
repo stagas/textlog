@@ -1,5 +1,6 @@
 import { anonymizeUser, isAdmin } from '../admin'
 import { accountForDeletionToken, issueAccountDeletionToken } from '../account-deletion'
+import { issueApiKey } from '../api-keys'
 import { AUTH_LIMITS, authRateLimitMessage } from '../auth-rate-limit'
 import { currentUser, hash, hashPassword, sessionToken, verifyPassword } from '../utils'
 import { authLimit, clientAddress, form, issueEmailToken, issueMagicLink, page, redirect, retryPage,
@@ -7,6 +8,8 @@ import { authLimit, clientAddress, form, issueEmailToken, issueMagicLink, page, 
 
 import type { Hono } from 'hono'
 import {
+  AccountApiKey,
+  AccountApiKeyCreate,
   AccountMagicLink,
   AccountPassword,
   ChangeTheme,
@@ -190,6 +193,47 @@ export function registerAccountRoutes(app: Hono) {
       : c.req.query('verified') === '1'
       ? 'Email address verified.'
       : undefined))
+
+  app.get('/account/api-keys/new', c => {
+    const user = currentUser(c.req.raw)
+    return user ? page(<AccountApiKeyCreate user={user} />)
+      : redirect('/enter?next=' + encodeURIComponent('/account/api-keys/new'))
+  })
+
+  app.post('/account/api-keys', async c => {
+    const user = currentUser(c.req.raw)
+    if (!user) return redirect('/enter')
+    const limited = authLimit(c, 'api-key-create', `${user.id}:${clientAddress(c)}`, AUTH_LIMITS.sensitiveAccount)
+    if (limited) return retryPage(page(<AccountApiKeyCreate user={user}
+      error={authRateLimitMessage(limited.retryAfter)} />, 429), limited.retryAfter)
+    const f = await form(c.req.raw)
+    const name = (f.name || '').trim()
+    const lifetimes: Record<string, number | null> = {
+      '90-days': 90 * 24 * 60 * 60 * 1000,
+      year: 365 * 24 * 60 * 60 * 1000,
+      never: null,
+    }
+    if (!name || name.length > 64 || !Object.hasOwn(lifetimes, f.lifetime)) {
+      return page(<AccountApiKeyCreate user={user} name={name} lifetime={f.lifetime}
+        error="Enter a key name and choose a valid expiration." />, 400)
+    }
+    const count = (db.query(`SELECT count(*) count FROM api_keys
+      WHERE user_id=? AND (expires_at IS NULL OR expires_at>?)`)
+      .get(user.id, Date.now()) as { count: number }).count
+    if (count >= 20) return page(<AccountApiKeyCreate user={user} name={name} lifetime={f.lifetime}
+      error="Revoke an existing key before creating another." />, 400)
+    const lifetime = lifetimes[f.lifetime]
+    const issued = issueApiKey(db, user.id, name, lifetime === null ? null : Date.now() + lifetime)
+    return page(<AccountApiKey user={user} name={name} value={issued.value} />)
+  })
+
+  app.post('/account/api-keys/revoke', async c => {
+    const user = currentUser(c.req.raw)
+    if (!user) return redirect('/enter')
+    const f = await form(c.req.raw)
+    if (/^\d+$/.test(f.id || '')) db.query('DELETE FROM api_keys WHERE id=? AND user_id=?').run(Number(f.id), user.id)
+    return redirect('/account/security')
+  })
 
   app.get('/account/password/enable', c => {
     const user = currentUser(c.req.raw)
