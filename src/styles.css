@@ -2238,6 +2238,18 @@ form.report-panel {
   font-size: 0.75rem;
 }
 
+.welcome-settings {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2) var(--space-4);
+  margin-top: var(--space-6);
+  font-size: 0.75rem;
+}
+
+.welcome-settings a {
+  border-bottom: 1px solid var(--link-border);
+}
+
 .verify-email-panel {
   width: calc(100% - (2 * var(--gutter)));
   max-width: 620px;

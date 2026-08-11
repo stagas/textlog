@@ -45,6 +45,11 @@ export function Explore({ user, welcome = false, peopleIds, tagsPage = 1, people
           <ActionPair className="welcome-actions"
             primary={<a className="button" href="/write">write your first note →</a>}
             secondary={<a href="/">browse notes</a>} />
+          <nav className="welcome-settings" aria-label="Set up your account">
+            <a href="/account/edit/notifications">enable notifications</a>
+            <a href="/account/edit/theme">customize theme</a>
+            <a href="/account/password/enable">set up a password</a>
+          </nav>
         </section>
       )}
       {!welcome && (
