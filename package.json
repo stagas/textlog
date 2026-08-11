@@ -20,6 +20,7 @@
     "@types/react": "latest",
     "@types/react-dom": "latest",
     "canvas": "^3.2.3",
+    "highlight.js": "^11.11.2",
     "hono": "^4.13.0",
     "jszip": "^3.10.1",
     "linkify-it": "^6.1.0",

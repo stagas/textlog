@@ -393,7 +393,29 @@ nav form {
   padding: var(--space-4);
   border: 1px solid var(--soft);
   background: var(--panel);
+  font-size: 0.8125rem;
   white-space: pre;
+}
+
+.api-docs .hljs-comment,
+.api-docs .hljs-meta {
+  color: var(--muted);
+}
+
+.api-docs .hljs-tag,
+.api-docs .hljs-keyword,
+.api-docs .hljs-built_in {
+  color: var(--accent-dark);
+}
+
+.api-docs .hljs-name,
+.api-docs .hljs-attr,
+.api-docs .hljs-variable {
+  color: var(--api-patch-ink);
+}
+
+.api-docs .hljs-string {
+  color: var(--api-post-ink);
 }
 
 .embed-example-grid {
@@ -458,6 +480,7 @@ nav form {
   grid-template-columns: 5.5em auto;
   align-items: center;
   gap: var(--space-3);
+  font-size: 0.8125rem;
 }
 
 .api-method {
