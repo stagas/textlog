@@ -337,7 +337,7 @@ describe('About', () => {
     expect(html).toContain('download or delete your account data')
     expect(html).toContain('class="action-pair about-actions"')
     expect(html).toContain('<span class="action-separator">or</span>')
-    expect(html).toContain('class="button" href="/enter">join the community</a>')
+    expect(html).toContain('class="button" href="/enter" rel="nofollow">join the community</a>')
     expect(html).toContain('href="/">browse notes</a>')
   })
 

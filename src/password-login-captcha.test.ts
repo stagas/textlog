@@ -20,23 +20,31 @@ describe('global password CAPTCHA', () => {
       expect(passwordCaptchaRequired(testDatabase(), Number.MAX_SAFE_INTEGER)).toBe(true)
     }
     finally {
-      if (previous === undefined) delete Bun.env.ENABLE_CAPTCHA_ALWAYS
+      if (previous === undefined) Bun.env.ENABLE_CAPTCHA_ALWAYS = undefined
       else Bun.env.ENABLE_CAPTCHA_ALWAYS = previous
     }
   })
 
   test('activates after failures across the server and rolls from each later failure', () => {
+    const previous = Bun.env.ENABLE_CAPTCHA_ALWAYS
+    Bun.env.ENABLE_CAPTCHA_ALWAYS = 'false'
     const database = testDatabase()
-    for (let attempt = 1; attempt < CAPTCHA_FAILURE_THRESHOLD; attempt++) {
-      expect(recordFailedPassword(database, 1_000 + attempt)).toBe(false)
-    }
-    expect(recordFailedPassword(database, 2_000)).toBe(true)
-    expect(passwordCaptchaRequired(database, 2_000 + CAPTCHA_WINDOW_MS - 1)).toBe(true)
+    try {
+      for (let attempt = 1; attempt < CAPTCHA_FAILURE_THRESHOLD; attempt++) {
+        expect(recordFailedPassword(database, 1_000 + attempt)).toBe(false)
+      }
+      expect(recordFailedPassword(database, 2_000)).toBe(true)
+      expect(passwordCaptchaRequired(database, 2_000 + CAPTCHA_WINDOW_MS - 1)).toBe(true)
 
-    const laterFailure = 2_000 + CAPTCHA_WINDOW_MS - 100
-    expect(recordFailedPassword(database, laterFailure)).toBe(true)
-    expect(passwordCaptchaRequired(database, laterFailure + CAPTCHA_WINDOW_MS - 1)).toBe(true)
-    expect(passwordCaptchaRequired(database, laterFailure + CAPTCHA_WINDOW_MS)).toBe(false)
+      const laterFailure = 2_000 + CAPTCHA_WINDOW_MS - 100
+      expect(recordFailedPassword(database, laterFailure)).toBe(true)
+      expect(passwordCaptchaRequired(database, laterFailure + CAPTCHA_WINDOW_MS - 1)).toBe(true)
+      expect(passwordCaptchaRequired(database, laterFailure + CAPTCHA_WINDOW_MS)).toBe(false)
+    }
+    finally {
+      if (previous === undefined) Bun.env.ENABLE_CAPTCHA_ALWAYS = undefined
+      else Bun.env.ENABLE_CAPTCHA_ALWAYS = previous
+    }
   })
 
   test('issues SVG challenges without storing the plaintext answer and consumes them once', () => {
