@@ -2292,6 +2292,18 @@ form.report-panel {
   border-bottom: 1px solid var(--soft);
 }
 
+.activity-side-link {
+  padding: 0;
+  color: var(--accent);
+  background: none;
+  border-bottom: 1px solid var(--link-border);
+  font-size: 0.6875rem;
+}
+
+.activity-side-link:hover {
+  color: var(--accent-dark);
+}
+
 .admin-header .eyebrow,
 .admin-user-header .eyebrow,
 .admin-confirm .eyebrow {

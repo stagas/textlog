@@ -83,7 +83,7 @@ export function Activity({ user, page }: { user: User; page: number }) {
         <h1>activity</h1>
         {total > 0 && (
           <form method="post" action="/activity/read-all">
-            <button className="quiet">mark all as read</button>
+            <button className="activity-side-link">mark all as read</button>
           </form>
         )}
       </section>
