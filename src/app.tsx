@@ -52,6 +52,7 @@ const publicAssets = await Promise.all([
   ['/android-chrome-192x192.png', 'image/png'],
   ['/android-chrome-512x512.png', 'image/png'],
   ['/maskable-icon-512x512.png', 'image/png'],
+  ['/email-logo.png', 'image/png'],
 ].map(async ([path, contentType]) => ({
   path,
   contentType,

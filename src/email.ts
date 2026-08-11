@@ -40,6 +40,9 @@ function notice(content: string) {
 function emailDocument(heading: string, content: string, preheader = heading) {
   const name = escapeHtml(appName())
   const origin = appOrigin()
+  const logo = origin
+    ? `<img src="${escapeHtml(new URL('/email-logo.png?v=1', origin).href)}" width="24" height="24" alt="" style="display:inline-block;width:24px;height:24px;margin-right:8px;border:0;vertical-align:-6px">`
+    : '<span style="display:inline-block;margin-right:8px;color:#749668;font-size:20px;font-weight:800;letter-spacing:-5px;vertical-align:-2px" aria-hidden="true">&gt;_</span>'
   const brand = origin
     ? `<a href="${
       escapeHtml(origin)
@@ -57,7 +60,7 @@ function emailDocument(heading: string, content: string, preheader = heading) {
   }&#847; &zwnj;&nbsp;&#847; &zwnj;&nbsp;&#847;</div>
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="#ffffff"><tr><td align="center" style="padding:28px 16px">
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="width:100%;max-width:600px;font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace">
-<tr><td align="center" style="padding:0 0 16px;text-align:center">${brand}<span style="display:inline-block;margin-right:8px;color:#749668;font-size:20px;font-weight:800;letter-spacing:-5px;vertical-align:-2px" aria-hidden="true">&gt;_</span><span style="font-size:18px;font-weight:800;letter-spacing:-1px">${name}</span>${brandEnd}</td></tr>
+<tr><td align="center" style="padding:0 0 16px;text-align:center">${brand}${logo}<span style="font-size:18px;font-weight:800;letter-spacing:-1px">${name}</span>${brandEnd}</td></tr>
 <tr><td align="center" bgcolor="#f1f5ee" style="padding:28px 30px;background:#f1f5ee;border:1px solid #d9dbd4;text-align:center">
 <h1 style="margin:0 0 16px;color:#55734a;font-size:20px;line-height:1.35;letter-spacing:-0.5px">${
     escapeHtml(heading)
