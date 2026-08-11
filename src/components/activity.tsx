@@ -64,13 +64,14 @@ export function Activity({ user, page }: { user: User; page: number }) {
       SELECT NULL id,u.id user_id,NULL parent_id,NULL body,u.handle_chosen_at created_at,NULL deleted_at,
         u.handle,'signup' activity_kind,u.bio,
         (SELECT count(*) FROM posts sp WHERE sp.user_id=u.id AND sp.deleted_at IS NULL) posts,
-        NULL viewerFollowing,'signup:' || u.id || ':' || u.handle_chosen_at activity_key
+        EXISTS(SELECT 1 FROM follows vf WHERE vf.follower_id=? AND vf.following_id=u.id) viewerFollowing,
+        'signup:' || u.id || ':' || u.handle_chosen_at activity_key
         FROM users u WHERE ?=1 AND u.handle_chosen_at IS NOT NULL
           AND u.deleted_at IS NULL AND u.suspended_at IS NULL
       ) activity LEFT JOIN activity_reads ar ON ar.user_id=? AND ar.event_key=activity.activity_key
       ORDER BY ${activityOrderBy} LIMIT ? OFFSET ?`,
   ).all(user.id, user.id, user.id, user.id, user.id, user.id, user.id, user.id, user.id, user.id, user.id,
-    Number(isAdmin(user)), user.id, PAGE_SIZE,
+    user.id, Number(isAdmin(user)), user.id, PAGE_SIZE,
     (page - 1) * PAGE_SIZE) as (PostView & { activity_kind: 'reply' | 'mention' | 'follow' | 'signup'; posts: number | null;
       viewerFollowing: boolean | null; bio: string | null; activity_key: string; unread: number })[]
   markActivityEntriesRead(user.id, posts.filter(post => post.unread).map(post => post.activity_key))
@@ -109,8 +110,18 @@ export function Activity({ user, page }: { user: User; page: number }) {
                         <time dateTime={rawPost.created_at} title={fmtFull(rawPost.created_at)}>
                           {fmt(rawPost.created_at)}
                         </time>
+                        <span aria-hidden="true">·</span>
+                        <small>{rawPost.posts} {rawPost.posts === 1 ? 'note' : 'notes'}</small>
                       </div>
+                      <p className="profile-bio">{rawPost.bio || 'No bio yet.'}</p>
                     </div>
+                    {rawPost.user_id !== user.id && (
+                      <form method="post" action={'/follow/' + rawPost.handle}>
+                        <button className={`button${rawPost.viewerFollowing ? ' unfollow-button' : ''}`}>
+                          {rawPost.viewerFollowing ? 'unfollow' : 'follow'}
+                        </button>
+                      </form>
+                    )}
                   </article>
                 )
                 : rawPost.activity_kind === 'follow'
