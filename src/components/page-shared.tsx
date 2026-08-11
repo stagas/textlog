@@ -1,7 +1,8 @@
+import type { PersonView, PostView, ProfileRow, TagView } from '../types'
+
 import React from 'react'
 import { isAdmin } from '../admin'
 import type { User } from '../db'
-import type { PersonView, PostView, ProfileRow, TagView } from '../types'
 
 const postTitleLength = 60
 
@@ -45,7 +46,12 @@ export function VerificationRequired() {
 }
 
 export function Pagination({ page, totalPages, path, pageParam = 'page', label = 'Pagination', compact = false }: {
-  page: number; totalPages: number; path: string; pageParam?: string; label?: string; compact?: boolean
+  page: number
+  totalPages: number
+  path: string
+  pageParam?: string
+  label?: string
+  compact?: boolean
 }) {
   if (totalPages <= 1) return null
   const separator = path.includes('?') ? '&' : '?'
@@ -191,7 +197,7 @@ export function ProfileHeader({ user, profile, following, blocked = false, editi
             )}
           </>
         )}
-        {!user && <a className="button" href="/enter">log in to follow</a>}
+        {!user && <a className="button" href="/enter">enter to follow</a>}
       </div>
     </section>
   )
@@ -246,11 +252,17 @@ export function ProfileTabs(
 function HighlightedText({ text, terms = [] }: { text: string; terms?: string[] }) {
   const matches = [...new Set(terms.filter(Boolean))].sort((a, b) => b.length - a.length)
   if (!matches.length) return <>{text}</>
-  const expression = new RegExp(`(${matches.map(term => term.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|')})`, 'giu')
-  return <>{text.split(expression).map((part, index) =>
-    matches.some(term => part.toLocaleLowerCase() === term.toLocaleLowerCase())
-      ? <mark key={index}>{part}</mark>
-      : part)}</>
+  const expression = new RegExp(`(${matches.map(term => term.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|')})`,
+    'giu')
+  return (
+    <>
+      {text.split(expression).map((part, index) =>
+        matches.some(term => part.toLocaleLowerCase() === term.toLocaleLowerCase())
+          ? <mark key={index}>{part}</mark>
+          : part
+      )}
+    </>
+  )
 }
 
 export function TagPeopleList({ user, tags, followingKey = 'following', highlightTerms = [] }: {
@@ -265,7 +277,9 @@ export function TagPeopleList({ user, tags, followingKey = 'following', highligh
         <article key={tag.tag}>
           <div>
             <div>
-              <a href={`/tag/${tag.tag}`}>#<HighlightedText text={tag.tag} terms={highlightTerms} /></a>
+              <a href={`/tag/${tag.tag}`}>
+                #<HighlightedText text={tag.tag} terms={highlightTerms} />
+              </a>
               <small>{tag.count} {tag.count === 1 ? 'note' : 'notes'}</small>
             </div>
             {user && (
@@ -334,7 +348,9 @@ export function ConnectionPeople({ user, people, className = '', highlightTerms 
         <article key={person.id}>
           <div>
             <div>
-              <a href={`/u/${person.handle}`}>@<HighlightedText text={person.handle} terms={highlightTerms} /></a>
+              <a href={`/u/${person.handle}`}>
+                @<HighlightedText text={person.handle} terms={highlightTerms} />
+              </a>
               <small>{person.posts} {person.posts === 1 ? 'note' : 'notes'}</small>
             </div>
             {user && user.id !== person.id && (
