@@ -3,6 +3,7 @@ import webpush from 'web-push'
 import { db } from './db'
 import { logError } from './log'
 import { ADMIN_EMAILS } from './admin'
+import { isDevelopment } from './environment'
 
 export type PushMessage = { title: string; body: string; url: string }
 type PushSubscriptionRow = { endpoint: string; p256dh: string; auth: string }
@@ -22,7 +23,7 @@ export function vapidPublicKey() {
 async function sendToSubscriptions(subscriptions: PushSubscriptionRow[],
   messageFor: (subscription: PushSubscriptionRow) => PushMessage, database: Database, vapid: VapidConfiguration)
 {
-  if (!subscriptions.length) return
+  if (isDevelopment() || !subscriptions.length) return
   webpush.setVapidDetails(vapid.subject, vapid.publicKey, vapid.privateKey)
   await Promise.all(subscriptions.map(async subscription => {
     try {

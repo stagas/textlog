@@ -6,6 +6,8 @@ import { sendPushForPost, sendPushForSignup, sendPushForTagFollow, sendPushForUs
 
 let originalSend: typeof webpush.sendNotification
 let vapid: ReturnType<typeof webpush.generateVAPIDKeys> & { subject: string }
+const originalEnvironment = Bun.env.NODE_ENV
+const originalDevReload = Bun.env.DEV_RELOAD
 
 function fixture() {
   const database = new Database(':memory:')
@@ -29,9 +31,29 @@ beforeEach(() => {
 
 afterEach(() => {
   webpush.sendNotification = originalSend
+  Bun.env.NODE_ENV = originalEnvironment
+  Bun.env.DEV_RELOAD = originalDevReload
 })
 
 describe('Web Push activity delivery', () => {
+  test('does not send notifications in development', async () => {
+    const database = fixture()
+    let deliveries = 0
+    webpush.sendNotification = (async () => {
+      deliveries++
+      return {} as never
+    }) as typeof webpush.sendNotification
+
+    Bun.env.NODE_ENV = 'development'
+    await sendPushToUser(2, { title: 'test', body: 'test', url: '/' }, database, vapid)
+
+    Bun.env.NODE_ENV = 'production'
+    Bun.env.DEV_RELOAD = 'true'
+    await sendPushToUser(2, { title: 'test', body: 'test', url: '/' }, database, vapid)
+
+    expect(deliveries).toBe(0)
+  })
+
   test('deduplicates someone who was both replied to and mentioned', async () => {
     const database = fixture()
     const payloads: string[] = []
