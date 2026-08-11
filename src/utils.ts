@@ -208,6 +208,11 @@ function renderedText(value: string, highlightTerms: string[]) {
   return html + highlighted(value.slice(start), highlightTerms)
 }
 
+function renderedMath(source: string, display: boolean) {
+  const output = texToMathML(source, display)
+  return output && display ? `<span class="math-display">${output}</span>` : output
+}
+
 export function linkify(body: string, mentionBios: Record<string, string> = {}, highlightTerms: string[] = [],
   appUrl: string | undefined = Bun.env.APP_URL) {
   let html = ''
@@ -220,10 +225,10 @@ export function linkify(body: string, mentionBios: Record<string, string> = {}, 
       html += `<code${match.kind === 'code-fence' ? ' class="code-fence"' : ''}>${esc(match.label)}</code>`
     }
     else if (match.kind === 'latex-fence') {
-      html += texToMathML(match.label!, true) || `<code class="code-fence">${esc(match.label)}</code>`
+      html += renderedMath(match.label!, true) || `<code class="code-fence">${esc(match.label)}</code>`
     }
     else if (match.kind === 'math') {
-      html += texToMathML(match.label!, match.display!) || renderedText(match.raw, highlightTerms)
+      html += renderedMath(match.label!, match.display!) || renderedText(match.raw, highlightTerms)
     }
     else if (match.kind === 'markdown') {
       html += `<a href="${esc(match.url)}" title="${esc(match.url)}"${linkAttributes(match.url!, appUrl)}>${

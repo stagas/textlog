@@ -887,10 +887,15 @@ nav form {
   white-space: normal;
 }
 
-.post p math[display="block"] {
-  max-width: 100%;
-  margin-block: 0.7em;
-  overflow-x: auto;
+.post p .math-display {
+  display: block;
+  margin-block: 1.65em 0;
+  text-align: left;
+}
+
+.post p .math-display > math {
+  display: inline-block;
+  display: inline math;
 }
 
 .post .parent-quote code {
