@@ -2341,7 +2341,7 @@ form.report-panel {
 .columns {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(min(100%, 280px), 1fr));
-  gap: clamp(20px, 8vw, 70px);
+  gap: clamp(16px, 3vw, 28px);
   padding: var(--space-6) var(--gutter) 0;
 }
 

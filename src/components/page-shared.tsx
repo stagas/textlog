@@ -59,13 +59,14 @@ export function Pagination({ page, totalPages, path, pageParam = 'page', label =
   const windowStart = Math.max(1, Math.min(page - 1, totalPages - 2))
   const windowPages = Array.from({ length: Math.min(3, totalPages) }, (_, index) => windowStart + index)
   const pages = compact
-    ? [...new Set([1, page === 1 ? Math.min(2, totalPages) : page === totalPages ? totalPages - 1 : page, totalPages])]
+    ? [...new Set([1, Math.max(1, page - 1), page, Math.min(totalPages, page + 1), totalPages])]
       .sort((a, b) => a - b)
     : [...new Set([1, ...windowPages, totalPages])].sort((a, b) => a - b)
   return (
     <nav className={`pagination${compact ? ' pagination-compact' : ''}`} aria-label={label}>
       {page > 1
-        ? <a className="pagination-edge" href={`${path}${separator}${pageParam}=${page - 1}`}>← prev</a>
+        ? <a className="pagination-edge" href={`${path}${separator}${pageParam}=${page - 1}`}
+            aria-label="Previous page">← prev</a>
         : <span className="pagination-edge placeholder" />}
       <div className="pagination-pages">
         {pages.map((value, index) => (
@@ -82,7 +83,8 @@ export function Pagination({ page, totalPages, path, pageParam = 'page', label =
         ))}
       </div>
       {page < totalPages
-        ? <a className="pagination-edge" href={`${path}${separator}${pageParam}=${page + 1}`}>next →</a>
+        ? <a className="pagination-edge" href={`${path}${separator}${pageParam}=${page + 1}`}
+            aria-label="Next page">next →</a>
         : <span className="pagination-edge placeholder" />}
     </nav>
   )

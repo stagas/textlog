@@ -6,7 +6,7 @@ import { About, AccountApiKeyCreate, AccountMagicLink, AccountPassword, AccountS
 import React from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
 import { HotFeed } from './components/hot-feed'
-import { ConnectionPeople, TagPeopleList } from './components/page-shared'
+import { ConnectionPeople, Pagination, TagPeopleList } from './components/page-shared'
 import { Post } from './components/post'
 import { PublicFeed } from './components/public-feed'
 import { TagFeed } from './components/tag-feed'
@@ -613,6 +613,20 @@ test('Following and followers paginate every 10 people', () => {
 
     expect(html).toContain(`href="/u/reader?tab=${kind}&amp;page=2"`)
   }
+})
+
+test('Compact column pagination shows labeled arrow controls and neighboring pages', () => {
+  const html = renderToStaticMarkup(React.createElement(Pagination, {
+    page: 5,
+    totalPages: 10,
+    path: '/explore',
+    pageParam: 'tagsPage',
+    compact: true,
+  }))
+
+  expect(html).toContain('aria-label="Previous page">← prev</a>')
+  expect(html).toContain('aria-label="Next page">next →</a>')
+  for (const page of [4, 5, 6]) expect(html).toContain(`>${page}</`)
 })
 
 test('Followed tags paginate every 12 tags', () => {
