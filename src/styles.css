@@ -261,6 +261,24 @@ nav form {
   border-bottom: 1px solid var(--soft);
 }
 
+.notification-banner {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  width: 100%;
+  max-width: 760px;
+  margin: 0 auto;
+  padding: var(--space-3) var(--gutter);
+  color: var(--muted);
+  background: color-mix(in srgb, var(--accent) 6%, transparent);
+  font-size: 0.75rem;
+  border-bottom: 1px solid var(--soft);
+}
+
+.notification-banner form { margin: 0; }
+.notification-banner button { font: inherit; }
+
 .feed-tabs a {
   padding: var(--space-2) var(--space-3);
   color: var(--muted);

@@ -39,12 +39,13 @@ type TimelineRow = PostView & {
   target_is_viewer: boolean
 }
 
-export function Feed({ user, cursor, title, path = '/for-you', pageUrl }: {
+export function Feed({ user, cursor, title, path = '/for-you', pageUrl, notificationBanner = false }: {
   user: User
   cursor: ForYouCursor | null
   title?: string
   path?: string
   pageUrl?: string
+  notificationBanner?: boolean
 }) {
   const comparison = cursor?.direction === 'previous' ? '>' : '<'
   const cursorFilter = cursor
@@ -122,7 +123,7 @@ export function Feed({ user, cursor, title, path = '/for-you', pageUrl }: {
   const enriched = enrichPosts(db, timeline.filter(row => row.activity_kind === 'post'), user.id)
   const posts = new Map(enriched.map(post => [post.id, post]))
   return (
-    <Layout user={user} title={title} pageUrl={pageUrl}>
+    <Layout user={user} title={title} pageUrl={pageUrl} notificationBanner={notificationBanner}>
       <h1 className="visually-hidden">Your feed</h1>
       <FeedTabs active="following" user={user} />
       {timeline.length

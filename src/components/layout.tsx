@@ -33,6 +33,7 @@ export function Layout({
   social,
   pageUrl,
   feeds,
+  notificationBanner = false,
   logoutNavigation = false,
   children,
 }: {
@@ -43,6 +44,7 @@ export function Layout({
     imageAlt?: string }
   pageUrl?: string
   feeds?: { title: string; rss: string; atom: string }
+  notificationBanner?: boolean
   children: React.ReactNode
 }) {
   const selectedAppearance = activeAppearance()
@@ -121,7 +123,7 @@ export function Layout({
             <link rel="alternate" type="application/atom+xml" title={`${feeds.title} (Atom)`} href={feeds.atom} />
           </>
         )}
-        <link rel="stylesheet" href="/styles.css?v=134" />
+        <link rel="stylesheet" href="/styles.css?v=137" />
         <style>{themeCss}</style>
       </head>
       <body>
@@ -146,6 +148,15 @@ export function Layout({
               </nav>
             )}
         </header>
+        {notificationBanner && (
+          <aside className="notification-banner" aria-label="Notification reminder">
+            <a href="/account/edit/notifications">enable notifications</a>
+            <span aria-hidden="true">·</span>
+            <form method="post" action="/notifications/banner/dismiss">
+              <button className="quiet">dismiss</button>
+            </form>
+          </aside>
+        )}
         <main id="main-content">{children}</main>
         <footer className="site-footer">
           <span>{appHost()}</span>

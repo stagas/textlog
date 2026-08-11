@@ -553,6 +553,14 @@ export const migrations: Migration[] = [
       addColumn(database, 'push_subscriptions', 'notify_following_notes', 'INTEGER NOT NULL DEFAULT 0')
     },
   },
+  {
+    version: 46,
+    name: 'push_subscription_devices',
+    up(database) {
+      addColumn(database, 'push_subscriptions', 'device_id', 'TEXT')
+      database.run('CREATE INDEX IF NOT EXISTS push_subscriptions_device ON push_subscriptions(user_id,device_id)')
+    },
+  },
 ]
 
 export const latestMigrationVersion = migrations.at(-1)!.version

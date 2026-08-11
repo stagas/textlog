@@ -163,6 +163,14 @@ test('stats are public without exposing admin operations', async () => {
   expect(html).not.toContain('recent admin actions')
 })
 
+test('notification banner is hidden from logged-out visitors', async () => {
+  for (const path of ['/', '/hot', '/latest']) {
+    const response = await request(path)
+    expect(response.status).toBe(200)
+    expect(await response.text()).not.toContain('class="notification-banner"')
+  }
+})
+
 test('email code signs up and invalidates its matching magic link', async () => {
   const email = 'code-signup@example.com'
   const sent = await request('/enter', { method: 'POST', form: { email, next: '/about' } })
@@ -231,6 +239,10 @@ test('consequential account, content, reporting, and admin flows work over HTTP'
   expect(authenticatedHomeHtml).toContain('class="account-nav"')
   expect(authenticatedHomeHtml).toContain('@alice')
   expect(authenticatedHomeHtml).not.toContain('href="/login">login</a>')
+  expect(authenticatedHomeHtml).toContain('class="notification-banner"')
+  for (const path of ['/for-you', '/hot', '/latest']) {
+    expect(await (await request(path, { cookie: aliceCookie })).text()).toContain('class="notification-banner"')
+  }
   const notificationSettings = await request('/account/edit/notifications', { cookie: aliceCookie })
   expect(notificationSettings.status).toBe(200)
   expect(await notificationSettings.text()).toContain('name="noteScope" checked="" value="latest"')
@@ -242,6 +254,17 @@ test('consequential account, content, reporting, and admin flows work over HTTP'
       preferences: { latest: false, replies: true, mentions: false, follows: true, ownPosts: false } },
   })
   expect(savedPush.status).toBe(200)
+  const deviceCookie = savedPush.headers.get('set-cookie')?.match(/notification_device=[^;]+/)?.[0]
+  expect(deviceCookie).toBeDefined()
+  const enabledDeviceHome = await (await request('/', { cookie: `${aliceCookie}; ${deviceCookie}` })).text()
+  expect(enabledDeviceHome).not.toContain('class="notification-banner"')
+
+  const dismissed = await request('/notifications/banner/dismiss', { method: 'POST', cookie: aliceCookie })
+  expect(dismissed.status).toBe(303)
+  const dismissedCookie = dismissed.headers.get('set-cookie')?.match(/notification_banner_dismissed=[^;]+/)?.[0]
+  expect(dismissedCookie).toBeDefined()
+  const dismissedHome = await (await request('/', { cookie: `${aliceCookie}; ${dismissedCookie}` })).text()
+  expect(dismissedHome).not.toContain('class="notification-banner"')
   const pushPreferences = await request(
     '/account/push-subscription?endpoint=' + encodeURIComponent(endpoint),
     { cookie: aliceCookie },

@@ -7,8 +7,8 @@ import { FeedTabs, GlobalFeedEmpty } from './page-shared'
 import { Post } from './post'
 
 export function HotFeed(
-  { cursor, user, title, path = '/hot', pageUrl }: { cursor: HotCursor | null; user: User | null; title?: string;
-    path?: string; pageUrl?: string },
+  { cursor, user, title, path = '/hot', pageUrl, notificationBanner = false }: { cursor: HotCursor | null;
+    user: User | null; title?: string; path?: string; pageUrl?: string; notificationBanner?: boolean },
 ) {
   const viewerId = user?.id ?? -1
   const asOf = cursor?.asOf || new Date().toISOString()
@@ -27,7 +27,7 @@ export function HotFeed(
     ? encodeHotCursor(hotCursor(pageRows[pageRows.length - 1], asOf, 'next'))
     : null
   return (
-    <Layout user={user} title={title} pageUrl={pageUrl}
+    <Layout user={user} title={title} pageUrl={pageUrl} notificationBanner={notificationBanner}
       feeds={{ title: 'Hot notes', rss: '/hot.rss', atom: '/hot.atom' }}
     >
       <h1 className="visually-hidden">Hot notes</h1>

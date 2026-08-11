@@ -65,6 +65,7 @@ describe('database migrations', () => {
     expect(pushColumns).toContain('notify_signups')
     expect(pushColumns).toContain('notify_follow_activity')
     expect(pushColumns).toContain('notify_following_notes')
+    expect(pushColumns).toContain('device_id')
     const hashtagFollowColumns = (database.query('PRAGMA table_info(hashtag_follows)').all() as { name: string }[])
       .map(column => column.name)
     expect(hashtagFollowColumns).toContain('created_at')

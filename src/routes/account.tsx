@@ -2,7 +2,7 @@ import { accountForDeletionToken, issueAccountDeletionToken } from '../account-d
 import { anonymizeUser, isAdmin } from '../admin'
 import { issueApiKey } from '../api-keys'
 import { AUTH_LIMITS, authRateLimitMessage } from '../auth-rate-limit'
-import { currentUser, hash, hashPassword, sessionToken, verifyPassword } from '../utils'
+import { currentUser, hash, hashPassword, sessionToken, token, verifyPassword } from '../utils'
 import { authLimit, clientAddress, form, issueEmailToken, issueMagicLink, page, redirect, retryPage,
   securityPage } from './shared'
 
@@ -27,6 +27,8 @@ import { confirmEmailToken, findEmailToken } from '../email-verification'
 import { updateProfileHandle } from '../handles'
 import {
   clearSessionCookie,
+  notificationDevice,
+  notificationDeviceCookie,
 } from '../http'
 import { moderateText, moderationMessage } from '../moderation'
 import { accountForPasswordEnableToken, issuePasswordEnableToken } from '../password-enable'
@@ -89,10 +91,12 @@ export function registerAccountRoutes(app: Hono) {
     const followActivity = preference('followActivity')
     const followingNotes = preference('followingNotes')
     const signups = isAdmin(user) ? preference('signups') : null
-    db.query(`INSERT INTO push_subscriptions(endpoint,user_id,p256dh,auth,
+    const deviceId = notificationDevice(c.req.raw) || token()
+    db.query(`INSERT INTO push_subscriptions(endpoint,user_id,p256dh,auth,device_id,
         notify_latest,notify_replies,notify_mentions,notify_follows,notify_own_posts,notify_signups,
-        notify_follow_activity,notify_following_notes) VALUES(?,?,?,?,?,?,?,?,?,?,?,?)
+        notify_follow_activity,notify_following_notes) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?)
       ON CONFLICT(endpoint) DO UPDATE SET user_id=excluded.user_id,p256dh=excluded.p256dh,auth=excluded.auth,
+        device_id=excluded.device_id,
         notify_latest=coalesce(?,push_subscriptions.notify_latest),
         notify_replies=coalesce(?,push_subscriptions.notify_replies),
         notify_mentions=coalesce(?,push_subscriptions.notify_mentions),
@@ -101,9 +105,10 @@ export function registerAccountRoutes(app: Hono) {
         notify_signups=coalesce(?,push_subscriptions.notify_signups),
         notify_follow_activity=coalesce(?,push_subscriptions.notify_follow_activity),
         notify_following_notes=coalesce(?,push_subscriptions.notify_following_notes)`)
-      .run(endpoint, user.id, p256dh, auth, latest ?? 1, replies ?? 1, mentions ?? 1, follows ?? 1, ownPosts ?? 1,
+      .run(endpoint, user.id, p256dh, auth, deviceId, latest ?? 1, replies ?? 1, mentions ?? 1, follows ?? 1, ownPosts ?? 1,
         signups ?? 1, followActivity ?? 1, followingNotes ?? 1,
         latest, replies, mentions, follows, ownPosts, signups, followActivity, followingNotes)
+    c.header('Set-Cookie', notificationDeviceCookie(deviceId), { append: true })
     return c.json({ saved: true })
   })
 
