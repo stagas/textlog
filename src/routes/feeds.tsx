@@ -24,6 +24,7 @@ import {
 import { decodePostCursor } from '../pagination'
 import { currentUser } from '../utils'
 import { markAllActivityRead } from '../activity-state'
+import { markAllForYouRead } from '../for-you-state'
 import { db } from '../db'
 
 function showNotificationBanner(request: Request, user: ReturnType<typeof currentUser>) {
@@ -80,6 +81,13 @@ export function registerFeedsRoutes(app: Hono) {
     if (cursorValue && !cursor) return c.text('Invalid cursor', 400)
     return rememberFeed(page(<PublicFeed user={user} cursor={cursor} path="/latest"
       notificationBanner={showNotificationBanner(c.req.raw, user)} />), 'latest')
+  })
+
+  app.post('/for-you/read-all', c => {
+    const user = currentUser(c.req.raw)
+    if (!user) return redirect('/enter?next=' + encodeURIComponent('/for-you'))
+    markAllForYouRead(user.id)
+    return redirect('/for-you')
   })
 
   app.get('/hot', c => {

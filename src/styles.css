@@ -280,10 +280,24 @@ nav form {
 .notification-banner button { font: inherit; }
 
 .feed-tabs a {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
   padding: var(--space-2) var(--space-3);
   color: var(--muted);
   border-bottom: 2px solid transparent;
 }
+
+.feed-tabs-read-status {
+  display: flex;
+  align-items: center;
+  margin-left: auto;
+  padding: var(--space-2) 0;
+  color: var(--muted);
+  font-size: 0.6875rem;
+}
+
+.feed-tabs-read-status form { margin: 0; }
 
 .feed-tabs a:hover {
   color: var(--tab-hover);

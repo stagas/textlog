@@ -561,6 +561,15 @@ export const migrations: Migration[] = [
       database.run('CREATE INDEX IF NOT EXISTS push_subscriptions_device ON push_subscriptions(user_id,device_id)')
     },
   },
+  {
+    version: 47,
+    name: 'for_you_read_status',
+    up(database) {
+      database.run(`CREATE TABLE IF NOT EXISTS for_you_reads (
+        user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,event_key TEXT NOT NULL,
+        read_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,PRIMARY KEY(user_id,event_key));`)
+    },
+  },
 ]
 
 export const latestMigrationVersion = migrations.at(-1)!.version

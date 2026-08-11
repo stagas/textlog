@@ -3,6 +3,7 @@ import type { PersonView, PostView, ProfileRow, TagView } from '../types'
 import React from 'react'
 import { isAdmin } from '../admin'
 import type { User } from '../db'
+import { hasUnreadForYou } from '../for-you-state'
 
 const postTitleLength = 60
 
@@ -116,13 +117,20 @@ export function CursorPagination({ path, previousCursor, nextCursor }: {
   )
 }
 
-export function FeedTabs({ active, user }: { active: 'following' | 'hot' | 'latest'; user: User | null }) {
+export function FeedTabs({ active, user, forYouReadStatus }: {
+  active: 'following' | 'hot' | 'latest'
+  user: User | null
+  forYouReadStatus?: boolean
+}) {
+  const forYouUnread = user ? hasUnreadForYou(user.id) : false
   return (
     <nav className="feed-tabs" aria-label="Feed">
       {user && (
         <a className={active === 'following' ? 'active' : ''} aria-current={active === 'following' ? 'page' : undefined}
           href="/for-you"
         >
+          {forYouUnread && <span className="activity-unread-dot" aria-hidden="true" />}
+          {forYouUnread && <span className="sr-only">unread </span>}
           for you
         </a>
       )}
@@ -134,6 +142,17 @@ export function FeedTabs({ active, user }: { active: 'following' | 'hot' | 'late
       >
         latest
       </a>
+      {forYouReadStatus !== undefined && (
+        <span className="feed-tabs-read-status">
+          {forYouReadStatus
+            ? (
+              <form method="post" action="/for-you/read-all">
+                <button className="activity-side-link">mark all as read</button>
+              </form>
+            )
+            : <span className="activity-side-status">you've seen it all</span>}
+        </span>
+      )}
     </nav>
   )
 }
