@@ -102,7 +102,11 @@
         setState('Notification permission was denied.', false)
         return
       }
-      const registration = await navigator.serviceWorker.register('/sw.js', { scope: '/' })
+      await navigator.serviceWorker.register('/sw.js', { scope: '/' })
+      // register() resolves once the worker has been registered, which may be
+      // before its first install has activated. Push subscription requires an
+      // active worker, so wait for the registration controlling this page.
+      const registration = await navigator.serviceWorker.ready
       const existing = await registration.pushManager.getSubscription()
       const subscription = existing || await registration.pushManager.subscribe({
         userVisibleOnly: true,
@@ -112,7 +116,8 @@
       if (!response.ok) throw new Error('Could not save subscription')
       setState('Notifications enabled on this browser.', true)
     }
-    catch {
+    catch (error) {
+      console.error('Could not enable notifications', error)
       setState('Notifications could not be enabled. Please try again.', false)
       enable.disabled = false
     }
