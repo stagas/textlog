@@ -992,6 +992,7 @@ nav form {
 }
 
 .post p math {
+  color: var(--quote-ink);
   font-size: 1.12em;
   white-space: normal;
 }
@@ -1008,6 +1009,10 @@ nav form {
 }
 
 .post .parent-quote code {
+  color: color-mix(in srgb, var(--quote-ink), var(--muted));
+}
+
+.post .parent-quote math {
   color: color-mix(in srgb, var(--quote-ink), var(--muted));
 }
 
