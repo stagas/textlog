@@ -160,7 +160,7 @@ export function AccountApiKey({ user, name, value }: { user: User; name: string;
           <textarea readOnly value={value} autoFocus spellCheck={false} aria-label="API key" />
         </label>
         <p>Store it like a password and send it as <code>Authorization: Bearer &lt;key&gt;</code>.</p>
-        <a className="quiet" href="/account/security">i saved it</a>
+        <a className="button" href="/account/security">I saved it</a>
       </div>
     </Layout>
   )
