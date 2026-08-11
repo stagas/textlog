@@ -16,7 +16,7 @@ import { softDeletePost } from '../admin'
 import { db } from '../db'
 import { logError } from '../log'
 import { renderPostOg } from '../og'
-import { normalizePostBody, validPostBody } from '../post-body'
+import { normalizePostBody, postBodyValidationMessage, validPostBody } from '../post-body'
 import { postRateLimitMessage } from '../post-rate-limit'
 import { sendPushForPost } from '../push'
 import { currentUser } from '../utils'
@@ -92,7 +92,9 @@ export function registerPostsRoutes(app: Hono) {
     if (!canPublishPosts(user)) return page(<Compose user={user} />, 403)
     const f = await form(c.req.raw)
     const body = normalizePostBody(f.body || '')
-    if (!validPostBody(body)) return page(<Compose user={user} />, 400)
+    if (!validPostBody(body)) {
+      return page(<Compose user={user} body={body} error={postBodyValidationMessage(body)} />, 400)
+    }
     const moderation = await moderateText(body)
     if (!moderation.ok) {
       return page(<Compose user={user} body={body} error={moderationMessage(moderation.reason)} />,
@@ -135,7 +137,7 @@ export function registerPostsRoutes(app: Hono) {
     const body = normalizePostBody(f.body || '')
     if (!validPostBody(body)) {
       return page(
-        <EditPost user={user} post={post} body={body} error="Posts must contain between 1 and 280 characters." />,
+        <EditPost user={user} post={post} body={body} error={postBodyValidationMessage(body)} />,
         400,
       )
     }
@@ -193,7 +195,7 @@ export function registerPostsRoutes(app: Hono) {
     const body = normalizePostBody(f.body || '')
     if (!validPostBody(body)) {
       return page(
-        <Reply user={user} post={parent} showForm error="Replies must contain between 1 and 280 characters."
+        <Reply user={user} post={parent} showForm error={postBodyValidationMessage(body, 'Replies')}
           body={body} />,
         400,
       )

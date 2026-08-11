@@ -8,7 +8,7 @@ import { sendMagicLink } from '../email'
 import { resolveHandle } from '../handles'
 import { logError } from '../log'
 import { moderateText, moderationMessage } from '../moderation'
-import { normalizePostBody, POST_MAX, validPostBody } from '../post-body'
+import { normalizePostBody, POST_MAX, postBodyValidationMessage, validPostBody } from '../post-body'
 import { postRateLimitMessage } from '../post-rate-limit'
 import { canPublishPosts } from '../posting-policy'
 import { createPost, updatePost } from '../posts'
@@ -184,7 +184,7 @@ export function registerApiWriteRoutes(app: Hono, database: Database, appUrl?: s
     const payload = await body(c)
     const content = normalizePostBody(text(payload?.body))
     if (!validPostBody(content)) {
-      return fail('invalid_body', `Posts contain between 1 and ${POST_MAX} characters`, 400)
+      return fail('invalid_body', postBodyValidationMessage(content), 400)
     }
     let parentId: number | null = null
     if (payload?.parent_id !== undefined && payload?.parent_id !== null) {
@@ -229,7 +229,7 @@ export function registerApiWriteRoutes(app: Hono, database: Database, appUrl?: s
     const payload = await body(c)
     const content = normalizePostBody(text(payload?.body))
     if (!validPostBody(content)) {
-      return fail('invalid_body', `Posts contain between 1 and ${POST_MAX} characters`, 400)
+      return fail('invalid_body', postBodyValidationMessage(content), 400)
     }
     const moderation = await moderateText(content)
     if (!moderation.ok) {

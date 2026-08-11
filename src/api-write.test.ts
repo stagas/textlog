@@ -147,6 +147,19 @@ describe('API writes', () => {
     expect((await post(app, 'alice-token', { body: 'x'.repeat(281) })).status).toBe(400)
   })
 
+  test('rejects posts over ten lines with a useful server error', async () => {
+    const { app } = fixture()
+    const response = await post(app, 'alice-token', { body: Array(11).fill('x').join('\n') })
+
+    expect(response.status).toBe(400)
+    expect(await response.json()).toMatchObject({
+      error: {
+        code: 'invalid_body',
+        message: 'Posts can contain up to 10 lines. Please reduce the number of lines.',
+      },
+    })
+  })
+
   test('edits and deletes only your own posts', async () => {
     const { app } = fixture()
     const created = (await (await post(app, 'alice-token', { body: 'mine' })).json() as any).data
