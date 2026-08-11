@@ -155,7 +155,8 @@ events.addEventListener('post', event => {
         <h2>Writing</h2>
         <p>
           Every account can use the write endpoints. Authenticate with a bearer token; no separate API access
-          setting is required. For long-running integrations, generate a revocable API key under account security.
+          setting is required. For long-running integrations, generate a revocable API key under{' '}
+          <a href="/account/security">account security</a>.
         </p>
         <p>
           Sign in with the code emailed alongside your magic link. Accounts are only created in a browser, so the
