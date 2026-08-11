@@ -189,7 +189,10 @@ function linkTokens(body: string): LinkToken[] {
     const url = match.schema ? match.url : `https://${match.raw}`
     tokens.push({ index: match.index, lastIndex: match.lastIndex, kind: 'url', raw: match.raw, url })
   }
-  for (const match of body.matchAll(/(?<![A-Za-z0-9_])[@#][A-Za-z0-9_]+/g)) {
+  for (const match of body.matchAll(/(?<![A-Za-z0-9_])@[A-Za-z0-9_]+/g)) {
+    tokens.push({ index: match.index, lastIndex: match.index + match[0].length, kind: 'reference', raw: match[0] })
+  }
+  for (const match of body.matchAll(/(?<![\p{L}\p{M}\p{N}_])#[\p{L}\p{M}\p{N}_]+/gu)) {
     tokens.push({ index: match.index, lastIndex: match.index + match[0].length, kind: 'reference', raw: match[0] })
   }
   const priority = { 'code-fence': 0, 'latex-fence': 0, code: 1, math: 2, markdown: 3, url: 4, reference: 5 }
@@ -251,7 +254,9 @@ export function linkify(body: string, mentionBios: Record<string, string> = {}, 
             ? ` title="${esc(mentionBios[value.toLowerCase()] || 'No bio yet.')}"`
             : ''
         }>${highlighted(`@${value}`, highlightTerms)}</a>`
-        : `<a href="/tag/${value.toLowerCase()}">${highlighted(`#${value}`, highlightTerms)}</a>`
+        : `<a href="/tag/${encodeURIComponent(value.normalize('NFC').toLowerCase())}">${
+          highlighted(`#${value}`, highlightTerms)
+        }</a>`
     }
     end = match.lastIndex
   }

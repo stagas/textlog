@@ -1,9 +1,10 @@
-import { currentPage, form, page, redirect, usersBlocked } from './shared'
+import { clientErrorPage, currentPage, form, page, redirect, usersBlocked } from './shared'
 
 import type { Hono } from 'hono'
 import {
   Explore,
 } from '../components/pages'
+import { isValidHashtag, normalizeHashtag } from '../content'
 import { db } from '../db'
 import { resolveHandle } from '../handles'
 import {
@@ -87,8 +88,8 @@ export function registerInteractionsRoutes(app: Hono) {
   app.post('/tag-follow/:tag', c => {
     const user = currentUser(c.req.raw)
     if (!user) return redirect('/enter')
-    const tag = c.req.param('tag').toLowerCase()
-    if (!/^[a-z0-9_]{1,280}$/.test(tag)) return c.text('Invalid tag', 400)
+    const tag = normalizeHashtag(c.req.param('tag'))
+    if (!isValidHashtag(tag)) return clientErrorPage(c.req.raw)
     const exists = db.query('SELECT 1 FROM hashtag_follows WHERE user_id=? AND tag=?').get(user.id, tag)
     if (exists) db.query('DELETE FROM hashtag_follows WHERE user_id=? AND tag=?').run(user.id, tag)
     else {
@@ -99,14 +100,14 @@ export function registerInteractionsRoutes(app: Hono) {
           .catch(error => logError('tag follow activity push failed', error))
       }
     }
-    return redirect(safeRefererPath(c.req.header('referer'), c.req.url, '/tag/' + tag))
+    return redirect(safeRefererPath(c.req.header('referer'), c.req.url, '/tag/' + encodeURIComponent(tag)))
   })
 
   app.post('/tag-block/:tag', c => {
     const user = currentUser(c.req.raw)
     if (!user) return redirect('/enter')
-    const tag = c.req.param('tag').toLowerCase()
-    if (!/^[a-z0-9_]{1,280}$/.test(tag)) return c.text('Invalid tag', 400)
+    const tag = normalizeHashtag(c.req.param('tag'))
+    if (!isValidHashtag(tag)) return clientErrorPage(c.req.raw)
     const exists = db.query('SELECT 1 FROM blocked_hashtags WHERE user_id=? AND tag=?').get(user.id, tag)
     db.transaction(() => {
       if (exists) db.query('DELETE FROM blocked_hashtags WHERE user_id=? AND tag=?').run(user.id, tag)
@@ -115,7 +116,7 @@ export function registerInteractionsRoutes(app: Hono) {
         db.query('DELETE FROM hashtag_follows WHERE user_id=? AND tag=?').run(user.id, tag)
       }
     })()
-    return redirect(safeRefererPath(c.req.header('referer'), c.req.url, '/tag/' + tag))
+    return redirect(safeRefererPath(c.req.header('referer'), c.req.url, '/tag/' + encodeURIComponent(tag)))
   })
 
   app.get('/explore', c => {

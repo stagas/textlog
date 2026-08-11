@@ -145,6 +145,13 @@ describe('post persistence', () => {
     expect(linkify('Search <notes> at #Searchable', {}, ['sear']))
       .toBe('<mark>Sear</mark>ch &lt;notes&gt; at <a href="/tag/searchable">#<mark>Sear</mark>chable</a>')
   })
+
+  test('linkifies Unicode hashtags with an encoded normalized URL', () => {
+    const html = linkify('Tags #Ελλάδα and #cafe\u0301')
+    expect(html).toContain('<a href="/tag/%CE%B5%CE%BB%CE%BB%CE%AC%CE%B4%CE%B1">#Ελλάδα</a>')
+    expect(html).toContain('<a href="/tag/caf%C3%A9">#café</a>')
+  })
+
   test('writes content and metadata atomically', () => {
     const db = database()
     expect(() => createPost(db, 1, 'rollback #fail @reader')).toThrow()

@@ -105,6 +105,35 @@ describe('database migrations', () => {
     expect(database.query('PRAGMA foreign_key_check').all()).toEqual([])
   })
 
+  test('rebuilds Unicode hashtags without changing posts or hashtag follows', () => {
+    const database = new Database(':memory:')
+    database.run('PRAGMA foreign_keys=ON')
+    runMigrations(database)
+    database.run(`INSERT INTO users(id,handle,email,password) VALUES(1,'author','author@example.com','x');
+      INSERT INTO posts(id,user_id,body,created_at) VALUES
+        (1,1,'hello #Ελλάδα #café','2020-01-02 03:04:05'),
+        (2,1,'deleted #日本語','2020-02-03 04:05:06');
+      UPDATE posts SET deleted_at='2021-01-01 00:00:00' WHERE id=2;
+      INSERT INTO post_hashtags(post_id,tag) VALUES(1,'stale'),(2,'日本語');
+      INSERT INTO hashtag_follows(user_id,tag,created_at) VALUES(1,'stale','2022-03-04 05:06:07');
+      PRAGMA user_version=48;`)
+
+    runMigrations(database)
+
+    expect(database.query('SELECT post_id,tag FROM post_hashtags ORDER BY tag').all()).toEqual([
+      { post_id: 1, tag: 'café' },
+      { post_id: 1, tag: 'ελλάδα' },
+    ])
+    expect(database.query('SELECT body,created_at FROM posts ORDER BY id').all()).toEqual([
+      { body: 'hello #Ελλάδα #café', created_at: '2020-01-02 03:04:05' },
+      { body: 'deleted #日本語', created_at: '2020-02-03 04:05:06' },
+    ])
+    expect(database.query('SELECT tag,created_at FROM hashtag_follows').all())
+      .toEqual([{ tag: 'stale', created_at: '2022-03-04 05:06:07' }])
+    expect(database.query("SELECT tag FROM tag_search WHERE tag_search MATCH 'ελλάδα'").get())
+      .toEqual({ tag: 'ελλάδα' })
+  })
+
   test('repairs account deletion tables created by the original version 30 migration', () => {
     const database = new Database(':memory:')
     database.run('PRAGMA foreign_keys=ON')

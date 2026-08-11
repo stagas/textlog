@@ -549,6 +549,16 @@ test('consequential account, content, reporting, and admin flows work over HTTP'
     .toBeTruthy()
   await request('/tag-follow/shared', { method: 'POST', cookie: aliceCookie })
   await request('/tag-follow/shared', { method: 'POST', cookie: bobCookie })
+  const unicodeTagFollow = await request('/tag-follow/' + encodeURIComponent('español'), {
+    method: 'POST', cookie: aliceCookie,
+  })
+  expect(unicodeTagFollow.status).toBe(303)
+  expect(unicodeTagFollow.headers.get('location')).toBe('/tag/espa%C3%B1ol')
+  expect(database.query("SELECT 1 FROM hashtag_follows WHERE user_id=? AND tag='español'").get(alice.id)).toBeTruthy()
+  const invalidTagFollow = await request('/tag-follow/not-a-tag', { method: 'POST', cookie: aliceCookie })
+  expect(invalidTagFollow.status).toBe(400)
+  expect(invalidTagFollow.headers.get('content-type')).toBe('text/html;charset=utf-8')
+  expect(await invalidTagFollow.text()).toContain('We couldn&#x27;t process that request.')
   database.query("UPDATE hashtag_follows SET created_at='2099-01-02 00:00:00' WHERE user_id=? AND tag='shared'")
     .run(bob.id)
   const followedTagFeed = await (await request('/for-you', { cookie: aliceCookie })).text()

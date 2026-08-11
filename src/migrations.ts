@@ -1,5 +1,5 @@
 import type { Database } from 'bun:sqlite'
-import { extractMentions } from './content'
+import { extractHashtags, extractMentions } from './content'
 import { rebuildHotPosts } from './hot'
 import { migrateLegacySessionTokens } from './sessions'
 
@@ -579,7 +579,22 @@ export const migrations: Migration[] = [
         FROM activity_reads WHERE event_key GLOB 'post:[0-9]*';
         INSERT OR IGNORE INTO activity_reads(user_id,event_key,read_at)
         SELECT user_id,'post:' || CAST(substr(event_key,6) AS INTEGER),read_at
-        FROM for_you_reads WHERE event_key GLOB 'post:[0-9]*';`)
+      FROM for_you_reads WHERE event_key GLOB 'post:[0-9]*';`)
+    },
+  },
+  {
+    version: 49,
+    name: 'unicode_hashtag_backfill',
+    up(database) {
+      const posts = database.query('SELECT id,body FROM posts WHERE deleted_at IS NULL').all() as {
+        id: number
+        body: string
+      }[]
+      const insert = database.query('INSERT OR IGNORE INTO post_hashtags(post_id,tag) VALUES(?,?)')
+      database.run('DELETE FROM post_hashtags')
+      for (const post of posts) {
+        for (const tag of extractHashtags(post.body)) insert.run(post.id, tag)
+      }
     },
   },
 ]

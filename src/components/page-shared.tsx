@@ -310,13 +310,13 @@ export function TagPeopleList({ user, tags, followingKey = 'following', highligh
         <article key={tag.tag}>
           <div>
             <div>
-              <a href={`/tag/${tag.tag}`}>
+              <a href={`/tag/${encodeURIComponent(tag.tag)}`}>
                 #<HighlightedText text={tag.tag} terms={highlightTerms} />
               </a>
               <small>{tag.count} {tag.count === 1 ? 'note' : 'notes'}</small>
             </div>
             {user && (
-              <form method="post" action={`/tag-follow/${tag.tag}`}>
+              <form method="post" action={`/tag-follow/${encodeURIComponent(tag.tag)}`}>
                 <button className={`button${tag[followingKey] ? ' unfollow-button' : ''}`}>
                   {tag[followingKey] ? 'unfollow' : 'follow'}
                 </button>
@@ -336,10 +336,10 @@ export function BlockedTagList({ tags }: { tags: TagView[] }) {
         <article key={tag.tag}>
           <div>
             <div>
-              <a href={`/tag/${tag.tag}`}>#{tag.tag}</a>
+              <a href={`/tag/${encodeURIComponent(tag.tag)}`}>#{tag.tag}</a>
               <small>{tag.count} {tag.count === 1 ? 'note' : 'notes'}</small>
             </div>
-            <form method="post" action={`/tag-block/${tag.tag}`}>
+            <form method="post" action={`/tag-block/${encodeURIComponent(tag.tag)}`}>
               <button className="button">unblock</button>
             </form>
           </div>

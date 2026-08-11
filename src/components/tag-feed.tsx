@@ -30,11 +30,11 @@ export function TagFeed(
         {user
           ? (
             <div className="profile-action">
-              <form method="post" action={'/tag-block/' + tag}>
+              <form method="post" action={'/tag-block/' + encodeURIComponent(tag)}>
                 <button className={blocked ? 'button' : 'quiet danger'}>{blocked ? 'unblock' : 'block'}</button>
               </form>
               {!blocked && (
-                <form method="post" action={'/tag-follow/' + tag}>
+                <form method="post" action={'/tag-follow/' + encodeURIComponent(tag)}>
                   <button className={`button${following ? ' unfollow-button' : ''}`}>
                     {following ? 'unfollow' : 'follow'}
                   </button>
