@@ -50,11 +50,12 @@ export function registerAccountRoutes(app: Hono) {
     const endpoint = c.req.query('endpoint') || ''
     const preferences = endpoint
       ? db.query(`SELECT notify_latest latest,notify_replies replies,notify_mentions mentions,notify_follows follows,
-          notify_own_posts ownPosts${isAdmin(user) ? ',notify_signups signups' : ''}
+          notify_own_posts ownPosts,notify_follow_activity followActivity${isAdmin(user) ? ',notify_signups signups' : ''}
         FROM push_subscriptions WHERE endpoint=? AND user_id=?`).get(endpoint, user.id) as Record<string, number> | null
       : null
     return c.json({ preferences: preferences || {
-      latest: 1, replies: 1, mentions: 1, follows: 1, ownPosts: 1, ...(isAdmin(user) ? { signups: 1 } : {}),
+      latest: 1, replies: 1, mentions: 1, follows: 1, ownPosts: 1, followActivity: 1,
+      ...(isAdmin(user) ? { signups: 1 } : {}),
     } })
   })
 
@@ -84,19 +85,21 @@ export function registerAccountRoutes(app: Hono) {
     const mentions = preference('mentions')
     const follows = preference('follows')
     const ownPosts = preference('ownPosts')
+    const followActivity = preference('followActivity')
     const signups = isAdmin(user) ? preference('signups') : null
     db.query(`INSERT INTO push_subscriptions(endpoint,user_id,p256dh,auth,
-        notify_latest,notify_replies,notify_mentions,notify_follows,notify_own_posts,notify_signups)
-        VALUES(?,?,?,?,?,?,?,?,?,?)
+        notify_latest,notify_replies,notify_mentions,notify_follows,notify_own_posts,notify_signups,
+        notify_follow_activity) VALUES(?,?,?,?,?,?,?,?,?,?,?)
       ON CONFLICT(endpoint) DO UPDATE SET user_id=excluded.user_id,p256dh=excluded.p256dh,auth=excluded.auth,
         notify_latest=coalesce(?,push_subscriptions.notify_latest),
         notify_replies=coalesce(?,push_subscriptions.notify_replies),
         notify_mentions=coalesce(?,push_subscriptions.notify_mentions),
         notify_follows=coalesce(?,push_subscriptions.notify_follows),
         notify_own_posts=coalesce(?,push_subscriptions.notify_own_posts),
-        notify_signups=coalesce(?,push_subscriptions.notify_signups)`)
+        notify_signups=coalesce(?,push_subscriptions.notify_signups),
+        notify_follow_activity=coalesce(?,push_subscriptions.notify_follow_activity)`)
       .run(endpoint, user.id, p256dh, auth, latest ?? 1, replies ?? 1, mentions ?? 1, follows ?? 1, ownPosts ?? 1,
-        signups ?? 1, latest, replies, mentions, follows, ownPosts, signups)
+        signups ?? 1, followActivity ?? 1, latest, replies, mentions, follows, ownPosts, signups, followActivity)
     return c.json({ saved: true })
   })
 

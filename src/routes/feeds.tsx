@@ -3,6 +3,7 @@ import {
   Activity,
   activityTotal,
   Contact,
+  decodeForYouCursor,
   Dmca,
   Feed,
   HotFeed,
@@ -40,7 +41,7 @@ export function registerFeedsRoutes(app: Hono) {
       return page(<HotFeed user={user} cursor={cursor} path="/" pageUrl={pageUrl} />)
     }
     const cursorValue = c.req.query('cursor')
-    const cursor = decodePostCursor(cursorValue)
+    const cursor = decodeForYouCursor(cursorValue)
     if (cursorValue && !cursor) return c.text('Invalid cursor', 400)
     return page(<Feed user={user} cursor={cursor} path="/" pageUrl={pageUrl} />)
   })
@@ -49,7 +50,7 @@ export function registerFeedsRoutes(app: Hono) {
     const user = currentUser(c.req.raw)
     if (!user) return redirect('/enter?next=' + encodeURIComponent('/for-you'))
     const cursorValue = c.req.query('cursor')
-    const cursor = decodePostCursor(cursorValue)
+    const cursor = decodeForYouCursor(cursorValue)
     if (cursorValue && !cursor) return c.text('Invalid cursor', 400)
     return rememberFeed(page(<Feed user={user} cursor={cursor} title="for you" />), 'following')
   })

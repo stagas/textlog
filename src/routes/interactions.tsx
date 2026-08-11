@@ -10,7 +10,7 @@ import {
   safeRefererPath,
 } from '../http'
 import { logError } from '../log'
-import { sendPushForFollow } from '../push'
+import { sendPushForFollow, sendPushForTagFollow, sendPushForUserFollow } from '../push'
 import { currentUser } from '../utils'
 
 export function registerInteractionsRoutes(app: Hono) {
@@ -31,6 +31,8 @@ export function registerInteractionsRoutes(app: Hono) {
         if (inserted.changes) {
           void sendPushForFollow(user.id, user.handle, target.id)
             .catch(error => logError('follow push failed', error))
+          void sendPushForUserFollow(user.id, user.handle, target.id, target.handle)
+            .catch(error => logError('follow activity push failed', error))
         }
       }
     }
@@ -88,9 +90,15 @@ export function registerInteractionsRoutes(app: Hono) {
     const tag = c.req.param('tag').toLowerCase()
     if (!/^[a-z0-9_]{1,280}$/.test(tag)) return c.text('Invalid tag', 400)
     const exists = db.query('SELECT 1 FROM hashtag_follows WHERE user_id=? AND tag=?').get(user.id, tag)
-    exists
-      ? db.query('DELETE FROM hashtag_follows WHERE user_id=? AND tag=?').run(user.id, tag)
-      : db.query('INSERT OR IGNORE INTO hashtag_follows VALUES(?,?)').run(user.id, tag)
+    if (exists) db.query('DELETE FROM hashtag_follows WHERE user_id=? AND tag=?').run(user.id, tag)
+    else {
+      const inserted = db.query(`INSERT OR IGNORE INTO hashtag_follows(user_id,tag,created_at)
+        VALUES(?,?,CURRENT_TIMESTAMP)`).run(user.id, tag)
+      if (inserted.changes) {
+        void sendPushForTagFollow(user.id, user.handle, tag)
+          .catch(error => logError('tag follow activity push failed', error))
+      }
+    }
     return redirect(safeRefererPath(c.req.header('referer'), c.req.url, '/tag/' + tag))
   })
 

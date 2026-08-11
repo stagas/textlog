@@ -129,6 +129,43 @@ export async function sendPushForFollow(followerId: number, followerHandle: stri
   }), database, vapid)
 }
 
+export async function sendPushForUserFollow(actorId: number, actorHandle: string, targetId: number,
+  targetHandle: string, database: Database = db, vapid: VapidConfiguration | null = vapidConfiguration())
+{
+  if (!vapid || actorId === targetId) return
+  const subscriptions = database.query(`SELECT ps.endpoint,ps.p256dh,ps.auth FROM push_subscriptions ps
+    WHERE ps.notify_follow_activity=1 AND ps.user_id NOT IN (?,?)
+      AND EXISTS (SELECT 1 FROM follows vf WHERE vf.follower_id=ps.user_id AND vf.following_id=?)
+      AND NOT EXISTS (SELECT 1 FROM blocks b WHERE
+        b.blocker_id=ps.user_id AND b.blocked_id IN (?,?) OR
+        b.blocked_id=ps.user_id AND b.blocker_id IN (?,?))`)
+    .all(actorId, targetId, actorId, actorId, targetId, actorId, targetId) as PushSubscriptionRow[]
+  await sendToSubscriptions(subscriptions, () => ({
+    title: `@${actorHandle} followed @${targetHandle}`,
+    body: `@${actorHandle} followed @${targetHandle}`,
+    url: `/u/${encodeURIComponent(targetHandle)}`,
+  }), database, vapid)
+}
+
+export async function sendPushForTagFollow(actorId: number, actorHandle: string, tag: string,
+  database: Database = db, vapid: VapidConfiguration | null = vapidConfiguration())
+{
+  if (!vapid) return
+  const subscriptions = database.query(`SELECT ps.endpoint,ps.p256dh,ps.auth FROM push_subscriptions ps
+    WHERE ps.notify_follow_activity=1 AND ps.user_id!=? AND (EXISTS
+      (SELECT 1 FROM follows vf WHERE vf.follower_id=ps.user_id AND vf.following_id=?) OR EXISTS
+      (SELECT 1 FROM hashtag_follows vhf WHERE vhf.user_id=ps.user_id AND vhf.tag=?))
+      AND NOT EXISTS (SELECT 1 FROM blocks b WHERE
+        (b.blocker_id=ps.user_id AND b.blocked_id=?) OR (b.blocked_id=ps.user_id AND b.blocker_id=?))
+      AND NOT EXISTS (SELECT 1 FROM blocked_hashtags bh WHERE bh.user_id=ps.user_id AND bh.tag=?)`)
+    .all(actorId, actorId, tag, actorId, actorId, tag) as PushSubscriptionRow[]
+  await sendToSubscriptions(subscriptions, () => ({
+    title: `@${actorHandle} followed #${tag}`,
+    body: `@${actorHandle} followed #${tag}`,
+    url: `/tag/${encodeURIComponent(tag)}`,
+  }), database, vapid)
+}
+
 export async function sendPushForSignup(userId: number, handle: string, database: Database = db,
   vapid: VapidConfiguration | null = vapidConfiguration())
 {

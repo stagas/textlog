@@ -51,6 +51,7 @@ export function NotificationSettings({ user, publicKey, ios = false }: {
               ['replies', 'replies', 'When someone replies to one of your notes'],
               ['mentions', 'mentions', 'When someone mentions your handle'],
               ['follows', 'new followers', 'When someone starts following you'],
+              ['followActivity', 'follow activity', 'When people or tags you follow gain a new follow'],
               ...(isAdmin(user)
                 ? [['signups', 'new user signups', 'When a new user creates an account']]
                 : []),

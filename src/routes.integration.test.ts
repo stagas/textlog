@@ -247,7 +247,7 @@ test('consequential account, content, reporting, and admin flows work over HTTP'
     { cookie: aliceCookie },
   )
   expect(await pushPreferences.json()).toEqual({
-    preferences: { latest: 0, replies: 1, mentions: 0, follows: 1, ownPosts: 0 },
+    preferences: { latest: 0, replies: 1, mentions: 0, follows: 1, ownPosts: 0, followActivity: 1 },
   })
   const cacheBustedHomeHtml = await (await request('/?v=94721')).text()
   expect(cacheBustedHomeHtml).toContain(`property="og:url" content="${origin}/?v=94721"`)
@@ -486,6 +486,11 @@ test('consequential account, content, reporting, and admin flows work over HTTP'
   expect(followBob.status).toBe(303)
   expect(database.query('SELECT 1 FROM follows WHERE follower_id=? AND following_id=?').get(alice.id, bob.id))
     .toBeTruthy()
+  database.query("UPDATE follows SET created_at='2099-01-01 00:00:00' WHERE follower_id=? AND following_id=?")
+    .run(bob.id, alice.id)
+  const followedPersonFeed = await (await request('/for-you', { cookie: aliceCookie })).text()
+  expect(followedPersonFeed).toContain('@bob</a><span>followed you</span>')
+  expect(followedPersonFeed).not.toContain('action="/follow/alice"')
   const blockBob = await request('/block/bob', { method: 'POST', cookie: aliceCookie })
   expect(blockBob.status).toBe(303)
   expect(database.query('SELECT 1 FROM blocks WHERE blocker_id=? AND blocked_id=?').get(alice.id, bob.id)).toBeTruthy()
@@ -500,6 +505,13 @@ test('consequential account, content, reporting, and admin flows work over HTTP'
     .toBeNull()
   expect(database.query('SELECT 1 FROM follows WHERE follower_id=? AND following_id=?').get(bob.id, alice.id))
     .toBeTruthy()
+  await request('/tag-follow/shared', { method: 'POST', cookie: aliceCookie })
+  await request('/tag-follow/shared', { method: 'POST', cookie: bobCookie })
+  database.query("UPDATE hashtag_follows SET created_at='2099-01-02 00:00:00' WHERE user_id=? AND tag='shared'")
+    .run(bob.id)
+  const followedTagFeed = await (await request('/for-you', { cookie: aliceCookie })).text()
+  expect(followedTagFeed).toContain('@bob</a><span>followed</span><a href="/tag/shared">#shared</a>')
+  expect(followedTagFeed).not.toContain('@alice</a><span>followed</span><a href="/tag/shared">#shared</a>')
   const report = await request(`/post/${post.id}/report`, {
     method: 'POST',
     cookie: bobCookie,

@@ -116,6 +116,7 @@ test('notification settings are the only account page that loads their client sc
   expect(notifications).toContain('name="mentions" checked=""')
   expect(notifications).toContain('name="follows" checked=""')
   expect(notifications).toContain('name="ownPosts" checked=""')
+  expect(notifications).toContain('name="followActivity" checked=""')
   expect(notifications).not.toContain('name="signups"')
   expect(notifications).toContain('save preferences</button>')
   expect(profile).toContain('href="/account/edit/notifications"')

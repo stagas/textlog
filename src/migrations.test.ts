@@ -63,13 +63,17 @@ describe('database migrations', () => {
     expect(pushColumns).toContain('notify_follows')
     expect(pushColumns).toContain('notify_own_posts')
     expect(pushColumns).toContain('notify_signups')
+    expect(pushColumns).toContain('notify_follow_activity')
+    const hashtagFollowColumns = (database.query('PRAGMA table_info(hashtag_follows)').all() as { name: string }[])
+      .map(column => column.name)
+    expect(hashtagFollowColumns).toContain('created_at')
 
     const reapplied: number[] = []
     expect(runMigrations(database, migration => reapplied.push(migration.version))).toBe(latestMigrationVersion)
     expect(reapplied).toEqual([])
   })
 
-  test('upgrades legacy data and backfills mentions without creating new follow activity', () => {
+  test('upgrades legacy data and backfills person-follow but not tag-follow activity timestamps', () => {
     const database = new Database(':memory:')
     database.run('PRAGMA foreign_keys=ON')
     migrations[0].up(database)
@@ -78,13 +82,18 @@ describe('database migrations', () => {
         (1,'author','author@example.com','x'),(2,'reader','reader@example.com','x');
       INSERT INTO posts(id,user_id,body) VALUES(1,1,'hello @reader');
       INSERT INTO follows(follower_id,following_id) VALUES(1,2);
+      INSERT INTO hashtag_follows(user_id,tag) VALUES(1,'legacy');
       INSERT INTO sessions(token,user_id,expires_at) VALUES('legacy-cookie',1,9999999999999);`)
 
     runMigrations(database)
 
     expect(databaseVersion(database)).toBe(latestMigrationVersion)
     expect(database.query('SELECT user_id FROM post_mentions WHERE post_id=1').get()).toEqual({ user_id: 2 })
-    expect(database.query('SELECT created_at FROM follows WHERE follower_id=1').get()).toEqual({ created_at: null })
+    expect((database.query('SELECT created_at FROM follows WHERE follower_id=1').get() as {
+      created_at: string | null
+    }).created_at).not.toBeNull()
+    expect(database.query("SELECT created_at FROM hashtag_follows WHERE tag='legacy'").get())
+      .toEqual({ created_at: null })
     expect(database.query('SELECT token_hash FROM sessions').get())
       .toEqual({ token_hash: sessionHash('legacy-cookie') })
     expect(database.query('SELECT score FROM post_hot WHERE post_id=1').get()).toEqual({ score: 0.25 })

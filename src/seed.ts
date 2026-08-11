@@ -82,7 +82,8 @@ db.transaction(() => {
       db.query('INSERT OR IGNORE INTO follows(follower_id,following_id) VALUES(?,?)')
         .run(users[index].id, users[(index + offset) % users.length].id)
     }
-    db.query('INSERT OR IGNORE INTO hashtag_follows VALUES(?,?)')
+    db.query(`INSERT OR IGNORE INTO hashtag_follows(user_id,tag,created_at)
+      VALUES(?,?,CURRENT_TIMESTAMP)`)
       .run(users[index].id, topics[index % topics.length][1])
   }
 })()

@@ -515,6 +515,37 @@ export const migrations: Migration[] = [
       addColumn(database, 'push_subscriptions', 'notify_signups', 'INTEGER NOT NULL DEFAULT 1')
     },
   },
+  {
+    version: 41,
+    name: 'hashtag_follow_activity',
+    up(database) {
+      addColumn(database, 'hashtag_follows', 'created_at', 'TEXT')
+      database.run('CREATE INDEX IF NOT EXISTS hashtag_follows_activity ON hashtag_follows(tag,created_at DESC)')
+    },
+  },
+  {
+    version: 42,
+    name: 'backfill_follow_activity',
+    up(database) {
+      database.run('UPDATE follows SET created_at=CURRENT_TIMESTAMP WHERE created_at IS NULL')
+    },
+  },
+  {
+    version: 43,
+    name: 'remove_hashtag_follow_backfill',
+    up(database) {
+      // Version 42 briefly backfilled these timestamps. Clearing them removes old tag follows from the timeline;
+      // newly followed tags receive a timestamp through the write route after this migration.
+      database.run('UPDATE hashtag_follows SET created_at=NULL')
+    },
+  },
+  {
+    version: 44,
+    name: 'follow_activity_push_preference',
+    up(database) {
+      addColumn(database, 'push_subscriptions', 'notify_follow_activity', 'INTEGER NOT NULL DEFAULT 1')
+    },
+  },
 ]
 
 export const latestMigrationVersion = migrations.at(-1)!.version

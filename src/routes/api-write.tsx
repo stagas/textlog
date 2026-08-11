@@ -12,7 +12,7 @@ import { normalizePostBody, POST_MAX, validPostBody } from '../post-body'
 import { postRateLimitMessage } from '../post-rate-limit'
 import { canPublishPosts } from '../posting-policy'
 import { createPost, updatePost } from '../posts'
-import { sendPushForFollow, sendPushForPost } from '../push'
+import { sendPushForFollow, sendPushForPost, sendPushForUserFollow } from '../push'
 import { insertSession, SESSION_LIFETIME_MS, sessionHash } from '../sessions'
 import { apiUser, bearerToken, hash, token } from '../utils'
 import { emailPattern } from './auth'
@@ -273,6 +273,8 @@ export function registerApiWriteRoutes(app: Hono, database: Database, appUrl?: s
     if (inserted.changes) {
       void sendPushForFollow(guard.user!.id, guard.user!.handle, other.id, database)
         .catch(error => logError('API follow push failed', error))
+      void sendPushForUserFollow(guard.user!.id, guard.user!.handle, other.id, other.handle, database)
+        .catch(error => logError('API follow activity push failed', error))
     }
     return json({ data: { following: true } })
   })

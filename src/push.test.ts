@@ -2,7 +2,7 @@ import { Database } from 'bun:sqlite'
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test'
 import webpush from 'web-push'
 import { runMigrations } from './migrations'
-import { sendPushForPost, sendPushForSignup, sendPushToUser } from './push'
+import { sendPushForPost, sendPushForSignup, sendPushForTagFollow, sendPushForUserFollow, sendPushToUser } from './push'
 
 let originalSend: typeof webpush.sendNotification
 let vapid: ReturnType<typeof webpush.generateVAPIDKeys> & { subject: string }
@@ -169,5 +169,30 @@ describe('Web Push activity delivery', () => {
         title: '@new_user signed up', body: '@new_user signed up', url: '/admin/users/5',
       }),
     }])
+  })
+
+  test('sends followed-person and followed-tag activity to matching subscribers', async () => {
+    const database = fixture()
+    database.run(`INSERT INTO users(id,handle,email,password) VALUES(3,'watcher','watcher@example.com','!');
+      INSERT INTO follows(follower_id,following_id,created_at) VALUES(3,1,CURRENT_TIMESTAMP);
+      INSERT INTO hashtag_follows(user_id,tag,created_at) VALUES(3,'bun',CURRENT_TIMESTAMP);
+      INSERT INTO push_subscriptions(endpoint,user_id,p256dh,auth)
+        VALUES('https://push.example/watcher',3,'watcher-key','watcher-auth')`)
+    const payloads: string[] = []
+    webpush.sendNotification = (async (_subscription, payload) => {
+      payloads.push(String(payload))
+      return {} as never
+    }) as typeof webpush.sendNotification
+
+    await sendPushForUserFollow(1, 'author', 2, 'recipient', database, vapid)
+    await sendPushForTagFollow(1, 'author', 'bun', database, vapid)
+
+    expect(payloads.map(payload => JSON.parse(payload).title)).toEqual([
+      '@author followed @recipient',
+      '@author followed #bun',
+    ])
+    database.run('UPDATE push_subscriptions SET notify_follow_activity=0 WHERE user_id=3')
+    await sendPushForTagFollow(1, 'author', 'bun', database, vapid)
+    expect(payloads).toHaveLength(2)
   })
 })
