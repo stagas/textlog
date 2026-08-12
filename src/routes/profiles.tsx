@@ -235,7 +235,8 @@ export function registerProfilesRoutes(app: Hono) {
         tab={tab === 'replies' ? 'replies' : 'notes'} followerCount={counts.followerCount}
         followingCount={counts.followingCount} followingTagCount={counts.followingTagCount}
         blockedPeopleCount={blockCounts.blockedPeople} blockedTagCount={blockCounts.blockedTags} social={social}
-        previousCursor={result.previousCursor} nextCursor={result.nextCursor} returnPath={returnPath} />,
+        previousCursor={result.previousCursor} nextCursor={result.nextCursor} returnPath={returnPath}
+        cursor={cursorValue} />,
     )
   })
 }

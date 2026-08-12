@@ -10,6 +10,7 @@ import { HotFeed } from './components/hot-feed'
 import { ConnectionPeople, Pagination, TagPeopleList } from './components/page-shared'
 import { Post, postedReplyPath, replyAnchorReturnPath } from './components/post'
 import { PublicFeed } from './components/public-feed'
+import { searchPostReturnPath } from './components/search'
 import { TagFeed } from './components/tag-feed'
 
 test('compose offers a server-rendered post preview', () => {
@@ -139,6 +140,8 @@ test('reply forms offer the same server-rendered preview flow', () => {
   }))
 
   expect(html).toContain('value="preview" name="action">preview</button>')
+  expect(html).toContain('class="secondary-action edit-post-cancel" href="/post/2">cancel</a>')
+  expect(html.indexOf('>cancel</a>')).toBeLessThan(html.indexOf('>preview</button>'))
   expect(html).toContain('<div class="reply-preview"><p class="eyebrow">preview</p><div class="reply-branch">')
   expect(html).not.toContain('<span class="post-context">preview:</span>')
   expect(html.indexOf('<div class="reply-preview">')).toBeLessThan(html.indexOf('<div class="panel replybox">'))
@@ -148,6 +151,20 @@ test('reply forms offer the same server-rendered preview flow', () => {
   expect(html).not.toContain('href="#"')
   expect(html).not.toContain('href="/post/0"')
   expect(html).not.toContain('NaN')
+})
+
+test('reply form cancel returns to the originating feed entry', () => {
+  const user = { id: 1, handle: 'writer', email: 'writer@example.com', bio: '',
+    email_verified_at: '2026-08-12 10:00:00', handle_chosen_at: '2026-08-12 10:00:00' }
+  const post = { id: 2, user_id: 2, parent_id: null, body: 'Original post',
+    created_at: '2026-08-12 09:00:00', deleted_at: null, handle: 'author' }
+  const html = renderToStaticMarkup(React.createElement(Reply, {
+    user, post, showForm: true, returnPath: '/u/writer?tab=replies#post-2',
+  }))
+
+  expect(html).toContain(
+    'class="secondary-action edit-post-cancel" href="/u/writer?tab=replies#post-2">cancel</a>',
+  )
 })
 
 test('write and reply previews apply ASCII-art spacing rules', () => {
@@ -187,6 +204,11 @@ test('search result cards highlight tag, handle, and bio matches while keeping f
   expect(people).toContain('@<mark>type</mark>writer')
   expect(people).toContain('<mark>Type</mark>s useful notes')
   expect(people).toContain('>unfollow</button>')
+})
+
+test('search post replies return to the originating result and page', () => {
+  expect(searchPostReturnPath('ascii art', 1, 42)).toBe('/search?q=ascii%20art#post-42')
+  expect(searchPostReturnPath('ascii art', 3, 42)).toBe('/search?q=ascii%20art&page=3#post-42')
 })
 
 test('admin metrics use locale-aware number formatting', () => {
@@ -934,6 +956,33 @@ test('Profile and hashtag feeds show cumulative reply counts beside post dates',
 
   expect(profileHtml).toContain('· 3 replies</span>')
   expect(tagHtml).toContain('· 3 replies</span>')
+})
+
+test('Profile note and reply actions link back to their originating feed entries', () => {
+  const post = {
+    id: 2,
+    user_id: 1,
+    parent_id: null,
+    body: 'A note',
+    handle: 'writer',
+    created_at: '2026-08-03 12:00:00',
+    deleted_at: null,
+  }
+  const profile = { id: 1, handle: 'writer', email: 'writer@example.com', bio: '' }
+  const user = { id: 2, handle: 'reader', email: 'reader@example.com', bio: '' }
+  const notes = renderToStaticMarkup(React.createElement(Profile, {
+    user, profile, following: false, posts: [post], cursor: 'next:20',
+  }))
+  const replies = renderToStaticMarkup(React.createElement(Profile, {
+    user, profile, following: false, posts: [{ ...post, parent_id: 1 }], tab: 'replies', cursor: 'next:20',
+  }))
+
+  expect(notes).toContain(
+    'href="/post/2?reply=1&amp;from=%2Fu%2Fwriter%3Fcursor%3Dnext%253A20%23post-2"',
+  )
+  expect(replies).toContain(
+    'href="/post/2?reply=1&amp;from=%2Fu%2Fwriter%3Ftab%3Dreplies%26cursor%3Dnext%253A20%23post-2"',
+  )
 })
 
 test('Post marks #ascii and #ascii_art bodies and quoted parents for tight line spacing', () => {

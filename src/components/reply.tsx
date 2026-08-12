@@ -96,7 +96,13 @@ export function Reply(
               <ReplyBox action={'/post/' + post.id + '/reply'} body={body} error={error}
                 placeholder={'Reply to @' + post.handle + '…'}
                 hidden={returnPath && <input type="hidden" name="from" value={returnPath} />}
-                secondary={<button className="secondary-action" name="action" value="preview">preview</button>}
+                secondary={
+                  <span className="edit-post-actions">
+                    <a className="secondary-action edit-post-cancel"
+                      href={returnPath || `/post/${post.id}`}>cancel</a>
+                    <button className="secondary-action" name="action" value="preview">preview</button>
+                  </span>
+                }
                 primary={<button className="button">post →</button>} />
             )
             : <VerificationRequired />

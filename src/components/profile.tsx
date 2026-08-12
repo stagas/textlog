@@ -9,7 +9,7 @@ export function Profile(
   { user, profile, posts, following, bio = profile.bio || '', editHandle = profile.handle, editEmail = profile.email,
     error, editing = false, total = posts.length, noteCount = total, replyCount = 0, tab = 'notes', followerCount = 0,
     followingCount = 0, followingTagCount = 0, blockedPeopleCount = 0, blockedTagCount = 0, blocked = false,
-    blockedByProfile = false, social, previousCursor = null, nextCursor = null, returnPath }: {
+    blockedByProfile = false, social, previousCursor = null, nextCursor = null, returnPath, cursor = null }: {
       user: User | null
       profile: ProfileRow
       posts: PostView[]
@@ -33,9 +33,14 @@ export function Profile(
       previousCursor?: string | null
       nextCursor?: string | null
       returnPath?: string
+      cursor?: string | null
       social?: { description: string; image: string; url: string; type?: 'article' | 'profile'; imageAlt?: string }
     },
 ) {
+  const feedQuery = new URLSearchParams()
+  if (tab === 'replies') feedQuery.set('tab', 'replies')
+  if (cursor) feedQuery.set('cursor', cursor)
+  const feedPath = `/u/${profile.handle}${feedQuery.size ? `?${feedQuery}` : ''}`
   return (
     <Layout user={user} title={`@${profile.handle}`} social={social} feeds={{
       title: `Notes by @${profile.handle}`,
@@ -139,7 +144,8 @@ export function Profile(
             blockedPeople={blockedPeopleCount} blockedTags={blockedTagCount} />
         )}
       {!editing && !blocked && !blockedByProfile
-        && posts.map(post => <Post key={post.id} p={post} user={user} showReplyCount tappable />)}
+        && posts.map(post => <Post key={post.id} p={post} user={user} showReplyCount tappable
+          returnPath={`${feedPath}#post-${post.id}`} />)}
       {!editing && !blocked && !blockedByProfile && total === 0 && (
         <div className={`empty${user?.id === profile.id ? ' empty-actions' : ''}`}>
           {user?.id === profile.id

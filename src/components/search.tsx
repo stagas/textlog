@@ -9,6 +9,11 @@ import { Post } from './post'
 
 export type SearchTab = 'notes' | 'tags' | 'people'
 
+export function searchPostReturnPath(query: string, page: number, postId: number) {
+  const pageParameter = page > 1 ? `&page=${page}` : ''
+  return `/search?q=${encodeURIComponent(query)}${pageParameter}#post-${postId}`
+}
+
 export function SearchForm({ query = '', autoFocus = false, tab = 'notes' }: {
   query?: string
   autoFocus?: boolean
@@ -60,7 +65,8 @@ export function SearchResults({ user, query, page, tab = 'notes' }: {
           </a>
         ))}
       </nav>
-      {posts.map(post => <Post key={post.id} p={post} user={user} showReplyCount highlightTerms={highlights} />)}
+      {posts.map(post => <Post key={post.id} p={post} user={user} showReplyCount highlightTerms={highlights}
+        returnPath={searchPostReturnPath(query, page, post.id)} />)}
       {!!tags.length && (
         <TagPeopleList user={user} tags={tags} followingKey="viewerFollowing" highlightTerms={highlights} />
       )}
