@@ -307,9 +307,20 @@ nav form {
   padding: var(--space-2) 0;
   color: var(--muted);
   font-size: 0.6875rem;
+  gap: var(--space-3);
 }
 
 .feed-tabs-read-status form { margin: 0; }
+
+.feed-tabs .feed-tabs-read-status .activity-side-link {
+  padding: 0;
+  color: var(--accent);
+  border-bottom: 1px solid var(--link-border);
+}
+
+.feed-tabs .feed-tabs-read-status .activity-side-link:hover { color: var(--accent-dark); }
+
+.feed-tabs-action-separator { color: var(--muted); }
 
 .feed-tabs a:hover {
   color: var(--tab-hover);
@@ -922,6 +933,10 @@ nav form {
 
 .feed-tabs+.for-you-item .post,
 .feed-tabs+.feed-relationship {
+  border-top: 0;
+}
+
+.feed-tabs+.activity-follow {
   border-top: 0;
 }
 
@@ -2080,9 +2095,16 @@ form.report-panel {
 }
 
 .profile-bio {
+  font-size: 0.6875rem;
+  line-height: 1.45;
   white-space: pre-wrap;
   overflow-wrap: anywhere;
   tab-size: 4;
+}
+
+.profile .profile-bio {
+  font-size: 0.6875rem;
+  line-height: 1.45;
 }
 
 .tag-header {
@@ -2856,6 +2878,10 @@ form.report-panel {
   font-size: 0.6875rem;
 }
 
+.for-you-item .posttop-context .post-context {
+  margin-left: calc(-1 * var(--space-4) + 1ch);
+}
+
 .activity-item .posttop {
   flex-wrap: wrap;
   gap: var(--space-2);
@@ -2913,9 +2939,9 @@ form.report-panel {
 }
 
 .activity-follow .button {
-  padding: 7px 10px;
+  padding: 8px 12px;
   white-space: nowrap;
-  font-size: 0.625rem;
+  font-size: 0.6875rem;
 }
 
 .columns h2 {

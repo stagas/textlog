@@ -1,6 +1,5 @@
 import {
   About,
-  Activity,
   Contact,
   decodeForYouCursor,
   Dmca,
@@ -12,8 +11,6 @@ import {
 import { page, redirect, rememberFeed } from './shared'
 
 import type { Hono } from 'hono'
-import { decodeActivityCursor } from '../activity-order'
-import { markAllActivityRead } from '../activity-state'
 import { db } from '../db'
 import { markAllForYouRead } from '../for-you-state'
 import { decodeHotCursor } from '../hot'
@@ -43,14 +40,6 @@ export function registerFeedsRoutes(app: Hono) {
     const configuredOrigin = Bun.env.APP_URL?.replace(/\/$/, '')
     const pageUrl = `${configuredOrigin || requestUrl.origin}/${requestUrl.search}`
     const preferredFeed = feedPreference(c.req.raw)
-    if (preferredFeed === 'activity' && user) {
-      const cursorValue = c.req.query('cursor')
-      const cursor = decodeActivityCursor(cursorValue)
-      if (cursorValue && !cursor) return c.text('Invalid cursor', 400)
-      return page(
-        <Activity user={user} cursor={cursor} path="/" pageUrl={pageUrl} notificationBanner={notificationBanner} />,
-      )
-    }
     if (preferredFeed === 'latest') {
       const cursorValue = c.req.query('cursor')
       const cursor = decodePostCursor(cursorValue)
@@ -70,7 +59,8 @@ export function registerFeedsRoutes(app: Hono) {
     const cursorValue = c.req.query('cursor')
     const cursor = decodeForYouCursor(cursorValue)
     if (cursorValue && !cursor) return c.text('Invalid cursor', 400)
-    return page(<Feed user={user} cursor={cursor} path="/" pageUrl={pageUrl} notificationBanner={notificationBanner} />)
+    return page(<Feed user={user} cursor={cursor} path="/" pageUrl={pageUrl} notificationBanner={notificationBanner}
+      toMe={c.req.query('to') === 'me'} />)
   })
 
   app.get('/for-you', c => {
@@ -81,7 +71,7 @@ export function registerFeedsRoutes(app: Hono) {
     if (cursorValue && !cursor) return c.text('Invalid cursor', 400)
     return rememberFeed(
       page(
-        <Feed user={user} cursor={cursor} title="for you"
+        <Feed user={user} cursor={cursor} title="for you" toMe={c.req.query('to') === 'me'}
           notificationBanner={showNotificationBanner(c.req.raw, user)} />,
       ),
       'following',
@@ -106,7 +96,7 @@ export function registerFeedsRoutes(app: Hono) {
     const user = currentUser(c.req.raw)
     if (!user) return redirect('/enter?next=' + encodeURIComponent('/for-you'))
     markAllForYouRead(user.id)
-    return redirect('/for-you')
+    return redirect(c.req.query('to') === 'me' ? '/for-you?to=me' : '/for-you')
   })
 
   app.get('/hot', c => {
@@ -133,23 +123,14 @@ export function registerFeedsRoutes(app: Hono) {
   app.get('/activity', c => {
     const user = currentUser(c.req.raw)
     if (!user) return redirect('/enter?next=' + encodeURIComponent('/activity'))
-    const cursorValue = c.req.query('cursor')
-    const cursor = decodeActivityCursor(cursorValue)
-    if (cursorValue && !cursor) return c.text('Invalid cursor', 400)
-    return rememberFeed(
-      page(
-        <Activity user={user} cursor={cursor} title="activity"
-          notificationBanner={showNotificationBanner(c.req.raw, user)} />,
-      ),
-      'activity',
-    )
+    return redirect('/for-you?to=me')
   })
 
   app.post('/activity/read-all', c => {
     const user = currentUser(c.req.raw)
     if (!user) return redirect('/enter?next=' + encodeURIComponent('/activity'))
-    markAllActivityRead(user.id)
-    return redirect('/activity')
+    markAllForYouRead(user.id)
+    return redirect('/for-you?to=me')
   })
 
   app.get('/about', c => page(<About user={currentUser(c.req.raw)} />))

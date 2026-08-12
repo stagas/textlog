@@ -1,7 +1,6 @@
 import type { PersonView, PostView, ProfileRow, TagView } from '../types'
 
 import React from 'react'
-import { hasUnreadActivity } from '../activity-state'
 import { isAdmin } from '../admin'
 import type { User } from '../db'
 import { hasUnreadForYou } from '../for-you-state'
@@ -141,14 +140,14 @@ export function CursorPagination({ path, previousCursor, nextCursor }: {
   )
 }
 
-export function FeedTabs({ active, user, forYouReadStatus, activityReadStatus }: {
+export function FeedTabs({ active, user, forYouReadStatus, activityReadStatus, toMe = false }: {
   active: 'following' | 'activity' | 'hot' | 'latest'
   user: User | null
   forYouReadStatus?: boolean
   activityReadStatus?: boolean
+  toMe?: boolean
 }) {
   const forYouUnread = user ? hasUnreadForYou(user.id) : false
-  const activityUnread = user ? hasUnreadActivity(user.id) : false
   return (
     <nav className="feed-tabs" aria-label="Feed">
       {user && (
@@ -160,15 +159,6 @@ export function FeedTabs({ active, user, forYouReadStatus, activityReadStatus }:
           for you
         </a>
       )}
-      {user && (
-        <a className={active === 'activity' ? 'active' : ''} aria-current={active === 'activity' ? 'page' : undefined}
-          href="/activity"
-        >
-          {activityUnread && <span className="unread-dot" aria-hidden="true" />}
-          {activityUnread && <span className="visually-hidden">unread</span>}
-          activity
-        </a>
-      )}
       <a className={active === 'hot' ? 'active' : ''} aria-current={active === 'hot' ? 'page' : undefined} href="/hot">
         hot
       </a>
@@ -177,17 +167,28 @@ export function FeedTabs({ active, user, forYouReadStatus, activityReadStatus }:
       >
         latest
       </a>
-      {(forYouReadStatus !== undefined || activityReadStatus !== undefined) && (
+      {(active === 'following' || forYouReadStatus !== undefined || activityReadStatus !== undefined) && (
         <span className="feed-tabs-read-status">
-          {(forYouReadStatus ?? activityReadStatus)
+          {active === 'following' && (
+            <>
+              <a className="activity-side-link" href={toMe ? '/for-you' : '/for-you?to=me'}>
+                {toMe ? 'all' : 'to me'}
+              </a>
+              {(forYouReadStatus !== undefined || activityReadStatus !== undefined)
+                && <span className="feed-tabs-action-separator" aria-hidden="true">·</span>}
+            </>
+          )}
+          {(forYouReadStatus !== undefined || activityReadStatus !== undefined) && ((forYouReadStatus ?? activityReadStatus)
             ? (
               <form method="post"
-                action={activityReadStatus !== undefined ? '/activity/read-all' : '/for-you/read-all'}
+                action={activityReadStatus !== undefined
+                  ? '/activity/read-all'
+                  : `/for-you/read-all${toMe ? '?to=me' : ''}`}
               >
                 <button className="activity-side-link">mark all as read</button>
               </form>
             )
-            : <span className="activity-side-status">you've seen it all</span>}
+            : <span className="activity-side-status">you've seen it all</span>)}
         </span>
       )}
     </nav>

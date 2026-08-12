@@ -1,3 +1,4 @@
+import { isAdminEmail } from './admin'
 import { db } from './db'
 
 const visibleEvents = `
@@ -6,6 +7,17 @@ const visibleEvents = `
       (SELECT following_id FROM follows WHERE follower_id=$viewer) OR p.id IN
       (SELECT ph.post_id FROM post_hashtags ph JOIN hashtag_follows hf ON hf.tag=ph.tag
         WHERE hf.user_id=$viewer))
+      AND NOT EXISTS (SELECT 1 FROM blocks b WHERE
+        (b.blocker_id=$viewer AND b.blocked_id=p.user_id) OR
+        (b.blocker_id=p.user_id AND b.blocked_id=$viewer))
+      AND NOT EXISTS (SELECT 1 FROM post_hashtags tph JOIN blocked_hashtags bh ON bh.tag=tph.tag
+        WHERE tph.post_id=p.id AND bh.user_id=$viewer)
+  UNION ALL
+  SELECT 'post:' || printf('%020d',p.id) event_key FROM posts p
+    LEFT JOIN posts parent ON parent.id=p.parent_id
+    LEFT JOIN post_mentions pm ON pm.post_id=p.id AND pm.user_id=$viewer
+    WHERE p.deleted_at IS NULL AND p.user_id!=$viewer
+      AND (parent.user_id=$viewer OR pm.user_id IS NOT NULL)
       AND NOT EXISTS (SELECT 1 FROM blocks b WHERE
         (b.blocker_id=$viewer AND b.blocked_id=p.user_id) OR
         (b.blocker_id=p.user_id AND b.blocked_id=$viewer))
@@ -31,12 +43,29 @@ const visibleEvents = `
       AND NOT EXISTS (SELECT 1 FROM blocks b WHERE
         (b.blocker_id=$viewer AND b.blocked_id=actor.id) OR
         (b.blocker_id=actor.id AND b.blocked_id=$viewer))
-      AND NOT EXISTS (SELECT 1 FROM blocked_hashtags bh WHERE bh.user_id=$viewer AND bh.tag=hf.tag)`
+      AND NOT EXISTS (SELECT 1 FROM blocked_hashtags bh WHERE bh.user_id=$viewer AND bh.tag=hf.tag)
+  UNION ALL
+  SELECT 'user-follow:' || printf('%020d',f.follower_id) || ':' || printf('%020d',$viewer) || ':' || f.created_at
+    FROM follows f JOIN users actor ON actor.id=f.follower_id
+    WHERE f.following_id=$viewer AND f.created_at IS NOT NULL
+      AND actor.deleted_at IS NULL AND actor.suspended_at IS NULL
+      AND NOT EXISTS (SELECT 1 FROM blocks b WHERE
+        (b.blocker_id=$viewer AND b.blocked_id=actor.id) OR
+        (b.blocker_id=actor.id AND b.blocked_id=$viewer))
+  UNION ALL
+  SELECT 'signup:' || printf('%020d',u.id) || ':' || u.handle_chosen_at FROM users u
+    WHERE $admin=1 AND u.handle_chosen_at IS NOT NULL
+      AND u.deleted_at IS NULL AND u.suspended_at IS NULL`
+
+function stateParameters(userId: number) {
+  const account = db.query('SELECT email FROM users WHERE id=?').get(userId) as { email: string } | null
+  return { viewer: userId, admin: Number(!!account && isAdminEmail(account.email)) }
+}
 
 export function hasUnreadForYou(userId: number) {
   return !!db.query(`SELECT 1 FROM (${visibleEvents}) event WHERE NOT EXISTS
     (SELECT 1 FROM for_you_reads seen WHERE seen.user_id=$viewer AND seen.event_key=event.event_key) LIMIT 1`)
-    .get({ viewer: userId })
+    .get(stateParameters(userId))
 }
 
 export function markForYouEntriesRead(userId: number, eventKeys: string[]) {
@@ -56,7 +85,7 @@ export function markForYouEntriesRead(userId: number, eventKeys: string[]) {
 export function markAllForYouRead(userId: number) {
   db.transaction(() => {
     db.query(`INSERT OR IGNORE INTO for_you_reads(user_id,event_key)
-      SELECT $viewer,event_key FROM (${visibleEvents})`).run({ viewer: userId })
+      SELECT $viewer,event_key FROM (${visibleEvents})`).run(stateParameters(userId))
     db.query(`INSERT OR IGNORE INTO activity_reads(user_id,event_key)
       SELECT user_id,'post:' || CAST(substr(event_key,6) AS INTEGER)
       FROM for_you_reads WHERE user_id=? AND event_key GLOB 'post:[0-9]*'`).run(userId)
