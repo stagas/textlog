@@ -61,7 +61,7 @@ const palettes = {
     panel: '#ffffff', tagBg: '#e6e9df', quoteInk: '#6f766c', quoteBg: 'rgb(116 150 104 / 6%)', errorInk: '#7a3f39',
     linkBorder: '#afb4a9', buttonBg: '#273126', buttonInk: '#ffffff', buttonHoverBg: '#55734a',
     buttonActiveBg: '#405c38' },
-  dark: { bg: '#171a17', ink: '#e5e8e1', muted: '#969d92', soft: '#343a33', accent: '#9abd8e', accentDark: '#b2d1a8',
+  dark: { bg: '#171a17', ink: '#e5e8e1', muted: '#747c72', soft: '#343a33', accent: '#9abd8e', accentDark: '#b2d1a8',
     panel: '#20241f', tagBg: '#292f28', quoteInk: '#a8afa4', quoteBg: 'rgb(154 189 142 / 8%)', errorInk: '#efb3aa',
     linkBorder: '#50594d', buttonBg: '#3b503d', buttonInk: '#e5e8e1', buttonHoverBg: '#4b664d',
     buttonActiveBg: '#314434' },

@@ -76,7 +76,7 @@ export function Post({
           preview
             ? <span className="quiet preview-reply">{resolvedReplyLabel}</span>
             : (
-              <a className="quiet" href={resolvedReplyHref} rel="nofollow"
+              <a className="quiet post-reply-link" href={resolvedReplyHref} rel="nofollow"
                 aria-label={`${resolvedReplyLabel} to @${p.handle}`}>
                 {resolvedReplyLabel}
               </a>

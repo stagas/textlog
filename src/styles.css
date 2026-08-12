@@ -59,7 +59,7 @@
   :root {
     --bg: #171a17;
     --ink: #e5e8e1;
-    --muted: #969d92;
+    --muted: #747c72;
     --tab-hover: #b4bab0;
     --soft: #343a33;
     --accent: #9abd8e;
@@ -700,7 +700,7 @@ nav form {
 
 .quiet {
   padding: 0;
-  color: var(--accent);
+  color: var(--muted);
   background: none;
   font-size: 0.6875rem;
 }
@@ -931,10 +931,26 @@ nav form {
   font-size: inherit;
 }
 
+.posttop .post-reply-link {
+  color: var(--accent);
+}
+
+.posttop .post-reply-link:hover {
+  color: var(--accent-dark);
+}
+
 .post-actions {
   display: flex;
   align-items: baseline;
   gap: var(--space-4);
+}
+
+.post-actions .quiet:not(.danger):not(.report-link) {
+  color: var(--accent);
+}
+
+.post-actions .quiet:not(.danger):not(.report-link):hover {
+  color: var(--accent-dark);
 }
 
 .post-actions form {
