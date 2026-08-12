@@ -1827,7 +1827,16 @@ form.report-panel {
 
 .replybox {
   margin-top: var(--space-5);
+  margin-left: clamp(18px, 3vw, 28px);
   margin-bottom: var(--space-6);
+}
+
+.thread-root + .replybox {
+  margin-top: 0;
+}
+
+.reply-preview + .replybox {
+  margin-top: var(--space-4);
 }
 
 .page-header {
@@ -2961,7 +2970,7 @@ form.report-panel {
 }
 
 .reply-preview>.eyebrow {
-  margin: var(--space-4) var(--gutter) var(--space-2);
+  margin: calc(-1 * var(--space-2)) var(--gutter) var(--space-2);
   color: var(--muted);
   font-size: 0.625rem;
   text-transform: none;
