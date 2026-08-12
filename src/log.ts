@@ -1,3 +1,5 @@
+import { logIpPseudonym } from './ip-privacy'
+
 const ansi = {
   reset: '\x1b[0m',
   dim: '\x1b[2m',
@@ -71,7 +73,7 @@ export function clientIp(request: Request, socketIp?: string) {
   return socketIp || '-'
 }
 
-export function logHttp(method: string, path: string, status: number, durationMs: number, ip = '-') {
+export function logHttp(method: string, path: string, status: number, durationMs: number, ip = '-', username?: string) {
   const action = semanticAction(method, path)
   const timing = durationMs < 1000 ? `${durationMs.toFixed(0)}ms` : `${(durationMs / 1000).toFixed(2)}s`
   const parts = [
@@ -80,6 +82,7 @@ export function logHttp(method: string, path: string, status: number, durationMs
     paint(String(status), statusColor(status)),
     paint(timing.padStart(7), durationMs >= 1000 ? 'yellow' : 'dim'),
     paint(logIpPseudonym(ip), 'dim'),
+    paint(username ? `@${username}` : '-', 'dim'),
     path,
   ]
   if (action) parts.push(paint(action, status >= 400 ? 'yellow' : 'magenta'))
@@ -98,4 +101,3 @@ export function logReady(url: string, environment: string) {
     }`,
   )
 }
-import { logIpPseudonym } from './ip-privacy'

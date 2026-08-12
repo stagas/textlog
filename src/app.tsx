@@ -107,6 +107,7 @@ app.use('*', async (c, next) => {
 
 app.use('*', async (c, next) => {
   const started = performance.now()
+  const username = currentUser(c.req.raw)?.handle
   try {
     await next()
   }
@@ -115,7 +116,7 @@ app.use('*', async (c, next) => {
     const path = url.pathname
     if (shouldLogHttp(path, c.res.status)) {
       logHttp(c.req.method, `${path}${url.search}`, c.res.status, performance.now() - started,
-        c.req.header(clientIpHeaderName()) || '-')
+        c.req.header(clientIpHeaderName()) || '-', username)
     }
   }
 })
