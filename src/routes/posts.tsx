@@ -20,6 +20,7 @@ import { normalizePostBody, postBodyValidationMessage, validPostBody } from '../
 import { postRateLimitMessage } from '../post-rate-limit'
 import { sendPushForPost } from '../push'
 import { currentUser } from '../utils'
+import { safeRefererPath } from '../http'
 
 function notifyPost(postId: number, userId: number, handle: string) {
   void sendPushForPost(postId, userId, handle).catch(error => logError('activity push failed', error))
@@ -35,7 +36,14 @@ function editParent(post: PostRow) {
 export function registerPostsRoutes(app: Hono) {
   app.get('/write', c => {
     const user = currentUser(c.req.raw)
-    return user ? page(<Compose user={user} />) : redirect('/enter?next=' + encodeURIComponent('/write'))
+    const requestedReturnPath = c.req.query('from')
+    const returnPath = requestedReturnPath
+      ? safeNext(requestedReturnPath)
+      : safeRefererPath(c.req.header('referer'), c.req.url)
+    const resolvedReturnPath = returnPath === '/write' ? '/' : returnPath
+    return user
+      ? page(<Compose user={user} returnPath={resolvedReturnPath} />)
+      : redirect('/enter?next=' + encodeURIComponent('/write'))
   })
   app.get('/compose', c => c.redirect('/write', 301))
   app.get('/post', c => c.redirect('/write', 303))
@@ -99,19 +107,23 @@ export function registerPostsRoutes(app: Hono) {
     if (!user) return redirect('/enter')
     if (!canPublishPosts(user)) return page(<Compose user={user} />, 403)
     const f = await form(c.req.raw)
+    const returnPath = f.from ? safeNext(f.from) : '/'
     const body = normalizePostBody(f.body || '')
     if (!validPostBody(body)) {
-      return page(<Compose user={user} body={body} error={postBodyValidationMessage(body)} />, 400)
+      return page(<Compose user={user} body={body} error={postBodyValidationMessage(body)}
+        returnPath={returnPath} />, 400)
     }
-    if (f.action === 'preview') return page(<Compose user={user} body={body} preview />)
+    if (f.action === 'preview') return page(<Compose user={user} body={body} preview returnPath={returnPath} />)
     const moderation = await moderateText(body)
     if (!moderation.ok) {
-      return page(<Compose user={user} body={body} error={moderationMessage(moderation.reason)} />,
+      return page(<Compose user={user} body={body} error={moderationMessage(moderation.reason)}
+        returnPath={returnPath} />,
         moderation.reason === 'flagged' ? 422 : 503)
     }
     const result = createPost(db, user.id, body)
     if ('retryAfter' in result) {
-      return page(<Compose user={user} body={body} error={postRateLimitMessage(result.retryAfter)} />, 429)
+      return page(<Compose user={user} body={body} error={postRateLimitMessage(result.retryAfter)}
+        returnPath={returnPath} />, 429)
     }
     if (!result.duplicate) notifyPost(result.id, user.id, user.handle)
     return rememberFeed(redirect('/latest'), 'latest')

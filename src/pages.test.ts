@@ -35,6 +35,19 @@ test('compose offers a server-rendered post preview', () => {
   expect(preview).not.toContain('NaN')
 })
 
+test('compose carries its originating page through preview and offers cancel before preview', () => {
+  const user = { id: 1, handle: 'writer', email: 'writer@example.com', bio: '',
+    email_verified_at: '2026-08-12 10:00:00', handle_chosen_at: '2026-08-12 10:00:00' }
+  const html = renderToStaticMarkup(React.createElement(Compose, {
+    user,
+    returnPath: '/latest?cursor=abc#post-2',
+  }))
+
+  expect(html).toContain('name="from" value="/latest?cursor=abc#post-2"')
+  expect(html).toContain('class="secondary-action edit-post-cancel" href="/latest?cursor=abc#post-2">cancel</a>')
+  expect(html.indexOf('>cancel</a>')).toBeLessThan(html.indexOf('>preview</button>'))
+})
+
 test('post edit places delete above the textarea and keeps preview before save', () => {
   const user = { id: 1, handle: 'writer', email: 'writer@example.com', bio: '' }
   const post = { id: 2, user_id: 1, parent_id: null, body: 'Original', created_at: '2026-08-12 09:00:00',

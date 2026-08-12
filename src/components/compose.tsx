@@ -6,7 +6,9 @@ import { FormActions, FormMessage, VerificationRequired } from './page-shared'
 import { Post } from './post'
 
 export function Compose(
-  { user, error, body = '', preview = false }: { user: User; error?: string; body?: string; preview?: boolean },
+  { user, error, body = '', preview = false, returnPath = '/' }: {
+    user: User; error?: string; body?: string; preview?: boolean; returnPath?: string
+  },
 ) {
   if (!canPublishPosts(user)) {
     return (
@@ -38,11 +40,17 @@ export function Compose(
           {user.handle}?
         </h1>
         <form method="post" action="/post">
+          <input type="hidden" name="from" value={returnPath} />
           <FormMessage error={error} />
           <textarea className="form-control" name="body" maxLength={280} required autoFocus defaultValue={body} />
           <div className="composefoot">
             <span>280 characters max · use #hashtags and @mentions</span>
-            <FormActions secondary={<button className="secondary-action" name="action" value="preview">preview</button>}
+            <FormActions secondary={(
+              <span className="edit-post-actions">
+                <a className="secondary-action edit-post-cancel" href={returnPath}>cancel</a>
+                <button className="secondary-action" name="action" value="preview">preview</button>
+              </span>
+            )}
               primary={<button className="button">post →</button>} />
           </div>
         </form>
