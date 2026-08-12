@@ -1,11 +1,11 @@
 import { appHost, appName, appOrigin } from '../brand'
 import { activeAppearance, activeRequest, activeThemeLogoSvg, activeThemeStyles } from '../theme'
-import { productHuntBannerDismissed } from '../http'
 
 import React from 'react'
 import { instance } from '../../instance.config'
 import { isAdmin } from '../admin'
 import type { User } from '../db'
+import { productHuntBannerDismissed } from '../http'
 
 let devReloadBootId: string | undefined
 
@@ -107,7 +107,7 @@ export function Layout({
             <link rel="alternate" type="application/atom+xml" title={`${feeds.title} (Atom)`} href={feeds.atom} />
           </>
         )}
-        <link rel="stylesheet" href="/styles.css?v=194" />
+        <link rel="stylesheet" href="/styles.css?v=195" />
         <style>{themeCss}</style>
       </head>
       <body>
