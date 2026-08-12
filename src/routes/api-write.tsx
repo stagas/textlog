@@ -2,6 +2,7 @@ import type { Database } from 'bun:sqlite'
 import type { Context, Hono } from 'hono'
 import { softDeletePost } from '../admin'
 import { apiOrigin, apiPost } from '../api'
+import { bioBodyValidationMessage, normalizeBioBody, validBioBody } from '../bio-body'
 import { AUTH_LIMITS, consumeAuthAttempt, consumeBucketedAttempt, rateLimitKey } from '../auth-rate-limit'
 import type { User } from '../db'
 import { sendMagicLink } from '../email'
@@ -21,7 +22,7 @@ import { clientAddress, issueMagicLink, usersBlocked } from './shared'
 export const CODE_ATTEMPT_LIMIT = 5
 export const WRITE_LIMIT = 60
 export const WRITE_WINDOW_SECONDS = 60 * 60
-export const BIO_MAX = 160
+export { BIO_MAX } from '../bio-body'
 export { POST_MAX } from '../post-body'
 
 function json(value: unknown, status = 200) {
@@ -162,8 +163,8 @@ export function registerApiWriteRoutes(app: Hono, database: Database, appUrl?: s
     const guard = writer(database, c)
     if (guard.error) return guard.error
     const payload = await body(c)
-    const bio = text(payload?.bio).trim()
-    if (bio.length > BIO_MAX) return fail('invalid_bio', `Bios are up to ${BIO_MAX} characters`, 400)
+    const bio = normalizeBioBody(text(payload?.bio).trim())
+    if (!validBioBody(bio)) return fail('invalid_bio', bioBodyValidationMessage(bio), 400)
     if (bio) {
       const moderation = await moderateText(`bio: ${bio}`)
       if (!moderation.ok) {

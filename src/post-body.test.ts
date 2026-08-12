@@ -24,10 +24,14 @@ describe('post bodies', () => {
     expect(validPostBody(Array(11).fill('x').join('\n'))).toBe(false)
   })
 
-  test('asks authors with too many lines to reduce them', () => {
+  test('reports exact counts for each exceeded limit', () => {
     const body = Array(11).fill('x').join('\n')
-    expect(postBodyValidationMessage(body)).toBe(
-      'Posts can contain up to 10 lines. Please reduce the number of lines.',
+    expect(postBodyValidationMessage(body)).toBe('The note exceeds the limit: 11/10 lines.')
+    expect(postBodyValidationMessage('x'.repeat(281))).toBe('The note exceeds the limit: 281/280 characters.')
+
+    const overBothLimits = `${'x'.repeat(279)}\n${Array(11).fill('x').join('\n')}`
+    expect(postBodyValidationMessage(overBothLimits)).toBe(
+      'The note exceeds the limit: 301/280 characters and 12/10 lines.',
     )
   })
 })

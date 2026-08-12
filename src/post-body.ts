@@ -16,8 +16,14 @@ export function postBodyLineCount(body: string) {
   return body.split('\n').length
 }
 
-export function postBodyValidationMessage(body: string, subject = 'Posts') {
-  return postBodyLineCount(body) > POST_MAX_LINES
-    ? `${subject} can contain up to ${POST_MAX_LINES} lines. Please reduce the number of lines.`
-    : `${subject} must contain between 1 and ${POST_MAX} characters.`
+export function postBodyValidationMessage(body: string) {
+  const exceeded: string[] = []
+  if (body.length > POST_MAX) exceeded.push(`${body.length}/${POST_MAX} characters`)
+
+  const lines = postBodyLineCount(body)
+  if (lines > POST_MAX_LINES) exceeded.push(`${lines}/${POST_MAX_LINES} lines`)
+
+  return exceeded.length
+    ? `The note exceeds the limit: ${exceeded.join(' and ')}.`
+    : `The note must contain between 1 and ${POST_MAX} characters.`
 }

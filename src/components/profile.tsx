@@ -80,7 +80,7 @@ export function Profile(
                       placeholder="Tell people a little about yourself…" />
                   </label>
                   <div className="composefoot">
-                    <PostingHelp maxLength={160} />
+                    <PostingHelp maxLength={160} maxLines={5} />
                     <button className="button">save profile →</button>
                   </div>
                 </form>

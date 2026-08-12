@@ -37,10 +37,10 @@ export function FormActions({ primary, secondary, className = '' }: {
   )
 }
 
-export function PostingHelp({ maxLength = 280 }: { maxLength?: number }) {
+export function PostingHelp({ maxLength = 280, maxLines = 10 }: { maxLength?: number; maxLines?: number }) {
   return (
     <div className="posting-help">
-      <span>{maxLength} characters max - use #hashtags, @mentions</span>
+      <span>{maxLength} characters / {maxLines} lines max - use #hashtags, @mentions</span>
       <details className="posting-help-more">
         <summary>and more</summary>
         <div className="posting-help-popover">

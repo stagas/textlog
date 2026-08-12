@@ -21,6 +21,7 @@ import {
 } from '../components/pages'
 import { exportUserData } from '../data-export'
 import { db } from '../db'
+import { bioBodyValidationMessage, normalizeBioBody, validBioBody } from '../bio-body'
 import { sendAccountDeletionConfirmation, sendEmailChangeAuthorization, sendPasswordEnableConfirmation } from '../email'
 import { emailChangeForToken, issueEmailChangeAuthorization } from '../email-change-authorization'
 import { confirmEmailToken, findEmailToken } from '../email-verification'
@@ -146,14 +147,19 @@ export function registerAccountRoutes(app: Hono) {
     const f = await form(c.req.raw)
     // Preserve whitespace because spaces and line breaks can be meaningful in ASCII art.
     // Treat an entirely blank submission as an empty bio, though.
-    const submittedBio = f.bio || ''
+    const submittedBio = normalizeBioBody(f.bio || '')
     const bio = submittedBio.trim() ? submittedBio : ''
     const submittedHandle = f.handle || ''
     const handle = submittedHandle.toLowerCase().replace(/^@/, '')
-    if (!/^[a-z0-9_]{2,24}$/.test(handle) || bio.length > 160) {
+    const validHandle = /^[a-z0-9_]{2,24}$/.test(handle)
+    if (!validHandle || !validBioBody(bio)) {
+      const error = [
+        !validHandle ? 'Use a 2–24 character username.' : '',
+        !validBioBody(bio) ? bioBodyValidationMessage(bio) : '',
+      ].filter(Boolean).join(' ')
       return page(
         <Profile user={user} profile={user} posts={[]} following={false} bio={bio} editHandle={submittedHandle} editing
-          error="Use a 2–24 character username and a bio up to 160 characters." />,
+          error={error} />,
         400,
       )
     }

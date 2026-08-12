@@ -155,7 +155,7 @@ describe('API writes', () => {
     expect(await response.json()).toMatchObject({
       error: {
         code: 'invalid_body',
-        message: 'Posts can contain up to 10 lines. Please reduce the number of lines.',
+        message: 'The note exceeds the limit: 11/10 lines.',
       },
     })
   })
@@ -239,11 +239,25 @@ describe('API writes', () => {
     const updated = await call(app, '/api/v1/me', { method: 'PATCH', token: 'alice-token', body: { bio: 'builder' } })
     expect((await updated.json() as any).data.bio).toBe('builder')
 
-    expect((await call(app, '/api/v1/me', {
+    const oversized = await call(app, '/api/v1/me', {
       method: 'PATCH',
       token: 'alice-token',
       body: { bio: 'x'.repeat(161) },
-    })).status).toBe(400)
+    })
+    expect(oversized.status).toBe(400)
+    expect(await oversized.json()).toMatchObject({
+      error: { code: 'invalid_bio', message: 'The bio exceeds the limit: 161/160 characters.' },
+    })
+
+    const tooManyLines = await call(app, '/api/v1/me', {
+      method: 'PATCH',
+      token: 'alice-token',
+      body: { bio: Array(6).fill('x').join('\n') },
+    })
+    expect(tooManyLines.status).toBe(400)
+    expect(await tooManyLines.json()).toMatchObject({
+      error: { code: 'invalid_bio', message: 'The bio exceeds the limit: 6/5 lines.' },
+    })
   })
 
   test('revoking a token stops it working', async () => {
