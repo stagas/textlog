@@ -658,13 +658,19 @@ test('consequential account, content, reporting, and admin flows work over HTTP'
   const sharedReplyResponse = await request(`/post/${post.id}/reply`, {
     method: 'POST',
     cookie: bobCookie,
-    form: { body: 'shared reply #shared' },
+    form: { body: 'shared reply #shared',
+      from: `/post/${post.id}?from=%2Flatest%3Fcursor%3Dabc%23post-1#post-${post.id}` },
   })
   expect(sharedReplyResponse.status).toBe(303)
   const sharedReply = database.query('SELECT id FROM posts WHERE user_id=? AND body=?').get(
     bob.id,
     'shared reply #shared',
   ) as { id: number }
+  expect(sharedReplyResponse.headers.get('location')).toBe(
+    `/post/${post.id}?from=%2Flatest%3Fcursor%3Dabc%23post-1#post-${sharedReply.id}`,
+  )
+  const sharedReplyPage = await request(sharedReplyResponse.headers.get('location')!, { cookie: bobCookie })
+  expect(await sharedReplyPage.text()).toContain('class="quiet post-back-link" href="/latest?cursor=abc#post-1">back</a>')
   const activityReadKey = `post:${sharedReply.id}`
   const forYouReadKey = `post:${String(sharedReply.id).padStart(20, '0')}`
 

@@ -8,7 +8,7 @@ import React from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
 import { HotFeed } from './components/hot-feed'
 import { ConnectionPeople, Pagination, TagPeopleList } from './components/page-shared'
-import { Post, replyAnchorReturnPath } from './components/post'
+import { Post, postedReplyPath, replyAnchorReturnPath } from './components/post'
 import { PublicFeed } from './components/public-feed'
 import { TagFeed } from './components/tag-feed'
 
@@ -1039,6 +1039,14 @@ test('thread replies use their own permanent anchor as the next return path', ()
   expect(replyAnchorReturnPath(2, 7)).toBe('/post/2#post-7')
   expect(replyAnchorReturnPath(2, 7, '/latest?cursor=abc#post-2'))
     .toBe('/post/2?from=%2Flatest%3Fcursor%3Dabc%23post-2#post-7')
+})
+
+test('a posted reply returns to its originating thread and preserves that thread back path', () => {
+  const thread = '/post/2?from=%2Flatest%3Fcursor%3Dabc%23post-2#post-7'
+  expect(postedReplyPath(7, 9, thread))
+    .toBe('/post/2?from=%2Flatest%3Fcursor%3Dabc%23post-2#post-9')
+  expect(postedReplyPath(7, 9, '/latest#post-7'))
+    .toBe('/post/7?from=%2Flatest%23post-7#post-9')
 })
 
 test('A quoted post gets its own higher-priority hit area in tappable feeds', () => {

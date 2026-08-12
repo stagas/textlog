@@ -19,6 +19,16 @@ export function replyAnchorReturnPath(threadRootId: number, replyId: number, ret
   return `/post/${threadRootId}${returnQuery}#post-${replyId}`
 }
 
+export function postedReplyPath(parentId: number, replyId: number, returnPath?: string) {
+  if (returnPath) {
+    const target = new URL(returnPath, 'http://textlog.local')
+    if (/^\/post\/[1-9]\d*$/.test(target.pathname)) {
+      return `${target.pathname}${target.search}#post-${replyId}`
+    }
+  }
+  return replyAnchorReturnPath(parentId, replyId, returnPath)
+}
+
 export function PreviewPost({ p }: { p: PostView }) {
   return (
     <article className="post" id={`post-${p.id}`}>

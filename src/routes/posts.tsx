@@ -5,6 +5,7 @@ import {
   PublicThread,
   Reply,
 } from '../components/pages'
+import { postedReplyPath } from '../components/post'
 import { moderateText, moderationMessage } from '../moderation'
 import { canPublishPosts } from '../posting-policy'
 import { createPost, enrichPosts, updatePost } from '../posts'
@@ -269,7 +270,7 @@ export function registerPostsRoutes(app: Hono) {
         )
       }
       if (!result.duplicate) notifyPost(result.id, user.id, user.handle)
-      return redirect('/post/' + parentId + (returnPath ? '?from=' + encodeURIComponent(returnPath) : ''))
+      return redirect(postedReplyPath(parentId, result.id, returnPath))
     }
     catch (error) {
       logError(`POST /post/${parentId}/reply`, error)
