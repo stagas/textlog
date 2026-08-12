@@ -1357,7 +1357,7 @@ nav form {
 .compose-heading {
   margin: 0 0 var(--space-3);
   overflow-wrap: anywhere;
-  font-size: 1.25rem;
+  font-size: 1.125rem;
   font-weight: 400;
   letter-spacing: -1px;
 }
