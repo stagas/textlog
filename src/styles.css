@@ -1415,7 +1415,7 @@ textarea {
 }
 
 .form-actions button.quiet:hover {
-  color: var(--accent-dark);
+  color: var(--tab-hover);
 }
 
 .confirm-delete h1 {
