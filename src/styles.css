@@ -894,6 +894,20 @@ nav form {
 
 .post {
   border-top: 1px solid var(--soft);
+  scroll-margin-block: var(--space-5);
+}
+
+.post:target {
+  background: color-mix(in srgb, var(--accent) 10%, transparent);
+  animation: post-target-fade 3s ease-in forwards;
+}
+
+@keyframes post-target-fade {
+  to { background: transparent; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .post:target { animation: none; }
 }
 
 .post-hit-area {

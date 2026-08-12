@@ -45,6 +45,16 @@ describe('in-memory stylesheet', () => {
     expect(css).toContain('.tappable-post .parent-hit-area {\n    position: absolute;')
   })
 
+  test('highlights a post opened through its stable anchor', async () => {
+    const css = await Bun.file(new URL('./styles.css', import.meta.url)).text()
+    expect(css).toContain('.post:target {')
+    expect(css).toContain('background: color-mix(in srgb, var(--accent) 10%, transparent);')
+    expect(css).toContain('animation: post-target-fade 3s ease-in forwards;')
+    expect(css).toContain('@keyframes post-target-fade {')
+    expect(css).toContain('@media (prefers-reduced-motion: reduce) {')
+    expect(css).not.toContain('box-shadow: inset 3px 0 var(--accent);')
+  })
+
   test('uses the active accent for the mobile tap highlight', async () => {
     const css = await Bun.file(new URL('./styles.css', import.meta.url)).text()
     expect(css).toContain('--tap-highlight: color-mix(in srgb, var(--accent) 24%, transparent);')
