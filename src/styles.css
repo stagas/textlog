@@ -1488,6 +1488,32 @@ textarea {
   align-items: center;
 }
 
+.edit-post-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-4);
+}
+
+.edit-post-delete-action {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: var(--space-3);
+}
+
+.secondary-action.edit-post-cancel {
+  color: var(--muted);
+}
+
+.secondary-action.edit-post-cancel:hover {
+  color: var(--tab-hover);
+}
+
+.edit-post-primary-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-4);
+}
+
 .secondary-action {
   padding: 0;
   color: var(--accent);
@@ -1500,6 +1526,14 @@ textarea {
 
 .secondary-action:hover {
   color: var(--accent-dark);
+}
+
+.secondary-action.danger {
+  color: var(--error-ink);
+}
+
+.secondary-action.danger:hover {
+  color: var(--danger-link-hover);
 }
 
 .confirm-delete h1 {
@@ -1517,6 +1551,15 @@ textarea {
 
 .confirm-delete form {
   margin: 0;
+}
+
+.post-delete-panel blockquote {
+  margin-block: var(--space-5);
+  border: 1px solid var(--soft);
+}
+
+.post-delete-panel .form-actions {
+  margin-top: var(--space-5);
 }
 
 .account-delete-form {
@@ -1920,15 +1963,19 @@ form.report-panel {
   border-top: 0;
 }
 
-.compose-post-preview .postauthor,
-.compose-post-preview .postdate,
-.reply-preview .postauthor,
-.reply-preview .postdate {
+.preview-post-meta {
+  position: relative;
+  z-index: 3;
+}
+
+.preview-post-meta > * {
+  color: var(--accent);
+  cursor: pointer;
   border-bottom: 1px solid var(--link-border);
 }
 
-.post .preview-reply {
-  border-bottom: 1px solid var(--link-border);
+.preview-post-meta > *:hover {
+  color: var(--accent-dark);
 }
 
 .compose-post-preview h2 {
@@ -3106,7 +3153,9 @@ form.report-panel {
 .reply-preview .postauthor,
 .reply-preview .postdate,
 .reply-preview .preview-reply {
+  color: var(--accent);
   cursor: pointer;
+  border-bottom: 1px solid var(--link-border);
 }
 
 .reply-preview .postauthor:hover,

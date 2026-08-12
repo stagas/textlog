@@ -9,7 +9,7 @@ export function Profile(
   { user, profile, posts, following, bio = profile.bio || '', editHandle = profile.handle, editEmail = profile.email,
     error, editing = false, total = posts.length, followerCount = 0, followingCount = 0, followingTagCount = 0,
     blockedPeopleCount = 0, blockedTagCount = 0, blocked = false, blockedByProfile = false, social,
-    previousCursor = null, nextCursor = null }: {
+    previousCursor = null, nextCursor = null, returnPath }: {
       user: User | null
       profile: ProfileRow
       posts: PostView[]
@@ -29,6 +29,7 @@ export function Profile(
       blockedByProfile?: boolean
       previousCursor?: string | null
       nextCursor?: string | null
+      returnPath?: string
       social?: { description: string; image: string; url: string; type?: 'article' | 'profile'; imageAlt?: string }
     },
 ) {
@@ -45,17 +46,22 @@ export function Profile(
               <span className="identity-prefix">@</span>
               {profile.handle}
             </h1>
-            {user?.id === profile.id && (
-              editing
-                ? <a className="profile-edit-link" href={'/u/' + profile.handle}>back</a>
-                : (
-                  <div className="profile-owner-actions">
-                    <a className="profile-edit-link" href="/account/edit">account</a>
-                    <form method="post" action="/logout">
-                      <button className="profile-edit-link profile-logout">logout</button>
-                    </form>
-                  </div>
-                )
+            {(returnPath || user?.id === profile.id) && (
+              <div className="profile-owner-actions">
+                {returnPath && <a className="profile-edit-link" href={returnPath}>back</a>}
+                {user?.id === profile.id && (
+                  editing
+                    ? <a className="profile-edit-link" href={'/u/' + profile.handle}>back</a>
+                    : (
+                      <>
+                        <a className="profile-edit-link" href="/account/edit">account</a>
+                        <form method="post" action="/logout">
+                          <button className="profile-edit-link profile-logout">logout</button>
+                        </form>
+                      </>
+                    )
+                )}
+              </div>
             )}
           </div>
           {user?.id === profile.id && editing

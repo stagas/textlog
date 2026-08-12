@@ -56,6 +56,24 @@ describe('in-memory stylesheet', () => {
     expect(css).toContain('.notification-actions [hidden] { display: none; }')
   })
 
+  test('keeps secondary danger actions destructive', async () => {
+    const css = await Bun.file(new URL('./styles.css', import.meta.url)).text()
+    expect(css).toContain('.secondary-action.danger {')
+    expect(css).toContain('.secondary-action.danger:hover {')
+  })
+
+  test('styles span-only preview metadata like links', async () => {
+    const css = await Bun.file(new URL('./styles.css', import.meta.url)).text()
+    expect(css).toContain('.reply-preview .preview-reply {\n  color: var(--accent);\n  cursor: pointer;')
+    expect(css).toContain('.reply-preview .preview-reply:hover {\n  color: var(--accent-dark);')
+  })
+
+  test('keeps the edit cancel action muted', async () => {
+    const css = await Bun.file(new URL('./styles.css', import.meta.url)).text()
+    expect(css).toContain('.secondary-action.edit-post-cancel {\n  color: var(--muted);')
+    expect(css).toContain('.secondary-action.edit-post-cancel:hover {\n  color: var(--tab-hover);')
+  })
+
   test('lets notification settings use the full page width', async () => {
     const css = await Bun.file(new URL('./styles.css', import.meta.url)).text()
     expect(css).toContain('.notifications-page {\n  max-width: none;\n}')

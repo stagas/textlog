@@ -1,23 +1,55 @@
 import { type User } from '../db'
-import type { PostRow } from '../types'
+import type { PostRow, PostView } from '../types'
 import { Layout } from './layout'
-import { FormActions, FormMessage } from './page-shared'
+import { Post, PreviewPost, ThreadReplies } from './post'
+import { ReplyBox, ReplyPreview } from './reply'
 
 export function EditPost(
-  { user, post, error, body = post.body }: { user: User; post: PostRow; error?: string; body?: string },
+  { user, post, parent, error, body = post.body, preview = false, returnPath }: {
+    user: User; post: PostRow; parent?: PostView | null; error?: string; body?: string; preview?: boolean
+    returnPath?: string
+  },
 ) {
+  const returnQuery = returnPath ? '?from=' + encodeURIComponent(returnPath) : ''
   return (
     <Layout user={user} title="edit post">
-      <div className="panel compose">
-        <form method="post" action={'/post/' + post.id + '/edit'}>
-          <FormMessage error={error} />
-          <textarea className="form-control" name="body" maxLength={280} required autoFocus defaultValue={body} />
-          <div className="composefoot">
-            <span>280 characters max · use #hashtags and @mentions</span>
-            <FormActions secondary={<a className="secondary-action" href={'/post/' + post.id}>cancel</a>}
-              primary={<button className="button">save changes →</button>} />
+      <div className={post.parent_id && parent ? 'post-page-thread' : undefined}>
+        {post.parent_id && parent && (
+          <div className="thread-root">
+            <Post p={parent} user={user} showReplyAction={false} showOwnerActions showModerateAction tappableParent
+              returnPath={returnPath} backHref={returnPath} />
           </div>
-        </form>
+        )}
+        {preview && post.parent_id && parent && <ReplyPreview parentId={parent.id} user={user} body={body} />}
+        {preview && !post.parent_id && (
+          <div className="compose-post-preview">
+            <h2>preview</h2>
+            <PreviewPost p={{ ...post, body, handle: user.handle, bio: user.bio }} />
+          </div>
+        )}
+        <ReplyBox action={'/post/' + post.id + '/edit'} body={body} error={error}
+          className={post.parent_id && parent ? 'replybox' : 'compose'}
+          hidden={returnPath && <input type="hidden" name="from" value={returnPath} />}
+          beforeTextarea={
+            <div className="edit-post-delete-action">
+              <a className="secondary-action danger" href={'/post/' + post.id + '/delete' + returnQuery}>
+                delete note
+              </a>
+            </div>
+          }
+          secondary={
+            <span className="edit-post-actions">
+              <a className="secondary-action edit-post-cancel" href={'/post/' + post.id + returnQuery}>cancel</a>
+            </span>
+          }
+          primary={
+            <span className="edit-post-primary-actions">
+              <button className="secondary-action" name="action" value="preview">preview</button>
+              <button className="button">save changes →</button>
+            </span>
+          } />
+        {post.parent_id && parent && <ThreadReplies parentId={parent.id} user={user} returnPath={returnPath}
+          excludePostId={post.id} />}
       </div>
     </Layout>
   )

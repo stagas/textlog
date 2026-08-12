@@ -25,6 +25,13 @@ function notifyPost(postId: number, userId: number, handle: string) {
   void sendPushForPost(postId, userId, handle).catch(error => logError('activity push failed', error))
 }
 
+function editParent(post: PostRow) {
+  if (!post.parent_id) return null
+  return db.query(`SELECT p.id,p.user_id,p.parent_id,p.body,p.created_at,p.deleted_at,
+    p.has_latex,p.has_links,p.has_code,u.handle,u.bio
+    FROM posts p JOIN users u ON u.id=p.user_id WHERE p.id=?`).get(post.parent_id) as PostView | null
+}
+
 export function registerPostsRoutes(app: Hono) {
   app.get('/write', c => {
     const user = currentUser(c.req.raw)
@@ -121,7 +128,8 @@ export function registerPostsRoutes(app: Hono) {
       : null
     if (!post) return c.text('Not found', 404)
     if (post.user_id !== user.id) return c.text('Forbidden', 403)
-    return page(<EditPost user={user} post={post} />)
+    const returnPath = c.req.query('from') ? safeNext(c.req.query('from')) : undefined
+    return page(<EditPost user={user} post={post} parent={editParent(post)} returnPath={returnPath} />)
   })
 
   app.post('/post/:id/edit', async c => {
@@ -136,20 +144,27 @@ export function registerPostsRoutes(app: Hono) {
     if (!post) return c.text('Not found', 404)
     if (post.user_id !== user.id) return c.text('Forbidden', 403)
     const f = await form(c.req.raw)
+    const returnPath = f.from ? safeNext(f.from) : undefined
     const body = normalizePostBody(f.body || '')
     if (!validPostBody(body)) {
       return page(
-        <EditPost user={user} post={post} body={body} error={postBodyValidationMessage(body)} />,
+        <EditPost user={user} post={post} parent={editParent(post)} body={body} returnPath={returnPath}
+          error={postBodyValidationMessage(body)} />,
         400,
       )
     }
+    if (f.action === 'preview') {
+      return page(<EditPost user={user} post={post} parent={editParent(post)} body={body} preview
+        returnPath={returnPath} />)
+    }
     const moderation = await moderateText(body)
     if (!moderation.ok) {
-      return page(<EditPost user={user} post={post} body={body} error={moderationMessage(moderation.reason)} />,
+      return page(<EditPost user={user} post={post} parent={editParent(post)} body={body} returnPath={returnPath}
+        error={moderationMessage(moderation.reason)} />,
         moderation.reason === 'flagged' ? 422 : 503)
     }
     updatePost(db, id, body)
-    return redirect('/post/' + id)
+    return redirect('/post/' + id + (returnPath ? '?from=' + encodeURIComponent(returnPath) : ''))
   })
 
   app.get('/post/:id/delete', c => {
@@ -162,10 +177,11 @@ export function registerPostsRoutes(app: Hono) {
       : null
     if (!post) return c.text('Not found', 404)
     if (post.user_id !== user.id) return c.text('Forbidden', 403)
-    return page(<ConfirmDelete user={user} post={post} />)
+    const returnPath = c.req.query('from') ? safeNext(c.req.query('from')) : undefined
+    return page(<ConfirmDelete user={user} post={post} returnPath={returnPath} />)
   })
 
-  app.post('/post/:id/delete', c => {
+  app.post('/post/:id/delete', async c => {
     const user = currentUser(c.req.raw)
     if (!user) return redirect('/enter')
     const id = Number(c.req.param('id'))
@@ -175,10 +191,14 @@ export function registerPostsRoutes(app: Hono) {
       : null
     if (!post) return c.text('Not found', 404)
     if (post.user_id !== user.id) return c.text('Forbidden', 403)
+    const f = await form(c.req.raw)
+    const returnPath = f.from ? safeNext(f.from) : undefined
     db.transaction(() => {
       softDeletePost(db, id)
     })()
-    return redirect(post.parent_id ? '/post/' + post.parent_id : '/')
+    return redirect(post.parent_id
+      ? '/post/' + post.parent_id + (returnPath ? '?from=' + encodeURIComponent(returnPath) : '')
+      : returnPath || '/')
   })
 
   app.post('/post/:id/reply', async c => {

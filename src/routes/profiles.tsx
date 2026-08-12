@@ -3,7 +3,7 @@ import {
   Profile,
 } from '../components/pages'
 import type { PersonView, PostView, ProfileRow } from '../types'
-import { currentPage, notFoundPage, page, paginationRedirect, redirect } from './shared'
+import { currentPage, notFoundPage, page, paginationRedirect, redirect, safeNext } from './shared'
 
 import type { Hono } from 'hono'
 import { appName } from '../brand'
@@ -65,6 +65,7 @@ export function registerProfilesRoutes(app: Hono) {
       return c.redirect(`/u/${resolved.handle}${new URL(c.req.url).search}`, 301)
     }
     const user = currentUser(c.req.raw)
+    const returnPath = c.req.query('from') ? safeNext(c.req.query('from')) : undefined
     const profilePage = currentPage(c.req.query('page'))
     const tagsPage = currentPage(c.req.query('tagsPage'))
     const profile = db.query(
@@ -120,7 +121,7 @@ export function registerProfilesRoutes(app: Hono) {
       return page(
         <Profile user={user} profile={profile} posts={[]} following={false} blocked={blocked}
           blockedByProfile={blockedByProfile} total={0} followerCount={0} followingCount={0} followingTagCount={0}
-          social={social} />,
+          social={social} returnPath={returnPath} />,
       )
     }
     if (tab === 'blocked') {
@@ -223,7 +224,7 @@ export function registerProfilesRoutes(app: Hono) {
         blocked={blocked} total={total} followerCount={counts.followerCount} followingCount={counts.followingCount}
         followingTagCount={counts.followingTagCount} blockedPeopleCount={blockCounts.blockedPeople}
         blockedTagCount={blockCounts.blockedTags} social={social} previousCursor={result.previousCursor}
-        nextCursor={result.nextCursor} />,
+        nextCursor={result.nextCursor} returnPath={returnPath} />,
     )
   })
 }

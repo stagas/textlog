@@ -1,7 +1,7 @@
 import { describe, expect, test } from 'bun:test'
 import { About, AccountApiKeyCreate, AccountMagicLink, AccountPassword, AccountSecurity, AdminDashboard, ApiDocs, Auth,
-  ChangeFont, ChangeTheme, ChooseHandle, Compose, ConfirmAccountDelete, ConfirmEmail, Connections, Contact,
-  EmbedExamples, ErrorPage, Legal, MagicLinkSent, NotFound, NotificationSettings, PasswordLogin, postTitle, Profile,
+  ChangeFont, ChangeTheme, ChooseHandle, Compose, ConfirmAccountDelete, ConfirmDelete, ConfirmEmail, Connections, Contact,
+  EditPost, EmbedExamples, ErrorPage, Legal, MagicLinkSent, NotFound, NotificationSettings, PasswordLogin, postTitle, Profile,
   Reply } from './components/pages'
 
 import React from 'react'
@@ -33,6 +33,75 @@ test('compose offers a server-rendered post preview', () => {
   expect(preview).toContain('<span class="quiet preview-reply">reply</span>')
   expect(preview).not.toContain('href="#"')
   expect(preview).not.toContain('NaN')
+})
+
+test('post edit places delete above the textarea and keeps preview before save', () => {
+  const user = { id: 1, handle: 'writer', email: 'writer@example.com', bio: '' }
+  const post = { id: 2, user_id: 1, parent_id: null, body: 'Original', created_at: '2026-08-12 09:00:00',
+    deleted_at: null }
+  const html = renderToStaticMarkup(React.createElement(EditPost, { user, post }))
+
+  expect(html).toContain('class="panel compose"')
+  expect(html).toContain('class="edit-post-actions"')
+  expect(html).toContain('class="edit-post-primary-actions"')
+  expect(html).toContain('class="edit-post-delete-action"')
+  expect(html).toContain('class="secondary-action edit-post-cancel"')
+  expect(html).toContain('class="secondary-action danger" href="/post/2/delete">delete note</a>')
+  expect(html.indexOf('>delete note</a>')).toBeLessThan(html.indexOf('<textarea'))
+  expect(html.indexOf('<textarea')).toBeLessThan(html.indexOf('>cancel</a>'))
+  expect(html.indexOf('>preview</button>')).toBeLessThan(html.indexOf('>save changes →</button>'))
+})
+
+test('post deletion uses the standard centered confirmation panel', () => {
+  const user = { id: 1, handle: 'writer', email: 'writer@example.com', bio: '' }
+  const post = { id: 2, user_id: 1, parent_id: null, body: 'Original note',
+    created_at: '2026-08-12 09:00:00', deleted_at: null }
+  const html = renderToStaticMarkup(React.createElement(ConfirmDelete, {
+    user, post, returnPath: '/latest#post-2',
+  }))
+
+  expect(html).toContain('class="auth-shell account-delete-shell post-delete-shell"')
+  expect(html).toContain('class="panel auth-panel account-delete-panel confirm-delete post-delete-panel"')
+  expect(html).toContain('<p class="eyebrow">note deletion</p>')
+  expect(html).toContain('<blockquote aria-label="Post to delete">Original note</blockquote>')
+  expect(html).toContain('class="post-delete-form" action="/post/2/delete" method="post"')
+  expect(html).toContain('name="from" value="/latest#post-2"')
+  expect(html).toContain('href="/post/2?from=%2Flatest%23post-2">cancel</a>')
+  expect(html).toContain('class="button button-danger" type="submit">delete post</button>')
+})
+
+test('editing a reply shows its parent context above the textarea', () => {
+  const user = { id: 1, handle: 'writer', email: 'writer@example.com', bio: '' }
+  const post = { id: 3, user_id: 1, parent_id: 2, body: 'My reply', created_at: '2026-08-12 10:00:00',
+    deleted_at: null }
+  const parent = { id: 2, user_id: 2, parent_id: null, body: 'Parent note', created_at: '2026-08-12 09:00:00',
+    deleted_at: null, handle: 'author' }
+  const returnPath = '/latest?cursor=abc#post-3'
+  const html = renderToStaticMarkup(React.createElement(EditPost, { user, post, parent, returnPath }))
+
+  expect(html).toContain('class="post-page-thread"')
+  expect(html).toContain('class="thread-root"')
+  expect(html).toContain('class="panel replybox"')
+  expect(html).toContain('Parent note')
+  expect(html).toContain('class="quiet post-back-link" href="/latest?cursor=abc#post-3">back</a>')
+  expect(html).toContain('name="from" value="/latest?cursor=abc#post-3"')
+  expect(html).toContain('href="/post/3/delete?from=%2Flatest%3Fcursor%3Dabc%23post-3"')
+  expect(html).toContain('href="/post/3?from=%2Flatest%3Fcursor%3Dabc%23post-3">cancel</a>')
+  expect(html.indexOf('Parent note')).toBeLessThan(html.indexOf('<textarea'))
+
+  const preview = renderToStaticMarkup(React.createElement(EditPost, {
+    user, post, parent, body: 'Edited reply', preview: true, returnPath,
+  }))
+  expect(preview).toContain('value="preview" name="action">preview</button>')
+  expect(preview).toContain('<div class="reply-preview"><p class="eyebrow">preview</p>')
+  expect(preview).toContain('Edited reply')
+  expect(preview.indexOf('<div class="reply-preview">')).toBeLessThan(preview.indexOf('<textarea'))
+  const previewPost = preview.slice(preview.indexOf('<div class="reply-preview">'),
+    preview.indexOf('<div class="panel replybox">'))
+  expect(previewPost).toContain('<div class="posttop preview-post-meta"><span class="postauthor"')
+  expect(previewPost).toContain('<span class="postdate"')
+  expect(previewPost).toContain('<span class="quiet preview-reply">reply</span>')
+  expect(previewPost).not.toContain('<a ')
 })
 
 test('reply forms offer the same server-rendered preview flow', () => {
@@ -630,11 +699,13 @@ test('Profile places owner actions in the handle row', () => {
     profile: user,
     following: false,
     posts: [],
+    returnPath: '/latest#post-2',
   }))
 
   expect(html).toContain('class="profile-title-row"')
   expect(html).toContain('class="identity-prefix">@</span>reader')
   expect(html).toContain('href="/account/edit">account</a>')
+  expect(html).toContain('href="/latest#post-2">back</a>')
   expect(html).toContain('action="/logout"')
   expect(html).toContain('type="application/rss+xml" title="Notes by @reader (RSS)" href="/u/reader.rss"')
   expect(html).toContain('type="application/atom+xml" title="Notes by @reader (Atom)" href="/u/reader.atom"')
@@ -902,7 +973,7 @@ test('Post only renders owner actions when requested by the detail view', () => 
   expect(feedHtml).not.toContain('/post/2/edit')
   expect(feedHtml).not.toContain('/post/2/delete')
   expect(detailHtml).toContain('/post/2/edit')
-  expect(detailHtml).toContain('/post/2/delete')
+  expect(detailHtml).not.toContain('/post/2/delete')
 })
 
 test('Post renders an opt-in feed hit area without changing detail posts', () => {
@@ -927,12 +998,13 @@ test('Post renders an opt-in feed hit area without changing detail posts', () =>
   expect(detailHtml).not.toContain('post-hit-area')
 })
 
-test('Post carries its originating cursor into detail and reply links', () => {
+test('Post carries its originating cursor into detail, reply, and edit links', () => {
   const html = renderToStaticMarkup(React.createElement(Post, {
     user: { id: 1, handle: 'reader', email: 'reader@example.com', bio: '',
       email_verified_at: '2026-08-12 10:00:00', handle_chosen_at: '2026-08-12 10:00:00' },
     returnPath: '/latest?cursor=abc#post-2',
     tappable: true,
+    showOwnerActions: true,
     p: {
       id: 2,
       user_id: 1,
@@ -946,12 +1018,15 @@ test('Post carries its originating cursor into detail and reply links', () => {
 
   expect(html).toContain('href="/post/2?from=%2Flatest%3Fcursor%3Dabc%23post-2"')
   expect(html).toContain('href="/post/2?reply=1&amp;from=%2Flatest%3Fcursor%3Dabc%23post-2"')
+  expect(html).toContain('href="/post/2/edit?from=%2Flatest%3Fcursor%3Dabc%23post-2"')
+  expect(html).not.toContain('/post/2/delete')
 })
 
 test('A quoted post gets its own higher-priority hit area in tappable feeds', () => {
   const html = renderToStaticMarkup(React.createElement(Post, {
-    user: null,
+    user: { id: 9, handle: 'reader', email: 'reader@example.com', bio: '' },
     tappable: true,
+    returnPath: '/latest?cursor=abc#post-2',
     p: {
       id: 2,
       user_id: 1,
@@ -972,7 +1047,10 @@ test('A quoted post gets its own higher-priority hit area in tappable feeds', ()
   }))
 
   expect(html).toContain('parent-quote tappable-parent')
-  expect(html).toContain('class="parent-hit-area" href="/post/1" aria-label="open quoted post by @parent"')
+  expect(html).toContain('class="parent-hit-area" href="/post/1?from=%2Flatest%3Fcursor%3Dabc%23post-2"')
+  expect(html).toContain('class="postauthor" href="/u/parent?from=%2Flatest%3Fcursor%3Dabc%23post-2"')
+  expect(html).toContain('class="postdate" href="/post/1?from=%2Flatest%3Fcursor%3Dabc%23post-2"')
+  expect(html).toContain('href="/post/1?reply=1&amp;from=%2Flatest%3Fcursor%3Dabc%23post-2"')
 })
 
 test('Post detail can make only its quoted parent tappable', () => {

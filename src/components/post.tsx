@@ -14,6 +14,23 @@ function renderFlags(post: PostView | NonNullable<PostView['parent']>) {
 
 export const MAX_VISIBLE_REPLY_DEPTH = 5
 
+export function PreviewPost({ p }: { p: PostView }) {
+  return (
+    <article className="post" id={`post-${p.id}`}>
+      <div className="posttop preview-post-meta">
+        <span className="postauthor" title={p.bio || 'No bio yet.'}>@{p.handle}</span>
+        <span className="postdate">
+          <time dateTime={p.created_at} title={fmtFull(p.created_at)}>{fmt(p.created_at)}</time>
+        </span>
+        <span className="quiet preview-reply">reply</span>
+      </div>
+      <p className={containsAsciiArt(p.body) ? 'ascii-art' : undefined} dangerouslySetInnerHTML={{
+        __html: linkify(p.body, p.mention_bios, [], undefined, renderFlags(p)),
+      }} />
+    </article>
+  )
+}
+
 export function Post({
   p,
   user,
@@ -44,7 +61,12 @@ export function Post({
   const isAsciiArt = containsAsciiArt(p.body)
   const replyCount = p.reply_count || 0
   const returnQuery = returnPath ? '&from=' + encodeURIComponent(returnPath) : ''
+  const actionQuery = returnPath ? '?from=' + encodeURIComponent(returnPath) : ''
   const detailPath = '/post/' + p.id + (returnPath ? '?from=' + encodeURIComponent(returnPath) : '')
+  const parentDetailPath = parent
+    ? '/post/' + parent.id + (returnPath ? '?from=' + encodeURIComponent(returnPath) : '')
+    : ''
+  const parentReplyPath = parent ? '/post/' + parent.id + '?reply=1' + returnQuery : ''
   const defaultReplyPath = '/post/' + p.id + '?reply=1' + returnQuery
   const resolvedReplyHref = replyHref
     ?? (user ? defaultReplyPath : '/enter?next=' + encodeURIComponent(defaultReplyPath))
@@ -99,8 +121,7 @@ export function Post({
         )}
         {showOwnerActions && user?.id === p.user_id && (
           <div className="post-actions">
-            <a className="quiet" href={'/post/' + p.id + '/edit'} aria-label="edit this post">edit</a>
-            <a className="quiet danger" href={'/post/' + p.id + '/delete'} aria-label="delete this post">delete</a>
+            <a className="quiet" href={'/post/' + p.id + '/edit' + actionQuery} aria-label="edit this post">edit</a>
           </div>
         )}
         {showModerateAction && isAdmin(user) && (
@@ -125,18 +146,19 @@ export function Post({
           + (hasTappableParent ? ' tappable-parent' : '')}
         >
           {hasTappableParent && (
-            <a className="parent-hit-area" href={'/post/' + parent.id}
+            <a className="parent-hit-area" href={parentDetailPath}
               aria-label={`open quoted post by @${parent.handle}`} />
           )}
           {parent.deleted_at
-            ? <a href={'/post/' + parent.id}>(deleted)</a>
+            ? <a href={parentDetailPath}>(deleted)</a>
             : (
               <>
                 <div className="parent-quote-top">
-                  <a className="postauthor" href={'/u/' + parent.handle} title={parent.bio || 'No bio yet.'}>
+                  <a className="postauthor" href={'/u/' + parent.handle + actionQuery}
+                    title={parent.bio || 'No bio yet.'}>
                     @{parent.handle}
                   </a>
-                  <a className="postdate" href={'/post/' + parent.id}>
+                  <a className="postdate" href={parentDetailPath}>
                     <time dateTime={parent.created_at} title={fmtFull(parent.created_at)}>
                       {fmt(parent.created_at)}
                     </time>
@@ -145,8 +167,8 @@ export function Post({
                     )}
                   </a>
                   <a className="quiet" href={user
-                    ? '/post/' + parent.id + '?reply=1'
-                    : '/enter?next=' + encodeURIComponent('/post/' + parent.id + '?reply=1')} rel="nofollow"
+                    ? parentReplyPath
+                    : '/enter?next=' + encodeURIComponent(parentReplyPath)} rel="nofollow"
                     aria-label={`reply to @${parent.handle}`}
                   >
                     {user ? 'reply' : 'enter to reply'}
@@ -163,8 +185,8 @@ export function Post({
   )
 }
 
-export function ThreadReplies({ parentId, user, returnPath }: { parentId: number; user: User | null;
-  returnPath?: string }) {
+export function ThreadReplies({ parentId, user, returnPath, excludePostId }: { parentId: number; user: User | null;
+  returnPath?: string; excludePostId?: number }) {
   const viewerId = user?.id ?? -1
   const rows = db.query(`WITH RECURSIVE thread AS (
       SELECT p.*,u.handle,1 depth FROM posts p JOIN users u ON u.id=p.user_id WHERE p.parent_id=? AND (? < 0 OR NOT EXISTS
@@ -207,6 +229,7 @@ export function ThreadReplies({ parentId, user, returnPath }: { parentId: number
           const continuesElsewhere = !reply.deleted_at && depth >= MAX_VISIBLE_REPLY_DEPTH && descendantCount > 0
           const childBranch = continuesElsewhere ? null : renderBranch(reply.id, depth + 1)
           if (reply.deleted_at) return <React.Fragment key={reply.id}>{childBranch}</React.Fragment>
+          if (reply.id === excludePostId) return <React.Fragment key={reply.id}>{childBranch}</React.Fragment>
           const foldControlId = childBranch ? `thread-fold-${reply.id}` : undefined
           return (
             <div className="reply-node" key={reply.id}>
