@@ -80,7 +80,7 @@ export function Reply(
       <div className="post-page-thread">
         <div className="thread-root">
           <Post p={post} user={user} showReplyAction={!showForm} showOwnerActions showModerateAction tappableParent
-            returnPath={returnPath} backHref={returnPath}
+            returnPath={returnPath} backHref={returnPath} canonicalTimestamp
             reportHref={user.id !== post.user_id && !showReport && !reported
               ? `/post/${post.id}?report=1${returnPath ? '&from=' + encodeURIComponent(returnPath) : ''}`
               : undefined} />

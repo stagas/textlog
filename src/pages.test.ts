@@ -1165,6 +1165,18 @@ test('Post carries its originating cursor into detail, reply, and edit links', (
   expect(html).not.toContain('/post/2/delete')
 })
 
+test('Post-page timestamp links to the canonical post URL', () => {
+  const html = renderToStaticMarkup(React.createElement(Post, {
+    p: { id: 2, user_id: 1, parent_id: null, body: 'A note', handle: 'writer',
+      created_at: '2026-08-03 12:00:00', deleted_at: null },
+    user: null,
+    returnPath: '/latest?page=2#post-2',
+    canonicalTimestamp: true,
+  }))
+  expect(html).toContain('class="postdate" href="/post/2"')
+  expect(html).not.toContain('class="postdate" href="/post/2?from=')
+})
+
 test('thread replies use their own permanent anchor as the next return path', () => {
   expect(replyAnchorReturnPath(2, 7)).toBe('/post/2#post-7')
   expect(replyAnchorReturnPath(2, 7, '/latest?cursor=abc#post-2'))

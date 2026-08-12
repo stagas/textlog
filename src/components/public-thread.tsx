@@ -14,7 +14,7 @@ export function PublicThread(
         <div className="thread-root">
           <Post p={post} user={null} replyHref={'/enter?next=' + encodeURIComponent('/post/' + post.id + '?reply=1'
             + (returnPath ? '&from=' + encodeURIComponent(returnPath) : ''))} replyLabel="enter to reply" tappableParent
-            backHref={returnPath} />
+            backHref={returnPath} canonicalTimestamp />
         </div>
         <ThreadReplies parentId={post.id} user={null} returnPath={returnPath} />
       </div>

@@ -66,10 +66,12 @@ export function Post({
   preview = false,
   returnPath,
   backHref,
+  canonicalTimestamp = false,
 }: { p: PostView; user: User | null; showReplyAction?: boolean; showOwnerActions?: boolean;
   showModerateAction?: boolean; showParent?: boolean; showReplyCount?: boolean; replyHref?: string; replyLabel?: string;
   reportHref?: string; foldControlId?: string; highlightTerms?: string[]; tappable?: boolean; tappableParent?: boolean;
-  contextLabel?: string; contextUnread?: boolean; preview?: boolean; returnPath?: string; backHref?: string })
+  contextLabel?: string; contextUnread?: boolean; preview?: boolean; returnPath?: string; backHref?: string;
+  canonicalTimestamp?: boolean })
 {
   const parent = showParent ? p.parent : null
   const hasTappableParent = Boolean(parent && (tappable || tappableParent))
@@ -115,7 +117,8 @@ export function Post({
             </span>
           )
           : (
-            <a className="postdate" href={detailPath} rel={navigationRel}>
+            <a className="postdate" href={canonicalTimestamp ? `/post/${p.id}` : detailPath}
+              rel={canonicalTimestamp ? undefined : navigationRel}>
               <time dateTime={p.created_at} title={fmtFull(p.created_at)}>{fmt(p.created_at)}</time>
               {showReplyCount && replyCount > 0 && (
                 <span>{' '}· {replyCount} {replyCount === 1 ? 'reply' : 'replies'}</span>
