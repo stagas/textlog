@@ -95,6 +95,7 @@ export function registerPostsRoutes(app: Hono) {
     if (!validPostBody(body)) {
       return page(<Compose user={user} body={body} error={postBodyValidationMessage(body)} />, 400)
     }
+    if (f.action === 'preview') return page(<Compose user={user} body={body} preview />)
     const moderation = await moderateText(body)
     if (!moderation.ok) {
       return page(<Compose user={user} body={body} error={moderationMessage(moderation.reason)} />,
@@ -199,6 +200,9 @@ export function registerPostsRoutes(app: Hono) {
           body={body} />,
         400,
       )
+    }
+    if (f.action === 'preview') {
+      return page(<Reply user={user} post={parent} showForm body={body} preview />)
     }
     const moderation = await moderateText(body)
     if (!moderation.ok) {

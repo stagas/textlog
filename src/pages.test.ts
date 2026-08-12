@@ -1,7 +1,7 @@
 import { describe, expect, test } from 'bun:test'
 import { About, AccountApiKeyCreate, AccountMagicLink, AccountPassword, AccountSecurity, AdminDashboard, ApiDocs, Auth,
   ChangeFont, ChangeTheme, ChooseHandle, ConfirmAccountDelete, ConfirmEmail, Connections, Contact, EmbedExamples,
-  ErrorPage, Legal, MagicLinkSent, NotFound, NotificationSettings, PasswordLogin, postTitle, Profile }
+  Compose, ErrorPage, Legal, MagicLinkSent, NotFound, NotificationSettings, PasswordLogin, postTitle, Profile, Reply }
   from './components/pages'
 
 import React from 'react'
@@ -11,6 +11,50 @@ import { ConnectionPeople, Pagination, TagPeopleList } from './components/page-s
 import { Post } from './components/post'
 import { PublicFeed } from './components/public-feed'
 import { TagFeed } from './components/tag-feed'
+
+test('compose offers a server-rendered post preview', () => {
+  const user = { id: 1, handle: 'writer', email: 'writer@example.com', bio: 'Writes things',
+    email_verified_at: '2026-08-12 10:00:00', handle_chosen_at: '2026-08-12 10:00:00' }
+  const form = renderToStaticMarkup(React.createElement(Compose, { user }))
+  const preview = renderToStaticMarkup(React.createElement(Compose, { user, body: 'Hello #world', preview: true }))
+
+  expect(form).toContain('value="preview" name="action">preview</button>')
+  expect(form.indexOf('>preview</button>')).toBeLessThan(form.indexOf('>post →</button>'))
+  expect(preview).toContain('<h2>preview</h2>')
+  expect(preview).toContain('What&#x27;s on your mind')
+  expect(preview.indexOf('<h2>preview</h2>')).toBeLessThan(preview.indexOf('<form action="/post" method="post">'))
+  expect(preview.indexOf('<h2>preview</h2>')).toBeLessThan(preview.indexOf('<h1 class="compose-heading">'))
+  expect(preview.indexOf('<h1 class="compose-heading">')).toBeLessThan(
+    preview.indexOf('<form action="/post" method="post">'),
+  )
+  expect(preview.indexOf('<form action="/post" method="post">')).toBeLessThan(preview.indexOf('<textarea'))
+  expect(preview).toContain('Hello <a href="/tag/world"')
+  expect(preview).not.toContain('href="/post/0"')
+  expect(preview).toContain('<span class="quiet preview-reply">reply</span>')
+  expect(preview).not.toContain('href="#"')
+  expect(preview).not.toContain('NaN')
+})
+
+test('reply forms offer the same server-rendered preview flow', () => {
+  const user = { id: 1, handle: 'writer', email: 'writer@example.com', bio: 'Writes things',
+    email_verified_at: '2026-08-12 10:00:00', handle_chosen_at: '2026-08-12 10:00:00' }
+  const post = { id: 2, user_id: 2, parent_id: null, body: 'Original post', created_at: '2026-08-12 09:00:00',
+    deleted_at: null, handle: 'author' }
+  const html = renderToStaticMarkup(React.createElement(Reply, {
+    user, post, showForm: true, body: 'Reply #here', preview: true,
+  }))
+
+  expect(html).toContain('value="preview" name="action">preview</button>')
+  expect(html).toContain('<div class="reply-preview"><p class="eyebrow">preview</p><div class="reply-branch">')
+  expect(html).not.toContain('<span class="post-context">preview:</span>')
+  expect(html.indexOf('<div class="reply-preview">')).toBeLessThan(html.indexOf('<div class="panel replybox">'))
+  expect(html.indexOf('<textarea')).toBeLessThan(html.indexOf('<div class="composefoot">'))
+  expect(html).toContain('Reply <a href="/tag/here"')
+  expect(html).toContain('<span class="quiet preview-reply">reply</span>')
+  expect(html).not.toContain('href="#"')
+  expect(html).not.toContain('href="/post/0"')
+  expect(html).not.toContain('NaN')
+})
 
 test('search result cards highlight tag, handle, and bio matches while keeping follow controls', () => {
   const user = { id: 1, handle: 'reader', email: 'reader@example.com', bio: '' }

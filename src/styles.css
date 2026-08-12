@@ -1398,6 +1398,10 @@ textarea {
   justify-content: flex-end;
 }
 
+.form-actions button.quiet:hover {
+  color: var(--accent-dark);
+}
+
 .confirm-delete h1 {
   font-size: 1.25rem;
 }
@@ -1777,7 +1781,48 @@ form.report-panel {
 }
 
 .composefoot .button {
-  margin-left: auto;
+  margin-left: 0;
+}
+
+.compose-post-preview {
+  width: calc(100% + 2 * var(--gutter));
+  max-width: none;
+  margin-top: var(--space-5);
+  margin-inline: calc(-1 * var(--gutter));
+  padding: 0;
+  border-bottom: 1px solid var(--soft);
+}
+
+.compose-post-preview+.compose-heading {
+  margin-top: var(--space-5);
+}
+
+.compose-post-preview .postauthor {
+  color: var(--accent);
+}
+
+.compose-post-preview .post {
+  border-top: 0;
+}
+
+.compose-post-preview .postauthor,
+.compose-post-preview .postdate,
+.reply-preview .postauthor,
+.reply-preview .postdate {
+  border-bottom: 1px solid var(--link-border);
+}
+
+.post .preview-reply {
+  border-bottom: 1px solid var(--link-border);
+}
+
+.compose-post-preview h2 {
+  margin: 0;
+  padding: var(--space-3) var(--gutter);
+  color: var(--muted);
+  border-bottom: 1px solid var(--soft);
+  font-size: 0.6875rem;
+  font-weight: 400;
 }
 
 .replybox {
@@ -2913,6 +2958,30 @@ form.report-panel {
 
 .reply-node .post p {
   font-size: 0.8125rem;
+}
+
+.reply-preview>.eyebrow {
+  margin: var(--space-4) var(--gutter) var(--space-2);
+  color: var(--muted);
+  font-size: 0.625rem;
+  text-transform: none;
+  letter-spacing: normal;
+}
+
+.reply-preview .postauthor {
+  color: var(--accent);
+}
+
+.reply-preview .postauthor,
+.reply-preview .postdate,
+.reply-preview .preview-reply {
+  cursor: pointer;
+}
+
+.reply-preview .postauthor:hover,
+.reply-preview .postdate:hover,
+.reply-preview .preview-reply:hover {
+  color: var(--accent-dark);
 }
 
 .thread-continuation {

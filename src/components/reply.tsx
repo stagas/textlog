@@ -6,9 +6,9 @@ import { FormMessage, postTitle, ReportPanel, VerificationRequired } from './pag
 import { Post, ThreadReplies } from './post'
 
 export function Reply(
-  { user, post, showForm, showReport = false, reported = false, error, body = '', social }: { user: User;
+  { user, post, showForm, showReport = false, reported = false, error, body = '', social, preview = false }: { user: User;
     post: PostView; showForm: boolean; showReport?: boolean; reported?: boolean; error?: string;
-    social?: { description: string; image: string; url: string }; body?: string },
+    social?: { description: string; image: string; url: string }; body?: string; preview?: boolean },
 ) {
   return (
     <Layout user={user} title={postTitle(post.body)} social={social}>
@@ -20,6 +20,25 @@ export function Reply(
               : undefined} />
         </div>
         {user.id !== post.user_id && <ReportPanel post={post} showForm={showReport} reported={reported} />}
+        {preview && (
+          <div className="reply-preview">
+            <p className="eyebrow">preview</p>
+            <div className="reply-branch">
+              <div className="reply-node">
+                <Post p={{
+                  id: 0,
+                  user_id: user.id,
+                  parent_id: post.id,
+                  body,
+                  created_at: new Date().toISOString().slice(0, 19).replace('T', ' '),
+                  deleted_at: null,
+                  handle: user.handle,
+                  bio: user.bio,
+                }} user={user} replyHref="#" showParent={false} preview />
+              </div>
+            </div>
+          </div>
+        )}
         {showForm && (
           canPublishPosts(user)
             ? (
@@ -30,7 +49,10 @@ export function Reply(
                     placeholder={'Reply to @' + post.handle + '…'} />
                   <div className="composefoot">
                     <span>280 characters max · use #hashtags and @mentions</span>
-                    <button className="button">post →</button>
+                    <div className="form-actions">
+                      <button className="quiet" name="action" value="preview">preview</button>
+                      <button className="button">post →</button>
+                    </div>
                   </div>
                 </form>
               </div>

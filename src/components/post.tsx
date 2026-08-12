@@ -31,10 +31,11 @@ export function Post({
   tappableParent = false,
   contextLabel,
   contextUnread = false,
+  preview = false,
 }: { p: PostView; user: User | null; showReplyAction?: boolean; showOwnerActions?: boolean;
   showModerateAction?: boolean; showParent?: boolean; showReplyCount?: boolean; replyHref?: string; replyLabel?: string;
   reportHref?: string; foldControlId?: string; highlightTerms?: string[]; tappable?: boolean; tappableParent?: boolean;
-  contextLabel?: string; contextUnread?: boolean })
+  contextLabel?: string; contextUnread?: boolean; preview?: boolean })
 {
   const parent = showParent ? p.parent : null
   const hasTappableParent = Boolean(parent && (tappable || tappableParent))
@@ -60,18 +61,26 @@ export function Post({
       {tappable && <a className="post-hit-area" href={'/post/' + p.id} aria-label={`open post by @${p.handle}`} />}
       <div className="posttop">
         {contextUnread && <span className="activity-item-unread-dot" aria-label="unread" />}
-        <a className="postauthor" href={'/u/' + p.handle} title={p.bio || 'No bio yet.'}>@{p.handle}</a>
+        {preview
+          ? <span className="postauthor" title={p.bio || 'No bio yet.'}>@{p.handle}</span>
+          : <a className="postauthor" href={'/u/' + p.handle} title={p.bio || 'No bio yet.'}>@{p.handle}</a>}
         {contextLabel && <span className="post-context">{contextLabel}</span>}
-        <a className="postdate" href={'/post/' + p.id}>
+        {preview ? <span className="postdate">
+          <time dateTime={p.created_at} title={fmtFull(p.created_at)}>{fmt(p.created_at)}</time>
+        </span> : <a className="postdate" href={'/post/' + p.id}>
           <time dateTime={p.created_at} title={fmtFull(p.created_at)}>{fmt(p.created_at)}</time>
           {showReplyCount && replyCount > 0 && <span>{' '}· {replyCount} {replyCount === 1 ? 'reply' : 'replies'}
           </span>}
-        </a>
+        </a>}
         {showReplyAction && (
-          <a className="quiet" href={resolvedReplyHref} rel="nofollow"
-            aria-label={`${resolvedReplyLabel} to @${p.handle}`}>
-            {resolvedReplyLabel}
-          </a>
+          preview
+            ? <span className="quiet preview-reply">{resolvedReplyLabel}</span>
+            : (
+              <a className="quiet" href={resolvedReplyHref} rel="nofollow"
+                aria-label={`${resolvedReplyLabel} to @${p.handle}`}>
+                {resolvedReplyLabel}
+              </a>
+            )
         )}
         {reportHref && (
           <a className="quiet report-link" href={reportHref} aria-label={`report post by @${p.handle}`}>report</a>
