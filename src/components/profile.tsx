@@ -142,6 +142,11 @@ export function Profile(
             following={followingCount} followingTags={followingTagCount} showBlocked={user?.id === profile.id}
             blockedPeople={blockedPeopleCount} blockedTags={blockedTagCount} />
         )}
+      {!editing && !blocked && !blockedByProfile && page > 1
+        && (
+          <Pagination path={'/u/' + profile.handle + (tab === 'replies' ? '?tab=replies' : '')}
+            page={page} totalPages={totalPages} top />
+        )}
       {!editing && !blocked && !blockedByProfile
         && posts.map(post => <Post key={post.id} p={post} user={user} showReplyCount tappable
           returnPath={`${feedPath}#post-${post.id}`} />)}

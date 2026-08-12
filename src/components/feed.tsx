@@ -180,6 +180,8 @@ export function Feed({ user, page = 1, title, path = '/for-you', pageUrl, notifi
     <Layout user={user} title={title} pageUrl={pageUrl} notificationBanner={notificationBanner}>
       <h1 className="visually-hidden">Your feed</h1>
       <FeedTabs active="following" user={user} forYouReadStatus={timeline.length ? hasUnread : undefined} toMe={toMe} />
+      {snapshot.page > 1
+        && <Pagination page={snapshot.page} totalPages={snapshot.totalPages} path={path} top />}
       {timeline.length
         ? timeline.map(row =>
           ['post', 'reply', 'mention'].includes(row.activity_kind)

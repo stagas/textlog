@@ -35,6 +35,8 @@ export function PublicFeed(
     >
       <h1 className="visually-hidden">Latest notes</h1>
       <FeedTabs active="latest" user={user} />
+      {snapshot.page > 1
+        && <Pagination page={snapshot.page} totalPages={snapshot.totalPages} path={path} top />}
       {posts.length
         ? posts.map(post => (
           <Post key={post.id} p={post} user={user} showReplyCount tappable

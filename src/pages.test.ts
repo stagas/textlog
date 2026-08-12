@@ -823,7 +823,8 @@ test('Compact column pagination shows labeled arrow controls and neighboring pag
 
   expect(html).toContain('aria-label="Previous page">← prev</a>')
   expect(html).toContain('aria-label="Next page">next →</a>')
-  for (const page of [4, 5, 6]) expect(html).toContain(`>${page}</`)
+  for (const page of [4, 6]) expect(html).toContain(`>${page}</`)
+  expect(html).toContain('name="tagsPage" value="5"')
 })
 
 test('Compact column pagination shows three page boxes at either edge', () => {
@@ -836,11 +837,13 @@ test('Compact column pagination shows three page boxes at either edge', () => {
     }))
 
   const first = render(1)
-  for (const page of [1, 2, 3, 17]) expect(first).toContain(`>${page}</`)
+  for (const page of [2, 3, 17]) expect(first).toContain(`>${page}</`)
+  expect(first).toContain('name="page" value="1"')
   expect(first).not.toContain('>4</')
 
   const last = render(17)
-  for (const page of [1, 15, 16, 17]) expect(last).toContain(`>${page}</`)
+  for (const page of [1, 15, 16]) expect(last).toContain(`>${page}</`)
+  expect(last).toContain('name="page" value="17"')
   expect(last).not.toContain('>14</')
 })
 
@@ -853,16 +856,41 @@ test('Standard pagination uses the same three-page window as compact columns', (
     }))
 
   const first = render(1)
-  for (const page of [1, 2, 3, 17]) expect(first).toContain(`>${page}</`)
+  for (const page of [2, 3, 17]) expect(first).toContain(`>${page}</`)
+  expect(first).toContain('name="page" value="1"')
   expect(first).not.toContain('>4</')
 
   const middle = render(9)
-  for (const page of [1, 8, 9, 10, 17]) expect(middle).toContain(`>${page}</`)
+  for (const page of [1, 8, 10, 17]) expect(middle).toContain(`>${page}</`)
+  expect(middle).toContain('name="page" value="9"')
   expect(middle).not.toContain('>7</')
 
   const last = render(17)
-  for (const page of [1, 15, 16, 17]) expect(last).toContain(`>${page}</`)
+  for (const page of [1, 15, 16]) expect(last).toContain(`>${page}</`)
+  expect(last).toContain('name="page" value="17"')
   expect(last).not.toContain('>14</')
+})
+
+test('Top pagination omits its top border', () => {
+  const html = renderToStaticMarkup(React.createElement(Pagination, {
+    page: 2,
+    totalPages: 10,
+    path: '/latest',
+    top: true,
+  }))
+  expect(html).toContain('class="pagination pagination-top"')
+})
+
+test('Current pagination page is an enter-to-navigate bounded input that preserves filters', () => {
+  const html = renderToStaticMarkup(React.createElement(Pagination, {
+    page: 5,
+    totalPages: 17,
+    path: '/u/writer?tab=replies',
+  }))
+  expect(html).toContain('<form class="pagination-current-form" action="/u/writer" method="get">')
+  expect(html).toContain('type="hidden" name="tab" value="replies"')
+  expect(html).toContain('aria-label="Current page, 5 of 17"')
+  expect(html).toContain('type="number" min="1" max="17" required="" name="page" value="5"')
 })
 
 test('Followed tags paginate every 12 tags', () => {

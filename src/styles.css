@@ -860,6 +860,29 @@ nav form {
   background: var(--button-bg);
 }
 
+.pagination-current-form {
+  margin: 0;
+}
+
+.pagination-pages .pagination-current-form .current {
+  width: 28px;
+  min-width: 28px;
+  padding: 5px 3px;
+  color: var(--button-ink);
+  background: var(--button-bg);
+  border: 0;
+  border-radius: 0;
+  font: inherit;
+  text-align: center;
+  appearance: textfield;
+}
+
+.pagination-current-form .current::-webkit-inner-spin-button,
+.pagination-current-form .current::-webkit-outer-spin-button {
+  margin: 0;
+  appearance: none;
+}
+
 .pagination-edge {
   width: max-content;
   padding: 5px 0;
@@ -890,6 +913,10 @@ nav form {
 
 .pagination-compact {
   padding-inline: 0;
+}
+
+.pagination-top {
+  border-top: 0;
 }
 
 .post {

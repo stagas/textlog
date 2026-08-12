@@ -91,6 +91,7 @@ describe('in-memory stylesheet', () => {
 
   test('uses shared component utilities for repeated visual patterns', async () => {
     const css = await Bun.file(new URL('./styles.css', import.meta.url)).text()
+    expect(css).toContain('.pagination-top {\n  border-top: 0;\n}')
     expect(css).toContain('.status-message {')
     expect(css).toContain('.status-error {')
     expect(css).toContain('.status-success {')

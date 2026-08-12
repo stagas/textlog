@@ -44,6 +44,8 @@ export function TagFeed(
           )
           : <a className="button" href="/enter" rel="nofollow">enter to follow</a>}
       </section>
+      {page > 1
+        && <Pagination page={page} totalPages={Math.ceil(total / PAGE_SIZE)} path={'/tag/' + tag} top />}
       {blocked
         ? <div className="empty relationship-notice">You blocked this tag. Unblock it to see its notes.</div>
         : posts.length

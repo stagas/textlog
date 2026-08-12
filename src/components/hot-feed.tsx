@@ -28,6 +28,8 @@ export function HotFeed(
     >
       <h1 className="visually-hidden">Hot notes</h1>
       <FeedTabs active="hot" user={user} />
+      {snapshot.page > 1
+        && <Pagination page={snapshot.page} totalPages={snapshot.totalPages} path={path} top />}
       {posts.length
         ? posts.map(post => (
           <Post key={post.id} p={post} user={user} showReplyCount tappable

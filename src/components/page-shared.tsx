@@ -127,21 +127,26 @@ export function VerificationRequired() {
   )
 }
 
-export function Pagination({ page, totalPages, path, pageParam = 'page', label = 'Pagination', compact = false }: {
+export function Pagination({ page, totalPages, path, pageParam = 'page', label = 'Pagination', compact = false,
+  top = false }: {
   page: number
   totalPages: number
   path: string
   pageParam?: string
   label?: string
   compact?: boolean
+  top?: boolean
 }) {
   if (totalPages <= 1) return null
   const separator = path.includes('?') ? '&' : '?'
+  const [formPath, formQuery = ''] = path.split('?', 2)
+  const formParameters = [...new URLSearchParams(formQuery)].filter(([name]) => name !== pageParam)
   const windowStart = Math.max(1, Math.min(page - 1, totalPages - 2))
   const windowPages = Array.from({ length: Math.min(3, totalPages) }, (_, index) => windowStart + index)
   const pages = [...new Set([1, ...windowPages, totalPages])].sort((a, b) => a - b)
   return (
-    <nav className={`pagination${compact ? ' pagination-compact' : ''}`} aria-label={label}>
+    <nav className={`pagination${compact ? ' pagination-compact' : ''}${top ? ' pagination-top' : ''}`}
+      aria-label={label}>
       {page > 1
         ? (
           <a className="pagination-edge" href={`${path}${separator}${pageParam}=${page - 1}`}
@@ -157,7 +162,15 @@ export function Pagination({ page, totalPages, path, pageParam = 'page', label =
             {index > 0 && value - pages[index - 1] > 1
               && <span className="ellipsis" aria-hidden="true">…</span>}
             {value === page
-              ? <span className="current" aria-current="page">{value}</span>
+              ? (
+                <form className="pagination-current-form" method="get" action={formPath}>
+                  {formParameters.map(([name, parameterValue]) => (
+                    <input key={`${name}:${parameterValue}`} type="hidden" name={name} value={parameterValue} />
+                  ))}
+                  <input className="current" aria-current="page" aria-label={`Current page, ${page} of ${totalPages}`}
+                    type="number" name={pageParam} min={1} max={totalPages} defaultValue={value} required />
+                </form>
+              )
               : <a href={`${path}${separator}${pageParam}=${value}`} aria-label={`Page ${value}`}>{value}</a>}
           </React.Fragment>
         ))}
