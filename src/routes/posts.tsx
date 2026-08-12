@@ -196,8 +196,7 @@ export function registerPostsRoutes(app: Hono) {
     const body = normalizePostBody(f.body || '')
     if (!validPostBody(body)) {
       return page(
-        <Reply user={user} post={parent} showForm error={postBodyValidationMessage(body, 'Replies')}
-          body={body} />,
+        <Reply user={user} post={parent} showForm error={postBodyValidationMessage(body, 'Replies')} body={body} />,
         400,
       )
     }

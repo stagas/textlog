@@ -1,5 +1,5 @@
-import { appName } from '../brand'
 import { isAdmin } from '../admin'
+import { appName } from '../brand'
 import type { User } from '../db'
 import { Layout } from './layout'
 
@@ -52,17 +52,25 @@ export function NotificationSettings({ user, publicKey, ios = false }: {
                 <label className="notification-radio-enable">
                   <span className="visually-hidden">enable new note notifications</span>
                   <input type="checkbox" name="notesEnabled" defaultChecked />
-                  <span className="notification-toggle-track" aria-hidden="true"><span /></span>
+                  <span className="notification-toggle-track" aria-hidden="true">
+                    <span />
+                  </span>
                 </label>
               </div>
               <div className="notification-radio-options">
                 <label>
                   <input type="radio" name="noteScope" value="latest" defaultChecked />
-                  <span><strong>latest</strong><small>Everything in /latest</small></span>
+                  <span>
+                    <strong>latest</strong>
+                    <small>Everything in /latest</small>
+                  </span>
                 </label>
                 <label>
                   <input type="radio" name="noteScope" value="following" />
-                  <span><strong>following</strong><small>People and tags you follow</small></span>
+                  <span>
+                    <strong>following</strong>
+                    <small>People and tags you follow</small>
+                  </span>
                 </label>
               </div>
             </fieldset>

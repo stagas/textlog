@@ -53,9 +53,10 @@ test('theme stylesheet uses mobile palettes and follows the OS for system', () =
 })
 
 test('generated system themes emit the complete static light and dark token contract', async () => {
-  const declarations = (css: string) => Object.fromEntries(
-    [...css.matchAll(/(--[\w-]+):\s*([^;}]+)(?:;|$)/g)].map(([, name, value]) => [name, value.trim()]),
-  )
+  const declarations = (css: string) =>
+    Object.fromEntries(
+      [...css.matchAll(/(--[\w-]+):\s*([^;}]+)(?:;|$)/g)].map(([, name, value]) => [name, value.trim()]),
+    )
   const staticCss = await Bun.file(new URL('./styles.css', import.meta.url)).text()
   const staticRoots = [...staticCss.matchAll(/:root\s*\{([^}]+)\}/g)].map(match => declarations(match[1]!))
   const generatedRoots = [...themeStyles(new Request('http://localhost')).matchAll(/:root\{([^}]+)\}/g)]

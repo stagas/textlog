@@ -79,8 +79,13 @@ export function Pagination({ page, totalPages, path, pageParam = 'page', label =
   return (
     <nav className={`pagination${compact ? ' pagination-compact' : ''}`} aria-label={label}>
       {page > 1
-        ? <a className="pagination-edge" href={`${path}${separator}${pageParam}=${page - 1}`}
-            aria-label="Previous page">← prev</a>
+        ? (
+          <a className="pagination-edge" href={`${path}${separator}${pageParam}=${page - 1}`}
+            aria-label="Previous page"
+          >
+            ← prev
+          </a>
+        )
         : <span className="pagination-edge placeholder" />}
       <div className="pagination-pages">
         {pages.map((value, index) => (
@@ -97,8 +102,11 @@ export function Pagination({ page, totalPages, path, pageParam = 'page', label =
         ))}
       </div>
       {page < totalPages
-        ? <a className="pagination-edge" href={`${path}${separator}${pageParam}=${page + 1}`}
-            aria-label="Next page">next →</a>
+        ? (
+          <a className="pagination-edge" href={`${path}${separator}${pageParam}=${page + 1}`} aria-label="Next page">
+            next →
+          </a>
+        )
         : <span className="pagination-edge placeholder" />}
     </nav>
   )
@@ -148,16 +156,16 @@ export function FeedTabs({ active, user, forYouReadStatus, activityReadStatus }:
           href="/for-you"
         >
           {forYouUnread && <span className="unread-dot" aria-hidden="true" />}
-          {forYouUnread && <span className="visually-hidden">unread </span>}
+          {forYouUnread && <span className="visually-hidden">unread</span>}
           for you
         </a>
       )}
       {user && (
-        <a className={active === 'activity' ? 'active' : ''}
-          aria-current={active === 'activity' ? 'page' : undefined} href="/activity"
+        <a className={active === 'activity' ? 'active' : ''} aria-current={active === 'activity' ? 'page' : undefined}
+          href="/activity"
         >
           {activityUnread && <span className="unread-dot" aria-hidden="true" />}
-          {activityUnread && <span className="visually-hidden">unread </span>}
+          {activityUnread && <span className="visually-hidden">unread</span>}
           activity
         </a>
       )}
@@ -173,7 +181,9 @@ export function FeedTabs({ active, user, forYouReadStatus, activityReadStatus }:
         <span className="feed-tabs-read-status">
           {(forYouReadStatus ?? activityReadStatus)
             ? (
-              <form method="post" action={activityReadStatus !== undefined ? '/activity/read-all' : '/for-you/read-all'}>
+              <form method="post"
+                action={activityReadStatus !== undefined ? '/activity/read-all' : '/for-you/read-all'}
+              >
                 <button className="activity-side-link">mark all as read</button>
               </form>
             )

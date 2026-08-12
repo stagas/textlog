@@ -6,9 +6,17 @@ import { FormActions, FormMessage, postTitle, ReportPanel, VerificationRequired 
 import { Post, ThreadReplies } from './post'
 
 export function Reply(
-  { user, post, showForm, showReport = false, reported = false, error, body = '', social, preview = false }: { user: User;
-    post: PostView; showForm: boolean; showReport?: boolean; reported?: boolean; error?: string;
-    social?: { description: string; image: string; url: string }; body?: string; preview?: boolean },
+  { user, post, showForm, showReport = false, reported = false, error, body = '', social, preview = false }: {
+    user: User
+    post: PostView
+    showForm: boolean
+    showReport?: boolean
+    reported?: boolean
+    error?: string
+    social?: { description: string; image: string; url: string }
+    body?: string
+    preview?: boolean
+  },
 ) {
   return (
     <Layout user={user} title={postTitle(post.body)} social={social}>
@@ -51,7 +59,8 @@ export function Reply(
                     <span>280 characters max · use #hashtags and @mentions</span>
                     <FormActions
                       secondary={<button className="secondary-action" name="action" value="preview">preview</button>}
-                      primary={<button className="button">post →</button>} />
+                      primary={<button className="button">post →</button>}
+                    />
                   </div>
                 </form>
               </div>

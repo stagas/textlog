@@ -10,8 +10,8 @@ export type PostRow = {
   has_code?: number | null
 }
 
-export type ParentPost = Pick<PostRow, 'id' | 'body' | 'created_at' | 'deleted_at' | 'has_latex' | 'has_links'
-  | 'has_code'> & {
+export type ParentPost = Pick<PostRow,
+  'id' | 'body' | 'created_at' | 'deleted_at' | 'has_latex' | 'has_links' | 'has_code'> & {
   handle: string
   bio?: string
   mention_bios?: Record<string, string>

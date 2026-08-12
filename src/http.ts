@@ -156,7 +156,8 @@ export function notificationDevice(request: Request) {
 
 export function notificationDeviceCookie(value: string, appUrl: string | undefined = Bun.env.APP_URL) {
   return `${NOTIFICATION_DEVICE_COOKIE}=${value}; Max-Age=${5 * 365 * 24 * 60 * 60}; HttpOnly; Path=/; SameSite=Lax${
-    secureCookie(appUrl)}`
+    secureCookie(appUrl)
+  }`
 }
 
 export function notificationBannerDismissed(request: Request, userId: number) {
@@ -165,7 +166,8 @@ export function notificationBannerDismissed(request: Request, userId: number) {
 
 export function notificationBannerDismissedCookie(userId: number, appUrl: string | undefined = Bun.env.APP_URL) {
   return `${NOTIFICATION_BANNER_COOKIE}=${userId}; Max-Age=${365 * 24 * 60 * 60}; HttpOnly; Path=/; SameSite=Lax${
-    secureCookie(appUrl)}`
+    secureCookie(appUrl)
+  }`
 }
 
 const publicHtmlPaths = new Set([

@@ -1,4 +1,5 @@
 import { db, type User } from '../db'
+import { hasUnreadForYou, markForYouEntriesRead } from '../for-you-state'
 import { PAGE_SIZE } from '../pagination'
 import { enrichPosts } from '../posts'
 import type { PostView } from '../types'
@@ -6,7 +7,6 @@ import { fmt, fmtFull } from '../utils'
 import { Layout } from './layout'
 import { ActionPair, CursorPagination, FeedTabs } from './page-shared'
 import { Post } from './post'
-import { hasUnreadForYou, markForYouEntriesRead } from '../for-you-state'
 
 export type ForYouCursor = { createdAt: string; key: string; direction: 'next' | 'previous' }
 
@@ -135,56 +135,71 @@ export function Feed({ user, cursor, title, path = '/for-you', pageUrl, notifica
   return (
     <Layout user={user} title={title} pageUrl={pageUrl} notificationBanner={notificationBanner}>
       <h1 className="visually-hidden">Your feed</h1>
-      <FeedTabs active="following" user={user}
-        forYouReadStatus={timeline.length ? hasUnread : undefined} />
+      <FeedTabs active="following" user={user} forYouReadStatus={timeline.length ? hasUnread : undefined} />
       {timeline.length
-        ? timeline.map(row => row.activity_kind === 'post'
-          ? <div className={`for-you-item${row.unread ? ' activity-item-unread' : ''}`} key={row.event_key}>
-              <Post p={posts.get(row.id)!} user={user} showReplyCount tappable contextUnread={!!row.unread} />
-            </div>
-          : (
-            <article className={`feed-relationship${row.activity_kind === 'user_follow'
-              ? ' feed-relationship-person'
-              : ''}${row.unread ? ' activity-item-unread' : ''}`} key={row.event_key}>
-              <div className="feed-relationship-content">
-                <div className="feed-relationship-main">
-                  {!!row.unread && <span className="unread-dot" aria-label="unread" />}
-                  <a href={`/u/${row.actor_handle}`} title={row.actor_bio || 'No bio yet.'}>@{row.actor_handle}</a>
-                  <span>{row.target_is_viewer ? 'followed you' : 'followed'}</span>
-                  {!row.target_is_viewer && row.activity_kind === 'user_follow'
-                    ? <a href={`/u/${row.target_handle}`}>@{row.target_handle}</a>
-                    : !row.target_is_viewer
-                    ? <a href={`/tag/${row.target_tag}`}>#{row.target_tag}</a>
-                    : null}
-                  <span aria-hidden="true">·</span>
-                  <time dateTime={row.created_at} title={fmtFull(row.created_at)}>{fmt(row.created_at)}</time>
-                </div>
-                {row.activity_kind === 'user_follow'
-                  && <p className="profile-bio">{row.target_bio || 'No bio yet.'}</p>}
+        ? timeline.map(row =>
+          row.activity_kind === 'post'
+            ? (
+              <div className={`for-you-item${row.unread ? ' activity-item-unread' : ''}`} key={row.event_key}>
+                <Post p={posts.get(row.id)!} user={user} showReplyCount tappable contextUnread={!!row.unread} />
               </div>
-              {!row.target_is_viewer && (
-                <form method="post" action={row.activity_kind === 'user_follow'
-                  ? `/follow/${row.target_handle}`
-                  : `/tag-follow/${row.target_tag}`}>
-                  <button className={`button${row.following ? ' button-muted' : ''}`}>
-                    {row.following ? 'unfollow' : 'follow'}
-                  </button>
-                </form>
-              )}
-            </article>
-          ))
+            )
+            : (
+              <article className={`feed-relationship${
+                row.activity_kind === 'user_follow'
+                  ? ' feed-relationship-person'
+                  : ''
+              }${row.unread ? ' activity-item-unread' : ''}`} key={row.event_key}>
+                <div className="feed-relationship-content">
+                  <div className="feed-relationship-main">
+                    {!!row.unread && <span className="unread-dot" aria-label="unread" />}
+                    <a href={`/u/${row.actor_handle}`} title={row.actor_bio || 'No bio yet.'}>@{row.actor_handle}</a>
+                    <span>{row.target_is_viewer ? 'followed you' : 'followed'}</span>
+                    {!row.target_is_viewer && row.activity_kind === 'user_follow'
+                      ? <a href={`/u/${row.target_handle}`}>@{row.target_handle}</a>
+                      : !row.target_is_viewer
+                      ? <a href={`/tag/${row.target_tag}`}>#{row.target_tag}</a>
+                      : null}
+                    <span aria-hidden="true">·</span>
+                    <time dateTime={row.created_at} title={fmtFull(row.created_at)}>{fmt(row.created_at)}</time>
+                  </div>
+                  {row.activity_kind === 'user_follow'
+                    && <p className="profile-bio">{row.target_bio || 'No bio yet.'}</p>}
+                </div>
+                {!row.target_is_viewer && (
+                  <form method="post" action={row.activity_kind === 'user_follow'
+                    ? `/follow/${row.target_handle}`
+                    : `/tag-follow/${row.target_tag}`}
+                  >
+                    <button className={`button${row.following ? ' button-muted' : ''}`}>
+                      {row.following ? 'unfollow' : 'follow'}
+                    </button>
+                  </form>
+                )}
+              </article>
+            )
+        )
         : !cursor
         ? (
           <div className="empty empty-actions">
             <p>Your timeline is empty. Follow people or hashtags to shape it.</p>
             <ActionPair
               primary={<a className="button" href="/explore">explore tags &amp; people</a>}
-              secondary={<><a href="/">browse notes</a><span className="action-separator">or</span>
-                <a href="/write">write your first note</a></>}
+              secondary={
+                <>
+                  <a href="/">browse notes</a>
+                  <span className="action-separator">or</span>
+                  <a href="/write">write your first note</a>
+                </>
+              }
             />
           </div>
         )
-        : <div className="empty">No activity on this page. <a href="/for-you">Return to the first page</a>.</div>}
+        : (
+          <div className="empty">
+            No activity on this page. <a href="/for-you">Return to the first page</a>.
+          </div>
+        )}
       <CursorPagination path={path} previousCursor={previousCursor} nextCursor={nextCursor} />
     </Layout>
   )

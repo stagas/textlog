@@ -1,4 +1,4 @@
-import { activityTimestamp, encodeActivityCursor, type ActivityCursor } from '../activity-order'
+import { type ActivityCursor, activityTimestamp, encodeActivityCursor } from '../activity-order'
 import { hasUnreadActivity, markActivityEntriesRead } from '../activity-state'
 import { isAdmin } from '../admin'
 import { db, type User } from '../db'
@@ -63,13 +63,17 @@ export function Activity({ user, cursor, title, path = '/activity', pageUrl, not
           AND u.deleted_at IS NULL AND u.suspended_at IS NULL
       ) activity LEFT JOIN activity_reads ar ON ar.user_id=? AND ar.event_key=activity.activity_key
       ${cursorFilter} ORDER BY activity_timestamp ${direction},activity.activity_key ${direction} LIMIT ?`,
-  ).all(user.id, user.id, user.id, user.id, user.id, user.id, user.id, user.id, user.id, user.id, user.id,
-    user.id, Number(isAdmin(user)), user.id,
-    ...(cursor ? [cursor.timestamp, cursor.timestamp, cursor.key] : []), PAGE_SIZE + 1) as (PostView & {
-        activity_kind: 'reply' | 'mention' | 'follow' | 'signup'; posts: number | null;
-        viewerFollowing: boolean | null; bio: string | null; activity_key: string; activity_timestamp: number;
-        unread: number
-      })[]
+  ).all(user.id, user.id, user.id, user.id, user.id, user.id, user.id, user.id, user.id, user.id, user.id, user.id,
+    Number(isAdmin(user)), user.id, ...(cursor ? [cursor.timestamp, cursor.timestamp, cursor.key] : []),
+    PAGE_SIZE + 1) as (PostView & {
+      activity_kind: 'reply' | 'mention' | 'follow' | 'signup'
+      posts: number | null
+      viewerFollowing: boolean | null
+      bio: string | null
+      activity_key: string
+      activity_timestamp: number
+      unread: number
+    })[]
   const ordered = cursor?.direction === 'previous' ? [...posts].reverse() : posts
   const hasMore = ordered.length > PAGE_SIZE
   const activityPage = cursor?.direction === 'previous' && hasMore ? ordered.slice(1) : ordered.slice(0, PAGE_SIZE)
@@ -80,12 +84,14 @@ export function Activity({ user, cursor, title, path = '/activity', pageUrl, not
       direction: 'previous' })
     : null
   const nextCursor = canGoNext && activityPage.length
-    ? encodeActivityCursor({ timestamp: activityPage.at(-1)!.activity_timestamp,
-      key: activityPage.at(-1)!.activity_key, direction: 'next' })
+    ? encodeActivityCursor({ timestamp: activityPage.at(-1)!.activity_timestamp, key: activityPage.at(-1)!.activity_key,
+      direction: 'next' })
     : null
   markActivityEntriesRead(user.id, activityPage.filter(post => post.unread).map(post => post.activity_key))
-  const activity = enrichPosts(db, activityPage.filter(post => post.activity_kind === 'reply'
-    || post.activity_kind === 'mention'), user.id)
+  const activity = enrichPosts(db, activityPage.filter(post =>
+    post.activity_kind === 'reply'
+    || post.activity_kind === 'mention'
+  ), user.id)
   const activityById = new Map(activity.map(post => [post.id, post]))
   const hasNotes = activityPage.length > 0 || !!db.query(
     'SELECT 1 FROM posts WHERE user_id=? AND deleted_at IS NULL LIMIT 1',
@@ -93,8 +99,7 @@ export function Activity({ user, cursor, title, path = '/activity', pageUrl, not
   return (
     <Layout user={user} title={title} pageUrl={pageUrl} notificationBanner={notificationBanner}>
       <h1 className="visually-hidden">activity</h1>
-      <FeedTabs active="activity" user={user}
-        activityReadStatus={activityPage.length ? hasUnread : undefined} />
+      <FeedTabs active="activity" user={user} activityReadStatus={activityPage.length ? hasUnread : undefined} />
       {activityPage.length
         ? activityPage.map((rawPost, index) => {
           const post = rawPost.activity_kind === 'reply' || rawPost.activity_kind === 'mention'
@@ -171,8 +176,13 @@ export function Activity({ user, cursor, title, path = '/activity', pageUrl, not
             </p>
             <ActionPair
               primary={<a className="button" href="/latest">browse latest notes</a>}
-              secondary={<><a href="/explore">explore</a><span className="action-separator">or</span>
-                <a href="/write">{hasNotes ? 'write a note' : 'write your first note'}</a></>}
+              secondary={
+                <>
+                  <a href="/explore">explore</a>
+                  <span className="action-separator">or</span>
+                  <a href="/write">{hasNotes ? 'write a note' : 'write your first note'}</a>
+                </>
+              }
             />
           </div>
         )

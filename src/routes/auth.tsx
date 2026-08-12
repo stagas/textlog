@@ -5,14 +5,14 @@ import { db } from '../db'
 import { sendMagicLink, sendPasswordReset } from '../email'
 import { isDevelopment } from '../environment'
 import { clearSessionCookie, safeLocalPath, sessionCookie } from '../http'
+import { logError } from '../log'
 import { moderateText, moderationMessage } from '../moderation'
+import { consumePasswordCaptcha, issuePasswordCaptcha, passwordCaptchaRequired,
+  recordFailedPassword } from '../password-login-captcha'
 import { consumePasswordLoginNonce, issuePasswordLoginNonce } from '../password-login-nonce'
-import { consumePasswordCaptcha, issuePasswordCaptcha, passwordCaptchaRequired, recordFailedPassword }
-  from '../password-login-captcha'
+import { sendPushForSignup } from '../push'
 import { insertSession, SESSION_LIFETIME_MS, sessionHash } from '../sessions'
 import { currentUser, hash, hashPassword, token, verifyPassword } from '../utils'
-import { sendPushForSignup } from '../push'
-import { logError } from '../log'
 import { authLimit, clientAddress, form, issueMagicLink, page, redirect, retryPage, safeNext } from './shared'
 
 import type { Hono } from 'hono'
@@ -71,8 +71,10 @@ export function registerAuthRoutes(app: Hono) {
 
   app.get('/enter/password', c => {
     const captcha = passwordCaptchaRequired(db) ? issuePasswordCaptcha(db) : undefined
-    return page(<PasswordLogin nonce={issuePasswordLoginNonce(db, clientAddress(c))} captcha={captcha}
-      next={safeNext(c.req.query('next'))} reset={c.req.query('reset') === '1'} />)
+    return page(
+      <PasswordLogin nonce={issuePasswordLoginNonce(db, clientAddress(c))} captcha={captcha}
+        next={safeNext(c.req.query('next'))} reset={c.req.query('reset') === '1'} />,
+    )
   })
   app.post('/enter/password', async c => {
     const f = await form(c.req.raw)
@@ -82,24 +84,31 @@ export function registerAuthRoutes(app: Hono) {
     const address = clientAddress(c)
     const loginCaptcha = () => passwordCaptchaRequired(db) ? issuePasswordCaptcha(db) : undefined
     if (!consumePasswordLoginNonce(db, f.nonce || '', address)) {
-      return page(<PasswordLogin nonce={issuePasswordLoginNonce(db, address)} identifier={identifier} next={next}
-        captcha={loginCaptcha()}
-        error="This login form has expired or was already used. Please try again." />, 400)
+      return page(
+        <PasswordLogin nonce={issuePasswordLoginNonce(db, address)} identifier={identifier} next={next}
+          captcha={loginCaptcha()} error="This login form has expired or was already used. Please try again." />,
+        400,
+      )
     }
     if (passwordCaptchaRequired(db)
-      && !consumePasswordCaptcha(db, f.captchaToken || '', f.captchaAnswer || '')) {
-      return page(<PasswordLogin nonce={issuePasswordLoginNonce(db, address)} identifier={identifier} next={next}
-        captcha={issuePasswordCaptcha(db)} error="Complete the security check and try again." />, 400)
+      && !consumePasswordCaptcha(db, f.captchaToken || '', f.captchaAnswer || ''))
+    {
+      return page(
+        <PasswordLogin nonce={issuePasswordLoginNonce(db, address)} identifier={identifier} next={next}
+          captcha={issuePasswordCaptcha(db)} error="Complete the security check and try again." />,
+        400,
+      )
     }
     const limited = authLimit(c, 'password-login-ip', address, AUTH_LIMITS.loginIp)
       || authLimit(c, 'password-login-subnet', loginSubnet(address), AUTH_LIMITS.loginSubnet)
       || authLimit(c, 'password-login-account', identifier || '(blank)', AUTH_LIMITS.loginAccount)
     if (limited) {
       return retryPage(
-        page(<PasswordLogin nonce={issuePasswordLoginNonce(db, address)} identifier={identifier} next={next}
-          captcha={loginCaptcha()}
-          error={authRateLimitMessage(limited.retryAfter)} />,
-          429),
+        page(
+          <PasswordLogin nonce={issuePasswordLoginNonce(db, address)} identifier={identifier} next={next}
+            captcha={loginCaptcha()} error={authRateLimitMessage(limited.retryAfter)} />,
+          429,
+        ),
         limited.retryAfter,
       )
     }
@@ -114,8 +123,7 @@ export function registerAuthRoutes(app: Hono) {
       recordFailedPassword(db)
       return page(
         <PasswordLogin nonce={issuePasswordLoginNonce(db, address)} identifier={identifier} next={next}
-          captcha={loginCaptcha()}
-          error="Email, handle, or password is incorrect." />,
+          captcha={loginCaptcha()} error="Email, handle, or password is incorrect." />,
         400,
       )
     }

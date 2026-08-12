@@ -1,8 +1,8 @@
 import { describe, expect, test } from 'bun:test'
 import { About, AccountApiKeyCreate, AccountMagicLink, AccountPassword, AccountSecurity, AdminDashboard, ApiDocs, Auth,
-  ChangeFont, ChangeTheme, ChooseHandle, ConfirmAccountDelete, ConfirmEmail, Connections, Contact, EmbedExamples,
-  Compose, ErrorPage, Legal, MagicLinkSent, NotFound, NotificationSettings, PasswordLogin, postTitle, Profile, Reply }
-  from './components/pages'
+  ChangeFont, ChangeTheme, ChooseHandle, Compose, ConfirmAccountDelete, ConfirmEmail, Connections, Contact,
+  EmbedExamples, ErrorPage, Legal, MagicLinkSent, NotFound, NotificationSettings, PasswordLogin, postTitle, Profile,
+  Reply } from './components/pages'
 
 import React from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
@@ -41,7 +41,11 @@ test('reply forms offer the same server-rendered preview flow', () => {
   const post = { id: 2, user_id: 2, parent_id: null, body: 'Original post', created_at: '2026-08-12 09:00:00',
     deleted_at: null, handle: 'author' }
   const html = renderToStaticMarkup(React.createElement(Reply, {
-    user, post, showForm: true, body: 'Reply #here', preview: true,
+    user,
+    post,
+    showForm: true,
+    body: 'Reply #here',
+    preview: true,
   }))
 
   expect(html).toContain('value="preview" name="action">preview</button>')
@@ -63,8 +67,8 @@ test('write and reply previews apply ASCII-art spacing rules', () => {
   const write = renderToStaticMarkup(React.createElement(Compose, { user, body: art, preview: true }))
   const reply = renderToStaticMarkup(React.createElement(Reply, {
     user,
-    post: { id: 2, user_id: 2, parent_id: null, body: 'Original', created_at: '2026-08-12 09:00:00',
-      deleted_at: null, handle: 'author' },
+    post: { id: 2, user_id: 2, parent_id: null, body: 'Original', created_at: '2026-08-12 09:00:00', deleted_at: null,
+      handle: 'author' },
     showForm: true,
     body: art.replace('#ASCII_ART', '#ascii'),
     preview: true,
@@ -444,7 +448,8 @@ describe('Auth', () => {
 
   test('password login renders a server-issued CAPTCHA when requested', () => {
     const html = renderToStaticMarkup(React.createElement(PasswordLogin, {
-      nonce: 'one-time-value', captcha: { token: 'captcha-token', image: 'data:image/svg+xml;base64,PHN2Zy8+' },
+      nonce: 'one-time-value',
+      captcha: { token: 'captcha-token', image: 'data:image/svg+xml;base64,PHN2Zy8+' },
     }))
     expect(html).toContain('name="captchaToken" value="captcha-token"')
     expect(html).toContain('name="captchaAnswer"')
@@ -708,12 +713,13 @@ test('Compact column pagination shows labeled arrow controls and neighboring pag
 })
 
 test('Compact column pagination shows three page boxes at either edge', () => {
-  const render = (page: number) => renderToStaticMarkup(React.createElement(Pagination, {
-    page,
-    totalPages: 17,
-    path: '/explore',
-    compact: true,
-  }))
+  const render = (page: number) =>
+    renderToStaticMarkup(React.createElement(Pagination, {
+      page,
+      totalPages: 17,
+      path: '/explore',
+      compact: true,
+    }))
 
   const first = render(1)
   for (const page of [1, 2, 3, 17]) expect(first).toContain(`>${page}</`)

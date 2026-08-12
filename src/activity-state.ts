@@ -1,5 +1,5 @@
-import { db } from './db'
 import { isAdminEmail } from './admin'
+import { db } from './db'
 
 export function hasUnreadActivity(userId: number) {
   const account = db.query('SELECT email FROM users WHERE id=?').get(userId) as { email: string } | null
@@ -66,8 +66,7 @@ export function markAllActivityRead(userId: number) {
       UNION ALL
       SELECT 'signup:' || u.id || ':' || u.handle_chosen_at FROM users u
         WHERE ?=1 AND u.handle_chosen_at IS NOT NULL AND u.deleted_at IS NULL AND u.suspended_at IS NULL
-    )`).run(userId, userId, userId, userId, userId, userId, userId, userId, userId, userId,
-      Number(administrator))
+    )`).run(userId, userId, userId, userId, userId, userId, userId, userId, userId, userId, Number(administrator))
     db.query(`INSERT OR IGNORE INTO for_you_reads(user_id,event_key)
       SELECT user_id,'post:' || printf('%020d',CAST(substr(event_key,6) AS INTEGER))
       FROM activity_reads WHERE user_id=? AND event_key GLOB 'post:[0-9]*'`).run(userId)

@@ -36,8 +36,7 @@
       .filter(input => input.name !== 'noteScope' && input.name !== 'notesEnabled')
       .map(input => [input.name, input.checked]))
     const noteScope = preferenceInputs.find(input => input.name === 'noteScope' && input.checked)?.value || 'latest'
-    return { ...values,
-      latest: notesEnabled.checked && noteScope === 'latest',
+    return { ...values, latest: notesEnabled.checked && noteScope === 'latest',
       followingNotes: notesEnabled.checked && noteScope === 'following' }
   }
   const syncNoteScope = () => {

@@ -37,8 +37,8 @@ describe('periodic database maintenance', () => {
     const removed = runBoundedCleanup(db, now)
 
     expect(removed).toEqual({ sessions: 1, passwordResets: 1, emailTokens: 1, accountDeletionTokens: 1,
-      passwordEnableTokens: 1, emailChangeAuthorizations: 1, magicLinks: 1, passwordLoginNonces: 1,
-      authRateLimits: 1, apiRateLimits: 1, visitors: 1 })
+      passwordEnableTokens: 1, emailChangeAuthorizations: 1, magicLinks: 1, passwordLoginNonces: 1, authRateLimits: 1,
+      apiRateLimits: 1, visitors: 1 })
     expect(db.query('SELECT expires_at FROM sessions').all()).toEqual([{ expires_at: now + 1 }])
     expect(db.query('SELECT day FROM daily_visitors').all()).toEqual([{ day: '2026-08-08' }])
   })

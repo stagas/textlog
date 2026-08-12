@@ -41,7 +41,9 @@ function emailDocument(heading: string, content: string, preheader = heading) {
   const name = escapeHtml(appName())
   const origin = appOrigin()
   const logo = origin
-    ? `<img src="${escapeHtml(new URL('/email-logo.png?v=1', origin).href)}" width="24" height="24" alt="" style="display:inline-block;width:24px;height:24px;margin-right:8px;border:0;vertical-align:-6px">`
+    ? `<img src="${
+      escapeHtml(new URL('/email-logo.png?v=1', origin).href)
+    }" width="24" height="24" alt="" style="display:inline-block;width:24px;height:24px;margin-right:8px;border:0;vertical-align:-6px">`
     : '<span style="display:inline-block;margin-right:8px;color:#749668;font-size:20px;font-weight:800;letter-spacing:-5px;vertical-align:-2px" aria-hidden="true">&gt;_</span>'
   const brand = origin
     ? `<a href="${

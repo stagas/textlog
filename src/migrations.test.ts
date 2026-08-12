@@ -97,7 +97,7 @@ describe('database migrations', () => {
     expect((database.query('SELECT created_at FROM follows WHERE follower_id=1').get() as {
       created_at: string | null
     }).created_at).not.toBeNull()
-    expect(database.query("SELECT created_at FROM hashtag_follows WHERE tag='legacy'").get())
+    expect(database.query('SELECT created_at FROM hashtag_follows WHERE tag=\'legacy\'').get())
       .toEqual({ created_at: null })
     expect(database.query('SELECT token_hash FROM sessions').get())
       .toEqual({ token_hash: sessionHash('legacy-cookie') })
@@ -133,7 +133,7 @@ describe('database migrations', () => {
     ])
     expect(database.query('SELECT tag,created_at FROM hashtag_follows').all())
       .toEqual([{ tag: 'stale', created_at: '2022-03-04 05:06:07' }])
-    expect(database.query("SELECT tag FROM tag_search WHERE tag_search MATCH 'ελλάδα'").get())
+    expect(database.query('SELECT tag FROM tag_search WHERE tag_search MATCH \'ελλάδα\'').get())
       .toEqual({ tag: 'ελλάδα' })
   })
 

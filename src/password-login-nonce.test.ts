@@ -1,7 +1,7 @@
 import { Database } from 'bun:sqlite'
 import { expect, test } from 'bun:test'
-import { consumePasswordLoginNonce, issuePasswordLoginNonce, PASSWORD_LOGIN_NONCE_LIFETIME_MS }
-  from './password-login-nonce'
+import { consumePasswordLoginNonce, issuePasswordLoginNonce,
+  PASSWORD_LOGIN_NONCE_LIFETIME_MS } from './password-login-nonce'
 
 function database() {
   const db = new Database(':memory:')

@@ -88,13 +88,15 @@ export function ConfirmEmail({ token, kind, email, invalid = false, pending = fa
               >
                 <input type="hidden" name="token" value={token} />
                 <FormActions secondary={<a className="secondary-action" href="/">cancel</a>}
-                  primary={<button className="button">
-                    {kind === 'authorize-change'
-                      ? 'approve change'
-                      : kind === 'change'
-                      ? 'change email'
-                      : 'verify email'}
-                  </button>} />
+                  primary={
+                    <button className="button">
+                      {kind === 'authorize-change'
+                        ? 'approve change'
+                        : kind === 'change'
+                        ? 'change email'
+                        : 'verify email'}
+                    </button>
+                  } />
               </form>
             </>
           )}

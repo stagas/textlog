@@ -116,13 +116,16 @@ export function ApiDocs({ user }: { user: User | null }) {
           embeds show the five newest notes and all links open {name}. See every format together on the{' '}
           <a href="/api/embed-examples">live embed examples page</a>.
         </p>
-        <CodeBlock language="html">{`<iframe
+        <CodeBlock language="html">
+          {`<iframe
   src="${origin}/embed/user/alice?theme=system&accent=sage&font=menlo"
   title="@alice on ${name}"
   width="100%" height="520" loading="lazy"
   style="border:0"
-></iframe>`}</CodeBlock>
-        <CodeBlock language="html">{`<!-- latest notes -->
+></iframe>`}
+        </CodeBlock>
+        <CodeBlock language="html">
+          {`<!-- latest notes -->
 <iframe src="${origin}/embed/latest?theme=dark&accent=purple"
   title="Latest notes on ${name}" width="100%" height="520" style="border:0"></iframe>
 
@@ -136,7 +139,8 @@ export function ApiDocs({ user }: { user: User | null }) {
 
 <!-- one post -->
 <iframe src="${origin}/embed/post/123?theme=sepia&accent=rust"
-  title="Post 123 on ${name}" width="100%" height="220" style="border:0"></iframe>`}</CodeBlock>
+  title="Post 123 on ${name}" width="100%" height="220" style="border:0"></iframe>`}
+        </CodeBlock>
         <p>
           Appearance uses the <code className="api-query-param">theme</code>,{' '}
           <code className="api-query-param">accent</code>, and <code className="api-query-param">font</code>{' '}
@@ -189,18 +193,22 @@ events.addEventListener('post', event => {
           Sign in with the code emailed alongside your magic link. Accounts are only created in a browser, so the API
           cannot sign anyone up.
         </p>
-        <CodeBlock language="bash">{`curl -X POST ${origin}/api/v1/auth/request \\
+        <CodeBlock language="bash">
+          {`curl -X POST ${origin}/api/v1/auth/request \\
   -H 'content-type: application/json' -d '{"email":"you@example.com"}'
 
 curl -X POST ${origin}/api/v1/auth/verify \\
-  -H 'content-type: application/json' -d '{"email":"you@example.com","code":"123456"}'`}</CodeBlock>
+  -H 'content-type: application/json' -d '{"email":"you@example.com","code":"123456"}'`}
+        </CodeBlock>
         <p>
           The returned token is an ordinary session. Both session tokens and generated API keys can be sent as bearer
           tokens and revoked under account security. Cookies are never accepted for writes.
         </p>
-        <CodeBlock language="bash">{`curl -X POST ${origin}/api/v1/posts \\
+        <CodeBlock language="bash">
+          {`curl -X POST ${origin}/api/v1/posts \\
   -H "authorization: Bearer $TOKEN" \\
-  -H 'content-type: application/json' -d '{"body":"hello from an app"}'`}</CodeBlock>
+  -H 'content-type: application/json' -d '{"body":"hello from an app"}'`}
+        </CodeBlock>
         <h2>Limits and errors</h2>
         <p>
           API reads are limited to 120 requests per minute per IP. Firehose clients may hold three simultaneous
@@ -208,9 +216,11 @@ curl -X POST ${origin}/api/v1/auth/verify \\
           website: three posts every five minutes. A limited response uses <code>429</code> and includes{' '}
           <code>Retry-After</code>.
         </p>
-        <CodeBlock language="json">{`{
+        <CodeBlock language="json">
+          {`{
   "error": { "code": "not_found", "message": "Post not found" }
-}`}</CodeBlock>
+}`}
+        </CodeBlock>
       </article>
     </Layout>
   )

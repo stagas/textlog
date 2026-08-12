@@ -282,8 +282,7 @@ test('consequential account, content, reporting, and admin flows work over HTTP'
     { cookie: aliceCookie },
   )
   expect(await pushPreferences.json()).toEqual({
-    preferences: { latest: 0, replies: 1, mentions: 0, follows: 1, ownPosts: 0, followActivity: 1,
-      followingNotes: 1 },
+    preferences: { latest: 0, replies: 1, mentions: 0, follows: 1, ownPosts: 0, followActivity: 1, followingNotes: 1 },
   })
   const cacheBustedHomeHtml = await (await request('/?v=94721')).text()
   expect(cacheBustedHomeHtml).toContain(`property="og:url" content="${origin}/?v=94721"`)
@@ -366,8 +365,7 @@ test('consequential account, content, reporting, and admin flows work over HTTP'
   const firstLoginNonce = await passwordLoginNonce()
   const passwordLogin = await request('/enter/password', {
     method: 'POST',
-    form: { nonce: firstLoginNonce, identifier: '@alice', password: 'alice password 123',
-      next: '/account/security' },
+    form: { nonce: firstLoginNonce, identifier: '@alice', password: 'alice password 123', next: '/account/security' },
   })
   expect(passwordLogin.status).toBe(303)
   expect(passwordLogin.headers.get('location')).toBe('/account/security')
@@ -529,9 +527,9 @@ test('consequential account, content, reporting, and admin flows work over HTTP'
   expect(followBob.status).toBe(303)
   expect(database.query('SELECT 1 FROM follows WHERE follower_id=? AND following_id=?').get(alice.id, bob.id))
     .toBeTruthy()
-  database.query("UPDATE follows SET created_at='2099-01-01 00:00:00' WHERE follower_id=? AND following_id=?")
+  database.query('UPDATE follows SET created_at=\'2099-01-01 00:00:00\' WHERE follower_id=? AND following_id=?')
     .run(bob.id, alice.id)
-  database.query("UPDATE users SET bio='Bob builds things' WHERE id=?").run(bob.id)
+  database.query('UPDATE users SET bio=\'Bob builds things\' WHERE id=?').run(bob.id)
   const followedPersonFeed = await (await request('/for-you', { cookie: aliceCookie })).text()
   expect(followedPersonFeed).toContain('<a href="/u/bob" title="Bob builds things">@bob</a><span>followed you</span>')
   expect(followedPersonFeed).not.toContain('action="/follow/alice"')
@@ -561,16 +559,17 @@ test('consequential account, content, reporting, and admin flows work over HTTP'
   await request('/tag-follow/shared', { method: 'POST', cookie: aliceCookie })
   await request('/tag-follow/shared', { method: 'POST', cookie: bobCookie })
   const unicodeTagFollow = await request('/tag-follow/' + encodeURIComponent('español'), {
-    method: 'POST', cookie: aliceCookie,
+    method: 'POST',
+    cookie: aliceCookie,
   })
   expect(unicodeTagFollow.status).toBe(303)
   expect(unicodeTagFollow.headers.get('location')).toBe('/tag/espa%C3%B1ol')
-  expect(database.query("SELECT 1 FROM hashtag_follows WHERE user_id=? AND tag='español'").get(alice.id)).toBeTruthy()
+  expect(database.query('SELECT 1 FROM hashtag_follows WHERE user_id=? AND tag=\'español\'').get(alice.id)).toBeTruthy()
   const invalidTagFollow = await request('/tag-follow/not-a-tag', { method: 'POST', cookie: aliceCookie })
   expect(invalidTagFollow.status).toBe(400)
   expect(invalidTagFollow.headers.get('content-type')).toBe('text/html;charset=utf-8')
   expect(await invalidTagFollow.text()).toContain('We couldn&#x27;t process that request.')
-  database.query("UPDATE hashtag_follows SET created_at='2099-01-02 00:00:00' WHERE user_id=? AND tag='shared'")
+  database.query('UPDATE hashtag_follows SET created_at=\'2099-01-02 00:00:00\' WHERE user_id=? AND tag=\'shared\'')
     .run(bob.id)
   const followedTagFeed = await (await request('/for-you', { cookie: aliceCookie })).text()
   expect(followedTagFeed).toContain(
@@ -578,7 +577,9 @@ test('consequential account, content, reporting, and admin flows work over HTTP'
   )
   expect(followedTagFeed).not.toContain('@alice</a><span>followed</span><a href="/tag/shared">#shared</a>')
   const sharedReplyResponse = await request(`/post/${post.id}/reply`, {
-    method: 'POST', cookie: bobCookie, form: { body: 'shared reply #shared' },
+    method: 'POST',
+    cookie: bobCookie,
+    form: { body: 'shared reply #shared' },
   })
   expect(sharedReplyResponse.status).toBe(303)
   const sharedReply = database.query('SELECT id FROM posts WHERE user_id=? AND body=?').get(

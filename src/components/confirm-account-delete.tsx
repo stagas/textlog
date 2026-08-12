@@ -62,11 +62,14 @@ export function ConfirmAccountDelete({ user, passwordEnabled = false, token, sen
                     )}
                     <FormActions
                       secondary={<a className="secondary-action" href={user ? '/account/edit' : '/'}>cancel</a>}
-                      primary={<button className={`button${emailConfirmation || passwordEnabled ? ' button-danger' : ''}`}
-                        type="submit"
-                      >
-                        {emailConfirmation || passwordEnabled ? 'delete account' : 'send confirmation link →'}
-                      </button>} />
+                      primary={
+                        <button className={`button${emailConfirmation || passwordEnabled ? ' button-danger' : ''}`}
+                          type="submit"
+                        >
+                          {emailConfirmation || passwordEnabled ? 'delete account' : 'send confirmation link →'}
+                        </button>
+                      }
+                    />
                   </form>
                 )}
             </div>

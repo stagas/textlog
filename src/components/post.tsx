@@ -65,19 +65,27 @@ export function Post({
           ? <span className="postauthor" title={p.bio || 'No bio yet.'}>@{p.handle}</span>
           : <a className="postauthor" href={'/u/' + p.handle} title={p.bio || 'No bio yet.'}>@{p.handle}</a>}
         {contextLabel && <span className="post-context">{contextLabel}</span>}
-        {preview ? <span className="postdate">
-          <time dateTime={p.created_at} title={fmtFull(p.created_at)}>{fmt(p.created_at)}</time>
-        </span> : <a className="postdate" href={'/post/' + p.id}>
-          <time dateTime={p.created_at} title={fmtFull(p.created_at)}>{fmt(p.created_at)}</time>
-          {showReplyCount && replyCount > 0 && <span>{' '}· {replyCount} {replyCount === 1 ? 'reply' : 'replies'}
-          </span>}
-        </a>}
+        {preview
+          ? (
+            <span className="postdate">
+              <time dateTime={p.created_at} title={fmtFull(p.created_at)}>{fmt(p.created_at)}</time>
+            </span>
+          )
+          : (
+            <a className="postdate" href={'/post/' + p.id}>
+              <time dateTime={p.created_at} title={fmtFull(p.created_at)}>{fmt(p.created_at)}</time>
+              {showReplyCount && replyCount > 0 && (
+                <span>{' '}· {replyCount} {replyCount === 1 ? 'reply' : 'replies'}</span>
+              )}
+            </a>
+          )}
         {showReplyAction && (
           preview
             ? <span className="quiet preview-reply">{resolvedReplyLabel}</span>
             : (
               <a className="quiet post-reply-link" href={resolvedReplyHref} rel="nofollow"
-                aria-label={`${resolvedReplyLabel} to @${p.handle}`}>
+                aria-label={`${resolvedReplyLabel} to @${p.handle}`}
+              >
                 {resolvedReplyLabel}
               </a>
             )
@@ -104,9 +112,9 @@ export function Post({
           </label>
         )}
       </div>
-      <p className={isAsciiArt ? 'ascii-art' : undefined}
-        dangerouslySetInnerHTML={{ __html: linkify(p.body, p.mention_bios, highlightTerms, undefined,
-          renderFlags(p)) }} />
+      <p className={isAsciiArt ? 'ascii-art' : undefined} dangerouslySetInnerHTML={{
+        __html: linkify(p.body, p.mention_bios, highlightTerms, undefined, renderFlags(p)),
+      }} />
       {parent && (
         <blockquote className={'parent-quote' + (parent.deleted_at ? ' deleted-parent' : '')
           + (hasTappableParent ? ' tappable-parent' : '')}
@@ -133,16 +141,15 @@ export function Post({
                   </a>
                   <a className="quiet" href={user
                     ? '/post/' + parent.id + '?reply=1'
-                    : '/enter?next=' + encodeURIComponent('/post/' + parent.id + '?reply=1')}
-                    rel="nofollow"
+                    : '/enter?next=' + encodeURIComponent('/post/' + parent.id + '?reply=1')} rel="nofollow"
                     aria-label={`reply to @${parent.handle}`}
                   >
                     {user ? 'reply' : 'enter to reply'}
                   </a>
                 </div>
-                <p className={containsAsciiArt(parent.body) ? 'ascii-art' : undefined}
-                  dangerouslySetInnerHTML={{ __html: linkify(parent.body, parent.mention_bios, [], undefined,
-                    renderFlags(parent)) }} />
+                <p className={containsAsciiArt(parent.body) ? 'ascii-art' : undefined} dangerouslySetInnerHTML={{
+                  __html: linkify(parent.body, parent.mention_bios, [], undefined, renderFlags(parent)),
+                }} />
               </>
             )}
         </blockquote>

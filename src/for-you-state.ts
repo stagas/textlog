@@ -44,11 +44,13 @@ export function markForYouEntriesRead(userId: number, eventKeys: string[]) {
   const insert = db.query('INSERT OR IGNORE INTO for_you_reads(user_id,event_key) VALUES(?,?)')
   const insertActivity = db.query(`INSERT OR IGNORE INTO activity_reads(user_id,event_key)
     VALUES(?,'post:' || CAST(? AS INTEGER))`)
-  db.transaction(() => eventKeys.forEach(eventKey => {
-    insert.run(userId, eventKey)
-    const postId = eventKey.match(/^post:(\d+)$/)?.[1]
-    if (postId) insertActivity.run(userId, postId)
-  }))()
+  db.transaction(() =>
+    eventKeys.forEach(eventKey => {
+      insert.run(userId, eventKey)
+      const postId = eventKey.match(/^post:(\d+)$/)?.[1]
+      if (postId) insertActivity.run(userId, postId)
+    })
+  )()
 }
 
 export function markAllForYouRead(userId: number) {

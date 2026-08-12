@@ -36,9 +36,11 @@ export function AdminConfirm({ user, kind, target, post, returnTo = '/admin' }: 
             <textarea name="note" maxLength={500} placeholder="Context for the audit log…" />
           </label>
           <FormActions secondary={<a className="secondary-action" href={returnTo}>cancel</a>}
-            primary={<button className={`button ${kind.includes('delete') || kind === 'suspend_user' ? 'button-danger' : ''}`}>
-              {kind.replaceAll('_', ' ')}
-            </button>} />
+            primary={
+              <button className={`button ${kind.includes('delete') || kind === 'suspend_user' ? 'button-danger' : ''}`}>
+                {kind.replaceAll('_', ' ')}
+              </button>
+            } />
         </form>
       </div>
     </Layout>

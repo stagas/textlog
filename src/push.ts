@@ -1,9 +1,9 @@
 import type { Database } from 'bun:sqlite'
 import webpush from 'web-push'
-import { db } from './db'
-import { logError } from './log'
 import { ADMIN_EMAILS } from './admin'
+import { db } from './db'
 import { isDevelopment } from './environment'
+import { logError } from './log'
 
 export type PushMessage = { title: string; body: string; url: string }
 type PushSubscriptionRow = { endpoint: string; p256dh: string; auth: string }
@@ -86,8 +86,8 @@ export async function sendPushForPost(postId: number, actorId: number, actorHand
         WHERE child.id=? AND parent.user_id=ps.user_id))
       OR (ps.notify_mentions=1 AND ps.user_id!=? AND EXISTS(
         SELECT 1 FROM post_mentions pm WHERE pm.post_id=? AND pm.user_id=ps.user_id)))`)
-    .all(actorId, postId, actorId, postId, actorId, actorId, postId, actorId,
-      actorId, actorId, postId, actorId, postId, actorId, postId) as (PushSubscriptionRow & {
+    .all(actorId, postId, actorId, postId, actorId, actorId, postId, actorId, actorId, actorId, postId, actorId, postId,
+      actorId, postId) as (PushSubscriptionRow & {
         user_id: number
         is_reply: number
         is_mention: number
@@ -152,8 +152,8 @@ export async function sendPushForUserFollow(actorId: number, actorHandle: string
   }), database, vapid)
 }
 
-export async function sendPushForTagFollow(actorId: number, actorHandle: string, tag: string,
-  database: Database = db, vapid: VapidConfiguration | null = vapidConfiguration())
+export async function sendPushForTagFollow(actorId: number, actorHandle: string, tag: string, database: Database = db,
+  vapid: VapidConfiguration | null = vapidConfiguration())
 {
   if (!vapid) return
   const subscriptions = database.query(`SELECT ps.endpoint,ps.p256dh,ps.auth FROM push_subscriptions ps

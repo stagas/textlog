@@ -61,13 +61,17 @@ export function PasswordLogin({ nonce, error, identifier = '', next, reset = fal
             </label>
             <input id="login-password" type="password" name="password" required maxLength={128}
               autoComplete="current-password" />
-            {captcha && <div className="captcha-field">
-              <label htmlFor="login-captcha"><span>security check</span></label>
-              <img src={captcha.image} alt="CAPTCHA: enter the characters shown" />
-              <input type="hidden" name="captchaToken" value={captcha.token} />
-              <input id="login-captcha" name="captchaAnswer" required maxLength={12} autoComplete="off"
-                autoCapitalize="none" spellCheck={false} />
-            </div>}
+            {captcha && (
+              <div className="captcha-field">
+                <label htmlFor="login-captcha">
+                  <span>security check</span>
+                </label>
+                <img src={captcha.image} alt="CAPTCHA: enter the characters shown" />
+                <input type="hidden" name="captchaToken" value={captcha.token} />
+                <input id="login-captcha" name="captchaAnswer" required maxLength={12} autoComplete="off"
+                  autoCapitalize="none" spellCheck={false} />
+              </div>
+            )}
             <button className="button">
               log in <span aria-hidden="true">→</span>
             </button>

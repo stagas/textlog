@@ -214,7 +214,9 @@ describe('Web Push activity delivery', () => {
     expect(deliveries).toEqual([{
       endpoint: 'https://push.example/admin',
       payload: JSON.stringify({
-        title: '@new_user signed up', body: '@new_user signed up', url: '/admin/users/5',
+        title: '@new_user signed up',
+        body: '@new_user signed up',
+        url: '/admin/users/5',
       }),
     }])
   })

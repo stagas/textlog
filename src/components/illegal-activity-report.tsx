@@ -26,12 +26,13 @@ export function IllegalActivityReport(
               <form className="form-panel report-panel" method="post" action="/report-illegal-activity">
                 <FormMessage error={error} />
                 <label className="form-label">
-                  post URL<input className="form-control" type="url" name="contentUrl" required defaultValue={values.contentUrl}
-                    placeholder={`${origin}/post/123`} />
+                  post URL<input className="form-control" type="url" name="contentUrl" required
+                    defaultValue={values.contentUrl} placeholder={`${origin}/post/123`} />
                 </label>
                 <label className="form-label">
                   category<select className="form-control form-select" name="category" required
-                    defaultValue={values.category || ''}>
+                    defaultValue={values.category || ''}
+                  >
                     <option value="" disabled>choose</option>
                     <option value="hate">illegal hate speech</option>
                     <option value="privacy">privacy violation</option>
@@ -42,15 +43,15 @@ export function IllegalActivityReport(
                   </select>
                 </label>
                 <label className="form-label">
-                  details<textarea className="form-control" name="details" required minLength={20} maxLength={3000} defaultValue={values.details}
-                    placeholder="Explain what you believe is illegal and why." />
+                  details<textarea className="form-control" name="details" required minLength={20} maxLength={3000}
+                    defaultValue={values.details} placeholder="Explain what you believe is illegal and why." />
                 </label>
                 <label className="form-label">
                   name<input className="form-control" name="name" maxLength={200} defaultValue={values.name} />
                 </label>
                 <label className="form-label">
-                  email<input className="form-control" type="email" name="email" maxLength={254} defaultValue={values.email}
-                    placeholder="you@example.com" />
+                  email<input className="form-control" type="email" name="email" maxLength={254}
+                    defaultValue={values.email} placeholder="you@example.com" />
                 </label>
                 <p className="form-hint">Name and email may be omitted only for a child-safety offence report.</p>
                 <label className="good-faith">

@@ -11,9 +11,11 @@ export function ConfirmDelete({ user, post }: { user: User; post: PostRow }) {
         <p>Its replies will remain, with this post shown as “(deleted)” when quoted.</p>
         <blockquote>{post.body}</blockquote>
         <FormActions secondary={<a className="secondary-action" href={'/post/' + post.id}>cancel</a>}
-          primary={<form method="post" action={'/post/' + post.id + '/delete'}>
-            <button className="button button-danger" type="submit">delete post</button>
-          </form>} />
+          primary={
+            <form method="post" action={'/post/' + post.id + '/delete'}>
+              <button className="button button-danger" type="submit">delete post</button>
+            </form>
+          } />
       </div>
     </Layout>
   )

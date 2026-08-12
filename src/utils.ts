@@ -4,9 +4,9 @@ import { createHash, randomBytes } from 'node:crypto'
 import tlds from 'tlds'
 import { userForApiKey } from './api-keys'
 import { sessionCookieName } from './brand'
+import type { PostContentFlags } from './content'
 import { db, type User } from './db'
 import { texToMathML } from './math'
-import type { PostContentFlags } from './content'
 import { markSessionUsed, sessionHash } from './sessions'
 
 export const esc = (v: unknown) =>
@@ -175,7 +175,8 @@ function linkTokens(body: string, flags?: PostContentFlags): LinkToken[] {
     for (const match of body.matchAll(/^```([^\r\n]*)\r?\n([\s\S]*?)\r?\n```(?=\r?$)/gm)) {
       const language = match[1].trim().toLowerCase()
       tokens.push({ index: match.index, lastIndex: match.index + match[0].length,
-        kind: language === 'latex' || language === 'tex' ? 'latex-fence' : 'code-fence', raw: match[0], label: match[2] })
+        kind: language === 'latex' || language === 'tex' ? 'latex-fence' : 'code-fence', raw: match[0],
+        label: match[2] })
     }
     for (const match of body.matchAll(/`([^`\r\n]+)`/g)) {
       tokens.push({ index: match.index, lastIndex: match.index + match[0].length, kind: 'code', raw: match[0],

@@ -19,7 +19,9 @@ describe('semanticAction', () => {
 test('HTTP logs include query parameters', () => {
   const original = console.log
   let output = ''
-  console.log = (...values: unknown[]) => { output = values.join(' ') }
+  console.log = (...values: unknown[]) => {
+    output = values.join(' ')
+  }
   try {
     logHttp('GET', '/latest?limit=20&cursor=next', 200, 12, '-')
   }

@@ -53,11 +53,18 @@ export function registerAccountRoutes(app: Hono) {
     const preferences = endpoint
       ? db.query(`SELECT notify_latest latest,notify_replies replies,notify_mentions mentions,notify_follows follows,
           notify_own_posts ownPosts,notify_follow_activity followActivity,notify_following_notes followingNotes${
-            isAdmin(user) ? ',notify_signups signups' : ''}
+        isAdmin(user) ? ',notify_signups signups' : ''
+      }
         FROM push_subscriptions WHERE endpoint=? AND user_id=?`).get(endpoint, user.id) as Record<string, number> | null
       : null
     return c.json({ preferences: preferences || {
-      latest: 1, followingNotes: 1, replies: 1, mentions: 1, follows: 1, ownPosts: 1, followActivity: 1,
+      latest: 1,
+      followingNotes: 1,
+      replies: 1,
+      mentions: 1,
+      follows: 1,
+      ownPosts: 1,
+      followActivity: 1,
       ...(isAdmin(user) ? { signups: 1 } : {}),
     } })
   })
@@ -105,9 +112,9 @@ export function registerAccountRoutes(app: Hono) {
         notify_signups=coalesce(?,push_subscriptions.notify_signups),
         notify_follow_activity=coalesce(?,push_subscriptions.notify_follow_activity),
         notify_following_notes=coalesce(?,push_subscriptions.notify_following_notes)`)
-      .run(endpoint, user.id, p256dh, auth, deviceId, latest ?? 1, replies ?? 1, mentions ?? 1, follows ?? 1, ownPosts ?? 1,
-        signups ?? 1, followActivity ?? 1, followingNotes ?? 1,
-        latest, replies, mentions, follows, ownPosts, signups, followActivity, followingNotes)
+      .run(endpoint, user.id, p256dh, auth, deviceId, latest ?? 1, replies ?? 1, mentions ?? 1, follows ?? 1,
+        ownPosts ?? 1, signups ?? 1, followActivity ?? 1, followingNotes ?? 1, latest, replies, mentions, follows,
+        ownPosts, signups, followActivity, followingNotes)
     c.header('Set-Cookie', notificationDeviceCookie(deviceId), { append: true })
     return c.json({ saved: true })
   })

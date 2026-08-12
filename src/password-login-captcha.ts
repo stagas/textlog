@@ -6,9 +6,10 @@ export const CAPTCHA_FAILURE_THRESHOLD = 10
 export const CAPTCHA_WINDOW_MS = 10 * 60 * 1000
 export const CAPTCHA_CHALLENGE_LIFETIME_MS = 5 * 60 * 1000
 
-const answerHash = (token: string, answer: string) => createHash('sha256')
-  .update(`textlog password captcha\0${token}\0${answer.trim().toLowerCase()}`)
-  .digest('hex')
+const answerHash = (token: string, answer: string) =>
+  createHash('sha256')
+    .update(`textlog password captcha\0${token}\0${answer.trim().toLowerCase()}`)
+    .digest('hex')
 
 export function passwordCaptchaRequired(database: Database, now = Date.now()) {
   if (Bun.env.ENABLE_CAPTCHA_ALWAYS === 'true') return true

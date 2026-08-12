@@ -30,7 +30,8 @@ export function loginSubnet(address: string) {
     const lastColon = ipv6.lastIndexOf(':')
     const octets = ipv6.slice(lastColon + 1).split('.').map(Number)
     ipv6 = `${ipv6.slice(0, lastColon)}:${((octets[0] << 8) | octets[1]).toString(16)}:${
-      ((octets[2] << 8) | octets[3]).toString(16)}`
+      ((octets[2] << 8) | octets[3]).toString(16)
+    }`
   }
   const [left = '', right = ''] = ipv6.split('::')
   const leftGroups = left ? left.split(':') : []

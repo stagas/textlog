@@ -13,6 +13,9 @@ import { page, redirect, rememberFeed } from './shared'
 
 import type { Hono } from 'hono'
 import { decodeActivityCursor } from '../activity-order'
+import { markAllActivityRead } from '../activity-state'
+import { db } from '../db'
+import { markAllForYouRead } from '../for-you-state'
 import { decodeHotCursor } from '../hot'
 import {
   feedPreference,
@@ -23,9 +26,6 @@ import {
 } from '../http'
 import { decodePostCursor } from '../pagination'
 import { currentUser } from '../utils'
-import { markAllActivityRead } from '../activity-state'
-import { markAllForYouRead } from '../for-you-state'
-import { db } from '../db'
 
 function showNotificationBanner(request: Request, user: ReturnType<typeof currentUser>) {
   if (!user || notificationBannerDismissed(request, user.id)) return false
@@ -47,28 +47,30 @@ export function registerFeedsRoutes(app: Hono) {
       const cursorValue = c.req.query('cursor')
       const cursor = decodeActivityCursor(cursorValue)
       if (cursorValue && !cursor) return c.text('Invalid cursor', 400)
-      return page(<Activity user={user} cursor={cursor} path="/" pageUrl={pageUrl}
-        notificationBanner={notificationBanner} />)
+      return page(
+        <Activity user={user} cursor={cursor} path="/" pageUrl={pageUrl} notificationBanner={notificationBanner} />,
+      )
     }
     if (preferredFeed === 'latest') {
       const cursorValue = c.req.query('cursor')
       const cursor = decodePostCursor(cursorValue)
       if (cursorValue && !cursor) return c.text('Invalid cursor', 400)
-      return page(<PublicFeed user={user} cursor={cursor} path="/" pageUrl={pageUrl}
-        notificationBanner={notificationBanner} />)
+      return page(
+        <PublicFeed user={user} cursor={cursor} path="/" pageUrl={pageUrl} notificationBanner={notificationBanner} />,
+      )
     }
     if (preferredFeed === 'hot' || !user) {
       const cursorValue = c.req.query('cursor')
       const cursor = decodeHotCursor(cursorValue)
       if (cursorValue && !cursor) return c.text('Invalid cursor', 400)
-      return page(<HotFeed user={user} cursor={cursor} path="/" pageUrl={pageUrl}
-        notificationBanner={notificationBanner} />)
+      return page(
+        <HotFeed user={user} cursor={cursor} path="/" pageUrl={pageUrl} notificationBanner={notificationBanner} />,
+      )
     }
     const cursorValue = c.req.query('cursor')
     const cursor = decodeForYouCursor(cursorValue)
     if (cursorValue && !cursor) return c.text('Invalid cursor', 400)
-    return page(<Feed user={user} cursor={cursor} path="/" pageUrl={pageUrl}
-      notificationBanner={notificationBanner} />)
+    return page(<Feed user={user} cursor={cursor} path="/" pageUrl={pageUrl} notificationBanner={notificationBanner} />)
   })
 
   app.get('/for-you', c => {
@@ -77,8 +79,13 @@ export function registerFeedsRoutes(app: Hono) {
     const cursorValue = c.req.query('cursor')
     const cursor = decodeForYouCursor(cursorValue)
     if (cursorValue && !cursor) return c.text('Invalid cursor', 400)
-    return rememberFeed(page(<Feed user={user} cursor={cursor} title="for you"
-      notificationBanner={showNotificationBanner(c.req.raw, user)} />), 'following')
+    return rememberFeed(
+      page(
+        <Feed user={user} cursor={cursor} title="for you"
+          notificationBanner={showNotificationBanner(c.req.raw, user)} />,
+      ),
+      'following',
+    )
   })
 
   app.get('/latest', c => {
@@ -86,8 +93,13 @@ export function registerFeedsRoutes(app: Hono) {
     const cursorValue = c.req.query('cursor')
     const cursor = decodePostCursor(cursorValue)
     if (cursorValue && !cursor) return c.text('Invalid cursor', 400)
-    return rememberFeed(page(<PublicFeed user={user} cursor={cursor} path="/latest"
-      notificationBanner={showNotificationBanner(c.req.raw, user)} />), 'latest')
+    return rememberFeed(
+      page(
+        <PublicFeed user={user} cursor={cursor} path="/latest"
+          notificationBanner={showNotificationBanner(c.req.raw, user)} />,
+      ),
+      'latest',
+    )
   })
 
   app.post('/for-you/read-all', c => {
@@ -102,8 +114,13 @@ export function registerFeedsRoutes(app: Hono) {
     const cursorValue = c.req.query('cursor')
     const cursor = decodeHotCursor(cursorValue)
     if (cursorValue && !cursor) return c.text('Invalid cursor', 400)
-    return rememberFeed(page(<HotFeed user={user} cursor={cursor} title="hot"
-      notificationBanner={showNotificationBanner(c.req.raw, user)} />), 'hot')
+    return rememberFeed(
+      page(
+        <HotFeed user={user} cursor={cursor} title="hot"
+          notificationBanner={showNotificationBanner(c.req.raw, user)} />,
+      ),
+      'hot',
+    )
   })
 
   app.post('/notifications/banner/dismiss', c => {
@@ -119,8 +136,13 @@ export function registerFeedsRoutes(app: Hono) {
     const cursorValue = c.req.query('cursor')
     const cursor = decodeActivityCursor(cursorValue)
     if (cursorValue && !cursor) return c.text('Invalid cursor', 400)
-    return rememberFeed(page(<Activity user={user} cursor={cursor} title="activity"
-      notificationBanner={showNotificationBanner(c.req.raw, user)} />), 'activity')
+    return rememberFeed(
+      page(
+        <Activity user={user} cursor={cursor} title="activity"
+          notificationBanner={showNotificationBanner(c.req.raw, user)} />,
+      ),
+      'activity',
+    )
   })
 
   app.post('/activity/read-all', c => {
