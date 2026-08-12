@@ -6,12 +6,15 @@ import { FormActions, FormMessage, postTitle, ReportPanel, VerificationRequired 
 import { Post, ThreadReplies } from './post'
 
 export function Reply(
-  { user, post, showForm, showReport = false, reported = false, error, body = '', social, preview = false }: {
+  { user, post, showForm, showReport = false, reported = false, error, body = '', reportReason = '', reportError,
+    social, preview = false }: {
     user: User
     post: PostView
     showForm: boolean
     showReport?: boolean
     reported?: boolean
+    reportReason?: string
+    reportError?: string
     error?: string
     social?: { description: string; image: string; url: string }
     body?: string
@@ -27,7 +30,9 @@ export function Reply(
               ? `/post/${post.id}?report=1`
               : undefined} />
         </div>
-        {user.id !== post.user_id && <ReportPanel post={post} showForm={showReport} reported={reported} />}
+        {user.id !== post.user_id && (
+          <ReportPanel post={post} showForm={showReport} reported={reported} reason={reportReason} error={reportError} />
+        )}
         {preview && (
           <div className="reply-preview">
             <p className="eyebrow">preview</p>

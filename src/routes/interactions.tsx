@@ -3,6 +3,7 @@ import { clientErrorPage, currentPage, form, page, redirect, usersBlocked } from
 import type { Hono } from 'hono'
 import {
   Explore,
+  Reply,
 } from '../components/pages'
 import { isValidHashtag, normalizeHashtag } from '../content'
 import { db } from '../db'
@@ -71,14 +72,20 @@ export function registerInteractionsRoutes(app: Hono) {
     if (!user) return redirect('/enter')
     const postId = Number(c.req.param('id'))
     const post = Number.isInteger(postId)
-      ? db.query('SELECT user_id FROM posts WHERE id=? AND deleted_at IS NULL')
-        .get(postId) as { user_id: number } | null
+      ? db.query(`SELECT p.*,u.handle,u.bio FROM posts p JOIN users u ON u.id=p.user_id
+        WHERE p.id=? AND p.deleted_at IS NULL`).get(postId) as import('../types').PostView | null
       : null
     if (!post) return c.text('Not found', 404)
     if (post.user_id === user.id) return c.text('You cannot report your own post', 400)
     if (usersBlocked(user.id, post.user_id)) return c.text('Not found', 404)
     const f = await form(c.req.raw)
-    if (!['harassment', 'spam', 'impersonation', 'other'].includes(f.reason)) return c.text('Invalid reason', 400)
+    if (!['harassment', 'spam', 'impersonation', 'other'].includes(f.reason)) {
+      return page(
+        <Reply user={user} post={post} showForm={false} showReport reportReason={f.reason || ''}
+          reportError="Choose a valid reason for the report." />,
+        400,
+      )
+    }
     db.query(`INSERT INTO reports(reporter_id,post_id,reason) VALUES(?,?,?)
     ON CONFLICT(reporter_id,post_id) DO UPDATE SET reason=excluded.reason,created_at=CURRENT_TIMESTAMP`)
       .run(user.id, postId, f.reason)

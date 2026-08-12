@@ -55,7 +55,8 @@ export function IllegalActivityReport(
                 </label>
                 <p className="form-hint">Name and email may be omitted only for a child-safety offence report.</p>
                 <label className="good-faith">
-                  <input className="form-checkbox" type="checkbox" name="goodFaith" value="yes" required />{' '}
+                  <input className="form-checkbox" type="checkbox" name="goodFaith" value="yes" required
+                    defaultChecked={values.goodFaith === 'yes'} />{' '}
                   I believe in good faith that this report is accurate and complete.
                 </label>
                 <FormActions primary={<button className="button">submit report</button>} />

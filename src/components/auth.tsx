@@ -33,10 +33,11 @@ export function Auth({ error, email = '', next }: { error?: string; email?: stri
   )
 }
 
-export function PasswordLogin({ nonce, error, identifier = '', next, reset = false, captcha }: {
+export function PasswordLogin({ nonce, error, identifier = '', password = '', next, reset = false, captcha }: {
   nonce: string
   error?: string
   identifier?: string
+  password?: string
   next?: string
   reset?: boolean
   captcha?: { token: string; image: string }
@@ -60,7 +61,7 @@ export function PasswordLogin({ nonce, error, identifier = '', next, reset = fal
               <span>password</span>
             </label>
             <input id="login-password" type="password" name="password" required maxLength={128}
-              autoComplete="current-password" />
+              autoComplete="current-password" defaultValue={password} />
             {captcha && (
               <div className="captcha-field">
                 <label htmlFor="login-captcha">

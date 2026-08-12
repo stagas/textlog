@@ -30,7 +30,7 @@ async function availablePort() {
 }
 
 async function waitForServer() {
-  for (let attempt = 0; attempt < 100; attempt++) {
+  for (let attempt = 0; attempt < 400; attempt++) {
     if (server.exitCode !== null) break
     try {
       const response = await fetch(`${origin}/health`)
@@ -376,7 +376,9 @@ test('consequential account, content, reporting, and admin flows work over HTTP'
     form: { nonce: firstLoginNonce, identifier: '@alice', password: 'alice password 123' },
   })
   expect(replayedLogin.status).toBe(400)
-  expect(await replayedLogin.text()).toContain('already used')
+  const replayedLoginHtml = await replayedLogin.text()
+  expect(replayedLoginHtml).toContain('already used')
+  expect(replayedLoginHtml).toContain('value="alice password 123"')
   const changedPassword = await request('/account/password/change', {
     method: 'POST',
     cookie: aliceCookie,
@@ -445,6 +447,31 @@ test('consequential account, content, reporting, and admin flows work over HTTP'
   const post = database.query('SELECT id,body FROM posts WHERE user_id=? ORDER BY id DESC LIMIT 1')
     .get(alice.id) as { id: number; body: string }
   expect(post.body).toBe('A route-level integration post')
+  const invalidPostBody = `remember post ${'x'.repeat(270)}`
+  const invalidPost = await request('/post', {
+    method: 'POST', cookie: aliceCookie, form: { body: invalidPostBody },
+  })
+  expect(invalidPost.status).toBe(400)
+  expect(await invalidPost.text()).toContain(invalidPostBody)
+  const invalidReplyBody = `remember reply ${'x'.repeat(270)}`
+  const invalidReply = await request(`/post/${post.id}/reply`, {
+    method: 'POST', cookie: aliceCookie, form: { body: invalidReplyBody },
+  })
+  expect(invalidReply.status).toBe(400)
+  expect(await invalidReply.text()).toContain(invalidReplyBody)
+  const invalidEditBody = `remember edit ${'x'.repeat(271)}`
+  const invalidEdit = await request(`/post/${post.id}/edit`, {
+    method: 'POST', cookie: aliceCookie, form: { body: invalidEditBody },
+  })
+  expect(invalidEdit.status).toBe(400)
+  expect(await invalidEdit.text()).toContain(invalidEditBody)
+  const invalidProfile = await request('/account/edit', {
+    method: 'POST', cookie: aliceCookie, form: { handle: 'Alice!', bio: 'remember profile bio' },
+  })
+  expect(invalidProfile.status).toBe(400)
+  const invalidProfileHtml = await invalidProfile.text()
+  expect(invalidProfileHtml).toContain('value="Alice!"')
+  expect(invalidProfileHtml).toContain('remember profile bio')
   const search = await request('/search?q=route-level', { cookie: aliceCookie })
   expect(search.status).toBe(200)
   expect(search.headers.get('x-robots-tag')).toBe('noindex, nofollow')
@@ -495,6 +522,23 @@ test('consequential account, content, reporting, and admin flows work over HTTP'
   expect((await request('/activity?cursor=broken', { cookie: aliceCookie })).status).toBe(303)
   expect((await request('/?cursor=broken', { cookie: aliceCookie })).status).toBe(400)
   expect((await request('/u/alice?cursor=broken')).status).toBe(400)
+
+  const invalidIllegalActivity = await request('/report-illegal-activity', {
+    method: 'POST',
+    form: {
+      contentUrl: `${origin}/post/${post.id}`,
+      category: 'fraud',
+      details: 'short but remembered',
+      name: 'Remembered Reporter',
+      email: 'not-an-email',
+      goodFaith: 'yes',
+    },
+  })
+  expect(invalidIllegalActivity.status).toBe(400)
+  const invalidIllegalHtml = await invalidIllegalActivity.text()
+  expect(invalidIllegalHtml).toContain('Remembered Reporter')
+  expect(invalidIllegalHtml).toContain('not-an-email')
+  expect(invalidIllegalHtml).toContain('checked=""')
 
   const illegalActivity = await request('/report-illegal-activity', {
     method: 'POST',
@@ -619,6 +663,13 @@ test('consequential account, content, reporting, and admin flows work over HTTP'
   expect(activitySecondBody).toContain('oldest cursor boundary')
   expect(activitySecondBody).not.toContain('activity cursor reply 21')
   expect(activitySecondBody).toContain('← prev')
+  const invalidReport = await request(`/post/${post.id}/report`, {
+    method: 'POST', cookie: bobCookie, form: { reason: 'remember-invalid-reason' },
+  })
+  expect(invalidReport.status).toBe(400)
+  const invalidReportHtml = await invalidReport.text()
+  expect(invalidReportHtml).toContain('value="remember-invalid-reason"')
+  expect(invalidReportHtml).toContain('hidden="" selected=""')
   const report = await request(`/post/${post.id}/report`, {
     method: 'POST',
     cookie: bobCookie,

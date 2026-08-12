@@ -148,10 +148,11 @@ export function registerAccountRoutes(app: Hono) {
     // Treat an entirely blank submission as an empty bio, though.
     const submittedBio = f.bio || ''
     const bio = submittedBio.trim() ? submittedBio : ''
-    const handle = (f.handle || '').toLowerCase().replace(/^@/, '')
+    const submittedHandle = f.handle || ''
+    const handle = submittedHandle.toLowerCase().replace(/^@/, '')
     if (!/^[a-z0-9_]{2,24}$/.test(handle) || bio.length > 160) {
       return page(
-        <Profile user={user} profile={user} posts={[]} following={false} bio={bio} editHandle={handle} editing
+        <Profile user={user} profile={user} posts={[]} following={false} bio={bio} editHandle={submittedHandle} editing
           error="Use a 2–24 character username and a bio up to 160 characters." />,
         400,
       )
@@ -160,7 +161,7 @@ export function registerAccountRoutes(app: Hono) {
       const moderation = await moderateText(`username: ${handle}\nbio: ${bio}`)
       if (!moderation.ok) {
         return page(
-          <Profile user={user} profile={user} posts={[]} following={false} bio={bio} editHandle={handle} editing
+          <Profile user={user} profile={user} posts={[]} following={false} bio={bio} editHandle={submittedHandle} editing
             error={moderationMessage(moderation.reason)} />,
           moderation.reason === 'flagged' ? 422 : 503,
         )
@@ -171,7 +172,7 @@ export function registerAccountRoutes(app: Hono) {
     }
     catch {
       return page(
-        <Profile user={user} profile={user} posts={[]} following={false} bio={bio} editHandle={handle} editing
+        <Profile user={user} profile={user} posts={[]} following={false} bio={bio} editHandle={submittedHandle} editing
           error="That username is unavailable." />,
         400,
       )

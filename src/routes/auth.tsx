@@ -86,7 +86,8 @@ export function registerAuthRoutes(app: Hono) {
     if (!consumePasswordLoginNonce(db, f.nonce || '', address)) {
       return page(
         <PasswordLogin nonce={issuePasswordLoginNonce(db, address)} identifier={identifier} next={next}
-          captcha={loginCaptcha()} error="This login form has expired or was already used. Please try again." />,
+          password={password} captcha={loginCaptcha()}
+          error="This login form has expired or was already used. Please try again." />,
         400,
       )
     }
@@ -95,7 +96,7 @@ export function registerAuthRoutes(app: Hono) {
     {
       return page(
         <PasswordLogin nonce={issuePasswordLoginNonce(db, address)} identifier={identifier} next={next}
-          captcha={issuePasswordCaptcha(db)} error="Complete the security check and try again." />,
+          password={password} captcha={issuePasswordCaptcha(db)} error="Complete the security check and try again." />,
         400,
       )
     }
@@ -106,7 +107,7 @@ export function registerAuthRoutes(app: Hono) {
       return retryPage(
         page(
           <PasswordLogin nonce={issuePasswordLoginNonce(db, address)} identifier={identifier} next={next}
-            captcha={loginCaptcha()} error={authRateLimitMessage(limited.retryAfter)} />,
+            password={password} captcha={loginCaptcha()} error={authRateLimitMessage(limited.retryAfter)} />,
           429,
         ),
         limited.retryAfter,
@@ -123,7 +124,7 @@ export function registerAuthRoutes(app: Hono) {
       recordFailedPassword(db)
       return page(
         <PasswordLogin nonce={issuePasswordLoginNonce(db, address)} identifier={identifier} next={next}
-          captcha={loginCaptcha()} error="Email, handle, or password is incorrect." />,
+          password={password} captcha={loginCaptcha()} error="Email, handle, or password is incorrect." />,
         400,
       )
     }

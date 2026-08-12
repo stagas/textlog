@@ -427,7 +427,9 @@ export function ConnectionPeople({ user, people, className = '', highlightTerms 
   )
 }
 
-export function ReportPanel({ post, showForm, reported }: { post: PostView; showForm: boolean; reported: boolean }) {
+export function ReportPanel({ post, showForm, reported, reason = '', error }: {
+  post: PostView; showForm: boolean; reported: boolean; reason?: string; error?: string
+}) {
   if (reported) {
     return (
       <div className="report-status" role="status">
@@ -442,10 +444,13 @@ export function ReportPanel({ post, showForm, reported }: { post: PostView; show
   return (
     <div className="panel report-panel">
       <form method="post" action={`/post/${post.id}/report`}>
+        <FormMessage error={error} />
         <label className="form-label">
           reason
-          <select className="form-control form-select" name="reason" required defaultValue="">
+          <select className="form-control form-select" name="reason" required defaultValue={reason}>
             <option value="" disabled>choose a reason</option>
+            {reason && !['harassment', 'spam', 'impersonation', 'other'].includes(reason)
+              && <option value={reason} hidden>{reason}</option>}
             <option value="harassment">harassment</option>
             <option value="spam">spam</option>
             <option value="impersonation">impersonation</option>
