@@ -56,6 +56,24 @@ test('reply forms offer the same server-rendered preview flow', () => {
   expect(html).not.toContain('NaN')
 })
 
+test('write and reply previews apply ASCII-art spacing rules', () => {
+  const user = { id: 1, handle: 'writer', email: 'writer@example.com', bio: '',
+    email_verified_at: '2026-08-12 10:00:00', handle_chosen_at: '2026-08-12 10:00:00' }
+  const art = ' /\\_/\\\n( o.o )\n #ASCII_ART'
+  const write = renderToStaticMarkup(React.createElement(Compose, { user, body: art, preview: true }))
+  const reply = renderToStaticMarkup(React.createElement(Reply, {
+    user,
+    post: { id: 2, user_id: 2, parent_id: null, body: 'Original', created_at: '2026-08-12 09:00:00',
+      deleted_at: null, handle: 'author' },
+    showForm: true,
+    body: art.replace('#ASCII_ART', '#ascii'),
+    preview: true,
+  }))
+
+  expect(write).toContain('<p class="ascii-art">')
+  expect(reply).toContain('<p class="ascii-art">')
+})
+
 test('search result cards highlight tag, handle, and bio matches while keeping follow controls', () => {
   const user = { id: 1, handle: 'reader', email: 'reader@example.com', bio: '' }
   const tags = renderToStaticMarkup(React.createElement(TagPeopleList, {

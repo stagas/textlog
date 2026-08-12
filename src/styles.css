@@ -3043,3 +3043,8 @@ form.report-panel {
 .post p.ascii-art {
   line-height: 1.15;
 }
+
+.compose-post-preview .post p.ascii-art,
+.reply-preview .post p.ascii-art {
+  line-height: 1.15;
+}
