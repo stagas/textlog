@@ -898,7 +898,7 @@ nav form {
 }
 
 .post:target {
-  background: color-mix(in srgb, var(--accent) 10%, transparent);
+  background: rgb(128 128 128 / 25%);
   animation: post-target-fade 3s ease-in forwards;
 }
 

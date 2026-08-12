@@ -48,7 +48,7 @@ describe('in-memory stylesheet', () => {
   test('highlights a post opened through its stable anchor', async () => {
     const css = await Bun.file(new URL('./styles.css', import.meta.url)).text()
     expect(css).toContain('.post:target {')
-    expect(css).toContain('background: color-mix(in srgb, var(--accent) 10%, transparent);')
+    expect(css).toContain('background: rgb(128 128 128 / 25%);')
     expect(css).toContain('animation: post-target-fade 3s ease-in forwards;')
     expect(css).toContain('@keyframes post-target-fade {')
     expect(css).toContain('@media (prefers-reduced-motion: reduce) {')
