@@ -178,6 +178,29 @@ test('notification banner is hidden from logged-out visitors', async () => {
   }
 })
 
+test('Product Hunt banner appears above notifications and can be dismissed', async () => {
+  const publicHome = await request('/')
+  const publicHtml = await publicHome.text()
+  expect(publicHtml).toContain('class="product-hunt-banner"')
+  expect(publicHtml).toContain('href="https://www.producthunt.com/products/textlog-2"')
+  expect(publicHtml).toContain('support us on product hunt</a>')
+  expect(await (await request('/about')).text()).toContain('class="product-hunt-banner"')
+
+  const dismissed = await request('/product-hunt/banner/dismiss', { method: 'POST' })
+  expect(dismissed.status).toBe(303)
+  const dismissedCookie = dismissed.headers.get('set-cookie')?.match(/product_hunt_banner_dismissed=[^;]+/)?.[0]
+  expect(dismissedCookie).toBeDefined()
+  const dismissedHtml = await (await request('/', { cookie: dismissedCookie })).text()
+  expect(dismissedHtml).not.toContain('class="product-hunt-banner"')
+  expect(await (await request('/about', { cookie: dismissedCookie })).text())
+    .not.toContain('class="product-hunt-banner"')
+
+  const aliceCookie = await signup('banner_order', 'banner-order@example.com', 'unused')
+  const authenticatedHtml = await (await request('/', { cookie: aliceCookie })).text()
+  expect(authenticatedHtml.indexOf('class="product-hunt-banner"'))
+    .toBeLessThan(authenticatedHtml.indexOf('class="notification-banner"'))
+})
+
 test('email code signs up and invalidates its matching magic link', async () => {
   const email = 'code-signup@example.com'
   const sent = await request('/enter', { method: 'POST', form: { email, next: '/about' } })

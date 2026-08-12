@@ -1,5 +1,6 @@
 import { appHost, appName, appOrigin } from '../brand'
-import { activeAppearance, activeThemeLogoSvg, activeThemeStyles } from '../theme'
+import { activeAppearance, activeRequest, activeThemeLogoSvg, activeThemeStyles } from '../theme'
+import { productHuntBannerDismissed } from '../http'
 
 import React from 'react'
 import { instance } from '../../instance.config'
@@ -106,7 +107,7 @@ export function Layout({
             <link rel="alternate" type="application/atom+xml" title={`${feeds.title} (Atom)`} href={feeds.atom} />
           </>
         )}
-        <link rel="stylesheet" href="/styles.css?v=193" />
+        <link rel="stylesheet" href="/styles.css?v=194" />
         <style>{themeCss}</style>
       </head>
       <body>
@@ -131,6 +132,17 @@ export function Layout({
               </nav>
             )}
         </header>
+        {!productHuntBannerDismissed(activeRequest()) && (
+          <aside className="product-hunt-banner" aria-label="Product Hunt support reminder">
+            <a href="https://www.producthunt.com/products/textlog-2" target="_blank" rel="noopener noreferrer">
+              support us on product hunt
+            </a>
+            <span aria-hidden="true">·</span>
+            <form method="post" action="/product-hunt/banner/dismiss">
+              <button className="quiet">dismiss</button>
+            </form>
+          </aside>
+        )}
         {notificationBanner && (
           <aside className="notification-banner" aria-label="Notification reminder">
             <a href="/account/edit/notifications">enable notifications</a>

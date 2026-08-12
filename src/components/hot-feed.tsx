@@ -7,8 +7,9 @@ import { FeedTabs, GlobalFeedEmpty } from './page-shared'
 import { Post } from './post'
 
 export function HotFeed(
-  { cursor, user, title, path = '/hot', pageUrl, notificationBanner = false }: { cursor: HotCursor | null;
-    user: User | null; title?: string; path?: string; pageUrl?: string; notificationBanner?: boolean },
+  { cursor, user, title, path = '/hot', pageUrl, notificationBanner = false }: {
+    cursor: HotCursor | null; user: User | null; title?: string; path?: string; pageUrl?: string;
+    notificationBanner?: boolean },
 ) {
   const viewerId = user?.id ?? -1
   const asOf = cursor?.asOf || new Date().toISOString()

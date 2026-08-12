@@ -7,8 +7,8 @@ import { CursorPagination, FeedTabs, GlobalFeedEmpty } from './page-shared'
 import { Post } from './post'
 
 export function PublicFeed(
-  { cursor, user = null, path = '/', pageUrl, notificationBanner = false }: { cursor: PostCursor | null;
-    user?: User | null; path?: string; pageUrl?: string; notificationBanner?: boolean },
+  { cursor, user = null, path = '/', pageUrl, notificationBanner = false }: {
+    cursor: PostCursor | null; user?: User | null; path?: string; pageUrl?: string; notificationBanner?: boolean },
 ) {
   const viewerId = user?.id ?? -1
   const cursorFilter = cursor ? `AND p.id ${cursor.direction === 'previous' ? '>' : '<'} ?` : ''

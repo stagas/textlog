@@ -98,6 +98,10 @@ export function withAppearance<T>(request: Request, callback: () => T) {
   return appearanceContext.run({ appearance: appearance(request), request }, callback)
 }
 
+export function activeRequest() {
+  return appearanceContext.getStore()?.request || new Request('http://localhost')
+}
+
 export function activeAppearance() {
   return appearanceContext.getStore()?.appearance || { theme: 'system', accent: 'theme' } as Appearance
 }

@@ -269,7 +269,8 @@ nav form {
   border-bottom: 1px solid var(--soft);
 }
 
-.notification-banner {
+.notification-banner,
+.product-hunt-banner {
   display: flex;
   align-items: center;
   justify-content: center;
@@ -284,12 +285,27 @@ nav form {
   border-bottom: 1px solid var(--soft);
 }
 
-.notification-banner form { margin: 0; }
-.notification-banner button {
+.notification-banner form,
+.product-hunt-banner form { margin: 0; }
+.notification-banner button,
+.product-hunt-banner button {
   color: var(--muted);
   font: inherit;
 }
-.notification-banner button:hover { color: var(--tab-hover); }
+.notification-banner button:hover,
+.product-hunt-banner button:hover { color: var(--tab-hover); }
+
+.product-hunt-banner {
+  background: color-mix(in srgb, #f97316 12%, transparent);
+}
+
+.product-hunt-banner > a {
+  color: #d95f02;
+}
+
+.product-hunt-banner > a:hover {
+  color: #f97316;
+}
 
 .feed-tabs a {
   display: inline-flex;
