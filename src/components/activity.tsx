@@ -77,6 +77,7 @@ export function Activity({ user, cursor, title, path = '/activity', pageUrl, not
   const ordered = cursor?.direction === 'previous' ? [...posts].reverse() : posts
   const hasMore = ordered.length > PAGE_SIZE
   const activityPage = cursor?.direction === 'previous' && hasMore ? ordered.slice(1) : ordered.slice(0, PAGE_SIZE)
+  const returnPath = path + (cursor ? `?cursor=${encodeURIComponent(encodeActivityCursor(cursor))}` : '')
   const canGoBack = Boolean(cursor) && (cursor!.direction === 'next' || hasMore)
   const canGoNext = cursor?.direction === 'previous' || hasMore
   const previousCursor = canGoBack && activityPage.length
@@ -161,6 +162,7 @@ export function Activity({ user, cursor, title, path = '/activity', pageUrl, not
                 )
                 : (
                   <Post p={post} user={user} showReplyCount tappable
+                    returnPath={`${returnPath}#post-${post.id}`}
                     contextLabel={rawPost.activity_kind === 'reply' ? 'replied:' : 'mentioned you:'}
                     contextUnread={!!rawPost.unread} />
                 )}

@@ -7,7 +7,7 @@ import { Post, ThreadReplies } from './post'
 
 export function Reply(
   { user, post, showForm, showReport = false, reported = false, error, body = '', reportReason = '', reportError,
-    social, preview = false }: {
+    social, preview = false, returnPath }: {
     user: User
     post: PostView
     showForm: boolean
@@ -19,6 +19,7 @@ export function Reply(
     social?: { description: string; image: string; url: string }
     body?: string
     preview?: boolean
+    returnPath?: string
   },
 ) {
   return (
@@ -26,8 +27,9 @@ export function Reply(
       <div className="post-page-thread">
         <div className="thread-root">
           <Post p={post} user={user} showReplyAction={!showForm} showOwnerActions showModerateAction tappableParent
+            returnPath={returnPath} backHref={returnPath}
             reportHref={user.id !== post.user_id && !showReport && !reported
-              ? `/post/${post.id}?report=1`
+              ? `/post/${post.id}?report=1${returnPath ? '&from=' + encodeURIComponent(returnPath) : ''}`
               : undefined} />
         </div>
         {user.id !== post.user_id && (
@@ -57,6 +59,7 @@ export function Reply(
             ? (
               <div className="panel replybox">
                 <form method="post" action={'/post/' + post.id + '/reply'}>
+                  {returnPath && <input type="hidden" name="from" value={returnPath} />}
                   <FormMessage error={error} />
                   <textarea className="form-control" name="body" maxLength={280} required autoFocus defaultValue={body}
                     placeholder={'Reply to @' + post.handle + '…'} />
@@ -72,7 +75,7 @@ export function Reply(
             )
             : <VerificationRequired />
         )}
-        <ThreadReplies parentId={post.id} user={user} />
+        <ThreadReplies parentId={post.id} user={user} returnPath={returnPath} />
       </div>
     </Layout>
   )

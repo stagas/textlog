@@ -32,23 +32,27 @@ export function Post({
   contextLabel,
   contextUnread = false,
   preview = false,
+  returnPath,
+  backHref,
 }: { p: PostView; user: User | null; showReplyAction?: boolean; showOwnerActions?: boolean;
   showModerateAction?: boolean; showParent?: boolean; showReplyCount?: boolean; replyHref?: string; replyLabel?: string;
   reportHref?: string; foldControlId?: string; highlightTerms?: string[]; tappable?: boolean; tappableParent?: boolean;
-  contextLabel?: string; contextUnread?: boolean; preview?: boolean })
+  contextLabel?: string; contextUnread?: boolean; preview?: boolean; returnPath?: string; backHref?: string })
 {
   const parent = showParent ? p.parent : null
   const hasTappableParent = Boolean(parent && (tappable || tappableParent))
   const isAsciiArt = containsAsciiArt(p.body)
   const replyCount = p.reply_count || 0
-  const defaultReplyPath = '/post/' + p.id + '?reply=1'
+  const returnQuery = returnPath ? '&from=' + encodeURIComponent(returnPath) : ''
+  const detailPath = '/post/' + p.id + (returnPath ? '?from=' + encodeURIComponent(returnPath) : '')
+  const defaultReplyPath = '/post/' + p.id + '?reply=1' + returnQuery
   const resolvedReplyHref = replyHref
     ?? (user ? defaultReplyPath : '/enter?next=' + encodeURIComponent(defaultReplyPath))
   const resolvedReplyLabel = replyLabel ?? (user ? 'reply' : 'enter to reply')
   if (p.deleted_at) {
     return (
-      <article className="post deleted-post">
-        <a href={'/post/' + p.id}>
+      <article className="post deleted-post" id={`post-${p.id}`}>
+        <a href={detailPath}>
           (deleted){showReplyCount && replyCount > 0
             ? ` · ${replyCount} ${replyCount === 1 ? 'reply' : 'replies'}`
             : ''}
@@ -57,8 +61,8 @@ export function Post({
     )
   }
   return (
-    <article className={`post${tappable || hasTappableParent ? ' tappable-post' : ''}`}>
-      {tappable && <a className="post-hit-area" href={'/post/' + p.id} aria-label={`open post by @${p.handle}`} />}
+    <article className={`post${tappable || hasTappableParent ? ' tappable-post' : ''}`} id={`post-${p.id}`}>
+      {tappable && <a className="post-hit-area" href={detailPath} aria-label={`open post by @${p.handle}`} />}
       <div className={`posttop${contextLabel ? ' posttop-context' : ''}`}>
         {contextUnread && <span className="unread-dot" aria-label="unread" />}
         {preview
@@ -72,7 +76,7 @@ export function Post({
             </span>
           )
           : (
-            <a className="postdate" href={'/post/' + p.id}>
+            <a className="postdate" href={detailPath}>
               <time dateTime={p.created_at} title={fmtFull(p.created_at)}>{fmt(p.created_at)}</time>
               {showReplyCount && replyCount > 0 && (
                 <span>{' '}· {replyCount} {replyCount === 1 ? 'reply' : 'replies'}</span>
@@ -106,6 +110,7 @@ export function Post({
             </a>
           </div>
         )}
+        {backHref && <a className="quiet post-back-link" href={backHref}>back</a>}
         {foldControlId && (
           <label className="quiet thread-fold" htmlFor={foldControlId} title="fold or unfold replies">
             <span className="visually-hidden">fold or unfold replies</span>
@@ -158,7 +163,8 @@ export function Post({
   )
 }
 
-export function ThreadReplies({ parentId, user }: { parentId: number; user: User | null }) {
+export function ThreadReplies({ parentId, user, returnPath }: { parentId: number; user: User | null;
+  returnPath?: string }) {
   const viewerId = user?.id ?? -1
   const rows = db.query(`WITH RECURSIVE thread AS (
       SELECT p.*,u.handle,1 depth FROM posts p JOIN users u ON u.id=p.user_id WHERE p.parent_id=? AND (? < 0 OR NOT EXISTS
@@ -206,7 +212,9 @@ export function ThreadReplies({ parentId, user }: { parentId: number; user: User
             <div className="reply-node" key={reply.id}>
               {foldControlId && <input className="thread-fold-input" type="checkbox" id={foldControlId} />}
               <Post p={reply} user={user} showParent={false} foldControlId={foldControlId}
-                replyHref={user ? undefined : '/enter?next=' + encodeURIComponent('/post/' + reply.id + '?reply=1')}
+                returnPath={returnPath}
+                replyHref={user ? undefined : '/enter?next=' + encodeURIComponent('/post/' + reply.id + '?reply=1'
+                  + (returnPath ? '&from=' + encodeURIComponent(returnPath) : ''))}
                 replyLabel={user ? 'reply' : 'enter to reply'} tappable />
               {childBranch}
               {continuesElsewhere && (

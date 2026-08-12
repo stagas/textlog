@@ -1,5 +1,5 @@
 import { db, type User } from '../db'
-import { PAGE_SIZE, type PostCursor, postCursorPage } from '../pagination'
+import { encodePostCursor, PAGE_SIZE, type PostCursor, postCursorPage } from '../pagination'
 import { enrichPosts } from '../posts'
 import type { PostView } from '../types'
 import { Layout } from './layout'
@@ -24,6 +24,7 @@ export function PublicFeed(
   ).all(...parameters) as PostView[]
   const result = postCursorPage(rows, cursor)
   const posts = enrichPosts(db, result.rows, viewerId)
+  const returnPath = path + (cursor ? `?cursor=${encodeURIComponent(encodePostCursor(cursor))}` : '')
   return (
     <Layout user={user} title={path === '/latest' ? 'latest' : undefined} pageUrl={pageUrl}
       notificationBanner={notificationBanner}
@@ -32,7 +33,8 @@ export function PublicFeed(
       <h1 className="visually-hidden">Latest notes</h1>
       <FeedTabs active="latest" user={user} />
       {posts.length
-        ? posts.map(post => <Post key={post.id} p={post} user={user} showReplyCount tappable />)
+        ? posts.map(post => <Post key={post.id} p={post} user={user} showReplyCount tappable
+          returnPath={`${returnPath}#post-${post.id}`} />)
         : !cursor
         ? <GlobalFeedEmpty user={user} />
         : (

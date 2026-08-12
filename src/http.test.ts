@@ -6,6 +6,7 @@ import { applyHtmlCachePolicy, clearSessionCookie, feedPreference, feedPreferenc
 describe('local redirects', () => {
   test('accepts local paths and rejects ambiguous or external targets', () => {
     expect(safeLocalPath('/activity?page=2')).toBe('/activity?page=2')
+    expect(safeLocalPath('/latest?cursor=abc#post-42')).toBe('/latest?cursor=abc#post-42')
     expect(safeLocalPath('//evil.example/path')).toBe('/')
     expect(safeLocalPath('/\\evil.example')).toBe('/')
     expect(safeLocalPath('https://evil.example')).toBe('/')

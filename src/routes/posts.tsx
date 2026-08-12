@@ -9,7 +9,7 @@ import { moderateText, moderationMessage } from '../moderation'
 import { canPublishPosts } from '../posting-policy'
 import { createPost, enrichPosts, updatePost } from '../posts'
 import type { PostRow, PostView } from '../types'
-import { form, page, redirect, rememberFeed, usersBlocked } from './shared'
+import { form, page, redirect, rememberFeed, safeNext, usersBlocked } from './shared'
 
 import type { Hono } from 'hono'
 import { softDeletePost } from '../admin'
@@ -41,8 +41,9 @@ export function registerPostsRoutes(app: Hono) {
     ).get(id) as PostView | null
     if (!foundPost) return c.text('Not found', 404)
     const user = currentUser(c.req.raw)
+    const returnPath = c.req.query('from') ? safeNext(c.req.query('from')) : undefined
     if (user && !user.handle_chosen_at && c.req.query('reply') === '1') {
-      const next = `/post/${id}?reply=1`
+      const next = `/post/${id}?reply=1${returnPath ? '&from=' + encodeURIComponent(returnPath) : ''}`
       return redirect('/choose-handle?next=' + encodeURIComponent(next))
     }
     if (user && usersBlocked(user.id, foundPost.user_id)) return c.text('Not found', 404)
@@ -59,11 +60,11 @@ export function registerPostsRoutes(app: Hono) {
     }
     if (user) {
       return page(
-        <Reply user={user} post={post} showForm={c.req.query('reply') === '1'}
+        <Reply user={user} post={post} showForm={c.req.query('reply') === '1'} returnPath={returnPath}
           showReport={c.req.query('report') === '1'} reported={c.req.query('reported') === '1'} social={social} />,
       )
     }
-    return page(<PublicThread post={post} social={social} />)
+    return page(<PublicThread post={post} social={social} returnPath={returnPath} />)
   })
 
   app.get('/post/:id/og.png', c => {
@@ -193,29 +194,33 @@ export function registerPostsRoutes(app: Hono) {
     if (usersBlocked(user.id, parent.user_id)) return c.text('Forbidden', 403)
     if (!canPublishPosts(user)) return page(<Reply user={user} post={parent} showForm />, 403)
     const f = await form(c.req.raw)
+    const returnPath = f.from ? safeNext(f.from) : undefined
     const body = normalizePostBody(f.body || '')
     if (!validPostBody(body)) {
       return page(
-        <Reply user={user} post={parent} showForm error={postBodyValidationMessage(body, 'Replies')} body={body} />,
+        <Reply user={user} post={parent} showForm error={postBodyValidationMessage(body, 'Replies')} body={body}
+          returnPath={returnPath} />,
         400,
       )
     }
     if (f.action === 'preview') {
-      return page(<Reply user={user} post={parent} showForm body={body} preview />)
+      return page(<Reply user={user} post={parent} showForm body={body} preview returnPath={returnPath} />)
     }
     const moderation = await moderateText(body)
     if (!moderation.ok) {
-      return page(<Reply user={user} post={parent} showForm error={moderationMessage(moderation.reason)} body={body} />,
+      return page(<Reply user={user} post={parent} showForm error={moderationMessage(moderation.reason)} body={body}
+        returnPath={returnPath} />,
         moderation.reason === 'flagged' ? 422 : 503)
     }
     const result = createPost(db, user.id, body, parentId)
     if ('retryAfter' in result) {
       return page(
-        <Reply user={user} post={parent} showForm error={postRateLimitMessage(result.retryAfter)} body={body} />,
+        <Reply user={user} post={parent} showForm error={postRateLimitMessage(result.retryAfter)} body={body}
+          returnPath={returnPath} />,
         429,
       )
     }
     if (!result.duplicate) notifyPost(result.id, user.id, user.handle)
-    return redirect('/post/' + parentId)
+    return redirect('/post/' + parentId + (returnPath ? '?from=' + encodeURIComponent(returnPath) : ''))
   })
 }

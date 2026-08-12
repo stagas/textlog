@@ -18,6 +18,7 @@ export function HotFeed(
     ? ranked.slice(1)
     : ranked.slice(0, PAGE_SIZE)
   const posts = enrichPosts(db, pageRows, viewerId)
+  const returnPath = path + (cursor ? `?cursor=${encodeURIComponent(encodeHotCursor(cursor))}` : '')
   const canGoBack = Boolean(cursor) && (cursor!.direction === 'next' || hasMore)
   const canGoNext = cursor?.direction === 'previous' || hasMore
   const previousCursor = canGoBack && pageRows.length
@@ -33,7 +34,8 @@ export function HotFeed(
       <h1 className="visually-hidden">Hot notes</h1>
       <FeedTabs active="hot" user={user} />
       {posts.length
-        ? posts.map(post => <Post key={post.id} p={post} user={user} showReplyCount tappable />)
+        ? posts.map(post => <Post key={post.id} p={post} user={user} showReplyCount tappable
+          returnPath={`${returnPath}#post-${post.id}`} />)
         : !cursor
         ? <GlobalFeedEmpty user={user} />
         : (

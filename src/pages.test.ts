@@ -922,8 +922,30 @@ test('Post renders an opt-in feed hit area without changing detail posts', () =>
   const detailHtml = renderToStaticMarkup(React.createElement(Post, props))
 
   expect(feedHtml).toContain('class="post tappable-post"')
+  expect(feedHtml).toContain('id="post-2"')
   expect(feedHtml).toContain('class="post-hit-area" href="/post/2" aria-label="open post by @writer"')
   expect(detailHtml).not.toContain('post-hit-area')
+})
+
+test('Post carries its originating cursor into detail and reply links', () => {
+  const html = renderToStaticMarkup(React.createElement(Post, {
+    user: { id: 1, handle: 'reader', email: 'reader@example.com', bio: '',
+      email_verified_at: '2026-08-12 10:00:00', handle_chosen_at: '2026-08-12 10:00:00' },
+    returnPath: '/latest?cursor=abc#post-2',
+    tappable: true,
+    p: {
+      id: 2,
+      user_id: 1,
+      parent_id: null,
+      body: 'note',
+      handle: 'writer',
+      created_at: '2026-08-03 12:00:00',
+      deleted_at: null,
+    },
+  }))
+
+  expect(html).toContain('href="/post/2?from=%2Flatest%3Fcursor%3Dabc%23post-2"')
+  expect(html).toContain('href="/post/2?reply=1&amp;from=%2Flatest%3Fcursor%3Dabc%23post-2"')
 })
 
 test('A quoted post gets its own higher-priority hit area in tappable feeds', () => {

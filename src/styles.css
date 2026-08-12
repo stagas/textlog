@@ -3069,6 +3069,13 @@ form.report-panel {
   margin-bottom: var(--space-5);
 }
 
+.posttop .post-back-link {
+  margin-left: auto;
+  color: var(--accent);
+}
+
+.posttop .post-back-link:hover { color: var(--accent-dark); }
+
 .reply-branch {
   margin-left: clamp(18px, 3vw, 28px);
   border-left: 1px solid var(--soft);

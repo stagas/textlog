@@ -48,7 +48,7 @@ export function safeLocalPath(value: string | undefined, requestUrl?: string, fa
   try {
     const base = new URL(requestUrl || 'http://localhost')
     const parsed = new URL(value, base)
-    return parsed.origin === base.origin ? parsed.pathname + parsed.search : fallback
+    return parsed.origin === base.origin ? parsed.pathname + parsed.search + parsed.hash : fallback
   }
   catch {
     return fallback

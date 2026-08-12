@@ -25,7 +25,7 @@ export function decodeForYouCursor(value?: string): ForYouCursor | null {
   }
 }
 
-function encodeForYouCursor(cursor: ForYouCursor) {
+export function encodeForYouCursor(cursor: ForYouCursor) {
   return Buffer.from(JSON.stringify([1, cursor.createdAt, cursor.key, cursor.direction])).toString('base64url')
 }
 
@@ -186,6 +186,7 @@ export function Feed({ user, cursor, title, path = '/for-you', pageUrl, notifica
     : null
   const enriched = enrichPosts(db, timeline.filter(row => ['post', 'reply', 'mention'].includes(row.activity_kind)), user.id)
   const posts = new Map(enriched.map(post => [post.id, post]))
+  const returnPath = path + (cursor ? `?cursor=${encodeURIComponent(encodeForYouCursor(cursor))}` : '')
   return (
     <Layout user={user} title={title} pageUrl={pageUrl} notificationBanner={notificationBanner}>
       <h1 className="visually-hidden">Your feed</h1>
@@ -196,6 +197,7 @@ export function Feed({ user, cursor, title, path = '/for-you', pageUrl, notifica
             ? (
               <div className={`for-you-item${row.unread ? ' activity-item-unread' : ''}`} key={row.event_key}>
                 <Post p={posts.get(row.id)!} user={user} showReplyCount tappable contextUnread={!!row.unread}
+                  returnPath={`${returnPath}#post-${row.id}`}
                   contextLabel={row.activity_kind === 'reply'
                     ? 'replied to you:'
                     : row.activity_kind === 'mention' ? 'mentioned you:' : undefined} />
