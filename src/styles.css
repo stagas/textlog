@@ -3188,6 +3188,8 @@ form.report-panel {
 
 .thread-fold {
   cursor: pointer;
+  padding: 0.9375rem;
+  margin: -0.9375rem;
   user-select: none;
 }
 
