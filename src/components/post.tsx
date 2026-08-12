@@ -170,7 +170,8 @@ export function Post({
               <>
                 <div className="parent-quote-top">
                   <a className="postauthor" href={'/u/' + parent.handle + actionQuery}
-                    title={parent.bio || 'No bio yet.'}>
+                    title={parent.bio || 'No bio yet.'}
+                  >
                     @{parent.handle}
                   </a>
                   <a className="postdate" href={parentDetailPath}>
@@ -200,8 +201,10 @@ export function Post({
   )
 }
 
-export function ThreadReplies({ parentId, user, returnPath, excludePostId }: { parentId: number; user: User | null;
-  returnPath?: string; excludePostId?: number }) {
+export function ThreadReplies(
+  { parentId, user, returnPath, excludePostId }: { parentId: number; user: User | null; returnPath?: string;
+    excludePostId?: number },
+) {
   const viewerId = user?.id ?? -1
   const rows = db.query(`WITH RECURSIVE thread AS (
       SELECT p.*,u.handle,1 depth FROM posts p JOIN users u ON u.id=p.user_id WHERE p.parent_id=? AND (? < 0 OR NOT EXISTS
@@ -253,8 +256,8 @@ export function ThreadReplies({ parentId, user, returnPath, excludePostId }: { p
               <Post p={reply} user={user} showParent={false} foldControlId={foldControlId}
                 returnPath={anchoredReturnPath}
                 replyHref={user ? undefined : '/enter?next=' + encodeURIComponent('/post/' + reply.id + '?reply=1'
-                  + '&from=' + encodeURIComponent(anchoredReturnPath))}
-                replyLabel={user ? 'reply' : 'enter to reply'} tappable />
+                  + '&from=' + encodeURIComponent(anchoredReturnPath))} replyLabel={user ? 'reply' : 'enter to reply'}
+                tappable />
               {childBranch}
               {continuesElsewhere && (
                 <div className="thread-continuation">

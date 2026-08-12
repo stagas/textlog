@@ -80,9 +80,9 @@ export function registerProfilesRoutes(app: Hono) {
       (SELECT count(*) FROM posts WHERE user_id=? AND parent_id IS NULL AND deleted_at IS NULL) notes,
       (SELECT count(*) FROM posts WHERE user_id=? AND parent_id IS NOT NULL AND deleted_at IS NULL) replies`)
       .get(profile.id, profile.id) as {
-          notes: number
-          replies: number
-        }
+        notes: number
+        replies: number
+      }
     const total = tab === 'replies' ? postCounts.replies : postCounts.notes
     const following = !!user
       && !!db.query('SELECT 1 FROM follows WHERE follower_id=? AND following_id=?').get(user.id, profile.id)
@@ -148,8 +148,8 @@ export function registerProfilesRoutes(app: Hono) {
       return page(
         <Connections user={user} profile={profile} people={people} tags={tags} kind="blocked" page={profilePage}
           total={blockCounts.blockedPeople} noteCount={postCounts.notes} replyCount={postCounts.replies} {...counts}
-          following={following}
-          blockedPeopleCount={blockCounts.blockedPeople} blockedTagCount={blockCounts.blockedTags} social={social} />,
+          following={following} blockedPeopleCount={blockCounts.blockedPeople} blockedTagCount={blockCounts.blockedTags}
+          social={social} />,
       )
     }
     if (tab === 'following' || tab === 'followers') {
@@ -210,9 +210,8 @@ export function registerProfilesRoutes(app: Hono) {
       return page(
         <Connections user={user} profile={profile} people={people} tags={tags} kind={tab} page={connectionPage}
           total={connectionTotal} tagsPage={tagsPage} tagsTotal={counts.followingTagCount} noteCount={postCounts.notes}
-          replyCount={postCounts.replies} {...counts}
-          following={following} blockedPeopleCount={blockCounts.blockedPeople} blockedTagCount={blockCounts.blockedTags}
-          social={social} />,
+          replyCount={postCounts.replies} {...counts} following={following}
+          blockedPeopleCount={blockCounts.blockedPeople} blockedTagCount={blockCounts.blockedTags} social={social} />,
       )
     }
     const cursorValue = c.req.query('cursor')
@@ -233,11 +232,10 @@ export function registerProfilesRoutes(app: Hono) {
     return page(
       <Profile user={user} profile={profile} posts={blocked || blockedByProfile ? [] : posts} following={following}
         blocked={blocked} total={total} noteCount={postCounts.notes} replyCount={postCounts.replies}
-        tab={tab === 'replies' ? 'replies' : 'notes'}
-        followerCount={counts.followerCount} followingCount={counts.followingCount}
-        followingTagCount={counts.followingTagCount} blockedPeopleCount={blockCounts.blockedPeople}
-        blockedTagCount={blockCounts.blockedTags} social={social} previousCursor={result.previousCursor}
-        nextCursor={result.nextCursor} returnPath={returnPath} />,
+        tab={tab === 'replies' ? 'replies' : 'notes'} followerCount={counts.followerCount}
+        followingCount={counts.followingCount} followingTagCount={counts.followingTagCount}
+        blockedPeopleCount={blockCounts.blockedPeople} blockedTagCount={blockCounts.blockedTags} social={social}
+        previousCursor={result.previousCursor} nextCursor={result.nextCursor} returnPath={returnPath} />,
     )
   })
 }

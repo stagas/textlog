@@ -1,8 +1,8 @@
 import { describe, expect, test } from 'bun:test'
 import { About, AccountApiKeyCreate, AccountMagicLink, AccountPassword, AccountSecurity, AdminDashboard, ApiDocs, Auth,
-  ChangeFont, ChangeTheme, ChooseHandle, Compose, ConfirmAccountDelete, ConfirmDelete, ConfirmEmail, Connections, Contact,
-  EditPost, EmbedExamples, ErrorPage, Legal, MagicLinkSent, NotFound, NotificationSettings, PasswordLogin, postTitle, Profile,
-  Reply } from './components/pages'
+  ChangeFont, ChangeTheme, ChooseHandle, Compose, ConfirmAccountDelete, ConfirmDelete, ConfirmEmail, Connections,
+  Contact, EditPost, EmbedExamples, ErrorPage, Legal, MagicLinkSent, NotFound, NotificationSettings, PasswordLogin,
+  postTitle, Profile, Reply } from './components/pages'
 
 import React from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
@@ -67,10 +67,12 @@ test('post edit places delete above the textarea and keeps preview before save',
 
 test('post deletion uses the standard centered confirmation panel', () => {
   const user = { id: 1, handle: 'writer', email: 'writer@example.com', bio: '' }
-  const post = { id: 2, user_id: 1, parent_id: null, body: 'Original note',
-    created_at: '2026-08-12 09:00:00', deleted_at: null }
+  const post = { id: 2, user_id: 1, parent_id: null, body: 'Original note', created_at: '2026-08-12 09:00:00',
+    deleted_at: null }
   const html = renderToStaticMarkup(React.createElement(ConfirmDelete, {
-    user, post, returnPath: '/latest#post-2',
+    user,
+    post,
+    returnPath: '/latest#post-2',
   }))
 
   expect(html).toContain('class="auth-shell account-delete-shell post-delete-shell"')
@@ -103,7 +105,12 @@ test('editing a reply shows its parent context above the textarea', () => {
   expect(html.indexOf('Parent note')).toBeLessThan(html.indexOf('<textarea'))
 
   const preview = renderToStaticMarkup(React.createElement(EditPost, {
-    user, post, parent, body: 'Edited reply', preview: true, returnPath,
+    user,
+    post,
+    parent,
+    body: 'Edited reply',
+    preview: true,
+    returnPath,
   }))
   expect(preview).toContain('value="preview" name="action">preview</button>')
   expect(preview).toContain('<div class="reply-preview"><p class="eyebrow">preview</p>')
@@ -1013,8 +1020,8 @@ test('Post renders an opt-in feed hit area without changing detail posts', () =>
 
 test('Post carries its originating cursor into detail, reply, and edit links', () => {
   const html = renderToStaticMarkup(React.createElement(Post, {
-    user: { id: 1, handle: 'reader', email: 'reader@example.com', bio: '',
-      email_verified_at: '2026-08-12 10:00:00', handle_chosen_at: '2026-08-12 10:00:00' },
+    user: { id: 1, handle: 'reader', email: 'reader@example.com', bio: '', email_verified_at: '2026-08-12 10:00:00',
+      handle_chosen_at: '2026-08-12 10:00:00' },
     returnPath: '/latest?cursor=abc#post-2',
     tappable: true,
     showOwnerActions: true,

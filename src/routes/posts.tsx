@@ -15,13 +15,13 @@ import { form, page, redirect, rememberFeed, safeNext, usersBlocked } from './sh
 import type { Hono } from 'hono'
 import { softDeletePost } from '../admin'
 import { db } from '../db'
+import { safeRefererPath } from '../http'
 import { logError } from '../log'
 import { renderPostOg } from '../og'
 import { normalizePostBody, postBodyValidationMessage, validPostBody } from '../post-body'
 import { postRateLimitMessage } from '../post-rate-limit'
 import { sendPushForPost } from '../push'
 import { currentUser } from '../utils'
-import { safeRefererPath } from '../http'
 
 function notifyPost(postId: number, userId: number, handle: string) {
   void sendPushForPost(postId, userId, handle).catch(error => logError('activity push failed', error))
@@ -113,21 +113,24 @@ export function registerPostsRoutes(app: Hono) {
     const returnPath = f.from ? safeNext(f.from) : '/'
     const body = normalizePostBody(f.body || '')
     if (!validPostBody(body)) {
-      return page(<Compose user={user} body={body} error={postBodyValidationMessage(body)}
-        returnPath={returnPath} />, 400)
+      return page(<Compose user={user} body={body} error={postBodyValidationMessage(body)} returnPath={returnPath} />,
+        400)
     }
     if (f.action === 'preview') return page(<Compose user={user} body={body} preview returnPath={returnPath} />)
     try {
       const moderation = await moderateText(body)
       if (!moderation.ok) {
-        return page(<Compose user={user} body={body} error={moderationMessage(moderation.reason)}
-          returnPath={returnPath} />,
-          moderation.reason === 'flagged' ? 422 : 503)
+        return page(
+          <Compose user={user} body={body} error={moderationMessage(moderation.reason)} returnPath={returnPath} />,
+          moderation.reason === 'flagged' ? 422 : 503,
+        )
       }
       const result = createPost(db, user.id, body)
       if ('retryAfter' in result) {
-        return page(<Compose user={user} body={body} error={postRateLimitMessage(result.retryAfter)}
-          returnPath={returnPath} />, 429)
+        return page(
+          <Compose user={user} body={body} error={postRateLimitMessage(result.retryAfter)} returnPath={returnPath} />,
+          429,
+        )
       }
       if (!result.duplicate) notifyPost(result.id, user.id, user.handle)
       return rememberFeed(redirect('/latest'), 'latest')
@@ -175,23 +178,29 @@ export function registerPostsRoutes(app: Hono) {
       )
     }
     if (f.action === 'preview') {
-      return page(<EditPost user={user} post={post} parent={editParent(post)} body={body} preview
-        returnPath={returnPath} />)
+      return page(
+        <EditPost user={user} post={post} parent={editParent(post)} body={body} preview returnPath={returnPath} />,
+      )
     }
     try {
       const moderation = await moderateText(body)
       if (!moderation.ok) {
-        return page(<EditPost user={user} post={post} parent={editParent(post)} body={body} returnPath={returnPath}
-          error={moderationMessage(moderation.reason)} />,
-          moderation.reason === 'flagged' ? 422 : 503)
+        return page(
+          <EditPost user={user} post={post} parent={editParent(post)} body={body} returnPath={returnPath}
+            error={moderationMessage(moderation.reason)} />,
+          moderation.reason === 'flagged' ? 422 : 503,
+        )
       }
       updatePost(db, id, body)
       return redirect('/post/' + id + (returnPath ? '?from=' + encodeURIComponent(returnPath) : ''))
     }
     catch (error) {
       logError(`POST /post/${id}/edit`, error)
-      return page(<EditPost user={user} post={post} parent={editParent(post)} body={body} returnPath={returnPath}
-        error={saveFailureMessage} />, 500)
+      return page(
+        <EditPost user={user} post={post} parent={editParent(post)} body={body} returnPath={returnPath}
+          error={saveFailureMessage} />,
+        500,
+      )
     }
   })
 
@@ -257,9 +266,11 @@ export function registerPostsRoutes(app: Hono) {
     try {
       const moderation = await moderateText(body)
       if (!moderation.ok) {
-        return page(<Reply user={user} post={parent} showForm error={moderationMessage(moderation.reason)} body={body}
-          returnPath={returnPath} />,
-          moderation.reason === 'flagged' ? 422 : 503)
+        return page(
+          <Reply user={user} post={parent} showForm error={moderationMessage(moderation.reason)} body={body}
+            returnPath={returnPath} />,
+          moderation.reason === 'flagged' ? 422 : 503,
+        )
       }
       const result = createPost(db, user.id, body, parentId)
       if ('retryAfter' in result) {
@@ -274,8 +285,10 @@ export function registerPostsRoutes(app: Hono) {
     }
     catch (error) {
       logError(`POST /post/${parentId}/reply`, error)
-      return page(<Reply user={user} post={parent} showForm error={saveFailureMessage} body={body}
-        returnPath={returnPath} />, 500)
+      return page(
+        <Reply user={user} post={parent} showForm error={saveFailureMessage} body={body} returnPath={returnPath} />,
+        500,
+      )
     }
   })
 }

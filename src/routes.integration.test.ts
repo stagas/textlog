@@ -1,9 +1,10 @@
-import { Database } from 'bun:sqlite'
 import { afterAll, beforeAll, expect, setDefaultTimeout, test } from 'bun:test'
 import { existsSync, mkdtempSync, readFileSync, rmSync } from 'node:fs'
+import { dirname, join, resolve } from 'node:path'
+
+import { Database } from 'bun:sqlite'
 import { createServer } from 'node:net'
 import { tmpdir } from 'node:os'
-import { dirname, join, resolve } from 'node:path'
 
 setDefaultTimeout(30_000)
 
@@ -183,7 +184,7 @@ test('Product Hunt banner appears above notifications and can be dismissed', asy
   const publicHtml = await publicHome.text()
   expect(publicHtml).toContain('class="product-hunt-banner"')
   expect(publicHtml).toContain('href="https://www.producthunt.com/products/textlog-2"')
-  expect(publicHtml).toContain('support us on product hunt</a>')
+  expect(publicHtml).toContain('support us on 🚀product hunt</a>')
   expect(await (await request('/about')).text()).toContain('class="product-hunt-banner"')
 
   const dismissed = await request('/product-hunt/banner/dismiss', { method: 'POST' })
@@ -472,24 +473,32 @@ test('consequential account, content, reporting, and admin flows work over HTTP'
   expect(post.body).toBe('A route-level integration post')
   const invalidPostBody = `remember post ${'x'.repeat(270)}`
   const invalidPost = await request('/post', {
-    method: 'POST', cookie: aliceCookie, form: { body: invalidPostBody },
+    method: 'POST',
+    cookie: aliceCookie,
+    form: { body: invalidPostBody },
   })
   expect(invalidPost.status).toBe(400)
   expect(await invalidPost.text()).toContain(invalidPostBody)
   const invalidReplyBody = `remember reply ${'x'.repeat(270)}`
   const invalidReply = await request(`/post/${post.id}/reply`, {
-    method: 'POST', cookie: aliceCookie, form: { body: invalidReplyBody },
+    method: 'POST',
+    cookie: aliceCookie,
+    form: { body: invalidReplyBody },
   })
   expect(invalidReply.status).toBe(400)
   expect(await invalidReply.text()).toContain(invalidReplyBody)
   const invalidEditBody = `remember edit ${'x'.repeat(271)}`
   const invalidEdit = await request(`/post/${post.id}/edit`, {
-    method: 'POST', cookie: aliceCookie, form: { body: invalidEditBody },
+    method: 'POST',
+    cookie: aliceCookie,
+    form: { body: invalidEditBody },
   })
   expect(invalidEdit.status).toBe(400)
   expect(await invalidEdit.text()).toContain(invalidEditBody)
   const invalidProfile = await request('/account/edit', {
-    method: 'POST', cookie: aliceCookie, form: { handle: 'Alice!', bio: 'remember profile bio' },
+    method: 'POST',
+    cookie: aliceCookie,
+    form: { handle: 'Alice!', bio: 'remember profile bio' },
   })
   expect(invalidProfile.status).toBe(400)
   const invalidProfileHtml = await invalidProfile.text()
@@ -670,7 +679,9 @@ test('consequential account, content, reporting, and admin flows work over HTTP'
     `/post/${post.id}?from=%2Flatest%3Fcursor%3Dabc%23post-1#post-${sharedReply.id}`,
   )
   const sharedReplyPage = await request(sharedReplyResponse.headers.get('location')!, { cookie: bobCookie })
-  expect(await sharedReplyPage.text()).toContain('class="quiet post-back-link" href="/latest?cursor=abc#post-1">back</a>')
+  expect(await sharedReplyPage.text()).toContain(
+    'class="quiet post-back-link" href="/latest?cursor=abc#post-1">back</a>',
+  )
   const activityReadKey = `post:${sharedReply.id}`
   const forYouReadKey = `post:${String(sharedReply.id).padStart(20, '0')}`
 
@@ -702,7 +713,9 @@ test('consequential account, content, reporting, and admin flows work over HTTP'
   expect(activitySecondBody).not.toContain('activity cursor reply 21')
   expect(activitySecondBody).toContain('← prev')
   const invalidReport = await request(`/post/${post.id}/report`, {
-    method: 'POST', cookie: bobCookie, form: { reason: 'remember-invalid-reason' },
+    method: 'POST',
+    cookie: bobCookie,
+    form: { reason: 'remember-invalid-reason' },
   })
   expect(invalidReport.status).toBe(400)
   const invalidReportHtml = await invalidReport.text()

@@ -8,7 +8,12 @@ import { Post } from './post'
 
 export function PublicFeed(
   { cursor, user = null, path = '/', pageUrl, notificationBanner = false }: {
-    cursor: PostCursor | null; user?: User | null; path?: string; pageUrl?: string; notificationBanner?: boolean },
+    cursor: PostCursor | null
+    user?: User | null
+    path?: string
+    pageUrl?: string
+    notificationBanner?: boolean
+  },
 ) {
   const viewerId = user?.id ?? -1
   const cursorFilter = cursor ? `AND p.id ${cursor.direction === 'previous' ? '>' : '<'} ?` : ''
@@ -33,8 +38,10 @@ export function PublicFeed(
       <h1 className="visually-hidden">Latest notes</h1>
       <FeedTabs active="latest" user={user} />
       {posts.length
-        ? posts.map(post => <Post key={post.id} p={post} user={user} showReplyCount tappable
-          returnPath={`${returnPath}#post-${post.id}`} />)
+        ? posts.map(post => (
+          <Post key={post.id} p={post} user={user} showReplyCount tappable
+            returnPath={`${returnPath}#post-${post.id}`} />
+        ))
         : !cursor
         ? <GlobalFeedEmpty user={user} />
         : (

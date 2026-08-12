@@ -1,5 +1,5 @@
-import { db, type User } from '../db'
 import { isAdmin } from '../admin'
+import { db, type User } from '../db'
 import { hasUnreadForYou, markForYouEntriesRead } from '../for-you-state'
 import { PAGE_SIZE } from '../pagination'
 import { enrichPosts } from '../posts'
@@ -45,8 +45,7 @@ type TimelineRow = PostView & {
   unread: number
 }
 
-export function Feed({ user, cursor, title, path = '/for-you', pageUrl, notificationBanner = false,
-  toMe = false }: {
+export function Feed({ user, cursor, title, path = '/for-you', pageUrl, notificationBanner = false, toMe = false }: {
   user: User
   cursor: ForYouCursor | null
   title?: string
@@ -184,7 +183,8 @@ export function Feed({ user, cursor, title, path = '/for-you', pageUrl, notifica
   const nextCursor = canGoNext && timeline.length
     ? encodeForYouCursor({ createdAt: timeline.at(-1)!.created_at, key: timeline.at(-1)!.event_key, direction: 'next' })
     : null
-  const enriched = enrichPosts(db, timeline.filter(row => ['post', 'reply', 'mention'].includes(row.activity_kind)), user.id)
+  const enriched = enrichPosts(db, timeline.filter(row => ['post', 'reply', 'mention'].includes(row.activity_kind)),
+    user.id)
   const posts = new Map(enriched.map(post => [post.id, post]))
   const returnPath = path + (cursor ? `?cursor=${encodeURIComponent(encodeForYouCursor(cursor))}` : '')
   return (
@@ -197,10 +197,11 @@ export function Feed({ user, cursor, title, path = '/for-you', pageUrl, notifica
             ? (
               <div className={`for-you-item${row.unread ? ' activity-item-unread' : ''}`} key={row.event_key}>
                 <Post p={posts.get(row.id)!} user={user} showReplyCount tappable contextUnread={!!row.unread}
-                  returnPath={`${returnPath}#post-${row.id}`}
-                  contextLabel={row.activity_kind === 'reply'
-                    ? 'replied to you:'
-                    : row.activity_kind === 'mention' ? 'mentioned you:' : undefined} />
+                  returnPath={`${returnPath}#post-${row.id}`} contextLabel={row.activity_kind === 'reply'
+                  ? 'replied to you:'
+                  : row.activity_kind === 'mention'
+                  ? 'mentioned you:'
+                  : undefined} />
               </div>
             )
             : (
@@ -210,19 +211,30 @@ export function Feed({ user, cursor, title, path = '/for-you', pageUrl, notifica
                     {!!row.unread && <span className="unread-dot" aria-label="unread" />}
                     <a href={row.activity_kind === 'signup'
                       ? `/admin/users/${row.actor_id}`
-                      : `/u/${row.actor_handle}`} title={row.actor_bio || 'No bio yet.'}>@{row.actor_handle}</a>
-                    <span>{row.activity_kind === 'signup'
-                      ? 'signed up:'
-                      : row.target_is_viewer ? 'followed you:' : 'followed'}</span>
+                      : `/u/${row.actor_handle}`} title={row.actor_bio || 'No bio yet.'}
+                    >
+                      @{row.actor_handle}
+                    </a>
+                    <span>
+                      {row.activity_kind === 'signup'
+                        ? 'signed up:'
+                        : row.target_is_viewer
+                        ? 'followed you:'
+                        : 'followed'}
+                    </span>
                     {!row.target_is_viewer && row.activity_kind === 'user_follow'
                       ? <a href={`/u/${row.target_handle}`}>@{row.target_handle}</a>
                       : row.activity_kind === 'tag_follow'
                       ? <a href={`/tag/${row.target_tag}`}>#{row.target_tag}</a>
-                    : null}
+                      : null}
                     {row.posts !== null
                       ? (
-                        <a className="activity-follow-stats" href={`/u/${row.activity_kind === 'user_follow'
-                          && !row.target_is_viewer ? row.target_handle : row.actor_handle}`}>
+                        <a className="activity-follow-stats" href={`/u/${
+                          row.activity_kind === 'user_follow'
+                            && !row.target_is_viewer
+                            ? row.target_handle
+                            : row.actor_handle
+                        }`}>
                           <time dateTime={row.created_at} title={fmtFull(row.created_at)}>{fmt(row.created_at)}</time>
                           <span aria-hidden="true">·</span>
                           <span>{row.posts} {row.posts === 1 ? 'note' : 'notes'}</span>
@@ -253,9 +265,11 @@ export function Feed({ user, cursor, title, path = '/for-you', pageUrl, notifica
         : !cursor
         ? (
           <div className="empty empty-actions">
-            <p>{toMe
-              ? 'No replies, mentions, or new followers yet.'
-              : 'Your timeline is empty. Follow people or hashtags to shape it.'}</p>
+            <p>
+              {toMe
+                ? 'No replies, mentions, or new followers yet.'
+                : 'Your timeline is empty. Follow people or hashtags to shape it.'}
+            </p>
             <ActionPair
               primary={<a className="button" href="/explore">explore tags &amp; people</a>}
               secondary={

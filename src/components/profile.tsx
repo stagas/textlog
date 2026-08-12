@@ -8,10 +8,8 @@ import { Post } from './post'
 export function Profile(
   { user, profile, posts, following, bio = profile.bio || '', editHandle = profile.handle, editEmail = profile.email,
     error, editing = false, total = posts.length, noteCount = total, replyCount = 0, tab = 'notes', followerCount = 0,
-    followingCount = 0,
-    followingTagCount = 0,
-    blockedPeopleCount = 0, blockedTagCount = 0, blocked = false, blockedByProfile = false, social,
-    previousCursor = null, nextCursor = null, returnPath }: {
+    followingCount = 0, followingTagCount = 0, blockedPeopleCount = 0, blockedTagCount = 0, blocked = false,
+    blockedByProfile = false, social, previousCursor = null, nextCursor = null, returnPath }: {
       user: User | null
       profile: ProfileRow
       posts: PostView[]
@@ -136,8 +134,7 @@ export function Profile(
           </div>
         )
         : !editing && (
-          <ProfileTabs profile={profile} active={tab} notes={noteCount} replies={replyCount}
-            followers={followerCount}
+          <ProfileTabs profile={profile} active={tab} notes={noteCount} replies={replyCount} followers={followerCount}
             following={followingCount} followingTags={followingTagCount} showBlocked={user?.id === profile.id}
             blockedPeople={blockedPeopleCount} blockedTags={blockedTagCount} />
         )}
@@ -158,8 +155,10 @@ export function Profile(
         </div>
       )}
       {!editing && !blocked && !blockedByProfile
-        && <CursorPagination path={'/u/' + profile.handle + (tab === 'replies' ? '?tab=replies' : '')}
-          previousCursor={previousCursor} nextCursor={nextCursor} />}
+        && (
+          <CursorPagination path={'/u/' + profile.handle + (tab === 'replies' ? '?tab=replies' : '')}
+            previousCursor={previousCursor} nextCursor={nextCursor} />
+        )}
     </Layout>
   )
 }

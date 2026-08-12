@@ -7,26 +7,27 @@ import { BlockedPeopleList, BlockedTagList, ConnectionPeople, Pagination, Profil
 
 export function Connections(
   { user, profile, people, tags = [], kind, page, total, tagsPage = 1, tagsTotal = 0, noteCount, followerCount,
-    followingCount, followingTagCount, following, social, replyCount = 0, blockedPeopleCount = 0, blockedTagCount = 0 }: {
-      user: User | null
-      profile: ProfileRow
-      people: PersonView[]
-      tags?: { tag: string; count: number; viewerFollowing: boolean }[]
-      kind: 'following' | 'followers' | 'blocked'
-      page: number
-      total: number
-      tagsPage?: number
-      tagsTotal?: number
-      noteCount: number
-      replyCount?: number
-      followerCount: number
-      followingCount: number
-      followingTagCount: number
-      following: boolean
-      blockedPeopleCount?: number
-      blockedTagCount?: number
-      social?: { description: string; image: string; url: string; type?: 'article' | 'profile'; imageAlt?: string }
-    },
+    followingCount, followingTagCount, following, social, replyCount = 0, blockedPeopleCount = 0, blockedTagCount = 0 }:
+      {
+        user: User | null
+        profile: ProfileRow
+        people: PersonView[]
+        tags?: { tag: string; count: number; viewerFollowing: boolean }[]
+        kind: 'following' | 'followers' | 'blocked'
+        page: number
+        total: number
+        tagsPage?: number
+        tagsTotal?: number
+        noteCount: number
+        replyCount?: number
+        followerCount: number
+        followingCount: number
+        followingTagCount: number
+        following: boolean
+        blockedPeopleCount?: number
+        blockedTagCount?: number
+        social?: { description: string; image: string; url: string; type?: 'article' | 'profile'; imageAlt?: string }
+      },
 ) {
   return (
     <Layout user={user} title={`${kind} @${profile.handle}`} social={social}>

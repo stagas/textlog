@@ -1,23 +1,24 @@
-import { type User } from '../db'
 import type React from 'react'
+import { type User } from '../db'
 import { canPublishPosts } from '../posting-policy'
 import type { PostView } from '../types'
 import { Layout } from './layout'
 import { FormActions, FormMessage, PostingHelp, postTitle, ReportPanel, VerificationRequired } from './page-shared'
 import { Post, PreviewPost, ThreadReplies } from './post'
 
-export function ReplyBox({ action, body, error, placeholder, hidden, beforeTextarea, secondary, primary,
-  className = 'replybox' }: {
-  action: string
-  body: string
-  error?: string
-  placeholder?: string
-  hidden?: React.ReactNode
-  beforeTextarea?: React.ReactNode
-  secondary: React.ReactNode
-  primary: React.ReactNode
-  className?: string
-}) {
+export function ReplyBox(
+  { action, body, error, placeholder, hidden, beforeTextarea, secondary, primary, className = 'replybox' }: {
+    action: string
+    body: string
+    error?: string
+    placeholder?: string
+    hidden?: React.ReactNode
+    beforeTextarea?: React.ReactNode
+    secondary: React.ReactNode
+    primary: React.ReactNode
+    className?: string
+  },
+) {
   return (
     <div className={`panel ${className}`}>
       <form method="post" action={action}>
@@ -60,19 +61,19 @@ export function ReplyPreview({ parentId, user, body }: { parentId: number; user:
 export function Reply(
   { user, post, showForm, showReport = false, reported = false, error, body = '', reportReason = '', reportError,
     social, preview = false, returnPath }: {
-    user: User
-    post: PostView
-    showForm: boolean
-    showReport?: boolean
-    reported?: boolean
-    reportReason?: string
-    reportError?: string
-    error?: string
-    social?: { description: string; image: string; url: string }
-    body?: string
-    preview?: boolean
-    returnPath?: string
-  },
+      user: User
+      post: PostView
+      showForm: boolean
+      showReport?: boolean
+      reported?: boolean
+      reportReason?: string
+      reportError?: string
+      error?: string
+      social?: { description: string; image: string; url: string }
+      body?: string
+      preview?: boolean
+      returnPath?: string
+    },
 ) {
   return (
     <Layout user={user} title={postTitle(post.body)} social={social}>
@@ -85,7 +86,8 @@ export function Reply(
               : undefined} />
         </div>
         {user.id !== post.user_id && (
-          <ReportPanel post={post} showForm={showReport} reported={reported} reason={reportReason} error={reportError} />
+          <ReportPanel post={post} showForm={showReport} reported={reported} reason={reportReason}
+            error={reportError} />
         )}
         {preview && <ReplyPreview parentId={post.id} user={user} body={body} />}
         {showForm && (

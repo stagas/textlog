@@ -12,17 +12,15 @@ export function ConfirmDelete({ user, post, returnPath }: { user: User; post: Po
           <p className="eyebrow">note deletion</p>
           <h1>Delete this post?</h1>
           <p className="account-delete-copy">
-            This can’t be undone. Replies will remain, with this post shown as “(deleted)” where the conversation
-            needs it.
+            This can’t be undone. Replies will remain, with this post shown as “(deleted)” where the conversation needs
+            it.
           </p>
           <blockquote aria-label="Post to delete">{post.body}</blockquote>
           <form className="post-delete-form" method="post" action={'/post/' + post.id + '/delete'}>
             {returnPath && <input type="hidden" name="from" value={returnPath} />}
             <FormActions
               secondary={<a className="secondary-action" href={'/post/' + post.id + returnQuery}>cancel</a>}
-              primary={
-              <button className="button button-danger" type="submit">delete post</button>
-              }
+              primary={<button className="button button-danger" type="submit">delete post</button>}
             />
           </form>
         </div>

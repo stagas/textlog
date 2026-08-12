@@ -135,7 +135,7 @@ export function Layout({
         {!productHuntBannerDismissed(activeRequest()) && (
           <aside className="product-hunt-banner" aria-label="Product Hunt support reminder">
             <a href="https://www.producthunt.com/products/textlog-2" target="_blank" rel="noopener noreferrer">
-              support us on product hunt
+              support us on 🚀product hunt
             </a>
             <span aria-hidden="true">·</span>
             <form method="post" action="/product-hunt/banner/dismiss">

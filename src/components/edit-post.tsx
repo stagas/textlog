@@ -6,7 +6,12 @@ import { ReplyBox, ReplyPreview } from './reply'
 
 export function EditPost(
   { user, post, parent, error, body = post.body, preview = false, returnPath }: {
-    user: User; post: PostRow; parent?: PostView | null; error?: string; body?: string; preview?: boolean
+    user: User
+    post: PostRow
+    parent?: PostView | null
+    error?: string
+    body?: string
+    preview?: boolean
     returnPath?: string
   },
 ) {
@@ -36,20 +41,19 @@ export function EditPost(
                 delete note
               </a>
             </div>
-          }
-          secondary={
-            <span className="edit-post-actions">
-              <a className="secondary-action edit-post-cancel" href={'/post/' + post.id + returnQuery}>cancel</a>
-            </span>
-          }
-          primary={
-            <span className="edit-post-primary-actions">
-              <button className="secondary-action" name="action" value="preview">preview</button>
-              <button className="button">save changes →</button>
-            </span>
-          } />
-        {post.parent_id && parent && <ThreadReplies parentId={parent.id} user={user} returnPath={returnPath}
-          excludePostId={post.id} />}
+          } secondary={
+          <span className="edit-post-actions">
+            <a className="secondary-action edit-post-cancel" href={'/post/' + post.id + returnQuery}>cancel</a>
+          </span>
+        } primary={
+          <span className="edit-post-primary-actions">
+            <button className="secondary-action" name="action" value="preview">preview</button>
+            <button className="button">save changes →</button>
+          </span>
+        } />
+        {post.parent_id && parent && (
+          <ThreadReplies parentId={parent.id} user={user} returnPath={returnPath} excludePostId={post.id} />
+        )}
       </div>
     </Layout>
   )

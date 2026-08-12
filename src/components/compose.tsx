@@ -7,7 +7,11 @@ import { Post } from './post'
 
 export function Compose(
   { user, error, body = '', preview = false, returnPath = '/' }: {
-    user: User; error?: string; body?: string; preview?: boolean; returnPath?: string
+    user: User
+    error?: string
+    body?: string
+    preview?: boolean
+    returnPath?: string
   },
 ) {
   if (!canPublishPosts(user)) {
@@ -45,13 +49,12 @@ export function Compose(
           <textarea className="form-control" name="body" maxLength={280} required autoFocus defaultValue={body} />
           <div className="composefoot">
             <PostingHelp />
-            <FormActions secondary={(
+            <FormActions secondary={
               <span className="edit-post-actions">
                 <a className="secondary-action edit-post-cancel" href={returnPath}>cancel</a>
                 <button className="secondary-action" name="action" value="preview">preview</button>
               </span>
-            )}
-              primary={<button className="button">post →</button>} />
+            } primary={<button className="button">post →</button>} />
           </div>
         </form>
       </div>

@@ -161,8 +161,7 @@ export function Activity({ user, cursor, title, path = '/activity', pageUrl, not
                   </article>
                 )
                 : (
-                  <Post p={post} user={user} showReplyCount tappable
-                    returnPath={`${returnPath}#post-${post.id}`}
+                  <Post p={post} user={user} showReplyCount tappable returnPath={`${returnPath}#post-${post.id}`}
                     contextLabel={rawPost.activity_kind === 'reply' ? 'replied:' : 'mentioned you:'}
                     contextUnread={!!rawPost.unread} />
                 )}

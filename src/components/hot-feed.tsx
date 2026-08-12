@@ -8,8 +8,13 @@ import { Post } from './post'
 
 export function HotFeed(
   { cursor, user, title, path = '/hot', pageUrl, notificationBanner = false }: {
-    cursor: HotCursor | null; user: User | null; title?: string; path?: string; pageUrl?: string;
-    notificationBanner?: boolean },
+    cursor: HotCursor | null
+    user: User | null
+    title?: string
+    path?: string
+    pageUrl?: string
+    notificationBanner?: boolean
+  },
 ) {
   const viewerId = user?.id ?? -1
   const asOf = cursor?.asOf || new Date().toISOString()
@@ -35,8 +40,10 @@ export function HotFeed(
       <h1 className="visually-hidden">Hot notes</h1>
       <FeedTabs active="hot" user={user} />
       {posts.length
-        ? posts.map(post => <Post key={post.id} p={post} user={user} showReplyCount tappable
-          returnPath={`${returnPath}#post-${post.id}`} />)
+        ? posts.map(post => (
+          <Post key={post.id} p={post} user={user} showReplyCount tappable
+            returnPath={`${returnPath}#post-${post.id}`} />
+        ))
         : !cursor
         ? <GlobalFeedEmpty user={user} />
         : (

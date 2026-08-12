@@ -106,8 +106,10 @@ export function registerFeedsRoutes(app: Hono) {
     const cursor = decodeForYouCursor(cursorValue)
     if (cursorValue && !cursor) return c.text('Invalid cursor', 400)
     return rememberFeed(
-      page(<Feed user={user} cursor={cursor} title="to me" path="/to-me" toMe
-        notificationBanner={showNotificationBanner(c.req.raw, user)} />),
+      page(
+        <Feed user={user} cursor={cursor} title="to me" path="/to-me" toMe
+          notificationBanner={showNotificationBanner(c.req.raw, user)} />,
+      ),
       'following',
     )
   })

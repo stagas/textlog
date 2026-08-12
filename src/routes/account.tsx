@@ -161,8 +161,8 @@ export function registerAccountRoutes(app: Hono) {
       const moderation = await moderateText(`username: ${handle}\nbio: ${bio}`)
       if (!moderation.ok) {
         return page(
-          <Profile user={user} profile={user} posts={[]} following={false} bio={bio} editHandle={submittedHandle} editing
-            error={moderationMessage(moderation.reason)} />,
+          <Profile user={user} profile={user} posts={[]} following={false} bio={bio} editHandle={submittedHandle}
+            editing error={moderationMessage(moderation.reason)} />,
           moderation.reason === 'flagged' ? 422 : 503,
         )
       }
