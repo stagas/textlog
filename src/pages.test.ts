@@ -8,7 +8,7 @@ import React from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
 import { HotFeed } from './components/hot-feed'
 import { ConnectionPeople, Pagination, TagPeopleList } from './components/page-shared'
-import { Post } from './components/post'
+import { Post, replyAnchorReturnPath } from './components/post'
 import { PublicFeed } from './components/public-feed'
 import { TagFeed } from './components/tag-feed'
 
@@ -1033,6 +1033,12 @@ test('Post carries its originating cursor into detail, reply, and edit links', (
   expect(html).toContain('href="/post/2?reply=1&amp;from=%2Flatest%3Fcursor%3Dabc%23post-2"')
   expect(html).toContain('href="/post/2/edit?from=%2Flatest%3Fcursor%3Dabc%23post-2"')
   expect(html).not.toContain('/post/2/delete')
+})
+
+test('thread replies use their own permanent anchor as the next return path', () => {
+  expect(replyAnchorReturnPath(2, 7)).toBe('/post/2#post-7')
+  expect(replyAnchorReturnPath(2, 7, '/latest?cursor=abc#post-2'))
+    .toBe('/post/2?from=%2Flatest%3Fcursor%3Dabc%23post-2#post-7')
 })
 
 test('A quoted post gets its own higher-priority hit area in tappable feeds', () => {

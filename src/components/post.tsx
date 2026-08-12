@@ -14,6 +14,11 @@ function renderFlags(post: PostView | NonNullable<PostView['parent']>) {
 
 export const MAX_VISIBLE_REPLY_DEPTH = 5
 
+export function replyAnchorReturnPath(threadRootId: number, replyId: number, returnPath?: string) {
+  const returnQuery = returnPath ? '?from=' + encodeURIComponent(returnPath) : ''
+  return `/post/${threadRootId}${returnQuery}#post-${replyId}`
+}
+
 export function PreviewPost({ p }: { p: PostView }) {
   return (
     <article className="post" id={`post-${p.id}`}>
@@ -225,6 +230,7 @@ export function ThreadReplies({ parentId, user, returnPath, excludePostId }: { p
     return (
       <div className="reply-branch">
         {branch.map(reply => {
+          const anchoredReturnPath = replyAnchorReturnPath(parentId, reply.id, returnPath)
           const descendantCount = visibleDescendantCount(reply.id)
           const continuesElsewhere = !reply.deleted_at && depth >= MAX_VISIBLE_REPLY_DEPTH && descendantCount > 0
           const childBranch = continuesElsewhere ? null : renderBranch(reply.id, depth + 1)
@@ -235,14 +241,14 @@ export function ThreadReplies({ parentId, user, returnPath, excludePostId }: { p
             <div className="reply-node" key={reply.id}>
               {foldControlId && <input className="thread-fold-input" type="checkbox" id={foldControlId} />}
               <Post p={reply} user={user} showParent={false} foldControlId={foldControlId}
-                returnPath={returnPath}
+                returnPath={anchoredReturnPath}
                 replyHref={user ? undefined : '/enter?next=' + encodeURIComponent('/post/' + reply.id + '?reply=1'
-                  + (returnPath ? '&from=' + encodeURIComponent(returnPath) : ''))}
+                  + '&from=' + encodeURIComponent(anchoredReturnPath))}
                 replyLabel={user ? 'reply' : 'enter to reply'} tappable />
               {childBranch}
               {continuesElsewhere && (
                 <div className="thread-continuation">
-                  <a className="quiet" href={'/post/' + reply.id}>
+                  <a className="quiet" href={'/post/' + reply.id + '?from=' + encodeURIComponent(anchoredReturnPath)}>
                     more ({descendantCount} {descendantCount === 1 ? 'reply' : 'replies'})
                   </a>
                 </div>
