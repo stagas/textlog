@@ -41,7 +41,7 @@ test('post edit places delete above the textarea and keeps preview before save',
     deleted_at: null }
   const html = renderToStaticMarkup(React.createElement(EditPost, { user, post }))
 
-  expect(html).toContain('class="panel compose"')
+  expect(html).toContain('class="panel compose edit-post-compose"')
   expect(html).toContain('class="edit-post-actions"')
   expect(html).toContain('class="edit-post-primary-actions"')
   expect(html).toContain('class="edit-post-delete-action"')

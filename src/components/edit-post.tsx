@@ -28,7 +28,7 @@ export function EditPost(
           </div>
         )}
         <ReplyBox action={'/post/' + post.id + '/edit'} body={body} error={error}
-          className={post.parent_id && parent ? 'replybox' : 'compose'}
+          className={post.parent_id && parent ? 'replybox' : 'compose edit-post-compose'}
           hidden={returnPath && <input type="hidden" name="from" value={returnPath} />}
           beforeTextarea={
             <div className="edit-post-delete-action">

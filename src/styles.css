@@ -1345,6 +1345,10 @@ nav form {
   margin-top: var(--space-5);
 }
 
+.edit-post-compose {
+  margin-top: var(--space-5);
+}
+
 .compose,
 .replybox {
   max-width: none;
