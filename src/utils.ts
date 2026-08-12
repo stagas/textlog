@@ -95,6 +95,15 @@ function linkLabel(url: string, appUrl: string | undefined) {
 const urlMatcher = new LinkifyIt({ fuzzyLink: true, fuzzyEmail: false })
   .tlds(tlds)
 
+function markdownUrl(destination: string) {
+  if (/^https?:\/\//i.test(destination)) return destination
+  const matches = urlMatcher.match(destination)
+  const match = matches?.length === 1 ? matches[0] : null
+  return match && match.index === 0 && match.lastIndex === destination.length && !match.schema
+    ? `https://${destination}`
+    : null
+}
+
 type LinkToken = {
   index: number
   lastIndex: number
@@ -185,9 +194,12 @@ function linkTokens(body: string, flags?: PostContentFlags): LinkToken[] {
   }
   if (!flags || flags.has_latex) tokens.push(...mathTokens(body, tokens))
   if (!flags || flags.has_links) {
-    for (const match of body.matchAll(/\[([^\]\r\n]+)\]\((https?:\/\/[^\s<>")]+)\)/gi)) {
-      tokens.push({ index: match.index, lastIndex: match.index + match[0].length, kind: 'markdown', raw: match[0],
-        label: match[1], url: match[2] })
+    for (const match of body.matchAll(/\[([^\]\r\n]+)\]\(([^\s<>")]+)\)/gi)) {
+      const url = markdownUrl(match[2])
+      if (url) {
+        tokens.push({ index: match.index, lastIndex: match.index + match[0].length, kind: 'markdown', raw: match[0],
+          label: match[1], url })
+      }
     }
     for (const match of urlMatcher.match(body) || []) {
       const url = match.schema ? match.url : `https://${match.raw}`

@@ -3,7 +3,7 @@ import type React from 'react'
 import { canPublishPosts } from '../posting-policy'
 import type { PostView } from '../types'
 import { Layout } from './layout'
-import { FormActions, FormMessage, postTitle, ReportPanel, VerificationRequired } from './page-shared'
+import { FormActions, FormMessage, PostingHelp, postTitle, ReportPanel, VerificationRequired } from './page-shared'
 import { Post, PreviewPost, ThreadReplies } from './post'
 
 export function ReplyBox({ action, body, error, placeholder, hidden, beforeTextarea, secondary, primary,
@@ -27,7 +27,7 @@ export function ReplyBox({ action, body, error, placeholder, hidden, beforeTexta
         <textarea className="form-control" name="body" maxLength={280} required autoFocus defaultValue={body}
           placeholder={placeholder} />
         <div className="composefoot">
-          <span>280 characters max · use #hashtags and @mentions</span>
+          <PostingHelp />
           <FormActions secondary={secondary} primary={primary} />
         </div>
       </form>

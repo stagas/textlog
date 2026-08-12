@@ -37,6 +37,74 @@ export function FormActions({ primary, secondary, className = '' }: {
   )
 }
 
+export function PostingHelp({ maxLength = 280 }: { maxLength?: number }) {
+  return (
+    <div className="posting-help">
+      <span>{maxLength} characters max - use #hashtags, @mentions</span>
+      <details className="posting-help-more">
+        <summary>and more</summary>
+        <div className="posting-help-popover">
+          <strong>Formatting</strong>
+          <dl>
+            <div>
+              <dt>Regular links</dt>
+              <dd>
+                <code>
+                  <span className="posting-help-link">example.com</span> or
+                  <br />
+                  <span className="posting-help-link">https://example.com</span>
+                </code>
+              </dd>
+            </div>
+            <div>
+              <dt>Markdown links</dt>
+              <dd>
+                <code>
+                  <b>[</b>title<b>](</b>example.com<b>)</b> or
+                  <br />
+                  <b>[</b>title<b>](</b>https://example.com<b>)</b>
+                </code>
+              </dd>
+            </div>
+            <div>
+              <dt>Inline code</dt>
+              <dd>
+                <code>
+                  <b>`</b>code<b>`</b>
+                </code>
+              </dd>
+            </div>
+            <div>
+              <dt>Code fences</dt>
+              <dd>
+                <code>
+                  <b>```</b>…<b>```</b>
+                </code>
+              </dd>
+            </div>
+            <div>
+              <dt>Inline LaTeX</dt>
+              <dd>
+                <code>
+                  <b>$</b>inline<b>$</b>
+                </code>
+              </dd>
+            </div>
+            <div>
+              <dt>Block LaTeX</dt>
+              <dd>
+                <code>
+                  <b>$$</b>block<b>$$</b>
+                </code>
+              </dd>
+            </div>
+          </dl>
+        </div>
+      </details>
+    </div>
+  )
+}
+
 export function ActionPair({ primary, secondary, className = '' }: {
   primary: React.ReactNode
   secondary: React.ReactNode
@@ -178,17 +246,19 @@ export function FeedTabs({ active, user, forYouReadStatus, activityReadStatus, t
                 && <span className="feed-tabs-action-separator" aria-hidden="true">·</span>}
             </>
           )}
-          {(forYouReadStatus !== undefined || activityReadStatus !== undefined) && ((forYouReadStatus ?? activityReadStatus)
-            ? (
-              <form method="post"
-                action={activityReadStatus !== undefined
+          {(forYouReadStatus !== undefined || activityReadStatus !== undefined)
+            && ((forYouReadStatus ?? activityReadStatus)
+              ? (
+                <form method="post" action={activityReadStatus !== undefined
                   ? '/activity/read-all'
-                  : toMe ? '/to-me/read-all' : '/for-you/read-all'}
-              >
-                <button className="activity-side-link">mark all as read</button>
-              </form>
-            )
-            : <span className="activity-side-status">you've seen it all</span>)}
+                  : toMe
+                  ? '/to-me/read-all'
+                  : '/for-you/read-all'}
+                >
+                  <button className="activity-side-link">mark all as read</button>
+                </form>
+              )
+              : <span className="activity-side-status">you've seen it all</span>)}
         </span>
       )}
     </nav>
@@ -434,7 +504,11 @@ export function ConnectionPeople({ user, people, className = '', highlightTerms 
 }
 
 export function ReportPanel({ post, showForm, reported, reason = '', error }: {
-  post: PostView; showForm: boolean; reported: boolean; reason?: string; error?: string
+  post: PostView
+  showForm: boolean
+  reported: boolean
+  reason?: string
+  error?: string
 }) {
   if (reported) {
     return (

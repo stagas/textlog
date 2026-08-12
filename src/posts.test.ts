@@ -43,6 +43,11 @@ describe('post persistence', () => {
       .toBe(
         '<a href="https://example.com/" title="https://example.com/" target="_blank" rel="nofollow ugc noopener noreferrer">test</a>',
       )
+    expect(linkify('[test](example.com/docs)'))
+      .toBe(
+        '<a href="https://example.com/docs" title="https://example.com/docs" target="_blank" rel="nofollow ugc noopener noreferrer">test</a>',
+      )
+    expect(linkify('[test](example.invalid)')).toBe('[test](example.invalid)')
   })
   test('linkifies protocol-less domains using the public TLD list', () => {
     expect(linkify('visit example.com or docs.example.dev/guide?q=links.'))

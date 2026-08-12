@@ -1946,6 +1946,92 @@ form.report-panel {
   margin-left: 0;
 }
 
+.posting-help {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.posting-help-more {
+  position: relative;
+  display: inline-block;
+}
+
+.posting-help-more summary {
+  color: inherit;
+  cursor: pointer;
+  user-select: none;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  list-style: none;
+}
+
+.posting-help-more summary::-webkit-details-marker {
+  display: none;
+}
+
+.posting-help-more summary:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.posting-help-popover {
+  position: absolute;
+  z-index: 10;
+  bottom: calc(100% + var(--space-2));
+  left: 50%;
+  transform: translateX(-50%);
+  width: max-content;
+  max-width: min(22rem, calc(100vw - 2 * var(--gutter)));
+  padding: var(--space-3);
+  color: var(--ink);
+  font-size: 0.6875rem;
+  line-height: 1.5;
+  background: var(--panel);
+  border: 1px solid var(--soft);
+  box-shadow: 0 8px 24px rgb(0 0 0 / 14%);
+}
+
+.posting-help-popover strong {
+  display: block;
+  margin-bottom: var(--space-2);
+}
+
+.posting-help-popover dl,
+.posting-help-popover dd {
+  margin: 0;
+}
+
+.posting-help-popover dl {
+  display: grid;
+  gap: var(--space-2);
+}
+
+.posting-help-popover dl>div {
+  display: grid;
+  grid-template-columns: 6.5rem 1fr;
+  gap: var(--space-3);
+}
+
+.posting-help-popover dt {
+  color: var(--muted);
+}
+
+.posting-help-popover code {
+  color: var(--muted);
+  overflow-wrap: anywhere;
+}
+
+.posting-help-popover code b,
+.posting-help-popover .posting-help-link {
+  color: var(--ink);
+}
+
+.posting-help-popover code b {
+  font-weight: inherit;
+}
+
 .compose-post-preview {
   width: calc(100% + 2 * var(--gutter));
   max-width: none;

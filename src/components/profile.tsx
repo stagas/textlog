@@ -2,7 +2,7 @@ import { type User } from '../db'
 import type { PostView, ProfileRow } from '../types'
 import { linkify } from '../utils'
 import { Layout } from './layout'
-import { CursorPagination, FormMessage, ProfileHeader, ProfileTabs } from './page-shared'
+import { CursorPagination, FormMessage, PostingHelp, ProfileHeader, ProfileTabs } from './page-shared'
 import { Post } from './post'
 
 export function Profile(
@@ -82,7 +82,7 @@ export function Profile(
                       placeholder="Tell people a little about yourself…" />
                   </label>
                   <div className="composefoot">
-                    <span>160 characters max</span>
+                    <PostingHelp maxLength={160} />
                     <button className="button">save profile →</button>
                   </div>
                 </form>

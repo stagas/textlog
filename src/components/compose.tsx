@@ -2,7 +2,7 @@ import { type User } from '../db'
 import { canPublishPosts } from '../posting-policy'
 import type { PostView } from '../types'
 import { Layout } from './layout'
-import { FormActions, FormMessage, VerificationRequired } from './page-shared'
+import { FormActions, FormMessage, PostingHelp, VerificationRequired } from './page-shared'
 import { Post } from './post'
 
 export function Compose(
@@ -44,7 +44,7 @@ export function Compose(
           <FormMessage error={error} />
           <textarea className="form-control" name="body" maxLength={280} required autoFocus defaultValue={body} />
           <div className="composefoot">
-            <span>280 characters max · use #hashtags and @mentions</span>
+            <PostingHelp />
             <FormActions secondary={(
               <span className="edit-post-actions">
                 <a className="secondary-action edit-post-cancel" href={returnPath}>cancel</a>
