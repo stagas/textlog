@@ -110,7 +110,8 @@ export function Feed({ user, cursor, title, path = '/for-you', pageUrl, notifica
         AND target_follow.following_id=target.id) following,'user_follow' activity_kind,
       'user-follow:' || printf('%020d',actor.id) || ':' || printf('%020d',target.id) || ':' || f.created_at event_key,
       actor.id actor_id,actor.handle actor_handle,actor.bio actor_bio,target.handle target_handle,NULL target_tag,
-      target.bio target_bio,target.id=$viewer target_is_viewer,target.id=$viewer targeted_to_viewer,NULL posts
+      target.bio target_bio,target.id=$viewer target_is_viewer,target.id=$viewer targeted_to_viewer,
+      (SELECT count(*) FROM posts tp WHERE tp.user_id=target.id AND tp.deleted_at IS NULL) posts
       FROM follows f JOIN users actor ON actor.id=f.follower_id JOIN users target ON target.id=f.following_id
       WHERE f.created_at IS NOT NULL AND actor.id!=$viewer AND EXISTS
         (SELECT 1 FROM follows viewer_follow WHERE viewer_follow.follower_id=$viewer
@@ -215,11 +216,17 @@ export function Feed({ user, cursor, title, path = '/for-you', pageUrl, notifica
                       ? <a href={`/u/${row.target_handle}`}>@{row.target_handle}</a>
                       : row.activity_kind === 'tag_follow'
                       ? <a href={`/tag/${row.target_tag}`}>#{row.target_tag}</a>
-                      : null}
-                    <span aria-hidden="true">·</span>
-                    <time dateTime={row.created_at} title={fmtFull(row.created_at)}>{fmt(row.created_at)}</time>
-                    {row.posts !== null && <><span aria-hidden="true">·</span><small>{row.posts} {row.posts === 1
-                      ? 'note' : 'notes'}</small></>}
+                    : null}
+                    {row.posts !== null
+                      ? (
+                        <a className="activity-follow-stats" href={`/u/${row.activity_kind === 'user_follow'
+                          && !row.target_is_viewer ? row.target_handle : row.actor_handle}`}>
+                          <time dateTime={row.created_at} title={fmtFull(row.created_at)}>{fmt(row.created_at)}</time>
+                          <span aria-hidden="true">·</span>
+                          <span>{row.posts} {row.posts === 1 ? 'note' : 'notes'}</span>
+                        </a>
+                      )
+                      : <time dateTime={row.created_at} title={fmtFull(row.created_at)}>{fmt(row.created_at)}</time>}
                   </div>
                   {(row.activity_kind === 'user_follow' || row.activity_kind === 'signup')
                     && <p className="profile-bio">{row.target_bio || 'No bio yet.'}</p>}

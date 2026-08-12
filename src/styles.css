@@ -774,7 +774,7 @@ nav form {
 }
 
 .feed-relationship-main time {
-  font-size: 0.625rem;
+  font-size: 0.75rem;
 }
 
 .feed-relationship .profile-bio {
@@ -2875,7 +2875,7 @@ form.report-panel {
 .post-context {
   margin-left: calc(-1 * var(--space-2) + 1ch);
   color: var(--muted);
-  font-size: 0.6875rem;
+  font-size: 0.75rem;
 }
 
 .for-you-item .posttop-context .post-context {
@@ -2919,12 +2919,41 @@ form.report-panel {
 }
 
 .activity-follow-main small {
-  color: var(--muted);
-  font-size: 0.6875rem;
+  color: var(--quote-ink);
+  font-size: 0.75rem;
 }
 
 .activity-follow-main time {
-  font-size: 0.6875rem;
+  color: var(--quote-ink);
+  font-size: 0.75rem;
+}
+
+.activity-follow-main time,
+.activity-follow-main small {
+  margin-left: var(--space-2);
+}
+
+.activity-follow-main .activity-follow-stats {
+  display: inline-flex;
+  gap: var(--space-2);
+  margin-left: var(--space-2);
+  color: var(--accent);
+  font-size: 0.75rem;
+  overflow: visible;
+}
+
+.activity-follow-main .activity-follow-stats time {
+  margin-left: 0;
+  color: inherit;
+  font-size: inherit;
+}
+
+.activity-follow-main .activity-follow-stats span {
+  color: inherit;
+}
+
+.activity-follow-main .activity-follow-stats:hover {
+  color: var(--accent-dark);
 }
 
 .activity-follow .profile-bio {
