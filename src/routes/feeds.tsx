@@ -59,8 +59,7 @@ export function registerFeedsRoutes(app: Hono) {
     const cursorValue = c.req.query('cursor')
     const cursor = decodeForYouCursor(cursorValue)
     if (cursorValue && !cursor) return c.text('Invalid cursor', 400)
-    return page(<Feed user={user} cursor={cursor} path="/" pageUrl={pageUrl} notificationBanner={notificationBanner}
-      toMe={c.req.query('to') === 'me'} />)
+    return page(<Feed user={user} cursor={cursor} path="/" pageUrl={pageUrl} notificationBanner={notificationBanner} />)
   })
 
   app.get('/for-you', c => {
@@ -71,7 +70,7 @@ export function registerFeedsRoutes(app: Hono) {
     if (cursorValue && !cursor) return c.text('Invalid cursor', 400)
     return rememberFeed(
       page(
-        <Feed user={user} cursor={cursor} title="for you" toMe={c.req.query('to') === 'me'}
+        <Feed user={user} cursor={cursor} title="for you"
           notificationBanner={showNotificationBanner(c.req.raw, user)} />,
       ),
       'following',
@@ -96,7 +95,27 @@ export function registerFeedsRoutes(app: Hono) {
     const user = currentUser(c.req.raw)
     if (!user) return redirect('/enter?next=' + encodeURIComponent('/for-you'))
     markAllForYouRead(user.id)
-    return redirect(c.req.query('to') === 'me' ? '/for-you?to=me' : '/for-you')
+    return redirect('/for-you')
+  })
+
+  app.get('/to-me', c => {
+    const user = currentUser(c.req.raw)
+    if (!user) return redirect('/enter?next=' + encodeURIComponent('/to-me'))
+    const cursorValue = c.req.query('cursor')
+    const cursor = decodeForYouCursor(cursorValue)
+    if (cursorValue && !cursor) return c.text('Invalid cursor', 400)
+    return rememberFeed(
+      page(<Feed user={user} cursor={cursor} title="to me" path="/to-me" toMe
+        notificationBanner={showNotificationBanner(c.req.raw, user)} />),
+      'following',
+    )
+  })
+
+  app.post('/to-me/read-all', c => {
+    const user = currentUser(c.req.raw)
+    if (!user) return redirect('/enter?next=' + encodeURIComponent('/to-me'))
+    markAllForYouRead(user.id)
+    return redirect('/to-me')
   })
 
   app.get('/hot', c => {
@@ -123,14 +142,14 @@ export function registerFeedsRoutes(app: Hono) {
   app.get('/activity', c => {
     const user = currentUser(c.req.raw)
     if (!user) return redirect('/enter?next=' + encodeURIComponent('/activity'))
-    return redirect('/for-you?to=me')
+    return redirect('/to-me')
   })
 
   app.post('/activity/read-all', c => {
     const user = currentUser(c.req.raw)
     if (!user) return redirect('/enter?next=' + encodeURIComponent('/activity'))
     markAllForYouRead(user.id)
-    return redirect('/for-you?to=me')
+    return redirect('/to-me')
   })
 
   app.get('/about', c => page(<About user={currentUser(c.req.raw)} />))

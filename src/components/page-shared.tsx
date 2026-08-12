@@ -171,7 +171,7 @@ export function FeedTabs({ active, user, forYouReadStatus, activityReadStatus, t
         <span className="feed-tabs-read-status">
           {active === 'following' && (
             <>
-              <a className="activity-side-link" href={toMe ? '/for-you' : '/for-you?to=me'}>
+              <a className="activity-side-link" href={toMe ? '/for-you' : '/to-me'}>
                 {toMe ? 'all' : 'to me'}
               </a>
               {(forYouReadStatus !== undefined || activityReadStatus !== undefined)
@@ -183,7 +183,7 @@ export function FeedTabs({ active, user, forYouReadStatus, activityReadStatus, t
               <form method="post"
                 action={activityReadStatus !== undefined
                   ? '/activity/read-all'
-                  : `/for-you/read-all${toMe ? '?to=me' : ''}`}
+                  : toMe ? '/to-me/read-all' : '/for-you/read-all'}
               >
                 <button className="activity-side-link">mark all as read</button>
               </form>

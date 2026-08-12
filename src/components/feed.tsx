@@ -271,7 +271,7 @@ export function Feed({ user, cursor, title, path = '/for-you', pageUrl, notifica
             No activity on this page. <a href="/for-you">Return to the first page</a>.
           </div>
         )}
-      <CursorPagination path={toMe ? `${path}?to=me` : path} previousCursor={previousCursor} nextCursor={nextCursor} />
+      <CursorPagination path={path} previousCursor={previousCursor} nextCursor={nextCursor} />
     </Layout>
   )
 }
