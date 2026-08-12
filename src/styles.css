@@ -1473,11 +1473,12 @@ textarea:focus-visible {
   outline-offset: -2px;
 }
 
-textarea {
+textarea,
+textarea.form-control {
   height: 150px;
   resize: vertical;
   font-size: 0.8125rem;
-  line-height: 1.7;
+  line-height: 1.65;
 }
 
 .button-wide {
@@ -1717,7 +1718,7 @@ textarea {
   min-height: 132px;
   padding: 13px;
   color: var(--ink);
-  font: 18px/1.65 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font: 0.8125rem/1.65 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
   overflow-wrap: anywhere;
   word-break: break-all;
   white-space: pre-wrap;

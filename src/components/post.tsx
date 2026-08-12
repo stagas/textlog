@@ -100,7 +100,7 @@ export function Post({
   return (
     <article className={`post${tappable || hasTappableParent ? ' tappable-post' : ''}`} id={`post-${p.id}`}>
       {tappable && <a className="post-hit-area" href={detailPath} aria-label={`open post by @${p.handle}`} />}
-      <div className={`posttop${contextLabel ? ' posttop-context' : ''}`}>
+      <div className={`posttop${contextLabel ? ' posttop-context' : ''}${preview ? ' preview-post-meta' : ''}`}>
         {contextUnread && <span className="unread-dot" aria-label="unread" />}
         {preview
           ? <span className="postauthor" title={p.bio || 'No bio yet.'}>@{p.handle}</span>

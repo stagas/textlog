@@ -29,6 +29,7 @@ test('compose offers a server-rendered post preview', () => {
   )
   expect(preview.indexOf('<form action="/post" method="post">')).toBeLessThan(preview.indexOf('<textarea'))
   expect(preview).toContain('Hello <a href="/tag/world"')
+  expect(preview).toContain('<div class="posttop preview-post-meta"><span class="postauthor"')
   expect(preview).not.toContain('href="/post/0"')
   expect(preview).toContain('<span class="quiet preview-reply">reply</span>')
   expect(preview).not.toContain('href="#"')
