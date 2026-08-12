@@ -261,11 +261,12 @@ export function ProfileHeader({ user, profile, following, blocked = false, editi
 }
 
 export function ProfileTabs(
-  { profile, active, notes, followers, following, followingTags, showBlocked = false, blockedPeople = 0,
+  { profile, active, notes, replies = 0, followers, following, followingTags, showBlocked = false, blockedPeople = 0,
     blockedTags = 0 }: {
       profile: ProfileRow
-      active: 'notes' | 'followers' | 'following' | 'blocked'
+      active: 'notes' | 'replies' | 'followers' | 'following' | 'blocked'
       notes: number
+      replies?: number
       followers: number
       following: number
       followingTags: number
@@ -281,6 +282,11 @@ export function ProfileTabs(
         href={base}
       >
         {notes} {notes === 1 ? 'note' : 'notes'}
+      </a>
+      <a className={active === 'replies' ? 'active' : ''} aria-current={active === 'replies' ? 'page' : undefined}
+        href={`${base}?tab=replies`}
+      >
+        {replies} {replies === 1 ? 'reply' : 'replies'}
       </a>
       <a className={active === 'following' ? 'active' : ''} aria-current={active === 'following' ? 'page' : undefined}
         href={`${base}?tab=following`}

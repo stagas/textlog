@@ -72,12 +72,18 @@ export function registerProfilesRoutes(app: Hono) {
       'SELECT id,handle,email,bio,suspended_at,deleted_at FROM users WHERE id=? AND deleted_at IS NULL',
     ).get(resolved.id) as ProfileRow
     const tab = c.req.query('tab')
-    if (tab && tab !== 'following' && tab !== 'followers' && tab !== 'blocked') return notFoundPage(c.req.raw)
+    if (tab && tab !== 'replies' && tab !== 'following' && tab !== 'followers' && tab !== 'blocked') {
+      return notFoundPage(c.req.raw)
+    }
     if (tab === 'blocked' && user?.id !== profile.id) return notFoundPage(c.req.raw)
-    const total =
-      (db.query('SELECT count(*) AS count FROM posts WHERE user_id=? AND deleted_at IS NULL').get(profile.id) as {
-        count: number
-      }).count
+    const postCounts = db.query(`SELECT
+      (SELECT count(*) FROM posts WHERE user_id=? AND parent_id IS NULL AND deleted_at IS NULL) notes,
+      (SELECT count(*) FROM posts WHERE user_id=? AND parent_id IS NOT NULL AND deleted_at IS NULL) replies`)
+      .get(profile.id, profile.id) as {
+          notes: number
+          replies: number
+        }
+    const total = tab === 'replies' ? postCounts.replies : postCounts.notes
     const following = !!user
       && !!db.query('SELECT 1 FROM follows WHERE follower_id=? AND following_id=?').get(user.id, profile.id)
     const blocked = !!user
@@ -141,7 +147,8 @@ export function registerProfilesRoutes(app: Hono) {
       if (outOfRange) return outOfRange
       return page(
         <Connections user={user} profile={profile} people={people} tags={tags} kind="blocked" page={profilePage}
-          total={blockCounts.blockedPeople} noteCount={total} {...counts} following={following}
+          total={blockCounts.blockedPeople} noteCount={postCounts.notes} replyCount={postCounts.replies} {...counts}
+          following={following}
           blockedPeopleCount={blockCounts.blockedPeople} blockedTagCount={blockCounts.blockedTags} social={social} />,
       )
     }
@@ -202,7 +209,8 @@ export function registerProfilesRoutes(app: Hono) {
       }
       return page(
         <Connections user={user} profile={profile} people={people} tags={tags} kind={tab} page={connectionPage}
-          total={connectionTotal} tagsPage={tagsPage} tagsTotal={counts.followingTagCount} noteCount={total} {...counts}
+          total={connectionTotal} tagsPage={tagsPage} tagsTotal={counts.followingTagCount} noteCount={postCounts.notes}
+          replyCount={postCounts.replies} {...counts}
           following={following} blockedPeopleCount={blockCounts.blockedPeople} blockedTagCount={blockCounts.blockedTags}
           social={social} />,
       )
@@ -211,17 +219,22 @@ export function registerProfilesRoutes(app: Hono) {
     const cursor = decodePostCursor(cursorValue)
     if (cursorValue && !cursor) return c.text('Invalid cursor', 400)
     const cursorFilter = cursor ? `AND p.id ${cursor.direction === 'previous' ? '>' : '<'} ?` : ''
+    const postKindFilter = tab === 'replies'
+      ? 'AND p.parent_id IS NOT NULL'
+      : 'AND p.parent_id IS NULL'
     const rows = db.query(`SELECT p.*,u.handle FROM posts p JOIN users u ON u.id=p.user_id
       WHERE p.user_id=? AND p.deleted_at IS NULL AND (? < 0 OR NOT EXISTS
         (SELECT 1 FROM post_hashtags ph JOIN blocked_hashtags bh ON bh.tag=ph.tag
-          WHERE ph.post_id=p.id AND bh.user_id=?)) ${cursorFilter}
+          WHERE ph.post_id=p.id AND bh.user_id=?)) ${postKindFilter} ${cursorFilter}
       ORDER BY p.id ${cursor?.direction === 'previous' ? 'ASC' : 'DESC'} LIMIT ?`)
       .all(profile.id, viewerId, viewerId, ...(cursor ? [cursor.id] : []), PAGE_SIZE + 1) as PostView[]
     const result = postCursorPage(rows, cursor)
     const posts = enrichPosts(db, result.rows, viewerId)
     return page(
       <Profile user={user} profile={profile} posts={blocked || blockedByProfile ? [] : posts} following={following}
-        blocked={blocked} total={total} followerCount={counts.followerCount} followingCount={counts.followingCount}
+        blocked={blocked} total={total} noteCount={postCounts.notes} replyCount={postCounts.replies}
+        tab={tab === 'replies' ? 'replies' : 'notes'}
+        followerCount={counts.followerCount} followingCount={counts.followingCount}
         followingTagCount={counts.followingTagCount} blockedPeopleCount={blockCounts.blockedPeople}
         blockedTagCount={blockCounts.blockedTags} social={social} previousCursor={result.previousCursor}
         nextCursor={result.nextCursor} returnPath={returnPath} />,

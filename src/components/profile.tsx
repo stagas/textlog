@@ -7,7 +7,9 @@ import { Post } from './post'
 
 export function Profile(
   { user, profile, posts, following, bio = profile.bio || '', editHandle = profile.handle, editEmail = profile.email,
-    error, editing = false, total = posts.length, followerCount = 0, followingCount = 0, followingTagCount = 0,
+    error, editing = false, total = posts.length, noteCount = total, replyCount = 0, tab = 'notes', followerCount = 0,
+    followingCount = 0,
+    followingTagCount = 0,
     blockedPeopleCount = 0, blockedTagCount = 0, blocked = false, blockedByProfile = false, social,
     previousCursor = null, nextCursor = null, returnPath }: {
       user: User | null
@@ -20,6 +22,9 @@ export function Profile(
       error?: string
       editing?: boolean
       total?: number
+      noteCount?: number
+      replyCount?: number
+      tab?: 'notes' | 'replies'
       followerCount?: number
       followingCount?: number
       followingTagCount?: number
@@ -131,7 +136,8 @@ export function Profile(
           </div>
         )
         : !editing && (
-          <ProfileTabs profile={profile} active="notes" notes={total} followers={followerCount}
+          <ProfileTabs profile={profile} active={tab} notes={noteCount} replies={replyCount}
+            followers={followerCount}
             following={followingCount} followingTags={followingTagCount} showBlocked={user?.id === profile.id}
             blockedPeople={blockedPeopleCount} blockedTags={blockedTagCount} />
         )}
@@ -142,15 +148,18 @@ export function Profile(
           {user?.id === profile.id
             ? (
               <>
-                <p>You haven’t posted any notes yet.</p>
-                <a className="button" href="/write">write a note</a>
+                <p>{tab === 'replies' ? 'You haven’t posted any replies yet.' : 'You haven’t posted any notes yet.'}</p>
+                {tab === 'notes' && <a className="button" href="/write">write a note</a>}
               </>
             )
+            : tab === 'replies'
+            ? `@${profile.handle} hasn’t posted any replies yet.`
             : `@${profile.handle} hasn’t posted any notes yet.`}
         </div>
       )}
       {!editing && !blocked && !blockedByProfile
-        && <CursorPagination path={'/u/' + profile.handle} previousCursor={previousCursor} nextCursor={nextCursor} />}
+        && <CursorPagination path={'/u/' + profile.handle + (tab === 'replies' ? '?tab=replies' : '')}
+          previousCursor={previousCursor} nextCursor={nextCursor} />}
     </Layout>
   )
 }
