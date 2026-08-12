@@ -40,6 +40,7 @@ export function Profile(
   if (tab === 'replies') feedQuery.set('tab', 'replies')
   if (page > 1) feedQuery.set('page', String(page))
   const feedPath = `/u/${profile.handle}${feedQuery.size ? `?${feedQuery}` : ''}`
+  const fromQuery = returnPath ? `?from=${encodeURIComponent(returnPath)}` : ''
   return (
     <Layout user={user} title={`@${profile.handle}`} social={social} feeds={{
       title: `Notes by @${profile.handle}`,
@@ -55,19 +56,21 @@ export function Profile(
             </h1>
             {(returnPath || user?.id === profile.id) && (
               <div className="profile-owner-actions">
-                {returnPath && <a className="profile-edit-link" href={returnPath}>back</a>}
-                {user?.id === profile.id && (
-                  editing
-                    ? <a className="profile-edit-link" href={'/u/' + profile.handle}>back</a>
-                    : (
-                      <>
-                        <a className="profile-edit-link" href="/account/edit">account</a>
-                        <form method="post" action="/logout">
-                          <button className="profile-edit-link profile-logout">logout</button>
-                        </form>
-                      </>
-                    )
-                )}
+                {editing
+                  ? <a className="profile-edit-link" href={returnPath || '/u/' + profile.handle}>back</a>
+                  : (
+                    <>
+                      {returnPath && <a className="profile-edit-link" href={returnPath}>back</a>}
+                      {user?.id === profile.id && (
+                        <>
+                          <a className="profile-edit-link" href="/account/edit">account</a>
+                          <form method="post" action="/logout">
+                            <button className="profile-edit-link profile-logout">logout</button>
+                          </form>
+                        </>
+                      )}
+                    </>
+                  )}
               </div>
             )}
           </div>
@@ -75,6 +78,7 @@ export function Profile(
             ? (
               <>
                 <form className="bio-form" method="post" action="/account/edit">
+                  {returnPath && <input type="hidden" name="from" value={returnPath} />}
                   <FormMessage error={error} />
                   <label>
                     handle<input name="handle" required pattern="[A-Za-z0-9_]{2,24}" defaultValue={editHandle} />
@@ -94,8 +98,8 @@ export function Profile(
                     <span>Choose a theme, accent color, and monospace font for textlog.</span>
                   </div>
                   <div className="account-appearance-actions">
-                    <a className="button" href="/account/edit/theme">change theme</a>
-                    <a className="button" href="/account/edit/font">change font</a>
+                    <a className="button" href={`/account/edit/theme${fromQuery}`}>change theme</a>
+                    <a className="button" href={`/account/edit/font${fromQuery}`}>change font</a>
                   </div>
                 </div>
                 <div className="account-danger-zone">
@@ -103,14 +107,14 @@ export function Profile(
                     <strong>Account security</strong>
                     <span>Manage your email and signed-in sessions.</span>
                   </div>
-                  <a className="button" href="/account/security">manage security</a>
+                  <a className="button" href={`/account/security${fromQuery}`}>manage security</a>
                 </div>
                 <div className="account-danger-zone">
                   <div>
                     <strong>Notifications</strong>
                     <span>Choose browser notifications for new notes, replies, mentions, and follows.</span>
                   </div>
-                  <a className="button" href="/account/edit/notifications">manage notifications</a>
+                  <a className="button" href={`/account/edit/notifications${fromQuery}`}>manage notifications</a>
                 </div>
                 <div className="account-danger-zone">
                   <div>
@@ -144,12 +148,13 @@ export function Profile(
         )}
       {!editing && !blocked && !blockedByProfile && page > 1
         && (
-          <Pagination path={'/u/' + profile.handle + (tab === 'replies' ? '?tab=replies' : '')}
-            page={page} totalPages={totalPages} top />
+          <Pagination path={'/u/' + profile.handle + (tab === 'replies' ? '?tab=replies' : '')} page={page}
+            totalPages={totalPages} top />
         )}
       {!editing && !blocked && !blockedByProfile
-        && posts.map(post => <Post key={post.id} p={post} user={user} showReplyCount tappable
-          returnPath={`${feedPath}#post-${post.id}`} />)}
+        && posts.map(post => (
+          <Post key={post.id} p={post} user={user} showReplyCount tappable returnPath={`${feedPath}#post-${post.id}`} />
+        ))}
       {!editing && !blocked && !blockedByProfile && total === 0 && (
         <div className={`empty${user?.id === profile.id ? ' empty-actions' : ''}`}>
           {user?.id === profile.id
@@ -166,8 +171,8 @@ export function Profile(
       )}
       {!editing && !blocked && !blockedByProfile
         && (
-          <Pagination path={'/u/' + profile.handle + (tab === 'replies' ? '?tab=replies' : '')}
-            page={page} totalPages={totalPages} />
+          <Pagination path={'/u/' + profile.handle + (tab === 'replies' ? '?tab=replies' : '')} page={page}
+            totalPages={totalPages} />
         )}
     </Layout>
   )

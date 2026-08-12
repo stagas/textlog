@@ -3,10 +3,11 @@ import { anonymizeUser, isAdmin } from '../admin'
 import { issueApiKey } from '../api-keys'
 import { AUTH_LIMITS, authRateLimitMessage } from '../auth-rate-limit'
 import { currentUser, hash, hashPassword, sessionToken, token, verifyPassword } from '../utils'
-import { authLimit, clientAddress, form, issueEmailToken, issueMagicLink, page, redirect, retryPage,
+import { authLimit, clientAddress, form, issueEmailToken, issueMagicLink, page, redirect, retryPage, safeNext,
   securityPage } from './shared'
 
 import type { Hono } from 'hono'
+import { bioBodyValidationMessage, normalizeBioBody, validBioBody } from '../bio-body'
 import {
   AccountApiKey,
   AccountApiKeyCreate,
@@ -21,7 +22,6 @@ import {
 } from '../components/pages'
 import { exportUserData } from '../data-export'
 import { db } from '../db'
-import { bioBodyValidationMessage, normalizeBioBody, validBioBody } from '../bio-body'
 import { sendAccountDeletionConfirmation, sendEmailChangeAuthorization, sendPasswordEnableConfirmation } from '../email'
 import { emailChangeForToken, issueEmailChangeAuthorization } from '../email-change-authorization'
 import { confirmEmailToken, findEmailToken } from '../email-verification'
@@ -44,7 +44,8 @@ export function registerAccountRoutes(app: Hono) {
     const user = currentUser(c.req.raw)
     if (!user) return redirect('/enter?next=' + encodeURIComponent('/account/edit/notifications'))
     const ios = /(?:iPhone|iPad|iPod)/i.test(c.req.header('user-agent') || '')
-    return page(<NotificationSettings user={user} publicKey={vapidPublicKey()} ios={ios} />)
+    const returnPath = c.req.query('from') ? safeNext(c.req.query('from')) : undefined
+    return page(<NotificationSettings user={user} publicKey={vapidPublicKey()} ios={ios} returnPath={returnPath} />)
   })
 
   app.get('/account/push-subscription', c => {
@@ -138,13 +139,15 @@ export function registerAccountRoutes(app: Hono) {
   app.get('/account/edit', c => {
     const user = currentUser(c.req.raw)
     if (!user) return redirect('/enter?next=' + encodeURIComponent('/account/edit'))
-    return page(<Profile user={user} profile={user} posts={[]} following={false} editing />)
+    const returnPath = c.req.query('from') ? safeNext(c.req.query('from')) : undefined
+    return page(<Profile user={user} profile={user} posts={[]} following={false} editing returnPath={returnPath} />)
   })
 
   app.post('/account/edit', async c => {
     const user = currentUser(c.req.raw)
     if (!user) return redirect('/enter')
     const f = await form(c.req.raw)
+    const returnPath = f.from ? safeNext(f.from) : undefined
     // Preserve whitespace because spaces and line breaks can be meaningful in ASCII art.
     // Treat an entirely blank submission as an empty bio, though.
     const submittedBio = normalizeBioBody(f.bio || '')
@@ -159,7 +162,7 @@ export function registerAccountRoutes(app: Hono) {
       ].filter(Boolean).join(' ')
       return page(
         <Profile user={user} profile={user} posts={[]} following={false} bio={bio} editHandle={submittedHandle} editing
-          error={error} />,
+          error={error} returnPath={returnPath} />,
         400,
       )
     }
@@ -168,7 +171,7 @@ export function registerAccountRoutes(app: Hono) {
       if (!moderation.ok) {
         return page(
           <Profile user={user} profile={user} posts={[]} following={false} bio={bio} editHandle={submittedHandle}
-            editing error={moderationMessage(moderation.reason)} />,
+            editing error={moderationMessage(moderation.reason)} returnPath={returnPath} />,
           moderation.reason === 'flagged' ? 422 : 503,
         )
       }
@@ -179,7 +182,7 @@ export function registerAccountRoutes(app: Hono) {
     catch {
       return page(
         <Profile user={user} profile={user} posts={[]} following={false} bio={bio} editHandle={submittedHandle} editing
-          error="That username is unavailable." />,
+          error="That username is unavailable." returnPath={returnPath} />,
         400,
       )
     }
@@ -189,46 +192,59 @@ export function registerAccountRoutes(app: Hono) {
   app.get('/account/edit/theme', c => {
     const user = currentUser(c.req.raw)
     if (!user) return redirect('/enter?next=' + encodeURIComponent('/account/edit/theme'))
-    return page(<ChangeTheme user={user} selected={appearance(c.req.raw)} />)
+    const returnPath = c.req.query('from') ? safeNext(c.req.query('from')) : undefined
+    return page(<ChangeTheme user={user} selected={appearance(c.req.raw)} returnPath={returnPath} />)
   })
 
   app.post('/account/edit/theme', async c => {
     const user = currentUser(c.req.raw)
     if (!user) return redirect('/enter')
     const f = await form(c.req.raw)
+    const returnPath = f.from ? safeNext(f.from) : undefined
     const theme = f.theme as ThemeChoice
     const accent = f.accent as AccentChoice
     if (!THEME_CHOICES.includes(theme) || !ACCENT_CHOICES.includes(accent)) {
-      return page(<ChangeTheme user={user} selected={appearance(c.req.raw)} />, 400)
+      return page(<ChangeTheme user={user} selected={appearance(c.req.raw)} returnPath={returnPath} />, 400)
     }
-    return redirect('/account/edit/theme', appearanceCookie({ theme, accent }))
+    return redirect('/account/edit/theme' + (returnPath ? '?from=' + encodeURIComponent(returnPath) : ''),
+      appearanceCookie({ theme, accent }))
   })
 
   app.get('/account/edit/font', c => {
     const user = currentUser(c.req.raw)
     if (!user) return redirect('/enter?next=' + encodeURIComponent('/account/edit/font'))
-    return page(<ChangeFont user={user} selected={fontChoice(c.req.raw)} selectedSize={fontSizeChoice(c.req.raw)} />)
+    const returnPath = c.req.query('from') ? safeNext(c.req.query('from')) : undefined
+    return page(
+      <ChangeFont user={user} selected={fontChoice(c.req.raw)} selectedSize={fontSizeChoice(c.req.raw)}
+        returnPath={returnPath} />,
+    )
   })
 
   app.post('/account/edit/font', async c => {
     const user = currentUser(c.req.raw)
     if (!user) return redirect('/enter')
     const f = await form(c.req.raw)
+    const returnPath = f.from ? safeNext(f.from) : undefined
     const selected = f.font as FontChoice
     const selectedSize = f.fontSize as FontSizeChoice
     if (!FONT_CHOICES.some(font => font.value === selected)
       || !FONT_SIZE_CHOICES.some(size => size.value === selectedSize))
     {
-      return page(<ChangeFont user={user} selected={fontChoice(c.req.raw)} selectedSize={fontSizeChoice(c.req.raw)} />,
-        400)
+      return page(
+        <ChangeFont user={user} selected={fontChoice(c.req.raw)} selectedSize={fontSizeChoice(c.req.raw)}
+          returnPath={returnPath} />,
+        400,
+      )
     }
-    const response = redirect('/account/edit/font', fontCookie(selected))
+    const response = redirect('/account/edit/font' + (returnPath ? '?from=' + encodeURIComponent(returnPath) : ''),
+      fontCookie(selected))
     response.headers.append('set-cookie', fontSizeCookie(selectedSize))
     return response
   })
 
-  app.get('/account/security', c =>
-    securityPage(c.req.raw, undefined, c.req.query('enabled') === 'password'
+  app.get('/account/security', c => {
+    const returnPath = c.req.query('from') ? safeNext(c.req.query('from')) : undefined
+    return securityPage(c.req.raw, undefined, c.req.query('enabled') === 'password'
       ? 'Password login enabled.'
       : c.req.query('changed') === 'password'
       ? 'Password changed. Other sessions were revoked.'
@@ -236,7 +252,8 @@ export function registerAccountRoutes(app: Hono) {
       ? 'Email address verified and changed.'
       : c.req.query('verified') === '1'
       ? 'Email address verified.'
-      : undefined))
+      : undefined, 200, returnPath)
+  })
 
   app.get('/account/api-keys/new', c => {
     const user = currentUser(c.req.raw)

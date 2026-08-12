@@ -112,7 +112,7 @@ export function issueMagicLink(email: string, userId: number | null, nextPath: s
     .run(hash(value), email, userId, safeLocalPath(nextPath), now + MAGIC_LINK_LIFETIME_MS, now, hash(code))
   return { url: `${origin.replace(/\/$/, '')}/enter/magic?token=${encodeURIComponent(value)}`, code }
 }
-export function securityPage(req: Request, error?: string, success?: string, status = 200) {
+export function securityPage(req: Request, error?: string, success?: string, status = 200, returnPath?: string) {
   const user = currentUser(req)
   if (!user) return redirect('/enter?next=' + encodeURIComponent('/account/security'))
   const current = sessionHash(sessionToken(req))
@@ -127,7 +127,7 @@ export function securityPage(req: Request, error?: string, success?: string, sta
     WHERE user_id=? ORDER BY created_at DESC`).all(user.id) as import('../types').ApiKeyView[]
   return page(
     <AccountSecurity user={user} sessions={sessions} apiKeys={apiKeys} passwordEnabled={credentials.password !== '!'}
-      error={error} success={success} />,
+      error={error} success={success} returnPath={returnPath} />,
     status,
   )
 }

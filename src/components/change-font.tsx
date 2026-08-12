@@ -3,8 +3,10 @@ import { FONT_CHOICES, FONT_SIZE_CHOICES, type FontChoice, type FontSizeChoice }
 import { Layout } from './layout'
 
 export function ChangeFont(
-  { user, selected, selectedSize = 'regular' }: { user: User; selected: FontChoice; selectedSize?: FontSizeChoice },
+  { user, selected, selectedSize = 'regular', returnPath }: { user: User; selected: FontChoice;
+    selectedSize?: FontSizeChoice; returnPath?: string },
 ) {
+  const backHref = returnPath ? `/account/edit?from=${encodeURIComponent(returnPath)}` : '/account/edit'
   return (
     <Layout user={user} title="change font">
       <section className="appearance-page">
@@ -13,9 +15,10 @@ export function ChangeFont(
             <span className="eyebrow">appearance</span>
             <h1>change font</h1>
           </div>
-          <a className="quiet" href="/account/edit">back</a>
+          <a className="profile-edit-link" href={backHref}>back</a>
         </div>
         <form method="post" action="/account/edit/font">
+          {returnPath && <input type="hidden" name="from" value={returnPath} />}
           <fieldset>
             <legend>local monospace fonts</legend>
             <div className="font-options">

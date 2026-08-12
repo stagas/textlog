@@ -221,6 +221,67 @@ header>.account-nav {
   gap: clamp(12px, 3vw, 22px);
 }
 
+.account-menu {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+}
+
+.account-menu-popover {
+  position: absolute;
+  z-index: 10;
+  top: calc(100% + var(--space-2));
+  right: 0;
+  display: none;
+  min-width: 9rem;
+  padding: var(--space-2);
+  background: var(--panel);
+  border: 1px solid var(--soft);
+  box-shadow: 0 8px 24px rgb(0 0 0 / 14%);
+}
+
+.account-menu:hover .account-menu-popover,
+.account-menu:focus-within .account-menu-popover {
+  display: grid;
+}
+
+.account-menu::after {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  display: none;
+  width: 100%;
+  height: var(--space-2);
+  content: '';
+}
+
+.account-menu:hover::after,
+.account-menu:focus-within::after {
+  display: block;
+}
+
+.account-menu-popover a,
+.account-menu-popover button {
+  display: block;
+  width: 100%;
+  padding: var(--space-2) var(--space-3);
+  color: var(--ink);
+  background: transparent;
+  border: 0;
+  text-align: left;
+  white-space: nowrap;
+}
+
+.account-menu-popover a:hover,
+.account-menu-popover button:hover {
+  color: var(--accent-dark);
+  background: var(--pagination-hover-bg);
+}
+
+.account-menu-popover form {
+  margin: 0;
+}
+
 .brand {
   color: var(--ink);
   display: inline-flex;
@@ -2397,7 +2458,7 @@ form.report-panel {
 
 .notification-heading h1 { margin-top: var(--space-1); }
 .notification-heading .eyebrow { margin-bottom: 0; }
-.notification-heading > .quiet { margin-top: var(--space-2); }
+.notification-heading > .profile-edit-link { margin-top: var(--space-2); }
 
 .ios-notification-help {
   margin: var(--space-5) 0;

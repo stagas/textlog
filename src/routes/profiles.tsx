@@ -221,9 +221,9 @@ export function registerProfilesRoutes(app: Hono) {
     const postKindFilter = tab === 'replies'
       ? 'AND p.parent_id IS NOT NULL'
       : 'AND p.parent_id IS NULL'
-    const snapshot = feedSnapshotPage<PostView>(db,
-      `profile:${profile.id}:${tab === 'replies' ? 'replies' : 'notes'}`, viewerId, profilePage,
-      () => db.query(`SELECT p.*,u.handle FROM posts p JOIN users u ON u.id=p.user_id
+    const snapshot = feedSnapshotPage<PostView>(db, `profile:${profile.id}:${tab === 'replies' ? 'replies' : 'notes'}`,
+      viewerId, profilePage, () =>
+      db.query(`SELECT p.*,u.handle FROM posts p JOIN users u ON u.id=p.user_id
         WHERE p.user_id=? AND p.deleted_at IS NULL AND (? < 0 OR NOT EXISTS
           (SELECT 1 FROM post_hashtags ph JOIN blocked_hashtags bh ON bh.tag=ph.tag
             WHERE ph.post_id=p.id AND bh.user_id=?)) ${postKindFilter}

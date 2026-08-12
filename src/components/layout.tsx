@@ -39,6 +39,12 @@ export function Layout({
   const logoSvg = activeThemeLogoSvg()
   const name = appName()
   const origin = appOrigin()
+  const requestUrl = new URL(activeRequest().url)
+  const currentPath = requestUrl.pathname + requestUrl.search
+  const accountFrom = requestUrl.pathname.startsWith('/account')
+    ? requestUrl.searchParams.get('from') || `/u/${user?.handle || ''}`
+    : currentPath
+  const accountHref = '/account/edit?from=' + encodeURIComponent(accountFrom)
   const share = social || {
     description: 'A quieter place for your thoughts.',
     image: `${origin}/og.png?v=2`,
@@ -57,7 +63,16 @@ export function Layout({
         <span className="account-nav-row account-nav-primary">
           <a href="/write">write</a>
           {isAdmin(user) && <a href="/admin">admin</a>}
-          <a href={`/u/${user.handle}`}>@{user.handle}</a>
+          <div className="account-menu">
+            <a className="account-menu-handle" href={`/u/${user.handle}`}>@{user.handle}</a>
+            <div className="account-menu-popover">
+              <a href={`/u/${user.handle}`}>profile</a>
+              <a href={accountHref}>account</a>
+              <form method="post" action="/logout">
+                <button type="submit">logout</button>
+              </form>
+            </div>
+          </div>
         </span>
       </>
     )
@@ -107,7 +122,7 @@ export function Layout({
             <link rel="alternate" type="application/atom+xml" title={`${feeds.title} (Atom)`} href={feeds.atom} />
           </>
         )}
-        <link rel="stylesheet" href="/styles.css?v=201" />
+        <link rel="stylesheet" href="/styles.css?v=204" />
         <style>{themeCss}</style>
       </head>
       <body>

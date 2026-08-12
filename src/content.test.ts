@@ -22,7 +22,11 @@ describe('content metadata extraction', () => {
 
   test('extracts only the first five hashtag occurrences', () => {
     expect(extractHashtags('#one #two #three #four #five #six')).toEqual([
-      'one', 'two', 'three', 'four', 'five',
+      'one',
+      'two',
+      'three',
+      'four',
+      'five',
     ])
   })
 

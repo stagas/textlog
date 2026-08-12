@@ -65,8 +65,10 @@ export function SearchResults({ user, query, page, tab = 'notes' }: {
           </a>
         ))}
       </nav>
-      {posts.map(post => <Post key={post.id} p={post} user={user} showReplyCount highlightTerms={highlights}
-        returnPath={searchPostReturnPath(query, page, post.id)} />)}
+      {posts.map(post => (
+        <Post key={post.id} p={post} user={user} showReplyCount highlightTerms={highlights}
+          returnPath={searchPostReturnPath(query, page, post.id)} />
+      ))}
       {!!tags.length && (
         <TagPeopleList user={user} tags={tags} followingKey="viewerFollowing" highlightTerms={highlights} />
       )}

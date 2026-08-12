@@ -3,20 +3,23 @@ import type { ApiKeyView, SessionView } from '../types'
 import { Layout } from './layout'
 import { FormMessage } from './page-shared'
 
-export function AccountSecurity({ user, sessions, apiKeys = [], passwordEnabled, error, success }: {
+export function AccountSecurity({ user, sessions, apiKeys = [], passwordEnabled, error, success, returnPath }: {
   user: User
   sessions: SessionView[]
   apiKeys?: ApiKeyView[]
   passwordEnabled?: boolean
   error?: string
   success?: string
+  returnPath?: string
 }) {
+  const backHref = returnPath ? `/account/edit?from=${encodeURIComponent(returnPath)}` : '/account/edit'
+  const fromQuery = returnPath ? `?from=${encodeURIComponent(returnPath)}` : ''
   return (
     <Layout user={user} title="account security">
       <section className="page-header security-header">
         <div className="profile-title-row">
           <h1>security</h1>
-          <a className="profile-edit-link" href="/account/edit">back</a>
+          <a className="profile-edit-link" href={backHref}>back</a>
         </div>
       </section>
       <div className="security-page">
@@ -52,14 +55,16 @@ export function AccountSecurity({ user, sessions, apiKeys = [], passwordEnabled,
               ? 'Change the password you use to log in.'
               : 'Add a password as an alternative to email magic links.'}
           </p>
-          <a className="button" href={passwordEnabled ? '/account/password/change' : '/account/password/enable'}>
+          <a className="button" href={(passwordEnabled ? '/account/password/change' : '/account/password/enable')
+            + fromQuery}
+          >
             {passwordEnabled ? 'change password →' : 'enable password login →'}
           </a>
         </section>
         <section className="security-section">
           <h2>API keys</h2>
           <p>Create a bearer token for scripts and apps. Keys are shown once and can be revoked at any time.</p>
-          <a className="button" href="/account/api-keys/new">generate API key →</a>
+          <a className="button" href={`/account/api-keys/new${fromQuery}`}>generate API key →</a>
           {apiKeys.length > 0 && (
             <div className="session-list api-key-list">
               {apiKeys.map(key => (

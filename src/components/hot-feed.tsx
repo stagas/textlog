@@ -1,6 +1,6 @@
 import { db, type User } from '../db'
-import { getHotPosts, type HotCursor, type HotPost } from '../hot'
 import { feedSnapshotPage } from '../feed-snapshots'
+import { getHotPosts, type HotCursor, type HotPost } from '../hot'
 import { enrichPosts } from '../posts'
 import { Layout } from './layout'
 import { FeedTabs, GlobalFeedEmpty, Pagination } from './page-shared'

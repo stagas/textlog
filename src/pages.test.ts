@@ -156,10 +156,13 @@ test('reply forms offer the same server-rendered preview flow', () => {
 test('reply form cancel returns to the originating feed entry', () => {
   const user = { id: 1, handle: 'writer', email: 'writer@example.com', bio: '',
     email_verified_at: '2026-08-12 10:00:00', handle_chosen_at: '2026-08-12 10:00:00' }
-  const post = { id: 2, user_id: 2, parent_id: null, body: 'Original post',
-    created_at: '2026-08-12 09:00:00', deleted_at: null, handle: 'author' }
+  const post = { id: 2, user_id: 2, parent_id: null, body: 'Original post', created_at: '2026-08-12 09:00:00',
+    deleted_at: null, handle: 'author' }
   const html = renderToStaticMarkup(React.createElement(Reply, {
-    user, post, showForm: true, returnPath: '/u/writer?tab=replies#post-2',
+    user,
+    post,
+    showForm: true,
+    returnPath: '/u/writer?tab=replies#post-2',
   }))
 
   expect(html).toContain(
@@ -280,6 +283,7 @@ test('notification settings are the only account page that loads their client sc
   const notifications = renderToStaticMarkup(React.createElement(NotificationSettings, {
     user,
     publicKey: 'public-key',
+    returnPath: '/latest?page=2',
   }))
   const profile = renderToStaticMarkup(React.createElement(Profile, {
     user,
@@ -290,6 +294,7 @@ test('notification settings are the only account page that loads their client sc
   }))
   expect(notifications).toContain('src="/notifications.js"')
   expect(notifications).toContain('class="static-page notifications-page"')
+  expect(notifications).toContain('class="profile-edit-link" href="/account/edit?from=%2Flatest%3Fpage%3D2">back</a>')
   expect(notifications).toContain('enable notifications')
   expect(notifications).toContain('name="noteScope" checked="" value="latest"')
   expect(notifications).toContain('name="noteScope" value="following"')
@@ -717,6 +722,7 @@ test('Profile edit offers a data download without rendering notes', () => {
     profile: user,
     following: false,
     editing: true,
+    returnPath: '/latest?page=2',
     posts: [{
       id: 1,
       user_id: 1,
@@ -731,7 +737,12 @@ test('Profile edit offers a data download without rendering notes', () => {
   expect(html).toContain('href="/account/export"')
   expect(html).toContain('action="/account/edit"')
   expect(html).toContain('download data')
-  expect(html).toContain('href="/u/reader">back</a>')
+  expect(html).toContain('href="/latest?page=2">back</a>')
+  expect(html).toContain('type="hidden" name="from" value="/latest?page=2"')
+  expect(html).toContain('href="/account/edit/theme?from=%2Flatest%3Fpage%3D2"')
+  expect(html).toContain('href="/account/edit/font?from=%2Flatest%3Fpage%3D2"')
+  expect(html).toContain('href="/account/security?from=%2Flatest%3Fpage%3D2"')
+  expect(html).toContain('href="/account/edit/notifications?from=%2Flatest%3Fpage%3D2"')
   expect(html).not.toContain('hidden while editing')
 })
 
@@ -754,6 +765,10 @@ test('Profile places owner actions in the handle row', () => {
   expect(html).toContain('type="application/atom+xml" title="Notes by @reader (Atom)" href="/u/reader.atom"')
   expect(html).toContain('class="account-nav-row account-nav-primary"')
   expect(html).toContain('class="account-nav-row account-nav-secondary"')
+  expect(html).toContain('class="account-menu-handle" href="/u/reader">@reader</a>')
+  expect(html).toContain('class="account-menu-popover"')
+  expect(html).toContain('href="/u/reader">profile</a>')
+  expect(html).toContain('href="/account/edit?from=%2F">account</a>')
   expect(html).not.toContain('class="mobile-account-footer"')
   expect(html.indexOf('href="/write"')).toBeLessThan(html.indexOf('href="/u/reader"'))
   expect(html).toContain('<a class="button" href="/write">write a note</a>')
@@ -1020,10 +1035,19 @@ test('Profile note and reply actions link back to their originating feed entries
   const profile = { id: 1, handle: 'writer', email: 'writer@example.com', bio: '' }
   const user = { id: 2, handle: 'reader', email: 'reader@example.com', bio: '' }
   const notes = renderToStaticMarkup(React.createElement(Profile, {
-    user, profile, following: false, posts: [post], page: 2,
+    user,
+    profile,
+    following: false,
+    posts: [post],
+    page: 2,
   }))
   const replies = renderToStaticMarkup(React.createElement(Profile, {
-    user, profile, following: false, posts: [{ ...post, parent_id: 1 }], tab: 'replies', page: 2,
+    user,
+    profile,
+    following: false,
+    posts: [{ ...post, parent_id: 1 }],
+    tab: 'replies',
+    page: 2,
   }))
 
   expect(notes).toContain(

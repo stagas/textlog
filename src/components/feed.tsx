@@ -1,7 +1,7 @@
 import { isAdmin } from '../admin'
 import { db, type User } from '../db'
-import { hasUnreadForYou, markForYouEntriesRead } from '../for-you-state'
 import { feedSnapshotPage } from '../feed-snapshots'
+import { hasUnreadForYou, markForYouEntriesRead } from '../for-you-state'
 import { enrichPosts } from '../posts'
 import type { PostView } from '../types'
 import { fmt, fmtFull } from '../utils'
@@ -60,7 +60,9 @@ export function Feed({ user, page = 1, title, path = '/for-you', pageUrl, notifi
     ...(toMe ? ['timeline.targeted_to_viewer=1'] : []),
   ]
   const cursorFilter = filters.length ? `WHERE ${filters.join(' AND ')}` : ''
-  const snapshot = feedSnapshotPage<TimelineRow>(db, toMe ? 'to-me' : 'for-you', user.id, page, () => db.query(`SELECT timeline.*,
+  const snapshot = feedSnapshotPage<TimelineRow>(db, toMe ? 'to-me' : 'for-you', user.id, page,
+    () =>
+      db.query(`SELECT timeline.*,
     NOT EXISTS(SELECT 1 FROM for_you_reads fyr WHERE fyr.user_id=$viewer AND fyr.event_key=timeline.event_key) unread
     FROM (
     SELECT p.id,p.user_id,p.body,p.created_at,p.parent_id,p.deleted_at,p.has_latex,p.has_links,p.has_code,u.handle,
@@ -162,13 +164,14 @@ export function Feed({ user, page = 1, title, path = '/for-you', pageUrl, notifi
         AND u.deleted_at IS NULL AND u.suspended_at IS NULL
     ) timeline ${cursorFilter}
     ORDER BY timeline.created_at DESC,timeline.event_key DESC`).all({
-    viewer: user.id,
-    admin: Number(isAdmin(user)),
-  }) as TimelineRow[])
+        viewer: user.id,
+        admin: Number(isAdmin(user)),
+      }) as TimelineRow[])
   const unreadKeys = snapshot.items.length
     ? new Set((db.query(`SELECT event_key FROM for_you_reads WHERE user_id=? AND event_key IN
-      (${snapshot.items.map(() => '?').join(',')})`).all(user.id, ...snapshot.items.map(row => row.event_key)) as
-      { event_key: string }[]).map(row => row.event_key))
+      (${snapshot.items.map(() => '?').join(',')})`).all(user.id, ...snapshot.items.map(row => row.event_key)) as {
+      event_key: string
+    }[]).map(row => row.event_key))
     : new Set<string>()
   const timeline = snapshot.items.map(row => ({ ...row, unread: Number(!unreadKeys.has(row.event_key)) }))
   markForYouEntriesRead(user.id, timeline.filter(row => row.unread).map(row => row.event_key))
@@ -222,11 +225,13 @@ export function Feed({ user, page = 1, title, path = '/for-you', pageUrl, notifi
                       ? (
                         <a className="activity-follow-stats" href={row.activity_kind === 'tag_follow'
                           ? `/tag/${row.target_tag}`
-                          : `/u/${row.activity_kind === 'user_follow'
-                            && !row.target_is_viewer
-                            ? row.target_handle
-                            : row.actor_handle
-                          }`}>
+                          : `/u/${
+                            row.activity_kind === 'user_follow'
+                              && !row.target_is_viewer
+                              ? row.target_handle
+                              : row.actor_handle
+                          }`}
+                        >
                           <time dateTime={row.created_at} title={fmtFull(row.created_at)}>{fmt(row.created_at)}</time>
                           <span aria-hidden="true">·</span>
                           <span>{row.posts} {row.posts === 1 ? 'note' : 'notes'}</span>

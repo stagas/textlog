@@ -22,8 +22,8 @@ import {
   productHuntBannerDismissedCookie,
   safeRefererPath,
 } from '../http'
-import { currentUser } from '../utils'
 import { decodePostCursor } from '../pagination'
+import { currentUser } from '../utils'
 
 function showNotificationBanner(request: Request, user: ReturnType<typeof currentUser>) {
   if (!user || notificationBannerDismissed(request, user.id)) return false
@@ -60,8 +60,10 @@ export function registerFeedsRoutes(app: Hono) {
     }
     const cursorValue = c.req.query('cursor')
     if (cursorValue && !decodeForYouCursor(cursorValue)) return c.text('Invalid cursor', 400)
-    return page(<Feed user={user} page={currentPage(c.req.query('page'))} path="/" pageUrl={pageUrl}
-      notificationBanner={notificationBanner} />)
+    return page(
+      <Feed user={user} page={currentPage(c.req.query('page'))} path="/" pageUrl={pageUrl}
+        notificationBanner={notificationBanner} />,
+    )
   })
 
   app.get('/for-you', c => {

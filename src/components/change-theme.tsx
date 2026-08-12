@@ -2,7 +2,8 @@ import type { User } from '../db'
 import { ACCENT_CHOICES, type Appearance, THEME_CHOICES } from '../theme'
 import { Layout } from './layout'
 
-export function ChangeTheme({ user, selected }: { user: User; selected: Appearance }) {
+export function ChangeTheme({ user, selected, returnPath }: { user: User; selected: Appearance; returnPath?: string }) {
+  const backHref = returnPath ? `/account/edit?from=${encodeURIComponent(returnPath)}` : '/account/edit'
   return (
     <Layout user={user} title="change theme">
       <section className="appearance-page">
@@ -11,9 +12,10 @@ export function ChangeTheme({ user, selected }: { user: User; selected: Appearan
             <span className="eyebrow">appearance</span>
             <h1>change theme</h1>
           </div>
-          <a className="quiet" href="/account/edit">back</a>
+          <a className="profile-edit-link" href={backHref}>back</a>
         </div>
         <form method="post" action="/account/edit/theme">
+          {returnPath && <input type="hidden" name="from" value={returnPath} />}
           <fieldset>
             <legend>theme</legend>
             <div className="theme-options">

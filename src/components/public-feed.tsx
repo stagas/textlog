@@ -19,13 +19,14 @@ export function PublicFeed(
 ) {
   const viewerId = user?.id ?? -1
   const parameters: number[] = [viewerId, viewerId, viewerId, viewerId, viewerId]
-  const snapshot = feedSnapshotPage<PostView>(db, 'latest', viewerId, page, () => db.query(
-    `SELECT p.*,u.handle FROM posts p JOIN users u ON u.id=p.user_id WHERE p.deleted_at IS NULL AND (? < 0 OR NOT EXISTS
+  const snapshot = feedSnapshotPage<PostView>(db, 'latest', viewerId, page, () =>
+    db.query(
+      `SELECT p.*,u.handle FROM posts p JOIN users u ON u.id=p.user_id WHERE p.deleted_at IS NULL AND (? < 0 OR NOT EXISTS
       (SELECT 1 FROM blocks b WHERE (b.blocker_id=? AND b.blocked_id=p.user_id) OR (b.blocker_id=p.user_id AND b.blocked_id=?)))
       AND (? < 0 OR NOT EXISTS (SELECT 1 FROM post_hashtags ph JOIN blocked_hashtags bh ON bh.tag=ph.tag
         WHERE ph.post_id=p.id AND bh.user_id=?))
       ORDER BY p.id DESC`,
-  ).all(...parameters) as PostView[])
+    ).all(...parameters) as PostView[])
   const posts = enrichPosts(db, snapshot.items, viewerId)
   const returnPath = path + (snapshot.page > 1 ? `?page=${snapshot.page}` : '')
   return (

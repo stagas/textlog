@@ -16,8 +16,8 @@ export function feedSnapshotPage<T>(database: Database, kind: string, viewerId: 
     generation: number
   }).generation
   let snapshot = database.query(`SELECT id,total_items,created_at FROM feed_snapshots
-    WHERE kind=? AND viewer_id=? AND generation=?`).get(kind, viewerId, generation) as
-    { id: number; total_items: number; created_at: string } | null
+    WHERE kind=? AND viewer_id=? AND generation=?`).get(kind, viewerId, generation) as { id: number;
+    total_items: number; created_at: string } | null
   if (snapshot && kind === 'hot'
     && Date.now() - Date.parse(`${snapshot.created_at.replace(' ', 'T')}Z`) > 15 * 60_000) snapshot = null
 
@@ -35,16 +35,18 @@ export function feedSnapshotPage<T>(database: Database, kind: string, viewerId: 
       }
     })()
     snapshot = database.query(`SELECT id,total_items,created_at FROM feed_snapshots
-      WHERE kind=? AND viewer_id=? AND generation=?`).get(kind, viewerId, generation) as
-      { id: number; total_items: number; created_at: string }
+      WHERE kind=? AND viewer_id=? AND generation=?`).get(kind, viewerId, generation) as { id: number;
+      total_items: number; created_at: string }
   }
 
   const totalPages = Math.max(1, Math.ceil(snapshot.total_items / PAGE_SIZE))
   const safePage = Math.min(page, totalPages)
   const rows = database.query(`SELECT payload FROM feed_snapshot_items WHERE snapshot_id=?
     AND position>=? AND position<? ORDER BY position`).all(
-    snapshot.id, (safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE,
+    snapshot.id,
+    (safePage - 1) * PAGE_SIZE,
+    safePage * PAGE_SIZE,
   ) as { payload: string }[]
-  return { items: rows.map(row => JSON.parse(row.payload) as T), page: safePage,
-    totalItems: snapshot.total_items, totalPages }
+  return { items: rows.map(row => JSON.parse(row.payload) as T), page: safePage, totalItems: snapshot.total_items,
+    totalPages }
 }

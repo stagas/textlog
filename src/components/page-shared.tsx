@@ -127,16 +127,17 @@ export function VerificationRequired() {
   )
 }
 
-export function Pagination({ page, totalPages, path, pageParam = 'page', label = 'Pagination', compact = false,
-  top = false }: {
-  page: number
-  totalPages: number
-  path: string
-  pageParam?: string
-  label?: string
-  compact?: boolean
-  top?: boolean
-}) {
+export function Pagination(
+  { page, totalPages, path, pageParam = 'page', label = 'Pagination', compact = false, top = false }: {
+    page: number
+    totalPages: number
+    path: string
+    pageParam?: string
+    label?: string
+    compact?: boolean
+    top?: boolean
+  },
+) {
   if (totalPages <= 1) return null
   const separator = path.includes('?') ? '&' : '?'
   const [formPath, formQuery = ''] = path.split('?', 2)
@@ -146,7 +147,8 @@ export function Pagination({ page, totalPages, path, pageParam = 'page', label =
   const pages = [...new Set([1, ...windowPages, totalPages])].sort((a, b) => a - b)
   return (
     <nav className={`pagination${compact ? ' pagination-compact' : ''}${top ? ' pagination-top' : ''}`}
-      aria-label={label}>
+      aria-label={label}
+    >
       {page > 1
         ? (
           <a className="pagination-edge" href={`${path}${separator}${pageParam}=${page - 1}`}

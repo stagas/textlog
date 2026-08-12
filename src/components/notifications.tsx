@@ -3,12 +3,14 @@ import { appName } from '../brand'
 import type { User } from '../db'
 import { Layout } from './layout'
 
-export function NotificationSettings({ user, publicKey, ios = false }: {
+export function NotificationSettings({ user, publicKey, ios = false, returnPath }: {
   user: User
   publicKey: string | null
   ios?: boolean
+  returnPath?: string
 }) {
   const name = appName()
+  const backHref = returnPath ? `/account/edit?from=${encodeURIComponent(returnPath)}` : '/account/edit'
   return (
     <Layout user={user} title="notifications">
       <article className="static-page notifications-page">
@@ -17,7 +19,7 @@ export function NotificationSettings({ user, publicKey, ios = false }: {
             <p className="eyebrow">account</p>
             <h1>notifications</h1>
           </div>
-          <a className="quiet" href="/account/edit">back</a>
+          <a className="profile-edit-link" href={backHref}>back</a>
         </div>
         <p id="notification-status">
           {publicKey
