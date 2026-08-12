@@ -6,9 +6,16 @@ export function isValidHashtag(tag: string) {
   return /^[\p{L}\p{M}\p{N}_]{1,280}$/u.test(tag)
 }
 
+export const MAX_HASHTAGS_PER_POST = 5
+
 export function extractHashtags(body: string) {
-  return [...new Set([...body.matchAll(/#([\p{L}\p{M}\p{N}_]+)/gu)]
-    .map(match => normalizeHashtag(match[1])))]
+  const tags = new Set<string>()
+  let count = 0
+  for (const match of body.matchAll(/#([\p{L}\p{M}\p{N}_]+)/gu)) {
+    if (count++ === MAX_HASHTAGS_PER_POST) break
+    tags.add(normalizeHashtag(match[1]))
+  }
+  return [...tags]
 }
 
 export function containsAsciiArt(body: string) {

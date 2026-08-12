@@ -4,7 +4,7 @@ import { createHash, randomBytes } from 'node:crypto'
 import tlds from 'tlds'
 import { userForApiKey } from './api-keys'
 import { sessionCookieName } from './brand'
-import type { PostContentFlags } from './content'
+import { MAX_HASHTAGS_PER_POST, type PostContentFlags } from './content'
 import { db, type User } from './db'
 import { texToMathML } from './math'
 import { markSessionUsed, sessionHash } from './sessions'
@@ -208,7 +208,9 @@ function linkTokens(body: string, flags?: PostContentFlags): LinkToken[] {
     for (const match of body.matchAll(/(?<![A-Za-z0-9_])@[A-Za-z0-9_]+/g)) {
       tokens.push({ index: match.index, lastIndex: match.index + match[0].length, kind: 'reference', raw: match[0] })
     }
+    let hashtagCount = 0
     for (const match of body.matchAll(/(?<![\p{L}\p{M}\p{N}_])#[\p{L}\p{M}\p{N}_]+/gu)) {
+      if (hashtagCount++ === MAX_HASHTAGS_PER_POST) break
       tokens.push({ index: match.index, lastIndex: match.index + match[0].length, kind: 'reference', raw: match[0] })
     }
   }

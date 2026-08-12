@@ -20,6 +20,12 @@ describe('content metadata extraction', () => {
     expect(extractHashtags('#Build something #build #Notes')).toEqual(['build', 'notes'])
   })
 
+  test('extracts only the first five hashtag occurrences', () => {
+    expect(extractHashtags('#one #two #three #four #five #six')).toEqual([
+      'one', 'two', 'three', 'four', 'five',
+    ])
+  })
+
   test('supports hashtags written in other scripts and with combining marks', () => {
     expect(extractHashtags('#Ελλάδα #日本語 #العَرَبِيَّة #cafe\u0301 #CAFÉ'))
       .toEqual(['ελλάδα', '日本語', 'العَرَبِيَّة', 'café'])

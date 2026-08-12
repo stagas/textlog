@@ -165,6 +165,12 @@ describe('post persistence', () => {
     expect(html).toContain('<a href="/tag/caf%C3%A9">#café</a>')
   })
 
+  test('linkifies only the first five hashtags', () => {
+    const html = linkify('#one #two #three #four #five #six #seven')
+    expect(html.match(/href="\/tag\//g)).toHaveLength(5)
+    expect(html).toContain('</a> #six #seven')
+  })
+
   test('writes content and metadata atomically', () => {
     const db = database()
     expect(() => createPost(db, 1, 'rollback #fail @reader')).toThrow()
