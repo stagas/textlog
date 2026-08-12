@@ -201,14 +201,9 @@ export function Feed({ user, cursor, title, path = '/for-you', pageUrl, notifica
               </div>
             )
             : (
-              <article className={`${row.activity_kind === 'user_follow' || row.activity_kind === 'signup'
-                ? 'activity-follow'
-                : 'feed-relationship'
-              }${row.unread ? ' activity-item-unread' : ''}`} key={row.event_key}>
-                <div className={row.activity_kind === 'user_follow' || row.activity_kind === 'signup'
-                  ? 'activity-follow-content' : 'feed-relationship-content'}>
-                  <div className={row.activity_kind === 'user_follow' || row.activity_kind === 'signup'
-                    ? 'activity-follow-main' : 'feed-relationship-main'}>
+              <article className={`activity-follow${row.unread ? ' activity-item-unread' : ''}`} key={row.event_key}>
+                <div className="activity-follow-content">
+                  <div className="activity-follow-main">
                     {!!row.unread && <span className="unread-dot" aria-label="unread" />}
                     <a href={row.activity_kind === 'signup'
                       ? `/admin/users/${row.actor_id}`
@@ -239,6 +234,7 @@ export function Feed({ user, cursor, title, path = '/for-you', pageUrl, notifica
                     <button className={`button${row.following ? ' button-muted' : ''}`}>
                       {row.following ? 'unfollow' : 'follow'}
                       {row.activity_kind === 'user_follow' && !row.target_is_viewer && ` @${row.target_handle}`}
+                      {row.activity_kind === 'tag_follow' && ` #${row.target_tag}`}
                     </button>
                   </form>
                 )}
