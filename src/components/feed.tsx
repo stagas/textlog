@@ -128,7 +128,9 @@ export function Feed({ user, cursor, title, path = '/for-you', pageUrl, notifica
       'tag_follow' activity_kind,
       'tag-follow:' || printf('%020d',actor.id) || ':' || hf.tag || ':' || hf.created_at event_key,
       actor.id actor_id,actor.handle actor_handle,actor.bio actor_bio,NULL target_handle,hf.tag target_tag,NULL target_bio,
-      0 target_is_viewer,0 targeted_to_viewer,NULL posts
+      0 target_is_viewer,0 targeted_to_viewer,
+      (SELECT count(*) FROM post_hashtags ph JOIN posts hp ON hp.id=ph.post_id
+        WHERE ph.tag=hf.tag AND hp.deleted_at IS NULL) posts
       FROM hashtag_follows hf JOIN users actor ON actor.id=hf.user_id
       WHERE hf.created_at IS NOT NULL AND actor.id!=$viewer AND (EXISTS
         (SELECT 1 FROM follows viewer_follow WHERE viewer_follow.follower_id=$viewer
@@ -229,12 +231,13 @@ export function Feed({ user, cursor, title, path = '/for-you', pageUrl, notifica
                       : null}
                     {row.posts !== null
                       ? (
-                        <a className="activity-follow-stats" href={`/u/${
-                          row.activity_kind === 'user_follow'
+                        <a className="activity-follow-stats" href={row.activity_kind === 'tag_follow'
+                          ? `/tag/${row.target_tag}`
+                          : `/u/${row.activity_kind === 'user_follow'
                             && !row.target_is_viewer
                             ? row.target_handle
                             : row.actor_handle
-                        }`}>
+                          }`}>
                           <time dateTime={row.created_at} title={fmtFull(row.created_at)}>{fmt(row.created_at)}</time>
                           <span aria-hidden="true">·</span>
                           <span>{row.posts} {row.posts === 1 ? 'note' : 'notes'}</span>

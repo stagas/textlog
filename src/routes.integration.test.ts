@@ -673,6 +673,10 @@ test('consequential account, content, reporting, and admin flows work over HTTP'
   expect(followedTagFeed).toContain(
     '<a href="/u/bob" title="Bob builds things">@bob</a><span>followed</span><a href="/tag/shared">#shared</a>',
   )
+  expect(followedTagFeed).toContain(
+    '<a class="activity-follow-stats" href="/tag/shared"><time dateTime="2099-01-02 00:00:00"',
+  )
+  expect(followedTagFeed).toContain('<span aria-hidden="true">·</span><span>0 notes</span></a>')
   expect(followedTagFeed).not.toContain('@alice</a><span>followed</span><a href="/tag/shared">#shared</a>')
   const sharedReplyResponse = await request(`/post/${post.id}/reply`, {
     method: 'POST',
