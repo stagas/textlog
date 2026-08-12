@@ -96,6 +96,8 @@ describe('in-memory stylesheet', () => {
     expect(css).toContain('.status-error {')
     expect(css).toContain('.status-success {')
     expect(css).toContain('.unread-dot {')
+    expect(css).toContain('.for-you-item .posttop .unread-dot {\n  margin-right: calc(1ch - var(--space-4));')
+    expect(css).toContain('.activity-follow-main .unread-dot {\n  margin-right: calc(1ch - var(--space-2));')
     expect(css).toContain('.secondary-action {')
     expect(css).toContain('.secondary-action {\n  padding: 0;\n  color: var(--accent);')
     expect(css).toContain('.form-control {')
