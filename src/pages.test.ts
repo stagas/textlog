@@ -992,17 +992,17 @@ test('Profile note and reply actions link back to their originating feed entries
   const profile = { id: 1, handle: 'writer', email: 'writer@example.com', bio: '' }
   const user = { id: 2, handle: 'reader', email: 'reader@example.com', bio: '' }
   const notes = renderToStaticMarkup(React.createElement(Profile, {
-    user, profile, following: false, posts: [post], cursor: 'next:20',
+    user, profile, following: false, posts: [post], page: 2,
   }))
   const replies = renderToStaticMarkup(React.createElement(Profile, {
-    user, profile, following: false, posts: [{ ...post, parent_id: 1 }], tab: 'replies', cursor: 'next:20',
+    user, profile, following: false, posts: [{ ...post, parent_id: 1 }], tab: 'replies', page: 2,
   }))
 
   expect(notes).toContain(
-    'href="/post/2?reply=1&amp;from=%2Fu%2Fwriter%3Fcursor%3Dnext%253A20%23post-2"',
+    'href="/post/2?reply=1&amp;from=%2Fu%2Fwriter%3Fpage%3D2%23post-2"',
   )
   expect(replies).toContain(
-    'href="/post/2?reply=1&amp;from=%2Fu%2Fwriter%3Ftab%3Dreplies%26cursor%3Dnext%253A20%23post-2"',
+    'href="/post/2?reply=1&amp;from=%2Fu%2Fwriter%3Ftab%3Dreplies%26page%3D2%23post-2"',
   )
 })
 

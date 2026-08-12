@@ -2,14 +2,14 @@ import { type User } from '../db'
 import type { PostView, ProfileRow } from '../types'
 import { linkify } from '../utils'
 import { Layout } from './layout'
-import { CursorPagination, FormMessage, PostingHelp, ProfileHeader, ProfileTabs } from './page-shared'
+import { FormMessage, Pagination, PostingHelp, ProfileHeader, ProfileTabs } from './page-shared'
 import { Post } from './post'
 
 export function Profile(
   { user, profile, posts, following, bio = profile.bio || '', editHandle = profile.handle, editEmail = profile.email,
     error, editing = false, total = posts.length, noteCount = total, replyCount = 0, tab = 'notes', followerCount = 0,
     followingCount = 0, followingTagCount = 0, blockedPeopleCount = 0, blockedTagCount = 0, blocked = false,
-    blockedByProfile = false, social, previousCursor = null, nextCursor = null, returnPath, cursor = null }: {
+    blockedByProfile = false, social, page = 1, totalPages = 1, returnPath }: {
       user: User | null
       profile: ProfileRow
       posts: PostView[]
@@ -30,16 +30,15 @@ export function Profile(
       blockedTagCount?: number
       blocked?: boolean
       blockedByProfile?: boolean
-      previousCursor?: string | null
-      nextCursor?: string | null
+      page?: number
+      totalPages?: number
       returnPath?: string
-      cursor?: string | null
       social?: { description: string; image: string; url: string; type?: 'article' | 'profile'; imageAlt?: string }
     },
 ) {
   const feedQuery = new URLSearchParams()
   if (tab === 'replies') feedQuery.set('tab', 'replies')
-  if (cursor) feedQuery.set('cursor', cursor)
+  if (page > 1) feedQuery.set('page', String(page))
   const feedPath = `/u/${profile.handle}${feedQuery.size ? `?${feedQuery}` : ''}`
   return (
     <Layout user={user} title={`@${profile.handle}`} social={social} feeds={{
@@ -162,8 +161,8 @@ export function Profile(
       )}
       {!editing && !blocked && !blockedByProfile
         && (
-          <CursorPagination path={'/u/' + profile.handle + (tab === 'replies' ? '?tab=replies' : '')}
-            previousCursor={previousCursor} nextCursor={nextCursor} />
+          <Pagination path={'/u/' + profile.handle + (tab === 'replies' ? '?tab=replies' : '')}
+            page={page} totalPages={totalPages} />
         )}
     </Layout>
   )

@@ -564,7 +564,7 @@ test('consequential account, content, reporting, and admin flows work over HTTP'
   expect(forYouFirstBody).not.toContain('class="for-you-item activity-item-unread"')
 
   const profileFirstBody = await (await request('/u/alice')).text()
-  const profileNext = profileFirstBody.match(/href="(\/u\/alice\?cursor=[^"]+)"/)?.[1]
+  const profileNext = profileFirstBody.match(/href="(\/u\/alice\?page=2)"/)?.[1]
   expect(profileNext).toBeTruthy()
   expect(profileFirstBody).not.toContain(post.body)
   expect(await (await request(profileNext!)).text()).toContain(post.body)

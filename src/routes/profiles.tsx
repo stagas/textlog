@@ -8,9 +8,10 @@ import { currentPage, notFoundPage, page, paginationRedirect, redirect, safeNext
 import type { Hono } from 'hono'
 import { appName } from '../brand'
 import { db } from '../db'
+import { feedSnapshotPage } from '../feed-snapshots'
 import { resolveHandle } from '../handles'
 import { renderProfileOg } from '../og'
-import { CONNECTION_PAGE_SIZE, decodePostCursor, PAGE_SIZE, postCursorPage, TAG_PAGE_SIZE } from '../pagination'
+import { CONNECTION_PAGE_SIZE, decodePostCursor, PAGE_SIZE, TAG_PAGE_SIZE } from '../pagination'
 import { enrichPosts } from '../posts'
 import { currentUser } from '../utils'
 
@@ -217,26 +218,24 @@ export function registerProfilesRoutes(app: Hono) {
     const cursorValue = c.req.query('cursor')
     const cursor = decodePostCursor(cursorValue)
     if (cursorValue && !cursor) return c.text('Invalid cursor', 400)
-    const cursorFilter = cursor ? `AND p.id ${cursor.direction === 'previous' ? '>' : '<'} ?` : ''
     const postKindFilter = tab === 'replies'
       ? 'AND p.parent_id IS NOT NULL'
       : 'AND p.parent_id IS NULL'
-    const rows = db.query(`SELECT p.*,u.handle FROM posts p JOIN users u ON u.id=p.user_id
-      WHERE p.user_id=? AND p.deleted_at IS NULL AND (? < 0 OR NOT EXISTS
-        (SELECT 1 FROM post_hashtags ph JOIN blocked_hashtags bh ON bh.tag=ph.tag
-          WHERE ph.post_id=p.id AND bh.user_id=?)) ${postKindFilter} ${cursorFilter}
-      ORDER BY p.id ${cursor?.direction === 'previous' ? 'ASC' : 'DESC'} LIMIT ?`)
-      .all(profile.id, viewerId, viewerId, ...(cursor ? [cursor.id] : []), PAGE_SIZE + 1) as PostView[]
-    const result = postCursorPage(rows, cursor)
-    const posts = enrichPosts(db, result.rows, viewerId)
+    const snapshot = feedSnapshotPage<PostView>(db,
+      `profile:${profile.id}:${tab === 'replies' ? 'replies' : 'notes'}`, viewerId, profilePage,
+      () => db.query(`SELECT p.*,u.handle FROM posts p JOIN users u ON u.id=p.user_id
+        WHERE p.user_id=? AND p.deleted_at IS NULL AND (? < 0 OR NOT EXISTS
+          (SELECT 1 FROM post_hashtags ph JOIN blocked_hashtags bh ON bh.tag=ph.tag
+            WHERE ph.post_id=p.id AND bh.user_id=?)) ${postKindFilter}
+        ORDER BY p.id DESC`).all(profile.id, viewerId, viewerId) as PostView[])
+    const posts = enrichPosts(db, snapshot.items, viewerId)
     return page(
       <Profile user={user} profile={profile} posts={blocked || blockedByProfile ? [] : posts} following={following}
         blocked={blocked} total={total} noteCount={postCounts.notes} replyCount={postCounts.replies}
         tab={tab === 'replies' ? 'replies' : 'notes'} followerCount={counts.followerCount}
         followingCount={counts.followingCount} followingTagCount={counts.followingTagCount}
         blockedPeopleCount={blockCounts.blockedPeople} blockedTagCount={blockCounts.blockedTags} social={social}
-        previousCursor={result.previousCursor} nextCursor={result.nextCursor} returnPath={returnPath}
-        cursor={cursorValue} />,
+        page={snapshot.page} totalPages={snapshot.totalPages} returnPath={returnPath} />,
     )
   })
 }
