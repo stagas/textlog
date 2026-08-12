@@ -83,13 +83,14 @@ export function Post({
     : ''
   const parentReplyPath = parent ? '/post/' + parent.id + '?reply=1' + returnQuery : ''
   const defaultReplyPath = '/post/' + p.id + '?reply=1' + returnQuery
+  const navigationRel = returnPath ? 'nofollow' : undefined
   const resolvedReplyHref = replyHref
     ?? (user ? defaultReplyPath : '/enter?next=' + encodeURIComponent(defaultReplyPath))
   const resolvedReplyLabel = replyLabel ?? (user ? 'reply' : 'enter to reply')
   if (p.deleted_at) {
     return (
       <article className="post deleted-post" id={`post-${p.id}`}>
-        <a href={detailPath}>
+        <a href={detailPath} rel={navigationRel}>
           (deleted){showReplyCount && replyCount > 0
             ? ` · ${replyCount} ${replyCount === 1 ? 'reply' : 'replies'}`
             : ''}
@@ -99,7 +100,8 @@ export function Post({
   }
   return (
     <article className={`post${tappable || hasTappableParent ? ' tappable-post' : ''}`} id={`post-${p.id}`}>
-      {tappable && <a className="post-hit-area" href={detailPath} aria-label={`open post by @${p.handle}`} />}
+      {tappable && <a className="post-hit-area" href={detailPath} rel={navigationRel}
+        aria-label={`open post by @${p.handle}`} />}
       <div className={`posttop${contextLabel ? ' posttop-context' : ''}${preview ? ' preview-post-meta' : ''}`}>
         {contextUnread && <span className="unread-dot" aria-label="unread" />}
         {preview
@@ -113,7 +115,7 @@ export function Post({
             </span>
           )
           : (
-            <a className="postdate" href={detailPath}>
+            <a className="postdate" href={detailPath} rel={navigationRel}>
               <time dateTime={p.created_at} title={fmtFull(p.created_at)}>{fmt(p.created_at)}</time>
               {showReplyCount && replyCount > 0 && (
                 <span>{' '}· {replyCount} {replyCount === 1 ? 'reply' : 'replies'}</span>
@@ -161,20 +163,20 @@ export function Post({
           + (hasTappableParent ? ' tappable-parent' : '')}
         >
           {hasTappableParent && (
-            <a className="parent-hit-area" href={parentDetailPath}
+            <a className="parent-hit-area" href={parentDetailPath} rel={navigationRel}
               aria-label={`open quoted post by @${parent.handle}`} />
           )}
           {parent.deleted_at
-            ? <a href={parentDetailPath}>(deleted)</a>
+            ? <a href={parentDetailPath} rel={navigationRel}>(deleted)</a>
             : (
               <>
                 <div className="parent-quote-top">
-                  <a className="postauthor" href={'/u/' + parent.handle + actionQuery}
+                  <a className="postauthor" href={'/u/' + parent.handle + actionQuery} rel={navigationRel}
                     title={parent.bio || 'No bio yet.'}
                   >
                     @{parent.handle}
                   </a>
-                  <a className="postdate" href={parentDetailPath}>
+                  <a className="postdate" href={parentDetailPath} rel={navigationRel}>
                     <time dateTime={parent.created_at} title={fmtFull(parent.created_at)}>
                       {fmt(parent.created_at)}
                     </time>
@@ -261,7 +263,8 @@ export function ThreadReplies(
               {childBranch}
               {continuesElsewhere && (
                 <div className="thread-continuation">
-                  <a className="quiet" href={'/post/' + reply.id + '?from=' + encodeURIComponent(anchoredReturnPath)}>
+                  <a className="quiet" rel="nofollow"
+                    href={'/post/' + reply.id + '?from=' + encodeURIComponent(anchoredReturnPath)}>
                     more ({descendantCount} {descendantCount === 1 ? 'reply' : 'replies'})
                   </a>
                 </div>

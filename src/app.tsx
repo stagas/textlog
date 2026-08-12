@@ -150,10 +150,13 @@ app.use('*', async (c, next) => {
     /^\/(?:enter|forgot-password|reset-password|choose-handle|write|compose|activity|admin|search|account)(?:\/|$)/
       .test(url.pathname) || /^\/post\/\d+\/(?:edit|delete)$/.test(url.pathname)
   const transientParameters = ['reply', 'report', 'reported', 'edit', 'welcome', 'reset', 'token']
+  const navigationOnly = url.searchParams.has('from')
   const transient = transientParameters.some(name => url.searchParams.has(name))
-  if (privatePath || transient || c.res.status >= 400) c.header('X-Robots-Tag', 'noindex, nofollow')
+  if (navigationOnly) c.header('X-Robots-Tag', 'noindex, follow')
+  else if (privatePath || transient || c.res.status >= 400) c.header('X-Robots-Tag', 'noindex, nofollow')
   if (!privatePath && c.res.status < 400) {
     for (const name of transientParameters) url.searchParams.delete(name)
+    url.searchParams.delete('from')
     if (url.searchParams.get('page') === '1') url.searchParams.delete('page')
     const configuredOrigin = Bun.env.APP_URL ? new URL(Bun.env.APP_URL).origin : url.origin
     c.header('Link', `<${configuredOrigin + url.pathname + url.search}>; rel="canonical"`)
