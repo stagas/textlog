@@ -531,8 +531,9 @@ test('consequential account, content, reporting, and admin flows work over HTTP'
     .toBeTruthy()
   database.query("UPDATE follows SET created_at='2099-01-01 00:00:00' WHERE follower_id=? AND following_id=?")
     .run(bob.id, alice.id)
+  database.query("UPDATE users SET bio='Bob builds things' WHERE id=?").run(bob.id)
   const followedPersonFeed = await (await request('/for-you', { cookie: aliceCookie })).text()
-  expect(followedPersonFeed).toContain('@bob</a><span>followed you</span>')
+  expect(followedPersonFeed).toContain('<a href="/u/bob" title="Bob builds things">@bob</a><span>followed you</span>')
   expect(followedPersonFeed).not.toContain('action="/follow/alice"')
   expect(followedPersonFeed).toContain('action="/for-you/read-all"')
   expect(followedPersonFeed).toContain('feed-relationship-person activity-item-unread')
@@ -572,7 +573,9 @@ test('consequential account, content, reporting, and admin flows work over HTTP'
   database.query("UPDATE hashtag_follows SET created_at='2099-01-02 00:00:00' WHERE user_id=? AND tag='shared'")
     .run(bob.id)
   const followedTagFeed = await (await request('/for-you', { cookie: aliceCookie })).text()
-  expect(followedTagFeed).toContain('@bob</a><span>followed</span><a href="/tag/shared">#shared</a>')
+  expect(followedTagFeed).toContain(
+    '<a href="/u/bob" title="Bob builds things">@bob</a><span>followed</span><a href="/tag/shared">#shared</a>',
+  )
   expect(followedTagFeed).not.toContain('@alice</a><span>followed</span><a href="/tag/shared">#shared</a>')
   const sharedReplyResponse = await request(`/post/${post.id}/reply`, {
     method: 'POST', cookie: bobCookie, form: { body: 'shared reply #shared' },

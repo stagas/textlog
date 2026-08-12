@@ -33,6 +33,7 @@ type TimelineRow = PostView & {
   event_key: string
   actor_id: number
   actor_handle: string
+  actor_bio: string
   target_handle: string | null
   target_tag: string | null
   target_bio: string | null
@@ -62,7 +63,7 @@ export function Feed({ user, cursor, title, path = '/for-you', pageUrl, notifica
     SELECT p.id,p.user_id,p.body,p.created_at,p.parent_id,p.deleted_at,p.has_latex,p.has_links,p.has_code,u.handle,
       EXISTS(SELECT 1 FROM follows vf WHERE vf.follower_id=$viewer AND vf.following_id=p.user_id) following,
       'post' activity_kind,'post:' || printf('%020d',p.id) event_key,p.user_id actor_id,
-      u.handle actor_handle,NULL target_handle,NULL target_tag,NULL target_bio,0 target_is_viewer
+      u.handle actor_handle,u.bio actor_bio,NULL target_handle,NULL target_tag,NULL target_bio,0 target_is_viewer
       FROM posts p JOIN users u ON u.id=p.user_id
       WHERE p.deleted_at IS NULL AND p.user_id!=$viewer AND (p.user_id IN
         (SELECT following_id FROM follows WHERE follower_id=$viewer) OR p.id IN
@@ -79,7 +80,8 @@ export function Feed({ user, cursor, title, path = '/for-you', pageUrl, notifica
       EXISTS(SELECT 1 FROM follows target_follow WHERE target_follow.follower_id=$viewer
         AND target_follow.following_id=target.id) following,'user_follow' activity_kind,
       'user-follow:' || printf('%020d',actor.id) || ':' || printf('%020d',target.id) || ':' || f.created_at event_key,
-      actor.id actor_id,actor.handle actor_handle,target.handle target_handle,NULL target_tag,target.bio target_bio,
+      actor.id actor_id,actor.handle actor_handle,actor.bio actor_bio,target.handle target_handle,NULL target_tag,
+      target.bio target_bio,
       target.id=$viewer target_is_viewer
       FROM follows f JOIN users actor ON actor.id=f.follower_id JOIN users target ON target.id=f.following_id
       WHERE f.created_at IS NOT NULL AND actor.id!=$viewer AND EXISTS
@@ -97,7 +99,7 @@ export function Feed({ user, cursor, title, path = '/for-you', pageUrl, notifica
         AND viewer_tag.tag=hf.tag) following,
       'tag_follow' activity_kind,
       'tag-follow:' || printf('%020d',actor.id) || ':' || hf.tag || ':' || hf.created_at event_key,
-      actor.id actor_id,actor.handle actor_handle,NULL target_handle,hf.tag target_tag,NULL target_bio,
+      actor.id actor_id,actor.handle actor_handle,actor.bio actor_bio,NULL target_handle,hf.tag target_tag,NULL target_bio,
       0 target_is_viewer
       FROM hashtag_follows hf JOIN users actor ON actor.id=hf.user_id
       WHERE hf.created_at IS NOT NULL AND actor.id!=$viewer AND (EXISTS
@@ -147,7 +149,7 @@ export function Feed({ user, cursor, title, path = '/for-you', pageUrl, notifica
               <div className="feed-relationship-content">
                 <div className="feed-relationship-main">
                   {!!row.unread && <span className="activity-item-unread-dot" aria-label="unread" />}
-                  <a href={`/u/${row.actor_handle}`}>@{row.actor_handle}</a>
+                  <a href={`/u/${row.actor_handle}`} title={row.actor_bio || 'No bio yet.'}>@{row.actor_handle}</a>
                   <span>{row.target_is_viewer ? 'followed you' : 'followed'}</span>
                   {!row.target_is_viewer && row.activity_kind === 'user_follow'
                     ? <a href={`/u/${row.target_handle}`}>@{row.target_handle}</a>
