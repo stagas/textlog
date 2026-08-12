@@ -139,10 +139,7 @@ export function Pagination({ page, totalPages, path, pageParam = 'page', label =
   const separator = path.includes('?') ? '&' : '?'
   const windowStart = Math.max(1, Math.min(page - 1, totalPages - 2))
   const windowPages = Array.from({ length: Math.min(3, totalPages) }, (_, index) => windowStart + index)
-  const pages = compact
-    ? [...new Set([1, ...windowPages, totalPages])]
-      .sort((a, b) => a - b)
-    : [...new Set([1, ...windowPages, totalPages])].sort((a, b) => a - b)
+  const pages = [...new Set([1, ...windowPages, totalPages])].sort((a, b) => a - b)
   return (
     <nav className={`pagination${compact ? ' pagination-compact' : ''}`} aria-label={label}>
       {page > 1
@@ -157,10 +154,7 @@ export function Pagination({ page, totalPages, path, pageParam = 'page', label =
       <div className="pagination-pages">
         {pages.map((value, index) => (
           <React.Fragment key={value}>
-            {!compact && index > 0 && value - pages[index - 1] === 2 && (
-              <a href={`${path}${separator}${pageParam}=${value - 1}`} aria-label={`Page ${value - 1}`}>{value - 1}</a>
-            )}
-            {index > 0 && value - pages[index - 1] > (compact ? 1 : 2)
+            {index > 0 && value - pages[index - 1] > 1
               && <span className="ellipsis" aria-hidden="true">…</span>}
             {value === page
               ? <span className="current" aria-current="page">{value}</span>

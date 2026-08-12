@@ -844,6 +844,27 @@ test('Compact column pagination shows three page boxes at either edge', () => {
   expect(last).not.toContain('>14</')
 })
 
+test('Standard pagination uses the same three-page window as compact columns', () => {
+  const render = (page: number) =>
+    renderToStaticMarkup(React.createElement(Pagination, {
+      page,
+      totalPages: 17,
+      path: '/latest',
+    }))
+
+  const first = render(1)
+  for (const page of [1, 2, 3, 17]) expect(first).toContain(`>${page}</`)
+  expect(first).not.toContain('>4</')
+
+  const middle = render(9)
+  for (const page of [1, 8, 9, 10, 17]) expect(middle).toContain(`>${page}</`)
+  expect(middle).not.toContain('>7</')
+
+  const last = render(17)
+  for (const page of [1, 15, 16, 17]) expect(last).toContain(`>${page}</`)
+  expect(last).not.toContain('>14</')
+})
+
 test('Followed tags paginate every 12 tags', () => {
   const html = renderToStaticMarkup(React.createElement(Connections, {
     user: null,

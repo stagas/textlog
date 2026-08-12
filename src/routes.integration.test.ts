@@ -548,7 +548,7 @@ test('consequential account, content, reporting, and admin flows work over HTTP'
   for (let index = 1; index <= 21; index++) insertFeedPost.run(alice.id, `cursor note ${index}`)
   const latestFirst = await request('/latest')
   const latestFirstBody = await latestFirst.text()
-  const latestNext = latestFirstBody.match(/href="(\/latest\?cursor=[^"]+)"/)?.[1]
+  const latestNext = latestFirstBody.match(/href="(\/latest\?page=2)"/)?.[1]
   expect(latestNext).toBeTruthy()
   expect(latestFirstBody).toContain('cursor note 21')
   expect(latestFirstBody).not.toContain(post.body)
@@ -717,7 +717,7 @@ test('consequential account, content, reporting, and admin flows work over HTTP'
       `2080-01-${String(index).padStart(2, '0')} 12:00:00`)
   }
   const activityFirstBody = await (await request('/to-me', { cookie: aliceCookie })).text()
-  const activityNext = activityFirstBody.match(/href="(\/to-me\?cursor=[^"]+)"/)?.[1]
+  const activityNext = activityFirstBody.match(/href="(\/to-me\?page=2)"/)?.[1]
   expect(activityNext).toBeTruthy()
   expect(activityFirstBody).toContain('activity cursor reply 21')
   expect(activityFirstBody).not.toContain('oldest cursor boundary')

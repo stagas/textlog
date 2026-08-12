@@ -1,12 +1,12 @@
 import { isAdmin } from '../admin'
 import { db, type User } from '../db'
 import { hasUnreadForYou, markForYouEntriesRead } from '../for-you-state'
-import { PAGE_SIZE } from '../pagination'
+import { feedSnapshotPage } from '../feed-snapshots'
 import { enrichPosts } from '../posts'
 import type { PostView } from '../types'
 import { fmt, fmtFull } from '../utils'
 import { Layout } from './layout'
-import { ActionPair, CursorPagination, FeedTabs } from './page-shared'
+import { ActionPair, FeedTabs, Pagination } from './page-shared'
 import { Post } from './post'
 
 export type ForYouCursor = { createdAt: string; key: string; direction: 'next' | 'previous' }
@@ -45,9 +45,10 @@ type TimelineRow = PostView & {
   unread: number
 }
 
-export function Feed({ user, cursor, title, path = '/for-you', pageUrl, notificationBanner = false, toMe = false }: {
+export function Feed({ user, page = 1, title, path = '/for-you', pageUrl, notificationBanner = false, toMe = false }: {
   user: User
-  cursor: ForYouCursor | null
+  page?: number
+  cursor?: ForYouCursor | null
   title?: string
   path?: string
   pageUrl?: string
@@ -55,17 +56,11 @@ export function Feed({ user, cursor, title, path = '/for-you', pageUrl, notifica
   toMe?: boolean
 }) {
   const hasUnread = hasUnreadForYou(user.id)
-  const comparison = cursor?.direction === 'previous' ? '>' : '<'
   const filters = [
     ...(toMe ? ['timeline.targeted_to_viewer=1'] : []),
-    ...(cursor
-      ? [`(timeline.created_at ${comparison} $cursorCreated OR
-        (timeline.created_at=$cursorCreated AND timeline.event_key ${comparison} $cursorKey))`]
-      : []),
   ]
   const cursorFilter = filters.length ? `WHERE ${filters.join(' AND ')}` : ''
-  const direction = cursor?.direction === 'previous' ? 'ASC' : 'DESC'
-  const rows = db.query(`SELECT timeline.*,
+  const snapshot = feedSnapshotPage<TimelineRow>(db, toMe ? 'to-me' : 'for-you', user.id, page, () => db.query(`SELECT timeline.*,
     NOT EXISTS(SELECT 1 FROM for_you_reads fyr WHERE fyr.user_id=$viewer AND fyr.event_key=timeline.event_key) unread
     FROM (
     SELECT p.id,p.user_id,p.body,p.created_at,p.parent_id,p.deleted_at,p.has_latex,p.has_links,p.has_code,u.handle,
@@ -166,29 +161,21 @@ export function Feed({ user, cursor, title, path = '/for-you', pageUrl, notifica
       FROM users u WHERE $admin=1 AND u.handle_chosen_at IS NOT NULL
         AND u.deleted_at IS NULL AND u.suspended_at IS NULL
     ) timeline ${cursorFilter}
-    ORDER BY timeline.created_at ${direction},timeline.event_key ${direction} LIMIT $limit`).all({
+    ORDER BY timeline.created_at DESC,timeline.event_key DESC`).all({
     viewer: user.id,
-    cursorCreated: cursor?.createdAt || '',
-    cursorKey: cursor?.key || '',
     admin: Number(isAdmin(user)),
-    limit: PAGE_SIZE + 1,
-  }) as TimelineRow[]
-  const ordered = cursor?.direction === 'previous' ? [...rows].reverse() : rows
-  const hasMore = ordered.length > PAGE_SIZE
-  const timeline = cursor?.direction === 'previous' && hasMore ? ordered.slice(1) : ordered.slice(0, PAGE_SIZE)
+  }) as TimelineRow[])
+  const unreadKeys = snapshot.items.length
+    ? new Set((db.query(`SELECT event_key FROM for_you_reads WHERE user_id=? AND event_key IN
+      (${snapshot.items.map(() => '?').join(',')})`).all(user.id, ...snapshot.items.map(row => row.event_key)) as
+      { event_key: string }[]).map(row => row.event_key))
+    : new Set<string>()
+  const timeline = snapshot.items.map(row => ({ ...row, unread: Number(!unreadKeys.has(row.event_key)) }))
   markForYouEntriesRead(user.id, timeline.filter(row => row.unread).map(row => row.event_key))
-  const canGoBack = Boolean(cursor) && (cursor!.direction === 'next' || hasMore)
-  const canGoNext = cursor?.direction === 'previous' || hasMore
-  const previousCursor = canGoBack && timeline.length
-    ? encodeForYouCursor({ createdAt: timeline[0].created_at, key: timeline[0].event_key, direction: 'previous' })
-    : null
-  const nextCursor = canGoNext && timeline.length
-    ? encodeForYouCursor({ createdAt: timeline.at(-1)!.created_at, key: timeline.at(-1)!.event_key, direction: 'next' })
-    : null
   const enriched = enrichPosts(db, timeline.filter(row => ['post', 'reply', 'mention'].includes(row.activity_kind)),
     user.id)
   const posts = new Map(enriched.map(post => [post.id, post]))
-  const returnPath = path + (cursor ? `?cursor=${encodeURIComponent(encodeForYouCursor(cursor))}` : '')
+  const returnPath = path + (snapshot.page > 1 ? `?page=${snapshot.page}` : '')
   return (
     <Layout user={user} title={title} pageUrl={pageUrl} notificationBanner={notificationBanner}>
       <h1 className="visually-hidden">Your feed</h1>
@@ -265,7 +252,7 @@ export function Feed({ user, cursor, title, path = '/for-you', pageUrl, notifica
               </article>
             )
         )
-        : !cursor
+        : snapshot.page === 1
         ? (
           <div className="empty empty-actions">
             <p>
@@ -290,7 +277,7 @@ export function Feed({ user, cursor, title, path = '/for-you', pageUrl, notifica
             No activity on this page. <a href="/for-you">Return to the first page</a>.
           </div>
         )}
-      <CursorPagination path={path} previousCursor={previousCursor} nextCursor={nextCursor} />
+      <Pagination page={snapshot.page} totalPages={snapshot.totalPages} path={path} />
     </Layout>
   )
 }

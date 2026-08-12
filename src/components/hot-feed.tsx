@@ -1,14 +1,15 @@
 import { db, type User } from '../db'
-import { encodeHotCursor, getHotPosts, type HotCursor, hotCursor } from '../hot'
-import { PAGE_SIZE } from '../pagination'
+import { getHotPosts, type HotCursor, type HotPost } from '../hot'
+import { feedSnapshotPage } from '../feed-snapshots'
 import { enrichPosts } from '../posts'
 import { Layout } from './layout'
-import { FeedTabs, GlobalFeedEmpty } from './page-shared'
+import { FeedTabs, GlobalFeedEmpty, Pagination } from './page-shared'
 import { Post } from './post'
 
 export function HotFeed(
-  { cursor, user, title, path = '/hot', pageUrl, notificationBanner = false }: {
-    cursor: HotCursor | null
+  { page = 1, user, title, path = '/hot', pageUrl, notificationBanner = false }: {
+    page?: number
+    cursor?: HotCursor | null
     user: User | null
     title?: string
     path?: string
@@ -17,22 +18,10 @@ export function HotFeed(
   },
 ) {
   const viewerId = user?.id ?? -1
-  const asOf = cursor?.asOf || new Date().toISOString()
-  const ranked = getHotPosts(db, PAGE_SIZE + 1, cursor, asOf, viewerId)
-  const hasMore = ranked.length > PAGE_SIZE
-  const pageRows = cursor?.direction === 'previous' && hasMore
-    ? ranked.slice(1)
-    : ranked.slice(0, PAGE_SIZE)
-  const posts = enrichPosts(db, pageRows, viewerId)
-  const returnPath = path + (cursor ? `?cursor=${encodeURIComponent(encodeHotCursor(cursor))}` : '')
-  const canGoBack = Boolean(cursor) && (cursor!.direction === 'next' || hasMore)
-  const canGoNext = cursor?.direction === 'previous' || hasMore
-  const previousCursor = canGoBack && pageRows.length
-    ? encodeHotCursor(hotCursor(pageRows[0], asOf, 'previous'))
-    : null
-  const nextCursor = canGoNext && pageRows.length
-    ? encodeHotCursor(hotCursor(pageRows[pageRows.length - 1], asOf, 'next'))
-    : null
+  const snapshot = feedSnapshotPage<HotPost>(db, 'hot', viewerId, page,
+    () => getHotPosts(db, 1_000_000, null, new Date(), viewerId))
+  const posts = enrichPosts(db, snapshot.items, viewerId)
+  const returnPath = path + (snapshot.page > 1 ? `?page=${snapshot.page}` : '')
   return (
     <Layout user={user} title={title} pageUrl={pageUrl} notificationBanner={notificationBanner}
       feeds={{ title: 'Hot notes', rss: '/hot.rss', atom: '/hot.atom' }}
@@ -44,27 +33,14 @@ export function HotFeed(
           <Post key={post.id} p={post} user={user} showReplyCount tappable
             returnPath={`${returnPath}#post-${post.id}`} />
         ))
-        : !cursor
+        : snapshot.page === 1
         ? <GlobalFeedEmpty user={user} />
         : (
           <div className="empty">
             No notes on this page. <a href="/hot">Return to the first page</a>.
           </div>
         )}
-      {(previousCursor || nextCursor) && (
-        <nav className="pagination hot-pagination" aria-label="Pagination">
-          {previousCursor && (
-            <a className="pagination-edge" href={`${path}?cursor=${encodeURIComponent(previousCursor)}`}>← prev</a>
-          )}
-          {nextCursor && (
-            <a className="pagination-edge hot-pagination-next"
-              href={`${path}?cursor=${encodeURIComponent(nextCursor)}`}
-            >
-              next →
-            </a>
-          )}
-        </nav>
-      )}
+      <Pagination page={snapshot.page} totalPages={snapshot.totalPages} path={path} />
     </Layout>
   )
 }

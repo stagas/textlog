@@ -635,6 +635,69 @@ export const migrations: Migration[] = [
       }
     },
   },
+  {
+    version: 53,
+    name: 'persistent_feed_pagination',
+    up(database) {
+      database.run(`CREATE TABLE IF NOT EXISTS feed_snapshot_generation (
+        id INTEGER PRIMARY KEY CHECK(id=1),generation INTEGER NOT NULL);
+      INSERT OR IGNORE INTO feed_snapshot_generation(id,generation) VALUES(1,1);
+      CREATE TABLE IF NOT EXISTS feed_snapshots (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,kind TEXT NOT NULL,viewer_id INTEGER NOT NULL,
+        generation INTEGER NOT NULL,total_items INTEGER NOT NULL,created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        UNIQUE(kind,viewer_id,generation));
+      CREATE TABLE IF NOT EXISTS feed_snapshot_items (
+        snapshot_id INTEGER NOT NULL REFERENCES feed_snapshots(id) ON DELETE CASCADE,
+        position INTEGER NOT NULL,payload TEXT NOT NULL,PRIMARY KEY(snapshot_id,position));
+      CREATE INDEX IF NOT EXISTS feed_snapshots_lookup ON feed_snapshots(kind,viewer_id,generation);
+      CREATE TRIGGER IF NOT EXISTS feed_generation_posts_insert AFTER INSERT ON posts BEGIN
+        UPDATE feed_snapshot_generation SET generation=generation+1 WHERE id=1; END;
+      CREATE TRIGGER IF NOT EXISTS feed_generation_posts_update AFTER UPDATE ON posts BEGIN
+        UPDATE feed_snapshot_generation SET generation=generation+1 WHERE id=1; END;
+      CREATE TRIGGER IF NOT EXISTS feed_generation_posts_delete AFTER DELETE ON posts BEGIN
+        UPDATE feed_snapshot_generation SET generation=generation+1 WHERE id=1; END;
+      CREATE TRIGGER IF NOT EXISTS feed_generation_follows_insert AFTER INSERT ON follows BEGIN
+        UPDATE feed_snapshot_generation SET generation=generation+1 WHERE id=1; END;
+      CREATE TRIGGER IF NOT EXISTS feed_generation_follows_update AFTER UPDATE ON follows BEGIN
+        UPDATE feed_snapshot_generation SET generation=generation+1 WHERE id=1; END;
+      CREATE TRIGGER IF NOT EXISTS feed_generation_follows_delete AFTER DELETE ON follows BEGIN
+        UPDATE feed_snapshot_generation SET generation=generation+1 WHERE id=1; END;
+      CREATE TRIGGER IF NOT EXISTS feed_generation_hashtag_follows_insert AFTER INSERT ON hashtag_follows BEGIN
+        UPDATE feed_snapshot_generation SET generation=generation+1 WHERE id=1; END;
+      CREATE TRIGGER IF NOT EXISTS feed_generation_hashtag_follows_update AFTER UPDATE ON hashtag_follows BEGIN
+        UPDATE feed_snapshot_generation SET generation=generation+1 WHERE id=1; END;
+      CREATE TRIGGER IF NOT EXISTS feed_generation_hashtag_follows_delete AFTER DELETE ON hashtag_follows BEGIN
+        UPDATE feed_snapshot_generation SET generation=generation+1 WHERE id=1; END;
+      CREATE TRIGGER IF NOT EXISTS feed_generation_blocks_insert AFTER INSERT ON blocks BEGIN
+        UPDATE feed_snapshot_generation SET generation=generation+1 WHERE id=1; END;
+      CREATE TRIGGER IF NOT EXISTS feed_generation_blocks_delete AFTER DELETE ON blocks BEGIN
+        UPDATE feed_snapshot_generation SET generation=generation+1 WHERE id=1; END;
+      CREATE TRIGGER IF NOT EXISTS feed_generation_blocked_tags_insert AFTER INSERT ON blocked_hashtags BEGIN
+        UPDATE feed_snapshot_generation SET generation=generation+1 WHERE id=1; END;
+      CREATE TRIGGER IF NOT EXISTS feed_generation_blocked_tags_delete AFTER DELETE ON blocked_hashtags BEGIN
+        UPDATE feed_snapshot_generation SET generation=generation+1 WHERE id=1; END;
+      CREATE TRIGGER IF NOT EXISTS feed_generation_hot_insert AFTER INSERT ON post_hot BEGIN
+        UPDATE feed_snapshot_generation SET generation=generation+1 WHERE id=1; END;
+      CREATE TRIGGER IF NOT EXISTS feed_generation_hot_update AFTER UPDATE ON post_hot BEGIN
+        UPDATE feed_snapshot_generation SET generation=generation+1 WHERE id=1; END;
+      CREATE TRIGGER IF NOT EXISTS feed_generation_hot_delete AFTER DELETE ON post_hot BEGIN
+        UPDATE feed_snapshot_generation SET generation=generation+1 WHERE id=1; END;
+      CREATE TRIGGER IF NOT EXISTS feed_generation_users_insert AFTER INSERT ON users BEGIN
+        UPDATE feed_snapshot_generation SET generation=generation+1 WHERE id=1; END;
+      CREATE TRIGGER IF NOT EXISTS feed_generation_users_update AFTER UPDATE ON users BEGIN
+        UPDATE feed_snapshot_generation SET generation=generation+1 WHERE id=1; END;
+      CREATE TRIGGER IF NOT EXISTS feed_generation_users_delete AFTER DELETE ON users BEGIN
+        UPDATE feed_snapshot_generation SET generation=generation+1 WHERE id=1; END;
+      CREATE TRIGGER IF NOT EXISTS feed_generation_post_tags_insert AFTER INSERT ON post_hashtags BEGIN
+        UPDATE feed_snapshot_generation SET generation=generation+1 WHERE id=1; END;
+      CREATE TRIGGER IF NOT EXISTS feed_generation_post_tags_delete AFTER DELETE ON post_hashtags BEGIN
+        UPDATE feed_snapshot_generation SET generation=generation+1 WHERE id=1; END;
+      CREATE TRIGGER IF NOT EXISTS feed_generation_mentions_insert AFTER INSERT ON post_mentions BEGIN
+        UPDATE feed_snapshot_generation SET generation=generation+1 WHERE id=1; END;
+      CREATE TRIGGER IF NOT EXISTS feed_generation_mentions_delete AFTER DELETE ON post_mentions BEGIN
+        UPDATE feed_snapshot_generation SET generation=generation+1 WHERE id=1; END;`)
+    },
+  },
 ]
 
 export const latestMigrationVersion = migrations.at(-1)!.version
