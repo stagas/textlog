@@ -296,15 +296,17 @@ nav form {
 .product-hunt-banner button:hover { color: var(--tab-hover); }
 
 .product-hunt-banner {
-  background: color-mix(in srgb, #f97316 12%, transparent);
+  background: color-mix(in srgb, #ea580c 24%, var(--panel));
+  border-bottom-color: color-mix(in srgb, #f97316 45%, var(--soft));
 }
 
 .product-hunt-banner > a {
-  color: #d95f02;
+  color: #f97316;
+  font-weight: 600;
 }
 
 .product-hunt-banner > a:hover {
-  color: #f97316;
+  color: #fb923c;
 }
 
 .feed-tabs a {
