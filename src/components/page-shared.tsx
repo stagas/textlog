@@ -19,9 +19,22 @@ export function postTitle(body: string) {
 export function FormMessage({ error, success }: { error?: string; success?: string }) {
   if (!error && !success) return null
   return (
-    <p className={error ? 'form-error' : 'form-success'} role={error ? 'alert' : 'status'}>
+    <p className={`status-message ${error ? 'status-error' : 'status-success'}`} role={error ? 'alert' : 'status'}>
       {error || success}
     </p>
+  )
+}
+
+export function FormActions({ primary, secondary, className = '' }: {
+  primary: React.ReactNode
+  secondary?: React.ReactNode
+  className?: string
+}) {
+  return (
+    <div className={`form-actions${className ? ` ${className}` : ''}`}>
+      {secondary && <span className="form-actions-secondary">{secondary}</span>}
+      {primary}
+    </div>
   )
 }
 
@@ -41,7 +54,7 @@ export function ActionPair({ primary, secondary, className = '' }: {
 
 export function VerificationRequired() {
   return (
-    <div className="panel form-error" role="alert">
+    <div className="panel status-message status-error" role="alert">
       Confirm your email address before posting. <a href="/account/security">Verify your email</a>
     </div>
   )
@@ -134,8 +147,8 @@ export function FeedTabs({ active, user, forYouReadStatus, activityReadStatus }:
         <a className={active === 'following' ? 'active' : ''} aria-current={active === 'following' ? 'page' : undefined}
           href="/for-you"
         >
-          {forYouUnread && <span className="activity-unread-dot" aria-hidden="true" />}
-          {forYouUnread && <span className="sr-only">unread </span>}
+          {forYouUnread && <span className="unread-dot" aria-hidden="true" />}
+          {forYouUnread && <span className="visually-hidden">unread </span>}
           for you
         </a>
       )}
@@ -143,8 +156,8 @@ export function FeedTabs({ active, user, forYouReadStatus, activityReadStatus }:
         <a className={active === 'activity' ? 'active' : ''}
           aria-current={active === 'activity' ? 'page' : undefined} href="/activity"
         >
-          {activityUnread && <span className="activity-unread-dot" aria-hidden="true" />}
-          {activityUnread && <span className="sr-only">unread </span>}
+          {activityUnread && <span className="unread-dot" aria-hidden="true" />}
+          {activityUnread && <span className="visually-hidden">unread </span>}
           activity
         </a>
       )}
@@ -221,7 +234,7 @@ export function ProfileHeader({ user, profile, following, blocked = false, editi
             </form>
             {!blocked && (
               <form method="post" action={'/follow/' + profile.handle}>
-                <button className={`button${following ? ' unfollow-button' : ''}`}
+                <button className={`button${following ? ' button-muted' : ''}`}
                   aria-label={`${following ? 'unfollow' : 'follow'} @${profile.handle}`}
                 >
                   {following ? 'unfollow' : 'follow'}
@@ -317,7 +330,7 @@ export function TagPeopleList({ user, tags, followingKey = 'following', highligh
             </div>
             {user && (
               <form method="post" action={`/tag-follow/${encodeURIComponent(tag.tag)}`}>
-                <button className={`button${tag[followingKey] ? ' unfollow-button' : ''}`}>
+                <button className={`button${tag[followingKey] ? ' button-muted' : ''}`}>
                   {tag[followingKey] ? 'unfollow' : 'follow'}
                 </button>
               </form>
@@ -388,7 +401,7 @@ export function ConnectionPeople({ user, people, className = '', highlightTerms 
             </div>
             {user && user.id !== person.id && (
               <form method="post" action={`/follow/${person.handle}`}>
-                <button className={`button${person.viewerFollowing ? ' unfollow-button' : ''}`}>
+                <button className={`button${person.viewerFollowing ? ' button-muted' : ''}`}>
                   {person.viewerFollowing ? 'unfollow' : 'follow'}
                 </button>
               </form>
@@ -418,9 +431,9 @@ export function ReportPanel({ post, showForm, reported }: { post: PostView; show
   return (
     <div className="panel report-panel">
       <form method="post" action={`/post/${post.id}/report`}>
-        <label>
+        <label className="form-label">
           reason
-          <select name="reason" required defaultValue="">
+          <select className="form-control form-select" name="reason" required defaultValue="">
             <option value="" disabled>choose a reason</option>
             <option value="harassment">harassment</option>
             <option value="spam">spam</option>
@@ -428,10 +441,8 @@ export function ReportPanel({ post, showForm, reported }: { post: PostView; show
             <option value="other">other</option>
           </select>
         </label>
-        <div className="form-actions">
-          <a className="quiet" href={`/post/${post.id}`}>cancel</a>
-          <button className="button delete-button">submit report</button>
-        </div>
+        <FormActions secondary={<a className="secondary-action" href={`/post/${post.id}`}>cancel</a>}
+          primary={<button className="button button-danger">submit report</button>} />
       </form>
     </div>
   )

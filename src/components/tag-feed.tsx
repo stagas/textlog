@@ -35,7 +35,7 @@ export function TagFeed(
               </form>
               {!blocked && (
                 <form method="post" action={'/tag-follow/' + encodeURIComponent(tag)}>
-                  <button className={`button${following ? ' unfollow-button' : ''}`}>
+                  <button className={`button${following ? ' button-muted' : ''}`}>
                     {following ? 'unfollow' : 'follow'}
                   </button>
                 </form>

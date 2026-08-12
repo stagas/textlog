@@ -208,7 +208,7 @@ export function AccountPassword({ user, enabled, token, request = false, sent = 
               ? 'Change password'
               : 'Set a password'}
           </h1>
-          {error && <p className="error" role="alert">{error}</p>}
+          {error && <p className="status-message status-error" role="alert">{error}</p>}
           {invalid
             ? <p className="switch">This link is invalid, expired, or already used.</p>
             : sent

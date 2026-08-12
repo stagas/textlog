@@ -148,7 +148,7 @@ export function Feed({ user, cursor, title, path = '/for-you', pageUrl, notifica
               : ''}${row.unread ? ' activity-item-unread' : ''}`} key={row.event_key}>
               <div className="feed-relationship-content">
                 <div className="feed-relationship-main">
-                  {!!row.unread && <span className="activity-item-unread-dot" aria-label="unread" />}
+                  {!!row.unread && <span className="unread-dot" aria-label="unread" />}
                   <a href={`/u/${row.actor_handle}`} title={row.actor_bio || 'No bio yet.'}>@{row.actor_handle}</a>
                   <span>{row.target_is_viewer ? 'followed you' : 'followed'}</span>
                   {!row.target_is_viewer && row.activity_kind === 'user_follow'
@@ -166,7 +166,7 @@ export function Feed({ user, cursor, title, path = '/for-you', pageUrl, notifica
                 <form method="post" action={row.activity_kind === 'user_follow'
                   ? `/follow/${row.target_handle}`
                   : `/tag-follow/${row.target_tag}`}>
-                  <button className={`button${row.following ? ' unfollow-button' : ''}`}>
+                  <button className={`button${row.following ? ' button-muted' : ''}`}>
                     {row.following ? 'unfollow' : 'follow'}
                   </button>
                 </form>

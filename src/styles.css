@@ -16,9 +16,9 @@
   --button-ink: #fff;
   --button-hover-bg: #55734a;
   --button-active-bg: #405c38;
-  --unfollow-button-bg: #65775e;
-  --unfollow-button-hover-bg: #72886a;
-  --unfollow-button-active-bg: #566650;
+  --button-muted-bg: #65775e;
+  --button-muted-hover-bg: #72886a;
+  --button-muted-active-bg: #566650;
   --button-disabled-bg: #d9dbd4;
   --button-disabled-ink: #777d73;
   --danger-button-bg: #7a3f39;
@@ -40,6 +40,9 @@
   --api-patch-bg: #f3ead5;
   --api-delete-ink: #8a3f37;
   --api-delete-bg: #f1dfdc;
+  --focus-ring-width: 2px;
+  --focus-ring-offset: 3px;
+  --focus-ring-inset-offset: -2px;
   --gutter: clamp(18px, 3vw, 28px);
   --space-1: 4px;
   --space-2: 8px;
@@ -73,9 +76,9 @@
     --button-ink: #e5e8e1;
     --button-hover-bg: #4b664d;
     --button-active-bg: #314434;
-    --unfollow-button-bg: #58705a;
-    --unfollow-button-hover-bg: #668267;
-    --unfollow-button-active-bg: #4a5f4c;
+    --button-muted-bg: #58705a;
+    --button-muted-hover-bg: #668267;
+    --button-muted-active-bg: #4a5f4c;
     --button-disabled-bg: #292f29;
     --button-disabled-ink: #747c72;
     --danger-button-bg: #663b37;
@@ -159,8 +162,13 @@ a:hover {
 a:focus-visible,
 button:focus-visible,
 select:focus-visible {
-  outline: 2px solid var(--accent);
-  outline-offset: 3px;
+  outline: var(--focus-ring-width) solid var(--accent);
+  outline-offset: var(--focus-ring-offset);
+}
+
+:where(input:not([type="hidden"]):not([type="checkbox"]):not([type="radio"]), textarea, select):focus-visible {
+  outline: var(--focus-ring-width) solid var(--accent);
+  outline-offset: var(--focus-ring-inset-offset);
 }
 
 button,
@@ -571,6 +579,10 @@ nav form {
   max-width: 760px;
 }
 
+.illegal-activity-page {
+  max-width: none;
+}
+
 .illegal-activity-page h1 {
   max-width: none;
   white-space: nowrap;
@@ -658,11 +670,16 @@ nav form {
 }
 
 .button {
-  display: inline-block;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
   padding: var(--space-3) var(--space-4);
   color: var(--button-ink);
   background: var(--button-bg);
   font-size: 0.75rem;
+  line-height: 1.5;
+  text-align: center;
 }
 
 .button:not(:disabled):not([aria-disabled="true"]):hover {
@@ -674,20 +691,20 @@ nav form {
   background: var(--button-active-bg);
 }
 
-.button.unfollow-button {
-  background: var(--unfollow-button-bg);
+.button.button-muted {
+  background: var(--button-muted-bg);
 }
 
-.button.unfollow-button:not(:disabled):not([aria-disabled="true"]):hover {
-  background: var(--unfollow-button-hover-bg);
+.button.button-muted:not(:disabled):not([aria-disabled="true"]):hover {
+  background: var(--button-muted-hover-bg);
 }
 
-.button.unfollow-button:not(:disabled):not([aria-disabled="true"]):active {
-  background: var(--unfollow-button-active-bg);
+.button.button-muted:not(:disabled):not([aria-disabled="true"]):active {
+  background: var(--button-muted-active-bg);
 }
 
 .button:focus-visible {
-  outline: 2px solid var(--accent);
+  outline: var(--focus-ring-width) solid var(--accent);
   outline-offset: 2px;
 }
 
@@ -731,7 +748,7 @@ nav form {
   gap: var(--space-2);
 }
 
-.feed-relationship-main .activity-item-unread-dot {
+.feed-relationship-main .unread-dot {
   margin-right: calc(1ch - var(--space-2));
 }
 
@@ -1194,7 +1211,6 @@ nav form {
 
 .magic-sent-panel .entry-code-row .button {
   flex: 0 0 auto;
-  justify-content: space-between;
 }
 
 .magic-sent-panel .entry-code-copy {
@@ -1205,6 +1221,10 @@ nav form {
 
 .magic-sent-panel .entry-code-copy + form {
   margin-top: var(--space-3);
+}
+
+.magic-sent-panel .entry-code-help {
+  text-align: left;
 }
 
 .auth-panel h1 {
@@ -1220,7 +1240,7 @@ nav form {
 }
 
 .auth-panel h1+form,
-.auth-panel .error+form {
+.auth-panel .status-error+form {
   margin-top: var(--space-6);
 }
 
@@ -1264,7 +1284,6 @@ nav form {
 
 .auth-panel .button {
   min-height: 48px;
-  justify-content: space-between;
   margin-top: var(--space-1);
   padding-inline: var(--space-4);
 }
@@ -1358,6 +1377,41 @@ textarea {
   outline: none;
 }
 
+.form-control {
+  width: 100%;
+  padding: 13px;
+  color: var(--ink);
+  font: inherit;
+  background: var(--panel);
+  border: 1px solid var(--soft);
+  border-radius: 0;
+  outline: none;
+}
+
+.form-select {
+  min-height: 48px;
+  cursor: pointer;
+}
+
+.form-checkbox {
+  accent-color: var(--accent);
+  cursor: pointer;
+}
+
+.form-label {
+  display: grid;
+  gap: var(--space-2);
+  color: var(--muted);
+  font-size: 0.6875rem;
+}
+
+.form-hint {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.6875rem;
+  line-height: 1.6;
+}
+
 .auth input:focus-visible,
 .bio-form input:focus-visible,
 .account-delete-form input:focus-visible,
@@ -1375,7 +1429,7 @@ textarea {
   line-height: 1.7;
 }
 
-.wide {
+.button-wide {
   width: 100%;
   margin-top: var(--space-2);
 }
@@ -1409,13 +1463,28 @@ textarea {
 .form-actions {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  flex-wrap: wrap;
   gap: var(--space-4);
   justify-content: flex-end;
 }
 
-.form-actions button.quiet:hover {
-  color: var(--tab-hover);
+.form-actions-secondary {
+  display: inline-flex;
+  align-items: center;
+}
+
+.secondary-action {
+  padding: 0;
+  color: var(--accent);
+  background: none;
+  font: inherit;
+  font-size: 0.6875rem;
+  border: 0;
+  border-bottom: 1px solid var(--link-border);
+}
+
+.secondary-action:hover {
+  color: var(--accent-dark);
 }
 
 .confirm-delete h1 {
@@ -1720,12 +1789,9 @@ textarea {
   margin-block: 0 var(--space-6);
 }
 
-.report-panel form,
-.report-panel label {
+.report-panel form {
   display: grid;
   gap: var(--space-3);
-  color: var(--muted);
-  font-size: 0.6875rem;
 }
 
 form.report-panel {
@@ -1734,14 +1800,21 @@ form.report-panel {
   margin: var(--space-6) 0;
 }
 
-.report-panel select,
-.report-panel input {
+.form-panel {
   width: 100%;
-  padding: 12px;
-  color: var(--ink);
-  font: inherit;
+  max-width: none;
+  margin: var(--space-6) 0;
+  padding: clamp(24px, 5vw, 40px);
   background: var(--panel);
   border: 1px solid var(--soft);
+}
+
+.form-panel .form-control {
+  background: var(--bg);
+}
+
+.form-panel.report-panel {
+  margin: var(--space-6) 0;
 }
 
 .report-panel .good-faith {
@@ -1749,6 +1822,7 @@ form.report-panel {
   align-items: flex-start;
   grid-template-columns: none;
   color: var(--quote-ink);
+  line-height: 1.55;
 }
 
 .report-panel .good-faith input {
@@ -1756,34 +1830,44 @@ form.report-panel {
   height: 16px;
   margin: 1px 0 0;
   padding: 0;
+  flex: none;
 }
 
-.delete-button {
+@media (max-width: 520px) {
+  .illegal-activity-page .form-panel {
+    width: calc(100% + 2 * var(--gutter));
+    margin-inline: calc(-1 * var(--gutter));
+    padding: var(--space-5) var(--gutter);
+    border-inline: 0;
+  }
+}
+
+.button-danger {
   background: var(--danger-button-bg);
 }
 
-.delete-button:not(:disabled):not([aria-disabled="true"]):hover {
+.button-danger:not(:disabled):not([aria-disabled="true"]):hover {
   background: var(--danger-button-hover-bg);
 }
 
-.delete-button:not(:disabled):not([aria-disabled="true"]):active {
+.button-danger:not(:disabled):not([aria-disabled="true"]):active {
   background: var(--danger-button-active-bg);
 }
 
-.form-error {
+.status-message {
   margin: 0 0 var(--space-3);
   padding: var(--space-2) var(--space-3);
-  color: var(--error-ink);
-  background: var(--error-bg);
   font-size: 0.75rem;
 }
 
-.form-success {
-  margin: 0 0 var(--space-3);
-  padding: var(--space-2) var(--space-3);
+.status-error {
+  color: var(--error-ink);
+  background: var(--error-bg);
+}
+
+.status-success {
   color: var(--success-ink);
   background: var(--success-bg);
-  font-size: 0.75rem;
 }
 
 .composefoot {
@@ -2719,44 +2803,12 @@ form.report-panel {
   padding: var(--space-6) var(--gutter) var(--space-8);
 }
 
-.admin-email form,
-.admin-email label {
+.admin-email form {
   display: grid;
-  gap: var(--space-2);
 }
 
 .admin-email form {
   gap: var(--space-5);
-}
-
-.admin-email label {
-  color: var(--muted);
-  font-size: 0.6875rem;
-}
-
-.admin-email input,
-.admin-email textarea {
-  width: 100%;
-}
-
-.admin-email input {
-  padding: 13px;
-  color: var(--ink);
-  font: inherit;
-  background: var(--panel);
-  border: 1px solid var(--soft);
-  border-radius: 0;
-  outline: none;
-}
-
-.admin-email input:focus-visible {
-  outline: 2px solid var(--accent);
-  outline-offset: -2px;
-}
-
-.admin-email-success {
-  margin: 0 0 var(--space-5);
-  color: var(--accent);
 }
 
 .admin-confirm form,
@@ -2789,7 +2841,7 @@ form.report-panel {
   white-space: nowrap;
 }
 
-.activity-unread-dot {
+.unread-dot {
   display: inline-block;
   width: 5px;
   height: 5px;
@@ -2807,14 +2859,6 @@ form.report-panel {
 .activity-item .posttop {
   flex-wrap: wrap;
   gap: var(--space-2);
-}
-
-.activity-item-unread-dot {
-  width: 5px;
-  height: 5px;
-  flex: 0 0 auto;
-  border-radius: 50%;
-  background: var(--accent);
 }
 
 .activity-item-unread {
@@ -3025,18 +3069,6 @@ form.report-panel {
   overflow: hidden;
   clip-path: inset(50%);
   white-space: nowrap;
-}
-
-.sr-only {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  padding: 0;
-  margin: -1px;
-  overflow: hidden;
-  clip: rect(0, 0, 0, 0);
-  white-space: nowrap;
-  border: 0;
 }
 
 .thread-fold {

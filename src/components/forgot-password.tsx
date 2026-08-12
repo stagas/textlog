@@ -24,7 +24,7 @@ export function ForgotPassword({ sent = false, error }: { sent?: boolean; error?
                     email<input type="email" name="email" required maxLength={254} autoComplete="email" autoFocus
                       placeholder="you@example.com" />
                   </label>
-                  <button className="button wide">send reset link →</button>
+                  <button className="button button-wide">send reset link →</button>
                 </form>
                 <p className="switch">
                   <a href="/enter" rel="nofollow">Back to login</a>

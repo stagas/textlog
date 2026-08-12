@@ -1,7 +1,7 @@
 import { appName, appOrigin } from '../brand'
 import type { User } from '../db'
 import { Layout } from './layout'
-import { FormMessage } from './page-shared'
+import { FormActions, FormMessage } from './page-shared'
 
 export function IllegalActivityReport(
   { user, error, reference, values = {} }: { user: User | null; error?: string; reference?: string;
@@ -16,21 +16,22 @@ export function IllegalActivityReport(
         <h1>Report illegal activity</h1>
         {reference
           ? (
-            <p role="status">
+            <p className="status-message status-success" role="status">
               Your report was received. Reference: <strong>{reference}</strong>.
             </p>
           )
           : (
             <>
               <p>Use this form to report a specific {name} post that you believe involves illegal activity.</p>
-              <form className="panel report-panel" method="post" action="/report-illegal-activity">
+              <form className="form-panel report-panel" method="post" action="/report-illegal-activity">
                 <FormMessage error={error} />
-                <label>
-                  post URL<input type="url" name="contentUrl" required defaultValue={values.contentUrl}
+                <label className="form-label">
+                  post URL<input className="form-control" type="url" name="contentUrl" required defaultValue={values.contentUrl}
                     placeholder={`${origin}/post/123`} />
                 </label>
-                <label>
-                  category<select name="category" required defaultValue={values.category || ''}>
+                <label className="form-label">
+                  category<select className="form-control form-select" name="category" required
+                    defaultValue={values.category || ''}>
                     <option value="" disabled>choose</option>
                     <option value="hate">illegal hate speech</option>
                     <option value="privacy">privacy violation</option>
@@ -40,23 +41,23 @@ export function IllegalActivityReport(
                     <option value="other">other</option>
                   </select>
                 </label>
-                <label>
-                  details<textarea name="details" required minLength={20} maxLength={3000} defaultValue={values.details}
+                <label className="form-label">
+                  details<textarea className="form-control" name="details" required minLength={20} maxLength={3000} defaultValue={values.details}
                     placeholder="Explain what you believe is illegal and why." />
                 </label>
-                <label>
-                  name<input name="name" maxLength={200} defaultValue={values.name} />
+                <label className="form-label">
+                  name<input className="form-control" name="name" maxLength={200} defaultValue={values.name} />
                 </label>
-                <label>
-                  email<input type="email" name="email" maxLength={254} defaultValue={values.email}
+                <label className="form-label">
+                  email<input className="form-control" type="email" name="email" maxLength={254} defaultValue={values.email}
                     placeholder="you@example.com" />
                 </label>
-                <p className="quiet">Name and email may be omitted only for a child-safety offence report.</p>
+                <p className="form-hint">Name and email may be omitted only for a child-safety offence report.</p>
                 <label className="good-faith">
-                  <input type="checkbox" name="goodFaith" value="yes" required />{' '}
+                  <input className="form-checkbox" type="checkbox" name="goodFaith" value="yes" required />{' '}
                   I believe in good faith that this report is accurate and complete.
                 </label>
-                <button className="button">submit report</button>
+                <FormActions primary={<button className="button">submit report</button>} />
               </form>
             </>
           )}

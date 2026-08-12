@@ -2,7 +2,7 @@ import { type User } from '../db'
 import { canPublishPosts } from '../posting-policy'
 import type { PostView } from '../types'
 import { Layout } from './layout'
-import { FormMessage, VerificationRequired } from './page-shared'
+import { FormActions, FormMessage, VerificationRequired } from './page-shared'
 import { Post } from './post'
 
 export function Compose(
@@ -39,13 +39,11 @@ export function Compose(
         </h1>
         <form method="post" action="/post">
           <FormMessage error={error} />
-          <textarea name="body" maxLength={280} required autoFocus defaultValue={body} />
+          <textarea className="form-control" name="body" maxLength={280} required autoFocus defaultValue={body} />
           <div className="composefoot">
             <span>280 characters max · use #hashtags and @mentions</span>
-            <div className="form-actions">
-              <button className="quiet" name="action" value="preview">preview</button>
-              <button className="button">post →</button>
-            </div>
+            <FormActions secondary={<button className="secondary-action" name="action" value="preview">preview</button>}
+              primary={<button className="button">post →</button>} />
           </div>
         </form>
       </div>

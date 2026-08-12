@@ -50,7 +50,7 @@ export function NotificationSettings({ user, publicKey, ios = false }: {
               <div className="notification-radio-heading">
                 <strong>new notes</strong>
                 <label className="notification-radio-enable">
-                  <span className="sr-only">enable new note notifications</span>
+                  <span className="visually-hidden">enable new note notifications</span>
                   <input type="checkbox" name="notesEnabled" defaultChecked />
                   <span className="notification-toggle-track" aria-hidden="true"><span /></span>
                 </label>

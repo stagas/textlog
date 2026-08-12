@@ -29,7 +29,7 @@ export function ResetPassword(
                   confirm password<input type="password" name="confirmPassword" required minLength={8}
                     autoComplete="new-password" />
                 </label>
-                <button className="button wide">reset password →</button>
+                <button className="button button-wide">reset password →</button>
               </form>
             )}
         </div>

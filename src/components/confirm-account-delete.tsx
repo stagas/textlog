@@ -1,6 +1,6 @@
 import { type User } from '../db'
 import { Layout } from './layout'
-import { FormMessage } from './page-shared'
+import { FormActions, FormMessage } from './page-shared'
 
 export function ConfirmAccountDelete({ user, passwordEnabled = false, token, sent = false, invalid = false, error }: {
   user?: User | null
@@ -60,14 +60,13 @@ export function ConfirmAccountDelete({ user, passwordEnabled = false, token, sen
                         We’ll email you a secure confirmation link before anything is deleted.
                       </p>
                     )}
-                    <div className="form-actions">
-                      <a className="quiet" href={user ? '/account/edit' : '/'}>cancel</a>
-                      <button className={`button${emailConfirmation || passwordEnabled ? ' delete-button' : ''}`}
+                    <FormActions
+                      secondary={<a className="secondary-action" href={user ? '/account/edit' : '/'}>cancel</a>}
+                      primary={<button className={`button${emailConfirmation || passwordEnabled ? ' button-danger' : ''}`}
                         type="submit"
                       >
                         {emailConfirmation || passwordEnabled ? 'delete account' : 'send confirmation link →'}
-                      </button>
-                    </div>
+                      </button>} />
                   </form>
                 )}
             </div>

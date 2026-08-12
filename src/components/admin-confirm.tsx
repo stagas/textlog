@@ -1,6 +1,7 @@
 import { type User } from '../db'
 import type { PostRow, ProfileRow } from '../types'
 import { Layout } from './layout'
+import { FormActions } from './page-shared'
 
 export function AdminConfirm({ user, kind, target, post, returnTo = '/admin' }: {
   user: User
@@ -34,12 +35,10 @@ export function AdminConfirm({ user, kind, target, post, returnTo = '/admin' }: 
             moderation note (optional)
             <textarea name="note" maxLength={500} placeholder="Context for the audit log…" />
           </label>
-          <div className="form-actions">
-            <a className="quiet" href={returnTo}>cancel</a>
-            <button className={`button ${kind.includes('delete') || kind === 'suspend_user' ? 'delete-button' : ''}`}>
+          <FormActions secondary={<a className="secondary-action" href={returnTo}>cancel</a>}
+            primary={<button className={`button ${kind.includes('delete') || kind === 'suspend_user' ? 'button-danger' : ''}`}>
               {kind.replaceAll('_', ' ')}
-            </button>
-          </div>
+            </button>} />
         </form>
       </div>
     </Layout>

@@ -5,7 +5,7 @@ export function Auth({ error, email = '', next }: { error?: string; email?: stri
     <Layout title="enter">
       <section className="auth-shell enter-shell">
         <div className="panel auth-panel enter-panel">
-          {error && <p className="error" role="alert">{error}</p>}
+          {error && <p className="status-message status-error" role="alert">{error}</p>}
           <form method="post" action="/enter" autoComplete="on">
             {next && <input type="hidden" name="next" value={next} />}
             <label htmlFor="enter-email">
@@ -46,8 +46,8 @@ export function PasswordLogin({ nonce, error, identifier = '', next, reset = fal
       <section className="auth-shell">
         <div className="panel auth-panel password-panel">
           <h1>Log in</h1>
-          {reset && <p className="success" role="status">Password reset. You can log in now.</p>}
-          {error && <p className="error" role="alert">{error}</p>}
+          {reset && <p className="status-message status-success" role="status">Password reset. You can log in now.</p>}
+          {error && <p className="status-message status-error" role="alert">{error}</p>}
           <form method="post" action="/enter/password" autoComplete="on">
             <input type="hidden" name="nonce" value={nonce} />
             {next && <input type="hidden" name="next" value={next} />}
@@ -95,7 +95,7 @@ export function MagicLinkSent({ email, magicUrl, error }: { email: string; magic
           </p>
           <p className="email-delivery-hint">Can’t find it? Check your spam or junk folder.</p>
           <p className="entry-code-copy">or enter the six-digit code</p>
-          {error && <p className="error" role="alert">{error}</p>}
+          {error && <p className="status-message status-error" role="alert">{error}</p>}
           <form method="post" action="/enter/code" autoComplete="one-time-code">
             <input type="hidden" name="email" value={email} />
             <div className="entry-code-row">
@@ -106,7 +106,7 @@ export function MagicLinkSent({ email, magicUrl, error }: { email: string; magic
                 enter <span aria-hidden="true">→</span>
               </button>
             </div>
-            <p id="entry-code-help" className="auth-secondary">
+            <p id="entry-code-help" className="auth-secondary entry-code-help">
               The link and code expire in 15 minutes and can only be used once.
             </p>
           </form>
@@ -128,7 +128,7 @@ export function ChooseHandle({ error, handle = '', next }: { error?: string; han
         <div className="panel auth-panel choose-handle-panel">
           <h1>Choose your handle</h1>
           <p>Pick the handle that people will see.</p>
-          {error && <p className="error" role="alert">{error}</p>}
+          {error && <p className="status-message status-error" role="alert">{error}</p>}
           <form method="post" action="/choose-handle">
             {next && <input type="hidden" name="next" value={next} />}
             <input name="handle" aria-label="handle" required pattern="[A-Za-z0-9_]{2,24}" autoFocus

@@ -80,7 +80,7 @@ export function Explore({ user, welcome = false, peopleIds, tagsPage = 1, people
                   {user && (
                     <form method="post" action={'/follow/' + p.handle}>
                       <input type="hidden" name="explorePeople" value={explorePeople} />
-                      <button className={`button${p.following ? ' unfollow-button' : ''}`}>
+                      <button className={`button${p.following ? ' button-muted' : ''}`}>
                         {p.following ? 'unfollow' : 'follow'}
                       </button>
                     </form>

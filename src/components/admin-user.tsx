@@ -23,7 +23,7 @@ export function AdminUser({ user, target }: { user: User; target: ProfileRow }) 
         ? <div className="empty relationship-notice">Hardcoded admin accounts are protected from moderation.</div>
         : (
           <section className="admin-user-actions">
-            <a className={`button ${target.suspended_at ? '' : 'delete-button'}`}
+            <a className={`button ${target.suspended_at ? '' : 'button-danger'}`}
               href={`/admin/users/${target.id}/${target.suspended_at ? 'restore' : 'suspend'}`}
             >
               {target.suspended_at ? 'restore account' : 'suspend account'}

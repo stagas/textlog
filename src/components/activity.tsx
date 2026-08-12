@@ -111,7 +111,7 @@ export function Activity({ user, cursor, title, path = '/activity', pageUrl, not
                   <article className="activity-follow">
                     <div className="activity-follow-content">
                       <div className="activity-follow-main">
-                        {!!rawPost.unread && <span className="activity-item-unread-dot" aria-label="unread" />}
+                        {!!rawPost.unread && <span className="unread-dot" aria-label="unread" />}
                         <a href={`/admin/users/${rawPost.user_id}`}>@{rawPost.handle}</a>
                         <span>signed up:</span>
                         <time dateTime={rawPost.created_at} title={fmtFull(rawPost.created_at)}>
@@ -124,7 +124,7 @@ export function Activity({ user, cursor, title, path = '/activity', pageUrl, not
                     </div>
                     {rawPost.user_id !== user.id && (
                       <form method="post" action={'/follow/' + rawPost.handle}>
-                        <button className={`button${rawPost.viewerFollowing ? ' unfollow-button' : ''}`}>
+                        <button className={`button${rawPost.viewerFollowing ? ' button-muted' : ''}`}>
                           {rawPost.viewerFollowing ? 'unfollow' : 'follow'}
                         </button>
                       </form>
@@ -136,7 +136,7 @@ export function Activity({ user, cursor, title, path = '/activity', pageUrl, not
                   <article className="activity-follow">
                     <div className="activity-follow-content">
                       <div className="activity-follow-main">
-                        {!!rawPost.unread && <span className="activity-item-unread-dot" aria-label="unread" />}
+                        {!!rawPost.unread && <span className="unread-dot" aria-label="unread" />}
                         <a href={'/u/' + rawPost.handle}>@{rawPost.handle}</a>
                         <span>followed you:</span>
                         <time dateTime={rawPost.created_at} title={fmtFull(rawPost.created_at)}>
@@ -148,7 +148,7 @@ export function Activity({ user, cursor, title, path = '/activity', pageUrl, not
                       <p className="profile-bio">{rawPost.bio || 'No bio yet.'}</p>
                     </div>
                     <form method="post" action={'/follow/' + rawPost.handle}>
-                      <button className={`button${rawPost.viewerFollowing ? ' unfollow-button' : ''}`}>
+                      <button className={`button${rawPost.viewerFollowing ? ' button-muted' : ''}`}>
                         {rawPost.viewerFollowing ? 'unfollow' : 'follow'}
                       </button>
                     </form>

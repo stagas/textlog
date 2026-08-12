@@ -2,7 +2,7 @@ import { type User } from '../db'
 import { canPublishPosts } from '../posting-policy'
 import type { PostView } from '../types'
 import { Layout } from './layout'
-import { FormMessage, postTitle, ReportPanel, VerificationRequired } from './page-shared'
+import { FormActions, FormMessage, postTitle, ReportPanel, VerificationRequired } from './page-shared'
 import { Post, ThreadReplies } from './post'
 
 export function Reply(
@@ -45,14 +45,13 @@ export function Reply(
               <div className="panel replybox">
                 <form method="post" action={'/post/' + post.id + '/reply'}>
                   <FormMessage error={error} />
-                  <textarea name="body" maxLength={280} required autoFocus defaultValue={body}
+                  <textarea className="form-control" name="body" maxLength={280} required autoFocus defaultValue={body}
                     placeholder={'Reply to @' + post.handle + '…'} />
                   <div className="composefoot">
                     <span>280 characters max · use #hashtags and @mentions</span>
-                    <div className="form-actions">
-                      <button className="quiet" name="action" value="preview">preview</button>
-                      <button className="button">post →</button>
-                    </div>
+                    <FormActions
+                      secondary={<button className="secondary-action" name="action" value="preview">preview</button>}
+                      primary={<button className="button">post →</button>} />
                   </div>
                 </form>
               </div>

@@ -29,9 +29,12 @@ test('theme stylesheet uses mobile palettes and follows the OS for system', () =
   expect(sepia).toContain('--button-bg:#7d382c')
   expect(sepia).toContain('--button-hover-bg:#86392d')
   expect(sepia).toContain('--button-active-bg:#73382a')
-  expect(sepia).toContain('--unfollow-button-bg:#6e3729')
-  expect(sepia).toContain('--unfollow-button-hover-bg:#78382b')
-  expect(sepia).toContain('--unfollow-button-active-bg:#653628')
+  expect(sepia).toContain('--button-muted-bg:#6e3729')
+  expect(sepia).toContain('--button-muted-hover-bg:#78382b')
+  expect(sepia).toContain('--button-muted-active-bg:#653628')
+  expect(sepia).toContain('--error-bg:#eee2de')
+  expect(sepia).toContain('--success-bg:#e3eadf')
+  expect(sepia).toContain('--danger-button-bg:#7a3f39')
   expect(sepia).not.toContain('prefers-color-scheme')
 
   const system = themeStyles(new Request('http://localhost'))
@@ -42,9 +45,28 @@ test('theme stylesheet uses mobile palettes and follows the OS for system', () =
   expect(system).toContain('--button-ink:#e5e8e1')
   expect(system).toContain('--button-hover-bg:#4b664d')
   expect(system).toContain('--button-active-bg:#314434')
-  expect(system).toContain('--unfollow-button-bg:#455341')
-  expect(system).toContain('--unfollow-button-hover-bg:#52634d')
-  expect(system).toContain('--unfollow-button-active-bg:#384335')
+  expect(system).toContain('--button-muted-bg:#455341')
+  expect(system).toContain('--button-muted-hover-bg:#52634d')
+  expect(system).toContain('--button-muted-active-bg:#384335')
+  expect(system).toContain('--error-bg:#442b28')
+  expect(system).toContain('--success-bg:#293b28')
+})
+
+test('generated system themes emit the complete static light and dark token contract', async () => {
+  const declarations = (css: string) => Object.fromEntries(
+    [...css.matchAll(/(--[\w-]+):\s*([^;}]+)(?:;|$)/g)].map(([, name, value]) => [name, value.trim()]),
+  )
+  const staticCss = await Bun.file(new URL('./styles.css', import.meta.url)).text()
+  const staticRoots = [...staticCss.matchAll(/:root\s*\{([^}]+)\}/g)].map(match => declarations(match[1]!))
+  const generatedRoots = [...themeStyles(new Request('http://localhost')).matchAll(/:root\{([^}]+)\}/g)]
+    .map(match => declarations(match[1]!))
+
+  const invariantToken = /^(--tap-highlight|--focus-ring-|--gutter|--space-)/
+  for (const [index, staticRoot] of staticRoots.entries()) {
+    for (const token of Object.keys(staticRoot).filter(token => !invariantToken.test(token))) {
+      expect(generatedRoots[index]).toHaveProperty(token)
+    }
+  }
 })
 
 test('font preference is validated and emitted by the theme stylesheet', () => {

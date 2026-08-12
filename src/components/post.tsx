@@ -60,7 +60,7 @@ export function Post({
     <article className={`post${tappable || hasTappableParent ? ' tappable-post' : ''}`}>
       {tappable && <a className="post-hit-area" href={'/post/' + p.id} aria-label={`open post by @${p.handle}`} />}
       <div className="posttop">
-        {contextUnread && <span className="activity-item-unread-dot" aria-label="unread" />}
+        {contextUnread && <span className="unread-dot" aria-label="unread" />}
         {preview
           ? <span className="postauthor" title={p.bio || 'No bio yet.'}>@{p.handle}</span>
           : <a className="postauthor" href={'/u/' + p.handle} title={p.bio || 'No bio yet.'}>@{p.handle}</a>}
@@ -100,7 +100,7 @@ export function Post({
         )}
         {foldControlId && (
           <label className="quiet thread-fold" htmlFor={foldControlId} title="fold or unfold replies">
-            <span className="sr-only">fold or unfold replies</span>
+            <span className="visually-hidden">fold or unfold replies</span>
           </label>
         )}
       </div>

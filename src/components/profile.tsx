@@ -111,7 +111,7 @@ export function Profile(
                     <strong>Delete account</strong>
                     <span>Permanently remove your profile and turn your notes into deleted tombstones.</span>
                   </div>
-                  <a className="button delete-button" href="/account/delete">delete account</a>
+                  <a className="button button-danger" href="/account/delete">delete account</a>
                 </div>
               </>
             )

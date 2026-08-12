@@ -162,6 +162,21 @@ export function fontSizeCookie(value: FontSizeChoice, appUrl: string | undefined
 function rules(name: keyof typeof palettes, accentChoice: AccentChoice) {
   const p = palettes[name]
   const dark = name === 'dark' || name === 'dracula'
+  const semantic = dark
+    ? {
+      tabHover: '#b4bab0', disabledBg: '#292f29', disabledInk: '#747c72', dangerBg: '#663b37',
+      dangerHover: '#7a4741', dangerActive: '#56312e', dangerLinkHover: '#ffc8bf', reportInk: '#e5a85f',
+      reportHover: '#ffc37d', errorBg: '#442b28', successInk: '#b9d5b2', successBg: '#293b28',
+      apiPostInk: '#a8d5ed', apiPostBg: '#263b46', apiPatchInk: '#f0c878', apiPatchBg: '#443921',
+      apiDeleteInk: '#f0aaa1', apiDeleteBg: '#472c29',
+    }
+    : {
+      tabHover: '#a2a79e', disabledBg: '#d9dbd4', disabledInk: '#777d73', dangerBg: '#7a3f39',
+      dangerHover: '#65332e', dangerActive: '#542a26', dangerLinkHover: '#542a26', reportInk: '#a05f19',
+      reportHover: '#77440f', errorBg: '#eee2de', successInk: '#466342', successBg: '#e3eadf',
+      apiPostInk: '#315f7a', apiPostBg: '#e1edf3', apiPatchInk: '#805b16', apiPatchBg: '#f3ead5',
+      apiDeleteInk: '#8a3f37', apiDeleteBg: '#f1dfdc',
+    }
   const accent = accentChoice === 'theme' ? p.accent : accents[accentChoice][dark ? 1 : 0]
   const button = accentChoice === 'theme'
     ? {
@@ -180,7 +195,7 @@ function rules(name: keyof typeof palettes, accentChoice: AccentChoice) {
       hover: mix(accent, p.ink, .70),
       active: mix(accent, p.ink, .50),
     }
-  const unfollowButton = dark
+  const mutedButton = dark
     ? {
       bg: mix(accent, p.bg, .35),
       hover: mix(accent, p.bg, .45),
@@ -193,9 +208,9 @@ function rules(name: keyof typeof palettes, accentChoice: AccentChoice) {
     }
   return `:root{color-scheme:${
     dark ? 'dark' : 'light'
-  };--bg:${p.bg};--ink:${p.ink};--muted:${p.muted};--soft:${p.soft};--accent:${accent};--accent-dark:${
+  };--bg:${p.bg};--ink:${p.ink};--muted:${p.muted};--tab-hover:${semantic.tabHover};--soft:${p.soft};--accent:${accent};--accent-dark:${
     accentChoice === 'theme' ? p.accentDark : accent
-  };--selection-bg:${accent};--selection-ink:${p.bg};--panel:${p.panel};--pagination-hover-bg:${p.tagBg};--link-border:${p.linkBorder};--button-bg:${button.bg};--button-ink:${p.buttonInk};--button-hover-bg:${button.hover};--button-active-bg:${button.active};--unfollow-button-bg:${unfollowButton.bg};--unfollow-button-hover-bg:${unfollowButton.hover};--unfollow-button-active-bg:${unfollowButton.active};--quote-ink:${p.quoteInk};--quote-bg:${p.quoteBg};--error-ink:${p.errorInk};--tag-bg:${p.tagBg}}`
+  };--selection-bg:${accent};--selection-ink:${p.bg};--panel:${p.panel};--pagination-hover-bg:${p.tagBg};--link-border:${p.linkBorder};--button-bg:${button.bg};--button-ink:${p.buttonInk};--button-hover-bg:${button.hover};--button-active-bg:${button.active};--button-muted-bg:${mutedButton.bg};--button-muted-hover-bg:${mutedButton.hover};--button-muted-active-bg:${mutedButton.active};--button-disabled-bg:${semantic.disabledBg};--button-disabled-ink:${semantic.disabledInk};--danger-button-bg:${semantic.dangerBg};--danger-button-hover-bg:${semantic.dangerHover};--danger-button-active-bg:${semantic.dangerActive};--danger-link-hover:${semantic.dangerLinkHover};--report-ink:${semantic.reportInk};--report-hover:${semantic.reportHover};--quote-ink:${p.quoteInk};--quote-bg:${p.quoteBg};--error-ink:${p.errorInk};--error-bg:${semantic.errorBg};--success-ink:${semantic.successInk};--success-bg:${semantic.successBg};--tag-bg:${p.tagBg};--api-post-ink:${semantic.apiPostInk};--api-post-bg:${semantic.apiPostBg};--api-patch-ink:${semantic.apiPatchInk};--api-patch-bg:${semantic.apiPatchBg};--api-delete-ink:${semantic.apiDeleteInk};--api-delete-bg:${semantic.apiDeleteBg}}`
 }
 
 function mix(foreground: string, background: string, amount: number) {
