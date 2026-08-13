@@ -284,7 +284,7 @@ header>.account-nav {
 
 .reference-menu {
   position: relative;
-  display: inline-flex;
+  display: inline-block;
   min-width: 0;
   font: inherit;
 }
@@ -292,7 +292,7 @@ header>.account-nav {
 .reference-menu-popover {
   position: absolute;
   z-index: 20;
-  top: calc(100% + var(--space-2));
+  top: calc(100% + var(--space-1));
   left: 0;
   display: none;
   width: max-content;
@@ -358,7 +358,7 @@ header>.account-nav {
   left: 0;
   display: none;
   width: 100%;
-  height: var(--space-2);
+  height: var(--space-1);
   content: '';
 }
 
@@ -1225,6 +1225,12 @@ nav form {
   align-items: baseline;
   gap: var(--space-4);
   font-size: 0.75rem;
+}
+
+.posttop > a,
+.parent-quote-top > a,
+.post-actions > a {
+  line-height: 1;
 }
 
 .posttop .quiet {
