@@ -87,8 +87,8 @@ export function PostingHelp({ maxLength = 280, maxLines = 10, search }: {
       <span className="posting-help-more posting-help-and-more">
         <button className="posting-help-trigger" type="button" popoverTarget="posting-help-more">and more</button>
         <div className="posting-help-popover posting-help-tabs" id="posting-help-more" popover="auto">
-          <input className="posting-help-tab-input" type="radio" name="posting-help-tab"
-            id="posting-help-formatting" defaultChecked />
+          <input className="posting-help-tab-input" type="radio" name="posting-help-tab" id="posting-help-formatting"
+            defaultChecked />
           <input className="posting-help-tab-input" type="radio" name="posting-help-tab" id="posting-help-emoji" />
           <div className="posting-help-tab-list" role="tablist" aria-label="Writing help">
             <label htmlFor="posting-help-formatting" role="tab">Formatting</label>
@@ -149,9 +149,8 @@ export function PostingHelp({ maxLength = 280, maxLines = 10, search }: {
             </div>
           </dl>
           <div className="posting-help-emoji-panel" aria-label="Emoji to copy and paste">
-            {'😀 😃 😄 😁 😆 😅 😂 🤣 😊 😇 🙂 🙃 😉 😌 😍 🥰 😘 😋 😛 😜 🤪 🤨 🧐 🤓 😎 🤩 🥳 😏 😒 😞 😔 😟 😕 🙁 ☹️ 😣 😖 😫 😩 🥺 😢 😭 😤 😠 😡 🤬 🤯 😳 🥵 🥶 😱 😨 😰 😥 😓 🤗 🤔 🫣 🤭 🫢 🤫 🤥 😶 😐 😑 😬 🙄 😯 😦 😧 😮 😲 🥱 😴 🤤 😪 😵 🤐 🥴 🤢 🤮 🤧 😷 🤒 🤕 🤑 🤠 😈 👿 👻 💀 ☠️ 👽 🤖 🎃 😺 😸 😹 😻 😼 😽 🙀 😿 😾 ❤️ 🧡 💛 💚 💙 💜 🖤 🤍 🤎 💔 ❣️ 💕 💞 💓 💗 💖 💘 💝 💟 👍 👎 👌 🤌 ✌️ 🤞 🤟 🤘 🤙 👈 👉 👆 👇 ☝️ ✋ 🤚 🖐️ 🖖 👋 🤝 👏 🙌 🫶 👐 🤲 🙏 ✍️ 💪 👀 👁️ 🧠 🫀 🫁 🌱 🌿 ☘️ 🍀 🌸 🌺 🌻 🌞 🌙 ⭐ ✨ ⚡ 🔥 🌈 ☀️ ☁️ ❄️ ☕ 🍕 🍎 🎉 🎊 🎈 🎁 🎵 🎶 🎨 📚 💡 ✅ ❌ ⚠️ 🚀 🌍 💻 📱 🔒 🔑'.split(' ').map((emoji, index) => (
-              <span key={`${emoji}-${index}`} title="Select and copy">{emoji}</span>
-            ))}
+            {'😀 😃 😄 😁 😆 😅 😂 🤣 😊 😇 🙂 🙃 😉 😌 😍 🥰 😘 😋 😛 😜 🤪 🤨 🧐 🤓 😎 🤩 🥳 😏 😒 😞 😔 😟 😕 🙁 ☹️ 😣 😖 😫 😩 🥺 😢 😭 😤 😠 😡 🤬 🤯 😳 🥵 🥶 😱 😨 😰 😥 😓 🤗 🤔 🫣 🤭 🫢 🤫 🤥 😶 😐 😑 😬 🙄 😯 😦 😧 😮 😲 🥱 😴 🤤 😪 😵 🤐 🥴 🤢 🤮 🤧 😷 🤒 🤕 🤑 🤠 😈 👿 👻 💀 ☠️ 👽 🤖 🎃 😺 😸 😹 😻 😼 😽 🙀 😿 😾 ❤️ 🧡 💛 💚 💙 💜 🖤 🤍 🤎 💔 ❣️ 💕 💞 💓 💗 💖 💘 💝 💟 👍 👎 👌 🤌 ✌️ 🤞 🤟 🤘 🤙 👈 👉 👆 👇 ☝️ ✋ 🤚 🖐️ 🖖 👋 🤝 👏 🙌 🫶 👐 🤲 🙏 ✍️ 💪 👀 👁️ 🧠 🫀 🫁 🌱 🌿 ☘️ 🍀 🌸 🌺 🌻 🌞 🌙 ⭐ ✨ ⚡ 🔥 🌈 ☀️ ☁️ ❄️ ☕ 🍕 🍎 🎉 🎊 🎈 🎁 🎵 🎶 🎨 📚 💡 ✅ ❌ ⚠️ 🚀 🌍 💻 📱 🔒 🔑'
+              .split(' ').map((emoji, index) => <span key={`${emoji}-${index}`} title="Select and copy">{emoji}</span>)}
           </div>
         </div>
       </span>
@@ -167,7 +166,10 @@ export function PostingSuggestionResults({ search }: { search?: PostingSuggestio
     <div className="posting-suggestion-results" aria-live="polite">
       {search.results.length
         ? search.results.map(result => (
-          <span key={result}>{prefix}<HighlightedText text={result} terms={terms} /></span>
+          <span key={result}>
+            {prefix}
+            <HighlightedText text={result} terms={terms} />
+          </span>
         ))
         : <span>No matching {search.kind}.</span>}
       {search.truncated && <span aria-label="More results">...</span>}
@@ -239,9 +241,9 @@ export function Pagination(
                   {formParameters.map(([name, parameterValue]) => (
                     <input key={`${name}:${parameterValue}`} type="hidden" name={name} value={parameterValue} />
                   ))}
-                  <input className="current" aria-label={`Current page, ${page} of ${totalPages}`}
-                    type="number" name={pageParam} min={1} max={totalPages} defaultValue={value} required
-                    autoComplete="off" inputMode="numeric" enterKeyHint="go" />
+                  <input className="current" aria-label={`Current page, ${page} of ${totalPages}`} type="number"
+                    name={pageParam} min={1} max={totalPages} defaultValue={value} required autoComplete="off"
+                    inputMode="numeric" enterKeyHint="go" />
                 </form>
               )
               : <a href={`${path}${separator}${pageParam}=${value}`} aria-label={`Page ${value}`}>{value}</a>}
@@ -358,14 +360,16 @@ export function ProfileControls({ user, profile, following, blocked = false }: {
           {!blocked && (
             <form method="post" action={'/follow/' + profile.handle}>
               <button className={`button${following ? ' button-muted' : ''}`}
-                aria-label={`${following ? 'unfollow' : 'follow'} @${profile.handle}`}>
+                aria-label={`${following ? 'unfollow' : 'follow'} @${profile.handle}`}
+              >
                 {following ? 'unfollow' : 'follow'}
               </button>
             </form>
           )}
           <form method="post" action={'/block/' + profile.handle}>
             <button className={blocked ? 'button' : 'quiet danger'}
-              aria-label={`${blocked ? 'unblock' : 'block'} @${profile.handle}`}>
+              aria-label={`${blocked ? 'unblock' : 'block'} @${profile.handle}`}
+            >
               {blocked ? 'unblock' : 'block'}
             </button>
           </form>
@@ -381,28 +385,33 @@ export function ProfileControls({ user, profile, following, blocked = false }: {
 
 export function ProfileHeader(
   { user, profile, following, blocked = false, editing = false, returnPath, controlsInTitle = true, children }: {
-  user: User | null
-  profile: ProfileRow
-  following: boolean
-  blocked?: boolean
-  editing?: boolean
-  returnPath?: string
-  controlsInTitle?: boolean
-  children?: React.ReactNode
-}) {
+    user: User | null
+    profile: ProfileRow
+    following: boolean
+    blocked?: boolean
+    editing?: boolean
+    returnPath?: string
+    controlsInTitle?: boolean
+    children?: React.ReactNode
+  },
+) {
   return (
     <section
       className={`page-header profile${user?.id === profile.id ? ' profile-owner' : ''}${
-        editing ? ' profile-editing' : ''}${returnPath && !editing && user?.id !== profile.id
+        editing ? ' profile-editing' : ''
+      }${
+        returnPath && !editing && user?.id !== profile.id
           ? ' profile-contextual'
           : ''
       }`}
     >
       {children || (
         <div className="profile-content">
-          <div className={`profile-title-row${!editing && user?.id !== profile.id
-            ? ' profile-title-row-actions'
-            : ''}`}>
+          <div className={`profile-title-row${
+            !editing && user?.id !== profile.id
+              ? ' profile-title-row-actions'
+              : ''
+          }`}>
             <h1>
               <span className="identity-prefix">@</span>
               {profile.handle}
@@ -421,9 +430,11 @@ export function ProfileHeader(
           <p className="profile-bio" dangerouslySetInnerHTML={{ __html: linkify(displayBio(profile.bio)) }} />
         </div>
       )}
-      <div className={`profile-action profile-back-action${user?.id === profile.id
-        ? ' profile-owner-mobile-back'
-        : ''}`}>
+      <div className={`profile-action profile-back-action${
+        user?.id === profile.id
+          ? ' profile-owner-mobile-back'
+          : ''
+      }`}>
         {returnPath && !editing
           && <a className="profile-edit-link" href={returnPath}>back</a>}
         {!controlsInTitle && <ProfileControls user={user} profile={profile} following={following} blocked={blocked} />}
@@ -523,8 +534,11 @@ export function TagPeopleList({ user, tags, followingKey = 'following', highligh
             <div>
               <TagReference tag={tag.tag} noteCount={tag.count} followerCount={followerCounts[tag.tag] || 0}
                 following={tag[followingKey]} user={user}
-                navigationQuery={returnPath ? `?from=${encodeURIComponent(returnPath(tag))}` : ''}
-                label={<>#<HighlightedText text={tag.tag} terms={highlightTerms} /></>} />
+                navigationQuery={returnPath ? `?from=${encodeURIComponent(returnPath(tag))}` : ''} label={
+                <>
+                  #<HighlightedText text={tag.tag} terms={highlightTerms} />
+                </>
+              } />
               <small>{tag.count} {tag.count === 1 ? 'note' : 'notes'}</small>
             </div>
             {user && (
@@ -550,8 +564,8 @@ export function BlockedTagList({ user, tags }: { user: User; tags: TagView[] }) 
         <article key={tag.tag}>
           <div>
             <div>
-              <TagReference tag={tag.tag} noteCount={tag.count} followerCount={followerCounts[tag.tag] || 0}
-                user={user} showFollowAction={false} />
+              <TagReference tag={tag.tag} noteCount={tag.count} followerCount={followerCounts[tag.tag] || 0} user={user}
+                showFollowAction={false} />
               <small>{tag.count} {tag.count === 1 ? 'note' : 'notes'}</small>
             </div>
             <form method="post" action={`/tag-block/${encodeURIComponent(tag.tag)}`}>
@@ -602,7 +616,11 @@ export function ConnectionPeople({ user, people, className = '', highlightTerms 
             <div>
               <UserReference handle={person.handle} bio={person.bio} noteCount={person.posts}
                 stats={profileStats.get(person.id)} following={person.viewerFollowing} user={user}
-                href={`/u/${person.handle}`} label={<>@<HighlightedText text={person.handle} terms={highlightTerms} /></>} />
+                href={`/u/${person.handle}`} label={
+                <>
+                  @<HighlightedText text={person.handle} terms={highlightTerms} />
+                </>
+              } />
               <small>{person.posts} {person.posts === 1 ? 'note' : 'notes'}</small>
             </div>
             {user && user.id !== person.id && (
@@ -614,8 +632,9 @@ export function ConnectionPeople({ user, people, className = '', highlightTerms 
               </form>
             )}
           </div>
-          <p className="profile-bio" dangerouslySetInnerHTML={{ __html: linkify(displayBio(person.bio), {},
-            person.bio ? highlightTerms : []) }} />
+          <p className="profile-bio" dangerouslySetInnerHTML={{
+            __html: linkify(displayBio(person.bio), {}, person.bio ? highlightTerms : []),
+          }} />
         </article>
       ))}
     </div>

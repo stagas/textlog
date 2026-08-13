@@ -8,12 +8,12 @@ import { currentPage, notFoundPage, page, paginationRedirect, redirect, safeNext
 import type { Hono } from 'hono'
 import { appName } from '../brand'
 import { db } from '../db'
+import { devicePageSize } from '../device-settings'
 import { feedSnapshotPage } from '../feed-snapshots'
 import { resolveHandle } from '../handles'
 import { renderProfileOg } from '../og'
 import { CONNECTION_PAGE_SIZE, decodePostCursor, PAGE_SIZE, TAG_PAGE_SIZE } from '../pagination'
 import { enrichPosts } from '../posts'
-import { devicePageSize } from '../device-settings'
 import { currentUser } from '../utils'
 
 export function registerProfilesRoutes(app: Hono) {

@@ -43,22 +43,28 @@ describe('local redirects', () => {
     ), 'https://textlog.cc')
     expect(passwordEntry?.headers.get('location')).toBe('https://textlog.cc/post/42')
 
-    const meta = new Request('https://textlog.cc/post/42?from=%2Flatest', { headers: { 'user-agent':
-      'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) '
-      + 'Chrome/145.0.0.0 Safari/537.36 (compatible; meta-externalagent/1.1)' } })
+    const meta = new Request('https://textlog.cc/post/42?from=%2Flatest', {
+      headers: { 'user-agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) '
+        + 'Chrome/145.0.0.0 Safari/537.36 (compatible; meta-externalagent/1.1)' },
+    })
     expect(isCrawlerRequest(meta)).toBe(true)
     expect(crawlerCanonicalRedirect(meta, 'https://textlog.cc')?.headers.get('location'))
       .toBe('https://textlog.cc/post/42')
 
-    const googleOther = new Request('https://textlog.cc/post/42?from=%2Flatest', { headers: { 'user-agent':
-      'Mozilla/5.0 (Linux; Android 6.0.1; Nexus 5X Build/MMB29P) AppleWebKit/537.36 (KHTML, like Gecko) '
-      + 'Chrome/150.0.7871.186 Mobile Safari/537.36 (compatible; GoogleOther)' } })
+    const googleOther = new Request('https://textlog.cc/post/42?from=%2Flatest', {
+      headers: {
+        'user-agent':
+          'Mozilla/5.0 (Linux; Android 6.0.1; Nexus 5X Build/MMB29P) AppleWebKit/537.36 (KHTML, like Gecko) '
+          + 'Chrome/150.0.7871.186 Mobile Safari/537.36 (compatible; GoogleOther)',
+      },
+    })
     expect(isCrawlerRequest(googleOther)).toBe(true)
     expect(crawlerCanonicalRedirect(googleOther, 'https://textlog.cc')?.headers.get('location'))
       .toBe('https://textlog.cc/post/42')
 
-    const ahrefs = new Request('https://textlog.cc/post/42?from=%2Flatest', { headers: { 'user-agent':
-      'Mozilla/5.0 (compatible; AhrefsBot/7.0; +http://ahrefs.com/robot/)' } })
+    const ahrefs = new Request('https://textlog.cc/post/42?from=%2Flatest', {
+      headers: { 'user-agent': 'Mozilla/5.0 (compatible; AhrefsBot/7.0; +http://ahrefs.com/robot/)' },
+    })
     expect(isCrawlerRequest(ahrefs)).toBe(true)
     expect(crawlerCanonicalRedirect(ahrefs, 'https://textlog.cc')?.headers.get('location'))
       .toBe('https://textlog.cc/post/42')
@@ -77,8 +83,8 @@ describe('local redirects', () => {
     const request = new Request('https://textlog.cc/latest', { headers: { 'user-agent': 'Googlebot/2.1' } })
     const response = await canonicalizeCrawlerLinks(request, new Response(
       '<a href="/post/42?from=%2Flatest%23post-42">post</a>'
-      + '<a href="/enter/password?next=%2Fpost%2F42%3Freply%3D1%26from%3D%252Flatest">reply</a>'
-      + '<a href="https://example.com/?from=external">external</a>',
+        + '<a href="/enter/password?next=%2Fpost%2F42%3Freply%3D1%26from%3D%252Flatest">reply</a>'
+        + '<a href="https://example.com/?from=external">external</a>',
       { headers: { 'content-type': 'text/html;charset=utf-8' } },
     ))
     expect(await response.text()).toBe('<a href="/post/42">post</a>'

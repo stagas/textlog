@@ -6,12 +6,12 @@ import {
   TagFeed,
 } from '../components/pages'
 import { db } from '../db'
+import { devicePageSize } from '../device-settings'
 import { renderTagOg } from '../og'
 import { CONNECTION_PAGE_SIZE } from '../pagination'
 import { enrichPosts } from '../posts'
 import type { PersonView, PostView } from '../types'
 import { currentUser } from '../utils'
-import { devicePageSize } from '../device-settings'
 
 export function registerTagsRoutes(app: Hono) {
   app.get('/tag/:tag/og.png', c => {
@@ -52,8 +52,7 @@ export function registerTagsRoutes(app: Hono) {
       WHERE ph.tag=? AND p.deleted_at IS NULL AND (? < 0 OR NOT EXISTS (SELECT 1 FROM blocks b WHERE
         (b.blocker_id=? AND b.blocked_id=p.user_id) OR (b.blocker_id=p.user_id AND b.blocked_id=?)))
       ORDER BY p.created_at DESC LIMIT ? OFFSET ?`,
-    ).all(tag, viewerId, viewerId, viewerId, notePageSize,
-      (tagPage - 1) * notePageSize) as PostView[], viewerId)
+    ).all(tag, viewerId, viewerId, viewerId, notePageSize, (tagPage - 1) * notePageSize) as PostView[], viewerId)
     const total = blocked
       ? 0
       : (db.query(`SELECT count(*) AS count FROM post_hashtags ph JOIN posts p ON p.id=ph.post_id

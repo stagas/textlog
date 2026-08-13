@@ -727,7 +727,7 @@ export const migrations: Migration[] = [
     name: 'device_density',
     up(database) {
       addColumn(database, 'device_settings', 'density',
-        "TEXT NOT NULL DEFAULT 'regular' CHECK(density IN ('compact','regular','relaxed'))")
+        'TEXT NOT NULL DEFAULT \'regular\' CHECK(density IN (\'compact\',\'regular\',\'relaxed\'))')
     },
   },
   {
@@ -738,7 +738,7 @@ export const migrations: Migration[] = [
     transaction: false,
     up(database) {
       const groupsExist = !!database.query(
-        "SELECT 1 FROM sqlite_master WHERE type='table' AND name='account_groups'",
+        'SELECT 1 FROM sqlite_master WHERE type=\'table\' AND name=\'account_groups\'',
       ).get()
       if (groupsExist && columns(database, 'users').includes('account_group_id')) {
         const users = database.query(`SELECT id,email FROM users

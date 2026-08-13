@@ -18,17 +18,17 @@ import { Post, PreviewPost, ThreadReplies } from './post'
 export function ReplyBox(
   { action, body, error, placeholder, hidden, beforeTextarea, secondary, primary, className = 'replybox',
     suggestionSearch }: {
-    action: string
-    body: string
-    error?: string
-    placeholder?: string
-    hidden?: React.ReactNode
-    beforeTextarea?: React.ReactNode
-    secondary: React.ReactNode
-    primary: React.ReactNode
-    className?: string
-    suggestionSearch?: PostingSuggestionSearch | null
-  },
+      action: string
+      body: string
+      error?: string
+      placeholder?: string
+      hidden?: React.ReactNode
+      beforeTextarea?: React.ReactNode
+      secondary: React.ReactNode
+      primary: React.ReactNode
+      className?: string
+      suggestionSearch?: PostingSuggestionSearch | null
+    },
 ) {
   return (
     <div className={`panel ${className}`}>
@@ -108,8 +108,7 @@ export function Reply(
           canPublishPosts(user)
             ? (
               <ReplyBox action={'/post/' + post.id + '/reply'} body={body} error={error}
-                suggestionSearch={suggestionSearch}
-                placeholder={'Reply to @' + post.handle + '…'}
+                suggestionSearch={suggestionSearch} placeholder={'Reply to @' + post.handle + '…'}
                 hidden={returnPath && <input type="hidden" name="from" value={returnPath} />}
                 secondary={
                   <span className="edit-post-actions">

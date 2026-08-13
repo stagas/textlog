@@ -76,9 +76,9 @@ describe('post persistence', () => {
     const body = '[eye](https://example.com) $x^2$ <nose> @Reader #ascii example.org/art'
     expect(linkify(body, { reader: 'Reader bio' })).toBe(
       '[eye](https://example.com) $x^2$ &lt;nose&gt; '
-      + '<a href="/u/reader" title="0 notes\n\nReader bio">@Reader</a> <a href="/tag/ascii">#ascii</a> '
-      + '<a href="https://example.org/art" target="_blank" rel="nofollow ugc noopener noreferrer">'
-      + 'example.org/art</a>',
+        + '<a href="/u/reader" title="0 notes\n\nReader bio">@Reader</a> <a href="/tag/ascii">#ascii</a> '
+        + '<a href="https://example.org/art" target="_blank" rel="nofollow ugc noopener noreferrer">'
+        + 'example.org/art</a>',
     )
   })
   test('linkifies protocol-less domains using the public TLD list', () => {
@@ -204,12 +204,12 @@ describe('post persistence', () => {
   })
 
   test('renders hover popovers with bios and standard follow buttons', () => {
-    const html = linkify('@Reader #Topic', { reader: 'Builds things' }, [], undefined, undefined, '', { topic: 20 },
-      { reader: 20 }, { signedIn: true, currentHandle: 'author', formPrefix: 'post-1',
-        mentionFollowing: { reader: true }, hashtagFollowing: { topic: false }, hashtagFollowerCounts: { topic: 8 },
-        mentionProfileStats: {
-          reader: { notes: 20, replies: 34, followers: 8, following: 5, followingTags: 2 },
-        } })
+    const html = linkify('@Reader #Topic', { reader: 'Builds things' }, [], undefined, undefined, '', { topic: 20 }, {
+      reader: 20,
+    }, { signedIn: true, currentHandle: 'author', formPrefix: 'post-1', mentionFollowing: { reader: true },
+      hashtagFollowing: { topic: false }, hashtagFollowerCounts: { topic: 8 }, mentionProfileStats: {
+        reader: { notes: 20, replies: 34, followers: 8, following: 5, followingTags: 2 },
+      } })
     expect(html).toContain('<span class="reference-menu-popover"><span class="reference-profile-tabs">'
       + '<a href="/u/reader">20 notes</a><a href="/u/reader?tab=replies">34 replies</a>'
       + '<a href="/u/reader?tab=following">2 tags, 5 users following</a>'

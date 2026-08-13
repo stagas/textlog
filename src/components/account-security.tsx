@@ -1,8 +1,8 @@
 import { type User } from '../db'
 import type { ApiKeyView, SessionView } from '../types'
+import { AccountSettingsHeader } from './account-settings-header'
 import { Layout } from './layout'
 import { FormActions, FormMessage } from './page-shared'
-import { AccountSettingsHeader } from './account-settings-header'
 
 export function AccountSecurity({ user, sessions, apiKeys = [], passwordEnabled, error, success, returnPath }: {
   user: User
@@ -258,8 +258,7 @@ export function AccountPassword({ user, enabled, token, request = false, sent = 
                   <span>{enabled ? 'new password' : 'password'}</span>
                 </label>
                 <input id="new-password" type="password" name="newPassword" required minLength={8} maxLength={128}
-                  autoComplete="new-password" enterKeyHint="done" autoFocus={!enabled}
-                  placeholder="8–128 characters" />
+                  autoComplete="new-password" enterKeyHint="done" autoFocus={!enabled} placeholder="8–128 characters" />
                 <button className="button">
                   {enabled ? 'change password' : 'enable password login'} <span>→</span>
                 </button>

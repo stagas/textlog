@@ -9,6 +9,7 @@ import { authLimit, clientAddress, form, issueEmailToken, issueMagicLink, page, 
 
 import type { Hono } from 'hono'
 import { bioBodyValidationMessage, normalizeBioBody, validBioBody } from '../bio-body'
+import type { PostingSuggestionSearch } from '../components/page-shared'
 import {
   AccountApiKey,
   AccountApiKeyCreate,
@@ -36,10 +37,9 @@ import {
   notificationUserAgent,
 } from '../http'
 import { moderateText, moderationMessage } from '../moderation'
-import { normalizeSearchQuery, searchPeople, searchTags } from '../search'
-import type { PostingSuggestionSearch } from '../components/page-shared'
 import { accountForPasswordEnableToken, issuePasswordEnableToken } from '../password-enable'
 import { vapidPublicKey } from '../push'
+import { normalizeSearchQuery, searchPeople, searchTags } from '../search'
 import { sessionHash } from '../sessions'
 import { ACCENT_CHOICES, type AccentChoice, appearance, appearanceCookie, FONT_CHOICES, FONT_SIZE_CHOICES,
   type FontChoice, fontChoice, fontCookie, type FontSizeChoice, fontSizeChoice, fontSizeCookie, THEME_CHOICES,
@@ -49,7 +49,9 @@ function profileSuggestionSearch(fields: Record<string, string>, viewerId: numbe
   if (fields.action !== 'search-hashtags' && fields.action !== 'search-mentions') return null
   const kind = fields.action === 'search-hashtags' ? 'hashtags' : 'mentions'
   const value = kind === 'hashtags' ? fields.hashtag_query : fields.mention_query
-  const query = normalizeSearchQuery(normalizeSearchQuery(value).replace(kind === 'hashtags' ? /^#+\s*/u : /^@+\s*/u, ''))
+  const query = normalizeSearchQuery(
+    normalizeSearchQuery(value).replace(kind === 'hashtags' ? /^#+\s*/u : /^@+\s*/u, ''),
+  )
   const result = kind === 'hashtags'
     ? searchTags(db, query, viewerId, 1, { followedFirst: true })
     : searchPeople(db, query, viewerId, 1, { followedFirst: true, handleOnly: true })
@@ -243,8 +245,8 @@ export function registerAccountRoutes(app: Hono) {
     const suggestionSearch = profileSuggestionSearch(f, user.id)
     if (suggestionSearch) {
       return page(
-        <Profile user={user} profile={user} posts={[]} following={false} bio={bio} editHandle={submittedHandle}
-          editing returnPath={returnPath} suggestionSearch={suggestionSearch} />,
+        <Profile user={user} profile={user} posts={[]} following={false} bio={bio} editHandle={submittedHandle} editing
+          returnPath={returnPath} suggestionSearch={suggestionSearch} />,
       )
     }
     const handle = submittedHandle.toLowerCase().replace(/^@/, '')
@@ -253,7 +255,9 @@ export function registerAccountRoutes(app: Hono) {
       const handleCharacters = Array.from(submittedHandle).length
       const error = [
         !validHandle
-          ? `You typed ${handleCharacters} ${handleCharacters === 1 ? 'character' : 'characters'}. Use 2–24 letters, numbers, or underscores.`
+          ? `You typed ${handleCharacters} ${
+            handleCharacters === 1 ? 'character' : 'characters'
+          }. Use 2–24 letters, numbers, or underscores.`
           : '',
         !validBioBody(bio) ? bioBodyValidationMessage(bio) : '',
       ].filter(Boolean).join(' ')
@@ -292,9 +296,11 @@ export function registerAccountRoutes(app: Hono) {
     const returnPath = c.req.query('from') ? safeNext(c.req.query('from')) : undefined
     const requestedTab = c.req.query('tab')
     const tab = requestedTab === 'font' || requestedTab === 'misc' ? requestedTab : 'theme'
-    return page(<ChangeAppearance user={user} selected={appearance(c.req.raw)} selectedFont={fontChoice(c.req.raw)}
-      selectedSize={fontSizeChoice(c.req.raw)} selectedPageSize={devicePageSize(c.req.raw, user.id)} tab={tab}
-      selectedDensity={deviceDensity(c.req.raw, user.id)} returnPath={returnPath} />)
+    return page(
+      <ChangeAppearance user={user} selected={appearance(c.req.raw)} selectedFont={fontChoice(c.req.raw)}
+        selectedSize={fontSizeChoice(c.req.raw)} selectedPageSize={devicePageSize(c.req.raw, user.id)} tab={tab}
+        selectedDensity={deviceDensity(c.req.raw, user.id)} returnPath={returnPath} />,
+    )
   })
 
   app.post('/account/edit/appearance', async c => {
@@ -303,16 +309,17 @@ export function registerAccountRoutes(app: Hono) {
     const f = await form(c.req.raw)
     const returnPath = f.from ? safeNext(f.from) : undefined
     const tab = f.tab === 'font' || f.tab === 'misc' ? f.tab : 'theme'
-    const query = `?tab=${tab}${
-      returnPath ? '&from=' + encodeURIComponent(returnPath) : ''}`
+    const query = `?tab=${tab}${returnPath ? '&from=' + encodeURIComponent(returnPath) : ''}`
     if (tab === 'misc') {
       const selectedPageSize = Number(f.pageSize) as PageSizeChoice
       const selectedDensity = f.density as DensityChoice
       if (!PAGE_SIZE_CHOICES.includes(selectedPageSize) || !DENSITY_CHOICES.includes(selectedDensity)) {
-        return page(<ChangeAppearance user={user} selected={appearance(c.req.raw)}
-          selectedFont={fontChoice(c.req.raw)} selectedSize={fontSizeChoice(c.req.raw)}
-          selectedPageSize={devicePageSize(c.req.raw, user.id)} selectedDensity={deviceDensity(c.req.raw, user.id)}
-          tab="misc" returnPath={returnPath} />, 400)
+        return page(
+          <ChangeAppearance user={user} selected={appearance(c.req.raw)} selectedFont={fontChoice(c.req.raw)}
+            selectedSize={fontSizeChoice(c.req.raw)} selectedPageSize={devicePageSize(c.req.raw, user.id)}
+            selectedDensity={deviceDensity(c.req.raw, user.id)} tab="misc" returnPath={returnPath} />,
+          400,
+        )
       }
       const deviceId = notificationDevice(c.req.raw) || token()
       saveDevicePageSize(user.id, deviceId, selectedPageSize)
@@ -323,11 +330,14 @@ export function registerAccountRoutes(app: Hono) {
       const selected = f.font as FontChoice
       const selectedSize = f.fontSize as FontSizeChoice
       if (!FONT_CHOICES.some(font => font.value === selected)
-        || !FONT_SIZE_CHOICES.some(size => size.value === selectedSize)) {
-        return page(<ChangeAppearance user={user} selected={appearance(c.req.raw)}
-          selectedFont={fontChoice(c.req.raw)} selectedSize={fontSizeChoice(c.req.raw)} tab="font"
-          selectedPageSize={devicePageSize(c.req.raw, user.id)} selectedDensity={deviceDensity(c.req.raw, user.id)}
-          returnPath={returnPath} />, 400)
+        || !FONT_SIZE_CHOICES.some(size => size.value === selectedSize))
+      {
+        return page(
+          <ChangeAppearance user={user} selected={appearance(c.req.raw)} selectedFont={fontChoice(c.req.raw)}
+            selectedSize={fontSizeChoice(c.req.raw)} tab="font" selectedPageSize={devicePageSize(c.req.raw, user.id)}
+            selectedDensity={deviceDensity(c.req.raw, user.id)} returnPath={returnPath} />,
+          400,
+        )
       }
       const response = redirect('/account/edit/appearance' + query, fontCookie(selected))
       response.headers.append('set-cookie', fontSizeCookie(selectedSize))
@@ -336,10 +346,12 @@ export function registerAccountRoutes(app: Hono) {
     const theme = f.theme as ThemeChoice
     const accent = f.accent as AccentChoice
     if (!THEME_CHOICES.includes(theme) || !ACCENT_CHOICES.includes(accent)) {
-      return page(<ChangeAppearance user={user} selected={appearance(c.req.raw)}
-        selectedFont={fontChoice(c.req.raw)} selectedSize={fontSizeChoice(c.req.raw)} tab="theme"
-        selectedPageSize={devicePageSize(c.req.raw, user.id)} selectedDensity={deviceDensity(c.req.raw, user.id)}
-        returnPath={returnPath} />, 400)
+      return page(
+        <ChangeAppearance user={user} selected={appearance(c.req.raw)} selectedFont={fontChoice(c.req.raw)}
+          selectedSize={fontSizeChoice(c.req.raw)} tab="theme" selectedPageSize={devicePageSize(c.req.raw, user.id)}
+          selectedDensity={deviceDensity(c.req.raw, user.id)} returnPath={returnPath} />,
+        400,
+      )
     }
     return redirect('/account/edit/appearance' + query, appearanceCookie({ theme, accent }))
   })
@@ -575,7 +587,8 @@ export function registerAccountRoutes(app: Hono) {
     const group = accountGroupForUser(db, user.id)
     if (db.query('SELECT 1 FROM account_groups WHERE email=? AND id!=?').get(email, group?.id ?? -1)
       || db.query(`SELECT 1 FROM users WHERE email=? AND deleted_at IS NULL
-        AND (account_group_id IS NULL OR account_group_id!=?)`).get(email, group?.id ?? -1)) {
+        AND (account_group_id IS NULL OR account_group_id!=?)`).get(email, group?.id ?? -1))
+    {
       return securityPage(c.req.raw, 'That email address is unavailable.', undefined, 400)
     }
     const credentials = db.query('SELECT password FROM users WHERE id=?').get(user.id) as { password: string }

@@ -1,12 +1,12 @@
 import { isAdmin } from '../admin'
 import { db, type User } from '../db'
+import { devicePageSize } from '../device-settings'
 import { feedSnapshotPage } from '../feed-snapshots'
 import { hasUnreadForYou, markForYouEntriesRead } from '../for-you-state'
 import { resolveHandle } from '../handles'
 import { enrichPosts, visibleTagFollowerCounts, visibleUserProfileStats } from '../posts'
-import type { PostView } from '../types'
-import { devicePageSize } from '../device-settings'
 import { activeRequest } from '../theme'
+import type { PostView } from '../types'
 import { displayBio, fmt, fmtFull, linkify } from '../utils'
 import { Layout } from './layout'
 import { ActionPair, FeedTabs, Pagination } from './page-shared'
@@ -215,7 +215,8 @@ export function Feed({ user, page = 1, title, path = '/for-you', pageUrl, notifi
             )
             : (
               <article className={`activity-follow${row.unread ? ' activity-item-unread' : ''}`} key={row.event_key}
-                id={activityAnchor}>
+                id={activityAnchor}
+              >
                 <div className="activity-follow-content">
                   <div className="activity-follow-main">
                     {!!row.unread && <span className="unread-dot" aria-label="unread" />}
@@ -233,14 +234,19 @@ export function Feed({ user, page = 1, title, path = '/for-you', pageUrl, notifi
                         : 'followed'}
                     </span>
                     {!row.target_is_viewer && row.activity_kind === 'user_follow'
-                      ? <UserReference handle={row.target_handle!} bio={row.target_bio || ''}
-                        noteCount={row.posts || 0} stats={targetProfileStats.get(targetUsers.get(row.target_handle!)!)}
-                        following={!!row.following} user={user} href={`/u/${row.target_handle}${fromQuery}`}
-                        navigationQuery={fromQuery} />
+                      ? (
+                        <UserReference handle={row.target_handle!} bio={row.target_bio || ''} noteCount={row.posts || 0}
+                          stats={targetProfileStats.get(targetUsers.get(row.target_handle!)!)}
+                          following={!!row.following} user={user} href={`/u/${row.target_handle}${fromQuery}`}
+                          navigationQuery={fromQuery} />
+                      )
                       : row.activity_kind === 'tag_follow'
-                      ? <TagReference tag={row.target_tag!} noteCount={row.posts || 0}
-                        followerCount={tagFollowerCounts[row.target_tag!] || 0} following={!!row.following} user={user}
-                        href={`/tag/${encodeURIComponent(row.target_tag!)}${fromQuery}`} navigationQuery={fromQuery} />
+                      ? (
+                        <TagReference tag={row.target_tag!} noteCount={row.posts || 0}
+                          followerCount={tagFollowerCounts[row.target_tag!] || 0} following={!!row.following}
+                          user={user} href={`/tag/${encodeURIComponent(row.target_tag!)}${fromQuery}`}
+                          navigationQuery={fromQuery} />
+                      )
                       : null}
                     {row.posts !== null
                       ? (
@@ -261,9 +267,11 @@ export function Feed({ user, page = 1, title, path = '/for-you', pageUrl, notifi
                       : <time dateTime={row.created_at} title={fmtFull(row.created_at)}>{fmt(row.created_at)}</time>}
                   </div>
                   {(row.activity_kind === 'user_follow' || row.activity_kind === 'signup')
-                    && <p className="profile-bio" dangerouslySetInnerHTML={{
-                      __html: linkify(displayBio(row.target_bio)),
-                    }} />}
+                    && (
+                      <p className="profile-bio" dangerouslySetInnerHTML={{
+                        __html: linkify(displayBio(row.target_bio)),
+                      }} />
+                    )}
                 </div>
                 {row.actor_id !== user.id && (
                   <form method="post" action={row.target_is_viewer || row.activity_kind === 'signup'

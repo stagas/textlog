@@ -43,8 +43,7 @@ export function registerInteractionsRoutes(app: Hono) {
     if (referer && URL.canParse(referer)) {
       const url = new URL(referer)
       if (url.pathname === '/explore' && /^\d+(,\d+){0,7}$/.test(f.explorePeople || '')) {
-        return redirect(returnPath,
-          `explore_people=${f.explorePeople}; HttpOnly; Path=/explore; SameSite=Lax`)
+        return redirect(returnPath, `explore_people=${f.explorePeople}; HttpOnly; Path=/explore; SameSite=Lax`)
       }
     }
     return redirect(returnPath)
@@ -111,7 +110,8 @@ export function registerInteractionsRoutes(app: Hono) {
           .catch(error => logError('tag follow activity push failed', error))
       }
     }
-    return redirect(f.from ? safeNext(f.from)
+    return redirect(f.from
+      ? safeNext(f.from)
       : safeRefererPath(c.req.header('referer'), c.req.url, '/tag/' + encodeURIComponent(tag)))
   })
 

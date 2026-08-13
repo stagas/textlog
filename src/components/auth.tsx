@@ -18,8 +18,8 @@ export function Auth({ error, email = '', next }: { error?: string; email?: stri
               <span>email address or handle</span>
             </label>
             <input id="enter-identifier" name="identifier" required maxLength={254} autoComplete="username" autoFocus
-              autoCapitalize="none" spellCheck={false} inputMode="email" enterKeyHint="send"
-              defaultValue={email} placeholder="you@example.com or your_handle" />
+              autoCapitalize="none" spellCheck={false} inputMode="email" enterKeyHint="send" defaultValue={email}
+              placeholder="you@example.com or your_handle" />
             <button className="button">
               send magic link <span aria-hidden="true">→</span>
             </button>
@@ -62,8 +62,8 @@ export function PasswordLogin({ nonce, error, identifier = '', next, reset = fal
               <span>email address or handle</span>
             </label>
             <input id="login-identifier" name="identifier" required maxLength={254} autoComplete="username"
-              autoCapitalize="none" spellCheck={false} autoFocus={!error} defaultValue={identifier}
-              inputMode="email" enterKeyHint="next" placeholder="you@example.com or your_handle" />
+              autoCapitalize="none" spellCheck={false} autoFocus={!error} defaultValue={identifier} inputMode="email"
+              enterKeyHint="next" placeholder="you@example.com or your_handle" />
             <label htmlFor="login-password">
               <span>password</span>
             </label>
@@ -97,7 +97,10 @@ export function PasswordLogin({ nonce, error, identifier = '', next, reset = fal
 }
 
 export function MagicLinkSent({ email, magicUrl, error, handle = false }: {
-  email: string; magicUrl?: string; error?: string; handle?: boolean
+  email: string
+  magicUrl?: string
+  error?: string
+  handle?: boolean
 }) {
   return (
     <Layout title="check your email">
@@ -106,8 +109,16 @@ export function MagicLinkSent({ email, magicUrl, error, handle = false }: {
           <h1>Check your email</h1>
           <p>
             {handle
-              ? <>Magic link and code sent to the email of <strong>{email}</strong>.</>
-              : <>Magic link and code sent to <strong>{maskEmail(email)}</strong>.</>}
+              ? (
+                <>
+                  Magic link and code sent to the email of <strong>{email}</strong>.
+                </>
+              )
+              : (
+                <>
+                  Magic link and code sent to <strong>{maskEmail(email)}</strong>.
+                </>
+              )}
           </p>
           <p className="email-delivery-hint">Can’t find it? Check your spam or junk folder.</p>
           <p className="entry-code-copy">or enter the six-digit code</p>
@@ -147,9 +158,9 @@ export function ChooseHandle({ error, handle = '', next }: { error?: string; han
           {error && <p className="status-message status-error" role="alert">{error}</p>}
           <form method="post" action="/choose-handle">
             {next && <input type="hidden" name="next" value={next} />}
-            <input name="handle" aria-label="handle" aria-describedby="handle-help" autoFocus
-              autoComplete="username" inputMode="text" enterKeyHint="done" autoCapitalize="none" spellCheck={false}
-              defaultValue={handle} placeholder="your_handle" />
+            <input name="handle" aria-label="handle" aria-describedby="handle-help" autoFocus autoComplete="username"
+              inputMode="text" enterKeyHint="done" autoCapitalize="none" spellCheck={false} defaultValue={handle}
+              placeholder="your_handle" />
             <p id="handle-help" className="form-hint">
               Handles must be 2–24 characters and use only letters, numbers, or underscores.
             </p>

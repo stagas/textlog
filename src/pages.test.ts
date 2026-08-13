@@ -1,13 +1,13 @@
 import { describe, expect, test } from 'bun:test'
 import { About, AccountApiKeyCreate, AccountMagicLink, AccountPassword, AccountSecurity, AdminDashboard, ApiDocs, Auth,
-  ChangeAppearance, ChooseHandle, Compose, ConfirmAccountDelete, ConfirmDelete, ConfirmEmail, Connections,
-  Contact, EditPost, EmbedExamples, ErrorPage, Legal, MagicLinkSent, NotFound, NotificationSettings, PasswordLogin,
-  postTitle, Profile, Reply } from './components/pages'
+  ChangeAppearance, ChooseHandle, Compose, ConfirmAccountDelete, ConfirmDelete, ConfirmEmail, Connections, Contact,
+  EditPost, EmbedExamples, ErrorPage, Legal, MagicLinkSent, NotFound, NotificationSettings, PasswordLogin, postTitle,
+  Profile, Reply } from './components/pages'
 
 import React from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
-import { HotFeed } from './components/hot-feed'
 import { maskEmail } from './components/auth'
+import { HotFeed } from './components/hot-feed'
 import { ConnectionPeople, Pagination, TagPeopleList } from './components/page-shared'
 import { conversationTopPath, Post, postedReplyPath, replyAnchorReturnPath } from './components/post'
 import { PublicFeed } from './components/public-feed'
@@ -72,7 +72,9 @@ test('posting helpers are searchable details and show copyable highlighted resul
   expect(html).toContain('placeholder="search handles"')
   expect(html).toContain('value="search-hashtags" formNoValidate="" name="action"')
   expect(html).toContain('value="search-mentions" formNoValidate="" name="action"')
-  expect(html).toContain('required="" autofocus="" autoComplete="off" inputMode="text" enterKeyHint="enter">A draft worth keeping</textarea>')
+  expect(html).toContain(
+    'required="" autofocus="" autoComplete="off" inputMode="text" enterKeyHint="enter">A draft worth keeping</textarea>',
+  )
   expect(html).toContain('#<mark>type</mark>script')
   expect(html).toContain('<span aria-label="More results">...</span>')
   expect(html).not.toContain('href="/tag/typescript"')
@@ -344,7 +346,9 @@ test('account settings pages share one consistent heading', () => {
   const user = { id: 1, handle: 'reader', email: 'reader@example.com', bio: '' }
   const pages = [
     renderToStaticMarkup(React.createElement(ChangeAppearance, {
-      user, selected: { theme: 'system', accent: 'theme' }, selectedFont: 'system',
+      user,
+      selected: { theme: 'system', accent: 'theme' },
+      selectedFont: 'system',
     })),
     renderToStaticMarkup(React.createElement(NotificationSettings, { user, publicKey: null })),
     renderToStaticMarkup(React.createElement(AccountSecurity, { user, sessions: [] })),
@@ -511,8 +515,8 @@ test('Tag follower tabs list people with compact follow controls', () => {
     tag: 'notes',
     following: true,
     posts: [],
-    people: [{ id: 3, handle: 'writer', email: 'writer@example.com', bio: 'Writes notes', posts: 14,
-      suspended_at: null, deleted_at: null, viewerFollowing: false }],
+    people: [{ id: 3, handle: 'writer', email: 'writer@example.com', bio: 'Writes notes', posts: 14, suspended_at: null,
+      deleted_at: null, viewerFollowing: false }],
     tab: 'followers',
     page: 1,
     total: 14,
@@ -741,7 +745,9 @@ describe('Auth', () => {
 
   test('password login errors retain only the identifier and focus the next field', () => {
     const passwordHtml = renderToStaticMarkup(React.createElement(PasswordLogin, {
-      nonce: 'one-time-value', identifier: 'reader@example.com', error: 'Try again.',
+      nonce: 'one-time-value',
+      identifier: 'reader@example.com',
+      error: 'Try again.',
     }))
     expect(passwordHtml).toContain('name="identifier"')
     expect(passwordHtml).toContain('value="reader@example.com"')
@@ -749,7 +755,9 @@ describe('Auth', () => {
     expect(passwordHtml).not.toMatch(/id="login-identifier"[^>]+autofocus/)
 
     const captchaHtml = renderToStaticMarkup(React.createElement(PasswordLogin, {
-      nonce: 'one-time-value', identifier: 'reader@example.com', error: 'Try again.',
+      nonce: 'one-time-value',
+      identifier: 'reader@example.com',
+      error: 'Try again.',
       captcha: { token: 'captcha-token', image: 'data:image/svg+xml;base64,PHN2Zy8+' },
     }))
     expect(captchaHtml).toMatch(/id="login-password"[^>]+autofocus=""/)
@@ -1132,7 +1140,9 @@ test('Current pagination page is an enter-to-navigate bounded input that preserv
   expect(html).toContain('action="/u/writer" method="get"')
   expect(html).toContain('type="hidden" name="tab" value="replies"')
   expect(html).toContain('aria-label="Current page, 5 of 17"')
-  expect(html).toContain('type="number" min="1" max="17" required="" autoComplete="off" inputMode="numeric" enterKeyHint="go" name="page" value="5"')
+  expect(html).toContain(
+    'type="number" min="1" max="17" required="" autoComplete="off" inputMode="numeric" enterKeyHint="go" name="page" value="5"',
+  )
 })
 
 test('Followed tags paginate every 12 tags', () => {
@@ -1409,8 +1419,8 @@ test('Post carries its originating cursor into detail, reply, and edit links', (
 
 test('Post-page timestamp links to the canonical post URL', () => {
   const html = renderToStaticMarkup(React.createElement(Post, {
-    p: { id: 2, user_id: 1, parent_id: null, body: 'A note', handle: 'writer',
-      created_at: '2026-08-03 12:00:00', deleted_at: null },
+    p: { id: 2, user_id: 1, parent_id: null, body: 'A note', handle: 'writer', created_at: '2026-08-03 12:00:00',
+      deleted_at: null },
     user: null,
     returnPath: '/latest?page=2#post-2',
     canonicalTimestamp: true,
@@ -1421,8 +1431,8 @@ test('Post-page timestamp links to the canonical post URL', () => {
 
 test('Reply pages show a top link immediately after the timestamp', () => {
   const html = renderToStaticMarkup(React.createElement(Post, {
-    p: { id: 3, user_id: 1, parent_id: 2, body: 'A reply', handle: 'writer',
-      created_at: '2026-08-03 12:00:00', deleted_at: null },
+    p: { id: 3, user_id: 1, parent_id: 2, body: 'A reply', handle: 'writer', created_at: '2026-08-03 12:00:00',
+      deleted_at: null },
     user: null,
     canonicalTimestamp: true,
     topHref: '/post/1?from=%2Flatest%23post-3',

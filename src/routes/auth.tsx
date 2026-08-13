@@ -1,13 +1,13 @@
-import { AUTH_LIMITS, authRateLimitMessage, loginSubnet } from '../auth-rate-limit'
 import { accountForEmail, accountForHandle, accountGroupForUser, createAccountGroup, markGroupEmailVerified,
   MONTHLY_NEW_ACCOUNT_LIMIT, recentAccountCreations, selectAccount } from '../account-groups'
+import { AUTH_LIMITS, authRateLimitMessage, loginSubnet } from '../auth-rate-limit'
 import { sessionCookieName } from '../brand'
 import { Auth, ChooseHandle, ForgotPassword, MagicLinkSent, PasswordLogin, ResetPassword } from '../components/pages'
 import { db } from '../db'
 import { sendMagicLink, sendPasswordReset } from '../email'
 import { isDevelopment } from '../environment'
-import { clearSessionCookie, safeLocalPath, sessionCookie } from '../http'
 import { claimInitialHandle } from '../handles'
+import { clearSessionCookie, safeLocalPath, sessionCookie } from '../http'
 import { logError } from '../log'
 import { moderateText, moderationMessage } from '../moderation'
 import { consumePasswordCaptcha, issuePasswordCaptcha, passwordCaptchaRequired,
@@ -219,8 +219,10 @@ export function registerAuthRoutes(app: Hono) {
       : authLimit(c, 'enter-ip', clientAddress(c), AUTH_LIMITS.loginIp)
         || authLimit(c, 'enter-email', identifier || '(blank)', AUTH_LIMITS.forgotAccount)
     if (limited) {
-      return retryPage(page(<Auth email={identifier} next={next} error={authRateLimitMessage(limited.retryAfter)} />, 429),
-        limited.retryAfter)
+      return retryPage(
+        page(<Auth email={identifier} next={next} error={authRateLimitMessage(limited.retryAfter)} />, 429),
+        limited.retryAfter,
+      )
     }
 
     const account = emailPattern.test(identifier)
@@ -244,8 +246,10 @@ export function registerAuthRoutes(app: Hono) {
         503,
       )
     }
-    return page(<MagicLinkSent email={identifier} handle={!emailPattern.test(identifier)}
-      magicUrl={isDevelopment() ? link.url : undefined} />)
+    return page(
+      <MagicLinkSent email={identifier} handle={!emailPattern.test(identifier)}
+        magicUrl={isDevelopment() ? link.url : undefined} />,
+    )
   })
 
   app.post('/enter/code', async c => {
@@ -255,15 +259,17 @@ export function registerAuthRoutes(app: Hono) {
     const account = accountForHandle(db, identifier.replace(/^@/, ''))
     const email = emailPattern.test(identifier) ? identifier : account?.email
     const handle = !emailPattern.test(identifier)
-    const invalid = () => page(<MagicLinkSent email={identifier} handle={handle}
-      error="That code is invalid or has expired." />, 400)
+    const invalid = () =>
+      page(<MagicLinkSent email={identifier} handle={handle} error="That code is invalid or has expired." />, 400)
     if (!email || !/^\d{6}$/.test(code)) return invalid()
     const limited = authLimit(c, 'enter-code-ip', clientAddress(c), AUTH_LIMITS.resetIp)
       || authLimit(c, 'enter-code-account', identifier, AUTH_LIMITS.resetToken)
     if (limited) {
-      return retryPage(page(<MagicLinkSent email={identifier} handle={handle}
-        error={authRateLimitMessage(limited.retryAfter)} />, 429),
-        limited.retryAfter)
+      return retryPage(
+        page(<MagicLinkSent email={identifier} handle={handle} error={authRateLimitMessage(limited.retryAfter)} />,
+          429),
+        limited.retryAfter,
+      )
     }
     const link = db.query(`SELECT token_hash,email,user_id,next_path,attempts FROM magic_links
       WHERE email=? AND code_hash IS NOT NULL AND expires_at>?`).get(email, Date.now()) as (MagicLink & {
@@ -320,9 +326,13 @@ export function registerAuthRoutes(app: Hono) {
     const next = safeNext(f.next)
     if (!/^[a-z0-9_]{2,24}$/.test(handle)) {
       const characters = Array.from(submittedHandle).length
-      return page(<ChooseHandle handle={submittedHandle} next={next}
-        error={`You typed ${characters} ${characters === 1 ? 'character' : 'characters'}. Use 2–24 letters, numbers, or underscores.`} />,
-      400)
+      return page(
+        <ChooseHandle handle={submittedHandle} next={next}
+          error={`You typed ${characters} ${
+            characters === 1 ? 'character' : 'characters'
+          }. Use 2–24 letters, numbers, or underscores.`} />,
+        400,
+      )
     }
     const moderation = await moderateText(`handle: ${handle}`)
     if (!moderation.ok) {
@@ -342,9 +352,11 @@ export function registerAuthRoutes(app: Hono) {
     }
     catch (error) {
       if (error instanceof MonthlyAccountLimitError) {
-        return page(<ChooseHandle handle={handle} next={next}
-          error="You can create up to two new accounts per month. Choose a handle from one of your deleted accounts to reclaim it, or try again later." />,
-        429)
+        return page(
+          <ChooseHandle handle={handle} next={next}
+            error="You can create up to two new accounts per month. Choose a handle from one of your deleted accounts to reclaim it, or try again later." />,
+          429,
+        )
       }
       return page(<ChooseHandle handle={handle} next={next} error="That handle is unavailable." />, 400)
     }

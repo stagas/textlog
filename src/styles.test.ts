@@ -81,7 +81,9 @@ describe('in-memory stylesheet', () => {
   test('styles conversation top links like reply actions', async () => {
     const css = await Bun.file(new URL('./styles.css', import.meta.url)).text()
     expect(css).toContain('.posttop .post-reply-link,\n.posttop .post-top-link {\n  color: var(--accent);')
-    expect(css).toContain('.posttop .post-reply-link:hover,\n.posttop .post-top-link:hover {\n  color: var(--accent-dark);')
+    expect(css).toContain(
+      '.posttop .post-reply-link:hover,\n.posttop .post-top-link:hover {\n  color: var(--accent-dark);',
+    )
   })
 
   test('keeps the edit cancel action muted', async () => {
@@ -137,7 +139,9 @@ describe('in-memory stylesheet', () => {
     const css = await Bun.file(new URL('./styles.css', import.meta.url)).text()
     expect(css).toContain('.reference-menu:hover .reference-menu-popover {')
     expect(css).toContain('animation: reference-popover-reveal 0s 500ms both;')
-    expect(css).toContain('.reference-menu:focus-within .reference-menu-popover {\n  display: grid;\n  animation: none;')
+    expect(css).toContain(
+      '.reference-menu:focus-within .reference-menu-popover {\n  display: grid;\n  animation: none;',
+    )
     expect(css).toContain('@keyframes reference-popover-reveal {')
     expect(css).toContain('@media (hover: none), (pointer: coarse) {\n  .account-menu .account-menu-popover,\n'
       + '  .account-menu::after,\n  .reference-menu .reference-menu-popover,\n'
@@ -159,5 +163,4 @@ describe('in-memory stylesheet', () => {
     expect(css).toContain('.posting-help-popover[popover]:popover-open {\n  display: block;')
     expect(css).toContain('.posting-help-search .posting-help-popover[popover]:popover-open {\n  display: flex;')
   })
-
 })

@@ -115,12 +115,12 @@ export function Legal({ user }: { user: User | null }) {
         <h3>Retention</h3>
         <p>
           Session records expire after 365 days of inactivity; password-reset, magic-link and email-change records after
-          one hour; appearance cookies after one year; daily visitor pseudonyms after seven days; and application
-          HTTP logs after at most 14 days. Public account and content data, connections, followed hashtags and blocks
-          are held until you remove them or delete your account. Deletion anonymizes the account and content, while
-          limited moderation, resolved report and audit records are retained for three years where needed to document
-          decisions, establish legal claims and protect users. Open reports remain until reviewed. Backups follow the
-          configured backup-retention period (14 days by default), after which deleted data ages out.
+          one hour; appearance cookies after one year; daily visitor pseudonyms after seven days; and application HTTP
+          logs after at most 14 days. Public account and content data, connections, followed hashtags and blocks are
+          held until you remove them or delete your account. Deletion anonymizes the account and content, while limited
+          moderation, resolved report and audit records are retained for three years where needed to document decisions,
+          establish legal claims and protect users. Open reports remain until reviewed. Backups follow the configured
+          backup-retention period (14 days by default), after which deleted data ages out.
         </p>
 
         <h3>Your rights</h3>

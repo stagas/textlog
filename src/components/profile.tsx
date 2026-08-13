@@ -1,11 +1,11 @@
-import { db, type User } from '../db'
 import { extractHashtags } from '../content'
+import { db, type User } from '../db'
 import { visibleHashtagCounts, visibleTagFollowerCounts } from '../posts'
 import type { PostView, ProfileRow } from '../types'
 import { displayBio, linkify, referenceFormId } from '../utils'
 import { Layout } from './layout'
-import { FormMessage, Pagination, PostingHelp, PostingSuggestionResults, type PostingSuggestionSearch,
-  ProfileControls, ProfileHeader, ProfileTabs } from './page-shared'
+import { FormMessage, Pagination, PostingHelp, PostingSuggestionResults, type PostingSuggestionSearch, ProfileControls,
+  ProfileHeader, ProfileTabs } from './page-shared'
 import { Post } from './post'
 
 export function Profile(
@@ -66,11 +66,14 @@ export function Profile(
       atom: `/u/${encodeURIComponent(profile.handle)}.atom`,
     }}>
       <ProfileHeader user={user} profile={profile} following={following} blocked={blocked} editing={editing}
-        returnPath={returnPath} controlsInTitle>
+        returnPath={returnPath} controlsInTitle
+      >
         <div className="profile-content">
-          <div className={`profile-title-row${!editing && user?.id !== profile.id
-            ? ' profile-title-row-actions'
-            : ''}`}>
+          <div className={`profile-title-row${
+            !editing && user?.id !== profile.id
+              ? ' profile-title-row-actions'
+              : ''
+          }`}>
             <h1>
               <a className="profile-canonical-link" href={`/u/${profile.handle}`}>
                 <span className="identity-prefix">@</span>
@@ -163,13 +166,22 @@ export function Profile(
                 </div>
               </>
             )
-            : <p className="profile-bio" dangerouslySetInnerHTML={{ __html: linkify(displayBio(profile.bio),
-              {}, [], undefined, undefined, '', bioTagCounts, {}, { signedIn: !!user, currentHandle: user?.handle,
-                formPrefix: bioFormPrefix, hashtagFollowing: bioTagFollowing,
-                hashtagFollowerCounts: bioTagFollowerCounts }) }} />}
-          {!editing && user && bioTags.map(tag => <form className="reference-follow-form"
-            id={referenceFormId(bioFormPrefix, 'tag', tag)} method="post"
-            action={'/tag-follow/' + encodeURIComponent(tag)} key={tag} />)}
+            : (
+              <p className="profile-bio" dangerouslySetInnerHTML={{
+                __html: linkify(displayBio(profile.bio), {}, [], undefined, undefined, '', bioTagCounts, {}, {
+                  signedIn: !!user,
+                  currentHandle: user?.handle,
+                  formPrefix: bioFormPrefix,
+                  hashtagFollowing: bioTagFollowing,
+                  hashtagFollowerCounts: bioTagFollowerCounts,
+                }),
+              }} />
+            )}
+          {!editing && user
+            && bioTags.map(tag => (
+              <form className="reference-follow-form" id={referenceFormId(bioFormPrefix, 'tag', tag)} method="post"
+                action={'/tag-follow/' + encodeURIComponent(tag)} key={tag} />
+            ))}
         </div>
       </ProfileHeader>
       {blocked || blockedByProfile
@@ -184,10 +196,7 @@ export function Profile(
             blockedPeople={blockedPeopleCount} blockedTags={blockedTagCount} returnPath={returnPath} />
         )}
       {!editing && !blocked && !blockedByProfile && page > 1
-        && (
-          <Pagination path={paginationPath} page={page}
-            totalPages={totalPages} top />
-        )}
+        && <Pagination path={paginationPath} page={page} totalPages={totalPages} top />}
       {!editing && !blocked && !blockedByProfile
         && posts.map(post => (
           <Post key={post.id} p={post} user={user} showReplyCount tappable returnPath={`${feedPath}#post-${post.id}`} />
@@ -207,10 +216,7 @@ export function Profile(
         </div>
       )}
       {!editing && !blocked && !blockedByProfile
-        && (
-          <Pagination path={paginationPath} page={page}
-            totalPages={totalPages} />
-        )}
+        && <Pagination path={paginationPath} page={page} totalPages={totalPages} />}
     </Layout>
   )
 }

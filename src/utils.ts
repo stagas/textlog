@@ -29,15 +29,17 @@ export type ReferencePopoverOptions = {
 
 function profileStatLinks(handle: string, stats: UserProfileStats, navigationQuery = '') {
   const base = `/u/${handle}`
-  const href = (tab?: string) => tab
-    ? `${base}?tab=${tab}${navigationQuery ? `&${navigationQuery.slice(1)}` : ''}`
-    : `${base}${navigationQuery}`
+  const href = (tab?: string) =>
+    tab
+      ? `${base}?tab=${tab}${navigationQuery ? `&${navigationQuery.slice(1)}` : ''}`
+      : `${base}${navigationQuery}`
   const count = (value: number, singular: string, plural = singular + 's') =>
     `${value.toLocaleString()} ${value === 1 ? singular : plural}`
   return `<span class="reference-profile-tabs"><a href="${href()}">${count(stats.notes, 'note')}</a>`
     + `<a href="${href('replies')}">${count(stats.replies, 'reply', 'replies')}</a>`
     + `<a href="${href('following')}">${count(stats.followingTags, 'tag')}, ${
-      count(stats.following, 'user')} following</a>`
+      count(stats.following, 'user')
+    } following</a>`
     + `<a href="${href('followers')}">${count(stats.followers, 'follower')}</a></span>`
 }
 
@@ -139,8 +141,9 @@ function shortenedUrlPart(part: string) {
   const characters = [...part]
   if (characters.length <= LONG_URL_PART_LENGTH) return part
   const boundaries = characters.flatMap((character, index) => /[^\p{L}\p{M}\p{N}_]/u.test(character) ? [index] : [])
-  const closestBoundary = (target: number) => boundaries.reduce((closest, index) =>
-    Math.abs(index - target) < Math.abs(closest - target) ? index : closest, boundaries[0])
+  const closestBoundary = (target: number) =>
+    boundaries.reduce((closest, index) => Math.abs(index - target) < Math.abs(closest - target) ? index : closest,
+      boundaries[0])
   const startBoundary = boundaries.length ? closestBoundary(URL_PART_START_LENGTH - 1) : -1
   const endTarget = characters.length - URL_PART_END_LENGTH - 1
   const endBoundary = boundaries.length ? closestBoundary(endTarget) : -1
@@ -317,9 +320,10 @@ function renderedMath(source: string, display: boolean) {
   return output && display ? `<span class="math-display">${output}</span>` : output
 }
 
-function renderedReference(token: string, mentionBios: Record<string, string>, mentionNoteCounts: Record<string, number>,
-  hashtagCounts: Record<string, number>, highlightTerms: string[], navigationQuery = '',
-  popover?: ReferencePopoverOptions) {
+function renderedReference(token: string, mentionBios: Record<string, string>,
+  mentionNoteCounts: Record<string, number>, hashtagCounts: Record<string, number>, highlightTerms: string[],
+  navigationQuery = '', popover?: ReferencePopoverOptions)
+{
   const value = token.slice(1)
   const normalizedValue = value.normalize('NFC').toLowerCase()
   const isUser = token[0] === '@'
@@ -332,31 +336,38 @@ function renderedReference(token: string, mentionBios: Record<string, string>, m
   if (!hasData) return `<a href="${href}">${label}</a>`
   const count = isUser ? mentionNoteCounts[key] || 0 : hashtagCounts[key]
   if (!popover) {
-    const title = isUser ? userHoverTitle(count, mentionBios[key])
+    const title = isUser
+      ? userHoverTitle(count, mentionBios[key])
       : `${count.toLocaleString()} ${count === 1 ? 'note' : 'notes'}`
     return `<a href="${href}" title="${esc(title)}">${label}</a>`
   }
   const following = isUser ? !!popover.mentionFollowing?.[key] : !!popover.hashtagFollowing?.[key]
   const ownUser = isUser && key === popover.currentHandle?.toLowerCase()
   const action = ownUser ? '' : popover.signedIn
-    ? `<button class="button${following ? ' button-muted' : ''}" type="submit" form="${esc(referenceFormId(popover.formPrefix,
-      isUser ? 'user' : 'tag', key))}">${following ? 'unfollow' : 'follow'}</button>`
+    ? `<button class="button${following ? ' button-muted' : ''}" type="submit" form="${
+      esc(referenceFormId(popover.formPrefix, isUser ? 'user' : 'tag', key))
+    }">${following ? 'unfollow' : 'follow'}</button>`
     : '<a class="button" href="/enter" rel="nofollow">enter to follow</a>'
   return `<span class="reference-menu"><a class="reference-menu-trigger" href="${href}">${label}</a>`
     + `<span class="reference-menu-popover${isUser ? '' : ' reference-menu-popover-tag'}">${
       isUser && popover.mentionProfileStats?.[key]
-      ? profileStatLinks(key, popover.mentionProfileStats[key], navigationQuery)
-      : isUser
-      ? `<span>${count.toLocaleString()} ${count === 1 ? 'note' : 'notes'}</span>`
-      : tagStatLinks(key, count, popover.hashtagFollowerCounts?.[key] || 0, navigationQuery)}`
-    + (isUser ? `<span class="reference-popover-bio">${linkify(displayBio(mentionBios[key]), {}, [],
-      Bun.env.APP_URL, undefined, navigationQuery)}</span>` : '')
+        ? profileStatLinks(key, popover.mentionProfileStats[key], navigationQuery)
+        : isUser
+        ? `<span>${count.toLocaleString()} ${count === 1 ? 'note' : 'notes'}</span>`
+        : tagStatLinks(key, count, popover.hashtagFollowerCounts?.[key] || 0, navigationQuery)
+    }`
+    + (isUser
+      ? `<span class="reference-popover-bio">${
+        linkify(displayBio(mentionBios[key]), {}, [], Bun.env.APP_URL, undefined, navigationQuery)
+      }</span>`
+      : '')
     + `${action}</span></span>`
 }
 
 function linkifyAsciiReferences(body: string, mentionBios: Record<string, string>, appUrl: string | undefined,
   navigationQuery = '', hashtagCounts: Record<string, number> = {}, mentionNoteCounts: Record<string, number> = {},
-  popover?: ReferencePopoverOptions) {
+  popover?: ReferencePopoverOptions)
+{
   let html = ''
   let end = 0
   const tokens = linkTokens(body, { has_latex: 1, has_links: 1, has_code: 1 })
@@ -372,9 +383,9 @@ function linkifyAsciiReferences(body: string, mentionBios: Record<string, string
       const url = match.url!
       const label = linkLabel(url, appUrl)
       const displayLabel = label === url ? match.raw : label
-      html += `<a href="${esc(url)}"${displayLabel === match.raw ? '' : ` title="${esc(url)}"`}${linkAttributes(url, appUrl)}>${
-        esc(displayLabel)
-      }</a>`
+      html += `<a href="${esc(url)}"${displayLabel === match.raw ? '' : ` title="${esc(url)}"`}${
+        linkAttributes(url, appUrl)
+      }>${esc(displayLabel)}</a>`
     }
     end = match.lastIndex
   }

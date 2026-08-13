@@ -7,8 +7,8 @@ import type { PersonView } from '../types'
 import { displayBio, linkify } from '../utils'
 import { Layout } from './layout'
 import { ActionPair, Pagination, TagPeopleList } from './page-shared'
-import { SearchForm } from './search'
 import { UserReference } from './post'
+import { SearchForm } from './search'
 
 const PEOPLE_PAGE_SIZE = 8
 
@@ -76,8 +76,7 @@ export function Explore({ user, welcome = false, peopleIds, tagsPage = 1, people
         <section>
           <h2>Trending tags</h2>
           {tags.length
-            ? <TagPeopleList user={user} tags={tags}
-                returnPath={tag => `${explorePath()}#tag-${tag.tag}`} />
+            ? <TagPeopleList user={user} tags={tags} returnPath={tag => `${explorePath()}#tag-${tag.tag}`} />
             : <p className="section-empty">No hashtags yet.</p>}
           <Pagination page={tagsPage} totalPages={Math.ceil(tagsTotal / TAG_PAGE_SIZE)} path={tagsPath}
             pageParam="tagsPage" label="Tags pagination" compact />
@@ -89,8 +88,8 @@ export function Explore({ user, welcome = false, peopleIds, tagsPage = 1, people
               <article key={p.id} id={`person-${p.id}`}>
                 <div>
                   <div>
-                    <UserReference handle={p.handle} bio={p.bio} noteCount={p.posts}
-                      stats={profileStats.get(p.id)} following={p.following} user={user}
+                    <UserReference handle={p.handle} bio={p.bio} noteCount={p.posts} stats={profileStats.get(p.id)}
+                      following={p.following} user={user}
                       href={`/u/${p.handle}?from=${encodeURIComponent(exploreReturnPath(p.id))}`}
                       navigationQuery={`?from=${encodeURIComponent(exploreReturnPath(p.id))}`} />
                     <small>{p.posts} {p.posts === 1 ? 'note' : 'notes'}</small>

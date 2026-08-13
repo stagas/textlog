@@ -53,7 +53,9 @@ test('HTTP logs can omit the user agent', () => {
   const originalLog = console.log
   const originalSetting = Bun.env.LOG_USER_AGENT
   let output = ''
-  console.log = (...values: unknown[]) => { output = values.join(' ') }
+  console.log = (...values: unknown[]) => {
+    output = values.join(' ')
+  }
   Bun.env.LOG_USER_AGENT = 'false'
   try {
     logHttp('GET', '/', 200, 12, '203.0.113.4', undefined, 'ExampleBot/1.0')

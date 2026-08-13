@@ -7,12 +7,11 @@ import { Post } from './post'
 
 export function TagFeed(
   { user, tag, following, blocked = false, posts, page, total, followerTotal = 0, people = [], tab = 'notes', social,
-    notePageSize = PAGE_SIZE, returnPath }: { user: User | null; tag: string;
-    following: boolean; blocked?: boolean; posts: PostView[]; page: number; total: number;
-    followerTotal?: number; people?: PersonView[]; tab?: 'notes' | 'followers'; notePageSize?: number;
-    returnPath?: string;
-    social?: { description: string; image: string; url: string; type?: 'article' | 'profile' | 'website';
-      imageAlt?: string } },
+    notePageSize = PAGE_SIZE, returnPath }: { user: User | null; tag: string; following: boolean; blocked?: boolean;
+      posts: PostView[]; page: number; total: number; followerTotal?: number; people?: PersonView[];
+      tab?: 'notes' | 'followers'; notePageSize?: number; returnPath?: string;
+      social?: { description: string; image: string; url: string; type?: 'article' | 'profile' | 'website';
+        imageAlt?: string } },
 ) {
   const tagPath = `/tag/${encodeURIComponent(tag)}`
   const tabPath = tab === 'followers' ? `${tagPath}?tab=followers` : tagPath
@@ -35,53 +34,57 @@ export function TagFeed(
             </a>
           </h1>
           {user
-          ? (
-            <div className="profile-action tag-handle-actions">
-              {!blocked && (
-                <form method="post" action={'/tag-follow/' + encodeURIComponent(tag)}>
-                  <button className={`button${following ? ' button-muted' : ''}`}>
-                    {following ? 'unfollow' : 'follow'}
-                  </button>
+            ? (
+              <div className="profile-action tag-handle-actions">
+                {!blocked && (
+                  <form method="post" action={'/tag-follow/' + encodeURIComponent(tag)}>
+                    <button className={`button${following ? ' button-muted' : ''}`}>
+                      {following ? 'unfollow' : 'follow'}
+                    </button>
+                  </form>
+                )}
+                <form method="post" action={'/tag-block/' + encodeURIComponent(tag)}>
+                  <button className={blocked ? 'button' : 'quiet danger'}>{blocked ? 'unblock' : 'block'}</button>
                 </form>
-              )}
-              <form method="post" action={'/tag-block/' + encodeURIComponent(tag)}>
-                <button className={blocked ? 'button' : 'quiet danger'}>{blocked ? 'unblock' : 'block'}</button>
-              </form>
-            </div>
-          )
-          : <a className="button" href="/enter" rel="nofollow">enter to follow</a>}
+              </div>
+            )
+            : <a className="button" href="/enter" rel="nofollow">enter to follow</a>}
         </div>
         {returnPath && <a className="profile-edit-link tag-back-link" href={returnPath}>back</a>}
       </section>
       <nav className="feed-tabs profile-tabs" aria-label={`#${tag} tag`}>
         <a className={tab === 'notes' ? 'active' : ''} aria-current={tab === 'notes' ? 'page' : undefined}
-          href={`${tagPath}${returnPath ? `?from=${encodeURIComponent(returnPath)}` : ''}`}>
+          href={`${tagPath}${returnPath ? `?from=${encodeURIComponent(returnPath)}` : ''}`}
+        >
           {total.toLocaleString()} {total === 1 ? 'note' : 'notes'}
         </a>
-        <a className={tab === 'followers' ? 'active' : ''}
-          aria-current={tab === 'followers' ? 'page' : undefined}
-          href={`${tagPath}?tab=followers${returnPath ? `&from=${encodeURIComponent(returnPath)}` : ''}`}>
+        <a className={tab === 'followers' ? 'active' : ''} aria-current={tab === 'followers' ? 'page' : undefined}
+          href={`${tagPath}?tab=followers${returnPath ? `&from=${encodeURIComponent(returnPath)}` : ''}`}
+        >
           {followerTotal.toLocaleString()} {followerTotal === 1 ? 'follower' : 'followers'}
         </a>
       </nav>
       {page > 1
-        && <Pagination page={page}
-          totalPages={Math.ceil((tab === 'followers' ? followerTotal : total)
-            / (tab === 'followers' ? CONNECTION_PAGE_SIZE : notePageSize))} path={paginationPath} top />}
+        && (
+          <Pagination page={page} totalPages={Math.ceil((tab === 'followers' ? followerTotal : total)
+            / (tab === 'followers' ? CONNECTION_PAGE_SIZE : notePageSize))} path={paginationPath} top />
+        )}
       {tab === 'followers'
         ? people.length
-          ? <ConnectionPeople user={user} people={people} className="connections-list"
-            returnPath={person => `${paginationPath}${page > 1 ? '&page=' + page : ''}#person-${person.id}`} />
+          ? (
+            <ConnectionPeople user={user} people={people} className="connections-list"
+              returnPath={person => `${paginationPath}${page > 1 ? '&page=' + page : ''}#person-${person.id}`} />
+          )
           : <div className="empty">No one follows this tag yet.</div>
         : blocked
         ? <div className="empty relationship-notice">You blocked this tag. Unblock it to see its notes.</div>
         : posts.length
-        ? posts.map(post => <Post p={post} user={user} key={post.id} showReplyCount tappable
-          returnPath={`${feedPath}#post-${post.id}`} />)
+        ? posts.map(post => (
+          <Post p={post} user={user} key={post.id} showReplyCount tappable returnPath={`${feedPath}#post-${post.id}`} />
+        ))
         : <div className="empty">No notes use this hashtag yet.</div>}
-      <Pagination page={page}
-        totalPages={Math.ceil((tab === 'followers' ? followerTotal : total)
-          / (tab === 'followers' ? CONNECTION_PAGE_SIZE : notePageSize))} path={paginationPath} />
+      <Pagination page={page} totalPages={Math.ceil((tab === 'followers' ? followerTotal : total)
+        / (tab === 'followers' ? CONNECTION_PAGE_SIZE : notePageSize))} path={paginationPath} />
     </Layout>
   )
 }

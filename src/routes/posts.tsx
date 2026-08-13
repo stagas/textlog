@@ -14,6 +14,7 @@ import { form, page, redirect, rememberFeed, safeNext, usersBlocked } from './sh
 
 import type { Hono } from 'hono'
 import { softDeletePost } from '../admin'
+import type { PostingSuggestionSearch } from '../components/page-shared'
 import { db } from '../db'
 import { safeRefererPath } from '../http'
 import { logError } from '../log'
@@ -23,7 +24,6 @@ import { postRateLimitMessage } from '../post-rate-limit'
 import { sendPushForPost } from '../push'
 import { normalizeSearchQuery, searchPeople, searchTags } from '../search'
 import { currentUser } from '../utils'
-import type { PostingSuggestionSearch } from '../components/page-shared'
 
 function notifyPost(postId: number, userId: number, handle: string) {
   void sendPushForPost(postId, userId, handle).catch(error => logError('activity push failed', error))
@@ -104,8 +104,7 @@ export function registerPostsRoutes(app: Hono) {
     }
     if (user) {
       return page(
-        <Reply user={user} post={post} showForm={c.req.query('reply') === '1'} returnPath={returnPath}
-          topHref={topHref}
+        <Reply user={user} post={post} showForm={c.req.query('reply') === '1'} returnPath={returnPath} topHref={topHref}
           showReport={c.req.query('report') === '1'} reported={c.req.query('reported') === '1'} social={social} />,
       )
     }

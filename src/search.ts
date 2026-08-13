@@ -45,7 +45,8 @@ export function searchPosts(database: Database, query: string, viewerId = -1, pa
 }
 
 export function searchPeople(database: Database, query: string, viewerId = -1, page = 1,
-  { followedFirst = false, handleOnly = false } = {}) {
+  { followedFirst = false, handleOnly = false } = {})
+{
   const expression = searchExpression(query)
   if (!expression) return { rows: [] as PersonView[], total: 0 }
   const matchExpression = handleOnly ? `handle : (${expression})` : expression
@@ -65,8 +66,7 @@ export function searchPeople(database: Database, query: string, viewerId = -1, p
   return { rows, total }
 }
 
-export function searchTags(database: Database, query: string, viewerId = -1, page = 1,
-  { followedFirst = false } = {}) {
+export function searchTags(database: Database, query: string, viewerId = -1, page = 1, { followedFirst = false } = {}) {
   const expression = searchExpression(query)
   if (!expression) return { rows: [] as TagView[], total: 0 }
   const visibility = `p.deleted_at IS NULL AND u.deleted_at IS NULL
@@ -81,7 +81,9 @@ export function searchTags(database: Database, query: string, viewerId = -1, pag
     .get(expression, ...parameters) as { count: number }).count
   const rows = database.query(`SELECT ph.tag,count(*) count,
     EXISTS(SELECT 1 FROM hashtag_follows hf WHERE hf.user_id=? AND hf.tag=ph.tag) viewerFollowing
-    ${matches} GROUP BY ph.tag ORDER BY ${followedFirst ? 'viewerFollowing DESC,' : ''}count DESC,ph.tag LIMIT ? OFFSET ?`)
+    ${matches} GROUP BY ph.tag ORDER BY ${
+    followedFirst ? 'viewerFollowing DESC,' : ''
+  }count DESC,ph.tag LIMIT ? OFFSET ?`)
     .all(viewerId, expression, ...parameters, PAGE_SIZE, (page - 1) * PAGE_SIZE) as TagView[]
   return { rows, total }
 }

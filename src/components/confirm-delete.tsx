@@ -1,8 +1,8 @@
 import { type User } from '../db'
 import type { PostRow } from '../types'
+import { displayPostBody } from '../utils'
 import { Layout } from './layout'
 import { FormActions } from './page-shared'
-import { displayPostBody } from '../utils'
 
 export function ConfirmDelete({ user, post, returnPath }: { user: User; post: PostRow; returnPath?: string }) {
   const returnQuery = returnPath ? '?from=' + encodeURIComponent(returnPath) : ''

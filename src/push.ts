@@ -131,8 +131,8 @@ export async function sendPushForFollow(followerId: number, followerHandle: stri
   const subscriptions = database.query(`SELECT ps.endpoint,ps.p256dh,ps.auth,u.handle recipient_handle
     FROM push_subscriptions ps JOIN users u ON u.id=ps.user_id
     WHERE ps.user_id=? AND ps.notify_follows=1`).all(followedId) as (PushSubscriptionRow & {
-      recipient_handle: string
-    })[]
+    recipient_handle: string
+  })[]
   await sendToSubscriptions(subscriptions, subscription => ({
     title: `@${followerHandle} followed @${subscription.recipient_handle}`,
     body: `@${followerHandle} is now following @${subscription.recipient_handle}.`,

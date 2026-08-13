@@ -34,8 +34,7 @@ export function EditPost(
             <PreviewPost p={{ ...post, body, handle: user.handle, bio: user.bio }} />
           </div>
         )}
-        <ReplyBox action={'/post/' + post.id + '/edit'} body={body} error={error}
-          suggestionSearch={suggestionSearch}
+        <ReplyBox action={'/post/' + post.id + '/edit'} body={body} error={error} suggestionSearch={suggestionSearch}
           className={post.parent_id && parent ? 'replybox' : 'compose edit-post-compose'}
           hidden={returnPath && <input type="hidden" name="from" value={returnPath} />}
           beforeTextarea={

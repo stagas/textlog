@@ -1,7 +1,7 @@
 import { Database } from 'bun:sqlite'
 import { expect, test } from 'bun:test'
-import { accountChoices, accountForEmail, createAccountGroup, detachAccountFromGroup, isPrimaryAccount, selectAccount }
-  from './account-groups'
+import { accountChoices, accountForEmail, createAccountGroup, detachAccountFromGroup, isPrimaryAccount,
+  selectAccount } from './account-groups'
 import { runMigrations } from './migrations'
 
 function fixture() {

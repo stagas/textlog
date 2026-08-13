@@ -1,8 +1,8 @@
 import { isAdmin } from '../admin'
 import { appName } from '../brand'
 import type { User } from '../db'
-import { Layout } from './layout'
 import { AccountSettingsHeader } from './account-settings-header'
+import { Layout } from './layout'
 
 export function NotificationSettings({ user, publicKey, ios = false, returnPath }: {
   user: User

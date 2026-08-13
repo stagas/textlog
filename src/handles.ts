@@ -33,17 +33,19 @@ function handleHistoryHasGroups(database: Database) {
 
 function historicalHandleClaim(database: Database, userId: number, handle: string) {
   const groupAware = handleHistoryHasGroups(database)
-  const historical = database.query(`SELECT hh.user_id,u.deleted_at${groupAware
-    ? ',hh.account_group_id,claimant.account_group_id claimant_group_id'
-    : ''}
+  const historical = database.query(`SELECT hh.user_id,u.deleted_at${
+    groupAware
+      ? ',hh.account_group_id,claimant.account_group_id claimant_group_id'
+      : ''
+  }
     FROM handle_history hh JOIN users u ON u.id=hh.user_id
     ${groupAware ? 'JOIN users claimant ON claimant.id=?' : ''}
     WHERE hh.handle=? COLLATE NOCASE`).get(...(groupAware ? [userId, handle] : [handle])) as {
-      user_id: number
-      deleted_at: string | null
-      account_group_id?: number | null
-      claimant_group_id?: number | null
-    } | null
+    user_id: number
+    deleted_at: string | null
+    account_group_id?: number | null
+    claimant_group_id?: number | null
+  } | null
   if (!historical || historical.user_id === userId) return { allowed: true, reclaimed: false }
   const reclaimed = Boolean(historical.deleted_at && historical.account_group_id
     && historical.account_group_id === historical.claimant_group_id)
@@ -65,7 +67,7 @@ export function claimInitialHandle(database: Database, userId: number, handle: s
     }
     database.query('UPDATE users SET handle=?,handle_chosen_at=CURRENT_TIMESTAMP WHERE id=?').run(handle, userId)
     if (claim.reclaimed && database.query(
-      "SELECT 1 FROM sqlite_master WHERE type='table' AND name='account_creation_events'",
+      'SELECT 1 FROM sqlite_master WHERE type=\'table\' AND name=\'account_creation_events\'',
     ).get()) {
       database.query('DELETE FROM account_creation_events WHERE user_id=?').run(userId)
     }
@@ -97,7 +99,7 @@ export function updateProfileHandle(database: Database, userId: number, handle: 
       database.query('INSERT OR IGNORE INTO handle_history(handle,user_id) VALUES(?,?)')
         .run(account.handle.toLowerCase(), userId)
       if (claim.reclaimed && database.query(
-        "SELECT 1 FROM sqlite_master WHERE type='table' AND name='account_creation_events'",
+        'SELECT 1 FROM sqlite_master WHERE type=\'table\' AND name=\'account_creation_events\'',
       ).get()) {
         database.query('DELETE FROM account_creation_events WHERE user_id=?').run(userId)
       }

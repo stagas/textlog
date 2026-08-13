@@ -8,32 +8,32 @@ import { BlockedPeopleList, BlockedTagList, ConnectionPeople, Pagination, Profil
 export function Connections(
   { user, profile, people, tags = [], kind, page, total, tagsPage = 1, tagsTotal = 0, noteCount, followerCount,
     followingCount, followingTagCount, following, social, replyCount = 0, blockedPeopleCount = 0, blockedTagCount = 0,
-    returnPath }:
-      {
-        user: User | null
-        profile: ProfileRow
-        people: PersonView[]
-        tags?: { tag: string; count: number; viewerFollowing: boolean }[]
-        kind: 'following' | 'followers' | 'blocked'
-        page: number
-        total: number
-        tagsPage?: number
-        tagsTotal?: number
-        noteCount: number
-        replyCount?: number
-        followerCount: number
-        followingCount: number
-        followingTagCount: number
-        following: boolean
-        blockedPeopleCount?: number
-        blockedTagCount?: number
-        returnPath?: string
-        social?: { description: string; image: string; url: string; type?: 'article' | 'profile'; imageAlt?: string }
-      },
+    returnPath }: {
+      user: User | null
+      profile: ProfileRow
+      people: PersonView[]
+      tags?: { tag: string; count: number; viewerFollowing: boolean }[]
+      kind: 'following' | 'followers' | 'blocked'
+      page: number
+      total: number
+      tagsPage?: number
+      tagsTotal?: number
+      noteCount: number
+      replyCount?: number
+      followerCount: number
+      followingCount: number
+      followingTagCount: number
+      following: boolean
+      blockedPeopleCount?: number
+      blockedTagCount?: number
+      returnPath?: string
+      social?: { description: string; image: string; url: string; type?: 'article' | 'profile'; imageAlt?: string }
+    },
 ) {
-  const withFrom = (path: string) => returnPath
-    ? `${path}${path.includes('?') ? '&' : '?'}from=${encodeURIComponent(returnPath)}`
-    : path
+  const withFrom = (path: string) =>
+    returnPath
+      ? `${path}${path.includes('?') ? '&' : '?'}from=${encodeURIComponent(returnPath)}`
+      : path
   return (
     <Layout user={user} title={`${kind} @${profile.handle}`} social={social}>
       <ProfileHeader user={user} profile={profile} following={following} returnPath={returnPath} />
@@ -60,8 +60,8 @@ export function Connections(
                 )}
               {kind === 'following' && (
                 <Pagination page={tagsPage} totalPages={Math.ceil(tagsTotal / TAG_PAGE_SIZE)}
-                  path={withFrom(`/u/${profile.handle}?tab=following${page > 1 ? `&page=${page}` : ''}`)} pageParam="tagsPage"
-                  label="Tags pagination" compact />
+                  path={withFrom(`/u/${profile.handle}?tab=following${page > 1 ? `&page=${page}` : ''}`)}
+                  pageParam="tagsPage" label="Tags pagination" compact />
               )}
             </section>
             <section>

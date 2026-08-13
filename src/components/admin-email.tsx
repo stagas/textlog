@@ -22,8 +22,8 @@ export function AdminEmail({ user, sent = false }: { user: User; sent?: boolean 
           </label>
           <label className="form-label">
             title
-            <input className="form-control" name="title" maxLength={200} required autoComplete="off"
-              inputMode="text" enterKeyHint="next" />
+            <input className="form-control" name="title" maxLength={200} required autoComplete="off" inputMode="text"
+              enterKeyHint="next" />
           </label>
           <label className="form-label">
             body

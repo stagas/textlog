@@ -27,7 +27,7 @@ export function confirmEmailToken(database: Database, value: string, now = Date.
 
       if (record.kind === 'change') {
         const groupsExist = !!database.query(
-          "SELECT 1 FROM sqlite_master WHERE type='table' AND name='account_groups'",
+          'SELECT 1 FROM sqlite_master WHERE type=\'table\' AND name=\'account_groups\'',
         ).get()
         const group = groupsExist
           ? database.query('SELECT account_group_id FROM users WHERE id=?').get(record.user_id) as

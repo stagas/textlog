@@ -127,8 +127,10 @@ describe('database migrations', () => {
       primary_user_id: 1,
       selected_user_id: 1,
     })
-    expect(() => database.query('INSERT INTO users(handle,email,password) VALUES(?,?,?)')
-      .run('second_persona', 'author@example.com', '!')).not.toThrow()
+    expect(() =>
+      database.query('INSERT INTO users(handle,email,password) VALUES(?,?,?)')
+        .run('second_persona', 'author@example.com', '!')
+    ).not.toThrow()
     expect(database.query('SELECT score FROM post_hot WHERE post_id=1').get()).toEqual({ score: 0.25 })
     expect(database.query('SELECT rowid FROM post_search WHERE post_search MATCH \'hello\'').get()).toEqual({
       rowid: 1,

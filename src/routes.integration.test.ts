@@ -233,7 +233,9 @@ test('accounts sharing an email can be created, switched, and selected by magic-
   }
 
   const edit = await request('/account/edit', { cookie: primaryCookie })
-  expect(await edit.text()).toContain('class="profile-edit-link profile-switch-link" href="/account/accounts">switch</a>')
+  expect(await edit.text()).toContain(
+    'class="profile-edit-link profile-switch-link" href="/account/accounts">switch</a>',
+  )
   const initialList = await request('/account/accounts', { cookie: primaryCookie })
   const initialHtml = await initialList.text()
   expect(initialHtml).toContain('@persona_primary')
@@ -258,7 +260,11 @@ test('accounts sharing an email can be created, switched, and selected by magic-
   }
   expect(bot.email).toBe(email)
   expect(bot.account_group_id).toBe(primary.account_group_id)
-  expect(database.query('SELECT user_id FROM account_creation_events WHERE account_group_id=?').all(primary.account_group_id))
+  expect(
+    database.query('SELECT user_id FROM account_creation_events WHERE account_group_id=?').all(
+      primary.account_group_id,
+    ),
+  )
     .toEqual([{ user_id: bot.id }])
   expect(database.query('SELECT primary_user_id,selected_user_id FROM account_groups WHERE id=?')
     .get(primary.account_group_id)).toEqual({ primary_user_id: primary.id, selected_user_id: bot.id })
@@ -272,7 +278,9 @@ test('accounts sharing an email can be created, switched, and selected by magic-
   expect(await (await request('/account/edit', { cookie: primaryCookie })).text()).toContain('>@persona_primary</a>')
 
   const handleLogin = await request('/enter', {
-    method: 'POST', form: { identifier: 'persona_bot' }, ip: 'personas-handle-login',
+    method: 'POST',
+    form: { identifier: 'persona_bot' },
+    ip: 'personas-handle-login',
   })
   expect(handleLogin.status).toBe(200)
   const handleEmail = capturedEmails().filter(message => message.to === email).at(-1)!
@@ -285,12 +293,16 @@ test('accounts sharing an email can be created, switched, and selected by magic-
 
   const sharedEndpoint = 'https://push.example/personas-browser'
   const botPush = await request('/account/push-subscription', {
-    method: 'POST', cookie: botCookie, userAgent: 'personas-browser',
+    method: 'POST',
+    cookie: botCookie,
+    userAgent: 'personas-browser',
     json: { endpoint: sharedEndpoint, keys: { p256dh: 'shared-key', auth: 'shared-auth' },
       preferences: { latest: false, replies: false, mentions: false, follows: false, ownPosts: false } },
   })
   const primaryPush = await request('/account/push-subscription', {
-    method: 'POST', cookie: primaryCookie, userAgent: 'personas-browser',
+    method: 'POST',
+    cookie: primaryCookie,
+    userAgent: 'personas-browser',
     json: { endpoint: sharedEndpoint, keys: { p256dh: 'rotated-key', auth: 'rotated-auth' },
       preferences: { latest: true, replies: true, mentions: true, follows: true, ownPosts: true } },
   })
@@ -302,7 +314,10 @@ test('accounts sharing an email can be created, switched, and selected by magic-
     { user_id: bot.id, p256dh: 'rotated-key', notify_latest: 0, notify_mentions: 0 },
   ])
   const disabledBotPush = await request('/account/push-subscription', {
-    method: 'DELETE', cookie: botCookie, userAgent: 'personas-browser', json: { endpoint: sharedEndpoint },
+    method: 'DELETE',
+    cookie: botCookie,
+    userAgent: 'personas-browser',
+    json: { endpoint: sharedEndpoint },
   })
   expect(await disabledBotPush.json()).toEqual({ removed: true, active: true })
   expect(database.query('SELECT user_id FROM push_subscriptions WHERE endpoint=?').all(sharedEndpoint))
@@ -316,7 +331,9 @@ test('accounts sharing an email can be created, switched, and selected by magic-
 
   const beforeEmailLogin = capturedEmails().length
   const emailLogin = await request('/enter', {
-    method: 'POST', form: { identifier: email }, ip: 'personas-email-login',
+    method: 'POST',
+    form: { identifier: email },
+    ip: 'personas-email-login',
   })
   expect(emailLogin.status).toBe(200)
   expect(capturedEmails()).toHaveLength(beforeEmailLogin + 1)
@@ -336,14 +353,18 @@ test('accounts sharing an email can be created, switched, and selected by magic-
       expect.objectContaining({ recent: 1 }),
     ])
   const secondChosen = await request('/choose-handle', {
-    method: 'POST', cookie: selectedCookie, form: { handle: 'persona_second', next: '/account/accounts' },
+    method: 'POST',
+    cookie: selectedCookie,
+    form: { handle: 'persona_second', next: '/account/accounts' },
   })
   expect(secondChosen.status).toBe(303)
   const thirdCreated = await request('/account/accounts/new', { method: 'POST', cookie: selectedCookie })
   expect(thirdCreated.status).toBe(303)
   expect(thirdCreated.headers.get('location')).toBe('/choose-handle?next=%2Faccount%2Faccounts')
   const limited = await request('/choose-handle', {
-    method: 'POST', cookie: selectedCookie, form: { handle: 'persona_third', next: '/account/accounts' },
+    method: 'POST',
+    cookie: selectedCookie,
+    form: { handle: 'persona_third', next: '/account/accounts' },
   })
   expect(limited.status).toBe(429)
   const limitedHtml = await limited.text()
@@ -457,12 +478,15 @@ test('consequential account, content, reporting, and admin flows work over HTTP'
   expect(legacyDismissedHome).not.toContain('class="notification-banner"')
 
   const dismissed = await request('/notifications/banner/dismiss', {
-    method: 'POST', cookie: aliceCookie, userAgent: 'alice-dismissed-browser',
+    method: 'POST',
+    cookie: aliceCookie,
+    userAgent: 'alice-dismissed-browser',
   })
   expect(dismissed.status).toBe(303)
   expect(dismissed.headers.get('set-cookie')).toBeNull()
   const dismissedHome = await (await request('/', {
-    cookie: aliceCookie, userAgent: 'alice-dismissed-browser',
+    cookie: aliceCookie,
+    userAgent: 'alice-dismissed-browser',
   })).text()
   expect(dismissedHome).not.toContain('class="notification-banner"')
   const pushPreferences = await request(
@@ -751,8 +775,9 @@ test('consequential account, content, reporting, and admin flows work over HTTP'
   expect(crawledEntry.status).toBe(301)
   expect(crawledEntry.headers.get('location')).toBe(`${origin}/post/${post.id}`)
   const crawledPasswordEntry = await request(
-    `/enter/password?next=${encodeURIComponent(`/post/${post.id}?reply=1&from=${
-      encodeURIComponent('/latest#post-1')}`)}`,
+    `/enter/password?next=${
+      encodeURIComponent(`/post/${post.id}?reply=1&from=${encodeURIComponent('/latest#post-1')}`)
+    }`,
     { userAgent: 'Googlebot/2.1' },
   )
   expect(crawledPasswordEntry.status).toBe(301)
@@ -944,9 +969,11 @@ test('consequential account, content, reporting, and admin flows work over HTTP'
   expect(sharedReplyHtml).toContain(
     'class="quiet post-back-link" href="/latest?cursor=abc#post-1">back</a>',
   )
-  const threadProfileHref = `/u/bob?from=${encodeURIComponent(
-    `/post/${post.id}?from=%2Flatest%3Fcursor%3Dabc%23post-1`,
-  )}`.replaceAll('&', '&amp;')
+  const threadProfileHref = `/u/bob?from=${
+    encodeURIComponent(
+      `/post/${post.id}?from=%2Flatest%3Fcursor%3Dabc%23post-1`,
+    )
+  }`.replaceAll('&', '&amp;')
   expect(sharedReplyHtml).toContain(`class="account-menu-handle" href="${threadProfileHref}">@bob</a>`)
   expect(sharedReplyHtml).toContain(`href="${threadProfileHref}">profile</a>`)
   const activityReadKey = `post:${sharedReply.id}`

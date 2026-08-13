@@ -1,8 +1,8 @@
 import { type User } from '../db'
 import type { PostRow, ProfileRow } from '../types'
+import { displayPostBody } from '../utils'
 import { Layout } from './layout'
 import { FormActions } from './page-shared'
-import { displayPostBody } from '../utils'
 
 export function AdminConfirm({ user, kind, target, post, returnTo = '/admin' }: {
   user: User

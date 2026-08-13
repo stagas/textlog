@@ -26,7 +26,7 @@ export type AccountChoice = Pick<AccountGroupUser, 'id' | 'handle' | 'handle_cho
 }
 
 function accountGroupsAvailable(database: Database) {
-  return !!database.query("SELECT 1 FROM sqlite_master WHERE type='table' AND name='account_groups'").get()
+  return !!database.query('SELECT 1 FROM sqlite_master WHERE type=\'table\' AND name=\'account_groups\'').get()
 }
 
 function groupForUser(database: Database, userId: number) {
@@ -119,7 +119,9 @@ export function accountForHandle(database: Database, handle: string) {
 
 export function selectAccount(database: Database, userId: number) {
   if (!accountGroupsAvailable(database)) {
-    return !!database.query(`SELECT 1 FROM users WHERE id=? AND deleted_at IS NULL AND suspended_at IS NULL`).get(userId)
+    return !!database.query(`SELECT 1 FROM users WHERE id=? AND deleted_at IS NULL AND suspended_at IS NULL`).get(
+      userId,
+    )
   }
   const group = ensureAccountGroup(database, userId)
   if (!group) return false
@@ -142,8 +144,9 @@ export function accountChoices(database: Database, userId: number) {
     FROM users u JOIN account_groups g ON g.id=u.account_group_id
     WHERE g.id=? AND u.deleted_at IS NULL AND u.suspended_at IS NULL
     ORDER BY is_primary DESC,u.created_at,u.id`).all(group.id) as AccountChoiceRow[])
-    .map(({ is_primary, is_selected, ...account }) => ({ ...account,
-      primary: Boolean(is_primary), selected: Boolean(is_selected) }))
+    .map(({ is_primary, is_selected, ...account }) => ({ ...account, primary: Boolean(is_primary),
+      selected: Boolean(is_selected) })
+    )
 }
 
 export function recentAccountCreations(database: Database, groupId: number) {

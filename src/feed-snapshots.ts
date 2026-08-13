@@ -9,8 +9,8 @@ export type FeedSnapshotPage<T> = {
 }
 
 /** Persist an ordered feed generation so restarts do not force it to be rebuilt. */
-export function feedSnapshotPage<T>(database: Database, kind: string, viewerId: number, page: number,
-  build: () => T[], pageSize = PAGE_SIZE): FeedSnapshotPage<T>
+export function feedSnapshotPage<T>(database: Database, kind: string, viewerId: number, page: number, build: () => T[],
+  pageSize = PAGE_SIZE): FeedSnapshotPage<T>
 {
   const generation = (database.query('SELECT generation FROM feed_snapshot_generation WHERE id=1').get() as {
     generation: number

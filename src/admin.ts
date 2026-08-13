@@ -1,9 +1,9 @@
 import type { Database } from 'bun:sqlite'
 import { instance } from '../instance.config'
+import { detachAccountFromGroup } from './account-groups'
 import { appHostname } from './brand'
 import type { User } from './db'
 import { removeHotActivity } from './hot'
-import { detachAccountFromGroup } from './account-groups'
 
 export const ADMIN_EMAILS = new Set(instance.administrators.map(email => email.trim().toLowerCase()))
 
@@ -39,7 +39,8 @@ export function resolvePostReports(database: Database, postId: number, actorId: 
 }
 
 export function anonymizeUser(database: Database, userId: number, actorId?: number) {
-  const groupedAccounts = database.query("SELECT 1 FROM sqlite_master WHERE type='table' AND name='account_groups'").get()
+  const groupedAccounts = database.query('SELECT 1 FROM sqlite_master WHERE type=\'table\' AND name=\'account_groups\'')
+    .get()
   const account = database.query(`SELECT handle${groupedAccounts ? ',account_group_id' : ''} FROM users WHERE id=?`)
     .get(userId) as { handle: string; account_group_id?: number | null } | null
   const postIds = database.query('SELECT id FROM posts WHERE user_id=?').all(userId) as { id: number }[]
@@ -80,7 +81,7 @@ export function anonymizeUser(database: Database, userId: number, actorId?: numb
     }
   }
   if (database.query(
-    "SELECT 1 FROM sqlite_master WHERE type='table' AND name='account_creation_events'",
+    'SELECT 1 FROM sqlite_master WHERE type=\'table\' AND name=\'account_creation_events\'',
   ).get()) {
     database.query('DELETE FROM account_creation_events WHERE user_id=?').run(userId)
   }

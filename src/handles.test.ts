@@ -1,9 +1,9 @@
 import { Database } from 'bun:sqlite'
 import { describe, expect, test } from 'bun:test'
+import { createAccountGroup } from './account-groups'
+import { anonymizeUser } from './admin'
 import { createAccount, resolveHandle, updateProfileHandle } from './handles'
 import { claimInitialHandle } from './handles'
-import { anonymizeUser } from './admin'
-import { createAccountGroup } from './account-groups'
 import { runMigrations } from './migrations'
 
 function fixture() {

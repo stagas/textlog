@@ -27,7 +27,8 @@ export function visibleHashtagCounts(database: Database, bodies: string[], viewe
 export function visibleUserProfileStats(database: Database, userIds: number[], viewerId = -1) {
   const ids = [...new Set(userIds)]
   if (!ids.length) return new Map<number, UserProfileStats>()
-  const connectionVisibility = (connectedId: string) => `AND ($viewer < 0 OR NOT EXISTS
+  const connectionVisibility = (connectedId: string) =>
+    `AND ($viewer < 0 OR NOT EXISTS
     (SELECT 1 FROM blocks b WHERE (b.blocker_id=$viewer AND b.blocked_id=${connectedId})
       OR (b.blocker_id=${connectedId} AND b.blocked_id=$viewer)))`
   const rows = database.query(`SELECT u.id,
@@ -164,9 +165,9 @@ export function enrichPosts(database: Database, posts: PostView[], viewerId = -1
     parents = new Map(rows.map(parent => [parent.id, parent]))
   }
   const hashtagCounts = visibleHashtagCounts(database, [...posts.map(post => post.body), ...parentBodies], viewerId)
-  const profileStats = visibleUserProfileStats(database,
-    [...userIds, ...[...parents.values()].flatMap(parent => parent.user_id == null ? [] : [parent.user_id]),
-      ...Object.values(mentionUserIds)], viewerId)
+  const profileStats = visibleUserProfileStats(database, [...userIds,
+    ...[...parents.values()].flatMap(parent => parent.user_id == null ? [] : [parent.user_id]),
+    ...Object.values(mentionUserIds)], viewerId)
   for (const [handle, id] of Object.entries(mentionUserIds)) {
     const stats = profileStats.get(id)
     mentionNoteCounts[handle] = stats?.notes || 0
@@ -175,12 +176,14 @@ export function enrichPosts(database: Database, posts: PostView[], viewerId = -1
   const relevantUserIds = [...profileStats.keys()]
   const relevantTags = Object.keys(hashtagCounts)
   const hashtagFollowerCounts = visibleTagFollowerCounts(database, relevantTags, viewerId)
-  const followedUserIds = viewerId < 0 || !relevantUserIds.length ? new Set<number>()
+  const followedUserIds = viewerId < 0 || !relevantUserIds.length
+    ? new Set<number>()
     : new Set((database.query(`SELECT following_id FROM follows WHERE follower_id=? AND following_id IN
       (${relevantUserIds.map(() => '?').join(',')})`).all(viewerId, ...relevantUserIds) as {
       following_id: number
     }[]).map(row => row.following_id))
-  const followedTags = viewerId < 0 || !relevantTags.length ? new Set<string>()
+  const followedTags = viewerId < 0 || !relevantTags.length
+    ? new Set<string>()
     : new Set((database.query(`SELECT tag FROM hashtag_follows WHERE user_id=? AND tag IN
       (${relevantTags.map(() => '?').join(',')})`).all(viewerId, ...relevantTags) as { tag: string }[])
       .map(row => row.tag))
