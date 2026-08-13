@@ -49,6 +49,24 @@ test('HTTP logs mark anonymous requests without a username', () => {
   expect(output).toContain(`${logIpPseudonym('203.0.113.4')}  -  /`)
 })
 
+test('HTTP logs can omit the user agent', () => {
+  const originalLog = console.log
+  const originalSetting = Bun.env.LOG_USER_AGENT
+  let output = ''
+  console.log = (...values: unknown[]) => { output = values.join(' ') }
+  Bun.env.LOG_USER_AGENT = 'false'
+  try {
+    logHttp('GET', '/', 200, 12, '203.0.113.4', undefined, 'ExampleBot/1.0')
+  }
+  finally {
+    console.log = originalLog
+    if (originalSetting === undefined) delete Bun.env.LOG_USER_AGENT
+    else Bun.env.LOG_USER_AGENT = originalSetting
+  }
+  expect(output).not.toContain('ua=')
+  expect(output).not.toContain('ExampleBot')
+})
+
 describe('shouldLogHttp', () => {
   test('hides successful dev reload polls but preserves failures', () => {
     expect(shouldLogHttp('/__dev/restart', 200)).toBe(false)

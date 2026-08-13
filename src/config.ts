@@ -22,6 +22,7 @@ export type StartupConfiguration = {
   backupAlertWebhookUrl: string | null
   trustProxy: boolean
   logColor: boolean
+  logUserAgent: boolean
   moderationDisabled: boolean
   enableCaptchaAlways: boolean
 }
@@ -209,6 +210,7 @@ export function validateStartupConfiguration(env: Environment = Bun.env, options
   }
   const trustProxy = booleanValue(env, 'TRUST_PROXY', problems)
   const logColor = booleanValue(env, 'LOG_COLOR', problems, true)
+  const logUserAgent = booleanValue(env, 'LOG_USER_AGENT', problems, true)
 
   const host = env.HOST?.trim() || '0.0.0.0'
   if (/\s|\//.test(host)) problems.push('HOST must be a hostname or IP address')
@@ -239,6 +241,7 @@ export function validateStartupConfiguration(env: Environment = Bun.env, options
     backupAlertWebhookUrl,
     trustProxy,
     logColor,
+    logUserAgent,
     moderationDisabled,
     enableCaptchaAlways,
   }

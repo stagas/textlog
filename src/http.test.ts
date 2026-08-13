@@ -56,6 +56,12 @@ describe('local redirects', () => {
     expect(isCrawlerRequest(googleOther)).toBe(true)
     expect(crawlerCanonicalRedirect(googleOther, 'https://textlog.cc')?.headers.get('location'))
       .toBe('https://textlog.cc/post/42')
+
+    const ahrefs = new Request('https://textlog.cc/post/42?from=%2Flatest', { headers: { 'user-agent':
+      'Mozilla/5.0 (compatible; AhrefsBot/7.0; +http://ahrefs.com/robot/)' } })
+    expect(isCrawlerRequest(ahrefs)).toBe(true)
+    expect(crawlerCanonicalRedirect(ahrefs, 'https://textlog.cc')?.headers.get('location'))
+      .toBe('https://textlog.cc/post/42')
   })
 
   test('does not redirect people or crawler URLs without from', () => {
