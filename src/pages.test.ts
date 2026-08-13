@@ -433,6 +433,10 @@ test('Tag pages keep actions beside the tag and a contextual back link on the ri
   }))
 
   expect(html).toContain('class="tag-title-actions"')
+  expect(html).toContain(
+    'class="tag-canonical-link" href="/tag/notes"><span class="identity-prefix">#</span>notes</a>',
+  )
+  expect(html).not.toContain('class="tag-canonical-link" href="/tag/notes?from=')
   expect(html).toContain('class="profile-action tag-handle-actions"')
   expect(html).toContain('class="profile-edit-link tag-back-link" href="/latest#post-2">back</a>')
   expect(html.indexOf('>follow</button>')).toBeLessThan(html.indexOf('>block</button>'))
@@ -873,7 +877,10 @@ test('Profile places owner actions in the handle row', () => {
   }))
 
   expect(html).toContain('class="profile-title-row"')
-  expect(html).toContain('class="identity-prefix">@</span>reader')
+  expect(html).toContain(
+    'class="profile-canonical-link" href="/u/reader"><span class="identity-prefix">@</span>reader</a>',
+  )
+  expect(html).not.toContain('class="profile-canonical-link" href="/u/reader?from=')
   expect(html).toContain('href="/account/edit">account</a>')
   expect(html).toContain('href="/latest#post-2">back</a>')
   expect(html).toContain('action="/logout"')
@@ -881,12 +888,12 @@ test('Profile places owner actions in the handle row', () => {
   expect(html).toContain('type="application/atom+xml" title="Notes by @reader (Atom)" href="/u/reader.atom"')
   expect(html).toContain('class="account-nav-row account-nav-primary"')
   expect(html).toContain('class="account-nav-row account-nav-secondary"')
-  expect(html).toContain('class="account-menu-handle" href="/u/reader">@reader</a>')
+  expect(html).toContain('class="account-menu-handle" href="/u/reader?from=%2F">@reader</a>')
   expect(html).toContain('class="account-menu-popover"')
-  expect(html).toContain('href="/u/reader">profile</a>')
+  expect(html).toContain('href="/u/reader?from=%2F">profile</a>')
   expect(html).toContain('href="/account/edit?from=%2F">account</a>')
   expect(html).not.toContain('class="mobile-account-footer"')
-  expect(html.indexOf('href="/write"')).toBeLessThan(html.indexOf('href="/u/reader"'))
+  expect(html.indexOf('href="/write"')).toBeLessThan(html.indexOf('href="/u/reader?from=%2F"'))
   expect(html).toContain('<a class="button" href="/write">write a note</a>')
 })
 

@@ -24,10 +24,10 @@ export function TagFeed(
       <section className={`page-header tag-header${returnPath ? ' tag-header-contextual' : ''}`}>
         <div className="tag-title-actions">
           <h1>
-            <span>
-            <span className="identity-prefix">#</span>
-            {tag}
-            </span>
+            <a className="tag-canonical-link" href={tagPath}>
+              <span className="identity-prefix">#</span>
+              {tag}
+            </a>
             <span className="tag-note-count" aria-label={`${total} ${total === 1 ? 'note' : 'notes'}`}>
               {total}
             </span>

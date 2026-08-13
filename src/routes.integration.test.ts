@@ -334,6 +334,8 @@ test('consequential account, content, reporting, and admin flows work over HTTP'
   const publicExploreHtml = await publicExplore.text()
   expect(publicExploreHtml).toContain('class="account-nav"')
   expect(publicExploreHtml).toContain('@alice')
+  expect(publicExploreHtml).toContain('class="account-menu-handle" href="/u/alice?from=%2Fexplore"')
+  expect(publicExploreHtml).toContain('href="/u/alice?from=%2Fexplore">profile</a>')
   expect(publicExploreHtml).toContain('action="/search"')
   expect(publicExploreHtml).toContain('placeholder="search notes, tags or people"')
   const noteSearchHtml = await (await request('/search?q=hello')).text()
@@ -344,6 +346,7 @@ test('consequential account, content, reporting, and admin flows work over HTTP'
   expect(peopleSearchHtml).toContain('placeholder="search people"')
   const welcomeExplore = await request('/explore?welcome=1', { cookie: aliceCookie })
   const welcomeExploreHtml = await welcomeExplore.text()
+  expect(welcomeExploreHtml).toContain('href="/u/alice?from=%2Fexplore%3Fwelcome%3D1">profile</a>')
   expect(welcomeExploreHtml).not.toContain('action="/search"')
   expect(welcomeExploreHtml).toContain('href="/account/edit/notifications">enable notifications</a>')
   expect(welcomeExploreHtml).toContain('href="/account/edit/theme">customize theme</a>')
@@ -754,9 +757,15 @@ test('consequential account, content, reporting, and admin flows work over HTTP'
     `/post/${post.id}?from=%2Flatest%3Fcursor%3Dabc%23post-1#post-${sharedReply.id}`,
   )
   const sharedReplyPage = await request(sharedReplyResponse.headers.get('location')!, { cookie: bobCookie })
-  expect(await sharedReplyPage.text()).toContain(
+  const sharedReplyHtml = await sharedReplyPage.text()
+  expect(sharedReplyHtml).toContain(
     'class="quiet post-back-link" href="/latest?cursor=abc#post-1">back</a>',
   )
+  const threadProfileHref = `/u/bob?from=${encodeURIComponent(
+    `/post/${post.id}?from=%2Flatest%3Fcursor%3Dabc%23post-1`,
+  )}`.replaceAll('&', '&amp;')
+  expect(sharedReplyHtml).toContain(`class="account-menu-handle" href="${threadProfileHref}">@bob</a>`)
+  expect(sharedReplyHtml).toContain(`href="${threadProfileHref}">profile</a>`)
   const activityReadKey = `post:${sharedReply.id}`
   const forYouReadKey = `post:${String(sharedReply.id).padStart(20, '0')}`
 

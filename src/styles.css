@@ -2287,6 +2287,17 @@ form.report-panel {
   font-weight: 600;
 }
 
+.profile-canonical-link,
+.tag-canonical-link {
+  color: inherit;
+  border-bottom: 0;
+}
+
+.profile-canonical-link:hover,
+.tag-canonical-link:hover {
+  color: var(--accent);
+}
+
 .profile p {
   max-width: 62ch;
   margin: var(--space-2) 0 0;
@@ -2424,7 +2435,6 @@ form.report-panel {
 }
 
 .tag-header {
-  --heading-size: clamp(24px, 4vw, 32px);
   padding-block: var(--space-6);
 }
 
@@ -2443,7 +2453,8 @@ form.report-panel {
   display: flex;
   align-items: center;
   gap: var(--space-3);
-  font-size: var(--heading-size);
+  font-size: clamp(1.375rem, 4vw, 1.75rem);
+  font-weight: 600;
 }
 
 .tag-note-count {

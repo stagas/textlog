@@ -40,6 +40,7 @@ export function Layout({
   const origin = appOrigin()
   const requestUrl = new URL(activeRequest().url)
   const currentPath = requestUrl.pathname + requestUrl.search
+  const profileHref = user ? `/u/${user.handle}?from=${encodeURIComponent(currentPath)}` : ''
   const accountFrom = requestUrl.pathname.startsWith('/account')
     ? requestUrl.searchParams.get('from') || `/u/${user?.handle || ''}`
     : currentPath
@@ -63,9 +64,9 @@ export function Layout({
           <a href="/write">write</a>
           {isAdmin(user) && <a href="/admin">admin</a>}
           <div className="account-menu">
-            <a className="account-menu-handle" href={`/u/${user.handle}`}>@{user.handle}</a>
+            <a className="account-menu-handle" href={profileHref}>@{user.handle}</a>
             <div className="account-menu-popover">
-              <a href={`/u/${user.handle}`}>profile</a>
+              <a href={profileHref}>profile</a>
               <a href={accountHref}>account</a>
               <form method="post" action="/logout">
                 <button type="submit">logout</button>

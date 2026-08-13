@@ -58,8 +58,10 @@ export function Profile(
             ? ' profile-title-row-actions'
             : ''}`}>
             <h1>
-              <span className="identity-prefix">@</span>
-              {profile.handle}
+              <a className="profile-canonical-link" href={`/u/${profile.handle}`}>
+                <span className="identity-prefix">@</span>
+                {profile.handle}
+              </a>
             </h1>
             {!editing && user?.id !== profile.id
               && <ProfileControls user={user} profile={profile} following={following} blocked={blocked} />}
