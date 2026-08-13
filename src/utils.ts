@@ -21,6 +21,7 @@ export type ReferencePopoverOptions = {
   mentionFollowing?: Record<string, boolean>
   mentionProfileStats?: Record<string, UserProfileStats>
   hashtagFollowing?: Record<string, boolean>
+  hashtagFollowerCounts?: Record<string, number>
 }
 
 function profileStatLinks(handle: string, stats: UserProfileStats, navigationQuery = '') {
@@ -35,6 +36,15 @@ function profileStatLinks(handle: string, stats: UserProfileStats, navigationQue
     + `<a href="${href('following')}">${count(stats.followingTags, 'tag')}, ${
       count(stats.following, 'user')} following</a>`
     + `<a href="${href('followers')}">${count(stats.followers, 'follower')}</a></span>`
+}
+
+function tagStatLinks(tag: string, notes: number, followers: number, navigationQuery = '') {
+  const base = `/tag/${encodeURIComponent(tag)}`
+  const followersHref = `${base}?tab=followers${navigationQuery ? `&${navigationQuery.slice(1)}` : ''}`
+  const count = (value: number, singular: string) =>
+    `${value.toLocaleString()} ${value === 1 ? singular : singular + 's'}`
+  return `<span class="reference-profile-tabs"><a href="${base}${navigationQuery}">${count(notes, 'note')}</a>`
+    + `<a href="${followersHref}">${count(followers, 'follower')}</a></span>`
 }
 
 export function referenceFormId(prefix: string, kind: 'user' | 'tag', value: string) {
@@ -335,7 +345,7 @@ function renderedReference(token: string, mentionBios: Record<string, string>, m
       ? profileStatLinks(key, popover.mentionProfileStats[key], navigationQuery)
       : isUser
       ? `<span>${count.toLocaleString()} ${count === 1 ? 'note' : 'notes'}</span>`
-      : `<a href="${href}">${count.toLocaleString()} ${count === 1 ? 'note' : 'notes'}</a>`}`
+      : tagStatLinks(key, count, popover.hashtagFollowerCounts?.[key] || 0, navigationQuery)}`
     + (isUser ? `<span class="reference-popover-bio">${linkify(mentionBios[key] || 'No bio yet.', {}, [],
       Bun.env.APP_URL, undefined, navigationQuery)}</span>` : '')
     + `${action}</span></span>`

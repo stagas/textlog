@@ -108,7 +108,8 @@ export function PreviewPost({ p }: { p: PostView }) {
       </div>
       <p className={containsAsciiArt(p.body) ? 'ascii-art' : undefined} dangerouslySetInnerHTML={{
         __html: linkify(p.body, p.mention_bios, [], undefined, renderFlags(p), '', p.hashtag_counts,
-          p.mention_note_counts, { signedIn: false, currentHandle: p.handle, formPrefix }),
+          p.mention_note_counts, { signedIn: false, currentHandle: p.handle, formPrefix,
+            hashtagFollowerCounts: p.hashtag_follower_counts }),
       }} />
     </article>
   )
@@ -238,7 +239,7 @@ export function Post({
         __html: linkify(p.body, p.mention_bios, highlightTerms, undefined, renderFlags(p), referenceQuery,
           p.hashtag_counts, p.mention_note_counts, { signedIn: !!user, currentHandle: user?.handle, formPrefix,
             mentionFollowing: p.mention_following, mentionProfileStats: p.mention_profile_stats,
-            hashtagFollowing: p.hashtag_following }),
+            hashtagFollowing: p.hashtag_following, hashtagFollowerCounts: p.hashtag_follower_counts }),
       }} />
       <ReferenceFollowForms post={p} prefix={formPrefix} user={user}
         returnPath={returnPath || `/post/${p.id}#post-${p.id}`} />
@@ -280,7 +281,8 @@ export function Post({
                     parent.hashtag_counts, parent.mention_note_counts, { signedIn: !!user,
                       currentHandle: user?.handle, formPrefix: `${formPrefix}-parent-${parent.id}`,
                       mentionFollowing: parent.mention_following, mentionProfileStats: parent.mention_profile_stats,
-                      hashtagFollowing: parent.hashtag_following }),
+                      hashtagFollowing: parent.hashtag_following,
+                      hashtagFollowerCounts: parent.hashtag_follower_counts }),
                 }} />
                 <ReferenceFollowForms post={parent} prefix={`${formPrefix}-parent-${parent.id}`} user={user}
                   returnPath={returnPath || `/post/${p.id}#post-${p.id}`} />

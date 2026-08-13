@@ -163,6 +163,16 @@ export function enrichPosts(database: Database, posts: PostView[], viewerId = -1
   }
   const relevantUserIds = [...profileStats.keys()]
   const relevantTags = Object.keys(hashtagCounts)
+  const hashtagFollowerCounts = relevantTags.length
+    ? Object.fromEntries((database.query(`SELECT hf.tag,count(*) count FROM hashtag_follows hf
+      JOIN users u ON u.id=hf.user_id
+      WHERE hf.tag IN (${relevantTags.map(() => '?').join(',')})
+      AND u.deleted_at IS NULL AND u.suspended_at IS NULL
+      AND (? < 0 OR NOT EXISTS (SELECT 1 FROM blocks b WHERE
+        (b.blocker_id=? AND b.blocked_id=u.id) OR (b.blocker_id=u.id AND b.blocked_id=?)))
+      GROUP BY hf.tag`).all(...relevantTags, viewerId, viewerId, viewerId) as { tag: string; count: number }[])
+      .map(row => [row.tag, row.count]))
+    : {}
   const followedUserIds = viewerId < 0 || !relevantUserIds.length ? new Set<number>()
     : new Set((database.query(`SELECT following_id FROM follows WHERE follower_id=? AND following_id IN
       (${relevantUserIds.map(() => '?').join(',')})`).all(viewerId, ...relevantUserIds) as {
@@ -185,6 +195,7 @@ export function enrichPosts(database: Database, posts: PostView[], viewerId = -1
     parent.mention_profile_stats = mentionProfileStats
     parent.mention_following = mentionFollowing
     parent.hashtag_counts = hashtagCounts
+    parent.hashtag_follower_counts = hashtagFollowerCounts
     parent.hashtag_following = hashtagFollowing
   }
   return posts.map(post => ({
@@ -198,6 +209,7 @@ export function enrichPosts(database: Database, posts: PostView[], viewerId = -1
     mention_profile_stats: mentionProfileStats,
     mention_following: mentionFollowing,
     hashtag_counts: hashtagCounts,
+    hashtag_follower_counts: hashtagFollowerCounts,
     hashtag_following: hashtagFollowing,
     reply_count: countById.get(post.id) || 0,
     parent: post.parent_id ? parents.get(post.parent_id) || null : null,

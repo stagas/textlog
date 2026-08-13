@@ -2561,18 +2561,6 @@ form.report-panel {
   font-weight: 600;
 }
 
-.tag-note-count {
-  min-width: 28px;
-  padding: 4px 8px;
-  color: var(--accent-dark);
-  background: var(--tag-bg);
-  font-size: 0.6875rem;
-  font-weight: 700;
-  line-height: 1.4;
-  letter-spacing: 0;
-  text-align: center;
-}
-
 .tag-header .button {
   flex: none;
   font-size: 0.8125rem;

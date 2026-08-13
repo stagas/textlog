@@ -7,9 +7,9 @@ import {
 } from '../components/pages'
 import { db } from '../db'
 import { renderTagOg } from '../og'
-import { PAGE_SIZE } from '../pagination'
+import { CONNECTION_PAGE_SIZE, PAGE_SIZE } from '../pagination'
 import { enrichPosts } from '../posts'
-import type { PostView } from '../types'
+import type { PersonView, PostView } from '../types'
 import { currentUser } from '../utils'
 
 export function registerTagsRoutes(app: Hono) {
@@ -38,6 +38,8 @@ export function registerTagsRoutes(app: Hono) {
     const user = currentUser(c.req.raw)
     const returnPath = c.req.query('from') ? safeNext(c.req.query('from')) : undefined
     const tagPage = currentPage(c.req.query('page'))
+    const tab = c.req.query('tab')
+    if (tab && tab !== 'followers') return c.notFound()
     const following = !!user && !!db.query(
       'SELECT 1 FROM hashtag_follows WHERE user_id=? AND tag=?',
     ).get(user.id, tag)
@@ -55,7 +57,25 @@ export function registerTagsRoutes(app: Hono) {
       WHERE ph.tag=? AND p.deleted_at IS NULL AND (? < 0 OR NOT EXISTS (SELECT 1 FROM blocks b WHERE
         (b.blocker_id=? AND b.blocked_id=p.user_id) OR (b.blocker_id=p.user_id AND b.blocked_id=?)))`)
         .get(tag, viewerId, viewerId, viewerId) as { count: number }).count
-    const outOfRange = paginationRedirect(tagPage, total, `/tag/${tag}`)
+    const followerTotal = (db.query(`SELECT count(*) count FROM hashtag_follows hf JOIN users u ON u.id=hf.user_id
+      WHERE hf.tag=? AND u.deleted_at IS NULL AND u.suspended_at IS NULL
+      AND (? < 0 OR NOT EXISTS (SELECT 1 FROM blocks b WHERE
+        (b.blocker_id=? AND b.blocked_id=u.id) OR (b.blocker_id=u.id AND b.blocked_id=?)))`)
+      .get(tag, viewerId, viewerId, viewerId) as { count: number }).count
+    const people = tab === 'followers'
+      ? db.query(`SELECT u.*,
+        (SELECT count(*) FROM posts p WHERE p.user_id=u.id AND p.deleted_at IS NULL) posts,
+        EXISTS(SELECT 1 FROM follows f WHERE f.follower_id=? AND f.following_id=u.id) viewerFollowing
+        FROM hashtag_follows hf JOIN users u ON u.id=hf.user_id
+        WHERE hf.tag=? AND u.deleted_at IS NULL AND u.suspended_at IS NULL
+        AND (? < 0 OR NOT EXISTS (SELECT 1 FROM blocks b WHERE
+          (b.blocker_id=? AND b.blocked_id=u.id) OR (b.blocker_id=u.id AND b.blocked_id=?)))
+        ORDER BY u.handle LIMIT ? OFFSET ?`)
+        .all(viewerId, tag, viewerId, viewerId, viewerId, CONNECTION_PAGE_SIZE,
+          (tagPage - 1) * CONNECTION_PAGE_SIZE) as PersonView[]
+      : []
+    const tabPath = `/tag/${encodeURIComponent(tag)}${tab === 'followers' ? '?tab=followers' : ''}`
+    const outOfRange = paginationRedirect(tagPage, tab === 'followers' ? followerTotal : total, tabPath)
     if (outOfRange) return outOfRange
     const configuredOrigin = Bun.env.APP_URL?.replace(/\/$/, '')
     const origin = configuredOrigin || new URL(c.req.url).origin
@@ -70,6 +90,7 @@ export function registerTagsRoutes(app: Hono) {
     }
     return page(
       <TagFeed user={user} tag={tag} following={following} blocked={blocked} posts={posts} page={tagPage} total={total}
+        followerTotal={followerTotal} people={people} tab={tab === 'followers' ? 'followers' : 'notes'}
         social={social} returnPath={returnPath} />,
     )
   })

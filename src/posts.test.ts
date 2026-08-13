@@ -200,7 +200,8 @@ describe('post persistence', () => {
   test('renders hover popovers with bios and standard follow buttons', () => {
     const html = linkify('@Reader #Topic', { reader: 'Builds things' }, [], undefined, undefined, '', { topic: 20 },
       { reader: 20 }, { signedIn: true, currentHandle: 'author', formPrefix: 'post-1',
-        mentionFollowing: { reader: true }, hashtagFollowing: { topic: false }, mentionProfileStats: {
+        mentionFollowing: { reader: true }, hashtagFollowing: { topic: false }, hashtagFollowerCounts: { topic: 8 },
+        mentionProfileStats: {
           reader: { notes: 20, replies: 34, followers: 8, following: 5, followingTags: 2 },
         } })
     expect(html).toContain('<span class="reference-menu-popover"><span class="reference-profile-tabs">'
@@ -210,6 +211,9 @@ describe('post persistence', () => {
       + '<span class="reference-popover-bio">Builds things</span>')
     expect(html).toContain('<button class="button button-muted" type="submit" '
       + 'form="post-1-user-reader">unfollow</button>')
+    expect(html).toContain('<span class="reference-menu-popover reference-menu-popover-tag">'
+      + '<span class="reference-profile-tabs"><a href="/tag/topic">20 notes</a>'
+      + '<a href="/tag/topic?tab=followers">8 followers</a></span>')
     expect(html).toContain('<button class="button" type="submit" form="post-1-tag-topic">follow</button>')
   })
 

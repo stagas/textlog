@@ -31,6 +31,7 @@ export type ParentPost = Pick<PostRow,
   mention_profile_stats?: Record<string, UserProfileStats>
   mention_following?: Record<string, boolean>
   hashtag_counts?: Record<string, number>
+  hashtag_follower_counts?: Record<string, number>
   hashtag_following?: Record<string, boolean>
   reply_count: number
 }
@@ -46,6 +47,7 @@ export type PostView = PostRow & {
   mention_profile_stats?: Record<string, UserProfileStats>
   mention_following?: Record<string, boolean>
   hashtag_counts?: Record<string, number>
+  hashtag_follower_counts?: Record<string, number>
   hashtag_following?: Record<string, boolean>
   reply_count?: number
   parent?: ParentPost | null

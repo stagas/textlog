@@ -1,19 +1,24 @@
 import { type User } from '../db'
-import { PAGE_SIZE } from '../pagination'
-import type { PostView } from '../types'
+import { CONNECTION_PAGE_SIZE, PAGE_SIZE } from '../pagination'
+import type { PersonView, PostView } from '../types'
 import { Layout } from './layout'
-import { Pagination } from './page-shared'
+import { ConnectionPeople, Pagination } from './page-shared'
 import { Post } from './post'
 
 export function TagFeed(
-  { user, tag, following, blocked = false, posts, page, total, social, returnPath }: { user: User | null; tag: string;
+  { user, tag, following, blocked = false, posts, page, total, followerTotal = 0, people = [], tab = 'notes', social,
+    returnPath }: { user: User | null; tag: string;
     following: boolean; blocked?: boolean; posts: PostView[]; page: number; total: number;
+    followerTotal?: number; people?: PersonView[]; tab?: 'notes' | 'followers';
     returnPath?: string;
     social?: { description: string; image: string; url: string; type?: 'article' | 'profile' | 'website';
       imageAlt?: string } },
 ) {
   const tagPath = `/tag/${encodeURIComponent(tag)}`
-  const paginationPath = returnPath ? `${tagPath}?from=${encodeURIComponent(returnPath)}` : tagPath
+  const tabPath = tab === 'followers' ? `${tagPath}?tab=followers` : tagPath
+  const paginationPath = returnPath
+    ? `${tabPath}${tabPath.includes('?') ? '&' : '?'}from=${encodeURIComponent(returnPath)}`
+    : tabPath
   const feedPath = `${paginationPath}${page > 1 ? `${returnPath ? '&' : '?'}page=${page}` : ''}`
   return (
     <Layout user={user} title={`#${tag}`} social={social} feeds={{
@@ -28,9 +33,6 @@ export function TagFeed(
               <span className="identity-prefix">#</span>
               {tag}
             </a>
-            <span className="tag-note-count" aria-label={`${total} ${total === 1 ? 'note' : 'notes'}`}>
-              {total}
-            </span>
           </h1>
           {user
           ? (
@@ -51,15 +53,35 @@ export function TagFeed(
         </div>
         {returnPath && <a className="profile-edit-link tag-back-link" href={returnPath}>back</a>}
       </section>
+      <nav className="feed-tabs profile-tabs" aria-label={`#${tag} tag`}>
+        <a className={tab === 'notes' ? 'active' : ''} aria-current={tab === 'notes' ? 'page' : undefined}
+          href={`${tagPath}${returnPath ? `?from=${encodeURIComponent(returnPath)}` : ''}`}>
+          {total.toLocaleString()} {total === 1 ? 'note' : 'notes'}
+        </a>
+        <a className={tab === 'followers' ? 'active' : ''}
+          aria-current={tab === 'followers' ? 'page' : undefined}
+          href={`${tagPath}?tab=followers${returnPath ? `&from=${encodeURIComponent(returnPath)}` : ''}`}>
+          {followerTotal.toLocaleString()} {followerTotal === 1 ? 'follower' : 'followers'}
+        </a>
+      </nav>
       {page > 1
-        && <Pagination page={page} totalPages={Math.ceil(total / PAGE_SIZE)} path={paginationPath} top />}
-      {blocked
+        && <Pagination page={page}
+          totalPages={Math.ceil((tab === 'followers' ? followerTotal : total)
+            / (tab === 'followers' ? CONNECTION_PAGE_SIZE : PAGE_SIZE))} path={paginationPath} top />}
+      {tab === 'followers'
+        ? people.length
+          ? <ConnectionPeople user={user} people={people} className="connections-list"
+            returnPath={person => `${paginationPath}${page > 1 ? '&page=' + page : ''}#person-${person.id}`} />
+          : <div className="empty">No one follows this tag yet.</div>
+        : blocked
         ? <div className="empty relationship-notice">You blocked this tag. Unblock it to see its notes.</div>
         : posts.length
         ? posts.map(post => <Post p={post} user={user} key={post.id} showReplyCount tappable
           returnPath={`${feedPath}#post-${post.id}`} />)
         : <div className="empty">No notes use this hashtag yet.</div>}
-      <Pagination page={page} totalPages={Math.ceil(total / PAGE_SIZE)} path={paginationPath} />
+      <Pagination page={page}
+        totalPages={Math.ceil((tab === 'followers' ? followerTotal : total)
+          / (tab === 'followers' ? CONNECTION_PAGE_SIZE : PAGE_SIZE))} path={paginationPath} />
     </Layout>
   )
 }
