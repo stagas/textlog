@@ -535,11 +535,13 @@ describe('About', () => {
 })
 
 describe('Auth', () => {
-  test('enter requests only an email address', () => {
+  test('enter accepts an email address or handle', () => {
     const html = renderToStaticMarkup(React.createElement(Auth))
 
     expect(html).toContain('action="/enter"')
-    expect(html).toContain('type="email"')
+    expect(html).toContain('email address or handle')
+    expect(html).toContain('name="identifier"')
+    expect(html).toContain('placeholder="you@example.com or your_handle"')
     expect(html).not.toContain('type="password"')
   })
 
@@ -573,6 +575,8 @@ describe('Auth', () => {
     const html = renderToStaticMarkup(React.createElement(PasswordLogin, { nonce: 'one-time-value' }))
 
     expect(html).toContain('type="hidden" name="nonce" value="one-time-value"')
+    expect(html).toContain('email address or handle')
+    expect(html).toContain('placeholder="you@example.com or your_handle"')
   })
 
   test('password login renders a server-issued CAPTCHA when requested', () => {
@@ -590,12 +594,20 @@ describe('Auth', () => {
 
     expect(html).toContain('action="/enter/code"')
     expect(html).toContain('or enter the six-digit code')
-    expect(html).toContain('name="email" value="reader@example.com"')
+    expect(html).toContain('name="identifier" value="reader@example.com"')
     expect(html).toContain('name="code"')
     expect(html).toContain('pattern="[0-9]{6}"')
     expect(html).toContain('placeholder="123456"')
     expect(html).not.toContain('autofocus=""')
     expect(html).toContain('expire in 15 minutes')
+  })
+
+  test('check-your-email page does not reveal an email requested by handle', () => {
+    const html = renderToStaticMarkup(React.createElement(MagicLinkSent, { email: 'reader', handle: true }))
+
+    expect(html).toContain('email address associated with <strong>reader</strong>')
+    expect(html).toContain('name="identifier" value="reader"')
+    expect(html).not.toContain('reader@example.com')
   })
 })
 

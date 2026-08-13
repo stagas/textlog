@@ -200,6 +200,25 @@ test('email code signs up and invalidates its matching magic link', async () => 
   expect(await reusedLink.text()).toContain('magic link is invalid or has expired')
 })
 
+test('magic link requested by handle is sent to the account email', async () => {
+  database.query(`INSERT INTO users(handle,email,password,email_verified_at,handle_chosen_at)
+    VALUES(?,?,'!',CURRENT_TIMESTAMP,CURRENT_TIMESTAMP)`).run('handlelogin', 'handle-login@example.com')
+
+  const sent = await request('/enter', { method: 'POST', form: { identifier: 'HANDLELOGIN' } })
+  expect(sent.status).toBe(200)
+  const sentHtml = await sent.text()
+  expect(sentHtml).toContain('email address associated with <strong>handlelogin</strong>')
+  expect(sentHtml).not.toContain('handle-login@example.com')
+  const message = capturedEmails().filter(item => item.to === 'handle-login@example.com').at(-1)
+  expect(message).toBeDefined()
+
+  const entered = await request('/enter/code', {
+    method: 'POST',
+    form: { identifier: 'HANDLELOGIN', code: entryCode(message!) },
+  })
+  expect(entered.status).toBe(303)
+})
+
 test('handle choice accepts invalid submissions and reports their character count', async () => {
   const email = 'invalid-handle@example.com'
   await request('/enter', { method: 'POST', form: { email } })

@@ -206,23 +206,25 @@ export function registerAuthRoutes(app: Hono) {
 
   app.post('/enter', async c => {
     const f = await form(c.req.raw)
-    const email = (f.email || '').trim().toLowerCase()
+    const identifier = (f.identifier || f.email || '').trim().toLowerCase()
     const next = safeNext(f.next)
     const limited = isDevelopment()
       ? null
       : authLimit(c, 'enter-ip', clientAddress(c), AUTH_LIMITS.loginIp)
-        || authLimit(c, 'enter-email', email || '(blank)', AUTH_LIMITS.forgotAccount)
+        || authLimit(c, 'enter-email', identifier || '(blank)', AUTH_LIMITS.forgotAccount)
     if (limited) {
-      return retryPage(page(<Auth email={email} next={next} error={authRateLimitMessage(limited.retryAfter)} />, 429),
+      return retryPage(page(<Auth email={identifier} next={next} error={authRateLimitMessage(limited.retryAfter)} />, 429),
         limited.retryAfter)
     }
-    if (!emailPattern.test(email) || email.length > 254) {
-      return page(<Auth email={email} next={next} error="Enter a valid email address." />, 400)
-    }
 
-    const account = db.query(`SELECT id,handle,handle_chosen_at FROM users
-      WHERE email=? AND deleted_at IS NULL AND suspended_at IS NULL`).get(email) as { id: number; handle: string;
-      handle_chosen_at: string | null } | null
+    const account = db.query(`SELECT id,handle,email,handle_chosen_at FROM users
+      WHERE (email=? OR (handle=? COLLATE NOCASE AND handle_chosen_at IS NOT NULL))
+      AND deleted_at IS NULL AND suspended_at IS NULL`).get(identifier, identifier) as { id: number; handle: string;
+      email: string; handle_chosen_at: string | null } | null
+    if ((!account && !emailPattern.test(identifier)) || identifier.length > 254) {
+      return page(<Auth email={identifier} next={next} error="Enter a valid email address or handle." />, 400)
+    }
+    const email = account?.email || identifier
     const origin = Bun.env.APP_URL?.replace(/\/$/, '') || new URL(c.req.url).origin
     const link = issueMagicLink(email, account?.id ?? null, next, origin)
     try {
@@ -237,19 +239,28 @@ export function registerAuthRoutes(app: Hono) {
         503,
       )
     }
-    return page(<MagicLinkSent email={email} magicUrl={isDevelopment() ? link.url : undefined} />)
+    return page(<MagicLinkSent email={identifier} handle={!emailPattern.test(identifier)}
+      magicUrl={isDevelopment() ? link.url : undefined} />)
   })
 
   app.post('/enter/code', async c => {
     const f = await form(c.req.raw)
-    const email = (f.email || '').trim().toLowerCase()
+    const identifier = (f.identifier || f.email || '').trim().toLowerCase()
     const code = (f.code || '').trim()
-    const invalid = () => page(<MagicLinkSent email={email} error="That code is invalid or has expired." />, 400)
-    if (!emailPattern.test(email) || !/^\d{6}$/.test(code)) return invalid()
+    const account = db.query(`SELECT email FROM users WHERE handle=? COLLATE NOCASE
+      AND handle_chosen_at IS NOT NULL AND deleted_at IS NULL AND suspended_at IS NULL`).get(identifier) as
+      | { email: string }
+      | null
+    const email = emailPattern.test(identifier) ? identifier : account?.email
+    const handle = !emailPattern.test(identifier)
+    const invalid = () => page(<MagicLinkSent email={identifier} handle={handle}
+      error="That code is invalid or has expired." />, 400)
+    if (!email || !/^\d{6}$/.test(code)) return invalid()
     const limited = authLimit(c, 'enter-code-ip', clientAddress(c), AUTH_LIMITS.resetIp)
-      || authLimit(c, 'enter-code-account', email, AUTH_LIMITS.resetToken)
+      || authLimit(c, 'enter-code-account', identifier, AUTH_LIMITS.resetToken)
     if (limited) {
-      return retryPage(page(<MagicLinkSent email={email} error={authRateLimitMessage(limited.retryAfter)} />, 429),
+      return retryPage(page(<MagicLinkSent email={identifier} handle={handle}
+        error={authRateLimitMessage(limited.retryAfter)} />, 429),
         limited.retryAfter)
     }
     const link = db.query(`SELECT token_hash,email,user_id,next_path,attempts FROM magic_links

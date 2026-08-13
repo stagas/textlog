@@ -8,11 +8,11 @@ export function Auth({ error, email = '', next }: { error?: string; email?: stri
           {error && <p className="status-message status-error" role="alert">{error}</p>}
           <form method="post" action="/enter" autoComplete="on">
             {next && <input type="hidden" name="next" value={next} />}
-            <label htmlFor="enter-email">
-              <span>email address</span>
+            <label htmlFor="enter-identifier">
+              <span>email address or handle</span>
             </label>
-            <input id="enter-email" type="email" name="email" required maxLength={254} autoComplete="email" autoFocus
-              autoCapitalize="none" spellCheck={false} defaultValue={email} placeholder="you@example.com" />
+            <input id="enter-identifier" name="identifier" required maxLength={254} autoComplete="username" autoFocus
+              autoCapitalize="none" spellCheck={false} defaultValue={email} placeholder="you@example.com or your_handle" />
             <button className="button">
               send magic link <span aria-hidden="true">→</span>
             </button>
@@ -53,10 +53,11 @@ export function PasswordLogin({ nonce, error, identifier = '', password = '', ne
             <input type="hidden" name="nonce" value={nonce} />
             {next && <input type="hidden" name="next" value={next} />}
             <label htmlFor="login-identifier">
-              <span>email or handle</span>
+              <span>email address or handle</span>
             </label>
             <input id="login-identifier" name="identifier" required maxLength={254} autoComplete="username"
-              autoCapitalize="none" spellCheck={false} autoFocus defaultValue={identifier} />
+              autoCapitalize="none" spellCheck={false} autoFocus defaultValue={identifier}
+              placeholder="you@example.com or your_handle" />
             <label htmlFor="login-password">
               <span>password</span>
             </label>
@@ -89,20 +90,24 @@ export function PasswordLogin({ nonce, error, identifier = '', password = '', ne
   )
 }
 
-export function MagicLinkSent({ email, magicUrl, error }: { email: string; magicUrl?: string; error?: string }) {
+export function MagicLinkSent({ email, magicUrl, error, handle = false }: {
+  email: string; magicUrl?: string; error?: string; handle?: boolean
+}) {
   return (
     <Layout title="check your email">
       <section className="auth-shell">
         <div className="panel auth-panel magic-sent-panel">
           <h1>Check your email</h1>
           <p>
-            We’ve sent an entry link to <strong>{email}</strong>.
+            {handle
+              ? <>We’ve sent an entry link to the email address associated with <strong>{email}</strong>.</>
+              : <>We’ve sent an entry link to <strong>{email}</strong>.</>}
           </p>
           <p className="email-delivery-hint">Can’t find it? Check your spam or junk folder.</p>
           <p className="entry-code-copy">or enter the six-digit code</p>
           {error && <p className="status-message status-error" role="alert">{error}</p>}
           <form method="post" action="/enter/code" autoComplete="one-time-code">
-            <input type="hidden" name="email" value={email} />
+            <input type="hidden" name="identifier" value={email} />
             <div className="entry-code-row">
               <input id="entry-code" name="code" aria-label="six-digit code" required inputMode="numeric"
                 autoComplete="one-time-code" pattern="[0-9]{6}" maxLength={6} placeholder="123456"
