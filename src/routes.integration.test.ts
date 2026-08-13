@@ -412,6 +412,13 @@ test('consequential account, content, reporting, and admin flows work over HTTP'
   })
   expect(enabledPassword.status).toBe(303)
   expect(enabledPassword.headers.get('location')).toBe('/account/security?enabled=password')
+  const rejectedPassword = await request('/enter/password', {
+    method: 'POST',
+    form: { nonce: await passwordLoginNonce(), identifier: '@alice', password: 'wrong password' },
+  })
+  const rejectedPasswordHtml = await rejectedPassword.text()
+  expect(rejectedPasswordHtml).toContain('Login was unsuccessful. Check your details and try again.')
+  expect(rejectedPasswordHtml).not.toContain('password is incorrect')
   const firstLoginNonce = await passwordLoginNonce()
   const passwordLogin = await request('/enter/password', {
     method: 'POST',
@@ -427,7 +434,8 @@ test('consequential account, content, reporting, and admin flows work over HTTP'
   expect(replayedLogin.status).toBe(400)
   const replayedLoginHtml = await replayedLogin.text()
   expect(replayedLoginHtml).toContain('already used')
-  expect(replayedLoginHtml).toContain('value="alice password 123"')
+  expect(replayedLoginHtml).toContain('value="alice"')
+  expect(replayedLoginHtml).not.toContain('alice password 123')
   const changedPassword = await request('/account/password/change', {
     method: 'POST',
     cookie: aliceCookie,

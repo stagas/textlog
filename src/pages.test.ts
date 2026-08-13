@@ -636,6 +636,7 @@ describe('Auth', () => {
     expect(html).toContain('type="hidden" name="nonce" value="one-time-value"')
     expect(html).toContain('email address or handle')
     expect(html).toContain('placeholder="you@example.com or your_handle"')
+    expect(html).not.toMatch(/name="password"[^>]+value=/)
   })
 
   test('password login renders a server-issued CAPTCHA when requested', () => {
@@ -646,6 +647,25 @@ describe('Auth', () => {
     expect(html).toContain('name="captchaToken" value="captcha-token"')
     expect(html).toContain('name="captchaAnswer"')
     expect(html).toContain('data:image/svg+xml;base64,PHN2Zy8+')
+  })
+
+  test('password login errors retain only the identifier and focus the next field', () => {
+    const passwordHtml = renderToStaticMarkup(React.createElement(PasswordLogin, {
+      nonce: 'one-time-value', identifier: 'reader@example.com', error: 'Try again.',
+    }))
+    expect(passwordHtml).toContain('name="identifier"')
+    expect(passwordHtml).toContain('value="reader@example.com"')
+    expect(passwordHtml).toMatch(/id="login-password"[^>]+autofocus=""/)
+    expect(passwordHtml).not.toMatch(/id="login-identifier"[^>]+autofocus/)
+
+    const captchaHtml = renderToStaticMarkup(React.createElement(PasswordLogin, {
+      nonce: 'one-time-value', identifier: 'reader@example.com', error: 'Try again.',
+      captcha: { token: 'captcha-token', image: 'data:image/svg+xml;base64,PHN2Zy8+' },
+    }))
+    expect(captchaHtml).toMatch(/id="login-password"[^>]+autofocus=""/)
+    expect(captchaHtml).not.toMatch(/id="login-captcha"[^>]+autofocus/)
+    expect(captchaHtml).not.toMatch(/name="password"[^>]+value=/)
+    expect(captchaHtml).not.toMatch(/name="captchaAnswer"[^>]+value=/)
   })
 
   test('check-your-email page accepts the one-time code', () => {

@@ -39,11 +39,10 @@ export function Auth({ error, email = '', next }: { error?: string; email?: stri
   )
 }
 
-export function PasswordLogin({ nonce, error, identifier = '', password = '', next, reset = false, captcha }: {
+export function PasswordLogin({ nonce, error, identifier = '', next, reset = false, captcha }: {
   nonce: string
   error?: string
   identifier?: string
-  password?: string
   next?: string
   reset?: boolean
   captcha?: { token: string; image: string }
@@ -62,13 +61,13 @@ export function PasswordLogin({ nonce, error, identifier = '', password = '', ne
               <span>email address or handle</span>
             </label>
             <input id="login-identifier" name="identifier" required maxLength={254} autoComplete="username"
-              autoCapitalize="none" spellCheck={false} autoFocus defaultValue={identifier}
+              autoCapitalize="none" spellCheck={false} autoFocus={!error} defaultValue={identifier}
               placeholder="you@example.com or your_handle" />
             <label htmlFor="login-password">
               <span>password</span>
             </label>
             <input id="login-password" type="password" name="password" required maxLength={128}
-              autoComplete="current-password" defaultValue={password} />
+              autoComplete="current-password" autoFocus={!!error} />
             {captcha && (
               <div className="captcha-field">
                 <label htmlFor="login-captcha">
