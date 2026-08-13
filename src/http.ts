@@ -205,7 +205,7 @@ export function applyHtmlCachePolicy(request: Request, response: Response) {
   if (!values.includes('cookie')) response.headers.set('vary', vary ? `${vary}, Cookie` : 'Cookie')
 }
 
-const crawlerUserAgent = /(?:\bbot\b|bot[\s/_-]|crawler|spider|slurp|facebookexternalhit|ia_archiver)/i
+const crawlerUserAgent = /(?:\bbot\b|bot[\s/_-]|crawler|spider|slurp|facebookexternalhit|meta-external(?:agent|fetcher)|ia_archiver)/i
 
 export function isCrawlerRequest(request: Request) {
   return crawlerUserAgent.test(request.headers.get('user-agent') || '')
