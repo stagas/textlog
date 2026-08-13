@@ -73,7 +73,9 @@ export function clientIp(request: Request, socketIp?: string) {
   return socketIp || '-'
 }
 
-export function logHttp(method: string, path: string, status: number, durationMs: number, ip = '-', username?: string) {
+export function logHttp(method: string, path: string, status: number, durationMs: number, ip = '-', username?: string,
+  userAgent = '-')
+{
   const action = semanticAction(method, path)
   const timing = durationMs < 1000 ? `${durationMs.toFixed(0)}ms` : `${(durationMs / 1000).toFixed(2)}s`
   const parts = [
@@ -86,6 +88,8 @@ export function logHttp(method: string, path: string, status: number, durationMs
     path,
   ]
   if (action) parts.push(paint(action, status >= 400 ? 'yellow' : 'magenta'))
+  const safeUserAgent = userAgent.replace(/[\u0000-\u001f\u007f]+/g, ' ').trim().slice(0, 200) || '-'
+  parts.push(paint(`ua=${JSON.stringify(safeUserAgent)}`, 'dim'))
   console.log(parts.join('  '))
 }
 

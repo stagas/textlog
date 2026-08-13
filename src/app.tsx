@@ -116,7 +116,7 @@ app.use('*', async (c, next) => {
     const path = url.pathname
     if (shouldLogHttp(path, c.res.status)) {
       logHttp(c.req.method, `${path}${url.search}`, c.res.status, performance.now() - started,
-        c.req.header(clientIpHeaderName()) || '-', username)
+        c.req.header(clientIpHeaderName()) || '-', username, c.req.header('user-agent') || '-')
     }
   }
 })

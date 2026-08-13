@@ -16,20 +16,22 @@ describe('semanticAction', () => {
   })
 })
 
-test('HTTP logs include the signed-in username after the IP pseudonym and preserve query parameters', () => {
+test('HTTP logs include the username, query parameters, and a safe bounded user agent', () => {
   const original = console.log
   let output = ''
   console.log = (...values: unknown[]) => {
     output = values.join(' ')
   }
   try {
-    logHttp('GET', '/latest?limit=20&cursor=next', 200, 12, '203.0.113.4', 'alice')
+    logHttp('GET', '/latest?limit=20&cursor=next', 200, 12, '203.0.113.4', 'alice', 'ExampleBot/1.0\nforged')
   }
   finally {
     console.log = original
   }
   expect(output).toContain(`${logIpPseudonym('203.0.113.4')}  @alice  /latest`)
   expect(output).toContain('/latest?limit=20&cursor=next')
+  expect(output).toContain('ua="ExampleBot/1.0 forged"')
+  expect(output).not.toContain('\n')
 })
 
 test('HTTP logs mark anonymous requests without a username', () => {
