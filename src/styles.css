@@ -1328,6 +1328,8 @@ nav form {
 
 .magic-sent-panel .entry-code-row .button {
   flex: 0 0 auto;
+  min-height: 50px;
+  margin-top: 0;
 }
 
 .magic-sent-panel .entry-code-copy {
