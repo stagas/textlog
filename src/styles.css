@@ -2656,6 +2656,10 @@ form.report-panel {
   padding-block: var(--space-6);
 }
 
+.profile-owner:not(.profile-editing) {
+  grid-template-columns: minmax(0, 1fr);
+}
+
 .profile-content {
   min-width: 0;
 }
@@ -2768,7 +2772,7 @@ form.report-panel {
 .profile-edit-link {
   display: inline-flex;
   align-items: center;
-  padding: 0;
+  padding: 0 0 1px;
   color: var(--accent);
   background: none;
   font-family: inherit;
@@ -3251,6 +3255,10 @@ form.report-panel {
     grid-template-columns: minmax(0, 1fr) auto;
     align-items: start;
     gap: var(--space-4);
+  }
+
+  .profile.profile-owner:not(.profile-editing) {
+    grid-template-columns: minmax(0, 1fr) auto;
   }
 
   .profile:not(.profile-editing) .profile-content,
