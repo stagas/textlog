@@ -309,7 +309,7 @@ export function ProfileControls({ user, profile, following, blocked = false }: {
 }
 
 export function ProfileHeader(
-  { user, profile, following, blocked = false, editing = false, returnPath, controlsInTitle = false, children }: {
+  { user, profile, following, blocked = false, editing = false, returnPath, controlsInTitle = true, children }: {
   user: User | null
   profile: ProfileRow
   following: boolean
@@ -329,11 +329,15 @@ export function ProfileHeader(
     >
       {children || (
         <div className="profile-content">
-          <div className="profile-title-row">
+          <div className={`profile-title-row${!editing && user?.id !== profile.id
+            ? ' profile-title-row-actions'
+            : ''}`}>
             <h1>
               <span className="identity-prefix">@</span>
               {profile.handle}
             </h1>
+            {!editing && user?.id !== profile.id
+              && <ProfileControls user={user} profile={profile} following={following} blocked={blocked} />}
             {user?.id === profile.id && (
               <div className="profile-owner-actions">
                 <a className="profile-edit-link" href="/account/edit">account</a>
