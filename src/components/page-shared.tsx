@@ -5,6 +5,7 @@ import { isAdmin } from '../admin'
 import type { User } from '../db'
 import { hasUnreadForYou } from '../for-you-state'
 import { searchTerms } from '../search'
+import { linkify } from '../utils'
 
 const postTitleLength = 60
 
@@ -400,7 +401,7 @@ export function ProfileHeader(
               </div>
             )}
           </div>
-          <p className="profile-bio">{profile.bio || 'No bio yet.'}</p>
+          <p className="profile-bio" dangerouslySetInnerHTML={{ __html: linkify(profile.bio || 'No bio yet.') }} />
         </div>
       )}
       <div className="profile-action profile-back-action">
@@ -585,9 +586,8 @@ export function ConnectionPeople({ user, people, className = '', highlightTerms 
               </form>
             )}
           </div>
-          <p className="profile-bio">
-            <HighlightedText text={person.bio || 'No bio yet.'} terms={person.bio ? highlightTerms : []} />
-          </p>
+          <p className="profile-bio" dangerouslySetInnerHTML={{ __html: linkify(person.bio || 'No bio yet.', {},
+            person.bio ? highlightTerms : []) }} />
         </article>
       ))}
     </div>

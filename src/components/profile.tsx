@@ -1,6 +1,8 @@
-import { type User } from '../db'
+import { db, type User } from '../db'
+import { extractHashtags } from '../content'
+import { visibleHashtagCounts } from '../posts'
 import type { PostView, ProfileRow } from '../types'
-import { linkify } from '../utils'
+import { linkify, referenceFormId } from '../utils'
 import { Layout } from './layout'
 import { FormMessage, Pagination, PostingHelp, ProfileControls, ProfileHeader, ProfileTabs } from './page-shared'
 import { Post } from './post'
@@ -45,6 +47,15 @@ export function Profile(
   if (returnPath) paginationQuery.set('from', returnPath)
   const paginationPath = `/u/${profile.handle}${paginationQuery.size ? `?${paginationQuery}` : ''}`
   const fromQuery = returnPath ? `?from=${encodeURIComponent(returnPath)}` : ''
+  const bioTags = extractHashtags(profile.bio)
+  const bioTagCounts = visibleHashtagCounts(db, [profile.bio], user?.id ?? -1)
+  const followedBioTags = user && bioTags.length
+    ? new Set((db.query(`SELECT tag FROM hashtag_follows WHERE user_id=? AND tag IN
+      (${bioTags.map(() => '?').join(',')})`).all(user.id, ...bioTags) as { tag: string }[])
+      .map(row => row.tag))
+    : new Set<string>()
+  const bioTagFollowing = Object.fromEntries(bioTags.map(tag => [tag, followedBioTags.has(tag)]))
+  const bioFormPrefix = `profile-${profile.id}-bio`
   return (
     <Layout user={user} title={`@${profile.handle}`} social={social} feeds={{
       title: `Notes by @${profile.handle}`,
@@ -150,7 +161,12 @@ export function Profile(
                 </div>
               </>
             )
-            : <p className="profile-bio" dangerouslySetInnerHTML={{ __html: linkify(profile.bio || 'No bio yet.') }} />}
+            : <p className="profile-bio" dangerouslySetInnerHTML={{ __html: linkify(profile.bio || 'No bio yet.',
+              {}, [], undefined, undefined, '', bioTagCounts, {}, { signedIn: !!user, currentHandle: user?.handle,
+                formPrefix: bioFormPrefix, hashtagFollowing: bioTagFollowing }) }} />}
+          {!editing && user && bioTags.map(tag => <form className="reference-follow-form"
+            id={referenceFormId(bioFormPrefix, 'tag', tag)} method="post"
+            action={'/tag-follow/' + encodeURIComponent(tag)} key={tag} />)}
         </div>
       </ProfileHeader>
       {blocked || blockedByProfile

@@ -92,11 +92,15 @@ export function registerInteractionsRoutes(app: Hono) {
     return redirect(`/post/${postId}?reported=1`)
   })
 
-  app.post('/tag-follow/:tag', c => {
+  app.post('/tag-follow/:tag', async c => {
     const user = currentUser(c.req.raw)
     if (!user) return redirect('/enter')
     const tag = normalizeHashtag(c.req.param('tag'))
     if (!isValidHashtag(tag)) return clientErrorPage(c.req.raw)
+    const contentType = c.req.header('content-type') || ''
+    const f = /^(application\/x-www-form-urlencoded|multipart\/form-data)(?:;|$)/i.test(contentType)
+      ? await form(c.req.raw)
+      : {} as Record<string, string>
     const exists = db.query('SELECT 1 FROM hashtag_follows WHERE user_id=? AND tag=?').get(user.id, tag)
     if (exists) db.query('DELETE FROM hashtag_follows WHERE user_id=? AND tag=?').run(user.id, tag)
     else {
@@ -107,7 +111,8 @@ export function registerInteractionsRoutes(app: Hono) {
           .catch(error => logError('tag follow activity push failed', error))
       }
     }
-    return redirect(safeRefererPath(c.req.header('referer'), c.req.url, '/tag/' + encodeURIComponent(tag)))
+    return redirect(f.from ? safeNext(f.from)
+      : safeRefererPath(c.req.header('referer'), c.req.url, '/tag/' + encodeURIComponent(tag)))
   })
 
   app.post('/tag-block/:tag', c => {

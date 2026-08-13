@@ -1,10 +1,70 @@
 import React from 'react'
 import { isAdmin } from '../admin'
-import { containsAsciiArt } from '../content'
+import { containsAsciiArt, extractHashtags, extractMentions } from '../content'
 import { db, type User } from '../db'
 import { enrichPosts } from '../posts'
-import type { PostView } from '../types'
-import { fmt, fmtFull, linkify } from '../utils'
+import type { PostView, UserProfileStats } from '../types'
+import { fmt, fmtFull, linkify, referenceFormId } from '../utils'
+
+export function UserReference({ handle, bio, noteCount, following, user, href, rel, currentHandle, stats,
+  navigationQuery = '' }: {
+  handle: string; bio?: string; noteCount: number; following?: boolean; user: User | null; href?: string; rel?: string;
+  currentHandle?: string; stats?: UserProfileStats; navigationQuery?: string }) {
+  const ownUser = (user?.handle || currentHandle)?.toLowerCase() === handle.toLowerCase()
+  const followReturnPath = new URLSearchParams(navigationQuery.slice(1)).get('from') || undefined
+  const profileHref = (tab?: string) => tab
+    ? `/u/${handle}?tab=${tab}${navigationQuery ? `&${navigationQuery.slice(1)}` : ''}`
+    : `/u/${handle}${navigationQuery}`
+  return (
+    <span className="reference-menu">
+      {href
+        ? <a className="reference-menu-trigger postauthor" href={href} rel={rel}>@{handle}</a>
+        : <span className="reference-menu-trigger postauthor" tabIndex={0}>@{handle}</span>}
+      <span className="reference-menu-popover">
+        {stats
+          ? <span className="reference-profile-tabs">
+              <a href={profileHref()}>{stats.notes.toLocaleString()} {stats.notes === 1 ? 'note' : 'notes'}</a>
+              <a href={profileHref('replies')}>{stats.replies.toLocaleString()}{' '}
+                {stats.replies === 1 ? 'reply' : 'replies'}</a>
+              <a href={profileHref('following')}>{stats.followingTags.toLocaleString()}{' '}
+                {stats.followingTags === 1 ? 'tag' : 'tags'}, {stats.following.toLocaleString()}{' '}
+                {stats.following === 1 ? 'user' : 'users'} following</a>
+              <a href={profileHref('followers')}>{stats.followers.toLocaleString()}{' '}
+                {stats.followers === 1 ? 'follower' : 'followers'}</a>
+            </span>
+          : <span>{noteCount.toLocaleString()} {noteCount === 1 ? 'note' : 'notes'}</span>}
+        <span className="reference-popover-bio" dangerouslySetInnerHTML={{
+          __html: linkify(bio || 'No bio yet.', {}, [], undefined, undefined, navigationQuery),
+        }} />
+        {!ownUser && (user
+          ? <form method="post" action={'/follow/' + handle}>
+              {followReturnPath && <input type="hidden" name="from" value={followReturnPath} />}
+              <button className={`button${following ? ' button-muted' : ''}`} type="submit">
+                {following ? 'unfollow' : 'follow'}
+              </button>
+            </form>
+          : <a className="button" href="/enter" rel="nofollow">enter to follow</a>)}
+      </span>
+    </span>
+  )
+}
+
+function ReferenceFollowForms({ post, prefix, user, returnPath }: { post: PostView | NonNullable<PostView['parent']>;
+  prefix: string; user: User | null; returnPath: string }) {
+  if (!user) return null
+  const handles = extractMentions(post.body).filter(handle => handle !== user.handle.toLowerCase())
+  const tags = extractHashtags(post.body)
+  return <>
+    {handles.map(handle => <form className="reference-follow-form" id={referenceFormId(prefix, 'user', handle)}
+      method="post" action={'/follow/' + handle} key={'user-' + handle}>
+        <input type="hidden" name="from" value={returnPath} />
+      </form>)}
+    {tags.map(tag => <form className="reference-follow-form" id={referenceFormId(prefix, 'tag', tag)}
+      method="post" action={'/tag-follow/' + encodeURIComponent(tag)} key={'tag-' + tag}>
+        <input type="hidden" name="from" value={returnPath} />
+      </form>)}
+  </>
+}
 
 function renderFlags(post: PostView | NonNullable<PostView['parent']>) {
   return post.has_latex == null || post.has_links == null || post.has_code == null
@@ -35,17 +95,20 @@ export function conversationTopPath(threadRootId: number, replyId: number, retur
 }
 
 export function PreviewPost({ p }: { p: PostView }) {
+  const formPrefix = `preview-post-${p.id}`
   return (
     <article className="post" id={`post-${p.id}`}>
       <div className="posttop preview-post-meta">
-        <span className="postauthor" title={p.bio || 'No bio yet.'}>@{p.handle}</span>
+        <UserReference handle={p.handle} bio={p.bio} noteCount={p.note_count || 0} stats={p.profile_stats} user={null}
+          currentHandle={p.handle} />
         <span className="postdate">
           <time dateTime={p.created_at} title={fmtFull(p.created_at)}>{fmt(p.created_at)}</time>
         </span>
         <span className="quiet preview-reply">reply</span>
       </div>
       <p className={containsAsciiArt(p.body) ? 'ascii-art' : undefined} dangerouslySetInnerHTML={{
-        __html: linkify(p.body, p.mention_bios, [], undefined, renderFlags(p)),
+        __html: linkify(p.body, p.mention_bios, [], undefined, renderFlags(p), '', p.hashtag_counts,
+          p.mention_note_counts, { signedIn: false, currentHandle: p.handle, formPrefix }),
       }} />
     </article>
   )
@@ -85,6 +148,8 @@ export function Post({
   const replyCount = p.reply_count || 0
   const returnQuery = returnPath ? '&from=' + encodeURIComponent(returnPath) : ''
   const actionQuery = returnPath ? '?from=' + encodeURIComponent(returnPath) : ''
+  const referenceQuery = preview ? actionQuery
+    : '?from=' + encodeURIComponent(returnPath || `/post/${p.id}#post-${p.id}`)
   const detailPath = '/post/' + p.id + (returnPath ? '?from=' + encodeURIComponent(returnPath) : '')
   const parentDetailPath = parent
     ? '/post/' + parent.id + (returnPath ? '?from=' + encodeURIComponent(returnPath) : '')
@@ -92,6 +157,7 @@ export function Post({
   const parentReplyPath = parent ? '/post/' + parent.id + '?reply=1' + returnQuery : ''
   const defaultReplyPath = '/post/' + p.id + '?reply=1' + returnQuery
   const navigationRel = returnPath ? 'nofollow' : undefined
+  const formPrefix = `post-${p.id}`
   const resolvedReplyHref = replyHref
     ?? (user ? defaultReplyPath : '/enter?next=' + encodeURIComponent(defaultReplyPath))
   const resolvedReplyLabel = replyLabel ?? (user ? 'reply' : 'enter to reply')
@@ -113,9 +179,11 @@ export function Post({
       <div className={`posttop${contextLabel ? ' posttop-context' : ''}${preview ? ' preview-post-meta' : ''}`}>
         {contextUnread && <span className="unread-dot" aria-label="unread" />}
         {preview
-          ? <span className="postauthor" title={p.bio || 'No bio yet.'}>@{p.handle}</span>
-          : <a className="postauthor" href={'/u/' + p.handle + actionQuery} rel={navigationRel}
-            title={p.bio || 'No bio yet.'}>@{p.handle}</a>}
+          ? <UserReference handle={p.handle} bio={p.bio} noteCount={p.note_count || 0} stats={p.profile_stats}
+              following={p.viewer_following} user={user} />
+          : <UserReference handle={p.handle} bio={p.bio} noteCount={p.note_count || 0} stats={p.profile_stats}
+              following={p.viewer_following} user={user} href={'/u/' + p.handle + referenceQuery} rel={navigationRel}
+              navigationQuery={referenceQuery} />}
         {contextLabel && <span className="post-context">{contextLabel}</span>}
         {preview
           ? (
@@ -167,8 +235,13 @@ export function Post({
         )}
       </div>
       <p className={isAsciiArt ? 'ascii-art' : undefined} dangerouslySetInnerHTML={{
-        __html: linkify(p.body, p.mention_bios, highlightTerms, undefined, renderFlags(p), actionQuery),
+        __html: linkify(p.body, p.mention_bios, highlightTerms, undefined, renderFlags(p), referenceQuery,
+          p.hashtag_counts, p.mention_note_counts, { signedIn: !!user, currentHandle: user?.handle, formPrefix,
+            mentionFollowing: p.mention_following, mentionProfileStats: p.mention_profile_stats,
+            hashtagFollowing: p.hashtag_following }),
       }} />
+      <ReferenceFollowForms post={p} prefix={formPrefix} user={user}
+        returnPath={returnPath || `/post/${p.id}#post-${p.id}`} />
       {parent && (
         <blockquote className={'parent-quote' + (parent.deleted_at ? ' deleted-parent' : '')
           + (hasTappableParent ? ' tappable-parent' : '')}
@@ -182,11 +255,10 @@ export function Post({
             : (
               <>
                 <div className="parent-quote-top">
-                  <a className="postauthor" href={'/u/' + parent.handle + actionQuery} rel={navigationRel}
-                    title={parent.bio || 'No bio yet.'}
-                  >
-                    @{parent.handle}
-                  </a>
+                  <UserReference handle={parent.handle} bio={parent.bio} noteCount={parent.note_count || 0}
+                    stats={parent.profile_stats} following={parent.viewer_following} user={user}
+                    href={'/u/' + parent.handle + referenceQuery}
+                    rel={navigationRel} navigationQuery={referenceQuery} />
                   <a className="postdate" href={parentDetailPath} rel={navigationRel}>
                     <time dateTime={parent.created_at} title={fmtFull(parent.created_at)}>
                       {fmt(parent.created_at)}
@@ -204,8 +276,14 @@ export function Post({
                   </a>
                 </div>
                 <p className={containsAsciiArt(parent.body) ? 'ascii-art' : undefined} dangerouslySetInnerHTML={{
-                  __html: linkify(parent.body, parent.mention_bios, [], undefined, renderFlags(parent), actionQuery),
+                  __html: linkify(parent.body, parent.mention_bios, [], undefined, renderFlags(parent), referenceQuery,
+                    parent.hashtag_counts, parent.mention_note_counts, { signedIn: !!user,
+                      currentHandle: user?.handle, formPrefix: `${formPrefix}-parent-${parent.id}`,
+                      mentionFollowing: parent.mention_following, mentionProfileStats: parent.mention_profile_stats,
+                      hashtagFollowing: parent.hashtag_following }),
                 }} />
+                <ReferenceFollowForms post={parent} prefix={`${formPrefix}-parent-${parent.id}`} user={user}
+                  returnPath={returnPath || `/post/${p.id}#post-${p.id}`} />
               </>
             )}
         </blockquote>

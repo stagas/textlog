@@ -8,6 +8,38 @@ import { containsAsciiArt, MAX_HASHTAGS_PER_POST, type PostContentFlags } from '
 import { db, type User } from './db'
 import { texToMathML } from './math'
 import { markSessionUsed, sessionHash } from './sessions'
+import type { UserProfileStats } from './types'
+
+export function userHoverTitle(noteCount: number, bio?: string) {
+  return `${noteCount.toLocaleString()} ${noteCount === 1 ? 'note' : 'notes'}\n\n${bio || 'No bio yet.'}`
+}
+
+export type ReferencePopoverOptions = {
+  signedIn: boolean
+  currentHandle?: string
+  formPrefix: string
+  mentionFollowing?: Record<string, boolean>
+  mentionProfileStats?: Record<string, UserProfileStats>
+  hashtagFollowing?: Record<string, boolean>
+}
+
+function profileStatLinks(handle: string, stats: UserProfileStats, navigationQuery = '') {
+  const base = `/u/${handle}`
+  const href = (tab?: string) => tab
+    ? `${base}?tab=${tab}${navigationQuery ? `&${navigationQuery.slice(1)}` : ''}`
+    : `${base}${navigationQuery}`
+  const count = (value: number, singular: string, plural = singular + 's') =>
+    `${value.toLocaleString()} ${value === 1 ? singular : plural}`
+  return `<span class="reference-profile-tabs"><a href="${href()}">${count(stats.notes, 'note')}</a>`
+    + `<a href="${href('replies')}">${count(stats.replies, 'reply', 'replies')}</a>`
+    + `<a href="${href('following')}">${count(stats.followingTags, 'tag')}, ${
+      count(stats.following, 'user')} following</a>`
+    + `<a href="${href('followers')}">${count(stats.followers, 'follower')}</a></span>`
+}
+
+export function referenceFormId(prefix: string, kind: 'user' | 'tag', value: string) {
+  return `${prefix}-${kind}-${encodeURIComponent(value)}`
+}
 
 export const esc = (v: unknown) =>
   String(v ?? '').replace(/[&<>"']/g,
@@ -272,22 +304,46 @@ function renderedMath(source: string, display: boolean) {
   return output && display ? `<span class="math-display">${output}</span>` : output
 }
 
-function renderedReference(token: string, mentionBios: Record<string, string>, highlightTerms: string[],
-  navigationQuery = '') {
+function renderedReference(token: string, mentionBios: Record<string, string>, mentionNoteCounts: Record<string, number>,
+  hashtagCounts: Record<string, number>, highlightTerms: string[], navigationQuery = '',
+  popover?: ReferencePopoverOptions) {
   const value = token.slice(1)
-  return token[0] === '@'
-    ? `<a href="/u/${value.toLowerCase()}${navigationQuery}"${
-      mentionBios[value.toLowerCase()] !== undefined
-        ? ` title="${esc(mentionBios[value.toLowerCase()] || 'No bio yet.')}"`
-        : ''
-    }>${highlighted(`@${value}`, highlightTerms)}</a>`
-    : `<a href="/tag/${encodeURIComponent(value.normalize('NFC').toLowerCase())}${navigationQuery}">${
-      highlighted(`#${value}`, highlightTerms)
-    }</a>`
+  const normalizedValue = value.normalize('NFC').toLowerCase()
+  const isUser = token[0] === '@'
+  const key = isUser ? value.toLowerCase() : normalizedValue
+  const href = isUser
+    ? `/u/${key}${navigationQuery}`
+    : `/tag/${encodeURIComponent(key)}${navigationQuery}`
+  const label = highlighted(`${token[0]}${value}`, highlightTerms)
+  const hasData = isUser ? mentionBios[key] !== undefined : hashtagCounts[key] !== undefined
+  if (!hasData) return `<a href="${href}">${label}</a>`
+  const count = isUser ? mentionNoteCounts[key] || 0 : hashtagCounts[key]
+  if (!popover) {
+    const title = isUser ? userHoverTitle(count, mentionBios[key])
+      : `${count.toLocaleString()} ${count === 1 ? 'note' : 'notes'}`
+    return `<a href="${href}" title="${esc(title)}">${label}</a>`
+  }
+  const following = isUser ? !!popover.mentionFollowing?.[key] : !!popover.hashtagFollowing?.[key]
+  const ownUser = isUser && key === popover.currentHandle?.toLowerCase()
+  const action = ownUser ? '' : popover.signedIn
+    ? `<button class="button${following ? ' button-muted' : ''}" type="submit" form="${esc(referenceFormId(popover.formPrefix,
+      isUser ? 'user' : 'tag', key))}">${following ? 'unfollow' : 'follow'}</button>`
+    : '<a class="button" href="/enter" rel="nofollow">enter to follow</a>'
+  return `<span class="reference-menu"><a class="reference-menu-trigger" href="${href}">${label}</a>`
+    + `<span class="reference-menu-popover${isUser ? '' : ' reference-menu-popover-tag'}">${
+      isUser && popover.mentionProfileStats?.[key]
+      ? profileStatLinks(key, popover.mentionProfileStats[key], navigationQuery)
+      : isUser
+      ? `<span>${count.toLocaleString()} ${count === 1 ? 'note' : 'notes'}</span>`
+      : `<a href="${href}">${count.toLocaleString()} ${count === 1 ? 'note' : 'notes'}</a>`}`
+    + (isUser ? `<span class="reference-popover-bio">${linkify(mentionBios[key] || 'No bio yet.', {}, [],
+      Bun.env.APP_URL, undefined, navigationQuery)}</span>` : '')
+    + `${action}</span></span>`
 }
 
 function linkifyAsciiReferences(body: string, mentionBios: Record<string, string>, appUrl: string | undefined,
-  navigationQuery = '') {
+  navigationQuery = '', hashtagCounts: Record<string, number> = {}, mentionNoteCounts: Record<string, number> = {},
+  popover?: ReferencePopoverOptions) {
   let html = ''
   let end = 0
   const tokens = linkTokens(body, { has_latex: 1, has_links: 1, has_code: 1 })
@@ -296,7 +352,9 @@ function linkifyAsciiReferences(body: string, mentionBios: Record<string, string
     if ((match.kind !== 'reference' && match.kind !== 'url') || match.index < end
       || markupRanges.some(range => match.index >= range.index && match.index < range.lastIndex)) continue
     html += esc(body.slice(end, match.index))
-    if (match.kind === 'reference') html += renderedReference(match.raw, mentionBios, [], navigationQuery)
+    if (match.kind === 'reference') {
+      html += renderedReference(match.raw, mentionBios, mentionNoteCounts, hashtagCounts, [], navigationQuery, popover)
+    }
     else {
       const url = match.url!
       const label = linkLabel(url, appUrl)
@@ -311,10 +369,14 @@ function linkifyAsciiReferences(body: string, mentionBios: Record<string, string
 }
 
 export function linkify(body: string, mentionBios: Record<string, string> = {}, highlightTerms: string[] = [],
-  appUrl: string | undefined = Bun.env.APP_URL, flags?: PostContentFlags, navigationQuery = '')
+  appUrl: string | undefined = Bun.env.APP_URL, flags?: PostContentFlags, navigationQuery = '',
+  hashtagCounts: Record<string, number> = {}, mentionNoteCounts: Record<string, number> = {},
+  popover?: ReferencePopoverOptions)
 {
   // Keep the drawing literal while retaining navigation for social references.
-  if (containsAsciiArt(body)) return linkifyAsciiReferences(body, mentionBios, appUrl, navigationQuery)
+  if (containsAsciiArt(body)) {
+    return linkifyAsciiReferences(body, mentionBios, appUrl, navigationQuery, hashtagCounts, mentionNoteCounts, popover)
+  }
   if (flags && !flags.has_latex && !flags.has_links && !flags.has_code) return highlighted(body, highlightTerms)
   let html = ''
   let end = 0
@@ -345,7 +407,8 @@ export function linkify(body: string, mentionBios: Record<string, string> = {}, 
       }</a>`
     }
     else {
-      html += renderedReference(token, mentionBios, highlightTerms, navigationQuery)
+      html += renderedReference(token, mentionBios, mentionNoteCounts, hashtagCounts, highlightTerms, navigationQuery,
+        popover)
     }
     end = match.lastIndex
   }

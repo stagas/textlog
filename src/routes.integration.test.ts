@@ -691,8 +691,15 @@ test('consequential account, content, reporting, and admin flows work over HTTP'
     .run(bob.id, alice.id)
   database.query('UPDATE users SET bio=\'Bob builds things\' WHERE id=?').run(bob.id)
   const followedPersonFeed = await (await request('/for-you', { cookie: aliceCookie })).text()
-  expect(followedPersonFeed).toContain('<a href="/u/bob?from=%2Ffor-you%23activity-user-follow-')
-  expect(followedPersonFeed).toContain('title="Bob builds things">@bob</a><span>followed you:</span>')
+  expect(followedPersonFeed).toContain('<a class="reference-menu-trigger postauthor" '
+    + 'href="/u/bob?from=%2Ffor-you%23activity-user-follow-')
+  expect(followedPersonFeed).toContain('<span class="reference-profile-tabs"><a '
+    + 'href="/u/bob?from=%2Ffor-you%23activity-user-follow-')
+  expect(followedPersonFeed).toContain('<a href="/u/bob?tab=replies&amp;from=%2Ffor-you%23activity-user-follow-')
+  expect(followedPersonFeed).toContain('<span class="reference-popover-bio">Bob builds things</span>'
+    + '<form action="/follow/bob" method="post"><input type="hidden" name="from" value="/for-you#activity-user-follow-')
+  expect(followedPersonFeed).toContain('<button '
+    + 'class="button button-muted" type="submit">unfollow</button>')
   expect(followedPersonFeed).toContain('<p class="profile-bio">Bob builds things</p>')
   expect(followedPersonFeed).toContain('action="/follow/bob"')
   expect(followedPersonFeed).not.toContain('action="/follow/alice"')
@@ -724,9 +731,10 @@ test('consequential account, content, reporting, and admin flows work over HTTP'
   const unicodeTagFollow = await request('/tag-follow/' + encodeURIComponent('español'), {
     method: 'POST',
     cookie: aliceCookie,
+    form: { from: '/latest#post-2' },
   })
   expect(unicodeTagFollow.status).toBe(303)
-  expect(unicodeTagFollow.headers.get('location')).toBe('/tag/espa%C3%B1ol')
+  expect(unicodeTagFollow.headers.get('location')).toBe('/latest#post-2')
   expect(database.query('SELECT 1 FROM hashtag_follows WHERE user_id=? AND tag=\'español\'').get(alice.id)).toBeTruthy()
   const invalidTagFollow = await request('/tag-follow/not-a-tag', { method: 'POST', cookie: aliceCookie })
   expect(invalidTagFollow.status).toBe(400)
@@ -735,8 +743,9 @@ test('consequential account, content, reporting, and admin flows work over HTTP'
   database.query('UPDATE hashtag_follows SET created_at=\'2099-01-02 00:00:00\' WHERE user_id=? AND tag=\'shared\'')
     .run(bob.id)
   const followedTagFeed = await (await request('/for-you', { cookie: aliceCookie })).text()
-  expect(followedTagFeed).toContain('<a href="/u/bob?from=%2Ffor-you%23activity-tag-follow-')
-  expect(followedTagFeed).toContain('title="Bob builds things">@bob</a><span>followed</span>')
+  expect(followedTagFeed).toContain('<a class="reference-menu-trigger postauthor" '
+    + 'href="/u/bob?from=%2Ffor-you%23activity-tag-follow-')
+  expect(followedTagFeed).toContain('<span class="reference-popover-bio">Bob builds things</span>')
   expect(followedTagFeed).toContain('<a href="/tag/shared?from=%2Ffor-you%23activity-tag-follow-')
   expect(followedTagFeed).toContain('<a class="activity-follow-stats" href="/tag/shared?from=')
   expect(followedTagFeed).toContain('<time dateTime="2099-01-02 00:00:00"')
@@ -907,8 +916,9 @@ test('consequential account, content, reporting, and admin flows work over HTTP'
 
   const adminCookie = await signup('admin', 'gstagas@gmail.com', 'admin password 123')
   const adminActivity = await (await request('/for-you', { cookie: adminCookie })).text()
-  expect(adminActivity).toContain('@admin</a><span>signed up:</span>')
-  expect(adminActivity).toContain('@alice</a><span>signed up:</span>')
+  expect(adminActivity).toContain('>@admin</a>')
+  expect(adminActivity).toContain('>@alice</a>')
+  expect(adminActivity).toContain('<span>signed up:</span>')
   expect(adminActivity).toContain('<a class="activity-follow-stats" href="/u/alice?from=%2Ffor-you%23activity-signup-')
   expect(adminActivity).not.toContain('href="/tag/null"')
   expect(adminActivity).not.toContain('>#null</a>')

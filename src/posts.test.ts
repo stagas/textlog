@@ -7,7 +7,8 @@ import { linkify } from './utils'
 function database() {
   const db = new Database(':memory:')
   db.run(`
-    CREATE TABLE users (id INTEGER PRIMARY KEY, handle TEXT NOT NULL, bio TEXT DEFAULT '', deleted_at TEXT);
+    CREATE TABLE users (id INTEGER PRIMARY KEY, handle TEXT NOT NULL, bio TEXT DEFAULT '', deleted_at TEXT,
+      suspended_at TEXT);
     CREATE TABLE handle_history (handle TEXT PRIMARY KEY COLLATE NOCASE,user_id INTEGER NOT NULL);
     CREATE TABLE posts (id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER NOT NULL, parent_id INTEGER,
       body TEXT NOT NULL, created_at TEXT DEFAULT CURRENT_TIMESTAMP, deleted_at TEXT,
@@ -17,6 +18,9 @@ function database() {
     CREATE TABLE for_you_reads (user_id INTEGER NOT NULL, event_key TEXT NOT NULL,
       read_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP, PRIMARY KEY(user_id,event_key));
     CREATE TABLE blocks (blocker_id INTEGER NOT NULL, blocked_id INTEGER NOT NULL, PRIMARY KEY(blocker_id,blocked_id));
+    CREATE TABLE follows (follower_id INTEGER NOT NULL,following_id INTEGER NOT NULL,
+      PRIMARY KEY(follower_id,following_id));
+    CREATE TABLE hashtag_follows (user_id INTEGER NOT NULL,tag TEXT NOT NULL,PRIMARY KEY(user_id,tag));
     CREATE TABLE blocked_hashtags (user_id INTEGER NOT NULL, tag TEXT NOT NULL, PRIMARY KEY(user_id,tag));
     CREATE TRIGGER reject_failed_tag BEFORE INSERT ON post_hashtags WHEN NEW.tag='fail'
       BEGIN SELECT RAISE(ABORT, 'metadata failure'); END;
@@ -28,9 +32,11 @@ function database() {
 describe('post persistence', () => {
   test('adds escaped bios to linkified post mentions', () => {
     expect(linkify('hello @Reader', { reader: 'Builder & "tester"' }))
-      .toContain('<a href="/u/reader" title="Builder &amp; &quot;tester&quot;">@Reader</a>')
+      .toContain('<a href="/u/reader" title="0 notes\n\nBuilder &amp; &quot;tester&quot;">@Reader</a>')
     expect(linkify('hello @Reader', { reader: '' }))
-      .toContain('<a href="/u/reader" title="No bio yet.">@Reader</a>')
+      .toContain('<a href="/u/reader" title="0 notes\n\nNo bio yet.">@Reader</a>')
+    expect(linkify('@Reader', { reader: 'Bio' }, [], undefined, undefined, '', {}, { reader: 1234 }))
+      .toContain(`title="${(1234).toLocaleString()} notes\n\nBio"`)
   })
   test('keeps apostrophes in linkified URLs', () => {
     expect(linkify('read https://example.com/people/O\'Brien/profile'))
@@ -64,7 +70,7 @@ describe('post persistence', () => {
     const body = '[eye](https://example.com) $x^2$ <nose> @Reader #ascii example.org/art'
     expect(linkify(body, { reader: 'Reader bio' })).toBe(
       '[eye](https://example.com) $x^2$ &lt;nose&gt; '
-      + '<a href="/u/reader" title="Reader bio">@Reader</a> <a href="/tag/ascii">#ascii</a> '
+      + '<a href="/u/reader" title="0 notes\n\nReader bio">@Reader</a> <a href="/tag/ascii">#ascii</a> '
       + '<a href="https://example.org/art" target="_blank" rel="nofollow ugc noopener noreferrer">'
       + 'example.org/art</a>',
     )
@@ -185,6 +191,36 @@ describe('post persistence', () => {
     expect(html).toContain('<a href="/tag/caf%C3%A9">#café</a>')
   })
 
+  test('adds visible note counts to hashtag titles', () => {
+    expect(linkify('#Topic #empty', {}, [], undefined, undefined, '', { topic: 1, empty: 0 }))
+      .toBe('<a href="/tag/topic" title="1 note">#Topic</a> '
+        + '<a href="/tag/empty" title="0 notes">#empty</a>')
+  })
+
+  test('renders hover popovers with bios and standard follow buttons', () => {
+    const html = linkify('@Reader #Topic', { reader: 'Builds things' }, [], undefined, undefined, '', { topic: 20 },
+      { reader: 20 }, { signedIn: true, currentHandle: 'author', formPrefix: 'post-1',
+        mentionFollowing: { reader: true }, hashtagFollowing: { topic: false }, mentionProfileStats: {
+          reader: { notes: 20, replies: 34, followers: 8, following: 5, followingTags: 2 },
+        } })
+    expect(html).toContain('<span class="reference-menu-popover"><span class="reference-profile-tabs">'
+      + '<a href="/u/reader">20 notes</a><a href="/u/reader?tab=replies">34 replies</a>'
+      + '<a href="/u/reader?tab=following">2 tags, 5 users following</a>'
+      + '<a href="/u/reader?tab=followers">8 followers</a></span>'
+      + '<span class="reference-popover-bio">Builds things</span>')
+    expect(html).toContain('<button class="button button-muted" type="submit" '
+      + 'form="post-1-user-reader">unfollow</button>')
+    expect(html).toContain('<button class="button" type="submit" form="post-1-tag-topic">follow</button>')
+  })
+
+  test('linkifies bios inside user popovers', () => {
+    const html = linkify('@Reader', { reader: 'Writes about #TypeScript\n\nat example.com' }, [], undefined, undefined,
+      '', {}, { reader: 2 }, { signedIn: false, formPrefix: 'post-1' })
+    expect(html).toContain('<span class="reference-popover-bio">Writes about '
+      + '<a href="/tag/typescript">#TypeScript</a>\n\nat '
+      + '<a href="https://example.com" target="_blank" rel="nofollow ugc noopener noreferrer">example.com</a></span>')
+  })
+
   test('linkifies only the first five hashtags', () => {
     const html = linkify('#one #two #three #four #five #six #seven')
     expect(html.match(/href="\/tag\//g)).toHaveLength(5)
@@ -280,5 +316,27 @@ describe('post persistence', () => {
     const child = db.query('SELECT p.*,u.handle FROM posts p JOIN users u ON u.id=p.user_id WHERE p.id=2')
       .get() as PostView
     expect(enrichPosts(db, [child], 2)[0].parent).toBeNull()
+  })
+
+  test('counts public hashtag notes visible through viewer blocks', () => {
+    const db = database()
+    db.run(`INSERT INTO users(id,handle) VALUES(3,'blocked');
+      INSERT INTO posts(id,user_id,body,created_at) VALUES
+        (1,1,'visible #topic','2026-08-03 10:00:00'),
+        (2,3,'blocked author #topic','2026-08-03 11:00:00'),
+        (3,1,'blocked tag #topic #spoilers','2026-08-03 12:00:00'),
+        (4,1,'deleted #topic','2026-08-03 13:00:00');
+      UPDATE posts SET deleted_at='2026-08-03 14:00:00' WHERE id=4;
+      INSERT INTO post_hashtags VALUES(1,'topic'),(2,'topic'),(3,'topic'),(3,'spoilers'),(4,'topic');
+      INSERT INTO blocks VALUES(2,3);
+      INSERT INTO blocked_hashtags VALUES(2,'spoilers');
+      INSERT INTO follows VALUES(2,1);
+      INSERT INTO hashtag_follows VALUES(2,'topic');`)
+    const post = db.query('SELECT p.*,u.handle FROM posts p JOIN users u ON u.id=p.user_id WHERE p.id=1')
+      .get() as PostView
+
+    expect(enrichPosts(db, [post])[0]).toMatchObject({ hashtag_counts: { topic: 3 }, note_count: 2 })
+    expect(enrichPosts(db, [post], 2)[0]).toMatchObject({ hashtag_counts: { topic: 1 }, note_count: 2,
+      viewer_following: true, hashtag_following: { topic: true } })
   })
 })

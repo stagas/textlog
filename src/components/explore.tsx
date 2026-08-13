@@ -3,6 +3,7 @@ import { db, type User } from '../db'
 import { suggestedPeople, suggestedPeopleCount, trendingTagCount, trendingTags } from '../explore'
 import { TAG_PAGE_SIZE } from '../pagination'
 import type { PersonView } from '../types'
+import { linkify } from '../utils'
 import { Layout } from './layout'
 import { ActionPair, Pagination, TagPeopleList } from './page-shared'
 import { SearchForm } from './search'
@@ -93,7 +94,7 @@ export function Explore({ user, welcome = false, peopleIds, tagsPage = 1, people
                     </form>
                   )}
                 </div>
-                <p className="profile-bio">{p.bio || 'No bio yet.'}</p>
+                <p className="profile-bio" dangerouslySetInnerHTML={{ __html: linkify(p.bio || 'No bio yet.') }} />
               </article>
             ))}
             {!people.length && <p className="section-empty">No people to suggest.</p>}

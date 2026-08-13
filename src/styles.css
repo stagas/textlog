@@ -282,6 +282,111 @@ header>.account-nav {
   margin: 0;
 }
 
+.reference-menu {
+  position: relative;
+  display: inline-flex;
+  min-width: 0;
+  font: inherit;
+}
+
+.reference-menu-popover {
+  position: absolute;
+  z-index: 20;
+  top: calc(100% + var(--space-2));
+  left: 0;
+  display: none;
+  width: max-content;
+  min-width: 12rem;
+  max-width: min(760px, calc(100vw - 2 * var(--gutter)));
+  padding: var(--space-2);
+  color: var(--ink);
+  background: var(--panel);
+  border: 1px solid var(--soft);
+  box-shadow: 0 8px 24px rgb(0 0 0 / 14%);
+  font-family: inherit;
+  font-size: 0.6875rem;
+  line-height: 1.45;
+  text-align: left;
+  white-space: normal;
+}
+
+.reference-menu-popover-tag {
+  min-width: 0;
+}
+
+.reference-menu-popover-tag > a {
+  justify-self: start;
+}
+
+.reference-menu:hover .reference-menu-popover,
+.reference-menu:focus-within .reference-menu-popover {
+  display: grid;
+}
+
+.reference-menu::after {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  display: none;
+  width: 100%;
+  height: var(--space-2);
+  content: '';
+}
+
+.reference-menu:hover::after,
+.reference-menu:focus-within::after {
+  display: block;
+}
+
+.reference-popover-bio {
+  display: block;
+  width: 100%;
+  margin-top: var(--space-2);
+  color: var(--quote-ink);
+  font-size: 0.6875rem;
+  line-height: 1.45;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  tab-size: 4;
+}
+
+.reference-profile-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+}
+
+.reference-menu-popover .reference-profile-tabs a {
+  color: var(--accent);
+  white-space: nowrap;
+}
+
+.reference-menu-popover .reference-profile-tabs a:hover {
+  color: var(--accent-dark);
+}
+
+.reference-menu-popover .button {
+  width: fit-content;
+  margin-top: var(--space-2);
+  font: inherit;
+  white-space: nowrap;
+}
+
+.reference-menu-popover .button,
+.reference-menu-popover .button:hover,
+.reference-menu-popover .button:focus-visible {
+  color: var(--button-ink);
+}
+
+.reference-menu-popover form,
+.reference-follow-form {
+  margin: 0;
+}
+
+.reference-follow-form {
+  display: none;
+}
+
 .brand {
   color: var(--ink);
   display: inline-flex;
@@ -2299,7 +2404,6 @@ form.report-panel {
 }
 
 .profile p {
-  max-width: 62ch;
   margin: var(--space-2) 0 0;
   color: var(--quote-ink);
   font-size: 0.8125rem;

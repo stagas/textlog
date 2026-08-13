@@ -5,7 +5,7 @@ import { db, type User } from '../db'
 import { PAGE_SIZE } from '../pagination'
 import { enrichPosts } from '../posts'
 import type { PostView } from '../types'
-import { fmt, fmtFull } from '../utils'
+import { fmt, fmtFull, linkify } from '../utils'
 import { Layout } from './layout'
 import { ActionPair, CursorPagination, FeedTabs } from './page-shared'
 import { Post } from './post'
@@ -126,7 +126,9 @@ export function Activity({ user, cursor, title, path = '/activity', pageUrl, not
                         <span aria-hidden="true">·</span>
                         <small>{rawPost.posts} {rawPost.posts === 1 ? 'note' : 'notes'}</small>
                       </div>
-                      <p className="profile-bio">{rawPost.bio || 'No bio yet.'}</p>
+                      <p className="profile-bio" dangerouslySetInnerHTML={{
+                        __html: linkify(rawPost.bio || 'No bio yet.'),
+                      }} />
                     </div>
                     {rawPost.user_id !== user.id && (
                       <form method="post" action={'/follow/' + rawPost.handle}>
@@ -151,7 +153,9 @@ export function Activity({ user, cursor, title, path = '/activity', pageUrl, not
                         <span aria-hidden="true">·</span>
                         <small>{rawPost.posts} {rawPost.posts === 1 ? 'note' : 'notes'}</small>
                       </div>
-                      <p className="profile-bio">{rawPost.bio || 'No bio yet.'}</p>
+                      <p className="profile-bio" dangerouslySetInnerHTML={{
+                        __html: linkify(rawPost.bio || 'No bio yet.'),
+                      }} />
                     </div>
                     <form method="post" action={'/follow/' + rawPost.handle}>
                       <button className={`button${rawPost.viewerFollowing ? ' button-muted' : ''}`}>

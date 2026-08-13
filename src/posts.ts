@@ -4,7 +4,44 @@ import { extractHashtags, extractMentions, postContentFlags } from './content'
 import { resolveHandle } from './handles'
 import { recordHotActivity } from './hot'
 import { insertRateLimitedPost } from './post-rate-limit'
-import type { ParentPost, PostView } from './types'
+import type { ParentPost, PostView, UserProfileStats } from './types'
+
+export function visibleHashtagCounts(database: Database, bodies: string[], viewerId = -1) {
+  const tags = [...new Set(bodies.flatMap(extractHashtags))]
+  if (!tags.length) return {}
+  const placeholders = tags.map(() => '?').join(',')
+  const viewerFilter = viewerId < 0 ? '' : `AND NOT EXISTS (SELECT 1 FROM blocks b WHERE
+    (b.blocker_id=? AND b.blocked_id=p.user_id) OR (b.blocker_id=p.user_id AND b.blocked_id=?))
+    AND NOT EXISTS (SELECT 1 FROM post_hashtags hidden_ph JOIN blocked_hashtags bh ON bh.tag=hidden_ph.tag
+      WHERE hidden_ph.post_id=p.id AND bh.user_id=?)`
+  const parameters = viewerId < 0 ? tags : [...tags, viewerId, viewerId, viewerId]
+  const rows = database.query(`SELECT ph.tag,count(*) count FROM post_hashtags ph
+    JOIN posts p ON p.id=ph.post_id JOIN users u ON u.id=p.user_id
+    WHERE ph.tag IN (${placeholders}) AND p.deleted_at IS NULL
+      AND u.deleted_at IS NULL AND u.suspended_at IS NULL ${viewerFilter}
+    GROUP BY ph.tag`).all(...parameters) as { tag: string; count: number }[]
+  const counts = new Map(rows.map(row => [row.tag, row.count]))
+  return Object.fromEntries(tags.map(tag => [tag, counts.get(tag) || 0]))
+}
+
+export function visibleUserProfileStats(database: Database, userIds: number[], viewerId = -1) {
+  const ids = [...new Set(userIds)]
+  if (!ids.length) return new Map<number, UserProfileStats>()
+  const connectionVisibility = (connectedId: string) => `AND ($viewer < 0 OR NOT EXISTS
+    (SELECT 1 FROM blocks b WHERE (b.blocker_id=$viewer AND b.blocked_id=${connectedId})
+      OR (b.blocker_id=${connectedId} AND b.blocked_id=$viewer)))`
+  const rows = database.query(`SELECT u.id,
+    (SELECT count(*) FROM posts p WHERE p.user_id=u.id AND p.parent_id IS NULL AND p.deleted_at IS NULL) notes,
+    (SELECT count(*) FROM posts p WHERE p.user_id=u.id AND p.parent_id IS NOT NULL AND p.deleted_at IS NULL) replies,
+    (SELECT count(*) FROM follows f WHERE f.following_id=u.id ${connectionVisibility('f.follower_id')}) followers,
+    (SELECT count(*) FROM follows f WHERE f.follower_id=u.id ${connectionVisibility('f.following_id')}) following,
+    (SELECT count(*) FROM hashtag_follows hf WHERE hf.user_id=u.id) followingTags
+    FROM users u WHERE u.id IN (${ids.join(',')}) AND u.deleted_at IS NULL AND u.suspended_at IS NULL`)
+    .all({ viewer: viewerId }) as ({ id: number } & UserProfileStats)[]
+  const stats = new Map(rows.map(({ id, ...values }) => [id, values]))
+  const empty = (): UserProfileStats => ({ notes: 0, replies: 0, followers: 0, following: 0, followingTags: 0 })
+  return new Map(ids.map(id => [id, stats.get(id) || empty()]))
+}
 
 export function syncPostMetadata(database: Database, postId: number, body: string) {
   const flags = postContentFlags(body)
@@ -56,12 +93,19 @@ export function enrichPosts(database: Database, posts: PostView[], viewerId = -1
 
   const mentionedHandles = [...new Set(posts.flatMap(post => extractMentions(post.body)))]
   const mentionBios: Record<string, string> = {}
+  const mentionUserIds: Record<string, number> = {}
+  const mentionNoteCounts: Record<string, number> = {}
+  const mentionProfileStats: Record<string, UserProfileStats> = {}
+  const parentBodies: string[] = []
   const addMentionBio = (handle: string) => {
     if (mentionBios[handle] !== undefined) return
     const mentioned = resolveHandle(database, handle)
     if (!mentioned) return
     const account = database.query('SELECT bio FROM users WHERE id=?').get(mentioned.id) as { bio: string } | null
-    if (account) mentionBios[handle] = account.bio
+    if (account) {
+      mentionBios[handle] = account.bio
+      mentionUserIds[handle] = mentioned.id
+    }
   }
   for (const handle of mentionedHandles) addMentionBio(handle)
   const parentIds = [...new Set(posts.flatMap(post => post.parent_id ? [post.parent_id] : []))]
@@ -97,21 +141,64 @@ export function enrichPosts(database: Database, posts: PostView[], viewerId = -1
       ? parentIds
       : [...parentIds, viewerId, viewerId, viewerId]
     const rows = database.query(
-      `SELECT p.id,p.body,p.created_at,p.deleted_at,p.has_latex,p.has_links,p.has_code,u.handle,u.bio,
+      `SELECT p.id,p.user_id,p.body,p.created_at,p.deleted_at,p.has_latex,p.has_links,p.has_code,u.handle,u.bio,
         0 reply_count
         FROM posts p JOIN users u ON u.id=p.user_id WHERE p.id IN (${parentPlaceholders}) ${parentFilter}`,
     ).all(...parentParameters) as ParentPost[]
     for (const parent of rows) {
+      parentBodies.push(parent.body)
       parent.reply_count = countById.get(parent.id) || 0
       for (const handle of extractMentions(parent.body)) addMentionBio(handle)
-      parent.mention_bios = mentionBios
     }
     parents = new Map(rows.map(parent => [parent.id, parent]))
+  }
+  const hashtagCounts = visibleHashtagCounts(database, [...posts.map(post => post.body), ...parentBodies], viewerId)
+  const profileStats = visibleUserProfileStats(database,
+    [...userIds, ...[...parents.values()].flatMap(parent => parent.user_id == null ? [] : [parent.user_id]),
+      ...Object.values(mentionUserIds)], viewerId)
+  for (const [handle, id] of Object.entries(mentionUserIds)) {
+    const stats = profileStats.get(id)
+    mentionNoteCounts[handle] = stats?.notes || 0
+    if (stats) mentionProfileStats[handle] = stats
+  }
+  const relevantUserIds = [...profileStats.keys()]
+  const relevantTags = Object.keys(hashtagCounts)
+  const followedUserIds = viewerId < 0 || !relevantUserIds.length ? new Set<number>()
+    : new Set((database.query(`SELECT following_id FROM follows WHERE follower_id=? AND following_id IN
+      (${relevantUserIds.map(() => '?').join(',')})`).all(viewerId, ...relevantUserIds) as {
+      following_id: number
+    }[]).map(row => row.following_id))
+  const followedTags = viewerId < 0 || !relevantTags.length ? new Set<string>()
+    : new Set((database.query(`SELECT tag FROM hashtag_follows WHERE user_id=? AND tag IN
+      (${relevantTags.map(() => '?').join(',')})`).all(viewerId, ...relevantTags) as { tag: string }[])
+      .map(row => row.tag))
+  const mentionFollowing = Object.fromEntries(Object.entries(mentionUserIds)
+    .map(([handle, id]) => [handle, followedUserIds.has(id)]))
+  const hashtagFollowing = Object.fromEntries(Object.keys(hashtagCounts)
+    .map(tag => [tag, followedTags.has(tag)]))
+  for (const parent of parents.values()) {
+    parent.profile_stats = parent.user_id == null ? undefined : profileStats.get(parent.user_id)
+    parent.note_count = parent.profile_stats?.notes || 0
+    parent.viewer_following = parent.user_id != null && followedUserIds.has(parent.user_id)
+    parent.mention_bios = mentionBios
+    parent.mention_note_counts = mentionNoteCounts
+    parent.mention_profile_stats = mentionProfileStats
+    parent.mention_following = mentionFollowing
+    parent.hashtag_counts = hashtagCounts
+    parent.hashtag_following = hashtagFollowing
   }
   return posts.map(post => ({
     ...post,
     bio: bioByUserId.get(post.user_id) ?? post.bio ?? '',
+    note_count: profileStats.get(post.user_id)?.notes || 0,
+    profile_stats: profileStats.get(post.user_id),
+    viewer_following: followedUserIds.has(post.user_id),
     mention_bios: mentionBios,
+    mention_note_counts: mentionNoteCounts,
+    mention_profile_stats: mentionProfileStats,
+    mention_following: mentionFollowing,
+    hashtag_counts: hashtagCounts,
+    hashtag_following: hashtagFollowing,
     reply_count: countById.get(post.id) || 0,
     parent: post.parent_id ? parents.get(post.parent_id) || null : null,
   }))

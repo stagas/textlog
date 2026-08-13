@@ -31,7 +31,7 @@ test('compose offers a server-rendered post preview', () => {
   )
   expect(preview.indexOf('<form action="/post" method="post">')).toBeLessThan(preview.indexOf('<textarea'))
   expect(preview).toContain('Hello <a href="/tag/world"')
-  expect(preview).toContain('<div class="posttop preview-post-meta"><span class="postauthor"')
+  expect(preview).toContain('<div class="posttop preview-post-meta"><span class="reference-menu">')
   expect(preview).not.toContain('href="/post/0"')
   expect(preview).toContain('<span class="quiet preview-reply">reply</span>')
   expect(preview).not.toContain('href="#"')
@@ -143,7 +143,7 @@ test('editing a reply shows its parent context above the textarea', () => {
   expect(preview.indexOf('<div class="reply-preview">')).toBeLessThan(preview.indexOf('<textarea'))
   const previewPost = preview.slice(preview.indexOf('<div class="reply-preview">'),
     preview.indexOf('<div class="panel replybox">'))
-  expect(previewPost).toContain('<div class="posttop preview-post-meta"><span class="postauthor"')
+  expect(previewPost).toContain('<div class="posttop preview-post-meta"><span class="reference-menu">')
   expect(previewPost).toContain('<span class="postdate"')
   expect(previewPost).toContain('<span class="quiet preview-reply">reply</span>')
   expect(previewPost).not.toContain('<a ')
@@ -1085,7 +1085,9 @@ test('Profile linkifies Markdown links and tags in the bio', () => {
     posts: [],
   }))
 
-  expect(html).toContain('<a href="/tag/textlog">#TextLog</a>')
+  expect(html).toContain('<span class="reference-menu"><a class="reference-menu-trigger" '
+    + 'href="/tag/textlog">#TextLog</a><span class="reference-menu-popover reference-menu-popover-tag">'
+    + '<a href="/tag/textlog">1 note</a>')
   expect(html).toContain(
     '<a href="https://example.com/" title="https://example.com/" target="_blank" rel="nofollow ugc noopener noreferrer">my site</a>.',
   )
@@ -1295,8 +1297,15 @@ test('Post carries its originating cursor into detail, reply, and edit links', (
       id: 2,
       user_id: 1,
       parent_id: null,
-      body: 'note',
+      body: 'note @friend #topic',
       handle: 'writer',
+      bio: 'Writer bio',
+      mention_bios: { friend: 'Friend bio' },
+      mention_note_counts: { friend: 1 },
+      mention_profile_stats: { friend: { notes: 1, replies: 0, followers: 0, following: 0, followingTags: 0 } },
+      mention_following: { friend: false },
+      hashtag_counts: { topic: 1 },
+      hashtag_following: { topic: false },
       created_at: '2026-08-03 12:00:00',
       deleted_at: null,
     },
@@ -1305,6 +1314,9 @@ test('Post carries its originating cursor into detail, reply, and edit links', (
   expect(html).toContain('href="/post/2?from=%2Flatest%3Fcursor%3Dabc%23post-2"')
   expect(html).toContain('href="/post/2?reply=1&amp;from=%2Flatest%3Fcursor%3Dabc%23post-2"')
   expect(html).toContain('href="/post/2/edit?from=%2Flatest%3Fcursor%3Dabc%23post-2"')
+  expect(html).toContain('<input type="hidden" name="from" value="/latest?cursor=abc#post-2"/>')
+  expect(html).toContain('id="post-2-user-friend" action="/follow/friend" method="post"')
+  expect(html).toContain('id="post-2-tag-topic" action="/tag-follow/topic" method="post"')
   expect(html).not.toContain('/post/2/delete')
 })
 
@@ -1376,9 +1388,11 @@ test('A quoted post gets its own higher-priority hit area in tappable feeds', ()
   }))
 
   expect(html).toContain('parent-quote tappable-parent')
-  expect(html).toContain('class="postauthor" href="/u/writer?from=%2Flatest%3Fcursor%3Dabc%23post-2"')
+  expect(html).toContain('class="reference-menu-trigger postauthor" '
+    + 'href="/u/writer?from=%2Flatest%3Fcursor%3Dabc%23post-2"')
   expect(html).toContain('class="parent-hit-area" href="/post/1?from=%2Flatest%3Fcursor%3Dabc%23post-2"')
-  expect(html).toContain('class="postauthor" href="/u/parent?from=%2Flatest%3Fcursor%3Dabc%23post-2"')
+  expect(html).toContain('class="reference-menu-trigger postauthor" '
+    + 'href="/u/parent?from=%2Flatest%3Fcursor%3Dabc%23post-2"')
   expect(html).toContain('class="postdate" href="/post/1?from=%2Flatest%3Fcursor%3Dabc%23post-2"')
   expect(html).toContain('href="/post/1?reply=1&amp;from=%2Flatest%3Fcursor%3Dabc%23post-2"')
 })

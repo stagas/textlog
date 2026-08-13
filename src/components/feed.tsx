@@ -2,12 +2,12 @@ import { isAdmin } from '../admin'
 import { db, type User } from '../db'
 import { feedSnapshotPage } from '../feed-snapshots'
 import { hasUnreadForYou, markForYouEntriesRead } from '../for-you-state'
-import { enrichPosts } from '../posts'
+import { enrichPosts, visibleUserProfileStats } from '../posts'
 import type { PostView } from '../types'
-import { fmt, fmtFull } from '../utils'
+import { fmt, fmtFull, linkify } from '../utils'
 import { Layout } from './layout'
 import { ActionPair, FeedTabs, Pagination } from './page-shared'
-import { Post } from './post'
+import { Post, UserReference } from './post'
 
 export type ForYouCursor = { createdAt: string; key: string; direction: 'next' | 'previous' }
 
@@ -174,6 +174,7 @@ export function Feed({ user, page = 1, title, path = '/for-you', pageUrl, notifi
     }[]).map(row => row.event_key))
     : new Set<string>()
   const timeline = snapshot.items.map(row => ({ ...row, unread: Number(!unreadKeys.has(row.event_key)) }))
+  const actorProfileStats = visibleUserProfileStats(db, timeline.map(row => row.actor_id), user.id)
   markForYouEntriesRead(user.id, timeline.filter(row => row.unread).map(row => row.event_key))
   const enriched = enrichPosts(db, timeline.filter(row => ['post', 'reply', 'mention'].includes(row.activity_kind)),
     user.id)
@@ -207,12 +208,12 @@ export function Feed({ user, page = 1, title, path = '/for-you', pageUrl, notifi
                 <div className="activity-follow-content">
                   <div className="activity-follow-main">
                     {!!row.unread && <span className="unread-dot" aria-label="unread" />}
-                    <a href={row.activity_kind === 'signup'
-                      ? `/admin/users/${row.actor_id}`
-                      : `/u/${row.actor_handle}${fromQuery}`} title={row.actor_bio || 'No bio yet.'}
-                    >
-                      @{row.actor_handle}
-                    </a>
+                    <UserReference handle={row.actor_handle} bio={row.actor_bio}
+                      noteCount={actorProfileStats.get(row.actor_id)?.notes || 0}
+                      stats={actorProfileStats.get(row.actor_id)} following={!!row.following} user={user}
+                      href={row.activity_kind === 'signup'
+                        ? `/admin/users/${row.actor_id}`
+                        : `/u/${row.actor_handle}${fromQuery}`} navigationQuery={fromQuery} />
                     <span>
                       {row.activity_kind === 'signup'
                         ? 'signed up:'
@@ -244,7 +245,9 @@ export function Feed({ user, page = 1, title, path = '/for-you', pageUrl, notifi
                       : <time dateTime={row.created_at} title={fmtFull(row.created_at)}>{fmt(row.created_at)}</time>}
                   </div>
                   {(row.activity_kind === 'user_follow' || row.activity_kind === 'signup')
-                    && <p className="profile-bio">{row.target_bio || 'No bio yet.'}</p>}
+                    && <p className="profile-bio" dangerouslySetInnerHTML={{
+                      __html: linkify(row.target_bio || 'No bio yet.'),
+                    }} />}
                 </div>
                 {row.actor_id !== user.id && (
                   <form method="post" action={row.target_is_viewer || row.activity_kind === 'signup'

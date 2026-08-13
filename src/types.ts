@@ -10,18 +10,43 @@ export type PostRow = {
   has_code?: number | null
 }
 
+export type UserProfileStats = {
+  notes: number
+  replies: number
+  followers: number
+  following: number
+  followingTags: number
+}
+
 export type ParentPost = Pick<PostRow,
   'id' | 'body' | 'created_at' | 'deleted_at' | 'has_latex' | 'has_links' | 'has_code'> & {
   handle: string
+  user_id?: number
   bio?: string
+  note_count?: number
+  profile_stats?: UserProfileStats
+  viewer_following?: boolean
   mention_bios?: Record<string, string>
+  mention_note_counts?: Record<string, number>
+  mention_profile_stats?: Record<string, UserProfileStats>
+  mention_following?: Record<string, boolean>
+  hashtag_counts?: Record<string, number>
+  hashtag_following?: Record<string, boolean>
   reply_count: number
 }
 
 export type PostView = PostRow & {
   handle: string
   bio?: string
+  note_count?: number
+  profile_stats?: UserProfileStats
+  viewer_following?: boolean
   mention_bios?: Record<string, string>
+  mention_note_counts?: Record<string, number>
+  mention_profile_stats?: Record<string, UserProfileStats>
+  mention_following?: Record<string, boolean>
+  hashtag_counts?: Record<string, number>
+  hashtag_following?: Record<string, boolean>
   reply_count?: number
   parent?: ParentPost | null
 }
