@@ -343,6 +343,13 @@ header>.account-nav {
   }
 }
 
+@media (hover: none), (pointer: coarse) {
+  .reference-menu .reference-menu-popover,
+  .reference-menu::after {
+    display: none;
+  }
+}
+
 .reference-menu::after {
   position: absolute;
   top: 100%;
@@ -508,6 +515,18 @@ nav form {
 .feed-tabs .feed-tabs-read-status .activity-side-link:hover { color: var(--accent-dark); }
 
 .feed-tabs-action-separator { color: var(--muted); }
+
+@media (max-width: 600px) {
+  .feed-tabs {
+    flex-wrap: wrap;
+  }
+
+  .feed-tabs-read-status {
+    justify-content: flex-start;
+    flex-basis: 100%;
+    margin-left: 0;
+  }
+}
 
 .feed-tabs a:hover {
   color: var(--tab-hover);

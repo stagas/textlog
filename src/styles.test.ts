@@ -130,6 +130,8 @@ describe('in-memory stylesheet', () => {
     expect(css).toContain('animation: reference-popover-reveal 0s 500ms both;')
     expect(css).toContain('.reference-menu:focus-within .reference-menu-popover {\n  display: grid;\n  animation: none;')
     expect(css).toContain('@keyframes reference-popover-reveal {')
+    expect(css).toContain('@media (hover: none), (pointer: coarse) {\n  .reference-menu .reference-menu-popover,\n'
+      + '  .reference-menu::after {\n    display: none;')
     expect(css).toContain('font-family: inherit;\n  font-size: 0.6875rem;')
     expect(css).toContain('max-width: min(760px, calc(100vw - 2 * var(--gutter)));')
     expect(css).toContain('.reference-menu-popover-tag {\n  min-width: 0;')
