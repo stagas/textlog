@@ -1301,14 +1301,20 @@ nav form {
   color: var(--accent);
 }
 
-.post p a,
-.posttop a,
-.parent-quote-top a,
-.post-actions a {
+.post p > a,
+.post p > .reference-menu > .reference-menu-trigger,
+.posttop > a,
+.posttop > .reference-menu > .reference-menu-trigger,
+.parent-quote-top > a,
+.parent-quote-top > .reference-menu > .reference-menu-trigger,
+.post-actions > a,
+.activity-follow-main > .reference-menu > .reference-menu-trigger,
+.feed-relationship-main > .reference-menu > .reference-menu-trigger,
+.people .reference-menu > .reference-menu-trigger {
   text-decoration-line: underline;
   text-decoration-color: var(--link-border);
-  text-decoration-thickness: 1px;
-  text-underline-offset: 4px;
+  text-decoration-thickness: 0.5px;
+  text-underline-offset: 5px;
   border-bottom: 0;
 }
 
@@ -2513,7 +2519,11 @@ form.report-panel {
 .preview-post-meta > * {
   color: var(--accent);
   cursor: pointer;
-  border-bottom: 1px solid var(--link-border);
+  text-decoration-line: underline;
+  text-decoration-color: var(--link-border);
+  text-decoration-thickness: 0.5px;
+  text-underline-offset: 5px;
+  border-bottom: 0;
 }
 
 .preview-post-meta > *:hover {
@@ -3827,7 +3837,11 @@ form.report-panel {
 .reply-preview .preview-reply {
   color: var(--accent);
   cursor: pointer;
-  border-bottom: 1px solid var(--link-border);
+  text-decoration-line: underline;
+  text-decoration-color: var(--link-border);
+  text-decoration-thickness: 0.5px;
+  text-underline-offset: 5px;
+  border-bottom: 0;
 }
 
 .reply-preview .postauthor:hover,
