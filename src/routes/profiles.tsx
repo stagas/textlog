@@ -150,7 +150,7 @@ export function registerProfilesRoutes(app: Hono) {
         <Connections user={user} profile={profile} people={people} tags={tags} kind="blocked" page={profilePage}
           total={blockCounts.blockedPeople} noteCount={postCounts.notes} replyCount={postCounts.replies} {...counts}
           following={following} blockedPeopleCount={blockCounts.blockedPeople} blockedTagCount={blockCounts.blockedTags}
-          social={social} />,
+          social={social} returnPath={returnPath} />,
       )
     }
     if (tab === 'following' || tab === 'followers') {
@@ -212,7 +212,8 @@ export function registerProfilesRoutes(app: Hono) {
         <Connections user={user} profile={profile} people={people} tags={tags} kind={tab} page={connectionPage}
           total={connectionTotal} tagsPage={tagsPage} tagsTotal={counts.followingTagCount} noteCount={postCounts.notes}
           replyCount={postCounts.replies} {...counts} following={following}
-          blockedPeopleCount={blockCounts.blockedPeople} blockedTagCount={blockCounts.blockedTags} social={social} />,
+          blockedPeopleCount={blockCounts.blockedPeople} blockedTagCount={blockCounts.blockedTags} social={social}
+          returnPath={returnPath} />,
       )
     }
     const cursorValue = c.req.query('cursor')

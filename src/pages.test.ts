@@ -858,6 +858,10 @@ test('Profile places a contextual back link in the handle row', () => {
   expect(html).toContain('class="profile-action profile-back-action"')
   expect(html).toContain('href="/latest#post-2">back</a>')
   expect(html.indexOf('aria-label="follow @writer"')).toBeLessThan(html.indexOf('href="/latest#post-2">back</a>'))
+  expect(html).toContain('href="/u/writer?from=%2Flatest%23post-2">0 notes</a>')
+  expect(html).toContain('href="/u/writer?tab=replies&amp;from=%2Flatest%23post-2">0 replies</a>')
+  expect(html).toContain('href="/u/writer?tab=following&amp;from=%2Flatest%23post-2"')
+  expect(html).toContain('href="/u/writer?tab=followers&amp;from=%2Flatest%23post-2"')
 })
 
 test('An empty profile only offers its owner a way to write a note', () => {

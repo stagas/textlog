@@ -40,6 +40,10 @@ export function Profile(
   if (tab === 'replies') feedQuery.set('tab', 'replies')
   if (page > 1) feedQuery.set('page', String(page))
   const feedPath = `/u/${profile.handle}${feedQuery.size ? `?${feedQuery}` : ''}`
+  const paginationQuery = new URLSearchParams()
+  if (tab === 'replies') paginationQuery.set('tab', 'replies')
+  if (returnPath) paginationQuery.set('from', returnPath)
+  const paginationPath = `/u/${profile.handle}${paginationQuery.size ? `?${paginationQuery}` : ''}`
   const fromQuery = returnPath ? `?from=${encodeURIComponent(returnPath)}` : ''
   return (
     <Layout user={user} title={`@${profile.handle}`} social={social} feeds={{
@@ -153,11 +157,11 @@ export function Profile(
         : !editing && (
           <ProfileTabs profile={profile} active={tab} notes={noteCount} replies={replyCount} followers={followerCount}
             following={followingCount} followingTags={followingTagCount} showBlocked={user?.id === profile.id}
-            blockedPeople={blockedPeopleCount} blockedTags={blockedTagCount} />
+            blockedPeople={blockedPeopleCount} blockedTags={blockedTagCount} returnPath={returnPath} />
         )}
       {!editing && !blocked && !blockedByProfile && page > 1
         && (
-          <Pagination path={'/u/' + profile.handle + (tab === 'replies' ? '?tab=replies' : '')} page={page}
+          <Pagination path={paginationPath} page={page}
             totalPages={totalPages} top />
         )}
       {!editing && !blocked && !blockedByProfile
@@ -180,7 +184,7 @@ export function Profile(
       )}
       {!editing && !blocked && !blockedByProfile
         && (
-          <Pagination path={'/u/' + profile.handle + (tab === 'replies' ? '?tab=replies' : '')} page={page}
+          <Pagination path={paginationPath} page={page}
             totalPages={totalPages} />
         )}
     </Layout>

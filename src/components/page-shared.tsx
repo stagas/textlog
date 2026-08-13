@@ -357,7 +357,7 @@ export function ProfileHeader(
 
 export function ProfileTabs(
   { profile, active, notes, replies = 0, followers, following, followingTags, showBlocked = false, blockedPeople = 0,
-    blockedTags = 0 }: {
+    blockedTags = 0, returnPath }: {
       profile: ProfileRow
       active: 'notes' | 'replies' | 'followers' | 'following' | 'blocked'
       notes: number
@@ -368,35 +368,42 @@ export function ProfileTabs(
       showBlocked?: boolean
       blockedPeople?: number
       blockedTags?: number
+      returnPath?: string
     },
 ) {
   const base = `/u/${profile.handle}`
+  const tabHref = (tab?: string) => {
+    const query = new URLSearchParams()
+    if (tab) query.set('tab', tab)
+    if (returnPath) query.set('from', returnPath)
+    return `${base}${query.size ? `?${query}` : ''}`
+  }
   return (
     <nav className="feed-tabs profile-tabs" aria-label={`@${profile.handle} profile`}>
       <a className={active === 'notes' ? 'active' : ''} aria-current={active === 'notes' ? 'page' : undefined}
-        href={base}
+        href={tabHref()}
       >
         {notes} {notes === 1 ? 'note' : 'notes'}
       </a>
       <a className={active === 'replies' ? 'active' : ''} aria-current={active === 'replies' ? 'page' : undefined}
-        href={`${base}?tab=replies`}
+        href={tabHref('replies')}
       >
         {replies} {replies === 1 ? 'reply' : 'replies'}
       </a>
       <a className={active === 'following' ? 'active' : ''} aria-current={active === 'following' ? 'page' : undefined}
-        href={`${base}?tab=following`}
+        href={tabHref('following')}
       >
         {followingTags} {followingTags === 1 ? 'tag' : 'tags'}, {following} {following === 1 ? 'user' : 'users'}{' '}
         following
       </a>
       <a className={active === 'followers' ? 'active' : ''} aria-current={active === 'followers' ? 'page' : undefined}
-        href={`${base}?tab=followers`}
+        href={tabHref('followers')}
       >
         {followers} {followers === 1 ? 'follower' : 'followers'}
       </a>
       {showBlocked && (
         <a className={active === 'blocked' ? 'active' : ''} aria-current={active === 'blocked' ? 'page' : undefined}
-          href={`${base}?tab=blocked`}
+          href={tabHref('blocked')}
         >
           {blockedTags} {blockedTags === 1 ? 'tag' : 'tags'}, {blockedPeople} {blockedPeople === 1 ? 'user' : 'users'}
           {' '}
