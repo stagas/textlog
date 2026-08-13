@@ -307,20 +307,31 @@ test('consequential account, content, reporting, and admin flows work over HTTP'
   const savedPush = await request('/account/push-subscription', {
     method: 'POST',
     cookie: aliceCookie,
+    userAgent: 'alice-browser',
     json: { endpoint, keys: { p256dh: 'test-key', auth: 'test-auth' },
       preferences: { latest: false, replies: true, mentions: false, follows: true, ownPosts: false } },
   })
   expect(savedPush.status).toBe(200)
   const deviceCookie = savedPush.headers.get('set-cookie')?.match(/notification_device=[^;]+/)?.[0]
   expect(deviceCookie).toBeDefined()
-  const enabledDeviceHome = await (await request('/', { cookie: `${aliceCookie}; ${deviceCookie}` })).text()
+  const enabledDeviceHome = await (await request('/', { cookie: aliceCookie, userAgent: 'alice-browser' })).text()
   expect(enabledDeviceHome).not.toContain('class="notification-banner"')
+  const otherBrowserHome = await (await request('/', { cookie: aliceCookie, userAgent: 'alice-other-browser' })).text()
+  expect(otherBrowserHome).toContain('class="notification-banner"')
+  const legacyDismissedHome = await (await request('/', {
+    cookie: `${aliceCookie}; notification_banner_dismissed=${alice.id}`,
+    userAgent: 'alice-legacy-browser',
+  })).text()
+  expect(legacyDismissedHome).not.toContain('class="notification-banner"')
 
-  const dismissed = await request('/notifications/banner/dismiss', { method: 'POST', cookie: aliceCookie })
+  const dismissed = await request('/notifications/banner/dismiss', {
+    method: 'POST', cookie: aliceCookie, userAgent: 'alice-dismissed-browser',
+  })
   expect(dismissed.status).toBe(303)
-  const dismissedCookie = dismissed.headers.get('set-cookie')?.match(/notification_banner_dismissed=[^;]+/)?.[0]
-  expect(dismissedCookie).toBeDefined()
-  const dismissedHome = await (await request('/', { cookie: `${aliceCookie}; ${dismissedCookie}` })).text()
+  expect(dismissed.headers.get('set-cookie')).toBeNull()
+  const dismissedHome = await (await request('/', {
+    cookie: aliceCookie, userAgent: 'alice-dismissed-browser',
+  })).text()
   expect(dismissedHome).not.toContain('class="notification-banner"')
   const pushPreferences = await request(
     '/account/push-subscription?endpoint=' + encodeURIComponent(endpoint),

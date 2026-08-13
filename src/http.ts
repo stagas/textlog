@@ -160,14 +160,12 @@ export function notificationDeviceCookie(value: string, appUrl: string | undefin
   }`
 }
 
-export function notificationBannerDismissed(request: Request, userId: number) {
-  return cookieValue(request, NOTIFICATION_BANNER_COOKIE) === String(userId)
+export function notificationUserAgent(request: Request) {
+  return (request.headers.get('user-agent') || '').trim().slice(0, 512)
 }
 
-export function notificationBannerDismissedCookie(userId: number, appUrl: string | undefined = Bun.env.APP_URL) {
-  return `${NOTIFICATION_BANNER_COOKIE}=${userId}; Max-Age=${365 * 24 * 60 * 60}; HttpOnly; Path=/; SameSite=Lax${
-    secureCookie(appUrl)
-  }`
+export function notificationBannerDismissed(request: Request, userId: number) {
+  return cookieValue(request, NOTIFICATION_BANNER_COOKIE) === String(userId)
 }
 
 const publicHtmlPaths = new Set([

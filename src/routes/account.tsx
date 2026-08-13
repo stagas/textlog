@@ -30,6 +30,7 @@ import {
   clearSessionCookie,
   notificationDevice,
   notificationDeviceCookie,
+  notificationUserAgent,
 } from '../http'
 import { moderateText, moderationMessage } from '../moderation'
 import { accountForPasswordEnableToken, issuePasswordEnableToken } from '../password-enable'
@@ -117,6 +118,12 @@ export function registerAccountRoutes(app: Hono) {
       .run(endpoint, user.id, p256dh, auth, deviceId, latest ?? 1, replies ?? 1, mentions ?? 1, follows ?? 1,
         ownPosts ?? 1, signups ?? 1, followActivity ?? 1, followingNotes ?? 1, latest, replies, mentions, follows,
         ownPosts, signups, followActivity, followingNotes)
+    const userAgent = notificationUserAgent(c.req.raw)
+    if (userAgent) {
+      db.query(`INSERT INTO notification_user_agents(user_id,user_agent,status) VALUES(?,?,'enabled')
+        ON CONFLICT(user_id,user_agent) DO UPDATE SET status='enabled',updated_at=CURRENT_TIMESTAMP`)
+        .run(user.id, userAgent)
+    }
     c.header('Set-Cookie', notificationDeviceCookie(deviceId), { append: true })
     return c.json({ saved: true })
   })
@@ -133,6 +140,11 @@ export function registerAccountRoutes(app: Hono) {
     }
     if (typeof value.endpoint !== 'string') return c.json({ error: 'Invalid subscription' }, 400)
     db.query('DELETE FROM push_subscriptions WHERE endpoint=? AND user_id=?').run(value.endpoint, user.id)
+    const userAgent = notificationUserAgent(c.req.raw)
+    if (userAgent) {
+      db.query(`DELETE FROM notification_user_agents
+        WHERE user_id=? AND user_agent=? AND status='enabled'`).run(user.id, userAgent)
+    }
     return c.json({ removed: true })
   })
 

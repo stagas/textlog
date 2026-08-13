@@ -17,8 +17,7 @@ import { decodeHotCursor } from '../hot'
 import {
   feedPreference,
   notificationBannerDismissed,
-  notificationBannerDismissedCookie,
-  notificationDevice,
+  notificationUserAgent,
   safeRefererPath,
 } from '../http'
 import { decodePostCursor } from '../pagination'
@@ -26,10 +25,10 @@ import { currentUser } from '../utils'
 
 function showNotificationBanner(request: Request, user: ReturnType<typeof currentUser>) {
   if (!user || notificationBannerDismissed(request, user.id)) return false
-  const deviceId = notificationDevice(request)
-  if (!deviceId) return true
-  return !db.query('SELECT 1 FROM push_subscriptions WHERE user_id=? AND device_id=? LIMIT 1')
-    .get(user.id, deviceId)
+  const userAgent = notificationUserAgent(request)
+  if (!userAgent) return true
+  return !db.query('SELECT 1 FROM notification_user_agents WHERE user_id=? AND user_agent=? LIMIT 1')
+    .get(user.id, userAgent)
 }
 
 export function registerFeedsRoutes(app: Hono) {
@@ -138,7 +137,13 @@ export function registerFeedsRoutes(app: Hono) {
     const user = currentUser(c.req.raw)
     if (!user) return redirect('/enter')
     const destination = safeRefererPath(c.req.header('referer'), c.req.url)
-    return redirect(destination, notificationBannerDismissedCookie(user.id))
+    const userAgent = notificationUserAgent(c.req.raw)
+    if (userAgent) {
+      db.query(`INSERT INTO notification_user_agents(user_id,user_agent,status) VALUES(?,?,'dismissed')
+        ON CONFLICT(user_id,user_agent) DO UPDATE SET status='dismissed',updated_at=CURRENT_TIMESTAMP`)
+        .run(user.id, userAgent)
+    }
+    return redirect(destination)
   })
 
   app.get('/activity', c => {
