@@ -518,13 +518,17 @@ nav form {
 
 @media (max-width: 600px) {
   .feed-tabs {
-    flex-wrap: wrap;
+    align-items: flex-end;
   }
 
   .feed-tabs-read-status {
-    justify-content: flex-start;
-    flex-basis: 100%;
-    margin-left: 0;
+    align-items: flex-end;
+    flex-direction: column;
+    gap: var(--space-1);
+  }
+
+  .feed-tabs-read-status .feed-tabs-action-separator {
+    display: none;
   }
 }
 
