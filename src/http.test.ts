@@ -49,6 +49,13 @@ describe('local redirects', () => {
     expect(isCrawlerRequest(meta)).toBe(true)
     expect(crawlerCanonicalRedirect(meta, 'https://textlog.cc')?.headers.get('location'))
       .toBe('https://textlog.cc/post/42')
+
+    const googleOther = new Request('https://textlog.cc/post/42?from=%2Flatest', { headers: { 'user-agent':
+      'Mozilla/5.0 (Linux; Android 6.0.1; Nexus 5X Build/MMB29P) AppleWebKit/537.36 (KHTML, like Gecko) '
+      + 'Chrome/150.0.7871.186 Mobile Safari/537.36 (compatible; GoogleOther)' } })
+    expect(isCrawlerRequest(googleOther)).toBe(true)
+    expect(crawlerCanonicalRedirect(googleOther, 'https://textlog.cc')?.headers.get('location'))
+      .toBe('https://textlog.cc/post/42')
   })
 
   test('does not redirect people or crawler URLs without from', () => {
