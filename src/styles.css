@@ -2929,12 +2929,6 @@ form.report-panel {
   flex: none;
 }
 
-.account-danger-zone > .account-appearance-actions {
-  display: flex;
-  flex-flow: row nowrap;
-  gap: var(--space-2);
-}
-
 .notification-preferences {
   display: grid;
   gap: 0;
@@ -3157,6 +3151,10 @@ form.report-panel {
 
 .appearance-heading h1 { margin: var(--space-1) 0 0; font-size: clamp(1.5rem, 5vw, 2.125rem); }
 .appearance-heading .eyebrow, .appearance-page legend { color: var(--muted); font-size: 0.625rem; }
+.appearance-tabs { display: flex; gap: 0; margin: calc(-1 * var(--space-3)) 0 var(--space-7); border-bottom: 1px solid var(--soft); }
+.appearance-tabs a { display: inline-flex; align-items: center; padding: var(--space-2) var(--space-3); color: var(--muted); font-size: 0.75rem; text-decoration: none; border-bottom: 2px solid transparent; }
+.appearance-tabs a:hover { color: var(--tab-hover); }
+.appearance-tabs a[aria-current="page"] { color: var(--ink); border-bottom-color: var(--accent); }
 .appearance-page fieldset { padding: 0; margin: 0 0 var(--space-7); border: 0; }
 .appearance-page legend { margin-bottom: var(--space-3); }
 .theme-options { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: var(--space-2); }

@@ -13,8 +13,7 @@ import {
   AccountApiKeyCreate,
   AccountMagicLink,
   AccountPassword,
-  ChangeFont,
-  ChangeTheme,
+  ChangeAppearance,
   ConfirmAccountDelete,
   ConfirmEmail,
   NotificationSettings,
@@ -227,57 +226,53 @@ export function registerAccountRoutes(app: Hono) {
     return redirect('/u/' + handle)
   })
 
-  app.get('/account/edit/theme', c => {
+  app.get('/account/edit/appearance', c => {
     const user = currentUser(c.req.raw)
-    if (!user) return redirect('/enter?next=' + encodeURIComponent('/account/edit/theme'))
+    if (!user) return redirect('/enter?next=' + encodeURIComponent('/account/edit/appearance'))
     const returnPath = c.req.query('from') ? safeNext(c.req.query('from')) : undefined
-    return page(<ChangeTheme user={user} selected={appearance(c.req.raw)} returnPath={returnPath} />)
+    const tab = c.req.query('tab') === 'font' ? 'font' : 'theme'
+    return page(<ChangeAppearance user={user} selected={appearance(c.req.raw)} selectedFont={fontChoice(c.req.raw)}
+      selectedSize={fontSizeChoice(c.req.raw)} tab={tab} returnPath={returnPath} />)
   })
 
-  app.post('/account/edit/theme', async c => {
+  app.post('/account/edit/appearance', async c => {
     const user = currentUser(c.req.raw)
     if (!user) return redirect('/enter')
     const f = await form(c.req.raw)
     const returnPath = f.from ? safeNext(f.from) : undefined
+    const query = `?tab=${f.tab === 'font' ? 'font' : 'theme'}${
+      returnPath ? '&from=' + encodeURIComponent(returnPath) : ''}`
+    if (f.tab === 'font') {
+      const selected = f.font as FontChoice
+      const selectedSize = f.fontSize as FontSizeChoice
+      if (!FONT_CHOICES.some(font => font.value === selected)
+        || !FONT_SIZE_CHOICES.some(size => size.value === selectedSize)) {
+        return page(<ChangeAppearance user={user} selected={appearance(c.req.raw)}
+          selectedFont={fontChoice(c.req.raw)} selectedSize={fontSizeChoice(c.req.raw)} tab="font"
+          returnPath={returnPath} />, 400)
+      }
+      const response = redirect('/account/edit/appearance' + query, fontCookie(selected))
+      response.headers.append('set-cookie', fontSizeCookie(selectedSize))
+      return response
+    }
     const theme = f.theme as ThemeChoice
     const accent = f.accent as AccentChoice
     if (!THEME_CHOICES.includes(theme) || !ACCENT_CHOICES.includes(accent)) {
-      return page(<ChangeTheme user={user} selected={appearance(c.req.raw)} returnPath={returnPath} />, 400)
+      return page(<ChangeAppearance user={user} selected={appearance(c.req.raw)}
+        selectedFont={fontChoice(c.req.raw)} selectedSize={fontSizeChoice(c.req.raw)} tab="theme"
+        returnPath={returnPath} />, 400)
     }
-    return redirect('/account/edit/theme' + (returnPath ? '?from=' + encodeURIComponent(returnPath) : ''),
-      appearanceCookie({ theme, accent }))
+    return redirect('/account/edit/appearance' + query, appearanceCookie({ theme, accent }))
+  })
+
+  app.get('/account/edit/theme', c => {
+    const from = c.req.query('from')
+    return redirect('/account/edit/appearance?tab=theme' + (from ? '&from=' + encodeURIComponent(safeNext(from)) : ''))
   })
 
   app.get('/account/edit/font', c => {
-    const user = currentUser(c.req.raw)
-    if (!user) return redirect('/enter?next=' + encodeURIComponent('/account/edit/font'))
-    const returnPath = c.req.query('from') ? safeNext(c.req.query('from')) : undefined
-    return page(
-      <ChangeFont user={user} selected={fontChoice(c.req.raw)} selectedSize={fontSizeChoice(c.req.raw)}
-        returnPath={returnPath} />,
-    )
-  })
-
-  app.post('/account/edit/font', async c => {
-    const user = currentUser(c.req.raw)
-    if (!user) return redirect('/enter')
-    const f = await form(c.req.raw)
-    const returnPath = f.from ? safeNext(f.from) : undefined
-    const selected = f.font as FontChoice
-    const selectedSize = f.fontSize as FontSizeChoice
-    if (!FONT_CHOICES.some(font => font.value === selected)
-      || !FONT_SIZE_CHOICES.some(size => size.value === selectedSize))
-    {
-      return page(
-        <ChangeFont user={user} selected={fontChoice(c.req.raw)} selectedSize={fontSizeChoice(c.req.raw)}
-          returnPath={returnPath} />,
-        400,
-      )
-    }
-    const response = redirect('/account/edit/font' + (returnPath ? '?from=' + encodeURIComponent(returnPath) : ''),
-      fontCookie(selected))
-    response.headers.append('set-cookie', fontSizeCookie(selectedSize))
-    return response
+    const from = c.req.query('from')
+    return redirect('/account/edit/appearance?tab=font' + (from ? '&from=' + encodeURIComponent(safeNext(from)) : ''))
   })
 
   app.get('/account/security', c => {

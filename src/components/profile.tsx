@@ -130,10 +130,7 @@ export function Profile(
                     <strong>Appearance</strong>
                     <span>Choose a theme, accent color, and monospace font for textlog.</span>
                   </div>
-                  <div className="account-appearance-actions">
-                    <a className="button" href={`/account/edit/theme${fromQuery}`}>change theme</a>
-                    <a className="button" href={`/account/edit/font${fromQuery}`}>change font</a>
-                  </div>
+                  <a className="button" href={`/account/edit/appearance${fromQuery}`}>change appearance</a>
                 </div>
                 <div className="account-danger-zone">
                   <div>

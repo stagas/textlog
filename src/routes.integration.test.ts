@@ -362,7 +362,7 @@ test('consequential account, content, reporting, and admin flows work over HTTP'
   expect(welcomeExploreHtml).toContain('href="/u/alice?from=%2Fexplore%3Fwelcome%3D1">profile</a>')
   expect(welcomeExploreHtml).not.toContain('action="/search"')
   expect(welcomeExploreHtml).toContain('href="/account/edit/notifications">enable notifications</a>')
-  expect(welcomeExploreHtml).toContain('href="/account/edit/theme">customize theme</a>')
+  expect(welcomeExploreHtml).toContain('href="/account/edit/appearance">customize appearance</a>')
   expect(welcomeExploreHtml).toContain('href="/account/password/enable">set up a password</a>')
   const publicProfile = await request('/u/alice', { cookie: aliceCookie })
   expect(publicProfile.status).toBe(200)

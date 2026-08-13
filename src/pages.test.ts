@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test'
 import { About, AccountApiKeyCreate, AccountMagicLink, AccountPassword, AccountSecurity, AdminDashboard, ApiDocs, Auth,
-  ChangeFont, ChangeTheme, ChooseHandle, Compose, ConfirmAccountDelete, ConfirmDelete, ConfirmEmail, Connections,
+  ChangeAppearance, ChooseHandle, Compose, ConfirmAccountDelete, ConfirmDelete, ConfirmEmail, Connections,
   Contact, EditPost, EmbedExamples, ErrorPage, Legal, MagicLinkSent, NotFound, NotificationSettings, PasswordLogin,
   postTitle, Profile, Reply } from './components/pages'
 
@@ -298,12 +298,15 @@ test('pages inline the cookie-aware theme and logo', () => {
   expect(html).not.toContain('src="/textlog.svg')
 })
 
-test('theme selection is a server-rendered form with mobile appearance choices', () => {
-  const html = renderToStaticMarkup(React.createElement(ChangeTheme, {
+test('appearance theme tab is a server-rendered form with mobile appearance choices', () => {
+  const html = renderToStaticMarkup(React.createElement(ChangeAppearance, {
     user: { id: 1, handle: 'reader', email: 'reader@example.com', bio: '' },
     selected: { theme: 'sepia', accent: 'amber' },
+    selectedFont: 'system',
   }))
-  expect(html).toContain('action="/account/edit/theme"')
+  expect(html).toContain('<h1>change appearance</h1>')
+  expect(html).toContain('action="/account/edit/appearance"')
+  expect(html).toContain('aria-current="page">theme</a>')
   expect(html).toContain('name="theme" value="dracula"')
   expect(html).toContain('name="accent" value="rust"')
   expect(html).toContain('class="accent-swatch accent-swatch-rust"')
@@ -373,12 +376,15 @@ test('notification settings show Home Screen installation steps only for iOS', (
   expect(other).not.toContain('Install textlog first')
 })
 
-test('font selection lists local monospace fonts in their own families', () => {
-  const html = renderToStaticMarkup(React.createElement(ChangeFont, {
+test('appearance font tab lists local monospace fonts in their own families', () => {
+  const html = renderToStaticMarkup(React.createElement(ChangeAppearance, {
     user: { id: 1, handle: 'reader', email: 'reader@example.com', bio: '' },
-    selected: 'consolas',
+    selected: { theme: 'system', accent: 'theme' },
+    selectedFont: 'consolas',
+    tab: 'font',
   }))
-  expect(html).toContain('action="/account/edit/font"')
+  expect(html).toContain('action="/account/edit/appearance"')
+  expect(html).toContain('aria-current="page">font</a>')
   expect(html).toContain('name="font" checked="" value="consolas"')
   expect(html).toContain('font-preview-sf-mono')
   expect(html).toContain('font-preview-dejavu-sans-mono')
@@ -891,8 +897,8 @@ test('Profile edit offers a data download without rendering notes', () => {
   expect(html).toContain('download data')
   expect(html).toContain('href="/latest?page=2">back</a>')
   expect(html).toContain('type="hidden" name="from" value="/latest?page=2"')
-  expect(html).toContain('href="/account/edit/theme?from=%2Flatest%3Fpage%3D2"')
-  expect(html).toContain('href="/account/edit/font?from=%2Flatest%3Fpage%3D2"')
+  expect(html).toContain('href="/account/edit/appearance?from=%2Flatest%3Fpage%3D2"')
+  expect(html).toContain('change appearance')
   expect(html).toContain('href="/account/security?from=%2Flatest%3Fpage%3D2"')
   expect(html).toContain('href="/account/edit/notifications?from=%2Flatest%3Fpage%3D2"')
   expect(html).toContain('Handles must be 2–24 characters')
