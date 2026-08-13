@@ -2332,7 +2332,7 @@ form.report-panel {
   font: inherit;
   background: transparent;
   border: 0;
-  border-bottom: var(--hairline) solid currentColor;
+  border-bottom: var(--hairline) solid var(--link-border);
   cursor: pointer;
   user-select: none;
 }
