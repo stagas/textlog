@@ -49,6 +49,15 @@ describe('post persistence', () => {
       )
     expect(linkify('[test](example.invalid)')).toBe('[test](example.invalid)')
   })
+  test('keeps ASCII-art markup literal while linking tags and handles', () => {
+    const body = '[eye](https://example.com) $x^2$ <nose> @Reader #ascii example.org/art'
+    expect(linkify(body, { reader: 'Reader bio' })).toBe(
+      '[eye](https://example.com) $x^2$ &lt;nose&gt; '
+      + '<a href="/u/reader" title="Reader bio">@Reader</a> <a href="/tag/ascii">#ascii</a> '
+      + '<a href="https://example.org/art" target="_blank" rel="nofollow ugc noopener noreferrer">'
+      + 'example.org/art</a>',
+    )
+  })
   test('linkifies protocol-less domains using the public TLD list', () => {
     expect(linkify('visit example.com or docs.example.dev/guide?q=links.'))
       .toBe(
