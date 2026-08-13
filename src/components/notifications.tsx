@@ -40,7 +40,7 @@ export function NotificationSettings({ user, publicKey, ios = false, returnPath 
         )}
         <form id="notification-preference-form">
           <fieldset className="notification-preferences" id="notification-preferences" disabled hidden>
-            <legend>notify me about</legend>
+            <legend>notify @{user.handle} about</legend>
             <fieldset className="notification-radio-group">
               <legend className="visually-hidden">new notes</legend>
               <div className="notification-radio-heading">
@@ -65,17 +65,17 @@ export function NotificationSettings({ user, publicKey, ios = false, returnPath 
                   <input type="radio" name="noteScope" value="following" />
                   <span>
                     <strong>following</strong>
-                    <small>People and tags you follow</small>
+                    <small>People and tags @{user.handle} follows</small>
                   </span>
                 </label>
               </div>
             </fieldset>
             {[
-              ['ownPosts', 'include own messages', 'Also notify for own notes'],
-              ['replies', 'replies', 'When someone replies to one of your notes'],
-              ['mentions', 'mentions', 'When someone mentions your handle'],
-              ['follows', 'new followers', 'When someone starts following you'],
-              ['followActivity', 'follow activity', 'When people or tags you follow gain a new follow'],
+              ['ownPosts', `include @${user.handle}’s messages`, `Also notify for @${user.handle}’s own notes`],
+              ['replies', 'replies', `When someone replies to one of @${user.handle}’s notes`],
+              ['mentions', 'mentions', `When someone mentions @${user.handle}`],
+              ['follows', 'new followers', `When someone starts following @${user.handle}`],
+              ['followActivity', 'follow activity', `When people or tags @${user.handle} follows gain a new follow`],
               ...(isAdmin(user)
                 ? [['signups', 'new user signups', 'When a new user creates an account']]
                 : []),
@@ -107,7 +107,7 @@ export function NotificationSettings({ user, publicKey, ios = false, returnPath 
             disable notifications
           </a>
         </div>
-        {publicKey && <script src="/notifications.js" data-vapid-public-key={publicKey} />}
+        {publicKey && <script src="/notifications.js" data-vapid-public-key={publicKey} data-handle={user.handle} />}
       </article>
     </Layout>
   )

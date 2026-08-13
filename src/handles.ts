@@ -26,6 +26,53 @@ export function createAccount(database: Database, handle: string, email: string,
   })()
 }
 
+function handleHistoryHasGroups(database: Database) {
+  return (database.query('PRAGMA table_info(handle_history)').all() as { name: string }[])
+    .some(column => column.name === 'account_group_id')
+}
+
+function historicalHandleClaim(database: Database, userId: number, handle: string) {
+  const groupAware = handleHistoryHasGroups(database)
+  const historical = database.query(`SELECT hh.user_id,u.deleted_at${groupAware
+    ? ',hh.account_group_id,claimant.account_group_id claimant_group_id'
+    : ''}
+    FROM handle_history hh JOIN users u ON u.id=hh.user_id
+    ${groupAware ? 'JOIN users claimant ON claimant.id=?' : ''}
+    WHERE hh.handle=? COLLATE NOCASE`).get(...(groupAware ? [userId, handle] : [handle])) as {
+      user_id: number
+      deleted_at: string | null
+      account_group_id?: number | null
+      claimant_group_id?: number | null
+    } | null
+  if (!historical || historical.user_id === userId) return { allowed: true, reclaimed: false }
+  const reclaimed = Boolean(historical.deleted_at && historical.account_group_id
+    && historical.account_group_id === historical.claimant_group_id)
+  return { allowed: reclaimed, reclaimed }
+}
+
+export function claimInitialHandle(database: Database, userId: number, handle: string,
+  onClaim?: (reclaimed: boolean) => void)
+{
+  return database.transaction(() => {
+    if (database.query('SELECT 1 FROM users WHERE handle=? COLLATE NOCASE AND id!=? AND deleted_at IS NULL')
+      .get(handle, userId)) throw new Error('Handle is unavailable')
+    const claim = historicalHandleClaim(database, userId, handle)
+    if (!claim.allowed) throw new Error('Handle is reserved')
+    onClaim?.(claim.reclaimed)
+    if (handleHistoryHasGroups(database)) {
+      database.query(`UPDATE handle_history SET user_id=?,account_group_id=(
+        SELECT account_group_id FROM users WHERE id=?) WHERE handle=? COLLATE NOCASE`).run(userId, userId, handle)
+    }
+    database.query('UPDATE users SET handle=?,handle_chosen_at=CURRENT_TIMESTAMP WHERE id=?').run(handle, userId)
+    if (claim.reclaimed && database.query(
+      "SELECT 1 FROM sqlite_master WHERE type='table' AND name='account_creation_events'",
+    ).get()) {
+      database.query('DELETE FROM account_creation_events WHERE user_id=?').run(userId)
+    }
+    return claim
+  })()
+}
+
 export function updateProfileHandle(database: Database, userId: number, handle: string, bio: string) {
   return database.transaction(() => {
     const account = database.query('SELECT handle FROM users WHERE id=? AND deleted_at IS NULL').get(userId) as
@@ -39,13 +86,21 @@ export function updateProfileHandle(database: Database, userId: number, handle: 
       ).get(handle) as { id: number } | null
       if (currentOwner && currentOwner.id !== userId) throw new Error('Handle is unavailable')
 
-      const historicalOwner = database.query(
-        'SELECT user_id FROM handle_history WHERE handle=? COLLATE NOCASE',
-      ).get(handle) as { user_id: number } | null
-      if (historicalOwner && historicalOwner.user_id !== userId) throw new Error('Handle is reserved')
+      const claim = historicalHandleClaim(database, userId, handle)
+      if (!claim.allowed) throw new Error('Handle is reserved')
+
+      if (handleHistoryHasGroups(database)) {
+        database.query(`UPDATE handle_history SET user_id=?,account_group_id=(
+          SELECT account_group_id FROM users WHERE id=?) WHERE handle=? COLLATE NOCASE`).run(userId, userId, handle)
+      }
 
       database.query('INSERT OR IGNORE INTO handle_history(handle,user_id) VALUES(?,?)')
         .run(account.handle.toLowerCase(), userId)
+      if (claim.reclaimed && database.query(
+        "SELECT 1 FROM sqlite_master WHERE type='table' AND name='account_creation_events'",
+      ).get()) {
+        database.query('DELETE FROM account_creation_events WHERE user_id=?').run(userId)
+      }
     }
 
     database.query('UPDATE users SET handle=?,bio=? WHERE id=?').run(handle, bio, userId)

@@ -1720,7 +1720,7 @@ nav form {
 .auth input,
 .bio-form input,
 .account-delete-form input,
-.security-form input,
+.security-form input:not([type="hidden"]):not([type="checkbox"]):not([type="radio"]),
 .search-form input,
 textarea {
   width: 100%;
@@ -1771,7 +1771,7 @@ textarea {
 .auth input:focus-visible,
 .bio-form input:focus-visible,
 .account-delete-form input:focus-visible,
-.security-form input:focus-visible,
+.security-form input:not([type="hidden"]):not([type="checkbox"]):not([type="radio"]):focus-visible,
 .search-form input:focus-visible,
 textarea:focus-visible {
   outline: 2px solid var(--accent);
@@ -2039,6 +2039,13 @@ textarea.form-control {
   letter-spacing: 4px;
 }
 
+.magic-link-output .api-key-output {
+  min-height: 0;
+  letter-spacing: 0;
+  user-select: all;
+  white-space: nowrap;
+}
+
 .magic-link-output textarea:focus-visible,
 .magic-link-output input:focus-visible {
   outline: 2px solid var(--accent);
@@ -2065,11 +2072,14 @@ textarea.form-control {
   justify-self: start;
 }
 
-.api-key-create-page { width: min(100%, 620px); min-width: 0; margin: var(--space-7) auto; overflow-x: clip; }
-.api-key-create-page .security-form { width: 100%; min-width: 0; margin-top: var(--space-6); }
+.api-key-create-page { min-width: 0; }
+.api-key-create-intro { color: var(--muted); font-size: 0.6875rem; }
+.api-key-create-page .security-form { width: 100%; min-width: 0; }
 .api-key-create-page .security-form > label,
-.api-key-create-page .security-form input { min-width: 0; max-width: 100%; }
-.api-key-create-page > .quiet { display: inline-block; margin-top: var(--space-5); }
+.api-key-create-page .security-form > label input { min-width: 0; max-width: 100%; }
+.api-key-form .form-actions { width: 100%; }
+.api-key-created-page > p { color: var(--muted); font-size: 0.6875rem; }
+.api-key-created-page .form-actions { margin-top: var(--space-5); }
 
 .api-key-lifetimes {
   display: grid;
@@ -2090,73 +2100,23 @@ textarea.form-control {
 
 .security-form .api-key-lifetime {
   display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--space-5);
+  align-items: flex-start;
+  gap: var(--space-2);
   padding: var(--space-4);
   cursor: pointer;
   border-bottom: 1px solid var(--soft);
 }
 
 .api-key-lifetime:last-of-type { border-bottom: 0; }
-.api-key-lifetime > span:first-child {
+.api-key-lifetime > span {
   display: grid;
   min-width: 0;
   gap: var(--space-1);
   overflow-wrap: anywhere;
 }
-.api-key-lifetime strong { color: var(--ink); font-size: 0.75rem; }
+.api-key-lifetime > input { flex: none; margin: 2px 0 0; accent-color: var(--accent); }
+.api-key-lifetime strong { color: var(--ink); font-size: 0.6875rem; }
 .api-key-lifetime small { color: var(--muted); font-size: 0.625rem; }
-.api-key-create-page .api-key-lifetime input {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  min-width: 0;
-  padding: 0;
-  margin: -1px;
-  overflow: hidden;
-  clip: rect(0, 0, 0, 0);
-  white-space: nowrap;
-  border: 0;
-}
-
-.api-key-radio {
-  position: relative;
-  flex: none;
-  width: 20px;
-  height: 20px;
-  background: var(--soft);
-  border: 1px solid var(--muted);
-  border-radius: 50%;
-  transition: background 120ms ease, border-color 120ms ease;
-}
-
-.api-key-radio::after {
-  position: absolute;
-  inset: 4px;
-  background: var(--muted);
-  border-radius: 50%;
-  content: '';
-  opacity: 0;
-  transform: scale(0.5);
-  transition: opacity 120ms ease, transform 120ms ease;
-}
-
-.api-key-lifetime input:checked + .api-key-radio {
-  background: var(--tag-bg);
-  border-color: var(--accent);
-}
-
-.api-key-lifetime input:checked + .api-key-radio::after {
-  background: var(--accent);
-  opacity: 1;
-  transform: scale(1);
-}
-
-.api-key-lifetime input:focus-visible + .api-key-radio {
-  outline: 2px solid var(--accent);
-  outline-offset: 2px;
-}
 
 .session-list article {
   display: flex;
@@ -2805,6 +2765,10 @@ form.report-panel {
   color: var(--accent-dark);
 }
 
+.profile-switch-link {
+  margin-right: auto;
+}
+
 
 .profile-logout {
   appearance: none;
@@ -2947,6 +2911,79 @@ form.report-panel {
 
 .account-danger-zone .button {
   flex: none;
+}
+
+.account-switcher-page {
+  margin-top: var(--space-7);
+}
+
+.account-switcher-intro {
+  max-width: 62ch;
+  margin: var(--space-5) 0;
+  color: var(--muted);
+  font-size: 0.75rem;
+}
+
+.account-choice-list {
+  border: 1px solid var(--soft);
+}
+
+.account-choice,
+.account-create-persona {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+  padding: var(--space-4);
+}
+
+.account-choice + .account-choice {
+  border-top: 1px solid var(--soft);
+}
+
+.account-choice > div,
+.account-create-persona > div {
+  display: grid;
+  gap: var(--space-1);
+}
+
+.account-choice-handle {
+  width: fit-content;
+  font-weight: 600;
+}
+
+.account-choice-labels {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  color: var(--muted);
+  font-size: 0.625rem;
+}
+
+.account-choice-labels span + span::before {
+  content: '·';
+  margin-right: var(--space-2);
+}
+
+.account-choice-current {
+  color: var(--muted);
+  font-size: 0.6875rem;
+}
+
+.account-create-persona {
+  margin-top: var(--space-5);
+  border-top: 1px solid var(--soft);
+  border-bottom: 1px solid var(--soft);
+}
+
+.account-create-persona strong {
+  font-size: 0.75rem;
+}
+
+.account-create-persona span {
+  color: var(--muted);
+  font-size: 0.625rem;
 }
 
 .notification-preferences {

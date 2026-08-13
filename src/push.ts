@@ -20,12 +20,16 @@ export function vapidPublicKey() {
   return vapidConfiguration()?.publicKey || null
 }
 
-async function sendToSubscriptions(subscriptions: PushSubscriptionRow[],
-  messageFor: (subscription: PushSubscriptionRow) => PushMessage, database: Database, vapid: VapidConfiguration)
+async function sendToSubscriptions<T extends PushSubscriptionRow>(subscriptions: T[],
+  messageFor: (subscription: T) => PushMessage, database: Database, vapid: VapidConfiguration)
 {
   if (isDevelopment() || !subscriptions.length) return
   webpush.setVapidDetails(vapid.subject, vapid.publicKey, vapid.privateKey)
-  await Promise.all(subscriptions.map(async subscription => {
+  const devices = new Map<string, T>()
+  for (const subscription of subscriptions) {
+    if (!devices.has(subscription.endpoint)) devices.set(subscription.endpoint, subscription)
+  }
+  await Promise.all([...devices.values()].map(async subscription => {
     try {
       await webpush.sendNotification({
         endpoint: subscription.endpoint,
@@ -67,12 +71,14 @@ export async function sendPushForPost(postId: number, actorId: number, actorHand
   } | null
   if (!post) return
   const subscriptions = database.query(`SELECT ps.endpoint,ps.p256dh,ps.auth,ps.user_id,
+      recipient.handle recipient_handle,
       (ps.user_id!=? AND EXISTS(SELECT 1 FROM posts child JOIN posts parent ON parent.id=child.parent_id
         WHERE child.id=? AND parent.user_id=ps.user_id)) is_reply,
       (ps.user_id!=? AND EXISTS(SELECT 1 FROM post_mentions pm
         WHERE pm.post_id=? AND pm.user_id=ps.user_id)) is_mention,
       ps.notify_replies,ps.notify_mentions
-    FROM push_subscriptions ps WHERE NOT EXISTS (SELECT 1 FROM blocks b WHERE
+    FROM push_subscriptions ps JOIN users recipient ON recipient.id=ps.user_id
+    WHERE NOT EXISTS (SELECT 1 FROM blocks b WHERE
       (b.blocker_id=? AND b.blocked_id=ps.user_id) OR (b.blocker_id=ps.user_id AND b.blocked_id=?))
     AND NOT EXISTS (SELECT 1 FROM post_hashtags ph JOIN blocked_hashtags bh ON bh.tag=ph.tag
       WHERE ph.post_id=? AND bh.user_id=ps.user_id)
@@ -85,7 +91,8 @@ export async function sendPushForPost(postId: number, actorId: number, actorHand
         SELECT 1 FROM posts child JOIN posts parent ON parent.id=child.parent_id
         WHERE child.id=? AND parent.user_id=ps.user_id))
       OR (ps.notify_mentions=1 AND ps.user_id!=? AND EXISTS(
-        SELECT 1 FROM post_mentions pm WHERE pm.post_id=? AND pm.user_id=ps.user_id)))`)
+        SELECT 1 FROM post_mentions pm WHERE pm.post_id=? AND pm.user_id=ps.user_id)))
+    ORDER BY ps.endpoint,is_reply DESC,is_mention DESC,ps.user_id`)
     .all(actorId, postId, actorId, postId, actorId, actorId, postId, actorId, actorId, actorId, postId, actorId, postId,
       actorId, postId) as (PushSubscriptionRow & {
         user_id: number
@@ -93,28 +100,25 @@ export async function sendPushForPost(postId: number, actorId: number, actorHand
         is_mention: number
         notify_replies: number
         notify_mentions: number
+        recipient_handle: string
       })[]
   await sendToSubscriptions(subscriptions, subscription => {
-    const item = subscription as typeof subscriptions[number]
-    const kind = item.is_reply && item.notify_replies
+    const kind = subscription.is_reply && subscription.notify_replies
       ? 'reply'
-      : item.is_mention && item.notify_mentions
+      : subscription.is_mention && subscription.notify_mentions
       ? 'mention'
       : 'latest'
-    const ownPost = item.user_id === actorId
     return {
-      title: ownPost
-        ? `You ${post.parent_handle ? `replied to @${post.parent_handle}` : 'wrote'}`
-        : `@${actorHandle} ${
-          kind === 'reply'
-            ? 'replied to you'
-            : kind === 'mention'
-            ? 'mentioned you'
-            : post.parent_handle
-            ? `replied to @${post.parent_handle}`
-            : 'wrote'
-        }`,
-      body: post.body,
+      title: `@${actorHandle} ${
+        kind === 'reply'
+          ? `replied to @${subscription.recipient_handle}`
+          : kind === 'mention'
+          ? `mentioned @${subscription.recipient_handle}`
+          : post.parent_handle
+          ? `replied to @${post.parent_handle}`
+          : 'wrote'
+      }`,
+      body: post.body.trimEnd(),
       url: `/post/${postId}`,
     }
   }, database, vapid)
@@ -124,12 +128,14 @@ export async function sendPushForFollow(followerId: number, followerHandle: stri
   database: Database = db, vapid: VapidConfiguration | null = vapidConfiguration())
 {
   if (!vapid || followerId === followedId) return
-  const subscriptions = database.query(
-    'SELECT endpoint,p256dh,auth FROM push_subscriptions WHERE user_id=? AND notify_follows=1',
-  ).all(followedId) as PushSubscriptionRow[]
-  await sendToSubscriptions(subscriptions, () => ({
-    title: `@${followerHandle} followed you`,
-    body: `@${followerHandle} is now following you.`,
+  const subscriptions = database.query(`SELECT ps.endpoint,ps.p256dh,ps.auth,u.handle recipient_handle
+    FROM push_subscriptions ps JOIN users u ON u.id=ps.user_id
+    WHERE ps.user_id=? AND ps.notify_follows=1`).all(followedId) as (PushSubscriptionRow & {
+      recipient_handle: string
+    })[]
+  await sendToSubscriptions(subscriptions, subscription => ({
+    title: `@${followerHandle} followed @${subscription.recipient_handle}`,
+    body: `@${followerHandle} is now following @${subscription.recipient_handle}.`,
     url: `/u/${encodeURIComponent(followerHandle)}`,
   }), database, vapid)
 }

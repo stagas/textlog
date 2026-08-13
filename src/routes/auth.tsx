@@ -1,10 +1,13 @@
 import { AUTH_LIMITS, authRateLimitMessage, loginSubnet } from '../auth-rate-limit'
+import { accountForEmail, accountForHandle, accountGroupForUser, createAccountGroup, markGroupEmailVerified,
+  MONTHLY_NEW_ACCOUNT_LIMIT, recentAccountCreations, selectAccount } from '../account-groups'
 import { sessionCookieName } from '../brand'
 import { Auth, ChooseHandle, ForgotPassword, MagicLinkSent, PasswordLogin, ResetPassword } from '../components/pages'
 import { db } from '../db'
 import { sendMagicLink, sendPasswordReset } from '../email'
 import { isDevelopment } from '../environment'
 import { clearSessionCookie, safeLocalPath, sessionCookie } from '../http'
+import { claimInitialHandle } from '../handles'
 import { logError } from '../log'
 import { moderateText, moderationMessage } from '../moderation'
 import { consumePasswordCaptcha, issuePasswordCaptcha, passwordCaptchaRequired,
@@ -12,6 +15,7 @@ import { consumePasswordCaptcha, issuePasswordCaptcha, passwordCaptchaRequired,
 import { consumePasswordLoginNonce, issuePasswordLoginNonce } from '../password-login-nonce'
 
 const PASSWORD_LOGIN_FAILURE = 'Login was unsuccessful. Check your details and try again.'
+class MonthlyAccountLimitError extends Error {}
 import { sendPushForSignup } from '../push'
 import { insertSession, SESSION_LIFETIME_MS, sessionHash } from '../sessions'
 import { currentUser, hash, hashPassword, token, verifyPassword } from '../utils'
@@ -35,13 +39,14 @@ function completeMagicEntry(link: MagicLink, userAgent: string) {
   db.transaction(() => {
     db.query('DELETE FROM magic_links WHERE token_hash=?').run(link.token_hash)
     if (userId) {
-      const account = db.query('SELECT handle_chosen_at FROM users WHERE id=?').get(userId) as {
+      const account = db.query(`SELECT handle_chosen_at FROM users
+        WHERE id=? AND deleted_at IS NULL AND suspended_at IS NULL`).get(userId) as {
         handle_chosen_at: string | null
       } | null
       if (!account) throw new Error('Account is unavailable')
       chosen = Boolean(account.handle_chosen_at)
-      db.query('UPDATE users SET email_verified_at=COALESCE(email_verified_at,CURRENT_TIMESTAMP) WHERE id=?')
-        .run(userId)
+      markGroupEmailVerified(db, userId)
+      if (!selectAccount(db, userId)) throw new Error('Account is unavailable')
     }
     else {
       for (let attempt = 0; attempt < 5; attempt++) {
@@ -49,6 +54,7 @@ function completeMagicEntry(link: MagicLink, userAgent: string) {
           const created = db.query(`INSERT INTO users(handle,email,password,email_verified_at)
             VALUES(?,?,'!',CURRENT_TIMESTAMP) RETURNING id`).get(temporaryHandle(), link.email) as { id: number }
           userId = created.id
+          createAccountGroup(db, userId, link.email)
           chosen = false
           break
         }
@@ -114,10 +120,9 @@ export function registerAuthRoutes(app: Hono) {
         limited.retryAfter,
       )
     }
-    const account = db.query(`SELECT id,password FROM users WHERE (email=? OR handle=? COLLATE NOCASE)
-      AND deleted_at IS NULL AND suspended_at IS NULL`).get(identifier, identifier) as
-      | { id: number; password: string }
-      | null
+    const account = emailPattern.test(identifier)
+      ? accountForEmail(db, identifier)
+      : accountForHandle(db, identifier)
     const valid = await verifyPassword(password, account?.password !== '!' && account?.password
       ? account.password
       : await dummyPasswordHash)
@@ -132,6 +137,7 @@ export function registerAuthRoutes(app: Hono) {
     if (!account.password.startsWith('$argon2id$')) {
       db.query('UPDATE users SET password=? WHERE id=?').run(await hashPassword(password), account.id)
     }
+    selectAccount(db, account.id)
     const session = token()
     insertSession(db, session, account.id, Date.now() + SESSION_LIFETIME_MS, Date.now(),
       c.req.header('user-agent') || '')
@@ -151,8 +157,7 @@ export function registerAuthRoutes(app: Hono) {
     if (!emailPattern.test(email) || email.length > 254) {
       return page(<ForgotPassword error="Enter a valid email address." />, 400)
     }
-    const account = db.query(`SELECT id,password FROM users WHERE email=? AND deleted_at IS NULL
-      AND suspended_at IS NULL`).get(email) as { id: number; password: string } | null
+    const account = accountForEmail(db, email)
     if (account && account.password !== '!') {
       const value = token()
       db.query('DELETE FROM password_resets WHERE user_id=? OR expires_at<=?').run(account.id, Date.now())
@@ -218,10 +223,9 @@ export function registerAuthRoutes(app: Hono) {
         limited.retryAfter)
     }
 
-    const account = db.query(`SELECT id,handle,email,handle_chosen_at FROM users
-      WHERE (email=? OR (handle=? COLLATE NOCASE AND handle_chosen_at IS NOT NULL))
-      AND deleted_at IS NULL AND suspended_at IS NULL`).get(identifier, identifier) as { id: number; handle: string;
-      email: string; handle_chosen_at: string | null } | null
+    const account = emailPattern.test(identifier)
+      ? accountForEmail(db, identifier)
+      : accountForHandle(db, identifier.replace(/^@/, ''))
     if ((!account && !emailPattern.test(identifier)) || identifier.length > 254) {
       return page(<Auth email={identifier} next={next} error="Enter a valid email address or handle." />, 400)
     }
@@ -248,10 +252,7 @@ export function registerAuthRoutes(app: Hono) {
     const f = await form(c.req.raw)
     const identifier = (f.identifier || f.email || '').trim().toLowerCase()
     const code = (f.code || '').trim()
-    const account = db.query(`SELECT email FROM users WHERE handle=? COLLATE NOCASE
-      AND handle_chosen_at IS NOT NULL AND deleted_at IS NULL AND suspended_at IS NULL`).get(identifier) as
-      | { email: string }
-      | null
+    const account = accountForHandle(db, identifier.replace(/^@/, ''))
     const email = emailPattern.test(identifier) ? identifier : account?.email
     const handle = !emailPattern.test(identifier)
     const invalid = () => page(<MagicLinkSent email={identifier} handle={handle}
@@ -330,13 +331,21 @@ export function registerAuthRoutes(app: Hono) {
         : moderationMessage(moderation.reason)} />, moderation.reason === 'flagged' ? 422 : 503)
     }
     try {
-      db.transaction(() => {
-        if (db.query('SELECT 1 FROM users WHERE handle=? COLLATE NOCASE AND id!=?').get(handle, user.id)
-          || db.query('SELECT 1 FROM handle_history WHERE handle=? COLLATE NOCASE').get(handle)) throw new Error()
-        db.query('UPDATE users SET handle=?,handle_chosen_at=CURRENT_TIMESTAMP WHERE id=?').run(handle, user.id)
-      })()
+      claimInitialHandle(db, user.id, handle, reclaimed => {
+        const group = accountGroupForUser(db, user.id)
+        if (!group || group.primary_user_id === user.id || reclaimed) return
+        if (recentAccountCreations(db, group.id) >= MONTHLY_NEW_ACCOUNT_LIMIT) {
+          throw new MonthlyAccountLimitError()
+        }
+        db.query('INSERT INTO account_creation_events(account_group_id,user_id) VALUES(?,?)').run(group.id, user.id)
+      })
     }
-    catch {
+    catch (error) {
+      if (error instanceof MonthlyAccountLimitError) {
+        return page(<ChooseHandle handle={handle} next={next}
+          error="You can create up to two new accounts per month. Choose a handle from one of your deleted accounts to reclaim it, or try again later." />,
+        429)
+      }
       return page(<ChooseHandle handle={handle} next={next} error="That handle is unavailable." />, 400)
     }
     void sendPushForSignup(user.id, handle).catch(error => logError('signup push failed', error))

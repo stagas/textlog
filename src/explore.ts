@@ -36,7 +36,7 @@ export function explorePivot(maxUserId: number, viewerId: number, day = new Date
   return (hash >>> 0) % maxUserId + 1
 }
 
-export function suggestedPeople(database: Database, viewerId: number, limit = 6,
+export function suggestedPeople(database: Database, viewerId: number, limit = 8,
   day = new Date().toISOString().slice(0, 10), offset = 0)
 {
   const maxUserId = (database.query('SELECT coalesce(max(id),0) id FROM users').get() as { id: number }).id

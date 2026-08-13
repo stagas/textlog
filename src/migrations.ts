@@ -3,7 +3,7 @@ import { extractHashtags, extractMentions, postContentFlags } from './content'
 import { rebuildHotPosts } from './hot'
 import { migrateLegacySessionTokens } from './sessions'
 
-type Migration = { version: number; name: string; up(database: Database): void }
+type Migration = { version: number; name: string; transaction?: boolean; up(database: Database): void }
 
 function columns(database: Database, table: string) {
   return (database.query(`PRAGMA table_info(${table})`).all() as { name: string }[]).map(column => column.name)
@@ -730,6 +730,129 @@ export const migrations: Migration[] = [
         "TEXT NOT NULL DEFAULT 'regular' CHECK(density IN ('compact','regular','relaxed'))")
     },
   },
+  {
+    version: 57,
+    name: 'multiple_accounts_per_email',
+    // SQLite implements UNIQUE columns as table-owned indexes. Rebuilding the parent
+    // table with foreign keys temporarily disabled is the supported way to remove it.
+    transaction: false,
+    up(database) {
+      const groupsExist = !!database.query(
+        "SELECT 1 FROM sqlite_master WHERE type='table' AND name='account_groups'",
+      ).get()
+      if (groupsExist && columns(database, 'users').includes('account_group_id')) {
+        const users = database.query(`SELECT id,email FROM users
+          WHERE deleted_at IS NULL AND account_group_id IS NULL ORDER BY id`).all() as { id: number; email: string }[]
+        const existingGroup = database.query('SELECT id FROM account_groups WHERE email=?')
+        const insertGroup = database.query(`INSERT INTO account_groups(email,primary_user_id,selected_user_id)
+          VALUES(?,?,?) RETURNING id`)
+        const attach = database.query('UPDATE users SET account_group_id=? WHERE id=?')
+        for (const user of users) {
+          const group = (existingGroup.get(user.email)
+            || insertGroup.get(user.email, user.id, user.id)) as { id: number }
+          attach.run(group.id, user.id)
+        }
+        return
+      }
+      database.run(`CREATE TABLE users_new (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,handle TEXT UNIQUE NOT NULL,email TEXT NOT NULL,
+        bio TEXT DEFAULT '',password TEXT NOT NULL,created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+        deleted_at TEXT,suspended_at TEXT,email_verified_at TEXT,activity_read_at TEXT,handle_chosen_at TEXT,
+        account_group_id INTEGER REFERENCES account_groups(id));
+      INSERT INTO users_new(id,handle,email,bio,password,created_at,deleted_at,suspended_at,email_verified_at,
+        activity_read_at,handle_chosen_at)
+        SELECT id,handle,email,bio,password,created_at,deleted_at,suspended_at,email_verified_at,
+          activity_read_at,handle_chosen_at FROM users;
+      DROP TABLE users;
+      ALTER TABLE users_new RENAME TO users;
+      CREATE TRIGGER user_search_insert AFTER INSERT ON users BEGIN
+        INSERT INTO user_search(rowid,handle,bio) VALUES(new.id,new.handle,new.bio); END;
+      CREATE TRIGGER user_search_delete AFTER DELETE ON users BEGIN
+        INSERT INTO user_search(user_search,rowid,handle,bio) VALUES('delete',old.id,old.handle,old.bio); END;
+      CREATE TRIGGER user_search_update AFTER UPDATE OF handle,bio ON users BEGIN
+        INSERT INTO user_search(user_search,rowid,handle,bio) VALUES('delete',old.id,old.handle,old.bio);
+        INSERT INTO user_search(rowid,handle,bio) VALUES(new.id,new.handle,new.bio); END;
+      CREATE TRIGGER feed_generation_users_insert AFTER INSERT ON users BEGIN
+        UPDATE feed_snapshot_generation SET generation=generation+1 WHERE id=1; END;
+      CREATE TRIGGER feed_generation_users_update AFTER UPDATE ON users BEGIN
+        UPDATE feed_snapshot_generation SET generation=generation+1 WHERE id=1; END;
+      CREATE TRIGGER feed_generation_users_delete AFTER DELETE ON users BEGIN
+        UPDATE feed_snapshot_generation SET generation=generation+1 WHERE id=1; END;
+      CREATE TABLE account_groups (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,email TEXT UNIQUE NOT NULL,
+        primary_user_id INTEGER NOT NULL REFERENCES users(id),
+        selected_user_id INTEGER NOT NULL REFERENCES users(id),
+        created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP);
+      CREATE INDEX users_account_group ON users(account_group_id,id);`)
+      const users = database.query(`SELECT id,email FROM users WHERE deleted_at IS NULL ORDER BY id`).all() as {
+        id: number
+        email: string
+      }[]
+      const insert = database.query(`INSERT INTO account_groups(email,primary_user_id,selected_user_id)
+        VALUES(?,?,?) RETURNING id`)
+      const attach = database.query('UPDATE users SET account_group_id=? WHERE id=?')
+      for (const user of users) {
+        const group = insert.get(user.email, user.id, user.id) as { id: number }
+        attach.run(group.id, user.id)
+      }
+    },
+  },
+  {
+    version: 58,
+    name: 'multi_account_push_subscriptions',
+    up(database) {
+      database.run(`ALTER TABLE push_subscriptions RENAME TO push_subscriptions_legacy;
+      CREATE TABLE push_subscriptions (
+        endpoint TEXT NOT NULL,user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        p256dh TEXT NOT NULL,auth TEXT NOT NULL,
+        notify_latest INTEGER NOT NULL DEFAULT 1,notify_replies INTEGER NOT NULL DEFAULT 1,
+        notify_mentions INTEGER NOT NULL DEFAULT 1,notify_follows INTEGER NOT NULL DEFAULT 1,
+        notify_own_posts INTEGER NOT NULL DEFAULT 1,notify_signups INTEGER NOT NULL DEFAULT 1,
+        notify_follow_activity INTEGER NOT NULL DEFAULT 1,notify_following_notes INTEGER NOT NULL DEFAULT 0,
+        device_id TEXT,PRIMARY KEY(endpoint,user_id));
+      INSERT INTO push_subscriptions(endpoint,user_id,p256dh,auth,notify_latest,notify_replies,notify_mentions,
+        notify_follows,notify_own_posts,notify_signups,notify_follow_activity,notify_following_notes,device_id)
+        SELECT endpoint,user_id,p256dh,auth,notify_latest,notify_replies,notify_mentions,notify_follows,
+          notify_own_posts,notify_signups,notify_follow_activity,notify_following_notes,device_id
+        FROM push_subscriptions_legacy;
+      DROP TABLE push_subscriptions_legacy;
+      CREATE INDEX push_subscriptions_user ON push_subscriptions(user_id);
+      CREATE INDEX push_subscriptions_device ON push_subscriptions(user_id,device_id);`)
+    },
+  },
+  {
+    version: 59,
+    name: 'account_creation_events',
+    up(database) {
+      database.run(`CREATE TABLE IF NOT EXISTS account_creation_events (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        account_group_id INTEGER NOT NULL REFERENCES account_groups(id) ON DELETE CASCADE,
+        user_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
+        created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP);
+      CREATE INDEX IF NOT EXISTS account_creation_events_group_created
+        ON account_creation_events(account_group_id,created_at);
+      INSERT INTO account_creation_events(account_group_id,user_id,created_at)
+        SELECT u.account_group_id,u.id,COALESCE(u.created_at,CURRENT_TIMESTAMP)
+        FROM users u JOIN account_groups g ON g.id=u.account_group_id
+        WHERE u.id!=g.primary_user_id AND NOT EXISTS (
+          SELECT 1 FROM account_creation_events e WHERE e.user_id=u.id);`)
+    },
+  },
+  {
+    version: 60,
+    name: 'group_owned_handle_history',
+    up(database) {
+      addColumn(database, 'handle_history', 'account_group_id',
+        'INTEGER REFERENCES account_groups(id) ON DELETE CASCADE')
+      database.run(`CREATE INDEX IF NOT EXISTS handle_history_account_group
+        ON handle_history(account_group_id);
+      UPDATE handle_history SET account_group_id=COALESCE(
+        (SELECT account_group_id FROM users WHERE users.id=handle_history.user_id),
+        (SELECT account_group_id FROM account_creation_events
+          WHERE account_creation_events.user_id=handle_history.user_id ORDER BY id DESC LIMIT 1))
+        WHERE account_group_id IS NULL;`)
+    },
+  },
 ]
 
 export const latestMigrationVersion = migrations.at(-1)!.version
@@ -745,10 +868,25 @@ export function runMigrations(database: Database, onMigration?: (migration: Migr
   }
   for (const migration of migrations) {
     if (migration.version <= current) continue
-    database.transaction(() => {
-      migration.up(database)
-      database.run(`PRAGMA user_version=${migration.version}`)
-    })()
+    if (migration.transaction === false) {
+      const foreignKeys = (database.query('PRAGMA foreign_keys').get() as { foreign_keys: number }).foreign_keys
+      if (foreignKeys) database.run('PRAGMA foreign_keys=OFF')
+      try {
+        database.transaction(() => {
+          migration.up(database)
+          database.run(`PRAGMA user_version=${migration.version}`)
+        })()
+      }
+      finally {
+        if (foreignKeys) database.run('PRAGMA foreign_keys=ON')
+      }
+    }
+    else {
+      database.transaction(() => {
+        migration.up(database)
+        database.run(`PRAGMA user_version=${migration.version}`)
+      })()
+    }
     onMigration?.(migration)
   }
   const integrity = database.query('PRAGMA foreign_key_check').all()

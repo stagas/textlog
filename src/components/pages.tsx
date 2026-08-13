@@ -1,5 +1,6 @@
 export * from './about'
 export * from './account-security'
+export * from './account-switcher'
 export * from './activity'
 export * from './admin-confirm'
 export * from './admin-dashboard'

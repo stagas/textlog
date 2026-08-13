@@ -7,7 +7,7 @@ import { enrichPosts, visibleTagFollowerCounts, visibleUserProfileStats } from '
 import type { PostView } from '../types'
 import { devicePageSize } from '../device-settings'
 import { activeRequest } from '../theme'
-import { fmt, fmtFull, linkify } from '../utils'
+import { displayBio, fmt, fmtFull, linkify } from '../utils'
 import { Layout } from './layout'
 import { ActionPair, FeedTabs, Pagination } from './page-shared'
 import { Post, TagReference, UserReference } from './post'
@@ -262,7 +262,7 @@ export function Feed({ user, page = 1, title, path = '/for-you', pageUrl, notifi
                   </div>
                   {(row.activity_kind === 'user_follow' || row.activity_kind === 'signup')
                     && <p className="profile-bio" dangerouslySetInnerHTML={{
-                      __html: linkify(row.target_bio || 'No bio yet.'),
+                      __html: linkify(displayBio(row.target_bio)),
                     }} />}
                 </div>
                 {row.actor_id !== user.id && (

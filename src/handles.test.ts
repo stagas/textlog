@@ -1,6 +1,10 @@
 import { Database } from 'bun:sqlite'
 import { describe, expect, test } from 'bun:test'
 import { createAccount, resolveHandle, updateProfileHandle } from './handles'
+import { claimInitialHandle } from './handles'
+import { anonymizeUser } from './admin'
+import { createAccountGroup } from './account-groups'
+import { runMigrations } from './migrations'
 
 function fixture() {
   const database = new Database(':memory:')
@@ -40,5 +44,46 @@ describe('handle history', () => {
     updateProfileHandle(database, 1, 'alpha', 'bio only')
 
     expect(database.query('SELECT * FROM handle_history').all()).toHaveLength(0)
+  })
+
+  test('lets the same account group reclaim a deleted persona handle', () => {
+    const database = new Database(':memory:')
+    database.run('PRAGMA foreign_keys=ON')
+    runMigrations(database)
+    const primary = database.query(`INSERT INTO users(handle,email,password,handle_chosen_at)
+      VALUES('primary','shared@example.com','!',CURRENT_TIMESTAMP) RETURNING id`).get() as { id: number }
+    const group = createAccountGroup(database, primary.id, 'shared@example.com')
+    const persona = database.query(`INSERT INTO users(handle,email,password,account_group_id)
+      VALUES('temporary','shared@example.com','!',?) RETURNING id`).get(group.id) as { id: number }
+    claimInitialHandle(database, persona.id, 'reclaim_me')
+    database.query('INSERT INTO account_creation_events(account_group_id,user_id) VALUES(?,?)')
+      .run(group.id, persona.id)
+    anonymizeUser(database, persona.id)
+    expect(database.query('SELECT COUNT(*) count FROM account_creation_events WHERE account_group_id=?').get(group.id))
+      .toEqual({ count: 0 })
+
+    const outsider = database.query(`INSERT INTO users(handle,email,password,handle_chosen_at)
+      VALUES('outsider','other@example.com','!',CURRENT_TIMESTAMP) RETURNING id`).get() as { id: number }
+    createAccountGroup(database, outsider.id, 'other@example.com')
+    expect(() => updateProfileHandle(database, outsider.id, 'reclaim_me', '')).toThrow()
+
+    database.query('INSERT INTO account_creation_events(account_group_id,user_id) VALUES(?,?),(?,?)')
+      .run(group.id, primary.id, group.id, primary.id)
+    const replacement = database.query(`INSERT INTO users(handle,email,password,account_group_id)
+      VALUES('replacement','shared@example.com','!',?) RETURNING id`).get(group.id) as { id: number }
+    database.query('INSERT INTO account_creation_events(account_group_id,user_id) VALUES(?,?)')
+      .run(group.id, replacement.id)
+    let reclaimed = false
+    claimInitialHandle(database, replacement.id, 'reclaim_me', value => {
+      reclaimed = value
+      if (!value) throw new Error('monthly limit')
+    })
+    expect(reclaimed).toBe(true)
+    expect(database.query('SELECT handle FROM users WHERE id=?').get(replacement.id))
+      .toEqual({ handle: 'reclaim_me' })
+    expect(database.query('SELECT user_id,account_group_id FROM handle_history WHERE handle=?').get('reclaim_me'))
+      .toEqual({ user_id: replacement.id, account_group_id: group.id })
+    expect(database.query('SELECT COUNT(*) count FROM account_creation_events WHERE account_group_id=?').get(group.id))
+      .toEqual({ count: 2 })
   })
 })

@@ -2,7 +2,7 @@ import { db, type User } from '../db'
 import { extractHashtags } from '../content'
 import { visibleHashtagCounts, visibleTagFollowerCounts } from '../posts'
 import type { PostView, ProfileRow } from '../types'
-import { linkify, referenceFormId } from '../utils'
+import { displayBio, linkify, referenceFormId } from '../utils'
 import { Layout } from './layout'
 import { FormMessage, Pagination, PostingHelp, PostingSuggestionResults, type PostingSuggestionSearch,
   ProfileControls, ProfileHeader, ProfileTabs } from './page-shared'
@@ -77,6 +77,7 @@ export function Profile(
                 {profile.handle}
               </a>
             </h1>
+            {editing && <a className="profile-edit-link profile-switch-link" href="/account/accounts">switch</a>}
             {!editing && user?.id !== profile.id
               && <ProfileControls user={user} profile={profile} following={following} blocked={blocked} />}
             {(editing || user?.id === profile.id) && (
@@ -162,7 +163,7 @@ export function Profile(
                 </div>
               </>
             )
-            : <p className="profile-bio" dangerouslySetInnerHTML={{ __html: linkify(profile.bio || 'No bio yet.',
+            : <p className="profile-bio" dangerouslySetInnerHTML={{ __html: linkify(displayBio(profile.bio),
               {}, [], undefined, undefined, '', bioTagCounts, {}, { signedIn: !!user, currentHandle: user?.handle,
                 formPrefix: bioFormPrefix, hashtagFollowing: bioTagFollowing,
                 hashtagFollowerCounts: bioTagFollowerCounts }) }} />}

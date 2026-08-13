@@ -4,7 +4,7 @@ import { containsAsciiArt, extractHashtags, extractMentions } from '../content'
 import { db, type User } from '../db'
 import { enrichPosts } from '../posts'
 import type { PostView, UserProfileStats } from '../types'
-import { fmt, fmtFull, linkify, referenceFormId } from '../utils'
+import { displayBio, displayPostBody, fmt, fmtFull, linkify, referenceFormId } from '../utils'
 
 export function UserReference({ handle, bio, noteCount, following, user, href, rel, currentHandle, stats,
   navigationQuery = '', showFollowAction = true, label }: {
@@ -35,7 +35,7 @@ export function UserReference({ handle, bio, noteCount, following, user, href, r
             </span>
           : <span>{noteCount.toLocaleString()} {noteCount === 1 ? 'note' : 'notes'}</span>}
         <span className="reference-popover-bio" dangerouslySetInnerHTML={{
-          __html: linkify(bio || 'No bio yet.', {}, [], undefined, undefined, navigationQuery),
+          __html: linkify(displayBio(bio), {}, [], undefined, undefined, navigationQuery),
         }} />
         {showFollowAction && !ownUser && (user
           ? <form method="post" action={'/follow/' + handle}>
@@ -136,7 +136,7 @@ export function PreviewPost({ p }: { p: PostView }) {
         <span className="quiet preview-reply">reply</span>
       </div>
       <p className={containsAsciiArt(p.body) ? 'ascii-art' : undefined} dangerouslySetInnerHTML={{
-        __html: linkify(p.body, p.mention_bios, [], undefined, renderFlags(p), '', p.hashtag_counts,
+        __html: linkify(displayPostBody(p.body), p.mention_bios, [], undefined, renderFlags(p), '', p.hashtag_counts,
           p.mention_note_counts, { signedIn: false, currentHandle: p.handle, formPrefix,
             hashtagFollowerCounts: p.hashtag_follower_counts }),
       }} />
@@ -265,7 +265,7 @@ export function Post({
         )}
       </div>
       <p className={isAsciiArt ? 'ascii-art' : undefined} dangerouslySetInnerHTML={{
-        __html: linkify(p.body, p.mention_bios, highlightTerms, undefined, renderFlags(p), referenceQuery,
+        __html: linkify(displayPostBody(p.body), p.mention_bios, highlightTerms, undefined, renderFlags(p), referenceQuery,
           p.hashtag_counts, p.mention_note_counts, { signedIn: !!user, currentHandle: user?.handle, formPrefix,
             mentionFollowing: p.mention_following, mentionProfileStats: p.mention_profile_stats,
             hashtagFollowing: p.hashtag_following, hashtagFollowerCounts: p.hashtag_follower_counts }),
@@ -306,7 +306,8 @@ export function Post({
                   </a>
                 </div>
                 <p className={containsAsciiArt(parent.body) ? 'ascii-art' : undefined} dangerouslySetInnerHTML={{
-                  __html: linkify(parent.body, parent.mention_bios, [], undefined, renderFlags(parent), referenceQuery,
+                  __html: linkify(displayPostBody(parent.body), parent.mention_bios, [], undefined, renderFlags(parent),
+                    referenceQuery,
                     parent.hashtag_counts, parent.mention_note_counts, { signedIn: !!user,
                       currentHandle: user?.handle, formPrefix: `${formPrefix}-parent-${parent.id}`,
                       mentionFollowing: parent.mention_following, mentionProfileStats: parent.mention_profile_stats,

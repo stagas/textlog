@@ -11,8 +11,11 @@ import { markSessionUsed, sessionHash } from './sessions'
 import type { UserProfileStats } from './types'
 
 export function userHoverTitle(noteCount: number, bio?: string) {
-  return `${noteCount.toLocaleString()} ${noteCount === 1 ? 'note' : 'notes'}\n\n${bio || 'No bio yet.'}`
+  return `${noteCount.toLocaleString()} ${noteCount === 1 ? 'note' : 'notes'}\n\n${displayBio(bio)}`
 }
+
+export const displayBio = (bio?: string | null) => bio?.trimEnd() || 'No bio yet.'
+export const displayPostBody = (body: string) => body.trimEnd()
 
 export type ReferencePopoverOptions = {
   signedIn: boolean
@@ -346,7 +349,7 @@ function renderedReference(token: string, mentionBios: Record<string, string>, m
       : isUser
       ? `<span>${count.toLocaleString()} ${count === 1 ? 'note' : 'notes'}</span>`
       : tagStatLinks(key, count, popover.hashtagFollowerCounts?.[key] || 0, navigationQuery)}`
-    + (isUser ? `<span class="reference-popover-bio">${linkify(mentionBios[key] || 'No bio yet.', {}, [],
+    + (isUser ? `<span class="reference-popover-bio">${linkify(displayBio(mentionBios[key]), {}, [],
       Bun.env.APP_URL, undefined, navigationQuery)}</span>` : '')
     + `${action}</span></span>`
 }

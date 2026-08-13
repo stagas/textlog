@@ -55,4 +55,28 @@ describe('email confirmation', () => {
       .toEqual({ email: 'new@example.com', verified: 1 })
     expect(database.query('SELECT count(*) count FROM email_tokens').get()).toEqual({ count: 0 })
   })
+
+  test('changes the shared email for every account in a group', () => {
+    const database = new Database(':memory:')
+    database.run(`CREATE TABLE users (id INTEGER PRIMARY KEY,email TEXT NOT NULL,email_verified_at TEXT,
+        deleted_at TEXT,account_group_id INTEGER);
+      CREATE TABLE account_groups (id INTEGER PRIMARY KEY,email TEXT UNIQUE NOT NULL,
+        primary_user_id INTEGER NOT NULL,selected_user_id INTEGER NOT NULL);
+      CREATE TABLE email_tokens (token_hash TEXT PRIMARY KEY,user_id INTEGER NOT NULL,kind TEXT NOT NULL,
+        email TEXT NOT NULL,expires_at INTEGER NOT NULL);
+      INSERT INTO users VALUES
+        (1,'shared@example.com',NULL,NULL,10),(2,'shared@example.com',NULL,NULL,10);
+      INSERT INTO account_groups VALUES(10,'shared@example.com',1,2);`)
+    database.query('INSERT INTO email_tokens VALUES(?,?,?,?,?)')
+      .run(hash('group-change'), 2, 'change', 'new-shared@example.com', 2000)
+
+    expect(confirmEmailToken(database, 'group-change', 1000)).toEqual({ ok: true, kind: 'change' })
+    expect(database.query('SELECT email,email_verified_at IS NOT NULL verified FROM users ORDER BY id').all())
+      .toEqual([
+        { email: 'new-shared@example.com', verified: 1 },
+        { email: 'new-shared@example.com', verified: 1 },
+      ])
+    expect(database.query('SELECT email FROM account_groups WHERE id=10').get())
+      .toEqual({ email: 'new-shared@example.com' })
+  })
 })

@@ -84,12 +84,14 @@ async function request(path: string, options: {
   form?: Record<string, string>
   json?: unknown
   userAgent?: string
+  ip?: string
 } = {}) {
   const method = options.method || 'GET'
   const headers = new Headers()
   if (options.cookie) headers.set('cookie', options.cookie)
   if (options.token) headers.set('authorization', `Bearer ${options.token}`)
   if (options.userAgent) headers.set('user-agent', options.userAgent)
+  if (options.ip) headers.set('x-forwarded-for', options.ip)
   if (method !== 'GET') headers.set('origin', origin)
   if (options.json !== undefined) headers.set('content-type', 'application/json')
   return await fetch(`${origin}${path}`, {
@@ -104,8 +106,8 @@ async function request(path: string, options: {
   })
 }
 
-async function signup(handle: string, email: string, _password: string) {
-  const response = await request('/enter', { method: 'POST', form: { email } })
+async function signup(handle: string, email: string, _password: string, ip?: string) {
+  const response = await request('/enter', { method: 'POST', form: { email }, ip })
   expect(response.status).toBe(200)
   const emailMessage = capturedEmails().filter(message => message.to === email && message.subject.includes('textlog'))
     .at(-1)
@@ -136,6 +138,7 @@ beforeAll(async () => {
       DATABASE_PATH: databasePath,
       DATABASE_BACKUP_DIR: join(temporaryDirectory, 'backups'),
       MODERATION_DISABLED: 'true',
+      TRUST_PROXY: 'true',
       EMAIL_CAPTURE_PATH: emailCapturePath,
       LOG_COLOR: 'false',
       PATH: process.env.PATH || '',
@@ -219,6 +222,135 @@ test('magic link requested by handle is sent to the account email', async () => 
     form: { identifier: 'HANDLELOGIN', code: entryCode(message!) },
   })
   expect(entered.status).toBe(303)
+})
+
+test('accounts sharing an email can be created, switched, and selected by magic-link login', async () => {
+  const email = 'personas@example.com'
+  const primaryCookie = await signup('persona_primary', email, 'unused', 'personas-signup')
+  const primary = database.query('SELECT id,account_group_id FROM users WHERE handle=?').get('persona_primary') as {
+    id: number
+    account_group_id: number
+  }
+
+  const edit = await request('/account/edit', { cookie: primaryCookie })
+  expect(await edit.text()).toContain('class="profile-edit-link profile-switch-link" href="/account/accounts">switch</a>')
+  const initialList = await request('/account/accounts', { cookie: primaryCookie })
+  const initialHtml = await initialList.text()
+  expect(initialHtml).toContain('@persona_primary')
+  expect(initialHtml).toContain('<span>primary</span>')
+  expect(initialHtml).toContain('<span>current</span>')
+  expect(initialHtml).toContain('action="/account/accounts/new"')
+
+  const created = await request('/account/accounts/new', { method: 'POST', cookie: primaryCookie })
+  expect(created.status).toBe(303)
+  expect(created.headers.get('location')).toBe('/choose-handle?next=%2Faccount%2Faccounts')
+  const chosen = await request('/choose-handle', {
+    method: 'POST',
+    cookie: primaryCookie,
+    form: { handle: 'persona_bot', next: '/account/accounts' },
+  })
+  expect(chosen.status).toBe(303)
+  expect(chosen.headers.get('location')).toBe('/account/accounts')
+  const bot = database.query('SELECT id,email,account_group_id FROM users WHERE handle=?').get('persona_bot') as {
+    id: number
+    email: string
+    account_group_id: number
+  }
+  expect(bot.email).toBe(email)
+  expect(bot.account_group_id).toBe(primary.account_group_id)
+  expect(database.query('SELECT user_id FROM account_creation_events WHERE account_group_id=?').all(primary.account_group_id))
+    .toEqual([{ user_id: bot.id }])
+  expect(database.query('SELECT primary_user_id,selected_user_id FROM account_groups WHERE id=?')
+    .get(primary.account_group_id)).toEqual({ primary_user_id: primary.id, selected_user_id: bot.id })
+
+  const selectedPrimary = await request('/account/accounts/select', {
+    method: 'POST',
+    cookie: primaryCookie,
+    form: { accountId: String(primary.id) },
+  })
+  expect(selectedPrimary.status).toBe(303)
+  expect(await (await request('/account/edit', { cookie: primaryCookie })).text()).toContain('>@persona_primary</a>')
+
+  const handleLogin = await request('/enter', {
+    method: 'POST', form: { identifier: 'persona_bot' }, ip: 'personas-handle-login',
+  })
+  expect(handleLogin.status).toBe(200)
+  const handleEmail = capturedEmails().filter(message => message.to === email).at(-1)!
+  const enteredBot = await request(`/enter/magic?token=${encodeURIComponent(linkToken(handleEmail))}`)
+  expect(enteredBot.status).toBe(303)
+  const botCookie = sessionCookie(enteredBot)
+  expect(await (await request('/account/edit', { cookie: botCookie })).text()).toContain('>@persona_bot</a>')
+  expect(database.query('SELECT selected_user_id FROM account_groups WHERE id=?').get(primary.account_group_id))
+    .toEqual({ selected_user_id: bot.id })
+
+  const sharedEndpoint = 'https://push.example/personas-browser'
+  const botPush = await request('/account/push-subscription', {
+    method: 'POST', cookie: botCookie, userAgent: 'personas-browser',
+    json: { endpoint: sharedEndpoint, keys: { p256dh: 'shared-key', auth: 'shared-auth' },
+      preferences: { latest: false, replies: false, mentions: false, follows: false, ownPosts: false } },
+  })
+  const primaryPush = await request('/account/push-subscription', {
+    method: 'POST', cookie: primaryCookie, userAgent: 'personas-browser',
+    json: { endpoint: sharedEndpoint, keys: { p256dh: 'rotated-key', auth: 'rotated-auth' },
+      preferences: { latest: true, replies: true, mentions: true, follows: true, ownPosts: true } },
+  })
+  expect(botPush.status).toBe(200)
+  expect(primaryPush.status).toBe(200)
+  expect(database.query(`SELECT user_id,p256dh,notify_latest,notify_mentions FROM push_subscriptions
+    WHERE endpoint=? ORDER BY user_id`).all(sharedEndpoint)).toEqual([
+    { user_id: primary.id, p256dh: 'rotated-key', notify_latest: 1, notify_mentions: 1 },
+    { user_id: bot.id, p256dh: 'rotated-key', notify_latest: 0, notify_mentions: 0 },
+  ])
+  const disabledBotPush = await request('/account/push-subscription', {
+    method: 'DELETE', cookie: botCookie, userAgent: 'personas-browser', json: { endpoint: sharedEndpoint },
+  })
+  expect(await disabledBotPush.json()).toEqual({ removed: true, active: true })
+  expect(database.query('SELECT user_id FROM push_subscriptions WHERE endpoint=?').all(sharedEndpoint))
+    .toEqual([{ user_id: primary.id }])
+  expect(await (await request('/account/push-subscription?endpoint=' + encodeURIComponent(sharedEndpoint), {
+    cookie: botCookie,
+  })).json()).toMatchObject({ enabled: false })
+  expect(await (await request('/account/push-subscription?endpoint=' + encodeURIComponent(sharedEndpoint), {
+    cookie: primaryCookie,
+  })).json()).toMatchObject({ enabled: true })
+
+  const beforeEmailLogin = capturedEmails().length
+  const emailLogin = await request('/enter', {
+    method: 'POST', form: { identifier: email }, ip: 'personas-email-login',
+  })
+  expect(emailLogin.status).toBe(200)
+  expect(capturedEmails()).toHaveLength(beforeEmailLogin + 1)
+  const emailMessage = capturedEmails().at(-1)!
+  expect(emailMessage.to).toBe(email)
+  const enteredSelected = await request(`/enter/magic?token=${encodeURIComponent(linkToken(emailMessage))}`)
+  expect(enteredSelected.status).toBe(303)
+  const selectedCookie = sessionCookie(enteredSelected)
+  expect(await (await request('/account/edit', { cookie: selectedCookie })).text())
+    .toContain('>@persona_bot</a>')
+
+  const secondCreated = await request('/account/accounts/new', { method: 'POST', cookie: selectedCookie })
+  expect(secondCreated.status).toBe(303)
+  expect(database.query(`SELECT account_group_id,user_id,created_at,
+      created_at>datetime('now','-1 month') recent FROM account_creation_events WHERE account_group_id=? ORDER BY id`)
+    .all(primary.account_group_id)).toEqual([
+      expect.objectContaining({ recent: 1 }),
+    ])
+  const secondChosen = await request('/choose-handle', {
+    method: 'POST', cookie: selectedCookie, form: { handle: 'persona_second', next: '/account/accounts' },
+  })
+  expect(secondChosen.status).toBe(303)
+  const thirdCreated = await request('/account/accounts/new', { method: 'POST', cookie: selectedCookie })
+  expect(thirdCreated.status).toBe(303)
+  expect(thirdCreated.headers.get('location')).toBe('/choose-handle?next=%2Faccount%2Faccounts')
+  const limited = await request('/choose-handle', {
+    method: 'POST', cookie: selectedCookie, form: { handle: 'persona_third', next: '/account/accounts' },
+  })
+  expect(limited.status).toBe(429)
+  const limitedHtml = await limited.text()
+  expect(limitedHtml).toContain('You can create up to two new accounts per month.')
+  expect(limitedHtml).toContain('Choose a handle from one of your deleted accounts to reclaim it')
+  expect(database.query('SELECT COUNT(*) count FROM account_creation_events WHERE account_group_id=?')
+    .get(primary.account_group_id)).toEqual({ count: 2 })
 })
 
 test('handle choice accepts invalid submissions and reports their character count', async () => {
@@ -338,6 +470,7 @@ test('consequential account, content, reporting, and admin flows work over HTTP'
     { cookie: aliceCookie },
   )
   expect(await pushPreferences.json()).toEqual({
+    enabled: true,
     preferences: { latest: 0, replies: 1, mentions: 0, follows: 1, ownPosts: 0, followActivity: 1, followingNotes: 1 },
   })
   const cacheBustedHomeHtml = await (await request('/?v=94721')).text()

@@ -42,7 +42,7 @@ export function registerInteractionsRoutes(app: Hono) {
     const returnPath = f.from ? safeNext(f.from) : safeRefererPath(referer, c.req.url)
     if (referer && URL.canParse(referer)) {
       const url = new URL(referer)
-      if (url.pathname === '/explore' && /^\d+(,\d+){0,5}$/.test(f.explorePeople || '')) {
+      if (url.pathname === '/explore' && /^\d+(,\d+){0,7}$/.test(f.explorePeople || '')) {
         return redirect(returnPath,
           `explore_people=${f.explorePeople}; HttpOnly; Path=/explore; SameSite=Lax`)
       }

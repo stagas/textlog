@@ -1,4 +1,5 @@
 import type { ApiPost } from './api'
+import { displayPostBody } from './utils'
 
 export type SyndicationFormat = 'rss' | 'atom'
 
@@ -37,7 +38,7 @@ function atom(feed: SyndicationFeed) {
     <published>${xml(post.created_at)}</published>
     <updated>${xml(post.created_at)}</updated>
     <author><name>${xml(`@${post.author.handle}`)}</name><uri>${xml(post.author.url)}</uri></author>
-    <content type="text">${xml(post.body)}</content>
+    <content type="text">${xml(displayPostBody(post.body))}</content>
   </entry>`
   ).join('\n')
   return `<?xml version="1.0" encoding="utf-8"?>
@@ -60,7 +61,7 @@ function rss(feed: SyndicationFeed) {
       <guid isPermaLink="true">${xml(post.url)}</guid>
       <pubDate>${new Date(post.created_at).toUTCString()}</pubDate>
       <dc:creator>${xml(`@${post.author.handle}`)}</dc:creator>
-      <description>${xml(post.body)}</description>
+      <description>${xml(displayPostBody(post.body))}</description>
     </item>`
   ).join('\n')
   return `<?xml version="1.0" encoding="utf-8"?>

@@ -371,6 +371,7 @@ test('notification settings are the only account page that loads their client sc
     editing: true,
   }))
   expect(notifications).toContain('src="/notifications.js"')
+  expect(notifications).toContain('data-handle="reader"')
   expect(notifications).toContain('class="static-page notifications-page"')
   expect(notifications).toContain('class="profile-edit-link" href="/account/edit?from=%2Flatest%3Fpage%3D2">back</a>')
   expect(notifications).toContain('enable notifications')
@@ -382,6 +383,8 @@ test('notification settings are the only account page that loads their client sc
   expect(notifications).toContain('name="follows" checked=""')
   expect(notifications).toContain('name="ownPosts" checked=""')
   expect(notifications).toContain('name="followActivity" checked=""')
+  expect(notifications).toContain('notify @reader about')
+  expect(notifications).toContain('replies to one of @reader’s notes')
   expect(notifications).not.toContain('name="signups"')
   expect(notifications).toContain('save preferences</button>')
   expect(profile).toContain('href="/account/edit/notifications"')
@@ -861,9 +864,10 @@ test('API key creation has a focused form with themed expiration radios', () => 
   expect(html).toContain('action="/account/api-keys"')
   expect(html).toContain('name="name"')
   expect(html).toContain('type="radio" name="lifetime" checked="" value="year"')
-  expect(html).toContain('class="api-key-radio"')
+  expect(html).not.toContain('class="api-key-radio"')
   expect(html).not.toContain('<select name="lifetime"')
-  expect(html).toContain('href="/account/security">cancel</a>')
+  expect(html).toContain('class="form-actions"')
+  expect(html).toContain('class="secondary-action" href="/account/security">cancel</a>')
 })
 
 test('AccountSecurity asks for the current password when email changes require it', () => {

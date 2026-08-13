@@ -2,6 +2,7 @@ import { type User } from '../db'
 import type { PostRow, ProfileRow } from '../types'
 import { Layout } from './layout'
 import { FormActions } from './page-shared'
+import { displayPostBody } from '../utils'
 
 export function AdminConfirm({ user, kind, target, post, returnTo = '/admin' }: {
   user: User
@@ -28,7 +29,7 @@ export function AdminConfirm({ user, kind, target, post, returnTo = '/admin' }: 
         <p className="eyebrow">admin moderation</p>
         <h1>{copy[0]}</h1>
         <p>{copy[1]}</p>
-        {post && <blockquote>{post.body}</blockquote>}
+        {post && <blockquote>{displayPostBody(post.body)}</blockquote>}
         <form method="post" action={action}>
           <input type="hidden" name="returnTo" value={returnTo} />
           <label>

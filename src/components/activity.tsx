@@ -5,7 +5,7 @@ import { db, type User } from '../db'
 import { PAGE_SIZE } from '../pagination'
 import { enrichPosts, visibleUserProfileStats } from '../posts'
 import type { PostView } from '../types'
-import { fmt, fmtFull, linkify } from '../utils'
+import { displayBio, fmt, fmtFull, linkify } from '../utils'
 import { Layout } from './layout'
 import { ActionPair, CursorPagination, FeedTabs } from './page-shared'
 import { Post, UserReference } from './post'
@@ -134,7 +134,7 @@ export function Activity({ user, cursor, title, path = '/activity', pageUrl, not
                         </span>
                       </div>
                       <p className="profile-bio" dangerouslySetInnerHTML={{
-                        __html: linkify(rawPost.bio || 'No bio yet.'),
+                        __html: linkify(displayBio(rawPost.bio)),
                       }} />
                     </div>
                     {rawPost.user_id !== user.id && (
@@ -165,7 +165,7 @@ export function Activity({ user, cursor, title, path = '/activity', pageUrl, not
                         </span>
                       </div>
                       <p className="profile-bio" dangerouslySetInnerHTML={{
-                        __html: linkify(rawPost.bio || 'No bio yet.'),
+                        __html: linkify(displayBio(rawPost.bio)),
                       }} />
                     </div>
                     <form method="post" action={'/follow/' + rawPost.handle}>

@@ -1,4 +1,5 @@
 import { accountForDeletionToken, issueAccountDeletionToken } from '../account-deletion'
+import { accountChoices, accountGroupForUser, isPrimaryAccount, selectAccount } from '../account-groups'
 import { anonymizeUser, isAdmin } from '../admin'
 import { issueApiKey } from '../api-keys'
 import { AUTH_LIMITS, authRateLimitMessage } from '../auth-rate-limit'
@@ -13,6 +14,7 @@ import {
   AccountApiKeyCreate,
   AccountMagicLink,
   AccountPassword,
+  AccountSwitcher,
   ChangeAppearance,
   ConfirmAccountDelete,
   ConfirmEmail,
@@ -58,6 +60,55 @@ function profileSuggestionSearch(fields: Record<string, string>, viewerId: numbe
 }
 
 export function registerAccountRoutes(app: Hono) {
+  app.get('/account/accounts', c => {
+    const user = currentUser(c.req.raw)
+    if (!user) return redirect('/enter?next=' + encodeURIComponent('/account/accounts'))
+    return page(<AccountSwitcher user={user} accounts={accountChoices(db, user.id)} />)
+  })
+
+  app.post('/account/accounts/select', async c => {
+    const user = currentUser(c.req.raw)
+    if (!user) return redirect('/enter')
+    const f = await form(c.req.raw)
+    if (!/^\d+$/.test(f.accountId || '')) return redirect('/account/accounts')
+    const targetId = Number(f.accountId)
+    const group = accountGroupForUser(db, user.id)
+    const target = group && db.query(`SELECT id,handle,handle_chosen_at FROM users
+      WHERE id=? AND account_group_id=? AND deleted_at IS NULL AND suspended_at IS NULL`)
+      .get(targetId, group.id) as { id: number; handle: string; handle_chosen_at: string | null } | null
+    if (!target) return redirect('/account/accounts')
+    db.transaction(() => {
+      if (!selectAccount(db, target.id)) throw new Error('Account is unavailable')
+      db.query('UPDATE sessions SET user_id=? WHERE token_hash=? AND user_id=?')
+        .run(target.id, sessionHash(sessionToken(c.req.raw)), user.id)
+    })()
+    return redirect(target.handle_chosen_at ? '/account/edit' : '/choose-handle?next=%2Faccount%2Faccounts')
+  })
+
+  app.post('/account/accounts/new', c => {
+    const user = currentUser(c.req.raw)
+    if (!user) return redirect('/enter')
+    const group = accountGroupForUser(db, user.id)
+    if (!group) return redirect('/account/accounts')
+    let newUserId: number | null = null
+    db.transaction(() => {
+      for (let attempt = 0; attempt < 5; attempt++) {
+        try {
+          const handle = `anon${crypto.randomUUID().replaceAll('-', '').slice(0, 12)}`
+          const created = db.query(`INSERT INTO users(handle,email,password,email_verified_at,account_group_id)
+            VALUES(?,?,'!',CURRENT_TIMESTAMP,?) RETURNING id`).get(handle, group.email, group.id) as { id: number }
+          newUserId = created.id
+          break
+        }
+        catch {}
+      }
+      if (!newUserId || !selectAccount(db, newUserId)) throw new Error('Could not create account')
+      db.query('UPDATE sessions SET user_id=? WHERE token_hash=? AND user_id=?')
+        .run(newUserId, sessionHash(sessionToken(c.req.raw)), user.id)
+    })()
+    return redirect('/choose-handle?next=%2Faccount%2Faccounts')
+  })
+
   app.get('/account/edit/notifications', c => {
     const user = currentUser(c.req.raw)
     if (!user) return redirect('/enter?next=' + encodeURIComponent('/account/edit/notifications'))
@@ -77,7 +128,7 @@ export function registerAccountRoutes(app: Hono) {
       }
         FROM push_subscriptions WHERE endpoint=? AND user_id=?`).get(endpoint, user.id) as Record<string, number> | null
       : null
-    return c.json({ preferences: preferences || {
+    return c.json({ enabled: Boolean(preferences), preferences: preferences || {
       latest: 1,
       followingNotes: 1,
       replies: 1,
@@ -119,22 +170,28 @@ export function registerAccountRoutes(app: Hono) {
     const followingNotes = preference('followingNotes')
     const signups = isAdmin(user) ? preference('signups') : null
     const deviceId = notificationDevice(c.req.raw) || token()
-    db.query(`INSERT INTO push_subscriptions(endpoint,user_id,p256dh,auth,device_id,
-        notify_latest,notify_replies,notify_mentions,notify_follows,notify_own_posts,notify_signups,
-        notify_follow_activity,notify_following_notes) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?)
-      ON CONFLICT(endpoint) DO UPDATE SET user_id=excluded.user_id,p256dh=excluded.p256dh,auth=excluded.auth,
-        device_id=excluded.device_id,
-        notify_latest=coalesce(?,push_subscriptions.notify_latest),
-        notify_replies=coalesce(?,push_subscriptions.notify_replies),
-        notify_mentions=coalesce(?,push_subscriptions.notify_mentions),
-        notify_follows=coalesce(?,push_subscriptions.notify_follows),
-        notify_own_posts=coalesce(?,push_subscriptions.notify_own_posts),
-        notify_signups=coalesce(?,push_subscriptions.notify_signups),
-        notify_follow_activity=coalesce(?,push_subscriptions.notify_follow_activity),
-        notify_following_notes=coalesce(?,push_subscriptions.notify_following_notes)`)
-      .run(endpoint, user.id, p256dh, auth, deviceId, latest ?? 1, replies ?? 1, mentions ?? 1, follows ?? 1,
-        ownPosts ?? 1, signups ?? 1, followActivity ?? 1, followingNotes ?? 1, latest, replies, mentions, follows,
-        ownPosts, signups, followActivity, followingNotes)
+    db.transaction(() => {
+      // Push services may rotate credentials without changing the endpoint. Keep every
+      // account attached to this physical browser on the current credential pair.
+      db.query('UPDATE push_subscriptions SET p256dh=?,auth=?,device_id=? WHERE endpoint=?')
+        .run(p256dh, auth, deviceId, endpoint)
+      db.query(`INSERT INTO push_subscriptions(endpoint,user_id,p256dh,auth,device_id,
+          notify_latest,notify_replies,notify_mentions,notify_follows,notify_own_posts,notify_signups,
+          notify_follow_activity,notify_following_notes) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?)
+        ON CONFLICT(endpoint,user_id) DO UPDATE SET p256dh=excluded.p256dh,auth=excluded.auth,
+          device_id=excluded.device_id,
+          notify_latest=coalesce(?,push_subscriptions.notify_latest),
+          notify_replies=coalesce(?,push_subscriptions.notify_replies),
+          notify_mentions=coalesce(?,push_subscriptions.notify_mentions),
+          notify_follows=coalesce(?,push_subscriptions.notify_follows),
+          notify_own_posts=coalesce(?,push_subscriptions.notify_own_posts),
+          notify_signups=coalesce(?,push_subscriptions.notify_signups),
+          notify_follow_activity=coalesce(?,push_subscriptions.notify_follow_activity),
+          notify_following_notes=coalesce(?,push_subscriptions.notify_following_notes)`)
+        .run(endpoint, user.id, p256dh, auth, deviceId, latest ?? 1, replies ?? 1, mentions ?? 1, follows ?? 1,
+          ownPosts ?? 1, signups ?? 1, followActivity ?? 1, followingNotes ?? 1, latest, replies, mentions, follows,
+          ownPosts, signups, followActivity, followingNotes)
+    })()
     const userAgent = notificationUserAgent(c.req.raw)
     if (userAgent) {
       db.query(`INSERT INTO notification_user_agents(user_id,user_agent,status) VALUES(?,?,'enabled')
@@ -157,12 +214,13 @@ export function registerAccountRoutes(app: Hono) {
     }
     if (typeof value.endpoint !== 'string') return c.json({ error: 'Invalid subscription' }, 400)
     db.query('DELETE FROM push_subscriptions WHERE endpoint=? AND user_id=?').run(value.endpoint, user.id)
+    const active = !!db.query('SELECT 1 FROM push_subscriptions WHERE endpoint=? LIMIT 1').get(value.endpoint)
     const userAgent = notificationUserAgent(c.req.raw)
     if (userAgent) {
       db.query(`DELETE FROM notification_user_agents
         WHERE user_id=? AND user_agent=? AND status='enabled'`).run(user.id, userAgent)
     }
-    return c.json({ removed: true })
+    return c.json({ removed: true, active })
   })
 
   app.get('/account/edit', c => {
@@ -514,7 +572,10 @@ export function registerAccountRoutes(app: Hono) {
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || email.length > 254) {
       return securityPage(c.req.raw, 'Enter a valid email address.', undefined, 400)
     }
-    if (db.query('SELECT 1 FROM users WHERE email=? AND id!=?').get(email, user.id)) {
+    const group = accountGroupForUser(db, user.id)
+    if (db.query('SELECT 1 FROM account_groups WHERE email=? AND id!=?').get(email, group?.id ?? -1)
+      || db.query(`SELECT 1 FROM users WHERE email=? AND deleted_at IS NULL
+        AND (account_group_id IS NULL OR account_group_id!=?)`).get(email, group?.id ?? -1)) {
       return securityPage(c.req.raw, 'That email address is unavailable.', undefined, 400)
     }
     const credentials = db.query('SELECT password FROM users WHERE id=?').get(user.id) as { password: string }
@@ -622,13 +683,15 @@ export function registerAccountRoutes(app: Hono) {
     const f = await form(c.req.raw)
     const deletionAccount = accountForDeletionToken(db, f.token || '')
     if (deletionAccount) {
-      if (isAdmin({ email: deletionAccount.email })) return c.text('Admin accounts cannot delete themselves', 403)
+      if (isAdmin({ email: deletionAccount.email }) && isPrimaryAccount(db, deletionAccount.id)) {
+        return c.text('Admin accounts cannot delete themselves', 403)
+      }
       db.transaction(() => anonymizeUser(db, deletionAccount.id))()
       return redirect('/', clearSessionCookie())
     }
     if (f.token) return page(<ConfirmAccountDelete user={user} invalid />, 400)
     if (!user) return redirect('/enter')
-    if (isAdmin(user)) return c.text('Admin accounts cannot delete themselves', 403)
+    if (isAdmin(user) && isPrimaryAccount(db, user.id)) return c.text('Admin accounts cannot delete themselves', 403)
     const limited = authLimit(c, 'account-delete', `${user.id}:${clientAddress(c)}`, AUTH_LIMITS.sensitiveAccount)
     const credentials = db.query('SELECT password FROM users WHERE id=?').get(user.id) as { password: string }
     const passwordEnabled = credentials.password !== '!'

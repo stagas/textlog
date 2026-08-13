@@ -3,6 +3,7 @@ import { instance } from '../instance.config'
 import { appHostname } from './brand'
 import type { User } from './db'
 import { removeHotActivity } from './hot'
+import { detachAccountFromGroup } from './account-groups'
 
 export const ADMIN_EMAILS = new Set(instance.administrators.map(email => email.trim().toLowerCase()))
 
@@ -38,7 +39,9 @@ export function resolvePostReports(database: Database, postId: number, actorId: 
 }
 
 export function anonymizeUser(database: Database, userId: number, actorId?: number) {
-  const account = database.query('SELECT handle FROM users WHERE id=?').get(userId) as { handle: string } | null
+  const groupedAccounts = database.query("SELECT 1 FROM sqlite_master WHERE type='table' AND name='account_groups'").get()
+  const account = database.query(`SELECT handle${groupedAccounts ? ',account_group_id' : ''} FROM users WHERE id=?`)
+    .get(userId) as { handle: string; account_group_id?: number | null } | null
   const postIds = database.query('SELECT id FROM posts WHERE user_id=?').all(userId) as { id: number }[]
   for (const post of postIds) softDeletePost(database, post.id)
   database.query('DELETE FROM post_hashtags WHERE post_id IN (SELECT id FROM posts WHERE user_id=?)').run(userId)
@@ -64,10 +67,27 @@ export function anonymizeUser(database: Database, userId: number, actorId?: numb
     database.query('DELETE FROM email_change_authorizations WHERE user_id=?').run(userId)
   }
   if (account && database.query('SELECT 1 FROM sqlite_master WHERE type=\'table\' AND name=\'handle_history\'').get()) {
-    database.query('INSERT OR IGNORE INTO handle_history(handle,user_id) VALUES(?,?)')
-      .run(account.handle.toLowerCase(), userId)
+    const groupOwnedHistory = (database.query('PRAGMA table_info(handle_history)').all() as { name: string }[])
+      .some(column => column.name === 'account_group_id')
+    if (groupOwnedHistory) {
+      database.query(`INSERT INTO handle_history(handle,user_id,account_group_id) VALUES(?,?,?)
+        ON CONFLICT(handle) DO UPDATE SET account_group_id=excluded.account_group_id`)
+        .run(account.handle.toLowerCase(), userId, account.account_group_id || null)
+    }
+    else {
+      database.query('INSERT OR IGNORE INTO handle_history(handle,user_id) VALUES(?,?)')
+        .run(account.handle.toLowerCase(), userId)
+    }
+  }
+  if (database.query(
+    "SELECT 1 FROM sqlite_master WHERE type='table' AND name='account_creation_events'",
+  ).get()) {
+    database.query('DELETE FROM account_creation_events WHERE user_id=?').run(userId)
   }
   database.query('DELETE FROM sessions WHERE user_id=?').run(userId)
+  if (groupedAccounts) {
+    detachAccountFromGroup(database, userId)
+  }
   database.query(`UPDATE users SET handle=?,email=?,bio='',password='!',suspended_at=NULL,deleted_at=CURRENT_TIMESTAMP
     WHERE id=?`).run(`deleted-${userId}`, `deleted-${userId}@${appHostname()}`, userId)
 }

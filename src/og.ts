@@ -191,7 +191,7 @@ export function renderPostOg(body: string, handle: string) {
 
   drawBackground(ctx)
 
-  const post = postOgText(body)
+  const post = postOgText(body.trimEnd())
   const fitted = fitPost(ctx, post.text)
   ctx.font = `500 ${fitted.size}px monospace`
   const textBlockHeight = fitted.lines.length * fitted.lineHeight
@@ -233,7 +233,7 @@ export function renderProfileOg(
   ctx.fillStyle = textColor
   ctx.fillText(handle, 80 + prefixWidth, 245)
 
-  const profileBio = bio || 'No bio yet.'
+  const profileBio = bio.trimEnd() || 'No bio yet.'
   let size = 46
   let lines: string[] = []
   let lineHeight = 61

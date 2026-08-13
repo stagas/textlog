@@ -26,8 +26,27 @@ export function confirmEmailToken(database: Database, value: string, now = Date.
       if (!record) return { ok: false as const, reason: 'invalid' as const }
 
       if (record.kind === 'change') {
-        database.query('UPDATE users SET email=?,email_verified_at=CURRENT_TIMESTAMP WHERE id=?')
-          .run(record.email, record.user_id)
+        const groupsExist = !!database.query(
+          "SELECT 1 FROM sqlite_master WHERE type='table' AND name='account_groups'",
+        ).get()
+        const group = groupsExist
+          ? database.query('SELECT account_group_id FROM users WHERE id=?').get(record.user_id) as
+            | { account_group_id: number | null }
+            | null
+          : null
+        if (group?.account_group_id) {
+          if (database.query(`SELECT 1 FROM users WHERE email=? AND deleted_at IS NULL
+            AND (account_group_id IS NULL OR account_group_id!=?)`).get(record.email, group.account_group_id)) {
+            throw new Error('Email is unavailable')
+          }
+          database.query('UPDATE account_groups SET email=? WHERE id=?').run(record.email, group.account_group_id)
+          database.query(`UPDATE users SET email=?,email_verified_at=CURRENT_TIMESTAMP
+            WHERE account_group_id=?`).run(record.email, group.account_group_id)
+        }
+        else {
+          database.query('UPDATE users SET email=?,email_verified_at=CURRENT_TIMESTAMP WHERE id=?')
+            .run(record.email, record.user_id)
+        }
       }
       else database.query('UPDATE users SET email_verified_at=CURRENT_TIMESTAMP WHERE id=?').run(record.user_id)
       database.query('DELETE FROM email_tokens WHERE user_id=?').run(record.user_id)

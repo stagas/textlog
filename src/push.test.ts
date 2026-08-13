@@ -2,7 +2,8 @@ import { Database } from 'bun:sqlite'
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test'
 import webpush from 'web-push'
 import { runMigrations } from './migrations'
-import { sendPushForPost, sendPushForSignup, sendPushForTagFollow, sendPushForUserFollow, sendPushToUser } from './push'
+import { sendPushForFollow, sendPushForPost, sendPushForSignup, sendPushForTagFollow, sendPushForUserFollow,
+  sendPushToUser } from './push'
 
 let originalSend: typeof webpush.sendNotification
 let vapid: ReturnType<typeof webpush.generateVAPIDKeys> & { subject: string }
@@ -66,7 +67,7 @@ describe('Web Push activity delivery', () => {
 
     expect(payloads).toHaveLength(1)
     expect(JSON.parse(payloads[0])).toEqual({
-      title: '@author replied to you',
+      title: '@author replied to @recipient',
       body: 'hello @recipient',
       url: '/post/2',
     })
@@ -141,7 +142,7 @@ describe('Web Push activity delivery', () => {
     ])
   })
 
-  test('sends an author their own post as latest without self-activity wording', async () => {
+  test('names the author on their own reply notification', async () => {
     const database = fixture()
     database.run(`INSERT INTO push_subscriptions(endpoint,user_id,p256dh,auth)
       VALUES('https://push.example/author',1,'author-key','author-auth')`)
@@ -154,13 +155,13 @@ describe('Web Push activity delivery', () => {
     await sendPushForPost(2, 1, 'author', database, vapid)
 
     expect(payloads.map(value => JSON.parse(value))).toEqual([{
-      title: 'You replied to @recipient',
+      title: '@author replied to @recipient',
       body: 'hello @recipient',
       url: '/post/2',
     }])
   })
 
-  test('uses first-person wording for an author own ordinary post', async () => {
+  test('names the author on their own ordinary post notification', async () => {
     const database = fixture()
     database.run(`INSERT INTO push_subscriptions(endpoint,user_id,p256dh,auth)
       VALUES('https://push.example/author',1,'author-key','author-auth');
@@ -174,7 +175,7 @@ describe('Web Push activity delivery', () => {
     await sendPushForPost(3, 1, 'author', database, vapid)
 
     expect(payloads.map(value => JSON.parse(value))).toEqual([{
-      title: 'You wrote',
+      title: '@author wrote',
       body: 'my note',
       url: '/post/3',
     }])
@@ -193,6 +194,39 @@ describe('Web Push activity delivery', () => {
     await sendPushForPost(2, 1, 'author', database, vapid)
 
     expect(authorDeliveries).toBe(0)
+  })
+
+  test('names the account that received a follow', async () => {
+    const database = fixture()
+    const payloads: string[] = []
+    webpush.sendNotification = (async (_subscription, payload) => {
+      payloads.push(String(payload))
+      return {} as never
+    }) as typeof webpush.sendNotification
+
+    await sendPushForFollow(1, 'author', 2, database, vapid)
+
+    expect(payloads.map(value => JSON.parse(value))).toEqual([{
+      title: '@author followed @recipient',
+      body: '@author is now following @recipient.',
+      url: '/u/author',
+    }])
+  })
+
+  test('delivers once when several accounts use the same browser endpoint', async () => {
+    const database = fixture()
+    database.run(`INSERT INTO push_subscriptions(endpoint,user_id,p256dh,auth)
+      VALUES('https://push.example/one',1,'key','auth')`)
+    const payloads: string[] = []
+    webpush.sendNotification = (async (_subscription, payload) => {
+      payloads.push(String(payload))
+      return {} as never
+    }) as typeof webpush.sendNotification
+
+    await sendPushForPost(2, 1, 'author', database, vapid)
+
+    expect(payloads).toHaveLength(1)
+    expect(JSON.parse(payloads[0]).title).toBe('@author replied to @recipient')
   })
 
   test('sends signup alerts only to administrators who enabled them', async () => {

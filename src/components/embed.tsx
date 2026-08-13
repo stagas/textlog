@@ -2,7 +2,7 @@ import { appName } from '../brand'
 import { containsAsciiArt } from '../content'
 import type { AccentChoice, EmbedFontChoice, ThemeChoice } from '../theme'
 import type { PostView } from '../types'
-import { fmt, fmtFull, linkify } from '../utils'
+import { displayPostBody, fmt, fmtFull, linkify } from '../utils'
 
 export function Embed(
   { posts, title, href, theme, accent, font }: { posts: PostView[]; title: string; href: string; theme?: ThemeChoice;
@@ -14,7 +14,7 @@ export function Embed(
   query.set('accent', accent)
   if (font) query.set('font', font)
   const embedLinks = (body: string, mentionBios?: Record<string, string>) =>
-    linkify(body, mentionBios)
+    linkify(displayPostBody(body), mentionBios)
       .replace(/<a (?![^>]*\btarget=)/g, '<a target="_blank" rel="noopener noreferrer" ')
   return (
     <html lang="en">

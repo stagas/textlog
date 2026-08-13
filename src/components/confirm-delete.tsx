@@ -2,6 +2,7 @@ import { type User } from '../db'
 import type { PostRow } from '../types'
 import { Layout } from './layout'
 import { FormActions } from './page-shared'
+import { displayPostBody } from '../utils'
 
 export function ConfirmDelete({ user, post, returnPath }: { user: User; post: PostRow; returnPath?: string }) {
   const returnQuery = returnPath ? '?from=' + encodeURIComponent(returnPath) : ''
@@ -15,7 +16,7 @@ export function ConfirmDelete({ user, post, returnPath }: { user: User; post: Po
             This can’t be undone. Replies will remain, with this post shown as “(deleted)” where the conversation needs
             it.
           </p>
-          <blockquote aria-label="Post to delete">{post.body}</blockquote>
+          <blockquote aria-label="Post to delete">{displayPostBody(post.body)}</blockquote>
           <form className="post-delete-form" method="post" action={'/post/' + post.id + '/delete'}>
             {returnPath && <input type="hidden" name="from" value={returnPath} />}
             <FormActions

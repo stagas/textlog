@@ -2,7 +2,7 @@ import { Database } from 'bun:sqlite'
 import { describe, expect, test } from 'bun:test'
 import { createPost, enrichPosts } from './posts'
 import type { PostView } from './types'
-import { linkify } from './utils'
+import { displayPostBody, linkify } from './utils'
 
 function database() {
   const db = new Database(':memory:')
@@ -30,6 +30,10 @@ function database() {
 }
 
 describe('post persistence', () => {
+  test('trims trailing whitespace when displaying post bodies', () => {
+    expect(displayPostBody('first line\nsecond line  \n\n')).toBe('first line\nsecond line')
+  })
+
   test('adds escaped bios to linkified post mentions', () => {
     expect(linkify('hello @Reader', { reader: 'Builder & "tester"' }))
       .toContain('<a href="/u/reader" title="0 notes\n\nBuilder &amp; &quot;tester&quot;">@Reader</a>')
@@ -37,6 +41,8 @@ describe('post persistence', () => {
       .toContain('<a href="/u/reader" title="0 notes\n\nNo bio yet.">@Reader</a>')
     expect(linkify('@Reader', { reader: 'Bio' }, [], undefined, undefined, '', {}, { reader: 1234 }))
       .toContain(`title="${(1234).toLocaleString()} notes\n\nBio"`)
+    expect(linkify('@Reader', { reader: 'Bio  \n' }))
+      .toContain('title="0 notes\n\nBio"')
   })
   test('keeps apostrophes in linkified URLs', () => {
     expect(linkify('read https://example.com/people/O\'Brien/profile'))
@@ -215,6 +221,14 @@ describe('post persistence', () => {
       + '<span class="reference-profile-tabs"><a href="/tag/topic">20 notes</a>'
       + '<a href="/tag/topic?tab=followers">8 followers</a></span>')
     expect(html).toContain('<button class="button" type="submit" form="post-1-tag-topic">follow</button>')
+  })
+
+  test('trims trailing whitespace from bios in user popovers', () => {
+    const html = linkify('@reader', { reader: 'Builds things  \n' }, [], undefined, undefined, '', {}, { reader: 1 }, {
+      signedIn: false,
+      formPrefix: 'post-1',
+    })
+    expect(html).toContain('<span class="reference-popover-bio">Builds things</span>')
   })
 
   test('linkifies bios inside user popovers', () => {

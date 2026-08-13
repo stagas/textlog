@@ -6,7 +6,7 @@ import { db, type User } from '../db'
 import { hasUnreadForYou } from '../for-you-state'
 import { visibleTagFollowerCounts, visibleUserProfileStats } from '../posts'
 import { searchTerms } from '../search'
-import { linkify } from '../utils'
+import { displayBio, linkify } from '../utils'
 import { TagReference, UserReference } from './post'
 
 const postTitleLength = 60
@@ -418,7 +418,7 @@ export function ProfileHeader(
               </div>
             )}
           </div>
-          <p className="profile-bio" dangerouslySetInnerHTML={{ __html: linkify(profile.bio || 'No bio yet.') }} />
+          <p className="profile-bio" dangerouslySetInnerHTML={{ __html: linkify(displayBio(profile.bio)) }} />
         </div>
       )}
       <div className={`profile-action profile-back-action${user?.id === profile.id
@@ -614,7 +614,7 @@ export function ConnectionPeople({ user, people, className = '', highlightTerms 
               </form>
             )}
           </div>
-          <p className="profile-bio" dangerouslySetInnerHTML={{ __html: linkify(person.bio || 'No bio yet.', {},
+          <p className="profile-bio" dangerouslySetInnerHTML={{ __html: linkify(displayBio(person.bio), {},
             person.bio ? highlightTerms : []) }} />
         </article>
       ))}

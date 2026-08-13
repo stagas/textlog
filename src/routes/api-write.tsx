@@ -3,6 +3,7 @@ import type { Context, Hono } from 'hono'
 import { softDeletePost } from '../admin'
 import { apiOrigin, apiPost } from '../api'
 import { AUTH_LIMITS, consumeAuthAttempt, consumeBucketedAttempt, rateLimitKey } from '../auth-rate-limit'
+import { accountForEmail, markGroupEmailVerified, selectAccount } from '../account-groups'
 import { bioBodyValidationMessage, normalizeBioBody, validBioBody } from '../bio-body'
 import type { User } from '../db'
 import { sendMagicLink } from '../email'
@@ -90,10 +91,8 @@ export function registerApiWriteRoutes(app: Hono, database: Database, appUrl?: s
 
     // Accounts are only ever created in a browser. An unknown address gets the same
     // answer as a known one so the API cannot be used to discover who has an account.
-    const account = database.query(`SELECT id,handle FROM users
-      WHERE email=? AND handle_chosen_at IS NOT NULL AND deleted_at IS NULL AND suspended_at IS NULL`)
-      .get(email) as { id: number; handle: string } | null
-    if (account) {
+    const account = accountForEmail(database, email)
+    if (account?.handle_chosen_at) {
       const origin = apiOrigin(c.req.url, appUrl)
       const link = issueMagicLink(email, account.id, '/', origin, database)
       try {
@@ -122,7 +121,9 @@ export function registerApiWriteRoutes(app: Hono, database: Database, appUrl?: s
       .get(email, Date.now()) as { token_hash: string; user_id: number | null; attempts: number } | null
     const match = link && database.query('SELECT 1 FROM magic_links WHERE token_hash=? AND code_hash=?')
       .get(link.token_hash, hash(code))
-    if (!link || !link.user_id || !match) {
+    const accountReady = link?.user_id && database.query(`SELECT 1 FROM users WHERE id=?
+      AND handle_chosen_at IS NOT NULL AND deleted_at IS NULL AND suspended_at IS NULL`).get(link.user_id)
+    if (!link || !link.user_id || !accountReady || !match) {
       if (link) {
         const attempts = link.attempts + 1
         if (attempts >= CODE_ATTEMPT_LIMIT) {
@@ -137,8 +138,8 @@ export function registerApiWriteRoutes(app: Hono, database: Database, appUrl?: s
     const expiresAt = Date.now() + SESSION_LIFETIME_MS
     database.transaction(() => {
       database.query('DELETE FROM magic_links WHERE token_hash=?').run(link.token_hash)
-      database.query('UPDATE users SET email_verified_at=COALESCE(email_verified_at,CURRENT_TIMESTAMP) WHERE id=?')
-        .run(link.user_id)
+      markGroupEmailVerified(database, link.user_id!)
+      if (!selectAccount(database, link.user_id!)) throw new Error('Account is unavailable')
       insertSession(database, session, link.user_id!, expiresAt, Date.now(), c.req.header('user-agent') || '')
     })()
     const user = database.query(`SELECT id,handle,email,bio,email_verified_at

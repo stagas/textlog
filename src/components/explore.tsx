@@ -4,13 +4,13 @@ import { suggestedPeople, suggestedPeopleCount, trendingTagCount, trendingTags }
 import { TAG_PAGE_SIZE } from '../pagination'
 import { visibleUserProfileStats } from '../posts'
 import type { PersonView } from '../types'
-import { linkify } from '../utils'
+import { displayBio, linkify } from '../utils'
 import { Layout } from './layout'
 import { ActionPair, Pagination, TagPeopleList } from './page-shared'
 import { SearchForm } from './search'
 import { UserReference } from './post'
 
-const PEOPLE_PAGE_SIZE = 6
+const PEOPLE_PAGE_SIZE = 8
 
 export function Explore({ user, welcome = false, peopleIds, tagsPage = 1, peoplePage = 1 }: {
   user: User | null
@@ -21,7 +21,7 @@ export function Explore({ user, welcome = false, peopleIds, tagsPage = 1, people
 }) {
   const viewerId = user?.id ?? -1
   const savedIds = peopleIds?.filter((id, index, ids) => Number.isInteger(id) && id > 0 && ids.indexOf(id) === index)
-    .slice(0, 6)
+    .slice(0, PEOPLE_PAGE_SIZE)
   const people = savedIds?.length
     ? (db.query(
       `SELECT u.*, (SELECT count(*) FROM posts p WHERE p.user_id=u.id AND p.deleted_at IS NULL) posts,
@@ -105,7 +105,7 @@ export function Explore({ user, welcome = false, peopleIds, tagsPage = 1, people
                     </form>
                   )}
                 </div>
-                <p className="profile-bio" dangerouslySetInnerHTML={{ __html: linkify(p.bio || 'No bio yet.') }} />
+                <p className="profile-bio" dangerouslySetInnerHTML={{ __html: linkify(displayBio(p.bio)) }} />
               </article>
             ))}
             {!people.length && <p className="section-empty">No people to suggest.</p>}

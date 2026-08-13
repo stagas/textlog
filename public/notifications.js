@@ -11,6 +11,7 @@
   const preferenceInputs = [...preferences.querySelectorAll('input')]
   const notesEnabled = preferenceInputs.find(input => input.name === 'notesEnabled')
   const noteScopes = preferenceInputs.filter(input => input.name === 'noteScope')
+  const handle = script.dataset.handle
 
   const supported = 'serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window
   const setActions = enabled => {
@@ -52,7 +53,8 @@
   const loadPreferences = async subscription => {
     const response = await fetch('/account/push-subscription?endpoint=' + encodeURIComponent(subscription.endpoint))
     if (!response.ok) throw new Error('Could not load preferences')
-    const saved = (await response.json()).preferences
+    const result = await response.json()
+    const saved = result.preferences
     for (const input of preferenceInputs) {
       input.checked = input.name === 'notesEnabled'
         ? saved.latest !== 0 || saved.followingNotes !== 0
@@ -61,6 +63,7 @@
         : saved[input.name] !== 0
     }
     syncNoteScope()
+    return result.enabled === true
   }
 
   notesEnabled.addEventListener('change', syncNoteScope)
@@ -85,10 +88,13 @@
   })
     .then(async subscription => {
       if (subscription) {
-        await loadPreferences(subscription)
-        const response = await save(subscription, false)
-        if (!response.ok) throw new Error('Could not save subscription')
-        setState('Notifications enabled on this browser.', true)
+        const enabled = await loadPreferences(subscription)
+        if (enabled) {
+          const response = await save(subscription, false)
+          if (!response.ok) throw new Error('Could not save subscription')
+          setState(`Notifications enabled for @${handle} on this browser.`, true)
+        }
+        else setActions(false)
       }
       else setActions(false)
     }).catch(() => setActions(false))
@@ -113,7 +119,7 @@
       })
       const response = await save(subscription)
       if (!response.ok) throw new Error('Could not save subscription')
-      setState('Notifications enabled on this browser.', true)
+      setState(`Notifications enabled for @${handle} on this browser.`, true)
     }
     catch (error) {
       console.error('Could not enable notifications', error)
@@ -129,7 +135,7 @@
       const registration = await navigator.serviceWorker.getRegistration('/')
       const subscription = await registration?.pushManager.getSubscription()
       if (!subscription || !(await save(subscription)).ok) throw new Error('Could not save preferences')
-      status.textContent = 'Notification preferences saved.'
+      status.textContent = `Notification preferences saved for @${handle}.`
     }
     catch {
       status.textContent = 'Preferences could not be saved. Please try again.'
@@ -152,10 +158,11 @@
           body: JSON.stringify({ endpoint: subscription.endpoint }),
         })
         if (!response.ok) throw new Error('Could not remove subscription')
-        await subscription.unsubscribe()
+        const result = await response.json()
+        if (!result.active) await subscription.unsubscribe()
       }
       disable.removeAttribute('aria-disabled')
-      setState('Notifications disabled on this browser.', false)
+      setState(`Notifications disabled for @${handle} on this browser.`, false)
       enable.disabled = false
     }
     catch {

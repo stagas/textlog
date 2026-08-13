@@ -32,11 +32,12 @@ db.transaction(() => {
     db.query(`DELETE FROM follows WHERE follower_id IN (${placeholders}) OR following_id IN (${placeholders})`)
       .run(...ids, ...ids)
     db.query(`DELETE FROM posts WHERE user_id IN (${placeholders})`).run(...ids)
+    db.query(`DELETE FROM account_groups WHERE primary_user_id IN (${placeholders})`).run(...ids)
     db.query(`DELETE FROM users WHERE id IN (${placeholders})`).run(...ids)
   }
 
-  const users = handles.map((handle, index) =>
-    db.query(
+  const users = handles.map((handle, index) => {
+    const user = db.query(
       'INSERT INTO users(handle,email,bio,password) VALUES(?,?,?,?) RETURNING id,handle',
     ).get(
       handle,
@@ -44,7 +45,11 @@ db.transaction(() => {
       `Demo account ${index + 1}. Posting small observations from around the web.`,
       passwordHashes[index],
     ) as { id: number; handle: string }
-  )
+    const group = db.query(`INSERT INTO account_groups(email,primary_user_id,selected_user_id)
+      VALUES(?,?,?) RETURNING id`).get(`${handle}@example.com`, user.id, user.id) as { id: number }
+    db.query('UPDATE users SET account_group_id=? WHERE id=?').run(group.id, user.id)
+    return user
+  })
 
   const postIds: number[] = []
   for (let index = 0; index < postCount; index++) {
