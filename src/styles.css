@@ -43,6 +43,7 @@
   --focus-ring-width: 2px;
   --focus-ring-offset: 3px;
   --focus-ring-inset-offset: -2px;
+  --hairline: 1px;
   --gutter: clamp(18px, 3vw, 28px);
   --space-1: 4px;
   --space-2: 8px;
@@ -56,6 +57,10 @@
   color: var(--ink);
   background: var(--bg);
   -webkit-tap-highlight-color: var(--tap-highlight);
+}
+
+@media (min-resolution: 1.75dppx) {
+  :root { --hairline: 0.5px; }
 }
 
 @media (prefers-color-scheme: dark) {
@@ -152,7 +157,7 @@ body {
 a {
   color: var(--accent);
   text-decoration: none;
-  border-bottom: 1px solid var(--link-border);
+  border-bottom: var(--hairline) solid var(--link-border);
 }
 
 a:hover {
@@ -523,7 +528,7 @@ nav form {
 .feed-tabs .feed-tabs-read-status .activity-side-link {
   padding: 0;
   color: var(--accent);
-  border-bottom: 1px solid var(--link-border);
+  border-bottom: var(--hairline) solid var(--link-border);
 }
 
 .feed-tabs .feed-tabs-read-status .activity-side-link:hover { color: var(--accent-dark); }
@@ -1261,7 +1266,7 @@ nav form {
 
 .danger {
   color: var(--error-ink);
-  border-bottom: 1px solid var(--link-border);
+  border-bottom: var(--hairline) solid var(--link-border);
 }
 
 .danger:hover {
@@ -1302,20 +1307,38 @@ nav form {
 }
 
 .post p > a,
-.post p > .reference-menu > .reference-menu-trigger,
+.post p > .reference-menu,
 .posttop > a,
-.posttop > .reference-menu > .reference-menu-trigger,
+.posttop > .reference-menu,
 .parent-quote-top > a,
-.parent-quote-top > .reference-menu > .reference-menu-trigger,
+.parent-quote-top > .reference-menu,
 .post-actions > a,
+.activity-follow-main > .reference-menu,
+.feed-relationship-main > .reference-menu,
+.people .reference-menu {
+  padding-bottom: 1px;
+  border-bottom: var(--hairline) solid var(--link-border);
+}
+
+.post p > .reference-menu > .reference-menu-trigger,
+.posttop > .reference-menu > .reference-menu-trigger,
+.parent-quote-top > .reference-menu > .reference-menu-trigger,
 .activity-follow-main > .reference-menu > .reference-menu-trigger,
 .feed-relationship-main > .reference-menu > .reference-menu-trigger,
 .people .reference-menu > .reference-menu-trigger {
-  text-decoration-line: underline;
-  text-decoration-color: var(--link-border);
-  text-decoration-thickness: 0.5px;
-  text-underline-offset: 4px;
+  padding-bottom: 0;
   border-bottom: 0;
+}
+
+.post p > .reference-menu {
+  display: inline;
+  padding-bottom: 2px;
+  line-height: inherit;
+  vertical-align: baseline;
+}
+
+.post p > a {
+  padding-bottom: 2px;
 }
 
 .post p a:hover,
@@ -1816,7 +1839,7 @@ textarea.form-control {
   font: inherit;
   font-size: 0.6875rem;
   border: 0;
-  border-bottom: 1px solid var(--link-border);
+  border-bottom: var(--hairline) solid var(--link-border);
 }
 
 .secondary-action:hover {
@@ -1982,7 +2005,7 @@ textarea.form-control {
   white-space: pre-wrap;
   resize: none;
   background: var(--quote-bg);
-  border: 1px solid var(--link-border);
+  border: var(--hairline) solid var(--link-border);
   border-radius: 0;
   outline: none;
 }
@@ -2250,15 +2273,14 @@ form.report-panel {
 }
 
 .posting-help-trigger {
-  padding: 0;
+  padding: 0 0 1px;
   color: inherit;
   font: inherit;
   background: transparent;
   border: 0;
+  border-bottom: var(--hairline) solid currentColor;
   cursor: pointer;
   user-select: none;
-  text-decoration: underline;
-  text-underline-offset: 4px;
 }
 
 .posting-help-hashtags .posting-help-trigger {
@@ -2353,14 +2375,13 @@ form.report-panel {
 }
 
 .posting-help-tab-list label {
+  padding-bottom: 1px;
   cursor: pointer;
-  text-decoration: underline;
-  text-decoration-color: transparent;
-  text-underline-offset: 4px;
+  border-bottom: var(--hairline) solid transparent;
 }
 
 .posting-help-tab-list label:hover {
-  text-decoration-color: currentColor;
+  border-bottom-color: currentColor;
 }
 
 #posting-help-formatting:focus-visible ~ .posting-help-tab-list label[for="posting-help-formatting"],
@@ -2372,7 +2393,7 @@ form.report-panel {
 #posting-help-formatting:checked ~ .posting-help-tab-list label[for="posting-help-formatting"],
 #posting-help-emoji:checked ~ .posting-help-tab-list label[for="posting-help-emoji"] {
   color: var(--accent);
-  text-decoration-color: currentColor;
+  border-bottom-color: currentColor;
 }
 
 .posting-help-emoji-panel {
@@ -2519,11 +2540,11 @@ form.report-panel {
 .preview-post-meta > * {
   color: var(--accent);
   cursor: pointer;
-  text-decoration-line: underline;
-  text-decoration-color: var(--link-border);
-  text-decoration-thickness: 0.5px;
-  text-underline-offset: 4px;
-  border-bottom: 0;
+}
+
+.preview-post-meta > :not(.reference-menu) {
+  padding-bottom: 1px;
+  border-bottom: var(--hairline) solid var(--link-border);
 }
 
 .preview-post-meta > *:hover {
@@ -2697,7 +2718,7 @@ form.report-panel {
   font-family: inherit;
   font-size: 0.6875rem;
   line-height: 1.2;
-  border-bottom: 1px solid var(--link-border);
+  border-bottom: var(--hairline) solid var(--link-border);
 }
 
 .profile-edit-link:hover {
@@ -3328,7 +3349,7 @@ form.report-panel {
 }
 
 .welcome-settings a {
-  border-bottom: 1px solid var(--link-border);
+  border-bottom: var(--hairline) solid var(--link-border);
 }
 
 .verify-email-panel {
@@ -3377,7 +3398,7 @@ form.report-panel {
   padding: 0;
   color: var(--accent);
   background: none;
-  border-bottom: 1px solid var(--link-border);
+  border-bottom: var(--hairline) solid var(--link-border);
   font-size: 0.6875rem;
 }
 
@@ -3673,18 +3694,9 @@ form.report-panel {
 
 .activity-follow-main a.activity-follow-stats {
   position: relative;
+  padding-bottom: 1px;
   text-decoration: none;
-  border-bottom: 0;
-}
-
-.activity-follow-main a.activity-follow-stats::after {
-  position: absolute;
-  right: 0;
-  bottom: 1px;
-  left: 0;
-  height: 0.5px;
-  background: var(--link-border);
-  content: '';
+  border-bottom: var(--hairline) solid var(--link-border);
 }
 
 .activity-follow-main .activity-follow-stats time {
@@ -3848,16 +3860,12 @@ form.report-panel {
   color: var(--accent);
 }
 
-.reply-preview .postauthor,
 .reply-preview .postdate,
 .reply-preview .preview-reply {
   color: var(--accent);
   cursor: pointer;
-  text-decoration-line: underline;
-  text-decoration-color: var(--link-border);
-  text-decoration-thickness: 0.5px;
-  text-underline-offset: 4px;
-  border-bottom: 0;
+  padding-bottom: 1px;
+  border-bottom: var(--hairline) solid var(--link-border);
 }
 
 .reply-preview .postauthor:hover,
