@@ -962,12 +962,14 @@ nav form {
   border-top: 0;
 }
 
-.post {
+.post,
+.activity-follow {
   border-top: 1px solid var(--soft);
   scroll-margin-block: var(--space-5);
 }
 
-.post:target {
+.post:target,
+.activity-follow:target {
   background: rgb(128 128 128 / 25%);
   animation: post-target-fade 3s ease-in forwards;
 }
@@ -977,7 +979,8 @@ nav form {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .post:target { animation: none; }
+  .post:target,
+  .activity-follow:target { animation: none; }
 }
 
 .post-hit-area {

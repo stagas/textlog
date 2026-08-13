@@ -651,7 +651,8 @@ test('consequential account, content, reporting, and admin flows work over HTTP'
     .run(bob.id, alice.id)
   database.query('UPDATE users SET bio=\'Bob builds things\' WHERE id=?').run(bob.id)
   const followedPersonFeed = await (await request('/for-you', { cookie: aliceCookie })).text()
-  expect(followedPersonFeed).toContain('<a href="/u/bob" title="Bob builds things">@bob</a><span>followed you:</span>')
+  expect(followedPersonFeed).toContain('<a href="/u/bob?from=%2Ffor-you%23activity-user-follow-')
+  expect(followedPersonFeed).toContain('title="Bob builds things">@bob</a><span>followed you:</span>')
   expect(followedPersonFeed).toContain('<p class="profile-bio">Bob builds things</p>')
   expect(followedPersonFeed).toContain('action="/follow/bob"')
   expect(followedPersonFeed).not.toContain('action="/follow/alice"')
@@ -694,12 +695,11 @@ test('consequential account, content, reporting, and admin flows work over HTTP'
   database.query('UPDATE hashtag_follows SET created_at=\'2099-01-02 00:00:00\' WHERE user_id=? AND tag=\'shared\'')
     .run(bob.id)
   const followedTagFeed = await (await request('/for-you', { cookie: aliceCookie })).text()
-  expect(followedTagFeed).toContain(
-    '<a href="/u/bob" title="Bob builds things">@bob</a><span>followed</span><a href="/tag/shared">#shared</a>',
-  )
-  expect(followedTagFeed).toContain(
-    '<a class="activity-follow-stats" href="/tag/shared"><time dateTime="2099-01-02 00:00:00"',
-  )
+  expect(followedTagFeed).toContain('<a href="/u/bob?from=%2Ffor-you%23activity-tag-follow-')
+  expect(followedTagFeed).toContain('title="Bob builds things">@bob</a><span>followed</span>')
+  expect(followedTagFeed).toContain('<a href="/tag/shared?from=%2Ffor-you%23activity-tag-follow-')
+  expect(followedTagFeed).toContain('<a class="activity-follow-stats" href="/tag/shared?from=')
+  expect(followedTagFeed).toContain('<time dateTime="2099-01-02 00:00:00"')
   expect(followedTagFeed).toContain('<span aria-hidden="true">·</span><span>0 notes</span></a>')
   expect(followedTagFeed).not.toContain('@alice</a><span>followed</span><a href="/tag/shared">#shared</a>')
   const sharedReplyResponse = await request(`/post/${post.id}/reply`, {
@@ -863,6 +863,7 @@ test('consequential account, content, reporting, and admin flows work over HTTP'
   const adminActivity = await (await request('/for-you', { cookie: adminCookie })).text()
   expect(adminActivity).toContain('@admin</a><span>signed up:</span>')
   expect(adminActivity).toContain('@alice</a><span>signed up:</span>')
+  expect(adminActivity).toContain('<a class="activity-follow-stats" href="/u/alice?from=%2Ffor-you%23activity-signup-')
   expect(adminActivity).not.toContain('href="/tag/null"')
   expect(adminActivity).not.toContain('>#null</a>')
   expect(adminActivity).toContain('activity-follow')

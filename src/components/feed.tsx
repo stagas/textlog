@@ -186,8 +186,11 @@ export function Feed({ user, page = 1, title, path = '/for-you', pageUrl, notifi
       {snapshot.page > 1
         && <Pagination page={snapshot.page} totalPages={snapshot.totalPages} path={path} top />}
       {timeline.length
-        ? timeline.map(row =>
-          ['post', 'reply', 'mention'].includes(row.activity_kind)
+        ? timeline.map(row => {
+          const activityAnchor = `activity-${row.event_key.replace(/[^a-z0-9_-]+/gi, '-')}`
+          const activityReturnPath = `${returnPath}#${activityAnchor}`
+          const fromQuery = `?from=${encodeURIComponent(activityReturnPath)}`
+          return ['post', 'reply', 'mention'].includes(row.activity_kind)
             ? (
               <div className={`for-you-item${row.unread ? ' activity-item-unread' : ''}`} key={row.event_key}>
                 <Post p={posts.get(row.id)!} user={user} showReplyCount tappable contextUnread={!!row.unread}
@@ -199,13 +202,14 @@ export function Feed({ user, page = 1, title, path = '/for-you', pageUrl, notifi
               </div>
             )
             : (
-              <article className={`activity-follow${row.unread ? ' activity-item-unread' : ''}`} key={row.event_key}>
+              <article className={`activity-follow${row.unread ? ' activity-item-unread' : ''}`} key={row.event_key}
+                id={activityAnchor}>
                 <div className="activity-follow-content">
                   <div className="activity-follow-main">
                     {!!row.unread && <span className="unread-dot" aria-label="unread" />}
                     <a href={row.activity_kind === 'signup'
                       ? `/admin/users/${row.actor_id}`
-                      : `/u/${row.actor_handle}`} title={row.actor_bio || 'No bio yet.'}
+                      : `/u/${row.actor_handle}${fromQuery}`} title={row.actor_bio || 'No bio yet.'}
                     >
                       @{row.actor_handle}
                     </a>
@@ -217,20 +221,20 @@ export function Feed({ user, page = 1, title, path = '/for-you', pageUrl, notifi
                         : 'followed'}
                     </span>
                     {!row.target_is_viewer && row.activity_kind === 'user_follow'
-                      ? <a href={`/u/${row.target_handle}`}>@{row.target_handle}</a>
+                      ? <a href={`/u/${row.target_handle}${fromQuery}`}>@{row.target_handle}</a>
                       : row.activity_kind === 'tag_follow'
-                      ? <a href={`/tag/${row.target_tag}`}>#{row.target_tag}</a>
+                      ? <a href={`/tag/${row.target_tag}${fromQuery}`}>#{row.target_tag}</a>
                       : null}
                     {row.posts !== null
                       ? (
-                        <a className="activity-follow-stats" href={row.activity_kind === 'tag_follow'
+                        <a className="activity-follow-stats" href={(row.activity_kind === 'tag_follow'
                           ? `/tag/${row.target_tag}`
                           : `/u/${
                             row.activity_kind === 'user_follow'
                               && !row.target_is_viewer
                               ? row.target_handle
                               : row.actor_handle
-                          }`}
+                          }`) + fromQuery}
                         >
                           <time dateTime={row.created_at} title={fmtFull(row.created_at)}>{fmt(row.created_at)}</time>
                           <span aria-hidden="true">·</span>
@@ -258,7 +262,7 @@ export function Feed({ user, page = 1, title, path = '/for-you', pageUrl, notifi
                 )}
               </article>
             )
-        )
+        })
         : snapshot.page === 1
         ? (
           <div className="empty empty-actions">

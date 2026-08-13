@@ -45,9 +45,9 @@ describe('in-memory stylesheet', () => {
     expect(css).toContain('.tappable-post .parent-hit-area {\n    position: absolute;')
   })
 
-  test('highlights a post opened through its stable anchor', async () => {
+  test('highlights a post or activity entry opened through its stable anchor', async () => {
     const css = await Bun.file(new URL('./styles.css', import.meta.url)).text()
-    expect(css).toContain('.post:target {')
+    expect(css).toContain('.post:target,\n.activity-follow:target {')
     expect(css).toContain('background: rgb(128 128 128 / 25%);')
     expect(css).toContain('animation: post-target-fade 3s ease-in forwards;')
     expect(css).toContain('@keyframes post-target-fade {')
