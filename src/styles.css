@@ -1316,7 +1316,7 @@ nav form {
 .activity-follow-main > .reference-menu,
 .feed-relationship-main > .reference-menu,
 .people .reference-menu {
-  padding-bottom: 1px;
+  padding-bottom: 0;
   border-bottom: var(--hairline) solid var(--link-border);
 }
 
@@ -1332,13 +1332,13 @@ nav form {
 
 .post p > .reference-menu {
   display: inline;
-  padding-bottom: 2px;
+  padding-bottom: 1px;
   line-height: inherit;
   vertical-align: baseline;
 }
 
 .post p > a {
-  padding-bottom: 2px;
+  padding-bottom: 1px;
 }
 
 .post p a:hover,
@@ -2273,7 +2273,7 @@ form.report-panel {
 }
 
 .posting-help-trigger {
-  padding: 0 0 1px;
+  padding: 0;
   color: inherit;
   font: inherit;
   background: transparent;
@@ -2375,7 +2375,7 @@ form.report-panel {
 }
 
 .posting-help-tab-list label {
-  padding-bottom: 1px;
+  padding-bottom: 0;
   cursor: pointer;
   border-bottom: var(--hairline) solid transparent;
 }
@@ -2543,7 +2543,7 @@ form.report-panel {
 }
 
 .preview-post-meta > :not(.reference-menu) {
-  padding-bottom: 1px;
+  padding-bottom: 0;
   border-bottom: var(--hairline) solid var(--link-border);
 }
 
@@ -3694,7 +3694,7 @@ form.report-panel {
 
 .activity-follow-main a.activity-follow-stats {
   position: relative;
-  padding-bottom: 1px;
+  padding-bottom: 0;
   text-decoration: none;
   border-bottom: var(--hairline) solid var(--link-border);
 }
@@ -3864,7 +3864,7 @@ form.report-panel {
 .reply-preview .preview-reply {
   color: var(--accent);
   cursor: pointer;
-  padding-bottom: 1px;
+  padding-bottom: 0;
   border-bottom: var(--hairline) solid var(--link-border);
 }
 
