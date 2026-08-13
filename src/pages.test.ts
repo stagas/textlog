@@ -937,7 +937,9 @@ test('Current pagination page is an enter-to-navigate bounded input that preserv
     totalPages: 17,
     path: '/u/writer?tab=replies',
   }))
-  expect(html).toContain('<form class="pagination-current-form" action="/u/writer" method="get">')
+  expect(html).toContain(
+    '<form class="pagination-current-form" action="/u/writer" method="get" aria-current="page">',
+  )
   expect(html).toContain('type="hidden" name="tab" value="replies"')
   expect(html).toContain('aria-label="Current page, 5 of 17"')
   expect(html).toContain('type="number" min="1" max="17" required="" name="page" value="5"')

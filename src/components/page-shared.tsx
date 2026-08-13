@@ -165,11 +165,11 @@ export function Pagination(
               && <span className="ellipsis" aria-hidden="true">…</span>}
             {value === page
               ? (
-                <form className="pagination-current-form" method="get" action={formPath}>
+                <form className="pagination-current-form" method="get" action={formPath} aria-current="page">
                   {formParameters.map(([name, parameterValue]) => (
                     <input key={`${name}:${parameterValue}`} type="hidden" name={name} value={parameterValue} />
                   ))}
-                  <input className="current" aria-current="page" aria-label={`Current page, ${page} of ${totalPages}`}
+                  <input className="current" aria-label={`Current page, ${page} of ${totalPages}`}
                     type="number" name={pageParam} min={1} max={totalPages} defaultValue={value} required />
                 </form>
               )
