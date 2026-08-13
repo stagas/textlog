@@ -2647,18 +2647,20 @@ form.report-panel {
   }
 
   .tag-header h1 {
-    grid-column: 1 / -1;
+    grid-column: 1;
+    grid-row: 1;
   }
 
   .tag-handle-actions,
   .tag-title-actions > .button {
-    grid-column: 1;
+    grid-column: 1 / -1;
     grid-row: 2;
   }
 
   .tag-back-link {
     grid-column: 2;
-    grid-row: 2;
+    grid-row: 1;
+    align-self: center;
   }
 }
 
@@ -3038,19 +3040,19 @@ form.report-panel {
   }
 
   .profile:not(.profile-editing) h1 {
-    grid-column: 1 / -1;
+    grid-column: 1;
     grid-row: 1;
   }
 
   .profile:not(.profile-editing) .profile-handle-actions,
   .profile:not(.profile-editing) .profile-owner-actions {
-    grid-column: 1;
+    grid-column: 1 / -1;
     grid-row: 2;
   }
 
   .profile:not(.profile-editing) .profile-back-action {
     grid-column: 2;
-    grid-row: 2;
+    grid-row: 1;
     align-self: center;
     min-height: 0;
   }
