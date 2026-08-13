@@ -556,16 +556,17 @@ export function BlockedPeopleList({ people }: { people: PersonView[] }) {
   )
 }
 
-export function ConnectionPeople({ user, people, className = '', highlightTerms = [] }: {
+export function ConnectionPeople({ user, people, className = '', highlightTerms = [], returnPath }: {
   user: User | null
   people: PersonView[]
   className?: string
   highlightTerms?: string[]
+  returnPath?: (person: PersonView) => string
 }) {
   return (
     <div className={`people ${className}`.trim()}>
       {people.map(person => (
-        <article key={person.id}>
+        <article key={person.id} id={`person-${person.id}`}>
           <div>
             <div>
               <a href={`/u/${person.handle}`}>
@@ -575,6 +576,7 @@ export function ConnectionPeople({ user, people, className = '', highlightTerms 
             </div>
             {user && user.id !== person.id && (
               <form method="post" action={`/follow/${person.handle}`}>
+                {returnPath && <input type="hidden" name="from" value={returnPath(person)} />}
                 <button className={`button${person.viewerFollowing ? ' button-muted' : ''}`}>
                   {person.viewerFollowing ? 'unfollow' : 'follow'}
                 </button>

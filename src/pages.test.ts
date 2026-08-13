@@ -11,7 +11,7 @@ import { maskEmail } from './components/auth'
 import { ConnectionPeople, Pagination, TagPeopleList } from './components/page-shared'
 import { Post, postedReplyPath, replyAnchorReturnPath } from './components/post'
 import { PublicFeed } from './components/public-feed'
-import { searchPostReturnPath } from './components/search'
+import { searchPersonReturnPath, searchPostReturnPath } from './components/search'
 import { TagFeed } from './components/tag-feed'
 
 test('compose offers a server-rendered post preview', () => {
@@ -223,6 +223,7 @@ test('search result cards highlight tag, handle, and bio matches while keeping f
     user,
     people: [{ id: 2, handle: 'typewriter', email: '', bio: 'Types useful notes', posts: 3, viewerFollowing: true }],
     highlightTerms: ['type'],
+    returnPath: person => searchPersonReturnPath('type writer', 3, person.id),
   }))
 
   expect(tags).toContain('#<mark>type</mark>script')
@@ -230,6 +231,8 @@ test('search result cards highlight tag, handle, and bio matches while keeping f
   expect(people).toContain('@<mark>type</mark>writer')
   expect(people).toContain('<mark>Type</mark>s useful notes')
   expect(people).toContain('>unfollow</button>')
+  expect(people).toContain('id="person-2"')
+  expect(people).toContain('name="from" value="/search?q=type%20writer&amp;tab=people&amp;page=3#person-2"')
 })
 
 test('search post replies return to the originating result and page', () => {

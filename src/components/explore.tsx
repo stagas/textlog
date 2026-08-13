@@ -35,6 +35,12 @@ export function Explore({ user, welcome = false, peopleIds, tagsPage = 1, people
   const tagsTotal = trendingTagCount(db, viewerId)
   const tagsPath = `/explore${peoplePage > 1 ? `?peoplePage=${peoplePage}` : ''}`
   const peoplePath = `/explore${tagsPage > 1 ? `?tagsPage=${tagsPage}` : ''}`
+  const exploreReturnPath = (personId: number) => {
+    const query = new URLSearchParams()
+    if (tagsPage > 1) query.set('tagsPage', String(tagsPage))
+    if (peoplePage > 1) query.set('peoplePage', String(peoplePage))
+    return `/explore${query.size ? `?${query}` : ''}#person-${personId}`
+  }
   return (
     <Layout user={user} title="explore">
       {user && welcome && (
@@ -71,7 +77,7 @@ export function Explore({ user, welcome = false, peopleIds, tagsPage = 1, people
           <h2>{user ? 'People to follow' : 'People'}</h2>
           <div className="people">
             {people.map(p => (
-              <article key={p.id}>
+              <article key={p.id} id={`person-${p.id}`}>
                 <div>
                   <div>
                     <a href={'/u/' + p.handle}>@{p.handle}</a>
@@ -80,6 +86,7 @@ export function Explore({ user, welcome = false, peopleIds, tagsPage = 1, people
                   {user && (
                     <form method="post" action={'/follow/' + p.handle}>
                       <input type="hidden" name="explorePeople" value={explorePeople} />
+                      <input type="hidden" name="from" value={exploreReturnPath(p.id)} />
                       <button className={`button${p.following ? ' button-muted' : ''}`}>
                         {p.following ? 'unfollow' : 'follow'}
                       </button>

@@ -1,4 +1,4 @@
-import { clientErrorPage, currentPage, form, page, redirect, usersBlocked } from './shared'
+import { clientErrorPage, currentPage, form, page, redirect, safeNext, usersBlocked } from './shared'
 
 import type { Hono } from 'hono'
 import {
@@ -39,11 +39,11 @@ export function registerInteractionsRoutes(app: Hono) {
       }
     }
     const referer = c.req.header('referer')
-    const returnPath = safeRefererPath(referer, c.req.url)
+    const returnPath = f.from ? safeNext(f.from) : safeRefererPath(referer, c.req.url)
     if (referer && URL.canParse(referer)) {
       const url = new URL(referer)
       if (url.pathname === '/explore' && /^\d+(,\d+){0,5}$/.test(f.explorePeople || '')) {
-        return redirect(url.pathname + url.search,
+        return redirect(returnPath,
           `explore_people=${f.explorePeople}; HttpOnly; Path=/explore; SameSite=Lax`)
       }
     }

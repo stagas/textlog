@@ -14,6 +14,11 @@ export function searchPostReturnPath(query: string, page: number, postId: number
   return `/search?q=${encodeURIComponent(query)}${pageParameter}#post-${postId}`
 }
 
+export function searchPersonReturnPath(query: string, page: number, personId: number) {
+  const pageParameter = page > 1 ? `&page=${page}` : ''
+  return `/search?q=${encodeURIComponent(query)}&tab=people${pageParameter}#person-${personId}`
+}
+
 export function SearchForm({ query = '', autoFocus = false, tab = 'notes', placeholder }: {
   query?: string
   autoFocus?: boolean
@@ -74,7 +79,8 @@ export function SearchResults({ user, query, page, tab = 'notes' }: {
         <TagPeopleList user={user} tags={tags} followingKey="viewerFollowing" highlightTerms={highlights} />
       )}
       {!!people.length && (
-        <ConnectionPeople user={user} people={people} className="search-people" highlightTerms={highlights} />
+        <ConnectionPeople user={user} people={people} className="search-people" highlightTerms={highlights}
+          returnPath={person => searchPersonReturnPath(query, page, person.id)} />
       )}
       {query && !result.rows.length && <div className="empty">No matching {tab}.</div>}
       <Pagination page={page} totalPages={totalPages}
