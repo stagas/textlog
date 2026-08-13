@@ -19,7 +19,6 @@ import {
   notificationBannerDismissed,
   notificationBannerDismissedCookie,
   notificationDevice,
-  productHuntBannerDismissedCookie,
   safeRefererPath,
 } from '../http'
 import { decodePostCursor } from '../pagination'
@@ -140,11 +139,6 @@ export function registerFeedsRoutes(app: Hono) {
     if (!user) return redirect('/enter')
     const destination = safeRefererPath(c.req.header('referer'), c.req.url)
     return redirect(destination, notificationBannerDismissedCookie(user.id))
-  })
-
-  app.post('/product-hunt/banner/dismiss', c => {
-    const destination = safeRefererPath(c.req.header('referer'), c.req.url)
-    return redirect(destination, productHuntBannerDismissedCookie())
   })
 
   app.get('/activity', c => {

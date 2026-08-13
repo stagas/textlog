@@ -330,8 +330,7 @@ nav form {
   border-bottom: 1px solid var(--soft);
 }
 
-.notification-banner,
-.product-hunt-banner {
+.notification-banner {
   display: flex;
   align-items: center;
   justify-content: center;
@@ -346,29 +345,12 @@ nav form {
   border-bottom: 1px solid var(--soft);
 }
 
-.notification-banner form,
-.product-hunt-banner form { margin: 0; }
-.notification-banner button,
-.product-hunt-banner button {
+.notification-banner form { margin: 0; }
+.notification-banner button {
   color: var(--muted);
   font: inherit;
 }
-.notification-banner button:hover,
-.product-hunt-banner button:hover { color: var(--tab-hover); }
-
-.product-hunt-banner {
-  background: color-mix(in srgb, #ea580c 24%, var(--panel));
-  border-bottom-color: color-mix(in srgb, #f97316 45%, var(--soft));
-}
-
-.product-hunt-banner > a {
-  color: #f97316;
-  font-weight: 600;
-}
-
-.product-hunt-banner > a:hover {
-  color: #fb923c;
-}
+.notification-banner button:hover { color: var(--tab-hover); }
 
 .feed-tabs a {
   display: inline-flex;
