@@ -21,7 +21,8 @@ import {
 } from '../components/pages'
 import { exportUserData } from '../data-export'
 import { db } from '../db'
-import { devicePageSize, PAGE_SIZE_CHOICES, type PageSizeChoice, saveDevicePageSize } from '../device-settings'
+import { DENSITY_CHOICES, type DensityChoice, deviceDensity, devicePageSize, PAGE_SIZE_CHOICES, type PageSizeChoice,
+  saveDeviceDensity, saveDevicePageSize } from '../device-settings'
 import { sendAccountDeletionConfirmation, sendEmailChangeAuthorization, sendPasswordEnableConfirmation } from '../email'
 import { emailChangeForToken, issueEmailChangeAuthorization } from '../email-change-authorization'
 import { confirmEmailToken, findEmailToken } from '../email-verification'
@@ -235,7 +236,7 @@ export function registerAccountRoutes(app: Hono) {
     const tab = requestedTab === 'font' || requestedTab === 'misc' ? requestedTab : 'theme'
     return page(<ChangeAppearance user={user} selected={appearance(c.req.raw)} selectedFont={fontChoice(c.req.raw)}
       selectedSize={fontSizeChoice(c.req.raw)} selectedPageSize={devicePageSize(c.req.raw, user.id)} tab={tab}
-      returnPath={returnPath} />)
+      selectedDensity={deviceDensity(c.req.raw, user.id)} returnPath={returnPath} />)
   })
 
   app.post('/account/edit/appearance', async c => {
@@ -248,13 +249,16 @@ export function registerAccountRoutes(app: Hono) {
       returnPath ? '&from=' + encodeURIComponent(returnPath) : ''}`
     if (tab === 'misc') {
       const selectedPageSize = Number(f.pageSize) as PageSizeChoice
-      if (!PAGE_SIZE_CHOICES.includes(selectedPageSize)) {
+      const selectedDensity = f.density as DensityChoice
+      if (!PAGE_SIZE_CHOICES.includes(selectedPageSize) || !DENSITY_CHOICES.includes(selectedDensity)) {
         return page(<ChangeAppearance user={user} selected={appearance(c.req.raw)}
           selectedFont={fontChoice(c.req.raw)} selectedSize={fontSizeChoice(c.req.raw)}
-          selectedPageSize={devicePageSize(c.req.raw, user.id)} tab="misc" returnPath={returnPath} />, 400)
+          selectedPageSize={devicePageSize(c.req.raw, user.id)} selectedDensity={deviceDensity(c.req.raw, user.id)}
+          tab="misc" returnPath={returnPath} />, 400)
       }
       const deviceId = notificationDevice(c.req.raw) || token()
       saveDevicePageSize(user.id, deviceId, selectedPageSize)
+      saveDeviceDensity(user.id, deviceId, selectedDensity)
       return redirect('/account/edit/appearance' + query, notificationDeviceCookie(deviceId))
     }
     if (tab === 'font') {
@@ -264,7 +268,8 @@ export function registerAccountRoutes(app: Hono) {
         || !FONT_SIZE_CHOICES.some(size => size.value === selectedSize)) {
         return page(<ChangeAppearance user={user} selected={appearance(c.req.raw)}
           selectedFont={fontChoice(c.req.raw)} selectedSize={fontSizeChoice(c.req.raw)} tab="font"
-          selectedPageSize={devicePageSize(c.req.raw, user.id)} returnPath={returnPath} />, 400)
+          selectedPageSize={devicePageSize(c.req.raw, user.id)} selectedDensity={deviceDensity(c.req.raw, user.id)}
+          returnPath={returnPath} />, 400)
       }
       const response = redirect('/account/edit/appearance' + query, fontCookie(selected))
       response.headers.append('set-cookie', fontSizeCookie(selectedSize))
@@ -275,7 +280,8 @@ export function registerAccountRoutes(app: Hono) {
     if (!THEME_CHOICES.includes(theme) || !ACCENT_CHOICES.includes(accent)) {
       return page(<ChangeAppearance user={user} selected={appearance(c.req.raw)}
         selectedFont={fontChoice(c.req.raw)} selectedSize={fontSizeChoice(c.req.raw)} tab="theme"
-        selectedPageSize={devicePageSize(c.req.raw, user.id)} returnPath={returnPath} />, 400)
+        selectedPageSize={devicePageSize(c.req.raw, user.id)} selectedDensity={deviceDensity(c.req.raw, user.id)}
+        returnPath={returnPath} />, 400)
     }
     return redirect('/account/edit/appearance' + query, appearanceCookie({ theme, accent }))
   })

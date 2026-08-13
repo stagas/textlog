@@ -722,6 +722,14 @@ export const migrations: Migration[] = [
         PRIMARY KEY(user_id,device_id));`)
     },
   },
+  {
+    version: 56,
+    name: 'device_density',
+    up(database) {
+      addColumn(database, 'device_settings', 'density',
+        "TEXT NOT NULL DEFAULT 'regular' CHECK(density IN ('compact','regular','relaxed'))")
+    },
+  },
 ]
 
 export const latestMigrationVersion = migrations.at(-1)!.version

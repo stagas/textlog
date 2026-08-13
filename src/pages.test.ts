@@ -323,6 +323,7 @@ test('appearance misc tab offers supported page sizes as radio cards', () => {
     selected: { theme: 'system', accent: 'theme' },
     selectedFont: 'system',
     selectedPageSize: 40,
+    selectedDensity: 'relaxed',
     tab: 'misc',
   }))
   expect(html).toContain('aria-current="page">misc</a>')
@@ -330,6 +331,12 @@ test('appearance misc tab offers supported page sizes as radio cards', () => {
   expect(html).toContain('name="pageSize" checked="" value="40"')
   expect(html).toContain('name="pageSize" value="80"')
   expect(html).toContain('name="pageSize" value="100"')
+  expect(html).toContain('name="density" value="compact"')
+  expect(html).toContain('name="density" value="regular"')
+  expect(html).toContain('name="density" checked="" value="relaxed"')
+  expect(html).toContain('class="density-preview density-preview-compact"')
+  expect(html).toContain('class="density-preview density-preview-regular"')
+  expect(html).toContain('class="density-preview density-preview-relaxed"')
   expect(html).toContain('save misc →')
 })
 
@@ -446,7 +453,7 @@ test('guest pages keep skip to content as their first shortcut', () => {
   const html = renderToStaticMarkup(React.createElement(About, { user: null }))
 
   expect(html).not.toContain('<a class="skip-link" href="/write">write</a>')
-  expect(html).toContain('<body><a class="skip-link" href="#main-content">skip to content</a>')
+  expect(html).toContain('<body class="density-regular"><a class="skip-link" href="#main-content">skip to content</a>')
 })
 
 test('public collection pages advertise their RSS and Atom feeds', () => {

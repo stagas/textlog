@@ -1,5 +1,5 @@
 import type { User } from '../db'
-import { PAGE_SIZE_CHOICES, type PageSizeChoice } from '../device-settings'
+import { DENSITY_CHOICES, type DensityChoice, PAGE_SIZE_CHOICES, type PageSizeChoice } from '../device-settings'
 import { ACCENT_CHOICES, type Appearance, FONT_CHOICES, FONT_SIZE_CHOICES, type FontChoice,
   type FontSizeChoice, THEME_CHOICES } from '../theme'
 import { Layout } from './layout'
@@ -8,9 +8,9 @@ import { AccountSettingsHeader } from './account-settings-header'
 export type AppearanceTab = 'theme' | 'font' | 'misc'
 
 export function ChangeAppearance({ user, selected, selectedFont, selectedSize = 'regular', selectedPageSize = 20,
-  tab = 'theme', returnPath }:
+  selectedDensity = 'regular', tab = 'theme', returnPath }:
   { user: User; selected: Appearance; selectedFont: FontChoice; selectedSize?: FontSizeChoice; tab?: AppearanceTab;
-    selectedPageSize?: PageSizeChoice; returnPath?: string }) {
+    selectedPageSize?: PageSizeChoice; selectedDensity?: DensityChoice; returnPath?: string }) {
   const fromQuery = returnPath ? `&from=${encodeURIComponent(returnPath)}` : ''
   return (
     <Layout user={user} title="change appearance">
@@ -100,6 +100,21 @@ export function ChangeAppearance({ user, selected, selectedFont, selectedSize = 
                     <input type="radio" name="pageSize" value={size} defaultChecked={selectedPageSize === size} />
                     <span>{size}</span>
                     <span>notes</span>
+                  </label>
+                ))}
+              </div>
+            </fieldset>
+            <fieldset>
+              <legend>density</legend>
+              <div className="misc-options">
+                {DENSITY_CHOICES.map(density => (
+                  <label key={density} className="misc-option density-option">
+                    <input type="radio" name="density" value={density}
+                      defaultChecked={selectedDensity === density} />
+                    <span className={`density-preview density-preview-${density}`} aria-hidden="true">
+                      <i /><i /><i /><i />
+                    </span>
+                    <span>{density}</span>
                   </label>
                 ))}
               </div>

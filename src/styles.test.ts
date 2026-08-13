@@ -95,6 +95,15 @@ describe('in-memory stylesheet', () => {
     expect(css).toContain('.notifications-page {\n  max-width: none;\n}')
   })
 
+  test('defines compact and relaxed global density scales', async () => {
+    const css = await Bun.file(new URL('./styles.css', import.meta.url)).text()
+    expect(css).toContain('body.density-compact {')
+    expect(css).toContain('--space-7: 36px;')
+    expect(css).toContain('body.density-relaxed {')
+    expect(css).toContain('--space-7: 60px;')
+    expect(css).toContain('body.density-compact :where(p, li, textarea):not(.ascii-art)')
+  })
+
   test('uses shared component utilities for repeated visual patterns', async () => {
     const css = await Bun.file(new URL('./styles.css', import.meta.url)).text()
     expect(css).toContain('.pagination-top {\n  border-top: 0;\n}')

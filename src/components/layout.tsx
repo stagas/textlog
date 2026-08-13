@@ -5,6 +5,7 @@ import React from 'react'
 import { instance } from '../../instance.config'
 import { isAdmin } from '../admin'
 import type { User } from '../db'
+import { deviceDensity } from '../device-settings'
 
 let devReloadBootId: string | undefined
 
@@ -33,6 +34,7 @@ export function Layout({
   children: React.ReactNode
 }) {
   const selectedAppearance = activeAppearance()
+  const density = deviceDensity(activeRequest(), user?.id)
   const appearanceVersion = `${selectedAppearance.theme}.${selectedAppearance.accent}`
   const themeCss = activeThemeStyles()
   const logoSvg = activeThemeLogoSvg()
@@ -122,10 +124,10 @@ export function Layout({
             <link rel="alternate" type="application/atom+xml" title={`${feeds.title} (Atom)`} href={feeds.atom} />
           </>
         )}
-        <link rel="stylesheet" href="/styles.css?v=242" />
+        <link rel="stylesheet" href="/styles.css?v=245" />
         <style>{themeCss}</style>
       </head>
-      <body>
+      <body className={`density-${density}`}>
         {user && ready && <a className="skip-link" href="/write">write</a>}
         <a className="skip-link" href="#main-content">skip to content</a>
         <header className={user ? 'authenticated-header' : undefined}>

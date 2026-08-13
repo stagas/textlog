@@ -125,6 +125,30 @@ body {
   flex-direction: column;
 }
 
+body.density-compact {
+  --space-1: 3px;
+  --space-2: 6px;
+  --space-3: 9px;
+  --space-4: 12px;
+  --space-5: 18px;
+  --space-6: 24px;
+  --space-7: 36px;
+  --space-8: 48px;
+  line-height: 1.35;
+}
+
+body.density-relaxed {
+  --space-1: 5px;
+  --space-2: 10px;
+  --space-3: 15px;
+  --space-4: 20px;
+  --space-5: 30px;
+  --space-6: 40px;
+  --space-7: 60px;
+  --space-8: 80px;
+  line-height: 1.65;
+}
+
 .visually-hidden {
   position: absolute;
   width: 1px;
@@ -3229,6 +3253,28 @@ form.report-panel {
 .misc-option:has(input:checked) { border-color: var(--accent); box-shadow: inset 0 0 0 2px var(--accent); }
 .misc-option:has(input:checked)>span:last-child { color: var(--ink); }
 .misc-option:has(input:focus-visible) { outline: 2px solid var(--accent); outline-offset: 3px; }
+.density-option { min-width: 82px; padding: 0; gap: var(--space-2); font-size: 0.5625rem; border: 0; }
+.density-option:has(input:checked) { border-color: transparent; box-shadow: none; }
+.density-option:has(input:focus-visible) { outline: 0; }
+.density-option > .density-preview {
+  display: grid;
+  align-content: center;
+  width: 82px;
+  height: 58px;
+  padding: 10px;
+  color: inherit;
+  font-size: inherit;
+  border: 1px solid var(--soft);
+}
+.density-preview i { display: block; height: 2px; background: var(--muted); opacity: 0.55; }
+.density-preview i:nth-child(2) { width: 76%; }
+.density-preview i:nth-child(3) { width: 88%; }
+.density-preview i:nth-child(4) { width: 58%; }
+.density-preview-compact { gap: 3px; }
+.density-preview-regular { gap: 6px; }
+.density-preview-relaxed { gap: 9px; }
+.density-option input:checked + .density-preview { border-color: var(--accent); box-shadow: inset 0 0 0 2px var(--accent); }
+.density-option input:focus-visible + .density-preview { outline: 2px solid var(--accent); outline-offset: 3px; }
 .font-preview-system { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
 .font-preview-sf-mono { font-family: "SF Mono", SFMono-Regular, monospace; }
 .font-preview-menlo { font-family: Menlo, monospace; }
@@ -4002,4 +4048,12 @@ form.report-panel {
 .compose-post-preview .post p.ascii-art,
 .reply-preview .post p.ascii-art {
   line-height: 1.15;
+}
+
+body.density-compact :where(p, li, textarea):not(.ascii-art) {
+  line-height: 1.4;
+}
+
+body.density-relaxed :where(p, li, textarea):not(.ascii-art) {
+  line-height: 1.7;
 }

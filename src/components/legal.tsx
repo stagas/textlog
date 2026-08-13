@@ -80,8 +80,8 @@ export function Legal({ user }: { user: User | null }) {
           </li>
           <li>
             Theme, accent and font choices: to remember your appearance settings. These are stored only in appearance
-            cookies on your device and are not tied to your account in our database. Your page-size choice is stored
-            with your account and an opaque device identifier so it can apply separately to each device.
+            cookies on your device and are not tied to your account in our database. Your page-size and density choices
+            are stored with your account and an opaque device identifier so they can apply separately to each device.
           </li>
           <li>
             Posts, replies, follows, followed hashtags, blocks and other activity: to publish and distribute content at
