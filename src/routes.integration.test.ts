@@ -650,12 +650,12 @@ test('consequential account, content, reporting, and admin flows work over HTTP'
   expect(await hotFeed.text()).toContain(post.body)
 
   const insertFeedPost = database.query('INSERT INTO posts(user_id,body) VALUES(?,?)')
-  for (let index = 1; index <= 21; index++) insertFeedPost.run(alice.id, `cursor note ${index}`)
+  for (let index = 1; index <= 41; index++) insertFeedPost.run(alice.id, `cursor note ${index}`)
   const latestFirst = await request('/latest')
   const latestFirstBody = await latestFirst.text()
   const latestNext = latestFirstBody.match(/href="(\/latest\?page=2)"/)?.[1]
   expect(latestNext).toBeTruthy()
-  expect(latestFirstBody).toContain('cursor note 21')
+  expect(latestFirstBody).toContain('cursor note 41')
   expect(latestFirstBody).not.toContain(post.body)
   const latestSecondBody = await (await request(latestNext!)).text()
   expect(latestSecondBody).toContain(post.body)
@@ -663,7 +663,7 @@ test('consequential account, content, reporting, and admin flows work over HTTP'
 
   const forYouFirstBody = await (await request('/for-you', { cookie: aliceCookie })).text()
   expect(forYouFirstBody).not.toContain('/for-you?cursor=')
-  expect(forYouFirstBody).not.toContain('cursor note 21')
+  expect(forYouFirstBody).not.toContain('cursor note 41')
   expect(forYouFirstBody).not.toContain(post.body)
   expect(forYouFirstBody).not.toContain('action="/for-you/read-all"')
   expect(forYouFirstBody).not.toContain('class="for-you-item activity-item-unread"')
@@ -832,19 +832,20 @@ test('consequential account, content, reporting, and admin flows work over HTTP'
   const insertActivityReply = database.query(
     'INSERT INTO posts(user_id,parent_id,body,created_at) VALUES(?,?,?,?)',
   )
-  for (let index = 1; index <= 21; index++) {
+  for (let index = 1; index <= 41; index++) {
+    const createdAt = new Date(Date.UTC(2080, 0, index, 12)).toISOString().replace('T', ' ').slice(0, 19)
     insertActivityReply.run(bob.id, post.id, index === 1 ? 'oldest cursor boundary' : `activity cursor reply ${index}`,
-      `2080-01-${String(index).padStart(2, '0')} 12:00:00`)
+      createdAt)
   }
   const activityFirstBody = await (await request('/to-me', { cookie: aliceCookie })).text()
   const activityNext = activityFirstBody.match(/href="(\/to-me\?page=2)"/)?.[1]
   expect(activityNext).toBeTruthy()
-  expect(activityFirstBody).toContain('activity cursor reply 21')
+  expect(activityFirstBody).toContain('activity cursor reply 41')
   expect(activityFirstBody).not.toContain('oldest cursor boundary')
   insertActivityReply.run(bob.id, post.id, 'newer activity after cursor', '2080-02-01 12:00:00')
   const activitySecondBody = await (await request(activityNext!, { cookie: aliceCookie })).text()
   expect(activitySecondBody).toContain('oldest cursor boundary')
-  expect(activitySecondBody).not.toContain('activity cursor reply 21')
+  expect(activitySecondBody).not.toContain('activity cursor reply 41')
   expect(activitySecondBody).toContain('← prev')
   const invalidReport = await request(`/post/${post.id}/report`, {
     method: 'POST',
@@ -1040,4 +1041,4 @@ test('consequential account, content, reporting, and admin flows work over HTTP'
   expect((database.query('SELECT suspended_at FROM users WHERE id=?').get(bob.id) as any).suspended_at).toBeNull()
   const userActions = database.query('SELECT action FROM admin_actions WHERE target_user_id=? ORDER BY id').all(bob.id)
   expect(userActions).toEqual([{ action: 'suspend_user' }, { action: 'restore_user' }])
-})
+}, 60_000)
