@@ -6,33 +6,35 @@ import { Pagination } from './page-shared'
 import { Post } from './post'
 
 export function TagFeed(
-  { user, tag, following, blocked = false, posts, page, total, social }: { user: User | null; tag: string;
+  { user, tag, following, blocked = false, posts, page, total, social, returnPath }: { user: User | null; tag: string;
     following: boolean; blocked?: boolean; posts: PostView[]; page: number; total: number;
+    returnPath?: string;
     social?: { description: string; image: string; url: string; type?: 'article' | 'profile' | 'website';
       imageAlt?: string } },
 ) {
+  const tagPath = `/tag/${encodeURIComponent(tag)}`
+  const paginationPath = returnPath ? `${tagPath}?from=${encodeURIComponent(returnPath)}` : tagPath
+  const feedPath = `${paginationPath}${page > 1 ? `${returnPath ? '&' : '?'}page=${page}` : ''}`
   return (
     <Layout user={user} title={`#${tag}`} social={social} feeds={{
       title: `#${tag} notes`,
       rss: `/tag/${encodeURIComponent(tag)}.rss`,
       atom: `/tag/${encodeURIComponent(tag)}.atom`,
     }}>
-      <section className="page-header tag-header">
-        <h1>
-          <span>
+      <section className={`page-header tag-header${returnPath ? ' tag-header-contextual' : ''}`}>
+        <div className="tag-title-actions">
+          <h1>
+            <span>
             <span className="identity-prefix">#</span>
             {tag}
-          </span>
-          <span className="tag-note-count" aria-label={`${total} ${total === 1 ? 'note' : 'notes'}`}>
-            {total}
-          </span>
-        </h1>
-        {user
+            </span>
+            <span className="tag-note-count" aria-label={`${total} ${total === 1 ? 'note' : 'notes'}`}>
+              {total}
+            </span>
+          </h1>
+          {user
           ? (
-            <div className="profile-action">
-              <form method="post" action={'/tag-block/' + encodeURIComponent(tag)}>
-                <button className={blocked ? 'button' : 'quiet danger'}>{blocked ? 'unblock' : 'block'}</button>
-              </form>
+            <div className="profile-action tag-handle-actions">
               {!blocked && (
                 <form method="post" action={'/tag-follow/' + encodeURIComponent(tag)}>
                   <button className={`button${following ? ' button-muted' : ''}`}>
@@ -40,18 +42,24 @@ export function TagFeed(
                   </button>
                 </form>
               )}
+              <form method="post" action={'/tag-block/' + encodeURIComponent(tag)}>
+                <button className={blocked ? 'button' : 'quiet danger'}>{blocked ? 'unblock' : 'block'}</button>
+              </form>
             </div>
           )
           : <a className="button" href="/enter" rel="nofollow">enter to follow</a>}
+        </div>
+        {returnPath && <a className="profile-edit-link tag-back-link" href={returnPath}>back</a>}
       </section>
       {page > 1
-        && <Pagination page={page} totalPages={Math.ceil(total / PAGE_SIZE)} path={'/tag/' + tag} top />}
+        && <Pagination page={page} totalPages={Math.ceil(total / PAGE_SIZE)} path={paginationPath} top />}
       {blocked
         ? <div className="empty relationship-notice">You blocked this tag. Unblock it to see its notes.</div>
         : posts.length
-        ? posts.map(post => <Post p={post} user={user} key={post.id} showReplyCount tappable />)
+        ? posts.map(post => <Post p={post} user={user} key={post.id} showReplyCount tappable
+          returnPath={`${feedPath}#post-${post.id}`} />)
         : <div className="empty">No notes use this hashtag yet.</div>}
-      <Pagination page={page} totalPages={Math.ceil(total / PAGE_SIZE)} path={'/tag/' + tag} />
+      <Pagination page={page} totalPages={Math.ceil(total / PAGE_SIZE)} path={paginationPath} />
     </Layout>
   )
 }

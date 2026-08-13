@@ -274,18 +274,57 @@ export function FeedTabs({ active, user, forYouReadStatus, activityReadStatus, t
   )
 }
 
-export function ProfileHeader({ user, profile, following, blocked = false, editing = false, children }: {
+export function ProfileControls({ user, profile, following, blocked = false }: {
+  user: User | null
+  profile: ProfileRow
+  following: boolean
+  blocked?: boolean
+}) {
+  return (
+    <div className="profile-action profile-handle-actions">
+      {user && user.id !== profile.id && (
+        <>
+          {!blocked && (
+            <form method="post" action={'/follow/' + profile.handle}>
+              <button className={`button${following ? ' button-muted' : ''}`}
+                aria-label={`${following ? 'unfollow' : 'follow'} @${profile.handle}`}>
+                {following ? 'unfollow' : 'follow'}
+              </button>
+            </form>
+          )}
+          <form method="post" action={'/block/' + profile.handle}>
+            <button className={blocked ? 'button' : 'quiet danger'}
+              aria-label={`${blocked ? 'unblock' : 'block'} @${profile.handle}`}>
+              {blocked ? 'unblock' : 'block'}
+            </button>
+          </form>
+        </>
+      )}
+      {!user && <a className="button" href="/enter" rel="nofollow">enter to follow</a>}
+      {isAdmin(user) && user?.id !== profile.id && (
+        <a className="quiet danger" href={`/admin/users/${profile.id}`}>moderate</a>
+      )}
+    </div>
+  )
+}
+
+export function ProfileHeader(
+  { user, profile, following, blocked = false, editing = false, returnPath, controlsInTitle = false, children }: {
   user: User | null
   profile: ProfileRow
   following: boolean
   blocked?: boolean
   editing?: boolean
+  returnPath?: string
+  controlsInTitle?: boolean
   children?: React.ReactNode
 }) {
   return (
     <section
       className={`page-header profile${user?.id === profile.id ? ' profile-owner' : ''}${
-        editing ? ' profile-editing' : ''
+        editing ? ' profile-editing' : ''}${returnPath && !editing && user?.id !== profile.id
+          ? ' profile-contextual'
+          : ''
       }`}
     >
       {children || (
@@ -307,33 +346,10 @@ export function ProfileHeader({ user, profile, following, blocked = false, editi
           <p className="profile-bio">{profile.bio || 'No bio yet.'}</p>
         </div>
       )}
-      <div className="profile-action">
-        {isAdmin(user) && user?.id !== profile.id && (
-          <a className="quiet danger" href={`/admin/users/${profile.id}`}>
-            moderate
-          </a>
-        )}
-        {user && user.id !== profile.id && (
-          <>
-            <form method="post" action={'/block/' + profile.handle}>
-              <button className={blocked ? 'button' : 'quiet danger'}
-                aria-label={`${blocked ? 'unblock' : 'block'} @${profile.handle}`}
-              >
-                {blocked ? 'unblock' : 'block'}
-              </button>
-            </form>
-            {!blocked && (
-              <form method="post" action={'/follow/' + profile.handle}>
-                <button className={`button${following ? ' button-muted' : ''}`}
-                  aria-label={`${following ? 'unfollow' : 'follow'} @${profile.handle}`}
-                >
-                  {following ? 'unfollow' : 'follow'}
-                </button>
-              </form>
-            )}
-          </>
-        )}
-        {!user && <a className="button" href="/enter" rel="nofollow">enter to follow</a>}
+      <div className="profile-action profile-back-action">
+        {returnPath && !editing && user?.id !== profile.id
+          && <a className="profile-edit-link" href={returnPath}>back</a>}
+        {!controlsInTitle && <ProfileControls user={user} profile={profile} following={following} blocked={blocked} />}
       </div>
     </section>
   )

@@ -1,4 +1,4 @@
-import { currentPage, page, paginationRedirect } from './shared'
+import { currentPage, page, paginationRedirect, safeNext } from './shared'
 
 import type { Hono } from 'hono'
 import { appName } from '../brand'
@@ -36,6 +36,7 @@ export function registerTagsRoutes(app: Hono) {
       return c.redirect(`/tag/${encodeURIComponent(tag)}${new URL(c.req.url).search}`, 301)
     }
     const user = currentUser(c.req.raw)
+    const returnPath = c.req.query('from') ? safeNext(c.req.query('from')) : undefined
     const tagPage = currentPage(c.req.query('page'))
     const following = !!user && !!db.query(
       'SELECT 1 FROM hashtag_follows WHERE user_id=? AND tag=?',
@@ -69,7 +70,7 @@ export function registerTagsRoutes(app: Hono) {
     }
     return page(
       <TagFeed user={user} tag={tag} following={following} blocked={blocked} posts={posts} page={tagPage} total={total}
-        social={social} />,
+        social={social} returnPath={returnPath} />,
     )
   })
 }

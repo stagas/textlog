@@ -2,7 +2,7 @@ import { type User } from '../db'
 import type { PostView, ProfileRow } from '../types'
 import { linkify } from '../utils'
 import { Layout } from './layout'
-import { FormMessage, Pagination, PostingHelp, ProfileHeader, ProfileTabs } from './page-shared'
+import { FormMessage, Pagination, PostingHelp, ProfileControls, ProfileHeader, ProfileTabs } from './page-shared'
 import { Post } from './post'
 
 export function Profile(
@@ -47,20 +47,24 @@ export function Profile(
       rss: `/u/${encodeURIComponent(profile.handle)}.rss`,
       atom: `/u/${encodeURIComponent(profile.handle)}.atom`,
     }}>
-      <ProfileHeader user={user} profile={profile} following={following} blocked={blocked} editing={editing}>
+      <ProfileHeader user={user} profile={profile} following={following} blocked={blocked} editing={editing}
+        returnPath={returnPath} controlsInTitle>
         <div className="profile-content">
-          <div className="profile-title-row">
+          <div className={`profile-title-row${!editing && user?.id !== profile.id
+            ? ' profile-title-row-actions'
+            : ''}`}>
             <h1>
               <span className="identity-prefix">@</span>
               {profile.handle}
             </h1>
-            {(returnPath || user?.id === profile.id) && (
+            {!editing && user?.id !== profile.id
+              && <ProfileControls user={user} profile={profile} following={following} blocked={blocked} />}
+            {(editing || user?.id === profile.id) && (
               <div className="profile-owner-actions">
                 {editing
                   ? <a className="profile-edit-link" href={returnPath || '/u/' + profile.handle}>back</a>
                   : (
                     <>
-                      {returnPath && <a className="profile-edit-link" href={returnPath}>back</a>}
                       {user?.id === profile.id && (
                         <>
                           <a className="profile-edit-link" href="/account/edit">account</a>
@@ -69,6 +73,8 @@ export function Profile(
                           </form>
                         </>
                       )}
+                      {returnPath && user?.id === profile.id
+                        && <a className="profile-edit-link" href={returnPath}>back</a>}
                     </>
                   )}
               </div>

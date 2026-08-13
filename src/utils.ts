@@ -235,20 +235,22 @@ function renderedMath(source: string, display: boolean) {
   return output && display ? `<span class="math-display">${output}</span>` : output
 }
 
-function renderedReference(token: string, mentionBios: Record<string, string>, highlightTerms: string[]) {
+function renderedReference(token: string, mentionBios: Record<string, string>, highlightTerms: string[],
+  navigationQuery = '') {
   const value = token.slice(1)
   return token[0] === '@'
-    ? `<a href="/u/${value.toLowerCase()}"${
+    ? `<a href="/u/${value.toLowerCase()}${navigationQuery}"${
       mentionBios[value.toLowerCase()] !== undefined
         ? ` title="${esc(mentionBios[value.toLowerCase()] || 'No bio yet.')}"`
         : ''
     }>${highlighted(`@${value}`, highlightTerms)}</a>`
-    : `<a href="/tag/${encodeURIComponent(value.normalize('NFC').toLowerCase())}">${
+    : `<a href="/tag/${encodeURIComponent(value.normalize('NFC').toLowerCase())}${navigationQuery}">${
       highlighted(`#${value}`, highlightTerms)
     }</a>`
 }
 
-function linkifyAsciiReferences(body: string, mentionBios: Record<string, string>, appUrl: string | undefined) {
+function linkifyAsciiReferences(body: string, mentionBios: Record<string, string>, appUrl: string | undefined,
+  navigationQuery = '') {
   let html = ''
   let end = 0
   const tokens = linkTokens(body, { has_latex: 1, has_links: 1, has_code: 1 })
@@ -257,7 +259,7 @@ function linkifyAsciiReferences(body: string, mentionBios: Record<string, string
     if ((match.kind !== 'reference' && match.kind !== 'url') || match.index < end
       || markupRanges.some(range => match.index >= range.index && match.index < range.lastIndex)) continue
     html += esc(body.slice(end, match.index))
-    if (match.kind === 'reference') html += renderedReference(match.raw, mentionBios, [])
+    if (match.kind === 'reference') html += renderedReference(match.raw, mentionBios, [], navigationQuery)
     else {
       const url = match.url!
       const label = linkLabel(url, appUrl)
@@ -271,10 +273,10 @@ function linkifyAsciiReferences(body: string, mentionBios: Record<string, string
 }
 
 export function linkify(body: string, mentionBios: Record<string, string> = {}, highlightTerms: string[] = [],
-  appUrl: string | undefined = Bun.env.APP_URL, flags?: PostContentFlags)
+  appUrl: string | undefined = Bun.env.APP_URL, flags?: PostContentFlags, navigationQuery = '')
 {
   // Keep the drawing literal while retaining navigation for social references.
-  if (containsAsciiArt(body)) return linkifyAsciiReferences(body, mentionBios, appUrl)
+  if (containsAsciiArt(body)) return linkifyAsciiReferences(body, mentionBios, appUrl, navigationQuery)
   if (flags && !flags.has_latex && !flags.has_links && !flags.has_code) return highlighted(body, highlightTerms)
   let html = ''
   let end = 0
@@ -304,7 +306,7 @@ export function linkify(body: string, mentionBios: Record<string, string> = {}, 
       }</a>`
     }
     else {
-      html += renderedReference(token, mentionBios, highlightTerms)
+      html += renderedReference(token, mentionBios, highlightTerms, navigationQuery)
     }
     end = match.lastIndex
   }

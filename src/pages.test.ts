@@ -396,6 +396,42 @@ test('public collection pages advertise their RSS and Atom feeds', () => {
   expect(tag).toContain('href="/tag/ascii_art.atom"')
 })
 
+test('Tag pages keep actions beside the tag and a contextual back link on the right', () => {
+  const html = renderToStaticMarkup(React.createElement(TagFeed, {
+    user: { id: 2, handle: 'reader', email: 'reader@example.com', bio: '' },
+    tag: 'notes',
+    following: false,
+    posts: [],
+    page: 1,
+    total: 0,
+    returnPath: '/latest#post-2',
+  }))
+
+  expect(html).toContain('class="tag-title-actions"')
+  expect(html).toContain('class="profile-action tag-handle-actions"')
+  expect(html).toContain('class="profile-edit-link tag-back-link" href="/latest#post-2">back</a>')
+  expect(html.indexOf('>follow</button>')).toBeLessThan(html.indexOf('>block</button>'))
+  expect(html.indexOf('>block</button>')).toBeLessThan(html.indexOf('>back</a>'))
+})
+
+test('Hashtags in posts carry their originating post into the tag page', () => {
+  const html = renderToStaticMarkup(React.createElement(Post, {
+    user: null,
+    returnPath: '/latest#post-2',
+    p: {
+      id: 2,
+      user_id: 1,
+      parent_id: null,
+      body: 'A #notes post',
+      handle: 'writer',
+      created_at: '2026-08-03 12:00:00',
+      deleted_at: null,
+    },
+  }))
+
+  expect(html).toContain('href="/tag/notes?from=%2Flatest%23post-2">#notes</a>')
+})
+
 test('root feed variants use the unqualified site title', () => {
   const hot = renderToStaticMarkup(React.createElement(HotFeed, { user: null, cursor: null, path: '/' }))
   const latest = renderToStaticMarkup(React.createElement(PublicFeed, { user: null, cursor: null, path: '/' }))
@@ -807,6 +843,21 @@ test('Profile places owner actions in the handle row', () => {
   expect(html).not.toContain('class="mobile-account-footer"')
   expect(html.indexOf('href="/write"')).toBeLessThan(html.indexOf('href="/u/reader"'))
   expect(html).toContain('<a class="button" href="/write">write a note</a>')
+})
+
+test('Profile places a contextual back link in the handle row', () => {
+  const html = renderToStaticMarkup(React.createElement(Profile, {
+    user: { id: 2, handle: 'visitor', email: 'visitor@example.com', bio: '' },
+    profile: { id: 1, handle: 'writer', email: 'writer@example.com', bio: '' },
+    following: false,
+    posts: [],
+    returnPath: '/latest#post-2',
+  }))
+
+  expect(html).toContain('class="profile-action profile-handle-actions"')
+  expect(html).toContain('class="profile-action profile-back-action"')
+  expect(html).toContain('href="/latest#post-2">back</a>')
+  expect(html.indexOf('aria-label="follow @writer"')).toBeLessThan(html.indexOf('href="/latest#post-2">back</a>'))
 })
 
 test('An empty profile only offers its owner a way to write a note', () => {
@@ -1252,6 +1303,7 @@ test('A quoted post gets its own higher-priority hit area in tappable feeds', ()
   }))
 
   expect(html).toContain('parent-quote tappable-parent')
+  expect(html).toContain('class="postauthor" href="/u/writer?from=%2Flatest%3Fcursor%3Dabc%23post-2"')
   expect(html).toContain('class="parent-hit-area" href="/post/1?from=%2Flatest%3Fcursor%3Dabc%23post-2"')
   expect(html).toContain('class="postauthor" href="/u/parent?from=%2Flatest%3Fcursor%3Dabc%23post-2"')
   expect(html).toContain('class="postdate" href="/post/1?from=%2Flatest%3Fcursor%3Dabc%23post-2"')

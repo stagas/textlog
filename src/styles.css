@@ -2248,6 +2248,19 @@ form.report-panel {
   gap: var(--space-4);
 }
 
+.profile-handle-actions {
+  gap: var(--space-4);
+}
+
+.profile-back-action {
+  justify-content: flex-end;
+  min-height: 42px;
+}
+
+.profile-contextual {
+  column-gap: var(--space-4);
+}
+
 .profile-action form {
   display: flex;
 }
@@ -2261,6 +2274,10 @@ form.report-panel {
   align-items: center;
   justify-content: space-between;
   gap: var(--space-4);
+}
+
+.profile-title-row-actions {
+  justify-content: flex-start;
 }
 
 .security-header .profile-title-row {
@@ -2352,6 +2369,17 @@ form.report-panel {
 .tag-header {
   --heading-size: clamp(24px, 4vw, 32px);
   padding-block: var(--space-6);
+}
+
+.tag-title-actions,
+.tag-handle-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+}
+
+.tag-back-link {
+  flex: none;
 }
 
 .tag-header h1 {

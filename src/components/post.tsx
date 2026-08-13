@@ -108,7 +108,8 @@ export function Post({
         {contextUnread && <span className="unread-dot" aria-label="unread" />}
         {preview
           ? <span className="postauthor" title={p.bio || 'No bio yet.'}>@{p.handle}</span>
-          : <a className="postauthor" href={'/u/' + p.handle} title={p.bio || 'No bio yet.'}>@{p.handle}</a>}
+          : <a className="postauthor" href={'/u/' + p.handle + actionQuery} rel={navigationRel}
+            title={p.bio || 'No bio yet.'}>@{p.handle}</a>}
         {contextLabel && <span className="post-context">{contextLabel}</span>}
         {preview
           ? (
@@ -159,7 +160,7 @@ export function Post({
         )}
       </div>
       <p className={isAsciiArt ? 'ascii-art' : undefined} dangerouslySetInnerHTML={{
-        __html: linkify(p.body, p.mention_bios, highlightTerms, undefined, renderFlags(p)),
+        __html: linkify(p.body, p.mention_bios, highlightTerms, undefined, renderFlags(p), actionQuery),
       }} />
       {parent && (
         <blockquote className={'parent-quote' + (parent.deleted_at ? ' deleted-parent' : '')
@@ -196,7 +197,7 @@ export function Post({
                   </a>
                 </div>
                 <p className={containsAsciiArt(parent.body) ? 'ascii-art' : undefined} dangerouslySetInnerHTML={{
-                  __html: linkify(parent.body, parent.mention_bios, [], undefined, renderFlags(parent)),
+                  __html: linkify(parent.body, parent.mention_bios, [], undefined, renderFlags(parent), actionQuery),
                 }} />
               </>
             )}
