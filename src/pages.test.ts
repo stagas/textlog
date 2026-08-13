@@ -7,6 +7,7 @@ import { About, AccountApiKeyCreate, AccountMagicLink, AccountPassword, AccountS
 import React from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
 import { HotFeed } from './components/hot-feed'
+import { maskEmail } from './components/auth'
 import { ConnectionPeople, Pagination, TagPeopleList } from './components/page-shared'
 import { Post, postedReplyPath, replyAnchorReturnPath } from './components/post'
 import { PublicFeed } from './components/public-feed'
@@ -592,6 +593,8 @@ describe('Auth', () => {
   test('check-your-email page accepts the one-time code', () => {
     const html = renderToStaticMarkup(React.createElement(MagicLinkSent, { email: 'reader@example.com' }))
 
+    expect(html).toContain('Magic link and code sent to <strong>r•••@example.com</strong>')
+    expect(html).not.toContain('>reader@example.com<')
     expect(html).toContain('action="/enter/code"')
     expect(html).toContain('or enter the six-digit code')
     expect(html).toContain('name="identifier" value="reader@example.com"')
@@ -602,10 +605,15 @@ describe('Auth', () => {
     expect(html).toContain('expire in 15 minutes')
   })
 
+  test('email masking preserves only the first character and domain', () => {
+    expect(maskEmail('alice@example.com')).toBe('a•••@example.com')
+    expect(maskEmail('a@example.com')).toBe('a•••@example.com')
+  })
+
   test('check-your-email page does not reveal an email requested by handle', () => {
     const html = renderToStaticMarkup(React.createElement(MagicLinkSent, { email: 'reader', handle: true }))
 
-    expect(html).toContain('entry link to the email of <strong>reader</strong>')
+    expect(html).toContain('Magic link and code sent to the email of <strong>reader</strong>')
     expect(html).toContain('name="identifier" value="reader"')
     expect(html).not.toContain('reader@example.com')
   })

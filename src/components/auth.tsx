@@ -1,5 +1,11 @@
 import { Layout } from './layout'
 
+export function maskEmail(email: string) {
+  const at = email.lastIndexOf('@')
+  if (at <= 0 || at === email.length - 1) return email
+  return `${email[0]}•••${email.slice(at)}`
+}
+
 export function Auth({ error, email = '', next }: { error?: string; email?: string; next?: string }) {
   return (
     <Layout title="enter">
@@ -100,8 +106,8 @@ export function MagicLinkSent({ email, magicUrl, error, handle = false }: {
           <h1>Check your email</h1>
           <p>
             {handle
-              ? <>We’ve sent an entry link to the email of <strong>{email}</strong>.</>
-              : <>We’ve sent an entry link to <strong>{email}</strong>.</>}
+              ? <>Magic link and code sent to the email of <strong>{email}</strong>.</>
+              : <>Magic link and code sent to <strong>{maskEmail(email)}</strong>.</>}
           </p>
           <p className="email-delivery-hint">Can’t find it? Check your spam or junk folder.</p>
           <p className="entry-code-copy">or enter the six-digit code</p>

@@ -207,7 +207,7 @@ test('magic link requested by handle is sent to the account email', async () => 
   const sent = await request('/enter', { method: 'POST', form: { identifier: 'HANDLELOGIN' } })
   expect(sent.status).toBe(200)
   const sentHtml = await sent.text()
-  expect(sentHtml).toContain('entry link to the email of <strong>handlelogin</strong>')
+  expect(sentHtml).toContain('Magic link and code sent to the email of <strong>handlelogin</strong>')
   expect(sentHtml).not.toContain('handle-login@example.com')
   const message = capturedEmails().filter(item => item.to === 'handle-login@example.com').at(-1)
   expect(message).toBeDefined()
