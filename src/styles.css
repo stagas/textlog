@@ -460,9 +460,19 @@ nav form {
 }
 
 .feed-tabs {
+  width: 100%;
+  min-width: 0;
   gap: 0;
   padding: var(--space-4) var(--gutter) 0;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scrollbar-width: none;
+  overscroll-behavior-inline: contain;
   border-bottom: 1px solid var(--soft);
+}
+
+.feed-tabs::-webkit-scrollbar {
+  display: none;
 }
 
 .notification-banner {
@@ -489,10 +499,12 @@ nav form {
 
 .feed-tabs a {
   display: inline-flex;
+  flex: 0 0 auto;
   align-items: center;
   gap: 5px;
   padding: var(--space-2) var(--space-3);
   color: var(--muted);
+  white-space: nowrap;
   border-bottom: 2px solid transparent;
 }
 
