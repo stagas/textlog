@@ -2267,6 +2267,60 @@ form.report-panel {
   gap: 1ch;
 }
 
+@media (max-width: 520px) {
+  .replybox {
+    margin-left: 0;
+    margin-right: 0;
+    padding-left: 0;
+    padding-right: var(--gutter);
+  }
+
+  :is(.write-compose, .replybox) .posting-help {
+    justify-content: flex-start;
+    align-self: center;
+    text-align: left;
+  }
+
+  :is(.write-compose, .replybox) .posting-help-limits {
+    flex-basis: 100%;
+  }
+
+  :is(.write-compose, .replybox) .posting-help-separator {
+    display: none;
+  }
+
+  :is(.write-compose, .replybox) .posting-help-and-more {
+    flex-basis: 100%;
+  }
+
+  :is(.write-compose, .replybox) :is(.posting-help-search, .posting-help-and-more) .posting-help-popover {
+    right: auto;
+    left: var(--gutter);
+    transform: none;
+  }
+
+  :is(.write-compose, .replybox) .composefoot {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+  }
+
+  :is(.write-compose, .replybox) .composefoot .form-actions {
+    align-items: center;
+    justify-content: flex-end;
+  }
+
+  :is(.write-compose, .replybox) .composefoot .form-actions > .button {
+    align-self: center;
+  }
+
+  :is(.write-compose, .replybox) .edit-post-actions {
+    flex-direction: column;
+    align-items: flex-end;
+    gap: var(--space-1);
+  }
+}
+
 .posting-help-more {
   position: relative;
   display: inline-block;

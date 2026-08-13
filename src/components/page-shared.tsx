@@ -77,7 +77,10 @@ export function PostingHelp({ maxLength = 280, maxLines = 10, search }: {
   }
   return (
     <div className="posting-help">
-      <span>{maxLength} chars / {maxLines} lines max · use</span>
+      <span className="posting-help-limits">
+        {maxLength} chars / {maxLines} lines max <span className="posting-help-separator">·</span>
+      </span>
+      <span>use</span>
       {suggestionDetails('hashtags', '#hashtags')}
       <span>and</span>
       {suggestionDetails('mentions', '@mentions')}
