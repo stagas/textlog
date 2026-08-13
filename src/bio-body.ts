@@ -15,7 +15,7 @@ export function validBioBody(body: string) {
 
 export function bioBodyValidationMessage(body: string) {
   const exceeded: string[] = []
-  if (body.length > BIO_MAX) exceeded.push(`${body.length}/${BIO_MAX} characters`)
+  if (body.length > BIO_MAX) exceeded.push(`${body.length}/${BIO_MAX} chars`)
 
   const lines = bioBodyLineCount(body)
   if (lines > BIO_MAX_LINES) exceeded.push(`${lines}/${BIO_MAX_LINES} lines`)
