@@ -1309,7 +1309,6 @@ nav form {
 .parent-quote-top > .reference-menu > .reference-menu-trigger,
 .post-actions > a,
 .activity-follow-main > .reference-menu > .reference-menu-trigger,
-.activity-follow-main > a.activity-follow-stats,
 .feed-relationship-main > .reference-menu > .reference-menu-trigger,
 .people .reference-menu > .reference-menu-trigger {
   text-decoration-line: underline;
@@ -3673,7 +3672,19 @@ form.report-panel {
 }
 
 .activity-follow-main a.activity-follow-stats {
-  display: inline;
+  position: relative;
+  text-decoration: none;
+  border-bottom: 0;
+}
+
+.activity-follow-main a.activity-follow-stats::after {
+  position: absolute;
+  right: 0;
+  bottom: 1px;
+  left: 0;
+  height: 0.5px;
+  background: var(--link-border);
+  content: '';
 }
 
 .activity-follow-main .activity-follow-stats time {

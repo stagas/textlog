@@ -252,7 +252,7 @@ export function Feed({ user, page = 1, title, path = '/for-you', pageUrl, notifi
                           }`) + fromQuery}
                         >
                           <time dateTime={row.created_at} title={fmtFull(row.created_at)}>{fmt(row.created_at)}</time>
-                          {' · '}
+                          <span aria-hidden="true">·</span>
                           <span>{row.posts} {row.posts === 1 ? 'note' : 'notes'}</span>
                         </a>
                       )
