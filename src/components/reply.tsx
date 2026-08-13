@@ -3,11 +3,21 @@ import { type User } from '../db'
 import { canPublishPosts } from '../posting-policy'
 import type { PostView } from '../types'
 import { Layout } from './layout'
-import { FormActions, FormMessage, PostingHelp, postTitle, ReportPanel, VerificationRequired } from './page-shared'
+import {
+  FormActions,
+  FormMessage,
+  PostingHelp,
+  PostingSuggestionResults,
+  type PostingSuggestionSearch,
+  postTitle,
+  ReportPanel,
+  VerificationRequired,
+} from './page-shared'
 import { Post, PreviewPost, ThreadReplies } from './post'
 
 export function ReplyBox(
-  { action, body, error, placeholder, hidden, beforeTextarea, secondary, primary, className = 'replybox' }: {
+  { action, body, error, placeholder, hidden, beforeTextarea, secondary, primary, className = 'replybox',
+    suggestionSearch }: {
     action: string
     body: string
     error?: string
@@ -17,6 +27,7 @@ export function ReplyBox(
     secondary: React.ReactNode
     primary: React.ReactNode
     className?: string
+    suggestionSearch?: PostingSuggestionSearch | null
   },
 ) {
   return (
@@ -27,8 +38,9 @@ export function ReplyBox(
         {beforeTextarea}
         <textarea className="form-control" name="body" maxLength={280} required autoFocus defaultValue={body}
           placeholder={placeholder} />
+        <PostingSuggestionResults search={suggestionSearch} />
         <div className="composefoot">
-          <PostingHelp />
+          <PostingHelp search={suggestionSearch} />
           <FormActions secondary={secondary} primary={primary} />
         </div>
       </form>
@@ -60,7 +72,7 @@ export function ReplyPreview({ parentId, user, body }: { parentId: number; user:
 
 export function Reply(
   { user, post, showForm, showReport = false, reported = false, error, body = '', reportReason = '', reportError,
-    social, preview = false, returnPath }: {
+    social, preview = false, returnPath, suggestionSearch }: {
       user: User
       post: PostView
       showForm: boolean
@@ -73,6 +85,7 @@ export function Reply(
       body?: string
       preview?: boolean
       returnPath?: string
+      suggestionSearch?: PostingSuggestionSearch | null
     },
 ) {
   return (
@@ -94,6 +107,7 @@ export function Reply(
           canPublishPosts(user)
             ? (
               <ReplyBox action={'/post/' + post.id + '/reply'} body={body} error={error}
+                suggestionSearch={suggestionSearch}
                 placeholder={'Reply to @' + post.handle + '…'}
                 hidden={returnPath && <input type="hidden" name="from" value={returnPath} />}
                 secondary={

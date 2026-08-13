@@ -48,6 +48,7 @@ describe('post search', () => {
     const database = testDatabase()
     database.run('UPDATE users SET bio=\'Makes ceramic instruments\' WHERE id=2')
     expect(searchPeople(database, 'ceram').rows.map(person => person.handle)).toEqual(['bob'])
+    expect(searchPeople(database, 'ceram', -1, 1, { handleOnly: true }).total).toBe(0)
     expect(searchPeople(database, 'ali').rows.map(person => person.handle)).toEqual(['alice'])
 
     database.run('INSERT INTO blocks(blocker_id,blocked_id) VALUES(1,2)')
@@ -66,5 +67,19 @@ describe('post search', () => {
     expect(searchTags(database, 'sqlite', 1).total).toBe(0)
     database.run('UPDATE post_hashtags SET tag=\'database-tips\' WHERE post_id=3')
     expect(searchTags(database, 'database').total).toBe(1)
+  })
+
+  test('can rank followed people and tags before generic search results', () => {
+    const database = testDatabase()
+    database.run(`UPDATE users SET handle=CASE id WHEN 2 THEN 'commonbob' ELSE 'commoncarol' END WHERE id IN (2,3);
+      INSERT INTO follows(follower_id,following_id) VALUES(1,3);
+      INSERT INTO post_hashtags(post_id,tag) VALUES
+        (1,'common-popular'),(2,'common-popular'),(3,'common-followed');
+      INSERT INTO hashtag_follows(user_id,tag) VALUES(1,'common-followed');`)
+
+    expect(searchPeople(database, 'common', 1, 1, { followedFirst: true, handleOnly: true }).rows
+      .map(person => person.handle)).toEqual(['commoncarol', 'commonbob'])
+    expect(searchTags(database, 'common', 1, 1, { followedFirst: true }).rows.map(tag => tag.tag))
+      .toEqual(['common-followed', 'common-popular'])
   })
 })

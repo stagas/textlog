@@ -51,6 +51,28 @@ test('compose carries its originating page through preview and offers cancel bef
   expect(html.indexOf('>cancel</a>')).toBeLessThan(html.indexOf('>preview</button>'))
 })
 
+test('posting helpers are searchable details and show copyable highlighted results above actions', () => {
+  const user = { id: 1, handle: 'writer', email: 'writer@example.com', bio: '',
+    email_verified_at: '2026-08-12 10:00:00', handle_chosen_at: '2026-08-12 10:00:00' }
+  const html = renderToStaticMarkup(React.createElement(Compose, {
+    user,
+    body: 'A draft worth keeping',
+    suggestionSearch: { kind: 'hashtags', query: 'type', results: ['typescript', 'typestyle'], truncated: true },
+  }))
+
+  expect(html).toContain('<summary>#hashtags</summary>')
+  expect(html).toContain('<summary>@mentions</summary>')
+  expect(html).toContain('placeholder="search hashtags"')
+  expect(html).toContain('placeholder="search handles"')
+  expect(html).toContain('value="search-hashtags" formNoValidate="" name="action"')
+  expect(html).toContain('value="search-mentions" formNoValidate="" name="action"')
+  expect(html).toContain('required="" autofocus="">A draft worth keeping</textarea>')
+  expect(html).toContain('#<mark>type</mark>script')
+  expect(html).toContain('<span aria-label="More results">...</span>')
+  expect(html).not.toContain('href="/tag/typescript"')
+  expect(html.indexOf('class="posting-suggestion-results"')).toBeLessThan(html.indexOf('class="composefoot"'))
+})
+
 test('post edit places delete above the textarea and keeps preview before save', () => {
   const user = { id: 1, handle: 'writer', email: 'writer@example.com', bio: '' }
   const post = { id: 2, user_id: 1, parent_id: null, body: 'Original', created_at: '2026-08-12 09:00:00',

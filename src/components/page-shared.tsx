@@ -4,6 +4,7 @@ import React from 'react'
 import { isAdmin } from '../admin'
 import type { User } from '../db'
 import { hasUnreadForYou } from '../for-you-state'
+import { searchTerms } from '../search'
 
 const postTitleLength = 60
 
@@ -37,10 +38,44 @@ export function FormActions({ primary, secondary, className = '' }: {
   )
 }
 
-export function PostingHelp({ maxLength = 280, maxLines = 10 }: { maxLength?: number; maxLines?: number }) {
+export type PostingSuggestionSearch = {
+  kind: 'hashtags' | 'mentions'
+  query: string
+  results: string[]
+  truncated?: boolean
+}
+
+export function PostingHelp({ maxLength = 280, maxLines = 10, search }: {
+  maxLength?: number
+  maxLines?: number
+  search?: PostingSuggestionSearch | null
+}) {
+  const suggestionDetails = (kind: PostingSuggestionSearch['kind'], label: string) => {
+    const active = search?.kind === kind
+    const inputName = kind === 'hashtags' ? 'hashtag_query' : 'mention_query'
+    const searchLabel = kind === 'hashtags' ? 'hashtags' : 'handles'
+    return (
+      <details className="posting-help-more posting-help-search">
+        <summary>{label}</summary>
+        <div className="posting-help-popover">
+          <label>
+            <span className="visually-hidden">search {searchLabel}</span>
+            <input type="search" name={inputName} maxLength={100} required={active || undefined}
+              defaultValue={active ? search.query : ''} placeholder={`search ${searchLabel}`} />
+          </label>
+          <button className="button" type="submit" name="action" value={`search-${kind}`} formNoValidate>
+            search
+          </button>
+        </div>
+      </details>
+    )
+  }
   return (
     <div className="posting-help">
-      <span>{maxLength} chars / {maxLines} lines max · use #hashtags, @mentions</span>
+      <span>{maxLength} chars / {maxLines} lines max · use</span>
+      {suggestionDetails('hashtags', '#hashtags')}
+      <span>and</span>
+      {suggestionDetails('mentions', '@mentions')}
       <details className="posting-help-more">
         <summary>and more</summary>
         <div className="posting-help-popover">
@@ -101,6 +136,22 @@ export function PostingHelp({ maxLength = 280, maxLines = 10 }: { maxLength?: nu
           </dl>
         </div>
       </details>
+    </div>
+  )
+}
+
+export function PostingSuggestionResults({ search }: { search?: PostingSuggestionSearch | null }) {
+  if (!search) return null
+  const prefix = search.kind === 'hashtags' ? '#' : '@'
+  const terms = searchTerms(search.query)
+  return (
+    <div className="posting-suggestion-results" aria-live="polite">
+      {search.results.length
+        ? search.results.map(result => (
+          <span key={result}>{prefix}<HighlightedText text={result} terms={terms} /></span>
+        ))
+        : <span>No matching {search.kind}.</span>}
+      {search.truncated && <span aria-label="More results">...</span>}
     </div>
   )
 }
@@ -418,7 +469,7 @@ export function ProfileTabs(
   )
 }
 
-function HighlightedText({ text, terms = [] }: { text: string; terms?: string[] }) {
+export function HighlightedText({ text, terms = [] }: { text: string; terms?: string[] }) {
   const matches = [...new Set(terms.filter(Boolean))].sort((a, b) => b.length - a.length)
   if (!matches.length) return <>{text}</>
   const expression = new RegExp(`(${matches.map(term => term.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|')})`,

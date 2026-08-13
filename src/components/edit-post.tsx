@@ -1,11 +1,12 @@
 import { type User } from '../db'
 import type { PostRow, PostView } from '../types'
 import { Layout } from './layout'
+import type { PostingSuggestionSearch } from './page-shared'
 import { Post, PreviewPost, ThreadReplies } from './post'
 import { ReplyBox, ReplyPreview } from './reply'
 
 export function EditPost(
-  { user, post, parent, error, body = post.body, preview = false, returnPath }: {
+  { user, post, parent, error, body = post.body, preview = false, returnPath, suggestionSearch }: {
     user: User
     post: PostRow
     parent?: PostView | null
@@ -13,6 +14,7 @@ export function EditPost(
     body?: string
     preview?: boolean
     returnPath?: string
+    suggestionSearch?: PostingSuggestionSearch | null
   },
 ) {
   const returnQuery = returnPath ? '?from=' + encodeURIComponent(returnPath) : ''
@@ -33,6 +35,7 @@ export function EditPost(
           </div>
         )}
         <ReplyBox action={'/post/' + post.id + '/edit'} body={body} error={error}
+          suggestionSearch={suggestionSearch}
           className={post.parent_id && parent ? 'replybox' : 'compose edit-post-compose'}
           hidden={returnPath && <input type="hidden" name="from" value={returnPath} />}
           beforeTextarea={

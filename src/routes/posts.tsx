@@ -21,13 +21,29 @@ import { renderPostOg } from '../og'
 import { normalizePostBody, postBodyValidationMessage, validPostBody } from '../post-body'
 import { postRateLimitMessage } from '../post-rate-limit'
 import { sendPushForPost } from '../push'
+import { normalizeSearchQuery, searchPeople, searchTags } from '../search'
 import { currentUser } from '../utils'
+import type { PostingSuggestionSearch } from '../components/page-shared'
 
 function notifyPost(postId: number, userId: number, handle: string) {
   void sendPushForPost(postId, userId, handle).catch(error => logError('activity push failed', error))
 }
 
 const saveFailureMessage = 'Something went wrong while saving. Your text is still here; please try again.'
+
+function postingSuggestionSearch(fields: Record<string, string>, viewerId: number): PostingSuggestionSearch | null {
+  if (fields.action !== 'search-hashtags' && fields.action !== 'search-mentions') return null
+  const kind = fields.action === 'search-hashtags' ? 'hashtags' : 'mentions'
+  const rawQuery = normalizeSearchQuery(kind === 'hashtags' ? fields.hashtag_query : fields.mention_query)
+  const query = normalizeSearchQuery(rawQuery.replace(kind === 'hashtags' ? /^#+\s*/u : /^@+\s*/u, ''))
+  const result = kind === 'hashtags'
+    ? searchTags(db, query, viewerId, 1, { followedFirst: true })
+    : searchPeople(db, query, viewerId, 1, { followedFirst: true, handleOnly: true })
+  const rows = kind === 'hashtags'
+    ? result.rows.map(row => 'tag' in row ? row.tag : '')
+    : result.rows.map(row => 'handle' in row ? row.handle : '')
+  return { kind, query, results: rows, truncated: result.total > 20 }
+}
 
 function editParent(post: PostRow) {
   if (!post.parent_id) return null
@@ -112,6 +128,10 @@ export function registerPostsRoutes(app: Hono) {
     const f = await form(c.req.raw)
     const returnPath = f.from ? safeNext(f.from) : '/'
     const body = normalizePostBody(f.body || '')
+    const suggestionSearch = postingSuggestionSearch(f, user.id)
+    if (suggestionSearch) {
+      return page(<Compose user={user} body={body} returnPath={returnPath} suggestionSearch={suggestionSearch} />)
+    }
     if (!validPostBody(body)) {
       return page(<Compose user={user} body={body} error={postBodyValidationMessage(body)} returnPath={returnPath} />,
         400)
@@ -170,6 +190,13 @@ export function registerPostsRoutes(app: Hono) {
     const f = await form(c.req.raw)
     const returnPath = f.from ? safeNext(f.from) : undefined
     const body = normalizePostBody(f.body || '')
+    const suggestionSearch = postingSuggestionSearch(f, user.id)
+    if (suggestionSearch) {
+      return page(
+        <EditPost user={user} post={post} parent={editParent(post)} body={body} returnPath={returnPath}
+          suggestionSearch={suggestionSearch} />,
+      )
+    }
     if (!validPostBody(body)) {
       return page(
         <EditPost user={user} post={post} parent={editParent(post)} body={body} returnPath={returnPath}
@@ -253,6 +280,13 @@ export function registerPostsRoutes(app: Hono) {
     const f = await form(c.req.raw)
     const returnPath = f.from ? safeNext(f.from) : undefined
     const body = normalizePostBody(f.body || '')
+    const suggestionSearch = postingSuggestionSearch(f, user.id)
+    if (suggestionSearch) {
+      return page(
+        <Reply user={user} post={parent} showForm body={body} returnPath={returnPath}
+          suggestionSearch={suggestionSearch} />,
+      )
+    }
     if (!validPostBody(body)) {
       return page(
         <Reply user={user} post={parent} showForm error={postBodyValidationMessage(body)} body={body}

@@ -2,16 +2,24 @@ import { type User } from '../db'
 import { canPublishPosts } from '../posting-policy'
 import type { PostView } from '../types'
 import { Layout } from './layout'
-import { FormActions, FormMessage, PostingHelp, VerificationRequired } from './page-shared'
+import {
+  FormActions,
+  FormMessage,
+  PostingHelp,
+  PostingSuggestionResults,
+  type PostingSuggestionSearch,
+  VerificationRequired,
+} from './page-shared'
 import { Post } from './post'
 
 export function Compose(
-  { user, error, body = '', preview = false, returnPath = '/' }: {
+  { user, error, body = '', preview = false, returnPath = '/', suggestionSearch }: {
     user: User
     error?: string
     body?: string
     preview?: boolean
     returnPath?: string
+    suggestionSearch?: PostingSuggestionSearch | null
   },
 ) {
   if (!canPublishPosts(user)) {
@@ -47,8 +55,9 @@ export function Compose(
           <input type="hidden" name="from" value={returnPath} />
           <FormMessage error={error} />
           <textarea className="form-control" name="body" maxLength={280} required autoFocus defaultValue={body} />
+          <PostingSuggestionResults search={suggestionSearch} />
           <div className="composefoot">
-            <PostingHelp />
+            <PostingHelp search={suggestionSearch} />
             <FormActions secondary={
               <span className="edit-post-actions">
                 <a className="secondary-action edit-post-cancel" href={returnPath}>cancel</a>

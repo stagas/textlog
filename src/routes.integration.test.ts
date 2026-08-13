@@ -548,6 +548,28 @@ test('consequential account, content, reporting, and admin flows work over HTTP'
   expect(searchHtml).toContain('>0 tags</a>')
   expect(searchHtml).toContain('>0 people</a>')
   expect(searchHtml).toContain('A <mark>route</mark>-<mark>level</mark> integration post')
+  database.query('INSERT OR IGNORE INTO post_hashtags(post_id,tag) VALUES(?,?)').run(post.id, 'routehelper')
+  const hashtagHelper = await request('/post', {
+    method: 'POST',
+    cookie: aliceCookie,
+    form: { body: 'replay this draft', action: 'search-hashtags', hashtag_query: '#route' },
+  })
+  expect(hashtagHelper.status).toBe(200)
+  const hashtagHelperHtml = await hashtagHelper.text()
+  expect(hashtagHelperHtml).toContain('>replay this draft</textarea>')
+  expect(hashtagHelperHtml).toContain('name="hashtag_query" value="route"')
+  expect(hashtagHelperHtml).toContain('#<mark>route</mark>helper')
+  expect(hashtagHelperHtml).not.toContain('class="posting-help-more posting-help-search" open=""')
+  const mentionHelper = await request(`/post/${post.id}/reply`, {
+    method: 'POST',
+    cookie: aliceCookie,
+    form: { body: '', action: 'search-mentions', mention_query: '@ali' },
+  })
+  expect(mentionHelper.status).toBe(200)
+  const mentionHelperHtml = await mentionHelper.text()
+  expect(mentionHelperHtml).toContain('@<mark>ali</mark>ce')
+  expect(mentionHelperHtml).toContain('name="mention_query" value="ali"')
+  expect(mentionHelperHtml).toContain('name="body" maxLength="280" required="" autofocus=""')
   const publicPost = await request(`/post/${post.id}`)
   expect(publicPost.status).toBe(200)
   expect(publicPost.headers.get('cache-control')).toBe('public, max-age=30, stale-while-revalidate=120')
