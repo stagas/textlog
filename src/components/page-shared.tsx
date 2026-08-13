@@ -490,26 +490,29 @@ export function HighlightedText({ text, terms = [] }: { text: string; terms?: st
   )
 }
 
-export function TagPeopleList({ user, tags, followingKey = 'following', highlightTerms = [] }: {
+export function TagPeopleList({ user, tags, followingKey = 'following', highlightTerms = [], returnPath }: {
   user: User | null
   tags: TagView[]
   followingKey?: 'following' | 'viewerFollowing'
   highlightTerms?: string[]
+  returnPath?: (tag: TagView) => string
 }) {
   const followerCounts = visibleTagFollowerCounts(db, tags.map(tag => tag.tag), user?.id ?? -1)
   return (
     <div className="people tag-people">
       {tags.map(tag => (
-        <article key={tag.tag}>
+        <article key={tag.tag} id={`tag-${tag.tag}`}>
           <div>
             <div>
               <TagReference tag={tag.tag} noteCount={tag.count} followerCount={followerCounts[tag.tag] || 0}
                 following={tag[followingKey]} user={user}
+                navigationQuery={returnPath ? `?from=${encodeURIComponent(returnPath(tag))}` : ''}
                 label={<>#<HighlightedText text={tag.tag} terms={highlightTerms} /></>} />
               <small>{tag.count} {tag.count === 1 ? 'note' : 'notes'}</small>
             </div>
             {user && (
               <form method="post" action={`/tag-follow/${encodeURIComponent(tag.tag)}`}>
+                {returnPath && <input type="hidden" name="from" value={returnPath(tag)} />}
                 <button className={`button${tag[followingKey] ? ' button-muted' : ''}`}>
                   {tag[followingKey] ? 'unfollow' : 'follow'}
                 </button>

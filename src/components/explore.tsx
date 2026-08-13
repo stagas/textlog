@@ -39,11 +39,15 @@ export function Explore({ user, welcome = false, peopleIds, tagsPage = 1, people
   const tagsTotal = trendingTagCount(db, viewerId)
   const tagsPath = `/explore${peoplePage > 1 ? `?peoplePage=${peoplePage}` : ''}`
   const peoplePath = `/explore${tagsPage > 1 ? `?tagsPage=${tagsPage}` : ''}`
-  const exploreReturnPath = (personId: number) => {
+  const explorePath = () => {
     const query = new URLSearchParams()
+    if (welcome) query.set('welcome', '1')
     if (tagsPage > 1) query.set('tagsPage', String(tagsPage))
     if (peoplePage > 1) query.set('peoplePage', String(peoplePage))
-    return `/explore${query.size ? `?${query}` : ''}#person-${personId}`
+    return `/explore${query.size ? `?${query}` : ''}`
+  }
+  const exploreReturnPath = (personId: number) => {
+    return `${explorePath()}#person-${personId}`
   }
   return (
     <Layout user={user} title="explore">
@@ -72,7 +76,8 @@ export function Explore({ user, welcome = false, peopleIds, tagsPage = 1, people
         <section>
           <h2>Trending tags</h2>
           {tags.length
-            ? <TagPeopleList user={user} tags={tags} />
+            ? <TagPeopleList user={user} tags={tags}
+                returnPath={tag => `${explorePath()}#tag-${tag.tag}`} />
             : <p className="section-empty">No hashtags yet.</p>}
           <Pagination page={tagsPage} totalPages={Math.ceil(tagsTotal / TAG_PAGE_SIZE)} path={tagsPath}
             pageParam="tagsPage" label="Tags pagination" compact />
@@ -85,7 +90,9 @@ export function Explore({ user, welcome = false, peopleIds, tagsPage = 1, people
                 <div>
                   <div>
                     <UserReference handle={p.handle} bio={p.bio} noteCount={p.posts}
-                      stats={profileStats.get(p.id)} following={p.following} user={user} href={'/u/' + p.handle} />
+                      stats={profileStats.get(p.id)} following={p.following} user={user}
+                      href={`/u/${p.handle}?from=${encodeURIComponent(exploreReturnPath(p.id))}`}
+                      navigationQuery={`?from=${encodeURIComponent(exploreReturnPath(p.id))}`} />
                     <small>{p.posts} {p.posts === 1 ? 'note' : 'notes'}</small>
                   </div>
                   {user && (

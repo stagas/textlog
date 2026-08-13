@@ -218,6 +218,7 @@ test('search result cards highlight tag, handle, and bio matches while keeping f
     tags: [{ tag: 'typescript', count: 2, viewerFollowing: false }],
     followingKey: 'viewerFollowing',
     highlightTerms: ['type'],
+    returnPath: tag => `/explore?tagsPage=3#tag-${tag.tag}`,
   }))
   const people = renderToStaticMarkup(React.createElement(ConnectionPeople, {
     user,
@@ -228,6 +229,9 @@ test('search result cards highlight tag, handle, and bio matches while keeping f
 
   expect(tags).toContain('#<mark>type</mark>script')
   expect(tags).toContain('>follow</button>')
+  expect(tags).toContain('id="tag-typescript"')
+  expect(tags).toContain('href="/tag/typescript?from=%2Fexplore%3FtagsPage%3D3%23tag-typescript"')
+  expect(tags).toContain('name="from" value="/explore?tagsPage=3#tag-typescript"')
   expect(people).toContain('@<mark>type</mark>writer')
   expect(people).toContain('<mark>Type</mark>s useful notes')
   expect(people).toContain('>unfollow</button>')
