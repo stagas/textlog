@@ -151,11 +151,8 @@ body {
 
 a {
   color: var(--accent);
-  text-decoration-line: underline;
-  text-decoration-color: var(--link-border);
-  text-decoration-thickness: 1px;
-  text-underline-offset: 4px;
-  border-bottom: 0;
+  text-decoration: none;
+  border-bottom: 1px solid var(--link-border);
 }
 
 a:hover {
@@ -509,7 +506,6 @@ nav form {
   color: var(--muted);
   white-space: nowrap;
   border-bottom: 2px solid transparent;
-  text-decoration: none;
 }
 
 .feed-tabs-read-status {
@@ -528,7 +524,6 @@ nav form {
   padding: 0;
   color: var(--accent);
   border-bottom: 1px solid var(--link-border);
-  text-decoration: none;
 }
 
 .feed-tabs .feed-tabs-read-status .activity-side-link:hover { color: var(--accent-dark); }
@@ -920,7 +915,6 @@ nav form {
   font-size: 0.75rem;
   line-height: 1.5;
   text-align: center;
-  text-decoration: none;
 }
 
 .button:not(:disabled):not([aria-disabled="true"]):hover {
@@ -1274,10 +1268,6 @@ nav form {
   color: var(--danger-link-hover);
 }
 
-a.danger {
-  border-bottom: 0;
-}
-
 .report-link {
   color: var(--report-ink);
 }
@@ -1309,6 +1299,17 @@ a.danger {
 .post p a,
 .parent-quote a {
   color: var(--accent);
+}
+
+.post p a,
+.posttop a,
+.parent-quote-top a,
+.post-actions a {
+  text-decoration-line: underline;
+  text-decoration-color: var(--link-border);
+  text-decoration-thickness: 1px;
+  text-underline-offset: 4px;
+  border-bottom: 0;
 }
 
 .post p a:hover,
@@ -2519,10 +2520,6 @@ form.report-panel {
   color: var(--accent-dark);
 }
 
-.preview-post-meta > a,
-.preview-post-meta > .reference-menu {
-  border-bottom: 0;
-}
 
 .compose-post-preview h2 {
   margin: 0;
@@ -2697,9 +2694,6 @@ form.report-panel {
   color: var(--accent-dark);
 }
 
-a.profile-edit-link {
-  border-bottom: 0;
-}
 
 .profile-logout {
   appearance: none;
@@ -3324,7 +3318,7 @@ a.profile-edit-link {
 }
 
 .welcome-settings a {
-  border-bottom: 0;
+  border-bottom: 1px solid var(--link-border);
 }
 
 .verify-email-panel {
@@ -3842,10 +3836,6 @@ a.profile-edit-link {
   color: var(--accent-dark);
 }
 
-.reply-preview a.postauthor,
-.reply-preview a.postdate {
-  border-bottom: 0;
-}
 
 .thread-continuation {
   padding: 0 var(--gutter) var(--space-4);
