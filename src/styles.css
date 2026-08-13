@@ -2497,8 +2497,13 @@ form.report-panel {
 }
 
 .profile-back-action {
+  align-self: center;
   justify-content: flex-end;
   min-height: 42px;
+}
+
+.profile-owner-mobile-back {
+  display: none;
 }
 
 .profile-contextual {
@@ -2566,12 +2571,11 @@ form.report-panel {
   appearance: none;
 }
 
-.profile-owner,
 .profile-editing {
   grid-template-columns: minmax(0, 1fr);
 }
 
-.profile-owner>.profile-action {
+.profile-owner>.profile-action:empty {
   display: none;
 }
 
@@ -3050,6 +3054,14 @@ form.report-panel {
     grid-row: 2;
   }
 
+  .profile-owner-mobile-back {
+    display: flex;
+  }
+
+  .profile-owner-back-link {
+    display: none;
+  }
+
   .profile:not(.profile-editing) .profile-back-action {
     grid-column: 2;
     grid-row: 1;
@@ -3071,7 +3083,6 @@ form.report-panel {
     width: auto;
   }
 
-  .profile.profile-owner,
   .profile.profile-editing {
     grid-template-columns: minmax(0, 1fr);
   }

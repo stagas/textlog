@@ -92,7 +92,7 @@ export function Profile(
                         </>
                       )}
                       {returnPath && user?.id === profile.id
-                        && <a className="profile-edit-link" href={returnPath}>back</a>}
+                        && <a className="profile-edit-link profile-owner-back-link" href={returnPath}>back</a>}
                     </>
                   )}
               </div>

@@ -406,8 +406,10 @@ export function ProfileHeader(
           <p className="profile-bio" dangerouslySetInnerHTML={{ __html: linkify(profile.bio || 'No bio yet.') }} />
         </div>
       )}
-      <div className="profile-action profile-back-action">
-        {returnPath && !editing && user?.id !== profile.id
+      <div className={`profile-action profile-back-action${user?.id === profile.id
+        ? ' profile-owner-mobile-back'
+        : ''}`}>
+        {returnPath && !editing
           && <a className="profile-edit-link" href={returnPath}>back</a>}
         {!controlsInTitle && <ProfileControls user={user} profile={profile} following={following} blocked={blocked} />}
       </div>
