@@ -66,7 +66,7 @@ test('posting helpers are searchable details and show copyable highlighted resul
   expect(html).toContain('placeholder="search handles"')
   expect(html).toContain('value="search-hashtags" formNoValidate="" name="action"')
   expect(html).toContain('value="search-mentions" formNoValidate="" name="action"')
-  expect(html).toContain('required="" autofocus="">A draft worth keeping</textarea>')
+  expect(html).toContain('required="" autofocus="" autoComplete="off" inputMode="text" enterKeyHint="enter">A draft worth keeping</textarea>')
   expect(html).toContain('#<mark>type</mark>script')
   expect(html).toContain('<span aria-label="More results">...</span>')
   expect(html).not.toContain('href="/tag/typescript"')
@@ -1041,7 +1041,7 @@ test('Current pagination page is an enter-to-navigate bounded input that preserv
   expect(html).toContain('action="/u/writer" method="get"')
   expect(html).toContain('type="hidden" name="tab" value="replies"')
   expect(html).toContain('aria-label="Current page, 5 of 17"')
-  expect(html).toContain('type="number" min="1" max="17" required="" name="page" value="5"')
+  expect(html).toContain('type="number" min="1" max="17" required="" autoComplete="off" inputMode="numeric" enterKeyHint="go" name="page" value="5"')
 })
 
 test('Followed tags paginate every 12 tags', () => {

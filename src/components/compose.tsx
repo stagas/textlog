@@ -54,7 +54,8 @@ export function Compose(
         <form method="post" action="/post">
           <input type="hidden" name="from" value={returnPath} />
           <FormMessage error={error} />
-          <textarea className="form-control" name="body" maxLength={280} required autoFocus defaultValue={body} />
+          <textarea className="form-control" name="body" maxLength={280} required autoFocus defaultValue={body}
+            autoComplete="off" inputMode="text" enterKeyHint="enter" />
           <PostingSuggestionResults search={suggestionSearch} />
           <div className="composefoot">
             <PostingHelp search={suggestionSearch} />

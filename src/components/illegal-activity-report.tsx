@@ -27,7 +27,8 @@ export function IllegalActivityReport(
                 <FormMessage error={error} />
                 <label className="form-label">
                   post URL<input className="form-control" type="url" name="contentUrl" required
-                    defaultValue={values.contentUrl} placeholder={`${origin}/post/123`} />
+                    defaultValue={values.contentUrl} placeholder={`${origin}/post/123`} autoComplete="url"
+                    inputMode="url" enterKeyHint="next" />
                 </label>
                 <label className="form-label">
                   category<select className="form-control form-select" name="category" required
@@ -44,14 +45,17 @@ export function IllegalActivityReport(
                 </label>
                 <label className="form-label">
                   details<textarea className="form-control" name="details" required minLength={20} maxLength={3000}
-                    defaultValue={values.details} placeholder="Explain what you believe is illegal and why." />
+                    defaultValue={values.details} placeholder="Explain what you believe is illegal and why."
+                    autoComplete="off" inputMode="text" enterKeyHint="enter" />
                 </label>
                 <label className="form-label">
-                  name<input className="form-control" name="name" maxLength={200} defaultValue={values.name} />
+                  name<input className="form-control" name="name" maxLength={200} defaultValue={values.name}
+                    autoComplete="name" inputMode="text" enterKeyHint="next" />
                 </label>
                 <label className="form-label">
                   email<input className="form-control" type="email" name="email" maxLength={254}
-                    defaultValue={values.email} placeholder="you@example.com" />
+                    defaultValue={values.email} placeholder="you@example.com" autoComplete="email" inputMode="email"
+                    enterKeyHint="done" />
                 </label>
                 <p className="form-hint">Name and email may be omitted only for a child-safety offence report.</p>
                 <label className="good-faith">

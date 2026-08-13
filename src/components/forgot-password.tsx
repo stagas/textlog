@@ -22,7 +22,7 @@ export function ForgotPassword({ sent = false, error }: { sent?: boolean; error?
                   <FormMessage error={error} />
                   <label>
                     email<input type="email" name="email" required maxLength={254} autoComplete="email" autoFocus
-                      placeholder="you@example.com" />
+                      inputMode="email" enterKeyHint="send" placeholder="you@example.com" />
                   </label>
                   <button className="button button-wide">send reset link →</button>
                 </form>

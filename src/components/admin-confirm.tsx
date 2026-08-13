@@ -33,7 +33,8 @@ export function AdminConfirm({ user, kind, target, post, returnTo = '/admin' }: 
           <input type="hidden" name="returnTo" value={returnTo} />
           <label>
             moderation note (optional)
-            <textarea name="note" maxLength={500} placeholder="Context for the audit log…" />
+            <textarea name="note" maxLength={500} placeholder="Context for the audit log…" autoComplete="off"
+              inputMode="text" enterKeyHint="enter" />
           </label>
           <FormActions secondary={<a className="secondary-action" href={returnTo}>cancel</a>}
             primary={

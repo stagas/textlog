@@ -61,7 +61,8 @@ export function PostingHelp({ maxLength = 280, maxLines = 10, search }: {
           <label>
             <span className="visually-hidden">search {searchLabel}</span>
             <input type="search" name={inputName} maxLength={100} required={active || undefined}
-              defaultValue={active ? search.query : ''} placeholder={`search ${searchLabel}`} />
+              defaultValue={active ? search.query : ''} placeholder={`search ${searchLabel}`} autoComplete="off"
+              inputMode="search" enterKeyHint="search" />
           </label>
           <button className="button" type="submit" name="action" value={`search-${kind}`} formNoValidate>
             search
@@ -221,7 +222,8 @@ export function Pagination(
                     <input key={`${name}:${parameterValue}`} type="hidden" name={name} value={parameterValue} />
                   ))}
                   <input className="current" aria-label={`Current page, ${page} of ${totalPages}`}
-                    type="number" name={pageParam} min={1} max={totalPages} defaultValue={value} required />
+                    type="number" name={pageParam} min={1} max={totalPages} defaultValue={value} required
+                    autoComplete="off" inputMode="numeric" enterKeyHint="go" />
                 </form>
               )
               : <a href={`${path}${separator}${pageParam}=${value}`} aria-label={`Page ${value}`}>{value}</a>}

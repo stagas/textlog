@@ -23,11 +23,11 @@ export function ResetPassword(
                 <input type="hidden" name="token" value={resetToken} />
                 <label>
                   new password<input type="password" name="password" required minLength={8} autoComplete="new-password"
-                    placeholder="8+ characters" />
+                    enterKeyHint="next" placeholder="8+ characters" />
                 </label>
                 <label>
                   confirm password<input type="password" name="confirmPassword" required minLength={8}
-                    autoComplete="new-password" />
+                    autoComplete="new-password" enterKeyHint="done" />
                 </label>
                 <button className="button button-wide">reset password →</button>
               </form>

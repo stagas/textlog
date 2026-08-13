@@ -30,7 +30,8 @@ export function SearchForm({ query = '', autoFocus = false, tab = 'notes', place
       <label className="visually-hidden" htmlFor="search-query">Search {tab}</label>
       {tab !== 'notes' && <input type="hidden" name="tab" value={tab} />}
       <input id="search-query" type="search" name="q" maxLength={100} required defaultValue={query}
-        placeholder={placeholder ?? `search ${tab}`} autoFocus={autoFocus} />
+        placeholder={placeholder ?? `search ${tab}`} autoFocus={autoFocus} autoComplete="off" inputMode="search"
+        enterKeyHint="search" />
       <button className="button">search</button>
     </form>
   )

@@ -17,15 +17,18 @@ export function AdminEmail({ user, sent = false }: { user: User; sent?: boolean 
         <form method="post" action="/admin/email">
           <label className="form-label">
             recipient email
-            <input className="form-control" name="email" type="email" maxLength={254} required autoComplete="off" />
+            <input className="form-control" name="email" type="email" maxLength={254} required autoComplete="off"
+              inputMode="email" enterKeyHint="next" />
           </label>
           <label className="form-label">
             title
-            <input className="form-control" name="title" maxLength={200} required />
+            <input className="form-control" name="title" maxLength={200} required autoComplete="off"
+              inputMode="text" enterKeyHint="next" />
           </label>
           <label className="form-label">
             body
-            <textarea className="form-control" name="body" maxLength={20_000} required />
+            <textarea className="form-control" name="body" maxLength={20_000} required autoComplete="off"
+              inputMode="text" enterKeyHint="enter" />
           </label>
           <FormActions primary={<button className="button">send email →</button>} />
         </form>

@@ -52,7 +52,8 @@ export function ConfirmAccountDelete({ user, passwordEnabled = false, token, sen
                     {passwordEnabled && !emailConfirmation && (
                       <label>
                         <span>confirm your password</span>
-                        <input type="password" name="password" autoComplete="current-password" required autoFocus />
+                        <input type="password" name="password" autoComplete="current-password" enterKeyHint="done"
+                          required autoFocus />
                       </label>
                     )}
                     {!passwordEnabled && !emailConfirmation && (

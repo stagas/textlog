@@ -47,7 +47,8 @@ export function AdminDashboard(
                   <div className="admin-inline-actions">
                     {(['resolve', 'dismiss'] as const).map(decision => (
                       <form method="post" action={`/admin/illegal-reports/${report.id}/${decision}`} key={decision}>
-                        <input name="reasons" minLength={20} maxLength={2000} required placeholder="specific reasons" />
+                        <input name="reasons" minLength={20} maxLength={2000} required placeholder="specific reasons"
+                          autoComplete="off" inputMode="text" enterKeyHint="done" />
                         <button className="quiet">{decision}</button>
                       </form>
                     ))}
@@ -95,12 +96,12 @@ export function AdminDashboard(
                     <div className="admin-inline-actions">
                       <form method="post" action={`/admin/reports/${report.id}/resolve`}>
                         <input name="note" maxLength={500} aria-label="Optional resolution note"
-                          placeholder="optional note" />
+                          placeholder="optional note" autoComplete="off" inputMode="text" enterKeyHint="done" />
                         <button className="quiet">resolve</button>
                       </form>
                       <form method="post" action={`/admin/reports/${report.id}/dismiss`}>
                         <input name="note" maxLength={500} aria-label="Optional dismissal note"
-                          placeholder="optional note" />
+                          placeholder="optional note" autoComplete="off" inputMode="text" enterKeyHint="done" />
                         <button className="quiet">dismiss</button>
                       </form>
                       {!report.post_deleted_at && (

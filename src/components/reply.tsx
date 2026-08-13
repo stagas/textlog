@@ -37,7 +37,7 @@ export function ReplyBox(
         <FormMessage error={error} />
         {beforeTextarea}
         <textarea className="form-control" name="body" maxLength={280} required autoFocus defaultValue={body}
-          placeholder={placeholder} />
+          placeholder={placeholder} autoComplete="off" inputMode="text" enterKeyHint="enter" />
         <PostingSuggestionResults search={suggestionSearch} />
         <div className="composefoot">
           <PostingHelp search={suggestionSearch} />

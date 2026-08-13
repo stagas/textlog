@@ -91,14 +91,17 @@ export function Profile(
                   {returnPath && <input type="hidden" name="from" value={returnPath} />}
                   <FormMessage error={error} />
                   <label>
-                    handle<input name="handle" aria-describedby="profile-handle-help" defaultValue={editHandle} />
+                    handle<input name="handle" aria-describedby="profile-handle-help" defaultValue={editHandle}
+                      autoComplete="username" inputMode="text" enterKeyHint="next" autoCapitalize="none"
+                      spellCheck={false} />
                     <span id="profile-handle-help" className="form-hint">
                       Handles must be 2–24 characters and use only letters, numbers, or underscores.
                     </span>
                   </label>
                   <label>
                     bio<textarea name="bio" maxLength={160} defaultValue={bio}
-                      placeholder="Tell people a little about yourself…" />
+                      placeholder="Tell people a little about yourself…" autoComplete="off" inputMode="text"
+                      enterKeyHint="enter" />
                   </label>
                   <div className="composefoot">
                     <PostingHelp maxLength={160} maxLines={5} />
