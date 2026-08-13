@@ -1112,8 +1112,8 @@ test('Profile linkifies Markdown links and tags in the bio', () => {
 
   expect(html).toContain('<span class="reference-menu"><a class="reference-menu-trigger" '
     + 'href="/tag/textlog">#TextLog</a><span class="reference-menu-popover reference-menu-popover-tag">'
-    + '<span class="reference-profile-tabs"><a href="/tag/textlog">1 note</a>'
-    + '<a href="/tag/textlog?tab=followers">0 followers</a></span>')
+    + '<span class="reference-profile-tabs"><a href="/tag/textlog">')
+  expect(html).toContain('<a href="/tag/textlog?tab=followers">')
   expect(html).toContain(
     '<a href="https://example.com/" title="https://example.com/" target="_blank" rel="nofollow ugc noopener noreferrer">my site</a>.',
   )

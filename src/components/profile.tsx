@@ -1,6 +1,6 @@
 import { db, type User } from '../db'
 import { extractHashtags } from '../content'
-import { visibleHashtagCounts } from '../posts'
+import { visibleHashtagCounts, visibleTagFollowerCounts } from '../posts'
 import type { PostView, ProfileRow } from '../types'
 import { linkify, referenceFormId } from '../utils'
 import { Layout } from './layout'
@@ -49,6 +49,7 @@ export function Profile(
   const fromQuery = returnPath ? `?from=${encodeURIComponent(returnPath)}` : ''
   const bioTags = extractHashtags(profile.bio)
   const bioTagCounts = visibleHashtagCounts(db, [profile.bio], user?.id ?? -1)
+  const bioTagFollowerCounts = visibleTagFollowerCounts(db, bioTags, user?.id ?? -1)
   const followedBioTags = user && bioTags.length
     ? new Set((db.query(`SELECT tag FROM hashtag_follows WHERE user_id=? AND tag IN
       (${bioTags.map(() => '?').join(',')})`).all(user.id, ...bioTags) as { tag: string }[])
@@ -163,7 +164,8 @@ export function Profile(
             )
             : <p className="profile-bio" dangerouslySetInnerHTML={{ __html: linkify(profile.bio || 'No bio yet.',
               {}, [], undefined, undefined, '', bioTagCounts, {}, { signedIn: !!user, currentHandle: user?.handle,
-                formPrefix: bioFormPrefix, hashtagFollowing: bioTagFollowing }) }} />}
+                formPrefix: bioFormPrefix, hashtagFollowing: bioTagFollowing,
+                hashtagFollowerCounts: bioTagFollowerCounts }) }} />}
           {!editing && user && bioTags.map(tag => <form className="reference-follow-form"
             id={referenceFormId(bioFormPrefix, 'tag', tag)} method="post"
             action={'/tag-follow/' + encodeURIComponent(tag)} key={tag} />)}
