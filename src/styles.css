@@ -151,8 +151,11 @@ body {
 
 a {
   color: var(--accent);
-  text-decoration: none;
-  border-bottom: 1px solid var(--link-border);
+  text-decoration-line: underline;
+  text-decoration-color: var(--link-border);
+  text-decoration-thickness: 1px;
+  text-underline-offset: 4px;
+  border-bottom: 0;
 }
 
 a:hover {
@@ -506,6 +509,7 @@ nav form {
   color: var(--muted);
   white-space: nowrap;
   border-bottom: 2px solid transparent;
+  text-decoration: none;
 }
 
 .feed-tabs-read-status {
@@ -524,6 +528,7 @@ nav form {
   padding: 0;
   color: var(--accent);
   border-bottom: 1px solid var(--link-border);
+  text-decoration: none;
 }
 
 .feed-tabs .feed-tabs-read-status .activity-side-link:hover { color: var(--accent-dark); }
@@ -915,6 +920,7 @@ nav form {
   font-size: 0.75rem;
   line-height: 1.5;
   text-align: center;
+  text-decoration: none;
 }
 
 .button:not(:disabled):not([aria-disabled="true"]):hover {
@@ -1227,12 +1233,6 @@ nav form {
   font-size: 0.75rem;
 }
 
-.posttop > a,
-.parent-quote-top > a,
-.post-actions > a {
-  line-height: 1;
-}
-
 .posttop .quiet {
   font-size: inherit;
 }
@@ -1272,6 +1272,10 @@ nav form {
 
 .danger:hover {
   color: var(--danger-link-hover);
+}
+
+a.danger {
+  border-bottom: 0;
 }
 
 .report-link {
@@ -2515,6 +2519,11 @@ form.report-panel {
   color: var(--accent-dark);
 }
 
+.preview-post-meta > a,
+.preview-post-meta > .reference-menu {
+  border-bottom: 0;
+}
+
 .compose-post-preview h2 {
   margin: 0;
   padding: var(--space-3) var(--gutter);
@@ -2686,6 +2695,10 @@ form.report-panel {
 
 .profile-edit-link:hover {
   color: var(--accent-dark);
+}
+
+a.profile-edit-link {
+  border-bottom: 0;
 }
 
 .profile-logout {
@@ -3311,7 +3324,7 @@ form.report-panel {
 }
 
 .welcome-settings a {
-  border-bottom: 1px solid var(--link-border);
+  border-bottom: 0;
 }
 
 .verify-email-panel {
@@ -3827,6 +3840,11 @@ form.report-panel {
 .reply-preview .postdate:hover,
 .reply-preview .preview-reply:hover {
   color: var(--accent-dark);
+}
+
+.reply-preview a.postauthor,
+.reply-preview a.postdate {
+  border-bottom: 0;
 }
 
 .thread-continuation {
