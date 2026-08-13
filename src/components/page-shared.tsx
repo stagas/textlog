@@ -82,9 +82,15 @@ export function PostingHelp({ maxLength = 280, maxLines = 10, search }: {
       {suggestionDetails('mentions', '@mentions')}
       <details className="posting-help-more">
         <summary>and more</summary>
-        <div className="posting-help-popover">
-          <strong>Formatting</strong>
-          <dl>
+        <div className="posting-help-popover posting-help-tabs">
+          <input className="posting-help-tab-input" type="radio" name="posting-help-tab"
+            id="posting-help-formatting" defaultChecked />
+          <input className="posting-help-tab-input" type="radio" name="posting-help-tab" id="posting-help-emoji" />
+          <div className="posting-help-tab-list" role="tablist" aria-label="Writing help">
+            <label htmlFor="posting-help-formatting" role="tab">Formatting</label>
+            <label htmlFor="posting-help-emoji" role="tab">Emoji</label>
+          </div>
+          <dl className="posting-help-formatting-panel">
             <div>
               <dt>Regular links</dt>
               <dd>
@@ -138,6 +144,11 @@ export function PostingHelp({ maxLength = 280, maxLines = 10, search }: {
               </dd>
             </div>
           </dl>
+          <div className="posting-help-emoji-panel" aria-label="Emoji to copy and paste">
+            {'😀 😃 😄 😁 😆 😅 😂 🤣 😊 😇 🙂 🙃 😉 😌 😍 🥰 😘 😋 😛 😜 🤪 🤨 🧐 🤓 😎 🤩 🥳 😏 😒 😞 😔 😟 😕 🙁 ☹️ 😣 😖 😫 😩 🥺 😢 😭 😤 😠 😡 🤬 🤯 😳 🥵 🥶 😱 😨 😰 😥 😓 🤗 🤔 🫣 🤭 🫢 🤫 🤥 😶 😐 😑 😬 🙄 😯 😦 😧 😮 😲 🥱 😴 🤤 😪 😵 🤐 🥴 🤢 🤮 🤧 😷 🤒 🤕 🤑 🤠 😈 👿 👻 💀 ☠️ 👽 🤖 🎃 😺 😸 😹 😻 😼 😽 🙀 😿 😾 ❤️ 🧡 💛 💚 💙 💜 🖤 🤍 🤎 💔 ❣️ 💕 💞 💓 💗 💖 💘 💝 💟 👍 👎 👌 🤌 ✌️ 🤞 🤟 🤘 🤙 👈 👉 👆 👇 ☝️ ✋ 🤚 🖐️ 🖖 👋 🤝 👏 🙌 🫶 👐 🤲 🙏 ✍️ 💪 👀 👁️ 🧠 🫀 🫁 🌱 🌿 ☘️ 🍀 🌸 🌺 🌻 🌞 🌙 ⭐ ✨ ⚡ 🔥 🌈 ☀️ ☁️ ❄️ ☕ 🍕 🍎 🎉 🎊 🎈 🎁 🎵 🎶 🎨 📚 💡 ✅ ❌ ⚠️ 🚀 🌍 💻 📱 🔒 🔑'.split(' ').map((emoji, index) => (
+              <span key={`${emoji}-${index}`} title="Select and copy">{emoji}</span>
+            ))}
+          </div>
         </div>
       </details>
     </div>

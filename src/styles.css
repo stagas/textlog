@@ -2272,6 +2272,78 @@ form.report-panel {
   margin-bottom: var(--space-2);
 }
 
+.posting-help-tabs {
+  width: min(22rem, calc(100vw - 2 * var(--gutter)));
+}
+
+.posting-help-tab-input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.posting-help-tab-list {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: var(--space-2);
+  font-weight: bold;
+}
+
+.posting-help-tab-list label {
+  cursor: pointer;
+  text-decoration: underline;
+  text-decoration-color: transparent;
+  text-underline-offset: 3px;
+}
+
+.posting-help-tab-list label:hover {
+  text-decoration-color: currentColor;
+}
+
+#posting-help-formatting:focus-visible ~ .posting-help-tab-list label[for="posting-help-formatting"],
+#posting-help-emoji:focus-visible ~ .posting-help-tab-list label[for="posting-help-emoji"] {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+#posting-help-formatting:checked ~ .posting-help-tab-list label[for="posting-help-formatting"],
+#posting-help-emoji:checked ~ .posting-help-tab-list label[for="posting-help-emoji"] {
+  color: var(--accent);
+  text-decoration-color: currentColor;
+}
+
+.posting-help-emoji-panel {
+  display: none;
+  grid-template-columns: repeat(10, 1fr);
+  gap: var(--space-1);
+  max-height: 13rem;
+  padding-right: var(--space-1);
+  overflow-y: auto;
+  font-size: 1.15rem;
+  line-height: 1.6;
+  text-align: center;
+}
+
+.posting-help-emoji-panel span {
+  cursor: text;
+  user-select: all;
+  border-radius: 2px;
+}
+
+.posting-help-emoji-panel span:hover {
+  background: var(--background);
+}
+
+#posting-help-emoji:checked ~ .posting-help-formatting-panel {
+  display: none;
+}
+
+#posting-help-emoji:checked ~ .posting-help-emoji-panel {
+  display: grid;
+}
+
 .posting-help-popover dl,
 .posting-help-popover dd {
   margin: 0;
