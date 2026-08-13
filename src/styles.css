@@ -344,6 +344,8 @@ header>.account-nav {
 }
 
 @media (hover: none), (pointer: coarse) {
+  .account-menu .account-menu-popover,
+  .account-menu::after,
   .reference-menu .reference-menu-popover,
   .reference-menu::after {
     display: none !important;
