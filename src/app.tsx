@@ -1,5 +1,6 @@
-import { applyHtmlCachePolicy, canonicalizeCrawlerLinks, crawlerCanonicalRedirect, GLOBAL_REQUEST_BODY_LIMIT,
-  isSameOriginRequest, RequestBodyError, requiresSameOrigin, safeLocalPath, securityHeaders, sessionCookie } from './http'
+import { applyHtmlCachePolicy, blockedCrawlerResponse, canonicalizeCrawlerLinks, crawlerCanonicalRedirect,
+  GLOBAL_REQUEST_BODY_LIMIT, isSameOriginRequest, RequestBodyError, requiresSameOrigin, safeLocalPath, securityHeaders,
+  sessionCookie } from './http'
 
 import { Hono } from 'hono'
 import { bodyLimit } from 'hono/body-limit'
@@ -133,6 +134,8 @@ app.use('*', async (c, next) => {
 })
 
 app.use('*', async (c, next) => {
+  const blocked = blockedCrawlerResponse(c.req.raw)
+  if (blocked) return blocked
   const redirect = crawlerCanonicalRedirect(c.req.raw)
   if (redirect) return redirect
   await next()
