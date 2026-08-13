@@ -597,21 +597,21 @@ test('consequential account, content, reporting, and admin flows work over HTTP'
     `/post/${post.id}?page=2&from=${encodeURIComponent('/latest#post-1')}`,
     { userAgent: 'Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)' },
   )
-  expect(crawledPost.status).toBe(302)
+  expect(crawledPost.status).toBe(301)
   expect(crawledPost.headers.get('location')).toBe(`${origin}/post/${post.id}?page=2`)
   expect(crawledPost.headers.get('vary')).toContain('User-Agent')
   const crawledEntry = await request(
     `/enter?next=${encodeURIComponent(`/post/${post.id}?reply=1&from=${encodeURIComponent('/latest#post-1')}`)}`,
     { userAgent: 'Googlebot/2.1' },
   )
-  expect(crawledEntry.status).toBe(302)
+  expect(crawledEntry.status).toBe(301)
   expect(crawledEntry.headers.get('location')).toBe(`${origin}/post/${post.id}`)
   const crawledPasswordEntry = await request(
     `/enter/password?next=${encodeURIComponent(`/post/${post.id}?reply=1&from=${
       encodeURIComponent('/latest#post-1')}`)}`,
     { userAgent: 'Googlebot/2.1' },
   )
-  expect(crawledPasswordEntry.status).toBe(302)
+  expect(crawledPasswordEntry.status).toBe(301)
   expect(crawledPasswordEntry.headers.get('location')).toBe(`${origin}/post/${post.id}`)
   const crawledFeed = await request('/latest', { userAgent: 'Googlebot/2.1' })
   const crawledFeedHtml = await crawledFeed.text()

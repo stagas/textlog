@@ -226,7 +226,7 @@ export function crawlerCanonicalRedirect(request: Request, appUrl: string | unde
   destination.searchParams.delete('from')
   const origin = appUrl ? new URL(appUrl).origin : url.origin
   const location = origin + destination.pathname + destination.search
-  return new Response(null, { status: 302, headers: {
+  return new Response(null, { status: 301, headers: {
     location,
     'cache-control': 'private, no-store',
     vary: 'User-Agent',

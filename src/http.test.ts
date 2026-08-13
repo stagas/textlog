@@ -26,7 +26,7 @@ describe('local redirects', () => {
     })
     expect(isCrawlerRequest(crawler)).toBe(true)
     const response = crawlerCanonicalRedirect(crawler, 'https://textlog.cc')
-    expect(response?.status).toBe(302)
+    expect(response?.status).toBe(301)
     expect(response?.headers.get('location')).toBe('https://textlog.cc/post/42?page=2')
     expect(response?.headers.get('vary')).toBe('User-Agent')
     expect(response?.headers.get('cache-control')).toBe('private, no-store')
