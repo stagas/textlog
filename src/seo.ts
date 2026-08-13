@@ -1,4 +1,5 @@
 import type { Database } from 'bun:sqlite'
+import { instance } from '../instance.config'
 
 export const SITEMAP_PAGE_SIZE = 10_000
 
@@ -108,5 +109,22 @@ Sitemap: ${origin}/sitemap.xml
 `, { headers: {
     'content-type': 'text/plain; charset=utf-8',
     'cache-control': 'public, max-age=3600',
+  } })
+}
+
+export function securityTxt(requestUrl: string, now = new Date()) {
+  const origin = publicOrigin(requestUrl)
+  const expires = new Date(now.getTime() + 180 * 24 * 60 * 60 * 1000).toISOString()
+  const contacts = [
+    instance.operator.email ? `Contact: mailto:${instance.operator.email}` : null,
+    `Contact: ${origin}/contact`,
+  ].filter(Boolean)
+  return new Response(`${contacts.join('\n')}
+Expires: ${expires}
+Canonical: ${origin}/.well-known/security.txt
+Preferred-Languages: en
+`, { headers: {
+    'content-type': 'text/plain; charset=utf-8',
+    'cache-control': 'public, max-age=86400',
   } })
 }

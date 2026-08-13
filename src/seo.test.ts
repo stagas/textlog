@@ -1,6 +1,6 @@
 import { Database } from 'bun:sqlite'
 import { describe, expect, test } from 'bun:test'
-import { robots, sitemapIndex, sitemapSection } from './seo'
+import { robots, securityTxt, sitemapIndex, sitemapSection } from './seo'
 
 function fixture() {
   const database = new Database(':memory:')
@@ -24,6 +24,21 @@ describe('crawler metadata', () => {
     expect(body).toContain('User-agent: *\nAllow: /')
     expect(body).toContain('Disallow: /account/')
     expect(body).toContain('Sitemap: https://textlog.cc/sitemap.xml')
+  })
+
+  test('publishes security contacts at the canonical well-known location', async () => {
+    Bun.env.APP_URL = 'https://textlog.cc'
+    const response = securityTxt(
+      'http://internal:3000/security.txt',
+      new Date('2026-08-13T00:00:00.000Z'),
+    )
+    const body = await response.text()
+    expect(response.headers.get('content-type')).toBe('text/plain; charset=utf-8')
+    expect(body).toContain('Contact: mailto:hello@textlog.cc')
+    expect(body).toContain('Contact: https://textlog.cc/contact')
+    expect(body).toContain('Expires: 2027-02-09T00:00:00.000Z')
+    expect(body).toContain('Canonical: https://textlog.cc/.well-known/security.txt')
+    expect(body).toContain('Preferred-Languages: en')
   })
 
   test('indexes static and populated segmented sitemaps', async () => {
