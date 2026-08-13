@@ -1,10 +1,17 @@
 import { describe, expect, test } from 'bun:test'
-import { CLIENT_ERROR_RATE_LIMIT, CLIENT_ERROR_RATE_WINDOW_SECONDS, ClientErrorRateLimiter, rateLimitedResponse,
+import { CLIENT_ERROR_RATE_LIMIT, CLIENT_ERROR_RATE_WINDOW_SECONDS, ClientErrorRateLimiter,
+  HOURLY_REQUEST_BLOCK_SECONDS, HOURLY_REQUEST_RATE_LIMIT, HOURLY_REQUEST_RATE_WINDOW_SECONDS, rateLimitedResponse,
   REQUEST_RATE_LIMIT, RequestRateLimiter } from './request-rate-limit'
 
 describe('in-memory request rate limiter', () => {
   test('allows a modestly higher site-wide request burst', () => {
     expect(REQUEST_RATE_LIMIT).toBe(50)
+  })
+
+  test('defines a sustained hourly crawler limit and block', () => {
+    expect(HOURLY_REQUEST_RATE_LIMIT).toBe(150)
+    expect(HOURLY_REQUEST_RATE_WINDOW_SECONDS).toBe(3_600)
+    expect(HOURLY_REQUEST_BLOCK_SECONDS).toBe(3_600)
   })
 
   test('hard-blocks an address after it exceeds the window allowance', () => {

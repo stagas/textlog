@@ -14,7 +14,8 @@ import { clientIp, logError, logHttp, logReady, shouldLogHttp } from './log'
 import { startMaintenance } from './maintenance'
 import { renderDefaultOg } from './og'
 import { startPublicArchive } from './public-archive'
-import { ClientErrorRateLimiter, rateLimitedResponse, RequestRateLimiter } from './request-rate-limit'
+import { ClientErrorRateLimiter, HOURLY_REQUEST_BLOCK_SECONDS, HOURLY_REQUEST_RATE_LIMIT,
+  HOURLY_REQUEST_RATE_WINDOW_SECONDS, rateLimitedResponse, RequestRateLimiter } from './request-rate-limit'
 import { registerAccountRoutes } from './routes/account'
 import { registerAdminRoutes } from './routes/admin'
 import { registerApiRoutes } from './routes/api'
@@ -65,6 +66,11 @@ const defaultOgBody = defaultOgImage.buffer.slice(
 ) as ArrayBuffer
 const visitorBuffer = new VisitorBuffer(db)
 const requestRateLimiter = new RequestRateLimiter()
+const hourlyRequestRateLimiter = new RequestRateLimiter({
+  limit: HOURLY_REQUEST_RATE_LIMIT,
+  windowSeconds: HOURLY_REQUEST_RATE_WINDOW_SECONDS,
+  blockSeconds: HOURLY_REQUEST_BLOCK_SECONDS,
+})
 const clientErrorRateLimiter = new ClientErrorRateLimiter()
 startMaintenance(db, visitorBuffer, error => logError('database maintenance failed', error))
 if (Bun.env.NODE_ENV === 'production') {
@@ -337,7 +343,9 @@ export default {
     const bypassRateLimits = Bun.env.NODE_ENV === 'test' || isDevelopment()
     const limited = bypassRateLimits
       ? null
-      : requestRateLimiter.consume(address) ?? clientErrorRateLimiter.check(address)
+      : requestRateLimiter.consume(address)
+        ?? hourlyRequestRateLimiter.consume(address)
+        ?? clientErrorRateLimiter.check(address)
     if (limited) return rateLimitedResponse(limited.retryAfter)
     const headers = new Headers(request.headers)
     headers.set(clientIpHeaderName(), address)
