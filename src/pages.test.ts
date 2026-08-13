@@ -605,7 +605,7 @@ describe('Auth', () => {
   test('check-your-email page does not reveal an email requested by handle', () => {
     const html = renderToStaticMarkup(React.createElement(MagicLinkSent, { email: 'reader', handle: true }))
 
-    expect(html).toContain('email address associated with <strong>reader</strong>')
+    expect(html).toContain('entry link to the email of <strong>reader</strong>')
     expect(html).toContain('name="identifier" value="reader"')
     expect(html).not.toContain('reader@example.com')
   })

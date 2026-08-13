@@ -100,7 +100,7 @@ export function MagicLinkSent({ email, magicUrl, error, handle = false }: {
           <h1>Check your email</h1>
           <p>
             {handle
-              ? <>We’ve sent an entry link to the email address associated with <strong>{email}</strong>.</>
+              ? <>We’ve sent an entry link to the email of <strong>{email}</strong>.</>
               : <>We’ve sent an entry link to <strong>{email}</strong>.</>}
           </p>
           <p className="email-delivery-hint">Can’t find it? Check your spam or junk folder.</p>
