@@ -459,7 +459,9 @@ test('consequential account, content, reporting, and admin flows work over HTTP'
     form: { body: 'A route-level integration post' },
   })
   expect(createPost.status).toBe(303)
-  expect(createPost.headers.get('location')).toBe('/latest')
+  const post = database.query('SELECT id,body FROM posts WHERE user_id=? ORDER BY id DESC LIMIT 1')
+    .get(alice.id) as { id: number; body: string }
+  expect(createPost.headers.get('location')).toBe(`/latest#post-${post.id}`)
 
   const routeOversizedPost = await request('/post', {
     method: 'POST',
@@ -486,8 +488,6 @@ test('consequential account, content, reporting, and admin flows work over HTTP'
   expect(unsupportedPost.status).toBe(415)
   expect(await unsupportedPost.text()).toContain('We couldn&#x27;t read that request.')
 
-  const post = database.query('SELECT id,body FROM posts WHERE user_id=? ORDER BY id DESC LIMIT 1')
-    .get(alice.id) as { id: number; body: string }
   expect(post.body).toBe('A route-level integration post')
   const invalidPostBody = `remember post ${'x'.repeat(270)}`
   const invalidPost = await request('/post', {

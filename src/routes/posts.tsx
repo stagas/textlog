@@ -133,7 +133,7 @@ export function registerPostsRoutes(app: Hono) {
         )
       }
       if (!result.duplicate) notifyPost(result.id, user.id, user.handle)
-      return rememberFeed(redirect('/latest'), 'latest')
+      return rememberFeed(redirect(`/latest#post-${result.id}`), 'latest')
     }
     catch (error) {
       logError('POST /post', error)
