@@ -1,7 +1,8 @@
 import { describe, expect, test } from 'bun:test'
-import { applyHtmlCachePolicy, clearSessionCookie, crawlerCanonicalRedirect, feedPreference, feedPreferenceCookie,
-  FORM_REQUEST_BODY_LIMIT, htmlCacheControl, isCrawlerRequest, isSameOriginRequest, limitedFormData, RequestBodyError,
-  requiresSameOrigin, safeLocalPath, safeRefererPath, securityHeaders, sessionCookie, stringField } from './http'
+import { applyHtmlCachePolicy, canonicalizeCrawlerLinks, clearSessionCookie, crawlerCanonicalRedirect, feedPreference,
+  feedPreferenceCookie, FORM_REQUEST_BODY_LIMIT, htmlCacheControl, isCrawlerRequest, isSameOriginRequest,
+  limitedFormData, RequestBodyError, requiresSameOrigin, safeLocalPath, safeRefererPath, securityHeaders,
+  sessionCookie, stringField } from './http'
 
 describe('local redirects', () => {
   test('accepts local paths and rejects ambiguous or external targets', () => {
@@ -50,6 +51,20 @@ describe('local redirects', () => {
     expect(crawlerCanonicalRedirect(new Request('https://textlog.cc/post/42', {
       headers: { 'user-agent': 'bingbot/2.0' },
     }))).toBeNull()
+  })
+
+  test('removes direct and nested from parameters from links shown to crawlers', async () => {
+    const request = new Request('https://textlog.cc/latest', { headers: { 'user-agent': 'Googlebot/2.1' } })
+    const response = await canonicalizeCrawlerLinks(request, new Response(
+      '<a href="/post/42?from=%2Flatest%23post-42">post</a>'
+      + '<a href="/enter/password?next=%2Fpost%2F42%3Freply%3D1%26from%3D%252Flatest">reply</a>'
+      + '<a href="https://example.com/?from=external">external</a>',
+      { headers: { 'content-type': 'text/html;charset=utf-8' } },
+    ))
+    expect(await response.text()).toBe('<a href="/post/42">post</a>'
+      + '<a href="/enter/password?next=%2Fpost%2F42%3Freply%3D1">reply</a>'
+      + '<a href="https://example.com/?from=external">external</a>')
+    expect(response.headers.get('vary')).toBe('User-Agent')
   })
 })
 

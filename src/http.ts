@@ -233,6 +233,27 @@ export function crawlerCanonicalRedirect(request: Request, appUrl: string | unde
   } })
 }
 
+function crawlerCanonicalHref(value: string) {
+  if (!value.startsWith('/')) return value
+  const url = new URL(value.replaceAll('&amp;', '&'), 'https://textlog.invalid')
+  url.searchParams.delete('from')
+  const next = url.searchParams.get('next')
+  if (next?.startsWith('/')) url.searchParams.set('next', crawlerCanonicalHref(next))
+  return (url.pathname + url.search + url.hash).replaceAll('&', '&amp;')
+}
+
+export async function canonicalizeCrawlerLinks(request: Request, response: Response) {
+  if (!isCrawlerRequest(request) || !response.headers.get('content-type')?.includes('text/html')) return response
+  const html = await response.text()
+  const body = html.replace(/\bhref="([^"]*)"/g, (_, href: string) => `href="${crawlerCanonicalHref(href)}"`)
+  const headers = new Headers(response.headers)
+  headers.delete('content-length')
+  const vary = headers.get('vary')
+  const values = vary?.split(',').map(value => value.trim().toLowerCase()) || []
+  if (!values.includes('user-agent')) headers.set('vary', vary ? `${vary}, User-Agent` : 'User-Agent')
+  return new Response(body, { status: response.status, statusText: response.statusText, headers })
+}
+
 export type FeedPreference = 'following' | 'activity' | 'hot' | 'latest'
 
 export function feedPreference(request: Request): FeedPreference | null {
