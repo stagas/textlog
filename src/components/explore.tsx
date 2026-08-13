@@ -55,7 +55,7 @@ export function Explore({ user, welcome = false, peopleIds, tagsPage = 1, people
       {!welcome && (
         <section className="explore-search" aria-labelledby="explore-search-heading">
           <h1 id="explore-search-heading">Search</h1>
-          <SearchForm />
+          <SearchForm placeholder="search notes, tags or people" />
         </section>
       )}
       <div className="columns">

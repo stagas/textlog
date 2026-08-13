@@ -14,17 +14,18 @@ export function searchPostReturnPath(query: string, page: number, postId: number
   return `/search?q=${encodeURIComponent(query)}${pageParameter}#post-${postId}`
 }
 
-export function SearchForm({ query = '', autoFocus = false, tab = 'notes' }: {
+export function SearchForm({ query = '', autoFocus = false, tab = 'notes', placeholder }: {
   query?: string
   autoFocus?: boolean
   tab?: SearchTab
+  placeholder?: string
 }) {
   return (
     <form className="search-form" method="get" action="/search" role="search">
       <label className="visually-hidden" htmlFor="search-query">Search {tab}</label>
       {tab !== 'notes' && <input type="hidden" name="tab" value={tab} />}
       <input id="search-query" type="search" name="q" maxLength={100} required defaultValue={query}
-        placeholder={`search ${tab}`} autoFocus={autoFocus} />
+        placeholder={placeholder ?? `search ${tab}`} autoFocus={autoFocus} />
       <button className="button">search</button>
     </form>
   )
