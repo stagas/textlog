@@ -35,6 +35,12 @@ describe('local redirects', () => {
       { headers: { 'user-agent': 'bingbot/2.0' } },
     ), 'https://textlog.cc')
     expect(entry?.headers.get('location')).toBe('https://textlog.cc/post/42')
+
+    const passwordEntry = crawlerCanonicalRedirect(new Request(
+      'https://internal.test/enter/password?next=%2Fpost%2F42%3Freply%3D1%26from%3D%252Flatest%2523post-42',
+      { headers: { 'user-agent': 'Googlebot/2.1' } },
+    ), 'https://textlog.cc')
+    expect(passwordEntry?.headers.get('location')).toBe('https://textlog.cc/post/42')
   })
 
   test('does not redirect people or crawler URLs without from', () => {

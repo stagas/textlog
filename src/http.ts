@@ -215,7 +215,7 @@ export function crawlerCanonicalRedirect(request: Request, appUrl: string | unde
   if (request.method !== 'GET' || !isCrawlerRequest(request)) return null
   const url = new URL(request.url)
   let destination = url
-  if (url.pathname === '/enter') {
+  if (url.pathname === '/enter' || url.pathname === '/enter/password') {
     destination = new URL(safeLocalPath(url.searchParams.get('next') || '/'), url.origin)
     destination.searchParams.delete('reply')
   }
