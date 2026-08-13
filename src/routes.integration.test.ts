@@ -600,6 +600,12 @@ test('consequential account, content, reporting, and admin flows work over HTTP'
   expect(crawledPost.status).toBe(302)
   expect(crawledPost.headers.get('location')).toBe(`${origin}/post/${post.id}?page=2`)
   expect(crawledPost.headers.get('vary')).toContain('User-Agent')
+  const crawledEntry = await request(
+    `/enter?next=${encodeURIComponent(`/post/${post.id}?reply=1&from=${encodeURIComponent('/latest#post-1')}`)}`,
+    { userAgent: 'Googlebot/2.1' },
+  )
+  expect(crawledEntry.status).toBe(302)
+  expect(crawledEntry.headers.get('location')).toBe(`${origin}/post/${post.id}`)
   const privatePost = await request(`/post/${post.id}`, { cookie: aliceCookie })
   expect(privatePost.headers.get('cache-control')).toBe('private, no-store')
   const privateReplyForm = await request(`/post/${post.id}?reply=1`, { cookie: aliceCookie })

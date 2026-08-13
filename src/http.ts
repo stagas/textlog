@@ -214,10 +214,18 @@ export function isCrawlerRequest(request: Request) {
 export function crawlerCanonicalRedirect(request: Request, appUrl: string | undefined = Bun.env.APP_URL) {
   if (request.method !== 'GET' || !isCrawlerRequest(request)) return null
   const url = new URL(request.url)
-  if (!url.searchParams.has('from')) return null
-  url.searchParams.delete('from')
+  let destination = url
+  if (url.pathname === '/enter') {
+    destination = new URL(safeLocalPath(url.searchParams.get('next') || '/'), url.origin)
+    destination.searchParams.delete('reply')
+  }
+  else {
+    if (!url.searchParams.has('from')) return null
+    destination.searchParams.delete('from')
+  }
+  destination.searchParams.delete('from')
   const origin = appUrl ? new URL(appUrl).origin : url.origin
-  const location = origin + url.pathname + url.search
+  const location = origin + destination.pathname + destination.search
   return new Response(null, { status: 302, headers: {
     location,
     'cache-control': 'private, no-store',

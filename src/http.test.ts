@@ -29,6 +29,12 @@ describe('local redirects', () => {
     expect(response?.headers.get('location')).toBe('https://textlog.cc/post/42?page=2')
     expect(response?.headers.get('vary')).toBe('User-Agent')
     expect(response?.headers.get('cache-control')).toBe('private, no-store')
+
+    const entry = crawlerCanonicalRedirect(new Request(
+      'https://internal.test/enter?next=%2Fpost%2F42%3Freply%3D1%26from%3D%252Flatest%2523post-42',
+      { headers: { 'user-agent': 'bingbot/2.0' } },
+    ), 'https://textlog.cc')
+    expect(entry?.headers.get('location')).toBe('https://textlog.cc/post/42')
   })
 
   test('does not redirect people or crawler URLs without from', () => {
