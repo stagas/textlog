@@ -2,6 +2,7 @@ import { type User } from '../db'
 import type { ApiKeyView, SessionView } from '../types'
 import { Layout } from './layout'
 import { FormMessage } from './page-shared'
+import { AccountSettingsHeader } from './account-settings-header'
 
 export function AccountSecurity({ user, sessions, apiKeys = [], passwordEnabled, error, success, returnPath }: {
   user: User
@@ -12,15 +13,11 @@ export function AccountSecurity({ user, sessions, apiKeys = [], passwordEnabled,
   success?: string
   returnPath?: string
 }) {
-  const backHref = returnPath ? `/account/edit?from=${encodeURIComponent(returnPath)}` : '/account/edit'
   const fromQuery = returnPath ? `?from=${encodeURIComponent(returnPath)}` : ''
   return (
     <Layout user={user} title="account security">
-      <section className="page-header security-header">
-        <div className="profile-title-row">
-          <h1>security</h1>
-          <a className="profile-edit-link" href={backHref}>back</a>
-        </div>
+      <section className="security-header">
+        <AccountSettingsHeader title="security" returnPath={returnPath} />
       </section>
       <div className="security-page">
         <FormMessage error={error} success={success} />

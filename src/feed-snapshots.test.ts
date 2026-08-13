@@ -31,3 +31,17 @@ test('persistent feed snapshots reuse a generation and rebuild after invalidatio
   expect(builds).toBe(2)
   expect((db.query('SELECT count(*) count FROM feed_snapshots').get() as { count: number }).count).toBe(1)
 })
+
+test('larger page sizes combine 20-item materialized page units without rebuilding', () => {
+  const db = database()
+  let builds = 0
+  const build = () => {
+    builds++
+    return Array.from({ length: 105 }, (_, id) => ({ id }))
+  }
+  const page = feedSnapshotPage(db, 'latest', -1, 2, build, 40)
+  expect(page.items.map(item => item.id)).toEqual(Array.from({ length: 40 }, (_, index) => index + 40))
+  expect(page.totalPages).toBe(3)
+  expect(feedSnapshotPage(db, 'latest', -1, 1, build, 80).items).toHaveLength(80)
+  expect(builds).toBe(1)
+})

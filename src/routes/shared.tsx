@@ -45,8 +45,8 @@ export function currentPage(value?: string) {
   const parsed = Number(value)
   return Number.isInteger(parsed) && parsed > 0 ? parsed : 1
 }
-export function paginationRedirect(requestedPage: number, total: number, path: string) {
-  const lastPage = Math.max(1, Math.ceil(total / PAGE_SIZE))
+export function paginationRedirect(requestedPage: number, total: number, path: string, pageSize = PAGE_SIZE) {
+  const lastPage = Math.max(1, Math.ceil(total / pageSize))
   if (requestedPage <= lastPage) return null
   if (lastPage === 1) return redirect(path)
   return redirect(`${path}${path.includes('?') ? '&' : '?'}page=${lastPage}`)

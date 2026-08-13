@@ -304,7 +304,7 @@ test('appearance theme tab is a server-rendered form with mobile appearance choi
     selected: { theme: 'sepia', accent: 'amber' },
     selectedFont: 'system',
   }))
-  expect(html).toContain('<h1>change appearance</h1>')
+  expect(html).toContain('<p class="eyebrow">account settings</p><h1>appearance</h1>')
   expect(html).toContain('action="/account/edit/appearance"')
   expect(html).toContain('aria-current="page">theme</a>')
   expect(html).toContain('name="theme" value="dracula"')
@@ -315,6 +315,38 @@ test('appearance theme tab is a server-rendered form with mobile appearance choi
   expect(html).toContain('name="accent" checked="" value="amber"')
   expect(html).not.toContain('<script')
   expect(html).not.toContain('style=')
+})
+
+test('appearance misc tab offers supported page sizes as radio cards', () => {
+  const html = renderToStaticMarkup(React.createElement(ChangeAppearance, {
+    user: { id: 1, handle: 'reader', email: 'reader@example.com', bio: '' },
+    selected: { theme: 'system', accent: 'theme' },
+    selectedFont: 'system',
+    selectedPageSize: 40,
+    tab: 'misc',
+  }))
+  expect(html).toContain('aria-current="page">misc</a>')
+  expect(html).toContain('name="pageSize" value="20"')
+  expect(html).toContain('name="pageSize" checked="" value="40"')
+  expect(html).toContain('name="pageSize" value="80"')
+  expect(html).toContain('name="pageSize" value="100"')
+  expect(html).toContain('save misc →')
+})
+
+test('account settings pages share one consistent heading', () => {
+  const user = { id: 1, handle: 'reader', email: 'reader@example.com', bio: '' }
+  const pages = [
+    renderToStaticMarkup(React.createElement(ChangeAppearance, {
+      user, selected: { theme: 'system', accent: 'theme' }, selectedFont: 'system',
+    })),
+    renderToStaticMarkup(React.createElement(NotificationSettings, { user, publicKey: null })),
+    renderToStaticMarkup(React.createElement(AccountSecurity, { user, sessions: [] })),
+  ]
+  for (const html of pages) {
+    expect(html).toContain('class="account-settings-heading"')
+    expect(html).toContain('<p class="eyebrow">account settings</p>')
+    expect(html).toContain('<a class="profile-edit-link" href="/account/edit">back</a>')
+  }
 })
 
 test('notification settings are the only account page that loads their client script', () => {

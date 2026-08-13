@@ -163,6 +163,7 @@ export function fontSizeCookie(value: FontSizeChoice, appUrl: string | undefined
   return `font-size=${value}; Max-Age=${365 * 24 * 60 * 60}; HttpOnly; Path=/; SameSite=Lax${secure}`
 }
 
+
 function rules(name: keyof typeof palettes, accentChoice: AccentChoice) {
   const p = palettes[name]
   const dark = name === 'dark' || name === 'dracula'

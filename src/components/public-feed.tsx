@@ -3,6 +3,8 @@ import { feedSnapshotPage } from '../feed-snapshots'
 import { type PostCursor } from '../pagination'
 import { enrichPosts } from '../posts'
 import type { PostView } from '../types'
+import { devicePageSize } from '../device-settings'
+import { activeRequest } from '../theme'
 import { Layout } from './layout'
 import { FeedTabs, GlobalFeedEmpty, Pagination } from './page-shared'
 import { Post } from './post'
@@ -26,7 +28,7 @@ export function PublicFeed(
       AND (? < 0 OR NOT EXISTS (SELECT 1 FROM post_hashtags ph JOIN blocked_hashtags bh ON bh.tag=ph.tag
         WHERE ph.post_id=p.id AND bh.user_id=?))
       ORDER BY p.id DESC`,
-    ).all(...parameters) as PostView[])
+    ).all(...parameters) as PostView[], devicePageSize(activeRequest(), user?.id))
   const posts = enrichPosts(db, snapshot.items, viewerId)
   const returnPath = path + (snapshot.page > 1 ? `?page=${snapshot.page}` : '')
   return (

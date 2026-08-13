@@ -3,6 +3,8 @@ import { db } from '../db'
 import { PAGE_SIZE } from '../pagination'
 import { enrichPosts } from '../posts'
 import { searchPeople, searchPosts, searchTags, searchTerms } from '../search'
+import { devicePageSize } from '../device-settings'
+import { activeRequest } from '../theme'
 import { Layout } from './layout'
 import { ConnectionPeople, Pagination, TagPeopleList } from './page-shared'
 import { Post } from './post'
@@ -44,8 +46,9 @@ export function SearchResults({ user, query, page, tab = 'notes' }: {
   tab?: SearchTab
 }) {
   const viewerId = user?.id ?? -1
+  const notePageSize = devicePageSize(activeRequest(), user?.id)
   const results = {
-    notes: searchPosts(db, query, viewerId, tab === 'notes' ? page : 1),
+    notes: searchPosts(db, query, viewerId, tab === 'notes' ? page : 1, notePageSize),
     tags: searchTags(db, query, viewerId, tab === 'tags' ? page : 1),
     people: searchPeople(db, query, viewerId, tab === 'people' ? page : 1),
   }
@@ -54,7 +57,7 @@ export function SearchResults({ user, query, page, tab = 'notes' }: {
   const people = tab === 'people' ? result.rows as ReturnType<typeof searchPeople>['rows'] : []
   const tags = tab === 'tags' ? result.rows as ReturnType<typeof searchTags>['rows'] : []
   const highlights = searchTerms(query)
-  const totalPages = Math.max(1, Math.ceil(result.total / PAGE_SIZE))
+  const totalPages = Math.max(1, Math.ceil(result.total / (tab === 'notes' ? notePageSize : PAGE_SIZE)))
   const queryParameter = query ? `?q=${encodeURIComponent(query)}` : ''
   const tabPath = (value: SearchTab) => `/search${queryParameter}${queryParameter ? '&' : '?'}tab=${value}`
   return (

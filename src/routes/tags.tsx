@@ -7,10 +7,11 @@ import {
 } from '../components/pages'
 import { db } from '../db'
 import { renderTagOg } from '../og'
-import { CONNECTION_PAGE_SIZE, PAGE_SIZE } from '../pagination'
+import { CONNECTION_PAGE_SIZE } from '../pagination'
 import { enrichPosts } from '../posts'
 import type { PersonView, PostView } from '../types'
 import { currentUser } from '../utils'
+import { devicePageSize } from '../device-settings'
 
 export function registerTagsRoutes(app: Hono) {
   app.get('/tag/:tag/og.png', c => {
@@ -45,12 +46,14 @@ export function registerTagsRoutes(app: Hono) {
     ).get(user.id, tag)
     const blocked = !!user && !!db.query('SELECT 1 FROM blocked_hashtags WHERE user_id=? AND tag=?').get(user.id, tag)
     const viewerId = user?.id ?? -1
+    const notePageSize = devicePageSize(c.req.raw, user?.id)
     const posts = blocked ? [] : enrichPosts(db, db.query(
       `SELECT p.*,u.handle FROM posts p JOIN users u ON u.id=p.user_id JOIN post_hashtags ph ON ph.post_id=p.id
       WHERE ph.tag=? AND p.deleted_at IS NULL AND (? < 0 OR NOT EXISTS (SELECT 1 FROM blocks b WHERE
         (b.blocker_id=? AND b.blocked_id=p.user_id) OR (b.blocker_id=p.user_id AND b.blocked_id=?)))
       ORDER BY p.created_at DESC LIMIT ? OFFSET ?`,
-    ).all(tag, viewerId, viewerId, viewerId, PAGE_SIZE, (tagPage - 1) * PAGE_SIZE) as PostView[], viewerId)
+    ).all(tag, viewerId, viewerId, viewerId, notePageSize,
+      (tagPage - 1) * notePageSize) as PostView[], viewerId)
     const total = blocked
       ? 0
       : (db.query(`SELECT count(*) AS count FROM post_hashtags ph JOIN posts p ON p.id=ph.post_id
@@ -75,7 +78,8 @@ export function registerTagsRoutes(app: Hono) {
           (tagPage - 1) * CONNECTION_PAGE_SIZE) as PersonView[]
       : []
     const tabPath = `/tag/${encodeURIComponent(tag)}${tab === 'followers' ? '?tab=followers' : ''}`
-    const outOfRange = paginationRedirect(tagPage, tab === 'followers' ? followerTotal : total, tabPath)
+    const outOfRange = paginationRedirect(tagPage, tab === 'followers' ? followerTotal : total, tabPath,
+      tab === 'followers' ? CONNECTION_PAGE_SIZE : notePageSize)
     if (outOfRange) return outOfRange
     const configuredOrigin = Bun.env.APP_URL?.replace(/\/$/, '')
     const origin = configuredOrigin || new URL(c.req.url).origin
@@ -91,7 +95,7 @@ export function registerTagsRoutes(app: Hono) {
     return page(
       <TagFeed user={user} tag={tag} following={following} blocked={blocked} posts={posts} page={tagPage} total={total}
         followerTotal={followerTotal} people={people} tab={tab === 'followers' ? 'followers' : 'notes'}
-        social={social} returnPath={returnPath} />,
+        notePageSize={notePageSize} social={social} returnPath={returnPath} />,
     )
   })
 }

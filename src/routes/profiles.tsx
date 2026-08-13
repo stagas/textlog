@@ -13,6 +13,7 @@ import { resolveHandle } from '../handles'
 import { renderProfileOg } from '../og'
 import { CONNECTION_PAGE_SIZE, decodePostCursor, PAGE_SIZE, TAG_PAGE_SIZE } from '../pagination'
 import { enrichPosts } from '../posts'
+import { devicePageSize } from '../device-settings'
 import { currentUser } from '../utils'
 
 export function registerProfilesRoutes(app: Hono) {
@@ -228,7 +229,7 @@ export function registerProfilesRoutes(app: Hono) {
         WHERE p.user_id=? AND p.deleted_at IS NULL AND (? < 0 OR NOT EXISTS
           (SELECT 1 FROM post_hashtags ph JOIN blocked_hashtags bh ON bh.tag=ph.tag
             WHERE ph.post_id=p.id AND bh.user_id=?)) ${postKindFilter}
-        ORDER BY p.id DESC`).all(profile.id, viewerId, viewerId) as PostView[])
+        ORDER BY p.id DESC`).all(profile.id, viewerId, viewerId) as PostView[], devicePageSize(c.req.raw, user?.id))
     const posts = enrichPosts(db, snapshot.items, viewerId)
     return page(
       <Profile user={user} profile={profile} posts={blocked || blockedByProfile ? [] : posts} following={following}

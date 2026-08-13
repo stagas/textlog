@@ -2,6 +2,7 @@ import { isAdmin } from '../admin'
 import { appName } from '../brand'
 import type { User } from '../db'
 import { Layout } from './layout'
+import { AccountSettingsHeader } from './account-settings-header'
 
 export function NotificationSettings({ user, publicKey, ios = false, returnPath }: {
   user: User
@@ -10,17 +11,10 @@ export function NotificationSettings({ user, publicKey, ios = false, returnPath 
   returnPath?: string
 }) {
   const name = appName()
-  const backHref = returnPath ? `/account/edit?from=${encodeURIComponent(returnPath)}` : '/account/edit'
   return (
     <Layout user={user} title="notifications">
       <article className="static-page notifications-page">
-        <div className="notification-heading">
-          <div>
-            <p className="eyebrow">account</p>
-            <h1>notifications</h1>
-          </div>
-          <a className="profile-edit-link" href={backHref}>back</a>
-        </div>
+        <AccountSettingsHeader title="notifications" returnPath={returnPath} />
         <p id="notification-status">
           {publicKey
             ? 'Enabling notifications uses JavaScript on this page and installs a small service worker in your browser.'

@@ -28,7 +28,7 @@ function visibilityParameters(viewerId: number) {
   return [viewerId, viewerId, viewerId, viewerId, viewerId]
 }
 
-export function searchPosts(database: Database, query: string, viewerId = -1, page = 1) {
+export function searchPosts(database: Database, query: string, viewerId = -1, page = 1, pageSize = PAGE_SIZE) {
   const expression = searchExpression(query)
   if (!expression) return { rows: [] as PostView[], total: 0 }
   const visible = visibilityParameters(viewerId)
@@ -40,7 +40,7 @@ export function searchPosts(database: Database, query: string, viewerId = -1, pa
     JOIN posts p ON p.id=post_search.rowid JOIN users u ON u.id=p.user_id
     WHERE post_search MATCH ? AND ${visibilityFilter}
     ORDER BY bm25(post_search),p.id DESC LIMIT ? OFFSET ?`)
-    .all(expression, ...visible, PAGE_SIZE, (page - 1) * PAGE_SIZE) as PostView[]
+    .all(expression, ...visible, pageSize, (page - 1) * pageSize) as PostView[]
   return { rows, total }
 }
 

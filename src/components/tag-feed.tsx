@@ -7,9 +7,9 @@ import { Post } from './post'
 
 export function TagFeed(
   { user, tag, following, blocked = false, posts, page, total, followerTotal = 0, people = [], tab = 'notes', social,
-    returnPath }: { user: User | null; tag: string;
+    notePageSize = PAGE_SIZE, returnPath }: { user: User | null; tag: string;
     following: boolean; blocked?: boolean; posts: PostView[]; page: number; total: number;
-    followerTotal?: number; people?: PersonView[]; tab?: 'notes' | 'followers';
+    followerTotal?: number; people?: PersonView[]; tab?: 'notes' | 'followers'; notePageSize?: number;
     returnPath?: string;
     social?: { description: string; image: string; url: string; type?: 'article' | 'profile' | 'website';
       imageAlt?: string } },
@@ -67,7 +67,7 @@ export function TagFeed(
       {page > 1
         && <Pagination page={page}
           totalPages={Math.ceil((tab === 'followers' ? followerTotal : total)
-            / (tab === 'followers' ? CONNECTION_PAGE_SIZE : PAGE_SIZE))} path={paginationPath} top />}
+            / (tab === 'followers' ? CONNECTION_PAGE_SIZE : notePageSize))} path={paginationPath} top />}
       {tab === 'followers'
         ? people.length
           ? <ConnectionPeople user={user} people={people} className="connections-list"
@@ -81,7 +81,7 @@ export function TagFeed(
         : <div className="empty">No notes use this hashtag yet.</div>}
       <Pagination page={page}
         totalPages={Math.ceil((tab === 'followers' ? followerTotal : total)
-          / (tab === 'followers' ? CONNECTION_PAGE_SIZE : PAGE_SIZE))} path={paginationPath} />
+          / (tab === 'followers' ? CONNECTION_PAGE_SIZE : notePageSize))} path={paginationPath} />
     </Layout>
   )
 }

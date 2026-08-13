@@ -710,6 +710,18 @@ export const migrations: Migration[] = [
         PRIMARY KEY(user_id,user_agent));`)
     },
   },
+  {
+    version: 55,
+    name: 'device_settings',
+    up(database) {
+      database.run(`CREATE TABLE IF NOT EXISTS device_settings (
+        user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        device_id TEXT NOT NULL CHECK(length(device_id) BETWEEN 20 AND 128),
+        page_size INTEGER NOT NULL DEFAULT 20 CHECK(page_size IN (20,40,80,100)),
+        updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        PRIMARY KEY(user_id,device_id));`)
+    },
+  },
 ]
 
 export const latestMigrationVersion = migrations.at(-1)!.version

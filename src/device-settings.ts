@@ -1,0 +1,22 @@
+import type { Database } from 'bun:sqlite'
+import { db } from './db'
+import { notificationDevice } from './http'
+
+export const PAGE_SIZE_CHOICES = [20, 40, 80, 100] as const
+export type PageSizeChoice = typeof PAGE_SIZE_CHOICES[number]
+
+export function devicePageSize(request: Request, userId: number | null | undefined,
+  database: Database = db): PageSizeChoice {
+  const deviceId = notificationDevice(request)
+  if (!userId || !deviceId) return 20
+  const row = database.query('SELECT page_size pageSize FROM device_settings WHERE user_id=? AND device_id=?')
+    .get(userId, deviceId) as { pageSize: number } | null
+  return row && PAGE_SIZE_CHOICES.includes(row.pageSize as PageSizeChoice) ? row.pageSize as PageSizeChoice : 20
+}
+
+export function saveDevicePageSize(userId: number, deviceId: string, pageSize: PageSizeChoice,
+  database: Database = db) {
+  database.query(`INSERT INTO device_settings(user_id,device_id,page_size) VALUES(?,?,?)
+    ON CONFLICT(user_id,device_id) DO UPDATE SET page_size=excluded.page_size,updated_at=CURRENT_TIMESTAMP`)
+    .run(userId, deviceId, pageSize)
+}

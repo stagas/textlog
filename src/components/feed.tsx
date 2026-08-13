@@ -5,6 +5,8 @@ import { hasUnreadForYou, markForYouEntriesRead } from '../for-you-state'
 import { resolveHandle } from '../handles'
 import { enrichPosts, visibleTagFollowerCounts, visibleUserProfileStats } from '../posts'
 import type { PostView } from '../types'
+import { devicePageSize } from '../device-settings'
+import { activeRequest } from '../theme'
 import { fmt, fmtFull, linkify } from '../utils'
 import { Layout } from './layout'
 import { ActionPair, FeedTabs, Pagination } from './page-shared'
@@ -167,7 +169,7 @@ export function Feed({ user, page = 1, title, path = '/for-you', pageUrl, notifi
     ORDER BY timeline.created_at DESC,timeline.event_key DESC`).all({
         viewer: user.id,
         admin: Number(isAdmin(user)),
-      }) as TimelineRow[])
+      }) as TimelineRow[], devicePageSize(activeRequest(), user.id))
   const unreadKeys = snapshot.items.length
     ? new Set((db.query(`SELECT event_key FROM for_you_reads WHERE user_id=? AND event_key IN
       (${snapshot.items.map(() => '?').join(',')})`).all(user.id, ...snapshot.items.map(row => row.event_key)) as {

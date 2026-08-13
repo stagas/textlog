@@ -56,6 +56,9 @@ describe('database migrations', () => {
       'SELECT count(*) count FROM sqlite_master WHERE type=\'table\' AND name=\'notification_user_agents\'',
     ).get()).toEqual({ count: 1 })
     expect(database.query(
+      'SELECT count(*) count FROM sqlite_master WHERE type=\'table\' AND name=\'device_settings\'',
+    ).get()).toEqual({ count: 1 })
+    expect(database.query(
       'SELECT count(*) count FROM sqlite_master WHERE type=\'table\' AND name=\'api_keys\'',
     ).get()).toEqual({ count: 1 })
     expect(database.query(

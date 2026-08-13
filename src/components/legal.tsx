@@ -79,8 +79,9 @@ export function Legal({ user }: { user: User | null }) {
             account. Secret links, session tokens and app entry codes are stored as hashes rather than in readable form.
           </li>
           <li>
-            Theme and accent choices: to remember your appearance settings. These are stored only in an appearance
-            cookie on your device and are not tied to your account in our database.
+            Theme, accent and font choices: to remember your appearance settings. These are stored only in appearance
+            cookies on your device and are not tied to your account in our database. Your page-size choice is stored
+            with your account and an opaque device identifier so it can apply separately to each device.
           </li>
           <li>
             Posts, replies, follows, followed hashtags, blocks and other activity: to publish and distribute content at
@@ -114,7 +115,7 @@ export function Legal({ user }: { user: User | null }) {
         <h3>Retention</h3>
         <p>
           Session records expire after 365 days of inactivity; password-reset, magic-link and email-change records after
-          one hour; the appearance cookie after one year; daily visitor pseudonyms after seven days; and application
+          one hour; appearance cookies after one year; daily visitor pseudonyms after seven days; and application
           HTTP logs after at most 14 days. Public account and content data, connections, followed hashtags and blocks
           are held until you remove them or delete your account. Deletion anonymizes the account and content, while
           limited moderation, resolved report and audit records are retained for three years where needed to document

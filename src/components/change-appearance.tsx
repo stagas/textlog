@@ -1,31 +1,30 @@
 import type { User } from '../db'
+import { PAGE_SIZE_CHOICES, type PageSizeChoice } from '../device-settings'
 import { ACCENT_CHOICES, type Appearance, FONT_CHOICES, FONT_SIZE_CHOICES, type FontChoice,
   type FontSizeChoice, THEME_CHOICES } from '../theme'
 import { Layout } from './layout'
+import { AccountSettingsHeader } from './account-settings-header'
 
-export type AppearanceTab = 'theme' | 'font'
+export type AppearanceTab = 'theme' | 'font' | 'misc'
 
-export function ChangeAppearance({ user, selected, selectedFont, selectedSize = 'regular', tab = 'theme', returnPath }:
+export function ChangeAppearance({ user, selected, selectedFont, selectedSize = 'regular', selectedPageSize = 20,
+  tab = 'theme', returnPath }:
   { user: User; selected: Appearance; selectedFont: FontChoice; selectedSize?: FontSizeChoice; tab?: AppearanceTab;
-    returnPath?: string }) {
-  const backHref = returnPath ? `/account/edit?from=${encodeURIComponent(returnPath)}` : '/account/edit'
+    selectedPageSize?: PageSizeChoice; returnPath?: string }) {
   const fromQuery = returnPath ? `&from=${encodeURIComponent(returnPath)}` : ''
   return (
     <Layout user={user} title="change appearance">
       <section className="appearance-page">
-        <div className="appearance-heading">
-          <div>
-            <span className="eyebrow">account settings</span>
-            <h1>change appearance</h1>
-          </div>
-          <a className="profile-edit-link" href={backHref}>back</a>
-        </div>
+        <AccountSettingsHeader title="appearance" returnPath={returnPath} />
         <nav className="appearance-tabs" aria-label="Appearance settings">
           <a href={`/account/edit/appearance?tab=theme${fromQuery}`} aria-current={tab === 'theme' ? 'page' : undefined}>
             theme
           </a>
           <a href={`/account/edit/appearance?tab=font${fromQuery}`} aria-current={tab === 'font' ? 'page' : undefined}>
             font
+          </a>
+          <a href={`/account/edit/appearance?tab=misc${fromQuery}`} aria-current={tab === 'misc' ? 'page' : undefined}>
+            misc
           </a>
         </nav>
         {tab === 'theme' ? (
@@ -59,7 +58,7 @@ export function ChangeAppearance({ user, selected, selectedFont, selectedSize = 
             </fieldset>
             <button className="button">save theme →</button>
           </form>
-        ) : (
+        ) : tab === 'font' ? (
           <form method="post" action="/account/edit/appearance">
             <input type="hidden" name="tab" value="font" />
             {returnPath && <input type="hidden" name="from" value={returnPath} />}
@@ -88,6 +87,24 @@ export function ChangeAppearance({ user, selected, selectedFont, selectedSize = 
             </fieldset>
             <p className="font-note">Fonts are used from your device. If one is not installed, your system monospace font is shown.</p>
             <button className="button">save font →</button>
+          </form>
+        ) : (
+          <form method="post" action="/account/edit/appearance">
+            <input type="hidden" name="tab" value="misc" />
+            {returnPath && <input type="hidden" name="from" value={returnPath} />}
+            <fieldset>
+              <legend>page size</legend>
+              <div className="misc-options">
+                {PAGE_SIZE_CHOICES.map(size => (
+                  <label key={size} className="misc-option">
+                    <input type="radio" name="pageSize" value={size} defaultChecked={selectedPageSize === size} />
+                    <span>{size}</span>
+                    <span>notes</span>
+                  </label>
+                ))}
+              </div>
+            </fieldset>
+            <button className="button">save misc →</button>
           </form>
         )}
       </section>
