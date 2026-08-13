@@ -3,12 +3,12 @@ import { hasUnreadActivity, markActivityEntriesRead } from '../activity-state'
 import { isAdmin } from '../admin'
 import { db, type User } from '../db'
 import { PAGE_SIZE } from '../pagination'
-import { enrichPosts } from '../posts'
+import { enrichPosts, visibleUserProfileStats } from '../posts'
 import type { PostView } from '../types'
 import { fmt, fmtFull, linkify } from '../utils'
 import { Layout } from './layout'
 import { ActionPair, CursorPagination, FeedTabs } from './page-shared'
-import { Post } from './post'
+import { Post, UserReference } from './post'
 
 const activityPostWhere = `p.deleted_at IS NULL AND
   (parent.user_id=? OR (pm.user_id IS NOT NULL AND p.user_id != ?)) AND
@@ -94,6 +94,9 @@ export function Activity({ user, cursor, title, path = '/activity', pageUrl, not
     || post.activity_kind === 'mention'
   ), user.id)
   const activityById = new Map(activity.map(post => [post.id, post]))
+  const activityProfileStats = visibleUserProfileStats(db,
+    activityPage.filter(post => post.activity_kind === 'follow' || post.activity_kind === 'signup')
+      .map(post => post.user_id), user.id)
   const hasNotes = activityPage.length > 0 || !!db.query(
     'SELECT 1 FROM posts WHERE user_id=? AND deleted_at IS NULL LIMIT 1',
   ).get(user.id)
@@ -118,7 +121,9 @@ export function Activity({ user, cursor, title, path = '/activity', pageUrl, not
                     <div className="activity-follow-content">
                       <div className="activity-follow-main">
                         {!!rawPost.unread && <span className="unread-dot" aria-label="unread" />}
-                        <a href={`/admin/users/${rawPost.user_id}`}>@{rawPost.handle}</a>
+                        <UserReference handle={rawPost.handle} bio={rawPost.bio || ''} noteCount={rawPost.posts || 0}
+                          stats={activityProfileStats.get(rawPost.user_id)} following={!!rawPost.viewerFollowing}
+                          user={user} href={`/admin/users/${rawPost.user_id}`} />
                         <span>signed up:</span>
                         <time dateTime={rawPost.created_at} title={fmtFull(rawPost.created_at)}>
                           {fmt(rawPost.created_at)}
@@ -145,7 +150,9 @@ export function Activity({ user, cursor, title, path = '/activity', pageUrl, not
                     <div className="activity-follow-content">
                       <div className="activity-follow-main">
                         {!!rawPost.unread && <span className="unread-dot" aria-label="unread" />}
-                        <a href={'/u/' + rawPost.handle}>@{rawPost.handle}</a>
+                        <UserReference handle={rawPost.handle} bio={rawPost.bio || ''} noteCount={rawPost.posts || 0}
+                          stats={activityProfileStats.get(rawPost.user_id)} following={!!rawPost.viewerFollowing}
+                          user={user} href={'/u/' + rawPost.handle} />
                         <span>followed you:</span>
                         <time dateTime={rawPost.created_at} title={fmtFull(rawPost.created_at)}>
                           {fmt(rawPost.created_at)}

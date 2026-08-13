@@ -43,6 +43,17 @@ export function visibleUserProfileStats(database: Database, userIds: number[], v
   return new Map(ids.map(id => [id, stats.get(id) || empty()]))
 }
 
+export function visibleTagFollowerCounts(database: Database, tags: string[], viewerId = -1) {
+  const unique = [...new Set(tags)]
+  if (!unique.length) return {} as Record<string, number>
+  return Object.fromEntries((database.query(`SELECT hf.tag,count(*) count FROM hashtag_follows hf
+    JOIN users u ON u.id=hf.user_id WHERE hf.tag IN (${unique.map(() => '?').join(',')})
+    AND u.deleted_at IS NULL AND u.suspended_at IS NULL
+    AND (? < 0 OR NOT EXISTS (SELECT 1 FROM blocks b WHERE
+      (b.blocker_id=? AND b.blocked_id=u.id) OR (b.blocker_id=u.id AND b.blocked_id=?))) GROUP BY hf.tag`)
+    .all(...unique, viewerId, viewerId, viewerId) as { tag: string; count: number }[]).map(row => [row.tag, row.count]))
+}
+
 export function syncPostMetadata(database: Database, postId: number, body: string) {
   const flags = postContentFlags(body)
   database.query('UPDATE posts SET has_latex=?,has_links=?,has_code=? WHERE id=?')
@@ -163,16 +174,7 @@ export function enrichPosts(database: Database, posts: PostView[], viewerId = -1
   }
   const relevantUserIds = [...profileStats.keys()]
   const relevantTags = Object.keys(hashtagCounts)
-  const hashtagFollowerCounts = relevantTags.length
-    ? Object.fromEntries((database.query(`SELECT hf.tag,count(*) count FROM hashtag_follows hf
-      JOIN users u ON u.id=hf.user_id
-      WHERE hf.tag IN (${relevantTags.map(() => '?').join(',')})
-      AND u.deleted_at IS NULL AND u.suspended_at IS NULL
-      AND (? < 0 OR NOT EXISTS (SELECT 1 FROM blocks b WHERE
-        (b.blocker_id=? AND b.blocked_id=u.id) OR (b.blocker_id=u.id AND b.blocked_id=?)))
-      GROUP BY hf.tag`).all(...relevantTags, viewerId, viewerId, viewerId) as { tag: string; count: number }[])
-      .map(row => [row.tag, row.count]))
-    : {}
+  const hashtagFollowerCounts = visibleTagFollowerCounts(database, relevantTags, viewerId)
   const followedUserIds = viewerId < 0 || !relevantUserIds.length ? new Set<number>()
     : new Set((database.query(`SELECT following_id FROM follows WHERE follower_id=? AND following_id IN
       (${relevantUserIds.map(() => '?').join(',')})`).all(viewerId, ...relevantUserIds) as {

@@ -318,9 +318,29 @@ header>.account-nav {
   justify-self: start;
 }
 
-.reference-menu:hover .reference-menu-popover,
+.reference-menu .reference-menu-popover.reference-menu-popover-tag .button {
+  margin-top: var(--space-2);
+}
+
+.reference-menu:hover .reference-menu-popover {
+  display: grid;
+  animation: reference-popover-reveal 0s 500ms both;
+}
+
 .reference-menu:focus-within .reference-menu-popover {
   display: grid;
+  animation: none;
+}
+
+@keyframes reference-popover-reveal {
+  from {
+    visibility: hidden;
+    opacity: 0;
+  }
+  to {
+    visibility: visible;
+    opacity: 1;
+  }
 }
 
 .reference-menu::after {
@@ -365,9 +385,10 @@ header>.account-nav {
   color: var(--accent-dark);
 }
 
-.reference-menu-popover .button {
+.reference-menu .reference-menu-popover .button {
   width: fit-content;
   margin-top: var(--space-2);
+  padding: var(--space-3) var(--space-4);
   font: inherit;
   white-space: nowrap;
 }
@@ -378,7 +399,7 @@ header>.account-nav {
   color: var(--button-ink);
 }
 
-.reference-menu-popover form,
+.reference-menu .reference-menu-popover form,
 .reference-follow-form {
   margin: 0;
 }

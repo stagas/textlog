@@ -2,10 +2,12 @@ import type { PersonView, PostView, ProfileRow, TagView } from '../types'
 
 import React from 'react'
 import { isAdmin } from '../admin'
-import type { User } from '../db'
+import { db, type User } from '../db'
 import { hasUnreadForYou } from '../for-you-state'
+import { visibleTagFollowerCounts, visibleUserProfileStats } from '../posts'
 import { searchTerms } from '../search'
 import { linkify } from '../utils'
+import { TagReference, UserReference } from './post'
 
 const postTitleLength = 60
 
@@ -494,15 +496,16 @@ export function TagPeopleList({ user, tags, followingKey = 'following', highligh
   followingKey?: 'following' | 'viewerFollowing'
   highlightTerms?: string[]
 }) {
+  const followerCounts = visibleTagFollowerCounts(db, tags.map(tag => tag.tag), user?.id ?? -1)
   return (
     <div className="people tag-people">
       {tags.map(tag => (
         <article key={tag.tag}>
           <div>
             <div>
-              <a href={`/tag/${encodeURIComponent(tag.tag)}`}>
-                #<HighlightedText text={tag.tag} terms={highlightTerms} />
-              </a>
+              <TagReference tag={tag.tag} noteCount={tag.count} followerCount={followerCounts[tag.tag] || 0}
+                following={tag[followingKey]} user={user}
+                label={<>#<HighlightedText text={tag.tag} terms={highlightTerms} /></>} />
               <small>{tag.count} {tag.count === 1 ? 'note' : 'notes'}</small>
             </div>
             {user && (
@@ -519,14 +522,16 @@ export function TagPeopleList({ user, tags, followingKey = 'following', highligh
   )
 }
 
-export function BlockedTagList({ tags }: { tags: TagView[] }) {
+export function BlockedTagList({ user, tags }: { user: User; tags: TagView[] }) {
+  const followerCounts = visibleTagFollowerCounts(db, tags.map(tag => tag.tag), user.id)
   return (
     <div className="people tag-people">
       {tags.map(tag => (
         <article key={tag.tag}>
           <div>
             <div>
-              <a href={`/tag/${encodeURIComponent(tag.tag)}`}>#{tag.tag}</a>
+              <TagReference tag={tag.tag} noteCount={tag.count} followerCount={followerCounts[tag.tag] || 0}
+                user={user} showFollowAction={false} />
               <small>{tag.count} {tag.count === 1 ? 'note' : 'notes'}</small>
             </div>
             <form method="post" action={`/tag-block/${encodeURIComponent(tag.tag)}`}>
@@ -539,14 +544,16 @@ export function BlockedTagList({ tags }: { tags: TagView[] }) {
   )
 }
 
-export function BlockedPeopleList({ people }: { people: PersonView[] }) {
+export function BlockedPeopleList({ user, people }: { user: User; people: PersonView[] }) {
+  const profileStats = visibleUserProfileStats(db, people.map(person => person.id), user.id)
   return (
     <div className="people">
       {people.map(person => (
         <article key={person.id}>
           <div>
             <div>
-              <a href={`/u/${person.handle}`}>@{person.handle}</a>
+              <UserReference handle={person.handle} bio={person.bio} noteCount={person.posts}
+                stats={profileStats.get(person.id)} user={user} href={`/u/${person.handle}`} showFollowAction={false} />
               <small>{person.posts} {person.posts === 1 ? 'note' : 'notes'}</small>
             </div>
             <form method="post" action={`/block/${person.handle}`}>
@@ -566,15 +573,16 @@ export function ConnectionPeople({ user, people, className = '', highlightTerms 
   highlightTerms?: string[]
   returnPath?: (person: PersonView) => string
 }) {
+  const profileStats = visibleUserProfileStats(db, people.map(person => person.id), user?.id ?? -1)
   return (
     <div className={`people ${className}`.trim()}>
       {people.map(person => (
         <article key={person.id} id={`person-${person.id}`}>
           <div>
             <div>
-              <a href={`/u/${person.handle}`}>
-                @<HighlightedText text={person.handle} terms={highlightTerms} />
-              </a>
+              <UserReference handle={person.handle} bio={person.bio} noteCount={person.posts}
+                stats={profileStats.get(person.id)} following={person.viewerFollowing} user={user}
+                href={`/u/${person.handle}`} label={<>@<HighlightedText text={person.handle} terms={highlightTerms} /></>} />
               <small>{person.posts} {person.posts === 1 ? 'note' : 'notes'}</small>
             </div>
             {user && user.id !== person.id && (

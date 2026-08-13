@@ -47,7 +47,7 @@ export function Connections(
               <h2>Tags</h2>
               {tags.length
                 ? kind === 'blocked'
-                  ? <BlockedTagList tags={tags} />
+                  ? <BlockedTagList user={user!} tags={tags} />
                   : <TagPeopleList user={user} tags={tags} followingKey="viewerFollowing" />
                 : (
                   <div className="empty connections-empty">
@@ -68,7 +68,7 @@ export function Connections(
               <h2>People</h2>
               {people.length
                 ? kind === 'blocked'
-                  ? <BlockedPeopleList people={people} />
+                  ? <BlockedPeopleList user={user!} people={people} />
                   : <ConnectionPeople user={user} people={people} />
                 : (
                   <div className="empty connections-empty">

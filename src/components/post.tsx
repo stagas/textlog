@@ -7,9 +7,10 @@ import type { PostView, UserProfileStats } from '../types'
 import { fmt, fmtFull, linkify, referenceFormId } from '../utils'
 
 export function UserReference({ handle, bio, noteCount, following, user, href, rel, currentHandle, stats,
-  navigationQuery = '' }: {
+  navigationQuery = '', showFollowAction = true, label }: {
   handle: string; bio?: string; noteCount: number; following?: boolean; user: User | null; href?: string; rel?: string;
-  currentHandle?: string; stats?: UserProfileStats; navigationQuery?: string }) {
+  currentHandle?: string; stats?: UserProfileStats; navigationQuery?: string; showFollowAction?: boolean;
+  label?: React.ReactNode }) {
   const ownUser = (user?.handle || currentHandle)?.toLowerCase() === handle.toLowerCase()
   const followReturnPath = new URLSearchParams(navigationQuery.slice(1)).get('from') || undefined
   const profileHref = (tab?: string) => tab
@@ -18,8 +19,8 @@ export function UserReference({ handle, bio, noteCount, following, user, href, r
   return (
     <span className="reference-menu">
       {href
-        ? <a className="reference-menu-trigger postauthor" href={href} rel={rel}>@{handle}</a>
-        : <span className="reference-menu-trigger postauthor" tabIndex={0}>@{handle}</span>}
+        ? <a className="reference-menu-trigger postauthor" href={href} rel={rel}>{label || <>@{handle}</>}</a>
+        : <span className="reference-menu-trigger postauthor" tabIndex={0}>{label || <>@{handle}</>}</span>}
       <span className="reference-menu-popover">
         {stats
           ? <span className="reference-profile-tabs">
@@ -36,7 +37,7 @@ export function UserReference({ handle, bio, noteCount, following, user, href, r
         <span className="reference-popover-bio" dangerouslySetInnerHTML={{
           __html: linkify(bio || 'No bio yet.', {}, [], undefined, undefined, navigationQuery),
         }} />
-        {!ownUser && (user
+        {showFollowAction && !ownUser && (user
           ? <form method="post" action={'/follow/' + handle}>
               {followReturnPath && <input type="hidden" name="from" value={followReturnPath} />}
               <button className={`button${following ? ' button-muted' : ''}`} type="submit">
@@ -47,6 +48,34 @@ export function UserReference({ handle, bio, noteCount, following, user, href, r
       </span>
     </span>
   )
+}
+
+export function TagReference({ tag, noteCount, followerCount, following, user, href, navigationQuery = '',
+  showFollowAction = true, label }: { tag: string; noteCount: number; followerCount: number; following?: boolean;
+    user: User | null; href?: string; navigationQuery?: string; showFollowAction?: boolean; label?: React.ReactNode }) {
+  const tagPath = `/tag/${encodeURIComponent(tag)}`
+  const followReturnPath = new URLSearchParams(navigationQuery.slice(1)).get('from') || undefined
+  const count = (value: number, singular: string) =>
+    `${value.toLocaleString()} ${value === 1 ? singular : singular + 's'}`
+  return <span className="reference-menu">
+    <a className="reference-menu-trigger" href={href || tagPath + navigationQuery}>{label || <>#{tag}</>}</a>
+    <span className="reference-menu-popover reference-menu-popover-tag">
+      <span className="reference-profile-tabs">
+        <a href={tagPath + navigationQuery}>{count(noteCount, 'note')}</a>
+        <a href={`${tagPath}?tab=followers${navigationQuery ? `&${navigationQuery.slice(1)}` : ''}`}>
+          {count(followerCount, 'follower')}
+        </a>
+      </span>
+      {showFollowAction && (user
+        ? <form method="post" action={`/tag-follow/${encodeURIComponent(tag)}`}>
+            {followReturnPath && <input type="hidden" name="from" value={followReturnPath} />}
+            <button className={`button${following ? ' button-muted' : ''}`} type="submit">
+              {following ? 'unfollow' : 'follow'}
+            </button>
+          </form>
+        : <a className="button" href="/enter" rel="nofollow">enter to follow</a>)}
+    </span>
+  </span>
 }
 
 function ReferenceFollowForms({ post, prefix, user, returnPath }: { post: PostView | NonNullable<PostView['parent']>;

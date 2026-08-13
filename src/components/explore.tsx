@@ -2,11 +2,13 @@ import { appName } from '../brand'
 import { db, type User } from '../db'
 import { suggestedPeople, suggestedPeopleCount, trendingTagCount, trendingTags } from '../explore'
 import { TAG_PAGE_SIZE } from '../pagination'
+import { visibleUserProfileStats } from '../posts'
 import type { PersonView } from '../types'
 import { linkify } from '../utils'
 import { Layout } from './layout'
 import { ActionPair, Pagination, TagPeopleList } from './page-shared'
 import { SearchForm } from './search'
+import { UserReference } from './post'
 
 const PEOPLE_PAGE_SIZE = 6
 
@@ -31,6 +33,7 @@ export function Explore({ user, welcome = false, peopleIds, tagsPage = 1, people
       .sort((a, b) => savedIds.indexOf(a.id) - savedIds.indexOf(b.id))
     : suggestedPeople(db, viewerId, PEOPLE_PAGE_SIZE, undefined, (peoplePage - 1) * PEOPLE_PAGE_SIZE)
   const explorePeople = people.map(p => p.id).join(',')
+  const profileStats = visibleUserProfileStats(db, people.map(person => person.id), viewerId)
   const tags = trendingTags(db, viewerId, TAG_PAGE_SIZE, undefined, (tagsPage - 1) * TAG_PAGE_SIZE)
   const peopleTotal = suggestedPeopleCount(db, viewerId)
   const tagsTotal = trendingTagCount(db, viewerId)
@@ -81,7 +84,8 @@ export function Explore({ user, welcome = false, peopleIds, tagsPage = 1, people
               <article key={p.id} id={`person-${p.id}`}>
                 <div>
                   <div>
-                    <a href={'/u/' + p.handle}>@{p.handle}</a>
+                    <UserReference handle={p.handle} bio={p.bio} noteCount={p.posts}
+                      stats={profileStats.get(p.id)} following={p.following} user={user} href={'/u/' + p.handle} />
                     <small>{p.posts} {p.posts === 1 ? 'note' : 'notes'}</small>
                   </div>
                   {user && (

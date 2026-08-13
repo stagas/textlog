@@ -2,12 +2,13 @@ import { isAdmin } from '../admin'
 import { db, type User } from '../db'
 import { feedSnapshotPage } from '../feed-snapshots'
 import { hasUnreadForYou, markForYouEntriesRead } from '../for-you-state'
-import { enrichPosts, visibleUserProfileStats } from '../posts'
+import { resolveHandle } from '../handles'
+import { enrichPosts, visibleTagFollowerCounts, visibleUserProfileStats } from '../posts'
 import type { PostView } from '../types'
 import { fmt, fmtFull, linkify } from '../utils'
 import { Layout } from './layout'
 import { ActionPair, FeedTabs, Pagination } from './page-shared'
-import { Post, UserReference } from './post'
+import { Post, TagReference, UserReference } from './post'
 
 export type ForYouCursor = { createdAt: string; key: string; direction: 'next' | 'previous' }
 
@@ -175,6 +176,14 @@ export function Feed({ user, page = 1, title, path = '/for-you', pageUrl, notifi
     : new Set<string>()
   const timeline = snapshot.items.map(row => ({ ...row, unread: Number(!unreadKeys.has(row.event_key)) }))
   const actorProfileStats = visibleUserProfileStats(db, timeline.map(row => row.actor_id), user.id)
+  const targetUsers = new Map(timeline.flatMap(row => {
+    if (!row.target_handle) return []
+    const resolved = resolveHandle(db, row.target_handle)
+    return resolved ? [[row.target_handle, resolved.id] as const] : []
+  }))
+  const targetProfileStats = visibleUserProfileStats(db, [...targetUsers.values()], user.id)
+  const tagFollowerCounts = visibleTagFollowerCounts(db,
+    timeline.flatMap(row => row.target_tag ? [row.target_tag] : []), user.id)
   markForYouEntriesRead(user.id, timeline.filter(row => row.unread).map(row => row.event_key))
   const enriched = enrichPosts(db, timeline.filter(row => ['post', 'reply', 'mention'].includes(row.activity_kind)),
     user.id)
@@ -222,9 +231,14 @@ export function Feed({ user, page = 1, title, path = '/for-you', pageUrl, notifi
                         : 'followed'}
                     </span>
                     {!row.target_is_viewer && row.activity_kind === 'user_follow'
-                      ? <a href={`/u/${row.target_handle}${fromQuery}`}>@{row.target_handle}</a>
+                      ? <UserReference handle={row.target_handle!} bio={row.target_bio || ''}
+                        noteCount={row.posts || 0} stats={targetProfileStats.get(targetUsers.get(row.target_handle!)!)}
+                        following={!!row.following} user={user} href={`/u/${row.target_handle}${fromQuery}`}
+                        navigationQuery={fromQuery} />
                       : row.activity_kind === 'tag_follow'
-                      ? <a href={`/tag/${row.target_tag}${fromQuery}`}>#{row.target_tag}</a>
+                      ? <TagReference tag={row.target_tag!} noteCount={row.posts || 0}
+                        followerCount={tagFollowerCounts[row.target_tag!] || 0} following={!!row.following} user={user}
+                        href={`/tag/${encodeURIComponent(row.target_tag!)}${fromQuery}`} navigationQuery={fromQuery} />
                       : null}
                     {row.posts !== null
                       ? (
