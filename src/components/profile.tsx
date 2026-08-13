@@ -81,7 +81,10 @@ export function Profile(
                   {returnPath && <input type="hidden" name="from" value={returnPath} />}
                   <FormMessage error={error} />
                   <label>
-                    handle<input name="handle" required pattern="[A-Za-z0-9_]{2,24}" defaultValue={editHandle} />
+                    handle<input name="handle" aria-describedby="profile-handle-help" defaultValue={editHandle} />
+                    <span id="profile-handle-help" className="form-hint">
+                      Handles must be 2–24 characters and use only letters, numbers, or underscores.
+                    </span>
                   </label>
                   <label>
                     bio<textarea name="bio" maxLength={160} defaultValue={bio}

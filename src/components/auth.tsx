@@ -136,8 +136,11 @@ export function ChooseHandle({ error, handle = '', next }: { error?: string; han
           {error && <p className="status-message status-error" role="alert">{error}</p>}
           <form method="post" action="/choose-handle">
             {next && <input type="hidden" name="next" value={next} />}
-            <input name="handle" aria-label="handle" required pattern="[A-Za-z0-9_]{2,24}" autoFocus
+            <input name="handle" aria-label="handle" aria-describedby="handle-help" autoFocus
               defaultValue={handle} placeholder="your_handle" />
+            <p id="handle-help" className="form-hint">
+              Handles must be 2–24 characters and use only letters, numbers, or underscores.
+            </p>
             <button className="button">continue</button>
           </form>
         </div>

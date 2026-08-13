@@ -543,11 +543,23 @@ describe('Auth', () => {
     expect(html).not.toContain('type="password"')
   })
 
-  test('handle choice keeps handle validation', () => {
+  test('handle choice explains validation without blocking the server submission', () => {
     const html = renderToStaticMarkup(React.createElement(ChooseHandle))
 
-    expect(html).toContain('pattern="[A-Za-z0-9_]{2,24}"')
+    expect(html).toContain('Handles must be 2–24 characters')
+    expect(html).toContain('aria-describedby="handle-help"')
+    expect(html).not.toContain('pattern=')
     expect(html).toContain('action="/choose-handle"')
+  })
+
+  test('handle choice preserves a rejected submitted handle and character-count error', () => {
+    const html = renderToStaticMarkup(React.createElement(ChooseHandle, {
+      handle: 'Too long!',
+      error: 'You typed 9 characters. Use 2–24 letters, numbers, or underscores.',
+    }))
+
+    expect(html).toContain('value="Too long!"')
+    expect(html).toContain('You typed 9 characters.')
   })
 
   test('carries a next destination through entry', () => {
@@ -743,6 +755,9 @@ test('Profile edit offers a data download without rendering notes', () => {
   expect(html).toContain('href="/account/edit/font?from=%2Flatest%3Fpage%3D2"')
   expect(html).toContain('href="/account/security?from=%2Flatest%3Fpage%3D2"')
   expect(html).toContain('href="/account/edit/notifications?from=%2Flatest%3Fpage%3D2"')
+  expect(html).toContain('Handles must be 2–24 characters')
+  expect(html).toContain('aria-describedby="profile-handle-help"')
+  expect(html).not.toContain('pattern="[A-Za-z0-9_]{2,24}"')
   expect(html).not.toContain('hidden while editing')
 })
 

@@ -156,8 +156,11 @@ export function registerAccountRoutes(app: Hono) {
     const handle = submittedHandle.toLowerCase().replace(/^@/, '')
     const validHandle = /^[a-z0-9_]{2,24}$/.test(handle)
     if (!validHandle || !validBioBody(bio)) {
+      const handleCharacters = Array.from(submittedHandle).length
       const error = [
-        !validHandle ? 'Use a 2–24 character username.' : '',
+        !validHandle
+          ? `You typed ${handleCharacters} ${handleCharacters === 1 ? 'character' : 'characters'}. Use 2–24 letters, numbers, or underscores.`
+          : '',
         !validBioBody(bio) ? bioBodyValidationMessage(bio) : '',
       ].filter(Boolean).join(' ')
       return page(

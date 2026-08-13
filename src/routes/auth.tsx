@@ -302,10 +302,14 @@ export function registerAuthRoutes(app: Hono) {
     if (!user) return redirect('/enter')
     if (user.handle_chosen_at) return redirect('/')
     const f = await form(c.req.raw)
-    const handle = (f.handle || '').trim().toLowerCase().replace(/^@/, '')
+    const submittedHandle = f.handle || ''
+    const handle = submittedHandle.trim().toLowerCase().replace(/^@/, '')
     const next = safeNext(f.next)
     if (!/^[a-z0-9_]{2,24}$/.test(handle)) {
-      return page(<ChooseHandle handle={handle} next={next} error="Use 2–24 letters, numbers, or underscores." />, 400)
+      const characters = Array.from(submittedHandle).length
+      return page(<ChooseHandle handle={submittedHandle} next={next}
+        error={`You typed ${characters} ${characters === 1 ? 'character' : 'characters'}. Use 2–24 letters, numbers, or underscores.`} />,
+      400)
     }
     const moderation = await moderateText(`handle: ${handle}`)
     if (!moderation.ok) {

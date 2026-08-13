@@ -200,6 +200,25 @@ test('email code signs up and invalidates its matching magic link', async () => 
   expect(await reusedLink.text()).toContain('magic link is invalid or has expired')
 })
 
+test('handle choice accepts invalid submissions and reports their character count', async () => {
+  const email = 'invalid-handle@example.com'
+  await request('/enter', { method: 'POST', form: { email } })
+  const message = capturedEmails().filter(item => item.to === email).at(-1)
+  expect(message).toBeDefined()
+  const magic = await request(`/enter/magic?token=${encodeURIComponent(linkToken(message!))}`)
+  const cookie = sessionCookie(magic)
+
+  const response = await request('/choose-handle', {
+    method: 'POST',
+    cookie,
+    form: { handle: 'bad handle!' },
+  })
+  expect(response.status).toBe(400)
+  const html = await response.text()
+  expect(html).toContain('You typed 11 characters.')
+  expect(html).toContain('value="bad handle!"')
+})
+
 test('account security creates one-time, revocable API keys', async () => {
   const cookie = await signup('keyuser', 'keyuser@example.com', 'unused')
   const form = await request('/account/api-keys/new', { cookie })
@@ -483,6 +502,7 @@ test('consequential account, content, reporting, and admin flows work over HTTP'
   expect(invalidProfile.status).toBe(400)
   const invalidProfileHtml = await invalidProfile.text()
   expect(invalidProfileHtml).toContain('value="Alice!"')
+  expect(invalidProfileHtml).toContain('You typed 6 characters.')
   expect(invalidProfileHtml).toContain('remember profile bio')
   const multilineBio = Array(6).fill('bio line').join('\n')
   const invalidMultilineBio = await request('/account/edit', {
