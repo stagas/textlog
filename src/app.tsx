@@ -1,5 +1,5 @@
-import { applyHtmlCachePolicy, GLOBAL_REQUEST_BODY_LIMIT, isSameOriginRequest, RequestBodyError, requiresSameOrigin,
-  safeLocalPath, securityHeaders, sessionCookie } from './http'
+import { applyHtmlCachePolicy, crawlerCanonicalRedirect, GLOBAL_REQUEST_BODY_LIMIT, isSameOriginRequest,
+  RequestBodyError, requiresSameOrigin, safeLocalPath, securityHeaders, sessionCookie } from './http'
 
 import { Hono } from 'hono'
 import { bodyLimit } from 'hono/body-limit'
@@ -79,6 +79,12 @@ app.use('*', bodyLimit({
   maxSize: GLOBAL_REQUEST_BODY_LIMIT,
   onError: c => clientErrorPage(c.req.raw, 413),
 }))
+
+app.use('*', async (c, next) => {
+  const redirect = crawlerCanonicalRedirect(c.req.raw)
+  if (redirect) return redirect
+  await next()
+})
 
 app.use('*', async (c, next) => {
   await next()

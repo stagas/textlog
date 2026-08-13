@@ -83,11 +83,13 @@ async function request(path: string, options: {
   token?: string
   form?: Record<string, string>
   json?: unknown
+  userAgent?: string
 } = {}) {
   const method = options.method || 'GET'
   const headers = new Headers()
   if (options.cookie) headers.set('cookie', options.cookie)
   if (options.token) headers.set('authorization', `Bearer ${options.token}`)
+  if (options.userAgent) headers.set('user-agent', options.userAgent)
   if (method !== 'GET') headers.set('origin', origin)
   if (options.json !== undefined) headers.set('content-type', 'application/json')
   return await fetch(`${origin}${path}`, {
@@ -591,6 +593,13 @@ test('consequential account, content, reporting, and admin flows work over HTTP'
   expect(navigatedPost.headers.get('link')).toContain(`<${origin}/post/${post.id}>; rel="canonical"`)
   expect(navigatedPost.headers.get('link')).not.toContain('from=')
   expect(await navigatedPost.text()).toContain('rel="nofollow"')
+  const crawledPost = await request(
+    `/post/${post.id}?page=2&from=${encodeURIComponent('/latest#post-1')}`,
+    { userAgent: 'Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)' },
+  )
+  expect(crawledPost.status).toBe(302)
+  expect(crawledPost.headers.get('location')).toBe(`${origin}/post/${post.id}?page=2`)
+  expect(crawledPost.headers.get('vary')).toContain('User-Agent')
   const privatePost = await request(`/post/${post.id}`, { cookie: aliceCookie })
   expect(privatePost.headers.get('cache-control')).toBe('private, no-store')
   const privateReplyForm = await request(`/post/${post.id}?reply=1`, { cookie: aliceCookie })

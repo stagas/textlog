@@ -1,7 +1,7 @@
 import { describe, expect, test } from 'bun:test'
-import { applyHtmlCachePolicy, clearSessionCookie, feedPreference, feedPreferenceCookie, FORM_REQUEST_BODY_LIMIT,
-  htmlCacheControl, isSameOriginRequest, limitedFormData, RequestBodyError, requiresSameOrigin, safeLocalPath,
-  safeRefererPath, securityHeaders, sessionCookie, stringField } from './http'
+import { applyHtmlCachePolicy, clearSessionCookie, crawlerCanonicalRedirect, feedPreference, feedPreferenceCookie,
+  FORM_REQUEST_BODY_LIMIT, htmlCacheControl, isCrawlerRequest, isSameOriginRequest, limitedFormData, RequestBodyError,
+  requiresSameOrigin, safeLocalPath, safeRefererPath, securityHeaders, sessionCookie, stringField } from './http'
 
 describe('local redirects', () => {
   test('accepts local paths and rejects ambiguous or external targets', () => {
@@ -17,6 +17,27 @@ describe('local redirects', () => {
     expect(safeRefererPath('https://textlog.cc/explore?page=2', request, '/', null)).toBe('/explore?page=2')
     expect(safeRefererPath('https://evil.example/explore', request, '/', null)).toBe('/')
     expect(safeRefererPath('not a url', request, '/', null)).toBe('/')
+  })
+
+  test('redirects crawlers away from navigation-only from parameters', () => {
+    const crawler = new Request('https://internal.test/post/42?page=2&from=%2Flatest%23post-42', {
+      headers: { 'user-agent': 'Mozilla/5.0 (compatible; Googlebot/2.1)' },
+    })
+    expect(isCrawlerRequest(crawler)).toBe(true)
+    const response = crawlerCanonicalRedirect(crawler, 'https://textlog.cc')
+    expect(response?.status).toBe(302)
+    expect(response?.headers.get('location')).toBe('https://textlog.cc/post/42?page=2')
+    expect(response?.headers.get('vary')).toBe('User-Agent')
+    expect(response?.headers.get('cache-control')).toBe('private, no-store')
+  })
+
+  test('does not redirect people or crawler URLs without from', () => {
+    expect(crawlerCanonicalRedirect(new Request('https://textlog.cc/post/42?from=%2Flatest', {
+      headers: { 'user-agent': 'Mozilla/5.0 Safari/605.1.15' },
+    }))).toBeNull()
+    expect(crawlerCanonicalRedirect(new Request('https://textlog.cc/post/42', {
+      headers: { 'user-agent': 'bingbot/2.0' },
+    }))).toBeNull()
   })
 })
 

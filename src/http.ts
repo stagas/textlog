@@ -205,6 +205,26 @@ export function applyHtmlCachePolicy(request: Request, response: Response) {
   if (!values.includes('cookie')) response.headers.set('vary', vary ? `${vary}, Cookie` : 'Cookie')
 }
 
+const crawlerUserAgent = /(?:\bbot\b|bot[\s/_-]|crawler|spider|slurp|facebookexternalhit|ia_archiver)/i
+
+export function isCrawlerRequest(request: Request) {
+  return crawlerUserAgent.test(request.headers.get('user-agent') || '')
+}
+
+export function crawlerCanonicalRedirect(request: Request, appUrl: string | undefined = Bun.env.APP_URL) {
+  if (request.method !== 'GET' || !isCrawlerRequest(request)) return null
+  const url = new URL(request.url)
+  if (!url.searchParams.has('from')) return null
+  url.searchParams.delete('from')
+  const origin = appUrl ? new URL(appUrl).origin : url.origin
+  const location = origin + url.pathname + url.search
+  return new Response(null, { status: 302, headers: {
+    location,
+    'cache-control': 'private, no-store',
+    vary: 'User-Agent',
+  } })
+}
+
 export type FeedPreference = 'following' | 'activity' | 'hot' | 'latest'
 
 export function feedPreference(request: Request): FeedPreference | null {
