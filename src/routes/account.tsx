@@ -33,12 +33,28 @@ import {
   notificationUserAgent,
 } from '../http'
 import { moderateText, moderationMessage } from '../moderation'
+import { normalizeSearchQuery, searchPeople, searchTags } from '../search'
+import type { PostingSuggestionSearch } from '../components/page-shared'
 import { accountForPasswordEnableToken, issuePasswordEnableToken } from '../password-enable'
 import { vapidPublicKey } from '../push'
 import { sessionHash } from '../sessions'
 import { ACCENT_CHOICES, type AccentChoice, appearance, appearanceCookie, FONT_CHOICES, FONT_SIZE_CHOICES,
   type FontChoice, fontChoice, fontCookie, type FontSizeChoice, fontSizeChoice, fontSizeCookie, THEME_CHOICES,
   type ThemeChoice } from '../theme'
+
+function profileSuggestionSearch(fields: Record<string, string>, viewerId: number): PostingSuggestionSearch | null {
+  if (fields.action !== 'search-hashtags' && fields.action !== 'search-mentions') return null
+  const kind = fields.action === 'search-hashtags' ? 'hashtags' : 'mentions'
+  const value = kind === 'hashtags' ? fields.hashtag_query : fields.mention_query
+  const query = normalizeSearchQuery(normalizeSearchQuery(value).replace(kind === 'hashtags' ? /^#+\s*/u : /^@+\s*/u, ''))
+  const result = kind === 'hashtags'
+    ? searchTags(db, query, viewerId, 1, { followedFirst: true })
+    : searchPeople(db, query, viewerId, 1, { followedFirst: true, handleOnly: true })
+  const results = kind === 'hashtags'
+    ? result.rows.map(row => 'tag' in row ? row.tag : '')
+    : result.rows.map(row => 'handle' in row ? row.handle : '')
+  return { kind, query, results, truncated: result.total > 20 }
+}
 
 export function registerAccountRoutes(app: Hono) {
   app.get('/account/edit/notifications', c => {
@@ -165,6 +181,13 @@ export function registerAccountRoutes(app: Hono) {
     const submittedBio = normalizeBioBody(f.bio || '')
     const bio = submittedBio.trim() ? submittedBio : ''
     const submittedHandle = f.handle || ''
+    const suggestionSearch = profileSuggestionSearch(f, user.id)
+    if (suggestionSearch) {
+      return page(
+        <Profile user={user} profile={user} posts={[]} following={false} bio={bio} editHandle={submittedHandle}
+          editing returnPath={returnPath} suggestionSearch={suggestionSearch} />,
+      )
+    }
     const handle = submittedHandle.toLowerCase().replace(/^@/, '')
     const validHandle = /^[a-z0-9_]{2,24}$/.test(handle)
     if (!validHandle || !validBioBody(bio)) {

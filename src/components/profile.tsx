@@ -4,14 +4,15 @@ import { visibleHashtagCounts, visibleTagFollowerCounts } from '../posts'
 import type { PostView, ProfileRow } from '../types'
 import { linkify, referenceFormId } from '../utils'
 import { Layout } from './layout'
-import { FormMessage, Pagination, PostingHelp, ProfileControls, ProfileHeader, ProfileTabs } from './page-shared'
+import { FormMessage, Pagination, PostingHelp, PostingSuggestionResults, type PostingSuggestionSearch,
+  ProfileControls, ProfileHeader, ProfileTabs } from './page-shared'
 import { Post } from './post'
 
 export function Profile(
   { user, profile, posts, following, bio = profile.bio || '', editHandle = profile.handle, editEmail = profile.email,
     error, editing = false, total = posts.length, noteCount = total, replyCount = 0, tab = 'notes', followerCount = 0,
     followingCount = 0, followingTagCount = 0, blockedPeopleCount = 0, blockedTagCount = 0, blocked = false,
-    blockedByProfile = false, social, page = 1, totalPages = 1, returnPath }: {
+    blockedByProfile = false, social, page = 1, totalPages = 1, returnPath, suggestionSearch }: {
       user: User | null
       profile: ProfileRow
       posts: PostView[]
@@ -35,6 +36,7 @@ export function Profile(
       page?: number
       totalPages?: number
       returnPath?: string
+      suggestionSearch?: PostingSuggestionSearch | null
       social?: { description: string; image: string; url: string; type?: 'article' | 'profile'; imageAlt?: string }
     },
 ) {
@@ -117,8 +119,9 @@ export function Profile(
                       placeholder="Tell people a little about yourself…" autoComplete="off" inputMode="text"
                       enterKeyHint="enter" />
                   </label>
+                  <PostingSuggestionResults search={suggestionSearch} />
                   <div className="composefoot">
-                    <PostingHelp maxLength={160} maxLines={5} />
+                    <PostingHelp maxLength={160} maxLines={5} search={suggestionSearch} />
                     <button className="button">save profile →</button>
                   </div>
                 </form>
