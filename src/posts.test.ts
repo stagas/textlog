@@ -38,6 +38,17 @@ describe('post persistence', () => {
         'read <a href="https://example.com/people/O&#39;Brien/profile" target="_blank" rel="nofollow ugc noopener noreferrer">https://example.com/people/O&#39;Brien/profile</a>',
       )
   })
+  test('shortens long URL labels without changing their destinations', () => {
+    expect(linkify('https://www.example.com/a/very/long/path/final-part/?tracking=123'))
+      .toBe(
+        '<a href="https://www.example.com/a/very/long/path/final-part/?tracking=123" title="https://www.example.com/a/very/long/path/final-part/?tracking=123" target="_blank" rel="nofollow ugc noopener noreferrer">www.example.com/…/final-part/</a>',
+      )
+    expect(linkify('https://example.com/short')).toContain('>https://example.com/short</a>')
+    expect(linkify('https://example.com/archive/a-very-long-final-segment-with-important-ending/'))
+      .toContain('>example.com/…/a-very-long-final-…with-important-ending/</a>')
+    expect(linkify('https://example.com/archive/intro.section-containing-several-words.and-a-useful-ending/'))
+      .toContain('>example.com/…/intro.section-containing-…and-a-useful-ending/</a>')
+  })
   test('supports Markdown links', () => {
     expect(linkify('[test](https://example.com/)'))
       .toBe(

@@ -85,8 +85,45 @@ function linkAttributes(url: string, appUrl: string | undefined) {
     : ' rel="nofollow ugc"'
 }
 
+const LONG_URL_LABEL_LENGTH = 48
+const LONG_URL_PART_LENGTH = 40
+const URL_PART_START_LENGTH = 20
+const URL_PART_END_LENGTH = LONG_URL_PART_LENGTH - URL_PART_START_LENGTH - 1
+
+function shortenedUrlPart(part: string) {
+  const characters = [...part]
+  if (characters.length <= LONG_URL_PART_LENGTH) return part
+  const boundaries = characters.flatMap((character, index) => /[^\p{L}\p{M}\p{N}_]/u.test(character) ? [index] : [])
+  const closestBoundary = (target: number) => boundaries.reduce((closest, index) =>
+    Math.abs(index - target) < Math.abs(closest - target) ? index : closest, boundaries[0])
+  const startBoundary = boundaries.length ? closestBoundary(URL_PART_START_LENGTH - 1) : -1
+  const endTarget = characters.length - URL_PART_END_LENGTH - 1
+  const endBoundary = boundaries.length ? closestBoundary(endTarget) : -1
+  const start = startBoundary >= 0 && startBoundary < endBoundary
+    ? characters.slice(0, startBoundary + 1)
+    : characters.slice(0, URL_PART_START_LENGTH)
+  const end = endBoundary > startBoundary
+    ? characters.slice(endBoundary + 1)
+    : characters.slice(-URL_PART_END_LENGTH)
+  return `${start.join('')}…${end.join('')}`
+}
+
+function shortenedUrlLabel(url: string) {
+  if (url.length <= LONG_URL_LABEL_LENGTH) return url
+  try {
+    const parsed = new URL(url)
+    const parts = parsed.pathname.split('/').filter(Boolean)
+    if (!parts.length) return parsed.hostname
+    const trailingSlash = parsed.pathname.endsWith('/') ? '/' : ''
+    return `${parsed.hostname}/…/${shortenedUrlPart(parts.at(-1)!)}${trailingSlash}`
+  }
+  catch {
+    return url
+  }
+}
+
 function linkLabel(url: string, appUrl: string | undefined) {
-  if (!appUrl || !url.startsWith(appUrl)) return url
+  if (!appUrl || !url.startsWith(appUrl)) return shortenedUrlLabel(url)
   const relative = url.slice(appUrl.length)
   if (!relative) return '/'
   return relative.startsWith('/') ? relative : `/${relative}`
@@ -263,8 +300,9 @@ function linkifyAsciiReferences(body: string, mentionBios: Record<string, string
     else {
       const url = match.url!
       const label = linkLabel(url, appUrl)
-      html += `<a href="${esc(url)}"${label === url ? '' : ` title="${esc(url)}"`}${linkAttributes(url, appUrl)}>${
-        esc(label === url ? match.raw : label)
+      const displayLabel = label === url ? match.raw : label
+      html += `<a href="${esc(url)}"${displayLabel === match.raw ? '' : ` title="${esc(url)}"`}${linkAttributes(url, appUrl)}>${
+        esc(displayLabel)
       }</a>`
     }
     end = match.lastIndex
@@ -301,8 +339,9 @@ export function linkify(body: string, mentionBios: Record<string, string> = {}, 
     else if (match.kind === 'url') {
       const url = match.url!
       const label = linkLabel(url, appUrl)
+      const displayLabel = label === url ? token : label
       html += `<a href="${esc(url)}"${label === url ? '' : ` title="${esc(url)}"`}${linkAttributes(url, appUrl)}>${
-        highlighted(label === url ? token : label, highlightTerms)
+        highlighted(displayLabel, highlightTerms)
       }</a>`
     }
     else {
