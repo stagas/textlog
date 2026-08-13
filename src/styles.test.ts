@@ -144,4 +144,11 @@ describe('in-memory stylesheet', () => {
     expect(css).toContain('.reference-menu .reference-menu-popover .button {')
   })
 
+  test('keeps unsupported posting-help popovers hidden', async () => {
+    const css = await Bun.file(new URL('./styles.css', import.meta.url)).text()
+    expect(css).toContain('.posting-help-popover[popover] {\n  display: none;')
+    expect(css).toContain('.posting-help-popover[popover]:popover-open {\n  display: block;')
+    expect(css).toContain('.posting-help-search .posting-help-popover[popover]:popover-open {\n  display: flex;')
+  })
+
 })

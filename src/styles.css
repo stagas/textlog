@@ -2232,28 +2232,40 @@ form.report-panel {
   display: inline-block;
 }
 
-.posting-help-more summary {
+.posting-help-trigger {
+  padding: 0;
   color: inherit;
+  font: inherit;
+  background: transparent;
+  border: 0;
   cursor: pointer;
   user-select: none;
   text-decoration: underline;
   text-underline-offset: 2px;
-  list-style: none;
 }
 
-.posting-help-more summary::-webkit-details-marker {
-  display: none;
+.posting-help-hashtags .posting-help-trigger {
+  anchor-name: --posting-help-hashtags;
 }
 
-.posting-help-more summary:focus-visible {
+.posting-help-mentions .posting-help-trigger {
+  anchor-name: --posting-help-mentions;
+}
+
+.posting-help-and-more .posting-help-trigger {
+  anchor-name: --posting-help-more;
+}
+
+.posting-help-trigger:focus-visible {
   outline: 2px solid var(--accent);
   outline-offset: 2px;
 }
 
 .posting-help-popover {
-  position: absolute;
+  position: fixed;
   z-index: 10;
-  bottom: calc(100% + var(--space-2));
+  inset: auto auto var(--space-6) 50%;
+  margin: 0 0 var(--space-2);
   left: 50%;
   transform: translateX(-50%);
   width: max-content;
@@ -2265,6 +2277,38 @@ form.report-panel {
   background: var(--panel);
   border: 1px solid var(--soft);
   box-shadow: 0 8px 24px rgb(0 0 0 / 14%);
+}
+
+.posting-help-popover[popover] {
+  display: none;
+}
+
+.posting-help-popover[popover]:popover-open {
+  display: block;
+}
+
+.posting-help-search .posting-help-popover[popover]:popover-open {
+  display: flex;
+}
+
+.posting-help-hashtags .posting-help-popover {
+  position-anchor: --posting-help-hashtags;
+}
+
+.posting-help-mentions .posting-help-popover {
+  position-anchor: --posting-help-mentions;
+}
+
+.posting-help-and-more .posting-help-popover {
+  position-anchor: --posting-help-more;
+}
+
+@supports (bottom: anchor(top)) {
+  .posting-help-popover {
+    inset: auto;
+    bottom: anchor(top);
+    left: anchor(center);
+  }
 }
 
 .posting-help-popover strong {
@@ -2379,7 +2423,6 @@ form.report-panel {
 }
 
 .posting-help-search .posting-help-popover {
-  display: flex;
   align-items: end;
   gap: var(--space-2);
 }

@@ -57,10 +57,11 @@ export function PostingHelp({ maxLength = 280, maxLines = 10, search }: {
     const active = search?.kind === kind
     const inputName = kind === 'hashtags' ? 'hashtag_query' : 'mention_query'
     const searchLabel = kind === 'hashtags' ? 'hashtags' : 'handles'
+    const popoverId = `posting-help-${kind}`
     return (
-      <details className="posting-help-more posting-help-search">
-        <summary>{label}</summary>
-        <div className="posting-help-popover">
+      <span className={`posting-help-more posting-help-search posting-help-${kind}`}>
+        <button className="posting-help-trigger" type="button" popoverTarget={popoverId}>{label}</button>
+        <div className="posting-help-popover" id={popoverId} popover="auto">
           <label>
             <span className="visually-hidden">search {searchLabel}</span>
             <input type="search" name={inputName} maxLength={100} required={active || undefined}
@@ -71,7 +72,7 @@ export function PostingHelp({ maxLength = 280, maxLines = 10, search }: {
             search
           </button>
         </div>
-      </details>
+      </span>
     )
   }
   return (
@@ -80,9 +81,9 @@ export function PostingHelp({ maxLength = 280, maxLines = 10, search }: {
       {suggestionDetails('hashtags', '#hashtags')}
       <span>and</span>
       {suggestionDetails('mentions', '@mentions')}
-      <details className="posting-help-more">
-        <summary>and more</summary>
-        <div className="posting-help-popover posting-help-tabs">
+      <span className="posting-help-more posting-help-and-more">
+        <button className="posting-help-trigger" type="button" popoverTarget="posting-help-more">and more</button>
+        <div className="posting-help-popover posting-help-tabs" id="posting-help-more" popover="auto">
           <input className="posting-help-tab-input" type="radio" name="posting-help-tab"
             id="posting-help-formatting" defaultChecked />
           <input className="posting-help-tab-input" type="radio" name="posting-help-tab" id="posting-help-emoji" />
@@ -150,7 +151,7 @@ export function PostingHelp({ maxLength = 280, maxLines = 10, search }: {
             ))}
           </div>
         </div>
-      </details>
+      </span>
     </div>
   )
 }

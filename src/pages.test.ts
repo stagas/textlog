@@ -60,8 +60,10 @@ test('posting helpers are searchable details and show copyable highlighted resul
     suggestionSearch: { kind: 'hashtags', query: 'type', results: ['typescript', 'typestyle'], truncated: true },
   }))
 
-  expect(html).toContain('<summary>#hashtags</summary>')
-  expect(html).toContain('<summary>@mentions</summary>')
+  expect(html).toContain('popoverTarget="posting-help-hashtags">#hashtags</button>')
+  expect(html).toContain('id="posting-help-hashtags" popover="auto"')
+  expect(html).toContain('popoverTarget="posting-help-mentions">@mentions</button>')
+  expect(html).toContain('id="posting-help-more" popover="auto"')
   expect(html).toContain('for="posting-help-formatting" role="tab">Formatting</label>')
   expect(html).toContain('for="posting-help-emoji" role="tab">Emoji</label>')
   expect(html).toContain('class="posting-help-emoji-panel" aria-label="Emoji to copy and paste"')
