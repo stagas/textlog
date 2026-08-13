@@ -2447,6 +2447,10 @@ form.report-panel {
 }
 
 .profile.page-header h1 {
+  overflow: hidden;
+  overflow-wrap: normal;
+  text-overflow: ellipsis;
+  white-space: nowrap;
   font-size: clamp(1.375rem, 4vw, 1.75rem);
   font-weight: 600;
 }
@@ -2455,6 +2459,15 @@ form.report-panel {
 .tag-canonical-link {
   color: inherit;
   border-bottom: 0;
+}
+
+.profile-canonical-link,
+.tag-canonical-link {
+  display: block;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .profile-canonical-link:hover,
@@ -2616,8 +2629,37 @@ form.report-panel {
   display: flex;
   align-items: center;
   gap: var(--space-3);
+  overflow-wrap: normal;
   font-size: clamp(1.375rem, 4vw, 1.75rem);
   font-weight: 600;
+}
+
+@media (max-width: 600px) {
+  .tag-header {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+    row-gap: var(--space-4);
+  }
+
+  .tag-title-actions {
+    display: contents;
+  }
+
+  .tag-header h1 {
+    grid-column: 1 / -1;
+  }
+
+  .tag-handle-actions,
+  .tag-title-actions > .button {
+    grid-column: 1;
+    grid-row: 2;
+  }
+
+  .tag-back-link {
+    grid-column: 2;
+    grid-row: 2;
+  }
 }
 
 .tag-header .button {
@@ -2988,6 +3030,39 @@ form.report-panel {
     grid-template-columns: minmax(0, 1fr) auto;
     align-items: start;
     gap: var(--space-4);
+  }
+
+  .profile:not(.profile-editing) .profile-content,
+  .profile:not(.profile-editing) .profile-title-row {
+    display: contents;
+  }
+
+  .profile:not(.profile-editing) h1 {
+    grid-column: 1 / -1;
+    grid-row: 1;
+  }
+
+  .profile:not(.profile-editing) .profile-handle-actions,
+  .profile:not(.profile-editing) .profile-owner-actions {
+    grid-column: 1;
+    grid-row: 2;
+  }
+
+  .profile:not(.profile-editing) .profile-back-action {
+    grid-column: 2;
+    grid-row: 2;
+    align-self: center;
+    min-height: 0;
+  }
+
+  .profile:not(.profile-editing) .profile-back-action:empty {
+    display: none;
+  }
+
+  .profile:not(.profile-editing) .profile-bio {
+    grid-column: 1 / -1;
+    grid-row: 3;
+    margin-top: 0;
   }
 
   .profile-action {
