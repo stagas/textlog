@@ -5,8 +5,8 @@ import { Layout } from './layout'
 import { postTitle } from './page-shared'
 
 export function PublicThread(
-  { post, social, returnPath }: { post: PostView; social?: { description: string; image: string; url: string };
-    returnPath?: string },
+  { post, social, returnPath, topHref }: { post: PostView; social?: { description: string; image: string; url: string };
+    returnPath?: string; topHref?: string },
 ) {
   return (
     <Layout title={postTitle(post.body)} social={social}>
@@ -14,7 +14,7 @@ export function PublicThread(
         <div className="thread-root">
           <Post p={post} user={null} replyHref={'/enter?next=' + encodeURIComponent('/post/' + post.id + '?reply=1'
             + (returnPath ? '&from=' + encodeURIComponent(returnPath) : ''))} replyLabel="enter to reply" tappableParent
-            backHref={returnPath} canonicalTimestamp />
+            backHref={returnPath} canonicalTimestamp topHref={topHref} />
         </div>
         <ThreadReplies parentId={post.id} user={null} returnPath={returnPath} />
       </div>

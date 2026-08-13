@@ -1068,11 +1068,13 @@ nav form {
   font-size: inherit;
 }
 
-.posttop .post-reply-link {
+.posttop .post-reply-link,
+.posttop .post-top-link {
   color: var(--accent);
 }
 
-.posttop .post-reply-link:hover {
+.posttop .post-reply-link:hover,
+.posttop .post-top-link:hover {
   color: var(--accent-dark);
 }
 

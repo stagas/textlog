@@ -72,7 +72,7 @@ export function ReplyPreview({ parentId, user, body }: { parentId: number; user:
 
 export function Reply(
   { user, post, showForm, showReport = false, reported = false, error, body = '', reportReason = '', reportError,
-    social, preview = false, returnPath, suggestionSearch }: {
+    social, preview = false, returnPath, topHref, suggestionSearch }: {
       user: User
       post: PostView
       showForm: boolean
@@ -85,6 +85,7 @@ export function Reply(
       body?: string
       preview?: boolean
       returnPath?: string
+      topHref?: string
       suggestionSearch?: PostingSuggestionSearch | null
     },
 ) {
@@ -93,7 +94,7 @@ export function Reply(
       <div className="post-page-thread">
         <div className="thread-root">
           <Post p={post} user={user} showReplyAction={!showForm} showOwnerActions showModerateAction tappableParent
-            returnPath={returnPath} backHref={returnPath} canonicalTimestamp
+            returnPath={returnPath} backHref={returnPath} canonicalTimestamp topHref={topHref}
             reportHref={user.id !== post.user_id && !showReport && !reported
               ? `/post/${post.id}?report=1${returnPath ? '&from=' + encodeURIComponent(returnPath) : ''}`
               : undefined} />

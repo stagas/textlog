@@ -5,7 +5,7 @@ import {
   PublicThread,
   Reply,
 } from '../components/pages'
-import { postedReplyPath } from '../components/post'
+import { conversationTopPath, postedReplyPath } from '../components/post'
 import { moderateText, moderationMessage } from '../moderation'
 import { canPublishPosts } from '../posting-policy'
 import { createPost, enrichPosts, updatePost } from '../posts'
@@ -76,6 +76,16 @@ export function registerPostsRoutes(app: Hono) {
     if (!foundPost) return c.text('Not found', 404)
     const user = currentUser(c.req.raw)
     const returnPath = c.req.query('from') ? safeNext(c.req.query('from')) : undefined
+    const conversationRoot = foundPost.parent_id
+      ? db.query(`WITH RECURSIVE ancestors(id,parent_id,depth) AS (
+          SELECT id,parent_id,0 FROM posts WHERE id=?
+          UNION ALL
+          SELECT p.id,p.parent_id,ancestors.depth+1 FROM posts p JOIN ancestors ON p.id=ancestors.parent_id
+        ) SELECT id FROM ancestors ORDER BY depth DESC LIMIT 1`).get(id) as { id: number } | null
+      : null
+    const topHref = conversationRoot
+      ? conversationTopPath(conversationRoot.id, id, returnPath)
+      : undefined
     if (user && !user.handle_chosen_at && c.req.query('reply') === '1') {
       const next = `/post/${id}?reply=1${returnPath ? '&from=' + encodeURIComponent(returnPath) : ''}`
       return redirect('/choose-handle?next=' + encodeURIComponent(next))
@@ -95,10 +105,11 @@ export function registerPostsRoutes(app: Hono) {
     if (user) {
       return page(
         <Reply user={user} post={post} showForm={c.req.query('reply') === '1'} returnPath={returnPath}
+          topHref={topHref}
           showReport={c.req.query('report') === '1'} reported={c.req.query('reported') === '1'} social={social} />,
       )
     }
-    return page(<PublicThread post={post} social={social} returnPath={returnPath} />)
+    return page(<PublicThread post={post} social={social} returnPath={returnPath} topHref={topHref} />)
   })
 
   app.get('/post/:id/og.png', c => {

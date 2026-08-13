@@ -9,7 +9,7 @@ import { renderToStaticMarkup } from 'react-dom/server'
 import { HotFeed } from './components/hot-feed'
 import { maskEmail } from './components/auth'
 import { ConnectionPeople, Pagination, TagPeopleList } from './components/page-shared'
-import { Post, postedReplyPath, replyAnchorReturnPath } from './components/post'
+import { conversationTopPath, Post, postedReplyPath, replyAnchorReturnPath } from './components/post'
 import { PublicFeed } from './components/public-feed'
 import { searchPersonReturnPath, searchPostReturnPath } from './components/search'
 import { TagFeed } from './components/tag-feed'
@@ -1311,6 +1311,23 @@ test('Post-page timestamp links to the canonical post URL', () => {
   }))
   expect(html).toContain('class="postdate" href="/post/2"')
   expect(html).not.toContain('class="postdate" href="/post/2?from=')
+})
+
+test('Reply pages show a top link immediately after the timestamp', () => {
+  const html = renderToStaticMarkup(React.createElement(Post, {
+    p: { id: 3, user_id: 1, parent_id: 2, body: 'A reply', handle: 'writer',
+      created_at: '2026-08-03 12:00:00', deleted_at: null },
+    user: null,
+    canonicalTimestamp: true,
+    topHref: '/post/1?from=%2Flatest%23post-3',
+  }))
+  expect(html).toContain('</a><a class="quiet post-top-link" href="/post/1?from=%2Flatest%23post-3">top</a>')
+})
+
+test('conversation top links return to the deep reply and preserve its original back path', () => {
+  expect(conversationTopPath(1, 3)).toBe('/post/1?from=%2Fpost%2F3%23post-3#post-1')
+  expect(conversationTopPath(1, 3, '/latest#post-3'))
+    .toBe('/post/1?from=%2Fpost%2F3%3Ffrom%3D%252Flatest%2523post-3%23post-3#post-1')
 })
 
 test('thread replies use their own permanent anchor as the next return path', () => {

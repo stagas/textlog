@@ -78,6 +78,12 @@ describe('in-memory stylesheet', () => {
     expect(css).toContain('.reply-preview .preview-reply:hover {\n  color: var(--accent-dark);')
   })
 
+  test('styles conversation top links like reply actions', async () => {
+    const css = await Bun.file(new URL('./styles.css', import.meta.url)).text()
+    expect(css).toContain('.posttop .post-reply-link,\n.posttop .post-top-link {\n  color: var(--accent);')
+    expect(css).toContain('.posttop .post-reply-link:hover,\n.posttop .post-top-link:hover {\n  color: var(--accent-dark);')
+  })
+
   test('keeps the edit cancel action muted', async () => {
     const css = await Bun.file(new URL('./styles.css', import.meta.url)).text()
     expect(css).toContain('.secondary-action.edit-post-cancel {\n  color: var(--muted);')

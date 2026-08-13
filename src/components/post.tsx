@@ -29,6 +29,11 @@ export function postedReplyPath(parentId: number, replyId: number, returnPath?: 
   return replyAnchorReturnPath(parentId, replyId, returnPath)
 }
 
+export function conversationTopPath(threadRootId: number, replyId: number, returnPath?: string) {
+  const deepPostPath = `/post/${replyId}${returnPath ? '?from=' + encodeURIComponent(returnPath) : ''}#post-${replyId}`
+  return `/post/${threadRootId}?from=${encodeURIComponent(deepPostPath)}#post-${threadRootId}`
+}
+
 export function PreviewPost({ p }: { p: PostView }) {
   return (
     <article className="post" id={`post-${p.id}`}>
@@ -67,11 +72,12 @@ export function Post({
   returnPath,
   backHref,
   canonicalTimestamp = false,
+  topHref,
 }: { p: PostView; user: User | null; showReplyAction?: boolean; showOwnerActions?: boolean;
   showModerateAction?: boolean; showParent?: boolean; showReplyCount?: boolean; replyHref?: string; replyLabel?: string;
   reportHref?: string; foldControlId?: string; highlightTerms?: string[]; tappable?: boolean; tappableParent?: boolean;
   contextLabel?: string; contextUnread?: boolean; preview?: boolean; returnPath?: string; backHref?: string;
-  canonicalTimestamp?: boolean })
+  canonicalTimestamp?: boolean; topHref?: string })
 {
   const parent = showParent ? p.parent : null
   const hasTappableParent = Boolean(parent && (tappable || tappableParent))
@@ -126,6 +132,7 @@ export function Post({
               )}
             </a>
           )}
+        {topHref && <a className="quiet post-top-link" href={topHref}>top</a>}
         {showReplyAction && (
           preview
             ? <span className="quiet preview-reply">{resolvedReplyLabel}</span>
