@@ -223,7 +223,7 @@ export function Feed({ user, page = 1, title, path = '/for-you', pageUrl, notifi
                       href={row.activity_kind === 'signup'
                         ? `/admin/users/${row.actor_id}`
                         : `/u/${row.actor_handle}${fromQuery}`} navigationQuery={fromQuery} />
-                    <span>
+                    <span className="activity-context">
                       {row.activity_kind === 'signup'
                         ? 'signed up:'
                         : row.target_is_viewer

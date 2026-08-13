@@ -124,12 +124,14 @@ export function Activity({ user, cursor, title, path = '/activity', pageUrl, not
                         <UserReference handle={rawPost.handle} bio={rawPost.bio || ''} noteCount={rawPost.posts || 0}
                           stats={activityProfileStats.get(rawPost.user_id)} following={!!rawPost.viewerFollowing}
                           user={user} href={`/admin/users/${rawPost.user_id}`} />
-                        <span>signed up:</span>
-                        <time dateTime={rawPost.created_at} title={fmtFull(rawPost.created_at)}>
-                          {fmt(rawPost.created_at)}
-                        </time>
-                        <span aria-hidden="true">·</span>
-                        <small>{rawPost.posts} {rawPost.posts === 1 ? 'note' : 'notes'}</small>
+                        <span className="activity-context">signed up:</span>
+                        <span className="activity-follow-stats">
+                          <time dateTime={rawPost.created_at} title={fmtFull(rawPost.created_at)}>
+                            {fmt(rawPost.created_at)}
+                          </time>
+                          <span aria-hidden="true">·</span>
+                          <small>{rawPost.posts} {rawPost.posts === 1 ? 'note' : 'notes'}</small>
+                        </span>
                       </div>
                       <p className="profile-bio" dangerouslySetInnerHTML={{
                         __html: linkify(rawPost.bio || 'No bio yet.'),
@@ -153,12 +155,14 @@ export function Activity({ user, cursor, title, path = '/activity', pageUrl, not
                         <UserReference handle={rawPost.handle} bio={rawPost.bio || ''} noteCount={rawPost.posts || 0}
                           stats={activityProfileStats.get(rawPost.user_id)} following={!!rawPost.viewerFollowing}
                           user={user} href={'/u/' + rawPost.handle} />
-                        <span>followed you:</span>
-                        <time dateTime={rawPost.created_at} title={fmtFull(rawPost.created_at)}>
-                          {fmt(rawPost.created_at)}
-                        </time>
-                        <span aria-hidden="true">·</span>
-                        <small>{rawPost.posts} {rawPost.posts === 1 ? 'note' : 'notes'}</small>
+                        <span className="activity-context">followed you:</span>
+                        <span className="activity-follow-stats">
+                          <time dateTime={rawPost.created_at} title={fmtFull(rawPost.created_at)}>
+                            {fmt(rawPost.created_at)}
+                          </time>
+                          <span aria-hidden="true">·</span>
+                          <small>{rawPost.posts} {rawPost.posts === 1 ? 'note' : 'notes'}</small>
+                        </span>
                       </div>
                       <p className="profile-bio" dangerouslySetInnerHTML={{
                         __html: linkify(rawPost.bio || 'No bio yet.'),

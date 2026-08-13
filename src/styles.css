@@ -1260,6 +1260,7 @@ nav form {
 
 .postdate {
   color: var(--accent);
+  white-space: nowrap;
 }
 
 .postauthor {
@@ -3350,6 +3351,7 @@ form.report-panel {
   margin-left: calc(-1 * var(--space-2) + 1ch);
   color: var(--muted);
   font-size: 0.75rem;
+  white-space: nowrap;
 }
 
 .for-you-item .posttop-context .post-context {
@@ -3396,6 +3398,10 @@ form.report-panel {
   color: var(--muted);
 }
 
+.activity-follow-main .activity-context {
+  white-space: nowrap;
+}
+
 .activity-follow-main small {
   color: var(--quote-ink);
   font-size: 0.75rem;
@@ -3418,6 +3424,7 @@ form.report-panel {
   color: var(--accent);
   font-size: 0.75rem;
   overflow: visible;
+  white-space: nowrap;
 }
 
 .activity-follow-main .activity-follow-stats time {

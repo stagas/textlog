@@ -918,7 +918,7 @@ test('consequential account, content, reporting, and admin flows work over HTTP'
   const adminActivity = await (await request('/for-you', { cookie: adminCookie })).text()
   expect(adminActivity).toContain('>@admin</a>')
   expect(adminActivity).toContain('>@alice</a>')
-  expect(adminActivity).toContain('<span>signed up:</span>')
+  expect(adminActivity).toContain('<span class="activity-context">signed up:</span>')
   expect(adminActivity).toContain('<a class="activity-follow-stats" href="/u/alice?from=%2Ffor-you%23activity-signup-')
   expect(adminActivity).not.toContain('href="/tag/null"')
   expect(adminActivity).not.toContain('>#null</a>')
