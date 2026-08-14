@@ -3,7 +3,7 @@ import type { PersonView, PostView, ProfileRow, TagView } from '../types'
 import React from 'react'
 import { isAdmin } from '../admin'
 import { db, type User } from '../db'
-import { hasUnreadForYou } from '../for-you-state'
+import { hasUnreadForYou, hasUnreadToMe } from '../for-you-state'
 import { visibleTagFollowerCounts, visibleUserProfileStats } from '../posts'
 import { searchTerms } from '../search'
 import { displayBio, linkify } from '../utils'
@@ -298,6 +298,7 @@ export function FeedTabs({ active, user, forYouReadStatus, activityReadStatus, t
   toMe?: boolean
 }) {
   const forYouUnread = user ? hasUnreadForYou(user.id) : false
+  const toMeUnread = user ? hasUnreadToMe(user.id) : false
   return (
     <nav className="feed-tabs" aria-label="Feed">
       {user && (
@@ -322,6 +323,8 @@ export function FeedTabs({ active, user, forYouReadStatus, activityReadStatus, t
           {active === 'following' && (
             <>
               <a className="activity-side-link" href={toMe ? '/for-you' : '/to-me'}>
+                {!toMe && toMeUnread && <span className="unread-dot" aria-hidden="true" />}
+                {!toMe && toMeUnread && <span className="visually-hidden">unread</span>}
                 {toMe ? 'all' : 'to me'}
               </a>
               {(forYouReadStatus !== undefined || activityReadStatus !== undefined)

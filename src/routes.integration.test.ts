@@ -903,6 +903,8 @@ test('consequential account, content, reporting, and admin flows work over HTTP'
   expect(followedPersonFeed).toContain('action="/follow/bob"')
   expect(followedPersonFeed).not.toContain('action="/follow/alice"')
   expect(followedPersonFeed).toContain('action="/for-you/read-all"')
+  expect(followedPersonFeed).toContain('href="/to-me"><span class="unread-dot" aria-hidden="true"></span>'
+    + '<span class="visually-hidden">unread</span>to me</a>')
   expect(followedPersonFeed).toContain('activity-follow activity-item-unread')
   expect(followedPersonFeed).toContain('class="unread-dot" aria-label="unread"')
   const markedForYou = await request('/for-you/read-all', { method: 'POST', cookie: aliceCookie })

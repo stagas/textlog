@@ -88,6 +88,12 @@ export function hasUnreadForYou(userId: number) {
     .get(stateParameters(userId))
 }
 
+export function hasUnreadToMe(userId: number) {
+  return !!db.query(`SELECT 1 FROM (${visibleToMeEvents}) event WHERE NOT EXISTS
+    (SELECT 1 FROM for_you_reads seen WHERE seen.user_id=$viewer AND seen.event_key=event.event_key) LIMIT 1`)
+    .get(stateParameters(userId))
+}
+
 export function markForYouEntriesRead(userId: number, eventKeys: string[]) {
   if (!eventKeys.length) return
   const insert = db.query('INSERT OR IGNORE INTO for_you_reads(user_id,event_key) VALUES(?,?)')
