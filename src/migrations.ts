@@ -31,6 +31,18 @@ function backfillMentions(database: Database) {
   }
 }
 
+function rebuildPostHashtags(database: Database) {
+  const posts = database.query('SELECT id,body FROM posts WHERE deleted_at IS NULL').all() as {
+    id: number
+    body: string
+  }[]
+  const insert = database.query('INSERT OR IGNORE INTO post_hashtags(post_id,tag) VALUES(?,?)')
+  database.run('DELETE FROM post_hashtags')
+  for (const post of posts) {
+    for (const tag of extractHashtags(post.body)) insert.run(post.id, tag)
+  }
+}
+
 function backfillLegacyActivityReads(database: Database) {
   database.run(`INSERT OR IGNORE INTO activity_reads(user_id,event_key,read_at)
     SELECT recipient_id,event_key,read_at FROM (
@@ -586,15 +598,7 @@ export const migrations: Migration[] = [
     version: 49,
     name: 'unicode_hashtag_backfill',
     up(database) {
-      const posts = database.query('SELECT id,body FROM posts WHERE deleted_at IS NULL').all() as {
-        id: number
-        body: string
-      }[]
-      const insert = database.query('INSERT OR IGNORE INTO post_hashtags(post_id,tag) VALUES(?,?)')
-      database.run('DELETE FROM post_hashtags')
-      for (const post of posts) {
-        for (const tag of extractHashtags(post.body)) insert.run(post.id, tag)
-      }
+      rebuildPostHashtags(database)
     },
   },
   {
@@ -876,6 +880,13 @@ export const migrations: Migration[] = [
       DROP TABLE admin_actions;
       ALTER TABLE admin_actions_new RENAME TO admin_actions;
       CREATE INDEX admin_actions_created ON admin_actions(created_at DESC);`)
+    },
+  },
+  {
+    version: 63,
+    name: 'url_fragment_hashtag_backfill',
+    up(database) {
+      rebuildPostHashtags(database)
     },
   },
 ]

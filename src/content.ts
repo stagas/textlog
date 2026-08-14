@@ -1,3 +1,6 @@
+import { LinkifyIt } from 'linkify-it'
+import tlds from 'tlds'
+
 export function normalizeHashtag(tag: string) {
   return tag.normalize('NFC').toLowerCase()
 }
@@ -8,10 +11,14 @@ export function isValidHashtag(tag: string) {
 
 export const MAX_HASHTAGS_PER_POST = 5
 
+const urlMatcher = new LinkifyIt({ fuzzyLink: true, fuzzyEmail: false }).tlds(tlds)
+
 export function extractHashtags(body: string) {
   const tags = new Set<string>()
   let count = 0
-  for (const match of body.matchAll(/#([\p{L}\p{M}\p{N}_]+)/gu)) {
+  const urls = urlMatcher.match(body) || []
+  for (const match of body.matchAll(/(?<![\p{L}\p{M}\p{N}_])#([\p{L}\p{M}\p{N}_]+)/gu)) {
+    if (urls.some(url => match.index >= url.index && match.index < url.lastIndex)) continue
     if (count++ === MAX_HASHTAGS_PER_POST) break
     tags.add(normalizeHashtag(match[1]))
   }

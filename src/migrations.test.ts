@@ -167,6 +167,33 @@ describe('database migrations', () => {
       .toEqual({ tag: 'ελλάδα' })
   })
 
+  test('rebuilds hashtags without URL fragments', () => {
+    const database = new Database(':memory:')
+    database.run('PRAGMA foreign_keys=ON')
+    runMigrations(database)
+    database.run(`INSERT INTO users(id,handle,email,password) VALUES(1,'author','author@example.com','x');
+      INSERT INTO posts(id,user_id,body) VALUES
+        (1,1,'https://example.com/docs#plain [guide](https://example.com/docs#markdown) #actual'),
+        (2,1,'deleted #old');
+      UPDATE posts SET deleted_at=CURRENT_TIMESTAMP WHERE id=2;
+      INSERT INTO post_hashtags(post_id,tag) VALUES
+        (1,'plain'),(1,'markdown'),(2,'old');
+      INSERT INTO hashtag_follows(user_id,tag,created_at) VALUES
+        (1,'plain','2026-08-01 02:03:04'),(1,'actual','2026-08-02 03:04:05');
+      PRAGMA user_version=62;`)
+
+    runMigrations(database)
+
+    expect(database.query('SELECT post_id,tag FROM post_hashtags ORDER BY post_id,tag').all())
+      .toEqual([{ post_id: 1, tag: 'actual' }])
+    expect(database.query('SELECT tag FROM tag_search WHERE tag_search MATCH \'actual\'').get())
+      .toEqual({ tag: 'actual' })
+    expect(database.query('SELECT tag,created_at FROM hashtag_follows ORDER BY tag').all()).toEqual([
+      { tag: 'actual', created_at: '2026-08-02 03:04:05' },
+      { tag: 'plain', created_at: '2026-08-01 02:03:04' },
+    ])
+  })
+
   test('repairs account deletion tables created by the original version 30 migration', () => {
     const database = new Database(':memory:')
     database.run('PRAGMA foreign_keys=ON')

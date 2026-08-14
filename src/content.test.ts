@@ -35,6 +35,14 @@ describe('content metadata extraction', () => {
       .toEqual(['ελλάδα', '日本語', 'العَرَبِيَّة', 'café'])
   })
 
+  test('ignores URL fragments in plain and Markdown URLs', () => {
+    expect(extractHashtags(
+      'https://example.com/docs#plain [guide](https://example.com/docs#markdown) #actual',
+    )).toEqual(['actual'])
+    expect(extractHashtags('example.com/#fragment #one #two #three #four #five'))
+      .toEqual(['one', 'two', 'three', 'four', 'five'])
+  })
+
   test('normalizes and deduplicates valid mentions', () => {
     expect(extractMentions('Hello @Demo_01 and @demo_01, meet @reader.')).toEqual(['demo_01', 'reader'])
   })
