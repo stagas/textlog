@@ -57,6 +57,26 @@ const visibleEvents = `
     WHERE $admin=1 AND u.handle_chosen_at IS NOT NULL
       AND u.deleted_at IS NULL AND u.suspended_at IS NULL`
 
+const visibleToMeEvents = `
+  SELECT 'post:' || printf('%020d',p.id) event_key FROM posts p
+    LEFT JOIN posts parent ON parent.id=p.parent_id
+    LEFT JOIN post_mentions pm ON pm.post_id=p.id AND pm.user_id=$viewer
+    WHERE p.deleted_at IS NULL AND p.user_id!=$viewer
+      AND (parent.user_id=$viewer OR pm.user_id IS NOT NULL)
+      AND NOT EXISTS (SELECT 1 FROM blocks b WHERE
+        (b.blocker_id=$viewer AND b.blocked_id=p.user_id) OR
+        (b.blocker_id=p.user_id AND b.blocked_id=$viewer))
+      AND NOT EXISTS (SELECT 1 FROM post_hashtags tph JOIN blocked_hashtags bh ON bh.tag=tph.tag
+        WHERE tph.post_id=p.id AND bh.user_id=$viewer)
+  UNION ALL
+  SELECT 'user-follow:' || printf('%020d',f.follower_id) || ':' || printf('%020d',$viewer) || ':' || f.created_at
+    FROM follows f JOIN users actor ON actor.id=f.follower_id
+    WHERE f.following_id=$viewer AND f.created_at IS NOT NULL
+      AND actor.deleted_at IS NULL AND actor.suspended_at IS NULL
+      AND NOT EXISTS (SELECT 1 FROM blocks b WHERE
+        (b.blocker_id=$viewer AND b.blocked_id=actor.id) OR
+        (b.blocker_id=actor.id AND b.blocked_id=$viewer))`
+
 function stateParameters(userId: number) {
   const account = db.query('SELECT email FROM users WHERE id=?').get(userId) as { email: string } | null
   return { viewer: userId, admin: Number(!!account && isAdminEmail(account.email)) }
@@ -82,10 +102,11 @@ export function markForYouEntriesRead(userId: number, eventKeys: string[]) {
   )()
 }
 
-export function markAllForYouRead(userId: number) {
+export function markAllForYouRead(userId: number, toMe = false) {
+  const events = toMe ? visibleToMeEvents : visibleEvents
   db.transaction(() => {
     db.query(`INSERT OR IGNORE INTO for_you_reads(user_id,event_key)
-      SELECT $viewer,event_key FROM (${visibleEvents})`).run(stateParameters(userId))
+      SELECT $viewer,event_key FROM (${events})`).run(stateParameters(userId))
     db.query(`INSERT OR IGNORE INTO activity_reads(user_id,event_key)
       SELECT user_id,'post:' || CAST(substr(event_key,6) AS INTEGER)
       FROM for_you_reads WHERE user_id=? AND event_key GLOB 'post:[0-9]*'`).run(userId)

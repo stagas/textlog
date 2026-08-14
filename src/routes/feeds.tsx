@@ -116,7 +116,7 @@ export function registerFeedsRoutes(app: Hono) {
   app.post('/to-me/read-all', c => {
     const user = currentUser(c.req.raw)
     if (!user) return redirect('/enter?next=' + encodeURIComponent('/to-me'))
-    markAllForYouRead(user.id)
+    markAllForYouRead(user.id, true)
     return redirect('/to-me')
   })
 
@@ -155,7 +155,7 @@ export function registerFeedsRoutes(app: Hono) {
   app.post('/activity/read-all', c => {
     const user = currentUser(c.req.raw)
     if (!user) return redirect('/enter?next=' + encodeURIComponent('/activity'))
-    markAllForYouRead(user.id)
+    markAllForYouRead(user.id, true)
     return redirect('/to-me')
   })
 
