@@ -50,7 +50,7 @@ export function EditPost(
         } primary={
           <span className="edit-post-primary-actions">
             <button className="secondary-action" name="action" value="preview">preview</button>
-            <button className="button">save changes →</button>
+            <button className="button">save</button>
           </span>
         } />
         {post.parent_id && parent && (

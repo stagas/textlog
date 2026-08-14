@@ -120,7 +120,7 @@ test('post edit places delete above the textarea and keeps preview before save',
   expect(html).toContain('class="secondary-action danger" href="/post/2/delete">delete note</a>')
   expect(html.indexOf('>delete note</a>')).toBeLessThan(html.indexOf('<textarea'))
   expect(html.indexOf('<textarea')).toBeLessThan(html.indexOf('>cancel</a>'))
-  expect(html.indexOf('>preview</button>')).toBeLessThan(html.indexOf('>save changes →</button>'))
+  expect(html.indexOf('>preview</button>')).toBeLessThan(html.indexOf('>save</button>'))
 })
 
 test('post deletion uses the standard centered confirmation panel', () => {
