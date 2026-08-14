@@ -26,7 +26,7 @@ export type HotCursor = {
   direction: 'next' | 'previous'
 }
 
-export const hotRankingVersion = 48
+export const hotRankingVersion = 49
 const cursorVersion = hotRankingVersion
 const activityHalfLifeHours = 6
 const postWeight = 0
@@ -54,6 +54,9 @@ const conversationDepthThreshold = 5
 const conversationDepthScale = 0.01
 const maxConversationDepthReserve = 0.1
 const conversationDepthHalfLifeHours = 72
+const longDiscussionCommentThreshold = 10
+const longDiscussionCommentScale = 0.005
+const longDiscussionCommentsPerDoubling = 5
 
 function hasHotTable(database: Database) {
   return Boolean(database.query('SELECT 1 FROM sqlite_master WHERE type=\'table\' AND name=\'post_hot\'').get())
@@ -313,7 +316,11 @@ export function getHotPosts(
               max(0,(julianday(ranking_time.as_of)-julianday(h.latest_activity_at))*24)
                 /${recentDiscussionReserveHalfLifeHours})
               +max(0,h.reply_count-${discussionReserveReplyThreshold})*${discussionParticipantReserveScale}
-            ELSE 0 END)
+            ELSE 0 END
+          +CASE WHEN h.reply_count>=${longLivedDiscussionReplyThreshold} THEN
+            ${longDiscussionCommentScale}*pow(2,
+              max(0,h.activity_count-${longDiscussionCommentThreshold})
+                /${longDiscussionCommentsPerDoubling}) ELSE 0 END)
         ELSE 0 END discussion_reserve
       ,CASE WHEN h.reply_count=2 AND h.activity_count>=${conversationDepthThreshold} THEN
         min(${maxConversationDepthReserve},(h.activity_count-${conversationDepthThreshold}+1)
