@@ -210,6 +210,16 @@ export function isCrawlerRequest(request: Request) {
   return crawlerUserAgent.test(request.headers.get('user-agent') || '')
 }
 
+export function blockedCrawlerResponse(request: Request) {
+  if (!/meta-external(?:agent|fetcher)/i.test(request.headers.get('user-agent') || '')) return null
+  return new Response('Too Many Requests', { status: 429, headers: {
+    'content-type': 'text/plain;charset=utf-8',
+    'cache-control': 'private, no-store',
+    'retry-after': '31536000',
+    'x-robots-tag': 'noindex, nofollow',
+  } })
+}
+
 export function crawlerCanonicalRedirect(request: Request, appUrl: string | undefined = Bun.env.APP_URL) {
   if (request.method !== 'GET' || !isCrawlerRequest(request)) return null
   const url = new URL(request.url)
