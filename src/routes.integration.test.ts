@@ -826,8 +826,9 @@ test('consequential account, content, reporting, and admin flows work over HTTP'
   expect(latestFirstBody).toContain('cursor note 41')
   expect(latestFirstBody).not.toContain(post.body)
   const latestSecondBody = await (await request(latestNext!)).text()
-  expect(latestSecondBody).toContain(post.body)
+  expect(latestSecondBody).not.toContain(post.body)
   expect(latestSecondBody).toContain('← prev')
+  expect(await (await request('/latest?page=3')).text()).toContain(post.body)
 
   const forYouFirstBody = await (await request('/for-you', { cookie: aliceCookie })).text()
   expect(forYouFirstBody).not.toContain('/for-you?cursor=')
@@ -840,7 +841,8 @@ test('consequential account, content, reporting, and admin flows work over HTTP'
   const profileNext = profileFirstBody.match(/href="(\/u\/alice\?page=2)"/)?.[1]
   expect(profileNext).toBeTruthy()
   expect(profileFirstBody).not.toContain(post.body)
-  expect(await (await request(profileNext!)).text()).toContain(post.body)
+  expect(await (await request(profileNext!)).text()).not.toContain(post.body)
+  expect(await (await request('/u/alice?page=3')).text()).toContain(post.body)
   expect((await request('/latest?cursor=broken')).status).toBe(400)
   expect((await request('/for-you?cursor=broken', { cookie: aliceCookie })).status).toBe(400)
   expect((await request('/activity?cursor=broken', { cookie: aliceCookie })).status).toBe(303)
@@ -1077,9 +1079,10 @@ test('consequential account, content, reporting, and admin flows work over HTTP'
   expect(activityFirstBody).not.toContain('oldest cursor boundary')
   insertActivityReply.run(bob.id, post.id, 'newer activity after cursor', '2080-02-01 12:00:00')
   const activitySecondBody = await (await request(activityNext!, { cookie: aliceCookie })).text()
-  expect(activitySecondBody).toContain('oldest cursor boundary')
+  expect(activitySecondBody).not.toContain('oldest cursor boundary')
   expect(activitySecondBody).not.toContain('activity cursor reply 41')
   expect(activitySecondBody).toContain('← prev')
+  expect(await (await request('/to-me?page=3', { cookie: aliceCookie })).text()).toContain('oldest cursor boundary')
   const invalidReport = await request(`/post/${post.id}/report`, {
     method: 'POST',
     cookie: bobCookie,

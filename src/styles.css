@@ -4007,7 +4007,7 @@ form.report-panel {
 
 .thread-root>.post>p {
   margin-bottom: 0;
-  font-size: clamp(1rem, 2.5vw, 1.25rem);
+  font-size: clamp(0.9375rem, 2.25vw, 1.125rem);
   line-height: 1.55;
   letter-spacing: -.5px;
 }
