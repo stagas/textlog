@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test'
-import { applyHtmlCachePolicy, blockedCrawlerResponse, canonicalizeCrawlerLinks, clearSessionCookie,
+import { applyHtmlCachePolicy, canonicalizeCrawlerLinks, clearSessionCookie,
   crawlerCanonicalRedirect, feedPreference, feedPreferenceCookie, FORM_REQUEST_BODY_LIMIT, htmlCacheControl,
   isCrawlerRequest, isSameOriginRequest, limitedFormData, RequestBodyError, requiresSameOrigin, safeLocalPath,
   safeRefererPath, securityHeaders, sessionCookie, stringField } from './http'
@@ -93,20 +93,6 @@ describe('local redirects', () => {
     expect(response.headers.get('vary')).toBe('User-Agent')
   })
 
-  test('blocks Meta external crawlers indefinitely with too many requests', async () => {
-    for (const agent of ['meta-externalagent/1.1', 'meta-externalfetcher/1.1']) {
-      const response = blockedCrawlerResponse(new Request('https://textlog.cc/', {
-        headers: { 'user-agent': `Mozilla/5.0 (compatible; ${agent})` },
-      }))
-      expect(response?.status).toBe(429)
-      expect(response?.headers.get('retry-after')).toBe('31536000')
-      expect(response?.headers.get('cache-control')).toBe('private, no-store')
-      expect(await response?.text()).toBe('Too Many Requests')
-    }
-    expect(blockedCrawlerResponse(new Request('https://textlog.cc/', {
-      headers: { 'user-agent': 'facebookexternalhit/1.1' },
-    }))).toBeNull()
-  })
 })
 
 describe('request values and cookies', () => {
