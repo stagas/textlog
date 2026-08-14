@@ -2914,6 +2914,7 @@ form.report-panel {
 }
 
 .account-switcher-page {
+  max-width: none;
   margin-top: var(--space-7);
 }
 
