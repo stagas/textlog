@@ -2300,48 +2300,48 @@ form.report-panel {
     padding-right: var(--gutter);
   }
 
-  :is(.write-compose, .replybox, .bio-form) .posting-help {
+  :is(.write-compose, .edit-post-compose, .replybox, .bio-form) .posting-help {
     justify-content: flex-start;
     align-self: center;
     gap: 2px 1ch;
     text-align: left;
   }
 
-  :is(.write-compose, .replybox, .bio-form) .posting-help-limits {
+  :is(.write-compose, .edit-post-compose, .replybox, .bio-form) .posting-help-limits {
     flex-basis: 100%;
   }
 
-  :is(.write-compose, .replybox, .bio-form) .posting-help-separator {
+  :is(.write-compose, .edit-post-compose, .replybox, .bio-form) .posting-help-separator {
     display: none;
   }
 
-  :is(.write-compose, .replybox, .bio-form) .posting-help-and-more {
+  :is(.write-compose, .edit-post-compose, .replybox, .bio-form) .posting-help-and-more {
     flex-basis: 100%;
   }
 
-  :is(.write-compose, .replybox, .bio-form) :is(.posting-help-search, .posting-help-and-more)
+  :is(.write-compose, .edit-post-compose, .replybox, .bio-form) :is(.posting-help-search, .posting-help-and-more)
     .posting-help-popover {
     right: auto;
     left: var(--gutter);
     transform: none;
   }
 
-  :is(.write-compose, .replybox, .bio-form) .composefoot {
+  :is(.write-compose, .edit-post-compose, .replybox, .bio-form) .composefoot {
     display: grid;
     grid-template-columns: minmax(0, 1fr) auto;
     align-items: center;
   }
 
-  :is(.write-compose, .replybox) .composefoot .form-actions {
+  :is(.write-compose, .edit-post-compose, .replybox) .composefoot .form-actions {
     align-items: center;
     justify-content: flex-end;
   }
 
-  :is(.write-compose, .replybox) .composefoot .form-actions > .button {
+  :is(.write-compose, .edit-post-compose, .replybox) .composefoot .form-actions > .button {
     align-self: center;
   }
 
-  :is(.write-compose, .replybox) .edit-post-actions {
+  :is(.write-compose, .edit-post-compose, .replybox) .edit-post-actions {
     flex-direction: column;
     align-items: flex-end;
     gap: var(--space-1);

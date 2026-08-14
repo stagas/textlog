@@ -205,4 +205,17 @@ describe('in-memory stylesheet', () => {
     expect(css).toContain('.posting-help-popover[popover]:popover-open {\n  display: block;')
     expect(css).toContain('.posting-help-search .posting-help-popover[popover]:popover-open {\n  display: flex;')
   })
+
+  test('gives the mobile edit composer the same posting-help layout as write', async () => {
+    const css = await Bun.file(new URL('./styles.css', import.meta.url)).text()
+    expect(css).toContain(
+      ':is(.write-compose, .edit-post-compose, .replybox, .bio-form) .posting-help {',
+    )
+    expect(css).toContain(
+      ':is(.write-compose, .edit-post-compose, .replybox, .bio-form) .posting-help-limits {',
+    )
+    expect(css).toContain(
+      ':is(.write-compose, .edit-post-compose, .replybox, .bio-form) .composefoot {',
+    )
+  })
 })
