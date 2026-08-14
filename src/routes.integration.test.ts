@@ -751,6 +751,16 @@ test('consequential account, content, reporting, and admin flows work over HTTP'
   expect(mentionHelperHtml).toContain('@<mark>ali</mark>ce')
   expect(mentionHelperHtml).toContain('name="mention_query" value="ali"')
   expect(mentionHelperHtml).toContain('name="body" maxLength="280" required="" autofocus=""')
+  expect(mentionHelperHtml).not.toContain('name="mention_query" maxLength="100" required=""')
+  const implicitMentionHelper = await request(`/post/${post.id}/reply`, {
+    method: 'POST',
+    cookie: aliceCookie,
+    form: { body: '', action: 'search-hashtags', hashtag_query: '', mention_query: '@ali' },
+  })
+  expect(implicitMentionHelper.status).toBe(200)
+  const implicitMentionHelperHtml = await implicitMentionHelper.text()
+  expect(implicitMentionHelperHtml).toContain('@<mark>ali</mark>ce')
+  expect(implicitMentionHelperHtml).not.toContain('No matching hashtags.')
   const publicPost = await request(`/post/${post.id}`)
   expect(publicPost.status).toBe(200)
   expect(publicPost.headers.get('cache-control')).toBe('public, max-age=30, stale-while-revalidate=120')

@@ -33,8 +33,16 @@ const saveFailureMessage = 'Something went wrong while saving. Your text is stil
 
 function postingSuggestionSearch(fields: Record<string, string>, viewerId: number): PostingSuggestionSearch | null {
   if (fields.action !== 'search-hashtags' && fields.action !== 'search-mentions') return null
-  const kind = fields.action === 'search-hashtags' ? 'hashtags' : 'mentions'
-  const rawQuery = normalizeSearchQuery(kind === 'hashtags' ? fields.hashtag_query : fields.mention_query)
+  const hashtagQuery = normalizeSearchQuery(fields.hashtag_query)
+  const mentionQuery = normalizeSearchQuery(fields.mention_query)
+  // An implicit form submission (pressing Enter in a search input) can send the
+  // first submit button's value, regardless of which helper input has focus.
+  const kind = fields.action === 'search-hashtags' && !hashtagQuery && mentionQuery
+    ? 'mentions'
+    : fields.action === 'search-mentions' && !mentionQuery && hashtagQuery
+    ? 'hashtags'
+    : fields.action === 'search-hashtags' ? 'hashtags' : 'mentions'
+  const rawQuery = kind === 'hashtags' ? hashtagQuery : mentionQuery
   const query = normalizeSearchQuery(rawQuery.replace(kind === 'hashtags' ? /^#+\s*/u : /^@+\s*/u, ''))
   const result = kind === 'hashtags'
     ? searchTags(db, query, viewerId, 1, { followedFirst: true })

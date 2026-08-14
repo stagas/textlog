@@ -64,7 +64,7 @@ export function PostingHelp({ maxLength = 280, maxLines = 10, search }: {
         <div className="posting-help-popover" id={popoverId} popover="auto">
           <label>
             <span className="visually-hidden">search {searchLabel}</span>
-            <input type="search" name={inputName} maxLength={100} required={active || undefined}
+            <input type="search" name={inputName} maxLength={100}
               defaultValue={active ? search.query : ''} placeholder={`search ${searchLabel}`} autoComplete="off"
               inputMode="search" enterKeyHint="search" />
           </label>
