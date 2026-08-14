@@ -21,7 +21,8 @@ export function HotFeed(
 ) {
   const viewerId = user?.id ?? -1
   const snapshot = feedSnapshotPage<HotPost>(db, `hot:${hotRankingVersion}`, viewerId, page,
-    () => getHotPosts(db, 1_000_000, null, new Date(), viewerId), devicePageSize(activeRequest(), user?.id))
+    () => getHotPosts(db, 1_000_000, null, new Date(), viewerId, false, 2),
+    devicePageSize(activeRequest(), user?.id))
   const posts = enrichPosts(db, snapshot.items, viewerId)
   const returnPath = path + (snapshot.page > 1 ? `?page=${snapshot.page}` : '')
   return (

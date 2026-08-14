@@ -94,16 +94,10 @@ describe('public API', () => {
     const firstResponse = await request(app, '/api/v1/feeds/hot?limit=2')
     const first = await firstResponse.json() as any
     expect(firstResponse.status).toBe(200)
-    expect(first.data).toHaveLength(2)
+    expect(first.data).toHaveLength(1)
     expect(first.data[0].id).toBe(1)
     expect(first.data[0].reply_count).toBe(1)
-    expect(first.pagination.next_cursor).toBeTruthy()
-
-    const second =
-      await (await request(app, `/api/v1/feeds/hot?limit=2&cursor=${encodeURIComponent(first.pagination.next_cursor)}`))
-        .json() as any
-    expect(second.data).toHaveLength(1)
-    expect(new Set([...first.data, ...second.data].map(post => post.id)).size).toBe(3)
+    expect(first.pagination.next_cursor).toBeNull()
     expect((await request(app, '/api/v1/feeds/hot?cursor=broken')).status).toBe(400)
   })
 

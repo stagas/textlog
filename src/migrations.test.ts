@@ -131,7 +131,7 @@ describe('database migrations', () => {
       database.query('INSERT INTO users(handle,email,password) VALUES(?,?,?)')
         .run('second_persona', 'author@example.com', '!')
     ).not.toThrow()
-    expect(database.query('SELECT score FROM post_hot WHERE post_id=1').get()).toEqual({ score: 0.25 })
+    expect(database.query('SELECT score FROM post_hot WHERE post_id=1').get()).toEqual({ score: 0 })
     expect(database.query('SELECT rowid FROM post_search WHERE post_search MATCH \'hello\'').get()).toEqual({
       rowid: 1,
     })
@@ -359,6 +359,6 @@ describe('database migrations', () => {
     runMigrations(database)
 
     expect(database.query('SELECT score,latest_activity_at FROM post_hot WHERE post_id=1').get())
-      .toEqual({ score: 0.25, latest_activity_at: '2026-08-05 09:00:00' })
+      .toEqual({ score: 0, latest_activity_at: '2026-08-05 09:00:00' })
   })
 })

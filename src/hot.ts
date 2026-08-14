@@ -13,6 +13,7 @@ export type HotPost = {
   handle: string
   hot_score: number
   latest_activity_at: string
+  reply_count: number
 }
 
 export type HotCursor = {
@@ -24,17 +25,23 @@ export type HotCursor = {
   direction: 'next' | 'previous'
 }
 
-export const hotRankingVersion = 10
+export const hotRankingVersion = 30
 const cursorVersion = hotRankingVersion
 const activityHalfLifeHours = 6
-const postWeight = 0.25
+const postWeight = 0
 const directReplyWeight = 2
-const baseRecencyHalfLifeHours = 6
-const recencyHoursPerReply = 3
-const maxRecencyHalfLifeHours = 336
-const maxExponentiallyWeightedReplies = 5
-const postAgeGraceHours = 72
-const postAgeHalfLifeHours = 30
+const replyRecencyHalfLifeHours = 1
+const maxExponentiallyWeightedReplies = 15
+const unboostedReplyCount = 5
+const repliesPerDiscussionWeightDoubling = 1.5
+const recentCommentBoost = 1
+const recentCommentBoostHalfLifeHours = 1
+const singleReplyParticipationWeight = 0.2
+const twoReplyParticipationWeight = 0.6
+const discussionReserveReplyThreshold = 4
+const discussionReserveScale = 0.12
+const minimumDiscussionReserve = 0.4
+const maxDiscussionReserve = 1.5
 
 function hasHotTable(database: Database) {
   return Boolean(database.query('SELECT 1 FROM sqlite_master WHERE type=\'table\' AND name=\'post_hot\'').get())
@@ -193,6 +200,7 @@ export function getHotPosts(
   asOf: Date | string = new Date(),
   viewerId = -1,
   publicOnly = false,
+  minimumDiscussionReplies = 0,
 ) {
   const timestamp = cursor?.asOf || (asOf instanceof Date ? asOf.toISOString() : asOf)
   const filters = ['p.deleted_at IS NULL', 'ranked.hot_score > 0']
@@ -206,6 +214,8 @@ export function getHotPosts(
     parameters.push(viewerId)
   }
   if (publicOnly) filters.push('u.deleted_at IS NULL')
+  if (minimumDiscussionReplies > 0) filters.push('h.reply_count>=?')
+  if (minimumDiscussionReplies > 0) parameters.push(minimumDiscussionReplies)
   if (cursor) {
     const comparison = cursor.direction === 'previous' ? '>' : '<'
     filters.push(`(ranked.hot_score ${comparison} ? OR (ranked.hot_score = ? AND
@@ -215,19 +225,25 @@ export function getHotPosts(
       cursor.createdAt, cursor.id)
   }
   parameters.push(limit)
-  const rows = database.query(`WITH ranking_time(as_of) AS (VALUES(?)), ranked AS (
-    SELECT h.post_id,h.score*pow(2,max(0,min(h.reply_count,${maxExponentiallyWeightedReplies})-1))
+  const rows = database.query(`WITH ranking_time(as_of) AS (VALUES(?)), scored AS (
+    SELECT h.post_id,h.score
+      *CASE h.reply_count WHEN 1 THEN ${singleReplyParticipationWeight}
+        WHEN 2 THEN ${twoReplyParticipationWeight} ELSE 1 END
+      *pow(2,max(0,min(h.reply_count,${maxExponentiallyWeightedReplies})-${unboostedReplyCount})
+        /${repliesPerDiscussionWeightDoubling})
       *pow(0.5,max(0,(julianday(ranking_time.as_of) - julianday(h.score_updated_at))*24)
-        /min(${maxRecencyHalfLifeHours}.0,${baseRecencyHalfLifeHours}.0
-          + h.reply_count*${recencyHoursPerReply}.0))
-      *pow(0.5,max(0,(julianday(ranking_time.as_of) - julianday(p.created_at))*24
-          - ${postAgeGraceHours}.0)/${postAgeHalfLifeHours}.0
-        *max(0,(julianday(ranking_time.as_of) - julianday(p.created_at))*24
-          - ${postAgeGraceHours}.0)/${postAgeHalfLifeHours}.0
-        *max(0,(julianday(ranking_time.as_of) - julianday(p.created_at))*24
-          - ${postAgeGraceHours}.0)/${postAgeHalfLifeHours}.0) hot_score
+        /${replyRecencyHalfLifeHours}.0)
+      *(1 + CASE WHEN h.reply_count > 0 THEN ${recentCommentBoost}.0
+        *pow(0.5,max(0,(julianday(ranking_time.as_of) - julianday(h.latest_activity_at))*24)
+          /${recentCommentBoostHalfLifeHours}.0) ELSE 0 END) recency_score,
+      CASE WHEN h.reply_count >= ${discussionReserveReplyThreshold} THEN
+        max(${minimumDiscussionReserve},min(${maxDiscussionReserve},${discussionReserveScale}*pow(2,
+          (min(h.reply_count,${maxExponentiallyWeightedReplies})-${discussionReserveReplyThreshold})
+            /${repliesPerDiscussionWeightDoubling}))) ELSE 0 END discussion_reserve
     FROM post_hot h JOIN posts p ON p.id=h.post_id CROSS JOIN ranking_time
-  ) SELECT p.*,u.handle,ranked.hot_score,h.latest_activity_at
+  ), ranked AS (
+    SELECT post_id,max(recency_score,discussion_reserve) hot_score FROM scored
+  ) SELECT p.*,u.handle,ranked.hot_score,h.latest_activity_at,h.reply_count
     FROM ranked JOIN post_hot h ON h.post_id=ranked.post_id
     JOIN posts p ON p.id=ranked.post_id JOIN users u ON u.id=p.user_id
     WHERE ${filters.join(' AND ')}
