@@ -109,7 +109,7 @@ describe('hot feed ranking', () => {
           * Math.pow(0.5, 40)
           * (1 + Math.pow(0.5, 40))
       const reserve = replies >= 4
-        ? Math.max(0.4, Math.min(1.5, 0.12 * Math.pow(2, (Math.min(replies, 15) - 4) / 1.5)))
+        ? Math.max(0.12, Math.min(0.3, 0.04 * Math.pow(2, (Math.min(replies, 15) - 4) / 1.5)))
         : 0
       expect(ranked.hot_score).toBeCloseTo(Math.max(decayedScore, reserve))
     }
@@ -202,7 +202,7 @@ describe('hot feed ranking', () => {
 
     const results = getHotPosts(database, 100, null, asOf)
     expect(results.map(result => result.id).slice(0, 2)).toEqual([2, 1])
-    expect(results.find(result => result.id === 1)?.hot_score).toBeCloseTo(1.5)
+    expect(results.find(result => result.id === 1)?.hot_score).toBeCloseTo(0.3)
   })
 
   test('nested reply boosts halve at each level', () => {

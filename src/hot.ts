@@ -25,7 +25,7 @@ export type HotCursor = {
   direction: 'next' | 'previous'
 }
 
-export const hotRankingVersion = 31
+export const hotRankingVersion = 33
 const cursorVersion = hotRankingVersion
 const activityHalfLifeHours = 6
 const postWeight = 0
@@ -39,9 +39,10 @@ const recentCommentBoostHalfLifeHours = 1
 const singleReplyParticipationWeight = 0.2
 const twoReplyParticipationWeight = 0.1
 const discussionReserveReplyThreshold = 4
-const discussionReserveScale = 0.12
-const minimumDiscussionReserve = 0.4
-const maxDiscussionReserve = 1.5
+const discussionReserveScale = 0.04
+const minimumDiscussionReserve = 0.12
+const maxDiscussionReserve = 0.3
+const recentReplyPriorityHours = 3
 
 function hasHotTable(database: Database) {
   return Boolean(database.query('SELECT 1 FROM sqlite_master WHERE type=\'table\' AND name=\'post_hot\'').get())
@@ -226,7 +227,9 @@ export function getHotPosts(
   }
   parameters.push(limit)
   const rows = database.query(`WITH ranking_time(as_of) AS (VALUES(?)), scored AS (
-    SELECT h.post_id,h.score
+    SELECT h.post_id,h.reply_count,
+      max(0,(julianday(ranking_time.as_of)-julianday(h.latest_activity_at))*24) reply_age_hours,
+      h.score
       *CASE h.reply_count WHEN 1 THEN ${singleReplyParticipationWeight}
         WHEN 2 THEN ${twoReplyParticipationWeight} ELSE 1 END
       *pow(2,max(0,min(h.reply_count,${maxExponentiallyWeightedReplies})-${unboostedReplyCount})
@@ -242,7 +245,10 @@ export function getHotPosts(
             /${repliesPerDiscussionWeightDoubling}))) ELSE 0 END discussion_reserve
     FROM post_hot h JOIN posts p ON p.id=h.post_id CROSS JOIN ranking_time
   ), ranked AS (
-    SELECT post_id,max(recency_score,discussion_reserve) hot_score FROM scored
+    SELECT post_id,CASE
+      WHEN reply_count>=3 AND reply_age_hours<=${recentReplyPriorityHours} THEN 1+recency_score
+      WHEN reply_count>=3 THEN discussion_reserve
+      ELSE recency_score END hot_score FROM scored
   ) SELECT p.*,u.handle,ranked.hot_score,h.latest_activity_at,h.reply_count
     FROM ranked JOIN post_hot h ON h.post_id=ranked.post_id
     JOIN posts p ON p.id=ranked.post_id JOIN users u ON u.id=p.user_id
