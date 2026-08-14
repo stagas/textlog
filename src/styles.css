@@ -3874,6 +3874,9 @@ form.report-panel {
 }
 
 .activity-follow-main .activity-context {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
   white-space: nowrap;
 }
 

@@ -165,6 +165,12 @@ describe('in-memory stylesheet', () => {
     expect(css).toContain('.activity-follow-main .activity-follow-stats > * + * {\n  margin-left: var(--space-2);')
   })
 
+  test('ellipsizes follow-event context labels when space is limited', async () => {
+    const css = await Bun.file(new URL('./styles.css', import.meta.url)).text()
+    expect(css).toContain('.activity-follow-main .activity-context {\n  min-width: 0;\n  overflow: hidden;\n'
+      + '  text-overflow: ellipsis;\n  white-space: nowrap;')
+  })
+
   test('opens reference popovers on hover and keyboard focus', async () => {
     const css = await Bun.file(new URL('./styles.css', import.meta.url)).text()
     expect(css).toContain('.reference-menu:hover .reference-menu-popover {')
