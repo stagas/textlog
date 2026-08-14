@@ -21,6 +21,7 @@ beforeEach(() => {
     CREATE TABLE post_hashtags (post_id INTEGER NOT NULL,tag TEXT NOT NULL);
     CREATE TABLE blocked_hashtags (user_id INTEGER NOT NULL,tag TEXT NOT NULL);
     CREATE TABLE post_hot (post_id INTEGER PRIMARY KEY,score REAL NOT NULL DEFAULT 0,reply_count INTEGER NOT NULL DEFAULT 0,
+      activity_count INTEGER NOT NULL DEFAULT 0,
       score_updated_at TEXT NOT NULL,latest_activity_at TEXT NOT NULL);
   `)
   database.query('INSERT INTO users(id,handle) VALUES(?,?)').run(1, 'tester')
@@ -29,7 +30,7 @@ beforeEach(() => {
 function post(id: number, createdAt: string, parentId: number | null = null, deletedAt: string | null = null) {
   database.query('INSERT INTO posts VALUES(?,?,?,?,?,?)')
     .run(id, 1, parentId, `post ${id}`, createdAt, null)
-  database.query('INSERT INTO post_hot VALUES(?,0,0,?,?)').run(id, createdAt, createdAt)
+  database.query('INSERT INTO post_hot VALUES(?,0,0,0,?,?)').run(id, createdAt, createdAt)
   recordHotActivity(database, id)
   if (deletedAt) {
     database.query('UPDATE posts SET deleted_at=? WHERE id=?').run(deletedAt, id)
@@ -40,7 +41,7 @@ function post(id: number, createdAt: string, parentId: number | null = null, del
 function postBy(userId: number, id: number, createdAt: string, parentId: number | null = null) {
   database.query('INSERT INTO posts VALUES(?,?,?,?,?,?)')
     .run(id, userId, parentId, `post ${id}`, createdAt, null)
-  database.query('INSERT INTO post_hot VALUES(?,0,0,?,?)').run(id, createdAt, createdAt)
+  database.query('INSERT INTO post_hot VALUES(?,0,0,0,?,?)').run(id, createdAt, createdAt)
   recordHotActivity(database, id)
 }
 
@@ -110,7 +111,8 @@ describe('hot feed ranking', () => {
           * Math.pow(0.5, 40)
           * (1 + Math.pow(0.5, 40))
       const reserve = replies >= 4
-        ? Math.max(0.12, Math.min(0.3, 0.04 * Math.pow(2, (Math.min(replies, 15) - 4) / 1.5)))
+        ? Math.min(0.3, Math.max(0.235, 0.04 * Math.pow(2, (Math.min(replies, 15) - 4) / 1.5))
+          + 0.02 * Math.pow(0.5, 40 / 24) + Math.max(0, replies - 4) * 0.001)
         : 0
       expect(ranked.hot_score).toBeCloseTo(Math.max(decayedScore, reserve))
     }
@@ -188,7 +190,7 @@ describe('hot feed ranking', () => {
     const fiveDayThread = results.find(result => result.id === 5)!
     expect(newThread.hot_score).toBeCloseTo(fourDayThread.hot_score)
     expect(fourDayThread.hot_score).toBeCloseTo(fiveDayThread.hot_score)
-    expect(newThread.hot_score).toBeCloseTo(0.2 + 0.1)
+    expect(newThread.hot_score).toBeCloseTo(0.225 + 0.04)
   })
 
   test('nine unique repliers outweigh six even when the six-reply thread is older', () => {
@@ -213,6 +215,34 @@ describe('hot feed ranking', () => {
     const oldThread = results.find(result => result.id === 1)!
     expect(results.map(result => result.id)).toEqual([1])
     expect(oldThread.hot_score).toBeGreaterThan(0)
+  })
+
+  test('expires small discussions after four days without comments', () => {
+    post(1, '2026-07-28 12:00:00')
+    for (let index = 1; index <= 4; index++) {
+      postBy(100 + index, 100 + index, '2026-07-29 12:00:00', 1)
+    }
+
+    expect(getHotPosts(database, 20, null, asOf)).toEqual([])
+  })
+
+  test('uses conversation depth to order the lower two-participant tier', () => {
+    database.run(`INSERT INTO users(id,handle) VALUES(2,'one'); INSERT INTO users(id,handle) VALUES(3,'two');`)
+    post(1, '2026-08-01 12:00:00')
+    postBy(2, 2, '2026-08-01 13:00:00', 1)
+    postBy(3, 3, '2026-08-01 14:00:00', 1)
+    post(10, '2026-08-01 12:00:00')
+    let parentId = 10
+    for (let index = 0; index < 8; index++) {
+      const id = 11 + index
+      postBy(index % 2 ? 2 : 3, id, '2026-08-01 14:00:00', parentId)
+      parentId = id
+    }
+
+    const results = getHotPosts(database, 20, null, asOf)
+    expect(results.map(result => result.id).indexOf(10)).toBeLessThan(results.map(result => result.id).indexOf(1))
+    expect(database.query('SELECT activity_count FROM post_hot WHERE post_id=10').get())
+      .toEqual({ activity_count: 8 })
   })
 
   test('keeps a week-old large discussion on hot without outranking fresh replies', () => {
@@ -339,7 +369,7 @@ describe('hot feed ranking', () => {
     post(1, '2026-08-03 11:00:00')
     database.query('INSERT INTO posts VALUES(?,?,?,?,?,?)')
       .run(2, 2, null, 'hidden', '2026-08-03 12:00:00', null)
-    database.query('INSERT INTO post_hot VALUES(?,0,0,?,?)')
+    database.query('INSERT INTO post_hot VALUES(?,0,0,0,?,?)')
       .run(2, '2026-08-03 12:00:00', '2026-08-03 12:00:00')
     recordHotActivity(database, 2)
     database.run(`UPDATE post_hot SET score=4,reply_count=2 WHERE post_id IN (1,2)`)

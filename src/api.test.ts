@@ -21,6 +21,7 @@ function fixture(now?: () => number) {
     CREATE TABLE api_rate_limit_buckets (scope TEXT NOT NULL,key_hash TEXT NOT NULL,bucket_start INTEGER NOT NULL,
       count INTEGER NOT NULL,PRIMARY KEY(scope,key_hash,bucket_start));
     CREATE TABLE post_hot (post_id INTEGER PRIMARY KEY,score REAL NOT NULL DEFAULT 0,reply_count INTEGER NOT NULL DEFAULT 0,
+      activity_count INTEGER NOT NULL DEFAULT 0,
       score_updated_at TEXT NOT NULL,latest_activity_at TEXT NOT NULL);
     INSERT INTO users(id,handle,email,bio,created_at) VALUES
       (1,'Alice','alice@example.com','builder','2026-08-01 10:00:00'),
@@ -37,7 +38,7 @@ function fixture(now?: () => number) {
     INSERT INTO post_hashtags(post_id,tag) VALUES(1,'textlog');
     INSERT INTO follows(follower_id,following_id) VALUES(2,1);
     INSERT INTO handle_history(handle,user_id) VALUES('oldalice',1);
-    INSERT INTO post_hot SELECT id,0,0,created_at,created_at FROM posts;
+    INSERT INTO post_hot SELECT id,0,0,0,created_at,created_at FROM posts;
     CREATE VIRTUAL TABLE post_search USING fts5(body,content='posts',content_rowid='id',tokenize='unicode61');
     INSERT INTO post_search(post_search) VALUES('rebuild');
   `)
@@ -150,7 +151,7 @@ describe('public API', () => {
       (6,1,2,'a nested reply','2026-08-03 14:30:00'),
       (7,2,6,'a deleted descendant','2026-08-03 14:40:00')`)
     database.run(`UPDATE posts SET deleted_at='2026-08-03 14:50:00' WHERE id=7`)
-    database.run(`INSERT INTO post_hot VALUES(6,0,0,'2026-08-03 14:30:00','2026-08-03 14:30:00')`)
+    database.run(`INSERT INTO post_hot VALUES(6,0,0,0,'2026-08-03 14:30:00','2026-08-03 14:30:00')`)
     rebuildHotPosts(database)
 
     const latest = await (await request(app, '/api/v1/feeds/latest')).json() as any

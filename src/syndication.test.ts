@@ -13,6 +13,7 @@ function fixture() {
       created_at TEXT NOT NULL,deleted_at TEXT);
     CREATE TABLE post_hashtags (post_id INTEGER NOT NULL,tag TEXT NOT NULL);
     CREATE TABLE post_hot (post_id INTEGER PRIMARY KEY,score REAL NOT NULL DEFAULT 0,reply_count INTEGER NOT NULL DEFAULT 0,
+      activity_count INTEGER NOT NULL DEFAULT 0,
       score_updated_at TEXT NOT NULL,latest_activity_at TEXT NOT NULL);
     INSERT INTO users VALUES(1,'Alice',NULL,0),(2,'Bob',NULL,1),(3,'Gone','2026-08-03 00:00:00',0);
     INSERT INTO handle_history VALUES('oldalice',1);
@@ -22,7 +23,7 @@ function fixture() {
       (3,1,NULL,'deleted','2026-08-03 12:00:00','2026-08-03 13:00:00'),
       (4,3,NULL,'gone author','2026-08-03 14:00:00',NULL);
     INSERT INTO post_hashtags VALUES(1,'textlog');
-    INSERT INTO post_hot SELECT id,0,0,created_at,created_at FROM posts;
+    INSERT INTO post_hot SELECT id,0,0,0,created_at,created_at FROM posts;
   `)
   rebuildHotPosts(database)
   const app = new Hono()

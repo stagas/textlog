@@ -923,6 +923,14 @@ export const migrations: Migration[] = [
       rebuildHotPosts(database)
     },
   },
+  {
+    version: 68,
+    name: 'hot_conversation_depth',
+    up(database) {
+      addColumn(database, 'post_hot', 'activity_count', 'INTEGER NOT NULL DEFAULT 0')
+      rebuildHotPosts(database)
+    },
+  },
 ]
 
 export const latestMigrationVersion = migrations.at(-1)!.version
