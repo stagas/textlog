@@ -1,9 +1,9 @@
 import { Database } from 'bun:sqlite'
 import { afterEach, describe, expect, test } from 'bun:test'
-import { existsSync, mkdtempSync, rmSync, statSync } from 'node:fs'
+import { copyFileSync, existsSync, mkdirSync, mkdtempSync, readdirSync, rmSync, statSync, utimesSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import { createDatabaseBackup, restoreDatabase, verifyDatabaseFile } from './database-backup'
+import { createDatabaseBackup, pruneBackups, restoreDatabase, verifyDatabaseFile } from './database-backup'
 
 const temporaryDirectories: string[] = []
 afterEach(() => {
@@ -53,5 +53,26 @@ describe('database recovery', () => {
     const live = new Database(join(directory, 'live.sqlite'), { readonly: true })
     expect(live.query('SELECT value FROM state').get()).toEqual({ value: 'from-backup' })
     live.close()
+  })
+
+  test('keeps only the ten newest migration and regular backups independently', () => {
+    const directory = temporaryDirectory()
+    const source = join(directory, 'source.sqlite')
+    databaseAt(source, 'preserved').close()
+    const backups = join(directory, 'backups')
+    mkdirSync(backups)
+    const baseTime = new Date('2026-08-01T00:00:00Z').getTime()
+    for (const category of ['pre-migration-v1-to-v2', 'manual']) {
+      for (let index = 0; index < 12; index++) {
+        const path = join(backups, `textlog-${category}-2026-08-${String(index + 1).padStart(2, '0')}.sqlite`)
+        copyFileSync(source, path)
+        const modified = new Date(baseTime + index * 60_000)
+        utimesSync(path, modified, modified)
+      }
+    }
+
+    expect(pruneBackups(backups, new Date('2026-08-14T00:00:00Z').getTime())).toBe(4)
+    expect(readdirSync(backups).filter(name => name.includes('pre-migration'))).toHaveLength(10)
+    expect(readdirSync(backups).filter(name => name.includes('manual'))).toHaveLength(10)
   })
 })

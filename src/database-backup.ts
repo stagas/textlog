@@ -4,6 +4,7 @@ import { basename, dirname, join, resolve } from 'node:path'
 
 export const defaultDatabasePath = Bun.env.DATABASE_PATH || 'storage/textlog.sqlite'
 export const defaultBackupDirectory = Bun.env.DATABASE_BACKUP_DIR || 'storage/backups'
+const MAX_BACKUPS_PER_CATEGORY = 10
 
 function timestamp() {
   return new Date().toISOString().replace(/[:.]/g, '-')
@@ -31,12 +32,23 @@ export function pruneBackups(directory = defaultBackupDirectory, now = Date.now(
   if (!existsSync(directory)) return 0
   const cutoff = now - retentionDays() * 24 * 60 * 60 * 1000
   let removed = 0
+  const categories = { migration: [] as { path: string; mtimeMs: number }[], regular: [] as {
+    path: string; mtimeMs: number
+  }[] }
   for (const entry of readdirSync(directory)) {
-    if (!/^textlog-(?:(?:pre-migration|manual|pre-restore)-.*|daily-\d{4}-\d{2}-\d{2})\.sqlite$/.test(entry)) continue
+    const migration = /^(?:textlog|root)-pre-migration-.*\.sqlite$/.test(entry)
+    const regular = /^(?:textlog|root)-(?:(?:manual|pre-restore)-.*|daily-\d{4}-\d{2}-\d{2})\.sqlite$/.test(entry)
+    if (!migration && !regular) continue
     const path = join(directory, entry)
-    if (statSync(path).mtimeMs >= cutoff) continue
-    rmSync(path)
-    removed++
+    categories[migration ? 'migration' : 'regular'].push({ path, mtimeMs: statSync(path).mtimeMs })
+  }
+  for (const backups of Object.values(categories)) {
+    backups.sort((left, right) => right.mtimeMs - left.mtimeMs || right.path.localeCompare(left.path))
+    for (const [index, backup] of backups.entries()) {
+      if (index < MAX_BACKUPS_PER_CATEGORY && backup.mtimeMs >= cutoff) continue
+      rmSync(backup.path)
+      removed++
+    }
   }
   return removed
 }

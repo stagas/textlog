@@ -1,6 +1,10 @@
 import type { Database } from 'bun:sqlite'
 import { PAGE_SIZE } from './pagination'
 
+const SNAPSHOT_MAX_AGE = '-1 day'
+const SNAPSHOT_ACCESS_REFRESH = '-5 minutes'
+const MAX_SNAPSHOTS = 200
+
 export type FeedSnapshotPage<T> = {
   items: T[]
   page: number
@@ -24,6 +28,12 @@ export function feedSnapshotPage<T>(database: Database, kind: string, viewerId: 
   if (!snapshot) {
     const items = build()
     database.transaction(() => {
+      database.query(`DELETE FROM feed_snapshots
+        WHERE last_accessed_at < datetime('now', ?)`).run(SNAPSHOT_MAX_AGE)
+      if (kind.startsWith('hot:')) {
+        database.query(`DELETE FROM feed_snapshots
+          WHERE kind LIKE 'hot:%' AND kind != ?`).run(kind)
+      }
       database.query('DELETE FROM feed_snapshots WHERE kind=? AND viewer_id=?').run(kind, viewerId)
       const result = database.query(`INSERT INTO feed_snapshots(kind,viewer_id,generation,total_items)
         VALUES(?,?,?,?)`).run(kind, viewerId, generation, items.length)
@@ -33,11 +43,18 @@ export function feedSnapshotPage<T>(database: Database, kind: string, viewerId: 
       for (let position = 0; position < items.length; position++) {
         insert.run(snapshotId, position, JSON.stringify(items[position]))
       }
+      database.query(`DELETE FROM feed_snapshots WHERE id IN (
+        SELECT id FROM feed_snapshots WHERE id != ?
+        ORDER BY last_accessed_at DESC,id DESC LIMIT -1 OFFSET ?
+      )`).run(snapshotId, MAX_SNAPSHOTS - 1)
     })()
     snapshot = database.query(`SELECT id,total_items,created_at FROM feed_snapshots
       WHERE kind=? AND viewer_id=? AND generation=?`).get(kind, viewerId, generation) as { id: number;
       total_items: number; created_at: string }
   }
+
+  database.query(`UPDATE feed_snapshots SET last_accessed_at=CURRENT_TIMESTAMP
+    WHERE id=? AND last_accessed_at < datetime('now', ?)`).run(snapshot.id, SNAPSHOT_ACCESS_REFRESH)
 
   const totalPages = Math.max(1, Math.ceil(snapshot.total_items / pageSize))
   const safePage = Math.min(page, totalPages)

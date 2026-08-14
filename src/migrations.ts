@@ -896,6 +896,19 @@ export const migrations: Migration[] = [
       rebuildHotPosts(database)
     },
   },
+  {
+    version: 65,
+    name: 'bounded_feed_snapshots',
+    up(database) {
+      addColumn(database, 'feed_snapshots', 'last_accessed_at', 'TEXT')
+      database.run(`UPDATE feed_snapshots SET last_accessed_at=created_at WHERE last_accessed_at IS NULL;
+        DELETE FROM feed_snapshots WHERE last_accessed_at < datetime('now','-1 day');
+        DELETE FROM feed_snapshots WHERE id IN (
+          SELECT id FROM feed_snapshots ORDER BY last_accessed_at DESC,id DESC LIMIT -1 OFFSET 200
+        );
+        CREATE INDEX IF NOT EXISTS feed_snapshots_last_accessed ON feed_snapshots(last_accessed_at);`)
+    },
+  },
 ]
 
 export const latestMigrationVersion = migrations.at(-1)!.version
