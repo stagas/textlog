@@ -323,7 +323,7 @@ describe('database migrations', () => {
       .toEqual({ count: 0 })
   })
 
-  test('rebuilds hot scores to exclude replies below the first level', () => {
+  test('rebuilds hot scores to exclude nested reply weight while retaining conversation activity', () => {
     const database = new Database(':memory:')
     database.run('PRAGMA foreign_keys=ON')
     runMigrations(database)
@@ -340,11 +340,11 @@ describe('database migrations', () => {
     runMigrations(database)
 
     expect(database.query('SELECT latest_activity_at FROM post_hot WHERE post_id=1').get())
-      .toEqual({ latest_activity_at: '2026-08-05 10:00:00' })
+      .toEqual({ latest_activity_at: '2026-08-05 11:00:00' })
     expect(database.query('SELECT score FROM post_hot WHERE post_id=1').get()).not.toEqual({ score: 99 })
   })
 
-  test('rebuilds hot scores to exclude replies by the parent author', () => {
+  test('rebuilds hot scores to exclude author participation while retaining conversation activity', () => {
     const database = new Database(':memory:')
     database.run('PRAGMA foreign_keys=ON')
     runMigrations(database)
@@ -359,6 +359,6 @@ describe('database migrations', () => {
     runMigrations(database)
 
     expect(database.query('SELECT score,latest_activity_at FROM post_hot WHERE post_id=1').get())
-      .toEqual({ score: 0, latest_activity_at: '2026-08-05 09:00:00' })
+      .toEqual({ score: 0, latest_activity_at: '2026-08-05 10:00:00' })
   })
 })

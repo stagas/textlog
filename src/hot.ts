@@ -25,24 +25,25 @@ export type HotCursor = {
   direction: 'next' | 'previous'
 }
 
-export const hotRankingVersion = 34
+export const hotRankingVersion = 39
 const cursorVersion = hotRankingVersion
 const activityHalfLifeHours = 6
 const postWeight = 0
 const directReplyWeight = 2
-const replyRecencyHalfLifeHours = 1
+const replyRecencyHalfLifeHours = 0.5
 const maxExponentiallyWeightedReplies = 15
 const unboostedReplyCount = 5
 const repliesPerDiscussionWeightDoubling = 1.5
 const recentCommentBoost = 1
-const recentCommentBoostHalfLifeHours = 1
+const recentCommentBoostHalfLifeHours = 0.5
 const singleReplyParticipationWeight = 0.2
 const twoReplyParticipationWeight = 0.1
 const discussionReserveReplyThreshold = 4
 const discussionReserveScale = 0.04
 const minimumDiscussionReserve = 0.12
 const maxDiscussionReserve = 0.3
-const recentReplyPriorityHours = 3
+const recentReplyPriorityHours = 12
+const recentReplyPriorityHalfLifeHours = 3
 
 function hasHotTable(database: Database) {
   return Boolean(database.query('SELECT 1 FROM sqlite_master WHERE type=\'table\' AND name=\'post_hot\'').get())
@@ -132,7 +133,11 @@ export function rebuildHotPosts(database: Database, postIds?: number[]) {
       SELECT candidate_id,created_at,${directReplyWeight}*pow(0.5,depth-1)
       FROM ranked_replies WHERE reply_rank=1
     ), latest AS (
-      SELECT candidate_id,max(created_at) latest_activity_at FROM activity GROUP BY candidate_id
+      SELECT candidate_id,max(created_at) latest_activity_at FROM (
+        SELECT candidate_id,created_at FROM activity
+        UNION ALL
+        SELECT candidate_id,created_at FROM descendants WHERE deleted_at IS NULL
+      ) GROUP BY candidate_id
     ) SELECT activity.candidate_id post_id,latest.latest_activity_at,count(*)-1 reply_count,
       sum(weight*pow(0.5,max(0,(julianday(latest.latest_activity_at)-julianday(activity.created_at))*24)/${activityHalfLifeHours}.0)) score
       FROM activity JOIN latest ON latest.candidate_id=activity.candidate_id
@@ -175,6 +180,8 @@ export function rebuildHotPosts(database: Database, postIds?: number[]) {
     SELECT id,created_at,${postWeight} FROM posts WHERE id=? AND deleted_at IS NULL
     UNION ALL
     SELECT id,created_at,${directReplyWeight}*pow(0.5,depth-1) FROM ranked_replies WHERE reply_rank=1
+    UNION ALL
+    SELECT id,created_at,0 FROM descendants WHERE deleted_at IS NULL
   ) SELECT created_at,weight FROM activity`)
   const update = database.query(tracksReplyCount
     ? 'UPDATE post_hot SET score=?,reply_count=?,score_updated_at=?,latest_activity_at=? WHERE post_id=?'
@@ -192,7 +199,8 @@ export function rebuildHotPosts(database: Database, postIds?: number[]) {
       sum
       + event.weight * Math.pow(0.5, Math.max(0, (Date.parse(`${latest.replace(' ', 'T')}Z`)
           - Date.parse(`${event.created_at.replace(' ', 'T')}Z`)) / (activityHalfLifeHours * 3_600_000))), 0)
-    if (tracksReplyCount) update.run(score, events.length - 1, latest, latest, candidate.id)
+    const replyCount = events.filter(event => event.weight > 0).length
+    if (tracksReplyCount) update.run(score, replyCount, latest, latest, candidate.id)
     else update.run(score, latest, latest, candidate.id)
   }
 }
@@ -243,16 +251,18 @@ export function getHotPosts(
   const rows = database.query(`WITH ranking_time(as_of) AS (VALUES(?)), scored AS (
     SELECT h.post_id,h.reply_count,
       max(0,(julianday(ranking_time.as_of)-julianday(h.latest_activity_at))*24) reply_age_hours,
+      pow(0.5,max(0,(julianday(ranking_time.as_of)-julianday(h.latest_activity_at))*24)
+        /${recentReplyPriorityHalfLifeHours}) reply_recency_priority,
       h.score
       *CASE h.reply_count WHEN 1 THEN ${singleReplyParticipationWeight}
         WHEN 2 THEN ${twoReplyParticipationWeight} ELSE 1 END
       *pow(2,max(0,min(h.reply_count,${maxExponentiallyWeightedReplies})-${unboostedReplyCount})
         /${repliesPerDiscussionWeightDoubling})
       *pow(0.5,max(0,(julianday(ranking_time.as_of) - julianday(h.score_updated_at))*24)
-        /${replyRecencyHalfLifeHours}.0)
+        /${replyRecencyHalfLifeHours})
       *(1 + CASE WHEN h.reply_count > 0 THEN ${recentCommentBoost}.0
         *pow(0.5,max(0,(julianday(ranking_time.as_of) - julianday(h.latest_activity_at))*24)
-          /${recentCommentBoostHalfLifeHours}.0) ELSE 0 END) recency_score,
+          /${recentCommentBoostHalfLifeHours}) ELSE 0 END) recency_score,
       CASE WHEN h.reply_count >= ${discussionReserveReplyThreshold} THEN
         max(${minimumDiscussionReserve},min(${maxDiscussionReserve},${discussionReserveScale}*pow(2,
           (min(h.reply_count,${maxExponentiallyWeightedReplies})-${discussionReserveReplyThreshold})
@@ -260,7 +270,10 @@ export function getHotPosts(
     FROM post_hot h JOIN posts p ON p.id=h.post_id CROSS JOIN ranking_time
   ), ranked AS (
     SELECT post_id,CASE
-      WHEN reply_count>=3 AND reply_age_hours<=${recentReplyPriorityHours} THEN 1+recency_score
+      WHEN reply_count>=3 AND reply_age_hours<=${recentReplyPriorityHours} THEN
+        1+reply_recency_priority+min(0.25,recency_score*0.01)
+      WHEN reply_count=2 AND reply_age_hours<=${recentReplyPriorityHours} THEN
+        0.2+reply_recency_priority*0.1
       WHEN reply_count>=3 THEN discussion_reserve
       ELSE recency_score END hot_score FROM scored
   ) SELECT p.*,u.handle,ranked.hot_score,h.latest_activity_at,h.reply_count

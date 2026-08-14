@@ -129,8 +129,8 @@ describe('hot feed ranking', () => {
     const stored = database.query('SELECT score,reply_count,latest_activity_at FROM post_hot WHERE post_id=1')
       .get() as { score: number; reply_count: number; latest_activity_at: string }
     expect(stored.reply_count).toBe(2)
-    expect(stored.score).toBeCloseTo(2 + 2 * Math.pow(0.5, 1 / 6))
-    expect(stored.latest_activity_at).toBe('2026-08-03 11:00:00')
+    expect(stored.score).toBeCloseTo(2 * Math.pow(0.5, 2 / 6) + 2 * Math.pow(0.5, 1 / 6))
+    expect(stored.latest_activity_at).toBe('2026-08-03 12:00:00')
 
     rebuildHotPosts(database)
     const rebuilt = database.query('SELECT score,reply_count,latest_activity_at FROM post_hot WHERE post_id=1')
@@ -153,7 +153,7 @@ describe('hot feed ranking', () => {
 
     const roots = getHotPosts(database, 100, null, asOf)
     expect(roots.map(result => result.id)).toEqual([3, 1, 2])
-    expect(roots[0].hot_score).toBeGreaterThan(2)
+    expect(roots[0].hot_score).toBeGreaterThan(1.5)
   })
 
   test('recent comments can outweigh one additional commenter on an older thread', () => {
@@ -188,7 +188,7 @@ describe('hot feed ranking', () => {
     const fiveDayThread = results.find(result => result.id === 5)!
     expect(newThread.hot_score).toBeCloseTo(fourDayThread.hot_score)
     expect(fourDayThread.hot_score).toBeCloseTo(fiveDayThread.hot_score)
-    expect(newThread.hot_score).toBeCloseTo(4 * 0.1 * 2)
+    expect(newThread.hot_score).toBeCloseTo(0.2 + 0.1)
   })
 
   test('nine unique repliers outweigh six even when the six-reply thread is older', () => {
