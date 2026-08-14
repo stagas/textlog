@@ -2930,6 +2930,20 @@ form.report-panel {
   cursor: pointer;
 }
 
+.bio-form > .posting-help {
+  color: var(--muted);
+  font-size: 0.625rem;
+}
+
+.bio-form > .composefoot {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.bio-form > .composefoot .button {
+  margin-left: auto;
+}
+
 .profile-bot-setting input {
   width: 2.25rem;
   height: 1.25rem;

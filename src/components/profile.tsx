@@ -113,18 +113,6 @@ export function Profile(
                 <form className="bio-form" method="post" action="/account/edit">
                   {returnPath && <input type="hidden" name="from" value={returnPath} />}
                   <FormMessage error={error} />
-                  <label className="profile-bot-setting">
-                    <input type="checkbox" role="switch" name="isBot" value="yes" defaultChecked={editIsBot}
-                      disabled={!!profile.bot_managed} />
-                    <span>
-                      <strong>This account is a bot</strong>
-                      <span className="form-hint">
-                        Bot notes are hidden from /latest. People can see them by following this account, following a
-                        hashtag it uses, or visiting its profile.
-                        {!!profile.bot_managed && ' A moderator permanently controls this setting.'}
-                      </span>
-                    </span>
-                  </label>
                   <label>
                     handle<input name="handle" aria-describedby="profile-handle-help" defaultValue={editHandle}
                       autoComplete="username" inputMode="text" enterKeyHint="next" autoCapitalize="none"
@@ -139,8 +127,20 @@ export function Profile(
                       enterKeyHint="enter" />
                   </label>
                   <PostingSuggestionResults search={suggestionSearch} />
+                  <PostingHelp maxLength={160} maxLines={5} search={suggestionSearch} />
+                  <label className="profile-bot-setting">
+                    <input type="checkbox" role="switch" name="isBot" value="yes" defaultChecked={editIsBot}
+                      disabled={!!profile.bot_managed} />
+                    <span>
+                      <strong>This account is a bot</strong>
+                      <span className="form-hint">
+                        Bot notes are hidden from /latest. People can see them by following this account, following a
+                        hashtag it uses, or visiting its profile.
+                        {!!profile.bot_managed && ' A moderator permanently controls this setting.'}
+                      </span>
+                    </span>
+                  </label>
                   <div className="composefoot">
-                    <PostingHelp maxLength={160} maxLines={5} search={suggestionSearch} />
                     <button className="button">save profile →</button>
                   </div>
                 </form>
