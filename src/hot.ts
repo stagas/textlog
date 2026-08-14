@@ -25,7 +25,7 @@ export type HotCursor = {
   direction: 'next' | 'previous'
 }
 
-export const hotRankingVersion = 33
+export const hotRankingVersion = 34
 const cursorVersion = hotRankingVersion
 const activityHalfLifeHours = 6
 const postWeight = 0
@@ -100,6 +100,14 @@ export function recordHotActivity(database: Database, postId: number) {
 export function rebuildHotPosts(database: Database, postIds?: number[]) {
   if (!hasHotTable(database)) return
   const tracksReplyCount = hasReplyCount(database)
+  const tracksAccountGroups = (database.query('PRAGMA table_info(users)').all() as { name: string }[])
+    .some(column => column.name === 'account_group_id')
+  const replyIdentity = tracksAccountGroups
+    ? 'COALESCE(reply_user.account_group_id,-descendants.user_id)'
+    : 'descendants.user_id'
+  const candidateIdentity = tracksAccountGroups
+    ? 'COALESCE(candidate_user.account_group_id,-candidate_user.id)'
+    : 'candidate_user.id'
   if (!postIds) {
     const rankings = database.query(
       `WITH RECURSIVE descendants(candidate_id,id,user_id,created_at,deleted_at,depth) AS (
@@ -110,11 +118,14 @@ export function rebuildHotPosts(database: Database, postIds?: number[]) {
       WHERE parent.parent_id IS NOT NULL AND descendants.deleted_at IS NULL
     ), ranked_replies AS (
       SELECT descendants.*,row_number() OVER (
-        PARTITION BY descendants.candidate_id,descendants.user_id
+        PARTITION BY descendants.candidate_id,${replyIdentity}
         ORDER BY descendants.depth,descendants.created_at DESC,descendants.id DESC
       ) reply_rank FROM descendants
       JOIN posts candidate ON candidate.id=descendants.candidate_id
-      WHERE descendants.deleted_at IS NULL AND descendants.user_id!=candidate.user_id
+      LEFT JOIN users reply_user ON reply_user.id=descendants.user_id
+      JOIN users candidate_user ON candidate_user.id=candidate.user_id
+      WHERE descendants.deleted_at IS NULL
+        AND ${replyIdentity}!=${candidateIdentity}
     ), activity(candidate_id,created_at,weight) AS (
       SELECT id,created_at,${postWeight} FROM posts WHERE deleted_at IS NULL
       UNION ALL
@@ -152,11 +163,14 @@ export function rebuildHotPosts(database: Database, postIds?: number[]) {
     JOIN posts child ON child.parent_id=descendants.id WHERE descendants.deleted_at IS NULL
   ), ranked_replies AS (
     SELECT descendants.*,row_number() OVER (
-      PARTITION BY descendants.user_id
+      PARTITION BY ${replyIdentity}
       ORDER BY descendants.depth,descendants.created_at DESC,descendants.id DESC
     ) reply_rank FROM descendants
     JOIN posts candidate ON candidate.id=?
-    WHERE descendants.deleted_at IS NULL AND descendants.user_id!=candidate.user_id
+    LEFT JOIN users reply_user ON reply_user.id=descendants.user_id
+    JOIN users candidate_user ON candidate_user.id=candidate.user_id
+    WHERE descendants.deleted_at IS NULL
+      AND ${replyIdentity}!=${candidateIdentity}
   ), activity(id,created_at,weight) AS (
     SELECT id,created_at,${postWeight} FROM posts WHERE id=? AND deleted_at IS NULL
     UNION ALL

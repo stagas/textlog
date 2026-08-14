@@ -909,6 +909,13 @@ export const migrations: Migration[] = [
         CREATE INDEX IF NOT EXISTS feed_snapshots_last_accessed ON feed_snapshots(last_accessed_at);`)
     },
   },
+  {
+    version: 66,
+    name: 'email_unique_hot_replies',
+    up(database) {
+      rebuildHotPosts(database)
+    },
+  },
 ]
 
 export const latestMigrationVersion = migrations.at(-1)!.version

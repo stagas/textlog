@@ -8,7 +8,7 @@ let database: Database
 beforeEach(() => {
   database = new Database(':memory:')
   database.run(`
-    CREATE TABLE users (id INTEGER PRIMARY KEY, handle TEXT NOT NULL);
+    CREATE TABLE users (id INTEGER PRIMARY KEY, handle TEXT NOT NULL, account_group_id INTEGER);
     CREATE TABLE posts (
       id INTEGER PRIMARY KEY,
       user_id INTEGER NOT NULL,
@@ -54,7 +54,8 @@ describe('hot feed ranking', () => {
   })
 
   test('ranks a replied thread without considering an unreplied new post', () => {
-    database.run('INSERT INTO users VALUES(2,\'replier\'); INSERT INTO users VALUES(3,\'another\');')
+    database.run(`INSERT INTO users(id,handle) VALUES(2,'replier');
+      INSERT INTO users(id,handle) VALUES(3,'another');`)
     post(1, '2026-08-02 12:00:00')
     postBy(2, 2, '2026-08-02 12:00:00', 1)
     postBy(3, 3, '2026-08-02 12:00:00', 1)
@@ -68,8 +69,8 @@ describe('hot feed ranking', () => {
   })
 
   test('direct replies give active threads substantially more staying power', () => {
-    database.run(`INSERT INTO users VALUES(2,'r2'); INSERT INTO users VALUES(3,'r3');
-      INSERT INTO users VALUES(4,'r4'); INSERT INTO users VALUES(5,'r5');`)
+    database.run(`INSERT INTO users(id,handle) VALUES(2,'r2'); INSERT INTO users(id,handle) VALUES(3,'r3');
+      INSERT INTO users(id,handle) VALUES(4,'r4'); INSERT INTO users(id,handle) VALUES(5,'r5');`)
     post(1, '2026-08-03 04:00:00')
     postBy(2, 2, '2026-08-03 06:00:00', 1)
     postBy(3, 3, '2026-08-03 06:00:00', 1)
@@ -113,6 +114,30 @@ describe('hot feed ranking', () => {
         : 0
       expect(ranked.hot_score).toBeCloseTo(Math.max(decayedScore, reserve))
     }
+  })
+
+  test('counts personas sharing an account email as one participant', () => {
+    database.run(`UPDATE users SET account_group_id=10 WHERE id=1;
+      INSERT INTO users(id,handle,account_group_id) VALUES
+        (2,'persona-one',20),(3,'persona-two',20),(4,'another-person',30),(5,'author-persona',10);`)
+    post(1, '2026-08-03 08:00:00')
+    postBy(2, 2, '2026-08-03 09:00:00', 1)
+    postBy(3, 3, '2026-08-03 10:00:00', 1)
+    postBy(4, 4, '2026-08-03 11:00:00', 1)
+    postBy(5, 5, '2026-08-03 12:00:00', 1)
+
+    const stored = database.query('SELECT score,reply_count,latest_activity_at FROM post_hot WHERE post_id=1')
+      .get() as { score: number; reply_count: number; latest_activity_at: string }
+    expect(stored.reply_count).toBe(2)
+    expect(stored.score).toBeCloseTo(2 + 2 * Math.pow(0.5, 1 / 6))
+    expect(stored.latest_activity_at).toBe('2026-08-03 11:00:00')
+
+    rebuildHotPosts(database)
+    const rebuilt = database.query('SELECT score,reply_count,latest_activity_at FROM post_hot WHERE post_id=1')
+      .get() as typeof stored
+    expect(rebuilt.reply_count).toBe(stored.reply_count)
+    expect(rebuilt.latest_activity_at).toBe(stored.latest_activity_at)
+    expect(rebuilt.score).toBeCloseTo(stored.score)
   })
 
   test('keeps a heavily discussed three-day post below fresher discussions but within range', () => {
