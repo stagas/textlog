@@ -815,7 +815,7 @@ test('consequential account, content, reporting, and admin flows work over HTTP'
   database.query('DELETE FROM posts WHERE id=?').run(ownThreadReply.id)
   const hotFeed = await request('/hot')
   expect(hotFeed.status).toBe(200)
-  expect(await hotFeed.text()).toContain(post.body)
+  expect(await hotFeed.text()).not.toContain(post.body)
 
   const insertFeedPost = database.query('INSERT INTO posts(user_id,body) VALUES(?,?)')
   for (let index = 1; index <= 41; index++) insertFeedPost.run(alice.id, `cursor note ${index}`)
