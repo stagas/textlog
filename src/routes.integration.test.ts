@@ -896,9 +896,12 @@ test('consequential account, content, reporting, and admin flows work over HTTP'
     + 'href="/u/bob?from=%2Ffor-you%23activity-user-follow-')
   expect(followedPersonFeed).toContain('<a href="/u/bob?tab=replies&amp;from=%2Ffor-you%23activity-user-follow-')
   expect(followedPersonFeed).toContain('<span class="reference-popover-bio">Bob builds things</span>'
-    + '<form action="/follow/bob" method="post"><input type="hidden" name="from" value="/for-you#activity-user-follow-')
+    + '<span class="reference-popover-actions"><form action="/follow/bob" method="post">'
+    + '<input type="hidden" name="from" value="/for-you#activity-user-follow-')
   expect(followedPersonFeed).toContain('<button '
     + 'class="button button-muted" type="submit">unfollow</button>')
+  expect(followedPersonFeed).toContain('<form action="/block/bob" method="post">'
+    + '<button class="quiet danger" type="submit">block</button></form>')
   expect(followedPersonFeed).toContain('<p class="profile-bio">Bob builds things</p>')
   expect(followedPersonFeed).toContain('action="/follow/bob"')
   expect(followedPersonFeed).not.toContain('action="/follow/alice"')
