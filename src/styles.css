@@ -431,6 +431,17 @@ header>.account-nav {
   white-space: nowrap;
 }
 
+.reference-popover-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  margin-top: var(--space-2);
+}
+
+.reference-menu .reference-menu-popover .reference-popover-actions .button {
+  margin-top: 0;
+}
+
 .reference-menu-popover .button,
 .reference-menu-popover .button:hover,
 .reference-menu-popover .button:focus-visible {

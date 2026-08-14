@@ -1,3 +1,4 @@
+import { Fragment } from 'react'
 import { extractHashtags } from '../content'
 import { db, type User } from '../db'
 import { visibleHashtagCounts, visibleTagFollowerCounts } from '../posts'
@@ -179,8 +180,12 @@ export function Profile(
             )}
           {!editing && user
             && bioTags.map(tag => (
-              <form className="reference-follow-form" id={referenceFormId(bioFormPrefix, 'tag', tag)} method="post"
-                action={'/tag-follow/' + encodeURIComponent(tag)} key={tag} />
+              <Fragment key={tag}>
+                <form className="reference-follow-form" id={referenceFormId(bioFormPrefix, 'tag', tag)} method="post"
+                  action={'/tag-follow/' + encodeURIComponent(tag)} />
+                <form className="reference-follow-form" id={referenceFormId(bioFormPrefix, 'tag', tag, 'block')}
+                  method="post" action={'/tag-block/' + encodeURIComponent(tag)} />
+              </Fragment>
             ))}
         </div>
       </ProfileHeader>

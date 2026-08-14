@@ -217,10 +217,14 @@ describe('post persistence', () => {
       + '<span class="reference-popover-bio">Builds things</span>')
     expect(html).toContain('<button class="button button-muted" type="submit" '
       + 'form="post-1-user-reader">unfollow</button>')
+    expect(html).toContain('<button class="quiet danger" type="submit" '
+      + 'form="post-1-user-reader-block">block</button>')
     expect(html).toContain('<span class="reference-menu-popover reference-menu-popover-tag">'
       + '<span class="reference-profile-tabs"><a href="/tag/topic">20 notes</a>'
       + '<a href="/tag/topic?tab=followers">8 followers</a></span>')
     expect(html).toContain('<button class="button" type="submit" form="post-1-tag-topic">follow</button>')
+    expect(html).toContain('<button class="quiet danger" type="submit" '
+      + 'form="post-1-tag-topic-block">block</button>')
   })
 
   test('trims trailing whitespace from bios in user popovers', () => {
