@@ -53,7 +53,8 @@ function tagStatLinks(tag: string, notes: number, followers: number, navigationQ
 }
 
 export function referenceFormId(prefix: string, kind: 'user' | 'tag', value: string,
-  action: 'follow' | 'block' = 'follow') {
+  action: 'follow' | 'block' = 'follow')
+{
   return `${prefix}-${kind}-${encodeURIComponent(value)}${action === 'block' ? '-block' : ''}`
 }
 
@@ -345,9 +346,11 @@ function renderedReference(token: string, mentionBios: Record<string, string>,
   const following = isUser ? !!popover.mentionFollowing?.[key] : !!popover.hashtagFollowing?.[key]
   const ownUser = isUser && key === popover.currentHandle?.toLowerCase()
   const action = ownUser ? '' : popover.signedIn
-    ? `<span class="reference-popover-actions"><button class="button${following ? ' button-muted' : ''}" type="submit" form="${
-      esc(referenceFormId(popover.formPrefix, isUser ? 'user' : 'tag', key))
-    }">${following ? 'unfollow' : 'follow'}</button><button class="quiet danger" type="submit" form="${
+    ? `<span class="reference-popover-actions"><button class="button${
+      following ? ' button-muted' : ''
+    }" type="submit" form="${esc(referenceFormId(popover.formPrefix, isUser ? 'user' : 'tag', key))}">${
+      following ? 'unfollow' : 'follow'
+    }</button><button class="quiet danger" type="submit" form="${
       esc(referenceFormId(popover.formPrefix, isUser ? 'user' : 'tag', key, 'block'))
     }">block</button></span>`
     : '<a class="button" href="/enter" rel="nofollow">enter to follow</a>'

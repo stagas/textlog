@@ -151,14 +151,18 @@ export class ClientErrorRateLimiter {
 
 export function rateLimitMessage(retryAfter: number) {
   const seconds = Math.max(1, Math.ceil(retryAfter))
-  if (seconds < 60) return `This connection has reached the site-wide request limit. Try again in about ${seconds} ${
-    seconds === 1 ? 'second' : 'seconds'
-  }.`
+  if (seconds < 60) {
+    return `This connection has reached the site-wide request limit. Try again in about ${seconds} ${
+      seconds === 1 ? 'second' : 'seconds'
+    }.`
+  }
 
   const minutes = Math.ceil(seconds / 60)
-  if (minutes < 60) return `This connection has reached the site-wide request limit. Try again in about ${minutes} ${
-    minutes === 1 ? 'minute' : 'minutes'
-  }.`
+  if (minutes < 60) {
+    return `This connection has reached the site-wide request limit. Try again in about ${minutes} ${
+      minutes === 1 ? 'minute' : 'minutes'
+    }.`
+  }
 
   const hours = Math.floor(minutes / 60)
   const remainingMinutes = minutes % 60

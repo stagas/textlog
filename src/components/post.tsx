@@ -134,7 +134,8 @@ function ReferenceFollowForms(
       {handles.map(handle => (
         <React.Fragment key={'user-' + handle}>
           <form className="reference-follow-form" id={referenceFormId(prefix, 'user', handle)} method="post"
-            action={'/follow/' + handle}>
+            action={'/follow/' + handle}
+          >
             <input type="hidden" name="from" value={returnPath} />
           </form>
           <form className="reference-follow-form" id={referenceFormId(prefix, 'user', handle, 'block')} method="post"
@@ -144,7 +145,8 @@ function ReferenceFollowForms(
       {tags.map(tag => (
         <React.Fragment key={'tag-' + tag}>
           <form className="reference-follow-form" id={referenceFormId(prefix, 'tag', tag)} method="post"
-            action={'/tag-follow/' + encodeURIComponent(tag)}>
+            action={'/tag-follow/' + encodeURIComponent(tag)}
+          >
             <input type="hidden" name="from" value={returnPath} />
           </form>
           <form className="reference-follow-form" id={referenceFormId(prefix, 'tag', tag, 'block')} method="post"

@@ -657,7 +657,9 @@ test('Error pages explain client and server failures without exposing details', 
   const client = renderToStaticMarkup(React.createElement(ErrorPage, { user: null, status: 400 }))
   const server = renderToStaticMarkup(React.createElement(ErrorPage, { user: null, status: 500 }))
   const limited = renderToStaticMarkup(React.createElement(ErrorPage, {
-    user: null, status: 429, message: 'Try again in about 12 minutes.',
+    user: null,
+    status: 429,
+    message: 'Try again in about 12 minutes.',
   }))
 
   expect(client).toContain('aria-hidden="true">4xx</p>')
