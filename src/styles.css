@@ -1317,7 +1317,10 @@ nav form {
 }
 
 .postdate {
+  min-width: 0;
+  overflow: hidden;
   color: var(--accent);
+  text-overflow: ellipsis;
   white-space: nowrap;
 }
 
@@ -1363,6 +1366,16 @@ nav form {
 .people .reference-menu > .reference-menu-trigger {
   padding-bottom: 0;
   border-bottom: 0;
+}
+
+.posttop > .reference-menu > .reference-menu-trigger,
+.parent-quote-top > .reference-menu > .reference-menu-trigger,
+.activity-follow-main > .reference-menu > .reference-menu-trigger,
+.feed-relationship-main > .reference-menu > .reference-menu-trigger {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .post p > .reference-menu {
@@ -3803,9 +3816,12 @@ form.report-panel {
 }
 
 .post-context {
+  min-width: 0;
   margin-left: calc(-1 * var(--space-2) + 1ch);
+  overflow: hidden;
   color: var(--muted);
   font-size: 0.75rem;
+  text-overflow: ellipsis;
   white-space: nowrap;
 }
 

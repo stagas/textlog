@@ -140,6 +140,24 @@ describe('in-memory stylesheet', () => {
     expect(css).not.toContain('.sr-only')
   })
 
+  test('ellipsizes activity reference links instead of overlapping metadata', async () => {
+    const css = await Bun.file(new URL('./styles.css', import.meta.url)).text()
+    expect(css).toContain('.activity-follow-main a {\n  overflow: hidden;\n  text-overflow: ellipsis;\n}')
+    expect(css).toContain('.posttop > .reference-menu > .reference-menu-trigger,\n'
+      + '.parent-quote-top > .reference-menu > .reference-menu-trigger,\n'
+      + '.activity-follow-main > .reference-menu > .reference-menu-trigger,\n'
+      + '.feed-relationship-main > .reference-menu > .reference-menu-trigger {\n  display: block;')
+    expect(css).toContain('text-overflow: ellipsis;\n  white-space: nowrap;')
+  })
+
+  test('ellipsizes post context and timestamp metadata when space is limited', async () => {
+    const css = await Bun.file(new URL('./styles.css', import.meta.url)).text()
+    expect(css).toContain('.postdate {\n  min-width: 0;\n  overflow: hidden;')
+    expect(css).toContain('color: var(--accent);\n  text-overflow: ellipsis;\n  white-space: nowrap;')
+    expect(css).toContain('.post-context {\n  min-width: 0;')
+    expect(css).toContain('overflow: hidden;\n  color: var(--muted);\n  font-size: 0.75rem;\n  text-overflow: ellipsis;')
+  })
+
   test('opens reference popovers on hover and keyboard focus', async () => {
     const css = await Bun.file(new URL('./styles.css', import.meta.url)).text()
     expect(css).toContain('.reference-menu:hover .reference-menu-popover {')
