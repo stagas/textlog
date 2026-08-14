@@ -2,7 +2,7 @@ import { isAdmin } from '../admin'
 import { db, type User } from '../db'
 import { devicePageSize } from '../device-settings'
 import { feedSnapshotPage } from '../feed-snapshots'
-import { hasUnreadForYou } from '../for-you-state'
+import { hasUnreadForYou, markForYouEntriesRead } from '../for-you-state'
 import { resolveHandle } from '../handles'
 import { enrichPosts, visibleTagFollowerCounts, visibleUserProfileStats } from '../posts'
 import { activeRequest } from '../theme'
@@ -186,6 +186,9 @@ export function Feed({ user, page = 1, title, path = '/for-you', pageUrl, notifi
   const targetProfileStats = visibleUserProfileStats(db, [...targetUsers.values()], user.id)
   const tagFollowerCounts = visibleTagFollowerCounts(db,
     timeline.flatMap(row => row.target_tag ? [row.target_tag] : []), user.id)
+  markForYouEntriesRead(user.id, timeline
+    .filter(row => row.unread && (toMe || !row.targeted_to_viewer))
+    .map(row => row.event_key))
   const enriched = enrichPosts(db, timeline.filter(row => ['post', 'reply', 'mention'].includes(row.activity_kind)),
     user.id)
   const posts = new Map(enriched.map(post => [post.id, post]))

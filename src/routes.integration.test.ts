@@ -915,7 +915,8 @@ test('consequential account, content, reporting, and admin flows work over HTTP'
   expect(followedPersonFeed).toContain('<p class="profile-bio">Bob builds things</p>')
   expect(followedPersonFeed).toContain('action="/follow/bob"')
   expect(followedPersonFeed).not.toContain('action="/follow/alice"')
-  expect(followedPersonFeed).toContain('action="/for-you/read-all"')
+  expect(followedPersonFeed).not.toContain('action="/for-you/read-all"')
+  expect(followedPersonFeed).toContain('<span class="activity-side-status">you&#x27;ve seen it all</span>')
   expect(followedPersonFeed).toContain('href="/to-me"><span class="unread-dot" aria-hidden="true"></span>'
     + '<span class="visually-hidden">unread</span>to me</a>')
   expect(followedPersonFeed).toContain('activity-follow activity-item-unread')
@@ -1021,14 +1022,22 @@ test('consequential account, content, reporting, and admin flows work over HTTP'
   expect(sharedReplyHtml).toContain(`href="${threadProfileHref}">profile</a>`)
   const activityReadKey = `post:${sharedReply.id}`
   const forYouReadKey = `post:${String(sharedReply.id).padStart(20, '0')}`
+  const visitedGeneralPost = database.query('INSERT INTO posts(user_id,body) VALUES(?,?) RETURNING id')
+    .get(bob.id, 'general note read by visiting for you #shared') as { id: number }
+  database.query('INSERT INTO post_hashtags(post_id,tag) VALUES(?,?)').run(visitedGeneralPost.id, 'shared')
+  const visitedGeneralReadKey = `post:${String(visitedGeneralPost.id).padStart(20, '0')}`
 
   await request('/for-you', { cookie: aliceCookie })
   expect(database.query('SELECT 1 FROM activity_reads WHERE user_id=? AND event_key=?')
     .get(alice.id, activityReadKey)).toBeNull()
+  expect(database.query('SELECT 1 FROM for_you_reads WHERE user_id=? AND event_key=?')
+    .get(alice.id, forYouReadKey)).toBeNull()
+  expect(database.query('SELECT 1 FROM for_you_reads WHERE user_id=? AND event_key=?')
+    .get(alice.id, visitedGeneralReadKey)).toBeTruthy()
 
   await request('/to-me', { cookie: aliceCookie })
   expect(database.query('SELECT 1 FROM for_you_reads WHERE user_id=? AND event_key=?')
-    .get(alice.id, forYouReadKey)).toBeNull()
+    .get(alice.id, forYouReadKey)).toBeTruthy()
 
   const generalFeedPost = database.query('INSERT INTO posts(user_id,body) VALUES(?,?) RETURNING id')
     .get(bob.id, 'unread general feed note') as { id: number }
@@ -1038,6 +1047,20 @@ test('consequential account, content, reporting, and admin flows work over HTTP'
     .get(alice.id, forYouReadKey)).toBeTruthy()
   expect(database.query('SELECT 1 FROM for_you_reads WHERE user_id=? AND event_key=?')
     .get(alice.id, generalFeedReadKey)).toBeNull()
+
+  const bulkTargetedReply = database.query(
+    'INSERT INTO posts(user_id,parent_id,body) VALUES(?,?,?) RETURNING id',
+  ).get(bob.id, post.id, 'targeted reply left for to me') as { id: number }
+  const bulkTargetedReadKey = `post:${String(bulkTargetedReply.id).padStart(20, '0')}`
+  const bulkGeneralPost = database.query('INSERT INTO posts(user_id,body) VALUES(?,?) RETURNING id')
+    .get(bob.id, 'general note cleared by for you #shared') as { id: number }
+  database.query('INSERT INTO post_hashtags(post_id,tag) VALUES(?,?)').run(bulkGeneralPost.id, 'shared')
+  const bulkGeneralReadKey = `post:${String(bulkGeneralPost.id).padStart(20, '0')}`
+  await request('/for-you/read-all', { method: 'POST', cookie: aliceCookie })
+  expect(database.query('SELECT 1 FROM for_you_reads WHERE user_id=? AND event_key=?')
+    .get(alice.id, bulkGeneralReadKey)).toBeTruthy()
+  expect(database.query('SELECT 1 FROM for_you_reads WHERE user_id=? AND event_key=?')
+    .get(alice.id, bulkTargetedReadKey)).toBeNull()
 
   const insertActivityReply = database.query(
     'INSERT INTO posts(user_id,parent_id,body,created_at) VALUES(?,?,?,?)',
@@ -1185,8 +1208,8 @@ test('consequential account, content, reporting, and admin flows work over HTTP'
   expect(markedActivity.status).toBe(303)
   expect(markedActivity.headers.get('location')).toBe('/to-me')
   const readAdminActivity = await (await request('/for-you', { cookie: adminCookie })).text()
-  expect(readAdminActivity).toContain('action="/for-you/read-all"')
-  expect(readAdminActivity).toContain('mark all as read</button>')
+  expect(readAdminActivity).not.toContain('action="/for-you/read-all"')
+  expect(readAdminActivity).toContain('<span class="activity-side-status">you&#x27;ve seen it all</span>')
   const ordinaryActivity = await (await request('/for-you', { cookie: aliceCookie })).text()
   expect(ordinaryActivity).not.toContain('signed up:</span>')
   const dashboard = await request('/admin', { cookie: adminCookie })

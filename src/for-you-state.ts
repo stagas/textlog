@@ -77,13 +77,18 @@ const visibleToMeEvents = `
         (b.blocker_id=$viewer AND b.blocked_id=actor.id) OR
         (b.blocker_id=actor.id AND b.blocked_id=$viewer))`
 
+const visibleForYouEvents = `
+  SELECT event_key FROM (${visibleEvents})
+  EXCEPT
+  SELECT event_key FROM (${visibleToMeEvents})`
+
 function stateParameters(userId: number) {
   const account = db.query('SELECT email FROM users WHERE id=?').get(userId) as { email: string } | null
   return { viewer: userId, admin: Number(!!account && isAdminEmail(account.email)) }
 }
 
 export function hasUnreadForYou(userId: number) {
-  return !!db.query(`SELECT 1 FROM (${visibleEvents}) event WHERE NOT EXISTS
+  return !!db.query(`SELECT 1 FROM (${visibleForYouEvents}) event WHERE NOT EXISTS
     (SELECT 1 FROM for_you_reads seen WHERE seen.user_id=$viewer AND seen.event_key=event.event_key) LIMIT 1`)
     .get(stateParameters(userId))
 }
@@ -109,7 +114,7 @@ export function markForYouEntriesRead(userId: number, eventKeys: string[]) {
 }
 
 export function markAllForYouRead(userId: number, toMe = false) {
-  const events = toMe ? visibleToMeEvents : visibleEvents
+  const events = toMe ? visibleToMeEvents : visibleForYouEvents
   db.transaction(() => {
     db.query(`INSERT OR IGNORE INTO for_you_reads(user_id,event_key)
       SELECT $viewer,event_key FROM (${events})`).run(stateParameters(userId))
