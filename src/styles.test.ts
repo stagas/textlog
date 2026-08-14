@@ -158,6 +158,13 @@ describe('in-memory stylesheet', () => {
     expect(css).toContain('overflow: hidden;\n  color: var(--muted);\n  font-size: 0.75rem;\n  text-overflow: ellipsis;')
   })
 
+  test('ellipsizes follow-event date and note metadata as one segment', async () => {
+    const css = await Bun.file(new URL('./styles.css', import.meta.url)).text()
+    expect(css).toContain('.activity-follow-main .activity-follow-stats {\n  display: block;\n  min-width: 0;')
+    expect(css).toContain('overflow: hidden;\n  color: var(--accent);\n  font-size: 0.75rem;\n  text-overflow: ellipsis;')
+    expect(css).toContain('.activity-follow-main .activity-follow-stats > * + * {\n  margin-left: var(--space-2);')
+  })
+
   test('opens reference popovers on hover and keyboard focus', async () => {
     const css = await Bun.file(new URL('./styles.css', import.meta.url)).text()
     expect(css).toContain('.reference-menu:hover .reference-menu-popover {')
