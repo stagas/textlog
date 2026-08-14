@@ -124,7 +124,7 @@ export function Layout({
             <link rel="alternate" type="application/atom+xml" title={`${feeds.title} (Atom)`} href={feeds.atom} />
           </>
         )}
-        <link rel="stylesheet" href="/styles.css?v=252" />
+        <link rel="stylesheet" href="/styles.css?v=253" />
         <style>{themeCss}</style>
       </head>
       <body className={`density-${density}`}>

@@ -306,6 +306,8 @@ test('admin metrics use locale-aware number formatting', () => {
   }))
 
   expect(html).toContain(`<strong>${(1234567).toLocaleString()}</strong><span>users</span>`)
+  expect(html).toContain('class="account-settings-heading admin-header"')
+  expect(html).toContain('class="profile-edit-link" href="/admin/email">send email</a>')
 })
 
 test('pages advertise the dynamic favicon, touch icon, and manifest', () => {

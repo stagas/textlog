@@ -1,17 +1,17 @@
 import { type User } from '../db'
+import { PageHeading } from './account-settings-header'
 import { Layout } from './layout'
 import { FormActions, FormMessage } from './page-shared'
 
 export function AdminEmail({ user, sent = false }: { user: User; sent?: boolean }) {
   return (
     <Layout user={user} title="send email">
-      <section className="page-header admin-header">
-        <div>
-          <p className="eyebrow">admin operations</p>
-          <h1>send email</h1>
-        </div>
-        <a className="quiet" href="/admin">dashboard</a>
-      </section>
+      <PageHeading
+        className="admin-header"
+        eyebrow="admin operations"
+        title="send email"
+        action={<a className="profile-edit-link" href="/admin">dashboard</a>}
+      />
       <section className="admin-email">
         <FormMessage success={sent ? 'Email sent.' : undefined} />
         <form method="post" action="/admin/email">

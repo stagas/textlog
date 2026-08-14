@@ -2,6 +2,7 @@ import { type User } from '../db'
 import { PAGE_SIZE } from '../pagination'
 import type { AdminActionView, AdminReportView, DashboardStats, IllegalActivityReportView, ProfileRow } from '../types'
 import { fmtFull } from '../utils'
+import { PageHeading } from './account-settings-header'
 import { Layout } from './layout'
 import { Pagination } from './page-shared'
 import { StatsGrid } from './stats'
@@ -21,13 +22,12 @@ export function AdminDashboard(
 ) {
   return (
     <Layout user={user} title="admin">
-      <section className="page-header admin-header">
-        <div>
-          <p className="eyebrow">operations</p>
-          <h1>admin dashboard</h1>
-        </div>
-        <a className="quiet" href="/admin/email">send email</a>
-      </section>
+      <PageHeading
+        className="admin-header"
+        eyebrow="operations"
+        title="admin dashboard"
+        action={<a className="profile-edit-link" href="/admin/email">send email</a>}
+      />
       <StatsGrid stats={stats} />
       <section className="admin-section">
         <h2>

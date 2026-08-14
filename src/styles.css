@@ -3050,7 +3050,7 @@ form.report-panel {
 
 .account-settings-heading {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   justify-content: space-between;
   gap: var(--space-5);
 }
@@ -3069,7 +3069,12 @@ form.report-panel {
   text-transform: uppercase;
   letter-spacing: 1.5px;
 }
-.account-settings-heading > .profile-edit-link { margin-top: var(--space-2); }
+.account-settings-heading > .profile-edit-link { margin-top: 0; }
+
+.admin-header.account-settings-heading {
+  margin-bottom: var(--space-7);
+  padding: var(--space-7) var(--gutter) 0;
+}
 
 .ios-notification-help {
   margin: var(--space-5) 0;
@@ -3614,7 +3619,6 @@ form.report-panel {
   font-size: 0.6875rem;
 }
 
-.admin-header .eyebrow,
 .admin-user-header .eyebrow,
 .admin-confirm .eyebrow {
   margin: 0 0 var(--space-2);
