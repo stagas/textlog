@@ -1729,7 +1729,7 @@ nav form {
 }
 
 .auth input,
-.bio-form input,
+.bio-form input:not([type="checkbox"]),
 .account-delete-form input,
 .security-form input:not([type="hidden"]):not([type="checkbox"]):not([type="radio"]),
 .search-form input,
@@ -1780,7 +1780,7 @@ textarea {
 }
 
 .auth input:focus-visible,
-.bio-form input:focus-visible,
+.bio-form input:not([type="checkbox"]):focus-visible,
 .account-delete-form input:focus-visible,
 .security-form input:not([type="hidden"]):not([type="checkbox"]):not([type="radio"]):focus-visible,
 .search-form input:focus-visible,
@@ -2890,6 +2890,27 @@ form.report-panel {
 
 .profile-editing .bio-form {
   margin-top: var(--space-6);
+}
+
+.bio-form .profile-bot-setting {
+  grid-template-columns: auto 1fr;
+  align-items: start;
+  gap: var(--space-3);
+  color: var(--ink);
+  cursor: pointer;
+}
+
+.profile-bot-setting input {
+  width: 2.25rem;
+  height: 1.25rem;
+  margin: 0;
+  accent-color: var(--accent);
+  cursor: pointer;
+}
+
+.profile-bot-setting > span {
+  display: grid;
+  gap: var(--space-1);
 }
 
 .account-danger-zone {

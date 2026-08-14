@@ -229,7 +229,12 @@ export function registerAccountRoutes(app: Hono) {
     const user = currentUser(c.req.raw)
     if (!user) return redirect('/enter?next=' + encodeURIComponent('/account/edit'))
     const returnPath = c.req.query('from') ? safeNext(c.req.query('from')) : undefined
-    return page(<Profile user={user} profile={user} posts={[]} following={false} editing returnPath={returnPath} />)
+    const bot = db.query('SELECT is_bot,bot_managed FROM users WHERE id=?').get(user.id) as {
+      is_bot: number
+      bot_managed: number
+    }
+    return page(<Profile user={user} profile={{ ...user, ...bot }} posts={[]} following={false} editing
+      returnPath={returnPath} />)
   })
 
   app.post('/account/edit', async c => {
@@ -242,11 +247,12 @@ export function registerAccountRoutes(app: Hono) {
     const submittedBio = normalizeBioBody(f.bio || '')
     const bio = submittedBio.trim() ? submittedBio : ''
     const submittedHandle = f.handle || ''
+    const isBot = f.isBot === 'yes'
     const suggestionSearch = profileSuggestionSearch(f, user.id)
     if (suggestionSearch) {
       return page(
         <Profile user={user} profile={user} posts={[]} following={false} bio={bio} editHandle={submittedHandle} editing
-          returnPath={returnPath} suggestionSearch={suggestionSearch} />,
+          returnPath={returnPath} suggestionSearch={suggestionSearch} editIsBot={isBot} />,
       )
     }
     const handle = submittedHandle.toLowerCase().replace(/^@/, '')
@@ -263,7 +269,7 @@ export function registerAccountRoutes(app: Hono) {
       ].filter(Boolean).join(' ')
       return page(
         <Profile user={user} profile={user} posts={[]} following={false} bio={bio} editHandle={submittedHandle} editing
-          error={error} returnPath={returnPath} />,
+          error={error} returnPath={returnPath} editIsBot={isBot} />,
         400,
       )
     }
@@ -272,18 +278,19 @@ export function registerAccountRoutes(app: Hono) {
       if (!moderation.ok) {
         return page(
           <Profile user={user} profile={user} posts={[]} following={false} bio={bio} editHandle={submittedHandle}
-            editing error={moderationMessage(moderation.reason)} returnPath={returnPath} />,
+            editing error={moderationMessage(moderation.reason)} returnPath={returnPath} editIsBot={isBot} />,
           moderation.reason === 'flagged' ? 422 : 503,
         )
       }
     }
     try {
       updateProfileHandle(db, user.id, handle, bio)
+      db.query('UPDATE users SET is_bot=? WHERE id=? AND bot_managed=0').run(isBot ? 1 : 0, user.id)
     }
     catch {
       return page(
         <Profile user={user} profile={user} posts={[]} following={false} bio={bio} editHandle={submittedHandle} editing
-          error="That username is unavailable." returnPath={returnPath} />,
+          error="That username is unavailable." returnPath={returnPath} editIsBot={isBot} />,
         400,
       )
     }

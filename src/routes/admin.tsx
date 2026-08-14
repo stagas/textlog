@@ -169,7 +169,7 @@ export function registerAdminRoutes(app: Hono) {
     if (!isAdmin(signedIn)) return c.text('Forbidden', 403)
     const id = Number(c.req.param('id'))
     const target = Number.isInteger(id)
-      ? db.query(`SELECT id,handle,email,bio,suspended_at,deleted_at FROM users
+      ? db.query(`SELECT id,handle,email,bio,suspended_at,deleted_at,is_bot,bot_managed FROM users
     WHERE id=? AND deleted_at IS NULL`).get(id) as ProfileRow | null
       : null
     if (!target) return c.text('Not found', 404)
@@ -204,17 +204,32 @@ export function registerAdminRoutes(app: Hono) {
     if (!isAdmin(signedIn)) return c.text('Forbidden', 403)
     const id = Number(c.req.param('id'))
     const action = c.req.param('action')
-    if (!Number.isInteger(id) || !['suspend', 'restore', 'delete'].includes(action)) return c.text('Not found', 404)
-    const target = db.query('SELECT id,email,suspended_at FROM users WHERE id=? AND deleted_at IS NULL').get(id) as {
+    if (!Number.isInteger(id) || !['suspend', 'restore', 'delete', 'bot'].includes(action)) {
+      return c.text('Not found', 404)
+    }
+    const target = db.query(`SELECT id,email,suspended_at,is_bot,bot_managed FROM users
+      WHERE id=? AND deleted_at IS NULL`).get(id) as {
       id: number
       email: string
       suspended_at: string | null
+      is_bot: number
+      bot_managed: number
     } | null
     if (!target) return c.text('Not found', 404)
     if (target.id === signedIn.id || isAdminEmail(target.email)) return c.text('Protected admin account', 403)
     if (action === 'suspend' && target.suspended_at) return c.text('Account is already suspended', 409)
     if (action === 'restore' && !target.suspended_at) return c.text('Account is not suspended', 409)
     const f = await form(c.req.raw)
+    if (action === 'bot') {
+      if (f.bot !== 'yes' && f.bot !== 'no') return c.text('Invalid bot status', 400)
+      const isBot = f.bot === 'yes'
+      if (target.bot_managed && !!target.is_bot === isBot) return c.text('Bot status has already changed', 409)
+      db.transaction(() => {
+        db.query('UPDATE users SET is_bot=?,bot_managed=1 WHERE id=?').run(isBot ? 1 : 0, id)
+        recordAdminAction(db, signedIn.id, isBot ? 'mark_bot' : 'unmark_bot', id, null, f.note || '')
+      })()
+      return redirect(`/admin/users/${id}`)
+    }
     db.transaction(() => {
       if (action === 'suspend') {
         db.query('UPDATE users SET suspended_at=CURRENT_TIMESTAMP WHERE id=?').run(id)

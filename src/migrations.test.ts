@@ -232,6 +232,16 @@ describe('database migrations', () => {
     expect(() => runMigrations(database)).toThrow('newer than supported')
   })
 
+  test('adds an opt-in bot account flag defaulting to false', () => {
+    const database = new Database(':memory:')
+    runMigrations(database)
+    database.query("INSERT INTO users(handle,email,password) VALUES('person','person@example.com','x')").run()
+
+    expect(database.query('SELECT is_bot FROM users WHERE handle=?').get('person')).toEqual({ is_bot: 0 })
+    expect(() => database.query('UPDATE users SET is_bot=2 WHERE handle=?').run('person')).toThrow()
+    expect(database.query('SELECT bot_managed FROM users WHERE handle=?').get('person')).toEqual({ bot_managed: 0 })
+  })
+
   test('removes the obsolete per-account API write flag from version 24 databases', () => {
     const database = new Database(':memory:')
     runMigrations(database)

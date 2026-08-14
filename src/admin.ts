@@ -8,7 +8,7 @@ import { removeHotActivity } from './hot'
 export const ADMIN_EMAILS = new Set(instance.administrators.map(email => email.trim().toLowerCase()))
 
 export type AdminActionType = 'delete_post' | 'suspend_user' | 'restore_user' | 'delete_user' | 'resolve_report'
-  | 'dismiss_report'
+  | 'dismiss_report' | 'mark_bot' | 'unmark_bot'
 
 export function isAdmin(user: Pick<User, 'email'> | null | undefined) {
   return !!user && ADMIN_EMAILS.has(user.email.trim().toLowerCase())

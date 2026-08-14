@@ -61,6 +61,8 @@ export type ProfileRow = {
   suspended_at?: string | null
   deleted_at?: string | null
   email_verified_at?: string | null
+  is_bot?: number
+  bot_managed?: number
 }
 
 export type SessionView = { token: string; created_at: number; expires_at: number; user_agent: string;

@@ -6,7 +6,8 @@ import { db } from '../db'
 import { resolveHandle } from '../handles'
 import { type SyndicationFormat, syndicationResponse } from '../syndication'
 
-function publicPosts(database: Database, origin: string, filters: { handle?: string; tag?: string } = {}) {
+function publicPosts(database: Database, origin: string,
+  filters: { handle?: string; tag?: string; excludeBots?: boolean } = {}) {
   return apiPosts(database, origin, { limit: API_DEFAULT_LIMIT, before: null, ...filters }).data
 }
 
@@ -43,7 +44,7 @@ export function registerSyndicationRoutes(app: Hono, database: Database = db,
       description: `The latest public notes posted on ${name}.`,
       pagePath: '/latest',
       feedPath,
-      posts: publicPosts(database, origin),
+      posts: publicPosts(database, origin, { excludeBots: true }),
     })
   }
   const hot = (c: Context, format: SyndicationFormat, feedPath?: string) => {

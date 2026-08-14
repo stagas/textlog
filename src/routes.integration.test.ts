@@ -910,6 +910,27 @@ test('consequential account, content, reporting, and admin flows work over HTTP'
     + '<span class="visually-hidden">unread</span>to me</a>')
   expect(followedPersonFeed).toContain('activity-follow activity-item-unread')
   expect(followedPersonFeed).toContain('class="unread-dot" aria-label="unread"')
+  const enableBot = await request('/account/edit', {
+    method: 'POST', cookie: bobCookie, form: { handle: 'bob', bio: 'Bob builds things', isBot: 'yes' },
+  })
+  expect(enableBot.status).toBe(303)
+  expect(database.query('SELECT is_bot FROM users WHERE id=?').get(bob.id)).toEqual({ is_bot: 1 })
+  const botSettings = await (await request('/account/edit', { cookie: bobCookie })).text()
+  expect(botSettings).toContain('role="switch" name="isBot" checked=""')
+  expect(botSettings).toContain('value="yes"')
+  const botPostBody = 'A bot-only timeline note'
+  expect((await request('/post', { method: 'POST', cookie: bobCookie, form: { body: botPostBody } })).status).toBe(303)
+  const botPost = database.query('SELECT id FROM posts WHERE user_id=? AND body=?').get(bob.id, botPostBody) as {
+    id: number
+  }
+  expect(await (await request('/latest')).text()).not.toContain(botPostBody)
+  expect(await (await request('/u/bob')).text()).toContain(botPostBody)
+  expect(await (await request('/for-you', { cookie: aliceCookie })).text()).toContain(botPostBody)
+  database.query('INSERT INTO posts(user_id,parent_id,body) VALUES(?,?,?)')
+    .run(alice.id, botPost.id, 'A human reply quoting the bot')
+  const latestWithBotQuote = await (await request('/latest')).text()
+  expect(latestWithBotQuote).toContain('A human reply quoting the bot')
+  expect(latestWithBotQuote).toContain(botPostBody)
   const markedForYou = await request('/for-you/read-all', { method: 'POST', cookie: aliceCookie })
   expect(markedForYou.status).toBe(303)
   expect(markedForYou.headers.get('location')).toBe('/for-you')
@@ -966,6 +987,13 @@ test('consequential account, content, reporting, and admin flows work over HTTP'
     bob.id,
     'shared reply #shared',
   ) as { id: number }
+  const hashtagBotPost = await request('/post', {
+    method: 'POST', cookie: bobCookie, form: { body: 'Bot note discovered through #shared' },
+  })
+  expect(hashtagBotPost.status).toBe(303)
+  const hashtagForYou = await (await request('/for-you', { cookie: aliceCookie })).text()
+    + await (await request('/for-you?page=2', { cookie: aliceCookie })).text()
+  expect(hashtagForYou).toContain('Bot note discovered through')
   expect(sharedReplyResponse.headers.get('location')).toBe(
     `/post/${post.id}?from=%2Flatest%3Fcursor%3Dabc%23post-1#post-${sharedReply.id}`,
   )
@@ -1194,6 +1222,24 @@ test('consequential account, content, reporting, and admin flows work over HTTP'
   expect(database.query('SELECT action,note FROM admin_actions WHERE target_post_id=? ORDER BY id DESC LIMIT 1')
     .get(post.id)).toEqual({ action: 'resolve_report', note: 'Resolved by integration test' })
 
+  const moderateBob = await request(`/admin/users/${bob.id}`, { cookie: adminCookie })
+  expect(await moderateBob.text()).toContain('take permanent control of bot status')
+  const enforceBot = await request(`/admin/users/${bob.id}/bot`, {
+    method: 'POST', cookie: adminCookie, form: { bot: 'yes', note: 'Automated account' },
+  })
+  expect(enforceBot.status).toBe(303)
+  expect(database.query('SELECT is_bot,bot_managed FROM users WHERE id=?').get(bob.id))
+    .toEqual({ is_bot: 1, bot_managed: 1 })
+  const lockedBotSettings = await (await request('/account/edit', { cookie: bobCookie })).text()
+  expect(lockedBotSettings).toContain('A moderator permanently controls this setting.')
+  expect(lockedBotSettings).toContain('role="switch" disabled="" name="isBot" checked=""')
+  const ownerCannotRemoveBot = await request('/account/edit', {
+    method: 'POST', cookie: bobCookie, form: { handle: 'bob', bio: 'Bob builds things' },
+  })
+  expect(ownerCannotRemoveBot.status).toBe(303)
+  expect(database.query('SELECT is_bot,bot_managed FROM users WHERE id=?').get(bob.id))
+    .toEqual({ is_bot: 1, bot_managed: 1 })
+
   const suspend = await request(`/admin/users/${bob.id}/suspend`, {
     method: 'POST',
     cookie: adminCookie,
@@ -1211,5 +1257,9 @@ test('consequential account, content, reporting, and admin flows work over HTTP'
   expect(restore.status).toBe(303)
   expect((database.query('SELECT suspended_at FROM users WHERE id=?').get(bob.id) as any).suspended_at).toBeNull()
   const userActions = database.query('SELECT action FROM admin_actions WHERE target_user_id=? ORDER BY id').all(bob.id)
-  expect(userActions).toEqual([{ action: 'suspend_user' }, { action: 'restore_user' }])
+  expect(userActions).toEqual([
+    { action: 'mark_bot' },
+    { action: 'suspend_user' },
+    { action: 'restore_user' },
+  ])
 }, 60_000)

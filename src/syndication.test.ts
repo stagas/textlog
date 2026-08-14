@@ -7,14 +7,14 @@ import { registerSyndicationRoutes } from './routes/syndication'
 function fixture() {
   const database = new Database(':memory:')
   database.run(`
-    CREATE TABLE users (id INTEGER PRIMARY KEY,handle TEXT NOT NULL,deleted_at TEXT);
+    CREATE TABLE users (id INTEGER PRIMARY KEY,handle TEXT NOT NULL,deleted_at TEXT,is_bot INTEGER NOT NULL DEFAULT 0);
     CREATE TABLE handle_history (handle TEXT PRIMARY KEY COLLATE NOCASE,user_id INTEGER NOT NULL);
     CREATE TABLE posts (id INTEGER PRIMARY KEY,user_id INTEGER NOT NULL,parent_id INTEGER,body TEXT NOT NULL,
       created_at TEXT NOT NULL,deleted_at TEXT);
     CREATE TABLE post_hashtags (post_id INTEGER NOT NULL,tag TEXT NOT NULL);
     CREATE TABLE post_hot (post_id INTEGER PRIMARY KEY,score REAL NOT NULL DEFAULT 0,reply_count INTEGER NOT NULL DEFAULT 0,
       score_updated_at TEXT NOT NULL,latest_activity_at TEXT NOT NULL);
-    INSERT INTO users VALUES(1,'Alice',NULL),(2,'Bob',NULL),(3,'Gone','2026-08-03 00:00:00');
+    INSERT INTO users VALUES(1,'Alice',NULL,0),(2,'Bob',NULL,1),(3,'Gone','2026-08-03 00:00:00',0);
     INSERT INTO handle_history VALUES('oldalice',1);
     INSERT INTO posts VALUES
       (1,1,NULL,'hello & <friends> #textlog','2026-08-03 10:00:00',NULL),
@@ -43,7 +43,7 @@ describe('RSS and Atom feeds', () => {
     expect(body).toContain('<rss version="2.0"')
     expect(body).toContain('<atom:link href="https://textlog.cc/latest.rss" rel="self"')
     expect(body).toContain('hello &amp; &lt;friends&gt; #textlog')
-    expect(body).toContain('https://textlog.cc/post/2')
+    expect(body).not.toContain('https://textlog.cc/post/2')
     expect(body).not.toContain('deleted')
     expect(body).not.toContain('gone author')
   })
@@ -69,6 +69,8 @@ describe('RSS and Atom feeds', () => {
     expect(user).not.toContain('a reply')
     expect(tag).toContain('hello &amp; &lt;friends&gt; #textlog')
     expect(tag).not.toContain('a reply')
+    const bot = await (await app.request('https://textlog.cc/u/Bob.atom')).text()
+    expect(bot).toContain('a reply')
     expect(alias.status).toBe(301)
     expect(alias.headers.get('location')).toBe('/u/Alice.rss')
   })

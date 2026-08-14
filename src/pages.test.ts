@@ -1,17 +1,42 @@
 import { describe, expect, test } from 'bun:test'
-import { About, AccountApiKeyCreate, AccountMagicLink, AccountPassword, AccountSecurity, AdminDashboard, ApiDocs, Auth,
-  ChangeAppearance, ChooseHandle, Compose, ConfirmAccountDelete, ConfirmDelete, ConfirmEmail, Connections, Contact,
-  EditPost, EmbedExamples, ErrorPage, Legal, MagicLinkSent, NotFound, NotificationSettings, PasswordLogin, postTitle,
-  Profile, Reply } from './components/pages'
+import { ConnectionPeople, Pagination, TagPeopleList } from './components/page-shared'
+import {
+  About,
+  AccountApiKeyCreate,
+  AccountMagicLink,
+  AccountPassword,
+  AccountSecurity,
+  AdminDashboard,
+  ApiDocs,
+  Auth,
+  ChangeAppearance,
+  ChooseHandle,
+  Compose,
+  ConfirmAccountDelete,
+  ConfirmDelete,
+  ConfirmEmail,
+  Connections,
+  Contact,
+  EditPost,
+  EmbedExamples,
+  ErrorPage,
+  Legal,
+  MagicLinkSent,
+  NotFound,
+  NotificationSettings,
+  PasswordLogin,
+  postTitle,
+  Profile,
+  Reply,
+} from './components/pages'
+import { conversationTopPath, Post, postedReplyPath, replyAnchorReturnPath } from './components/post'
+import { searchPersonReturnPath, searchPostReturnPath } from './components/search'
 
 import React from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
 import { maskEmail } from './components/auth'
 import { HotFeed } from './components/hot-feed'
-import { ConnectionPeople, Pagination, TagPeopleList } from './components/page-shared'
-import { conversationTopPath, Post, postedReplyPath, replyAnchorReturnPath } from './components/post'
 import { PublicFeed } from './components/public-feed'
-import { searchPersonReturnPath, searchPostReturnPath } from './components/search'
 import { TagFeed } from './components/tag-feed'
 
 test('compose offers a server-rendered post preview', () => {
@@ -961,6 +986,11 @@ test('Profile edit offers a data download without rendering notes', () => {
   expect(html).toContain('href="/account/edit/notifications?from=%2Flatest%3Fpage%3D2"')
   expect(html).toContain('Handles must be 2–24 characters')
   expect(html).toContain('aria-describedby="profile-handle-help"')
+  expect(html).toContain('role="switch" name="isBot" value="yes"')
+  expect(html).toContain('This account is a bot')
+  expect(html).toContain('Bot notes are hidden from /latest')
+  expect(html).not.toContain('visiting its profile.0')
+  expect(html.indexOf('This account is a bot')).toBeLessThan(html.indexOf('aria-describedby="profile-handle-help"'))
   expect(html).not.toContain('pattern="[A-Za-z0-9_]{2,24}"')
   expect(html).not.toContain('hidden while editing')
 })
