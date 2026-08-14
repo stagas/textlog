@@ -1,7 +1,7 @@
 import { describe, expect, test } from 'bun:test'
 import { CLIENT_ERROR_RATE_LIMIT, CLIENT_ERROR_RATE_WINDOW_SECONDS, ClientErrorRateLimiter,
   HOURLY_REQUEST_BLOCK_SECONDS, HOURLY_REQUEST_RATE_LIMIT, HOURLY_REQUEST_RATE_WINDOW_SECONDS, rateLimitedResponse,
-  REQUEST_RATE_LIMIT, RequestRateLimiter } from './request-rate-limit'
+  rateLimitMessage, REQUEST_RATE_LIMIT, RequestRateLimiter } from './request-rate-limit'
 
 describe('in-memory request rate limiter', () => {
   test('allows a modestly higher site-wide request burst', () => {
@@ -9,7 +9,7 @@ describe('in-memory request rate limiter', () => {
   })
 
   test('defines a sustained hourly crawler limit and block', () => {
-    expect(HOURLY_REQUEST_RATE_LIMIT).toBe(150)
+    expect(HOURLY_REQUEST_RATE_LIMIT).toBe(500)
     expect(HOURLY_REQUEST_RATE_WINDOW_SECONDS).toBe(3_600)
     expect(HOURLY_REQUEST_BLOCK_SECONDS).toBe(3_600)
   })
@@ -50,6 +50,13 @@ describe('in-memory request rate limiter', () => {
     expect(response.status).toBe(429)
     expect(response.headers.get('retry-after')).toBe('42')
     expect(response.headers.get('cache-control')).toBe('no-store')
+  })
+
+  test('explains how long a visitor needs to wait', () => {
+    expect(rateLimitMessage(42)).toContain('about 42 seconds')
+    expect(rateLimitMessage(61)).toContain('about 2 minutes')
+    expect(rateLimitMessage(3_600)).toContain('about 1 hour')
+    expect(rateLimitMessage(3_661)).toContain('about 1 hour and 2 minutes')
   })
 })
 

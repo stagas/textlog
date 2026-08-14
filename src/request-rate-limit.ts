@@ -1,7 +1,7 @@
 export const REQUEST_RATE_LIMIT = 50
 export const REQUEST_RATE_WINDOW_SECONDS = 10
 export const REQUEST_BLOCK_SECONDS = 5 * 60
-export const HOURLY_REQUEST_RATE_LIMIT = 150
+export const HOURLY_REQUEST_RATE_LIMIT = 500
 export const HOURLY_REQUEST_RATE_WINDOW_SECONDS = 60 * 60
 export const HOURLY_REQUEST_BLOCK_SECONDS = 60 * 60
 export const REQUEST_RATE_MAX_IPS = 50_000
@@ -147,6 +147,25 @@ export class ClientErrorRateLimiter {
       if (misses.length === 0) this.entries.delete(address)
     }
   }
+}
+
+export function rateLimitMessage(retryAfter: number) {
+  const seconds = Math.max(1, Math.ceil(retryAfter))
+  if (seconds < 60) return `This connection has reached the site-wide request limit. Try again in about ${seconds} ${
+    seconds === 1 ? 'second' : 'seconds'
+  }.`
+
+  const minutes = Math.ceil(seconds / 60)
+  if (minutes < 60) return `This connection has reached the site-wide request limit. Try again in about ${minutes} ${
+    minutes === 1 ? 'minute' : 'minutes'
+  }.`
+
+  const hours = Math.floor(minutes / 60)
+  const remainingMinutes = minutes % 60
+  const wait = `${hours} ${hours === 1 ? 'hour' : 'hours'}${
+    remainingMinutes ? ` and ${remainingMinutes} ${remainingMinutes === 1 ? 'minute' : 'minutes'}` : ''
+  }`
+  return `This connection has reached the site-wide request limit. Try again in about ${wait}.`
 }
 
 export function rateLimitedResponse(retryAfter: number) {

@@ -12,11 +12,13 @@ const errors: Record<number, ErrorCopy> = {
   413: { eyebrow: 'request too large', title: 'That request was too large.', message: 'Try again with less content.' },
   415: { eyebrow: 'unsupported request', title: 'We couldn\'t read that request.',
     message: 'Try submitting it again from the original page.' },
+  429: { eyebrow: 'rate limit reached', title: 'Please slow down for a bit.',
+    message: 'Wait a moment, then try again.' },
   500: { eyebrow: 'server error', title: 'Something went wrong.',
     message: 'The problem is on our side. Please try again in a moment.' },
 }
 
-export function ErrorPage({ user, status }: { user: User | null; status: number }) {
+export function ErrorPage({ user, status, message }: { user: User | null; status: number; message?: string }) {
   const error = errors[status] || errors[400]
   const displayStatus = status === 404 ? '404' : status >= 500 ? '5xx' : '4xx'
   return (
@@ -26,7 +28,7 @@ export function ErrorPage({ user, status }: { user: User | null; status: number 
         <div className="not-found-copy status-page-copy">
           <p className="eyebrow">{error.eyebrow}</p>
           <h1 id="status-page-title">{error.title}</h1>
-          <p>{error.message}</p>
+          <p>{message || error.message}</p>
           <ActionPair className="not-found-actions status-page-actions"
             primary={<a className="button" href="/">browse notes</a>} secondary={<a href="/explore">explore</a>} />
         </div>

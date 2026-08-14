@@ -29,7 +29,7 @@ import { registerPostsRoutes } from './routes/posts'
 import { registerProfilesRoutes } from './routes/profiles'
 import { registerSearchRoutes } from './routes/search'
 import { registerSeoRoutes } from './routes/seo'
-import { clientErrorPage, notFoundPage, serverErrorPage } from './routes/shared'
+import { clientErrorPage, notFoundPage, rateLimitPage, serverErrorPage } from './routes/shared'
 import { registerStatsRoutes } from './routes/stats'
 import { registerTagsRoutes } from './routes/tags'
 import { renewSession } from './sessions'
@@ -73,6 +73,12 @@ const hourlyRequestRateLimiter = new RequestRateLimiter({
   blockSeconds: HOURLY_REQUEST_BLOCK_SECONDS,
 })
 const clientErrorRateLimiter = new ClientErrorRateLimiter()
+function requestRateLimitResponse(request: Request, retryAfter: number) {
+  const acceptsHtml = request.headers.get('accept')?.includes('text/html')
+  return acceptsHtml && !new URL(request.url).pathname.startsWith('/api/')
+    ? rateLimitPage(request, retryAfter)
+    : rateLimitedResponse(retryAfter)
+}
 startMaintenance(db, visitorBuffer, error => logError('database maintenance failed', error))
 if (Bun.env.NODE_ENV === 'production') {
   startAutomatedBackups(db, {
@@ -349,13 +355,13 @@ export default {
       : requestRateLimiter.consume(address)
         ?? hourlyRequestRateLimiter.consume(address)
         ?? clientErrorRateLimiter.check(address)
-    if (limited) return rateLimitedResponse(limited.retryAfter)
+    if (limited) return requestRateLimitResponse(request, limited.retryAfter)
     const headers = new Headers(request.headers)
     headers.set(clientIpHeaderName(), address)
     const response = await app.fetch(new Request(request, { headers }))
     if (!bypassRateLimits && response.status >= 400 && response.status < 500) {
       const clientErrorLimited = clientErrorRateLimiter.record(address)
-      if (clientErrorLimited) return rateLimitedResponse(clientErrorLimited.retryAfter)
+      if (clientErrorLimited) return requestRateLimitResponse(request, clientErrorLimited.retryAfter)
     }
     return response
   },

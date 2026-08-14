@@ -656,12 +656,17 @@ test('Not found page gives visitors useful ways back into the site', () => {
 test('Error pages explain client and server failures without exposing details', () => {
   const client = renderToStaticMarkup(React.createElement(ErrorPage, { user: null, status: 400 }))
   const server = renderToStaticMarkup(React.createElement(ErrorPage, { user: null, status: 500 }))
+  const limited = renderToStaticMarkup(React.createElement(ErrorPage, {
+    user: null, status: 429, message: 'Try again in about 12 minutes.',
+  }))
 
   expect(client).toContain('aria-hidden="true">4xx</p>')
   expect(client).toContain('We couldn&#x27;t process that request.')
   expect(server).toContain('aria-hidden="true">5xx</p>')
   expect(server).toContain('Something went wrong.')
   expect(server).not.toContain('Intentional server error')
+  expect(limited).toContain('Please slow down for a bit.')
+  expect(limited).toContain('Try again in about 12 minutes.')
 })
 
 describe('About', () => {

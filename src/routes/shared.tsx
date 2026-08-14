@@ -13,6 +13,7 @@ import { clientIpHeaderName } from '../brand'
 import { AccountSecurity, ErrorPage } from '../components/pages'
 import { db } from '../db'
 import { sendEmailVerification } from '../email'
+import { rateLimitMessage } from '../request-rate-limit'
 import { sessionHash } from '../sessions'
 
 export function page(node: React.ReactNode, status = 200) {
@@ -28,6 +29,12 @@ export function clientErrorPage(req: Request, status = 400) {
 }
 export function serverErrorPage(req: Request) {
   return page(<ErrorPage user={currentUser(req)} status={500} />, 500)
+}
+export function rateLimitPage(req: Request, retryAfter: number) {
+  return retryPage(
+    page(<ErrorPage user={currentUser(req)} status={429} message={rateLimitMessage(retryAfter)} />, 429),
+    retryAfter,
+  )
 }
 export function redirect(path: string, cookie?: string) {
   const h = new Headers({ location: path })
