@@ -570,6 +570,18 @@ nav form {
 
 .feed-tabs-action-separator { color: var(--muted); }
 
+.feed-read-action {
+  display: flex;
+  justify-content: center;
+  width: 100%;
+  padding: var(--space-2) var(--gutter);
+  background: color-mix(in srgb, var(--accent) 6%, transparent);
+  border-bottom: 1px solid var(--soft);
+  font-size: 0.6875rem;
+}
+
+.feed-read-action form { margin: 0; }
+
 @media (max-width: 600px) {
   .feed-tabs {
     align-items: flex-end;
@@ -1250,6 +1262,11 @@ nav form {
 
 .feed-tabs+.activity-item .post,
 .feed-tabs+.activity-item .activity-follow {
+  border-top: 0;
+}
+
+.feed-read-action+.for-you-item .post,
+.feed-read-action+.activity-follow {
   border-top: 0;
 }
 

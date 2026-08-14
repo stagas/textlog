@@ -281,11 +281,11 @@ function linkTokens(body: string, flags?: PostContentFlags): LinkToken[] {
   }
   if (!flags || flags.has_latex) tokens.push(...mathTokens(body, tokens))
   if (!flags || flags.has_links) {
-    for (const match of body.matchAll(/\[([^\]\r\n]+)\]\(([^\s<>")]+)\)/gi)) {
+    for (const match of body.matchAll(/\[((?:\\[\[\]]|[^\]\r\n])+)\]\(([^\s<>")]+)\)/gi)) {
       const url = markdownUrl(match[2])
       if (url) {
         tokens.push({ index: match.index, lastIndex: match.index + match[0].length, kind: 'markdown', raw: match[0],
-          label: match[1], url })
+          label: match[1].replace(/\\([\[\]])/g, '$1'), url })
       }
     }
     for (const match of urlMatcher.match(body) || []) {

@@ -71,6 +71,10 @@ describe('post persistence', () => {
         '<a href="https://example.com/docs" title="https://example.com/docs" target="_blank" rel="nofollow ugc noopener noreferrer">test</a>',
       )
     expect(linkify('[test](example.invalid)')).toBe('[test](example.invalid)')
+    expect(linkify('[Anthropic Risk August 2026 \\[pdf\\]](www-cdn.anthropic.com/reports/Risk%20Report.pdf)'))
+      .toBe(
+        '<a href="https://www-cdn.anthropic.com/reports/Risk%20Report.pdf" title="https://www-cdn.anthropic.com/reports/Risk%20Report.pdf" target="_blank" rel="nofollow ugc noopener noreferrer">Anthropic Risk August 2026 [pdf]</a>',
+      )
   })
   test('keeps ASCII-art markup literal while linking tags and handles', () => {
     const body = '[eye](https://example.com) $x^2$ <nose> @Reader #ascii example.org/art'

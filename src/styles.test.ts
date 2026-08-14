@@ -55,6 +55,12 @@ describe('in-memory stylesheet', () => {
     expect(css).not.toContain('box-shadow: inset 3px 0 var(--accent);')
   })
 
+  test('centers the read-all action on the unread activity highlight', async () => {
+    const css = await Bun.file(new URL('./styles.css', import.meta.url)).text()
+    expect(css).toContain('.feed-read-action {\n  display: flex;\n  justify-content: center;')
+    expect(css).toContain('padding: var(--space-2) var(--gutter);\n  background: color-mix(in srgb, var(--accent) 6%, transparent);')
+  })
+
   test('uses the active accent for the mobile tap highlight', async () => {
     const css = await Bun.file(new URL('./styles.css', import.meta.url)).text()
     expect(css).toContain('--tap-highlight: color-mix(in srgb, var(--accent) 24%, transparent);')

@@ -297,56 +297,56 @@ export function FeedTabs({ active, user, forYouReadStatus, activityReadStatus, t
   activityReadStatus?: boolean
   toMe?: boolean
 }) {
-  const forYouUnread = user ? hasUnreadForYou(user.id) : false
   const toMeUnread = user ? hasUnreadToMe(user.id) : false
+  const forYouUnread = user ? hasUnreadForYou(user.id) || toMeUnread : false
   return (
-    <nav className="feed-tabs" aria-label="Feed">
-      {user && (
-        <a className={active === 'following' ? 'active' : ''} aria-current={active === 'following' ? 'page' : undefined}
-          href="/for-you"
-        >
-          {forYouUnread && <span className="unread-dot" aria-hidden="true" />}
-          {forYouUnread && <span className="visually-hidden">unread</span>}
-          for you
+    <>
+      <nav className="feed-tabs" aria-label="Feed">
+        {user && (
+          <a className={active === 'following' ? 'active' : ''} aria-current={active === 'following' ? 'page' : undefined}
+            href="/for-you"
+          >
+            {forYouUnread && <span className="unread-dot" aria-hidden="true" />}
+            {forYouUnread && <span className="visually-hidden">unread</span>}
+            for you
+          </a>
+        )}
+        <a className={active === 'hot' ? 'active' : ''} aria-current={active === 'hot' ? 'page' : undefined} href="/hot">
+          hot
         </a>
-      )}
-      <a className={active === 'hot' ? 'active' : ''} aria-current={active === 'hot' ? 'page' : undefined} href="/hot">
-        hot
-      </a>
-      <a className={active === 'latest' ? 'active' : ''} aria-current={active === 'latest' ? 'page' : undefined}
-        href="/latest"
-      >
-        latest
-      </a>
-      {(active === 'following' || forYouReadStatus !== undefined || activityReadStatus !== undefined) && (
-        <span className="feed-tabs-read-status">
-          {active === 'following' && (
-            <>
+        <a className={active === 'latest' ? 'active' : ''} aria-current={active === 'latest' ? 'page' : undefined}
+          href="/latest"
+        >
+          latest
+        </a>
+        {(active === 'following' || activityReadStatus !== undefined) && (
+          <span className="feed-tabs-read-status">
+            {active === 'following' && (
               <a className="activity-side-link" href={toMe ? '/for-you' : '/to-me'}>
                 {!toMe && toMeUnread && <span className="unread-dot" aria-hidden="true" />}
                 {!toMe && toMeUnread && <span className="visually-hidden">unread</span>}
                 {toMe ? 'all' : 'to me'}
               </a>
-              {(forYouReadStatus !== undefined || activityReadStatus !== undefined)
-                && <span className="feed-tabs-action-separator" aria-hidden="true">·</span>}
-            </>
-          )}
-          {(forYouReadStatus !== undefined || activityReadStatus !== undefined)
-            && ((forYouReadStatus ?? activityReadStatus)
-              ? (
-                <form method="post" action={activityReadStatus !== undefined
-                  ? '/activity/read-all'
-                  : toMe
-                  ? '/to-me/read-all'
-                  : '/for-you/read-all'}
-                >
-                  <button className="activity-side-link">mark all as read</button>
-                </form>
-              )
-              : <span className="activity-side-status">you've seen it all</span>)}
-        </span>
+            )}
+            {activityReadStatus !== undefined
+              && (activityReadStatus
+                ? (
+                  <form method="post" action="/activity/read-all">
+                    <button className="activity-side-link">mark all as read</button>
+                  </form>
+                )
+                : <span className="activity-side-status">you've seen it all</span>)}
+          </span>
+        )}
+      </nav>
+      {forYouReadStatus && (
+        <div className="feed-read-action">
+          <form method="post" action={toMe ? '/to-me/read-all' : '/for-you/read-all'}>
+            <button className="activity-side-link">mark all as read</button>
+          </form>
+        </div>
       )}
-    </nav>
+    </>
   )
 }
 
