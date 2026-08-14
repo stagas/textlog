@@ -24,14 +24,17 @@ export type HotCursor = {
   direction: 'next' | 'previous'
 }
 
-const cursorVersion = 5
+export const hotRankingVersion = 10
+const cursorVersion = hotRankingVersion
 const activityHalfLifeHours = 6
 const postWeight = 0.25
 const directReplyWeight = 2
 const baseRecencyHalfLifeHours = 6
-const recencyHoursPerReply = 6
+const recencyHoursPerReply = 3
 const maxRecencyHalfLifeHours = 336
-const maxExponentiallyWeightedReplies = 20
+const maxExponentiallyWeightedReplies = 5
+const postAgeGraceHours = 72
+const postAgeHalfLifeHours = 30
 
 function hasHotTable(database: Database) {
   return Boolean(database.query('SELECT 1 FROM sqlite_master WHERE type=\'table\' AND name=\'post_hot\'').get())
@@ -212,12 +215,18 @@ export function getHotPosts(
       cursor.createdAt, cursor.id)
   }
   parameters.push(limit)
-  const rows = database.query(`WITH ranked AS (
-    SELECT post_id,score*pow(2,max(0,min(reply_count,${maxExponentiallyWeightedReplies})-1))
-      *pow(0.5,max(0,(julianday(?) - julianday(score_updated_at))*24)
+  const rows = database.query(`WITH ranking_time(as_of) AS (VALUES(?)), ranked AS (
+    SELECT h.post_id,h.score*pow(2,max(0,min(h.reply_count,${maxExponentiallyWeightedReplies})-1))
+      *pow(0.5,max(0,(julianday(ranking_time.as_of) - julianday(h.score_updated_at))*24)
         /min(${maxRecencyHalfLifeHours}.0,${baseRecencyHalfLifeHours}.0
-          + reply_count*${recencyHoursPerReply}.0)) hot_score
-    FROM post_hot
+          + h.reply_count*${recencyHoursPerReply}.0))
+      *pow(0.5,max(0,(julianday(ranking_time.as_of) - julianday(p.created_at))*24
+          - ${postAgeGraceHours}.0)/${postAgeHalfLifeHours}.0
+        *max(0,(julianday(ranking_time.as_of) - julianday(p.created_at))*24
+          - ${postAgeGraceHours}.0)/${postAgeHalfLifeHours}.0
+        *max(0,(julianday(ranking_time.as_of) - julianday(p.created_at))*24
+          - ${postAgeGraceHours}.0)/${postAgeHalfLifeHours}.0) hot_score
+    FROM post_hot h JOIN posts p ON p.id=h.post_id CROSS JOIN ranking_time
   ) SELECT p.*,u.handle,ranked.hot_score,h.latest_activity_at
     FROM ranked JOIN post_hot h ON h.post_id=ranked.post_id
     JOIN posts p ON p.id=ranked.post_id JOIN users u ON u.id=p.user_id

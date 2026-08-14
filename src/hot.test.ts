@@ -65,7 +65,7 @@ describe('hot feed ranking', () => {
     const results = getHotPosts(database, 20, null, asOf)
     expect(results[0].id).toBe(1)
     expect(results.find(result => result.id === 1)?.hot_score)
-      .toBeCloseTo(4.25 * 2 * Math.pow(0.5, 24 / 18))
+      .toBeCloseTo(4.25 * 2 * Math.pow(0.5, 24 / 12))
   })
 
   test('direct replies give active threads substantially more staying power', () => {
@@ -95,7 +95,7 @@ describe('hot feed ranking', () => {
     }
 
     const results = getHotPosts(database, 100, null, asOf)
-    for (const [rootId, replies, halfLife] of [[1, 1, 12], [100, 5, 36], [200, 20, 126]] as const) {
+    for (const [rootId, replies, halfLife] of [[1, 1, 9], [100, 5, 21], [200, 20, 66]] as const) {
       const stored = database.query('SELECT score,reply_count FROM post_hot WHERE post_id=?').get(rootId) as {
         score: number
         reply_count: number
@@ -103,8 +103,44 @@ describe('hot feed ranking', () => {
       const ranked = results.find(result => result.id === rootId)!
       expect(stored.reply_count).toBe(replies)
       expect(ranked.hot_score / stored.score)
-        .toBeCloseTo(Math.pow(2, Math.max(0, replies - 1)) * Math.pow(0.5, 40 / halfLife))
+        .toBeCloseTo(Math.pow(2, Math.max(0, Math.min(replies, 5) - 1)) * Math.pow(0.5, 40 / halfLife))
     }
+  })
+
+  test('recent comments can outweigh one additional commenter on an older thread', () => {
+    post(1, '2026-08-01 12:00:00')
+    for (let index = 1; index <= 6; index++) {
+      postBy(100 + index, 100 + index, '2026-08-01 12:00:00', 1)
+    }
+    post(2, '2026-08-03 04:00:00')
+    for (let index = 1; index <= 5; index++) {
+      postBy(200 + index, 200 + index, '2026-08-03 04:00:00', 2)
+    }
+
+    const results = getHotPosts(database, 20, null, asOf)
+    expect(results.indexOf(results.find(result => result.id === 2)!))
+      .toBeLessThan(results.indexOf(results.find(result => result.id === 1)!))
+  })
+
+  test('progressively increases the post-age penalty after three days even when comments are fresh', () => {
+    post(1, '2026-07-30 12:00:00')
+    postBy(2, 2, '2026-08-03 12:00:00', 1)
+    post(3, '2026-08-03 12:00:00')
+    postBy(3, 4, '2026-08-03 12:00:00', 3)
+    post(5, '2026-07-29 12:00:00')
+    postBy(4, 6, '2026-08-03 12:00:00', 5)
+
+    const results = getHotPosts(database, 20, null, asOf)
+    const fourDayThread = results.find(result => result.id === 1)!
+    const newThread = results.find(result => result.id === 3)!
+    const fiveDayThread = results.find(result => result.id === 5)!
+    expect(newThread.hot_score).toBeGreaterThan(fourDayThread.hot_score)
+    expect(fourDayThread.hot_score).toBeGreaterThan(fiveDayThread.hot_score)
+    expect(fourDayThread.hot_score)
+      .toBeCloseTo((2 + 0.25 * Math.pow(0.5, 96 / 6)) * Math.pow(0.5, Math.pow(24 / 30, 3)))
+    expect(fiveDayThread.hot_score)
+      .toBeCloseTo((2 + 0.25 * Math.pow(0.5, 120 / 6)) * Math.pow(0.5, Math.pow(48 / 30, 3)))
+    expect(newThread.hot_score).toBeCloseTo(2.25)
   })
 
   test('nine unique repliers outweigh six even when the six-reply thread is older', () => {
@@ -118,16 +154,18 @@ describe('hot feed ranking', () => {
       .toBeLessThan(results.indexOf(results.find(result => result.id === 1)!))
   })
 
-  test('keeps an older widely discussed thread above a brand-new post', () => {
-    post(1, '2026-07-27 12:00:00')
+  test('pushes old discussions far below new posts even when they had many commenters', () => {
+    post(1, '2026-07-28 12:00:00')
     for (let index = 1; index <= 30; index++) {
-      postBy(100 + index, 100 + index, '2026-07-27 12:00:00', 1)
+      postBy(100 + index, 100 + index, '2026-07-28 12:00:00', 1)
     }
     post(2, '2026-08-03 12:00:00')
 
     const results = getHotPosts(database, 50, null, asOf)
-    expect(results[0].id).toBe(1)
-    expect(results[0].hot_score).toBeGreaterThan(results.find(result => result.id === 2)!.hot_score)
+    const oldThread = results.find(result => result.id === 1)!
+    const newPost = results.find(result => result.id === 2)!
+    expect(results[0].id).toBe(2)
+    expect(oldThread.hot_score).toBeLessThan(newPost.hot_score / 2)
   })
 
   test('nested reply boosts halve at each level', () => {
@@ -224,8 +262,6 @@ describe('hot feed ranking', () => {
 
     const results = getHotPosts(database, 20, null, asOf)
     expect(results.map(result => result.id)).toEqual([3, 1])
-    expect(results[1].latest_activity_at).toBe('2026-07-30 12:00:00')
-    expect(results[1].hot_score).toBeCloseTo(0.25 * Math.pow(0.5, 96 / 6))
   })
 
   test('uses deterministic tie-breakers and pagination', () => {

@@ -18,7 +18,7 @@ export function feedSnapshotPage<T>(database: Database, kind: string, viewerId: 
   let snapshot = database.query(`SELECT id,total_items,created_at FROM feed_snapshots
     WHERE kind=? AND viewer_id=? AND generation=?`).get(kind, viewerId, generation) as { id: number;
     total_items: number; created_at: string } | null
-  if (snapshot && kind === 'hot'
+  if (snapshot && (kind === 'hot' || kind.startsWith('hot:'))
     && Date.now() - Date.parse(`${snapshot.created_at.replace(' ', 'T')}Z`) > 15 * 60_000) snapshot = null
 
   if (!snapshot) {
