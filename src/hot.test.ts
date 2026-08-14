@@ -63,7 +63,7 @@ describe('hot feed ranking', () => {
     const results = getHotPosts(database, 20, null, asOf)
     expect(results[0].id).toBe(1)
     expect(results.find(result => result.id === 1)?.hot_score)
-      .toBeCloseTo(4 * 0.6 * Math.pow(0.5, 24)
+      .toBeCloseTo(4 * 0.1 * Math.pow(0.5, 24)
         * (1 + Math.pow(0.5, 24)))
   })
 
@@ -163,7 +163,7 @@ describe('hot feed ranking', () => {
     const fiveDayThread = results.find(result => result.id === 5)!
     expect(newThread.hot_score).toBeCloseTo(fourDayThread.hot_score)
     expect(fourDayThread.hot_score).toBeCloseTo(fiveDayThread.hot_score)
-    expect(newThread.hot_score).toBeCloseTo(4 * 0.6 * 2)
+    expect(newThread.hot_score).toBeCloseTo(4 * 0.1 * 2)
   })
 
   test('nine unique repliers outweigh six even when the six-reply thread is older', () => {

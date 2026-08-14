@@ -25,7 +25,7 @@ export type HotCursor = {
   direction: 'next' | 'previous'
 }
 
-export const hotRankingVersion = 30
+export const hotRankingVersion = 31
 const cursorVersion = hotRankingVersion
 const activityHalfLifeHours = 6
 const postWeight = 0
@@ -37,7 +37,7 @@ const repliesPerDiscussionWeightDoubling = 1.5
 const recentCommentBoost = 1
 const recentCommentBoostHalfLifeHours = 1
 const singleReplyParticipationWeight = 0.2
-const twoReplyParticipationWeight = 0.6
+const twoReplyParticipationWeight = 0.1
 const discussionReserveReplyThreshold = 4
 const discussionReserveScale = 0.12
 const minimumDiscussionReserve = 0.4
