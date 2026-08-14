@@ -11,10 +11,10 @@ export function devicePageSize(request: Request, userId: number | null | undefin
   database: Database = db): PageSizeChoice
 {
   const deviceId = notificationDevice(request)
-  if (!userId || !deviceId) return 40
+  if (!userId || !deviceId) return 20
   const row = database.query('SELECT page_size pageSize FROM device_settings WHERE user_id=? AND device_id=?')
     .get(userId, deviceId) as { pageSize: number } | null
-  return row && PAGE_SIZE_CHOICES.includes(row.pageSize as PageSizeChoice) ? row.pageSize as PageSizeChoice : 40
+  return row && PAGE_SIZE_CHOICES.includes(row.pageSize as PageSizeChoice) ? row.pageSize as PageSizeChoice : 20
 }
 
 export function saveDevicePageSize(userId: number, deviceId: string, pageSize: PageSizeChoice,
@@ -36,7 +36,7 @@ export function deviceDensity(request: Request, userId: number | null | undefine
 }
 
 export function saveDeviceDensity(userId: number, deviceId: string, density: DensityChoice, database: Database = db) {
-  database.query(`INSERT INTO device_settings(user_id,device_id,page_size,density) VALUES(?,?,40,?)
+  database.query(`INSERT INTO device_settings(user_id,device_id,page_size,density) VALUES(?,?,20,?)
     ON CONFLICT(user_id,device_id) DO UPDATE SET density=excluded.density,updated_at=CURRENT_TIMESTAMP`)
     .run(userId, deviceId, density)
 }

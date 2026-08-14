@@ -8,7 +8,7 @@ import { Layout } from './layout'
 export type AppearanceTab = 'theme' | 'font' | 'misc'
 
 export function ChangeAppearance(
-  { user, selected, selectedFont, selectedSize = 'regular', selectedPageSize = 40, selectedDensity = 'regular',
+  { user, selected, selectedFont, selectedSize = 'regular', selectedPageSize = 20, selectedDensity = 'regular',
     tab = 'theme', returnPath }: { user: User; selected: Appearance; selectedFont: FontChoice;
       selectedSize?: FontSizeChoice; tab?: AppearanceTab; selectedPageSize?: PageSizeChoice;
       selectedDensity?: DensityChoice; returnPath?: string },
