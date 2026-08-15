@@ -232,7 +232,7 @@ describe('public API', () => {
     expect(reply.data.parent).toMatchObject({ id: 1, body: 'hello #textlog @bob' })
     expect(replies.data.map((item: any) => item.id)).toEqual([2])
     expect(user.data).toMatchObject({ handle: 'alice', bio: 'builder', post_count: 2, replies_count: 1,
-      follower_count: 1, following_count: 0 })
+      follower_count: 1, following_user_count: 0, following_tag_count: 0, following_count: 0 })
     expect(user.data.email).toBeUndefined()
     expect(userPosts.data.map((item: any) => item.id)).toEqual([3, 1])
     expect(userNotes).toEqual(userPosts)
@@ -274,8 +274,13 @@ describe('public API', () => {
     expect(followers.data.map((item: any) => item.handle)).toEqual(['dana', 'bob'])
     expect(tagFollowers.data.map((item: any) => item.handle)).toEqual(['dana', 'bob', 'alice'])
     expect([...firstTags.data, ...secondTags.data].map((item: any) => item.tag)).toEqual(['quiet', 'textlog'])
-    expect(firstTags.data[0]).toMatchObject({ url: 'https://textlog.cc/tag/quiet',
-      api_url: 'https://textlog.cc/api/v1/tags/quiet/posts' })
+    expect(firstTags.data[0]).toMatchObject({ follower_count: 1, post_count: 0,
+      url: 'https://textlog.cc/tag/quiet', api_url: 'https://textlog.cc/api/v1/tags/quiet' })
+    const user = await (await request(app, '/api/v1/users/alice')).json() as any
+    const tag = await (await request(app, '/api/v1/tags/textlog')).json() as any
+    expect(user.data).toMatchObject({ following_user_count: 2, following_tag_count: 2, follower_count: 2 })
+    expect(tag.data).toMatchObject({ tag: 'textlog', post_count: 1, follower_count: 3,
+      api_url: 'https://textlog.cc/api/v1/tags/textlog' })
     expect((await request(app, '/api/v1/users/gone/followers')).status).toBe(404)
     expect((await request(app, '/api/v1/tags/invalid-tag/followers')).status).toBe(400)
   })
@@ -340,13 +345,15 @@ describe('public API', () => {
     expect(rss.headers.get('content-type')).toBe('application/rss+xml; charset=utf-8')
     expect(rss.headers.get('access-control-allow-origin')).toBe('*')
     expect(spec.openapi).toBe('3.1.0')
-    expect(Object.keys(spec.paths)).toHaveLength(34)
+    expect(Object.keys(spec.paths)).toHaveLength(35)
     expect(spec.paths['/activities/for-you'].get.responses['401']).toBeDefined()
     expect(spec.paths['/activities/to-me'].get.responses['401']).toBeDefined()
     expect(spec.paths['/users/{handle}/blocks'].get.responses['403']).toBeDefined()
     expect(spec.paths['/activities/for-you/read-all'].post).toBeDefined()
     expect(spec.paths['/users/{handle}/following/tags'].get).toBeDefined()
     expect(spec.paths['/tags/{tag}/followers'].get).toBeDefined()
+    expect(spec.components.schemas.User.required).toContain('following_tag_count')
+    expect(spec.components.schemas.Tag.required).toContain('follower_count')
     expect(spec.components.schemas.Activity.properties.type.enum).toContain('user_follow')
     expect(spec.paths['/users/{handle}/posts'].get.deprecated).toBe(true)
     expect(spec.paths['/users/{handle}/notes'].get.summary).toBe("User's latest notes")

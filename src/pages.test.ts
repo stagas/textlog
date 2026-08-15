@@ -668,6 +668,7 @@ test('API documentation is linked from the footer and describes the firehose', (
   expect(html).toContain('class="api-path">/activities/to-me/read-all</span>')
   expect(html).toContain('class="api-path">/users/:handle/following/tags</span>')
   expect(html).toContain('class="api-path">/tags/:tag/followers</span>')
+  expect(html).toContain('class="api-path">/tags/:tag</span>')
   expect(html).not.toContain('Bearer token required.')
   expect(html).toContain('authentication bearer token required')
 })

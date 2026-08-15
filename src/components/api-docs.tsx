@@ -58,6 +58,7 @@ const endpoints: ReadonlyArray<readonly [string, string, ReactNode, boolean?]> =
   ['GET', '/activities/to-me', 'Get replies, mentions, and follows directed to you.', true],
   ['POST', '/activities/to-me/read', 'Mark selected activities as read using their activity_ids.', true],
   ['POST', '/activities/to-me/read-all', 'Mark every to-me activity as read.', true],
+  ['GET', '/tags/:tag', 'Get hashtag details and post and follower counts.'],
   ['GET', '/tags/:tag/posts', 'Get the latest posts carrying a hashtag.'],
   ['GET', '/tags/:tag/followers', 'List accounts following a hashtag.'],
   ['GET', '/search?q=:query', 'Search public posts by text.'],

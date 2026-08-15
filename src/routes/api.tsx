@@ -215,6 +215,9 @@ function openApiDocument() {
           parameters: [{ name: 'tag', in: 'path', required: true, schema: { type: 'string' } },
             ...collectionParameters], responses: jsonResponses },
       },
+      '/tags/{tag}': { get: { summary: 'Hashtag details', parameters: [
+        { name: 'tag', in: 'path', required: true, schema: { type: 'string' } },
+      ], responses: jsonResponses } },
       '/tags/{tag}/followers': { get: { summary: 'Accounts following a hashtag', parameters: [
         { name: 'tag', in: 'path', required: true, schema: { type: 'string' } }, ...collectionParameters,
       ], responses: jsonResponses } },
@@ -271,10 +274,18 @@ function openApiDocument() {
               description: 'Distance from the post whose replies were requested.' },
           } },
         ],
+      }, Tag: {
+        type: 'object', required: ['tag', 'post_count', 'follower_count', 'url', 'api_url'], properties: {
+          tag: { type: 'string' },
+          post_count: { type: 'integer', minimum: 0 },
+          follower_count: { type: 'integer', minimum: 0 },
+          url: { type: 'string', format: 'uri' },
+          api_url: { type: 'string', format: 'uri' },
+        },
       }, User: {
         type: 'object',
-        required: ['handle', 'bio', 'created_at', 'post_count', 'replies_count', 'follower_count', 'following_count',
-          'url', 'api_url'],
+        required: ['handle', 'bio', 'created_at', 'post_count', 'replies_count', 'follower_count',
+          'following_user_count', 'following_tag_count', 'following_count', 'url', 'api_url'],
         properties: {
           handle: { type: 'string' },
           bio: { type: 'string' },
@@ -282,7 +293,10 @@ function openApiDocument() {
           post_count: { type: 'integer', minimum: 0, description: 'Number of top-level posts.' },
           replies_count: { type: 'integer', minimum: 0, description: 'Number of replies.' },
           follower_count: { type: 'integer', minimum: 0 },
-          following_count: { type: 'integer', minimum: 0 },
+          following_user_count: { type: 'integer', minimum: 0 },
+          following_tag_count: { type: 'integer', minimum: 0 },
+          following_count: { type: 'integer', minimum: 0,
+            description: 'Backward-compatible alias for following_user_count.' },
           url: { type: 'string', format: 'uri' },
           api_url: { type: 'string', format: 'uri' },
         },
@@ -465,9 +479,10 @@ export function registerApiRoutes(app: Hono, database: Database = db,
       (SELECT count(*) FROM posts p
         WHERE p.user_id=u.id AND p.parent_id IS NOT NULL AND p.deleted_at IS NULL) replies_count,
       (SELECT count(*) FROM follows f JOIN users follower ON follower.id=f.follower_id
-        WHERE f.following_id=u.id AND follower.deleted_at IS NULL) follower_count,
+        WHERE f.following_id=u.id AND follower.deleted_at IS NULL AND follower.suspended_at IS NULL) follower_count,
       (SELECT count(*) FROM follows f JOIN users followed ON followed.id=f.following_id
-        WHERE f.follower_id=u.id AND followed.deleted_at IS NULL) following_count
+        WHERE f.follower_id=u.id AND followed.deleted_at IS NULL AND followed.suspended_at IS NULL) following_user_count,
+      (SELECT count(*) FROM hashtag_follows hf WHERE hf.user_id=u.id) following_tag_count
       FROM users u WHERE u.id=? AND u.deleted_at IS NULL`).get(resolved.id) as {
       handle: string
       bio: string
@@ -475,7 +490,8 @@ export function registerApiRoutes(app: Hono, database: Database = db,
       post_count: number
       replies_count: number
       follower_count: number
-      following_count: number
+      following_user_count: number
+      following_tag_count: number
     } | null
     if (!found) return apiError('not_found', 'User not found', 404)
     const origin = apiOrigin(c.req.url, appUrl)
@@ -483,7 +499,8 @@ export function registerApiRoutes(app: Hono, database: Database = db,
     return jsonResponse({
       data: { handle: normalized, bio: found.bio, created_at: isoTimestamp(found.created_at),
         post_count: found.post_count, replies_count: found.replies_count, follower_count: found.follower_count,
-        following_count: found.following_count,
+        following_user_count: found.following_user_count, following_tag_count: found.following_tag_count,
+        following_count: found.following_user_count,
         url: `${origin}/u/${encodeURIComponent(normalized)}`,
         api_url: `${origin}/api/v1/users/${encodeURIComponent(normalized)}` },
     })
@@ -615,17 +632,44 @@ export function registerApiRoutes(app: Hono, database: Database = db,
     const parameters = parsed.before === null
       ? [resolved.id, parsed.limit + 1]
       : [resolved.id, parsed.before, parsed.limit + 1]
-    const rows = database.query(`SELECT hf.rowid id,hf.tag FROM hashtag_follows hf
+    const rows = database.query(`SELECT hf.rowid id,hf.tag,
+      (SELECT count(*) FROM post_hashtags ph JOIN posts p ON p.id=ph.post_id JOIN users author ON author.id=p.user_id
+        WHERE ph.tag=hf.tag AND p.deleted_at IS NULL AND author.deleted_at IS NULL
+          AND author.suspended_at IS NULL) post_count,
+      (SELECT count(*) FROM hashtag_follows followers JOIN users follower ON follower.id=followers.user_id
+        WHERE followers.tag=hf.tag AND follower.deleted_at IS NULL AND follower.suspended_at IS NULL) follower_count
+      FROM hashtag_follows hf
       WHERE hf.user_id=? ${before} ORDER BY hf.rowid DESC LIMIT ?`).all(...parameters) as Array<{
         id: number
         tag: string
+        post_count: number
+        follower_count: number
       }>
     const hasMore = rows.length > parsed.limit
     const selected = rows.slice(0, parsed.limit)
     const origin = apiOrigin(c.req.url, appUrl)
-    return jsonResponse({ data: selected.map(row => ({ tag: row.tag, url: `${origin}/tag/${encodeURIComponent(row.tag)}`,
-      api_url: `${origin}/api/v1/tags/${encodeURIComponent(row.tag)}/posts` })),
+    return jsonResponse({ data: selected.map(row => ({ tag: row.tag, post_count: row.post_count,
+      follower_count: row.follower_count, url: `${origin}/tag/${encodeURIComponent(row.tag)}`,
+      api_url: `${origin}/api/v1/tags/${encodeURIComponent(row.tag)}` })),
     pagination: { next_cursor: hasMore ? encodeCursor(selected[selected.length - 1].id) : null } })
+  })
+
+  app.get('/api/v1/tags/:tag', c => {
+    const tag = c.req.param('tag').toLowerCase()
+    if (!/^[a-z0-9_]+$/.test(tag)) return apiError('invalid_tag', 'Tag is invalid', 400)
+    const counts = database.query(`SELECT
+      (SELECT count(*) FROM post_hashtags ph JOIN posts p ON p.id=ph.post_id JOIN users author ON author.id=p.user_id
+        WHERE ph.tag=? AND p.deleted_at IS NULL AND author.deleted_at IS NULL
+          AND author.suspended_at IS NULL) post_count,
+      (SELECT count(*) FROM hashtag_follows hf JOIN users follower ON follower.id=hf.user_id
+        WHERE hf.tag=? AND follower.deleted_at IS NULL AND follower.suspended_at IS NULL) follower_count`).get(tag, tag) as {
+          post_count: number
+          follower_count: number
+        }
+    if (!counts.post_count && !counts.follower_count) return apiError('not_found', 'Tag not found', 404)
+    const origin = apiOrigin(c.req.url, appUrl)
+    return jsonResponse({ data: { tag, ...counts, url: `${origin}/tag/${encodeURIComponent(tag)}`,
+      api_url: `${origin}/api/v1/tags/${encodeURIComponent(tag)}` } })
   })
 
   app.get('/api/v1/tags/:tag/followers', c => {
