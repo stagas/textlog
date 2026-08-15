@@ -3,7 +3,7 @@ import type { ApiKeyView, SessionView } from '../types'
 import { AccountSettingsHeader } from './account-settings-header'
 import { maskEmail } from './email-address'
 import { Layout } from './layout'
-import { CenteredPanel, Panel } from './panel'
+import { CenteredPanel } from './panel'
 import { FormActions, FormMessage } from './page-shared'
 
 export function AccountSecurity({ user, sessions, apiKeys = [], passwordEnabled, error, success, returnPath }: {
@@ -183,22 +183,23 @@ export function AccountApiKeyCreate({ user, name = '', lifetime = 'year', error 
 export function AccountApiKey({ user, name, value }: { user: User; name: string; value: string }) {
   return (
     <Layout user={user} title="API key created">
-      <section className="security-header">
-        <AccountSettingsHeader title="API key created" />
-      </section>
-      <div className="security-page api-key-created-page">
-        <p className="api-key-create-intro">
+      <CenteredPanel className="magic-link-page api-key-created-page" width="medium">
+        <h1>API key created</h1>
+        <p>
           Copy <strong>{name}</strong> now. For your security, this key will not be shown again.
         </p>
         <label className="magic-link-output">
           bearer token
-          <input className="api-key-output" readOnly value={value} autoFocus spellCheck={false} aria-label="API key" />
+          <output className="form-control magic-link-value api-key-output" tabIndex={0} aria-label="API key">
+            {value}
+          </output>
         </label>
         <p>
-          Store it like a password and send it as <code>Authorization: Bearer &lt;key&gt;</code>.
+          Store it like a password and send it as:<br />
+          <code>Authorization: Bearer &lt;key&gt;</code>
         </p>
         <FormActions primary={<a className="button" href="/account/security">I saved it</a>} />
-      </div>
+      </CenteredPanel>
     </Layout>
   )
 }
@@ -278,19 +279,19 @@ export function AccountPassword({ user, enabled, token, request = false, sent = 
 export function AccountMagicLink({ user, magicUrl, code }: { user: User; magicUrl: string; code: string }) {
   return (
     <Layout user={user} title="magic link">
-      <Panel className="magic-link-page">
+      <CenteredPanel className="magic-link-page" width="medium">
         <h1>magic link</h1>
-        <p>Copy this one-time sign-in link to your other device. It expires after 15 minutes.</p>
+        <p>Copy this one-time sign-in link to your other device.<br />It expires after 15 minutes.</p>
         <label className="magic-link-output">
           magic link
-          <textarea readOnly value={magicUrl} autoFocus spellCheck={false} aria-label="magic link URL" />
+          <output className="form-control magic-link-value" tabIndex={0} aria-label="magic link URL">{magicUrl}</output>
         </label>
         <label className="magic-link-output app-entry-code">
           app entry code
-          <input readOnly value={code} inputMode="numeric" aria-label="app entry code" />
+          <output className="form-control magic-link-value" tabIndex={0} aria-label="app entry code">{code}</output>
         </label>
-        <a className="quiet" href="/account/security">back to account security</a>
-      </Panel>
+        <FormActions primary={<a className="button" href="/account/security">I copied it</a>} />
+      </CenteredPanel>
     </Layout>
   )
 }

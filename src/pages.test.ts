@@ -1014,11 +1014,10 @@ test('AccountMagicLink renders a generated magic link on its own page for copyin
     code: '123456',
   }))
 
-  expect(html).toContain('<textarea')
-  expect(html).toContain('readOnly=""')
-  expect(html).toContain('https://textlog.cc/enter/magic?token=secret-token</textarea>')
+  expect(html).toContain('<output class="form-control magic-link-value"')
+  expect(html).toContain('https://textlog.cc/enter/magic?token=secret-token</output>')
   expect(html).toContain('app entry code')
-  expect(html).toContain('value="123456"')
+  expect(html).toContain('>123456</output>')
   expect(html).toContain('href="/account/security"')
 })
 
