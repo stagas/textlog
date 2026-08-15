@@ -36,7 +36,7 @@ import { registerTagsRoutes } from './routes/tags'
 import { renewSession } from './sessions'
 import { loadStylesAsset, stylesResponse } from './styles'
 import { themeLogoSvg, themeStyles, versionedAppearance, withAppearance } from './theme'
-import { currentUser, sessionToken } from './utils'
+import { apiUser, currentUser, sessionToken } from './utils'
 import { VisitorBuffer } from './visitors'
 
 const devReloadEnabled = Bun.env.DEV_RELOAD === 'true'
@@ -121,7 +121,7 @@ app.use('*', async (c, next) => {
 
 app.use('*', async (c, next) => {
   const started = performance.now()
-  const username = currentUser(c.req.raw)?.handle
+  const username = (currentUser(c.req.raw) || (c.req.path.startsWith('/api/') ? apiUser(c.req.raw) : null))?.handle
   try {
     await next()
   }
