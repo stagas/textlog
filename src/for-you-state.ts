@@ -3,6 +3,8 @@ import { db } from './db'
 import type { Database } from 'bun:sqlite'
 import { invalidateMaterializedFeedPages } from './materialized-feed-pages'
 
+const viewerFeedPages = ['for-you', 'to-me', 'latest', 'hot'] as const
+
 const visibleEvents = `
   SELECT 'post:' || printf('%020d',p.id) event_key FROM posts p
     WHERE p.deleted_at IS NULL AND p.user_id!=$viewer AND (p.user_id IN
@@ -113,7 +115,7 @@ export function markForYouEntriesRead(userId: number, eventKeys: string[]) {
       if (postId) insertActivity.run(userId, postId)
     })
   )()
-  invalidateMaterializedFeedPages(userId, ['for-you', 'to-me'])
+  invalidateMaterializedFeedPages(userId, [...viewerFeedPages])
 }
 
 export function markVisibleForYouEntriesRead(userId: number, eventKeys: string[], toMe = false,
@@ -134,7 +136,7 @@ export function markVisibleForYouEntriesRead(userId: number, eventKeys: string[]
     const postId = eventKey.match(/^post:(\d+)$/)?.[1]
     if (postId) insertActivity.run(userId, postId)
   }))()
-  if (visible.length && database === db) invalidateMaterializedFeedPages(userId, ['for-you', 'to-me'])
+  if (visible.length && database === db) invalidateMaterializedFeedPages(userId, [...viewerFeedPages])
   return visible.length
 }
 
@@ -147,5 +149,5 @@ export function markAllForYouRead(userId: number, toMe = false, database: Databa
       SELECT user_id,'post:' || CAST(substr(event_key,6) AS INTEGER)
       FROM for_you_reads WHERE user_id=? AND event_key GLOB 'post:[0-9]*'`).run(userId)
   })()
-  if (database === db) invalidateMaterializedFeedPages(userId, ['for-you', 'to-me'])
+  if (database === db) invalidateMaterializedFeedPages(userId, [...viewerFeedPages])
 }
