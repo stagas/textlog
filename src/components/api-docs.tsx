@@ -38,7 +38,8 @@ const endpoints: ReadonlyArray<readonly [string, string, ReactNode, boolean?]> =
       omitted descendants. Top-level posts have a null <code>top_id</code>.</>],
   ['POST', '/posts/:id/report', 'Report a post.', true],
   ['GET', '/users/:handle',
-    <>Get a public profile with separate <code>post_count</code> and <code>replies_count</code> totals.</>],
+    <>Get a public profile and relationship totals. Your authenticated profile also includes private blocked-user and
+      blocked-tag counts.</>],
   ['GET', '/users/:handle/notes', 'Get a user\'s latest top-level notes.'],
   ['GET', '/users/:handle/posts', <>Backward-compatible alias for <code>/users/:handle/notes</code>.</>],
   ['GET', '/users/:handle/replies', 'Get a user\'s latest replies.'],

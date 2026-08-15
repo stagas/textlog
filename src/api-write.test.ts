@@ -19,6 +19,8 @@ function fixture() {
       PRIMARY KEY(follower_id,following_id));
     CREATE TABLE blocks (blocker_id INTEGER NOT NULL,blocked_id INTEGER NOT NULL,
       PRIMARY KEY(blocker_id,blocked_id));
+    CREATE TABLE blocked_hashtags (user_id INTEGER NOT NULL,tag TEXT NOT NULL,PRIMARY KEY(user_id,tag));
+    CREATE TABLE hashtag_follows (user_id INTEGER NOT NULL,tag TEXT NOT NULL,PRIMARY KEY(user_id,tag));
     CREATE TABLE reports (reporter_id INTEGER NOT NULL,post_id INTEGER NOT NULL,reason TEXT NOT NULL,
       status TEXT NOT NULL DEFAULT 'open',created_at TEXT DEFAULT CURRENT_TIMESTAMP,resolved_at TEXT,
       PRIMARY KEY(reporter_id,post_id));
@@ -201,6 +203,7 @@ describe('API writes', () => {
     expect(database.query('SELECT 1 FROM follows WHERE follower_id=1 AND following_id=2').get()).toBeNull()
 
     expect((await post(app, 'alice-token', { body: 'reply', parent_id: 1 })).status).toBe(404)
+    database.query('INSERT INTO blocked_hashtags(user_id,tag) VALUES(?,?)').run(1, 'muted')
 
     expect((await call(app, '/api/v1/users/alice/blocks')).status).toBe(401)
     expect((await call(app, '/api/v1/users/bob/blocks', { token: 'alice-token' })).status).toBe(403)
@@ -209,6 +212,13 @@ describe('API writes', () => {
     expect(blocksResponse.headers.get('cache-control')).toBe('no-store')
     expect(blocks).toEqual({ data: [{ handle: 'bob', url: 'https://textlog.test/u/bob',
       api_url: 'https://textlog.test/api/v1/users/bob' }], pagination: { next_cursor: null } })
+    const ownProfileResponse = await call(app, '/api/v1/users/alice', { token: 'alice-token' })
+    const ownProfile = await ownProfileResponse.json() as any
+    expect(ownProfile.data).toMatchObject({ blocked_user_count: 1, blocked_tag_count: 1 })
+    expect(ownProfileResponse.headers.get('cache-control')).toBe('no-store')
+    const publicProfile = await (await call(app, '/api/v1/users/alice')).json() as any
+    expect(publicProfile.data.blocked_user_count).toBeUndefined()
+    expect(publicProfile.data.blocked_tag_count).toBeUndefined()
   })
 
   test('reports a post, but not your own', async () => {

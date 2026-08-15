@@ -297,6 +297,10 @@ function openApiDocument() {
           following_tag_count: { type: 'integer', minimum: 0 },
           following_count: { type: 'integer', minimum: 0,
             description: 'Backward-compatible alias for following_user_count.' },
+          blocked_user_count: { type: 'integer', minimum: 0,
+            description: 'Only returned when the authenticated account requests its own profile.' },
+          blocked_tag_count: { type: 'integer', minimum: 0,
+            description: 'Only returned when the authenticated account requests its own profile.' },
           url: { type: 'string', format: 'uri' },
           api_url: { type: 'string', format: 'uri' },
         },
@@ -496,14 +500,24 @@ export function registerApiRoutes(app: Hono, database: Database = db,
     if (!found) return apiError('not_found', 'User not found', 404)
     const origin = apiOrigin(c.req.url, appUrl)
     const normalized = found.handle.toLowerCase()
+    const authenticated = apiUser(c.req.raw, database)
+    const blockCounts = authenticated?.id === resolved.id
+      ? database.query(`SELECT
+        (SELECT count(*) FROM blocks WHERE blocker_id=?) blocked_user_count,
+        (SELECT count(*) FROM blocked_hashtags WHERE user_id=?) blocked_tag_count`).get(resolved.id, resolved.id) as {
+          blocked_user_count: number
+          blocked_tag_count: number
+        }
+      : null
     return jsonResponse({
       data: { handle: normalized, bio: found.bio, created_at: isoTimestamp(found.created_at),
         post_count: found.post_count, replies_count: found.replies_count, follower_count: found.follower_count,
         following_user_count: found.following_user_count, following_tag_count: found.following_tag_count,
         following_count: found.following_user_count,
+        ...(blockCounts || {}),
         url: `${origin}/u/${encodeURIComponent(normalized)}`,
         api_url: `${origin}/api/v1/users/${encodeURIComponent(normalized)}` },
-    })
+    }, 200, blockCounts ? 'no-store' : undefined)
   })
 
   app.get('/api/v1/users/:handle/posts', c => {

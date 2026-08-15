@@ -353,6 +353,7 @@ describe('public API', () => {
     expect(spec.paths['/users/{handle}/following/tags'].get).toBeDefined()
     expect(spec.paths['/tags/{tag}/followers'].get).toBeDefined()
     expect(spec.components.schemas.User.required).toContain('following_tag_count')
+    expect(spec.components.schemas.User.properties.blocked_tag_count).toBeDefined()
     expect(spec.components.schemas.Tag.required).toContain('follower_count')
     expect(spec.components.schemas.Activity.properties.type.enum).toContain('user_follow')
     expect(spec.paths['/users/{handle}/posts'].get.deprecated).toBe(true)
