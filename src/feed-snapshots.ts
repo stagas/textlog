@@ -6,6 +6,7 @@ const SNAPSHOT_ACCESS_REFRESH = '-5 minutes'
 const MAX_SNAPSHOTS = 200
 
 export type FeedSnapshotPage<T> = {
+  snapshotId: number
   items: T[]
   page: number
   totalItems: number
@@ -64,6 +65,7 @@ export function feedSnapshotPage<T>(database: Database, kind: string, viewerId: 
     (safePage - 1) * pageSize,
     safePage * pageSize,
   ) as { payload: string }[]
-  return { items: rows.map(row => JSON.parse(row.payload) as T), page: safePage, totalItems: snapshot.total_items,
+  return { snapshotId: snapshot.id, items: rows.map(row => JSON.parse(row.payload) as T), page: safePage,
+    totalItems: snapshot.total_items,
     totalPages }
 }

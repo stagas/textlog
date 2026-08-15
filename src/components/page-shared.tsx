@@ -291,12 +291,13 @@ export function CursorPagination({ path, previousCursor, nextCursor }: {
   )
 }
 
-export function FeedTabs({ active, user, forYouReadStatus, activityReadStatus, toMe = false }: {
+export function FeedTabs({ active, user, forYouReadStatus, activityReadStatus, toMe = false, unreadHref }: {
   active: 'following' | 'activity' | 'hot' | 'latest'
   user: User | null
   forYouReadStatus?: boolean
   activityReadStatus?: boolean
   toMe?: boolean
+  unreadHref?: string
 }) {
   const toMeUnread = user ? hasUnreadToMe(user.id) : false
   const forYouUnread = user ? hasUnreadForYou(user.id) || toMeUnread : false
@@ -342,6 +343,8 @@ export function FeedTabs({ active, user, forYouReadStatus, activityReadStatus, t
       </nav>
       {forYouReadStatus && (
         <div className="feed-read-action">
+          {unreadHref && <a className="activity-side-link" href={unreadHref}>jump to unread</a>}
+          {unreadHref && <span className="feed-tabs-action-separator" aria-hidden="true">·</span>}
           <form method="post" action={toMe ? '/to-me/read-all' : '/for-you/read-all'}>
             <button className="activity-side-link">mark all as read</button>
           </form>

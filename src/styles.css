@@ -580,6 +580,8 @@ nav form {
 .feed-read-action {
   display: flex;
   justify-content: center;
+  align-items: center;
+  gap: var(--space-3);
   width: 100%;
   padding: var(--space-2) var(--gutter);
   background: color-mix(in srgb, var(--accent) 6%, transparent);
