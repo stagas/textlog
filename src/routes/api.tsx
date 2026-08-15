@@ -124,6 +124,9 @@ function openApiDocument() {
       },
       '/posts/{id}/replies': {
         get: { summary: 'Post replies',
+          description: `Returns replies recursively. The optional depth query parameter controls how many levels are
+            returned (1–${API_MAX_REPLY_DEPTH}, default ${API_DEFAULT_REPLY_DEPTH}). Each reply is marked truncated when
+            its child branch continues outside the response.`,
           parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'integer', minimum: 1 } },
             { name: 'depth', in: 'query', schema: { type: 'integer', minimum: 1, maximum: API_MAX_REPLY_DEPTH,
               default: API_DEFAULT_REPLY_DEPTH } },

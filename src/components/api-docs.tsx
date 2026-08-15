@@ -31,8 +31,9 @@ const endpoints = [
   ['GET', '/posts/:id', 'Get a single public post.'],
   ['PATCH', '/posts/:id', 'Edit a post you own.'],
   ['DELETE', '/posts/:id', 'Delete a post you own. Replies remain and the post becomes a “(deleted)” tombstone.'],
-  ['GET', '/posts/:id/replies?depth=:depth',
-    'Get replies recursively. Each reply is marked truncated when its child branch continues outside the response.'],
+  ['GET', '/posts/:id/replies',
+    <>Get replies recursively. Use the optional <code>depth</code> query parameter (1–20, default 1). Each reply is
+      marked <code>truncated</code> when its child branch continues outside the response.</>],
   ['POST', '/posts/:id/report', 'Report a post.'],
   ['GET', '/users/:handle', 'Get a public profile and its counts.'],
   ['GET', '/users/:handle/posts', 'Get a user\'s latest posts and replies.'],
