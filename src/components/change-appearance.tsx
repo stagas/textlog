@@ -156,10 +156,12 @@ export function ChangeAppearance(
                     <label key={density} className="misc-option density-option">
                       <input type="radio" name="density" value={density} defaultChecked={selectedDensity === density} />
                       <span className={`density-preview density-preview-${density}`} aria-hidden="true">
-                        <i />
-                        <i />
-                        <i />
-                        <i />
+                        <svg viewBox="0 0 62 36" focusable="false">
+                          <rect width="62" height="2" />
+                          <rect width="47" height="2" />
+                          <rect width="55" height="2" />
+                          <rect width="36" height="2" />
+                        </svg>
                       </span>
                       <span>{density}</span>
                     </label>
