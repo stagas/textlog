@@ -130,6 +130,12 @@ describe('post persistence', () => {
       .toContain('href="https://example.com"')
   })
 
+  test('wraps emoji without changing the surrounding text font', () => {
+    expect(linkify('fast ⚡ launch 👩🏽‍💻')).toBe(
+      'fast <span class="emoji">⚡</span> launch <span class="emoji">👩🏽‍💻</span>',
+    )
+  })
+
   test('renders fenced code without linkifying its contents', () => {
     expect(linkify('before\n```ts\nconst tag = "#notes"\n```\nafter'))
       .toBe('before\n<code class="code-fence">const tag = &quot;#notes&quot;</code>\nafter')

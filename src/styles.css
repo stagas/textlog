@@ -53,8 +53,9 @@
   --space-6: 32px;
   --space-7: 48px;
   --space-8: 64px;
-  --font-monospace: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-  --font-sans-serif: ui-sans-serif, system-ui, -apple-system, sans-serif;
+  --font-emoji: "Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", "Twemoji Mozilla", emoji;
+  --font-monospace: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace, var(--font-emoji);
+  --font-sans-serif: ui-sans-serif, system-ui, -apple-system, sans-serif, var(--font-emoji);
   --font-primary: var(--font-monospace);
   font: 16px/1.5 var(--font-primary);
   color: var(--ink);
@@ -68,6 +69,10 @@
 
 :where(h1, h2, h3, h4, h5, h6, legend, .eyebrow) {
   font-family: var(--font-primary);
+}
+
+.emoji {
+  font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI Symbol", "Noto Sans Symbols 2", sans-serif;
 }
 
 @media (prefers-color-scheme: dark) {

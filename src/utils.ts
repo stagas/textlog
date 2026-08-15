@@ -114,17 +114,29 @@ export function fmt(d: string) {
   return `${Math.floor(days / 365)}y`
 }
 export const fmtFull = (d: string) => timestamp(d).toLocaleString('en', { dateStyle: 'medium', timeStyle: 'short' })
-function highlighted(text: string, terms: string[]) {
-  if (!terms.length) return esc(text)
-  const pattern = terms.map(term => term.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|')
-  if (!pattern) return esc(text)
+const emojiPattern = /(?:\p{Regional_Indicator}{2}|[#*0-9]\uFE0F?\u20E3|\p{Extended_Pictographic}[\uFE0E\uFE0F]?\p{Emoji_Modifier}?(?:\u200D\p{Extended_Pictographic}[\uFE0E\uFE0F]?\p{Emoji_Modifier}?)*)/gu
+
+function emojiText(text: string) {
   let html = ''
   let end = 0
-  for (const match of text.matchAll(new RegExp(pattern, 'giu'))) {
-    html += esc(text.slice(end, match.index)) + `<mark>${esc(match[0])}</mark>`
+  for (const match of text.matchAll(emojiPattern)) {
+    html += esc(text.slice(end, match.index)) + `<span class="emoji">${esc(match[0])}</span>`
     end = match.index + match[0].length
   }
   return html + esc(text.slice(end))
+}
+
+function highlighted(text: string, terms: string[]) {
+  if (!terms.length) return emojiText(text)
+  const pattern = terms.map(term => term.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|')
+  if (!pattern) return emojiText(text)
+  let html = ''
+  let end = 0
+  for (const match of text.matchAll(new RegExp(pattern, 'giu'))) {
+    html += emojiText(text.slice(end, match.index)) + `<mark>${emojiText(match[0])}</mark>`
+    end = match.index + match[0].length
+  }
+  return html + emojiText(text.slice(end))
 }
 
 function linkAttributes(url: string, appUrl: string | undefined) {

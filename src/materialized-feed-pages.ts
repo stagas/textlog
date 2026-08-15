@@ -23,6 +23,10 @@ export function invalidateMaterializedFeedPages(viewerId: number, kinds: Materia
 export async function materializedFeedPage(database: Database, request: Request, kind: MaterializedFeedKind,
   viewerId: number, render: () => Response, cache: Database = cacheDb, rerenderForCache = false)
 {
+  // Cached development HTML embeds the server's boot ID. Reusing it after a
+  // restart makes the reload client refresh forever, so keep dev pages live.
+  if (Bun.env.DEV_RELOAD === 'true') return render()
+
   const generation = (database.query('SELECT generation FROM feed_snapshot_generation WHERE id=1').get() as {
     generation: number
   }).generation
