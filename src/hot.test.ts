@@ -65,8 +65,7 @@ describe('hot feed ranking', () => {
     const results = getHotPosts(database, 20, null, asOf)
     expect(results[0].id).toBe(1)
     expect(results.find(result => result.id === 1)?.hot_score)
-      .toBeCloseTo(4 * 0.1 * Math.pow(0.5, 24)
-        * (1 + Math.pow(0.5, 24)))
+      .toBeCloseTo(0.225 + 0.04 * Math.pow(0.5, 24 / 3))
   })
 
   test('direct replies give active threads substantially more staying power', () => {
@@ -245,6 +244,24 @@ describe('hot feed ranking', () => {
       .toEqual({ activity_count: 8 })
   })
 
+  test('progressively reduces standalone candidacy at each reply depth', () => {
+    database.run(`INSERT INTO users(id,handle) VALUES(2,'reply-author');
+      INSERT INTO users(id,handle) VALUES(3,'nested-author');`)
+    post(1, '2026-08-01 12:00:00')
+    postBy(2, 2, '2026-08-01 13:00:00', 1)
+    postBy(3, 3, '2026-08-01 14:00:00', 2)
+    database.run(`UPDATE post_hot SET score=4,reply_count=3,activity_count=3,
+      score_updated_at='2026-08-03 11:00:00',latest_activity_at='2026-08-03 11:00:00'
+      WHERE post_id IN (1,2,3)`)
+
+    const results = getHotPosts(database, 20, null, asOf)
+    const root = results.find(result => result.id === 1)!
+    const direct = results.find(result => result.id === 2)!
+    const nested = results.find(result => result.id === 3)!
+    expect(direct.hot_score).toBeCloseTo(root.hot_score * 0.1)
+    expect(nested.hot_score).toBeCloseTo(direct.hot_score * 0.6)
+  })
+
   test('keeps a week-old large discussion on hot without outranking fresh replies', () => {
     post(1, '2026-07-27 12:00:00')
     for (let index = 1; index <= 30; index++) {
@@ -322,11 +339,11 @@ describe('hot feed ranking', () => {
     post(3, '2026-08-03 11:00:00', 2)
 
     const results = getHotPosts(database, 20, null, asOf)
-    expect(results.map(result => result.id)).toEqual([2, 1])
+    expect(results.map(result => result.id)).toEqual([1, 2])
 
     rebuildHotPosts(database)
     const rebuilt = getHotPosts(database, 20, null, asOf)
-    expect(rebuilt.map(result => result.id)).toEqual([2, 1])
+    expect(rebuilt.map(result => result.id)).toEqual([1, 2])
   })
 
   test('does not let authors boost their own posts with direct replies', () => {
