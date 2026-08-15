@@ -53,7 +53,7 @@ function collection(c: Context, database: Database, filters: {
 }
 
 function openApiDocument() {
-  const postSchema = {
+  const quotedPostSchema = {
     type: 'object',
     required: ['id', 'top_id', 'body', 'created_at', 'parent_id', 'reply_count', 'tags', 'mentions', 'url', 'api_url',
       'author'],
@@ -74,6 +74,14 @@ function openApiDocument() {
         url: { type: 'string', format: 'uri' },
         api_url: { type: 'string', format: 'uri' },
       } },
+    },
+  }
+  const postSchema = {
+    ...quotedPostSchema,
+    required: [...quotedPostSchema.required, 'parent'],
+    properties: { ...quotedPostSchema.properties,
+      parent: { anyOf: [{ $ref: '#/components/schemas/QuotedPost' }, { type: 'null' }],
+        description: 'Immediate quoted parent, or null for a top-level or unavailable parent.' },
     },
   }
   const collectionParameters = [
@@ -209,7 +217,7 @@ function openApiDocument() {
     },
     security: [{ bearerAuth: [] }],
     components: {
-      schemas: { Post: postSchema, Reply: {
+      schemas: { QuotedPost: quotedPostSchema, Post: postSchema, Reply: {
         allOf: [
           { $ref: '#/components/schemas/Post' },
           { type: 'object', required: ['depth'], properties: {

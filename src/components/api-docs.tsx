@@ -173,6 +173,8 @@ export function ApiDocs({ user }: { user: User | null }) {
         <p>
           Collections accept <code>limit</code> from 1–100 (default 20). Pass the opaque{' '}
           <code>pagination.next_cursor</code> value back as <code>cursor</code> to fetch the next page.
+          Replies include their immediate quoted post in <code>parent</code>, so displaying a feed needs no per-post
+          follow-up requests.
         </p>
         <CodeBlock language="bash">{`curl '${origin}/api/v1/feeds/latest?limit=10'`}</CodeBlock>
 

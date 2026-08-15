@@ -30,6 +30,7 @@ export type ApiPost = {
   url: string
   api_url: string
   author: { handle: string; url: string; api_url: string }
+  parent?: ApiPost | null
 }
 
 export function apiOrigin(requestUrl: string, appUrl: string | null | undefined = Bun.env.APP_URL) {
@@ -131,10 +132,24 @@ function enrichApiRows<T extends Omit<ApiPostRow, 'reply_count' | 'top_id'>>(dat
   return withTopIds(database, withReplyCounts(database, rows))
 }
 
+function serializePostsWithParents(database: Database, rows: ApiPostRow[], origin: string): ApiPost[] {
+  const parentIds = [...new Set(rows.flatMap(row => row.parent_id === null ? [] : [row.parent_id]))]
+  let parentsById = new Map<number, ApiPost>()
+  if (parentIds.length) {
+    const placeholders = parentIds.map(() => '?').join(',')
+    const parentRows = database.query(`${postSelect} WHERE p.id IN (${placeholders})
+      AND p.deleted_at IS NULL AND u.deleted_at IS NULL`).all(...parentIds) as ApiPostRow[]
+    const parents = enrichApiRows(database, parentRows).map(row => serializePost(row, origin))
+    parentsById = new Map(parents.map(parent => [parent.id, parent]))
+  }
+  return rows.map(row => ({ ...serializePost(row, origin),
+    parent: row.parent_id === null ? null : parentsById.get(row.parent_id) || null }))
+}
+
 export function apiPost(database: Database, id: number, origin: string) {
   const row = database.query(`${postSelect} WHERE p.id=? AND p.deleted_at IS NULL AND u.deleted_at IS NULL`)
     .get(id) as ApiPostRow | null
-  return row ? serializePost(enrichApiRows(database, [row])[0], origin) : null
+  return row ? serializePostsWithParents(database, enrichApiRows(database, [row]), origin)[0] : null
 }
 
 export function apiPosts(database: Database, origin: string, options: {
@@ -173,7 +188,7 @@ export function apiPosts(database: Database, origin: string, options: {
   const hasMore = rows.length > options.limit
   const pageRows = enrichApiRows(database, rows.slice(0, options.limit))
   return {
-    data: pageRows.map(row => serializePost(row, origin)),
+    data: serializePostsWithParents(database, pageRows, origin),
     pagination: { next_cursor: hasMore ? encodeCursor(pageRows[pageRows.length - 1].id) : null },
   }
 }
@@ -202,7 +217,8 @@ export function apiReplies(database: Database, origin: string, parentId: number,
   const selected = rows.slice(0, options.limit)
   const pageRows = enrichApiRows(database, selected)
   return {
-    data: pageRows.map(row => ({ ...serializePost(row, origin), depth: row.depth })),
+    data: serializePostsWithParents(database, pageRows, origin)
+      .map((post, index) => ({ ...post, depth: pageRows[index].depth })),
     pagination: { next_cursor: hasMore ? encodeCursor(pageRows[pageRows.length - 1].id) : null },
   }
 }
@@ -214,7 +230,7 @@ export function apiHotPosts(database: Database, origin: string, limit: number, c
   const selected = rows.slice(0, limit)
   const pageRows = enrichApiRows(database, selected)
   return {
-    data: pageRows.map(row => serializePost(row, origin)),
+    data: serializePostsWithParents(database, pageRows, origin),
     pagination: { next_cursor: hasMore ? encodeHotCursor(hotCursor(rows[limit - 1], asOf)) : null },
   }
 }
@@ -228,7 +244,7 @@ export function apiSearchPosts(database: Database, origin: string, query: string
   const hasMore = rows.length > limit
   const pageRows = enrichApiRows(database, rows.slice(0, limit))
   return {
-    data: pageRows.map(row => serializePost(row, origin)),
+    data: serializePostsWithParents(database, pageRows, origin),
     pagination: { next_cursor: hasMore ? encodeCursor(offset + limit) : null },
   }
 }

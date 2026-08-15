@@ -64,6 +64,9 @@ describe('public API', () => {
     expect(response.headers.get('access-control-allow-origin')).toBe('*')
     expect(payload.data.map((post: any) => post.id)).toEqual([3, 2, 1])
     expect(payload.data.find((post: any) => post.id === 2).top_id).toBe(1)
+    expect(payload.data.find((post: any) => post.id === 2).parent).toMatchObject({ id: 1 })
+    expect(payload.data.find((post: any) => post.id === 2).parent.parent).toBeUndefined()
+    expect(payload.data.find((post: any) => post.id === 1).parent).toBeNull()
     expect(payload.data[2]).toMatchObject({
       top_id: null,
       body: 'hello #textlog @bob',
@@ -137,6 +140,7 @@ describe('public API', () => {
     expect(post.data.id).toBe(1)
     expect(post.data.top_id).toBeNull()
     expect(reply.data.top_id).toBe(1)
+    expect(reply.data.parent).toMatchObject({ id: 1, body: 'hello #textlog @bob' })
     expect(replies.data.map((item: any) => item.id)).toEqual([2])
     expect(user.data).toMatchObject({ handle: 'alice', bio: 'builder', post_count: 2, replies_count: 1,
       follower_count: 1, following_count: 0 })
@@ -239,6 +243,8 @@ describe('public API', () => {
     expect(spec.components.schemas.Reply.allOf[1].required).toEqual(['depth'])
     expect(spec.components.schemas.Reply.allOf[1].properties.truncated).toBeUndefined()
     expect(spec.components.schemas.Post.required).toContain('top_id')
+    expect(spec.components.schemas.Post.required).toContain('parent')
+    expect(spec.components.schemas.Post.properties.parent.anyOf[0].$ref).toBe('#/components/schemas/QuotedPost')
     expect(spec.components.schemas.User.required).toContain('replies_count')
     expect(spec.paths['/users/{handle}'].get.responses['200'].content['application/json'].schema.properties.data.$ref)
       .toBe('#/components/schemas/User')
