@@ -5,6 +5,8 @@ import { searchExpression } from './search'
 
 export const API_DEFAULT_LIMIT = 20
 export const API_MAX_LIMIT = 100
+export const API_DEFAULT_REPLY_DEPTH = 1
+export const API_MAX_REPLY_DEPTH = 20
 
 type ApiPostRow = {
   id: number
@@ -143,6 +145,55 @@ export function apiPosts(database: Database, origin: string, options: {
   return {
     data: pageRows.map(row => serializePost(row, origin)),
     pagination: { next_cursor: hasMore ? encodeCursor(pageRows[pageRows.length - 1].id) : null },
+  }
+}
+
+export function apiReplies(database: Database, origin: string, parentId: number, options: {
+  limit: number
+  before: number | null
+  depth: number
+}) {
+  const beforeFilter = options.before === null ? '' : 'AND thread.id < ?'
+  const parameters = options.before === null
+    ? [parentId, options.depth + 1, options.depth, options.limit + 1]
+    : [parentId, options.depth + 1, options.depth, options.before, options.limit + 1]
+  const rows = database.query(`WITH RECURSIVE thread(id,body,parent_id,created_at,handle,depth) AS (
+    SELECT p.id,p.body,p.parent_id,p.created_at,u.handle,1
+    FROM posts p JOIN users u ON u.id=p.user_id
+    WHERE p.parent_id=? AND p.deleted_at IS NULL AND u.deleted_at IS NULL
+    UNION ALL
+    SELECT p.id,p.body,p.parent_id,p.created_at,u.handle,thread.depth+1
+    FROM posts p JOIN users u ON u.id=p.user_id JOIN thread ON p.parent_id=thread.id
+    WHERE thread.depth < ? AND p.deleted_at IS NULL AND u.deleted_at IS NULL
+  ) SELECT id,body,parent_id,created_at,handle,0 reply_count,depth
+    FROM thread WHERE depth <= ? ${beforeFilter}
+    ORDER BY id DESC LIMIT ?`).all(...parameters) as Array<ApiPostRow & { depth: number }>
+  const hasMore = rows.length > options.limit
+  const selected = rows.slice(0, options.limit)
+  const hasDeeper = !!database.query(`WITH RECURSIVE thread(id,depth) AS (
+    SELECT p.id,1 FROM posts p JOIN users u ON u.id=p.user_id
+      WHERE p.parent_id=? AND p.deleted_at IS NULL AND u.deleted_at IS NULL
+    UNION ALL
+    SELECT p.id,thread.depth+1 FROM posts p JOIN users u ON u.id=p.user_id JOIN thread ON p.parent_id=thread.id
+      WHERE thread.depth <= ? AND p.deleted_at IS NULL AND u.deleted_at IS NULL
+  ) SELECT 1 found FROM thread WHERE depth > ? LIMIT 1`).get(parentId, options.depth, options.depth)
+  const pageRows = withReplyCounts(database, selected)
+  const selectedIds = new Set(selected.map(row => row.id))
+  const truncatedIds = new Set<number>()
+  if (selected.length) {
+    const placeholders = selected.map(() => '?').join(',')
+    const children = database.query(`SELECT p.id,p.parent_id FROM posts p JOIN users u ON u.id=p.user_id
+      WHERE p.parent_id IN (${placeholders}) AND p.deleted_at IS NULL AND u.deleted_at IS NULL`)
+      .all(...selected.map(row => row.id)) as Array<{ id: number; parent_id: number }>
+    for (const child of children) {
+      if (!selectedIds.has(child.id)) truncatedIds.add(child.parent_id)
+    }
+  }
+  return {
+    data: pageRows.map(row => ({ ...serializePost(row, origin), depth: row.depth,
+      truncated: truncatedIds.has(row.id) })),
+    pagination: { next_cursor: hasMore ? encodeCursor(pageRows[pageRows.length - 1].id) : null },
+    truncated: hasMore || hasDeeper,
   }
 }
 

@@ -164,6 +164,39 @@ describe('public API', () => {
     expect(post.data.replies).toBeUndefined()
   })
 
+  test('returns reply trees with depth, parent IDs, and truncation metadata', async () => {
+    const { app, database } = fixture()
+    database.run(`INSERT INTO posts(id,user_id,parent_id,body,created_at) VALUES
+      (6,1,2,'nested reply','2026-08-03 14:30:00'),
+      (7,2,6,'deep reply','2026-08-03 14:40:00')`)
+
+    const shallow = await (await request(app, '/api/v1/posts/1/replies')).json() as any
+    expect(shallow.data.map((item: any) => ({ id: item.id, parent_id: item.parent_id, depth: item.depth,
+      truncated: item.truncated })))
+      .toEqual([{ id: 2, parent_id: 1, depth: 1, truncated: true }])
+    expect(shallow.truncated).toBe(true)
+
+    const tree = await (await request(app, '/api/v1/posts/1/replies?depth=3')).json() as any
+    expect(tree.data.map((item: any) => ({ id: item.id, parent_id: item.parent_id, depth: item.depth })))
+      .toEqual([
+        { id: 7, parent_id: 6, depth: 3 },
+        { id: 6, parent_id: 2, depth: 2 },
+        { id: 2, parent_id: 1, depth: 1 },
+      ])
+    expect(tree.truncated).toBe(false)
+    expect(tree.data.every((item: any) => item.truncated === false)).toBe(true)
+
+    const middle = await (await request(app, '/api/v1/posts/1/replies?depth=2')).json() as any
+    expect(middle.data.find((item: any) => item.id === 2).truncated).toBe(false)
+    expect(middle.data.find((item: any) => item.id === 6).truncated).toBe(true)
+
+    const limited = await (await request(app, '/api/v1/posts/1/replies?depth=3&limit=2')).json() as any
+    expect(limited.truncated).toBe(true)
+    expect(limited.pagination.next_cursor).toBeTruthy()
+    expect((await request(app, '/api/v1/posts/1/replies?depth=0')).status).toBe(400)
+    expect((await request(app, '/api/v1/posts/1/replies?depth=21')).status).toBe(400)
+  })
+
   test('supports preflight, publishes OpenAPI, and rejects mutation methods', async () => {
     const { app } = fixture()
     const preflight = await request(app, '/api/v1/feeds/latest', { method: 'OPTIONS' })
@@ -179,6 +212,13 @@ describe('public API', () => {
     expect(Object.keys(spec.paths)).toHaveLength(21)
     expect(spec.paths['/search'].get.security).toEqual([])
     expect(spec.paths['/feeds/latest.{format}'].get.parameters[0].schema.enum).toEqual(['rss', 'atom'])
+    const repliesOperation = spec.paths['/posts/{id}/replies'].get
+    expect(repliesOperation.parameters.find((parameter: any) => parameter.name === 'depth').schema)
+      .toMatchObject({ type: 'integer', minimum: 1, maximum: 20, default: 1 })
+    const repliesSchema = repliesOperation.responses['200'].content['application/json'].schema
+    expect(repliesSchema.required).toEqual(['data', 'pagination', 'truncated'])
+    expect(repliesSchema.properties.data.items.$ref).toBe('#/components/schemas/Reply')
+    expect(spec.components.schemas.Reply.allOf[1].required).toEqual(['depth', 'truncated'])
     expect(mutation.status).toBe(405)
     expect(mutation.headers.get('allow')).toBe('GET, HEAD, OPTIONS')
     const missing = await request(app, '/api/v1/unknown')

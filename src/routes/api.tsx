@@ -1,6 +1,7 @@
 import type { Database } from 'bun:sqlite'
 import type { Context, Hono } from 'hono'
-import { apiHotPosts, apiOrigin, apiPost, apiPosts, apiSearchPosts, isoTimestamp, parseCollectionParams } from '../api'
+import { API_DEFAULT_REPLY_DEPTH, API_MAX_REPLY_DEPTH, apiHotPosts, apiOrigin, apiPost, apiPosts, apiReplies,
+  apiSearchPosts, isoTimestamp, parseCollectionParams } from '../api'
 import { subscribeToPosts } from '../api-broker'
 import { consumeBucketedAttempt, rateLimitKey } from '../auth-rate-limit'
 import { appName, clientIpHeaderName } from '../brand'
@@ -73,6 +74,20 @@ function openApiDocument() {
   ]
   const jsonResponses = { '200': { description: 'Successful response' }, '400': { description: 'Invalid request' },
     '404': { description: 'Not found' }, '429': { description: 'Rate limited' } }
+  const repliesResponse = { '200': { description: 'Replies up to the requested depth', content: {
+    'application/json': { schema: {
+      type: 'object',
+      required: ['data', 'pagination', 'truncated'],
+      properties: {
+        data: { type: 'array', items: { $ref: '#/components/schemas/Reply' } },
+        pagination: { type: 'object', required: ['next_cursor'], properties: {
+          next_cursor: { type: ['string', 'null'] },
+        } },
+        truncated: { type: 'boolean',
+          description: 'True when replies are omitted anywhere because of the depth or page limit.' },
+      },
+    } },
+  } }, '400': jsonResponses['400'], '404': jsonResponses['404'], '429': jsonResponses['429'] }
   const formatParameter = { name: 'format', in: 'path', required: true,
     schema: { type: 'string', enum: ['rss', 'atom'] } }
   const postIdParameter = { name: 'id', in: 'path', required: true, schema: { type: 'integer', minimum: 1 } }
@@ -110,7 +125,9 @@ function openApiDocument() {
       '/posts/{id}/replies': {
         get: { summary: 'Post replies',
           parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'integer', minimum: 1 } },
-            ...collectionParameters], responses: jsonResponses },
+            { name: 'depth', in: 'query', schema: { type: 'integer', minimum: 1, maximum: API_MAX_REPLY_DEPTH,
+              default: API_DEFAULT_REPLY_DEPTH } },
+            ...collectionParameters], responses: repliesResponse },
       },
       '/users/{handle}': {
         get: { summary: 'Public profile',
@@ -168,7 +185,17 @@ function openApiDocument() {
     },
     security: [{ bearerAuth: [] }],
     components: {
-      schemas: { Post: postSchema },
+      schemas: { Post: postSchema, Reply: {
+        allOf: [
+          { $ref: '#/components/schemas/Post' },
+          { type: 'object', required: ['depth', 'truncated'], properties: {
+            depth: { type: 'integer', minimum: 1,
+              description: 'Distance from the post whose replies were requested.' },
+            truncated: { type: 'boolean',
+              description: 'True when this reply has child replies omitted from the response.' },
+          } },
+        ],
+      } },
       securitySchemes: { bearerAuth: { type: 'http', scheme: 'bearer' } },
     },
   }
@@ -279,7 +306,16 @@ export function registerApiRoutes(app: Hono, database: Database = db,
     const id = Number(c.req.param('id'))
     if (!Number.isInteger(id) || id < 1) return apiError('invalid_post_id', 'Post ID must be a positive integer', 400)
     if (!apiPost(database, id, apiOrigin(c.req.url, appUrl))) return apiError('not_found', 'Post not found', 404)
-    return collection(c, database, { parentId: id }, appUrl)
+    const parsed = parseCollectionParams(c.req.query('limit'), c.req.query('cursor'))
+    if (!parsed) {
+      return apiError('invalid_pagination', 'limit must be 1–100 and cursor must be a valid opaque cursor', 400)
+    }
+    const depthValue = c.req.query('depth')
+    const depth = depthValue === undefined ? API_DEFAULT_REPLY_DEPTH : Number(depthValue)
+    if (!Number.isInteger(depth) || depth < 1 || depth > API_MAX_REPLY_DEPTH) {
+      return apiError('invalid_depth', `depth must be an integer from 1 to ${API_MAX_REPLY_DEPTH}`, 400)
+    }
+    return jsonResponse(apiReplies(database, apiOrigin(c.req.url, appUrl), id, { ...parsed, depth }))
   })
 
   app.get('/api/v1/users/:handle', c => {
