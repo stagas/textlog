@@ -42,6 +42,9 @@ const endpoints: ReadonlyArray<readonly [string, string, ReactNode, boolean?]> =
   ['GET', '/users/:handle/notes', 'Get a user\'s latest top-level notes.'],
   ['GET', '/users/:handle/posts', <>Backward-compatible alias for <code>/users/:handle/notes</code>.</>],
   ['GET', '/users/:handle/replies', 'Get a user\'s latest replies.'],
+  ['GET', '/users/:handle/following/users', 'List accounts followed by a user.'],
+  ['GET', '/users/:handle/following/tags', 'List hashtags followed by a user.'],
+  ['GET', '/users/:handle/followers', 'List accounts following a user.'],
   ['POST', '/users/:handle/follow', 'Follow a user.', true],
   ['DELETE', '/users/:handle/follow', 'Unfollow a user.', true],
   ['POST', '/users/:handle/block', 'Block a user.', true],
@@ -56,6 +59,7 @@ const endpoints: ReadonlyArray<readonly [string, string, ReactNode, boolean?]> =
   ['POST', '/activities/to-me/read', 'Mark selected activities as read using their activity_ids.', true],
   ['POST', '/activities/to-me/read-all', 'Mark every to-me activity as read.', true],
   ['GET', '/tags/:tag/posts', 'Get the latest posts carrying a hashtag.'],
+  ['GET', '/tags/:tag/followers', 'List accounts following a hashtag.'],
   ['GET', '/search?q=:query', 'Search public posts by text.'],
   ['GET', '/firehose', 'Stream new posts as server-sent events.'],
 ] as const

@@ -255,6 +255,31 @@ describe('public API', () => {
     expect(oldReplies.headers.get('location')).toBe('/api/v1/users/Alice/replies?limit=5')
   })
 
+  test('lists followed users and tags, user followers, and tag followers', async () => {
+    const { app, database } = fixture()
+    database.run(`INSERT INTO users(id,handle,email,bio) VALUES(4,'Dana','dana@example.com','');
+      INSERT INTO follows(follower_id,following_id) VALUES(1,2),(1,4),(4,1);
+      INSERT INTO hashtag_follows(user_id,tag) VALUES
+        (1,'textlog'),(1,'quiet'),(2,'textlog'),(4,'textlog');`)
+
+    const following = await (await request(app, '/api/v1/users/alice/following/users')).json() as any
+    const followers = await (await request(app, '/api/v1/users/alice/followers')).json() as any
+    const tagFollowers = await (await request(app, '/api/v1/tags/textlog/followers')).json() as any
+    const firstTags = await (await request(app, '/api/v1/users/alice/following/tags?limit=1')).json() as any
+    const secondTags = await (await request(app,
+      `/api/v1/users/alice/following/tags?limit=1&cursor=${encodeURIComponent(firstTags.pagination.next_cursor)}`))
+      .json() as any
+
+    expect(following.data.map((item: any) => item.handle)).toEqual(['dana', 'bob'])
+    expect(followers.data.map((item: any) => item.handle)).toEqual(['dana', 'bob'])
+    expect(tagFollowers.data.map((item: any) => item.handle)).toEqual(['dana', 'bob', 'alice'])
+    expect([...firstTags.data, ...secondTags.data].map((item: any) => item.tag)).toEqual(['quiet', 'textlog'])
+    expect(firstTags.data[0]).toMatchObject({ url: 'https://textlog.cc/tag/quiet',
+      api_url: 'https://textlog.cc/api/v1/tags/quiet/posts' })
+    expect((await request(app, '/api/v1/users/gone/followers')).status).toBe(404)
+    expect((await request(app, '/api/v1/tags/invalid-tag/followers')).status).toBe(400)
+  })
+
   test('reports aggregate descendant counts without embedding reply bodies', async () => {
     const { app, database } = fixture()
     database.run(`INSERT INTO posts(id,user_id,parent_id,body,created_at) VALUES
@@ -315,11 +340,13 @@ describe('public API', () => {
     expect(rss.headers.get('content-type')).toBe('application/rss+xml; charset=utf-8')
     expect(rss.headers.get('access-control-allow-origin')).toBe('*')
     expect(spec.openapi).toBe('3.1.0')
-    expect(Object.keys(spec.paths)).toHaveLength(30)
+    expect(Object.keys(spec.paths)).toHaveLength(34)
     expect(spec.paths['/activities/for-you'].get.responses['401']).toBeDefined()
     expect(spec.paths['/activities/to-me'].get.responses['401']).toBeDefined()
     expect(spec.paths['/users/{handle}/blocks'].get.responses['403']).toBeDefined()
     expect(spec.paths['/activities/for-you/read-all'].post).toBeDefined()
+    expect(spec.paths['/users/{handle}/following/tags'].get).toBeDefined()
+    expect(spec.paths['/tags/{tag}/followers'].get).toBeDefined()
     expect(spec.components.schemas.Activity.properties.type.enum).toContain('user_follow')
     expect(spec.paths['/users/{handle}/posts'].get.deprecated).toBe(true)
     expect(spec.paths['/users/{handle}/notes'].get.summary).toBe("User's latest notes")

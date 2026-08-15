@@ -200,6 +200,12 @@ function openApiDocument() {
           ...collectionParameters], responses: { ...jsonResponses, '401': writeResponses['401'],
             '403': writeResponses['403'] } },
       },
+      '/users/{handle}/following/users': { get: { summary: 'Accounts followed by a user',
+        parameters: [handleParameter, ...collectionParameters], responses: jsonResponses } },
+      '/users/{handle}/following/tags': { get: { summary: 'Hashtags followed by a user',
+        parameters: [handleParameter, ...collectionParameters], responses: jsonResponses } },
+      '/users/{handle}/followers': { get: { summary: 'Accounts following a user',
+        parameters: [handleParameter, ...collectionParameters], responses: jsonResponses } },
       '/users/{handle}/posts.{format}': { get: { summary: 'User\'s latest posts as RSS or Atom', parameters: [
         { name: 'handle', in: 'path', required: true, schema: { type: 'string' } },
         formatParameter,
@@ -209,6 +215,9 @@ function openApiDocument() {
           parameters: [{ name: 'tag', in: 'path', required: true, schema: { type: 'string' } },
             ...collectionParameters], responses: jsonResponses },
       },
+      '/tags/{tag}/followers': { get: { summary: 'Accounts following a hashtag', parameters: [
+        { name: 'tag', in: 'path', required: true, schema: { type: 'string' } }, ...collectionParameters,
+      ], responses: jsonResponses } },
       '/tags/{tag}/posts.{format}': { get: { summary: 'Hashtag posts as RSS or Atom', parameters: [
         { name: 'tag', in: 'path', required: true, schema: { type: 'string' } },
         formatParameter,
@@ -550,6 +559,87 @@ export function registerApiRoutes(app: Hono, database: Database = db,
       return { handle: normalized, url: `${origin}/u/${encodeURIComponent(normalized)}`,
         api_url: `${origin}/api/v1/users/${encodeURIComponent(normalized)}` }
     }), pagination: { next_cursor: hasMore ? encodeCursor(selected[selected.length - 1].id) : null } }, 200, 'no-store')
+  })
+
+  const relationshipUserCollection = (c: Context, rows: Array<{ id: number; handle: string }>, limit: number) => {
+    const hasMore = rows.length > limit
+    const selected = rows.slice(0, limit)
+    const origin = apiOrigin(c.req.url, appUrl)
+    return jsonResponse({ data: selected.map(row => {
+      const handle = row.handle.toLowerCase()
+      return { handle, url: `${origin}/u/${encodeURIComponent(handle)}`,
+        api_url: `${origin}/api/v1/users/${encodeURIComponent(handle)}` }
+    }), pagination: { next_cursor: hasMore ? encodeCursor(selected[selected.length - 1].id) : null } })
+  }
+
+  for (const relationship of ['following/users', 'followers'] as const) {
+    app.get(`/api/v1/users/:handle/${relationship}`, c => {
+      const handle = c.req.param('handle')
+      if (!/^[A-Za-z0-9_]{2,24}$/.test(handle)) return apiError('invalid_handle', 'Handle is invalid', 400)
+      const resolved = resolveHandle(database, handle)
+      if (!resolved) return apiError('not_found', 'User not found', 404)
+      if (resolved.alias) {
+        return c.redirect(`/api/v1/users/${encodeURIComponent(resolved.handle)}/${relationship}${new URL(c.req.url).search}`,
+          308)
+      }
+      const parsed = parseCollectionParams(c.req.query('limit'), c.req.query('cursor'))
+      if (!parsed) {
+        return apiError('invalid_pagination', 'limit must be 1–100 and cursor must be a valid opaque cursor', 400)
+      }
+      const before = parsed.before === null ? '' : 'AND related.id < ?'
+      const join = relationship === 'following/users'
+        ? 'JOIN users related ON related.id=f.following_id WHERE f.follower_id=?'
+        : 'JOIN users related ON related.id=f.follower_id WHERE f.following_id=?'
+      const parameters = parsed.before === null
+        ? [resolved.id, parsed.limit + 1]
+        : [resolved.id, parsed.before, parsed.limit + 1]
+      const rows = database.query(`SELECT related.id,related.handle FROM follows f ${join}
+        AND related.deleted_at IS NULL AND related.suspended_at IS NULL ${before}
+        ORDER BY related.id DESC LIMIT ?`).all(...parameters) as Array<{ id: number; handle: string }>
+      return relationshipUserCollection(c, rows, parsed.limit)
+    })
+  }
+
+  app.get('/api/v1/users/:handle/following/tags', c => {
+    const handle = c.req.param('handle')
+    if (!/^[A-Za-z0-9_]{2,24}$/.test(handle)) return apiError('invalid_handle', 'Handle is invalid', 400)
+    const resolved = resolveHandle(database, handle)
+    if (!resolved) return apiError('not_found', 'User not found', 404)
+    if (resolved.alias) {
+      return c.redirect(`/api/v1/users/${encodeURIComponent(resolved.handle)}/following/tags${new URL(c.req.url).search}`,
+        308)
+    }
+    const parsed = parseCollectionParams(c.req.query('limit'), c.req.query('cursor'))
+    if (!parsed) return apiError('invalid_pagination', 'limit and cursor are invalid', 400)
+    const before = parsed.before === null ? '' : 'AND hf.rowid < ?'
+    const parameters = parsed.before === null
+      ? [resolved.id, parsed.limit + 1]
+      : [resolved.id, parsed.before, parsed.limit + 1]
+    const rows = database.query(`SELECT hf.rowid id,hf.tag FROM hashtag_follows hf
+      WHERE hf.user_id=? ${before} ORDER BY hf.rowid DESC LIMIT ?`).all(...parameters) as Array<{
+        id: number
+        tag: string
+      }>
+    const hasMore = rows.length > parsed.limit
+    const selected = rows.slice(0, parsed.limit)
+    const origin = apiOrigin(c.req.url, appUrl)
+    return jsonResponse({ data: selected.map(row => ({ tag: row.tag, url: `${origin}/tag/${encodeURIComponent(row.tag)}`,
+      api_url: `${origin}/api/v1/tags/${encodeURIComponent(row.tag)}/posts` })),
+    pagination: { next_cursor: hasMore ? encodeCursor(selected[selected.length - 1].id) : null } })
+  })
+
+  app.get('/api/v1/tags/:tag/followers', c => {
+    const tag = c.req.param('tag').toLowerCase()
+    if (!/^[a-z0-9_]+$/.test(tag)) return apiError('invalid_tag', 'Tag is invalid', 400)
+    const parsed = parseCollectionParams(c.req.query('limit'), c.req.query('cursor'))
+    if (!parsed) return apiError('invalid_pagination', 'limit and cursor are invalid', 400)
+    const before = parsed.before === null ? '' : 'AND related.id < ?'
+    const parameters = parsed.before === null ? [tag, parsed.limit + 1] : [tag, parsed.before, parsed.limit + 1]
+    const rows = database.query(`SELECT related.id,related.handle FROM hashtag_follows hf
+      JOIN users related ON related.id=hf.user_id WHERE hf.tag=?
+      AND related.deleted_at IS NULL AND related.suspended_at IS NULL ${before}
+      ORDER BY related.id DESC LIMIT ?`).all(...parameters) as Array<{ id: number; handle: string }>
+    return relationshipUserCollection(c, rows, parsed.limit)
   })
 
   app.get('/api/v1/tags/:tag/posts', c => {
