@@ -201,6 +201,14 @@ describe('API writes', () => {
     expect(database.query('SELECT 1 FROM follows WHERE follower_id=1 AND following_id=2').get()).toBeNull()
 
     expect((await post(app, 'alice-token', { body: 'reply', parent_id: 1 })).status).toBe(404)
+
+    expect((await call(app, '/api/v1/users/alice/blocks')).status).toBe(401)
+    expect((await call(app, '/api/v1/users/bob/blocks', { token: 'alice-token' })).status).toBe(403)
+    const blocksResponse = await call(app, '/api/v1/users/alice/blocks', { token: 'alice-token' })
+    const blocks = await blocksResponse.json() as any
+    expect(blocksResponse.headers.get('cache-control')).toBe('no-store')
+    expect(blocks).toEqual({ data: [{ handle: 'bob', url: 'https://textlog.test/u/bob',
+      api_url: 'https://textlog.test/api/v1/users/bob' }], pagination: { next_cursor: null } })
   })
 
   test('reports a post, but not your own', async () => {

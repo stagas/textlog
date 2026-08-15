@@ -2,6 +2,7 @@ import hljs from 'highlight.js/lib/core'
 import bash from 'highlight.js/lib/languages/bash'
 import json from 'highlight.js/lib/languages/json'
 import xml from 'highlight.js/lib/languages/xml'
+import type { ReactNode } from 'react'
 import { appName, appOrigin } from '../brand'
 import type { User } from '../db'
 import { Layout } from './layout'
@@ -19,34 +20,41 @@ function CodeBlock({ language, children }: { language: 'bash' | 'html' | 'json';
   )
 }
 
-const endpoints = [
+const endpoints: ReadonlyArray<readonly [string, string, ReactNode, boolean?]> = [
   ['POST', '/auth/request', 'Email a sign-in code to an existing account.'],
   ['POST', '/auth/verify', 'Exchange the code for a session token.'],
-  ['DELETE', '/auth/session', 'Sign out by revoking the token you are using.'],
-  ['GET', '/me', 'Get the signed-in account.'],
-  ['PATCH', '/me', 'Update your bio.'],
+  ['DELETE', '/auth/session', 'Sign out by revoking the token you are using.', true],
+  ['GET', '/me', 'Get the signed-in account.', true],
+  ['PATCH', '/me', 'Update your bio.', true],
   ['POST', '/posts', <>
     Create a post, or reply by including <code>parent_id</code>.
-  </>],
+  </>, true],
   ['GET', '/posts/:id', 'Get a single public post.'],
-  ['PATCH', '/posts/:id', 'Edit a post you own.'],
-  ['DELETE', '/posts/:id', 'Delete a post you own. Replies remain and the post becomes a “(deleted)” tombstone.'],
+  ['PATCH', '/posts/:id', 'Edit a post you own.', true],
+  ['DELETE', '/posts/:id', 'Delete a post you own. Replies remain and the post becomes a “(deleted)” tombstone.', true],
   ['GET', '/posts/:id/replies',
     <>Get replies recursively. Use the optional <code>depth</code> query parameter (1–20, default 1). Each reply is
       returned with its depth, parent ID, and <code>top_id</code>; use its aggregate <code>reply_count</code> to detect
       omitted descendants. Top-level posts have a null <code>top_id</code>.</>],
-  ['POST', '/posts/:id/report', 'Report a post.'],
+  ['POST', '/posts/:id/report', 'Report a post.', true],
   ['GET', '/users/:handle',
     <>Get a public profile with separate <code>post_count</code> and <code>replies_count</code> totals.</>],
   ['GET', '/users/:handle/notes', 'Get a user\'s latest top-level notes.'],
   ['GET', '/users/:handle/posts', <>Backward-compatible alias for <code>/users/:handle/notes</code>.</>],
   ['GET', '/users/:handle/replies', 'Get a user\'s latest replies.'],
-  ['POST', '/users/:handle/follow', 'Follow a user.'],
-  ['DELETE', '/users/:handle/follow', 'Unfollow a user.'],
-  ['POST', '/users/:handle/block', 'Block a user.'],
-  ['DELETE', '/users/:handle/block', 'Unblock a user.'],
+  ['POST', '/users/:handle/follow', 'Follow a user.', true],
+  ['DELETE', '/users/:handle/follow', 'Unfollow a user.', true],
+  ['POST', '/users/:handle/block', 'Block a user.', true],
+  ['DELETE', '/users/:handle/block', 'Unblock a user.', true],
+  ['GET', '/users/:handle/blocks', 'List accounts you have blocked. The handle must be your own.', true],
   ['GET', '/feeds/latest', 'Get the latest public posts and replies.'],
   ['GET', '/feeds/hot', 'Get posts ranked by recent activity and replies.'],
+  ['GET', '/activities/for-you', 'Get activity from followed people and tags, plus activity directed to you.', true],
+  ['POST', '/activities/for-you/read', 'Mark selected activities as read using their activity_ids.', true],
+  ['POST', '/activities/for-you/read-all', 'Mark every for-you activity as read.', true],
+  ['GET', '/activities/to-me', 'Get replies, mentions, and follows directed to you.', true],
+  ['POST', '/activities/to-me/read', 'Mark selected activities as read using their activity_ids.', true],
+  ['POST', '/activities/to-me/read-all', 'Mark every to-me activity as read.', true],
   ['GET', '/tags/:tag/posts', 'Get the latest posts carrying a hashtag.'],
   ['GET', '/search?q=:query', 'Search public posts by text.'],
   ['GET', '/firehose', 'Stream new posts as server-sent events.'],
@@ -68,7 +76,7 @@ export function ApiDocs({ user }: { user: User | null }) {
         </h1>
         <p>
           The public API is a small way to build feeds, profile cards, post embeds, and live widgets. Reading needs no
-          account or API key. Writing is available to every account with a bearer token.
+          account or API key, except personalized activity. Personalized activity and writing use a bearer token.
         </p>
 
         <h2>Base URL</h2>
@@ -80,11 +88,14 @@ export function ApiDocs({ user }: { user: User | null }) {
 
         <h2>Endpoints</h2>
         <dl className="api-endpoints">
-          {endpoints.map(([method, path, description]) => (
+          {endpoints.map(([method, path, description, authentication]) => (
             <div className="api-endpoint" key={`${method}:${path}`}>
               <dt>
                 <code>
-                  <span className="api-method" data-method={method}>{method}</span>
+                  <span className="api-method" data-method={method} data-auth={authentication || undefined}>
+                    {!!authentication && <span className="api-auth-dot" aria-hidden="true" />}
+                    {method}
+                  </span>
                   <span className="api-path">{path}</span>
                 </code>
               </dt>
@@ -94,6 +105,12 @@ export function ApiDocs({ user }: { user: User | null }) {
             </div>
           ))}
         </dl>
+        <p className="api-auth-legend">
+          <code><span className="api-method" data-auth="true"><span className="api-auth-dot" aria-hidden="true" />
+            VERB
+          </span></code>{' '}
+          authentication bearer token required
+        </p>
 
         <h2>RSS and Atom</h2>
         <p>
@@ -177,6 +194,14 @@ export function ApiDocs({ user }: { user: User | null }) {
           follow-up requests.
         </p>
         <CodeBlock language="bash">{`curl '${origin}/api/v1/feeds/latest?limit=10'`}</CodeBlock>
+        <CodeBlock language="bash">{`curl '${origin}/api/v1/activities/for-you?limit=10' \\
+  -H "authorization: Bearer $TOKEN"`}</CodeBlock>
+        <p>
+          Personalized activity collections return <code>has_unread</code> and typed activity objects. Each activity’s{' '}
+          <code>type</code> is <code>post</code>,{' '}
+          <code>reply</code>, <code>mention</code>, <code>user_follow</code>, <code>tag_follow</code>, or{' '}
+          <code>signup</code>; <code>payload</code> contains the corresponding post or actor and target.
+        </p>
 
         <h2>Search</h2>
         <p>Search is public and uses the same prefix matching as the website. Separate words must all match.</p>

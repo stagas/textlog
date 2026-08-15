@@ -661,10 +661,13 @@ test('API documentation is linked from the footer and describes the firehose', (
   expect(html).toContain('/tags/:tag/posts.atom')
   expect(html).toContain('href="/api/embed-examples"')
   expect(html.match(/class="api-endpoints"/g)).toHaveLength(1)
-  expect(html).toContain('data-method="DELETE">DELETE</span><span class="api-path">/auth/session</span>')
-  expect(html).toContain('data-method="DELETE">DELETE</span><span class="api-path">/posts/:id</span>')
-  expect(html).toContain('data-method="DELETE">DELETE</span><span class="api-path">/users/:handle/follow</span>')
-  expect(html).toContain('data-method="DELETE">DELETE</span><span class="api-path">/users/:handle/block</span>')
+  expect(html).toContain('data-method="DELETE" data-auth="true"><span class="api-auth-dot"')
+  expect(html).toContain('data-method="GET" data-auth="true"><span class="api-auth-dot"')
+  expect(html).toContain('class="api-path">/activities/for-you</span>')
+  expect(html).toContain('class="api-path">/users/:handle/blocks</span>')
+  expect(html).toContain('class="api-path">/activities/to-me/read-all</span>')
+  expect(html).not.toContain('Bearer token required.')
+  expect(html).toContain('authentication bearer token required')
 })
 
 test('API documentation links to the privacy-filtered public archive', () => {

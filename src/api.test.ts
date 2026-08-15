@@ -4,18 +4,27 @@ import { Hono } from 'hono'
 import { publishPost } from './api-broker'
 import { rebuildHotPosts } from './hot'
 import { registerApiRoutes } from './routes/api'
+import { sessionHash } from './sessions'
 
 function fixture(now?: () => number) {
-  const database = new Database(':memory:')
+  const database = new Database(':memory:', { strict: true })
   database.run(`
     CREATE TABLE users (id INTEGER PRIMARY KEY,handle TEXT NOT NULL,email TEXT,bio TEXT NOT NULL DEFAULT '',
-      created_at TEXT DEFAULT CURRENT_TIMESTAMP,deleted_at TEXT,suspended_at TEXT,is_bot INTEGER NOT NULL DEFAULT 0);
+      created_at TEXT DEFAULT CURRENT_TIMESTAMP,deleted_at TEXT,suspended_at TEXT,is_bot INTEGER NOT NULL DEFAULT 0,
+      email_verified_at TEXT,handle_chosen_at TEXT);
     CREATE TABLE handle_history (handle TEXT PRIMARY KEY COLLATE NOCASE,user_id INTEGER NOT NULL);
     CREATE TABLE posts (id INTEGER PRIMARY KEY,user_id INTEGER NOT NULL,parent_id INTEGER,body TEXT NOT NULL,
       created_at TEXT DEFAULT CURRENT_TIMESTAMP,deleted_at TEXT);
-    CREATE TABLE follows (follower_id INTEGER NOT NULL,following_id INTEGER NOT NULL);
+    CREATE TABLE follows (follower_id INTEGER NOT NULL,following_id INTEGER NOT NULL,created_at TEXT);
     CREATE TABLE blocks (blocker_id INTEGER NOT NULL,blocked_id INTEGER NOT NULL);
     CREATE TABLE post_hashtags (post_id INTEGER NOT NULL,tag TEXT NOT NULL);
+    CREATE TABLE post_mentions (post_id INTEGER NOT NULL,user_id INTEGER NOT NULL);
+    CREATE TABLE hashtag_follows (user_id INTEGER NOT NULL,tag TEXT NOT NULL,created_at TEXT);
+    CREATE TABLE blocked_hashtags (user_id INTEGER NOT NULL,tag TEXT NOT NULL);
+    CREATE TABLE for_you_reads (user_id INTEGER NOT NULL,event_key TEXT NOT NULL);
+    CREATE TABLE activity_reads (user_id INTEGER NOT NULL,event_key TEXT NOT NULL);
+    CREATE TABLE sessions (token_hash TEXT PRIMARY KEY,user_id INTEGER NOT NULL,expires_at INTEGER NOT NULL,
+      created_at INTEGER NOT NULL,user_agent TEXT NOT NULL,last_used_at INTEGER NOT NULL);
     CREATE TABLE auth_rate_limits (id INTEGER PRIMARY KEY AUTOINCREMENT,scope TEXT NOT NULL,key_hash TEXT NOT NULL,
       created_at INTEGER NOT NULL);
     CREATE TABLE api_rate_limit_buckets (scope TEXT NOT NULL,key_hash TEXT NOT NULL,bucket_start INTEGER NOT NULL,
@@ -106,6 +115,73 @@ describe('public API', () => {
     expect(first.data.map((post: any) => post.id)).toEqual([3])
     expect(second.data.map((post: any) => post.id)).toEqual([1])
     expect(second.pagination.next_cursor).toBeNull()
+  })
+
+  test('requires authentication for personalized activity and returns the web activity shape', async () => {
+    const { app, database } = fixture()
+    const token = 'personalized-feed-token'
+    const now = Date.now()
+    database.query(`INSERT INTO sessions(token_hash,user_id,expires_at,created_at,user_agent,last_used_at)
+      VALUES(?,?,?,?,?,?)`).run(sessionHash(token), 1, now + 60_000, now, 'test', now)
+    database.run(`INSERT INTO post_mentions(post_id,user_id) VALUES(2,1);
+      INSERT INTO follows(follower_id,following_id,created_at) VALUES
+        (1,2,'2026-08-03 09:00:00'),(2,1,'2026-08-03 17:00:00');
+      INSERT INTO posts(id,user_id,parent_id,body,created_at) VALUES
+        (6,2,NULL,'followed author','2026-08-03 15:00:00'),
+        (7,2,NULL,'tag match #textlog','2026-08-03 16:00:00');
+      INSERT INTO post_hashtags(post_id,tag) VALUES(7,'textlog');
+      INSERT INTO hashtag_follows(user_id,tag,created_at) VALUES
+        (1,'textlog','2026-08-03 08:00:00'),(2,'textlog','2026-08-03 18:00:00');`)
+    const headers = { authorization: `Bearer ${token}` }
+
+    expect((await request(app, '/api/v1/activities/for-you')).status).toBe(401)
+    expect((await request(app, '/api/v1/activities/to-me')).status).toBe(401)
+    const forYou = await (await request(app, '/api/v1/activities/for-you', { headers })).json() as any
+    const toMe = await (await request(app, '/api/v1/activities/to-me', { headers })).json() as any
+
+    expect(forYou.data.map((activity: any) => activity.type))
+      .toEqual(['tag_follow', 'user_follow', 'post', 'post', 'reply'])
+    expect(forYou.data.find((activity: any) => activity.type === 'tag_follow').payload)
+      .toMatchObject({ actor: { handle: 'bob' }, target: { tag: 'textlog' } })
+    expect(forYou.data.find((activity: any) => activity.type === 'post').payload).toMatchObject({ id: 7 })
+    expect(toMe.data.map((activity: any) => activity.type)).toEqual(['user_follow', 'reply'])
+    expect(toMe.data.find((activity: any) => activity.type === 'user_follow').payload)
+      .toMatchObject({ actor: { handle: 'bob' }, target: { handle: 'alice' } })
+    expect(forYou.has_unread).toBe(true)
+    expect(toMe.has_unread).toBe(true)
+    const firstPage = await (await request(app, '/api/v1/activities/for-you?limit=2', { headers })).json() as any
+    const secondPage = await (await request(app,
+      `/api/v1/activities/for-you?limit=2&cursor=${encodeURIComponent(firstPage.pagination.next_cursor)}`,
+      { headers })).json() as any
+    expect(firstPage.data.map((activity: any) => activity.type)).toEqual(['tag_follow', 'user_follow'])
+    expect(secondPage.data.map((activity: any) => activity.payload.id)).toEqual([7, 6])
+    expect((await request(app, '/api/v1/activities/for-you?cursor=broken', { headers })).status).toBe(400)
+
+    const selectedRead = await request(app, '/api/v1/activities/for-you/read', { method: 'POST', headers: {
+      ...headers, 'content-type': 'application/json' }, body: JSON.stringify({ activity_ids: [forYou.data[0].id] }) })
+    expect(selectedRead.status).toBe(200)
+    expect(selectedRead.headers.get('cache-control')).toBe('no-store')
+    expect(await selectedRead.json()).toEqual({ data: { read: 1 } })
+    const afterSelectedRead = await (await request(app, '/api/v1/activities/for-you', { headers })).json() as any
+    expect(afterSelectedRead.data[0].unread).toBe(false)
+
+    expect((await request(app, '/api/v1/activities/for-you/read-all', { method: 'POST', headers })).status).toBe(200)
+    const afterForYouReadAll = await (await request(app, '/api/v1/activities/for-you', { headers })).json() as any
+    const toMeIds = new Set(toMe.data.map((activity: any) => activity.id))
+    expect(afterForYouReadAll.data.filter((activity: any) => !toMeIds.has(activity.id))
+      .every((activity: any) => !activity.unread)).toBe(true)
+    expect(afterForYouReadAll.data.find((activity: any) => activity.type === 'reply').unread).toBe(true)
+    expect(afterForYouReadAll.has_unread).toBe(false)
+
+    const reply = toMe.data.find((activity: any) => activity.type === 'reply')
+    expect((await request(app, '/api/v1/activities/to-me/read', { method: 'POST', headers: {
+      ...headers, 'content-type': 'application/json' }, body: JSON.stringify({ activity_ids: [reply.id] }) })).status)
+      .toBe(200)
+    expect((await request(app, '/api/v1/activities/to-me/read-all', { method: 'POST', headers })).status).toBe(200)
+    const afterToMeReadAll = await (await request(app, '/api/v1/activities/to-me', { headers })).json() as any
+    expect(afterToMeReadAll.data.every((activity: any) => !activity.unread)).toBe(true)
+    expect(afterToMeReadAll.has_unread).toBe(false)
+    expect((await request(app, '/api/v1/activities/for-you/read', { method: 'POST', headers })).status).toBe(400)
   })
 
   test('returns hot posts using the existing activity ranking with cursor pagination', async () => {
@@ -239,7 +315,12 @@ describe('public API', () => {
     expect(rss.headers.get('content-type')).toBe('application/rss+xml; charset=utf-8')
     expect(rss.headers.get('access-control-allow-origin')).toBe('*')
     expect(spec.openapi).toBe('3.1.0')
-    expect(Object.keys(spec.paths)).toHaveLength(23)
+    expect(Object.keys(spec.paths)).toHaveLength(30)
+    expect(spec.paths['/activities/for-you'].get.responses['401']).toBeDefined()
+    expect(spec.paths['/activities/to-me'].get.responses['401']).toBeDefined()
+    expect(spec.paths['/users/{handle}/blocks'].get.responses['403']).toBeDefined()
+    expect(spec.paths['/activities/for-you/read-all'].post).toBeDefined()
+    expect(spec.components.schemas.Activity.properties.type.enum).toContain('user_follow')
     expect(spec.paths['/users/{handle}/posts'].get.deprecated).toBe(true)
     expect(spec.paths['/users/{handle}/notes'].get.summary).toBe("User's latest notes")
     expect(spec.paths['/users/{handle}/replies'].get.parameters.map((parameter: any) => parameter.name))

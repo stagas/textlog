@@ -1,5 +1,6 @@
 import { isAdminEmail } from './admin'
 import { db } from './db'
+import type { Database } from 'bun:sqlite'
 
 const visibleEvents = `
   SELECT 'post:' || printf('%020d',p.id) event_key FROM posts p
@@ -82,21 +83,21 @@ const visibleForYouEvents = `
   EXCEPT
   SELECT event_key FROM (${visibleToMeEvents})`
 
-function stateParameters(userId: number) {
-  const account = db.query('SELECT email FROM users WHERE id=?').get(userId) as { email: string } | null
+function stateParameters(userId: number, database: Database = db) {
+  const account = database.query('SELECT email FROM users WHERE id=?').get(userId) as { email: string } | null
   return { viewer: userId, admin: Number(!!account && isAdminEmail(account.email)) }
 }
 
-export function hasUnreadForYou(userId: number) {
-  return !!db.query(`SELECT 1 FROM (${visibleForYouEvents}) event WHERE NOT EXISTS
+export function hasUnreadForYou(userId: number, database: Database = db) {
+  return !!database.query(`SELECT 1 FROM (${visibleForYouEvents}) event WHERE NOT EXISTS
     (SELECT 1 FROM for_you_reads seen WHERE seen.user_id=$viewer AND seen.event_key=event.event_key) LIMIT 1`)
-    .get(stateParameters(userId))
+    .get(stateParameters(userId, database))
 }
 
-export function hasUnreadToMe(userId: number) {
-  return !!db.query(`SELECT 1 FROM (${visibleToMeEvents}) event WHERE NOT EXISTS
+export function hasUnreadToMe(userId: number, database: Database = db) {
+  return !!database.query(`SELECT 1 FROM (${visibleToMeEvents}) event WHERE NOT EXISTS
     (SELECT 1 FROM for_you_reads seen WHERE seen.user_id=$viewer AND seen.event_key=event.event_key) LIMIT 1`)
-    .get(stateParameters(userId))
+    .get(stateParameters(userId, database))
 }
 
 export function markForYouEntriesRead(userId: number, eventKeys: string[]) {
@@ -113,12 +114,33 @@ export function markForYouEntriesRead(userId: number, eventKeys: string[]) {
   )()
 }
 
-export function markAllForYouRead(userId: number, toMe = false) {
+export function markVisibleForYouEntriesRead(userId: number, eventKeys: string[], toMe = false,
+  database: Database = db)
+{
+  if (!eventKeys.length) return 0
   const events = toMe ? visibleToMeEvents : visibleForYouEvents
-  db.transaction(() => {
-    db.query(`INSERT OR IGNORE INTO for_you_reads(user_id,event_key)
-      SELECT $viewer,event_key FROM (${events})`).run(stateParameters(userId))
-    db.query(`INSERT OR IGNORE INTO activity_reads(user_id,event_key)
+  const placeholders = eventKeys.map((_, index) => `$event${index}`).join(',')
+  const parameters = { ...stateParameters(userId, database),
+    ...Object.fromEntries(eventKeys.map((eventKey, index) => [`event${index}`, eventKey])) }
+  const visible = database.query(`SELECT event_key FROM (${events}) WHERE event_key IN (${placeholders})`)
+    .all(parameters) as Array<{ event_key: string }>
+  const insert = database.query('INSERT OR IGNORE INTO for_you_reads(user_id,event_key) VALUES(?,?)')
+  const insertActivity = database.query(`INSERT OR IGNORE INTO activity_reads(user_id,event_key)
+    VALUES(?,'post:' || CAST(? AS INTEGER))`)
+  database.transaction(() => visible.forEach(({ event_key: eventKey }) => {
+    insert.run(userId, eventKey)
+    const postId = eventKey.match(/^post:(\d+)$/)?.[1]
+    if (postId) insertActivity.run(userId, postId)
+  }))()
+  return visible.length
+}
+
+export function markAllForYouRead(userId: number, toMe = false, database: Database = db) {
+  const events = toMe ? visibleToMeEvents : visibleForYouEvents
+  database.transaction(() => {
+    database.query(`INSERT OR IGNORE INTO for_you_reads(user_id,event_key)
+      SELECT $viewer,event_key FROM (${events})`).run(stateParameters(userId, database))
+    database.query(`INSERT OR IGNORE INTO activity_reads(user_id,event_key)
       SELECT user_id,'post:' || CAST(substr(event_key,6) AS INTEGER)
       FROM for_you_reads WHERE user_id=? AND event_key GLOB 'post:[0-9]*'`).run(userId)
   })()

@@ -1,18 +1,20 @@
 import type { Database } from 'bun:sqlite'
 import type { Context, Hono } from 'hono'
 import { API_DEFAULT_REPLY_DEPTH, API_MAX_REPLY_DEPTH, apiHotPosts, apiOrigin, apiPost, apiPosts, apiReplies,
-  apiSearchPosts, isoTimestamp, parseCollectionParams } from '../api'
+  apiSearchPosts, encodeCursor, isoTimestamp, parseCollectionParams } from '../api'
+import { apiActivities, decodeActivityCursor } from '../api-activity'
 import { subscribeToPosts } from '../api-broker'
 import { consumeBucketedAttempt, rateLimitKey } from '../auth-rate-limit'
 import { appName, clientIpHeaderName } from '../brand'
 import { ApiDocs, EmbedExamples } from '../components/pages'
 import { db } from '../db'
 import { isDevelopment } from '../environment'
+import { markAllForYouRead, markVisibleForYouEntriesRead } from '../for-you-state'
 import { resolveHandle } from '../handles'
 import { decodeHotCursor } from '../hot'
 import { logError } from '../log'
 import { MAX_SEARCH_LENGTH, normalizeSearchQuery, searchExpression } from '../search'
-import { currentUser } from '../utils'
+import { apiUser, currentUser } from '../utils'
 import { registerApiWriteRoutes } from './api-write'
 import { page } from './shared'
 import { registerSyndicationRoutes } from './syndication'
@@ -91,6 +93,15 @@ function openApiDocument() {
   ]
   const jsonResponses = { '200': { description: 'Successful response' }, '400': { description: 'Invalid request' },
     '404': { description: 'Not found' }, '429': { description: 'Rate limited' } }
+  const activityResponses = { ...jsonResponses, '200': { description: 'A typed activity collection', content: {
+    'application/json': { schema: { type: 'object', required: ['data', 'has_unread', 'pagination'], properties: {
+      data: { type: 'array', items: { $ref: '#/components/schemas/Activity' } },
+      has_unread: { type: 'boolean' },
+      pagination: { type: 'object', required: ['next_cursor'], properties: {
+        next_cursor: { type: ['string', 'null'] },
+      } },
+    } } },
+  } } }
   const repliesResponse = { '200': { description: 'Replies up to the requested depth', content: {
     'application/json': { schema: {
       type: 'object',
@@ -125,6 +136,18 @@ function openApiDocument() {
     servers: [{ url: '/api/v1' }],
     paths: {
       '/feeds/latest': { get: { summary: 'Latest posts', parameters: collectionParameters, responses: jsonResponses } },
+      '/activities/for-you': { get: { summary: 'Activity personalized for the authenticated account',
+        parameters: collectionParameters, responses: { ...activityResponses, '401': writeResponses['401'] } } },
+      '/activities/to-me': { get: { summary: 'Activity directed to the authenticated account',
+        parameters: collectionParameters, responses: { ...activityResponses, '401': writeResponses['401'] } } },
+      '/activities/for-you/read': { post: { summary: 'Mark selected for-you activities as read',
+        responses: writeResponses } },
+      '/activities/for-you/read-all': { post: { summary: 'Mark all for-you activities as read',
+        responses: writeResponses } },
+      '/activities/to-me/read': { post: { summary: 'Mark selected to-me activities as read',
+        responses: writeResponses } },
+      '/activities/to-me/read-all': { post: { summary: 'Mark all to-me activities as read',
+        responses: writeResponses } },
       '/feeds/hot': { get: { summary: 'Hot posts', parameters: collectionParameters, responses: jsonResponses } },
       '/search': { get: { summary: 'Search public posts', security: [], parameters: [
         { name: 'q', in: 'query', required: true,
@@ -172,6 +195,11 @@ function openApiDocument() {
           parameters: [{ name: 'handle', in: 'path', required: true, schema: { type: 'string' } },
             ...collectionParameters], responses: jsonResponses },
       },
+      '/users/{handle}/blocks': {
+        get: { summary: 'Accounts blocked by the authenticated account', parameters: [handleParameter,
+          ...collectionParameters], responses: { ...jsonResponses, '401': writeResponses['401'],
+            '403': writeResponses['403'] } },
+      },
       '/users/{handle}/posts.{format}': { get: { summary: 'User\'s latest posts as RSS or Atom', parameters: [
         { name: 'handle', in: 'path', required: true, schema: { type: 'string' } },
         formatParameter,
@@ -218,7 +246,15 @@ function openApiDocument() {
     },
     security: [{ bearerAuth: [] }],
     components: {
-      schemas: { QuotedPost: quotedPostSchema, Post: postSchema, Reply: {
+      schemas: { QuotedPost: quotedPostSchema, Post: postSchema, Activity: {
+        type: 'object', required: ['id', 'type', 'created_at', 'unread', 'payload'], properties: {
+          id: { type: 'string' },
+          type: { type: 'string', enum: ['post', 'reply', 'mention', 'user_follow', 'tag_follow', 'signup'] },
+          created_at: { type: 'string', format: 'date-time' },
+          unread: { type: 'boolean' },
+          payload: { oneOf: [{ $ref: '#/components/schemas/Post' }, { type: 'object' }] },
+        },
+      }, Reply: {
         allOf: [
           { $ref: '#/components/schemas/Post' },
           { type: 'object', required: ['depth'], properties: {
@@ -308,6 +344,48 @@ export function registerApiRoutes(app: Hono, database: Database = db,
   app.get('/api/openapi.json', () => jsonResponse(openApiDocument(), 200, 'public, max-age=3600'))
 
   app.get('/api/v1/feeds/latest', c => collection(c, database, { excludeBots: true }, appUrl))
+
+  for (const [path, kind] of [['for-you', 'personalizedFor'], ['to-me', 'toMeFor']] as const) {
+    app.get(`/api/v1/activities/${path}`, c => {
+      const user = apiUser(c.req.raw, database)
+      if (!user) return apiError('unauthorized', 'Provide a bearer token from /api/v1/auth/verify', 401)
+      const parsed = parseCollectionParams(c.req.query('limit'))
+      const cursorValue = c.req.query('cursor')
+      const cursor = decodeActivityCursor(cursorValue)
+      if (!parsed || (cursorValue && !cursor)) {
+        return apiError('invalid_pagination', 'limit must be 1–100 and cursor must be a valid opaque cursor', 400)
+      }
+      return jsonResponse(apiActivities(database, apiOrigin(c.req.url, appUrl), user, {
+        limit: parsed.limit,
+        cursor,
+        toMe: kind === 'toMeFor',
+      }))
+    })
+    app.post(`/api/v1/activities/${path}/read`, async c => {
+      const user = apiUser(c.req.raw, database)
+      if (!user) return apiError('unauthorized', 'Provide a bearer token from /api/v1/auth/verify', 401)
+      let payload: unknown
+      try {
+        payload = await c.req.json()
+      }
+      catch {
+        return apiError('invalid_body', 'Provide activity_ids as an array of activity IDs', 400)
+      }
+      const activityIds = (payload as { activity_ids?: unknown })?.activity_ids
+      if (!Array.isArray(activityIds) || activityIds.length < 1 || activityIds.length > 100
+        || activityIds.some(id => typeof id !== 'string' || !id || id.length > 500)) {
+        return apiError('invalid_body', 'Provide 1–100 activity_ids from this feed', 400)
+      }
+      const read = markVisibleForYouEntriesRead(user.id, [...new Set(activityIds)], kind === 'toMeFor', database)
+      return jsonResponse({ data: { read } }, 200, 'no-store')
+    })
+    app.post(`/api/v1/activities/${path}/read-all`, c => {
+      const user = apiUser(c.req.raw, database)
+      if (!user) return apiError('unauthorized', 'Provide a bearer token from /api/v1/auth/verify', 401)
+      markAllForYouRead(user.id, kind === 'toMeFor', database)
+      return jsonResponse({ data: { read_all: true } }, 200, 'no-store')
+    })
+  }
 
   app.get('/api/v1/search', c => {
     const rawQuery = c.req.query('q') || ''
@@ -441,6 +519,37 @@ export function registerApiRoutes(app: Hono, database: Database = db,
       handle: resolved.handle,
       repliesOnly: true,
     }))
+  })
+
+  app.get('/api/v1/users/:handle/blocks', c => {
+    const user = apiUser(c.req.raw, database)
+    if (!user) return apiError('unauthorized', 'Provide a bearer token from /api/v1/auth/verify', 401)
+    const handle = c.req.param('handle')
+    if (!/^[A-Za-z0-9_]{2,24}$/.test(handle)) return apiError('invalid_handle', 'Handle is invalid', 400)
+    const resolved = resolveHandle(database, handle)
+    if (!resolved) return apiError('not_found', 'User not found', 404)
+    if (resolved.alias) {
+      return c.redirect(`/api/v1/users/${encodeURIComponent(resolved.handle)}/blocks${new URL(c.req.url).search}`, 308)
+    }
+    if (resolved.id !== user.id) return apiError('forbidden', 'You can only list your own blocked accounts', 403)
+    const parsed = parseCollectionParams(c.req.query('limit'), c.req.query('cursor'))
+    if (!parsed) {
+      return apiError('invalid_pagination', 'limit must be 1–100 and cursor must be a valid opaque cursor', 400)
+    }
+    const before = parsed.before === null ? '' : 'AND blocked.id < ?'
+    const parameters = parsed.before === null ? [user.id, parsed.limit + 1] : [user.id, parsed.before, parsed.limit + 1]
+    const rows = database.query(`SELECT blocked.id,blocked.handle FROM blocks b
+      JOIN users blocked ON blocked.id=b.blocked_id
+      WHERE b.blocker_id=? AND blocked.deleted_at IS NULL ${before}
+      ORDER BY blocked.id DESC LIMIT ?`).all(...parameters) as Array<{ id: number; handle: string }>
+    const hasMore = rows.length > parsed.limit
+    const selected = rows.slice(0, parsed.limit)
+    const origin = apiOrigin(c.req.url, appUrl)
+    return jsonResponse({ data: selected.map(row => {
+      const normalized = row.handle.toLowerCase()
+      return { handle: normalized, url: `${origin}/u/${encodeURIComponent(normalized)}`,
+        api_url: `${origin}/api/v1/users/${encodeURIComponent(normalized)}` }
+    }), pagination: { next_cursor: hasMore ? encodeCursor(selected[selected.length - 1].id) : null } }, 200, 'no-store')
   })
 
   app.get('/api/v1/tags/:tag/posts', c => {
