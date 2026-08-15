@@ -56,7 +56,7 @@ export function Feed({ user, page = 1, title, path = '/for-you', pageUrl, notifi
   title?: string
   path?: string
   pageUrl?: string
-  notificationBanner?: boolean
+  notificationBanner?: false | 'notifications' | 'appearance'
   toMe?: boolean
 }) {
   const filters = [

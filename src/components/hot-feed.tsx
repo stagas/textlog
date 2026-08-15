@@ -16,7 +16,7 @@ export function HotFeed(
     title?: string
     path?: string
     pageUrl?: string
-    notificationBanner?: boolean
+    notificationBanner?: false | 'notifications' | 'appearance'
   },
 ) {
   const viewerId = user?.id ?? -1

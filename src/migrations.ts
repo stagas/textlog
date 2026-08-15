@@ -931,6 +931,18 @@ export const migrations: Migration[] = [
       rebuildHotPosts(database)
     },
   },
+  {
+    version: 69,
+    name: 'appearance_user_agents',
+    up(database) {
+      database.run(`CREATE TABLE IF NOT EXISTS appearance_user_agents (
+        user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        user_agent TEXT NOT NULL CHECK(length(user_agent) BETWEEN 1 AND 512),
+        status TEXT NOT NULL CHECK(status IN ('seen','dismissed')),
+        updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        PRIMARY KEY(user_id,user_agent));`)
+    },
+  },
 ]
 
 export const latestMigrationVersion = migrations.at(-1)!.version

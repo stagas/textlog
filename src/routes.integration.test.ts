@@ -482,14 +482,15 @@ test('consequential account, content, reporting, and admin flows work over HTTP'
   const deviceCookie = savedPush.headers.get('set-cookie')?.match(/notification_device=[^;]+/)?.[0]
   expect(deviceCookie).toBeDefined()
   const enabledDeviceHome = await (await request('/', { cookie: aliceCookie, userAgent: 'alice-browser' })).text()
-  expect(enabledDeviceHome).not.toContain('class="notification-banner"')
+  expect(enabledDeviceHome).toContain('class="notification-banner"')
+  expect(enabledDeviceHome).toContain('href="/appearance/banner">customize appearance</a>')
   const otherBrowserHome = await (await request('/', { cookie: aliceCookie, userAgent: 'alice-other-browser' })).text()
   expect(otherBrowserHome).toContain('class="notification-banner"')
   const legacyDismissedHome = await (await request('/', {
     cookie: `${aliceCookie}; notification_banner_dismissed=${alice.id}`,
     userAgent: 'alice-legacy-browser',
   })).text()
-  expect(legacyDismissedHome).not.toContain('class="notification-banner"')
+  expect(legacyDismissedHome).toContain('href="/appearance/banner">customize appearance</a>')
 
   const dismissed = await request('/notifications/banner/dismiss', {
     method: 'POST',
@@ -502,7 +503,24 @@ test('consequential account, content, reporting, and admin flows work over HTTP'
     cookie: aliceCookie,
     userAgent: 'alice-dismissed-browser',
   })).text()
-  expect(dismissedHome).not.toContain('class="notification-banner"')
+  expect(dismissedHome).toContain('href="/appearance/banner">customize appearance</a>')
+  const dismissedAppearance = await request('/appearance/banner/dismiss', {
+    method: 'POST', cookie: aliceCookie, userAgent: 'alice-dismissed-browser',
+  })
+  expect(dismissedAppearance.status).toBe(303)
+  const fullyDismissedHome = await (await request('/', {
+    cookie: aliceCookie, userAgent: 'alice-dismissed-browser',
+  })).text()
+  expect(fullyDismissedHome).not.toContain('class="notification-banner"')
+  const openedAppearance = await request('/appearance/banner', {
+    cookie: aliceCookie, userAgent: 'alice-browser',
+  })
+  expect(openedAppearance.status).toBe(303)
+  expect(openedAppearance.headers.get('location')).toBe('/account/edit/appearance')
+  const configuredDeviceHome = await (await request('/', {
+    cookie: aliceCookie, userAgent: 'alice-browser',
+  })).text()
+  expect(configuredDeviceHome).not.toContain('class="notification-banner"')
   const pushPreferences = await request(
     '/account/push-subscription?endpoint=' + encodeURIComponent(endpoint),
     { cookie: aliceCookie },

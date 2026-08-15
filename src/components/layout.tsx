@@ -30,7 +30,7 @@ export function Layout({
     imageAlt?: string }
   pageUrl?: string
   feeds?: { title: string; rss: string; atom: string }
-  notificationBanner?: boolean
+  notificationBanner?: false | 'notifications' | 'appearance'
   children: React.ReactNode
 }) {
   const selectedAppearance = activeAppearance()
@@ -124,7 +124,7 @@ export function Layout({
             <link rel="alternate" type="application/atom+xml" title={`${feeds.title} (Atom)`} href={feeds.atom} />
           </>
         )}
-        <link rel="stylesheet" href="/styles.css?v=279" />
+        <link rel="stylesheet" href="/styles.css?v=280" />
         <style>{themeCss}</style>
       </head>
       <body className={`density-${density}`}>
@@ -150,10 +150,16 @@ export function Layout({
             )}
         </header>
         {notificationBanner && (
-          <aside className="notification-banner" aria-label="Notification reminder">
-            <a href="/account/edit/notifications">enable notifications</a>
+          <aside className="notification-banner" aria-label="Account setup reminder">
+            <a href={notificationBanner === 'appearance'
+              ? '/appearance/banner'
+              : '/account/edit/notifications'}>
+              {notificationBanner === 'appearance' ? 'customize appearance' : 'enable notifications'}
+            </a>
             <span aria-hidden="true">·</span>
-            <form method="post" action="/notifications/banner/dismiss">
+            <form method="post" action={notificationBanner === 'appearance'
+              ? '/appearance/banner/dismiss'
+              : '/notifications/banner/dismiss'}>
               <button className="quiet">dismiss</button>
             </form>
           </aside>

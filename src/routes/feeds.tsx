@@ -24,11 +24,27 @@ import { decodePostCursor } from '../pagination'
 import { currentUser } from '../utils'
 
 function showNotificationBanner(request: Request, user: ReturnType<typeof currentUser>) {
-  if (!user || notificationBannerDismissed(request, user.id)) return false
+  if (!user) return false
   const userAgent = notificationUserAgent(request)
-  if (!userAgent) return true
-  return !db.query('SELECT 1 FROM notification_user_agents WHERE user_id=? AND user_agent=? LIMIT 1')
-    .get(user.id, userAgent)
+  if (!userAgent) return Math.random() < 0.5 ? 'notifications' : 'appearance'
+  const notificationsHandled = notificationBannerDismissed(request, user.id) || Boolean(db.query(
+    'SELECT 1 FROM notification_user_agents WHERE user_id=? AND user_agent=? LIMIT 1',
+  ).get(user.id, userAgent))
+  const appearanceHandled = Boolean(db.query(
+    'SELECT 1 FROM appearance_user_agents WHERE user_id=? AND user_agent=? LIMIT 1',
+  ).get(user.id, userAgent))
+  if (notificationsHandled && appearanceHandled) return false
+  if (notificationsHandled) return 'appearance'
+  if (appearanceHandled) return 'notifications'
+  return Math.random() < 0.5 ? 'notifications' : 'appearance'
+}
+
+function rememberAppearanceBanner(request: Request, userId: number, status: 'seen' | 'dismissed') {
+  const userAgent = notificationUserAgent(request)
+  if (!userAgent) return
+  db.query(`INSERT INTO appearance_user_agents(user_id,user_agent,status) VALUES(?,?,?)
+    ON CONFLICT(user_id,user_agent) DO UPDATE SET status=excluded.status,updated_at=CURRENT_TIMESTAMP`)
+    .run(userId, userAgent, status)
 }
 
 export function registerFeedsRoutes(app: Hono) {
@@ -144,6 +160,20 @@ export function registerFeedsRoutes(app: Hono) {
         .run(user.id, userAgent)
     }
     return redirect(destination)
+  })
+
+  app.get('/appearance/banner', c => {
+    const user = currentUser(c.req.raw)
+    if (!user) return redirect('/enter?next=' + encodeURIComponent('/account/edit/appearance'))
+    rememberAppearanceBanner(c.req.raw, user.id, 'seen')
+    return redirect('/account/edit/appearance')
+  })
+
+  app.post('/appearance/banner/dismiss', c => {
+    const user = currentUser(c.req.raw)
+    if (!user) return redirect('/enter')
+    rememberAppearanceBanner(c.req.raw, user.id, 'dismissed')
+    return redirect(safeRefererPath(c.req.header('referer'), c.req.url))
   })
 
   app.get('/activity', c => {
