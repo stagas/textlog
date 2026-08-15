@@ -170,30 +170,28 @@ export function apiReplies(database: Database, origin: string, parentId: number,
     ORDER BY id DESC LIMIT ?`).all(...parameters) as Array<ApiPostRow & { depth: number }>
   const hasMore = rows.length > options.limit
   const selected = rows.slice(0, options.limit)
-  const hasDeeper = !!database.query(`WITH RECURSIVE thread(id,depth) AS (
-    SELECT p.id,1 FROM posts p JOIN users u ON u.id=p.user_id
-      WHERE p.parent_id=? AND p.deleted_at IS NULL AND u.deleted_at IS NULL
-    UNION ALL
-    SELECT p.id,thread.depth+1 FROM posts p JOIN users u ON u.id=p.user_id JOIN thread ON p.parent_id=thread.id
-      WHERE thread.depth <= ? AND p.deleted_at IS NULL AND u.deleted_at IS NULL
-  ) SELECT 1 found FROM thread WHERE depth > ? LIMIT 1`).get(parentId, options.depth, options.depth)
   const pageRows = withReplyCounts(database, selected)
-  const selectedIds = new Set(selected.map(row => row.id))
-  const truncatedIds = new Set<number>()
-  if (selected.length) {
-    const placeholders = selected.map(() => '?').join(',')
-    const children = database.query(`SELECT p.id,p.parent_id FROM posts p JOIN users u ON u.id=p.user_id
-      WHERE p.parent_id IN (${placeholders}) AND p.deleted_at IS NULL AND u.deleted_at IS NULL`)
-      .all(...selected.map(row => row.id)) as Array<{ id: number; parent_id: number }>
-    for (const child of children) {
-      if (!selectedIds.has(child.id)) truncatedIds.add(child.parent_id)
+  const selectedById = new Map(selected.map(row => [row.id, row]))
+  const returnedDescendants = new Map(selected.map(row => [row.id, 0]))
+  for (const row of selected) {
+    let parent = row.parent_id === null ? undefined : selectedById.get(row.parent_id)
+    while (parent) {
+      returnedDescendants.set(parent.id, (returnedDescendants.get(parent.id) || 0) + 1)
+      parent = parent.parent_id === null ? undefined : selectedById.get(parent.parent_id)
     }
   }
+  const total = (database.query(`WITH RECURSIVE descendants(id,user_id,deleted_at) AS (
+    SELECT id,user_id,deleted_at FROM posts WHERE id=?
+    UNION ALL
+    SELECT p.id,p.user_id,p.deleted_at FROM posts p JOIN descendants ON p.parent_id=descendants.id
+  ) SELECT count(*) count FROM descendants JOIN users u ON u.id=descendants.user_id
+    WHERE descendants.id!=? AND descendants.deleted_at IS NULL AND u.deleted_at IS NULL`)
+    .get(parentId, parentId) as { count: number }).count
   return {
     data: pageRows.map(row => ({ ...serializePost(row, origin), depth: row.depth,
-      truncated: truncatedIds.has(row.id) })),
+      truncated: Math.max(0, row.reply_count - (returnedDescendants.get(row.id) || 0)) })),
     pagination: { next_cursor: hasMore ? encodeCursor(pageRows[pageRows.length - 1].id) : null },
-    truncated: hasMore || hasDeeper,
+    truncated: Math.max(0, total - selected.length),
   }
 }
 

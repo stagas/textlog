@@ -83,8 +83,8 @@ function openApiDocument() {
         pagination: { type: 'object', required: ['next_cursor'], properties: {
           next_cursor: { type: ['string', 'null'] },
         } },
-        truncated: { type: 'boolean',
-          description: 'True when replies are omitted anywhere because of the depth or page limit.' },
+        truncated: { type: 'integer', minimum: 0,
+          description: 'Number of replies omitted because of the depth or page limit.' },
       },
     } },
   } }, '400': jsonResponses['400'], '404': jsonResponses['404'], '429': jsonResponses['429'] }
@@ -125,8 +125,8 @@ function openApiDocument() {
       '/posts/{id}/replies': {
         get: { summary: 'Post replies',
           description: `Returns replies recursively. The optional depth query parameter controls how many levels are
-            returned (1–${API_MAX_REPLY_DEPTH}, default ${API_DEFAULT_REPLY_DEPTH}). Each reply is marked truncated when
-            its child branch continues outside the response.`,
+            returned (1–${API_MAX_REPLY_DEPTH}, default ${API_DEFAULT_REPLY_DEPTH}). Each reply's truncated field counts
+            the descendants omitted from its branch.`,
           parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'integer', minimum: 1 } },
             { name: 'depth', in: 'query', schema: { type: 'integer', minimum: 1, maximum: API_MAX_REPLY_DEPTH,
               default: API_DEFAULT_REPLY_DEPTH } },
@@ -194,8 +194,8 @@ function openApiDocument() {
           { type: 'object', required: ['depth', 'truncated'], properties: {
             depth: { type: 'integer', minimum: 1,
               description: 'Distance from the post whose replies were requested.' },
-            truncated: { type: 'boolean',
-              description: 'True when this reply has child replies omitted from the response.' },
+            truncated: { type: 'integer', minimum: 0,
+              description: 'Number of visible descendants beneath this reply that are omitted from the response.' },
           } },
         ],
       } },
