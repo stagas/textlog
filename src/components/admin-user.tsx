@@ -1,5 +1,6 @@
 import { isAdminEmail } from '../admin'
 import { type User } from '../db'
+import { maskEmail } from './email-address'
 import type { ProfileRow } from '../types'
 import { fmtFull } from '../utils'
 import { Layout } from './layout'
@@ -12,7 +13,7 @@ export function AdminUser({ user, target }: { user: User; target: ProfileRow }) 
         <div className="profile-content">
           <p className="eyebrow">admin moderation</p>
           <h1>@{target.handle}</h1>
-          <p>{target.email}</p>
+          <p>{maskEmail(target.email)}</p>
           <p>{target.suspended_at ? `Suspended ${fmtFull(target.suspended_at)}` : 'Account active'}</p>
           <p>{target.bot_managed ? 'Bot status enforced by moderation' : target.is_bot ? 'Self-declared bot' : 'Not a bot'}</p>
         </div>

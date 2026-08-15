@@ -1,4 +1,5 @@
 import { Layout } from './layout'
+import { maskEmail } from './email-address'
 import { Panel } from './panel'
 import { FormActions } from './page-shared'
 
@@ -11,6 +12,7 @@ export function ConfirmEmail({ token, kind, email, invalid = false, pending = fa
   sent?: boolean
   error?: string
 }) {
+  const displayedEmail = email && maskEmail(email)
   const allowDevelopmentVerification = Bun.env.NODE_ENV === 'development' || Bun.env.DEV_RELOAD === 'true'
   const authorizingChange = kind === 'authorize-change'
   return (
@@ -25,7 +27,7 @@ export function ConfirmEmail({ token, kind, email, invalid = false, pending = fa
               <p className="eyebrow">one last step</p>
               <h1>Verify your email.</h1>
               <p className="verify-email-copy">
-                We sent a link to <strong>{email}</strong>. Open it to finish setting up your account.
+                We sent a link to <strong>{displayedEmail}</strong>. Open it to finish setting up your account.
               </p>
               {sent && (
                 <p className="status-message status-success verify-email-notice" role="status">
@@ -67,18 +69,18 @@ export function ConfirmEmail({ token, kind, email, invalid = false, pending = fa
                 {kind === 'authorize-change'
                   ? (
                     <>
-                      Allow your textlog account email to be changed to <strong>{email}</strong>.
+                      Allow your textlog account email to be changed to <strong>{displayedEmail}</strong>.
                     </>
                   )
                   : kind === 'change'
                   ? (
                     <>
-                      Confirm changing your textlog account email to <strong>{email}</strong>.
+                      Confirm changing your textlog account email to <strong>{displayedEmail}</strong>.
                     </>
                   )
                   : (
                     <>
-                      Confirm <strong>{email}</strong> as your textlog account email.
+                      Confirm <strong>{displayedEmail}</strong> as your textlog account email.
                     </>
                   )}
               </p>

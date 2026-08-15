@@ -936,7 +936,8 @@ test('Account deletion asks for the configured second factor', () => {
 
   const sentHtml = renderToStaticMarkup(React.createElement(ConfirmAccountDelete, { user, sent: true }))
   expect(sentHtml).toContain('Check your email.')
-  expect(sentHtml).toContain('reader@example.com')
+  expect(sentHtml).toContain('r•••@example.com')
+  expect(sentHtml).not.toContain('reader@example.com')
   expect(sentHtml).toContain('Your account has not been deleted.')
   expect(sentHtml).not.toContain('action="/account/delete"')
 })
@@ -950,7 +951,8 @@ test('AccountSecurity renders email and safe session controls without passwords'
     ],
   }))
 
-  expect(html).toContain('reader@example.com')
+  expect(html).toContain('r•••@example.com')
+  expect(html).not.toContain('reader@example.com')
   expect(html).toContain('action="/account/magic-link"')
   expect(html).toContain('generate magic link')
   expect(html).toContain('href="/account/api-keys/new">generate API key')

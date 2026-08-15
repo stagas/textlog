@@ -1,5 +1,6 @@
 import { type User } from '../db'
 import { Layout } from './layout'
+import { maskEmail } from './email-address'
 import { CenteredPanel, Panel } from './panel'
 import { FormActions, FormMessage } from './page-shared'
 
@@ -20,7 +21,7 @@ export function ConfirmAccountDelete({ user, passwordEnabled = false, token, sen
             <p className="eyebrow">confirmation required</p>
             <h1>Check your email.</h1>
             <p className="verify-email-copy">
-              We sent a confirmation link to <strong>{user?.email}</strong>. Your account has not been deleted.
+              We sent a confirmation link to <strong>{user?.email && maskEmail(user.email)}</strong>. Your account has not been deleted.
             </p>
             <p className="account-delete-expiry">
               The link expires in one hour. Open it to review and confirm deletion.

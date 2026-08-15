@@ -1,6 +1,7 @@
 import { type User } from '../db'
 import type { ApiKeyView, SessionView } from '../types'
 import { AccountSettingsHeader } from './account-settings-header'
+import { maskEmail } from './email-address'
 import { Layout } from './layout'
 import { CenteredPanel, Panel } from './panel'
 import { FormActions, FormMessage } from './page-shared'
@@ -24,7 +25,7 @@ export function AccountSecurity({ user, sessions, apiKeys = [], passwordEnabled,
         <FormMessage error={error} success={success} />
         <section className="security-section">
           <h2>email</h2>
-          <p>{user.email}</p>
+          <p>{maskEmail(user.email)}</p>
           <form className="security-form" method="post" action="/account/email/change">
             <label>
               new email
@@ -228,7 +229,7 @@ export function AccountPassword({ user, enabled, token, request = false, sent = 
             ? (
               <>
                 <p className="switch">
-                  We sent a secure setup link to <strong>{user?.email}</strong>. It expires in one hour.
+                  We sent a secure setup link to <strong>{user?.email && maskEmail(user.email)}</strong>. It expires in one hour.
                 </p>
                 <p className="email-delivery-hint">Can’t find it? Check your spam or junk folder.</p>
               </>

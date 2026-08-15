@@ -1,11 +1,8 @@
 import { Layout } from './layout'
 import { CenteredPanel } from './panel'
+import { maskEmail } from './email-address'
 
-export function maskEmail(email: string) {
-  const at = email.lastIndexOf('@')
-  if (at <= 0 || at === email.length - 1) return email
-  return `${email[0]}•••${email.slice(at)}`
-}
+export { maskEmail } from './email-address'
 
 export function Auth({ error, email = '', next }: { error?: string; email?: string; next?: string }) {
   return (
