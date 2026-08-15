@@ -36,7 +36,8 @@ const endpoints = [
       returned with its depth, parent ID, and <code>top_id</code>; use its aggregate <code>reply_count</code> to detect
       omitted descendants. Top-level posts have a null <code>top_id</code>.</>],
   ['POST', '/posts/:id/report', 'Report a post.'],
-  ['GET', '/users/:handle', 'Get a public profile and its counts.'],
+  ['GET', '/users/:handle',
+    <>Get a public profile with separate <code>post_count</code> and <code>replies_count</code> totals.</>],
   ['GET', '/users/:handle/posts', 'Get a user\'s latest posts and replies.'],
   ['POST', '/users/:handle/follow', 'Follow a user.'],
   ['DELETE', '/users/:handle/follow', 'Unfollow a user.'],

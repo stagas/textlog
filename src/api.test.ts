@@ -122,7 +122,9 @@ describe('public API', () => {
   })
 
   test('serves single posts, replies, users, and tags with documented errors', async () => {
-    const { app } = fixture()
+    const { app, database } = fixture()
+    database.run(`INSERT INTO posts(id,user_id,parent_id,body,created_at)
+      VALUES(6,1,2,'alice replies','2026-08-03 14:30:00')`)
     const post = await (await request(app, '/api/v1/posts/1')).json() as any
     const reply = await (await request(app, '/api/v1/posts/2')).json() as any
     const replies = await (await request(app, '/api/v1/posts/1/replies')).json() as any
@@ -134,10 +136,10 @@ describe('public API', () => {
     expect(post.data.top_id).toBeNull()
     expect(reply.data.top_id).toBe(1)
     expect(replies.data.map((item: any) => item.id)).toEqual([2])
-    expect(user.data).toMatchObject({ handle: 'alice', bio: 'builder', post_count: 2, follower_count: 1,
-      following_count: 0 })
+    expect(user.data).toMatchObject({ handle: 'alice', bio: 'builder', post_count: 2, replies_count: 1,
+      follower_count: 1, following_count: 0 })
     expect(user.data.email).toBeUndefined()
-    expect(userPosts.data.map((item: any) => item.id)).toEqual([3, 1])
+    expect(userPosts.data.map((item: any) => item.id)).toEqual([6, 3, 1])
     expect(tags.data.map((item: any) => item.id)).toEqual([1])
     expect((await request(app, '/api/v1/posts/nope')).status).toBe(400)
     expect((await request(app, '/api/v1/posts/5')).status).toBe(404)
@@ -223,6 +225,9 @@ describe('public API', () => {
     expect(spec.components.schemas.Reply.allOf[1].required).toEqual(['depth'])
     expect(spec.components.schemas.Reply.allOf[1].properties.truncated).toBeUndefined()
     expect(spec.components.schemas.Post.required).toContain('top_id')
+    expect(spec.components.schemas.User.required).toContain('replies_count')
+    expect(spec.paths['/users/{handle}'].get.responses['200'].content['application/json'].schema.properties.data.$ref)
+      .toBe('#/components/schemas/User')
     expect(mutation.status).toBe(405)
     expect(mutation.headers.get('allow')).toBe('GET, HEAD, OPTIONS')
     const missing = await request(app, '/api/v1/unknown')

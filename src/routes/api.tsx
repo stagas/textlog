@@ -89,6 +89,11 @@ function openApiDocument() {
       },
     } },
   } }, '400': jsonResponses['400'], '404': jsonResponses['404'], '429': jsonResponses['429'] }
+  const userResponse = { '200': { description: 'Public profile', content: {
+    'application/json': { schema: { type: 'object', required: ['data'], properties: {
+      data: { $ref: '#/components/schemas/User' },
+    } } },
+  } }, '400': jsonResponses['400'], '404': jsonResponses['404'], '429': jsonResponses['429'] }
   const formatParameter = { name: 'format', in: 'path', required: true,
     schema: { type: 'string', enum: ['rss', 'atom'] } }
   const postIdParameter = { name: 'id', in: 'path', required: true, schema: { type: 'integer', minimum: 1 } }
@@ -136,7 +141,7 @@ function openApiDocument() {
       '/users/{handle}': {
         get: { summary: 'Public profile',
           parameters: [{ name: 'handle', in: 'path', required: true, schema: { type: 'string' } }],
-          responses: jsonResponses },
+          responses: userResponse },
       },
       '/users/{handle}/posts': {
         get: { summary: 'User\'s latest posts',
@@ -197,6 +202,21 @@ function openApiDocument() {
               description: 'Distance from the post whose replies were requested.' },
           } },
         ],
+      }, User: {
+        type: 'object',
+        required: ['handle', 'bio', 'created_at', 'post_count', 'replies_count', 'follower_count', 'following_count',
+          'url', 'api_url'],
+        properties: {
+          handle: { type: 'string' },
+          bio: { type: 'string' },
+          created_at: { type: 'string', format: 'date-time' },
+          post_count: { type: 'integer', minimum: 0, description: 'Number of top-level posts.' },
+          replies_count: { type: 'integer', minimum: 0, description: 'Number of replies.' },
+          follower_count: { type: 'integer', minimum: 0 },
+          following_count: { type: 'integer', minimum: 0 },
+          url: { type: 'string', format: 'uri' },
+          api_url: { type: 'string', format: 'uri' },
+        },
       } },
       securitySchemes: { bearerAuth: { type: 'http', scheme: 'bearer' } },
     },
@@ -329,7 +349,10 @@ export function registerApiRoutes(app: Hono, database: Database = db,
       return c.redirect(`/api/v1/users/${encodeURIComponent(resolved.handle)}`, 308)
     }
     const found = database.query(`SELECT u.handle,u.bio,u.created_at,
-      (SELECT count(*) FROM posts p WHERE p.user_id=u.id AND p.deleted_at IS NULL) post_count,
+      (SELECT count(*) FROM posts p
+        WHERE p.user_id=u.id AND p.parent_id IS NULL AND p.deleted_at IS NULL) post_count,
+      (SELECT count(*) FROM posts p
+        WHERE p.user_id=u.id AND p.parent_id IS NOT NULL AND p.deleted_at IS NULL) replies_count,
       (SELECT count(*) FROM follows f JOIN users follower ON follower.id=f.follower_id
         WHERE f.following_id=u.id AND follower.deleted_at IS NULL) follower_count,
       (SELECT count(*) FROM follows f JOIN users followed ON followed.id=f.following_id
@@ -339,6 +362,7 @@ export function registerApiRoutes(app: Hono, database: Database = db,
       bio: string
       created_at: string
       post_count: number
+      replies_count: number
       follower_count: number
       following_count: number
     } | null
@@ -347,7 +371,8 @@ export function registerApiRoutes(app: Hono, database: Database = db,
     const normalized = found.handle.toLowerCase()
     return jsonResponse({
       data: { handle: normalized, bio: found.bio, created_at: isoTimestamp(found.created_at),
-        post_count: found.post_count, follower_count: found.follower_count, following_count: found.following_count,
+        post_count: found.post_count, replies_count: found.replies_count, follower_count: found.follower_count,
+        following_count: found.following_count,
         url: `${origin}/u/${encodeURIComponent(normalized)}`,
         api_url: `${origin}/api/v1/users/${encodeURIComponent(normalized)}` },
     })
