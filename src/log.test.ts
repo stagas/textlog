@@ -16,17 +16,21 @@ describe('semanticAction', () => {
   })
 })
 
-test('HTTP logs include the username, query parameters, and a safe bounded user agent', () => {
+test.serial('HTTP logs include the username, query parameters, and a safe bounded user agent', () => {
   const original = console.log
+  const originalSetting = Bun.env.LOG_USER_AGENT
   let output = ''
   console.log = (...values: unknown[]) => {
     output = values.join(' ')
   }
+  Bun.env.LOG_USER_AGENT = 'true'
   try {
     logHttp('GET', '/latest?limit=20&cursor=next', 200, 12, '203.0.113.4', 'alice', 'ExampleBot/1.0\nforged')
   }
   finally {
     console.log = original
+    if (originalSetting === undefined) delete Bun.env.LOG_USER_AGENT
+    else Bun.env.LOG_USER_AGENT = originalSetting
   }
   expect(output).toContain(`${logIpPseudonym('203.0.113.4')}  @alice  /latest`)
   expect(output).toContain('/latest?limit=20&cursor=next')
@@ -34,7 +38,7 @@ test('HTTP logs include the username, query parameters, and a safe bounded user 
   expect(output).not.toContain('\n')
 })
 
-test('HTTP logs mark anonymous requests without a username', () => {
+test.serial('HTTP logs mark anonymous requests without a username', () => {
   const original = console.log
   let output = ''
   console.log = (...values: unknown[]) => {
@@ -49,7 +53,7 @@ test('HTTP logs mark anonymous requests without a username', () => {
   expect(output).toContain(`${logIpPseudonym('203.0.113.4')}  -  /`)
 })
 
-test('HTTP logs can omit the user agent', () => {
+test.serial('HTTP logs can omit the user agent', () => {
   const originalLog = console.log
   const originalSetting = Bun.env.LOG_USER_AGENT
   let output = ''

@@ -900,6 +900,7 @@ export const migrations: Migration[] = [
     version: 65,
     name: 'bounded_feed_snapshots',
     up(database) {
+      if (!database.query("SELECT 1 FROM sqlite_master WHERE type='table' AND name='feed_snapshots'").get()) return
       addColumn(database, 'feed_snapshots', 'last_accessed_at', 'TEXT')
       database.run(`UPDATE feed_snapshots SET last_accessed_at=created_at WHERE last_accessed_at IS NULL;
         DELETE FROM feed_snapshots WHERE last_accessed_at < datetime('now','-1 day');
@@ -941,6 +942,28 @@ export const migrations: Migration[] = [
         status TEXT NOT NULL CHECK(status IN ('seen','dismissed')),
         updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
         PRIMARY KEY(user_id,user_agent));`)
+    },
+  },
+  {
+    version: 70,
+    name: 'external_feed_snapshot_cache',
+    up(database) {
+      database.query("DELETE FROM feed_snapshots WHERE kind='latest' OR kind='hot' OR kind LIKE 'hot:%'").run()
+    },
+  },
+  {
+    version: 71,
+    name: 'restore_personalized_feed_snapshots',
+    up(database) {
+      database.run(`CREATE TABLE IF NOT EXISTS feed_snapshots (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,kind TEXT NOT NULL,viewer_id INTEGER NOT NULL,
+        generation INTEGER NOT NULL,total_items INTEGER NOT NULL,created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        last_accessed_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,UNIQUE(kind,viewer_id,generation));
+        CREATE TABLE IF NOT EXISTS feed_snapshot_items (
+          snapshot_id INTEGER NOT NULL REFERENCES feed_snapshots(id) ON DELETE CASCADE,
+          position INTEGER NOT NULL,payload TEXT NOT NULL,PRIMARY KEY(snapshot_id,position));
+        CREATE INDEX IF NOT EXISTS feed_snapshots_lookup ON feed_snapshots(kind,viewer_id,generation);
+        CREATE INDEX IF NOT EXISTS feed_snapshots_last_accessed ON feed_snapshots(last_accessed_at);`)
     },
   },
 ]

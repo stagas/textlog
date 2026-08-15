@@ -1,4 +1,5 @@
 import type { Database } from 'bun:sqlite'
+import { cacheDb } from './cache-db'
 import { PAGE_SIZE } from './pagination'
 
 const SNAPSHOT_MAX_AGE = '-1 day'
@@ -15,12 +16,13 @@ export type FeedSnapshotPage<T> = {
 
 /** Persist an ordered feed generation so restarts do not force it to be rebuilt. */
 export function feedSnapshotPage<T>(database: Database, kind: string, viewerId: number, page: number, build: () => T[],
-  pageSize = PAGE_SIZE): FeedSnapshotPage<T>
+  pageSize = PAGE_SIZE, cache: Database = cacheDb): FeedSnapshotPage<T>
 {
+  const storage = kind === 'latest' || kind === 'hot' || kind.startsWith('hot:') ? cache : database
   const generation = (database.query('SELECT generation FROM feed_snapshot_generation WHERE id=1').get() as {
     generation: number
   }).generation
-  let snapshot = database.query(`SELECT id,total_items,created_at FROM feed_snapshots
+  let snapshot = storage.query(`SELECT id,total_items,created_at FROM feed_snapshots
     WHERE kind=? AND viewer_id=? AND generation=?`).get(kind, viewerId, generation) as { id: number;
     total_items: number; created_at: string } | null
   if (snapshot && (kind === 'hot' || kind.startsWith('hot:'))
@@ -28,38 +30,38 @@ export function feedSnapshotPage<T>(database: Database, kind: string, viewerId: 
 
   if (!snapshot) {
     const items = build()
-    database.transaction(() => {
-      database.query(`DELETE FROM feed_snapshots
+    storage.transaction(() => {
+      storage.query(`DELETE FROM feed_snapshots
         WHERE last_accessed_at < datetime('now', ?)`).run(SNAPSHOT_MAX_AGE)
       if (kind.startsWith('hot:')) {
-        database.query(`DELETE FROM feed_snapshots
+        storage.query(`DELETE FROM feed_snapshots
           WHERE kind LIKE 'hot:%' AND kind != ?`).run(kind)
       }
-      database.query('DELETE FROM feed_snapshots WHERE kind=? AND viewer_id=?').run(kind, viewerId)
-      const result = database.query(`INSERT INTO feed_snapshots(kind,viewer_id,generation,total_items)
+      storage.query('DELETE FROM feed_snapshots WHERE kind=? AND viewer_id=?').run(kind, viewerId)
+      const result = storage.query(`INSERT INTO feed_snapshots(kind,viewer_id,generation,total_items)
         VALUES(?,?,?,?)`).run(kind, viewerId, generation, items.length)
       const snapshotId = Number(result.lastInsertRowid)
-      const insert = database.query(`INSERT INTO feed_snapshot_items(snapshot_id,position,payload)
+      const insert = storage.query(`INSERT INTO feed_snapshot_items(snapshot_id,position,payload)
         VALUES(?,?,?)`)
       for (let position = 0; position < items.length; position++) {
         insert.run(snapshotId, position, JSON.stringify(items[position]))
       }
-      database.query(`DELETE FROM feed_snapshots WHERE id IN (
+      storage.query(`DELETE FROM feed_snapshots WHERE id IN (
         SELECT id FROM feed_snapshots WHERE id != ?
         ORDER BY last_accessed_at DESC,id DESC LIMIT -1 OFFSET ?
       )`).run(snapshotId, MAX_SNAPSHOTS - 1)
     })()
-    snapshot = database.query(`SELECT id,total_items,created_at FROM feed_snapshots
+    snapshot = storage.query(`SELECT id,total_items,created_at FROM feed_snapshots
       WHERE kind=? AND viewer_id=? AND generation=?`).get(kind, viewerId, generation) as { id: number;
       total_items: number; created_at: string }
   }
 
-  database.query(`UPDATE feed_snapshots SET last_accessed_at=CURRENT_TIMESTAMP
+  storage.query(`UPDATE feed_snapshots SET last_accessed_at=CURRENT_TIMESTAMP
     WHERE id=? AND last_accessed_at < datetime('now', ?)`).run(snapshot.id, SNAPSHOT_ACCESS_REFRESH)
 
   const totalPages = Math.max(1, Math.ceil(snapshot.total_items / pageSize))
   const safePage = Math.min(page, totalPages)
-  const rows = database.query(`SELECT payload FROM feed_snapshot_items WHERE snapshot_id=?
+  const rows = storage.query(`SELECT payload FROM feed_snapshot_items WHERE snapshot_id=?
     AND position>=? AND position<? ORDER BY position`).all(
     snapshot.id,
     (safePage - 1) * pageSize,

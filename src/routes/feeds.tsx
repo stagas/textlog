@@ -14,6 +14,7 @@ import type { Hono } from 'hono'
 import { db } from '../db'
 import { markAllForYouRead } from '../for-you-state'
 import { decodeHotCursor } from '../hot'
+import { materializedFeedPage } from '../materialized-feed-pages'
 import {
   feedPreference,
   notificationBannerDismissed,
@@ -80,32 +81,36 @@ export function registerFeedsRoutes(app: Hono) {
     )
   })
 
-  app.get('/for-you', c => {
+  app.get('/for-you', async c => {
     const user = currentUser(c.req.raw)
     if (!user) return redirect('/enter?next=' + encodeURIComponent('/for-you'))
     const cursorValue = c.req.query('cursor')
     if (cursorValue && !decodeForYouCursor(cursorValue)) return c.text('Invalid cursor', 400)
-    return rememberFeed(
-      page(
+    const notificationBanner = showNotificationBanner(c.req.raw, user)
+    const render = () => page(
         <Feed user={user} page={currentPage(c.req.query('page'))} title="for you"
-          notificationBanner={showNotificationBanner(c.req.raw, user)} />,
-      ),
-      'following',
+          notificationBanner={notificationBanner} />,
     )
+    const response = !notificationBanner && currentPage(c.req.query('page')) === 1 && !cursorValue
+      ? await materializedFeedPage(db, c.req.raw, 'for-you', user.id, render, undefined, true)
+      : render()
+    return rememberFeed(response, 'following')
   })
 
-  app.get('/latest', c => {
+  app.get('/latest', async c => {
     const user = currentUser(c.req.raw)
     const cursorValue = c.req.query('cursor')
     const cursor = decodePostCursor(cursorValue)
     if (cursorValue && !cursor) return c.text('Invalid cursor', 400)
-    return rememberFeed(
-      page(
-        <PublicFeed user={user} page={currentPage(c.req.query('page'))} path="/latest"
-          notificationBanner={showNotificationBanner(c.req.raw, user)} />,
-      ),
-      'latest',
+    const notificationBanner = showNotificationBanner(c.req.raw, user)
+    const render = () => page(
+      <PublicFeed user={user} page={currentPage(c.req.query('page'))} path="/latest"
+        notificationBanner={notificationBanner} />,
     )
+    const response = !notificationBanner && currentPage(c.req.query('page')) === 1 && !cursorValue
+      ? await materializedFeedPage(db, c.req.raw, 'latest', user?.id ?? -1, render)
+      : render()
+    return rememberFeed(response, 'latest')
   })
 
   app.post('/for-you/read-all', c => {
@@ -115,18 +120,20 @@ export function registerFeedsRoutes(app: Hono) {
     return redirect('/for-you')
   })
 
-  app.get('/to-me', c => {
+  app.get('/to-me', async c => {
     const user = currentUser(c.req.raw)
     if (!user) return redirect('/enter?next=' + encodeURIComponent('/to-me'))
     const cursorValue = c.req.query('cursor')
     if (cursorValue && !decodeForYouCursor(cursorValue)) return c.text('Invalid cursor', 400)
-    return rememberFeed(
-      page(
+    const notificationBanner = showNotificationBanner(c.req.raw, user)
+    const render = () => page(
         <Feed user={user} page={currentPage(c.req.query('page'))} title="to me" path="/to-me" toMe
-          notificationBanner={showNotificationBanner(c.req.raw, user)} />,
-      ),
-      'following',
+          notificationBanner={notificationBanner} />,
     )
+    const response = !notificationBanner && currentPage(c.req.query('page')) === 1 && !cursorValue
+      ? await materializedFeedPage(db, c.req.raw, 'to-me', user.id, render, undefined, true)
+      : render()
+    return rememberFeed(response, 'following')
   })
 
   app.post('/to-me/read-all', c => {
@@ -136,17 +143,19 @@ export function registerFeedsRoutes(app: Hono) {
     return redirect('/to-me')
   })
 
-  app.get('/hot', c => {
+  app.get('/hot', async c => {
     const user = currentUser(c.req.raw)
     const cursorValue = c.req.query('cursor')
     if (cursorValue && !decodeHotCursor(cursorValue)) return c.text('Invalid cursor', 400)
-    return rememberFeed(
-      page(
-        <HotFeed user={user} page={currentPage(c.req.query('page'))} title="hot"
-          notificationBanner={showNotificationBanner(c.req.raw, user)} />,
-      ),
-      'hot',
+    const notificationBanner = showNotificationBanner(c.req.raw, user)
+    const render = () => page(
+      <HotFeed user={user} page={currentPage(c.req.query('page'))} title="hot"
+        notificationBanner={notificationBanner} />,
     )
+    const response = !notificationBanner && currentPage(c.req.query('page')) === 1 && !cursorValue
+      ? await materializedFeedPage(db, c.req.raw, 'hot', user?.id ?? -1, render)
+      : render()
+    return rememberFeed(response, 'hot')
   })
 
   app.post('/notifications/banner/dismiss', c => {

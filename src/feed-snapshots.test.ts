@@ -23,12 +23,12 @@ test('persistent feed snapshots reuse a generation and rebuild after invalidatio
     builds++
     return Array.from({ length: 25 }, (_, id) => ({ id }))
   }
-  expect(feedSnapshotPage(db, 'hot', -1, 1, build).items).toHaveLength(20)
-  expect(feedSnapshotPage(db, 'hot', -1, 2, build).items.map(item => item.id)).toEqual([20, 21, 22, 23, 24])
+  expect(feedSnapshotPage(db, 'hot', -1, 1, build, 20, db).items).toHaveLength(20)
+  expect(feedSnapshotPage(db, 'hot', -1, 2, build, 20, db).items.map(item => item.id)).toEqual([20, 21, 22, 23, 24])
   expect(builds).toBe(1)
 
   db.run('UPDATE feed_snapshot_generation SET generation=generation+1 WHERE id=1')
-  expect(feedSnapshotPage(db, 'hot', -1, 1, build).totalPages).toBe(2)
+  expect(feedSnapshotPage(db, 'hot', -1, 1, build, 20, db).totalPages).toBe(2)
   expect(builds).toBe(2)
   expect((db.query('SELECT count(*) count FROM feed_snapshots').get() as { count: number }).count).toBe(1)
 })
@@ -40,11 +40,25 @@ test('larger page sizes combine 20-item materialized page units without rebuildi
     builds++
     return Array.from({ length: 105 }, (_, id) => ({ id }))
   }
-  const page = feedSnapshotPage(db, 'latest', -1, 2, build, 40)
+  const page = feedSnapshotPage(db, 'latest', -1, 2, build, 40, db)
   expect(page.items.map(item => item.id)).toEqual(Array.from({ length: 40 }, (_, index) => index + 40))
   expect(page.totalPages).toBe(3)
-  expect(feedSnapshotPage(db, 'latest', -1, 1, build, 80).items).toHaveLength(80)
+  expect(feedSnapshotPage(db, 'latest', -1, 1, build, 80, db).items).toHaveLength(80)
   expect(builds).toBe(1)
+})
+
+test('global latest and hot snapshots are stored in the disposable cache database', () => {
+  const primary = database()
+  const cache = database()
+
+  feedSnapshotPage(primary, 'latest', -1, 1, () => [{ id: 1 }], 20, cache)
+  feedSnapshotPage(primary, 'hot:54', -1, 1, () => [{ id: 2 }], 20, cache)
+
+  expect(primary.query('SELECT count(*) count FROM feed_snapshots').get()).toEqual({ count: 0 })
+  expect(cache.query('SELECT kind FROM feed_snapshots ORDER BY kind').all()).toEqual([
+    { kind: 'hot:54' },
+    { kind: 'latest' },
+  ])
 })
 
 test('snapshot creation removes stale, obsolete hot, and least recently used snapshots', () => {
@@ -55,7 +69,7 @@ test('snapshot creation removes stale, obsolete hot, and least recently used sna
   insert.run('hot:old', 1, '2999-01-01 00:00:00')
   for (let id = 0; id < 205; id++) insert.run(`profile:${id}:notes`, id, '2999-01-01 00:00:00')
 
-  feedSnapshotPage(db, 'hot:new', -1, 1, () => [{ id: 1 }])
+  feedSnapshotPage(db, 'hot:new', -1, 1, () => [{ id: 1 }], 20, db)
 
   expect(db.query("SELECT count(*) count FROM feed_snapshots WHERE kind IN ('stale','hot:old')").get())
     .toEqual({ count: 0 })
