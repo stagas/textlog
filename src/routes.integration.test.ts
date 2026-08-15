@@ -165,6 +165,8 @@ test('stats are public without exposing admin operations', async () => {
   expect(response.headers.get('link')).toContain(`${origin}/stats`)
 
   const html = await response.text()
+  expect(html).toContain('<div class="account-settings-heading admin-header">')
+  expect(html).toContain('<p class="eyebrow">community</p>')
   expect(html).toContain('<h1>stats</h1>')
   expect(html).not.toContain('<p class="eyebrow">textlog</p>')
   expect(html).toContain('aria-label="Application statistics"')

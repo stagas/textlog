@@ -1,5 +1,6 @@
 import type { User } from '../db'
 import type { DashboardStats } from '../types'
+import { PageHeading } from './account-settings-header'
 import { Layout } from './layout'
 
 const labels: [keyof DashboardStats, string][] = [
@@ -39,11 +40,7 @@ export function StatsGrid({ stats, publicOnly = false }: { stats: DashboardStats
 export function Stats({ user, stats }: { user: User | null; stats: DashboardStats }) {
   return (
     <Layout user={user} title="stats">
-      <section className="page-header">
-        <div>
-          <h1>stats</h1>
-        </div>
-      </section>
+      <PageHeading className="admin-header" eyebrow="community" title="stats" />
       <StatsGrid stats={stats} publicOnly />
     </Layout>
   )
