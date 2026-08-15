@@ -5,6 +5,7 @@ import { db, type User } from '../db'
 import { enrichPosts } from '../posts'
 import type { PostView, UserProfileStats } from '../types'
 import { displayBio, displayPostBody, fmt, fmtFull, linkify, referenceFormId } from '../utils'
+import { MetaRow } from './meta'
 
 export function UserReference(
   { handle, bio, noteCount, following, user, href, rel, currentHandle, stats, navigationQuery = '',
@@ -189,14 +190,14 @@ export function PreviewPost({ p }: { p: PostView }) {
   const formPrefix = `preview-post-${p.id}`
   return (
     <article className="post" id={`post-${p.id}`}>
-      <div className="posttop preview-post-meta">
+      <MetaRow className="posttop preview-post-meta">
         <UserReference handle={p.handle} bio={p.bio} noteCount={p.note_count || 0} stats={p.profile_stats} user={null}
           currentHandle={p.handle} />
         <span className="postdate">
           <time dateTime={p.created_at} title={fmtFull(p.created_at)}>{fmt(p.created_at)}</time>
         </span>
         <span className="quiet preview-reply">reply</span>
-      </div>
+      </MetaRow>
       <p className={containsAsciiArt(p.body) ? 'ascii-art' : undefined} dangerouslySetInnerHTML={{
         __html: linkify(displayPostBody(p.body), p.mention_bios, [], undefined, renderFlags(p), '', p.hashtag_counts,
           p.mention_note_counts, { signedIn: false, currentHandle: p.handle, formPrefix,
@@ -270,8 +271,9 @@ export function Post({
       {tappable && (
         <a className="post-hit-area" href={detailPath} rel={navigationRel} aria-label={`open post by @${p.handle}`} />
       )}
-      <div className={`posttop${contextLabel ? ' posttop-context' : ''}${preview ? ' preview-post-meta' : ''}`}>
-        {contextUnread && <span className="unread-dot" aria-label="unread" />}
+      <MetaRow className={`posttop${contextLabel ? ' posttop-context' : ''}${preview ? ' preview-post-meta' : ''}`}
+        unread={contextUnread}
+      >
         {preview
           ? (
             <UserReference handle={p.handle} bio={p.bio} noteCount={p.note_count || 0} stats={p.profile_stats}
@@ -332,7 +334,7 @@ export function Post({
             <span className="visually-hidden">fold or unfold replies</span>
           </label>
         )}
-      </div>
+      </MetaRow>
       <p className={isAsciiArt ? 'ascii-art' : undefined} dangerouslySetInnerHTML={{
         __html: linkify(displayPostBody(p.body), p.mention_bios, highlightTerms, undefined, renderFlags(p),
           referenceQuery, p.hashtag_counts, p.mention_note_counts, { signedIn: !!user, currentHandle: user?.handle,

@@ -5,8 +5,9 @@ import { db, type User } from '../db'
 import { PAGE_SIZE } from '../pagination'
 import { enrichPosts, visibleUserProfileStats } from '../posts'
 import type { PostView } from '../types'
-import { displayBio, fmt, fmtFull, linkify } from '../utils'
+import { displayBio, linkify } from '../utils'
 import { Layout } from './layout'
+import { MetaRow, MetaStats } from './meta'
 import { ActionPair, CursorPagination, FeedTabs } from './page-shared'
 import { Post, UserReference } from './post'
 
@@ -119,20 +120,13 @@ export function Activity({ user, cursor, title, path = '/activity', pageUrl, not
                 ? (
                   <article className="activity-follow">
                     <div className="activity-follow-content">
-                      <div className="activity-follow-main">
-                        {!!rawPost.unread && <span className="unread-dot" aria-label="unread" />}
+                      <MetaRow className="activity-follow-main" unread={!!rawPost.unread}>
                         <UserReference handle={rawPost.handle} bio={rawPost.bio || ''} noteCount={rawPost.posts || 0}
                           stats={activityProfileStats.get(rawPost.user_id)} following={!!rawPost.viewerFollowing}
                           user={user} href={`/admin/users/${rawPost.user_id}`} />
                         <span className="activity-context">signed up:</span>
-                        <span className="activity-follow-stats">
-                          <time dateTime={rawPost.created_at} title={fmtFull(rawPost.created_at)}>
-                            {fmt(rawPost.created_at)}
-                          </time>
-                          <span aria-hidden="true">·</span>
-                          <small>{rawPost.posts} {rawPost.posts === 1 ? 'note' : 'notes'}</small>
-                        </span>
-                      </div>
+                        <MetaStats createdAt={rawPost.created_at} count={rawPost.posts} smallCount />
+                      </MetaRow>
                       <p className="profile-bio" dangerouslySetInnerHTML={{
                         __html: linkify(displayBio(rawPost.bio)),
                       }} />
@@ -150,20 +144,13 @@ export function Activity({ user, cursor, title, path = '/activity', pageUrl, not
                 ? (
                   <article className="activity-follow">
                     <div className="activity-follow-content">
-                      <div className="activity-follow-main">
-                        {!!rawPost.unread && <span className="unread-dot" aria-label="unread" />}
+                      <MetaRow className="activity-follow-main" unread={!!rawPost.unread}>
                         <UserReference handle={rawPost.handle} bio={rawPost.bio || ''} noteCount={rawPost.posts || 0}
                           stats={activityProfileStats.get(rawPost.user_id)} following={!!rawPost.viewerFollowing}
                           user={user} href={'/u/' + rawPost.handle} />
                         <span className="activity-context">followed you:</span>
-                        <span className="activity-follow-stats">
-                          <time dateTime={rawPost.created_at} title={fmtFull(rawPost.created_at)}>
-                            {fmt(rawPost.created_at)}
-                          </time>
-                          <span aria-hidden="true">·</span>
-                          <small>{rawPost.posts} {rawPost.posts === 1 ? 'note' : 'notes'}</small>
-                        </span>
-                      </div>
+                        <MetaStats createdAt={rawPost.created_at} count={rawPost.posts} smallCount />
+                      </MetaRow>
                       <p className="profile-bio" dangerouslySetInnerHTML={{
                         __html: linkify(displayBio(rawPost.bio)),
                       }} />

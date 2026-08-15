@@ -7,8 +7,9 @@ import { resolveHandle } from '../handles'
 import { enrichPosts, visibleTagFollowerCounts, visibleUserProfileStats } from '../posts'
 import { activeRequest } from '../theme'
 import type { PostView } from '../types'
-import { displayBio, fmt, fmtFull, linkify } from '../utils'
+import { displayBio, linkify } from '../utils'
 import { Layout } from './layout'
+import { MetaRow, MetaStats } from './meta'
 import { ActionPair, FeedTabs, Pagination } from './page-shared'
 import { Post, TagReference, UserReference } from './post'
 
@@ -220,8 +221,7 @@ export function Feed({ user, page = 1, title, path = '/for-you', pageUrl, notifi
                 id={activityAnchor}
               >
                 <div className="activity-follow-content">
-                  <div className="activity-follow-main">
-                    {!!row.unread && <span className="unread-dot" aria-label="unread" />}
+                  <MetaRow className="activity-follow-main" unread={!!row.unread}>
                     <UserReference handle={row.actor_handle} bio={row.actor_bio}
                       noteCount={actorProfileStats.get(row.actor_id)?.notes || 0}
                       stats={actorProfileStats.get(row.actor_id)} following={!!row.following} user={user}
@@ -251,23 +251,16 @@ export function Feed({ user, page = 1, title, path = '/for-you', pageUrl, notifi
                       )
                       : null}
                     {row.posts !== null
-                      ? (
-                        <a className="activity-follow-stats" href={(row.activity_kind === 'tag_follow'
+                      ? <MetaStats createdAt={row.created_at} count={row.posts} href={(row.activity_kind === 'tag_follow'
                           ? `/tag/${row.target_tag}`
                           : `/u/${
                             row.activity_kind === 'user_follow'
                               && !row.target_is_viewer
                               ? row.target_handle
                               : row.actor_handle
-                          }`) + fromQuery}
-                        >
-                          <time dateTime={row.created_at} title={fmtFull(row.created_at)}>{fmt(row.created_at)}</time>
-                          <span aria-hidden="true">·</span>
-                          <span>{row.posts} {row.posts === 1 ? 'note' : 'notes'}</span>
-                        </a>
-                      )
-                      : <time dateTime={row.created_at} title={fmtFull(row.created_at)}>{fmt(row.created_at)}</time>}
-                  </div>
+                          }`) + fromQuery} />
+                      : <MetaStats createdAt={row.created_at} count={null} className="activity-follow-stats" />}
+                  </MetaRow>
                   {(row.activity_kind === 'user_follow' || row.activity_kind === 'signup')
                     && (
                       <p className="profile-bio" dangerouslySetInnerHTML={{
