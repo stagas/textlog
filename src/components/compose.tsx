@@ -2,6 +2,7 @@ import { type User } from '../db'
 import { canPublishPosts } from '../posting-policy'
 import type { PostView } from '../types'
 import { Layout } from './layout'
+import { Panel } from './panel'
 import {
   FormActions,
   FormMessage,
@@ -31,7 +32,7 @@ export function Compose(
   }
   return (
     <Layout user={user} title="write">
-      <div className="panel compose write-compose">
+      <Panel className="compose write-compose">
         {preview && (
           <div className="compose-post-preview">
             <h2>preview</h2>
@@ -61,13 +62,13 @@ export function Compose(
             <PostingHelp search={suggestionSearch} />
             <FormActions secondary={
               <span className="edit-post-actions">
-                <a className="secondary-action edit-post-cancel" href={returnPath}>cancel</a>
+                <a className="secondary-action cancel-action edit-post-cancel" href={returnPath}>cancel</a>
                 <button className="secondary-action" name="action" value="preview">preview</button>
               </span>
             } primary={<button className="button">post →</button>} />
           </div>
         </form>
-      </div>
+      </Panel>
     </Layout>
   )
 }

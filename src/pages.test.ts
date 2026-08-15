@@ -6,6 +6,7 @@ import {
   AccountMagicLink,
   AccountPassword,
   AccountSecurity,
+  AccountSwitcher,
   AdminDashboard,
   ApiDocs,
   Auth,
@@ -20,11 +21,13 @@ import {
   EditPost,
   EmbedExamples,
   ErrorPage,
+  ForgotPassword,
   Legal,
   MagicLinkSent,
   NotFound,
   NotificationSettings,
   PasswordLogin,
+  PanelsGallery,
   postTitle,
   Profile,
   Reply,
@@ -38,6 +41,38 @@ import { maskEmail } from './components/auth'
 import { HotFeed } from './components/hot-feed'
 import { PublicFeed } from './components/public-feed'
 import { TagFeed } from './components/tag-feed'
+
+test('panels gallery renders every shared panel variation', () => {
+  const html = renderToStaticMarkup(React.createElement(PanelsGallery))
+
+  expect(html).toContain('<h1>panels gallery</h1>')
+  expect(html).toContain('class="account-settings-heading panels-gallery-header"')
+  expect(html).toContain('panel-narrow')
+  expect(html).toContain('panel-medium')
+  expect(html).toContain('panel-wide')
+  expect(html).toContain('panel-fluid')
+  expect(html).toContain('panel-danger')
+  expect(html).toContain('panel-gallery-shell-preview')
+})
+
+test('account switcher errors use the shared error notice', () => {
+  const user = { id: 1, handle: 'reader', email: 'reader@example.com', bio: '' }
+  const html = renderToStaticMarkup(React.createElement(AccountSwitcher, {
+    user,
+    accounts: [{ id: 1, handle: 'reader', handle_chosen_at: '2026-08-12 10:00:00', primary: true,
+      selected: true }],
+    error: 'Could not switch accounts.',
+  }))
+
+  expect(html).toContain('class="status-message status-error" role="alert">Could not switch accounts.</p>')
+  expect(html).not.toContain('class="error"')
+})
+
+test('auth pages render through the shared centered panel', () => {
+  const html = renderToStaticMarkup(React.createElement(Auth, {}))
+  expect(html).toContain('class="panel-shell auth-shell enter-shell"')
+  expect(html).toContain('class="panel panel-surface panel-narrow auth-panel enter-panel"')
+})
 
 test('compose offers a server-rendered post preview', () => {
   const user = { id: 1, handle: 'writer', email: 'writer@example.com', bio: 'Writes things',
@@ -72,7 +107,7 @@ test('compose carries its originating page through preview and offers cancel bef
   }))
 
   expect(html).toContain('name="from" value="/latest?cursor=abc#post-2"')
-  expect(html).toContain('class="secondary-action edit-post-cancel" href="/latest?cursor=abc#post-2">cancel</a>')
+  expect(html).toContain('class="secondary-action cancel-action edit-post-cancel" href="/latest?cursor=abc#post-2">cancel</a>')
   expect(html.indexOf('>cancel</a>')).toBeLessThan(html.indexOf('>preview</button>'))
 })
 
@@ -112,11 +147,11 @@ test('post edit places delete above the textarea and keeps preview before save',
     deleted_at: null }
   const html = renderToStaticMarkup(React.createElement(EditPost, { user, post }))
 
-  expect(html).toContain('class="panel compose edit-post-compose"')
+  expect(html).toContain('class="panel panel-surface panel-medium compose edit-post-compose"')
   expect(html).toContain('class="edit-post-actions"')
   expect(html).toContain('class="edit-post-primary-actions"')
   expect(html).toContain('class="edit-post-delete-action"')
-  expect(html).toContain('class="secondary-action edit-post-cancel"')
+  expect(html).toContain('class="secondary-action cancel-action edit-post-cancel"')
   expect(html).toContain('class="secondary-action danger" href="/post/2/delete">delete note</a>')
   expect(html.indexOf('>delete note</a>')).toBeLessThan(html.indexOf('<textarea'))
   expect(html.indexOf('<textarea')).toBeLessThan(html.indexOf('>cancel</a>'))
@@ -133,8 +168,10 @@ test('post deletion uses the standard centered confirmation panel', () => {
     returnPath: '/latest#post-2',
   }))
 
-  expect(html).toContain('class="auth-shell account-delete-shell post-delete-shell"')
-  expect(html).toContain('class="panel auth-panel account-delete-panel confirm-delete post-delete-panel"')
+  expect(html).toContain('class="panel-shell auth-shell account-delete-shell post-delete-shell"')
+  expect(html).toContain(
+    'class="panel panel-surface panel-medium panel-danger auth-panel account-delete-panel confirm-delete post-delete-panel"',
+  )
   expect(html).toContain('<p class="eyebrow">note deletion</p>')
   expect(html).toContain('<blockquote aria-label="Post to delete">Original note</blockquote>')
   expect(html).toContain('class="post-delete-form" action="/post/2/delete" method="post"')
@@ -154,7 +191,7 @@ test('editing a reply shows its parent context above the textarea', () => {
 
   expect(html).toContain('class="post-page-thread"')
   expect(html).toContain('class="thread-root"')
-  expect(html).toContain('class="panel replybox"')
+  expect(html).toContain('class="panel panel-surface panel-medium replybox"')
   expect(html).toContain('Parent note')
   expect(html).toContain('class="quiet post-back-link" href="/latest?cursor=abc#post-3">back</a>')
   expect(html).toContain('name="from" value="/latest?cursor=abc#post-3"')
@@ -175,7 +212,7 @@ test('editing a reply shows its parent context above the textarea', () => {
   expect(preview).toContain('Edited reply')
   expect(preview.indexOf('<div class="reply-preview">')).toBeLessThan(preview.indexOf('<textarea'))
   const previewPost = preview.slice(preview.indexOf('<div class="reply-preview">'),
-    preview.indexOf('<div class="panel replybox">'))
+    preview.indexOf('<div class="panel panel-surface panel-medium replybox">'))
   expect(previewPost).toContain('<div class="posttop preview-post-meta"><span class="reference-menu">')
   expect(previewPost).toContain('<span class="postdate"')
   expect(previewPost).toContain('<span class="quiet preview-reply">reply</span>')
@@ -196,11 +233,13 @@ test('reply forms offer the same server-rendered preview flow', () => {
   }))
 
   expect(html).toContain('value="preview" name="action">preview</button>')
-  expect(html).toContain('class="secondary-action edit-post-cancel" href="/post/2">cancel</a>')
+  expect(html).toContain('class="secondary-action cancel-action edit-post-cancel" href="/post/2">cancel</a>')
   expect(html.indexOf('>cancel</a>')).toBeLessThan(html.indexOf('>preview</button>'))
   expect(html).toContain('<div class="reply-preview"><p class="eyebrow">preview</p><div class="reply-branch">')
   expect(html).not.toContain('<span class="post-context">preview:</span>')
-  expect(html.indexOf('<div class="reply-preview">')).toBeLessThan(html.indexOf('<div class="panel replybox">'))
+  expect(html.indexOf('<div class="reply-preview">')).toBeLessThan(
+    html.indexOf('<div class="panel panel-surface panel-medium replybox">'),
+  )
   expect(html.indexOf('<textarea')).toBeLessThan(html.indexOf('<div class="composefoot">'))
   expect(html).toContain('Reply <a href="/tag/here"')
   expect(html).toContain('<span class="quiet preview-reply">reply</span>')
@@ -222,7 +261,7 @@ test('reply form cancel returns to the originating feed entry', () => {
   }))
 
   expect(html).toContain(
-    'class="secondary-action edit-post-cancel" href="/u/writer?tab=replies#post-2">cancel</a>',
+    'class="secondary-action cancel-action edit-post-cancel" href="/u/writer?tab=replies#post-2">cancel</a>',
   )
 })
 
@@ -732,6 +771,17 @@ describe('About', () => {
 })
 
 describe('Auth', () => {
+  test('forgot password form has a clear heading', () => {
+    const html = renderToStaticMarkup(React.createElement(ForgotPassword))
+
+    expect(html).toContain('<h1>Reset your password</h1>')
+    expect(html).toContain('class="forgot-password-copy">Enter your email address or your handle')
+    expect(html).toContain('<label for="forgot-password-identifier"><span>email address or handle</span></label>')
+    expect(html).toContain('id="forgot-password-identifier"')
+    expect(html).toContain('name="identifier"')
+    expect(html.indexOf('<h1>')).toBeLessThan(html.indexOf('action="/forgot-password"'))
+  })
+
   test('enter accepts an email address or handle', () => {
     const html = renderToStaticMarkup(React.createElement(Auth))
 
@@ -875,6 +925,8 @@ test('Account deletion asks for the configured second factor', () => {
   const emailHtml = renderToStaticMarkup(React.createElement(ConfirmAccountDelete, { user }))
   expect(emailHtml).not.toContain('type="password"')
   expect(emailHtml).toContain('send confirmation link')
+  expect(emailHtml).toContain('panel-danger')
+  expect(emailHtml).toContain('class="button button-danger"')
 
   const tokenHtml = renderToStaticMarkup(React.createElement(ConfirmAccountDelete, {
     token: 'deletion-token',
@@ -919,7 +971,7 @@ test('API key creation has a focused form with themed expiration radios', () => 
   expect(html).not.toContain('class="api-key-radio"')
   expect(html).not.toContain('<select name="lifetime"')
   expect(html).toContain('class="form-actions"')
-  expect(html).toContain('class="secondary-action" href="/account/security">cancel</a>')
+  expect(html).toContain('class="secondary-action cancel-action" href="/account/security">cancel</a>')
 })
 
 test('AccountSecurity asks for the current password when email changes require it', () => {

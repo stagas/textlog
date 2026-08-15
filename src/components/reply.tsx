@@ -14,6 +14,7 @@ import {
   VerificationRequired,
 } from './page-shared'
 import { Post, PreviewPost, ThreadReplies } from './post'
+import { Panel } from './panel'
 
 export function ReplyBox(
   { action, body, error, placeholder, hidden, beforeTextarea, secondary, primary, className = 'replybox',
@@ -31,7 +32,7 @@ export function ReplyBox(
     },
 ) {
   return (
-    <div className={`panel ${className}`}>
+    <Panel className={className}>
       <form method="post" action={action}>
         {hidden}
         <FormMessage error={error} />
@@ -44,7 +45,7 @@ export function ReplyBox(
           <FormActions secondary={secondary} primary={primary} />
         </div>
       </form>
-    </div>
+    </Panel>
   )
 }
 
@@ -112,7 +113,7 @@ export function Reply(
                 hidden={returnPath && <input type="hidden" name="from" value={returnPath} />}
                 secondary={
                   <span className="edit-post-actions">
-                    <a className="secondary-action edit-post-cancel" href={returnPath || `/post/${post.id}`}>cancel</a>
+                    <a className="secondary-action cancel-action edit-post-cancel" href={returnPath || `/post/${post.id}`}>cancel</a>
                     <button className="secondary-action" name="action" value="preview">preview</button>
                   </span>
                 } primary={<button className="button">post →</button>} />

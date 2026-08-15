@@ -1544,19 +1544,36 @@ nav form {
   padding: 0 var(--gutter);
 }
 
-.auth-shell {
+.panel-surface {
+  width: calc(100% - (2 * var(--gutter)));
+  padding: clamp(24px, 5vw, 40px);
+  background: var(--panel);
+  border: 1px solid var(--soft);
+}
+
+.panel-narrow { max-width: 440px; }
+.panel-medium { max-width: 560px; }
+.panel-wide { max-width: 620px; }
+.panel-fluid { width: 100%; max-width: none; }
+.panel-danger { border-color: color-mix(in srgb, var(--error-ink) 40%, var(--soft)); }
+
+.panel-shell {
   display: grid;
   min-height: min(620px, calc(100dvh - 190px));
   padding: var(--space-6) var(--gutter) var(--space-8);
   place-items: center;
 }
 
+.panel-shell > .panel-surface { margin: 0; }
+
+.panel-surface .form-control {
+  background: var(--bg);
+}
+
 .auth-panel {
   width: min(100%, 440px);
   margin: 0;
   padding: clamp(26px, 6vw, 42px);
-  background: var(--panel);
-  border: 1px solid var(--soft);
 }
 
 .magic-sent-panel {
@@ -1707,6 +1724,14 @@ nav form {
   margin-bottom: var(--space-5);
   font-size: clamp(1.375rem, 5vw, 1.875rem);
   letter-spacing: -1px;
+}
+
+.forgot-password-copy {
+  margin: 0 0 var(--space-5);
+  color: var(--muted);
+  font-size: .75rem;
+  line-height: 1.6;
+  text-align: left;
 }
 
 .enable-password-panel {
@@ -1890,14 +1915,6 @@ textarea.form-control {
   margin-bottom: var(--space-3);
 }
 
-.secondary-action.edit-post-cancel {
-  color: var(--muted);
-}
-
-.secondary-action.edit-post-cancel:hover {
-  color: var(--tab-hover);
-}
-
 .edit-post-primary-actions {
   display: inline-flex;
   align-items: center;
@@ -1916,6 +1933,14 @@ textarea.form-control {
 
 .secondary-action:hover {
   color: var(--accent-dark);
+}
+
+.secondary-action.cancel-action {
+  color: var(--muted);
+}
+
+.secondary-action.cancel-action:hover {
+  color: var(--tab-hover);
 }
 
 .secondary-action.danger {
@@ -2102,8 +2127,6 @@ textarea.form-control {
 
 .magic-link-page {
   padding: clamp(24px, 5vw, 40px);
-  background: var(--panel);
-  border: 1px solid var(--soft);
 }
 
 .magic-link-page>p {
@@ -2213,12 +2236,6 @@ form.report-panel {
   max-width: none;
   margin: var(--space-6) 0;
   padding: clamp(24px, 5vw, 40px);
-  background: var(--panel);
-  border: 1px solid var(--soft);
-}
-
-.form-panel .form-control {
-  background: var(--bg);
 }
 
 .form-panel.report-panel {
@@ -2263,19 +2280,21 @@ form.report-panel {
 }
 
 .status-message {
-  margin: 0 0 var(--space-3);
+  margin: var(--space-4) 0;
   padding: var(--space-2) var(--space-3);
   font-size: 0.75rem;
 }
 
 .status-error {
   color: var(--error-ink);
-  background: var(--error-bg);
+  background: color-mix(in srgb, var(--error-ink) 10%, var(--panel));
+  border: 2px solid color-mix(in srgb, var(--error-ink) 38%, var(--soft));
 }
 
 .status-success {
   color: var(--success-ink);
-  background: var(--success-bg);
+  background: color-mix(in srgb, var(--success-ink) 10%, var(--panel));
+  border: 2px solid color-mix(in srgb, var(--success-ink) 38%, var(--soft));
 }
 
 .composefoot {
@@ -3107,6 +3126,13 @@ form.report-panel {
   text-transform: uppercase;
   letter-spacing: 1.5px;
 }
+.account-settings-heading .page-heading-description {
+  max-width: 62ch;
+  margin: var(--space-3) 0 0;
+  color: var(--muted);
+  font-size: .75rem;
+  line-height: 1.7;
+}
 .account-settings-heading > .profile-edit-link { margin-top: 0; }
 
 .admin-header.account-settings-heading {
@@ -3582,8 +3608,6 @@ form.report-panel {
 .welcome-panel {
   margin: var(--space-6) var(--gutter) 0;
   padding: clamp(22px, 5vw, 34px);
-  background: var(--panel);
-  border: 1px solid var(--soft);
 }
 
 .welcome-panel .eyebrow {
@@ -3628,9 +3652,69 @@ form.report-panel {
   overflow-wrap: anywhere;
 }
 
+.panels-gallery {
+  width: min(100%, 1040px);
+  margin: 0 auto;
+  padding: var(--space-7) var(--gutter) var(--space-8);
+}
+
+.panels-gallery-header { max-width: 680px; margin-bottom: var(--space-8); }
+.panels-gallery .panel-surface > .eyebrow {
+  margin: 0 0 var(--space-2);
+  color: var(--accent);
+  font-size: .625rem;
+  font-weight: 700;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+}
+.panel-gallery-copy {
+  margin: var(--space-4) 0;
+  color: var(--muted);
+  font-size: .75rem;
+  line-height: 1.7;
+}
+.panel-gallery-section { margin-top: var(--space-8); }
+.panel-gallery-section > h2 {
+  margin-bottom: var(--space-5);
+  font-size: .75rem;
+  letter-spacing: .8px;
+  text-transform: uppercase;
+}
+.panel-gallery-section > .panel-surface { margin-block: var(--space-4); }
+.panels-gallery .panel-surface h2 {
+  margin: 0;
+  font-size: clamp(1.25rem, 4vw, 1.75rem);
+  line-height: 1.15;
+  letter-spacing: -1px;
+}
+.panel-gallery-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-5); }
+.panel-gallery-grid .panel-surface { margin: 0; }
+.panel-gallery-form { display: grid; gap: var(--space-4); margin-top: var(--space-5); }
+.panel-gallery-form .form-label { display: grid; gap: var(--space-2); }
+.panel-gallery-state {
+  display: block;
+}
+.panel-gallery-state-content {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-4);
+}
+.panel-gallery-state-content > .status-message {
+  width: 100%;
+  margin: 0;
+}
+.panel-gallery-state-content > .button { align-self: flex-end; }
+.panel-gallery-state-content > .panel-gallery-copy { margin: 0; }
+.panel-gallery-shell-preview { border: 1px dashed var(--soft); background: var(--bg); }
+.panel-gallery-shell-preview .panel-shell { min-height: 520px; }
+
+@media (max-width: 700px) {
+  .panel-gallery-grid { grid-template-columns: 1fr; }
+}
+
 .verify-email-notice {
   max-width: 440px;
-  margin: 0 0 var(--space-5);
 }
 
 .verify-email-actions {

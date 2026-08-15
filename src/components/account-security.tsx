@@ -2,6 +2,7 @@ import { type User } from '../db'
 import type { ApiKeyView, SessionView } from '../types'
 import { AccountSettingsHeader } from './account-settings-header'
 import { Layout } from './layout'
+import { CenteredPanel, Panel } from './panel'
 import { FormActions, FormMessage } from './page-shared'
 
 export function AccountSecurity({ user, sessions, apiKeys = [], passwordEnabled, error, success, returnPath }: {
@@ -169,7 +170,7 @@ export function AccountApiKeyCreate({ user, name = '', lifetime = 'year', error 
             ))}
           </fieldset>
           <FormActions
-            secondary={<a className="secondary-action" href="/account/security">cancel</a>}
+            secondary={<a className="secondary-action cancel-action" href="/account/security">cancel</a>}
             primary={<button className="button">generate API key →</button>}
           />
         </form>
@@ -212,8 +213,9 @@ export function AccountPassword({ user, enabled, token, request = false, sent = 
 }) {
   return (
     <Layout user={user} title={enabled ? 'change password' : 'enable password login'}>
-      <section className="auth-shell">
-        <div className={`panel auth-panel password-panel${enabled ? '' : ' enable-password-panel'}`}>
+      <CenteredPanel shellClassName="auth-shell"
+        className={`auth-panel password-panel${enabled ? '' : ' enable-password-panel'}`}
+        width={enabled ? 'narrow' : 'medium'}>
           <h1>
             {invalid ? 'Link unavailable' : sent ? 'Check your email' : request ? 'Enable password login' : enabled
               ? 'Change password'
@@ -267,8 +269,7 @@ export function AccountPassword({ user, enabled, token, request = false, sent = 
           <p className="auth-secondary">
             <a href="/account/security">Back to account security</a>
           </p>
-        </div>
-      </section>
+      </CenteredPanel>
     </Layout>
   )
 }
@@ -276,7 +277,7 @@ export function AccountPassword({ user, enabled, token, request = false, sent = 
 export function AccountMagicLink({ user, magicUrl, code }: { user: User; magicUrl: string; code: string }) {
   return (
     <Layout user={user} title="magic link">
-      <div className="panel magic-link-page">
+      <Panel className="magic-link-page">
         <h1>magic link</h1>
         <p>Copy this one-time sign-in link to your other device. It expires after 15 minutes.</p>
         <label className="magic-link-output">
@@ -288,7 +289,7 @@ export function AccountMagicLink({ user, magicUrl, code }: { user: User; magicUr
           <input readOnly value={code} inputMode="numeric" aria-label="app entry code" />
         </label>
         <a className="quiet" href="/account/security">back to account security</a>
-      </div>
+      </Panel>
     </Layout>
   )
 }

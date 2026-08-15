@@ -269,6 +269,20 @@ test('accounts sharing an email can be created, switched, and selected by magic-
   expect(database.query('SELECT primary_user_id,selected_user_id FROM account_groups WHERE id=?')
     .get(primary.account_group_id)).toEqual({ primary_user_id: primary.id, selected_user_id: bot.id })
 
+  database.query("UPDATE users SET password='password-enabled' WHERE id IN (?,?)").run(primary.id, bot.id)
+  const beforeHandleResets = capturedEmails().length
+  for (const handle of ['persona_primary', '@persona_bot']) {
+    const response = await request('/forgot-password', {
+      method: 'POST',
+      form: { identifier: handle },
+      ip: `password-reset-${handle}`,
+    })
+    expect(response.status).toBe(200)
+  }
+  const handleResetEmails = capturedEmails().slice(beforeHandleResets)
+  expect(handleResetEmails).toHaveLength(2)
+  expect(handleResetEmails.every(message => message.to === email && message.subject.includes('Reset your'))).toBe(true)
+
   const selectedPrimary = await request('/account/accounts/select', {
     method: 'POST',
     cookie: primaryCookie,

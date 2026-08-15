@@ -1,9 +1,10 @@
 import type { ReactNode } from 'react'
 
 export function PageHeading(
-  { eyebrow, title, action, className }: {
+  { eyebrow, title, description, action, className }: {
     eyebrow: string
     title: string
+    description?: ReactNode
     action?: ReactNode
     className?: string
   },
@@ -13,6 +14,7 @@ export function PageHeading(
       <div>
         <p className="eyebrow">{eyebrow}</p>
         <h1>{title}</h1>
+        {description && <p className="page-heading-description">{description}</p>}
       </div>
       {action}
     </div>

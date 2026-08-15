@@ -6,6 +6,7 @@ import { visibleUserProfileStats } from '../posts'
 import type { PersonView } from '../types'
 import { displayBio, linkify } from '../utils'
 import { Layout } from './layout'
+import { Panel } from './panel'
 import { ActionPair, Pagination, TagPeopleList } from './page-shared'
 import { UserReference } from './post'
 import { SearchForm } from './search'
@@ -52,7 +53,7 @@ export function Explore({ user, welcome = false, peopleIds, tagsPage = 1, people
   return (
     <Layout user={user} title="explore">
       {user && welcome && (
-        <section className="welcome-panel" role="status">
+        <Panel as="section" width="wide" className="welcome-panel" role="status">
           <p className="eyebrow">welcome to {appName()}</p>
           <h1>Make this place yours.</h1>
           <p>Follow a few people or hashtags below, or start with a note of your own.</p>
@@ -64,7 +65,7 @@ export function Explore({ user, welcome = false, peopleIds, tagsPage = 1, people
             <a href="/account/edit/appearance">customize appearance</a>
             <a href="/account/password/enable">set up a password</a>
           </nav>
-        </section>
+        </Panel>
       )}
       {!welcome && (
         <section className="explore-search" aria-labelledby="explore-search-heading">

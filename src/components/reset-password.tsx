@@ -1,4 +1,5 @@
 import { Layout } from './layout'
+import { CenteredPanel } from './panel'
 import { FormMessage } from './page-shared'
 
 export function ResetPassword(
@@ -6,8 +7,7 @@ export function ResetPassword(
 ) {
   return (
     <Layout title="reset password">
-      <section className="auth-shell">
-        <div className="panel auth-panel password-panel">
+      <CenteredPanel shellClassName="auth-shell" className="auth-panel password-panel">
           {invalid
             ? (
               <>
@@ -32,8 +32,7 @@ export function ResetPassword(
                 <button className="button button-wide">reset password →</button>
               </form>
             )}
-        </div>
-      </section>
+      </CenteredPanel>
     </Layout>
   )
 }

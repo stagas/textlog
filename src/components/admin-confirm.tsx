@@ -2,6 +2,7 @@ import { type User } from '../db'
 import type { PostRow, ProfileRow } from '../types'
 import { displayPostBody } from '../utils'
 import { Layout } from './layout'
+import { Panel } from './panel'
 import { FormActions } from './page-shared'
 
 export function AdminConfirm({ user, kind, target, post, returnTo = '/admin' }: {
@@ -25,7 +26,7 @@ export function AdminConfirm({ user, kind, target, post, returnTo = '/admin' }: 
     : `/admin/users/${target!.id}/${kind.replace('_user', '')}`
   return (
     <Layout user={user} title="admin moderation">
-      <div className="panel confirm-delete admin-confirm">
+      <Panel className="confirm-delete admin-confirm">
         <p className="eyebrow">admin moderation</p>
         <h1>{copy[0]}</h1>
         <p>{copy[1]}</p>
@@ -37,14 +38,14 @@ export function AdminConfirm({ user, kind, target, post, returnTo = '/admin' }: 
             <textarea name="note" maxLength={500} placeholder="Context for the audit log…" autoComplete="off"
               inputMode="text" enterKeyHint="enter" />
           </label>
-          <FormActions secondary={<a className="secondary-action" href={returnTo}>cancel</a>}
+          <FormActions secondary={<a className="secondary-action cancel-action" href={returnTo}>cancel</a>}
             primary={
               <button className={`button ${kind.includes('delete') || kind === 'suspend_user' ? 'button-danger' : ''}`}>
                 {kind.replaceAll('_', ' ')}
               </button>
             } />
         </form>
-      </div>
+      </Panel>
     </Layout>
   )
 }

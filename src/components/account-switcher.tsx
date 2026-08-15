@@ -2,16 +2,18 @@ import type { AccountChoice } from '../account-groups'
 import type { User } from '../db'
 import { AccountSettingsHeader } from './account-settings-header'
 import { Layout } from './layout'
+import { Panel } from './panel'
+import { FormMessage } from './page-shared'
 
 export function AccountSwitcher({ user, accounts, error }: { user: User; accounts: AccountChoice[]; error?: string }) {
   return (
     <Layout user={user} title="switch account">
-      <section className="panel account-switcher-page">
+      <Panel as="section" width="fluid" className="account-switcher-page">
         <AccountSettingsHeader title="accounts" />
         <p className="account-switcher-intro">
           Each account has its own profile, notes, connections, settings, and API keys. They share {user.email}.
         </p>
-        {error && <p className="error">{error}</p>}
+        <FormMessage error={error} />
         <div className="account-choice-list" role="list">
           {accounts.map(account => {
             const current = account.id === user.id
@@ -46,7 +48,7 @@ export function AccountSwitcher({ user, accounts, error }: { user: User; account
             <button className="button">create new</button>
           </form>
         </div>
-      </section>
+      </Panel>
     </Layout>
   )
 }

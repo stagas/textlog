@@ -7,6 +7,7 @@ import { bodyLimit } from 'hono/body-limit'
 import { startAutomatedBackups } from './backup-automation'
 import { appName, clientIpHeaderName } from './brand'
 import { configureDevReload } from './components/layout'
+import { PanelsGallery } from './components/panels-gallery'
 import { compressResponse } from './compression'
 import { databaseHealth } from './database-health'
 import { db } from './db'
@@ -29,7 +30,7 @@ import { registerPostsRoutes } from './routes/posts'
 import { registerProfilesRoutes } from './routes/profiles'
 import { registerSearchRoutes } from './routes/search'
 import { registerSeoRoutes } from './routes/seo'
-import { clientErrorPage, notFoundPage, rateLimitPage, serverErrorPage } from './routes/shared'
+import { clientErrorPage, notFoundPage, page, rateLimitPage, serverErrorPage } from './routes/shared'
 import { registerStatsRoutes } from './routes/stats'
 import { registerTagsRoutes } from './routes/tags'
 import { renewSession } from './sessions'
@@ -169,7 +170,7 @@ app.use('*', async (c, next) => {
   if (c.req.method !== 'GET' || !c.res.headers.get('content-type')?.includes('text/html')) return
   const url = new URL(c.req.url)
   const privatePath =
-    /^\/(?:enter|forgot-password|reset-password|choose-handle|write|compose|activity|admin|search|account)(?:\/|$)/
+    /^\/(?:enter|forgot-password|reset-password|choose-handle|write|compose|activity|admin|search|account|panels-gallery)(?:\/|$)/
       .test(url.pathname) || /^\/post\/\d+\/(?:edit|delete)$/.test(url.pathname)
   const transientParameters = ['reply', 'report', 'reported', 'edit', 'welcome', 'reset', 'token']
   const navigationOnly = url.searchParams.has('from')
@@ -319,6 +320,7 @@ app.get('/og.png', () => {
 })
 
 app.get('/client-error', c => clientErrorPage(c.req.raw))
+app.get('/panels-gallery', c => page(<PanelsGallery user={currentUser(c.req.raw)} />))
 app.get('/server-error', () => {
   throw new Error('Intentional server error route')
 })

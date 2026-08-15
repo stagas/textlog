@@ -147,17 +147,22 @@ export function registerAuthRoutes(app: Hono) {
   app.get('/forgot-password', c => page(<ForgotPassword />))
   app.post('/forgot-password', async c => {
     const f = await form(c.req.raw)
-    const email = (f.email || '').trim().toLowerCase()
+    const submittedIdentifier = (f.identifier || f.email || '').trim().toLowerCase()
+    const identifier = submittedIdentifier.replace(/^@/, '')
     const limited = authLimit(c, 'forgot-password-ip', clientAddress(c), AUTH_LIMITS.forgotIp)
-      || authLimit(c, 'forgot-password-account', email || '(blank)', AUTH_LIMITS.forgotAccount)
+      || authLimit(c, 'forgot-password-account', identifier || '(blank)', AUTH_LIMITS.forgotAccount)
     if (limited) {
-      return retryPage(page(<ForgotPassword error={authRateLimitMessage(limited.retryAfter)} />, 429),
+      return retryPage(page(<ForgotPassword identifier={submittedIdentifier}
+        error={authRateLimitMessage(limited.retryAfter)} />, 429),
         limited.retryAfter)
     }
-    if (!emailPattern.test(email) || email.length > 254) {
-      return page(<ForgotPassword error="Enter a valid email address." />, 400)
+    const isEmail = emailPattern.test(identifier) && identifier.length <= 254
+    const isHandle = /^[a-z0-9_]{2,24}$/.test(identifier)
+    if (!isEmail && !isHandle) {
+      return page(<ForgotPassword identifier={submittedIdentifier}
+        error="Enter a valid email address or handle." />, 400)
     }
-    const account = accountForEmail(db, email)
+    const account = isEmail ? accountForEmail(db, identifier) : accountForHandle(db, identifier)
     if (account && account.password !== '!') {
       const value = token()
       db.query('DELETE FROM password_resets WHERE user_id=? OR expires_at<=?').run(account.id, Date.now())
@@ -165,12 +170,13 @@ export function registerAuthRoutes(app: Hono) {
         .run(hash(value), account.id, Date.now() + 3600000)
       const origin = Bun.env.APP_URL?.replace(/\/$/, '') || new URL(c.req.url).origin
       try {
-        await sendPasswordReset(email, `${origin}/reset-password?token=${encodeURIComponent(value)}`)
+        await sendPasswordReset(account.email, `${origin}/reset-password?token=${encodeURIComponent(value)}`)
       }
       catch (error) {
         console.error('Could not send password reset', error)
         db.query('DELETE FROM password_resets WHERE token_hash=?').run(hash(value))
-        return page(<ForgotPassword error="The reset email could not be sent. Please try again later." />, 503)
+        return page(<ForgotPassword identifier={submittedIdentifier}
+          error="The reset email could not be sent. Please try again later." />, 503)
       }
     }
     return page(<ForgotPassword sent />)

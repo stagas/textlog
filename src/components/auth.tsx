@@ -1,4 +1,5 @@
 import { Layout } from './layout'
+import { CenteredPanel } from './panel'
 
 export function maskEmail(email: string) {
   const at = email.lastIndexOf('@')
@@ -9,8 +10,7 @@ export function maskEmail(email: string) {
 export function Auth({ error, email = '', next }: { error?: string; email?: string; next?: string }) {
   return (
     <Layout title="enter">
-      <section className="auth-shell enter-shell">
-        <div className="panel auth-panel enter-panel">
+      <CenteredPanel shellClassName="auth-shell enter-shell" className="auth-panel enter-panel">
           {error && <p className="status-message status-error" role="alert">{error}</p>}
           <form method="post" action="/enter" autoComplete="on">
             {next && <input type="hidden" name="next" value={next} />}
@@ -34,8 +34,7 @@ export function Auth({ error, email = '', next }: { error?: string; email?: stri
               log in using your password
             </a>.
           </p>
-        </div>
-      </section>
+      </CenteredPanel>
     </Layout>
   )
 }
@@ -50,8 +49,7 @@ export function PasswordLogin({ nonce, error, identifier = '', next, reset = fal
 }) {
   return (
     <Layout title="password login">
-      <section className="auth-shell">
-        <div className="panel auth-panel password-panel">
+      <CenteredPanel shellClassName="auth-shell" className="auth-panel password-panel">
           <h1>Log in</h1>
           {reset && <p className="status-message status-success" role="status">Password reset. You can log in now.</p>}
           {error && <p className="status-message status-error" role="alert">{error}</p>}
@@ -85,13 +83,12 @@ export function PasswordLogin({ nonce, error, identifier = '', next, reset = fal
             </button>
           </form>
           <p className="auth-secondary">
-            <a href="/forgot-password">Forgot password?</a>
+            <a href="/forgot-password">forgot password?</a>
           </p>
           <p className="auth-secondary">
-            <a href="/enter" rel="nofollow">Use a magic link instead</a>
+            <a href="/enter" rel="nofollow">use a magic link instead</a>
           </p>
-        </div>
-      </section>
+      </CenteredPanel>
     </Layout>
   )
 }
@@ -104,8 +101,7 @@ export function MagicLinkSent({ email, magicUrl, error, handle = false }: {
 }) {
   return (
     <Layout title="check your email">
-      <section className="auth-shell">
-        <div className="panel auth-panel magic-sent-panel">
+      <CenteredPanel shellClassName="auth-shell" className="auth-panel magic-sent-panel" width="medium">
           <h1>Check your email</h1>
           <p>
             {handle
@@ -142,8 +138,7 @@ export function MagicLinkSent({ email, magicUrl, error, handle = false }: {
               <a className="button" href={magicUrl}>open development magic link</a>
             </p>
           )}
-        </div>
-      </section>
+      </CenteredPanel>
     </Layout>
   )
 }
@@ -151,8 +146,7 @@ export function MagicLinkSent({ email, magicUrl, error, handle = false }: {
 export function ChooseHandle({ error, handle = '', next }: { error?: string; handle?: string; next?: string }) {
   return (
     <Layout title="choose your handle" logoutNavigation>
-      <section className="auth-shell">
-        <div className="panel auth-panel choose-handle-panel">
+      <CenteredPanel shellClassName="auth-shell" className="auth-panel choose-handle-panel" width="medium">
           <h1>Choose your handle</h1>
           <p>Pick the handle that people will see.</p>
           {error && <p className="status-message status-error" role="alert">{error}</p>}
@@ -166,8 +160,7 @@ export function ChooseHandle({ error, handle = '', next }: { error?: string; han
             </p>
             <button className="button">continue</button>
           </form>
-        </div>
-      </section>
+      </CenteredPanel>
     </Layout>
   )
 }

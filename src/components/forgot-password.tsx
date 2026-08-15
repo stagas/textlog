@@ -1,11 +1,15 @@
 import { Layout } from './layout'
+import { CenteredPanel } from './panel'
 import { FormMessage } from './page-shared'
 
-export function ForgotPassword({ sent = false, error }: { sent?: boolean; error?: string }) {
+export function ForgotPassword({ sent = false, error, identifier = '' }: {
+  sent?: boolean
+  error?: string
+  identifier?: string
+}) {
   return (
     <Layout title="forgot password">
-      <section className="auth-shell">
-        <div className="panel auth-panel password-panel">
+      <CenteredPanel shellClassName="auth-shell" className="auth-panel password-panel">
           {sent
             ? (
               <>
@@ -18,21 +22,27 @@ export function ForgotPassword({ sent = false, error }: { sent?: boolean; error?
             )
             : (
               <>
+                <h1>Reset your password</h1>
+                <p className="forgot-password-copy">
+                  Enter your email address or your handle and we’ll send you a secure reset link.
+                </p>
                 <form method="post" action="/forgot-password">
                   <FormMessage error={error} />
-                  <label>
-                    email<input type="email" name="email" required maxLength={254} autoComplete="email" autoFocus
-                      inputMode="email" enterKeyHint="send" placeholder="you@example.com" />
+                  <label htmlFor="forgot-password-identifier">
+                    <span>email address or handle</span>
                   </label>
+                  <input id="forgot-password-identifier" name="identifier" required maxLength={254}
+                    autoComplete="username" autoFocus inputMode="email" enterKeyHint="send"
+                    autoCapitalize="none" spellCheck={false} defaultValue={identifier}
+                    placeholder="you@example.com or your_handle" />
                   <button className="button button-wide">send reset link →</button>
                 </form>
                 <p className="switch">
-                  <a href="/enter" rel="nofollow">Back to login</a>
+                  <a href="/enter" rel="nofollow">back to login</a>
                 </p>
               </>
             )}
-        </div>
-      </section>
+      </CenteredPanel>
     </Layout>
   )
 }

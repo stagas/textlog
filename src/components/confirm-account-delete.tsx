@@ -1,5 +1,6 @@
 import { type User } from '../db'
 import { Layout } from './layout'
+import { CenteredPanel, Panel } from './panel'
 import { FormActions, FormMessage } from './page-shared'
 
 export function ConfirmAccountDelete({ user, passwordEnabled = false, token, sent = false, invalid = false, error }: {
@@ -15,7 +16,7 @@ export function ConfirmAccountDelete({ user, passwordEnabled = false, token, sen
     <Layout user={user} title="delete account">
       {sent
         ? (
-          <section className="welcome-panel verify-email-panel account-delete-sent" role="status">
+          <Panel as="section" width="wide" className="welcome-panel verify-email-panel account-delete-sent" role="status">
             <p className="eyebrow">confirmation required</p>
             <h1>Check your email.</h1>
             <p className="verify-email-copy">
@@ -28,11 +29,11 @@ export function ConfirmAccountDelete({ user, passwordEnabled = false, token, sen
             <div className="welcome-actions verify-email-actions">
               <a className="button" href="/account/edit">back to account</a>
             </div>
-          </section>
+          </Panel>
         )
         : (
-          <section className="auth-shell account-delete-shell">
-            <div className="panel auth-panel account-delete-panel">
+          <CenteredPanel shellClassName="auth-shell account-delete-shell"
+            className="auth-panel account-delete-panel" width="medium" tone="danger">
               <p className="eyebrow">account deletion</p>
               <h1>{invalid ? 'Link unavailable.' : 'Delete your account?'}</h1>
               {invalid
@@ -62,19 +63,16 @@ export function ConfirmAccountDelete({ user, passwordEnabled = false, token, sen
                       </p>
                     )}
                     <FormActions
-                      secondary={<a className="secondary-action" href={user ? '/account/edit' : '/'}>cancel</a>}
+                      secondary={<a className="secondary-action cancel-action" href={user ? '/account/edit' : '/'}>cancel</a>}
                       primary={
-                        <button className={`button${emailConfirmation || passwordEnabled ? ' button-danger' : ''}`}
-                          type="submit"
-                        >
+                        <button className="button button-danger" type="submit">
                           {emailConfirmation || passwordEnabled ? 'delete account' : 'send confirmation link →'}
                         </button>
                       }
                     />
                   </form>
                 )}
-            </div>
-          </section>
+          </CenteredPanel>
         )}
     </Layout>
   )

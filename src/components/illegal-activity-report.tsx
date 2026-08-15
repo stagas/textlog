@@ -1,6 +1,7 @@
 import { appName, appOrigin } from '../brand'
 import type { User } from '../db'
 import { Layout } from './layout'
+import { Panel } from './panel'
 import { FormActions, FormMessage } from './page-shared'
 
 export function IllegalActivityReport(
@@ -23,7 +24,8 @@ export function IllegalActivityReport(
           : (
             <>
               <p>Use this form to report a specific {name} post that you believe involves illegal activity.</p>
-              <form className="form-panel report-panel" method="post" action="/report-illegal-activity">
+              <Panel as="form" width="fluid" className="form-panel report-panel" method="post"
+                action="/report-illegal-activity">
                 <FormMessage error={error} />
                 <label className="form-label">
                   post URL<input className="form-control" type="url" name="contentUrl" required
@@ -64,7 +66,7 @@ export function IllegalActivityReport(
                   I believe in good faith that this report is accurate and complete.
                 </label>
                 <FormActions primary={<button className="button">submit report</button>} />
-              </form>
+              </Panel>
             </>
           )}
       </article>

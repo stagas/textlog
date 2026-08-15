@@ -1,4 +1,5 @@
 import { Layout } from './layout'
+import { Panel } from './panel'
 import { FormActions } from './page-shared'
 
 export function ConfirmEmail({ token, kind, email, invalid = false, pending = false, sent = false, error }: {
@@ -14,9 +15,9 @@ export function ConfirmEmail({ token, kind, email, invalid = false, pending = fa
   const authorizingChange = kind === 'authorize-change'
   return (
     <Layout title="confirm email" logoutNavigation={pending}>
-      <div className={pending || authorizingChange
+      <Panel width={pending || authorizingChange ? 'wide' : 'medium'} className={pending || authorizingChange
         ? `welcome-panel verify-email-panel${authorizingChange ? ' email-change-approval' : ''}`
-        : 'panel confirm-delete'}
+        : 'confirm-delete'}
       >
         {pending
           ? (
@@ -87,7 +88,7 @@ export function ConfirmEmail({ token, kind, email, invalid = false, pending = fa
                 : '/verify-email'}
               >
                 <input type="hidden" name="token" value={token} />
-                <FormActions secondary={<a className="secondary-action" href="/">cancel</a>}
+                <FormActions secondary={<a className="secondary-action cancel-action" href="/">cancel</a>}
                   primary={
                     <button className="button">
                       {kind === 'authorize-change'
@@ -100,7 +101,7 @@ export function ConfirmEmail({ token, kind, email, invalid = false, pending = fa
               </form>
             </>
           )}
-      </div>
+      </Panel>
     </Layout>
   )
 }

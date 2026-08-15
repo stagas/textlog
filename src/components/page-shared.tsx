@@ -1,6 +1,7 @@
 import type { PersonView, PostView, ProfileRow, TagView } from '../types'
 
 import React from 'react'
+import { Panel } from './panel'
 import { isAdmin } from '../admin'
 import { db, type User } from '../db'
 import { hasUnreadForYou, hasUnreadToMe } from '../for-you-state'
@@ -193,9 +194,9 @@ export function ActionPair({ primary, secondary, className = '' }: {
 
 export function VerificationRequired() {
   return (
-    <div className="panel status-message status-error" role="alert">
+    <Panel className="status-message status-error" role="alert">
       Confirm your email address before posting. <a href="/account/security">Verify your email</a>
-    </div>
+    </Panel>
   )
 }
 
@@ -663,7 +664,7 @@ export function ReportPanel({ post, showForm, reported, reason = '', error }: {
   }
   if (!showForm) return null
   return (
-    <div className="panel report-panel">
+    <Panel className="report-panel">
       <form method="post" action={`/post/${post.id}/report`}>
         <FormMessage error={error} />
         <label className="form-label">
@@ -678,10 +679,10 @@ export function ReportPanel({ post, showForm, reported, reason = '', error }: {
             <option value="other">other</option>
           </select>
         </label>
-        <FormActions secondary={<a className="secondary-action" href={`/post/${post.id}`}>cancel</a>}
+        <FormActions secondary={<a className="secondary-action cancel-action" href={`/post/${post.id}`}>cancel</a>}
           primary={<button className="button button-danger">submit report</button>} />
       </form>
-    </div>
+    </Panel>
   )
 }
 

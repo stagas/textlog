@@ -94,8 +94,8 @@ describe('in-memory stylesheet', () => {
 
   test('keeps the edit cancel action muted', async () => {
     const css = await Bun.file(new URL('./styles.css', import.meta.url)).text()
-    expect(css).toContain('.secondary-action.edit-post-cancel {\n  color: var(--muted);')
-    expect(css).toContain('.secondary-action.edit-post-cancel:hover {\n  color: var(--tab-hover);')
+    expect(css).toContain('.secondary-action.cancel-action {\n  color: var(--muted);')
+    expect(css).toContain('.secondary-action.cancel-action:hover {\n  color: var(--tab-hover);')
   })
 
   test('lets notification settings use the full page width', async () => {
@@ -131,7 +131,9 @@ describe('in-memory stylesheet', () => {
     expect(css).toContain('.form-control {')
     expect(css).toContain('.form-label {')
     expect(css).toContain('.form-panel {')
-    expect(css).toContain('.form-panel .form-control {\n  background: var(--bg);')
+    expect(css).toContain('.panel-surface {')
+    expect(css).toContain('background: var(--panel);')
+    expect(css).toContain('.panel-surface .form-control {\n  background: var(--bg);')
     expect(css).toContain('.illegal-activity-page {\n  max-width: none;')
     expect(css).toContain('.button-danger {')
     expect(css).toContain('.button-wide {')
