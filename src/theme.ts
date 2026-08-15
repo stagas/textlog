@@ -20,6 +20,30 @@ export const FONT_CHOICES = [
   { value: 'jetbrains-mono', label: 'JetBrains Mono', family: '"JetBrains Mono", monospace' },
   { value: 'hack', label: 'Hack', family: 'Hack, monospace' },
 ] as const
+export const SANS_SERIF_FONT_CHOICES = [
+  { value: 'system-sans', label: 'System sans serif', family: 'ui-sans-serif, system-ui, -apple-system, sans-serif' },
+  { value: 'arial', label: 'Arial', family: 'Arial, sans-serif' },
+  { value: 'helvetica', label: 'Helvetica', family: 'Helvetica, Arial, sans-serif' },
+  { value: 'verdana', label: 'Verdana', family: 'Verdana, sans-serif' },
+  { value: 'tahoma', label: 'Tahoma', family: 'Tahoma, sans-serif' },
+  { value: 'trebuchet-ms', label: 'Trebuchet MS', family: '"Trebuchet MS", sans-serif' },
+  { value: 'segoe-ui', label: 'Segoe UI', family: '"Segoe UI", sans-serif' },
+  { value: 'calibri', label: 'Calibri', family: 'Calibri, sans-serif' },
+  { value: 'avenir', label: 'Avenir', family: 'Avenir, "Avenir Next", sans-serif' },
+  { value: 'futura', label: 'Futura', family: 'Futura, sans-serif' },
+  { value: 'gill-sans', label: 'Gill Sans', family: '"Gill Sans", sans-serif' },
+  { value: 'frutiger', label: 'Frutiger', family: 'Frutiger, sans-serif' },
+  { value: 'noto-sans', label: 'Noto Sans', family: '"Noto Sans", sans-serif' },
+  { value: 'open-sans', label: 'Open Sans', family: '"Open Sans", sans-serif' },
+  { value: 'roboto', label: 'Roboto', family: 'Roboto, sans-serif' },
+  { value: 'inter', label: 'Inter', family: 'Inter, sans-serif' },
+  { value: 'montserrat', label: 'Montserrat', family: 'Montserrat, sans-serif' },
+  { value: 'source-sans-pro', label: 'Source Sans Pro', family: '"Source Sans Pro", "Source Sans 3", sans-serif' },
+  { value: 'ubuntu', label: 'Ubuntu', family: 'Ubuntu, sans-serif' },
+  { value: 'dejavu-sans', label: 'DejaVu Sans', family: '"DejaVu Sans", sans-serif' },
+  { value: 'liberation-sans', label: 'Liberation Sans', family: '"Liberation Sans", sans-serif' },
+] as const
+export const PRIMARY_FONT_CHOICES = ['monospace', 'sans-serif'] as const
 export const FONT_SIZE_CHOICES = [
   { value: 'small', label: 'small', size: '14px' },
   { value: 'regular', label: 'regular', size: '16px' },
@@ -31,6 +55,8 @@ export type ThemeChoice = typeof THEME_CHOICES[number]
 export type AccentChoice = typeof ACCENT_CHOICES[number]
 export type Appearance = { theme: ThemeChoice; accent: AccentChoice }
 export type FontChoice = typeof FONT_CHOICES[number]['value']
+export type SansSerifFontChoice = typeof SANS_SERIF_FONT_CHOICES[number]['value']
+export type PrimaryFontChoice = typeof PRIMARY_FONT_CHOICES[number]
 export type FontSizeChoice = typeof FONT_SIZE_CHOICES[number]['value']
 export const EMBED_FONT_CHOICES = {
   system: 'system',
@@ -149,6 +175,33 @@ export function fontCookie(value: FontChoice, appUrl: string | undefined = Bun.e
   return `font=${value}; Max-Age=${365 * 24 * 60 * 60}; HttpOnly; Path=/; SameSite=Lax${secure}`
 }
 
+export function sansSerifFontChoice(request: Request): SansSerifFontChoice {
+  const value = request.headers.get('cookie')?.match(/(?:^|;\s*)sans-serif-font=([^;]+)/)?.[1] || ''
+  return SANS_SERIF_FONT_CHOICES.some(font => font.value === value) ? value as SansSerifFontChoice : 'system-sans'
+}
+
+export function sansSerifFontCookie(value: SansSerifFontChoice, appUrl: string | undefined = Bun.env.APP_URL) {
+  return preferenceCookie('sans-serif-font', value, appUrl)
+}
+
+export function primaryFontChoice(request: Request): PrimaryFontChoice {
+  const value = request.headers.get('cookie')?.match(/(?:^|;\s*)primary-font=([^;]+)/)?.[1] || ''
+  return PRIMARY_FONT_CHOICES.includes(value as PrimaryFontChoice) ? value as PrimaryFontChoice : 'monospace'
+}
+
+export function primaryFontCookie(value: PrimaryFontChoice, appUrl: string | undefined = Bun.env.APP_URL) {
+  return preferenceCookie('primary-font', value, appUrl)
+}
+
+function preferenceCookie(name: string, value: string, appUrl: string | undefined) {
+  let secure = ''
+  try {
+    secure = appUrl && new URL(appUrl).protocol === 'https:' ? '; Secure' : ''
+  }
+  catch {}
+  return `${name}=${value}; Max-Age=${365 * 24 * 60 * 60}; HttpOnly; Path=/; SameSite=Lax${secure}`
+}
+
 export function fontSizeChoice(request: Request): FontSizeChoice {
   const value = request.headers.get('cookie')?.match(/(?:^|;\s*)font-size=([^;]+)/)?.[1] || ''
   return FONT_SIZE_CHOICES.some(choice => choice.value === value) ? value as FontSizeChoice : 'regular'
@@ -238,7 +291,7 @@ function rules(name: keyof typeof palettes, accentChoice: AccentChoice) {
     }
   return `:root{color-scheme:${
     dark ? 'dark' : 'light'
-  };--bg:${p.bg};--ink:${p.ink};--muted:${p.muted};--tab-hover:${semantic.tabHover};--soft:${p.soft};--accent:${accent};--accent-dark:${
+  };--font-monospace:ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;--font-sans-serif:ui-sans-serif, system-ui, -apple-system, sans-serif;--bg:${p.bg};--ink:${p.ink};--muted:${p.muted};--tab-hover:${semantic.tabHover};--soft:${p.soft};--accent:${accent};--accent-dark:${
     accentChoice === 'theme' ? p.accentDark : accent
   };--selection-bg:${accent};--selection-ink:${p.bg};--panel:${p.panel};--pagination-hover-bg:${p.tagBg};--link-border:${p.linkBorder};--button-bg:${button.bg};--button-ink:${p.buttonInk};--button-hover-bg:${button.hover};--button-active-bg:${button.active};--button-muted-bg:${mutedButton.bg};--button-muted-hover-bg:${mutedButton.hover};--button-muted-active-bg:${mutedButton.active};--button-disabled-bg:${semantic.disabledBg};--button-disabled-ink:${semantic.disabledInk};--danger-button-bg:${semantic.dangerBg};--danger-button-hover-bg:${semantic.dangerHover};--danger-button-active-bg:${semantic.dangerActive};--danger-link-hover:${semantic.dangerLinkHover};--report-ink:${semantic.reportInk};--report-hover:${semantic.reportHover};--quote-ink:${p.quoteInk};--quote-bg:${p.quoteBg};--error-ink:${p.errorInk};--error-bg:${semantic.errorBg};--success-ink:${semantic.successInk};--success-bg:${semantic.successBg};--tag-bg:${p.tagBg};--api-post-ink:${semantic.apiPostInk};--api-post-bg:${semantic.apiPostBg};--api-patch-ink:${semantic.apiPatchInk};--api-patch-bg:${semantic.apiPatchBg};--api-delete-ink:${semantic.apiDeleteInk};--api-delete-bg:${semantic.apiDeleteBg}}`
 }
@@ -268,8 +321,13 @@ export function themeStyles(request: Request) {
     ? EMBED_FONT_CHOICES[requestedFont as EmbedFontChoice] || 'system'
     : fontChoice(request)
   const font = FONT_CHOICES.find(choice => choice.value === selectedFont) || FONT_CHOICES[0]
+  const sansSerifFont = SANS_SERIF_FONT_CHOICES.find(choice => choice.value === sansSerifFontChoice(request))
+    || SANS_SERIF_FONT_CHOICES[0]
+  const primaryFont = requestedFont ? 'monospace' : primaryFontChoice(request)
   const fontSize = FONT_SIZE_CHOICES.find(choice => choice.value === fontSizeChoice(request)) || FONT_SIZE_CHOICES[1]
-  const fontRule = `:root{font-family:${font.family};font-size:${fontSize.size}}`
+  const fontRule = `:root{--font-monospace:${font.family};--font-sans-serif:${sansSerifFont.family};font-family:var(--font-${
+    primaryFont
+  });font-size:${fontSize.size}}`
   if (selected.theme === 'system') {
     return `${rules('light', selected.accent)}@media(prefers-color-scheme:dark){${
       rules('dark', selected.accent)

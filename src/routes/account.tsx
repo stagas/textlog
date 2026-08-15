@@ -42,8 +42,9 @@ import { vapidPublicKey } from '../push'
 import { normalizeSearchQuery, searchPeople, searchTags } from '../search'
 import { sessionHash } from '../sessions'
 import { ACCENT_CHOICES, type AccentChoice, appearance, appearanceCookie, FONT_CHOICES, FONT_SIZE_CHOICES,
-  type FontChoice, fontChoice, fontCookie, type FontSizeChoice, fontSizeChoice, fontSizeCookie, THEME_CHOICES,
-  type ThemeChoice } from '../theme'
+  type FontChoice, fontChoice, fontCookie, type FontSizeChoice, fontSizeChoice, fontSizeCookie, PRIMARY_FONT_CHOICES,
+  type PrimaryFontChoice, primaryFontChoice, primaryFontCookie, SANS_SERIF_FONT_CHOICES, type SansSerifFontChoice,
+  sansSerifFontChoice, sansSerifFontCookie, THEME_CHOICES, type ThemeChoice } from '../theme'
 
 function profileSuggestionSearch(fields: Record<string, string>, viewerId: number): PostingSuggestionSearch | null {
   if (fields.action !== 'search-hashtags' && fields.action !== 'search-mentions') return null
@@ -305,6 +306,7 @@ export function registerAccountRoutes(app: Hono) {
     const tab = requestedTab === 'font' || requestedTab === 'misc' ? requestedTab : 'theme'
     return page(
       <ChangeAppearance user={user} selected={appearance(c.req.raw)} selectedFont={fontChoice(c.req.raw)}
+        selectedSansSerifFont={sansSerifFontChoice(c.req.raw)} selectedPrimaryFont={primaryFontChoice(c.req.raw)}
         selectedSize={fontSizeChoice(c.req.raw)} selectedPageSize={devicePageSize(c.req.raw, user.id)} tab={tab}
         selectedDensity={deviceDensity(c.req.raw, user.id)} returnPath={returnPath} />,
     )
@@ -335,8 +337,12 @@ export function registerAccountRoutes(app: Hono) {
     }
     if (tab === 'font') {
       const selected = f.font as FontChoice
+      const selectedSansSerif = f.sansSerifFont as SansSerifFontChoice
+      const selectedPrimary = f.primaryFont as PrimaryFontChoice
       const selectedSize = f.fontSize as FontSizeChoice
       if (!FONT_CHOICES.some(font => font.value === selected)
+        || !SANS_SERIF_FONT_CHOICES.some(font => font.value === selectedSansSerif)
+        || !PRIMARY_FONT_CHOICES.includes(selectedPrimary)
         || !FONT_SIZE_CHOICES.some(size => size.value === selectedSize))
       {
         return page(
@@ -347,6 +353,8 @@ export function registerAccountRoutes(app: Hono) {
         )
       }
       const response = redirect('/account/edit/appearance' + query, fontCookie(selected))
+      response.headers.append('set-cookie', sansSerifFontCookie(selectedSansSerif))
+      response.headers.append('set-cookie', primaryFontCookie(selectedPrimary))
       response.headers.append('set-cookie', fontSizeCookie(selectedSize))
       return response
     }

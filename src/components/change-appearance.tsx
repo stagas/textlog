@@ -1,6 +1,7 @@
 import type { User } from '../db'
 import { DENSITY_CHOICES, type DensityChoice, PAGE_SIZE_CHOICES, type PageSizeChoice } from '../device-settings'
 import { ACCENT_CHOICES, type Appearance, FONT_CHOICES, FONT_SIZE_CHOICES, type FontChoice, type FontSizeChoice,
+  PRIMARY_FONT_CHOICES, type PrimaryFontChoice, SANS_SERIF_FONT_CHOICES, type SansSerifFontChoice,
   THEME_CHOICES } from '../theme'
 import { AccountSettingsHeader } from './account-settings-header'
 import { Layout } from './layout'
@@ -8,9 +9,12 @@ import { Layout } from './layout'
 export type AppearanceTab = 'theme' | 'font' | 'misc'
 
 export function ChangeAppearance(
-  { user, selected, selectedFont, selectedSize = 'regular', selectedPageSize = 20, selectedDensity = 'regular',
+  { user, selected, selectedFont, selectedSansSerifFont = 'system-sans', selectedPrimaryFont = 'monospace',
+    selectedSize = 'regular', selectedPageSize = 20, selectedDensity = 'regular',
     tab = 'theme', returnPath }: { user: User; selected: Appearance; selectedFont: FontChoice;
-      selectedSize?: FontSizeChoice; tab?: AppearanceTab; selectedPageSize?: PageSizeChoice;
+      selectedSansSerifFont?: SansSerifFontChoice; selectedPrimaryFont?: PrimaryFontChoice;
+      selectedSize?: FontSizeChoice;
+      tab?: AppearanceTab; selectedPageSize?: PageSizeChoice;
       selectedDensity?: DensityChoice; returnPath?: string },
 ) {
   const fromQuery = returnPath ? `&from=${encodeURIComponent(returnPath)}` : ''
@@ -77,11 +81,37 @@ export function ChangeAppearance(
               <input type="hidden" name="tab" value="font" />
               {returnPath && <input type="hidden" name="from" value={returnPath} />}
               <fieldset>
+                <legend>primary font</legend>
+                <div className="font-size-options">
+                  {PRIMARY_FONT_CHOICES.map(choice => (
+                    <label key={choice} className={`font-size-option primary-font-${choice}`}>
+                      <input type="radio" name="primaryFont" value={choice}
+                        defaultChecked={selectedPrimaryFont === choice} />
+                      <span>textlog</span>
+                      <span>{choice}</span>
+                    </label>
+                  ))}
+                </div>
+              </fieldset>
+              <fieldset>
                 <legend>local monospace fonts</legend>
                 <div className="font-options">
                   {FONT_CHOICES.map(font => (
                     <label key={font.value} className={`font-option font-preview-${font.value}`}>
                       <input type="radio" name="font" value={font.value} defaultChecked={selectedFont === font.value} />
+                      <span className="font-sample">textlog</span>
+                      <span>{font.label}</span>
+                    </label>
+                  ))}
+                </div>
+              </fieldset>
+              <fieldset>
+                <legend>local sans serif fonts</legend>
+                <div className="font-options">
+                  {SANS_SERIF_FONT_CHOICES.map(font => (
+                    <label key={font.value} className={`font-option font-preview-${font.value}`}>
+                      <input type="radio" name="sansSerifFont" value={font.value}
+                        defaultChecked={selectedSansSerifFont === font.value} />
                       <span className="font-sample">textlog</span>
                       <span>{font.label}</span>
                     </label>
@@ -102,7 +132,7 @@ export function ChangeAppearance(
                 </div>
               </fieldset>
               <p className="font-note">
-                Fonts are used from your device. If one is not installed, your system monospace font is shown.
+                Fonts are used from your device. Unavailable faces fall back to your system monospace or sans serif font.
               </p>
               <button className="button">save font →</button>
             </form>

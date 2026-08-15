@@ -53,7 +53,9 @@
   --space-6: 32px;
   --space-7: 48px;
   --space-8: 64px;
-  font: 16px/1.5 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  --font-monospace: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  --font-sans-serif: ui-sans-serif, system-ui, -apple-system, sans-serif;
+  font: 16px/1.5 var(--font-monospace);
   color: var(--ink);
   background: var(--bg);
   -webkit-tap-highlight-color: var(--tap-highlight);
@@ -3365,6 +3367,8 @@ form.report-panel {
 .font-size-regular>span:last-child { font-size: 11px; }
 .font-size-large>span:last-child { font-size: 12px; }
 .font-size-larger>span:last-child { font-size: 13px; }
+.primary-font-monospace { font-family: var(--font-monospace); }
+.primary-font-sans-serif { font-family: var(--font-sans-serif); }
 .misc-options { display: flex; flex-wrap: wrap; gap: var(--space-3); }
 .misc-option { display: grid; min-width: 82px; gap: var(--space-1); padding: var(--space-3); color: var(--muted); font-size: 0.625rem; border: 1px solid var(--soft); cursor: pointer; }
 .misc-option input { position: absolute; opacity: 0; pointer-events: none; }
@@ -3412,6 +3416,27 @@ form.report-panel {
 .font-preview-fira-mono { font-family: "Fira Mono", monospace; }
 .font-preview-jetbrains-mono { font-family: "JetBrains Mono", monospace; }
 .font-preview-hack { font-family: Hack, monospace; }
+.font-preview-system-sans { font-family: ui-sans-serif, system-ui, -apple-system, sans-serif; }
+.font-preview-arial { font-family: Arial, sans-serif; }
+.font-preview-helvetica { font-family: Helvetica, Arial, sans-serif; }
+.font-preview-verdana { font-family: Verdana, sans-serif; }
+.font-preview-tahoma { font-family: Tahoma, sans-serif; }
+.font-preview-trebuchet-ms { font-family: "Trebuchet MS", sans-serif; }
+.font-preview-segoe-ui { font-family: "Segoe UI", sans-serif; }
+.font-preview-calibri { font-family: Calibri, sans-serif; }
+.font-preview-avenir { font-family: Avenir, "Avenir Next", sans-serif; }
+.font-preview-futura { font-family: Futura, sans-serif; }
+.font-preview-gill-sans { font-family: "Gill Sans", sans-serif; }
+.font-preview-frutiger { font-family: Frutiger, sans-serif; }
+.font-preview-noto-sans { font-family: "Noto Sans", sans-serif; }
+.font-preview-open-sans { font-family: "Open Sans", sans-serif; }
+.font-preview-roboto { font-family: Roboto, sans-serif; }
+.font-preview-inter { font-family: Inter, sans-serif; }
+.font-preview-montserrat { font-family: Montserrat, sans-serif; }
+.font-preview-source-sans-pro { font-family: "Source Sans Pro", "Source Sans 3", sans-serif; }
+.font-preview-ubuntu { font-family: Ubuntu, sans-serif; }
+.font-preview-dejavu-sans { font-family: "DejaVu Sans", sans-serif; }
+.font-preview-liberation-sans { font-family: "Liberation Sans", sans-serif; }
 
 @media (max-width: 600px) {
   .theme-options { grid-template-columns: repeat(3, minmax(0, 1fr)); }
@@ -4171,7 +4196,12 @@ form.report-panel {
 }
 
 .post p.ascii-art {
+  font-family: var(--font-monospace);
   line-height: 1.15;
+}
+
+.post code, .post pre {
+  font-family: var(--font-monospace);
 }
 
 .compose-post-preview .post p.ascii-art,

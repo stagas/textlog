@@ -8,12 +8,12 @@ test('embed appearance query parameters select known themes and accents', () => 
   const css = themeStyles(new Request('https://textlog.cc/theme.css?theme=dracula&accent=cyan&font=dejavu'))
   expect(css).toContain('--bg:#282a36')
   expect(css).toContain('--accent:#8be9fd')
-  expect(css).toContain('font-family:"DejaVu Sans Mono", monospace')
+  expect(css).toContain('--font-monospace:"DejaVu Sans Mono", monospace')
 })
 
 test('embed font short names are optional and invalid values fall back safely', () => {
   const invalid = themeStyles(new Request('https://textlog.cc/theme.css?theme=light&font=not-a-font'))
-  expect(invalid).toContain('font-family:ui-monospace, SFMono-Regular, Menlo, Consolas, monospace')
+  expect(invalid).toContain('--font-monospace:ui-monospace, SFMono-Regular, Menlo, Consolas, monospace')
 
   const html = renderToStaticMarkup(React.createElement(Embed, {
     posts: [],
@@ -28,7 +28,7 @@ test('embed font short names are optional and invalid values fall back safely', 
 
 test('embed system font uses the full system name', () => {
   const css = themeStyles(new Request('https://textlog.cc/theme.css?font=system'))
-  expect(css).toContain('font-family:ui-monospace, SFMono-Regular, Menlo, Consolas, monospace')
+  expect(css).toContain('--font-monospace:ui-monospace, SFMono-Regular, Menlo, Consolas, monospace')
 })
 
 test('embed theme can be omitted from the generated stylesheet URL', () => {

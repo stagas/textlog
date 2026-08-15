@@ -1,6 +1,7 @@
 import { expect, test } from 'bun:test'
 import { activeAppearance, appearance, appearanceCookie, fontChoice, fontCookie, fontSizeChoice, fontSizeCookie,
-  themeLogoSvg, themeStyles, versionedAppearance, withAppearance } from './theme'
+  primaryFontChoice, primaryFontCookie, sansSerifFontChoice, sansSerifFontCookie, themeLogoSvg, themeStyles,
+  versionedAppearance, withAppearance } from './theme'
 
 test('appearance reads valid choices and falls back safely', () => {
   expect(appearance(new Request('http://localhost', { headers: { cookie: 'appearance=sepia.amber' } })))
@@ -74,14 +75,34 @@ test('generated system themes emit the complete static light and dark token cont
 test('font preference is validated and emitted by the theme stylesheet', () => {
   const request = new Request('https://textlog.cc', { headers: { cookie: 'font=dejavu-sans-mono' } })
   expect(fontChoice(request)).toBe('dejavu-sans-mono')
-  expect(themeStyles(request)).toContain(':root{font-family:"DejaVu Sans Mono", monospace;font-size:16px}')
+  expect(themeStyles(request)).toContain('--font-monospace:"DejaVu Sans Mono", monospace')
+  expect(themeStyles(request)).toContain('font-family:var(--font-monospace);font-size:16px')
   expect(fontCookie('menlo', 'https://textlog.cc')).toContain('font=menlo')
   expect(fontCookie('menlo', 'https://textlog.cc')).toContain('Secure')
 
   const invalid = new Request('http://localhost', { headers: { cookie: 'font=bad%7Dbody%7Bdisplay:none' } })
   expect(fontChoice(invalid)).toBe('system')
-  expect(themeStyles(invalid)).toContain('font-family:ui-monospace, SFMono-Regular, Menlo, Consolas, monospace')
+  expect(themeStyles(invalid)).toContain('--font-monospace:ui-monospace, SFMono-Regular, Menlo, Consolas, monospace')
   expect(themeStyles(invalid)).not.toContain('display:none')
+})
+
+test('sans serif and primary font preferences are validated independently', () => {
+  const request = new Request('https://textlog.cc', {
+    headers: { cookie: 'font=menlo; sans-serif-font=inter; primary-font=sans-serif' },
+  })
+  expect(sansSerifFontChoice(request)).toBe('inter')
+  expect(primaryFontChoice(request)).toBe('sans-serif')
+  expect(themeStyles(request)).toContain('--font-monospace:Menlo, monospace')
+  expect(themeStyles(request)).toContain('--font-sans-serif:Inter, sans-serif')
+  expect(themeStyles(request)).toContain('font-family:var(--font-sans-serif)')
+  expect(sansSerifFontCookie('inter', 'https://textlog.cc')).toContain('sans-serif-font=inter')
+  expect(primaryFontCookie('sans-serif', 'https://textlog.cc')).toContain('primary-font=sans-serif')
+
+  const invalid = new Request('http://localhost', {
+    headers: { cookie: 'sans-serif-font=invalid; primary-font=invalid' },
+  })
+  expect(sansSerifFontChoice(invalid)).toBe('system-sans')
+  expect(primaryFontChoice(invalid)).toBe('monospace')
 })
 
 test('font size preference is validated and emitted by the theme stylesheet', () => {
