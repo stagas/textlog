@@ -76,7 +76,7 @@ test('font preference is validated and emitted by the theme stylesheet', () => {
   const request = new Request('https://textlog.cc', { headers: { cookie: 'font=dejavu-sans-mono' } })
   expect(fontChoice(request)).toBe('dejavu-sans-mono')
   expect(themeStyles(request)).toContain('--font-monospace:"DejaVu Sans Mono", monospace')
-  expect(themeStyles(request)).toContain('font-family:var(--font-monospace);font-size:16px')
+  expect(themeStyles(request)).toContain('--font-primary:var(--font-monospace);font-family:var(--font-primary);font-size:16px')
   expect(fontCookie('menlo', 'https://textlog.cc')).toContain('font=menlo')
   expect(fontCookie('menlo', 'https://textlog.cc')).toContain('Secure')
 
@@ -94,7 +94,7 @@ test('sans serif and primary font preferences are validated independently', () =
   expect(primaryFontChoice(request)).toBe('sans-serif')
   expect(themeStyles(request)).toContain('--font-monospace:Menlo, monospace')
   expect(themeStyles(request)).toContain('--font-sans-serif:Inter, sans-serif')
-  expect(themeStyles(request)).toContain('font-family:var(--font-sans-serif)')
+  expect(themeStyles(request)).toContain('--font-primary:var(--font-sans-serif)')
   expect(sansSerifFontCookie('inter', 'https://textlog.cc')).toContain('sans-serif-font=inter')
   expect(primaryFontCookie('sans-serif', 'https://textlog.cc')).toContain('primary-font=sans-serif')
 

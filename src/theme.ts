@@ -291,7 +291,7 @@ function rules(name: keyof typeof palettes, accentChoice: AccentChoice) {
     }
   return `:root{color-scheme:${
     dark ? 'dark' : 'light'
-  };--font-monospace:ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;--font-sans-serif:ui-sans-serif, system-ui, -apple-system, sans-serif;--bg:${p.bg};--ink:${p.ink};--muted:${p.muted};--tab-hover:${semantic.tabHover};--soft:${p.soft};--accent:${accent};--accent-dark:${
+  };--font-monospace:ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;--font-sans-serif:ui-sans-serif, system-ui, -apple-system, sans-serif;--font-primary:var(--font-monospace);--bg:${p.bg};--ink:${p.ink};--muted:${p.muted};--tab-hover:${semantic.tabHover};--soft:${p.soft};--accent:${accent};--accent-dark:${
     accentChoice === 'theme' ? p.accentDark : accent
   };--selection-bg:${accent};--selection-ink:${p.bg};--panel:${p.panel};--pagination-hover-bg:${p.tagBg};--link-border:${p.linkBorder};--button-bg:${button.bg};--button-ink:${p.buttonInk};--button-hover-bg:${button.hover};--button-active-bg:${button.active};--button-muted-bg:${mutedButton.bg};--button-muted-hover-bg:${mutedButton.hover};--button-muted-active-bg:${mutedButton.active};--button-disabled-bg:${semantic.disabledBg};--button-disabled-ink:${semantic.disabledInk};--danger-button-bg:${semantic.dangerBg};--danger-button-hover-bg:${semantic.dangerHover};--danger-button-active-bg:${semantic.dangerActive};--danger-link-hover:${semantic.dangerLinkHover};--report-ink:${semantic.reportInk};--report-hover:${semantic.reportHover};--quote-ink:${p.quoteInk};--quote-bg:${p.quoteBg};--error-ink:${p.errorInk};--error-bg:${semantic.errorBg};--success-ink:${semantic.successInk};--success-bg:${semantic.successBg};--tag-bg:${p.tagBg};--api-post-ink:${semantic.apiPostInk};--api-post-bg:${semantic.apiPostBg};--api-patch-ink:${semantic.apiPatchInk};--api-patch-bg:${semantic.apiPatchBg};--api-delete-ink:${semantic.apiDeleteInk};--api-delete-bg:${semantic.apiDeleteBg}}`
 }
@@ -325,9 +325,9 @@ export function themeStyles(request: Request) {
     || SANS_SERIF_FONT_CHOICES[0]
   const primaryFont = requestedFont ? 'monospace' : primaryFontChoice(request)
   const fontSize = FONT_SIZE_CHOICES.find(choice => choice.value === fontSizeChoice(request)) || FONT_SIZE_CHOICES[1]
-  const fontRule = `:root{--font-monospace:${font.family};--font-sans-serif:${sansSerifFont.family};font-family:var(--font-${
+  const fontRule = `:root{--font-monospace:${font.family};--font-sans-serif:${sansSerifFont.family};--font-primary:var(--font-${
     primaryFont
-  });font-size:${fontSize.size}}`
+  });font-family:var(--font-primary);font-size:${fontSize.size}}`
   if (selected.theme === 'system') {
     return `${rules('light', selected.accent)}@media(prefers-color-scheme:dark){${
       rules('dark', selected.accent)
