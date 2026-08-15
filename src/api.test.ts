@@ -95,6 +95,19 @@ describe('public API', () => {
     expect((await request(app, '/api/v1/feeds/latest?cursor=broken')).status).toBe(400)
   })
 
+  test('excludes bot posts from the latest feed', async () => {
+    const { app, database } = fixture()
+    database.run("UPDATE users SET is_bot=1 WHERE id=2")
+
+    const first = await (await request(app, '/api/v1/feeds/latest?limit=1')).json() as any
+    const second = await (await request(app,
+      `/api/v1/feeds/latest?limit=1&cursor=${encodeURIComponent(first.pagination.next_cursor)}`)).json() as any
+
+    expect(first.data.map((post: any) => post.id)).toEqual([3])
+    expect(second.data.map((post: any) => post.id)).toEqual([1])
+    expect(second.pagination.next_cursor).toBeNull()
+  })
+
   test('returns hot posts using the existing activity ranking with cursor pagination', async () => {
     const { app } = fixture()
     const firstResponse = await request(app, '/api/v1/feeds/hot?limit=2')

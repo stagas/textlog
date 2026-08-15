@@ -38,6 +38,7 @@ function apiError(code: string, message: string, status: number, retryAfter?: nu
 }
 
 function collection(c: Context, database: Database, filters: {
+  excludeBots?: boolean
   handle?: string
   parentId?: number
   tag?: string
@@ -306,7 +307,7 @@ export function registerApiRoutes(app: Hono, database: Database = db,
 
   app.get('/api/openapi.json', () => jsonResponse(openApiDocument(), 200, 'public, max-age=3600'))
 
-  app.get('/api/v1/feeds/latest', c => collection(c, database, {}, appUrl))
+  app.get('/api/v1/feeds/latest', c => collection(c, database, { excludeBots: true }, appUrl))
 
   app.get('/api/v1/search', c => {
     const rawQuery = c.req.query('q') || ''
