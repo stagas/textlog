@@ -171,27 +171,9 @@ export function apiReplies(database: Database, origin: string, parentId: number,
   const hasMore = rows.length > options.limit
   const selected = rows.slice(0, options.limit)
   const pageRows = withReplyCounts(database, selected)
-  const selectedById = new Map(selected.map(row => [row.id, row]))
-  const returnedDescendants = new Map(selected.map(row => [row.id, 0]))
-  for (const row of selected) {
-    let parent = row.parent_id === null ? undefined : selectedById.get(row.parent_id)
-    while (parent) {
-      returnedDescendants.set(parent.id, (returnedDescendants.get(parent.id) || 0) + 1)
-      parent = parent.parent_id === null ? undefined : selectedById.get(parent.parent_id)
-    }
-  }
-  const total = (database.query(`WITH RECURSIVE descendants(id,user_id,deleted_at) AS (
-    SELECT id,user_id,deleted_at FROM posts WHERE id=?
-    UNION ALL
-    SELECT p.id,p.user_id,p.deleted_at FROM posts p JOIN descendants ON p.parent_id=descendants.id
-  ) SELECT count(*) count FROM descendants JOIN users u ON u.id=descendants.user_id
-    WHERE descendants.id!=? AND descendants.deleted_at IS NULL AND u.deleted_at IS NULL`)
-    .get(parentId, parentId) as { count: number }).count
   return {
-    data: pageRows.map(row => ({ ...serializePost(row, origin), depth: row.depth,
-      truncated: Math.max(0, row.reply_count - (returnedDescendants.get(row.id) || 0)) })),
+    data: pageRows.map(row => ({ ...serializePost(row, origin), depth: row.depth })),
     pagination: { next_cursor: hasMore ? encodeCursor(pageRows[pageRows.length - 1].id) : null },
-    truncated: Math.max(0, total - selected.length),
   }
 }
 

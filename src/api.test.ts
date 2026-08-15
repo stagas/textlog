@@ -164,7 +164,7 @@ describe('public API', () => {
     expect(post.data.replies).toBeUndefined()
   })
 
-  test('returns reply trees with depth, parent IDs, and truncation metadata', async () => {
+  test('returns reply trees with depth, parent IDs, and aggregate reply counts', async () => {
     const { app, database } = fixture()
     database.run(`INSERT INTO posts(id,user_id,parent_id,body,created_at) VALUES
       (6,1,2,'nested reply','2026-08-03 14:30:00'),
@@ -172,9 +172,9 @@ describe('public API', () => {
 
     const shallow = await (await request(app, '/api/v1/posts/1/replies')).json() as any
     expect(shallow.data.map((item: any) => ({ id: item.id, parent_id: item.parent_id, depth: item.depth,
-      truncated: item.truncated })))
-      .toEqual([{ id: 2, parent_id: 1, depth: 1, truncated: 2 }])
-    expect(shallow.truncated).toBe(2)
+      reply_count: item.reply_count })))
+      .toEqual([{ id: 2, parent_id: 1, depth: 1, reply_count: 2 }])
+    expect(shallow.truncated).toBeUndefined()
 
     const tree = await (await request(app, '/api/v1/posts/1/replies?depth=3')).json() as any
     expect(tree.data.map((item: any) => ({ id: item.id, parent_id: item.parent_id, depth: item.depth })))
@@ -183,15 +183,10 @@ describe('public API', () => {
         { id: 6, parent_id: 2, depth: 2 },
         { id: 2, parent_id: 1, depth: 1 },
       ])
-    expect(tree.truncated).toBe(0)
-    expect(tree.data.every((item: any) => item.truncated === 0)).toBe(true)
-
-    const middle = await (await request(app, '/api/v1/posts/1/replies?depth=2')).json() as any
-    expect(middle.data.find((item: any) => item.id === 2).truncated).toBe(1)
-    expect(middle.data.find((item: any) => item.id === 6).truncated).toBe(1)
+    expect(tree.truncated).toBeUndefined()
+    expect(tree.data.every((item: any) => item.truncated === undefined)).toBe(true)
 
     const limited = await (await request(app, '/api/v1/posts/1/replies?depth=3&limit=2')).json() as any
-    expect(limited.truncated).toBe(1)
     expect(limited.pagination.next_cursor).toBeTruthy()
     expect((await request(app, '/api/v1/posts/1/replies?depth=0')).status).toBe(400)
     expect((await request(app, '/api/v1/posts/1/replies?depth=21')).status).toBe(400)
@@ -216,12 +211,11 @@ describe('public API', () => {
     expect(repliesOperation.parameters.find((parameter: any) => parameter.name === 'depth').schema)
       .toMatchObject({ type: 'integer', minimum: 1, maximum: 20, default: 1 })
     const repliesSchema = repliesOperation.responses['200'].content['application/json'].schema
-    expect(repliesSchema.required).toEqual(['data', 'pagination', 'truncated'])
-    expect(repliesSchema.properties.truncated).toMatchObject({ type: 'integer', minimum: 0 })
+    expect(repliesSchema.required).toEqual(['data', 'pagination'])
+    expect(repliesSchema.properties.truncated).toBeUndefined()
     expect(repliesSchema.properties.data.items.$ref).toBe('#/components/schemas/Reply')
-    expect(spec.components.schemas.Reply.allOf[1].required).toEqual(['depth', 'truncated'])
-    expect(spec.components.schemas.Reply.allOf[1].properties.truncated)
-      .toMatchObject({ type: 'integer', minimum: 0 })
+    expect(spec.components.schemas.Reply.allOf[1].required).toEqual(['depth'])
+    expect(spec.components.schemas.Reply.allOf[1].properties.truncated).toBeUndefined()
     expect(mutation.status).toBe(405)
     expect(mutation.headers.get('allow')).toBe('GET, HEAD, OPTIONS')
     const missing = await request(app, '/api/v1/unknown')

@@ -77,14 +77,12 @@ function openApiDocument() {
   const repliesResponse = { '200': { description: 'Replies up to the requested depth', content: {
     'application/json': { schema: {
       type: 'object',
-      required: ['data', 'pagination', 'truncated'],
+      required: ['data', 'pagination'],
       properties: {
         data: { type: 'array', items: { $ref: '#/components/schemas/Reply' } },
         pagination: { type: 'object', required: ['next_cursor'], properties: {
           next_cursor: { type: ['string', 'null'] },
         } },
-        truncated: { type: 'integer', minimum: 0,
-          description: 'Number of replies omitted because of the depth or page limit.' },
       },
     } },
   } }, '400': jsonResponses['400'], '404': jsonResponses['404'], '429': jsonResponses['429'] }
@@ -125,8 +123,8 @@ function openApiDocument() {
       '/posts/{id}/replies': {
         get: { summary: 'Post replies',
           description: `Returns replies recursively. The optional depth query parameter controls how many levels are
-            returned (1–${API_MAX_REPLY_DEPTH}, default ${API_DEFAULT_REPLY_DEPTH}). Each reply's truncated field counts
-            the descendants omitted from its branch.`,
+            returned (1–${API_MAX_REPLY_DEPTH}, default ${API_DEFAULT_REPLY_DEPTH}). Use each post's aggregate
+            reply_count to determine whether descendants fall outside the response.`,
           parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'integer', minimum: 1 } },
             { name: 'depth', in: 'query', schema: { type: 'integer', minimum: 1, maximum: API_MAX_REPLY_DEPTH,
               default: API_DEFAULT_REPLY_DEPTH } },
@@ -191,11 +189,9 @@ function openApiDocument() {
       schemas: { Post: postSchema, Reply: {
         allOf: [
           { $ref: '#/components/schemas/Post' },
-          { type: 'object', required: ['depth', 'truncated'], properties: {
+          { type: 'object', required: ['depth'], properties: {
             depth: { type: 'integer', minimum: 1,
               description: 'Distance from the post whose replies were requested.' },
-            truncated: { type: 'integer', minimum: 0,
-              description: 'Number of visible descendants beneath this reply that are omitted from the response.' },
           } },
         ],
       } },
