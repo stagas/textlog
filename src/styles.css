@@ -3358,7 +3358,7 @@ form.report-panel {
 .font-option:has(input:focus-visible) { outline: 2px solid var(--accent); outline-offset: 3px; }
 .font-note { max-width: 38.75rem; margin: calc(-1 * var(--space-4)) 0 var(--space-5); color: var(--muted); font-size: 0.625rem; }
 .font-size-options { display: flex; align-items: stretch; flex-wrap: wrap; gap: var(--space-3); }
-.font-size-option { display: grid; min-width: 110px; gap: var(--space-1); padding: var(--space-3); color: var(--muted); border: 1px solid var(--soft); cursor: pointer; }
+.font-size-option { display: grid; align-content: center; min-width: 110px; gap: var(--space-1); padding: var(--space-3); color: var(--muted); border: 1px solid var(--soft); cursor: pointer; }
 .font-size-option input { position: absolute; opacity: 0; pointer-events: none; }
 .font-size-option>span:first-of-type { color: var(--ink); }
 .font-size-option:has(input:checked) { border-color: var(--accent); box-shadow: inset 0 0 0 2px var(--accent); }
@@ -3368,10 +3368,6 @@ form.report-panel {
 .font-size-regular>span:first-of-type { font-size: 16px; }
 .font-size-large>span:first-of-type { font-size: 18px; }
 .font-size-larger>span:first-of-type { font-size: 20px; }
-.font-size-small>span:last-child { font-size: 10px; }
-.font-size-regular>span:last-child { font-size: 11px; }
-.font-size-large>span:last-child { font-size: 12px; }
-.font-size-larger>span:last-child { font-size: 13px; }
 .primary-font-monospace { font-family: var(--font-monospace); }
 .primary-font-sans-serif { font-family: var(--font-sans-serif); }
 .misc-options { display: flex; flex-wrap: wrap; gap: var(--space-3); }

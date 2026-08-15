@@ -1,7 +1,7 @@
 export const THEME_CHOICES = ['system', 'light', 'dark', 'sepia', 'dracula'] as const
 export const ACCENT_CHOICES = ['theme', 'sage', 'purple', 'cyan', 'pink', 'amber', 'blue', 'rust'] as const
 export const FONT_CHOICES = [
-  { value: 'system', label: 'System monospace', family: 'ui-monospace, SFMono-Regular, Menlo, Consolas, monospace' },
+  { value: 'system', label: 'System', family: 'ui-monospace, SFMono-Regular, Menlo, Consolas, monospace' },
   { value: 'sf-mono', label: 'SF Mono', family: '"SF Mono", SFMono-Regular, monospace' },
   { value: 'menlo', label: 'Menlo', family: 'Menlo, monospace' },
   { value: 'monaco', label: 'Monaco', family: 'Monaco, monospace' },
@@ -21,7 +21,7 @@ export const FONT_CHOICES = [
   { value: 'hack', label: 'Hack', family: 'Hack, monospace' },
 ] as const
 export const SANS_SERIF_FONT_CHOICES = [
-  { value: 'system-sans', label: 'System sans serif', family: 'ui-sans-serif, system-ui, -apple-system, sans-serif' },
+  { value: 'system-sans', label: 'System', family: 'ui-sans-serif, system-ui, -apple-system, sans-serif' },
   { value: 'arial', label: 'Arial', family: 'Arial, sans-serif' },
   { value: 'helvetica', label: 'Helvetica', family: 'Helvetica, Arial, sans-serif' },
   { value: 'verdana', label: 'Verdana', family: 'Verdana, sans-serif' },

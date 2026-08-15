@@ -81,58 +81,54 @@ export function ChangeAppearance(
               <input type="hidden" name="tab" value="font" />
               {returnPath && <input type="hidden" name="from" value={returnPath} />}
               <fieldset>
-                <legend>primary font</legend>
-                <div className="font-size-options">
-                  {PRIMARY_FONT_CHOICES.map(choice => (
-                    <label key={choice} className={`font-size-option primary-font-${choice}`}>
-                      <input type="radio" name="primaryFont" value={choice}
-                        defaultChecked={selectedPrimaryFont === choice} />
-                      <span>textlog</span>
-                      <span>{choice}</span>
-                    </label>
-                  ))}
-                </div>
-              </fieldset>
-              <fieldset>
-                <legend>local monospace fonts</legend>
-                <div className="font-options">
-                  {FONT_CHOICES.map(font => (
-                    <label key={font.value} className={`font-option font-preview-${font.value}`}>
-                      <input type="radio" name="font" value={font.value} defaultChecked={selectedFont === font.value} />
-                      <span className="font-sample">textlog</span>
-                      <span>{font.label}</span>
-                    </label>
-                  ))}
-                </div>
-              </fieldset>
-              <fieldset>
-                <legend>local sans serif fonts</legend>
-                <div className="font-options">
-                  {SANS_SERIF_FONT_CHOICES.map(font => (
-                    <label key={font.value} className={`font-option font-preview-${font.value}`}>
-                      <input type="radio" name="sansSerifFont" value={font.value}
-                        defaultChecked={selectedSansSerifFont === font.value} />
-                      <span className="font-sample">textlog</span>
-                      <span>{font.label}</span>
-                    </label>
-                  ))}
-                </div>
-              </fieldset>
-              <fieldset>
                 <legend>font size</legend>
                 <div className="font-size-options">
                   {FONT_SIZE_CHOICES.map(choice => (
                     <label key={choice.value} className={`font-size-option font-size-${choice.value}`}>
                       <input type="radio" name="fontSize" value={choice.value}
                         defaultChecked={selectedSize === choice.value} />
-                      <span>textlog</span>
                       <span>{choice.label}</span>
                     </label>
                   ))}
                 </div>
               </fieldset>
+              <fieldset>
+                <legend>primary font</legend>
+                <div className="font-size-options">
+                  {PRIMARY_FONT_CHOICES.map(choice => (
+                    <label key={choice} className={`font-size-option primary-font-${choice}`}>
+                      <input type="radio" name="primaryFont" value={choice}
+                        defaultChecked={selectedPrimaryFont === choice} />
+                      <span>{choice}</span>
+                    </label>
+                  ))}
+                </div>
+              </fieldset>
+              <fieldset>
+                <legend>monospace fonts</legend>
+                <div className="font-options">
+                  {FONT_CHOICES.map(font => (
+                    <label key={font.value} className={`font-option font-preview-${font.value}`}>
+                      <input type="radio" name="font" value={font.value} defaultChecked={selectedFont === font.value} />
+                      <span className="font-sample">{font.label}</span>
+                    </label>
+                  ))}
+                </div>
+              </fieldset>
+              <fieldset>
+                <legend>sans serif fonts</legend>
+                <div className="font-options">
+                  {SANS_SERIF_FONT_CHOICES.map(font => (
+                    <label key={font.value} className={`font-option font-preview-${font.value}`}>
+                      <input type="radio" name="sansSerifFont" value={font.value}
+                        defaultChecked={selectedSansSerifFont === font.value} />
+                      <span className="font-sample">{font.label}</span>
+                    </label>
+                  ))}
+                </div>
+              </fieldset>
               <p className="font-note">
-                Fonts are used from your device. Unavailable faces fall back to your system monospace or sans serif font.
+                Fonts are used from your device. Unavailable faces fall back to your system&apos;s fonts.
               </p>
               <button className="button">save font →</button>
             </form>
