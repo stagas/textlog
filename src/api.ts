@@ -10,6 +10,7 @@ export const API_MAX_REPLY_DEPTH = 20
 
 type ApiPostRow = {
   id: number
+  top_id: number | null
   body: string
   parent_id: number | null
   created_at: string
@@ -19,6 +20,7 @@ type ApiPostRow = {
 
 export type ApiPost = {
   id: number
+  top_id: number | null
   body: string
   created_at: string
   parent_id: number | null
@@ -66,6 +68,7 @@ export function serializePost(row: ApiPostRow, origin: string): ApiPost {
   const handle = row.handle.toLowerCase()
   return {
     id: row.id,
+    top_id: row.top_id,
     body: row.body,
     created_at: isoTimestamp(row.created_at),
     parent_id: row.parent_id,
@@ -82,11 +85,11 @@ export function serializePost(row: ApiPostRow, origin: string): ApiPost {
   }
 }
 
-const postSelect = `SELECT p.id,p.body,p.parent_id,p.created_at,u.handle,
+const postSelect = `SELECT p.id,p.id top_id,p.body,p.parent_id,p.created_at,u.handle,
   0 reply_count
   FROM posts p JOIN users u ON u.id=p.user_id`
 
-function withReplyCounts<T extends Omit<ApiPostRow, 'reply_count'>>(
+function withReplyCounts<T extends Omit<ApiPostRow, 'reply_count' | 'top_id'>>(
   database: Database,
   rows: T[],
 ): Array<T & { reply_count: number }> {
@@ -105,10 +108,33 @@ function withReplyCounts<T extends Omit<ApiPostRow, 'reply_count'>>(
   return rows.map(row => ({ ...row, reply_count: countById.get(row.id) || 0 }))
 }
 
+function withTopIds<T extends Omit<ApiPostRow, 'top_id'>>(
+  database: Database,
+  rows: T[],
+): Array<T & { top_id: number | null }> {
+  if (!rows.length) return []
+  const placeholders = rows.map(() => '?').join(',')
+  const roots = database.query(`WITH RECURSIVE ancestors(root_id,id,parent_id) AS (
+    SELECT id,id,parent_id FROM posts WHERE id IN (${placeholders})
+    UNION ALL
+    SELECT ancestors.root_id,p.id,p.parent_id FROM posts p JOIN ancestors ON p.id=ancestors.parent_id
+  ) SELECT root_id,id top_id FROM ancestors WHERE parent_id IS NULL`)
+    .all(...rows.map(row => row.id)) as Array<{ root_id: number; top_id: number }>
+  const topIdByPost = new Map(roots.map(row => [row.root_id, row.top_id]))
+  return rows.map(row => {
+    const topId = topIdByPost.get(row.id) || row.id
+    return { ...row, top_id: topId === row.id ? null : topId }
+  })
+}
+
+function enrichApiRows<T extends Omit<ApiPostRow, 'reply_count' | 'top_id'>>(database: Database, rows: T[]) {
+  return withTopIds(database, withReplyCounts(database, rows))
+}
+
 export function apiPost(database: Database, id: number, origin: string) {
   const row = database.query(`${postSelect} WHERE p.id=? AND p.deleted_at IS NULL AND u.deleted_at IS NULL`)
     .get(id) as ApiPostRow | null
-  return row ? serializePost(withReplyCounts(database, [row])[0], origin) : null
+  return row ? serializePost(enrichApiRows(database, [row])[0], origin) : null
 }
 
 export function apiPosts(database: Database, origin: string, options: {
@@ -141,7 +167,7 @@ export function apiPosts(database: Database, origin: string, options: {
   const rows = database.query(`${postSelect} WHERE ${filters.join(' AND ')}
     ORDER BY p.id DESC LIMIT ?`).all(...parameters, options.limit + 1) as ApiPostRow[]
   const hasMore = rows.length > options.limit
-  const pageRows = withReplyCounts(database, rows.slice(0, options.limit))
+  const pageRows = enrichApiRows(database, rows.slice(0, options.limit))
   return {
     data: pageRows.map(row => serializePost(row, origin)),
     pagination: { next_cursor: hasMore ? encodeCursor(pageRows[pageRows.length - 1].id) : null },
@@ -165,12 +191,12 @@ export function apiReplies(database: Database, origin: string, parentId: number,
     SELECT p.id,p.body,p.parent_id,p.created_at,u.handle,thread.depth+1
     FROM posts p JOIN users u ON u.id=p.user_id JOIN thread ON p.parent_id=thread.id
     WHERE thread.depth < ? AND p.deleted_at IS NULL AND u.deleted_at IS NULL
-  ) SELECT id,body,parent_id,created_at,handle,0 reply_count,depth
+  ) SELECT id,id top_id,body,parent_id,created_at,handle,0 reply_count,depth
     FROM thread WHERE depth <= ? ${beforeFilter}
     ORDER BY id DESC LIMIT ?`).all(...parameters) as Array<ApiPostRow & { depth: number }>
   const hasMore = rows.length > options.limit
   const selected = rows.slice(0, options.limit)
-  const pageRows = withReplyCounts(database, selected)
+  const pageRows = enrichApiRows(database, selected)
   return {
     data: pageRows.map(row => ({ ...serializePost(row, origin), depth: row.depth })),
     pagination: { next_cursor: hasMore ? encodeCursor(pageRows[pageRows.length - 1].id) : null },
@@ -182,7 +208,7 @@ export function apiHotPosts(database: Database, origin: string, limit: number, c
   const rows = getHotPosts(database, limit + 1, cursor, asOf, -1, true)
   const hasMore = rows.length > limit
   const selected = rows.slice(0, limit)
-  const pageRows = withReplyCounts(database, selected)
+  const pageRows = enrichApiRows(database, selected)
   return {
     data: pageRows.map(row => serializePost(row, origin)),
     pagination: { next_cursor: hasMore ? encodeHotCursor(hotCursor(rows[limit - 1], asOf)) : null },
@@ -196,7 +222,7 @@ export function apiSearchPosts(database: Database, origin: string, query: string
     ORDER BY bm25(post_search),p.id DESC LIMIT ? OFFSET ?`)
     .all(expression, limit + 1, offset) as ApiPostRow[]
   const hasMore = rows.length > limit
-  const pageRows = withReplyCounts(database, rows.slice(0, limit))
+  const pageRows = enrichApiRows(database, rows.slice(0, limit))
   return {
     data: pageRows.map(row => serializePost(row, origin)),
     pagination: { next_cursor: hasMore ? encodeCursor(offset + limit) : null },

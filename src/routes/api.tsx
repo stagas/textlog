@@ -50,9 +50,12 @@ function collection(c: Context, database: Database, filters: { handle?: string; 
 function openApiDocument() {
   const postSchema = {
     type: 'object',
-    required: ['id', 'body', 'created_at', 'parent_id', 'reply_count', 'tags', 'mentions', 'url', 'api_url', 'author'],
+    required: ['id', 'top_id', 'body', 'created_at', 'parent_id', 'reply_count', 'tags', 'mentions', 'url', 'api_url',
+      'author'],
     properties: {
       id: { type: 'integer' },
+      top_id: { type: ['integer', 'null'],
+        description: 'ID of the top-level post in this thread, or null when this post is already top-level.' },
       body: { type: 'string', maxLength: 280 },
       created_at: { type: 'string', format: 'date-time' },
       parent_id: { type: ['integer', 'null'] },

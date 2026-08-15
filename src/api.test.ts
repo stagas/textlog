@@ -63,7 +63,9 @@ describe('public API', () => {
     expect(response.status).toBe(200)
     expect(response.headers.get('access-control-allow-origin')).toBe('*')
     expect(payload.data.map((post: any) => post.id)).toEqual([3, 2, 1])
+    expect(payload.data.find((post: any) => post.id === 2).top_id).toBe(1)
     expect(payload.data[2]).toMatchObject({
+      top_id: null,
       body: 'hello #textlog @bob',
       created_at: '2026-08-03T10:00:00.000Z',
       reply_count: 1,
@@ -122,12 +124,15 @@ describe('public API', () => {
   test('serves single posts, replies, users, and tags with documented errors', async () => {
     const { app } = fixture()
     const post = await (await request(app, '/api/v1/posts/1')).json() as any
+    const reply = await (await request(app, '/api/v1/posts/2')).json() as any
     const replies = await (await request(app, '/api/v1/posts/1/replies')).json() as any
     const user = await (await request(app, '/api/v1/users/ALICE')).json() as any
     const userPosts = await (await request(app, '/api/v1/users/alice/posts')).json() as any
     const tags = await (await request(app, '/api/v1/tags/textlog/posts')).json() as any
 
     expect(post.data.id).toBe(1)
+    expect(post.data.top_id).toBeNull()
+    expect(reply.data.top_id).toBe(1)
     expect(replies.data.map((item: any) => item.id)).toEqual([2])
     expect(user.data).toMatchObject({ handle: 'alice', bio: 'builder', post_count: 2, follower_count: 1,
       following_count: 0 })
@@ -183,6 +188,7 @@ describe('public API', () => {
         { id: 6, parent_id: 2, depth: 2 },
         { id: 2, parent_id: 1, depth: 1 },
       ])
+    expect(tree.data.every((item: any) => item.top_id === 1)).toBe(true)
     expect(tree.truncated).toBeUndefined()
     expect(tree.data.every((item: any) => item.truncated === undefined)).toBe(true)
 
@@ -216,6 +222,7 @@ describe('public API', () => {
     expect(repliesSchema.properties.data.items.$ref).toBe('#/components/schemas/Reply')
     expect(spec.components.schemas.Reply.allOf[1].required).toEqual(['depth'])
     expect(spec.components.schemas.Reply.allOf[1].properties.truncated).toBeUndefined()
+    expect(spec.components.schemas.Post.required).toContain('top_id')
     expect(mutation.status).toBe(405)
     expect(mutation.headers.get('allow')).toBe('GET, HEAD, OPTIONS')
     const missing = await request(app, '/api/v1/unknown')

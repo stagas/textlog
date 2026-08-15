@@ -33,7 +33,8 @@ const endpoints = [
   ['DELETE', '/posts/:id', 'Delete a post you own. Replies remain and the post becomes a “(deleted)” tombstone.'],
   ['GET', '/posts/:id/replies',
     <>Get replies recursively. Use the optional <code>depth</code> query parameter (1–20, default 1). Each reply is
-      returned with its depth and parent ID; use its aggregate <code>reply_count</code> to detect omitted descendants.</>],
+      returned with its depth, parent ID, and <code>top_id</code>; use its aggregate <code>reply_count</code> to detect
+      omitted descendants. Top-level posts have a null <code>top_id</code>.</>],
   ['POST', '/posts/:id/report', 'Report a post.'],
   ['GET', '/users/:handle', 'Get a public profile and its counts.'],
   ['GET', '/users/:handle/posts', 'Get a user\'s latest posts and replies.'],
