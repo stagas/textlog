@@ -130,6 +130,8 @@ describe('public API', () => {
     const replies = await (await request(app, '/api/v1/posts/1/replies')).json() as any
     const user = await (await request(app, '/api/v1/users/ALICE')).json() as any
     const userPosts = await (await request(app, '/api/v1/users/alice/posts')).json() as any
+    const userNotes = await (await request(app, '/api/v1/users/alice/notes')).json() as any
+    const userReplies = await (await request(app, '/api/v1/users/alice/replies')).json() as any
     const tags = await (await request(app, '/api/v1/tags/textlog/posts')).json() as any
 
     expect(post.data.id).toBe(1)
@@ -139,17 +141,25 @@ describe('public API', () => {
     expect(user.data).toMatchObject({ handle: 'alice', bio: 'builder', post_count: 2, replies_count: 1,
       follower_count: 1, following_count: 0 })
     expect(user.data.email).toBeUndefined()
-    expect(userPosts.data.map((item: any) => item.id)).toEqual([6, 3, 1])
+    expect(userPosts.data.map((item: any) => item.id)).toEqual([3, 1])
+    expect(userNotes).toEqual(userPosts)
+    expect(userReplies.data.map((item: any) => item.id)).toEqual([6])
     expect(tags.data.map((item: any) => item.id)).toEqual([1])
     expect((await request(app, '/api/v1/posts/nope')).status).toBe(400)
     expect((await request(app, '/api/v1/posts/5')).status).toBe(404)
     expect((await request(app, '/api/v1/users/gone')).status).toBe(404)
     const oldProfile = await request(app, '/api/v1/users/oldalice')
     const oldPosts = await request(app, '/api/v1/users/oldalice/posts?limit=5')
+    const oldNotes = await request(app, '/api/v1/users/oldalice/notes?limit=5')
+    const oldReplies = await request(app, '/api/v1/users/oldalice/replies?limit=5')
     expect(oldProfile.status).toBe(308)
     expect(oldProfile.headers.get('location')).toBe('/api/v1/users/Alice')
     expect(oldPosts.status).toBe(308)
     expect(oldPosts.headers.get('location')).toBe('/api/v1/users/Alice/posts?limit=5')
+    expect(oldNotes.status).toBe(308)
+    expect(oldNotes.headers.get('location')).toBe('/api/v1/users/Alice/notes?limit=5')
+    expect(oldReplies.status).toBe(308)
+    expect(oldReplies.headers.get('location')).toBe('/api/v1/users/Alice/replies?limit=5')
   })
 
   test('reports aggregate descendant counts without embedding reply bodies', async () => {
@@ -212,7 +222,11 @@ describe('public API', () => {
     expect(rss.headers.get('content-type')).toBe('application/rss+xml; charset=utf-8')
     expect(rss.headers.get('access-control-allow-origin')).toBe('*')
     expect(spec.openapi).toBe('3.1.0')
-    expect(Object.keys(spec.paths)).toHaveLength(21)
+    expect(Object.keys(spec.paths)).toHaveLength(23)
+    expect(spec.paths['/users/{handle}/posts'].get.deprecated).toBe(true)
+    expect(spec.paths['/users/{handle}/notes'].get.summary).toBe("User's latest notes")
+    expect(spec.paths['/users/{handle}/replies'].get.parameters.map((parameter: any) => parameter.name))
+      .toEqual(['handle', 'limit', 'cursor'])
     expect(spec.paths['/search'].get.security).toEqual([])
     expect(spec.paths['/feeds/latest.{format}'].get.parameters[0].schema.enum).toEqual(['rss', 'atom'])
     const repliesOperation = spec.paths['/posts/{id}/replies'].get

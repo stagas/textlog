@@ -37,7 +37,12 @@ function apiError(code: string, message: string, status: number, retryAfter?: nu
   return response
 }
 
-function collection(c: Context, database: Database, filters: { handle?: string; parentId?: number; tag?: string } = {},
+function collection(c: Context, database: Database, filters: {
+  handle?: string
+  parentId?: number
+  tag?: string
+  topLevelOnly?: boolean
+} = {},
   appUrl?: string | null)
 {
   const parsed = parseCollectionParams(c.req.query('limit'), c.req.query('cursor'))
@@ -144,7 +149,17 @@ function openApiDocument() {
           responses: userResponse },
       },
       '/users/{handle}/posts': {
-        get: { summary: 'User\'s latest posts',
+        get: { summary: 'User\'s latest notes (alias)', deprecated: true,
+          parameters: [{ name: 'handle', in: 'path', required: true, schema: { type: 'string' } },
+            ...collectionParameters], responses: jsonResponses },
+      },
+      '/users/{handle}/notes': {
+        get: { summary: 'User\'s latest notes',
+          parameters: [{ name: 'handle', in: 'path', required: true, schema: { type: 'string' } },
+            ...collectionParameters], responses: jsonResponses },
+      },
+      '/users/{handle}/replies': {
+        get: { summary: 'User\'s latest replies',
           parameters: [{ name: 'handle', in: 'path', required: true, schema: { type: 'string' } },
             ...collectionParameters], responses: jsonResponses },
       },
@@ -386,7 +401,37 @@ export function registerApiRoutes(app: Hono, database: Database = db,
     if (resolved.alias) {
       return c.redirect(`/api/v1/users/${encodeURIComponent(resolved.handle)}/posts${new URL(c.req.url).search}`, 308)
     }
-    return collection(c, database, { handle: resolved.handle }, appUrl)
+    return collection(c, database, { handle: resolved.handle, topLevelOnly: true }, appUrl)
+  })
+
+  app.get('/api/v1/users/:handle/notes', c => {
+    const handle = c.req.param('handle')
+    if (!/^[A-Za-z0-9_]{2,24}$/.test(handle)) return apiError('invalid_handle', 'Handle is invalid', 400)
+    const resolved = resolveHandle(database, handle)
+    if (!resolved) return apiError('not_found', 'User not found', 404)
+    if (resolved.alias) {
+      return c.redirect(`/api/v1/users/${encodeURIComponent(resolved.handle)}/notes${new URL(c.req.url).search}`, 308)
+    }
+    return collection(c, database, { handle: resolved.handle, topLevelOnly: true }, appUrl)
+  })
+
+  app.get('/api/v1/users/:handle/replies', c => {
+    const handle = c.req.param('handle')
+    if (!/^[A-Za-z0-9_]{2,24}$/.test(handle)) return apiError('invalid_handle', 'Handle is invalid', 400)
+    const resolved = resolveHandle(database, handle)
+    if (!resolved) return apiError('not_found', 'User not found', 404)
+    if (resolved.alias) {
+      return c.redirect(`/api/v1/users/${encodeURIComponent(resolved.handle)}/replies${new URL(c.req.url).search}`, 308)
+    }
+    const parsed = parseCollectionParams(c.req.query('limit'), c.req.query('cursor'))
+    if (!parsed) {
+      return apiError('invalid_pagination', 'limit must be 1–100 and cursor must be a valid opaque cursor', 400)
+    }
+    return jsonResponse(apiPosts(database, apiOrigin(c.req.url, appUrl), {
+      ...parsed,
+      handle: resolved.handle,
+      repliesOnly: true,
+    }))
   })
 
   app.get('/api/v1/tags/:tag/posts', c => {
