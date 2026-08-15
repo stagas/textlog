@@ -1,6 +1,6 @@
 import { applyHtmlCachePolicy, blockedCrawlerResponse, canonicalizeCrawlerLinks, crawlerCanonicalRedirect,
-  GLOBAL_REQUEST_BODY_LIMIT, isSameOriginRequest, RequestBodyError, requiresSameOrigin, safeLocalPath, securityHeaders,
-  sessionCookie } from './http'
+  GLOBAL_REQUEST_BODY_LIMIT, isCrawlerRequest, isSameOriginRequest, RequestBodyError, requiresSameOrigin, safeLocalPath,
+  securityHeaders, sessionCookie } from './http'
 
 import { Hono } from 'hono'
 import { bodyLimit } from 'hono/body-limit'
@@ -127,7 +127,7 @@ app.use('*', async (c, next) => {
   finally {
     const url = new URL(c.req.url)
     const path = url.pathname
-    if (shouldLogHttp(path, c.res.status)) {
+    if (shouldLogHttp(path, c.res.status, isCrawlerRequest(c.req.raw))) {
       logHttp(c.req.method, `${path}${url.search}`, c.res.status, performance.now() - started,
         c.req.header(clientIpHeaderName()) || '-', username, c.req.header('user-agent') || '-')
     }

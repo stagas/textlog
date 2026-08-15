@@ -75,6 +75,12 @@ describe('shouldLogHttp', () => {
     expect(shouldLogHttp('/__dev/restart', 500)).toBe(true)
     expect(shouldLogHttp('/health', 200)).toBe(true)
   })
+
+  test('hides crawler activity regardless of response status', () => {
+    expect(shouldLogHttp('/latest', 200, true)).toBe(false)
+    expect(shouldLogHttp('/missing', 404, true)).toBe(false)
+    expect(shouldLogHttp('/latest', 200, false)).toBe(true)
+  })
 })
 
 describe('clientIp', () => {
