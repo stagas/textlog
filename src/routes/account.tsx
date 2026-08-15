@@ -46,6 +46,14 @@ import { ACCENT_CHOICES, type AccentChoice, appearance, appearanceCookie, FONT_C
   type PrimaryFontChoice, primaryFontChoice, primaryFontCookie, SANS_SERIF_FONT_CHOICES, type SansSerifFontChoice,
   sansSerifFontChoice, sansSerifFontCookie, THEME_CHOICES, type ThemeChoice } from '../theme'
 
+function markAppearanceBannerHandled(request: Request, userId: number) {
+  const userAgent = notificationUserAgent(request)
+  if (!userAgent) return
+  db.query(`INSERT INTO appearance_user_agents(user_id,user_agent,status) VALUES(?,?,'seen')
+    ON CONFLICT(user_id,user_agent) DO UPDATE SET status='seen',updated_at=CURRENT_TIMESTAMP`)
+    .run(userId, userAgent)
+}
+
 function profileSuggestionSearch(fields: Record<string, string>, viewerId: number): PostingSuggestionSearch | null {
   if (fields.action !== 'search-hashtags' && fields.action !== 'search-mentions') return null
   const kind = fields.action === 'search-hashtags' ? 'hashtags' : 'mentions'
@@ -333,6 +341,7 @@ export function registerAccountRoutes(app: Hono) {
       const deviceId = notificationDevice(c.req.raw) || token()
       saveDevicePageSize(user.id, deviceId, selectedPageSize)
       saveDeviceDensity(user.id, deviceId, selectedDensity)
+      markAppearanceBannerHandled(c.req.raw, user.id)
       return redirect('/account/edit/appearance' + query, notificationDeviceCookie(deviceId))
     }
     if (tab === 'font') {
@@ -356,6 +365,7 @@ export function registerAccountRoutes(app: Hono) {
       response.headers.append('set-cookie', sansSerifFontCookie(selectedSansSerif))
       response.headers.append('set-cookie', primaryFontCookie(selectedPrimary))
       response.headers.append('set-cookie', fontSizeCookie(selectedSize))
+      markAppearanceBannerHandled(c.req.raw, user.id)
       return response
     }
     const theme = f.theme as ThemeChoice
@@ -368,6 +378,7 @@ export function registerAccountRoutes(app: Hono) {
         400,
       )
     }
+    markAppearanceBannerHandled(c.req.raw, user.id)
     return redirect('/account/edit/appearance' + query, appearanceCookie({ theme, accent }))
   })
 

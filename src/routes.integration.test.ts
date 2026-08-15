@@ -483,14 +483,14 @@ test('consequential account, content, reporting, and admin flows work over HTTP'
   expect(deviceCookie).toBeDefined()
   const enabledDeviceHome = await (await request('/', { cookie: aliceCookie, userAgent: 'alice-browser' })).text()
   expect(enabledDeviceHome).toContain('class="notification-banner"')
-  expect(enabledDeviceHome).toContain('href="/appearance/banner">customize appearance</a>')
+  expect(enabledDeviceHome).toContain('href="/account/edit/appearance">customize appearance</a>')
   const otherBrowserHome = await (await request('/', { cookie: aliceCookie, userAgent: 'alice-other-browser' })).text()
   expect(otherBrowserHome).toContain('class="notification-banner"')
   const legacyDismissedHome = await (await request('/', {
     cookie: `${aliceCookie}; notification_banner_dismissed=${alice.id}`,
     userAgent: 'alice-legacy-browser',
   })).text()
-  expect(legacyDismissedHome).toContain('href="/appearance/banner">customize appearance</a>')
+  expect(legacyDismissedHome).toContain('href="/account/edit/appearance">customize appearance</a>')
 
   const dismissed = await request('/notifications/banner/dismiss', {
     method: 'POST',
@@ -503,7 +503,7 @@ test('consequential account, content, reporting, and admin flows work over HTTP'
     cookie: aliceCookie,
     userAgent: 'alice-dismissed-browser',
   })).text()
-  expect(dismissedHome).toContain('href="/appearance/banner">customize appearance</a>')
+  expect(dismissedHome).toContain('href="/account/edit/appearance">customize appearance</a>')
   const dismissedAppearance = await request('/appearance/banner/dismiss', {
     method: 'POST', cookie: aliceCookie, userAgent: 'alice-dismissed-browser',
   })
@@ -512,11 +512,19 @@ test('consequential account, content, reporting, and admin flows work over HTTP'
     cookie: aliceCookie, userAgent: 'alice-dismissed-browser',
   })).text()
   expect(fullyDismissedHome).not.toContain('class="notification-banner"')
-  const openedAppearance = await request('/appearance/banner', {
+  const openedAppearance = await request('/account/edit/appearance', {
     cookie: aliceCookie, userAgent: 'alice-browser',
   })
-  expect(openedAppearance.status).toBe(303)
-  expect(openedAppearance.headers.get('location')).toBe('/account/edit/appearance')
+  expect(openedAppearance.status).toBe(200)
+  const merelyOpenedDeviceHome = await (await request('/', {
+    cookie: aliceCookie, userAgent: 'alice-browser',
+  })).text()
+  expect(merelyOpenedDeviceHome).toContain('href="/account/edit/appearance">customize appearance</a>')
+  const savedAppearance = await request('/account/edit/appearance', {
+    method: 'POST', cookie: aliceCookie, userAgent: 'alice-browser',
+    form: { tab: 'theme', theme: 'system', accent: 'theme' },
+  })
+  expect(savedAppearance.status).toBe(303)
   const configuredDeviceHome = await (await request('/', {
     cookie: aliceCookie, userAgent: 'alice-browser',
   })).text()

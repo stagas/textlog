@@ -162,13 +162,6 @@ export function registerFeedsRoutes(app: Hono) {
     return redirect(destination)
   })
 
-  app.get('/appearance/banner', c => {
-    const user = currentUser(c.req.raw)
-    if (!user) return redirect('/enter?next=' + encodeURIComponent('/account/edit/appearance'))
-    rememberAppearanceBanner(c.req.raw, user.id, 'seen')
-    return redirect('/account/edit/appearance')
-  })
-
   app.post('/appearance/banner/dismiss', c => {
     const user = currentUser(c.req.raw)
     if (!user) return redirect('/enter')

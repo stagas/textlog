@@ -152,7 +152,7 @@ export function Layout({
         {notificationBanner && (
           <aside className="notification-banner" aria-label="Account setup reminder">
             <a href={notificationBanner === 'appearance'
-              ? '/appearance/banner'
+              ? '/account/edit/appearance'
               : '/account/edit/notifications'}>
               {notificationBanner === 'appearance' ? 'customize appearance' : 'enable notifications'}
             </a>
