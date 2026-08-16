@@ -12,6 +12,11 @@ function appearanceVariant(request: Request) {
 /** Reuse the fully rendered anonymous first page until a database mutation advances the feed generation. */
 export type MaterializedFeedKind = 'latest' | 'hot' | 'for-you' | 'to-me'
 
+/** Discard rendered feed HTML from an earlier server process. */
+export function clearMaterializedFeedPages(cache: Database = cacheDb) {
+  cache.run('DELETE FROM materialized_feed_pages_v2')
+}
+
 export function invalidateMaterializedFeedPages(viewerId: number, kinds: MaterializedFeedKind[],
   cache: Database = cacheDb)
 {

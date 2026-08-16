@@ -13,8 +13,8 @@ import { databaseHealth } from './database-health'
 import { db } from './db'
 import { isDevelopment } from './environment'
 import { clientIp, logError, logHttp, logReady, shouldLogHttp } from './log'
-import { startLinkPreviewBackfill } from './link-preview-backfill'
 import { startMaintenance } from './maintenance'
+import { clearMaterializedFeedPages } from './materialized-feed-pages'
 import { renderDefaultOg } from './og'
 import { startPublicArchive } from './public-archive'
 import { ClientErrorRateLimiter, HOURLY_REQUEST_BLOCK_SECONDS, HOURLY_REQUEST_RATE_LIMIT,
@@ -44,6 +44,7 @@ const devReloadEnabled = Bun.env.DEV_RELOAD === 'true'
 const publicArchivePath = Bun.env.PUBLIC_ARCHIVE_PATH || 'public/dump.zip'
 const bootId = crypto.randomUUID()
 configureDevReload(devReloadEnabled ? bootId : undefined)
+clearMaterializedFeedPages()
 const app = new Hono()
 app.use('*', (c, next) => withAppearance(c.req.raw, next))
 const stylesPath = new URL('./styles.css', import.meta.url).pathname
@@ -82,10 +83,6 @@ function requestRateLimitResponse(request: Request, retryAfter: number) {
     : rateLimitedResponse(retryAfter)
 }
 startMaintenance(db, visitorBuffer, error => logError('database maintenance failed', error))
-if (Bun.env.NODE_ENV === 'production') {
-  startLinkPreviewBackfill(db, { directImagesOnly: true },
-    error => logError('link preview backfill failed', error))
-}
 if (Bun.env.NODE_ENV === 'production') {
   startAutomatedBackups(db, {
     directory: Bun.env.DATABASE_BACKUP_DIR || 'storage/backups',

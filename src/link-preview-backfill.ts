@@ -51,12 +51,3 @@ export async function runLinkPreviewBackfill(database: Database, options: {
   log(`link preview backfill complete fetched=${fetched} saved=${saved}`)
   return { pending: pending.length, fetched, saved }
 }
-
-let started = false
-
-export function startLinkPreviewBackfill(database: Database, options: { directImagesOnly?: boolean } = {},
-  onError: (error: unknown) => void = console.error) {
-  if (started) return
-  started = true
-  void runLinkPreviewBackfill(database, options).catch(onError)
-}
