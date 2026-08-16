@@ -143,6 +143,7 @@ export function clearSessionCookie(appUrl: string | undefined = Bun.env.APP_URL)
 
 const NOTIFICATION_DEVICE_COOKIE = 'notification_device'
 const NOTIFICATION_BANNER_COOKIE = 'notification_banner_dismissed'
+const DONATION_BANNER_COOKIE = 'donation_banner_dismissed'
 
 function cookieValue(request: Request, name: string) {
   const escaped = name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
@@ -166,6 +167,16 @@ export function notificationUserAgent(request: Request) {
 
 export function notificationBannerDismissed(request: Request, userId: number) {
   return cookieValue(request, NOTIFICATION_BANNER_COOKIE) === String(userId)
+}
+
+export function donationBannerDismissed(request: Request) {
+  return cookieValue(request, DONATION_BANNER_COOKIE) === '1'
+}
+
+export function donationBannerDismissedCookie(appUrl: string | undefined = Bun.env.APP_URL) {
+  return `${DONATION_BANNER_COOKIE}=1; Max-Age=${5 * 365 * 24 * 60 * 60}; HttpOnly; Path=/; SameSite=Lax${
+    secureCookie(appUrl)
+  }`
 }
 
 const publicHtmlPaths = new Set([

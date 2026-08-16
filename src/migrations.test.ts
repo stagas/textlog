@@ -95,6 +95,8 @@ describe('database migrations', () => {
       .filter(column => column.pk).map(column => column.name)).toEqual(['endpoint', 'user_id'])
     expect(database.query(`SELECT count(*) count FROM sqlite_master
       WHERE type='table' AND name='notification_improvement_user_agents'`).get()).toEqual({ count: 1 })
+    expect(database.query(`SELECT count(*) count FROM sqlite_master
+      WHERE type='table' AND name='donation_banner_dismissals'`).get()).toEqual({ count: 1 })
     const deviceSettingColumns = (database.query('PRAGMA table_info(device_settings)').all() as { name: string }[])
       .map(column => column.name)
     expect(deviceSettingColumns).toContain('page_size')

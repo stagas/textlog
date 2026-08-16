@@ -178,14 +178,18 @@ test('stats are public without exposing admin operations', async () => {
   expect(html).not.toContain('recent admin actions')
 })
 
-test('notification banner is hidden from logged-out visitors', async () => {
+test('only the donation banner is shown to logged-out visitors', async () => {
   const home = await request('/')
   expect(home.status).toBe(303)
   expect(home.headers.get('location')).toBe('/hot')
   for (const path of ['/hot', '/latest']) {
     const response = await request(path)
     expect(response.status).toBe(200)
-    expect(await response.text()).not.toContain('class="notification-banner"')
+    const html = await response.text()
+    expect(html).toContain('class="notification-banner"')
+    expect(html).toContain('donate to support us')
+    expect(html).not.toContain('enable notifications')
+    expect(html).not.toContain('customize appearance')
   }
 })
 
@@ -449,6 +453,19 @@ test('account security creates one-time, revocable API keys', async () => {
 })
 
 test('consequential account, content, reporting, and admin flows work over HTTP', async () => {
+  const guestHot = await (await request('/hot')).text()
+  expect(guestHot).toContain('href="/donation/banner/accept"')
+  expect(guestHot).toContain('❤️ donate to support us')
+  expect(guestHot).toContain('will donate later')
+  const guestDonationAcceptance = await request('/donation/banner/accept')
+  expect(guestDonationAcceptance.status).toBe(303)
+  expect(guestDonationAcceptance.headers.get('location')).toBe('https://buymeacoffee.com/stagas')
+  const guestDonationCookie = guestDonationAcceptance.headers.get('set-cookie')
+    ?.match(/donation_banner_dismissed=1/)?.[0]
+  expect(guestDonationCookie).toBeDefined()
+  expect(await (await request('/hot', { cookie: guestDonationCookie })).text())
+    .not.toContain('donate to support us')
+
   let aliceCookie = await signup('alice', 'alice@example.com', 'unused')
   const alice = database.query('SELECT id,email_verified_at FROM users WHERE handle=?')
     .get('alice') as { id: number; email_verified_at: string | null }
@@ -549,7 +566,18 @@ test('consequential account, content, reporting, and admin flows work over HTTP'
   const fullyDismissedHome = await (await request('/for-you', {
     cookie: aliceCookie, userAgent: 'alice-dismissed-browser',
   })).text()
-  expect(fullyDismissedHome).not.toContain('class="notification-banner"')
+  expect(fullyDismissedHome).toContain('donate to support us')
+  const acceptedDonation = await request('/donation/banner/accept', {
+    cookie: aliceCookie, userAgent: 'alice-dismissed-browser',
+  })
+  expect(acceptedDonation.status).toBe(303)
+  expect(acceptedDonation.headers.get('location')).toBe('https://buymeacoffee.com/stagas')
+  expect(acceptedDonation.headers.get('set-cookie')).toBeNull()
+  expect(database.query('SELECT 1 FROM donation_banner_dismissals WHERE user_id=?').get(alice.id)).toBeDefined()
+  const donationDismissedHome = await (await request('/for-you', {
+    cookie: aliceCookie, userAgent: 'alice-dismissed-browser',
+  })).text()
+  expect(donationDismissedHome).not.toContain('class="notification-banner"')
   const openedAppearance = await request('/account/edit/appearance', {
     cookie: aliceCookie, userAgent: 'alice-browser',
   })

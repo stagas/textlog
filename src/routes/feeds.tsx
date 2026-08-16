@@ -16,16 +16,19 @@ import { markAllForYouRead } from '../for-you-state'
 import { decodeHotCursor } from '../hot'
 import { materializedFeedPage } from '../materialized-feed-pages'
 import {
+  donationBannerDismissed,
+  donationBannerDismissedCookie,
   feedPreference,
   notificationBannerDismissed,
   notificationUserAgent,
   safeRefererPath,
 } from '../http'
+import { instance } from '../../instance.config'
 import { decodePostCursor } from '../pagination'
 import { currentUser } from '../utils'
 
 function showNotificationBanner(request: Request, user: ReturnType<typeof currentUser>) {
-  if (!user) return false
+  if (!user) return instance.links.donate && !donationBannerDismissed(request) ? 'donate' : false
   const userAgent = notificationUserAgent(request)
   if (!userAgent) return Math.random() < 0.5 ? 'notifications' : 'appearance'
   const notificationsEnabled = Boolean(db.query(
@@ -41,7 +44,12 @@ function showNotificationBanner(request: Request, user: ReturnType<typeof curren
   const appearanceHandled = Boolean(db.query(
     'SELECT 1 FROM appearance_user_agents WHERE user_id=? AND user_agent=? LIMIT 1',
   ).get(user.id, userAgent))
-  if (notificationsHandled && appearanceHandled) return false
+  if (notificationsHandled && appearanceHandled) {
+    const donationDismissed = Boolean(db.query(
+      'SELECT 1 FROM donation_banner_dismissals WHERE user_id=? LIMIT 1',
+    ).get(user.id))
+    return instance.links.donate && !donationDismissed ? 'donate' : false
+  }
   if (notificationsHandled) return 'appearance'
   if (appearanceHandled) return 'notifications'
   return Math.random() < 0.5 ? 'notifications' : 'appearance'
@@ -53,6 +61,11 @@ function rememberAppearanceBanner(request: Request, userId: number, status: 'see
   db.query(`INSERT INTO appearance_user_agents(user_id,user_agent,status) VALUES(?,?,?)
     ON CONFLICT(user_id,user_agent) DO UPDATE SET status=excluded.status,updated_at=CURRENT_TIMESTAMP`)
     .run(userId, userAgent, status)
+}
+
+function rememberDonationBanner(userId: number) {
+  db.query(`INSERT INTO donation_banner_dismissals(user_id) VALUES(?)
+    ON CONFLICT(user_id) DO UPDATE SET dismissed_at=CURRENT_TIMESTAMP`).run(userId)
 }
 
 export function registerFeedsRoutes(app: Hono) {
@@ -171,6 +184,24 @@ export function registerFeedsRoutes(app: Hono) {
     if (!user) return redirect('/enter')
     rememberAppearanceBanner(c.req.raw, user.id, 'dismissed')
     return redirect(safeRefererPath(c.req.header('referer'), c.req.url))
+  })
+
+  app.get('/donation/banner/accept', c => {
+    if (!instance.links.donate) return redirect('/')
+    const user = currentUser(c.req.raw)
+    if (user) {
+      rememberDonationBanner(user.id)
+      return redirect(instance.links.donate)
+    }
+    return redirect(instance.links.donate, donationBannerDismissedCookie())
+  })
+
+  app.post('/donation/banner/dismiss', c => {
+    const user = currentUser(c.req.raw)
+    const destination = safeRefererPath(c.req.header('referer'), c.req.url)
+    if (!user) return redirect(destination, donationBannerDismissedCookie())
+    rememberDonationBanner(user.id)
+    return redirect(destination)
   })
 
   app.get('/activity', c => {

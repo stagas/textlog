@@ -1078,6 +1078,15 @@ export const migrations: Migration[] = [
       for (let index = 0; index < legacy.length; index++) update.run(zones[index], legacy[index])
     },
   },
+  {
+    version: 84,
+    name: 'donation_banner_dismissals',
+    up(database) {
+      database.run(`CREATE TABLE IF NOT EXISTS donation_banner_dismissals (
+        user_id INTEGER PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
+        dismissed_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP);`)
+    },
+  },
 ]
 
 export const latestMigrationVersion = migrations.at(-1)!.version

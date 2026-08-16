@@ -30,7 +30,7 @@ export function Layout({
     imageAlt?: string }
   pageUrl?: string
   feeds?: { title: string; rss: string; atom: string }
-  notificationBanner?: false | 'notifications' | 'appearance' | 'notification-update'
+  notificationBanner?: false | 'notifications' | 'appearance' | 'notification-update' | 'donate'
   children: React.ReactNode
 }) {
   const selectedAppearance = activeAppearance()
@@ -152,26 +152,31 @@ export function Layout({
         {notificationBanner && (
           <aside className="notification-banner" aria-label={notificationBanner === 'notification-update'
             ? 'Notification update'
-            : 'Account setup reminder'}
+            : notificationBanner === 'donate' ? 'Support us' : 'Account setup reminder'}
           >
-            <a href={notificationBanner === 'appearance'
+            <a href={notificationBanner === 'donate' ? '/donation/banner/accept' : notificationBanner === 'appearance'
               ? '/account/edit/appearance'
               : '/account/edit/notifications'}
+              {...notificationBanner === 'donate' ? { target: '_blank', rel: 'noopener noreferrer' } : {}}
             >
-              {notificationBanner === 'appearance'
+              {notificationBanner === 'donate'
+                ? '❤️ donate to support us'
+                : notificationBanner === 'appearance'
                 ? 'customize appearance'
                 : notificationBanner === 'notification-update'
                 ? 'check the improved notifications'
                 : 'enable notifications'}
             </a>
             <span aria-hidden="true">·</span>
-            <form method="post" action={notificationBanner === 'appearance'
+            <form method="post" action={notificationBanner === 'donate'
+              ? '/donation/banner/dismiss'
+              : notificationBanner === 'appearance'
               ? '/appearance/banner/dismiss'
               : notificationBanner === 'notification-update'
               ? '/notifications/improvements/dismiss'
               : '/notifications/banner/dismiss'}
             >
-              <button className="quiet">dismiss</button>
+              <button className="quiet">{notificationBanner === 'donate' ? 'will donate later' : 'dismiss'}</button>
             </form>
           </aside>
         )}
