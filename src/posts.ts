@@ -6,6 +6,7 @@ import { recordHotActivity } from './hot'
 import { insertRateLimitedPost } from './post-rate-limit'
 import type { LinkPreview, ParentPost, PostView, UserProfileStats } from './types'
 import { getImageUrl, isImageKey } from './image-storage'
+import { decodeHtmlEntities } from './link-preview'
 
 export function visibleHashtagCounts(database: Database, bodies: string[], viewerId = -1) {
   const tags = [...new Set(bodies.flatMap(extractHashtags))]
@@ -137,8 +138,9 @@ export function enrichPosts(database: Database, posts: PostView[], viewerId = -1
   for (const row of previewRows) {
     const previews = previewsByPost.get(row.post_id) || {}
     previews[row.url] = { imageUrl: isImageKey(row.image_url) ? getImageUrl(row.image_url) : row.image_url,
-      title: row.title || undefined,
-      description: row.description || undefined, siteName: row.site_name || undefined,
+      title: row.title ? decodeHtmlEntities(row.title) : undefined,
+      description: row.description ? decodeHtmlEntities(row.description) : undefined,
+      siteName: row.site_name ? decodeHtmlEntities(row.site_name) : undefined,
       imageWidth: row.image_width || undefined, imageHeight: row.image_height || undefined }
     previewsByPost.set(row.post_id, previews)
   }

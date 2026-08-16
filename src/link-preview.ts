@@ -81,10 +81,26 @@ function attribute(tag: string, name: string) {
   return match?.[1] ?? match?.[2] ?? match?.[3]
 }
 
-function decodeEntities(value: string) {
-  return value.replace(/&(?:amp|quot|apos|lt|gt|#39|#x27);/gi, entity => ({
-    '&amp;': '&', '&quot;': '"', '&apos;': "'", '&lt;': '<', '&gt;': '>', '&#39;': "'", '&#x27;': "'",
-  })[entity.toLowerCase()] || entity)
+export function decodeHtmlEntities(value: string) {
+  const decode = (text: string) => text.replace(/&(?:amp|quot|apos|lt|gt|#(\d+)|#x([\da-f]+));/gi,
+    (entity, decimal: string | undefined, hexadecimal: string | undefined) => {
+      if (decimal || hexadecimal) {
+        const codePoint = Number.parseInt(decimal || hexadecimal!, decimal ? 10 : 16)
+        return codePoint > 0 && codePoint <= 0x10ffff && !(codePoint >= 0xd800 && codePoint <= 0xdfff)
+          ? String.fromCodePoint(codePoint)
+          : entity
+      }
+      return ({ '&amp;': '&', '&quot;': '"', '&apos;': "'", '&lt;': '<', '&gt;': '>' } as Record<string, string>)[
+        entity.toLowerCase()
+      ] || entity
+    })
+  let decoded = value
+  for (let depth = 0; depth < 4; depth++) {
+    const next = decode(decoded)
+    if (next === decoded) break
+    decoded = next
+  }
+  return decoded
 }
 
 export function openGraphMetadata(html: string, pageUrl: string) {
@@ -96,7 +112,7 @@ export function openGraphMetadata(html: string, pageUrl: string) {
       .test(property || '')) {
       continue
     }
-    metadata[property!.toLowerCase()] ??= decodeEntities(content).replace(/\s+/g, ' ').trim()
+    metadata[property!.toLowerCase()] ??= decodeHtmlEntities(content).replace(/\s+/g, ' ').trim()
   }
   const rawImage = metadata['og:image'] || metadata['og:image:url'] || metadata['og:image:secure_url']
   if (!rawImage) return null

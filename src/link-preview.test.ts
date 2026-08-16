@@ -37,6 +37,15 @@ describe('link previews', () => {
     })
   })
 
+  test('decodes numeric and double-escaped entities in card copy', () => {
+    expect(openGraphMetadata(`<meta property="og:title" content="London&amp;#8217;s forgotten property">
+      <meta property="og:description" content="Research &#x2014; history">
+      <meta property="og:image" content="https://example.com/card.jpg">`, 'https://example.com/')).toMatchObject({
+      title: 'London’s forgotten property',
+      description: 'Research — history',
+    })
+  })
+
   test('builds local post previews without fetching localhost', async () => {
     const previous = Bun.env.APP_URL
     Bun.env.APP_URL = 'http://localhost:3000'
