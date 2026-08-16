@@ -173,6 +173,7 @@ test('stats are public without exposing admin operations', async () => {
   expect(html).toContain('<span>users</span>')
   expect(html).not.toContain('<span>suspended</span>')
   expect(html).not.toContain('<span>users online · 30m</span>')
+  expect(html).not.toContain('<span>anonymous online · 30m</span>')
   expect(html).not.toContain('admin dashboard')
   expect(html).not.toContain('illegal activity reports')
   expect(html).not.toContain('recent admin actions')

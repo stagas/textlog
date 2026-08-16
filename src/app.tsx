@@ -126,7 +126,7 @@ app.use('*', async (c, next) => {
   await next()
   if (c.req.method !== 'GET' || c.res.status >= 400 || !c.res.headers.get('content-type')?.includes('text/html')) return
   try {
-    visitorBuffer.record(c.req.header(clientIpHeaderName()) || '-')
+    visitorBuffer.record(c.req.header(clientIpHeaderName()) || '-', new Date(), !currentUser(c.req.raw))
   }
   catch (error) {
     logError('visitor buffer flush failed', error)

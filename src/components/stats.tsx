@@ -6,6 +6,7 @@ import { Layout } from './layout'
 const labels: [keyof DashboardStats, string][] = [
   ['users', 'users'],
   ['usersOnline', 'users online · 30m'],
+  ['anonymousOnline', 'anonymous online · 30m'],
   ['suspendedUsers', 'suspended'],
   ['activePosts', 'active posts'],
   ['replies', 'replies'],
@@ -23,7 +24,7 @@ const labels: [keyof DashboardStats, string][] = [
 
 export function StatsGrid({ stats, publicOnly = false }: { stats: DashboardStats; publicOnly?: boolean }) {
   const visibleLabels = publicOnly
-    ? labels.filter(([key]) => !['suspendedUsers', 'usersOnline'].includes(key))
+    ? labels.filter(([key]) => !['suspendedUsers', 'usersOnline', 'anonymousOnline'].includes(key))
     : labels
   return (
     <section className="admin-stats" aria-label="Application statistics">

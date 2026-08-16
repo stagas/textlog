@@ -81,6 +81,7 @@ export type ApiKeyView = { id: number; name: string; created_at: number; expires
 export type DashboardStats = {
   users: number
   usersOnline: number
+  anonymousOnline: number
   suspendedUsers: number
   activePosts: number
   replies: number

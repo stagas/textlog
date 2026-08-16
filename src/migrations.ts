@@ -1109,6 +1109,14 @@ export const migrations: Migration[] = [
         name TEXT PRIMARY KEY,status TEXT NOT NULL,updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP);`)
     },
   },
+  {
+    version: 87,
+    name: 'anonymous_visitor_activity',
+    up(database) {
+      addColumn(database, 'daily_visitors', 'anonymous_last_seen_at', 'INTEGER')
+      database.run('CREATE INDEX IF NOT EXISTS daily_visitors_anonymous_last_seen ON daily_visitors(anonymous_last_seen_at)')
+    },
+  },
 ]
 
 export const latestMigrationVersion = migrations.at(-1)!.version

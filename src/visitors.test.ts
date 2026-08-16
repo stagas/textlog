@@ -1,12 +1,13 @@
 import { Database } from 'bun:sqlite'
 import { describe, expect, test } from 'bun:test'
-import { VisitorBuffer, visitorHash, visitorStats } from './visitors'
+import { anonymousOnlineCount, VisitorBuffer, visitorHash, visitorStats } from './visitors'
 
 function testDatabase() {
   const database = new Database(':memory:')
   database.run(`CREATE TABLE daily_visitors (
     day TEXT NOT NULL,
     visitor_hash TEXT NOT NULL,
+    anonymous_last_seen_at INTEGER,
     PRIMARY KEY(day,visitor_hash)
   )`)
   return database
@@ -25,6 +26,7 @@ describe('visitor analytics', () => {
     expect(database.query('SELECT * FROM daily_visitors').all()).toEqual([{
       day: '2026-08-04',
       visitor_hash: visitorHash('203.0.113.4', visitedAt),
+      anonymous_last_seen_at: new Date('2026-08-04T23:00:00Z').getTime(),
     }])
     expect(visitorHash('203.0.113.4', visitedAt)).not.toContain('203.0.113.4')
   })
@@ -51,6 +53,18 @@ describe('visitor analytics', () => {
       (date('now','-1 day'),'yesterday-2')`)
 
     expect(visitorStats(database)).toEqual({ visitorsToday: 1, visitorsYesterday: 2, visitors7d: 3 })
+  })
+
+  test('counts only anonymous visitors seen in the rolling online window', () => {
+    const database = testDatabase()
+    const now = new Date('2026-08-04T12:00:00Z')
+    const buffer = new VisitorBuffer(database)
+    buffer.record('203.0.113.4', new Date(now.getTime() - 10 * 60 * 1000), true)
+    buffer.record('203.0.113.5', new Date(now.getTime() - 31 * 60 * 1000), true)
+    buffer.record('203.0.113.6', now, false)
+    buffer.flush()
+
+    expect(anonymousOnlineCount(database, now.getTime())).toBe(1)
   })
 
   test('flushes in bounded batches', () => {

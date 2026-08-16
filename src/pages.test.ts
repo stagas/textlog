@@ -327,7 +327,8 @@ test('admin metrics use locale-aware number formatting', () => {
     user: { id: 1, handle: 'admin', email: 'gstagas@gmail.com', bio: '' },
     stats: {
       users: 1234567,
-      usersOnline: 0,
+      usersOnline: 12,
+      anonymousOnline: 34,
       suspendedUsers: 0,
       activePosts: 0,
       replies: 0,
@@ -351,6 +352,8 @@ test('admin metrics use locale-aware number formatting', () => {
   }))
 
   expect(html).toContain(`<strong>${(1234567).toLocaleString()}</strong><span>users</span>`)
+  expect(html).toContain('<strong>12</strong><span>users online · 30m</span>')
+  expect(html).toContain('<strong>34</strong><span>anonymous online · 30m</span>')
   expect(html).toContain('class="account-settings-heading admin-header"')
   expect(html).toContain('class="profile-edit-link" href="/admin/email">send email</a>')
 })

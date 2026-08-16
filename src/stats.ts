@@ -1,7 +1,7 @@
 import type { Database } from 'bun:sqlite'
 import { onlineUserCount } from './sessions'
 import type { DashboardStats } from './types'
-import { visitorStats } from './visitors'
+import { anonymousOnlineCount, visitorStats } from './visitors'
 
 export function dashboardStats(database: Database): DashboardStats {
   const stats = database.query(`SELECT
@@ -31,8 +31,10 @@ export function dashboardStats(database: Database): DashboardStats {
     (SELECT count(*) FROM posts WHERE deleted_at IS NULL AND created_at>=datetime('now','-7 days')) posts7d`)
 
   return {
-    ...(stats.get() as Omit<DashboardStats, 'visitorsToday' | 'visitorsYesterday' | 'visitors7d' | 'usersOnline'>),
+    ...(stats.get() as Omit<DashboardStats,
+      'visitorsToday' | 'visitorsYesterday' | 'visitors7d' | 'usersOnline' | 'anonymousOnline'>),
     usersOnline: onlineUserCount(database),
+    anonymousOnline: anonymousOnlineCount(database),
     ...visitorStats(database),
   }
 }
