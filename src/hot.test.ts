@@ -113,7 +113,8 @@ describe('hot feed ranking', () => {
         ? Math.min(0.3, Math.max(0.235, 0.04 * Math.pow(2, (Math.min(replies, 15) - 4) / 1.5))
           + 0.02 * Math.pow(0.5, 40 / 24) + Math.max(0, replies - 4) * 0.001)
         : 0
-      expect(ranked.hot_score).toBeCloseTo((replies > 1 ? 50 : 0) + Math.max(decayedScore, reserve))
+      expect(ranked.hot_score).toBeCloseTo((replies > 1 ? 50 : 0) + (replies >= 4 ? 16 : 0)
+        + Math.max(decayedScore, reserve))
     }
   })
 
@@ -194,6 +195,17 @@ describe('hot feed ranking', () => {
       score_updated_at='2026-08-03 00:00:00',latest_activity_at='2026-08-03 00:00:00' WHERE post_id=2`)
 
     expect(getHotPosts(database, 20, null, asOf).map(result => result.id)).toEqual([1, 2])
+  })
+
+  test('places recently quiet mature discussions low in hot', () => {
+    post(1, '2026-07-20 12:00:00')
+    database.run(`UPDATE post_hot SET score=0.01,reply_count=4,activity_count=4,
+      score_updated_at='2026-08-01 18:00:00',latest_activity_at='2026-08-01 18:00:00' WHERE post_id=1`)
+
+    const result = getHotPosts(database, 20, null, asOf)[0]
+    expect(result.id).toBe(1)
+    expect(result.hot_score).toBeGreaterThan(16)
+    expect(result.hot_score).toBeLessThan(17)
   })
 
   test('boosts posts during their first day when reply activity is identical', () => {
@@ -311,6 +323,24 @@ describe('hot feed ranking', () => {
     postBy(3, 3, '2026-08-01 11:00:00', 2)
     database.run(`UPDATE post_hot SET score=4,reply_count=4,activity_count=4,
       score_updated_at='2026-08-02 11:00:00',latest_activity_at='2026-08-02 11:00:00'
+      WHERE post_id IN (1,2,3)`)
+
+    const results = getHotPosts(database, 20, null, asOf)
+    const root = results.find(result => result.id === 1)!
+    const direct = results.find(result => result.id === 2)!
+    const nested = results.find(result => result.id === 3)!
+    expect(direct.hot_score).toBeCloseTo(root.hot_score * 0.1)
+    expect(nested.hot_score).toBeCloseTo(direct.hot_score * 0.6)
+  })
+
+  test('applies reply depth penalties to every freshness boost', () => {
+    database.run(`INSERT INTO users(id,handle) VALUES(2,'reply-author');
+      INSERT INTO users(id,handle) VALUES(3,'nested-author');`)
+    post(1, '2026-08-03 12:00:00')
+    postBy(2, 2, '2026-08-03 12:00:00', 1)
+    postBy(3, 3, '2026-08-03 12:00:00', 2)
+    database.run(`UPDATE post_hot SET score=4,reply_count=2,activity_count=2,
+      score_updated_at='2026-08-03 12:00:00',latest_activity_at='2026-08-03 12:00:00'
       WHERE post_id IN (1,2,3)`)
 
     const results = getHotPosts(database, 20, null, asOf)

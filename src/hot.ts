@@ -26,7 +26,7 @@ export type HotCursor = {
   direction: 'next' | 'previous'
 }
 
-export const hotRankingVersion = 63
+export const hotRankingVersion = 65
 const cursorVersion = hotRankingVersion
 const activityHalfLifeHours = 6
 const postWeight = 0
@@ -66,6 +66,8 @@ const recentPostTierBonus = 100
 const yesterdayPostHours = 48
 const yesterdayPostTierBonus = 50
 const recentReplyActivityBoost = 300
+const matureDiscussionLowTierBonus = 16
+const matureDiscussionLowTierHours = 48
 
 function hasHotTable(database: Database) {
   return Boolean(database.query('SELECT 1 FROM sqlite_master WHERE type=\'table\' AND name=\'post_hot\'').get())
@@ -346,7 +348,10 @@ export function getHotPosts(
           /${conversationDepthHalfLifeHours}) ELSE 0 END conversation_depth_reserve
     FROM post_hot h JOIN posts p ON p.id=h.post_id JOIN post_depth ON post_depth.id=p.id CROSS JOIN ranking_time
   ), ranked_base AS (
-    SELECT post_id,post_age_hours,reply_age_hours,reply_count,(CASE
+    SELECT post_id,post_age_hours,reply_age_hours,reply_count,
+      CASE WHEN candidate_depth=0 THEN 1 ELSE
+        ${replyCandidateBaseWeight}*pow(${replyCandidateDepthWeight},candidate_depth-1) END candidate_weight,
+      (CASE
       WHEN reply_count>=3 AND reply_age_hours<=${recentReplyPriorityHours} THEN
         1+reply_recency_priority+min(0.25,recency_score*0.01)
       WHEN reply_count=2 AND reply_age_hours<=${recentReplyPriorityHours} THEN
@@ -356,13 +361,17 @@ export function getHotPosts(
       *CASE WHEN candidate_depth=0 THEN 1 ELSE
         ${replyCandidateBaseWeight}*pow(${replyCandidateDepthWeight},candidate_depth-1) END base_score FROM scored
   ), ranked AS (
-    SELECT post_id,base_score*(1+${recentPostBoost}*max(0,1-post_age_hours/${recentPostBoostHours}.0))
-      +CASE WHEN base_score>0 AND reply_count>0 AND reply_age_hours<${recentReplyPriorityHours}
+    SELECT post_id,(base_score*(1+${recentPostBoost}*max(0,1-post_age_hours/${recentPostBoostHours}.0))
+      +candidate_weight*CASE WHEN base_score>0 AND reply_count>0 AND reply_age_hours<${recentReplyPriorityHours}
         THEN ${recentReplyActivityBoost}*max(0,1-reply_age_hours/${recentReplyPriorityHours}.0) ELSE 0 END
-      +CASE WHEN base_score>0 AND reply_count>1 AND post_age_hours<${recentPostBoostHours}
+      +candidate_weight*CASE WHEN base_score>0 AND reply_count>1 AND post_age_hours<${recentPostBoostHours}
         THEN ${recentPostTierBonus}
         WHEN base_score>0 AND reply_count>1 AND post_age_hours<${yesterdayPostHours}
-        THEN ${yesterdayPostTierBonus} ELSE 0 END hot_score FROM ranked_base
+        THEN ${yesterdayPostTierBonus} ELSE 0 END
+      +candidate_weight*CASE WHEN base_score>0 AND reply_count>=${discussionReserveReplyThreshold}
+        AND reply_age_hours>=${recentReplyPriorityHours}
+        AND reply_age_hours<${matureDiscussionLowTierHours} THEN ${matureDiscussionLowTierBonus} ELSE 0 END) hot_score
+      FROM ranked_base
   ) SELECT p.*,u.handle,ranked.hot_score,h.latest_activity_at,h.reply_count,h.activity_count
     FROM ranked JOIN post_hot h ON h.post_id=ranked.post_id
     JOIN posts p ON p.id=ranked.post_id JOIN users u ON u.id=p.user_id
