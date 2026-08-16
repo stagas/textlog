@@ -316,7 +316,7 @@ describe('hot feed ranking', () => {
     expect(stored.reply_count).toBe(1)
     expect(stored.latest_activity_at).toBe('2026-08-03 11:00:00')
     expect(stored.score).toBeCloseTo(2)
-    expect(getHotPosts(database, 20, null, asOf, -1, false, 2).some(result => result.id === 1)).toBeFalse()
+    expect(getHotPosts(database, 20, null, asOf, -1, false, 2).some(result => result.id === 1)).toBeTrue()
   })
 
   test('deleting a nested reply removes its branch credit from every ancestor', () => {
@@ -344,6 +344,19 @@ describe('hot feed ranking', () => {
     rebuildHotPosts(database)
     const rebuilt = getHotPosts(database, 20, null, asOf)
     expect(rebuilt.map(result => result.id)).toEqual([1, 2])
+  })
+
+  test('lets one-reply posts briefly enter the front-page hot feed', () => {
+    database.run(`INSERT INTO users(id,handle) VALUES(2,'recent-replier');
+      INSERT INTO users(id,handle) VALUES(3,'older-replier');`)
+    post(1, '2026-08-03 10:00:00')
+    postBy(2, 2, '2026-08-03 08:01:00', 1)
+    post(3, '2026-08-03 07:00:00')
+    postBy(3, 4, '2026-08-03 07:59:00', 3)
+
+    const results = getHotPosts(database, 20, null, asOf, -1, false, 2)
+    expect(results.some(result => result.id === 1)).toBeTrue()
+    expect(results.some(result => result.id === 3)).toBeFalse()
   })
 
   test('does not let authors boost their own posts with direct replies', () => {

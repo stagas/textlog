@@ -26,7 +26,7 @@ export type HotCursor = {
   direction: 'next' | 'previous'
 }
 
-export const hotRankingVersion = 54
+export const hotRankingVersion = 55
 const cursorVersion = hotRankingVersion
 const activityHalfLifeHours = 6
 const postWeight = 0
@@ -59,6 +59,7 @@ const longDiscussionCommentScale = 0.005
 const longDiscussionCommentsPerDoubling = 5
 const replyCandidateDepthWeight = 0.6
 const replyCandidateBaseWeight = 0.1
+const veryRecentReplyCandidateHours = 4
 
 function hasHotTable(database: Database) {
   return Boolean(database.query('SELECT 1 FROM sqlite_master WHERE type=\'table\' AND name=\'post_hot\'').get())
@@ -279,8 +280,11 @@ export function getHotPosts(
     parameters.push(viewerId)
   }
   if (publicOnly) filters.push('u.deleted_at IS NULL')
-  if (minimumDiscussionReplies > 0) filters.push('h.reply_count>=?')
-  if (minimumDiscussionReplies > 0) parameters.push(minimumDiscussionReplies)
+  if (minimumDiscussionReplies > 0) {
+    filters.push(`(h.reply_count>=? OR (h.reply_count BETWEEN 1 AND 2
+      AND max(0,(julianday(?) - julianday(h.latest_activity_at))*24)<=${veryRecentReplyCandidateHours}))`)
+    parameters.push(minimumDiscussionReplies, timestamp)
+  }
   if (cursor) {
     const comparison = cursor.direction === 'previous' ? '>' : '<'
     filters.push(`(ranked.hot_score ${comparison} ? OR (ranked.hot_score = ? AND
