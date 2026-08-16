@@ -32,22 +32,22 @@ export function Compose(
   }
   return (
     <Layout user={user} title="write">
+      {preview && (
+        <div className="compose-post-preview">
+          <h2>preview</h2>
+          <Post p={{
+            id: 0,
+            user_id: user.id,
+            parent_id: null,
+            body,
+            created_at: new Date().toISOString().slice(0, 19).replace('T', ' '),
+            deleted_at: null,
+            handle: user.handle,
+            bio: user.bio,
+          } satisfies PostView} user={user} replyHref="#" preview />
+        </div>
+      )}
       <Panel className="compose write-compose">
-        {preview && (
-          <div className="compose-post-preview">
-            <h2>preview</h2>
-            <Post p={{
-              id: 0,
-              user_id: user.id,
-              parent_id: null,
-              body,
-              created_at: new Date().toISOString().slice(0, 19).replace('T', ' '),
-              deleted_at: null,
-              handle: user.handle,
-              bio: user.bio,
-            } satisfies PostView} user={user} replyHref="#" preview />
-          </div>
-        )}
         <h1 className="compose-heading">
           What's on your mind, <span className="compose-at">@</span>
           {user.handle}?

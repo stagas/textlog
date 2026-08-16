@@ -287,13 +287,14 @@ export function registerPostsRoutes(app: Hono) {
     const user = currentUser(c.req.raw)
     if (!user) return redirect('/enter')
     const parentId = Number(c.req.param('id'))
-    const parent = Number.isInteger(parentId)
+    const foundParent = Number.isInteger(parentId)
       ? db.query('SELECT p.*,u.handle,u.bio FROM posts p JOIN users u ON u.id=p.user_id WHERE p.id=?').get(
         parentId,
       ) as PostView | null
       : null
-    if (!parent) return c.text('Not found', 404)
-    if (usersBlocked(user.id, parent.user_id)) return c.text('Forbidden', 403)
+    if (!foundParent) return c.text('Not found', 404)
+    if (usersBlocked(user.id, foundParent.user_id)) return c.text('Forbidden', 403)
+    const parent = enrichPosts(db, [foundParent], user.id)[0]
     if (!canPublishPosts(user)) return page(<Reply user={user} post={parent} showForm />, 403)
     const f = await form(c.req.raw)
     const returnPath = f.from ? safeNext(f.from) : undefined

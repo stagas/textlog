@@ -773,6 +773,19 @@ test('consequential account, content, reporting, and admin flows work over HTTP'
   })
   expect(invalidReply.status).toBe(400)
   expect(await invalidReply.text()).toContain(invalidReplyBody)
+  const quotedReply = database.query(
+    'INSERT INTO posts(user_id,parent_id,body,created_at) VALUES(?,?,?,datetime(\'now\')) RETURNING id',
+  ).get(alice.id, post.id, 'A reply quoting the original post') as { id: number }
+  const replyPreview = await request(`/post/${quotedReply.id}/reply`, {
+    method: 'POST',
+    cookie: aliceCookie,
+    form: { body: 'A nested reply preview', action: 'preview' },
+  })
+  expect(replyPreview.status).toBe(200)
+  const replyPreviewHtml = await replyPreview.text()
+  expect(replyPreviewHtml).toContain('A nested reply preview')
+  expect(replyPreviewHtml).toContain('<blockquote class="parent-quote')
+  expect(replyPreviewHtml).toContain('A route-level integration post')
   const invalidEditBody = `remember edit ${'x'.repeat(271)}`
   const invalidEdit = await request(`/post/${post.id}/edit`, {
     method: 'POST',

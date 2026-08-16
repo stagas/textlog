@@ -124,7 +124,7 @@ export function Layout({
             <link rel="alternate" type="application/atom+xml" title={`${feeds.title} (Atom)`} href={feeds.atom} />
           </>
         )}
-        <link rel="stylesheet" href="/styles.css?v=296" />
+        <link rel="stylesheet" href="/styles.css?v=299" />
         <style>{themeCss}</style>
       </head>
       <body className={`density-${density}`}>
@@ -152,10 +152,12 @@ export function Layout({
         {notificationBanner && (
           <aside className="notification-banner" aria-label={notificationBanner === 'notification-update'
             ? 'Notification update'
-            : 'Account setup reminder'}>
+            : 'Account setup reminder'}
+          >
             <a href={notificationBanner === 'appearance'
               ? '/account/edit/appearance'
-              : '/account/edit/notifications'}>
+              : '/account/edit/notifications'}
+            >
               {notificationBanner === 'appearance'
                 ? 'customize appearance'
                 : notificationBanner === 'notification-update'
@@ -167,7 +169,8 @@ export function Layout({
               ? '/appearance/banner/dismiss'
               : notificationBanner === 'notification-update'
               ? '/notifications/improvements/dismiss'
-              : '/notifications/banner/dismiss'}>
+              : '/notifications/banner/dismiss'}
+            >
               <button className="quiet">dismiss</button>
             </form>
           </aside>

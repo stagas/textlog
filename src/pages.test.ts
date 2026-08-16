@@ -90,6 +90,12 @@ test('compose offers a server-rendered post preview', () => {
     preview.indexOf('<form action="/post" method="post">'),
   )
   expect(preview.indexOf('<form action="/post" method="post">')).toBeLessThan(preview.indexOf('<textarea'))
+  expect(preview.indexOf('<div class="compose-post-preview">')).toBeLessThan(
+    preview.indexOf('<div class="panel panel-surface panel-medium compose write-compose">'),
+  )
+  expect(preview.slice(
+    preview.indexOf('<div class="panel panel-surface panel-medium compose write-compose">'),
+  )).not.toContain('<div class="compose-post-preview">')
   expect(preview).toContain('Hello <a href="/tag/world"')
   expect(preview).toContain('<div class="posttop preview-post-meta"><span class="reference-menu">')
   expect(preview).not.toContain('href="/post/0"')

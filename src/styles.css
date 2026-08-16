@@ -2664,16 +2664,15 @@ form.report-panel {
 }
 
 .compose-post-preview {
-  width: calc(100% + 2 * var(--gutter));
+  width: 100%;
   max-width: none;
-  margin-top: var(--space-5);
-  margin-inline: calc(-1 * var(--gutter));
+  margin: var(--space-5) auto 0;
   padding: 0;
   border-bottom: 1px solid var(--soft);
 }
 
-.compose-post-preview+.compose-heading {
-  margin-top: var(--space-5);
+.compose-post-preview + .write-compose {
+  margin-top: var(--space-4);
 }
 
 .compose-post-preview .postauthor {
