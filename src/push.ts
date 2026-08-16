@@ -82,19 +82,26 @@ export async function sendPushForPost(postId: number, actorId: number, actorHand
       (b.blocker_id=? AND b.blocked_id=ps.user_id) OR (b.blocker_id=ps.user_id AND b.blocked_id=?))
     AND NOT EXISTS (SELECT 1 FROM post_hashtags ph JOIN blocked_hashtags bh ON bh.tag=ph.tag
       WHERE ph.post_id=? AND bh.user_id=ps.user_id)
-    AND ((ps.notify_latest=1 AND (ps.user_id!=? OR ps.notify_own_posts=1))
-      OR (ps.notify_following_notes=1 AND (ps.user_id!=? OR ps.notify_own_posts=1) AND (EXISTS
+    AND (ps.notify_bots=1 OR NOT EXISTS
+      (SELECT 1 FROM users actor WHERE actor.id=? AND actor.is_bot=1))
+    AND ((ps.notify_latest=1 AND ps.user_id!=?)
+      OR (ps.notify_following_notes=1 AND ps.user_id!=? AND (EXISTS
         (SELECT 1 FROM follows vf WHERE vf.follower_id=ps.user_id AND vf.following_id=?) OR EXISTS
         (SELECT 1 FROM post_hashtags ph JOIN hashtag_follows hf ON hf.tag=ph.tag
-          WHERE ph.post_id=? AND hf.user_id=ps.user_id)))
+          WHERE ph.post_id=? AND hf.user_id=ps.user_id))
+        AND (ps.notify_following_only_to_me=0 OR EXISTS(
+          SELECT 1 FROM posts direct_child JOIN posts direct_parent ON direct_parent.id=direct_child.parent_id
+          WHERE direct_child.id=? AND direct_parent.user_id=ps.user_id) OR EXISTS(
+          SELECT 1 FROM post_mentions direct_mention
+          WHERE direct_mention.post_id=? AND direct_mention.user_id=ps.user_id)))
       OR (ps.notify_replies=1 AND ps.user_id!=? AND EXISTS(
         SELECT 1 FROM posts child JOIN posts parent ON parent.id=child.parent_id
         WHERE child.id=? AND parent.user_id=ps.user_id))
       OR (ps.notify_mentions=1 AND ps.user_id!=? AND EXISTS(
         SELECT 1 FROM post_mentions pm WHERE pm.post_id=? AND pm.user_id=ps.user_id)))
     ORDER BY ps.endpoint,is_reply DESC,is_mention DESC,ps.user_id`)
-    .all(actorId, postId, actorId, postId, actorId, actorId, postId, actorId, actorId, actorId, postId, actorId, postId,
-      actorId, postId) as (PushSubscriptionRow & {
+    .all(actorId, postId, actorId, postId, actorId, actorId, postId, actorId, actorId, actorId, actorId,
+      postId, postId, postId, actorId, postId, actorId, postId) as (PushSubscriptionRow & {
         user_id: number
         is_reply: number
         is_mention: number

@@ -16,7 +16,7 @@ export function PublicFeed(
     user?: User | null
     path?: string
     pageUrl?: string
-    notificationBanner?: false | 'notifications' | 'appearance'
+    notificationBanner?: false | 'notifications' | 'appearance' | 'notification-update'
   },
 ) {
   const viewerId = user?.id ?? -1

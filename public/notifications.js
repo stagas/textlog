@@ -9,8 +9,8 @@
   const preferenceForm = document.getElementById('notification-preference-form')
   const preferenceHint = document.getElementById('notification-preference-hint')
   const preferenceInputs = [...preferences.querySelectorAll('input')]
-  const notesEnabled = preferenceInputs.find(input => input.name === 'notesEnabled')
-  const noteScopes = preferenceInputs.filter(input => input.name === 'noteScope')
+  const forYou = preferenceInputs.find(input => input.name === 'forYou')
+  const onlyToMe = preferenceInputs.find(input => input.name === 'onlyToMe')
   const handle = script.dataset.handle
 
   const supported = 'serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window
@@ -33,15 +33,18 @@
     return Uint8Array.from(bytes, character => character.charCodeAt(0))
   }
   const preferenceValues = () => {
-    const values = Object.fromEntries(preferenceInputs
-      .filter(input => input.name !== 'noteScope' && input.name !== 'notesEnabled')
-      .map(input => [input.name, input.checked]))
-    const noteScope = preferenceInputs.find(input => input.name === 'noteScope' && input.checked)?.value || 'latest'
-    return { ...values, latest: notesEnabled.checked && noteScope === 'latest',
-      followingNotes: notesEnabled.checked && noteScope === 'following' }
+    return { ...Object.fromEntries(preferenceInputs
+      .filter(input => input.name !== 'onlyToMe' && input.name !== 'forYou')
+      .map(input => [input.name, input.checked])),
+    followingNotes: forYou.checked,
+    replies: forYou.checked,
+    mentions: forYou.checked,
+    follows: forYou.checked,
+    followActivity: forYou.checked && !onlyToMe.checked,
+    followingOnlyToMe: onlyToMe.checked }
   }
-  const syncNoteScope = () => {
-    for (const input of noteScopes) input.disabled = !notesEnabled.checked
+  const syncForYou = () => {
+    onlyToMe.disabled = !forYou.checked
   }
   const save = (subscription, includePreferences = true) =>
     fetch('/account/push-subscription', {
@@ -56,17 +59,18 @@
     const result = await response.json()
     const saved = result.preferences
     for (const input of preferenceInputs) {
-      input.checked = input.name === 'notesEnabled'
-        ? saved.latest !== 0 || saved.followingNotes !== 0
-        : input.name === 'noteScope'
-        ? input.value === (saved.followingNotes !== 0 && saved.latest === 0 ? 'following' : 'latest')
+      input.checked = input.name === 'forYou'
+        ? saved.followingNotes !== 0 || saved.replies !== 0 || saved.mentions !== 0
+          || saved.follows !== 0 || saved.followActivity !== 0
+        : input.name === 'onlyToMe'
+        ? saved.followingOnlyToMe !== 0
         : saved[input.name] !== 0
     }
-    syncNoteScope()
+    syncForYou()
     return result.enabled === true
   }
 
-  notesEnabled.addEventListener('change', syncNoteScope)
+  forYou.addEventListener('change', syncForYou)
 
   if (!supported) {
     enable.disabled = true

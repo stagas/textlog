@@ -30,7 +30,7 @@ export function Layout({
     imageAlt?: string }
   pageUrl?: string
   feeds?: { title: string; rss: string; atom: string }
-  notificationBanner?: false | 'notifications' | 'appearance'
+  notificationBanner?: false | 'notifications' | 'appearance' | 'notification-update'
   children: React.ReactNode
 }) {
   const selectedAppearance = activeAppearance()
@@ -124,7 +124,7 @@ export function Layout({
             <link rel="alternate" type="application/atom+xml" title={`${feeds.title} (Atom)`} href={feeds.atom} />
           </>
         )}
-        <link rel="stylesheet" href="/styles.css?v=290" />
+        <link rel="stylesheet" href="/styles.css?v=296" />
         <style>{themeCss}</style>
       </head>
       <body className={`density-${density}`}>
@@ -150,15 +150,23 @@ export function Layout({
             )}
         </header>
         {notificationBanner && (
-          <aside className="notification-banner" aria-label="Account setup reminder">
+          <aside className="notification-banner" aria-label={notificationBanner === 'notification-update'
+            ? 'Notification update'
+            : 'Account setup reminder'}>
             <a href={notificationBanner === 'appearance'
               ? '/account/edit/appearance'
               : '/account/edit/notifications'}>
-              {notificationBanner === 'appearance' ? 'customize appearance' : 'enable notifications'}
+              {notificationBanner === 'appearance'
+                ? 'customize appearance'
+                : notificationBanner === 'notification-update'
+                ? 'check the improved notifications'
+                : 'enable notifications'}
             </a>
             <span aria-hidden="true">·</span>
             <form method="post" action={notificationBanner === 'appearance'
               ? '/appearance/banner/dismiss'
+              : notificationBanner === 'notification-update'
+              ? '/notifications/improvements/dismiss'
               : '/notifications/banner/dismiss'}>
               <button className="quiet">dismiss</button>
             </form>

@@ -142,7 +142,46 @@ describe('Web Push activity delivery', () => {
     ])
   })
 
-  test('names the author on their own reply notification', async () => {
+  test('includes bot notes only when enabled for for-you notifications', async () => {
+    const database = fixture()
+    database.run(`UPDATE users SET is_bot=1 WHERE id=1;
+      UPDATE push_subscriptions SET notify_latest=1,notify_following_notes=1,notify_bots=0;
+      INSERT INTO follows(follower_id,following_id,created_at) VALUES(2,1,CURRENT_TIMESTAMP);
+      INSERT INTO posts(id,user_id,body) VALUES(3,1,'bot note')`)
+    let deliveries = 0
+    webpush.sendNotification = (async () => {
+      deliveries++
+      return {} as never
+    }) as typeof webpush.sendNotification
+
+    await sendPushForPost(3, 1, 'author', database, vapid)
+    expect(deliveries).toBe(0)
+
+    database.run('UPDATE push_subscriptions SET notify_bots=1')
+    await sendPushForPost(3, 1, 'author', database, vapid)
+    expect(deliveries).toBe(1)
+  })
+
+  test('can restrict for-you notifications to replies and mentions addressed to the subscriber', async () => {
+    const database = fixture()
+    database.run(`UPDATE push_subscriptions SET notify_latest=0,notify_replies=0,notify_mentions=0,
+        notify_following_notes=1,notify_following_only_to_me=1;
+      INSERT INTO follows(follower_id,following_id,created_at) VALUES(2,1,CURRENT_TIMESTAMP);
+      INSERT INTO posts(id,user_id,body) VALUES(3,1,'ordinary followed note')`)
+    let deliveries = 0
+    webpush.sendNotification = (async () => {
+      deliveries++
+      return {} as never
+    }) as typeof webpush.sendNotification
+
+    await sendPushForPost(3, 1, 'author', database, vapid)
+    expect(deliveries).toBe(0)
+
+    await sendPushForPost(2, 1, 'author', database, vapid)
+    expect(deliveries).toBe(1)
+  })
+
+  test('never notifies an author about their own reply', async () => {
     const database = fixture()
     database.run(`INSERT INTO push_subscriptions(endpoint,user_id,p256dh,auth)
       VALUES('https://push.example/author',1,'author-key','author-auth')`)
@@ -154,37 +193,29 @@ describe('Web Push activity delivery', () => {
 
     await sendPushForPost(2, 1, 'author', database, vapid)
 
-    expect(payloads.map(value => JSON.parse(value))).toEqual([{
-      title: '@author replied to @recipient',
-      body: 'hello @recipient',
-      url: '/post/2',
-    }])
+    expect(payloads).toEqual([])
   })
 
-  test('names the author on their own ordinary post notification', async () => {
+  test('never notifies an author about their own post', async () => {
     const database = fixture()
     database.run(`INSERT INTO push_subscriptions(endpoint,user_id,p256dh,auth)
       VALUES('https://push.example/author',1,'author-key','author-auth');
       INSERT INTO posts(id,user_id,body) VALUES(3,1,'my note')`)
-    const payloads: string[] = []
-    webpush.sendNotification = (async (subscription, payload) => {
-      if (subscription.endpoint.endsWith('/author')) payloads.push(String(payload))
+    let deliveries = 0
+    webpush.sendNotification = (async subscription => {
+      if (subscription.endpoint.endsWith('/author')) deliveries++
       return {} as never
     }) as typeof webpush.sendNotification
 
     await sendPushForPost(3, 1, 'author', database, vapid)
 
-    expect(payloads.map(value => JSON.parse(value))).toEqual([{
-      title: '@author wrote',
-      body: 'my note',
-      url: '/post/3',
-    }])
+    expect(deliveries).toBe(0)
   })
 
-  test('can exclude an author own posts while keeping latest enabled', async () => {
+  test('ignores legacy self-notification preferences', async () => {
     const database = fixture()
     database.run(`INSERT INTO push_subscriptions(endpoint,user_id,p256dh,auth,notify_own_posts)
-      VALUES('https://push.example/author',1,'author-key','author-auth',0)`)
+      VALUES('https://push.example/author',1,'author-key','author-auth',1)`)
     let authorDeliveries = 0
     webpush.sendNotification = (async subscription => {
       if (subscription.endpoint.endsWith('/author')) authorDeliveries++

@@ -134,7 +134,8 @@ export function registerAccountRoutes(app: Hono) {
     const endpoint = c.req.query('endpoint') || ''
     const preferences = endpoint
       ? db.query(`SELECT notify_latest latest,notify_replies replies,notify_mentions mentions,notify_follows follows,
-          notify_own_posts ownPosts,notify_follow_activity followActivity,notify_following_notes followingNotes${
+          notify_follow_activity followActivity,notify_following_notes followingNotes,
+          notify_bots bots,notify_following_only_to_me followingOnlyToMe${
         isAdmin(user) ? ',notify_signups signups' : ''
       }
         FROM push_subscriptions WHERE endpoint=? AND user_id=?`).get(endpoint, user.id) as Record<string, number> | null
@@ -142,10 +143,11 @@ export function registerAccountRoutes(app: Hono) {
     return c.json({ enabled: Boolean(preferences), preferences: preferences || {
       latest: 1,
       followingNotes: 1,
+      bots: 0,
+      followingOnlyToMe: 0,
       replies: 1,
       mentions: 1,
       follows: 1,
-      ownPosts: 1,
       followActivity: 1,
       ...(isAdmin(user) ? { signups: 1 } : {}),
     } })
@@ -176,9 +178,10 @@ export function registerAccountRoutes(app: Hono) {
     const replies = preference('replies')
     const mentions = preference('mentions')
     const follows = preference('follows')
-    const ownPosts = preference('ownPosts')
     const followActivity = preference('followActivity')
     const followingNotes = preference('followingNotes')
+    const bots = preference('bots')
+    const followingOnlyToMe = preference('followingOnlyToMe')
     const signups = isAdmin(user) ? preference('signups') : null
     const deviceId = notificationDevice(c.req.raw) || token()
     db.transaction(() => {
@@ -188,20 +191,23 @@ export function registerAccountRoutes(app: Hono) {
         .run(p256dh, auth, deviceId, endpoint)
       db.query(`INSERT INTO push_subscriptions(endpoint,user_id,p256dh,auth,device_id,
           notify_latest,notify_replies,notify_mentions,notify_follows,notify_own_posts,notify_signups,
-          notify_follow_activity,notify_following_notes) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?)
+          notify_follow_activity,notify_following_notes,notify_bots,notify_following_only_to_me)
+          VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
         ON CONFLICT(endpoint,user_id) DO UPDATE SET p256dh=excluded.p256dh,auth=excluded.auth,
           device_id=excluded.device_id,
           notify_latest=coalesce(?,push_subscriptions.notify_latest),
           notify_replies=coalesce(?,push_subscriptions.notify_replies),
           notify_mentions=coalesce(?,push_subscriptions.notify_mentions),
           notify_follows=coalesce(?,push_subscriptions.notify_follows),
-          notify_own_posts=coalesce(?,push_subscriptions.notify_own_posts),
+          notify_own_posts=0,
           notify_signups=coalesce(?,push_subscriptions.notify_signups),
           notify_follow_activity=coalesce(?,push_subscriptions.notify_follow_activity),
-          notify_following_notes=coalesce(?,push_subscriptions.notify_following_notes)`)
+          notify_following_notes=coalesce(?,push_subscriptions.notify_following_notes),
+          notify_bots=coalesce(?,push_subscriptions.notify_bots),
+          notify_following_only_to_me=coalesce(?,push_subscriptions.notify_following_only_to_me)`)
         .run(endpoint, user.id, p256dh, auth, deviceId, latest ?? 1, replies ?? 1, mentions ?? 1, follows ?? 1,
-          ownPosts ?? 1, signups ?? 1, followActivity ?? 1, followingNotes ?? 1, latest, replies, mentions, follows,
-          ownPosts, signups, followActivity, followingNotes)
+          0, signups ?? 1, followActivity ?? 1, followingNotes ?? 1, bots ?? 0, followingOnlyToMe ?? 0,
+          latest, replies, mentions, follows, signups, followActivity, followingNotes, bots, followingOnlyToMe)
     })()
     const userAgent = notificationUserAgent(c.req.raw)
     if (userAgent) {

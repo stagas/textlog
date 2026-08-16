@@ -28,6 +28,13 @@ function showNotificationBanner(request: Request, user: ReturnType<typeof curren
   if (!user) return false
   const userAgent = notificationUserAgent(request)
   if (!userAgent) return Math.random() < 0.5 ? 'notifications' : 'appearance'
+  const notificationsEnabled = Boolean(db.query(
+    "SELECT 1 FROM notification_user_agents WHERE user_id=? AND user_agent=? AND status='enabled' LIMIT 1",
+  ).get(user.id, userAgent))
+  const improvementDismissed = Boolean(db.query(
+    'SELECT 1 FROM notification_improvement_user_agents WHERE user_id=? AND user_agent=? LIMIT 1',
+  ).get(user.id, userAgent))
+  if (notificationsEnabled && !improvementDismissed) return 'notification-update'
   const notificationsHandled = notificationBannerDismissed(request, user.id) || Boolean(db.query(
     'SELECT 1 FROM notification_user_agents WHERE user_id=? AND user_agent=? LIMIT 1',
   ).get(user.id, userAgent))
@@ -169,6 +176,18 @@ export function registerFeedsRoutes(app: Hono) {
         .run(user.id, userAgent)
     }
     return redirect(destination)
+  })
+
+  app.post('/notifications/improvements/dismiss', c => {
+    const user = currentUser(c.req.raw)
+    if (!user) return redirect('/enter')
+    const userAgent = notificationUserAgent(c.req.raw)
+    if (userAgent) {
+      db.query(`INSERT INTO notification_improvement_user_agents(user_id,user_agent) VALUES(?,?)
+        ON CONFLICT(user_id,user_agent) DO UPDATE SET dismissed_at=CURRENT_TIMESTAMP`)
+        .run(user.id, userAgent)
+    }
+    return redirect(safeRefererPath(c.req.header('referer'), c.req.url))
   })
 
   app.post('/appearance/banner/dismiss', c => {

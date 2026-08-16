@@ -966,6 +966,46 @@ export const migrations: Migration[] = [
         CREATE INDEX IF NOT EXISTS feed_snapshots_last_accessed ON feed_snapshots(last_accessed_at);`)
     },
   },
+  {
+    version: 72,
+    name: 'notification_for_you_bots',
+    up(database) {
+      addColumn(database, 'push_subscriptions', 'notify_following_bots', 'INTEGER NOT NULL DEFAULT 0')
+    },
+  },
+  {
+    version: 73,
+    name: 'disable_self_notifications',
+    up(database) {
+      database.run('UPDATE push_subscriptions SET notify_own_posts=0')
+    },
+  },
+  {
+    version: 74,
+    name: 'notification_for_you_only_to_me',
+    up(database) {
+      addColumn(database, 'push_subscriptions', 'notify_following_only_to_me', 'INTEGER NOT NULL DEFAULT 0')
+    },
+  },
+  {
+    version: 75,
+    name: 'notification_bots_all_sources',
+    up(database) {
+      addColumn(database, 'push_subscriptions', 'notify_bots', 'INTEGER NOT NULL DEFAULT 0')
+      database.run('UPDATE push_subscriptions SET notify_bots=notify_following_bots')
+    },
+  },
+  {
+    version: 76,
+    name: 'notification_improvement_banner',
+    up(database) {
+      database.run(`CREATE TABLE IF NOT EXISTS notification_improvement_user_agents (
+        user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        user_agent TEXT NOT NULL CHECK(length(user_agent) BETWEEN 1 AND 512),
+        dismissed_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        PRIMARY KEY(user_id,user_agent));`)
+    },
+  },
 ]
 
 export const latestMigrationVersion = migrations.at(-1)!.version

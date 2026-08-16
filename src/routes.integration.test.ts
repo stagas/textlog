@@ -471,7 +471,7 @@ test('consequential account, content, reporting, and admin flows work over HTTP'
   }
   const notificationSettings = await request('/account/edit/notifications', { cookie: aliceCookie })
   expect(notificationSettings.status).toBe(200)
-  expect(await notificationSettings.text()).toContain('name="noteScope" checked="" value="latest"')
+  expect(await notificationSettings.text()).toContain('name="latest" checked=""')
   const endpoint = 'https://push.example/alice-browser'
   const savedPush = await request('/account/push-subscription', {
     method: 'POST',
@@ -485,9 +485,19 @@ test('consequential account, content, reporting, and admin flows work over HTTP'
   expect(deviceCookie).toBeDefined()
   const enabledDeviceHome = await (await request('/', { cookie: aliceCookie, userAgent: 'alice-browser' })).text()
   expect(enabledDeviceHome).toContain('class="notification-banner"')
-  expect(enabledDeviceHome).toContain('href="/account/edit/appearance">customize appearance</a>')
+  expect(enabledDeviceHome).toContain('href="/account/edit/notifications">check the improved notifications</a>')
   const otherBrowserHome = await (await request('/', { cookie: aliceCookie, userAgent: 'alice-other-browser' })).text()
   expect(otherBrowserHome).toContain('class="notification-banner"')
+  expect(otherBrowserHome).not.toContain('check the improved notifications')
+  const dismissedImprovements = await request('/notifications/improvements/dismiss', {
+    method: 'POST', cookie: aliceCookie, userAgent: 'alice-browser', referer: '/',
+  })
+  expect(dismissedImprovements.status).toBe(303)
+  const improvementDismissedHome = await (await request('/', {
+    cookie: aliceCookie, userAgent: 'alice-browser',
+  })).text()
+  expect(improvementDismissedHome).not.toContain('check the improved notifications')
+  expect(improvementDismissedHome).toContain('href="/account/edit/appearance">customize appearance</a>')
   const legacyDismissedHome = await (await request('/', {
     cookie: `${aliceCookie}; notification_banner_dismissed=${alice.id}`,
     userAgent: 'alice-legacy-browser',
@@ -537,7 +547,8 @@ test('consequential account, content, reporting, and admin flows work over HTTP'
   )
   expect(await pushPreferences.json()).toEqual({
     enabled: true,
-    preferences: { latest: 0, replies: 1, mentions: 0, follows: 1, ownPosts: 0, followActivity: 1, followingNotes: 1 },
+    preferences: { latest: 0, replies: 1, mentions: 0, follows: 1, followActivity: 1,
+      followingNotes: 1, bots: 0, followingOnlyToMe: 0 },
   })
   const cacheBustedHomeHtml = await (await request('/?v=94721')).text()
   expect(cacheBustedHomeHtml).toContain(`property="og:url" content="${origin}/?v=94721"`)

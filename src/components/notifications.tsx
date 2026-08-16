@@ -42,48 +42,46 @@ export function NotificationSettings({ user, publicKey, ios = false, returnPath 
           <fieldset className="notification-preferences" id="notification-preferences" disabled hidden>
             <legend>notify @{user.handle} about</legend>
             <fieldset className="notification-radio-group">
-              <legend className="visually-hidden">new notes</legend>
-              <div className="notification-radio-heading">
-                <strong>new notes</strong>
-                <label className="notification-radio-enable">
-                  <span className="visually-hidden">enable new note notifications</span>
-                  <input type="checkbox" name="notesEnabled" defaultChecked />
-                  <span className="notification-toggle-track" aria-hidden="true">
-                    <span />
-                  </span>
-                </label>
-              </div>
-              <div className="notification-radio-options">
-                <label>
-                  <input type="radio" name="noteScope" value="latest" defaultChecked />
-                  <span>
-                    <strong>latest</strong>
-                    <small>Everything in /latest</small>
-                  </span>
-                </label>
-                <label>
-                  <input type="radio" name="noteScope" value="following" />
-                  <span>
-                    <strong>following</strong>
-                    <small>People and tags @{user.handle} follows</small>
-                  </span>
-                </label>
-              </div>
+              <legend className="visually-hidden">feed notifications</legend>
+              <label className="notification-toggle">
+                <span>
+                  <strong>latest</strong>
+                  <small>Everything in /latest</small>
+                </span>
+                <input type="checkbox" name="latest" defaultChecked />
+                <span className="notification-toggle-track" aria-hidden="true"><span /></span>
+              </label>
+              <label className="notification-toggle notification-toggle-parent">
+                <span>
+                  <strong>for you</strong>
+                  <small>Followed activity, replies, mentions, and new followers</small>
+                </span>
+                <input type="checkbox" name="forYou" defaultChecked />
+                <span className="notification-toggle-track" aria-hidden="true"><span /></span>
+              </label>
+              <label className="notification-toggle notification-toggle-dependent notification-toggle-group-end">
+                <span>
+                  <strong>only to me</strong>
+                  <small>Only notes addressed to me</small>
+                </span>
+                <input type="checkbox" name="onlyToMe" defaultChecked />
+                <span className="notification-toggle-track" aria-hidden="true"><span /></span>
+              </label>
+              <label className="notification-toggle notification-toggle-group-end">
+                <span>
+                  <strong>include bots</strong>
+                  <small>Include notifications from bot accounts</small>
+                </span>
+                <input type="checkbox" name="bots" />
+                <span className="notification-toggle-track" aria-hidden="true"><span /></span>
+              </label>
             </fieldset>
             {[
-              ['ownPosts', `include @${user.handle}’s messages`, `Also notify for @${user.handle}’s own notes`],
-              ['replies', 'replies', `When someone replies to one of @${user.handle}’s notes`],
-              ['mentions', 'mentions', `When someone mentions @${user.handle}`],
-              ['follows', 'new followers', `When someone starts following @${user.handle}`],
-              ['followActivity', 'follow activity', `When people or tags @${user.handle} follows gain a new follow`],
               ...(isAdmin(user)
                 ? [['signups', 'new user signups', 'When a new user creates an account']]
                 : []),
             ].map(([name, label, description]) => (
-              <label
-                className={`notification-toggle${name === 'ownPosts' ? ' notification-toggle-dependent' : ''}`}
-                key={name}
-              >
+              <label className="notification-toggle" key={name}>
                 <span>
                   <strong>{label}</strong>
                   <small>{description}</small>
