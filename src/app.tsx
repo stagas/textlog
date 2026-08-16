@@ -13,7 +13,6 @@ import { databaseHealth } from './database-health'
 import { db } from './db'
 import { isDevelopment } from './environment'
 import { localImageFile, usesLocalImageStorage } from './image-storage'
-import { runLinkPreviewBackfill } from './link-preview-backfill'
 import { clientIp, logError, logHttp, logReady, shouldLogHttp } from './log'
 import { startMaintenance } from './maintenance'
 import { clearMaterializedFeedPages } from './materialized-feed-pages'
@@ -99,8 +98,6 @@ if (Bun.env.NODE_ENV === 'production') {
     alertWebhookUrl: Bun.env.BACKUP_ALERT_WEBHOOK_URL || null,
   })
   startPublicArchive(db, { path: publicArchivePath })
-  void runLinkPreviewBackfill(db, { youtubeOnly: true })
-    .catch(error => logError('YouTube link preview backfill failed', error))
 }
 
 app.use('*', bodyLimit({
