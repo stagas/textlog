@@ -192,10 +192,10 @@ describe('in-memory stylesheet', () => {
     const css = await Bun.file(new URL('./styles.css', import.meta.url)).text()
     const popoverRule = css.slice(css.indexOf('.reference-menu-popover {'), css.indexOf('.reference-menu-popover-tag'))
     expect(popoverRule).toContain('z-index: 22;')
-    expect(css).toContain('.reference-menu:hover .reference-menu-popover {')
+    expect(css).toContain('.reference-menu:hover > .reference-menu-popover {')
     expect(css).toContain('animation: reference-popover-reveal 0s 500ms both;')
     expect(css).toContain(
-      '.reference-menu:focus-within .reference-menu-popover {\n  display: grid;\n  animation: none;',
+      '.reference-menu:focus-within > .reference-menu-popover {\n  display: grid;\n  animation: none;',
     )
     expect(css).toContain('@keyframes reference-popover-reveal {')
     expect(css).toContain('@media (hover: none), (pointer: coarse) {\n  .account-menu .account-menu-popover,\n'

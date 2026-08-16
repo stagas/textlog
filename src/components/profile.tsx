@@ -1,7 +1,7 @@
 import { Fragment } from 'react'
-import { extractHashtags } from '../content'
+import { extractHashtags, extractMentions } from '../content'
 import { db, type User } from '../db'
-import { visibleHashtagCounts, visibleTagFollowerCounts } from '../posts'
+import { visibleHashtagCounts, visibleTagFollowerCounts, visibleUserProfileStats } from '../posts'
 import type { PostView, ProfileRow } from '../types'
 import { displayBio, linkify, referenceFormId } from '../utils'
 import { Layout } from './layout'
@@ -9,6 +9,8 @@ import { FormMessage, Pagination, PostingHelp, PostingSuggestionResults, type Po
   ProfileHeader, ProfileTabs } from './page-shared'
 import { Post } from './post'
 import { DEFAULT_TIMEZONE, TIMEZONE_CHOICES } from '../timezone'
+import { resolveHandle } from '../handles'
+import { userBioLinkPreviews } from '../link-preview'
 
 export function Profile(
   { user, profile, posts, following, bio = profile.bio || '', editHandle = profile.handle, editEmail = profile.email,
@@ -54,6 +56,7 @@ export function Profile(
   const paginationPath = `/u/${profile.handle}${paginationQuery.size ? `?${paginationQuery}` : ''}`
   const fromQuery = returnPath ? `?from=${encodeURIComponent(returnPath)}` : ''
   const bioTags = extractHashtags(profile.bio)
+  const bioHandles = extractMentions(profile.bio)
   const bioTagCounts = visibleHashtagCounts(db, [profile.bio], user?.id ?? -1)
   const bioTagFollowerCounts = visibleTagFollowerCounts(db, bioTags, user?.id ?? -1)
   const followedBioTags = user && bioTags.length
@@ -62,6 +65,31 @@ export function Profile(
       .map(row => row.tag))
     : new Set<string>()
   const bioTagFollowing = Object.fromEntries(bioTags.map(tag => [tag, followedBioTags.has(tag)]))
+  const bioMentionBios: Record<string, string> = {}
+  const bioMentionIds: Record<string, number> = {}
+  for (const handle of bioHandles) {
+    const mentioned = resolveHandle(db, handle)
+    if (!mentioned) continue
+    const account = db.query('SELECT bio FROM users WHERE id=?').get(mentioned.id) as { bio: string } | null
+    if (account) {
+      bioMentionBios[handle] = account.bio
+      bioMentionIds[handle] = mentioned.id
+    }
+  }
+  const bioMentionStats = visibleUserProfileStats(db, Object.values(bioMentionIds), user?.id ?? -1)
+  const followedBioMentionIds = !user || !Object.keys(bioMentionIds).length ? new Set<number>() : new Set(
+    (db.query(`SELECT following_id FROM follows WHERE follower_id=? AND following_id IN (${
+      Object.keys(bioMentionIds).map(() => '?').join(',')})`).all(user.id, ...Object.values(bioMentionIds)) as {
+      following_id: number
+    }[]).map(row => row.following_id),
+  )
+  const bioMentionFollowing = Object.fromEntries(Object.entries(bioMentionIds)
+    .map(([handle, id]) => [handle, followedBioMentionIds.has(id)]))
+  const bioMentionProfileStats = Object.fromEntries(Object.entries(bioMentionIds)
+    .flatMap(([handle, id]) => bioMentionStats.has(id) ? [[handle, bioMentionStats.get(id)!]] : []))
+  const bioMentionNoteCounts = Object.fromEntries(Object.entries(bioMentionProfileStats)
+    .map(([handle, stats]) => [handle, stats.notes]))
+  const bioLinkPreviews = userBioLinkPreviews(db, profile.id)
   const bioFormPrefix = `profile-${profile.id}-bio`
   return (
     <Layout user={user} title={`@${profile.handle}`} social={social} feeds={{
@@ -194,22 +222,29 @@ export function Profile(
             )
             : (
               <p className="profile-bio" dangerouslySetInnerHTML={{
-                __html: linkify(displayBio(profile.bio), {}, [], undefined, undefined, '', bioTagCounts, {}, {
+                __html: linkify(displayBio(profile.bio), bioMentionBios, [], undefined, undefined, '', bioTagCounts,
+                  bioMentionNoteCounts, {
                   signedIn: !!user,
                   currentHandle: user?.handle,
                   formPrefix: bioFormPrefix,
+                  mentionFollowing: bioMentionFollowing,
+                  mentionProfileStats: bioMentionProfileStats,
                   hashtagFollowing: bioTagFollowing,
                   hashtagFollowerCounts: bioTagFollowerCounts,
+                  linkPreviews: bioLinkPreviews,
                 }),
               }} />
             )}
           {!editing && user
-            && bioTags.map(tag => (
-              <Fragment key={tag}>
-                <form className="reference-follow-form" id={referenceFormId(bioFormPrefix, 'tag', tag)} method="post"
-                  action={'/tag-follow/' + encodeURIComponent(tag)} />
-                <form className="reference-follow-form" id={referenceFormId(bioFormPrefix, 'tag', tag, 'block')}
-                  method="post" action={'/tag-block/' + encodeURIComponent(tag)} />
+            && [...bioTags.map(tag => ({ kind: 'tag' as const, value: tag })),
+              ...bioHandles.map(handle => ({ kind: 'user' as const, value: handle }))].map(reference => (
+              <Fragment key={`${reference.kind}-${reference.value}`}>
+                <form className="reference-follow-form" id={referenceFormId(bioFormPrefix, reference.kind,
+                  reference.value)} method="post" action={(reference.kind === 'tag' ? '/tag-follow/' : '/follow/')
+                    + encodeURIComponent(reference.value)} />
+                <form className="reference-follow-form" id={referenceFormId(bioFormPrefix, reference.kind,
+                  reference.value, 'block')} method="post"
+                  action={(reference.kind === 'tag' ? '/tag-block/' : '/block/') + encodeURIComponent(reference.value)} />
               </Fragment>
             ))}
         </div>

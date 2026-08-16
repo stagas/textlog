@@ -1,7 +1,8 @@
 import { describe, expect, test } from 'bun:test'
 import { Database } from 'bun:sqlite'
 import { isYouTubeUrl } from './link-preview'
-import { runLinkPreviewBackfill, runR2LinkPreviewBackfill } from './link-preview-backfill'
+import { runAutomaticBioLinkPreviewBackfill, runBioLinkPreviewBackfill, runLinkPreviewBackfill,
+  runR2LinkPreviewBackfill } from './link-preview-backfill'
 
 describe('link preview backfill', () => {
   test('recognizes YouTube video hosts without matching lookalikes', () => {
@@ -37,6 +38,50 @@ describe('link preview backfill', () => {
       database.close()
       Bun.env.APP_URL = previousUrl
     }
+  })
+
+  test('backfills existing bios and records each URL only once', async () => {
+    const previousUrl = Bun.env.APP_URL
+    Bun.env.APP_URL = 'http://localhost:3000'
+    const database = new Database(':memory:')
+    database.run(`CREATE TABLE users(id INTEGER PRIMARY KEY,handle TEXT,bio TEXT,deleted_at TEXT,suspended_at TEXT);
+      CREATE TABLE posts(id INTEGER PRIMARY KEY,user_id INTEGER,body TEXT,deleted_at TEXT);
+      CREATE TABLE user_bio_link_previews(user_id INTEGER,url TEXT,image_url TEXT,title TEXT,description TEXT,
+        site_name TEXT,image_width INTEGER,image_height INTEGER,PRIMARY KEY(user_id,url));
+      CREATE TABLE user_bio_link_preview_backfill_attempts(user_id INTEGER,url TEXT,status TEXT,attempted_at TEXT
+        DEFAULT CURRENT_TIMESTAMP,PRIMARY KEY(user_id,url));
+      INSERT INTO users(id,handle,bio) VALUES(1,'writer','See http://localhost:3000/post/1');
+      INSERT INTO posts(id,user_id,body) VALUES(1,1,'linked note');`)
+    try {
+      expect(await runBioLinkPreviewBackfill(database, { delayMs: 0, log: () => {} }))
+        .toEqual({ pending: 1, fetched: 1, saved: 1 })
+      expect(database.query('SELECT url,title FROM user_bio_link_previews').get()).toEqual({
+        url: 'http://localhost:3000/post/1', title: 'linked note',
+      })
+      expect(await runBioLinkPreviewBackfill(database, { delayMs: 0, log: () => {} }))
+        .toEqual({ pending: 0, fetched: 0, saved: 0 })
+    }
+    finally {
+      database.close()
+      Bun.env.APP_URL = previousUrl
+    }
+  })
+
+  test('claims the automatic bio backfill once and records completion', async () => {
+    const database = new Database(':memory:')
+    database.run(`CREATE TABLE users(id INTEGER PRIMARY KEY,bio TEXT,deleted_at TEXT);
+      CREATE TABLE user_bio_link_previews(user_id INTEGER,url TEXT,image_url TEXT,PRIMARY KEY(user_id,url));
+      CREATE TABLE user_bio_link_preview_backfill_attempts(user_id INTEGER,url TEXT,status TEXT,
+        attempted_at TEXT DEFAULT CURRENT_TIMESTAMP,PRIMARY KEY(user_id,url));
+      CREATE TABLE background_tasks(name TEXT PRIMARY KEY,status TEXT NOT NULL,
+        updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP);`)
+    try {
+      expect(await runAutomaticBioLinkPreviewBackfill(database, { delayMs: 0, log: () => {} }))
+        .toEqual({ pending: 0, fetched: 0, saved: 0 })
+      expect(await runAutomaticBioLinkPreviewBackfill(database, { delayMs: 0, log: () => {} })).toBeNull()
+      expect(database.query('SELECT status FROM background_tasks').get()).toEqual({ status: 'complete' })
+    }
+    finally { database.close() }
   })
 })
 

@@ -16,7 +16,7 @@ import type { Hono } from 'hono'
 import { db } from '../db'
 import { sendAdminEmail, sendReportDecision } from '../email'
 import { PAGE_SIZE } from '../pagination'
-import { deleteLinkPreviewImages } from '../link-preview'
+import { deleteBioLinkPreviewImages, deleteLinkPreviewImages } from '../link-preview'
 import { dashboardStats } from '../stats'
 import { currentUser } from '../utils'
 
@@ -251,6 +251,7 @@ export function registerAdminRoutes(app: Hono) {
       }
     })()
     for (const postId of postIds) await deleteLinkPreviewImages(db, postId)
+    if (action === 'delete') await deleteBioLinkPreviewImages(db, id)
     return redirect(action === 'delete' ? '/admin' : `/admin/users/${id}`)
   })
 }

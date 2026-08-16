@@ -27,6 +27,7 @@ export type ReferencePopoverOptions = {
   hashtagFollowing?: Record<string, boolean>
   hashtagFollowerCounts?: Record<string, number>
   linkPreviews?: Record<string, LinkPreview>
+  mentionPopovers?: boolean
 }
 
 function previewLink(html: string, url: string, appUrl: string | undefined, popover?: ReferencePopoverOptions) {
@@ -395,31 +396,33 @@ function renderedReference(token: string, mentionBios: Record<string, string>,
   const label = highlighted(`${token[0]}${value}`, highlightTerms)
   const hasData = isUser ? mentionBios[key] !== undefined : hashtagCounts[key] !== undefined
   if (!hasData) return `<a href="${href}">${label}</a>`
+  if (isUser && popover?.mentionPopovers === false) return `<a href="${href}">${label}</a>`
   const count = isUser ? mentionNoteCounts[key] || 0 : hashtagCounts[key]
-  if (!popover) {
+  const referencePopover = popover && (!isUser || popover.mentionPopovers !== false) ? popover : undefined
+  if (!referencePopover) {
     const title = isUser
       ? userHoverTitle(count, mentionBios[key])
       : `${count.toLocaleString()} ${count === 1 ? 'note' : 'notes'}`
     return `<a href="${href}" title="${esc(title)}">${label}</a>`
   }
-  const following = isUser ? !!popover.mentionFollowing?.[key] : !!popover.hashtagFollowing?.[key]
-  const ownUser = isUser && key === popover.currentHandle?.toLowerCase()
-  const action = ownUser ? '' : popover.signedIn
+  const following = isUser ? !!referencePopover.mentionFollowing?.[key] : !!referencePopover.hashtagFollowing?.[key]
+  const ownUser = isUser && key === referencePopover.currentHandle?.toLowerCase()
+  const action = ownUser ? '' : referencePopover.signedIn
     ? `<span class="reference-popover-actions"><button class="button${
       following ? ' button-muted' : ''
-    }" type="submit" form="${esc(referenceFormId(popover.formPrefix, isUser ? 'user' : 'tag', key))}">${
+    }" type="submit" form="${esc(referenceFormId(referencePopover.formPrefix, isUser ? 'user' : 'tag', key))}">${
       following ? 'unfollow' : 'follow'
     }</button><button class="quiet danger" type="submit" form="${
-      esc(referenceFormId(popover.formPrefix, isUser ? 'user' : 'tag', key, 'block'))
+      esc(referenceFormId(referencePopover.formPrefix, isUser ? 'user' : 'tag', key, 'block'))
     }">block</button></span>`
     : '<a class="button" href="/enter" rel="nofollow">enter to follow</a>'
   return `<span class="reference-menu"><a class="reference-menu-trigger" href="${href}">${label}</a>`
     + `<span class="reference-menu-popover${isUser ? '' : ' reference-menu-popover-tag'}">${
-      isUser && popover.mentionProfileStats?.[key]
-        ? profileStatLinks(key, popover.mentionProfileStats[key], navigationQuery)
+      isUser && referencePopover.mentionProfileStats?.[key]
+        ? profileStatLinks(key, referencePopover.mentionProfileStats[key], navigationQuery)
         : isUser
         ? `<span>${count.toLocaleString()} ${count === 1 ? 'note' : 'notes'}</span>`
-        : tagStatLinks(key, count, popover.hashtagFollowerCounts?.[key] || 0, navigationQuery)
+        : tagStatLinks(key, count, referencePopover.hashtagFollowerCounts?.[key] || 0, navigationQuery)
     }`
     + (isUser
       ? `<span class="reference-popover-bio">${

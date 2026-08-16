@@ -1087,6 +1087,28 @@ export const migrations: Migration[] = [
         dismissed_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP);`)
     },
   },
+  {
+    version: 85,
+    name: 'user_bio_link_previews',
+    up(database) {
+      database.run(`CREATE TABLE IF NOT EXISTS user_bio_link_previews (
+        user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        url TEXT NOT NULL,image_url TEXT NOT NULL,title TEXT,description TEXT,site_name TEXT,
+        image_width INTEGER,image_height INTEGER,PRIMARY KEY(user_id,url));
+        CREATE TABLE IF NOT EXISTS user_bio_link_preview_backfill_attempts (
+        user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        url TEXT NOT NULL,status TEXT NOT NULL,attempted_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        PRIMARY KEY(user_id,url));`)
+    },
+  },
+  {
+    version: 86,
+    name: 'background_tasks',
+    up(database) {
+      database.run(`CREATE TABLE IF NOT EXISTS background_tasks (
+        name TEXT PRIMARY KEY,status TEXT NOT NULL,updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP);`)
+    },
+  },
 ]
 
 export const latestMigrationVersion = migrations.at(-1)!.version

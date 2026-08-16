@@ -364,12 +364,12 @@ header>.account-nav {
   margin-top: var(--space-2);
 }
 
-.reference-menu:hover .reference-menu-popover {
+.reference-menu:hover > .reference-menu-popover {
   display: grid;
   animation: reference-popover-reveal 0s 500ms both;
 }
 
-.reference-menu:focus-within .reference-menu-popover {
+.reference-menu:focus-within > .reference-menu-popover {
   display: grid;
   animation: none;
 }

@@ -9,7 +9,8 @@ import type { User } from '../db'
 import { sendMagicLink } from '../email'
 import { resolveHandle } from '../handles'
 import { logError } from '../log'
-import { deleteLinkPreviewImages, discoverLinkPreviews, replaceLinkPreviews, saveLinkPreviews } from '../link-preview'
+import { deleteLinkPreviewImages, discoverLinkPreviews, replaceBioLinkPreviews, replaceLinkPreviews,
+  saveLinkPreviews } from '../link-preview'
 import { moderateText, moderationMessage } from '../moderation'
 import { normalizePostBody, POST_MAX, postBodyValidationMessage, validPostBody } from '../post-body'
 import { postRateLimitMessage } from '../post-rate-limit'
@@ -175,6 +176,7 @@ export function registerApiWriteRoutes(app: Hono, database: Database, appUrl?: s
       }
     }
     database.query('UPDATE users SET bio=? WHERE id=?').run(bio, guard.user!.id)
+    await replaceBioLinkPreviews(database, guard.user!.id, await discoverLinkPreviews(bio, database))
     return json({ data: { ...serialize(guard.user!), bio } })
   })
 

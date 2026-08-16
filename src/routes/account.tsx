@@ -41,7 +41,8 @@ import { moderateText, moderationMessage } from '../moderation'
 import { accountForPasswordEnableToken, issuePasswordEnableToken } from '../password-enable'
 import { vapidPublicKey } from '../push'
 import { normalizeSearchQuery, searchPeople, searchTags } from '../search'
-import { deleteLinkPreviewImages } from '../link-preview'
+import { deleteBioLinkPreviewImages, deleteLinkPreviewImages, discoverLinkPreviews,
+  replaceBioLinkPreviews } from '../link-preview'
 import { sessionHash } from '../sessions'
 import { ACCENT_CHOICES, type AccentChoice, appearance, appearanceCookie, FONT_CHOICES, FONT_SIZE_CHOICES,
   type FontChoice, fontChoice, fontCookie, type FontSizeChoice, fontSizeChoice, fontSizeCookie, PRIMARY_FONT_CHOICES,
@@ -314,6 +315,7 @@ export function registerAccountRoutes(app: Hono) {
     }
     try {
       updateProfileHandle(db, user.id, handle, bio)
+      await replaceBioLinkPreviews(db, user.id, await discoverLinkPreviews(bio, db))
       db.query('UPDATE users SET timezone=? WHERE id=?').run(submittedTimezone, user.id)
       db.query('UPDATE users SET is_bot=? WHERE id=? AND bot_managed=0').run(isBot ? 1 : 0, user.id)
       invalidateMaterializedFeedPages(user.id, ['latest', 'hot', 'for-you', 'to-me'])
@@ -752,6 +754,7 @@ export function registerAccountRoutes(app: Hono) {
         .map(post => post.id)
       db.transaction(() => anonymizeUser(db, deletionAccount.id))()
       for (const postId of postIds) await deleteLinkPreviewImages(db, postId)
+      await deleteBioLinkPreviewImages(db, deletionAccount.id)
       return redirect('/', clearSessionCookie())
     }
     if (f.token) return page(<ConfirmAccountDelete user={user} invalid />, 400)
@@ -778,6 +781,7 @@ export function registerAccountRoutes(app: Hono) {
         .map(post => post.id)
       db.transaction(() => anonymizeUser(db, user.id))()
       for (const postId of postIds) await deleteLinkPreviewImages(db, postId)
+      await deleteBioLinkPreviewImages(db, user.id)
       return redirect('/', clearSessionCookie())
     }
     const origin = Bun.env.APP_URL?.replace(/\/$/, '') || new URL(c.req.url).origin

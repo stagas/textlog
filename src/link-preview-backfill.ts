@@ -1,7 +1,7 @@
 import type { Database } from 'bun:sqlite'
 import { appOrigin } from './brand'
 import { discoverLinkPreviews, isDirectImageUrl, isYouTubeUrl, saveLinkPreviews,
-  storeRemotePreviewImage } from './link-preview'
+  storeRemotePreviewImage, replaceBioLinkPreviews } from './link-preview'
 import { deleteImagesAfterCommit, isImageKey } from './image-storage'
 import { logError, logInfo } from './log'
 import { postLinks } from './utils'
@@ -69,6 +69,70 @@ export async function runLinkPreviewBackfill(database: Database, options: {
   }
   log(`link preview backfill complete fetched=${fetched} saved=${saved}`)
   return { pending: pending.length, fetched, saved }
+}
+
+export async function runBioLinkPreviewBackfill(database: Database, options: {
+  delayMs?: number
+  log?: (message: string) => void
+} = {}) {
+  const delayMs = options.delayMs ?? LINK_PREVIEW_BACKFILL_DELAY_MS
+  const log = options.log || console.log
+  const users = database.query(`SELECT id,bio FROM users
+    WHERE deleted_at IS NULL AND trim(bio)!='' ORDER BY id`).all() as { id: number; bio: string }[]
+  const attempted = database.query(
+    'SELECT status FROM user_bio_link_preview_backfill_attempts WHERE user_id=? AND url=?',
+  )
+  const existing = database.query('SELECT image_url FROM user_bio_link_previews WHERE user_id=? AND url=?')
+  const record = database.query(`INSERT OR REPLACE INTO user_bio_link_preview_backfill_attempts(user_id,url,status)
+    VALUES(?,?,?)`)
+  const pending = users.filter(user => postLinks(user.bio).some(url => {
+    const previous = attempted.get(user.id, url) as { status: string } | null
+    if (previous && !(isYouTubeUrl(url) && previous.status === 'no-preview')) return false
+    return !existing.get(user.id, url)
+  }))
+  log(`bio link preview backfill start pending=${pending.length} delay=${delayMs}ms`)
+  let fetched = 0
+  let saved = 0
+  for (const user of pending) {
+    if (fetched) await wait(delayMs)
+    const urls = postLinks(user.bio)
+    log(`bio link preview backfill fetch user=${user.id}`)
+    const previews = await discoverLinkPreviews(user.bio, database)
+    await replaceBioLinkPreviews(database, user.id, previews)
+    const savedUrls = new Set(previews.map(preview => preview.url))
+    for (const url of urls) record.run(user.id, url, savedUrls.has(url)
+      ? 'saved'
+      : isYouTubeUrl(url) ? 'no-preview-youtube-v2' : 'no-preview')
+    fetched++
+    saved += previews.length
+    log(`bio link preview backfill processed user=${user.id} saved=${previews.length}`)
+  }
+  log(`bio link preview backfill complete fetched=${fetched} saved=${saved}`)
+  return { pending: pending.length, fetched, saved }
+}
+
+const BIO_LINK_PREVIEW_TASK = 'bio-link-previews-v1'
+
+export async function runAutomaticBioLinkPreviewBackfill(database: Database, options: {
+  delayMs?: number
+  log?: (message: string) => void
+} = {}) {
+  const claimed = database.query(`INSERT INTO background_tasks(name,status) VALUES(?,'running')
+    ON CONFLICT(name) DO UPDATE SET status='running',updated_at=CURRENT_TIMESTAMP
+    WHERE background_tasks.status!='complete' AND (background_tasks.status!='running'
+      OR background_tasks.updated_at<=datetime('now','-30 minutes'))`).run(BIO_LINK_PREVIEW_TASK).changes
+  if (!claimed) return null
+  try {
+    const result = await runBioLinkPreviewBackfill(database, options)
+    database.query(`UPDATE background_tasks SET status='complete',updated_at=CURRENT_TIMESTAMP WHERE name=?`)
+      .run(BIO_LINK_PREVIEW_TASK)
+    return result
+  }
+  catch (error) {
+    database.query(`UPDATE background_tasks SET status='failed',updated_at=CURRENT_TIMESTAMP WHERE name=?`)
+      .run(BIO_LINK_PREVIEW_TASK)
+    throw error
+  }
 }
 
 export async function runR2LinkPreviewBackfill(database: Database, options: {

@@ -9,6 +9,7 @@ import { postLinks } from './utils'
 
 const MAX_LINKS = 3
 const MAX_HTML_BYTES = 1024 * 1024
+const MAX_YOUTUBE_CHANNEL_BYTES = 2 * 1024 * 1024
 const FETCH_TIMEOUT_MS = 5000
 
 export function isDirectImageUrl(value: string) {
@@ -25,6 +26,10 @@ export function isYouTubeUrl(value: string) {
   catch {
     return false
   }
+}
+
+function isYouTubeChannelUrl(url: URL) {
+  return isYouTubeUrl(url.href) && /^\/(?:@[^/]+|channel\/[^/]+|c\/[^/]+|user\/[^/]+)\/?$/i.test(url.pathname)
 }
 
 function ownPostPreview(database: Database, rawUrl: string) {
@@ -146,6 +151,31 @@ export function openGraphMetadata(html: string, pageUrl: string) {
   }
 }
 
+export function youtubeChannelMetadata(html: string) {
+  const start = html.indexOf('"channelMetadataRenderer":{')
+  if (start === -1) return null
+  const metadata = html.slice(start, start + 20_000)
+  const jsonString = (name: string) => {
+    const match = metadata.match(new RegExp(`"${name}":("(?:\\\\.|[^"\\\\])*")`))
+    if (!match) return undefined
+    try { return JSON.parse(match[1]) as string }
+    catch { return undefined }
+  }
+  const avatar = metadata.match(/"avatar":\{"thumbnails":\[\{"url":("(?:\\.|[^"\\])*")\s*,\s*"width":(\d+)\s*,\s*"height":(\d+)/)
+  if (!avatar) return null
+  try {
+    return {
+      imageUrl: JSON.parse(avatar[1]) as string,
+      title: jsonString('title')?.slice(0, 200),
+      description: jsonString('description')?.replace(/\s+/g, ' ').trim().slice(0, 500),
+      siteName: 'YouTube',
+      imageWidth: Number(avatar[2]),
+      imageHeight: Number(avatar[3]),
+    }
+  }
+  catch { return null }
+}
+
 export const openGraphImage = (html: string, pageUrl: string) => openGraphMetadata(html, pageUrl)?.imageUrl || null
 
 export async function readHtmlHead(response: Response) {
@@ -193,6 +223,52 @@ async function fetchHtml(initialUrl: URL) {
     if (!response.ok || !response.headers.get('content-type')?.toLowerCase().includes('text/html')) return null
     const html = await readHtmlHead(response)
     return html === null ? null : { html, url: url.href }
+  }
+  return null
+}
+
+async function fetchYouTubeChannel(initialUrl: URL) {
+  let url = initialUrl
+  for (let redirects = 0; redirects <= 3; redirects++) {
+    const response = await fetch(url, {
+      redirect: 'manual', signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
+      headers: {
+        accept: 'text/html,application/xhtml+xml',
+        'user-agent': 'Mozilla/5.0 (compatible; textlog-link-preview/1.0)',
+        cookie: 'CONSENT=YES+cb',
+      },
+    })
+    if (response.status >= 300 && response.status < 400) {
+      const location = response.headers.get('location')
+      if (!location) return null
+      const redirected = await publicHttpUrl(new URL(location, url).href)
+      if (!redirected) return null
+      url = redirected
+      continue
+    }
+    if (!response.ok || !response.headers.get('content-type')?.toLowerCase().includes('text/html')) return null
+    const declaredSize = Number(response.headers.get('content-length') || 0)
+    if (declaredSize > MAX_YOUTUBE_CHANNEL_BYTES) return null
+    const reader = response.body?.getReader()
+    if (!reader) return null
+    const decoder = new TextDecoder()
+    let html = ''
+    let size = 0
+    while (true) {
+      const { done, value } = await reader.read()
+      if (done) return youtubeChannelMetadata(html + decoder.decode())
+      size += value.byteLength
+      if (size > MAX_YOUTUBE_CHANNEL_BYTES) {
+        await reader.cancel()
+        return null
+      }
+      html += decoder.decode(value, { stream: true })
+      const metadata = youtubeChannelMetadata(html)
+      if (metadata) {
+        await reader.cancel()
+        return metadata
+      }
+    }
   }
   return null
 }
@@ -296,6 +372,7 @@ export async function discoverLinkPreviews(body: string, database?: Database) {
         return { url: rawUrl, ...image, title: filename, siteName: url.hostname.replace(/^www\./, '') }
       }
       let metadata = isYouTubeUrl(url.href) ? await youtubeMetadata(url) : null
+      if (!metadata && isYouTubeChannelUrl(url)) metadata = await fetchYouTubeChannel(url)
       if (!metadata) {
         const page = await fetchHtml(url)
         if (!page) return null
@@ -394,5 +471,68 @@ export async function deleteLinkPreviewImages(database: Database, postId: number
   if (!linkPreviewTableAvailable(database)) return
   const keys = storedPreviewKeys(database, postId)
   database.query('DELETE FROM post_link_previews WHERE post_id=?').run(postId)
+  await deleteImagesAfterCommit(keys)
+}
+
+function bioLinkPreviewTableAvailable(database: Database) {
+  return Boolean(database.query(
+    "SELECT 1 FROM sqlite_master WHERE type='table' AND name='user_bio_link_previews'",
+  ).get())
+}
+
+function storedBioPreviewKeys(database: Database, userId: number) {
+  if (!bioLinkPreviewTableAvailable(database)) return []
+  return (database.query('SELECT image_url FROM user_bio_link_previews WHERE user_id=?').all(userId) as {
+    image_url: string
+  }[]).map(row => row.image_url).filter(isImageKey)
+}
+
+export function userBioLinkPreviews(database: Database, userId: number) {
+  if (!bioLinkPreviewTableAvailable(database)) return {}
+  const rows = database.query(`SELECT url,image_url,title,description,site_name,image_width,image_height
+    FROM user_bio_link_previews WHERE user_id=?`).all(userId) as {
+      url: string; image_url: string; title: string | null; description: string | null; site_name: string | null;
+      image_width: number | null; image_height: number | null
+    }[]
+  return Object.fromEntries(rows.map(row => [row.url, {
+    imageUrl: isImageKey(row.image_url) ? getImageUrl(row.image_url) : row.image_url,
+    title: row.title ? decodeHtmlEntities(row.title) : undefined,
+    description: row.description ? decodeHtmlEntities(row.description) : undefined,
+    siteName: row.site_name ? decodeHtmlEntities(row.site_name) : undefined,
+    imageWidth: row.image_width || undefined,
+    imageHeight: row.image_height || undefined,
+  }]))
+}
+
+export async function replaceBioLinkPreviews(database: Database, userId: number,
+  previews: ({ url: string } & LinkPreview)[]) {
+  if (!bioLinkPreviewTableAvailable(database)) {
+    await deleteImages(previews.flatMap(preview => preview.imageKey ? [preview.imageKey] : []))
+    return
+  }
+  const oldKeys = storedBioPreviewKeys(database, userId)
+  const newKeys = previews.flatMap(preview => preview.imageKey ? [preview.imageKey] : [])
+  const insert = database.query(`INSERT INTO user_bio_link_previews
+    (user_id,url,image_url,title,description,site_name,image_width,image_height) VALUES(?,?,?,?,?,?,?,?)`)
+  try {
+    database.transaction(() => {
+      database.query('DELETE FROM user_bio_link_previews WHERE user_id=?').run(userId)
+      for (const preview of previews) {
+        insert.run(userId, preview.url, preview.imageKey || preview.imageUrl, preview.title || null,
+          preview.description || null, preview.siteName || null, preview.imageWidth || null, preview.imageHeight || null)
+      }
+    })()
+  }
+  catch (error) {
+    await deleteImages(newKeys)
+    throw error
+  }
+  await deleteImagesAfterCommit(oldKeys.filter(key => !newKeys.includes(key)))
+}
+
+export async function deleteBioLinkPreviewImages(database: Database, userId: number) {
+  if (!bioLinkPreviewTableAvailable(database)) return
+  const keys = storedBioPreviewKeys(database, userId)
+  database.query('DELETE FROM user_bio_link_previews WHERE user_id=?').run(userId)
   await deleteImagesAfterCommit(keys)
 }

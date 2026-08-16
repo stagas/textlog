@@ -1,9 +1,18 @@
 import { describe, expect, test } from 'bun:test'
 import { Database } from 'bun:sqlite'
 import { discoverLinkPreviews, isDirectImageUrl, openGraphImage, openGraphMetadata, readHtmlHead,
-  replaceLinkPreviews } from './link-preview'
+  replaceLinkPreviews, youtubeChannelMetadata } from './link-preview'
 
 describe('link previews', () => {
+  test('reads YouTube channel metadata from its embedded channel data', () => {
+    const html = `<script>var data={"channelMetadataRenderer":{"title":"Example Channel",
+      "description":"Videos about \\u0026 things","avatar":{"thumbnails":[{"url":"https://yt3.example/avatar.jpg",
+      "width":900,"height":900}]}}}</script>`
+    expect(youtubeChannelMetadata(html)).toEqual({
+      imageUrl: 'https://yt3.example/avatar.jpg', title: 'Example Channel',
+      description: 'Videos about & things', siteName: 'YouTube', imageWidth: 900, imageHeight: 900,
+    })
+  })
   test('recognizes direct image links with queries case-insensitively', () => {
     expect(isDirectImageUrl('https://cdn.example.com/photo.JPG?size=large')).toBe(true)
     expect(isDirectImageUrl('https://cdn.example.com/animation.gif')).toBe(true)

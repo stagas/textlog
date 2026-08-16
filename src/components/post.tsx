@@ -2,7 +2,9 @@ import React from 'react'
 import { isAdmin } from '../admin'
 import { containsAsciiArt, extractHashtags, extractMentions } from '../content'
 import { db, type User } from '../db'
-import { enrichPosts } from '../posts'
+import { resolveHandle } from '../handles'
+import { userBioLinkPreviews } from '../link-preview'
+import { enrichPosts, visibleHashtagCounts, visibleTagFollowerCounts, visibleUserProfileStats } from '../posts'
 import type { PostView, UserProfileStats } from '../types'
 import { displayBio, displayPostBody, fmt, fmtFull, linkify, referenceFormId } from '../utils'
 import { MetaRow } from './meta'
@@ -26,6 +28,38 @@ export function UserReference(
 ) {
   const ownUser = (user?.handle || currentHandle)?.toLowerCase() === handle.toLowerCase()
   const followReturnPath = new URLSearchParams(navigationQuery.slice(1)).get('from') || undefined
+  const bioTags = extractHashtags(bio || '')
+  const bioTagCounts = visibleHashtagCounts(db, [bio || ''], user?.id ?? -1)
+  const bioTagFollowerCounts = visibleTagFollowerCounts(db, bioTags, user?.id ?? -1)
+  const followedBioTags = !user || !bioTags.length ? new Set<string>() : new Set(
+    (db.query(`SELECT tag FROM hashtag_follows WHERE user_id=? AND tag IN (${
+      bioTags.map(() => '?').join(',')})`).all(user.id, ...bioTags) as { tag: string }[]).map(row => row.tag),
+  )
+  const bioHandles = extractMentions(bio || '')
+  const bioMentionBios: Record<string, string> = {}
+  const bioMentionIds: Record<string, number> = {}
+  for (const bioHandle of bioHandles) {
+    const mentioned = resolveHandle(db, bioHandle)
+    if (!mentioned) continue
+    const account = db.query('SELECT bio FROM users WHERE id=?').get(mentioned.id) as { bio: string } | null
+    if (account) {
+      bioMentionBios[bioHandle] = account.bio
+      bioMentionIds[bioHandle] = mentioned.id
+    }
+  }
+  const bioMentionStats = visibleUserProfileStats(db, Object.values(bioMentionIds), user?.id ?? -1)
+  const followedBioMentionIds = !user || !Object.keys(bioMentionIds).length ? new Set<number>() : new Set(
+    (db.query(`SELECT following_id FROM follows WHERE follower_id=? AND following_id IN (${
+      Object.keys(bioMentionIds).map(() => '?').join(',')})`).all(user.id, ...Object.values(bioMentionIds)) as {
+      following_id: number
+    }[]).map(row => row.following_id),
+  )
+  const bioMentionProfileStats = Object.fromEntries(Object.entries(bioMentionIds)
+    .flatMap(([bioHandle, id]) => bioMentionStats.has(id) ? [[bioHandle, bioMentionStats.get(id)!]] : []))
+  const bioMentionNoteCounts = Object.fromEntries(Object.entries(bioMentionProfileStats)
+    .map(([bioHandle, profileStats]) => [bioHandle, profileStats.notes]))
+  const referencedUser = bio ? resolveHandle(db, handle) : null
+  const bioFormPrefix = `handle-${handle.toLowerCase()}-bio`
   const profileHref = (tab?: string) =>
     tab
       ? `/u/${handle}?tab=${tab}${navigationQuery ? `&${navigationQuery.slice(1)}` : ''}`
@@ -54,7 +88,18 @@ export function UserReference(
           )
           : <span>{noteCount.toLocaleString()} {noteCount === 1 ? 'note' : 'notes'}</span>}
         <span className="reference-popover-bio" dangerouslySetInnerHTML={{
-          __html: linkify(displayBio(bio), {}, [], undefined, undefined, navigationQuery),
+          __html: linkify(displayBio(bio), bioMentionBios, [], undefined, undefined, navigationQuery, bioTagCounts,
+            bioMentionNoteCounts, {
+            signedIn: !!user,
+            currentHandle: user?.handle,
+            formPrefix: bioFormPrefix,
+            mentionFollowing: Object.fromEntries(Object.entries(bioMentionIds)
+              .map(([bioHandle, id]) => [bioHandle, followedBioMentionIds.has(id)])),
+            mentionProfileStats: bioMentionProfileStats,
+            hashtagFollowing: Object.fromEntries(bioTags.map(tag => [tag, followedBioTags.has(tag)])),
+            hashtagFollowerCounts: bioTagFollowerCounts,
+            linkPreviews: referencedUser ? userBioLinkPreviews(db, referencedUser.id) : {},
+          }),
         }} />
         {showFollowAction && !ownUser && (user
           ? (
@@ -72,6 +117,22 @@ export function UserReference(
           )
           : <a className="button" href="/enter" rel="nofollow">enter to follow</a>)}
       </span>
+      {user && bioTags.map(tag => (
+        <React.Fragment key={tag}>
+          <form className="reference-follow-form" id={referenceFormId(bioFormPrefix, 'tag', tag)} method="post"
+            action={'/tag-follow/' + encodeURIComponent(tag)} />
+          <form className="reference-follow-form" id={referenceFormId(bioFormPrefix, 'tag', tag, 'block')} method="post"
+            action={'/tag-block/' + encodeURIComponent(tag)} />
+        </React.Fragment>
+      ))}
+      {user && Object.keys(bioMentionIds).map(bioHandle => (
+        <React.Fragment key={`user-${bioHandle}`}>
+          <form className="reference-follow-form" id={referenceFormId(bioFormPrefix, 'user', bioHandle)} method="post"
+            action={'/follow/' + encodeURIComponent(bioHandle)} />
+          <form className="reference-follow-form" id={referenceFormId(bioFormPrefix, 'user', bioHandle, 'block')}
+            method="post" action={'/block/' + encodeURIComponent(bioHandle)} />
+        </React.Fragment>
+      ))}
     </span>
   )
 }

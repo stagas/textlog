@@ -237,6 +237,39 @@ describe('post persistence', () => {
       + 'form="post-1-tag-topic-block">block</button>')
   })
 
+  test('keeps handles flat while allowing tag and link popovers inside a bio popover', () => {
+    const url = 'https://example.com/about'
+    const html = linkify(`Talks with @friend about #Topic at ${url}`, { friend: 'Nested bio' }, [], undefined,
+      undefined, '', { topic: 3 }, { friend: 2 }, {
+        signedIn: false,
+        formPrefix: 'handle-writer-bio',
+        hashtagFollowerCounts: { topic: 1 },
+        linkPreviews: { [url]: { imageUrl: 'https://cdn.example.com/about.jpg', title: 'About' } },
+        mentionPopovers: false,
+      })
+    expect(html).toContain('<a href="/u/friend">@friend</a>')
+    expect(html).toContain('<span class="reference-menu-popover reference-menu-popover-tag">')
+    expect(html).toContain('class="remote-link-popover"')
+    expect(html.match(/reference-popover-bio/g)).toBeNull()
+  })
+
+  test('stops handle popover nesting after the nested handle bio', () => {
+    const html = linkify('@friend', {
+      friend: 'Knows @third and follows #topic at example.com',
+    }, [], undefined, undefined, '', {}, { friend: 2 }, {
+      signedIn: false,
+      formPrefix: 'handle-writer-bio',
+      mentionProfileStats: {
+        friend: { notes: 2, replies: 1, followers: 1, following: 1, followingTags: 1 },
+      },
+    })
+    expect(html.match(/class="reference-menu"/g)).toHaveLength(1)
+    expect(html).toContain('<span class="reference-popover-bio">Knows <a href="/u/third">@third</a> and follows '
+      + '<a href="/tag/topic">#topic</a> at ')
+    expect(html).toContain('<a href="https://example.com" target="_blank" '
+      + 'rel="nofollow ugc noopener noreferrer">example.com</a>')
+  })
+
   test('renders a stored remote link image as a hover-only CSS variable', () => {
     const html = linkify('read https://example.com/story', {}, [], undefined, undefined, '', {}, {}, {
       signedIn: false,
