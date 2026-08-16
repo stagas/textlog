@@ -18,6 +18,7 @@ function feedResponse(c: Context, database: Database, format: SyndicationFormat,
     pagePath: string
     feedPath?: string
     posts: ReturnType<typeof publicPosts>
+    omitAuthorInTitles?: boolean
   })
 {
   const origin = apiOrigin(c.req.url, appUrl)
@@ -75,6 +76,7 @@ export function registerSyndicationRoutes(app: Hono, database: Database = db,
       pagePath,
       feedPath,
       posts: publicPosts(database, origin, { handle: resolved.handle }),
+      omitAuthorInTitles: true,
     })
   }
   const tag = (c: Context, requestedTag: string, format: SyndicationFormat, feedPath?: string) => {

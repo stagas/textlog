@@ -12,6 +12,7 @@ export type SyndicationFeed = {
   pageUrl: string
   feedUrl: string
   posts: ApiPost[]
+  omitAuthorInTitles?: boolean
 }
 
 function xml(value: string) {
@@ -47,11 +48,12 @@ function postHtml(body: string) {
   }).trim()
 }
 
-function itemTitle(post: ApiPost) {
-  return decodeHtmlEntities(sanitizeHtml(postHtml(post.body), {
+function itemTitle(post: ApiPost, omitAuthor: boolean) {
+  const text = decodeHtmlEntities(sanitizeHtml(postHtml(post.body), {
     allowedTags: [],
     allowedAttributes: {},
   })).replace(/\s+/g, ' ').trim()
+  return omitAuthor ? text : `@${post.author.handle}: ${text}`
 }
 
 function updated(posts: ApiPost[]) {
@@ -61,7 +63,7 @@ function updated(posts: ApiPost[]) {
 function atom(feed: SyndicationFeed) {
   const entries = feed.posts.map(post =>
     `  <entry>
-    <title>${xml(itemTitle(post))}</title>
+    <title>${xml(itemTitle(post, !!feed.omitAuthorInTitles))}</title>
     <id>${xml(post.url)}</id>
     <link rel="alternate" href="${xml(post.url)}" />
     <published>${xml(post.created_at)}</published>
@@ -85,7 +87,7 @@ ${entries}${entries ? '\n' : ''}</feed>
 function rss(feed: SyndicationFeed) {
   const items = feed.posts.map(post =>
     `    <item>
-      <title>${xml(itemTitle(post))}</title>
+      <title>${xml(itemTitle(post, !!feed.omitAuthorInTitles))}</title>
       <link>${xml(post.url)}</link>
       <guid isPermaLink="true">${xml(post.url)}</guid>
       <pubDate>${new Date(post.created_at).toUTCString()}</pubDate>
