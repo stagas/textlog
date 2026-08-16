@@ -186,6 +186,20 @@ describe('hot feed ranking', () => {
     expect(results[0].hot_score).toBeGreaterThan(290)
   })
 
+  test('does not turn two-person back-and-forth depth into a large recent-reply boost', () => {
+    post(1, '2026-08-03 08:00:00')
+    post(2, '2026-08-03 08:00:00')
+    database.run(`UPDATE post_hot SET score=2,reply_count=1,activity_count=1,
+      score_updated_at='2026-08-03 12:00:00',latest_activity_at='2026-08-03 12:00:00' WHERE post_id=1`)
+    database.run(`UPDATE post_hot SET score=2,reply_count=1,activity_count=50,
+      score_updated_at='2026-08-03 12:00:00',latest_activity_at='2026-08-03 12:00:00' WHERE post_id=2`)
+
+    const results = getHotPosts(database, 20, null, asOf)
+    expect(results.find(result => result.id === 1)?.hot_score)
+      .toBeCloseTo(results.find(result => result.id === 2)!.hot_score)
+    expect(results[0].hot_score).toBeLessThan(100)
+  })
+
   test('very recent replies can outrank the post-age tiers', () => {
     post(1, '2026-07-20 12:00:00')
     post(2, '2026-08-03 00:00:00')

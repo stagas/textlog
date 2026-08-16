@@ -26,7 +26,7 @@ export type HotCursor = {
   direction: 'next' | 'previous'
 }
 
-export const hotRankingVersion = 65
+export const hotRankingVersion = 67
 const cursorVersion = hotRankingVersion
 const activityHalfLifeHours = 6
 const postWeight = 0
@@ -38,6 +38,7 @@ const repliesPerDiscussionWeightDoubling = 1.5
 const recentCommentBoost = 1
 const recentCommentBoostHalfLifeHours = 0.5
 const singleReplyParticipationWeight = 0.2
+const singleReplyRecentActivityWeight = 0.05
 const twoReplyParticipationWeight = 0.1
 const discussionReserveReplyThreshold = 4
 const discussionReserveScale = 0.04
@@ -363,7 +364,8 @@ export function getHotPosts(
   ), ranked AS (
     SELECT post_id,(base_score*(1+${recentPostBoost}*max(0,1-post_age_hours/${recentPostBoostHours}.0))
       +candidate_weight*CASE WHEN base_score>0 AND reply_count>0 AND reply_age_hours<${recentReplyPriorityHours}
-        THEN ${recentReplyActivityBoost}*max(0,1-reply_age_hours/${recentReplyPriorityHours}.0) ELSE 0 END
+        THEN ${recentReplyActivityBoost}*CASE reply_count WHEN 1 THEN ${singleReplyRecentActivityWeight} ELSE 1 END
+          *max(0,1-reply_age_hours/${recentReplyPriorityHours}.0) ELSE 0 END
       +candidate_weight*CASE WHEN base_score>0 AND reply_count>1 AND post_age_hours<${recentPostBoostHours}
         THEN ${recentPostTierBonus}
         WHEN base_score>0 AND reply_count>1 AND post_age_hours<${yesterdayPostHours}
