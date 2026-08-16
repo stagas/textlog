@@ -26,7 +26,7 @@ export type HotCursor = {
   direction: 'next' | 'previous'
 }
 
-export const hotRankingVersion = 55
+export const hotRankingVersion = 60
 const cursorVersion = hotRankingVersion
 const activityHalfLifeHours = 6
 const postWeight = 0
@@ -60,6 +60,9 @@ const longDiscussionCommentsPerDoubling = 5
 const replyCandidateDepthWeight = 0.6
 const replyCandidateBaseWeight = 0.1
 const veryRecentReplyCandidateHours = 4
+const recentPostBoost = 4
+const recentPostBoostHours = 24
+const recentPostTierBonus = 100
 
 function hasHotTable(database: Database) {
   return Boolean(database.query('SELECT 1 FROM sqlite_master WHERE type=\'table\' AND name=\'post_hot\'').get())
@@ -300,6 +303,7 @@ export function getHotPosts(
     SELECT child.id,post_depth.depth+1 FROM post_depth JOIN posts child ON child.parent_id=post_depth.id
   ), ranking_time(as_of) AS (VALUES(?)), scored AS (
     SELECT h.post_id,h.reply_count,h.activity_count,post_depth.depth candidate_depth,
+      max(0,(julianday(ranking_time.as_of)-julianday(p.created_at))*24) post_age_hours,
       max(0,(julianday(ranking_time.as_of)-julianday(h.latest_activity_at))*24) reply_age_hours,
       pow(0.5,max(0,(julianday(ranking_time.as_of)-julianday(h.latest_activity_at))*24)
         /${recentReplyPriorityHalfLifeHours}) reply_recency_priority,
@@ -338,8 +342,8 @@ export function getHotPosts(
         *pow(0.5,max(0,(julianday(ranking_time.as_of)-julianday(h.latest_activity_at))*24)
           /${conversationDepthHalfLifeHours}) ELSE 0 END conversation_depth_reserve
     FROM post_hot h JOIN posts p ON p.id=h.post_id JOIN post_depth ON post_depth.id=p.id CROSS JOIN ranking_time
-  ), ranked AS (
-    SELECT post_id,(CASE
+  ), ranked_base AS (
+    SELECT post_id,post_age_hours,reply_count,(CASE
       WHEN reply_count>=3 AND reply_age_hours<=${recentReplyPriorityHours} THEN
         1+reply_recency_priority+min(0.25,recency_score*0.01)
       WHEN reply_count=2 AND reply_age_hours<=${recentReplyPriorityHours} THEN
@@ -347,7 +351,11 @@ export function getHotPosts(
       WHEN reply_count>=3 THEN discussion_reserve
       ELSE max(recency_score,conversation_depth_reserve) END)
       *CASE WHEN candidate_depth=0 THEN 1 ELSE
-        ${replyCandidateBaseWeight}*pow(${replyCandidateDepthWeight},candidate_depth-1) END hot_score FROM scored
+        ${replyCandidateBaseWeight}*pow(${replyCandidateDepthWeight},candidate_depth-1) END base_score FROM scored
+  ), ranked AS (
+    SELECT post_id,base_score*(1+${recentPostBoost}*max(0,1-post_age_hours/${recentPostBoostHours}.0))
+      +CASE WHEN base_score>0 AND reply_count>1 AND post_age_hours<${recentPostBoostHours}
+        THEN ${recentPostTierBonus} ELSE 0 END hot_score FROM ranked_base
   ) SELECT p.*,u.handle,ranked.hot_score,h.latest_activity_at,h.reply_count,h.activity_count
     FROM ranked JOIN post_hot h ON h.post_id=ranked.post_id
     JOIN posts p ON p.id=ranked.post_id JOIN users u ON u.id=p.user_id

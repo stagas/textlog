@@ -153,7 +153,7 @@ describe('hot feed ranking', () => {
       WHERE post_id=?`).run(5.84, 3, '2026-08-03 11:00:00', '2026-08-03 11:00:00', 3)
 
     const roots = getHotPosts(database, 100, null, asOf)
-    expect(roots.map(result => result.id)).toEqual([3, 1, 2])
+    expect(roots.map(result => result.id)).toEqual([3, 2, 1])
     expect(roots[0].hot_score).toBeGreaterThan(1.5)
   })
 
@@ -172,7 +172,7 @@ describe('hot feed ranking', () => {
       .toBeLessThan(results.indexOf(results.find(result => result.id === 1)!))
   })
 
-  test('does not use original post age when reply activity is identical', () => {
+  test('boosts posts during their first day when reply activity is identical', () => {
     post(1, '2026-07-30 12:00:00')
     postBy(2, 2, '2026-08-03 12:00:00', 1)
     postBy(5, 7, '2026-08-03 12:00:00', 1)
@@ -187,9 +187,31 @@ describe('hot feed ranking', () => {
     const fourDayThread = results.find(result => result.id === 1)!
     const newThread = results.find(result => result.id === 3)!
     const fiveDayThread = results.find(result => result.id === 5)!
-    expect(newThread.hot_score).toBeCloseTo(fourDayThread.hot_score)
     expect(fourDayThread.hot_score).toBeCloseTo(fiveDayThread.hot_score)
-    expect(newThread.hot_score).toBeCloseTo(0.225 + 0.04)
+    expect(newThread.hot_score).toBeCloseTo(100 + fourDayThread.hot_score * 5)
+    expect(newThread.hot_score).toBeCloseTo(100 + (0.225 + 0.04) * 5)
+  })
+
+  test('ranks hour-old posts with multiple replies ahead of day-old posts', () => {
+    post(1, '2026-08-02 11:59:00')
+    post(2, '2026-08-03 11:00:00')
+    database.run(`UPDATE post_hot SET score=1000,reply_count=20,activity_count=20,
+      score_updated_at='2026-08-03 12:00:00',latest_activity_at='2026-08-03 12:00:00' WHERE post_id=1`)
+    database.run(`UPDATE post_hot SET score=0.01,reply_count=2,activity_count=2,
+      score_updated_at='2026-08-03 11:00:00',latest_activity_at='2026-08-03 11:00:00' WHERE post_id=2`)
+
+    expect(getHotPosts(database, 20, null, asOf).map(result => result.id)).toEqual([2, 1])
+  })
+
+  test('does not guarantee the hour tier to posts with only one reply', () => {
+    post(1, '2026-08-02 11:59:00')
+    post(2, '2026-08-03 11:00:00')
+    database.run(`UPDATE post_hot SET score=1000,reply_count=20,activity_count=20,
+      score_updated_at='2026-08-03 12:00:00',latest_activity_at='2026-08-03 12:00:00' WHERE post_id=1`)
+    database.run(`UPDATE post_hot SET score=0.01,reply_count=1,activity_count=1,
+      score_updated_at='2026-08-03 11:00:00',latest_activity_at='2026-08-03 11:00:00' WHERE post_id=2`)
+
+    expect(getHotPosts(database, 20, null, asOf).map(result => result.id)).toEqual([1, 2])
   })
 
   test('nine unique repliers outweigh six even when the six-reply thread is older', () => {
