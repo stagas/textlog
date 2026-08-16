@@ -384,7 +384,7 @@ export function Post({
                     currentHandle: user?.handle, formPrefix: `${formPrefix}-parent-${parent.id}`,
                     mentionFollowing: parent.mention_following, mentionProfileStats: parent.mention_profile_stats,
                     hashtagFollowing: parent.hashtag_following,
-                    hashtagFollowerCounts: parent.hashtag_follower_counts }),
+                    hashtagFollowerCounts: parent.hashtag_follower_counts, linkPreviews: parent.link_previews }),
                 }} />
                 <ReferenceFollowForms post={parent} prefix={`${formPrefix}-parent-${parent.id}`} user={user}
                   returnPath={returnPath || `/post/${p.id}#post-${p.id}`} />

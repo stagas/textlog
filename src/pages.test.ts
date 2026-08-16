@@ -1326,6 +1326,10 @@ test('Post renders preloaded parent and reply data', () => {
         created_at: '2026-08-03 11:00:00',
         deleted_at: null,
         reply_count: 1,
+        link_previews: {
+          'https://example.com/post': { imageUrl: 'https://example.com/post.jpg', title: 'Parent preview',
+            imageWidth: 1200, imageHeight: 630 },
+        },
       },
     },
   }))
@@ -1338,6 +1342,8 @@ test('Post renders preloaded parent and reply data', () => {
   expect(html).toContain(
     'href="https://example.com/post" title="https://example.com/post" target="_blank" rel="nofollow ugc noopener noreferrer">link</a>',
   )
+  expect(html).toContain('class="remote-link-popover" href="https://example.com/post"')
+  expect(html).toContain('<strong class="remote-link-title">Parent preview</strong>')
   expect(html).toContain('href="/enter?next=%2Fpost%2F2%3Freply%3D1"')
   expect(html).toContain('aria-label="enter to reply to @writer">enter to reply</a>')
   expect(html).toContain('href="/enter?next=%2Fpost%2F1%3Freply%3D1"')
