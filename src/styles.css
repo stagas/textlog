@@ -3201,6 +3201,14 @@ form.report-panel {
   font-size: 0.625rem;
 }
 
+.bio-form .profile-timezone-setting {
+  gap: var(--space-2);
+}
+
+.profile-timezone-setting .form-select {
+  color: var(--ink);
+}
+
 .bio-form > .composefoot {
   display: flex;
   justify-content: flex-end;

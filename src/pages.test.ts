@@ -1073,6 +1073,8 @@ test('Profile edit offers a data download without rendering notes', () => {
   expect(html).toContain('Handles must be 2–24 characters')
   expect(html).toContain('aria-describedby="profile-handle-help"')
   expect(html).toContain('role="switch" name="isBot" value="yes"')
+  expect(html).toContain('<select class="form-control form-select" name="timezone">')
+  expect(html).toContain('<option value="UTC" selected="">UTC ±00 — London, Dublin, Lisbon, Accra</option>')
   expect(html).toContain('This account is a bot')
   expect(html).toContain('Bot notes are hidden from /latest')
   expect(html).not.toContain('visiting its profile.0')

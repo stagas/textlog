@@ -30,6 +30,7 @@ import { sendAccountDeletionConfirmation, sendEmailChangeAuthorization, sendPass
 import { emailChangeForToken, issueEmailChangeAuthorization } from '../email-change-authorization'
 import { confirmEmailToken, findEmailToken } from '../email-verification'
 import { updateProfileHandle } from '../handles'
+import { invalidateMaterializedFeedPages } from '../materialized-feed-pages'
 import {
   clearSessionCookie,
   notificationDevice,
@@ -46,6 +47,7 @@ import { ACCENT_CHOICES, type AccentChoice, appearance, appearanceCookie, FONT_C
   type FontChoice, fontChoice, fontCookie, type FontSizeChoice, fontSizeChoice, fontSizeCookie, PRIMARY_FONT_CHOICES,
   type PrimaryFontChoice, primaryFontChoice, primaryFontCookie, SANS_SERIF_FONT_CHOICES, type SansSerifFontChoice,
   sansSerifFontChoice, sansSerifFontCookie, THEME_CHOICES, type ThemeChoice } from '../theme'
+import { DEFAULT_TIMEZONE, validTimezone } from '../timezone'
 
 function markAppearanceBannerHandled(request: Request, userId: number) {
   const userAgent = notificationUserAgent(request)
@@ -268,17 +270,19 @@ export function registerAccountRoutes(app: Hono) {
     const submittedBio = normalizeBioBody(f.bio || '')
     const bio = submittedBio.trim() ? submittedBio : ''
     const submittedHandle = f.handle || ''
+    const submittedTimezone = f.timezone || user.timezone || DEFAULT_TIMEZONE
     const isBot = f.isBot === 'yes'
     const suggestionSearch = profileSuggestionSearch(f, user.id)
     if (suggestionSearch) {
       return page(
-        <Profile user={user} profile={user} posts={[]} following={false} bio={bio} editHandle={submittedHandle} editing
+        <Profile user={user} profile={{ ...user, timezone: submittedTimezone }} posts={[]} following={false} bio={bio}
+          editHandle={submittedHandle} editing
           returnPath={returnPath} suggestionSearch={suggestionSearch} editIsBot={isBot} />,
       )
     }
     const handle = submittedHandle.toLowerCase().replace(/^@/, '')
     const validHandle = /^[a-z0-9_]{2,24}$/.test(handle)
-    if (!validHandle || !validBioBody(bio)) {
+    if (!validHandle || !validBioBody(bio) || !validTimezone(submittedTimezone)) {
       const handleCharacters = Array.from(submittedHandle).length
       const error = [
         !validHandle
@@ -287,9 +291,11 @@ export function registerAccountRoutes(app: Hono) {
           }. Use 2–24 letters, numbers, or underscores.`
           : '',
         !validBioBody(bio) ? bioBodyValidationMessage(bio) : '',
+        !validTimezone(submittedTimezone) ? 'Choose a valid timezone.' : '',
       ].filter(Boolean).join(' ')
       return page(
-        <Profile user={user} profile={user} posts={[]} following={false} bio={bio} editHandle={submittedHandle} editing
+        <Profile user={user} profile={{ ...user, timezone: submittedTimezone }} posts={[]} following={false} bio={bio}
+          editHandle={submittedHandle} editing
           error={error} returnPath={returnPath} editIsBot={isBot} />,
         400,
       )
@@ -298,7 +304,8 @@ export function registerAccountRoutes(app: Hono) {
       const moderation = await moderateText(`username: ${handle}\nbio: ${bio}`)
       if (!moderation.ok) {
         return page(
-          <Profile user={user} profile={user} posts={[]} following={false} bio={bio} editHandle={submittedHandle}
+          <Profile user={user} profile={{ ...user, timezone: submittedTimezone }} posts={[]} following={false} bio={bio}
+            editHandle={submittedHandle}
             editing error={moderationMessage(moderation.reason)} returnPath={returnPath} editIsBot={isBot} />,
           moderation.reason === 'flagged' ? 422 : 503,
         )
@@ -306,11 +313,14 @@ export function registerAccountRoutes(app: Hono) {
     }
     try {
       updateProfileHandle(db, user.id, handle, bio)
+      db.query('UPDATE users SET timezone=? WHERE id=?').run(submittedTimezone, user.id)
       db.query('UPDATE users SET is_bot=? WHERE id=? AND bot_managed=0').run(isBot ? 1 : 0, user.id)
+      invalidateMaterializedFeedPages(user.id, ['latest', 'hot', 'for-you', 'to-me'])
     }
     catch {
       return page(
-        <Profile user={user} profile={user} posts={[]} following={false} bio={bio} editHandle={submittedHandle} editing
+        <Profile user={user} profile={{ ...user, timezone: submittedTimezone }} posts={[]} following={false} bio={bio}
+          editHandle={submittedHandle} editing
           error="That username is unavailable." returnPath={returnPath} editIsBot={isBot} />,
         400,
       )

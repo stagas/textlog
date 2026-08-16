@@ -68,6 +68,7 @@ export type ProfileRow = {
   email_verified_at?: string | null
   is_bot?: number
   bot_managed?: number
+  timezone?: string | null
 }
 
 export type SessionView = { token: string; created_at: number; expires_at: number; user_agent: string;

@@ -1052,6 +1052,13 @@ export const migrations: Migration[] = [
         PRIMARY KEY(post_id,url));`)
     },
   },
+  {
+    version: 82,
+    name: 'user_timezone',
+    up(database) {
+      addColumn(database, 'users', 'timezone', "TEXT NOT NULL DEFAULT 'UTC'")
+    },
+  },
 ]
 
 export const latestMigrationVersion = migrations.at(-1)!.version

@@ -6,6 +6,7 @@ import { userForApiKey } from './api-keys'
 import { sessionCookieName } from './brand'
 import { containsAsciiArt, MAX_HASHTAGS_PER_POST, type PostContentFlags } from './content'
 import { db, type User } from './db'
+import { activeTimezone, timezoneLabel } from './timezone'
 import { texToMathML } from './math'
 import { markSessionUsed, sessionHash } from './sessions'
 import type { LinkPreview, UserProfileStats } from './types'
@@ -111,7 +112,8 @@ export const bearerToken = (req: Request) => req.headers.get('authorization')?.m
 function userForSession(token: string | null, database: Database): User | null {
   const tokenHash = sessionHash(token)
   if (!tokenHash) return null
-  const user = database.query(`SELECT u.id,u.handle,u.email,u.bio,u.suspended_at,u.email_verified_at,u.handle_chosen_at
+  const user = database.query(`SELECT u.id,u.handle,u.email,u.bio,u.suspended_at,u.email_verified_at,u.handle_chosen_at,
+      u.timezone
     FROM sessions s JOIN users u ON u.id=s.user_id
     WHERE s.token_hash=? AND s.expires_at>? AND u.deleted_at IS NULL AND u.suspended_at IS NULL`)
     .get(tokenHash, Date.now()) as User | null
@@ -141,7 +143,11 @@ export function fmt(d: string, now = Date.now()) {
   if (months < 12) return `${months}mo`
   return `${Math.floor(days / 365)}y`
 }
-export const fmtFull = (d: string) => timestamp(d).toLocaleString('en', { dateStyle: 'medium', timeStyle: 'short' })
+export const fmtFull = (d: string) => {
+  const timeZone = activeTimezone()
+  return `${timestamp(d).toLocaleString('en', { dateStyle: 'medium', timeStyle: 'short', timeZone })} (${
+    timezoneLabel(timeZone)})`
+}
 const emojiPattern = /(?:\p{Regional_Indicator}{2}|[#*0-9]\uFE0F?\u20E3|\p{Extended_Pictographic}[\uFE0E\uFE0F]?\p{Emoji_Modifier}?(?:\u200D\p{Extended_Pictographic}[\uFE0E\uFE0F]?\p{Emoji_Modifier}?)*)/gu
 
 function emojiText(text: string) {

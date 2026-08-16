@@ -25,6 +25,7 @@ describe('database migrations', () => {
       .map(column => column.name)
     expect(userColumns).toContain('activity_read_at')
     expect(userColumns).toContain('account_group_id')
+    expect(userColumns).toContain('timezone')
     expect(userColumns).not.toContain('api_writes_enabled_at')
     expect((database.query('PRAGMA table_info(handle_history)').all() as { name: string }[])
       .map(column => column.name)).toContain('account_group_id')

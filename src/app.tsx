@@ -40,6 +40,7 @@ import { loadStylesAsset, stylesResponse } from './styles'
 import { themeLogoSvg, themeStyles, versionedAppearance, withAppearance } from './theme'
 import { apiUser, currentUser, sessionToken } from './utils'
 import { VisitorBuffer } from './visitors'
+import { withTimezone } from './timezone'
 
 const devReloadEnabled = Bun.env.DEV_RELOAD === 'true'
 const publicArchivePath = Bun.env.PUBLIC_ARCHIVE_PATH || 'public/dump.zip'
@@ -48,6 +49,7 @@ configureDevReload(devReloadEnabled ? bootId : undefined)
 clearMaterializedFeedPages()
 const app = new Hono()
 app.use('*', (c, next) => withAppearance(c.req.raw, next))
+app.use('*', (c, next) => withTimezone(currentUser(c.req.raw)?.timezone, next))
 const stylesPath = new URL('./styles.css', import.meta.url).pathname
 const styles = devReloadEnabled ? undefined : await loadStylesAsset(stylesPath)
 const publicAssets = await Promise.all([

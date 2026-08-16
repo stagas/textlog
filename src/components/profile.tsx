@@ -8,6 +8,7 @@ import { Layout } from './layout'
 import { FormMessage, Pagination, PostingHelp, PostingSuggestionResults, type PostingSuggestionSearch, ProfileControls,
   ProfileHeader, ProfileTabs } from './page-shared'
 import { Post } from './post'
+import { DEFAULT_TIMEZONE, TIMEZONE_CHOICES } from '../timezone'
 
 export function Profile(
   { user, profile, posts, following, bio = profile.bio || '', editHandle = profile.handle, editEmail = profile.email,
@@ -128,6 +129,16 @@ export function Profile(
                   </label>
                   <PostingSuggestionResults search={suggestionSearch} />
                   <PostingHelp maxLength={160} maxLines={5} search={suggestionSearch} />
+                  <label className="form-label profile-timezone-setting">
+                    timezone
+                    <select className="form-control form-select" name="timezone"
+                      defaultValue={profile.timezone || DEFAULT_TIMEZONE}
+                    >
+                      {TIMEZONE_CHOICES.map(timezone => (
+                        <option value={timezone.value} key={timezone.value}>{timezone.label}</option>
+                      ))}
+                    </select>
+                  </label>
                   <label className="profile-bot-setting">
                     <input type="checkbox" role="switch" name="isBot" value="yes" defaultChecked={editIsBot}
                       disabled={!!profile.bot_managed} />
