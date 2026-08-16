@@ -214,6 +214,11 @@ export function registerAccountRoutes(app: Hono) {
       db.query(`INSERT INTO notification_user_agents(user_id,user_agent,status) VALUES(?,?,'enabled')
         ON CONFLICT(user_id,user_agent) DO UPDATE SET status='enabled',updated_at=CURRENT_TIMESTAMP`)
         .run(user.id, userAgent)
+      if (value.preferences) {
+        db.query(`INSERT INTO notification_improvement_user_agents(user_id,user_agent) VALUES(?,?)
+          ON CONFLICT(user_id,user_agent) DO UPDATE SET dismissed_at=CURRENT_TIMESTAMP`)
+          .run(user.id, userAgent)
+      }
     }
     c.header('Set-Cookie', notificationDeviceCookie(deviceId), { append: true })
     return c.json({ saved: true })

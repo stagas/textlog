@@ -485,16 +485,23 @@ test('consequential account, content, reporting, and admin flows work over HTTP'
   expect(deviceCookie).toBeDefined()
   const enabledDeviceHome = await (await request('/', { cookie: aliceCookie, userAgent: 'alice-browser' })).text()
   expect(enabledDeviceHome).toContain('class="notification-banner"')
-  expect(enabledDeviceHome).toContain('href="/account/edit/notifications">check the improved notifications</a>')
+  expect(enabledDeviceHome).not.toContain('check the improved notifications')
+  expect(enabledDeviceHome).toContain('href="/account/edit/appearance">customize appearance</a>')
   const otherBrowserHome = await (await request('/', { cookie: aliceCookie, userAgent: 'alice-other-browser' })).text()
   expect(otherBrowserHome).toContain('class="notification-banner"')
   expect(otherBrowserHome).not.toContain('check the improved notifications')
+  database.query(`INSERT INTO notification_user_agents(user_id,user_agent,status) VALUES(?,?,'enabled')`)
+    .run(alice.id, 'alice-improvements-browser')
+  const improvementsHome = await (await request('/', {
+    cookie: aliceCookie, userAgent: 'alice-improvements-browser',
+  })).text()
+  expect(improvementsHome).toContain('href="/account/edit/notifications">check the improved notifications</a>')
   const dismissedImprovements = await request('/notifications/improvements/dismiss', {
-    method: 'POST', cookie: aliceCookie, userAgent: 'alice-browser',
+    method: 'POST', cookie: aliceCookie, userAgent: 'alice-improvements-browser',
   })
   expect(dismissedImprovements.status).toBe(303)
   const improvementDismissedHome = await (await request('/', {
-    cookie: aliceCookie, userAgent: 'alice-browser',
+    cookie: aliceCookie, userAgent: 'alice-improvements-browser',
   })).text()
   expect(improvementDismissedHome).not.toContain('check the improved notifications')
   expect(improvementDismissedHome).toContain('href="/account/edit/appearance">customize appearance</a>')
