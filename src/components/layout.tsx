@@ -178,7 +178,7 @@ export function Layout({
         <main id="main-content">{children}</main>
         <footer className="site-footer">
           <span>
-            {appHost()} <span aria-hidden="true">·</span> <a className="footer-host-link" href="/stats">stats</a>
+            {appHost()} <span aria-hidden="true">/</span> <a className="footer-host-link" href="/stats">stats</a>
           </span>
           {instance.links.getMobileApp && (
             <a
