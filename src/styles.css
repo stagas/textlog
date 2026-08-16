@@ -333,7 +333,7 @@ header>.account-nav {
 
 .reference-menu-popover {
   position: absolute;
-  z-index: 20;
+  z-index: 22;
   top: calc(100% + var(--space-1));
   left: 0;
   display: none;

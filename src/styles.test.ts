@@ -190,6 +190,8 @@ describe('in-memory stylesheet', () => {
 
   test('opens reference popovers on hover and keyboard focus', async () => {
     const css = await Bun.file(new URL('./styles.css', import.meta.url)).text()
+    const popoverRule = css.slice(css.indexOf('.reference-menu-popover {'), css.indexOf('.reference-menu-popover-tag'))
+    expect(popoverRule).toContain('z-index: 22;')
     expect(css).toContain('.reference-menu:hover .reference-menu-popover {')
     expect(css).toContain('animation: reference-popover-reveal 0s 500ms both;')
     expect(css).toContain(
