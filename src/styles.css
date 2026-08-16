@@ -1974,6 +1974,11 @@ textarea {
   outline: none;
 }
 
+.form-control:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+}
+
 .form-select {
   min-height: 48px;
   padding-right: 44px;
@@ -2008,6 +2013,11 @@ textarea {
   background-position: center;
   background-repeat: no-repeat;
   background-size: 12px 12px;
+}
+
+.form-checkbox:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
 }
 
 .form-label {
@@ -2446,6 +2456,12 @@ form.report-panel {
   font-weight: 400;
   line-height: 1.75;
   letter-spacing: normal;
+}
+
+.illegal-activity-page .report-panel .identity-exception-hint {
+  color: var(--muted);
+  font-size: 0.6875rem;
+  line-height: 1.6;
 }
 
 .report-panel .good-faith {

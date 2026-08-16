@@ -59,7 +59,9 @@ export function IllegalActivityReport(
                     defaultValue={values.email} placeholder="you@example.com" autoComplete="email" inputMode="email"
                     enterKeyHint="done" />
                 </label>
-                <p className="form-hint">Name and email may be omitted only for a child-safety offence report.</p>
+                <p className="form-hint identity-exception-hint">
+                  Name and email may be omitted only for a child-safety offence report.
+                </p>
                 <label className="good-faith form-hint">
                   <input className="form-checkbox" type="checkbox" name="goodFaith" value="yes" required
                     defaultChecked={values.goodFaith === 'yes'} />
