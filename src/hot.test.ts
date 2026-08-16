@@ -65,7 +65,7 @@ describe('hot feed ranking', () => {
     const results = getHotPosts(database, 20, null, asOf)
     expect(results[0].id).toBe(1)
     expect(results.find(result => result.id === 1)?.hot_score)
-      .toBeCloseTo(0.225 + 0.04 * Math.pow(0.5, 24 / 3))
+      .toBeCloseTo(50 + 0.225 + 0.04 * Math.pow(0.5, 24 / 3))
   })
 
   test('direct replies give active threads substantially more staying power', () => {
@@ -113,7 +113,7 @@ describe('hot feed ranking', () => {
         ? Math.min(0.3, Math.max(0.235, 0.04 * Math.pow(2, (Math.min(replies, 15) - 4) / 1.5))
           + 0.02 * Math.pow(0.5, 40 / 24) + Math.max(0, replies - 4) * 0.001)
         : 0
-      expect(ranked.hot_score).toBeCloseTo(Math.max(decayedScore, reserve))
+      expect(ranked.hot_score).toBeCloseTo((replies > 1 ? 50 : 0) + Math.max(decayedScore, reserve))
     }
   })
 
@@ -192,15 +192,18 @@ describe('hot feed ranking', () => {
     expect(newThread.hot_score).toBeCloseTo(100 + (0.225 + 0.04) * 5)
   })
 
-  test('ranks hour-old posts with multiple replies ahead of day-old posts', () => {
+  test('ranks minute- and hour-old posts with multiple replies ahead of day-old posts', () => {
     post(1, '2026-08-02 11:59:00')
     post(2, '2026-08-03 11:00:00')
+    post(3, '2026-08-03 11:59:00')
     database.run(`UPDATE post_hot SET score=1000,reply_count=20,activity_count=20,
       score_updated_at='2026-08-03 12:00:00',latest_activity_at='2026-08-03 12:00:00' WHERE post_id=1`)
     database.run(`UPDATE post_hot SET score=0.01,reply_count=2,activity_count=2,
       score_updated_at='2026-08-03 11:00:00',latest_activity_at='2026-08-03 11:00:00' WHERE post_id=2`)
+    database.run(`UPDATE post_hot SET score=0.01,reply_count=2,activity_count=2,
+      score_updated_at='2026-08-03 11:59:00',latest_activity_at='2026-08-03 11:59:00' WHERE post_id=3`)
 
-    expect(getHotPosts(database, 20, null, asOf).map(result => result.id)).toEqual([2, 1])
+    expect(getHotPosts(database, 20, null, asOf).map(result => result.id)).toEqual([3, 2, 1])
   })
 
   test('does not guarantee the hour tier to posts with only one reply', () => {
@@ -212,6 +215,17 @@ describe('hot feed ranking', () => {
       score_updated_at='2026-08-03 11:00:00',latest_activity_at='2026-08-03 11:00:00' WHERE post_id=2`)
 
     expect(getHotPosts(database, 20, null, asOf).map(result => result.id)).toEqual([1, 2])
+  })
+
+  test('ranks yesterday posts with multiple replies ahead of older posts', () => {
+    post(1, '2026-08-01 10:59:00')
+    post(2, '2026-08-02 11:00:00')
+    database.run(`UPDATE post_hot SET score=1000,reply_count=20,activity_count=20,
+      score_updated_at='2026-08-03 12:00:00',latest_activity_at='2026-08-03 12:00:00' WHERE post_id=1`)
+    database.run(`UPDATE post_hot SET score=0.01,reply_count=2,activity_count=2,
+      score_updated_at='2026-08-03 11:00:00',latest_activity_at='2026-08-03 11:00:00' WHERE post_id=2`)
+
+    expect(getHotPosts(database, 20, null, asOf).map(result => result.id)).toEqual([2, 1])
   })
 
   test('nine unique repliers outweigh six even when the six-reply thread is older', () => {
@@ -269,9 +283,9 @@ describe('hot feed ranking', () => {
   test('progressively reduces standalone candidacy at each reply depth', () => {
     database.run(`INSERT INTO users(id,handle) VALUES(2,'reply-author');
       INSERT INTO users(id,handle) VALUES(3,'nested-author');`)
-    post(1, '2026-08-01 12:00:00')
-    postBy(2, 2, '2026-08-01 13:00:00', 1)
-    postBy(3, 3, '2026-08-01 14:00:00', 2)
+    post(1, '2026-08-01 09:00:00')
+    postBy(2, 2, '2026-08-01 10:00:00', 1)
+    postBy(3, 3, '2026-08-01 11:00:00', 2)
     database.run(`UPDATE post_hot SET score=4,reply_count=3,activity_count=3,
       score_updated_at='2026-08-03 11:00:00',latest_activity_at='2026-08-03 11:00:00'
       WHERE post_id IN (1,2,3)`)

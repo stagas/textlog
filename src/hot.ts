@@ -26,7 +26,7 @@ export type HotCursor = {
   direction: 'next' | 'previous'
 }
 
-export const hotRankingVersion = 60
+export const hotRankingVersion = 61
 const cursorVersion = hotRankingVersion
 const activityHalfLifeHours = 6
 const postWeight = 0
@@ -63,6 +63,8 @@ const veryRecentReplyCandidateHours = 4
 const recentPostBoost = 4
 const recentPostBoostHours = 24
 const recentPostTierBonus = 100
+const yesterdayPostHours = 48
+const yesterdayPostTierBonus = 50
 
 function hasHotTable(database: Database) {
   return Boolean(database.query('SELECT 1 FROM sqlite_master WHERE type=\'table\' AND name=\'post_hot\'').get())
@@ -355,7 +357,9 @@ export function getHotPosts(
   ), ranked AS (
     SELECT post_id,base_score*(1+${recentPostBoost}*max(0,1-post_age_hours/${recentPostBoostHours}.0))
       +CASE WHEN base_score>0 AND reply_count>1 AND post_age_hours<${recentPostBoostHours}
-        THEN ${recentPostTierBonus} ELSE 0 END hot_score FROM ranked_base
+        THEN ${recentPostTierBonus}
+        WHEN base_score>0 AND reply_count>1 AND post_age_hours<${yesterdayPostHours}
+        THEN ${yesterdayPostTierBonus} ELSE 0 END hot_score FROM ranked_base
   ) SELECT p.*,u.handle,ranked.hot_score,h.latest_activity_at,h.reply_count,h.activity_count
     FROM ranked JOIN post_hot h ON h.post_id=ranked.post_id
     JOIN posts p ON p.id=ranked.post_id JOIN users u ON u.id=p.user_id
