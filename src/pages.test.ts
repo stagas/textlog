@@ -716,7 +716,7 @@ test('footer offers the mobile app in a mobile-only row', () => {
 test('footer links to stats next to the app host', () => {
   const html = renderToStaticMarkup(React.createElement(About, { user: null }))
 
-  expect(html).toMatch(/<span>[^<]+ <span aria-hidden="true">·<\/span> <a class="footer-host-link" href="\/stats">stats<\/a><\/span>/)
+  expect(html).toMatch(/<span>[^<]+ <span aria-hidden="true">\/<\/span> <a class="footer-host-link" href="\/stats">stats<\/a><\/span>/)
 })
 
 test('Contact page shows operator details and is linked before legal in the footer', () => {
