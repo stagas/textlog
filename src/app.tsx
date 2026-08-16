@@ -13,6 +13,7 @@ import { databaseHealth } from './database-health'
 import { db } from './db'
 import { isDevelopment } from './environment'
 import { clientIp, logError, logHttp, logReady, shouldLogHttp } from './log'
+import { startLinkPreviewBackfill } from './link-preview-backfill'
 import { startMaintenance } from './maintenance'
 import { renderDefaultOg } from './og'
 import { startPublicArchive } from './public-archive'
@@ -81,6 +82,9 @@ function requestRateLimitResponse(request: Request, retryAfter: number) {
     : rateLimitedResponse(retryAfter)
 }
 startMaintenance(db, visitorBuffer, error => logError('database maintenance failed', error))
+if (Bun.env.NODE_ENV === 'production') {
+  startLinkPreviewBackfill(db, error => logError('link preview backfill failed', error))
+}
 if (Bun.env.NODE_ENV === 'production') {
   startAutomatedBackups(db, {
     directory: Bun.env.DATABASE_BACKUP_DIR || 'storage/backups',

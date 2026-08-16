@@ -11,6 +11,7 @@
     "db:verify": "bun scripts/verify-database.ts",
     "db:load-test": "bun scripts/load-database.ts",
     "archive:public": "bun scripts/archive-public-data.ts",
+    "backfill:link-previews": "bun scripts/backfill-link-previews.ts",
     "stress:routes": "bun scripts/stress-routes.ts",
     "test": "bun test",
     "typecheck": "tsc --noEmit",

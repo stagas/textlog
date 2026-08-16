@@ -1042,6 +1042,16 @@ export const migrations: Migration[] = [
       addColumn(database, 'post_link_previews', 'image_height', 'INTEGER')
     },
   },
+  {
+    version: 81,
+    name: 'post_link_preview_backfill',
+    up(database) {
+      database.run(`CREATE TABLE IF NOT EXISTS post_link_preview_backfill_attempts (
+        post_id INTEGER NOT NULL REFERENCES posts(id) ON DELETE CASCADE,
+        url TEXT NOT NULL,status TEXT NOT NULL,attempted_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        PRIMARY KEY(post_id,url));`)
+    },
+  },
 ]
 
 export const latestMigrationVersion = migrations.at(-1)!.version
