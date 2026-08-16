@@ -11,6 +11,11 @@ const MAX_HTML_BYTES = 512 * 1024
 const MAX_IMAGE_BYTES = 5 * 1024 * 1024
 const FETCH_TIMEOUT_MS = 1500
 
+export function isDirectImageUrl(value: string) {
+  try { return /\.(?:png|jpe?g|gif|webp|avif)$/i.test(new URL(value).pathname) }
+  catch { return false }
+}
+
 function ownPostPreview(database: Database, rawUrl: string) {
   const origin = appOrigin()
   if (!origin) return null
@@ -204,6 +209,13 @@ export async function discoverLinkPreviews(body: string, database?: Database) {
       if (ownPreview) return ownPreview
       const url = await publicHttpUrl(rawUrl)
       if (!url) return null
+      if (isDirectImageUrl(url.href)) {
+        const dimensions = await fetchImageDimensions(url)
+        if (!dimensions || (url.protocol !== 'https:' && url.origin !== appOrigin())) return null
+        const filename = decodeURIComponent(url.pathname.split('/').pop() || url.hostname)
+        return { url: rawUrl, imageUrl: url.href, title: filename, siteName: url.hostname.replace(/^www\./, ''),
+          imageWidth: dimensions.width, imageHeight: dimensions.height }
+      }
       const page = await fetchHtml(url)
       if (!page) return null
       const metadata = openGraphMetadata(page.html, page.url)

@@ -1,9 +1,15 @@
 import { describe, expect, test } from 'bun:test'
 import { Database } from 'bun:sqlite'
-import { openGraphImage, openGraphMetadata } from './link-preview'
+import { isDirectImageUrl, openGraphImage, openGraphMetadata } from './link-preview'
 import { discoverLinkPreviews } from './link-preview'
 
 describe('link previews', () => {
+  test('recognizes direct image links with queries case-insensitively', () => {
+    expect(isDirectImageUrl('https://cdn.example.com/photo.JPG?size=large')).toBe(true)
+    expect(isDirectImageUrl('https://cdn.example.com/animation.gif')).toBe(true)
+    expect(isDirectImageUrl('https://example.com/image')).toBe(false)
+  })
+
   test('reads an Open Graph image regardless of attribute order and resolves relative URLs', () => {
     expect(openGraphImage(
       '<html><head><meta content="/images/card.jpg?x=1&amp;y=2" property="og:image"></head></html>',

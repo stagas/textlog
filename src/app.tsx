@@ -83,7 +83,8 @@ function requestRateLimitResponse(request: Request, retryAfter: number) {
 }
 startMaintenance(db, visitorBuffer, error => logError('database maintenance failed', error))
 if (Bun.env.NODE_ENV === 'production') {
-  startLinkPreviewBackfill(db, error => logError('link preview backfill failed', error))
+  startLinkPreviewBackfill(db, { directImagesOnly: true },
+    error => logError('link preview backfill failed', error))
 }
 if (Bun.env.NODE_ENV === 'production') {
   startAutomatedBackups(db, {
