@@ -386,7 +386,7 @@ header>.account-nav {
 }
 
 .remote-link-menu {
-  position: static;
+  position: relative;
 }
 
 .remote-link-menu > a:not(.remote-link-popover) {
@@ -412,7 +412,7 @@ header>.account-nav {
   grid-template-columns: minmax(0, 1fr);
   grid-template-rows: max-content max-content;
   align-items: start;
-  width: min(100%, var(--preview-width, 382px));
+  width: min(var(--preview-width, 382px), calc(100vw - 2 * var(--gutter)));
   overflow: hidden;
   border: 1px solid var(--soft);
   background-color: var(--panel);
@@ -3742,7 +3742,11 @@ form.report-panel {
 
 .search-form input {
   min-width: 0;
+  height: 46px;
+  appearance: none;
+  -webkit-appearance: none;
   font-size: 0.75rem;
+  line-height: 1.5;
 }
 
 .search-form input::-webkit-search-cancel-button {
