@@ -40,7 +40,9 @@ describe('instance branding', () => {
     const html = renderToStaticMarkup(React.createElement(Layout, null, React.createElement('p', null, 'Hello')))
     expect(html).toContain('<title>Notebook Garden</title>')
     expect(html).toContain('aria-label="Notebook Garden home"')
-    expect(html).toContain('<span>notes.example.org</span>')
+    expect(html).toContain(
+      '<span>notes.example.org <span aria-hidden="true">·</span> <a class="footer-host-link" href="/stats">stats</a></span>',
+    )
     expect(html).not.toContain('textlog.cc')
   })
 })
