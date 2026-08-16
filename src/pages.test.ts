@@ -650,6 +650,11 @@ describe('postTitle', () => {
     expect(postTitle('A note\nwith   uneven spacing')).toBe('A note with uneven spacing')
   })
 
+  test('uses sanitized plain text for Markdown document titles', () => {
+    expect(postTitle('A **bold** [link](https://example.com) with `code` <script>bad</script>'))
+      .toBe('A bold link with code')
+  })
+
   test('truncates long post text with an ellipsis', () => {
     const title = postTitle('x'.repeat(61))
     expect(title).toBe(`${'x'.repeat(59)}…`)

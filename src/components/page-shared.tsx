@@ -5,6 +5,7 @@ import { Panel } from './panel'
 import { isAdmin } from '../admin'
 import { db, type User } from '../db'
 import { hasUnreadForYou, hasUnreadToMe } from '../for-you-state'
+import { markdownPlainText } from '../markdown'
 import { visibleTagFollowerCounts, visibleUserProfileStats } from '../posts'
 import { searchTerms } from '../search'
 import { displayBio, linkify } from '../utils'
@@ -13,7 +14,7 @@ import { TagReference, UserReference } from './post'
 const postTitleLength = 60
 
 export function postTitle(body: string) {
-  const text = body.replace(/\s+/g, ' ').trim()
+  const text = markdownPlainText(body)
   const characters = Array.from(text)
   return characters.length > postTitleLength
     ? `${characters.slice(0, postTitleLength - 1).join('').trimEnd()}…`

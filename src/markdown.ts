@@ -26,7 +26,9 @@ export function sanitizedMarkdownHtml(body: string) {
 }
 
 export function markdownPlainText(body: string) {
-  return decodeHtmlEntities(sanitizeHtml(sanitizedMarkdownHtml(body), {
+  const spacedHtml = sanitizedMarkdownHtml(body)
+    .replace(/<\/?(?:blockquote|br|h[1-6]|hr|li|ol|p|pre|table|tbody|td|th|thead|tr|ul)\b[^>]*>/gi, ' ')
+  return decodeHtmlEntities(sanitizeHtml(spacedHtml, {
     allowedTags: [],
     allowedAttributes: {},
   })).replace(/\s+/g, ' ').trim()
