@@ -817,6 +817,7 @@ describe('Auth', () => {
     const html = renderToStaticMarkup(React.createElement(ChooseHandle))
 
     expect(html).toContain('Handles must be 2–24 characters')
+    expect(html).toContain('You can always change it later.')
     expect(html).toContain('aria-describedby="handle-help"')
     expect(html).not.toContain('pattern=')
     expect(html).toContain('action="/choose-handle"')

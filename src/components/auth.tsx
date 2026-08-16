@@ -145,7 +145,7 @@ export function ChooseHandle({ error, handle = '', next }: { error?: string; han
     <Layout title="choose your handle" logoutNavigation>
       <CenteredPanel shellClassName="auth-shell" className="auth-panel choose-handle-panel" width="medium">
           <h1>Choose your handle</h1>
-          <p>Pick the handle that people will see.</p>
+          <p>Pick the handle that people will see. You can always change it later.</p>
           {error && <p className="status-message status-error" role="alert">{error}</p>}
           <form method="post" action="/choose-handle">
             {next && <input type="hidden" name="next" value={next} />}
