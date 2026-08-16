@@ -1,9 +1,8 @@
 import type { Database } from 'bun:sqlite'
 import { lookup } from 'node:dns/promises'
 import { isIP } from 'node:net'
-import { loadImage } from 'canvas'
 import { appName, appOrigin } from './brand'
-import { createImageKey, deleteImages, deleteImagesAfterCommit, getImageUrl, isImageKey, MAX_IMAGE_BYTES,
+import { createImageKey, deleteImages, deleteImagesAfterCommit, getImageUrl, imageDimensions, isImageKey, MAX_IMAGE_BYTES,
   uploadImage, validateImageData } from './image-storage'
 import type { LinkPreview } from './types'
 import { postLinks } from './utils'
@@ -205,10 +204,8 @@ async function fetchImage(initialUrl: URL) {
       offset += chunk.byteLength
     }
     const validatedType = validateImageData(data, contentType)
-    const image = await loadImage(Buffer.from(data))
-    return image.width > 0 && image.height > 0
-      ? { data, contentType: validatedType, width: image.width, height: image.height }
-      : null
+    const dimensions = imageDimensions(data, validatedType)
+    return { data, contentType: validatedType, ...dimensions }
   }
   return null
 }

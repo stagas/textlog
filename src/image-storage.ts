@@ -158,6 +158,72 @@ export function validateImageData(data: Uint8Array, contentType: string) {
   return detectedType as ImageContentType
 }
 
+function uint16Le(data: Uint8Array, offset: number) {
+  return data[offset] | data[offset + 1] << 8
+}
+
+function uint16Be(data: Uint8Array, offset: number) {
+  return data[offset] << 8 | data[offset + 1]
+}
+
+function uint24Le(data: Uint8Array, offset: number) {
+  return data[offset] | data[offset + 1] << 8 | data[offset + 2] << 16
+}
+
+function uint32Be(data: Uint8Array, offset: number) {
+  return (data[offset] * 0x1000000 + (data[offset + 1] << 16 | data[offset + 2] << 8 | data[offset + 3])) >>> 0
+}
+
+export function imageDimensions(data: Uint8Array, contentType: ImageContentType) {
+  let width = 0
+  let height = 0
+  if (contentType === 'image/png' && data.length >= 24) {
+    width = uint32Be(data, 16)
+    height = uint32Be(data, 20)
+  }
+  else if (contentType === 'image/gif' && data.length >= 10) {
+    width = uint16Le(data, 6)
+    height = uint16Le(data, 8)
+  }
+  else if (contentType === 'image/webp') {
+    if (matches(data, [0x56, 0x50, 0x38, 0x58], 12) && data.length >= 30) {
+      width = uint24Le(data, 24) + 1
+      height = uint24Le(data, 27) + 1
+    }
+    else if (matches(data, [0x56, 0x50, 0x38, 0x4c], 12) && data.length >= 25 && data[20] === 0x2f) {
+      width = 1 + data[21] + ((data[22] & 0x3f) << 8)
+      height = 1 + (data[22] >> 6) + (data[23] << 2) + ((data[24] & 0x0f) << 10)
+    }
+    else if (matches(data, [0x56, 0x50, 0x38, 0x20], 12) && data.length >= 30
+      && matches(data, [0x9d, 0x01, 0x2a], 23)) {
+      width = uint16Le(data, 26) & 0x3fff
+      height = uint16Le(data, 28) & 0x3fff
+    }
+  }
+  else if (contentType === 'image/jpeg') {
+    for (let offset = 2; offset + 8 < data.length;) {
+      if (data[offset] !== 0xff) break
+      while (data[offset] === 0xff) offset++
+      const marker = data[offset++]
+      if (marker === 0xd8 || marker === 0xd9) continue
+      if (offset + 2 > data.length) break
+      const length = uint16Be(data, offset)
+      if (length < 2 || offset + length > data.length) break
+      if ((marker >= 0xc0 && marker <= 0xc3) || (marker >= 0xc5 && marker <= 0xc7)
+        || (marker >= 0xc9 && marker <= 0xcb) || (marker >= 0xcd && marker <= 0xcf)) {
+        height = uint16Be(data, offset + 3)
+        width = uint16Be(data, offset + 5)
+        break
+      }
+      offset += length
+    }
+  }
+  if (!width || !height || width > 10000 || height > 10000 || width * height > 40_000_000) {
+    throw new Error('Invalid or oversized image dimensions')
+  }
+  return { width, height }
+}
+
 export async function deleteImages(keys: string[]) {
   await Promise.all([...new Set(keys)].filter(isImageKey).map(deleteImage))
 }

@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, test } from 'bun:test'
-import { createImageKey, deleteImage, getImageUrl, localImageFile, uploadImage, validateImageData } from './image-storage'
+import { createImageKey, deleteImage, getImageUrl, imageDimensions, localImageFile, uploadImage,
+  validateImageData } from './image-storage'
 
 const previousEnvironment = Bun.env.NODE_ENV
 const previousPublicUrl = Bun.env.R2_PUBLIC_URL
@@ -17,7 +18,15 @@ describe('image storage', () => {
     ])
     const contentType = validateImageData(png, 'image/png')
     expect(createImageKey(contentType)).toMatch(/^images\/[0-9a-f-]{36}\.png$/)
+    expect(imageDimensions(png, contentType)).toEqual({ width: 1, height: 1 })
     expect(() => validateImageData(png, 'image/jpeg')).toThrow('does not match')
+  })
+
+  test('reads allowed image dimensions without native decoder support', () => {
+    const gif = new Uint8Array([0x47, 0x49, 0x46, 0x38, 0x39, 0x61, 0x20, 0x03, 0x58, 0x02])
+    expect(imageDimensions(gif, validateImageData(gif, 'image/gif'))).toEqual({ width: 800, height: 600 })
+    expect(() => imageDimensions(new Uint8Array([0x47, 0x49, 0x46, 0x38, 0x39, 0x61, 0, 0, 0, 0]),
+      'image/gif')).toThrow('Invalid or oversized')
   })
 
   test('writes, serves, and deletes the same object key locally', async () => {
