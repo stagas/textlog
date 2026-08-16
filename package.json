@@ -26,16 +26,19 @@
     "hono": "^4.13.0",
     "jszip": "^3.10.1",
     "linkify-it": "^6.1.0",
+    "marked": "^18.0.9",
     "mathjax-full": "^3.2.2",
     "nodemailer": "^9.0.5",
     "react": "latest",
     "react-dom": "latest",
+    "sanitize-html": "^2.17.7",
     "svg-captcha": "^1.4.0",
     "tlds": "^1.261.0",
     "web-push": "^3.6.7"
   },
   "devDependencies": {
     "@types/nodemailer": "^8.0.1",
+    "@types/sanitize-html": "^2.16.1",
     "@types/web-push": "^3.6.4",
     "bun-types": "latest",
     "typescript": "latest"

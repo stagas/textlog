@@ -1,4 +1,7 @@
 import type { ApiPost } from './api'
+import { marked } from 'marked'
+import sanitizeHtml from 'sanitize-html'
+import { decodeHtmlEntities } from './link-preview'
 import { displayPostBody } from './utils'
 
 export type SyndicationFormat = 'rss' | 'atom'
@@ -21,8 +24,35 @@ function xml(value: string) {
     .replace(/'/g, '&apos;')
 }
 
+function postHtml(body: string) {
+  const renderer = new marked.Renderer()
+  renderer.html = ({ text }) => /^<\/?(?:a|abbr|address|article|aside|audio|b|base|bdi|bdo|blockquote|body|br|button|canvas|caption|cite|code|col|colgroup|data|datalist|dd|del|details|dfn|dialog|div|dl|dt|em|embed|fieldset|figcaption|figure|footer|form|h[1-6]|head|header|hgroup|hr|html|i|iframe|img|input|ins|kbd|label|legend|li|link|main|map|mark|menu|meta|meter|nav|noscript|object|ol|optgroup|option|output|p|picture|pre|progress|q|rp|rt|ruby|s|samp|script|search|section|select|slot|small|source|span|strong|style|sub|summary|sup|table|tbody|td|template|textarea|tfoot|th|thead|time|title|tr|track|u|ul|var|video|wbr)(?:\s|\/?>)/i.test(text)
+    ? text
+    : xml(text)
+  const rendered = marked.parse(displayPostBody(body), {
+    async: false,
+    breaks: true,
+    gfm: true,
+    renderer,
+  })
+  return sanitizeHtml(rendered, {
+    allowedTags: [
+      'a', 'blockquote', 'br', 'code', 'del', 'em', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'hr', 'li', 'ol', 'p',
+      'pre', 'strong', 'table', 'tbody', 'td', 'th', 'thead', 'tr', 'ul',
+    ],
+    allowedAttributes: { a: ['href', 'title'] },
+    allowedSchemes: ['http', 'https', 'mailto'],
+    allowProtocolRelative: false,
+    enforceHtmlBoundary: true,
+  }).trim()
+}
+
 function itemTitle(post: ApiPost) {
-  return `@${post.author.handle}: ${post.body.replace(/\s+/g, ' ').trim()}`
+  const text = decodeHtmlEntities(sanitizeHtml(postHtml(post.body), {
+    allowedTags: [],
+    allowedAttributes: {},
+  })).replace(/\s+/g, ' ').trim()
+  return `@${post.author.handle}: ${text}`
 }
 
 function updated(posts: ApiPost[]) {
@@ -38,7 +68,7 @@ function atom(feed: SyndicationFeed) {
     <published>${xml(post.created_at)}</published>
     <updated>${xml(post.created_at)}</updated>
     <author><name>${xml(`@${post.author.handle}`)}</name><uri>${xml(post.author.url)}</uri></author>
-    <content type="text">${xml(displayPostBody(post.body))}</content>
+    <content type="html">${xml(postHtml(post.body))}</content>
   </entry>`
   ).join('\n')
   return `<?xml version="1.0" encoding="utf-8"?>
@@ -61,7 +91,7 @@ function rss(feed: SyndicationFeed) {
       <guid isPermaLink="true">${xml(post.url)}</guid>
       <pubDate>${new Date(post.created_at).toUTCString()}</pubDate>
       <dc:creator>${xml(`@${post.author.handle}`)}</dc:creator>
-      <description>${xml(displayPostBody(post.body))}</description>
+      <description>${xml(postHtml(post.body))}</description>
     </item>`
   ).join('\n')
   return `<?xml version="1.0" encoding="utf-8"?>

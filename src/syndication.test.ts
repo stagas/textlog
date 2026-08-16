@@ -4,7 +4,7 @@ import { Hono } from 'hono'
 import { rebuildHotPosts } from './hot'
 import { registerSyndicationRoutes } from './routes/syndication'
 
-function fixture() {
+function fixture(firstPostBody?: string) {
   const database = new Database(':memory:')
   database.run(`
     CREATE TABLE users (id INTEGER PRIMARY KEY,handle TEXT NOT NULL,deleted_at TEXT,is_bot INTEGER NOT NULL DEFAULT 0);
@@ -25,6 +25,7 @@ function fixture() {
     INSERT INTO post_hashtags VALUES(1,'textlog');
     INSERT INTO post_hot SELECT id,0,0,0,created_at,created_at FROM posts;
   `)
+  if (firstPostBody !== undefined) database.query('UPDATE posts SET body=? WHERE id=1').run(firstPostBody)
   rebuildHotPosts(database)
   const app = new Hono()
   registerSyndicationRoutes(app, database, null)
@@ -58,6 +59,20 @@ describe('RSS and Atom feeds', () => {
     expect(body).toContain('<id>https://textlog.cc/hot.atom</id>')
     expect(body).toContain('<id>https://textlog.cc/post/1</id>')
     expect(body).toContain('<uri>https://textlog.cc/u/alice</uri>')
+  })
+
+  test('renders Markdown as sanitized HTML in RSS and Atom entries', async () => {
+    const app = fixture('**bold** [safe](https://example.com) [unsafe](javascript:alert(1)) <script>alert(2)</script>')
+    const rss = await (await app.request('https://textlog.cc/latest.rss')).text()
+    const atom = await (await app.request('https://textlog.cc/latest.atom')).text()
+
+    expect(rss).toContain('&lt;strong&gt;bold&lt;/strong&gt;')
+    expect(rss).toContain('&lt;a href=&quot;https://example.com&quot;&gt;safe&lt;/a&gt;')
+    expect(rss).toContain('<title>@alice: bold safe unsafe</title>')
+    expect(atom).toContain('<title>@alice: bold safe unsafe</title>')
+    expect(atom).toContain('<content type="html">&lt;p&gt;&lt;strong&gt;bold&lt;/strong&gt;')
+    expect(rss).not.toContain('href=&quot;javascript:')
+    expect(atom).not.toContain('<script')
   })
 
   test('filters user and hashtag feeds and redirects historical handles', async () => {
