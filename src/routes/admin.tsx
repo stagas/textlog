@@ -16,6 +16,7 @@ import type { Hono } from 'hono'
 import { db } from '../db'
 import { sendAdminEmail, sendReportDecision } from '../email'
 import { PAGE_SIZE } from '../pagination'
+import { deleteLinkPreviewImages } from '../link-preview'
 import { dashboardStats } from '../stats'
 import { currentUser } from '../utils'
 
@@ -160,6 +161,7 @@ export function registerAdminRoutes(app: Hono) {
       resolvePostReports(db, id, signedIn.id)
       recordAdminAction(db, signedIn.id, 'delete_post', post.user_id, id, f.note || '')
     })()
+    await deleteLinkPreviewImages(db, id)
     return redirect(safeLocalPath(f.returnTo, '/admin'))
   })
 
@@ -230,6 +232,9 @@ export function registerAdminRoutes(app: Hono) {
       })()
       return redirect(`/admin/users/${id}`)
     }
+    const postIds = action === 'delete'
+      ? (db.query('SELECT id FROM posts WHERE user_id=?').all(id) as { id: number }[]).map(post => post.id)
+      : []
     db.transaction(() => {
       if (action === 'suspend') {
         db.query('UPDATE users SET suspended_at=CURRENT_TIMESTAMP WHERE id=?').run(id)
@@ -245,6 +250,7 @@ export function registerAdminRoutes(app: Hono) {
         anonymizeUser(db, id, signedIn.id)
       }
     })()
+    for (const postId of postIds) await deleteLinkPreviewImages(db, postId)
     return redirect(action === 'delete' ? '/admin' : `/admin/users/${id}`)
   })
 }

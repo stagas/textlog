@@ -3,12 +3,13 @@ import { lookup } from 'node:dns/promises'
 import { isIP } from 'node:net'
 import { loadImage } from 'canvas'
 import { appName, appOrigin } from './brand'
+import { createImageKey, deleteImages, deleteImagesAfterCommit, getImageUrl, isImageKey, MAX_IMAGE_BYTES,
+  uploadImage, validateImageData } from './image-storage'
 import type { LinkPreview } from './types'
 import { postLinks } from './utils'
 
 const MAX_LINKS = 3
 const MAX_HTML_BYTES = 512 * 1024
-const MAX_IMAGE_BYTES = 5 * 1024 * 1024
 const FETCH_TIMEOUT_MS = 1500
 
 export function isDirectImageUrl(value: string) {
@@ -164,7 +165,7 @@ async function fetchHtml(initialUrl: URL) {
   return null
 }
 
-async function fetchImageDimensions(initialUrl: URL) {
+async function fetchImage(initialUrl: URL) {
   let url = initialUrl
   for (let redirects = 0; redirects <= 3; redirects++) {
     const response = await fetch(url, {
@@ -179,7 +180,8 @@ async function fetchImageDimensions(initialUrl: URL) {
       url = redirected
       continue
     }
-    if (!response.ok || !response.headers.get('content-type')?.toLowerCase().startsWith('image/')) return null
+    if (!response.ok) return null
+    const contentType = response.headers.get('content-type') || ''
     const declaredSize = Number(response.headers.get('content-length') || 0)
     if (declaredSize > MAX_IMAGE_BYTES) return null
     const reader = response.body?.getReader()
@@ -196,13 +198,39 @@ async function fetchImageDimensions(initialUrl: URL) {
       }
       chunks.push(value)
     }
-    const image = await loadImage(Buffer.concat(chunks.map(chunk => Buffer.from(chunk))))
-    return image.width > 0 && image.height > 0 ? { width: image.width, height: image.height } : null
+    const data = new Uint8Array(size)
+    let offset = 0
+    for (const chunk of chunks) {
+      data.set(chunk, offset)
+      offset += chunk.byteLength
+    }
+    const validatedType = validateImageData(data, contentType)
+    const image = await loadImage(Buffer.from(data))
+    return image.width > 0 && image.height > 0
+      ? { data, contentType: validatedType, width: image.width, height: image.height }
+      : null
   }
   return null
 }
 
+export async function storeRemotePreviewImage(rawUrl: string) {
+  const url = await publicHttpUrl(rawUrl)
+  if (!url || url.protocol !== 'https:') return null
+  const image = await fetchImage(url)
+  if (!image) return null
+  const key = createImageKey(image.contentType)
+  await uploadImage(key, image.data, image.contentType)
+  return { key, width: image.width, height: image.height }
+}
+
 export async function discoverLinkPreviews(body: string, database?: Database) {
+  const storedImage = async (url: URL) => {
+    const image = await fetchImage(url)
+    if (!image) return null
+    const key = createImageKey(image.contentType)
+    await uploadImage(key, image.data, image.contentType)
+    return { imageUrl: getImageUrl(key), imageKey: key, imageWidth: image.width, imageHeight: image.height }
+  }
   const preview = async (rawUrl: string) => {
     try {
       const ownPreview = database && ownPostPreview(database, rawUrl)
@@ -210,25 +238,21 @@ export async function discoverLinkPreviews(body: string, database?: Database) {
       const url = await publicHttpUrl(rawUrl)
       if (!url) return null
       if (isDirectImageUrl(url.href)) {
-        const dimensions = await fetchImageDimensions(url)
-        if (!dimensions || (url.protocol !== 'https:' && url.origin !== appOrigin())) return null
+        if (url.protocol !== 'https:' && url.origin !== appOrigin()) return null
+        const image = await storedImage(url)
+        if (!image) return null
         const filename = decodeURIComponent(url.pathname.split('/').pop() || url.hostname)
-        return { url: rawUrl, imageUrl: url.href, title: filename, siteName: url.hostname.replace(/^www\./, ''),
-          imageWidth: dimensions.width, imageHeight: dimensions.height }
+        return { url: rawUrl, ...image, title: filename, siteName: url.hostname.replace(/^www\./, '') }
       }
       const page = await fetchHtml(url)
       if (!page) return null
       const metadata = openGraphMetadata(page.html, page.url)
       const imageUrl = metadata && await publicHttpUrl(metadata.imageUrl)
       if (!imageUrl || imageUrl.protocol !== 'https:') return null
-      if (!metadata!.imageWidth || !metadata!.imageHeight) {
-        const dimensions = await fetchImageDimensions(imageUrl)
-        if (dimensions) {
-          metadata!.imageWidth = dimensions.width
-          metadata!.imageHeight = dimensions.height
-        }
-      }
-      return { url: rawUrl, ...metadata! }
+      const image = await storedImage(imageUrl)
+      if (!image) return null
+      const { imageUrl: _, imageWidth: _width, imageHeight: _height, ...details } = metadata!
+      return { url: rawUrl, ...details, ...image }
     }
     catch {
       // A preview is optional; publishing must not fail with a remote site.
@@ -239,17 +263,82 @@ export async function discoverLinkPreviews(body: string, database?: Database) {
   return previews.filter(value => value !== null)
 }
 
-export function saveLinkPreviews(database: Database, postId: number,
+export async function saveLinkPreviews(database: Database, postId: number,
   previews: ({ url: string } & LinkPreview)[]) {
   if (!previews.length) return
   const available = database.query(
     "SELECT 1 FROM sqlite_master WHERE type='table' AND name='post_link_previews'",
   ).get()
-  if (!available) return
-  const insert = database.query(`INSERT OR IGNORE INTO post_link_previews
-    (post_id,url,image_url,title,description,site_name,image_width,image_height) VALUES(?,?,?,?,?,?,?,?)`)
-  database.transaction(() => {
-    for (const preview of previews) insert.run(postId, preview.url, preview.imageUrl, preview.title || null,
+  if (!available) {
+    await deleteImages(previews.flatMap(preview => preview.imageKey ? [preview.imageKey] : []))
+    return
+  }
+  const replacedKeys: string[] = []
+  try {
+    database.transaction(() => writeLinkPreviews(database, postId, previews, replacedKeys))()
+  }
+  catch (error) {
+    await deleteImages(previews.flatMap(preview => preview.imageKey ? [preview.imageKey] : []))
+    throw error
+  }
+  await deleteImagesAfterCommit(replacedKeys)
+}
+
+function writeLinkPreviews(database: Database, postId: number, previews: ({ url: string } & LinkPreview)[],
+  replacedKeys: string[] = []) {
+  const existing = database.query('SELECT image_url FROM post_link_previews WHERE post_id=? AND url=?')
+  const insert = database.query(`INSERT INTO post_link_previews
+    (post_id,url,image_url,title,description,site_name,image_width,image_height) VALUES(?,?,?,?,?,?,?,?)
+    ON CONFLICT(post_id,url) DO UPDATE SET image_url=excluded.image_url,title=excluded.title,
+      description=excluded.description,site_name=excluded.site_name,image_width=excluded.image_width,
+      image_height=excluded.image_height`)
+  for (const preview of previews) {
+    const previous = existing.get(postId, preview.url) as { image_url: string } | null
+    insert.run(postId, preview.url, preview.imageKey || preview.imageUrl, preview.title || null,
       preview.description || null, preview.siteName || null, preview.imageWidth || null, preview.imageHeight || null)
-  })()
+    if (previous && isImageKey(previous.image_url) && previous.image_url !== preview.imageKey) {
+      replacedKeys.push(previous.image_url)
+    }
+  }
+}
+
+function linkPreviewTableAvailable(database: Database) {
+  return Boolean(database.query(
+    "SELECT 1 FROM sqlite_master WHERE type='table' AND name='post_link_previews'",
+  ).get())
+}
+
+function storedPreviewKeys(database: Database, postId: number) {
+  if (!linkPreviewTableAvailable(database)) return []
+  return (database.query('SELECT image_url FROM post_link_previews WHERE post_id=?').all(postId) as {
+    image_url: string
+  }[]).map(row => row.image_url).filter(isImageKey)
+}
+
+export async function replaceLinkPreviews(database: Database, postId: number,
+  previews: ({ url: string } & LinkPreview)[]) {
+  if (!linkPreviewTableAvailable(database)) {
+    await deleteImages(previews.flatMap(preview => preview.imageKey ? [preview.imageKey] : []))
+    return
+  }
+  const oldKeys = storedPreviewKeys(database, postId)
+  const newKeys = previews.flatMap(preview => preview.imageKey ? [preview.imageKey] : [])
+  try {
+    database.transaction(() => {
+      database.query('DELETE FROM post_link_previews WHERE post_id=?').run(postId)
+      writeLinkPreviews(database, postId, previews)
+    })()
+  }
+  catch (error) {
+    await deleteImages(newKeys)
+    throw error
+  }
+  await deleteImagesAfterCommit(oldKeys.filter(key => !newKeys.includes(key)))
+}
+
+export async function deleteLinkPreviewImages(database: Database, postId: number) {
+  if (!linkPreviewTableAvailable(database)) return
+  const keys = storedPreviewKeys(database, postId)
+  database.query('DELETE FROM post_link_previews WHERE post_id=?').run(postId)
+  await deleteImagesAfterCommit(keys)
 }

@@ -392,6 +392,7 @@ header>.account-nav {
 .remote-link-menu > a:not(.remote-link-popover) {
   position: relative;
   z-index: 21;
+  cursor: pointer;
 }
 
 .remote-link-menu:hover::after,
@@ -423,6 +424,7 @@ header>.account-nav {
   text-align: left;
   white-space: normal;
   text-decoration: none;
+  cursor: pointer;
 }
 
 .post p a.remote-link-popover,
@@ -1407,12 +1409,12 @@ nav form {
     border: 0;
   }
 
-  .tappable-post a:not(.post-hit-area):not(.parent-hit-area),
+  .tappable-post a:not(.post-hit-area):not(.parent-hit-area):not(.remote-link-popover),
   .tappable-post button,
   .tappable-post label,
   .tappable-post input {
     position: relative;
-    z-index: 2;
+    z-index: 21;
   }
 
   .tappable-post .post-hit-area:focus-visible,

@@ -194,6 +194,24 @@ export function validateStartupConfiguration(env: Environment = Bun.env, options
   if (environment === 'production' && (env.IP_PSEUDONYM_SECRET?.trim().length || 0) < 32) {
     problems.push('IP_PSEUDONYM_SECRET must be at least 32 characters in production')
   }
+  const r2Variables = ['R2_ACCESS_KEY_ID', 'R2_SECRET_ACCESS_KEY', 'R2_ENDPOINT', 'R2_BUCKET', 'R2_PUBLIC_URL']
+  if (environment === 'production') {
+    for (const name of r2Variables) {
+      if (!env[name]?.trim()) problems.push(`${name} is required in production`)
+    }
+  }
+  for (const name of ['R2_ENDPOINT', 'R2_PUBLIC_URL']) {
+    const value = env[name]?.trim()
+    if (!value) continue
+    try {
+      const url = new URL(value)
+      if (url.protocol !== 'https:' || url.username || url.password || url.search || url.hash
+        || (url.pathname !== '/' && url.pathname !== '')) throw new Error('invalid R2 URL')
+    }
+    catch {
+      problems.push(`${name} must be an HTTPS origin without credentials, a path, query, or fragment`)
+    }
+  }
   const vapidValues = ['VAPID_SUBJECT', 'VAPID_PUBLIC_KEY', 'VAPID_PRIVATE_KEY']
     .filter(name => Boolean(env[name]?.trim()))
   if (vapidValues.length > 0 && vapidValues.length < 3) {

@@ -100,6 +100,10 @@ export function logError(message: string, error: unknown) {
   console.error(`${paint('error', 'red')}  ${message}\n${paint(detail, 'dim')}`)
 }
 
+export function logInfo(message: string) {
+  console.log(`${paint('info', 'cyan')}   ${message}`)
+}
+
 export function logReady(url: string, environment: string) {
   console.log(
     `${paint('ready', 'green')} ${paint('◆', 'magenta')} textlog listening on ${paint(url, 'cyan')} ${

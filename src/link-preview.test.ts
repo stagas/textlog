@@ -1,7 +1,6 @@
 import { describe, expect, test } from 'bun:test'
 import { Database } from 'bun:sqlite'
-import { isDirectImageUrl, openGraphImage, openGraphMetadata } from './link-preview'
-import { discoverLinkPreviews } from './link-preview'
+import { discoverLinkPreviews, isDirectImageUrl, openGraphImage, openGraphMetadata, replaceLinkPreviews } from './link-preview'
 
 describe('link previews', () => {
   test('recognizes direct image links with queries case-insensitively', () => {
@@ -60,6 +59,30 @@ describe('link previews', () => {
     finally {
       database.close()
       Bun.env.APP_URL = previous
+    }
+  })
+
+  test('keeps existing preview rows when replacement persistence fails', async () => {
+    const database = new Database(':memory:')
+    database.run(`CREATE TABLE post_link_previews(post_id INTEGER,url TEXT,image_url TEXT,title TEXT,
+      description TEXT,site_name TEXT,image_width INTEGER,image_height INTEGER,PRIMARY KEY(post_id,url));
+      INSERT INTO post_link_previews(post_id,url,image_url,title) VALUES
+        (1,'https://old.test','images/old.png','Old');
+      CREATE TRIGGER reject_preview BEFORE INSERT ON post_link_previews BEGIN SELECT RAISE(ABORT,'rejected'); END;`)
+    try {
+      await expect(replaceLinkPreviews(database, 1, [{
+        url: 'https://new.test',
+        imageUrl: '/uploads/images/new.png',
+        imageKey: 'images/new.png',
+      }])).rejects.toThrow('rejected')
+      expect(database.query('SELECT url,image_url,title FROM post_link_previews WHERE post_id=1').get()).toEqual({
+        url: 'https://old.test',
+        image_url: 'images/old.png',
+        title: 'Old',
+      })
+    }
+    finally {
+      database.close()
     }
   })
 })

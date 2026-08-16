@@ -8,6 +8,11 @@ const production = {
   EMAIL_FROM: 'textlog <hello@textlog.cc>',
   OPENAI_API_KEY: 'configured-secret',
   IP_PSEUDONYM_SECRET: 'configured-secret-at-least-32-characters',
+  R2_ACCESS_KEY_ID: 'configured-key',
+  R2_SECRET_ACCESS_KEY: 'configured-secret',
+  R2_ENDPOINT: 'https://account.r2.cloudflarestorage.com',
+  R2_BUCKET: 'textlog-images',
+  R2_PUBLIC_URL: 'https://img.textlog.cc',
 }
 
 describe('startup configuration', () => {
@@ -34,6 +39,8 @@ describe('startup configuration', () => {
       expect(message).toContain('EMAIL_FROM is required')
       expect(message).toContain('OPENAI_API_KEY is required')
       expect(message).toContain('IP_PSEUDONYM_SECRET must be at least 32 characters')
+      expect(message).toContain('R2_ACCESS_KEY_ID is required')
+      expect(message).toContain('R2_PUBLIC_URL is required')
     }
   })
 
@@ -50,6 +57,8 @@ describe('startup configuration', () => {
         DATABASE_BUSY_TIMEOUT_MS: '60000',
         DATABASE_BACKUP_RETENTION_DAYS: '0',
         BACKUP_ALERT_WEBHOOK_URL: 'http://user:pass@example.com',
+        R2_ENDPOINT: 'http://user:pass@example.com/path',
+        R2_PUBLIC_URL: 'https://img.example.com/path',
       }, { checkFilesystem: false })
     ).toThrow('Invalid startup configuration')
   })

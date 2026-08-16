@@ -12,6 +12,8 @@ import { compressResponse } from './compression'
 import { databaseHealth } from './database-health'
 import { db } from './db'
 import { isDevelopment } from './environment'
+import { localImageFile, usesLocalImageStorage } from './image-storage'
+import { runR2LinkPreviewBackfill } from './link-preview-backfill'
 import { clientIp, logError, logHttp, logReady, shouldLogHttp } from './log'
 import { startMaintenance } from './maintenance'
 import { clearMaterializedFeedPages } from './materialized-feed-pages'
@@ -89,6 +91,7 @@ if (Bun.env.NODE_ENV === 'production') {
     alertWebhookUrl: Bun.env.BACKUP_ALERT_WEBHOOK_URL || null,
   })
   startPublicArchive(db, { path: publicArchivePath })
+  void runR2LinkPreviewBackfill(db).catch(error => logError('R2 link preview backfill failed', error))
 }
 
 app.use('*', bodyLimit({
@@ -244,6 +247,23 @@ for (const asset of publicAssets) {
         'cache-control': 'public, max-age=31536000, immutable',
       },
     }))
+}
+if (usesLocalImageStorage()) {
+  app.get('/uploads/*', async c => {
+    try {
+      const key = c.req.path.slice('/uploads/'.length)
+      const file = await localImageFile(key)
+      if (!file) return c.text('Not found', 404)
+      return new Response(file, { headers: {
+        'content-type': file.type || 'application/octet-stream',
+        'cache-control': 'public, max-age=31536000, immutable',
+        'x-content-type-options': 'nosniff',
+      } })
+    }
+    catch {
+      return c.text('Not found', 404)
+    }
+  })
 }
 app.get('/site.webmanifest', c =>
   c.json({

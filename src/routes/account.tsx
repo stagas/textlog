@@ -40,6 +40,7 @@ import { moderateText, moderationMessage } from '../moderation'
 import { accountForPasswordEnableToken, issuePasswordEnableToken } from '../password-enable'
 import { vapidPublicKey } from '../push'
 import { normalizeSearchQuery, searchPeople, searchTags } from '../search'
+import { deleteLinkPreviewImages } from '../link-preview'
 import { sessionHash } from '../sessions'
 import { ACCENT_CHOICES, type AccentChoice, appearance, appearanceCookie, FONT_CHOICES, FONT_SIZE_CHOICES,
   type FontChoice, fontChoice, fontCookie, type FontSizeChoice, fontSizeChoice, fontSizeCookie, PRIMARY_FONT_CHOICES,
@@ -736,7 +737,10 @@ export function registerAccountRoutes(app: Hono) {
       if (isAdmin({ email: deletionAccount.email }) && isPrimaryAccount(db, deletionAccount.id)) {
         return c.text('Admin accounts cannot delete themselves', 403)
       }
+      const postIds = (db.query('SELECT id FROM posts WHERE user_id=?').all(deletionAccount.id) as { id: number }[])
+        .map(post => post.id)
       db.transaction(() => anonymizeUser(db, deletionAccount.id))()
+      for (const postId of postIds) await deleteLinkPreviewImages(db, postId)
       return redirect('/', clearSessionCookie())
     }
     if (f.token) return page(<ConfirmAccountDelete user={user} invalid />, 400)
@@ -759,7 +763,10 @@ export function registerAccountRoutes(app: Hono) {
       if (!await verifyPassword(f.password || '', credentials.password)) {
         return page(<ConfirmAccountDelete user={user} passwordEnabled error="Password is incorrect." />, 400)
       }
+      const postIds = (db.query('SELECT id FROM posts WHERE user_id=?').all(user.id) as { id: number }[])
+        .map(post => post.id)
       db.transaction(() => anonymizeUser(db, user.id))()
+      for (const postId of postIds) await deleteLinkPreviewImages(db, postId)
       return redirect('/', clearSessionCookie())
     }
     const origin = Bun.env.APP_URL?.replace(/\/$/, '') || new URL(c.req.url).origin

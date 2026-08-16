@@ -18,7 +18,7 @@ import type { PostingSuggestionSearch } from '../components/page-shared'
 import { db } from '../db'
 import { safeRefererPath } from '../http'
 import { logError } from '../log'
-import { discoverLinkPreviews, saveLinkPreviews } from '../link-preview'
+import { deleteLinkPreviewImages, discoverLinkPreviews, replaceLinkPreviews, saveLinkPreviews } from '../link-preview'
 import { renderPostOg } from '../og'
 import { normalizePostBody, postBodyValidationMessage, validPostBody } from '../post-body'
 import { postRateLimitMessage } from '../post-rate-limit'
@@ -171,7 +171,7 @@ export function registerPostsRoutes(app: Hono) {
           429,
         )
       }
-      if (!result.duplicate) saveLinkPreviews(db, result.id, await discoverLinkPreviews(body, db))
+      if (!result.duplicate) await saveLinkPreviews(db, result.id, await discoverLinkPreviews(body, db))
       if (!result.duplicate) notifyPost(result.id, user.id, user.handle)
       return rememberFeed(redirect(`/latest#post-${result.id}`), 'latest')
     }
@@ -239,6 +239,7 @@ export function registerPostsRoutes(app: Hono) {
         )
       }
       updatePost(db, id, body)
+      await replaceLinkPreviews(db, id, await discoverLinkPreviews(body, db))
       return redirect('/post/' + id + (returnPath ? '?from=' + encodeURIComponent(returnPath) : ''))
     }
     catch (error) {
@@ -280,6 +281,7 @@ export function registerPostsRoutes(app: Hono) {
     db.transaction(() => {
       softDeletePost(db, id)
     })()
+    await deleteLinkPreviewImages(db, id)
     return redirect(post.parent_id
       ? '/post/' + post.parent_id + (returnPath ? '?from=' + encodeURIComponent(returnPath) : '')
       : returnPath || '/')
@@ -335,7 +337,7 @@ export function registerPostsRoutes(app: Hono) {
           429,
         )
       }
-      if (!result.duplicate) saveLinkPreviews(db, result.id, await discoverLinkPreviews(body, db))
+      if (!result.duplicate) await saveLinkPreviews(db, result.id, await discoverLinkPreviews(body, db))
       if (!result.duplicate) notifyPost(result.id, user.id, user.handle)
       return redirect(postedReplyPath(parentId, result.id, returnPath))
     }

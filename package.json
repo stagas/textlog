@@ -18,6 +18,7 @@
     "check": "bun run typecheck && bun run test"
   },
   "dependencies": {
+    "@aws-sdk/client-s3": "^3.1111.0",
     "@types/react": "latest",
     "@types/react-dom": "latest",
     "canvas": "^3.2.3",

@@ -1,4 +1,4 @@
-export type LinkPreview = { imageUrl: string; title?: string; description?: string; siteName?: string;
+export type LinkPreview = { imageUrl: string; imageKey?: string; title?: string; description?: string; siteName?: string;
   imageWidth?: number; imageHeight?: number }
 
 export type PostRow = {

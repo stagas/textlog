@@ -227,6 +227,11 @@ describe('in-memory stylesheet', () => {
     expect(css).toContain('animation: reference-popover-reveal 0s 500ms both;')
     const baseRule = css.slice(css.indexOf('.remote-link-popover {'), css.indexOf('.remote-link-menu:hover'))
     expect(baseRule).not.toContain('background-image')
+    expect(css).toContain(
+      '.tappable-post a:not(.post-hit-area):not(.parent-hit-area):not(.remote-link-popover),',
+    )
+    expect(css).toContain('.tappable-post input {\n    position: relative;\n    z-index: 21;')
+    expect(cardRule).toContain('cursor: pointer;')
   })
 
   test('keeps unsupported posting-help popovers hidden', async () => {

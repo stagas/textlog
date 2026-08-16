@@ -9,7 +9,7 @@ import type { User } from '../db'
 import { sendMagicLink } from '../email'
 import { resolveHandle } from '../handles'
 import { logError } from '../log'
-import { discoverLinkPreviews, saveLinkPreviews } from '../link-preview'
+import { deleteLinkPreviewImages, discoverLinkPreviews, replaceLinkPreviews, saveLinkPreviews } from '../link-preview'
 import { moderateText, moderationMessage } from '../moderation'
 import { normalizePostBody, POST_MAX, postBodyValidationMessage, validPostBody } from '../post-body'
 import { postRateLimitMessage } from '../post-rate-limit'
@@ -211,7 +211,7 @@ export function registerApiWriteRoutes(app: Hono, database: Database, appUrl?: s
     if ('retryAfter' in result) {
       return fail('post_rate_limited', postRateLimitMessage(result.retryAfter), 429, result.retryAfter)
     }
-    if (!result.duplicate) saveLinkPreviews(database, result.id, await discoverLinkPreviews(content, database))
+    if (!result.duplicate) await saveLinkPreviews(database, result.id, await discoverLinkPreviews(content, database))
     if (!result.duplicate) {
       void sendPushForPost(result.id, user.id, user.handle, database)
         .catch(error => logError('API activity push failed', error))
@@ -241,10 +241,11 @@ export function registerApiWriteRoutes(app: Hono, database: Database, appUrl?: s
         moderation.reason === 'flagged' ? 422 : 503)
     }
     updatePost(database, id, content)
+    await replaceLinkPreviews(database, id, await discoverLinkPreviews(content, database))
     return json({ data: apiPost(database, id, apiOrigin(c.req.url, appUrl)) })
   })
 
-  app.delete('/api/v1/posts/:id', c => {
+  app.delete('/api/v1/posts/:id', async c => {
     const guard = writer(database, c)
     if (guard.error) return guard.error
     const id = Number(c.req.param('id'))
@@ -254,6 +255,7 @@ export function registerApiWriteRoutes(app: Hono, database: Database, appUrl?: s
     if (!post) return fail('not_found', 'Post not found', 404)
     if (post.user_id !== guard.user!.id) return fail('forbidden', 'That post belongs to someone else', 403)
     database.transaction(() => softDeletePost(database, id))()
+    await deleteLinkPreviewImages(database, id)
     return json({ data: { deleted: true } })
   })
 
