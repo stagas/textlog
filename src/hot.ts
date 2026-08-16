@@ -26,7 +26,7 @@ export type HotCursor = {
   direction: 'next' | 'previous'
 }
 
-export const hotRankingVersion = 61
+export const hotRankingVersion = 62
 const cursorVersion = hotRankingVersion
 const activityHalfLifeHours = 6
 const postWeight = 0
@@ -65,6 +65,7 @@ const recentPostBoostHours = 24
 const recentPostTierBonus = 100
 const yesterdayPostHours = 48
 const yesterdayPostTierBonus = 50
+const recentReplyActivityBoost = 75
 
 function hasHotTable(database: Database) {
   return Boolean(database.query('SELECT 1 FROM sqlite_master WHERE type=\'table\' AND name=\'post_hot\'').get())
@@ -345,7 +346,7 @@ export function getHotPosts(
           /${conversationDepthHalfLifeHours}) ELSE 0 END conversation_depth_reserve
     FROM post_hot h JOIN posts p ON p.id=h.post_id JOIN post_depth ON post_depth.id=p.id CROSS JOIN ranking_time
   ), ranked_base AS (
-    SELECT post_id,post_age_hours,reply_count,(CASE
+    SELECT post_id,post_age_hours,reply_age_hours,reply_count,(CASE
       WHEN reply_count>=3 AND reply_age_hours<=${recentReplyPriorityHours} THEN
         1+reply_recency_priority+min(0.25,recency_score*0.01)
       WHEN reply_count=2 AND reply_age_hours<=${recentReplyPriorityHours} THEN
@@ -356,6 +357,8 @@ export function getHotPosts(
         ${replyCandidateBaseWeight}*pow(${replyCandidateDepthWeight},candidate_depth-1) END base_score FROM scored
   ), ranked AS (
     SELECT post_id,base_score*(1+${recentPostBoost}*max(0,1-post_age_hours/${recentPostBoostHours}.0))
+      +CASE WHEN base_score>0 AND reply_count>0 AND reply_age_hours<${recentReplyPriorityHours}
+        THEN ${recentReplyActivityBoost}*max(0,1-reply_age_hours/${recentReplyPriorityHours}.0) ELSE 0 END
       +CASE WHEN base_score>0 AND reply_count>1 AND post_age_hours<${recentPostBoostHours}
         THEN ${recentPostTierBonus}
         WHEN base_score>0 AND reply_count>1 AND post_age_hours<${yesterdayPostHours}

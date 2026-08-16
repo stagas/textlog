@@ -172,6 +172,19 @@ describe('hot feed ranking', () => {
       .toBeLessThan(results.indexOf(results.find(result => result.id === 1)!))
   })
 
+  test('replies today strongly revive an older post', () => {
+    post(1, '2026-07-20 12:00:00')
+    post(2, '2026-08-01 12:00:00')
+    database.run(`UPDATE post_hot SET score=0.01,reply_count=2,activity_count=2,
+      score_updated_at='2026-08-03 11:59:00',latest_activity_at='2026-08-03 11:59:00' WHERE post_id=1`)
+    database.run(`UPDATE post_hot SET score=1000,reply_count=20,activity_count=20,
+      score_updated_at='2026-08-02 11:59:00',latest_activity_at='2026-08-02 11:59:00' WHERE post_id=2`)
+
+    const results = getHotPosts(database, 20, null, asOf)
+    expect(results.map(result => result.id)).toEqual([1, 2])
+    expect(results[0].hot_score).toBeGreaterThan(70)
+  })
+
   test('boosts posts during their first day when reply activity is identical', () => {
     post(1, '2026-07-30 12:00:00')
     postBy(2, 2, '2026-08-03 12:00:00', 1)
@@ -188,8 +201,7 @@ describe('hot feed ranking', () => {
     const newThread = results.find(result => result.id === 3)!
     const fiveDayThread = results.find(result => result.id === 5)!
     expect(fourDayThread.hot_score).toBeCloseTo(fiveDayThread.hot_score)
-    expect(newThread.hot_score).toBeCloseTo(100 + fourDayThread.hot_score * 5)
-    expect(newThread.hot_score).toBeCloseTo(100 + (0.225 + 0.04) * 5)
+    expect(newThread.hot_score).toBeCloseTo(100 + 75 + (0.225 + 0.04) * 5)
   })
 
   test('ranks minute- and hour-old posts with multiple replies ahead of day-old posts', () => {
@@ -286,8 +298,8 @@ describe('hot feed ranking', () => {
     post(1, '2026-08-01 09:00:00')
     postBy(2, 2, '2026-08-01 10:00:00', 1)
     postBy(3, 3, '2026-08-01 11:00:00', 2)
-    database.run(`UPDATE post_hot SET score=4,reply_count=3,activity_count=3,
-      score_updated_at='2026-08-03 11:00:00',latest_activity_at='2026-08-03 11:00:00'
+    database.run(`UPDATE post_hot SET score=4,reply_count=4,activity_count=4,
+      score_updated_at='2026-08-02 11:00:00',latest_activity_at='2026-08-02 11:00:00'
       WHERE post_id IN (1,2,3)`)
 
     const results = getHotPosts(database, 20, null, asOf)
