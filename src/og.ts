@@ -1,5 +1,7 @@
-import { type CanvasRenderingContext2D, createCanvas } from 'canvas'
+import { type CanvasRenderingContext2D, createCanvas, Image } from 'canvas'
 import { appName } from './brand'
+import { texToSvg } from './math'
+import { linkTokens } from './utils'
 
 const width = 1200
 const height = 630
@@ -9,8 +11,28 @@ const contentBottom = 510
 const maxTextHeight = contentBottom - contentTop
 const textColor = '#f0f3ee'
 const accentColor = '#9abd8e'
+const codeColor = '#a8afa4'
 const headerWordmarkOffsetY = 8
 const defaultWordmarkOffsetY = 10
+const mathPlaceholder = '\uFFFC'
+const mathImageCache = new Map<string, Image>()
+
+type OgRange = { start: number; end: number }
+type OgMath = OgRange & { source: string; display: boolean }
+
+function mathImage(svg: string, width: number, height: number) {
+  const key = `${width}x${height}\0${svg}`
+  const cached = mathImageCache.get(key)
+  if (cached) return cached
+  const image = new Image()
+  image.src = Buffer.from(svg
+    .replace(/width="[^"]+"/, `width="${width}px"`)
+    .replace(/height="[^"]+"/, `height="${height}px"`)
+    .replaceAll('currentColor', textColor))
+  if (mathImageCache.size >= 256) mathImageCache.delete(mathImageCache.keys().next().value!)
+  mathImageCache.set(key, image)
+  return image
+}
 
 function drawBackground(ctx: CanvasRenderingContext2D) {
   const brand = appName()
@@ -87,19 +109,44 @@ function fitPost(ctx: CanvasRenderingContext2D, body: string) {
 }
 
 export function postOgText(body: string) {
-  const links: Array<{ start: number; end: number }> = []
-  const markdownLink = /\[([^\]\r\n]+)\]\((https?:\/\/[^\s<>")]+)\)/gi
+  const links: OgRange[] = []
+  const code: OgRange[] = []
+  const math: OgMath[] = []
   let text = ''
-  let end = 0
-  for (const match of body.matchAll(markdownLink)) {
-    text += body.slice(end, match.index)
+  let sourceEnd = 0
+  for (const token of linkTokens(body)) {
+    if (token.index < sourceEnd) continue
+    text += body.slice(sourceEnd, token.index)
     const start = text.length
-    text += match[1]
-    links.push({ start, end: text.length })
-    end = match.index + match[0].length
+    if (token.kind === 'math' || token.kind === 'latex-fence') {
+      const display = token.kind === 'latex-fence' || token.display!
+      const rendered = texToSvg(token.label!, display)
+      if (!rendered) text += token.raw
+      else {
+        if (display && text && !text.endsWith('\n')) text += '\n'
+        const start = text.length
+        const placeholderCount = Math.max(1, Math.ceil(rendered.width / 600))
+        text += mathPlaceholder.repeat(placeholderCount)
+        math.push({ start, end: text.length, source: token.label!, display })
+        if (display && body[token.lastIndex] && body[token.lastIndex] !== '\n') text += '\n'
+      }
+    }
+    else if (token.kind === 'code' || token.kind === 'code-fence') {
+      text += token.label!
+      code.push({ start, end: text.length })
+    }
+    else if (token.kind === 'markdown') {
+      text += token.label!
+      links.push({ start, end: text.length })
+    }
+    else {
+      text += token.raw
+      if (token.kind === 'url' || token.kind === 'reference') links.push({ start, end: text.length })
+    }
+    sourceEnd = token.lastIndex
   }
-  text += body.slice(end)
-  return { text, links }
+  text += body.slice(sourceEnd)
+  return { text, links, code, math }
 }
 
 function drawLogo(ctx: CanvasRenderingContext2D, x: number, y: number, scale = 3) {
@@ -149,38 +196,67 @@ export function renderDefaultOg() {
   return canvas.toBuffer('image/png')
 }
 
-function drawPostLine(
+function drawLinkedLine(
   ctx: CanvasRenderingContext2D,
   line: string,
   x: number,
   y: number,
   lineStart: number,
-  markdownLinks: Array<{ start: number; end: number }>,
+  links: Array<{ start: number; end: number }>,
+  code: Array<{ start: number; end: number }>,
+  math: OgMath[],
 ) {
-  const tokens = /https?:\/\/[^\s<>"']+|(?<![A-Za-z0-9_])[@#][A-Za-z0-9_]+/gi
   let drawX = x
-  const accented = Array.from({ length: line.length },
-    (_, index) => markdownLinks.some(link => lineStart + index >= link.start && lineStart + index < link.end))
+  const styles = Array.from({ length: line.length }, (_, index) => {
+    const position = lineStart + index
+    if (links.some(link => position >= link.start && position < link.end)) return 'link'
+    if (code.some(range => position >= range.start && position < range.end)) return 'code'
+    if (math.some(range => position >= range.start && position < range.end)) return 'math'
+    return 'text'
+  })
 
-  for (const match of line.matchAll(tokens)) {
-    const token = match[0]
-    const accentLength = /^https?:\/\//i.test(token) ? token.replace(/[.,!?;:]+$/, '').length : token.length
-    for (let index = match.index; index < match.index + accentLength; index++) accented[index] = true
-  }
-
-  const draw = (text: string, color: string) => {
+  const draw = (text: string, style: 'text' | 'link' | 'code' | 'math') => {
     if (!text) return
-    ctx.fillStyle = color
+    ctx.fillStyle = style === 'link' ? accentColor : style === 'code' ? codeColor : textColor
     ctx.fillText(text, drawX, y)
-    drawX += ctx.measureText(text).width
+    const metrics = ctx.measureText(text)
+    const nextX = drawX + metrics.width
+    if (style === 'link') {
+      const fontSize = Number(ctx.font.match(/(\d+(?:\.\d+)?)px/)?.[1] || 20)
+      const textTop = y - ctx.measureText('M').actualBoundingBoxAscent
+      const underlineY = textTop + fontSize * 1.05
+      ctx.strokeStyle = accentColor
+      ctx.lineWidth = Math.max(1, fontSize * 0.025)
+      ctx.beginPath()
+      ctx.moveTo(drawX, underlineY)
+      ctx.lineTo(nextX, underlineY)
+      ctx.stroke()
+    }
+    drawX = nextX
   }
 
   let cursor = 0
   while (cursor < line.length) {
-    const accent = accented[cursor]
+    const equation = math.find(range => lineStart + cursor === range.start)
+    if (equation) {
+      const fontSize = Number(ctx.font.match(/(\d+(?:\.\d+)?)px/)?.[1] || 20)
+      const rendered = texToSvg(equation.source, equation.display)
+      if (rendered) {
+        const preferredMathSize = fontSize * (equation.display ? 1.15 : 1.05)
+        const mathSize = Math.min(preferredMathSize, maxTextWidth * 1000 / rendered.width)
+        const imageWidth = rendered.width / 1000 * mathSize
+        const imageHeight = rendered.height / 1000 * mathSize
+        const image = mathImage(rendered.svg, imageWidth, imageHeight)
+        ctx.drawImage(image, drawX, y + rendered.minY / 1000 * mathSize, imageWidth, imageHeight)
+        drawX = equation.display ? drawX : drawX + imageWidth
+        cursor += equation.end - equation.start
+        continue
+      }
+    }
+    const style = styles[cursor]
     let next = cursor + 1
-    while (next < line.length && accented[next] === accent) next++
-    draw(line.slice(cursor, next), accent ? accentColor : textColor)
+    while (next < line.length && styles[next] === style) next++
+    draw(line.slice(cursor, next), style)
     cursor = next
   }
 }
@@ -199,7 +275,7 @@ export function renderPostOg(body: string, handle: string) {
   let searchFrom = 0
   for (const line of fitted.lines) {
     const lineStart = post.text.indexOf(line, searchFrom)
-    drawPostLine(ctx, line, 80, y, lineStart < 0 ? searchFrom : lineStart, post.links)
+    drawLinkedLine(ctx, line, 80, y, lineStart < 0 ? searchFrom : lineStart, post.links, post.code, post.math)
     searchFrom = (lineStart < 0 ? searchFrom : lineStart) + line.length
     y += fitted.lineHeight
   }
@@ -233,13 +309,13 @@ export function renderProfileOg(
   ctx.fillStyle = textColor
   ctx.fillText(handle, 80 + prefixWidth, 245)
 
-  const profileBio = bio.trimEnd() || 'No bio yet.'
+  const profileBio = postOgText(bio.trimEnd() || 'No bio yet.')
   let size = 46
   let lines: string[] = []
   let lineHeight = 61
   for (; size >= 28; size -= 2) {
     ctx.font = `500 ${size}px monospace`
-    lines = linesFor(ctx, profileBio, maxTextWidth)
+    lines = linesFor(ctx, profileBio.text, maxTextWidth)
     lineHeight = Math.round(size * 1.35)
     if (lines.length * lineHeight <= 165) break
   }
@@ -253,8 +329,12 @@ export function renderProfileOg(
   ctx.fillStyle = textColor
   ctx.font = `500 ${size}px monospace`
   let y = 340
+  let searchFrom = 0
   for (const line of lines) {
-    ctx.fillText(line, 80, y)
+    const lineStart = profileBio.text.indexOf(line, searchFrom)
+    drawLinkedLine(ctx, line, 80, y, lineStart < 0 ? searchFrom : lineStart,
+      profileBio.links, profileBio.code, profileBio.math)
+    searchFrom = (lineStart < 0 ? searchFrom : lineStart) + line.length
     y += lineHeight
   }
 

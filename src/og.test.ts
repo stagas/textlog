@@ -1,13 +1,72 @@
 import { describe, expect, test } from 'bun:test'
+import { createCanvas, Image } from 'canvas'
 import { postOgText, renderDefaultOg, renderPostOg, renderProfileOg, renderTagOg } from './og'
+
+function visiblePixels(imageBuffer: Buffer, x: number, y: number, width: number, height: number) {
+  const image = new Image()
+  image.src = imageBuffer
+  const canvas = createCanvas(1200, 630)
+  const context = canvas.getContext('2d')
+  context.drawImage(image, 0, 0)
+  const pixels = context.getImageData(x, y, width, height).data
+  let visible = 0
+  for (let index = 0; index < pixels.length; index += 4) {
+    if (pixels[index] !== 17 || pixels[index + 1] !== 21 || pixels[index + 2] !== 18) visible++
+  }
+  return visible
+}
 
 describe('renderPostOg', () => {
   test('renders markdown links as their label without the URL', () => {
     expect(postOgText('Read [the docs](https://example.com/docs) today')).toEqual({
       text: 'Read the docs today',
       links: [{ start: 5, end: 13 }],
+      code: [],
+      math: [],
     })
     expect(renderPostOg('Read [the docs](https://example.com/docs) today', 'tester')).not.toHaveLength(0)
+  })
+
+  test('identifies everything the content renderer linkifies', () => {
+    expect(postOgText('See example.com, @tester and #textlog')).toEqual({
+      text: 'See example.com, @tester and #textlog',
+      links: [
+        { start: 4, end: 15 },
+        { start: 17, end: 24 },
+        { start: 29, end: 37 },
+      ],
+      code: [],
+      math: [],
+    })
+    expect(postOgText('Keep `example.com` literal')).toEqual({
+      text: 'Keep example.com literal',
+      links: [],
+      code: [{ start: 5, end: 16 }],
+      math: [],
+    })
+    expect(postOgText('Before\n```js\nconst answer = 42\n```\nafter')).toEqual({
+      text: 'Before\nconst answer = 42\nafter',
+      links: [],
+      code: [{ start: 7, end: 24 }],
+      math: [],
+    })
+  })
+
+  test('typesets inline and display LaTeX without showing delimiters', () => {
+    const content = postOgText('Inline $x^2 + y^2$ here.\n$$\\sum_{i=1}^n i$$\nDone.')
+    expect(content.text).not.toContain('$')
+    expect(content.math).toEqual([
+      { start: 7, end: 13, source: 'x^2 + y^2', display: false },
+      { start: 20, end: 24, source: '\\sum_{i=1}^n i', display: true },
+    ])
+    const inlineImage = renderPostOg('Inline $x^2 + y^2$ here.', 'tester')
+    expect(visiblePixels(inlineImage, 430, 240, 350, 170)).toBeGreaterThan(500)
+    const displayImage = renderPostOg('$$\\sum_{i=1}^n i$$', 'tester')
+    expect(visiblePixels(displayImage, 70, 150, 400, 330)).toBeGreaterThan(500)
+    const fenced = postOgText('```latex\n\\frac{a}{b}\n```')
+    expect(fenced.text).not.toContain('```')
+    expect(fenced.math).toHaveLength(1)
+    expect(fenced.math[0]).toMatchObject({ source: '\\frac{a}{b}', display: true })
   })
 })
 
@@ -24,6 +83,13 @@ describe('renderProfileOg', () => {
   test('renders empty and multiline bios', () => {
     expect(renderProfileOg('tester', '', counts)).not.toHaveLength(0)
     expect(renderProfileOg('tester', 'first line\nsecond line', counts)).not.toHaveLength(0)
+  })
+
+  test('renders linkified bio content', () => {
+    expect(renderProfileOg('tester', 'At [my site](https://example.com), with @friend and #writing.', counts))
+      .not.toHaveLength(0)
+    expect(renderProfileOg('tester', 'Studies $E = mc^2$ and $$x = \\frac{-b}{2a}$$', counts))
+      .not.toHaveLength(0)
   })
 })
 

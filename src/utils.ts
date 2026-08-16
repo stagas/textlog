@@ -311,7 +311,7 @@ function mathTokens(body: string, protectedTokens: LinkToken[]) {
   return tokens
 }
 
-function linkTokens(body: string, flags?: PostContentFlags): LinkToken[] {
+export function linkTokens(body: string, flags?: PostContentFlags): LinkToken[] {
   const tokens: LinkToken[] = []
   if (!flags || flags.has_code || flags.has_latex) {
     for (const match of body.matchAll(/^```([^\r\n]*)\r?\n([\s\S]*?)\r?\n```(?=\r?$)/gm)) {
