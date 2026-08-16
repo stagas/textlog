@@ -68,8 +68,8 @@ describe('RSS and Atom feeds', () => {
 
     expect(rss).toContain('&lt;strong&gt;bold&lt;/strong&gt;')
     expect(rss).toContain('&lt;a href=&quot;https://example.com&quot;&gt;safe&lt;/a&gt;')
-    expect(rss).toContain('<title>@alice: bold safe unsafe</title>')
-    expect(atom).toContain('<title>@alice: bold safe unsafe</title>')
+    expect(rss).toContain('<title>bold safe unsafe</title>')
+    expect(atom).toContain('<title>bold safe unsafe</title>')
     expect(atom).toContain('<content type="html">&lt;p&gt;&lt;strong&gt;bold&lt;/strong&gt;')
     expect(rss).not.toContain('href=&quot;javascript:')
     expect(atom).not.toContain('<script')

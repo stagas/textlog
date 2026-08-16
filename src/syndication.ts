@@ -48,11 +48,10 @@ function postHtml(body: string) {
 }
 
 function itemTitle(post: ApiPost) {
-  const text = decodeHtmlEntities(sanitizeHtml(postHtml(post.body), {
+  return decodeHtmlEntities(sanitizeHtml(postHtml(post.body), {
     allowedTags: [],
     allowedAttributes: {},
   })).replace(/\s+/g, ' ').trim()
-  return `@${post.author.handle}: ${text}`
 }
 
 function updated(posts: ApiPost[]) {
