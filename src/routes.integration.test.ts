@@ -490,7 +490,7 @@ test('consequential account, content, reporting, and admin flows work over HTTP'
   expect(otherBrowserHome).toContain('class="notification-banner"')
   expect(otherBrowserHome).not.toContain('check the improved notifications')
   const dismissedImprovements = await request('/notifications/improvements/dismiss', {
-    method: 'POST', cookie: aliceCookie, userAgent: 'alice-browser', referer: '/',
+    method: 'POST', cookie: aliceCookie, userAgent: 'alice-browser',
   })
   expect(dismissedImprovements.status).toBe(303)
   const improvementDismissedHome = await (await request('/', {
