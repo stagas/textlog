@@ -406,7 +406,7 @@ header>.account-nav {
 
 .remote-link-popover {
   position: absolute;
-  z-index: 20;
+  z-index: 22;
   top: 100%;
   left: 0;
   display: none;

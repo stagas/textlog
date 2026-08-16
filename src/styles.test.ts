@@ -225,8 +225,8 @@ describe('in-memory stylesheet', () => {
     expect(css).toContain('.remote-link-image-sized {\n  background-size: contain;')
     expect(css).toContain('.post:has(.remote-link-menu:hover),')
     expect(css).toContain('animation: reference-popover-reveal 0s 500ms both;')
-    const baseRule = css.slice(css.indexOf('.remote-link-popover {'), css.indexOf('.remote-link-menu:hover'))
-    expect(baseRule).not.toContain('background-image')
+    expect(cardRule).toContain('z-index: 22;')
+    expect(cardRule).not.toContain('background-image')
     expect(css).toContain(
       '.tappable-post a:not(.post-hit-area):not(.parent-hit-area):not(.remote-link-popover),',
     )
