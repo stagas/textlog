@@ -8,7 +8,7 @@ import { containsAsciiArt, MAX_HASHTAGS_PER_POST, type PostContentFlags } from '
 import { db, type User } from './db'
 import { texToMathML } from './math'
 import { markSessionUsed, sessionHash } from './sessions'
-import type { UserProfileStats } from './types'
+import type { LinkPreview, UserProfileStats } from './types'
 
 export function userHoverTitle(noteCount: number, bio?: string) {
   return `${noteCount.toLocaleString()} ${noteCount === 1 ? 'note' : 'notes'}\n\n${displayBio(bio)}`
@@ -25,6 +25,34 @@ export type ReferencePopoverOptions = {
   mentionProfileStats?: Record<string, UserProfileStats>
   hashtagFollowing?: Record<string, boolean>
   hashtagFollowerCounts?: Record<string, number>
+  linkPreviews?: Record<string, LinkPreview>
+}
+
+function previewLink(html: string, url: string, popover?: ReferencePopoverOptions) {
+  const preview = popover?.linkPreviews?.[url]
+  if (!preview) return html
+  const cssUrl = preview.imageUrl.replace(/["'\\\n\r\f]/g, character => `\\${character}`)
+  const aspect = preview.imageWidth && preview.imageHeight
+    ? `;--preview-ratio:${preview.imageWidth / preview.imageHeight};--preview-width:${
+      200 * preview.imageWidth / preview.imageHeight
+    }px`
+    : ''
+  const imageClass = `remote-link-image${aspect ? ' remote-link-image-sized' : ''}`
+  const hostname = (() => {
+    try { return new URL(url).hostname.replace(/^www\./, '') }
+    catch { return '' }
+  })()
+  const site = preview.siteName || hostname
+  const details = site || preview.title || preview.description
+    ? `<span class="remote-link-copy">${site ? `<span class="remote-link-site">${esc(site)}</span>` : ''}${
+      preview.title ? `<strong class="remote-link-title">${esc(preview.title)}</strong>` : ''}${
+      preview.description ? `<span class="remote-link-description">${esc(preview.description)}</span>` : ''
+    }</span>`
+    : ''
+  return `<span class="remote-link-menu">${html}<a class="remote-link-popover" href="${esc(url)}" `
+    + `target="_blank" rel="noopener noreferrer nofollow" `
+    + `style="--preview-image:url(&quot;${esc(cssUrl)}&quot;)${aspect}"><span class="${imageClass}" role="img" `
+    + `aria-label="${esc(preview.title || `Preview of ${hostname}`)}"></span>${details}</a></span>`
 }
 
 function profileStatLinks(handle: string, stats: UserProfileStats, navigationQuery = '') {
@@ -317,6 +345,19 @@ function linkTokens(body: string, flags?: PostContentFlags): LinkToken[] {
   return tokens.sort((a, b) => a.index - b.index || priority[a.kind] - priority[b.kind])
 }
 
+export function postLinks(body: string) {
+  const links: string[] = []
+  let end = 0
+  for (const token of linkTokens(body)) {
+    if (token.index < end) continue
+    if ((token.kind === 'url' || token.kind === 'markdown') && token.url && !links.includes(token.url)) {
+      links.push(token.url)
+    }
+    end = token.lastIndex
+  }
+  return links
+}
+
 function renderedText(value: string, highlightTerms: string[]) {
   let html = ''
   let start = 0
@@ -401,9 +442,9 @@ function linkifyAsciiReferences(body: string, mentionBios: Record<string, string
       const url = match.url!
       const label = linkLabel(url, appUrl)
       const displayLabel = label === url ? match.raw : label
-      html += `<a href="${esc(url)}"${displayLabel === match.raw ? '' : ` title="${esc(url)}"`}${
+      html += previewLink(`<a href="${esc(url)}"${displayLabel === match.raw ? '' : ` title="${esc(url)}"`}${
         linkAttributes(url, appUrl)
-      }>${esc(displayLabel)}</a>`
+      }>${esc(displayLabel)}</a>`, url, popover)
     }
     end = match.lastIndex
   }
@@ -436,17 +477,17 @@ export function linkify(body: string, mentionBios: Record<string, string> = {}, 
       html += renderedMath(match.label!, match.display!) || renderedText(match.raw, highlightTerms)
     }
     else if (match.kind === 'markdown') {
-      html += `<a href="${esc(match.url)}" title="${esc(match.url)}"${linkAttributes(match.url!, appUrl)}>${
+      html += previewLink(`<a href="${esc(match.url)}" title="${esc(match.url)}"${linkAttributes(match.url!, appUrl)}>${
         highlighted(match.label!, highlightTerms)
-      }</a>`
+      }</a>`, match.url!, popover)
     }
     else if (match.kind === 'url') {
       const url = match.url!
       const label = linkLabel(url, appUrl)
       const displayLabel = label === url ? token : label
-      html += `<a href="${esc(url)}"${label === url ? '' : ` title="${esc(url)}"`}${linkAttributes(url, appUrl)}>${
+      html += previewLink(`<a href="${esc(url)}"${label === url ? '' : ` title="${esc(url)}"`}${linkAttributes(url, appUrl)}>${
         highlighted(displayLabel, highlightTerms)
-      }</a>`
+      }</a>`, url, popover)
     }
     else {
       html += renderedReference(token, mentionBios, mentionNoteCounts, hashtagCounts, highlightTerms, navigationQuery,

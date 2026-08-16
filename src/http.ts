@@ -100,7 +100,7 @@ export function securityHeaders(devReload = false, appUrl: string | undefined = 
       'form-action \'self\'',
       embeddable ? 'frame-ancestors *' : 'frame-ancestors \'none\'',
       'object-src \'none\'',
-      'img-src \'self\' data:',
+      'img-src \'self\' data: https:',
       'style-src \'self\' \'unsafe-inline\'',
       devReload ? 'script-src \'self\' \'unsafe-inline\'' : scripts ? 'script-src \'self\'' : 'script-src \'none\'',
       'connect-src \'self\'',

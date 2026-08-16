@@ -18,6 +18,7 @@ import type { PostingSuggestionSearch } from '../components/page-shared'
 import { db } from '../db'
 import { safeRefererPath } from '../http'
 import { logError } from '../log'
+import { discoverLinkPreviews, saveLinkPreviews } from '../link-preview'
 import { renderPostOg } from '../og'
 import { normalizePostBody, postBodyValidationMessage, validPostBody } from '../post-body'
 import { postRateLimitMessage } from '../post-rate-limit'
@@ -170,6 +171,7 @@ export function registerPostsRoutes(app: Hono) {
           429,
         )
       }
+      if (!result.duplicate) saveLinkPreviews(db, result.id, await discoverLinkPreviews(body, db))
       if (!result.duplicate) notifyPost(result.id, user.id, user.handle)
       return rememberFeed(redirect(`/latest#post-${result.id}`), 'latest')
     }
@@ -333,6 +335,7 @@ export function registerPostsRoutes(app: Hono) {
           429,
         )
       }
+      if (!result.duplicate) saveLinkPreviews(db, result.id, await discoverLinkPreviews(body, db))
       if (!result.duplicate) notifyPost(result.id, user.id, user.handle)
       return redirect(postedReplyPath(parentId, result.id, returnPath))
     }

@@ -237,6 +237,26 @@ describe('post persistence', () => {
       + 'form="post-1-tag-topic-block">block</button>')
   })
 
+  test('renders a stored remote link image as a hover-only CSS variable', () => {
+    const html = linkify('read https://example.com/story', {}, [], undefined, undefined, '', {}, {}, {
+      signedIn: false,
+      formPrefix: 'post-1',
+      linkPreviews: { 'https://example.com/story': { imageUrl: 'https://cdn.example.com/card.jpg?x=1&y=2',
+        title: 'A useful story', description: 'The story description', siteName: 'Example',
+        imageWidth: 1200, imageHeight: 630 } },
+    })
+    expect(html).toContain('class="remote-link-menu"')
+    expect(html).toContain('class="remote-link-popover" href="https://example.com/story"')
+    expect(html).toContain('--preview-image:url(&quot;https://cdn.example.com/card.jpg?x=1&amp;y=2&quot;)')
+    expect(html).toContain('--preview-ratio:1.9047619047619047')
+    expect(html).toContain('--preview-width:380.95238095238096px')
+    expect(html).toContain('class="remote-link-image remote-link-image-sized"')
+    expect(html).toContain('<span class="remote-link-site">Example</span>')
+    expect(html).toContain('<strong class="remote-link-title">A useful story</strong>')
+    expect(html).toContain('<span class="remote-link-description">The story description</span>')
+    expect(html).not.toContain('background-image')
+  })
+
   test('trims trailing whitespace from bios in user popovers', () => {
     const html = linkify('@reader', { reader: 'Builds things  \n' }, [], undefined, undefined, '', {}, { reader: 1 }, {
       signedIn: false,

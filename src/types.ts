@@ -1,3 +1,6 @@
+export type LinkPreview = { imageUrl: string; title?: string; description?: string; siteName?: string;
+  imageWidth?: number; imageHeight?: number }
+
 export type PostRow = {
   id: number
   user_id: number
@@ -8,6 +11,7 @@ export type PostRow = {
   has_latex?: number | null
   has_links?: number | null
   has_code?: number | null
+  link_previews?: Record<string, LinkPreview>
 }
 
 export type UserProfileStats = {
@@ -33,6 +37,7 @@ export type ParentPost = Pick<PostRow,
   hashtag_counts?: Record<string, number>
   hashtag_follower_counts?: Record<string, number>
   hashtag_following?: Record<string, boolean>
+  link_previews?: Record<string, LinkPreview>
   reply_count: number
 }
 

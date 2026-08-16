@@ -4,7 +4,7 @@ import { extractHashtags, extractMentions, postContentFlags } from './content'
 import { resolveHandle } from './handles'
 import { recordHotActivity } from './hot'
 import { insertRateLimitedPost } from './post-rate-limit'
-import type { ParentPost, PostView, UserProfileStats } from './types'
+import type { LinkPreview, ParentPost, PostView, UserProfileStats } from './types'
 
 export function visibleHashtagCounts(database: Database, bodies: string[], viewerId = -1) {
   const tags = [...new Set(bodies.flatMap(extractHashtags))]
@@ -121,6 +121,25 @@ export function enrichPosts(database: Database, posts: PostView[], viewerId = -1
   }
   for (const handle of mentionedHandles) addMentionBio(handle)
   const parentIds = [...new Set(posts.flatMap(post => post.parent_id ? [post.parent_id] : []))]
+  const previewPostIds = [...new Set([...ids, ...parentIds])]
+  const previewRows = database.query(
+    "SELECT 1 FROM sqlite_master WHERE type='table' AND name='post_link_previews'",
+  ).get()
+    ? database.query(`SELECT post_id,url,image_url,title,description,site_name,image_width,image_height
+      FROM post_link_previews WHERE post_id IN
+      (${previewPostIds.map(() => '?').join(',')})`).all(...previewPostIds) as {
+        post_id: number; url: string; image_url: string; title: string | null; description: string | null;
+        site_name: string | null; image_width: number | null; image_height: number | null
+      }[]
+    : []
+  const previewsByPost = new Map<number, Record<string, LinkPreview>>()
+  for (const row of previewRows) {
+    const previews = previewsByPost.get(row.post_id) || {}
+    previews[row.url] = { imageUrl: row.image_url, title: row.title || undefined,
+      description: row.description || undefined, siteName: row.site_name || undefined,
+      imageWidth: row.image_width || undefined, imageHeight: row.image_height || undefined }
+    previewsByPost.set(row.post_id, previews)
+  }
   const countRootIds = [...new Set([...ids, ...parentIds])]
   const placeholders = countRootIds.map(() => '?').join(',')
   const visibleReply = viewerId < 0 ? '' : `AND NOT EXISTS (SELECT 1 FROM blocks b WHERE
@@ -160,6 +179,7 @@ export function enrichPosts(database: Database, posts: PostView[], viewerId = -1
     for (const parent of rows) {
       parentBodies.push(parent.body)
       parent.reply_count = countById.get(parent.id) || 0
+      parent.link_previews = previewsByPost.get(parent.id)
       for (const handle of extractMentions(parent.body)) addMentionBio(handle)
     }
     parents = new Map(rows.map(parent => [parent.id, parent]))
@@ -216,6 +236,7 @@ export function enrichPosts(database: Database, posts: PostView[], viewerId = -1
     hashtag_counts: hashtagCounts,
     hashtag_follower_counts: hashtagFollowerCounts,
     hashtag_following: hashtagFollowing,
+    link_previews: previewsByPost.get(post.id),
     reply_count: countById.get(post.id) || 0,
     parent: post.parent_id ? parents.get(post.parent_id) || null : null,
   }))

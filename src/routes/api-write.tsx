@@ -9,6 +9,7 @@ import type { User } from '../db'
 import { sendMagicLink } from '../email'
 import { resolveHandle } from '../handles'
 import { logError } from '../log'
+import { discoverLinkPreviews, saveLinkPreviews } from '../link-preview'
 import { moderateText, moderationMessage } from '../moderation'
 import { normalizePostBody, POST_MAX, postBodyValidationMessage, validPostBody } from '../post-body'
 import { postRateLimitMessage } from '../post-rate-limit'
@@ -210,6 +211,7 @@ export function registerApiWriteRoutes(app: Hono, database: Database, appUrl?: s
     if ('retryAfter' in result) {
       return fail('post_rate_limited', postRateLimitMessage(result.retryAfter), 429, result.retryAfter)
     }
+    if (!result.duplicate) saveLinkPreviews(database, result.id, await discoverLinkPreviews(content, database))
     if (!result.duplicate) {
       void sendPushForPost(result.id, user.id, user.handle, database)
         .catch(error => logError('API activity push failed', error))

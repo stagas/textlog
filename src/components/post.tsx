@@ -201,7 +201,8 @@ export function PreviewPost({ p }: { p: PostView }) {
       <p className={containsAsciiArt(p.body) ? 'ascii-art' : undefined} dangerouslySetInnerHTML={{
         __html: linkify(displayPostBody(p.body), p.mention_bios, [], undefined, renderFlags(p), '', p.hashtag_counts,
           p.mention_note_counts, { signedIn: false, currentHandle: p.handle, formPrefix,
-          hashtagFollowerCounts: p.hashtag_follower_counts }),
+          hashtagFollowerCounts: p.hashtag_follower_counts,
+          linkPreviews: p.link_previews }),
       }} />
     </article>
   )
@@ -339,7 +340,8 @@ export function Post({
         __html: linkify(displayPostBody(p.body), p.mention_bios, highlightTerms, undefined, renderFlags(p),
           referenceQuery, p.hashtag_counts, p.mention_note_counts, { signedIn: !!user, currentHandle: user?.handle,
           formPrefix, mentionFollowing: p.mention_following, mentionProfileStats: p.mention_profile_stats,
-          hashtagFollowing: p.hashtag_following, hashtagFollowerCounts: p.hashtag_follower_counts }),
+          hashtagFollowing: p.hashtag_following, hashtagFollowerCounts: p.hashtag_follower_counts,
+          linkPreviews: p.link_previews }),
       }} />
       <ReferenceFollowForms post={p} prefix={formPrefix} user={user}
         returnPath={returnPath || `/post/${p.id}#post-${p.id}`} />

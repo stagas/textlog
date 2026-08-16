@@ -60,10 +60,10 @@ export function IllegalActivityReport(
                     enterKeyHint="done" />
                 </label>
                 <p className="form-hint">Name and email may be omitted only for a child-safety offence report.</p>
-                <label className="good-faith">
+                <label className="good-faith form-hint">
                   <input className="form-checkbox" type="checkbox" name="goodFaith" value="yes" required
-                    defaultChecked={values.goodFaith === 'yes'} />{' '}
-                  I believe in good faith that this report is accurate and complete.
+                    defaultChecked={values.goodFaith === 'yes'} />
+                  <span>I believe in good faith that this report is accurate and complete.</span>
                 </label>
                 <FormActions primary={<button className="button">submit report</button>} />
               </Panel>

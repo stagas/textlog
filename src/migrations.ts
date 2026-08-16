@@ -1006,6 +1006,42 @@ export const migrations: Migration[] = [
         PRIMARY KEY(user_id,user_agent));`)
     },
   },
+  {
+    version: 77,
+    name: 'post_link_previews',
+    up(database) {
+      addColumn(database, 'posts', 'preview_url', 'TEXT')
+      addColumn(database, 'posts', 'preview_image_url', 'TEXT')
+    },
+  },
+  {
+    version: 78,
+    name: 'post_link_preview_rows',
+    up(database) {
+      database.run(`CREATE TABLE IF NOT EXISTS post_link_previews (
+        post_id INTEGER NOT NULL REFERENCES posts(id) ON DELETE CASCADE,
+        url TEXT NOT NULL,image_url TEXT NOT NULL,PRIMARY KEY(post_id,url));`)
+      dropColumn(database, 'posts', 'preview_url')
+      dropColumn(database, 'posts', 'preview_image_url')
+    },
+  },
+  {
+    version: 79,
+    name: 'post_link_preview_metadata',
+    up(database) {
+      addColumn(database, 'post_link_previews', 'title', 'TEXT')
+      addColumn(database, 'post_link_previews', 'description', 'TEXT')
+      addColumn(database, 'post_link_previews', 'site_name', 'TEXT')
+    },
+  },
+  {
+    version: 80,
+    name: 'post_link_preview_image_dimensions',
+    up(database) {
+      addColumn(database, 'post_link_previews', 'image_width', 'INTEGER')
+      addColumn(database, 'post_link_previews', 'image_height', 'INTEGER')
+    },
+  },
 ]
 
 export const latestMigrationVersion = migrations.at(-1)!.version
