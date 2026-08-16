@@ -257,6 +257,17 @@ describe('post persistence', () => {
     expect(html).not.toContain('background-image')
   })
 
+  test('opens local link previews in the current tab like their post links', () => {
+    const url = 'https://textlog.test/post/1'
+    const html = linkify(url, {}, [], 'https://textlog.test', undefined, '', {}, {}, {
+      signedIn: false,
+      formPrefix: 'post-1',
+      linkPreviews: { [url]: { imageUrl: 'https://textlog.test/post/1/og.png', title: 'A local note' } },
+    })
+    expect(html).toContain(`class="remote-link-popover" href="${url}" rel="nofollow ugc"`)
+    expect(html).not.toMatch(/class="remote-link-popover"[^>]+target="_blank"/)
+  })
+
   test('trims trailing whitespace from bios in user popovers', () => {
     const html = linkify('@reader', { reader: 'Builds things  \n' }, [], undefined, undefined, '', {}, { reader: 1 }, {
       signedIn: false,

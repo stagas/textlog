@@ -29,7 +29,7 @@ export type ReferencePopoverOptions = {
   linkPreviews?: Record<string, LinkPreview>
 }
 
-function previewLink(html: string, url: string, popover?: ReferencePopoverOptions) {
+function previewLink(html: string, url: string, appUrl: string | undefined, popover?: ReferencePopoverOptions) {
   const preview = popover?.linkPreviews?.[url]
   if (!preview) return html
   const cssUrl = preview.imageUrl.replace(/["'\\\n\r\f]/g, character => `\\${character}`)
@@ -51,7 +51,7 @@ function previewLink(html: string, url: string, popover?: ReferencePopoverOption
     }</span>`
     : ''
   return `<span class="remote-link-menu">${html}<a class="remote-link-popover" href="${esc(url)}" `
-    + `target="_blank" rel="noopener noreferrer nofollow" `
+    + `${linkAttributes(url, appUrl).trimStart()} `
     + `style="--preview-image:url(&quot;${esc(cssUrl)}&quot;)${aspect}"><span class="${imageClass}" role="img" `
     + `aria-label="${esc(preview.title || `Preview of ${hostname}`)}"></span>${details}</a></span>`
 }
@@ -450,7 +450,7 @@ function linkifyAsciiReferences(body: string, mentionBios: Record<string, string
       const displayLabel = label === url ? match.raw : label
       html += previewLink(`<a href="${esc(url)}"${displayLabel === match.raw ? '' : ` title="${esc(url)}"`}${
         linkAttributes(url, appUrl)
-      }>${esc(displayLabel)}</a>`, url, popover)
+      }>${esc(displayLabel)}</a>`, url, appUrl, popover)
     }
     end = match.lastIndex
   }
@@ -485,7 +485,7 @@ export function linkify(body: string, mentionBios: Record<string, string> = {}, 
     else if (match.kind === 'markdown') {
       html += previewLink(`<a href="${esc(match.url)}" title="${esc(match.url)}"${linkAttributes(match.url!, appUrl)}>${
         highlighted(match.label!, highlightTerms)
-      }</a>`, match.url!, popover)
+      }</a>`, match.url!, appUrl, popover)
     }
     else if (match.kind === 'url') {
       const url = match.url!
@@ -493,7 +493,7 @@ export function linkify(body: string, mentionBios: Record<string, string> = {}, 
       const displayLabel = label === url ? token : label
       html += previewLink(`<a href="${esc(url)}"${label === url ? '' : ` title="${esc(url)}"`}${linkAttributes(url, appUrl)}>${
         highlighted(displayLabel, highlightTerms)
-      }</a>`, url, popover)
+      }</a>`, url, appUrl, popover)
     }
     else {
       html += renderedReference(token, mentionBios, mentionNoteCounts, hashtagCounts, highlightTerms, navigationQuery,
