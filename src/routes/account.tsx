@@ -252,9 +252,10 @@ export function registerAccountRoutes(app: Hono) {
     const user = currentUser(c.req.raw)
     if (!user) return redirect('/enter?next=' + encodeURIComponent('/account/edit'))
     const returnPath = c.req.query('from') ? safeNext(c.req.query('from')) : undefined
-    const bot = db.query('SELECT is_bot,bot_managed FROM users WHERE id=?').get(user.id) as {
+    const bot = db.query('SELECT is_bot,bot_managed,timezone FROM users WHERE id=?').get(user.id) as {
       is_bot: number
       bot_managed: number
+      timezone: string
     }
     return page(<Profile user={user} profile={{ ...user, ...bot }} posts={[]} following={false} editing
       returnPath={returnPath} />)

@@ -49,7 +49,13 @@ configureDevReload(devReloadEnabled ? bootId : undefined)
 clearMaterializedFeedPages()
 const app = new Hono()
 app.use('*', (c, next) => withAppearance(c.req.raw, next))
-app.use('*', (c, next) => withTimezone(currentUser(c.req.raw)?.timezone, next))
+app.use('*', (c, next) => {
+  const user = currentUser(c.req.raw)
+  const timezone = user
+    ? (db.query('SELECT timezone FROM users WHERE id=?').get(user.id) as { timezone: string } | null)?.timezone
+    : undefined
+  return withTimezone(timezone, next)
+})
 const stylesPath = new URL('./styles.css', import.meta.url).pathname
 const styles = devReloadEnabled ? undefined : await loadStylesAsset(stylesPath)
 const publicAssets = await Promise.all([
