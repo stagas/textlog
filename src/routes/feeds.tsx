@@ -58,34 +58,10 @@ function rememberAppearanceBanner(request: Request, userId: number, status: 'see
 export function registerFeedsRoutes(app: Hono) {
   app.get('/', c => {
     const user = currentUser(c.req.raw)
-    const notificationBanner = showNotificationBanner(c.req.raw, user)
-    const requestUrl = new URL(c.req.url)
-    const configuredOrigin = Bun.env.APP_URL?.replace(/\/$/, '')
-    const pageUrl = `${configuredOrigin || requestUrl.origin}/${requestUrl.search}`
     const preferredFeed = feedPreference(c.req.raw)
-    if (preferredFeed === 'latest') {
-      const cursorValue = c.req.query('cursor')
-      const cursor = decodePostCursor(cursorValue)
-      if (cursorValue && !cursor) return c.text('Invalid cursor', 400)
-      return page(
-        <PublicFeed user={user} page={currentPage(c.req.query('page'))} path="/" pageUrl={pageUrl}
-          notificationBanner={notificationBanner} />,
-      )
-    }
-    if (preferredFeed === 'hot' || !user) {
-      const cursorValue = c.req.query('cursor')
-      if (cursorValue && !decodeHotCursor(cursorValue)) return c.text('Invalid cursor', 400)
-      return page(
-        <HotFeed user={user} page={currentPage(c.req.query('page'))} path="/" pageUrl={pageUrl}
-          notificationBanner={notificationBanner} />,
-      )
-    }
-    const cursorValue = c.req.query('cursor')
-    if (cursorValue && !decodeForYouCursor(cursorValue)) return c.text('Invalid cursor', 400)
-    return page(
-      <Feed user={user} page={currentPage(c.req.query('page'))} path="/" pageUrl={pageUrl}
-        notificationBanner={notificationBanner} />,
-    )
+    const path = preferredFeed === 'latest' ? '/latest'
+      : preferredFeed === 'hot' || !user ? '/hot' : '/for-you'
+    return redirect(path + new URL(c.req.url).search)
   })
 
   app.get('/for-you', async c => {

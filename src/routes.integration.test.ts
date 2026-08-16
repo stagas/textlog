@@ -179,7 +179,10 @@ test('stats are public without exposing admin operations', async () => {
 })
 
 test('notification banner is hidden from logged-out visitors', async () => {
-  for (const path of ['/', '/hot', '/latest']) {
+  const home = await request('/')
+  expect(home.status).toBe(303)
+  expect(home.headers.get('location')).toBe('/hot')
+  for (const path of ['/hot', '/latest']) {
     const response = await request(path)
     expect(response.status).toBe(200)
     expect(await response.text()).not.toContain('class="notification-banner"')
@@ -451,11 +454,14 @@ test('consequential account, content, reporting, and admin flows work over HTTP'
     .get('alice') as { id: number; email_verified_at: string | null }
   expect(alice.email_verified_at).not.toBeNull()
   const authenticatedHome = await request('/', { cookie: aliceCookie })
-  expect(authenticatedHome.status).toBe(200)
-  const authenticatedHomeHtml = await authenticatedHome.text()
+  expect(authenticatedHome.status).toBe(303)
+  expect(authenticatedHome.headers.get('location')).toBe('/for-you')
+  const authenticatedHomeHtml = await (await request(authenticatedHome.headers.get('location')!, {
+    cookie: aliceCookie,
+  })).text()
   expect(authenticatedHomeHtml).toContain('class="account-nav"')
   expect(authenticatedHomeHtml).toContain('@alice')
-  expect(authenticatedHomeHtml).toContain('href="/account/edit?from=%2F">account</a>')
+  expect(authenticatedHomeHtml).toContain('href="/account/edit?from=%2Ffor-you">account</a>')
   expect(authenticatedHomeHtml).not.toContain('href="/login">login</a>')
   expect(authenticatedHomeHtml).toContain('class="notification-banner"')
   const accountFromLatest = await request('/account/edit?from=%2Flatest%3Fpage%3D2', { cookie: aliceCookie })
@@ -463,9 +469,18 @@ test('consequential account, content, reporting, and admin flows work over HTTP'
   const rememberedActivity = await request('/activity', { cookie: aliceCookie })
   expect(rememberedActivity.status).toBe(303)
   expect(rememberedActivity.headers.get('location')).toBe('/to-me')
-  const activityHomeHtml = await (await request('/', { cookie: `${aliceCookie}; feed=activity` })).text()
+  const activityHome = await request('/', { cookie: `${aliceCookie}; feed=activity` })
+  expect(activityHome.status).toBe(303)
+  expect(activityHome.headers.get('location')).toBe('/for-you')
+  const latestHome = await request('/?page=2', { cookie: `${aliceCookie}; feed=latest` })
+  expect(latestHome.status).toBe(303)
+  expect(latestHome.headers.get('location')).toBe('/latest?page=2')
+  const hotHome = await request('/', { cookie: `${aliceCookie}; feed=hot` })
+  expect(hotHome.status).toBe(303)
+  expect(hotHome.headers.get('location')).toBe('/hot')
+  const activityHomeHtml = await (await request('/for-you', { cookie: `${aliceCookie}; feed=activity` })).text()
   expect(activityHomeHtml).toContain('class="active" aria-current="page" href="/for-you"')
-  expect(activityHomeHtml).toContain('<title>textlog</title>')
+  expect(activityHomeHtml).toContain('<title>for you · textlog</title>')
   for (const path of ['/for-you', '/hot', '/latest']) {
     expect(await (await request(path, { cookie: aliceCookie })).text()).toContain('class="notification-banner"')
   }
@@ -483,16 +498,20 @@ test('consequential account, content, reporting, and admin flows work over HTTP'
   expect(savedPush.status).toBe(200)
   const deviceCookie = savedPush.headers.get('set-cookie')?.match(/notification_device=[^;]+/)?.[0]
   expect(deviceCookie).toBeDefined()
-  const enabledDeviceHome = await (await request('/', { cookie: aliceCookie, userAgent: 'alice-browser' })).text()
+  const enabledDeviceHome = await (await request('/for-you', {
+    cookie: aliceCookie, userAgent: 'alice-browser',
+  })).text()
   expect(enabledDeviceHome).toContain('class="notification-banner"')
   expect(enabledDeviceHome).not.toContain('check the improved notifications')
   expect(enabledDeviceHome).toContain('href="/account/edit/appearance">customize appearance</a>')
-  const otherBrowserHome = await (await request('/', { cookie: aliceCookie, userAgent: 'alice-other-browser' })).text()
+  const otherBrowserHome = await (await request('/for-you', {
+    cookie: aliceCookie, userAgent: 'alice-other-browser',
+  })).text()
   expect(otherBrowserHome).toContain('class="notification-banner"')
   expect(otherBrowserHome).not.toContain('check the improved notifications')
   database.query(`INSERT INTO notification_user_agents(user_id,user_agent,status) VALUES(?,?,'enabled')`)
     .run(alice.id, 'alice-improvements-browser')
-  const improvementsHome = await (await request('/', {
+  const improvementsHome = await (await request('/for-you', {
     cookie: aliceCookie, userAgent: 'alice-improvements-browser',
   })).text()
   expect(improvementsHome).toContain('href="/account/edit/notifications">check the improved notifications</a>')
@@ -500,12 +519,12 @@ test('consequential account, content, reporting, and admin flows work over HTTP'
     method: 'POST', cookie: aliceCookie, userAgent: 'alice-improvements-browser',
   })
   expect(dismissedImprovements.status).toBe(303)
-  const improvementDismissedHome = await (await request('/', {
+  const improvementDismissedHome = await (await request('/for-you', {
     cookie: aliceCookie, userAgent: 'alice-improvements-browser',
   })).text()
   expect(improvementDismissedHome).not.toContain('check the improved notifications')
   expect(improvementDismissedHome).toContain('href="/account/edit/appearance">customize appearance</a>')
-  const legacyDismissedHome = await (await request('/', {
+  const legacyDismissedHome = await (await request('/for-you', {
     cookie: `${aliceCookie}; notification_banner_dismissed=${alice.id}`,
     userAgent: 'alice-legacy-browser',
   })).text()
@@ -518,7 +537,7 @@ test('consequential account, content, reporting, and admin flows work over HTTP'
   })
   expect(dismissed.status).toBe(303)
   expect(dismissed.headers.get('set-cookie')).toBeNull()
-  const dismissedHome = await (await request('/', {
+  const dismissedHome = await (await request('/for-you', {
     cookie: aliceCookie,
     userAgent: 'alice-dismissed-browser',
   })).text()
@@ -527,7 +546,7 @@ test('consequential account, content, reporting, and admin flows work over HTTP'
     method: 'POST', cookie: aliceCookie, userAgent: 'alice-dismissed-browser',
   })
   expect(dismissedAppearance.status).toBe(303)
-  const fullyDismissedHome = await (await request('/', {
+  const fullyDismissedHome = await (await request('/for-you', {
     cookie: aliceCookie, userAgent: 'alice-dismissed-browser',
   })).text()
   expect(fullyDismissedHome).not.toContain('class="notification-banner"')
@@ -535,7 +554,7 @@ test('consequential account, content, reporting, and admin flows work over HTTP'
     cookie: aliceCookie, userAgent: 'alice-browser',
   })
   expect(openedAppearance.status).toBe(200)
-  const merelyOpenedDeviceHome = await (await request('/', {
+  const merelyOpenedDeviceHome = await (await request('/for-you', {
     cookie: aliceCookie, userAgent: 'alice-browser',
   })).text()
   expect(merelyOpenedDeviceHome).toContain('href="/account/edit/appearance">customize appearance</a>')
@@ -544,7 +563,7 @@ test('consequential account, content, reporting, and admin flows work over HTTP'
     form: { tab: 'theme', theme: 'system', accent: 'theme' },
   })
   expect(savedAppearance.status).toBe(303)
-  const configuredDeviceHome = await (await request('/', {
+  const configuredDeviceHome = await (await request('/for-you', {
     cookie: aliceCookie, userAgent: 'alice-browser',
   })).text()
   expect(configuredDeviceHome).not.toContain('class="notification-banner"')
@@ -557,8 +576,9 @@ test('consequential account, content, reporting, and admin flows work over HTTP'
     preferences: { latest: 0, replies: 1, mentions: 0, follows: 1, followActivity: 1,
       followingNotes: 1, bots: 0, followingOnlyToMe: 0 },
   })
-  const cacheBustedHomeHtml = await (await request('/?v=94721')).text()
-  expect(cacheBustedHomeHtml).toContain(`property="og:url" content="${origin}/?v=94721"`)
+  const cacheBustedHome = await request('/?v=94721')
+  expect(cacheBustedHome.status).toBe(303)
+  expect(cacheBustedHome.headers.get('location')).toBe('/hot?v=94721')
   const publicExplore = await request('/explore', { cookie: aliceCookie })
   expect(publicExplore.status).toBe(200)
   const publicExploreHtml = await publicExplore.text()
@@ -906,7 +926,9 @@ test('consequential account, content, reporting, and admin flows work over HTTP'
   expect((await request('/latest?cursor=broken')).status).toBe(400)
   expect((await request('/for-you?cursor=broken', { cookie: aliceCookie })).status).toBe(400)
   expect((await request('/activity?cursor=broken', { cookie: aliceCookie })).status).toBe(303)
-  expect((await request('/?cursor=broken', { cookie: aliceCookie })).status).toBe(400)
+  const invalidHomeCursor = await request('/?cursor=broken', { cookie: aliceCookie })
+  expect(invalidHomeCursor.status).toBe(303)
+  expect(invalidHomeCursor.headers.get('location')).toBe('/for-you?cursor=broken')
   expect((await request('/u/alice?cursor=broken')).status).toBe(400)
 
   const invalidIllegalActivity = await request('/report-illegal-activity', {
