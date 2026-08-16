@@ -9,6 +9,7 @@ import { appName, clientIpHeaderName } from './brand'
 import { configureDevReload } from './components/layout'
 import { PanelsGallery } from './components/panels-gallery'
 import { compressResponse } from './compression'
+import { createBootDatabaseBackup } from './database-backup'
 import { databaseHealth } from './database-health'
 import { db } from './db'
 import { isDevelopment } from './environment'
@@ -93,6 +94,8 @@ function requestRateLimitResponse(request: Request, retryAfter: number) {
 }
 startMaintenance(db, visitorBuffer, error => logError('database maintenance failed', error))
 if (Bun.env.NODE_ENV === 'production') {
+  const bootBackup = createBootDatabaseBackup(db, Bun.env.DATABASE_BACKUP_DIR || 'storage/backups')
+  console.log(`database boot backup  ${bootBackup}`)
   startAutomatedBackups(db, {
     directory: Bun.env.DATABASE_BACKUP_DIR || 'storage/backups',
     alertWebhookUrl: Bun.env.BACKUP_ALERT_WEBHOOK_URL || null,

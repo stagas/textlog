@@ -78,6 +78,29 @@ export function dailyBackupPath(directory = defaultBackupDirectory, day = new Da
   return resolve(directory, `textlog-daily-${day}.sqlite`)
 }
 
+export function bootBackupPath(directory = defaultBackupDirectory) {
+  return resolve(directory, 'textlog-boot.sqlite')
+}
+
+export function createBootDatabaseBackup(database: Database, directory = defaultBackupDirectory) {
+  mkdirSync(directory, { recursive: true, mode: 0o700 })
+  const finalPath = bootBackupPath(directory)
+  const temporaryPath = `${finalPath}.${process.pid}.tmp`
+  const escapedPath = temporaryPath.replaceAll('\'', '\'\'')
+  try {
+    rmSync(temporaryPath, { force: true })
+    database.run(`VACUUM INTO '${escapedPath}'`)
+    chmodSync(temporaryPath, 0o600)
+    verifyDatabaseFile(temporaryPath)
+    renameSync(temporaryPath, finalPath)
+    chmodSync(finalPath, 0o600)
+    return finalPath
+  }
+  finally {
+    rmSync(temporaryPath, { force: true })
+  }
+}
+
 export function createDailyDatabaseBackup(database: Database, directory = defaultBackupDirectory,
   day = new Date().toISOString().slice(0, 10))
 {

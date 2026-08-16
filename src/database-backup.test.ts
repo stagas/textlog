@@ -3,7 +3,8 @@ import { afterEach, describe, expect, test } from 'bun:test'
 import { copyFileSync, existsSync, mkdirSync, mkdtempSync, readdirSync, rmSync, statSync, utimesSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import { createDatabaseBackup, pruneBackups, restoreDatabase, verifyDatabaseFile } from './database-backup'
+import { bootBackupPath, createBootDatabaseBackup, createDatabaseBackup, pruneBackups, restoreDatabase,
+  verifyDatabaseFile } from './database-backup'
 
 const temporaryDirectories: string[] = []
 afterEach(() => {
@@ -25,6 +26,25 @@ function databaseAt(path: string, value: string) {
 }
 
 describe('database recovery', () => {
+  test('atomically replaces the stable boot backup on every invocation', () => {
+    const directory = temporaryDirectory()
+    const database = databaseAt(join(directory, 'source.sqlite'), 'first boot')
+    const backups = join(directory, 'backups')
+
+    const first = createBootDatabaseBackup(database, backups)
+    database.query('UPDATE state SET value=?').run('second boot')
+    const second = createBootDatabaseBackup(database, backups)
+
+    expect(first).toBe(bootBackupPath(backups))
+    expect(second).toBe(first)
+    expect(readdirSync(backups)).toEqual(['textlog-boot.sqlite'])
+    expect(statSync(second).mode & 0o777).toBe(0o600)
+    const snapshot = new Database(second, { readonly: true })
+    expect(snapshot.query('SELECT value FROM state').get()).toEqual({ value: 'second boot' })
+    snapshot.close()
+    database.close()
+  })
+
   test('creates and verifies a consistent restricted backup', () => {
     const directory = temporaryDirectory()
     const database = databaseAt(join(directory, 'source.sqlite'), 'preserved')
