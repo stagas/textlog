@@ -144,8 +144,9 @@ export function fmt(d: string, now = Date.now()) {
 }
 export const fmtFull = (d: string) => {
   const timeZone = activeTimezone()
-  return `${timestamp(d).toLocaleString('en', { dateStyle: 'medium', timeStyle: 'short', timeZone })} (${
-    timezoneLabel(timeZone)})`
+  const date = timestamp(d)
+  return `${date.toLocaleString('en', { dateStyle: 'medium', timeStyle: 'short', timeZone })} (${
+    timezoneLabel(timeZone, date)})`
 }
 const emojiPattern = /(?:\p{Regional_Indicator}{2}|[#*0-9]\uFE0F?\u20E3|\p{Extended_Pictographic}[\uFE0E\uFE0F]?\p{Emoji_Modifier}?(?:\u200D\p{Extended_Pictographic}[\uFE0E\uFE0F]?\p{Emoji_Modifier}?)*)/gu
 

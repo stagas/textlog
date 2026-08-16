@@ -1059,6 +1059,25 @@ export const migrations: Migration[] = [
       addColumn(database, 'users', 'timezone', "TEXT NOT NULL DEFAULT 'UTC'")
     },
   },
+  {
+    version: 83,
+    name: 'daylight_saving_timezones',
+    up(database) {
+      const zones = [
+        'Etc/GMT+12', 'Pacific/Pago_Pago', 'Pacific/Honolulu', 'America/Anchorage', 'America/Los_Angeles',
+        'America/Denver', 'America/Chicago', 'America/New_York', 'America/Halifax',
+        'America/Argentina/Buenos_Aires', 'America/Noronha', 'Atlantic/Cape_Verde', 'UTC', 'Europe/Paris',
+        'Europe/Athens', 'Europe/Istanbul', 'Asia/Dubai', 'Asia/Karachi', 'Asia/Dhaka', 'Asia/Bangkok',
+        'Asia/Singapore', 'Asia/Tokyo', 'Australia/Sydney', 'Pacific/Noumea', 'Pacific/Auckland',
+      ]
+      const legacy = Array.from({ length: 25 }, (_, index) => {
+        const offset = index - 12
+        return offset === 0 ? 'UTC' : `Etc/GMT${offset > 0 ? '-' : '+'}${Math.abs(offset)}`
+      })
+      const update = database.query('UPDATE users SET timezone=? WHERE timezone=?')
+      for (let index = 0; index < legacy.length; index++) update.run(zones[index], legacy[index])
+    },
+  },
 ]
 
 export const latestMigrationVersion = migrations.at(-1)!.version
