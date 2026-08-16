@@ -26,7 +26,7 @@ export type HotCursor = {
   direction: 'next' | 'previous'
 }
 
-export const hotRankingVersion = 62
+export const hotRankingVersion = 63
 const cursorVersion = hotRankingVersion
 const activityHalfLifeHours = 6
 const postWeight = 0
@@ -65,7 +65,7 @@ const recentPostBoostHours = 24
 const recentPostTierBonus = 100
 const yesterdayPostHours = 48
 const yesterdayPostTierBonus = 50
-const recentReplyActivityBoost = 75
+const recentReplyActivityBoost = 300
 
 function hasHotTable(database: Database) {
   return Boolean(database.query('SELECT 1 FROM sqlite_master WHERE type=\'table\' AND name=\'post_hot\'').get())

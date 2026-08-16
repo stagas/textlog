@@ -182,7 +182,18 @@ describe('hot feed ranking', () => {
 
     const results = getHotPosts(database, 20, null, asOf)
     expect(results.map(result => result.id)).toEqual([1, 2])
-    expect(results[0].hot_score).toBeGreaterThan(70)
+    expect(results[0].hot_score).toBeGreaterThan(290)
+  })
+
+  test('very recent replies can outrank the post-age tiers', () => {
+    post(1, '2026-07-20 12:00:00')
+    post(2, '2026-08-03 00:00:00')
+    database.run(`UPDATE post_hot SET score=0.01,reply_count=2,activity_count=2,
+      score_updated_at='2026-08-03 11:59:00',latest_activity_at='2026-08-03 11:59:00' WHERE post_id=1`)
+    database.run(`UPDATE post_hot SET score=1000,reply_count=20,activity_count=20,
+      score_updated_at='2026-08-03 00:00:00',latest_activity_at='2026-08-03 00:00:00' WHERE post_id=2`)
+
+    expect(getHotPosts(database, 20, null, asOf).map(result => result.id)).toEqual([1, 2])
   })
 
   test('boosts posts during their first day when reply activity is identical', () => {
@@ -201,7 +212,7 @@ describe('hot feed ranking', () => {
     const newThread = results.find(result => result.id === 3)!
     const fiveDayThread = results.find(result => result.id === 5)!
     expect(fourDayThread.hot_score).toBeCloseTo(fiveDayThread.hot_score)
-    expect(newThread.hot_score).toBeCloseTo(100 + 75 + (0.225 + 0.04) * 5)
+    expect(newThread.hot_score).toBeCloseTo(100 + 300 + (0.225 + 0.04) * 5)
   })
 
   test('ranks minute- and hour-old posts with multiple replies ahead of day-old posts', () => {
