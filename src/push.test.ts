@@ -102,6 +102,21 @@ describe('Web Push activity delivery', () => {
     }])
   })
 
+  test('uses plain text rather than Markdown in post notifications', async () => {
+    const database = fixture()
+    database.run(`INSERT INTO posts(id,user_id,body) VALUES
+      (3,1,'**bold** [link](https://example.com) and \`code\`')`)
+    const payloads: string[] = []
+    webpush.sendNotification = (async (_subscription, payload) => {
+      payloads.push(String(payload))
+      return {} as never
+    }) as typeof webpush.sendNotification
+
+    await sendPushForPost(3, 1, 'author', database, vapid)
+
+    expect(JSON.parse(payloads[0]).body).toBe('bold link and code')
+  })
+
   test('honors disabled per-subscription post preferences', async () => {
     const database = fixture()
     database.run(`UPDATE push_subscriptions SET notify_latest=0,notify_replies=0,notify_mentions=0`)

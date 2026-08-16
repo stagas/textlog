@@ -4,6 +4,7 @@ import { ADMIN_EMAILS } from './admin'
 import { db } from './db'
 import { isDevelopment } from './environment'
 import { logError } from './log'
+import { markdownPlainText } from './markdown'
 
 export type PushMessage = { title: string; body: string; url: string }
 type PushSubscriptionRow = { endpoint: string; p256dh: string; auth: string }
@@ -125,7 +126,7 @@ export async function sendPushForPost(postId: number, actorId: number, actorHand
           ? `replied to @${post.parent_handle}`
           : 'wrote'
       }`,
-      body: post.body.trimEnd(),
+      body: markdownPlainText(post.body),
       url: `/post/${postId}`,
     }
   }, database, vapid)
