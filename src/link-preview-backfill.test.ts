@@ -1,8 +1,16 @@
 import { describe, expect, test } from 'bun:test'
 import { Database } from 'bun:sqlite'
+import { isYouTubeUrl } from './link-preview'
 import { runLinkPreviewBackfill, runR2LinkPreviewBackfill } from './link-preview-backfill'
 
 describe('link preview backfill', () => {
+  test('recognizes YouTube video hosts without matching lookalikes', () => {
+    expect(isYouTubeUrl('https://www.youtube.com/watch?v=abc')).toBe(true)
+    expect(isYouTubeUrl('https://youtu.be/abc')).toBe(true)
+    expect(isYouTubeUrl('https://www.youtube-nocookie.com/embed/abc')).toBe(true)
+    expect(isYouTubeUrl('https://youtube.com.example.test/watch?v=abc')).toBe(false)
+  })
+
   test('records attempts, logs work, and does not crawl the same link twice', async () => {
     const previousUrl = Bun.env.APP_URL
     Bun.env.APP_URL = 'http://localhost:3000'

@@ -1,6 +1,7 @@
 import type { Database } from 'bun:sqlite'
 import { appOrigin } from './brand'
-import { discoverLinkPreviews, isDirectImageUrl, saveLinkPreviews, storeRemotePreviewImage } from './link-preview'
+import { discoverLinkPreviews, isDirectImageUrl, isYouTubeUrl, saveLinkPreviews,
+  storeRemotePreviewImage } from './link-preview'
 import { deleteImagesAfterCommit, isImageKey } from './image-storage'
 import { logError, logInfo } from './log'
 import { postLinks } from './utils'
@@ -14,6 +15,7 @@ export async function runLinkPreviewBackfill(database: Database, options: {
   delayMs?: number
   log?: (message: string) => void
   directImagesOnly?: boolean
+  youtubeOnly?: boolean
 } = {}) {
   const delayMs = options.delayMs ?? LINK_PREVIEW_BACKFILL_DELAY_MS
   const log = options.log || console.log
@@ -27,6 +29,7 @@ export async function runLinkPreviewBackfill(database: Database, options: {
     VALUES(?,?,?)`)
   const pending = rows.flatMap(post => postLinks(post.body).map(url => ({ postId: post.id, url })))
     .filter(item => {
+      if (options.youtubeOnly && !isYouTubeUrl(item.url)) return false
       const stored = existing.get(item.postId, item.url) as { image_url: string } | null
       if (stored && !isImageKey(stored.image_url)) {
         try {
@@ -35,12 +38,15 @@ export async function runLinkPreviewBackfill(database: Database, options: {
         catch {}
       }
       if (options.directImagesOnly && !isDirectImageUrl(item.url)) return false
+      if (options.youtubeOnly) return true
       const previous = attempted.get(item.postId, item.url) as { status: string } | null
       if (previous) return isDirectImageUrl(item.url) && previous.status === 'no-preview'
       return !stored || !isImageKey(stored.image_url)
     })
   log(`link preview backfill start pending=${pending.length} delay=${delayMs}ms${
     options.directImagesOnly ? ' direct-images-only=true' : ''
+  }${
+    options.youtubeOnly ? ' youtube-only=true' : ''
   }`)
   let fetched = 0
   let saved = 0

@@ -8,12 +8,23 @@ import type { LinkPreview } from './types'
 import { postLinks } from './utils'
 
 const MAX_LINKS = 3
-const MAX_HTML_BYTES = 512 * 1024
-const FETCH_TIMEOUT_MS = 1500
+const MAX_HTML_BYTES = 1024 * 1024
+const FETCH_TIMEOUT_MS = 5000
 
 export function isDirectImageUrl(value: string) {
   try { return /\.(?:png|jpe?g|gif|webp|avif)$/i.test(new URL(value).pathname) }
   catch { return false }
+}
+
+export function isYouTubeUrl(value: string) {
+  try {
+    const host = new URL(value).hostname.toLowerCase()
+    return host === 'youtu.be' || host === 'youtube.com' || host.endsWith('.youtube.com')
+      || host === 'youtube-nocookie.com' || host.endsWith('.youtube-nocookie.com')
+  }
+  catch {
+    return false
+  }
 }
 
 function ownPostPreview(database: Database, rawUrl: string) {
@@ -137,6 +148,33 @@ export function openGraphMetadata(html: string, pageUrl: string) {
 
 export const openGraphImage = (html: string, pageUrl: string) => openGraphMetadata(html, pageUrl)?.imageUrl || null
 
+export async function readHtmlHead(response: Response) {
+  const reader = response.body?.getReader()
+  if (!reader) return null
+  const decoder = new TextDecoder()
+  let html = ''
+  let size = 0
+  while (true) {
+    const { done, value } = await reader.read()
+    if (done) {
+      html += decoder.decode()
+      return html
+    }
+    size += value.byteLength
+    html += decoder.decode(value, { stream: true })
+    const end = html.search(/<\/head\s*>/i)
+    if (end !== -1) {
+      await reader.cancel()
+      const head = html.slice(0, end) + '</head>'
+      return new TextEncoder().encode(head).byteLength <= MAX_HTML_BYTES ? head : null
+    }
+    if (size > MAX_HTML_BYTES) {
+      await reader.cancel()
+      return null
+    }
+  }
+}
+
 async function fetchHtml(initialUrl: URL) {
   let url = initialUrl
   for (let redirects = 0; redirects <= 3; redirects++) {
@@ -153,29 +191,8 @@ async function fetchHtml(initialUrl: URL) {
       continue
     }
     if (!response.ok || !response.headers.get('content-type')?.toLowerCase().includes('text/html')) return null
-    const declaredSize = Number(response.headers.get('content-length') || 0)
-    if (declaredSize > MAX_HTML_BYTES) return null
-    const reader = response.body?.getReader()
-    if (!reader) return null
-    const chunks: Uint8Array[] = []
-    let size = 0
-    while (true) {
-      const { done, value } = await reader.read()
-      if (done) break
-      size += value.byteLength
-      if (size > MAX_HTML_BYTES) {
-        await reader.cancel()
-        return null
-      }
-      chunks.push(value)
-    }
-    const bytes = new Uint8Array(size)
-    let offset = 0
-    for (const chunk of chunks) {
-      bytes.set(chunk, offset)
-      offset += chunk.byteLength
-    }
-    return { html: new TextDecoder().decode(bytes), url: url.href }
+    const html = await readHtmlHead(response)
+    return html === null ? null : { html, url: url.href }
   }
   return null
 }
@@ -226,6 +243,27 @@ async function fetchImage(initialUrl: URL) {
   return null
 }
 
+async function youtubeMetadata(url: URL) {
+  const endpoint = new URL('https://www.youtube.com/oembed')
+  endpoint.searchParams.set('url', url.href)
+  endpoint.searchParams.set('format', 'json')
+  const response = await fetch(endpoint, { signal: AbortSignal.timeout(FETCH_TIMEOUT_MS) })
+  if (!response.ok) return null
+  const declaredSize = Number(response.headers.get('content-length') || 0)
+  if (declaredSize > 16 * 1024) return null
+  const body = await response.text()
+  if (body.length > 16 * 1024) return null
+  const value = JSON.parse(body) as Record<string, unknown>
+  if (typeof value.thumbnail_url !== 'string') return null
+  return {
+    imageUrl: value.thumbnail_url,
+    title: typeof value.title === 'string' ? value.title.slice(0, 200) : undefined,
+    siteName: typeof value.provider_name === 'string' ? value.provider_name.slice(0, 100) : 'YouTube',
+    imageWidth: typeof value.thumbnail_width === 'number' ? value.thumbnail_width : undefined,
+    imageHeight: typeof value.thumbnail_height === 'number' ? value.thumbnail_height : undefined,
+  }
+}
+
 export async function storeRemotePreviewImage(rawUrl: string) {
   const url = await publicHttpUrl(rawUrl)
   if (!url || url.protocol !== 'https:') return null
@@ -257,9 +295,12 @@ export async function discoverLinkPreviews(body: string, database?: Database) {
         const filename = decodeURIComponent(url.pathname.split('/').pop() || url.hostname)
         return { url: rawUrl, ...image, title: filename, siteName: url.hostname.replace(/^www\./, '') }
       }
-      const page = await fetchHtml(url)
-      if (!page) return null
-      const metadata = openGraphMetadata(page.html, page.url)
+      let metadata = isYouTubeUrl(url.href) ? await youtubeMetadata(url) : null
+      if (!metadata) {
+        const page = await fetchHtml(url)
+        if (!page) return null
+        metadata = openGraphMetadata(page.html, page.url)
+      }
       const imageUrl = metadata && await publicHttpUrl(metadata.imageUrl)
       if (!imageUrl || imageUrl.protocol !== 'https:') return null
       const image = await storedImage(imageUrl)

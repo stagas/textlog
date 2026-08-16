@@ -1,6 +1,7 @@
 import { describe, expect, test } from 'bun:test'
 import { Database } from 'bun:sqlite'
-import { discoverLinkPreviews, isDirectImageUrl, openGraphImage, openGraphMetadata, replaceLinkPreviews } from './link-preview'
+import { discoverLinkPreviews, isDirectImageUrl, openGraphImage, openGraphMetadata, readHtmlHead,
+  replaceLinkPreviews } from './link-preview'
 
 describe('link previews', () => {
   test('recognizes direct image links with queries case-insensitively', () => {
@@ -44,6 +45,18 @@ describe('link previews', () => {
       title: 'London’s forgotten property',
       description: 'Research — history',
     })
+  })
+
+  test('reads metadata from the head without rejecting a large page body', async () => {
+    const head = `<html><head>${' '.repeat(600 * 1024)}`
+      + '<meta property="og:image" content="https://i.ytimg.com/video.jpg"></head>'
+    const response = new Response(head + `<body>${'x'.repeat(600 * 1024)}</body>`, {
+      headers: { 'content-length': String(1300 * 1024) },
+    })
+    const html = await readHtmlHead(response)
+    expect(html).toBe(head.slice(0, -7) + '</head>')
+    expect(openGraphImage(html!, 'https://www.youtube.com/watch?v=video'))
+      .toBe('https://i.ytimg.com/video.jpg')
   })
 
   test('builds local post previews without fetching localhost', async () => {
