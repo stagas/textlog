@@ -1,5 +1,6 @@
 import type { Database } from 'bun:sqlite'
 import { cacheDb } from './cache-db'
+import { fmt } from './utils'
 
 const MAX_MATERIALIZED_PAGES = 40
 
@@ -11,6 +12,15 @@ function appearanceVariant(request: Request) {
 
 /** Reuse the fully rendered anonymous first page until a database mutation advances the feed generation. */
 export type MaterializedFeedKind = 'latest' | 'hot' | 'for-you' | 'to-me'
+
+/** Refresh relative times in cached HTML without rendering the feed again. */
+export function refreshMaterializedTimestamps(html: string, now = Date.now()) {
+  return html.replace(/<time\b([^>]*)>([^<]*)<\/time>/g, (time, attributes) => {
+    const dateTime = attributes.match(/\bdateTime=(?:"([^"]+)"|'([^']+)')/)?.slice(1).find(Boolean)
+    if (!dateTime) return time
+    return `<time${attributes}>${fmt(dateTime, now)}</time>`
+  })
+}
 
 /** Discard rendered feed HTML from an earlier server process. */
 export function clearMaterializedFeedPages(cache: Database = cacheDb) {
@@ -40,7 +50,7 @@ export async function materializedFeedPage(database: Database, request: Request,
     WHERE kind=? AND viewer_id=? AND variant=? AND generation=?`).get(kind, viewerId, variant, generation) as {
       html: string
     } | null
-  if (cached) return new Response(cached.html, {
+  if (cached) return new Response(refreshMaterializedTimestamps(cached.html), {
     headers: { 'content-type': 'text/html;charset=utf-8', 'cache-control': 'private, no-store' },
   })
 

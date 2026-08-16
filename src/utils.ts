@@ -128,8 +128,8 @@ export function apiUser(req: Request, database: Database = db): User | null {
   return userForApiKey(database, value) || userForSession(value, database)
 }
 const timestamp = (d: string) => new Date(d.replace(' ', 'T') + 'Z')
-export function fmt(d: string) {
-  const seconds = Math.max(0, Math.floor((Date.now() - timestamp(d).getTime()) / 1000))
+export function fmt(d: string, now = Date.now()) {
+  const seconds = Math.max(0, Math.floor((now - timestamp(d).getTime()) / 1000))
   if (seconds < 60) return `${Math.max(1, seconds)}s`
   const minutes = Math.floor(seconds / 60)
   if (minutes < 60) return `${minutes}m`

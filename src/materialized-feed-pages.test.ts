@@ -1,6 +1,6 @@
 import { Database } from 'bun:sqlite'
 import { expect, test } from 'bun:test'
-import { clearMaterializedFeedPages, invalidateMaterializedFeedPages, materializedFeedPage }
+import { clearMaterializedFeedPages, invalidateMaterializedFeedPages, materializedFeedPage, refreshMaterializedTimestamps }
   from './materialized-feed-pages'
 
 function databases() {
@@ -23,6 +23,32 @@ test('reuses rendered HTML until the mutation generation changes', async () => {
   expect(await (await materializedFeedPage(primary, request, 'latest', -1, render, cache)).text()).toBe('<p>1</p>')
   primary.run('UPDATE feed_snapshot_generation SET generation=generation+1 WHERE id=1')
   expect(await (await materializedFeedPage(primary, request, 'latest', -1, render, cache)).text()).toBe('<p>2</p>')
+})
+
+test('refreshes relative timestamps in cached HTML without rerendering', async () => {
+  const { primary, cache } = databases()
+  let renders = 0
+  const render = () => {
+    renders++
+    return new Response('<time dateTime="2026-08-16 10:00:00" title="Aug 16, 2026, 1:00 PM">1s</time>')
+  }
+  const request = new Request('https://textlog.test/latest')
+
+  await materializedFeedPage(primary, request, 'latest', -1, render, cache)
+  const originalNow = Date.now
+  Date.now = () => Date.parse('2026-08-16T12:00:00Z')
+  try {
+    expect(await (await materializedFeedPage(primary, request, 'latest', -1, render, cache)).text())
+      .toBe('<time dateTime="2026-08-16 10:00:00" title="Aug 16, 2026, 1:00 PM">2h</time>')
+  } finally {
+    Date.now = originalNow
+  }
+  expect(renders).toBe(1)
+})
+
+test('only changes time elements with a machine-readable timestamp', () => {
+  const html = '<time title="not a post timestamp">soon</time><span>1s</span>'
+  expect(refreshMaterializedTimestamps(html, Date.parse('2026-08-16T12:00:00Z'))).toBe(html)
 })
 
 test('keeps appearance variants separate without storing the full cookie', async () => {
