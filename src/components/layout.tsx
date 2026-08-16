@@ -124,7 +124,7 @@ export function Layout({
             <link rel="alternate" type="application/atom+xml" title={`${feeds.title} (Atom)`} href={feeds.atom} />
           </>
         )}
-        <link rel="stylesheet" href="/styles.css?v=320" />
+        <link rel="stylesheet" href="/styles.css?v=322" />
         <style>{themeCss}</style>
       </head>
       <body className={`density-${density}`}>
@@ -177,7 +177,9 @@ export function Layout({
         )}
         <main id="main-content">{children}</main>
         <footer className="site-footer">
-          <span>{appHost()}</span>
+          <span>
+            {appHost()} <span aria-hidden="true">·</span> <a className="footer-host-link" href="/stats">stats</a>
+          </span>
           {instance.links.getMobileApp && (
             <a
               className="button mobile-app-footer"

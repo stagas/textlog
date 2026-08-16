@@ -760,6 +760,18 @@ nav form {
   font-size: 0.6875rem;
 }
 
+.site-footer .footer-host-link,
+.site-footer .footer-host-link:visited {
+  color: inherit;
+  font: inherit;
+  text-decoration: none;
+  border-bottom: 0;
+}
+
+.site-footer .footer-host-link:hover {
+  color: var(--tab-hover);
+}
+
 .site-footer .mobile-app-footer {
   display: none;
 }
