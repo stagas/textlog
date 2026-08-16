@@ -1,8 +1,7 @@
 import { describe, expect, test } from 'bun:test'
 import { Database } from 'bun:sqlite'
 import { isYouTubeUrl } from './link-preview'
-import { runAutomaticBioLinkPreviewBackfill, runBioLinkPreviewBackfill, runLinkPreviewBackfill,
-  runR2LinkPreviewBackfill } from './link-preview-backfill'
+import { runBioLinkPreviewBackfill, runLinkPreviewBackfill, runR2LinkPreviewBackfill } from './link-preview-backfill'
 
 describe('link preview backfill', () => {
   test('recognizes YouTube video hosts without matching lookalikes', () => {
@@ -67,22 +66,6 @@ describe('link preview backfill', () => {
     }
   })
 
-  test('claims the automatic bio backfill once and records completion', async () => {
-    const database = new Database(':memory:')
-    database.run(`CREATE TABLE users(id INTEGER PRIMARY KEY,bio TEXT,deleted_at TEXT);
-      CREATE TABLE user_bio_link_previews(user_id INTEGER,url TEXT,image_url TEXT,PRIMARY KEY(user_id,url));
-      CREATE TABLE user_bio_link_preview_backfill_attempts(user_id INTEGER,url TEXT,status TEXT,
-        attempted_at TEXT DEFAULT CURRENT_TIMESTAMP,PRIMARY KEY(user_id,url));
-      CREATE TABLE background_tasks(name TEXT PRIMARY KEY,status TEXT NOT NULL,
-        updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP);`)
-    try {
-      expect(await runAutomaticBioLinkPreviewBackfill(database, { delayMs: 0, log: () => {} }))
-        .toEqual({ pending: 0, fetched: 0, saved: 0 })
-      expect(await runAutomaticBioLinkPreviewBackfill(database, { delayMs: 0, log: () => {} })).toBeNull()
-      expect(database.query('SELECT status FROM background_tasks').get()).toEqual({ status: 'complete' })
-    }
-    finally { database.close() }
-  })
 })
 
 describe('R2 link preview backfill', () => {

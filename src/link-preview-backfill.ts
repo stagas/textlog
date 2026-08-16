@@ -111,30 +111,6 @@ export async function runBioLinkPreviewBackfill(database: Database, options: {
   return { pending: pending.length, fetched, saved }
 }
 
-const BIO_LINK_PREVIEW_TASK = 'bio-link-previews-v1'
-
-export async function runAutomaticBioLinkPreviewBackfill(database: Database, options: {
-  delayMs?: number
-  log?: (message: string) => void
-} = {}) {
-  const claimed = database.query(`INSERT INTO background_tasks(name,status) VALUES(?,'running')
-    ON CONFLICT(name) DO UPDATE SET status='running',updated_at=CURRENT_TIMESTAMP
-    WHERE background_tasks.status!='complete' AND (background_tasks.status!='running'
-      OR background_tasks.updated_at<=datetime('now','-30 minutes'))`).run(BIO_LINK_PREVIEW_TASK).changes
-  if (!claimed) return null
-  try {
-    const result = await runBioLinkPreviewBackfill(database, options)
-    database.query(`UPDATE background_tasks SET status='complete',updated_at=CURRENT_TIMESTAMP WHERE name=?`)
-      .run(BIO_LINK_PREVIEW_TASK)
-    return result
-  }
-  catch (error) {
-    database.query(`UPDATE background_tasks SET status='failed',updated_at=CURRENT_TIMESTAMP WHERE name=?`)
-      .run(BIO_LINK_PREVIEW_TASK)
-    throw error
-  }
-}
-
 export async function runR2LinkPreviewBackfill(database: Database, options: {
   log?: (message: string) => void
   logFailure?: (message: string, error: unknown) => void
