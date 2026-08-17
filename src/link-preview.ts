@@ -50,7 +50,7 @@ function ownPostPreview(database: Database, rawUrl: string) {
   const title = characters.length > 60 ? `${characters.slice(0, 59).join('').trimEnd()}…` : text
   return {
     url: rawUrl,
-    imageUrl: `${origin}/post/${match[1]}/og.png?v=2`,
+    imageUrl: `${origin}/post/${match[1]}/og.png?v=3`,
     title,
     description: text.slice(0, 500),
     siteName: appName(),

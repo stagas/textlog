@@ -1,7 +1,8 @@
 import { describe, expect, test } from 'bun:test'
 import { Database } from 'bun:sqlite'
 import { isYouTubeUrl } from './link-preview'
-import { runBioLinkPreviewBackfill, runLinkPreviewBackfill, runR2LinkPreviewBackfill } from './link-preview-backfill'
+import { runBioLinkPreviewBackfill, runLinkPreviewBackfill, runPostOgPreviewRefetch,
+  runR2LinkPreviewBackfill } from './link-preview-backfill'
 
 describe('link preview backfill', () => {
   test('recognizes YouTube video hosts without matching lookalikes', () => {
@@ -59,6 +60,44 @@ describe('link preview backfill', () => {
       })
       expect(await runBioLinkPreviewBackfill(database, { delayMs: 0, log: () => {} }))
         .toEqual({ pending: 0, fetched: 0, saved: 0 })
+    }
+    finally {
+      database.close()
+      Bun.env.APP_URL = previousUrl
+    }
+  })
+
+  test('refetches previews using an app post OG image exactly once', async () => {
+    const previousUrl = Bun.env.APP_URL
+    Bun.env.APP_URL = 'https://textlog.test'
+    const database = new Database(':memory:')
+    database.run(`CREATE TABLE posts(id INTEGER PRIMARY KEY,body TEXT,deleted_at TEXT);
+      CREATE TABLE post_link_previews(post_id INTEGER,url TEXT,image_url TEXT,title TEXT,description TEXT,
+        site_name TEXT,image_width INTEGER,image_height INTEGER,PRIMARY KEY(post_id,url));
+      CREATE TABLE post_link_preview_backfill_attempts(post_id INTEGER,url TEXT,status TEXT,attempted_at TEXT
+        DEFAULT CURRENT_TIMESTAMP,PRIMARY KEY(post_id,url));
+      INSERT INTO posts(id,body) VALUES(1,'one'),(2,'two');
+      INSERT INTO post_link_previews(post_id,url,image_url,title) VALUES
+        (1,'https://remote.test/article','https://textlog.test/post/42/og.png?v=2','old'),
+        (2,'https://other.test/article','https://cdn.test/post/42/og.png?v=2','untouched');`)
+    const fetched: string[] = []
+    const discoverPreviews = async (url: string) => {
+      fetched.push(url)
+      return [{ url, imageUrl: 'https://cdn.test/refetched.png', title: 'refetched', description: 'new preview',
+        siteName: 'Remote', imageWidth: 1200, imageHeight: 630 }]
+    }
+    try {
+      expect(await runPostOgPreviewRefetch(database, { log: () => {}, discoverPreviews }))
+        .toEqual({ pending: 1, fetched: 1, saved: 1 })
+      expect(database.query('SELECT image_url,title FROM post_link_previews WHERE post_id=1').get()).toEqual({
+        image_url: 'https://cdn.test/refetched.png', title: 'refetched',
+      })
+      expect(database.query('SELECT image_url,title FROM post_link_previews WHERE post_id=2').get()).toEqual({
+        image_url: 'https://cdn.test/post/42/og.png?v=2', title: 'untouched',
+      })
+      expect(await runPostOgPreviewRefetch(database, { log: () => {}, discoverPreviews }))
+        .toEqual({ pending: 0, fetched: 0, saved: 0 })
+      expect(fetched).toEqual(['https://remote.test/article'])
     }
     finally {
       database.close()

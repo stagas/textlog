@@ -282,7 +282,7 @@ export function renderPostOg(body: string, handle: string) {
 
   ctx.fillStyle = accentColor
   ctx.font = '500 42px monospace'
-  const attribution = `@${handle}`
+  const attribution = `@${handle} wrote`
   ctx.fillText(attribution, width - 80 - ctx.measureText(attribution).width, 572)
 
   return canvas.toBuffer('image/png')

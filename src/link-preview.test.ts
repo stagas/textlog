@@ -79,7 +79,7 @@ describe('link previews', () => {
     try {
       expect(await discoverLinkPreviews('http://localhost:3000/post/12', database)).toEqual([{
         url: 'http://localhost:3000/post/12',
-        imageUrl: 'http://localhost:3000/post/12/og.png?v=2',
+        imageUrl: 'http://localhost:3000/post/12/og.png?v=3',
         title: 'A local post worth sharing',
         description: 'A local post worth sharing',
         siteName: 'textlog',

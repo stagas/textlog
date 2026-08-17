@@ -1126,6 +1126,13 @@ export const migrations: Migration[] = [
         dismissed_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP);`)
     },
   },
+  {
+    version: 89,
+    name: 'post_og_preview_refetch_backfill',
+    up() {
+      // The asynchronous, one-time refetch is performed by scripts/backfill-link-previews.ts.
+    },
+  },
 ]
 
 export const latestMigrationVersion = migrations.at(-1)!.version

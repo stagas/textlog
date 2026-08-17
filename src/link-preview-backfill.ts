@@ -8,6 +8,7 @@ import { postLinks } from './utils'
 
 export const LINK_PREVIEW_BACKFILL_DELAY_MS = 2500
 const R2_BACKFILL_STATUS_PREFIX = 'r2-backfill-'
+const POST_OG_REFETCH_STATUS_PREFIX = 'post-og-v3-refetch-'
 
 const wait = (milliseconds: number) => new Promise(resolve => setTimeout(resolve, milliseconds))
 
@@ -109,6 +110,48 @@ export async function runBioLinkPreviewBackfill(database: Database, options: {
   }
   log(`bio link preview backfill complete fetched=${fetched} saved=${saved}`)
   return { pending: pending.length, fetched, saved }
+}
+
+export async function runPostOgPreviewRefetch(database: Database, options: {
+  log?: (message: string) => void
+  discoverPreviews?: typeof discoverLinkPreviews
+} = {}) {
+  const origin = appOrigin()
+  const log = options.log || logInfo
+  const discoverPreviews = options.discoverPreviews || discoverLinkPreviews
+  const attempted = database.query(
+    'SELECT status FROM post_link_preview_backfill_attempts WHERE post_id=? AND url=?',
+  )
+  const record = database.query(`INSERT OR REPLACE INTO post_link_preview_backfill_attempts(post_id,url,status)
+    VALUES(?,?,?)`)
+  const rows = database.query(`SELECT lp.post_id,lp.url,lp.image_url FROM post_link_previews lp
+    JOIN posts p ON p.id=lp.post_id WHERE p.deleted_at IS NULL ORDER BY lp.post_id,lp.url`).all() as {
+      post_id: number
+      url: string
+      image_url: string
+    }[]
+  const pending = origin ? rows.filter(row => {
+    const previous = attempted.get(row.post_id, row.url) as { status: string } | null
+    if (previous?.status.startsWith(POST_OG_REFETCH_STATUS_PREFIX)) return false
+    try {
+      const image = new URL(row.image_url)
+      return image.origin === origin && /^\/post\/[1-9]\d*\/og\.png$/.test(image.pathname)
+    }
+    catch { return false }
+  }) : []
+  log(`post OG preview refetch start pending=${pending.length}`)
+  let saved = 0
+  for (const row of pending) {
+    record.run(row.post_id, row.url, `${POST_OG_REFETCH_STATUS_PREFIX}running`)
+    const previews = await discoverPreviews(row.url, database)
+    await saveLinkPreviews(database, row.post_id, previews)
+    const status = previews.length ? 'saved' : 'no-preview'
+    record.run(row.post_id, row.url, `${POST_OG_REFETCH_STATUS_PREFIX}${status}`)
+    if (previews.length) saved++
+    log(`post OG preview refetch ${status} post=${row.post_id} url=${row.url}`)
+  }
+  log(`post OG preview refetch complete fetched=${pending.length} saved=${saved}`)
+  return { pending: pending.length, fetched: pending.length, saved }
 }
 
 export async function runR2LinkPreviewBackfill(database: Database, options: {
