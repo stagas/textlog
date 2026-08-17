@@ -1038,6 +1038,17 @@ nav form {
   margin-top: var(--space-4);
 }
 
+.static-page .about-hot-heading {
+  margin-top: var(--space-7);
+}
+
+.about-hot-embed {
+  display: block;
+  width: 100%;
+  margin-top: var(--space-2);
+  border: 0;
+}
+
 .static-page .legal-updated {
   margin-top: calc(-1 * var(--space-5));
   color: var(--muted);

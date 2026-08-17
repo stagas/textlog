@@ -48,6 +48,9 @@ export function About({ user }: { user: User | null }) {
             <ActionPair className="about-actions"
               primary={<a className="button" href="/enter" rel="nofollow">join the community</a>}
               secondary={<a href="/hot">browse notes</a>} />
+            <h2 className="about-hot-heading">What's happening</h2>
+            <iframe className="about-hot-embed" src="/embed/hot" title={`Hot notes on ${name}`}
+              width="100%" height="520" loading="lazy" />
           </>
         )}
       </article>

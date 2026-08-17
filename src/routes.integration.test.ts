@@ -185,6 +185,7 @@ test('only the donation banner is shown to logged-out visitors', async () => {
   const homeHtml = await home.text()
   expect(homeHtml).toContain('<p class="eyebrow">about</p>')
   expect(homeHtml).toContain('href="/hot">browse notes</a>')
+  expect(homeHtml).toContain('class="about-hot-embed" src="/embed/hot"')
   for (const path of ['/hot', '/latest']) {
     const response = await request(path)
     expect(response.status).toBe(200)

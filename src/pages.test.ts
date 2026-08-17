@@ -802,6 +802,9 @@ describe('About', () => {
     expect(html).toContain('<span class="action-separator">or</span>')
     expect(html).toContain('class="button" href="/enter" rel="nofollow">join the community</a>')
     expect(html).toContain('href="/hot">browse notes</a>')
+    expect(html).toContain('<h2 class="about-hot-heading">What&#x27;s happening</h2>')
+    expect(html).toContain('class="about-hot-embed" src="/embed/hot" title="Hot notes on textlog"')
+    expect(html).toContain('width="100%" height="520" loading="lazy"')
   })
 
   test('does not show the guest calls to action to signed-in visitors', () => {
@@ -811,6 +814,7 @@ describe('About', () => {
 
     expect(html).not.toContain('class="about-actions"')
     expect(html).not.toContain('>browse notes</a>')
+    expect(html).not.toContain('class="about-hot-embed"')
   })
 })
 
