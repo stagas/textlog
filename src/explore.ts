@@ -42,19 +42,28 @@ export function suggestedPeople(database: Database, viewerId: number, limit = 8,
   const maxUserId = (database.query('SELECT coalesce(max(id),0) id FROM users').get() as { id: number }).id
   const pivot = explorePivot(maxUserId, viewerId, day)
   return database.query(
-    `SELECT u.*, (SELECT count(*) FROM posts p WHERE p.user_id=u.id AND p.deleted_at IS NULL) posts,
+    `WITH candidates AS (
+      SELECT u.*, (SELECT count(*) FROM posts p WHERE p.user_id=u.id AND p.deleted_at IS NULL) posts,
+      (SELECT count(*) FROM follows followers JOIN users follower ON follower.id=followers.follower_id
+        WHERE followers.following_id=u.id AND follower.deleted_at IS NULL) follower_count,
       EXISTS(SELECT 1 FROM follows f WHERE f.follower_id=? AND f.following_id=u.id) following FROM users u
-      WHERE u.id != ? AND u.deleted_at IS NULL
+      WHERE u.id != ? AND u.deleted_at IS NULL AND trim(coalesce(u.bio,''))!=''
       AND NOT EXISTS (SELECT 1 FROM follows f WHERE f.follower_id=? AND f.following_id=u.id)
       AND (? < 0 OR NOT EXISTS (SELECT 1 FROM blocks b WHERE
         (b.blocker_id=? AND b.blocked_id=u.id) OR (b.blocker_id=u.id AND b.blocked_id=?)))
       AND EXISTS (SELECT 1 FROM posts p WHERE p.user_id=u.id AND p.deleted_at IS NULL)
-      ORDER BY u.id < ?,u.id LIMIT ? OFFSET ?`,
-  ).all(viewerId, viewerId, viewerId, viewerId, viewerId, viewerId, pivot, limit, offset) as PersonView[]
+    )
+    SELECT * FROM candidates
+    ORDER BY (posts > 2) DESC,((id - ? + ?) % ?) * 1.0 /
+      (1 + min(follower_count,8)*0.25 + min(posts,20)*0.05),id
+    LIMIT ? OFFSET ?`,
+  ).all(viewerId, viewerId, viewerId, viewerId, viewerId, viewerId,
+    pivot, maxUserId, maxUserId, limit, offset) as PersonView[]
 }
 
 export function suggestedPeopleCount(database: Database, viewerId: number) {
   return (database.query(`SELECT count(*) count FROM users u WHERE u.id != ? AND u.deleted_at IS NULL
+    AND trim(coalesce(u.bio,''))!=''
     AND NOT EXISTS (SELECT 1 FROM follows f WHERE f.follower_id=? AND f.following_id=u.id)
     AND (? < 0 OR NOT EXISTS (SELECT 1 FROM blocks b WHERE
       (b.blocker_id=? AND b.blocked_id=u.id) OR (b.blocker_id=u.id AND b.blocked_id=?)))

@@ -10,7 +10,8 @@ function fixture() {
     CREATE TABLE follows (follower_id INTEGER,following_id INTEGER);
     CREATE TABLE blocks (blocker_id INTEGER,blocked_id INTEGER);
     INSERT INTO users(id,handle,bio) VALUES
-      (1,'viewer',''),(2,'two',''),(3,'three',''),(4,'four',''),(5,'five',''),(6,'six','');
+      (1,'viewer',''),(2,'two','Bio two'),(3,'three','Bio three'),(4,'four','Bio four'),
+      (5,'five','Bio five'),(6,'six','Bio six');
     INSERT INTO posts(id,user_id) VALUES(2,2),(3,3),(4,4),(5,5),(6,6);
     INSERT INTO follows VALUES(1,3);
     INSERT INTO blocks VALUES(1,4);
@@ -30,6 +31,28 @@ describe('explore suggestions', () => {
     const second = suggestedPeople(database, 1, 6, '2026-08-04')
     expect(first.map(person => person.id)).toEqual(second.map(person => person.id))
     expect(new Set(first.map(person => person.id))).toEqual(new Set([2, 5, 6]))
+  })
+
+  test('only suggests people with completed bios', () => {
+    const database = fixture()
+    database.run(`UPDATE users SET bio='' WHERE id=5`)
+    expect(suggestedPeople(database, 1, 6, '2026-08-04').map(person => person.id)).toEqual(expect.not.arrayContaining([5]))
+  })
+
+  test('favors people with more than two notes without overriding the daily rotation', () => {
+    const database = fixture()
+    database.run(`
+      INSERT INTO posts(id,user_id) VALUES(7,5),(8,2),(9,2),(10,2),(11,5);
+      INSERT INTO follows VALUES(2,5),(4,5),(2,6);
+    `)
+
+    const boosted = suggestedPeople(database, 1, 6, '2026-08-04').map(person => person.id)
+    expect(new Set(boosted.slice(0, 2))).toEqual(new Set([2, 5]))
+    expect(boosted[2]).toBe(6)
+
+    const dayPivotingToTwo = Array.from({ length: 31 }, (_, day) => `2026-08-${String(day + 1).padStart(2, '0')}`)
+      .find(day => explorePivot(6, 1, day) === 2)!
+    expect(suggestedPeople(database, 1, 6, dayPivotingToTwo)[0].id).toBe(2)
   })
 })
 
