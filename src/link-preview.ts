@@ -48,7 +48,7 @@ function ownPostPreview(database: Database, rawUrl: string) {
   const text = post.body.replace(/\s+/g, ' ').trim()
   return {
     url: rawUrl,
-    imageUrl: `${origin}/post/${match[1]}/og.png?v=3`,
+    imageUrl: `${origin}/post/${match[1]}/og.png?v=4`,
     title: `@${post.handle} wrote on ${appName()}`,
     description: text.slice(0, 500),
     siteName: appName(),
