@@ -171,6 +171,7 @@ test('stats are public without exposing admin operations', async () => {
   expect(html).not.toContain('<p class="eyebrow">textlog</p>')
   expect(html).toContain('aria-label="Application statistics"')
   expect(html).toContain('<span>users</span>')
+  expect(html).toMatch(/<strong>[\d.,]+%<\/strong><span>Conversion rate - 24h<\/span>/)
   expect(html).not.toContain('<span>suspended</span>')
   expect(html).not.toContain('<span>users online · 30m</span>')
   expect(html).not.toContain('<span>anonymous online · 30m</span>')
@@ -185,7 +186,9 @@ test('only the donation banner is shown to logged-out visitors', async () => {
   const homeHtml = await home.text()
   expect(homeHtml).toContain('<p class="eyebrow">about</p>')
   expect(homeHtml).toContain('href="/hot">browse notes</a>')
-  expect(homeHtml).toContain('class="about-hot-embed" src="/embed/hot"')
+  expect(homeHtml).not.toContain('class="about-hot-posts"')
+  expect(homeHtml).not.toContain('<iframe')
+  expect(homeHtml).toContain('class="about-hot-more"><a class="button" href="/hot">browse more</a>')
   for (const path of ['/hot', '/latest']) {
     const response = await request(path)
     expect(response.status).toBe(200)

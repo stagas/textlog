@@ -1042,11 +1042,16 @@ nav form {
   margin-top: var(--space-7);
 }
 
-.about-hot-embed {
-  display: block;
-  width: 100%;
-  margin-top: var(--space-2);
-  border: 0;
+.about-page-guest {
+  padding-bottom: 0;
+}
+
+.about-hot-more {
+  padding: var(--space-5) var(--gutter) var(--space-6);
+}
+
+.post:has(+ .about-hot-more) {
+  border-bottom: 1px solid var(--soft);
 }
 
 .static-page .legal-updated {

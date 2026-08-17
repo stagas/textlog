@@ -335,12 +335,12 @@ test('admin metrics use locale-aware number formatting', () => {
       openReports: 0,
       activeUsersYesterday: 0,
       usersYesterday: 0,
-      users24h: 0,
+      users24h: 1,
       users7d: 0,
       posts24h: 0,
       postsYesterday: 0,
       posts7d: 0,
-      visitorsToday: 0,
+      visitorsToday: 3,
       visitorsYesterday: 0,
       visitors7d: 0,
     },
@@ -353,6 +353,7 @@ test('admin metrics use locale-aware number formatting', () => {
 
   expect(html).toContain(`<strong>${(1234567).toLocaleString()}</strong><span>users</span>`)
   expect(html).toContain('<strong>12</strong><span>users online · 30m</span>')
+  expect(html).toContain(`<strong>${(100 / 3).toLocaleString(undefined, { maximumFractionDigits: 2 })}%</strong><span>Conversion rate - 24h</span>`)
   expect(html).toContain('<strong>34</strong><span>anonymous online · 30m</span>')
   expect(html).toContain('class="account-settings-heading admin-header"')
   expect(html).toContain('class="profile-edit-link" href="/admin/email">send email</a>')
@@ -803,8 +804,9 @@ describe('About', () => {
     expect(html).toContain('class="button" href="/enter" rel="nofollow">join the community</a>')
     expect(html).toContain('href="/hot">browse notes</a>')
     expect(html).toContain('<h2 class="about-hot-heading">What&#x27;s happening</h2>')
-    expect(html).toContain('class="about-hot-embed" src="/embed/hot" title="Hot notes on textlog"')
-    expect(html).toContain('width="100%" height="520" loading="lazy"')
+    expect(html).not.toContain('class="about-hot-posts"')
+    expect(html).not.toContain('<iframe')
+    expect(html).toContain('class="about-hot-more"><a class="button" href="/hot">browse more</a>')
   })
 
   test('does not show the guest calls to action to signed-in visitors', () => {
@@ -814,7 +816,7 @@ describe('About', () => {
 
     expect(html).not.toContain('class="about-actions"')
     expect(html).not.toContain('>browse notes</a>')
-    expect(html).not.toContain('class="about-hot-embed"')
+    expect(html).not.toContain('class="about-hot-more"')
   })
 })
 

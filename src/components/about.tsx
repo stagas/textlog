@@ -1,14 +1,18 @@
 import { instance } from '../../instance.config'
 import { appName } from '../brand'
-import { type User } from '../db'
+import { db, type User } from '../db'
+import { getHotPosts } from '../hot'
+import { enrichPosts } from '../posts'
 import { Layout } from './layout'
 import { ActionPair } from './page-shared'
+import { Post } from './post'
 
 export function About({ user }: { user: User | null }) {
   const name = appName()
+  const hotPosts = user ? [] : enrichPosts(db, getHotPosts(db, 5, null, new Date(), -1, true), -1)
   return (
     <Layout user={user} title="about">
-      <article className="static-page">
+      <article className={`static-page about-page${user ? '' : ' about-page-guest'}`}>
         <p className="eyebrow">about</p>
         <h1>A quieter place for your thoughts.</h1>
         <p>
@@ -49,11 +53,19 @@ export function About({ user }: { user: User | null }) {
               primary={<a className="button" href="/enter" rel="nofollow">join the community</a>}
               secondary={<a href="/hot">browse notes</a>} />
             <h2 className="about-hot-heading">What's happening</h2>
-            <iframe className="about-hot-embed" src="/embed/hot" title={`Hot notes on ${name}`}
-              width="100%" height="520" loading="lazy" />
           </>
         )}
       </article>
+      {!user && (hotPosts.length
+        ? hotPosts.map(post => (
+          <Post key={post.id} p={post} user={null} showReplyCount tappable returnPath={`/#post-${post.id}`} />
+        ))
+        : <div className="empty">No hot notes yet.</div>)}
+      {!user && (
+        <div className="about-hot-more">
+          <a className="button" href="/hot">browse more</a>
+        </div>
+      )}
     </Layout>
   )
 }
