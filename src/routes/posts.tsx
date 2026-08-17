@@ -18,6 +18,7 @@ import type { PostingSuggestionSearch } from '../components/page-shared'
 import { db } from '../db'
 import { safeRefererPath } from '../http'
 import { logError } from '../log'
+import { markdownPlainText } from '../markdown'
 import { deleteLinkPreviewImages, discoverLinkPreviews, replaceLinkPreviews, saveLinkPreviews } from '../link-preview'
 import { renderPostOg } from '../og'
 import { normalizePostBody, postBodyValidationMessage, validPostBody } from '../post-body'
@@ -108,7 +109,7 @@ export function registerPostsRoutes(app: Hono) {
     const postUrl = `${origin}/post/${post.id}`
     const social = {
       title: `@${post.handle} wrote on textlog`,
-      description: post.body.replace(/\s+/g, ' ').trim(),
+      description: markdownPlainText(post.body),
       image: `${postUrl}/og.png?v=3`,
       url: postUrl,
     }

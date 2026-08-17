@@ -11,6 +11,7 @@ import { db } from '../db'
 import { devicePageSize } from '../device-settings'
 import { feedSnapshotPage } from '../feed-snapshots'
 import { resolveHandle } from '../handles'
+import { markdownPlainText } from '../markdown'
 import { renderProfileOg } from '../og'
 import { CONNECTION_PAGE_SIZE, decodePostCursor, PAGE_SIZE, TAG_PAGE_SIZE } from '../pagination'
 import { enrichPosts } from '../posts'
@@ -117,7 +118,7 @@ export function registerProfilesRoutes(app: Hono) {
     const configuredOrigin = Bun.env.APP_URL?.replace(/\/$/, '')
     const origin = configuredOrigin || new URL(c.req.url).origin
     const profileUrl = `${origin}/u/${profile.handle}`
-    const description = profile.bio.replace(/\s+/g, ' ').trim() || `@${profile.handle} on ${appName()}`
+    const description = markdownPlainText(profile.bio) || `@${profile.handle} on ${appName()}`
     const social = {
       description,
       image: `${profileUrl}/og.png?v=2`,
