@@ -47,10 +47,23 @@ function feedUpdated(feed: SyndicationFeed) {
     : latest, updated(feed.posts))
 }
 
+function feedContent(feed: SyndicationFeed, body: string) {
+  const html = sanitizedMarkdownHtml(body)
+  return html.replace(/\bhref="([^"]+)"/g, (attribute, href: string) => {
+    if (/^(?:https?:|mailto:)/i.test(href)) return attribute
+    try {
+      return `href="${new URL(href, feed.pageUrl).href}"`
+    }
+    catch {
+      return attribute
+    }
+  })
+}
+
 function atom(feed: SyndicationFeed) {
   const postEntries = feed.posts.map(post => ({ id: post.url,
     title: `${feed.postTitlePrefixes?.[post.id] || ''}${itemTitle(post, !!feed.omitAuthorInTitles)}`,
-    url: post.url, created_at: post.created_at, author: post.author, content: sanitizedMarkdownHtml(post.body),
+    url: post.url, created_at: post.created_at, author: post.author, content: feedContent(feed, post.body),
     permalink: true }))
   const allEntries = [...postEntries, ...(feed.activities || []).map(activity => ({ ...activity,
     content: `<p>${activity.title}</p>`, permalink: false }))].sort((a, b) => b.created_at.localeCompare(a.created_at))
@@ -80,7 +93,7 @@ ${entries}${entries ? '\n' : ''}</feed>
 function rss(feed: SyndicationFeed) {
   const postEntries = feed.posts.map(post => ({ id: post.url,
     title: `${feed.postTitlePrefixes?.[post.id] || ''}${itemTitle(post, !!feed.omitAuthorInTitles)}`,
-    url: post.url, created_at: post.created_at, author: post.author, content: sanitizedMarkdownHtml(post.body),
+    url: post.url, created_at: post.created_at, author: post.author, content: feedContent(feed, post.body),
     permalink: true }))
   const allEntries = [...postEntries, ...(feed.activities || []).map(activity => ({ ...activity,
     content: `<p>${activity.title}</p>`, permalink: false }))].sort((a, b) => b.created_at.localeCompare(a.created_at))

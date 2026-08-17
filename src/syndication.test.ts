@@ -99,14 +99,17 @@ describe('RSS and Atom feeds', () => {
   })
 
   test('renders Markdown as sanitized HTML in RSS and Atom entries', async () => {
-    const app = fixture('**bold** [safe](https://example.com) [unsafe](javascript:alert(1)) <script>alert(2)</script>')
+    const app = fixture('**bold** [safe](https://example.com) [local](/post/1) '
+      + '[unsafe](javascript:alert(1)) <script>alert(2)</script>')
     const rss = await (await app.request('https://textlog.cc/latest.rss')).text()
     const atom = await (await app.request('https://textlog.cc/latest.atom')).text()
 
     expect(rss).toContain('&lt;strong&gt;bold&lt;/strong&gt;')
     expect(rss).toContain('&lt;a href=&quot;https://example.com&quot;&gt;safe&lt;/a&gt;')
-    expect(rss).toContain('<title>@alice: bold safe unsafe</title>')
-    expect(atom).toContain('<title>@alice: bold safe unsafe</title>')
+    expect(rss).toContain('&lt;a href=&quot;https://textlog.cc/post/1&quot;&gt;local&lt;/a&gt;')
+    expect(atom).toContain('&lt;a href=&quot;https://textlog.cc/post/1&quot;&gt;local&lt;/a&gt;')
+    expect(rss).toContain('<title>@alice: bold safe local unsafe</title>')
+    expect(atom).toContain('<title>@alice: bold safe local unsafe</title>')
     expect(atom).toContain('<content type="html">&lt;p&gt;&lt;strong&gt;bold&lt;/strong&gt;')
     expect(rss).not.toContain('href=&quot;javascript:')
     expect(atom).not.toContain('<script')
