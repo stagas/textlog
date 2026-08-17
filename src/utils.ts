@@ -237,7 +237,7 @@ function linkLabel(url: string, appUrl: string | undefined) {
 const urlMatcher = new LinkifyIt({ fuzzyLink: true, fuzzyEmail: false })
   .tlds(tlds)
 
-function markdownUrl(destination: string) {
+export function markdownUrl(destination: string) {
   if (/^https?:\/\//i.test(destination)) return destination
   const matches = urlMatcher.match(destination)
   const match = matches?.length === 1 ? matches[0] : null

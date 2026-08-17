@@ -1,5 +1,6 @@
 import type { ApiPost } from './api'
 import { markdownPlainText, sanitizedMarkdownHtml } from './markdown'
+import { markdownUrl } from './utils'
 
 export type SyndicationFormat = 'rss' | 'atom'
 
@@ -52,7 +53,8 @@ function feedContent(feed: SyndicationFeed, body: string) {
   return html.replace(/\bhref="([^"]+)"/g, (attribute, href: string) => {
     if (/^(?:https?:|mailto:)/i.test(href)) return attribute
     try {
-      return `href="${new URL(href, feed.pageUrl).href}"`
+      const absolute = markdownUrl(href) || new URL(href, feed.pageUrl).href
+      return `href="${absolute}"`
     }
     catch {
       return attribute
