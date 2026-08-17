@@ -85,6 +85,8 @@ export type DashboardStats = {
   anonymousOnline: number
   suspendedUsers: number
   activePosts: number
+  notesPerUser: number
+  averageNotesPerUser: number
   replies: number
   openReports: number
   activeUsersYesterday: number

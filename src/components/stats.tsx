@@ -9,6 +9,7 @@ const labels: [keyof DashboardStats, string][] = [
   ['anonymousOnline', 'anonymous online · 30m'],
   ['suspendedUsers', 'suspended'],
   ['activePosts', 'active posts'],
+  ['notesPerUser', 'median/avg notes per user'],
   ['replies', 'replies'],
   ['visitorsToday', 'unique visitors · today'],
   ['visitorsYesterday', 'unique visitors · yesterday'],
@@ -31,7 +32,10 @@ export function StatsGrid({ stats, publicOnly = false }: { stats: DashboardStats
     <section className="admin-stats" aria-label="Application statistics">
       {visibleLabels.map(([key, label]) => (
         <article key={key}>
-          <strong>{stats[key].toLocaleString()}</strong>
+          <strong>{key === 'notesPerUser'
+            ? `${stats.notesPerUser.toLocaleString(undefined, { maximumFractionDigits: 2 })}/${
+              stats.averageNotesPerUser.toLocaleString(undefined, { maximumFractionDigits: 2 })}`
+            : stats[key].toLocaleString()}</strong>
           <span>{label}</span>
         </article>
       ))}

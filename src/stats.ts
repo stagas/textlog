@@ -8,6 +8,14 @@ export function dashboardStats(database: Database): DashboardStats {
     (SELECT count(*) FROM users WHERE deleted_at IS NULL) users,
     (SELECT count(*) FROM users WHERE deleted_at IS NULL AND suspended_at IS NOT NULL) suspendedUsers,
     (SELECT count(*) FROM posts WHERE deleted_at IS NULL) activePosts,
+    (SELECT coalesce(avg(note_count),0) FROM (
+      SELECT count(p.id) note_count,row_number() OVER (ORDER BY count(p.id)) position,count(*) OVER () total
+      FROM users u LEFT JOIN posts p ON p.user_id=u.id AND p.deleted_at IS NULL
+      WHERE u.deleted_at IS NULL GROUP BY u.id
+    ) WHERE position IN ((total+1)/2,(total+2)/2)) notesPerUser,
+    (SELECT coalesce(count(p.id)*1.0/nullif(count(DISTINCT u.id),0),0)
+      FROM users u LEFT JOIN posts p ON p.user_id=u.id AND p.deleted_at IS NULL
+      WHERE u.deleted_at IS NULL) averageNotesPerUser,
     (SELECT count(*) FROM posts WHERE deleted_at IS NULL AND parent_id IS NOT NULL) replies,
     (SELECT count(*) FROM reports WHERE status='open') openReports,
     (SELECT count(DISTINCT activity.user_id) FROM (

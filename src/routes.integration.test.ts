@@ -171,6 +171,7 @@ test('stats are public without exposing admin operations', async () => {
   expect(html).not.toContain('<p class="eyebrow">textlog</p>')
   expect(html).toContain('aria-label="Application statistics"')
   expect(html).toContain('<span>users</span>')
+  expect(html).toContain('<span>median/avg notes per user</span>')
   expect(html).toMatch(/<strong>[\d.,]+%<\/strong><span>Conversion rate - 24h<\/span>/)
   expect(html).not.toContain('<span>suspended</span>')
   expect(html).not.toContain('<span>users online · 30m</span>')
