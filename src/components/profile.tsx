@@ -206,6 +206,13 @@ export function Profile(
                 </div>
                 <div className="account-danger-zone">
                   <div>
+                    <strong>Invite friends</strong>
+                    <span>Send friends a personal invitation and magic link to join textlog.</span>
+                  </div>
+                  <a className="button" href={`/account/edit/invite${fromQuery}`}>invite friends</a>
+                </div>
+                <div className="account-danger-zone">
+                  <div>
                     <strong>Download your data</strong>
                     <span>Export your account, notes, connections, and activity as a JSON file.</span>
                   </div>

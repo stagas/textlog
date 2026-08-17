@@ -2,7 +2,7 @@ import { afterAll, beforeAll, expect, test } from 'bun:test'
 import { mkdtempSync, readFileSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import { sendMagicLink, sendReportDecision } from './email'
+import { sendFriendInvitation, sendMagicLink, sendReportDecision } from './email'
 
 const previous = {
   NODE_ENV: Bun.env.NODE_ENV,
@@ -64,4 +64,17 @@ test('HTML emails escape externally supplied report details', async () => {
   expect(message.html).toContain('&lt;accepted&gt;')
   expect(message.html).toContain('&lt;script&gt;alert(1)&lt;/script&gt;')
   expect(message.html).not.toContain('<script>')
+})
+
+test('friend invitation uses the inviter copy and a styled magic-link action', async () => {
+  await sendFriendInvitation('friend@example.com', 'https://textlog.cc/enter/magic?token=invite', 'alice')
+  const message = messages().at(-1)
+
+  expect(message.subject).toBe("You've been invited to textlog")
+  expect(message.text).toContain('Your friend @alice has invited you to join textlog.')
+  expect(message.text).toContain('Click on this magic link to join:')
+  expect(message.text).toContain('This link expires in one week and can only be used once.')
+  expect(message.html).toContain('Your friend @alice has invited you to join textlog.')
+  expect(message.html).toContain('Click on this magic link to join.')
+  expect(message.html).toContain('>Join textlog <span aria-hidden="true">→</span>')
 })

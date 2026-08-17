@@ -30,7 +30,7 @@ export function Layout({
     imageAlt?: string }
   pageUrl?: string
   feeds?: { title: string; rss: string; atom: string }
-  notificationBanner?: false | 'notifications' | 'appearance' | 'notification-update' | 'donate'
+  notificationBanner?: false | 'notifications' | 'appearance' | 'invite' | 'notification-update' | 'donate'
   children: React.ReactNode
 }) {
   const selectedAppearance = activeAppearance()
@@ -124,7 +124,7 @@ export function Layout({
             <link rel="alternate" type="application/atom+xml" title={`${feeds.title} (Atom)`} href={feeds.atom} />
           </>
         )}
-        <link rel="stylesheet" href="/styles.css?v=329" />
+        <link rel="stylesheet" href="/styles.css?v=334" />
         <style>{themeCss}</style>
       </head>
       <body className={`density-${density}`}>
@@ -156,13 +156,15 @@ export function Layout({
           >
             <a href={notificationBanner === 'donate' ? '/donation/banner/accept' : notificationBanner === 'appearance'
               ? '/account/edit/appearance'
-              : '/account/edit/notifications'}
+              : notificationBanner === 'invite' ? '/account/edit/invite' : '/account/edit/notifications'}
               {...notificationBanner === 'donate' ? { target: '_blank', rel: 'noopener noreferrer' } : {}}
             >
               {notificationBanner === 'donate'
                 ? '❤️ donate to support us'
                 : notificationBanner === 'appearance'
                 ? 'customize appearance'
+                : notificationBanner === 'invite'
+                ? 'invite friends'
                 : notificationBanner === 'notification-update'
                 ? 'check the improved notifications'
                 : 'enable notifications'}
@@ -172,6 +174,8 @@ export function Layout({
               ? '/donation/banner/dismiss'
               : notificationBanner === 'appearance'
               ? '/appearance/banner/dismiss'
+              : notificationBanner === 'invite'
+              ? '/invite/banner/dismiss'
               : notificationBanner === 'notification-update'
               ? '/notifications/improvements/dismiss'
               : '/notifications/banner/dismiss'}

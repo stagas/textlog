@@ -29,8 +29,14 @@ import { currentUser } from '../utils'
 
 function showNotificationBanner(request: Request, user: ReturnType<typeof currentUser>) {
   if (!user) return instance.links.donate && !donationBannerDismissed(request) ? 'donate' : false
+  const inviteHandled = Boolean(db.query(
+    'SELECT 1 FROM invite_banner_dismissals WHERE user_id=? LIMIT 1',
+  ).get(user.id))
   const userAgent = notificationUserAgent(request)
-  if (!userAgent) return Math.random() < 0.5 ? 'notifications' : 'appearance'
+  if (!userAgent) {
+    const choices = inviteHandled ? ['notifications', 'appearance'] : ['notifications', 'appearance', 'invite']
+    return choices[Math.floor(Math.random() * choices.length)] as 'notifications' | 'appearance' | 'invite'
+  }
   const notificationsEnabled = Boolean(db.query(
     "SELECT 1 FROM notification_user_agents WHERE user_id=? AND user_agent=? AND status='enabled' LIMIT 1",
   ).get(user.id, userAgent))
@@ -44,6 +50,7 @@ function showNotificationBanner(request: Request, user: ReturnType<typeof curren
   const appearanceHandled = Boolean(db.query(
     'SELECT 1 FROM appearance_user_agents WHERE user_id=? AND user_agent=? LIMIT 1',
   ).get(user.id, userAgent))
+  if (notificationsHandled && appearanceHandled && !inviteHandled) return 'invite'
   if (notificationsHandled && appearanceHandled) {
     const donationDismissed = Boolean(db.query(
       'SELECT 1 FROM donation_banner_dismissals WHERE user_id=? LIMIT 1',
@@ -52,6 +59,7 @@ function showNotificationBanner(request: Request, user: ReturnType<typeof curren
   }
   if (notificationsHandled) return 'appearance'
   if (appearanceHandled) return 'notifications'
+  if (!inviteHandled && Math.random() < 1 / 3) return 'invite'
   return Math.random() < 0.5 ? 'notifications' : 'appearance'
 }
 
@@ -65,6 +73,11 @@ function rememberAppearanceBanner(request: Request, userId: number, status: 'see
 
 function rememberDonationBanner(userId: number) {
   db.query(`INSERT INTO donation_banner_dismissals(user_id) VALUES(?)
+    ON CONFLICT(user_id) DO UPDATE SET dismissed_at=CURRENT_TIMESTAMP`).run(userId)
+}
+
+function rememberInviteBanner(userId: number) {
+  db.query(`INSERT INTO invite_banner_dismissals(user_id) VALUES(?)
     ON CONFLICT(user_id) DO UPDATE SET dismissed_at=CURRENT_TIMESTAMP`).run(userId)
 }
 
@@ -183,6 +196,13 @@ export function registerFeedsRoutes(app: Hono) {
     const user = currentUser(c.req.raw)
     if (!user) return redirect('/enter')
     rememberAppearanceBanner(c.req.raw, user.id, 'dismissed')
+    return redirect(safeRefererPath(c.req.header('referer'), c.req.url))
+  })
+
+  app.post('/invite/banner/dismiss', c => {
+    const user = currentUser(c.req.raw)
+    if (!user) return redirect('/enter')
+    rememberInviteBanner(user.id)
     return redirect(safeRefererPath(c.req.header('referer'), c.req.url))
   })
 

@@ -61,9 +61,14 @@ export function Explore({ user, welcome = false, peopleIds, tagsPage = 1, people
             primary={<a className="button" href="/write">write your first note →</a>}
             secondary={<a href="/">browse notes</a>} />
           <nav className="welcome-settings" aria-label="Set up your account">
-            <a href="/account/edit/notifications">enable notifications</a>
-            <a href="/account/edit/appearance">customize appearance</a>
-            <a href="/account/password/enable">set up a password</a>
+            <span>
+              <a href="/account/edit/notifications">enable notifications</a>
+              <a href="/account/edit/appearance">customize appearance</a>
+            </span>
+            <span>
+              <a href="/account/edit/invite">invite friends</a>
+              <a href="/account/password/enable">set up a password</a>
+            </span>
           </nav>
         </Panel>
       )}

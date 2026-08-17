@@ -3383,6 +3383,8 @@ form.report-panel {
 }
 .account-settings-heading > .profile-edit-link { margin-top: 0; }
 
+.invite-form textarea { min-height: 9rem; resize: vertical; }
+
 .admin-header.account-settings-heading {
   margin-bottom: var(--space-7);
   padding: var(--space-7) var(--gutter) 0;
@@ -3841,11 +3843,16 @@ form.report-panel {
 }
 
 .welcome-settings {
+  display: grid;
+  gap: var(--space-2);
+  margin-top: var(--space-6);
+  font-size: 0.75rem;
+}
+
+.welcome-settings span {
   display: flex;
   flex-wrap: wrap;
   gap: var(--space-2) var(--space-4);
-  margin-top: var(--space-6);
-  font-size: 0.75rem;
 }
 
 .welcome-settings a {
@@ -3870,7 +3877,7 @@ form.report-panel {
 }
 
 .panels-gallery-header { max-width: 680px; margin-bottom: var(--space-8); }
-.panels-gallery .panel-surface > .eyebrow {
+.panel-surface > .eyebrow {
   margin: 0 0 var(--space-2);
   color: var(--accent);
   font-size: .625rem;
@@ -3892,7 +3899,7 @@ form.report-panel {
   text-transform: uppercase;
 }
 .panel-gallery-section > .panel-surface { margin-block: var(--space-4); }
-.panels-gallery .panel-surface h2 {
+.panel-surface h2 {
   margin: 0;
   font-size: clamp(1.25rem, 4vw, 1.75rem);
   line-height: 1.15;

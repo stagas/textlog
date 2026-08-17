@@ -1117,6 +1117,15 @@ export const migrations: Migration[] = [
       database.run('CREATE INDEX IF NOT EXISTS daily_visitors_anonymous_last_seen ON daily_visitors(anonymous_last_seen_at)')
     },
   },
+  {
+    version: 88,
+    name: 'invite_banner_dismissals',
+    up(database) {
+      database.run(`CREATE TABLE IF NOT EXISTS invite_banner_dismissals (
+        user_id INTEGER PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
+        dismissed_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP);`)
+    },
+  },
 ]
 
 export const latestMigrationVersion = migrations.at(-1)!.version

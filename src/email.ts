@@ -157,6 +157,20 @@ export function sendMagicLink(email: string, magicUrl: string, code: string, han
       `Your secure sign-in link and code for ${name}.`))
 }
 
+export function sendFriendInvitation(email: string, magicUrl: string, handle: string) {
+  const name = appName()
+  const heading = `You've been invited to ${name}`
+  const invitation = `Your friend @${handle} has invited you to join ${name}.`
+  return sendEmail(email, heading,
+    `${invitation}\n\nClick on this magic link to join:\n\n${magicUrl}\n\nThis link expires in one week and can only be used once.`,
+    emailDocument(heading,
+      paragraph(`${escapeHtml(invitation)}`)
+        + paragraph('Click on this magic link to join.')
+        + button(`Join ${name}`, magicUrl)
+        + notice('This link expires in one week and can only be used once.'),
+      `${invitation} Click on this magic link to join.`))
+}
+
 export function sendReportReceipt(email: string, reference: string) {
   const safeReference = escapeHtml(reference)
   return sendEmail(email, `Report received · ${reference}`,

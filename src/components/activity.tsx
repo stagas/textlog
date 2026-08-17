@@ -24,7 +24,7 @@ export function Activity({ user, cursor, title, path = '/activity', pageUrl, not
   title?: string
   path?: string
   pageUrl?: string
-  notificationBanner?: false | 'notifications' | 'appearance' | 'notification-update' | 'donate'
+  notificationBanner?: false | 'notifications' | 'appearance' | 'invite' | 'notification-update' | 'donate'
 }) {
   const hasUnread = hasUnreadActivity(user.id)
   const comparison = cursor?.direction === 'previous' ? '>' : '<'

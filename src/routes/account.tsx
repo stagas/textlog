@@ -1,11 +1,12 @@
 import { accountForDeletionToken, issueAccountDeletionToken } from '../account-deletion'
 import { accountChoices, accountGroupForUser, isPrimaryAccount, selectAccount } from '../account-groups'
+import { accountForEmail } from '../account-groups'
 import { anonymizeUser, isAdmin } from '../admin'
 import { issueApiKey } from '../api-keys'
 import { AUTH_LIMITS, authRateLimitMessage } from '../auth-rate-limit'
 import { currentUser, hash, hashPassword, sessionToken, token, verifyPassword } from '../utils'
 import { authLimit, clientAddress, form, issueEmailToken, issueMagicLink, page, redirect, retryPage, safeNext,
-  securityPage } from './shared'
+  securityPage, INVITATION_LINK_LIFETIME_MS } from './shared'
 
 import type { Hono } from 'hono'
 import { bioBodyValidationMessage, normalizeBioBody, validBioBody } from '../bio-body'
@@ -19,6 +20,7 @@ import {
   ChangeAppearance,
   ConfirmAccountDelete,
   ConfirmEmail,
+  InviteFriends,
   NotificationSettings,
   Profile,
 } from '../components/pages'
@@ -26,7 +28,9 @@ import { exportUserData } from '../data-export'
 import { db } from '../db'
 import { DENSITY_CHOICES, type DensityChoice, deviceDensity, devicePageSize, PAGE_SIZE_CHOICES, type PageSizeChoice,
   saveDeviceDensity, saveDevicePageSize } from '../device-settings'
-import { sendAccountDeletionConfirmation, sendEmailChangeAuthorization, sendPasswordEnableConfirmation } from '../email'
+import { sendAccountDeletionConfirmation, sendEmailChangeAuthorization, sendFriendInvitation,
+  sendPasswordEnableConfirmation } from '../email'
+import { emailPattern } from './auth'
 import { emailChangeForToken, issueEmailChangeAuthorization } from '../email-change-authorization'
 import { confirmEmailToken, findEmailToken } from '../email-verification'
 import { updateProfileHandle } from '../handles'
@@ -58,6 +62,11 @@ function markAppearanceBannerHandled(request: Request, userId: number) {
     .run(userId, userAgent)
 }
 
+function markInviteBannerHandled(userId: number) {
+  db.query(`INSERT INTO invite_banner_dismissals(user_id) VALUES(?)
+    ON CONFLICT(user_id) DO UPDATE SET dismissed_at=CURRENT_TIMESTAMP`).run(userId)
+}
+
 function profileSuggestionSearch(fields: Record<string, string>, viewerId: number): PostingSuggestionSearch | null {
   if (fields.action !== 'search-hashtags' && fields.action !== 'search-mentions') return null
   const kind = fields.action === 'search-hashtags' ? 'hashtags' : 'mentions'
@@ -75,6 +84,54 @@ function profileSuggestionSearch(fields: Record<string, string>, viewerId: numbe
 }
 
 export function registerAccountRoutes(app: Hono) {
+  app.get('/account/edit/invite', c => {
+    const user = currentUser(c.req.raw)
+    if (!user) return redirect('/enter?next=' + encodeURIComponent('/account/edit/invite'))
+    markInviteBannerHandled(user.id)
+    const returnPath = c.req.query('from') ? safeNext(c.req.query('from')) : undefined
+    return page(<InviteFriends user={user} returnPath={returnPath} />)
+  })
+
+  app.post('/account/edit/invite', async c => {
+    const user = currentUser(c.req.raw)
+    if (!user) return redirect('/enter?next=' + encodeURIComponent('/account/edit/invite'))
+    const f = await form(c.req.raw, 8_000)
+    const submitted = f.emails || ''
+    const returnPath = f.from ? safeNext(f.from) : undefined
+    const emails = [...new Set(submitted.split(/[\s,]+/u).map(value => value.trim().toLowerCase()).filter(Boolean))]
+    const renderError = (error: string, status = 400) =>
+      page(<InviteFriends user={user} emails={submitted} error={error} returnPath={returnPath} />, status)
+    if (!emails.length) return renderError('Enter at least one email address.')
+    if (emails.length > 20) return renderError('You can invite up to 20 friends at a time.')
+    if (emails.some(email => email.length > 254 || !emailPattern.test(email))) {
+      return renderError('Check the email addresses and try again. Separate each address with a space or comma.')
+    }
+    const limited = authLimit(c, 'friend-invite-user', String(user.id), { attempts: 5, windowSeconds: 60 * 60 })
+    if (limited) {
+      return retryPage(renderError(authRateLimitMessage(limited.retryAfter), 429), limited.retryAfter)
+    }
+    const origin = Bun.env.APP_URL?.replace(/\/$/, '') || new URL(c.req.url).origin
+    try {
+      for (const email of emails) {
+        const account = accountForEmail(db, email)
+        const link = issueMagicLink(email, account?.id ?? null, '/', origin, db, INVITATION_LINK_LIFETIME_MS)
+        try {
+          await sendFriendInvitation(email, link.url, user.handle)
+        }
+        catch (error) {
+          const value = new URL(link.url).searchParams.get('token') || ''
+          db.query('DELETE FROM magic_links WHERE token_hash=?').run(hash(value))
+          throw error
+        }
+      }
+    }
+    catch (error) {
+      console.error('Could not send friend invitations', error)
+      return renderError('The invitations could not all be sent. Please try again later.', 503)
+    }
+    return page(<InviteFriends user={user} sent={emails.length} returnPath={returnPath} />)
+  })
+
   app.get('/account/accounts', c => {
     const user = currentUser(c.req.raw)
     if (!user) return redirect('/enter?next=' + encodeURIComponent('/account/accounts'))

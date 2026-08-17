@@ -234,6 +234,45 @@ test('magic link requested by handle is sent to the account email', async () => 
   expect(entered.status).toBe(303)
 })
 
+test('signed-in users can invite a deduplicated list of friends with join magic links', async () => {
+  const cookie = await signup('inviter', 'inviter@example.com', 'unused', 'invite-signup')
+  const invitePage = await request('/account/edit/invite', { cookie })
+  expect(invitePage.status).toBe(200)
+  const inviter = database.query('SELECT id FROM users WHERE handle=?').get('inviter') as { id: number }
+  expect(database.query('SELECT 1 FROM invite_banner_dismissals WHERE user_id=?').get(inviter.id)).toBeDefined()
+  const inviteHtml = await invitePage.text()
+  expect(inviteHtml).toContain('<p class="eyebrow">share textlog</p>')
+  expect(inviteHtml).toContain('<h2>Bring your friends along</h2>')
+  expect(inviteHtml).not.toContain('account settings')
+  expect(inviteHtml).toContain('class="secondary-action cancel-action"')
+  expect(inviteHtml).not.toContain('>back</a>')
+  expect(inviteHtml).toContain('Your friends will get a magic link to join textlog.')
+  expect(inviteHtml).toContain('name="emails"')
+
+  const invited = await request('/account/edit/invite', {
+    method: 'POST',
+    cookie,
+    form: { emails: 'First.Invite@example.com, second-invite@example.com first.invite@example.com' },
+  })
+  expect(invited.status).toBe(200)
+  expect(await invited.text()).toContain('2 invitations sent.')
+
+  const firstMessages = capturedEmails().filter(item => item.to === 'first.invite@example.com')
+  const secondMessages = capturedEmails().filter(item => item.to === 'second-invite@example.com')
+  expect(firstMessages).toHaveLength(1)
+  expect(secondMessages).toHaveLength(1)
+  expect(firstMessages[0]?.subject).toBe("You've been invited to textlog")
+  expect(firstMessages[0]?.text).toContain('Your friend @inviter has invited you to join textlog.')
+  expect(firstMessages[0]?.text).toContain('Click on this magic link to join')
+  const invitationExpiry = database.query('SELECT expires_at,created_at FROM magic_links WHERE email=?')
+    .get('first.invite@example.com') as { expires_at: number; created_at: number }
+  expect(invitationExpiry.expires_at - invitationExpiry.created_at).toBe(7 * 24 * 60 * 60 * 1000)
+
+  const joined = await request(`/enter/magic?token=${encodeURIComponent(linkToken(firstMessages[0]!))}`)
+  expect(joined.status).toBe(303)
+  expect(joined.headers.get('location')).toBe('/choose-handle?next=%2Fexplore%3Fwelcome%3D1')
+})
+
 test('accounts sharing an email can be created, switched, and selected by magic-link login', async () => {
   const email = 'personas@example.com'
   const primaryCookie = await signup('persona_primary', email, 'unused', 'personas-signup')
@@ -567,7 +606,15 @@ test('consequential account, content, reporting, and admin flows work over HTTP'
   const fullyDismissedHome = await (await request('/for-you', {
     cookie: aliceCookie, userAgent: 'alice-dismissed-browser',
   })).text()
-  expect(fullyDismissedHome).toContain('donate to support us')
+  expect(fullyDismissedHome).toContain('href="/account/edit/invite">invite friends</a>')
+  const dismissedInvite = await request('/invite/banner/dismiss', {
+    method: 'POST', cookie: aliceCookie, userAgent: 'alice-dismissed-browser',
+  })
+  expect(dismissedInvite.status).toBe(303)
+  const setupDismissedHome = await (await request('/for-you', {
+    cookie: aliceCookie, userAgent: 'alice-dismissed-browser',
+  })).text()
+  expect(setupDismissedHome).toContain('donate to support us')
   const acceptedDonation = await request('/donation/banner/accept', {
     cookie: aliceCookie, userAgent: 'alice-dismissed-browser',
   })
@@ -629,6 +676,7 @@ test('consequential account, content, reporting, and admin flows work over HTTP'
   expect(welcomeExploreHtml).not.toContain('action="/search"')
   expect(welcomeExploreHtml).toContain('href="/account/edit/notifications">enable notifications</a>')
   expect(welcomeExploreHtml).toContain('href="/account/edit/appearance">customize appearance</a>')
+  expect(welcomeExploreHtml).toContain('href="/account/edit/invite">invite friends</a>')
   expect(welcomeExploreHtml).toContain('href="/account/password/enable">set up a password</a>')
   const publicProfile = await request('/u/alice', { cookie: aliceCookie })
   expect(publicProfile.status).toBe(200)

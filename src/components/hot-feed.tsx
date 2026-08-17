@@ -16,7 +16,7 @@ export function HotFeed(
     title?: string
     path?: string
     pageUrl?: string
-  notificationBanner?: false | 'notifications' | 'appearance' | 'notification-update' | 'donate'
+  notificationBanner?: false | 'notifications' | 'appearance' | 'invite' | 'notification-update' | 'donate'
   },
 ) {
   const viewerId = user?.id ?? -1
