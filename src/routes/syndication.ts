@@ -1,8 +1,10 @@
 import type { Database } from 'bun:sqlite'
 import type { Context, Hono, Next } from 'hono'
 import { API_DEFAULT_LIMIT, apiHotPosts, apiOrigin, apiPosts } from '../api'
+import { apiActivities } from '../api-activity'
 import { appName } from '../brand'
 import { db } from '../db'
+import { userForFeedKey } from '../feed-keys'
 import { resolveHandle } from '../handles'
 import { type SyndicationFormat, syndicationResponse } from '../syndication'
 
@@ -93,12 +95,55 @@ export function registerSyndicationRoutes(app: Hono, database: Database = db,
     })
   }
 
+  const personalized = (c: Context, key: string, format: SyndicationFormat) => {
+    const viewer = userForFeedKey(database, key)
+    if (!viewer) return c.text('Not found', 404)
+    const origin = apiOrigin(c.req.url, appUrl)
+    const feedPath = `/feeds/for-you/${encodeURIComponent(key)}.${format}`
+    const activities = apiActivities(database, origin, viewer, { limit: 100, cursor: null, toMe: false })
+    const posts = activities.data.flatMap(activity =>
+      ['post', 'reply', 'mention'].includes(activity.type) && 'body' in activity.payload ? [activity.payload] : [])
+    const postTitlePrefixes = Object.fromEntries(activities.data.flatMap(activity =>
+      activity.type === 'mention' && 'body' in activity.payload ? [[activity.payload.id, 'Mentioned you: ']] : []))
+    const activityEntries = activities.data.flatMap(activity => {
+      if (['post', 'reply', 'mention'].includes(activity.type) || 'body' in activity.payload) return []
+      const { actor, target } = activity.payload
+      const title = activity.type === 'signup'
+        ? `@${actor.handle} signed up`
+        : target && 'handle' in target
+        ? `@${actor.handle} followed @${target.handle}`
+        : target && 'tag' in target
+        ? `@${actor.handle} followed #${target.tag}`
+        : `@${actor.handle} followed someone`
+      return [{ id: `${origin}/activities/${encodeURIComponent(activity.id)}`, title,
+        url: target?.url || actor.url, created_at: activity.created_at, author: actor }]
+    })
+    const response = syndicationResponse(format, {
+      title: `For You on ${name}`,
+      description: `The personalized For You notes for @${viewer.handle}.`,
+      pageUrl: `${origin}/for-you`,
+      feedUrl: `${origin}${feedPath}`,
+      posts,
+      activities: activityEntries,
+      postTitlePrefixes,
+    }, 'private, no-store, max-age=0')
+    response.headers.set('pragma', 'no-cache')
+    response.headers.set('expires', '0')
+    return response
+  }
+
   for (const format of ['rss', 'atom'] as const) {
     app.get(`/latest.${format}`, c => latest(c, format))
     app.get(`/hot.${format}`, c => hot(c, format))
     app.get(`/api/v1/feeds/latest.${format}`, c => latest(c, format, `/api/v1/feeds/latest.${format}`))
     app.get(`/api/v1/feeds/hot.${format}`, c => hot(c, format, `/api/v1/feeds/hot.${format}`))
   }
+
+  app.get('/feeds/for-you/:file', c => {
+    const parsed = suffixed(c.req.param('file'))
+    if (!parsed) return c.text('Not found', 404)
+    return personalized(c, parsed.name, parsed.format)
+  })
 
   app.get('/u/:file', async (c, next: Next) => {
     const parsed = suffixed(c.req.param('file'))

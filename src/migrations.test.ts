@@ -4,6 +4,30 @@ import { databaseVersion, latestMigrationVersion, migrations, runMigrations } fr
 import { sessionHash } from './sessions'
 
 describe('database migrations', () => {
+  test('upgrades the original single feed key schema without invalidating its key', () => {
+    const database = new Database(':memory:')
+    database.run(`PRAGMA foreign_keys=ON;
+      CREATE TABLE users(id INTEGER PRIMARY KEY);
+      INSERT INTO users VALUES(7);
+      CREATE TABLE feed_keys (
+        user_id INTEGER PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
+        token_hash TEXT NOT NULL UNIQUE,created_at INTEGER NOT NULL);
+      INSERT INTO feed_keys VALUES(7,'existing-hash',1234);
+      PRAGMA user_version=91;`)
+
+    expect(runMigrations(database)).toBe(92)
+    expect(database.query(`SELECT id,token_hash,user_id,name,created_at,expires_at,last_used_at
+      FROM feed_keys`).get()).toEqual({
+      id: 1,
+      token_hash: 'existing-hash',
+      user_id: 7,
+      name: 'original feed key',
+      created_at: 1234,
+      expires_at: null,
+      last_used_at: null,
+    })
+  })
+
   test('builds the current schema from an empty database and is idempotent', () => {
     const database = new Database(':memory:')
     database.run('PRAGMA foreign_keys=ON')
@@ -67,6 +91,9 @@ describe('database migrations', () => {
     ).get()).toEqual({ count: 1 })
     expect(database.query(
       'SELECT count(*) count FROM sqlite_master WHERE type=\'table\' AND name=\'api_keys\'',
+    ).get()).toEqual({ count: 1 })
+    expect(database.query(
+      'SELECT count(*) count FROM sqlite_master WHERE type=\'table\' AND name=\'feed_keys\'',
     ).get()).toEqual({ count: 1 })
     expect(database.query(
       'SELECT count(*) count FROM sqlite_master WHERE type=\'table\' AND name=\'account_groups\'',

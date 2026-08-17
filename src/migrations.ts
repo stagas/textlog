@@ -1140,6 +1140,31 @@ export const migrations: Migration[] = [
       addColumn(database, 'users', 'show_link_previews', 'INTEGER NOT NULL DEFAULT 1 CHECK(show_link_previews IN (0,1))')
     },
   },
+  {
+    version: 91,
+    name: 'personalized_feed_keys',
+    up(database) {
+      database.run(`CREATE TABLE IF NOT EXISTS feed_keys (
+        user_id INTEGER PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
+        token_hash TEXT NOT NULL UNIQUE,created_at INTEGER NOT NULL);`)
+    },
+  },
+  {
+    version: 92,
+    name: 'multiple_personalized_feed_keys',
+    up(database) {
+      database.run(`CREATE TABLE feed_keys_new (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,token_hash TEXT NOT NULL UNIQUE,
+        user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        name TEXT NOT NULL CHECK(length(name) BETWEEN 1 AND 64),created_at INTEGER NOT NULL,
+        expires_at INTEGER,last_used_at INTEGER);
+      INSERT INTO feed_keys_new(token_hash,user_id,name,created_at)
+        SELECT token_hash,user_id,'original feed key',created_at FROM feed_keys;
+      DROP TABLE feed_keys;
+      ALTER TABLE feed_keys_new RENAME TO feed_keys;
+      CREATE INDEX feed_keys_user_created ON feed_keys(user_id,created_at DESC);`)
+    },
+  },
 ]
 
 export const latestMigrationVersion = migrations.at(-1)!.version

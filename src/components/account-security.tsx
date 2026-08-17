@@ -1,15 +1,17 @@
 import { type User } from '../db'
-import type { ApiKeyView, SessionView } from '../types'
+import type { ApiKeyView, FeedKeyView, SessionView } from '../types'
 import { AccountSettingsHeader } from './account-settings-header'
 import { maskEmail } from './email-address'
 import { Layout } from './layout'
 import { CenteredPanel } from './panel'
 import { FormActions, FormMessage } from './page-shared'
 
-export function AccountSecurity({ user, sessions, apiKeys = [], passwordEnabled, error, success, returnPath }: {
+export function AccountSecurity({ user, sessions, apiKeys = [], feedKeys = [], passwordEnabled, error, success,
+  returnPath }: {
   user: User
   sessions: SessionView[]
   apiKeys?: ApiKeyView[]
+  feedKeys?: FeedKeyView[]
   passwordEnabled?: boolean
   error?: string
   success?: string
@@ -90,6 +92,37 @@ export function AccountSecurity({ user, sessions, apiKeys = [], passwordEnabled,
                     </span>
                   </div>
                   <form method="post" action="/account/api-keys/revoke">
+                    <input type="hidden" name="id" value={key.id} />
+                    <button className="quiet danger">revoke</button>
+                  </form>
+                </article>
+              ))}
+            </div>
+          )}
+        </section>
+        <section className="security-section">
+          <h2>Feed key</h2>
+          <p>
+            Create a private, read-only RSS or Atom feed for your For You timeline. Treat its URL like a password.
+          </p>
+          <a className="button" href="/account/feed-keys/new">generate feed key →</a>
+          {feedKeys.length > 0 && (
+            <div className="session-list api-key-list">
+              {feedKeys.map(key => (
+                <article key={key.id}>
+                  <div>
+                    <strong>{key.name}</strong>
+                    <span>
+                      {key.last_used_at
+                        ? `last used ${new Date(key.last_used_at).toLocaleDateString('en')}`
+                        : 'never used'}
+                      {' · '}
+                      {key.expires_at
+                        ? `expires ${new Date(key.expires_at).toLocaleDateString('en')}`
+                        : 'never expires'}
+                    </span>
+                  </div>
+                  <form method="post" action="/account/feed-keys/revoke">
                     <input type="hidden" name="id" value={key.id} />
                     <button className="quiet danger">revoke</button>
                   </form>
@@ -200,6 +233,62 @@ export function AccountApiKey({ user, name, value }: { user: User; name: string;
         </p>
         <FormActions primary={<a className="button" href="/account/security">I saved it</a>} />
       </CenteredPanel>
+    </Layout>
+  )
+}
+
+export function AccountFeedKey({ user, rssUrl, atomUrl }: { user: User; rssUrl: string; atomUrl: string }) {
+  return (
+    <Layout user={user} title="Feed key created">
+      <CenteredPanel className="magic-link-page api-key-created-page" width="medium">
+        <h1>Feed key created</h1>
+        <p>Copy these feed URLs now. This key will not be shown again.</p>
+        {([['RSS', rssUrl], ['Atom', atomUrl]] as const).map(([format, url]) => (
+          <label className="magic-link-output" key={format}>
+            <span><a href={url}>{format} feed</a></span>
+            <output className="form-control magic-link-value api-key-output feed-url-output" tabIndex={0}
+              aria-label={`${format} feed URL`}>
+              {url}
+            </output>
+          </label>
+        ))}
+        <p>Anyone with one of these URLs can read your personalized feed. They cannot modify your account. Treat them
+          like secrets.</p>
+        <FormActions primary={<a className="button" href="/account/security">I saved it</a>} />
+      </CenteredPanel>
+    </Layout>
+  )
+}
+
+export function AccountFeedKeyCreate({ user, name = '', lifetime = 'year', error }: {
+  user: User; name?: string; lifetime?: string; error?: string
+}) {
+  return (
+    <Layout user={user} title="generate feed key">
+      <section className="security-header"><AccountSettingsHeader title="generate feed key" /></section>
+      <div className="security-page api-key-create-page">
+        <p className="api-key-create-intro">Create a read-only key for your personalized For You feed.</p>
+        <FormMessage error={error} />
+        <form className="security-form api-key-form" method="post" action="/account/feed-keys">
+          <label>key name<input name="name" required minLength={1} maxLength={64} placeholder="my feed reader"
+            defaultValue={name} autoFocus autoComplete="off" /></label>
+          <fieldset className="api-key-lifetimes">
+            <legend>expiration</legend>
+            {[
+              ['90-days', '90 days', 'For temporary feed readers'],
+              ['year', '1 year', 'A safer default for ongoing subscriptions'],
+              ['never', 'never', 'Remains valid until you revoke it'],
+            ].map(([value, label, description]) => (
+              <label className="api-key-lifetime" key={value}>
+                <input type="radio" name="lifetime" value={value} defaultChecked={value === lifetime} />
+                <span><strong>{label}</strong><small>{description}</small></span>
+              </label>
+            ))}
+          </fieldset>
+          <FormActions secondary={<a className="secondary-action cancel-action" href="/account/security">cancel</a>}
+            primary={<button className="button">generate feed key →</button>} />
+        </form>
+      </div>
     </Layout>
   )
 }

@@ -64,6 +64,13 @@ export function shouldLogHttp(path: string, status: number, isCrawler = false) {
   return !isCrawler && (path !== '/__dev/restart' || status >= 400)
 }
 
+export function redactHttpPath(value: string) {
+  return value.replace(/^\/feeds\/for-you\/[^?]+/, match => {
+    const format = match.endsWith('.atom') ? '.atom' : match.endsWith('.rss') ? '.rss' : ''
+    return `/feeds/for-you/[redacted]${format}`
+  })
+}
+
 export function clientIp(request: Request, socketIp?: string) {
   if (Bun.env.TRUST_PROXY === 'true') {
     const forwarded = request.headers.get('x-forwarded-for')?.split(',', 1)[0]?.trim()

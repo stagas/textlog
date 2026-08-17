@@ -127,6 +127,14 @@ export function ApiDocs({ user }: { user: User | null }) {
 /feeds/hot.atom
 /users/:handle/posts.rss
 /tags/:tag/posts.atom`}</code></pre>
+        <p>
+          Signed-in users can generate private, personalized For You RSS and Atom URLs under <strong>Feed key</strong>{' '}
+          in account security. These unguessable URLs are read-only, require no bearer header, and must be kept secret.
+          Each key can be named, expired, or revoked independently. Personalized feeds are marked private and are not
+          publicly cached.
+        </p>
+        <pre><code>{`/feeds/for-you/:key.rss
+/feeds/for-you/:key.atom`}</code></pre>
 
         <h2 id="public-archive">Public data archive</h2>
         <p>

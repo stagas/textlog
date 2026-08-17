@@ -133,9 +133,11 @@ export function securityPage(req: Request, error?: string, success?: string, sta
   const credentials = db.query('SELECT password FROM users WHERE id=?').get(user.id) as { password: string }
   const apiKeys = db.query(`SELECT id,name,created_at,expires_at,last_used_at FROM api_keys
     WHERE user_id=? ORDER BY created_at DESC`).all(user.id) as import('../types').ApiKeyView[]
+  const feedKeys = db.query(`SELECT id,name,created_at,expires_at,last_used_at FROM feed_keys
+    WHERE user_id=? ORDER BY created_at DESC`).all(user.id) as import('../types').FeedKeyView[]
   return page(
-    <AccountSecurity user={user} sessions={sessions} apiKeys={apiKeys} passwordEnabled={credentials.password !== '!'}
-      error={error} success={success} returnPath={returnPath} />,
+    <AccountSecurity user={user} sessions={sessions} apiKeys={apiKeys} feedKeys={feedKeys}
+      passwordEnabled={credentials.password !== '!'} error={error} success={success} returnPath={returnPath} />,
     status,
   )
 }

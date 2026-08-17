@@ -10,6 +10,16 @@ export type SyndicationFeed = {
   feedUrl: string
   posts: ApiPost[]
   omitAuthorInTitles?: boolean
+  activities?: SyndicationActivity[]
+  postTitlePrefixes?: Record<number, string>
+}
+
+export type SyndicationActivity = {
+  id: string
+  title: string
+  url: string
+  created_at: string
+  author: { handle: string; url: string }
 }
 
 function xml(value: string) {
@@ -31,16 +41,28 @@ function updated(posts: ApiPost[]) {
   return posts.reduce((latest, post) => post.created_at > latest ? post.created_at : latest, '1970-01-01T00:00:00.000Z')
 }
 
+function feedUpdated(feed: SyndicationFeed) {
+  return (feed.activities || []).reduce((latest, activity) => activity.created_at > latest
+    ? activity.created_at
+    : latest, updated(feed.posts))
+}
+
 function atom(feed: SyndicationFeed) {
-  const entries = feed.posts.map(post =>
+  const postEntries = feed.posts.map(post => ({ id: post.url,
+    title: `${feed.postTitlePrefixes?.[post.id] || ''}${itemTitle(post, !!feed.omitAuthorInTitles)}`,
+    url: post.url, created_at: post.created_at, author: post.author, content: sanitizedMarkdownHtml(post.body),
+    permalink: true }))
+  const allEntries = [...postEntries, ...(feed.activities || []).map(activity => ({ ...activity,
+    content: `<p>${activity.title}</p>`, permalink: false }))].sort((a, b) => b.created_at.localeCompare(a.created_at))
+  const entries = allEntries.map(entry =>
     `  <entry>
-    <title>${xml(itemTitle(post, !!feed.omitAuthorInTitles))}</title>
-    <id>${xml(post.url)}</id>
-    <link rel="alternate" href="${xml(post.url)}" />
-    <published>${xml(post.created_at)}</published>
-    <updated>${xml(post.created_at)}</updated>
-    <author><name>${xml(`@${post.author.handle}`)}</name><uri>${xml(post.author.url)}</uri></author>
-    <content type="html">${xml(sanitizedMarkdownHtml(post.body))}</content>
+    <title>${xml(entry.title)}</title>
+    <id>${xml(entry.id)}</id>
+    <link rel="alternate" href="${xml(entry.url)}" />
+    <published>${xml(entry.created_at)}</published>
+    <updated>${xml(entry.created_at)}</updated>
+    <author><name>${xml(`@${entry.author.handle}`)}</name><uri>${xml(entry.author.url)}</uri></author>
+    <content type="html">${xml(entry.content)}</content>
   </entry>`
   ).join('\n')
   return `<?xml version="1.0" encoding="utf-8"?>
@@ -50,20 +72,26 @@ function atom(feed: SyndicationFeed) {
   <id>${xml(feed.feedUrl)}</id>
   <link rel="self" type="application/atom+xml" href="${xml(feed.feedUrl)}" />
   <link rel="alternate" type="text/html" href="${xml(feed.pageUrl)}" />
-  <updated>${updated(feed.posts)}</updated>
+  <updated>${feedUpdated(feed)}</updated>
 ${entries}${entries ? '\n' : ''}</feed>
 `
 }
 
 function rss(feed: SyndicationFeed) {
-  const items = feed.posts.map(post =>
+  const postEntries = feed.posts.map(post => ({ id: post.url,
+    title: `${feed.postTitlePrefixes?.[post.id] || ''}${itemTitle(post, !!feed.omitAuthorInTitles)}`,
+    url: post.url, created_at: post.created_at, author: post.author, content: sanitizedMarkdownHtml(post.body),
+    permalink: true }))
+  const allEntries = [...postEntries, ...(feed.activities || []).map(activity => ({ ...activity,
+    content: `<p>${activity.title}</p>`, permalink: false }))].sort((a, b) => b.created_at.localeCompare(a.created_at))
+  const items = allEntries.map(entry =>
     `    <item>
-      <title>${xml(itemTitle(post, !!feed.omitAuthorInTitles))}</title>
-      <link>${xml(post.url)}</link>
-      <guid isPermaLink="true">${xml(post.url)}</guid>
-      <pubDate>${new Date(post.created_at).toUTCString()}</pubDate>
-      <dc:creator>${xml(`@${post.author.handle}`)}</dc:creator>
-      <description>${xml(sanitizedMarkdownHtml(post.body))}</description>
+      <title>${xml(entry.title)}</title>
+      <link>${xml(entry.url)}</link>
+      <guid isPermaLink="${entry.permalink}">${xml(entry.id)}</guid>
+      <pubDate>${new Date(entry.created_at).toUTCString()}</pubDate>
+      <dc:creator>${xml(`@${entry.author.handle}`)}</dc:creator>
+      <description>${xml(entry.content)}</description>
     </item>`
   ).join('\n')
   return `<?xml version="1.0" encoding="utf-8"?>
@@ -73,18 +101,19 @@ function rss(feed: SyndicationFeed) {
     <link>${xml(feed.pageUrl)}</link>
     <description>${xml(feed.description)}</description>
     <language>en</language>
-    <lastBuildDate>${new Date(updated(feed.posts)).toUTCString()}</lastBuildDate>
+    <lastBuildDate>${new Date(feedUpdated(feed)).toUTCString()}</lastBuildDate>
     <atom:link href="${xml(feed.feedUrl)}" rel="self" type="application/rss+xml" />
 ${items}${items ? '\n' : ''}  </channel>
 </rss>
 `
 }
 
-export function syndicationResponse(format: SyndicationFormat, feed: SyndicationFeed) {
+export function syndicationResponse(format: SyndicationFormat, feed: SyndicationFeed, cacheControl =
+  'public, max-age=60, stale-while-revalidate=300') {
   return new Response(format === 'atom' ? atom(feed) : rss(feed), {
     headers: {
       'content-type': `application/${format}+xml; charset=utf-8`,
-      'cache-control': 'public, max-age=60, stale-while-revalidate=300',
+      'cache-control': cacheControl,
     },
   })
 }

@@ -3,6 +3,8 @@ import { accountChoices, accountGroupForUser, isPrimaryAccount, selectAccount } 
 import { accountForEmail } from '../account-groups'
 import { anonymizeUser, isAdmin } from '../admin'
 import { issueApiKey } from '../api-keys'
+import { apiOrigin } from '../api'
+import { issueFeedKey } from '../feed-keys'
 import { AUTH_LIMITS, authRateLimitMessage } from '../auth-rate-limit'
 import { currentUser, hash, hashPassword, sessionToken, token, verifyPassword } from '../utils'
 import { authLimit, clientAddress, form, issueEmailToken, issueMagicLink, page, redirect, retryPage, safeNext,
@@ -14,6 +16,8 @@ import type { PostingSuggestionSearch } from '../components/page-shared'
 import {
   AccountApiKey,
   AccountApiKeyCreate,
+  AccountFeedKey,
+  AccountFeedKeyCreate,
   AccountMagicLink,
   AccountPassword,
   AccountSwitcher,
@@ -486,6 +490,8 @@ export function registerAccountRoutes(app: Hono) {
       ? 'Email address verified and changed.'
       : c.req.query('verified') === '1'
       ? 'Email address verified.'
+      : c.req.query('revoked') === 'feed'
+      ? 'Feed key revoked. Its RSS and Atom URLs no longer work.'
       : undefined, 200, returnPath)
   })
 
@@ -539,6 +545,46 @@ export function registerAccountRoutes(app: Hono) {
     const f = await form(c.req.raw)
     if (/^\d+$/.test(f.id || '')) db.query('DELETE FROM api_keys WHERE id=? AND user_id=?').run(Number(f.id), user.id)
     return redirect('/account/security')
+  })
+
+  app.get('/account/feed-keys/new', c => {
+    const user = currentUser(c.req.raw)
+    return user ? page(<AccountFeedKeyCreate user={user} />)
+      : redirect('/enter?next=' + encodeURIComponent('/account/feed-keys/new'))
+  })
+
+  app.post('/account/feed-keys', async c => {
+    const user = currentUser(c.req.raw)
+    if (!user) return redirect('/enter')
+    const limited = authLimit(c, 'feed-key-create', `${user.id}:${clientAddress(c)}`, AUTH_LIMITS.sensitiveAccount)
+    if (limited) return retryPage(securityPage(c.req.raw, authRateLimitMessage(limited.retryAfter), undefined, 429),
+      limited.retryAfter)
+    const f = await form(c.req.raw)
+    const name = (f.name || '').trim()
+    const lifetimes: Record<string, number | null> = {
+      '90-days': 90 * 24 * 60 * 60 * 1000, year: 365 * 24 * 60 * 60 * 1000, never: null,
+    }
+    if (!name || name.length > 64 || !Object.hasOwn(lifetimes, f.lifetime)) {
+      return page(<AccountFeedKeyCreate user={user} name={name} lifetime={f.lifetime}
+        error="Enter a key name and choose a valid expiration." />, 400)
+    }
+    const count = (db.query(`SELECT count(*) count FROM feed_keys
+      WHERE user_id=? AND (expires_at IS NULL OR expires_at>?)`).get(user.id, Date.now()) as { count: number }).count
+    if (count >= 20) return page(<AccountFeedKeyCreate user={user} name={name} lifetime={f.lifetime}
+      error="Revoke an existing key before creating another." />, 400)
+    const lifetime = lifetimes[f.lifetime]
+    const issued = issueFeedKey(db, user.id, name, lifetime === null ? null : Date.now() + lifetime)
+    const origin = apiOrigin(c.req.url)
+    return page(<AccountFeedKey user={user} rssUrl={`${origin}/feeds/for-you/${issued.value}.rss`}
+      atomUrl={`${origin}/feeds/for-you/${issued.value}.atom`} />)
+  })
+
+  app.post('/account/feed-keys/revoke', async c => {
+    const user = currentUser(c.req.raw)
+    if (!user) return redirect('/enter')
+    const f = await form(c.req.raw)
+    if (/^\d+$/.test(f.id || '')) db.query('DELETE FROM feed_keys WHERE id=? AND user_id=?').run(Number(f.id), user.id)
+    return redirect('/account/security?revoked=feed')
   })
 
   app.get('/account/password/enable', c => {

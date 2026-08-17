@@ -3,11 +3,15 @@ import { describe, expect, test } from 'bun:test'
 import { Hono } from 'hono'
 import { rebuildHotPosts } from './hot'
 import { registerSyndicationRoutes } from './routes/syndication'
+import { issueFeedKey } from './feed-keys'
+import { syndicationResponse } from './syndication'
 
 function fixture(firstPostBody?: string) {
   const database = new Database(':memory:')
   database.run(`
-    CREATE TABLE users (id INTEGER PRIMARY KEY,handle TEXT NOT NULL,deleted_at TEXT,is_bot INTEGER NOT NULL DEFAULT 0);
+    CREATE TABLE users (id INTEGER PRIMARY KEY,handle TEXT NOT NULL,email TEXT NOT NULL DEFAULT '',bio TEXT NOT NULL DEFAULT '',
+      deleted_at TEXT,suspended_at TEXT,email_verified_at TEXT,handle_chosen_at TEXT,is_bot INTEGER NOT NULL DEFAULT 0,
+      bot_managed INTEGER,timezone TEXT,show_link_previews INTEGER);
     CREATE TABLE handle_history (handle TEXT PRIMARY KEY COLLATE NOCASE,user_id INTEGER NOT NULL);
     CREATE TABLE posts (id INTEGER PRIMARY KEY,user_id INTEGER NOT NULL,parent_id INTEGER,body TEXT NOT NULL,
       created_at TEXT NOT NULL,deleted_at TEXT);
@@ -15,7 +19,20 @@ function fixture(firstPostBody?: string) {
     CREATE TABLE post_hot (post_id INTEGER PRIMARY KEY,score REAL NOT NULL DEFAULT 0,reply_count INTEGER NOT NULL DEFAULT 0,
       activity_count INTEGER NOT NULL DEFAULT 0,
       score_updated_at TEXT NOT NULL,latest_activity_at TEXT NOT NULL);
-    INSERT INTO users VALUES(1,'Alice',NULL,0),(2,'Bob',NULL,1),(3,'Gone','2026-08-03 00:00:00',0);
+    CREATE TABLE feed_keys (id INTEGER PRIMARY KEY AUTOINCREMENT,user_id INTEGER,token_hash TEXT NOT NULL UNIQUE,
+      name TEXT NOT NULL,created_at INTEGER NOT NULL,expires_at INTEGER,last_used_at INTEGER);
+    CREATE TABLE follows (follower_id INTEGER,following_id INTEGER,created_at TEXT);
+    CREATE TABLE hashtag_follows (user_id INTEGER,tag TEXT,created_at TEXT);
+    CREATE TABLE blocks (blocker_id INTEGER,blocked_id INTEGER);
+    CREATE TABLE blocked_hashtags (user_id INTEGER,tag TEXT);
+    CREATE TABLE post_mentions (post_id INTEGER,user_id INTEGER);
+    CREATE TABLE for_you_reads (user_id INTEGER,event_key TEXT);
+    INSERT INTO users(id,handle,email,bio,deleted_at,is_bot) VALUES
+      (1,'Alice','alice@example.com','',NULL,0),(2,'Bob','bob@example.com','',NULL,1),
+      (3,'Gone','gone@example.com','','2026-08-03 00:00:00',0),(4,'Reader','reader@example.com','',NULL,0);
+    INSERT INTO follows VALUES(4,1,'2026-08-01 00:00:00');
+    INSERT INTO follows VALUES(1,2,'2026-08-03 09:00:00');
+    INSERT INTO hashtag_follows VALUES(4,'textlog','2026-08-01 00:00:00');
     INSERT INTO handle_history VALUES('oldalice',1);
     INSERT INTO posts VALUES
       (1,1,NULL,'hello & <friends> #textlog','2026-08-03 10:00:00',NULL),
@@ -31,10 +48,30 @@ function fixture(firstPostBody?: string) {
   registerSyndicationRoutes(app, database, null)
   app.get('/u/:handle', c => c.text(`profile ${c.req.param('handle')}`))
   app.get('/tag/:tag', c => c.text(`tag ${c.req.param('tag')}`))
+  ;(app as any).database = database
   return app
 }
 
 describe('RSS and Atom feeds', () => {
+  test('renders follow and signup activity as stable syndication entries', async () => {
+    const response = syndicationResponse('atom', {
+      title: 'For You', description: 'Personalized activity', pageUrl: 'https://textlog.cc/for-you',
+      feedUrl: 'https://textlog.cc/feeds/for-you/key.atom', posts: [], activities: [{
+        id: 'https://textlog.cc/activities/follow-1', title: '@alice followed @bob',
+        url: 'https://textlog.cc/u/bob', created_at: '2026-08-03T09:00:00.000Z',
+        author: { handle: 'alice', url: 'https://textlog.cc/u/alice' },
+      }, {
+        id: 'https://textlog.cc/activities/signup-2', title: '@carol signed up',
+        url: 'https://textlog.cc/u/carol', created_at: '2026-08-03T10:00:00.000Z',
+        author: { handle: 'carol', url: 'https://textlog.cc/u/carol' },
+      }],
+    })
+    const body = await response.text()
+    expect(body).toContain('<title>@alice followed @bob</title>')
+    expect(body).toContain('<title>@carol signed up</title>')
+    expect(body).toContain('<updated>2026-08-03T10:00:00.000Z</updated>')
+  })
+
   test('serves latest RSS as escaped, public XML', async () => {
     const response = await fixture().request('https://textlog.cc/latest.rss')
     const body = await response.text()
@@ -110,5 +147,24 @@ describe('RSS and Atom feeds', () => {
     const app = fixture()
     expect(await (await app.request('https://textlog.cc/u/Alice')).text()).toBe('profile Alice')
     expect(await (await app.request('https://textlog.cc/tag/textlog')).text()).toBe('tag textlog')
+  })
+
+  test('serves retained personalized keys privately and invalidates only revoked keys', async () => {
+    const app = fixture()
+    const database = (app as any).database as Database
+    const first = issueFeedKey(database, 4, 'first', null)
+    const rss = await app.request(`https://textlog.cc/feeds/for-you/${first.value}.rss`)
+    expect(rss.status).toBe(200)
+    expect(rss.headers.get('cache-control')).toBe('private, no-store, max-age=0')
+    expect(rss.headers.get('pragma')).toBe('no-cache')
+    expect(await rss.text()).toContain('<title>For You on textlog</title>')
+
+    const second = issueFeedKey(database, 4, 'second', null)
+    expect((await app.request(`https://textlog.cc/feeds/for-you/${first.value}.rss`)).status).toBe(200)
+    database.query('DELETE FROM feed_keys WHERE id=?').run(first.id)
+    expect((await app.request(`https://textlog.cc/feeds/for-you/${first.value}.rss`)).status).toBe(404)
+    const atom = await app.request(`https://textlog.cc/feeds/for-you/${second.value}.atom`)
+    expect(atom.status).toBe(200)
+    expect(atom.headers.get('content-type')).toBe('application/atom+xml; charset=utf-8')
   })
 })

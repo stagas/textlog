@@ -14,7 +14,7 @@ import { databaseHealth } from './database-health'
 import { db } from './db'
 import { isDevelopment } from './environment'
 import { localImageFile, usesLocalImageStorage } from './image-storage'
-import { clientIp, logError, logHttp, logReady, shouldLogHttp } from './log'
+import { clientIp, logError, logHttp, logReady, redactHttpPath, shouldLogHttp } from './log'
 import { startMaintenance } from './maintenance'
 import { clearMaterializedFeedPages } from './materialized-feed-pages'
 import { renderDefaultOg } from './og'
@@ -143,7 +143,7 @@ app.use('*', async (c, next) => {
     const url = new URL(c.req.url)
     const path = url.pathname
     if (shouldLogHttp(path, c.res.status, isCrawlerRequest(c.req.raw))) {
-      logHttp(c.req.method, `${path}${url.search}`, c.res.status, performance.now() - started,
+      logHttp(c.req.method, redactHttpPath(`${path}${url.search}`), c.res.status, performance.now() - started,
         c.req.header(clientIpHeaderName()) || '-', username, c.req.header('user-agent') || '-')
     }
   }

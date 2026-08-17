@@ -2358,6 +2358,12 @@ textarea.form-control {
   white-space: nowrap;
 }
 
+.magic-link-output .feed-url-output {
+  overflow-wrap: anywhere;
+  word-break: break-all;
+  white-space: normal;
+}
+
 .magic-link-output textarea:focus-visible,
 .magic-link-output input:focus-visible,
 .magic-link-output .magic-link-value:focus-visible {

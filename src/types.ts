@@ -77,6 +77,7 @@ export type SessionView = { token: string; created_at: number; expires_at: numbe
 
 export type ApiKeyView = { id: number; name: string; created_at: number; expires_at: number | null;
   last_used_at: number | null }
+export type FeedKeyView = ApiKeyView
 
 export type DashboardStats = {
   users: number

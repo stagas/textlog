@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test'
 import { ipPseudonym, logIpPseudonym } from './ip-privacy'
-import { clientIp, logHttp, semanticAction, shouldLogHttp } from './log'
+import { clientIp, logHttp, redactHttpPath, semanticAction, shouldLogHttp } from './log'
 
 describe('semanticAction', () => {
   test('names user actions without including identifiers', () => {
@@ -85,6 +85,13 @@ describe('shouldLogHttp', () => {
     expect(shouldLogHttp('/missing', 404, true)).toBe(false)
     expect(shouldLogHttp('/latest', 200, false)).toBe(true)
   })
+})
+
+test('feed request logs preserve the route and format without exposing the key', () => {
+  expect(redactHttpPath('/feeds/for-you/tlf_super-secret.atom')).toBe('/feeds/for-you/[redacted].atom')
+  expect(redactHttpPath('/feeds/for-you/tlf_super-secret?preview=1')).toBe('/feeds/for-you/[redacted]?preview=1')
+  expect(redactHttpPath('/latest.rss')).toBe('/latest.rss')
+  expect(shouldLogHttp('/feeds/for-you/tlf_super-secret', 200)).toBe(true)
 })
 
 describe('clientIp', () => {
