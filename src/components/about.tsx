@@ -47,7 +47,7 @@ export function About({ user }: { user: User | null }) {
             <h2>What's next?</h2>
             <ActionPair className="about-actions"
               primary={<a className="button" href="/enter" rel="nofollow">join the community</a>}
-              secondary={<a href="/">browse notes</a>} />
+              secondary={<a href="/hot">browse notes</a>} />
           </>
         )}
       </article>

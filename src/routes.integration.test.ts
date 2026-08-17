@@ -181,8 +181,10 @@ test('stats are public without exposing admin operations', async () => {
 
 test('only the donation banner is shown to logged-out visitors', async () => {
   const home = await request('/')
-  expect(home.status).toBe(303)
-  expect(home.headers.get('location')).toBe('/hot')
+  expect(home.status).toBe(200)
+  const homeHtml = await home.text()
+  expect(homeHtml).toContain('<p class="eyebrow">about</p>')
+  expect(homeHtml).toContain('href="/hot">browse notes</a>')
   for (const path of ['/hot', '/latest']) {
     const response = await request(path)
     expect(response.status).toBe(200)
@@ -669,8 +671,8 @@ test('consequential account, content, reporting, and admin flows work over HTTP'
       followingNotes: 1, bots: 0, followingOnlyToMe: 0 },
   })
   const cacheBustedHome = await request('/?v=94721')
-  expect(cacheBustedHome.status).toBe(303)
-  expect(cacheBustedHome.headers.get('location')).toBe('/hot?v=94721')
+  expect(cacheBustedHome.status).toBe(200)
+  expect(await cacheBustedHome.text()).toContain('<p class="eyebrow">about</p>')
   const publicExplore = await request('/explore', { cookie: aliceCookie })
   expect(publicExplore.status).toBe(200)
   const publicExploreHtml = await publicExplore.text()

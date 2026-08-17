@@ -84,9 +84,10 @@ function rememberInviteBanner(userId: number) {
 export function registerFeedsRoutes(app: Hono) {
   app.get('/', c => {
     const user = currentUser(c.req.raw)
+    if (!user) return page(<About user={null} />)
     const preferredFeed = feedPreference(c.req.raw)
     const path = preferredFeed === 'latest' ? '/latest'
-      : preferredFeed === 'hot' || !user ? '/hot' : '/for-you'
+      : preferredFeed === 'hot' ? '/hot' : '/for-you'
     return redirect(path + new URL(c.req.url).search)
   })
 

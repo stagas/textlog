@@ -801,7 +801,7 @@ describe('About', () => {
     expect(html).toContain('class="action-pair about-actions"')
     expect(html).toContain('<span class="action-separator">or</span>')
     expect(html).toContain('class="button" href="/enter" rel="nofollow">join the community</a>')
-    expect(html).toContain('href="/">browse notes</a>')
+    expect(html).toContain('href="/hot">browse notes</a>')
   })
 
   test('does not show the guest calls to action to signed-in visitors', () => {
