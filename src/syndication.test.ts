@@ -157,6 +157,7 @@ describe('RSS and Atom feeds', () => {
     expect(rss.status).toBe(200)
     expect(rss.headers.get('cache-control')).toBe('private, no-store, max-age=0')
     expect(rss.headers.get('pragma')).toBe('no-cache')
+    expect(rss.headers.get('access-control-allow-origin')).toBe('*')
     expect(await rss.text()).toContain('<title>For You on textlog</title>')
 
     const second = issueFeedKey(database, 4, 'second', null)

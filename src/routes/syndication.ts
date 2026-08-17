@@ -133,6 +133,7 @@ export function registerSyndicationRoutes(app: Hono, database: Database = db,
     }, 'private, no-store, max-age=0')
     response.headers.set('pragma', 'no-cache')
     response.headers.set('expires', '0')
+    response.headers.set('access-control-allow-origin', '*')
     return response
   }
 
@@ -149,13 +150,15 @@ export function registerSyndicationRoutes(app: Hono, database: Database = db,
       const key = c.req.param('file')
       if (!userForFeedKey(database, key)) return c.text('Not found', 404)
       const origin = apiOrigin(c.req.url, appUrl)
-      return page(React.createElement(PersonalizedFeedLanding, {
+      const response = page(React.createElement(PersonalizedFeedLanding, {
         landingUrl: `${origin}/feeds/for-you/${encodeURIComponent(key)}`,
         rssUrl: `${origin}/feeds/for-you/${encodeURIComponent(key)}.rss`,
         atomUrl: `${origin}/feeds/for-you/${encodeURIComponent(key)}.atom`,
         user: currentUser(c.req.raw),
         created: c.req.query('created') === '1',
       }))
+      response.headers.set('access-control-allow-origin', '*')
+      return response
     }
     return personalized(c, parsed.name, parsed.format)
   })
