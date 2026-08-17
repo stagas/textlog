@@ -2364,6 +2364,10 @@ textarea.form-control {
   white-space: normal;
 }
 
+.magic-link-output .feed-self-link {
+  font-size: 0.75rem;
+}
+
 .magic-link-output textarea:focus-visible,
 .magic-link-output input:focus-visible,
 .magic-link-output .magic-link-value:focus-visible {

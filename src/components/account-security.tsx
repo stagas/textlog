@@ -64,7 +64,7 @@ export function AccountSecurity({ user, sessions, apiKeys = [], feedKeys = [], p
             {passwordEnabled ? 'change password →' : 'enable password login →'}
           </a>
         </section>
-        <section className="security-section">
+        <section className="security-section" id="api-keys">
           <h2>API keys</h2>
           <p>Create a bearer token for scripts and apps. Keys are shown once and can be revoked at any time.</p>
           <a className="button" href={`/account/api-keys/new${fromQuery}`}>generate API key →</a>
@@ -100,7 +100,7 @@ export function AccountSecurity({ user, sessions, apiKeys = [], feedKeys = [], p
             </div>
           )}
         </section>
-        <section className="security-section">
+        <section className="security-section" id="feed-keys">
           <h2>Feed key</h2>
           <p>
             Create a private, read-only RSS or Atom feed for your For You timeline. Treat its URL like a password.
@@ -131,7 +131,7 @@ export function AccountSecurity({ user, sessions, apiKeys = [], feedKeys = [], p
             </div>
           )}
         </section>
-        <section className="security-section">
+        <section className="security-section" id="sessions">
           <h2>sessions</h2>
           <div className="session-list">
             {sessions.map(session => (
@@ -231,29 +231,6 @@ export function AccountApiKey({ user, name, value }: { user: User; name: string;
           Store it like a password and send it as:<br />
           <code>Authorization: Bearer &lt;key&gt;</code>
         </p>
-        <FormActions primary={<a className="button" href="/account/security">I saved it</a>} />
-      </CenteredPanel>
-    </Layout>
-  )
-}
-
-export function AccountFeedKey({ user, rssUrl, atomUrl }: { user: User; rssUrl: string; atomUrl: string }) {
-  return (
-    <Layout user={user} title="Feed key created">
-      <CenteredPanel className="magic-link-page api-key-created-page" width="medium">
-        <h1>Feed key created</h1>
-        <p>Copy these feed URLs now. This key will not be shown again.</p>
-        {([['RSS', rssUrl], ['Atom', atomUrl]] as const).map(([format, url]) => (
-          <label className="magic-link-output" key={format}>
-            <span><a href={url}>{format} feed</a></span>
-            <output className="form-control magic-link-value api-key-output feed-url-output" tabIndex={0}
-              aria-label={`${format} feed URL`}>
-              {url}
-            </output>
-          </label>
-        ))}
-        <p>Anyone with one of these URLs can read your personalized feed. They cannot modify your account. Treat them
-          like secrets.</p>
         <FormActions primary={<a className="button" href="/account/security">I saved it</a>} />
       </CenteredPanel>
     </Layout>

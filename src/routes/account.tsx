@@ -3,7 +3,6 @@ import { accountChoices, accountGroupForUser, isPrimaryAccount, selectAccount } 
 import { accountForEmail } from '../account-groups'
 import { anonymizeUser, isAdmin } from '../admin'
 import { issueApiKey } from '../api-keys'
-import { apiOrigin } from '../api'
 import { issueFeedKey } from '../feed-keys'
 import { AUTH_LIMITS, authRateLimitMessage } from '../auth-rate-limit'
 import { currentUser, hash, hashPassword, sessionToken, token, verifyPassword } from '../utils'
@@ -16,7 +15,6 @@ import type { PostingSuggestionSearch } from '../components/page-shared'
 import {
   AccountApiKey,
   AccountApiKeyCreate,
-  AccountFeedKey,
   AccountFeedKeyCreate,
   AccountMagicLink,
   AccountPassword,
@@ -544,7 +542,7 @@ export function registerAccountRoutes(app: Hono) {
     if (!user) return redirect('/enter')
     const f = await form(c.req.raw)
     if (/^\d+$/.test(f.id || '')) db.query('DELETE FROM api_keys WHERE id=? AND user_id=?').run(Number(f.id), user.id)
-    return redirect('/account/security')
+    return redirect('/account/security#api-keys')
   })
 
   app.get('/account/feed-keys/new', c => {
@@ -574,9 +572,7 @@ export function registerAccountRoutes(app: Hono) {
       error="Revoke an existing key before creating another." />, 400)
     const lifetime = lifetimes[f.lifetime]
     const issued = issueFeedKey(db, user.id, name, lifetime === null ? null : Date.now() + lifetime)
-    const origin = apiOrigin(c.req.url)
-    return page(<AccountFeedKey user={user} rssUrl={`${origin}/feeds/for-you/${issued.value}.rss`}
-      atomUrl={`${origin}/feeds/for-you/${issued.value}.atom`} />)
+    return c.redirect(`/feeds/for-you/${issued.value}?created=1`, 303)
   })
 
   app.post('/account/feed-keys/revoke', async c => {
@@ -584,7 +580,7 @@ export function registerAccountRoutes(app: Hono) {
     if (!user) return redirect('/enter')
     const f = await form(c.req.raw)
     if (/^\d+$/.test(f.id || '')) db.query('DELETE FROM feed_keys WHERE id=? AND user_id=?').run(Number(f.id), user.id)
-    return redirect('/account/security?revoked=feed')
+    return redirect('/account/security?revoked=feed#feed-keys')
   })
 
   app.get('/account/password/enable', c => {
@@ -823,7 +819,7 @@ export function registerAccountRoutes(app: Hono) {
     }[]
     const target = sessions.find(session => session.token_hash === f.token && session.token_hash !== current)
     if (target) db.query('DELETE FROM sessions WHERE token_hash=? AND user_id=?').run(target.token_hash, user.id)
-    return redirect('/account/security')
+    return redirect('/account/security#sessions')
   })
 
   app.post('/account/sessions/revoke-others', c => {
@@ -831,7 +827,7 @@ export function registerAccountRoutes(app: Hono) {
     if (!user) return redirect('/enter')
     db.query('DELETE FROM sessions WHERE user_id=? AND token_hash!=?')
       .run(user.id, sessionHash(sessionToken(c.req.raw)))
-    return redirect('/account/security')
+    return redirect('/account/security#sessions')
   })
 
   app.get('/account/delete', c => {

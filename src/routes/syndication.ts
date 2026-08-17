@@ -1,12 +1,16 @@
 import type { Database } from 'bun:sqlite'
 import type { Context, Hono, Next } from 'hono'
+import React from 'react'
 import { API_DEFAULT_LIMIT, apiHotPosts, apiOrigin, apiPosts } from '../api'
 import { apiActivities } from '../api-activity'
 import { appName } from '../brand'
 import { db } from '../db'
 import { userForFeedKey } from '../feed-keys'
+import { PersonalizedFeedLanding } from '../components/personalized-feed-landing'
 import { resolveHandle } from '../handles'
 import { type SyndicationFormat, syndicationResponse } from '../syndication'
+import { page } from './shared'
+import { currentUser } from '../utils'
 
 function publicPosts(database: Database, origin: string,
   filters: { handle?: string; tag?: string; excludeBots?: boolean } = {}) {
@@ -141,7 +145,18 @@ export function registerSyndicationRoutes(app: Hono, database: Database = db,
 
   app.get('/feeds/for-you/:file', c => {
     const parsed = suffixed(c.req.param('file'))
-    if (!parsed) return c.text('Not found', 404)
+    if (!parsed) {
+      const key = c.req.param('file')
+      if (!userForFeedKey(database, key)) return c.text('Not found', 404)
+      const origin = apiOrigin(c.req.url, appUrl)
+      return page(React.createElement(PersonalizedFeedLanding, {
+        landingUrl: `${origin}/feeds/for-you/${encodeURIComponent(key)}`,
+        rssUrl: `${origin}/feeds/for-you/${encodeURIComponent(key)}.rss`,
+        atomUrl: `${origin}/feeds/for-you/${encodeURIComponent(key)}.atom`,
+        user: currentUser(c.req.raw),
+        created: c.req.query('created') === '1',
+      }))
+    }
     return personalized(c, parsed.name, parsed.format)
   })
 
