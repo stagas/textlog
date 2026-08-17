@@ -1165,6 +1165,36 @@ export const migrations: Migration[] = [
       CREATE INDEX feed_keys_user_created ON feed_keys(user_id,created_at DESC);`)
     },
   },
+  {
+    version: 93,
+    name: 'recap_email_subscription',
+    up(database) {
+      addColumn(database, 'users', 'recap_emails', 'INTEGER NOT NULL DEFAULT 1 CHECK(recap_emails IN (0,1))')
+    },
+  },
+  {
+    version: 94,
+    name: 'recap_unsubscribe_tokens',
+    up(database) {
+      database.run(`CREATE TABLE IF NOT EXISTS recap_unsubscribe_tokens (
+        token_hash TEXT PRIMARY KEY,user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP);`)
+    },
+  },
+  {
+    version: 95,
+    name: 'durable_recap_unsubscribe_tokens',
+    up(database) {
+      database.run(`CREATE TABLE recap_unsubscribe_tokens_new (
+        token_hash TEXT PRIMARY KEY,user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP);
+      INSERT INTO recap_unsubscribe_tokens_new(token_hash,user_id,created_at)
+        SELECT token_hash,user_id,created_at FROM recap_unsubscribe_tokens;
+      DROP TABLE recap_unsubscribe_tokens;
+      ALTER TABLE recap_unsubscribe_tokens_new RENAME TO recap_unsubscribe_tokens;
+      CREATE INDEX recap_unsubscribe_tokens_user ON recap_unsubscribe_tokens(user_id);`)
+    },
+  },
 ]
 
 export const latestMigrationVersion = migrations.at(-1)!.version

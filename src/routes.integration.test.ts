@@ -5,6 +5,7 @@ import { dirname, join, resolve } from 'node:path'
 import { Database } from 'bun:sqlite'
 import { createServer } from 'node:net'
 import { tmpdir } from 'node:os'
+import { issueRecapUnsubscribeToken } from './recap-emails'
 
 setDefaultTimeout(30_000)
 
@@ -529,7 +530,20 @@ test('consequential account, content, reporting, and admin flows work over HTTP'
   expect(authenticatedHomeHtml).not.toContain('href="/login">login</a>')
   expect(authenticatedHomeHtml).toContain('class="notification-banner"')
   const accountFromLatest = await request('/account/edit?from=%2Flatest%3Fpage%3D2', { cookie: aliceCookie })
-  expect(await accountFromLatest.text()).toContain('href="/latest?page=2">back</a>')
+  const accountFromLatestHtml = await accountFromLatest.text()
+  expect(accountFromLatestHtml).toContain('href="/latest?page=2">back</a>')
+  expect(accountFromLatestHtml).toContain('id="recap-emails"')
+  expect(accountFromLatestHtml).toContain('href="/account/recap-emails">manage recap emails</a>')
+  const recapToken = issueRecapUnsubscribeToken(database, alice.id)
+  const unsubscribedRecaps = await request(
+    '/account/recap-emails/unsubscribe?token=' + encodeURIComponent(recapToken),
+  )
+  expect(unsubscribedRecaps.status).toBe(200)
+  expect(await unsubscribedRecaps.text()).toContain('You have been unsubscribed.')
+  expect(database.query('SELECT recap_emails FROM users WHERE id=?').get(alice.id)).toEqual({ recap_emails: 0 })
+  const recapSettings = await (await request('/account/recap-emails', { cookie: aliceCookie })).text()
+  expect(recapSettings).toContain('name="subscribed" value="1"')
+  expect(recapSettings).toContain('>subscribe</button>')
   const rememberedActivity = await request('/activity', { cookie: aliceCookie })
   expect(rememberedActivity.status).toBe(303)
   expect(rememberedActivity.headers.get('location')).toBe('/to-me')

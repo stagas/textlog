@@ -70,6 +70,7 @@ export type ProfileRow = {
   is_bot?: number
   bot_managed?: number
   timezone?: string | null
+  recap_emails?: number
 }
 
 export type SessionView = { token: string; created_at: number; expires_at: number; user_agent: string;

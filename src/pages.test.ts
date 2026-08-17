@@ -30,6 +30,7 @@ import {
   PanelsGallery,
   postTitle,
   Profile,
+  RecapEmails,
   Reply,
 } from './components/pages'
 import { conversationTopPath, Post, postedReplyPath, replyAnchorReturnPath } from './components/post'
@@ -452,6 +453,27 @@ test('account settings pages share one consistent heading', () => {
     expect(html).toContain('<p class="eyebrow">account settings</p>')
     expect(html).toContain('<a class="profile-edit-link" href="/account/edit">back</a>')
   }
+})
+
+test('account settings link to a focused recap email preference panel', () => {
+  const user = { id: 1, handle: 'reader', email: 'reader@example.com', bio: '' }
+  const subscribed = renderToStaticMarkup(React.createElement(Profile, {
+    user,
+    profile: { ...user, recap_emails: 1 },
+    posts: [],
+    following: false,
+    editing: true,
+  }))
+  const unsubscribed = renderToStaticMarkup(React.createElement(RecapEmails, {
+    user, subscribed: false, changed: true,
+  }))
+
+  expect(subscribed).toContain('class="account-danger-zone" id="recap-emails"')
+  expect(subscribed).toContain('href="/account/recap-emails">manage recap emails</a>')
+  expect(unsubscribed).toContain('class="panel panel-surface panel-medium recap-emails-panel"')
+  expect(unsubscribed).toContain('name="subscribed" value="1"')
+  expect(unsubscribed).toContain('>subscribe</button>')
+  expect(unsubscribed).toContain('You have been unsubscribed.')
 })
 
 test('notification settings are the only account page that loads their client script', () => {

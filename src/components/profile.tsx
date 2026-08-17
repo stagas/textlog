@@ -204,6 +204,13 @@ export function Profile(
                   </div>
                   <a className="button" href={`/account/edit/notifications${fromQuery}`}>manage notifications</a>
                 </div>
+                <div className="account-danger-zone" id="recap-emails">
+                  <div>
+                    <strong>Recap emails</strong>
+                    <span>Receive occasional emails about new features and popular notes.</span>
+                  </div>
+                  <a className="button" href="/account/recap-emails">manage recap emails</a>
+                </div>
                 <div className="account-danger-zone">
                   <div>
                     <strong>Invite friends</strong>

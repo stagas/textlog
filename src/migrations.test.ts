@@ -15,7 +15,7 @@ describe('database migrations', () => {
       INSERT INTO feed_keys VALUES(7,'existing-hash',1234);
       PRAGMA user_version=91;`)
 
-    expect(runMigrations(database)).toBe(92)
+    expect(runMigrations(database)).toBe(95)
     expect(database.query(`SELECT id,token_hash,user_id,name,created_at,expires_at,last_used_at
       FROM feed_keys`).get()).toEqual({
       id: 1,
@@ -126,6 +126,8 @@ describe('database migrations', () => {
       WHERE type='table' AND name='donation_banner_dismissals'`).get()).toEqual({ count: 1 })
     expect(database.query(`SELECT count(*) count FROM sqlite_master
       WHERE type='table' AND name='invite_banner_dismissals'`).get()).toEqual({ count: 1 })
+    expect(database.query(`SELECT count(*) count FROM sqlite_master
+      WHERE type='table' AND name='recap_unsubscribe_tokens'`).get()).toEqual({ count: 1 })
     const deviceSettingColumns = (database.query('PRAGMA table_info(device_settings)').all() as { name: string }[])
       .map(column => column.name)
     expect(deviceSettingColumns).toContain('page_size')
@@ -133,6 +135,7 @@ describe('database migrations', () => {
     const migratedUserColumns = (database.query('PRAGMA table_info(users)').all() as { name: string }[])
       .map(column => column.name)
     expect(migratedUserColumns).toContain('show_link_previews')
+    expect(migratedUserColumns).toContain('recap_emails')
     const hashtagFollowColumns = (database.query('PRAGMA table_info(hashtag_follows)').all() as { name: string }[])
       .map(column => column.name)
     expect(hashtagFollowColumns).toContain('created_at')

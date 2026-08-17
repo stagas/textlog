@@ -25,6 +25,7 @@ import {
   InviteFriends,
   NotificationSettings,
   Profile,
+  RecapEmails,
 } from '../components/pages'
 import { exportUserData } from '../data-export'
 import { db } from '../db'
@@ -55,6 +56,7 @@ import { ACCENT_CHOICES, type AccentChoice, appearance, appearanceCookie, FONT_C
   type PrimaryFontChoice, primaryFontChoice, primaryFontCookie, SANS_SERIF_FONT_CHOICES, type SansSerifFontChoice,
   sansSerifFontChoice, sansSerifFontCookie, THEME_CHOICES, type ThemeChoice } from '../theme'
 import { DEFAULT_TIMEZONE, validTimezone } from '../timezone'
+import { accountForRecapToken } from '../recap-emails'
 
 function markAppearanceBannerHandled(request: Request, userId: number) {
   const userAgent = notificationUserAgent(request)
@@ -312,13 +314,41 @@ export function registerAccountRoutes(app: Hono) {
     const user = currentUser(c.req.raw)
     if (!user) return redirect('/enter?next=' + encodeURIComponent('/account/edit'))
     const returnPath = c.req.query('from') ? safeNext(c.req.query('from')) : undefined
-    const bot = db.query('SELECT is_bot,bot_managed,timezone FROM users WHERE id=?').get(user.id) as {
+    const bot = db.query('SELECT is_bot,bot_managed,timezone,recap_emails FROM users WHERE id=?').get(user.id) as {
       is_bot: number
       bot_managed: number
       timezone: string
+      recap_emails: number
     }
     return page(<Profile user={user} profile={{ ...user, ...bot }} posts={[]} following={false} editing
       returnPath={returnPath} />)
+  })
+
+  app.get('/account/recap-emails', c => {
+    const user = currentUser(c.req.raw)
+    if (!user) return redirect('/enter?next=' + encodeURIComponent('/account/recap-emails'))
+    const preference = db.query('SELECT recap_emails FROM users WHERE id=?').get(user.id) as { recap_emails: number }
+    return page(<RecapEmails user={user} subscribed={preference.recap_emails !== 0} />)
+  })
+
+  app.get('/account/recap-emails/unsubscribe', c => {
+    const value = c.req.query('token') || ''
+    const account = accountForRecapToken(db, value)
+    if (!account) return page(<RecapEmails subscribed={false} invalid />, 404)
+    db.query('UPDATE users SET recap_emails=0 WHERE id=?').run(account.id)
+    return page(<RecapEmails subscribed={false} token={value} changed />)
+  })
+
+  app.post('/account/recap-emails', async c => {
+    const user = currentUser(c.req.raw)
+    const f = await form(c.req.raw)
+    const tokenAccount = f.token ? accountForRecapToken(db, f.token) : null
+    const accountId = user?.id || tokenAccount?.id
+    if (!accountId) return redirect('/enter?next=' + encodeURIComponent('/account/recap-emails'))
+    if (f.subscribed !== '0' && f.subscribed !== '1') return redirect('/account/recap-emails')
+    const subscribed = f.subscribed === '1'
+    db.query('UPDATE users SET recap_emails=? WHERE id=?').run(subscribed ? 1 : 0, accountId)
+    return page(<RecapEmails user={user} subscribed={subscribed} token={user ? undefined : f.token} changed />)
   })
 
   app.post('/account/edit', async c => {

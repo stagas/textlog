@@ -18,6 +18,7 @@ import { clientIp, logError, logHttp, logReady, redactHttpPath, shouldLogHttp } 
 import { startMaintenance } from './maintenance'
 import { clearMaterializedFeedPages } from './materialized-feed-pages'
 import { renderDefaultOg } from './og'
+import { recapEmail } from './recap-email'
 import { startPublicArchive } from './public-archive'
 import { ClientErrorRateLimiter, HOURLY_REQUEST_BLOCK_SECONDS, HOURLY_REQUEST_RATE_LIMIT,
   HOURLY_REQUEST_RATE_WINDOW_SECONDS, rateLimitedResponse, RequestRateLimiter } from './request-rate-limit'
@@ -184,7 +185,7 @@ app.use('*', async (c, next) => {
   if (c.req.method !== 'GET' || !c.res.headers.get('content-type')?.includes('text/html')) return
   const url = new URL(c.req.url)
   const privatePath =
-    /^\/(?:enter|forgot-password|reset-password|choose-handle|write|compose|activity|admin|search|account|panels-gallery)(?:\/|$)/
+    /^\/(?:enter|forgot-password|reset-password|choose-handle|write|compose|activity|admin|search|account|panels-gallery|recap-email)(?:\/|$)/
       .test(url.pathname) || /^\/post\/\d+\/(?:edit|delete)$/.test(url.pathname)
   const transientParameters = ['reply', 'report', 'reported', 'edit', 'welcome', 'reset', 'token']
   const navigationOnly = url.searchParams.has('from')
@@ -352,6 +353,8 @@ app.get('/og.png', () => {
 
 app.get('/client-error', c => clientErrorPage(c.req.raw))
 app.get('/panels-gallery', c => page(<PanelsGallery user={currentUser(c.req.raw)} />))
+app.get('/recap-email', c => c.html(recapEmail(db, c.req.url, 'audit-preview'), 200,
+  { 'cache-control': 'private, no-store' }))
 app.get('/server-error', () => {
   throw new Error('Intentional server error route')
 })

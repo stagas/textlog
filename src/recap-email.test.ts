@@ -1,0 +1,47 @@
+import { expect, test } from 'bun:test'
+import { Database } from 'bun:sqlite'
+import { recapEmail } from './recap-email'
+
+test('recap email renders the launch highlights as a standalone email document', () => {
+  const database = new Database(':memory:')
+  database.run('CREATE TABLE users (id INTEGER PRIMARY KEY, handle TEXT NOT NULL)')
+  database.run(`CREATE TABLE posts (
+    id INTEGER PRIMARY KEY, user_id INTEGER NOT NULL, body TEXT NOT NULL, deleted_at TEXT
+  )`)
+  const html = recapEmail(database, 'https://preview.textlog.test/recap-email', 'recipient-token')
+
+  expect(html).toStartWith('<!doctype html>')
+  expect(html).toContain('A lot has happened.<br>Quietly, of course.')
+  expect(html).toContain('Write it your way')
+  expect(html).toContain('Find your people')
+  expect(html).toContain('Follow the conversation')
+  expect(html).toContain('Make it feel like yours')
+  expect(html).toContain('Stay close, anywhere')
+  expect(html).toContain('Built to travel')
+  expect(html).toContain('Textlog in your pocket')
+  expect(html).toContain('href="https://github.com/Faultless/textlog_flutter"')
+  expect(html).toContain('>A mobile app for Android phones</a>')
+  expect(html).toContain('href="https://frontendienst.nl/"')
+  expect(html).toContain('>Serge Kamel aka Faultless</a>')
+  expect(html).toContain('/write"')
+  expect(html).toContain('/search"')
+  expect(html).toContain('/explore"')
+  expect(html).toContain('/for-you"')
+  expect(html).toContain('/to-me"')
+  expect(html).toContain('/account/edit/appearance"')
+  expect(html).toContain('/account/edit/notifications"')
+  expect(html).toContain('account/edit/notifications" style="color:#55734a')
+  expect(html).toContain('>Notifications</a>')
+  expect(html).toContain('/account/accounts"')
+  expect(html).toContain('/account/security"')
+  expect(html).toContain('/latest.rss"')
+  expect(html).toContain('/latest.atom"')
+  expect(html).toContain('/api/embed-examples"')
+  expect(html).toContain('/api"')
+  expect(html).toContain('>a documented API with write access</a>')
+  expect(html).toContain('/dump.zip"')
+  expect(html).toContain('/account/recap-emails/unsubscribe?token=recipient-token"')
+  expect(html).toContain('>Unsubscribe from recap emails</a>')
+  expect(html).toContain('/hot"')
+  expect(html).not.toContain('Notes we kept thinking about')
+})
