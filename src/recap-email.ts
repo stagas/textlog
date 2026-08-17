@@ -150,8 +150,7 @@ export function recapEmail(database: Database, requestOrigin: string, unsubscrib
     <a href="${escapeHtml(origin)}" style="display:inline-block;color:#20231f;text-decoration:none">
       <img src="${
     escapeHtml(logoUrl)
-  }" width="24" height="24" alt="" style="display:inline-block;width:24px;height:24px;margin-right:8px;border:0;vertical-align:-6px">
-      <span style="font-size:18px;font-weight:800;letter-spacing:-1px">${escapeHtml(name)}</span>
+  }" width="24" height="24" alt="" style="display:inline-block;width:24px;height:24px;margin-right:5px;border:0;vertical-align:-6px"><span style="font-size:18px;font-weight:800;letter-spacing:-1px">${escapeHtml(name)}</span>
     </a>
   </td></tr>
   <tr><td bgcolor="#f1f5ee" style="border:1px solid #d9dbd4">
