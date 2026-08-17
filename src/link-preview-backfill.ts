@@ -8,7 +8,8 @@ import { postLinks } from './utils'
 
 export const LINK_PREVIEW_BACKFILL_DELAY_MS = 2500
 const R2_BACKFILL_STATUS_PREFIX = 'r2-backfill-'
-const POST_OG_REFETCH_STATUS_PREFIX = 'post-og-v3-refetch-'
+const LEGACY_POST_OG_REFETCH_STATUS_PREFIX = 'post-og-v3-refetch-'
+const POST_OG_REFETCH_STATUS_PREFIX = 'post-og-title-v2-refetch-'
 
 const wait = (milliseconds: number) => new Promise(resolve => setTimeout(resolve, milliseconds))
 
@@ -130,20 +131,25 @@ export async function runPostOgPreviewRefetch(database: Database, options: {
       url: string
       image_url: string
     }[]
+  const ownPostOgImage = (value: string) => {
+    try {
+      const image = new URL(/^https?:\/\//i.test(value) ? value : `https://${value.replace(/^\/+/, '')}`)
+      return image.host === new URL(origin).host && /^\/post\/[1-9]\d*\/og\.png$/.test(image.pathname)
+    }
+    catch { return false }
+  }
   const pending = origin ? rows.filter(row => {
     const previous = attempted.get(row.post_id, row.url) as { status: string } | null
     if (previous?.status.startsWith(POST_OG_REFETCH_STATUS_PREFIX)) return false
-    try {
-      const image = new URL(row.image_url)
-      return image.origin === origin && /^\/post\/[1-9]\d*\/og\.png$/.test(image.pathname)
-    }
-    catch { return false }
+    return ownPostOgImage(row.image_url)
+      || Boolean(previous?.status.startsWith(LEGACY_POST_OG_REFETCH_STATUS_PREFIX))
   }) : []
   log(`post OG preview refetch start pending=${pending.length}`)
   let saved = 0
   for (const row of pending) {
     record.run(row.post_id, row.url, `${POST_OG_REFETCH_STATUS_PREFIX}running`)
-    const previews = await discoverPreviews(row.url, database)
+    const previewUrl = /^https?:\/\//i.test(row.url) ? row.url : `https://${row.url.replace(/^\/+/, '')}`
+    const previews = await discoverPreviews(previewUrl, database)
     await saveLinkPreviews(database, row.post_id, previews)
     const status = previews.length ? 'saved' : 'no-preview'
     record.run(row.post_id, row.url, `${POST_OG_REFETCH_STATUS_PREFIX}${status}`)
