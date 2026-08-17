@@ -27,6 +27,23 @@ export function dashboardStats(database: Database): DashboardStats {
       WHERE users.deleted_at IS NULL
         AND activity.created_at>=datetime('now','start of day','-1 day')
         AND activity.created_at<datetime('now','start of day')) activeUsersYesterday,
+    (SELECT count(DISTINCT activity.user_id) FROM (
+      SELECT user_id,created_at FROM posts
+      UNION ALL SELECT follower_id,created_at FROM follows
+      UNION ALL SELECT blocker_id,created_at FROM blocks
+      UNION ALL SELECT reporter_id,created_at FROM reports
+    ) activity JOIN users ON users.id=activity.user_id
+      WHERE users.deleted_at IS NULL
+        AND activity.created_at>=datetime('now','-1 day')) activeUsers24h,
+    (SELECT count(DISTINCT users.id) FROM users JOIN (
+      SELECT user_id,created_at FROM posts
+      UNION ALL SELECT follower_id,created_at FROM follows
+      UNION ALL SELECT blocker_id,created_at FROM blocks
+      UNION ALL SELECT reporter_id,created_at FROM reports
+    ) activity ON activity.user_id=users.id
+      WHERE users.deleted_at IS NULL
+        AND users.created_at>=datetime('now','-1 day')
+        AND activity.created_at>=users.created_at) activatedNewUsers24h,
     (SELECT count(*) FROM users WHERE deleted_at IS NULL
       AND created_at>=datetime('now','start of day','-1 day')
       AND created_at<datetime('now','start of day')) usersYesterday,

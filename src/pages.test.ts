@@ -337,6 +337,8 @@ test('admin metrics use locale-aware number formatting', () => {
       replies: 0,
       openReports: 0,
       activeUsersYesterday: 0,
+      activeUsers24h: 56,
+      activatedNewUsers24h: 1,
       usersYesterday: 0,
       users24h: 1,
       users7d: 0,
@@ -356,7 +358,9 @@ test('admin metrics use locale-aware number formatting', () => {
 
   expect(html).toContain(`<strong>${(1234567).toLocaleString()}</strong><span>users</span>`)
   expect(html).toContain('<strong>12</strong><span>users online · 30m</span>')
+  expect(html).toContain('<strong>56</strong><span>active users · 24h</span>')
   expect(html).toContain(`<strong>${(100 / 3).toLocaleString(undefined, { maximumFractionDigits: 2 })}%</strong><span>Conversion rate - 24h</span>`)
+  expect(html).toContain('<strong>100%</strong><span>Signup-to-active conversion · 24h</span>')
   expect(html).toContain('<strong>34</strong><span>anonymous online · 30m</span>')
   expect(html).toContain('<strong>2/2.5</strong><span>median/avg notes per user</span>')
   expect(html).toContain('class="account-settings-heading admin-header"')
