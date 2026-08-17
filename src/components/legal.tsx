@@ -10,7 +10,7 @@ export function Legal({ user }: { user: User | null }) {
       <article className="static-page legal-page">
         <p className="eyebrow">legal</p>
         <h1 id="terms">Terms, privacy &amp; liability</h1>
-        <p className="legal-updated">Last updated: August 9, 2026</p>
+        <p className="legal-updated">Last updated: August 17, 2026</p>
 
         <h2>Your content and conduct</h2>
         <p>
@@ -33,6 +33,14 @@ export function Legal({ user }: { user: User | null }) {
           is provided “as is” and “as available,” without warranties of any kind. We do not promise that the service
           will always be available, secure, accurate, or free of errors. Features may change, and content or accounts
           may be suspended or removed when necessary to operate or protect the service.
+        </p>
+
+        <h2>Service communications</h2>
+        <p>
+          We send essential account, security, and legally required messages. We may also occasionally email account
+          holders a recap of new {name} features and popular public notes. Recap emails are optional: you can
+          unsubscribe at any time using the link in any recap email or the Recap emails control in account settings,
+          and you can subscribe again later.
         </p>
 
         <h2>Limitation of liability</h2>
@@ -62,8 +70,9 @@ export function Legal({ user }: { user: User | null }) {
           We use your personal information only as reasonably necessary to provide, maintain, secure and support
           {name}, respond to actions or requests you make, and meet our legal obligations. We do not sell or rent your
           personal information, share it for targeted advertising, or use it to build advertising profiles. We do not
-          send newsletters, promotions or other unnecessary email. We email you only for essential account and security
-          messages, actions you request, or notices we are required to send.
+          send advertising or third-party promotions. We email you for essential account and security messages,
+          actions you request, notices we are required to send, and occasional optional recaps about {name} features
+          and popular public notes. Every recap includes an unsubscribe link.
         </p>
 
         <h3>Data, purposes and legal bases</h3>
@@ -97,8 +106,10 @@ export function Legal({ user }: { user: User | null }) {
             aggregate audience measurement. We do not use them for advertising or cross-day tracking.
           </li>
           <li>
-            Email communications: performance of the service or steps you request, and legal obligations where a notice
-            requires receipt or decision communication. We do not send marketing email.
+            Email communications and preferences: performance of the service or steps you request, legal obligations
+            where a notice requires receipt or decision communication, and our legitimate interest in occasionally
+            informing account holders about service features and public community activity. You may object by
+            unsubscribing from recap emails at any time without affecting essential account or legal messages.
           </li>
         </ul>
 
@@ -116,7 +127,9 @@ export function Legal({ user }: { user: User | null }) {
         <p>
           Session records expire after 365 days of inactivity; password-reset, magic-link and email-change records after
           one hour; appearance cookies after one year; daily visitor pseudonyms after seven days; and application HTTP
-          logs after at most 14 days. Public account and content data, connections, followed hashtags and blocks are
+          logs after at most 14 days. Recap-email preferences, unsubscribe tokens, and campaign delivery records are
+          retained as needed to honor opt-outs and prevent duplicate delivery. Public account and content data,
+          connections, followed hashtags and blocks are
           held until you remove them or delete your account. Deletion anonymizes the account and content, while limited
           moderation, resolved report and audit records are retained for three years where needed to document decisions,
           establish legal claims and protect users. Open reports remain until reviewed. Backups follow the configured
@@ -128,7 +141,8 @@ export function Legal({ user }: { user: User | null }) {
           Depending on the circumstances, you may request access, correction, erasure, restriction, portability, or
           object to processing based on legitimate interests. Where processing relies on consent, you may withdraw it
           without affecting earlier processing. In account settings you can correct your handle and bio, change your
-          email, manage your password and sessions, download a JSON copy of your account data, and delete your account.
+          email, manage your password and sessions, subscribe or unsubscribe from recap emails, download a JSON copy of
+          your account data, and delete your account.
           {instance.operator.email && (
             <>
               You can also email <a href={`mailto:${instance.operator.email}`}>{instance.operator.email}</a>.

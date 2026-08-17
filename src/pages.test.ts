@@ -786,6 +786,9 @@ test('Legal privacy disclosures cover current account settings data', () => {
   expect(html).toContain('appearance cookie')
   expect(html).toContain('manage your password and sessions')
   expect(html).toContain('download a JSON copy of your account data')
+  expect(html).toContain('occasionally email account holders a recap')
+  expect(html).toContain('unsubscribe at any time')
+  expect(html).toContain('Every recap includes an unsubscribe link.')
 })
 
 test('Not found page gives visitors useful ways back into the site', () => {
