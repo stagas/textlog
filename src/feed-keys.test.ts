@@ -1,6 +1,6 @@
 import { Database } from 'bun:sqlite'
 import { expect, test } from 'bun:test'
-import { FEED_KEY_PREFIX, feedKeyHash, issueFeedKey, userForFeedKey } from './feed-keys'
+import { feedKeyHash, issueFeedKey, userForFeedKey } from './feed-keys'
 
 test('feed keys are random, hashed, retained, expiring, and independently revocable', () => {
   const database = new Database(':memory:')
@@ -12,8 +12,7 @@ test('feed keys are random, hashed, retained, expiring, and independently revoca
     INSERT INTO users(id,handle,email,bio) VALUES(1,'alice','alice@example.com','');`)
 
   const first = issueFeedKey(database, 1, 'first', null, 100)
-  expect(first.value.startsWith(FEED_KEY_PREFIX)).toBe(true)
-  expect(Buffer.from(first.value.slice(FEED_KEY_PREFIX.length), 'base64url').byteLength).toBe(32)
+  expect(first.value).toMatch(/^[a-f0-9]{64}$/)
   expect(database.query('SELECT token_hash FROM feed_keys WHERE id=?').get(first.id))
     .toEqual({ token_hash: feedKeyHash(first.value) })
   expect(userForFeedKey(database, first.value, 150)?.id).toBe(1)
@@ -23,6 +22,10 @@ test('feed keys are random, hashed, retained, expiring, and independently revoca
   expect(userForFeedKey(database, first.value, 250)?.id).toBe(1)
   expect(userForFeedKey(database, second.value, 250)?.handle).toBe('alice')
   expect(userForFeedKey(database, second.value, 301)).toBeNull()
+  const legacy = `tlf_${'A'.repeat(43)}`
+  database.query(`INSERT INTO feed_keys(token_hash,user_id,name,created_at)
+    VALUES(?,?,?,?)`).run(feedKeyHash(legacy), 1, 'legacy', 50)
+  expect(userForFeedKey(database, legacy, 250)?.id).toBe(1)
   database.query('DELETE FROM feed_keys WHERE id=?').run(first.id)
   expect(userForFeedKey(database, first.value, 250)).toBeNull()
 })
