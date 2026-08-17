@@ -13,7 +13,7 @@ import { currentPage, page, redirect, rememberFeed } from './shared'
 import type { Hono } from 'hono'
 import { db } from '../db'
 import { markAllForYouRead } from '../for-you-state'
-import { decodeHotCursor } from '../hot'
+import { decodeHotCursor, hotRankingVersion } from '../hot'
 import { materializedFeedPage } from '../materialized-feed-pages'
 import {
   donationBannerDismissed,
@@ -163,7 +163,7 @@ export function registerFeedsRoutes(app: Hono) {
         notificationBanner={notificationBanner} />,
     )
     const response = !notificationBanner && currentPage(c.req.query('page')) === 1 && !cursorValue
-      ? await materializedFeedPage(db, c.req.raw, 'hot', user?.id ?? -1, render)
+      ? await materializedFeedPage(db, c.req.raw, 'hot', user?.id ?? -1, render, undefined, false, hotRankingVersion)
       : render()
     return rememberFeed(response, 'hot')
   })

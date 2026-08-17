@@ -26,7 +26,7 @@ export type HotCursor = {
   direction: 'next' | 'previous'
 }
 
-export const hotRankingVersion = 85
+export const hotRankingVersion = 87
 const cursorVersion = hotRankingVersion
 const activityHalfLifeHours = 6
 const postWeight = 0
@@ -74,6 +74,8 @@ const recentPostTierBonus = 100
 const yesterdayPostHours = 48
 const yesterdayPostTierBonus = 50
 const recentReplyActivityBoost = 300
+const recentParticipantActivityWeight = 100
+const recentParticipantActivityHalfLifeHours = 1
 const matureDiscussionLowTierBonus = 16
 const matureDiscussionLowTierHours = 48
 
@@ -330,8 +332,16 @@ export function getHotPosts(
   ), branch_heads AS (
     SELECT root_id,head_id FROM branch_candidates
     WHERE branch_rank=1 AND head_direct_replies>=2 AND head_direct_replies>root_direct_replies
+  ), direct_participant_activity AS (
+    SELECT parent_id candidate_id,user_id,max(created_at) latest_reply_at FROM posts
+      WHERE parent_id IS NOT NULL AND deleted_at IS NULL GROUP BY parent_id,user_id
+  ), participant_recency AS (
+    SELECT candidate_id,sum(pow(0.5,max(0,(julianday(?) - julianday(latest_reply_at))*24)
+      /${recentParticipantActivityHalfLifeHours}.0)) participant_recency_score
+      FROM direct_participant_activity GROUP BY candidate_id
   ), ranking_time(as_of) AS (VALUES(?)), scored AS (
     SELECT h.post_id,h.reply_count,h.activity_count,
+      COALESCE(participant_recency.participant_recency_score,0) participant_recency_score,
       CASE WHEN branch_heads.head_id=h.post_id THEN 0 ELSE post_depth.depth END candidate_depth,
       max(0,(julianday(ranking_time.as_of)-julianday(p.created_at))*24) post_age_hours,
       max(0,(julianday(ranking_time.as_of)-julianday(h.latest_activity_at))*24) reply_age_hours,
@@ -373,8 +383,9 @@ export function getHotPosts(
           /${conversationDepthHalfLifeHours}) ELSE 0 END conversation_depth_reserve
     FROM post_hot h JOIN posts p ON p.id=h.post_id JOIN post_depth ON post_depth.id=p.id
     LEFT JOIN branch_heads ON branch_heads.head_id=h.post_id CROSS JOIN ranking_time
+    LEFT JOIN participant_recency ON participant_recency.candidate_id=h.post_id
   ), ranked_base AS (
-    SELECT post_id,post_age_hours,reply_age_hours,reply_count,
+    SELECT post_id,post_age_hours,reply_age_hours,reply_count,participant_recency_score,
       CASE WHEN candidate_depth=0 THEN 1 ELSE
         ${replyCandidateBaseWeight}*pow(${replyCandidateDepthWeight},candidate_depth-1) END candidate_weight,
       (CASE
@@ -392,6 +403,8 @@ export function getHotPosts(
       +candidate_weight*CASE WHEN base_score>0 AND reply_count>0 AND reply_age_hours<${recentReplyPriorityHours}
         THEN ${recentReplyActivityBoost}*CASE reply_count WHEN 1 THEN ${singleReplyRecentActivityWeight} ELSE 1 END
           *max(0,1-reply_age_hours/${recentReplyPriorityHours}.0) ELSE 0 END
+      +candidate_weight*CASE WHEN base_score>0 AND reply_count>=3 THEN
+        ${recentParticipantActivityWeight}*participant_recency_score ELSE 0 END
       +candidate_weight*CASE WHEN base_score>0 AND reply_count>1 AND post_age_hours<${recentPostBoostHours}
         THEN ${recentPostTierBonus}
         WHEN base_score>0 AND reply_count>1 AND post_age_hours<${yesterdayPostHours}
@@ -443,6 +456,6 @@ export function getHotPosts(
       h.latest_activity_at ${cursor?.direction === 'previous' ? 'ASC' : 'DESC'},
       p.created_at ${cursor?.direction === 'previous' ? 'ASC' : 'DESC'},
       p.id ${cursor?.direction === 'previous' ? 'ASC' : 'DESC'} LIMIT ?`)
-    .all(...parameters) as HotPost[]
+    .all(timestamp, ...parameters) as HotPost[]
   return cursor?.direction === 'previous' ? rows.reverse() : rows
 }

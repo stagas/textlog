@@ -25,6 +25,17 @@ test('reuses rendered HTML until the mutation generation changes', async () => {
   expect(await (await materializedFeedPage(primary, request, 'latest', -1, render, cache)).text()).toBe('<p>2</p>')
 })
 
+test('keeps cache versions separate', async () => {
+  const { primary, cache } = databases()
+  const request = new Request('https://textlog.test/hot')
+  let renders = 0
+  const render = () => new Response(`<p>${++renders}</p>`)
+  expect(await (await materializedFeedPage(primary, request, 'hot', -1, render, cache, false, 1)).text())
+    .toBe('<p>1</p>')
+  expect(await (await materializedFeedPage(primary, request, 'hot', -1, render, cache, false, 2)).text())
+    .toBe('<p>2</p>')
+})
+
 test('refreshes relative timestamps in cached HTML without rerendering', async () => {
   const { primary, cache } = databases()
   let renders = 0

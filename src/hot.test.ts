@@ -194,6 +194,25 @@ describe('hot feed ranking', () => {
     expect(results[0].hot_score).toBeGreaterThan(290)
   })
 
+  test('several very recent participants can lead hot', () => {
+    for (let userId = 2; userId <= 10; userId++) {
+      database.query('INSERT INTO users(id,handle) VALUES(?,?)').run(userId, `user-${userId}`)
+    }
+    post(1, '2026-08-03 10:00:00')
+    postBy(2, 2, '2026-08-03 10:30:00', 1)
+    postBy(3, 3, '2026-08-03 10:35:00', 1)
+    postBy(4, 4, '2026-08-03 10:40:00', 1)
+    post(10, '2026-07-20 12:00:00')
+    postBy(5, 11, '2026-08-03 11:20:00', 10)
+    postBy(6, 12, '2026-08-03 11:30:00', 10)
+    postBy(7, 13, '2026-08-03 11:40:00', 10)
+    postBy(8, 14, '2026-08-03 11:50:00', 10)
+    postBy(9, 15, '2026-08-03 11:45:00', 10)
+    postBy(10, 16, '2026-08-03 11:55:00', 10)
+
+    expect(getHotPosts(database, 20, null, asOf).map(result => result.id).slice(0, 2)).toEqual([10, 1])
+  })
+
   test('does not turn two-person back-and-forth depth into a large recent-reply boost', () => {
     post(1, '2026-08-03 08:00:00')
     post(2, '2026-08-03 08:00:00')

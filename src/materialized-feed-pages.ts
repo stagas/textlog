@@ -36,7 +36,8 @@ export function invalidateMaterializedFeedPages(viewerId: number, kinds: Materia
 }
 
 export async function materializedFeedPage(database: Database, request: Request, kind: MaterializedFeedKind,
-  viewerId: number, render: () => Response, cache: Database = cacheDb, rerenderForCache = false)
+  viewerId: number, render: () => Response, cache: Database = cacheDb, rerenderForCache = false,
+  cacheVersion = 0)
 {
   // Cached development HTML embeds the server's boot ID. Reusing it after a
   // restart makes the reload client refresh forever, so keep dev pages live.
@@ -45,7 +46,7 @@ export async function materializedFeedPage(database: Database, request: Request,
   const generation = (database.query('SELECT generation FROM feed_snapshot_generation WHERE id=1').get() as {
     generation: number
   }).generation
-  const variant = appearanceVariant(request)
+  const variant = `${cacheVersion ? `${cacheVersion}|` : ''}${appearanceVariant(request)}`
   const cached = cache.query(`SELECT html FROM materialized_feed_pages_v2
     WHERE kind=? AND viewer_id=? AND variant=? AND generation=?`).get(kind, viewerId, variant, generation) as {
       html: string
