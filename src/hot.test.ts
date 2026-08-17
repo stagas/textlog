@@ -45,6 +45,14 @@ function postBy(userId: number, id: number, createdAt: string, parentId: number 
   recordHotActivity(database, id)
 }
 
+function fillHotRootRanks() {
+  for (let id = 100; id <= 120; id++) {
+    post(id, '2026-08-03 12:00:00')
+    database.run(`UPDATE post_hot SET score=4,reply_count=2,activity_count=2,
+      score_updated_at='2026-08-03 12:00:00',latest_activity_at='2026-08-03 12:00:00' WHERE post_id=?`, [id])
+  }
+}
+
 describe('hot feed ranking', () => {
   test('excludes reply-free posts', () => {
     post(1, '2026-08-03 12:00:00')
@@ -329,7 +337,7 @@ describe('hot feed ranking', () => {
       .toEqual({ activity_count: 8 })
   })
 
-  test('progressively reduces standalone candidacy at each reply depth', () => {
+  test('strongly favors top-level posts over replies, then progressively penalizes reply depth', () => {
     database.run(`INSERT INTO users(id,handle) VALUES(2,'reply-author');
       INSERT INTO users(id,handle) VALUES(3,'nested-author');`)
     post(1, '2026-08-01 09:00:00')
@@ -338,13 +346,14 @@ describe('hot feed ranking', () => {
     database.run(`UPDATE post_hot SET score=4,reply_count=4,activity_count=4,
       score_updated_at='2026-08-02 11:00:00',latest_activity_at='2026-08-02 11:00:00'
       WHERE post_id IN (1,2,3)`)
+    fillHotRootRanks()
 
-    const results = getHotPosts(database, 20, null, asOf)
+    const results = getHotPosts(database, 100, null, asOf)
     const root = results.find(result => result.id === 1)!
     const direct = results.find(result => result.id === 2)!
     const nested = results.find(result => result.id === 3)!
-    expect(direct.hot_score).toBeCloseTo(root.hot_score * 0.1)
-    expect(nested.hot_score).toBeCloseTo(direct.hot_score * 0.6)
+    expect(direct.hot_score).toBeCloseTo(root.hot_score * 0.02 * 0.000000002)
+    expect(nested.hot_score).toBeLessThan(direct.hot_score * 0.01)
   })
 
   test('applies reply depth penalties to every freshness boost', () => {
@@ -356,13 +365,49 @@ describe('hot feed ranking', () => {
     database.run(`UPDATE post_hot SET score=4,reply_count=2,activity_count=2,
       score_updated_at='2026-08-03 12:00:00',latest_activity_at='2026-08-03 12:00:00'
       WHERE post_id IN (1,2,3)`)
+    fillHotRootRanks()
 
-    const results = getHotPosts(database, 20, null, asOf)
+    const results = getHotPosts(database, 100, null, asOf)
     const root = results.find(result => result.id === 1)!
     const direct = results.find(result => result.id === 2)!
     const nested = results.find(result => result.id === 3)!
-    expect(direct.hot_score).toBeCloseTo(root.hot_score * 0.1)
-    expect(nested.hot_score).toBeCloseTo(direct.hot_score * 0.6)
+    expect(direct.hot_score).toBeCloseTo(root.hot_score * 0.02 * 0.000000002)
+    expect(nested.hot_score).toBeLessThan(direct.hot_score * 0.001)
+  })
+
+  test('smoothly demotes a reply when its conversation root already ranks above it', () => {
+    database.run(`INSERT INTO users(id,handle) VALUES(2,'reply-author');
+      INSERT INTO users(id,handle) VALUES(3,'nested-author');`)
+    post(1, '2026-08-03 10:00:00')
+    postBy(2, 2, '2026-08-03 11:00:00', 1)
+    postBy(3, 3, '2026-08-03 12:00:00', 2)
+    database.run(`UPDATE post_hot SET score=4,reply_count=2,activity_count=2,
+      score_updated_at='2026-08-03 12:00:00',latest_activity_at='2026-08-03 12:00:00'
+      WHERE post_id IN (1,2)`)
+
+    const results = getHotPosts(database, 20, null, asOf)
+    const root = results.find(result => result.id === 1)!
+    const reply = results.find(result => result.id === 2)!
+    expect(root.hot_score).toBeGreaterThan(0)
+    expect(reply.hot_score).toBeCloseTo(root.hot_score * 0.02 * 0.000000002)
+    expect(reply.hot_score).toBeGreaterThan(0)
+  })
+
+  test('uses the same smooth coverage rule when the conversation root is outside the first page', () => {
+    database.run(`INSERT INTO users(id,handle) VALUES(2,'reply-author');
+      INSERT INTO users(id,handle) VALUES(3,'nested-author');`)
+    post(1, '2026-08-03 12:00:00')
+    postBy(2, 2, '2026-08-03 12:00:00', 1)
+    postBy(3, 3, '2026-08-03 12:00:00', 2)
+    database.run(`UPDATE post_hot SET score=4,reply_count=2,activity_count=2,
+      score_updated_at='2026-08-03 12:00:00',latest_activity_at='2026-08-03 12:00:00'
+      WHERE post_id IN (1,2)`)
+    fillHotRootRanks()
+
+    const results = getHotPosts(database, 100, null, asOf)
+    const root = results.find(result => result.id === 1)!
+    const reply = results.find(result => result.id === 2)!
+    expect(reply.hot_score).toBeCloseTo(root.hot_score * 0.02 * 0.000000002)
   })
 
   test('keeps a week-old large discussion on hot without outranking fresh replies', () => {
@@ -377,7 +422,8 @@ describe('hot feed ranking', () => {
 
     const results = getHotPosts(database, 100, null, asOf)
     expect(results.map(result => result.id).slice(0, 2)).toEqual([2, 1])
-    expect(results.find(result => result.id === 1)?.hot_score).toBeCloseTo(0.3)
+    expect(results.find(result => result.id === 1)?.hot_score)
+      .toBeCloseTo(0.3 * Math.pow(0.5, 28))
   })
 
   test('nested reply boosts halve at each level', () => {
@@ -435,7 +481,7 @@ describe('hot feed ranking', () => {
       .toBeCloseTo(0)
   })
 
-  test('direct and nested replies still rank independently', () => {
+  test('a covered reply remains smoothly ranked after incremental and full score rebuilds', () => {
     database.query('INSERT INTO users(id,handle) VALUES(?,?)').run(2, 'replier')
     post(1, '2026-07-30 12:00:00')
     postBy(2, 2, '2026-08-03 10:00:00', 1)

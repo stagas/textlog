@@ -470,7 +470,7 @@ header>.account-nav {
   display: -webkit-box;
   overflow: hidden;
   color: var(--ink);
-  font-size: 0.8125rem;
+  font-size: 0.75rem;
   line-height: 1.35;
   -webkit-box-orient: vertical;
   -webkit-line-clamp: 2;

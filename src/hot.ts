@@ -26,7 +26,7 @@ export type HotCursor = {
   direction: 'next' | 'previous'
 }
 
-export const hotRankingVersion = 67
+export const hotRankingVersion = 82
 const cursorVersion = hotRankingVersion
 const activityHalfLifeHours = 6
 const postWeight = 0
@@ -59,7 +59,14 @@ const longDiscussionCommentThreshold = 10
 const longDiscussionCommentScale = 0.005
 const longDiscussionCommentsPerDoubling = 5
 const replyCandidateDepthWeight = 0.6
-const replyCandidateBaseWeight = 0.1
+const replyCandidateBaseWeight = 0.02
+const replyRootCoverageScale = 0.0000001
+const hotTailRecencyHalfLifeHours = 6
+const hotTailRecencyFloor = 0.000000000001
+const hotTailRecencyFloorHalfLifeHours = 24
+const hotTailRecencyDepthWeight = 0.1
+const staleTailPostHours = 168
+const staleTailPostHalfLifeHours = 6
 const veryRecentReplyCandidateHours = 4
 const recentPostBoost = 4
 const recentPostBoostHours = 24
@@ -303,10 +310,11 @@ export function getHotPosts(
       cursor.createdAt, cursor.id)
   }
   parameters.push(limit)
-  const rows = database.query(`WITH RECURSIVE post_depth(id,depth) AS (
-    SELECT id,0 FROM posts WHERE parent_id IS NULL
+  const rows = database.query(`WITH RECURSIVE post_depth(id,depth,root_id) AS (
+    SELECT id,0,id FROM posts WHERE parent_id IS NULL
     UNION ALL
-    SELECT child.id,post_depth.depth+1 FROM post_depth JOIN posts child ON child.parent_id=post_depth.id
+    SELECT child.id,post_depth.depth+1,post_depth.root_id
+      FROM post_depth JOIN posts child ON child.parent_id=post_depth.id
   ), ranking_time(as_of) AS (VALUES(?)), scored AS (
     SELECT h.post_id,h.reply_count,h.activity_count,post_depth.depth candidate_depth,
       max(0,(julianday(ranking_time.as_of)-julianday(p.created_at))*24) post_age_hours,
@@ -361,8 +369,9 @@ export function getHotPosts(
       ELSE max(recency_score,conversation_depth_reserve) END)
       *CASE WHEN candidate_depth=0 THEN 1 ELSE
         ${replyCandidateBaseWeight}*pow(${replyCandidateDepthWeight},candidate_depth-1) END base_score FROM scored
-  ), ranked AS (
-    SELECT post_id,(base_score*(1+${recentPostBoost}*max(0,1-post_age_hours/${recentPostBoostHours}.0))
+  ), ranked_unaged AS (
+    SELECT post_id,reply_age_hours,
+      (base_score*(1+${recentPostBoost}*max(0,1-post_age_hours/${recentPostBoostHours}.0))
       +candidate_weight*CASE WHEN base_score>0 AND reply_count>0 AND reply_age_hours<${recentReplyPriorityHours}
         THEN ${recentReplyActivityBoost}*CASE reply_count WHEN 1 THEN ${singleReplyRecentActivityWeight} ELSE 1 END
           *max(0,1-reply_age_hours/${recentReplyPriorityHours}.0) ELSE 0 END
@@ -374,6 +383,32 @@ export function getHotPosts(
         AND reply_age_hours>=${recentReplyPriorityHours}
         AND reply_age_hours<${matureDiscussionLowTierHours} THEN ${matureDiscussionLowTierBonus} ELSE 0 END) hot_score
       FROM ranked_base
+  ), ranked_raw AS (
+    SELECT post_id,hot_score*CASE WHEN hot_score<1 THEN
+      pow(0.5,reply_age_hours/${hotTailRecencyHalfLifeHours}.0) ELSE 1 END hot_score
+    FROM ranked_unaged
+  ), ranked_candidates AS (
+    SELECT candidate.post_id,candidate.hot_score candidate_score FROM ranked_raw candidate
+  ), ranked_tree(post_id,candidate_score,coverage_weight,depth) AS (
+    SELECT candidate.post_id,candidate.candidate_score,1,0 FROM ranked_candidates candidate
+    JOIN posts p ON p.id=candidate.post_id WHERE p.parent_id IS NULL
+    UNION ALL
+    SELECT child.id,candidate.candidate_score,ranked_tree.coverage_weight
+      *CASE WHEN ranked_tree.candidate_score>=candidate.candidate_score THEN
+        min(1,${replyRootCoverageScale}*candidate.candidate_score/ranked_tree.candidate_score) ELSE 1 END,
+      ranked_tree.depth+1
+    FROM ranked_tree JOIN posts child ON child.parent_id=ranked_tree.post_id
+    JOIN ranked_candidates candidate ON candidate.post_id=child.id
+  ), ranked AS (
+    SELECT ranked_tree.post_id,(candidate_score*coverage_weight
+      +CASE WHEN candidate_score>0 THEN ${hotTailRecencyFloor}
+        *pow(0.5,max(0,(julianday(ranking_time.as_of)-julianday(h.latest_activity_at))*24)
+          /${hotTailRecencyFloorHalfLifeHours}.0)
+        *pow(${hotTailRecencyDepthWeight},ranked_tree.depth) ELSE 0 END)
+      *CASE WHEN ranked_tree.depth=0 THEN pow(0.5,max(0,
+        (julianday(ranking_time.as_of)-julianday(h.latest_activity_at))*24-${staleTailPostHours})
+          /${staleTailPostHalfLifeHours}.0) ELSE 1 END hot_score
+    FROM ranked_tree JOIN post_hot h ON h.post_id=ranked_tree.post_id CROSS JOIN ranking_time
   ) SELECT p.*,u.handle,ranked.hot_score,h.latest_activity_at,h.reply_count,h.activity_count
     FROM ranked JOIN post_hot h ON h.post_id=ranked.post_id
     JOIN posts p ON p.id=ranked.post_id JOIN users u ON u.id=p.user_id

@@ -241,7 +241,7 @@ describe('in-memory stylesheet', () => {
     expect(css).toContain('.link-previews-disabled .remote-link-menu:hover .remote-link-popover,')
     expect(css).toContain('.link-previews-disabled .remote-link-menu:focus-within .remote-link-popover {\n  display: none;')
     expect(css).toContain('.link-preview-setting {\n  display: flex;')
-    expect(css).toContain('font-size: 0.8125rem;')
+    expect(css).toContain('font-size: 0.75rem;')
     expect(css).toContain('.link-preview-setting .form-checkbox {\n  width: 16px;\n  height: 16px;')
   })
 
