@@ -1195,6 +1195,21 @@ export const migrations: Migration[] = [
       CREATE INDEX recap_unsubscribe_tokens_user ON recap_unsubscribe_tokens(user_id);`)
     },
   },
+  {
+    version: 96,
+    name: 'recap_email_deliveries',
+    up(database) {
+      database.run(`CREATE TABLE IF NOT EXISTS recap_email_deliveries (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,campaign_version TEXT NOT NULL,email TEXT NOT NULL,
+        user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        status TEXT NOT NULL CHECK(status IN ('sending','sent','failed','uncertain')),
+        run_id TEXT NOT NULL,idempotency_key TEXT NOT NULL UNIQUE,attempts INTEGER NOT NULL DEFAULT 0,
+        provider_id TEXT,error TEXT,created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,sent_at TEXT,
+        UNIQUE(campaign_version,email));
+      CREATE INDEX IF NOT EXISTS recap_email_deliveries_status
+        ON recap_email_deliveries(campaign_version,status,id);`)
+    },
+  },
 ]
 
 export const latestMigrationVersion = migrations.at(-1)!.version

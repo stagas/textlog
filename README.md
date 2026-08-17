@@ -45,6 +45,17 @@ the name; for example, `Notebook Garden` uses the `notebook-garden` cookie and `
 Transactional email supports Resend, SendGrid, and Google SMTP through `EMAIL_PROVIDER`. Configure the selected
 provider's credentials and `EMAIL_FROM` as documented in `.env.example`. Resend remains the default for compatibility.
 
+To send the V1 recap campaign through Resend, run `bun run email:recap:v1`. The command sends only to verified,
+non-suspended accounts subscribed to recap emails, deduplicates shared email addresses, and waits at least one second
+between Resend requests. Delivery state is stored by campaign version and email, so restarting the command skips
+completed or ambiguous deliveries. Resend rate limits honor `Retry-After` and reuse the same idempotency key. To create
+a future campaign, change `RECAP_CAMPAIGN_VERSION` and add a correspondingly named package script; the new version will
+be eligible for delivery even when an earlier version was sent.
+
+Run `bun run email:recap:v1 --test` first to send a `[TEST]` copy only to active accounts whose email appears in
+`instance.administrators`. Test sends deliberately ignore and do not modify campaign delivery history, so the command
+can be repeated and does not prevent the administrators from receiving the real campaign later.
+
 Public instance details—operator contact information, administrator emails, privacy authority, and optional IRC,
 GitHub, mobile-app, and donation links—live in `instance.config.ts`. Set an optional entry to `null` to omit it from the
 rendered pages or footer.

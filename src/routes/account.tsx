@@ -335,8 +335,16 @@ export function registerAccountRoutes(app: Hono) {
     const value = c.req.query('token') || ''
     const account = accountForRecapToken(db, value)
     if (!account) return page(<RecapEmails subscribed={false} invalid />, 404)
-    db.query('UPDATE users SET recap_emails=0 WHERE id=?').run(account.id)
+    db.query('UPDATE users SET recap_emails=0 WHERE email=?').run(account.email)
     return page(<RecapEmails subscribed={false} token={value} changed />)
+  })
+
+  app.post('/account/recap-emails/unsubscribe', c => {
+    const value = c.req.query('token') || ''
+    const account = accountForRecapToken(db, value)
+    if (!account) return c.text('Unsubscribe link unavailable', 404)
+    db.query('UPDATE users SET recap_emails=0 WHERE email=?').run(account.email)
+    return c.text('Unsubscribed', 200)
   })
 
   app.post('/account/recap-emails', async c => {
@@ -347,7 +355,8 @@ export function registerAccountRoutes(app: Hono) {
     if (!accountId) return redirect('/enter?next=' + encodeURIComponent('/account/recap-emails'))
     if (f.subscribed !== '0' && f.subscribed !== '1') return redirect('/account/recap-emails')
     const subscribed = f.subscribed === '1'
-    db.query('UPDATE users SET recap_emails=? WHERE id=?').run(subscribed ? 1 : 0, accountId)
+    db.query(`UPDATE users SET recap_emails=? WHERE email=(SELECT email FROM users WHERE id=?)`)
+      .run(subscribed ? 1 : 0, accountId)
     return page(<RecapEmails user={user} subscribed={subscribed} token={user ? undefined : f.token} changed />)
   })
 

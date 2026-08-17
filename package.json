@@ -13,6 +13,7 @@
     "archive:public": "bun scripts/archive-public-data.ts",
     "backfill:link-previews": "bun scripts/backfill-link-previews.ts",
     "backfill:post-og-previews": "bun scripts/backfill-post-og-previews.ts",
+    "email:recap:v1": "bun scripts/send-recap-email.ts",
     "stress:routes": "bun scripts/stress-routes.ts",
     "test": "bun test",
     "typecheck": "tsc --noEmit",
