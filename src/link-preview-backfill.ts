@@ -8,8 +8,8 @@ import { postLinks } from './utils'
 
 export const LINK_PREVIEW_BACKFILL_DELAY_MS = 2500
 const R2_BACKFILL_STATUS_PREFIX = 'r2-backfill-'
-const LEGACY_POST_OG_REFETCH_STATUS_PREFIX = 'post-og-v3-refetch-'
-const POST_OG_REFETCH_STATUS_PREFIX = 'post-og-title-v2-refetch-'
+const LEGACY_POST_OG_REFETCH_STATUS_PREFIXES = ['post-og-v3-refetch-', 'post-og-title-v2-refetch-']
+const POST_OG_REFETCH_STATUS_PREFIX = 'post-og-title-v3-refetch-'
 
 const wait = (milliseconds: number) => new Promise(resolve => setTimeout(resolve, milliseconds))
 
@@ -131,18 +131,25 @@ export async function runPostOgPreviewRefetch(database: Database, options: {
       url: string
       image_url: string
     }[]
-  const ownPostOgImage = (value: string) => {
+  const normalizedUrl = (value: string) => new URL(
+    /^https?:\/\//i.test(value) ? value : `https://${value.replace(/^\/+/, '')}`,
+  )
+  const ownPostOgImage = (value: string, previewUrl: string) => {
     try {
-      const image = new URL(/^https?:\/\//i.test(value) ? value : `https://${value.replace(/^\/+/, '')}`)
-      return image.host === new URL(origin).host && /^\/post\/[1-9]\d*\/og\.png$/.test(image.pathname)
+      const image = normalizedUrl(value)
+      const imagePost = image.pathname.match(/^\/post\/([1-9]\d*)\/og\.png$/)?.[1]
+      if (!imagePost) return false
+      if (image.host === new URL(origin).host) return true
+      const linked = normalizedUrl(previewUrl)
+      return linked.origin === image.origin && linked.pathname === `/post/${imagePost}`
     }
     catch { return false }
   }
   const pending = origin ? rows.filter(row => {
     const previous = attempted.get(row.post_id, row.url) as { status: string } | null
     if (previous?.status.startsWith(POST_OG_REFETCH_STATUS_PREFIX)) return false
-    return ownPostOgImage(row.image_url)
-      || Boolean(previous?.status.startsWith(LEGACY_POST_OG_REFETCH_STATUS_PREFIX))
+    return ownPostOgImage(row.image_url, row.url)
+      || LEGACY_POST_OG_REFETCH_STATUS_PREFIXES.some(prefix => previous?.status.startsWith(prefix))
   }) : []
   log(`post OG preview refetch start pending=${pending.length}`)
   let saved = 0

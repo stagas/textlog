@@ -56,7 +56,7 @@ describe('link preview backfill', () => {
       expect(await runBioLinkPreviewBackfill(database, { delayMs: 0, log: () => {} }))
         .toEqual({ pending: 1, fetched: 1, saved: 1 })
       expect(database.query('SELECT url,title FROM user_bio_link_previews').get()).toEqual({
-        url: 'http://localhost:3000/post/1', title: 'linked note',
+        url: 'http://localhost:3000/post/1', title: '@writer wrote on textlog',
       })
       expect(await runBioLinkPreviewBackfill(database, { delayMs: 0, log: () => {} }))
         .toEqual({ pending: 0, fetched: 0, saved: 0 })
@@ -76,12 +76,13 @@ describe('link preview backfill', () => {
         site_name TEXT,image_width INTEGER,image_height INTEGER,PRIMARY KEY(post_id,url));
       CREATE TABLE post_link_preview_backfill_attempts(post_id INTEGER,url TEXT,status TEXT,attempted_at TEXT
         DEFAULT CURRENT_TIMESTAMP,PRIMARY KEY(post_id,url));
-      INSERT INTO posts(id,body) VALUES(1,'one'),(2,'two'),(3,'three'),(4,'four');
+      INSERT INTO posts(id,body) VALUES(1,'one'),(2,'two'),(3,'three'),(4,'four'),(5,'five');
       INSERT INTO post_link_previews(post_id,url,image_url,title) VALUES
         (1,'https://remote.test/article','https://textlog.test/post/42/og.png?v=2','old'),
         (2,'https://other.test/article','https://cdn.test/post/42/og.png?v=2','untouched'),
         (3,'remote.test/no-protocol','textlog.test/post/43/og.png?v=2','old'),
-        (4,'https://remote.test/previously-run','images/previous.webp','old');
+        (4,'https://remote.test/previously-run','images/previous.webp','old'),
+        (5,'https://legacy-textlog.test/post/142','https://legacy-textlog.test/post/142/og.png?v=2','old');
       INSERT INTO post_link_preview_backfill_attempts(post_id,url,status) VALUES
         (4,'https://remote.test/previously-run','post-og-v3-refetch-saved');`)
     const fetched: string[] = []
@@ -92,7 +93,7 @@ describe('link preview backfill', () => {
     }
     try {
       expect(await runPostOgPreviewRefetch(database, { log: () => {}, discoverPreviews }))
-        .toEqual({ pending: 3, fetched: 3, saved: 3 })
+        .toEqual({ pending: 4, fetched: 4, saved: 4 })
       expect(database.query('SELECT image_url,title FROM post_link_previews WHERE post_id=1').get()).toEqual({
         image_url: 'https://cdn.test/refetched.png', title: 'refetched',
       })
@@ -105,6 +106,7 @@ describe('link preview backfill', () => {
         'https://remote.test/article',
         'https://remote.test/no-protocol',
         'https://remote.test/previously-run',
+        'https://legacy-textlog.test/post/142',
       ])
     }
     finally {

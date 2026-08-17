@@ -46,12 +46,10 @@ function ownPostPreview(database: Database, rawUrl: string) {
     .get(Number(match[1])) as { body: string; handle: string } | null
   if (!post) return null
   const text = post.body.replace(/\s+/g, ' ').trim()
-  const characters = [...text]
-  const title = characters.length > 60 ? `${characters.slice(0, 59).join('').trimEnd()}…` : text
   return {
     url: rawUrl,
     imageUrl: `${origin}/post/${match[1]}/og.png?v=3`,
-    title,
+    title: `@${post.handle} wrote on ${appName()}`,
     description: text.slice(0, 500),
     siteName: appName(),
     imageWidth: 1200,
