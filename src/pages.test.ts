@@ -414,7 +414,22 @@ test('appearance misc tab offers supported page sizes as radio cards', () => {
   expect(html).toContain('class="density-preview density-preview-compact"')
   expect(html).toContain('class="density-preview density-preview-regular"')
   expect(html).toContain('class="density-preview density-preview-relaxed"')
+  expect(html).toContain('name="showLinkPreviews" checked="" value="yes"')
+  expect(html).toContain('<legend>ui</legend>')
+  expect(html).toContain('Show link previews')
   expect(html).toContain('save misc →')
+})
+
+test('appearance misc tab can render link previews disabled', () => {
+  const html = renderToStaticMarkup(React.createElement(ChangeAppearance, {
+    user: { id: 1, handle: 'reader', email: 'reader@example.com', bio: '' },
+    selected: { theme: 'system', accent: 'theme' },
+    selectedFont: 'system',
+    selectedLinkPreviews: false,
+    tab: 'misc',
+  }))
+  expect(html).toContain('name="showLinkPreviews" value="yes"')
+  expect(html).not.toContain('name="showLinkPreviews" checked=""')
 })
 
 test('account settings pages share one consistent heading', () => {

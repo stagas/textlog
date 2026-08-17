@@ -236,6 +236,15 @@ describe('in-memory stylesheet', () => {
     expect(cardRule).toContain('cursor: pointer;')
   })
 
+  test('can suppress remote link previews for a signed-in user', async () => {
+    const css = await Bun.file(new URL('./styles.css', import.meta.url)).text()
+    expect(css).toContain('.link-previews-disabled .remote-link-menu:hover .remote-link-popover,')
+    expect(css).toContain('.link-previews-disabled .remote-link-menu:focus-within .remote-link-popover {\n  display: none;')
+    expect(css).toContain('.link-preview-setting {\n  display: flex;')
+    expect(css).toContain('font-size: 0.8125rem;')
+    expect(css).toContain('.link-preview-setting .form-checkbox {\n  width: 16px;\n  height: 16px;')
+  })
+
   test('keeps unsupported posting-help popovers hidden', async () => {
     const css = await Bun.file(new URL('./styles.css', import.meta.url)).text()
     expect(css).toContain('.posting-help-popover[popover] {\n  display: none;')

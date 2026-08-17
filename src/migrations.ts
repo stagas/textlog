@@ -1133,6 +1133,13 @@ export const migrations: Migration[] = [
       // The asynchronous, one-time refetch is performed by scripts/backfill-link-previews.ts.
     },
   },
+  {
+    version: 90,
+    name: 'user_link_preview_preference',
+    up(database) {
+      addColumn(database, 'users', 'show_link_previews', 'INTEGER NOT NULL DEFAULT 1 CHECK(show_link_previews IN (0,1))')
+    },
+  },
 ]
 
 export const latestMigrationVersion = migrations.at(-1)!.version

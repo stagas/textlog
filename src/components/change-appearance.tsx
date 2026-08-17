@@ -11,11 +11,11 @@ export type AppearanceTab = 'theme' | 'font' | 'misc'
 export function ChangeAppearance(
   { user, selected, selectedFont, selectedSansSerifFont = 'system-sans', selectedPrimaryFont = 'monospace',
     selectedSize = 'regular', selectedPageSize = 20, selectedDensity = 'regular',
-    tab = 'theme', returnPath }: { user: User; selected: Appearance; selectedFont: FontChoice;
+    selectedLinkPreviews = true, tab = 'theme', returnPath }: { user: User; selected: Appearance; selectedFont: FontChoice;
       selectedSansSerifFont?: SansSerifFontChoice; selectedPrimaryFont?: PrimaryFontChoice;
       selectedSize?: FontSizeChoice;
       tab?: AppearanceTab; selectedPageSize?: PageSizeChoice;
-      selectedDensity?: DensityChoice; returnPath?: string },
+      selectedDensity?: DensityChoice; selectedLinkPreviews?: boolean; returnPath?: string },
 ) {
   const fromQuery = returnPath ? `&from=${encodeURIComponent(returnPath)}` : ''
   return (
@@ -167,6 +167,14 @@ export function ChangeAppearance(
                     </label>
                   ))}
                 </div>
+              </fieldset>
+              <fieldset>
+                <legend>ui</legend>
+                <label className="link-preview-setting">
+                  <input className="form-checkbox" type="checkbox" role="switch" name="showLinkPreviews" value="yes"
+                    defaultChecked={selectedLinkPreviews} />
+                  <span>Show link previews</span>
+                </label>
               </fieldset>
               <button className="button">save misc →</button>
             </form>

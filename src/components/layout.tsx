@@ -124,10 +124,10 @@ export function Layout({
             <link rel="alternate" type="application/atom+xml" title={`${feeds.title} (Atom)`} href={feeds.atom} />
           </>
         )}
-        <link rel="stylesheet" href="/styles.css?v=334" />
+        <link rel="stylesheet" href="/styles.css?v=337" />
         <style>{themeCss}</style>
       </head>
-      <body className={`density-${density}`}>
+      <body className={`density-${density}${user?.show_link_previews === 0 ? ' link-previews-disabled' : ''}`}>
         {user && ready && <a className="skip-link" href="/write">write</a>}
         <a className="skip-link" href="#main-content">skip to content</a>
         <header className={user ? 'authenticated-header' : undefined}>

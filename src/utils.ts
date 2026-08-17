@@ -117,6 +117,14 @@ function userForSession(token: string | null, database: Database): User | null {
     FROM sessions s JOIN users u ON u.id=s.user_id
     WHERE s.token_hash=? AND s.expires_at>? AND u.deleted_at IS NULL AND u.suspended_at IS NULL`)
     .get(tokenHash, Date.now()) as User | null
+  if (user) {
+    try {
+      user.show_link_previews = (database.query('SELECT show_link_previews FROM users WHERE id=?').get(user.id) as {
+        show_link_previews: number
+      } | null)?.show_link_previews
+    }
+    catch {}
+  }
   if (user) markSessionUsed(database, token!, Date.now())
   return user
 }

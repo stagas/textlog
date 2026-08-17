@@ -398,7 +398,8 @@ export function registerAccountRoutes(app: Hono) {
       <ChangeAppearance user={user} selected={appearance(c.req.raw)} selectedFont={fontChoice(c.req.raw)}
         selectedSansSerifFont={sansSerifFontChoice(c.req.raw)} selectedPrimaryFont={primaryFontChoice(c.req.raw)}
         selectedSize={fontSizeChoice(c.req.raw)} selectedPageSize={devicePageSize(c.req.raw, user.id)} tab={tab}
-        selectedDensity={deviceDensity(c.req.raw, user.id)} returnPath={returnPath} />,
+        selectedDensity={deviceDensity(c.req.raw, user.id)} selectedLinkPreviews={user.show_link_previews !== 0}
+        returnPath={returnPath} />,
     )
   })
 
@@ -423,6 +424,7 @@ export function registerAccountRoutes(app: Hono) {
       const deviceId = notificationDevice(c.req.raw) || token()
       saveDevicePageSize(user.id, deviceId, selectedPageSize)
       saveDeviceDensity(user.id, deviceId, selectedDensity)
+      db.query('UPDATE users SET show_link_previews=? WHERE id=?').run(f.showLinkPreviews === 'yes' ? 1 : 0, user.id)
       markAppearanceBannerHandled(c.req.raw, user.id)
       return redirect('/account/edit/appearance' + query, notificationDeviceCookie(deviceId))
     }

@@ -639,6 +639,22 @@ test('consequential account, content, reporting, and admin flows work over HTTP'
     form: { tab: 'theme', theme: 'system', accent: 'theme' },
   })
   expect(savedAppearance.status).toBe(303)
+  const disabledLinkPreviews = await request('/account/edit/appearance', {
+    method: 'POST', cookie: aliceCookie, userAgent: 'alice-browser',
+    form: { tab: 'misc', pageSize: '20', density: 'regular' },
+  })
+  expect(disabledLinkPreviews.status).toBe(303)
+  expect(database.query('SELECT show_link_previews FROM users WHERE id=?').get(alice.id))
+    .toEqual({ show_link_previews: 0 })
+  const linkPreviewsDisabledHome = await (await request('/for-you', {
+    cookie: aliceCookie, userAgent: 'alice-other-browser',
+  })).text()
+  expect(linkPreviewsDisabledHome).toContain('<body class="density-regular link-previews-disabled">')
+  const linkPreviewSettings = await (await request('/account/edit/appearance?tab=misc', {
+    cookie: aliceCookie, userAgent: 'alice-other-browser',
+  })).text()
+  expect(linkPreviewSettings).toContain('name="showLinkPreviews" value="yes"')
+  expect(linkPreviewSettings).not.toContain('name="showLinkPreviews" checked=""')
   const configuredDeviceHome = await (await request('/for-you', {
     cookie: aliceCookie, userAgent: 'alice-browser',
   })).text()
