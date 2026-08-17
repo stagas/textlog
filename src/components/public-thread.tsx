@@ -5,7 +5,8 @@ import { Layout } from './layout'
 import { postTitle } from './page-shared'
 
 export function PublicThread(
-  { post, social, returnPath, topHref }: { post: PostView; social?: { description: string; image: string; url: string };
+  { post, social, returnPath, topHref }: { post: PostView;
+    social?: { title?: string; description: string; image: string; url: string };
     returnPath?: string; topHref?: string },
 ) {
   return (

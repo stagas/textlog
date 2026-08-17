@@ -82,7 +82,7 @@ export function Reply(
       reportReason?: string
       reportError?: string
       error?: string
-      social?: { description: string; image: string; url: string }
+      social?: { title?: string; description: string; image: string; url: string }
       body?: string
       preview?: boolean
       returnPath?: string

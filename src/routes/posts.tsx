@@ -107,6 +107,7 @@ export function registerPostsRoutes(app: Hono) {
     const origin = configuredOrigin || new URL(c.req.url).origin
     const postUrl = `${origin}/post/${post.id}`
     const social = {
+      title: `@${post.handle} wrote on textlog`,
       description: post.body.replace(/\s+/g, ' ').trim(),
       image: `${postUrl}/og.png?v=3`,
       url: postUrl,

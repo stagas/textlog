@@ -26,7 +26,7 @@ export function Layout({
   title?: string
   user?: User | null
   logoutNavigation?: boolean
-  social?: { description: string; image: string; url: string; type?: 'article' | 'profile' | 'website';
+  social?: { title?: string; description: string; image: string; url: string; type?: 'article' | 'profile' | 'website';
     imageAlt?: string }
   pageUrl?: string
   feeds?: { title: string; rss: string; atom: string }
@@ -97,7 +97,7 @@ export function Layout({
           <meta name="description" content={share.description} />
           <meta property="og:type" content={share.type || 'article'} />
           <meta property="og:site_name" content={name} />
-          <meta property="og:title" content={title || name} />
+          <meta property="og:title" content={share.title || title || name} />
           <meta property="og:description" content={share.description} />
           {share.url && <meta property="og:url" content={share.url} />}
           <meta property="og:image" content={share.image} />
@@ -107,7 +107,7 @@ export function Layout({
           <meta property="og:image:height" content="630" />
           <meta property="og:image:alt" content={share.imageAlt || `Post by ${title || `a ${name} user`}`} />
           <meta name="twitter:card" content="summary_large_image" />
-          <meta name="twitter:title" content={title || name} />
+          <meta name="twitter:title" content={share.title || title || name} />
           <meta name="twitter:description" content={share.description} />
           <meta name="twitter:image" content={share.image} />
           <meta name="twitter:image:width" content="1200" />
