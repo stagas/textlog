@@ -352,7 +352,7 @@ describe('hot feed ranking', () => {
     const root = results.find(result => result.id === 1)!
     const direct = results.find(result => result.id === 2)!
     const nested = results.find(result => result.id === 3)!
-    expect(direct.hot_score).toBeCloseTo(root.hot_score * 0.02 * 0.000000002)
+    expect(direct.hot_score).toBeCloseTo(root.hot_score * 0.02 * 0.000000001)
     expect(nested.hot_score).toBeLessThan(direct.hot_score * 0.01)
   })
 
@@ -371,8 +371,26 @@ describe('hot feed ranking', () => {
     const root = results.find(result => result.id === 1)!
     const direct = results.find(result => result.id === 2)!
     const nested = results.find(result => result.id === 3)!
-    expect(direct.hot_score).toBeCloseTo(root.hot_score * 0.02 * 0.000000002)
+    expect(direct.hot_score).toBeCloseTo(root.hot_score * 0.02 * 0.000000001)
     expect(nested.hot_score).toBeLessThan(direct.hot_score * 0.001)
+  })
+
+  test('hands a conversation to a reply with more direct responses than the root', () => {
+    database.run(`INSERT INTO users(id,handle) VALUES(2,'branch-author');
+      INSERT INTO users(id,handle) VALUES(3,'nested-author');
+      INSERT INTO users(id,handle) VALUES(4,'another-nested-author');`)
+    post(1, '2026-08-03 10:00:00')
+    postBy(2, 2, '2026-08-03 11:00:00', 1)
+    postBy(3, 3, '2026-08-03 12:00:00', 2)
+    postBy(4, 4, '2026-08-03 12:00:00', 2)
+    database.run(`UPDATE post_hot SET score=4,reply_count=2,activity_count=6,
+      score_updated_at='2026-08-03 12:00:00',latest_activity_at='2026-08-03 12:00:00'
+      WHERE post_id IN (1,2)`)
+
+    const results = getHotPosts(database, 20, null, asOf)
+    const root = results.find(result => result.id === 1)!
+    const head = results.find(result => result.id === 2)!
+    expect(head.hot_score).toBeGreaterThan(root.hot_score)
   })
 
   test('smoothly demotes a reply when its conversation root already ranks above it', () => {
@@ -389,7 +407,7 @@ describe('hot feed ranking', () => {
     const root = results.find(result => result.id === 1)!
     const reply = results.find(result => result.id === 2)!
     expect(root.hot_score).toBeGreaterThan(0)
-    expect(reply.hot_score).toBeCloseTo(root.hot_score * 0.02 * 0.000000002)
+    expect(reply.hot_score).toBeCloseTo(root.hot_score * 0.02 * 0.000000001)
     expect(reply.hot_score).toBeGreaterThan(0)
   })
 
@@ -407,7 +425,7 @@ describe('hot feed ranking', () => {
     const results = getHotPosts(database, 100, null, asOf)
     const root = results.find(result => result.id === 1)!
     const reply = results.find(result => result.id === 2)!
-    expect(reply.hot_score).toBeCloseTo(root.hot_score * 0.02 * 0.000000002)
+    expect(reply.hot_score).toBeCloseTo(root.hot_score * 0.02 * 0.000000001)
   })
 
   test('keeps a week-old large discussion on hot without outranking fresh replies', () => {
