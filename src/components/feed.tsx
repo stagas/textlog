@@ -298,6 +298,7 @@ export function Feed({ user, page = 1, title, path = '/for-you', pageUrl, notifi
                     ? `/follow/${row.target_handle}`
                     : `/tag-follow/${row.target_tag}`}
                   >
+                    <input type="hidden" name="from" value={activityReturnPath} />
                     <button className={`button${row.following ? ' button-muted' : ''}`}>
                       {row.following ? 'unfollow' : 'follow'}
                       {row.activity_kind === 'user_follow' && !row.target_is_viewer && ` @${row.target_handle}`}

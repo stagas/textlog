@@ -1103,7 +1103,8 @@ test('consequential account, content, reporting, and admin flows work over HTTP'
   expect(followedPersonFeed).toContain('<form action="/block/bob" method="post">'
     + '<button class="quiet danger" type="submit">block</button></form>')
   expect(followedPersonFeed).toContain('<p class="profile-bio">Bob builds things</p>')
-  expect(followedPersonFeed).toContain('action="/follow/bob"')
+  expect(followedPersonFeed).toContain('<form action="/follow/bob" method="post">'
+    + '<input type="hidden" name="from" value="/for-you#activity-user-follow-')
   expect(followedPersonFeed).not.toContain('action="/follow/alice"')
   expect(followedPersonFeed).not.toContain('action="/for-you/read-all"')
   expect(followedPersonFeed).not.toContain('you&#x27;ve seen it all')
@@ -1175,6 +1176,8 @@ test('consequential account, content, reporting, and admin flows work over HTTP'
   expect(followedTagFeed).toContain('<span class="reference-popover-bio">Bob builds things</span>')
   expect(followedTagFeed).toContain('<a href="/tag/shared?from=%2Ffor-you%23activity-tag-follow-')
   expect(followedTagFeed).toContain('<a class="activity-follow-stats" href="/tag/shared?from=')
+  expect(followedTagFeed).toContain('<form action="/tag-follow/shared" method="post">'
+    + '<input type="hidden" name="from" value="/for-you#activity-tag-follow-')
   expect(followedTagFeed).toContain('<time dateTime="2099-01-02 00:00:00"')
   expect(followedTagFeed).toContain('<span aria-hidden="true">·</span><span>0 notes</span></a>')
   expect(followedTagFeed).not.toContain('@alice</a><span>followed</span><a href="/tag/shared">#shared</a>')
