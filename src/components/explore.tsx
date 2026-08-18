@@ -28,6 +28,7 @@ export function Explore({ user, welcome = false, peopleIds, tagsPage = 1, people
       `SELECT u.*, (SELECT count(*) FROM posts p WHERE p.user_id=u.id AND p.deleted_at IS NULL) posts,
         EXISTS(SELECT 1 FROM follows f WHERE f.follower_id=? AND f.following_id=u.id) following
         FROM users u WHERE u.id IN (${savedIds.map(() => '?').join(',')}) AND u.deleted_at IS NULL
+        AND u.handle_chosen_at IS NOT NULL
         AND (? < 0 OR NOT EXISTS (SELECT 1 FROM blocks b WHERE
           (b.blocker_id=? AND b.blocked_id=u.id) OR (b.blocker_id=u.id AND b.blocked_id=?)))`,
     ).all(viewerId, ...savedIds, viewerId, viewerId, viewerId) as PersonView[])

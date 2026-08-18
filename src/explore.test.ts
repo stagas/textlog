@@ -1,17 +1,19 @@
 import { Database } from 'bun:sqlite'
 import { describe, expect, test } from 'bun:test'
-import { explorePivot, suggestedPeople, trendingTags } from './explore'
+import { explorePivot, suggestedPeople, suggestedPeopleCount, trendingTags } from './explore'
 
 function fixture() {
   const database = new Database(':memory:')
   database.run(`
-    CREATE TABLE users (id INTEGER PRIMARY KEY,handle TEXT,bio TEXT,email TEXT,deleted_at TEXT);
+    CREATE TABLE users (id INTEGER PRIMARY KEY,handle TEXT,bio TEXT,email TEXT,created_at TEXT,deleted_at TEXT,
+      handle_chosen_at TEXT);
     CREATE TABLE posts (id INTEGER PRIMARY KEY,user_id INTEGER,deleted_at TEXT);
     CREATE TABLE follows (follower_id INTEGER,following_id INTEGER);
     CREATE TABLE blocks (blocker_id INTEGER,blocked_id INTEGER);
-    INSERT INTO users(id,handle,bio) VALUES
-      (1,'viewer',''),(2,'two','Bio two'),(3,'three','Bio three'),(4,'four','Bio four'),
-      (5,'five','Bio five'),(6,'six','Bio six');
+    INSERT INTO users(id,handle,bio,handle_chosen_at) VALUES
+      (1,'viewer','',CURRENT_TIMESTAMP),(2,'two','Bio two',CURRENT_TIMESTAMP),
+      (3,'three','Bio three',CURRENT_TIMESTAMP),(4,'four','Bio four',CURRENT_TIMESTAMP),
+      (5,'five','Bio five',CURRENT_TIMESTAMP),(6,'six','Bio six',CURRENT_TIMESTAMP);
     INSERT INTO posts(id,user_id) VALUES(2,2),(3,3),(4,4),(5,5),(6,6);
     INSERT INTO follows VALUES(1,3);
     INSERT INTO blocks VALUES(1,4);
@@ -33,10 +35,38 @@ describe('explore suggestions', () => {
     expect(new Set(first.map(person => person.id))).toEqual(new Set([2, 5, 6]))
   })
 
-  test('only suggests people with completed bios', () => {
+  test('includes people without bios but ranks comparable completed profiles first', () => {
     const database = fixture()
     database.run(`UPDATE users SET bio='' WHERE id=5`)
-    expect(suggestedPeople(database, 1, 6, '2026-08-04').map(person => person.id)).toEqual(expect.not.arrayContaining([5]))
+    const people = suggestedPeople(database, 1, 6, '2026-08-04')
+    expect(people.map(person => person.id)).toContain(5)
+    expect(people.findIndex(person => person.id === 5)).toBeGreaterThan(
+      people.findIndex(person => person.id === 2),
+    )
+  })
+
+  test('includes newly joined people without notes in the rotation', () => {
+    const database = fixture()
+    database.run(`
+      INSERT INTO users(id,handle,bio,created_at,handle_chosen_at) VALUES
+        (7,'newcomer','Just joined','2026-08-03 12:00:00',CURRENT_TIMESTAMP),
+        (8,'inactive','Joined a while ago','2026-07-01 12:00:00',CURRENT_TIMESTAMP);
+    `)
+
+    const people = suggestedPeople(database, 1, 8, '2026-08-04')
+    expect(people.map(person => person.id)).toContain(7)
+    expect(people.map(person => person.id)).not.toContain(8)
+    expect(people.find(person => person.id === 7)?.posts).toBe(0)
+    expect(suggestedPeopleCount(database, 1, '2026-08-04')).toBe(4)
+  })
+
+  test('excludes accounts that have not chosen a handle', () => {
+    const database = fixture()
+    database.run(`INSERT INTO users(id,handle,bio,created_at) VALUES
+      (7,'anon123456789abc','','2026-08-04 12:00:00')`)
+
+    expect(suggestedPeople(database, 1, 8, '2026-08-04').map(person => person.id)).not.toContain(7)
+    expect(suggestedPeopleCount(database, 1, '2026-08-04')).toBe(3)
   })
 
   test('favors people with more than two notes without overriding the daily rotation', () => {
