@@ -52,7 +52,9 @@ export function suggestedPeople(database: Database, viewerId: number, limit = 8,
       AND (? < 0 OR NOT EXISTS (SELECT 1 FROM blocks b WHERE
         (b.blocker_id=? AND b.blocked_id=u.id) OR (b.blocker_id=u.id AND b.blocked_id=?)))
       AND (EXISTS (SELECT 1 FROM posts p WHERE p.user_id=u.id AND p.deleted_at IS NULL)
-        OR (trim(coalesce(u.bio,''))!='' AND u.created_at>=datetime(?,'-7 days')))
+        OR (trim(coalesce(u.bio,''))!='' AND u.created_at>=datetime(?,'-7 days'))
+        OR ((SELECT count(*) FROM follows engagement WHERE engagement.follower_id=u.id)
+          + (SELECT count(*) FROM hashtag_follows engagement WHERE engagement.user_id=u.id))>=2)
     )
     SELECT * FROM candidates
     ORDER BY (posts > 2) DESC,(trim(coalesce(bio,''))!='') DESC,((id - ? + ?) % ?) * 1.0 /
@@ -71,6 +73,8 @@ export function suggestedPeopleCount(database: Database, viewerId: number,
     AND (? < 0 OR NOT EXISTS (SELECT 1 FROM blocks b WHERE
       (b.blocker_id=? AND b.blocked_id=u.id) OR (b.blocker_id=u.id AND b.blocked_id=?)))
     AND (EXISTS (SELECT 1 FROM posts p WHERE p.user_id=u.id AND p.deleted_at IS NULL)
-      OR (trim(coalesce(u.bio,''))!='' AND u.created_at>=datetime(?,'-7 days')))`)
+      OR (trim(coalesce(u.bio,''))!='' AND u.created_at>=datetime(?,'-7 days'))
+      OR ((SELECT count(*) FROM follows engagement WHERE engagement.follower_id=u.id)
+        + (SELECT count(*) FROM hashtag_follows engagement WHERE engagement.user_id=u.id))>=2)`)
     .get(viewerId, viewerId, viewerId, viewerId, viewerId, day) as { count: number }).count
 }

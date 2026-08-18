@@ -9,6 +9,7 @@ function fixture() {
       handle_chosen_at TEXT);
     CREATE TABLE posts (id INTEGER PRIMARY KEY,user_id INTEGER,deleted_at TEXT);
     CREATE TABLE follows (follower_id INTEGER,following_id INTEGER);
+    CREATE TABLE hashtag_follows (user_id INTEGER,tag TEXT);
     CREATE TABLE blocks (blocker_id INTEGER,blocked_id INTEGER);
     INSERT INTO users(id,handle,bio,handle_chosen_at) VALUES
       (1,'viewer','',CURRENT_TIMESTAMP),(2,'two','Bio two',CURRENT_TIMESTAMP),
@@ -67,6 +68,24 @@ describe('explore suggestions', () => {
 
     expect(suggestedPeople(database, 1, 8, '2026-08-04').map(person => person.id)).not.toContain(7)
     expect(suggestedPeopleCount(database, 1, '2026-08-04')).toBe(3)
+  })
+
+  test('includes people without bios or notes after two combined follows', () => {
+    const database = fixture()
+    database.run(`
+      INSERT INTO users(id,handle,bio,created_at,handle_chosen_at) VALUES
+        (7,'peoplefan','','2026-07-01 12:00:00',CURRENT_TIMESTAMP),
+        (8,'mixedfan','','2026-07-01 12:00:00',CURRENT_TIMESTAMP),
+        (9,'singlefollow','','2026-07-01 12:00:00',CURRENT_TIMESTAMP);
+      INSERT INTO follows VALUES(7,2),(7,5),(8,2);
+      INSERT INTO hashtag_follows VALUES(8,'notes');
+      INSERT INTO hashtag_follows VALUES(9,'notes');
+    `)
+
+    const people = suggestedPeople(database, 1, 8, '2026-08-04')
+    expect(people.map(person => person.id)).toEqual(expect.arrayContaining([7, 8]))
+    expect(people.map(person => person.id)).not.toContain(9)
+    expect(suggestedPeopleCount(database, 1, '2026-08-04')).toBe(5)
   })
 
   test('excludes accounts that have not chosen a handle', () => {
