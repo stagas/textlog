@@ -113,7 +113,7 @@ export function Feed({ user, data, title, path = '/for-you', pageUrl, notificati
     <Layout user={user} title={title} pageUrl={pageUrl} notificationBanner={notificationBanner}>
       <h1 className="visually-hidden">Your feed</h1>
       <FeedTabs active="following" user={user} forYouReadStatus={data.timeline.length ? hasUnread : undefined}
-        toMe={toMe} toMeCount={toMe ? 0 : data.toMeCount} unreadHref={data.unreadHref}
+        toMe={toMe} toMeCount={toMe ? 0 : data.toMeCount} forYouCount={data.forYouCount} unreadHref={data.unreadHref}
         forYouUnread={data.forYouUnread} toMeUnread={data.toMeUnread} />
       {data.page > 1 && <Pagination page={data.page} totalPages={data.totalPages} path={path} top />}
       {data.timeline.length

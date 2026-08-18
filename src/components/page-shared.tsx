@@ -291,13 +291,14 @@ export function CursorPagination({ path, previousCursor, nextCursor }: {
 }
 
 export function FeedTabs({ active, user, forYouReadStatus, activityReadStatus, toMe = false, toMeCount = 0,
-  unreadHref, forYouUnread = false, toMeUnread = false }: {
+  forYouCount = 0, unreadHref, forYouUnread = false, toMeUnread = false }: {
   active: 'following' | 'activity' | 'hot' | 'latest'
   user: User | null
   forYouReadStatus?: boolean
   activityReadStatus?: boolean
   toMe?: boolean
   toMeCount?: number
+  forYouCount?: number
   unreadHref?: string
   forYouUnread?: boolean
   toMeUnread?: boolean
@@ -310,9 +311,8 @@ export function FeedTabs({ active, user, forYouReadStatus, activityReadStatus, t
           <a className={active === 'following' ? 'active' : ''} aria-current={active === 'following' ? 'page' : undefined}
             href="/for-you"
           >
-            {forYouUnread && <span className="unread-dot" aria-hidden="true" />}
-            {forYouUnread && <span className="visually-hidden">unread</span>}
             for you
+            {forYouCount > 0 && <span className="to-me-count">{forYouCount}</span>}
           </a>
         )}
         <a className={active === 'hot' ? 'active' : ''} aria-current={active === 'hot' ? 'page' : undefined} href="/hot">

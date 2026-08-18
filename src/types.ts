@@ -72,7 +72,7 @@ export type PostView = PostRow & {
 }
 
 export type PostFeedPage = { posts: PostView[]; page: number; totalItems: number; totalPages: number;
-  forYouUnread?: boolean; toMeUnread?: boolean }
+  forYouUnread?: boolean; toMeUnread?: boolean; forYouCount?: number }
 export type ApiPost = {
   id: number; top_id: number | null; body: string; created_at: string; parent_id: number | null; reply_count: number
   tags: string[]; mentions: string[]; url: string; api_url: string
@@ -127,6 +127,7 @@ export type PersonalizedFeedData = {
   page: number
   totalPages: number
   toMeCount: number
+  forYouCount: number
   forYouUnread: boolean
   toMeUnread: boolean
   unreadHref?: string

@@ -22,7 +22,8 @@ export function PublicFeed(
       feeds={{ title: 'Latest notes', rss: '/latest.rss', atom: '/latest.atom' }}
     >
       <h1 className="visually-hidden">Latest notes</h1>
-      <FeedTabs active="latest" user={user} forYouUnread={feed.forYouUnread} toMeUnread={feed.toMeUnread} />
+      <FeedTabs active="latest" user={user} forYouCount={feed.forYouCount}
+        forYouUnread={feed.forYouUnread} toMeUnread={feed.toMeUnread} />
       {feed.page > 1 && <Pagination page={feed.page} totalPages={feed.totalPages} path={path} top />}
       {feed.posts.length
         ? feed.posts.map(post => (

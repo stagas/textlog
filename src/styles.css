@@ -724,7 +724,6 @@ nav form {
   padding: 1px var(--space-2);
   color: var(--muted);
   background: color-mix(in srgb, var(--accent) 10%, transparent);
-  border-radius: 3px;
   text-decoration: none;
   line-height: 1.4;
   text-align: center;

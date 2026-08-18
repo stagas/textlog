@@ -1148,7 +1148,7 @@ test('consequential account, content, reporting, and admin flows work over HTTP'
   expect(followedPersonFeed).not.toContain('action="/follow/alice"')
   expect(followedPersonFeed).not.toContain('action="/for-you/read-all"')
   expect(followedPersonFeed).not.toContain('you&#x27;ve seen it all')
-  expect(followedPersonFeed).not.toContain('href="/for-you"><span class="unread-dot" aria-hidden="true"></span>')
+  expect(followedPersonFeed).toContain('href="/for-you">for you<span class="to-me-count">1</span></a>')
   expect(followedPersonFeed).toContain('href="/to-me"><span class="to-me-label">to me</span>'
     + '<span class="to-me-count">1</span></a>')
   expect(followedPersonFeed).not.toContain('href="/to-me"><span class="unread-dot"')
@@ -1266,10 +1266,10 @@ test('consequential account, content, reporting, and admin flows work over HTTP'
   const visitedGeneralReadKey = `post:${String(visitedGeneralPost.id).padStart(20, '0')}`
 
   const latestBeforeForYou = await (await request('/latest', { cookie: aliceCookie })).text()
-  expect(latestBeforeForYou).toContain('href="/for-you"><span class="unread-dot" aria-hidden="true"></span>')
+  expect(latestBeforeForYou).toContain('href="/for-you">for you<span class="to-me-count">1</span></a>')
   await request('/for-you', { cookie: aliceCookie })
   const latestAfterForYou = await (await request('/latest', { cookie: aliceCookie })).text()
-  expect(latestAfterForYou).not.toContain('href="/for-you"><span class="unread-dot" aria-hidden="true"></span>')
+  expect(latestAfterForYou).toContain('href="/for-you">for you</a>')
   expect(database.query('SELECT 1 FROM activity_reads WHERE user_id=? AND event_key=?')
     .get(alice.id, activityReadKey)).toBeTruthy()
   expect(database.query('SELECT 1 FROM for_you_reads WHERE user_id=? AND event_key=?')

@@ -93,6 +93,12 @@ export function hasUnreadForYou(userId: number, database: Database) {
     .get(stateParameters(userId, database))
 }
 
+export function unreadForYouCount(userId: number, database: Database) {
+  return (database.query(`SELECT count(DISTINCT event_key) count FROM (${visibleEvents}) event WHERE NOT EXISTS
+    (SELECT 1 FROM for_you_reads seen WHERE seen.user_id=$viewer AND seen.event_key=event.event_key)`)
+    .get(stateParameters(userId, database)) as { count: number }).count
+}
+
 export function hasUnreadToMe(userId: number, database: Database) {
   return !!database.query(`SELECT 1 FROM (${visibleToMeEvents}) event WHERE NOT EXISTS
     (SELECT 1 FROM for_you_reads seen WHERE seen.user_id=$viewer AND seen.event_key=event.event_key) LIMIT 1`)

@@ -1,7 +1,7 @@
 import type { Database } from 'bun:sqlite'
 import { isAdmin } from './admin'
 import { feedSnapshotPage } from './feed-snapshots'
-import { hasUnreadForYou, hasUnreadToMe, markForYouEntriesRead } from './for-you-state'
+import { hasUnreadForYou, hasUnreadToMe, markForYouEntriesRead, unreadForYouCount } from './for-you-state'
 import { resolveHandle } from './handles'
 import { enrichPosts, visibleTagFollowerCounts, visibleUserProfileStats } from './posts'
 import type { PersonalizedFeedData, PersonalizedTimelineRow, User } from './types'
@@ -127,6 +127,7 @@ export function loadPersonalizedFeed(database: Database, user: User, page: numbe
     actorProfileStats: actorStats.get(row.actor_id),
     targetProfileStats: row.target_handle ? targetStats.get(targets.get(row.target_handle)!) : undefined,
     tagFollowerCount: row.target_tag ? tagCounts[row.target_tag] || 0 : undefined }))
+  const forYouCount = unreadForYouCount(user.id, database)
   if (markRead) {
     markForYouEntriesRead(user.id, timeline.filter(row => row.unread).map(row => row.event_key), toMe, database)
   }
@@ -142,6 +143,7 @@ export function loadPersonalizedFeed(database: Database, user: User, page: numbe
   const anchor = first ? ['post', 'reply', 'mention'].includes(first.activity_kind) ? `post-${first.id}`
     : `activity-${first.event_key.replace(/[^a-z0-9_-]+/gi, '-')}` : null
   return { timeline: resultTimeline, page: snapshot.page, totalPages: snapshot.totalPages,
-    toMeCount: targetedKeys.filter(key => !seenToMe.has(key)).length, forYouUnread, toMeUnread,
+    toMeCount: targetedKeys.filter(key => !seenToMe.has(key)).length,
+    forYouCount, forYouUnread, toMeUnread,
     unreadHref: firstPage && anchor ? `${path}${firstPage > 1 ? `?page=${firstPage}` : ''}#${anchor}` : undefined }
 }
