@@ -1,7 +1,7 @@
 import type { Database } from 'bun:sqlite'
 import { isDevelopment } from './environment'
 
-export const POST_LIMIT = 3
+export const POST_LIMIT = 5
 export const POST_WINDOW_SECONDS = 5 * 60
 export const DUPLICATE_POST_WINDOW_SECONDS = 15
 

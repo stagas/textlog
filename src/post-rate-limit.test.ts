@@ -19,18 +19,20 @@ beforeEach(() => {
 })
 
 describe('post rate limit', () => {
-  test('allows three posts, then rejects another post from the same account', () => {
+  test('allows five posts, then rejects another post from the same account', () => {
     expect(insertRateLimitedPost(database, 1, 'one')).toHaveProperty('id')
     expect(insertRateLimitedPost(database, 1, 'two', 10)).toHaveProperty('id')
     expect(insertRateLimitedPost(database, 1, 'three')).toHaveProperty('id')
+    expect(insertRateLimitedPost(database, 1, 'four')).toHaveProperty('id')
+    expect(insertRateLimitedPost(database, 1, 'five')).toHaveProperty('id')
 
-    const result = insertRateLimitedPost(database, 1, 'four')
+    const result = insertRateLimitedPost(database, 1, 'six')
     expect(result).toHaveProperty('retryAfter')
-    expect(database.query('SELECT count(*) count FROM posts WHERE user_id=1').get()).toEqual({ count: 3 })
+    expect(database.query('SELECT count(*) count FROM posts WHERE user_id=1').get()).toEqual({ count: 5 })
   })
 
   test('does not share limits between accounts', () => {
-    for (let i = 0; i < 3; i++) insertRateLimitedPost(database, 1, `post ${i}`)
+    for (let i = 0; i < 5; i++) insertRateLimitedPost(database, 1, `post ${i}`)
     expect(insertRateLimitedPost(database, 2, 'another account')).toHaveProperty('id')
   })
 

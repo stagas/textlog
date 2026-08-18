@@ -123,7 +123,7 @@ describe('API writes', () => {
 
   test('keeps the same posting limit as the website', async () => {
     const { app } = fixture()
-    for (let i = 0; i < 3; i++) {
+    for (let i = 0; i < 5; i++) {
       expect((await post(app, 'alice-token', { body: `post ${i}` })).status).toBe(201)
     }
     const limited = await post(app, 'alice-token', { body: 'one too many' })
