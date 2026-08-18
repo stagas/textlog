@@ -29,6 +29,7 @@ export type DatabaseDomainOperations = {
   'maintenance.automatedBackup': { input: { directory: string; now: string }; output: unknown }
   'maintenance.publicArchive': { input: { path: string; now: string }; output: unknown | null }
   'maintenance.recapPreview': { input: { requestUrl: string }; output: string }
+  'blog.recapPosts': { input: { viewerId: number }; output: PostView[] }
   'auth.sessionUser': { input: { token: string | null }; output: User | null }
   'auth.apiUser': { input: { token: string | null; now: number }; output: User | null }
   'auth.resolve': { input: { sessionToken: string | null; bearerToken: string | null; deviceId: string | null;

@@ -1057,6 +1057,88 @@ nav form {
   margin-top: var(--space-4);
 }
 
+.recap-page {
+  padding-bottom: 0;
+}
+
+.recap-page h1 {
+  color: var(--ink);
+}
+
+.recap-page .recap-intro {
+  max-width: 62ch;
+  font-size: 0.875rem;
+}
+
+.recap-highlights {
+  margin-top: var(--space-7);
+}
+
+.recap-page .recap-highlights h2,
+.recap-page .recap-community h2 {
+  margin-top: 0;
+}
+
+.recap-highlights ol {
+  margin: var(--space-4) 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.recap-highlights li {
+  display: grid;
+  grid-template-columns: 3ch minmax(0, 1fr);
+  gap: var(--space-4);
+  padding: var(--space-4) 0;
+  border-top: 1px solid var(--soft);
+}
+
+.recap-marker {
+  color: var(--accent);
+  font-size: 0.6875rem;
+  font-weight: 700;
+}
+
+.recap-highlights h3 {
+  margin: 0 0 var(--space-2);
+  font-size: 0.8125rem;
+}
+
+.recap-highlights li p {
+  margin: 0;
+  font-size: 0.75rem;
+  line-height: 1.65;
+}
+
+.recap-community {
+  margin-top: var(--space-7);
+}
+
+.recap-page + .post {
+  border-top: 0;
+}
+
+.recap-closing {
+  padding: var(--space-6) var(--gutter);
+  border-top: 1px solid var(--soft);
+  text-align: center;
+}
+
+.recap-closing p {
+  max-width: 62ch;
+  margin: 0 auto var(--space-4);
+  color: var(--quote-ink);
+  font-size: 0.75rem;
+  line-height: 1.65;
+}
+
+.recap-actions {
+  display: flex;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+}
+
 .static-page .about-hot-heading {
   margin-top: var(--space-7);
 }

@@ -8,6 +8,7 @@ import { BACKUP_CHECK_INTERVAL_MS } from './backup-automation'
 import { appName, clientIpHeaderName } from './brand'
 import { configureDevReload } from './components/layout'
 import { PanelsGallery } from './components/panels-gallery'
+import { BlogRecap } from './components/blog-recap'
 import { compressResponse } from './compression'
 import { databaseService } from './database-service'
 import { DatabaseUnavailableError } from './runtime-worker-client'
@@ -443,6 +444,11 @@ app.get('/og.png', () => {
 
 app.get('/client-error', c => clientErrorPage(c.req.raw))
 app.get('/panels-gallery', c => page(<PanelsGallery user={currentUser(c.req.raw)} />))
+app.get('/blog/recap-v1', async c => {
+  const user = currentUser(c.req.raw)
+  const posts = await databaseService().call('blog.recapPosts', { viewerId: user?.id ?? -1 })
+  return page(<BlogRecap user={user} posts={posts} pageUrl={c.req.url} />)
+})
 app.get('/recap-email', async c => c.html(await databaseService().call('maintenance.recapPreview', {
   requestUrl: c.req.url,
 }), 200, { 'cache-control': 'private, no-store' }))

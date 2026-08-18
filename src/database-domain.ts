@@ -42,7 +42,7 @@ import { runBoundedCleanup } from './maintenance'
 import { createBootDatabaseBackup } from './database-backup'
 import { runAutomatedBackup } from './backup-automation'
 import { createPublicArchive, publicArchiveIsCurrent } from './public-archive'
-import { recapEmail } from './recap-email'
+import { recapEmail, RECAP_POPULAR_NOTE_IDS } from './recap-email'
 
 function attachPeopleStats(database: Database, people: import('./types').PersonView[], viewerId: number) {
   const stats = visibleUserProfileStats(database, people.map(person => person.id), viewerId)
@@ -159,6 +159,24 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
     case 'maintenance.recapPreview': {
       const { requestUrl } = input as DatabaseDomainInput<'maintenance.recapPreview'>
       return recapEmail(database, requestUrl, 'audit-preview') as DatabaseDomainOutput<K>
+    }
+    case 'blog.recapPosts': {
+      const { viewerId } = input as DatabaseDomainInput<'blog.recapPosts'>
+      if (!RECAP_POPULAR_NOTE_IDS.length) return [] as DatabaseDomainOutput<K>
+      const placeholders = RECAP_POPULAR_NOTE_IDS.map(() => '?').join(',')
+      const visibility = viewerId < 0 ? '' : `AND NOT EXISTS (SELECT 1 FROM blocks b WHERE
+        (b.blocker_id=? AND b.blocked_id=p.user_id) OR (b.blocker_id=p.user_id AND b.blocked_id=?))
+        AND NOT EXISTS (SELECT 1 FROM post_hashtags ph JOIN blocked_hashtags bh ON bh.tag=ph.tag
+          WHERE ph.post_id=p.id AND bh.user_id=?)`
+      const parameters = viewerId < 0 ? [...RECAP_POPULAR_NOTE_IDS]
+        : [...RECAP_POPULAR_NOTE_IDS, viewerId, viewerId, viewerId]
+      const rows = database.query(`SELECT p.*,u.handle FROM posts p JOIN users u ON u.id=p.user_id
+        WHERE p.id IN (${placeholders}) AND p.deleted_at IS NULL AND u.deleted_at IS NULL
+          AND u.suspended_at IS NULL ${visibility}`).all(...parameters) as PostView[]
+      const byId = new Map(rows.map(post => [post.id, post]))
+      return enrichPosts(database,
+        RECAP_POPULAR_NOTE_IDS.flatMap(id => byId.has(id) ? [byId.get(id)!] : []), viewerId,
+      ) as DatabaseDomainOutput<K>
     }
     case 'system.consumeAuthAttempt': {
       const { scope, identity, attempts, windowSeconds, now } = input as DatabaseDomainInput<'system.consumeAuthAttempt'>

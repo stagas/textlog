@@ -10,6 +10,7 @@ import {
   AdminDashboard,
   ApiDocs,
   Auth,
+  BlogRecap,
   ChangeAppearance,
   ChooseHandle,
   Compose,
@@ -54,6 +55,23 @@ test('panels gallery renders every shared panel variation', () => {
   expect(html).toContain('panel-fluid')
   expect(html).toContain('panel-danger')
   expect(html).toContain('panel-gallery-shell-preview')
+})
+
+test('blog recap uses the site layout and shared post presentation', () => {
+  const html = renderToStaticMarkup(React.createElement(BlogRecap, {
+    user: null, pageUrl: 'https://textlog.test/blog/recap-v1', posts: [{
+    id: 925, user_id: 1, parent_id: null, body: 'A memorable #note', created_at: '2026-01-01 12:00:00',
+    deleted_at: null, handle: 'writer', reply_count: 2,
+    }],
+  }))
+
+  expect(html).toContain('<header>')
+  expect(html).toContain('<article class="static-page recap-page">')
+  expect(html).toContain('<article class="post tappable-post" id="post-925">')
+  expect(html).toContain('href="/post/925?from=%2Fblog%2Frecap-v1%23post-925"')
+  expect(html).toContain('A lot has happened.<br/>Quietly, of course.')
+  expect(html).toContain('<a class="button" href="/about">about textlog</a><a class="button" href="/hot">')
+  expect(html).toContain('class="site-footer"')
 })
 
 test('account switcher errors use the shared error notice', () => {
