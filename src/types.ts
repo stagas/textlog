@@ -22,6 +22,17 @@ export type UserProfileStats = {
   followingTags: number
 }
 
+export type BioReferenceData = {
+  hashtagCounts: Record<string, number>
+  hashtagFollowerCounts: Record<string, number>
+  hashtagFollowing: Record<string, boolean>
+  mentionBios: Record<string, string>
+  mentionNoteCounts: Record<string, number>
+  mentionProfileStats: Record<string, UserProfileStats>
+  mentionFollowing: Record<string, boolean>
+  linkPreviews: Record<string, LinkPreview>
+}
+
 export type ParentPost = Pick<PostRow,
   'id' | 'body' | 'created_at' | 'deleted_at' | 'has_latex' | 'has_links' | 'has_code'> & {
   handle: string
@@ -38,6 +49,7 @@ export type ParentPost = Pick<PostRow,
   hashtag_follower_counts?: Record<string, number>
   hashtag_following?: Record<string, boolean>
   link_previews?: Record<string, LinkPreview>
+  bio_reference?: BioReferenceData
   reply_count: number
 }
 
@@ -54,8 +66,70 @@ export type PostView = PostRow & {
   hashtag_counts?: Record<string, number>
   hashtag_follower_counts?: Record<string, number>
   hashtag_following?: Record<string, boolean>
+  bio_reference?: BioReferenceData
   reply_count?: number
   parent?: ParentPost | null
+}
+
+export type PostFeedPage = { posts: PostView[]; page: number; totalItems: number; totalPages: number;
+  forYouUnread?: boolean; toMeUnread?: boolean }
+export type ApiPost = {
+  id: number; top_id: number | null; body: string; created_at: string; parent_id: number | null; reply_count: number
+  tags: string[]; mentions: string[]; url: string; api_url: string
+  author: { handle: string; url: string; api_url: string }
+  parent?: ApiPost | null
+}
+export type SearchResultsData = {
+  totals: { notes: number; tags: number; people: number }
+  posts: PostView[]
+  tags: TagView[]
+  people: PersonView[]
+  highlights: string[]
+  totalPages: number
+}
+export type ExploreData = {
+  people: PersonView[]
+  tags: TagView[]
+  peopleTotal: number
+  tagsTotal: number
+  profileStats: Record<number, UserProfileStats>
+}
+export type TagPageData = {
+  following: boolean
+  blocked: boolean
+  posts: PostView[]
+  total: number
+  followerTotal: number
+  people: PersonView[]
+}
+export type EmbedData = { posts: PostView[]; title: string; href: string; canonicalHandle?: string }
+export type PersonalizedTimelineRow = PostView & {
+  activity_kind: 'post' | 'reply' | 'mention' | 'user_follow' | 'tag_follow' | 'signup'
+  event_key: string
+  actor_id: number
+  actor_handle: string
+  actor_bio: string
+  target_handle: string | null
+  target_tag: string | null
+  target_bio: string | null
+  following: boolean
+  target_is_viewer: boolean
+  targeted_to_viewer: boolean
+  posts: number | null
+  unread: number
+  renderedPost?: PostView
+  actorProfileStats?: UserProfileStats
+  targetProfileStats?: UserProfileStats
+  tagFollowerCount?: number
+}
+export type PersonalizedFeedData = {
+  timeline: PersonalizedTimelineRow[]
+  page: number
+  totalPages: number
+  toMeCount: number
+  forYouUnread: boolean
+  toMeUnread: boolean
+  unreadHref?: string
 }
 
 export type ProfileRow = {
@@ -71,6 +145,21 @@ export type ProfileRow = {
   bot_managed?: number
   timezone?: string | null
   recap_emails?: number
+}
+
+export type ProfileOverviewData = {
+  profile: ProfileRow
+  bioReference: BioReferenceData
+  noteCount: number
+  replyCount: number
+  following: boolean
+  blocked: boolean
+  blockedByProfile: boolean
+  followerCount: number
+  followingCount: number
+  followingTagCount: number
+  blockedPeopleCount: number
+  blockedTagCount: number
 }
 
 export type SessionView = { token: string; created_at: number; expires_at: number; user_agent: string;
@@ -148,6 +237,7 @@ export type PersonView = ProfileRow & {
   posts: number
   following?: boolean
   viewerFollowing?: boolean
+  profileStats?: UserProfileStats
 }
 
 export type TagView = {
@@ -155,4 +245,8 @@ export type TagView = {
   count: number
   following?: boolean
   viewerFollowing?: boolean
+  followerCount?: number
 }
+export type User = { id: number; handle: string; email: string; bio: string; suspended_at?: string | null;
+  email_verified_at?: string | null; activity_read_at?: string | null; handle_chosen_at?: string | null;
+  is_bot?: number; bot_managed?: number; timezone?: string | null; show_link_previews?: number; recap_emails?: number }

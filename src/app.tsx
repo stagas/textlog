@@ -1,25 +1,22 @@
 import { applyHtmlCachePolicy, blockedCrawlerResponse, canonicalizeCrawlerLinks, crawlerCanonicalRedirect,
   GLOBAL_REQUEST_BODY_LIMIT, isCrawlerRequest, isSameOriginRequest, RequestBodyError, requiresSameOrigin, safeLocalPath,
-  securityHeaders, sessionCookie } from './http'
+  securityHeaders } from './http'
 
 import { Hono } from 'hono'
 import { bodyLimit } from 'hono/body-limit'
-import { startAutomatedBackups } from './backup-automation'
+import { BACKUP_CHECK_INTERVAL_MS } from './backup-automation'
 import { appName, clientIpHeaderName } from './brand'
 import { configureDevReload } from './components/layout'
 import { PanelsGallery } from './components/panels-gallery'
 import { compressResponse } from './compression'
-import { createBootDatabaseBackup } from './database-backup'
-import { databaseHealth } from './database-health'
-import { db } from './db'
+import { databaseService } from './database-service'
+import { DatabaseUnavailableError } from './runtime-worker-client'
 import { isDevelopment } from './environment'
 import { localImageFile, usesLocalImageStorage } from './image-storage'
 import { clientIp, logError, logHttp, logReady, redactHttpPath, shouldLogHttp } from './log'
-import { startMaintenance } from './maintenance'
-import { clearMaterializedFeedPages } from './materialized-feed-pages'
+import { MAINTENANCE_INTERVAL_MS } from './maintenance'
 import { renderDefaultOg } from './og'
-import { recapEmail } from './recap-email'
-import { startPublicArchive } from './public-archive'
+import { PUBLIC_ARCHIVE_CHECK_INTERVAL_MS } from './public-archive'
 import { ClientErrorRateLimiter, HOURLY_REQUEST_BLOCK_SECONDS, HOURLY_REQUEST_RATE_LIMIT,
   HOURLY_REQUEST_RATE_WINDOW_SECONDS, rateLimitedResponse, RequestRateLimiter } from './request-rate-limit'
 import { updateResponseTime } from './response-time'
@@ -38,26 +35,21 @@ import { registerSeoRoutes } from './routes/seo'
 import { clientErrorPage, notFoundPage, page, rateLimitPage, serverErrorPage } from './routes/shared'
 import { registerStatsRoutes } from './routes/stats'
 import { registerTagsRoutes } from './routes/tags'
-import { renewSession } from './sessions'
 import { loadStylesAsset, stylesResponse } from './styles'
 import { themeLogoSvg, themeStyles, versionedAppearance, withAppearance } from './theme'
-import { apiUser, currentUser, sessionToken } from './utils'
-import { VisitorBuffer } from './visitors'
+import { apiUser, currentUser } from './utils'
+import { visitorHash, VISITOR_FLUSH_BATCH_SIZE } from './visitors'
 import { withTimezone } from './timezone'
 
 const devReloadEnabled = Bun.env.DEV_RELOAD === 'true'
 const publicArchivePath = Bun.env.PUBLIC_ARCHIVE_PATH || 'public/dump.zip'
 const bootId = crypto.randomUUID()
 configureDevReload(devReloadEnabled ? bootId : undefined)
-clearMaterializedFeedPages()
 const app = new Hono()
 app.use('*', (c, next) => withAppearance(c.req.raw, next))
 app.use('*', (c, next) => {
   const user = currentUser(c.req.raw)
-  const timezone = user
-    ? (db.query('SELECT timezone FROM users WHERE id=?').get(user.id) as { timezone: string } | null)?.timezone
-    : undefined
-  return withTimezone(timezone, next)
+  return withTimezone(user?.timezone || undefined, next)
 })
 const stylesPath = new URL('./styles.css', import.meta.url).pathname
 const styles = devReloadEnabled ? undefined : await loadStylesAsset(stylesPath)
@@ -80,7 +72,37 @@ const defaultOgBody = defaultOgImage.buffer.slice(
   defaultOgImage.byteOffset,
   defaultOgImage.byteOffset + defaultOgImage.byteLength,
 ) as ArrayBuffer
-const visitorBuffer = new VisitorBuffer(db)
+const pendingVisitors = new Map<string, { day: string; hash: string; anonymousLastSeenAt: number | null }>()
+let visitorFlushRunning = false
+function recordVisitor(address: string, visitedAt = new Date(), anonymous = true) {
+  if (!address || address === '-') return
+  const day = visitedAt.toISOString().slice(0, 10)
+  const hash = visitorHash(address, visitedAt)
+  const key = `${day}:${hash}`
+  const pending = pendingVisitors.get(key)
+  pendingVisitors.set(key, { day, hash, anonymousLastSeenAt: anonymous
+    ? Math.max(pending?.anonymousLastSeenAt || 0, visitedAt.getTime()) : pending?.anonymousLastSeenAt || null })
+  if (pendingVisitors.size >= VISITOR_FLUSH_BATCH_SIZE) {
+    void flushVisitors().catch(error => logError('visitor buffer flush failed', error))
+  }
+}
+async function flushVisitors() {
+  if (visitorFlushRunning) return
+  const visits = [...pendingVisitors.values()].slice(0, VISITOR_FLUSH_BATCH_SIZE)
+  if (!visits.length) return
+  visitorFlushRunning = true
+  try {
+    await databaseService().call('maintenance.flushVisitors', { visits })
+    for (const visit of visits) {
+      const key = `${visit.day}:${visit.hash}`
+      // Keep a newer observation that arrived while this batch was in flight.
+      if (pendingVisitors.get(key) === visit) pendingVisitors.delete(key)
+    }
+  }
+  finally {
+    visitorFlushRunning = false
+  }
+}
 const requestRateLimiter = new RequestRateLimiter()
 const hourlyRequestRateLimiter = new RequestRateLimiter({
   limit: HOURLY_REQUEST_RATE_LIMIT,
@@ -94,27 +116,79 @@ function requestRateLimitResponse(request: Request, retryAfter: number) {
     ? rateLimitPage(request, retryAfter)
     : rateLimitedResponse(retryAfter)
 }
-startMaintenance(db, visitorBuffer, error => logError('database maintenance failed', error))
+let cleanupRunning = false
+const runCleanup = async () => {
+  if (cleanupRunning) return
+  cleanupRunning = true
+  try {
+    await databaseService().call('maintenance.cleanup', { now: Date.now() })
+  }
+  catch (error) {
+    logError('database maintenance failed', error)
+  }
+  finally {
+    cleanupRunning = false
+  }
+}
+void runCleanup()
+const visitorTimer = setInterval(() => void flushVisitors().catch(error => logError('visitor buffer flush failed', error)),
+  5_000)
+const cleanupTimer = setInterval(runCleanup, MAINTENANCE_INTERVAL_MS)
+visitorTimer.unref()
+cleanupTimer.unref()
 if (Bun.env.NODE_ENV === 'production') {
-  const bootBackup = createBootDatabaseBackup(db, Bun.env.DATABASE_BACKUP_DIR || 'storage/backups')
+  const backupDirectory = Bun.env.DATABASE_BACKUP_DIR || 'storage/backups'
+  const bootBackup = await databaseService().call('maintenance.bootBackup', { directory: backupDirectory })
   console.log(`database boot backup  ${bootBackup}`)
-  startAutomatedBackups(db, {
-    directory: Bun.env.DATABASE_BACKUP_DIR || 'storage/backups',
-    alertWebhookUrl: Bun.env.BACKUP_ALERT_WEBHOOK_URL || null,
-  })
-  startPublicArchive(db, { path: publicArchivePath })
+  let backupRunning = false
+  const runBackup = async () => {
+    if (backupRunning) return
+    backupRunning = true
+    try {
+      await databaseService().call('maintenance.automatedBackup', {
+        directory: backupDirectory, now: new Date().toISOString(),
+      })
+    }
+    catch (error) {
+      logError('automated backup failed', error)
+      if (Bun.env.BACKUP_ALERT_WEBHOOK_URL) await fetch(Bun.env.BACKUP_ALERT_WEBHOOK_URL, { method: 'POST',
+        headers: { 'content-type': 'application/json' }, signal: AbortSignal.timeout(10_000),
+        body: JSON.stringify({ event: 'database_backup_failed', service: 'textlog', error: String(error),
+          occurredAt: new Date().toISOString() }) }).catch(alertError => logError('backup alert delivery failed', alertError))
+    }
+    finally {
+      backupRunning = false
+    }
+  }
+  let archiveRunning = false
+  const runArchive = async () => {
+    if (archiveRunning) return
+    archiveRunning = true
+    try {
+      const result = await databaseService().call('maintenance.publicArchive', {
+        path: publicArchivePath, now: new Date().toISOString(),
+      })
+      if (result && typeof result === 'object' && 'path' in result) console.log(`public archive    ${result.path}`)
+    }
+    catch (error) {
+      logError('public archive generation failed', error)
+    }
+    finally {
+      archiveRunning = false
+    }
+  }
+  void runBackup()
+  void runArchive()
+  const backupTimer = setInterval(runBackup, BACKUP_CHECK_INTERVAL_MS)
+  const archiveTimer = setInterval(runArchive, PUBLIC_ARCHIVE_CHECK_INTERVAL_MS)
+  backupTimer.unref()
+  archiveTimer.unref()
 }
 
 app.use('*', bodyLimit({
   maxSize: GLOBAL_REQUEST_BODY_LIMIT,
   onError: c => clientErrorPage(c.req.raw, 413),
 }))
-
-app.use('*', async (c, next) => {
-  await next()
-  const value = sessionToken(c.req.raw)
-  if (value && renewSession(db, value)) c.header('Set-Cookie', sessionCookie(value), { append: true })
-})
 
 app.use('*', async (c, next) => {
   await next()
@@ -128,7 +202,7 @@ app.use('*', async (c, next) => {
   await next()
   if (c.req.method !== 'GET' || c.res.status >= 400 || !c.res.headers.get('content-type')?.includes('text/html')) return
   try {
-    visitorBuffer.record(c.req.header(clientIpHeaderName()) || '-', new Date(), !currentUser(c.req.raw))
+    recordVisitor(c.req.header(clientIpHeaderName()) || '-', new Date(), !currentUser(c.req.raw))
   }
   catch (error) {
     logError('visitor buffer flush failed', error)
@@ -232,9 +306,11 @@ app.use('*', async (c, next) => {
   }
   await next()
 })
-app.get('/health', c => {
+app.get('/health', async c => {
   try {
-    const database = databaseHealth(db, Bun.env.DATABASE_PATH || 'storage/textlog.sqlite')
+    const database = await databaseService().call('system.health', {
+      databasePath: Bun.env.DATABASE_PATH || 'storage/textlog.sqlite',
+    })
     if (database.writeLockLatencyMs >= 250 || database.walBytes >= 64 * 1024 * 1024) {
       console.warn('database health warning', {
         writeLockLatencyMs: database.writeLockLatencyMs,
@@ -367,8 +443,9 @@ app.get('/og.png', () => {
 
 app.get('/client-error', c => clientErrorPage(c.req.raw))
 app.get('/panels-gallery', c => page(<PanelsGallery user={currentUser(c.req.raw)} />))
-app.get('/recap-email', c => c.html(recapEmail(db, c.req.url, 'audit-preview'), 200,
-  { 'cache-control': 'private, no-store' }))
+app.get('/recap-email', async c => c.html(await databaseService().call('maintenance.recapPreview', {
+  requestUrl: c.req.url,
+}), 200, { 'cache-control': 'private, no-store' }))
 app.get('/server-error', () => {
   throw new Error('Intentional server error route')
 })
@@ -390,6 +467,11 @@ registerSeoRoutes(app)
 app.notFound(c => notFoundPage(c.req.raw))
 app.onError((error, c) => {
   if (error instanceof RequestBodyError) return clientErrorPage(c.req.raw, error.status)
+  if (error instanceof DatabaseUnavailableError) {
+    return new Response('Service Unavailable', { status: 503, headers: {
+      'cache-control': 'no-store', 'retry-after': String(error.retryAfterSeconds),
+    } })
+  }
   logError(`${c.req.method} ${new URL(c.req.url).pathname}`, error)
   return serverErrorPage(c.req.raw)
 })

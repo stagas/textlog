@@ -1,29 +1,20 @@
-import type { Database } from 'bun:sqlite'
 import type { Context, Hono, Next } from 'hono'
 import React from 'react'
-import { API_DEFAULT_LIMIT, apiHotPosts, apiOrigin, apiPosts } from '../api'
-import { apiActivities } from '../api-activity'
+import { apiOrigin } from '../api'
 import { appName } from '../brand'
-import { db } from '../db'
-import { userForFeedKey } from '../feed-keys'
 import { PersonalizedFeedLanding } from '../components/personalized-feed-landing'
-import { resolveHandle } from '../handles'
 import { type SyndicationFormat, syndicationResponse } from '../syndication'
 import { page } from './shared'
 import { currentUser } from '../utils'
+import { databaseService, type DatabaseService } from '../database-service'
 
-function publicPosts(database: Database, origin: string,
-  filters: { handle?: string; tag?: string; excludeBots?: boolean } = {}) {
-  return apiPosts(database, origin, { limit: API_DEFAULT_LIMIT, before: null, ...filters }).data
-}
-
-function feedResponse(c: Context, database: Database, format: SyndicationFormat, appUrl: string | null | undefined,
+function feedResponse(c: Context, format: SyndicationFormat, appUrl: string | null | undefined,
   details: {
     title: string
     description: string
     pagePath: string
     feedPath?: string
-    posts: ReturnType<typeof publicPosts>
+    posts: import('../types').ApiPost[]
     omitAuthorInTitles?: boolean
   })
 {
@@ -40,96 +31,85 @@ function suffixed(value: string): { name: string; format: SyndicationFormat } | 
   return match ? { name: match[1], format: match[2] as SyndicationFormat } : null
 }
 
-export function registerSyndicationRoutes(app: Hono, database: Database = db,
+export function registerSyndicationRoutes(app: Hono, configuredService?: DatabaseService,
   appUrl: string | null | undefined = Bun.env.APP_URL)
 {
+  const service = () => configuredService || databaseService()
   const name = appName()
-  const latest = (c: Context, format: SyndicationFormat, feedPath?: string) => {
+  const latest = async (c: Context, format: SyndicationFormat, feedPath?: string) => {
     const origin = apiOrigin(c.req.url, appUrl)
-    return feedResponse(c, database, format, appUrl, {
+    const loaded = await service().call('syndication.load', { kind: 'latest', origin })
+    if (loaded.status !== 'ready') return c.text('Not found', 404)
+    return feedResponse(c, format, appUrl, {
       title: `Latest notes on ${name}`,
       description: `The latest public notes posted on ${name}.`,
       pagePath: '/latest',
       feedPath,
-      posts: publicPosts(database, origin, { excludeBots: true }),
+      posts: loaded.posts,
     })
   }
-  const hot = (c: Context, format: SyndicationFormat, feedPath?: string) => {
+  const hot = async (c: Context, format: SyndicationFormat, feedPath?: string) => {
     const origin = apiOrigin(c.req.url, appUrl)
-    return feedResponse(c, database, format, appUrl, {
+    const loaded = await service().call('syndication.load', { kind: 'hot', origin })
+    if (loaded.status !== 'ready') return c.text('Not found', 404)
+    return feedResponse(c, format, appUrl, {
       title: `Hot notes on ${name}`,
       description: `Public notes currently ranked hot on ${name}.`,
       pagePath: '/hot',
       feedPath,
-      posts: apiHotPosts(database, origin, API_DEFAULT_LIMIT, null).data,
+      posts: loaded.posts,
     })
   }
-  const user = (c: Context, requestedHandle: string, format: SyndicationFormat, feedPath?: string) => {
+  const user = async (c: Context, requestedHandle: string, format: SyndicationFormat, feedPath?: string) => {
     if (!/^[A-Za-z0-9_]{2,24}$/.test(requestedHandle)) return c.text('Not found', 404)
-    const resolved = resolveHandle(database, requestedHandle)
-    if (!resolved) return c.text('Not found', 404)
-    if (resolved.alias) {
+    const origin = apiOrigin(c.req.url, appUrl)
+    const loaded = await service().call('syndication.load', { kind: 'user', origin, identifier: requestedHandle })
+    if (loaded.status === 'not_found') return c.text('Not found', 404)
+    if (loaded.status === 'redirect') {
       const path = feedPath?.startsWith('/api/')
-        ? `/api/v1/users/${encodeURIComponent(resolved.handle)}/posts.${format}`
-        : `/u/${encodeURIComponent(resolved.handle)}.${format}`
+        ? `/api/v1/users/${encodeURIComponent(loaded.handle)}/posts.${format}`
+        : `/u/${encodeURIComponent(loaded.handle)}.${format}`
       return c.redirect(path, 301)
     }
-    const origin = apiOrigin(c.req.url, appUrl)
-    const pagePath = `/u/${encodeURIComponent(resolved.handle)}`
-    return feedResponse(c, database, format, appUrl, {
-      title: `Notes by @${resolved.handle} on ${name}`,
-      description: `The latest public notes posted by @${resolved.handle}.`,
+    const pagePath = `/u/${encodeURIComponent(loaded.handle!)}`
+    return feedResponse(c, format, appUrl, {
+      title: `Notes by @${loaded.handle} on ${name}`,
+      description: `The latest public notes posted by @${loaded.handle}.`,
       pagePath,
       feedPath,
-      posts: publicPosts(database, origin, { handle: resolved.handle }),
+      posts: loaded.posts,
       omitAuthorInTitles: true,
     })
   }
-  const tag = (c: Context, requestedTag: string, format: SyndicationFormat, feedPath?: string) => {
+  const tag = async (c: Context, requestedTag: string, format: SyndicationFormat, feedPath?: string) => {
     const normalizedTag = requestedTag.toLowerCase()
     if (!/^[a-z0-9_]+$/.test(normalizedTag)) return c.text('Not found', 404)
     const origin = apiOrigin(c.req.url, appUrl)
     const pagePath = `/tag/${encodeURIComponent(normalizedTag)}`
-    return feedResponse(c, database, format, appUrl, {
+    const loaded = await service().call('syndication.load', { kind: 'tag', origin, identifier: normalizedTag })
+    if (loaded.status !== 'ready') return c.text('Not found', 404)
+    return feedResponse(c, format, appUrl, {
       title: `#${normalizedTag} notes on ${name}`,
       description: `The latest public notes tagged #${normalizedTag}.`,
       pagePath,
       feedPath,
-      posts: publicPosts(database, origin, { tag: normalizedTag }),
+      posts: loaded.posts,
     })
   }
 
-  const personalized = (c: Context, key: string, format: SyndicationFormat) => {
-    const viewer = userForFeedKey(database, key)
-    if (!viewer) return c.text('Not found', 404)
+  const personalized = async (c: Context, key: string, format: SyndicationFormat) => {
     const origin = apiOrigin(c.req.url, appUrl)
+    const loaded = await service().call('syndication.load', { kind: 'personalized', origin, identifier: key })
+    if (loaded.status !== 'ready') return c.text('Not found', 404)
     const feedPath = `/feeds/for-you/${encodeURIComponent(key)}.${format}`
-    const activities = apiActivities(database, origin, viewer, { limit: 100, cursor: null, toMe: false })
-    const posts = activities.data.flatMap(activity =>
-      ['post', 'reply', 'mention'].includes(activity.type) && 'body' in activity.payload ? [activity.payload] : [])
-    const postTitlePrefixes = Object.fromEntries(activities.data.flatMap(activity =>
-      activity.type === 'mention' && 'body' in activity.payload ? [[activity.payload.id, 'Mentioned you: ']] : []))
-    const activityEntries = activities.data.flatMap(activity => {
-      if (['post', 'reply', 'mention'].includes(activity.type) || 'body' in activity.payload) return []
-      const { actor, target } = activity.payload
-      const title = activity.type === 'signup'
-        ? `@${actor.handle} signed up`
-        : target && 'handle' in target
-        ? `@${actor.handle} followed @${target.handle}`
-        : target && 'tag' in target
-        ? `@${actor.handle} followed #${target.tag}`
-        : `@${actor.handle} followed someone`
-      return [{ id: `${origin}/activities/${encodeURIComponent(activity.id)}`, title,
-        url: target?.url || actor.url, created_at: activity.created_at, author: actor }]
-    })
     const response = syndicationResponse(format, {
       title: `For You on ${name}`,
-      description: `The personalized For You notes for @${viewer.handle}.`,
+      description: `The personalized For You notes for @${loaded.viewerHandle}.`,
       pageUrl: `${origin}/for-you`,
       feedUrl: `${origin}${feedPath}`,
-      posts,
-      activities: activityEntries,
-      postTitlePrefixes,
+      posts: loaded.posts,
+      activities: loaded.activities,
+      postTitlePrefixes: loaded.postTitlePrefixes,
     }, 'private, no-store, max-age=0')
     response.headers.set('pragma', 'no-cache')
     response.headers.set('expires', '0')
@@ -144,12 +124,13 @@ export function registerSyndicationRoutes(app: Hono, database: Database = db,
     app.get(`/api/v1/feeds/hot.${format}`, c => hot(c, format, `/api/v1/feeds/hot.${format}`))
   }
 
-  app.get('/feeds/for-you/:file', c => {
+  app.get('/feeds/for-you/:file', async c => {
     const parsed = suffixed(c.req.param('file'))
     if (!parsed) {
       const key = c.req.param('file')
-      if (!userForFeedKey(database, key)) return c.text('Not found', 404)
       const origin = apiOrigin(c.req.url, appUrl)
+      const loaded = await service().call('syndication.load', { kind: 'personalized', origin, identifier: key })
+      if (loaded.status !== 'ready') return c.text('Not found', 404)
       const response = page(React.createElement(PersonalizedFeedLanding, {
         landingUrl: `${origin}/feeds/for-you/${encodeURIComponent(key)}`,
         rssUrl: `${origin}/feeds/for-you/${encodeURIComponent(key)}.rss`,

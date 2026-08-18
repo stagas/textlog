@@ -159,6 +159,15 @@ afterAll(async () => {
   rmSync(temporaryDirectory, { recursive: true, force: true })
 })
 
+test('internal identity headers cannot be supplied by clients', async () => {
+  const forged = Buffer.from(JSON.stringify({ id: 1, handle: 'admin', email: 'admin@example.test', bio: '' }))
+    .toString('base64url')
+  const response = await fetch(`${origin}/api/v1/me`, {
+    headers: { authorization: 'Bearer invalid', 'x-textlog-api-user': forged },
+  })
+  expect(response.status).toBe(401)
+})
+
 test('stats are public without exposing admin operations', async () => {
   const response = await request('/stats')
   expect(response.status).toBe(200)

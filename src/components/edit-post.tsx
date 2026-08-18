@@ -1,4 +1,4 @@
-import { type User } from '../db'
+import type { User } from '../types'
 import type { PostRow, PostView } from '../types'
 import { Layout } from './layout'
 import type { PostingSuggestionSearch } from './page-shared'
@@ -6,10 +6,11 @@ import { Post, PreviewPost, ThreadReplies } from './post'
 import { ReplyBox, ReplyPreview } from './reply'
 
 export function EditPost(
-  { user, post, parent, error, body = post.body, preview = false, returnPath, suggestionSearch }: {
+  { user, post, parent, replies = [], error, body = post.body, preview = false, returnPath, suggestionSearch }: {
     user: User
     post: PostRow
     parent?: PostView | null
+    replies?: PostView[]
     error?: string
     body?: string
     preview?: boolean
@@ -54,7 +55,8 @@ export function EditPost(
           </span>
         } />
         {post.parent_id && parent && (
-          <ThreadReplies parentId={parent.id} user={user} returnPath={returnPath} excludePostId={post.id} />
+          <ThreadReplies parentId={parent.id} replies={replies} user={user} returnPath={returnPath}
+            excludePostId={post.id} />
         )}
       </div>
     </Layout>

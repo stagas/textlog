@@ -1,5 +1,5 @@
 import type { AccountChoice } from '../account-groups'
-import type { User } from '../db'
+import type { User } from '../types'
 import { AccountSettingsHeader } from './account-settings-header'
 import { maskEmail } from './email-address'
 import { Layout } from './layout'

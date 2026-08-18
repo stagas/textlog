@@ -1,4 +1,4 @@
-import { anonymizeUser, isAdmin, isAdminEmail, recordAdminAction, resolvePostReports, softDeletePost } from '../admin'
+import { isAdmin, isAdminEmail } from '../admin'
 import {
   AdminConfirm,
   AdminDashboard,
@@ -9,15 +9,12 @@ import {
   safeLocalPath,
   safeRefererPath,
 } from '../http'
-import type { AdminActionView, AdminReportView, IllegalActivityReportView, PostRow, ProfileRow } from '../types'
 import { currentPage, form, page, paginationRedirect, redirect } from './shared'
 
 import type { Hono } from 'hono'
-import { db } from '../db'
+import { databaseService } from '../database-service'
 import { sendAdminEmail, sendReportDecision } from '../email'
-import { PAGE_SIZE } from '../pagination'
-import { deleteBioLinkPreviewImages, deleteLinkPreviewImages } from '../link-preview'
-import { dashboardStats } from '../stats'
+import { deleteImagesAfterCommit } from '../image-storage'
 import { currentUser } from '../utils'
 
 export function registerAdminRoutes(app: Hono) {
@@ -43,7 +40,7 @@ export function registerAdminRoutes(app: Hono) {
     return redirect('/admin/email?sent=1')
   })
 
-  app.get('/admin', c => {
+  app.get('/admin', async c => {
     const signedIn = currentUser(c.req.raw)
     if (!signedIn) return redirect('/enter?next=' + encodeURIComponent(c.req.path))
     if (!isAdmin(signedIn)) return c.text('Forbidden', 403)
@@ -51,26 +48,10 @@ export function registerAdminRoutes(app: Hono) {
     if (!['open', 'resolved', 'dismissed'].includes(statusValue)) return c.text('Invalid report status', 400)
     const status = statusValue as 'open' | 'resolved' | 'dismissed'
     const reportPage = currentPage(c.req.query('page'))
-    const stats = dashboardStats(db)
-    const total = (db.query('SELECT count(*) count FROM reports WHERE status=?').get(status) as { count: number }).count
+    const data = await databaseService().call('admin.dashboard', { status, page: reportPage })
+    const { stats, total, reports, actions, suspended, illegalReports } = data
     const outOfRange = paginationRedirect(reportPage, total, `/admin?status=${status}`)
     if (outOfRange) return outOfRange
-    const reports = db.query(`SELECT r.id,r.reason,r.status,r.created_at,r.resolved_at,r.post_id,
-    p.body post_body,p.deleted_at post_deleted_at,p.user_id author_id,author.handle author_handle,
-    reporter.handle reporter_handle,resolver.handle resolver_handle
-    FROM reports r JOIN posts p ON p.id=r.post_id JOIN users author ON author.id=p.user_id
-    JOIN users reporter ON reporter.id=r.reporter_id LEFT JOIN users resolver ON resolver.id=r.resolved_by
-    WHERE r.status=? ORDER BY r.created_at DESC,r.id DESC LIMIT ? OFFSET ?`)
-      .all(status, PAGE_SIZE, (reportPage - 1) * PAGE_SIZE) as AdminReportView[]
-    const actions = db.query(`SELECT aa.id,aa.action,aa.note,aa.created_at,actor.handle actor_handle,
-    aa.target_user_id,target.handle target_handle,aa.target_post_id
-    FROM admin_actions aa JOIN users actor ON actor.id=aa.actor_id
-    LEFT JOIN users target ON target.id=aa.target_user_id ORDER BY aa.created_at DESC,aa.id DESC LIMIT 20`)
-      .all() as AdminActionView[]
-    const suspended = db.query(`SELECT id,handle,email,bio,suspended_at,deleted_at FROM users
-    WHERE deleted_at IS NULL AND suspended_at IS NOT NULL ORDER BY suspended_at DESC LIMIT 20`).all() as ProfileRow[]
-    const illegalReports = db.query(`SELECT * FROM illegal_activity_reports
-      WHERE status='open' ORDER BY created_at,id LIMIT 20`).all() as IllegalActivityReportView[]
     return page(
       <AdminDashboard user={signedIn} stats={stats} reports={reports} actions={actions} illegalReports={illegalReports}
         status={status} page={reportPage} total={total} suspended={suspended} />,
@@ -84,20 +65,16 @@ export function registerAdminRoutes(app: Hono) {
     const id = Number(c.req.param('id'))
     const decision = c.req.param('decision')
     if (!Number.isInteger(id) || !['resolve', 'dismiss'].includes(decision)) return c.text('Not found', 404)
-    const report = db.query(`SELECT reference,reporter_email FROM illegal_activity_reports
-      WHERE id=? AND status='open'`).get(id) as { reference: string; reporter_email: string | null } | null
-    if (!report) return c.text('Report is not open', 409)
     const f = await form(c.req.raw)
     const reasons = (f.reasons || '').trim()
     if (reasons.length < 20) return c.text('Specific reasons are required', 400)
-    const updated = db.query(
-      `UPDATE illegal_activity_reports SET status=?,resolution_note=?,resolved_at=CURRENT_TIMESTAMP
-      WHERE id=? AND status='open'`,
-    ).run(decision === 'resolve' ? 'resolved' : 'dismissed', reasons.slice(0, 2000), id)
-    if (!updated.changes) return c.text('Report is not open', 409)
-    if (report.reporter_email) {
+    const report = await databaseService().call('admin.decideIllegalReport', {
+      id, decision: decision as 'resolve' | 'dismiss', reasons,
+    })
+    if (report.status === 'not_open') return c.text('Report is not open', 409)
+    if (report.reporterEmail) {
       try {
-        await sendReportDecision(report.reporter_email, report.reference,
+        await sendReportDecision(report.reporterEmail, report.reference,
           decision === 'resolve' ? 'action taken' : 'no action', reasons)
       }
       catch (error) {
@@ -114,31 +91,20 @@ export function registerAdminRoutes(app: Hono) {
     const id = Number(c.req.param('id'))
     const decision = c.req.param('decision')
     if (!Number.isInteger(id) || !['resolve', 'dismiss'].includes(decision)) return c.text('Not found', 404)
-    const report = db.query('SELECT post_id FROM reports WHERE id=? AND status=\'open\'').get(id) as
-      | { post_id: number }
-      | null
-    if (!report) return c.text('Report is not open', 409)
     const f = await form(c.req.raw)
-    db.transaction(() => {
-      db.query(`UPDATE reports SET status=?,resolved_at=CURRENT_TIMESTAMP,resolved_by=? WHERE id=? AND status='open'`)
-        .run(decision === 'resolve' ? 'resolved' : 'dismissed', signedIn.id, id)
-      recordAdminAction(db, signedIn.id, decision === 'resolve' ? 'resolve_report' : 'dismiss_report', null,
-        report.post_id, f.note || '')
-    })()
+    const updated = await databaseService().call('admin.decideReport', {
+      id, decision: decision as 'resolve' | 'dismiss', actorId: signedIn.id, note: f.note || '',
+    })
+    if (!updated) return c.text('Report is not open', 409)
     return redirect('/admin')
   })
 
-  app.get('/admin/posts/:id/delete', c => {
+  app.get('/admin/posts/:id/delete', async c => {
     const signedIn = currentUser(c.req.raw)
     if (!signedIn) return redirect('/enter?next=' + encodeURIComponent(c.req.path))
     if (!isAdmin(signedIn)) return c.text('Forbidden', 403)
     const id = Number(c.req.param('id'))
-    const post = Number.isInteger(id)
-      ? db.query(`SELECT p.id,p.user_id,p.parent_id,p.body,p.created_at,p.deleted_at,
-    u.handle FROM posts p JOIN users u ON u.id=p.user_id WHERE p.id=? AND p.deleted_at IS NULL`).get(id) as
-        | (PostRow & { handle: string })
-        | null
-      : null
+    const post = Number.isInteger(id) ? await databaseService().call('admin.post', { id }) : null
     if (!post) return c.text('Not found', 404)
     const returnTo = c.req.query('report')
       ? '/admin'
@@ -151,44 +117,32 @@ export function registerAdminRoutes(app: Hono) {
     if (!signedIn) return redirect('/enter?next=' + encodeURIComponent('/admin'))
     if (!isAdmin(signedIn)) return c.text('Forbidden', 403)
     const id = Number(c.req.param('id'))
-    const post = Number.isInteger(id)
-      ? db.query('SELECT user_id FROM posts WHERE id=? AND deleted_at IS NULL').get(id) as { user_id: number } | null
-      : null
-    if (!post) return c.text('Not found', 404)
     const f = await form(c.req.raw)
-    db.transaction(() => {
-      softDeletePost(db, id)
-      resolvePostReports(db, id, signedIn.id)
-      recordAdminAction(db, signedIn.id, 'delete_post', post.user_id, id, f.note || '')
-    })()
-    await deleteLinkPreviewImages(db, id)
+    if (!Number.isInteger(id)) return c.text('Not found', 404)
+    const deleted = await databaseService().call('admin.deletePost', { id, actorId: signedIn.id, note: f.note || '' })
+    if (deleted.status === 'not_found') return c.text('Not found', 404)
+    await deleteImagesAfterCommit(deleted.imageKeys)
     return redirect(safeLocalPath(f.returnTo, '/admin'))
   })
 
-  app.get('/admin/users/:id', c => {
+  app.get('/admin/users/:id', async c => {
     const signedIn = currentUser(c.req.raw)
     if (!signedIn) return redirect('/enter?next=' + encodeURIComponent(c.req.path))
     if (!isAdmin(signedIn)) return c.text('Forbidden', 403)
     const id = Number(c.req.param('id'))
-    const target = Number.isInteger(id)
-      ? db.query(`SELECT id,handle,email,bio,suspended_at,deleted_at,is_bot,bot_managed FROM users
-    WHERE id=? AND deleted_at IS NULL`).get(id) as ProfileRow | null
-      : null
+    const target = Number.isInteger(id) ? await databaseService().call('admin.user', { id }) : null
     if (!target) return c.text('Not found', 404)
     return page(<AdminUser user={signedIn} target={target} />)
   })
 
-  app.get('/admin/users/:id/:action', c => {
+  app.get('/admin/users/:id/:action', async c => {
     const signedIn = currentUser(c.req.raw)
     if (!signedIn) return redirect('/enter?next=' + encodeURIComponent(c.req.path))
     if (!isAdmin(signedIn)) return c.text('Forbidden', 403)
     const id = Number(c.req.param('id'))
     const action = c.req.param('action')
     if (!['suspend', 'restore', 'delete'].includes(action)) return c.text('Not found', 404)
-    const target = Number.isInteger(id)
-      ? db.query(`SELECT id,handle,email,bio,suspended_at,deleted_at FROM users
-    WHERE id=? AND deleted_at IS NULL`).get(id) as ProfileRow | null
-      : null
+    const target = Number.isInteger(id) ? await databaseService().call('admin.user', { id }) : null
     if (!target) return c.text('Not found', 404)
     if (target.id === signedIn.id || isAdminEmail(target.email)) return c.text('Protected admin account', 403)
     if (action === 'suspend' && target.suspended_at) return c.text('Account is already suspended', 409)
@@ -209,14 +163,7 @@ export function registerAdminRoutes(app: Hono) {
     if (!Number.isInteger(id) || !['suspend', 'restore', 'delete', 'bot'].includes(action)) {
       return c.text('Not found', 404)
     }
-    const target = db.query(`SELECT id,email,suspended_at,is_bot,bot_managed FROM users
-      WHERE id=? AND deleted_at IS NULL`).get(id) as {
-      id: number
-      email: string
-      suspended_at: string | null
-      is_bot: number
-      bot_managed: number
-    } | null
+    const target = await databaseService().call('admin.user', { id })
     if (!target) return c.text('Not found', 404)
     if (target.id === signedIn.id || isAdminEmail(target.email)) return c.text('Protected admin account', 403)
     if (action === 'suspend' && target.suspended_at) return c.text('Account is already suspended', 409)
@@ -225,33 +172,21 @@ export function registerAdminRoutes(app: Hono) {
     if (action === 'bot') {
       if (f.bot !== 'yes' && f.bot !== 'no') return c.text('Invalid bot status', 400)
       const isBot = f.bot === 'yes'
-      if (target.bot_managed && !!target.is_bot === isBot) return c.text('Bot status has already changed', 409)
-      db.transaction(() => {
-        db.query('UPDATE users SET is_bot=?,bot_managed=1 WHERE id=?').run(isBot ? 1 : 0, id)
-        recordAdminAction(db, signedIn.id, isBot ? 'mark_bot' : 'unmark_bot', id, null, f.note || '')
-      })()
+      const changed = await databaseService().call('admin.moderateUser', {
+        id, actorId: signedIn.id, action: 'bot', isBot, note: f.note || '',
+      })
+      if (changed.status === 'bot_unchanged') return c.text('Bot status has already changed', 409)
+      if (changed.status === 'not_found') return c.text('Not found', 404)
       return redirect(`/admin/users/${id}`)
     }
-    const postIds = action === 'delete'
-      ? (db.query('SELECT id FROM posts WHERE user_id=?').all(id) as { id: number }[]).map(post => post.id)
-      : []
-    db.transaction(() => {
-      if (action === 'suspend') {
-        db.query('UPDATE users SET suspended_at=CURRENT_TIMESTAMP WHERE id=?').run(id)
-        db.query('DELETE FROM sessions WHERE user_id=?').run(id)
-        recordAdminAction(db, signedIn.id, 'suspend_user', id, null, f.note || '')
-      }
-      else if (action === 'restore') {
-        db.query('UPDATE users SET suspended_at=NULL WHERE id=?').run(id)
-        recordAdminAction(db, signedIn.id, 'restore_user', id, null, f.note || '')
-      }
-      else {
-        recordAdminAction(db, signedIn.id, 'delete_user', id, null, f.note || '')
-        anonymizeUser(db, id, signedIn.id)
-      }
-    })()
-    for (const postId of postIds) await deleteLinkPreviewImages(db, postId)
-    if (action === 'delete') await deleteBioLinkPreviewImages(db, id)
+    const changed = await databaseService().call('admin.moderateUser', {
+      id, actorId: signedIn.id, action: action as 'suspend' | 'restore' | 'delete', note: f.note || '',
+    })
+    if (changed.status === 'not_found') return c.text('Not found', 404)
+    if (changed.status === 'already_suspended') return c.text('Account is already suspended', 409)
+    if (changed.status === 'not_suspended') return c.text('Account is not suspended', 409)
+    if (changed.status !== 'ready') return c.text('Conflict', 409)
+    await deleteImagesAfterCommit(changed.imageKeys)
     return redirect(action === 'delete' ? '/admin' : `/admin/users/${id}`)
   })
 }

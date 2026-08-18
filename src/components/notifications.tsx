@@ -1,6 +1,6 @@
 import { isAdmin } from '../admin'
 import { appName } from '../brand'
-import type { User } from '../db'
+import type { User } from '../types'
 import { AccountSettingsHeader } from './account-settings-header'
 import { Layout } from './layout'
 

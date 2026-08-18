@@ -1,5 +1,5 @@
-import type { User } from '../db'
-import { DENSITY_CHOICES, type DensityChoice, PAGE_SIZE_CHOICES, type PageSizeChoice } from '../device-settings'
+import type { User } from '../types'
+import { DENSITY_CHOICES, type DensityChoice, PAGE_SIZE_CHOICES, type PageSizeChoice } from '../request-preferences'
 import { ACCENT_CHOICES, type Appearance, FONT_CHOICES, FONT_SIZE_CHOICES, type FontChoice, type FontSizeChoice,
   PRIMARY_FONT_CHOICES, type PrimaryFontChoice, SANS_SERIF_FONT_CHOICES, type SansSerifFontChoice,
   THEME_CHOICES } from '../theme'

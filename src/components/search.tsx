@@ -1,10 +1,5 @@
-import type { User } from '../db'
-import { db } from '../db'
-import { devicePageSize } from '../device-settings'
-import { PAGE_SIZE } from '../pagination'
-import { enrichPosts } from '../posts'
-import { searchPeople, searchPosts, searchTags, searchTerms } from '../search'
-import { activeRequest } from '../theme'
+import type { User } from '../types'
+import type { SearchResultsData } from '../types'
 import { Layout } from './layout'
 import { ConnectionPeople, Pagination, TagPeopleList } from './page-shared'
 import { Post } from './post'
@@ -39,25 +34,13 @@ export function SearchForm({ query = '', autoFocus = false, tab = 'notes', place
   )
 }
 
-export function SearchResults({ user, query, page, tab = 'notes' }: {
+export function SearchResults({ user, query, page, tab = 'notes', results }: {
   user: User | null
   query: string
   page: number
   tab?: SearchTab
+  results: SearchResultsData
 }) {
-  const viewerId = user?.id ?? -1
-  const notePageSize = devicePageSize(activeRequest(), user?.id)
-  const results = {
-    notes: searchPosts(db, query, viewerId, tab === 'notes' ? page : 1, notePageSize),
-    tags: searchTags(db, query, viewerId, tab === 'tags' ? page : 1),
-    people: searchPeople(db, query, viewerId, tab === 'people' ? page : 1),
-  }
-  const result = results[tab]
-  const posts = tab === 'notes' ? enrichPosts(db, result.rows as ReturnType<typeof searchPosts>['rows'], viewerId) : []
-  const people = tab === 'people' ? result.rows as ReturnType<typeof searchPeople>['rows'] : []
-  const tags = tab === 'tags' ? result.rows as ReturnType<typeof searchTags>['rows'] : []
-  const highlights = searchTerms(query)
-  const totalPages = Math.max(1, Math.ceil(result.total / (tab === 'notes' ? notePageSize : PAGE_SIZE)))
   const queryParameter = query ? `?q=${encodeURIComponent(query)}` : ''
   const tabPath = (value: SearchTab) => `/search${queryParameter}${queryParameter ? '&' : '?'}tab=${value}`
   return (
@@ -71,23 +54,25 @@ export function SearchResults({ user, query, page, tab = 'notes' }: {
           <a key={value} href={tabPath(value)} className={tab === value ? 'active' : ''}
             aria-current={tab === value ? 'page' : undefined}
           >
-            {results[value].total} {value}
+            {results.totals[value]} {value}
           </a>
         ))}
       </nav>
-      {posts.map(post => (
-        <Post key={post.id} p={post} user={user} showReplyCount highlightTerms={highlights}
+      {results.posts.map(post => (
+        <Post key={post.id} p={post} user={user} showReplyCount highlightTerms={results.highlights}
           returnPath={searchPostReturnPath(query, page, post.id)} />
       ))}
-      {!!tags.length && (
-        <TagPeopleList user={user} tags={tags} followingKey="viewerFollowing" highlightTerms={highlights} />
+      {!!results.tags.length && (
+        <TagPeopleList user={user} tags={results.tags} followingKey="viewerFollowing"
+          highlightTerms={results.highlights} />
       )}
-      {!!people.length && (
-        <ConnectionPeople user={user} people={people} className="search-people" highlightTerms={highlights}
+      {!!results.people.length && (
+        <ConnectionPeople user={user} people={results.people} className="search-people"
+          highlightTerms={results.highlights}
           returnPath={person => searchPersonReturnPath(query, page, person.id)} />
       )}
-      {query && !result.rows.length && <div className="empty">No matching {tab}.</div>}
-      <Pagination page={page} totalPages={totalPages}
+      {query && !results[tab === 'notes' ? 'posts' : tab].length && <div className="empty">No matching {tab}.</div>}
+      <Pagination page={page} totalPages={results.totalPages}
         path={`/search?q=${encodeURIComponent(query)}${tab === 'notes' ? '' : `&tab=${tab}`}`} />
     </Layout>
   )

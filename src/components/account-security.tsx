@@ -1,4 +1,4 @@
-import { type User } from '../db'
+import type { User } from '../types'
 import type { ApiKeyView, FeedKeyView, SessionView } from '../types'
 import { AccountSettingsHeader } from './account-settings-header'
 import { maskEmail } from './email-address'

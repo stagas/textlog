@@ -11,10 +11,8 @@ import {
 import { currentPage, page, redirect, rememberFeed } from './shared'
 
 import type { Hono } from 'hono'
-import { db } from '../db'
-import { markAllForYouRead } from '../for-you-state'
 import { decodeHotCursor, hotRankingVersion } from '../hot'
-import { materializedFeedPage } from '../materialized-feed-pages'
+import { rpcMaterializedFeedPage } from '../materialized-feed-service'
 import {
   donationBannerDismissed,
   donationBannerDismissedCookie,
@@ -26,35 +24,22 @@ import {
 import { instance } from '../../instance.config'
 import { decodePostCursor } from '../pagination'
 import { currentUser } from '../utils'
+import { databaseService } from '../database-service'
+import { resolvedPageSize } from '../request-preferences'
 
-function showNotificationBanner(request: Request, user: ReturnType<typeof currentUser>) {
+async function showNotificationBanner(request: Request, user: ReturnType<typeof currentUser>) {
   if (!user) return instance.links.donate && !donationBannerDismissed(request) ? 'donate' : false
-  const inviteHandled = Boolean(db.query(
-    'SELECT 1 FROM invite_banner_dismissals WHERE user_id=? LIMIT 1',
-  ).get(user.id))
   const userAgent = notificationUserAgent(request)
+  const state = await databaseService().call('feeds.bannerState', { userId: user.id, userAgent })
+  const { inviteHandled, notificationsEnabled, improvementDismissed, appearanceHandled, donationDismissed } = state
   if (!userAgent) {
     const choices = inviteHandled ? ['notifications', 'appearance'] : ['notifications', 'appearance', 'invite']
     return choices[Math.floor(Math.random() * choices.length)] as 'notifications' | 'appearance' | 'invite'
   }
-  const notificationsEnabled = Boolean(db.query(
-    "SELECT 1 FROM notification_user_agents WHERE user_id=? AND user_agent=? AND status='enabled' LIMIT 1",
-  ).get(user.id, userAgent))
-  const improvementDismissed = Boolean(db.query(
-    'SELECT 1 FROM notification_improvement_user_agents WHERE user_id=? AND user_agent=? LIMIT 1',
-  ).get(user.id, userAgent))
   if (notificationsEnabled && !improvementDismissed) return 'notification-update'
-  const notificationsHandled = notificationBannerDismissed(request, user.id) || Boolean(db.query(
-    'SELECT 1 FROM notification_user_agents WHERE user_id=? AND user_agent=? LIMIT 1',
-  ).get(user.id, userAgent))
-  const appearanceHandled = Boolean(db.query(
-    'SELECT 1 FROM appearance_user_agents WHERE user_id=? AND user_agent=? LIMIT 1',
-  ).get(user.id, userAgent))
+  const notificationsHandled = notificationBannerDismissed(request, user.id) || state.notificationsHandled
   if (notificationsHandled && appearanceHandled && !inviteHandled) return 'invite'
   if (notificationsHandled && appearanceHandled) {
-    const donationDismissed = Boolean(db.query(
-      'SELECT 1 FROM donation_banner_dismissals WHERE user_id=? LIMIT 1',
-    ).get(user.id))
     return instance.links.donate && !donationDismissed ? 'donate' : false
   }
   if (notificationsHandled) return 'appearance'
@@ -63,28 +48,11 @@ function showNotificationBanner(request: Request, user: ReturnType<typeof curren
   return Math.random() < 0.5 ? 'notifications' : 'appearance'
 }
 
-function rememberAppearanceBanner(request: Request, userId: number, status: 'seen' | 'dismissed') {
-  const userAgent = notificationUserAgent(request)
-  if (!userAgent) return
-  db.query(`INSERT INTO appearance_user_agents(user_id,user_agent,status) VALUES(?,?,?)
-    ON CONFLICT(user_id,user_agent) DO UPDATE SET status=excluded.status,updated_at=CURRENT_TIMESTAMP`)
-    .run(userId, userAgent, status)
-}
-
-function rememberDonationBanner(userId: number) {
-  db.query(`INSERT INTO donation_banner_dismissals(user_id) VALUES(?)
-    ON CONFLICT(user_id) DO UPDATE SET dismissed_at=CURRENT_TIMESTAMP`).run(userId)
-}
-
-function rememberInviteBanner(userId: number) {
-  db.query(`INSERT INTO invite_banner_dismissals(user_id) VALUES(?)
-    ON CONFLICT(user_id) DO UPDATE SET dismissed_at=CURRENT_TIMESTAMP`).run(userId)
-}
-
 export function registerFeedsRoutes(app: Hono) {
-  app.get('/', c => {
+  app.get('/', async c => {
     const user = currentUser(c.req.raw)
-    if (!user) return page(<About user={null} />)
+    if (!user) return page(<About user={null}
+      hotPosts={await databaseService().call('feeds.aboutHotPosts', {})} />)
     const preferredFeed = feedPreference(c.req.raw)
     const path = preferredFeed === 'latest' ? '/latest'
       : preferredFeed === 'hot' ? '/hot' : '/for-you'
@@ -96,13 +64,15 @@ export function registerFeedsRoutes(app: Hono) {
     if (!user) return redirect('/enter?next=' + encodeURIComponent('/for-you'))
     const cursorValue = c.req.query('cursor')
     if (cursorValue && !decodeForYouCursor(cursorValue)) return c.text('Invalid cursor', 400)
-    const notificationBanner = showNotificationBanner(c.req.raw, user)
+    const notificationBanner = await showNotificationBanner(c.req.raw, user)
+    const data = await databaseService().call('feeds.personalizedPage', { user,
+      page: currentPage(c.req.query('page')), pageSize: resolvedPageSize(c.req.raw), toMe: false, path: '/for-you' })
     const render = () => page(
-        <Feed user={user} page={currentPage(c.req.query('page'))} title="for you"
+        <Feed user={user} data={data} title="for you"
           notificationBanner={notificationBanner} />,
     )
     const response = !notificationBanner && currentPage(c.req.query('page')) === 1 && !cursorValue
-      ? await materializedFeedPage(db, c.req.raw, 'for-you', user.id, render, undefined, true)
+      ? await rpcMaterializedFeedPage(c.req.raw, 'for-you', user.id, render, true)
       : render()
     return rememberFeed(response, 'following')
   })
@@ -112,21 +82,23 @@ export function registerFeedsRoutes(app: Hono) {
     const cursorValue = c.req.query('cursor')
     const cursor = decodePostCursor(cursorValue)
     if (cursorValue && !cursor) return c.text('Invalid cursor', 400)
-    const notificationBanner = showNotificationBanner(c.req.raw, user)
+    const notificationBanner = await showNotificationBanner(c.req.raw, user)
+    const feed = await databaseService().call('feeds.latestPage', { viewerId: user?.id ?? -1,
+      page: currentPage(c.req.query('page')), pageSize: resolvedPageSize(c.req.raw) })
     const render = () => page(
-      <PublicFeed user={user} page={currentPage(c.req.query('page'))} path="/latest"
+      <PublicFeed user={user} feed={feed} path="/latest"
         notificationBanner={notificationBanner} />,
     )
     const response = !notificationBanner && currentPage(c.req.query('page')) === 1 && !cursorValue
-      ? await materializedFeedPage(db, c.req.raw, 'latest', user?.id ?? -1, render)
+      ? await rpcMaterializedFeedPage(c.req.raw, 'latest', user?.id ?? -1, render)
       : render()
     return rememberFeed(response, 'latest')
   })
 
-  app.post('/for-you/read-all', c => {
+  app.post('/for-you/read-all', async c => {
     const user = currentUser(c.req.raw)
     if (!user) return redirect('/enter?next=' + encodeURIComponent('/for-you'))
-    markAllForYouRead(user.id)
+    await databaseService().call('feeds.markRead', { userId: user.id, toMe: false })
     return redirect('/for-you')
   })
 
@@ -135,21 +107,23 @@ export function registerFeedsRoutes(app: Hono) {
     if (!user) return redirect('/enter?next=' + encodeURIComponent('/to-me'))
     const cursorValue = c.req.query('cursor')
     if (cursorValue && !decodeForYouCursor(cursorValue)) return c.text('Invalid cursor', 400)
-    const notificationBanner = showNotificationBanner(c.req.raw, user)
+    const notificationBanner = await showNotificationBanner(c.req.raw, user)
+    const data = await databaseService().call('feeds.personalizedPage', { user,
+      page: currentPage(c.req.query('page')), pageSize: resolvedPageSize(c.req.raw), toMe: true, path: '/to-me' })
     const render = () => page(
-        <Feed user={user} page={currentPage(c.req.query('page'))} title="to me" path="/to-me" toMe
+        <Feed user={user} data={data} title="to me" path="/to-me" toMe
           notificationBanner={notificationBanner} />,
     )
     const response = !notificationBanner && currentPage(c.req.query('page')) === 1 && !cursorValue
-      ? await materializedFeedPage(db, c.req.raw, 'to-me', user.id, render, undefined, true)
+      ? await rpcMaterializedFeedPage(c.req.raw, 'to-me', user.id, render, true)
       : render()
     return rememberFeed(response, 'following')
   })
 
-  app.post('/to-me/read-all', c => {
+  app.post('/to-me/read-all', async c => {
     const user = currentUser(c.req.raw)
     if (!user) return redirect('/enter?next=' + encodeURIComponent('/to-me'))
-    markAllForYouRead(user.id, true)
+    await databaseService().call('feeds.markRead', { userId: user.id, toMe: true })
     return redirect('/to-me')
   })
 
@@ -157,71 +131,73 @@ export function registerFeedsRoutes(app: Hono) {
     const user = currentUser(c.req.raw)
     const cursorValue = c.req.query('cursor')
     if (cursorValue && !decodeHotCursor(cursorValue)) return c.text('Invalid cursor', 400)
-    const notificationBanner = showNotificationBanner(c.req.raw, user)
+    const notificationBanner = await showNotificationBanner(c.req.raw, user)
+    const feed = await databaseService().call('feeds.hotPage', { viewerId: user?.id ?? -1,
+      page: currentPage(c.req.query('page')), pageSize: resolvedPageSize(c.req.raw) })
     const render = () => page(
-      <HotFeed user={user} page={currentPage(c.req.query('page'))} title="hot"
+      <HotFeed user={user} feed={feed} title="hot"
         notificationBanner={notificationBanner} />,
     )
     const response = !notificationBanner && currentPage(c.req.query('page')) === 1 && !cursorValue
-      ? await materializedFeedPage(db, c.req.raw, 'hot', user?.id ?? -1, render, undefined, false, hotRankingVersion)
+      ? await rpcMaterializedFeedPage(c.req.raw, 'hot', user?.id ?? -1, render, false, hotRankingVersion)
       : render()
     return rememberFeed(response, 'hot')
   })
 
-  app.post('/notifications/banner/dismiss', c => {
+  app.post('/notifications/banner/dismiss', async c => {
     const user = currentUser(c.req.raw)
     if (!user) return redirect('/enter')
     const destination = safeRefererPath(c.req.header('referer'), c.req.url)
     const userAgent = notificationUserAgent(c.req.raw)
-    if (userAgent) {
-      db.query(`INSERT INTO notification_user_agents(user_id,user_agent,status) VALUES(?,?,'dismissed')
-        ON CONFLICT(user_id,user_agent) DO UPDATE SET status='dismissed',updated_at=CURRENT_TIMESTAMP`)
-        .run(user.id, userAgent)
-    }
+    await databaseService().call('feeds.recordBanner', {
+      userId: user.id, userAgent, action: 'notifications-dismissed',
+    })
     return redirect(destination)
   })
 
-  app.post('/notifications/improvements/dismiss', c => {
+  app.post('/notifications/improvements/dismiss', async c => {
     const user = currentUser(c.req.raw)
     if (!user) return redirect('/enter')
     const userAgent = notificationUserAgent(c.req.raw)
-    if (userAgent) {
-      db.query(`INSERT INTO notification_improvement_user_agents(user_id,user_agent) VALUES(?,?)
-        ON CONFLICT(user_id,user_agent) DO UPDATE SET dismissed_at=CURRENT_TIMESTAMP`)
-        .run(user.id, userAgent)
-    }
+    await databaseService().call('feeds.recordBanner', {
+      userId: user.id, userAgent, action: 'notification-improvements-dismissed',
+    })
     return redirect(safeRefererPath(c.req.header('referer'), c.req.url))
   })
 
-  app.post('/appearance/banner/dismiss', c => {
+  app.post('/appearance/banner/dismiss', async c => {
     const user = currentUser(c.req.raw)
     if (!user) return redirect('/enter')
-    rememberAppearanceBanner(c.req.raw, user.id, 'dismissed')
+    await databaseService().call('feeds.recordBanner', { userId: user.id,
+      userAgent: notificationUserAgent(c.req.raw), action: 'appearance-dismissed' })
     return redirect(safeRefererPath(c.req.header('referer'), c.req.url))
   })
 
-  app.post('/invite/banner/dismiss', c => {
+  app.post('/invite/banner/dismiss', async c => {
     const user = currentUser(c.req.raw)
     if (!user) return redirect('/enter')
-    rememberInviteBanner(user.id)
+    await databaseService().call('feeds.recordBanner', { userId: user.id, userAgent: null,
+      action: 'invite-dismissed' })
     return redirect(safeRefererPath(c.req.header('referer'), c.req.url))
   })
 
-  app.get('/donation/banner/accept', c => {
+  app.get('/donation/banner/accept', async c => {
     if (!instance.links.donate) return redirect('/')
     const user = currentUser(c.req.raw)
     if (user) {
-      rememberDonationBanner(user.id)
+      await databaseService().call('feeds.recordBanner', { userId: user.id, userAgent: null,
+        action: 'donation-dismissed' })
       return redirect(instance.links.donate)
     }
     return redirect(instance.links.donate, donationBannerDismissedCookie())
   })
 
-  app.post('/donation/banner/dismiss', c => {
+  app.post('/donation/banner/dismiss', async c => {
     const user = currentUser(c.req.raw)
     const destination = safeRefererPath(c.req.header('referer'), c.req.url)
     if (!user) return redirect(destination, donationBannerDismissedCookie())
-    rememberDonationBanner(user.id)
+    await databaseService().call('feeds.recordBanner', { userId: user.id, userAgent: null,
+      action: 'donation-dismissed' })
     return redirect(destination)
   })
 
@@ -231,14 +207,18 @@ export function registerFeedsRoutes(app: Hono) {
     return redirect('/to-me')
   })
 
-  app.post('/activity/read-all', c => {
+  app.post('/activity/read-all', async c => {
     const user = currentUser(c.req.raw)
     if (!user) return redirect('/enter?next=' + encodeURIComponent('/activity'))
-    markAllForYouRead(user.id, true)
+    await databaseService().call('feeds.markRead', { userId: user.id, toMe: true })
     return redirect('/to-me')
   })
 
-  app.get('/about', c => page(<About user={currentUser(c.req.raw)} />))
+  app.get('/about', async c => {
+    const user = currentUser(c.req.raw)
+    const hotPosts = user ? [] : await databaseService().call('feeds.aboutHotPosts', {})
+    return page(<About user={user} hotPosts={hotPosts} />)
+  })
   app.get('/contact', c => page(<Contact user={currentUser(c.req.raw)} />))
   app.get('/dmca', c => page(<Dmca user={currentUser(c.req.raw)} />))
   app.get('/legal', c => page(<Legal user={currentUser(c.req.raw)} />))

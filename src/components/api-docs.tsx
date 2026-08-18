@@ -4,7 +4,7 @@ import json from 'highlight.js/lib/languages/json'
 import xml from 'highlight.js/lib/languages/xml'
 import type { ReactNode } from 'react'
 import { appName, appOrigin } from '../brand'
-import type { User } from '../db'
+import type { User } from '../types'
 import { Layout } from './layout'
 
 hljs.registerLanguage('bash', bash)

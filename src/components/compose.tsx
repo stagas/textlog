@@ -1,4 +1,4 @@
-import { type User } from '../db'
+import type { User } from '../types'
 import { canPublishPosts } from '../posting-policy'
 import type { PostView } from '../types'
 import { Layout } from './layout'

@@ -1,6 +1,6 @@
 import type { Database } from 'bun:sqlite'
 import { createHash, randomBytes } from 'node:crypto'
-import type { User } from './db'
+import type { User } from './types'
 
 export const feedKeyHash = (value: string) => createHash('sha256').update(value).digest('hex')
 

@@ -2,6 +2,8 @@ import type { Database } from 'bun:sqlite'
 import { extractHashtags, extractMentions } from './content'
 import { encodeHotCursor, getHotPosts, type HotCursor, hotCursor } from './hot'
 import { searchExpression } from './search'
+import type { ApiPost } from './types'
+export type { ApiPost } from './types'
 
 export const API_DEFAULT_LIMIT = 20
 export const API_MAX_LIMIT = 100
@@ -16,21 +18,6 @@ type ApiPostRow = {
   created_at: string
   handle: string
   reply_count: number
-}
-
-export type ApiPost = {
-  id: number
-  top_id: number | null
-  body: string
-  created_at: string
-  parent_id: number | null
-  reply_count: number
-  tags: string[]
-  mentions: string[]
-  url: string
-  api_url: string
-  author: { handle: string; url: string; api_url: string }
-  parent?: ApiPost | null
 }
 
 export function apiOrigin(requestUrl: string, appUrl: string | null | undefined = Bun.env.APP_URL) {

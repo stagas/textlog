@@ -1,4 +1,4 @@
-import { type User } from '../db'
+import type { User } from '../types'
 import type { PostRow, ProfileRow } from '../types'
 import { displayPostBody } from '../utils'
 import { Layout } from './layout'

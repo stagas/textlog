@@ -3,10 +3,8 @@ import type { PersonView, PostView, ProfileRow, TagView } from '../types'
 import React from 'react'
 import { Panel } from './panel'
 import { isAdmin } from '../admin'
-import { db, type User } from '../db'
-import { hasUnreadForYou, hasUnreadToMe } from '../for-you-state'
+import type { User } from '../types'
 import { markdownPlainText } from '../markdown'
-import { visibleTagFollowerCounts, visibleUserProfileStats } from '../posts'
 import { searchTerms } from '../search'
 import { displayBio, linkify } from '../utils'
 import { TagReference, UserReference } from './post'
@@ -293,7 +291,7 @@ export function CursorPagination({ path, previousCursor, nextCursor }: {
 }
 
 export function FeedTabs({ active, user, forYouReadStatus, activityReadStatus, toMe = false, toMeCount = 0,
-  unreadHref }: {
+  unreadHref, forYouUnread = false, toMeUnread = false }: {
   active: 'following' | 'activity' | 'hot' | 'latest'
   user: User | null
   forYouReadStatus?: boolean
@@ -301,9 +299,10 @@ export function FeedTabs({ active, user, forYouReadStatus, activityReadStatus, t
   toMe?: boolean
   toMeCount?: number
   unreadHref?: string
+  forYouUnread?: boolean
+  toMeUnread?: boolean
 }) {
-  const toMeUnread = user ? hasUnreadToMe(user.id) : false
-  const forYouUnread = user ? hasUnreadForYou(user.id) || toMeUnread : false
+  forYouUnread = forYouUnread || toMeUnread
   return (
     <>
       <nav className="feed-tabs" aria-label="Feed">
@@ -539,14 +538,13 @@ export function TagPeopleList({ user, tags, followingKey = 'following', highligh
   highlightTerms?: string[]
   returnPath?: (tag: TagView) => string
 }) {
-  const followerCounts = visibleTagFollowerCounts(db, tags.map(tag => tag.tag), user?.id ?? -1)
   return (
     <div className="people tag-people">
       {tags.map(tag => (
         <article key={tag.tag} id={`tag-${tag.tag}`}>
           <div>
             <div>
-              <TagReference tag={tag.tag} noteCount={tag.count} followerCount={followerCounts[tag.tag] || 0}
+              <TagReference tag={tag.tag} noteCount={tag.count} followerCount={tag.followerCount || 0}
                 following={tag[followingKey]} user={user}
                 navigationQuery={returnPath ? `?from=${encodeURIComponent(returnPath(tag))}` : ''} label={
                 <>
@@ -571,14 +569,13 @@ export function TagPeopleList({ user, tags, followingKey = 'following', highligh
 }
 
 export function BlockedTagList({ user, tags }: { user: User; tags: TagView[] }) {
-  const followerCounts = visibleTagFollowerCounts(db, tags.map(tag => tag.tag), user.id)
   return (
     <div className="people tag-people">
       {tags.map(tag => (
         <article key={tag.tag}>
           <div>
             <div>
-              <TagReference tag={tag.tag} noteCount={tag.count} followerCount={followerCounts[tag.tag] || 0} user={user}
+              <TagReference tag={tag.tag} noteCount={tag.count} followerCount={tag.followerCount || 0} user={user}
                 showFollowAction={false} />
               <small>{tag.count} {tag.count === 1 ? 'note' : 'notes'}</small>
             </div>
@@ -593,7 +590,6 @@ export function BlockedTagList({ user, tags }: { user: User; tags: TagView[] }) 
 }
 
 export function BlockedPeopleList({ user, people }: { user: User; people: PersonView[] }) {
-  const profileStats = visibleUserProfileStats(db, people.map(person => person.id), user.id)
   return (
     <div className="people">
       {people.map(person => (
@@ -601,7 +597,7 @@ export function BlockedPeopleList({ user, people }: { user: User; people: Person
           <div>
             <div>
               <UserReference handle={person.handle} bio={person.bio} noteCount={person.posts}
-                stats={profileStats.get(person.id)} user={user} href={`/u/${person.handle}`} showFollowAction={false} />
+                stats={person.profileStats} user={user} href={`/u/${person.handle}`} showFollowAction={false} />
               <small>{person.posts} {person.posts === 1 ? 'note' : 'notes'}</small>
             </div>
             <form method="post" action={`/block/${person.handle}`}>
@@ -621,7 +617,6 @@ export function ConnectionPeople({ user, people, className = '', highlightTerms 
   highlightTerms?: string[]
   returnPath?: (person: PersonView) => string
 }) {
-  const profileStats = visibleUserProfileStats(db, people.map(person => person.id), user?.id ?? -1)
   return (
     <div className={`people ${className}`.trim()}>
       {people.map(person => (
@@ -629,7 +624,7 @@ export function ConnectionPeople({ user, people, className = '', highlightTerms 
           <div>
             <div>
               <UserReference handle={person.handle} bio={person.bio} noteCount={person.posts}
-                stats={profileStats.get(person.id)} following={person.viewerFollowing} user={user}
+                stats={person.profileStats} following={person.viewerFollowing} user={user}
                 href={`/u/${person.handle}`} label={
                 <>
                   @<HighlightedText text={person.handle} terms={highlightTerms} />

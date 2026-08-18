@@ -1,6 +1,6 @@
 import { Layout } from './layout'
 import { CenteredPanel } from './panel'
-import type { User } from '../db'
+import type { User } from '../types'
 import { FormActions } from './page-shared'
 
 export function PersonalizedFeedLanding({ landingUrl, rssUrl, atomUrl, user, created }: { landingUrl: string;

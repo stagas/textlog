@@ -1,4 +1,4 @@
-import type { User } from '../db'
+import type { User } from '../types'
 import type { DashboardStats } from '../types'
 import { PageHeading } from './account-settings-header'
 import { Layout } from './layout'

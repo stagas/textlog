@@ -1365,6 +1365,16 @@ test('Profile linkifies Markdown links and tags in the bio', () => {
     profile,
     following: false,
     posts: [],
+    bioReference: {
+      hashtagCounts: { textlog: 1 },
+      hashtagFollowerCounts: { textlog: 1 },
+      hashtagFollowing: { textlog: false },
+      mentionBios: {},
+      mentionNoteCounts: {},
+      mentionProfileStats: {},
+      mentionFollowing: {},
+      linkPreviews: {},
+    },
   }))
 
   expect(html).toContain('<span class="reference-menu"><a class="reference-menu-trigger" '

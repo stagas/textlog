@@ -5,6 +5,8 @@ import { rebuildHotPosts } from './hot'
 import { registerSyndicationRoutes } from './routes/syndication'
 import { issueFeedKey } from './feed-keys'
 import { syndicationResponse } from './syndication'
+import { executeDatabaseDomain } from './database-domain'
+import type { DatabaseService } from './database-service'
 
 function fixture(firstPostBody?: string) {
   const database = new Database(':memory:')
@@ -45,7 +47,8 @@ function fixture(firstPostBody?: string) {
   if (firstPostBody !== undefined) database.query('UPDATE posts SET body=? WHERE id=1').run(firstPostBody)
   rebuildHotPosts(database)
   const app = new Hono()
-  registerSyndicationRoutes(app, database, null)
+  const service: DatabaseService = { call: (operation, input) => executeDatabaseDomain(database, operation, input) }
+  registerSyndicationRoutes(app, service, null)
   app.get('/u/:handle', c => c.text(`profile ${c.req.param('handle')}`))
   app.get('/tag/:tag', c => c.text(`tag ${c.req.param('tag')}`))
   ;(app as any).database = database

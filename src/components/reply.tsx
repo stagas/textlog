@@ -1,5 +1,5 @@
 import type React from 'react'
-import { type User } from '../db'
+import type { User } from '../types'
 import { canPublishPosts } from '../posting-policy'
 import type { PostView } from '../types'
 import { Layout } from './layout'
@@ -72,10 +72,11 @@ export function ReplyPreview({ parentId, user, body }: { parentId: number; user:
 }
 
 export function Reply(
-  { user, post, showForm, showReport = false, reported = false, error, body = '', reportReason = '', reportError,
+  { user, post, replies = [], showForm, showReport = false, reported = false, error, body = '', reportReason = '', reportError,
     social, preview = false, returnPath, topHref, suggestionSearch }: {
       user: User
       post: PostView
+      replies?: PostView[]
       showForm: boolean
       showReport?: boolean
       reported?: boolean
@@ -120,7 +121,7 @@ export function Reply(
             )
             : <VerificationRequired />
         )}
-        <ThreadReplies parentId={post.id} user={user} returnPath={returnPath} />
+        <ThreadReplies parentId={post.id} replies={replies} user={user} returnPath={returnPath} />
       </div>
     </Layout>
   )

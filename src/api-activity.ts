@@ -1,7 +1,7 @@
 import type { Database } from 'bun:sqlite'
 import { isAdmin } from './admin'
 import { apiPost, isoTimestamp, type ApiPost } from './api'
-import type { User } from './db'
+import type { User } from './types'
 import { hasUnreadForYou, hasUnreadToMe } from './for-you-state'
 
 type ActivityKind = 'post' | 'reply' | 'mention' | 'user_follow' | 'tag_follow' | 'signup'

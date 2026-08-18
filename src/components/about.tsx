@@ -1,15 +1,13 @@
 import { instance } from '../../instance.config'
 import { appName } from '../brand'
-import { db, type User } from '../db'
-import { getHotPosts } from '../hot'
-import { enrichPosts } from '../posts'
+import type { User } from '../types'
+import type { PostView } from '../types'
 import { Layout } from './layout'
 import { ActionPair } from './page-shared'
 import { Post } from './post'
 
-export function About({ user }: { user: User | null }) {
+export function About({ user, hotPosts = [] }: { user: User | null; hotPosts?: PostView[] }) {
   const name = appName()
-  const hotPosts = user ? [] : enrichPosts(db, getHotPosts(db, 5, null, new Date(), -1, true), -1)
   return (
     <Layout user={user} title="about">
       <article className={`static-page about-page${user ? '' : ' about-page-guest'}`}>

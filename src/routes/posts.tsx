@@ -8,24 +8,23 @@ import {
 import { conversationTopPath, postedReplyPath } from '../components/post'
 import { moderateText, moderationMessage } from '../moderation'
 import { canPublishPosts } from '../posting-policy'
-import { createPost, enrichPosts, updatePost } from '../posts'
-import type { PostRow, PostView } from '../types'
-import { form, page, redirect, rememberFeed, safeNext, usersBlocked } from './shared'
+import { databaseService } from '../database-service'
+import { form, page, redirect, rememberFeed, safeNext } from './shared'
 
 import type { Hono } from 'hono'
-import { softDeletePost } from '../admin'
 import type { PostingSuggestionSearch } from '../components/page-shared'
-import { db } from '../db'
 import { safeRefererPath } from '../http'
 import { logError } from '../log'
 import { markdownPlainText } from '../markdown'
-import { deleteLinkPreviewImages, discoverLinkPreviews, replaceLinkPreviews, saveLinkPreviews } from '../link-preview'
+import { discoverLinkPreviews } from '../link-preview'
+import { deleteImages, deleteImagesAfterCommit } from '../image-storage'
 import { renderPostOg } from '../og'
 import { normalizePostBody, postBodyValidationMessage, validPostBody } from '../post-body'
 import { postRateLimitMessage } from '../post-rate-limit'
 import { sendPushForPost } from '../push'
-import { normalizeSearchQuery, searchPeople, searchTags } from '../search'
+import { normalizeSearchQuery } from '../search'
 import { currentUser } from '../utils'
+import { publishPost } from '../api-broker'
 
 function notifyPost(postId: number, userId: number, handle: string) {
   void sendPushForPost(postId, userId, handle).catch(error => logError('activity push failed', error))
@@ -33,7 +32,7 @@ function notifyPost(postId: number, userId: number, handle: string) {
 
 const saveFailureMessage = 'Something went wrong while saving. Your text is still here; please try again.'
 
-function postingSuggestionSearch(fields: Record<string, string>, viewerId: number): PostingSuggestionSearch | null {
+async function postingSuggestionSearch(fields: Record<string, string>, viewerId: number): Promise<PostingSuggestionSearch | null> {
   if (fields.action !== 'search-hashtags' && fields.action !== 'search-mentions') return null
   const hashtagQuery = normalizeSearchQuery(fields.hashtag_query)
   const mentionQuery = normalizeSearchQuery(fields.mention_query)
@@ -46,20 +45,21 @@ function postingSuggestionSearch(fields: Record<string, string>, viewerId: numbe
     : fields.action === 'search-hashtags' ? 'hashtags' : 'mentions'
   const rawQuery = kind === 'hashtags' ? hashtagQuery : mentionQuery
   const query = normalizeSearchQuery(rawQuery.replace(kind === 'hashtags' ? /^#+\s*/u : /^@+\s*/u, ''))
-  const result = kind === 'hashtags'
-    ? searchTags(db, query, viewerId, 1, { followedFirst: true })
-    : searchPeople(db, query, viewerId, 1, { followedFirst: true, handleOnly: true })
-  const rows = kind === 'hashtags'
-    ? result.rows.map(row => 'tag' in row ? row.tag : '')
-    : result.rows.map(row => 'handle' in row ? row.handle : '')
-  return { kind, query, results: rows, truncated: result.total > 20 }
+  const result = await databaseService().call('posts.suggestions', { kind, query, viewerId })
+  return { kind, query, ...result }
 }
 
-function editParent(post: PostRow) {
-  if (!post.parent_id) return null
-  return db.query(`SELECT p.id,p.user_id,p.parent_id,p.body,p.created_at,p.deleted_at,
-    p.has_latex,p.has_links,p.has_code,u.handle,u.bio
-    FROM posts p JOIN users u ON u.id=p.user_id WHERE p.id=?`).get(post.parent_id) as PostView | null
+async function persistPreviews(postId: number, mode: 'save' | 'replace', body: string) {
+  const previews = await discoverLinkPreviews(body)
+  const newKeys = previews.flatMap(preview => 'imageKey' in preview && preview.imageKey ? [preview.imageKey] : [])
+  try {
+    const result = await databaseService().call('api.persistPostPreviews', { postId, mode, previews })
+    await deleteImagesAfterCommit(result.obsoleteImageKeys)
+  }
+  catch (error) {
+    await deleteImages(newKeys)
+    throw error
+  }
 }
 
 export function registerPostsRoutes(app: Hono) {
@@ -77,33 +77,24 @@ export function registerPostsRoutes(app: Hono) {
   app.get('/compose', c => c.redirect('/write', 301))
   app.get('/post', c => c.redirect('/write', 303))
 
-  app.get('/post/:id', c => {
+  app.get('/post/:id', async c => {
     const id = Number(c.req.param('id'))
     if (!Number.isInteger(id) || id < 1) return c.text('Not found', 404)
-    const foundPost = db.query(
-      'SELECT p.*,u.handle FROM posts p JOIN users u ON u.id=p.user_id WHERE p.id=?',
-    ).get(id) as PostView | null
-    if (!foundPost) return c.text('Not found', 404)
     const user = currentUser(c.req.raw)
+    const detail = await databaseService().call('posts.detail', { id, viewerId: user?.id ?? -1 })
+    if (detail.status === 'not_found') return c.text('Not found', 404)
+    const post = detail.post
     const returnPath = c.req.query('from') ? safeNext(c.req.query('from')) : undefined
-    const conversationRoot = foundPost.parent_id
-      ? db.query(`WITH RECURSIVE ancestors(id,parent_id,depth) AS (
-          SELECT id,parent_id,0 FROM posts WHERE id=?
-          UNION ALL
-          SELECT p.id,p.parent_id,ancestors.depth+1 FROM posts p JOIN ancestors ON p.id=ancestors.parent_id
-        ) SELECT id FROM ancestors ORDER BY depth DESC LIMIT 1`).get(id) as { id: number } | null
-      : null
-    const topHref = conversationRoot
-      ? conversationTopPath(conversationRoot.id, id, returnPath)
+    const topHref = detail.conversationRootId
+      ? conversationTopPath(detail.conversationRootId, id, returnPath)
       : undefined
     if (user && !user.handle_chosen_at && c.req.query('reply') === '1') {
       const next = `/post/${id}?reply=1${returnPath ? '&from=' + encodeURIComponent(returnPath) : ''}`
       return redirect('/choose-handle?next=' + encodeURIComponent(next))
     }
-    if (user && usersBlocked(user.id, foundPost.user_id)) return c.text('Not found', 404)
-    if (user && db.query(`SELECT 1 FROM post_hashtags ph JOIN blocked_hashtags bh ON bh.tag=ph.tag
-      WHERE ph.post_id=? AND bh.user_id=?`).get(id, user.id)) return c.text('Not found', 404)
-    const post = enrichPosts(db, [foundPost], user?.id ?? -1)[0]
+    const replies = await databaseService().call('posts.threadReplies', {
+      parentId: post.id, viewerId: user?.id ?? -1,
+    })
     const configuredOrigin = Bun.env.APP_URL?.replace(/\/$/, '')
     const origin = configuredOrigin || new URL(c.req.url).origin
     const postUrl = `${origin}/post/${post.id}`
@@ -115,21 +106,17 @@ export function registerPostsRoutes(app: Hono) {
     }
     if (user) {
       return page(
-        <Reply user={user} post={post} showForm={c.req.query('reply') === '1'} returnPath={returnPath} topHref={topHref}
+        <Reply user={user} post={post} replies={replies} showForm={c.req.query('reply') === '1'} returnPath={returnPath}
+          topHref={topHref}
           showReport={c.req.query('report') === '1'} reported={c.req.query('reported') === '1'} social={social} />,
       )
     }
-    return page(<PublicThread post={post} social={social} returnPath={returnPath} topHref={topHref} />)
+    return page(<PublicThread post={post} replies={replies} social={social} returnPath={returnPath} topHref={topHref} />)
   })
 
-  app.get('/post/:id/og.png', c => {
+  app.get('/post/:id/og.png', async c => {
     const id = Number(c.req.param('id'))
-    const post = Number.isInteger(id) && id > 0
-      ? db.query(
-        'SELECT p.body,u.handle FROM posts p JOIN users u ON u.id=p.user_id WHERE p.id=? AND p.deleted_at IS NULL',
-      )
-        .get(id) as { body: string; handle: string } | null
-      : null
+    const post = Number.isInteger(id) && id > 0 ? await databaseService().call('posts.ogData', { id }) : null
     if (!post) return c.text('Not found', 404)
     const image = renderPostOg(post.body, post.handle)
     const body = image.buffer.slice(image.byteOffset, image.byteOffset + image.byteLength) as ArrayBuffer
@@ -149,7 +136,7 @@ export function registerPostsRoutes(app: Hono) {
     const f = await form(c.req.raw)
     const returnPath = f.from ? safeNext(f.from) : '/'
     const body = normalizePostBody(f.body || '')
-    const suggestionSearch = postingSuggestionSearch(f, user.id)
+    const suggestionSearch = await postingSuggestionSearch(f, user.id)
     if (suggestionSearch) {
       return page(<Compose user={user} body={body} returnPath={returnPath} suggestionSearch={suggestionSearch} />)
     }
@@ -166,14 +153,18 @@ export function registerPostsRoutes(app: Hono) {
           moderation.reason === 'flagged' ? 422 : 503,
         )
       }
-      const result = createPost(db, user.id, body)
-      if ('retryAfter' in result) {
+      const result = await databaseService().call('api.createPost', {
+        userId: user.id, body, parentId: null, origin: new URL(c.req.url).origin,
+      })
+      if (result.status === 'rate_limited') {
         return page(
           <Compose user={user} body={body} error={postRateLimitMessage(result.retryAfter)} returnPath={returnPath} />,
           429,
         )
       }
-      if (!result.duplicate) await saveLinkPreviews(db, result.id, await discoverLinkPreviews(body, db))
+      if (result.status === 'not_found') throw new Error('Post parent unavailable')
+      if (!result.duplicate) publishPost(result.id)
+      if (!result.duplicate) await persistPreviews(result.id, 'save', body)
       if (!result.duplicate) notifyPost(result.id, user.id, user.handle)
       return rememberFeed(redirect(`/latest#post-${result.id}`), 'latest')
     }
@@ -183,109 +174,98 @@ export function registerPostsRoutes(app: Hono) {
     }
   })
 
-  app.get('/post/:id/edit', c => {
+  app.get('/post/:id/edit', async c => {
     const user = currentUser(c.req.raw)
     if (!user) return redirect('/enter?next=' + encodeURIComponent(c.req.path))
     const id = Number(c.req.param('id'))
-    const post = Number.isInteger(id)
-      ? db.query(
-        'SELECT id,user_id,parent_id,body,created_at,deleted_at FROM posts WHERE id=? AND deleted_at IS NULL',
-      ).get(id) as PostRow | null
-      : null
-    if (!post) return c.text('Not found', 404)
-    if (post.user_id !== user.id) return c.text('Forbidden', 403)
+    const loaded = Number.isInteger(id) ? await databaseService().call('posts.editData', { id, userId: user.id }) : null
+    if (!loaded || loaded.status === 'not_found') return c.text('Not found', 404)
+    if (loaded.status === 'forbidden') return c.text('Forbidden', 403)
     const returnPath = c.req.query('from') ? safeNext(c.req.query('from')) : undefined
-    return page(<EditPost user={user} post={post} parent={editParent(post)} returnPath={returnPath} />)
+    return page(<EditPost user={user} post={loaded.post} parent={loaded.parent} returnPath={returnPath} />)
   })
 
   app.post('/post/:id/edit', async c => {
     const user = currentUser(c.req.raw)
     if (!user) return redirect('/enter')
     const id = Number(c.req.param('id'))
-    const post = Number.isInteger(id)
-      ? db.query(
-        'SELECT id,user_id,parent_id,body,created_at,deleted_at FROM posts WHERE id=? AND deleted_at IS NULL',
-      ).get(id) as PostRow | null
-      : null
-    if (!post) return c.text('Not found', 404)
-    if (post.user_id !== user.id) return c.text('Forbidden', 403)
+    const loaded = Number.isInteger(id) ? await databaseService().call('posts.editData', { id, userId: user.id }) : null
+    if (!loaded || loaded.status === 'not_found') return c.text('Not found', 404)
+    if (loaded.status === 'forbidden') return c.text('Forbidden', 403)
+    const { post, parent } = loaded
     const f = await form(c.req.raw)
     const returnPath = f.from ? safeNext(f.from) : undefined
     const body = normalizePostBody(f.body || '')
-    const suggestionSearch = postingSuggestionSearch(f, user.id)
+    const suggestionSearch = await postingSuggestionSearch(f, user.id)
     if (suggestionSearch) {
       return page(
-        <EditPost user={user} post={post} parent={editParent(post)} body={body} returnPath={returnPath}
+        <EditPost user={user} post={post} parent={parent} body={body} returnPath={returnPath}
           suggestionSearch={suggestionSearch} />,
       )
     }
     if (!validPostBody(body)) {
       return page(
-        <EditPost user={user} post={post} parent={editParent(post)} body={body} returnPath={returnPath}
+        <EditPost user={user} post={post} parent={parent} body={body} returnPath={returnPath}
           error={postBodyValidationMessage(body)} />,
         400,
       )
     }
     if (f.action === 'preview') {
       return page(
-        <EditPost user={user} post={post} parent={editParent(post)} body={body} preview returnPath={returnPath} />,
+        <EditPost user={user} post={post} parent={parent} body={body} preview returnPath={returnPath} />,
       )
     }
     try {
       const moderation = await moderateText(body)
       if (!moderation.ok) {
         return page(
-          <EditPost user={user} post={post} parent={editParent(post)} body={body} returnPath={returnPath}
+          <EditPost user={user} post={post} parent={parent} body={body} returnPath={returnPath}
             error={moderationMessage(moderation.reason)} />,
           moderation.reason === 'flagged' ? 422 : 503,
         )
       }
-      updatePost(db, id, body)
-      await replaceLinkPreviews(db, id, await discoverLinkPreviews(body, db))
+      const result = await databaseService().call('api.updatePost', {
+        userId: user.id, id, body, origin: new URL(c.req.url).origin,
+      })
+      if (result.status !== 'ready') return c.text(result.status === 'not_found' ? 'Not found' : 'Forbidden',
+        result.status === 'not_found' ? 404 : 403)
+      await persistPreviews(id, 'replace', body)
       return redirect('/post/' + id + (returnPath ? '?from=' + encodeURIComponent(returnPath) : ''))
     }
     catch (error) {
       logError(`POST /post/${id}/edit`, error)
       return page(
-        <EditPost user={user} post={post} parent={editParent(post)} body={body} returnPath={returnPath}
+        <EditPost user={user} post={post} parent={parent} body={body} returnPath={returnPath}
           error={saveFailureMessage} />,
         500,
       )
     }
   })
 
-  app.get('/post/:id/delete', c => {
+  app.get('/post/:id/delete', async c => {
     const user = currentUser(c.req.raw)
     if (!user) return redirect('/enter?next=' + encodeURIComponent(c.req.path))
     const id = Number(c.req.param('id'))
-    const post = Number.isInteger(id)
-      ? db.query('SELECT id,user_id,parent_id,body,created_at,deleted_at FROM posts WHERE id=? AND deleted_at IS NULL')
-        .get(id) as PostRow | null
-      : null
-    if (!post) return c.text('Not found', 404)
-    if (post.user_id !== user.id) return c.text('Forbidden', 403)
+    const loaded = Number.isInteger(id) ? await databaseService().call('posts.editData', { id, userId: user.id }) : null
+    if (!loaded || loaded.status === 'not_found') return c.text('Not found', 404)
+    if (loaded.status === 'forbidden') return c.text('Forbidden', 403)
     const returnPath = c.req.query('from') ? safeNext(c.req.query('from')) : undefined
-    return page(<ConfirmDelete user={user} post={post} returnPath={returnPath} />)
+    return page(<ConfirmDelete user={user} post={loaded.post} returnPath={returnPath} />)
   })
 
   app.post('/post/:id/delete', async c => {
     const user = currentUser(c.req.raw)
     if (!user) return redirect('/enter')
     const id = Number(c.req.param('id'))
-    const post = Number.isInteger(id)
-      ? db.query('SELECT user_id,parent_id FROM posts WHERE id=? AND deleted_at IS NULL').get(id) as { user_id: number;
-        parent_id: number | null } | null
-      : null
-    if (!post) return c.text('Not found', 404)
-    if (post.user_id !== user.id) return c.text('Forbidden', 403)
+    if (!Number.isInteger(id)) return c.text('Not found', 404)
     const f = await form(c.req.raw)
     const returnPath = f.from ? safeNext(f.from) : undefined
-    db.transaction(() => {
-      softDeletePost(db, id)
-    })()
-    await deleteLinkPreviewImages(db, id)
-    return redirect(post.parent_id
-      ? '/post/' + post.parent_id + (returnPath ? '?from=' + encodeURIComponent(returnPath) : '')
+    const result = await databaseService().call('api.deletePost', { userId: user.id, id })
+    if (result.status !== 'ready') return c.text(result.status === 'not_found' ? 'Not found' : 'Forbidden',
+      result.status === 'not_found' ? 404 : 403)
+    await deleteImagesAfterCommit(result.imageKeys)
+    return redirect(result.parentId
+      ? '/post/' + result.parentId + (returnPath ? '?from=' + encodeURIComponent(returnPath) : '')
       : returnPath || '/')
   })
 
@@ -293,19 +273,16 @@ export function registerPostsRoutes(app: Hono) {
     const user = currentUser(c.req.raw)
     if (!user) return redirect('/enter')
     const parentId = Number(c.req.param('id'))
-    const foundParent = Number.isInteger(parentId)
-      ? db.query('SELECT p.*,u.handle,u.bio FROM posts p JOIN users u ON u.id=p.user_id WHERE p.id=?').get(
-        parentId,
-      ) as PostView | null
-      : null
-    if (!foundParent) return c.text('Not found', 404)
-    if (usersBlocked(user.id, foundParent.user_id)) return c.text('Forbidden', 403)
-    const parent = enrichPosts(db, [foundParent], user.id)[0]
+    const loaded = Number.isInteger(parentId)
+      ? await databaseService().call('posts.replyParent', { id: parentId, userId: user.id }) : null
+    if (!loaded || loaded.status === 'not_found') return c.text('Not found', 404)
+    if (loaded.status === 'forbidden') return c.text('Forbidden', 403)
+    const parent = loaded.post
     if (!canPublishPosts(user)) return page(<Reply user={user} post={parent} showForm />, 403)
     const f = await form(c.req.raw)
     const returnPath = f.from ? safeNext(f.from) : undefined
     const body = normalizePostBody(f.body || '')
-    const suggestionSearch = postingSuggestionSearch(f, user.id)
+    const suggestionSearch = await postingSuggestionSearch(f, user.id)
     if (suggestionSearch) {
       return page(
         <Reply user={user} post={parent} showForm body={body} returnPath={returnPath}
@@ -331,15 +308,19 @@ export function registerPostsRoutes(app: Hono) {
           moderation.reason === 'flagged' ? 422 : 503,
         )
       }
-      const result = createPost(db, user.id, body, parentId)
-      if ('retryAfter' in result) {
+      const result = await databaseService().call('api.createPost', {
+        userId: user.id, body, parentId, origin: new URL(c.req.url).origin,
+      })
+      if (result.status === 'rate_limited') {
         return page(
           <Reply user={user} post={parent} showForm error={postRateLimitMessage(result.retryAfter)} body={body}
             returnPath={returnPath} />,
           429,
         )
       }
-      if (!result.duplicate) await saveLinkPreviews(db, result.id, await discoverLinkPreviews(body, db))
+      if (result.status === 'not_found') return c.text('Not found', 404)
+      if (!result.duplicate) publishPost(result.id)
+      if (!result.duplicate) await persistPreviews(result.id, 'save', body)
       if (!result.duplicate) notifyPost(result.id, user.id, user.handle)
       return redirect(postedReplyPath(parentId, result.id, returnPath))
     }

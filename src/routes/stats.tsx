@@ -1,10 +1,11 @@
 import type { Hono } from 'hono'
 import { Stats } from '../components/pages'
-import { db } from '../db'
-import { dashboardStats } from '../stats'
+import { databaseService } from '../database-service'
 import { currentUser } from '../utils'
 import { page } from './shared'
 
 export function registerStatsRoutes(app: Hono) {
-  app.get('/stats', c => page(<Stats user={currentUser(c.req.raw)} stats={dashboardStats(db)} />))
+  app.get('/stats', async c => page(
+    <Stats user={currentUser(c.req.raw)} stats={await databaseService().call('stats.dashboard', {})} />,
+  ))
 }

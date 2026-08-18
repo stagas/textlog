@@ -4,7 +4,9 @@ import { Hono } from 'hono'
 import { readFileSync, unlinkSync } from 'node:fs'
 import { registerApiRoutes } from './routes/api'
 import { WRITE_LIMIT } from './routes/api-write'
-import { hash } from './utils'
+import { apiUser, hash } from './utils'
+import { executeDatabaseDomain } from './database-domain'
+import type { DatabaseService } from './database-service'
 
 function fixture() {
   const database = new Database(':memory:')
@@ -50,7 +52,8 @@ function fixture() {
       ('${hash('bob-token')}',2,${Date.now() + 86400000},${Date.now()});
   `)
   const app = new Hono()
-  registerApiRoutes(app, database, 'https://textlog.test')
+  const service: DatabaseService = { call: (operation, input) => executeDatabaseDomain(database, operation, input) }
+  registerApiRoutes(app, 'https://textlog.test', Date.now, service, request => apiUser(request, database))
   return { app, database }
 }
 

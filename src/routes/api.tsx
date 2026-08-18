@@ -1,16 +1,11 @@
-import type { Database } from 'bun:sqlite'
 import type { Context, Hono } from 'hono'
-import { API_DEFAULT_REPLY_DEPTH, API_MAX_REPLY_DEPTH, apiHotPosts, apiOrigin, apiPost, apiPosts, apiReplies,
-  apiSearchPosts, encodeCursor, isoTimestamp, parseCollectionParams } from '../api'
-import { apiActivities, decodeActivityCursor } from '../api-activity'
+import { API_DEFAULT_REPLY_DEPTH, API_MAX_REPLY_DEPTH, apiOrigin,
+  parseCollectionParams } from '../api'
+import { decodeActivityCursor } from '../api-activity'
 import { subscribeToPosts } from '../api-broker'
-import { consumeBucketedAttempt, rateLimitKey } from '../auth-rate-limit'
 import { appName, clientIpHeaderName } from '../brand'
 import { ApiDocs, EmbedExamples } from '../components/pages'
-import { db } from '../db'
 import { isDevelopment } from '../environment'
-import { markAllForYouRead, markVisibleForYouEntriesRead } from '../for-you-state'
-import { resolveHandle } from '../handles'
 import { decodeHotCursor } from '../hot'
 import { logError } from '../log'
 import { MAX_SEARCH_LENGTH, normalizeSearchQuery, searchExpression } from '../search'
@@ -18,6 +13,8 @@ import { apiUser, currentUser } from '../utils'
 import { registerApiWriteRoutes } from './api-write'
 import { page } from './shared'
 import { registerSyndicationRoutes } from './syndication'
+import { databaseService, type DatabaseService } from '../database-service'
+import type { User } from '../types'
 
 const JSON_LIMIT = 120
 const JSON_WINDOW_SECONDS = 60
@@ -39,10 +36,11 @@ function apiError(code: string, message: string, status: number, retryAfter?: nu
   return response
 }
 
-function collection(c: Context, database: Database, filters: {
+async function collection(c: Context, service: DatabaseService, filters: {
   excludeBots?: boolean
   handle?: string
   parentId?: number
+  repliesOnly?: boolean
   tag?: string
   topLevelOnly?: boolean
 } = {},
@@ -52,7 +50,10 @@ function collection(c: Context, database: Database, filters: {
   if (!parsed) {
     return apiError('invalid_pagination', 'limit must be 1–100 and cursor must be a valid opaque cursor', 400)
   }
-  return jsonResponse(apiPosts(database, apiOrigin(c.req.url, appUrl), { ...parsed, ...filters }))
+  const result = await service.call('api.publicRead', {
+    kind: 'collection', origin: apiOrigin(c.req.url, appUrl), ...parsed, ...filters,
+  })
+  return jsonResponse(result.status === 'ready' ? result.value : null)
 }
 
 function openApiDocument() {
@@ -310,23 +311,17 @@ function openApiDocument() {
   }
 }
 
-export function registerApiRoutes(app: Hono, database: Database = db,
-  appUrl: string | null | undefined = Bun.env.APP_URL, now: () => number = Date.now)
+export function registerApiRoutes(app: Hono,
+  appUrl: string | null | undefined = Bun.env.APP_URL, now: () => number = Date.now,
+  configuredService?: DatabaseService, configuredApiUser?: (request: Request) => User | null)
 {
+  const service = configuredService || databaseService()
+  const requestApiUser = configuredApiUser || ((request: Request) => apiUser(request))
   app.get('/api', c => page(<ApiDocs user={currentUser(c.req.raw)} />))
-  app.get('/api/embed-examples', c => {
-    const sample = database.query(`SELECT p.id,
-      (SELECT ph.tag FROM post_hashtags ph WHERE ph.post_id=p.id ORDER BY ph.tag LIMIT 1) tag
-      FROM posts p JOIN users u ON u.id=p.user_id
-      WHERE p.deleted_at IS NULL AND u.deleted_at IS NULL
-      ORDER BY p.id DESC LIMIT 1`).get() as { id: number; tag: string | null } | null
-    const fallbackTag = sample?.tag || (database.query(`SELECT ph.tag FROM post_hashtags ph
-      JOIN posts p ON p.id=ph.post_id JOIN users u ON u.id=p.user_id
-      WHERE p.deleted_at IS NULL AND u.deleted_at IS NULL ORDER BY p.id DESC LIMIT 1`).get() as {
-      tag: string
-    } | null)?.tag || null
+  app.get('/api/embed-examples', async c => {
+    const sample = await service.call('api.embedExample', {})
     return page(
-      <EmbedExamples user={currentUser(c.req.raw)} handle="stagas" tag={fallbackTag} postId={sample?.id || null} />,
+      <EmbedExamples user={currentUser(c.req.raw)} handle="stagas" tag={sample.tag} postId={sample.postId} />,
     )
   })
 
@@ -353,28 +348,23 @@ export function registerApiRoutes(app: Hono, database: Database = db,
   app.use('/api/v1/*', async (c, next) => {
     if (c.req.method === 'OPTIONS' || c.req.path === '/api/v1/firehose') return next()
     const ip = c.req.header(clientIpHeaderName()) || '-'
-    const limited = consumeBucketedAttempt(
-      database,
-      'api-json',
-      rateLimitKey(ip),
-      JSON_LIMIT,
-      JSON_WINDOW_SECONDS,
-      now(),
-    )
+    const limited = await service.call('system.consumeBucketedAttempt', {
+      scope: 'api-json', identity: ip, attempts: JSON_LIMIT, bucketSeconds: JSON_WINDOW_SECONDS, now: now(),
+    })
     if (limited) return apiError('rate_limited', 'Too many API requests', 429, limited.retryAfter)
     return next()
   })
 
-  registerSyndicationRoutes(app, database, appUrl)
-  registerApiWriteRoutes(app, database, appUrl)
+  registerSyndicationRoutes(app, service, appUrl)
+  registerApiWriteRoutes(app, service, requestApiUser, appUrl)
 
   app.get('/api/openapi.json', () => jsonResponse(openApiDocument(), 200, 'public, max-age=3600'))
 
-  app.get('/api/v1/feeds/latest', c => collection(c, database, { excludeBots: true }, appUrl))
+  app.get('/api/v1/feeds/latest', c => collection(c, service, { excludeBots: true }, appUrl))
 
   for (const [path, kind] of [['for-you', 'personalizedFor'], ['to-me', 'toMeFor']] as const) {
-    app.get(`/api/v1/activities/${path}`, c => {
-      const user = apiUser(c.req.raw, database)
+    app.get(`/api/v1/activities/${path}`, async c => {
+      const user = requestApiUser(c.req.raw)
       if (!user) return apiError('unauthorized', 'Provide a bearer token from /api/v1/auth/verify', 401)
       const parsed = parseCollectionParams(c.req.query('limit'))
       const cursorValue = c.req.query('cursor')
@@ -382,14 +372,11 @@ export function registerApiRoutes(app: Hono, database: Database = db,
       if (!parsed || (cursorValue && !cursor)) {
         return apiError('invalid_pagination', 'limit must be 1–100 and cursor must be a valid opaque cursor', 400)
       }
-      return jsonResponse(apiActivities(database, apiOrigin(c.req.url, appUrl), user, {
-        limit: parsed.limit,
-        cursor,
-        toMe: kind === 'toMeFor',
-      }))
+      return jsonResponse(await service.call('api.activities', { user, origin: apiOrigin(c.req.url, appUrl),
+        limit: parsed.limit, cursor, toMe: kind === 'toMeFor' }))
     })
     app.post(`/api/v1/activities/${path}/read`, async c => {
-      const user = apiUser(c.req.raw, database)
+      const user = requestApiUser(c.req.raw)
       if (!user) return apiError('unauthorized', 'Provide a bearer token from /api/v1/auth/verify', 401)
       let payload: unknown
       try {
@@ -403,18 +390,20 @@ export function registerApiRoutes(app: Hono, database: Database = db,
         || activityIds.some(id => typeof id !== 'string' || !id || id.length > 500)) {
         return apiError('invalid_body', 'Provide 1–100 activity_ids from this feed', 400)
       }
-      const read = markVisibleForYouEntriesRead(user.id, [...new Set(activityIds)], kind === 'toMeFor', database)
+      const read = await service.call('api.markActivitiesRead', {
+        userId: user.id, activityIds: [...new Set(activityIds)], toMe: kind === 'toMeFor',
+      })
       return jsonResponse({ data: { read } }, 200, 'no-store')
     })
-    app.post(`/api/v1/activities/${path}/read-all`, c => {
-      const user = apiUser(c.req.raw, database)
+    app.post(`/api/v1/activities/${path}/read-all`, async c => {
+      const user = requestApiUser(c.req.raw)
       if (!user) return apiError('unauthorized', 'Provide a bearer token from /api/v1/auth/verify', 401)
-      markAllForYouRead(user.id, kind === 'toMeFor', database)
+      await service.call('api.markAllActivitiesRead', { userId: user.id, toMe: kind === 'toMeFor' })
       return jsonResponse({ data: { read_all: true } }, 200, 'no-store')
     })
   }
 
-  app.get('/api/v1/search', c => {
+  app.get('/api/v1/search', async c => {
     const rawQuery = c.req.query('q') || ''
     const query = normalizeSearchQuery(rawQuery)
     if (!query || rawQuery.trim().length > MAX_SEARCH_LENGTH || !searchExpression(query)) {
@@ -424,16 +413,12 @@ export function registerApiRoutes(app: Hono, database: Database = db,
     if (!parsed) {
       return apiError('invalid_pagination', 'limit must be 1–100 and cursor must be a valid opaque cursor', 400)
     }
-    return jsonResponse(apiSearchPosts(
-      database,
-      apiOrigin(c.req.url, appUrl),
-      query,
-      parsed.limit,
-      parsed.before || 0,
-    ))
+    const result = await service.call('api.publicRead', { kind: 'search',
+      origin: apiOrigin(c.req.url, appUrl), query, limit: parsed.limit, offset: parsed.before || 0 })
+    return jsonResponse(result.status === 'ready' ? result.value : null)
   })
 
-  app.get('/api/v1/feeds/hot', c => {
+  app.get('/api/v1/feeds/hot', async c => {
     const parsed = parseCollectionParams(c.req.query('limit'))
     if (!parsed) {
       return apiError('invalid_pagination', 'limit must be 1–100 and cursor must be a valid opaque cursor', 400)
@@ -443,20 +428,23 @@ export function registerApiRoutes(app: Hono, database: Database = db,
     if (cursorValue && !cursor) {
       return apiError('invalid_pagination', 'limit must be 1–100 and cursor must be a valid opaque cursor', 400)
     }
-    return jsonResponse(apiHotPosts(database, apiOrigin(c.req.url, appUrl), parsed.limit, cursor))
+    const result = await service.call('api.publicRead', { kind: 'hot',
+      origin: apiOrigin(c.req.url, appUrl), limit: parsed.limit, cursor })
+    return jsonResponse(result.status === 'ready' ? result.value : null)
   })
 
-  app.get('/api/v1/posts/:id', c => {
+  app.get('/api/v1/posts/:id', async c => {
     const id = Number(c.req.param('id'))
     if (!Number.isInteger(id) || id < 1) return apiError('invalid_post_id', 'Post ID must be a positive integer', 400)
-    const post = apiPost(database, id, apiOrigin(c.req.url, appUrl))
-    return post ? jsonResponse({ data: post }) : apiError('not_found', 'Post not found', 404)
+    const result = await service.call('api.publicRead', {
+      kind: 'post', origin: apiOrigin(c.req.url, appUrl), id,
+    })
+    return result.status === 'ready' ? jsonResponse(result.value) : apiError('not_found', 'Post not found', 404)
   })
 
-  app.get('/api/v1/posts/:id/replies', c => {
+  app.get('/api/v1/posts/:id/replies', async c => {
     const id = Number(c.req.param('id'))
     if (!Number.isInteger(id) || id < 1) return apiError('invalid_post_id', 'Post ID must be a positive integer', 400)
-    if (!apiPost(database, id, apiOrigin(c.req.url, appUrl))) return apiError('not_found', 'Post not found', 404)
     const parsed = parseCollectionParams(c.req.query('limit'), c.req.query('cursor'))
     if (!parsed) {
       return apiError('invalid_pagination', 'limit must be 1–100 and cursor must be a valid opaque cursor', 400)
@@ -466,244 +454,140 @@ export function registerApiRoutes(app: Hono, database: Database = db,
     if (!Number.isInteger(depth) || depth < 1 || depth > API_MAX_REPLY_DEPTH) {
       return apiError('invalid_depth', `depth must be an integer from 1 to ${API_MAX_REPLY_DEPTH}`, 400)
     }
-    return jsonResponse(apiReplies(database, apiOrigin(c.req.url, appUrl), id, { ...parsed, depth }))
+    const result = await service.call('api.publicRead', { kind: 'replies',
+      origin: apiOrigin(c.req.url, appUrl), id, limit: parsed.limit, before: parsed.before, depth })
+    return result.status === 'ready' ? jsonResponse(result.value) : apiError('not_found', 'Post not found', 404)
   })
 
-  app.get('/api/v1/users/:handle', c => {
+  app.get('/api/v1/users/:handle', async c => {
     const handle = c.req.param('handle')
     if (!/^[A-Za-z0-9_]{2,24}$/.test(handle)) return apiError('invalid_handle', 'Handle is invalid', 400)
-    const resolved = resolveHandle(database, handle)
-    if (!resolved) return apiError('not_found', 'User not found', 404)
-    if (resolved.alias) {
-      return c.redirect(`/api/v1/users/${encodeURIComponent(resolved.handle)}`, 308)
-    }
-    const found = database.query(`SELECT u.handle,u.bio,u.created_at,
-      (SELECT count(*) FROM posts p
-        WHERE p.user_id=u.id AND p.parent_id IS NULL AND p.deleted_at IS NULL) post_count,
-      (SELECT count(*) FROM posts p
-        WHERE p.user_id=u.id AND p.parent_id IS NOT NULL AND p.deleted_at IS NULL) replies_count,
-      (SELECT count(*) FROM follows f JOIN users follower ON follower.id=f.follower_id
-        WHERE f.following_id=u.id AND follower.deleted_at IS NULL AND follower.suspended_at IS NULL) follower_count,
-      (SELECT count(*) FROM follows f JOIN users followed ON followed.id=f.following_id
-        WHERE f.follower_id=u.id AND followed.deleted_at IS NULL AND followed.suspended_at IS NULL) following_user_count,
-      (SELECT count(*) FROM hashtag_follows hf WHERE hf.user_id=u.id) following_tag_count
-      FROM users u WHERE u.id=? AND u.deleted_at IS NULL`).get(resolved.id) as {
-      handle: string
-      bio: string
-      created_at: string
-      post_count: number
-      replies_count: number
-      follower_count: number
-      following_user_count: number
-      following_tag_count: number
-    } | null
-    if (!found) return apiError('not_found', 'User not found', 404)
     const origin = apiOrigin(c.req.url, appUrl)
-    const normalized = found.handle.toLowerCase()
-    const authenticated = apiUser(c.req.raw, database)
-    const blockCounts = authenticated?.id === resolved.id
-      ? database.query(`SELECT
-        (SELECT count(*) FROM blocks WHERE blocker_id=?) blocked_user_count,
-        (SELECT count(*) FROM blocked_hashtags WHERE user_id=?) blocked_tag_count`).get(resolved.id, resolved.id) as {
-          blocked_user_count: number
-          blocked_tag_count: number
-        }
-      : null
-    return jsonResponse({
-      data: { handle: normalized, bio: found.bio, created_at: isoTimestamp(found.created_at),
-        post_count: found.post_count, replies_count: found.replies_count, follower_count: found.follower_count,
-        following_user_count: found.following_user_count, following_tag_count: found.following_tag_count,
-        following_count: found.following_user_count,
-        ...(blockCounts || {}),
-        url: `${origin}/u/${encodeURIComponent(normalized)}`,
-        api_url: `${origin}/api/v1/users/${encodeURIComponent(normalized)}` },
-    }, 200, blockCounts ? 'no-store' : undefined)
+    const result = await service.call('api.profile', {
+      handle, viewerId: requestApiUser(c.req.raw)?.id ?? null, origin,
+    })
+    if (result.status === 'not_found') return apiError('not_found', 'User not found', 404)
+    if (result.status === 'redirect') return c.redirect(`/api/v1/users/${encodeURIComponent(result.handle)}`, 308)
+    return jsonResponse(result.value, 200, result.private ? 'no-store' : undefined)
   })
 
-  app.get('/api/v1/users/:handle/posts', c => {
+  app.get('/api/v1/users/:handle/posts', async c => {
     const handle = c.req.param('handle')
     if (!/^[A-Za-z0-9_]{2,24}$/.test(handle)) return apiError('invalid_handle', 'Handle is invalid', 400)
-    const resolved = resolveHandle(database, handle)
+    const resolved = await service.call('profiles.resolve', { handle })
     if (!resolved) return apiError('not_found', 'User not found', 404)
     if (resolved.alias) {
       return c.redirect(`/api/v1/users/${encodeURIComponent(resolved.handle)}/posts${new URL(c.req.url).search}`, 308)
     }
-    return collection(c, database, { handle: resolved.handle, topLevelOnly: true }, appUrl)
+    return collection(c, service, { handle: resolved.handle, topLevelOnly: true }, appUrl)
   })
 
-  app.get('/api/v1/users/:handle/notes', c => {
+  app.get('/api/v1/users/:handle/notes', async c => {
     const handle = c.req.param('handle')
     if (!/^[A-Za-z0-9_]{2,24}$/.test(handle)) return apiError('invalid_handle', 'Handle is invalid', 400)
-    const resolved = resolveHandle(database, handle)
+    const resolved = await service.call('profiles.resolve', { handle })
     if (!resolved) return apiError('not_found', 'User not found', 404)
     if (resolved.alias) {
       return c.redirect(`/api/v1/users/${encodeURIComponent(resolved.handle)}/notes${new URL(c.req.url).search}`, 308)
     }
-    return collection(c, database, { handle: resolved.handle, topLevelOnly: true }, appUrl)
+    return collection(c, service, { handle: resolved.handle, topLevelOnly: true }, appUrl)
   })
 
-  app.get('/api/v1/users/:handle/replies', c => {
+  app.get('/api/v1/users/:handle/replies', async c => {
     const handle = c.req.param('handle')
     if (!/^[A-Za-z0-9_]{2,24}$/.test(handle)) return apiError('invalid_handle', 'Handle is invalid', 400)
-    const resolved = resolveHandle(database, handle)
+    const resolved = await service.call('profiles.resolve', { handle })
     if (!resolved) return apiError('not_found', 'User not found', 404)
     if (resolved.alias) {
       return c.redirect(`/api/v1/users/${encodeURIComponent(resolved.handle)}/replies${new URL(c.req.url).search}`, 308)
     }
-    const parsed = parseCollectionParams(c.req.query('limit'), c.req.query('cursor'))
-    if (!parsed) {
-      return apiError('invalid_pagination', 'limit must be 1–100 and cursor must be a valid opaque cursor', 400)
-    }
-    return jsonResponse(apiPosts(database, apiOrigin(c.req.url, appUrl), {
-      ...parsed,
-      handle: resolved.handle,
-      repliesOnly: true,
-    }))
+    return collection(c, service, { handle: resolved.handle, repliesOnly: true }, appUrl)
   })
 
-  app.get('/api/v1/users/:handle/blocks', c => {
-    const user = apiUser(c.req.raw, database)
+  app.get('/api/v1/users/:handle/blocks', async c => {
+    const user = requestApiUser(c.req.raw)
     if (!user) return apiError('unauthorized', 'Provide a bearer token from /api/v1/auth/verify', 401)
     const handle = c.req.param('handle')
     if (!/^[A-Za-z0-9_]{2,24}$/.test(handle)) return apiError('invalid_handle', 'Handle is invalid', 400)
-    const resolved = resolveHandle(database, handle)
-    if (!resolved) return apiError('not_found', 'User not found', 404)
-    if (resolved.alias) {
-      return c.redirect(`/api/v1/users/${encodeURIComponent(resolved.handle)}/blocks${new URL(c.req.url).search}`, 308)
-    }
-    if (resolved.id !== user.id) return apiError('forbidden', 'You can only list your own blocked accounts', 403)
     const parsed = parseCollectionParams(c.req.query('limit'), c.req.query('cursor'))
     if (!parsed) {
       return apiError('invalid_pagination', 'limit must be 1–100 and cursor must be a valid opaque cursor', 400)
     }
-    const before = parsed.before === null ? '' : 'AND blocked.id < ?'
-    const parameters = parsed.before === null ? [user.id, parsed.limit + 1] : [user.id, parsed.before, parsed.limit + 1]
-    const rows = database.query(`SELECT blocked.id,blocked.handle FROM blocks b
-      JOIN users blocked ON blocked.id=b.blocked_id
-      WHERE b.blocker_id=? AND blocked.deleted_at IS NULL ${before}
-      ORDER BY blocked.id DESC LIMIT ?`).all(...parameters) as Array<{ id: number; handle: string }>
-    const hasMore = rows.length > parsed.limit
-    const selected = rows.slice(0, parsed.limit)
     const origin = apiOrigin(c.req.url, appUrl)
-    return jsonResponse({ data: selected.map(row => {
-      const normalized = row.handle.toLowerCase()
-      return { handle: normalized, url: `${origin}/u/${encodeURIComponent(normalized)}`,
-        api_url: `${origin}/api/v1/users/${encodeURIComponent(normalized)}` }
-    }), pagination: { next_cursor: hasMore ? encodeCursor(selected[selected.length - 1].id) : null } }, 200, 'no-store')
+    const result = await service.call('api.relationships', { kind: 'blocks', handle, viewerId: user.id, origin,
+      limit: parsed.limit, before: parsed.before })
+    if (result.status === 'not_found') return apiError('not_found', 'User not found', 404)
+    if (result.status === 'forbidden') {
+      return apiError('forbidden', 'You can only list your own blocked accounts', 403)
+    }
+    if (result.status === 'redirect') {
+      return c.redirect(`/api/v1/users/${encodeURIComponent(result.handle)}/blocks${new URL(c.req.url).search}`, 308)
+    }
+    return jsonResponse(result.value, 200, 'no-store')
   })
 
-  const relationshipUserCollection = (c: Context, rows: Array<{ id: number; handle: string }>, limit: number) => {
-    const hasMore = rows.length > limit
-    const selected = rows.slice(0, limit)
-    const origin = apiOrigin(c.req.url, appUrl)
-    return jsonResponse({ data: selected.map(row => {
-      const handle = row.handle.toLowerCase()
-      return { handle, url: `${origin}/u/${encodeURIComponent(handle)}`,
-        api_url: `${origin}/api/v1/users/${encodeURIComponent(handle)}` }
-    }), pagination: { next_cursor: hasMore ? encodeCursor(selected[selected.length - 1].id) : null } })
-  }
-
   for (const relationship of ['following/users', 'followers'] as const) {
-    app.get(`/api/v1/users/:handle/${relationship}`, c => {
+    app.get(`/api/v1/users/:handle/${relationship}`, async c => {
       const handle = c.req.param('handle')
       if (!/^[A-Za-z0-9_]{2,24}$/.test(handle)) return apiError('invalid_handle', 'Handle is invalid', 400)
-      const resolved = resolveHandle(database, handle)
-      if (!resolved) return apiError('not_found', 'User not found', 404)
-      if (resolved.alias) {
-        return c.redirect(`/api/v1/users/${encodeURIComponent(resolved.handle)}/${relationship}${new URL(c.req.url).search}`,
-          308)
-      }
       const parsed = parseCollectionParams(c.req.query('limit'), c.req.query('cursor'))
       if (!parsed) {
         return apiError('invalid_pagination', 'limit must be 1–100 and cursor must be a valid opaque cursor', 400)
       }
-      const before = parsed.before === null ? '' : 'AND related.id < ?'
-      const join = relationship === 'following/users'
-        ? 'JOIN users related ON related.id=f.following_id WHERE f.follower_id=?'
-        : 'JOIN users related ON related.id=f.follower_id WHERE f.following_id=?'
-      const parameters = parsed.before === null
-        ? [resolved.id, parsed.limit + 1]
-        : [resolved.id, parsed.before, parsed.limit + 1]
-      const rows = database.query(`SELECT related.id,related.handle FROM follows f ${join}
-        AND related.deleted_at IS NULL AND related.suspended_at IS NULL ${before}
-        ORDER BY related.id DESC LIMIT ?`).all(...parameters) as Array<{ id: number; handle: string }>
-      return relationshipUserCollection(c, rows, parsed.limit)
+      const result = await service.call('api.relationships', {
+        kind: relationship === 'following/users' ? 'following' : 'followers', handle,
+        origin: apiOrigin(c.req.url, appUrl), limit: parsed.limit, before: parsed.before,
+      })
+      if (result.status === 'not_found') return apiError('not_found', 'User not found', 404)
+      if (result.status === 'redirect') {
+        return c.redirect(`/api/v1/users/${encodeURIComponent(result.handle)}/${relationship}${new URL(c.req.url).search}`,
+          308)
+      }
+      if (result.status === 'forbidden') return apiError('forbidden', 'Forbidden', 403)
+      return jsonResponse(result.value)
     })
   }
 
-  app.get('/api/v1/users/:handle/following/tags', c => {
+  app.get('/api/v1/users/:handle/following/tags', async c => {
     const handle = c.req.param('handle')
     if (!/^[A-Za-z0-9_]{2,24}$/.test(handle)) return apiError('invalid_handle', 'Handle is invalid', 400)
-    const resolved = resolveHandle(database, handle)
-    if (!resolved) return apiError('not_found', 'User not found', 404)
-    if (resolved.alias) {
-      return c.redirect(`/api/v1/users/${encodeURIComponent(resolved.handle)}/following/tags${new URL(c.req.url).search}`,
+    const parsed = parseCollectionParams(c.req.query('limit'), c.req.query('cursor'))
+    if (!parsed) return apiError('invalid_pagination', 'limit and cursor are invalid', 400)
+    const origin = apiOrigin(c.req.url, appUrl)
+    const result = await service.call('api.relationships', {
+      kind: 'followingTags', handle, origin, limit: parsed.limit, before: parsed.before,
+    })
+    if (result.status === 'not_found') return apiError('not_found', 'User not found', 404)
+    if (result.status === 'redirect') {
+      return c.redirect(`/api/v1/users/${encodeURIComponent(result.handle)}/following/tags${new URL(c.req.url).search}`,
         308)
     }
-    const parsed = parseCollectionParams(c.req.query('limit'), c.req.query('cursor'))
-    if (!parsed) return apiError('invalid_pagination', 'limit and cursor are invalid', 400)
-    const before = parsed.before === null ? '' : 'AND hf.rowid < ?'
-    const parameters = parsed.before === null
-      ? [resolved.id, parsed.limit + 1]
-      : [resolved.id, parsed.before, parsed.limit + 1]
-    const rows = database.query(`SELECT hf.rowid id,hf.tag,
-      (SELECT count(*) FROM post_hashtags ph JOIN posts p ON p.id=ph.post_id JOIN users author ON author.id=p.user_id
-        WHERE ph.tag=hf.tag AND p.deleted_at IS NULL AND author.deleted_at IS NULL
-          AND author.suspended_at IS NULL) post_count,
-      (SELECT count(*) FROM hashtag_follows followers JOIN users follower ON follower.id=followers.user_id
-        WHERE followers.tag=hf.tag AND follower.deleted_at IS NULL AND follower.suspended_at IS NULL) follower_count
-      FROM hashtag_follows hf
-      WHERE hf.user_id=? ${before} ORDER BY hf.rowid DESC LIMIT ?`).all(...parameters) as Array<{
-        id: number
-        tag: string
-        post_count: number
-        follower_count: number
-      }>
-    const hasMore = rows.length > parsed.limit
-    const selected = rows.slice(0, parsed.limit)
-    const origin = apiOrigin(c.req.url, appUrl)
-    return jsonResponse({ data: selected.map(row => ({ tag: row.tag, post_count: row.post_count,
-      follower_count: row.follower_count, url: `${origin}/tag/${encodeURIComponent(row.tag)}`,
-      api_url: `${origin}/api/v1/tags/${encodeURIComponent(row.tag)}` })),
-    pagination: { next_cursor: hasMore ? encodeCursor(selected[selected.length - 1].id) : null } })
+    if (result.status === 'forbidden') return apiError('forbidden', 'Forbidden', 403)
+    return jsonResponse(result.value)
   })
 
-  app.get('/api/v1/tags/:tag', c => {
+  app.get('/api/v1/tags/:tag', async c => {
     const tag = c.req.param('tag').toLowerCase()
     if (!/^[a-z0-9_]+$/.test(tag)) return apiError('invalid_tag', 'Tag is invalid', 400)
-    const counts = database.query(`SELECT
-      (SELECT count(*) FROM post_hashtags ph JOIN posts p ON p.id=ph.post_id JOIN users author ON author.id=p.user_id
-        WHERE ph.tag=? AND p.deleted_at IS NULL AND author.deleted_at IS NULL
-          AND author.suspended_at IS NULL) post_count,
-      (SELECT count(*) FROM hashtag_follows hf JOIN users follower ON follower.id=hf.user_id
-        WHERE hf.tag=? AND follower.deleted_at IS NULL AND follower.suspended_at IS NULL) follower_count`).get(tag, tag) as {
-          post_count: number
-          follower_count: number
-        }
-    if (!counts.post_count && !counts.follower_count) return apiError('not_found', 'Tag not found', 404)
     const origin = apiOrigin(c.req.url, appUrl)
-    return jsonResponse({ data: { tag, ...counts, url: `${origin}/tag/${encodeURIComponent(tag)}`,
-      api_url: `${origin}/api/v1/tags/${encodeURIComponent(tag)}` } })
+    const result = await service.call('api.tagDetails', { tag, origin })
+    return result.status === 'ready' ? jsonResponse(result.value) : apiError('not_found', 'Tag not found', 404)
   })
 
-  app.get('/api/v1/tags/:tag/followers', c => {
+  app.get('/api/v1/tags/:tag/followers', async c => {
     const tag = c.req.param('tag').toLowerCase()
     if (!/^[a-z0-9_]+$/.test(tag)) return apiError('invalid_tag', 'Tag is invalid', 400)
     const parsed = parseCollectionParams(c.req.query('limit'), c.req.query('cursor'))
     if (!parsed) return apiError('invalid_pagination', 'limit and cursor are invalid', 400)
-    const before = parsed.before === null ? '' : 'AND related.id < ?'
-    const parameters = parsed.before === null ? [tag, parsed.limit + 1] : [tag, parsed.before, parsed.limit + 1]
-    const rows = database.query(`SELECT related.id,related.handle FROM hashtag_follows hf
-      JOIN users related ON related.id=hf.user_id WHERE hf.tag=?
-      AND related.deleted_at IS NULL AND related.suspended_at IS NULL ${before}
-      ORDER BY related.id DESC LIMIT ?`).all(...parameters) as Array<{ id: number; handle: string }>
-    return relationshipUserCollection(c, rows, parsed.limit)
+    const result = await service.call('api.relationships', { kind: 'tagFollowers', tag,
+      origin: apiOrigin(c.req.url, appUrl), limit: parsed.limit, before: parsed.before })
+    return result.status === 'ready' ? jsonResponse(result.value) : apiError('not_found', 'Tag not found', 404)
   })
 
   app.get('/api/v1/tags/:tag/posts', c => {
     const tag = c.req.param('tag').toLowerCase()
     if (!/^[a-z0-9_]+$/.test(tag)) return apiError('invalid_tag', 'Tag is invalid', 400)
-    return collection(c, database, { tag }, appUrl)
+    return collection(c, service, { tag }, appUrl)
   })
 
   app.get('/api/v1/firehose', c => {
@@ -743,13 +627,13 @@ export function registerApiRoutes(app: Hono, database: Database = db,
           }
         }
         unsubscribe = subscribeToPosts(postId => {
-          try {
-            const post = apiPost(database, postId, apiOrigin(c.req.url, appUrl))
-            if (post) send(`id: ${post.id}\nevent: post\ndata: ${JSON.stringify(post)}\n\n`)
-          }
-          catch {
-            cleanup()
-          }
+          void service.call('api.publicRead', { kind: 'post', origin: apiOrigin(c.req.url, appUrl), id: postId })
+            .then(result => {
+              if (result.status !== 'ready') return
+              const post = (result.value as { data: { id: number } }).data
+              send(`id: ${post.id}\nevent: post\ndata: ${JSON.stringify(post)}\n\n`)
+            })
+            .catch(() => cleanup())
         })
         heartbeat = setInterval(() => send(': heartbeat\n\n'), SSE_HEARTBEAT_MS)
         cleanup = close

@@ -1,26 +1,23 @@
-import type { Database } from 'bun:sqlite'
 import type { Context, Hono } from 'hono'
-import { accountForEmail, markGroupEmailVerified, selectAccount } from '../account-groups'
-import { softDeletePost } from '../admin'
-import { apiOrigin, apiPost } from '../api'
-import { AUTH_LIMITS, consumeAuthAttempt, consumeBucketedAttempt, rateLimitKey } from '../auth-rate-limit'
+import { apiOrigin } from '../api'
+import { AUTH_LIMITS } from '../auth-rate-limit'
 import { bioBodyValidationMessage, normalizeBioBody, validBioBody } from '../bio-body'
-import type { User } from '../db'
+import type { User } from '../types'
+import type { DatabaseService } from '../database-service'
 import { sendMagicLink } from '../email'
-import { resolveHandle } from '../handles'
 import { logError } from '../log'
-import { deleteLinkPreviewImages, discoverLinkPreviews, replaceBioLinkPreviews, replaceLinkPreviews,
-  saveLinkPreviews } from '../link-preview'
+import { discoverLinkPreviews } from '../link-preview'
+import { deleteImages, deleteImagesAfterCommit } from '../image-storage'
+import { publishPost } from '../api-broker'
 import { moderateText, moderationMessage } from '../moderation'
 import { normalizePostBody, POST_MAX, postBodyValidationMessage, validPostBody } from '../post-body'
 import { postRateLimitMessage } from '../post-rate-limit'
 import { canPublishPosts } from '../posting-policy'
-import { createPost, updatePost } from '../posts'
 import { sendPushForFollow, sendPushForPost, sendPushForUserFollow } from '../push'
-import { insertSession, SESSION_LIFETIME_MS, sessionHash } from '../sessions'
-import { apiUser, bearerToken, hash, token } from '../utils'
+import { sessionHash } from '../sessions'
+import { bearerToken } from '../utils'
 import { emailPattern } from './auth'
-import { clientAddress, issueMagicLink, usersBlocked } from './shared'
+import { clientAddress } from './shared'
 
 export const CODE_ATTEMPT_LIMIT = 5
 export const WRITE_LIMIT = 60
@@ -58,11 +55,11 @@ const text = (value: unknown) => typeof value === 'string' ? value : ''
  * duplicate window and moderation as the web forms, so the API is never a way around
  * a rule the site already enforces.
  */
-function writer(database: Database, c: Context) {
-  const user = apiUser(c.req.raw, database)
+async function writer(service: DatabaseService, requestApiUser: (request: Request) => User | null, c: Context) {
+  const user = requestApiUser(c.req.raw)
   if (!user) return { error: fail('unauthorized', 'Provide a bearer token from /api/v1/auth/verify', 401) }
-  const limited = consumeBucketedAttempt(database, 'api-write', rateLimitKey(`user:${user.id}`), WRITE_LIMIT,
-    WRITE_WINDOW_SECONDS)
+  const limited = await service.call('system.consumeBucketedAttempt', { scope: 'api-write',
+    identity: `user:${user.id}`, attempts: WRITE_LIMIT, bucketSeconds: WRITE_WINDOW_SECONDS, now: Date.now() })
   if (limited) return { error: fail('rate_limited', 'Too many writes', 429, limited.retryAfter) }
   return { user }
 }
@@ -77,28 +74,58 @@ function serialize(user: User) {
   }
 }
 
-export function registerApiWriteRoutes(app: Hono, database: Database, appUrl?: string | null) {
+async function persistPostPreviews(service: DatabaseService, postId: number, mode: 'save' | 'replace',
+  previews: Awaited<ReturnType<typeof discoverLinkPreviews>>)
+{
+  const newKeys = previews.flatMap(preview => 'imageKey' in preview && preview.imageKey ? [preview.imageKey] : [])
+  try {
+    const result = await service.call('api.persistPostPreviews', { postId, mode, previews })
+    await deleteImagesAfterCommit(result.obsoleteImageKeys)
+  }
+  catch (error) {
+    await deleteImages(newKeys)
+    throw error
+  }
+}
+
+async function persistBioPreviews(service: DatabaseService, userId: number,
+  previews: Awaited<ReturnType<typeof discoverLinkPreviews>>)
+{
+  const newKeys = previews.flatMap(preview => 'imageKey' in preview && preview.imageKey ? [preview.imageKey] : [])
+  try {
+    const result = await service.call('api.persistBioPreviews', { userId, previews })
+    await deleteImagesAfterCommit(result.obsoleteImageKeys)
+  }
+  catch (error) {
+    await deleteImages(newKeys)
+    throw error
+  }
+}
+
+export function registerApiWriteRoutes(app: Hono, service: DatabaseService,
+  requestApiUser: (request: Request) => User | null, appUrl?: string | null)
+{
   app.post('/api/v1/auth/request', async c => {
     const payload = await body(c)
     const email = text(payload?.email).trim().toLowerCase()
     if (!emailPattern.test(email) || email.length > 254) {
       return fail('invalid_email', 'Enter a valid email address', 400)
     }
-    const ipLimited = consumeAuthAttempt(database, 'api-auth-ip', rateLimitKey(clientAddress(c)),
-      AUTH_LIMITS.loginIp.attempts, AUTH_LIMITS.loginIp.windowSeconds)
+    const ipLimited = await service.call('system.consumeAuthAttempt', { scope: 'api-auth-ip',
+      identity: clientAddress(c), attempts: AUTH_LIMITS.loginIp.attempts,
+      windowSeconds: AUTH_LIMITS.loginIp.windowSeconds, now: Date.now() })
     if (ipLimited) return fail('rate_limited', 'Too many sign in attempts', 429, ipLimited.retryAfter)
-    const emailLimited = consumeAuthAttempt(database, 'api-auth-email', rateLimitKey(email),
-      AUTH_LIMITS.forgotAccount.attempts, AUTH_LIMITS.forgotAccount.windowSeconds)
+    const emailLimited = await service.call('system.consumeAuthAttempt', { scope: 'api-auth-email', identity: email,
+      attempts: AUTH_LIMITS.forgotAccount.attempts, windowSeconds: AUTH_LIMITS.forgotAccount.windowSeconds,
+      now: Date.now() })
     if (emailLimited) return fail('rate_limited', 'Too many sign in attempts', 429, emailLimited.retryAfter)
 
     // Accounts are only ever created in a browser. An unknown address gets the same
     // answer as a known one so the API cannot be used to discover who has an account.
-    const account = accountForEmail(database, email)
-    if (account?.handle_chosen_at) {
-      const origin = apiOrigin(c.req.url, appUrl)
-      const link = issueMagicLink(email, account.id, '/', origin, database)
+    const link = await service.call('api.requestSignIn', { email, origin: apiOrigin(c.req.url, appUrl), now: Date.now() })
+    if (link) {
       try {
-        await sendMagicLink(email, link.url, link.code, account.handle)
+        await sendMagicLink(email, link.url, link.code, link.handle)
       }
       catch {
         return fail('email_failed', 'The code could not be sent. Please try again later', 503)
@@ -114,56 +141,37 @@ export function registerApiWriteRoutes(app: Hono, database: Database, appUrl?: s
     if (!emailPattern.test(email) || !/^\d{6}$/.test(code)) {
       return fail('invalid_code', 'That code is invalid or has expired', 400)
     }
-    const limited = consumeAuthAttempt(database, 'api-auth-verify', rateLimitKey(`${email}:${clientAddress(c)}`),
-      AUTH_LIMITS.resetToken.attempts, AUTH_LIMITS.resetToken.windowSeconds)
+    const now = Date.now()
+    const limited = await service.call('system.consumeAuthAttempt', { scope: 'api-auth-verify',
+      identity: `${email}:${clientAddress(c)}`, attempts: AUTH_LIMITS.resetToken.attempts,
+      windowSeconds: AUTH_LIMITS.resetToken.windowSeconds, now })
     if (limited) return fail('rate_limited', 'Too many attempts', 429, limited.retryAfter)
 
-    const link = database.query(`SELECT token_hash,user_id,attempts FROM magic_links
-      WHERE email=? AND code_hash IS NOT NULL AND expires_at>?`)
-      .get(email, Date.now()) as { token_hash: string; user_id: number | null; attempts: number } | null
-    const match = link && database.query('SELECT 1 FROM magic_links WHERE token_hash=? AND code_hash=?')
-      .get(link.token_hash, hash(code))
-    const accountReady = link?.user_id && database.query(`SELECT 1 FROM users WHERE id=?
-      AND handle_chosen_at IS NOT NULL AND deleted_at IS NULL AND suspended_at IS NULL`).get(link.user_id)
-    if (!link || !link.user_id || !accountReady || !match) {
-      if (link) {
-        const attempts = link.attempts + 1
-        if (attempts >= CODE_ATTEMPT_LIMIT) {
-          database.query('DELETE FROM magic_links WHERE token_hash=?').run(link.token_hash)
-        }
-        else database.query('UPDATE magic_links SET attempts=? WHERE token_hash=?').run(attempts, link.token_hash)
-      }
-      return fail('invalid_code', 'That code is invalid or has expired', 400)
-    }
-
-    const session = token()
-    const expiresAt = Date.now() + SESSION_LIFETIME_MS
-    database.transaction(() => {
-      database.query('DELETE FROM magic_links WHERE token_hash=?').run(link.token_hash)
-      markGroupEmailVerified(database, link.user_id!)
-      if (!selectAccount(database, link.user_id!)) throw new Error('Account is unavailable')
-      insertSession(database, session, link.user_id!, expiresAt, Date.now(), c.req.header('user-agent') || '')
-    })()
-    const user = database.query(`SELECT id,handle,email,bio,email_verified_at
-      FROM users WHERE id=?`).get(link.user_id) as User
-    return json({ data: { token: session, expires_at: new Date(expiresAt).toISOString(), user: serialize(user) } })
+    const result = await service.call('api.verifySignIn', {
+      email, code, userAgent: c.req.header('user-agent') || '', now,
+    })
+    if (result.status === 'invalid') return fail('invalid_code', 'That code is invalid or has expired', 400)
+    return json({ data: { token: result.token, expires_at: new Date(result.expiresAt).toISOString(),
+      user: serialize(result.user) } })
   })
 
-  app.delete('/api/v1/auth/session', c => {
+  app.delete('/api/v1/auth/session', async c => {
     const tokenHash = sessionHash(bearerToken(c.req.raw))
     if (!tokenHash) return fail('unauthorized', 'Provide a bearer token', 401)
-    database.query('DELETE FROM sessions WHERE token_hash=?').run(tokenHash)
+    const user = requestApiUser(c.req.raw)
+    if (!user) return fail('unauthorized', 'Provide a bearer token', 401)
+    await service.call('account.revokeSession', { userId: user.id, tokenHash, currentSessionHash: null })
     return json({ data: { revoked: true } })
   })
 
   app.get('/api/v1/me', c => {
-    const user = apiUser(c.req.raw, database)
+    const user = requestApiUser(c.req.raw)
     if (!user) return fail('unauthorized', 'Provide a bearer token from /api/v1/auth/verify', 401)
     return json({ data: serialize(user) })
   })
 
   app.patch('/api/v1/me', async c => {
-    const guard = writer(database, c)
+    const guard = await writer(service, requestApiUser, c)
     if (guard.error) return guard.error
     const payload = await body(c)
     const bio = normalizeBioBody(text(payload?.bio).trim())
@@ -175,13 +183,13 @@ export function registerApiWriteRoutes(app: Hono, database: Database, appUrl?: s
           moderation.reason === 'flagged' ? 422 : 503)
       }
     }
-    database.query('UPDATE users SET bio=? WHERE id=?').run(bio, guard.user!.id)
-    await replaceBioLinkPreviews(database, guard.user!.id, await discoverLinkPreviews(bio, database))
+    await service.call('api.updateBio', { userId: guard.user!.id, bio })
+    await persistBioPreviews(service, guard.user!.id, await discoverLinkPreviews(bio))
     return json({ data: { ...serialize(guard.user!), bio } })
   })
 
   app.post('/api/v1/posts', async c => {
-    const guard = writer(database, c)
+    const guard = await writer(service, requestApiUser, c)
     if (guard.error) return guard.error
     const user = guard.user!
     if (!canPublishPosts(user)) return fail('email_unverified', 'Verify your email address before posting', 403)
@@ -197,10 +205,6 @@ export function registerApiWriteRoutes(app: Hono, database: Database, appUrl?: s
       if (!Number.isInteger(parentId) || parentId < 1) {
         return fail('invalid_parent', 'Parent must be a post id', 400)
       }
-      const parent = database.query('SELECT user_id FROM posts WHERE id=? AND deleted_at IS NULL')
-        .get(parentId) as { user_id: number } | null
-      if (!parent) return fail('not_found', 'Post not found', 404)
-      if (usersBlocked(user.id, parent.user_id, database)) return fail('not_found', 'Post not found', 404)
     }
 
     const moderation = await moderateText(content)
@@ -209,29 +213,27 @@ export function registerApiWriteRoutes(app: Hono, database: Database, appUrl?: s
         moderation.reason === 'flagged' ? 422 : 503)
     }
 
-    const result = createPost(database, user.id, content, parentId)
-    if ('retryAfter' in result) {
+    const result = await service.call('api.createPost', {
+      userId: user.id, body: content, parentId, origin: apiOrigin(c.req.url, appUrl),
+    })
+    if (result.status === 'not_found') return fail('not_found', 'Post not found', 404)
+    if (result.status === 'rate_limited') {
       return fail('post_rate_limited', postRateLimitMessage(result.retryAfter), 429, result.retryAfter)
     }
-    if (!result.duplicate) await saveLinkPreviews(database, result.id, await discoverLinkPreviews(content, database))
+    if (!result.duplicate) publishPost(result.id)
+    if (!result.duplicate) await persistPostPreviews(service, result.id, 'save', await discoverLinkPreviews(content))
     if (!result.duplicate) {
-      void sendPushForPost(result.id, user.id, user.handle, database)
+      void sendPushForPost(result.id, user.id, user.handle, undefined, undefined, service)
         .catch(error => logError('API activity push failed', error))
     }
-    const created = apiPost(database, result.id, apiOrigin(c.req.url, appUrl))
-    return json({ data: created }, result.duplicate ? 200 : 201)
+    return json({ data: result.post }, result.duplicate ? 200 : 201)
   })
 
   app.patch('/api/v1/posts/:id', async c => {
-    const guard = writer(database, c)
+    const guard = await writer(service, requestApiUser, c)
     if (guard.error) return guard.error
     const id = Number(c.req.param('id'))
     if (!Number.isInteger(id) || id < 1) return fail('invalid_post_id', 'Post ID must be a positive integer', 400)
-    const post = database.query('SELECT user_id FROM posts WHERE id=? AND deleted_at IS NULL')
-      .get(id) as { user_id: number } | null
-    if (!post) return fail('not_found', 'Post not found', 404)
-    if (post.user_id !== guard.user!.id) return fail('forbidden', 'That post belongs to someone else', 403)
-
     const payload = await body(c)
     const content = normalizePostBody(text(payload?.body))
     if (!validPostBody(content)) {
@@ -242,99 +244,93 @@ export function registerApiWriteRoutes(app: Hono, database: Database, appUrl?: s
       return fail(moderation.reason === 'flagged' ? 'flagged' : 'unavailable', moderationMessage(moderation.reason),
         moderation.reason === 'flagged' ? 422 : 503)
     }
-    updatePost(database, id, content)
-    await replaceLinkPreviews(database, id, await discoverLinkPreviews(content, database))
-    return json({ data: apiPost(database, id, apiOrigin(c.req.url, appUrl)) })
+    const result = await service.call('api.updatePost', {
+      userId: guard.user!.id, id, body: content, origin: apiOrigin(c.req.url, appUrl),
+    })
+    if (result.status !== 'ready') return result.status === 'not_found'
+      ? fail('not_found', 'Post not found', 404)
+      : fail('forbidden', 'That post belongs to someone else', 403)
+    await persistPostPreviews(service, id, 'replace', await discoverLinkPreviews(content))
+    return json({ data: result.post })
   })
 
   app.delete('/api/v1/posts/:id', async c => {
-    const guard = writer(database, c)
+    const guard = await writer(service, requestApiUser, c)
     if (guard.error) return guard.error
     const id = Number(c.req.param('id'))
     if (!Number.isInteger(id) || id < 1) return fail('invalid_post_id', 'Post ID must be a positive integer', 400)
-    const post = database.query('SELECT user_id FROM posts WHERE id=? AND deleted_at IS NULL')
-      .get(id) as { user_id: number } | null
-    if (!post) return fail('not_found', 'Post not found', 404)
-    if (post.user_id !== guard.user!.id) return fail('forbidden', 'That post belongs to someone else', 403)
-    database.transaction(() => softDeletePost(database, id))()
-    await deleteLinkPreviewImages(database, id)
+    const result = await service.call('api.deletePost', { userId: guard.user!.id, id })
+    if (result.status !== 'ready') return result.status === 'not_found'
+      ? fail('not_found', 'Post not found', 404)
+      : fail('forbidden', 'That post belongs to someone else', 403)
+    await deleteImagesAfterCommit(result.imageKeys)
     return json({ data: { deleted: true } })
   })
 
-  function target(c: Context, userId: number) {
-    const handle = (c.req.param('handle') || '').toLowerCase()
-    if (!/^[a-z0-9_]{2,24}$/.test(handle)) return { error: fail('invalid_handle', 'Handle is invalid', 400) }
-    const found = resolveHandle(database, handle)
-    if (!found) return { error: fail('not_found', 'User not found', 404) }
-    if (found.id === userId) return { error: fail('forbidden', 'That is your own account', 403) }
-    return { id: found.id, handle: found.handle }
-  }
-
-  app.post('/api/v1/users/:handle/follow', c => {
-    const guard = writer(database, c)
+  app.post('/api/v1/users/:handle/follow', async c => {
+    const guard = await writer(service, requestApiUser, c)
     if (guard.error) return guard.error
-    const other = target(c, guard.user!.id)
-    if (other.error || !other.id) return other.error ?? fail('not_found', 'User not found', 404)
-    if (usersBlocked(guard.user!.id, other.id, database)) return fail('not_found', 'User not found', 404)
-    const inserted = database.query(`INSERT OR IGNORE INTO follows(follower_id,following_id,created_at)
-      VALUES(?,?,CURRENT_TIMESTAMP)`).run(guard.user!.id, other.id)
-    if (inserted.changes) {
-      void sendPushForFollow(guard.user!.id, guard.user!.handle, other.id, database)
+    const handle = (c.req.param('handle') || '').toLowerCase()
+    if (!/^[a-z0-9_]{2,24}$/.test(handle)) return fail('invalid_handle', 'Handle is invalid', 400)
+    const other = await service.call('api.relationshipMutation', { userId: guard.user!.id, handle, action: 'follow' })
+    if (other.status === 'self') return fail('forbidden', 'That is your own account', 403)
+    if (other.status !== 'ready') return fail('not_found', 'User not found', 404)
+    if (other.changed) {
+      void sendPushForFollow(guard.user!.id, guard.user!.handle, other.targetId, undefined, undefined, service)
         .catch(error => logError('API follow push failed', error))
-      void sendPushForUserFollow(guard.user!.id, guard.user!.handle, other.id, other.handle, database)
+      void sendPushForUserFollow(guard.user!.id, guard.user!.handle, other.targetId, other.targetHandle,
+        undefined, undefined, service)
         .catch(error => logError('API follow activity push failed', error))
     }
     return json({ data: { following: true } })
   })
 
-  app.delete('/api/v1/users/:handle/follow', c => {
-    const guard = writer(database, c)
+  app.delete('/api/v1/users/:handle/follow', async c => {
+    const guard = await writer(service, requestApiUser, c)
     if (guard.error) return guard.error
-    const other = target(c, guard.user!.id)
-    if (other.error || !other.id) return other.error ?? fail('not_found', 'User not found', 404)
-    database.query('DELETE FROM follows WHERE follower_id=? AND following_id=?').run(guard.user!.id, other.id)
+    const handle = (c.req.param('handle') || '').toLowerCase()
+    if (!/^[a-z0-9_]{2,24}$/.test(handle)) return fail('invalid_handle', 'Handle is invalid', 400)
+    const other = await service.call('api.relationshipMutation', { userId: guard.user!.id, handle, action: 'unfollow' })
+    if (other.status === 'self') return fail('forbidden', 'That is your own account', 403)
+    if (other.status !== 'ready') return fail('not_found', 'User not found', 404)
     return json({ data: { following: false } })
   })
 
-  app.post('/api/v1/users/:handle/block', c => {
-    const guard = writer(database, c)
+  app.post('/api/v1/users/:handle/block', async c => {
+    const guard = await writer(service, requestApiUser, c)
     if (guard.error) return guard.error
-    const other = target(c, guard.user!.id)
-    if (other.error || !other.id) return other.error ?? fail('not_found', 'User not found', 404)
-    database.transaction(() => {
-      database.query('INSERT OR IGNORE INTO blocks(blocker_id,blocked_id) VALUES(?,?)')
-        .run(guard.user!.id, other.id)
-      database.query('DELETE FROM follows WHERE follower_id=? AND following_id=?').run(guard.user!.id, other.id)
-    })()
+    const handle = (c.req.param('handle') || '').toLowerCase()
+    if (!/^[a-z0-9_]{2,24}$/.test(handle)) return fail('invalid_handle', 'Handle is invalid', 400)
+    const other = await service.call('api.relationshipMutation', { userId: guard.user!.id, handle, action: 'block' })
+    if (other.status === 'self') return fail('forbidden', 'That is your own account', 403)
+    if (other.status !== 'ready') return fail('not_found', 'User not found', 404)
     return json({ data: { blocked: true } })
   })
 
-  app.delete('/api/v1/users/:handle/block', c => {
-    const guard = writer(database, c)
+  app.delete('/api/v1/users/:handle/block', async c => {
+    const guard = await writer(service, requestApiUser, c)
     if (guard.error) return guard.error
-    const other = target(c, guard.user!.id)
-    if (other.error || !other.id) return other.error ?? fail('not_found', 'User not found', 404)
-    database.query('DELETE FROM blocks WHERE blocker_id=? AND blocked_id=?').run(guard.user!.id, other.id)
+    const handle = (c.req.param('handle') || '').toLowerCase()
+    if (!/^[a-z0-9_]{2,24}$/.test(handle)) return fail('invalid_handle', 'Handle is invalid', 400)
+    const other = await service.call('api.relationshipMutation', { userId: guard.user!.id, handle, action: 'unblock' })
+    if (other.status === 'self') return fail('forbidden', 'That is your own account', 403)
+    if (other.status !== 'ready') return fail('not_found', 'User not found', 404)
     return json({ data: { blocked: false } })
   })
 
   app.post('/api/v1/posts/:id/report', async c => {
-    const guard = writer(database, c)
+    const guard = await writer(service, requestApiUser, c)
     if (guard.error) return guard.error
     const id = Number(c.req.param('id'))
     if (!Number.isInteger(id) || id < 1) return fail('invalid_post_id', 'Post ID must be a positive integer', 400)
-    const post = database.query('SELECT user_id FROM posts WHERE id=? AND deleted_at IS NULL')
-      .get(id) as { user_id: number } | null
-    if (!post) return fail('not_found', 'Post not found', 404)
-    if (post.user_id === guard.user!.id) return fail('forbidden', 'You cannot report your own post', 400)
     const payload = await body(c)
     const reason = text(payload?.reason)
     if (!['harassment', 'spam', 'impersonation', 'other'].includes(reason)) {
       return fail('invalid_reason', 'Reason must be harassment, spam, impersonation or other', 400)
     }
-    database.query(`INSERT INTO reports(reporter_id,post_id,reason) VALUES(?,?,?)
-      ON CONFLICT(reporter_id,post_id) DO UPDATE SET reason=excluded.reason,created_at=CURRENT_TIMESTAMP`)
-      .run(guard.user!.id, id, reason)
+    const result = await service.call('interactions.reportPost', { userId: guard.user!.id, postId: id, reason })
+    if (result.status === 'not_found') return fail('not_found', 'Post not found', 404)
+    if (result.status === 'own_post') return fail('forbidden', 'You cannot report your own post', 400)
     return json({ data: { reported: true } })
   })
 }

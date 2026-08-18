@@ -1,23 +1,19 @@
 import { Fragment } from 'react'
 import { extractHashtags, extractMentions } from '../content'
-import { db, type User } from '../db'
-import { visibleHashtagCounts, visibleTagFollowerCounts, visibleUserProfileStats } from '../posts'
-import type { PostView, ProfileRow } from '../types'
+import type { BioReferenceData, PostView, ProfileRow, User } from '../types'
 import { displayBio, linkify, referenceFormId } from '../utils'
 import { Layout } from './layout'
 import { FormMessage, Pagination, PostingHelp, PostingSuggestionResults, type PostingSuggestionSearch, ProfileControls,
   ProfileHeader, ProfileTabs } from './page-shared'
 import { Post } from './post'
 import { DEFAULT_TIMEZONE, TIMEZONE_CHOICES } from '../timezone'
-import { resolveHandle } from '../handles'
-import { userBioLinkPreviews } from '../link-preview'
 
 export function Profile(
   { user, profile, posts, following, bio = profile.bio || '', editHandle = profile.handle, editEmail = profile.email,
     editIsBot = !!profile.is_bot, error, editing = false, total = posts.length, noteCount = total, replyCount = 0,
     tab = 'notes', followerCount = 0, followingCount = 0, followingTagCount = 0, blockedPeopleCount = 0,
     blockedTagCount = 0, blocked = false, blockedByProfile = false, social, page = 1, totalPages = 1, returnPath,
-    suggestionSearch }: {
+    suggestionSearch, bioReference }: {
       user: User | null
       profile: ProfileRow
       posts: PostView[]
@@ -43,6 +39,7 @@ export function Profile(
       totalPages?: number
       returnPath?: string
       suggestionSearch?: PostingSuggestionSearch | null
+      bioReference?: BioReferenceData
       social?: { description: string; image: string; url: string; type?: 'article' | 'profile'; imageAlt?: string }
     },
 ) {
@@ -57,39 +54,8 @@ export function Profile(
   const fromQuery = returnPath ? `?from=${encodeURIComponent(returnPath)}` : ''
   const bioTags = extractHashtags(profile.bio)
   const bioHandles = extractMentions(profile.bio)
-  const bioTagCounts = visibleHashtagCounts(db, [profile.bio], user?.id ?? -1)
-  const bioTagFollowerCounts = visibleTagFollowerCounts(db, bioTags, user?.id ?? -1)
-  const followedBioTags = user && bioTags.length
-    ? new Set((db.query(`SELECT tag FROM hashtag_follows WHERE user_id=? AND tag IN
-      (${bioTags.map(() => '?').join(',')})`).all(user.id, ...bioTags) as { tag: string }[])
-      .map(row => row.tag))
-    : new Set<string>()
-  const bioTagFollowing = Object.fromEntries(bioTags.map(tag => [tag, followedBioTags.has(tag)]))
-  const bioMentionBios: Record<string, string> = {}
-  const bioMentionIds: Record<string, number> = {}
-  for (const handle of bioHandles) {
-    const mentioned = resolveHandle(db, handle)
-    if (!mentioned) continue
-    const account = db.query('SELECT bio FROM users WHERE id=?').get(mentioned.id) as { bio: string } | null
-    if (account) {
-      bioMentionBios[handle] = account.bio
-      bioMentionIds[handle] = mentioned.id
-    }
-  }
-  const bioMentionStats = visibleUserProfileStats(db, Object.values(bioMentionIds), user?.id ?? -1)
-  const followedBioMentionIds = !user || !Object.keys(bioMentionIds).length ? new Set<number>() : new Set(
-    (db.query(`SELECT following_id FROM follows WHERE follower_id=? AND following_id IN (${
-      Object.keys(bioMentionIds).map(() => '?').join(',')})`).all(user.id, ...Object.values(bioMentionIds)) as {
-      following_id: number
-    }[]).map(row => row.following_id),
-  )
-  const bioMentionFollowing = Object.fromEntries(Object.entries(bioMentionIds)
-    .map(([handle, id]) => [handle, followedBioMentionIds.has(id)]))
-  const bioMentionProfileStats = Object.fromEntries(Object.entries(bioMentionIds)
-    .flatMap(([handle, id]) => bioMentionStats.has(id) ? [[handle, bioMentionStats.get(id)!]] : []))
-  const bioMentionNoteCounts = Object.fromEntries(Object.entries(bioMentionProfileStats)
-    .map(([handle, stats]) => [handle, stats.notes]))
-  const bioLinkPreviews = userBioLinkPreviews(db, profile.id)
+  const references = bioReference || { hashtagCounts: {}, hashtagFollowerCounts: {}, hashtagFollowing: {},
+    mentionBios: {}, mentionNoteCounts: {}, mentionProfileStats: {}, mentionFollowing: {}, linkPreviews: {} }
   const bioFormPrefix = `profile-${profile.id}-bio`
   return (
     <Layout user={user} title={`@${profile.handle}`} social={social} feeds={{
@@ -236,16 +202,16 @@ export function Profile(
             )
             : (
               <p className="profile-bio" dangerouslySetInnerHTML={{
-                __html: linkify(displayBio(profile.bio), bioMentionBios, [], undefined, undefined, '', bioTagCounts,
-                  bioMentionNoteCounts, {
+                __html: linkify(displayBio(profile.bio), references.mentionBios, [], undefined, undefined, '',
+                  references.hashtagCounts, references.mentionNoteCounts, {
                   signedIn: !!user,
                   currentHandle: user?.handle,
                   formPrefix: bioFormPrefix,
-                  mentionFollowing: bioMentionFollowing,
-                  mentionProfileStats: bioMentionProfileStats,
-                  hashtagFollowing: bioTagFollowing,
-                  hashtagFollowerCounts: bioTagFollowerCounts,
-                  linkPreviews: bioLinkPreviews,
+                  mentionFollowing: references.mentionFollowing,
+                  mentionProfileStats: references.mentionProfileStats,
+                  hashtagFollowing: references.hashtagFollowing,
+                  hashtagFollowerCounts: references.hashtagFollowerCounts,
+                  linkPreviews: references.linkPreviews,
                 }),
               }} />
             )}

@@ -1,5 +1,4 @@
 import type { Database } from 'bun:sqlite'
-import { cacheDb } from './cache-db'
 import { fmt } from './utils'
 
 const MAX_MATERIALIZED_PAGES = 40
@@ -23,12 +22,12 @@ export function refreshMaterializedTimestamps(html: string, now = Date.now()) {
 }
 
 /** Discard rendered feed HTML from an earlier server process. */
-export function clearMaterializedFeedPages(cache: Database = cacheDb) {
+export function clearMaterializedFeedPages(cache: Database) {
   cache.run('DELETE FROM materialized_feed_pages_v2')
 }
 
 export function invalidateMaterializedFeedPages(viewerId: number, kinds: MaterializedFeedKind[],
-  cache: Database = cacheDb)
+  cache: Database)
 {
   if (!kinds.length) return
   cache.query(`DELETE FROM materialized_feed_pages_v2 WHERE viewer_id=? AND kind IN
@@ -36,7 +35,7 @@ export function invalidateMaterializedFeedPages(viewerId: number, kinds: Materia
 }
 
 export async function materializedFeedPage(database: Database, request: Request, kind: MaterializedFeedKind,
-  viewerId: number, render: () => Response, cache: Database = cacheDb, rerenderForCache = false,
+  viewerId: number, render: () => Response, cache: Database, rerenderForCache = false,
   cacheVersion = 0)
 {
   // Cached development HTML embeds the server's boot ID. Reusing it after a

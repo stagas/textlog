@@ -1,5 +1,5 @@
 import { isAdminEmail } from '../admin'
-import { type User } from '../db'
+import type { User } from '../types'
 import { maskEmail } from './email-address'
 import type { ProfileRow } from '../types'
 import { fmtFull } from '../utils'

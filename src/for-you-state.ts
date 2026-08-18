@@ -1,9 +1,5 @@
 import { isAdminEmail } from './admin'
-import { db } from './db'
 import type { Database } from 'bun:sqlite'
-import { invalidateMaterializedFeedPages } from './materialized-feed-pages'
-
-const viewerFeedPages = ['for-you', 'to-me', 'latest', 'hot'] as const
 
 const visibleEvents = `
   SELECT 'post:' || printf('%020d',p.id) event_key FROM posts p
@@ -86,32 +82,32 @@ const visibleForYouEvents = `
   EXCEPT
   SELECT event_key FROM (${visibleToMeEvents})`
 
-function stateParameters(userId: number, database: Database = db) {
+function stateParameters(userId: number, database: Database) {
   const account = database.query('SELECT email FROM users WHERE id=?').get(userId) as { email: string } | null
   return { viewer: userId, admin: Number(!!account && isAdminEmail(account.email)) }
 }
 
-export function hasUnreadForYou(userId: number, database: Database = db) {
+export function hasUnreadForYou(userId: number, database: Database) {
   return !!database.query(`SELECT 1 FROM (${visibleForYouEvents}) event WHERE NOT EXISTS
     (SELECT 1 FROM for_you_reads seen WHERE seen.user_id=$viewer AND seen.event_key=event.event_key) LIMIT 1`)
     .get(stateParameters(userId, database))
 }
 
-export function hasUnreadToMe(userId: number, database: Database = db) {
+export function hasUnreadToMe(userId: number, database: Database) {
   return !!database.query(`SELECT 1 FROM (${visibleToMeEvents}) event WHERE NOT EXISTS
     (SELECT 1 FROM for_you_reads seen WHERE seen.user_id=$viewer AND seen.event_key=event.event_key) LIMIT 1`)
     .get(stateParameters(userId, database))
 }
 
-export function markForYouEntriesRead(userId: number, eventKeys: string[], toMe = false) {
+export function markForYouEntriesRead(userId: number, eventKeys: string[], toMe: boolean, database: Database) {
   if (!eventKeys.length) return
-  const insert = db.query('INSERT OR IGNORE INTO for_you_reads(user_id,event_key) VALUES(?,?)')
+  const insert = database.query('INSERT OR IGNORE INTO for_you_reads(user_id,event_key) VALUES(?,?)')
   const insertToMe = toMe
-    ? db.query('INSERT OR IGNORE INTO to_me_reads(user_id,event_key) VALUES(?,?)')
+    ? database.query('INSERT OR IGNORE INTO to_me_reads(user_id,event_key) VALUES(?,?)')
     : null
-  const insertActivity = db.query(`INSERT OR IGNORE INTO activity_reads(user_id,event_key)
+  const insertActivity = database.query(`INSERT OR IGNORE INTO activity_reads(user_id,event_key)
     VALUES(?,'post:' || CAST(? AS INTEGER))`)
-  db.transaction(() =>
+  database.transaction(() =>
     eventKeys.forEach(eventKey => {
       insert.run(userId, eventKey)
       insertToMe?.run(userId, eventKey)
@@ -119,11 +115,10 @@ export function markForYouEntriesRead(userId: number, eventKeys: string[], toMe 
       if (postId) insertActivity.run(userId, postId)
     })
   )()
-  invalidateMaterializedFeedPages(userId, [...viewerFeedPages])
 }
 
 export function markVisibleForYouEntriesRead(userId: number, eventKeys: string[], toMe = false,
-  database: Database = db)
+  database: Database)
 {
   if (!eventKeys.length) return 0
   const events = toMe ? visibleToMeEvents : visibleForYouEvents
@@ -144,11 +139,10 @@ export function markVisibleForYouEntriesRead(userId: number, eventKeys: string[]
     const postId = eventKey.match(/^post:(\d+)$/)?.[1]
     if (postId) insertActivity.run(userId, postId)
   }))()
-  if (visible.length && database === db) invalidateMaterializedFeedPages(userId, [...viewerFeedPages])
   return visible.length
 }
 
-export function markAllForYouRead(userId: number, toMe = false, database: Database = db) {
+export function markAllForYouRead(userId: number, toMe: boolean, database: Database) {
   const events = toMe ? visibleToMeEvents : visibleEvents
   database.transaction(() => {
     database.query(`INSERT OR IGNORE INTO for_you_reads(user_id,event_key)
@@ -159,5 +153,4 @@ export function markAllForYouRead(userId: number, toMe = false, database: Databa
       SELECT user_id,'post:' || CAST(substr(event_key,6) AS INTEGER)
       FROM for_you_reads WHERE user_id=? AND event_key GLOB 'post:[0-9]*'`).run(userId)
   })()
-  if (database === db) invalidateMaterializedFeedPages(userId, [...viewerFeedPages])
 }

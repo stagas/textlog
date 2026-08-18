@@ -5,11 +5,12 @@ import tlds from 'tlds'
 import { userForApiKey } from './api-keys'
 import { sessionCookieName } from './brand'
 import { containsAsciiArt, MAX_HASHTAGS_PER_POST, type PostContentFlags } from './content'
-import { db, type User } from './db'
+import type { User } from './types'
 import { activeTimezone, timezoneLabel } from './timezone'
 import { texToMathML } from './math'
 import { markSessionUsed, sessionHash } from './sessions'
 import type { LinkPreview, UserProfileStats } from './types'
+import { requestContext } from './request-context'
 
 export function userHoverTitle(noteCount: number, bio?: string) {
   return `${noteCount.toLocaleString()} ${noteCount === 1 ? 'note' : 'notes'}\n\n${displayBio(bio)}`
@@ -128,12 +129,17 @@ function userForSession(token: string | null, database: Database): User | null {
   if (user) markSessionUsed(database, token!, Date.now())
   return user
 }
-export function currentUser(req: Request, database: Database = db): User | null {
-  return userForSession(sessionToken(req), database)
+export function currentUser(req: Request, database?: Database): User | null {
+  const resolved = requestContext()
+  if (resolved) return resolved.sessionUser
+  return database ? userForSession(sessionToken(req), database) : null
 }
 // The API never reads the cookie. A bearer token cannot be attached by another site,
 // so write endpoints are not reachable by cross-site requests.
-export function apiUser(req: Request, database: Database = db): User | null {
+export function apiUser(req: Request, database?: Database): User | null {
+  const resolved = requestContext()
+  if (resolved) return resolved.apiUser
+  if (!database) return null
   const value = bearerToken(req)
   return userForApiKey(database, value) || userForSession(value, database)
 }

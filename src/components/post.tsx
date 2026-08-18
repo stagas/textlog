@@ -1,17 +1,14 @@
 import React from 'react'
 import { isAdmin } from '../admin'
 import { containsAsciiArt, extractHashtags, extractMentions } from '../content'
-import { db, type User } from '../db'
-import { resolveHandle } from '../handles'
-import { userBioLinkPreviews } from '../link-preview'
-import { enrichPosts, visibleHashtagCounts, visibleTagFollowerCounts, visibleUserProfileStats } from '../posts'
-import type { PostView, UserProfileStats } from '../types'
+import type { User } from '../types'
+import type { BioReferenceData, PostView, UserProfileStats } from '../types'
 import { displayBio, displayPostBody, fmt, fmtFull, linkify, referenceFormId } from '../utils'
 import { MetaRow } from './meta'
 
 export function UserReference(
   { handle, bio, noteCount, following, user, href, rel, currentHandle, stats, navigationQuery = '',
-    showFollowAction = true, label }: {
+    showFollowAction = true, label, referenceData }: {
       handle: string
       bio?: string
       noteCount: number
@@ -24,41 +21,17 @@ export function UserReference(
       navigationQuery?: string
       showFollowAction?: boolean
       label?: React.ReactNode
+      referenceData?: BioReferenceData
     },
 ) {
   const ownUser = (user?.handle || currentHandle)?.toLowerCase() === handle.toLowerCase()
   const followReturnPath = new URLSearchParams(navigationQuery.slice(1)).get('from') || undefined
   const bioTags = extractHashtags(bio || '')
-  const bioTagCounts = visibleHashtagCounts(db, [bio || ''], user?.id ?? -1)
-  const bioTagFollowerCounts = visibleTagFollowerCounts(db, bioTags, user?.id ?? -1)
-  const followedBioTags = !user || !bioTags.length ? new Set<string>() : new Set(
-    (db.query(`SELECT tag FROM hashtag_follows WHERE user_id=? AND tag IN (${
-      bioTags.map(() => '?').join(',')})`).all(user.id, ...bioTags) as { tag: string }[]).map(row => row.tag),
-  )
-  const bioHandles = extractMentions(bio || '')
-  const bioMentionBios: Record<string, string> = {}
-  const bioMentionIds: Record<string, number> = {}
-  for (const bioHandle of bioHandles) {
-    const mentioned = resolveHandle(db, bioHandle)
-    if (!mentioned) continue
-    const account = db.query('SELECT bio FROM users WHERE id=?').get(mentioned.id) as { bio: string } | null
-    if (account) {
-      bioMentionBios[bioHandle] = account.bio
-      bioMentionIds[bioHandle] = mentioned.id
-    }
-  }
-  const bioMentionStats = visibleUserProfileStats(db, Object.values(bioMentionIds), user?.id ?? -1)
-  const followedBioMentionIds = !user || !Object.keys(bioMentionIds).length ? new Set<number>() : new Set(
-    (db.query(`SELECT following_id FROM follows WHERE follower_id=? AND following_id IN (${
-      Object.keys(bioMentionIds).map(() => '?').join(',')})`).all(user.id, ...Object.values(bioMentionIds)) as {
-      following_id: number
-    }[]).map(row => row.following_id),
-  )
-  const bioMentionProfileStats = Object.fromEntries(Object.entries(bioMentionIds)
-    .flatMap(([bioHandle, id]) => bioMentionStats.has(id) ? [[bioHandle, bioMentionStats.get(id)!]] : []))
-  const bioMentionNoteCounts = Object.fromEntries(Object.entries(bioMentionProfileStats)
-    .map(([bioHandle, profileStats]) => [bioHandle, profileStats.notes]))
-  const referencedUser = bio ? resolveHandle(db, handle) : null
+  const bioTagCounts = referenceData?.hashtagCounts || {}
+  const bioTagFollowerCounts = referenceData?.hashtagFollowerCounts || {}
+  const bioMentionBios = referenceData?.mentionBios || {}
+  const bioMentionProfileStats = referenceData?.mentionProfileStats || {}
+  const bioMentionNoteCounts = referenceData?.mentionNoteCounts || {}
   const bioFormPrefix = `handle-${handle.toLowerCase()}-bio`
   const profileHref = (tab?: string) =>
     tab
@@ -93,12 +66,11 @@ export function UserReference(
             signedIn: !!user,
             currentHandle: user?.handle,
             formPrefix: bioFormPrefix,
-            mentionFollowing: Object.fromEntries(Object.entries(bioMentionIds)
-              .map(([bioHandle, id]) => [bioHandle, followedBioMentionIds.has(id)])),
+            mentionFollowing: referenceData?.mentionFollowing,
             mentionProfileStats: bioMentionProfileStats,
-            hashtagFollowing: Object.fromEntries(bioTags.map(tag => [tag, followedBioTags.has(tag)])),
+            hashtagFollowing: referenceData?.hashtagFollowing,
             hashtagFollowerCounts: bioTagFollowerCounts,
-            linkPreviews: referencedUser ? userBioLinkPreviews(db, referencedUser.id) : {},
+            linkPreviews: referenceData?.linkPreviews,
           }),
         }} />
         {showFollowAction && !ownUser && (user
@@ -125,7 +97,7 @@ export function UserReference(
             action={'/tag-block/' + encodeURIComponent(tag)} />
         </React.Fragment>
       ))}
-      {user && Object.keys(bioMentionIds).map(bioHandle => (
+      {user && Object.keys(bioMentionBios).map(bioHandle => (
         <React.Fragment key={`user-${bioHandle}`}>
           <form className="reference-follow-form" id={referenceFormId(bioFormPrefix, 'user', bioHandle)} method="post"
             action={'/follow/' + encodeURIComponent(bioHandle)} />
@@ -253,7 +225,7 @@ export function PreviewPost({ p }: { p: PostView }) {
     <article className="post" id={`post-${p.id}`}>
       <MetaRow className="posttop preview-post-meta">
         <UserReference handle={p.handle} bio={p.bio} noteCount={p.note_count || 0} stats={p.profile_stats} user={null}
-          currentHandle={p.handle} />
+          currentHandle={p.handle} referenceData={p.bio_reference} />
         <span className="postdate">
           <time dateTime={p.created_at} title={fmtFull(p.created_at)}>{fmt(p.created_at)}</time>
         </span>
@@ -339,12 +311,12 @@ export function Post({
         {preview
           ? (
             <UserReference handle={p.handle} bio={p.bio} noteCount={p.note_count || 0} stats={p.profile_stats}
-              following={p.viewer_following} user={user} />
+              following={p.viewer_following} user={user} referenceData={p.bio_reference} />
           )
           : (
             <UserReference handle={p.handle} bio={p.bio} noteCount={p.note_count || 0} stats={p.profile_stats}
               following={p.viewer_following} user={user} href={'/u/' + p.handle + referenceQuery} rel={navigationRel}
-              navigationQuery={referenceQuery} />
+              navigationQuery={referenceQuery} referenceData={p.bio_reference} />
           )}
         {contextLabel && <span className="post-context">{contextLabel}</span>}
         {preview
@@ -422,7 +394,7 @@ export function Post({
                   <UserReference handle={parent.handle} bio={parent.bio} noteCount={parent.note_count || 0}
                     stats={parent.profile_stats} following={parent.viewer_following} user={user}
                     href={'/u/' + parent.handle + referenceQuery} rel={navigationRel}
-                    navigationQuery={referenceQuery} />
+                    navigationQuery={referenceQuery} referenceData={parent.bio_reference} />
                   <a className="postdate" href={parentDetailPath} rel={navigationRel}>
                     <time dateTime={parent.created_at} title={fmtFull(parent.created_at)}>
                       {fmt(parent.created_at)}
@@ -458,25 +430,9 @@ export function Post({
 }
 
 export function ThreadReplies(
-  { parentId, user, returnPath, excludePostId }: { parentId: number; user: User | null; returnPath?: string;
-    excludePostId?: number },
+  { parentId, replies, user, returnPath, excludePostId }: { parentId: number; replies: PostView[]; user: User | null;
+    returnPath?: string; excludePostId?: number },
 ) {
-  const viewerId = user?.id ?? -1
-  const rows = db.query(`WITH RECURSIVE thread AS (
-      SELECT p.*,u.handle,1 depth FROM posts p JOIN users u ON u.id=p.user_id WHERE p.parent_id=? AND (? < 0 OR NOT EXISTS
-        (SELECT 1 FROM blocks b WHERE (b.blocker_id=? AND b.blocked_id=p.user_id) OR (b.blocker_id=p.user_id AND b.blocked_id=?)))
-        AND (? < 0 OR NOT EXISTS (SELECT 1 FROM post_hashtags ph JOIN blocked_hashtags bh ON bh.tag=ph.tag
-          WHERE ph.post_id=p.id AND bh.user_id=?))
-      UNION ALL
-      SELECT p.*,u.handle,thread.depth+1 FROM posts p JOIN users u ON u.id=p.user_id
-        JOIN thread ON p.parent_id=thread.id WHERE (? < 0 OR NOT EXISTS
-        (SELECT 1 FROM blocks b WHERE (b.blocker_id=? AND b.blocked_id=p.user_id) OR (b.blocker_id=p.user_id AND b.blocked_id=?)))
-        AND (? < 0 OR NOT EXISTS (SELECT 1 FROM post_hashtags ph JOIN blocked_hashtags bh ON bh.tag=ph.tag
-          WHERE ph.post_id=p.id AND bh.user_id=?))
-    ) SELECT id,user_id,parent_id,body,created_at,deleted_at,has_latex,has_links,has_code,handle,depth
-      FROM thread ORDER BY created_at ASC,id ASC`).all(parentId, viewerId, viewerId, viewerId, viewerId, viewerId,
-    viewerId, viewerId, viewerId, viewerId, viewerId) as (PostView & { depth: number })[]
-  const replies = enrichPosts(db, rows, viewerId)
   if (!replies.length) return null
   const children = new Map<number, PostView[]>()
   for (const reply of replies) {

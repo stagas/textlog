@@ -1,11 +1,9 @@
 import type { Database } from 'bun:sqlite'
 import { db } from './db'
 import { notificationDevice } from './http'
+import { DENSITY_CHOICES, PAGE_SIZE_CHOICES, type DensityChoice, type PageSizeChoice } from './request-preferences'
 
-export const PAGE_SIZE_CHOICES = [20, 40, 80, 100] as const
-export type PageSizeChoice = typeof PAGE_SIZE_CHOICES[number]
-export const DENSITY_CHOICES = ['compact', 'regular', 'relaxed'] as const
-export type DensityChoice = typeof DENSITY_CHOICES[number]
+export { DENSITY_CHOICES, PAGE_SIZE_CHOICES, type DensityChoice, type PageSizeChoice } from './request-preferences'
 
 export function devicePageSize(request: Request, userId: number | null | undefined,
   database: Database = db): PageSizeChoice

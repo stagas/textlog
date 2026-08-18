@@ -5,6 +5,9 @@ import { publishPost } from './api-broker'
 import { rebuildHotPosts } from './hot'
 import { registerApiRoutes } from './routes/api'
 import { sessionHash } from './sessions'
+import { executeDatabaseDomain } from './database-domain'
+import type { DatabaseService } from './database-service'
+import { apiUser } from './utils'
 
 function fixture(now?: () => number) {
   const database = new Database(':memory:', { strict: true })
@@ -54,7 +57,8 @@ function fixture(now?: () => number) {
   `)
   rebuildHotPosts(database)
   const app = new Hono()
-  registerApiRoutes(app, database, null, now)
+  const service: DatabaseService = { call: (operation, input) => executeDatabaseDomain(database, operation, input) }
+  registerApiRoutes(app, null, now, service, request => apiUser(request, database))
   return { app, database }
 }
 

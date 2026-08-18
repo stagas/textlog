@@ -1,9 +1,6 @@
 import { appName } from '../brand'
-import { db, type User } from '../db'
-import { suggestedPeople, suggestedPeopleCount, trendingTagCount, trendingTags } from '../explore'
+import type { ExploreData, User } from '../types'
 import { TAG_PAGE_SIZE } from '../pagination'
-import { visibleUserProfileStats } from '../posts'
-import type { PersonView } from '../types'
 import { displayBio, linkify } from '../utils'
 import { Layout } from './layout'
 import { Panel } from './panel'
@@ -13,32 +10,15 @@ import { SearchForm } from './search'
 
 const PEOPLE_PAGE_SIZE = 8
 
-export function Explore({ user, welcome = false, peopleIds, tagsPage = 1, peoplePage = 1 }: {
+export function Explore({ user, welcome = false, tagsPage = 1, peoplePage = 1, data }: {
   user: User | null
   welcome?: boolean
-  peopleIds?: number[]
   tagsPage?: number
   peoplePage?: number
+  data: ExploreData
 }) {
-  const viewerId = user?.id ?? -1
-  const savedIds = peopleIds?.filter((id, index, ids) => Number.isInteger(id) && id > 0 && ids.indexOf(id) === index)
-    .slice(0, PEOPLE_PAGE_SIZE)
-  const people = savedIds?.length
-    ? (db.query(
-      `SELECT u.*, (SELECT count(*) FROM posts p WHERE p.user_id=u.id AND p.deleted_at IS NULL) posts,
-        EXISTS(SELECT 1 FROM follows f WHERE f.follower_id=? AND f.following_id=u.id) following
-        FROM users u WHERE u.id IN (${savedIds.map(() => '?').join(',')}) AND u.deleted_at IS NULL
-        AND u.handle_chosen_at IS NOT NULL
-        AND (? < 0 OR NOT EXISTS (SELECT 1 FROM blocks b WHERE
-          (b.blocker_id=? AND b.blocked_id=u.id) OR (b.blocker_id=u.id AND b.blocked_id=?)))`,
-    ).all(viewerId, ...savedIds, viewerId, viewerId, viewerId) as PersonView[])
-      .sort((a, b) => savedIds.indexOf(a.id) - savedIds.indexOf(b.id))
-    : suggestedPeople(db, viewerId, PEOPLE_PAGE_SIZE, undefined, (peoplePage - 1) * PEOPLE_PAGE_SIZE)
+  const { people, tags, peopleTotal, tagsTotal, profileStats } = data
   const explorePeople = people.map(p => p.id).join(',')
-  const profileStats = visibleUserProfileStats(db, people.map(person => person.id), viewerId)
-  const tags = trendingTags(db, viewerId, TAG_PAGE_SIZE, undefined, (tagsPage - 1) * TAG_PAGE_SIZE)
-  const peopleTotal = suggestedPeopleCount(db, viewerId)
-  const tagsTotal = trendingTagCount(db, viewerId)
   const tagsPath = `/explore${peoplePage > 1 ? `?peoplePage=${peoplePage}` : ''}`
   const peoplePath = `/explore${tagsPage > 1 ? `?tagsPage=${tagsPage}` : ''}`
   const explorePath = () => {
@@ -95,7 +75,7 @@ export function Explore({ user, welcome = false, peopleIds, tagsPage = 1, people
               <article key={p.id} id={`person-${p.id}`}>
                 <div>
                   <div>
-                    <UserReference handle={p.handle} bio={p.bio} noteCount={p.posts} stats={profileStats.get(p.id)}
+                    <UserReference handle={p.handle} bio={p.bio} noteCount={p.posts} stats={profileStats[p.id]}
                       following={p.following} user={user}
                       href={`/u/${p.handle}?from=${encodeURIComponent(exploreReturnPath(p.id))}`}
                       navigationQuery={`?from=${encodeURIComponent(exploreReturnPath(p.id))}`} />

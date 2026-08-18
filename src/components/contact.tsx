@@ -1,6 +1,6 @@
 import { instance } from '../../instance.config'
 import { appName } from '../brand'
-import { type User } from '../db'
+import type { User } from '../types'
 import { Layout } from './layout'
 
 export function Contact({ user }: { user: User | null }) {

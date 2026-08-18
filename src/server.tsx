@@ -1,4 +1,9 @@
 import { validateStartupConfiguration } from './config'
+import { DatabaseUnavailableError, RuntimeWorkerClient } from './runtime-worker-client'
+import { clientIpHeaderName, sessionCookieName } from './brand'
+import { notificationDevice, sessionCookie } from './http'
+import { configureDatabaseService } from './database-service'
+import { withRequestContext } from './request-context'
 
 const configuration = validateStartupConfiguration()
 Bun.env.NODE_ENV = configuration.environment
@@ -21,5 +26,130 @@ if (configuration.moderationDisabled && configuration.production) {
   console.warn('configuration warning  content moderation is disabled in production')
 }
 
-const application = await import('./app')
-export default application.default
+const runtime = new RuntimeWorkerClient(new URL('./runtime-worker.ts', import.meta.url))
+await runtime.ready()
+configureDatabaseService(runtime)
+const application = (await import('./app')).default
+
+const degradedAssets = new Map<string, string>([
+  ['/favicon.ico', 'image/x-icon'],
+  ['/favicon-16x16.png', 'image/png'],
+  ['/favicon-32x32.png', 'image/png'],
+  ['/apple-touch-icon.png', 'image/png'],
+  ['/android-chrome-192x192.png', 'image/png'],
+  ['/android-chrome-512x512.png', 'image/png'],
+  ['/maskable-icon-512x512.png', 'image/png'],
+  ['/email-logo.png', 'image/png'],
+])
+
+function unavailableResponse(request: Request) {
+  const path = new URL(request.url).pathname
+  const retryAfter = String(runtime.retryAfterSeconds)
+  if (path === '/health') {
+    return Response.json({ status: 'unavailable', worker: runtime.state }, {
+      status: 503,
+      headers: { 'cache-control': 'no-store', 'retry-after': retryAfter },
+    })
+  }
+  const contentType = degradedAssets.get(path)
+  if (contentType) {
+    return new Response(Bun.file(new URL(`../public${path}`, import.meta.url)), {
+      headers: { 'content-type': contentType, 'cache-control': 'public, max-age=31536000, immutable' },
+    })
+  }
+  return new Response('Service Unavailable', {
+    status: 503,
+    headers: { 'cache-control': 'no-store', 'retry-after': retryAfter },
+  })
+}
+
+function mainThreadAsset(request: Request) {
+  const path = new URL(request.url).pathname
+  const contentType = degradedAssets.get(path)
+  if (!contentType) return null
+  return new Response(Bun.file(new URL(`../public${path}`, import.meta.url)), {
+    headers: { 'content-type': contentType, 'cache-control': 'public, max-age=31536000, immutable' },
+  })
+}
+
+const databaseIndependentPaths = new Set([
+  '/site.webmanifest', '/styles.css', '/embed.css', '/notifications.js', '/sw.js',
+  '/theme.css', '/textlog.svg', '/favicon-theme.svg', '/og.png', '/dump.zip',
+])
+
+function isDatabaseIndependentRequest(request: Request) {
+  if (request.method !== 'GET' && request.method !== 'HEAD') return false
+  const path = new URL(request.url).pathname
+  return databaseIndependentPaths.has(path) || path.startsWith('/uploads/')
+}
+
+function fetchWithoutIdentity(request: Request, server: Bun.Server<unknown>) {
+  return withRequestContext({ sessionUser: null, apiUser: null, pageSize: 20, density: 'regular' },
+    () => application.fetch(request, server))
+}
+
+function cookieToken(request: Request) {
+  const name = sessionCookieName()
+  return request.headers.get('cookie')?.split(';').map(cookie => cookie.trim())
+    .find(cookie => cookie.startsWith(`${name}=`))?.slice(name.length + 1) || null
+}
+
+function bearerToken(request: Request) {
+  return request.headers.get('authorization')?.match(/^Bearer\s+(\S+)$/i)?.[1] || null
+}
+
+async function requestWithResolvedIdentity(request: Request) {
+  return await runtime.call('auth.resolve', {
+    sessionToken: cookieToken(request), bearerToken: bearerToken(request), deviceId: notificationDevice(request),
+    now: Date.now(),
+  })
+}
+
+export default {
+  port: configuration.port,
+  host: configuration.host,
+  async fetch(request: Request, server: Bun.Server<unknown>) {
+    const asset = mainThreadAsset(request)
+    if (asset) return asset
+    if (runtime.state !== 'ready') {
+      if (isDatabaseIndependentRequest(request)) return fetchWithoutIdentity(request, server)
+      return unavailableResponse(request)
+    }
+    if (new URL(request.url).pathname === '/health') {
+      return runtime.call('system.health', { databasePath: configuration.databasePath })
+        .then(database => Response.json({ status: 'ok', database }, {
+          headers: { 'cache-control': 'no-store' },
+        }))
+        .catch(error => {
+          if (!(error instanceof DatabaseUnavailableError)) console.error('health check failed', error)
+          return unavailableResponse(request)
+        })
+    }
+    const address = server.requestIP(request)?.address || null
+    const identity = await requestWithResolvedIdentity(request).catch(error => {
+      if (!(error instanceof DatabaseUnavailableError)) throw error
+      return null
+    })
+    if (!identity) return unavailableResponse(request)
+    const headers = new Headers(request.headers)
+    headers.delete('x-textlog-session-user')
+    headers.delete('x-textlog-api-user')
+    headers.delete('x-textlog-page-size')
+    headers.delete('x-textlog-density')
+    headers.delete(clientIpHeaderName())
+    if (address) headers.set(clientIpHeaderName(), address)
+    const applicationRequest = new Request(request, { headers })
+    return withRequestContext({ sessionUser: identity.sessionUser, apiUser: identity.apiUser,
+      pageSize: identity.preferences.pageSize, density: identity.preferences.density },
+    () => application.fetch(applicationRequest, server)).then(async response => {
+      const token = cookieToken(request)
+      if (token && await runtime.call('auth.renewSession', { token, now: Date.now() })) {
+        response.headers.append('set-cookie', sessionCookie(token))
+      }
+      return response
+    }).catch(error => {
+      if (!(error instanceof DatabaseUnavailableError)) throw error
+      return unavailableResponse(request)
+    })
+  },
+}

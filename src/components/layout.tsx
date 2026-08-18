@@ -4,8 +4,8 @@ import { activeAppearance, activeRequest, activeThemeLogoSvg, activeThemeStyles 
 import React from 'react'
 import { instance } from '../../instance.config'
 import { isAdmin } from '../admin'
-import type { User } from '../db'
-import { deviceDensity } from '../device-settings'
+import type { User } from '../types'
+import { resolvedDensity } from '../request-preferences'
 import { RESPONSE_TIME_PLACEHOLDER } from '../response-time'
 
 let devReloadBootId: string | undefined
@@ -35,7 +35,7 @@ export function Layout({
   children: React.ReactNode
 }) {
   const selectedAppearance = activeAppearance()
-  const density = deviceDensity(activeRequest(), user?.id)
+  const density = resolvedDensity(activeRequest())
   const appearanceVersion = `${selectedAppearance.theme}.${selectedAppearance.accent}`
   const themeCss = activeThemeStyles()
   const logoSvg = activeThemeLogoSvg()
@@ -125,7 +125,7 @@ export function Layout({
             <link rel="alternate" type="application/atom+xml" title={`${feeds.title} (Atom)`} href={feeds.atom} />
           </>
         )}
-        <link rel="stylesheet" href="/styles.css?v=354" />
+        <link rel="stylesheet" href="/styles.css?v=355" />
         <style>{themeCss}</style>
       </head>
       <body className={`density-${density}${user?.show_link_previews === 0 ? ' link-previews-disabled' : ''}`}>

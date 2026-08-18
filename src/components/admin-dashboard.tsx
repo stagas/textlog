@@ -1,4 +1,4 @@
-import { type User } from '../db'
+import type { User } from '../types'
 import { PAGE_SIZE } from '../pagination'
 import type { AdminActionView, AdminReportView, DashboardStats, IllegalActivityReportView, ProfileRow } from '../types'
 import { fmtFull } from '../utils'

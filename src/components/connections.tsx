@@ -1,4 +1,4 @@
-import { type User } from '../db'
+import type { User } from '../types'
 import { CONNECTION_PAGE_SIZE, PAGE_SIZE, TAG_PAGE_SIZE } from '../pagination'
 import type { PersonView, ProfileRow } from '../types'
 import { Layout } from './layout'
