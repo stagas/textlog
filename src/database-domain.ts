@@ -1634,8 +1634,12 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
         generation: number
       }).generation
       if (generation !== currentGeneration) return null as DatabaseDomainOutput<K>
-      if (viewerId >= 0 && html.includes('href="/for-you"><span class="unread-dot"')
-        && !hasUnreadForYou(viewerId, database)) return null as DatabaseDomainOutput<K>
+      if (viewerId >= 0) {
+        const cachedForYouCount = Number(html.match(
+          /href="\/for-you"[^>]*>for you<span class="to-me-count">(\d+)<\/span>/,
+        )?.[1] || 0)
+        if (cachedForYouCount !== unreadForYouCount(viewerId, database)) return null as DatabaseDomainOutput<K>
+      }
       cacheDb.transaction(() => {
         cacheDb.query('DELETE FROM materialized_feed_pages_v2 WHERE kind=? AND viewer_id=? AND generation!=?')
           .run(kind, viewerId, generation)

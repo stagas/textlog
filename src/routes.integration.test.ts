@@ -1148,7 +1148,7 @@ test('consequential account, content, reporting, and admin flows work over HTTP'
   expect(followedPersonFeed).not.toContain('action="/follow/alice"')
   expect(followedPersonFeed).not.toContain('action="/for-you/read-all"')
   expect(followedPersonFeed).not.toContain('you&#x27;ve seen it all')
-  expect(followedPersonFeed).toContain('href="/for-you">for you<span class="to-me-count">1</span></a>')
+  expect(followedPersonFeed).toContain('href="/for-you">for you</a>')
   expect(followedPersonFeed).toContain('href="/to-me"><span class="to-me-label">to me</span>'
     + '<span class="to-me-count">1</span></a>')
   expect(followedPersonFeed).not.toContain('href="/to-me"><span class="unread-dot"')

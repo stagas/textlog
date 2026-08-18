@@ -127,7 +127,6 @@ export function loadPersonalizedFeed(database: Database, user: User, page: numbe
     actorProfileStats: actorStats.get(row.actor_id),
     targetProfileStats: row.target_handle ? targetStats.get(targets.get(row.target_handle)!) : undefined,
     tagFollowerCount: row.target_tag ? tagCounts[row.target_tag] || 0 : undefined }))
-  const forYouCount = unreadForYouCount(user.id, database)
   if (markRead) {
     markForYouEntriesRead(user.id, timeline.filter(row => row.unread).map(row => row.event_key), toMe, database)
   }
@@ -144,6 +143,6 @@ export function loadPersonalizedFeed(database: Database, user: User, page: numbe
     : `activity-${first.event_key.replace(/[^a-z0-9_-]+/gi, '-')}` : null
   return { timeline: resultTimeline, page: snapshot.page, totalPages: snapshot.totalPages,
     toMeCount: targetedKeys.filter(key => !seenToMe.has(key)).length,
-    forYouCount, forYouUnread, toMeUnread,
+    forYouCount: unreadForYouCount(user.id, database), forYouUnread, toMeUnread,
     unreadHref: firstPage && anchor ? `${path}${firstPage > 1 ? `?page=${firstPage}` : ''}#${anchor}` : undefined }
 }
