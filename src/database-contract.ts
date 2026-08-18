@@ -237,6 +237,10 @@ export type DatabaseDomainOperations = {
     variant: string }; output: { html: string | null; generation: number } }
   'cache.materializedFeedPut': { input: { kind: 'latest' | 'hot' | 'for-you' | 'to-me'; viewerId: number;
     variant: string; generation: number; html: string }; output: null }
+  'cache.recentFeedVisitorPut': { input: { userId: number; requestUrl: string; cookie: string;
+    pageSize: PageSizeChoice; density: DensityChoice }; output: null }
+  'cache.recentFeedVisitors': { input: Record<string, never>; output: Array<{ user: User; requestUrl: string;
+    cookie: string; pageSize: PageSizeChoice; density: DensityChoice }> }
   'search.results': { input: { query: string; viewerId: number; page: number; pageSize: PageSizeChoice;
     tab: 'notes' | 'tags' | 'people' }; output: SearchResultsData }
   'explore.page': { input: { viewerId: number; peopleIds?: number[]; tagsPage: number; peoplePage: number };

@@ -20,6 +20,7 @@ import { suggestedPeople, suggestedPeopleCount, trendingTagCount, trendingTags }
 import { visibleTagFollowerCounts, visibleUserProfileStats } from './posts'
 import { resolveHandle } from './handles'
 import { loadPersonalizedFeed } from './personalized-feed'
+import { MAX_MATERIALIZED_PAGES } from './materialized-feed-pages'
 import { hasUnreadForYou, hasUnreadToMe, markAllForYouRead, markVisibleForYouEntriesRead } from './for-you-state'
 import { consumeAuthAttempt, consumeBucketedAttempt, rateLimitKey } from './auth-rate-limit'
 import { issueApiKey } from './api-keys'
@@ -1618,10 +1619,37 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
         cacheDb.query(`INSERT OR REPLACE INTO materialized_feed_pages_v2(kind,viewer_id,variant,generation,html)
           VALUES(?,?,?,?,?)`).run(kind, viewerId, variant, generation, html)
         cacheDb.query(`DELETE FROM materialized_feed_pages_v2 WHERE rowid IN (
-          SELECT rowid FROM materialized_feed_pages_v2 ORDER BY created_at DESC,rowid DESC LIMIT -1 OFFSET 40
+          SELECT rowid FROM materialized_feed_pages_v2 ORDER BY created_at DESC,rowid DESC LIMIT -1 OFFSET ?
+        )`).run(MAX_MATERIALIZED_PAGES)
+      })()
+      return null as DatabaseDomainOutput<K>
+    }
+    case 'cache.recentFeedVisitorPut': {
+      const { userId, requestUrl, cookie, pageSize, density } =
+        input as DatabaseDomainInput<'cache.recentFeedVisitorPut'>
+      cacheDb.transaction(() => {
+        cacheDb.query(`INSERT INTO recent_feed_visitors(user_id,request_url,cookie,page_size,density,last_visited_at)
+          VALUES(?,?,?,?,?,?) ON CONFLICT(user_id) DO UPDATE SET request_url=excluded.request_url,
+          cookie=excluded.cookie,page_size=excluded.page_size,density=excluded.density,
+          last_visited_at=excluded.last_visited_at`).run(userId, requestUrl, cookie, pageSize, density, Date.now())
+        cacheDb.query(`DELETE FROM recent_feed_visitors WHERE user_id IN (
+          SELECT user_id FROM recent_feed_visitors ORDER BY last_visited_at DESC,user_id DESC LIMIT -1 OFFSET 30
         )`).run()
       })()
       return null as DatabaseDomainOutput<K>
+    }
+    case 'cache.recentFeedVisitors': {
+      const rows = cacheDb.query(`SELECT user_id,request_url,cookie,page_size,density FROM recent_feed_visitors
+        ORDER BY last_visited_at ASC,user_id ASC LIMIT 30`).all() as Array<{ user_id: number; request_url: string;
+          cookie: string; page_size: PageSizeChoice; density: DensityChoice }>
+      const result = rows.flatMap(row => {
+        const user = database.query(`SELECT id,handle,email,bio,suspended_at,email_verified_at,handle_chosen_at,
+          show_link_previews,timezone FROM users WHERE id=? AND deleted_at IS NULL AND suspended_at IS NULL`)
+          .get(row.user_id) as User | null
+        return user ? [{ user, requestUrl: row.request_url, cookie: row.cookie,
+          pageSize: row.page_size, density: row.density }] : []
+      })
+      return result as DatabaseDomainOutput<K>
     }
     case 'search.results': {
       const { query, viewerId, page, pageSize, tab } = input as DatabaseDomainInput<'search.results'>

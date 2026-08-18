@@ -62,48 +62,69 @@ const recentFeedVisitors = new Map<number, RecentFeedVisitor>()
 const recentFeedVisitorLimit = 30
 let recentVisitorPrewarmScheduled = false
 
+const feedVariantCookieNames = new Set([
+  'appearance', 'font', 'sans-serif-font', 'primary-font', 'font-size', 'notification_device',
+])
+
+function feedVariantCookie(request: Request) {
+  return (request.headers.get('cookie') || '').split(';').map(value => value.trim()).filter(value => {
+    const separator = value.indexOf('=')
+    return separator > 0 && feedVariantCookieNames.has(value.slice(0, separator))
+  }).join('; ')
+}
+
 function rememberFeedVisitor(request: Request, user: NonNullable<ReturnType<typeof currentUser>> | null) {
   if (!user) return
+  const density = resolvedDensity(request)
+  const pageSize = resolvedPageSize(request)
+  const cookie = feedVariantCookie(request)
+  const requestUrl = new URL('/latest', request.url).href
   recentFeedVisitors.delete(user.id)
   recentFeedVisitors.set(user.id, {
-    density: resolvedDensity(request),
-    pageSize: resolvedPageSize(request),
+    density,
+    pageSize,
     user,
-    request: new Request(request.url, { headers: request.headers }),
+    request: new Request(requestUrl, { headers: { cookie } }),
   })
   while (recentFeedVisitors.size > recentFeedVisitorLimit) {
     recentFeedVisitors.delete(recentFeedVisitors.keys().next().value!)
   }
+  void databaseService().call('cache.recentFeedVisitorPut', {
+    userId: user.id, requestUrl, cookie, pageSize, density,
+  }).catch(error => console.error('Could not remember recent feed visitor', error))
 }
 
 async function warmFeedPage(request: Request, kind: PrimaryFeed, user: NonNullable<ReturnType<typeof currentUser>> | null,
   pageSize: ReturnType<typeof resolvedPageSize>)
 {
-  const viewerId = user?.id ?? -1
-  if (kind === 'for-you') {
-    if (!user) return
-    await rpcMaterializedFeedPage(request, kind, viewerId,
-      async () => {
-        const data = await databaseService().call('feeds.personalizedPage', {
-          user, page: 1, pageSize, toMe: false, path: '/for-you', markRead: false,
+  const feedRequest = new Request(new URL(`/${kind}`, request.url), { headers: request.headers })
+  return await withAppearance(feedRequest, async () => {
+    const viewerId = user?.id ?? -1
+    if (kind === 'for-you') {
+      if (!user) return
+      await rpcMaterializedFeedPage(feedRequest, kind, viewerId,
+        async () => {
+          const data = await databaseService().call('feeds.personalizedPage', {
+            user, page: 1, pageSize, toMe: false, path: '/for-you', markRead: false,
+          })
+          return page(<Feed user={user} data={data} title="for you" />)
         })
-        return page(<Feed user={user} data={data} title="for you" />)
-      })
-    return
-  }
-  if (kind === 'latest') {
-    await rpcMaterializedFeedPage(request, kind, viewerId,
+      return
+    }
+    if (kind === 'latest') {
+      await rpcMaterializedFeedPage(feedRequest, kind, viewerId,
+        async () => {
+          const feed = await databaseService().call('feeds.latestPage', { viewerId, page: 1, pageSize })
+          return page(<PublicFeed user={user} feed={feed} path="/latest" />)
+        })
+      return
+    }
+    await rpcMaterializedFeedPage(feedRequest, kind, viewerId,
       async () => {
-        const feed = await databaseService().call('feeds.latestPage', { viewerId, page: 1, pageSize })
-        return page(<PublicFeed user={user} feed={feed} path="/latest" />)
-      })
-    return
-  }
-  await rpcMaterializedFeedPage(request, kind, viewerId,
-    async () => {
-      const feed = await databaseService().call('feeds.hotPage', { viewerId, page: 1, pageSize })
-      return page(<HotFeed user={user} feed={feed} title="hot" />)
-    }, false, hotRankingVersion)
+        const feed = await databaseService().call('feeds.hotPage', { viewerId, page: 1, pageSize })
+        return page(<HotFeed user={user} feed={feed} title="hot" />)
+      }, false, hotRankingVersion)
+  })
 }
 
 function warmOtherFeedPages(request: Request, current: PrimaryFeed,
@@ -133,6 +154,16 @@ export function prewarmRecentFeedVisitors() {
       console.error('Could not prewarm recent feed visitors', error)
     })
   }, 0)
+}
+
+export async function prewarmRecentFeedVisitorsOnInit() {
+  const visitors = await databaseService().call('cache.recentFeedVisitors', {})
+  for (const { density, pageSize, requestUrl, cookie, user } of visitors) {
+    recentFeedVisitors.set(user.id, {
+      density, pageSize, user, request: new Request(requestUrl, { headers: { cookie } }),
+    })
+  }
+  prewarmRecentFeedVisitors()
 }
 
 export function registerFeedsRoutes(app: Hono) {

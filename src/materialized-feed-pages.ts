@@ -1,7 +1,7 @@
 import type { Database } from 'bun:sqlite'
 import { fmt } from './utils'
 
-const MAX_MATERIALIZED_PAGES = 40
+export const MAX_MATERIALIZED_PAGES = 128
 
 function appearanceVariant(request: Request) {
   const cookie = request.headers.get('cookie') || ''
