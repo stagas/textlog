@@ -6,6 +6,7 @@ import { instance } from '../../instance.config'
 import { isAdmin } from '../admin'
 import type { User } from '../db'
 import { deviceDensity } from '../device-settings'
+import { RESPONSE_TIME_PLACEHOLDER } from '../response-time'
 
 let devReloadBootId: string | undefined
 
@@ -187,7 +188,8 @@ export function Layout({
         <main id="main-content">{children}</main>
         <footer className="site-footer">
           <span>
-            {appHost()} <span aria-hidden="true">/</span> <a className="footer-host-link" href="/stats">stats</a>
+            {appHost()} <span aria-hidden="true">/</span> <a className="footer-host-link" href="/stats">stats</a>{' '}
+            <span aria-hidden="true">·</span> <span className="footer-response-time">{RESPONSE_TIME_PLACEHOLDER}</span>
           </span>
           {instance.links.getMobileApp && (
             <a
