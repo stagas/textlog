@@ -92,7 +92,7 @@ export type DashboardStats = {
   openReports: number
   activeUsersYesterday: number
   activeUsers24h: number
-  activatedNewUsers24h: number
+  activatedNewUsersYesterday: number
   usersYesterday: number
   users24h: number
   users7d: number

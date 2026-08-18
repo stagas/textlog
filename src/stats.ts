@@ -42,8 +42,9 @@ export function dashboardStats(database: Database): DashboardStats {
       UNION ALL SELECT reporter_id,created_at FROM reports
     ) activity ON activity.user_id=users.id
       WHERE users.deleted_at IS NULL
-        AND users.created_at>=datetime('now','-1 day')
-        AND activity.created_at>=users.created_at) activatedNewUsers24h,
+        AND users.created_at>=datetime('now','start of day','-1 day')
+        AND users.created_at<datetime('now','start of day')
+        AND activity.created_at>=users.created_at) activatedNewUsersYesterday,
     (SELECT count(*) FROM users WHERE deleted_at IS NULL
       AND created_at>=datetime('now','start of day','-1 day')
       AND created_at<datetime('now','start of day')) usersYesterday,

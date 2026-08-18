@@ -28,8 +28,12 @@ export function StatsGrid({ stats, publicOnly = false }: { stats: DashboardStats
   const visibleLabels = publicOnly
     ? labels.filter(([key]) => !['suspendedUsers', 'usersOnline', 'anonymousOnline'].includes(key))
     : labels
-  const conversionRate24h = stats.visitorsToday === 0 ? 0 : stats.users24h / stats.visitorsToday * 100
-  const signupActiveRate24h = stats.users24h === 0 ? 0 : stats.activatedNewUsers24h / stats.users24h * 100
+  const conversionRateYesterday = stats.visitorsYesterday === 0
+    ? 0
+    : stats.usersYesterday / stats.visitorsYesterday * 100
+  const signupActiveRateYesterday = stats.usersYesterday === 0
+    ? 0
+    : stats.activatedNewUsersYesterday / stats.usersYesterday * 100
   return (
     <section className="admin-stats" aria-label="Application statistics">
       {visibleLabels.map(([key, label]) => (
@@ -42,12 +46,12 @@ export function StatsGrid({ stats, publicOnly = false }: { stats: DashboardStats
         </article>
       ))}
       <article>
-        <strong>{conversionRate24h.toLocaleString(undefined, { maximumFractionDigits: 2 })}%</strong>
-        <span>Conversion rate - 24h</span>
+        <strong>{conversionRateYesterday.toLocaleString(undefined, { maximumFractionDigits: 2 })}%</strong>
+        <span>Conversion rate · yesterday</span>
       </article>
       <article>
-        <strong>{signupActiveRate24h.toLocaleString(undefined, { maximumFractionDigits: 2 })}%</strong>
-        <span>Signup-to-active conversion · 24h</span>
+        <strong>{signupActiveRateYesterday.toLocaleString(undefined, { maximumFractionDigits: 2 })}%</strong>
+        <span>Signup-to-active conversion · yesterday</span>
       </article>
     </section>
   )
