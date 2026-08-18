@@ -48,6 +48,51 @@ async function showNotificationBanner(request: Request, user: ReturnType<typeof 
   return Math.random() < 0.5 ? 'notifications' : 'appearance'
 }
 
+type PrimaryFeed = 'for-you' | 'latest' | 'hot'
+
+async function warmFeedPage(request: Request, kind: PrimaryFeed, user: NonNullable<ReturnType<typeof currentUser>> | null,
+  pageSize: ReturnType<typeof resolvedPageSize>)
+{
+  const viewerId = user?.id ?? -1
+  if (kind === 'for-you') {
+    if (!user) return
+    await rpcMaterializedFeedPage(request, kind, viewerId,
+      async () => {
+        const data = await databaseService().call('feeds.personalizedPage', {
+          user, page: 1, pageSize, toMe: false, path: '/for-you', markRead: false,
+        })
+        return page(<Feed user={user} data={data} title="for you" />)
+      })
+    return
+  }
+  if (kind === 'latest') {
+    await rpcMaterializedFeedPage(request, kind, viewerId,
+      async () => {
+        const feed = await databaseService().call('feeds.latestPage', { viewerId, page: 1, pageSize })
+        return page(<PublicFeed user={user} feed={feed} path="/latest" />)
+      })
+    return
+  }
+  await rpcMaterializedFeedPage(request, kind, viewerId,
+    async () => {
+      const feed = await databaseService().call('feeds.hotPage', { viewerId, page: 1, pageSize })
+      return page(<HotFeed user={user} feed={feed} title="hot" />)
+    }, false, hotRankingVersion)
+}
+
+function warmOtherFeedPages(request: Request, current: PrimaryFeed,
+  user: NonNullable<ReturnType<typeof currentUser>> | null)
+{
+  const pageSize = resolvedPageSize(request)
+  const kinds: PrimaryFeed[] = user ? ['for-you', 'hot', 'latest'] : ['hot', 'latest']
+  setTimeout(() => {
+    void Promise.all(kinds.filter(kind => kind !== current)
+      .map(kind => warmFeedPage(request, kind, user, pageSize))).catch(error => {
+        console.error('Could not warm feed caches', error)
+      })
+  }, 0)
+}
+
 export function registerFeedsRoutes(app: Hono) {
   app.get('/', async c => {
     const user = currentUser(c.req.raw)
@@ -74,7 +119,9 @@ export function registerFeedsRoutes(app: Hono) {
     const response = !notificationBanner && currentPage(c.req.query('page')) === 1 && !cursorValue
       ? await rpcMaterializedFeedPage(c.req.raw, 'for-you', user.id, render, true)
       : render()
-    return rememberFeed(response, 'following')
+    const remembered = rememberFeed(response, 'following')
+    warmOtherFeedPages(c.req.raw, 'for-you', user)
+    return remembered
   })
 
   app.get('/latest', async c => {
@@ -92,7 +139,9 @@ export function registerFeedsRoutes(app: Hono) {
     const response = !notificationBanner && currentPage(c.req.query('page')) === 1 && !cursorValue
       ? await rpcMaterializedFeedPage(c.req.raw, 'latest', user?.id ?? -1, render)
       : render()
-    return rememberFeed(response, 'latest')
+    const remembered = rememberFeed(response, 'latest')
+    warmOtherFeedPages(c.req.raw, 'latest', user)
+    return remembered
   })
 
   app.post('/for-you/read-all', async c => {
@@ -141,7 +190,9 @@ export function registerFeedsRoutes(app: Hono) {
     const response = !notificationBanner && currentPage(c.req.query('page')) === 1 && !cursorValue
       ? await rpcMaterializedFeedPage(c.req.raw, 'hot', user?.id ?? -1, render, false, hotRankingVersion)
       : render()
-    return rememberFeed(response, 'hot')
+    const remembered = rememberFeed(response, 'hot')
+    warmOtherFeedPages(c.req.raw, 'hot', user)
+    return remembered
   })
 
   app.post('/notifications/banner/dismiss', async c => {

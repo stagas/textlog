@@ -1547,9 +1547,10 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
         toMeUnread: viewerId >= 0 && hasUnreadToMe(viewerId, database) } as DatabaseDomainOutput<K>
     }
     case 'feeds.personalizedPage': {
-      const { user, page, pageSize, toMe, path } = input as DatabaseDomainInput<'feeds.personalizedPage'>
-      const result = loadPersonalizedFeed(database, user, page, pageSize, toMe, path)
-      if (result.timeline.some(row => row.unread)) {
+      const { user, page, pageSize, toMe, path, markRead = true } =
+        input as DatabaseDomainInput<'feeds.personalizedPage'>
+      const result = loadPersonalizedFeed(database, user, page, pageSize, toMe, path, markRead)
+      if (markRead && result.timeline.some(row => row.unread)) {
         cacheDb.query(`DELETE FROM materialized_feed_pages_v2 WHERE viewer_id=?
           AND kind IN ('latest','hot','for-you','to-me')`).run(user.id)
       }

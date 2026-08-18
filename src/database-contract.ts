@@ -225,7 +225,7 @@ export type DatabaseDomainOperations = {
   'feeds.latestPage': { input: { viewerId: number; page: number; pageSize: PageSizeChoice }; output: PostFeedPage }
   'feeds.hotPage': { input: { viewerId: number; page: number; pageSize: PageSizeChoice }; output: PostFeedPage }
   'feeds.personalizedPage': { input: { user: User; page: number; pageSize: PageSizeChoice; toMe: boolean;
-    path: string }; output: PersonalizedFeedData }
+    path: string; markRead?: boolean }; output: PersonalizedFeedData }
   'feeds.bannerState': { input: { userId: number; userAgent: string | null }; output: {
     inviteHandled: boolean; notificationsEnabled: boolean; improvementDismissed: boolean;
     notificationsHandled: boolean; appearanceHandled: boolean; donationDismissed: boolean } }

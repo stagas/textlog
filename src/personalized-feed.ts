@@ -7,7 +7,7 @@ import { enrichPosts, visibleTagFollowerCounts, visibleUserProfileStats } from '
 import type { PersonalizedFeedData, PersonalizedTimelineRow, User } from './types'
 
 export function loadPersonalizedFeed(database: Database, user: User, page: number, pageSize: number, toMe: boolean,
-  path: string): PersonalizedFeedData
+  path: string, markRead = true): PersonalizedFeedData
 {
   const readsTable = toMe ? 'to_me_reads' : 'for_you_reads'
   const filter = toMe ? 'WHERE timeline.targeted_to_viewer=1' : ''
@@ -127,7 +127,9 @@ export function loadPersonalizedFeed(database: Database, user: User, page: numbe
     actorProfileStats: actorStats.get(row.actor_id),
     targetProfileStats: row.target_handle ? targetStats.get(targets.get(row.target_handle)!) : undefined,
     tagFollowerCount: row.target_tag ? tagCounts[row.target_tag] || 0 : undefined }))
-  markForYouEntriesRead(user.id, timeline.filter(row => row.unread).map(row => row.event_key), toMe, database)
+  if (markRead) {
+    markForYouEntriesRead(user.id, timeline.filter(row => row.unread).map(row => row.event_key), toMe, database)
+  }
   const forYouUnread = hasUnreadForYou(user.id, database)
   const toMeUnread = hasUnreadToMe(user.id, database)
   const firstUnread = forYouUnread || toMeUnread ? database.query(`SELECT item.position,item.payload
