@@ -27,9 +27,26 @@ if (configuration.moderationDisabled && configuration.production) {
 }
 
 const runtime = new RuntimeWorkerClient(new URL('./runtime-worker.ts', import.meta.url))
-await runtime.ready()
 configureDatabaseService(runtime)
-const application = (await import('./app')).default
+
+type Application = (typeof import('./app'))['default']
+let application: Application | null = null
+let startupError: unknown = null
+const applicationReady = runtime.ready()
+  .then(async () => {
+    application = (await import('./app')).default
+    return application
+  })
+  .catch(error => {
+    startupError = error
+    console.error('application startup failed', error)
+    throw error
+  })
+void applicationReady.catch(() => undefined)
+const STARTUP_REQUEST_TIMEOUT_SECONDS = 60
+const STARTUP_QUEUE_WAIT_MS = 55_000
+const STARTUP_QUEUE_LIMIT = 1_000
+let startupQueueSize = 0
 
 const degradedAssets = new Map<string, string>([
   ['/favicon.ico', 'image/x-icon'],
@@ -84,8 +101,10 @@ function isDatabaseIndependentRequest(request: Request) {
 }
 
 function fetchWithoutIdentity(request: Request, server: Bun.Server<unknown>) {
+  const readyApplication = application
+  if (!readyApplication) throw new DatabaseUnavailableError('Application is starting')
   return withRequestContext({ sessionUser: null, apiUser: null, pageSize: 20, density: 'regular' },
-    () => application.fetch(request, server))
+    () => readyApplication.fetch(request, server))
 }
 
 function cookieToken(request: Request) {
@@ -105,17 +124,51 @@ async function requestWithResolvedIdentity(request: Request) {
   })
 }
 
-export default {
+async function waitUntilReady(request: Request, server: Bun.Server<unknown>) {
+  if (application && runtime.state === 'ready') return application
+  if (startupQueueSize >= STARTUP_QUEUE_LIMIT) throw new DatabaseUnavailableError('Startup queue is full')
+  startupQueueSize++
+  server.timeout(request, STARTUP_REQUEST_TIMEOUT_SECONDS)
+  let timer: ReturnType<typeof setTimeout> | undefined
+  try {
+    const readyApplication = await Promise.race([
+      (async () => {
+        const loadedApplication = await applicationReady
+        if (runtime.state !== 'ready') await runtime.ready()
+        return loadedApplication
+      })(),
+      new Promise<never>((_, reject) => {
+        timer = setTimeout(() => reject(new DatabaseUnavailableError('Application startup timed out')),
+          STARTUP_QUEUE_WAIT_MS)
+      }),
+    ])
+    return readyApplication
+  }
+  finally {
+    if (timer) clearTimeout(timer)
+    startupQueueSize--
+  }
+}
+
+const server = Bun.serve({
   port: configuration.port,
-  host: configuration.host,
+  hostname: configuration.host,
   async fetch(request: Request, server: Bun.Server<unknown>) {
     const asset = mainThreadAsset(request)
     if (asset) return asset
-    if (runtime.state !== 'ready') {
-      if (isDatabaseIndependentRequest(request)) return fetchWithoutIdentity(request, server)
+    const path = new URL(request.url).pathname
+    if (path === '/health' && (runtime.state !== 'ready' || !application || startupError)) {
       return unavailableResponse(request)
     }
-    if (new URL(request.url).pathname === '/health') {
+    let readyApplication: Application
+    try {
+      readyApplication = await waitUntilReady(request, server)
+    }
+    catch {
+      return unavailableResponse(request)
+    }
+    if (isDatabaseIndependentRequest(request)) return fetchWithoutIdentity(request, server)
+    if (path === '/health') {
       return runtime.call('system.health', { databasePath: configuration.databasePath })
         .then(database => Response.json({ status: 'ok', database }, {
           headers: { 'cache-control': 'no-store' },
@@ -141,7 +194,7 @@ export default {
     const applicationRequest = new Request(request, { headers })
     return withRequestContext({ sessionUser: identity.sessionUser, apiUser: identity.apiUser,
       pageSize: identity.preferences.pageSize, density: identity.preferences.density },
-    () => application.fetch(applicationRequest, server)).then(async response => {
+    () => readyApplication.fetch(applicationRequest, server)).then(async response => {
       const token = cookieToken(request)
       if (token && await runtime.call('auth.renewSession', { token, now: Date.now() })) {
         response.headers.append('set-cookie', sessionCookie(token))
@@ -152,4 +205,6 @@ export default {
       return unavailableResponse(request)
     })
   },
-}
+})
+
+console.log(`http listener ready  http://${server.hostname}:${server.port}`)
