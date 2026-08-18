@@ -7,6 +7,11 @@ type PendingRequest = {
   reject: (error: Error) => void
 }
 
+type RuntimeWorkerClientOptions = {
+  allowTestControls?: boolean
+  env?: Record<string, string>
+}
+
 export class DatabaseUnavailableError extends Error {
   readonly retryAfterSeconds: number
 
@@ -28,7 +33,7 @@ export class RuntimeWorkerClient implements DatabaseService {
   private readyWaiters: Array<{ resolve: () => void; reject: (error: Error) => void }> = []
   private generation = 0
 
-  constructor(private workerUrl: URL, private allowTestControls = false) {
+  constructor(private workerUrl: URL, private options: RuntimeWorkerClientOptions = {}) {
     this.start(false)
   }
 
@@ -73,7 +78,7 @@ export class RuntimeWorkerClient implements DatabaseService {
   }
 
   async testControl(action: 'block' | 'crash') {
-    if (!this.allowTestControls) throw new Error('Worker controls are test-only')
+    if (!this.options.allowTestControls) throw new Error('Worker controls are test-only')
     if (this.state !== 'ready' || !this.worker) throw new DatabaseUnavailableError()
     const id = this.nextId++
     return await new Promise<void>((resolve, reject) => {
@@ -102,7 +107,7 @@ export class RuntimeWorkerClient implements DatabaseService {
   private start(restarting: boolean) {
     this.state = restarting ? 'restarting' : 'starting'
     const generation = ++this.generation
-    const worker = new Worker(this.workerUrl.href)
+    const worker = new Worker(this.workerUrl.href, this.options.env ? { env: this.options.env } : undefined)
     this.worker = worker
     worker.onmessage = event => {
       if (generation === this.generation) this.onMessage(event.data as RuntimeToMainMessage)
