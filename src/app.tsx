@@ -464,7 +464,9 @@ registerProfilesRoutes(app)
 registerTagsRoutes(app)
 registerSearchRoutes(app)
 registerSeoRoutes(app)
-void prewarmRecentFeedVisitorsOnInit().catch(error => logError('initial feed cache warmup', error))
+setTimeout(() => {
+  void prewarmRecentFeedVisitorsOnInit().catch(error => logError('initial feed cache warmup', error))
+}, 0)
 app.notFound(c => notFoundPage(c.req.raw))
 app.onError((error, c) => {
   if (error instanceof RequestBodyError) return clientErrorPage(c.req.raw, error.status)

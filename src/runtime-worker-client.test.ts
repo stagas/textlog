@@ -39,6 +39,16 @@ test('a blocked database worker leaves the main event loop responsive', async ()
   await blocked
 })
 
+test('foreground calls overtake queued background work', async () => {
+  const completed: string[] = []
+  const background = Array.from({ length: 30 }, (_, index) => client.callBackground(
+    'system.health', { databasePath: Bun.env.DATABASE_PATH! }).then(() => completed.push(`background-${index}`)))
+  const foreground = client.call('system.health', { databasePath: Bun.env.DATABASE_PATH! })
+    .then(() => completed.push('foreground'))
+  await Promise.all([...background, foreground])
+  expect(completed.indexOf('foreground')).toBeLessThan(completed.length - 1)
+})
+
 test('a crash rejects pending work without replay and automatically recovers', async () => {
   const pending = client.testControl('crash')
   await expect(pending).rejects.toBeInstanceOf(DatabaseUnavailableError)

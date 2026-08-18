@@ -16,7 +16,41 @@ function send(message: RuntimeToMainMessage) {
   self.postMessage(message)
 }
 
-let queue = Promise.resolve()
+const foregroundQueue: Extract<MainToRuntimeMessage, { type: 'domain' }>[] = []
+const backgroundQueue: Extract<MainToRuntimeMessage, { type: 'domain' }>[] = []
+let processing = false
+let drainScheduled = false
+
+function scheduleDrain() {
+  if (processing || drainScheduled || (!foregroundQueue.length && !backgroundQueue.length)) return
+  drainScheduled = true
+  setTimeout(() => {
+    drainScheduled = false
+    void drainQueue()
+  }, 0)
+}
+
+async function drainQueue() {
+  if (processing) return
+  processing = true
+  try {
+    const message = foregroundQueue.shift() || backgroundQueue.shift()
+    if (!message) return
+    try {
+      const result = await executeDatabaseDomain(db, message.operation, message.input)
+      send({ type: 'domainResult', id: message.id, result })
+    }
+    catch (error) {
+      const value = error instanceof Error ? error : new Error(String(error))
+      send({ type: 'error', id: message.id,
+        error: { name: value.name, message: value.message, stack: value.stack } })
+    }
+  }
+  finally {
+    processing = false
+    scheduleDrain()
+  }
+}
 
 // Every Worker generation owns and validates both connections before advertising readiness.
 db.query('SELECT 1').get()
@@ -32,17 +66,9 @@ self.onmessage = event => {
     send({ type: 'domainResult', id: message.id, result: null })
     return
   }
-  queue = queue.then(async () => {
-    try {
-      const result = await executeDatabaseDomain(db, message.operation, message.input)
-      send({ type: 'domainResult', id: message.id, result })
-    }
-    catch (error) {
-      const value = error instanceof Error ? error : new Error(String(error))
-      send({ type: 'error', id: message.id,
-        error: { name: value.name, message: value.message, stack: value.stack } })
-    }
-  })
+  if (message.priority === 'background') backgroundQueue.push(message)
+  else foregroundQueue.push(message)
+  scheduleDrain()
 }
 
 send({ type: 'ready' })

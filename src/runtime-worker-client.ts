@@ -44,6 +44,18 @@ export class RuntimeWorkerClient implements DatabaseService {
   async call<K extends DatabaseDomainOperation>(operation: K,
     input: DatabaseDomainInput<K>): Promise<DatabaseDomainOutput<K>>
   {
+    return await this.send(operation, input, 'foreground')
+  }
+
+  async callBackground<K extends DatabaseDomainOperation>(operation: K,
+    input: DatabaseDomainInput<K>): Promise<DatabaseDomainOutput<K>>
+  {
+    return await this.send(operation, input, 'background')
+  }
+
+  private async send<K extends DatabaseDomainOperation>(operation: K, input: DatabaseDomainInput<K>,
+    priority: 'foreground' | 'background'): Promise<DatabaseDomainOutput<K>>
+  {
     if (this.state !== 'ready' || !this.worker) {
       throw new DatabaseUnavailableError('Database worker is restarting', this.unavailableRetryAfterSeconds)
     }
@@ -51,7 +63,7 @@ export class RuntimeWorkerClient implements DatabaseService {
     return await new Promise<DatabaseDomainOutput<K>>((resolve, reject) => {
       this.pending.set(id, { resolve, reject })
       try {
-        this.worker!.postMessage({ type: 'domain', id, operation, input } as MainToRuntimeMessage)
+        this.worker!.postMessage({ type: 'domain', id, operation, input, priority } as MainToRuntimeMessage)
       }
       catch (error) {
         this.pending.delete(id)

@@ -24,7 +24,7 @@ import {
 import { instance } from '../../instance.config'
 import { decodePostCursor } from '../pagination'
 import { currentUser } from '../utils'
-import { databaseService } from '../database-service'
+import { backgroundDatabaseCall, databaseService } from '../database-service'
 import { resolvedDensity, resolvedPageSize } from '../request-preferences'
 import { withRequestContext } from '../request-context'
 import { withAppearance } from '../theme'
@@ -89,7 +89,7 @@ function rememberFeedVisitor(request: Request, user: NonNullable<ReturnType<type
   while (recentFeedVisitors.size > recentFeedVisitorLimit) {
     recentFeedVisitors.delete(recentFeedVisitors.keys().next().value!)
   }
-  void databaseService().call('cache.recentFeedVisitorPut', {
+  void backgroundDatabaseCall('cache.recentFeedVisitorPut', {
     userId: user.id, requestUrl, cookie, pageSize, density,
   }).catch(error => console.error('Could not remember recent feed visitor', error))
 }
@@ -104,26 +104,26 @@ async function warmFeedPage(request: Request, kind: PrimaryFeed, user: NonNullab
       if (!user) return
       await rpcMaterializedFeedPage(feedRequest, kind, viewerId,
         async () => {
-          const data = await databaseService().call('feeds.personalizedPage', {
+          const data = await backgroundDatabaseCall('feeds.personalizedPage', {
             user, page: 1, pageSize, toMe: false, path: '/for-you', markRead: false,
           })
           return page(<Feed user={user} data={data} title="for you" />)
-        })
+        }, false, 0, true)
       return
     }
     if (kind === 'latest') {
       await rpcMaterializedFeedPage(feedRequest, kind, viewerId,
         async () => {
-          const feed = await databaseService().call('feeds.latestPage', { viewerId, page: 1, pageSize })
+          const feed = await backgroundDatabaseCall('feeds.latestPage', { viewerId, page: 1, pageSize })
           return page(<PublicFeed user={user} feed={feed} path="/latest" />)
-        })
+        }, false, 0, true)
       return
     }
     await rpcMaterializedFeedPage(feedRequest, kind, viewerId,
       async () => {
-        const feed = await databaseService().call('feeds.hotPage', { viewerId, page: 1, pageSize })
+        const feed = await backgroundDatabaseCall('feeds.hotPage', { viewerId, page: 1, pageSize })
         return page(<HotFeed user={user} feed={feed} title="hot" />)
-      }, false, hotRankingVersion)
+      }, false, hotRankingVersion, true)
   })
 }
 
@@ -146,18 +146,21 @@ export function prewarmRecentFeedVisitors() {
   setTimeout(() => {
     recentVisitorPrewarmScheduled = false
     const visitors = [...recentFeedVisitors.values()]
-    void Promise.all(visitors.flatMap(({ density, pageSize, request, user }) => {
-      return (['for-you', 'hot', 'latest'] as PrimaryFeed[])
-        .map(kind => withRequestContext({ sessionUser: user, apiUser: null, pageSize, density },
-          () => withAppearance(request, () => warmFeedPage(request, kind, user, pageSize))))
-    })).catch(error => {
+    void (async () => {
+      for (const { density, pageSize, request, user } of visitors) {
+        for (const kind of ['for-you', 'hot', 'latest'] as PrimaryFeed[]) {
+          await withRequestContext({ sessionUser: user, apiUser: null, pageSize, density },
+            () => withAppearance(request, () => warmFeedPage(request, kind, user, pageSize)))
+        }
+      }
+    })().catch(error => {
       console.error('Could not prewarm recent feed visitors', error)
     })
   }, 0)
 }
 
 export async function prewarmRecentFeedVisitorsOnInit() {
-  const visitors = await databaseService().call('cache.recentFeedVisitors', {})
+  const visitors = await backgroundDatabaseCall('cache.recentFeedVisitors', {})
   for (const { density, pageSize, requestUrl, cookie, user } of visitors) {
     recentFeedVisitors.set(user.id, {
       density, pageSize, user, request: new Request(requestUrl, { headers: { cookie } }),

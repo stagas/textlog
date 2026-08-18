@@ -1,4 +1,4 @@
-import { databaseService } from './database-service'
+import { backgroundDatabaseCall, databaseService } from './database-service'
 
 type MaterializedFeedKind = 'latest' | 'hot' | 'for-you' | 'to-me'
 
@@ -25,11 +25,12 @@ function appearanceVariant(request: Request) {
 }
 
 export async function rpcMaterializedFeedPage(request: Request, kind: MaterializedFeedKind, viewerId: number,
-  render: () => Response | Promise<Response>, rerenderForCache = false, cacheVersion = 0)
+  render: () => Response | Promise<Response>, rerenderForCache = false, cacheVersion = 0, background = false)
 {
   if (Bun.env.DEV_RELOAD === 'true') return await render()
   const variant = `${cacheVersion ? `${cacheVersion}|` : ''}${appearanceVariant(request)}`
-  const cached = await databaseService().call('cache.materializedFeedGet', { kind, viewerId, variant })
+  const call = background ? backgroundDatabaseCall : databaseService().call.bind(databaseService())
+  const cached = await call('cache.materializedFeedGet', { kind, viewerId, variant })
   if (cached.html) return new Response(refreshMaterializedTimestamps(cached.html), {
     headers: { 'content-type': 'text/html;charset=utf-8', 'cache-control': 'private, no-store' },
   })
@@ -37,7 +38,7 @@ export async function rpcMaterializedFeedPage(request: Request, kind: Materializ
   if (response.status !== 200) return response
   const html = await response.text()
   const cachedHtml = rerenderForCache ? await (await render()).text() : html
-  await databaseService().call('cache.materializedFeedPut', {
+  await call('cache.materializedFeedPut', {
     kind, viewerId, variant, generation: cached.generation, html: cachedHtml,
   })
   return new Response(html, { status: response.status, headers: response.headers })
