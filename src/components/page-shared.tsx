@@ -331,7 +331,7 @@ export function FeedTabs({ active, user, forYouReadStatus, activityReadStatus, t
                 {toMe ? 'all' : (
                   <>
                     <span className="to-me-label">to me</span>
-                    <span className="to-me-count">{toMeCount}</span>
+                    {toMeCount > 0 && <span className="to-me-count">{toMeCount}</span>}
                   </>
                 )}
               </a>
