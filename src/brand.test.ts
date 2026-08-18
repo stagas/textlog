@@ -41,7 +41,9 @@ describe('instance branding', () => {
     expect(html).toContain('<title>Notebook Garden</title>')
     expect(html).toContain('aria-label="Notebook Garden home"')
     expect(html).toContain(
-      '<span>notes.example.org <span aria-hidden="true">/</span> <a class="footer-host-link" href="/stats">stats</a></span>',
+      '<span>notes.example.org <span aria-hidden="true">/</span> '
+        + '<a class="footer-host-link" href="/stats">stats</a> <span aria-hidden="true">·</span> '
+        + '<span class="footer-response-time">__TEXTLOG_RESPONSE_TIME__</span></span>',
     )
     expect(html).not.toContain('textlog.cc')
   })
