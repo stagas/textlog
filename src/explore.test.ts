@@ -60,6 +60,15 @@ describe('explore suggestions', () => {
     expect(suggestedPeopleCount(database, 1, '2026-08-04')).toBe(4)
   })
 
+  test('excludes people who have neither a bio nor notes', () => {
+    const database = fixture()
+    database.run(`INSERT INTO users(id,handle,bio,created_at,handle_chosen_at) VALUES
+      (7,'empty','','2026-08-04 12:00:00',CURRENT_TIMESTAMP)`)
+
+    expect(suggestedPeople(database, 1, 8, '2026-08-04').map(person => person.id)).not.toContain(7)
+    expect(suggestedPeopleCount(database, 1, '2026-08-04')).toBe(3)
+  })
+
   test('excludes accounts that have not chosen a handle', () => {
     const database = fixture()
     database.run(`INSERT INTO users(id,handle,bio,created_at) VALUES
