@@ -1254,7 +1254,11 @@ test('consequential account, content, reporting, and admin flows work over HTTP'
   database.query('INSERT INTO post_hashtags(post_id,tag) VALUES(?,?)').run(visitedGeneralPost.id, 'shared')
   const visitedGeneralReadKey = `post:${String(visitedGeneralPost.id).padStart(20, '0')}`
 
+  const latestBeforeForYou = await (await request('/latest', { cookie: aliceCookie })).text()
+  expect(latestBeforeForYou).toContain('href="/for-you"><span class="unread-dot" aria-hidden="true"></span>')
   await request('/for-you', { cookie: aliceCookie })
+  const latestAfterForYou = await (await request('/latest', { cookie: aliceCookie })).text()
+  expect(latestAfterForYou).not.toContain('href="/for-you"><span class="unread-dot" aria-hidden="true"></span>')
   expect(database.query('SELECT 1 FROM activity_reads WHERE user_id=? AND event_key=?')
     .get(alice.id, activityReadKey)).toBeTruthy()
   expect(database.query('SELECT 1 FROM for_you_reads WHERE user_id=? AND event_key=?')
