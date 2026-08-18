@@ -292,12 +292,14 @@ export function CursorPagination({ path, previousCursor, nextCursor }: {
   )
 }
 
-export function FeedTabs({ active, user, forYouReadStatus, activityReadStatus, toMe = false, unreadHref }: {
+export function FeedTabs({ active, user, forYouReadStatus, activityReadStatus, toMe = false, toMeCount = 0,
+  unreadHref }: {
   active: 'following' | 'activity' | 'hot' | 'latest'
   user: User | null
   forYouReadStatus?: boolean
   activityReadStatus?: boolean
   toMe?: boolean
+  toMeCount?: number
   unreadHref?: string
 }) {
   const toMeUnread = user ? hasUnreadToMe(user.id) : false
@@ -325,10 +327,14 @@ export function FeedTabs({ active, user, forYouReadStatus, activityReadStatus, t
         {(active === 'following' || activityReadStatus !== undefined) && (
           <span className="feed-tabs-read-status">
             {active === 'following' && (
-              <a className="activity-side-link" href={toMe ? '/for-you' : '/to-me'}>
-                {!toMe && toMeUnread && <span className="unread-dot" aria-hidden="true" />}
-                {!toMe && toMeUnread && <span className="visually-hidden">unread</span>}
-                {toMe ? 'all' : 'to me'}
+              <a className={`activity-side-link${toMeCount ? ' has-to-me-count' : ''}`}
+                href={toMe ? '/for-you' : '/to-me'}>
+                {toMe ? 'all' : (
+                  <>
+                    <span className="to-me-label">to me</span>
+                    {!!toMeCount && <span className="to-me-count">{toMeCount}</span>}
+                  </>
+                )}
               </a>
             )}
             {activityReadStatus !== undefined

@@ -22,6 +22,7 @@ function fixture(now?: () => number) {
     CREATE TABLE hashtag_follows (user_id INTEGER NOT NULL,tag TEXT NOT NULL,created_at TEXT);
     CREATE TABLE blocked_hashtags (user_id INTEGER NOT NULL,tag TEXT NOT NULL);
     CREATE TABLE for_you_reads (user_id INTEGER NOT NULL,event_key TEXT NOT NULL);
+    CREATE TABLE to_me_reads (user_id INTEGER NOT NULL,event_key TEXT NOT NULL);
     CREATE TABLE activity_reads (user_id INTEGER NOT NULL,event_key TEXT NOT NULL);
     CREATE TABLE sessions (token_hash TEXT PRIMARY KEY,user_id INTEGER NOT NULL,expires_at INTEGER NOT NULL,
       created_at INTEGER NOT NULL,user_agent TEXT NOT NULL,last_used_at INTEGER NOT NULL);
@@ -170,7 +171,7 @@ describe('public API', () => {
     const toMeIds = new Set(toMe.data.map((activity: any) => activity.id))
     expect(afterForYouReadAll.data.filter((activity: any) => !toMeIds.has(activity.id))
       .every((activity: any) => !activity.unread)).toBe(true)
-    expect(afterForYouReadAll.data.find((activity: any) => activity.type === 'reply').unread).toBe(true)
+    expect(afterForYouReadAll.data.find((activity: any) => activity.type === 'reply').unread).toBe(false)
     expect(afterForYouReadAll.has_unread).toBe(false)
 
     const reply = toMe.data.find((activity: any) => activity.type === 'reply')

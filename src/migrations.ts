@@ -1210,6 +1210,20 @@ export const migrations: Migration[] = [
         ON recap_email_deliveries(campaign_version,status,id);`)
     },
   },
+  {
+    version: 97,
+    name: 'to_me_reads',
+    up(database) {
+      database.run(`CREATE TABLE IF NOT EXISTS to_me_reads (
+        user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,event_key TEXT NOT NULL,
+        read_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,PRIMARY KEY(user_id,event_key));`)
+      if (database.query("SELECT 1 FROM sqlite_master WHERE type='table' AND name='for_you_reads'").get()) {
+        database.run(`INSERT OR IGNORE INTO to_me_reads(user_id,event_key,read_at)
+          SELECT user_id,event_key,read_at FROM for_you_reads;`)
+      }
+      database.run('CREATE INDEX IF NOT EXISTS to_me_reads_user_read_at ON to_me_reads(user_id,read_at)')
+    },
+  },
 ]
 
 export const latestMigrationVersion = migrations.at(-1)!.version

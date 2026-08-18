@@ -111,7 +111,9 @@ export function Activity({ user, cursor, title, path = '/activity', pageUrl, not
             ? activityById.get(rawPost.id)!
             : rawPost
           return (
-            <div className={`activity-item${rawPost.unread ? ' activity-item-unread' : ''}`}
+            <div className={`activity-item${
+              rawPost.unread && rawPost.activity_kind !== 'signup' ? ' activity-item-directed-unread' : ''
+            }`}
               key={rawPost.activity_kind === 'reply' || rawPost.activity_kind === 'mention'
                 ? rawPost.id
                 : `${rawPost.activity_kind}-${rawPost.user_id}-${index}`}

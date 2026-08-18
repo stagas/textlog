@@ -15,7 +15,7 @@ describe('database migrations', () => {
       INSERT INTO feed_keys VALUES(7,'existing-hash',1234);
       PRAGMA user_version=91;`)
 
-    expect(runMigrations(database)).toBe(96)
+    expect(runMigrations(database)).toBe(latestMigrationVersion)
     expect(database.query(`SELECT id,token_hash,user_id,name,created_at,expires_at,last_used_at
       FROM feed_keys`).get()).toEqual({
       id: 1,

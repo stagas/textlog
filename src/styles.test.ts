@@ -153,7 +153,10 @@ describe('in-memory stylesheet', () => {
     expect(css).not.toContain('.unfollow-button')
     expect(css).not.toContain('.auth-panel .button {\n  min-height: 48px;\n  justify-content: space-between;')
     expect(css).toContain('flex-wrap: wrap;')
-    expect(css).not.toContain('.activity-item-unread-dot')
+    expect(css).toContain('.activity-item-directed-unread {')
+    expect(css).toContain('.to-me-count {')
+    expect(css).toContain('.activity-side-link.has-to-me-count {')
+    expect(css).not.toContain('.activity-item-unread {')
     expect(css).not.toContain('.sr-only')
   })
 

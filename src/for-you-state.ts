@@ -103,14 +103,18 @@ export function hasUnreadToMe(userId: number, database: Database = db) {
     .get(stateParameters(userId, database))
 }
 
-export function markForYouEntriesRead(userId: number, eventKeys: string[]) {
+export function markForYouEntriesRead(userId: number, eventKeys: string[], toMe = false) {
   if (!eventKeys.length) return
   const insert = db.query('INSERT OR IGNORE INTO for_you_reads(user_id,event_key) VALUES(?,?)')
+  const insertToMe = toMe
+    ? db.query('INSERT OR IGNORE INTO to_me_reads(user_id,event_key) VALUES(?,?)')
+    : null
   const insertActivity = db.query(`INSERT OR IGNORE INTO activity_reads(user_id,event_key)
     VALUES(?,'post:' || CAST(? AS INTEGER))`)
   db.transaction(() =>
     eventKeys.forEach(eventKey => {
       insert.run(userId, eventKey)
+      insertToMe?.run(userId, eventKey)
       const postId = eventKey.match(/^post:(\d+)$/)?.[1]
       if (postId) insertActivity.run(userId, postId)
     })
@@ -129,10 +133,14 @@ export function markVisibleForYouEntriesRead(userId: number, eventKeys: string[]
   const visible = database.query(`SELECT event_key FROM (${events}) WHERE event_key IN (${placeholders})`)
     .all(parameters) as Array<{ event_key: string }>
   const insert = database.query('INSERT OR IGNORE INTO for_you_reads(user_id,event_key) VALUES(?,?)')
+  const insertToMe = toMe
+    ? database.query('INSERT OR IGNORE INTO to_me_reads(user_id,event_key) VALUES(?,?)')
+    : null
   const insertActivity = database.query(`INSERT OR IGNORE INTO activity_reads(user_id,event_key)
     VALUES(?,'post:' || CAST(? AS INTEGER))`)
   database.transaction(() => visible.forEach(({ event_key: eventKey }) => {
     insert.run(userId, eventKey)
+    insertToMe?.run(userId, eventKey)
     const postId = eventKey.match(/^post:(\d+)$/)?.[1]
     if (postId) insertActivity.run(userId, postId)
   }))()
@@ -141,10 +149,12 @@ export function markVisibleForYouEntriesRead(userId: number, eventKeys: string[]
 }
 
 export function markAllForYouRead(userId: number, toMe = false, database: Database = db) {
-  const events = toMe ? visibleToMeEvents : visibleForYouEvents
+  const events = toMe ? visibleToMeEvents : visibleEvents
   database.transaction(() => {
     database.query(`INSERT OR IGNORE INTO for_you_reads(user_id,event_key)
       SELECT $viewer,event_key FROM (${events})`).run(stateParameters(userId, database))
+    if (toMe) database.query(`INSERT OR IGNORE INTO to_me_reads(user_id,event_key)
+      SELECT $viewer,event_key FROM (${visibleToMeEvents})`).run(stateParameters(userId, database))
     database.query(`INSERT OR IGNORE INTO activity_reads(user_id,event_key)
       SELECT user_id,'post:' || CAST(substr(event_key,6) AS INTEGER)
       FROM for_you_reads WHERE user_id=? AND event_key GLOB 'post:[0-9]*'`).run(userId)

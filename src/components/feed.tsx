@@ -81,10 +81,11 @@ export function Feed({ user, page = 1, title, path = '/for-you', pageUrl, notifi
   ]
   const cursorFilter = filters.length ? `WHERE ${filters.join(' AND ')}` : ''
   const pageSize = devicePageSize(activeRequest(), user.id)
+  const readsTable = toMe ? 'to_me_reads' : 'for_you_reads'
   const snapshot = feedSnapshotPage<TimelineRow>(db, toMe ? 'to-me' : 'for-you', user.id, page,
     () =>
       db.query(`SELECT timeline.*,
-    NOT EXISTS(SELECT 1 FROM for_you_reads fyr WHERE fyr.user_id=$viewer AND fyr.event_key=timeline.event_key) unread
+    NOT EXISTS(SELECT 1 FROM ${readsTable} fyr WHERE fyr.user_id=$viewer AND fyr.event_key=timeline.event_key) unread
     FROM (
     SELECT p.id,p.user_id,p.body,p.created_at,p.parent_id,p.deleted_at,p.has_latex,p.has_links,p.has_code,u.handle,
       EXISTS(SELECT 1 FROM follows vf WHERE vf.follower_id=$viewer AND vf.following_id=p.user_id) following,
@@ -189,12 +190,19 @@ export function Feed({ user, page = 1, title, path = '/for-you', pageUrl, notifi
         admin: Number(isAdmin(user)),
       }) as TimelineRow[], pageSize)
   const unreadKeys = snapshot.items.length
-    ? new Set((db.query(`SELECT event_key FROM for_you_reads WHERE user_id=? AND event_key IN
+    ? new Set((db.query(`SELECT event_key FROM ${readsTable} WHERE user_id=? AND event_key IN
       (${snapshot.items.map(() => '?').join(',')})`).all(user.id, ...snapshot.items.map(row => row.event_key)) as {
       event_key: string
     }[]).map(row => row.event_key))
     : new Set<string>()
   const timeline = snapshot.items.map(row => ({ ...row, unread: Number(!unreadKeys.has(row.event_key)) }))
+  const targetedKeys = timeline.filter(row => row.targeted_to_viewer).map(row => row.event_key)
+  const seenToMeKeys = targetedKeys.length
+    ? new Set((db.query(`SELECT event_key FROM to_me_reads WHERE user_id=? AND event_key IN
+      (${targetedKeys.map(() => '?').join(',')})`).all(user.id, ...targetedKeys) as { event_key: string }[])
+      .map(row => row.event_key))
+    : new Set<string>()
+  const toMeCount = targetedKeys.filter(key => !seenToMeKeys.has(key)).length
   const actorProfileStats = visibleUserProfileStats(db, timeline.map(row => row.actor_id), user.id)
   const targetUsers = new Map(timeline.flatMap(row => {
     if (!row.target_handle) return []
@@ -205,16 +213,15 @@ export function Feed({ user, page = 1, title, path = '/for-you', pageUrl, notifi
   const tagFollowerCounts = visibleTagFollowerCounts(db,
     timeline.flatMap(row => row.target_tag ? [row.target_tag] : []), user.id)
   markForYouEntriesRead(user.id, timeline
-    .filter(row => row.unread && (toMe || !row.targeted_to_viewer))
-    .map(row => row.event_key))
-  const hasUnread = toMe ? hasUnreadToMe(user.id) : hasUnreadForYou(user.id)
+    .filter(row => row.unread)
+    .map(row => row.event_key), toMe)
+  const hasUnread = toMe ? hasUnreadToMe(user.id) : hasUnreadForYou(user.id) || hasUnreadToMe(user.id)
   const firstUnread = hasUnread
     ? db.query(`SELECT item.position,item.payload FROM feed_snapshot_items item
       LEFT JOIN for_you_reads seen ON seen.user_id=?
         AND seen.event_key=json_extract(item.payload,'$.event_key')
       WHERE item.snapshot_id=? AND seen.event_key IS NULL
-        AND (? OR json_extract(item.payload,'$.targeted_to_viewer')=0)
-      ORDER BY item.position LIMIT 1`).get(user.id, snapshot.snapshotId, Number(toMe)) as {
+      ORDER BY item.position LIMIT 1`).get(user.id, snapshot.snapshotId) as {
         position: number
         payload: string
       } | null
@@ -239,7 +246,8 @@ export function Feed({ user, page = 1, title, path = '/for-you', pageUrl, notifi
     const fromQuery = `?from=${encodeURIComponent(activityReturnPath)}`
     return ['post', 'reply', 'mention'].includes(row.activity_kind)
       ? (
-        <div className={`for-you-item${row.unread ? ' activity-item-unread' : ''}`} key={row.event_key}>
+        <div className={`for-you-item${row.unread && row.targeted_to_viewer ? ' activity-item-directed-unread' : ''}`}
+          key={row.event_key}>
           <Post p={posts.get(row.id)!} user={user} showReplyCount tappable contextUnread={!!row.unread}
             returnPath={`${returnPath}#post-${row.id}`} contextLabel={row.activity_kind === 'reply'
             ? 'replied to you:'
@@ -249,7 +257,9 @@ export function Feed({ user, page = 1, title, path = '/for-you', pageUrl, notifi
         </div>
       )
       : (
-        <article className={`activity-follow${row.unread ? ' activity-item-unread' : ''}`} key={row.event_key}
+        <article className={`activity-follow${
+          row.unread && row.targeted_to_viewer ? ' activity-item-directed-unread' : ''
+        }`} key={row.event_key}
           id={activityAnchor}
         >
           <div className="activity-follow-content">
@@ -322,7 +332,7 @@ export function Feed({ user, page = 1, title, path = '/for-you', pageUrl, notifi
     <Layout user={user} title={title} pageUrl={pageUrl} notificationBanner={notificationBanner}>
       <h1 className="visually-hidden">Your feed</h1>
       <FeedTabs active="following" user={user} forYouReadStatus={timeline.length ? hasUnread : undefined} toMe={toMe}
-        unreadHref={unreadHref} />
+        toMeCount={toMe ? 0 : toMeCount} unreadHref={unreadHref} />
       {snapshot.page > 1
         && <Pagination page={snapshot.page} totalPages={snapshot.totalPages} path={path} top />}
       {timeline.length

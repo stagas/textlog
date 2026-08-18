@@ -1131,10 +1131,11 @@ test('consequential account, content, reporting, and admin flows work over HTTP'
   expect(followedPersonFeed).not.toContain('action="/follow/alice"')
   expect(followedPersonFeed).not.toContain('action="/for-you/read-all"')
   expect(followedPersonFeed).not.toContain('you&#x27;ve seen it all')
-  expect(followedPersonFeed).toContain('href="/for-you"><span class="unread-dot" aria-hidden="true"></span>')
-  expect(followedPersonFeed).toContain('href="/to-me"><span class="unread-dot" aria-hidden="true"></span>'
-    + '<span class="visually-hidden">unread</span>to me</a>')
-  expect(followedPersonFeed).toContain('activity-follow activity-item-unread')
+  expect(followedPersonFeed).not.toContain('href="/for-you"><span class="unread-dot" aria-hidden="true"></span>')
+  expect(followedPersonFeed).toContain('href="/to-me"><span class="to-me-label">to me</span>'
+    + '<span class="to-me-count">1</span></a>')
+  expect(followedPersonFeed).not.toContain('href="/to-me"><span class="unread-dot"')
+  expect(followedPersonFeed).toContain('activity-follow activity-item-directed-unread')
   expect(followedPersonFeed).toContain('class="unread-dot" aria-label="unread"')
   const enableBot = await request('/account/edit', {
     method: 'POST', cookie: bobCookie, form: { handle: 'bob', bio: 'Bob builds things', isBot: 'yes' },
@@ -1246,14 +1247,16 @@ test('consequential account, content, reporting, and admin flows work over HTTP'
 
   await request('/for-you', { cookie: aliceCookie })
   expect(database.query('SELECT 1 FROM activity_reads WHERE user_id=? AND event_key=?')
-    .get(alice.id, activityReadKey)).toBeNull()
+    .get(alice.id, activityReadKey)).toBeTruthy()
   expect(database.query('SELECT 1 FROM for_you_reads WHERE user_id=? AND event_key=?')
-    .get(alice.id, forYouReadKey)).toBeNull()
+    .get(alice.id, forYouReadKey)).toBeTruthy()
   expect(database.query('SELECT 1 FROM for_you_reads WHERE user_id=? AND event_key=?')
     .get(alice.id, visitedGeneralReadKey)).toBeTruthy()
 
   const unreadToMeHtml = await (await request('/to-me', { cookie: aliceCookie })).text()
   expect(unreadToMeHtml).not.toContain('action="/to-me/read-all"')
+  expect(unreadToMeHtml).toContain('activity-item-directed-unread')
+  expect(unreadToMeHtml).toContain('class="unread-dot" aria-label="unread"')
   expect(database.query('SELECT 1 FROM for_you_reads WHERE user_id=? AND event_key=?')
     .get(alice.id, forYouReadKey)).toBeTruthy()
 
@@ -1278,7 +1281,7 @@ test('consequential account, content, reporting, and admin flows work over HTTP'
   expect(database.query('SELECT 1 FROM for_you_reads WHERE user_id=? AND event_key=?')
     .get(alice.id, bulkGeneralReadKey)).toBeTruthy()
   expect(database.query('SELECT 1 FROM for_you_reads WHERE user_id=? AND event_key=?')
-    .get(alice.id, bulkTargetedReadKey)).toBeNull()
+    .get(alice.id, bulkTargetedReadKey)).toBeTruthy()
 
   const insertActivityReply = database.query(
     'INSERT INTO posts(user_id,parent_id,body,created_at) VALUES(?,?,?,?)',
