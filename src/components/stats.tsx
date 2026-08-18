@@ -39,8 +39,8 @@ export function StatsGrid({ stats, publicOnly = false }: { stats: DashboardStats
       {visibleLabels.map(([key, label]) => (
         <article key={key}>
           <strong>{key === 'notesPerUser'
-            ? `${stats.notesPerUser.toLocaleString(undefined, { maximumFractionDigits: 2 })}/${
-              stats.averageNotesPerUser.toLocaleString(undefined, { maximumFractionDigits: 2 })}`
+            ? `${stats.notesPerUser.toLocaleString(undefined, { maximumFractionDigits: 1 })}/${
+              stats.averageNotesPerUser.toLocaleString(undefined, { maximumFractionDigits: 1 })}`
             : stats[key].toLocaleString()}</strong>
           <span>{label}</span>
         </article>
