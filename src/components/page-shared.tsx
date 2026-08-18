@@ -326,12 +326,12 @@ export function FeedTabs({ active, user, forYouReadStatus, activityReadStatus, t
         {(active === 'following' || activityReadStatus !== undefined) && (
           <span className="feed-tabs-read-status">
             {active === 'following' && (
-              <a className={`activity-side-link${toMeCount ? ' has-to-me-count' : ''}`}
+              <a className={`activity-side-link${toMe ? '' : ' has-to-me-count'}`}
                 href={toMe ? '/for-you' : '/to-me'}>
                 {toMe ? 'all' : (
                   <>
                     <span className="to-me-label">to me</span>
-                    {!!toMeCount && <span className="to-me-count">{toMeCount}</span>}
+                    <span className="to-me-count">{toMeCount}</span>
                   </>
                 )}
               </a>
