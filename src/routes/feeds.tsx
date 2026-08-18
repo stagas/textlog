@@ -25,7 +25,9 @@ import { instance } from '../../instance.config'
 import { decodePostCursor } from '../pagination'
 import { currentUser } from '../utils'
 import { databaseService } from '../database-service'
-import { resolvedPageSize } from '../request-preferences'
+import { resolvedDensity, resolvedPageSize } from '../request-preferences'
+import { withRequestContext } from '../request-context'
+import { withAppearance } from '../theme'
 
 async function showNotificationBanner(request: Request, user: ReturnType<typeof currentUser>) {
   if (!user) return instance.links.donate && !donationBannerDismissed(request) ? 'donate' : false
@@ -49,6 +51,30 @@ async function showNotificationBanner(request: Request, user: ReturnType<typeof 
 }
 
 type PrimaryFeed = 'for-you' | 'latest' | 'hot'
+type RecentFeedVisitor = {
+  density: ReturnType<typeof resolvedDensity>
+  pageSize: ReturnType<typeof resolvedPageSize>
+  request: Request
+  user: NonNullable<ReturnType<typeof currentUser>>
+}
+
+const recentFeedVisitors = new Map<number, RecentFeedVisitor>()
+const recentFeedVisitorLimit = 30
+let recentVisitorPrewarmScheduled = false
+
+function rememberFeedVisitor(request: Request, user: NonNullable<ReturnType<typeof currentUser>> | null) {
+  if (!user) return
+  recentFeedVisitors.delete(user.id)
+  recentFeedVisitors.set(user.id, {
+    density: resolvedDensity(request),
+    pageSize: resolvedPageSize(request),
+    user,
+    request: new Request(request.url, { headers: request.headers }),
+  })
+  while (recentFeedVisitors.size > recentFeedVisitorLimit) {
+    recentFeedVisitors.delete(recentFeedVisitors.keys().next().value!)
+  }
+}
 
 async function warmFeedPage(request: Request, kind: PrimaryFeed, user: NonNullable<ReturnType<typeof currentUser>> | null,
   pageSize: ReturnType<typeof resolvedPageSize>)
@@ -93,6 +119,22 @@ function warmOtherFeedPages(request: Request, current: PrimaryFeed,
   }, 0)
 }
 
+export function prewarmRecentFeedVisitors() {
+  if (recentVisitorPrewarmScheduled) return
+  recentVisitorPrewarmScheduled = true
+  setTimeout(() => {
+    recentVisitorPrewarmScheduled = false
+    const visitors = [...recentFeedVisitors.values()]
+    void Promise.all(visitors.flatMap(({ density, pageSize, request, user }) => {
+      return (['for-you', 'hot', 'latest'] as PrimaryFeed[])
+        .map(kind => withRequestContext({ sessionUser: user, apiUser: null, pageSize, density },
+          () => withAppearance(request, () => warmFeedPage(request, kind, user, pageSize))))
+    })).catch(error => {
+      console.error('Could not prewarm recent feed visitors', error)
+    })
+  }, 0)
+}
+
 export function registerFeedsRoutes(app: Hono) {
   app.get('/', async c => {
     const user = currentUser(c.req.raw)
@@ -107,6 +149,7 @@ export function registerFeedsRoutes(app: Hono) {
   app.get('/for-you', async c => {
     const user = currentUser(c.req.raw)
     if (!user) return redirect('/enter?next=' + encodeURIComponent('/for-you'))
+    rememberFeedVisitor(c.req.raw, user)
     const cursorValue = c.req.query('cursor')
     if (cursorValue && !decodeForYouCursor(cursorValue)) return c.text('Invalid cursor', 400)
     const notificationBanner = await showNotificationBanner(c.req.raw, user)
@@ -126,6 +169,7 @@ export function registerFeedsRoutes(app: Hono) {
 
   app.get('/latest', async c => {
     const user = currentUser(c.req.raw)
+    rememberFeedVisitor(c.req.raw, user)
     const cursorValue = c.req.query('cursor')
     const cursor = decodePostCursor(cursorValue)
     if (cursorValue && !cursor) return c.text('Invalid cursor', 400)
@@ -178,6 +222,7 @@ export function registerFeedsRoutes(app: Hono) {
 
   app.get('/hot', async c => {
     const user = currentUser(c.req.raw)
+    rememberFeedVisitor(c.req.raw, user)
     const cursorValue = c.req.query('cursor')
     if (cursorValue && !decodeHotCursor(cursorValue)) return c.text('Invalid cursor', 400)
     const notificationBanner = await showNotificationBanner(c.req.raw, user)

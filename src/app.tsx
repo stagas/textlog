@@ -25,7 +25,7 @@ import { registerAdminRoutes } from './routes/admin'
 import { registerApiRoutes } from './routes/api'
 import { registerAuthRoutes } from './routes/auth'
 import { registerEmbedRoutes } from './routes/embed'
-import { registerFeedsRoutes } from './routes/feeds'
+import { prewarmRecentFeedVisitors, registerFeedsRoutes } from './routes/feeds'
 import { registerIllegalActivityRoutes } from './routes/illegal-activity'
 import { registerInteractionsRoutes } from './routes/interactions'
 import { registerPostsRoutes } from './routes/posts'
@@ -491,6 +491,7 @@ export default {
     const headers = new Headers(request.headers)
     headers.set(clientIpHeaderName(), address)
     const response = await app.fetch(new Request(request, { headers }))
+    if (request.method === 'POST' && response.status < 400) prewarmRecentFeedVisitors()
     if (!bypassRateLimits && response.status >= 400 && response.status < 500) {
       const clientErrorLimited = clientErrorRateLimiter.record(address)
       if (clientErrorLimited) return requestRateLimitResponse(request, clientErrorLimited.retryAfter)
