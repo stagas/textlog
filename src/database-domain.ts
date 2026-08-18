@@ -207,7 +207,7 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
           .get(signedIn.id, deviceId) as { pageSize: number; density: string } | null
         : null
       const pageSize = row && PAGE_SIZE_CHOICES.includes(row.pageSize as PageSizeChoice)
-        ? row.pageSize as PageSizeChoice : 20
+        ? row.pageSize as PageSizeChoice : PAGE_SIZE
       const density = row && DENSITY_CHOICES.includes(row.density as DensityChoice)
         ? row.density as DensityChoice : 'regular'
       const result = { sessionUser: signedIn, apiUser: bearerUser, preferences: { pageSize, density } }

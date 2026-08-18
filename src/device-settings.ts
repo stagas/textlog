@@ -1,6 +1,7 @@
 import type { Database } from 'bun:sqlite'
 import { db } from './db'
 import { notificationDevice } from './http'
+import { PAGE_SIZE } from './pagination'
 import { DENSITY_CHOICES, PAGE_SIZE_CHOICES, type DensityChoice, type PageSizeChoice } from './request-preferences'
 
 export { DENSITY_CHOICES, PAGE_SIZE_CHOICES, type DensityChoice, type PageSizeChoice } from './request-preferences'
@@ -9,10 +10,10 @@ export function devicePageSize(request: Request, userId: number | null | undefin
   database: Database = db): PageSizeChoice
 {
   const deviceId = notificationDevice(request)
-  if (!userId || !deviceId) return 20
+  if (!userId || !deviceId) return PAGE_SIZE
   const row = database.query('SELECT page_size pageSize FROM device_settings WHERE user_id=? AND device_id=?')
     .get(userId, deviceId) as { pageSize: number } | null
-  return row && PAGE_SIZE_CHOICES.includes(row.pageSize as PageSizeChoice) ? row.pageSize as PageSizeChoice : 20
+  return row && PAGE_SIZE_CHOICES.includes(row.pageSize as PageSizeChoice) ? row.pageSize as PageSizeChoice : PAGE_SIZE
 }
 
 export function saveDevicePageSize(userId: number, deviceId: string, pageSize: PageSizeChoice,
@@ -34,7 +35,7 @@ export function deviceDensity(request: Request, userId: number | null | undefine
 }
 
 export function saveDeviceDensity(userId: number, deviceId: string, density: DensityChoice, database: Database = db) {
-  database.query(`INSERT INTO device_settings(user_id,device_id,page_size,density) VALUES(?,?,20,?)
+  database.query(`INSERT INTO device_settings(user_id,device_id,page_size,density) VALUES(?,?,?,?)
     ON CONFLICT(user_id,device_id) DO UPDATE SET density=excluded.density,updated_at=CURRENT_TIMESTAMP`)
-    .run(userId, deviceId, density)
+    .run(userId, deviceId, PAGE_SIZE, density)
 }

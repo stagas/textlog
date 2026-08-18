@@ -4,6 +4,7 @@ import { clientIpHeaderName, sessionCookieName } from './brand'
 import { notificationDevice, sessionCookie } from './http'
 import { configureDatabaseService } from './database-service'
 import { withRequestContext } from './request-context'
+import { PAGE_SIZE } from './pagination'
 
 const configuration = validateStartupConfiguration()
 Bun.env.NODE_ENV = configuration.environment
@@ -103,7 +104,7 @@ function isDatabaseIndependentRequest(request: Request) {
 function fetchWithoutIdentity(request: Request, server: Bun.Server<unknown>) {
   const readyApplication = application
   if (!readyApplication) throw new DatabaseUnavailableError('Application is starting')
-  return withRequestContext({ sessionUser: null, apiUser: null, pageSize: 20, density: 'regular' },
+  return withRequestContext({ sessionUser: null, apiUser: null, pageSize: PAGE_SIZE, density: 'regular' },
     () => readyApplication.fetch(request, server))
 }
 

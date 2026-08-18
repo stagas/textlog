@@ -7,7 +7,7 @@ export function resolvedPageSize(request: Request): PageSizeChoice {
   const context = requestContext()
   if (context) return context.pageSize
   const value = Number(request.headers.get('x-textlog-page-size'))
-  return PAGE_SIZE_CHOICES.includes(value as PageSizeChoice) ? value as PageSizeChoice : 20
+  return PAGE_SIZE_CHOICES.includes(value as PageSizeChoice) ? value as PageSizeChoice : PAGE_SIZE
 }
 
 export function resolvedDensity(request: Request): DensityChoice {
@@ -17,3 +17,4 @@ export function resolvedDensity(request: Request): DensityChoice {
   return DENSITY_CHOICES.includes(value as DensityChoice) ? value as DensityChoice : 'regular'
 }
 import { requestContext } from './request-context'
+import { PAGE_SIZE } from './pagination'
