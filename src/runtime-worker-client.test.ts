@@ -11,7 +11,7 @@ beforeAll(async () => {
   Bun.env.NODE_ENV = 'test'
   Bun.env.DATABASE_PATH = join(directory, 'primary.sqlite')
   Bun.env.CACHE_DATABASE_PATH = join(directory, 'cache.sqlite')
-  client = new RuntimeWorkerClient(new URL('./runtime-worker.ts', import.meta.url))
+  client = new RuntimeWorkerClient(new URL('./runtime-worker.ts', import.meta.url), true)
   await client.ready()
 })
 

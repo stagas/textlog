@@ -26,7 +26,6 @@ cacheDb.run('DELETE FROM materialized_feed_pages_v2')
 self.onmessage = event => {
   const message = event.data as MainToRuntimeMessage
   if (message.type === 'testControl') {
-    if (Bun.env.NODE_ENV !== 'test') return
     if (message.action === 'crash') process.exit(70)
     const until = performance.now() + 500
     while (performance.now() < until) {}

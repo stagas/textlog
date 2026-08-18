@@ -28,7 +28,7 @@ export class RuntimeWorkerClient implements DatabaseService {
   private readyWaiters: Array<{ resolve: () => void; reject: (error: Error) => void }> = []
   private generation = 0
 
-  constructor(private workerUrl: URL) {
+  constructor(private workerUrl: URL, private allowTestControls = false) {
     this.start(false)
   }
 
@@ -61,7 +61,7 @@ export class RuntimeWorkerClient implements DatabaseService {
   }
 
   async testControl(action: 'block' | 'crash') {
-    if (Bun.env.NODE_ENV !== 'test') throw new Error('Worker controls are test-only')
+    if (!this.allowTestControls) throw new Error('Worker controls are test-only')
     if (this.state !== 'ready' || !this.worker) throw new DatabaseUnavailableError()
     const id = this.nextId++
     return await new Promise<void>((resolve, reject) => {
