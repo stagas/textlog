@@ -1,5 +1,6 @@
 import { Database } from 'bun:sqlite'
 import { dirname, extname, join, basename } from 'node:path'
+import { mkdirSync } from 'node:fs'
 
 function defaultCachePath() {
   if (Bun.env.CACHE_DATABASE_PATH) return Bun.env.CACHE_DATABASE_PATH
@@ -11,6 +12,7 @@ function defaultCachePath() {
 }
 
 export function createCacheDatabase(path = defaultCachePath()) {
+  if (path !== ':memory:') mkdirSync(dirname(path), { recursive: true, mode: 0o700 })
   const database = new Database(path, { create: true, strict: true })
   database.run(`PRAGMA journal_mode=WAL; PRAGMA foreign_keys=ON; PRAGMA synchronous=NORMAL;
     CREATE TABLE IF NOT EXISTS feed_snapshots (

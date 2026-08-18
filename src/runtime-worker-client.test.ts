@@ -5,6 +5,11 @@ import { tmpdir } from 'node:os'
 import { DatabaseUnavailableError, RuntimeWorkerClient } from './runtime-worker-client'
 
 const directory = mkdtempSync(join(tmpdir(), 'textlog-database-worker-'))
+const originalEnvironment = {
+  NODE_ENV: Bun.env.NODE_ENV,
+  DATABASE_PATH: Bun.env.DATABASE_PATH,
+  CACHE_DATABASE_PATH: Bun.env.CACHE_DATABASE_PATH,
+}
 let client: RuntimeWorkerClient
 
 beforeAll(async () => {
@@ -17,6 +22,12 @@ beforeAll(async () => {
 
 afterAll(() => {
   client.terminate()
+  if (originalEnvironment.NODE_ENV === undefined) delete Bun.env.NODE_ENV
+  else Bun.env.NODE_ENV = originalEnvironment.NODE_ENV
+  if (originalEnvironment.DATABASE_PATH === undefined) delete Bun.env.DATABASE_PATH
+  else Bun.env.DATABASE_PATH = originalEnvironment.DATABASE_PATH
+  if (originalEnvironment.CACHE_DATABASE_PATH === undefined) delete Bun.env.CACHE_DATABASE_PATH
+  else Bun.env.CACHE_DATABASE_PATH = originalEnvironment.CACHE_DATABASE_PATH
   rmSync(directory, { recursive: true, force: true })
 })
 
