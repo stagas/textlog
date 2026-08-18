@@ -378,7 +378,7 @@ app.get('/site.webmanifest', c =>
     background_color: '#f4f3ee',
     display: 'standalone',
     start_url: '/',
-  }, 200, { 'cache-control': 'no-cache' }))
+  }, 200, { 'cache-control': 'public, max-age=86400, stale-while-revalidate=604800' }))
 app.get('/styles.css', async c => {
   const asset = styles ?? await loadStylesAsset(stylesPath)
   return stylesResponse(asset, c.req.raw, !devReloadEnabled)

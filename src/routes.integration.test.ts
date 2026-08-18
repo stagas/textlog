@@ -107,6 +107,14 @@ async function request(path: string, options: {
   })
 }
 
+test('web manifest is cached by browsers', async () => {
+  const response = await request('/site.webmanifest')
+
+  expect(response.status).toBe(200)
+  expect(response.headers.get('content-type')).toContain('application/json')
+  expect(response.headers.get('cache-control')).toBe('public, max-age=86400, stale-while-revalidate=604800')
+})
+
 async function signup(handle: string, email: string, _password: string, ip?: string) {
   const response = await request('/enter', { method: 'POST', form: { email }, ip })
   expect(response.status).toBe(200)
