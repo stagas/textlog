@@ -1154,6 +1154,9 @@ test('consequential account, content, reporting, and admin flows work over HTTP'
   expect(followedPersonFeed).not.toContain('href="/to-me"><span class="unread-dot"')
   expect(followedPersonFeed).toContain('activity-follow activity-item-directed-unread')
   expect(followedPersonFeed).toContain('class="unread-dot" aria-label="unread"')
+  const revisitedForYou = await (await request('/for-you', { cookie: aliceCookie })).text()
+  expect(revisitedForYou).not.toContain('class="unread-dot" aria-label="unread"')
+  expect(revisitedForYou).not.toContain('activity-item-directed-unread')
   const enableBot = await request('/account/edit', {
     method: 'POST', cookie: bobCookie, form: { handle: 'bob', bio: 'Bob builds things', isBot: 'yes' },
   })

@@ -25,7 +25,8 @@ function appearanceVariant(request: Request) {
 }
 
 export async function rpcMaterializedFeedPage(request: Request, kind: MaterializedFeedKind, viewerId: number,
-  render: () => Response | Promise<Response>, rerenderForCache = false, cacheVersion = 0, background = false)
+  render: () => Response | Promise<Response>, rerenderForCache = false, cacheVersion = 0, background = false,
+  renderForCache?: () => Response | Promise<Response>)
 {
   if (Bun.env.DEV_RELOAD === 'true') return await render()
   const variant = `${cacheVersion ? `${cacheVersion}|` : ''}${appearanceVariant(request)}`
@@ -37,7 +38,8 @@ export async function rpcMaterializedFeedPage(request: Request, kind: Materializ
   const response = await render()
   if (response.status !== 200) return response
   const html = await response.text()
-  const cachedHtml = rerenderForCache ? await (await render()).text() : html
+  const cachedHtml = renderForCache ? await (await renderForCache()).text()
+    : rerenderForCache ? await (await render()).text() : html
   await call('cache.materializedFeedPut', {
     kind, viewerId, variant, generation: cached.generation, html: cachedHtml,
   })

@@ -193,8 +193,12 @@ export function registerFeedsRoutes(app: Hono) {
         <Feed user={user} data={data} title="for you"
           notificationBanner={notificationBanner} />,
     )
+    const renderForCache = () => page(
+      <Feed user={user} data={{ ...data, timeline: data.timeline.map(row => ({ ...row, unread: 0 })) }}
+        title="for you" notificationBanner={notificationBanner} />,
+    )
     const response = !notificationBanner && currentPage(c.req.query('page')) === 1 && !cursorValue
-      ? await rpcMaterializedFeedPage(c.req.raw, 'for-you', user.id, render, true)
+      ? await rpcMaterializedFeedPage(c.req.raw, 'for-you', user.id, render, false, 0, false, renderForCache)
       : render()
     const remembered = rememberFeed(response, 'following')
     warmOtherFeedPages(c.req.raw, 'for-you', user)
@@ -241,8 +245,12 @@ export function registerFeedsRoutes(app: Hono) {
         <Feed user={user} data={data} title="to me" path="/to-me" toMe
           notificationBanner={notificationBanner} />,
     )
+    const renderForCache = () => page(
+      <Feed user={user} data={{ ...data, timeline: data.timeline.map(row => ({ ...row, unread: 0 })) }}
+        title="to me" path="/to-me" toMe notificationBanner={notificationBanner} />,
+    )
     const response = !notificationBanner && currentPage(c.req.query('page')) === 1 && !cursorValue
-      ? await rpcMaterializedFeedPage(c.req.raw, 'to-me', user.id, render, true)
+      ? await rpcMaterializedFeedPage(c.req.raw, 'to-me', user.id, render, false, 0, false, renderForCache)
       : render()
     return rememberFeed(response, 'following')
   })
