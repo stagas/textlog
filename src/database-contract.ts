@@ -234,9 +234,9 @@ export type DatabaseDomainOperations = {
     action: 'notifications-dismissed' | 'notification-improvements-dismissed' | 'appearance-dismissed'
       | 'appearance-seen' | 'invite-dismissed' | 'donation-dismissed' }; output: null }
   'feeds.markRead': { input: { userId: number; toMe: boolean }; output: null }
-  'cache.materializedFeedGet': { input: { kind: 'latest' | 'hot' | 'for-you' | 'to-me'; viewerId: number;
+  'cache.materializedFeedGet': { input: { kind: 'latest' | 'hot' | 'for-you' | 'to-me' | 'about'; viewerId: number;
     variant: string }; output: { html: string | null; generation: number } }
-  'cache.materializedFeedPut': { input: { kind: 'latest' | 'hot' | 'for-you' | 'to-me'; viewerId: number;
+  'cache.materializedFeedPut': { input: { kind: 'latest' | 'hot' | 'for-you' | 'to-me' | 'about'; viewerId: number;
     variant: string; generation: number; html: string }; output: null }
   'cache.recentFeedVisitorPut': { input: { userId: number; requestUrl: string; cookie: string;
     pageSize: PageSizeChoice; density: DensityChoice }; output: null }

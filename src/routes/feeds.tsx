@@ -172,8 +172,8 @@ export async function prewarmRecentFeedVisitorsOnInit() {
 export function registerFeedsRoutes(app: Hono) {
   app.get('/', async c => {
     const user = currentUser(c.req.raw)
-    if (!user) return page(<About user={null}
-      hotPosts={await databaseService().call('feeds.aboutHotPosts', {})} />)
+    if (!user) return await rpcMaterializedFeedPage(c.req.raw, 'about', -1, async () =>
+      page(<About user={null} hotPosts={await databaseService().call('feeds.aboutHotPosts', {})} />))
     const preferredFeed = feedPreference(c.req.raw)
     const path = preferredFeed === 'latest' ? '/latest'
       : preferredFeed === 'hot' ? '/hot' : '/for-you'
@@ -212,15 +212,15 @@ export function registerFeedsRoutes(app: Hono) {
     const cursor = decodePostCursor(cursorValue)
     if (cursorValue && !cursor) return c.text('Invalid cursor', 400)
     const notificationBanner = await showNotificationBanner(c.req.raw, user)
-    const feed = await databaseService().call('feeds.latestPage', { viewerId: user?.id ?? -1,
-      page: currentPage(c.req.query('page')), pageSize: resolvedPageSize(c.req.raw) })
-    const render = () => page(
-      <PublicFeed user={user} feed={feed} path="/latest"
-        notificationBanner={notificationBanner} />,
-    )
-    const response = !notificationBanner && currentPage(c.req.query('page')) === 1 && !cursorValue
+    const render = async () => {
+      const feed = await databaseService().call('feeds.latestPage', { viewerId: user?.id ?? -1,
+        page: currentPage(c.req.query('page')), pageSize: resolvedPageSize(c.req.raw) })
+      return page(<PublicFeed user={user} feed={feed} path="/latest"
+        notificationBanner={notificationBanner} />)
+    }
+    const response = (!user || !notificationBanner) && currentPage(c.req.query('page')) === 1 && !cursorValue
       ? await rpcMaterializedFeedPage(c.req.raw, 'latest', user?.id ?? -1, render)
-      : render()
+      : await render()
     const remembered = rememberFeed(response, 'latest')
     warmOtherFeedPages(c.req.raw, 'latest', user)
     return remembered
@@ -268,15 +268,15 @@ export function registerFeedsRoutes(app: Hono) {
     const cursorValue = c.req.query('cursor')
     if (cursorValue && !decodeHotCursor(cursorValue)) return c.text('Invalid cursor', 400)
     const notificationBanner = await showNotificationBanner(c.req.raw, user)
-    const feed = await databaseService().call('feeds.hotPage', { viewerId: user?.id ?? -1,
-      page: currentPage(c.req.query('page')), pageSize: resolvedPageSize(c.req.raw) })
-    const render = () => page(
-      <HotFeed user={user} feed={feed} title="hot"
-        notificationBanner={notificationBanner} />,
-    )
-    const response = !notificationBanner && currentPage(c.req.query('page')) === 1 && !cursorValue
+    const render = async () => {
+      const feed = await databaseService().call('feeds.hotPage', { viewerId: user?.id ?? -1,
+        page: currentPage(c.req.query('page')), pageSize: resolvedPageSize(c.req.raw) })
+      return page(<HotFeed user={user} feed={feed} title="hot"
+        notificationBanner={notificationBanner} />)
+    }
+    const response = (!user || !notificationBanner) && currentPage(c.req.query('page')) === 1 && !cursorValue
       ? await rpcMaterializedFeedPage(c.req.raw, 'hot', user?.id ?? -1, render, false, hotRankingVersion)
-      : render()
+      : await render()
     const remembered = rememberFeed(response, 'hot')
     warmOtherFeedPages(c.req.raw, 'hot', user)
     return remembered
@@ -354,8 +354,9 @@ export function registerFeedsRoutes(app: Hono) {
 
   app.get('/about', async c => {
     const user = currentUser(c.req.raw)
-    const hotPosts = user ? [] : await databaseService().call('feeds.aboutHotPosts', {})
-    return page(<About user={user} hotPosts={hotPosts} />)
+    if (user) return page(<About user={user} hotPosts={[]} />)
+    return await rpcMaterializedFeedPage(c.req.raw, 'about', -1, async () =>
+      page(<About user={null} hotPosts={await databaseService().call('feeds.aboutHotPosts', {})} />))
   })
   app.get('/contact', c => page(<Contact user={currentUser(c.req.raw)} />))
   app.get('/dmca', c => page(<Dmca user={currentUser(c.req.raw)} />))
