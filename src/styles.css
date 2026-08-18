@@ -4352,6 +4352,18 @@ form.report-panel {
   font-size: 0.6875rem;
 }
 
+.activity-more > summary {
+  padding: var(--space-3) var(--gutter);
+  border-top: 1px solid var(--soft);
+  color: var(--accent);
+  font-size: 0.75rem;
+  cursor: pointer;
+}
+
+.activity-more[open] > summary {
+  color: var(--muted);
+}
+
 .columns h2 {
   color: var(--muted);
   font-size: 0.75rem;

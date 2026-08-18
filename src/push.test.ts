@@ -2,8 +2,8 @@ import { Database } from 'bun:sqlite'
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test'
 import webpush from 'web-push'
 import { runMigrations } from './migrations'
-import { sendPushForFollow, sendPushForPost, sendPushForSignup, sendPushForTagFollow, sendPushForUserFollow,
-  sendPushToUser } from './push'
+import { flushPendingFollowActivityPushes, sendPushForFollow, sendPushForPost, sendPushForSignup,
+  sendPushForTagFollow, sendPushForUserFollow, sendPushToUser } from './push'
 
 let originalSend: typeof webpush.sendNotification
 let vapid: ReturnType<typeof webpush.generateVAPIDKeys> & { subject: string }
@@ -316,13 +316,16 @@ describe('Web Push activity delivery', () => {
 
     await sendPushForUserFollow(1, 'author', 2, 'recipient', database, vapid)
     await sendPushForTagFollow(1, 'author', 'bun', database, vapid)
+    expect(payloads).toHaveLength(0)
+    await flushPendingFollowActivityPushes()
 
-    expect(payloads.map(payload => JSON.parse(payload).title)).toEqual([
-      '@author followed @recipient',
-      '@author followed #bun',
-    ])
+    expect(payloads.map(payload => JSON.parse(payload))).toEqual([{
+      title: '@author followed @recipient, #bun',
+      body: '@author followed @recipient, #bun',
+      url: '/for-you',
+    }])
     database.run('UPDATE push_subscriptions SET notify_follow_activity=0 WHERE user_id=3')
     await sendPushForTagFollow(1, 'author', 'bun', database, vapid)
-    expect(payloads).toHaveLength(2)
+    expect(payloads).toHaveLength(1)
   })
 })

@@ -10,6 +10,17 @@ export type PushMessage = { title: string; body: string; url: string }
 type PushSubscriptionRow = { endpoint: string; p256dh: string; auth: string }
 type VapidConfiguration = { subject: string; publicKey: string; privateKey: string }
 
+const followActivityBatchDelay = 2 * 60 * 1_000
+type FollowActivityBatch = {
+  actorHandle: string
+  database: Database
+  items: Map<string, string>
+  subscription: PushSubscriptionRow
+  timer: ReturnType<typeof setTimeout>
+  vapid: VapidConfiguration
+}
+const followActivityBatches = new Map<string, FollowActivityBatch>()
+
 function vapidConfiguration() {
   const subject = Bun.env.VAPID_SUBJECT?.trim()
   const publicKey = Bun.env.VAPID_PUBLIC_KEY?.trim()
@@ -47,6 +58,49 @@ async function sendToSubscriptions<T extends PushSubscriptionRow>(subscriptions:
       else logError('push delivery failed', error)
     }
   }))
+}
+
+async function flushFollowActivityBatch(key: string) {
+  const batch = followActivityBatches.get(key)
+  if (!batch) return
+  followActivityBatches.delete(key)
+  clearTimeout(batch.timer)
+  const labels = [...batch.items.keys()]
+  const message = `@${batch.actorHandle} followed ${labels.join(', ')}`
+  await sendToSubscriptions([batch.subscription], () => ({
+    title: message,
+    body: message,
+    url: labels.length === 1 ? [...batch.items.values()][0] : '/for-you',
+  }), batch.database, batch.vapid)
+}
+
+function queueFollowActivity(actorId: number, actorHandle: string, label: string, url: string,
+  subscriptions: PushSubscriptionRow[], database: Database, vapid: VapidConfiguration)
+{
+  for (const subscription of subscriptions) {
+    const key = `${actorId}:${subscription.endpoint}`
+    const existing = followActivityBatches.get(key)
+    if (existing) {
+      existing.items.set(label, url)
+      continue
+    }
+    const timer = setTimeout(() => {
+      void flushFollowActivityBatch(key).catch(error => logError('batched follow activity push failed', error))
+    }, followActivityBatchDelay)
+    const batch: FollowActivityBatch = {
+      actorHandle,
+      database,
+      items: new Map([[label, url]]),
+      subscription,
+      timer,
+      vapid,
+    }
+    followActivityBatches.set(key, batch)
+  }
+}
+
+export async function flushPendingFollowActivityPushes() {
+  await Promise.all([...followActivityBatches.keys()].map(flushFollowActivityBatch))
 }
 
 export async function sendPushToUser(userId: number, message: PushMessage, database: Database = db,
@@ -159,11 +213,8 @@ export async function sendPushForUserFollow(actorId: number, actorHandle: string
         b.blocker_id=ps.user_id AND b.blocked_id IN (?,?) OR
         b.blocked_id=ps.user_id AND b.blocker_id IN (?,?))`)
     .all(actorId, targetId, actorId, actorId, targetId, actorId, targetId) as PushSubscriptionRow[]
-  await sendToSubscriptions(subscriptions, () => ({
-    title: `@${actorHandle} followed @${targetHandle}`,
-    body: `@${actorHandle} followed @${targetHandle}`,
-    url: `/u/${encodeURIComponent(targetHandle)}`,
-  }), database, vapid)
+  queueFollowActivity(actorId, actorHandle, `@${targetHandle}`, `/u/${encodeURIComponent(targetHandle)}`,
+    subscriptions, database, vapid)
 }
 
 export async function sendPushForTagFollow(actorId: number, actorHandle: string, tag: string, database: Database = db,
@@ -178,11 +229,8 @@ export async function sendPushForTagFollow(actorId: number, actorHandle: string,
         (b.blocker_id=ps.user_id AND b.blocked_id=?) OR (b.blocked_id=ps.user_id AND b.blocker_id=?))
       AND NOT EXISTS (SELECT 1 FROM blocked_hashtags bh WHERE bh.user_id=ps.user_id AND bh.tag=?)`)
     .all(actorId, actorId, tag, actorId, actorId, tag) as PushSubscriptionRow[]
-  await sendToSubscriptions(subscriptions, () => ({
-    title: `@${actorHandle} followed #${tag}`,
-    body: `@${actorHandle} followed #${tag}`,
-    url: `/tag/${encodeURIComponent(tag)}`,
-  }), database, vapid)
+  queueFollowActivity(actorId, actorHandle, `#${tag}`, `/tag/${encodeURIComponent(tag)}`, subscriptions,
+    database, vapid)
 }
 
 export async function sendPushForSignup(userId: number, handle: string, database: Database = db,
