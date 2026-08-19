@@ -9,7 +9,7 @@ import { enterHref } from './auth-links'
 
 export function UserReference(
   { handle, bio, noteCount, following, user, href, rel, currentHandle, stats, navigationQuery = '',
-    showFollowAction = true, label, referenceData }: {
+    showFollowAction = true, label, referenceData, extraAction }: {
       handle: string
       bio?: string
       noteCount: number
@@ -23,6 +23,7 @@ export function UserReference(
       showFollowAction?: boolean
       label?: React.ReactNode
       referenceData?: BioReferenceData
+      extraAction?: React.ReactNode
     },
 ) {
   const ownUser = (user?.handle || currentHandle)?.toLowerCase() === handle.toLowerCase()
@@ -86,6 +87,7 @@ export function UserReference(
               <form method="post" action={'/block/' + handle}>
                 <button className="quiet danger" type="submit">block</button>
               </form>
+              {extraAction}
             </span>
           )
           : <a className="button" href={enterHref()} rel="nofollow">enter to follow</a>)}
@@ -264,12 +266,12 @@ export function Post({
   backHref,
   canonicalTimestamp = false,
   topHref,
-  metaAction,
+  authorPopoverAction,
 }: { p: PostView; user: User | null; showReplyAction?: boolean; showOwnerActions?: boolean;
   showModerateAction?: boolean; showParent?: boolean; showReplyCount?: boolean; replyHref?: string; replyLabel?: string;
   reportHref?: string; foldControlId?: string; highlightTerms?: string[]; tappable?: boolean; tappableParent?: boolean;
   contextLabel?: string; contextUnread?: boolean; preview?: boolean; returnPath?: string; backHref?: string;
-  canonicalTimestamp?: boolean; topHref?: string; metaAction?: React.ReactNode })
+  canonicalTimestamp?: boolean; topHref?: string; authorPopoverAction?: React.ReactNode })
 {
   const parent = showParent ? p.parent : null
   const hasTappableParent = Boolean(parent && (tappable || tappableParent))
@@ -310,16 +312,16 @@ export function Post({
       <MetaRow className={`posttop${contextLabel ? ' posttop-context' : ''}${preview ? ' preview-post-meta' : ''}`}
         unread={contextUnread}
       >
-        {metaAction}
         {preview
           ? (
             <UserReference handle={p.handle} bio={p.bio} noteCount={p.note_count || 0} stats={p.profile_stats}
-              following={p.viewer_following} user={user} referenceData={p.bio_reference} />
+              following={p.viewer_following} user={user} referenceData={p.bio_reference}
+              extraAction={authorPopoverAction} />
           )
           : (
             <UserReference handle={p.handle} bio={p.bio} noteCount={p.note_count || 0} stats={p.profile_stats}
               following={p.viewer_following} user={user} href={'/u/' + p.handle + referenceQuery} rel={navigationRel}
-              navigationQuery={referenceQuery} referenceData={p.bio_reference} />
+              navigationQuery={referenceQuery} referenceData={p.bio_reference} extraAction={authorPopoverAction} />
           )}
         {contextLabel && <span className="post-context">{contextLabel}</span>}
         {preview

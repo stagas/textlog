@@ -4371,14 +4371,13 @@ form.report-panel {
 }
 
 .for-you-hide-action {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  padding: var(--space-2);
-  margin: calc(-1 * var(--space-2));
-  line-height: 1;
-  cursor: pointer !important;
+  border-bottom: var(--hairline) solid var(--link-border);
+  cursor: pointer;
   user-select: none;
+}
+
+.for-you-hide-action:hover {
+  color: var(--tab-hover);
 }
 
 .for-you-hide-input:focus-visible + .for-you-hide-action {

@@ -68,7 +68,7 @@ export function Feed({ user, data, title, path = '/for-you', pageUrl, notificati
     const hideAction = row.actor_is_bot && ['post', 'reply', 'mention'].includes(row.activity_kind) ? <>
       <input className={`for-you-hide-input for-you-hide-${row.actor_id}`} type="checkbox" id={hideControlId} />
       <label className="quiet for-you-hide-action" htmlFor={hideControlId}
-        aria-label={`hide posts by @${row.actor_handle}`}>−</label>
+        aria-label={`hide all posts by @${row.actor_handle}`}>hide all</label>
     </> : null
     const activityReturnPath = `${returnPath}#${activityAnchor}`
     const fromQuery = `?from=${encodeURIComponent(activityReturnPath)}`
@@ -80,7 +80,7 @@ export function Feed({ user, data, title, path = '/for-you', pageUrl, notificati
           <Post p={row.renderedPost!} user={user} showReplyCount tappable contextUnread={!!row.unread}
             returnPath={`${returnPath}#post-${row.id}`} contextLabel={row.activity_kind === 'reply'
             ? 'replied to you:' : row.activity_kind === 'mention' ? 'mentioned you:' : undefined}
-            metaAction={hideAction} />
+            authorPopoverAction={hideAction} />
         </div>
       )
       : (
@@ -88,7 +88,6 @@ export function Feed({ user, data, title, path = '/for-you', pageUrl, notificati
           ? ' activity-item-directed-unread' : ''}`} key={row.event_key} id={activityAnchor}>
           <div className="activity-follow-content">
             <MetaRow className="activity-follow-main" unread={!!row.unread}>
-              {hideAction}
               <UserReference handle={row.actor_handle} bio={row.actor_bio}
                 noteCount={row.actorProfileStats?.notes || 0} stats={row.actorProfileStats}
                 following={!!row.following} user={user} href={row.activity_kind === 'signup'
