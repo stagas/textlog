@@ -26,7 +26,7 @@ export type HotCursor = {
   direction: 'next' | 'previous'
 }
 
-export const hotRankingVersion = 88
+export const hotRankingVersion = 91
 const cursorVersion = hotRankingVersion
 const activityHalfLifeHours = 6
 const postWeight = 0
@@ -67,6 +67,7 @@ const hotTailRecencyFloorHalfLifeHours = 24
 const hotTailRecencyDepthWeight = 0.1
 const staleTailPostHours = 168
 const staleTailPostHalfLifeHours = 6
+const quietSmallDiscussionTailWeight = 0.001
 const veryRecentReplyCandidateHours = 4
 const recentPostBoost = 4
 const recentPostBoostHours = 24
@@ -444,6 +445,7 @@ export function getHotPosts(
       +candidate_weight*CASE WHEN base_score>0 AND reply_count>1 AND post_age_hours<${recentPostBoostHours}
         THEN ${recentPostTierBonus}
         WHEN base_score>0 AND reply_count>1 AND post_age_hours<${yesterdayPostHours}
+          AND reply_age_hours<=${recentReplyPriorityHours}
         THEN ${yesterdayPostTierBonus} ELSE 0 END
       +candidate_weight*CASE WHEN base_score>0 AND reply_count>=${discussionReserveReplyThreshold}
         AND reply_age_hours>=${recentReplyPriorityHours}
@@ -479,6 +481,9 @@ export function getHotPosts(
       *CASE WHEN ranked_tree.depth=0 THEN pow(0.5,max(0,
         (julianday(ranking_time.as_of)-julianday(h.latest_activity_at))*24-${staleTailPostHours})
           /${staleTailPostHalfLifeHours}.0) ELSE 1 END
+      *CASE WHEN ranked_tree.depth=0 AND h.reply_count<${discussionReserveReplyThreshold}
+        AND (julianday(ranking_time.as_of)-julianday(h.latest_activity_at))*24>${recentReplyPriorityHours}
+        THEN ${quietSmallDiscussionTailWeight} ELSE 1 END
       *CASE WHEN representative_scores.root_id=ranked_tree.post_id
         AND representative_scores.head_score>=candidate_score THEN
         min(1,${replyRootCoverageScale}*candidate_score/representative_scores.head_score) ELSE 1 END hot_score

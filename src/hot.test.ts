@@ -121,7 +121,7 @@ describe('hot feed ranking', () => {
         ? Math.min(0.3, Math.max(0.235, 0.04 * Math.pow(2, (Math.min(replies, 15) - 4) / 1.5))
           + 0.02 * Math.pow(0.5, 40 / 24) + Math.max(0, replies - 4) * 0.001)
         : 0
-      expect(ranked.hot_score).toBeCloseTo((replies > 1 ? 50 : 0) + (replies >= 4 ? 16 : 0)
+      expect(ranked.hot_score).toBeCloseTo((replies >= 4 ? 16 : 0)
         + Math.max(decayedScore, reserve))
     }
   })
@@ -349,6 +349,16 @@ describe('hot feed ranking', () => {
       score_updated_at='2026-08-03 11:00:00',latest_activity_at='2026-08-03 11:00:00' WHERE post_id=2`)
 
     expect(getHotPosts(database, 20, null, asOf).map(result => result.id)).toEqual([2, 1])
+  })
+
+  test('does not keep yesterday posts in the top tier after their activity goes quiet', () => {
+    post(1, '2026-08-01 18:00:00')
+    database.run(`UPDATE post_hot SET score=0.9,reply_count=2,activity_count=3,
+      score_updated_at='2026-08-02 06:00:00',latest_activity_at='2026-08-02 06:00:00' WHERE post_id=1`)
+
+    const result = getHotPosts(database, 20, null, asOf)[0]
+    expect(result.id).toBe(1)
+    expect(result.hot_score).toBeLessThan(0.0000000000001)
   })
 
   test('nine unique repliers outweigh six even when the six-reply thread is older', () => {
