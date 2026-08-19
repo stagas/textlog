@@ -23,7 +23,7 @@ describe('startup configuration', () => {
 
     expect(config).toMatchObject({ production: true, appUrl: 'https://textlog.cc', host: '0.0.0.0', port: 3000,
       databaseBusyTimeoutMs: 5000, backupRetentionDays: 14, moderationDisabled: false, enableCaptchaAlways: false,
-      logUserAgent: true })
+      logAnonymous: true, logUserAgent: true })
   })
 
   test('reports all missing production integrations without exposing values', () => {
@@ -53,6 +53,7 @@ describe('startup configuration', () => {
         TRUST_PROXY: 'sometimes',
         ENABLE_CAPTCHA_ALWAYS: 'sometimes',
         LOG_USER_AGENT: 'sometimes',
+        LOG_ANONYMOUS: 'sometimes',
         PORT: '70000',
         DATABASE_BUSY_TIMEOUT_MS: '60000',
         DATABASE_BACKUP_RETENTION_DAYS: '0',

@@ -61,8 +61,9 @@ export function semanticAction(method: string, path: string) {
   return actionRoutes.find(([pattern]) => pattern.test(pathname))?.[1] ?? 'http.mutate'
 }
 
-export function shouldLogHttp(path: string, status: number, isCrawler = false) {
-  return !isCrawler && (path !== '/__dev/restart' || status >= 400)
+export function shouldLogHttp(path: string, status: number, isCrawler = false, authenticated = false) {
+  return !isCrawler && (authenticated || Bun.env.LOG_ANONYMOUS !== 'false')
+    && (path !== '/__dev/restart' || status >= 400)
 }
 
 export function redactHttpPath(value: string) {

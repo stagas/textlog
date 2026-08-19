@@ -224,7 +224,7 @@ app.use('*', async (c, next) => {
   finally {
     const url = new URL(c.req.url)
     const path = url.pathname
-    if (shouldLogHttp(path, c.res.status, isCrawlerRequest(c.req.raw))) {
+    if (shouldLogHttp(path, c.res.status, isCrawlerRequest(c.req.raw), Boolean(username))) {
       logHttp(c.req.method, redactHttpPath(`${path}${url.search}`), c.res.status, performance.now() - started,
         c.req.header(clientIpHeaderName()) || '-', username, c.req.header('user-agent') || '-')
     }

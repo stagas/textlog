@@ -85,6 +85,19 @@ describe('shouldLogHttp', () => {
     expect(shouldLogHttp('/missing', 404, true)).toBe(false)
     expect(shouldLogHttp('/latest', 200, false)).toBe(true)
   })
+
+  test('can hide anonymous requests while preserving authenticated requests', () => {
+    const original = Bun.env.LOG_ANONYMOUS
+    Bun.env.LOG_ANONYMOUS = 'false'
+    try {
+      expect(shouldLogHttp('/latest', 200, false, false)).toBe(false)
+      expect(shouldLogHttp('/latest', 200, false, true)).toBe(true)
+    }
+    finally {
+      if (original === undefined) delete Bun.env.LOG_ANONYMOUS
+      else Bun.env.LOG_ANONYMOUS = original
+    }
+  })
 })
 
 test('feed request logs preserve the route and format without exposing the key', () => {
