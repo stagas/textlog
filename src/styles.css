@@ -581,6 +581,37 @@ header>.account-nav {
   margin-top: var(--space-2);
 }
 
+.reference-popover-actions:has(.follows-you) {
+  margin-top: calc(var(--space-2) + 0.75rem);
+}
+
+.reference-popover-actions .follow-action,
+.reference-popover-actions form:has(> .follows-you) {
+  position: relative;
+}
+
+.reference-popover-actions .follows-you {
+  position: absolute;
+  bottom: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+.follow-action,
+form:has(> .follows-you) {
+  display: flex;
+  width: max-content;
+  flex-direction: column;
+  align-items: center;
+}
+
+.follows-you {
+  color: var(--muted);
+  font-size: 0.625rem;
+  line-height: 1.4;
+  white-space: nowrap;
+}
+
 .reference-menu .reference-menu-popover .reference-popover-actions .button {
   margin-top: 0;
 }
@@ -3169,6 +3200,17 @@ form.report-panel {
 
 .profile-handle-actions {
   gap: var(--space-4);
+}
+
+.profile-handle-actions form:has(> .follows-you) {
+  position: relative;
+}
+
+.profile-handle-actions .follows-you {
+  position: absolute;
+  bottom: 100%;
+  left: 50%;
+  transform: translateX(-50%);
 }
 
 .profile-back-action {

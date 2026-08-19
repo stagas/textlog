@@ -24,6 +24,7 @@ export type ReferencePopoverOptions = {
   currentHandle?: string
   formPrefix: string
   mentionFollowing?: Record<string, boolean>
+  mentionFollowsViewer?: Record<string, boolean>
   mentionProfileStats?: Record<string, UserProfileStats>
   hashtagFollowing?: Record<string, boolean>
   hashtagFollowerCounts?: Record<string, number>
@@ -424,13 +425,15 @@ function renderedReference(token: string, mentionBios: Record<string, string>,
     return `<a href="${href}" title="${esc(title)}">${label}</a>`
   }
   const following = isUser ? !!referencePopover.mentionFollowing?.[key] : !!referencePopover.hashtagFollowing?.[key]
+  const followsViewer = isUser && !!referencePopover.mentionFollowsViewer?.[key]
   const ownUser = isUser && key === referencePopover.currentHandle?.toLowerCase()
   const action = ownUser ? '' : referencePopover.signedIn
-    ? `<span class="reference-popover-actions"><button class="button${
+    ? `<span class="reference-popover-actions"><span class="follow-action">${
+      followsViewer ? '<span class="follows-you">follows you</span>' : ''}<button class="button${
       following ? ' button-muted' : ''
     }" type="submit" form="${esc(referenceFormId(referencePopover.formPrefix, isUser ? 'user' : 'tag', key))}">${
-      following ? 'unfollow' : 'follow'
-    }</button><button class="quiet danger" type="submit" form="${
+      following ? 'unfollow' : followsViewer ? 'follow back' : 'follow'
+    }</button></span><button class="quiet danger" type="submit" form="${
       esc(referenceFormId(referencePopover.formPrefix, isUser ? 'user' : 'tag', key, 'block'))
     }">block</button></span>`
     : '<a class="button" href="/enter" rel="nofollow">enter to follow</a>'

@@ -61,6 +61,24 @@ test('for-you does not put hide actions on follow activity', () => {
   expect(html).not.toContain(':has(.for-you-hide-4:checked) .for-you-author-4')
 })
 
+test('a followed-you event offers to follow back', () => {
+  const followActivity = {
+    ...postActivity(12, 4, 'carol'), activity_kind: 'user_follow' as const, event_key: 'user-follow:12',
+    target_handle: null, target_bio: '', target_is_viewer: true, targeted_to_viewer: true, following: false,
+    actorFollowsViewer: true, renderedPost: undefined,
+  }
+  const html = renderToStaticMarkup(<Feed
+    user={{ id: 1, handle: 'reader', email: 'reader@example.com', bio: '',
+      handle_chosen_at: '2026-08-19 09:00:00' }}
+    data={{ timeline: [followActivity], page: 1, totalPages: 1,
+      toMeCount: 1, forYouCount: 0, forYouUnread: false, toMeUnread: true }}
+  />)
+
+  expect(html).toContain('>follow back</button>')
+  expect(html).toContain('</div><form action="/follow/carol" method="post"><input type="hidden" '
+    + 'name="from" value="/for-you#activity-user-follow-12"/><button class="button">follow back</button>')
+})
+
 test('for-you does not put hide actions on posts by people', () => {
   const html = renderToStaticMarkup(<Feed
     user={{ id: 1, handle: 'reader', email: 'reader@example.com', bio: '',

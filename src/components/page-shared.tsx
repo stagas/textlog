@@ -366,10 +366,11 @@ export function FeedTabs({ active, user, forYouReadStatus, activityReadStatus, t
   )
 }
 
-export function ProfileControls({ user, profile, following, blocked = false }: {
+export function ProfileControls({ user, profile, following, followsViewer = false, blocked = false }: {
   user: User | null
   profile: ProfileRow
   following: boolean
+  followsViewer?: boolean
   blocked?: boolean
 }) {
   return (
@@ -378,10 +379,11 @@ export function ProfileControls({ user, profile, following, blocked = false }: {
         <>
           {!blocked && (
             <form method="post" action={'/follow/' + profile.handle}>
+              {followsViewer && <span className="follows-you">follows you</span>}
               <button className={`button${following ? ' button-muted' : ''}`}
-                aria-label={`${following ? 'unfollow' : 'follow'} @${profile.handle}`}
+                aria-label={`${following ? 'unfollow' : followsViewer ? 'follow back' : 'follow'} @${profile.handle}`}
               >
-                {following ? 'unfollow' : 'follow'}
+                {following ? 'unfollow' : followsViewer ? 'follow back' : 'follow'}
               </button>
             </form>
           )}
@@ -403,10 +405,12 @@ export function ProfileControls({ user, profile, following, blocked = false }: {
 }
 
 export function ProfileHeader(
-  { user, profile, following, blocked = false, editing = false, returnPath, controlsInTitle = true, children }: {
+  { user, profile, following, followsViewer = false, blocked = false, editing = false, returnPath,
+    controlsInTitle = true, children }: {
     user: User | null
     profile: ProfileRow
     following: boolean
+    followsViewer?: boolean
     blocked?: boolean
     editing?: boolean
     returnPath?: string
@@ -436,7 +440,8 @@ export function ProfileHeader(
               {profile.handle}
             </h1>
             {!editing && user?.id !== profile.id
-              && <ProfileControls user={user} profile={profile} following={following} blocked={blocked} />}
+              && <ProfileControls user={user} profile={profile} following={following} followsViewer={followsViewer}
+                blocked={blocked} />}
             {user?.id === profile.id && (
               <div className="profile-owner-actions">
                 <a className="profile-edit-link" href="/account/edit">account</a>
@@ -456,7 +461,8 @@ export function ProfileHeader(
       }`}>
         {returnPath && !editing
           && <a className="profile-edit-link" href={returnPath}>back</a>}
-        {!controlsInTitle && <ProfileControls user={user} profile={profile} following={following} blocked={blocked} />}
+        {!controlsInTitle && <ProfileControls user={user} profile={profile} following={following}
+          followsViewer={followsViewer} blocked={blocked} />}
       </div>
     </section>
   )
@@ -630,7 +636,8 @@ export function ConnectionPeople({ user, people, className = '', highlightTerms 
           <div>
             <div>
               <UserReference handle={person.handle} bio={person.bio} noteCount={person.posts}
-                stats={person.profileStats} following={person.viewerFollowing} user={user}
+                stats={person.profileStats} following={person.viewerFollowing} followsViewer={person.followsViewer}
+                user={user}
                 href={`/u/${person.handle}`} label={
                 <>
                   @<HighlightedText text={person.handle} terms={highlightTerms} />
@@ -641,8 +648,9 @@ export function ConnectionPeople({ user, people, className = '', highlightTerms 
             {user && user.id !== person.id && (
               <form method="post" action={`/follow/${person.handle}`}>
                 {returnPath && <input type="hidden" name="from" value={returnPath(person)} />}
+                {person.followsViewer && <span className="follows-you">follows you</span>}
                 <button className={`button${person.viewerFollowing ? ' button-muted' : ''}`}>
-                  {person.viewerFollowing ? 'unfollow' : 'follow'}
+                  {person.viewerFollowing ? 'unfollow' : person.followsViewer ? 'follow back' : 'follow'}
                 </button>
               </form>
             )}

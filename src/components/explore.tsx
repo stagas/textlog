@@ -77,6 +77,7 @@ export function Explore({ user, welcome = false, tagsPage = 1, peoplePage = 1, d
                   <div>
                     <UserReference handle={p.handle} bio={p.bio} noteCount={p.posts} stats={profileStats[p.id]}
                       following={p.following} user={user}
+                      followsViewer={p.followsViewer}
                       href={`/u/${p.handle}?from=${encodeURIComponent(exploreReturnPath(p.id))}`}
                       navigationQuery={`?from=${encodeURIComponent(exploreReturnPath(p.id))}`} />
                     <small>{p.posts} {p.posts === 1 ? 'note' : 'notes'}</small>
@@ -85,8 +86,9 @@ export function Explore({ user, welcome = false, tagsPage = 1, peoplePage = 1, d
                     <form method="post" action={'/follow/' + p.handle}>
                       <input type="hidden" name="explorePeople" value={explorePeople} />
                       <input type="hidden" name="from" value={exploreReturnPath(p.id)} />
+                      {p.followsViewer && <span className="follows-you">follows you</span>}
                       <button className={`button${p.following ? ' button-muted' : ''}`}>
-                        {p.following ? 'unfollow' : 'follow'}
+                        {p.following ? 'unfollow' : p.followsViewer ? 'follow back' : 'follow'}
                       </button>
                     </form>
                   )}

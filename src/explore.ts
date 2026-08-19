@@ -46,7 +46,8 @@ export function suggestedPeople(database: Database, viewerId: number, limit = 8,
       SELECT u.*, (SELECT count(*) FROM posts p WHERE p.user_id=u.id AND p.deleted_at IS NULL) posts,
       (SELECT count(*) FROM follows followers JOIN users follower ON follower.id=followers.follower_id
         WHERE followers.following_id=u.id AND follower.deleted_at IS NULL) follower_count,
-      EXISTS(SELECT 1 FROM follows f WHERE f.follower_id=? AND f.following_id=u.id) following FROM users u
+      EXISTS(SELECT 1 FROM follows f WHERE f.follower_id=? AND f.following_id=u.id) following,
+      EXISTS(SELECT 1 FROM follows rf WHERE rf.follower_id=u.id AND rf.following_id=?) followsViewer FROM users u
       WHERE u.id != ? AND u.deleted_at IS NULL AND u.handle_chosen_at IS NOT NULL
       AND NOT EXISTS (SELECT 1 FROM follows f WHERE f.follower_id=? AND f.following_id=u.id)
       AND (? < 0 OR NOT EXISTS (SELECT 1 FROM blocks b WHERE
@@ -60,7 +61,7 @@ export function suggestedPeople(database: Database, viewerId: number, limit = 8,
     ORDER BY (posts > 2) DESC,(trim(coalesce(bio,''))!='') DESC,((id - ? + ?) % ?) * 1.0 /
       (1 + min(follower_count,8)*0.25 + min(posts,20)*0.05),id
     LIMIT ? OFFSET ?`,
-  ).all(viewerId, viewerId, viewerId, viewerId, viewerId, viewerId, day,
+  ).all(viewerId, viewerId, viewerId, viewerId, viewerId, viewerId, viewerId, day,
     pivot, maxUserId, maxUserId, limit, offset) as PersonView[]
 }
 

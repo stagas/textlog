@@ -1208,6 +1208,9 @@ test('consequential account, content, reporting, and admin flows work over HTTP'
     .toBeNull()
   expect(database.query('SELECT 1 FROM follows WHERE follower_id=? AND following_id=?').get(bob.id, alice.id))
     .toBeTruthy()
+  const bobProfileAsAlice = await (await request('/u/bob', { cookie: aliceCookie })).text()
+  expect(bobProfileAsAlice).toContain('<span class="follows-you">follows you</span><button class="button" '
+    + 'aria-label="follow back @bob">follow back</button>')
   await request('/tag-follow/shared', { method: 'POST', cookie: aliceCookie })
   await request('/tag-follow/shared', { method: 'POST', cookie: bobCookie })
   const unicodeTagFollow = await request('/tag-follow/' + encodeURIComponent('español'), {

@@ -7,7 +7,8 @@ import { BlockedPeopleList, BlockedTagList, ConnectionPeople, Pagination, Profil
 
 export function Connections(
   { user, profile, people, tags = [], kind, page, total, tagsPage = 1, tagsTotal = 0, noteCount, followerCount,
-    followingCount, followingTagCount, following, social, replyCount = 0, blockedPeopleCount = 0, blockedTagCount = 0,
+    followingCount, followingTagCount, following, followsViewer = false, social, replyCount = 0,
+    blockedPeopleCount = 0, blockedTagCount = 0,
     returnPath }: {
       user: User | null
       profile: ProfileRow
@@ -24,6 +25,7 @@ export function Connections(
       followingCount: number
       followingTagCount: number
       following: boolean
+      followsViewer?: boolean
       blockedPeopleCount?: number
       blockedTagCount?: number
       returnPath?: string
@@ -36,7 +38,8 @@ export function Connections(
       : path
   return (
     <Layout user={user} title={`${kind} @${profile.handle}`} social={social}>
-      <ProfileHeader user={user} profile={profile} following={following} returnPath={returnPath} />
+      <ProfileHeader user={user} profile={profile} following={following} followsViewer={followsViewer}
+        returnPath={returnPath} />
       <ProfileTabs profile={profile} active={kind} notes={noteCount} replies={replyCount} followers={followerCount}
         following={followingCount} followingTags={followingTagCount} showBlocked={user?.id === profile.id}
         blockedPeople={blockedPeopleCount} blockedTags={blockedTagCount} returnPath={returnPath} />

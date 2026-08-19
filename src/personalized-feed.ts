@@ -128,13 +128,19 @@ export function loadPersonalizedFeed(database: Database, user: User, page: numbe
     return resolved ? [[row.target_handle, resolved.id] as const] : []
   }))
   const targetStats = visibleUserProfileStats(database, [...targets.values()], user.id)
+  const relevantIds = [...new Set([...timeline.map(row => row.actor_id), ...targets.values()])]
+  const followerIds = relevantIds.length ? new Set((database.query(`SELECT follower_id FROM follows
+    WHERE following_id=? AND follower_id IN (${relevantIds.map(() => '?').join(',')})`)
+    .all(user.id, ...relevantIds) as { follower_id: number }[]).map(row => row.follower_id)) : new Set<number>()
   const tagCounts = visibleTagFollowerCounts(database, timeline.flatMap(row => row.target_tag ? [row.target_tag] : []),
     user.id)
   const enriched = new Map(enrichPosts(database,
     timeline.filter(row => ['post', 'reply', 'mention'].includes(row.activity_kind)), user.id).map(post => [post.id, post]))
   const resultTimeline = timeline.map(row => ({ ...row, renderedPost: row.id ? enriched.get(row.id) : undefined,
     actorProfileStats: actorStats.get(row.actor_id),
+    actorFollowsViewer: followerIds.has(row.actor_id),
     targetProfileStats: row.target_handle ? targetStats.get(targets.get(row.target_handle)!) : undefined,
+    targetFollowsViewer: row.target_handle ? followerIds.has(targets.get(row.target_handle)!) : undefined,
     tagFollowerCount: row.target_tag ? tagCounts[row.target_tag] || 0 : undefined }))
   if (markRead) {
     markForYouEntriesRead(user.id, timeline.filter(row => row.unread).map(row => row.event_key), toMe, database)

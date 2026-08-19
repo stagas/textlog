@@ -58,11 +58,12 @@ export function searchPeople(database: Database, query: string, viewerId = -1, p
     .get(matchExpression, ...parameters) as { count: number }).count
   const rows = database.query(`SELECT u.*,
     (SELECT count(*) FROM posts p WHERE p.user_id=u.id AND p.deleted_at IS NULL) posts,
-    EXISTS(SELECT 1 FROM follows f WHERE f.follower_id=? AND f.following_id=u.id) viewerFollowing
+    EXISTS(SELECT 1 FROM follows f WHERE f.follower_id=? AND f.following_id=u.id) viewerFollowing,
+    EXISTS(SELECT 1 FROM follows rf WHERE rf.follower_id=u.id AND rf.following_id=?) followsViewer
     FROM user_search JOIN users u ON u.id=user_search.rowid
     WHERE user_search MATCH ? AND ${visibility}
     ORDER BY ${followedFirst ? 'viewerFollowing DESC,' : ''}bm25(user_search),u.handle LIMIT ? OFFSET ?`)
-    .all(viewerId, matchExpression, ...parameters, PAGE_SIZE, (page - 1) * PAGE_SIZE) as PersonView[]
+    .all(viewerId, viewerId, matchExpression, ...parameters, PAGE_SIZE, (page - 1) * PAGE_SIZE) as PersonView[]
   return { rows, total }
 }
 

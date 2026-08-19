@@ -10,7 +10,8 @@ import { DEFAULT_TIMEZONE, TIMEZONE_CHOICES } from '../timezone'
 import { LogoutForm } from './logout-form'
 
 export function Profile(
-  { user, profile, posts, following, bio = profile.bio || '', editHandle = profile.handle, editEmail = profile.email,
+  { user, profile, posts, following, followsViewer = false, bio = profile.bio || '', editHandle = profile.handle,
+    editEmail = profile.email,
     editIsBot = !!profile.is_bot, error, editing = false, total = posts.length, noteCount = total, replyCount = 0,
     tab = 'notes', followerCount = 0, followingCount = 0, followingTagCount = 0, blockedPeopleCount = 0,
     blockedTagCount = 0, blocked = false, blockedByProfile = false, social, page = 1, totalPages = 1, returnPath,
@@ -19,6 +20,7 @@ export function Profile(
       profile: ProfileRow
       posts: PostView[]
       following: boolean
+      followsViewer?: boolean
       bio?: string
       editHandle?: string
       editEmail?: string
@@ -56,7 +58,8 @@ export function Profile(
   const bioTags = extractHashtags(profile.bio)
   const bioHandles = extractMentions(profile.bio)
   const references = bioReference || { hashtagCounts: {}, hashtagFollowerCounts: {}, hashtagFollowing: {},
-    mentionBios: {}, mentionNoteCounts: {}, mentionProfileStats: {}, mentionFollowing: {}, linkPreviews: {} }
+    mentionBios: {}, mentionNoteCounts: {}, mentionProfileStats: {}, mentionFollowing: {}, mentionFollowsViewer: {},
+    linkPreviews: {} }
   const bioFormPrefix = `profile-${profile.id}-bio`
   return (
     <Layout user={user} title={`@${profile.handle}`} social={social} feeds={{
@@ -64,7 +67,8 @@ export function Profile(
       rss: `/u/${encodeURIComponent(profile.handle)}.rss`,
       atom: `/u/${encodeURIComponent(profile.handle)}.atom`,
     }}>
-      <ProfileHeader user={user} profile={profile} following={following} blocked={blocked} editing={editing}
+      <ProfileHeader user={user} profile={profile} following={following} followsViewer={followsViewer} blocked={blocked}
+        editing={editing}
         returnPath={returnPath} controlsInTitle
       >
         <div className="profile-content">
@@ -87,7 +91,8 @@ export function Profile(
             </h1>
             {editing && <a className="profile-edit-link profile-switch-link" href="/account/accounts">switch</a>}
             {!editing && user?.id !== profile.id
-              && <ProfileControls user={user} profile={profile} following={following} blocked={blocked} />}
+              && <ProfileControls user={user} profile={profile} following={following} followsViewer={followsViewer}
+                blocked={blocked} />}
             {(editing || user?.id === profile.id) && (
               <div className="profile-owner-actions">
                 {editing
@@ -215,6 +220,7 @@ export function Profile(
                   currentHandle: user?.handle,
                   formPrefix: bioFormPrefix,
                   mentionFollowing: references.mentionFollowing,
+                  mentionFollowsViewer: references.mentionFollowsViewer,
                   mentionProfileStats: references.mentionProfileStats,
                   hashtagFollowing: references.hashtagFollowing,
                   hashtagFollowerCounts: references.hashtagFollowerCounts,

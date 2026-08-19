@@ -1228,6 +1228,19 @@ test('Profile places a contextual back link in the handle row', () => {
   expect(html).toContain('href="/u/writer?tab=followers&amp;from=%2Flatest%23post-2"')
 })
 
+test('Profile shows when the viewed account follows the viewer', () => {
+  const html = renderToStaticMarkup(React.createElement(Profile, {
+    user: { id: 2, handle: 'visitor', email: 'visitor@example.com', bio: '' },
+    profile: { id: 1, handle: 'writer', email: 'writer@example.com', bio: '' },
+    following: false,
+    followsViewer: true,
+    posts: [],
+  }))
+
+  expect(html).toContain('<span class="follows-you">follows you</span><button class="button" '
+    + 'aria-label="follow back @writer">follow back</button>')
+})
+
 test('An empty profile only offers its owner a way to write a note', () => {
   const profile = { id: 1, handle: 'reader', email: 'reader@example.com', bio: '' }
   const html = renderToStaticMarkup(React.createElement(Profile, {

@@ -90,7 +90,8 @@ export function Feed({ user, data, title, path = '/for-you', pageUrl, notificati
             <MetaRow className="activity-follow-main" unread={!!row.unread}>
               <UserReference handle={row.actor_handle} bio={row.actor_bio}
                 noteCount={row.actorProfileStats?.notes || 0} stats={row.actorProfileStats}
-                following={!!row.following} user={user} href={row.activity_kind === 'signup'
+                following={!!row.following} followsViewer={row.actorFollowsViewer} user={user}
+                href={row.activity_kind === 'signup'
                   ? `/admin/users/${row.actor_id}` : `/u/${row.actor_handle}${fromQuery}`}
                 navigationQuery={fromQuery} />
               <span className="activity-context">
@@ -99,6 +100,7 @@ export function Feed({ user, data, title, path = '/for-you', pageUrl, notificati
               {!row.target_is_viewer && row.activity_kind === 'user_follow'
                 ? <UserReference handle={row.target_handle!} bio={row.target_bio || ''} noteCount={row.posts || 0}
                   stats={row.targetProfileStats} following={!!row.following} user={user}
+                  followsViewer={row.targetFollowsViewer}
                   href={`/u/${row.target_handle}${fromQuery}`} navigationQuery={fromQuery} />
                 : row.activity_kind === 'tag_follow'
                 ? <TagReference tag={row.target_tag!} noteCount={row.posts || 0}
@@ -120,8 +122,15 @@ export function Feed({ user, data, title, path = '/for-you', pageUrl, notificati
               ? `/follow/${row.actor_handle}` : row.activity_kind === 'user_follow'
               ? `/follow/${row.target_handle}` : `/tag-follow/${row.target_tag}`}>
               <input type="hidden" name="from" value={activityReturnPath} />
+              {(!row.target_is_viewer && (row.activity_kind === 'signup'
+                ? row.actorFollowsViewer
+                : row.activity_kind === 'user_follow' ? row.targetFollowsViewer : false)
+                ) && <span className="follows-you">follows you</span>}
               <button className={`button${row.following ? ' button-muted' : ''}`}>
-                {row.following ? 'unfollow' : 'follow'}
+                {row.following ? 'unfollow' : row.target_is_viewer || (row.activity_kind === 'signup'
+                  ? row.actorFollowsViewer
+                  : row.activity_kind === 'user_follow' ? row.targetFollowsViewer : false)
+                  ? 'follow back' : 'follow'}
                 {row.activity_kind === 'user_follow' && !row.target_is_viewer && ` @${row.target_handle}`}
                 {row.activity_kind === 'tag_follow' && ` #${row.target_tag}`}
               </button>

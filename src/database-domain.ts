@@ -47,7 +47,10 @@ import { recapEmail, RECAP_POPULAR_NOTE_IDS } from './recap-email'
 
 function attachPeopleStats(database: Database, people: import('./types').PersonView[], viewerId: number) {
   const stats = visibleUserProfileStats(database, people.map(person => person.id), viewerId)
-  return people.map(person => ({ ...person, profileStats: stats.get(person.id) }))
+  const followers = viewerId < 0 || !people.length ? new Set<number>() : new Set((database.query(
+    `SELECT follower_id FROM follows WHERE following_id=? AND follower_id IN (${people.map(() => '?').join(',')})`,
+  ).all(viewerId, ...people.map(person => person.id)) as { follower_id: number }[]).map(row => row.follower_id))
+  return people.map(person => ({ ...person, profileStats: stats.get(person.id), followsViewer: followers.has(person.id) }))
 }
 
 function attachTagStats(database: Database, tags: import('./types').TagView[], viewerId: number) {
@@ -819,6 +822,8 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
         .get(profileId, profileId) as { noteCount: number; replyCount: number }
       const following = viewerId >= 0
         && !!database.query('SELECT 1 FROM follows WHERE follower_id=? AND following_id=?').get(viewerId, profileId)
+      const followsViewer = viewerId >= 0
+        && !!database.query('SELECT 1 FROM follows WHERE follower_id=? AND following_id=?').get(profileId, viewerId)
       const blocked = viewerId >= 0
         && !!database.query('SELECT 1 FROM blocks WHERE blocker_id=? AND blocked_id=?').get(viewerId, profileId)
       const blockedByProfile = viewerId >= 0
@@ -841,7 +846,7 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
           }
         : { blockedPeopleCount: 0, blockedTagCount: 0 }
       const result = { profile, bioReference: loadBioReferenceData(database, profile.bio, profileId, viewerId),
-        ...postCounts, following, blocked, blockedByProfile, ...counts, ...blockCounts }
+        ...postCounts, following, followsViewer, blocked, blockedByProfile, ...counts, ...blockCounts }
       return result as DatabaseDomainOutput<K>
     }
     case 'profiles.blockedPage': {
@@ -863,11 +868,12 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
         : 'JOIN follows f ON f.follower_id=u.id WHERE f.following_id=?'
       const people = database.query(
         `SELECT u.*, (SELECT count(*) FROM posts p WHERE p.user_id=u.id AND p.deleted_at IS NULL) posts,
-        EXISTS(SELECT 1 FROM follows vf WHERE vf.follower_id=? AND vf.following_id=u.id) viewerFollowing
+        EXISTS(SELECT 1 FROM follows vf WHERE vf.follower_id=? AND vf.following_id=u.id) viewerFollowing,
+        EXISTS(SELECT 1 FROM follows rv WHERE rv.follower_id=u.id AND rv.following_id=?) followsViewer
         FROM users u ${join} AND (? < 0 OR NOT EXISTS (SELECT 1 FROM blocks b WHERE
           (b.blocker_id=? AND b.blocked_id=u.id) OR (b.blocker_id=u.id AND b.blocked_id=?)))
         ORDER BY u.handle LIMIT ? OFFSET ?`,
-      ).all(viewerId, profileId, viewerId, viewerId, viewerId, CONNECTION_PAGE_SIZE,
+      ).all(viewerId, viewerId, profileId, viewerId, viewerId, viewerId, CONNECTION_PAGE_SIZE,
         (page - 1) * CONNECTION_PAGE_SIZE)
       const countWhere = kind === 'following' ? 'follower_id=?' : 'following_id=?'
       const counterpart = kind === 'following' ? 'f.following_id' : 'f.follower_id'

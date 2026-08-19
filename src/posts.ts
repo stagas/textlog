@@ -37,6 +37,12 @@ export function loadBioReferenceData(database: Database, bio: string, profileId:
   )
   const mentionProfileStats = Object.fromEntries(Object.entries(mentionIds)
     .flatMap(([handle, id]) => stats.has(id) ? [[handle, stats.get(id)!]] : []))
+  const followerIds = viewerId < 0 || !Object.keys(mentionIds).length ? new Set<number>() : new Set(
+    (database.query(`SELECT follower_id FROM follows WHERE following_id=? AND follower_id IN
+      (${Object.keys(mentionIds).map(() => '?').join(',')})`).all(viewerId, ...Object.values(mentionIds)) as {
+      follower_id: number
+    }[]).map(row => row.follower_id),
+  )
   return {
     hashtagCounts,
     hashtagFollowerCounts,
@@ -47,6 +53,8 @@ export function loadBioReferenceData(database: Database, bio: string, profileId:
     mentionProfileStats,
     mentionFollowing: Object.fromEntries(Object.entries(mentionIds).map(([handle, id]) => [handle,
       followedIds.has(id)])),
+    mentionFollowsViewer: Object.fromEntries(Object.entries(mentionIds).map(([handle, id]) => [handle,
+      followerIds.has(id)])),
     linkPreviews: userBioLinkPreviews(database, profileId),
   }
 }
@@ -263,6 +271,14 @@ export function enrichPosts(database: Database, posts: PostView[], viewerId = -1
       .map(row => row.tag))
   const mentionFollowing = Object.fromEntries(Object.entries(mentionUserIds)
     .map(([handle, id]) => [handle, followedUserIds.has(id)]))
+  const followerUserIds = viewerId < 0 || !relevantUserIds.length
+    ? new Set<number>()
+    : new Set((database.query(`SELECT follower_id FROM follows WHERE following_id=? AND follower_id IN
+      (${relevantUserIds.map(() => '?').join(',')})`).all(viewerId, ...relevantUserIds) as {
+      follower_id: number
+    }[]).map(row => row.follower_id))
+  const mentionFollowsViewer = Object.fromEntries(Object.entries(mentionUserIds)
+    .map(([handle, id]) => [handle, followerUserIds.has(id)]))
   const hashtagFollowing = Object.fromEntries(Object.keys(hashtagCounts)
     .map(tag => [tag, followedTags.has(tag)]))
   const bioReference = (userId: number | undefined): BioReferenceData => ({
@@ -273,16 +289,19 @@ export function enrichPosts(database: Database, posts: PostView[], viewerId = -1
     mentionNoteCounts,
     mentionProfileStats,
     mentionFollowing,
+    mentionFollowsViewer,
     linkPreviews: userId == null ? {} : userBioLinkPreviews(database, userId),
   })
   for (const parent of parents.values()) {
     parent.profile_stats = parent.user_id == null ? undefined : profileStats.get(parent.user_id)
     parent.note_count = parent.profile_stats?.notes || 0
     parent.viewer_following = parent.user_id != null && followedUserIds.has(parent.user_id)
+    parent.follows_viewer = parent.user_id != null && followerUserIds.has(parent.user_id)
     parent.mention_bios = mentionBios
     parent.mention_note_counts = mentionNoteCounts
     parent.mention_profile_stats = mentionProfileStats
     parent.mention_following = mentionFollowing
+    parent.mention_follows_viewer = mentionFollowsViewer
     parent.hashtag_counts = hashtagCounts
     parent.hashtag_follower_counts = hashtagFollowerCounts
     parent.hashtag_following = hashtagFollowing
@@ -294,10 +313,12 @@ export function enrichPosts(database: Database, posts: PostView[], viewerId = -1
     note_count: profileStats.get(post.user_id)?.notes || 0,
     profile_stats: profileStats.get(post.user_id),
     viewer_following: followedUserIds.has(post.user_id),
+    follows_viewer: followerUserIds.has(post.user_id),
     mention_bios: mentionBios,
     mention_note_counts: mentionNoteCounts,
     mention_profile_stats: mentionProfileStats,
     mention_following: mentionFollowing,
+    mention_follows_viewer: mentionFollowsViewer,
     hashtag_counts: hashtagCounts,
     hashtag_follower_counts: hashtagFollowerCounts,
     hashtag_following: hashtagFollowing,

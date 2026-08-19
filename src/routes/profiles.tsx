@@ -55,7 +55,7 @@ export function registerProfilesRoutes(app: Hono) {
     const viewerId = user?.id ?? -1
     const overview = await databaseService().call('profiles.overview', { profileId: resolved.id, viewerId })
     if (!overview) return notFoundPage(c.req.raw)
-    const { profile, bioReference, noteCount, replyCount, following, blocked, blockedByProfile,
+    const { profile, bioReference, noteCount, replyCount, following, followsViewer, blocked, blockedByProfile,
       followerCount, followingCount, followingTagCount, blockedPeopleCount, blockedTagCount } = overview
     const tab = c.req.query('tab')
     if (tab && tab !== 'replies' && tab !== 'following' && tab !== 'followers' && tab !== 'blocked') {
@@ -124,7 +124,7 @@ export function registerProfilesRoutes(app: Hono) {
         <Connections user={user} profile={profile} people={people} tags={tags} kind={tab} page={connectionPage}
           total={connectionTotal} tagsPage={tagsPage} tagsTotal={followingTagCount} noteCount={noteCount}
           replyCount={replyCount} followerCount={followerCount} followingCount={followingCount}
-          followingTagCount={followingTagCount} following={following}
+          followingTagCount={followingTagCount} following={following} followsViewer={followsViewer}
           blockedPeopleCount={blockedPeopleCount} blockedTagCount={blockedTagCount} social={social}
           returnPath={returnPath} />,
       )
@@ -136,7 +136,7 @@ export function registerProfilesRoutes(app: Hono) {
       page: profilePage, pageSize: resolvedPageSize(c.req.raw), kind: tab === 'replies' ? 'replies' : 'notes' })
     return page(
       <Profile user={user} profile={profile} posts={blocked || blockedByProfile ? [] : snapshot.posts}
-        following={following}
+        following={following} followsViewer={followsViewer}
         blocked={blocked} total={total} noteCount={noteCount} replyCount={replyCount}
         tab={tab === 'replies' ? 'replies' : 'notes'} followerCount={followerCount}
         followingCount={followingCount} followingTagCount={followingTagCount}

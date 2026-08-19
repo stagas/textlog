@@ -30,6 +30,7 @@ export type BioReferenceData = {
   mentionNoteCounts: Record<string, number>
   mentionProfileStats: Record<string, UserProfileStats>
   mentionFollowing: Record<string, boolean>
+  mentionFollowsViewer?: Record<string, boolean>
   linkPreviews: Record<string, LinkPreview>
 }
 
@@ -41,10 +42,12 @@ export type ParentPost = Pick<PostRow,
   note_count?: number
   profile_stats?: UserProfileStats
   viewer_following?: boolean
+  follows_viewer?: boolean
   mention_bios?: Record<string, string>
   mention_note_counts?: Record<string, number>
   mention_profile_stats?: Record<string, UserProfileStats>
   mention_following?: Record<string, boolean>
+  mention_follows_viewer?: Record<string, boolean>
   hashtag_counts?: Record<string, number>
   hashtag_follower_counts?: Record<string, number>
   hashtag_following?: Record<string, boolean>
@@ -59,10 +62,12 @@ export type PostView = PostRow & {
   note_count?: number
   profile_stats?: UserProfileStats
   viewer_following?: boolean
+  follows_viewer?: boolean
   mention_bios?: Record<string, string>
   mention_note_counts?: Record<string, number>
   mention_profile_stats?: Record<string, UserProfileStats>
   mention_following?: Record<string, boolean>
+  mention_follows_viewer?: Record<string, boolean>
   hashtag_counts?: Record<string, number>
   hashtag_follower_counts?: Record<string, number>
   hashtag_following?: Record<string, boolean>
@@ -96,6 +101,7 @@ export type ExploreData = {
 }
 export type TagPageData = {
   following: boolean
+  followsViewer: boolean
   blocked: boolean
   posts: PostView[]
   total: number
@@ -121,6 +127,8 @@ export type PersonalizedTimelineRow = PostView & {
   renderedPost?: PostView
   actorProfileStats?: UserProfileStats
   targetProfileStats?: UserProfileStats
+  actorFollowsViewer?: boolean
+  targetFollowsViewer?: boolean
   tagFollowerCount?: number
 }
 export type PersonalizedFeedData = {
@@ -157,6 +165,7 @@ export type ProfileOverviewData = {
   noteCount: number
   replyCount: number
   following: boolean
+  followsViewer: boolean
   blocked: boolean
   blockedByProfile: boolean
   followerCount: number
@@ -241,6 +250,7 @@ export type PersonView = ProfileRow & {
   posts: number
   following?: boolean
   viewerFollowing?: boolean
+  followsViewer?: boolean
   profileStats?: UserProfileStats
 }
 
