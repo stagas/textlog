@@ -222,7 +222,7 @@ export type DatabaseDomainOperations = {
   'profiles.resolve': { input: { handle: string }; output: { id: number; handle: string; alias: boolean } | null }
   'profiles.ogData': { input: { handle: string }; output: { canonicalHandle?: string; profile?: {
     handle: string; bio: string; notes: number; following: number; followingTags: number; followers: number } } | null }
-  'feeds.aboutHotPosts': { input: Record<string, never>; output: PostView[] }
+  'feeds.aboutTopPosts': { input: Record<string, never>; output: PostView[] }
   'feeds.latestPage': { input: { viewerId: number; page: number; pageSize: PageSizeChoice }; output: PostFeedPage }
   'feeds.hotPage': { input: { viewerId: number; page: number; pageSize: PageSizeChoice }; output: PostFeedPage }
   'feeds.personalizedPage': { input: { user: User; page: number; pageSize: PageSizeChoice; toMe: boolean;

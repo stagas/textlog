@@ -173,7 +173,7 @@ export function registerFeedsRoutes(app: Hono) {
   app.get('/', async c => {
     const user = currentUser(c.req.raw)
     if (!user) return await rpcMaterializedFeedPage(c.req.raw, 'about', -1, async () =>
-      page(<About user={null} hotPosts={await databaseService().call('feeds.aboutHotPosts', {})} />))
+      page(<About user={null} topPosts={await databaseService().call('feeds.aboutTopPosts', {})} />))
     const preferredFeed = feedPreference(c.req.raw)
     const path = preferredFeed === 'latest' ? '/latest'
       : preferredFeed === 'hot' ? '/hot' : '/for-you'
@@ -354,9 +354,9 @@ export function registerFeedsRoutes(app: Hono) {
 
   app.get('/about', async c => {
     const user = currentUser(c.req.raw)
-    if (user) return page(<About user={user} hotPosts={[]} />)
+    if (user) return page(<About user={user} topPosts={[]} />)
     return await rpcMaterializedFeedPage(c.req.raw, 'about', -1, async () =>
-      page(<About user={null} hotPosts={await databaseService().call('feeds.aboutHotPosts', {})} />))
+      page(<About user={null} topPosts={await databaseService().call('feeds.aboutTopPosts', {})} />))
   })
   app.get('/contact', c => page(<Contact user={currentUser(c.req.raw)} />))
   app.get('/dmca', c => page(<Dmca user={currentUser(c.req.raw)} />))

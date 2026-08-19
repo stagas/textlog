@@ -55,6 +55,23 @@ function attachTagStats(database: Database, tags: import('./types').TagView[], v
   return tags.map(tag => ({ ...tag, followerCount: counts[tag.tag] || 0 }))
 }
 
+function recapPosts(database: Database, viewerId: number) {
+  if (!RECAP_POPULAR_NOTE_IDS.length) return []
+  const placeholders = RECAP_POPULAR_NOTE_IDS.map(() => '?').join(',')
+  const visibility = viewerId < 0 ? '' : `AND NOT EXISTS (SELECT 1 FROM blocks b WHERE
+    (b.blocker_id=? AND b.blocked_id=p.user_id) OR (b.blocker_id=p.user_id AND b.blocked_id=?))
+    AND NOT EXISTS (SELECT 1 FROM post_hashtags ph JOIN blocked_hashtags bh ON bh.tag=ph.tag
+      WHERE ph.post_id=p.id AND bh.user_id=?)`
+  const parameters = viewerId < 0 ? [...RECAP_POPULAR_NOTE_IDS]
+    : [...RECAP_POPULAR_NOTE_IDS, viewerId, viewerId, viewerId]
+  const rows = database.query(`SELECT p.*,u.handle FROM posts p JOIN users u ON u.id=p.user_id
+    WHERE p.id IN (${placeholders}) AND p.deleted_at IS NULL AND u.deleted_at IS NULL
+      AND u.suspended_at IS NULL ${visibility}`).all(...parameters) as PostView[]
+  const byId = new Map(rows.map(post => [post.id, post]))
+  return enrichPosts(database,
+    RECAP_POPULAR_NOTE_IDS.flatMap(id => byId.has(id) ? [byId.get(id)!] : []), viewerId)
+}
+
 function removePreviewRecords(database: Database, userId: number, postId?: number) {
   const keys: string[] = []
   if (database.query("SELECT 1 FROM sqlite_master WHERE type='table' AND name='post_link_previews'").get()) {
@@ -163,21 +180,7 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
     }
     case 'blog.recapPosts': {
       const { viewerId } = input as DatabaseDomainInput<'blog.recapPosts'>
-      if (!RECAP_POPULAR_NOTE_IDS.length) return [] as DatabaseDomainOutput<K>
-      const placeholders = RECAP_POPULAR_NOTE_IDS.map(() => '?').join(',')
-      const visibility = viewerId < 0 ? '' : `AND NOT EXISTS (SELECT 1 FROM blocks b WHERE
-        (b.blocker_id=? AND b.blocked_id=p.user_id) OR (b.blocker_id=p.user_id AND b.blocked_id=?))
-        AND NOT EXISTS (SELECT 1 FROM post_hashtags ph JOIN blocked_hashtags bh ON bh.tag=ph.tag
-          WHERE ph.post_id=p.id AND bh.user_id=?)`
-      const parameters = viewerId < 0 ? [...RECAP_POPULAR_NOTE_IDS]
-        : [...RECAP_POPULAR_NOTE_IDS, viewerId, viewerId, viewerId]
-      const rows = database.query(`SELECT p.*,u.handle FROM posts p JOIN users u ON u.id=p.user_id
-        WHERE p.id IN (${placeholders}) AND p.deleted_at IS NULL AND u.deleted_at IS NULL
-          AND u.suspended_at IS NULL ${visibility}`).all(...parameters) as PostView[]
-      const byId = new Map(rows.map(post => [post.id, post]))
-      return enrichPosts(database,
-        RECAP_POPULAR_NOTE_IDS.flatMap(id => byId.has(id) ? [byId.get(id)!] : []), viewerId,
-      ) as DatabaseDomainOutput<K>
+      return recapPosts(database, viewerId) as DatabaseDomainOutput<K>
     }
     case 'system.consumeAuthAttempt': {
       const { scope, identity, attempts, windowSeconds, now } = input as DatabaseDomainInput<'system.consumeAuthAttempt'>
@@ -1536,9 +1539,8 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
         followers: number } | null
       return (profile ? { profile } : null) as DatabaseDomainOutput<K>
     }
-    case 'feeds.aboutHotPosts': {
-      const result = enrichPosts(database, getHotPosts(database, 5, null, new Date(), -1, true), -1)
-      return result as DatabaseDomainOutput<K>
+    case 'feeds.aboutTopPosts': {
+      return recapPosts(database, -1) as DatabaseDomainOutput<K>
     }
     case 'feeds.latestPage': {
       const { viewerId, page, pageSize } = input as DatabaseDomainInput<'feeds.latestPage'>

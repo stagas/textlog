@@ -6,7 +6,7 @@ import { Layout } from './layout'
 import { ActionPair } from './page-shared'
 import { Post } from './post'
 
-export function About({ user, hotPosts = [] }: { user: User | null; hotPosts?: PostView[] }) {
+export function About({ user, topPosts = [] }: { user: User | null; topPosts?: PostView[] }) {
   const name = appName()
   return (
     <Layout user={user} title="about">
@@ -54,11 +54,11 @@ export function About({ user, hotPosts = [] }: { user: User | null; hotPosts?: P
           </>
         )}
       </article>
-      {!user && (hotPosts.length
-        ? hotPosts.map(post => (
+      {!user && (topPosts.length
+        ? topPosts.map(post => (
           <Post key={post.id} p={post} user={null} showReplyCount tappable returnPath={`/#post-${post.id}`} />
         ))
-        : <div className="empty">No hot notes yet.</div>)}
+        : <div className="empty">No featured notes yet.</div>)}
       {!user && (
         <div className="about-hot-more">
           <a className="button" href="/hot">browse more</a>
