@@ -1,7 +1,7 @@
 import { Fragment } from 'react'
 import { extractHashtags, extractMentions } from '../content'
 import type { BioReferenceData, PostView, ProfileRow, User } from '../types'
-import { displayBio, linkify, referenceFormId } from '../utils'
+import { displayBio, fmt, fmtDate, linkify, referenceFormId } from '../utils'
 import { Layout } from './layout'
 import { FormMessage, Pagination, PostingHelp, PostingSuggestionResults, type PostingSuggestionSearch, ProfileControls,
   ProfileHeader, ProfileTabs } from './page-shared'
@@ -77,7 +77,12 @@ export function Profile(
                 <span className="identity-prefix">@</span>
                 {profile.handle}
               </a>
-              {user?.id === profile.id && <span className="profile-user-id">#{profile.id}</span>}
+              {user?.id === profile.id && (
+                <span className="profile-user-details" title="Only visible to you">
+                  <span>User ID: {profile.id}</span>
+                  {profile.created_at && <span>Since: {fmtDate(profile.created_at)}, {fmt(profile.created_at)} ago</span>}
+                </span>
+              )}
             </h1>
             {editing && <a className="profile-edit-link profile-switch-link" href="/account/accounts">switch</a>}
             {!editing && user?.id !== profile.id

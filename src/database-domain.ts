@@ -782,7 +782,7 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
     case 'profiles.overview': {
       const { profileId, viewerId } = input as DatabaseDomainInput<'profiles.overview'>
       const profile = database.query(
-        'SELECT id,handle,email,bio,suspended_at,deleted_at FROM users WHERE id=? AND deleted_at IS NULL',
+        'SELECT id,handle,email,bio,created_at,suspended_at,deleted_at FROM users WHERE id=? AND deleted_at IS NULL',
       ).get(profileId) as import('./types').ProfileRow | null
       if (!profile) return null as DatabaseDomainOutput<K>
       const postCounts = database.query(`SELECT

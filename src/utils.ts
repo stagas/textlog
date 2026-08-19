@@ -157,6 +157,10 @@ export function fmt(d: string, now = Date.now()) {
   if (months < 12) return `${months}mo`
   return `${Math.floor(days / 365)}y`
 }
+export const fmtDate = (d: string) => timestamp(d).toLocaleDateString('en', {
+  dateStyle: 'medium',
+  timeZone: activeTimezone(),
+})
 export const fmtFull = (d: string) => {
   const timeZone = activeTimezone()
   const date = timestamp(d)

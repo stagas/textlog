@@ -1165,7 +1165,7 @@ test('Profile edit offers a data download without rendering notes', () => {
 })
 
 test('Profile places owner actions in the handle row', () => {
-  const user = { id: 1, handle: 'reader', email: 'reader@example.com', bio: '' }
+  const user = { id: 1, handle: 'reader', email: 'reader@example.com', bio: '', created_at: '2026-08-03 12:00:00' }
   const html = renderToStaticMarkup(React.createElement(Profile, {
     user,
     profile: user,
@@ -1177,8 +1177,10 @@ test('Profile places owner actions in the handle row', () => {
   expect(html).toContain('class="profile-title-row"')
   expect(html).toContain(
     'class="profile-canonical-link" href="/u/reader"><span class="identity-prefix">@</span>reader</a>'
-      + '<span class="profile-user-id">#1</span>',
+      + '<span class="profile-user-details" title="Only visible to you"><span>User ID: 1</span>'
+      + '<span>Since: Aug 3, 2026, ',
   )
+  expect(html).toContain(' ago</span></span>')
   expect(html).not.toContain('class="profile-canonical-link" href="/u/reader?from=')
   expect(html).toContain('href="/account/edit">account</a>')
   expect(html).toContain('href="/latest#post-2">back</a>')
@@ -1208,7 +1210,7 @@ test('Profile places a contextual back link in the handle row', () => {
   expect(html).toContain('class="profile-action profile-handle-actions"')
   expect(html).toContain('class="profile-action profile-back-action"')
   expect(html).toContain('href="/latest#post-2">back</a>')
-  expect(html).not.toContain('class="profile-user-id"')
+  expect(html).not.toContain('class="profile-user-details"')
   expect(html.indexOf('aria-label="follow @writer"')).toBeLessThan(html.indexOf('href="/latest#post-2">back</a>'))
   expect(html).toContain('href="/u/writer?from=%2Flatest%23post-2">0 notes</a>')
   expect(html).toContain('href="/u/writer?tab=replies&amp;from=%2Flatest%23post-2">0 replies</a>')

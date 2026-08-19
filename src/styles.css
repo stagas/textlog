@@ -3119,8 +3119,10 @@ form.report-panel {
   flex: 0 1 auto;
 }
 
-.profile-user-id {
+.profile-user-details {
+  display: flex;
   flex: none;
+  flex-direction: column;
   color: var(--quote-ink);
   font-size: 0.6875rem;
   font-weight: 400;

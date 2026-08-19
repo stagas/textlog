@@ -140,6 +140,7 @@ export type ProfileRow = {
   handle: string
   email: string
   bio: string
+  created_at?: string
   bio_link_previews?: Record<string, LinkPreview>
   suspended_at?: string | null
   deleted_at?: string | null
