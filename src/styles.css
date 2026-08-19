@@ -4552,7 +4552,7 @@ form.report-panel {
 }
 
 .activity-more > summary {
-  padding: var(--space-1) var(--gutter) var(--space-3);
+  padding: var(--space-1) var(--gutter) var(--space-5);
   border-top: 0;
   color: var(--accent);
   font-size: 0.75rem;
