@@ -49,7 +49,9 @@ export function NotificationSettings({ user, publicKey, ios = false, returnPath 
                   <small>Everything in /latest</small>
                 </span>
                 <input type="checkbox" name="latest" defaultChecked />
-                <span className="notification-toggle-track" aria-hidden="true"><span /></span>
+                <span className="notification-toggle-track" aria-hidden="true">
+                  <span />
+                </span>
               </label>
               <label className="notification-toggle notification-toggle-parent">
                 <span>
@@ -57,7 +59,9 @@ export function NotificationSettings({ user, publicKey, ios = false, returnPath 
                   <small>Followed activity, replies, mentions, and new followers</small>
                 </span>
                 <input type="checkbox" name="forYou" defaultChecked />
-                <span className="notification-toggle-track" aria-hidden="true"><span /></span>
+                <span className="notification-toggle-track" aria-hidden="true">
+                  <span />
+                </span>
               </label>
               <label className="notification-toggle notification-toggle-dependent notification-toggle-group-end">
                 <span>
@@ -65,7 +69,9 @@ export function NotificationSettings({ user, publicKey, ios = false, returnPath 
                   <small>Only notes addressed to me</small>
                 </span>
                 <input type="checkbox" name="onlyToMe" defaultChecked />
-                <span className="notification-toggle-track" aria-hidden="true"><span /></span>
+                <span className="notification-toggle-track" aria-hidden="true">
+                  <span />
+                </span>
               </label>
               <label className="notification-toggle notification-toggle-group-end">
                 <span>
@@ -73,7 +79,9 @@ export function NotificationSettings({ user, publicKey, ios = false, returnPath 
                   <small>Include notifications from bot accounts</small>
                 </span>
                 <input type="checkbox" name="bots" />
-                <span className="notification-toggle-track" aria-hidden="true"><span /></span>
+                <span className="notification-toggle-track" aria-hidden="true">
+                  <span />
+                </span>
               </label>
             </fieldset>
             {[

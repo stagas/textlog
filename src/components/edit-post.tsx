@@ -46,7 +46,9 @@ export function EditPost(
             </div>
           } secondary={
           <span className="edit-post-actions">
-            <a className="secondary-action cancel-action edit-post-cancel" href={'/post/' + post.id + returnQuery}>cancel</a>
+            <a className="secondary-action cancel-action edit-post-cancel" href={'/post/' + post.id + returnQuery}>
+              cancel
+            </a>
           </span>
         } primary={
           <span className="edit-post-primary-actions">

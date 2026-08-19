@@ -2,11 +2,11 @@ import { Database } from 'bun:sqlite'
 import { describe, expect, test } from 'bun:test'
 import { Hono } from 'hono'
 import { publishPost } from './api-broker'
+import { executeDatabaseDomain } from './database-domain'
+import type { DatabaseService } from './database-service'
 import { rebuildHotPosts } from './hot'
 import { registerApiRoutes } from './routes/api'
 import { sessionHash } from './sessions'
-import { executeDatabaseDomain } from './database-domain'
-import type { DatabaseService } from './database-service'
 import { apiUser } from './utils'
 
 function fixture(now?: () => number) {
@@ -111,11 +111,12 @@ describe('public API', () => {
 
   test('excludes bot posts from the latest feed', async () => {
     const { app, database } = fixture()
-    database.run("UPDATE users SET is_bot=1 WHERE id=2")
+    database.run('UPDATE users SET is_bot=1 WHERE id=2')
 
     const first = await (await request(app, '/api/v1/feeds/latest?limit=1')).json() as any
-    const second = await (await request(app,
-      `/api/v1/feeds/latest?limit=1&cursor=${encodeURIComponent(first.pagination.next_cursor)}`)).json() as any
+    const second =
+      await (await request(app,
+        `/api/v1/feeds/latest?limit=1&cursor=${encodeURIComponent(first.pagination.next_cursor)}`)).json() as any
 
     expect(first.data.map((post: any) => post.id)).toEqual([3])
     expect(second.data.map((post: any) => post.id)).toEqual([1])
@@ -155,15 +156,19 @@ describe('public API', () => {
     expect(forYou.has_unread).toBe(true)
     expect(toMe.has_unread).toBe(true)
     const firstPage = await (await request(app, '/api/v1/activities/for-you?limit=2', { headers })).json() as any
-    const secondPage = await (await request(app,
-      `/api/v1/activities/for-you?limit=2&cursor=${encodeURIComponent(firstPage.pagination.next_cursor)}`,
-      { headers })).json() as any
+    const secondPage =
+      await (await request(app,
+        `/api/v1/activities/for-you?limit=2&cursor=${encodeURIComponent(firstPage.pagination.next_cursor)}`, {
+        headers,
+      })).json() as any
     expect(firstPage.data.map((activity: any) => activity.type)).toEqual(['tag_follow', 'user_follow'])
     expect(secondPage.data.map((activity: any) => activity.payload.id)).toEqual([7, 6])
     expect((await request(app, '/api/v1/activities/for-you?cursor=broken', { headers })).status).toBe(400)
 
     const selectedRead = await request(app, '/api/v1/activities/for-you/read', { method: 'POST', headers: {
-      ...headers, 'content-type': 'application/json' }, body: JSON.stringify({ activity_ids: [forYou.data[0].id] }) })
+      ...headers,
+      'content-type': 'application/json',
+    }, body: JSON.stringify({ activity_ids: [forYou.data[0].id] }) })
     expect(selectedRead.status).toBe(200)
     expect(selectedRead.headers.get('cache-control')).toBe('no-store')
     expect(await selectedRead.json()).toEqual({ data: { read: 1 } })
@@ -180,7 +185,9 @@ describe('public API', () => {
 
     const reply = toMe.data.find((activity: any) => activity.type === 'reply')
     expect((await request(app, '/api/v1/activities/to-me/read', { method: 'POST', headers: {
-      ...headers, 'content-type': 'application/json' }, body: JSON.stringify({ activity_ids: [reply.id] }) })).status)
+      ...headers,
+      'content-type': 'application/json',
+    }, body: JSON.stringify({ activity_ids: [reply.id] }) })).status)
       .toBe(200)
     expect((await request(app, '/api/v1/activities/to-me/read-all', { method: 'POST', headers })).status).toBe(200)
     const afterToMeReadAll = await (await request(app, '/api/v1/activities/to-me', { headers })).json() as any
@@ -271,16 +278,17 @@ describe('public API', () => {
     const followers = await (await request(app, '/api/v1/users/alice/followers')).json() as any
     const tagFollowers = await (await request(app, '/api/v1/tags/textlog/followers')).json() as any
     const firstTags = await (await request(app, '/api/v1/users/alice/following/tags?limit=1')).json() as any
-    const secondTags = await (await request(app,
-      `/api/v1/users/alice/following/tags?limit=1&cursor=${encodeURIComponent(firstTags.pagination.next_cursor)}`))
-      .json() as any
+    const secondTags =
+      await (await request(app,
+        `/api/v1/users/alice/following/tags?limit=1&cursor=${encodeURIComponent(firstTags.pagination.next_cursor)}`))
+        .json() as any
 
     expect(following.data.map((item: any) => item.handle)).toEqual(['dana', 'bob'])
     expect(followers.data.map((item: any) => item.handle)).toEqual(['dana', 'bob'])
     expect(tagFollowers.data.map((item: any) => item.handle)).toEqual(['dana', 'bob', 'alice'])
     expect([...firstTags.data, ...secondTags.data].map((item: any) => item.tag)).toEqual(['quiet', 'textlog'])
-    expect(firstTags.data[0]).toMatchObject({ follower_count: 1, post_count: 0,
-      url: 'https://textlog.cc/tag/quiet', api_url: 'https://textlog.cc/api/v1/tags/quiet' })
+    expect(firstTags.data[0]).toMatchObject({ follower_count: 1, post_count: 0, url: 'https://textlog.cc/tag/quiet',
+      api_url: 'https://textlog.cc/api/v1/tags/quiet' })
     const user = await (await request(app, '/api/v1/users/alice')).json() as any
     const tag = await (await request(app, '/api/v1/tags/textlog')).json() as any
     expect(user.data).toMatchObject({ following_user_count: 2, following_tag_count: 2, follower_count: 2 })
@@ -316,8 +324,11 @@ describe('public API', () => {
       (7,2,6,'deep reply','2026-08-03 14:40:00')`)
 
     const shallow = await (await request(app, '/api/v1/posts/1/replies')).json() as any
-    expect(shallow.data.map((item: any) => ({ id: item.id, parent_id: item.parent_id, depth: item.depth,
-      reply_count: item.reply_count })))
+    expect(
+      shallow.data.map((item: any) => ({ id: item.id, parent_id: item.parent_id, depth: item.depth,
+        reply_count: item.reply_count })
+      ),
+    )
       .toEqual([{ id: 2, parent_id: 1, depth: 1, reply_count: 2 }])
     expect(shallow.truncated).toBeUndefined()
 
@@ -362,7 +373,7 @@ describe('public API', () => {
     expect(spec.components.schemas.Tag.required).toContain('follower_count')
     expect(spec.components.schemas.Activity.properties.type.enum).toContain('user_follow')
     expect(spec.paths['/users/{handle}/posts'].get.deprecated).toBe(true)
-    expect(spec.paths['/users/{handle}/notes'].get.summary).toBe("User's latest notes")
+    expect(spec.paths['/users/{handle}/notes'].get.summary).toBe('User\'s latest notes')
     expect(spec.paths['/users/{handle}/replies'].get.parameters.map((parameter: any) => parameter.name))
       .toEqual(['handle', 'limit', 'cursor'])
     expect(spec.paths['/search'].get.security).toEqual([])

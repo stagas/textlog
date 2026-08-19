@@ -9,10 +9,10 @@ import { renderToStaticMarkup } from 'react-dom/server'
 import { isAdmin } from '../admin'
 import { clientIpHeaderName } from '../brand'
 import { AccountSecurity, ErrorPage } from '../components/pages'
+import { databaseService } from '../database-service'
 import { sendEmailVerification } from '../email'
 import { rateLimitMessage } from '../request-rate-limit'
 import { sessionHash } from '../sessions'
-import { databaseService } from '../database-service'
 
 export function page(node: React.ReactNode, status = 200) {
   return new Response('<!doctype html>' + renderToStaticMarkup(node), { status,
@@ -68,7 +68,11 @@ export function authLimit(c: Context, scope: string, identity: string,
   policy: { attempts: number; windowSeconds: number })
 {
   return databaseService().call('system.consumeAuthAttempt', {
-    scope, identity, attempts: policy.attempts, windowSeconds: policy.windowSeconds, now: Date.now(),
+    scope,
+    identity,
+    attempts: policy.attempts,
+    windowSeconds: policy.windowSeconds,
+    now: Date.now(),
   })
 }
 export function retryPage(response: Response, retryAfter: number) {
@@ -85,7 +89,11 @@ export async function issueEmailToken(userId: number, email: string, kind: 'chan
   const value = token()
   const tokenHash = hash(value)
   await databaseService().call('account.storeEmailToken', {
-    tokenHash, userId, kind, email, expiresAt: Date.now() + 3600000,
+    tokenHash,
+    userId,
+    kind,
+    email,
+    expiresAt: Date.now() + 3600000,
   })
   try {
     await sendEmailVerification(email, `${appUrl}/verify-email?token=${encodeURIComponent(value)}`, kind === 'change')
@@ -106,8 +114,13 @@ export async function issueMagicLink(email: string, userId: number | null, nextP
   const now = Date.now()
   const tokenHash = hash(value)
   await databaseService().call('auth.storeMagicLink', {
-    tokenHash, codeHash: hash(code), email, userId, nextPath: safeLocalPath(nextPath),
-    expiresAt: now + lifetimeMs, now,
+    tokenHash,
+    codeHash: hash(code),
+    email,
+    userId,
+    nextPath: safeLocalPath(nextPath),
+    expiresAt: now + lifetimeMs,
+    now,
   })
   return { url: `${origin.replace(/\/$/, '')}/enter/magic?token=${encodeURIComponent(value)}`, code, tokenHash }
 }
@@ -115,7 +128,9 @@ export async function securityPage(req: Request, error?: string, success?: strin
   const user = currentUser(req)
   if (!user) return redirect('/enter?next=' + encodeURIComponent('/account/security'))
   const data = await databaseService().call('account.securityData', {
-    userId: user.id, currentSessionHash: sessionHash(sessionToken(req)), now: Date.now(),
+    userId: user.id,
+    currentSessionHash: sessionHash(sessionToken(req)),
+    now: Date.now(),
   })
   return page(
     <AccountSecurity user={user} sessions={data.sessions} apiKeys={data.apiKeys} feedKeys={data.feedKeys}

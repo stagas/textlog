@@ -130,7 +130,8 @@ function serializePostsWithParents(database: Database, rows: ApiPostRow[], origi
     parentsById = new Map(parents.map(parent => [parent.id, parent]))
   }
   return rows.map(row => ({ ...serializePost(row, origin),
-    parent: row.parent_id === null ? null : parentsById.get(row.parent_id) || null }))
+    parent: row.parent_id === null ? null : parentsById.get(row.parent_id) || null })
+  )
 }
 
 export function apiPost(database: Database, id: number, origin: string) {

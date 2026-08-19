@@ -3,21 +3,19 @@ import React from 'react'
 import { apiOrigin } from '../api'
 import { appName } from '../brand'
 import { PersonalizedFeedLanding } from '../components/personalized-feed-landing'
+import { type DatabaseService, databaseService } from '../database-service'
 import { type SyndicationFormat, syndicationResponse } from '../syndication'
-import { page } from './shared'
 import { currentUser } from '../utils'
-import { databaseService, type DatabaseService } from '../database-service'
+import { page } from './shared'
 
-function feedResponse(c: Context, format: SyndicationFormat, appUrl: string | null | undefined,
-  details: {
-    title: string
-    description: string
-    pagePath: string
-    feedPath?: string
-    posts: import('../types').ApiPost[]
-    omitAuthorInTitles?: boolean
-  })
-{
+function feedResponse(c: Context, format: SyndicationFormat, appUrl: string | null | undefined, details: {
+  title: string
+  description: string
+  pagePath: string
+  feedPath?: string
+  posts: import('../types').ApiPost[]
+  omitAuthorInTitles?: boolean
+}) {
   const origin = apiOrigin(c.req.url, appUrl)
   return syndicationResponse(format, {
     ...details,

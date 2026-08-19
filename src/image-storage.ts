@@ -64,7 +64,9 @@ export async function uploadImage(key: string, data: Uint8Array, contentType: Im
   const startedAt = performance.now()
   const backend = usesLocalImageStorage() ? 'local' : 'r2'
   const bucket = backend === 'r2' ? configuredBucket() : undefined
-  const context = `image storage upload backend=${backend}${bucket ? ` bucket=${bucket}` : ''} key=${checked} bytes=${data.byteLength} content_type=${contentType}`
+  const context = `image storage upload backend=${backend}${
+    bucket ? ` bucket=${bucket}` : ''
+  } key=${checked} bytes=${data.byteLength} content_type=${contentType}`
   logInfo(`${context} status=started`)
   try {
     if (backend === 'local') {
@@ -195,7 +197,8 @@ export function imageDimensions(data: Uint8Array, contentType: ImageContentType)
       height = 1 + (data[22] >> 6) + (data[23] << 2) + ((data[24] & 0x0f) << 10)
     }
     else if (matches(data, [0x56, 0x50, 0x38, 0x20], 12) && data.length >= 30
-      && matches(data, [0x9d, 0x01, 0x2a], 23)) {
+      && matches(data, [0x9d, 0x01, 0x2a], 23))
+    {
       width = uint16Le(data, 26) & 0x3fff
       height = uint16Le(data, 28) & 0x3fff
     }
@@ -210,7 +213,8 @@ export function imageDimensions(data: Uint8Array, contentType: ImageContentType)
       const length = uint16Be(data, offset)
       if (length < 2 || offset + length > data.length) break
       if ((marker >= 0xc0 && marker <= 0xc3) || (marker >= 0xc5 && marker <= 0xc7)
-        || (marker >= 0xc9 && marker <= 0xcb) || (marker >= 0xcd && marker <= 0xcf)) {
+        || (marker >= 0xc9 && marker <= 0xcb) || (marker >= 0xcd && marker <= 0xcf))
+      {
         height = uint16Be(data, offset + 3)
         width = uint16Be(data, offset + 5)
         break

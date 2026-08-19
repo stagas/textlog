@@ -2,8 +2,8 @@ import { Database } from 'bun:sqlite'
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test'
 import webpush from 'web-push'
 import { runMigrations } from './migrations'
-import { flushPendingFollowActivityPushes, sendPushForFollow, sendPushForPost, sendPushForSignup,
-  sendPushForTagFollow, sendPushForUserFollow, sendPushToUser } from './push'
+import { flushPendingFollowActivityPushes, sendPushForFollow, sendPushForPost, sendPushForSignup, sendPushForTagFollow,
+  sendPushForUserFollow, sendPushToUser } from './push'
 
 let originalSend: typeof webpush.sendNotification
 let vapid: ReturnType<typeof webpush.generateVAPIDKeys> & { subject: string }

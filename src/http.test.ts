@@ -107,7 +107,6 @@ describe('local redirects', () => {
       headers: { 'user-agent': 'facebookexternalhit/1.1' },
     }))).toBeNull()
   })
-
 })
 
 describe('request values and cookies', () => {
@@ -196,7 +195,7 @@ describe('security headers', () => {
   test('disables scripts in production and only permits the inline development reloader in development', () => {
     expect(securityHeaders()['Content-Security-Policy']).toContain('script-src \'none\'')
     expect(securityHeaders()['Content-Security-Policy']).toContain('style-src \'self\' \'unsafe-inline\'')
-    expect(securityHeaders()['Content-Security-Policy']).toContain("img-src 'self' data: https:")
+    expect(securityHeaders()['Content-Security-Policy']).toContain('img-src \'self\' data: https:')
     expect(securityHeaders(true)['Content-Security-Policy']).toContain('script-src \'self\' \'unsafe-inline\'')
     expect(securityHeaders()['X-Frame-Options']).toBe('DENY')
     expect(securityHeaders(false, undefined, true)['X-Frame-Options']).toBeUndefined()

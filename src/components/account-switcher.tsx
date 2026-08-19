@@ -3,8 +3,8 @@ import type { User } from '../types'
 import { AccountSettingsHeader } from './account-settings-header'
 import { maskEmail } from './email-address'
 import { Layout } from './layout'
-import { Panel } from './panel'
 import { FormMessage } from './page-shared'
+import { Panel } from './panel'
 
 export function AccountSwitcher({ user, accounts, error }: { user: User; accounts: AccountChoice[]; error?: string }) {
   return (
@@ -12,7 +12,8 @@ export function AccountSwitcher({ user, accounts, error }: { user: User; account
       <Panel as="section" width="fluid" className="account-switcher-page">
         <AccountSettingsHeader title="accounts" />
         <p className="account-switcher-intro">
-          Each account has its own profile, notes, connections, settings, and API keys. They share {maskEmail(user.email)}.
+          Each account has its own profile, notes, connections, settings, and API keys. They share{' '}
+          {maskEmail(user.email)}.
         </p>
         <FormMessage error={error} />
         <div className="account-choice-list" role="list">

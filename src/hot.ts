@@ -261,7 +261,9 @@ export function rebuildHotPosts(database: Database, postIds?: number[]) {
     : 'UPDATE post_hot SET score=?,score_updated_at=?,latest_activity_at=? WHERE post_id=?')
   for (const candidate of candidates) {
     const events = activity.all(candidate.id, candidate.id, candidate.id, candidate.id) as {
-      created_at: string; weight: number; boosts_recency: number
+      created_at: string
+      weight: number
+      boosts_recency: number
     }[]
     if (!events.length) {
       if (tracksReplyCount && tracksActivityCount) {

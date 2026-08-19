@@ -868,8 +868,7 @@ export const migrations: Migration[] = [
     version: 62,
     name: 'moderator_managed_bots',
     up(database) {
-      addColumn(database, 'users', 'bot_managed',
-        'INTEGER NOT NULL DEFAULT 0 CHECK(bot_managed IN (0,1))')
+      addColumn(database, 'users', 'bot_managed', 'INTEGER NOT NULL DEFAULT 0 CHECK(bot_managed IN (0,1))')
       database.run(`CREATE TABLE admin_actions_new (
         id INTEGER PRIMARY KEY AUTOINCREMENT,actor_id INTEGER NOT NULL REFERENCES users(id),
         action TEXT NOT NULL CHECK(action IN ('delete_post','suspend_user','restore_user','delete_user',
@@ -900,7 +899,7 @@ export const migrations: Migration[] = [
     version: 65,
     name: 'bounded_feed_snapshots',
     up(database) {
-      if (!database.query("SELECT 1 FROM sqlite_master WHERE type='table' AND name='feed_snapshots'").get()) return
+      if (!database.query('SELECT 1 FROM sqlite_master WHERE type=\'table\' AND name=\'feed_snapshots\'').get()) return
       addColumn(database, 'feed_snapshots', 'last_accessed_at', 'TEXT')
       database.run(`UPDATE feed_snapshots SET last_accessed_at=created_at WHERE last_accessed_at IS NULL;
         DELETE FROM feed_snapshots WHERE last_accessed_at < datetime('now','-1 day');
@@ -948,7 +947,7 @@ export const migrations: Migration[] = [
     version: 70,
     name: 'external_feed_snapshot_cache',
     up(database) {
-      database.query("DELETE FROM feed_snapshots WHERE kind='latest' OR kind='hot' OR kind LIKE 'hot:%'").run()
+      database.query('DELETE FROM feed_snapshots WHERE kind=\'latest\' OR kind=\'hot\' OR kind LIKE \'hot:%\'').run()
     },
   },
   {
@@ -1056,7 +1055,7 @@ export const migrations: Migration[] = [
     version: 82,
     name: 'user_timezone',
     up(database) {
-      addColumn(database, 'users', 'timezone', "TEXT NOT NULL DEFAULT 'UTC'")
+      addColumn(database, 'users', 'timezone', 'TEXT NOT NULL DEFAULT \'UTC\'')
     },
   },
   {
@@ -1064,11 +1063,31 @@ export const migrations: Migration[] = [
     name: 'daylight_saving_timezones',
     up(database) {
       const zones = [
-        'Etc/GMT+12', 'Pacific/Pago_Pago', 'Pacific/Honolulu', 'America/Anchorage', 'America/Los_Angeles',
-        'America/Denver', 'America/Chicago', 'America/New_York', 'America/Halifax',
-        'America/Argentina/Buenos_Aires', 'America/Noronha', 'Atlantic/Cape_Verde', 'UTC', 'Europe/Paris',
-        'Europe/Athens', 'Europe/Istanbul', 'Asia/Dubai', 'Asia/Karachi', 'Asia/Dhaka', 'Asia/Bangkok',
-        'Asia/Singapore', 'Asia/Tokyo', 'Australia/Sydney', 'Pacific/Noumea', 'Pacific/Auckland',
+        'Etc/GMT+12',
+        'Pacific/Pago_Pago',
+        'Pacific/Honolulu',
+        'America/Anchorage',
+        'America/Los_Angeles',
+        'America/Denver',
+        'America/Chicago',
+        'America/New_York',
+        'America/Halifax',
+        'America/Argentina/Buenos_Aires',
+        'America/Noronha',
+        'Atlantic/Cape_Verde',
+        'UTC',
+        'Europe/Paris',
+        'Europe/Athens',
+        'Europe/Istanbul',
+        'Asia/Dubai',
+        'Asia/Karachi',
+        'Asia/Dhaka',
+        'Asia/Bangkok',
+        'Asia/Singapore',
+        'Asia/Tokyo',
+        'Australia/Sydney',
+        'Pacific/Noumea',
+        'Pacific/Auckland',
       ]
       const legacy = Array.from({ length: 25 }, (_, index) => {
         const offset = index - 12
@@ -1114,7 +1133,9 @@ export const migrations: Migration[] = [
     name: 'anonymous_visitor_activity',
     up(database) {
       addColumn(database, 'daily_visitors', 'anonymous_last_seen_at', 'INTEGER')
-      database.run('CREATE INDEX IF NOT EXISTS daily_visitors_anonymous_last_seen ON daily_visitors(anonymous_last_seen_at)')
+      database.run(
+        'CREATE INDEX IF NOT EXISTS daily_visitors_anonymous_last_seen ON daily_visitors(anonymous_last_seen_at)',
+      )
     },
   },
   {
@@ -1137,7 +1158,8 @@ export const migrations: Migration[] = [
     version: 90,
     name: 'user_link_preview_preference',
     up(database) {
-      addColumn(database, 'users', 'show_link_previews', 'INTEGER NOT NULL DEFAULT 1 CHECK(show_link_previews IN (0,1))')
+      addColumn(database, 'users', 'show_link_previews',
+        'INTEGER NOT NULL DEFAULT 1 CHECK(show_link_previews IN (0,1))')
     },
   },
   {
@@ -1217,7 +1239,7 @@ export const migrations: Migration[] = [
       database.run(`CREATE TABLE IF NOT EXISTS to_me_reads (
         user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,event_key TEXT NOT NULL,
         read_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,PRIMARY KEY(user_id,event_key));`)
-      if (database.query("SELECT 1 FROM sqlite_master WHERE type='table' AND name='for_you_reads'").get()) {
+      if (database.query('SELECT 1 FROM sqlite_master WHERE type=\'table\' AND name=\'for_you_reads\'').get()) {
         database.run(`INSERT OR IGNORE INTO to_me_reads(user_id,event_key,read_at)
           SELECT user_id,event_key,read_at FROM for_you_reads;`)
       }

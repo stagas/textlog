@@ -1,5 +1,5 @@
-import { isAdminEmail } from './admin'
 import type { Database } from 'bun:sqlite'
+import { isAdminEmail } from './admin'
 
 const visibleEvents = `
   SELECT 'post:' || printf('%020d',p.id) event_key FROM posts p
@@ -123,9 +123,7 @@ export function markForYouEntriesRead(userId: number, eventKeys: string[], toMe:
   )()
 }
 
-export function markVisibleForYouEntriesRead(userId: number, eventKeys: string[], toMe = false,
-  database: Database)
-{
+export function markVisibleForYouEntriesRead(userId: number, eventKeys: string[], toMe = false, database: Database) {
   if (!eventKeys.length) return 0
   const events = toMe ? visibleToMeEvents : visibleForYouEvents
   const placeholders = eventKeys.map((_, index) => `$event${index}`).join(',')
@@ -139,12 +137,14 @@ export function markVisibleForYouEntriesRead(userId: number, eventKeys: string[]
     : null
   const insertActivity = database.query(`INSERT OR IGNORE INTO activity_reads(user_id,event_key)
     VALUES(?,'post:' || CAST(? AS INTEGER))`)
-  database.transaction(() => visible.forEach(({ event_key: eventKey }) => {
-    insert.run(userId, eventKey)
-    insertToMe?.run(userId, eventKey)
-    const postId = eventKey.match(/^post:(\d+)$/)?.[1]
-    if (postId) insertActivity.run(userId, postId)
-  }))()
+  database.transaction(() =>
+    visible.forEach(({ event_key: eventKey }) => {
+      insert.run(userId, eventKey)
+      insertToMe?.run(userId, eventKey)
+      const postId = eventKey.match(/^post:(\d+)$/)?.[1]
+      if (postId) insertActivity.run(userId, postId)
+    })
+  )()
   return visible.length
 }
 
@@ -153,8 +153,10 @@ export function markAllForYouRead(userId: number, toMe: boolean, database: Datab
   database.transaction(() => {
     database.query(`INSERT OR IGNORE INTO for_you_reads(user_id,event_key)
       SELECT $viewer,event_key FROM (${events})`).run(stateParameters(userId, database))
-    if (toMe) database.query(`INSERT OR IGNORE INTO to_me_reads(user_id,event_key)
+    if (toMe) {
+      database.query(`INSERT OR IGNORE INTO to_me_reads(user_id,event_key)
       SELECT $viewer,event_key FROM (${visibleToMeEvents})`).run(stateParameters(userId, database))
+    }
     database.query(`INSERT OR IGNORE INTO activity_reads(user_id,event_key)
       SELECT user_id,'post:' || CAST(substr(event_key,6) AS INTEGER)
       FROM for_you_reads WHERE user_id=? AND event_key GLOB 'post:[0-9]*'`).run(userId)

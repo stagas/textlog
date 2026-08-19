@@ -1,8 +1,8 @@
-import type { MainToRuntimeMessage, RuntimeToMainMessage } from './runtime-worker-protocol'
-import { executeDatabaseDomain } from './database-domain'
-import { db } from './db'
 import { cacheDb } from './cache-db'
+import { executeDatabaseDomain } from './database-domain'
 import { configureDatabaseService } from './database-service'
+import { db } from './db'
+import type { MainToRuntimeMessage, RuntimeToMainMessage } from './runtime-worker-protocol'
 
 declare const self: Worker
 
@@ -42,8 +42,7 @@ async function drainQueue() {
     }
     catch (error) {
       const value = error instanceof Error ? error : new Error(String(error))
-      send({ type: 'error', id: message.id,
-        error: { name: value.name, message: value.message, stack: value.stack } })
+      send({ type: 'error', id: message.id, error: { name: value.name, message: value.message, stack: value.stack } })
     }
   }
   finally {

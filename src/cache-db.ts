@@ -1,6 +1,6 @@
 import { Database } from 'bun:sqlite'
-import { dirname, extname, join, basename } from 'node:path'
 import { mkdirSync } from 'node:fs'
+import { basename, dirname, extname, join } from 'node:path'
 
 function defaultCachePath() {
   if (Bun.env.CACHE_DATABASE_PATH) return Bun.env.CACHE_DATABASE_PATH

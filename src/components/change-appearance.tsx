@@ -1,8 +1,8 @@
-import type { User } from '../types'
 import { DENSITY_CHOICES, type DensityChoice, PAGE_SIZE_CHOICES, type PageSizeChoice } from '../request-preferences'
 import { ACCENT_CHOICES, type Appearance, FONT_CHOICES, FONT_SIZE_CHOICES, type FontChoice, type FontSizeChoice,
   PRIMARY_FONT_CHOICES, type PrimaryFontChoice, SANS_SERIF_FONT_CHOICES, type SansSerifFontChoice,
   THEME_CHOICES } from '../theme'
+import type { User } from '../types'
 import { AccountSettingsHeader } from './account-settings-header'
 import { Layout } from './layout'
 
@@ -10,11 +10,10 @@ export type AppearanceTab = 'theme' | 'font' | 'misc'
 
 export function ChangeAppearance(
   { user, selected, selectedFont, selectedSansSerifFont = 'system-sans', selectedPrimaryFont = 'monospace',
-    selectedSize = 'regular', selectedPageSize = 20, selectedDensity = 'regular',
-    selectedLinkPreviews = true, tab = 'theme', returnPath }: { user: User; selected: Appearance; selectedFont: FontChoice;
+    selectedSize = 'regular', selectedPageSize = 20, selectedDensity = 'regular', selectedLinkPreviews = true,
+    tab = 'theme', returnPath }: { user: User; selected: Appearance; selectedFont: FontChoice;
       selectedSansSerifFont?: SansSerifFontChoice; selectedPrimaryFont?: PrimaryFontChoice;
-      selectedSize?: FontSizeChoice;
-      tab?: AppearanceTab; selectedPageSize?: PageSizeChoice;
+      selectedSize?: FontSizeChoice; tab?: AppearanceTab; selectedPageSize?: PageSizeChoice;
       selectedDensity?: DensityChoice; selectedLinkPreviews?: boolean; returnPath?: string },
 ) {
   const fromQuery = returnPath ? `&from=${encodeURIComponent(returnPath)}` : ''

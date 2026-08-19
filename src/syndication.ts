@@ -43,9 +43,10 @@ function updated(posts: ApiPost[]) {
 }
 
 function feedUpdated(feed: SyndicationFeed) {
-  return (feed.activities || []).reduce((latest, activity) => activity.created_at > latest
-    ? activity.created_at
-    : latest, updated(feed.posts))
+  return (feed.activities || []).reduce((latest, activity) =>
+    activity.created_at > latest
+      ? activity.created_at
+      : latest, updated(feed.posts))
 }
 
 function feedContent(feed: SyndicationFeed, body: string) {
@@ -64,11 +65,13 @@ function feedContent(feed: SyndicationFeed, body: string) {
 
 function atom(feed: SyndicationFeed) {
   const postEntries = feed.posts.map(post => ({ id: post.url,
-    title: `${feed.postTitlePrefixes?.[post.id] || ''}${itemTitle(post, !!feed.omitAuthorInTitles)}`,
-    url: post.url, created_at: post.created_at, author: post.author, content: feedContent(feed, post.body),
-    permalink: true }))
-  const allEntries = [...postEntries, ...(feed.activities || []).map(activity => ({ ...activity,
-    content: `<p>${activity.title}</p>`, permalink: false }))].sort((a, b) => b.created_at.localeCompare(a.created_at))
+    title: `${feed.postTitlePrefixes?.[post.id] || ''}${itemTitle(post, !!feed.omitAuthorInTitles)}`, url: post.url,
+    created_at: post.created_at, author: post.author, content: feedContent(feed, post.body), permalink: true })
+  )
+  const allEntries = [...postEntries,
+    ...(feed.activities || []).map(activity => ({ ...activity, content: `<p>${activity.title}</p>`,
+      permalink: false })
+    )].sort((a, b) => b.created_at.localeCompare(a.created_at))
   const entries = allEntries.map(entry =>
     `  <entry>
     <title>${xml(entry.title)}</title>
@@ -94,11 +97,13 @@ ${entries}${entries ? '\n' : ''}</feed>
 
 function rss(feed: SyndicationFeed) {
   const postEntries = feed.posts.map(post => ({ id: post.url,
-    title: `${feed.postTitlePrefixes?.[post.id] || ''}${itemTitle(post, !!feed.omitAuthorInTitles)}`,
-    url: post.url, created_at: post.created_at, author: post.author, content: feedContent(feed, post.body),
-    permalink: true }))
-  const allEntries = [...postEntries, ...(feed.activities || []).map(activity => ({ ...activity,
-    content: `<p>${activity.title}</p>`, permalink: false }))].sort((a, b) => b.created_at.localeCompare(a.created_at))
+    title: `${feed.postTitlePrefixes?.[post.id] || ''}${itemTitle(post, !!feed.omitAuthorInTitles)}`, url: post.url,
+    created_at: post.created_at, author: post.author, content: feedContent(feed, post.body), permalink: true })
+  )
+  const allEntries = [...postEntries,
+    ...(feed.activities || []).map(activity => ({ ...activity, content: `<p>${activity.title}</p>`,
+      permalink: false })
+    )].sort((a, b) => b.created_at.localeCompare(a.created_at))
   const items = allEntries.map(entry =>
     `    <item>
       <title>${xml(entry.title)}</title>
@@ -123,8 +128,9 @@ ${items}${items ? '\n' : ''}  </channel>
 `
 }
 
-export function syndicationResponse(format: SyndicationFormat, feed: SyndicationFeed, cacheControl =
-  'public, max-age=60, stale-while-revalidate=300') {
+export function syndicationResponse(format: SyndicationFormat, feed: SyndicationFeed,
+  cacheControl = 'public, max-age=60, stale-while-revalidate=300')
+{
   return new Response(format === 'atom' ? atom(feed) : rss(feed), {
     headers: {
       'content-type': `application/${format}+xml; charset=utf-8`,

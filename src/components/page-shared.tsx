@@ -1,15 +1,15 @@
 import type { PersonView, PostView, ProfileRow, TagView } from '../types'
 
 import React from 'react'
-import { Panel } from './panel'
 import { isAdmin } from '../admin'
-import type { User } from '../types'
 import { markdownPlainText } from '../markdown'
 import { searchTerms } from '../search'
+import type { User } from '../types'
 import { displayBio, linkify } from '../utils'
-import { TagReference, UserReference } from './post'
-import { LogoutForm } from './logout-form'
 import { enterHref } from './auth-links'
+import { LogoutForm } from './logout-form'
+import { Panel } from './panel'
+import { TagReference, UserReference } from './post'
 
 const postTitleLength = 60
 
@@ -66,9 +66,8 @@ export function PostingHelp({ maxLength = 280, maxLines = 10, search }: {
         <div className="posting-help-popover" id={popoverId} popover="auto">
           <label>
             <span className="visually-hidden">search {searchLabel}</span>
-            <input type="search" name={inputName} maxLength={100}
-              defaultValue={active ? search.query : ''} placeholder={`search ${searchLabel}`} autoComplete="off"
-              inputMode="search" enterKeyHint="search" />
+            <input type="search" name={inputName} maxLength={100} defaultValue={active ? search.query : ''}
+              placeholder={`search ${searchLabel}`} autoComplete="off" inputMode="search" enterKeyHint="search" />
           </label>
           <button className="button" type="submit" name="action" value={`search-${kind}`} formNoValidate>
             search
@@ -292,33 +291,37 @@ export function CursorPagination({ path, previousCursor, nextCursor }: {
   )
 }
 
-export function FeedTabs({ active, user, forYouReadStatus, activityReadStatus, toMe = false, toMeCount = 0,
-  forYouCount = 0, unreadHref, lastUnreadHref, forYouUnread = false, toMeUnread = false }: {
-  active: 'following' | 'activity' | 'hot' | 'latest'
-  user: User | null
-  forYouReadStatus?: boolean
-  activityReadStatus?: boolean
-  toMe?: boolean
-  toMeCount?: number
-  forYouCount?: number
-  unreadHref?: string
-  lastUnreadHref?: string
-  forYouUnread?: boolean
-  toMeUnread?: boolean
-}) {
+export function FeedTabs(
+  { active, user, forYouReadStatus, activityReadStatus, toMe = false, toMeCount = 0, forYouCount = 0, unreadHref,
+    lastUnreadHref, forYouUnread = false, toMeUnread = false }: {
+      active: 'following' | 'activity' | 'hot' | 'latest'
+      user: User | null
+      forYouReadStatus?: boolean
+      activityReadStatus?: boolean
+      toMe?: boolean
+      toMeCount?: number
+      forYouCount?: number
+      unreadHref?: string
+      lastUnreadHref?: string
+      forYouUnread?: boolean
+      toMeUnread?: boolean
+    },
+) {
   forYouUnread = forYouUnread || toMeUnread
   return (
     <>
       <nav className="feed-tabs" aria-label="Feed">
         {user && (
-          <a className={active === 'following' ? 'active' : ''} aria-current={active === 'following' ? 'page' : undefined}
-            href="/for-you"
+          <a className={active === 'following' ? 'active' : ''}
+            aria-current={active === 'following' ? 'page' : undefined} href="/for-you"
           >
             for you
             {forYouCount > 0 && <span className="to-me-count">{forYouCount}</span>}
           </a>
         )}
-        <a className={active === 'hot' ? 'active' : ''} aria-current={active === 'hot' ? 'page' : undefined} href="/hot">
+        <a className={active === 'hot' ? 'active' : ''} aria-current={active === 'hot' ? 'page' : undefined}
+          href="/hot"
+        >
           hot
         </a>
         <a className={active === 'latest' ? 'active' : ''} aria-current={active === 'latest' ? 'page' : undefined}
@@ -329,8 +332,7 @@ export function FeedTabs({ active, user, forYouReadStatus, activityReadStatus, t
         {(active === 'following' || activityReadStatus !== undefined) && (
           <span className="feed-tabs-read-status">
             {active === 'following' && (
-              <a className={`activity-side-link${toMe ? '' : ' has-to-me-count'}`}
-                href={toMe ? '/for-you' : '/to-me'}>
+              <a className={`activity-side-link${toMe ? '' : ' has-to-me-count'}`} href={toMe ? '/for-you' : '/to-me'}>
                 {toMe ? 'all' : (
                   <>
                     <span className="to-me-label">to me</span>
@@ -407,16 +409,16 @@ export function ProfileControls({ user, profile, following, followsViewer = fals
 export function ProfileHeader(
   { user, profile, following, followsViewer = false, blocked = false, editing = false, returnPath,
     controlsInTitle = true, children }: {
-    user: User | null
-    profile: ProfileRow
-    following: boolean
-    followsViewer?: boolean
-    blocked?: boolean
-    editing?: boolean
-    returnPath?: string
-    controlsInTitle?: boolean
-    children?: React.ReactNode
-  },
+      user: User | null
+      profile: ProfileRow
+      following: boolean
+      followsViewer?: boolean
+      blocked?: boolean
+      editing?: boolean
+      returnPath?: string
+      controlsInTitle?: boolean
+      children?: React.ReactNode
+    },
 ) {
   return (
     <section
@@ -440,8 +442,10 @@ export function ProfileHeader(
               {profile.handle}
             </h1>
             {!editing && user?.id !== profile.id
-              && <ProfileControls user={user} profile={profile} following={following} followsViewer={followsViewer}
-                blocked={blocked} />}
+              && (
+                <ProfileControls user={user} profile={profile} following={following} followsViewer={followsViewer}
+                  blocked={blocked} />
+              )}
             {user?.id === profile.id && (
               <div className="profile-owner-actions">
                 <a className="profile-edit-link" href="/account/edit">account</a>
@@ -461,8 +465,10 @@ export function ProfileHeader(
       }`}>
         {returnPath && !editing
           && <a className="profile-edit-link" href={returnPath}>back</a>}
-        {!controlsInTitle && <ProfileControls user={user} profile={profile} following={following}
-          followsViewer={followsViewer} blocked={blocked} />}
+        {!controlsInTitle && (
+          <ProfileControls user={user} profile={profile} following={following} followsViewer={followsViewer}
+            blocked={blocked} />
+        )}
       </div>
     </section>
   )
@@ -637,8 +643,7 @@ export function ConnectionPeople({ user, people, className = '', highlightTerms 
             <div>
               <UserReference handle={person.handle} bio={person.bio} noteCount={person.posts}
                 stats={person.profileStats} following={person.viewerFollowing} followsViewer={person.followsViewer}
-                user={user}
-                href={`/u/${person.handle}`} label={
+                user={user} href={`/u/${person.handle}`} label={
                 <>
                   @<HighlightedText text={person.handle} terms={highlightTerms} />
                 </>

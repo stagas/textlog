@@ -217,8 +217,8 @@ describe('post persistence', () => {
     const html = linkify('@Reader #Topic', { reader: 'Builds things' }, [], undefined, undefined, '', { topic: 20 }, {
       reader: 20,
     }, { signedIn: true, currentHandle: 'author', formPrefix: 'post-1', mentionFollowing: { reader: true },
-      mentionFollowsViewer: { reader: true },
-      hashtagFollowing: { topic: false }, hashtagFollowerCounts: { topic: 8 }, mentionProfileStats: {
+      mentionFollowsViewer: { reader: true }, hashtagFollowing: { topic: false }, hashtagFollowerCounts: { topic: 8 },
+      mentionProfileStats: {
         reader: { notes: 20, replies: 34, followers: 8, following: 5, followingTags: 2 },
       } })
     expect(html).toContain('<span class="reference-menu-popover"><span class="reference-profile-tabs">'
@@ -243,12 +243,12 @@ describe('post persistence', () => {
     const url = 'https://example.com/about'
     const html = linkify(`Talks with @friend about #Topic at ${url}`, { friend: 'Nested bio' }, [], undefined,
       undefined, '', { topic: 3 }, { friend: 2 }, {
-        signedIn: false,
-        formPrefix: 'handle-writer-bio',
-        hashtagFollowerCounts: { topic: 1 },
-        linkPreviews: { [url]: { imageUrl: 'https://cdn.example.com/about.jpg', title: 'About' } },
-        mentionPopovers: false,
-      })
+      signedIn: false,
+      formPrefix: 'handle-writer-bio',
+      hashtagFollowerCounts: { topic: 1 },
+      linkPreviews: { [url]: { imageUrl: 'https://cdn.example.com/about.jpg', title: 'About' } },
+      mentionPopovers: false,
+    })
     expect(html).toContain('<a href="/u/friend">@friend</a>')
     expect(html).toContain('<span class="reference-menu-popover reference-menu-popover-tag">')
     expect(html).toContain('class="remote-link-popover"')
@@ -276,9 +276,10 @@ describe('post persistence', () => {
     const html = linkify('read https://example.com/story', {}, [], undefined, undefined, '', {}, {}, {
       signedIn: false,
       formPrefix: 'post-1',
-      linkPreviews: { 'https://example.com/story': { imageUrl: 'https://cdn.example.com/card.jpg?x=1&y=2',
-        title: 'A useful story', description: 'The story description', siteName: 'Example',
-        imageWidth: 1200, imageHeight: 630 } },
+      linkPreviews: {
+        'https://example.com/story': { imageUrl: 'https://cdn.example.com/card.jpg?x=1&y=2', title: 'A useful story',
+          description: 'The story description', siteName: 'Example', imageWidth: 1200, imageHeight: 630 },
+      },
     })
     expect(html).toContain('class="remote-link-menu"')
     expect(html).toContain('class="remote-link-popover" href="https://example.com/story"')

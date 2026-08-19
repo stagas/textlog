@@ -18,14 +18,15 @@ export function Panel({ children, className = '', width = 'medium', tone = 'defa
   return <Element className={classes} {...props}>{children}</Element>
 }
 
-export function CenteredPanel({ children, className = '', shellClassName = '', width = 'narrow', tone = 'default',
-  ...props }: {
+export function CenteredPanel(
+  { children, className = '', shellClassName = '', width = 'narrow', tone = 'default', ...props }: {
     children: React.ReactNode
     className?: string
     shellClassName?: string
     width?: PanelWidth
     tone?: PanelTone
-  } & React.HTMLAttributes<HTMLElement>) {
+  } & React.HTMLAttributes<HTMLElement>,
+) {
   return (
     <section className={`panel-shell${shellClassName ? ` ${shellClassName}` : ''}`}>
       <Panel className={className} width={width} tone={tone} {...props}>{children}</Panel>

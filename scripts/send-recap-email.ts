@@ -204,11 +204,11 @@ if (import.meta.main) {
   runMigrations(database, migration => console.log(`database migrate v${migration.version} ${migration.name}`))
   try {
     const result = await sendRecapCampaign({ database, stopping: () => stopping, testMode })
-    console.log(`recap ${result.version}${result.testMode ? ' test' : ''}: sent=${result.sent} skipped=${
-      result.skipped
-    } failed=${result.failed}${
-      result.stopped ? ' stopped=true' : ''
-    }`)
+    console.log(
+      `recap ${result.version}${
+        result.testMode ? ' test' : ''
+      }: sent=${result.sent} skipped=${result.skipped} failed=${result.failed}${result.stopped ? ' stopped=true' : ''}`,
+    )
     if (result.failed) process.exitCode = 1
   }
   finally {

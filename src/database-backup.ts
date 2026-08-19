@@ -33,7 +33,8 @@ export function pruneBackups(directory = defaultBackupDirectory, now = Date.now(
   const cutoff = now - retentionDays() * 24 * 60 * 60 * 1000
   let removed = 0
   const categories = { migration: [] as { path: string; mtimeMs: number }[], regular: [] as {
-    path: string; mtimeMs: number
+    path: string
+    mtimeMs: number
   }[] }
   for (const entry of readdirSync(directory)) {
     const migration = /^(?:textlog|root)-pre-migration-.*\.sqlite$/.test(entry)

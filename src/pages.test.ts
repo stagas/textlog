@@ -27,8 +27,8 @@ import {
   MagicLinkSent,
   NotFound,
   NotificationSettings,
-  PasswordLogin,
   PanelsGallery,
+  PasswordLogin,
   postTitle,
   Profile,
   RecapEmails,
@@ -59,9 +59,17 @@ test('panels gallery renders every shared panel variation', () => {
 
 test('blog recap uses the site layout and shared post presentation', () => {
   const html = renderToStaticMarkup(React.createElement(BlogRecap, {
-    user: null, pageUrl: 'https://textlog.test/blog/recap-v1', posts: [{
-    id: 925, user_id: 1, parent_id: null, body: 'A memorable #note', created_at: '2026-01-01 12:00:00',
-    deleted_at: null, handle: 'writer', reply_count: 2,
+    user: null,
+    pageUrl: 'https://textlog.test/blog/recap-v1',
+    posts: [{
+      id: 925,
+      user_id: 1,
+      parent_id: null,
+      body: 'A memorable #note',
+      created_at: '2026-01-01 12:00:00',
+      deleted_at: null,
+      handle: 'writer',
+      reply_count: 2,
     }],
   }))
 
@@ -78,8 +86,7 @@ test('account switcher errors use the shared error notice', () => {
   const user = { id: 1, handle: 'reader', email: 'reader@example.com', bio: '' }
   const html = renderToStaticMarkup(React.createElement(AccountSwitcher, {
     user,
-    accounts: [{ id: 1, handle: 'reader', handle_chosen_at: '2026-08-12 10:00:00', primary: true,
-      selected: true }],
+    accounts: [{ id: 1, handle: 'reader', handle_chosen_at: '2026-08-12 10:00:00', primary: true, selected: true }],
     error: 'Could not switch accounts.',
   }))
 
@@ -132,7 +139,9 @@ test('compose carries its originating page through preview and offers cancel bef
   }))
 
   expect(html).toContain('name="from" value="/latest?cursor=abc#post-2"')
-  expect(html).toContain('class="secondary-action cancel-action edit-post-cancel" href="/latest?cursor=abc#post-2">cancel</a>')
+  expect(html).toContain(
+    'class="secondary-action cancel-action edit-post-cancel" href="/latest?cursor=abc#post-2">cancel</a>',
+  )
   expect(html.indexOf('>cancel</a>')).toBeLessThan(html.indexOf('>preview</button>'))
 })
 
@@ -381,7 +390,11 @@ test('admin metrics use locale-aware number formatting', () => {
   expect(html).toContain(`<strong>${(1234567).toLocaleString()}</strong><span>users</span>`)
   expect(html).toContain('<strong>12</strong><span>users online · 30m</span>')
   expect(html).toContain('<strong>56</strong><span>active users · 24h</span>')
-  expect(html).toContain(`<strong>${(200 / 3).toLocaleString(undefined, { maximumFractionDigits: 2 })}%</strong><span>Conversion rate · yesterday</span>`)
+  expect(html).toContain(
+    `<strong>${
+      (200 / 3).toLocaleString(undefined, { maximumFractionDigits: 2 })
+    }%</strong><span>Conversion rate · yesterday</span>`,
+  )
   expect(html).toContain('<strong>50%</strong><span>Signup-to-active conversion · yesterday</span>')
   expect(html).toContain('<strong>34</strong><span>anonymous online · 30m</span>')
   expect(html).toContain('<strong>2/2.5</strong><span>median/avg notes per user</span>')
@@ -390,7 +403,9 @@ test('admin metrics use locale-aware number formatting', () => {
   expect(html).toContain('<code>aaaaa</code><div class="admin-ip-actions"><span>250 requests</span>')
   expect(html).toContain('action="/admin/ip-blocks"')
   expect(html).not.toContain('a'.repeat(64) + '</code>')
-  expect(html).toContain('<code>bbbbb</code><div class="admin-ip-actions"><span>100 requests</span><span class="danger">blocked today</span>')
+  expect(html).toContain(
+    '<code>bbbbb</code><div class="admin-ip-actions"><span>100 requests</span><span class="danger">blocked today</span>',
+  )
 })
 
 test('pages advertise the dynamic favicon, touch icon, and manifest', () => {
@@ -495,7 +510,9 @@ test('account settings link to a focused recap email preference panel', () => {
     editing: true,
   }))
   const unsubscribed = renderToStaticMarkup(React.createElement(RecapEmails, {
-    user, subscribed: false, changed: true,
+    user,
+    subscribed: false,
+    changed: true,
   }))
 
   expect(subscribed).toContain('class="account-danger-zone" id="recap-emails"')
@@ -795,7 +812,9 @@ test('footer offers the mobile app in a mobile-only row', () => {
 test('footer links to stats next to the app host', () => {
   const html = renderToStaticMarkup(React.createElement(About, { user: null }))
 
-  expect(html).toMatch(/<span><a class="footer-host-link" href="\/">[^<]+<\/a> <span aria-hidden="true">\/<\/span> <a class="footer-host-link" href="\/stats">stats<\/a> <span aria-hidden="true">·<\/span> <span class="footer-response-time">__TEXTLOG_RESPONSE_TIME__<\/span><\/span>/)
+  expect(html).toMatch(
+    /<span><a class="footer-host-link" href="\/">[^<]+<\/a> <span aria-hidden="true">\/<\/span> <a class="footer-host-link" href="\/stats">stats<\/a> <span aria-hidden="true">·<\/span> <span class="footer-response-time">__TEXTLOG_RESPONSE_TIME__<\/span><\/span>/,
+  )
 })
 
 test('Contact page shows operator details and is linked before legal in the footer', () => {

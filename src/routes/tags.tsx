@@ -6,9 +6,9 @@ import {
   TagFeed,
 } from '../components/pages'
 import { databaseService } from '../database-service'
-import { resolvedPageSize } from '../request-preferences'
 import { renderTagOg } from '../og'
 import { CONNECTION_PAGE_SIZE } from '../pagination'
+import { resolvedPageSize } from '../request-preferences'
 import { currentUser } from '../utils'
 
 export function registerTagsRoutes(app: Hono) {
@@ -39,8 +39,8 @@ export function registerTagsRoutes(app: Hono) {
     if (tab && tab !== 'followers') return c.notFound()
     const viewerId = user?.id ?? -1
     const notePageSize = resolvedPageSize(c.req.raw)
-    const data = await databaseService().call('tags.page', { tag, viewerId, page: tagPage,
-      pageSize: notePageSize, tab: tab === 'followers' ? 'followers' : 'notes' })
+    const data = await databaseService().call('tags.page', { tag, viewerId, page: tagPage, pageSize: notePageSize,
+      tab: tab === 'followers' ? 'followers' : 'notes' })
     const { following, blocked, posts, total, followerTotal, people } = data
     const tabPath = `/tag/${encodeURIComponent(tag)}${tab === 'followers' ? '?tab=followers' : ''}`
     const outOfRange = paginationRedirect(tagPage, tab === 'followers' ? followerTotal : total, tabPath,

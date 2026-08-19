@@ -58,7 +58,9 @@ describe('in-memory stylesheet', () => {
   test('centers the read-all action on the unread activity highlight', async () => {
     const css = await Bun.file(new URL('./styles.css', import.meta.url)).text()
     expect(css).toContain('.feed-read-action {\n  display: flex;\n  justify-content: center;')
-    expect(css).toContain('padding: var(--space-2) var(--gutter);\n  background: color-mix(in srgb, var(--accent) 6%, transparent);')
+    expect(css).toContain(
+      'padding: var(--space-2) var(--gutter);\n  background: color-mix(in srgb, var(--accent) 6%, transparent);',
+    )
   })
 
   test('uses the active accent for the mobile tap highlight', async () => {
@@ -145,11 +147,17 @@ describe('in-memory stylesheet', () => {
     expect(css).toContain('.form-checkbox:focus-visible {\n  outline: 2px solid var(--accent);\n  outline-offset: 2px;')
     expect(css).toContain('appearance: none;')
     expect(css).toContain('.form-checkbox:checked {')
-    expect(css).toContain('.report-panel .good-faith {\n  display: flex;\n  align-items: flex-start;\n  gap: var(--space-2);')
+    expect(css).toContain(
+      '.report-panel .good-faith {\n  display: flex;\n  align-items: flex-start;\n  gap: var(--space-2);',
+    )
     expect(css).toContain('.illegal-activity-page .report-panel .form-hint {\n  width: 100%;\n  max-width: none;')
-    expect(css).toContain('.illegal-activity-page .report-panel .identity-exception-hint {\n  color: var(--muted);\n  font-size: 0.6875rem;')
+    expect(css).toContain(
+      '.illegal-activity-page .report-panel .identity-exception-hint {\n  color: var(--muted);\n  font-size: 0.6875rem;',
+    )
     expect(css).toContain('font-size: 0.8125rem;\n  font-weight: 400;\n  line-height: 1.75;')
-    expect(css).toContain('.illegal-activity-page .report-panel .good-faith span {\n  min-width: 0;\n  flex: 1;\n  font: inherit;')
+    expect(css).toContain(
+      '.illegal-activity-page .report-panel .good-faith span {\n  min-width: 0;\n  flex: 1;\n  font: inherit;',
+    )
     expect(css).not.toContain('.unfollow-button')
     expect(css).not.toContain('.auth-panel .button {\n  min-height: 48px;\n  justify-content: space-between;')
     expect(css).toContain('flex-wrap: wrap;')
@@ -175,13 +183,17 @@ describe('in-memory stylesheet', () => {
     expect(css).toContain('.postdate {\n  min-width: 0;\n  overflow: hidden;')
     expect(css).toContain('color: var(--accent);\n  text-overflow: ellipsis;\n  white-space: nowrap;')
     expect(css).toContain('.post-context {\n  min-width: 0;')
-    expect(css).toContain('overflow: hidden;\n  color: var(--muted);\n  font-size: 0.75rem;\n  text-overflow: ellipsis;')
+    expect(css).toContain(
+      'overflow: hidden;\n  color: var(--muted);\n  font-size: 0.75rem;\n  text-overflow: ellipsis;',
+    )
   })
 
   test('ellipsizes follow-event date and note metadata as one segment', async () => {
     const css = await Bun.file(new URL('./styles.css', import.meta.url)).text()
     expect(css).toContain('.activity-follow-main .activity-follow-stats {\n  display: block;\n  min-width: 0;')
-    expect(css).toContain('overflow: hidden;\n  color: var(--accent);\n  font-size: 0.75rem;\n  text-overflow: ellipsis;')
+    expect(css).toContain(
+      'overflow: hidden;\n  color: var(--accent);\n  font-size: 0.75rem;\n  text-overflow: ellipsis;',
+    )
     expect(css).toContain('.activity-follow-main .activity-follow-stats > * + * {\n  margin-left: var(--space-2);')
   })
 
@@ -242,7 +254,9 @@ describe('in-memory stylesheet', () => {
   test('can suppress remote link previews for a signed-in user', async () => {
     const css = await Bun.file(new URL('./styles.css', import.meta.url)).text()
     expect(css).toContain('.link-previews-disabled .remote-link-menu:hover .remote-link-popover,')
-    expect(css).toContain('.link-previews-disabled .remote-link-menu:focus-within .remote-link-popover {\n  display: none;')
+    expect(css).toContain(
+      '.link-previews-disabled .remote-link-menu:focus-within .remote-link-popover {\n  display: none;',
+    )
     expect(css).toContain('.link-preview-setting {\n  display: flex;')
     expect(css).toContain('font-size: 0.75rem;')
     expect(css).toContain('.link-preview-setting .form-checkbox {\n  width: 16px;\n  height: 16px;')

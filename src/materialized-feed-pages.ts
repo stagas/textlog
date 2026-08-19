@@ -26,17 +26,14 @@ export function clearMaterializedFeedPages(cache: Database) {
   cache.run('DELETE FROM materialized_feed_pages_v2')
 }
 
-export function invalidateMaterializedFeedPages(viewerId: number, kinds: MaterializedFeedKind[],
-  cache: Database)
-{
+export function invalidateMaterializedFeedPages(viewerId: number, kinds: MaterializedFeedKind[], cache: Database) {
   if (!kinds.length) return
   cache.query(`DELETE FROM materialized_feed_pages_v2 WHERE viewer_id=? AND kind IN
     (${kinds.map(() => '?').join(',')})`).run(viewerId, ...kinds)
 }
 
 export async function materializedFeedPage(database: Database, request: Request, kind: MaterializedFeedKind,
-  viewerId: number, render: () => Response, cache: Database, rerenderForCache = false,
-  cacheVersion = 0)
+  viewerId: number, render: () => Response, cache: Database, rerenderForCache = false, cacheVersion = 0)
 {
   // Cached development HTML embeds the server's boot ID. Reusing it after a
   // restart makes the reload client refresh forever, so keep dev pages live.
@@ -48,11 +45,13 @@ export async function materializedFeedPage(database: Database, request: Request,
   const variant = `${cacheVersion ? `${cacheVersion}|` : ''}${appearanceVariant(request)}`
   const cached = cache.query(`SELECT html FROM materialized_feed_pages_v2
     WHERE kind=? AND viewer_id=? AND variant=? AND generation=?`).get(kind, viewerId, variant, generation) as {
-      html: string
-    } | null
-  if (cached) return new Response(refreshMaterializedTimestamps(cached.html), {
-    headers: { 'content-type': 'text/html;charset=utf-8', 'cache-control': 'private, no-store' },
-  })
+    html: string
+  } | null
+  if (cached) {
+    return new Response(refreshMaterializedTimestamps(cached.html), {
+      headers: { 'content-type': 'text/html;charset=utf-8', 'cache-control': 'private, no-store' },
+    })
+  }
 
   const response = render()
   if (response.status !== 200) return response

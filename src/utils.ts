@@ -5,12 +5,12 @@ import tlds from 'tlds'
 import { userForApiKey } from './api-keys'
 import { sessionCookieName } from './brand'
 import { containsAsciiArt, MAX_HASHTAGS_PER_POST, type PostContentFlags } from './content'
-import type { User } from './types'
-import { activeTimezone, timezoneLabel } from './timezone'
 import { texToMathML } from './math'
-import { markSessionUsed, sessionHash } from './sessions'
-import type { LinkPreview, UserProfileStats } from './types'
 import { requestContext } from './request-context'
+import { markSessionUsed, sessionHash } from './sessions'
+import { activeTimezone, timezoneLabel } from './timezone'
+import type { User } from './types'
+import type { LinkPreview, UserProfileStats } from './types'
 
 export function userHoverTitle(noteCount: number, bio?: string) {
   return `${noteCount.toLocaleString()} ${noteCount === 1 ? 'note' : 'notes'}\n\n${displayBio(bio)}`
@@ -43,15 +43,18 @@ function previewLink(html: string, url: string, appUrl: string | undefined, popo
     : ''
   const imageClass = `remote-link-image${aspect ? ' remote-link-image-sized' : ''}`
   const hostname = (() => {
-    try { return new URL(url).hostname.replace(/^www\./, '') }
-    catch { return '' }
+    try {
+      return new URL(url).hostname.replace(/^www\./, '')
+    }
+    catch {
+      return ''
+    }
   })()
   const site = preview.siteName || hostname
   const details = site || preview.title || preview.description
     ? `<span class="remote-link-copy">${site ? `<span class="remote-link-site">${esc(site)}</span>` : ''}${
-      preview.title ? `<strong class="remote-link-title">${esc(preview.title)}</strong>` : ''}${
-      preview.description ? `<span class="remote-link-description">${esc(preview.description)}</span>` : ''
-    }</span>`
+      preview.title ? `<strong class="remote-link-title">${esc(preview.title)}</strong>` : ''
+    }${preview.description ? `<span class="remote-link-description">${esc(preview.description)}</span>` : ''}</span>`
     : ''
   return `<span class="remote-link-menu">${html}<a class="remote-link-popover" href="${esc(url)}" `
     + `${linkAttributes(url, appUrl).trimStart()} `
@@ -158,17 +161,20 @@ export function fmt(d: string, now = Date.now()) {
   if (months < 12) return `${months}mo`
   return `${Math.floor(days / 365)}y`
 }
-export const fmtDate = (d: string) => timestamp(d).toLocaleDateString('en', {
-  dateStyle: 'medium',
-  timeZone: activeTimezone(),
-})
+export const fmtDate = (d: string) =>
+  timestamp(d).toLocaleDateString('en', {
+    dateStyle: 'medium',
+    timeZone: activeTimezone(),
+  })
 export const fmtFull = (d: string) => {
   const timeZone = activeTimezone()
   const date = timestamp(d)
   return `${date.toLocaleString('en', { dateStyle: 'medium', timeStyle: 'short', timeZone })} (${
-    timezoneLabel(timeZone, date)})`
+    timezoneLabel(timeZone, date)
+  })`
 }
-const emojiPattern = /(?:\p{Regional_Indicator}{2}|[#*0-9]\uFE0F?\u20E3|\p{Extended_Pictographic}[\uFE0E\uFE0F]?\p{Emoji_Modifier}?(?:\u200D\p{Extended_Pictographic}[\uFE0E\uFE0F]?\p{Emoji_Modifier}?)*)/gu
+const emojiPattern =
+  /(?:\p{Regional_Indicator}{2}|[#*0-9]\uFE0F?\u20E3|\p{Extended_Pictographic}[\uFE0E\uFE0F]?\p{Emoji_Modifier}?(?:\u200D\p{Extended_Pictographic}[\uFE0E\uFE0F]?\p{Emoji_Modifier}?)*)/gu
 
 function emojiText(text: string) {
   let html = ''
@@ -429,9 +435,10 @@ function renderedReference(token: string, mentionBios: Record<string, string>,
   const ownUser = isUser && key === referencePopover.currentHandle?.toLowerCase()
   const action = ownUser ? '' : referencePopover.signedIn
     ? `<span class="reference-popover-actions"><span class="follow-action">${
-      followsViewer ? '<span class="follows-you">follows you</span>' : ''}<button class="button${
-      following ? ' button-muted' : ''
-    }" type="submit" form="${esc(referenceFormId(referencePopover.formPrefix, isUser ? 'user' : 'tag', key))}">${
+      followsViewer ? '<span class="follows-you">follows you</span>' : ''
+    }<button class="button${following ? ' button-muted' : ''}" type="submit" form="${
+      esc(referenceFormId(referencePopover.formPrefix, isUser ? 'user' : 'tag', key))
+    }">${
       following ? 'unfollow' : followsViewer ? 'follow back' : 'follow'
     }</button></span><button class="quiet danger" type="submit" form="${
       esc(referenceFormId(referencePopover.formPrefix, isUser ? 'user' : 'tag', key, 'block'))
@@ -472,9 +479,14 @@ function linkifyAsciiReferences(body: string, mentionBios: Record<string, string
       const url = match.url!
       const label = linkLabel(url, appUrl)
       const displayLabel = label === url ? match.raw : label
-      html += previewLink(`<a href="${esc(url)}"${displayLabel === match.raw ? '' : ` title="${esc(url)}"`}${
-        linkAttributes(url, appUrl)
-      }>${esc(displayLabel)}</a>`, url, appUrl, popover)
+      html += previewLink(
+        `<a href="${esc(url)}"${displayLabel === match.raw ? '' : ` title="${esc(url)}"`}${
+          linkAttributes(url, appUrl)
+        }>${esc(displayLabel)}</a>`,
+        url,
+        appUrl,
+        popover,
+      )
     }
     end = match.lastIndex
   }
@@ -507,17 +519,27 @@ export function linkify(body: string, mentionBios: Record<string, string> = {}, 
       html += renderedMath(match.label!, match.display!) || renderedText(match.raw, highlightTerms)
     }
     else if (match.kind === 'markdown') {
-      html += previewLink(`<a href="${esc(match.url)}" title="${esc(match.url)}"${linkAttributes(match.url!, appUrl)}>${
-        highlighted(match.label!, highlightTerms)
-      }</a>`, match.url!, appUrl, popover)
+      html += previewLink(
+        `<a href="${esc(match.url)}" title="${esc(match.url)}"${linkAttributes(match.url!, appUrl)}>${
+          highlighted(match.label!, highlightTerms)
+        }</a>`,
+        match.url!,
+        appUrl,
+        popover,
+      )
     }
     else if (match.kind === 'url') {
       const url = match.url!
       const label = linkLabel(url, appUrl)
       const displayLabel = label === url ? token : label
-      html += previewLink(`<a href="${esc(url)}"${label === url ? '' : ` title="${esc(url)}"`}${linkAttributes(url, appUrl)}>${
-        highlighted(displayLabel, highlightTerms)
-      }</a>`, url, appUrl, popover)
+      html += previewLink(
+        `<a href="${esc(url)}"${label === url ? '' : ` title="${esc(url)}"`}${linkAttributes(url, appUrl)}>${
+          highlighted(displayLabel, highlightTerms)
+        }</a>`,
+        url,
+        appUrl,
+        popover,
+      )
     }
     else {
       html += renderedReference(token, mentionBios, mentionNoteCounts, hashtagCounts, highlightTerms, navigationQuery,

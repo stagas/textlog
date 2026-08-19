@@ -3,20 +3,21 @@ import type { ApiKeyView, FeedKeyView, SessionView } from '../types'
 import { AccountSettingsHeader } from './account-settings-header'
 import { maskEmail } from './email-address'
 import { Layout } from './layout'
-import { CenteredPanel } from './panel'
 import { FormActions, FormMessage } from './page-shared'
+import { CenteredPanel } from './panel'
 
-export function AccountSecurity({ user, sessions, apiKeys = [], feedKeys = [], passwordEnabled, error, success,
-  returnPath }: {
-  user: User
-  sessions: SessionView[]
-  apiKeys?: ApiKeyView[]
-  feedKeys?: FeedKeyView[]
-  passwordEnabled?: boolean
-  error?: string
-  success?: string
-  returnPath?: string
-}) {
+export function AccountSecurity(
+  { user, sessions, apiKeys = [], feedKeys = [], passwordEnabled, error, success, returnPath }: {
+    user: User
+    sessions: SessionView[]
+    apiKeys?: ApiKeyView[]
+    feedKeys?: FeedKeyView[]
+    passwordEnabled?: boolean
+    error?: string
+    success?: string
+    returnPath?: string
+  },
+) {
   const fromQuery = returnPath ? `?from=${encodeURIComponent(returnPath)}` : ''
   return (
     <Layout user={user} title="account security">
@@ -238,17 +239,24 @@ export function AccountApiKey({ user, name, value }: { user: User; name: string;
 }
 
 export function AccountFeedKeyCreate({ user, name = '', lifetime = 'year', error }: {
-  user: User; name?: string; lifetime?: string; error?: string
+  user: User
+  name?: string
+  lifetime?: string
+  error?: string
 }) {
   return (
     <Layout user={user} title="generate feed key">
-      <section className="security-header"><AccountSettingsHeader title="generate feed key" /></section>
+      <section className="security-header">
+        <AccountSettingsHeader title="generate feed key" />
+      </section>
       <div className="security-page api-key-create-page">
         <p className="api-key-create-intro">Create a read-only key for your personalized For You feed.</p>
         <FormMessage error={error} />
         <form className="security-form api-key-form" method="post" action="/account/feed-keys">
-          <label>key name<input name="name" required minLength={1} maxLength={64} placeholder="my feed reader"
-            defaultValue={name} autoFocus autoComplete="off" /></label>
+          <label>
+            key name<input name="name" required minLength={1} maxLength={64} placeholder="my feed reader"
+              defaultValue={name} autoFocus autoComplete="off" />
+          </label>
           <fieldset className="api-key-lifetimes">
             <legend>expiration</legend>
             {[
@@ -258,7 +266,10 @@ export function AccountFeedKeyCreate({ user, name = '', lifetime = 'year', error
             ].map(([value, label, description]) => (
               <label className="api-key-lifetime" key={value}>
                 <input type="radio" name="lifetime" value={value} defaultChecked={value === lifetime} />
-                <span><strong>{label}</strong><small>{description}</small></span>
+                <span>
+                  <strong>{label}</strong>
+                  <small>{description}</small>
+                </span>
               </label>
             ))}
           </fieldset>
@@ -283,60 +294,62 @@ export function AccountPassword({ user, enabled, token, request = false, sent = 
     <Layout user={user} title={enabled ? 'change password' : 'enable password login'}>
       <CenteredPanel shellClassName="auth-shell"
         className={`auth-panel password-panel${enabled ? '' : ' enable-password-panel'}`}
-        width={enabled ? 'narrow' : 'medium'}>
-          <h1>
-            {invalid ? 'Link unavailable' : sent ? 'Check your email' : request ? 'Enable password login' : enabled
-              ? 'Change password'
-              : 'Set a password'}
-          </h1>
-          {error && <p className="status-message status-error" role="alert">{error}</p>}
-          {invalid
-            ? <p className="switch">This link is invalid, expired, or already used.</p>
-            : sent
-            ? (
-              <>
-                <p className="switch">
-                  We sent a secure setup link to <strong>{user?.email && maskEmail(user.email)}</strong>. It expires in one hour.
-                </p>
-                <p className="email-delivery-hint">Can’t find it? Check your spam or junk folder.</p>
-              </>
-            )
-            : request
-            ? (
-              <>
-                <p className="switch">We’ll email you a secure link before you can set a password.</p>
-                <form method="post" action="/account/password/enable">
-                  <button className="button">
-                    send setup link <span>→</span>
-                  </button>
-                </form>
-              </>
-            )
-            : (
-              <form method="post" action={enabled ? '/account/password/change' : '/account/password/enable'}>
-                {!enabled && <input type="hidden" name="token" value={token} />}
-                {enabled && (
-                  <>
-                    <label htmlFor="old-password">
-                      <span>old password</span>
-                    </label>
-                    <input id="old-password" type="password" name="oldPassword" required maxLength={128}
-                      autoComplete="current-password" enterKeyHint="next" autoFocus />
-                  </>
-                )}
-                <label htmlFor="new-password">
-                  <span>{enabled ? 'new password' : 'password'}</span>
-                </label>
-                <input id="new-password" type="password" name="newPassword" required minLength={8} maxLength={128}
-                  autoComplete="new-password" enterKeyHint="done" autoFocus={!enabled} placeholder="8–128 characters" />
+        width={enabled ? 'narrow' : 'medium'}
+      >
+        <h1>
+          {invalid ? 'Link unavailable' : sent ? 'Check your email' : request ? 'Enable password login' : enabled
+            ? 'Change password'
+            : 'Set a password'}
+        </h1>
+        {error && <p className="status-message status-error" role="alert">{error}</p>}
+        {invalid
+          ? <p className="switch">This link is invalid, expired, or already used.</p>
+          : sent
+          ? (
+            <>
+              <p className="switch">
+                We sent a secure setup link to{' '}
+                <strong>{user?.email && maskEmail(user.email)}</strong>. It expires in one hour.
+              </p>
+              <p className="email-delivery-hint">Can’t find it? Check your spam or junk folder.</p>
+            </>
+          )
+          : request
+          ? (
+            <>
+              <p className="switch">We’ll email you a secure link before you can set a password.</p>
+              <form method="post" action="/account/password/enable">
                 <button className="button">
-                  {enabled ? 'change password' : 'enable password login'} <span>→</span>
+                  send setup link <span>→</span>
                 </button>
               </form>
-            )}
-          <p className="auth-secondary">
-            <a href="/account/security">Back to account security</a>
-          </p>
+            </>
+          )
+          : (
+            <form method="post" action={enabled ? '/account/password/change' : '/account/password/enable'}>
+              {!enabled && <input type="hidden" name="token" value={token} />}
+              {enabled && (
+                <>
+                  <label htmlFor="old-password">
+                    <span>old password</span>
+                  </label>
+                  <input id="old-password" type="password" name="oldPassword" required maxLength={128}
+                    autoComplete="current-password" enterKeyHint="next" autoFocus />
+                </>
+              )}
+              <label htmlFor="new-password">
+                <span>{enabled ? 'new password' : 'password'}</span>
+              </label>
+              <input id="new-password" type="password" name="newPassword" required minLength={8} maxLength={128}
+                autoComplete="new-password" enterKeyHint="done" autoFocus={!enabled} placeholder="8–128 characters" />
+              <button className="button">
+                {enabled ? 'change password' : 'enable password login'} <span>→</span>
+              </button>
+            </form>
+          )}
+        <p className="auth-secondary">
+          <a href="/account/security">Back to account security</a>
+        </p>
       </CenteredPanel>
     </Layout>
   )
@@ -347,7 +360,9 @@ export function AccountMagicLink({ user, magicUrl, code }: { user: User; magicUr
     <Layout user={user} title="magic link">
       <CenteredPanel className="magic-link-page" width="medium">
         <h1>magic link</h1>
-        <p>Copy this one-time sign-in link to your other device.<br />It expires after 15 minutes.</p>
+        <p>
+          Copy this one-time sign-in link to your other device.<br />It expires after 15 minutes.
+        </p>
         <label className="magic-link-output">
           magic link
           <output className="form-control magic-link-value" tabIndex={0} aria-label="magic link URL">{magicUrl}</output>

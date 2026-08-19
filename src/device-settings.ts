@@ -2,9 +2,9 @@ import type { Database } from 'bun:sqlite'
 import { db } from './db'
 import { notificationDevice } from './http'
 import { PAGE_SIZE } from './pagination'
-import { DENSITY_CHOICES, PAGE_SIZE_CHOICES, type DensityChoice, type PageSizeChoice } from './request-preferences'
+import { DENSITY_CHOICES, type DensityChoice, PAGE_SIZE_CHOICES, type PageSizeChoice } from './request-preferences'
 
-export { DENSITY_CHOICES, PAGE_SIZE_CHOICES, type DensityChoice, type PageSizeChoice } from './request-preferences'
+export { DENSITY_CHOICES, type DensityChoice, PAGE_SIZE_CHOICES, type PageSizeChoice } from './request-preferences'
 
 export function devicePageSize(request: Request, userId: number | null | undefined,
   database: Database = db): PageSizeChoice

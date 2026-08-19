@@ -1,5 +1,5 @@
-import type { User } from '../types'
 import { CONNECTION_PAGE_SIZE, PAGE_SIZE, TAG_PAGE_SIZE } from '../pagination'
+import type { User } from '../types'
 import type { PersonView, ProfileRow } from '../types'
 import { Layout } from './layout'
 import { BlockedPeopleList, BlockedTagList, ConnectionPeople, Pagination, ProfileHeader, ProfileTabs,
@@ -7,9 +7,8 @@ import { BlockedPeopleList, BlockedTagList, ConnectionPeople, Pagination, Profil
 
 export function Connections(
   { user, profile, people, tags = [], kind, page, total, tagsPage = 1, tagsTotal = 0, noteCount, followerCount,
-    followingCount, followingTagCount, following, followsViewer = false, social, replyCount = 0,
-    blockedPeopleCount = 0, blockedTagCount = 0,
-    returnPath }: {
+    followingCount, followingTagCount, following, followsViewer = false, social, replyCount = 0, blockedPeopleCount = 0,
+    blockedTagCount = 0, returnPath }: {
       user: User | null
       profile: ProfileRow
       people: PersonView[]

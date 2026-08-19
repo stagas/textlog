@@ -2,8 +2,8 @@ import type { Database } from 'bun:sqlite'
 import { lookup } from 'node:dns/promises'
 import { isIP } from 'node:net'
 import { appName, appOrigin } from './brand'
-import { createImageKey, deleteImages, deleteImagesAfterCommit, getImageUrl, imageDimensions, isImageKey, MAX_IMAGE_BYTES,
-  uploadImage, validateImageData } from './image-storage'
+import { createImageKey, deleteImages, deleteImagesAfterCommit, getImageUrl, imageDimensions, isImageKey,
+  MAX_IMAGE_BYTES, uploadImage, validateImageData } from './image-storage'
 import type { LinkPreview } from './types'
 import { postLinks } from './utils'
 
@@ -13,8 +13,12 @@ const MAX_YOUTUBE_CHANNEL_BYTES = 2 * 1024 * 1024
 const FETCH_TIMEOUT_MS = 5000
 
 export function isDirectImageUrl(value: string) {
-  try { return /\.(?:png|jpe?g|gif|webp|avif)$/i.test(new URL(value).pathname) }
-  catch { return false }
+  try {
+    return /\.(?:png|jpe?g|gif|webp|avif)$/i.test(new URL(value).pathname)
+  }
+  catch {
+    return false
+  }
 }
 
 export function isYouTubeUrl(value: string) {
@@ -36,8 +40,12 @@ function ownPostPreview(database: Database, rawUrl: string) {
   const origin = appOrigin()
   if (!origin) return null
   let url: URL
-  try { url = new URL(rawUrl) }
-  catch { return null }
+  try {
+    url = new URL(rawUrl)
+  }
+  catch {
+    return null
+  }
   if (url.origin !== origin) return null
   const match = url.pathname.match(/^\/post\/([1-9]\d*)$/)
   if (!match) return null
@@ -96,18 +104,19 @@ function attribute(tag: string, name: string) {
 }
 
 export function decodeHtmlEntities(value: string) {
-  const decode = (text: string) => text.replace(/&(?:amp|quot|apos|lt|gt|#(\d+)|#x([\da-f]+));/gi,
-    (entity, decimal: string | undefined, hexadecimal: string | undefined) => {
-      if (decimal || hexadecimal) {
-        const codePoint = Number.parseInt(decimal || hexadecimal!, decimal ? 10 : 16)
-        return codePoint > 0 && codePoint <= 0x10ffff && !(codePoint >= 0xd800 && codePoint <= 0xdfff)
-          ? String.fromCodePoint(codePoint)
-          : entity
-      }
-      return ({ '&amp;': '&', '&quot;': '"', '&apos;': "'", '&lt;': '<', '&gt;': '>' } as Record<string, string>)[
-        entity.toLowerCase()
-      ] || entity
-    })
+  const decode = (text: string) =>
+    text.replace(/&(?:amp|quot|apos|lt|gt|#(\d+)|#x([\da-f]+));/gi,
+      (entity, decimal: string | undefined, hexadecimal: string | undefined) => {
+        if (decimal || hexadecimal) {
+          const codePoint = Number.parseInt(decimal || hexadecimal!, decimal ? 10 : 16)
+          return codePoint > 0 && codePoint <= 0x10ffff && !(codePoint >= 0xd800 && codePoint <= 0xdfff)
+            ? String.fromCodePoint(codePoint)
+            : entity
+        }
+        return ({ '&amp;': '&', '&quot;': '"', '&apos;': '\'', '&lt;': '<', '&gt;': '>' } as Record<string, string>)[
+          entity.toLowerCase()
+        ] || entity
+      })
   let decoded = value
   for (let depth = 0; depth < 4; depth++) {
     const next = decode(decoded)
@@ -123,7 +132,8 @@ export function openGraphMetadata(html: string, pageUrl: string) {
     const property = attribute(match[0], 'property') || attribute(match[0], 'name')
     const content = attribute(match[0], 'content')
     if (!content || !/^og:(?:image(?::(?:url|secure_url|width|height))?|title|description|site_name)$/i
-      .test(property || '')) {
+      .test(property || ''))
+    {
       continue
     }
     metadata[property!.toLowerCase()] ??= decodeHtmlEntities(content).replace(/\s+/g, ' ').trim()
@@ -156,10 +166,16 @@ export function youtubeChannelMetadata(html: string) {
   const jsonString = (name: string) => {
     const match = metadata.match(new RegExp(`"${name}":("(?:\\\\.|[^"\\\\])*")`))
     if (!match) return undefined
-    try { return JSON.parse(match[1]) as string }
-    catch { return undefined }
+    try {
+      return JSON.parse(match[1]) as string
+    }
+    catch {
+      return undefined
+    }
   }
-  const avatar = metadata.match(/"avatar":\{"thumbnails":\[\{"url":("(?:\\.|[^"\\])*")\s*,\s*"width":(\d+)\s*,\s*"height":(\d+)/)
+  const avatar = metadata.match(
+    /"avatar":\{"thumbnails":\[\{"url":("(?:\\.|[^"\\])*")\s*,\s*"width":(\d+)\s*,\s*"height":(\d+)/,
+  )
   if (!avatar) return null
   try {
     return {
@@ -171,7 +187,9 @@ export function youtubeChannelMetadata(html: string) {
       imageHeight: Number(avatar[3]),
     }
   }
-  catch { return null }
+  catch {
+    return null
+  }
 }
 
 export const openGraphImage = (html: string, pageUrl: string) => openGraphMetadata(html, pageUrl)?.imageUrl || null
@@ -207,7 +225,8 @@ async function fetchHtml(initialUrl: URL) {
   let url = initialUrl
   for (let redirects = 0; redirects <= 3; redirects++) {
     const response = await fetch(url, {
-      redirect: 'manual', signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
+      redirect: 'manual',
+      signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
       headers: { accept: 'text/html,application/xhtml+xml', 'user-agent': 'textlog-link-preview/1.0' },
     })
     if (response.status >= 300 && response.status < 400) {
@@ -229,7 +248,8 @@ async function fetchYouTubeChannel(initialUrl: URL) {
   let url = initialUrl
   for (let redirects = 0; redirects <= 3; redirects++) {
     const response = await fetch(url, {
-      redirect: 'manual', signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
+      redirect: 'manual',
+      signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
       headers: {
         accept: 'text/html,application/xhtml+xml',
         'user-agent': 'Mozilla/5.0 (compatible; textlog-link-preview/1.0)',
@@ -275,7 +295,8 @@ async function fetchImage(initialUrl: URL) {
   let url = initialUrl
   for (let redirects = 0; redirects <= 3; redirects++) {
     const response = await fetch(url, {
-      redirect: 'manual', signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
+      redirect: 'manual',
+      signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
       headers: { accept: 'image/*', 'user-agent': 'textlog-link-preview/1.0' },
     })
     if (response.status >= 300 && response.status < 400) {
@@ -393,10 +414,11 @@ export async function discoverLinkPreviews(body: string, database?: Database) {
 }
 
 export async function saveLinkPreviews(database: Database, postId: number,
-  previews: ({ url: string } & LinkPreview)[]) {
+  previews: ({ url: string } & LinkPreview)[])
+{
   if (!previews.length) return
   const available = database.query(
-    "SELECT 1 FROM sqlite_master WHERE type='table' AND name='post_link_previews'",
+    'SELECT 1 FROM sqlite_master WHERE type=\'table\' AND name=\'post_link_previews\'',
   ).get()
   if (!available) {
     await deleteImages(previews.flatMap(preview => preview.imageKey ? [preview.imageKey] : []))
@@ -414,7 +436,8 @@ export async function saveLinkPreviews(database: Database, postId: number,
 }
 
 function writeLinkPreviews(database: Database, postId: number, previews: ({ url: string } & LinkPreview)[],
-  replacedKeys: string[] = []) {
+  replacedKeys: string[] = [])
+{
   const existing = database.query('SELECT image_url FROM post_link_previews WHERE post_id=? AND url=?')
   const insert = database.query(`INSERT INTO post_link_previews
     (post_id,url,image_url,title,description,site_name,image_width,image_height) VALUES(?,?,?,?,?,?,?,?)
@@ -433,7 +456,7 @@ function writeLinkPreviews(database: Database, postId: number, previews: ({ url:
 
 function linkPreviewTableAvailable(database: Database) {
   return Boolean(database.query(
-    "SELECT 1 FROM sqlite_master WHERE type='table' AND name='post_link_previews'",
+    'SELECT 1 FROM sqlite_master WHERE type=\'table\' AND name=\'post_link_previews\'',
   ).get())
 }
 
@@ -445,7 +468,8 @@ function storedPreviewKeys(database: Database, postId: number) {
 }
 
 export async function replaceLinkPreviews(database: Database, postId: number,
-  previews: ({ url: string } & LinkPreview)[]) {
+  previews: ({ url: string } & LinkPreview)[])
+{
   if (!linkPreviewTableAvailable(database)) {
     await deleteImages(previews.flatMap(preview => preview.imageKey ? [preview.imageKey] : []))
     return
@@ -474,7 +498,7 @@ export async function deleteLinkPreviewImages(database: Database, postId: number
 
 function bioLinkPreviewTableAvailable(database: Database) {
   return Boolean(database.query(
-    "SELECT 1 FROM sqlite_master WHERE type='table' AND name='user_bio_link_previews'",
+    'SELECT 1 FROM sqlite_master WHERE type=\'table\' AND name=\'user_bio_link_previews\'',
   ).get())
 }
 
@@ -489,9 +513,14 @@ export function userBioLinkPreviews(database: Database, userId: number) {
   if (!bioLinkPreviewTableAvailable(database)) return {}
   const rows = database.query(`SELECT url,image_url,title,description,site_name,image_width,image_height
     FROM user_bio_link_previews WHERE user_id=?`).all(userId) as {
-      url: string; image_url: string; title: string | null; description: string | null; site_name: string | null;
-      image_width: number | null; image_height: number | null
-    }[]
+    url: string
+    image_url: string
+    title: string | null
+    description: string | null
+    site_name: string | null
+    image_width: number | null
+    image_height: number | null
+  }[]
   return Object.fromEntries(rows.map(row => [row.url, {
     imageUrl: isImageKey(row.image_url) ? getImageUrl(row.image_url) : row.image_url,
     title: row.title ? decodeHtmlEntities(row.title) : undefined,
@@ -503,7 +532,8 @@ export function userBioLinkPreviews(database: Database, userId: number) {
 }
 
 export async function replaceBioLinkPreviews(database: Database, userId: number,
-  previews: ({ url: string } & LinkPreview)[]) {
+  previews: ({ url: string } & LinkPreview)[])
+{
   if (!bioLinkPreviewTableAvailable(database)) {
     await deleteImages(previews.flatMap(preview => preview.imageKey ? [preview.imageKey] : []))
     return
@@ -517,7 +547,8 @@ export async function replaceBioLinkPreviews(database: Database, userId: number,
       database.query('DELETE FROM user_bio_link_previews WHERE user_id=?').run(userId)
       for (const preview of previews) {
         insert.run(userId, preview.url, preview.imageKey || preview.imageUrl, preview.title || null,
-          preview.description || null, preview.siteName || null, preview.imageWidth || null, preview.imageHeight || null)
+          preview.description || null, preview.siteName || null, preview.imageWidth || null,
+          preview.imageHeight || null)
       }
     })()
   }

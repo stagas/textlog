@@ -2,8 +2,8 @@ import type { Database } from 'bun:sqlite'
 import { instance } from '../instance.config'
 import { detachAccountFromGroup } from './account-groups'
 import { appHostname } from './brand'
-import type { User } from './types'
 import { removeHotActivity } from './hot'
+import type { User } from './types'
 
 export const ADMIN_EMAILS = new Set(instance.administrators.map(email => email.trim().toLowerCase()))
 

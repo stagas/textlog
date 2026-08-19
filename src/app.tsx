@@ -6,18 +6,18 @@ import { Hono } from 'hono'
 import { bodyLimit } from 'hono/body-limit'
 import { BACKUP_CHECK_INTERVAL_MS } from './backup-automation'
 import { appName, clientIpHeaderName } from './brand'
+import { BlogRecap } from './components/blog-recap'
 import { configureDevReload } from './components/layout'
 import { PanelsGallery } from './components/panels-gallery'
-import { BlogRecap } from './components/blog-recap'
 import { compressResponse } from './compression'
 import { databaseService } from './database-service'
-import { DatabaseUnavailableError } from './runtime-worker-client'
 import { isDevelopment } from './environment'
 import { localImageFile, usesLocalImageStorage } from './image-storage'
 import { clientIp, logError, logHttp, logReady, redactHttpPath, shouldLogHttp } from './log'
 import { MAINTENANCE_INTERVAL_MS } from './maintenance'
 import { renderDefaultOg } from './og'
 import { PUBLIC_ARCHIVE_CHECK_INTERVAL_MS } from './public-archive'
+import { flushIpRequests, isIpBlocked, loadBlockedIps, recordIpRequest } from './request-ip-blocks'
 import { ClientErrorRateLimiter, HOURLY_REQUEST_BLOCK_SECONDS, HOURLY_REQUEST_RATE_LIMIT,
   HOURLY_REQUEST_RATE_WINDOW_SECONDS, rateLimitedResponse, RequestRateLimiter } from './request-rate-limit'
 import { updateResponseTime } from './response-time'
@@ -36,12 +36,12 @@ import { registerSeoRoutes } from './routes/seo'
 import { clientErrorPage, notFoundPage, page, rateLimitPage, serverErrorPage } from './routes/shared'
 import { registerStatsRoutes } from './routes/stats'
 import { registerTagsRoutes } from './routes/tags'
+import { DatabaseUnavailableError } from './runtime-worker-client'
 import { loadStylesAsset, stylesResponse } from './styles'
 import { themeLogoSvg, themeStyles, versionedAppearance, withAppearance } from './theme'
-import { apiUser, currentUser } from './utils'
-import { visitorHash, VISITOR_FLUSH_BATCH_SIZE } from './visitors'
 import { withTimezone } from './timezone'
-import { flushIpRequests, isIpBlocked, loadBlockedIps, recordIpRequest } from './request-ip-blocks'
+import { apiUser, currentUser } from './utils'
+import { VISITOR_FLUSH_BATCH_SIZE, visitorHash } from './visitors'
 
 const devReloadEnabled = Bun.env.DEV_RELOAD === 'true'
 const publicArchivePath = Bun.env.PUBLIC_ARCHIVE_PATH || 'public/dump.zip'
@@ -83,7 +83,8 @@ function recordVisitor(address: string, visitedAt = new Date(), anonymous = true
   const key = `${day}:${hash}`
   const pending = pendingVisitors.get(key)
   pendingVisitors.set(key, { day, hash, anonymousLastSeenAt: anonymous
-    ? Math.max(pending?.anonymousLastSeenAt || 0, visitedAt.getTime()) : pending?.anonymousLastSeenAt || null })
+    ? Math.max(pending?.anonymousLastSeenAt || 0, visitedAt.getTime())
+    : pending?.anonymousLastSeenAt || null })
   if (pendingVisitors.size >= VISITOR_FLUSH_BATCH_SIZE) {
     void flushVisitors().catch(error => logError('visitor buffer flush failed', error))
   }
@@ -113,8 +114,10 @@ const hourlyRequestRateLimiter = new RequestRateLimiter({
 })
 const clientErrorRateLimiter = new ClientErrorRateLimiter()
 await loadBlockedIps()
-const ipRequestTimer = setInterval(() => void flushIpRequests().catch(error => logError('IP request buffer flush failed', error)),
-  5_000)
+const ipRequestTimer = setInterval(
+  () => void flushIpRequests().catch(error => logError('IP request buffer flush failed', error)),
+  5_000,
+)
 ipRequestTimer.unref()
 function requestRateLimitResponse(request: Request, retryAfter: number) {
   const acceptsHtml = request.headers.get('accept')?.includes('text/html')
@@ -137,8 +140,10 @@ const runCleanup = async () => {
   }
 }
 void runCleanup()
-const visitorTimer = setInterval(() => void flushVisitors().catch(error => logError('visitor buffer flush failed', error)),
-  5_000)
+const visitorTimer = setInterval(
+  () => void flushVisitors().catch(error => logError('visitor buffer flush failed', error)),
+  5_000,
+)
 const cleanupTimer = setInterval(runCleanup, MAINTENANCE_INTERVAL_MS)
 visitorTimer.unref()
 cleanupTimer.unref()
@@ -152,15 +157,19 @@ if (Bun.env.NODE_ENV === 'production') {
     backupRunning = true
     try {
       await databaseService().call('maintenance.automatedBackup', {
-        directory: backupDirectory, now: new Date().toISOString(),
+        directory: backupDirectory,
+        now: new Date().toISOString(),
       })
     }
     catch (error) {
       logError('automated backup failed', error)
-      if (Bun.env.BACKUP_ALERT_WEBHOOK_URL) await fetch(Bun.env.BACKUP_ALERT_WEBHOOK_URL, { method: 'POST',
-        headers: { 'content-type': 'application/json' }, signal: AbortSignal.timeout(10_000),
-        body: JSON.stringify({ event: 'database_backup_failed', service: 'textlog', error: String(error),
-          occurredAt: new Date().toISOString() }) }).catch(alertError => logError('backup alert delivery failed', alertError))
+      if (Bun.env.BACKUP_ALERT_WEBHOOK_URL) {
+        await fetch(Bun.env.BACKUP_ALERT_WEBHOOK_URL, { method: 'POST', headers: { 'content-type': 'application/json' },
+          signal: AbortSignal.timeout(10_000),
+          body: JSON.stringify({ event: 'database_backup_failed', service: 'textlog', error: String(error),
+            occurredAt: new Date().toISOString() }) }).catch(alertError =>
+            logError('backup alert delivery failed', alertError))
+      }
     }
     finally {
       backupRunning = false
@@ -172,7 +181,8 @@ if (Bun.env.NODE_ENV === 'production') {
     archiveRunning = true
     try {
       const result = await databaseService().call('maintenance.publicArchive', {
-        path: publicArchivePath, now: new Date().toISOString(),
+        path: publicArchivePath,
+        now: new Date().toISOString(),
       })
       if (result && typeof result === 'object' && 'path' in result) console.log(`public archive    ${result.path}`)
     }
@@ -454,9 +464,10 @@ app.get('/blog/recap-v1', async c => {
   const posts = await databaseService().call('blog.recapPosts', { viewerId: user?.id ?? -1 })
   return page(<BlogRecap user={user} posts={posts} pageUrl={c.req.url} />)
 })
-app.get('/recap-email', async c => c.html(await databaseService().call('maintenance.recapPreview', {
-  requestUrl: c.req.url,
-}), 200, { 'cache-control': 'private, no-store' }))
+app.get('/recap-email', async c =>
+  c.html(await databaseService().call('maintenance.recapPreview', {
+    requestUrl: c.req.url,
+  }), 200, { 'cache-control': 'private, no-store' }))
 app.get('/server-error', () => {
   throw new Error('Intentional server error route')
 })
@@ -483,7 +494,8 @@ app.onError((error, c) => {
   if (error instanceof RequestBodyError) return clientErrorPage(c.req.raw, error.status)
   if (error instanceof DatabaseUnavailableError) {
     return new Response('Service Unavailable', { status: 503, headers: {
-      'cache-control': 'no-store', 'retry-after': String(error.retryAfterSeconds),
+      'cache-control': 'no-store',
+      'retry-after': String(error.retryAfterSeconds),
     } })
   }
   logError(`${c.req.method} ${new URL(c.req.url).pathname}`, error)

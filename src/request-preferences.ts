@@ -16,5 +16,5 @@ export function resolvedDensity(request: Request): DensityChoice {
   const value = request.headers.get('x-textlog-density')
   return DENSITY_CHOICES.includes(value as DensityChoice) ? value as DensityChoice : 'regular'
 }
-import { requestContext } from './request-context'
 import { PAGE_SIZE } from './pagination'
+import { requestContext } from './request-context'

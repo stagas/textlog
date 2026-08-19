@@ -19,8 +19,14 @@ function refreshMaterializedTimestamps(html: string, now = Date.now()) {
     const hours = Math.floor(minutes / 60)
     const days = Math.floor(hours / 24)
     const months = Math.floor(days / 30)
-    const value = seconds < 60 ? `${Math.max(1, seconds)}s` : minutes < 60 ? `${minutes}m`
-      : hours < 24 ? `${hours}h` : days < 30 ? `${days}d` : months < 12 ? `${months}mo`
+    const value = seconds < 60 ? `${Math.max(1, seconds)}s` : minutes < 60
+      ? `${minutes}m`
+      : hours < 24
+      ? `${hours}h`
+      : days < 30
+      ? `${days}d`
+      : months < 12
+      ? `${months}mo`
       : `${Math.floor(days / 365)}y`
     return `<time${attributes}>${value}</time>`
   })
@@ -45,15 +51,24 @@ export async function rpcMaterializedFeedPage(request: Request, kind: Materializ
   if (!materialization) {
     materialization = (async () => {
       const cached = await call('cache.materializedFeedGet', { kind, viewerId, variant })
-      if (cached.html) return { body: refreshMaterializedTimestamps(cached.html), status: 200,
-        headers: [['content-type', 'text/html;charset=utf-8'], ['cache-control', 'private, no-store']] }
+      if (cached.html) {
+        return { body: refreshMaterializedTimestamps(cached.html), status: 200,
+          headers: [['content-type', 'text/html;charset=utf-8'], ['cache-control', 'private, no-store']] }
+      }
       const response = await render()
       const html = await response.text()
       if (response.status === 200) {
-        const cachedHtml = renderForCache ? await (await renderForCache()).text()
-          : rerenderForCache ? await (await render()).text() : html
+        const cachedHtml = renderForCache
+          ? await (await renderForCache()).text()
+          : rerenderForCache
+          ? await (await render()).text()
+          : html
         await call('cache.materializedFeedPut', {
-          kind, viewerId, variant, generation: cached.generation, html: cachedHtml,
+          kind,
+          viewerId,
+          variant,
+          generation: cached.generation,
+          html: cachedHtml,
         })
       }
       return { body: html, status: response.status, headers: [...response.headers.entries()] }

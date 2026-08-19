@@ -1,20 +1,20 @@
 import type { Context, Hono } from 'hono'
 import { apiOrigin } from '../api'
+import { publishPost } from '../api-broker'
 import { AUTH_LIMITS } from '../auth-rate-limit'
 import { bioBodyValidationMessage, normalizeBioBody, validBioBody } from '../bio-body'
-import type { User } from '../types'
 import type { DatabaseService } from '../database-service'
 import { sendMagicLink } from '../email'
-import { logError } from '../log'
-import { discoverLinkPreviews } from '../link-preview'
 import { deleteImages, deleteImagesAfterCommit } from '../image-storage'
-import { publishPost } from '../api-broker'
+import { discoverLinkPreviews } from '../link-preview'
+import { logError } from '../log'
 import { moderateText, moderationMessage } from '../moderation'
 import { normalizePostBody, POST_MAX, postBodyValidationMessage, validPostBody } from '../post-body'
 import { postRateLimitMessage } from '../post-rate-limit'
 import { canPublishPosts } from '../posting-policy'
 import { sendPushForFollow, sendPushForPost, sendPushForUserFollow } from '../push'
 import { sessionHash } from '../sessions'
+import type { User } from '../types'
 import { bearerToken } from '../utils'
 import { emailPattern } from './auth'
 import { clientAddress } from './shared'
@@ -58,8 +58,8 @@ const text = (value: unknown) => typeof value === 'string' ? value : ''
 async function writer(service: DatabaseService, requestApiUser: (request: Request) => User | null, c: Context) {
   const user = requestApiUser(c.req.raw)
   if (!user) return { error: fail('unauthorized', 'Provide a bearer token from /api/v1/auth/verify', 401) }
-  const limited = await service.call('system.consumeBucketedAttempt', { scope: 'api-write',
-    identity: `user:${user.id}`, attempts: WRITE_LIMIT, bucketSeconds: WRITE_WINDOW_SECONDS, now: Date.now() })
+  const limited = await service.call('system.consumeBucketedAttempt', { scope: 'api-write', identity: `user:${user.id}`,
+    attempts: WRITE_LIMIT, bucketSeconds: WRITE_WINDOW_SECONDS, now: Date.now() })
   if (limited) return { error: fail('rate_limited', 'Too many writes', 429, limited.retryAfter) }
   return { user }
 }
@@ -122,7 +122,8 @@ export function registerApiWriteRoutes(app: Hono, service: DatabaseService,
 
     // Accounts are only ever created in a browser. An unknown address gets the same
     // answer as a known one so the API cannot be used to discover who has an account.
-    const link = await service.call('api.requestSignIn', { email, origin: apiOrigin(c.req.url, appUrl), now: Date.now() })
+    const link = await service.call('api.requestSignIn', { email, origin: apiOrigin(c.req.url, appUrl),
+      now: Date.now() })
     if (link) {
       try {
         await sendMagicLink(email, link.url, link.code, link.handle)
@@ -148,11 +149,15 @@ export function registerApiWriteRoutes(app: Hono, service: DatabaseService,
     if (limited) return fail('rate_limited', 'Too many attempts', 429, limited.retryAfter)
 
     const result = await service.call('api.verifySignIn', {
-      email, code, userAgent: c.req.header('user-agent') || '', now,
+      email,
+      code,
+      userAgent: c.req.header('user-agent') || '',
+      now,
     })
     if (result.status === 'invalid') return fail('invalid_code', 'That code is invalid or has expired', 400)
-    return json({ data: { token: result.token, expires_at: new Date(result.expiresAt).toISOString(),
-      user: serialize(result.user) } })
+    return json({
+      data: { token: result.token, expires_at: new Date(result.expiresAt).toISOString(), user: serialize(result.user) },
+    })
   })
 
   app.delete('/api/v1/auth/session', async c => {
@@ -214,7 +219,10 @@ export function registerApiWriteRoutes(app: Hono, service: DatabaseService,
     }
 
     const result = await service.call('api.createPost', {
-      userId: user.id, body: content, parentId, origin: apiOrigin(c.req.url, appUrl),
+      userId: user.id,
+      body: content,
+      parentId,
+      origin: apiOrigin(c.req.url, appUrl),
     })
     if (result.status === 'not_found') return fail('not_found', 'Post not found', 404)
     if (result.status === 'rate_limited') {
@@ -245,11 +253,16 @@ export function registerApiWriteRoutes(app: Hono, service: DatabaseService,
         moderation.reason === 'flagged' ? 422 : 503)
     }
     const result = await service.call('api.updatePost', {
-      userId: guard.user!.id, id, body: content, origin: apiOrigin(c.req.url, appUrl),
+      userId: guard.user!.id,
+      id,
+      body: content,
+      origin: apiOrigin(c.req.url, appUrl),
     })
-    if (result.status !== 'ready') return result.status === 'not_found'
-      ? fail('not_found', 'Post not found', 404)
-      : fail('forbidden', 'That post belongs to someone else', 403)
+    if (result.status !== 'ready') {
+      return result.status === 'not_found'
+        ? fail('not_found', 'Post not found', 404)
+        : fail('forbidden', 'That post belongs to someone else', 403)
+    }
     await persistPostPreviews(service, id, 'replace', await discoverLinkPreviews(content))
     return json({ data: result.post })
   })
@@ -260,9 +273,11 @@ export function registerApiWriteRoutes(app: Hono, service: DatabaseService,
     const id = Number(c.req.param('id'))
     if (!Number.isInteger(id) || id < 1) return fail('invalid_post_id', 'Post ID must be a positive integer', 400)
     const result = await service.call('api.deletePost', { userId: guard.user!.id, id })
-    if (result.status !== 'ready') return result.status === 'not_found'
-      ? fail('not_found', 'Post not found', 404)
-      : fail('forbidden', 'That post belongs to someone else', 403)
+    if (result.status !== 'ready') {
+      return result.status === 'not_found'
+        ? fail('not_found', 'Post not found', 404)
+        : fail('forbidden', 'That post belongs to someone else', 403)
+    }
     await deleteImagesAfterCommit(result.imageKeys)
     return json({ data: { deleted: true } })
   })
@@ -278,8 +293,8 @@ export function registerApiWriteRoutes(app: Hono, service: DatabaseService,
     if (other.changed) {
       void sendPushForFollow(guard.user!.id, guard.user!.handle, other.targetId, undefined, undefined, service)
         .catch(error => logError('API follow push failed', error))
-      void sendPushForUserFollow(guard.user!.id, guard.user!.handle, other.targetId, other.targetHandle,
-        undefined, undefined, service)
+      void sendPushForUserFollow(guard.user!.id, guard.user!.handle, other.targetId, other.targetHandle, undefined,
+        undefined, service)
         .catch(error => logError('API follow activity push failed', error))
     }
     return json({ data: { following: true } })

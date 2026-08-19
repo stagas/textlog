@@ -6,8 +6,8 @@ import { postTitle } from './page-shared'
 
 export function PublicThread(
   { post, replies = [], social, returnPath, topHref }: { post: PostView; replies?: PostView[];
-    social?: { title?: string; description: string; image: string; url: string };
-    returnPath?: string; topHref?: string },
+    social?: { title?: string; description: string; image: string; url: string }; returnPath?: string;
+    topHref?: string },
 ) {
   return (
     <Layout title={postTitle(post.body)} social={social}>

@@ -1,5 +1,5 @@
-import { expect, test } from 'bun:test'
 import { Database } from 'bun:sqlite'
+import { expect, test } from 'bun:test'
 import { recapEmail } from './recap-email'
 
 test('recap email renders the launch highlights as a standalone email document', () => {

@@ -16,7 +16,9 @@ export function decodeForYouCursor(value?: string): ForYouCursor | null {
       || !['next', 'previous'].includes(decoded[3])) return null
     return { createdAt: decoded[1], key: decoded[2], direction: decoded[3] }
   }
-  catch { return null }
+  catch {
+    return null
+  }
 }
 
 export function encodeForYouCursor(cursor: ForYouCursor) {
@@ -27,8 +29,10 @@ type TimelineGroup = { rows: PersonalizedTimelineRow[]; collapsible: boolean }
 
 export function groupSimilarActivities(timeline: PersonalizedTimelineRow[]): TimelineGroup[] {
   const groups: TimelineGroup[] = []
-  const similarityKey = (row: PersonalizedTimelineRow) => ['post', 'reply', 'mention'].includes(row.activity_kind)
-    ? null : `${row.activity_kind}:${row.target_is_viewer}`
+  const similarityKey = (row: PersonalizedTimelineRow) =>
+    ['post', 'reply', 'mention'].includes(row.activity_kind)
+      ? null
+      : `${row.activity_kind}:${row.target_is_viewer}`
   for (const row of timeline) {
     const key = similarityKey(row)
     const previous = groups.at(-1)
@@ -60,57 +64,81 @@ export function Feed({ user, data, title, path = '/for-you', pageUrl, notificati
     .sort((a, b) => a.handle.localeCompare(b.handle))
   const hasAuthorHiding = filterAuthors.length > 0
   const authorFilterStyles = filterAuthors.map(author =>
-    `.for-you-filter-shell:has(.for-you-hide-${author.id}:checked) .for-you-author-${author.id}{display:none}`,
+    `.for-you-filter-shell:has(.for-you-hide-${author.id}:checked) .for-you-author-${author.id}{display:none}`
   ).join('')
   const renderTimelineRow = (row: PersonalizedTimelineRow) => {
     const activityAnchor = `activity-${row.event_key.replace(/[^a-z0-9_-]+/gi, '-')}`
     const hideControlId = `hide-${activityAnchor}`
-    const hideAction = row.actor_is_bot && ['post', 'reply', 'mention'].includes(row.activity_kind) ? <>
-      <input className={`for-you-hide-input for-you-hide-${row.actor_id}`} type="checkbox" id={hideControlId} />
-      <label className="quiet for-you-hide-action" htmlFor={hideControlId}
-        aria-label={`hide all posts by @${row.actor_handle}`}>hide all</label>
-    </> : null
+    const hideAction = row.actor_is_bot && ['post', 'reply', 'mention'].includes(row.activity_kind)
+      ? (
+        <>
+          <input className={`for-you-hide-input for-you-hide-${row.actor_id}`} type="checkbox" id={hideControlId} />
+          <label className="quiet for-you-hide-action" htmlFor={hideControlId}
+            aria-label={`hide all posts by @${row.actor_handle}`}
+          >
+            hide all
+          </label>
+        </>
+      )
+      : null
     const activityReturnPath = `${returnPath}#${activityAnchor}`
     const fromQuery = `?from=${encodeURIComponent(activityReturnPath)}`
     return ['post', 'reply', 'mention'].includes(row.activity_kind)
       ? (
-        <div className={`for-you-item for-you-author-${row.actor_id}${
-          row.unread && row.targeted_to_viewer ? ' activity-item-directed-unread' : ''}`}
-          key={row.event_key}>
+        <div
+          className={`for-you-item for-you-author-${row.actor_id}${
+            row.unread && row.targeted_to_viewer ? ' activity-item-directed-unread' : ''
+          }`}
+          key={row.event_key}
+        >
           <Post p={row.renderedPost!} user={user} showReplyCount tappable contextUnread={!!row.unread}
             returnPath={`${returnPath}#post-${row.id}`} contextLabel={row.activity_kind === 'reply'
-            ? 'replied to you:' : row.activity_kind === 'mention' ? 'mentioned you:' : undefined}
-            authorPopoverAction={hideAction} />
+            ? 'replied to you:'
+            : row.activity_kind === 'mention'
+            ? 'mentioned you:'
+            : undefined} authorPopoverAction={hideAction} />
         </div>
       )
       : (
-        <article className={`activity-follow${row.unread && row.targeted_to_viewer
-          ? ' activity-item-directed-unread' : ''}`} key={row.event_key} id={activityAnchor}>
+        <article className={`activity-follow${
+          row.unread && row.targeted_to_viewer
+            ? ' activity-item-directed-unread'
+            : ''
+        }`} key={row.event_key} id={activityAnchor}>
           <div className="activity-follow-content">
             <MetaRow className="activity-follow-main" unread={!!row.unread}>
-              <UserReference handle={row.actor_handle} bio={row.actor_bio}
-                noteCount={row.actorProfileStats?.notes || 0} stats={row.actorProfileStats}
-                following={!!row.following} followsViewer={row.actorFollowsViewer} user={user}
-                href={row.activity_kind === 'signup'
-                  ? `/admin/users/${row.actor_id}` : `/u/${row.actor_handle}${fromQuery}`}
-                navigationQuery={fromQuery} />
+              <UserReference handle={row.actor_handle} bio={row.actor_bio} noteCount={row.actorProfileStats?.notes || 0}
+                stats={row.actorProfileStats} following={!!row.following} followsViewer={row.actorFollowsViewer}
+                user={user} href={row.activity_kind === 'signup'
+                ? `/admin/users/${row.actor_id}`
+                : `/u/${row.actor_handle}${fromQuery}`} navigationQuery={fromQuery} />
               <span className="activity-context">
                 {row.activity_kind === 'signup' ? 'signed up:' : row.target_is_viewer ? 'followed you:' : 'followed'}
               </span>
               {!row.target_is_viewer && row.activity_kind === 'user_follow'
-                ? <UserReference handle={row.target_handle!} bio={row.target_bio || ''} noteCount={row.posts || 0}
-                  stats={row.targetProfileStats} following={!!row.following} user={user}
-                  followsViewer={row.targetFollowsViewer}
-                  href={`/u/${row.target_handle}${fromQuery}`} navigationQuery={fromQuery} />
+                ? (
+                  <UserReference handle={row.target_handle!} bio={row.target_bio || ''} noteCount={row.posts || 0}
+                    stats={row.targetProfileStats} following={!!row.following} user={user}
+                    followsViewer={row.targetFollowsViewer} href={`/u/${row.target_handle}${fromQuery}`}
+                    navigationQuery={fromQuery} />
+                )
                 : row.activity_kind === 'tag_follow'
-                ? <TagReference tag={row.target_tag!} noteCount={row.posts || 0}
-                  followerCount={row.tagFollowerCount || 0} following={!!row.following} user={user}
-                  href={`/tag/${encodeURIComponent(row.target_tag!)}${fromQuery}`} navigationQuery={fromQuery} />
+                ? (
+                  <TagReference tag={row.target_tag!} noteCount={row.posts || 0}
+                    followerCount={row.tagFollowerCount || 0} following={!!row.following} user={user}
+                    href={`/tag/${encodeURIComponent(row.target_tag!)}${fromQuery}`} navigationQuery={fromQuery} />
+                )
                 : null}
               {row.posts !== null
-                ? <MetaStats createdAt={row.created_at} count={row.posts} href={(row.activity_kind === 'tag_follow'
-                    ? `/tag/${row.target_tag}` : `/u/${row.activity_kind === 'user_follow' && !row.target_is_viewer
-                      ? row.target_handle : row.actor_handle}`) + fromQuery} />
+                ? (
+                  <MetaStats createdAt={row.created_at} count={row.posts} href={(row.activity_kind === 'tag_follow'
+                    ? `/tag/${row.target_tag}`
+                    : `/u/${
+                      row.activity_kind === 'user_follow' && !row.target_is_viewer
+                        ? row.target_handle
+                        : row.actor_handle
+                    }`) + fromQuery} />
+                )
                 : <MetaStats createdAt={row.created_at} count={null} className="activity-follow-stats" />}
             </MetaRow>
             {(row.activity_kind === 'user_follow' || row.activity_kind === 'signup') && (
@@ -119,18 +147,25 @@ export function Feed({ user, data, title, path = '/for-you', pageUrl, notificati
           </div>
           {row.actor_id !== user.id && (
             <form method="post" action={row.target_is_viewer || row.activity_kind === 'signup'
-              ? `/follow/${row.actor_handle}` : row.activity_kind === 'user_follow'
-              ? `/follow/${row.target_handle}` : `/tag-follow/${row.target_tag}`}>
+              ? `/follow/${row.actor_handle}`
+              : row.activity_kind === 'user_follow'
+              ? `/follow/${row.target_handle}`
+              : `/tag-follow/${row.target_tag}`}
+            >
               <input type="hidden" name="from" value={activityReturnPath} />
               {(!row.target_is_viewer && (row.activity_kind === 'signup'
                 ? row.actorFollowsViewer
-                : row.activity_kind === 'user_follow' ? row.targetFollowsViewer : false)
-                ) && <span className="follows-you">follows you</span>}
+                : row.activity_kind === 'user_follow'
+                ? row.targetFollowsViewer
+                : false)) && <span className="follows-you">follows you</span>}
               <button className={`button${row.following ? ' button-muted' : ''}`}>
                 {row.following ? 'unfollow' : row.target_is_viewer || (row.activity_kind === 'signup'
-                  ? row.actorFollowsViewer
-                  : row.activity_kind === 'user_follow' ? row.targetFollowsViewer : false)
-                  ? 'follow back' : 'follow'}
+                    ? row.actorFollowsViewer
+                    : row.activity_kind === 'user_follow'
+                    ? row.targetFollowsViewer
+                    : false)
+                  ? 'follow back'
+                  : 'follow'}
                 {row.activity_kind === 'user_follow' && !row.target_is_viewer && ` @${row.target_handle}`}
                 {row.activity_kind === 'tag_follow' && ` #${row.target_tag}`}
               </button>
@@ -144,39 +179,65 @@ export function Feed({ user, data, title, path = '/for-you', pageUrl, notificati
       <h1 className="visually-hidden">Your feed</h1>
       <FeedTabs active="following" user={user} forYouReadStatus={data.timeline.length ? hasUnread : undefined}
         toMe={toMe} toMeCount={toMe ? 0 : data.toMeCount} forYouCount={data.forYouCount} unreadHref={data.unreadHref}
-        lastUnreadHref={data.lastUnreadHref}
-        forYouUnread={data.forYouUnread} toMeUnread={data.toMeUnread} />
+        lastUnreadHref={data.lastUnreadHref} forYouUnread={data.forYouUnread} toMeUnread={data.toMeUnread} />
       {showTopPagination && (!data.timeline.length || !hasAuthorHiding)
         && <Pagination page={data.page} totalPages={data.totalPages} path={path} top />}
       {data.timeline.length
         ? hasAuthorHiding
-        ? <div className="for-you-filter-shell">
-          <style>{authorFilterStyles}</style>
-          {showTopPagination && <Pagination page={data.page} totalPages={data.totalPages} path={path} top />}
-          {groupSimilarActivities(data.timeline).map(group => group.rows.length > 1 && group.collapsible
-            ? <div className="activity-group" key={group.rows[0].event_key}>
-              {renderTimelineRow(group.rows[0])}
-              <details className="activity-more"><summary>and {group.rows.length - 1} more</summary>
-                {group.rows.slice(1).map(renderTimelineRow)}</details>
+          ? (
+            <div className="for-you-filter-shell">
+              <style>{authorFilterStyles}</style>
+              {showTopPagination && <Pagination page={data.page} totalPages={data.totalPages} path={path} top />}
+              {groupSimilarActivities(data.timeline).map(group =>
+                group.rows.length > 1 && group.collapsible
+                  ? (
+                    <div className="activity-group" key={group.rows[0].event_key}>
+                      {renderTimelineRow(group.rows[0])}
+                      <details className="activity-more">
+                        <summary>and {group.rows.length - 1} more</summary>
+                        {group.rows.slice(1).map(renderTimelineRow)}
+                      </details>
+                    </div>
+                  )
+                  : renderTimelineRow(group.rows[0])
+              )}
             </div>
-            : renderTimelineRow(group.rows[0]))}
-        </div>
-        : groupSimilarActivities(data.timeline).map(group => group.rows.length > 1 && group.collapsible
-          ? <div className="activity-group" key={group.rows[0].event_key}>
-            {renderTimelineRow(group.rows[0])}
-            <details className="activity-more"><summary>and {group.rows.length - 1} more</summary>
-              {group.rows.slice(1).map(renderTimelineRow)}</details>
-          </div>
-          : renderTimelineRow(group.rows[0]))
+          )
+          : groupSimilarActivities(data.timeline).map(group =>
+            group.rows.length > 1 && group.collapsible
+              ? (
+                <div className="activity-group" key={group.rows[0].event_key}>
+                  {renderTimelineRow(group.rows[0])}
+                  <details className="activity-more">
+                    <summary>and {group.rows.length - 1} more</summary>
+                    {group.rows.slice(1).map(renderTimelineRow)}
+                  </details>
+                </div>
+              )
+              : renderTimelineRow(group.rows[0])
+          )
         : data.page === 1
-        ? <div className="empty empty-actions">
-          <p>{toMe ? 'No replies, mentions, or new followers yet.'
-            : 'Your timeline is empty. Follow people or hashtags to shape it.'}</p>
-          <ActionPair primary={<a className="button" href="/explore">explore tags &amp; people</a>}
-            secondary={<><a href="/">browse notes</a><span className="action-separator">or</span>
-              <a href="/write">write your first note</a></>} />
-        </div>
-        : <div className="empty">No activity on this page. <a href="/for-you">Return to the first page</a>.</div>}
+        ? (
+          <div className="empty empty-actions">
+            <p>
+              {toMe
+                ? 'No replies, mentions, or new followers yet.'
+                : 'Your timeline is empty. Follow people or hashtags to shape it.'}
+            </p>
+            <ActionPair primary={<a className="button" href="/explore">explore tags &amp; people</a>} secondary={
+              <>
+                <a href="/">browse notes</a>
+                <span className="action-separator">or</span>
+                <a href="/write">write your first note</a>
+              </>
+            } />
+          </div>
+        )
+        : (
+          <div className="empty">
+            No activity on this page. <a href="/for-you">Return to the first page</a>.
+          </div>
+        )}
       <Pagination page={data.page} totalPages={data.totalPages} path={path} />
     </Layout>
   )

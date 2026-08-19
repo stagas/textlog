@@ -38,10 +38,14 @@ test('recap campaign honors rate limits and never resends a completed version', 
   const options = {
     database,
     env: {
-      APP_URL: 'https://textlog.test', EMAIL_FROM: 'textlog <hello@textlog.test>', RESEND_API_KEY: 'secret',
+      APP_URL: 'https://textlog.test',
+      EMAIL_FROM: 'textlog <hello@textlog.test>',
+      RESEND_API_KEY: 'secret',
     },
     request: request as typeof fetch,
-    sleep: async (ms: number) => { sleeps.push(ms) },
+    sleep: async (ms: number) => {
+      sleeps.push(ms)
+    },
     log: () => {},
   }
 
@@ -61,7 +65,10 @@ test('recap campaign honors rate limits and never resends a completed version', 
   expect(String(requests[1].body.html)).toContain(`token=${unsubscribeToken}`)
   expect(database.query(`SELECT campaign_version,status,attempts,provider_id
     FROM recap_email_deliveries`).get()).toEqual({
-    campaign_version: 'v1', status: 'sent', attempts: 2, provider_id: 'resend-message-1',
+    campaign_version: 'v1',
+    status: 'sent',
+    attempts: 2,
+    provider_id: 'resend-message-1',
   })
 })
 
@@ -74,7 +81,9 @@ test('--test sends only to admins and does not read or write campaign history', 
   const options = {
     database,
     env: {
-      APP_URL: 'https://textlog.test', EMAIL_FROM: 'textlog <hello@textlog.test>', RESEND_API_KEY: 'secret',
+      APP_URL: 'https://textlog.test',
+      EMAIL_FROM: 'textlog <hello@textlog.test>',
+      RESEND_API_KEY: 'secret',
     },
     testMode: true,
     adminEmails: ['reader@example.com'],
@@ -99,7 +108,9 @@ test('an ambiguous network outcome is not retried on restart', async () => {
   const options = {
     database,
     env: {
-      APP_URL: 'https://textlog.test', EMAIL_FROM: 'textlog <hello@textlog.test>', RESEND_API_KEY: 'secret',
+      APP_URL: 'https://textlog.test',
+      EMAIL_FROM: 'textlog <hello@textlog.test>',
+      RESEND_API_KEY: 'secret',
     },
     request: (async () => {
       requests++

@@ -13,8 +13,30 @@ afterEach(() => {
 describe('image storage', () => {
   test('derives UUID object keys from validated image types', () => {
     const png = new Uint8Array([
-      0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a,
-      0, 0, 0, 13, 0x49, 0x48, 0x44, 0x52, 0, 0, 0, 1, 0, 0, 0, 1,
+      0x89,
+      0x50,
+      0x4e,
+      0x47,
+      0x0d,
+      0x0a,
+      0x1a,
+      0x0a,
+      0,
+      0,
+      0,
+      13,
+      0x49,
+      0x48,
+      0x44,
+      0x52,
+      0,
+      0,
+      0,
+      1,
+      0,
+      0,
+      0,
+      1,
     ])
     const contentType = validateImageData(png, 'image/png')
     expect(createImageKey(contentType)).toMatch(/^images\/[0-9a-f-]{36}\.png$/)
@@ -25,8 +47,8 @@ describe('image storage', () => {
   test('reads allowed image dimensions without native decoder support', () => {
     const gif = new Uint8Array([0x47, 0x49, 0x46, 0x38, 0x39, 0x61, 0x20, 0x03, 0x58, 0x02])
     expect(imageDimensions(gif, validateImageData(gif, 'image/gif'))).toEqual({ width: 800, height: 600 })
-    expect(() => imageDimensions(new Uint8Array([0x47, 0x49, 0x46, 0x38, 0x39, 0x61, 0, 0, 0, 0]),
-      'image/gif')).toThrow('Invalid or oversized')
+    expect(() => imageDimensions(new Uint8Array([0x47, 0x49, 0x46, 0x38, 0x39, 0x61, 0, 0, 0, 0]), 'image/gif'))
+      .toThrow('Invalid or oversized')
   })
 
   test('writes, serves, and deletes the same object key locally', async () => {

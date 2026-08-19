@@ -1,15 +1,17 @@
 import { Database } from 'bun:sqlite'
 import { expect, test } from 'bun:test'
-import { clearMaterializedFeedPages, invalidateMaterializedFeedPages, materializedFeedPage, refreshMaterializedTimestamps }
-  from './materialized-feed-pages'
+import { clearMaterializedFeedPages, invalidateMaterializedFeedPages, materializedFeedPage,
+  refreshMaterializedTimestamps } from './materialized-feed-pages'
 
 function databases() {
   const primary = new Database(':memory:', { strict: true })
   primary.run(`CREATE TABLE feed_snapshot_generation(id INTEGER PRIMARY KEY,generation INTEGER NOT NULL);
     INSERT INTO feed_snapshot_generation VALUES(1,1);`)
   const cache = new Database(':memory:', { strict: true })
-  cache.run(`CREATE TABLE materialized_feed_pages_v2(kind TEXT,viewer_id INTEGER,variant TEXT,generation INTEGER,html TEXT,
-    created_at TEXT DEFAULT CURRENT_TIMESTAMP,PRIMARY KEY(kind,viewer_id,variant,generation));`)
+  cache.run(
+    `CREATE TABLE materialized_feed_pages_v2(kind TEXT,viewer_id INTEGER,variant TEXT,generation INTEGER,html TEXT,
+    created_at TEXT DEFAULT CURRENT_TIMESTAMP,PRIMARY KEY(kind,viewer_id,variant,generation));`,
+  )
   return { primary, cache }
 }
 
@@ -51,7 +53,8 @@ test('refreshes relative timestamps in cached HTML without rerendering', async (
   try {
     expect(await (await materializedFeedPage(primary, request, 'latest', -1, render, cache)).text())
       .toBe('<time dateTime="2026-08-16 10:00:00" title="Aug 16, 2026, 1:00 PM">2h</time>')
-  } finally {
+  }
+  finally {
     Date.now = originalNow
   }
   expect(renders).toBe(1)

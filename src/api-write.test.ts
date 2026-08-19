@@ -2,11 +2,11 @@ import { Database } from 'bun:sqlite'
 import { beforeEach, describe, expect, test } from 'bun:test'
 import { Hono } from 'hono'
 import { readFileSync, unlinkSync } from 'node:fs'
+import { executeDatabaseDomain } from './database-domain'
+import type { DatabaseService } from './database-service'
 import { registerApiRoutes } from './routes/api'
 import { WRITE_LIMIT } from './routes/api-write'
 import { apiUser, hash } from './utils'
-import { executeDatabaseDomain } from './database-domain'
-import type { DatabaseService } from './database-service'
 
 function fixture() {
   const database = new Database(':memory:')
@@ -213,8 +213,10 @@ describe('API writes', () => {
     const blocksResponse = await call(app, '/api/v1/users/alice/blocks', { token: 'alice-token' })
     const blocks = await blocksResponse.json() as any
     expect(blocksResponse.headers.get('cache-control')).toBe('no-store')
-    expect(blocks).toEqual({ data: [{ handle: 'bob', url: 'https://textlog.test/u/bob',
-      api_url: 'https://textlog.test/api/v1/users/bob' }], pagination: { next_cursor: null } })
+    expect(blocks).toEqual({
+      data: [{ handle: 'bob', url: 'https://textlog.test/u/bob', api_url: 'https://textlog.test/api/v1/users/bob' }],
+      pagination: { next_cursor: null },
+    })
     const ownProfileResponse = await call(app, '/api/v1/users/alice', { token: 'alice-token' })
     const ownProfile = await ownProfileResponse.json() as any
     expect(ownProfile.data).toMatchObject({ blocked_user_count: 1, blocked_tag_count: 1 })

@@ -15,8 +15,8 @@ import type { Hono } from 'hono'
 import { databaseService } from '../database-service'
 import { sendAdminEmail, sendReportDecision } from '../email'
 import { deleteImagesAfterCommit } from '../image-storage'
-import { currentUser } from '../utils'
 import { cacheBlockedIp, flushIpRequests } from '../request-ip-blocks'
+import { currentUser } from '../utils'
 
 export function registerAdminRoutes(app: Hono) {
   app.get('/admin/email', c => {
@@ -85,7 +85,9 @@ export function registerAdminRoutes(app: Hono) {
     const reasons = (f.reasons || '').trim()
     if (reasons.length < 20) return c.text('Specific reasons are required', 400)
     const report = await databaseService().call('admin.decideIllegalReport', {
-      id, decision: decision as 'resolve' | 'dismiss', reasons,
+      id,
+      decision: decision as 'resolve' | 'dismiss',
+      reasons,
     })
     if (report.status === 'not_open') return c.text('Report is not open', 409)
     if (report.reporterEmail) {
@@ -109,7 +111,10 @@ export function registerAdminRoutes(app: Hono) {
     if (!Number.isInteger(id) || !['resolve', 'dismiss'].includes(decision)) return c.text('Not found', 404)
     const f = await form(c.req.raw)
     const updated = await databaseService().call('admin.decideReport', {
-      id, decision: decision as 'resolve' | 'dismiss', actorId: signedIn.id, note: f.note || '',
+      id,
+      decision: decision as 'resolve' | 'dismiss',
+      actorId: signedIn.id,
+      note: f.note || '',
     })
     if (!updated) return c.text('Report is not open', 409)
     return redirect('/admin')
@@ -189,14 +194,21 @@ export function registerAdminRoutes(app: Hono) {
       if (f.bot !== 'yes' && f.bot !== 'no') return c.text('Invalid bot status', 400)
       const isBot = f.bot === 'yes'
       const changed = await databaseService().call('admin.moderateUser', {
-        id, actorId: signedIn.id, action: 'bot', isBot, note: f.note || '',
+        id,
+        actorId: signedIn.id,
+        action: 'bot',
+        isBot,
+        note: f.note || '',
       })
       if (changed.status === 'bot_unchanged') return c.text('Bot status has already changed', 409)
       if (changed.status === 'not_found') return c.text('Not found', 404)
       return redirect(`/admin/users/${id}`)
     }
     const changed = await databaseService().call('admin.moderateUser', {
-      id, actorId: signedIn.id, action: action as 'suspend' | 'restore' | 'delete', note: f.note || '',
+      id,
+      actorId: signedIn.id,
+      action: action as 'suspend' | 'restore' | 'delete',
+      note: f.note || '',
     })
     if (changed.status === 'not_found') return c.text('Not found', 404)
     if (changed.status === 'already_suspended') return c.text('Account is already suspended', 409)

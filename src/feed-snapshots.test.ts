@@ -71,8 +71,8 @@ test('snapshot creation removes stale, obsolete hot, and least recently used sna
 
   feedSnapshotPage(db, 'hot:new', -1, 1, () => [{ id: 1 }], 20, db)
 
-  expect(db.query("SELECT count(*) count FROM feed_snapshots WHERE kind IN ('stale','hot:old')").get())
+  expect(db.query('SELECT count(*) count FROM feed_snapshots WHERE kind IN (\'stale\',\'hot:old\')').get())
     .toEqual({ count: 0 })
   expect(db.query('SELECT count(*) count FROM feed_snapshots').get()).toEqual({ count: 200 })
-  expect(db.query("SELECT count(*) count FROM feed_snapshots WHERE kind='hot:new'").get()).toEqual({ count: 1 })
+  expect(db.query('SELECT count(*) count FROM feed_snapshots WHERE kind=\'hot:new\'').get()).toEqual({ count: 1 })
 })

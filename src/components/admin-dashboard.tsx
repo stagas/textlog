@@ -1,10 +1,10 @@
-import type { User } from '../types'
 import { PAGE_SIZE } from '../pagination'
+import type { User } from '../types'
 import type { AdminActionView, AdminReportView, DashboardStats, IllegalActivityReportView, ProfileRow } from '../types'
 import { fmtFull } from '../utils'
 import { PageHeading } from './account-settings-header'
-import { Layout } from './layout'
 import { maskEmail } from './email-address'
+import { Layout } from './layout'
 import { Pagination } from './page-shared'
 import { StatsGrid } from './stats'
 
@@ -32,7 +32,9 @@ export function AdminDashboard(
       />
       <StatsGrid stats={stats} />
       <section className="admin-section admin-ip-requests">
-        <h2>top IPs today <span>{ipRequests.length}</span></h2>
+        <h2>
+          top IPs today <span>{ipRequests.length}</span>
+        </h2>
         {ipRequests.length
           ? (
             <div className="admin-ip-list">
@@ -67,9 +69,10 @@ export function AdminDashboard(
                 <article className="admin-report" key={report.id}>
                   <div className="admin-report-meta">
                     <span>{report.reference} · {report.category} · post #{report.post_id}</span>
-                    <span>{report.reporter_name || 'identity exception'} · {
-                      report.reporter_email ? maskEmail(report.reporter_email) : 'no email'
-                    }</span>
+                    <span>
+                      {report.reporter_name || 'identity exception'} ·{' '}
+                      {report.reporter_email ? maskEmail(report.reporter_email) : 'no email'}
+                    </span>
                   </div>
                   <p>{report.details}</p>
                   <a href={report.content_url}>view post</a>

@@ -68,6 +68,5 @@ export function feedSnapshotPage<T>(database: Database, kind: string, viewerId: 
     safePage * pageSize,
   ) as { payload: string }[]
   return { snapshotId: snapshot.id, items: rows.map(row => JSON.parse(row.payload) as T), page: safePage,
-    totalItems: snapshot.total_items,
-    totalPages }
+    totalItems: snapshot.total_items, totalPages }
 }

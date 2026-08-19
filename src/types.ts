@@ -1,5 +1,5 @@
-export type LinkPreview = { imageUrl: string; imageKey?: string; title?: string; description?: string; siteName?: string;
-  imageWidth?: number; imageHeight?: number }
+export type LinkPreview = { imageUrl: string; imageKey?: string; title?: string; description?: string;
+  siteName?: string; imageWidth?: number; imageHeight?: number }
 
 export type PostRow = {
   id: number
@@ -79,8 +79,16 @@ export type PostView = PostRow & {
 export type PostFeedPage = { posts: PostView[]; page: number; totalItems: number; totalPages: number;
   forYouUnread?: boolean; toMeUnread?: boolean; forYouCount?: number }
 export type ApiPost = {
-  id: number; top_id: number | null; body: string; created_at: string; parent_id: number | null; reply_count: number
-  tags: string[]; mentions: string[]; url: string; api_url: string
+  id: number
+  top_id: number | null
+  body: string
+  created_at: string
+  parent_id: number | null
+  reply_count: number
+  tags: string[]
+  mentions: string[]
+  url: string
+  api_url: string
   author: { handle: string; url: string; api_url: string }
   parent?: ApiPost | null
 }

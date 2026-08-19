@@ -6,24 +6,40 @@ import type { PersonalizedTimelineRow } from './types'
 
 function postActivity(id: number, actorId: number, handle: string, actorIsBot = true): PersonalizedTimelineRow {
   const post = {
-    id, user_id: actorId, parent_id: null, body: `note by ${handle}`, created_at: '2026-08-19 10:00:00',
-    deleted_at: null, handle, reply_count: 0,
+    id,
+    user_id: actorId,
+    parent_id: null,
+    body: `note by ${handle}`,
+    created_at: '2026-08-19 10:00:00',
+    deleted_at: null,
+    handle,
+    reply_count: 0,
   }
   return {
     ...post,
-    activity_kind: 'post', event_key: `post:${id}`, actor_id: actorId, actor_handle: handle, actor_bio: '',
+    activity_kind: 'post',
+    event_key: `post:${id}`,
+    actor_id: actorId,
+    actor_handle: handle,
+    actor_bio: '',
     actor_is_bot: Number(actorIsBot),
-    target_handle: null, target_tag: null, target_bio: null, following: true, target_is_viewer: false,
-    targeted_to_viewer: false, posts: null, unread: 0, renderedPost: post,
+    target_handle: null,
+    target_tag: null,
+    target_bio: null,
+    following: true,
+    target_is_viewer: false,
+    targeted_to_viewer: false,
+    posts: null,
+    unread: 0,
+    renderedPost: post,
   }
 }
 
 test('for-you renders a page-local hide action on each entry', () => {
   const html = renderToStaticMarkup(<Feed
-    user={{ id: 1, handle: 'reader', email: 'reader@example.com', bio: '',
-      handle_chosen_at: '2026-08-19 09:00:00' }}
-    data={{ timeline: [postActivity(10, 2, 'alice'), postActivity(11, 3, 'bob')], page: 1, totalPages: 1,
-      toMeCount: 0, forYouCount: 0, forYouUnread: false, toMeUnread: false }}
+    user={{ id: 1, handle: 'reader', email: 'reader@example.com', bio: '', handle_chosen_at: '2026-08-19 09:00:00' }}
+    data={{ timeline: [postActivity(10, 2, 'alice'), postActivity(11, 3, 'bob')], page: 1, totalPages: 1, toMeCount: 0,
+      forYouCount: 0, forYouUnread: false, toMeUnread: false }}
   />)
 
   expect(html).not.toContain('for-you-author-filters')
@@ -35,10 +51,9 @@ test('for-you renders a page-local hide action on each entry', () => {
 
 test('for-you offers hiding even when only one author is present', () => {
   const html = renderToStaticMarkup(<Feed
-    user={{ id: 1, handle: 'reader', email: 'reader@example.com', bio: '',
-      handle_chosen_at: '2026-08-19 09:00:00' }}
-    data={{ timeline: [postActivity(10, 2, 'alice')], page: 1, totalPages: 1,
-      toMeCount: 0, forYouCount: 0, forYouUnread: false, toMeUnread: false }}
+    user={{ id: 1, handle: 'reader', email: 'reader@example.com', bio: '', handle_chosen_at: '2026-08-19 09:00:00' }}
+    data={{ timeline: [postActivity(10, 2, 'alice')], page: 1, totalPages: 1, toMeCount: 0, forYouCount: 0,
+      forYouUnread: false, toMeUnread: false }}
   />)
 
   expect(html).toContain('for-you-filter-shell')
@@ -47,14 +62,17 @@ test('for-you offers hiding even when only one author is present', () => {
 
 test('for-you does not put hide actions on follow activity', () => {
   const followActivity = {
-    ...postActivity(12, 4, 'carol'), activity_kind: 'user_follow' as const, event_key: 'user-follow:12',
-    target_handle: 'dave', target_bio: '', renderedPost: undefined,
+    ...postActivity(12, 4, 'carol'),
+    activity_kind: 'user_follow' as const,
+    event_key: 'user-follow:12',
+    target_handle: 'dave',
+    target_bio: '',
+    renderedPost: undefined,
   }
   const html = renderToStaticMarkup(<Feed
-    user={{ id: 1, handle: 'reader', email: 'reader@example.com', bio: '',
-      handle_chosen_at: '2026-08-19 09:00:00' }}
-    data={{ timeline: [postActivity(10, 2, 'alice'), followActivity], page: 1, totalPages: 1,
-      toMeCount: 0, forYouCount: 0, forYouUnread: false, toMeUnread: false }}
+    user={{ id: 1, handle: 'reader', email: 'reader@example.com', bio: '', handle_chosen_at: '2026-08-19 09:00:00' }}
+    data={{ timeline: [postActivity(10, 2, 'alice'), followActivity], page: 1, totalPages: 1, toMeCount: 0,
+      forYouCount: 0, forYouUnread: false, toMeUnread: false }}
   />)
 
   expect(html).not.toContain('for-you-hide-input for-you-hide-4')
@@ -63,15 +81,21 @@ test('for-you does not put hide actions on follow activity', () => {
 
 test('a followed-you event offers to follow back', () => {
   const followActivity = {
-    ...postActivity(12, 4, 'carol'), activity_kind: 'user_follow' as const, event_key: 'user-follow:12',
-    target_handle: null, target_bio: '', target_is_viewer: true, targeted_to_viewer: true, following: false,
-    actorFollowsViewer: true, renderedPost: undefined,
+    ...postActivity(12, 4, 'carol'),
+    activity_kind: 'user_follow' as const,
+    event_key: 'user-follow:12',
+    target_handle: null,
+    target_bio: '',
+    target_is_viewer: true,
+    targeted_to_viewer: true,
+    following: false,
+    actorFollowsViewer: true,
+    renderedPost: undefined,
   }
   const html = renderToStaticMarkup(<Feed
-    user={{ id: 1, handle: 'reader', email: 'reader@example.com', bio: '',
-      handle_chosen_at: '2026-08-19 09:00:00' }}
-    data={{ timeline: [followActivity], page: 1, totalPages: 1,
-      toMeCount: 1, forYouCount: 0, forYouUnread: false, toMeUnread: true }}
+    user={{ id: 1, handle: 'reader', email: 'reader@example.com', bio: '', handle_chosen_at: '2026-08-19 09:00:00' }}
+    data={{ timeline: [followActivity], page: 1, totalPages: 1, toMeCount: 1, forYouCount: 0, forYouUnread: false,
+      toMeUnread: true }}
   />)
 
   expect(html).toContain('>follow back</button>')
@@ -81,10 +105,9 @@ test('a followed-you event offers to follow back', () => {
 
 test('for-you does not put hide actions on posts by people', () => {
   const html = renderToStaticMarkup(<Feed
-    user={{ id: 1, handle: 'reader', email: 'reader@example.com', bio: '',
-      handle_chosen_at: '2026-08-19 09:00:00' }}
-    data={{ timeline: [postActivity(10, 2, 'alice', false)], page: 1, totalPages: 1,
-      toMeCount: 0, forYouCount: 0, forYouUnread: false, toMeUnread: false }}
+    user={{ id: 1, handle: 'reader', email: 'reader@example.com', bio: '', handle_chosen_at: '2026-08-19 09:00:00' }}
+    data={{ timeline: [postActivity(10, 2, 'alice', false)], page: 1, totalPages: 1, toMeCount: 0, forYouCount: 0,
+      forYouUnread: false, toMeUnread: false }}
   />)
 
   expect(html).not.toContain('for-you-hide-action')
@@ -93,10 +116,9 @@ test('for-you does not put hide actions on posts by people', () => {
 
 test('secondary for-you pages retain top pagination with hide actions', () => {
   const html = renderToStaticMarkup(<Feed
-    user={{ id: 1, handle: 'reader', email: 'reader@example.com', bio: '',
-      handle_chosen_at: '2026-08-19 09:00:00' }}
-    data={{ timeline: [postActivity(10, 2, 'alice'), postActivity(11, 3, 'bob')], page: 2, totalPages: 3,
-      toMeCount: 0, forYouCount: 0, forYouUnread: false, toMeUnread: false }}
+    user={{ id: 1, handle: 'reader', email: 'reader@example.com', bio: '', handle_chosen_at: '2026-08-19 09:00:00' }}
+    data={{ timeline: [postActivity(10, 2, 'alice'), postActivity(11, 3, 'bob')], page: 2, totalPages: 3, toMeCount: 0,
+      forYouCount: 0, forYouUnread: false, toMeUnread: false }}
   />)
 
   expect(html).toContain('pagination pagination-top')
@@ -105,11 +127,9 @@ test('secondary for-you pages retain top pagination with hide actions', () => {
 
 test('first for-you page shows top pagination when the first unread item is on a later page', () => {
   const html = renderToStaticMarkup(<Feed
-    user={{ id: 1, handle: 'reader', email: 'reader@example.com', bio: '',
-      handle_chosen_at: '2026-08-19 09:00:00' }}
-    data={{ timeline: [postActivity(10, 2, 'alice'), postActivity(11, 3, 'bob')], page: 1, totalPages: 3,
-      toMeCount: 0, forYouCount: 1, forYouUnread: true, toMeUnread: false,
-      unreadHref: '/for-you?page=2#post-20' }}
+    user={{ id: 1, handle: 'reader', email: 'reader@example.com', bio: '', handle_chosen_at: '2026-08-19 09:00:00' }}
+    data={{ timeline: [postActivity(10, 2, 'alice'), postActivity(11, 3, 'bob')], page: 1, totalPages: 3, toMeCount: 0,
+      forYouCount: 1, forYouUnread: true, toMeUnread: false, unreadHref: '/for-you?page=2#post-20' }}
   />)
 
   expect(html).toContain('pagination pagination-top')
@@ -117,11 +137,10 @@ test('first for-you page shows top pagination when the first unread item is on a
 
 test('for-you offers links to the first and last unread activity', () => {
   const html = renderToStaticMarkup(<Feed
-    user={{ id: 1, handle: 'reader', email: 'reader@example.com', bio: '',
-      handle_chosen_at: '2026-08-19 09:00:00' }}
-    data={{ timeline: [postActivity(10, 2, 'alice')], page: 1, totalPages: 3,
-      toMeCount: 0, forYouCount: 2, forYouUnread: true, toMeUnread: false,
-      unreadHref: '/for-you?page=2#post-20', lastUnreadHref: '/for-you?page=3#post-30' }}
+    user={{ id: 1, handle: 'reader', email: 'reader@example.com', bio: '', handle_chosen_at: '2026-08-19 09:00:00' }}
+    data={{ timeline: [postActivity(10, 2, 'alice')], page: 1, totalPages: 3, toMeCount: 0, forYouCount: 2,
+      forYouUnread: true, toMeUnread: false, unreadHref: '/for-you?page=2#post-20',
+      lastUnreadHref: '/for-you?page=3#post-30' }}
   />)
 
   expect(html).toContain('<span class="activity-side-status">jump to</span>')
@@ -131,12 +150,11 @@ test('for-you offers links to the first and last unread activity', () => {
 
 test('to-me uses the same hide actions and pagination placement', () => {
   const html = renderToStaticMarkup(<Feed
-    user={{ id: 1, handle: 'reader', email: 'reader@example.com', bio: '',
-      handle_chosen_at: '2026-08-19 09:00:00' }}
-    toMe path="/to-me"
-    data={{ timeline: [postActivity(10, 2, 'alice'), postActivity(11, 3, 'bob')], page: 1, totalPages: 3,
-      toMeCount: 2, forYouCount: 2, forYouUnread: false, toMeUnread: true,
-      unreadHref: '/to-me?page=2#post-20' }}
+    user={{ id: 1, handle: 'reader', email: 'reader@example.com', bio: '', handle_chosen_at: '2026-08-19 09:00:00' }}
+    toMe
+    path="/to-me"
+    data={{ timeline: [postActivity(10, 2, 'alice'), postActivity(11, 3, 'bob')], page: 1, totalPages: 3, toMeCount: 2,
+      forYouCount: 2, forYouUnread: false, toMeUnread: true, unreadHref: '/to-me?page=2#post-20' }}
   />)
 
   expect(html).toContain('for-you-hide-input for-you-hide-2')

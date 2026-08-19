@@ -22,7 +22,8 @@ test('main-thread application files cannot import SQLite connections', () => {
   const violations = files.flatMap(path => {
     const source = readFileSync(path, 'utf8')
     return /from\s+['"]bun:sqlite['"]|from\s+['"](?:\.\.\/)*db['"]|from\s+['"](?:\.\.\/)*cache-db['"]/.test(source)
-      ? [path.slice(root.length)] : []
+      ? [path.slice(root.length)]
+      : []
   })
   expect(violations).toEqual([])
 })

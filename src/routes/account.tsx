@@ -3,8 +3,8 @@ import { accountGroupForUser, isPrimaryAccount } from '../account-groups'
 import { anonymizeUser, isAdmin } from '../admin'
 import { AUTH_LIMITS, authRateLimitMessage } from '../auth-rate-limit'
 import { currentUser, hash, hashPassword, sessionToken, token, verifyPassword } from '../utils'
-import { authLimit, clientAddress, form, issueEmailToken, issueMagicLink, page, redirect, retryPage, safeNext,
-  securityPage, INVITATION_LINK_LIFETIME_MS } from './shared'
+import { authLimit, clientAddress, form, INVITATION_LINK_LIFETIME_MS, issueEmailToken, issueMagicLink, page, redirect,
+  retryPage, safeNext, securityPage } from './shared'
 
 import type { Hono } from 'hono'
 import { bioBodyValidationMessage, normalizeBioBody, validBioBody } from '../bio-body'
@@ -26,11 +26,8 @@ import {
 } from '../components/pages'
 import { exportUserData } from '../data-export'
 import { databaseService } from '../database-service'
-import { DENSITY_CHOICES, type DensityChoice, PAGE_SIZE_CHOICES, type PageSizeChoice,
-  resolvedDensity, resolvedPageSize } from '../request-preferences'
 import { sendAccountDeletionConfirmation, sendEmailChangeAuthorization, sendFriendInvitation,
   sendPasswordEnableConfirmation } from '../email'
-import { emailPattern } from './auth'
 import { emailChangeForToken, issueEmailChangeAuthorization } from '../email-change-authorization'
 import { confirmEmailToken, findEmailToken } from '../email-verification'
 import {
@@ -39,18 +36,21 @@ import {
   notificationDeviceCookie,
   notificationUserAgent,
 } from '../http'
+import { deleteImages, deleteImagesAfterCommit } from '../image-storage'
+import { deleteBioLinkPreviewImages, deleteLinkPreviewImages, discoverLinkPreviews } from '../link-preview'
 import { moderateText, moderationMessage } from '../moderation'
 import { accountForPasswordEnableToken, issuePasswordEnableToken } from '../password-enable'
 import { vapidPublicKey } from '../push'
+import { DENSITY_CHOICES, type DensityChoice, PAGE_SIZE_CHOICES, type PageSizeChoice, resolvedDensity,
+  resolvedPageSize } from '../request-preferences'
 import { normalizeSearchQuery } from '../search'
-import { deleteBioLinkPreviewImages, deleteLinkPreviewImages, discoverLinkPreviews } from '../link-preview'
-import { deleteImages, deleteImagesAfterCommit } from '../image-storage'
 import { sessionHash } from '../sessions'
 import { ACCENT_CHOICES, type AccentChoice, appearance, appearanceCookie, FONT_CHOICES, FONT_SIZE_CHOICES,
   type FontChoice, fontChoice, fontCookie, type FontSizeChoice, fontSizeChoice, fontSizeCookie, PRIMARY_FONT_CHOICES,
   type PrimaryFontChoice, primaryFontChoice, primaryFontCookie, SANS_SERIF_FONT_CHOICES, type SansSerifFontChoice,
   sansSerifFontChoice, sansSerifFontCookie, THEME_CHOICES, type ThemeChoice } from '../theme'
 import { DEFAULT_TIMEZONE, validTimezone } from '../timezone'
+import { emailPattern } from './auth'
 
 async function markAppearanceBannerHandled(request: Request, userId: number) {
   const userAgent = notificationUserAgent(request)
@@ -62,7 +62,9 @@ async function markInviteBannerHandled(userId: number) {
   await databaseService().call('feeds.recordBanner', { userId, userAgent: null, action: 'invite-dismissed' })
 }
 
-async function profileSuggestionSearch(fields: Record<string, string>, viewerId: number): Promise<PostingSuggestionSearch | null> {
+async function profileSuggestionSearch(fields: Record<string, string>,
+  viewerId: number): Promise<PostingSuggestionSearch | null>
+{
   if (fields.action !== 'search-hashtags' && fields.action !== 'search-mentions') return null
   const kind = fields.action === 'search-hashtags' ? 'hashtags' : 'mentions'
   const value = kind === 'hashtags' ? fields.hashtag_query : fields.mention_query
@@ -135,7 +137,9 @@ export function registerAccountRoutes(app: Hono) {
     if (!/^\d+$/.test(f.accountId || '')) return redirect('/account/accounts')
     const targetId = Number(f.accountId)
     const selected = await databaseService().call('account.select', {
-      userId: user.id, targetId, sessionHash: sessionHash(sessionToken(c.req.raw)) || '',
+      userId: user.id,
+      targetId,
+      sessionHash: sessionHash(sessionToken(c.req.raw)) || '',
     })
     if (selected.status === 'not_found') return redirect('/account/accounts')
     return redirect(selected.handleChosen ? '/account/edit' : '/choose-handle?next=%2Faccount%2Faccounts')
@@ -145,7 +149,8 @@ export function registerAccountRoutes(app: Hono) {
     const user = currentUser(c.req.raw)
     if (!user) return redirect('/enter')
     const created = await databaseService().call('account.createLinked', {
-      userId: user.id, sessionHash: sessionHash(sessionToken(c.req.raw)) || '',
+      userId: user.id,
+      sessionHash: sessionHash(sessionToken(c.req.raw)) || '',
     })
     if (!created) return redirect('/account/accounts')
     return redirect('/choose-handle?next=%2Faccount%2Faccounts')
@@ -164,7 +169,9 @@ export function registerAccountRoutes(app: Hono) {
     if (!user) return c.json({ error: 'Unauthorized' }, 401)
     const endpoint = c.req.query('endpoint') || ''
     const preferences = await databaseService().call('account.pushPreferences', {
-      userId: user.id, endpoint, includeSignups: isAdmin(user),
+      userId: user.id,
+      endpoint,
+      includeSignups: isAdmin(user),
     })
     return c.json({ enabled: Boolean(preferences), preferences: preferences || {
       latest: 1,
@@ -212,8 +219,9 @@ export function registerAccountRoutes(app: Hono) {
     const deviceId = notificationDevice(c.req.raw) || token()
     const userAgent = notificationUserAgent(c.req.raw)
     await databaseService().call('account.savePushSubscription', { userId: user.id, endpoint, p256dh, auth, deviceId,
-      userAgent, preferencesProvided: Boolean(value.preferences), preferences: { latest, replies, mentions, follows,
-        signups, followActivity, followingNotes, bots, followingOnlyToMe } })
+      userAgent, preferencesProvided: Boolean(value.preferences),
+      preferences: { latest, replies, mentions, follows, signups, followActivity, followingNotes, bots,
+        followingOnlyToMe } })
     c.header('Set-Cookie', notificationDeviceCookie(deviceId), { append: true })
     return c.json({ saved: true })
   })
@@ -231,7 +239,9 @@ export function registerAccountRoutes(app: Hono) {
     if (typeof value.endpoint !== 'string') return c.json({ error: 'Invalid subscription' }, 400)
     const userAgent = notificationUserAgent(c.req.raw)
     const result = await databaseService().call('account.removePushSubscription', {
-      userId: user.id, endpoint: value.endpoint, userAgent,
+      userId: user.id,
+      endpoint: value.endpoint,
+      userAgent,
     })
     return c.json({ removed: true, active: result.active })
   })
@@ -241,10 +251,11 @@ export function registerAccountRoutes(app: Hono) {
     if (!user) return redirect('/enter?next=' + encodeURIComponent('/account/edit'))
     const returnPath = c.req.query('from') ? safeNext(c.req.query('from')) : undefined
     const settings = await databaseService().call('account.editSettings', { userId: user.id })
-    return page(<Profile user={user} profile={{ ...user, is_bot: settings?.isBot,
-      bot_managed: settings?.botManaged, timezone: settings?.timezone, recap_emails: settings?.recapEmails }}
-      posts={[]} following={false} editing
-      returnPath={returnPath} />)
+    return page(
+      <Profile user={user}
+        profile={{ ...user, is_bot: settings?.isBot, bot_managed: settings?.botManaged, timezone: settings?.timezone,
+          recap_emails: settings?.recapEmails }} posts={[]} following={false} editing returnPath={returnPath} />,
+    )
   })
 
   app.get('/account/recap-emails', async c => {
@@ -274,7 +285,9 @@ export function registerAccountRoutes(app: Hono) {
     if (f.subscribed !== '0' && f.subscribed !== '1') return redirect('/account/recap-emails')
     const subscribed = f.subscribed === '1'
     const changed = await databaseService().call('account.setRecapPreference', {
-      userId: user?.id, token: user ? undefined : f.token, subscribed,
+      userId: user?.id,
+      token: user ? undefined : f.token,
+      subscribed,
     })
     if (!changed) return redirect('/enter?next=' + encodeURIComponent('/account/recap-emails'))
     return page(<RecapEmails user={user} subscribed={subscribed} token={user ? undefined : f.token} changed />)
@@ -296,8 +309,8 @@ export function registerAccountRoutes(app: Hono) {
     if (suggestionSearch) {
       return page(
         <Profile user={user} profile={{ ...user, timezone: submittedTimezone }} posts={[]} following={false} bio={bio}
-          editHandle={submittedHandle} editing
-          returnPath={returnPath} suggestionSearch={suggestionSearch} editIsBot={isBot} />,
+          editHandle={submittedHandle} editing returnPath={returnPath} suggestionSearch={suggestionSearch}
+          editIsBot={isBot} />,
       )
     }
     const handle = submittedHandle.toLowerCase().replace(/^@/, '')
@@ -315,8 +328,7 @@ export function registerAccountRoutes(app: Hono) {
       ].filter(Boolean).join(' ')
       return page(
         <Profile user={user} profile={{ ...user, timezone: submittedTimezone }} posts={[]} following={false} bio={bio}
-          editHandle={submittedHandle} editing
-          error={error} returnPath={returnPath} editIsBot={isBot} />,
+          editHandle={submittedHandle} editing error={error} returnPath={returnPath} editIsBot={isBot} />,
         400,
       )
     }
@@ -325,20 +337,24 @@ export function registerAccountRoutes(app: Hono) {
       if (!moderation.ok) {
         return page(
           <Profile user={user} profile={{ ...user, timezone: submittedTimezone }} posts={[]} following={false} bio={bio}
-            editHandle={submittedHandle}
-            editing error={moderationMessage(moderation.reason)} returnPath={returnPath} editIsBot={isBot} />,
+            editHandle={submittedHandle} editing error={moderationMessage(moderation.reason)} returnPath={returnPath}
+            editIsBot={isBot} />,
           moderation.reason === 'flagged' ? 422 : 503,
         )
       }
     }
     const updated = await databaseService().call('account.updateProfile', {
-      userId: user.id, handle, bio, timezone: submittedTimezone, isBot,
+      userId: user.id,
+      handle,
+      bio,
+      timezone: submittedTimezone,
+      isBot,
     })
     if (updated.status !== 'ready') {
       return page(
         <Profile user={user} profile={{ ...user, timezone: submittedTimezone }} posts={[]} following={false} bio={bio}
-          editHandle={submittedHandle} editing
-          error="That username is unavailable." returnPath={returnPath} editIsBot={isBot} />,
+          editHandle={submittedHandle} editing error="That username is unavailable." returnPath={returnPath}
+          editIsBot={isBot} />,
         400,
       )
     }
@@ -390,7 +406,10 @@ export function registerAccountRoutes(app: Hono) {
       }
       const deviceId = notificationDevice(c.req.raw) || token()
       await databaseService().call('account.saveAppearancePreferences', {
-        userId: user.id, deviceId, pageSize: selectedPageSize, density: selectedDensity,
+        userId: user.id,
+        deviceId,
+        pageSize: selectedPageSize,
+        density: selectedDensity,
         showLinkPreviews: f.showLinkPreviews === 'yes',
       })
       await markAppearanceBannerHandled(c.req.raw, user.id)
@@ -506,39 +525,57 @@ export function registerAccountRoutes(app: Hono) {
     const user = currentUser(c.req.raw)
     if (!user) return redirect('/enter')
     const f = await form(c.req.raw)
-    if (/^\d+$/.test(f.id || '')) await databaseService().call('account.revokeKey', {
-      kind: 'api', userId: user.id, id: Number(f.id),
-    })
+    if (/^\d+$/.test(f.id || '')) {
+      await databaseService().call('account.revokeKey', {
+        kind: 'api',
+        userId: user.id,
+        id: Number(f.id),
+      })
+    }
     return redirect('/account/security#api-keys')
   })
 
   app.get('/account/feed-keys/new', c => {
     const user = currentUser(c.req.raw)
-    return user ? page(<AccountFeedKeyCreate user={user} />)
+    return user
+      ? page(<AccountFeedKeyCreate user={user} />)
       : redirect('/enter?next=' + encodeURIComponent('/account/feed-keys/new'))
   })
 
   app.post('/account/feed-keys', async c => {
     const user = currentUser(c.req.raw)
     if (!user) return redirect('/enter')
-    const limited = await authLimit(c, 'feed-key-create', `${user.id}:${clientAddress(c)}`, AUTH_LIMITS.sensitiveAccount)
-    if (limited) return retryPage(await securityPage(c.req.raw, authRateLimitMessage(limited.retryAfter), undefined, 429),
-      limited.retryAfter)
+    const limited = await authLimit(c, 'feed-key-create', `${user.id}:${clientAddress(c)}`,
+      AUTH_LIMITS.sensitiveAccount)
+    if (limited) {
+      return retryPage(await securityPage(c.req.raw, authRateLimitMessage(limited.retryAfter), undefined, 429),
+        limited.retryAfter)
+    }
     const f = await form(c.req.raw)
     const name = (f.name || '').trim()
     const lifetimes: Record<string, number | null> = {
-      '90-days': 90 * 24 * 60 * 60 * 1000, year: 365 * 24 * 60 * 60 * 1000, never: null,
+      '90-days': 90 * 24 * 60 * 60 * 1000,
+      year: 365 * 24 * 60 * 60 * 1000,
+      never: null,
     }
     if (!name || name.length > 64 || !Object.hasOwn(lifetimes, f.lifetime)) {
-      return page(<AccountFeedKeyCreate user={user} name={name} lifetime={f.lifetime}
-        error="Enter a key name and choose a valid expiration." />, 400)
+      return page(
+        <AccountFeedKeyCreate user={user} name={name} lifetime={f.lifetime}
+          error="Enter a key name and choose a valid expiration." />,
+        400,
+      )
     }
     const lifetime = lifetimes[f.lifetime]
     const now = Date.now()
     const issued = await databaseService().call('account.issueKey', { kind: 'feed', userId: user.id, name,
       expiresAt: lifetime === null ? null : now + lifetime, now })
-    if (!issued) return page(<AccountFeedKeyCreate user={user} name={name} lifetime={f.lifetime}
-      error="Revoke an existing key before creating another." />, 400)
+    if (!issued) {
+      return page(
+        <AccountFeedKeyCreate user={user} name={name} lifetime={f.lifetime}
+          error="Revoke an existing key before creating another." />,
+        400,
+      )
+    }
     return c.redirect(`/feeds/for-you/${issued.value}?created=1`, 303)
   })
 
@@ -546,9 +583,13 @@ export function registerAccountRoutes(app: Hono) {
     const user = currentUser(c.req.raw)
     if (!user) return redirect('/enter')
     const f = await form(c.req.raw)
-    if (/^\d+$/.test(f.id || '')) await databaseService().call('account.revokeKey', {
-      kind: 'feed', userId: user.id, id: Number(f.id),
-    })
+    if (/^\d+$/.test(f.id || '')) {
+      await databaseService().call('account.revokeKey', {
+        kind: 'feed',
+        userId: user.id,
+        id: Number(f.id),
+      })
+    }
     return redirect('/account/security?revoked=feed#feed-keys')
   })
 
@@ -556,7 +597,8 @@ export function registerAccountRoutes(app: Hono) {
     const user = currentUser(c.req.raw)
     const value = c.req.query('token') || ''
     if (value) {
-      return await databaseService().call('account.passwordEnableTokenValid', { tokenHash: hash(value), now: Date.now() })
+      return await databaseService().call('account.passwordEnableTokenValid', { tokenHash: hash(value),
+          now: Date.now() })
         ? page(<AccountPassword user={user} enabled={false} token={value} />)
         : page(<AccountPassword user={user} enabled={false} invalid />, 400)
     }
@@ -570,7 +612,8 @@ export function registerAccountRoutes(app: Hono) {
     const user = currentUser(c.req.raw)
     if (!user) return redirect('/enter')
     const f = await form(c.req.raw)
-    const limited = await authLimit(c, 'password-enable', `${user.id}:${clientAddress(c)}`, AUTH_LIMITS.sensitiveAccount)
+    const limited = await authLimit(c, 'password-enable', `${user.id}:${clientAddress(c)}`,
+      AUTH_LIMITS.sensitiveAccount)
     if (limited) {
       return retryPage(
         page(
@@ -582,7 +625,8 @@ export function registerAccountRoutes(app: Hono) {
       )
     }
     const tokenValid = Boolean(f.token) && await databaseService().call('account.passwordEnableTokenValid', {
-      tokenHash: hash(f.token), now: Date.now(),
+      tokenHash: hash(f.token),
+      now: Date.now(),
     })
     if (!f.token) {
       const currentPasswordHash = await databaseService().call('account.passwordHash', { userId: user.id })
@@ -591,7 +635,11 @@ export function registerAccountRoutes(app: Hono) {
       const value = token()
       const tokenHash = hash(value)
       await databaseService().call('account.storePasswordEnableToken', {
-        userId: user.id, email: user.email, tokenHash, expiresAt: Date.now() + 3600000, now: Date.now(),
+        userId: user.id,
+        email: user.email,
+        tokenHash,
+        expiresAt: Date.now() + 3600000,
+        now: Date.now(),
       })
       try {
         await sendPasswordEnableConfirmation(user.email,
@@ -619,7 +667,9 @@ export function registerAccountRoutes(app: Hono) {
     }
     const passwordHash = await hashPassword(password)
     const enabled = await databaseService().call('account.consumePasswordEnableToken', {
-      tokenHash: hash(f.token), passwordHash, now: Date.now(),
+      tokenHash: hash(f.token),
+      passwordHash,
+      now: Date.now(),
     })
     if (!enabled) return page(<AccountPassword user={user} enabled={false} invalid />, 400)
     return redirect('/account/security?enabled=password')
@@ -636,7 +686,8 @@ export function registerAccountRoutes(app: Hono) {
   app.post('/account/password/change', async c => {
     const user = currentUser(c.req.raw)
     if (!user) return redirect('/enter')
-    const limited = await authLimit(c, 'password-change', `${user.id}:${clientAddress(c)}`, AUTH_LIMITS.sensitiveAccount)
+    const limited = await authLimit(c, 'password-change', `${user.id}:${clientAddress(c)}`,
+      AUTH_LIMITS.sensitiveAccount)
     if (limited) {
       return retryPage(
         page(<AccountPassword user={user} enabled error={authRateLimitMessage(limited.retryAfter)} />, 429),
@@ -661,7 +712,9 @@ export function registerAccountRoutes(app: Hono) {
     const currentSession = sessionHash(sessionToken(c.req.raw))
     const newPasswordHash = await hashPassword(newPassword)
     await databaseService().call('account.changePassword', {
-      userId: user.id, passwordHash: newPasswordHash, currentSessionHash: currentSession,
+      userId: user.id,
+      passwordHash: newPasswordHash,
+      currentSessionHash: currentSession,
     })
     return redirect('/account/security?changed=password')
   })
@@ -669,7 +722,8 @@ export function registerAccountRoutes(app: Hono) {
   app.post('/account/magic-link', async c => {
     const user = currentUser(c.req.raw)
     if (!user) return redirect('/enter?next=' + encodeURIComponent('/account/security'))
-    const limited = await authLimit(c, 'account-magic-link', `${user.id}:${clientAddress(c)}`, AUTH_LIMITS.sensitiveAccount)
+    const limited = await authLimit(c, 'account-magic-link', `${user.id}:${clientAddress(c)}`,
+      AUTH_LIMITS.sensitiveAccount)
     if (limited) {
       return retryPage(await securityPage(c.req.raw, authRateLimitMessage(limited.retryAfter), undefined, 429),
         limited.retryAfter)
@@ -683,7 +737,8 @@ export function registerAccountRoutes(app: Hono) {
     const user = currentUser(c.req.raw)
     if (!user) return redirect('/enter?next=' + encodeURIComponent('/account/export'))
     const data = await databaseService().call('account.export', {
-      userId: user.id, currentSession: sessionToken(c.req.raw),
+      userId: user.id,
+      currentSession: sessionToken(c.req.raw),
     })
     return new Response(JSON.stringify(data, null, 2), {
       headers: {
@@ -724,9 +779,8 @@ export function registerAccountRoutes(app: Hono) {
       }
       const origin = Bun.env.APP_URL?.replace(/\/$/, '') || new URL(c.req.url).origin
       const value = token()
-      await databaseService().call('account.storeEmailChangeAuthorization', { userId: user.id,
-        currentEmail: user.email, newEmail: email, tokenHash: hash(value), expiresAt: Date.now() + 3600000,
-        now: Date.now() })
+      await databaseService().call('account.storeEmailChangeAuthorization', { userId: user.id, currentEmail: user.email,
+        newEmail: email, tokenHash: hash(value), expiresAt: Date.now() + 3600000, now: Date.now() })
       await sendEmailChangeAuthorization(user.email,
         `${origin}/account/email/change/authorize?token=${encodeURIComponent(value)}`)
       return securityPage(c.req.raw, undefined, 'An approval link was sent to your current email address.')
@@ -741,7 +795,8 @@ export function registerAccountRoutes(app: Hono) {
   app.get('/account/email/change/authorize', async c => {
     const value = c.req.query('token') || ''
     const change = await databaseService().call('account.emailChangeAuthorization', {
-      tokenHash: hash(value), now: Date.now(),
+      tokenHash: hash(value),
+      now: Date.now(),
     })
     return change
       ? page(<ConfirmEmail token={value} kind="authorize-change" email={change.newEmail} />)
@@ -752,7 +807,8 @@ export function registerAccountRoutes(app: Hono) {
     const f = await form(c.req.raw)
     const value = f.token || ''
     const change = await databaseService().call('account.emailChangeAuthorization', {
-      tokenHash: hash(value), now: Date.now(),
+      tokenHash: hash(value),
+      now: Date.now(),
     })
     if (!change) return page(<ConfirmEmail invalid />, 400)
     try {
@@ -799,7 +855,8 @@ export function registerAccountRoutes(app: Hono) {
     const user = currentUser(c.req.raw)
     if (!user) return redirect('/enter')
     await databaseService().call('account.revokeOtherSessions', {
-      userId: user.id, currentSessionHash: sessionHash(sessionToken(c.req.raw)),
+      userId: user.id,
+      currentSessionHash: sessionHash(sessionToken(c.req.raw)),
     })
     return redirect('/account/security#sessions')
   })
@@ -808,15 +865,17 @@ export function registerAccountRoutes(app: Hono) {
     const value = c.req.query('token') || ''
     if (value) {
       return await databaseService().call('account.deletionInfo', {
-        selector: { tokenHash: hash(value) }, now: Date.now(),
-      })
+          selector: { tokenHash: hash(value) },
+          now: Date.now(),
+        })
         ? page(<ConfirmAccountDelete user={currentUser(c.req.raw)} token={value} />)
         : page(<ConfirmAccountDelete user={currentUser(c.req.raw)} invalid />, 400)
     }
     const user = currentUser(c.req.raw)
     if (!user) return redirect('/enter')
     const account = await databaseService().call('account.deletionInfo', {
-      selector: { userId: user.id }, now: Date.now(),
+      selector: { userId: user.id },
+      now: Date.now(),
     })
     return page(<ConfirmAccountDelete user={user} passwordEnabled={account?.passwordHash !== '!'} />)
   })
@@ -824,9 +883,12 @@ export function registerAccountRoutes(app: Hono) {
   app.post('/account/delete', async c => {
     const user = currentUser(c.req.raw)
     const f = await form(c.req.raw)
-    const deletionAccount = f.token ? await databaseService().call('account.deletionInfo', {
-      selector: { tokenHash: hash(f.token) }, now: Date.now(),
-    }) : null
+    const deletionAccount = f.token
+      ? await databaseService().call('account.deletionInfo', {
+        selector: { tokenHash: hash(f.token) },
+        now: Date.now(),
+      })
+      : null
     if (deletionAccount) {
       if (isAdmin({ email: deletionAccount.email }) && deletionAccount.primary) {
         return c.text('Admin accounts cannot delete themselves', 403)
@@ -838,7 +900,8 @@ export function registerAccountRoutes(app: Hono) {
     if (f.token) return page(<ConfirmAccountDelete user={user} invalid />, 400)
     if (!user) return redirect('/enter')
     const account = await databaseService().call('account.deletionInfo', {
-      selector: { userId: user.id }, now: Date.now(),
+      selector: { userId: user.id },
+      now: Date.now(),
     })
     if (!account) return redirect('/enter')
     if (isAdmin(user) && account.primary) return c.text('Admin accounts cannot delete themselves', 403)

@@ -1,10 +1,10 @@
-import { validateStartupConfiguration } from './config'
-import { DatabaseUnavailableError, RuntimeWorkerClient } from './runtime-worker-client'
 import { clientIpHeaderName, sessionCookieName } from './brand'
-import { notificationDevice, sessionCookie } from './http'
+import { validateStartupConfiguration } from './config'
 import { configureDatabaseService } from './database-service'
-import { withRequestContext } from './request-context'
+import { notificationDevice, sessionCookie } from './http'
 import { PAGE_SIZE } from './pagination'
+import { withRequestContext } from './request-context'
+import { DatabaseUnavailableError, RuntimeWorkerClient } from './runtime-worker-client'
 
 const configuration = validateStartupConfiguration()
 Bun.env.NODE_ENV = configuration.environment
@@ -92,8 +92,16 @@ function mainThreadAsset(request: Request) {
 }
 
 const databaseIndependentPaths = new Set([
-  '/site.webmanifest', '/styles.css', '/embed.css', '/notifications.js', '/sw.js',
-  '/theme.css', '/textlog.svg', '/favicon-theme.svg', '/og.png', '/dump.zip',
+  '/site.webmanifest',
+  '/styles.css',
+  '/embed.css',
+  '/notifications.js',
+  '/sw.js',
+  '/theme.css',
+  '/textlog.svg',
+  '/favicon-theme.svg',
+  '/og.png',
+  '/dump.zip',
 ])
 
 function isDatabaseIndependentRequest(request: Request) {
@@ -121,7 +129,9 @@ function bearerToken(request: Request) {
 
 async function requestWithResolvedIdentity(request: Request) {
   return await runtime.call('auth.resolve', {
-    sessionToken: cookieToken(request), bearerToken: bearerToken(request), deviceId: notificationDevice(request),
+    sessionToken: cookieToken(request),
+    bearerToken: bearerToken(request),
+    deviceId: notificationDevice(request),
     now: Date.now(),
   })
 }
@@ -172,9 +182,11 @@ const server = Bun.serve({
     if (isDatabaseIndependentRequest(request)) return fetchWithoutIdentity(request, server)
     if (path === '/health') {
       return runtime.call('system.health', { databasePath: configuration.databasePath })
-        .then(database => Response.json({ status: 'ok', database }, {
-          headers: { 'cache-control': 'no-store' },
-        }))
+        .then(database =>
+          Response.json({ status: 'ok', database }, {
+            headers: { 'cache-control': 'no-store' },
+          })
+        )
         .catch(error => {
           if (!(error instanceof DatabaseUnavailableError)) console.error('health check failed', error)
           return unavailableResponse(request)
@@ -196,16 +208,16 @@ const server = Bun.serve({
     const applicationRequest = new Request(request, { headers })
     return withRequestContext({ sessionUser: identity.sessionUser, apiUser: identity.apiUser,
       pageSize: identity.preferences.pageSize, density: identity.preferences.density },
-    () => readyApplication.fetch(applicationRequest, server)).then(async response => {
-      const token = cookieToken(request)
-      if (token && await runtime.call('auth.renewSession', { token, now: Date.now() })) {
-        response.headers.append('set-cookie', sessionCookie(token))
-      }
-      return response
-    }).catch(error => {
-      if (!(error instanceof DatabaseUnavailableError)) throw error
-      return unavailableResponse(request)
-    })
+      () => readyApplication.fetch(applicationRequest, server)).then(async response => {
+        const token = cookieToken(request)
+        if (token && await runtime.call('auth.renewSession', { token, now: Date.now() })) {
+          response.headers.append('set-cookie', sessionCookie(token))
+        }
+        return response
+      }).catch(error => {
+        if (!(error instanceof DatabaseUnavailableError)) throw error
+        return unavailableResponse(request)
+      })
   },
 })
 

@@ -7,13 +7,13 @@ import { Post } from './post'
 export function PublicFeed(
   { feed = { posts: [], page: 1, totalItems: 0, totalPages: 1 }, user = null, path = '/', pageUrl,
     notificationBanner = false }: {
-    feed?: PostFeedPage
-    cursor?: unknown
-    user?: User | null
-    path?: string
-    pageUrl?: string
-    notificationBanner?: false | 'notifications' | 'appearance' | 'invite' | 'notification-update' | 'donate'
-  },
+      feed?: PostFeedPage
+      cursor?: unknown
+      user?: User | null
+      path?: string
+      pageUrl?: string
+      notificationBanner?: false | 'notifications' | 'appearance' | 'invite' | 'notification-update' | 'donate'
+    },
 ) {
   const returnPath = path + (feed.page > 1 ? `?page=${feed.page}` : '')
   return (
@@ -22,8 +22,8 @@ export function PublicFeed(
       feeds={{ title: 'Latest notes', rss: '/latest.rss', atom: '/latest.atom' }}
     >
       <h1 className="visually-hidden">Latest notes</h1>
-      <FeedTabs active="latest" user={user} forYouCount={feed.forYouCount}
-        forYouUnread={feed.forYouUnread} toMeUnread={feed.toMeUnread} />
+      <FeedTabs active="latest" user={user} forYouCount={feed.forYouCount} forYouUnread={feed.forYouUnread}
+        toMeUnread={feed.toMeUnread} />
       {feed.page > 1 && <Pagination page={feed.page} totalPages={feed.totalPages} path={path} top />}
       {feed.posts.length
         ? feed.posts.map(post => (

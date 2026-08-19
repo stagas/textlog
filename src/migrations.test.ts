@@ -310,7 +310,7 @@ describe('database migrations', () => {
   test('adds an opt-in bot account flag defaulting to false', () => {
     const database = new Database(':memory:')
     runMigrations(database)
-    database.query("INSERT INTO users(handle,email,password) VALUES('person','person@example.com','x')").run()
+    database.query('INSERT INTO users(handle,email,password) VALUES(\'person\',\'person@example.com\',\'x\')').run()
 
     expect(database.query('SELECT is_bot FROM users WHERE handle=?').get('person')).toEqual({ is_bot: 0 })
     expect(() => database.query('UPDATE users SET is_bot=2 WHERE handle=?').run('person')).toThrow()

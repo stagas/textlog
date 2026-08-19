@@ -35,13 +35,9 @@
   const preferenceValues = () => {
     return { ...Object.fromEntries(preferenceInputs
       .filter(input => input.name !== 'onlyToMe' && input.name !== 'forYou')
-      .map(input => [input.name, input.checked])),
-    followingNotes: forYou.checked,
-    replies: forYou.checked,
-    mentions: forYou.checked,
-    follows: forYou.checked,
-    followActivity: forYou.checked && !onlyToMe.checked,
-    followingOnlyToMe: onlyToMe.checked }
+      .map(input => [input.name, input.checked])), followingNotes: forYou.checked, replies: forYou.checked,
+      mentions: forYou.checked, follows: forYou.checked, followActivity: forYou.checked && !onlyToMe.checked,
+      followingOnlyToMe: onlyToMe.checked }
   }
   const syncForYou = () => {
     onlyToMe.disabled = !forYou.checked

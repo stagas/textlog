@@ -104,7 +104,9 @@ describe('hot feed ranking', () => {
 
     const results = getHotPosts(database, 100, null, asOf)
     for (const [rootId, replies] of [
-      [1, 1], [100, 5], [200, 20],
+      [1, 1],
+      [100, 5],
+      [200, 20],
     ] as const) {
       const stored = database.query('SELECT score,reply_count FROM post_hot WHERE post_id=?').get(rootId) as {
         score: number
@@ -114,9 +116,9 @@ describe('hot feed ranking', () => {
       expect(stored.reply_count).toBe(replies)
       const participationWeight = replies === 1 ? 0.2 : 1
       const decayedScore = stored.score * participationWeight
-          * Math.pow(2, Math.max(0, Math.min(replies, 15) - 5) / 1.5)
-          * Math.pow(0.5, 40)
-          * (1 + Math.pow(0.5, 40))
+        * Math.pow(2, Math.max(0, Math.min(replies, 15) - 5) / 1.5)
+        * Math.pow(0.5, 40)
+        * (1 + Math.pow(0.5, 40))
       const reserve = replies >= 4
         ? Math.min(0.3, Math.max(0.235, 0.04 * Math.pow(2, (Math.min(replies, 15) - 4) / 1.5))
           + 0.02 * Math.pow(0.5, 40 / 24) + Math.max(0, replies - 4) * 0.001)

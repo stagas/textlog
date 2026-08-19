@@ -1,8 +1,7 @@
-import type { User } from '../types'
 import { canPublishPosts } from '../posting-policy'
+import type { User } from '../types'
 import type { PostView } from '../types'
 import { Layout } from './layout'
-import { Panel } from './panel'
 import {
   FormActions,
   FormMessage,
@@ -11,6 +10,7 @@ import {
   type PostingSuggestionSearch,
   VerificationRequired,
 } from './page-shared'
+import { Panel } from './panel'
 import { Post } from './post'
 
 export function Compose(

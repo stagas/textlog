@@ -3,12 +3,14 @@ import { publishPost } from './api-broker'
 import { extractHashtags, extractMentions, postContentFlags } from './content'
 import { resolveHandle } from './handles'
 import { recordHotActivity } from './hot'
-import { insertRateLimitedPost } from './post-rate-limit'
-import type { BioReferenceData, LinkPreview, ParentPost, PostView, UserProfileStats } from './types'
 import { getImageUrl, isImageKey } from './image-storage'
 import { decodeHtmlEntities, userBioLinkPreviews } from './link-preview'
+import { insertRateLimitedPost } from './post-rate-limit'
+import type { BioReferenceData, LinkPreview, ParentPost, PostView, UserProfileStats } from './types'
 
-export function loadBioReferenceData(database: Database, bio: string, profileId: number, viewerId = -1): BioReferenceData {
+export function loadBioReferenceData(database: Database, bio: string, profileId: number,
+  viewerId = -1): BioReferenceData
+{
   const tags = extractHashtags(bio)
   const handles = extractMentions(bio)
   const hashtagCounts = visibleHashtagCounts(database, [bio], viewerId)
@@ -48,13 +50,16 @@ export function loadBioReferenceData(database: Database, bio: string, profileId:
     hashtagFollowerCounts,
     hashtagFollowing: Object.fromEntries(tags.map(tag => [tag, followedTags.has(tag)])),
     mentionBios,
-    mentionNoteCounts: Object.fromEntries(Object.entries(mentionProfileStats).map(([handle, value]) => [handle,
-      value.notes])),
+    mentionNoteCounts: Object.fromEntries(
+      Object.entries(mentionProfileStats).map(([handle, value]) => [handle, value.notes]),
+    ),
     mentionProfileStats,
-    mentionFollowing: Object.fromEntries(Object.entries(mentionIds).map(([handle, id]) => [handle,
-      followedIds.has(id)])),
-    mentionFollowsViewer: Object.fromEntries(Object.entries(mentionIds).map(([handle, id]) => [handle,
-      followerIds.has(id)])),
+    mentionFollowing: Object.fromEntries(
+      Object.entries(mentionIds).map(([handle, id]) => [handle, followedIds.has(id)]),
+    ),
+    mentionFollowsViewer: Object.fromEntries(
+      Object.entries(mentionIds).map(([handle, id]) => [handle, followerIds.has(id)]),
+    ),
     linkPreviews: userBioLinkPreviews(database, profileId),
   }
 }
@@ -180,14 +185,20 @@ export function enrichPosts(database: Database, posts: PostView[], viewerId = -1
   const parentIds = [...new Set(posts.flatMap(post => post.parent_id ? [post.parent_id] : []))]
   const previewPostIds = [...new Set([...ids, ...parentIds])]
   const previewRows = database.query(
-    "SELECT 1 FROM sqlite_master WHERE type='table' AND name='post_link_previews'",
-  ).get()
+      'SELECT 1 FROM sqlite_master WHERE type=\'table\' AND name=\'post_link_previews\'',
+    ).get()
     ? database.query(`SELECT post_id,url,image_url,title,description,site_name,image_width,image_height
       FROM post_link_previews WHERE post_id IN
       (${previewPostIds.map(() => '?').join(',')})`).all(...previewPostIds) as {
-        post_id: number; url: string; image_url: string; title: string | null; description: string | null;
-        site_name: string | null; image_width: number | null; image_height: number | null
-      }[]
+      post_id: number
+      url: string
+      image_url: string
+      title: string | null
+      description: string | null
+      site_name: string | null
+      image_width: number | null
+      image_height: number | null
+    }[]
     : []
   const previewsByPost = new Map<number, Record<string, LinkPreview>>()
   for (const row of previewRows) {
@@ -195,8 +206,8 @@ export function enrichPosts(database: Database, posts: PostView[], viewerId = -1
     previews[row.url] = { imageUrl: isImageKey(row.image_url) ? getImageUrl(row.image_url) : row.image_url,
       title: row.title ? decodeHtmlEntities(row.title) : undefined,
       description: row.description ? decodeHtmlEntities(row.description) : undefined,
-      siteName: row.site_name ? decodeHtmlEntities(row.site_name) : undefined,
-      imageWidth: row.image_width || undefined, imageHeight: row.image_height || undefined }
+      siteName: row.site_name ? decodeHtmlEntities(row.site_name) : undefined, imageWidth: row.image_width || undefined,
+      imageHeight: row.image_height || undefined }
     previewsByPost.set(row.post_id, previews)
   }
   const countRootIds = [...new Set([...ids, ...parentIds])]
@@ -244,9 +255,9 @@ export function enrichPosts(database: Database, posts: PostView[], viewerId = -1
     }
     parents = new Map(rows.map(parent => [parent.id, parent]))
   }
-  const hashtagCounts = visibleHashtagCounts(database,
-    [...posts.map(post => post.body), ...authors.map(author => author.bio), ...parentBodies,
-      ...[...parents.values()].map(parent => parent.bio || '')], viewerId)
+  const hashtagCounts = visibleHashtagCounts(database, [...posts.map(post => post.body),
+    ...authors.map(author => author.bio), ...parentBodies, ...[...parents.values()].map(parent => parent.bio || '')],
+    viewerId)
   const profileStats = visibleUserProfileStats(database, [...userIds,
     ...[...parents.values()].flatMap(parent => parent.user_id == null ? [] : [parent.user_id]),
     ...Object.values(mentionUserIds)], viewerId)

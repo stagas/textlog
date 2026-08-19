@@ -1,6 +1,6 @@
 import { expect, test } from 'bun:test'
-import { fmtFull } from './utils'
 import { activeTimezone, validTimezone, withTimezone } from './timezone'
+import { fmtFull } from './utils'
 
 test('formats full timestamps in the request timezone', () => {
   expect(withTimezone('Europe/Athens', () => fmtFull('2026-01-16 12:00:00')))

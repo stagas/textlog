@@ -3,9 +3,9 @@ import { SerializedMmlVisitor } from 'mathjax-full/js/core/MmlTree/SerializedMml
 import { RegisterHTMLHandler } from 'mathjax-full/js/handlers/html.js'
 import { HTMLMathItem } from 'mathjax-full/js/handlers/html/HTMLMathItem.js'
 import { TeX } from 'mathjax-full/js/input/tex.js'
-import { SVG } from 'mathjax-full/js/output/svg.js'
 import TexError from 'mathjax-full/js/input/tex/TexError.js'
 import { mathjax } from 'mathjax-full/js/mathjax.js'
+import { SVG } from 'mathjax-full/js/output/svg.js'
 
 // mathjax-full 3 exposes its native MathML serializer as a visitor rather than
 // a browser-oriented output bundle. Keep the whole TeX -> MathML pipeline here

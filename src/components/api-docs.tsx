@@ -32,16 +32,21 @@ const endpoints: ReadonlyArray<readonly [string, string, ReactNode, boolean?]> =
   ['GET', '/posts/:id', 'Get a single public post.'],
   ['PATCH', '/posts/:id', 'Edit a post you own.', true],
   ['DELETE', '/posts/:id', 'Delete a post you own. Replies remain and the post becomes a “(deleted)” tombstone.', true],
-  ['GET', '/posts/:id/replies',
-    <>Get replies recursively. Use the optional <code>depth</code> query parameter (1–20, default 1). Each reply is
-      returned with its depth, parent ID, and <code>top_id</code>; use its aggregate <code>reply_count</code> to detect
-      omitted descendants. Top-level posts have a null <code>top_id</code>.</>],
+  ['GET', '/posts/:id/replies', <>
+    Get replies recursively. Use the optional <code>depth</code>{' '}
+    query parameter (1–20, default 1). Each reply is returned with its depth, parent ID, and{' '}
+    <code>top_id</code>; use its aggregate <code>reply_count</code>{' '}
+    to detect omitted descendants. Top-level posts have a null <code>top_id</code>.
+  </>],
   ['POST', '/posts/:id/report', 'Report a post.', true],
-  ['GET', '/users/:handle',
-    <>Get a public profile and relationship totals. Your authenticated profile also includes private blocked-user and
-      blocked-tag counts.</>],
+  ['GET', '/users/:handle', <>
+    Get a public profile and relationship totals. Your authenticated profile also includes private blocked-user and
+    blocked-tag counts.
+  </>],
   ['GET', '/users/:handle/notes', 'Get a user\'s latest top-level notes.'],
-  ['GET', '/users/:handle/posts', <>Backward-compatible alias for <code>/users/:handle/notes</code>.</>],
+  ['GET', '/users/:handle/posts', <>
+    Backward-compatible alias for <code>/users/:handle/notes</code>.
+  </>],
   ['GET', '/users/:handle/replies', 'Get a user\'s latest replies.'],
   ['GET', '/users/:handle/following/users', 'List accounts followed by a user.'],
   ['GET', '/users/:handle/following/tags', 'List hashtags followed by a user.'],
@@ -112,9 +117,12 @@ export function ApiDocs({ user }: { user: User | null }) {
           ))}
         </dl>
         <p className="api-auth-legend">
-          <code><span className="api-method" data-auth="true"><span className="api-auth-dot" aria-hidden="true" />
-            VERB
-          </span></code>{' '}
+          <code>
+            <span className="api-method" data-auth="true">
+              <span className="api-auth-dot" aria-hidden="true" />
+              VERB
+            </span>
+          </code>{' '}
           authentication bearer token required
         </p>
 
@@ -128,7 +136,8 @@ export function ApiDocs({ user }: { user: User | null }) {
 /users/:handle/posts.rss
 /tags/:tag/posts.atom`}</code></pre>
         <p>
-          Signed-in users can generate private, personalized For You RSS and Atom URLs under <strong>Feed key</strong>{' '}
+          Signed-in users can generate private, personalized For You RSS and Atom URLs under <strong>Feed key</strong>
+          {' '}
           in account security. These unguessable URLs are read-only, require no bearer header, and must be kept secret.
           Each key can be named, expired, or revoked independently. Personalized feeds are marked private and are not
           publicly cached.
@@ -203,18 +212,22 @@ export function ApiDocs({ user }: { user: User | null }) {
         <h2>Pagination</h2>
         <p>
           Collections accept <code>limit</code> from 1–100 (default 20). Pass the opaque{' '}
-          <code>pagination.next_cursor</code> value back as <code>cursor</code> to fetch the next page.
-          Replies include their immediate quoted post in <code>parent</code>, so displaying a feed needs no per-post
-          follow-up requests.
+          <code>pagination.next_cursor</code> value back as <code>cursor</code>{' '}
+          to fetch the next page. Replies include their immediate quoted post in{' '}
+          <code>parent</code>, so displaying a feed needs no per-post follow-up requests.
         </p>
         <CodeBlock language="bash">{`curl '${origin}/api/v1/feeds/latest?limit=10'`}</CodeBlock>
-        <CodeBlock language="bash">{`curl '${origin}/api/v1/activities/for-you?limit=10' \\
-  -H "authorization: Bearer $TOKEN"`}</CodeBlock>
+        <CodeBlock language="bash">
+          {`curl '${origin}/api/v1/activities/for-you?limit=10' \\
+  -H "authorization: Bearer $TOKEN"`}
+        </CodeBlock>
         <p>
-          Personalized activity collections return <code>has_unread</code> and typed activity objects. Each activity’s{' '}
-          <code>type</code> is <code>post</code>,{' '}
-          <code>reply</code>, <code>mention</code>, <code>user_follow</code>, <code>tag_follow</code>, or{' '}
-          <code>signup</code>; <code>payload</code> contains the corresponding post or actor and target.
+          Personalized activity collections return <code>has_unread</code> and typed activity objects. Each activity’s
+          {' '}
+          <code>type</code> is <code>post</code>, <code>reply</code>, <code>mention</code>, <code>user_follow</code>,
+          {' '}
+          <code>tag_follow</code>, or <code>signup</code>; <code>payload</code>{' '}
+          contains the corresponding post or actor and target.
         </p>
 
         <h2>Search</h2>

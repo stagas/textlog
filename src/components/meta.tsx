@@ -14,15 +14,16 @@ export function MetaRow({ className, unread = false, children }: {
   )
 }
 
-export function MetaStats({ createdAt, count, singular = 'note', href, smallCount = false,
-  className = 'activity-follow-stats' }: {
-  createdAt: string
-  count?: number | null
-  singular?: string
-  href?: string
-  smallCount?: boolean
-  className?: string
-}) {
+export function MetaStats(
+  { createdAt, count, singular = 'note', href, smallCount = false, className = 'activity-follow-stats' }: {
+    createdAt: string
+    count?: number | null
+    singular?: string
+    href?: string
+    smallCount?: boolean
+    className?: string
+  },
+) {
   const content = (
     <>
       <time dateTime={createdAt} title={fmtFull(createdAt)}>{fmt(createdAt)}</time>

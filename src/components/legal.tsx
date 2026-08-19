@@ -38,9 +38,9 @@ export function Legal({ user }: { user: User | null }) {
         <h2>Service communications</h2>
         <p>
           We send essential account, security, and legally required messages. We may also occasionally email account
-          holders a recap of new {name} features and popular public notes. Recap emails are optional: you can
-          unsubscribe at any time using the link in any recap email or the Recap emails control in account settings,
-          and you can subscribe again later.
+          holders a recap of new {name}{' '}
+          features and popular public notes. Recap emails are optional: you can unsubscribe at any time using the link
+          in any recap email or the Recap emails control in account settings, and you can subscribe again later.
         </p>
 
         <h2>Limitation of liability</h2>
@@ -70,9 +70,9 @@ export function Legal({ user }: { user: User | null }) {
           We use your personal information only as reasonably necessary to provide, maintain, secure and support
           {name}, respond to actions or requests you make, and meet our legal obligations. We do not sell or rent your
           personal information, share it for targeted advertising, or use it to build advertising profiles. We do not
-          send advertising or third-party promotions. We email you for essential account and security messages,
-          actions you request, notices we are required to send, and occasional optional recaps about {name} features
-          and popular public notes. Every recap includes an unsubscribe link.
+          send advertising or third-party promotions. We email you for essential account and security messages, actions
+          you request, notices we are required to send, and occasional optional recaps about {name}{' '}
+          features and popular public notes. Every recap includes an unsubscribe link.
         </p>
 
         <h3>Data, purposes and legal bases</h3>
@@ -129,11 +129,11 @@ export function Legal({ user }: { user: User | null }) {
           one hour; appearance cookies after one year; daily visitor pseudonyms after seven days; and application HTTP
           logs after at most 14 days. Recap-email preferences, unsubscribe tokens, and campaign delivery records are
           retained as needed to honor opt-outs and prevent duplicate delivery. Public account and content data,
-          connections, followed hashtags and blocks are
-          held until you remove them or delete your account. Deletion anonymizes the account and content, while limited
-          moderation, resolved report and audit records are retained for three years where needed to document decisions,
-          establish legal claims and protect users. Open reports remain until reviewed. Backups follow the configured
-          backup-retention period (14 days by default), after which deleted data ages out.
+          connections, followed hashtags and blocks are held until you remove them or delete your account. Deletion
+          anonymizes the account and content, while limited moderation, resolved report and audit records are retained
+          for three years where needed to document decisions, establish legal claims and protect users. Open reports
+          remain until reviewed. Backups follow the configured backup-retention period (14 days by default), after which
+          deleted data ages out.
         </p>
 
         <h3>Your rights</h3>

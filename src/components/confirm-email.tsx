@@ -1,7 +1,7 @@
-import { Layout } from './layout'
 import { maskEmail } from './email-address'
-import { Panel } from './panel'
+import { Layout } from './layout'
 import { FormActions } from './page-shared'
+import { Panel } from './panel'
 
 export function ConfirmEmail({ token, kind, email, invalid = false, pending = false, sent = false, error }: {
   token?: string

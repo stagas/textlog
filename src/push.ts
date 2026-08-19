@@ -1,10 +1,10 @@
 import type { Database } from 'bun:sqlite'
 import webpush from 'web-push'
 import { ADMIN_EMAILS } from './admin'
+import { type DatabaseService, databaseService } from './database-service'
 import { isDevelopment } from './environment'
 import { logError } from './log'
 import { markdownPlainText } from './markdown'
-import { databaseService, type DatabaseService } from './database-service'
 
 export type PushMessage = { title: string; body: string; url: string }
 type PushSubscriptionRow = { endpoint: string; p256dh: string; auth: string }
@@ -112,9 +112,11 @@ export async function sendPushToUser(userId: number, message: PushMessage, datab
   vapid: VapidConfiguration | null = vapidConfiguration())
 {
   if (!vapid) return
-  const subscriptions = database ? database.query(
-    'SELECT endpoint,p256dh,auth FROM push_subscriptions WHERE user_id=?',
-  ).all(userId) as PushSubscriptionRow[] : await databaseService().call('push.userDelivery', { userId })
+  const subscriptions = database
+    ? database.query(
+      'SELECT endpoint,p256dh,auth FROM push_subscriptions WHERE user_id=?',
+    ).all(userId) as PushSubscriptionRow[]
+    : await databaseService().call('push.userDelivery', { userId })
   await sendToSubscriptions(subscriptions, () => message, database, vapid)
 }
 
@@ -122,18 +124,22 @@ export async function sendPushForPost(postId: number, actorId: number, actorHand
   vapid: VapidConfiguration | null = vapidConfiguration(), service?: DatabaseService)
 {
   if (!vapid) return
-  const directPost = database ? database.query(`SELECT child.body,child.parent_id,parent_user.handle parent_handle
+  const directPost = database
+    ? database.query(`SELECT child.body,child.parent_id,parent_user.handle parent_handle
     FROM posts child LEFT JOIN posts parent ON parent.id=child.parent_id
     LEFT JOIN users parent_user ON parent_user.id=parent.user_id WHERE child.id=?`).get(postId) as {
-    body: string
-    parent_id: number | null
-    parent_handle: string | null
-  } | null : null
+      body: string
+      parent_id: number | null
+      parent_handle: string | null
+    } | null
+    : null
   const loaded = database ? null : await (service || databaseService()).call('push.postDelivery', { postId, actorId })
-  const post = directPost ? { body: directPost.body, parentId: directPost.parent_id,
-    parentHandle: directPost.parent_handle } : loaded?.post
+  const post = directPost
+    ? { body: directPost.body, parentId: directPost.parent_id, parentHandle: directPost.parent_handle }
+    : loaded?.post
   if (!post) return
-  const directSubscriptions = database ? database.query(`SELECT ps.endpoint,ps.p256dh,ps.auth,ps.user_id,
+  const directSubscriptions = database
+    ? database.query(`SELECT ps.endpoint,ps.p256dh,ps.auth,ps.user_id,
       recipient.handle recipient_handle,
       (ps.user_id!=? AND EXISTS(SELECT 1 FROM posts child JOIN posts parent ON parent.id=child.parent_id
         WHERE child.id=? AND parent.user_id=ps.user_id)) is_reply,
@@ -163,19 +169,22 @@ export async function sendPushForPost(postId: number, actorId: number, actorHand
       OR (ps.notify_mentions=1 AND ps.user_id!=? AND EXISTS(
         SELECT 1 FROM post_mentions pm WHERE pm.post_id=? AND pm.user_id=ps.user_id)))
     ORDER BY ps.endpoint,is_reply DESC,is_mention DESC,ps.user_id`)
-    .all(actorId, postId, actorId, postId, actorId, actorId, postId, actorId, actorId, actorId, actorId,
-      postId, postId, postId, actorId, postId, actorId, postId) as (PushSubscriptionRow & {
-        user_id: number
-        is_reply: number
-        is_mention: number
-        notify_replies: number
-        notify_mentions: number
-        recipient_handle: string
-      })[] : []
-  const subscriptions = database ? directSubscriptions.map(subscription => ({ ...subscription,
-    userId: subscription.user_id, recipientHandle: subscription.recipient_handle,
-    isReply: subscription.is_reply, isMention: subscription.is_mention,
-    notifyReplies: subscription.notify_replies, notifyMentions: subscription.notify_mentions }))
+      .all(actorId, postId, actorId, postId, actorId, actorId, postId, actorId, actorId, actorId, actorId, postId,
+        postId, postId, actorId, postId, actorId, postId) as (PushSubscriptionRow & {
+          user_id: number
+          is_reply: number
+          is_mention: number
+          notify_replies: number
+          notify_mentions: number
+          recipient_handle: string
+        })[]
+    : []
+  const subscriptions = database
+    ? directSubscriptions.map(subscription => ({ ...subscription, userId: subscription.user_id,
+      recipientHandle: subscription.recipient_handle, isReply: subscription.is_reply,
+      isMention: subscription.is_mention, notifyReplies: subscription.notify_replies,
+      notifyMentions: subscription.notify_mentions })
+    )
     : loaded!.subscriptions
   await sendToSubscriptions(subscriptions, subscription => {
     const kind = subscription.isReply && subscription.notifyReplies
@@ -203,13 +212,15 @@ export async function sendPushForFollow(followerId: number, followerHandle: stri
   database?: Database, vapid: VapidConfiguration | null = vapidConfiguration(), service?: DatabaseService)
 {
   if (!vapid || followerId === followedId) return
-  const direct = database ? database.query(`SELECT ps.endpoint,ps.p256dh,ps.auth,u.handle recipient_handle
+  const direct = database
+    ? database.query(`SELECT ps.endpoint,ps.p256dh,ps.auth,u.handle recipient_handle
     FROM push_subscriptions ps JOIN users u ON u.id=ps.user_id
     WHERE ps.user_id=? AND ps.notify_follows=1`).all(followedId) as (PushSubscriptionRow & {
-    recipient_handle: string
-  })[] : []
-  const subscriptions = database ? direct.map(subscription => ({ ...subscription,
-    recipientHandle: subscription.recipient_handle }))
+      recipient_handle: string
+    })[]
+    : []
+  const subscriptions = database
+    ? direct.map(subscription => ({ ...subscription, recipientHandle: subscription.recipient_handle }))
     : await (service || databaseService()).call('push.followDelivery', { followedId })
   await sendToSubscriptions(subscriptions, subscription => ({
     title: `@${followerHandle} followed @${subscription.recipientHandle}`,
@@ -223,33 +234,35 @@ export async function sendPushForUserFollow(actorId: number, actorHandle: string
   service?: DatabaseService)
 {
   if (!vapid || actorId === targetId) return
-  const subscriptions = database ? database.query(`SELECT ps.endpoint,ps.p256dh,ps.auth FROM push_subscriptions ps
+  const subscriptions = database
+    ? database.query(`SELECT ps.endpoint,ps.p256dh,ps.auth FROM push_subscriptions ps
     WHERE ps.notify_follow_activity=1 AND ps.user_id NOT IN (?,?)
       AND EXISTS (SELECT 1 FROM follows vf WHERE vf.follower_id=ps.user_id AND vf.following_id=?)
       AND NOT EXISTS (SELECT 1 FROM blocks b WHERE
         b.blocker_id=ps.user_id AND b.blocked_id IN (?,?) OR
         b.blocked_id=ps.user_id AND b.blocker_id IN (?,?))`)
-    .all(actorId, targetId, actorId, actorId, targetId, actorId, targetId) as PushSubscriptionRow[]
+      .all(actorId, targetId, actorId, actorId, targetId, actorId, targetId) as PushSubscriptionRow[]
     : await (service || databaseService()).call('push.userFollowDelivery', { actorId, targetId })
-  queueFollowActivity(actorId, actorHandle, `@${targetHandle}`, `/u/${encodeURIComponent(targetHandle)}`,
-    subscriptions, database, vapid, service)
+  queueFollowActivity(actorId, actorHandle, `@${targetHandle}`, `/u/${encodeURIComponent(targetHandle)}`, subscriptions,
+    database, vapid, service)
 }
 
 export async function sendPushForTagFollow(actorId: number, actorHandle: string, tag: string, database?: Database,
   vapid: VapidConfiguration | null = vapidConfiguration())
 {
   if (!vapid) return
-  const subscriptions = database ? database.query(`SELECT ps.endpoint,ps.p256dh,ps.auth FROM push_subscriptions ps
+  const subscriptions = database
+    ? database.query(`SELECT ps.endpoint,ps.p256dh,ps.auth FROM push_subscriptions ps
     WHERE ps.notify_follow_activity=1 AND ps.user_id!=? AND (EXISTS
       (SELECT 1 FROM follows vf WHERE vf.follower_id=ps.user_id AND vf.following_id=?) OR EXISTS
       (SELECT 1 FROM hashtag_follows vhf WHERE vhf.user_id=ps.user_id AND vhf.tag=?))
       AND NOT EXISTS (SELECT 1 FROM blocks b WHERE
         (b.blocker_id=ps.user_id AND b.blocked_id=?) OR (b.blocked_id=ps.user_id AND b.blocker_id=?))
       AND NOT EXISTS (SELECT 1 FROM blocked_hashtags bh WHERE bh.user_id=ps.user_id AND bh.tag=?)`)
-    .all(actorId, actorId, tag, actorId, actorId, tag) as PushSubscriptionRow[]
+      .all(actorId, actorId, tag, actorId, actorId, tag) as PushSubscriptionRow[]
     : await databaseService().call('push.tagFollowDelivery', { actorId, tag })
-  queueFollowActivity(actorId, actorHandle, `#${tag}`, `/tag/${encodeURIComponent(tag)}`, subscriptions,
-    database, vapid)
+  queueFollowActivity(actorId, actorHandle, `#${tag}`, `/tag/${encodeURIComponent(tag)}`, subscriptions, database,
+    vapid)
 }
 
 export async function sendPushForSignup(userId: number, handle: string, database?: Database,
@@ -258,7 +271,8 @@ export async function sendPushForSignup(userId: number, handle: string, database
   if (!vapid || !ADMIN_EMAILS.size) return
   const administratorEmails = [...ADMIN_EMAILS]
   const placeholders = administratorEmails.map(() => '?').join(',')
-  const subscriptions = database ? database.query(`SELECT ps.endpoint,ps.p256dh,ps.auth
+  const subscriptions = database
+    ? database.query(`SELECT ps.endpoint,ps.p256dh,ps.auth
     FROM push_subscriptions ps JOIN users u ON u.id=ps.user_id
     WHERE lower(u.email) IN (${placeholders}) AND ps.notify_signups=1
       AND u.deleted_at IS NULL AND u.suspended_at IS NULL`).all(...administratorEmails) as PushSubscriptionRow[]

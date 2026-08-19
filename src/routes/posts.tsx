@@ -6,25 +6,25 @@ import {
   Reply,
 } from '../components/pages'
 import { conversationTopPath, postedReplyPath } from '../components/post'
+import { databaseService } from '../database-service'
 import { moderateText, moderationMessage } from '../moderation'
 import { canPublishPosts } from '../posting-policy'
-import { databaseService } from '../database-service'
 import { form, page, redirect, rememberFeed, safeNext } from './shared'
 
 import type { Hono } from 'hono'
+import { publishPost } from '../api-broker'
 import type { PostingSuggestionSearch } from '../components/page-shared'
 import { safeRefererPath } from '../http'
+import { deleteImages, deleteImagesAfterCommit } from '../image-storage'
+import { discoverLinkPreviews } from '../link-preview'
 import { logError } from '../log'
 import { markdownPlainText } from '../markdown'
-import { discoverLinkPreviews } from '../link-preview'
-import { deleteImages, deleteImagesAfterCommit } from '../image-storage'
 import { renderPostOg } from '../og'
 import { normalizePostBody, postBodyValidationMessage, validPostBody } from '../post-body'
 import { postRateLimitMessage } from '../post-rate-limit'
 import { sendPushForPost } from '../push'
 import { normalizeSearchQuery } from '../search'
 import { currentUser } from '../utils'
-import { publishPost } from '../api-broker'
 
 function notifyPost(postId: number, userId: number, handle: string) {
   void sendPushForPost(postId, userId, handle).catch(error => logError('activity push failed', error))
@@ -32,7 +32,9 @@ function notifyPost(postId: number, userId: number, handle: string) {
 
 const saveFailureMessage = 'Something went wrong while saving. Your text is still here; please try again.'
 
-async function postingSuggestionSearch(fields: Record<string, string>, viewerId: number): Promise<PostingSuggestionSearch | null> {
+async function postingSuggestionSearch(fields: Record<string, string>,
+  viewerId: number): Promise<PostingSuggestionSearch | null>
+{
   if (fields.action !== 'search-hashtags' && fields.action !== 'search-mentions') return null
   const hashtagQuery = normalizeSearchQuery(fields.hashtag_query)
   const mentionQuery = normalizeSearchQuery(fields.mention_query)
@@ -42,7 +44,9 @@ async function postingSuggestionSearch(fields: Record<string, string>, viewerId:
     ? 'mentions'
     : fields.action === 'search-mentions' && !mentionQuery && hashtagQuery
     ? 'hashtags'
-    : fields.action === 'search-hashtags' ? 'hashtags' : 'mentions'
+    : fields.action === 'search-hashtags'
+    ? 'hashtags'
+    : 'mentions'
   const rawQuery = kind === 'hashtags' ? hashtagQuery : mentionQuery
   const query = normalizeSearchQuery(rawQuery.replace(kind === 'hashtags' ? /^#+\s*/u : /^@+\s*/u, ''))
   const result = await databaseService().call('posts.suggestions', { kind, query, viewerId })
@@ -93,7 +97,8 @@ export function registerPostsRoutes(app: Hono) {
       return redirect('/choose-handle?next=' + encodeURIComponent(next))
     }
     const replies = await databaseService().call('posts.threadReplies', {
-      parentId: post.id, viewerId: user?.id ?? -1,
+      parentId: post.id,
+      viewerId: user?.id ?? -1,
     })
     const configuredOrigin = Bun.env.APP_URL?.replace(/\/$/, '')
     const origin = configuredOrigin || new URL(c.req.url).origin
@@ -107,11 +112,13 @@ export function registerPostsRoutes(app: Hono) {
     if (user) {
       return page(
         <Reply user={user} post={post} replies={replies} showForm={c.req.query('reply') === '1'} returnPath={returnPath}
-          topHref={topHref}
-          showReport={c.req.query('report') === '1'} reported={c.req.query('reported') === '1'} social={social} />,
+          topHref={topHref} showReport={c.req.query('report') === '1'} reported={c.req.query('reported') === '1'}
+          social={social} />,
       )
     }
-    return page(<PublicThread post={post} replies={replies} social={social} returnPath={returnPath} topHref={topHref} />)
+    return page(
+      <PublicThread post={post} replies={replies} social={social} returnPath={returnPath} topHref={topHref} />,
+    )
   })
 
   app.get('/post/:id/og.png', async c => {
@@ -154,7 +161,10 @@ export function registerPostsRoutes(app: Hono) {
         )
       }
       const result = await databaseService().call('api.createPost', {
-        userId: user.id, body, parentId: null, origin: new URL(c.req.url).origin,
+        userId: user.id,
+        body,
+        parentId: null,
+        origin: new URL(c.req.url).origin,
       })
       if (result.status === 'rate_limited') {
         return page(
@@ -225,10 +235,15 @@ export function registerPostsRoutes(app: Hono) {
         )
       }
       const result = await databaseService().call('api.updatePost', {
-        userId: user.id, id, body, origin: new URL(c.req.url).origin,
+        userId: user.id,
+        id,
+        body,
+        origin: new URL(c.req.url).origin,
       })
-      if (result.status !== 'ready') return c.text(result.status === 'not_found' ? 'Not found' : 'Forbidden',
-        result.status === 'not_found' ? 404 : 403)
+      if (result.status !== 'ready') {
+        return c.text(result.status === 'not_found' ? 'Not found' : 'Forbidden',
+          result.status === 'not_found' ? 404 : 403)
+      }
       await persistPreviews(id, 'replace', body)
       return redirect('/post/' + id + (returnPath ? '?from=' + encodeURIComponent(returnPath) : ''))
     }
@@ -261,8 +276,10 @@ export function registerPostsRoutes(app: Hono) {
     const f = await form(c.req.raw)
     const returnPath = f.from ? safeNext(f.from) : undefined
     const result = await databaseService().call('api.deletePost', { userId: user.id, id })
-    if (result.status !== 'ready') return c.text(result.status === 'not_found' ? 'Not found' : 'Forbidden',
-      result.status === 'not_found' ? 404 : 403)
+    if (result.status !== 'ready') {
+      return c.text(result.status === 'not_found' ? 'Not found' : 'Forbidden',
+        result.status === 'not_found' ? 404 : 403)
+    }
     await deleteImagesAfterCommit(result.imageKeys)
     return redirect(result.parentId
       ? '/post/' + result.parentId + (returnPath ? '?from=' + encodeURIComponent(returnPath) : '')
@@ -274,7 +291,8 @@ export function registerPostsRoutes(app: Hono) {
     if (!user) return redirect('/enter')
     const parentId = Number(c.req.param('id'))
     const loaded = Number.isInteger(parentId)
-      ? await databaseService().call('posts.replyParent', { id: parentId, userId: user.id }) : null
+      ? await databaseService().call('posts.replyParent', { id: parentId, userId: user.id })
+      : null
     if (!loaded || loaded.status === 'not_found') return c.text('Not found', 404)
     if (loaded.status === 'forbidden') return c.text('Forbidden', 403)
     const parent = loaded.post
@@ -309,7 +327,10 @@ export function registerPostsRoutes(app: Hono) {
         )
       }
       const result = await databaseService().call('api.createPost', {
-        userId: user.id, body, parentId, origin: new URL(c.req.url).origin,
+        userId: user.id,
+        body,
+        parentId,
+        origin: new URL(c.req.url).origin,
       })
       if (result.status === 'rate_limited') {
         return page(

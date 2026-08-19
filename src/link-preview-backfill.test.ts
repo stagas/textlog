@@ -1,5 +1,5 @@
-import { describe, expect, test } from 'bun:test'
 import { Database } from 'bun:sqlite'
+import { describe, expect, test } from 'bun:test'
 import { isYouTubeUrl } from './link-preview'
 import { runBioLinkPreviewBackfill, runLinkPreviewBackfill, runPostOgPreviewRefetch,
   runR2LinkPreviewBackfill } from './link-preview-backfill'
@@ -56,7 +56,8 @@ describe('link preview backfill', () => {
       expect(await runBioLinkPreviewBackfill(database, { delayMs: 0, log: () => {} }))
         .toEqual({ pending: 1, fetched: 1, saved: 1 })
       expect(database.query('SELECT url,title FROM user_bio_link_previews').get()).toEqual({
-        url: 'http://localhost:3000/post/1', title: '@writer wrote on textlog',
+        url: 'http://localhost:3000/post/1',
+        title: '@writer wrote on textlog',
       })
       expect(await runBioLinkPreviewBackfill(database, { delayMs: 0, log: () => {} }))
         .toEqual({ pending: 0, fetched: 0, saved: 0 })
@@ -95,10 +96,12 @@ describe('link preview backfill', () => {
       expect(await runPostOgPreviewRefetch(database, { log: () => {}, discoverPreviews }))
         .toEqual({ pending: 4, fetched: 4, saved: 4 })
       expect(database.query('SELECT image_url,title FROM post_link_previews WHERE post_id=1').get()).toEqual({
-        image_url: 'https://cdn.test/refetched.png', title: 'refetched',
+        image_url: 'https://cdn.test/refetched.png',
+        title: 'refetched',
       })
       expect(database.query('SELECT image_url,title FROM post_link_previews WHERE post_id=2').get()).toEqual({
-        image_url: 'https://cdn.test/post/42/og.png?v=2', title: 'untouched',
+        image_url: 'https://cdn.test/post/42/og.png?v=2',
+        title: 'untouched',
       })
       expect(await runPostOgPreviewRefetch(database, { log: () => {}, discoverPreviews }))
         .toEqual({ pending: 0, fetched: 0, saved: 0 })
@@ -114,7 +117,6 @@ describe('link preview backfill', () => {
       Bun.env.APP_URL = previousUrl
     }
   })
-
 })
 
 describe('R2 link preview backfill', () => {

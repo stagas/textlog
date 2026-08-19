@@ -68,8 +68,7 @@ export function SearchResults({ user, query, page, tab = 'notes', results }: {
       )}
       {!!results.people.length && (
         <ConnectionPeople user={user} people={results.people} className="search-people"
-          highlightTerms={results.highlights}
-          returnPath={person => searchPersonReturnPath(query, page, person.id)} />
+          highlightTerms={results.highlights} returnPath={person => searchPersonReturnPath(query, page, person.id)} />
       )}
       {query && !results[tab === 'notes' ? 'posts' : tab].length && <div className="empty">No matching {tab}.</div>}
       <Pagination page={page} totalPages={results.totalPages}

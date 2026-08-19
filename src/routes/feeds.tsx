@@ -11,8 +11,9 @@ import {
 import { currentPage, page, redirect, rememberFeed } from './shared'
 
 import type { Hono } from 'hono'
+import { instance } from '../../instance.config'
+import { backgroundDatabaseCall, databaseService } from '../database-service'
 import { decodeHotCursor, hotRankingVersion } from '../hot'
-import { rpcMaterializedFeedPage } from '../materialized-feed-service'
 import {
   donationBannerDismissed,
   donationBannerDismissedCookie,
@@ -21,13 +22,12 @@ import {
   notificationUserAgent,
   safeRefererPath,
 } from '../http'
-import { instance } from '../../instance.config'
+import { rpcMaterializedFeedPage } from '../materialized-feed-service'
 import { decodePostCursor } from '../pagination'
-import { currentUser } from '../utils'
-import { backgroundDatabaseCall, databaseService } from '../database-service'
-import { resolvedDensity, resolvedPageSize } from '../request-preferences'
 import { withRequestContext } from '../request-context'
+import { resolvedDensity, resolvedPageSize } from '../request-preferences'
 import { withAppearance } from '../theme'
+import { currentUser } from '../utils'
 
 async function showNotificationBanner(request: Request, user: ReturnType<typeof currentUser>) {
   if (!user) return instance.links.donate && !donationBannerDismissed(request) ? 'donate' : false
@@ -63,7 +63,12 @@ const recentFeedVisitorLimit = 30
 let recentVisitorPrewarmScheduled = false
 
 const feedVariantCookieNames = new Set([
-  'appearance', 'font', 'sans-serif-font', 'primary-font', 'font-size', 'notification_device',
+  'appearance',
+  'font',
+  'sans-serif-font',
+  'primary-font',
+  'font-size',
+  'notification_device',
 ])
 
 function feedVariantCookie(request: Request) {
@@ -90,40 +95,46 @@ function rememberFeedVisitor(request: Request, user: NonNullable<ReturnType<type
     recentFeedVisitors.delete(recentFeedVisitors.keys().next().value!)
   }
   void backgroundDatabaseCall('cache.recentFeedVisitorPut', {
-    userId: user.id, requestUrl, cookie, pageSize, density,
+    userId: user.id,
+    requestUrl,
+    cookie,
+    pageSize,
+    density,
   }).catch(error => console.error('Could not remember recent feed visitor', error))
 }
 
-async function warmFeedPage(request: Request, kind: PrimaryFeed, user: NonNullable<ReturnType<typeof currentUser>> | null,
-  pageSize: ReturnType<typeof resolvedPageSize>)
+async function warmFeedPage(request: Request, kind: PrimaryFeed,
+  user: NonNullable<ReturnType<typeof currentUser>> | null, pageSize: ReturnType<typeof resolvedPageSize>)
 {
   const feedRequest = new Request(new URL(`/${kind}`, request.url), { headers: request.headers })
   return await withAppearance(feedRequest, async () => {
     const viewerId = user?.id ?? -1
     if (kind === 'for-you') {
       if (!user) return
-      await rpcMaterializedFeedPage(feedRequest, kind, viewerId,
-        async () => {
-          const data = await backgroundDatabaseCall('feeds.personalizedPage', {
-            user, page: 1, pageSize, toMe: false, path: '/for-you', markRead: false,
-          })
-          return page(<Feed user={user} data={data} title="for you" />)
-        }, false, 0, true)
+      await rpcMaterializedFeedPage(feedRequest, kind, viewerId, async () => {
+        const data = await backgroundDatabaseCall('feeds.personalizedPage', {
+          user,
+          page: 1,
+          pageSize,
+          toMe: false,
+          path: '/for-you',
+          markRead: false,
+        })
+        return page(<Feed user={user} data={data} title="for you" />)
+      }, false, 0, true)
       return
     }
     if (kind === 'latest') {
-      await rpcMaterializedFeedPage(feedRequest, kind, viewerId,
-        async () => {
-          const feed = await backgroundDatabaseCall('feeds.latestPage', { viewerId, page: 1, pageSize })
-          return page(<PublicFeed user={user} feed={feed} path="/latest" />)
-        }, false, 0, true)
+      await rpcMaterializedFeedPage(feedRequest, kind, viewerId, async () => {
+        const feed = await backgroundDatabaseCall('feeds.latestPage', { viewerId, page: 1, pageSize })
+        return page(<PublicFeed user={user} feed={feed} path="/latest" />)
+      }, false, 0, true)
       return
     }
-    await rpcMaterializedFeedPage(feedRequest, kind, viewerId,
-      async () => {
-        const feed = await backgroundDatabaseCall('feeds.hotPage', { viewerId, page: 1, pageSize })
-        return page(<HotFeed user={user} feed={feed} title="hot" />)
-      }, false, hotRankingVersion, true)
+    await rpcMaterializedFeedPage(feedRequest, kind, viewerId, async () => {
+      const feed = await backgroundDatabaseCall('feeds.hotPage', { viewerId, page: 1, pageSize })
+      return page(<HotFeed user={user} feed={feed} title="hot" />)
+    }, false, hotRankingVersion, true)
   })
 }
 
@@ -149,8 +160,8 @@ export function prewarmRecentFeedVisitors() {
     void (async () => {
       for (const { density, pageSize, request, user } of visitors) {
         for (const kind of ['for-you', 'hot', 'latest'] as PrimaryFeed[]) {
-          await withRequestContext({ sessionUser: user, apiUser: null, pageSize, density },
-            () => withAppearance(request, () => warmFeedPage(request, kind, user, pageSize)))
+          await withRequestContext({ sessionUser: user, apiUser: null, pageSize, density }, () =>
+            withAppearance(request, () => warmFeedPage(request, kind, user, pageSize)))
         }
       }
     })().catch(error => {
@@ -163,7 +174,10 @@ export async function prewarmRecentFeedVisitorsOnInit() {
   const visitors = await backgroundDatabaseCall('cache.recentFeedVisitors', {})
   for (const { density, pageSize, requestUrl, cookie, user } of visitors) {
     recentFeedVisitors.set(user.id, {
-      density, pageSize, user, request: new Request(requestUrl, { headers: { cookie } }),
+      density,
+      pageSize,
+      user,
+      request: new Request(requestUrl, { headers: { cookie } }),
     })
   }
   prewarmRecentFeedVisitors()
@@ -172,11 +186,16 @@ export async function prewarmRecentFeedVisitorsOnInit() {
 export function registerFeedsRoutes(app: Hono) {
   app.get('/', async c => {
     const user = currentUser(c.req.raw)
-    if (!user) return await rpcMaterializedFeedPage(c.req.raw, 'about', -1, async () =>
-      page(<About user={null} topPosts={await databaseService().call('feeds.aboutTopPosts', {})} />))
+    if (!user) {
+      return await rpcMaterializedFeedPage(c.req.raw, 'about', -1, async () =>
+        page(<About user={null} topPosts={await databaseService().call('feeds.aboutTopPosts', {})} />))
+    }
     const preferredFeed = feedPreference(c.req.raw)
-    const path = preferredFeed === 'latest' ? '/latest'
-      : preferredFeed === 'hot' ? '/hot' : '/for-you'
+    const path = preferredFeed === 'latest'
+      ? '/latest'
+      : preferredFeed === 'hot'
+      ? '/hot'
+      : '/for-you'
     return redirect(path + new URL(c.req.url).search)
   })
 
@@ -187,16 +206,17 @@ export function registerFeedsRoutes(app: Hono) {
     const cursorValue = c.req.query('cursor')
     if (cursorValue && !decodeForYouCursor(cursorValue)) return c.text('Invalid cursor', 400)
     const notificationBanner = await showNotificationBanner(c.req.raw, user)
-    const data = await databaseService().call('feeds.personalizedPage', { user,
-      page: currentPage(c.req.query('page')), pageSize: resolvedPageSize(c.req.raw), toMe: false, path: '/for-you' })
-    const render = () => page(
-        <Feed user={user} data={data} title="for you"
-          notificationBanner={notificationBanner} />,
-    )
-    const renderForCache = () => page(
-      <Feed user={user} data={{ ...data, timeline: data.timeline.map(row => ({ ...row, unread: 0 })) }}
-        title="for you" notificationBanner={notificationBanner} />,
-    )
+    const data = await databaseService().call('feeds.personalizedPage', { user, page: currentPage(c.req.query('page')),
+      pageSize: resolvedPageSize(c.req.raw), toMe: false, path: '/for-you' })
+    const render = () =>
+      page(
+        <Feed user={user} data={data} title="for you" notificationBanner={notificationBanner} />,
+      )
+    const renderForCache = () =>
+      page(
+        <Feed user={user} data={{ ...data, timeline: data.timeline.map(row => ({ ...row, unread: 0 })) }}
+          title="for you" notificationBanner={notificationBanner} />,
+      )
     const response = !notificationBanner && currentPage(c.req.query('page')) === 1 && !cursorValue
       ? await rpcMaterializedFeedPage(c.req.raw, 'for-you', user.id, render, false, 0, false, renderForCache)
       : render()
@@ -215,8 +235,7 @@ export function registerFeedsRoutes(app: Hono) {
     const render = async () => {
       const feed = await databaseService().call('feeds.latestPage', { viewerId: user?.id ?? -1,
         page: currentPage(c.req.query('page')), pageSize: resolvedPageSize(c.req.raw) })
-      return page(<PublicFeed user={user} feed={feed} path="/latest"
-        notificationBanner={notificationBanner} />)
+      return page(<PublicFeed user={user} feed={feed} path="/latest" notificationBanner={notificationBanner} />)
     }
     const response = (!user || !notificationBanner) && currentPage(c.req.query('page')) === 1 && !cursorValue
       ? await rpcMaterializedFeedPage(c.req.raw, 'latest', user?.id ?? -1, render)
@@ -239,16 +258,17 @@ export function registerFeedsRoutes(app: Hono) {
     const cursorValue = c.req.query('cursor')
     if (cursorValue && !decodeForYouCursor(cursorValue)) return c.text('Invalid cursor', 400)
     const notificationBanner = await showNotificationBanner(c.req.raw, user)
-    const data = await databaseService().call('feeds.personalizedPage', { user,
-      page: currentPage(c.req.query('page')), pageSize: resolvedPageSize(c.req.raw), toMe: true, path: '/to-me' })
-    const render = () => page(
-        <Feed user={user} data={data} title="to me" path="/to-me" toMe
-          notificationBanner={notificationBanner} />,
-    )
-    const renderForCache = () => page(
-      <Feed user={user} data={{ ...data, timeline: data.timeline.map(row => ({ ...row, unread: 0 })) }}
-        title="to me" path="/to-me" toMe notificationBanner={notificationBanner} />,
-    )
+    const data = await databaseService().call('feeds.personalizedPage', { user, page: currentPage(c.req.query('page')),
+      pageSize: resolvedPageSize(c.req.raw), toMe: true, path: '/to-me' })
+    const render = () =>
+      page(
+        <Feed user={user} data={data} title="to me" path="/to-me" toMe notificationBanner={notificationBanner} />,
+      )
+    const renderForCache = () =>
+      page(
+        <Feed user={user} data={{ ...data, timeline: data.timeline.map(row => ({ ...row, unread: 0 })) }} title="to me"
+          path="/to-me" toMe notificationBanner={notificationBanner} />,
+      )
     const response = !notificationBanner && currentPage(c.req.query('page')) === 1 && !cursorValue
       ? await rpcMaterializedFeedPage(c.req.raw, 'to-me', user.id, render, false, 0, false, renderForCache)
       : render()
@@ -271,8 +291,7 @@ export function registerFeedsRoutes(app: Hono) {
     const render = async () => {
       const feed = await databaseService().call('feeds.hotPage', { viewerId: user?.id ?? -1,
         page: currentPage(c.req.query('page')), pageSize: resolvedPageSize(c.req.raw) })
-      return page(<HotFeed user={user} feed={feed} title="hot"
-        notificationBanner={notificationBanner} />)
+      return page(<HotFeed user={user} feed={feed} title="hot" notificationBanner={notificationBanner} />)
     }
     const response = (!user || !notificationBanner) && currentPage(c.req.query('page')) === 1 && !cursorValue
       ? await rpcMaterializedFeedPage(c.req.raw, 'hot', user?.id ?? -1, render, false, hotRankingVersion)
@@ -288,7 +307,9 @@ export function registerFeedsRoutes(app: Hono) {
     const destination = safeRefererPath(c.req.header('referer'), c.req.url)
     const userAgent = notificationUserAgent(c.req.raw)
     await databaseService().call('feeds.recordBanner', {
-      userId: user.id, userAgent, action: 'notifications-dismissed',
+      userId: user.id,
+      userAgent,
+      action: 'notifications-dismissed',
     })
     return redirect(destination)
   })
@@ -298,7 +319,9 @@ export function registerFeedsRoutes(app: Hono) {
     if (!user) return redirect('/enter')
     const userAgent = notificationUserAgent(c.req.raw)
     await databaseService().call('feeds.recordBanner', {
-      userId: user.id, userAgent, action: 'notification-improvements-dismissed',
+      userId: user.id,
+      userAgent,
+      action: 'notification-improvements-dismissed',
     })
     return redirect(safeRefererPath(c.req.header('referer'), c.req.url))
   })
@@ -306,16 +329,15 @@ export function registerFeedsRoutes(app: Hono) {
   app.post('/appearance/banner/dismiss', async c => {
     const user = currentUser(c.req.raw)
     if (!user) return redirect('/enter')
-    await databaseService().call('feeds.recordBanner', { userId: user.id,
-      userAgent: notificationUserAgent(c.req.raw), action: 'appearance-dismissed' })
+    await databaseService().call('feeds.recordBanner', { userId: user.id, userAgent: notificationUserAgent(c.req.raw),
+      action: 'appearance-dismissed' })
     return redirect(safeRefererPath(c.req.header('referer'), c.req.url))
   })
 
   app.post('/invite/banner/dismiss', async c => {
     const user = currentUser(c.req.raw)
     if (!user) return redirect('/enter')
-    await databaseService().call('feeds.recordBanner', { userId: user.id, userAgent: null,
-      action: 'invite-dismissed' })
+    await databaseService().call('feeds.recordBanner', { userId: user.id, userAgent: null, action: 'invite-dismissed' })
     return redirect(safeRefererPath(c.req.header('referer'), c.req.url))
   })
 
@@ -355,8 +377,8 @@ export function registerFeedsRoutes(app: Hono) {
   app.get('/about', async c => {
     const user = currentUser(c.req.raw)
     if (user) return page(<About user={user} topPosts={[]} />)
-    return await rpcMaterializedFeedPage(c.req.raw, 'about', -1, async () =>
-      page(<About user={null} topPosts={await databaseService().call('feeds.aboutTopPosts', {})} />))
+    return await rpcMaterializedFeedPage(c.req.raw, 'about', -1,
+      async () => page(<About user={null} topPosts={await databaseService().call('feeds.aboutTopPosts', {})} />))
   })
   app.get('/contact', c => page(<Contact user={currentUser(c.req.raw)} />))
   app.get('/dmca', c => page(<Dmca user={currentUser(c.req.raw)} />))

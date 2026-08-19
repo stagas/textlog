@@ -1,7 +1,7 @@
 import type { User } from '../types'
 import { Layout } from './layout'
-import { CenteredPanel } from './panel'
 import { FormActions, FormMessage } from './page-shared'
+import { CenteredPanel } from './panel'
 
 export function InviteFriends({ user, emails = '', error, sent = 0, returnPath }: {
   user: User
@@ -33,9 +33,14 @@ export function InviteFriends({ user, emails = '', error, sent = 0, returnPath }
           </label>
           <FormActions
             primary={<button className="button">send invitations →</button>}
-            secondary={<a className="secondary-action cancel-action" href={returnPath
-              ? `/account/edit?from=${encodeURIComponent(returnPath)}`
-              : '/account/edit'}>cancel</a>}
+            secondary={
+              <a className="secondary-action cancel-action" href={returnPath
+                ? `/account/edit?from=${encodeURIComponent(returnPath)}`
+                : '/account/edit'}
+              >
+                cancel
+              </a>
+            }
           />
         </form>
       </CenteredPanel>

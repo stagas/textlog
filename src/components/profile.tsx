@@ -1,21 +1,20 @@
 import { Fragment } from 'react'
 import { extractHashtags, extractMentions } from '../content'
+import { DEFAULT_TIMEZONE, TIMEZONE_CHOICES } from '../timezone'
 import type { BioReferenceData, PostView, ProfileRow, User } from '../types'
 import { displayBio, fmt, fmtDate, linkify, referenceFormId } from '../utils'
 import { Layout } from './layout'
+import { LogoutForm } from './logout-form'
 import { FormMessage, Pagination, PostingHelp, PostingSuggestionResults, type PostingSuggestionSearch, ProfileControls,
   ProfileHeader, ProfileTabs } from './page-shared'
 import { Post } from './post'
-import { DEFAULT_TIMEZONE, TIMEZONE_CHOICES } from '../timezone'
-import { LogoutForm } from './logout-form'
 
 export function Profile(
   { user, profile, posts, following, followsViewer = false, bio = profile.bio || '', editHandle = profile.handle,
-    editEmail = profile.email,
-    editIsBot = !!profile.is_bot, error, editing = false, total = posts.length, noteCount = total, replyCount = 0,
-    tab = 'notes', followerCount = 0, followingCount = 0, followingTagCount = 0, blockedPeopleCount = 0,
-    blockedTagCount = 0, blocked = false, blockedByProfile = false, social, page = 1, totalPages = 1, returnPath,
-    suggestionSearch, bioReference }: {
+    editEmail = profile.email, editIsBot = !!profile.is_bot, error, editing = false, total = posts.length,
+    noteCount = total, replyCount = 0, tab = 'notes', followerCount = 0, followingCount = 0, followingTagCount = 0,
+    blockedPeopleCount = 0, blockedTagCount = 0, blocked = false, blockedByProfile = false, social, page = 1,
+    totalPages = 1, returnPath, suggestionSearch, bioReference }: {
       user: User | null
       profile: ProfileRow
       posts: PostView[]
@@ -57,9 +56,9 @@ export function Profile(
   const fromQuery = returnPath ? `?from=${encodeURIComponent(returnPath)}` : ''
   const bioTags = extractHashtags(profile.bio)
   const bioHandles = extractMentions(profile.bio)
-  const references = bioReference || { hashtagCounts: {}, hashtagFollowerCounts: {}, hashtagFollowing: {},
-    mentionBios: {}, mentionNoteCounts: {}, mentionProfileStats: {}, mentionFollowing: {}, mentionFollowsViewer: {},
-    linkPreviews: {} }
+  const references = bioReference
+    || { hashtagCounts: {}, hashtagFollowerCounts: {}, hashtagFollowing: {}, mentionBios: {}, mentionNoteCounts: {},
+      mentionProfileStats: {}, mentionFollowing: {}, mentionFollowsViewer: {}, linkPreviews: {} }
   const bioFormPrefix = `profile-${profile.id}-bio`
   return (
     <Layout user={user} title={`@${profile.handle}`} social={social} feeds={{
@@ -68,8 +67,7 @@ export function Profile(
       atom: `/u/${encodeURIComponent(profile.handle)}.atom`,
     }}>
       <ProfileHeader user={user} profile={profile} following={following} followsViewer={followsViewer} blocked={blocked}
-        editing={editing}
-        returnPath={returnPath} controlsInTitle
+        editing={editing} returnPath={returnPath} controlsInTitle
       >
         <div className="profile-content">
           <div className={`profile-title-row${
@@ -80,18 +78,23 @@ export function Profile(
             <h1>
               <a className="profile-canonical-link" href={`/u/${profile.handle}`}
                 title={!editing && user?.id === profile.id
-                  ? `User ID: ${profile.id}${profile.created_at
-                    ? `\nSince: ${fmtDate(profile.created_at)}, ${fmt(profile.created_at)} ago`
-                    : ''}`
-                  : undefined}>
+                  ? `User ID: ${profile.id}${
+                    profile.created_at
+                      ? `\nSince: ${fmtDate(profile.created_at)}, ${fmt(profile.created_at)} ago`
+                      : ''
+                  }`
+                  : undefined}
+              >
                 <span className="identity-prefix">@</span>
                 {profile.handle}
               </a>
             </h1>
             {editing && <a className="profile-edit-link profile-switch-link" href="/account/accounts">switch</a>}
             {!editing && user?.id !== profile.id
-              && <ProfileControls user={user} profile={profile} following={following} followsViewer={followsViewer}
-                blocked={blocked} />}
+              && (
+                <ProfileControls user={user} profile={profile} following={following} followsViewer={followsViewer}
+                  blocked={blocked} />
+              )}
             {(editing || user?.id === profile.id) && (
               <div className="profile-owner-actions">
                 {editing
@@ -230,15 +233,17 @@ export function Profile(
           {!editing && user
             && [...bioTags.map(tag => ({ kind: 'tag' as const, value: tag })),
               ...bioHandles.map(handle => ({ kind: 'user' as const, value: handle }))].map(reference => (
-              <Fragment key={`${reference.kind}-${reference.value}`}>
-                <form className="reference-follow-form" id={referenceFormId(bioFormPrefix, reference.kind,
-                  reference.value)} method="post" action={(reference.kind === 'tag' ? '/tag-follow/' : '/follow/')
-                    + encodeURIComponent(reference.value)} />
-                <form className="reference-follow-form" id={referenceFormId(bioFormPrefix, reference.kind,
-                  reference.value, 'block')} method="post"
-                  action={(reference.kind === 'tag' ? '/tag-block/' : '/block/') + encodeURIComponent(reference.value)} />
-              </Fragment>
-            ))}
+                <Fragment key={`${reference.kind}-${reference.value}`}>
+                  <form className="reference-follow-form"
+                    id={referenceFormId(bioFormPrefix, reference.kind, reference.value)} method="post"
+                    action={(reference.kind === 'tag' ? '/tag-follow/' : '/follow/')
+                      + encodeURIComponent(reference.value)} />
+                  <form className="reference-follow-form"
+                    id={referenceFormId(bioFormPrefix, reference.kind, reference.value, 'block')} method="post"
+                    action={(reference.kind === 'tag' ? '/tag-block/' : '/block/')
+                      + encodeURIComponent(reference.value)} />
+                </Fragment>
+              ))}
         </div>
       </ProfileHeader>
       {blocked || blockedByProfile

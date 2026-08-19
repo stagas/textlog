@@ -163,11 +163,10 @@ export function sendFriendInvitation(email: string, magicUrl: string, handle: st
   const invitation = `Your friend @${handle} has invited you to join ${name}.`
   return sendEmail(email, heading,
     `${invitation}\n\nClick on this magic link to join:\n\n${magicUrl}\n\nThis link expires in one week and can only be used once.`,
-    emailDocument(heading,
-      paragraph(`${escapeHtml(invitation)}`)
-        + paragraph('Click on this magic link to join.')
-        + button(`Join ${name}`, magicUrl)
-        + notice('This link expires in one week and can only be used once.'),
+    emailDocument(heading, paragraph(`${escapeHtml(invitation)}`)
+      + paragraph('Click on this magic link to join.')
+      + button(`Join ${name}`, magicUrl)
+      + notice('This link expires in one week and can only be used once.'),
       `${invitation} Click on this magic link to join.`))
 }
 

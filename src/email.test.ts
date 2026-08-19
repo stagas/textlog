@@ -70,7 +70,7 @@ test('friend invitation uses the inviter copy and a styled magic-link action', a
   await sendFriendInvitation('friend@example.com', 'https://textlog.cc/enter/magic?token=invite', 'alice')
   const message = messages().at(-1)
 
-  expect(message.subject).toBe("You've been invited to textlog")
+  expect(message.subject).toBe('You\'ve been invited to textlog')
   expect(message.text).toContain('Your friend @alice has invited you to join textlog.')
   expect(message.text).toContain('Click on this magic link to join:')
   expect(message.text).toContain('This link expires in one week and can only be used once.')

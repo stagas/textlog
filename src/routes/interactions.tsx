@@ -6,11 +6,11 @@ import {
   Reply,
 } from '../components/pages'
 import { isValidHashtag, normalizeHashtag } from '../content'
+import { databaseService } from '../database-service'
 import {
   safeRefererPath,
 } from '../http'
 import { logError } from '../log'
-import { databaseService } from '../database-service'
 import { sendPushForFollow, sendPushForTagFollow, sendPushForUserFollow } from '../push'
 import { currentUser } from '../utils'
 
@@ -55,16 +55,18 @@ export function registerInteractionsRoutes(app: Hono) {
     const f = await form(c.req.raw)
     const validReason = ['harassment', 'spam', 'impersonation', 'other'].includes(f.reason)
     const result = await databaseService().call('interactions.reportPost', {
-      userId: user.id, postId, reason: validReason ? f.reason : null,
+      userId: user.id,
+      postId,
+      reason: validReason ? f.reason : null,
     })
     if (result.status === 'not_found') return c.text('Not found', 404)
     if (result.status === 'own_post') return c.text('You cannot report your own post', 400)
     if (!validReason) {
       return page(
         <Reply user={user} post={result.post!} replies={await databaseService().call('posts.threadReplies', {
-          parentId: result.post!.id, viewerId: user.id,
-        })} showForm={false} showReport
-          reportReason={f.reason || ''}
+          parentId: result.post!.id,
+          viewerId: user.id,
+        })} showForm={false} showReport reportReason={f.reason || ''}
           reportError="Choose a valid reason for the report." />,
         400,
       )
@@ -107,10 +109,15 @@ export function registerInteractionsRoutes(app: Hono) {
     const tagsPage = currentPage(c.req.query('tagsPage'))
     const peoplePage = currentPage(c.req.query('peoplePage'))
     const data = await databaseService().call('explore.page', {
-      viewerId: user?.id ?? -1, peopleIds, tagsPage, peoplePage,
+      viewerId: user?.id ?? -1,
+      peopleIds,
+      tagsPage,
+      peoplePage,
     })
-    const response = page(<Explore user={user} welcome={c.req.query('welcome') === '1'}
-      tagsPage={tagsPage} peoplePage={peoplePage} data={data} />)
+    const response = page(
+      <Explore user={user} welcome={c.req.query('welcome') === '1'} tagsPage={tagsPage} peoplePage={peoplePage}
+        data={data} />,
+    )
     if (savedPeople) {
       response.headers.append('set-cookie', 'explore_people=; Max-Age=0; Path=/explore; HttpOnly; SameSite=Lax')
     }

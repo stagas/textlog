@@ -35,7 +35,11 @@ export function RecapEmails({ user, subscribed, token, changed = false, invalid 
               </form>
             </>
           )}
-        {user && <p><a href="/account/edit">back to account</a></p>}
+        {user && (
+          <p>
+            <a href="/account/edit">back to account</a>
+          </p>
+        )}
       </Panel>
     </Layout>
   )

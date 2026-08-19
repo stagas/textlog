@@ -5,7 +5,8 @@ import type { User } from './types'
 export const feedKeyHash = (value: string) => createHash('sha256').update(value).digest('hex')
 
 export function issueFeedKey(database: Database, userId: number, name: string, expiresAt: number | null,
-  now = Date.now()) {
+  now = Date.now())
+{
   const value = randomBytes(32).toString('hex')
   const result = database.query(`INSERT INTO feed_keys(token_hash,user_id,name,created_at,expires_at)
     VALUES(?,?,?,?,?)`).run(feedKeyHash(value), userId, name, now, expiresAt)

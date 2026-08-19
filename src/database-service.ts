@@ -1,8 +1,7 @@
 import type { DatabaseDomainInput, DatabaseDomainOperation, DatabaseDomainOutput } from './database-contract'
 
 export interface DatabaseService {
-  call<K extends DatabaseDomainOperation>(operation: K,
-    input: DatabaseDomainInput<K>): Promise<DatabaseDomainOutput<K>>
+  call<K extends DatabaseDomainOperation>(operation: K, input: DatabaseDomainInput<K>): Promise<DatabaseDomainOutput<K>>
   callBackground?<K extends DatabaseDomainOperation>(operation: K,
     input: DatabaseDomainInput<K>): Promise<DatabaseDomainOutput<K>>
 }

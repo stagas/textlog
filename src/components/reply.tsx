@@ -1,6 +1,6 @@
 import type React from 'react'
-import type { User } from '../types'
 import { canPublishPosts } from '../posting-policy'
+import type { User } from '../types'
 import type { PostView } from '../types'
 import { Layout } from './layout'
 import {
@@ -13,8 +13,8 @@ import {
   ReportPanel,
   VerificationRequired,
 } from './page-shared'
-import { Post, PreviewPost, ThreadReplies } from './post'
 import { Panel } from './panel'
+import { Post, PreviewPost, ThreadReplies } from './post'
 
 export function ReplyBox(
   { action, body, error, placeholder, hidden, beforeTextarea, secondary, primary, className = 'replybox',
@@ -72,8 +72,8 @@ export function ReplyPreview({ parentId, user, body }: { parentId: number; user:
 }
 
 export function Reply(
-  { user, post, replies = [], showForm, showReport = false, reported = false, error, body = '', reportReason = '', reportError,
-    social, preview = false, returnPath, topHref, suggestionSearch }: {
+  { user, post, replies = [], showForm, showReport = false, reported = false, error, body = '', reportReason = '',
+    reportError, social, preview = false, returnPath, topHref, suggestionSearch }: {
       user: User
       post: PostView
       replies?: PostView[]
@@ -114,7 +114,11 @@ export function Reply(
                 hidden={returnPath && <input type="hidden" name="from" value={returnPath} />}
                 secondary={
                   <span className="edit-post-actions">
-                    <a className="secondary-action cancel-action edit-post-cancel" href={returnPath || `/post/${post.id}`}>cancel</a>
+                    <a className="secondary-action cancel-action edit-post-cancel"
+                      href={returnPath || `/post/${post.id}`}
+                    >
+                      cancel
+                    </a>
                     <button className="secondary-action" name="action" value="preview">preview</button>
                   </span>
                 } primary={<button className="button">post →</button>} />

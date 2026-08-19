@@ -332,8 +332,8 @@ export function renderProfileOg(
   let searchFrom = 0
   for (const line of lines) {
     const lineStart = profileBio.text.indexOf(line, searchFrom)
-    drawLinkedLine(ctx, line, 80, y, lineStart < 0 ? searchFrom : lineStart,
-      profileBio.links, profileBio.code, profileBio.math)
+    drawLinkedLine(ctx, line, 80, y, lineStart < 0 ? searchFrom : lineStart, profileBio.links, profileBio.code,
+      profileBio.math)
     searchFrom = (lineStart < 0 ? searchFrom : lineStart) + line.length
     y += lineHeight
   }

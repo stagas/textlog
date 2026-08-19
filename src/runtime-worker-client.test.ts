@@ -1,7 +1,7 @@
 import { afterAll, beforeAll, expect, test } from 'bun:test'
 import { mkdtempSync, rmSync } from 'node:fs'
-import { join } from 'node:path'
 import { tmpdir } from 'node:os'
+import { join } from 'node:path'
 import { DatabaseUnavailableError, RuntimeWorkerClient } from './runtime-worker-client'
 
 const directory = mkdtempSync(join(tmpdir(), 'textlog-database-worker-'))
@@ -32,8 +32,11 @@ test('a blocked database worker leaves the main event loop responsive', async ()
 
 test('foreground calls overtake queued background work', async () => {
   const completed: string[] = []
-  const background = Array.from({ length: 30 }, (_, index) => client.callBackground(
-    'system.health', { databasePath }).then(() => completed.push(`background-${index}`)))
+  const background = Array.from({ length: 30 }, (_, index) =>
+    client.callBackground(
+      'system.health',
+      { databasePath },
+    ).then(() => completed.push(`background-${index}`)))
   const foreground = client.call('system.health', { databasePath })
     .then(() => completed.push('foreground'))
   await Promise.all([...background, foreground])

@@ -3,8 +3,8 @@ import { existsSync, mkdtempSync, readFileSync, rmSync } from 'node:fs'
 import { dirname, join, resolve } from 'node:path'
 
 import { Database } from 'bun:sqlite'
-import { createServer } from 'node:net'
 import { createHmac } from 'node:crypto'
+import { createServer } from 'node:net'
 import { tmpdir } from 'node:os'
 import { issueRecapUnsubscribeToken } from './recap-emails'
 
@@ -290,7 +290,7 @@ test('signed-in users can invite a deduplicated list of friends with join magic 
   const secondMessages = capturedEmails().filter(item => item.to === 'second-invite@example.com')
   expect(firstMessages).toHaveLength(1)
   expect(secondMessages).toHaveLength(1)
-  expect(firstMessages[0]?.subject).toBe("You've been invited to textlog")
+  expect(firstMessages[0]?.subject).toBe('You\'ve been invited to textlog')
   expect(firstMessages[0]?.text).toContain('Your friend @inviter has invited you to join textlog.')
   expect(firstMessages[0]?.text).toContain('Click on this magic link to join')
   const invitationExpiry = database.query('SELECT expires_at,created_at FROM magic_links WHERE email=?')
@@ -347,7 +347,7 @@ test('accounts sharing an email can be created, switched, and selected by magic-
   expect(database.query('SELECT primary_user_id,selected_user_id FROM account_groups WHERE id=?')
     .get(primary.account_group_id)).toEqual({ primary_user_id: primary.id, selected_user_id: bot.id })
 
-  database.query("UPDATE users SET password='password-enabled' WHERE id IN (?,?)").run(primary.id, bot.id)
+  database.query('UPDATE users SET password=\'password-enabled\' WHERE id IN (?,?)').run(primary.id, bot.id)
   const beforeHandleResets = capturedEmails().length
   for (const handle of ['persona_primary', '@persona_bot']) {
     const response = await request('/forgot-password', {
@@ -544,14 +544,18 @@ test('consequential account, content, reporting, and admin flows work over HTTP'
   expect(authenticatedEntry.headers.get('location')).toBe('/')
   const emailCount = capturedEmails().length
   const otherAccountRequest = await request('/enter', {
-    method: 'POST', cookie: aliceCookie, form: { email: 'another-account@example.com' },
+    method: 'POST',
+    cookie: aliceCookie,
+    form: { email: 'another-account@example.com' },
   })
   expect(otherAccountRequest.status).toBe(303)
   expect(otherAccountRequest.headers.get('location')).toBe('/')
   expect(capturedEmails()).toHaveLength(emailCount)
 
   const foreignRequest = await request('/enter', {
-    method: 'POST', form: { email: 'foreign-account@example.com' }, ip: 'foreign-account-request',
+    method: 'POST',
+    form: { email: 'foreign-account@example.com' },
+    ip: 'foreign-account-request',
   })
   expect(foreignRequest.status).toBe(200)
   const foreignEmail = capturedEmails().filter(message => message.to === 'foreign-account@example.com').at(-1)!
@@ -561,7 +565,10 @@ test('consequential account, content, reporting, and admin flows work over HTTP'
   expect(foreignEntry.status).toBe(400)
 
   const ownLinkRequest = await request('/enter', {
-    method: 'POST', cookie: aliceCookie, form: { identifier: 'alice' }, ip: 'alice-own-link',
+    method: 'POST',
+    cookie: aliceCookie,
+    form: { identifier: 'alice' },
+    ip: 'alice-own-link',
   })
   expect(ownLinkRequest.status).toBe(200)
   const ownEmail = capturedEmails().filter(message => message.to === 'alice@example.com').at(-1)!
@@ -630,28 +637,34 @@ test('consequential account, content, reporting, and admin flows work over HTTP'
   const deviceCookie = savedPush.headers.get('set-cookie')?.match(/notification_device=[^;]+/)?.[0]
   expect(deviceCookie).toBeDefined()
   const enabledDeviceHome = await (await request('/for-you', {
-    cookie: aliceCookie, userAgent: 'alice-browser',
+    cookie: aliceCookie,
+    userAgent: 'alice-browser',
   })).text()
   expect(enabledDeviceHome).toContain('class="notification-banner"')
   expect(enabledDeviceHome).not.toContain('check the improved notifications')
   expect(enabledDeviceHome).toContain('href="/account/edit/appearance">customize appearance</a>')
   const otherBrowserHome = await (await request('/for-you', {
-    cookie: aliceCookie, userAgent: 'alice-other-browser',
+    cookie: aliceCookie,
+    userAgent: 'alice-other-browser',
   })).text()
   expect(otherBrowserHome).toContain('class="notification-banner"')
   expect(otherBrowserHome).not.toContain('check the improved notifications')
   database.query(`INSERT INTO notification_user_agents(user_id,user_agent,status) VALUES(?,?,'enabled')`)
     .run(alice.id, 'alice-improvements-browser')
   const improvementsHome = await (await request('/for-you', {
-    cookie: aliceCookie, userAgent: 'alice-improvements-browser',
+    cookie: aliceCookie,
+    userAgent: 'alice-improvements-browser',
   })).text()
   expect(improvementsHome).toContain('href="/account/edit/notifications">check the improved notifications</a>')
   const dismissedImprovements = await request('/notifications/improvements/dismiss', {
-    method: 'POST', cookie: aliceCookie, userAgent: 'alice-improvements-browser',
+    method: 'POST',
+    cookie: aliceCookie,
+    userAgent: 'alice-improvements-browser',
   })
   expect(dismissedImprovements.status).toBe(303)
   const improvementDismissedHome = await (await request('/for-you', {
-    cookie: aliceCookie, userAgent: 'alice-improvements-browser',
+    cookie: aliceCookie,
+    userAgent: 'alice-improvements-browser',
   })).text()
   expect(improvementDismissedHome).not.toContain('check the improved notifications')
   expect(improvementDismissedHome).toContain('href="/account/edit/appearance">customize appearance</a>')
@@ -674,63 +687,80 @@ test('consequential account, content, reporting, and admin flows work over HTTP'
   })).text()
   expect(dismissedHome).toContain('href="/account/edit/appearance">customize appearance</a>')
   const dismissedAppearance = await request('/appearance/banner/dismiss', {
-    method: 'POST', cookie: aliceCookie, userAgent: 'alice-dismissed-browser',
+    method: 'POST',
+    cookie: aliceCookie,
+    userAgent: 'alice-dismissed-browser',
   })
   expect(dismissedAppearance.status).toBe(303)
   const fullyDismissedHome = await (await request('/for-you', {
-    cookie: aliceCookie, userAgent: 'alice-dismissed-browser',
+    cookie: aliceCookie,
+    userAgent: 'alice-dismissed-browser',
   })).text()
   expect(fullyDismissedHome).toContain('href="/account/edit/invite">invite friends</a>')
   const dismissedInvite = await request('/invite/banner/dismiss', {
-    method: 'POST', cookie: aliceCookie, userAgent: 'alice-dismissed-browser',
+    method: 'POST',
+    cookie: aliceCookie,
+    userAgent: 'alice-dismissed-browser',
   })
   expect(dismissedInvite.status).toBe(303)
   const setupDismissedHome = await (await request('/for-you', {
-    cookie: aliceCookie, userAgent: 'alice-dismissed-browser',
+    cookie: aliceCookie,
+    userAgent: 'alice-dismissed-browser',
   })).text()
   expect(setupDismissedHome).toContain('donate to support us')
   const acceptedDonation = await request('/donation/banner/accept', {
-    cookie: aliceCookie, userAgent: 'alice-dismissed-browser',
+    cookie: aliceCookie,
+    userAgent: 'alice-dismissed-browser',
   })
   expect(acceptedDonation.status).toBe(303)
   expect(acceptedDonation.headers.get('location')).toBe('https://buymeacoffee.com/stagas')
   expect(acceptedDonation.headers.get('set-cookie')).toBeNull()
   expect(database.query('SELECT 1 FROM donation_banner_dismissals WHERE user_id=?').get(alice.id)).toBeDefined()
   const donationDismissedHome = await (await request('/for-you', {
-    cookie: aliceCookie, userAgent: 'alice-dismissed-browser',
+    cookie: aliceCookie,
+    userAgent: 'alice-dismissed-browser',
   })).text()
   expect(donationDismissedHome).not.toContain('class="notification-banner"')
   const openedAppearance = await request('/account/edit/appearance', {
-    cookie: aliceCookie, userAgent: 'alice-browser',
+    cookie: aliceCookie,
+    userAgent: 'alice-browser',
   })
   expect(openedAppearance.status).toBe(200)
   const merelyOpenedDeviceHome = await (await request('/for-you', {
-    cookie: aliceCookie, userAgent: 'alice-browser',
+    cookie: aliceCookie,
+    userAgent: 'alice-browser',
   })).text()
   expect(merelyOpenedDeviceHome).toContain('href="/account/edit/appearance">customize appearance</a>')
   const savedAppearance = await request('/account/edit/appearance', {
-    method: 'POST', cookie: aliceCookie, userAgent: 'alice-browser',
+    method: 'POST',
+    cookie: aliceCookie,
+    userAgent: 'alice-browser',
     form: { tab: 'theme', theme: 'system', accent: 'theme' },
   })
   expect(savedAppearance.status).toBe(303)
   const disabledLinkPreviews = await request('/account/edit/appearance', {
-    method: 'POST', cookie: aliceCookie, userAgent: 'alice-browser',
+    method: 'POST',
+    cookie: aliceCookie,
+    userAgent: 'alice-browser',
     form: { tab: 'misc', pageSize: '20', density: 'regular' },
   })
   expect(disabledLinkPreviews.status).toBe(303)
   expect(database.query('SELECT show_link_previews FROM users WHERE id=?').get(alice.id))
     .toEqual({ show_link_previews: 0 })
   const linkPreviewsDisabledHome = await (await request('/for-you', {
-    cookie: aliceCookie, userAgent: 'alice-other-browser',
+    cookie: aliceCookie,
+    userAgent: 'alice-other-browser',
   })).text()
   expect(linkPreviewsDisabledHome).toContain('<body class="density-regular link-previews-disabled">')
   const linkPreviewSettings = await (await request('/account/edit/appearance?tab=misc', {
-    cookie: aliceCookie, userAgent: 'alice-other-browser',
+    cookie: aliceCookie,
+    userAgent: 'alice-other-browser',
   })).text()
   expect(linkPreviewSettings).toContain('name="showLinkPreviews" value="yes"')
   expect(linkPreviewSettings).not.toContain('name="showLinkPreviews" checked=""')
   const configuredDeviceHome = await (await request('/for-you', {
-    cookie: aliceCookie, userAgent: 'alice-browser',
+    cookie: aliceCookie,
+    userAgent: 'alice-browser',
   })).text()
   expect(configuredDeviceHome).not.toContain('class="notification-banner"')
   const pushPreferences = await request(
@@ -739,8 +769,8 @@ test('consequential account, content, reporting, and admin flows work over HTTP'
   )
   expect(await pushPreferences.json()).toEqual({
     enabled: true,
-    preferences: { latest: 0, replies: 1, mentions: 0, follows: 1, followActivity: 1,
-      followingNotes: 1, bots: 0, followingOnlyToMe: 0 },
+    preferences: { latest: 0, replies: 1, mentions: 0, follows: 1, followActivity: 1, followingNotes: 1, bots: 0,
+      followingOnlyToMe: 0 },
   })
   const cacheBustedHome = await request('/?v=94721')
   expect(cacheBustedHome.status).toBe(200)
@@ -1198,7 +1228,9 @@ test('consequential account, content, reporting, and admin flows work over HTTP'
   expect(revisitedForYou).not.toContain('class="unread-dot" aria-label="unread"')
   expect(revisitedForYou).not.toContain('activity-item-directed-unread')
   const enableBot = await request('/account/edit', {
-    method: 'POST', cookie: bobCookie, form: { handle: 'bob', bio: 'Bob builds things', isBot: 'yes' },
+    method: 'POST',
+    cookie: bobCookie,
+    form: { handle: 'bob', bio: 'Bob builds things', isBot: 'yes' },
   })
   expect(enableBot.status).toBe(303)
   expect(database.query('SELECT is_bot FROM users WHERE id=?').get(bob.id)).toEqual({ is_bot: 1 })
@@ -1282,7 +1314,9 @@ test('consequential account, content, reporting, and admin flows work over HTTP'
     'shared reply #shared',
   ) as { id: number }
   const hashtagBotPost = await request('/post', {
-    method: 'POST', cookie: bobCookie, form: { body: 'Bot note discovered through #shared' },
+    method: 'POST',
+    cookie: bobCookie,
+    form: { body: 'Bot note discovered through #shared' },
   })
   expect(hashtagBotPost.status).toBe(303)
   const hashtagForYou = await (await request('/for-you', { cookie: aliceCookie })).text()
@@ -1548,7 +1582,9 @@ test('consequential account, content, reporting, and admin flows work over HTTP'
   const moderateBob = await request(`/admin/users/${bob.id}`, { cookie: adminCookie })
   expect(await moderateBob.text()).toContain('take permanent control of bot status')
   const enforceBot = await request(`/admin/users/${bob.id}/bot`, {
-    method: 'POST', cookie: adminCookie, form: { bot: 'yes', note: 'Automated account' },
+    method: 'POST',
+    cookie: adminCookie,
+    form: { bot: 'yes', note: 'Automated account' },
   })
   expect(enforceBot.status).toBe(303)
   expect(database.query('SELECT is_bot,bot_managed FROM users WHERE id=?').get(bob.id))
@@ -1557,7 +1593,9 @@ test('consequential account, content, reporting, and admin flows work over HTTP'
   expect(lockedBotSettings).toContain('A moderator permanently controls this setting.')
   expect(lockedBotSettings).toContain('role="switch" disabled="" name="isBot" checked=""')
   const ownerCannotRemoveBot = await request('/account/edit', {
-    method: 'POST', cookie: bobCookie, form: { handle: 'bob', bio: 'Bob builds things' },
+    method: 'POST',
+    cookie: bobCookie,
+    form: { handle: 'bob', bio: 'Bob builds things' },
   })
   expect(ownerCannotRemoveBot.status).toBe(303)
   expect(database.query('SELECT is_bot,bot_managed FROM users WHERE id=?').get(bob.id))
@@ -1597,7 +1635,9 @@ test('consequential account, content, reporting, and admin flows work over HTTP'
   expect(ipHash).toBeDefined()
   expect(ipDashboardHtml).toContain(`name="hash" value="${ipHash}"`)
   const blockIp = await request('/admin/ip-blocks', {
-    method: 'POST', cookie: adminCookie, form: { hash: ipHash! },
+    method: 'POST',
+    cookie: adminCookie,
+    form: { hash: ipHash! },
   })
   expect(blockIp.status).toBe(303)
   expect(database.query(`SELECT blocked_at FROM daily_ip_requests

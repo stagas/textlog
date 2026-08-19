@@ -1,56 +1,58 @@
-import { statSync } from 'node:fs'
-import { createHash, randomBytes, randomInt } from 'node:crypto'
 import type { Database } from 'bun:sqlite'
-import type { User } from './types'
-import { insertSession, markSessionUsed, renewSession, SESSION_LIFETIME_MS, sessionHash } from './sessions'
-import type { DatabaseDomainInput, DatabaseDomainOperation, DatabaseDomainOutput } from './database-contract'
-import { dashboardStats } from './stats'
-import { sitemapIndex, sitemapSection } from './seo'
-import { loadBioReferenceData, loadThreadReplies } from './posts'
-import { enrichPosts } from './posts'
-import { getHotPosts, type HotPost, hotRankingVersion } from './hot'
-import { feedSnapshotPage } from './feed-snapshots'
+import { createHash, randomBytes, randomInt } from 'node:crypto'
+import { statSync } from 'node:fs'
+import { accountChoices, accountForEmail, accountGroupForUser, createAccountGroup, isPrimaryAccount,
+  markGroupEmailVerified, MONTHLY_NEW_ACCOUNT_LIMIT, recentAccountCreations, selectAccount } from './account-groups'
+import { anonymizeUser, recordAdminAction, resolvePostReports, softDeletePost } from './admin'
+import { API_DEFAULT_LIMIT, apiHotPosts, apiPost, apiPosts, apiReplies, apiSearchPosts, encodeCursor } from './api'
+import { apiActivities } from './api-activity'
+import { issueApiKey } from './api-keys'
+import { consumeAuthAttempt, consumeBucketedAttempt, rateLimitKey } from './auth-rate-limit'
+import { runAutomatedBackup } from './backup-automation'
 import { cacheDb } from './cache-db'
-import type { PostView } from './types'
-import { searchPeople, searchPosts, searchTags, searchTerms } from './search'
+import { exportUserData } from './data-export'
+import { createBootDatabaseBackup } from './database-backup'
+import type { DatabaseDomainInput, DatabaseDomainOperation, DatabaseDomainOutput } from './database-contract'
+import { confirmEmailToken } from './email-verification'
+import { suggestedPeople, suggestedPeopleCount, trendingTagCount, trendingTags } from './explore'
+import { issueFeedKey, userForFeedKey } from './feed-keys'
+import { feedSnapshotPage } from './feed-snapshots'
+import { hasUnreadForYou, hasUnreadToMe, markAllForYouRead, markVisibleForYouEntriesRead,
+  unreadForYouCount } from './for-you-state'
+import { resolveHandle } from './handles'
+import { claimInitialHandle, updateProfileHandle } from './handles'
+import { getHotPosts, type HotPost, hotRankingVersion } from './hot'
+import { isImageKey } from './image-storage'
+import { runBoundedCleanup } from './maintenance'
+import { MAX_MATERIALIZED_PAGES } from './materialized-feed-pages'
 import { PAGE_SIZE } from './pagination'
 import { TAG_PAGE_SIZE } from './pagination'
 import { CONNECTION_PAGE_SIZE } from './pagination'
-import { suggestedPeople, suggestedPeopleCount, trendingTagCount, trendingTags } from './explore'
-import { visibleTagFollowerCounts, visibleUserProfileStats } from './posts'
-import { resolveHandle } from './handles'
-import { loadPersonalizedFeed } from './personalized-feed'
-import { MAX_MATERIALIZED_PAGES } from './materialized-feed-pages'
-import { hasUnreadForYou, hasUnreadToMe, markAllForYouRead, markVisibleForYouEntriesRead,
-  unreadForYouCount } from './for-you-state'
-import { consumeAuthAttempt, consumeBucketedAttempt, rateLimitKey } from './auth-rate-limit'
-import { issueApiKey } from './api-keys'
-import { issueFeedKey, userForFeedKey } from './feed-keys'
-import { API_DEFAULT_LIMIT, apiHotPosts, apiPost, apiPosts, apiReplies, apiSearchPosts, encodeCursor } from './api'
-import { apiActivities } from './api-activity'
-import { createPost, updatePost } from './posts'
-import { anonymizeUser, recordAdminAction, resolvePostReports, softDeletePost } from './admin'
-import { isImageKey } from './image-storage'
-import { accountChoices, accountForEmail, accountGroupForUser, createAccountGroup, isPrimaryAccount,
-  markGroupEmailVerified, MONTHLY_NEW_ACCOUNT_LIMIT, recentAccountCreations, selectAccount } from './account-groups'
 import { consumePasswordCaptcha, issuePasswordCaptcha, passwordCaptchaRequired,
   recordFailedPassword } from './password-login-captcha'
 import { consumePasswordLoginNonce, issuePasswordLoginNonce } from './password-login-nonce'
-import { claimInitialHandle, updateProfileHandle } from './handles'
-import { exportUserData } from './data-export'
-import { confirmEmailToken } from './email-verification'
-import { runBoundedCleanup } from './maintenance'
-import { createBootDatabaseBackup } from './database-backup'
-import { runAutomatedBackup } from './backup-automation'
+import { loadPersonalizedFeed } from './personalized-feed'
+import { loadBioReferenceData, loadThreadReplies } from './posts'
+import { enrichPosts } from './posts'
+import { visibleTagFollowerCounts, visibleUserProfileStats } from './posts'
+import { createPost, updatePost } from './posts'
 import { createPublicArchive, publicArchiveIsCurrent } from './public-archive'
-import { recapEmail, RECAP_POPULAR_NOTE_IDS } from './recap-email'
+import { RECAP_POPULAR_NOTE_IDS, recapEmail } from './recap-email'
+import { searchPeople, searchPosts, searchTags, searchTerms } from './search'
+import { sitemapIndex, sitemapSection } from './seo'
+import { insertSession, markSessionUsed, renewSession, SESSION_LIFETIME_MS, sessionHash } from './sessions'
+import { dashboardStats } from './stats'
+import type { User } from './types'
+import type { PostView } from './types'
 
 function attachPeopleStats(database: Database, people: import('./types').PersonView[], viewerId: number) {
   const stats = visibleUserProfileStats(database, people.map(person => person.id), viewerId)
   const followers = viewerId < 0 || !people.length ? new Set<number>() : new Set((database.query(
     `SELECT follower_id FROM follows WHERE following_id=? AND follower_id IN (${people.map(() => '?').join(',')})`,
   ).all(viewerId, ...people.map(person => person.id)) as { follower_id: number }[]).map(row => row.follower_id))
-  return people.map(person => ({ ...person, profileStats: stats.get(person.id), followsViewer: followers.has(person.id) }))
+  return people.map(person => ({ ...person, profileStats: stats.get(person.id),
+    followsViewer: followers.has(person.id) })
+  )
 }
 
 function attachTagStats(database: Database, tags: import('./types').TagView[], viewerId: number) {
@@ -65,31 +67,33 @@ function recapPosts(database: Database, viewerId: number) {
     (b.blocker_id=? AND b.blocked_id=p.user_id) OR (b.blocker_id=p.user_id AND b.blocked_id=?))
     AND NOT EXISTS (SELECT 1 FROM post_hashtags ph JOIN blocked_hashtags bh ON bh.tag=ph.tag
       WHERE ph.post_id=p.id AND bh.user_id=?)`
-  const parameters = viewerId < 0 ? [...RECAP_POPULAR_NOTE_IDS]
+  const parameters = viewerId < 0
+    ? [...RECAP_POPULAR_NOTE_IDS]
     : [...RECAP_POPULAR_NOTE_IDS, viewerId, viewerId, viewerId]
   const rows = database.query(`SELECT p.*,u.handle FROM posts p JOIN users u ON u.id=p.user_id
     WHERE p.id IN (${placeholders}) AND p.deleted_at IS NULL AND u.deleted_at IS NULL
       AND u.suspended_at IS NULL ${visibility}`).all(...parameters) as PostView[]
   const byId = new Map(rows.map(post => [post.id, post]))
-  return enrichPosts(database,
-    RECAP_POPULAR_NOTE_IDS.flatMap(id => byId.has(id) ? [byId.get(id)!] : []), viewerId)
+  return enrichPosts(database, RECAP_POPULAR_NOTE_IDS.flatMap(id => byId.has(id) ? [byId.get(id)!] : []), viewerId)
 }
 
 function removePreviewRecords(database: Database, userId: number, postId?: number) {
   const keys: string[] = []
-  if (database.query("SELECT 1 FROM sqlite_master WHERE type='table' AND name='post_link_previews'").get()) {
+  if (database.query('SELECT 1 FROM sqlite_master WHERE type=\'table\' AND name=\'post_link_previews\'').get()) {
     const rows = postId == null
       ? database.query(`SELECT image_url FROM post_link_previews
         WHERE post_id IN (SELECT id FROM posts WHERE user_id=?)`).all(userId)
       : database.query('SELECT image_url FROM post_link_previews WHERE post_id=?').all(postId)
     keys.push(...(rows as { image_url: string }[]).map(row => row.image_url).filter(isImageKey))
-    if (postId == null) database.query(
-      'DELETE FROM post_link_previews WHERE post_id IN (SELECT id FROM posts WHERE user_id=?)',
-    ).run(userId)
+    if (postId == null) {
+      database.query(
+        'DELETE FROM post_link_previews WHERE post_id IN (SELECT id FROM posts WHERE user_id=?)',
+      ).run(userId)
+    }
     else database.query('DELETE FROM post_link_previews WHERE post_id=?').run(postId)
   }
   if (postId == null && database.query(
-    "SELECT 1 FROM sqlite_master WHERE type='table' AND name='user_bio_link_previews'",
+    'SELECT 1 FROM sqlite_master WHERE type=\'table\' AND name=\'user_bio_link_previews\'',
   ).get()) {
     keys.push(...(database.query('SELECT image_url FROM user_bio_link_previews WHERE user_id=?')
       .all(userId) as { image_url: string }[]).map(row => row.image_url).filter(isImageKey))
@@ -97,7 +101,7 @@ function removePreviewRecords(database: Database, userId: number, postId?: numbe
   }
   return keys
 }
-import { DENSITY_CHOICES, PAGE_SIZE_CHOICES, type DensityChoice, type PageSizeChoice } from './request-preferences'
+import { DENSITY_CHOICES, type DensityChoice, PAGE_SIZE_CHOICES, type PageSizeChoice } from './request-preferences'
 
 function sessionUser(database: Database, token: string | null): User | null {
   if (!token) return null
@@ -136,14 +140,20 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
       const { databasePath } = input as DatabaseDomainInput<'system.health'>
       const started = performance.now()
       database.run('BEGIN IMMEDIATE')
-      try { database.query('SELECT 1').get() }
-      finally { database.run('ROLLBACK') }
+      try {
+        database.query('SELECT 1').get()
+      }
+      finally {
+        database.run('ROLLBACK')
+      }
       let walBytes = 0
-      try { walBytes = statSync(`${databasePath}-wal`).size }
+      try {
+        walBytes = statSync(`${databasePath}-wal`).size
+      }
       catch {}
       const busyTimeoutMs = (database.query('PRAGMA busy_timeout').get() as { timeout: number }).timeout
-      return { writeLockLatencyMs: Math.round((performance.now() - started) * 100) / 100,
-        walBytes, busyTimeoutMs } as DatabaseDomainOutput<K>
+      return { writeLockLatencyMs: Math.round((performance.now() - started) * 100) / 100, walBytes,
+        busyTimeoutMs } as DatabaseDomainOutput<K>
     }
     case 'system.blockedIps': {
       const { day } = input as DatabaseDomainInput<'system.blockedIps'>
@@ -201,13 +211,16 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
       return recapPosts(database, viewerId) as DatabaseDomainOutput<K>
     }
     case 'system.consumeAuthAttempt': {
-      const { scope, identity, attempts, windowSeconds, now } = input as DatabaseDomainInput<'system.consumeAuthAttempt'>
+      const { scope, identity, attempts, windowSeconds, now } = input as DatabaseDomainInput<
+        'system.consumeAuthAttempt'
+      >
       const result = consumeAuthAttempt(database, scope, rateLimitKey(identity), attempts, windowSeconds, now)
       return result as DatabaseDomainOutput<K>
     }
     case 'system.consumeBucketedAttempt': {
-      const { scope, identity, attempts, bucketSeconds, now }
-        = input as DatabaseDomainInput<'system.consumeBucketedAttempt'>
+      const { scope, identity, attempts, bucketSeconds, now } = input as DatabaseDomainInput<
+        'system.consumeBucketedAttempt'
+      >
       const result = consumeBucketedAttempt(database, scope, rateLimitKey(identity), attempts, bucketSeconds, now)
       return result as DatabaseDomainOutput<K>
     }
@@ -228,9 +241,11 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
           .get(signedIn.id, deviceId) as { pageSize: number; density: string } | null
         : null
       const pageSize = row && PAGE_SIZE_CHOICES.includes(row.pageSize as PageSizeChoice)
-        ? row.pageSize as PageSizeChoice : PAGE_SIZE
+        ? row.pageSize as PageSizeChoice
+        : PAGE_SIZE
       const density = row && DENSITY_CHOICES.includes(row.density as DensityChoice)
-        ? row.density as DensityChoice : 'regular'
+        ? row.density as DensityChoice
+        : 'regular'
       const result = { sessionUser: signedIn, apiUser: bearerUser, preferences: { pageSize, density } }
       return result as DatabaseDomainOutput<K>
     }
@@ -240,7 +255,9 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
     }
     case 'account.timezone': {
       const { userId } = input as DatabaseDomainInput<'account.timezone'>
-      const row = database.query('SELECT timezone FROM users WHERE id=?').get(userId) as { timezone: string | null } | null
+      const row = database.query('SELECT timezone FROM users WHERE id=?').get(userId) as
+        | { timezone: string | null }
+        | null
       return (row?.timezone ?? null) as DatabaseDomainOutput<K>
     }
     case 'account.choices': {
@@ -292,10 +309,10 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
         FROM push_subscriptions WHERE endpoint=? AND user_id=?`).get(endpoint, userId) as DatabaseDomainOutput<K>
     }
     case 'account.savePushSubscription': {
-      const { userId, endpoint, p256dh, auth, deviceId, userAgent, preferencesProvided, preferences }
-        = input as DatabaseDomainInput<'account.savePushSubscription'>
-      const { latest, replies, mentions, follows, signups, followActivity, followingNotes, bots, followingOnlyToMe }
-        = preferences
+      const { userId, endpoint, p256dh, auth, deviceId, userAgent, preferencesProvided, preferences } =
+        input as DatabaseDomainInput<'account.savePushSubscription'>
+      const { latest, replies, mentions, follows, signups, followActivity, followingNotes, bots, followingOnlyToMe } =
+        preferences
       database.transaction(() => {
         database.query('UPDATE push_subscriptions SET p256dh=?,auth=?,device_id=? WHERE endpoint=?')
           .run(p256dh, auth, deviceId, endpoint)
@@ -313,16 +330,18 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
             notify_following_notes=coalesce(?,push_subscriptions.notify_following_notes),
             notify_bots=coalesce(?,push_subscriptions.notify_bots),
             notify_following_only_to_me=coalesce(?,push_subscriptions.notify_following_only_to_me)`)
-          .run(endpoint, userId, p256dh, auth, deviceId, latest ?? 1, replies ?? 1, mentions ?? 1, follows ?? 1,
-            0, signups ?? 1, followActivity ?? 1, followingNotes ?? 1, bots ?? 0, followingOnlyToMe ?? 0,
-            latest, replies, mentions, follows, signups, followActivity, followingNotes, bots, followingOnlyToMe)
+          .run(endpoint, userId, p256dh, auth, deviceId, latest ?? 1, replies ?? 1, mentions ?? 1, follows ?? 1, 0,
+            signups ?? 1, followActivity ?? 1, followingNotes ?? 1, bots ?? 0, followingOnlyToMe ?? 0, latest, replies,
+            mentions, follows, signups, followActivity, followingNotes, bots, followingOnlyToMe)
         if (userAgent) {
           database.query(`INSERT INTO notification_user_agents(user_id,user_agent,status) VALUES(?,?,'enabled')
             ON CONFLICT(user_id,user_agent) DO UPDATE SET status='enabled',updated_at=CURRENT_TIMESTAMP`)
             .run(userId, userAgent)
-          if (preferencesProvided) database.query(`INSERT INTO notification_improvement_user_agents(user_id,user_agent)
+          if (preferencesProvided) {
+            database.query(`INSERT INTO notification_improvement_user_agents(user_id,user_agent)
             VALUES(?,?) ON CONFLICT(user_id,user_agent) DO UPDATE SET dismissed_at=CURRENT_TIMESTAMP`)
-            .run(userId, userAgent)
+              .run(userId, userAgent)
+          }
         }
       })()
       return null as DatabaseDomainOutput<K>
@@ -333,8 +352,10 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
       database.transaction(() => {
         database.query('DELETE FROM push_subscriptions WHERE endpoint=? AND user_id=?').run(endpoint, userId)
         active = Boolean(database.query('SELECT 1 FROM push_subscriptions WHERE endpoint=? LIMIT 1').get(endpoint))
-        if (userAgent) database.query(`DELETE FROM notification_user_agents
+        if (userAgent) {
+          database.query(`DELETE FROM notification_user_agents
           WHERE user_id=? AND user_agent=? AND status='enabled'`).run(userId, userAgent)
+        }
       })()
       return { active } as DatabaseDomainOutput<K>
     }
@@ -344,8 +365,9 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
       return (row?.password ?? null) as DatabaseDomainOutput<K>
     }
     case 'account.storePasswordEnableToken': {
-      const { userId, email, tokenHash, expiresAt, now }
-        = input as DatabaseDomainInput<'account.storePasswordEnableToken'>
+      const { userId, email, tokenHash, expiresAt, now } = input as DatabaseDomainInput<
+        'account.storePasswordEnableToken'
+      >
       const account = database.query('SELECT 1 FROM users WHERE id=? AND email=? AND password=? AND deleted_at IS NULL')
         .get(userId, email, '!')
       if (!account) return false as DatabaseDomainOutput<K>
@@ -418,12 +440,14 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
       const credentials = database.query('SELECT password FROM users WHERE id=?').get(userId) as {
         password: string
       } | null
-      return (credentials ? { status: 'ready', passwordHash: credentials.password }
+      return (credentials
+        ? { status: 'ready', passwordHash: credentials.password }
         : { status: 'unavailable' }) as DatabaseDomainOutput<K>
     }
     case 'account.storeEmailChangeAuthorization': {
-      const { userId, currentEmail, newEmail, tokenHash, expiresAt, now }
-        = input as DatabaseDomainInput<'account.storeEmailChangeAuthorization'>
+      const { userId, currentEmail, newEmail, tokenHash, expiresAt, now } = input as DatabaseDomainInput<
+        'account.storeEmailChangeAuthorization'
+      >
       database.transaction(() => {
         database.query('DELETE FROM email_change_authorizations WHERE user_id=? OR expires_at<=?').run(userId, now)
         database.query(`INSERT INTO email_change_authorizations(token_hash,user_id,current_email,new_email,expires_at)
@@ -461,10 +485,13 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
         : database.query(`SELECT u.id,u.email,u.password passwordHash FROM account_deletion_tokens t
           JOIN users u ON u.id=t.user_id WHERE t.token_hash=? AND t.expires_at>? AND u.deleted_at IS NULL
             AND u.password='!' AND u.email=t.email`).get(selector.tokenHash, now)) as {
-              id: number; email: string; passwordHash: string
-            } | null
-      return (account ? { ...account, primary: isPrimaryAccount(database, account.id) } : null
-      ) as DatabaseDomainOutput<K>
+          id: number
+          email: string
+          passwordHash: string
+        } | null
+      return (account ? { ...account, primary: isPrimaryAccount(database, account.id) } : null) as DatabaseDomainOutput<
+        K
+      >
     }
     case 'account.storeDeletionToken': {
       const { userId, email, tokenHash, expiresAt, now } = input as DatabaseDomainInput<'account.storeDeletionToken'>
@@ -484,14 +511,16 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
       const { userId } = input as DatabaseDomainInput<'account.delete'>
       const imageKeys: string[] = []
       database.transaction(() => {
-        if (database.query("SELECT 1 FROM sqlite_master WHERE type='table' AND name='post_link_previews'").get()) {
+        if (database.query('SELECT 1 FROM sqlite_master WHERE type=\'table\' AND name=\'post_link_previews\'').get()) {
           imageKeys.push(...(database.query(`SELECT image_url FROM post_link_previews
             WHERE post_id IN (SELECT id FROM posts WHERE user_id=?)`).all(userId) as { image_url: string }[])
             .map(row => row.image_url).filter(isImageKey))
           database.query('DELETE FROM post_link_previews WHERE post_id IN (SELECT id FROM posts WHERE user_id=?)')
             .run(userId)
         }
-        if (database.query("SELECT 1 FROM sqlite_master WHERE type='table' AND name='user_bio_link_previews'").get()) {
+        if (database.query('SELECT 1 FROM sqlite_master WHERE type=\'table\' AND name=\'user_bio_link_previews\'')
+          .get())
+        {
           imageKeys.push(...(database.query('SELECT image_url FROM user_bio_link_previews WHERE user_id=?')
             .all(userId) as { image_url: string }[]).map(row => row.image_url).filter(isImageKey))
           database.query('DELETE FROM user_bio_link_previews WHERE user_id=?').run(userId)
@@ -501,8 +530,9 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
       return { imageKeys } as DatabaseDomainOutput<K>
     }
     case 'account.saveAppearancePreferences': {
-      const { userId, deviceId, pageSize, density, showLinkPreviews }
-        = input as DatabaseDomainInput<'account.saveAppearancePreferences'>
+      const { userId, deviceId, pageSize, density, showLinkPreviews } = input as DatabaseDomainInput<
+        'account.saveAppearancePreferences'
+      >
       database.transaction(() => {
         database.query(`INSERT INTO device_settings(user_id,device_id,page_size,density) VALUES(?,?,?,?)
           ON CONFLICT(user_id,device_id) DO UPDATE SET page_size=excluded.page_size,density=excluded.density,
@@ -532,18 +562,22 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
       const { userId, token } = input as DatabaseDomainInput<'account.recapStatus'>
       const row = userId
         ? database.query('SELECT id,recap_emails subscribed FROM users WHERE id=? AND deleted_at IS NULL').get(userId)
-        : token ? database.query(`SELECT u.id,u.recap_emails subscribed FROM recap_unsubscribe_tokens t
+        : token
+        ? database.query(`SELECT u.id,u.recap_emails subscribed FROM recap_unsubscribe_tokens t
           JOIN users u ON u.id=t.user_id WHERE t.token_hash=? AND u.deleted_at IS NULL`)
-          .get(createHash('sha256').update(token).digest('hex')) : null
+          .get(createHash('sha256').update(token).digest('hex'))
+        : null
       if (!row) return null as DatabaseDomainOutput<K>
       const result = row as { id: number; subscribed: number }
       return { id: result.id, subscribed: result.subscribed !== 0 } as DatabaseDomainOutput<K>
     }
     case 'account.setRecapPreference': {
       const { userId, token, subscribed } = input as DatabaseDomainInput<'account.setRecapPreference'>
-      const row = userId ? { id: userId } : token ? database.query(`SELECT u.id FROM recap_unsubscribe_tokens t
+      const row = userId ? { id: userId } : token
+        ? database.query(`SELECT u.id FROM recap_unsubscribe_tokens t
         JOIN users u ON u.id=t.user_id WHERE t.token_hash=? AND u.deleted_at IS NULL`)
-        .get(createHash('sha256').update(token).digest('hex')) as { id: number } | null : null
+          .get(createHash('sha256').update(token).digest('hex')) as { id: number } | null
+        : null
       if (!row) return false as DatabaseDomainOutput<K>
       database.query(`UPDATE users SET recap_emails=? WHERE email=(SELECT email FROM users WHERE id=?)`)
         .run(subscribed ? 1 : 0, row.id)
@@ -553,12 +587,16 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
       const { userId, currentSessionHash, now } = input as DatabaseDomainInput<'account.securityData'>
       const rows = database.query(`SELECT token_hash,created_at,expires_at,user_agent FROM sessions
         WHERE user_id=? AND expires_at>? ORDER BY created_at DESC`).all(userId, now) as {
-        token_hash: string; created_at: number; expires_at: number; user_agent: string
+        token_hash: string
+        created_at: number
+        expires_at: number
+        user_agent: string
       }[]
       const credentials = database.query('SELECT password FROM users WHERE id=?').get(userId) as { password: string }
       const result = {
         sessions: rows.map(({ token_hash, ...row }) => ({ ...row, token: token_hash,
-          current: token_hash === currentSessionHash })),
+          current: token_hash === currentSessionHash })
+        ),
         apiKeys: database.query(`SELECT id,name,created_at,expires_at,last_used_at FROM api_keys
           WHERE user_id=? ORDER BY created_at DESC`).all(userId),
         feedKeys: database.query(`SELECT id,name,created_at,expires_at,last_used_at FROM feed_keys
@@ -574,7 +612,8 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
         const count = (database.query(`SELECT count(*) count FROM ${table}
           WHERE user_id=? AND (expires_at IS NULL OR expires_at>?)`).get(userId, now) as { count: number }).count
         if (count >= 20) return null
-        return kind === 'api' ? issueApiKey(database, userId, name, expiresAt, now)
+        return kind === 'api'
+          ? issueApiKey(database, userId, name, expiresAt, now)
           : issueFeedKey(database, userId, name, expiresAt, now)
       })()
       return (result ? { value: result.value } : null) as DatabaseDomainOutput<K>
@@ -635,8 +674,8 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
       const ipRequests = database.query(`SELECT ip_hash hash,substr(ip_hash,1,5) obfuscated,
         request_count requests,blocked_at IS NOT NULL blocked FROM daily_ip_requests
         WHERE day=? ORDER BY request_count DESC,ip_hash LIMIT 50`).all(day)
-      return { stats: dashboardStats(database), total, reports, actions, suspended, illegalReports, ipRequests
-      } as DatabaseDomainOutput<K>
+      return { stats: dashboardStats(database), total, reports, actions, suspended, illegalReports,
+        ipRequests } as DatabaseDomainOutput<K>
     }
     case 'admin.blockIp': {
       const { day, hash, actorId } = input as DatabaseDomainInput<'admin.blockIp'>
@@ -652,12 +691,13 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
       const updated = database.query(`UPDATE illegal_activity_reports SET status=?,resolution_note=?,
         resolved_at=CURRENT_TIMESTAMP WHERE id=? AND status='open'`)
         .run(decision === 'resolve' ? 'resolved' : 'dismissed', reasons.slice(0, 2000), id)
-      return (updated.changes ? { status: 'ready', reference: report.reference,
-        reporterEmail: report.reporter_email } : { status: 'not_open' }) as DatabaseDomainOutput<K>
+      return (updated.changes
+        ? { status: 'ready', reference: report.reference, reporterEmail: report.reporter_email }
+        : { status: 'not_open' }) as DatabaseDomainOutput<K>
     }
     case 'admin.decideReport': {
       const { id, decision, actorId, note } = input as DatabaseDomainInput<'admin.decideReport'>
-      const report = database.query("SELECT post_id FROM reports WHERE id=? AND status='open'")
+      const report = database.query('SELECT post_id FROM reports WHERE id=? AND status=\'open\'')
         .get(id) as { post_id: number } | null
       if (!report) return false as DatabaseDomainOutput<K>
       database.transaction(() => {
@@ -671,8 +711,8 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
     case 'admin.post': {
       const { id } = input as DatabaseDomainInput<'admin.post'>
       return (database.query(`SELECT p.id,p.user_id,p.parent_id,p.body,p.created_at,p.deleted_at,u.handle
-        FROM posts p JOIN users u ON u.id=p.user_id WHERE p.id=? AND p.deleted_at IS NULL`).get(id) || null
-      ) as DatabaseDomainOutput<K>
+        FROM posts p JOIN users u ON u.id=p.user_id WHERE p.id=? AND p.deleted_at IS NULL`).get(id)
+        || null) as DatabaseDomainOutput<K>
     }
     case 'admin.deletePost': {
       const { id, actorId, note } = input as DatabaseDomainInput<'admin.deletePost'>
@@ -698,7 +738,7 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
       const { id, actorId, action, isBot, note } = input as DatabaseDomainInput<'admin.moderateUser'>
       const target = database.query(`SELECT id,email,suspended_at,is_bot,bot_managed FROM users
         WHERE id=? AND deleted_at IS NULL`).get(id) as { id: number; email: string; suspended_at: string | null;
-          is_bot: number; bot_managed: number } | null
+        is_bot: number; bot_managed: number } | null
       if (!target) return { status: 'not_found' } as DatabaseDomainOutput<K>
       if (action === 'suspend' && target.suspended_at) {
         return { status: 'already_suspended' } as DatabaseDomainOutput<K>
@@ -767,10 +807,12 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
           WHERE ph.post_id=? AND bh.user_id=?`).get(id, viewerId)
         if (blocked || blockedTag) return { status: 'not_found' } as DatabaseDomainOutput<K>
       }
-      const root = found.parent_id ? database.query(`WITH RECURSIVE ancestors(id,parent_id,depth) AS (
+      const root = found.parent_id
+        ? database.query(`WITH RECURSIVE ancestors(id,parent_id,depth) AS (
         SELECT id,parent_id,0 FROM posts WHERE id=? UNION ALL
         SELECT p.id,p.parent_id,ancestors.depth+1 FROM posts p JOIN ancestors ON p.id=ancestors.parent_id
-      ) SELECT id FROM ancestors ORDER BY depth DESC LIMIT 1`).get(id) as { id: number } | null : null
+      ) SELECT id FROM ancestors ORDER BY depth DESC LIMIT 1`).get(id) as { id: number } | null
+        : null
       return { status: 'ready', post: enrichPosts(database, [found], viewerId)[0],
         conversationRootId: root?.id ?? null } as DatabaseDomainOutput<K>
     }
@@ -780,9 +822,11 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
         FROM posts p JOIN users u ON u.id=p.user_id WHERE p.id=? AND p.deleted_at IS NULL`).get(id) as PostView | null
       if (!post) return { status: 'not_found' } as DatabaseDomainOutput<K>
       if (post.user_id !== userId) return { status: 'forbidden' } as DatabaseDomainOutput<K>
-      const parent = post.parent_id ? database.query(`SELECT p.id,p.user_id,p.parent_id,p.body,p.created_at,p.deleted_at,
+      const parent = post.parent_id
+        ? database.query(`SELECT p.id,p.user_id,p.parent_id,p.body,p.created_at,p.deleted_at,
         p.has_latex,p.has_links,p.has_code,u.handle,u.bio FROM posts p JOIN users u ON u.id=p.user_id WHERE p.id=?`)
-        .get(post.parent_id) as PostView | null : null
+          .get(post.parent_id) as PostView | null
+        : null
       return { status: 'ready', post, parent } as DatabaseDomainOutput<K>
     }
     case 'posts.replyParent': {
@@ -803,7 +847,8 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
     }
     case 'posts.suggestions': {
       const { kind, query, viewerId } = input as DatabaseDomainInput<'posts.suggestions'>
-      const found = kind === 'hashtags' ? searchTags(database, query, viewerId, 1, { followedFirst: true })
+      const found = kind === 'hashtags'
+        ? searchTags(database, query, viewerId, 1, { followedFirst: true })
         : searchPeople(database, query, viewerId, 1, { followedFirst: true, handleOnly: true })
       const results = kind === 'hashtags'
         ? found.rows.map(row => 'tag' in row ? row.tag : '')
@@ -837,13 +882,16 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
             OR (b.blocker_id=f.following_id AND b.blocked_id=?)))) followingCount,
         (SELECT count(*) FROM hashtag_follows WHERE user_id=?) followingTagCount`)
         .get(profileId, viewerId, viewerId, viewerId, profileId, viewerId, viewerId, viewerId, profileId) as {
-          followerCount: number; followingCount: number; followingTagCount: number
+          followerCount: number
+          followingCount: number
+          followingTagCount: number
         }
       const blockCounts = viewerId === profileId
         ? database.query(`SELECT (SELECT count(*) FROM blocks WHERE blocker_id=?) blockedPeopleCount,
           (SELECT count(*) FROM blocked_hashtags WHERE user_id=?) blockedTagCount`).get(profileId, profileId) as {
-            blockedPeopleCount: number; blockedTagCount: number
-          }
+          blockedPeopleCount: number
+          blockedTagCount: number
+        }
         : { blockedPeopleCount: 0, blockedTagCount: 0 }
       const result = { profile, bioReference: loadBioReferenceData(database, profile.bio, profileId, viewerId),
         ...postCounts, following, followsViewer, blocked, blockedByProfile, ...counts, ...blockCounts }
@@ -881,21 +929,24 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
         AND (? < 0 OR NOT EXISTS (SELECT 1 FROM blocks b WHERE
           (b.blocker_id=? AND b.blocked_id=${counterpart}) OR (b.blocker_id=${counterpart} AND b.blocked_id=?)))`)
         .get(profileId, viewerId, viewerId, viewerId) as { count: number }).count
-      const tags = kind === 'following' ? database.query(`SELECT hf.tag,
+      const tags = kind === 'following'
+        ? database.query(`SELECT hf.tag,
         (SELECT count(*) FROM post_hashtags ph JOIN posts hp ON hp.id=ph.post_id
           WHERE ph.tag=hf.tag AND hp.deleted_at IS NULL AND (? < 0 OR NOT EXISTS
             (SELECT 1 FROM blocks b WHERE (b.blocker_id=? AND b.blocked_id=hp.user_id)
               OR (b.blocker_id=hp.user_id AND b.blocked_id=?)))) count,
         EXISTS(SELECT 1 FROM hashtag_follows vhf WHERE vhf.user_id=? AND vhf.tag=hf.tag) viewerFollowing
         FROM hashtag_follows hf WHERE hf.user_id=? ORDER BY hf.tag LIMIT ? OFFSET ?`)
-        .all(viewerId, viewerId, viewerId, viewerId, profileId, TAG_PAGE_SIZE, (tagsPage - 1) * TAG_PAGE_SIZE) : []
+          .all(viewerId, viewerId, viewerId, viewerId, profileId, TAG_PAGE_SIZE, (tagsPage - 1) * TAG_PAGE_SIZE)
+        : []
       return { people, tags, total } as DatabaseDomainOutput<K>
     }
     case 'profiles.postsPage': {
       const { profileId, viewerId, page, pageSize, kind } = input as DatabaseDomainInput<'profiles.postsPage'>
       const postKindFilter = kind === 'replies' ? 'AND p.parent_id IS NOT NULL' : 'AND p.parent_id IS NULL'
-      const snapshot = feedSnapshotPage<PostView>(database, `profile:${profileId}:${kind}`, viewerId, page, () =>
-        database.query(`SELECT p.*,u.handle FROM posts p JOIN users u ON u.id=p.user_id
+      const snapshot = feedSnapshotPage<PostView>(database, `profile:${profileId}:${kind}`, viewerId, page,
+        () =>
+          database.query(`SELECT p.*,u.handle FROM posts p JOIN users u ON u.id=p.user_id
           WHERE p.user_id=? AND p.deleted_at IS NULL AND (? < 0 OR NOT EXISTS
             (SELECT 1 FROM post_hashtags ph JOIN blocked_hashtags bh ON bh.tag=ph.tag
               WHERE ph.post_id=p.id AND bh.user_id=?)) ${postKindFilter}
@@ -918,18 +969,25 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
         if (!viewer) return { status: 'not_found' } as DatabaseDomainOutput<K>
         const feed = apiActivities(database, origin, viewer, { limit: 100, cursor: null, toMe: false })
         const posts = feed.data.flatMap(activity =>
-          ['post', 'reply', 'mention'].includes(activity.type) && 'body' in activity.payload ? [activity.payload] : [])
-        const postTitlePrefixes = Object.fromEntries(feed.data.flatMap(activity =>
-          activity.type === 'mention' && 'body' in activity.payload ? [[activity.payload.id, 'Mentioned you: ']] : []))
+          ['post', 'reply', 'mention'].includes(activity.type) && 'body' in activity.payload ? [activity.payload] : []
+        )
+        const postTitlePrefixes = Object.fromEntries(
+          feed.data.flatMap(activity =>
+            activity.type === 'mention' && 'body' in activity.payload ? [[activity.payload.id, 'Mentioned you: ']] : []
+          ),
+        )
         const activities = feed.data.flatMap(activity => {
           if (['post', 'reply', 'mention'].includes(activity.type) || 'body' in activity.payload) return []
           const { actor, target } = activity.payload
-          const title = activity.type === 'signup' ? `@${actor.handle} signed up`
-            : target && 'handle' in target ? `@${actor.handle} followed @${target.handle}`
-            : target && 'tag' in target ? `@${actor.handle} followed #${target.tag}`
+          const title = activity.type === 'signup'
+            ? `@${actor.handle} signed up`
+            : target && 'handle' in target
+            ? `@${actor.handle} followed @${target.handle}`
+            : target && 'tag' in target
+            ? `@${actor.handle} followed #${target.tag}`
             : `@${actor.handle} followed someone`
-          return [{ id: `${origin}/activities/${encodeURIComponent(activity.id)}`, title,
-            url: target?.url || actor.url, created_at: activity.created_at, author: actor }]
+          return [{ id: `${origin}/activities/${encodeURIComponent(activity.id)}`, title, url: target?.url || actor.url,
+            created_at: activity.created_at, author: actor }]
         })
         return { status: 'ready', viewerHandle: viewer.handle, posts, activities,
           postTitlePrefixes } as DatabaseDomainOutput<K>
@@ -958,20 +1016,23 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
       }
       if (request.kind === 'post') {
         const post = apiPost(database, request.id, request.origin)
-        return post ? { status: 'ready', value: { data: post } } as DatabaseDomainOutput<K>
+        return post
+          ? { status: 'ready', value: { data: post } } as DatabaseDomainOutput<K>
           : { status: 'not_found' } as DatabaseDomainOutput<K>
       }
       if (!apiPost(database, request.id, request.origin)) {
         return { status: 'not_found' } as DatabaseDomainOutput<K>
       }
       return { status: 'ready', value: apiReplies(database, request.origin, request.id, {
-        limit: request.limit, before: request.before, depth: request.depth,
+        limit: request.limit,
+        before: request.before,
+        depth: request.depth,
       }) } as DatabaseDomainOutput<K>
     }
     case 'api.activities': {
       const request = input as DatabaseDomainInput<'api.activities'>
-      return apiActivities(database, request.origin, request.user, { limit: request.limit,
-        cursor: request.cursor, toMe: request.toMe }) as DatabaseDomainOutput<K>
+      return apiActivities(database, request.origin, request.user, { limit: request.limit, cursor: request.cursor,
+        toMe: request.toMe }) as DatabaseDomainOutput<K>
     }
     case 'api.markActivitiesRead': {
       const { userId, activityIds, toMe } = input as DatabaseDomainInput<'api.markActivitiesRead'>
@@ -1000,22 +1061,32 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
             AND followed.suspended_at IS NULL) following_user_count,
         (SELECT count(*) FROM hashtag_follows hf WHERE hf.user_id=u.id) following_tag_count
         FROM users u WHERE u.id=? AND u.deleted_at IS NULL`).get(resolved.id) as {
-          handle: string; bio: string; created_at: string; post_count: number; replies_count: number;
-          follower_count: number; following_user_count: number; following_tag_count: number
-        } | null
+        handle: string
+        bio: string
+        created_at: string
+        post_count: number
+        replies_count: number
+        follower_count: number
+        following_user_count: number
+        following_tag_count: number
+      } | null
       if (!found) return { status: 'not_found' } as DatabaseDomainOutput<K>
-      const blockCounts = viewerId === resolved.id ? database.query(`SELECT
+      const blockCounts = viewerId === resolved.id
+        ? database.query(`SELECT
         (SELECT count(*) FROM blocks WHERE blocker_id=?) blocked_user_count,
         (SELECT count(*) FROM blocked_hashtags WHERE user_id=?) blocked_tag_count`)
-        .get(resolved.id, resolved.id) : null
+          .get(resolved.id, resolved.id)
+        : null
       const normalized = found.handle.toLowerCase()
-      const value = { data: { handle: normalized, bio: found.bio,
-        created_at: new Date(found.created_at.replace(' ', 'T') + 'Z').toISOString(),
-        post_count: found.post_count, replies_count: found.replies_count, follower_count: found.follower_count,
-        following_user_count: found.following_user_count, following_tag_count: found.following_tag_count,
-        following_count: found.following_user_count, ...(blockCounts || {}),
-        url: `${origin}/u/${encodeURIComponent(normalized)}`,
-        api_url: `${origin}/api/v1/users/${encodeURIComponent(normalized)}` } }
+      const value = {
+        data: { handle: normalized, bio: found.bio,
+          created_at: new Date(found.created_at.replace(' ', 'T') + 'Z').toISOString(), post_count: found.post_count,
+          replies_count: found.replies_count, follower_count: found.follower_count,
+          following_user_count: found.following_user_count, following_tag_count: found.following_tag_count,
+          following_count: found.following_user_count, ...(blockCounts || {}),
+          url: `${origin}/u/${encodeURIComponent(normalized)}`,
+          api_url: `${origin}/api/v1/users/${encodeURIComponent(normalized)}` },
+      }
       return { status: 'ready', value, private: !!blockCounts } as DatabaseDomainOutput<K>
     }
     case 'api.tagDetails': {
@@ -1030,9 +1101,10 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
       if (!counts.post_count && !counts.follower_count) {
         return { status: 'not_found' } as DatabaseDomainOutput<K>
       }
-      return { status: 'ready', value: { data: { tag, ...counts,
-        url: `${origin}/tag/${encodeURIComponent(tag)}`,
-        api_url: `${origin}/api/v1/tags/${encodeURIComponent(tag)}` } } } as DatabaseDomainOutput<K>
+      return { status: 'ready', value: {
+        data: { tag, ...counts, url: `${origin}/tag/${encodeURIComponent(tag)}`,
+          api_url: `${origin}/api/v1/tags/${encodeURIComponent(tag)}` },
+      } } as DatabaseDomainOutput<K>
     }
     case 'api.relationships': {
       const request = input as DatabaseDomainInput<'api.relationships'>
@@ -1059,14 +1131,21 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
               AND follower.suspended_at IS NULL) follower_count
           FROM hashtag_follows hf WHERE hf.user_id=? ${before} ORDER BY hf.rowid DESC LIMIT ?`)
           .all(accountId!, ...cursorParameters, request.limit + 1) as Array<{
-            id: number; tag: string; post_count: number; follower_count: number
+            id: number
+            tag: string
+            post_count: number
+            follower_count: number
           }>
         const selected = rows.slice(0, request.limit)
-        const value = { data: selected.map(row => ({ tag: row.tag, post_count: row.post_count,
-          follower_count: row.follower_count, url: `${request.origin}/tag/${encodeURIComponent(row.tag)}`,
-          api_url: `${request.origin}/api/v1/tags/${encodeURIComponent(row.tag)}` })),
-        pagination: { next_cursor: rows.length > request.limit
-          ? encodeCursor(selected[selected.length - 1].id) : null } }
+        const value = {
+          data: selected.map(row => ({ tag: row.tag, post_count: row.post_count, follower_count: row.follower_count,
+            url: `${request.origin}/tag/${encodeURIComponent(row.tag)}`,
+            api_url: `${request.origin}/api/v1/tags/${encodeURIComponent(row.tag)}` })
+          ),
+          pagination: { next_cursor: rows.length > request.limit
+            ? encodeCursor(selected[selected.length - 1].id)
+            : null },
+        }
         return { status: 'ready', value } as DatabaseDomainOutput<K>
       }
       let rows: Array<{ id: number; handle: string }>
@@ -1096,7 +1175,8 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
         return { handle, url: `${request.origin}/u/${encodeURIComponent(handle)}`,
           api_url: `${request.origin}/api/v1/users/${encodeURIComponent(handle)}` }
       }), pagination: { next_cursor: rows.length > request.limit
-        ? encodeCursor(selected[selected.length - 1].id) : null } }
+        ? encodeCursor(selected[selected.length - 1].id)
+        : null } }
       return { status: 'ready', value } as DatabaseDomainOutput<K>
     }
     case 'api.embedExample': {
@@ -1108,7 +1188,8 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
       const fallbackTag = sample?.tag || (database.query(`SELECT ph.tag FROM post_hashtags ph
         JOIN posts p ON p.id=ph.post_id JOIN users u ON u.id=p.user_id
         WHERE p.deleted_at IS NULL AND u.deleted_at IS NULL ORDER BY p.id DESC LIMIT 1`)
-        .get() as { tag: string } | null)?.tag || null
+        .get() as { tag: string } | null)?.tag
+        || null
       return { postId: sample?.id || null, tag: fallbackTag } as DatabaseDomainOutput<K>
     }
     case 'api.relationshipMutation': {
@@ -1179,10 +1260,14 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
         .get(id) as { user_id: number; parent_id: number | null } | null
       if (!existing) return { status: 'not_found' } as DatabaseDomainOutput<K>
       if (existing.user_id !== userId) return { status: 'forbidden' } as DatabaseDomainOutput<K>
-      const available = database.query("SELECT 1 FROM sqlite_master WHERE type='table' AND name='post_link_previews'")
+      const available = database.query(
+        'SELECT 1 FROM sqlite_master WHERE type=\'table\' AND name=\'post_link_previews\'',
+      )
         .get()
-      const imageKeys = available ? (database.query('SELECT image_url FROM post_link_previews WHERE post_id=?')
-        .all(id) as { image_url: string }[]).map(row => row.image_url).filter(isImageKey) : []
+      const imageKeys = available
+        ? (database.query('SELECT image_url FROM post_link_previews WHERE post_id=?')
+          .all(id) as { image_url: string }[]).map(row => row.image_url).filter(isImageKey)
+        : []
       database.transaction(() => {
         softDeletePost(database, id)
         if (available) database.query('DELETE FROM post_link_previews WHERE post_id=?').run(id)
@@ -1191,7 +1276,9 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
     }
     case 'api.persistPostPreviews': {
       const { postId, mode, previews } = input as DatabaseDomainInput<'api.persistPostPreviews'>
-      const available = database.query("SELECT 1 FROM sqlite_master WHERE type='table' AND name='post_link_previews'")
+      const available = database.query(
+        'SELECT 1 FROM sqlite_master WHERE type=\'table\' AND name=\'post_link_previews\'',
+      )
         .get()
       if (!available) return { obsoleteImageKeys: [] } as DatabaseDomainOutput<K>
       const existingRows = database.query('SELECT url,image_url FROM post_link_previews WHERE post_id=?')
@@ -1205,12 +1292,16 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
           ON CONFLICT(post_id,url) DO UPDATE SET image_url=excluded.image_url,title=excluded.title,
             description=excluded.description,site_name=excluded.site_name,image_width=excluded.image_width,
             image_height=excluded.image_height`)
-        for (const preview of previews) insert.run(postId, preview.url, preview.imageKey || preview.imageUrl,
-          preview.title || null, preview.description || null, preview.siteName || null,
-          preview.imageWidth || null, preview.imageHeight || null)
+        for (const preview of previews) {
+          insert.run(postId, preview.url, preview.imageKey || preview.imageUrl, preview.title || null,
+            preview.description || null, preview.siteName || null, preview.imageWidth || null,
+            preview.imageHeight || null)
+        }
       })()
-      const retained = mode === 'save' ? existingRows.filter(row => previews.every(preview => preview.url !== row.url))
-        .map(row => row.image_url).filter(isImageKey) : []
+      const retained = mode === 'save'
+        ? existingRows.filter(row => previews.every(preview => preview.url !== row.url))
+          .map(row => row.image_url).filter(isImageKey)
+        : []
       const result = { obsoleteImageKeys: oldKeys.filter(key => !newKeys.includes(key) && !retained.includes(key)) }
       return result as DatabaseDomainOutput<K>
     }
@@ -1222,7 +1313,7 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
     case 'api.persistBioPreviews': {
       const { userId, previews } = input as DatabaseDomainInput<'api.persistBioPreviews'>
       const available = database.query(
-        "SELECT 1 FROM sqlite_master WHERE type='table' AND name='user_bio_link_previews'",
+        'SELECT 1 FROM sqlite_master WHERE type=\'table\' AND name=\'user_bio_link_previews\'',
       ).get()
       if (!available) return { obsoleteImageKeys: [] } as DatabaseDomainOutput<K>
       const oldKeys = (database.query('SELECT image_url FROM user_bio_link_previews WHERE user_id=?')
@@ -1232,9 +1323,11 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
         database.query('DELETE FROM user_bio_link_previews WHERE user_id=?').run(userId)
         const insert = database.query(`INSERT INTO user_bio_link_previews
           (user_id,url,image_url,title,description,site_name,image_width,image_height) VALUES(?,?,?,?,?,?,?,?)`)
-        for (const preview of previews) insert.run(userId, preview.url, preview.imageKey || preview.imageUrl,
-          preview.title || null, preview.description || null, preview.siteName || null,
-          preview.imageWidth || null, preview.imageHeight || null)
+        for (const preview of previews) {
+          insert.run(userId, preview.url, preview.imageKey || preview.imageUrl, preview.title || null,
+            preview.description || null, preview.siteName || null, preview.imageWidth || null,
+            preview.imageHeight || null)
+        }
       })()
       return { obsoleteImageKeys: oldKeys.filter(key => !newKeys.includes(key)) } as DatabaseDomainOutput<K>
     }
@@ -1255,8 +1348,9 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
       return result as DatabaseDomainOutput<K>
     }
     case 'auth.storeMagicLink': {
-      const { tokenHash, codeHash, email, userId, nextPath, expiresAt, now }
-        = input as DatabaseDomainInput<'auth.storeMagicLink'>
+      const { tokenHash, codeHash, email, userId, nextPath, expiresAt, now } = input as DatabaseDomainInput<
+        'auth.storeMagicLink'
+      >
       database.transaction(() => {
         database.query('DELETE FROM magic_links WHERE email=? OR expires_at<=?').run(email, now)
         database.query(`INSERT INTO magic_links(token_hash,email,user_id,next_path,expires_at,created_at,code_hash)
@@ -1276,12 +1370,17 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
           WHERE token_hash=? AND expires_at>?`).get(selector.tokenHash, now)
         : database.query(`SELECT token_hash,email,user_id,next_path,attempts FROM magic_links
           WHERE email=? AND code_hash IS NOT NULL AND expires_at>?`).get(selector.email, now)) as {
-            token_hash: string; email: string; user_id: number | null; next_path: string; attempts: number
-          } | null
+          token_hash: string
+          email: string
+          user_id: number | null
+          next_path: string
+          attempts: number
+        } | null
       if (!link || (currentUserId !== undefined && link.user_id !== currentUserId)
         || ('codeHash' in selector && !database.query(
-        'SELECT 1 FROM magic_links WHERE token_hash=? AND code_hash=?',
-      ).get(link.token_hash, selector.codeHash))) {
+          'SELECT 1 FROM magic_links WHERE token_hash=? AND code_hash=?',
+        ).get(link.token_hash, selector.codeHash)))
+      {
         if (link && 'codeHash' in selector) {
           const attempts = link.attempts + 1
           if (attempts >= 5) database.query('DELETE FROM magic_links WHERE token_hash=?').run(link.token_hash)
@@ -1299,8 +1398,8 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
           if (userId) {
             const account = database.query(`SELECT handle_chosen_at FROM users
               WHERE id=? AND deleted_at IS NULL AND suspended_at IS NULL`).get(userId) as {
-                handle_chosen_at: string | null
-              } | null
+              handle_chosen_at: string | null
+            } | null
             if (!account) throw new Error('Account is unavailable')
             chosen = Boolean(account.handle_chosen_at)
             markGroupEmailVerified(database, userId)
@@ -1330,14 +1429,16 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
         return { status: 'unavailable' } as DatabaseDomainOutput<K>
       }
       const nextPath = newAccount && link.next_path === '/' ? '/explore?welcome=1' : link.next_path
-      return { status: 'ready', session,
-        destination: chosen ? nextPath : `/choose-handle?next=${encodeURIComponent(nextPath)}`
-      } as DatabaseDomainOutput<K>
+      return { status: 'ready', session, destination: chosen
+        ? nextPath
+        : `/choose-handle?next=${encodeURIComponent(nextPath)}` } as DatabaseDomainOutput<K>
     }
     case 'auth.preparePasswordReset': {
-      const { identifier, isEmail, tokenHash, expiresAt, now }
-        = input as DatabaseDomainInput<'auth.preparePasswordReset'>
-      const account = isEmail ? accountForEmail(database, identifier)
+      const { identifier, isEmail, tokenHash, expiresAt, now } = input as DatabaseDomainInput<
+        'auth.preparePasswordReset'
+      >
+      const account = isEmail
+        ? accountForEmail(database, identifier)
         : database.query(`SELECT id,email,password FROM users WHERE handle=? AND deleted_at IS NULL
           AND suspended_at IS NULL`).get(identifier) as { id: number; email: string; password: string } | null
       if (!account || account.password === '!') return null as DatabaseDomainOutput<K>
@@ -1377,18 +1478,24 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
     }
     case 'auth.accountForIdentifier': {
       const { identifier, isEmail } = input as DatabaseDomainInput<'auth.accountForIdentifier'>
-      const account = isEmail ? accountForEmail(database, identifier)
+      const account = isEmail
+        ? accountForEmail(database, identifier)
         : database.query(`SELECT id,email,handle,password,handle_chosen_at FROM users WHERE handle=?
           AND deleted_at IS NULL AND suspended_at IS NULL`).get(identifier) as {
-            id: number; email: string; handle: string; password: string; handle_chosen_at: string | null
-          } | null
+          id: number
+          email: string
+          handle: string
+          password: string
+          handle_chosen_at: string | null
+        } | null
       if (!account) return null as DatabaseDomainOutput<K>
       return { id: account.id, email: account.email, handle: account.handle, password: account.password,
         handleChosenAt: account.handle_chosen_at } as DatabaseDomainOutput<K>
     }
     case 'auth.completePasswordLogin': {
-      const { userId, replacementPasswordHash, userAgent, now }
-        = input as DatabaseDomainInput<'auth.completePasswordLogin'>
+      const { userId, replacementPasswordHash, userAgent, now } = input as DatabaseDomainInput<
+        'auth.completePasswordLogin'
+      >
       const session = randomBytes(32).toString('hex')
       database.transaction(() => {
         if (replacementPasswordHash) {
@@ -1402,17 +1509,21 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
     case 'auth.passwordLoginChallenge': {
       const { address, now, forceCaptcha } = input as DatabaseDomainInput<'auth.passwordLoginChallenge'>
       const result = { nonce: issuePasswordLoginNonce(database, address, now),
-        captcha: forceCaptcha || passwordCaptchaRequired(database, now) ? issuePasswordCaptcha(database, now) : undefined }
+        captcha: forceCaptcha || passwordCaptchaRequired(database, now)
+          ? issuePasswordCaptcha(database, now)
+          : undefined }
       return result as DatabaseDomainOutput<K>
     }
     case 'auth.validatePasswordLoginForm': {
-      const { address, nonce, captchaToken, captchaAnswer, now }
-        = input as DatabaseDomainInput<'auth.validatePasswordLoginForm'>
+      const { address, nonce, captchaToken, captchaAnswer, now } = input as DatabaseDomainInput<
+        'auth.validatePasswordLoginForm'
+      >
       if (!consumePasswordLoginNonce(database, nonce, address, now)) {
         return { status: 'invalid_nonce' } as DatabaseDomainOutput<K>
       }
       if (passwordCaptchaRequired(database, now)
-        && !consumePasswordCaptcha(database, captchaToken, captchaAnswer, now)) {
+        && !consumePasswordCaptcha(database, captchaToken, captchaAnswer, now))
+      {
         return { status: 'invalid_captcha' } as DatabaseDomainOutput<K>
       }
       return { status: 'ready' } as DatabaseDomainOutput<K>
@@ -1437,15 +1548,18 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
       }
       catch (error) {
         return { status: error instanceof Error && error.message === 'monthly-account-limit'
-          ? 'monthly_limit' : 'unavailable' } as DatabaseDomainOutput<K>
+          ? 'monthly_limit'
+          : 'unavailable' } as DatabaseDomainOutput<K>
       }
     }
     case 'api.verifySignIn': {
       const { email, code, userAgent, now } = input as DatabaseDomainInput<'api.verifySignIn'>
       const link = database.query(`SELECT token_hash,user_id,attempts FROM magic_links
         WHERE email=? AND code_hash IS NOT NULL AND expires_at>?`).get(email, now) as {
-          token_hash: string; user_id: number | null; attempts: number
-        } | null
+        token_hash: string
+        user_id: number | null
+        attempts: number
+      } | null
       const match = link && database.query('SELECT 1 FROM magic_links WHERE token_hash=? AND code_hash=?')
         .get(link.token_hash, createHash('sha256').update(code).digest('hex'))
       const accountReady = link?.user_id && database.query(`SELECT 1 FROM users WHERE id=?
@@ -1475,8 +1589,10 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
       const row = database.query(`SELECT child.body,child.parent_id parentId,parent_user.handle parentHandle
         FROM posts child LEFT JOIN posts parent ON parent.id=child.parent_id
         LEFT JOIN users parent_user ON parent_user.id=parent.user_id WHERE child.id=?`).get(postId) as {
-          body: string; parentId: number | null; parentHandle: string | null
-        } | null
+        body: string
+        parentId: number | null
+        parentHandle: string | null
+      } | null
       if (!row) return { post: null, subscriptions: [] } as DatabaseDomainOutput<K>
       const subscriptions = database.query(`SELECT ps.endpoint,ps.p256dh,ps.auth,ps.user_id userId,
         recipient.handle recipientHandle,
@@ -1505,8 +1621,8 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
           OR (ps.notify_mentions=1 AND ps.user_id!=? AND EXISTS(SELECT 1 FROM post_mentions pm
             WHERE pm.post_id=? AND pm.user_id=ps.user_id)))
         ORDER BY ps.endpoint,isReply DESC,isMention DESC,ps.user_id`)
-        .all(actorId, postId, actorId, postId, actorId, actorId, postId, actorId, actorId, actorId, actorId,
-          postId, postId, postId, actorId, postId, actorId, postId)
+        .all(actorId, postId, actorId, postId, actorId, actorId, postId, actorId, actorId, actorId, actorId, postId,
+          postId, postId, actorId, postId, actorId, postId)
       return { post: row, subscriptions } as DatabaseDomainOutput<K>
     }
     case 'push.followDelivery': {
@@ -1603,8 +1719,9 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
         toMeUnread: viewerId >= 0 && hasUnreadToMe(viewerId, database) } as DatabaseDomainOutput<K>
     }
     case 'feeds.personalizedPage': {
-      const { user, page, pageSize, toMe, path, markRead = true } =
-        input as DatabaseDomainInput<'feeds.personalizedPage'>
+      const { user, page, pageSize, toMe, path, markRead = true } = input as DatabaseDomainInput<
+        'feeds.personalizedPage'
+      >
       const result = loadPersonalizedFeed(database, user, page, pageSize, toMe, path, markRead)
       if (markRead && result.timeline.some(row => row.unread)) {
         cacheDb.query(`DELETE FROM materialized_feed_pages_v2 WHERE viewer_id=?
@@ -1617,34 +1734,56 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
       const exists = (sql: string, ...parameters: Array<string | number>) => !!database.query(sql).get(...parameters)
       const result = {
         inviteHandled: exists('SELECT 1 FROM invite_banner_dismissals WHERE user_id=? LIMIT 1', userId),
-        notificationsEnabled: !!userAgent && exists("SELECT 1 FROM notification_user_agents WHERE user_id=? AND user_agent=? AND status='enabled' LIMIT 1", userId, userAgent),
-        improvementDismissed: !!userAgent && exists('SELECT 1 FROM notification_improvement_user_agents WHERE user_id=? AND user_agent=? LIMIT 1', userId, userAgent),
-        notificationsHandled: !!userAgent && exists('SELECT 1 FROM notification_user_agents WHERE user_id=? AND user_agent=? LIMIT 1', userId, userAgent),
-        appearanceHandled: !!userAgent && exists('SELECT 1 FROM appearance_user_agents WHERE user_id=? AND user_agent=? LIMIT 1', userId, userAgent),
+        notificationsEnabled: !!userAgent
+          && exists(
+            'SELECT 1 FROM notification_user_agents WHERE user_id=? AND user_agent=? AND status=\'enabled\' LIMIT 1',
+            userId,
+            userAgent,
+          ),
+        improvementDismissed: !!userAgent
+          && exists('SELECT 1 FROM notification_improvement_user_agents WHERE user_id=? AND user_agent=? LIMIT 1',
+            userId, userAgent),
+        notificationsHandled: !!userAgent
+          && exists('SELECT 1 FROM notification_user_agents WHERE user_id=? AND user_agent=? LIMIT 1', userId,
+            userAgent),
+        appearanceHandled: !!userAgent
+          && exists('SELECT 1 FROM appearance_user_agents WHERE user_id=? AND user_agent=? LIMIT 1', userId, userAgent),
         donationDismissed: exists('SELECT 1 FROM donation_banner_dismissals WHERE user_id=? LIMIT 1', userId),
       }
       return result as DatabaseDomainOutput<K>
     }
     case 'feeds.recordBanner': {
       const { userId, userAgent, action } = input as DatabaseDomainInput<'feeds.recordBanner'>
-      if (action === 'notifications-dismissed' && userAgent) database.query(
-        `INSERT INTO notification_user_agents(user_id,user_agent,status) VALUES(?,?,'dismissed')
-        ON CONFLICT(user_id,user_agent) DO UPDATE SET status='dismissed',updated_at=CURRENT_TIMESTAMP`).run(userId, userAgent)
-      else if (action === 'notification-improvements-dismissed' && userAgent) database.query(
-        `INSERT INTO notification_improvement_user_agents(user_id,user_agent) VALUES(?,?)
-        ON CONFLICT(user_id,user_agent) DO UPDATE SET dismissed_at=CURRENT_TIMESTAMP`).run(userId, userAgent)
+      if (action === 'notifications-dismissed' && userAgent) {
+        database.query(
+          `INSERT INTO notification_user_agents(user_id,user_agent,status) VALUES(?,?,'dismissed')
+        ON CONFLICT(user_id,user_agent) DO UPDATE SET status='dismissed',updated_at=CURRENT_TIMESTAMP`,
+        ).run(userId, userAgent)
+      }
+      else if (action === 'notification-improvements-dismissed' && userAgent) {
+        database.query(
+          `INSERT INTO notification_improvement_user_agents(user_id,user_agent) VALUES(?,?)
+        ON CONFLICT(user_id,user_agent) DO UPDATE SET dismissed_at=CURRENT_TIMESTAMP`,
+        ).run(userId, userAgent)
+      }
       else if ((action === 'appearance-dismissed' || action === 'appearance-seen') && userAgent) {
         const status = action === 'appearance-seen' ? 'seen' : 'dismissed'
         database.query(`INSERT INTO appearance_user_agents(user_id,user_agent,status) VALUES(?,?,?)
           ON CONFLICT(user_id,user_agent) DO UPDATE SET status=excluded.status,updated_at=CURRENT_TIMESTAMP`)
           .run(userId, userAgent, status)
       }
-      else if (action === 'invite-dismissed') database.query(
-        `INSERT INTO invite_banner_dismissals(user_id) VALUES(?)
-        ON CONFLICT(user_id) DO UPDATE SET dismissed_at=CURRENT_TIMESTAMP`).run(userId)
-      else if (action === 'donation-dismissed') database.query(
-        `INSERT INTO donation_banner_dismissals(user_id) VALUES(?)
-        ON CONFLICT(user_id) DO UPDATE SET dismissed_at=CURRENT_TIMESTAMP`).run(userId)
+      else if (action === 'invite-dismissed') {
+        database.query(
+          `INSERT INTO invite_banner_dismissals(user_id) VALUES(?)
+        ON CONFLICT(user_id) DO UPDATE SET dismissed_at=CURRENT_TIMESTAMP`,
+        ).run(userId)
+      }
+      else if (action === 'donation-dismissed') {
+        database.query(
+          `INSERT INTO donation_banner_dismissals(user_id) VALUES(?)
+        ON CONFLICT(user_id) DO UPDATE SET dismissed_at=CURRENT_TIMESTAMP`,
+        ).run(userId)
+      }
       return null as DatabaseDomainOutput<K>
     }
     case 'feeds.markRead': {
@@ -1658,8 +1797,9 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
         generation: number
       }).generation
       const cached = cacheDb.query(`SELECT html FROM materialized_feed_pages_v2
-        WHERE kind=? AND viewer_id=? AND variant=? AND generation=?`).get(kind, viewerId, variant, generation) as
-        { html: string } | null
+        WHERE kind=? AND viewer_id=? AND variant=? AND generation=?`).get(kind, viewerId, variant, generation) as {
+        html: string
+      } | null
       return { html: cached?.html ?? null, generation } as DatabaseDomainOutput<K>
     }
     case 'cache.materializedFeedPut': {
@@ -1686,8 +1826,9 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
       return null as DatabaseDomainOutput<K>
     }
     case 'cache.recentFeedVisitorPut': {
-      const { userId, requestUrl, cookie, pageSize, density } =
-        input as DatabaseDomainInput<'cache.recentFeedVisitorPut'>
+      const { userId, requestUrl, cookie, pageSize, density } = input as DatabaseDomainInput<
+        'cache.recentFeedVisitorPut'
+      >
       cacheDb.transaction(() => {
         cacheDb.query(`INSERT INTO recent_feed_visitors(user_id,request_url,cookie,page_size,density,last_visited_at)
           VALUES(?,?,?,?,?,?) ON CONFLICT(user_id) DO UPDATE SET request_url=excluded.request_url,
@@ -1701,14 +1842,16 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
     }
     case 'cache.recentFeedVisitors': {
       const rows = cacheDb.query(`SELECT user_id,request_url,cookie,page_size,density FROM recent_feed_visitors
-        ORDER BY last_visited_at ASC,user_id ASC LIMIT 30`).all() as Array<{ user_id: number; request_url: string;
-          cookie: string; page_size: PageSizeChoice; density: DensityChoice }>
+        ORDER BY last_visited_at ASC,user_id ASC LIMIT 30`).all() as Array<
+        { user_id: number; request_url: string; cookie: string; page_size: PageSizeChoice; density: DensityChoice }
+      >
       const result = rows.flatMap(row => {
         const user = database.query(`SELECT id,handle,email,bio,suspended_at,email_verified_at,handle_chosen_at,
           show_link_previews,timezone FROM users WHERE id=? AND deleted_at IS NULL AND suspended_at IS NULL`)
           .get(row.user_id) as User | null
-        return user ? [{ user, requestUrl: row.request_url, cookie: row.cookie,
-          pageSize: row.page_size, density: row.density }] : []
+        return user
+          ? [{ user, requestUrl: row.request_url, cookie: row.cookie, pageSize: row.page_size, density: row.density }]
+          : []
       })
       return result as DatabaseDomainOutput<K>
     }
@@ -1728,8 +1871,10 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
     }
     case 'explore.page': {
       const { viewerId, peopleIds, tagsPage, peoplePage } = input as DatabaseDomainInput<'explore.page'>
-      const savedIds = peopleIds?.filter((id, index, ids) => Number.isInteger(id) && id > 0
-        && ids.indexOf(id) === index).slice(0, 8)
+      const savedIds = peopleIds?.filter((id, index, ids) =>
+        Number.isInteger(id) && id > 0
+        && ids.indexOf(id) === index
+      ).slice(0, 8)
       const people = savedIds?.length
         ? (database.query(
           `SELECT u.*, (SELECT count(*) FROM posts p WHERE p.user_id=u.id AND p.deleted_at IS NULL) posts,
@@ -1761,9 +1906,11 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
     case 'tags.page': {
       const { tag, viewerId, page, pageSize, tab } = input as DatabaseDomainInput<'tags.page'>
       const following = viewerId >= 0 && !!database.query(
-        'SELECT 1 FROM hashtag_follows WHERE user_id=? AND tag=?').get(viewerId, tag)
+        'SELECT 1 FROM hashtag_follows WHERE user_id=? AND tag=?',
+      ).get(viewerId, tag)
       const blocked = viewerId >= 0 && !!database.query(
-        'SELECT 1 FROM blocked_hashtags WHERE user_id=? AND tag=?').get(viewerId, tag)
+        'SELECT 1 FROM blocked_hashtags WHERE user_id=? AND tag=?',
+      ).get(viewerId, tag)
       const rawPosts = blocked || tab === 'followers' ? [] : database.query(
         `SELECT p.*,u.handle FROM posts p JOIN users u ON u.id=p.user_id JOIN post_hashtags ph ON ph.post_id=p.id
         WHERE ph.tag=? AND p.deleted_at IS NULL AND (? < 0 OR NOT EXISTS (SELECT 1 FROM blocks b WHERE
@@ -1781,44 +1928,59 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
         AND (? < 0 OR NOT EXISTS (SELECT 1 FROM blocks b WHERE
           (b.blocker_id=? AND b.blocked_id=u.id) OR (b.blocker_id=u.id AND b.blocked_id=?)))`,
       ).get(tag, viewerId, viewerId, viewerId) as { count: number }).count
-      const people = tab === 'followers' ? database.query(
-        `SELECT u.*, (SELECT count(*) FROM posts p WHERE p.user_id=u.id AND p.deleted_at IS NULL) posts,
+      const people = tab === 'followers'
+        ? database.query(
+          `SELECT u.*, (SELECT count(*) FROM posts p WHERE p.user_id=u.id AND p.deleted_at IS NULL) posts,
           EXISTS(SELECT 1 FROM follows f WHERE f.follower_id=? AND f.following_id=u.id) viewerFollowing
         FROM hashtag_follows hf JOIN users u ON u.id=hf.user_id
         WHERE hf.tag=? AND u.deleted_at IS NULL AND u.suspended_at IS NULL
         AND (? < 0 OR NOT EXISTS (SELECT 1 FROM blocks b WHERE
           (b.blocker_id=? AND b.blocked_id=u.id) OR (b.blocker_id=u.id AND b.blocked_id=?)))
         ORDER BY u.handle LIMIT ? OFFSET ?`,
-      ).all(viewerId, tag, viewerId, viewerId, viewerId, CONNECTION_PAGE_SIZE,
-        (page - 1) * CONNECTION_PAGE_SIZE) as import('./types').PersonView[] : []
+        ).all(viewerId, tag, viewerId, viewerId, viewerId, CONNECTION_PAGE_SIZE,
+          (page - 1) * CONNECTION_PAGE_SIZE) as import('./types').PersonView[]
+        : []
       const result = { following, blocked, posts: enrichPosts(database, rawPosts, viewerId), total, followerTotal,
         people: attachPeopleStats(database, people, viewerId) }
       return result as DatabaseDomainOutput<K>
     }
     case 'embeds.load': {
       const request = input as DatabaseDomainInput<'embeds.load'>
-      const latest = (where = '', parameters: Array<string | number> = []) => enrichPosts(database,
-        database.query(`SELECT p.*,u.handle FROM posts p JOIN users u ON u.id=p.user_id
+      const latest = (where = '', parameters: Array<string | number> = []) =>
+        enrichPosts(database, database.query(`SELECT p.*,u.handle FROM posts p JOIN users u ON u.id=p.user_id
           ${where ? `WHERE ${where} AND` : 'WHERE'} p.deleted_at IS NULL AND u.deleted_at IS NULL
           ORDER BY p.id DESC LIMIT ?`).all(...parameters, 5) as PostView[], -1)
       let result: import('./types').EmbedData | null
       if (request.kind === 'latest') result = { posts: latest(), title: 'latest', href: '/latest' }
-      else if (request.kind === 'hot') result = { posts: enrichPosts(database,
-        getHotPosts(database, 5, null, new Date(), -1, true), -1), title: 'hot', href: '/hot' }
-      else if (request.kind === 'tag') result = { posts: latest(
-        'EXISTS(SELECT 1 FROM post_hashtags ph WHERE ph.post_id=p.id AND ph.tag=?)', [request.tag]),
-      title: `#${request.tag}`, href: `/tag/${encodeURIComponent(request.tag)}` }
+      else if (request.kind === 'hot') {
+        result = { posts: enrichPosts(database, getHotPosts(database, 5, null, new Date(), -1, true), -1), title: 'hot',
+          href: '/hot' }
+      }
+      else if (request.kind === 'tag') {
+        result = { posts: latest(
+          'EXISTS(SELECT 1 FROM post_hashtags ph WHERE ph.post_id=p.id AND ph.tag=?)',
+          [request.tag],
+        ), title: `#${request.tag}`, href: `/tag/${encodeURIComponent(request.tag)}` }
+      }
       else if (request.kind === 'user') {
         const resolved = resolveHandle(database, request.handle)
-        result = resolved ? { posts: latest('p.user_id=?', [resolved.id]), title: `@${resolved.handle}`,
-          href: `/u/${resolved.handle}`, canonicalHandle: resolved.alias ? resolved.handle : undefined } : null
-      } else if (request.kind === 'post') {
-        const row = Number.isInteger(request.id) && request.id > 0 ? database.query(
-          `SELECT p.*,u.handle FROM posts p JOIN users u ON u.id=p.user_id
-          WHERE p.id=? AND p.deleted_at IS NULL AND u.deleted_at IS NULL`).get(request.id) as PostView | null : null
-        result = row ? { posts: enrichPosts(database, [row], -1), title: `post ${request.id}`,
-          href: `/post/${request.id}` } : null
-      } else result = null
+        result = resolved
+          ? { posts: latest('p.user_id=?', [resolved.id]), title: `@${resolved.handle}`, href: `/u/${resolved.handle}`,
+            canonicalHandle: resolved.alias ? resolved.handle : undefined }
+          : null
+      }
+      else if (request.kind === 'post') {
+        const row = Number.isInteger(request.id) && request.id > 0
+          ? database.query(
+            `SELECT p.*,u.handle FROM posts p JOIN users u ON u.id=p.user_id
+          WHERE p.id=? AND p.deleted_at IS NULL AND u.deleted_at IS NULL`,
+          ).get(request.id) as PostView | null
+          : null
+        result = row
+          ? { posts: enrichPosts(database, [row], -1), title: `post ${request.id}`, href: `/post/${request.id}` }
+          : null
+      }
+      else result = null
       return result as DatabaseDomainOutput<K>
     }
     case 'reports.createIllegalActivity': {
@@ -1840,8 +2002,10 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
       const exists = !!database.query('SELECT 1 FROM follows WHERE follower_id=? AND following_id=?')
         .get(userId, target.id)
       if (exists) database.query('DELETE FROM follows WHERE follower_id=? AND following_id=?').run(userId, target.id)
-      else database.query('INSERT OR IGNORE INTO follows(follower_id,following_id,created_at) VALUES(?,?,CURRENT_TIMESTAMP)')
-        .run(userId, target.id)
+      else {database.query(
+          'INSERT OR IGNORE INTO follows(follower_id,following_id,created_at) VALUES(?,?,CURRENT_TIMESTAMP)',
+        )
+          .run(userId, target.id)}
       return { targetId: target.id, targetHandle: target.handle, followed: !exists } as DatabaseDomainOutput<K>
     }
     case 'interactions.toggleBlock': {
@@ -1860,8 +2024,10 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
     }
     case 'interactions.reportPost': {
       const { userId, postId, reason } = input as DatabaseDomainInput<'interactions.reportPost'>
-      const raw = Number.isInteger(postId) ? database.query(`SELECT p.*,u.handle,u.bio FROM posts p
-        JOIN users u ON u.id=p.user_id WHERE p.id=? AND p.deleted_at IS NULL`).get(postId) as PostView | null : null
+      const raw = Number.isInteger(postId)
+        ? database.query(`SELECT p.*,u.handle,u.bio FROM posts p
+        JOIN users u ON u.id=p.user_id WHERE p.id=? AND p.deleted_at IS NULL`).get(postId) as PostView | null
+        : null
       if (!raw) return { status: 'not_found' } as DatabaseDomainOutput<K>
       if (raw.user_id === userId) return { status: 'own_post' } as DatabaseDomainOutput<K>
       const blocked = database.query(`SELECT 1 FROM blocks WHERE (blocker_id=? AND blocked_id=?)
@@ -1878,8 +2044,10 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
       const { userId, tag } = input as DatabaseDomainInput<'interactions.toggleTagFollow'>
       const exists = !!database.query('SELECT 1 FROM hashtag_follows WHERE user_id=? AND tag=?').get(userId, tag)
       if (exists) database.query('DELETE FROM hashtag_follows WHERE user_id=? AND tag=?').run(userId, tag)
-      else database.query('INSERT OR IGNORE INTO hashtag_follows(user_id,tag,created_at) VALUES(?,?,CURRENT_TIMESTAMP)')
-        .run(userId, tag)
+      else {database.query(
+          'INSERT OR IGNORE INTO hashtag_follows(user_id,tag,created_at) VALUES(?,?,CURRENT_TIMESTAMP)',
+        )
+          .run(userId, tag)}
       return { followed: !exists } as DatabaseDomainOutput<K>
     }
     case 'interactions.toggleTagBlock': {

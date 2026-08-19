@@ -1,10 +1,10 @@
 import { appName } from '../brand'
-import type { ExploreData, User } from '../types'
 import { TAG_PAGE_SIZE } from '../pagination'
+import type { ExploreData, User } from '../types'
 import { displayBio, linkify } from '../utils'
 import { Layout } from './layout'
-import { Panel } from './panel'
 import { ActionPair, Pagination, TagPeopleList } from './page-shared'
+import { Panel } from './panel'
 import { UserReference } from './post'
 import { SearchForm } from './search'
 
@@ -76,8 +76,7 @@ export function Explore({ user, welcome = false, tagsPage = 1, peoplePage = 1, d
                 <div>
                   <div>
                     <UserReference handle={p.handle} bio={p.bio} noteCount={p.posts} stats={profileStats[p.id]}
-                      following={p.following} user={user}
-                      followsViewer={p.followsViewer}
+                      following={p.following} user={user} followsViewer={p.followsViewer}
                       href={`/u/${p.handle}?from=${encodeURIComponent(exploreReturnPath(p.id))}`}
                       navigationQuery={`?from=${encodeURIComponent(exploreReturnPath(p.id))}`} />
                     <small>{p.posts} {p.posts === 1 ? 'note' : 'notes'}</small>

@@ -76,7 +76,9 @@ test('font preference is validated and emitted by the theme stylesheet', () => {
   const request = new Request('https://textlog.cc', { headers: { cookie: 'font=dejavu-sans-mono' } })
   expect(fontChoice(request)).toBe('dejavu-sans-mono')
   expect(themeStyles(request)).toContain('--font-monospace:"DejaVu Sans Mono", monospace')
-  expect(themeStyles(request)).toContain('--font-primary:var(--font-monospace);font-family:var(--font-primary);font-size:16px')
+  expect(themeStyles(request)).toContain(
+    '--font-primary:var(--font-monospace);font-family:var(--font-primary);font-size:16px',
+  )
   expect(fontCookie('menlo', 'https://textlog.cc')).toContain('font=menlo')
   expect(fontCookie('menlo', 'https://textlog.cc')).toContain('Secure')
 

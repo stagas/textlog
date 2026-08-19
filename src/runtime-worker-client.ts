@@ -1,6 +1,6 @@
-import type { MainToRuntimeMessage, RuntimeToMainMessage, RuntimeWorkerState } from './runtime-worker-protocol'
 import type { DatabaseDomainInput, DatabaseDomainOperation, DatabaseDomainOutput } from './database-contract'
 import type { DatabaseService } from './database-service'
+import type { MainToRuntimeMessage, RuntimeToMainMessage, RuntimeWorkerState } from './runtime-worker-protocol'
 
 type PendingRequest = {
   resolve: (response: any) => void
@@ -136,7 +136,8 @@ export class RuntimeWorkerClient implements DatabaseService {
     }
     else {
       const error = Object.assign(new Error(message.error.message), {
-        name: message.error.name, stack: message.error.stack,
+        name: message.error.name,
+        stack: message.error.stack,
       })
       pending.reject(error)
       this.pending.delete(message.id)

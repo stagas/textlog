@@ -1,10 +1,10 @@
-import type { User } from '../types'
 import { CONNECTION_PAGE_SIZE, PAGE_SIZE } from '../pagination'
+import type { User } from '../types'
 import type { PersonView, PostView } from '../types'
+import { enterHref } from './auth-links'
 import { Layout } from './layout'
 import { ConnectionPeople, Pagination } from './page-shared'
 import { Post } from './post'
-import { enterHref } from './auth-links'
 
 export function TagFeed(
   { user, tag, following, blocked = false, posts, page, total, followerTotal = 0, people = [], tab = 'notes', social,

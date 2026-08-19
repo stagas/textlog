@@ -13,59 +13,64 @@ const milestones = [
     marker: '01',
     title: 'Write it your way',
     path: '/write',
-    copy: () => 'Notes grew support for links, code, LaTeX, unicode tags, emoji, previews, and smarter writing helpers.',
+    copy: () =>
+      'Notes grew support for links, code, LaTeX, unicode tags, emoji, previews, and smarter writing helpers.',
   },
   {
     marker: '02',
     title: 'Find your people',
     path: null,
-    copy: (origin: string) => `${emailLink('Full-text search', '/search', origin)}, ${
-      emailLink('trending tags, profiles, follows, tag communities, and helpful popovers', '/explore', origin)
-    } make discovery easy.`,
+    copy: (origin: string) =>
+      `${emailLink('Full-text search', '/search', origin)}, ${
+        emailLink('trending tags, profiles, follows, tag communities, and helpful popovers', '/explore', origin)
+      } make discovery easy.`,
   },
   {
     marker: '03',
     title: 'Follow the conversation',
     path: '/hot',
-    copy: (origin: string) => `Threaded replies, backlinks, ${
-      emailLink('jump-to-unread and activity in For You', '/for-you', origin)
-    }, and ${emailLink('To Me', '/to-me', origin)} keep every conversation connected.`,
+    copy: (origin: string) =>
+      `Threaded replies, backlinks, ${emailLink('jump-to-unread and activity in For You', '/for-you', origin)}, and ${
+        emailLink('To Me', '/to-me', origin)
+      } keep every conversation connected.`,
   },
   {
     marker: '04',
     title: 'Make it feel like yours',
     path: '/account/edit/appearance',
-    copy: () => 'Choose your theme, accent, typeface, font size, density, page size, timezone, and link-preview preference.',
+    copy: () =>
+      'Choose your theme, accent, typeface, font size, density, page size, timezone, and link-preview preference.',
   },
   {
     marker: '05',
     title: 'Stay close, anywhere',
     path: null,
-    copy: (origin: string) => `${emailLink('Notifications', '/account/edit/notifications', origin)}, ${
-      emailLink('multiple accounts', '/account/accounts', origin)
-    }, and ${
-      emailLink('password or magic-link entry and private personalized feeds', '/account/security', origin)
-    } keep you in the loop.`,
+    copy: (origin: string) =>
+      `${emailLink('Notifications', '/account/edit/notifications', origin)}, ${
+        emailLink('multiple accounts', '/account/accounts', origin)
+      }, and ${
+        emailLink('password or magic-link entry and private personalized feeds', '/account/security', origin)
+      } keep you in the loop.`,
   },
   {
     marker: '06',
     title: 'Built to travel',
     path: null,
-    copy: (origin: string) => `${emailLink('RSS', '/latest.rss', origin)} and ${
-      emailLink('Atom feeds', '/latest.atom', origin)
-    }, ${emailLink('embeds', '/api/embed-examples', origin)}, ${
-      emailLink('a documented API with write access', '/api', origin)
-    }, and ${
-      emailLink('a public archive', '/dump.zip', origin)
-    } make your words portable.`,
+    copy: (origin: string) =>
+      `${emailLink('RSS', '/latest.rss', origin)} and ${emailLink('Atom feeds', '/latest.atom', origin)}, ${
+        emailLink('embeds', '/api/embed-examples', origin)
+      }, ${emailLink('a documented API with write access', '/api', origin)}, and ${
+        emailLink('a public archive', '/dump.zip', origin)
+      } make your words portable.`,
   },
   {
     marker: '07',
     title: 'Textlog in your pocket',
     path: null,
-    copy: (origin: string) => `${
-      emailLink('A mobile app for Android phones', 'https://github.com/Faultless/textlog_flutter', origin)
-    }, created by ${emailLink('Serge Kamel aka Faultless', 'https://frontendienst.nl/', origin)}.`,
+    copy: (origin: string) =>
+      `${
+        emailLink('A mobile app for Android phones', 'https://github.com/Faultless/textlog_flutter', origin)
+      }, created by ${emailLink('Serge Kamel aka Faultless', 'https://frontendienst.nl/', origin)}.`,
   },
 ] as const
 
@@ -76,7 +81,9 @@ function escapeHtml(value: string) {
 
 function emailLink(label: string, path: string, origin: string) {
   const href = new URL(path, origin).href
-  return `<a href="${escapeHtml(href)}" style="color:#55734a;text-decoration:underline;text-decoration-color:#aab9a4;text-underline-offset:2px">${
+  return `<a href="${
+    escapeHtml(href)
+  }" style="color:#55734a;text-decoration:underline;text-decoration-color:#aab9a4;text-underline-offset:2px">${
     escapeHtml(label)
   }</a>`
 }
@@ -97,8 +104,8 @@ function featureRows(origin: string) {
       <td width="38" valign="top" style="width:38px;padding-top:2px;color:#749668;font-size:11px;font-weight:700">${feature.marker}</td>
       <td style="padding:0 0 10px;border-bottom:1px solid #d9dbd4">
         <div style="margin:0 0 4px;color:#20231f;font-size:14px;font-weight:700">${
-          feature.path ? emailLink(feature.title, feature.path, origin) : escapeHtml(feature.title)
-        }</div>
+      feature.path ? emailLink(feature.title, feature.path, origin) : escapeHtml(feature.title)
+    }</div>
         <div style="color:#60665e;font-size:12px;line-height:1.6">${feature.copy(origin)}</div>
       </td>
     </tr></table>
@@ -150,7 +157,9 @@ export function recapEmail(database: Database, requestOrigin: string, unsubscrib
     <a href="${escapeHtml(origin)}" style="display:inline-block;color:#20231f;text-decoration:none">
       <img src="${
     escapeHtml(logoUrl)
-  }" width="24" height="24" alt="" style="display:inline-block;width:24px;height:24px;margin-right:5px;border:0;vertical-align:-6px"><span style="font-size:18px;font-weight:800;letter-spacing:-1px">${escapeHtml(name)}</span>
+  }" width="24" height="24" alt="" style="display:inline-block;width:24px;height:24px;margin-right:5px;border:0;vertical-align:-6px"><span style="font-size:18px;font-weight:800;letter-spacing:-1px">${
+    escapeHtml(name)
+  }</span>
     </a>
   </td></tr>
   <tr><td bgcolor="#f1f5ee" style="border:1px solid #d9dbd4">
@@ -165,7 +174,9 @@ export function recapEmail(database: Database, requestOrigin: string, unsubscrib
       <tr><td style="padding:26px 30px 10px">
         <div style="margin-bottom:5px;color:#8a9085;font-size:10px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase">What’s new</div>
         <h2 style="margin:0 0 17px;color:#20231f;font-size:17px;line-height:1.35">The short version</h2>
-        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">${featureRows(origin)}</table>
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">${
+    featureRows(origin)
+  }</table>
       </td></tr>
       ${popularNotes(notes, origin)}
       <tr><td align="center" style="padding:22px 30px 32px">
@@ -179,10 +190,12 @@ export function recapEmail(database: Database, requestOrigin: string, unsubscrib
     </table>
   </td></tr>
   <tr><td align="center" style="padding:14px 0 0;color:#8a9085;font-size:11px;line-height:1.8">
-    <a href="${escapeHtml(unsubscribeUrl)}" style="color:#55734a;text-decoration:underline">Unsubscribe from recap emails</a><br>
+    <a href="${
+    escapeHtml(unsubscribeUrl)
+  }" style="color:#55734a;text-decoration:underline">Unsubscribe from recap emails</a><br>
     Sent by ${escapeHtml(name)} · <a href="${escapeHtml(origin)}" style="color:#55734a;text-decoration:none">${
-      escapeHtml(new URL(origin).host)
-    }</a>
+    escapeHtml(new URL(origin).host)
+  }</a>
   </td></tr>
 </table></td></tr></table></body></html>`
 }

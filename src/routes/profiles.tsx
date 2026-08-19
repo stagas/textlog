@@ -6,12 +6,12 @@ import { currentPage, notFoundPage, page, paginationRedirect, redirect, safeNext
 
 import type { Hono } from 'hono'
 import { appName } from '../brand'
+import { databaseService } from '../database-service'
 import { markdownPlainText } from '../markdown'
 import { renderProfileOg } from '../og'
 import { CONNECTION_PAGE_SIZE, decodePostCursor, TAG_PAGE_SIZE } from '../pagination'
-import { currentUser } from '../utils'
-import { databaseService } from '../database-service'
 import { resolvedPageSize } from '../request-preferences'
+import { currentUser } from '../utils'
 
 export function registerProfilesRoutes(app: Hono) {
   app.get('/u/:handle/og.png', async c => {
@@ -83,22 +83,27 @@ export function registerProfilesRoutes(app: Hono) {
     }
     if (tab === 'blocked') {
       const { people, tags } = await databaseService().call('profiles.blockedPage', {
-        profileId: profile.id, page: profilePage,
+        profileId: profile.id,
+        page: profilePage,
       })
       const outOfRange = paginationRedirect(profilePage, blockedPeopleCount, `/u/${profile.handle}?tab=blocked`)
       if (outOfRange) return outOfRange
       return page(
         <Connections user={user} profile={profile} people={people} tags={tags} kind="blocked" page={profilePage}
           total={blockedPeopleCount} noteCount={noteCount} replyCount={replyCount} followerCount={followerCount}
-          followingCount={followingCount} followingTagCount={followingTagCount}
-          following={following} blockedPeopleCount={blockedPeopleCount} blockedTagCount={blockedTagCount}
-          social={social} returnPath={returnPath} />,
+          followingCount={followingCount} followingTagCount={followingTagCount} following={following}
+          blockedPeopleCount={blockedPeopleCount} blockedTagCount={blockedTagCount} social={social}
+          returnPath={returnPath} />,
       )
     }
     if (tab === 'following' || tab === 'followers') {
       const connectionPage = profilePage
       const connection = await databaseService().call('profiles.connectionsPage', {
-        profileId: profile.id, viewerId, page: connectionPage, tagsPage, kind: tab,
+        profileId: profile.id,
+        viewerId,
+        page: connectionPage,
+        tagsPage,
+        kind: tab,
       })
       const { people, tags, total: connectionTotal } = connection
       const lastConnectionPage = Math.max(1, Math.ceil(connectionTotal / CONNECTION_PAGE_SIZE))
@@ -136,12 +141,11 @@ export function registerProfilesRoutes(app: Hono) {
       page: profilePage, pageSize: resolvedPageSize(c.req.raw), kind: tab === 'replies' ? 'replies' : 'notes' })
     return page(
       <Profile user={user} profile={profile} posts={blocked || blockedByProfile ? [] : snapshot.posts}
-        following={following} followsViewer={followsViewer}
-        blocked={blocked} total={total} noteCount={noteCount} replyCount={replyCount}
-        tab={tab === 'replies' ? 'replies' : 'notes'} followerCount={followerCount}
-        followingCount={followingCount} followingTagCount={followingTagCount}
-        blockedPeopleCount={blockedPeopleCount} blockedTagCount={blockedTagCount} social={social}
-        page={snapshot.page} totalPages={snapshot.totalPages} returnPath={returnPath} bioReference={bioReference} />,
+        following={following} followsViewer={followsViewer} blocked={blocked} total={total} noteCount={noteCount}
+        replyCount={replyCount} tab={tab === 'replies' ? 'replies' : 'notes'} followerCount={followerCount}
+        followingCount={followingCount} followingTagCount={followingTagCount} blockedPeopleCount={blockedPeopleCount}
+        blockedTagCount={blockedTagCount} social={social} page={snapshot.page} totalPages={snapshot.totalPages}
+        returnPath={returnPath} bioReference={bioReference} />,
     )
   })
 }

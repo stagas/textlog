@@ -1,8 +1,8 @@
 import type { Database } from 'bun:sqlite'
 import { appOrigin } from './brand'
-import { discoverLinkPreviews, isDirectImageUrl, isYouTubeUrl, saveLinkPreviews,
-  storeRemotePreviewImage, replaceBioLinkPreviews } from './link-preview'
 import { deleteImagesAfterCommit, isImageKey } from './image-storage'
+import { discoverLinkPreviews, isDirectImageUrl, isYouTubeUrl, replaceBioLinkPreviews, saveLinkPreviews,
+  storeRemotePreviewImage } from './link-preview'
 import { logError, logInfo } from './log'
 import { postLinks } from './utils'
 
@@ -45,11 +45,11 @@ export async function runLinkPreviewBackfill(database: Database, options: {
       if (previous) return isDirectImageUrl(item.url) && previous.status === 'no-preview'
       return !stored || !isImageKey(stored.image_url)
     })
-  log(`link preview backfill start pending=${pending.length} delay=${delayMs}ms${
-    options.directImagesOnly ? ' direct-images-only=true' : ''
-  }${
-    options.youtubeOnly ? ' youtube-only=true' : ''
-  }`)
+  log(
+    `link preview backfill start pending=${pending.length} delay=${delayMs}ms${
+      options.directImagesOnly ? ' direct-images-only=true' : ''
+    }${options.youtubeOnly ? ' youtube-only=true' : ''}`,
+  )
   let fetched = 0
   let saved = 0
   for (const item of pending) {
@@ -87,11 +87,13 @@ export async function runBioLinkPreviewBackfill(database: Database, options: {
   const existing = database.query('SELECT image_url FROM user_bio_link_previews WHERE user_id=? AND url=?')
   const record = database.query(`INSERT OR REPLACE INTO user_bio_link_preview_backfill_attempts(user_id,url,status)
     VALUES(?,?,?)`)
-  const pending = users.filter(user => postLinks(user.bio).some(url => {
-    const previous = attempted.get(user.id, url) as { status: string } | null
-    if (previous && !(isYouTubeUrl(url) && previous.status === 'no-preview')) return false
-    return !existing.get(user.id, url)
-  }))
+  const pending = users.filter(user =>
+    postLinks(user.bio).some(url => {
+      const previous = attempted.get(user.id, url) as { status: string } | null
+      if (previous && !(isYouTubeUrl(url) && previous.status === 'no-preview')) return false
+      return !existing.get(user.id, url)
+    })
+  )
   log(`bio link preview backfill start pending=${pending.length} delay=${delayMs}ms`)
   let fetched = 0
   let saved = 0
@@ -102,9 +104,13 @@ export async function runBioLinkPreviewBackfill(database: Database, options: {
     const previews = await discoverLinkPreviews(user.bio, database)
     await replaceBioLinkPreviews(database, user.id, previews)
     const savedUrls = new Set(previews.map(preview => preview.url))
-    for (const url of urls) record.run(user.id, url, savedUrls.has(url)
-      ? 'saved'
-      : isYouTubeUrl(url) ? 'no-preview-youtube-v2' : 'no-preview')
+    for (const url of urls) {
+      record.run(user.id, url, savedUrls.has(url)
+        ? 'saved'
+        : isYouTubeUrl(url)
+        ? 'no-preview-youtube-v2'
+        : 'no-preview')
+    }
     fetched++
     saved += previews.length
     log(`bio link preview backfill processed user=${user.id} saved=${previews.length}`)
@@ -127,13 +133,14 @@ export async function runPostOgPreviewRefetch(database: Database, options: {
     VALUES(?,?,?)`)
   const rows = database.query(`SELECT lp.post_id,lp.url,lp.image_url FROM post_link_previews lp
     JOIN posts p ON p.id=lp.post_id WHERE p.deleted_at IS NULL ORDER BY lp.post_id,lp.url`).all() as {
-      post_id: number
-      url: string
-      image_url: string
-    }[]
-  const normalizedUrl = (value: string) => new URL(
-    /^https?:\/\//i.test(value) ? value : `https://${value.replace(/^\/+/, '')}`,
-  )
+    post_id: number
+    url: string
+    image_url: string
+  }[]
+  const normalizedUrl = (value: string) =>
+    new URL(
+      /^https?:\/\//i.test(value) ? value : `https://${value.replace(/^\/+/, '')}`,
+    )
   const ownPostOgImage = (value: string, previewUrl: string) => {
     try {
       const image = normalizedUrl(value)
@@ -143,14 +150,18 @@ export async function runPostOgPreviewRefetch(database: Database, options: {
       const linked = normalizedUrl(previewUrl)
       return linked.origin === image.origin && linked.pathname === `/post/${imagePost}`
     }
-    catch { return false }
+    catch {
+      return false
+    }
   }
-  const pending = origin ? rows.filter(row => {
-    const previous = attempted.get(row.post_id, row.url) as { status: string } | null
-    if (previous?.status.startsWith(POST_OG_REFETCH_STATUS_PREFIX)) return false
-    return ownPostOgImage(row.image_url, row.url)
-      || LEGACY_POST_OG_REFETCH_STATUS_PREFIXES.some(prefix => previous?.status.startsWith(prefix))
-  }) : []
+  const pending = origin
+    ? rows.filter(row => {
+      const previous = attempted.get(row.post_id, row.url) as { status: string } | null
+      if (previous?.status.startsWith(POST_OG_REFETCH_STATUS_PREFIX)) return false
+      return ownPostOgImage(row.image_url, row.url)
+        || LEGACY_POST_OG_REFETCH_STATUS_PREFIXES.some(prefix => previous?.status.startsWith(prefix))
+    })
+    : []
   log(`post OG preview refetch start pending=${pending.length}`)
   let saved = 0
   for (const row of pending) {
@@ -189,11 +200,12 @@ export async function runR2LinkPreviewBackfill(database: Database, options: {
     WHERE post_id=? AND url=?`)
   const rows = database.query(`SELECT lp.post_id,lp.url,lp.image_url FROM post_link_previews lp
     JOIN posts p ON p.id=lp.post_id WHERE p.deleted_at IS NULL ORDER BY lp.post_id,lp.url`).all() as {
-      post_id: number
-      url: string
-      image_url: string
-    }[]
-  const staleClaimCutoff = (database.query("SELECT datetime('now','-15 minutes') AS value").get() as { value: string }).value
+    post_id: number
+    url: string
+    image_url: string
+  }[]
+  const staleClaimCutoff =
+    (database.query('SELECT datetime(\'now\',\'-15 minutes\') AS value').get() as { value: string }).value
   const pending = rows.filter(row => {
     if (isImageKey(row.image_url)) return false
     try {
@@ -227,7 +239,8 @@ export async function runR2LinkPreviewBackfill(database: Database, options: {
       database.transaction(() => {
         if (!database.query(`UPDATE post_link_previews SET image_url=?,image_width=?,image_height=?
           WHERE post_id=? AND url=? AND image_url=?`)
-          .run(image.key, image.width, image.height, row.post_id, row.url, row.image_url).changes) {
+          .run(image.key, image.width, image.height, row.post_id, row.url, row.image_url).changes)
+        {
           throw new Error('Legacy preview changed while it was being backfilled')
         }
         finish.run(`${R2_BACKFILL_STATUS_PREFIX}saved`, row.post_id, row.url)
@@ -242,6 +255,8 @@ export async function runR2LinkPreviewBackfill(database: Database, options: {
       logFailure(`R2 link preview backfill failed post=${row.post_id}`, error)
     }
   }
-  log(`R2 link preview backfill complete pending=${pending.length} attempted=${attemptedCount} saved=${saved} failed=${failed}`)
+  log(
+    `R2 link preview backfill complete pending=${pending.length} attempted=${attemptedCount} saved=${saved} failed=${failed}`,
+  )
   return { pending: pending.length, attempted: attemptedCount, saved, failed }
 }

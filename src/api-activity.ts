@@ -1,8 +1,8 @@
 import type { Database } from 'bun:sqlite'
 import { isAdmin } from './admin'
-import { apiPost, isoTimestamp, type ApiPost } from './api'
-import type { User } from './types'
+import { type ApiPost, apiPost, isoTimestamp } from './api'
 import { hasUnreadForYou, hasUnreadToMe } from './for-you-state'
+import type { User } from './types'
 
 type ActivityKind = 'post' | 'reply' | 'mention' | 'user_follow' | 'tag_follow' | 'signup'
 
@@ -41,8 +41,8 @@ export function decodeActivityCursor(value?: string): ActivityCursor | null {
   try {
     const decoded = JSON.parse(Buffer.from(value, 'base64url').toString())
     return Array.isArray(decoded) && decoded.length === 3 && decoded[0] === 1
-      && typeof decoded[1] === 'string' && decoded[1]
-      && typeof decoded[2] === 'string' && decoded[2]
+        && typeof decoded[1] === 'string' && decoded[1]
+        && typeof decoded[2] === 'string' && decoded[2]
       ? { createdAt: decoded[1], key: decoded[2] }
       : null
   }
@@ -126,11 +126,11 @@ export function apiActivities(database: Database, origin: string, user: User, op
         AND u.deleted_at IS NULL AND u.suspended_at IS NULL
     ) timeline WHERE 1=1 ${toMeFilter} ${cursorFilter}
     ORDER BY timeline.created_at DESC,timeline.event_key DESC LIMIT ${options.limit + 1}`).all({
-      viewer: user.id,
-      admin: Number(isAdmin(user)),
-      createdAt: options.cursor?.createdAt || '',
-      key: options.cursor?.key || '',
-    }) as ActivityRow[]
+    viewer: user.id,
+    admin: Number(isAdmin(user)),
+    createdAt: options.cursor?.createdAt || '',
+    key: options.cursor?.key || '',
+  }) as ActivityRow[]
   const hasMore = rows.length > options.limit
   const selected = rows.slice(0, options.limit)
   const data = selected.flatMap((row): ApiActivity[] => {
@@ -151,6 +151,6 @@ export function apiActivities(database: Database, origin: string, user: User, op
   const last = selected[selected.length - 1]
   return { data, has_unread: options.toMe ? hasUnreadToMe(user.id, database) : hasUnreadForYou(user.id, database),
     pagination: { next_cursor: hasMore && last
-    ? encodeCursor({ createdAt: last.created_at, key: last.event_key })
-    : null } }
+      ? encodeCursor({ createdAt: last.created_at, key: last.event_key })
+      : null } }
 }

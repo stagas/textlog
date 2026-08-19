@@ -4,8 +4,8 @@ import { containsAsciiArt, extractHashtags, extractMentions } from '../content'
 import type { User } from '../types'
 import type { BioReferenceData, PostView, UserProfileStats } from '../types'
 import { displayBio, displayPostBody, fmt, fmtFull, linkify, referenceFormId } from '../utils'
-import { MetaRow } from './meta'
 import { enterHref } from './auth-links'
+import { MetaRow } from './meta'
 
 export function UserReference(
   { handle, bio, noteCount, following, followsViewer, user, href, rel, currentHandle, stats, navigationQuery = '',
@@ -240,8 +240,7 @@ export function PreviewPost({ p }: { p: PostView }) {
       <p className={containsAsciiArt(p.body) ? 'ascii-art' : undefined} dangerouslySetInnerHTML={{
         __html: linkify(displayPostBody(p.body), p.mention_bios, [], undefined, renderFlags(p), '', p.hashtag_counts,
           p.mention_note_counts, { signedIn: false, currentHandle: p.handle, formPrefix,
-          hashtagFollowerCounts: p.hashtag_follower_counts,
-          linkPreviews: p.link_previews }),
+          hashtagFollowerCounts: p.hashtag_follower_counts, linkPreviews: p.link_previews }),
       }} />
     </article>
   )
@@ -318,14 +317,14 @@ export function Post({
         {preview
           ? (
             <UserReference handle={p.handle} bio={p.bio} noteCount={p.note_count || 0} stats={p.profile_stats}
-              following={p.viewer_following} followsViewer={p.follows_viewer} user={user} referenceData={p.bio_reference}
-              extraAction={authorPopoverAction} />
+              following={p.viewer_following} followsViewer={p.follows_viewer} user={user}
+              referenceData={p.bio_reference} extraAction={authorPopoverAction} />
           )
           : (
             <UserReference handle={p.handle} bio={p.bio} noteCount={p.note_count || 0} stats={p.profile_stats}
               following={p.viewer_following} followsViewer={p.follows_viewer} user={user}
-              href={'/u/' + p.handle + referenceQuery} rel={navigationRel}
-              navigationQuery={referenceQuery} referenceData={p.bio_reference} extraAction={authorPopoverAction} />
+              href={'/u/' + p.handle + referenceQuery} rel={navigationRel} navigationQuery={referenceQuery}
+              referenceData={p.bio_reference} extraAction={authorPopoverAction} />
           )}
         {contextLabel && <span className="post-context">{contextLabel}</span>}
         {preview
@@ -382,9 +381,8 @@ export function Post({
         __html: linkify(displayPostBody(p.body), p.mention_bios, highlightTerms, undefined, renderFlags(p),
           referenceQuery, p.hashtag_counts, p.mention_note_counts, { signedIn: !!user, currentHandle: user?.handle,
           formPrefix, mentionFollowing: p.mention_following, mentionFollowsViewer: p.mention_follows_viewer,
-          mentionProfileStats: p.mention_profile_stats,
-          hashtagFollowing: p.hashtag_following, hashtagFollowerCounts: p.hashtag_follower_counts,
-          linkPreviews: p.link_previews }),
+          mentionProfileStats: p.mention_profile_stats, hashtagFollowing: p.hashtag_following,
+          hashtagFollowerCounts: p.hashtag_follower_counts, linkPreviews: p.link_previews }),
       }} />
       <ReferenceFollowForms post={p} prefix={formPrefix} user={user}
         returnPath={returnPath || `/post/${p.id}#post-${p.id}`} />
@@ -403,9 +401,8 @@ export function Post({
                 <div className="parent-quote-top">
                   <UserReference handle={parent.handle} bio={parent.bio} noteCount={parent.note_count || 0}
                     stats={parent.profile_stats} following={parent.viewer_following}
-                    followsViewer={parent.follows_viewer} user={user}
-                    href={'/u/' + parent.handle + referenceQuery} rel={navigationRel}
-                    navigationQuery={referenceQuery} referenceData={parent.bio_reference} />
+                    followsViewer={parent.follows_viewer} user={user} href={'/u/' + parent.handle + referenceQuery}
+                    rel={navigationRel} navigationQuery={referenceQuery} referenceData={parent.bio_reference} />
                   <a className="postdate" href={parentDetailPath} rel={navigationRel}>
                     <time dateTime={parent.created_at} title={fmtFull(parent.created_at)}>
                       {fmt(parent.created_at)}
@@ -427,8 +424,7 @@ export function Post({
                     referenceQuery, parent.hashtag_counts, parent.mention_note_counts, { signedIn: !!user,
                     currentHandle: user?.handle, formPrefix: `${formPrefix}-parent-${parent.id}`,
                     mentionFollowing: parent.mention_following, mentionFollowsViewer: parent.mention_follows_viewer,
-                    mentionProfileStats: parent.mention_profile_stats,
-                    hashtagFollowing: parent.hashtag_following,
+                    mentionProfileStats: parent.mention_profile_stats, hashtagFollowing: parent.hashtag_following,
                     hashtagFollowerCounts: parent.hashtag_follower_counts, linkPreviews: parent.link_previews }),
                 }} />
                 <ReferenceFollowForms post={parent} prefix={`${formPrefix}-parent-${parent.id}`} user={user}

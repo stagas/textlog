@@ -50,8 +50,13 @@ export function registerIllegalActivityRoutes(app: Hono) {
     }
     const reference = `RPT-${token().slice(0, 12).toUpperCase()}`
     const created = await databaseService().call('reports.createIllegalActivity', {
-      postId, contentUrl: contentUrl!.href, details: values.details.trim(), reporterEmail: email || null,
-      reference, category, reporterName: name || null,
+      postId,
+      contentUrl: contentUrl!.href,
+      details: values.details.trim(),
+      reporterEmail: email || null,
+      reference,
+      category,
+      reporterName: name || null,
     })
     if (!created) {
       return page(

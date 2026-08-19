@@ -8,8 +8,8 @@ import { logError } from '../log'
 import { moderateText, moderationMessage } from '../moderation'
 
 const PASSWORD_LOGIN_FAILURE = 'Login was unsuccessful. Check your details and try again.'
-import { sendPushForSignup } from '../push'
 import { databaseService } from '../database-service'
+import { sendPushForSignup } from '../push'
 import { sessionHash } from '../sessions'
 import { currentUser, hash, hashPassword, token, verifyPassword } from '../utils'
 import { authLimit, clientAddress, form, issueMagicLink, page, redirect, retryPage, safeNext } from './shared'
@@ -19,9 +19,10 @@ import type { Hono } from 'hono'
 export const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 const dummyPasswordHash = hashPassword(crypto.randomUUID())
 export function registerAuthRoutes(app: Hono) {
-  app.get('/enter', c => currentUser(c.req.raw)
-    ? redirect('/')
-    : page(<Auth next={safeNext(c.req.query('next'))} />))
+  app.get('/enter', c =>
+    currentUser(c.req.raw)
+      ? redirect('/')
+      : page(<Auth next={safeNext(c.req.query('next'))} />))
   app.get('/login',
     c => redirect('/enter' + (c.req.query('next') ? `?next=${encodeURIComponent(safeNext(c.req.query('next')))}` : '')))
   app.get('/signup',
@@ -29,11 +30,12 @@ export function registerAuthRoutes(app: Hono) {
 
   app.get('/enter/password', async c => {
     const challenge = await databaseService().call('auth.passwordLoginChallenge', {
-      address: clientAddress(c), now: Date.now(),
+      address: clientAddress(c),
+      now: Date.now(),
     })
     return page(
-      <PasswordLogin nonce={challenge.nonce} captcha={challenge.captcha}
-        next={safeNext(c.req.query('next'))} reset={c.req.query('reset') === '1'} />,
+      <PasswordLogin nonce={challenge.nonce} captcha={challenge.captcha} next={safeNext(c.req.query('next'))}
+        reset={c.req.query('reset') === '1'} />,
     )
   })
   app.post('/enter/password', async c => {
@@ -43,24 +45,29 @@ export function registerAuthRoutes(app: Hono) {
     const next = safeNext(f.next)
     const address = clientAddress(c)
     const validation = await databaseService().call('auth.validatePasswordLoginForm', {
-      address, nonce: f.nonce || '', captchaToken: f.captchaToken || '', captchaAnswer: f.captchaAnswer || '',
+      address,
+      nonce: f.nonce || '',
+      captchaToken: f.captchaToken || '',
+      captchaAnswer: f.captchaAnswer || '',
       now: Date.now(),
     })
     if (validation.status === 'invalid_nonce') {
       const challenge = await databaseService().call('auth.passwordLoginChallenge', { address, now: Date.now() })
       return page(
-        <PasswordLogin nonce={challenge.nonce} identifier={identifier} next={next}
-          captcha={challenge.captcha} error="This login form has expired or was already used. Please try again." />,
+        <PasswordLogin nonce={challenge.nonce} identifier={identifier} next={next} captcha={challenge.captcha}
+          error="This login form has expired or was already used. Please try again." />,
         400,
       )
     }
     if (validation.status === 'invalid_captcha') {
       const challenge = await databaseService().call('auth.passwordLoginChallenge', {
-        address, now: Date.now(), forceCaptcha: true,
+        address,
+        now: Date.now(),
+        forceCaptcha: true,
       })
       return page(
-        <PasswordLogin nonce={challenge.nonce} identifier={identifier} next={next}
-          captcha={challenge.captcha} error={PASSWORD_LOGIN_FAILURE} />,
+        <PasswordLogin nonce={challenge.nonce} identifier={identifier} next={next} captcha={challenge.captcha}
+          error={PASSWORD_LOGIN_FAILURE} />,
         400,
       )
     }
@@ -71,15 +78,16 @@ export function registerAuthRoutes(app: Hono) {
       const challenge = await databaseService().call('auth.passwordLoginChallenge', { address, now: Date.now() })
       return retryPage(
         page(
-          <PasswordLogin nonce={challenge.nonce} identifier={identifier} next={next}
-            captcha={challenge.captcha} error={authRateLimitMessage(limited.retryAfter)} />,
+          <PasswordLogin nonce={challenge.nonce} identifier={identifier} next={next} captcha={challenge.captcha}
+            error={authRateLimitMessage(limited.retryAfter)} />,
           429,
         ),
         limited.retryAfter,
       )
     }
     const account = await databaseService().call('auth.accountForIdentifier', {
-      identifier, isEmail: emailPattern.test(identifier),
+      identifier,
+      isEmail: emailPattern.test(identifier),
     })
     const valid = await verifyPassword(password, account?.password !== '!' && account?.password
       ? account.password
@@ -88,14 +96,17 @@ export function registerAuthRoutes(app: Hono) {
       await databaseService().call('auth.recordFailedPassword', { now: Date.now() })
       const challenge = await databaseService().call('auth.passwordLoginChallenge', { address, now: Date.now() })
       return page(
-        <PasswordLogin nonce={challenge.nonce} identifier={identifier} next={next}
-          captcha={challenge.captcha} error={PASSWORD_LOGIN_FAILURE} />,
+        <PasswordLogin nonce={challenge.nonce} identifier={identifier} next={next} captcha={challenge.captcha}
+          error={PASSWORD_LOGIN_FAILURE} />,
         400,
       )
     }
     const replacementPasswordHash = account.password.startsWith('$argon2id$') ? null : await hashPassword(password)
     const result = await databaseService().call('auth.completePasswordLogin', {
-      userId: account.id, replacementPasswordHash, now: Date.now(), userAgent: c.req.header('user-agent') || '',
+      userId: account.id,
+      replacementPasswordHash,
+      now: Date.now(),
+      userAgent: c.req.header('user-agent') || '',
     })
     return redirect(next, sessionCookie(result.session))
   })
@@ -108,21 +119,26 @@ export function registerAuthRoutes(app: Hono) {
     const limited = await authLimit(c, 'forgot-password-ip', clientAddress(c), AUTH_LIMITS.forgotIp)
       || await authLimit(c, 'forgot-password-account', identifier || '(blank)', AUTH_LIMITS.forgotAccount)
     if (limited) {
-      return retryPage(page(<ForgotPassword identifier={submittedIdentifier}
-        error={authRateLimitMessage(limited.retryAfter)} />, 429),
-        limited.retryAfter)
+      return retryPage(
+        page(<ForgotPassword identifier={submittedIdentifier} error={authRateLimitMessage(limited.retryAfter)} />, 429),
+        limited.retryAfter,
+      )
     }
     const isEmail = emailPattern.test(identifier) && identifier.length <= 254
     const isHandle = /^[a-z0-9_]{2,24}$/.test(identifier)
     if (!isEmail && !isHandle) {
-      return page(<ForgotPassword identifier={submittedIdentifier}
-        error="Enter a valid email address or handle." />, 400)
+      return page(<ForgotPassword identifier={submittedIdentifier} error="Enter a valid email address or handle." />,
+        400)
     }
     const value = token()
     const tokenHash = hash(value)
     const now = Date.now()
     const reset = await databaseService().call('auth.preparePasswordReset', {
-      identifier, isEmail, tokenHash, expiresAt: now + 3600000, now,
+      identifier,
+      isEmail,
+      tokenHash,
+      expiresAt: now + 3600000,
+      now,
     })
     if (reset) {
       const origin = Bun.env.APP_URL?.replace(/\/$/, '') || new URL(c.req.url).origin
@@ -132,8 +148,11 @@ export function registerAuthRoutes(app: Hono) {
       catch (error) {
         console.error('Could not send password reset', error)
         await databaseService().call('auth.deletePasswordReset', { tokenHash })
-        return page(<ForgotPassword identifier={submittedIdentifier}
-          error="The reset email could not be sent. Please try again later." />, 503)
+        return page(
+          <ForgotPassword identifier={submittedIdentifier}
+            error="The reset email could not be sent. Please try again later." />,
+          503,
+        )
       }
     }
     return page(<ForgotPassword sent />)
@@ -142,7 +161,8 @@ export function registerAuthRoutes(app: Hono) {
   app.get('/reset-password', async c => {
     const value = c.req.query('token') || ''
     const reset = Boolean(value) && await databaseService().call('auth.passwordResetValid', {
-      tokenHash: hash(value), now: Date.now(),
+      tokenHash: hash(value),
+      now: Date.now(),
     })
     return page(<ResetPassword resetToken={value} invalid={!reset} />, reset ? 200 : 400)
   })
@@ -157,7 +177,8 @@ export function registerAuthRoutes(app: Hono) {
         limited.retryAfter)
     }
     const resetValid = Boolean(value) && await databaseService().call('auth.passwordResetValid', {
-      tokenHash: hash(value), now: Date.now(),
+      tokenHash: hash(value),
+      now: Date.now(),
     })
     if (!resetValid) return page(<ResetPassword invalid />, 400)
     if (password.length < 8 || password.length > 128) {
@@ -168,7 +189,9 @@ export function registerAuthRoutes(app: Hono) {
     }
     const passwordHash = await hashPassword(password)
     const consumed = await databaseService().call('auth.consumePasswordReset', {
-      tokenHash: hash(value), passwordHash, now: Date.now(),
+      tokenHash: hash(value),
+      passwordHash,
+      now: Date.now(),
     })
     if (!consumed) return page(<ResetPassword invalid />, 400)
     return redirect('/enter/password?reset=1')
@@ -194,10 +217,11 @@ export function registerAuthRoutes(app: Hono) {
     }
 
     const account = signedInUser
-      ? { id: signedInUser.id, email: signedInUser.email, handle: signedInUser.handle,
-        password: '!', handleChosenAt: signedInUser.handle_chosen_at }
+      ? { id: signedInUser.id, email: signedInUser.email, handle: signedInUser.handle, password: '!',
+        handleChosenAt: signedInUser.handle_chosen_at }
       : await databaseService().call('auth.accountForIdentifier', {
-        identifier: normalizedIdentifier, isEmail: emailPattern.test(identifier),
+        identifier: normalizedIdentifier,
+        isEmail: emailPattern.test(identifier),
       })
     if ((!account && !emailPattern.test(identifier)) || identifier.length > 254) {
       return page(<Auth email={identifier} next={next} error="Enter a valid email address or handle." />, 400)
@@ -227,7 +251,8 @@ export function registerAuthRoutes(app: Hono) {
     const identifier = (f.identifier || f.email || '').trim().toLowerCase()
     const code = (f.code || '').trim()
     const account = await databaseService().call('auth.accountForIdentifier', {
-      identifier: identifier.replace(/^@/, ''), isEmail: false,
+      identifier: identifier.replace(/^@/, ''),
+      isEmail: false,
     })
     const email = emailPattern.test(identifier) ? identifier : account?.email
     const handle = !emailPattern.test(identifier)
@@ -244,7 +269,9 @@ export function registerAuthRoutes(app: Hono) {
       )
     }
     const result = await databaseService().call('auth.consumeMagicLink', {
-      selector: { email, codeHash: hash(code) }, userAgent: c.req.header('user-agent') || '', now: Date.now(),
+      selector: { email, codeHash: hash(code) },
+      userAgent: c.req.header('user-agent') || '',
+      now: Date.now(),
       currentUserId: currentUser(c.req.raw)?.id,
     })
     if (result.status === 'invalid') return invalid()
@@ -258,7 +285,9 @@ export function registerAuthRoutes(app: Hono) {
     const value = c.req.query('token') || ''
     if (!value) return page(<Auth error="That magic link is invalid or has expired. Request a new one." />, 400)
     const result = await databaseService().call('auth.consumeMagicLink', {
-      selector: { tokenHash: hash(value) }, userAgent: c.req.header('user-agent') || '', now: Date.now(),
+      selector: { tokenHash: hash(value) },
+      userAgent: c.req.header('user-agent') || '',
+      now: Date.now(),
       currentUserId: currentUser(c.req.raw)?.id,
     })
     if (result.status === 'invalid') {

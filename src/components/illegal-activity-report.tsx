@@ -1,8 +1,8 @@
 import { appName, appOrigin } from '../brand'
 import type { User } from '../types'
 import { Layout } from './layout'
-import { Panel } from './panel'
 import { FormActions, FormMessage } from './page-shared'
+import { Panel } from './panel'
 
 export function IllegalActivityReport(
   { user, error, reference, values = {} }: { user: User | null; error?: string; reference?: string;
@@ -25,7 +25,8 @@ export function IllegalActivityReport(
             <>
               <p>Use this form to report a specific {name} post that you believe involves illegal activity.</p>
               <Panel as="form" width="fluid" className="form-panel report-panel" method="post"
-                action="/report-illegal-activity">
+                action="/report-illegal-activity"
+              >
                 <FormMessage error={error} />
                 <label className="form-label">
                   post URL<input className="form-control" type="url" name="contentUrl" required

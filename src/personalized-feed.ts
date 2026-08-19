@@ -15,7 +15,8 @@ export function loadPersonalizedFeed(database: Database, user: User, page: numbe
   const filter = toMe ? 'WHERE timeline.targeted_to_viewer=1' : ''
   const snapshotKind = `${toMe ? 'to-me' : 'for-you'}:v${PERSONALIZED_FEED_SNAPSHOT_VERSION}`
   const snapshot = feedSnapshotPage<PersonalizedTimelineRow>(database, snapshotKind, user.id, page,
-    () => database.query(`SELECT timeline.*,
+    () =>
+      database.query(`SELECT timeline.*,
       NOT EXISTS(SELECT 1 FROM ${readsTable} seen WHERE seen.user_id=$viewer
         AND seen.event_key=timeline.event_key) unread FROM (
       SELECT p.id,p.user_id,p.body,p.created_at,p.parent_id,p.deleted_at,p.has_latex,p.has_links,p.has_code,u.handle,
@@ -109,18 +110,22 @@ export function loadPersonalizedFeed(database: Database, user: User, page: numbe
       FROM users u WHERE $admin=1 AND u.handle_chosen_at IS NOT NULL AND u.deleted_at IS NULL
         AND u.suspended_at IS NULL
       ) timeline ${filter} ORDER BY timeline.created_at DESC,timeline.event_key DESC`).all({
-        viewer: user.id, admin: Number(isAdmin(user)),
+        viewer: user.id,
+        admin: Number(isAdmin(user)),
       }) as PersonalizedTimelineRow[], pageSize)
 
-  const readKeys = snapshot.items.length ? new Set((database.query(`SELECT event_key FROM ${readsTable}
+  const readKeys = snapshot.items.length
+    ? new Set((database.query(`SELECT event_key FROM ${readsTable}
     WHERE user_id=? AND event_key IN (${snapshot.items.map(() => '?').join(',')})`)
-    .all(user.id, ...snapshot.items.map(row => row.event_key)) as { event_key: string }[]).map(row => row.event_key))
+      .all(user.id, ...snapshot.items.map(row => row.event_key)) as { event_key: string }[]).map(row => row.event_key))
     : new Set<string>()
   const timeline = snapshot.items.map(row => ({ ...row, unread: Number(!readKeys.has(row.event_key)) }))
   const targetedKeys = timeline.filter(row => row.targeted_to_viewer).map(row => row.event_key)
-  const seenToMe = targetedKeys.length ? new Set((database.query(`SELECT event_key FROM to_me_reads
+  const seenToMe = targetedKeys.length
+    ? new Set((database.query(`SELECT event_key FROM to_me_reads
     WHERE user_id=? AND event_key IN (${targetedKeys.map(() => '?').join(',')})`)
-    .all(user.id, ...targetedKeys) as { event_key: string }[]).map(row => row.event_key)) : new Set<string>()
+      .all(user.id, ...targetedKeys) as { event_key: string }[]).map(row => row.event_key))
+    : new Set<string>()
   const actorStats = visibleUserProfileStats(database, timeline.map(row => row.actor_id), user.id)
   const targets = new Map(timeline.flatMap(row => {
     if (!row.target_handle) return []
@@ -129,45 +134,53 @@ export function loadPersonalizedFeed(database: Database, user: User, page: numbe
   }))
   const targetStats = visibleUserProfileStats(database, [...targets.values()], user.id)
   const relevantIds = [...new Set([...timeline.map(row => row.actor_id), ...targets.values()])]
-  const followerIds = relevantIds.length ? new Set((database.query(`SELECT follower_id FROM follows
+  const followerIds = relevantIds.length
+    ? new Set((database.query(`SELECT follower_id FROM follows
     WHERE following_id=? AND follower_id IN (${relevantIds.map(() => '?').join(',')})`)
-    .all(user.id, ...relevantIds) as { follower_id: number }[]).map(row => row.follower_id)) : new Set<number>()
+      .all(user.id, ...relevantIds) as { follower_id: number }[]).map(row => row.follower_id))
+    : new Set<number>()
   const tagCounts = visibleTagFollowerCounts(database, timeline.flatMap(row => row.target_tag ? [row.target_tag] : []),
     user.id)
-  const enriched = new Map(enrichPosts(database,
-    timeline.filter(row => ['post', 'reply', 'mention'].includes(row.activity_kind)), user.id).map(post => [post.id, post]))
+  const enriched = new Map(
+    enrichPosts(database, timeline.filter(row => ['post', 'reply', 'mention'].includes(row.activity_kind)), user.id)
+      .map(post => [post.id, post]),
+  )
   const resultTimeline = timeline.map(row => ({ ...row, renderedPost: row.id ? enriched.get(row.id) : undefined,
-    actorProfileStats: actorStats.get(row.actor_id),
-    actorFollowsViewer: followerIds.has(row.actor_id),
+    actorProfileStats: actorStats.get(row.actor_id), actorFollowsViewer: followerIds.has(row.actor_id),
     targetProfileStats: row.target_handle ? targetStats.get(targets.get(row.target_handle)!) : undefined,
     targetFollowsViewer: row.target_handle ? followerIds.has(targets.get(row.target_handle)!) : undefined,
-    tagFollowerCount: row.target_tag ? tagCounts[row.target_tag] || 0 : undefined }))
+    tagFollowerCount: row.target_tag ? tagCounts[row.target_tag] || 0 : undefined })
+  )
   if (markRead) {
     markForYouEntriesRead(user.id, timeline.filter(row => row.unread).map(row => row.event_key), toMe, database)
   }
   const forYouUnread = hasUnreadForYou(user.id, database)
   const toMeUnread = hasUnreadToMe(user.id, database)
-  const firstUnread = forYouUnread || toMeUnread ? database.query(`SELECT item.position,item.payload
+  const firstUnread = forYouUnread || toMeUnread
+    ? database.query(`SELECT item.position,item.payload
     FROM feed_snapshot_items item LEFT JOIN for_you_reads seen ON seen.user_id=?
       AND seen.event_key=json_extract(item.payload,'$.event_key')
     WHERE item.snapshot_id=? AND seen.event_key IS NULL ORDER BY item.position LIMIT 1`)
-    .get(user.id, snapshot.snapshotId) as { position: number; payload: string } | null : null
-  const lastUnread = firstUnread ? database.query(`SELECT item.position,item.payload
+      .get(user.id, snapshot.snapshotId) as { position: number; payload: string } | null
+    : null
+  const lastUnread = firstUnread
+    ? database.query(`SELECT item.position,item.payload
     FROM feed_snapshot_items item LEFT JOIN for_you_reads seen ON seen.user_id=?
       AND seen.event_key=json_extract(item.payload,'$.event_key')
     WHERE item.snapshot_id=? AND seen.event_key IS NULL ORDER BY item.position DESC LIMIT 1`)
-    .get(user.id, snapshot.snapshotId) as { position: number; payload: string } | null : null
+      .get(user.id, snapshot.snapshotId) as { position: number; payload: string } | null
+    : null
   const unreadHref = (item: { position: number; payload: string } | null) => {
     if (!item) return undefined
     const row = JSON.parse(item.payload) as PersonalizedTimelineRow
     const page = Math.floor(item.position / pageSize) + 1
-    const anchor = ['post', 'reply', 'mention'].includes(row.activity_kind) ? `post-${row.id}`
+    const anchor = ['post', 'reply', 'mention'].includes(row.activity_kind)
+      ? `post-${row.id}`
       : `activity-${row.event_key.replace(/[^a-z0-9_-]+/gi, '-')}`
     return `${path}${page > 1 ? `?page=${page}` : ''}#${anchor}`
   }
   return { timeline: resultTimeline, page: snapshot.page, totalPages: snapshot.totalPages,
-    toMeCount: targetedKeys.filter(key => !seenToMe.has(key)).length,
-    forYouCount: unreadForYouCount(user.id, database), forYouUnread, toMeUnread,
-    unreadHref: unreadHref(firstUnread),
+    toMeCount: targetedKeys.filter(key => !seenToMe.has(key)).length, forYouCount: unreadForYouCount(user.id, database),
+    forYouUnread, toMeUnread, unreadHref: unreadHref(firstUnread),
     lastUnreadHref: lastUnread?.position !== firstUnread?.position ? unreadHref(lastUnread) : undefined }
 }

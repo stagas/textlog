@@ -4,11 +4,11 @@ import { activeAppearance, activeRequest, activeThemeLogoSvg, activeThemeStyles 
 import React from 'react'
 import { instance } from '../../instance.config'
 import { isAdmin } from '../admin'
-import type { User } from '../types'
 import { resolvedDensity } from '../request-preferences'
 import { RESPONSE_TIME_PLACEHOLDER } from '../response-time'
-import { LogoutForm } from './logout-form'
+import type { User } from '../types'
 import { enterHref } from './auth-links'
+import { LogoutForm } from './logout-form'
 
 let devReloadBootId: string | undefined
 
@@ -155,11 +155,15 @@ export function Layout({
         {notificationBanner && (
           <aside className="notification-banner" aria-label={notificationBanner === 'notification-update'
             ? 'Notification update'
-            : notificationBanner === 'donate' ? 'Support us' : 'Account setup reminder'}
+            : notificationBanner === 'donate'
+            ? 'Support us'
+            : 'Account setup reminder'}
           >
             <a href={notificationBanner === 'donate' ? '/donation/banner/accept' : notificationBanner === 'appearance'
               ? '/account/edit/appearance'
-              : notificationBanner === 'invite' ? '/account/edit/invite' : '/account/edit/notifications'}
+              : notificationBanner === 'invite'
+              ? '/account/edit/invite'
+              : '/account/edit/notifications'}
               {...notificationBanner === 'donate' ? { target: '_blank', rel: 'noopener noreferrer' } : {}}
             >
               {notificationBanner === 'donate'
@@ -190,9 +194,9 @@ export function Layout({
         <main id="main-content">{children}</main>
         <footer className="site-footer">
           <span>
-            <a className="footer-host-link" href="/">{appHost()}</a>{' '}
-            <span aria-hidden="true">/</span> <a className="footer-host-link" href="/stats">stats</a>{' '}
-            <span aria-hidden="true">·</span> <span className="footer-response-time">{RESPONSE_TIME_PLACEHOLDER}</span>
+            <a className="footer-host-link" href="/">{appHost()}</a> <span aria-hidden="true">/</span>{' '}
+            <a className="footer-host-link" href="/stats">stats</a> <span aria-hidden="true">·</span>{' '}
+            <span className="footer-response-time">{RESPONSE_TIME_PLACEHOLDER}</span>
           </span>
           {instance.links.getMobileApp && (
             <a

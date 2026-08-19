@@ -1,12 +1,12 @@
 import { Database } from 'bun:sqlite'
 import { describe, expect, test } from 'bun:test'
 import { Hono } from 'hono'
-import { rebuildHotPosts } from './hot'
-import { registerSyndicationRoutes } from './routes/syndication'
-import { issueFeedKey } from './feed-keys'
-import { syndicationResponse } from './syndication'
 import { executeDatabaseDomain } from './database-domain'
 import type { DatabaseService } from './database-service'
+import { issueFeedKey } from './feed-keys'
+import { rebuildHotPosts } from './hot'
+import { registerSyndicationRoutes } from './routes/syndication'
+import { syndicationResponse } from './syndication'
 
 function fixture(firstPostBody?: string) {
   const database = new Database(':memory:')
@@ -58,14 +58,22 @@ function fixture(firstPostBody?: string) {
 describe('RSS and Atom feeds', () => {
   test('renders follow and signup activity as stable syndication entries', async () => {
     const response = syndicationResponse('atom', {
-      title: 'For You', description: 'Personalized activity', pageUrl: 'https://textlog.cc/for-you',
-      feedUrl: 'https://textlog.cc/feeds/for-you/key.atom', posts: [], activities: [{
-        id: 'https://textlog.cc/activities/follow-1', title: '@alice followed @bob',
-        url: 'https://textlog.cc/u/bob', created_at: '2026-08-03T09:00:00.000Z',
+      title: 'For You',
+      description: 'Personalized activity',
+      pageUrl: 'https://textlog.cc/for-you',
+      feedUrl: 'https://textlog.cc/feeds/for-you/key.atom',
+      posts: [],
+      activities: [{
+        id: 'https://textlog.cc/activities/follow-1',
+        title: '@alice followed @bob',
+        url: 'https://textlog.cc/u/bob',
+        created_at: '2026-08-03T09:00:00.000Z',
         author: { handle: 'alice', url: 'https://textlog.cc/u/alice' },
       }, {
-        id: 'https://textlog.cc/activities/signup-2', title: '@carol signed up',
-        url: 'https://textlog.cc/u/carol', created_at: '2026-08-03T10:00:00.000Z',
+        id: 'https://textlog.cc/activities/signup-2',
+        title: '@carol signed up',
+        url: 'https://textlog.cc/u/carol',
+        created_at: '2026-08-03T10:00:00.000Z',
         author: { handle: 'carol', url: 'https://textlog.cc/u/carol' },
       }],
     })

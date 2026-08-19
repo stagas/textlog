@@ -1,7 +1,7 @@
-import { describe, expect, test } from 'bun:test'
 import { Database } from 'bun:sqlite'
-import { discoverLinkPreviews, isDirectImageUrl, openGraphImage, openGraphMetadata, readHtmlHead,
-  replaceLinkPreviews, youtubeChannelMetadata } from './link-preview'
+import { describe, expect, test } from 'bun:test'
+import { discoverLinkPreviews, isDirectImageUrl, openGraphImage, openGraphMetadata, readHtmlHead, replaceLinkPreviews,
+  youtubeChannelMetadata } from './link-preview'
 
 describe('link previews', () => {
   test('reads YouTube channel metadata from its embedded channel data', () => {
@@ -9,8 +9,12 @@ describe('link previews', () => {
       "description":"Videos about \\u0026 things","avatar":{"thumbnails":[{"url":"https://yt3.example/avatar.jpg",
       "width":900,"height":900}]}}}</script>`
     expect(youtubeChannelMetadata(html)).toEqual({
-      imageUrl: 'https://yt3.example/avatar.jpg', title: 'Example Channel',
-      description: 'Videos about & things', siteName: 'YouTube', imageWidth: 900, imageHeight: 900,
+      imageUrl: 'https://yt3.example/avatar.jpg',
+      title: 'Example Channel',
+      description: 'Videos about & things',
+      siteName: 'YouTube',
+      imageWidth: 900,
+      imageHeight: 900,
     })
   })
   test('recognizes direct image links with queries case-insensitively', () => {
@@ -27,8 +31,8 @@ describe('link previews', () => {
   })
 
   test('ignores unrelated metadata', () => {
-    expect(openGraphImage('<meta name="twitter:image" content="https://example.com/card.jpg">',
-      'https://example.com/')).toBeNull()
+    expect(openGraphImage('<meta name="twitter:image" content="https://example.com/card.jpg">', 'https://example.com/'))
+      .toBeNull()
   })
 
   test('reads the title, description, and site name for a card', () => {
