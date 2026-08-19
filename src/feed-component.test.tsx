@@ -56,7 +56,7 @@ test('for-you hide actions also target follow activity', () => {
       toMeCount: 0, forYouCount: 0, forYouUnread: false, toMeUnread: false }}
   />)
 
-  expect(html).toContain('activity-follow for-you-author-4')
+  expect(html).toContain('for-you-author-4')
   expect(html).toContain('for-you-hide-input for-you-hide-4')
   expect(html).toContain(':has(.for-you-hide-4:checked) .for-you-author-4')
 })

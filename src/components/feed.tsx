@@ -82,8 +82,8 @@ export function Feed({ user, data, title, path = '/for-you', pageUrl, notificati
         </div>
       )
       : (
-        <article className={`activity-follow for-you-author-${row.actor_id}${row.unread && row.targeted_to_viewer
-          ? ' activity-item-directed-unread' : ''}`} key={row.event_key} id={activityAnchor}>
+        <article className={`activity-follow${row.unread && row.targeted_to_viewer
+          ? ' activity-item-directed-unread' : ''} for-you-author-${row.actor_id}`} key={row.event_key} id={activityAnchor}>
           <div className="activity-follow-content">
             <MetaRow className="activity-follow-main" unread={!!row.unread}>
               <UserReference handle={row.actor_handle} bio={row.actor_bio}
