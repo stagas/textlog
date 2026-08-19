@@ -16,6 +16,7 @@ import { databaseService } from '../database-service'
 import { sendAdminEmail, sendReportDecision } from '../email'
 import { deleteImagesAfterCommit } from '../image-storage'
 import { currentUser } from '../utils'
+import { cacheBlockedIp, flushIpRequests } from '../request-ip-blocks'
 
 export function registerAdminRoutes(app: Hono) {
   app.get('/admin/email', c => {
@@ -48,14 +49,29 @@ export function registerAdminRoutes(app: Hono) {
     if (!['open', 'resolved', 'dismissed'].includes(statusValue)) return c.text('Invalid report status', 400)
     const status = statusValue as 'open' | 'resolved' | 'dismissed'
     const reportPage = currentPage(c.req.query('page'))
+    await flushIpRequests()
     const data = await databaseService().call('admin.dashboard', { status, page: reportPage })
-    const { stats, total, reports, actions, suspended, illegalReports } = data
+    const { stats, total, reports, actions, suspended, illegalReports, ipRequests } = data
     const outOfRange = paginationRedirect(reportPage, total, `/admin?status=${status}`)
     if (outOfRange) return outOfRange
     return page(
       <AdminDashboard user={signedIn} stats={stats} reports={reports} actions={actions} illegalReports={illegalReports}
-        status={status} page={reportPage} total={total} suspended={suspended} />,
+        status={status} page={reportPage} total={total} suspended={suspended} ipRequests={ipRequests} />,
     )
+  })
+
+  app.post('/admin/ip-blocks', async c => {
+    const signedIn = currentUser(c.req.raw)
+    if (!signedIn) return redirect('/enter?next=' + encodeURIComponent('/admin'))
+    if (!isAdmin(signedIn)) return c.text('Forbidden', 403)
+    const fields = await form(c.req.raw)
+    const hash = fields.hash || ''
+    const day = new Date().toISOString().slice(0, 10)
+    if (!/^[a-f0-9]{64}$/.test(hash)) return c.text('Invalid IP identifier', 400)
+    const blocked = await databaseService().call('admin.blockIp', { day, hash, actorId: signedIn.id })
+    if (!blocked) return c.text('IP is unavailable or already blocked', 409)
+    cacheBlockedIp(day, hash)
+    return redirect('/admin')
   })
 
   app.post('/admin/illegal-reports/:id/:decision', async c => {

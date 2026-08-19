@@ -18,12 +18,15 @@ export type SerializedDomainResponse = {
 
 export type DatabaseDomainOperations = {
   'system.health': { input: { databasePath: string }; output: DatabaseHealthResult }
+  'system.blockedIps': { input: { day: string }; output: string[] }
   'system.consumeAuthAttempt': { input: { scope: string; identity: string; attempts: number;
     windowSeconds: number; now: number }; output: { retryAfter: number } | null }
   'system.consumeBucketedAttempt': { input: { scope: string; identity: string; attempts: number;
     bucketSeconds: number; now: number }; output: { retryAfter: number } | null }
   'maintenance.flushVisitors': { input: { visits: Array<{ day: string; hash: string;
     anonymousLastSeenAt: number | null }> }; output: number }
+  'maintenance.flushIpRequests': { input: { entries: Array<{ day: string; hash: string; requests: number }> };
+    output: number }
   'maintenance.cleanup': { input: { now: number }; output: Record<string, number> }
   'maintenance.bootBackup': { input: { directory: string }; output: string }
   'maintenance.automatedBackup': { input: { directory: string; now: string }; output: unknown }
@@ -103,7 +106,9 @@ export type DatabaseDomainOperations = {
   'account.delete': { input: { userId: number }; output: { imageKeys: string[] } }
   'admin.dashboard': { input: { status: 'open' | 'resolved' | 'dismissed'; page: number }; output: {
     stats: DashboardStats; total: number; reports: AdminReportView[]; actions: AdminActionView[];
-    suspended: ProfileRow[]; illegalReports: IllegalActivityReportView[] } }
+    suspended: ProfileRow[]; illegalReports: IllegalActivityReportView[];
+    ipRequests: Array<{ hash: string; obfuscated: string; requests: number; blocked: boolean }> } }
+  'admin.blockIp': { input: { day: string; hash: string; actorId: number }; output: boolean }
   'admin.decideIllegalReport': { input: { id: number; decision: 'resolve' | 'dismiss'; reasons: string };
     output: { status: 'not_open' } | { status: 'ready'; reference: string; reporterEmail: string | null } }
   'admin.decideReport': { input: { id: number; decision: 'resolve' | 'dismiss'; actorId: number; note: string };

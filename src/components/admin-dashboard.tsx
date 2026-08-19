@@ -9,7 +9,7 @@ import { Pagination } from './page-shared'
 import { StatsGrid } from './stats'
 
 export function AdminDashboard(
-  { user, stats, reports, actions, illegalReports = [], status, page, total, suspended = [] }: {
+  { user, stats, reports, actions, illegalReports = [], status, page, total, suspended = [], ipRequests = [] }: {
     user: User
     stats: DashboardStats
     reports: AdminReportView[]
@@ -19,6 +19,7 @@ export function AdminDashboard(
     page: number
     total: number
     suspended?: ProfileRow[]
+    ipRequests?: Array<{ hash: string; obfuscated: string; requests: number; blocked: boolean }>
   },
 ) {
   return (
@@ -30,6 +31,31 @@ export function AdminDashboard(
         action={<a className="profile-edit-link" href="/admin/email">send email</a>}
       />
       <StatsGrid stats={stats} />
+      <section className="admin-section admin-ip-requests">
+        <h2>top IPs today <span>{ipRequests.length}</span></h2>
+        {ipRequests.length
+          ? (
+            <div className="admin-ip-list">
+              {ipRequests.map(ip => (
+                <article key={ip.hash}>
+                  <code>{ip.obfuscated}</code>
+                  <div className="admin-ip-actions">
+                    <span>{ip.requests.toLocaleString()} requests</span>
+                    {ip.blocked
+                      ? <span className="danger">blocked today</span>
+                      : (
+                        <form method="post" action="/admin/ip-blocks">
+                          <input type="hidden" name="hash" value={ip.hash} />
+                          <button className="quiet danger">block</button>
+                        </form>
+                      )}
+                  </div>
+                </article>
+              ))}
+            </div>
+          )
+          : <p className="section-empty">No requests recorded today.</p>}
+      </section>
       <section className="admin-section">
         <h2>
           illegal activity reports <span>{illegalReports.length}</span>

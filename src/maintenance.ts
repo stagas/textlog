@@ -23,6 +23,7 @@ export function runBoundedCleanup(database: Database, now = Date.now()) {
     authRateLimits: deleteBatch(database, 'auth_rate_limits', 'created_at<=?', now - 24 * 60 * 60 * 1000),
     apiRateLimits: deleteBatch(database, 'api_rate_limit_buckets', 'bucket_start<?', now - 2 * 60 * 1000),
     visitors: deleteBatch(database, 'daily_visitors', 'day<date(?,\'-6 days\')', new Date(now).toISOString()),
+    ipRequests: deleteBatch(database, 'daily_ip_requests', 'day<date(?,\'-6 days\')', new Date(now).toISOString()),
   }))()
 }
 

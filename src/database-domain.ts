@@ -142,6 +142,11 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
       return { writeLockLatencyMs: Math.round((performance.now() - started) * 100) / 100,
         walBytes, busyTimeoutMs } as DatabaseDomainOutput<K>
     }
+    case 'system.blockedIps': {
+      const { day } = input as DatabaseDomainInput<'system.blockedIps'>
+      return database.query('SELECT ip_hash FROM daily_ip_requests WHERE day=? AND blocked_at IS NOT NULL')
+        .all(day).map(row => (row as { ip_hash: string }).ip_hash) as DatabaseDomainOutput<K>
+    }
     case 'maintenance.flushVisitors': {
       const { visits } = input as DatabaseDomainInput<'maintenance.flushVisitors'>
       if (!visits.length) return 0 as DatabaseDomainOutput<K>
@@ -154,6 +159,16 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
         for (const visit of visits) insert.run(visit.day, visit.hash, visit.anonymousLastSeenAt)
       })()
       return visits.length as DatabaseDomainOutput<K>
+    }
+    case 'maintenance.flushIpRequests': {
+      const { entries } = input as DatabaseDomainInput<'maintenance.flushIpRequests'>
+      if (!entries.length) return 0 as DatabaseDomainOutput<K>
+      database.transaction(() => {
+        const upsert = database.query(`INSERT INTO daily_ip_requests(day,ip_hash,request_count) VALUES(?,?,?)
+          ON CONFLICT(day,ip_hash) DO UPDATE SET request_count=request_count+excluded.request_count`)
+        for (const entry of entries) upsert.run(entry.day, entry.hash, entry.requests)
+      })()
+      return entries.length as DatabaseDomainOutput<K>
     }
     case 'maintenance.cleanup': {
       const { now } = input as DatabaseDomainInput<'maintenance.cleanup'>
@@ -613,8 +628,18 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
         WHERE deleted_at IS NULL AND suspended_at IS NOT NULL ORDER BY suspended_at DESC LIMIT 20`).all()
       const illegalReports = database.query(`SELECT * FROM illegal_activity_reports
         WHERE status='open' ORDER BY created_at,id LIMIT 20`).all()
-      return { stats: dashboardStats(database), total, reports, actions, suspended, illegalReports
+      const day = new Date().toISOString().slice(0, 10)
+      const ipRequests = database.query(`SELECT ip_hash hash,substr(ip_hash,1,5) obfuscated,
+        request_count requests,blocked_at IS NOT NULL blocked FROM daily_ip_requests
+        WHERE day=? ORDER BY request_count DESC,ip_hash LIMIT 50`).all(day)
+      return { stats: dashboardStats(database), total, reports, actions, suspended, illegalReports, ipRequests
       } as DatabaseDomainOutput<K>
+    }
+    case 'admin.blockIp': {
+      const { day, hash, actorId } = input as DatabaseDomainInput<'admin.blockIp'>
+      const result = database.query(`UPDATE daily_ip_requests SET blocked_at=CURRENT_TIMESTAMP,blocked_by=?
+        WHERE day=? AND ip_hash=? AND blocked_at IS NULL`).run(actorId, day, hash)
+      return Boolean(result.changes) as DatabaseDomainOutput<K>
     }
     case 'admin.decideIllegalReport': {
       const { id, decision, reasons } = input as DatabaseDomainInput<'admin.decideIllegalReport'>

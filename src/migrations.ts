@@ -1231,6 +1231,17 @@ export const migrations: Migration[] = [
       rebuildHotPosts(database)
     },
   },
+  {
+    version: 99,
+    name: 'daily_ip_request_blocks',
+    up(database) {
+      database.run(`CREATE TABLE IF NOT EXISTS daily_ip_requests (
+        day TEXT NOT NULL,ip_hash TEXT NOT NULL,request_count INTEGER NOT NULL DEFAULT 0,
+        blocked_at TEXT,blocked_by INTEGER REFERENCES users(id),PRIMARY KEY(day,ip_hash));
+        CREATE INDEX IF NOT EXISTS daily_ip_requests_day_count
+          ON daily_ip_requests(day,request_count DESC);`)
+    },
+  },
 ]
 
 export const latestMigrationVersion = migrations.at(-1)!.version

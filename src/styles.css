@@ -4176,7 +4176,8 @@ form.report-panel {
 .admin-report-meta,
 .admin-report-targets,
 .admin-actions-log time,
-.admin-user-list span {
+.admin-user-list span,
+.admin-ip-list span {
   color: var(--muted);
   font-size: 0.625rem;
 }
@@ -4212,7 +4213,8 @@ form.report-panel {
 .admin-report-meta,
 .admin-report-targets,
 .admin-inline-actions,
-.admin-user-list article {
+.admin-user-list article,
+.admin-ip-list article {
   display: flex;
   align-items: center;
   flex-wrap: wrap;
@@ -4257,7 +4259,8 @@ form.report-panel {
 }
 
 .admin-actions-log article,
-.admin-user-list article {
+.admin-user-list article,
+.admin-ip-list article {
   padding: var(--space-3) 0;
   border-top: 1px solid var(--soft);
   font-size: 0.6875rem;
@@ -4277,6 +4280,20 @@ form.report-panel {
 
 .admin-user-list article .quiet {
   margin-left: auto;
+}
+
+.admin-ip-list code {
+  min-width: 4rem;
+}
+
+.admin-ip-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.admin-ip-actions form {
+  margin: 0;
 }
 
 .admin-user-actions {

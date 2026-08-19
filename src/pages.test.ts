@@ -372,6 +372,10 @@ test('admin metrics use locale-aware number formatting', () => {
     status: 'open',
     page: 1,
     total: 0,
+    ipRequests: [
+      { hash: 'a'.repeat(64), obfuscated: 'aaaaa', requests: 250, blocked: false },
+      { hash: 'b'.repeat(64), obfuscated: 'bbbbb', requests: 100, blocked: true },
+    ],
   }))
 
   expect(html).toContain(`<strong>${(1234567).toLocaleString()}</strong><span>users</span>`)
@@ -383,6 +387,10 @@ test('admin metrics use locale-aware number formatting', () => {
   expect(html).toContain('<strong>2/2.5</strong><span>median/avg notes per user</span>')
   expect(html).toContain('class="account-settings-heading admin-header"')
   expect(html).toContain('class="profile-edit-link" href="/admin/email">send email</a>')
+  expect(html).toContain('<code>aaaaa</code><div class="admin-ip-actions"><span>250 requests</span>')
+  expect(html).toContain('action="/admin/ip-blocks"')
+  expect(html).not.toContain('a'.repeat(64) + '</code>')
+  expect(html).toContain('<code>bbbbb</code><div class="admin-ip-actions"><span>100 requests</span><span class="danger">blocked today</span>')
 })
 
 test('pages advertise the dynamic favicon, touch icon, and manifest', () => {

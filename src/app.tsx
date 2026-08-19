@@ -41,6 +41,7 @@ import { themeLogoSvg, themeStyles, versionedAppearance, withAppearance } from '
 import { apiUser, currentUser } from './utils'
 import { visitorHash, VISITOR_FLUSH_BATCH_SIZE } from './visitors'
 import { withTimezone } from './timezone'
+import { flushIpRequests, isIpBlocked, loadBlockedIps, recordIpRequest } from './request-ip-blocks'
 
 const devReloadEnabled = Bun.env.DEV_RELOAD === 'true'
 const publicArchivePath = Bun.env.PUBLIC_ARCHIVE_PATH || 'public/dump.zip'
@@ -111,6 +112,10 @@ const hourlyRequestRateLimiter = new RequestRateLimiter({
   blockSeconds: HOURLY_REQUEST_BLOCK_SECONDS,
 })
 const clientErrorRateLimiter = new ClientErrorRateLimiter()
+await loadBlockedIps()
+const ipRequestTimer = setInterval(() => void flushIpRequests().catch(error => logError('IP request buffer flush failed', error)),
+  5_000)
+ipRequestTimer.unref()
 function requestRateLimitResponse(request: Request, retryAfter: number) {
   const acceptsHtml = request.headers.get('accept')?.includes('text/html')
   return acceptsHtml && !new URL(request.url).pathname.startsWith('/api/')
@@ -490,6 +495,12 @@ export default {
   host: Bun.env.HOST || '0.0.0.0',
   async fetch(request: Request, server: Bun.Server<unknown>) {
     const address = clientIp(request, server.requestIP(request)?.address)
+    recordIpRequest(address)
+    if (isIpBlocked(address)) {
+      const now = new Date()
+      const nextDay = Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() + 1)
+      return requestRateLimitResponse(request, Math.max(1, Math.ceil((nextDay - now.getTime()) / 1000)))
+    }
     const bypassRateLimits = Bun.env.NODE_ENV === 'test' || isDevelopment()
     const limited = bypassRateLimits
       ? null

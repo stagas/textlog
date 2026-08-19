@@ -4,6 +4,7 @@ import { dirname, join, resolve } from 'node:path'
 
 import { Database } from 'bun:sqlite'
 import { createServer } from 'node:net'
+import { createHmac } from 'node:crypto'
 import { tmpdir } from 'node:os'
 import { issueRecapUnsubscribeToken } from './recap-emails'
 
@@ -148,6 +149,7 @@ beforeAll(async () => {
       DATABASE_BACKUP_DIR: join(temporaryDirectory, 'backups'),
       MODERATION_DISABLED: 'true',
       TRUST_PROXY: 'true',
+      IP_PSEUDONYM_SECRET: 'route-integration-ip-secret',
       EMAIL_CAPTURE_PATH: emailCapturePath,
       LOG_COLOR: 'false',
       PATH: process.env.PATH || '',
@@ -1548,4 +1550,26 @@ test('consequential account, content, reporting, and admin flows work over HTTP'
     { action: 'suspend_user' },
     { action: 'restore_user' },
   ])
+
+  const testBlockAddress = '198.51.100.77'
+  await request('/latest', { ip: testBlockAddress })
+  await request('/latest', { ip: testBlockAddress })
+  const ipDashboardHtml = await (await request('/admin', { cookie: adminCookie })).text()
+  expect(ipDashboardHtml).toContain('top IPs today')
+  const today = new Date().toISOString().slice(0, 10)
+  const ipHash = createHmac('sha256', 'route-integration-ip-secret')
+    .update(`textlog\0http-log\0${today}\0${testBlockAddress}`).digest('hex')
+  expect(ipHash).toBeDefined()
+  expect(ipDashboardHtml).toContain(`name="hash" value="${ipHash}"`)
+  const blockIp = await request('/admin/ip-blocks', {
+    method: 'POST', cookie: adminCookie, form: { hash: ipHash! },
+  })
+  expect(blockIp.status).toBe(303)
+  expect(database.query(`SELECT blocked_at FROM daily_ip_requests
+    WHERE day=date('now') AND ip_hash=?`).get(ipHash!) as { blocked_at: string | null }).toMatchObject({
+    blocked_at: expect.any(String),
+  })
+  const blockedRequest = await request('/latest', { ip: testBlockAddress })
+  expect(blockedRequest.status).toBe(429)
+  expect(Number(blockedRequest.headers.get('retry-after'))).toBeGreaterThan(0)
 }, 60_000)
