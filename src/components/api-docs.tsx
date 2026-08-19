@@ -258,10 +258,9 @@ curl -X POST ${origin}/api/v1/auth/verify \\
         </CodeBlock>
         <h2>Limits and errors</h2>
         <p>
-          API reads are limited to 120 requests per minute per IP. Firehose clients may hold three simultaneous
-          connections per IP. Writes are limited to 60 per hour per account, and posting keeps the same limit as the
-          website: five posts every five minutes. A limited response uses <code>429</code> and includes{' '}
-          <code>Retry-After</code>.
+          API reads are limited to 120 requests per minute per IP. Writes are limited to 60 per hour per account, and
+          posting keeps the same limit as the website: five posts every five minutes. A limited response uses{' '}
+          <code>429</code> and includes <code>Retry-After</code>.
         </p>
         <CodeBlock language="json">
           {`{

@@ -5,7 +5,6 @@ import { decodeActivityCursor } from '../api-activity'
 import { subscribeToPosts } from '../api-broker'
 import { appName, clientIpHeaderName } from '../brand'
 import { ApiDocs, EmbedExamples } from '../components/pages'
-import { isDevelopment } from '../environment'
 import { decodeHotCursor } from '../hot'
 import { logError } from '../log'
 import { MAX_SEARCH_LENGTH, normalizeSearchQuery, searchExpression } from '../search'
@@ -18,10 +17,7 @@ import type { User } from '../types'
 
 const JSON_LIMIT = 120
 const JSON_WINDOW_SECONDS = 60
-const SSE_LIMIT = 3
-const SSE_RETRY_AFTER = 30
 const SSE_HEARTBEAT_MS = 5_000
-const activeStreams = new Map<string, number>()
 
 function jsonResponse(value: unknown, status = 200, cache = 'public, max-age=15, stale-while-revalidate=30') {
   return new Response(JSON.stringify(value), {
@@ -230,7 +226,6 @@ function openApiDocument() {
         get: { summary: 'Live post stream', responses: {
           '200': { description: 'Server-sent events',
             content: { 'text/event-stream': { schema: { type: 'string' } } } },
-          '429': { description: 'Too many streams' },
         } },
       },
       '/auth/request': {
@@ -591,12 +586,6 @@ export function registerApiRoutes(app: Hono,
   })
 
   app.get('/api/v1/firehose', c => {
-    const ip = c.req.header(clientIpHeaderName()) || '-'
-    const count = activeStreams.get(ip) || 0
-    if (!isDevelopment() && count >= SSE_LIMIT) {
-      return apiError('rate_limited', 'Too many firehose connections', 429, SSE_RETRY_AFTER)
-    }
-    activeStreams.set(ip, count + 1)
     const encoder = new TextEncoder()
     let cleanup = () => {}
     const stream = new ReadableStream<Uint8Array>({
@@ -609,9 +598,6 @@ export function registerApiRoutes(app: Hono,
           closed = true
           if (heartbeat) clearInterval(heartbeat)
           unsubscribe()
-          const remaining = (activeStreams.get(ip) || 1) - 1
-          if (remaining > 0) activeStreams.set(ip, remaining)
-          else activeStreams.delete(ip)
           try {
             controller.close()
           }

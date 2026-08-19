@@ -429,21 +429,14 @@ describe('public API', () => {
     await reader.cancel()
   })
 
-  test('limits simultaneous firehose connections per IP and releases cancelled streams', async () => {
+  test('allows simultaneous firehose connections from the same IP', async () => {
     const { app } = fixture()
-    const responses = await Promise.all([1, 2, 3].map(() =>
+    const responses = await Promise.all([1, 2, 3, 4].map(() =>
       request(app, '/api/v1/firehose', {
         headers: { 'x-textlog-client-ip': 'crowded' },
       })
     ))
     expect(responses.every(response => response.status === 200)).toBe(true)
-    const limited = await request(app, '/api/v1/firehose', { headers: { 'x-textlog-client-ip': 'crowded' } })
-    expect(limited.status).toBe(429)
-    expect(limited.headers.get('retry-after')).toBe('30')
-
-    await responses[0].body!.cancel()
-    const replacement = await request(app, '/api/v1/firehose', { headers: { 'x-textlog-client-ip': 'crowded' } })
-    expect(replacement.status).toBe(200)
-    await Promise.all([...responses.slice(1), replacement].map(response => response.body!.cancel()))
+    await Promise.all(responses.map(response => response.body!.cancel()))
   })
 })
