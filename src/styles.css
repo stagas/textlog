@@ -4505,9 +4505,17 @@ form.report-panel {
   font-size: 0.6875rem;
 }
 
+.activity-group > .activity-follow:first-child {
+  padding-bottom: var(--space-2);
+}
+
+.activity-group > .for-you-item:first-child .post {
+  padding-bottom: var(--space-2);
+}
+
 .activity-more > summary {
-  padding: var(--space-3) var(--gutter);
-  border-top: 1px solid var(--soft);
+  padding: 0 var(--gutter) var(--space-3);
+  border-top: 0;
   color: var(--accent);
   font-size: 0.75rem;
   cursor: pointer;
