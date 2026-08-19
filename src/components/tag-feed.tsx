@@ -4,6 +4,7 @@ import type { PersonView, PostView } from '../types'
 import { Layout } from './layout'
 import { ConnectionPeople, Pagination } from './page-shared'
 import { Post } from './post'
+import { enterHref } from './auth-links'
 
 export function TagFeed(
   { user, tag, following, blocked = false, posts, page, total, followerTotal = 0, people = [], tab = 'notes', social,
@@ -48,7 +49,7 @@ export function TagFeed(
                 </form>
               </div>
             )
-            : <a className="button" href="/enter" rel="nofollow">enter to follow</a>}
+            : <a className="button" href={enterHref()} rel="nofollow">enter to follow</a>}
         </div>
         {returnPath && <a className="profile-edit-link tag-back-link" href={returnPath}>back</a>}
       </section>

@@ -722,6 +722,7 @@ test('consequential account, content, reporting, and admin flows work over HTTP'
   expect(publicExploreHtml).toContain('placeholder="search notes, tags or people"')
   const noteSearchHtml = await (await request('/search?q=hello')).text()
   expect(noteSearchHtml).toContain('placeholder="search notes"')
+  expect(noteSearchHtml).toContain('href="/enter?next=%2Fsearch%3Fq%3Dhello"')
   const tagSearchHtml = await (await request('/search?q=hello&tab=tags')).text()
   expect(tagSearchHtml).toContain('placeholder="search tags"')
   const peopleSearchHtml = await (await request('/search?q=hello&tab=people')).text()
@@ -766,8 +767,13 @@ test('consequential account, content, reporting, and admin flows work over HTTP'
   expect(storedSession.token_hash).toHaveLength(64)
   expect(storedSession.token_hash).not.toBe(rawSession)
 
-  const logout = await request('/logout', { method: 'POST', cookie: aliceCookie })
+  const logout = await request('/logout', {
+    method: 'POST',
+    cookie: aliceCookie,
+    form: { returnTo: '/tag/onboarding?page=2' },
+  })
   expect(logout.status).toBe(303)
+  expect(logout.headers.get('location')).toBe('/tag/onboarding?page=2')
   expect((database.query('SELECT count(*) count FROM sessions WHERE user_id=?').get(alice.id) as any).count).toBe(0)
 
   aliceCookie = await signup('alice', 'alice@example.com', 'unused')

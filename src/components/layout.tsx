@@ -7,6 +7,8 @@ import { isAdmin } from '../admin'
 import type { User } from '../types'
 import { resolvedDensity } from '../request-preferences'
 import { RESPONSE_TIME_PLACEHOLDER } from '../response-time'
+import { LogoutForm } from './logout-form'
+import { enterHref } from './auth-links'
 
 let devReloadBootId: string | undefined
 
@@ -71,9 +73,9 @@ export function Layout({
             <div className="account-menu-popover">
               <a href={profileHref}>profile</a>
               <a href={accountHref}>account</a>
-              <form method="post" action="/logout">
+              <LogoutForm>
                 <button type="submit">logout</button>
-              </form>
+              </LogoutForm>
             </div>
           </div>
         </span>
@@ -84,7 +86,7 @@ export function Layout({
     : (
       <>
         <a href="/explore">explore</a>
-        <a className="button" href="/enter" rel="nofollow">enter</a>
+        <a className="button" href={enterHref()} rel="nofollow">enter</a>
       </>
     )
   return (
@@ -139,9 +141,9 @@ export function Layout({
           {logoutNavigation
             ? (
               <nav aria-label="Account">
-                <form method="post" action="/logout">
+                <LogoutForm>
                   <button className="quiet">logout</button>
-                </form>
+                </LogoutForm>
               </nav>
             )
             : (

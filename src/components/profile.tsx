@@ -7,6 +7,7 @@ import { FormMessage, Pagination, PostingHelp, PostingSuggestionResults, type Po
   ProfileHeader, ProfileTabs } from './page-shared'
 import { Post } from './post'
 import { DEFAULT_TIMEZONE, TIMEZONE_CHOICES } from '../timezone'
+import { LogoutForm } from './logout-form'
 
 export function Profile(
   { user, profile, posts, following, bio = profile.bio || '', editHandle = profile.handle, editEmail = profile.email,
@@ -96,9 +97,9 @@ export function Profile(
                       {user?.id === profile.id && (
                         <>
                           <a className="profile-edit-link" href="/account/edit">account</a>
-                          <form method="post" action="/logout">
+                          <LogoutForm>
                             <button className="profile-edit-link profile-logout">logout</button>
-                          </form>
+                          </LogoutForm>
                         </>
                       )}
                       {returnPath && user?.id === profile.id

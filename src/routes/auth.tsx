@@ -306,10 +306,11 @@ export function registerAuthRoutes(app: Hono) {
   })
 
   app.post('/logout', async c => {
+    const f = await form(c.req.raw)
     const cookieName = sessionCookieName()
     const session = c.req.header('cookie')?.split(';').map(cookie => cookie.trim())
       .find(cookie => cookie.startsWith(`${cookieName}=`))?.slice(cookieName.length + 1)
     if (session) await databaseService().call('auth.logout', { tokenHash: sessionHash(session) })
-    return redirect('/', clearSessionCookie())
+    return redirect(safeLocalPath(f.returnTo), clearSessionCookie())
   })
 }

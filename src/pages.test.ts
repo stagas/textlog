@@ -1186,6 +1186,7 @@ test('Profile places owner actions in the handle row', () => {
   expect(html).toContain('href="/account/edit">account</a>')
   expect(html).toContain('href="/latest#post-2">back</a>')
   expect(html).toContain('action="/logout"')
+  expect(html).toContain('name="returnTo" value="/"')
   expect(html).toContain('type="application/rss+xml" title="Notes by @reader (RSS)" href="/u/reader.rss"')
   expect(html).toContain('type="application/atom+xml" title="Notes by @reader (Atom)" href="/u/reader.atom"')
   expect(html).toContain('class="account-nav-row account-nav-primary"')

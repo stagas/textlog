@@ -8,6 +8,8 @@ import { markdownPlainText } from '../markdown'
 import { searchTerms } from '../search'
 import { displayBio, linkify } from '../utils'
 import { TagReference, UserReference } from './post'
+import { LogoutForm } from './logout-form'
+import { enterHref } from './auth-links'
 
 const postTitleLength = 60
 
@@ -392,7 +394,7 @@ export function ProfileControls({ user, profile, following, blocked = false }: {
           </form>
         </>
       )}
-      {!user && <a className="button" href="/enter" rel="nofollow">enter to follow</a>}
+      {!user && <a className="button" href={enterHref()} rel="nofollow">enter to follow</a>}
       {isAdmin(user) && user?.id !== profile.id && (
         <a className="quiet danger" href={`/admin/users/${profile.id}`}>moderate</a>
       )}
@@ -438,9 +440,9 @@ export function ProfileHeader(
             {user?.id === profile.id && (
               <div className="profile-owner-actions">
                 <a className="profile-edit-link" href="/account/edit">account</a>
-                <form method="post" action="/logout">
+                <LogoutForm>
                   <button className="profile-edit-link profile-logout">logout</button>
-                </form>
+                </LogoutForm>
               </div>
             )}
           </div>

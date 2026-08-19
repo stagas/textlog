@@ -5,6 +5,7 @@ import type { User } from '../types'
 import type { BioReferenceData, PostView, UserProfileStats } from '../types'
 import { displayBio, displayPostBody, fmt, fmtFull, linkify, referenceFormId } from '../utils'
 import { MetaRow } from './meta'
+import { enterHref } from './auth-links'
 
 export function UserReference(
   { handle, bio, noteCount, following, user, href, rel, currentHandle, stats, navigationQuery = '',
@@ -87,7 +88,7 @@ export function UserReference(
               </form>
             </span>
           )
-          : <a className="button" href="/enter" rel="nofollow">enter to follow</a>)}
+          : <a className="button" href={enterHref()} rel="nofollow">enter to follow</a>)}
       </span>
       {user && bioTags.map(tag => (
         <React.Fragment key={tag}>
@@ -150,7 +151,7 @@ export function TagReference(
               </form>
             </span>
           )
-          : <a className="button" href="/enter" rel="nofollow">enter to follow</a>)}
+          : <a className="button" href={enterHref()} rel="nofollow">enter to follow</a>)}
       </span>
     </span>
   )
