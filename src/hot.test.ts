@@ -139,8 +139,8 @@ describe('hot feed ranking', () => {
     const stored = database.query('SELECT score,reply_count,latest_activity_at FROM post_hot WHERE post_id=1')
       .get() as { score: number; reply_count: number; latest_activity_at: string }
     expect(stored.reply_count).toBe(2)
-    expect(stored.score).toBeCloseTo(2 * Math.pow(0.5, 2 / 6) + 2 * Math.pow(0.5, 1 / 6))
-    expect(stored.latest_activity_at).toBe('2026-08-03 12:00:00')
+    expect(stored.score).toBeCloseTo(2 * Math.pow(0.5, 1 / 6) + 2)
+    expect(stored.latest_activity_at).toBe('2026-08-03 11:00:00')
 
     rebuildHotPosts(database)
     const rebuilt = database.query('SELECT score,reply_count,latest_activity_at FROM post_hot WHERE post_id=1')
@@ -148,6 +148,53 @@ describe('hot feed ranking', () => {
     expect(rebuilt.reply_count).toBe(stored.reply_count)
     expect(rebuilt.latest_activity_at).toBe(stored.latest_activity_at)
     expect(rebuilt.score).toBeCloseTo(stored.score)
+  })
+
+  test('author comments do not refresh their original post hot recency', () => {
+    database.query('INSERT INTO users(id,handle) VALUES(?,?)').run(2, 'replier')
+    post(1, '2026-08-03 08:00:00')
+    postBy(2, 2, '2026-08-03 09:00:00', 1)
+    post(3, '2026-08-03 11:00:00', 2)
+
+    let stored = database.query('SELECT reply_count,activity_count,latest_activity_at FROM post_hot WHERE post_id=1')
+      .get() as { reply_count: number; activity_count: number; latest_activity_at: string }
+    expect(stored).toEqual({ reply_count: 1, activity_count: 1, latest_activity_at: '2026-08-03 09:00:00' })
+
+    rebuildHotPosts(database)
+    stored = database.query('SELECT reply_count,activity_count,latest_activity_at FROM post_hot WHERE post_id=1')
+      .get() as typeof stored
+    expect(stored).toEqual({ reply_count: 1, activity_count: 1, latest_activity_at: '2026-08-03 09:00:00' })
+  })
+
+  test('author comments do not add participant recency to an active top-level post', () => {
+    database.run(`INSERT INTO users(id,handle) VALUES(2,'one'),(3,'two'),(4,'three');`)
+    post(1, '2026-08-03 06:00:00')
+    postBy(2, 2, '2026-08-03 08:00:00', 1)
+    postBy(3, 3, '2026-08-03 08:00:00', 1)
+    postBy(4, 4, '2026-08-03 08:00:00', 1)
+    const before = getHotPosts(database, 20, null, asOf).find(result => result.id === 1)!
+
+    post(5, '2026-08-03 12:00:00', 1)
+    const after = getHotPosts(database, 20, null, asOf).find(result => result.id === 1)!
+
+    expect(after.latest_activity_at).toBe(before.latest_activity_at)
+    expect(after.hot_score).toBeCloseTo(before.hot_score)
+  })
+
+  test('repeated author comments do not cross conversation activity boost thresholds', () => {
+    database.run(`INSERT INTO users(id,handle) VALUES(2,'one'),(3,'two');`)
+    post(1, '2026-08-03 06:00:00')
+    postBy(2, 2, '2026-08-03 08:00:00', 1)
+    postBy(3, 3, '2026-08-03 08:00:00', 1)
+    const before = getHotPosts(database, 20, null, asOf).find(result => result.id === 1)!
+
+    for (let id = 4; id <= 10; id++) post(id, '2026-08-03 12:00:00', 1)
+    const after = getHotPosts(database, 20, null, asOf).find(result => result.id === 1)!
+    const stored = database.query('SELECT activity_count FROM post_hot WHERE post_id=1').get()
+
+    expect(stored).toEqual({ activity_count: 2 })
+    expect(after.latest_activity_at).toBe(before.latest_activity_at)
+    expect(after.hot_score).toBeCloseTo(before.hot_score)
   })
 
   test('keeps a heavily discussed three-day post below fresher discussions but within range', () => {

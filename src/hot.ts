@@ -26,7 +26,7 @@ export type HotCursor = {
   direction: 'next' | 'previous'
 }
 
-export const hotRankingVersion = 87
+export const hotRankingVersion = 88
 const cursorVersion = hotRankingVersion
 const activityHalfLifeHours = 6
 const postWeight = 0
@@ -172,14 +172,26 @@ export function rebuildHotPosts(database: Database, postIds?: number[]) {
       UNION ALL
       SELECT candidate_id,created_at,${directReplyWeight}*pow(0.5,depth-1)
       FROM ranked_replies WHERE reply_rank=1
+    ), recency_replies AS (
+      SELECT descendants.candidate_id,descendants.created_at FROM descendants
+      JOIN posts candidate ON candidate.id=descendants.candidate_id
+      LEFT JOIN users reply_user ON reply_user.id=descendants.user_id
+      JOIN users candidate_user ON candidate_user.id=candidate.user_id
+      WHERE descendants.deleted_at IS NULL
+        AND ${replyIdentity}!=${candidateIdentity}
     ), latest AS (
       SELECT candidate_id,max(created_at) latest_activity_at FROM (
         SELECT candidate_id,created_at FROM activity
         UNION ALL
-        SELECT candidate_id,created_at FROM descendants WHERE deleted_at IS NULL
+        SELECT candidate_id,created_at FROM recency_replies
       ) GROUP BY candidate_id
     ), totals AS (
-      SELECT candidate_id,count(*) activity_count FROM descendants WHERE deleted_at IS NULL GROUP BY candidate_id
+      SELECT descendants.candidate_id,count(*) activity_count FROM descendants
+      JOIN posts candidate ON candidate.id=descendants.candidate_id
+      LEFT JOIN users reply_user ON reply_user.id=descendants.user_id
+      JOIN users candidate_user ON candidate_user.id=candidate.user_id
+      WHERE descendants.deleted_at IS NULL AND ${replyIdentity}!=${candidateIdentity}
+      GROUP BY descendants.candidate_id
     ) SELECT activity.candidate_id post_id,latest.latest_activity_at,count(*)-1 reply_count,
       COALESCE(totals.activity_count,0) activity_count,
       sum(weight*pow(0.5,max(0,(julianday(latest.latest_activity_at)-julianday(activity.created_at))*24)/${activityHalfLifeHours}.0)) score
@@ -228,20 +240,28 @@ export function rebuildHotPosts(database: Database, postIds?: number[]) {
     JOIN users candidate_user ON candidate_user.id=candidate.user_id
     WHERE descendants.deleted_at IS NULL
       AND ${replyIdentity}!=${candidateIdentity}
-  ), activity(id,created_at,weight) AS (
-    SELECT id,created_at,${postWeight} FROM posts WHERE id=? AND deleted_at IS NULL
+  ), activity(id,created_at,weight,boosts_recency) AS (
+    SELECT id,created_at,${postWeight},1 FROM posts WHERE id=? AND deleted_at IS NULL
     UNION ALL
-    SELECT id,created_at,${directReplyWeight}*pow(0.5,depth-1) FROM ranked_replies WHERE reply_rank=1
+    SELECT id,created_at,${directReplyWeight}*pow(0.5,depth-1),1 FROM ranked_replies WHERE reply_rank=1
     UNION ALL
-    SELECT id,created_at,0 FROM descendants WHERE deleted_at IS NULL
-  ) SELECT created_at,weight FROM activity`)
+    SELECT descendants.id,descendants.created_at,0,
+      CASE WHEN ${replyIdentity}!=${candidateIdentity} THEN 1 ELSE 0 END
+    FROM descendants
+    JOIN posts candidate ON candidate.id=?
+    LEFT JOIN users reply_user ON reply_user.id=descendants.user_id
+    JOIN users candidate_user ON candidate_user.id=candidate.user_id
+    WHERE descendants.deleted_at IS NULL
+  ) SELECT created_at,weight,boosts_recency FROM activity`)
   const update = database.query(tracksReplyCount && tracksActivityCount
     ? 'UPDATE post_hot SET score=?,reply_count=?,activity_count=?,score_updated_at=?,latest_activity_at=? WHERE post_id=?'
     : tracksReplyCount
     ? 'UPDATE post_hot SET score=?,reply_count=?,score_updated_at=?,latest_activity_at=? WHERE post_id=?'
     : 'UPDATE post_hot SET score=?,score_updated_at=?,latest_activity_at=? WHERE post_id=?')
   for (const candidate of candidates) {
-    const events = activity.all(candidate.id, candidate.id, candidate.id) as { created_at: string; weight: number }[]
+    const events = activity.all(candidate.id, candidate.id, candidate.id, candidate.id) as {
+      created_at: string; weight: number; boosts_recency: number
+    }[]
     if (!events.length) {
       if (tracksReplyCount && tracksActivityCount) {
         update.run(0, 0, 0, '1970-01-01 00:00:00', '1970-01-01 00:00:00', candidate.id)
@@ -250,14 +270,17 @@ export function rebuildHotPosts(database: Database, postIds?: number[]) {
       else update.run(0, '1970-01-01 00:00:00', '1970-01-01 00:00:00', candidate.id)
       continue
     }
-    const latest = events.reduce((value, event) => event.created_at > value ? event.created_at : value,
-      events[0].created_at)
+    const recencyEvents = events.filter(event => event.boosts_recency)
+    const latest = recencyEvents.length
+      ? recencyEvents.reduce((value, event) => event.created_at > value ? event.created_at : value,
+        recencyEvents[0].created_at)
+      : events.reduce((value, event) => event.created_at > value ? event.created_at : value, events[0].created_at)
     const score = events.reduce((sum, event) =>
       sum
       + event.weight * Math.pow(0.5, Math.max(0, (Date.parse(`${latest.replace(' ', 'T')}Z`)
           - Date.parse(`${event.created_at.replace(' ', 'T')}Z`)) / (activityHalfLifeHours * 3_600_000))), 0)
     const replyCount = events.filter(event => event.weight > 0).length
-    const activityCount = events.filter(event => event.weight === 0).length - 1
+    const activityCount = events.filter(event => event.weight === 0 && event.boosts_recency).length - 1
     if (tracksReplyCount && tracksActivityCount) {
       update.run(score, replyCount, activityCount, latest, latest, candidate.id)
     }
@@ -287,6 +310,14 @@ export function getHotPosts(
   minimumDiscussionReplies = 0,
 ) {
   const timestamp = cursor?.asOf || (asOf instanceof Date ? asOf.toISOString() : asOf)
+  const tracksAccountGroups = (database.query('PRAGMA table_info(users)').all() as { name: string }[])
+    .some(column => column.name === 'account_group_id')
+  const activityAuthorIdentity = tracksAccountGroups
+    ? 'COALESCE(activity_user.account_group_id,-activity_user.id)'
+    : 'activity_user.id'
+  const candidateAuthorIdentity = tracksAccountGroups
+    ? 'COALESCE(candidate_user.account_group_id,-candidate_user.id)'
+    : 'candidate_user.id'
   const filters = ['p.deleted_at IS NULL', 'ranked.hot_score > 0']
   const parameters: Array<string | number> = [timestamp]
   if (viewerId >= 0) {
@@ -333,8 +364,13 @@ export function getHotPosts(
     SELECT root_id,head_id FROM branch_candidates
     WHERE branch_rank=1 AND head_direct_replies>=2 AND head_direct_replies>root_direct_replies
   ), direct_participant_activity AS (
-    SELECT parent_id candidate_id,user_id,max(created_at) latest_reply_at FROM posts
-      WHERE parent_id IS NOT NULL AND deleted_at IS NULL GROUP BY parent_id,user_id
+    SELECT reply.parent_id candidate_id,${activityAuthorIdentity} participant_id,
+      max(reply.created_at) latest_reply_at FROM posts reply
+      JOIN users activity_user ON activity_user.id=reply.user_id
+      JOIN posts candidate ON candidate.id=reply.parent_id
+      JOIN users candidate_user ON candidate_user.id=candidate.user_id
+      WHERE reply.deleted_at IS NULL AND ${activityAuthorIdentity}!=${candidateAuthorIdentity}
+      GROUP BY reply.parent_id,${activityAuthorIdentity}
   ), participant_recency AS (
     SELECT candidate_id,sum(pow(0.5,max(0,(julianday(?) - julianday(latest_reply_at))*24)
       /${recentParticipantActivityHalfLifeHours}.0)) participant_recency_score

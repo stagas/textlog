@@ -1224,6 +1224,13 @@ export const migrations: Migration[] = [
       database.run('CREATE INDEX IF NOT EXISTS to_me_reads_user_read_at ON to_me_reads(user_id,read_at)')
     },
   },
+  {
+    version: 98,
+    name: 'exclude_author_comments_from_hot_recency',
+    up(database) {
+      rebuildHotPosts(database)
+    },
+  },
 ]
 
 export const latestMigrationVersion = migrations.at(-1)!.version
