@@ -309,6 +309,7 @@ export function Post({
       <MetaRow className={`posttop${contextLabel ? ' posttop-context' : ''}${preview ? ' preview-post-meta' : ''}`}
         unread={contextUnread}
       >
+        {metaAction}
         {preview
           ? (
             <UserReference handle={p.handle} bio={p.bio} noteCount={p.note_count || 0} stats={p.profile_stats}
@@ -351,7 +352,6 @@ export function Post({
         {reportHref && (
           <a className="quiet report-link" href={reportHref} aria-label={`report post by @${p.handle}`}>report</a>
         )}
-        {metaAction}
         {showOwnerActions && user?.id === p.user_id && (
           <div className="post-actions">
             <a className="quiet" href={'/post/' + p.id + '/edit' + actionQuery} aria-label="edit this post">edit</a>

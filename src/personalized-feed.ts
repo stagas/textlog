@@ -6,19 +6,23 @@ import { resolveHandle } from './handles'
 import { enrichPosts, visibleTagFollowerCounts, visibleUserProfileStats } from './posts'
 import type { PersonalizedFeedData, PersonalizedTimelineRow, User } from './types'
 
+const PERSONALIZED_FEED_SNAPSHOT_VERSION = 2
+
 export function loadPersonalizedFeed(database: Database, user: User, page: number, pageSize: number, toMe: boolean,
   path: string, markRead = true): PersonalizedFeedData
 {
   const readsTable = toMe ? 'to_me_reads' : 'for_you_reads'
   const filter = toMe ? 'WHERE timeline.targeted_to_viewer=1' : ''
-  const snapshot = feedSnapshotPage<PersonalizedTimelineRow>(database, toMe ? 'to-me' : 'for-you', user.id, page,
+  const snapshotKind = `${toMe ? 'to-me' : 'for-you'}:v${PERSONALIZED_FEED_SNAPSHOT_VERSION}`
+  const snapshot = feedSnapshotPage<PersonalizedTimelineRow>(database, snapshotKind, user.id, page,
     () => database.query(`SELECT timeline.*,
       NOT EXISTS(SELECT 1 FROM ${readsTable} seen WHERE seen.user_id=$viewer
         AND seen.event_key=timeline.event_key) unread FROM (
       SELECT p.id,p.user_id,p.body,p.created_at,p.parent_id,p.deleted_at,p.has_latex,p.has_links,p.has_code,u.handle,
         EXISTS(SELECT 1 FROM follows vf WHERE vf.follower_id=$viewer AND vf.following_id=p.user_id) following,
         'post' activity_kind,'post:' || printf('%020d',p.id) event_key,p.user_id actor_id,
-        u.handle actor_handle,u.bio actor_bio,NULL target_handle,NULL target_tag,NULL target_bio,0 target_is_viewer,
+        u.handle actor_handle,u.bio actor_bio,u.is_bot actor_is_bot,NULL target_handle,NULL target_tag,NULL target_bio,
+        0 target_is_viewer,
         0 targeted_to_viewer,NULL posts
       FROM posts p JOIN users u ON u.id=p.user_id LEFT JOIN posts parent ON parent.id=p.parent_id
       LEFT JOIN post_mentions pm ON pm.post_id=p.id AND pm.user_id=$viewer
@@ -35,6 +39,7 @@ export function loadPersonalizedFeed(database: Database, user: User, page: numbe
         EXISTS(SELECT 1 FROM follows vf WHERE vf.follower_id=$viewer AND vf.following_id=p.user_id) following,
         CASE WHEN parent.user_id=$viewer THEN 'reply' ELSE 'mention' END activity_kind,
         'post:' || printf('%020d',p.id) event_key,p.user_id actor_id,u.handle actor_handle,u.bio actor_bio,
+        u.is_bot actor_is_bot,
         NULL target_handle,NULL target_tag,NULL target_bio,0 target_is_viewer,1 targeted_to_viewer,NULL posts
       FROM posts p JOIN users u ON u.id=p.user_id LEFT JOIN posts parent ON parent.id=p.parent_id
       LEFT JOIN post_mentions pm ON pm.post_id=p.id AND pm.user_id=$viewer
@@ -49,7 +54,8 @@ export function loadPersonalizedFeed(database: Database, user: User, page: numbe
         EXISTS(SELECT 1 FROM follows tf WHERE tf.follower_id=$viewer AND tf.following_id=target.id) following,
         'user_follow' activity_kind,
         'user-follow:' || printf('%020d',actor.id) || ':' || printf('%020d',target.id) || ':' || f.created_at event_key,
-        actor.id actor_id,actor.handle actor_handle,actor.bio actor_bio,target.handle target_handle,NULL target_tag,
+        actor.id actor_id,actor.handle actor_handle,actor.bio actor_bio,actor.is_bot actor_is_bot,
+        target.handle target_handle,NULL target_tag,
         target.bio target_bio,target.id=$viewer target_is_viewer,target.id=$viewer targeted_to_viewer,
         (SELECT count(*) FROM posts tp WHERE tp.user_id=target.id AND tp.deleted_at IS NULL) posts
       FROM follows f JOIN users actor ON actor.id=f.follower_id JOIN users target ON target.id=f.following_id
@@ -65,7 +71,8 @@ export function loadPersonalizedFeed(database: Database, user: User, page: numbe
         EXISTS(SELECT 1 FROM hashtag_follows vt WHERE vt.user_id=$viewer AND vt.tag=hf.tag) following,
         'tag_follow' activity_kind,
         'tag-follow:' || printf('%020d',actor.id) || ':' || hf.tag || ':' || hf.created_at event_key,
-        actor.id actor_id,actor.handle actor_handle,actor.bio actor_bio,NULL target_handle,hf.tag target_tag,NULL target_bio,
+        actor.id actor_id,actor.handle actor_handle,actor.bio actor_bio,actor.is_bot actor_is_bot,
+        NULL target_handle,hf.tag target_tag,NULL target_bio,
         0 target_is_viewer,0 targeted_to_viewer,(SELECT count(*) FROM post_hashtags ph JOIN posts hp ON hp.id=ph.post_id
           WHERE ph.tag=hf.tag AND hp.deleted_at IS NULL) posts
       FROM hashtag_follows hf JOIN users actor ON actor.id=hf.user_id
@@ -82,7 +89,8 @@ export function loadPersonalizedFeed(database: Database, user: User, page: numbe
         EXISTS(SELECT 1 FROM follows vf WHERE vf.follower_id=$viewer AND vf.following_id=actor.id) following,
         'user_follow' activity_kind,
         'user-follow:' || printf('%020d',actor.id) || ':' || printf('%020d',$viewer) || ':' || f.created_at event_key,
-        actor.id actor_id,actor.handle actor_handle,actor.bio actor_bio,NULL target_handle,NULL target_tag,
+        actor.id actor_id,actor.handle actor_handle,actor.bio actor_bio,actor.is_bot actor_is_bot,
+        NULL target_handle,NULL target_tag,
         actor.bio target_bio,1 target_is_viewer,1 targeted_to_viewer,
         (SELECT count(*) FROM posts fp WHERE fp.user_id=actor.id AND fp.deleted_at IS NULL) posts
       FROM follows f JOIN users actor ON actor.id=f.follower_id
@@ -94,7 +102,8 @@ export function loadPersonalizedFeed(database: Database, user: User, page: numbe
         NULL has_latex,NULL has_links,NULL has_code,u.handle,
         EXISTS(SELECT 1 FROM follows vf WHERE vf.follower_id=$viewer AND vf.following_id=u.id) following,
         'signup' activity_kind,'signup:' || printf('%020d',u.id) || ':' || u.handle_chosen_at event_key,
-        u.id actor_id,u.handle actor_handle,u.bio actor_bio,NULL target_handle,NULL target_tag,u.bio target_bio,
+        u.id actor_id,u.handle actor_handle,u.bio actor_bio,u.is_bot actor_is_bot,
+        NULL target_handle,NULL target_tag,u.bio target_bio,
         0 target_is_viewer,0 targeted_to_viewer,
         (SELECT count(*) FROM posts sp WHERE sp.user_id=u.id AND sp.deleted_at IS NULL) posts
       FROM users u WHERE $admin=1 AND u.handle_chosen_at IS NOT NULL AND u.deleted_at IS NULL

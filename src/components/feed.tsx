@@ -54,6 +54,7 @@ export function Feed({ user, data, title, path = '/for-you', pageUrl, notificati
     : null
   const showTopPagination = data.page > 1 || (data.page === 1 && unreadPage !== null && unreadPage > 1)
   const filterAuthors = [...new Map(data.timeline
+    .filter(row => !!row.actor_is_bot && ['post', 'reply', 'mention'].includes(row.activity_kind))
     .map(row => [row.actor_id, row.actor_handle])).entries()]
     .map(([id, handle]) => ({ id, handle }))
     .sort((a, b) => a.handle.localeCompare(b.handle))
@@ -64,10 +65,11 @@ export function Feed({ user, data, title, path = '/for-you', pageUrl, notificati
   const renderTimelineRow = (row: PersonalizedTimelineRow) => {
     const activityAnchor = `activity-${row.event_key.replace(/[^a-z0-9_-]+/gi, '-')}`
     const hideControlId = `hide-${activityAnchor}`
-    const hideAction = <>
+    const hideAction = row.actor_is_bot && ['post', 'reply', 'mention'].includes(row.activity_kind) ? <>
       <input className={`for-you-hide-input for-you-hide-${row.actor_id}`} type="checkbox" id={hideControlId} />
-      <label className="quiet for-you-hide-action" htmlFor={hideControlId}>hide</label>
-    </>
+      <label className="quiet for-you-hide-action" htmlFor={hideControlId}
+        aria-label={`hide posts by @${row.actor_handle}`}>×</label>
+    </> : null
     const activityReturnPath = `${returnPath}#${activityAnchor}`
     const fromQuery = `?from=${encodeURIComponent(activityReturnPath)}`
     return ['post', 'reply', 'mention'].includes(row.activity_kind)
@@ -83,9 +85,10 @@ export function Feed({ user, data, title, path = '/for-you', pageUrl, notificati
       )
       : (
         <article className={`activity-follow${row.unread && row.targeted_to_viewer
-          ? ' activity-item-directed-unread' : ''} for-you-author-${row.actor_id}`} key={row.event_key} id={activityAnchor}>
+          ? ' activity-item-directed-unread' : ''}`} key={row.event_key} id={activityAnchor}>
           <div className="activity-follow-content">
             <MetaRow className="activity-follow-main" unread={!!row.unread}>
+              {hideAction}
               <UserReference handle={row.actor_handle} bio={row.actor_bio}
                 noteCount={row.actorProfileStats?.notes || 0} stats={row.actorProfileStats}
                 following={!!row.following} user={user} href={row.activity_kind === 'signup'
@@ -108,7 +111,6 @@ export function Feed({ user, data, title, path = '/for-you', pageUrl, notificati
                     ? `/tag/${row.target_tag}` : `/u/${row.activity_kind === 'user_follow' && !row.target_is_viewer
                       ? row.target_handle : row.actor_handle}`) + fromQuery} />
                 : <MetaStats createdAt={row.created_at} count={null} className="activity-follow-stats" />}
-              {hideAction}
             </MetaRow>
             {(row.activity_kind === 'user_follow' || row.activity_kind === 'signup') && (
               <p className="profile-bio" dangerouslySetInnerHTML={{ __html: linkify(displayBio(row.target_bio)) }} />

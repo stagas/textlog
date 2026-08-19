@@ -109,6 +109,7 @@ export type PersonalizedTimelineRow = PostView & {
   actor_id: number
   actor_handle: string
   actor_bio: string
+  actor_is_bot?: number
   target_handle: string | null
   target_tag: string | null
   target_bio: string | null

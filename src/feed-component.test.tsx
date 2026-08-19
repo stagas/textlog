@@ -4,7 +4,7 @@ import { renderToStaticMarkup } from 'react-dom/server'
 import { Feed } from './components/feed'
 import type { PersonalizedTimelineRow } from './types'
 
-function postActivity(id: number, actorId: number, handle: string): PersonalizedTimelineRow {
+function postActivity(id: number, actorId: number, handle: string, actorIsBot = true): PersonalizedTimelineRow {
   const post = {
     id, user_id: actorId, parent_id: null, body: `note by ${handle}`, created_at: '2026-08-19 10:00:00',
     deleted_at: null, handle, reply_count: 0,
@@ -12,6 +12,7 @@ function postActivity(id: number, actorId: number, handle: string): Personalized
   return {
     ...post,
     activity_kind: 'post', event_key: `post:${id}`, actor_id: actorId, actor_handle: handle, actor_bio: '',
+    actor_is_bot: Number(actorIsBot),
     target_handle: null, target_tag: null, target_bio: null, following: true, target_is_viewer: false,
     targeted_to_viewer: false, posts: null, unread: 0, renderedPost: post,
   }
@@ -27,7 +28,7 @@ test('for-you renders a page-local hide action on each entry', () => {
 
   expect(html).not.toContain('for-you-author-filters')
   expect(html).toContain('class="for-you-hide-input for-you-hide-2" type="checkbox"')
-  expect(html).toContain('class="quiet for-you-hide-action" for="hide-activity-post-10">hide</label>')
+  expect(html).toContain('aria-label="hide posts by @alice">×</label>')
   expect(html).toContain('for-you-item for-you-author-2')
   expect(html).toContain(':has(.for-you-hide-2:checked) .for-you-author-2')
 })
@@ -44,7 +45,7 @@ test('for-you offers hiding even when only one author is present', () => {
   expect(html).toContain('class="quiet for-you-hide-action"')
 })
 
-test('for-you hide actions also target follow activity', () => {
+test('for-you does not put hide actions on follow activity', () => {
   const followActivity = {
     ...postActivity(12, 4, 'carol'), activity_kind: 'user_follow' as const, event_key: 'user-follow:12',
     target_handle: 'dave', target_bio: '', renderedPost: undefined,
@@ -56,9 +57,20 @@ test('for-you hide actions also target follow activity', () => {
       toMeCount: 0, forYouCount: 0, forYouUnread: false, toMeUnread: false }}
   />)
 
-  expect(html).toContain('for-you-author-4')
-  expect(html).toContain('for-you-hide-input for-you-hide-4')
-  expect(html).toContain(':has(.for-you-hide-4:checked) .for-you-author-4')
+  expect(html).not.toContain('for-you-hide-input for-you-hide-4')
+  expect(html).not.toContain(':has(.for-you-hide-4:checked) .for-you-author-4')
+})
+
+test('for-you does not put hide actions on posts by people', () => {
+  const html = renderToStaticMarkup(<Feed
+    user={{ id: 1, handle: 'reader', email: 'reader@example.com', bio: '',
+      handle_chosen_at: '2026-08-19 09:00:00' }}
+    data={{ timeline: [postActivity(10, 2, 'alice', false)], page: 1, totalPages: 1,
+      toMeCount: 0, forYouCount: 0, forYouUnread: false, toMeUnread: false }}
+  />)
+
+  expect(html).not.toContain('for-you-hide-action')
+  expect(html).not.toContain('for-you-filter-shell')
 })
 
 test('secondary for-you pages retain top pagination with hide actions', () => {

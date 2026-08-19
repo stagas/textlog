@@ -1172,7 +1172,9 @@ test('consequential account, content, reporting, and admin flows work over HTTP'
   }
   expect(await (await request('/latest')).text()).not.toContain(botPostBody)
   expect(await (await request('/u/bob')).text()).toContain(botPostBody)
-  expect(await (await request('/for-you', { cookie: aliceCookie })).text()).toContain(botPostBody)
+  const forYouWithBotPost = await (await request('/for-you', { cookie: aliceCookie })).text()
+  expect(forYouWithBotPost).toContain(botPostBody)
+  expect(forYouWithBotPost).toContain('class="quiet for-you-hide-action"')
   database.query('INSERT INTO posts(user_id,parent_id,body) VALUES(?,?,?)')
     .run(alice.id, botPost.id, 'A human reply quoting the bot')
   const latestWithBotQuote = await (await request('/latest')).text()
