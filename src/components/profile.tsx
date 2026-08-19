@@ -77,7 +77,7 @@ export function Profile(
                 <span className="identity-prefix">@</span>
                 {profile.handle}
               </a>
-              {user?.id === profile.id && (
+              {!editing && user?.id === profile.id && (
                 <span className="profile-user-details" title="Only visible to you">
                   <span>User ID: {profile.id}</span>
                   {profile.created_at && <span>Since: {fmtDate(profile.created_at)}, {fmt(profile.created_at)} ago</span>}

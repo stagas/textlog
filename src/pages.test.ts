@@ -1162,6 +1162,7 @@ test('Profile edit offers a data download without rendering notes', () => {
   expect(html.indexOf('This account is a bot')).toBeLessThan(html.indexOf('save profile'))
   expect(html).not.toContain('pattern="[A-Za-z0-9_]{2,24}"')
   expect(html).not.toContain('hidden while editing')
+  expect(html).not.toContain('class="profile-user-details"')
 })
 
 test('Profile places owner actions in the handle row', () => {
