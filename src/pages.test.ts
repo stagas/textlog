@@ -1185,11 +1185,10 @@ test('Profile places owner actions in the handle row', () => {
 
   expect(html).toContain('class="profile-title-row"')
   expect(html).toContain(
-    'class="profile-canonical-link" href="/u/reader"><span class="identity-prefix">@</span>reader</a>'
-      + '<span class="profile-user-details" title="Only visible to you"><span>User ID: 1</span>'
-      + '<span>Since: Aug 3, 2026, ',
+    'class="profile-canonical-link" href="/u/reader" title="User ID: 1\nSince: Aug 3, 2026, ',
   )
-  expect(html).toContain(' ago</span></span>')
+  expect(html).toContain(' ago"><span class="identity-prefix">@</span>reader</a>')
+  expect(html).not.toContain('class="profile-user-details"')
   expect(html).not.toContain('class="profile-canonical-link" href="/u/reader?from=')
   expect(html).toContain('href="/account/edit">account</a>')
   expect(html).toContain('href="/latest#post-2">back</a>')

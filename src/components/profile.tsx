@@ -77,17 +77,16 @@ export function Profile(
               ? ' profile-title-row-actions'
               : ''
           }`}>
-            <h1 className={user?.id === profile.id ? 'profile-title-with-id' : undefined}>
-              <a className="profile-canonical-link" href={`/u/${profile.handle}`}>
+            <h1>
+              <a className="profile-canonical-link" href={`/u/${profile.handle}`}
+                title={!editing && user?.id === profile.id
+                  ? `User ID: ${profile.id}${profile.created_at
+                    ? `\nSince: ${fmtDate(profile.created_at)}, ${fmt(profile.created_at)} ago`
+                    : ''}`
+                  : undefined}>
                 <span className="identity-prefix">@</span>
                 {profile.handle}
               </a>
-              {!editing && user?.id === profile.id && (
-                <span className="profile-user-details" title="Only visible to you">
-                  <span>User ID: {profile.id}</span>
-                  {profile.created_at && <span>Since: {fmtDate(profile.created_at)}, {fmt(profile.created_at)} ago</span>}
-                </span>
-              )}
             </h1>
             {editing && <a className="profile-edit-link profile-switch-link" href="/account/accounts">switch</a>}
             {!editing && user?.id !== profile.id
