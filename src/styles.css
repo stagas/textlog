@@ -3109,6 +3109,24 @@ form.report-panel {
   font-weight: 600;
 }
 
+.profile-title-with-id {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.profile-title-with-id .profile-canonical-link {
+  flex: 0 1 auto;
+}
+
+.profile-user-id {
+  flex: none;
+  color: var(--quote-ink);
+  font-size: 0.6875rem;
+  font-weight: 400;
+  line-height: 1.2;
+}
+
 .profile-canonical-link,
 .tag-canonical-link {
   color: inherit;

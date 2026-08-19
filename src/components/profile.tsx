@@ -72,11 +72,12 @@ export function Profile(
               ? ' profile-title-row-actions'
               : ''
           }`}>
-            <h1>
+            <h1 className={user?.id === profile.id ? 'profile-title-with-id' : undefined}>
               <a className="profile-canonical-link" href={`/u/${profile.handle}`}>
                 <span className="identity-prefix">@</span>
                 {profile.handle}
               </a>
+              {user?.id === profile.id && <span className="profile-user-id">#{profile.id}</span>}
             </h1>
             {editing && <a className="profile-edit-link profile-switch-link" href="/account/accounts">switch</a>}
             {!editing && user?.id !== profile.id

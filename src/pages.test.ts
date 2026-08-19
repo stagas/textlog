@@ -1176,7 +1176,8 @@ test('Profile places owner actions in the handle row', () => {
 
   expect(html).toContain('class="profile-title-row"')
   expect(html).toContain(
-    'class="profile-canonical-link" href="/u/reader"><span class="identity-prefix">@</span>reader</a>',
+    'class="profile-canonical-link" href="/u/reader"><span class="identity-prefix">@</span>reader</a>'
+      + '<span class="profile-user-id">#1</span>',
   )
   expect(html).not.toContain('class="profile-canonical-link" href="/u/reader?from=')
   expect(html).toContain('href="/account/edit">account</a>')
@@ -1207,6 +1208,7 @@ test('Profile places a contextual back link in the handle row', () => {
   expect(html).toContain('class="profile-action profile-handle-actions"')
   expect(html).toContain('class="profile-action profile-back-action"')
   expect(html).toContain('href="/latest#post-2">back</a>')
+  expect(html).not.toContain('class="profile-user-id"')
   expect(html.indexOf('aria-label="follow @writer"')).toBeLessThan(html.indexOf('href="/latest#post-2">back</a>'))
   expect(html).toContain('href="/u/writer?from=%2Flatest%23post-2">0 notes</a>')
   expect(html).toContain('href="/u/writer?tab=replies&amp;from=%2Flatest%23post-2">0 replies</a>')
