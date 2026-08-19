@@ -137,12 +137,22 @@ export function loadPersonalizedFeed(database: Database, user: User, page: numbe
       AND seen.event_key=json_extract(item.payload,'$.event_key')
     WHERE item.snapshot_id=? AND seen.event_key IS NULL ORDER BY item.position LIMIT 1`)
     .get(user.id, snapshot.snapshotId) as { position: number; payload: string } | null : null
-  const first = firstUnread ? JSON.parse(firstUnread.payload) as PersonalizedTimelineRow : null
-  const firstPage = firstUnread ? Math.floor(firstUnread.position / pageSize) + 1 : null
-  const anchor = first ? ['post', 'reply', 'mention'].includes(first.activity_kind) ? `post-${first.id}`
-    : `activity-${first.event_key.replace(/[^a-z0-9_-]+/gi, '-')}` : null
+  const lastUnread = firstUnread ? database.query(`SELECT item.position,item.payload
+    FROM feed_snapshot_items item LEFT JOIN for_you_reads seen ON seen.user_id=?
+      AND seen.event_key=json_extract(item.payload,'$.event_key')
+    WHERE item.snapshot_id=? AND seen.event_key IS NULL ORDER BY item.position DESC LIMIT 1`)
+    .get(user.id, snapshot.snapshotId) as { position: number; payload: string } | null : null
+  const unreadHref = (item: { position: number; payload: string } | null) => {
+    if (!item) return undefined
+    const row = JSON.parse(item.payload) as PersonalizedTimelineRow
+    const page = Math.floor(item.position / pageSize) + 1
+    const anchor = ['post', 'reply', 'mention'].includes(row.activity_kind) ? `post-${row.id}`
+      : `activity-${row.event_key.replace(/[^a-z0-9_-]+/gi, '-')}`
+    return `${path}${page > 1 ? `?page=${page}` : ''}#${anchor}`
+  }
   return { timeline: resultTimeline, page: snapshot.page, totalPages: snapshot.totalPages,
     toMeCount: targetedKeys.filter(key => !seenToMe.has(key)).length,
     forYouCount: unreadForYouCount(user.id, database), forYouUnread, toMeUnread,
-    unreadHref: firstPage && anchor ? `${path}${firstPage > 1 ? `?page=${firstPage}` : ''}#${anchor}` : undefined }
+    unreadHref: unreadHref(firstUnread),
+    lastUnreadHref: lastUnread?.position !== firstUnread?.position ? unreadHref(lastUnread) : undefined }
 }

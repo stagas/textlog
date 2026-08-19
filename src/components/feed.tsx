@@ -49,21 +49,40 @@ export function Feed({ user, data, title, path = '/for-you', pageUrl, notificati
 }) {
   const returnPath = path + (data.page > 1 ? `?page=${data.page}` : '')
   const hasUnread = toMe ? data.toMeUnread : data.forYouUnread || data.toMeUnread
+  const unreadPage = data.unreadHref
+    ? Number(new URL(data.unreadHref, 'http://localhost').searchParams.get('page') || 1)
+    : null
+  const showTopPagination = data.page > 1 || (data.page === 1 && unreadPage !== null && unreadPage > 1)
+  const filterAuthors = [...new Map(data.timeline
+    .map(row => [row.actor_id, row.actor_handle])).entries()]
+    .map(([id, handle]) => ({ id, handle }))
+    .sort((a, b) => a.handle.localeCompare(b.handle))
+  const hasAuthorHiding = filterAuthors.length > 0
+  const authorFilterStyles = filterAuthors.map(author =>
+    `.for-you-filter-shell:has(.for-you-hide-${author.id}:checked) .for-you-author-${author.id}{display:none}`,
+  ).join('')
   const renderTimelineRow = (row: PersonalizedTimelineRow) => {
     const activityAnchor = `activity-${row.event_key.replace(/[^a-z0-9_-]+/gi, '-')}`
+    const hideControlId = `hide-${activityAnchor}`
+    const hideAction = <>
+      <input className={`for-you-hide-input for-you-hide-${row.actor_id}`} type="checkbox" id={hideControlId} />
+      <label className="quiet for-you-hide-action" htmlFor={hideControlId}>hide</label>
+    </>
     const activityReturnPath = `${returnPath}#${activityAnchor}`
     const fromQuery = `?from=${encodeURIComponent(activityReturnPath)}`
     return ['post', 'reply', 'mention'].includes(row.activity_kind)
       ? (
-        <div className={`for-you-item${row.unread && row.targeted_to_viewer ? ' activity-item-directed-unread' : ''}`}
+        <div className={`for-you-item for-you-author-${row.actor_id}${
+          row.unread && row.targeted_to_viewer ? ' activity-item-directed-unread' : ''}`}
           key={row.event_key}>
           <Post p={row.renderedPost!} user={user} showReplyCount tappable contextUnread={!!row.unread}
             returnPath={`${returnPath}#post-${row.id}`} contextLabel={row.activity_kind === 'reply'
-            ? 'replied to you:' : row.activity_kind === 'mention' ? 'mentioned you:' : undefined} />
+            ? 'replied to you:' : row.activity_kind === 'mention' ? 'mentioned you:' : undefined}
+            metaAction={hideAction} />
         </div>
       )
       : (
-        <article className={`activity-follow${row.unread && row.targeted_to_viewer
+        <article className={`activity-follow for-you-author-${row.actor_id}${row.unread && row.targeted_to_viewer
           ? ' activity-item-directed-unread' : ''}`} key={row.event_key} id={activityAnchor}>
           <div className="activity-follow-content">
             <MetaRow className="activity-follow-main" unread={!!row.unread}>
@@ -89,6 +108,7 @@ export function Feed({ user, data, title, path = '/for-you', pageUrl, notificati
                     ? `/tag/${row.target_tag}` : `/u/${row.activity_kind === 'user_follow' && !row.target_is_viewer
                       ? row.target_handle : row.actor_handle}`) + fromQuery} />
                 : <MetaStats createdAt={row.created_at} count={null} className="activity-follow-stats" />}
+              {hideAction}
             </MetaRow>
             {(row.activity_kind === 'user_follow' || row.activity_kind === 'signup') && (
               <p className="profile-bio" dangerouslySetInnerHTML={{ __html: linkify(displayBio(row.target_bio)) }} />
@@ -114,10 +134,24 @@ export function Feed({ user, data, title, path = '/for-you', pageUrl, notificati
       <h1 className="visually-hidden">Your feed</h1>
       <FeedTabs active="following" user={user} forYouReadStatus={data.timeline.length ? hasUnread : undefined}
         toMe={toMe} toMeCount={toMe ? 0 : data.toMeCount} forYouCount={data.forYouCount} unreadHref={data.unreadHref}
+        lastUnreadHref={data.lastUnreadHref}
         forYouUnread={data.forYouUnread} toMeUnread={data.toMeUnread} />
-      {data.page > 1 && <Pagination page={data.page} totalPages={data.totalPages} path={path} top />}
+      {showTopPagination && (!data.timeline.length || !hasAuthorHiding)
+        && <Pagination page={data.page} totalPages={data.totalPages} path={path} top />}
       {data.timeline.length
-        ? groupSimilarActivities(data.timeline).map(group => group.rows.length > 1 && group.collapsible
+        ? hasAuthorHiding
+        ? <div className="for-you-filter-shell">
+          <style>{authorFilterStyles}</style>
+          {showTopPagination && <Pagination page={data.page} totalPages={data.totalPages} path={path} top />}
+          {groupSimilarActivities(data.timeline).map(group => group.rows.length > 1 && group.collapsible
+            ? <div className="activity-group" key={group.rows[0].event_key}>
+              {renderTimelineRow(group.rows[0])}
+              <details className="activity-more"><summary>and {group.rows.length - 1} more</summary>
+                {group.rows.slice(1).map(renderTimelineRow)}</details>
+            </div>
+            : renderTimelineRow(group.rows[0]))}
+        </div>
+        : groupSimilarActivities(data.timeline).map(group => group.rows.length > 1 && group.collapsible
           ? <div className="activity-group" key={group.rows[0].event_key}>
             {renderTimelineRow(group.rows[0])}
             <details className="activity-more"><summary>and {group.rows.length - 1} more</summary>

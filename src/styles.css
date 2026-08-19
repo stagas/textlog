@@ -4341,6 +4341,29 @@ form.report-panel {
   margin-right: calc(1ch - var(--space-4));
 }
 
+.activity-more > summary {
+  user-select: none;
+}
+
+.for-you-hide-input {
+  position: absolute;
+  opacity: 0;
+}
+
+.for-you-hide-action {
+  cursor: pointer;
+  user-select: none;
+}
+
+.activity-follow .for-you-hide-action {
+  margin-left: var(--space-2);
+}
+
+.for-you-hide-input:focus-visible + .for-you-hide-action {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
 .post-context {
   min-width: 0;
   margin-left: calc(-1 * var(--space-2) + 1ch);

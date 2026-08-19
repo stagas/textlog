@@ -291,7 +291,7 @@ export function CursorPagination({ path, previousCursor, nextCursor }: {
 }
 
 export function FeedTabs({ active, user, forYouReadStatus, activityReadStatus, toMe = false, toMeCount = 0,
-  forYouCount = 0, unreadHref, forYouUnread = false, toMeUnread = false }: {
+  forYouCount = 0, unreadHref, lastUnreadHref, forYouUnread = false, toMeUnread = false }: {
   active: 'following' | 'activity' | 'hot' | 'latest'
   user: User | null
   forYouReadStatus?: boolean
@@ -300,6 +300,7 @@ export function FeedTabs({ active, user, forYouReadStatus, activityReadStatus, t
   toMeCount?: number
   forYouCount?: number
   unreadHref?: string
+  lastUnreadHref?: string
   forYouUnread?: boolean
   toMeUnread?: boolean
 }) {
@@ -349,10 +350,13 @@ export function FeedTabs({ active, user, forYouReadStatus, activityReadStatus, t
       </nav>
       {forYouReadStatus && (
         <div className="feed-read-action">
-          {unreadHref && <a className="activity-side-link" href={unreadHref}>jump to unread</a>}
+          {unreadHref && <span className="activity-side-status">jump to</span>}
+          {unreadHref && <a className="activity-side-link" href={unreadHref}>first unread</a>}
+          {lastUnreadHref && <span className="feed-tabs-action-separator" aria-hidden="true">·</span>}
+          {lastUnreadHref && <a className="activity-side-link" href={lastUnreadHref}>last unread</a>}
           {unreadHref && <span className="feed-tabs-action-separator" aria-hidden="true">·</span>}
           <form method="post" action={toMe ? '/to-me/read-all' : '/for-you/read-all'}>
-            <button className="activity-side-link">mark all as read</button>
+            <button className="activity-side-link">mark all read</button>
           </form>
         </div>
       )}

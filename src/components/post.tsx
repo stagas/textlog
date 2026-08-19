@@ -263,11 +263,12 @@ export function Post({
   backHref,
   canonicalTimestamp = false,
   topHref,
+  metaAction,
 }: { p: PostView; user: User | null; showReplyAction?: boolean; showOwnerActions?: boolean;
   showModerateAction?: boolean; showParent?: boolean; showReplyCount?: boolean; replyHref?: string; replyLabel?: string;
   reportHref?: string; foldControlId?: string; highlightTerms?: string[]; tappable?: boolean; tappableParent?: boolean;
   contextLabel?: string; contextUnread?: boolean; preview?: boolean; returnPath?: string; backHref?: string;
-  canonicalTimestamp?: boolean; topHref?: string })
+  canonicalTimestamp?: boolean; topHref?: string; metaAction?: React.ReactNode })
 {
   const parent = showParent ? p.parent : null
   const hasTappableParent = Boolean(parent && (tappable || tappableParent))
@@ -350,6 +351,7 @@ export function Post({
         {reportHref && (
           <a className="quiet report-link" href={reportHref} aria-label={`report post by @${p.handle}`}>report</a>
         )}
+        {metaAction}
         {showOwnerActions && user?.id === p.user_id && (
           <div className="post-actions">
             <a className="quiet" href={'/post/' + p.id + '/edit' + actionQuery} aria-label="edit this post">edit</a>

@@ -131,6 +131,7 @@ export type PersonalizedFeedData = {
   forYouUnread: boolean
   toMeUnread: boolean
   unreadHref?: string
+  lastUnreadHref?: string
 }
 
 export type ProfileRow = {
