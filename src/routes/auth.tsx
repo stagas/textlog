@@ -19,7 +19,9 @@ import type { Hono } from 'hono'
 export const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 const dummyPasswordHash = hashPassword(crypto.randomUUID())
 export function registerAuthRoutes(app: Hono) {
-  app.get('/enter', c => page(<Auth next={safeNext(c.req.query('next'))} />))
+  app.get('/enter', c => currentUser(c.req.raw)
+    ? redirect('/')
+    : page(<Auth next={safeNext(c.req.query('next'))} />))
   app.get('/login',
     c => redirect('/enter' + (c.req.query('next') ? `?next=${encodeURIComponent(safeNext(c.req.query('next')))}` : '')))
   app.get('/signup',
@@ -176,6 +178,10 @@ export function registerAuthRoutes(app: Hono) {
     const f = await form(c.req.raw)
     const identifier = (f.identifier || f.email || '').trim().toLowerCase()
     const next = safeNext(f.next)
+    const signedInUser = currentUser(c.req.raw)
+    const normalizedIdentifier = identifier.replace(/^@/, '')
+    if (signedInUser && normalizedIdentifier !== signedInUser.handle
+      && identifier !== signedInUser.email.toLowerCase()) return redirect('/')
     const limited = isDevelopment()
       ? null
       : await authLimit(c, 'enter-ip', clientAddress(c), AUTH_LIMITS.loginIp)
@@ -187,9 +193,12 @@ export function registerAuthRoutes(app: Hono) {
       )
     }
 
-    const account = await databaseService().call('auth.accountForIdentifier', {
-      identifier: identifier.replace(/^@/, ''), isEmail: emailPattern.test(identifier),
-    })
+    const account = signedInUser
+      ? { id: signedInUser.id, email: signedInUser.email, handle: signedInUser.handle,
+        password: '!', handleChosenAt: signedInUser.handle_chosen_at }
+      : await databaseService().call('auth.accountForIdentifier', {
+        identifier: normalizedIdentifier, isEmail: emailPattern.test(identifier),
+      })
     if ((!account && !emailPattern.test(identifier)) || identifier.length > 254) {
       return page(<Auth email={identifier} next={next} error="Enter a valid email address or handle." />, 400)
     }
@@ -236,6 +245,7 @@ export function registerAuthRoutes(app: Hono) {
     }
     const result = await databaseService().call('auth.consumeMagicLink', {
       selector: { email, codeHash: hash(code) }, userAgent: c.req.header('user-agent') || '', now: Date.now(),
+      currentUserId: currentUser(c.req.raw)?.id,
     })
     if (result.status === 'invalid') return invalid()
     if (result.status === 'unavailable') {
@@ -249,6 +259,7 @@ export function registerAuthRoutes(app: Hono) {
     if (!value) return page(<Auth error="That magic link is invalid or has expired. Request a new one." />, 400)
     const result = await databaseService().call('auth.consumeMagicLink', {
       selector: { tokenHash: hash(value) }, userAgent: c.req.header('user-agent') || '', now: Date.now(),
+      currentUserId: currentUser(c.req.raw)?.id,
     })
     if (result.status === 'invalid') {
       return page(<Auth error="That magic link is invalid or has expired. Request a new one." />, 400)

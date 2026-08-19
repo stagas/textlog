@@ -1270,7 +1270,7 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
       return null as DatabaseDomainOutput<K>
     }
     case 'auth.consumeMagicLink': {
-      const { selector, userAgent, now } = input as DatabaseDomainInput<'auth.consumeMagicLink'>
+      const { selector, userAgent, now, currentUserId } = input as DatabaseDomainInput<'auth.consumeMagicLink'>
       const link = ('tokenHash' in selector
         ? database.query(`SELECT token_hash,email,user_id,next_path,attempts FROM magic_links
           WHERE token_hash=? AND expires_at>?`).get(selector.tokenHash, now)
@@ -1278,7 +1278,8 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
           WHERE email=? AND code_hash IS NOT NULL AND expires_at>?`).get(selector.email, now)) as {
             token_hash: string; email: string; user_id: number | null; next_path: string; attempts: number
           } | null
-      if (!link || ('codeHash' in selector && !database.query(
+      if (!link || (currentUserId !== undefined && link.user_id !== currentUserId)
+        || ('codeHash' in selector && !database.query(
         'SELECT 1 FROM magic_links WHERE token_hash=? AND code_hash=?',
       ).get(link.token_hash, selector.codeHash))) {
         if (link && 'codeHash' in selector) {

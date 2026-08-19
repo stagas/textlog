@@ -43,7 +43,7 @@ export type DatabaseDomainOperations = {
     nextPath: string; expiresAt: number; now: number }; output: null }
   'auth.deleteMagicLink': { input: { tokenHash: string }; output: null }
   'auth.consumeMagicLink': { input: { selector: { tokenHash: string } | { email: string; codeHash: string };
-    userAgent: string; now: number }; output: { status: 'invalid' } | { status: 'unavailable' }
+    userAgent: string; now: number; currentUserId?: number }; output: { status: 'invalid' } | { status: 'unavailable' }
       | { status: 'ready'; session: string; destination: string } }
   'auth.preparePasswordReset': { input: { identifier: string; isEmail: boolean; tokenHash: string;
     expiresAt: number; now: number }; output: { email: string } | null }

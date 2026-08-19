@@ -539,6 +539,38 @@ test('consequential account, content, reporting, and admin flows work over HTTP'
   const alice = database.query('SELECT id,email_verified_at FROM users WHERE handle=?')
     .get('alice') as { id: number; email_verified_at: string | null }
   expect(alice.email_verified_at).not.toBeNull()
+  const authenticatedEntry = await request('/enter', { cookie: aliceCookie })
+  expect(authenticatedEntry.status).toBe(303)
+  expect(authenticatedEntry.headers.get('location')).toBe('/')
+  const emailCount = capturedEmails().length
+  const otherAccountRequest = await request('/enter', {
+    method: 'POST', cookie: aliceCookie, form: { email: 'another-account@example.com' },
+  })
+  expect(otherAccountRequest.status).toBe(303)
+  expect(otherAccountRequest.headers.get('location')).toBe('/')
+  expect(capturedEmails()).toHaveLength(emailCount)
+
+  const foreignRequest = await request('/enter', {
+    method: 'POST', form: { email: 'foreign-account@example.com' }, ip: 'foreign-account-request',
+  })
+  expect(foreignRequest.status).toBe(200)
+  const foreignEmail = capturedEmails().filter(message => message.to === 'foreign-account@example.com').at(-1)!
+  const foreignEntry = await request(`/enter/magic?token=${encodeURIComponent(linkToken(foreignEmail))}`, {
+    cookie: aliceCookie,
+  })
+  expect(foreignEntry.status).toBe(400)
+
+  const ownLinkRequest = await request('/enter', {
+    method: 'POST', cookie: aliceCookie, form: { identifier: 'alice' }, ip: 'alice-own-link',
+  })
+  expect(ownLinkRequest.status).toBe(200)
+  const ownEmail = capturedEmails().filter(message => message.to === 'alice@example.com').at(-1)!
+  const ownEntry = await request(`/enter/magic?token=${encodeURIComponent(linkToken(ownEmail))}`, {
+    cookie: aliceCookie,
+  })
+  expect(ownEntry.status).toBe(303)
+  const ownLinkCookie = sessionCookie(ownEntry)
+  expect((await request('/logout', { method: 'POST', cookie: ownLinkCookie, form: {} })).status).toBe(303)
   const authenticatedHome = await request('/', { cookie: aliceCookie })
   expect(authenticatedHome.status).toBe(303)
   expect(authenticatedHome.headers.get('location')).toBe('/for-you')
