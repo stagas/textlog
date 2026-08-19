@@ -28,7 +28,7 @@ test('for-you renders a page-local hide action on each entry', () => {
 
   expect(html).not.toContain('for-you-author-filters')
   expect(html).toContain('class="for-you-hide-input for-you-hide-2" type="checkbox"')
-  expect(html).toContain('aria-label="hide posts by @alice">×</label>')
+  expect(html).toContain('aria-label="hide posts by @alice">−</label>')
   expect(html).toContain('for-you-item for-you-author-2')
   expect(html).toContain(':has(.for-you-hide-2:checked) .for-you-author-2')
 })

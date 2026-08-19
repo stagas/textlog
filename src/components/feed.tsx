@@ -68,7 +68,7 @@ export function Feed({ user, data, title, path = '/for-you', pageUrl, notificati
     const hideAction = row.actor_is_bot && ['post', 'reply', 'mention'].includes(row.activity_kind) ? <>
       <input className={`for-you-hide-input for-you-hide-${row.actor_id}`} type="checkbox" id={hideControlId} />
       <label className="quiet for-you-hide-action" htmlFor={hideControlId}
-        aria-label={`hide posts by @${row.actor_handle}`}>×</label>
+        aria-label={`hide posts by @${row.actor_handle}`}>−</label>
     </> : null
     const activityReturnPath = `${returnPath}#${activityAnchor}`
     const fromQuery = `?from=${encodeURIComponent(activityReturnPath)}`
