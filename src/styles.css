@@ -4364,6 +4364,13 @@ form.report-panel {
   outline-offset: 2px;
 }
 
+.for-you-filter-shell > style + .for-you-item .post,
+.for-you-filter-shell > style + .activity-follow,
+.for-you-filter-shell > style + .activity-group > .for-you-item:first-child .post,
+.for-you-filter-shell > style + .activity-group > .activity-follow:first-child {
+  border-top: 0;
+}
+
 .post-context {
   min-width: 0;
   margin-left: calc(-1 * var(--space-2) + 1ch);
