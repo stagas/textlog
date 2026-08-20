@@ -1694,6 +1694,8 @@ nav form {
   width: max-content;
   color: var(--accent);
   cursor: pointer;
+  font-size: inherit;
+  line-height: inherit;
   user-select: none;
 }
 
