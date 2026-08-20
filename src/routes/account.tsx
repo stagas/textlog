@@ -30,6 +30,7 @@ import { sendAccountDeletionConfirmation, sendEmailChangeAuthorization, sendFrie
   sendPasswordEnableConfirmation } from '../email'
 import { emailChangeForToken, issueEmailChangeAuthorization } from '../email-change-authorization'
 import { confirmEmailToken, findEmailToken } from '../email-verification'
+import { isDevelopment } from '../environment'
 import {
   clearSessionCookie,
   notificationDevice,
@@ -857,11 +858,12 @@ export function registerAccountRoutes(app: Hono) {
   app.get('/account/delete', async c => {
     const value = c.req.query('token') || ''
     if (value) {
-      return await databaseService().call('account.deletionInfo', {
+      const account = await databaseService().call('account.deletionInfo', {
           selector: { tokenHash: hash(value) },
           now: Date.now(),
         })
-        ? page(<ConfirmAccountDelete user={currentUser(c.req.raw)} token={value} />)
+      return account
+        ? page(<ConfirmAccountDelete user={currentUser(c.req.raw)} handle={account.handle} token={value} />)
         : page(<ConfirmAccountDelete user={currentUser(c.req.raw)} invalid />, 400)
     }
     const user = currentUser(c.req.raw)
@@ -921,10 +923,15 @@ export function registerAccountRoutes(app: Hono) {
     const origin = Bun.env.APP_URL?.replace(/\/$/, '') || new URL(c.req.url).origin
     const value = token()
     const tokenHash = hash(value)
+    const confirmationUrl = `${origin}/account/delete?token=${encodeURIComponent(value)}`
     await databaseService().call('account.storeDeletionToken', { userId: user.id, email: user.email, tokenHash,
       expiresAt: Date.now() + 3600000, now: Date.now() })
     try {
-      await sendAccountDeletionConfirmation(user.email, `${origin}/account/delete?token=${encodeURIComponent(value)}`)
+      await sendAccountDeletionConfirmation(
+        user.email,
+        user.handle,
+        confirmationUrl,
+      )
     }
     catch (error) {
       await databaseService().call('account.deleteDeletionToken', { tokenHash })
@@ -934,6 +941,8 @@ export function registerAccountRoutes(app: Hono) {
         503,
       )
     }
-    return page(<ConfirmAccountDelete user={user} sent />)
+    return page(
+      <ConfirmAccountDelete user={user} sent confirmationUrl={isDevelopment() ? confirmationUrl : undefined} />,
+    )
   })
 }

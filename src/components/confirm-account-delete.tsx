@@ -4,15 +4,20 @@ import { Layout } from './layout'
 import { FormActions, FormMessage } from './page-shared'
 import { CenteredPanel, Panel } from './panel'
 
-export function ConfirmAccountDelete({ user, passwordEnabled = false, token, sent = false, invalid = false, error }: {
+export function ConfirmAccountDelete({ user, handle, passwordEnabled = false, token, confirmationUrl, sent = false,
+  invalid = false, error }: {
   user?: User | null
+  handle?: string
   passwordEnabled?: boolean
   token?: string
+  confirmationUrl?: string
   sent?: boolean
   invalid?: boolean
   error?: string
 }) {
   const emailConfirmation = !!token
+  const accountHandle = handle || user?.handle
+  const handleLabel = accountHandle ? `@${accountHandle}` : 'your account'
   return (
     <Layout user={user} title="delete account">
       {sent
@@ -21,10 +26,11 @@ export function ConfirmAccountDelete({ user, passwordEnabled = false, token, sen
             role="status"
           >
             <p className="eyebrow">confirmation required</p>
-            <h1>Check your email.</h1>
+            <h1>Check your email to delete {handleLabel}.</h1>
             <p className="verify-email-copy">
               We sent a confirmation link to{' '}
-              <strong>{user?.email && maskEmail(user.email)}</strong>. Your account has not been deleted.
+              <strong>{user?.email && maskEmail(user.email)}</strong>. <strong>{handleLabel}</strong> has not been
+              deleted.
             </p>
             <p className="account-delete-expiry">
               The link expires in one hour. Open it to review and confirm deletion.
@@ -32,6 +38,9 @@ export function ConfirmAccountDelete({ user, passwordEnabled = false, token, sen
             <p className="email-delivery-hint">Can’t find it? Check your spam or junk folder.</p>
             <div className="welcome-actions verify-email-actions">
               <a className="button" href="/account/edit">back to account</a>
+              {confirmationUrl && (
+                <a className="button" href={confirmationUrl}>open development confirmation link</a>
+              )}
             </div>
           </Panel>
         )
@@ -40,7 +49,7 @@ export function ConfirmAccountDelete({ user, passwordEnabled = false, token, sen
             width="medium" tone="danger"
           >
             <p className="eyebrow">account deletion</p>
-            <h1>{invalid ? 'Link unavailable.' : 'Delete your account?'}</h1>
+            <h1>{invalid ? 'Link unavailable.' : `Delete ${handleLabel}?`}</h1>
             {invalid
               ? <p className="account-delete-copy">This confirmation link is invalid, expired, or already used.</p>
               : (
@@ -64,7 +73,7 @@ export function ConfirmAccountDelete({ user, passwordEnabled = false, token, sen
                   )}
                   {!passwordEnabled && !emailConfirmation && (
                     <p className="account-delete-confirmation-note">
-                      We’ll email you a secure confirmation link before anything is deleted.
+                      We’ll email you a secure confirmation link before {handleLabel} is deleted.
                     </p>
                   )}
                   <FormActions
@@ -73,7 +82,9 @@ export function ConfirmAccountDelete({ user, passwordEnabled = false, token, sen
                     }
                     primary={
                       <button className="button button-danger" type="submit">
-                        {emailConfirmation || passwordEnabled ? 'delete account' : 'send confirmation link →'}
+                        {emailConfirmation || passwordEnabled
+                          ? `delete ${handleLabel}`
+                          : 'send confirmation link →'}
                       </button>
                     }
                   />

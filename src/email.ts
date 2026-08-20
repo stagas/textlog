@@ -109,12 +109,15 @@ export function sendEmailVerification(email: string, verificationUrl: string, ch
       + expiryNotice('This link expires in one hour.')))
 }
 
-export function sendAccountDeletionConfirmation(email: string, confirmationUrl: string) {
+export function sendAccountDeletionConfirmation(email: string, handle: string, confirmationUrl: string) {
   const name = appName()
-  return sendEmail(email, `Confirm account deletion · ${name}`,
-    `Confirm deletion of your ${name} account by opening this link:\n\n${confirmationUrl}\n\nThis link expires in one hour. If you did not request it, secure your account by signing out other sessions.`,
-    emailDocument('Review account deletion', paragraph(`A request was made to delete your ${escapeHtml(name)} account.`)
-      + button('Review account deletion', confirmationUrl)
+  const accountHandle = `@${handle}`
+  return sendEmail(email, `Confirm account deletion for ${accountHandle} · ${name}`,
+    `Confirm deletion of your ${name} account ${accountHandle} by opening this link:\n\n${confirmationUrl}\n\nThis link expires in one hour. If you did not request it, secure your account by signing out other sessions.`,
+    emailDocument(`Delete ${escapeHtml(accountHandle)}?`, paragraph(
+      `A request was made to delete your ${escapeHtml(name)} account <strong>${escapeHtml(accountHandle)}</strong>.`,
+    )
+      + button(`Review deletion of ${accountHandle}`, confirmationUrl)
       + notice(
         'This link expires in one hour.<br>If this was not you, sign out other sessions to secure your account.',
       )))

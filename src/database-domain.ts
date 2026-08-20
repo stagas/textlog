@@ -478,12 +478,13 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
     case 'account.deletionInfo': {
       const { selector, now } = input as DatabaseDomainInput<'account.deletionInfo'>
       const account = ('userId' in selector
-        ? database.query(`SELECT id,email,password passwordHash FROM users WHERE id=? AND deleted_at IS NULL`)
+        ? database.query(`SELECT id,handle,email,password passwordHash FROM users WHERE id=? AND deleted_at IS NULL`)
           .get(selector.userId)
-        : database.query(`SELECT u.id,u.email,u.password passwordHash FROM account_deletion_tokens t
+        : database.query(`SELECT u.id,u.handle,u.email,u.password passwordHash FROM account_deletion_tokens t
           JOIN users u ON u.id=t.user_id WHERE t.token_hash=? AND t.expires_at>? AND u.deleted_at IS NULL
             AND u.password='!' AND u.email=t.email`).get(selector.tokenHash, now)) as {
           id: number
+          handle: string
           email: string
           passwordHash: string
         } | null

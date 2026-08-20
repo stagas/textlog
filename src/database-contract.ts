@@ -137,7 +137,7 @@ export type DatabaseDomainOperations = {
   'account.confirmEmailToken': { input: { value: string; now: number };
     output: { ok: true; kind: 'verify' | 'change' } | { ok: false; reason: 'invalid' | 'email_unavailable' } }
   'account.deletionInfo': { input: { selector: { userId: number } | { tokenHash: string }; now: number };
-    output: { id: number; email: string; passwordHash: string; primary: boolean } | null }
+    output: { id: number; handle: string; email: string; passwordHash: string; primary: boolean } | null }
   'account.storeDeletionToken': {
     input: { userId: number; email: string; tokenHash: string; expiresAt: number; now: number }
     output: null

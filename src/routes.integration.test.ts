@@ -1470,9 +1470,13 @@ test('consequential account, content, reporting, and admin flows work over HTTP'
     && message.subject.includes('Confirm account deletion')
   ).at(-1)
   expect(deleteEmail).toBeDefined()
+  expect(deleteEmail!.subject).toContain('@emaildelete')
+  expect(deleteEmail!.text).toContain('account @emaildelete')
+  expect(deleteEmail!.html).toContain('@emaildelete')
   const deletionToken = linkToken(deleteEmail!)
   const deletionReview = await request(`/account/delete?token=${encodeURIComponent(deletionToken)}`)
   expect(deletionReview.status).toBe(200)
+  expect(await deletionReview.text()).toContain('Delete @emaildelete?')
   expect(
     (database.query('SELECT deleted_at FROM users WHERE handle=?').get('emaildelete') as { deleted_at: string | null })
       .deleted_at,

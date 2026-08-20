@@ -1048,25 +1048,36 @@ test('Account deletion asks for the configured second factor', () => {
   }))
   expect(passwordHtml).toContain('type="password"')
   expect(passwordHtml).toContain('name="password"')
+  expect(passwordHtml).toContain('Delete @reader?')
 
   const emailHtml = renderToStaticMarkup(React.createElement(ConfirmAccountDelete, { user }))
   expect(emailHtml).not.toContain('type="password"')
-  expect(emailHtml).toContain('send confirmation link')
+  expect(emailHtml).toContain('send confirmation link →')
   expect(emailHtml).toContain('panel-danger')
   expect(emailHtml).toContain('class="button button-danger"')
 
   const tokenHtml = renderToStaticMarkup(React.createElement(ConfirmAccountDelete, {
+    handle: 'reader',
     token: 'deletion-token',
   }))
   expect(tokenHtml).toContain('type="hidden" name="token" value="deletion-token"')
-  expect(tokenHtml).toContain('>delete account</button>')
+  expect(tokenHtml).toContain('Delete @reader?')
+  expect(tokenHtml).toContain('>delete @reader</button>')
 
   const sentHtml = renderToStaticMarkup(React.createElement(ConfirmAccountDelete, { user, sent: true }))
-  expect(sentHtml).toContain('Check your email.')
+  expect(sentHtml).toContain('Check your email to delete @reader.')
   expect(sentHtml).toContain('r•••@example.com')
   expect(sentHtml).not.toContain('reader@example.com')
-  expect(sentHtml).toContain('Your account has not been deleted.')
+  expect(sentHtml).toContain('@reader</strong> has not been deleted.')
   expect(sentHtml).not.toContain('action="/account/delete"')
+
+  const developmentHtml = renderToStaticMarkup(React.createElement(ConfirmAccountDelete, {
+    user,
+    sent: true,
+    confirmationUrl: 'http://localhost:3003/account/delete?token=development-token',
+  }))
+  expect(developmentHtml).toContain('open development confirmation link')
+  expect(developmentHtml).toContain('/account/delete?token=development-token')
 })
 
 test('AccountSecurity renders email and safe session controls without passwords', () => {

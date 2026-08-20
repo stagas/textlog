@@ -3879,12 +3879,21 @@ form.report-panel {
     grid-row: 2;
   }
 
-  .profile-owner-mobile-back {
-    display: flex;
+  .profile.profile-owner:not(.profile-editing) .profile-owner-actions {
+    grid-column: 2;
+    grid-row: 1 / span 2;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: var(--space-1);
   }
 
-  .profile-owner-back-link {
+  .profile.profile-owner:not(.profile-editing) .profile-owner-mobile-back {
     display: none;
+  }
+
+  .profile.profile-owner:not(.profile-editing) .profile-owner-back-link {
+    display: inline-flex;
+    order: -1;
   }
 
   .profile:not(.profile-editing) .profile-back-action {
@@ -3902,6 +3911,11 @@ form.report-panel {
     grid-column: 1 / -1;
     grid-row: 3;
     margin-top: 0;
+  }
+
+  .profile.profile-owner:not(.profile-editing) .profile-bio {
+    grid-column: 1;
+    grid-row: 2;
   }
 
   .profile-action {
