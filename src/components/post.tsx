@@ -290,7 +290,7 @@ export function PreviewPost({ p }: { p: PostView }) {
         </span>
         <span className="quiet preview-reply">reply</span>
       </MetaRow>
-      <p className={containsAsciiArt(p.body) ? 'ascii-art' : undefined} dangerouslySetInnerHTML={{
+      <div className={`post-body${containsAsciiArt(p.body) ? ' ascii-art' : ''}`} dangerouslySetInnerHTML={{
         __html: linkify(displayPostBody(renderedPollBody(p.body)), p.mention_bios, [], undefined, renderFlags(p), '', p.hashtag_counts,
           p.mention_note_counts, { signedIn: false, currentHandle: p.handle, formPrefix,
           hashtagFollowerCounts: p.hashtag_follower_counts, linkPreviews: p.link_previews }),
@@ -436,7 +436,7 @@ export function Post({
           </label>
         )}
       </MetaRow>
-      <p className={isAsciiArt ? 'ascii-art' : undefined} dangerouslySetInnerHTML={{
+      <div className={`post-body${isAsciiArt ? ' ascii-art' : ''}`} dangerouslySetInnerHTML={{
         __html: linkify(displayPostBody(renderedPollBody(p.body)), p.mention_bios, highlightTerms, undefined, renderFlags(p),
           referenceQuery, p.hashtag_counts, p.mention_note_counts, { signedIn: !!user, currentHandle: user?.handle,
           formPrefix, mentionFollowing: p.mention_following, mentionFollowsViewer: p.mention_follows_viewer,
@@ -483,7 +483,7 @@ export function Post({
                     {user ? 'reply' : 'enter to reply'}
                   </a>
                 </div>
-                <p className={containsAsciiArt(parent.body) ? 'ascii-art' : undefined} dangerouslySetInnerHTML={{
+                <div className={`post-body${containsAsciiArt(parent.body) ? ' ascii-art' : ''}`} dangerouslySetInnerHTML={{
                   __html: linkify(displayPostBody(renderedPollBody(parent.body)), parent.mention_bios, [], undefined, renderFlags(parent),
                     referenceQuery, parent.hashtag_counts, parent.mention_note_counts, { signedIn: !!user,
                     currentHandle: user?.handle, formPrefix: `${formPrefix}-parent-${parent.id}`,

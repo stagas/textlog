@@ -427,8 +427,8 @@ header>.account-nav {
   cursor: pointer;
 }
 
-.post p a.remote-link-popover,
-.post p a.remote-link-popover:hover {
+.post-body a.remote-link-popover,
+.post-body a.remote-link-popover:hover {
   color: var(--ink);
 }
 
@@ -1677,7 +1677,7 @@ nav form {
   white-space: nowrap;
 }
 
-.post p {
+.post-body {
   position: relative;
   margin: var(--space-3) 0 0;
   font-size: 0.8125rem;
@@ -1686,13 +1686,33 @@ nav form {
   overflow-wrap: anywhere;
 }
 
-.post p a,
+.post-spoiler {
+  margin-top: var(--space-1);
+}
+
+.post-spoiler summary {
+  width: max-content;
+  color: var(--accent);
+  cursor: pointer;
+  user-select: none;
+}
+
+.post-spoiler summary:hover {
+  color: var(--accent-dark);
+}
+
+.post-spoiler-content {
+  display: block;
+  margin-top: var(--space-1);
+}
+
+.post-body a,
 .parent-quote a {
   color: var(--accent);
 }
 
-.post p > a,
-.post p > .reference-menu,
+.post-body > a,
+.post-body > .reference-menu,
 .posttop > a,
 .posttop > .reference-menu,
 .parent-quote-top > a,
@@ -1705,7 +1725,7 @@ nav form {
   border-bottom: var(--hairline) solid var(--link-border);
 }
 
-.post p > .reference-menu > .reference-menu-trigger,
+.post-body > .reference-menu > .reference-menu-trigger,
 .posttop > .reference-menu > .reference-menu-trigger,
 .parent-quote-top > .reference-menu > .reference-menu-trigger,
 .activity-follow-main > .reference-menu > .reference-menu-trigger,
@@ -1725,38 +1745,38 @@ nav form {
   white-space: nowrap;
 }
 
-.post p > .reference-menu {
+.post-body > .reference-menu {
   display: inline;
   padding-bottom: 1px;
   line-height: inherit;
   vertical-align: baseline;
 }
 
-.post p > a {
+.post-body > a {
   padding-bottom: 1px;
 }
 
-.post p a:hover,
+.post-body a:hover,
 .parent-quote a:hover {
   color: var(--accent-dark);
 }
 
-.post p code {
+.post-body code {
   color: var(--quote-ink);
 }
 
-.post p math {
+.post-body math {
   font-size: 1.12em;
   white-space: normal;
 }
 
-.post p .math-display {
+.post-body .math-display {
   display: block;
   margin-block: 0;
   text-align: left;
 }
 
-.post p .math-display > math {
+.post-body .math-display > math {
   display: inline-block;
   display: inline math;
 }
@@ -1778,7 +1798,7 @@ nav form {
   font-size: 0.6875rem;
 }
 
-.post .parent-quote p {
+.post .parent-quote .post-body {
   margin: var(--space-2) 0 0;
   color: var(--quote-ink);
   font-size: 0.75rem;
@@ -4639,7 +4659,7 @@ form.report-panel {
   border: 0;
 }
 
-.thread-root>.post>p {
+.thread-root>.post>.post-body {
   margin-bottom: 0;
   font-size: clamp(0.9375rem, 2.25vw, 1.125rem);
   line-height: 1.55;
@@ -4668,7 +4688,7 @@ form.report-panel {
   border: 0;
 }
 
-.reply-node .post p {
+.reply-node .post-body {
   font-size: 0.8125rem;
 }
 
@@ -4745,7 +4765,7 @@ form.report-panel {
   outline-offset: 3px;
 }
 
-.post p.ascii-art {
+.post-body.ascii-art {
   font-family: var(--font-monospace);
   line-height: 1.15;
 }
@@ -4754,8 +4774,8 @@ form.report-panel {
   font-family: var(--font-monospace);
 }
 
-.compose-post-preview .post p.ascii-art,
-.reply-preview .post p.ascii-art {
+.compose-post-preview .post-body.ascii-art,
+.reply-preview .post-body.ascii-art {
   line-height: 1.15;
 }
 

@@ -34,6 +34,16 @@ describe('post persistence', () => {
     expect(displayPostBody('first line\nsecond line  \n\n')).toBe('first line\nsecond line')
   })
 
+  test('hides lines below a spoiler tag behind a reveal control', () => {
+    expect(linkify('visible\n#spoiler\nhidden https://example.com'))
+      .toBe('visible\n<a href="/tag/spoiler">#spoiler</a><details class="post-spoiler"><summary>reveal</summary>'
+        + '<span class="post-spoiler-content">hidden <a href="https://example.com" target="_blank" '
+        + 'rel="nofollow ugc noopener noreferrer">https://example.com</a></span></details>')
+    expect(linkify('visible #spoilers\nstill visible')).not.toContain('<details')
+    expect(linkify('https://example.com/#spoiler\nstill visible')).not.toContain('<details')
+    expect(linkify('#SPOILER')).not.toContain('<details')
+  })
+
   test('adds escaped bios to linkified post mentions', () => {
     expect(linkify('hello @Reader', { reader: 'Builder & "tester"' }))
       .toContain('<a href="/u/reader" title="0 notes\n\nBuilder &amp; &quot;tester&quot;">@Reader</a>')

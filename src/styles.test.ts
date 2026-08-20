@@ -250,7 +250,7 @@ describe('in-memory stylesheet', () => {
     expect(css).toContain('.remote-link-menu:hover .remote-link-popover {')
     expect(css).toContain('.remote-link-menu:hover .remote-link-image,')
     expect(css).toContain('background-image: var(--preview-image);')
-    const cardRule = css.slice(css.indexOf('.remote-link-popover {'), css.indexOf('.post p a.remote-link-popover'))
+    const cardRule = css.slice(css.indexOf('.remote-link-popover {'), css.indexOf('.post-body a.remote-link-popover'))
     expect(cardRule).toContain('width: min(var(--preview-width, 382px), calc(100vw - 2 * var(--gutter)));')
     expect(css).toContain('.remote-link-menu {\n  position: relative;')
     expect(css).toContain('header,\nmain,\n.site-footer {\n  max-width: 760px;\n  width: 100%;')

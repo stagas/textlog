@@ -328,8 +328,8 @@ test('write and reply previews apply ASCII-art spacing rules', () => {
     preview: true,
   }))
 
-  expect(write).toContain('<p class="ascii-art">')
-  expect(reply).toContain('<p class="ascii-art">')
+  expect(write).toContain('<div class="post-body ascii-art">')
+  expect(reply).toContain('<div class="post-body ascii-art">')
 })
 
 test('search result cards highlight tag, handle, and bio matches while keeping follow controls', () => {
@@ -1651,7 +1651,7 @@ test('Post marks #ascii and #ascii_art bodies and quoted parents for tight line 
     },
   }))
 
-  expect(html.match(/class="ascii-art"/g)).toHaveLength(2)
+  expect(html.match(/class="post-body ascii-art"/g)).toHaveLength(2)
 
   const regularHtml = renderToStaticMarkup(React.createElement(Post, {
     user: null,
