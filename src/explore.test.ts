@@ -112,6 +112,15 @@ describe('explore suggestions', () => {
       .find(day => explorePivot(6, 1, day) === 2)!
     expect(suggestedPeople(database, 1, 6, dayPivotingToTwo)[0].id).toBe(2)
   })
+
+  test('ranks people who follow the viewer before other suggestions', () => {
+    const database = fixture()
+    database.run('INSERT INTO follows VALUES(6,1)')
+
+    const people = suggestedPeople(database, 1, 6, '2026-08-04')
+    expect(people[0].id).toBe(6)
+    expect(people[0].followsViewer).toBeTruthy()
+  })
 })
 
 describe('trending tags', () => {

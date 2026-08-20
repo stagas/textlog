@@ -58,7 +58,7 @@ export function suggestedPeople(database: Database, viewerId: number, limit = 8,
           + (SELECT count(*) FROM hashtag_follows engagement WHERE engagement.user_id=u.id))>=2)
     )
     SELECT * FROM candidates
-    ORDER BY (posts > 2) DESC,(trim(coalesce(bio,''))!='') DESC,((id - ? + ?) % ?) * 1.0 /
+    ORDER BY followsViewer DESC,(posts > 2) DESC,(trim(coalesce(bio,''))!='') DESC,((id - ? + ?) % ?) * 1.0 /
       (1 + min(follower_count,8)*0.25 + min(posts,20)*0.05),id
     LIMIT ? OFFSET ?`,
   ).all(viewerId, viewerId, viewerId, viewerId, viewerId, viewerId, viewerId, day, pivot, maxUserId, maxUserId, limit,

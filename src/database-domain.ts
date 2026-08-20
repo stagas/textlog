@@ -914,13 +914,16 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
       const join = kind === 'following'
         ? 'JOIN follows f ON f.following_id=u.id WHERE f.follower_id=?'
         : 'JOIN follows f ON f.follower_id=u.id WHERE f.following_id=?'
+      const connectionOrder = kind === 'followers'
+        ? 'viewerFollowing ASC,followsViewer DESC,u.handle'
+        : 'u.handle'
       const people = (database.query(
         `SELECT u.*, (SELECT count(*) FROM posts p WHERE p.user_id=u.id AND p.deleted_at IS NULL) posts,
         EXISTS(SELECT 1 FROM follows vf WHERE vf.follower_id=? AND vf.following_id=u.id) viewerFollowing,
         EXISTS(SELECT 1 FROM follows rv WHERE rv.follower_id=u.id AND rv.following_id=?) followsViewer
         FROM users u ${join} AND (? < 0 OR NOT EXISTS (SELECT 1 FROM blocks b WHERE
           (b.blocker_id=? AND b.blocked_id=u.id) OR (b.blocker_id=u.id AND b.blocked_id=?)))
-        ORDER BY u.handle LIMIT ? OFFSET ?`,
+        ORDER BY ${connectionOrder} LIMIT ? OFFSET ?`,
       ).all(viewerId, viewerId, profileId, viewerId, viewerId, viewerId, CONNECTION_PAGE_SIZE,
         (page - 1) * CONNECTION_PAGE_SIZE) as import('./types').PersonView[]).map(person => ({
         ...person,
@@ -1882,13 +1885,15 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
       const people = savedIds?.length
         ? (database.query(
           `SELECT u.*, (SELECT count(*) FROM posts p WHERE p.user_id=u.id AND p.deleted_at IS NULL) posts,
-            EXISTS(SELECT 1 FROM follows f WHERE f.follower_id=? AND f.following_id=u.id) following
+            EXISTS(SELECT 1 FROM follows f WHERE f.follower_id=? AND f.following_id=u.id) following,
+            EXISTS(SELECT 1 FROM follows rf WHERE rf.follower_id=u.id AND rf.following_id=?) followsViewer
             FROM users u WHERE u.id IN (${savedIds.map(() => '?').join(',')}) AND u.deleted_at IS NULL
             AND u.handle_chosen_at IS NOT NULL
             AND (? < 0 OR NOT EXISTS (SELECT 1 FROM blocks b WHERE
               (b.blocker_id=? AND b.blocked_id=u.id) OR (b.blocker_id=u.id AND b.blocked_id=?)))`,
-        ).all(viewerId, ...savedIds, viewerId, viewerId, viewerId) as import('./types').PersonView[])
-          .sort((a, b) => savedIds.indexOf(a.id) - savedIds.indexOf(b.id))
+        ).all(viewerId, viewerId, ...savedIds, viewerId, viewerId, viewerId) as import('./types').PersonView[])
+          .sort((a, b) => Number(!!b.followsViewer) - Number(!!a.followsViewer)
+            || savedIds.indexOf(a.id) - savedIds.indexOf(b.id))
         : suggestedPeople(database, viewerId, 8, undefined, (peoplePage - 1) * 8)
       const stats = visibleUserProfileStats(database, people.map(person => person.id), viewerId)
       const profileStats = Object.fromEntries(stats) as import('./types').ExploreData['profileStats']
