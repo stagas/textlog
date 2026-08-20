@@ -271,7 +271,7 @@ test('signed-in users can invite a deduplicated list of friends with join magic 
   expect(database.query('SELECT 1 FROM invite_banner_dismissals WHERE user_id=?').get(inviter.id)).toBeDefined()
   const inviteHtml = await invitePage.text()
   expect(inviteHtml).toContain('<p class="eyebrow">share textlog</p>')
-  expect(inviteHtml).toContain('<h2>Bring your friends along</h2>')
+  expect(inviteHtml).toContain('<h2 class="panel-heading">Bring your friends along</h2>')
   expect(inviteHtml).not.toContain('account settings')
   expect(inviteHtml).toContain('class="secondary-action cancel-action"')
   expect(inviteHtml).not.toContain('>back</a>')
