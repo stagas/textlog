@@ -45,6 +45,15 @@ describe('in-memory stylesheet', () => {
     expect(css).toContain('.tappable-post .parent-hit-area {\n    position: absolute;')
   })
 
+  test('uses quoted-post text color for polls inside quoted parents', async () => {
+    const css = await Bun.file(new URL('./styles.css', import.meta.url)).text()
+    expect(css).toContain('.parent-quote .poll { font-size: 0.75rem; }')
+    expect(css).toContain(
+      '.parent-quote .poll-option button,\n.parent-quote .poll-result,\n.parent-quote .poll-preview-option,\n'
+      + '.parent-quote .poll-option-count,\n.parent-quote .poll-meta { color: var(--quote-ink); }',
+    )
+  })
+
   test('highlights a post or activity entry opened through its stable anchor', async () => {
     const css = await Bun.file(new URL('./styles.css', import.meta.url)).text()
     expect(css).toContain('.post:target,\n.activity-follow:target {')
