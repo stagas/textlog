@@ -528,7 +528,7 @@ test('consequential account, content, reporting, and admin flows work over HTTP'
   expect(guestHot).toContain('will donate later')
   const guestDonationAcceptance = await request('/donation/banner/accept')
   expect(guestDonationAcceptance.status).toBe(303)
-  expect(guestDonationAcceptance.headers.get('location')).toBe('https://buymeacoffee.com/stagas')
+  expect(guestDonationAcceptance.headers.get('location')).toBe('https://opencollective.com/textlog')
   const guestDonationCookie = guestDonationAcceptance.headers.get('set-cookie')
     ?.match(/donation_banner_dismissed=1/)?.[0]
   expect(guestDonationCookie).toBeDefined()
@@ -713,7 +713,7 @@ test('consequential account, content, reporting, and admin flows work over HTTP'
     userAgent: 'alice-dismissed-browser',
   })
   expect(acceptedDonation.status).toBe(303)
-  expect(acceptedDonation.headers.get('location')).toBe('https://buymeacoffee.com/stagas')
+  expect(acceptedDonation.headers.get('location')).toBe('https://opencollective.com/textlog')
   expect(acceptedDonation.headers.get('set-cookie')).toBeNull()
   expect(database.query('SELECT 1 FROM donation_banner_dismissals WHERE user_id=?').get(alice.id)).toBeDefined()
   const donationDismissedHome = await (await request('/for-you', {

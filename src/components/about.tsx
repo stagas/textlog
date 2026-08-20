@@ -38,6 +38,14 @@ export function About({ user, topPosts = [] }: { user: User | null; topPosts?: P
             </>
           )}
         </p>
+        {instance.fiscalHost && (
+          <p>
+            {name} is a community collective fiscally hosted by{' '}
+            <a href={instance.fiscalHost.url} target="_blank" rel="noopener noreferrer">
+              {instance.fiscalHost.name}
+            </a>. Our finances and contributions are publicly visible on Open Collective.
+          </p>
+        )}
         <h2>Be a good neighbour</h2>
         <p>
           Share what is yours to share, treat other people with respect, and don’t use the service for harassment,

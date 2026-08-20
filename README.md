@@ -26,7 +26,9 @@ Share what is yours to share and treat other people with respect. Harassment, ab
 
 [Browse notes](https://textlog.cc) or [join the community](https://textlog.cc/enter).
 
-If you enjoy textlog, you can also [support the service](https://buymeacoffee.com/stagas).
+textlog is a collective fiscally hosted by [Open Source Europe](https://opencollective.com/europe). If you enjoy it,
+you can [support the service through Open Collective](https://opencollective.com/textlog); contributions and finances
+are public.
 
 ## Local development
 
@@ -56,7 +58,7 @@ Run `bun run email:recap:v1 --test` first to send a `[TEST]` copy only to active
 `instance.administrators`. Test sends deliberately ignore and do not modify campaign delivery history, so the command
 can be repeated and does not prevent the administrators from receiving the real campaign later.
 
-Public instance details—operator contact information, administrator emails, privacy authority, and optional IRC,
+Public instance details—operator and fiscal-host information, administrator emails, privacy authority, and optional IRC,
 GitHub, mobile-app, and donation links—live in `instance.config.ts`. Set an optional entry to `null` to omit it from the
 rendered pages or footer.
 

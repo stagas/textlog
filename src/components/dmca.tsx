@@ -11,7 +11,7 @@ export function Dmca({ user }: { user: User | null }) {
         <p className="eyebrow">copyright</p>
         <h1>DMCA notices and counter-notices</h1>
         <p>
-          Send copyright notices to {instance.operator.name} at {instance.operator.email
+          Send copyright notices to the {instance.operator.name} at {instance.operator.email
             ? <a href={`mailto:${instance.operator.email}`}>{instance.operator.email}</a>
             : 'the configured contact email'}
           {instance.operator.phone && (
@@ -21,6 +21,12 @@ export function Dmca({ user }: { user: User | null }) {
           )}
           {instance.operator.address && <>, {instance.operator.address}</>}.
         </p>
+        {instance.fiscalHost && (
+          <p>
+            Legal correspondence may also be addressed to {instance.fiscalHost.legalName}, fiscal host of the {name}{' '}
+            collective, at {instance.fiscalHost.address}.
+          </p>
+        )}
         <h2>Copyright notice</h2>
         <p>
           Identify the copyrighted work, the exact {name}{' '}

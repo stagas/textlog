@@ -6,6 +6,21 @@ import { Layout } from './layout'
 import { FormActions, FormMessage } from './page-shared'
 import { CenteredPanel, PanelCopy, PanelHeading } from './panel'
 
+function SecuritySection({ title, description, id, children }: {
+  title: string
+  description?: React.ReactNode
+  id?: string
+  children: React.ReactNode
+}) {
+  return (
+    <section className="security-section" id={id}>
+      <h2>{title}</h2>
+      {description && <p>{description}</p>}
+      {children}
+    </section>
+  )
+}
+
 export function AccountSecurity(
   { user, sessions, apiKeys = [], feedKeys = [], passwordEnabled, error, success, returnPath }: {
     user: User
@@ -26,9 +41,7 @@ export function AccountSecurity(
       </section>
       <div className="security-page">
         <FormMessage error={error} success={success} />
-        <section className="security-section">
-          <h2>email</h2>
-          <p>{maskEmail(user.email)}</p>
+        <SecuritySection title="email" description={maskEmail(user.email)}>
           <form className="security-form" method="post" action="/account/email/change">
             <label>
               new email
@@ -44,30 +57,27 @@ export function AccountSecurity(
             )}
             <button className="button">confirm new email →</button>
           </form>
-        </section>
-        <section className="security-section">
-          <h2>magic link</h2>
-          <p>Generate a one-time sign-in link to copy to another device. It expires after 15 minutes.</p>
+        </SecuritySection>
+        <SecuritySection title="magic link"
+          description="Generate a one-time sign-in link to copy to another device. It expires after 15 minutes."
+        >
           <form className="security-form" method="post" action="/account/magic-link">
             <button className="button">generate magic link →</button>
           </form>
-        </section>
-        <section className="security-section">
-          <h2>password login</h2>
-          <p>
-            {passwordEnabled
-              ? 'Change the password you use to log in.'
-              : 'Add a password as an alternative to email magic links.'}
-          </p>
+        </SecuritySection>
+        <SecuritySection title="password login" description={passwordEnabled
+          ? 'Change the password you use to log in.'
+          : 'Add a password as an alternative to email magic links.'}
+        >
           <a className="button" href={(passwordEnabled ? '/account/password/change' : '/account/password/enable')
             + fromQuery}
           >
             {passwordEnabled ? 'change password →' : 'enable password login →'}
           </a>
-        </section>
-        <section className="security-section" id="api-keys">
-          <h2>API keys</h2>
-          <p>Create a bearer token for scripts and apps. Keys are shown once and can be revoked at any time.</p>
+        </SecuritySection>
+        <SecuritySection id="api-keys" title="API keys"
+          description="Create a bearer token for scripts and apps. Keys are shown once and can be revoked at any time."
+        >
           <a className="button" href={`/account/api-keys/new${fromQuery}`}>generate API key →</a>
           {apiKeys.length > 0 && (
             <div className="session-list api-key-list">
@@ -100,12 +110,10 @@ export function AccountSecurity(
               ))}
             </div>
           )}
-        </section>
-        <section className="security-section" id="feed-keys">
-          <h2>Feed key</h2>
-          <p>
-            Create a private, read-only RSS or Atom feed for your For You timeline. Treat its URL like a password.
-          </p>
+        </SecuritySection>
+        <SecuritySection id="feed-keys" title="Feed key"
+          description="Create a private, read-only RSS or Atom feed for your For You timeline. Treat its URL like a password."
+        >
           <a className="button" href="/account/feed-keys/new">generate feed key →</a>
           {feedKeys.length > 0 && (
             <div className="session-list api-key-list">
@@ -131,9 +139,8 @@ export function AccountSecurity(
               ))}
             </div>
           )}
-        </section>
-        <section className="security-section" id="sessions">
-          <h2>sessions</h2>
+        </SecuritySection>
+        <SecuritySection id="sessions" title="sessions">
           <div className="session-list">
             {sessions.map(session => (
               <article key={session.token}>
@@ -160,7 +167,7 @@ export function AccountSecurity(
               <button className="quiet danger">revoke all other sessions</button>
             </form>
           )}
-        </section>
+        </SecuritySection>
       </div>
     </Layout>
   )

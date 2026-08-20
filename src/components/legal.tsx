@@ -10,7 +10,29 @@ export function Legal({ user }: { user: User | null }) {
       <article className="static-page legal-page">
         <p className="eyebrow">legal</p>
         <h1 id="terms">Terms, privacy &amp; liability</h1>
-        <p className="legal-updated">Last updated: August 17, 2026</p>
+        <p className="legal-updated">Last updated: August 20, 2026</p>
+
+        <h2>Operator and fiscal host</h2>
+        <p>
+          {name} is operated by the{' '}
+          {instance.operator.url
+            ? (
+              <a href={instance.operator.url} target="_blank" rel="noopener noreferrer">
+                {instance.operator.name}
+              </a>
+            )
+            : instance.operator.name}. The collective is fiscally hosted by{' '}
+          {instance.fiscalHost && (
+            <a href={instance.fiscalHost.url} target="_blank" rel="noopener noreferrer">
+              {instance.fiscalHost.name}
+            </a>
+          )}
+          {instance.fiscalHost
+            ? ` (${instance.fiscalHost.legalName}), ${instance.fiscalHost.address}.`
+            : '.'}{' '}
+          The fiscal host receives and administers funds for the collective; the collective retains ownership of its
+          project, intellectual property, and brand.
+        </p>
 
         <h2>Your content and conduct</h2>
         <p>
@@ -54,7 +76,9 @@ export function Legal({ user }: { user: User | null }) {
         <h2 id="privacy">Privacy</h2>
         <h3>Controller and contact</h3>
         <p>
-          {instance.operator.name} is the controller and contact for {name}. Contact: {instance.operator.email
+          The {instance.operator.name} is the controller for {name}
+          {instance.fiscalHost && <>, with {instance.fiscalHost.legalName} providing fiscal hosting</>}. Contact:{' '}
+          {instance.operator.email
             ? <a href={`mailto:${instance.operator.email}`}>{instance.operator.email}</a>
             : 'email not configured'}
           {instance.operator.phone && (

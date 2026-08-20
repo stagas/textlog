@@ -1,11 +1,18 @@
 export type InstanceConfiguration = {
   operator: {
     name: string
+    url: string | null
     email: string | null
     phone: { display: string; url: string } | null
     address: string | null
     hours: string | null
   }
+  fiscalHost: {
+    name: string
+    legalName: string
+    url: string
+    address: string
+  } | null
   administrators: string[]
   privacyAuthority: {
     name: string
@@ -24,22 +31,29 @@ export type InstanceConfiguration = {
 // settings remain in environment variables; see .env.example.
 export const instance: InstanceConfiguration = {
   operator: {
-    name: 'Georgios Stagakis',
+    name: 'textlog collective',
+    url: 'https://opencollective.com/textlog',
     email: 'hello@textlog.cc',
-    phone: { display: '+30 694 660 0152', url: 'tel:+306946600152' },
-    address: 'Kallikratis, Crete, Greece 730 11',
-    hours: 'Monday–Friday, 10:00–17:00 EEST',
+    phone: null,
+    address: null,
+    hours: null,
+  },
+  fiscalHost: {
+    name: 'Open Source Europe',
+    legalName: 'Open Collective Europe ASBL',
+    url: 'https://opencollective.com/europe',
+    address: 'Avenue Louise 500, 1000 Brussels, Belgium',
   },
   administrators: ['gstagas@gmail.com'],
   privacyAuthority: {
-    name: 'Hellenic Data Protection Authority',
-    url: 'https://www.dpa.gr/en',
-    address: '1–3 Kifisias, 115 23 Athens, Greece',
+    name: 'Belgian Data Protection Authority',
+    url: 'https://www.dataprotectionauthority.be/citizen',
+    address: 'Rue de la Presse 35, 1000 Brussels, Belgium',
   },
   links: {
     getMobileApp: 'https://github.com/Faultless/textlog_flutter',
     irc: 'ircs://irc.libera.chat/#textlog',
     github: 'https://github.com/stagas/textlog',
-    donate: 'https://buymeacoffee.com/stagas',
+    donate: 'https://opencollective.com/textlog',
   },
 }

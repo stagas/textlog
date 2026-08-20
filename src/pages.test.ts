@@ -822,12 +822,15 @@ test('footer links to stats next to the app host', () => {
   )
 })
 
-test('Contact page shows operator details and is linked before legal in the footer', () => {
+test('Contact page shows collective and fiscal host details and is linked before legal in the footer', () => {
   const html = renderToStaticMarkup(React.createElement(Contact, { user: null }))
 
   expect(html).toContain('href="mailto:hello@textlog.cc"')
-  expect(html).toContain('Kallikratis, Crete, Greece 730 11')
-  expect(html).toContain('href="tel:+306946600152"')
+  expect(html).toContain('textlog collective')
+  expect(html).toContain('href="https://opencollective.com/textlog"')
+  expect(html).toContain('Open Collective Europe ASBL')
+  expect(html).toContain('Avenue Louise 500, 1000 Brussels, Belgium')
+  expect(html).not.toContain('href="tel:')
   expect(html).toContain('href="/report-illegal-activity"')
   expect(html.indexOf('href="/contact"')).toBeLessThan(html.indexOf('href="/legal"'))
 })
@@ -835,6 +838,7 @@ test('Contact page shows operator details and is linked before legal in the foot
 test('Legal privacy disclosures cover current account settings data', () => {
   const html = renderToStaticMarkup(React.createElement(Legal, { user: null }))
 
+  expect(html).toContain('href="https://opencollective.com/textlog"')
   expect(html).toContain('one-way password hash')
   expect(html).toContain('hashed app entry codes')
   expect(html).toContain('appearance cookie')

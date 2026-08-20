@@ -14,6 +14,21 @@ export function Contact({ user }: { user: User | null }) {
           Questions, ideas, or just want to say hi? Send a note and we’ll get back to you as soon as we can.
         </p>
 
+        <h2>Collective</h2>
+        <p>
+          {name} is operated by the{' '}
+          {instance.operator.url
+            ? (
+              <a href={instance.operator.url} target="_blank" rel="noopener noreferrer">
+                {instance.operator.name}
+              </a>
+            )
+            : instance.operator.name}, fiscally hosted by{' '}
+          {instance.fiscalHost
+            ? <a href={instance.fiscalHost.url} target="_blank" rel="noopener noreferrer">{instance.fiscalHost.name}</a>
+            : 'our fiscal host'}.
+        </p>
+
         <h2>Email</h2>
         <p>
           {instance.operator.email
@@ -37,6 +52,17 @@ export function Contact({ user }: { user: User | null }) {
               {instance.operator.name} · {name}
               <br />
               {instance.operator.address}
+            </p>
+          </>
+        )}
+
+        {instance.fiscalHost && (
+          <>
+            <h2>Legal and financial correspondence</h2>
+            <p>
+              {instance.fiscalHost.legalName}<br />
+              Fiscal host of the {name} collective<br />
+              {instance.fiscalHost.address}
             </p>
           </>
         )}
