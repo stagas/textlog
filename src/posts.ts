@@ -6,6 +6,7 @@ import { recordHotActivity } from './hot'
 import { getImageUrl, isImageKey } from './image-storage'
 import { decodeHtmlEntities, userBioLinkPreviews } from './link-preview'
 import { insertRateLimitedPost } from './post-rate-limit'
+import { loadPolls, syncPoll } from './polls'
 import type { BioReferenceData, LinkPreview, ParentPost, PostView, UserProfileStats } from './types'
 
 export function loadBioReferenceData(database: Database, bio: string, profileId: number,
@@ -127,6 +128,7 @@ export function syncPostMetadata(database: Database, postId: number, body: strin
     const mentioned = resolveHandle(database, handle)
     if (mentioned) insertMention.run(postId, mentioned.id)
   }
+  syncPoll(database, postId, body)
 }
 
 export function createPost(
@@ -184,6 +186,7 @@ export function enrichPosts(database: Database, posts: PostView[], viewerId = -1
   for (const handle of mentionedHandles) addMentionBio(handle)
   const parentIds = [...new Set(posts.flatMap(post => post.parent_id ? [post.parent_id] : []))]
   const previewPostIds = [...new Set([...ids, ...parentIds])]
+  const polls = loadPolls(database, previewPostIds, viewerId)
   const previewRows = database.query(
       'SELECT 1 FROM sqlite_master WHERE type=\'table\' AND name=\'post_link_previews\'',
     ).get()
@@ -327,6 +330,7 @@ export function enrichPosts(database: Database, posts: PostView[], viewerId = -1
     parent.hashtag_follower_counts = hashtagFollowerCounts
     parent.hashtag_following = hashtagFollowing
     parent.bio_reference = bioReference(parent.user_id)
+    parent.poll = polls.get(parent.id)
   }
   return posts.map(post => ({
     ...post,
@@ -347,6 +351,7 @@ export function enrichPosts(database: Database, posts: PostView[], viewerId = -1
     link_previews: previewsByPost.get(post.id),
     reply_count: countById.get(post.id) || 0,
     parent: post.parent_id ? parents.get(post.parent_id) || null : null,
+    poll: polls.get(post.id),
   }))
 }
 

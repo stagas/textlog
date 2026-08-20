@@ -2,6 +2,7 @@ import type { Database } from 'bun:sqlite'
 import { extractHashtags, extractMentions, postContentFlags } from './content'
 import { rebuildHotPosts } from './hot'
 import { migrateLegacySessionTokens } from './sessions'
+import { parsePoll } from './polls'
 
 type Migration = { version: number; name: string; transaction?: boolean; up(database: Database): void }
 
@@ -1284,6 +1285,28 @@ export const migrations: Migration[] = [
           DROP TABLE admin_actions;
           ALTER TABLE admin_actions_new RENAME TO admin_actions;
           CREATE INDEX admin_actions_created ON admin_actions(created_at DESC);`)
+      }
+    },
+  },
+  {
+    version: 101,
+    name: 'post_polls',
+    up(database) {
+      if (!database.query("SELECT 1 FROM sqlite_master WHERE type='table' AND name='posts'").get()) return
+      database.run(`CREATE TABLE IF NOT EXISTS poll_options (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,post_id INTEGER NOT NULL REFERENCES posts(id) ON DELETE CASCADE,
+        position INTEGER NOT NULL,label TEXT NOT NULL,UNIQUE(post_id,position));
+      CREATE TABLE IF NOT EXISTS poll_votes (
+        post_id INTEGER NOT NULL REFERENCES posts(id) ON DELETE CASCADE,
+        option_id INTEGER NOT NULL REFERENCES poll_options(id) ON DELETE CASCADE,
+        user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,PRIMARY KEY(post_id,user_id));
+      CREATE INDEX IF NOT EXISTS poll_votes_option ON poll_votes(option_id);`)
+      const insert = database.query('INSERT OR IGNORE INTO poll_options(post_id,position,label) VALUES(?,?,?)')
+      const posts = database.query('SELECT id,body FROM posts WHERE deleted_at IS NULL').all() as
+        Array<{ id: number; body: string }>
+      for (const post of posts) {
+        parsePoll(post.body)?.options.forEach((label, position) => insert.run(post.id, position, label))
       }
     },
   },

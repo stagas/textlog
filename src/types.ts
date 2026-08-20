@@ -14,6 +14,9 @@ export type PostRow = {
   link_previews?: Record<string, LinkPreview>
 }
 
+export type PollView = { options: Array<{ id: number; label: string; votes: number; selected: boolean }>
+  totalVotes: number; expired: boolean; expiresAt: number; viewerVoted: boolean }
+
 export type UserProfileStats = {
   notes: number
   replies: number
@@ -53,6 +56,7 @@ export type ParentPost = Pick<PostRow,
   hashtag_follower_counts?: Record<string, number>
   hashtag_following?: Record<string, boolean>
   link_previews?: Record<string, LinkPreview>
+  poll?: PollView
   bio_reference?: BioReferenceData
   reply_count: number
   top_id?: number | null
@@ -74,6 +78,7 @@ export type PostView = PostRow & {
   hashtag_follower_counts?: Record<string, number>
   hashtag_following?: Record<string, boolean>
   bio_reference?: BioReferenceData
+  poll?: PollView
   reply_count?: number
   parent?: ParentPost | null
 }

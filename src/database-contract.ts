@@ -217,6 +217,8 @@ export type DatabaseDomainOperations = {
   'posts.ogData': { input: { id: number }; output: { body: string; handle: string } | null }
   'posts.suggestions': { input: { kind: 'hashtags' | 'mentions'; query: string; viewerId: number };
     output: { results: string[]; truncated: boolean } }
+  'posts.votePoll': { input: { postId: number; optionId: number; userId: number };
+    output: 'ready' | 'already_voted' | 'expired' | 'not_found' }
   'profiles.bioReferences': { input: { bio: string; profileId: number; viewerId: number }; output: BioReferenceData }
   'profiles.overview': { input: { profileId: number; viewerId: number }; output: ProfileOverviewData | null }
   'profiles.blockedPage': { input: { profileId: number; page: number }; output: {

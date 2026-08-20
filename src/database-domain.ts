@@ -36,6 +36,7 @@ import { loadBioReferenceData, loadThreadReplies } from './posts'
 import { enrichPosts } from './posts'
 import { visibleTagFollowerCounts, visibleUserProfileStats } from './posts'
 import { createPost, updatePost } from './posts'
+import { voteInPoll } from './polls'
 import { createPublicArchive, publicArchiveIsCurrent } from './public-archive'
 import { RECAP_POPULAR_NOTE_IDS, recapEmail } from './recap-email'
 import { searchPeople, searchPosts, searchTags, searchTerms } from './search'
@@ -844,6 +845,10 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
         ? found.rows.map(row => 'tag' in row ? row.tag : '')
         : found.rows.map(row => 'handle' in row ? row.handle : '')
       return { results, truncated: found.total > 20 } as DatabaseDomainOutput<K>
+    }
+    case 'posts.votePoll': {
+      const { postId, optionId, userId } = input as DatabaseDomainInput<'posts.votePoll'>
+      return voteInPoll(database, postId, optionId, userId) as DatabaseDomainOutput<K>
     }
     case 'profiles.overview': {
       const { profileId, viewerId } = input as DatabaseDomainInput<'profiles.overview'>

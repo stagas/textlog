@@ -131,6 +131,19 @@ test('compose offers a server-rendered post preview', () => {
   expect(preview).not.toContain('NaN')
 })
 
+test('compose previews inline polls with their visible tag and options', () => {
+  const html = renderToStaticMarkup(React.createElement(Compose, {
+    user: { id: 1, handle: 'writer', email: 'writer@example.com', bio: '', email_verified_at: '2026-08-20' },
+    body: 'Best OS? #poll\nWindows\nMacOS\nLinux',
+    preview: true,
+  }))
+  expect(html).toContain('Best OS? <a href="/tag/poll')
+  expect(html).toContain('aria-label="Poll preview"')
+  expect(html).toContain('>Windows</div>')
+  expect(html).toContain('>MacOS</div>')
+  expect(html).toContain('>Linux</div>')
+})
+
 test('compose carries its originating page through preview and offers cancel before preview', () => {
   const user = { id: 1, handle: 'writer', email: 'writer@example.com', bio: '',
     email_verified_at: '2026-08-12 10:00:00', handle_chosen_at: '2026-08-12 10:00:00' }

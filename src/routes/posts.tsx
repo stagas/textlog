@@ -204,6 +204,21 @@ export function registerPostsRoutes(app: Hono) {
     return page(<EditPost user={user} post={loaded.post} parent={loaded.parent} returnPath={returnPath} />)
   })
 
+  app.post('/post/:id/poll', async c => {
+    const user = currentUser(c.req.raw)
+    const postId = Number(c.req.param('id'))
+    if (!Number.isInteger(postId) || postId < 1) return c.text('Not found', 404)
+    if (!user) return redirect('/enter?next=' + encodeURIComponent(`/post/${postId}#post-${postId}`))
+    const f = await form(c.req.raw)
+    const optionId = Number(f.option)
+    if (!Number.isInteger(optionId) || optionId < 1) return c.text('Invalid poll option', 400)
+    const result = await databaseService().call('posts.votePoll', { postId, optionId, userId: user.id })
+    if (result === 'not_found') return c.text('Not found', 404)
+    const requested = f.from ? safeNext(f.from) : `/post/${postId}`
+    const target = new URL(requested, 'http://textlog.local')
+    return redirect(`${target.pathname}${target.search}#post-${postId}`)
+  })
+
   app.post('/post/:id/edit', async c => {
     const user = currentUser(c.req.raw)
     if (!user) return redirect('/enter')

@@ -6,6 +6,59 @@ import type { BioReferenceData, PostView, UserProfileStats } from '../types'
 import { displayBio, displayPostBody, fmt, fmtFull, linkify, referenceFormId } from '../utils'
 import { enterHref } from './auth-links'
 import { MetaRow } from './meta'
+import { parsePoll, pollDisplayBody } from '../polls'
+
+function Poll({ p, returnPath }: { p: PostView | NonNullable<PostView['parent']>; returnPath?: string }) {
+  if (!p.poll) return null
+  const showResults = p.poll.expired || p.poll.viewerVoted
+  const hoursLeft = Math.max(1, Math.ceil((p.poll.expiresAt - Date.now()) / (60 * 60 * 1000)))
+  return (
+    <div className={`poll${showResults ? ' poll-results' : ''}`} aria-label="Poll">
+      {p.poll.options.map(option => {
+        const percent = p.poll!.totalVotes ? Math.round(option.votes / p.poll!.totalVotes * 100) : 0
+        return showResults
+          ? (
+            <div className={`poll-result${option.selected ? ' poll-selected' : ''}`} key={option.id}>
+              <span className="poll-result-fill" style={{ width: `${percent}%` }} />
+              <span className="poll-option-label">{option.label}</span>
+              <span className="poll-option-count">{percent}%</span>
+            </div>
+          )
+          : (
+            <form method="post" action={`/post/${p.id}/poll`} className="poll-option" key={option.id}>
+              <input type="hidden" name="option" value={option.id} />
+              <input type="hidden" name="from" value={returnPath || `/post/${p.id}`} />
+              <button type="submit">{option.label}</button>
+            </form>
+          )
+      })}
+      <span className="poll-meta">{showResults
+        ? <>{p.poll.totalVotes} {p.poll.totalVotes === 1 ? 'vote' : 'votes'} · {p.poll.expired
+          ? 'ended'
+          : `${hoursLeft} ${hoursLeft === 1 ? 'hour' : 'hours'} left to vote`}</>
+        : <>{hoursLeft} {hoursLeft === 1 ? 'hour' : 'hours'} left to vote</>}</span>
+    </div>
+  )
+}
+
+function renderedPollBody(body: string) {
+  return pollDisplayBody(body)
+}
+
+function PollPreview({ body }: { body: string }) {
+  const poll = parsePoll(body)
+  if (!poll) return null
+  return (
+    <div className="poll poll-preview" aria-label="Poll preview">
+      {poll.options.map(option => (
+        <div className="poll-option poll-preview-option" key={option}>
+          {option}
+        </div>
+      ))}
+      <span className="poll-meta">24 hours left to vote</span>
+    </div>
+  )
+}
 
 export function UserReference(
   { handle, bio, noteCount, following, followsViewer, user, href, rel, currentHandle, stats, navigationQuery = '',
@@ -238,10 +291,11 @@ export function PreviewPost({ p }: { p: PostView }) {
         <span className="quiet preview-reply">reply</span>
       </MetaRow>
       <p className={containsAsciiArt(p.body) ? 'ascii-art' : undefined} dangerouslySetInnerHTML={{
-        __html: linkify(displayPostBody(p.body), p.mention_bios, [], undefined, renderFlags(p), '', p.hashtag_counts,
+        __html: linkify(displayPostBody(renderedPollBody(p.body)), p.mention_bios, [], undefined, renderFlags(p), '', p.hashtag_counts,
           p.mention_note_counts, { signedIn: false, currentHandle: p.handle, formPrefix,
           hashtagFollowerCounts: p.hashtag_follower_counts, linkPreviews: p.link_previews }),
       }} />
+      <PollPreview body={p.body} />
     </article>
   )
 }
@@ -383,12 +437,13 @@ export function Post({
         )}
       </MetaRow>
       <p className={isAsciiArt ? 'ascii-art' : undefined} dangerouslySetInnerHTML={{
-        __html: linkify(displayPostBody(p.body), p.mention_bios, highlightTerms, undefined, renderFlags(p),
+        __html: linkify(displayPostBody(renderedPollBody(p.body)), p.mention_bios, highlightTerms, undefined, renderFlags(p),
           referenceQuery, p.hashtag_counts, p.mention_note_counts, { signedIn: !!user, currentHandle: user?.handle,
           formPrefix, mentionFollowing: p.mention_following, mentionFollowsViewer: p.mention_follows_viewer,
           mentionProfileStats: p.mention_profile_stats, hashtagFollowing: p.hashtag_following,
           hashtagFollowerCounts: p.hashtag_follower_counts, linkPreviews: p.link_previews }),
       }} />
+      {preview ? <PollPreview body={p.body} /> : <Poll p={p} returnPath={returnPath} />}
       <ReferenceFollowForms post={p} prefix={formPrefix} user={user}
         returnPath={returnPath || `/post/${p.id}#post-${p.id}`} />
       {parent && (
@@ -429,13 +484,14 @@ export function Post({
                   </a>
                 </div>
                 <p className={containsAsciiArt(parent.body) ? 'ascii-art' : undefined} dangerouslySetInnerHTML={{
-                  __html: linkify(displayPostBody(parent.body), parent.mention_bios, [], undefined, renderFlags(parent),
+                  __html: linkify(displayPostBody(renderedPollBody(parent.body)), parent.mention_bios, [], undefined, renderFlags(parent),
                     referenceQuery, parent.hashtag_counts, parent.mention_note_counts, { signedIn: !!user,
                     currentHandle: user?.handle, formPrefix: `${formPrefix}-parent-${parent.id}`,
                     mentionFollowing: parent.mention_following, mentionFollowsViewer: parent.mention_follows_viewer,
                     mentionProfileStats: parent.mention_profile_stats, hashtagFollowing: parent.hashtag_following,
                     hashtagFollowerCounts: parent.hashtag_follower_counts, linkPreviews: parent.link_previews }),
                 }} />
+                <Poll p={parent} returnPath={returnPath} />
                 <ReferenceFollowForms post={parent} prefix={`${formPrefix}-parent-${parent.id}`} user={user}
                   returnPath={returnPath || `/post/${p.id}#post-${p.id}`} />
               </>
