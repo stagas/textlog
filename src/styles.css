@@ -2415,6 +2415,8 @@ textarea.form-control {
 }
 
 .security-section {
+  display: grid;
+  gap: var(--space-4);
   padding: var(--space-5) 0 var(--space-6);
   border-bottom: 1px solid var(--soft);
 }
@@ -2428,9 +2430,12 @@ textarea.form-control {
   border-bottom: 0;
 }
 
-.security-section h2,
-.security-section p {
-  margin-top: 0;
+.security-section > :is(h2, p, form) {
+  margin: 0;
+}
+
+.security-section > .button {
+  justify-self: start;
 }
 
 .security-section p,

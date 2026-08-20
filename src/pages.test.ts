@@ -1139,7 +1139,11 @@ test('enabling password login requests email confirmation before showing passwor
     request: true,
   }))
   expect(requestHtml).toContain('send setup link')
-  expect(requestHtml).toContain('password-panel enable-password-panel')
+  expect(requestHtml).toContain('class="panel-shell enable-password-shell"')
+  expect(requestHtml).toContain('class="panel panel-surface panel-medium enable-password-panel"')
+  expect(requestHtml).toContain('<h1 class="panel-heading">Enable password login</h1>')
+  expect(requestHtml).toContain('<p class="panel-copy">We’ll email you a secure link before you can set a password.</p>')
+  expect(requestHtml).toContain('class="form-actions-secondary"><a class="secondary-action" href="/account/security"')
   expect(requestHtml).not.toContain('name="newPassword"')
 
   const confirmedHtml = renderToStaticMarkup(React.createElement(AccountPassword, {

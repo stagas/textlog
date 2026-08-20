@@ -4,7 +4,7 @@ import { AccountSettingsHeader } from './account-settings-header'
 import { maskEmail } from './email-address'
 import { Layout } from './layout'
 import { FormActions, FormMessage } from './page-shared'
-import { CenteredPanel } from './panel'
+import { CenteredPanel, PanelCopy, PanelHeading } from './panel'
 
 export function AccountSecurity(
   { user, sessions, apiKeys = [], feedKeys = [], passwordEnabled, error, success, returnPath }: {
@@ -292,15 +292,17 @@ export function AccountPassword({ user, enabled, token, request = false, sent = 
 }) {
   return (
     <Layout user={user} title={enabled ? 'change password' : 'enable password login'}>
-      <CenteredPanel shellClassName="auth-shell"
-        className={`auth-panel password-panel${enabled ? '' : ' enable-password-panel'}`}
+      <CenteredPanel shellClassName={request ? 'enable-password-shell' : 'auth-shell'}
+        className={request ? 'enable-password-panel' : `auth-panel password-panel${enabled ? '' : ' enable-password-panel'}`}
         width={enabled ? 'narrow' : 'medium'}
       >
-        <h1>
-          {invalid ? 'Link unavailable' : sent ? 'Check your email' : request ? 'Enable password login' : enabled
-            ? 'Change password'
-            : 'Set a password'}
-        </h1>
+        {request
+          ? <PanelHeading as="h1">Enable password login</PanelHeading>
+          : (
+            <h1>
+              {invalid ? 'Link unavailable' : sent ? 'Check your email' : enabled ? 'Change password' : 'Set a password'}
+            </h1>
+          )}
         {error && <p className="status-message status-error" role="alert">{error}</p>}
         {invalid
           ? <p className="switch">This link is invalid, expired, or already used.</p>
@@ -317,11 +319,10 @@ export function AccountPassword({ user, enabled, token, request = false, sent = 
           : request
           ? (
             <>
-              <p className="switch">We’ll email you a secure link before you can set a password.</p>
+              <PanelCopy>We’ll email you a secure link before you can set a password.</PanelCopy>
               <form method="post" action="/account/password/enable">
-                <button className="button">
-                  send setup link <span>→</span>
-                </button>
+                <FormActions secondary={<a className="secondary-action" href="/account/security">back</a>}
+                  primary={<button className="button">send setup link →</button>} />
               </form>
             </>
           )
@@ -347,9 +348,11 @@ export function AccountPassword({ user, enabled, token, request = false, sent = 
               </button>
             </form>
           )}
-        <p className="auth-secondary">
-          <a href="/account/security">Back to account security</a>
-        </p>
+        {!request && (
+          <p className="auth-secondary">
+            <a href="/account/security">Back to account security</a>
+          </p>
+        )}
       </CenteredPanel>
     </Layout>
   )

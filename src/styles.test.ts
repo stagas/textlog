@@ -110,6 +110,13 @@ describe('in-memory stylesheet', () => {
     expect(css).toContain('.account-switcher-page {\n  max-width: none;')
   })
 
+  test('spaces account security headings, copy, and actions consistently', async () => {
+    const css = await Bun.file(new URL('./styles.css', import.meta.url)).text()
+    expect(css).toContain('.security-section {\n  display: grid;\n  gap: var(--space-4);')
+    expect(css).toContain('.security-section > :is(h2, p, form) {\n  margin: 0;')
+    expect(css).toContain('.security-section > .button {\n  justify-self: start;')
+  })
+
   test('defines compact and relaxed global density scales', async () => {
     const css = await Bun.file(new URL('./styles.css', import.meta.url)).text()
     expect(css).toContain('body.density-compact {')
