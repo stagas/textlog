@@ -3,19 +3,19 @@ import { dirname } from 'node:path'
 import { appName, appOrigin } from './brand'
 import { createEmailTransport } from './email-transport'
 
-async function sendEmail(email: string, subject: string, text: string, html: string) {
+async function sendEmail(email: string, subject: string, text: string, html: string, fromOverride?: string) {
+  const from = fromOverride || Bun.env.EMAIL_FROM
   const capturePath = Bun.env.EMAIL_CAPTURE_PATH
   if (capturePath) {
     if (Bun.env.NODE_ENV !== 'test') throw new Error('EMAIL_CAPTURE_PATH is only available in test')
     mkdirSync(dirname(capturePath), { recursive: true })
-    appendFileSync(capturePath, `${JSON.stringify({ to: email, subject, text, html })}\n`, { mode: 0o600 })
+    appendFileSync(capturePath, `${JSON.stringify({ from, to: email, subject, text, html })}\n`, { mode: 0o600 })
     return
   }
 
   const sendDevelopmentEmail = Bun.env.DEV_SEND_EMAILS === 'true' || Bun.env.DEV_RESEND_EMAILS === 'true'
   if (Bun.env.NODE_ENV === 'development' && !sendDevelopmentEmail) return
 
-  const from = Bun.env.EMAIL_FROM
   if (!from) throw new Error('EMAIL_FROM must be configured')
   await createEmailTransport().send({ from, to: email, subject, text, html })
 }
@@ -83,9 +83,9 @@ const paragraph = (content: string) => `<p style="margin:0 0 16px">${content}</p
 const expiryNotice = (message: string) =>
   notice(`${escapeHtml(message)}<br>If you did not request this, you can safely ignore this email.`)
 
-export function sendAdminEmail(email: string, subject: string, body: string) {
+export function sendAdminEmail(email: string, subject: string, body: string, from?: string) {
   const content = `<div style="white-space:pre-wrap;word-break:break-word">${escapeHtml(body)}</div>`
-  return sendEmail(email, subject, body, emailDocument(subject, content))
+  return sendEmail(email, subject, body, emailDocument(subject, content), from)
 }
 
 export function sendPasswordReset(email: string, resetUrl: string) {

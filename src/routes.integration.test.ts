@@ -1543,15 +1543,23 @@ test('consequential account, content, reporting, and admin flows work over HTTP'
   expect(await dashboard.text()).toContain('A route-level integration post')
   const emailPage = await request('/admin/email', { cookie: adminCookie })
   expect(emailPage.status).toBe(200)
-  expect(await emailPage.text()).toContain('action="/admin/email"')
+  const emailPageHtml = await emailPage.text()
+  expect(emailPageHtml).toContain('action="/admin/email"')
+  expect(emailPageHtml).toContain('name="from" value="textlog &lt;hello@textlog.cc&gt;"')
   const sendEmail = await request('/admin/email', {
     method: 'POST',
     cookie: adminCookie,
-    form: { email: 'recipient@example.com', title: 'A custom title', body: 'Hello <friend>!' },
+    form: {
+      from: 'another sender <sender@example.com>',
+      email: 'recipient@example.com',
+      title: 'A custom title',
+      body: 'Hello <friend>!',
+    },
   })
   expect(sendEmail.status).toBe(303)
   expect(sendEmail.headers.get('location')).toBe('/admin/email?sent=1')
   expect(capturedEmails().at(-1)).toMatchObject({
+    from: 'another sender <sender@example.com>',
     to: 'recipient@example.com',
     subject: 'A custom title',
     text: 'Hello <friend>!',

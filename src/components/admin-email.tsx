@@ -16,6 +16,11 @@ export function AdminEmail({ user, sent = false }: { user: User; sent?: boolean 
         <FormMessage success={sent ? 'Email sent.' : undefined} />
         <form method="post" action="/admin/email">
           <label className="form-label">
+            sender email
+            <input className="form-control" name="from" defaultValue="textlog &lt;hello@textlog.cc&gt;" maxLength={320}
+              required autoComplete="off" inputMode="email" enterKeyHint="next" />
+          </label>
+          <label className="form-label">
             recipient email
             <input className="form-control" name="email" type="email" maxLength={254} required autoComplete="off"
               inputMode="email" enterKeyHint="next" />
