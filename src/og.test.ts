@@ -1,6 +1,7 @@
 import { describe, expect, test } from 'bun:test'
 import { createCanvas, Image } from 'canvas'
 import { postOgText, renderDefaultOg, renderPostOg, renderProfileOg, renderTagOg } from './og'
+import { pollDisplayBody } from './polls'
 
 function visiblePixels(imageBuffer: Buffer, x: number, y: number, width: number, height: number) {
   const image = new Image()
@@ -25,6 +26,20 @@ describe('renderPostOg', () => {
       math: [],
     })
     expect(renderPostOg('Read [the docs](https://example.com/docs) today', 'tester')).not.toHaveLength(0)
+  })
+
+  test('omits unrevealed spoiler text from the image', () => {
+    expect(postOgText('Visible setup\n#spoiler\nSecret ending')).toMatchObject({
+      text: 'Visible setup\n#spoiler',
+    })
+    expect(renderPostOg('Visible setup\n#spoiler\nSecret ending', 'tester')).not.toHaveLength(0)
+  })
+
+  test('renders poll questions with visually distinct answer rows', () => {
+    expect(postOgText(pollDisplayBody('Tea or coffee?\n#poll\nTea\nCoffee')).text)
+      .toBe('Tea or coffee?\n#poll')
+    const image = renderPostOg('Tea or coffee?\n#poll\nTea\nCoffee', 'tester')
+    expect(visiblePixels(image, 70, 375, 1060, 145)).toBeGreaterThan(10_000)
   })
 
   test('identifies everything the content renderer linkifies', () => {

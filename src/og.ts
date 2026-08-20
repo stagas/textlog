@@ -1,6 +1,8 @@
 import { type CanvasRenderingContext2D, createCanvas, Image } from 'canvas'
 import { appName } from './brand'
+import { splitSpoilerBody } from './content'
 import { texToSvg } from './math'
+import { parsePoll, pollDisplayBody } from './polls'
 import { linkTokens } from './utils'
 
 const width = 1200
@@ -77,29 +79,29 @@ function linesFor(ctx: CanvasRenderingContext2D, text: string, maxWidth: number)
   return lines
 }
 
-function fitPost(ctx: CanvasRenderingContext2D, body: string) {
+function fitPost(ctx: CanvasRenderingContext2D, body: string, availableHeight = maxTextHeight, maxSize = 108) {
   // Let the longest authored line influence the starting size. This favors fewer,
   // longer rows instead of rendering large type and wrapping after only a few words.
   const longestSourceLine = body.replace(/\r/g, '').split('\n')
     .map(line => line.replace(/\t/g, '    '))
     .reduce((longest, line) => line.length > longest.length ? line : longest, '')
-  ctx.font = '500 108px monospace'
+  ctx.font = `500 ${maxSize}px monospace`
   const longestWidth = ctx.measureText(longestSourceLine).width
-  const widthFittedSize = longestWidth ? Math.floor(108 * maxTextWidth / longestWidth) : 108
-  const startingSize = Math.max(40, Math.min(108, widthFittedSize))
+  const widthFittedSize = longestWidth ? Math.floor(maxSize * maxTextWidth / longestWidth) : maxSize
+  const startingSize = Math.max(20, Math.min(maxSize, widthFittedSize))
 
   // Wrapping is recalculated at every size because it also affects total height.
   for (let size = startingSize; size >= 20; size -= 2) {
     ctx.font = `500 ${size}px monospace`
     const lines = linesFor(ctx, body, maxTextWidth)
     const lineHeight = Math.round(size * 1.32)
-    if (lines.length * lineHeight <= maxTextHeight) return { lines, lineHeight, size }
+    if (lines.length * lineHeight <= availableHeight) return { lines, lineHeight, size }
   }
   const size = 20
   const lineHeight = 26
   ctx.font = `500 ${size}px monospace`
   const lines = linesFor(ctx, body, maxTextWidth)
-  const visibleLineCount = Math.floor(maxTextHeight / lineHeight)
+  const visibleLineCount = Math.max(1, Math.floor(availableHeight / lineHeight))
   const visibleLines = lines.slice(0, visibleLineCount)
   if (lines.length > visibleLineCount) {
     const last = visibleLines.length - 1
@@ -109,6 +111,7 @@ function fitPost(ctx: CanvasRenderingContext2D, body: string) {
 }
 
 export function postOgText(body: string) {
+  body = splitSpoilerBody(body).visible
   const links: OgRange[] = []
   const code: OgRange[] = []
   const math: OgMath[] = []
@@ -261,17 +264,67 @@ function drawLinkedLine(
   }
 }
 
+function drawPollOptions(ctx: CanvasRenderingContext2D, options: string[], fontSize: number, top: number) {
+  const columns = options.length > 4 ? 2 : 1
+  const rows = Math.ceil(options.length / columns)
+  const gap = 10
+  const columnGap = 14
+  const rowHeight = (contentBottom - top - (rows - 1) * gap) / rows
+  const optionWidth = columns === 2 ? (maxTextWidth - columnGap) / 2 : maxTextWidth
+  ctx.font = `500 ${fontSize}px monospace`
+
+  for (const [index, option] of options.entries()) {
+    const column = index % columns
+    const row = Math.floor(index / columns)
+    const x = 80 + column * (optionWidth + columnGap)
+    const y = top + row * (rowHeight + gap)
+    ctx.fillStyle = '#171d18'
+    ctx.strokeStyle = '#465048'
+    ctx.lineWidth = 2
+    ctx.beginPath()
+    ctx.rect(x, y, optionWidth, rowHeight)
+    ctx.fill()
+    ctx.stroke()
+
+    const label = linesFor(ctx, option, optionWidth - 40)[0] || ''
+    const clipped = label === option ? label : label.replace(/\s+$/, '') + '…'
+    const metrics = ctx.measureText(clipped)
+    ctx.fillStyle = textColor
+    ctx.fillText(clipped, x + 20,
+      y + (rowHeight + metrics.actualBoundingBoxAscent - metrics.actualBoundingBoxDescent) / 2)
+  }
+}
+
 export function renderPostOg(body: string, handle: string) {
   const canvas = createCanvas(width, height)
   const ctx = canvas.getContext('2d')
 
   drawBackground(ctx)
 
-  const post = postOgText(body.trimEnd())
-  const fitted = fitPost(ctx, post.text)
+  const visibleBody = splitSpoilerBody(body.trimEnd()).visible
+  const poll = parsePoll(visibleBody)
+  const post = postOgText(poll ? pollDisplayBody(visibleBody) : visibleBody)
+  const pollRows = poll ? Math.ceil(poll.options.length / (poll.options.length > 4 ? 2 : 1)) : 0
+  const pollHeight = poll ? pollRows * (poll.options.length > 4 ? 60 : 68) + (pollRows - 1) * 10 : 0
+  const questionGap = 8
+  const questionHeight = poll ? Math.max(26, maxTextHeight - pollHeight - questionGap) : maxTextHeight
+  const pollFontSize = poll
+    ? poll.options.length === 2
+      ? 70
+      : poll.options.length === 3
+      ? 52
+      : poll.options.length === 4
+      ? 40
+      : poll.options.length <= 6
+      ? 48
+      : 38
+    : 108
+  const fitted = fitPost(ctx, post.text, questionHeight, pollFontSize)
   ctx.font = `500 ${fitted.size}px monospace`
   const textBlockHeight = fitted.lines.length * fitted.lineHeight
-  let y = contentTop + Math.max(0, (maxTextHeight - textBlockHeight) / 2) + fitted.size
+  let y = poll
+    ? contentTop + fitted.size
+    : contentTop + Math.max(0, (questionHeight - textBlockHeight) / 2) + fitted.size
   let searchFrom = 0
   for (const line of fitted.lines) {
     const lineStart = post.text.indexOf(line, searchFrom)
@@ -279,6 +332,8 @@ export function renderPostOg(body: string, handle: string) {
     searchFrom = (lineStart < 0 ? searchFrom : lineStart) + line.length
     y += fitted.lineHeight
   }
+
+  if (poll) drawPollOptions(ctx, poll.options, fitted.size, contentTop + textBlockHeight + questionGap)
 
   ctx.fillStyle = accentColor
   ctx.font = '500 42px monospace'
