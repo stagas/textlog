@@ -107,6 +107,7 @@ test('compose offers a server-rendered post preview', () => {
   const preview = renderToStaticMarkup(React.createElement(Compose, { user, body: 'Hello #world', preview: true }))
 
   expect(form).toContain('value="preview" name="action">preview</button>')
+  expect(form).toContain('class="button" accessKey="p">post →</button>')
   expect(form.indexOf('>preview</button>')).toBeLessThan(form.indexOf('>post →</button>'))
   expect(preview).toContain('<h2>preview</h2>')
   expect(preview).toContain('What&#x27;s on your mind')
@@ -267,6 +268,7 @@ test('reply forms offer the same server-rendered preview flow', () => {
   }))
 
   expect(html).toContain('value="preview" name="action">preview</button>')
+  expect(html).toContain('class="button" accessKey="p">post →</button>')
   expect(html).toContain('class="secondary-action cancel-action edit-post-cancel" href="/post/2">cancel</a>')
   expect(html.indexOf('>cancel</a>')).toBeLessThan(html.indexOf('>preview</button>'))
   expect(html).toContain('<div class="reply-preview"><p class="eyebrow">preview</p><div class="reply-branch">')
@@ -631,7 +633,7 @@ test('signed-in pages put the write shortcut before skip to content', () => {
     user: { id: 1, handle: 'reader', email: 'reader@example.com', bio: '' },
   }))
 
-  const writeShortcut = '<a class="skip-link" href="/write">write</a>'
+  const writeShortcut = '<a class="skip-link" href="/write?from=%2F" accessKey="w">write</a>'
   const contentShortcut = '<a class="skip-link" href="#main-content">skip to content</a>'
   expect(html).toContain(writeShortcut)
   expect(html.indexOf(writeShortcut)).toBeLessThan(html.indexOf(contentShortcut))
@@ -640,7 +642,7 @@ test('signed-in pages put the write shortcut before skip to content', () => {
 test('guest pages keep skip to content as their first shortcut', () => {
   const html = renderToStaticMarkup(React.createElement(About, { user: null }))
 
-  expect(html).not.toContain('<a class="skip-link" href="/write">write</a>')
+  expect(html).not.toContain('accessKey="w">write</a>')
   expect(html).toContain('<body class="density-regular"><a class="skip-link" href="#main-content">skip to content</a>')
 })
 

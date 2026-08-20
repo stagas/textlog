@@ -65,7 +65,7 @@ export function Compose(
                 <a className="secondary-action cancel-action edit-post-cancel" href={returnPath}>cancel</a>
                 <button className="secondary-action" name="action" value="preview">preview</button>
               </span>
-            } primary={<button className="button">post →</button>} />
+            } primary={<button className="button" accessKey="p">post →</button>} />
           </div>
         </form>
       </Panel>

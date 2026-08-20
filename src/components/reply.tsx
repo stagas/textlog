@@ -125,7 +125,7 @@ export function Reply(
                     </a>
                     <button className="secondary-action" name="action" value="preview">preview</button>
                   </span>
-                } primary={<button className="button">post →</button>} />
+                } primary={<button className="button" accessKey="p">post →</button>} />
             )
             : <VerificationRequired />
         )}

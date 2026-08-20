@@ -45,6 +45,9 @@ export function Layout({
   const origin = appOrigin()
   const requestUrl = new URL(activeRequest().url)
   const currentPath = requestUrl.pathname + requestUrl.search
+  const writeShortcutHref = requestUrl.pathname === '/write'
+    ? '/write'
+    : '/write?from=' + encodeURIComponent(currentPath)
   const profileHref = user ? `/u/${user.handle}?from=${encodeURIComponent(currentPath)}` : ''
   const accountFrom = requestUrl.pathname.startsWith('/account')
     ? requestUrl.searchParams.get('from') || `/u/${user?.handle || ''}`
@@ -131,7 +134,7 @@ export function Layout({
         <style>{themeCss}</style>
       </head>
       <body className={`density-${density}${user?.show_link_previews === 0 ? ' link-previews-disabled' : ''}`}>
-        {user && ready && <a className="skip-link" href="/write">write</a>}
+        {user && ready && <a className="skip-link" href={writeShortcutHref} accessKey="w">write</a>}
         <a className="skip-link" href="#main-content">skip to content</a>
         <header className={user ? 'authenticated-header' : undefined}>
           <a className="brand" href="/" aria-label={`${name} home`}>
