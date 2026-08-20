@@ -305,21 +305,21 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
       if (!endpoint) return null as DatabaseDomainOutput<K>
       return database.query(`SELECT notify_latest latest,notify_replies replies,notify_mentions mentions,
         notify_follows follows,notify_follow_activity followActivity,notify_following_notes followingNotes,
-        notify_bots bots,notify_following_only_to_me followingOnlyToMe${includeSignups ? ',notify_signups signups' : ''}
+        notify_following_only_to_me followingOnlyToMe${includeSignups ? ',notify_signups signups' : ''}
         FROM push_subscriptions WHERE endpoint=? AND user_id=?`).get(endpoint, userId) as DatabaseDomainOutput<K>
     }
     case 'account.savePushSubscription': {
       const { userId, endpoint, p256dh, auth, deviceId, userAgent, preferencesProvided, preferences } =
         input as DatabaseDomainInput<'account.savePushSubscription'>
-      const { latest, replies, mentions, follows, signups, followActivity, followingNotes, bots, followingOnlyToMe } =
+      const { latest, replies, mentions, follows, signups, followActivity, followingNotes, followingOnlyToMe } =
         preferences
       database.transaction(() => {
         database.query('UPDATE push_subscriptions SET p256dh=?,auth=?,device_id=? WHERE endpoint=?')
           .run(p256dh, auth, deviceId, endpoint)
         database.query(`INSERT INTO push_subscriptions(endpoint,user_id,p256dh,auth,device_id,
             notify_latest,notify_replies,notify_mentions,notify_follows,notify_own_posts,notify_signups,
-            notify_follow_activity,notify_following_notes,notify_bots,notify_following_only_to_me)
-            VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+            notify_follow_activity,notify_following_notes,notify_following_only_to_me)
+            VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?)
           ON CONFLICT(endpoint,user_id) DO UPDATE SET p256dh=excluded.p256dh,auth=excluded.auth,
             device_id=excluded.device_id,notify_latest=coalesce(?,push_subscriptions.notify_latest),
             notify_replies=coalesce(?,push_subscriptions.notify_replies),
@@ -328,11 +328,10 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
             notify_signups=coalesce(?,push_subscriptions.notify_signups),
             notify_follow_activity=coalesce(?,push_subscriptions.notify_follow_activity),
             notify_following_notes=coalesce(?,push_subscriptions.notify_following_notes),
-            notify_bots=coalesce(?,push_subscriptions.notify_bots),
             notify_following_only_to_me=coalesce(?,push_subscriptions.notify_following_only_to_me)`)
           .run(endpoint, userId, p256dh, auth, deviceId, latest ?? 1, replies ?? 1, mentions ?? 1, follows ?? 1, 0,
-            signups ?? 1, followActivity ?? 1, followingNotes ?? 1, bots ?? 0, followingOnlyToMe ?? 0, latest, replies,
-            mentions, follows, signups, followActivity, followingNotes, bots, followingOnlyToMe)
+            signups ?? 1, followActivity ?? 1, followingNotes ?? 1, followingOnlyToMe ?? 0, latest, replies,
+            mentions, follows, signups, followActivity, followingNotes, followingOnlyToMe)
         if (userAgent) {
           database.query(`INSERT INTO notification_user_agents(user_id,user_agent,status) VALUES(?,?,'enabled')
             ON CONFLICT(user_id,user_agent) DO UPDATE SET status='enabled',updated_at=CURRENT_TIMESTAMP`)
@@ -411,12 +410,11 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
       return null as DatabaseDomainOutput<K>
     }
     case 'account.updateProfile': {
-      const { userId, handle, bio, timezone, isBot } = input as DatabaseDomainInput<'account.updateProfile'>
+      const { userId, handle, bio, timezone } = input as DatabaseDomainInput<'account.updateProfile'>
       try {
         database.transaction(() => {
           updateProfileHandle(database, userId, handle, bio)
           database.query('UPDATE users SET timezone=? WHERE id=?').run(timezone, userId)
-          database.query('UPDATE users SET is_bot=? WHERE id=? AND bot_managed=0').run(isBot ? 1 : 0, userId)
           cacheDb.query(`DELETE FROM materialized_feed_pages_v2 WHERE viewer_id=?
             AND kind IN ('latest','hot','for-you','to-me')`).run(userId)
         })()
@@ -543,10 +541,9 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
       return null as DatabaseDomainOutput<K>
     }
     case 'account.updateProfileFlags': {
-      const { userId, timezone, isBot } = input as DatabaseDomainInput<'account.updateProfileFlags'>
+      const { userId, timezone } = input as DatabaseDomainInput<'account.updateProfileFlags'>
       database.transaction(() => {
         database.query('UPDATE users SET timezone=? WHERE id=?').run(timezone, userId)
-        database.query('UPDATE users SET is_bot=? WHERE id=? AND bot_managed=0').run(isBot ? 1 : 0, userId)
         cacheDb.query(`DELETE FROM materialized_feed_pages_v2 WHERE viewer_id=?
           AND kind IN ('latest','hot','for-you','to-me')`).run(userId)
       })()
@@ -554,7 +551,7 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
     }
     case 'account.editSettings': {
       const { userId } = input as DatabaseDomainInput<'account.editSettings'>
-      const row = database.query(`SELECT is_bot isBot,bot_managed botManaged,timezone,recap_emails recapEmails
+      const row = database.query(`SELECT timezone,recap_emails recapEmails
         FROM users WHERE id=?`).get(userId)
       return (row || null) as DatabaseDomainOutput<K>
     }
@@ -731,29 +728,21 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
     }
     case 'admin.user': {
       const { id } = input as DatabaseDomainInput<'admin.user'>
-      return (database.query(`SELECT id,handle,email,bio,suspended_at,deleted_at,is_bot,bot_managed FROM users
+      return (database.query(`SELECT id,handle,email,bio,suspended_at,deleted_at FROM users
         WHERE id=? AND deleted_at IS NULL`).get(id) || null) as DatabaseDomainOutput<K>
     }
     case 'admin.moderateUser': {
-      const { id, actorId, action, isBot, note } = input as DatabaseDomainInput<'admin.moderateUser'>
-      const target = database.query(`SELECT id,email,suspended_at,is_bot,bot_managed FROM users
-        WHERE id=? AND deleted_at IS NULL`).get(id) as { id: number; email: string; suspended_at: string | null;
-        is_bot: number; bot_managed: number } | null
+      const { id, actorId, action, note } = input as DatabaseDomainInput<'admin.moderateUser'>
+      const target = database.query(`SELECT id,email,suspended_at FROM users
+        WHERE id=? AND deleted_at IS NULL`).get(id) as { id: number; email: string; suspended_at: string | null } | null
       if (!target) return { status: 'not_found' } as DatabaseDomainOutput<K>
       if (action === 'suspend' && target.suspended_at) {
         return { status: 'already_suspended' } as DatabaseDomainOutput<K>
       }
       if (action === 'restore' && !target.suspended_at) return { status: 'not_suspended' } as DatabaseDomainOutput<K>
-      if (action === 'bot' && target.bot_managed && Boolean(target.is_bot) === isBot) {
-        return { status: 'bot_unchanged' } as DatabaseDomainOutput<K>
-      }
       let imageKeys: string[] = []
       database.transaction(() => {
-        if (action === 'bot') {
-          database.query('UPDATE users SET is_bot=?,bot_managed=1 WHERE id=?').run(isBot ? 1 : 0, id)
-          recordAdminAction(database, actorId, isBot ? 'mark_bot' : 'unmark_bot', id, null, note)
-        }
-        else if (action === 'suspend') {
+        if (action === 'suspend') {
           database.query('UPDATE users SET suspended_at=CURRENT_TIMESTAMP WHERE id=?').run(id)
           database.query('DELETE FROM sessions WHERE user_id=?').run(id)
           recordAdminAction(database, actorId, 'suspend_user', id, null, note)
@@ -1002,7 +991,7 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
       const posts = kind === 'hot'
         ? apiHotPosts(database, origin, API_DEFAULT_LIMIT, null).data
         : apiPosts(database, origin, { limit: API_DEFAULT_LIMIT, before: null,
-          ...(kind === 'latest' ? { excludeBots: true } : { tag: identifier || '' }) }).data
+          ...(kind === 'latest' ? {} : { tag: identifier || '' }) }).data
       return { status: 'ready', posts, activities: [], postTitlePrefixes: {} } as DatabaseDomainOutput<K>
     }
     case 'api.publicRead': {
@@ -1613,7 +1602,6 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
           (b.blocker_id=? AND b.blocked_id=ps.user_id) OR (b.blocker_id=ps.user_id AND b.blocked_id=?))
         AND NOT EXISTS (SELECT 1 FROM post_hashtags ph JOIN blocked_hashtags bh ON bh.tag=ph.tag
           WHERE ph.post_id=? AND bh.user_id=ps.user_id)
-        AND (ps.notify_bots=1 OR NOT EXISTS (SELECT 1 FROM users actor WHERE actor.id=? AND actor.is_bot=1))
         AND ((ps.notify_latest=1 AND ps.user_id!=?) OR (ps.notify_following_notes=1 AND ps.user_id!=? AND (EXISTS
           (SELECT 1 FROM follows vf WHERE vf.follower_id=ps.user_id AND vf.following_id=?) OR EXISTS
           (SELECT 1 FROM post_hashtags ph JOIN hashtag_follows hf ON hf.tag=ph.tag
@@ -1628,7 +1616,7 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
           OR (ps.notify_mentions=1 AND ps.user_id!=? AND EXISTS(SELECT 1 FROM post_mentions pm
             WHERE pm.post_id=? AND pm.user_id=ps.user_id)))
         ORDER BY ps.endpoint,isReply DESC,isMention DESC,ps.user_id`)
-        .all(actorId, postId, actorId, postId, actorId, actorId, postId, actorId, actorId, actorId, actorId, postId,
+        .all(actorId, postId, actorId, postId, actorId, actorId, postId, actorId, actorId, actorId, postId,
           postId, postId, actorId, postId, actorId, postId)
       return { post: row, subscriptions } as DatabaseDomainOutput<K>
     }
@@ -1703,7 +1691,7 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
       const snapshot = feedSnapshotPage<PostView>(database, 'latest', viewerId, page, () =>
         database.query(
           `SELECT p.*,u.handle FROM posts p JOIN users u ON u.id=p.user_id
-          WHERE p.deleted_at IS NULL AND u.is_bot=0 AND (? < 0 OR NOT EXISTS
+          WHERE p.deleted_at IS NULL AND (? < 0 OR NOT EXISTS
           (SELECT 1 FROM blocks b WHERE (b.blocker_id=? AND b.blocked_id=p.user_id)
             OR (b.blocker_id=p.user_id AND b.blocked_id=?)))
           AND (? < 0 OR NOT EXISTS (SELECT 1 FROM post_hashtags ph JOIN blocked_hashtags bh ON bh.tag=ph.tag

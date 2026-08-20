@@ -32,7 +32,6 @@ function apiError(code: string, message: string, status: number, retryAfter?: nu
 }
 
 async function collection(c: Context, service: DatabaseService, filters: {
-  excludeBots?: boolean
   handle?: string
   parentId?: number
   repliesOnly?: boolean
@@ -377,7 +376,7 @@ export function registerApiRoutes(app: Hono, appUrl: string | null | undefined =
 
   app.get('/api/openapi.json', () => jsonResponse(openApiDocument(), 200, 'public, max-age=3600'))
 
-  app.get('/api/v1/feeds/latest', c => collection(c, service, { excludeBots: true }, appUrl))
+  app.get('/api/v1/feeds/latest', c => collection(c, service, {}, appUrl))
 
   for (const [path, kind] of [['for-you', 'personalizedFor'], ['to-me', 'toMeFor']] as const) {
     app.get(`/api/v1/activities/${path}`, async c => {

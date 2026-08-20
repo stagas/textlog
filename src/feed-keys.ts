@@ -17,7 +17,7 @@ export function userForFeedKey(database: Database, value: string | null, now = D
   // Continue accepting previously issued base64url keys while new keys use plain hexadecimal.
   if (!value || !(/^[a-f0-9]{64}$/.test(value) || /^tlf_[A-Za-z0-9_-]{43}$/.test(value))) return null
   const row = database.query(`SELECT u.id,u.handle,u.email,u.bio,u.suspended_at,u.email_verified_at,u.handle_chosen_at,
-      u.is_bot,u.bot_managed,u.timezone,u.show_link_previews,k.id key_id
+      u.timezone,u.show_link_previews,k.id key_id
     FROM feed_keys k JOIN users u ON u.id=k.user_id
     WHERE k.token_hash=? AND (k.expires_at IS NULL OR k.expires_at>?)
       AND u.deleted_at IS NULL AND u.suspended_at IS NULL`)

@@ -146,13 +146,11 @@ export function apiPosts(database: Database, origin: string, options: {
   handle?: string
   parentId?: number
   tag?: string
-  excludeBots?: boolean
   repliesOnly?: boolean
   topLevelOnly?: boolean
 }) {
   const filters = ['p.deleted_at IS NULL', 'u.deleted_at IS NULL']
   const parameters: Array<string | number> = []
-  if (options.excludeBots) filters.push('u.is_bot = 0')
   if (options.repliesOnly) filters.push('p.parent_id IS NOT NULL')
   if (options.topLevelOnly) filters.push('p.parent_id IS NULL')
   if (options.before !== null) {

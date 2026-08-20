@@ -157,26 +157,6 @@ describe('Web Push activity delivery', () => {
     ])
   })
 
-  test('includes bot notes only when enabled for for-you notifications', async () => {
-    const database = fixture()
-    database.run(`UPDATE users SET is_bot=1 WHERE id=1;
-      UPDATE push_subscriptions SET notify_latest=1,notify_following_notes=1,notify_bots=0;
-      INSERT INTO follows(follower_id,following_id,created_at) VALUES(2,1,CURRENT_TIMESTAMP);
-      INSERT INTO posts(id,user_id,body) VALUES(3,1,'bot note')`)
-    let deliveries = 0
-    webpush.sendNotification = (async () => {
-      deliveries++
-      return {} as never
-    }) as typeof webpush.sendNotification
-
-    await sendPushForPost(3, 1, 'author', database, vapid)
-    expect(deliveries).toBe(0)
-
-    database.run('UPDATE push_subscriptions SET notify_bots=1')
-    await sendPushForPost(3, 1, 'author', database, vapid)
-    expect(deliveries).toBe(1)
-  })
-
   test('can restrict for-you notifications to replies and mentions addressed to the subscriber', async () => {
     const database = fixture()
     database.run(`UPDATE push_subscriptions SET notify_latest=0,notify_replies=0,notify_mentions=0,

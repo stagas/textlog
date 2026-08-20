@@ -120,7 +120,7 @@ export type DatabaseDomainOperations = {
     output: boolean }
   'account.changePassword': { input: { userId: number; passwordHash: string; currentSessionHash: string | null };
     output: null }
-  'account.updateProfile': { input: { userId: number; handle: string; bio: string; timezone: string; isBot: boolean };
+  'account.updateProfile': { input: { userId: number; handle: string; bio: string; timezone: string };
     output: { status: 'ready' | 'unavailable' } }
   'account.export': { input: { userId: number; currentSession: string | null }; output: unknown }
   'account.emailChangeReadiness': { input: { userId: number; email: string };
@@ -163,9 +163,9 @@ export type DatabaseDomainOperations = {
     output: { status: 'not_found' } | { status: 'ready'; imageKeys: string[] } }
   'admin.user': { input: { id: number }; output: ProfileRow | null }
   'admin.moderateUser': {
-    input: { id: number; actorId: number; action: 'suspend' | 'restore' | 'delete' | 'bot'; isBot?: boolean;
+    input: { id: number; actorId: number; action: 'suspend' | 'restore' | 'delete';
       note: string }
-    output: { status: 'not_found' | 'already_suspended' | 'not_suspended' | 'bot_unchanged' } | { status: 'ready';
+    output: { status: 'not_found' | 'already_suspended' | 'not_suspended' } | { status: 'ready';
       imageKeys: string[] }
   }
   'account.securityData': { input: { userId: number; currentSessionHash: string | null; now: number }; output: {
@@ -192,10 +192,8 @@ export type DatabaseDomainOperations = {
       showLinkPreviews: boolean }
     output: null
   }
-  'account.updateProfileFlags': { input: { userId: number; timezone: string; isBot: boolean }; output: null }
+  'account.updateProfileFlags': { input: { userId: number; timezone: string }; output: null }
   'account.editSettings': { input: { userId: number }; output: {
-    isBot: number
-    botManaged: number
     timezone: string
     recapEmails: number
   } | null }
@@ -241,7 +239,7 @@ export type DatabaseDomainOperations = {
       >; postTitlePrefixes: Record<number, string> }
   }
   'api.publicRead': { input:
-    | { kind: 'collection'; origin: string; limit: number; before: number | null; excludeBots?: boolean;
+    | { kind: 'collection'; origin: string; limit: number; before: number | null;
       handle?: string; tag?: string; repliesOnly?: boolean; topLevelOnly?: boolean }
     | { kind: 'hot'; origin: string; limit: number;
       cursor: { asOf: string; score: number; latestActivityAt: string; createdAt: string; id: number;

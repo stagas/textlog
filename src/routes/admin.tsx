@@ -181,7 +181,7 @@ export function registerAdminRoutes(app: Hono) {
     if (!isAdmin(signedIn)) return c.text('Forbidden', 403)
     const id = Number(c.req.param('id'))
     const action = c.req.param('action')
-    if (!Number.isInteger(id) || !['suspend', 'restore', 'delete', 'bot'].includes(action)) {
+    if (!Number.isInteger(id) || !['suspend', 'restore', 'delete'].includes(action)) {
       return c.text('Not found', 404)
     }
     const target = await databaseService().call('admin.user', { id })
@@ -190,20 +190,6 @@ export function registerAdminRoutes(app: Hono) {
     if (action === 'suspend' && target.suspended_at) return c.text('Account is already suspended', 409)
     if (action === 'restore' && !target.suspended_at) return c.text('Account is not suspended', 409)
     const f = await form(c.req.raw)
-    if (action === 'bot') {
-      if (f.bot !== 'yes' && f.bot !== 'no') return c.text('Invalid bot status', 400)
-      const isBot = f.bot === 'yes'
-      const changed = await databaseService().call('admin.moderateUser', {
-        id,
-        actorId: signedIn.id,
-        action: 'bot',
-        isBot,
-        note: f.note || '',
-      })
-      if (changed.status === 'bot_unchanged') return c.text('Bot status has already changed', 409)
-      if (changed.status === 'not_found') return c.text('Not found', 404)
-      return redirect(`/admin/users/${id}`)
-    }
     const changed = await databaseService().call('admin.moderateUser', {
       id,
       actorId: signedIn.id,

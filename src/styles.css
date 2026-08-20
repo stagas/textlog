@@ -3375,14 +3375,6 @@ form.report-panel {
   margin-top: var(--space-6);
 }
 
-.bio-form .profile-bot-setting {
-  grid-template-columns: auto 1fr;
-  align-items: start;
-  gap: var(--space-3);
-  color: var(--ink);
-  cursor: pointer;
-}
-
 .bio-form > .posting-help {
   color: var(--muted);
   font-size: 0.625rem;
@@ -3403,19 +3395,6 @@ form.report-panel {
 
 .bio-form > .composefoot .button {
   margin-left: auto;
-}
-
-.profile-bot-setting input {
-  width: 2.25rem;
-  height: 1.25rem;
-  margin: 0;
-  accent-color: var(--accent);
-  cursor: pointer;
-}
-
-.profile-bot-setting > span {
-  display: grid;
-  gap: var(--space-1);
 }
 
 .account-danger-zone {
@@ -4384,34 +4363,6 @@ form.report-panel {
 
 .activity-more > summary {
   user-select: none;
-}
-
-.for-you-hide-input {
-  position: absolute;
-  opacity: 0;
-  pointer-events: none;
-}
-
-.for-you-hide-action {
-  border-bottom: var(--hairline) solid var(--link-border);
-  cursor: pointer;
-  user-select: none;
-}
-
-.for-you-hide-action:hover {
-  color: var(--tab-hover);
-}
-
-.for-you-hide-input:focus-visible + .for-you-hide-action {
-  outline: 2px solid var(--accent);
-  outline-offset: 2px;
-}
-
-.for-you-filter-shell > style + .for-you-item .post,
-.for-you-filter-shell > style + .activity-follow,
-.for-you-filter-shell > style + .activity-group > .for-you-item:first-child .post,
-.for-you-filter-shell > style + .activity-group > .activity-follow:first-child {
-  border-top: 0;
 }
 
 .post-context {

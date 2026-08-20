@@ -23,12 +23,12 @@ test('notes per user stats exclude users with two or fewer notes', () => {
   database.close()
 })
 
-test('post and note stats exclude notes from bots', () => {
+test('post and note stats include all accounts', () => {
   const database = new Database(':memory:')
   runMigrations(database)
-  database.run(`INSERT INTO users(id,handle,email,password,is_bot) VALUES
-    (1,'person','person@example.com','x',0),
-    (2,'bot','bot@example.com','x',1);
+  database.run(`INSERT INTO users(id,handle,email,password) VALUES
+    (1,'person','person@example.com','x'),
+    (2,'second','second@example.com','x');
     INSERT INTO posts(id,user_id,body,parent_id,created_at) VALUES
     (1,1,'person 1',NULL,datetime('now')),
     (2,1,'person 2',1,datetime('now')),
@@ -40,12 +40,12 @@ test('post and note stats exclude notes from bots', () => {
 
   const stats = dashboardStats(database)
 
-  expect(stats.activePosts).toBe(3)
-  expect(stats.replies).toBe(1)
-  expect(stats.notesPerUser).toBe(3)
-  expect(stats.averageNotesPerUser).toBe(3)
-  expect(stats.posts24h).toBe(3)
-  expect(stats.posts7d).toBe(3)
-  expect(stats.postsYesterday).toBe(0)
+  expect(stats.activePosts).toBe(7)
+  expect(stats.replies).toBe(2)
+  expect(stats.notesPerUser).toBe(3.5)
+  expect(stats.averageNotesPerUser).toBe(3.5)
+  expect(stats.posts24h).toBe(7)
+  expect(stats.posts7d).toBe(7)
+  expect(stats.postsYesterday).toBe(1)
   database.close()
 })

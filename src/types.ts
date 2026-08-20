@@ -123,7 +123,6 @@ export type PersonalizedTimelineRow = PostView & {
   actor_id: number
   actor_handle: string
   actor_bio: string
-  actor_is_bot?: number
   target_handle: string | null
   target_tag: string | null
   target_bio: string | null
@@ -161,8 +160,6 @@ export type ProfileRow = {
   suspended_at?: string | null
   deleted_at?: string | null
   email_verified_at?: string | null
-  is_bot?: number
-  bot_managed?: number
   timezone?: string | null
   recap_emails?: number
 }
@@ -271,4 +268,4 @@ export type TagView = {
 }
 export type User = { id: number; handle: string; email: string; bio: string; suspended_at?: string | null;
   email_verified_at?: string | null; activity_read_at?: string | null; handle_chosen_at?: string | null;
-  is_bot?: number; bot_managed?: number; timezone?: string | null; show_link_previews?: number; recap_emails?: number }
+  timezone?: string | null; show_link_previews?: number; recap_emails?: number }

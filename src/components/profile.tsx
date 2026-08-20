@@ -11,7 +11,7 @@ import { Post } from './post'
 
 export function Profile(
   { user, profile, posts, following, followsViewer = false, bio = profile.bio || '', editHandle = profile.handle,
-    editEmail = profile.email, editIsBot = !!profile.is_bot, error, editing = false, total = posts.length,
+    editEmail = profile.email, error, editing = false, total = posts.length,
     noteCount = total, replyCount = 0, tab = 'notes', followerCount = 0, followingCount = 0, followingTagCount = 0,
     blockedPeopleCount = 0, blockedTagCount = 0, blocked = false, blockedByProfile = false, social, page = 1,
     totalPages = 1, returnPath, suggestionSearch, bioReference }: {
@@ -23,7 +23,6 @@ export function Profile(
       bio?: string
       editHandle?: string
       editEmail?: string
-      editIsBot?: boolean
       error?: string
       editing?: boolean
       total?: number
@@ -146,18 +145,6 @@ export function Profile(
                         <option value={timezone.value} key={timezone.value}>{timezone.label}</option>
                       ))}
                     </select>
-                  </label>
-                  <label className="profile-bot-setting">
-                    <input type="checkbox" role="switch" name="isBot" value="yes" defaultChecked={editIsBot}
-                      disabled={!!profile.bot_managed} />
-                    <span>
-                      <strong>This account is a bot</strong>
-                      <span className="form-hint">
-                        Bot notes are hidden from /latest. People can see them by following this account, following a
-                        hashtag it uses, or visiting its profile.
-                        {!!profile.bot_managed && ' A moderator permanently controls this setting.'}
-                      </span>
-                    </span>
                   </label>
                   <div className="composefoot">
                     <button className="button">save profile →</button>

@@ -73,16 +73,6 @@ export function NotificationSettings({ user, publicKey, ios = false, returnPath 
                   <span />
                 </span>
               </label>
-              <label className="notification-toggle notification-toggle-group-end">
-                <span>
-                  <strong>include bots</strong>
-                  <small>Include notifications from bot accounts</small>
-                </span>
-                <input type="checkbox" name="bots" />
-                <span className="notification-toggle-track" aria-hidden="true">
-                  <span />
-                </span>
-              </label>
             </fieldset>
             {[
               ...(isAdmin(user)

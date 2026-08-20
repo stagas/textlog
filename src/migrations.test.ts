@@ -114,9 +114,9 @@ describe('database migrations', () => {
     expect(pushColumns).toContain('notify_signups')
     expect(pushColumns).toContain('notify_follow_activity')
     expect(pushColumns).toContain('notify_following_notes')
-    expect(pushColumns).toContain('notify_following_bots')
+    expect(pushColumns).not.toContain('notify_following_bots')
     expect(pushColumns).toContain('notify_following_only_to_me')
-    expect(pushColumns).toContain('notify_bots')
+    expect(pushColumns).not.toContain('notify_bots')
     expect(pushColumns).toContain('device_id')
     expect((database.query('PRAGMA table_info(push_subscriptions)').all() as { name: string; pk: number }[])
       .filter(column => column.pk).map(column => column.name)).toEqual(['endpoint', 'user_id'])
@@ -307,14 +307,14 @@ describe('database migrations', () => {
     expect(() => runMigrations(database)).toThrow('newer than supported')
   })
 
-  test('adds an opt-in bot account flag defaulting to false', () => {
+  test('does not retain bot account flags', () => {
     const database = new Database(':memory:')
     runMigrations(database)
     database.query('INSERT INTO users(handle,email,password) VALUES(\'person\',\'person@example.com\',\'x\')').run()
 
-    expect(database.query('SELECT is_bot FROM users WHERE handle=?').get('person')).toEqual({ is_bot: 0 })
-    expect(() => database.query('UPDATE users SET is_bot=2 WHERE handle=?').run('person')).toThrow()
-    expect(database.query('SELECT bot_managed FROM users WHERE handle=?').get('person')).toEqual({ bot_managed: 0 })
+    const columns = (database.query('PRAGMA table_info(users)').all() as { name: string }[]).map(row => row.name)
+    expect(columns).not.toContain('is_bot')
+    expect(columns).not.toContain('bot_managed')
   })
 
   test('removes the obsolete per-account API write flag from version 24 databases', () => {

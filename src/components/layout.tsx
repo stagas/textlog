@@ -127,7 +127,7 @@ export function Layout({
             <link rel="alternate" type="application/atom+xml" title={`${feeds.title} (Atom)`} href={feeds.atom} />
           </>
         )}
-        <link rel="stylesheet" href="/styles.css?v=402" />
+        <link rel="stylesheet" href="/styles.css?v=403" />
         <style>{themeCss}</style>
       </head>
       <body className={`density-${density}${user?.show_link_previews === 0 ? ' link-previews-disabled' : ''}`}>
@@ -233,7 +233,6 @@ function DevReload({ bootId }: { bootId: string }) {
     <script dangerouslySetInnerHTML={{ __html: `
     (() => {
       const bootId = ${JSON.stringify(bootId)};
-      let disconnected = false;
       const check = async () => {
         const controller = new AbortController();
         const timeout = setTimeout(() => controller.abort(), 750);
@@ -243,13 +242,12 @@ function DevReload({ bootId }: { bootId: string }) {
             signal: controller.signal,
           });
           const current = response.ok ? (await response.json()).bootId : null;
-          if (current && (disconnected || current !== bootId)) {
+          if (current && current !== bootId) {
             window.location.reload();
             return;
           }
-          disconnected = !current;
         } catch {
-          disconnected = true;
+          // A busy server can miss a poll without having restarted.
         } finally {
           clearTimeout(timeout);
         }

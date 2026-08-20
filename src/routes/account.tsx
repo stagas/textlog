@@ -176,7 +176,6 @@ export function registerAccountRoutes(app: Hono) {
     return c.json({ enabled: Boolean(preferences), preferences: preferences || {
       latest: 1,
       followingNotes: 1,
-      bots: 0,
       followingOnlyToMe: 0,
       replies: 1,
       mentions: 1,
@@ -213,14 +212,13 @@ export function registerAccountRoutes(app: Hono) {
     const follows = preference('follows')
     const followActivity = preference('followActivity')
     const followingNotes = preference('followingNotes')
-    const bots = preference('bots')
     const followingOnlyToMe = preference('followingOnlyToMe')
     const signups = isAdmin(user) ? preference('signups') : null
     const deviceId = notificationDevice(c.req.raw) || token()
     const userAgent = notificationUserAgent(c.req.raw)
     await databaseService().call('account.savePushSubscription', { userId: user.id, endpoint, p256dh, auth, deviceId,
       userAgent, preferencesProvided: Boolean(value.preferences),
-      preferences: { latest, replies, mentions, follows, signups, followActivity, followingNotes, bots,
+      preferences: { latest, replies, mentions, follows, signups, followActivity, followingNotes,
         followingOnlyToMe } })
     c.header('Set-Cookie', notificationDeviceCookie(deviceId), { append: true })
     return c.json({ saved: true })
@@ -253,7 +251,7 @@ export function registerAccountRoutes(app: Hono) {
     const settings = await databaseService().call('account.editSettings', { userId: user.id })
     return page(
       <Profile user={user}
-        profile={{ ...user, is_bot: settings?.isBot, bot_managed: settings?.botManaged, timezone: settings?.timezone,
+        profile={{ ...user, timezone: settings?.timezone,
           recap_emails: settings?.recapEmails }} posts={[]} following={false} editing returnPath={returnPath} />,
     )
   })
@@ -304,13 +302,11 @@ export function registerAccountRoutes(app: Hono) {
     const bio = submittedBio.trim() ? submittedBio : ''
     const submittedHandle = f.handle || ''
     const submittedTimezone = f.timezone || user.timezone || DEFAULT_TIMEZONE
-    const isBot = f.isBot === 'yes'
     const suggestionSearch = await profileSuggestionSearch(f, user.id)
     if (suggestionSearch) {
       return page(
         <Profile user={user} profile={{ ...user, timezone: submittedTimezone }} posts={[]} following={false} bio={bio}
-          editHandle={submittedHandle} editing returnPath={returnPath} suggestionSearch={suggestionSearch}
-          editIsBot={isBot} />,
+          editHandle={submittedHandle} editing returnPath={returnPath} suggestionSearch={suggestionSearch} />,
       )
     }
     const handle = submittedHandle.toLowerCase().replace(/^@/, '')
@@ -328,7 +324,7 @@ export function registerAccountRoutes(app: Hono) {
       ].filter(Boolean).join(' ')
       return page(
         <Profile user={user} profile={{ ...user, timezone: submittedTimezone }} posts={[]} following={false} bio={bio}
-          editHandle={submittedHandle} editing error={error} returnPath={returnPath} editIsBot={isBot} />,
+          editHandle={submittedHandle} editing error={error} returnPath={returnPath} />,
         400,
       )
     }
@@ -337,8 +333,7 @@ export function registerAccountRoutes(app: Hono) {
       if (!moderation.ok) {
         return page(
           <Profile user={user} profile={{ ...user, timezone: submittedTimezone }} posts={[]} following={false} bio={bio}
-            editHandle={submittedHandle} editing error={moderationMessage(moderation.reason)} returnPath={returnPath}
-            editIsBot={isBot} />,
+            editHandle={submittedHandle} editing error={moderationMessage(moderation.reason)} returnPath={returnPath} />,
           moderation.reason === 'flagged' ? 422 : 503,
         )
       }
@@ -348,13 +343,11 @@ export function registerAccountRoutes(app: Hono) {
       handle,
       bio,
       timezone: submittedTimezone,
-      isBot,
     })
     if (updated.status !== 'ready') {
       return page(
         <Profile user={user} profile={{ ...user, timezone: submittedTimezone }} posts={[]} following={false} bio={bio}
-          editHandle={submittedHandle} editing error="That username is unavailable." returnPath={returnPath}
-          editIsBot={isBot} />,
+          editHandle={submittedHandle} editing error="That username is unavailable." returnPath={returnPath} />,
         400,
       )
     }

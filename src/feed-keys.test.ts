@@ -5,7 +5,7 @@ import { feedKeyHash, issueFeedKey, userForFeedKey } from './feed-keys'
 test('feed keys are random, hashed, retained, expiring, and independently revocable', () => {
   const database = new Database(':memory:')
   database.run(`CREATE TABLE users (id INTEGER PRIMARY KEY,handle TEXT,email TEXT,bio TEXT,deleted_at TEXT,
-      suspended_at TEXT,email_verified_at TEXT,handle_chosen_at TEXT,is_bot INTEGER,bot_managed INTEGER,timezone TEXT,
+      suspended_at TEXT,email_verified_at TEXT,handle_chosen_at TEXT,timezone TEXT,
       show_link_previews INTEGER);
     CREATE TABLE feed_keys (id INTEGER PRIMARY KEY AUTOINCREMENT,user_id INTEGER,token_hash TEXT NOT NULL UNIQUE,
       name TEXT NOT NULL,created_at INTEGER NOT NULL,expires_at INTEGER,last_used_at INTEGER);

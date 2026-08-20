@@ -151,8 +151,6 @@ export async function sendPushForPost(postId: number, actorId: number, actorHand
       (b.blocker_id=? AND b.blocked_id=ps.user_id) OR (b.blocker_id=ps.user_id AND b.blocked_id=?))
     AND NOT EXISTS (SELECT 1 FROM post_hashtags ph JOIN blocked_hashtags bh ON bh.tag=ph.tag
       WHERE ph.post_id=? AND bh.user_id=ps.user_id)
-    AND (ps.notify_bots=1 OR NOT EXISTS
-      (SELECT 1 FROM users actor WHERE actor.id=? AND actor.is_bot=1))
     AND ((ps.notify_latest=1 AND ps.user_id!=?)
       OR (ps.notify_following_notes=1 AND ps.user_id!=? AND (EXISTS
         (SELECT 1 FROM follows vf WHERE vf.follower_id=ps.user_id AND vf.following_id=?) OR EXISTS
@@ -169,7 +167,7 @@ export async function sendPushForPost(postId: number, actorId: number, actorHand
       OR (ps.notify_mentions=1 AND ps.user_id!=? AND EXISTS(
         SELECT 1 FROM post_mentions pm WHERE pm.post_id=? AND pm.user_id=ps.user_id)))
     ORDER BY ps.endpoint,is_reply DESC,is_mention DESC,ps.user_id`)
-      .all(actorId, postId, actorId, postId, actorId, actorId, postId, actorId, actorId, actorId, actorId, postId,
+      .all(actorId, postId, actorId, postId, actorId, actorId, postId, actorId, actorId, actorId, postId,
         postId, postId, actorId, postId, actorId, postId) as (PushSubscriptionRow & {
           user_id: number
           is_reply: number

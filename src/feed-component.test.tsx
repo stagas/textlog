@@ -4,7 +4,7 @@ import { renderToStaticMarkup } from 'react-dom/server'
 import { Feed } from './components/feed'
 import type { PersonalizedTimelineRow } from './types'
 
-function postActivity(id: number, actorId: number, handle: string, actorIsBot = true): PersonalizedTimelineRow {
+function postActivity(id: number, actorId: number, handle: string): PersonalizedTimelineRow {
   const post = {
     id,
     user_id: actorId,
@@ -22,7 +22,6 @@ function postActivity(id: number, actorId: number, handle: string, actorIsBot = 
     actor_id: actorId,
     actor_handle: handle,
     actor_bio: '',
-    actor_is_bot: Number(actorIsBot),
     target_handle: null,
     target_tag: null,
     target_bio: null,
@@ -35,7 +34,7 @@ function postActivity(id: number, actorId: number, handle: string, actorIsBot = 
   }
 }
 
-test('for-you renders a page-local hide action on each entry', () => {
+test('for-you does not render author hide-all controls', () => {
   const html = renderToStaticMarkup(<Feed
     user={{ id: 1, handle: 'reader', email: 'reader@example.com', bio: '', handle_chosen_at: '2026-08-19 09:00:00' }}
     data={{ timeline: [postActivity(10, 2, 'alice'), postActivity(11, 3, 'bob')], page: 1, totalPages: 1, toMeCount: 0,
@@ -43,21 +42,21 @@ test('for-you renders a page-local hide action on each entry', () => {
   />)
 
   expect(html).not.toContain('for-you-author-filters')
-  expect(html).toContain('class="for-you-hide-input for-you-hide-2" type="checkbox"')
-  expect(html).toContain('aria-label="hide all posts by @alice">hide all</label>')
+  expect(html).not.toContain('for-you-hide-input')
+  expect(html).not.toContain('hide all posts by')
   expect(html).toContain('for-you-item for-you-author-2')
-  expect(html).toContain(':has(.for-you-hide-2:checked) .for-you-author-2')
+  expect(html).not.toContain(':has(.for-you-hide-2:checked)')
 })
 
-test('for-you offers hiding even when only one author is present', () => {
+test('for-you renders a single author without a filter shell', () => {
   const html = renderToStaticMarkup(<Feed
     user={{ id: 1, handle: 'reader', email: 'reader@example.com', bio: '', handle_chosen_at: '2026-08-19 09:00:00' }}
     data={{ timeline: [postActivity(10, 2, 'alice')], page: 1, totalPages: 1, toMeCount: 0, forYouCount: 0,
       forYouUnread: false, toMeUnread: false }}
   />)
 
-  expect(html).toContain('for-you-filter-shell')
-  expect(html).toContain('class="quiet for-you-hide-action"')
+  expect(html).not.toContain('for-you-filter-shell')
+  expect(html).not.toContain('for-you-hide-action')
 })
 
 test('for-you does not put hide actions on follow activity', () => {
@@ -106,7 +105,7 @@ test('a followed-you event offers to follow back', () => {
 test('for-you does not put hide actions on posts by people', () => {
   const html = renderToStaticMarkup(<Feed
     user={{ id: 1, handle: 'reader', email: 'reader@example.com', bio: '', handle_chosen_at: '2026-08-19 09:00:00' }}
-    data={{ timeline: [postActivity(10, 2, 'alice', false)], page: 1, totalPages: 1, toMeCount: 0, forYouCount: 0,
+    data={{ timeline: [postActivity(10, 2, 'alice')], page: 1, totalPages: 1, toMeCount: 0, forYouCount: 0,
       forYouUnread: false, toMeUnread: false }}
   />)
 
@@ -148,7 +147,7 @@ test('for-you offers links to the first and last unread activity', () => {
   expect(html).toContain('href="/for-you?page=3#post-30">last unread</a>')
 })
 
-test('to-me uses the same hide actions and pagination placement', () => {
+test('to-me omits hide actions and keeps top pagination before entries', () => {
   const html = renderToStaticMarkup(<Feed
     user={{ id: 1, handle: 'reader', email: 'reader@example.com', bio: '', handle_chosen_at: '2026-08-19 09:00:00' }}
     toMe
@@ -157,7 +156,6 @@ test('to-me uses the same hide actions and pagination placement', () => {
       forYouCount: 2, forYouUnread: false, toMeUnread: true, unreadHref: '/to-me?page=2#post-20' }}
   />)
 
-  expect(html).toContain('for-you-hide-input for-you-hide-2')
-  expect(html).toContain('for-you-hide-input for-you-hide-3')
+  expect(html).not.toContain('for-you-hide-input')
   expect(html.indexOf('pagination pagination-top')).toBeLessThan(html.indexOf('for-you-item for-you-author-2'))
 })

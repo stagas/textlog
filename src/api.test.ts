@@ -13,7 +13,7 @@ function fixture(now?: () => number) {
   const database = new Database(':memory:', { strict: true })
   database.run(`
     CREATE TABLE users (id INTEGER PRIMARY KEY,handle TEXT NOT NULL,email TEXT,bio TEXT NOT NULL DEFAULT '',
-      created_at TEXT DEFAULT CURRENT_TIMESTAMP,deleted_at TEXT,suspended_at TEXT,is_bot INTEGER NOT NULL DEFAULT 0,
+      created_at TEXT DEFAULT CURRENT_TIMESTAMP,deleted_at TEXT,suspended_at TEXT,
       email_verified_at TEXT,handle_chosen_at TEXT);
     CREATE TABLE handle_history (handle TEXT PRIMARY KEY COLLATE NOCASE,user_id INTEGER NOT NULL);
     CREATE TABLE posts (id INTEGER PRIMARY KEY,user_id INTEGER NOT NULL,parent_id INTEGER,body TEXT NOT NULL,
@@ -107,20 +107,6 @@ describe('public API', () => {
     expect(second.pagination.next_cursor).toBeNull()
     expect((await request(app, '/api/v1/feeds/latest?limit=101')).status).toBe(400)
     expect((await request(app, '/api/v1/feeds/latest?cursor=broken')).status).toBe(400)
-  })
-
-  test('excludes bot posts from the latest feed', async () => {
-    const { app, database } = fixture()
-    database.run('UPDATE users SET is_bot=1 WHERE id=2')
-
-    const first = await (await request(app, '/api/v1/feeds/latest?limit=1')).json() as any
-    const second =
-      await (await request(app,
-        `/api/v1/feeds/latest?limit=1&cursor=${encodeURIComponent(first.pagination.next_cursor)}`)).json() as any
-
-    expect(first.data.map((post: any) => post.id)).toEqual([3])
-    expect(second.data.map((post: any) => post.id)).toEqual([1])
-    expect(second.pagination.next_cursor).toBeNull()
   })
 
   test('requires authentication for personalized activity and returns the web activity shape', async () => {

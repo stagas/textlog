@@ -12,8 +12,8 @@ function fixture(firstPostBody?: string) {
   const database = new Database(':memory:')
   database.run(`
     CREATE TABLE users (id INTEGER PRIMARY KEY,handle TEXT NOT NULL,email TEXT NOT NULL DEFAULT '',bio TEXT NOT NULL DEFAULT '',
-      deleted_at TEXT,suspended_at TEXT,email_verified_at TEXT,handle_chosen_at TEXT,is_bot INTEGER NOT NULL DEFAULT 0,
-      bot_managed INTEGER,timezone TEXT,show_link_previews INTEGER);
+      deleted_at TEXT,suspended_at TEXT,email_verified_at TEXT,handle_chosen_at TEXT,
+      timezone TEXT,show_link_previews INTEGER);
     CREATE TABLE handle_history (handle TEXT PRIMARY KEY COLLATE NOCASE,user_id INTEGER NOT NULL);
     CREATE TABLE posts (id INTEGER PRIMARY KEY,user_id INTEGER NOT NULL,parent_id INTEGER,body TEXT NOT NULL,
       created_at TEXT NOT NULL,deleted_at TEXT);
@@ -29,9 +29,9 @@ function fixture(firstPostBody?: string) {
     CREATE TABLE blocked_hashtags (user_id INTEGER,tag TEXT);
     CREATE TABLE post_mentions (post_id INTEGER,user_id INTEGER);
     CREATE TABLE for_you_reads (user_id INTEGER,event_key TEXT);
-    INSERT INTO users(id,handle,email,bio,deleted_at,is_bot) VALUES
-      (1,'Alice','alice@example.com','',NULL,0),(2,'Bob','bob@example.com','',NULL,1),
-      (3,'Gone','gone@example.com','','2026-08-03 00:00:00',0),(4,'Reader','reader@example.com','',NULL,0);
+    INSERT INTO users(id,handle,email,bio,deleted_at) VALUES
+      (1,'Alice','alice@example.com','',NULL),(2,'Bob','bob@example.com','',NULL),
+      (3,'Gone','gone@example.com','','2026-08-03 00:00:00'),(4,'Reader','reader@example.com','',NULL);
     INSERT INTO follows VALUES(4,1,'2026-08-01 00:00:00');
     INSERT INTO follows VALUES(1,2,'2026-08-03 09:00:00');
     INSERT INTO hashtag_follows VALUES(4,'textlog','2026-08-01 00:00:00');

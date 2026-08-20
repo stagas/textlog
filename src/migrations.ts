@@ -1264,6 +1264,27 @@ export const migrations: Migration[] = [
           ON daily_ip_requests(day,request_count DESC);`)
     },
   },
+  {
+    version: 100,
+    name: 'remove_bot_accounts',
+    up(database) {
+      dropColumn(database, 'users', 'is_bot')
+      dropColumn(database, 'users', 'bot_managed')
+      dropColumn(database, 'push_subscriptions', 'notify_following_bots')
+      dropColumn(database, 'push_subscriptions', 'notify_bots')
+      database.run(`CREATE TABLE admin_actions_new (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,actor_id INTEGER NOT NULL REFERENCES users(id),
+          action TEXT NOT NULL CHECK(action IN ('delete_post','suspend_user','restore_user','delete_user',
+            'resolve_report','dismiss_report')),
+          target_user_id INTEGER REFERENCES users(id),target_post_id INTEGER REFERENCES posts(id),
+          note TEXT NOT NULL DEFAULT '',created_at TEXT DEFAULT CURRENT_TIMESTAMP);
+        INSERT INTO admin_actions_new SELECT * FROM admin_actions
+          WHERE action NOT IN ('mark_bot','unmark_bot');
+        DROP TABLE admin_actions;
+        ALTER TABLE admin_actions_new RENAME TO admin_actions;
+        CREATE INDEX admin_actions_created ON admin_actions(created_at DESC);`)
+    },
+  },
 ]
 
 export const latestMigrationVersion = migrations.at(-1)!.version

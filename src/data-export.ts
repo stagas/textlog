@@ -2,7 +2,7 @@ import type { Database } from 'bun:sqlite'
 import { sessionHash } from './sessions'
 
 export function exportUserData(database: Database, userId: number, currentSession?: string | null) {
-  const account = database.query(`SELECT id,handle,email,bio,timezone,is_bot,bot_managed,recap_emails,
+  const account = database.query(`SELECT id,handle,email,bio,timezone,recap_emails,
     created_at,email_verified_at,suspended_at
     FROM users WHERE id=?`).get(userId)
   const posts = database.query(`SELECT id,parent_id,body,created_at,deleted_at
