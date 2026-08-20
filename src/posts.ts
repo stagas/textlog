@@ -242,13 +242,23 @@ export function enrichPosts(database: Database, posts: PostView[], viewerId = -1
       ? parentIds
       : [...parentIds, viewerId, viewerId, viewerId]
     const rows = database.query(
-      `SELECT p.id,p.user_id,p.body,p.created_at,p.deleted_at,p.has_latex,p.has_links,p.has_code,u.handle,u.bio,
+      `SELECT p.id,p.user_id,p.parent_id,p.body,p.created_at,p.deleted_at,p.has_latex,p.has_links,p.has_code,u.handle,u.bio,
         0 reply_count
         FROM posts p JOIN users u ON u.id=p.user_id WHERE p.id IN (${parentPlaceholders}) ${parentFilter}`,
     ).all(...parentParameters) as ParentPost[]
+    const roots = database.query(`WITH RECURSIVE ancestors(start_id,id,parent_id) AS (
+      SELECT id,id,parent_id FROM posts WHERE id IN (${parentPlaceholders})
+      UNION ALL
+      SELECT ancestors.start_id,p.id,p.parent_id FROM posts p JOIN ancestors ON p.id=ancestors.parent_id
+    ) SELECT start_id,id top_id FROM ancestors WHERE parent_id IS NULL`).all(...parentIds) as {
+      start_id: number
+      top_id: number
+    }[]
+    const topByParentId = new Map(roots.map(root => [root.start_id, root.top_id]))
     for (const parent of rows) {
       parentBodies.push(parent.body)
       parent.reply_count = countById.get(parent.id) || 0
+      parent.top_id = parent.parent_id ? topByParentId.get(parent.id) || null : null
       parent.link_previews = previewsByPost.get(parent.id)
       for (const handle of extractMentions(parent.body)) addMentionBio(handle)
       for (const handle of extractMentions(parent.bio || '')) addMentionBio(handle)

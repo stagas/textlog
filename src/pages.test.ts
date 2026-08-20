@@ -34,7 +34,7 @@ import {
   RecapEmails,
   Reply,
 } from './components/pages'
-import { conversationTopPath, Post, postedReplyPath, replyAnchorReturnPath } from './components/post'
+import { conversationTopPath, Post, postedReplyPath, replyAnchorReturnPath, ThreadReplies } from './components/post'
 import { searchPersonReturnPath, searchPostReturnPath } from './components/search'
 
 import React from 'react'
@@ -1508,6 +1508,7 @@ test('Post renders preloaded parent and reply data', () => {
       reply_count: 2,
       parent: {
         id: 1,
+        parent_id: null,
         body: 'parent [link](https://example.com/post)',
         handle: 'author',
         created_at: '2026-08-03 11:00:00',
@@ -1753,6 +1754,47 @@ test('Reply pages show a top link immediately after the timestamp', () => {
   expect(html).toContain('</a><a class="quiet post-top-link" href="/post/1?from=%2Flatest%23post-3">top</a>')
 })
 
+test('Conversation roots show a flat link in the top-link action slot', () => {
+  const html = renderToStaticMarkup(React.createElement(Post, {
+    user: null,
+    p: { id: 1, user_id: 1, parent_id: null, body: 'Root', handle: 'author',
+      created_at: '2026-08-03 10:00:00', deleted_at: null },
+    canonicalTimestamp: true,
+    flatHref: '/post/1?flat=1',
+  }))
+  expect(html).toContain('</a><a class="quiet post-top-link" href="/post/1?flat=1">flat</a>')
+})
+
+test('Flat conversations show a tree link in the same action slot', () => {
+  const html = renderToStaticMarkup(React.createElement(Post, {
+    user: null,
+    p: { id: 1, user_id: 1, parent_id: null, body: 'Root', handle: 'author',
+      created_at: '2026-08-03 10:00:00', deleted_at: null },
+    canonicalTimestamp: true,
+    treeHref: '/post/1?from=%2Flatest%23post-1',
+  }))
+  expect(html).toContain(
+    '</a><a class="quiet post-top-link" href="/post/1?from=%2Flatest%23post-1">tree</a>',
+  )
+})
+
+test('Flat thread replies render descendants in depth-first order without nested branches', () => {
+  const reply = (id: number, parentId: number, body: string) => ({
+    id, user_id: 1, parent_id: parentId, body, handle: 'author',
+    created_at: `2026-08-03 1${id}:00:00`, deleted_at: null,
+  })
+  const html = renderToStaticMarkup(React.createElement(ThreadReplies, {
+    parentId: 1,
+    replies: [reply(2, 1, 'first'), reply(3, 1, 'second'), reply(4, 2, 'first child')],
+    user: null,
+    flat: true,
+  }))
+
+  expect(html.match(/class="reply-branch/g)).toHaveLength(1)
+  expect(html.indexOf('id="post-2"')).toBeLessThan(html.indexOf('id="post-4"'))
+  expect(html.indexOf('id="post-4"')).toBeLessThan(html.indexOf('id="post-3"'))
+})
+
 test('conversation top links return to the deep reply and preserve its original back path', () => {
   expect(conversationTopPath(1, 3)).toBe('/post/1?from=%2Fpost%2F3%23post-3#post-1')
   expect(conversationTopPath(1, 3, '/latest#post-3'))
@@ -1788,6 +1830,7 @@ test('A quoted post gets its own higher-priority hit area in tappable feeds', ()
       deleted_at: null,
       parent: {
         id: 1,
+        parent_id: null,
         body: 'quoted note',
         handle: 'parent',
         created_at: '2026-08-03 11:00:00',
@@ -1807,6 +1850,37 @@ test('A quoted post gets its own higher-priority hit area in tappable feeds', ()
   expect(html).toContain('href="/post/1?reply=1&amp;from=%2Flatest%3Fcursor%3Dabc%23post-2"')
 })
 
+test('Nested quoted posts link to the conversation top before reply in feeds', () => {
+  const html = renderToStaticMarkup(React.createElement(Post, {
+    user: { id: 9, handle: 'reader', email: 'reader@example.com', bio: '' },
+    tappable: true,
+    returnPath: '/latest#post-3',
+    p: {
+      id: 3,
+      user_id: 1,
+      parent_id: 2,
+      body: 'nested reply',
+      handle: 'writer',
+      created_at: '2026-08-03 13:00:00',
+      deleted_at: null,
+      parent: {
+        id: 2,
+        parent_id: 1,
+        top_id: 1,
+        body: 'quoted reply',
+        handle: 'parent',
+        created_at: '2026-08-03 12:00:00',
+        deleted_at: null,
+        reply_count: 0,
+      },
+    },
+  }))
+
+  const top = 'href="/post/1?from=%2Fpost%2F2%3Ffrom%3D%252Flatest%2523post-3%23post-2#post-1">top</a>'
+  expect(html).toContain(top)
+  expect(html.indexOf(top)).toBeLessThan(html.indexOf('aria-label="reply to @parent"'))
+})
+
 test('Post detail can make only its quoted parent tappable', () => {
   const html = renderToStaticMarkup(React.createElement(Post, {
     user: null,
@@ -1821,6 +1895,7 @@ test('Post detail can make only its quoted parent tappable', () => {
       deleted_at: null,
       parent: {
         id: 1,
+        parent_id: null,
         body: 'quoted note',
         handle: 'parent',
         created_at: '2026-08-03 11:00:00',

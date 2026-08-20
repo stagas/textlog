@@ -268,12 +268,15 @@ export function Post({
   backHref,
   canonicalTimestamp = false,
   topHref,
+  flatHref,
+  treeHref,
   authorPopoverAction,
 }: { p: PostView; user: User | null; showReplyAction?: boolean; showOwnerActions?: boolean;
   showModerateAction?: boolean; showParent?: boolean; showReplyCount?: boolean; replyHref?: string; replyLabel?: string;
   reportHref?: string; foldControlId?: string; highlightTerms?: string[]; tappable?: boolean; tappableParent?: boolean;
   contextLabel?: string; contextUnread?: boolean; preview?: boolean; returnPath?: string; backHref?: string;
-  canonicalTimestamp?: boolean; topHref?: string; authorPopoverAction?: React.ReactNode })
+  canonicalTimestamp?: boolean; topHref?: string; flatHref?: string; treeHref?: string;
+  authorPopoverAction?: React.ReactNode })
 {
   const parent = showParent ? p.parent : null
   const hasTappableParent = Boolean(parent && (tappable || tappableParent))
@@ -344,6 +347,8 @@ export function Post({
             </a>
           )}
         {topHref && <a className="quiet post-top-link" href={topHref}>top</a>}
+        {flatHref && <a className="quiet post-top-link" href={flatHref}>flat</a>}
+        {treeHref && <a className="quiet post-top-link" href={treeHref}>tree</a>}
         {showReplyAction && (
           preview
             ? <span className="quiet preview-reply">{resolvedReplyLabel}</span>
@@ -411,6 +416,10 @@ export function Post({
                       <span>{' '}· {parent.reply_count} {parent.reply_count === 1 ? 'reply' : 'replies'}</span>
                     )}
                   </a>
+                  {tappable && parent.top_id && (
+                    <a className="quiet post-top-link"
+                      href={conversationTopPath(parent.top_id, parent.id, returnPath)}>top</a>
+                  )}
                   <a className="quiet" href={user
                     ? parentReplyPath
                     : '/enter?next=' + encodeURIComponent(parentReplyPath)} rel="nofollow"
@@ -438,8 +447,8 @@ export function Post({
 }
 
 export function ThreadReplies(
-  { parentId, replies, user, returnPath, excludePostId }: { parentId: number; replies: PostView[]; user: User | null;
-    returnPath?: string; excludePostId?: number },
+  { parentId, replies, user, returnPath, excludePostId, flat = false }: { parentId: number; replies: PostView[];
+    user: User | null; returnPath?: string; excludePostId?: number; flat?: boolean },
 ) {
   if (!replies.length) return null
   const children = new Map<number, PostView[]>()
@@ -457,39 +466,55 @@ export function ThreadReplies(
     descendantCounts.set(id, count)
     return count
   }
+  const renderReply = (reply: PostView, childBranch?: React.ReactNode, continuesElsewhere = false) => {
+    const anchoredReturnPath = replyAnchorReturnPath(parentId, reply.id, returnPath)
+    const foldControlId = childBranch ? `thread-fold-${reply.id}` : undefined
+    return (
+      <div className="reply-node" key={reply.id}>
+        {foldControlId && <input className="thread-fold-input" type="checkbox" id={foldControlId} />}
+        <Post p={reply} user={user} showParent={false} foldControlId={foldControlId}
+          returnPath={anchoredReturnPath}
+          replyHref={user ? undefined : '/enter?next=' + encodeURIComponent('/post/' + reply.id + '?reply=1'
+            + '&from=' + encodeURIComponent(anchoredReturnPath))} replyLabel={user ? 'reply' : 'enter to reply'}
+          tappable />
+        {childBranch}
+        {continuesElsewhere && (
+          <div className="thread-continuation">
+            <a className="quiet" rel="nofollow"
+              href={'/post/' + reply.id + '?from=' + encodeURIComponent(anchoredReturnPath)}
+            >
+              more ({visibleDescendantCount(reply.id)} {visibleDescendantCount(reply.id) === 1 ? 'reply' : 'replies'})
+            </a>
+          </div>
+        )}
+      </div>
+    )
+  }
+  if (flat) {
+    const flattened: PostView[] = []
+    const visit = (id: number) => {
+      for (const reply of children.get(id) || []) {
+        if (!reply.deleted_at && reply.id !== excludePostId) flattened.push(reply)
+        visit(reply.id)
+      }
+    }
+    visit(parentId)
+    return flattened.length
+      ? <div className="reply-branch reply-branch-flat">{flattened.map(reply => renderReply(reply))}</div>
+      : null
+  }
   const renderBranch = (id: number, depth: number): React.ReactNode => {
     const branch = children.get(id) || []
     if (!branch.length) return null
     return (
       <div className="reply-branch">
         {branch.map(reply => {
-          const anchoredReturnPath = replyAnchorReturnPath(parentId, reply.id, returnPath)
           const descendantCount = visibleDescendantCount(reply.id)
           const continuesElsewhere = !reply.deleted_at && depth >= MAX_VISIBLE_REPLY_DEPTH && descendantCount > 0
           const childBranch = continuesElsewhere ? null : renderBranch(reply.id, depth + 1)
           if (reply.deleted_at) return <React.Fragment key={reply.id}>{childBranch}</React.Fragment>
           if (reply.id === excludePostId) return <React.Fragment key={reply.id}>{childBranch}</React.Fragment>
-          const foldControlId = childBranch ? `thread-fold-${reply.id}` : undefined
-          return (
-            <div className="reply-node" key={reply.id}>
-              {foldControlId && <input className="thread-fold-input" type="checkbox" id={foldControlId} />}
-              <Post p={reply} user={user} showParent={false} foldControlId={foldControlId}
-                returnPath={anchoredReturnPath}
-                replyHref={user ? undefined : '/enter?next=' + encodeURIComponent('/post/' + reply.id + '?reply=1'
-                  + '&from=' + encodeURIComponent(anchoredReturnPath))} replyLabel={user ? 'reply' : 'enter to reply'}
-                tappable />
-              {childBranch}
-              {continuesElsewhere && (
-                <div className="thread-continuation">
-                  <a className="quiet" rel="nofollow"
-                    href={'/post/' + reply.id + '?from=' + encodeURIComponent(anchoredReturnPath)}
-                  >
-                    more ({descendantCount} {descendantCount === 1 ? 'reply' : 'replies'})
-                  </a>
-                </div>
-              )}
-            </div>
-          )
+          return renderReply(reply, childBranch, continuesElsewhere)
         })}
       </div>
     )

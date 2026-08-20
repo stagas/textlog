@@ -73,7 +73,7 @@ export function ReplyPreview({ parentId, user, body }: { parentId: number; user:
 
 export function Reply(
   { user, post, replies = [], showForm, showReport = false, reported = false, error, body = '', reportReason = '',
-    reportError, social, preview = false, returnPath, topHref, suggestionSearch }: {
+    reportError, social, preview = false, returnPath, topHref, flatHref, treeHref, flat = false, suggestionSearch }: {
       user: User
       post: PostView
       replies?: PostView[]
@@ -88,6 +88,9 @@ export function Reply(
       preview?: boolean
       returnPath?: string
       topHref?: string
+      flatHref?: string
+      treeHref?: string
+      flat?: boolean
       suggestionSearch?: PostingSuggestionSearch | null
     },
 ) {
@@ -96,7 +99,8 @@ export function Reply(
       <div className="post-page-thread">
         <div className="thread-root">
           <Post p={post} user={user} showReplyAction={!showForm} showOwnerActions showModerateAction tappableParent
-            returnPath={returnPath} backHref={returnPath} canonicalTimestamp topHref={topHref}
+            returnPath={returnPath} backHref={returnPath} canonicalTimestamp topHref={topHref} flatHref={flatHref}
+            treeHref={treeHref}
             reportHref={user.id !== post.user_id && !showReport && !reported
               ? `/post/${post.id}?report=1${returnPath ? '&from=' + encodeURIComponent(returnPath) : ''}`
               : undefined} />
@@ -125,7 +129,7 @@ export function Reply(
             )
             : <VerificationRequired />
         )}
-        <ThreadReplies parentId={post.id} replies={replies} user={user} returnPath={returnPath} />
+        <ThreadReplies parentId={post.id} replies={replies} user={user} returnPath={returnPath} flat={flat} />
       </div>
     </Layout>
   )

@@ -37,6 +37,7 @@ export type BioReferenceData = {
 export type ParentPost = Pick<PostRow,
   'id' | 'body' | 'created_at' | 'deleted_at' | 'has_latex' | 'has_links' | 'has_code'> & {
   handle: string
+  parent_id?: number | null
   user_id?: number
   bio?: string
   note_count?: number
@@ -54,6 +55,7 @@ export type ParentPost = Pick<PostRow,
   link_previews?: Record<string, LinkPreview>
   bio_reference?: BioReferenceData
   reply_count: number
+  top_id?: number | null
 }
 
 export type PostView = PostRow & {

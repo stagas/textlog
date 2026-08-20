@@ -377,14 +377,15 @@ describe('post persistence', () => {
       (5,1,4,'visible below tombstone','2026-08-03 14:00:00');
       UPDATE posts SET deleted_at='2026-08-03 13:30:00' WHERE id=4;`)
     const posts = db.query(
-      'SELECT p.*,u.handle FROM posts p JOIN users u ON u.id=p.user_id WHERE p.id IN (1,2) ORDER BY p.id',
+      'SELECT p.*,u.handle FROM posts p JOIN users u ON u.id=p.user_id WHERE p.id IN (1,2,3) ORDER BY p.id',
     )
       .all() as PostView[]
-    const [root, child] = enrichPosts(db, posts)
+    const [root, child, grandchild] = enrichPosts(db, posts)
 
     expect(root.reply_count).toBe(3)
     expect(child.reply_count).toBe(2)
     expect(child.parent?.reply_count).toBe(3)
+    expect(grandchild.parent).toMatchObject({ id: 2, parent_id: 1, top_id: 1 })
   })
 
   test('excludes blocked replies and parent summaries for the viewer', () => {

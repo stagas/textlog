@@ -92,6 +92,13 @@ export function registerPostsRoutes(app: Hono) {
     const topHref = detail.conversationRootId
       ? conversationTopPath(detail.conversationRootId, id, returnPath)
       : undefined
+    const flat = !topHref && c.req.query('flat') === '1'
+    const flatHref = !topHref && !flat
+      ? `/post/${id}?flat=1${returnPath ? '&from=' + encodeURIComponent(returnPath) : ''}`
+      : undefined
+    const treeHref = !topHref && flat
+      ? `/post/${id}${returnPath ? '?from=' + encodeURIComponent(returnPath) : ''}`
+      : undefined
     if (user && !user.handle_chosen_at && c.req.query('reply') === '1') {
       const next = `/post/${id}?reply=1${returnPath ? '&from=' + encodeURIComponent(returnPath) : ''}`
       return redirect('/choose-handle?next=' + encodeURIComponent(next))
@@ -112,12 +119,14 @@ export function registerPostsRoutes(app: Hono) {
     if (user) {
       return page(
         <Reply user={user} post={post} replies={replies} showForm={c.req.query('reply') === '1'} returnPath={returnPath}
-          topHref={topHref} showReport={c.req.query('report') === '1'} reported={c.req.query('reported') === '1'}
+          topHref={topHref} flatHref={flatHref} treeHref={treeHref} flat={flat} showReport={c.req.query('report') === '1'}
+          reported={c.req.query('reported') === '1'}
           social={social} />,
       )
     }
     return page(
-      <PublicThread post={post} replies={replies} social={social} returnPath={returnPath} topHref={topHref} />,
+      <PublicThread post={post} replies={replies} social={social} returnPath={returnPath} topHref={topHref}
+        flatHref={flatHref} treeHref={treeHref} flat={flat} />,
     )
   })
 
