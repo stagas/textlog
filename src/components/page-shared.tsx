@@ -649,6 +649,9 @@ export function ConnectionPeople({ user, people, className = '', highlightTerms 
                 </>
               } />
               <small>{person.posts} {person.posts === 1 ? 'note' : 'notes'}</small>
+              <p className="profile-bio" dangerouslySetInnerHTML={{
+                __html: linkify(displayBio(person.bio), {}, person.bio ? highlightTerms : []),
+              }} />
             </div>
             {user && user.id !== person.id && (
               <form method="post" action={`/follow/${person.handle}`}>
@@ -660,9 +663,6 @@ export function ConnectionPeople({ user, people, className = '', highlightTerms 
               </form>
             )}
           </div>
-          <p className="profile-bio" dangerouslySetInnerHTML={{
-            __html: linkify(displayBio(person.bio), {}, person.bio ? highlightTerms : []),
-          }} />
         </article>
       ))}
     </div>
