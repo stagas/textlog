@@ -44,6 +44,10 @@ describe('post persistence', () => {
     expect(linkify('@Reader', { reader: 'Bio  \n' }))
       .toContain('title="0 notes\n\nBio"')
   })
+  test('does not linkify handles that were not found', () => {
+    expect(linkify('hello @Missing and @Reader', { reader: '' }))
+      .toBe('hello @Missing and <a href="/u/reader" title="0 notes\n\nNo bio yet.">@Reader</a>')
+  })
   test('keeps apostrophes in linkified URLs', () => {
     expect(linkify('read https://example.com/people/O\'Brien/profile'))
       .toBe(
@@ -266,7 +270,7 @@ describe('post persistence', () => {
       },
     })
     expect(html.match(/class="reference-menu"/g)).toHaveLength(1)
-    expect(html).toContain('<span class="reference-popover-bio">Knows <a href="/u/third">@third</a> and follows '
+    expect(html).toContain('<span class="reference-popover-bio">Knows @third and follows '
       + '<a href="/tag/topic">#topic</a> at ')
     expect(html).toContain('<a href="https://example.com" target="_blank" '
       + 'rel="nofollow ugc noopener noreferrer">example.com</a>')

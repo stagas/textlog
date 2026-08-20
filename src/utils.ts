@@ -420,6 +420,7 @@ function renderedReference(token: string, mentionBios: Record<string, string>,
     : `/tag/${encodeURIComponent(key)}${navigationQuery}`
   const label = highlighted(`${token[0]}${value}`, highlightTerms)
   const hasData = isUser ? mentionBios[key] !== undefined : hashtagCounts[key] !== undefined
+  if (isUser && !hasData) return label
   if (!hasData) return `<a href="${href}">${label}</a>`
   if (isUser && popover?.mentionPopovers === false) return `<a href="${href}">${label}</a>`
   const count = isUser ? mentionNoteCounts[key] || 0 : hashtagCounts[key]
