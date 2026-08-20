@@ -44,7 +44,7 @@ export const instance: InstanceConfiguration = {
     url: 'https://opencollective.com/europe',
     address: 'Avenue Louise 500, 1000 Brussels, Belgium',
   },
-  administrators: ['gstagas@gmail.com'],
+  administrators: ['gstagas@gmail.com', 'lamprou@live.com'],
   privacyAuthority: {
     name: 'Belgian Data Protection Authority',
     url: 'https://www.dataprotectionauthority.be/citizen',
