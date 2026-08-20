@@ -40,10 +40,14 @@ export function About({ user, topPosts = [] }: { user: User | null; topPosts?: P
         </p>
         {instance.fiscalHost && (
           <p>
-            {name} is a community collective fiscally hosted by{' '}
+            <a href={instance.operator.url} target="_blank" rel="noopener noreferrer">
+              {instance.operator.name}
+            </a>{' '}
+            is fiscally hosted by{' '}
             <a href={instance.fiscalHost.url} target="_blank" rel="noopener noreferrer">
               {instance.fiscalHost.name}
-            </a>. Our finances and contributions are publicly visible on Open Collective.
+            </a>. Our finances and contributions are publicly visible on{' '}
+            <a href="https://opencollective.com" target="_blank" rel="noopener noreferrer">Open Collective</a>.
           </p>
         )}
         <h2>Be a good neighbour</h2>

@@ -61,7 +61,10 @@ export function Contact({ user }: { user: User | null }) {
             <h2>Legal and financial correspondence</h2>
             <p>
               {instance.fiscalHost.legalName}<br />
-              Fiscal host of the {name} collective<br />
+              Fiscal host of the{' '}
+              <a href={instance.operator.url} target="_blank" rel="noopener noreferrer">
+                {name} collective
+              </a><br />
               {instance.fiscalHost.address}
             </p>
           </>

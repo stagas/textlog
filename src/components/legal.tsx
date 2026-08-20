@@ -76,7 +76,11 @@ export function Legal({ user }: { user: User | null }) {
         <h2 id="privacy">Privacy</h2>
         <h3>Controller and contact</h3>
         <p>
-          The {instance.operator.name} is the controller for {name}
+          The{' '}
+          <a href={instance.operator.url} target="_blank" rel="noopener noreferrer">
+            {instance.operator.name}
+          </a>{' '}
+          is the controller for {name}
           {instance.fiscalHost && <>, with {instance.fiscalHost.legalName} providing fiscal hosting</>}. Contact:{' '}
           {instance.operator.email
             ? <a href={`mailto:${instance.operator.email}`}>{instance.operator.email}</a>
