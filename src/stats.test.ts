@@ -36,7 +36,7 @@ test('post and note stats include all accounts', () => {
     (4,2,'bot 1',NULL,datetime('now')),
     (5,2,'bot 2',4,datetime('now')),
     (6,2,'bot 3',NULL,datetime('now')),
-    (7,2,'bot yesterday',NULL,datetime('now','start of day','-12 hours'));`)
+    (7,2,'bot yesterday',NULL,datetime('now','start of day','-1 second'));`)
 
   const stats = dashboardStats(database)
 
