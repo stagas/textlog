@@ -242,6 +242,38 @@ describe('database migrations', () => {
     ])
   })
 
+  test('rebuilds hashtags without Markdown code while preserving tag relationships', () => {
+    const database = new Database(':memory:')
+    database.run('PRAGMA foreign_keys=ON')
+    runMigrations(database)
+    database.run(`INSERT INTO users(id,handle,email,password) VALUES
+        (1,'author','author@example.com','x'),(2,'reader','reader@example.com','x');
+      INSERT INTO posts(id,user_id,body) VALUES
+        (1,1,'#visible \`#inline\`\n\`\`\`ts\n#fenced\n\`\`\`'),
+        (2,1,'deleted #old');
+      UPDATE posts SET deleted_at=CURRENT_TIMESTAMP WHERE id=2;
+      INSERT OR IGNORE INTO post_hashtags(post_id,tag) VALUES
+        (1,'inline'),(1,'fenced'),(2,'old');
+      INSERT INTO hashtag_follows(user_id,tag,created_at) VALUES
+        (2,'inline','2026-08-03 04:05:06'),(2,'visible','2026-08-04 05:06:07');
+      INSERT INTO blocked_hashtags(user_id,tag) VALUES(2,'fenced');
+      PRAGMA user_version=101;`)
+
+    runMigrations(database)
+
+    expect(database.query('SELECT post_id,tag FROM post_hashtags ORDER BY post_id,tag').all())
+      .toEqual([{ post_id: 1, tag: 'visible' }])
+    expect(database.query('SELECT tag,created_at FROM hashtag_follows ORDER BY tag').all()).toEqual([
+      { tag: 'inline', created_at: '2026-08-03 04:05:06' },
+      { tag: 'visible', created_at: '2026-08-04 05:06:07' },
+    ])
+    expect(database.query('SELECT user_id,tag FROM blocked_hashtags').all())
+      .toEqual([{ user_id: 2, tag: 'fenced' }])
+    expect(database.query("SELECT tag FROM tag_search WHERE tag_search MATCH 'visible'").get())
+      .toEqual({ tag: 'visible' })
+    expect(database.query("SELECT tag FROM tag_search WHERE tag_search MATCH 'inline'").get()).toBeNull()
+  })
+
   test('repairs account deletion tables created by the original version 30 migration', () => {
     const database = new Database(':memory:')
     database.run('PRAGMA foreign_keys=ON')

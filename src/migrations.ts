@@ -1310,6 +1310,14 @@ export const migrations: Migration[] = [
       }
     },
   },
+  {
+    version: 102,
+    name: 'markdown_code_hashtag_backfill',
+    up(database) {
+      if (!database.query("SELECT 1 FROM sqlite_master WHERE type='table' AND name='posts'").get()) return
+      rebuildPostHashtags(database)
+    },
+  },
 ]
 
 export const latestMigrationVersion = migrations.at(-1)!.version

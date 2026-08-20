@@ -53,6 +53,14 @@ describe('content metadata extraction', () => {
       .toEqual(['one', 'two', 'three', 'four', 'five'])
   })
 
+  test('ignores hashtags in inline code and fenced code blocks', () => {
+    expect(extractHashtags('keep #outside but not `#inline` or ``code `#nested` here``'))
+      .toEqual(['outside'])
+    expect(extractHashtags('before #one\n```ts\nconst tag = "#fenced"\n```\nafter #two'))
+      .toEqual(['one', 'two'])
+    expect(extractHashtags('~~~\n#tilde_fence\n~~~\n#visible')).toEqual(['visible'])
+  })
+
   test('normalizes and deduplicates valid mentions', () => {
     expect(extractMentions('Hello @Demo_01 and @demo_01, meet @reader.')).toEqual(['demo_01', 'reader'])
   })

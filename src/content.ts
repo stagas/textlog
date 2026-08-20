@@ -13,11 +13,50 @@ export const MAX_HASHTAGS_PER_POST = 5
 
 const urlMatcher = new LinkifyIt({ fuzzyLink: true, fuzzyEmail: false }).tlds(tlds)
 
+function withoutMarkdownCode(body: string) {
+  const characters = body.split('')
+  const lines = [...body.matchAll(/.*(?:\n|$)/g)]
+  let fence: { marker: string; length: number } | undefined
+
+  for (const line of lines) {
+    if (!line[0]) continue
+    const content = line[0].replace(/\n$/, '')
+    const opening = content.match(/^ {0,3}(`{3,}|~{3,})/)
+    const closing = fence && content.match(new RegExp(`^ {0,3}${fence.marker}{${fence.length},}\\s*$`))
+    if (fence || opening) {
+      const start = line.index!
+      for (let index = start; index < start + line[0].length; index++) {
+        if (characters[index] !== '\n') characters[index] = ' '
+      }
+      if (closing) fence = undefined
+      else if (!fence && opening) fence = { marker: opening[1][0], length: opening[1].length }
+    }
+  }
+
+  const outsideFences = characters.join('')
+  const openers = /`+/g
+  let opener: RegExpExecArray | null
+  while ((opener = openers.exec(outsideFences))) {
+    const length = opener[0].length
+    const remainder = outsideFences.slice(opener.index + length)
+    const delimiter = String.fromCharCode(96).repeat(length)
+    const closer = remainder.match(new RegExp(`(^|[^\\x60])(${delimiter})(?!\\x60)`))
+    if (!closer) continue
+    const end = opener.index + length + closer.index! + closer[1].length + length
+    for (let index = opener.index; index < end; index++) {
+      if (characters[index] !== '\n') characters[index] = ' '
+    }
+    openers.lastIndex = end
+  }
+  return characters.join('')
+}
+
 export function extractHashtags(body: string) {
   const tags = new Set<string>()
   let count = 0
-  const urls = urlMatcher.match(body) || []
-  for (const match of body.matchAll(/(?<![\p{L}\p{M}\p{N}_])#([\p{L}\p{M}\p{N}_]+)/gu)) {
+  const searchableBody = withoutMarkdownCode(body)
+  const urls = urlMatcher.match(searchableBody) || []
+  for (const match of searchableBody.matchAll(/(?<![\p{L}\p{M}\p{N}_])#([\p{L}\p{M}\p{N}_]+)/gu)) {
     if (urls.some(url => match.index >= url.index && match.index < url.lastIndex)) continue
     if (count++ === MAX_HASHTAGS_PER_POST) break
     tags.add(normalizeHashtag(match[1]))
