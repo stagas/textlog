@@ -40,7 +40,7 @@ export function About({ user, topPosts = [] }: { user: User | null; topPosts?: P
         </p>
         {instance.fiscalHost && (
           <p>
-            <a href={instance.operator.url} target="_blank" rel="noopener noreferrer">
+            <a href="https://opencollective.com/textlog" target="_blank" rel="noopener noreferrer">
               {instance.operator.name}
             </a>{' '}
             is fiscally hosted by{' '}

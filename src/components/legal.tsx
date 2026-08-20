@@ -77,7 +77,7 @@ export function Legal({ user }: { user: User | null }) {
         <h3>Controller and contact</h3>
         <p>
           The{' '}
-          <a href={instance.operator.url} target="_blank" rel="noopener noreferrer">
+          <a href="https://opencollective.com/textlog" target="_blank" rel="noopener noreferrer">
             {instance.operator.name}
           </a>{' '}
           is the controller for {name}
