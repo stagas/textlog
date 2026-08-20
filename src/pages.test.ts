@@ -1312,6 +1312,25 @@ test('Following and followers paginate every 10 people', () => {
   }
 })
 
+test('Connection people do not render a zero when they do not follow the viewer', () => {
+  const html = renderToStaticMarkup(React.createElement(ConnectionPeople, {
+    user: { id: 1, handle: 'reader', email: 'reader@example.com', bio: '' },
+    people: [{
+      id: 2,
+      handle: 'writer',
+      email: 'writer@example.com',
+      bio: '',
+      posts: 0,
+      viewerFollowing: false,
+      followsViewer: 0,
+    } as unknown as import('./types').PersonView],
+  }))
+
+  expect(html).not.toContain('follows you')
+  expect(html).not.toContain('<form method="post" action="/follow/writer">0')
+  expect(html).toContain('<button class="button">follow</button>')
+})
+
 test('Compact column pagination shows labeled arrow controls and neighboring pages', () => {
   const html = renderToStaticMarkup(React.createElement(Pagination, {
     page: 5,

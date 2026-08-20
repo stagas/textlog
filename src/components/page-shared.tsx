@@ -381,7 +381,7 @@ export function ProfileControls({ user, profile, following, followsViewer = fals
         <>
           {!blocked && (
             <form method="post" action={'/follow/' + profile.handle}>
-              {followsViewer && <span className="follows-you">follows you</span>}
+              {!!followsViewer && <span className="follows-you">follows you</span>}
               <button className={`button${following ? ' button-muted' : ''}`}
                 aria-label={`${following ? 'unfollow' : followsViewer ? 'follow back' : 'follow'} @${profile.handle}`}
               >
@@ -653,7 +653,7 @@ export function ConnectionPeople({ user, people, className = '', highlightTerms 
             {user && user.id !== person.id && (
               <form method="post" action={`/follow/${person.handle}`}>
                 {returnPath && <input type="hidden" name="from" value={returnPath(person)} />}
-                {person.followsViewer && <span className="follows-you">follows you</span>}
+                {!!person.followsViewer && <span className="follows-you">follows you</span>}
                 <button className={`button${person.viewerFollowing ? ' button-muted' : ''}`}>
                   {person.viewerFollowing ? 'unfollow' : person.followsViewer ? 'follow back' : 'follow'}
                 </button>

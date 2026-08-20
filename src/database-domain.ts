@@ -914,7 +914,7 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
       const join = kind === 'following'
         ? 'JOIN follows f ON f.following_id=u.id WHERE f.follower_id=?'
         : 'JOIN follows f ON f.follower_id=u.id WHERE f.following_id=?'
-      const people = database.query(
+      const people = (database.query(
         `SELECT u.*, (SELECT count(*) FROM posts p WHERE p.user_id=u.id AND p.deleted_at IS NULL) posts,
         EXISTS(SELECT 1 FROM follows vf WHERE vf.follower_id=? AND vf.following_id=u.id) viewerFollowing,
         EXISTS(SELECT 1 FROM follows rv WHERE rv.follower_id=u.id AND rv.following_id=?) followsViewer
@@ -922,7 +922,11 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
           (b.blocker_id=? AND b.blocked_id=u.id) OR (b.blocker_id=u.id AND b.blocked_id=?)))
         ORDER BY u.handle LIMIT ? OFFSET ?`,
       ).all(viewerId, viewerId, profileId, viewerId, viewerId, viewerId, CONNECTION_PAGE_SIZE,
-        (page - 1) * CONNECTION_PAGE_SIZE)
+        (page - 1) * CONNECTION_PAGE_SIZE) as import('./types').PersonView[]).map(person => ({
+        ...person,
+        viewerFollowing: !!person.viewerFollowing,
+        followsViewer: !!person.followsViewer,
+      }))
       const countWhere = kind === 'following' ? 'follower_id=?' : 'following_id=?'
       const counterpart = kind === 'following' ? 'f.following_id' : 'f.follower_id'
       const total = (database.query(`SELECT count(*) count FROM follows f WHERE ${countWhere}

@@ -82,7 +82,7 @@ export function UserReference(
             <span className="reference-popover-actions">
               <form method="post" action={'/follow/' + handle}>
                 {followReturnPath && <input type="hidden" name="from" value={followReturnPath} />}
-                {followsViewer && <span className="follows-you">follows you</span>}
+                {!!followsViewer && <span className="follows-you">follows you</span>}
                 <button className={`button${following ? ' button-muted' : ''}`} type="submit">
                   {following ? 'unfollow' : followsViewer ? 'follow back' : 'follow'}
                 </button>

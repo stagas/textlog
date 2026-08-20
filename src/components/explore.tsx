@@ -85,7 +85,7 @@ export function Explore({ user, welcome = false, tagsPage = 1, peoplePage = 1, d
                     <form method="post" action={'/follow/' + p.handle}>
                       <input type="hidden" name="explorePeople" value={explorePeople} />
                       <input type="hidden" name="from" value={exploreReturnPath(p.id)} />
-                      {p.followsViewer && <span className="follows-you">follows you</span>}
+                      {!!p.followsViewer && <span className="follows-you">follows you</span>}
                       <button className={`button${p.following ? ' button-muted' : ''}`}>
                         {p.following ? 'unfollow' : p.followsViewer ? 'follow back' : 'follow'}
                       </button>
