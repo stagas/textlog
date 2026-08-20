@@ -50,44 +50,37 @@ export type PostingSuggestionSearch = {
   truncated?: boolean
 }
 
-export function PostingHelp({ maxLength = 280, maxLines = 10, search }: {
-  maxLength?: number
-  maxLines?: number
+export function PostingSuggestionPopover({ kind, label, search }: {
+  kind: PostingSuggestionSearch['kind']
+  label: string
   search?: PostingSuggestionSearch | null
 }) {
-  const suggestionDetails = (kind: PostingSuggestionSearch['kind'], label: string) => {
-    const active = search?.kind === kind
-    const inputName = kind === 'hashtags' ? 'hashtag_query' : 'mention_query'
-    const searchLabel = kind === 'hashtags' ? 'hashtags' : 'handles'
-    const popoverId = `posting-help-${kind}`
-    return (
-      <span className={`posting-help-more posting-help-search posting-help-${kind}`}>
-        <button className="posting-help-trigger" type="button" popoverTarget={popoverId}>{label}</button>
-        <div className="posting-help-popover" id={popoverId} popover="auto">
-          <label>
-            <span className="visually-hidden">search {searchLabel}</span>
-            <input type="search" name={inputName} maxLength={100} defaultValue={active ? search.query : ''}
-              placeholder={`search ${searchLabel}`} autoComplete="off" inputMode="search" enterKeyHint="search" />
-          </label>
-          <button className="button" type="submit" name="action" value={`search-${kind}`} formNoValidate>
-            search
-          </button>
-        </div>
-      </span>
-    )
-  }
+  const active = search?.kind === kind
+  const inputName = kind === 'hashtags' ? 'hashtag_query' : 'mention_query'
+  const searchLabel = kind === 'hashtags' ? 'hashtags' : 'handles'
+  const popoverId = `posting-help-${kind}`
   return (
-    <div className="posting-help">
-      <span className="posting-help-limits">
-        {maxLength} chars / {maxLines} lines max <span className="posting-help-separator">·</span>
-      </span>
-      <span>use</span>
-      {suggestionDetails('hashtags', '#hashtags')}
-      <span>and</span>
-      {suggestionDetails('mentions', '@mentions')}
-      <span className="posting-help-more posting-help-and-more">
-        <button className="posting-help-trigger" type="button" popoverTarget="posting-help-more">and more</button>
-        <div className="posting-help-popover posting-help-tabs" id="posting-help-more" popover="auto">
+    <span className={`posting-help-more posting-help-search posting-help-${kind}`}>
+      <button className="posting-help-trigger" type="button" popoverTarget={popoverId}>{label}</button>
+      <div className="posting-help-popover" id={popoverId} popover="auto">
+        <label>
+          <span className="visually-hidden">search {searchLabel}</span>
+          <input type="search" name={inputName} maxLength={100} defaultValue={active ? search.query : ''}
+            placeholder={`search ${searchLabel}`} autoComplete="off" inputMode="search" enterKeyHint="search" />
+        </label>
+        <button className="button" type="submit" name="action" value={`search-${kind}`} formNoValidate>
+          search
+        </button>
+      </div>
+    </span>
+  )
+}
+
+export function PostingMorePopover() {
+  return (
+    <span className="posting-help-more posting-help-and-more">
+      <button className="posting-help-trigger" type="button" popoverTarget="posting-help-more">and more</button>
+      <div className="posting-help-popover posting-help-tabs" id="posting-help-more" popover="auto">
           <input className="posting-help-tab-input" type="radio" name="posting-help-tab" id="posting-help-formatting"
             defaultChecked />
           <input className="posting-help-tab-input" type="radio" name="posting-help-tab" id="posting-help-emoji" />
@@ -153,8 +146,26 @@ export function PostingHelp({ maxLength = 280, maxLines = 10, search }: {
             {'😀 😃 😄 😁 😆 😅 😂 🤣 😊 😇 🙂 🙃 😉 😌 😍 🥰 😘 😋 😛 😜 🤪 🤨 🧐 🤓 😎 🤩 🥳 😏 😒 😞 😔 😟 😕 🙁 ☹️ 😣 😖 😫 😩 🥺 😢 😭 😤 😠 😡 🤬 🤯 😳 🥵 🥶 😱 😨 😰 😥 😓 🤗 🤔 🫣 🤭 🫢 🤫 🤥 😶 😐 😑 😬 🙄 😯 😦 😧 😮 😲 🥱 😴 🤤 😪 😵 🤐 🥴 🤢 🤮 🤧 😷 🤒 🤕 🤑 🤠 😈 👿 👻 💀 ☠️ 👽 🤖 🎃 😺 😸 😹 😻 😼 😽 🙀 😿 😾 ❤️ 🧡 💛 💚 💙 💜 🖤 🤍 🤎 💔 ❣️ 💕 💞 💓 💗 💖 💘 💝 💟 👍 👎 👌 🤌 ✌️ 🤞 🤟 🤘 🤙 👈 👉 👆 👇 ☝️ ✋ 🤚 🖐️ 🖖 👋 🤝 👏 🙌 🫶 👐 🤲 🙏 ✍️ 💪 👀 👁️ 🧠 🫀 🫁 🌱 🌿 ☘️ 🍀 🌸 🌺 🌻 🌞 🌙 ⭐ ✨ ⚡ 🔥 🌈 ☀️ ☁️ ❄️ ☕ 🍕 🍎 🎉 🎊 🎈 🎁 🎵 🎶 🎨 📚 💡 ✅ ❌ ⚠️ 🚀 🌍 💻 📱 🔒 🔑'
               .split(' ').map((emoji, index) => <span key={`${emoji}-${index}`} title="Select and copy">{emoji}</span>)}
           </div>
-        </div>
+      </div>
+    </span>
+  )
+}
+
+export function PostingHelp({ maxLength = 280, maxLines = 10, search }: {
+  maxLength?: number
+  maxLines?: number
+  search?: PostingSuggestionSearch | null
+}) {
+  return (
+    <div className="posting-help">
+      <span className="posting-help-limits">
+        {maxLength} chars / {maxLines} lines max <span className="posting-help-separator">·</span>
       </span>
+      <span>use</span>
+      <PostingSuggestionPopover kind="hashtags" label="#hashtags" search={search} />
+      <span>and</span>
+      <PostingSuggestionPopover kind="mentions" label="@mentions" search={search} />
+      <PostingMorePopover />
     </div>
   )
 }

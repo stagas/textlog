@@ -264,6 +264,7 @@ describe('in-memory stylesheet', () => {
 
   test('keeps unsupported posting-help popovers hidden', async () => {
     const css = await Bun.file(new URL('./styles.css', import.meta.url)).text()
+    expect(css).toContain('line-height: 1.5;\n  overflow-x: hidden;\n  background: var(--panel);')
     expect(css).toContain('.posting-help-popover[popover] {\n  display: none;')
     expect(css).toContain('.posting-help-popover[popover]:popover-open {\n  display: block;')
     expect(css).toContain('.posting-help-search .posting-help-popover[popover]:popover-open {\n  display: flex;')
@@ -271,6 +272,8 @@ describe('in-memory stylesheet', () => {
 
   test('gives the mobile edit composer the same posting-help layout as write', async () => {
     const css = await Bun.file(new URL('./styles.css', import.meta.url)).text()
+    expect(css).toContain('.bio-form > label > input:not([type="checkbox"]),')
+    expect(css).not.toContain('\n.bio-form input:not([type="checkbox"]),')
     expect(css).toContain(
       ':is(.write-compose, .edit-post-compose, .replybox, .bio-form) .posting-help {',
     )
