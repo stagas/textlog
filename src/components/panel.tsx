@@ -3,6 +3,15 @@ import React from 'react'
 export type PanelWidth = 'narrow' | 'medium' | 'wide' | 'fluid'
 export type PanelTone = 'default' | 'danger'
 
+export function PanelHeading({ children, as = 'h2' }: { children: React.ReactNode; as?: 'h1' | 'h2' }) {
+  const Element = as
+  return <Element className="panel-heading">{children}</Element>
+}
+
+export function PanelCopy({ children }: { children: React.ReactNode }) {
+  return <p className="panel-copy">{children}</p>
+}
+
 export function Panel({ children, className = '', width = 'medium', tone = 'default', as = 'div', ...props }: {
   children: React.ReactNode
   className?: string

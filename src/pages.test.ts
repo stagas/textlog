@@ -517,7 +517,13 @@ test('account settings link to a focused recap email preference panel', () => {
 
   expect(subscribed).toContain('class="account-danger-zone" id="recap-emails"')
   expect(subscribed).toContain('href="/account/recap-emails">manage recap emails</a>')
+  expect(unsubscribed).toContain('class="panel-shell recap-emails-shell"')
   expect(unsubscribed).toContain('class="panel panel-surface panel-medium recap-emails-panel"')
+  expect(unsubscribed).toContain('<h1 class="panel-heading">Recap emails</h1>')
+  expect(unsubscribed).toContain(
+    '<p class="panel-copy">You are currently unsubscribed and will not be receiving recap emails.</p>',
+  )
+  expect(unsubscribed).toContain('class="form-actions-secondary"><a class="secondary-action" href="/account/edit"')
   expect(unsubscribed).toContain('name="subscribed" value="1"')
   expect(unsubscribed).toContain('>subscribe</button>')
   expect(unsubscribed).toContain('You have been unsubscribed.')

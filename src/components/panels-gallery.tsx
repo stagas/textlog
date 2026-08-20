@@ -2,16 +2,16 @@ import type { User } from '../types'
 import { PageHeading } from './account-settings-header'
 import { Layout } from './layout'
 import { FormActions } from './page-shared'
-import { CenteredPanel, Panel } from './panel'
+import { CenteredPanel, Panel, PanelCopy, PanelHeading } from './panel'
 
 function SampleContent({ title, eyebrow, danger = false }: { title: string; eyebrow: string; danger?: boolean }) {
   return (
     <>
       <p className="eyebrow">{eyebrow}</p>
-      <h2>{title}</h2>
-      <p className="panel-gallery-copy">
+      <PanelHeading>{title}</PanelHeading>
+      <PanelCopy>
         Representative supporting copy for checking measure, spacing, contrast, and wrapping.
-      </p>
+      </PanelCopy>
       <FormActions secondary={danger
         ? <button className="secondary-action cancel-action" type="button">cancel</button>
         : <button className="secondary-action" type="button">secondary</button>}
@@ -63,15 +63,15 @@ export function PanelsGallery({ user }: { user?: User | null }) {
             <Panel width="fluid" className="panel-gallery-state">
               <p className="eyebrow">status</p>
               <div className="panel-gallery-state-content">
-                <h2>Check your email</h2>
+                <PanelHeading>Check your email</PanelHeading>
                 <p className="status-message status-success" role="status">A fresh verification link has been sent.</p>
-                <p className="panel-gallery-copy">The link expires in one hour.</p>
+                <PanelCopy>The link expires in one hour.</PanelCopy>
               </div>
             </Panel>
             <Panel width="fluid" className="panel-gallery-state">
               <p className="eyebrow">error</p>
               <div className="panel-gallery-state-content">
-                <h2>Something needs attention</h2>
+                <PanelHeading>Something needs attention</PanelHeading>
                 <p className="status-message status-error" role="alert">Review the highlighted information.</p>
                 <button className="button" type="button">try again</button>
               </div>

@@ -274,6 +274,7 @@ describe('in-memory stylesheet', () => {
     const css = await Bun.file(new URL('./styles.css', import.meta.url)).text()
     expect(css).toContain('.bio-form > label > input:not([type="checkbox"]),')
     expect(css).not.toContain('\n.bio-form input:not([type="checkbox"]),')
+    expect(css).toContain('.bio-form + .account-danger-zone {\n  margin-top: var(--space-4);')
     expect(css).toContain(
       ':is(.write-compose, .edit-post-compose, .replybox, .bio-form) .posting-help {',
     )

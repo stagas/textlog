@@ -1,7 +1,7 @@
 import type { User } from '../types'
 import { Layout } from './layout'
 import { FormActions, FormMessage } from './page-shared'
-import { CenteredPanel } from './panel'
+import { CenteredPanel, PanelCopy, PanelHeading } from './panel'
 
 export function InviteFriends({ user, emails = '', error, sent = 0, returnPath }: {
   user: User
@@ -14,11 +14,11 @@ export function InviteFriends({ user, emails = '', error, sent = 0, returnPath }
     <Layout user={user} title="invite friends">
       <CenteredPanel className="invite-panel" width="medium">
         <p className="eyebrow">share textlog</p>
-        <h2>Bring your friends along</h2>
-        <p className="panel-gallery-copy">
+        <PanelHeading>Bring your friends along</PanelHeading>
+        <PanelCopy>
           Your friends will get a magic link to join textlog.<br />
           Enter up to 20 email addresses, separated by spaces or commas.
-        </p>
+        </PanelCopy>
         <FormMessage error={error} success={sent
           ? `${sent} ${sent === 1 ? 'invitation' : 'invitations'} sent.`
           : undefined} />

@@ -1,6 +1,7 @@
 import type { User } from '../types'
 import { Layout } from './layout'
-import { Panel } from './panel'
+import { FormActions } from './page-shared'
+import { CenteredPanel, PanelCopy, PanelHeading } from './panel'
 
 export function RecapEmails({ user, subscribed, token, changed = false, invalid = false }: {
   user?: User | null
@@ -11,9 +12,9 @@ export function RecapEmails({ user, subscribed, token, changed = false, invalid 
 }) {
   return (
     <Layout user={user} title="recap emails">
-      <Panel width="medium" className="recap-emails-panel">
+      <CenteredPanel width="medium" shellClassName="recap-emails-shell" className="recap-emails-panel">
         <p className="eyebrow">email preferences</p>
-        <h1>Recap emails</h1>
+        <PanelHeading as="h1">Recap emails</PanelHeading>
         {invalid
           ? <p className="status-message status-error" role="alert">This unsubscribe link is unavailable.</p>
           : (
@@ -23,24 +24,21 @@ export function RecapEmails({ user, subscribed, token, changed = false, invalid 
                   You have been {subscribed ? 'subscribed' : 'unsubscribed'}.
                 </p>
               )}
-              <p>
+              <PanelCopy>
                 {subscribed
-                  ? 'You receive occasional emails about new features and popular notes.'
-                  : 'You are not subscribed to recap emails.'}
-              </p>
+                  ? 'You are currently subscribed and receiving occasional emails about new features and popular notes.'
+                  : 'You are currently unsubscribed and will not be receiving recap emails.'}
+              </PanelCopy>
               <form method="post" action="/account/recap-emails">
                 {token && <input type="hidden" name="token" value={token} />}
                 <input type="hidden" name="subscribed" value={subscribed ? '0' : '1'} />
-                <button className="button">{subscribed ? 'unsubscribe' : 'subscribe'}</button>
+                <FormActions secondary={user && <a className="secondary-action" href="/account/edit">back to account</a>}
+                  primary={<button className="button">{subscribed ? 'unsubscribe' : 'subscribe'}</button>} />
               </form>
             </>
           )}
-        {user && (
-          <p>
-            <a href="/account/edit">back to account</a>
-          </p>
-        )}
-      </Panel>
+        {invalid && user && <a className="secondary-action" href="/account/edit">back to account</a>}
+      </CenteredPanel>
     </Layout>
   )
 }

@@ -3409,7 +3409,7 @@ form.report-panel {
 }
 
 .bio-form + .account-danger-zone {
-  margin-top: var(--space-5);
+  margin-top: var(--space-4);
 }
 
 .account-danger-zone>div {
@@ -4066,7 +4066,7 @@ form.report-panel {
   letter-spacing: 1px;
   text-transform: uppercase;
 }
-.panel-gallery-copy {
+.panel-copy {
   margin: var(--space-4) 0;
   color: var(--muted);
   font-size: .75rem;
@@ -4080,7 +4080,7 @@ form.report-panel {
   text-transform: uppercase;
 }
 .panel-gallery-section > .panel-surface { margin-block: var(--space-4); }
-.panel-surface h2 {
+.panel-heading {
   margin: 0;
   font-size: clamp(1.25rem, 4vw, 1.75rem);
   line-height: 1.15;
@@ -4104,7 +4104,7 @@ form.report-panel {
   margin: 0;
 }
 .panel-gallery-state-content > .button { align-self: flex-end; }
-.panel-gallery-state-content > .panel-gallery-copy { margin: 0; }
+.panel-gallery-state-content > .panel-copy { margin: 0; }
 .panel-gallery-shell-preview { border: 1px dashed var(--soft); background: var(--bg); }
 .panel-gallery-shell-preview .panel-shell { min-height: 520px; }
 
