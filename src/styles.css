@@ -3787,9 +3787,7 @@ form.report-panel {
 .parent-quote .poll { font-size: 0.75rem; }
 .parent-quote .poll-option button,
 .parent-quote .poll-result,
-.parent-quote .poll-preview-option,
-.parent-quote .poll-option-count,
-.parent-quote .poll-meta { color: var(--quote-ink); }
+.parent-quote .poll-preview-option { color: var(--quote-ink); }
 .font-size-larger>span:first-of-type { font-size: 20px; }
 .primary-font-monospace { font-family: var(--font-monospace); }
 .primary-font-sans-serif { font-family: var(--font-sans-serif); }

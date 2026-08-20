@@ -49,9 +49,11 @@ describe('in-memory stylesheet', () => {
     const css = await Bun.file(new URL('./styles.css', import.meta.url)).text()
     expect(css).toContain('.parent-quote .poll { font-size: 0.75rem; }')
     expect(css).toContain(
-      '.parent-quote .poll-option button,\n.parent-quote .poll-result,\n.parent-quote .poll-preview-option,\n'
-      + '.parent-quote .poll-option-count,\n.parent-quote .poll-meta { color: var(--quote-ink); }',
+      '.parent-quote .poll-option button,\n.parent-quote .poll-result,\n'
+      + '.parent-quote .poll-preview-option { color: var(--quote-ink); }',
     )
+    expect(css).not.toContain('.parent-quote .poll-option-count,')
+    expect(css).not.toContain('.parent-quote .poll-meta { color: var(--quote-ink); }')
   })
 
   test('highlights a post or activity entry opened through its stable anchor', async () => {
