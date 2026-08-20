@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test'
-import { containsAsciiArt, extractHashtags, extractMentions, postContentFlags } from './content'
+import { containsAsciiArt, extractHashtags, extractMentions, postContentFlags, splitSpoilerBody } from './content'
 
 describe('content metadata extraction', () => {
   test('classifies the parsers needed to render a post', () => {
@@ -15,6 +15,16 @@ describe('content metadata extraction', () => {
     expect(containsAsciiArt('hello #ascii')).toBe(true)
     expect(containsAsciiArt('hello #ASCII_ART')).toBe(true)
     expect(containsAsciiArt('hello #asciiartist')).toBe(false)
+  })
+  test('splits content after the first real spoiler tag line', () => {
+    expect(splitSpoilerBody('visible\n#SPOILER\nhidden\nmore')).toEqual({
+      visible: 'visible\n#SPOILER',
+      hidden: 'hidden\nmore',
+    })
+    expect(splitSpoilerBody('https://example.com/#spoiler\nvisible')).toEqual({
+      visible: 'https://example.com/#spoiler\nvisible',
+      hidden: '',
+    })
   })
   test('normalizes and deduplicates hashtags', () => {
     expect(extractHashtags('#Build something #build #Notes')).toEqual(['build', 'notes'])

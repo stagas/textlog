@@ -4,7 +4,7 @@ import { createHash, randomBytes } from 'node:crypto'
 import tlds from 'tlds'
 import { userForApiKey } from './api-keys'
 import { sessionCookieName } from './brand'
-import { containsAsciiArt, extractHashtags, MAX_HASHTAGS_PER_POST, type PostContentFlags } from './content'
+import { containsAsciiArt, MAX_HASHTAGS_PER_POST, splitSpoilerBody, type PostContentFlags } from './content'
 import { texToMathML } from './math'
 import { requestContext } from './request-context'
 import { markSessionUsed, sessionHash } from './sessions'
@@ -499,16 +499,14 @@ export function linkify(body: string, mentionBios: Record<string, string> = {}, 
   hashtagCounts: Record<string, number> = {}, mentionNoteCounts: Record<string, number> = {},
   popover?: ReferencePopoverOptions, renderSpoiler = true): string
 {
-  const spoilerLine = renderSpoiler ? body.split('\n').findIndex(line => extractHashtags(line).includes('spoiler')) : -1
-  if (spoilerLine >= 0) {
-    const lines = body.split('\n')
-    const visible = lines.slice(0, spoilerLine + 1).join('\n')
-    const hidden = lines.slice(spoilerLine + 1).join('\n')
+  const spoiler = renderSpoiler ? splitSpoilerBody(body) : { visible: body, hidden: '' }
+  if (spoiler.hidden) {
     const renderPart = (part: string): string => linkify(part, mentionBios, highlightTerms, appUrl, flags,
       navigationQuery, hashtagCounts, mentionNoteCounts, popover, false)
-    return renderPart(visible) + (hidden
-      ? `<details class="post-spoiler"><summary>reveal</summary><span class="post-spoiler-content">${renderPart(hidden)}</span></details>`
-      : '')
+    return renderPart(spoiler.visible)
+      + `<details class="post-spoiler"><summary>reveal</summary><span class="post-spoiler-content">${
+        renderPart(spoiler.hidden)
+      }</span></details>`
   }
   // Keep the drawing literal while retaining navigation for social references.
   if (containsAsciiArt(body)) {

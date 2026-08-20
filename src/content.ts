@@ -29,6 +29,17 @@ export function containsAsciiArt(body: string) {
   return extractHashtags(body).some(tag => tag === 'ascii' || tag === 'ascii_art')
 }
 
+export function splitSpoilerBody(body: string) {
+  const lines = body.split('\n')
+  const spoilerLine = lines.findIndex(line => extractHashtags(line).includes('spoiler'))
+  return spoilerLine < 0
+    ? { visible: body, hidden: '' }
+    : {
+      visible: lines.slice(0, spoilerLine + 1).join('\n'),
+      hidden: lines.slice(spoilerLine + 1).join('\n'),
+    }
+}
+
 export function extractMentions(body: string) {
   return [...new Set([...body.matchAll(/(?<![A-Za-z0-9_])@([A-Za-z0-9_]{2,24})(?![A-Za-z0-9_])/g)]
     .map(match => match[1].toLowerCase()))]

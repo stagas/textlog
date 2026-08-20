@@ -1,6 +1,7 @@
 import type { Database } from 'bun:sqlite'
 import webpush from 'web-push'
 import { ADMIN_EMAILS } from './admin'
+import { splitSpoilerBody } from './content'
 import { type DatabaseService, databaseService } from './database-service'
 import { isDevelopment } from './environment'
 import { logError } from './log'
@@ -200,7 +201,7 @@ export async function sendPushForPost(postId: number, actorId: number, actorHand
           ? `replied to @${post.parentHandle}`
           : 'wrote'
       }`,
-      body: markdownPlainText(post.body),
+      body: markdownPlainText(splitSpoilerBody(post.body).visible),
       url: `/post/${postId}`,
     }
   }, database, vapid, service)
