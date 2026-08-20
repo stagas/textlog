@@ -11,10 +11,10 @@ import { Post } from './post'
 
 export function Profile(
   { user, profile, posts, following, followsViewer = false, bio = profile.bio || '', editHandle = profile.handle,
-    editEmail = profile.email, error, editing = false, total = posts.length,
-    noteCount = total, replyCount = 0, tab = 'notes', followerCount = 0, followingCount = 0, followingTagCount = 0,
-    blockedPeopleCount = 0, blockedTagCount = 0, blocked = false, blockedByProfile = false, social, page = 1,
-    totalPages = 1, returnPath, suggestionSearch, bioReference }: {
+    editEmail = profile.email, error, editing = false, total = posts.length, noteCount = total, replyCount = 0,
+    tab = 'notes', followerCount = 0, followingCount = 0, followingTagCount = 0, blockedPeopleCount = 0,
+    blockedTagCount = 0, blocked = false, blockedByProfile = false, social, page = 1, totalPages = 1, returnPath,
+    suggestionSearch, bioReference }: {
       user: User | null
       profile: ProfileRow
       posts: PostView[]
@@ -153,7 +153,7 @@ export function Profile(
                 <div className="account-danger-zone">
                   <div>
                     <strong>Appearance</strong>
-                    <span>Choose a theme, accent color, and monospace font for textlog.</span>
+                    <span>Choose a theme, fonts, and user interface settings.</span>
                   </div>
                   <a className="button" href={`/account/edit/appearance${fromQuery}`}>change appearance</a>
                 </div>
