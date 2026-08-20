@@ -1272,17 +1272,19 @@ export const migrations: Migration[] = [
       dropColumn(database, 'users', 'bot_managed')
       dropColumn(database, 'push_subscriptions', 'notify_following_bots')
       dropColumn(database, 'push_subscriptions', 'notify_bots')
-      database.run(`CREATE TABLE admin_actions_new (
-          id INTEGER PRIMARY KEY AUTOINCREMENT,actor_id INTEGER NOT NULL REFERENCES users(id),
-          action TEXT NOT NULL CHECK(action IN ('delete_post','suspend_user','restore_user','delete_user',
-            'resolve_report','dismiss_report')),
-          target_user_id INTEGER REFERENCES users(id),target_post_id INTEGER REFERENCES posts(id),
-          note TEXT NOT NULL DEFAULT '',created_at TEXT DEFAULT CURRENT_TIMESTAMP);
-        INSERT INTO admin_actions_new SELECT * FROM admin_actions
-          WHERE action NOT IN ('mark_bot','unmark_bot');
-        DROP TABLE admin_actions;
-        ALTER TABLE admin_actions_new RENAME TO admin_actions;
-        CREATE INDEX admin_actions_created ON admin_actions(created_at DESC);`)
+      if (database.query("SELECT 1 FROM sqlite_master WHERE type='table' AND name='admin_actions'").get()) {
+        database.run(`CREATE TABLE admin_actions_new (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,actor_id INTEGER NOT NULL REFERENCES users(id),
+            action TEXT NOT NULL CHECK(action IN ('delete_post','suspend_user','restore_user','delete_user',
+              'resolve_report','dismiss_report')),
+            target_user_id INTEGER REFERENCES users(id),target_post_id INTEGER REFERENCES posts(id),
+            note TEXT NOT NULL DEFAULT '',created_at TEXT DEFAULT CURRENT_TIMESTAMP);
+          INSERT INTO admin_actions_new SELECT * FROM admin_actions
+            WHERE action NOT IN ('mark_bot','unmark_bot');
+          DROP TABLE admin_actions;
+          ALTER TABLE admin_actions_new RENAME TO admin_actions;
+          CREATE INDEX admin_actions_created ON admin_actions(created_at DESC);`)
+      }
     },
   },
 ]

@@ -93,7 +93,7 @@ describe('RSS and Atom feeds', () => {
     expect(body).toContain('<rss version="2.0"')
     expect(body).toContain('<atom:link href="https://textlog.cc/latest.rss" rel="self"')
     expect(body).toContain('hello &amp; &lt;friends&gt; #textlog')
-    expect(body).not.toContain('https://textlog.cc/post/2')
+    expect(body).toContain('https://textlog.cc/post/2')
     expect(body).not.toContain('deleted')
     expect(body).not.toContain('gone author')
   })
