@@ -160,7 +160,7 @@ export function Profile(
                 <div className="account-danger-zone">
                   <div>
                     <strong>Account security</strong>
-                    <span>Manage your email and signed-in sessions.</span>
+                    <span>Manage your email, feeds, signed-in sessions, create API keys and send magic links.</span>
                   </div>
                   <a className="button" href={`/account/security${fromQuery}`}>manage security</a>
                 </div>
