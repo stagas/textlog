@@ -217,7 +217,7 @@ test('only the donation banner is shown to logged-out visitors', async () => {
     expect(response.status).toBe(200)
     const html = await response.text()
     expect(html).toContain('class="notification-banner"')
-    expect(html).toContain('donate to support us')
+    expect(html).toContain('support us on open collective')
     expect(html).not.toContain('enable notifications')
     expect(html).not.toContain('customize appearance')
   }
@@ -524,7 +524,7 @@ test('account security creates one-time, revocable API keys', async () => {
 test('consequential account, content, reporting, and admin flows work over HTTP', async () => {
   const guestHot = await (await request('/hot')).text()
   expect(guestHot).toContain('href="/donation/banner/accept"')
-  expect(guestHot).toContain('❤️ donate to support us')
+  expect(guestHot).toContain('❤️ support us on open collective')
   expect(guestHot).toContain('will donate later')
   const guestDonationAcceptance = await request('/donation/banner/accept')
   expect(guestDonationAcceptance.status).toBe(303)
@@ -533,7 +533,7 @@ test('consequential account, content, reporting, and admin flows work over HTTP'
     ?.match(/donation_banner_dismissed=1/)?.[0]
   expect(guestDonationCookie).toBeDefined()
   expect(await (await request('/hot', { cookie: guestDonationCookie })).text())
-    .not.toContain('donate to support us')
+    .not.toContain('support us on open collective')
 
   let aliceCookie = await signup('alice', 'alice@example.com', 'unused')
   const alice = database.query('SELECT id,email_verified_at FROM users WHERE handle=?')
@@ -707,7 +707,7 @@ test('consequential account, content, reporting, and admin flows work over HTTP'
     cookie: aliceCookie,
     userAgent: 'alice-dismissed-browser',
   })).text()
-  expect(setupDismissedHome).toContain('donate to support us')
+  expect(setupDismissedHome).toContain('support us on open collective')
   const acceptedDonation = await request('/donation/banner/accept', {
     cookie: aliceCookie,
     userAgent: 'alice-dismissed-browser',

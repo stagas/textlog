@@ -156,7 +156,7 @@ export function Layout({
           <aside className="notification-banner" aria-label={notificationBanner === 'notification-update'
             ? 'Notification update'
             : notificationBanner === 'donate'
-            ? 'Support us'
+            ? 'Support us on Open Collective'
             : 'Account setup reminder'}
           >
             <a href={notificationBanner === 'donate' ? '/donation/banner/accept' : notificationBanner === 'appearance'
@@ -167,7 +167,7 @@ export function Layout({
               {...notificationBanner === 'donate' ? { target: '_blank', rel: 'noopener noreferrer' } : {}}
             >
               {notificationBanner === 'donate'
-                ? '❤️ donate to support us'
+                ? '❤️ support us on open collective'
                 : notificationBanner === 'appearance'
                 ? 'customize appearance'
                 : notificationBanner === 'invite'
