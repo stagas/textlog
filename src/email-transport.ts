@@ -5,7 +5,7 @@ export type EmailMessage = {
   to: string
   subject: string
   text: string
-  html: string
+  html?: string
 }
 
 export type EmailTransport = {
@@ -45,7 +45,7 @@ function sendGridTransport(apiKey: string, request: typeof fetch): EmailTranspor
           subject: message.subject,
           content: [
             { type: 'text/plain', value: message.text },
-            { type: 'text/html', value: message.html },
+            ...(message.html ? [{ type: 'text/html', value: message.html }] : []),
           ],
         }),
         signal: AbortSignal.timeout(8_000),

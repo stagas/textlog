@@ -1564,8 +1564,7 @@ test('consequential account, content, reporting, and admin flows work over HTTP'
     subject: 'A custom title',
     text: 'Hello <friend>!',
   })
-  expect(capturedEmails().at(-1)?.html).toContain('<title>A custom title · textlog</title>')
-  expect(capturedEmails().at(-1)?.html).toContain('Hello &lt;friend&gt;!')
+  expect(capturedEmails().at(-1)?.html).toBeUndefined()
   const resolveIllegalReport = await request(`/admin/illegal-reports/${illegalReport.id}/resolve`, {
     method: 'POST',
     cookie: adminCookie,

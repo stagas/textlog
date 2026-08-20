@@ -3,7 +3,7 @@ import { dirname } from 'node:path'
 import { appName, appOrigin } from './brand'
 import { createEmailTransport } from './email-transport'
 
-async function sendEmail(email: string, subject: string, text: string, html: string, fromOverride?: string) {
+async function sendEmail(email: string, subject: string, text: string, html?: string, fromOverride?: string) {
   const from = fromOverride || Bun.env.EMAIL_FROM
   const capturePath = Bun.env.EMAIL_CAPTURE_PATH
   if (capturePath) {
@@ -84,8 +84,7 @@ const expiryNotice = (message: string) =>
   notice(`${escapeHtml(message)}<br>If you did not request this, you can safely ignore this email.`)
 
 export function sendAdminEmail(email: string, subject: string, body: string, from?: string) {
-  const content = `<div style="white-space:pre-wrap;word-break:break-word">${escapeHtml(body)}</div>`
-  return sendEmail(email, subject, body, emailDocument(subject, content), from)
+  return sendEmail(email, subject, body, undefined, from)
 }
 
 export function sendPasswordReset(email: string, resetUrl: string) {
