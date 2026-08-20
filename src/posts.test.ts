@@ -377,6 +377,22 @@ describe('post persistence', () => {
     expect(view.parent?.body).toBe('parent')
   })
 
+  test('classifies replies and mentions addressed to the viewer', () => {
+    const db = database()
+    db.run(`INSERT INTO posts(id,user_id,parent_id,body,created_at) VALUES
+      (1,2,NULL,'viewer note','2026-08-03 10:00:00'),
+      (2,1,1,'reply mentioning @reader','2026-08-03 11:00:00'),
+      (3,1,NULL,'mentioning @reader','2026-08-03 12:00:00'),
+      (4,1,NULL,'ordinary note','2026-08-03 13:00:00');
+      INSERT INTO post_mentions VALUES(2,2),(3,2);`)
+    const posts = db.query(
+      'SELECT p.*,u.handle FROM posts p JOIN users u ON u.id=p.user_id WHERE p.id IN (2,3,4) ORDER BY p.id',
+    ).all() as PostView[]
+
+    expect(enrichPosts(db, posts, 2).map(post => post.viewer_context))
+      .toEqual(['reply', 'mention', undefined])
+  })
+
   test('counts the full visible descendant tree as replies', () => {
     const db = database()
     db.run(`INSERT INTO posts(id,user_id,parent_id,body,created_at) VALUES

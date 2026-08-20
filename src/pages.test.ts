@@ -679,6 +679,19 @@ test('public collection pages advertise their RSS and Atom feeds', () => {
   expect(tag).toContain('href="/tag/ascii_art.atom"')
 })
 
+test('latest and hot feeds label posts addressed to the viewer', () => {
+  const user = { id: 2, handle: 'reader', email: 'reader@example.com', bio: '' }
+  const post = { id: 9, user_id: 1, parent_id: 4, body: 'hello', created_at: '2026-08-20 12:00:00',
+    deleted_at: null, handle: 'writer', viewer_context: 'reply' as const }
+  const feed = { posts: [post], page: 1, totalItems: 1, totalPages: 1 }
+
+  const latest = renderToStaticMarkup(React.createElement(PublicFeed, { user, feed, path: '/latest' }))
+  const hot = renderToStaticMarkup(React.createElement(HotFeed, { user, feed }))
+
+  expect(latest).toContain('<span class="post-context">replied to you:</span>')
+  expect(hot).toContain('<span class="post-context">replied to you:</span>')
+})
+
 test('Tag pages keep actions beside the tag and a contextual back link on the right', () => {
   const html = renderToStaticMarkup(React.createElement(TagFeed, {
     user: { id: 2, handle: 'reader', email: 'reader@example.com', bio: '' },

@@ -4429,16 +4429,12 @@ form.report-panel {
 
 .post-context {
   min-width: 0;
-  margin-left: calc(-1 * var(--space-2) + 1ch);
+  margin-left: calc(-1 * var(--space-4) + 1ch);
   overflow: hidden;
   color: var(--muted);
   font-size: 0.75rem;
   text-overflow: ellipsis;
   white-space: nowrap;
-}
-
-.for-you-item .posttop-context .post-context {
-  margin-left: calc(-1 * var(--space-4) + 1ch);
 }
 
 .activity-item .posttop {

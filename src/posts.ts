@@ -158,6 +158,20 @@ export function updatePost(database: Database, postId: number, body: string) {
 export function enrichPosts(database: Database, posts: PostView[], viewerId = -1) {
   if (!posts.length) return posts
   const ids = posts.map(post => post.id)
+  const viewerContextByPostId = new Map<number, 'reply' | 'mention'>()
+  if (viewerId >= 0) {
+    const contextRows = database.query(`SELECT p.id,
+      CASE WHEN parent.user_id=? THEN 'reply' ELSE 'mention' END viewer_context
+      FROM posts p LEFT JOIN posts parent ON parent.id=p.parent_id
+      LEFT JOIN post_mentions pm ON pm.post_id=p.id AND pm.user_id=?
+      WHERE p.id IN (${ids.map(() => '?').join(',')}) AND p.user_id!=?
+        AND (parent.user_id=? OR pm.user_id IS NOT NULL)`)
+      .all(viewerId, viewerId, ...ids, viewerId, viewerId) as {
+        id: number
+        viewer_context: 'reply' | 'mention'
+      }[]
+    for (const row of contextRows) viewerContextByPostId.set(row.id, row.viewer_context)
+  }
   const userIds = [...new Set(posts.map(post => post.user_id))]
   const userPlaceholders = userIds.map(() => '?').join(',')
   const authors = database.query(`SELECT id,bio FROM users WHERE id IN (${userPlaceholders})`)
@@ -334,6 +348,7 @@ export function enrichPosts(database: Database, posts: PostView[], viewerId = -1
   }
   return posts.map(post => ({
     ...post,
+    viewer_context: viewerContextByPostId.get(post.id),
     bio: bioByUserId.get(post.user_id) ?? post.bio ?? '',
     note_count: profileStats.get(post.user_id)?.notes || 0,
     profile_stats: profileStats.get(post.user_id),

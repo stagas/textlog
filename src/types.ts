@@ -64,6 +64,7 @@ export type ParentPost = Pick<PostRow,
 
 export type PostView = PostRow & {
   handle: string
+  viewer_context?: 'reply' | 'mention'
   bio?: string
   note_count?: number
   profile_stats?: UserProfileStats

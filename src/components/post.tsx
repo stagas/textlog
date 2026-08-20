@@ -332,6 +332,11 @@ export function Post({
   canonicalTimestamp?: boolean; topHref?: string; flatHref?: string; treeHref?: string;
   authorPopoverAction?: React.ReactNode })
 {
+  contextLabel ??= p.viewer_context === 'reply'
+    ? 'replied to you:'
+    : p.viewer_context === 'mention'
+    ? 'mentioned you:'
+    : undefined
   const parent = showParent ? p.parent : null
   const hasTappableParent = Boolean(parent && (tappable || tappableParent))
   const isAsciiArt = containsAsciiArt(p.body)
