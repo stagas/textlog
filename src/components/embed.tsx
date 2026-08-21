@@ -45,9 +45,6 @@ export function Embed(
                     <a href={`/u/${post.handle}`} target="_blank" rel="noopener noreferrer">@{post.handle}</a>
                     <a className="embed-date" href={`/post/${post.id}`} target="_blank" rel="noopener noreferrer">
                       <time dateTime={post.created_at} title={fmtFull(post.created_at)}>{fmt(post.created_at)}</time>
-                      {(post.reply_count || 0) > 0 && (
-                        <span>· replies</span>
-                      )}
                     </a>
                   </div>
                   <p className={containsAsciiArt(post.body) ? 'ascii-art' : undefined}
@@ -68,9 +65,6 @@ export function Embed(
                                 <time dateTime={post.parent.created_at} title={fmtFull(post.parent.created_at)}>
                                   {fmt(post.parent.created_at)}
                                 </time>
-                                {post.parent.reply_count > 0 && (
-                                  <span>· replies</span>
-                                )}
                               </a>
                             </div>
                             <p className={containsAsciiArt(post.parent.body) ? 'ascii-art' : undefined}

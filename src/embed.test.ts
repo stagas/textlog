@@ -90,6 +90,6 @@ test('feed embeds render a quoted parent with its metadata and links', () => {
   expect(html).toContain('href="/u/bob"')
   expect(html).toContain('href="/post/1"')
   expect(html).toContain('quoted <a target="_blank" rel="noopener noreferrer" href="/tag/note">#note</a>')
-  expect(html).toContain('· replies</span>')
+  expect(html).not.toContain('· replies</span>')
   expect(html).not.toContain('2 replies')
 })

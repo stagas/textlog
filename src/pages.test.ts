@@ -1552,7 +1552,7 @@ test('Post renders preloaded parent and reply data', () => {
       },
     },
   }))
-  expect(html).toContain('· replies</span>')
+  expect(html).not.toContain('· replies</span>')
   expect(html).not.toContain('2 replies')
   expect(html).toContain('@author')
   expect(html).toContain('parent')
@@ -1570,7 +1570,7 @@ test('Post renders preloaded parent and reply data', () => {
   expect(html).toContain('aria-label="reply to @author">enter to reply</a>')
 })
 
-test('Profile and hashtag feeds show a reply label without the count beside post dates', () => {
+test('Profile and hashtag feeds show no reply metadata beside post dates', () => {
   const post = {
     id: 2,
     user_id: 1,
@@ -1602,8 +1602,8 @@ test('Profile and hashtag feeds show a reply label without the count beside post
     total: 1,
   }))
 
-  expect(profileHtml).toContain('· replies</span>')
-  expect(tagHtml).toContain('· replies</span>')
+  expect(profileHtml).not.toContain('· replies</span>')
+  expect(tagHtml).not.toContain('· replies</span>')
   expect(profileHtml).not.toContain('3 replies')
   expect(tagHtml).not.toContain('3 replies')
 })

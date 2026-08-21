@@ -329,7 +329,6 @@ export function Post({
   const parent = showParent ? p.parent : null
   const hasTappableParent = Boolean(parent && (tappable || tappableParent))
   const isAsciiArt = containsAsciiArt(p.body)
-  const replyCount = p.reply_count || 0
   const returnQuery = returnPath ? '&from=' + encodeURIComponent(returnPath) : ''
   const actionQuery = returnPath ? '?from=' + encodeURIComponent(returnPath) : ''
   const referenceQuery = preview
@@ -350,9 +349,7 @@ export function Post({
     return (
       <article className="post deleted-post" id={`post-${p.id}`}>
         <a href={detailPath} rel={navigationRel}>
-          (deleted){showReplyCount && replyCount > 0
-            ? ' · replies'
-            : ''}
+          (deleted)
         </a>
       </article>
     )
@@ -389,9 +386,6 @@ export function Post({
               rel={canonicalTimestamp ? undefined : navigationRel}
             >
               <time dateTime={p.created_at} title={fmtFull(p.created_at)}>{fmt(p.created_at)}</time>
-              {showReplyCount && replyCount > 0 && (
-                <span>{' '}· replies</span>
-              )}
             </a>
           )}
         {topHref && <a className="quiet post-top-link" href={topHref}>top</a>}
@@ -461,9 +455,6 @@ export function Post({
                     <time dateTime={parent.created_at} title={fmtFull(parent.created_at)}>
                       {fmt(parent.created_at)}
                     </time>
-                    {parent.reply_count > 0 && (
-                      <span>{' '}· replies</span>
-                    )}
                   </a>
                   {tappable && parent.top_id && (
                     <a className="quiet post-top-link"
