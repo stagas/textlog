@@ -79,7 +79,7 @@ export function Profile(
                 title={!editing && user?.id === profile.id
                   ? `User ID: ${profile.id}${
                     profile.created_at
-                      ? `\nSince: ${fmtDate(profile.created_at)}, ${fmt(profile.created_at)} ago`
+                      ? `\nSince: ${fmtDate(profile.created_at)}, ${fmt(profile.created_at)}`
                       : ''
                   }`
                   : undefined}

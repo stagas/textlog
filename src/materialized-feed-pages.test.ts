@@ -52,7 +52,7 @@ test('refreshes relative timestamps in cached HTML without rerendering', async (
   Date.now = () => Date.parse('2026-08-16T12:00:00Z')
   try {
     expect(await (await materializedFeedPage(primary, request, 'latest', -1, render, cache)).text())
-      .toBe('<time dateTime="2026-08-16 10:00:00" title="Aug 16, 2026, 1:00 PM">2h</time>')
+      .toBe('<time dateTime="2026-08-16 10:00:00" title="Aug 16, 2026, 1:00 PM">2 hours ago</time>')
   }
   finally {
     Date.now = originalNow
