@@ -247,6 +247,8 @@ describe('in-memory stylesheet', () => {
     expect(css).toContain('@keyframes reference-popover-reveal {')
     expect(css).toContain('.account-menu-popover:popover-open {\n  display: grid;')
     expect(css).toContain('@media (hover: none), (pointer: coarse) {\n  .account-menu-popover[popover] {')
+    expect(css).toContain('top: calc(82px - var(--space-2));\n    right: var(--gutter);\n'
+      + '    bottom: auto;\n    left: auto;\n    width: max-content;\n    height: max-content;')
     expect(css).toContain('  .reference-menu .reference-menu-popover,\n'
       + '  .reference-menu::after {\n    display: none !important;')
     expect(css).toContain('font-family: inherit;\n  font-size: 0.6875rem;')
