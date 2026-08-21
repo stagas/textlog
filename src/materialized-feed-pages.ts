@@ -1,5 +1,4 @@
 import type { Database } from 'bun:sqlite'
-import { fmt } from './utils'
 
 export const MAX_MATERIALIZED_PAGES = 128
 
@@ -11,15 +10,6 @@ function appearanceVariant(request: Request) {
 
 /** Reuse the fully rendered anonymous first page until a database mutation advances the feed generation. */
 export type MaterializedFeedKind = 'latest' | 'hot' | 'for-you' | 'to-me'
-
-/** Refresh relative times in cached HTML without rendering the feed again. */
-export function refreshMaterializedTimestamps(html: string, now = Date.now()) {
-  return html.replace(/<time\b([^>]*)>([^<]*)<\/time>/g, (time, attributes) => {
-    const dateTime = attributes.match(/\bdateTime=(?:"([^"]+)"|'([^']+)')/)?.slice(1).find(Boolean)
-    if (!dateTime) return time
-    return `<time${attributes}>${fmt(dateTime, now)}</time>`
-  })
-}
 
 /** Discard rendered feed HTML from an earlier server process. */
 export function clearMaterializedFeedPages(cache: Database) {
@@ -42,13 +32,13 @@ export async function materializedFeedPage(database: Database, request: Request,
   const generation = (database.query('SELECT generation FROM feed_snapshot_generation WHERE id=1').get() as {
     generation: number
   }).generation
-  const variant = `1|${cacheVersion ? `${cacheVersion}|` : ''}${appearanceVariant(request)}`
+  const variant = `2|${cacheVersion ? `${cacheVersion}|` : ''}${appearanceVariant(request)}`
   const cached = cache.query(`SELECT html FROM materialized_feed_pages_v2
     WHERE kind=? AND viewer_id=? AND variant=? AND generation=?`).get(kind, viewerId, variant, generation) as {
     html: string
   } | null
   if (cached) {
-    return new Response(refreshMaterializedTimestamps(cached.html), {
+    return new Response(cached.html, {
       headers: { 'content-type': 'text/html;charset=utf-8', 'cache-control': 'private, no-store' },
     })
   }

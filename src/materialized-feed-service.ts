@@ -1,5 +1,4 @@
 import { backgroundDatabaseCall, databaseService } from './database-service'
-import { formatRelativeTime } from './relative-time'
 
 type MaterializedFeedKind = 'latest' | 'hot' | 'for-you' | 'to-me' | 'about'
 
@@ -10,15 +9,7 @@ type MaterializedResponse = {
 }
 
 const materializations = new Map<string, Promise<MaterializedResponse>>()
-const MATERIALIZED_HTML_VERSION = 1
-
-export function refreshMaterializedTimestamps(html: string, now = Date.now()) {
-  return html.replace(/<time\b([^>]*)>([^<]*)<\/time>/g, (time, attributes) => {
-    const dateTime = attributes.match(/\bdateTime=(?:"([^"]+)"|'([^']+)')/)?.slice(1).find(Boolean)
-    if (!dateTime) return time
-    return `<time${attributes}>${formatRelativeTime(dateTime, now)}</time>`
-  })
-}
+const MATERIALIZED_HTML_VERSION = 2
 
 function appearanceVariant(request: Request) {
   const cookie = request.headers.get('cookie') || ''
@@ -40,7 +31,7 @@ export async function rpcMaterializedFeedPage(request: Request, kind: Materializ
     materialization = (async () => {
       const cached = await call('cache.materializedFeedGet', { kind, viewerId, variant })
       if (cached.html) {
-        return { body: refreshMaterializedTimestamps(cached.html), status: 200,
+        return { body: cached.html, status: 200,
           headers: [['content-type', 'text/html;charset=utf-8'], ['cache-control', 'private, no-store']] }
       }
       const response = await render()

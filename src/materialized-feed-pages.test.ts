@@ -1,7 +1,6 @@
 import { Database } from 'bun:sqlite'
 import { expect, test } from 'bun:test'
-import { clearMaterializedFeedPages, invalidateMaterializedFeedPages, materializedFeedPage,
-  refreshMaterializedTimestamps } from './materialized-feed-pages'
+import { clearMaterializedFeedPages, invalidateMaterializedFeedPages, materializedFeedPage } from './materialized-feed-pages'
 
 function databases() {
   const primary = new Database(':memory:', { strict: true })
@@ -38,31 +37,19 @@ test('keeps cache versions separate', async () => {
     .toBe('<p>2</p>')
 })
 
-test('refreshes relative timestamps in cached HTML without rerendering', async () => {
+test('returns cached HTML without injecting timestamps', async () => {
   const { primary, cache } = databases()
   let renders = 0
   const render = () => {
     renders++
-    return new Response('<time dateTime="2026-08-16 10:00:00" title="Aug 16, 2026, 1:00 PM">1s</time>')
+    return new Response('<a class="postdate" href="/post/1">read</a>')
   }
   const request = new Request('https://textlog.test/latest')
 
   await materializedFeedPage(primary, request, 'latest', -1, render, cache)
-  const originalNow = Date.now
-  Date.now = () => Date.parse('2026-08-16T12:00:00Z')
-  try {
-    expect(await (await materializedFeedPage(primary, request, 'latest', -1, render, cache)).text())
-      .toBe('<time dateTime="2026-08-16 10:00:00" title="Aug 16, 2026, 1:00 PM">2h</time>')
-  }
-  finally {
-    Date.now = originalNow
-  }
+  expect(await (await materializedFeedPage(primary, request, 'latest', -1, render, cache)).text())
+    .toBe('<a class="postdate" href="/post/1">read</a>')
   expect(renders).toBe(1)
-})
-
-test('only changes time elements with a machine-readable timestamp', () => {
-  const html = '<time title="not a post timestamp">soon</time><span>1s</span>'
-  expect(refreshMaterializedTimestamps(html, Date.parse('2026-08-16T12:00:00Z'))).toBe(html)
 })
 
 test('keeps appearance variants separate without storing the full cookie', async () => {
@@ -76,8 +63,8 @@ test('keeps appearance variants separate without storing the full cookie', async
   await materializedFeedPage(primary, dark, 'latest', 7, render, cache)
   expect(renders).toBe(2)
   expect(cache.query('SELECT variant FROM materialized_feed_pages_v2 ORDER BY variant').all()).toEqual([
-    { variant: '1|dark.purple|||||' },
-    { variant: '1|light.sage|||||' },
+    { variant: '2|dark.purple|||||' },
+    { variant: '2|light.sage|||||' },
   ])
 })
 

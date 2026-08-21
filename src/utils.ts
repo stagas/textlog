@@ -7,7 +7,6 @@ import { sessionCookieName } from './brand'
 import { containsAsciiArt, MAX_HASHTAGS_PER_POST, splitSpoilerBody, type PostContentFlags } from './content'
 import { texToMathML } from './math'
 import { requestContext } from './request-context'
-import { formatRelativeTime } from './relative-time'
 import { markSessionUsed, sessionHash } from './sessions'
 import { activeTimezone, timezoneLabel } from './timezone'
 import type { User } from './types'
@@ -125,14 +124,6 @@ export function apiUser(req: Request, database?: Database): User | null {
   return userForApiKey(database, value) || userForSession(value, database)
 }
 const timestamp = (d: string) => new Date(d.replace(' ', 'T') + 'Z')
-export function fmt(d: string, now = Date.now()) {
-  return formatRelativeTime(d, now)
-}
-export const fmtDate = (d: string) =>
-  timestamp(d).toLocaleDateString('en', {
-    dateStyle: 'medium',
-    timeZone: activeTimezone(),
-  })
 export const fmtFull = (d: string) => {
   const timeZone = activeTimezone()
   const date = timestamp(d)

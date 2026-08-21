@@ -2,7 +2,7 @@ import { Fragment } from 'react'
 import { extractHashtags, extractMentions } from '../content'
 import { DEFAULT_TIMEZONE, TIMEZONE_CHOICES } from '../timezone'
 import type { BioReferenceData, PostView, ProfileRow, User } from '../types'
-import { displayBio, fmt, fmtDate, linkify, referenceFormId } from '../utils'
+import { displayBio, linkify, referenceFormId } from '../utils'
 import { Layout } from './layout'
 import { LogoutForm } from './logout-form'
 import { FormMessage, Pagination, PostingHelp, PostingSuggestionResults, type PostingSuggestionSearch, ProfileControls,
@@ -77,11 +77,7 @@ export function Profile(
             <h1>
               <a className="profile-canonical-link" href={`/u/${profile.handle}`}
                 title={!editing && user?.id === profile.id
-                  ? `User ID: ${profile.id}${
-                    profile.created_at
-                      ? `\nSince: ${fmtDate(profile.created_at)}, ${fmt(profile.created_at)} ago`
-                      : ''
-                  }`
+                  ? `User ID: ${profile.id}`
                   : undefined}
               >
                 <span className="identity-prefix">@</span>

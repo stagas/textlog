@@ -1293,10 +1293,10 @@ test('consequential account, content, reporting, and admin flows work over HTTP'
   expect(followedTagFeed).toContain('<span class="reference-popover-bio">Bob builds things</span>')
   expect(followedTagFeed).toContain('<a class="reference-menu-trigger" '
     + 'href="/tag/shared?from=%2Ffor-you%23activity-tag-follow-')
-  expect(followedTagFeed).toContain('<a class="activity-follow-stats" href="/tag/shared?from=')
+  expect(followedTagFeed).not.toContain('activity-follow-stats')
   expect(followedTagFeed).toContain('<form action="/tag-follow/shared" method="post">'
     + '<input type="hidden" name="from" value="/for-you#activity-tag-follow-')
-  expect(followedTagFeed).toContain('<time dateTime="2099-01-02 00:00:00"')
+  expect(followedTagFeed).not.toContain('<time dateTime="2099-01-02 00:00:00"')
   expect(followedTagFeed).not.toContain('<span aria-hidden="true">·</span><span>0 notes</span></a>')
   expect(followedTagFeed).not.toContain('@alice</a><span>followed</span><a href="/tag/shared">#shared</a>')
   const sharedReplyResponse = await request(`/post/${post.id}/reply`, {
@@ -1520,8 +1520,7 @@ test('consequential account, content, reporting, and admin flows work over HTTP'
   expect(adminActivity).toContain('>@admin</a>')
   expect(adminActivity).toContain('>@alice</a>')
   expect(adminActivity).toContain('<span class="activity-context">signed up:</span>')
-  expect(adminActivity).toContain('<a class="activity-follow-stats" href="/u/alice?from=%2Ffor-you%23activity-signup-')
-  expect(adminActivity).not.toMatch(/activity-follow-stats[^>]*>.*?notes<\/span>/)
+  expect(adminActivity).not.toContain('activity-follow-stats')
   expect(adminActivity).not.toContain('href="/tag/null"')
   expect(adminActivity).not.toContain('>#null</a>')
   expect(adminActivity).toContain('activity-follow')

@@ -1260,9 +1260,8 @@ test('Profile places owner actions in the handle row', () => {
 
   expect(html).toContain('class="profile-title-row"')
   expect(html).toContain(
-    'class="profile-canonical-link" href="/u/reader" title="User ID: 1\nSince: Aug 3, 2026, ',
+    'class="profile-canonical-link" href="/u/reader" title="User ID: 1"><span class="identity-prefix">@</span>reader</a>',
   )
-  expect(html).toContain(' ago"><span class="identity-prefix">@</span>reader</a>')
   expect(html).not.toContain('class="profile-user-details"')
   expect(html).not.toContain('class="profile-canonical-link" href="/u/reader?from=')
   expect(html).toContain('href="/account/edit">account</a>')
@@ -1783,7 +1782,7 @@ test('Post carries its originating cursor into detail, reply, and edit links', (
   expect(html).not.toContain('/post/2/delete')
 })
 
-test('Post-page timestamp links to the canonical post URL', () => {
+test('Post-page permalink uses the canonical post URL', () => {
   const html = renderToStaticMarkup(React.createElement(Post, {
     p: { id: 2, user_id: 1, parent_id: null, body: 'A note', handle: 'writer', created_at: '2026-08-03 12:00:00',
       deleted_at: null },
@@ -1792,10 +1791,11 @@ test('Post-page timestamp links to the canonical post URL', () => {
     canonicalTimestamp: true,
   }))
   expect(html).toContain('class="postdate" href="/post/2"')
+  expect(html).toContain('class="postdate" href="/post/2">permalink</a>')
   expect(html).not.toContain('class="postdate" href="/post/2?from=')
 })
 
-test('Reply pages show a top link immediately after the timestamp', () => {
+test('Reply pages show a top link immediately after the permalink', () => {
   const html = renderToStaticMarkup(React.createElement(Post, {
     p: { id: 3, user_id: 1, parent_id: 2, body: 'A reply', handle: 'writer', created_at: '2026-08-03 12:00:00',
       deleted_at: null },

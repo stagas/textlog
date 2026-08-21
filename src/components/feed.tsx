@@ -1,7 +1,7 @@
 import type { PersonalizedFeedData, PersonalizedTimelineRow, User } from '../types'
 import { displayBio, linkify } from '../utils'
 import { Layout } from './layout'
-import { MetaRow, MetaStats } from './meta'
+import { MetaRow } from './meta'
 import { ActionPair, FeedTabs, Pagination } from './page-shared'
 import { Post, TagReference, UserReference } from './post'
 
@@ -107,17 +107,6 @@ export function Feed({ user, data, title, path = '/for-you', pageUrl, notificati
                     href={`/tag/${encodeURIComponent(row.target_tag!)}${fromQuery}`} navigationQuery={fromQuery} />
                 )
                 : null}
-              {row.posts !== null
-                ? (
-                  <MetaStats createdAt={row.created_at} count={null} href={(row.activity_kind === 'tag_follow'
-                    ? `/tag/${row.target_tag}`
-                    : `/u/${
-                      row.activity_kind === 'user_follow' && !row.target_is_viewer
-                        ? row.target_handle
-                        : row.actor_handle
-                    }`) + fromQuery} />
-                )
-                : <MetaStats createdAt={row.created_at} count={null} className="activity-follow-stats" />}
             </MetaRow>
             {(row.activity_kind === 'user_follow' || row.activity_kind === 'signup') && (
               <p className="profile-bio" dangerouslySetInnerHTML={{ __html: linkify(displayBio(row.target_bio)) }} />

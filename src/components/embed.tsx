@@ -2,7 +2,7 @@ import { appName } from '../brand'
 import { containsAsciiArt } from '../content'
 import type { AccentChoice, EmbedFontChoice, ThemeChoice } from '../theme'
 import type { PostView } from '../types'
-import { displayPostBody, fmt, fmtFull, linkify } from '../utils'
+import { displayPostBody, linkify } from '../utils'
 
 export function Embed(
   { posts, title, href, theme, accent, font }: { posts: PostView[]; title: string; href: string; theme?: ThemeChoice;
@@ -44,7 +44,7 @@ export function Embed(
                   <div className="embed-post-top">
                     <a href={`/u/${post.handle}`} target="_blank" rel="noopener noreferrer">@{post.handle}</a>
                     <a className="embed-date" href={`/post/${post.id}`} target="_blank" rel="noopener noreferrer">
-                      <time dateTime={post.created_at} title={fmtFull(post.created_at)}>{fmt(post.created_at)}</time>
+                      read
                     </a>
                   </div>
                   <p className={containsAsciiArt(post.body) ? 'ascii-art' : undefined}
@@ -63,9 +63,7 @@ export function Embed(
                               <a className="embed-date" href={`/post/${post.parent.id}`} target="_blank"
                                 rel="noopener noreferrer"
                               >
-                                <time dateTime={post.parent.created_at} title={fmtFull(post.parent.created_at)}>
-                                  {fmt(post.parent.created_at)}
-                                </time>
+                                read
                               </a>
                             </div>
                             <p className={containsAsciiArt(post.parent.body) ? 'ascii-art' : undefined}

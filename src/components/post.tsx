@@ -3,7 +3,7 @@ import { isAdmin } from '../admin'
 import { containsAsciiArt, extractHashtags, extractMentions } from '../content'
 import type { User } from '../types'
 import type { BioReferenceData, PostView, UserProfileStats } from '../types'
-import { displayBio, displayPostBody, fmt, fmtFull, linkify, referenceFormId } from '../utils'
+import { displayBio, displayPostBody, linkify, referenceFormId } from '../utils'
 import { enterHref } from './auth-links'
 import { MetaRow } from './meta'
 import { parsePoll, pollDisplayBody } from '../polls'
@@ -274,9 +274,7 @@ export function PreviewPost({ p }: { p: PostView }) {
       <MetaRow className="posttop preview-post-meta">
         <UserReference handle={p.handle} bio={p.bio} noteCount={p.note_count || 0} stats={p.profile_stats} user={null}
           currentHandle={p.handle} referenceData={p.bio_reference} />
-        <span className="postdate">
-          <time dateTime={p.created_at} title={fmtFull(p.created_at)}>{fmt(p.created_at)}</time>
-        </span>
+        <span className="postdate">read</span>
         <span className="quiet preview-reply">reply</span>
       </MetaRow>
       <div className={`post-body${containsAsciiArt(p.body) ? ' ascii-art' : ''}`} dangerouslySetInnerHTML={{
@@ -377,15 +375,13 @@ export function Post({
         {contextLabel && <span className="post-context">{contextLabel}</span>}
         {preview
           ? (
-            <span className="postdate">
-              <time dateTime={p.created_at} title={fmtFull(p.created_at)}>{fmt(p.created_at)}</time>
-            </span>
+            <span className="postdate">read</span>
           )
           : (
             <a className="postdate" href={canonicalTimestamp ? `/post/${p.id}` : detailPath}
               rel={canonicalTimestamp ? undefined : navigationRel}
             >
-              <time dateTime={p.created_at} title={fmtFull(p.created_at)}>{fmt(p.created_at)}</time>
+              {canonicalTimestamp ? 'permalink' : 'read'}
             </a>
           )}
         {topHref && <a className="quiet post-top-link" href={topHref}>top</a>}
@@ -453,9 +449,7 @@ export function Post({
                     followsViewer={parent.follows_viewer} user={user} href={'/u/' + parent.handle + referenceQuery}
                     rel={navigationRel} navigationQuery={referenceQuery} referenceData={parent.bio_reference} />
                   <a className="postdate" href={parentDetailPath} rel={navigationRel}>
-                    <time dateTime={parent.created_at} title={fmtFull(parent.created_at)}>
-                      {fmt(parent.created_at)}
-                    </time>
+                    read
                   </a>
                   {tappable && parent.top_id && (
                     <a className="quiet post-top-link"
