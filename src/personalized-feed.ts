@@ -128,7 +128,6 @@ export function loadPersonalizedFeed(database: Database, user: User, page: numbe
       .all(user.id, ...snapshot.items.map(row => row.event_key)) as { event_key: string }[]).map(row => row.event_key))
     : new Set<string>()
   const timeline = snapshot.items.map(row => ({ ...row, unread: Number(!readKeys.has(row.event_key)) }))
-  const toMeCount = unreadToMeCount(user.id, database)
   const actorStats = visibleUserProfileStats(database, timeline.map(row => row.actor_id), user.id)
   const targets = new Map(timeline.flatMap(row => {
     if (!row.target_handle) return []
@@ -154,9 +153,10 @@ export function loadPersonalizedFeed(database: Database, user: User, page: numbe
     targetFollowsViewer: row.target_handle ? followerIds.has(targets.get(row.target_handle)!) : undefined,
     tagFollowerCount: row.target_tag ? tagCounts[row.target_tag] || 0 : undefined })
   )
-  if (markRead && !toMe) {
-    markForYouEntriesRead(user.id, timeline.filter(row => row.unread).map(row => row.event_key), false, database)
+  if (markRead) {
+    markForYouEntriesRead(user.id, timeline.filter(row => row.unread).map(row => row.event_key), toMe, database)
   }
+  const toMeCount = unreadToMeCount(user.id, database)
   const forYouUnread = hasUnreadForYou(user.id, database)
   const toMeUnread = hasUnreadToMe(user.id, database)
   const hasUnread = toMe ? toMeUnread : forYouUnread
@@ -182,9 +182,6 @@ export function loadPersonalizedFeed(database: Database, user: User, page: numbe
       ? `post-${row.id}`
       : `activity-${row.event_key.replace(/[^a-z0-9_-]+/gi, '-')}`
     return `${path}${page > 1 ? `?page=${page}` : ''}#${anchor}`
-  }
-  if (markRead && toMe) {
-    markForYouEntriesRead(user.id, timeline.filter(row => row.unread).map(row => row.event_key), true, database)
   }
   return { timeline: resultTimeline, page: snapshot.page, totalPages: snapshot.totalPages,
     toMeCount, forYouCount: unreadForYouCount(user.id, database),
