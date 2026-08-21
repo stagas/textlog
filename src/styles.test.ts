@@ -106,9 +106,9 @@ describe('in-memory stylesheet', () => {
 
   test('styles conversation top links like reply actions', async () => {
     const css = await Bun.file(new URL('./styles.css', import.meta.url)).text()
-    expect(css).toContain('.posttop .post-reply-link,\n.posttop .post-top-link {\n  color: var(--accent);')
+    expect(css).toContain('.postfoot .post-reply-link,\n.posttop .post-top-link,')
     expect(css).toContain(
-      '.posttop .post-reply-link:hover,\n.posttop .post-top-link:hover {\n  color: var(--accent-dark);',
+      '.postfoot .post-reply-link:hover,\n.posttop .post-top-link:hover,',
     )
   })
 

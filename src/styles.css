@@ -1630,24 +1630,35 @@ nav form {
 }
 
 .posttop,
-.parent-quote-top {
+.parent-quote-top,
+.postfoot,
+.parent-quote-foot {
   display: flex;
   align-items: baseline;
   gap: var(--space-4);
   font-size: 0.75rem;
 }
 
-.posttop .quiet {
+.postfoot,
+.parent-quote-foot {
+  margin-top: var(--space-2);
+}
+
+.posttop .quiet,
+.postfoot .quiet,
+.parent-quote-foot .quiet {
   font-size: inherit;
 }
 
-.posttop .post-reply-link,
-.posttop .post-top-link {
+.postfoot .post-reply-link,
+.posttop .post-top-link,
+.parent-quote-top .post-top-link {
   color: var(--accent);
 }
 
-.posttop .post-reply-link:hover,
-.posttop .post-top-link:hover {
+.postfoot .post-reply-link:hover,
+.posttop .post-top-link:hover,
+.parent-quote-top .post-top-link:hover {
   color: var(--accent-dark);
 }
 

@@ -275,7 +275,6 @@ export function PreviewPost({ p }: { p: PostView }) {
         <UserReference handle={p.handle} bio={p.bio} noteCount={p.note_count || 0} stats={p.profile_stats} user={null}
           currentHandle={p.handle} referenceData={p.bio_reference} />
         <span className="postdate">read</span>
-        <span className="quiet preview-reply">reply</span>
       </MetaRow>
       <div className={`post-body${containsAsciiArt(p.body) ? ' ascii-art' : ''}`} dangerouslySetInnerHTML={{
         __html: linkify(displayPostBody(renderedPollBody(p.body)), p.mention_bios, [], undefined, renderFlags(p), '', p.hashtag_counts,
@@ -283,6 +282,9 @@ export function PreviewPost({ p }: { p: PostView }) {
           hashtagFollowerCounts: p.hashtag_follower_counts, linkPreviews: p.link_previews }),
       }} />
       <PollPreview body={p.body} />
+      <MetaRow className="postfoot preview-post-meta">
+        <span className="quiet preview-reply">reply</span>
+      </MetaRow>
     </article>
   )
 }
@@ -415,9 +417,7 @@ export function Post({
           </>
         )}
         {preview
-          ? (
-            <span className="postdate">read</span>
-          )
+          ? <span className="postdate">read</span>
           : !tappable && (
             <a className="postdate" href={canonicalTimestamp ? `/post/${p.id}` : detailPath}
               rel={canonicalTimestamp ? undefined : navigationRel}
@@ -428,17 +428,6 @@ export function Post({
         {topHref && <a className="quiet post-top-link" href={topHref}>top</a>}
         {flatHref && <a className="quiet post-top-link" href={flatHref}>flat</a>}
         {treeHref && <a className="quiet post-top-link" href={treeHref}>tree</a>}
-        {showReplyAction && (
-          preview
-            ? <span className="quiet preview-reply">{resolvedReplyLabel}</span>
-            : (
-              <a className="quiet post-reply-link" href={resolvedReplyHref} rel="nofollow"
-                aria-label={`${resolvedReplyLabel} to @${p.handle}`}
-              >
-                {resolvedReplyLabel}
-              </a>
-            )
-        )}
         {reportHref && (
           <a className="quiet report-link" href={reportHref} aria-label={`report post by @${p.handle}`}>report</a>
         )}
@@ -469,6 +458,14 @@ export function Post({
           hashtagFollowerCounts: p.hashtag_follower_counts, linkPreviews: p.link_previews }),
       }} />
       {preview ? <PollPreview body={p.body} /> : <Poll p={p} returnPath={returnPath} />}
+      {!parent && showReplyAction && (
+      <MetaRow className={`postfoot${preview ? ' preview-post-meta' : ''}`}>
+        {!parent && showReplyAction && (preview
+          ? <span className="quiet preview-reply">{resolvedReplyLabel}</span>
+          : <a className="quiet post-reply-link" href={resolvedReplyHref} rel="nofollow"
+            aria-label={`${resolvedReplyLabel} to @${p.handle}`}>{resolvedReplyLabel}</a>)}
+      </MetaRow>
+      )}
       <ReferenceFollowForms post={p} prefix={formPrefix} user={user}
         returnPath={returnPath || `/post/${p.id}#post-${p.id}`} />
       {parent && (
@@ -506,21 +503,12 @@ export function Post({
                     </>
                   )}
                   {!hasTappableParent && (
-                    <a className="postdate" href={parentDetailPath} rel={navigationRel}>
-                      read
-                    </a>
+                    <a className="postdate" href={parentDetailPath} rel={navigationRel}>read</a>
                   )}
                   {tappable && parent.top_id && (
                     <a className="quiet post-top-link"
                       href={conversationTopPath(parent.top_id, parent.id, returnPath)}>top</a>
                   )}
-                  <a className="quiet" href={user
-                    ? parentReplyPath
-                    : '/enter?next=' + encodeURIComponent(parentReplyPath)} rel="nofollow"
-                    aria-label={`reply to @${parent.handle}`}
-                  >
-                    {user ? 'reply' : 'enter to reply'}
-                  </a>
                 </div>
                 <div className={`post-body${containsAsciiArt(parent.body) ? ' ascii-art' : ''}`} dangerouslySetInnerHTML={{
                   __html: linkify(displayPostBody(renderedPollBody(parent.body)), parent.mention_bios, [], undefined, renderFlags(parent),
@@ -531,11 +519,28 @@ export function Post({
                     hashtagFollowerCounts: parent.hashtag_follower_counts, linkPreviews: parent.link_previews }),
                 }} />
                 <Poll p={parent} returnPath={returnPath} />
+                <div className="parent-quote-foot">
+                  <a className="quiet" href={user
+                    ? parentReplyPath
+                    : '/enter?next=' + encodeURIComponent(parentReplyPath)} rel="nofollow"
+                    aria-label={`reply to @${parent.handle}`}
+                  >
+                    {user ? 'reply' : 'enter to reply'}
+                  </a>
+                </div>
                 <ReferenceFollowForms post={parent} prefix={`${formPrefix}-parent-${parent.id}`} user={user}
                   returnPath={returnPath || `/post/${p.id}#post-${p.id}`} />
               </>
             )}
         </blockquote>
+      )}
+      {parent && showReplyAction && (
+        <MetaRow className={`postfoot postfoot-after-quote${preview ? ' preview-post-meta' : ''}`}>
+          {showReplyAction && (preview
+            ? <span className="quiet preview-reply">{resolvedReplyLabel}</span>
+            : <a className="quiet post-reply-link" href={resolvedReplyHref} rel="nofollow"
+              aria-label={`${resolvedReplyLabel} to @${p.handle}`}>{resolvedReplyLabel}</a>)}
+        </MetaRow>
       )}
     </article>
   )
