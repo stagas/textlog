@@ -198,8 +198,20 @@ export function enrichPosts(database: Database, posts: PostView[], viewerId = -1
     }
   }
   for (const handle of mentionedHandles) addMentionBio(handle)
-  const parentIds = [...new Set(posts.flatMap(post => post.parent_id ? [post.parent_id] : []))]
+  const directParentIds = [...new Set(posts.flatMap(post => post.parent_id ? [post.parent_id] : []))]
+  const parentIds = directParentIds.length
+    ? (database.query(`WITH RECURSIVE ancestors(id,parent_id) AS (
+        SELECT id,parent_id FROM posts WHERE id IN (${directParentIds.map(() => '?').join(',')})
+        UNION SELECT p.id,p.parent_id FROM posts p JOIN ancestors ON p.id=ancestors.parent_id
+      ) SELECT id FROM ancestors`).all(...directParentIds) as { id: number }[]).map(row => row.id)
+    : []
   const previewPostIds = [...new Set([...ids, ...parentIds])]
+  const viewerMentionedPostIds = viewerId < 0
+    ? new Set<number>()
+    : new Set((database.query(`SELECT pm.post_id FROM post_mentions pm JOIN posts p ON p.id=pm.post_id
+      WHERE pm.user_id=? AND p.user_id!=? AND pm.post_id IN
+      (${previewPostIds.map(() => '?').join(',')})`).all(viewerId, viewerId, ...previewPostIds) as { post_id: number }[])
+      .map(row => row.post_id))
   const polls = loadPolls(database, previewPostIds, viewerId)
   const previewRows = database.query(
       'SELECT 1 FROM sqlite_master WHERE type=\'table\' AND name=\'post_link_previews\'',
@@ -345,10 +357,13 @@ export function enrichPosts(database: Database, posts: PostView[], viewerId = -1
     parent.hashtag_following = hashtagFollowing
     parent.bio_reference = bioReference(parent.user_id)
     parent.poll = polls.get(parent.id)
+    parent.viewer_mentioned = viewerMentionedPostIds.has(parent.id)
+    parent.parent = parent.parent_id ? parents.get(parent.parent_id) || null : null
   }
   return posts.map(post => ({
     ...post,
     viewer_context: viewerContextByPostId.get(post.id),
+    viewer_mentioned: viewerMentionedPostIds.has(post.id),
     bio: bioByUserId.get(post.user_id) ?? post.bio ?? '',
     note_count: profileStats.get(post.user_id)?.notes || 0,
     profile_stats: profileStats.get(post.user_id),

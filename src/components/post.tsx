@@ -315,16 +315,25 @@ export function Post({
 }: { p: PostView; user: User | null; showReplyAction?: boolean; showOwnerActions?: boolean;
   showModerateAction?: boolean; showParent?: boolean; showReplyCount?: boolean; replyHref?: string; replyLabel?: string;
   reportHref?: string; foldControlId?: string; highlightTerms?: string[]; tappable?: boolean; tappableParent?: boolean;
-  contextLabel?: string; contextUnread?: boolean; preview?: boolean; returnPath?: string; backHref?: string;
+  contextLabel?: React.ReactNode; contextUnread?: boolean; preview?: boolean; returnPath?: string; backHref?: string;
   canonicalTimestamp?: boolean; topHref?: string; flatHref?: string; treeHref?: string;
   authorPopoverAction?: React.ReactNode })
 {
-  contextLabel ??= p.viewer_context === 'reply'
-    ? 'replied to you:'
-    : p.viewer_context === 'mention'
-    ? 'mentioned you:'
-    : undefined
   const parent = showParent ? p.parent : null
+  const parentContinued = parent?.parent_id && parent.parent?.user_id === parent.user_id
+  const parentContextTarget = parent?.parent_id && !parent.poll && !parentContinued
+    && parent.parent?.user_id !== user?.id ? parent.parent : null
+  const parentContextLabel = parent?.poll
+    ? `created a poll${parent.viewer_mentioned ? ' and mentioned you' : ''}:`
+    : parentContinued
+    ? `continued${parent?.viewer_mentioned ? ' and mentioned you' : ''}:`
+    : parent?.parent_id
+    ? parent.parent?.user_id === user?.id
+      ? `replied to you${parent.viewer_mentioned ? ' and mentioned you' : ''}:`
+      : parentContextTarget
+      ? 'replied to'
+      : undefined
+    : `wrote${parent?.viewer_mentioned ? ' and mentioned you' : ''}:`
   const hasTappableParent = Boolean(parent && (tappable || tappableParent))
   const isAsciiArt = containsAsciiArt(p.body)
   const returnQuery = returnPath ? '&from=' + encodeURIComponent(returnPath) : ''
@@ -332,6 +341,24 @@ export function Post({
   const referenceQuery = preview
     ? actionQuery
     : '?from=' + encodeURIComponent(returnPath || `/post/${p.id}#post-${p.id}`)
+  const continued = p.parent_id && p.parent?.user_id === p.user_id
+  const contextTarget = !p.poll && contextLabel == null && p.parent_id && !continued && p.viewer_context !== 'reply'
+    ? p.parent
+    : null
+  contextLabel = p.poll
+    ? `created a poll${p.viewer_mentioned ? ' and mentioned you' : ''}:`
+    : contextLabel ?? (p.parent_id
+      ? continued
+        ? `continued${p.viewer_mentioned ? ' and mentioned you' : ''}:`
+        : p.viewer_context === 'reply'
+        ? `replied to you${p.viewer_mentioned ? ' and mentioned you' : ''}:`
+        : contextTarget
+        ? 'replied to'
+        : undefined
+      : `wrote${p.viewer_mentioned ? ' and mentioned you' : ''}:`)
+  if (p.viewer_mentioned && typeof contextLabel === 'string' && !contextLabel.includes('mentioned you')) {
+    contextLabel = contextLabel.replace(/:$/, '') + ' and mentioned you:'
+  }
   const detailPath = '/post/' + p.id + (returnPath ? '?from=' + encodeURIComponent(returnPath) : '')
   const parentDetailPath = parent
     ? '/post/' + parent.id + (returnPath ? '?from=' + encodeURIComponent(returnPath) : '')
@@ -373,6 +400,18 @@ export function Post({
               referenceData={p.bio_reference} extraAction={authorPopoverAction} />
           )}
         {contextLabel && <span className="post-context">{contextLabel}</span>}
+        {contextTarget && (
+          <>
+            <UserReference handle={contextTarget.handle} bio={contextTarget.bio}
+              noteCount={contextTarget.note_count || 0} stats={contextTarget.profile_stats}
+              following={contextTarget.viewer_following} followsViewer={contextTarget.follows_viewer} user={user}
+              href={`/u/${contextTarget.handle}${referenceQuery}`} rel={navigationRel}
+              navigationQuery={referenceQuery} referenceData={contextTarget.bio_reference} />
+            <span className="post-context post-context-punctuation">
+              {p.viewer_mentioned ? ' and mentioned you:' : ':'}
+            </span>
+          </>
+        )}
         {preview
           ? (
             <span className="postdate">read</span>
@@ -448,6 +487,20 @@ export function Post({
                     stats={parent.profile_stats} following={parent.viewer_following}
                     followsViewer={parent.follows_viewer} user={user} href={'/u/' + parent.handle + referenceQuery}
                     rel={navigationRel} navigationQuery={referenceQuery} referenceData={parent.bio_reference} />
+                  {parentContextLabel && <span className="post-context">{parentContextLabel}</span>}
+                  {parentContextTarget && (
+                    <>
+                      <UserReference handle={parentContextTarget.handle} bio={parentContextTarget.bio}
+                        noteCount={parentContextTarget.note_count || 0} stats={parentContextTarget.profile_stats}
+                        following={parentContextTarget.viewer_following}
+                        followsViewer={parentContextTarget.follows_viewer} user={user}
+                        href={`/u/${parentContextTarget.handle}${referenceQuery}`} rel={navigationRel}
+                        navigationQuery={referenceQuery} referenceData={parentContextTarget.bio_reference} />
+                      <span className="post-context post-context-punctuation">
+                        {parent.viewer_mentioned ? ' and mentioned you:' : ':'}
+                      </span>
+                    </>
+                  )}
                   {!hasTappableParent && (
                     <a className="postdate" href={parentDetailPath} rel={navigationRel}>
                       read

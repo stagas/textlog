@@ -4469,6 +4469,30 @@ form.report-panel {
   white-space: nowrap;
 }
 
+.post-context-punctuation {
+  margin-left: calc(-1 * var(--space-4));
+}
+
+.post-context + .reference-menu {
+  margin-left: calc(-1 * var(--space-4) + 1ch);
+}
+
+.parent-quote-top > .post-context + .reference-menu {
+  margin-left: calc(-1 * var(--space-3) + 1ch);
+}
+
+.parent-quote-top > .reference-menu + .post-context:not(.post-context-punctuation) {
+  margin-left: calc(-1 * var(--space-3) + 1ch);
+}
+
+.parent-quote-top > .post-context-punctuation {
+  margin-left: calc(-1 * var(--space-3));
+}
+
+.parent-quote-top > .post-context {
+  font-size: inherit;
+}
+
 .activity-item .posttop {
   flex-wrap: wrap;
   gap: var(--space-2);

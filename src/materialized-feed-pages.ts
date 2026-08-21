@@ -32,7 +32,7 @@ export async function materializedFeedPage(database: Database, request: Request,
   const generation = (database.query('SELECT generation FROM feed_snapshot_generation WHERE id=1').get() as {
     generation: number
   }).generation
-  const variant = `2|${cacheVersion ? `${cacheVersion}|` : ''}${appearanceVariant(request)}`
+  const variant = `3|${cacheVersion ? `${cacheVersion}|` : ''}${appearanceVariant(request)}`
   const cached = cache.query(`SELECT html FROM materialized_feed_pages_v2
     WHERE kind=? AND viewer_id=? AND variant=? AND generation=?`).get(kind, viewerId, variant, generation) as {
     html: string

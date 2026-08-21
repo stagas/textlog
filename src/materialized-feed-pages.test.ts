@@ -63,8 +63,8 @@ test('keeps appearance variants separate without storing the full cookie', async
   await materializedFeedPage(primary, dark, 'latest', 7, render, cache)
   expect(renders).toBe(2)
   expect(cache.query('SELECT variant FROM materialized_feed_pages_v2 ORDER BY variant').all()).toEqual([
-    { variant: '2|dark.purple|||||' },
-    { variant: '2|light.sage|||||' },
+    { variant: '3|dark.purple|||||' },
+    { variant: '3|light.sage|||||' },
   ])
 })
 

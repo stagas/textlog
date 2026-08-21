@@ -124,7 +124,8 @@ test('compose offers a server-rendered post preview', () => {
     preview.indexOf('<div class="panel panel-surface panel-medium compose write-compose">'),
   )).not.toContain('<div class="compose-post-preview">')
   expect(preview).toContain('Hello <a href="/tag/world"')
-  expect(preview).toContain('<div class="posttop preview-post-meta"><span class="reference-menu">')
+  expect(preview).toContain('<div class="posttop posttop-context preview-post-meta"><span class="reference-menu">')
+  expect(preview).toContain('<span class="post-context">wrote:</span>')
   expect(preview).not.toContain('href="/post/0"')
   expect(preview).toContain('<span class="quiet preview-reply">reply</span>')
   expect(preview).not.toContain('href="#"')
@@ -692,6 +693,60 @@ test('latest and hot feeds label posts addressed to the viewer', () => {
 
   expect(latest).toContain('<span class="post-context">replied to you:</span>')
   expect(hot).toContain('<span class="post-context">replied to you:</span>')
+})
+
+test('posts describe whether their author wrote or replied', () => {
+  const user = { id: 3, handle: 'reader', email: 'reader@example.com', bio: '' }
+  const parent = { id: 4, user_id: 2, parent_id: null, body: 'Parent', created_at: '2026-08-20 11:00:00',
+    deleted_at: null, handle: 'foo', reply_count: 1 }
+  const base = { user_id: 1, body: 'hello', created_at: '2026-08-20 12:00:00', deleted_at: null, handle: 'writer' }
+
+  const topLevel = renderToStaticMarkup(React.createElement(Post, {
+    p: { ...base, id: 9, parent_id: null }, user,
+  }))
+  const reply = renderToStaticMarkup(React.createElement(Post, {
+    p: { ...base, id: 10, parent_id: parent.id, parent }, user,
+  }))
+  const replyToViewer = renderToStaticMarkup(React.createElement(Post, {
+    p: { ...base, id: 11, parent_id: parent.id, parent, viewer_context: 'reply' }, user,
+  }))
+  const continuation = renderToStaticMarkup(React.createElement(Post, {
+    p: { ...base, id: 12, parent_id: parent.id, parent: { ...parent, user_id: base.user_id } }, user,
+  }))
+  const poll = renderToStaticMarkup(React.createElement(Post, {
+    p: { ...base, id: 13, parent_id: null,
+      poll: { options: [], totalVotes: 0, expired: false, expiresAt: Date.now() + 60_000, viewerVoted: false } }, user,
+  }))
+  const mentioned = renderToStaticMarkup(React.createElement(Post, {
+    p: { ...base, id: 14, parent_id: parent.id, parent, viewer_mentioned: true }, user,
+  }))
+
+  expect(topLevel).toContain('<span class="post-context">wrote:</span>')
+  expect(reply).toContain('<span class="post-context">replied to</span><span class="reference-menu">')
+  expect(reply).toContain('class="reference-menu-trigger postauthor" href="/u/foo?from=')
+  expect(reply).toContain('>@foo</a><span class="reference-menu-popover">')
+  expect(reply).toContain('<span class="post-context post-context-punctuation">:</span>')
+  expect(replyToViewer).toContain('<span class="post-context">replied to you:</span>')
+  expect(continuation).toContain('<span class="post-context">continued:</span>')
+  expect(continuation).not.toContain('replied to')
+  expect(poll).toContain('<span class="post-context">created a poll:</span>')
+  expect(mentioned).toContain('<span class="post-context post-context-punctuation"> and mentioned you:</span>')
+})
+
+test('quoted parents use the same attribution wording', () => {
+  const user = { id: 3, handle: 'reader', email: 'reader@example.com', bio: '' }
+  const root = { id: 1, user_id: 1, parent_id: null, body: 'Root', created_at: '2026-08-20 10:00:00',
+    deleted_at: null, handle: 'root', reply_count: 2 }
+  const quoted = { id: 2, user_id: 2, parent_id: root.id, parent: root, body: 'Reply',
+    created_at: '2026-08-20 11:00:00', deleted_at: null, handle: 'foo', reply_count: 1 }
+  const html = renderToStaticMarkup(React.createElement(Post, {
+    p: { id: 3, user_id: 3, parent_id: quoted.id, parent: quoted, body: 'Current',
+      created_at: '2026-08-20 12:00:00', deleted_at: null, handle: 'reader' }, user,
+  }))
+
+  expect(html).toContain('<div class="parent-quote-top"><span class="reference-menu">')
+  expect(html).toContain('<span class="post-context">replied to</span><span class="reference-menu">')
+  expect(html).toContain('class="reference-menu-trigger postauthor" href="/u/root?from=')
 })
 
 test('Tag pages keep actions beside the tag and a contextual back link on the right', () => {

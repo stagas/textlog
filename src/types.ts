@@ -57,6 +57,8 @@ export type ParentPost = Pick<PostRow,
   hashtag_following?: Record<string, boolean>
   link_previews?: Record<string, LinkPreview>
   poll?: PollView
+  viewer_mentioned?: boolean
+  parent?: ParentPost | null
   bio_reference?: BioReferenceData
   reply_count: number
   top_id?: number | null
@@ -65,6 +67,7 @@ export type ParentPost = Pick<PostRow,
 export type PostView = PostRow & {
   handle: string
   viewer_context?: 'reply' | 'mention'
+  viewer_mentioned?: boolean
   bio?: string
   note_count?: number
   profile_stats?: UserProfileStats
