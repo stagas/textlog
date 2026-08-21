@@ -186,10 +186,7 @@ export async function prewarmRecentFeedVisitorsOnInit() {
 export function registerFeedsRoutes(app: Hono) {
   app.get('/', async c => {
     const user = currentUser(c.req.raw)
-    if (!user) {
-      return await rpcMaterializedFeedPage(c.req.raw, 'about', -1, async () =>
-        page(<About user={null} topPosts={await databaseService().call('feeds.aboutTopPosts', {})} />))
-    }
+    if (!user) return redirect('/hot' + new URL(c.req.url).search)
     const preferredFeed = feedPreference(c.req.raw)
     const path = preferredFeed === 'latest'
       ? '/latest'
