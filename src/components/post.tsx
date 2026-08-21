@@ -371,7 +371,9 @@ export function Post({
   const formPrefix = `post-${p.id}`
   const resolvedReplyHref = replyHref
     ?? (user ? defaultReplyPath : '/enter?next=' + encodeURIComponent(defaultReplyPath))
-  const resolvedReplyLabel = replyLabel ?? (user ? 'reply' : 'enter to reply')
+  const resolvedReplyLabel = replyLabel ?? (user
+    ? user.id === p.user_id ? 'continue' : 'reply'
+    : 'enter to reply')
   if (p.deleted_at) {
     return (
       <article className="post deleted-post" id={`post-${p.id}`}>
@@ -523,9 +525,9 @@ export function Post({
                   <a className="quiet" href={user
                     ? parentReplyPath
                     : '/enter?next=' + encodeURIComponent(parentReplyPath)} rel="nofollow"
-                    aria-label={`reply to @${parent.handle}`}
+                    aria-label={`${user && user.id === parent.user_id ? 'continue' : 'reply to'} @${parent.handle}`}
                   >
-                    {user ? 'reply' : 'enter to reply'}
+                    {user ? user.id === parent.user_id ? 'continue' : 'reply' : 'enter to reply'}
                   </a>
                 </div>
                 <ReferenceFollowForms post={parent} prefix={`${formPrefix}-parent-${parent.id}`} user={user}
@@ -575,7 +577,7 @@ export function ThreadReplies(
         <Post p={reply} user={user} showParent={false} foldControlId={foldControlId}
           returnPath={anchoredReturnPath}
           replyHref={user ? undefined : '/enter?next=' + encodeURIComponent('/post/' + reply.id + '?reply=1'
-            + '&from=' + encodeURIComponent(anchoredReturnPath))} replyLabel={user ? 'reply' : 'enter to reply'}
+            + '&from=' + encodeURIComponent(anchoredReturnPath))} replyLabel={user ? undefined : 'enter to reply'}
           tappable />
         {childBranch}
         {continuesElsewhere && (

@@ -127,7 +127,7 @@ test('compose offers a server-rendered post preview', () => {
   expect(preview).toContain('<div class="posttop posttop-context preview-post-meta"><span class="postauthor post-context-author">you</span>')
   expect(preview).toContain('<span class="post-context">wrote:</span>')
   expect(preview).not.toContain('href="/post/0"')
-  expect(preview).toContain('<span class="quiet preview-reply">reply</span>')
+  expect(preview).toContain('<span class="quiet preview-reply">continue</span>')
   expect(preview).not.toContain('href="#"')
   expect(preview).not.toContain('NaN')
 })
