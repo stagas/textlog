@@ -358,7 +358,7 @@ export function Post({
       <article className="post deleted-post" id={`post-${p.id}`}>
         <a href={detailPath} rel={navigationRel}>
           (deleted){showReplyCount && replyCount > 0
-            ? ` · ${replyCount} ${replyCount === 1 ? 'reply' : 'replies'}`
+            ? ' · replies'
             : ''}
         </a>
       </article>
@@ -397,7 +397,7 @@ export function Post({
             >
               <time dateTime={p.created_at} title={fmtFull(p.created_at)}>{fmt(p.created_at)}</time>
               {showReplyCount && replyCount > 0 && (
-                <span>{' '}· {replyCount} {replyCount === 1 ? 'reply' : 'replies'}</span>
+                <span>{' '}· replies</span>
               )}
             </a>
           )}
@@ -469,7 +469,7 @@ export function Post({
                       {fmt(parent.created_at)}
                     </time>
                     {parent.reply_count > 0 && (
-                      <span>{' '}· {parent.reply_count} {parent.reply_count === 1 ? 'reply' : 'replies'}</span>
+                      <span>{' '}· replies</span>
                     )}
                   </a>
                   {tappable && parent.top_id && (
@@ -540,7 +540,7 @@ export function ThreadReplies(
             <a className="quiet" rel="nofollow"
               href={'/post/' + reply.id + '?from=' + encodeURIComponent(anchoredReturnPath)}
             >
-              more ({visibleDescendantCount(reply.id)} {visibleDescendantCount(reply.id) === 1 ? 'reply' : 'replies'})
+              more replies
             </a>
           </div>
         )}

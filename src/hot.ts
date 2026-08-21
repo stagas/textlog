@@ -26,11 +26,12 @@ export type HotCursor = {
   direction: 'next' | 'previous'
 }
 
-export const hotRankingVersion = 91
+export const hotRankingVersion = 92
 const cursorVersion = hotRankingVersion
 const activityHalfLifeHours = 6
 const postWeight = 0
 const directReplyWeight = 2
+const pollVoteWeight = 1
 const replyRecencyHalfLifeHours = 0.5
 const maxExponentiallyWeightedReplies = 15
 const unboostedReplyCount = 5
@@ -94,6 +95,10 @@ function hasActivityCount(database: Database) {
     .some(column => column.name === 'activity_count')
 }
 
+function hasPollVotes(database: Database) {
+  return Boolean(database.query("SELECT 1 FROM sqlite_master WHERE type='table' AND name='poll_votes'").get())
+}
+
 export function encodeHotCursor(cursor: HotCursor) {
   return Buffer.from(
     JSON.stringify([cursorVersion, cursor.asOf, cursor.score, cursor.latestActivityAt, cursor.createdAt, cursor.id,
@@ -142,6 +147,7 @@ export function rebuildHotPosts(database: Database, postIds?: number[]) {
   if (!hasHotTable(database)) return
   const tracksReplyCount = hasReplyCount(database)
   const tracksActivityCount = hasActivityCount(database)
+  const tracksPollVotes = hasPollVotes(database)
   const tracksAccountGroups = (database.query('PRAGMA table_info(users)').all() as { name: string }[])
     .some(column => column.name === 'account_group_id')
   const replyIdentity = tracksAccountGroups
@@ -168,11 +174,14 @@ export function rebuildHotPosts(database: Database, postIds?: number[]) {
       JOIN users candidate_user ON candidate_user.id=candidate.user_id
       WHERE descendants.deleted_at IS NULL
         AND ${replyIdentity}!=${candidateIdentity}
-    ), activity(candidate_id,created_at,weight) AS (
-      SELECT id,created_at,${postWeight} FROM posts WHERE deleted_at IS NULL
+    ), activity(candidate_id,created_at,weight,is_reply) AS (
+      SELECT id,created_at,${postWeight},0 FROM posts WHERE deleted_at IS NULL
       UNION ALL
-      SELECT candidate_id,created_at,${directReplyWeight}*pow(0.5,depth-1)
+      SELECT candidate_id,created_at,${directReplyWeight}*pow(0.5,depth-1),1
       FROM ranked_replies WHERE reply_rank=1
+      ${tracksPollVotes ? `UNION ALL
+      SELECT votes.post_id,votes.created_at,${pollVoteWeight},0 FROM poll_votes votes
+      JOIN posts voted_post ON voted_post.id=votes.post_id WHERE voted_post.deleted_at IS NULL` : ''}
     ), recency_replies AS (
       SELECT descendants.candidate_id,descendants.created_at FROM descendants
       JOIN posts candidate ON candidate.id=descendants.candidate_id
@@ -193,7 +202,7 @@ export function rebuildHotPosts(database: Database, postIds?: number[]) {
       JOIN users candidate_user ON candidate_user.id=candidate.user_id
       WHERE descendants.deleted_at IS NULL AND ${replyIdentity}!=${candidateIdentity}
       GROUP BY descendants.candidate_id
-    ) SELECT activity.candidate_id post_id,latest.latest_activity_at,count(*)-1 reply_count,
+    ) SELECT activity.candidate_id post_id,latest.latest_activity_at,sum(activity.is_reply) reply_count,
       COALESCE(totals.activity_count,0) activity_count,
       sum(weight*pow(0.5,max(0,(julianday(latest.latest_activity_at)-julianday(activity.created_at))*24)/${activityHalfLifeHours}.0)) score
       FROM activity JOIN latest ON latest.candidate_id=activity.candidate_id
@@ -241,29 +250,34 @@ export function rebuildHotPosts(database: Database, postIds?: number[]) {
     JOIN users candidate_user ON candidate_user.id=candidate.user_id
     WHERE descendants.deleted_at IS NULL
       AND ${replyIdentity}!=${candidateIdentity}
-  ), activity(id,created_at,weight,boosts_recency) AS (
-    SELECT id,created_at,${postWeight},1 FROM posts WHERE id=? AND deleted_at IS NULL
+  ), activity(id,created_at,weight,boosts_recency,is_reply) AS (
+    SELECT id,created_at,${postWeight},1,0 FROM posts WHERE id=? AND deleted_at IS NULL
     UNION ALL
-    SELECT id,created_at,${directReplyWeight}*pow(0.5,depth-1),1 FROM ranked_replies WHERE reply_rank=1
+    SELECT id,created_at,${directReplyWeight}*pow(0.5,depth-1),1,1 FROM ranked_replies WHERE reply_rank=1
     UNION ALL
     SELECT descendants.id,descendants.created_at,0,
-      CASE WHEN ${replyIdentity}!=${candidateIdentity} THEN 1 ELSE 0 END
+      CASE WHEN ${replyIdentity}!=${candidateIdentity} THEN 1 ELSE 0 END,0
     FROM descendants
     JOIN posts candidate ON candidate.id=?
     LEFT JOIN users reply_user ON reply_user.id=descendants.user_id
     JOIN users candidate_user ON candidate_user.id=candidate.user_id
     WHERE descendants.deleted_at IS NULL
-  ) SELECT created_at,weight,boosts_recency FROM activity`)
+    ${tracksPollVotes ? `UNION ALL
+    SELECT votes.option_id,votes.created_at,${pollVoteWeight},1,0 FROM poll_votes votes
+    WHERE votes.post_id=?` : ''}
+  ) SELECT created_at,weight,boosts_recency,is_reply FROM activity`)
   const update = database.query(tracksReplyCount && tracksActivityCount
     ? 'UPDATE post_hot SET score=?,reply_count=?,activity_count=?,score_updated_at=?,latest_activity_at=? WHERE post_id=?'
     : tracksReplyCount
     ? 'UPDATE post_hot SET score=?,reply_count=?,score_updated_at=?,latest_activity_at=? WHERE post_id=?'
     : 'UPDATE post_hot SET score=?,score_updated_at=?,latest_activity_at=? WHERE post_id=?')
   for (const candidate of candidates) {
-    const events = activity.all(candidate.id, candidate.id, candidate.id, candidate.id) as {
+    const events = activity.all(candidate.id, candidate.id, candidate.id, candidate.id,
+      ...(tracksPollVotes ? [candidate.id] : [])) as {
       created_at: string
       weight: number
       boosts_recency: number
+      is_reply: number
     }[]
     if (!events.length) {
       if (tracksReplyCount && tracksActivityCount) {
@@ -282,7 +296,7 @@ export function rebuildHotPosts(database: Database, postIds?: number[]) {
       sum
       + event.weight * Math.pow(0.5, Math.max(0, (Date.parse(`${latest.replace(' ', 'T')}Z`)
           - Date.parse(`${event.created_at.replace(' ', 'T')}Z`)) / (activityHalfLifeHours * 3_600_000))), 0)
-    const replyCount = events.filter(event => event.weight > 0).length
+    const replyCount = events.filter(event => event.is_reply).length
     const activityCount = events.filter(event => event.weight === 0 && event.boosts_recency).length - 1
     if (tracksReplyCount && tracksActivityCount) {
       update.run(score, replyCount, activityCount, latest, latest, candidate.id)

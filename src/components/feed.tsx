@@ -109,7 +109,7 @@ export function Feed({ user, data, title, path = '/for-you', pageUrl, notificati
                 : null}
               {row.posts !== null
                 ? (
-                  <MetaStats createdAt={row.created_at} count={row.posts} href={(row.activity_kind === 'tag_follow'
+                  <MetaStats createdAt={row.created_at} count={null} href={(row.activity_kind === 'tag_follow'
                     ? `/tag/${row.target_tag}`
                     : `/u/${
                       row.activity_kind === 'user_follow' && !row.target_is_viewer

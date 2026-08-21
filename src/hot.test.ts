@@ -62,6 +62,30 @@ describe('hot feed ranking', () => {
     expect(results).toEqual([])
   })
 
+  test('poll votes add weight and refresh a post without counting as replies', () => {
+    post(1, '2026-08-03 08:00:00')
+    database.run(`CREATE TABLE poll_votes (
+      post_id INTEGER NOT NULL,option_id INTEGER NOT NULL,user_id INTEGER NOT NULL,created_at TEXT NOT NULL,
+      PRIMARY KEY(post_id,user_id));
+      INSERT INTO poll_votes VALUES(1,1,2,'2026-08-03 11:00:00');
+      INSERT INTO poll_votes VALUES(1,1,3,'2026-08-03 12:00:00');`)
+
+    recordHotActivity(database, 1)
+    const stored = database.query('SELECT score,reply_count,latest_activity_at FROM post_hot WHERE post_id=1')
+      .get() as { score: number; reply_count: number; latest_activity_at: string }
+    expect(stored.reply_count).toBe(0)
+    expect(stored.latest_activity_at).toBe('2026-08-03 12:00:00')
+    expect(stored.score).toBeCloseTo(1 + Math.pow(0.5, 1 / 6))
+    expect(getHotPosts(database, 20, null, asOf).map(result => result.id)).toEqual([1])
+
+    rebuildHotPosts(database)
+    const rebuilt = database.query('SELECT score,reply_count,latest_activity_at FROM post_hot WHERE post_id=1')
+      .get() as typeof stored
+    expect(rebuilt.score).toBeCloseTo(stored.score)
+    expect(rebuilt.reply_count).toBe(stored.reply_count)
+    expect(rebuilt.latest_activity_at).toBe(stored.latest_activity_at)
+  })
+
   test('ranks a replied thread without considering an unreplied new post', () => {
     database.run(`INSERT INTO users(id,handle) VALUES(2,'replier');
       INSERT INTO users(id,handle) VALUES(3,'another');`)

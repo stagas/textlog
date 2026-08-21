@@ -1,5 +1,6 @@
 import type { Database } from 'bun:sqlite'
 import type { PollView } from './types'
+import { recordHotActivity } from './hot'
 
 export const POLL_LIFETIME_MS = 24 * 60 * 60 * 1000
 
@@ -84,6 +85,7 @@ export function voteInPoll(database: Database, postId: number, optionId: number,
   if (Date.now() >= createdAt + POLL_LIFETIME_MS) return 'expired' as const
   const changed = database.query('INSERT OR IGNORE INTO poll_votes(post_id,option_id,user_id) VALUES(?,?,?)')
     .run(postId, optionId, userId).changes
+  if (changed) recordHotActivity(database, postId)
   if (changed && database.query(
     "SELECT 1 FROM sqlite_master WHERE type='table' AND name='feed_snapshot_generation'",
   ).get()) database.query('UPDATE feed_snapshot_generation SET generation=generation+1 WHERE id=1').run()
