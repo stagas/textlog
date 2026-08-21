@@ -130,7 +130,7 @@ export function Layout({
             <link rel="alternate" type="application/atom+xml" title={`${feeds.title} (Atom)`} href={feeds.atom} />
           </>
         )}
-        <link rel="stylesheet" href="/styles.css?v=466" />
+        <link rel="stylesheet" href="/styles.css?v=467" />
         <style>{themeCss}</style>
       </head>
       <body className={`density-${density}${user?.show_link_previews === 0 ? ' link-previews-disabled' : ''}`}>
@@ -167,6 +167,7 @@ export function Layout({
               : notificationBanner === 'invite'
               ? '/account/edit/invite'
               : '/account/edit/notifications'}
+              className={notificationBanner === 'donate' ? 'notification-banner-donate-link' : undefined}
               {...notificationBanner === 'donate' ? { target: '_blank', rel: 'noopener noreferrer' } : {}}
             >
               {notificationBanner === 'donate'

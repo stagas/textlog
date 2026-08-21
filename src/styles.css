@@ -725,6 +725,10 @@ nav form {
 }
 
 .notification-banner form { margin: 0; }
+.notification-banner-donate-link {
+  text-align: center;
+  text-wrap: balance;
+}
 .notification-banner button {
   color: var(--muted);
   font: inherit;
