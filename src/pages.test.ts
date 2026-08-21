@@ -124,7 +124,7 @@ test('compose offers a server-rendered post preview', () => {
     preview.indexOf('<div class="panel panel-surface panel-medium compose write-compose">'),
   )).not.toContain('<div class="compose-post-preview">')
   expect(preview).toContain('Hello <a href="/tag/world"')
-  expect(preview).toContain('<div class="posttop posttop-context preview-post-meta"><span class="postauthor post-context-author">You</span>')
+  expect(preview).toContain('<div class="posttop posttop-context preview-post-meta"><span class="postauthor post-context-author">you</span>')
   expect(preview).toContain('<span class="post-context">wrote:</span>')
   expect(preview).not.toContain('href="/post/0"')
   expect(preview).toContain('<span class="quiet preview-reply">reply</span>')
@@ -749,7 +749,7 @@ test('quoted parents use the same attribution wording', () => {
   expect(html).toContain('class="reference-menu-trigger postauthor" href="/u/root?from=')
 })
 
-test('posts by the viewer use plain You instead of a linked handle', () => {
+test('posts by the viewer use plain you instead of a linked handle', () => {
   const user = { id: 1, handle: 'reader', email: 'reader@example.com', bio: '' }
   const own = { id: 1, user_id: 1, parent_id: null, body: 'Mine', created_at: '2026-08-20 10:00:00',
     deleted_at: null, handle: 'reader' }
@@ -759,9 +759,9 @@ test('posts by the viewer use plain You instead of a linked handle', () => {
       created_at: '2026-08-20 11:00:00', deleted_at: null, handle: 'foo' }, user,
   }))
 
-  expect(post).toContain('<span class="postauthor post-context-author">You</span><span class="post-context">wrote:</span>')
+  expect(post).toContain('<span class="postauthor post-context-author">you</span><span class="post-context">wrote:</span>')
   expect(post).not.toContain('href="/u/reader')
-  expect(quoted).toContain('<div class="parent-quote-top"><span class="postauthor post-context-author">You</span>'
+  expect(quoted).toContain('<div class="parent-quote-top"><span class="postauthor post-context-author">you</span>'
     + '<span class="post-context">wrote:</span>')
 })
 
