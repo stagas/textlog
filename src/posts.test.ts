@@ -37,8 +37,9 @@ describe('post persistence', () => {
   test('hides lines below a spoiler tag behind a reveal control', () => {
     expect(linkify('visible\n#spoiler\nhidden https://example.com'))
       .toBe('visible\n<a href="/tag/spoiler">#spoiler</a><details class="post-spoiler"><summary>reveal</summary>'
-        + '<span class="post-spoiler-content">hidden <a href="https://example.com" target="_blank" '
-        + 'rel="nofollow ugc noopener noreferrer">https://example.com</a></span></details>')
+        + '<span class="post-spoiler-content">hidden <a href="https://example.com" class="raw-link" '
+        + 'title="https://example.com" target="_blank" rel="nofollow ugc noopener noreferrer">example.com</a>'
+        + '</span></details>')
     expect(linkify('visible #spoilers\nstill visible')).not.toContain('<details')
     expect(linkify('https://example.com/#spoiler\nstill visible')).not.toContain('<details')
     expect(linkify('#SPOILER')).not.toContain('<details')
@@ -61,15 +62,18 @@ describe('post persistence', () => {
   test('keeps apostrophes in linkified URLs', () => {
     expect(linkify('read https://example.com/people/O\'Brien/profile'))
       .toBe(
-        'read <a href="https://example.com/people/O&#39;Brien/profile" target="_blank" rel="nofollow ugc noopener noreferrer">https://example.com/people/O&#39;Brien/profile</a>',
+        'read <a href="https://example.com/people/O&#39;Brien/profile" class="raw-link" title="https://example.com/people/O&#39;Brien/profile" target="_blank" rel="nofollow ugc noopener noreferrer">example.com/people/O&#39;Brien/profile</a>',
       )
   })
   test('shortens long URL labels without changing their destinations', () => {
     expect(linkify('https://www.example.com/a/very/long/path/final-part/?tracking=123'))
       .toBe(
-        '<a href="https://www.example.com/a/very/long/path/final-part/?tracking=123" title="https://www.example.com/a/very/long/path/final-part/?tracking=123" target="_blank" rel="nofollow ugc noopener noreferrer">www.example.com/…/final-part/</a>',
+        '<a href="https://www.example.com/a/very/long/path/final-part/?tracking=123" class="raw-link" title="https://www.example.com/a/very/long/path/final-part/?tracking=123" target="_blank" rel="nofollow ugc noopener noreferrer">www.example.com/…/final-part/</a>',
       )
-    expect(linkify('https://example.com/short')).toContain('>https://example.com/short</a>')
+    expect(linkify('https://example.com/short')).toContain('>example.com/short</a>')
+    expect(linkify('https://example.com/short')).toContain('class="raw-link"')
+    expect(linkify('example.com/short')).toContain('class="raw-link"')
+    expect(linkify('[test](https://example.com/short)')).not.toContain('class="raw-link"')
     expect(linkify('https://example.com/archive/a-very-long-final-segment-with-important-ending/'))
       .toContain('>example.com/…/a-very-long-final-…with-important-ending/</a>')
     expect(linkify('https://example.com/archive/intro.section-containing-several-words.and-a-useful-ending/'))
@@ -107,14 +111,14 @@ describe('post persistence', () => {
     expect(linkify(body, { reader: 'Reader bio' })).toBe(
       '[eye](https://example.com) $x^2$ &lt;nose&gt; '
         + '<a href="/u/reader" title="0 notes\n\nReader bio">@Reader</a> <a href="/tag/ascii">#ascii</a> '
-        + '<a href="https://example.org/art" target="_blank" rel="nofollow ugc noopener noreferrer">'
+        + '<a href="https://example.org/art" class="raw-link" target="_blank" rel="nofollow ugc noopener noreferrer">'
         + 'example.org/art</a>',
     )
   })
   test('linkifies protocol-less domains using the public TLD list', () => {
     expect(linkify('visit example.com or docs.example.dev/guide?q=links.'))
       .toBe(
-        'visit <a href="https://example.com" target="_blank" rel="nofollow ugc noopener noreferrer">example.com</a> or <a href="https://docs.example.dev/guide?q=links" target="_blank" rel="nofollow ugc noopener noreferrer">docs.example.dev/guide?q=links</a>.',
+        'visit <a href="https://example.com" class="raw-link" target="_blank" rel="nofollow ugc noopener noreferrer">example.com</a> or <a href="https://docs.example.dev/guide?q=links" class="raw-link" target="_blank" rel="nofollow ugc noopener noreferrer">docs.example.dev/guide?q=links</a>.',
       )
     expect(linkify('not links: version 1.2.3, example.invalid, or a@example.com'))
       .toBe('not links: version 1.2.3, example.invalid, or a@example.com')
@@ -122,26 +126,26 @@ describe('post persistence', () => {
   test('does not treat references inside protocol-less URLs as mentions or tags', () => {
     expect(linkify('example.com/@reader#notes', { reader: 'Reader' }))
       .toBe(
-        '<a href="https://example.com/@reader#notes" target="_blank" rel="nofollow ugc noopener noreferrer">example.com/@reader#notes</a>',
+        '<a href="https://example.com/@reader#notes" class="raw-link" target="_blank" rel="nofollow ugc noopener noreferrer">example.com/@reader#notes</a>',
       )
   })
   test('opens links starting with APP_URL in the current tab', () => {
     expect(linkify('https://textlog.cc', {}, [], 'https://textlog.cc'))
-      .toBe('<a href="https://textlog.cc" title="https://textlog.cc" rel="nofollow ugc">textlog.cc</a>')
+      .toBe('<a href="https://textlog.cc" class="raw-link" title="https://textlog.cc" rel="nofollow ugc">textlog.cc</a>')
     expect(linkify('https://textlog.cc/', {}, [], 'https://textlog.cc'))
-      .toBe('<a href="https://textlog.cc/" title="https://textlog.cc/" rel="nofollow ugc">textlog.cc</a>')
+      .toBe('<a href="https://textlog.cc/" class="raw-link" title="https://textlog.cc/" rel="nofollow ugc">textlog.cc</a>')
     expect(linkify('https://textlog.test/post/1', {}, [], 'https://textlog.test'))
-      .toBe('<a href="https://textlog.test/post/1" title="https://textlog.test/post/1" rel="nofollow ugc">/post/1</a>')
+      .toBe('<a href="https://textlog.test/post/1" class="raw-link" title="https://textlog.test/post/1" rel="nofollow ugc">/post/1</a>')
     expect(linkify('[post](https://textlog.test/post/1)', {}, [], 'https://textlog.test'))
       .toBe('<a href="https://textlog.test/post/1" title="https://textlog.test/post/1" rel="nofollow ugc">post</a>')
     expect(linkify('textlog.cc/post/1', {}, [], 'https://textlog.cc'))
-      .toBe('<a href="https://textlog.cc/post/1" title="https://textlog.cc/post/1" rel="nofollow ugc">/post/1</a>')
+      .toBe('<a href="https://textlog.cc/post/1" class="raw-link" title="https://textlog.cc/post/1" rel="nofollow ugc">/post/1</a>')
   })
   test('normalizes literal APP_URL links when APP_URL has a trailing slash', () => {
     expect(linkify('https://textlog.test/', {}, [], 'https://textlog.test/'))
-      .toBe('<a href="https://textlog.test/" title="https://textlog.test/" rel="nofollow ugc">textlog.test</a>')
+      .toBe('<a href="https://textlog.test/" class="raw-link" title="https://textlog.test/" rel="nofollow ugc">textlog.test</a>')
     expect(linkify('https://textlog.test/post/1', {}, [], 'https://textlog.test/'))
-      .toBe('<a href="https://textlog.test/post/1" title="https://textlog.test/post/1" rel="nofollow ugc">/post/1</a>')
+      .toBe('<a href="https://textlog.test/post/1" class="raw-link" title="https://textlog.test/post/1" rel="nofollow ugc">/post/1</a>')
   })
   test('escapes Markdown link labels and destinations', () => {
     expect(linkify('[<test>](https://example.com/a\'b)'))
@@ -296,7 +300,7 @@ describe('post persistence', () => {
     expect(html.match(/class="reference-menu"/g)).toHaveLength(1)
     expect(html).toContain('<span class="reference-popover-bio">Knows @third and follows '
       + '<a href="/tag/topic">#topic</a> at ')
-    expect(html).toContain('<a href="https://example.com" target="_blank" '
+    expect(html).toContain('<a href="https://example.com" class="raw-link" target="_blank" '
       + 'rel="nofollow ugc noopener noreferrer">example.com</a>')
   })
 
@@ -345,7 +349,7 @@ describe('post persistence', () => {
       '', {}, { reader: 2 }, { signedIn: false, formPrefix: 'post-1' })
     expect(html).toContain('<span class="reference-popover-bio">Writes about '
       + '<a href="/tag/typescript">#TypeScript</a>\n\nat '
-      + '<a href="https://example.com" target="_blank" rel="nofollow ugc noopener noreferrer">example.com</a></span>')
+      + '<a href="https://example.com" class="raw-link" target="_blank" rel="nofollow ugc noopener noreferrer">example.com</a></span>')
   })
 
   test('linkifies only the first five hashtags', () => {

@@ -189,7 +189,8 @@ function shortenedUrlPart(part: string) {
 }
 
 function shortenedUrlLabel(url: string) {
-  if (url.length <= LONG_URL_LABEL_LENGTH) return url
+  const withoutProtocol = url.replace(/^https?:\/\//i, '')
+  if (withoutProtocol.length <= LONG_URL_LABEL_LENGTH) return withoutProtocol
   try {
     const parsed = new URL(url)
     const parts = parsed.pathname.split('/').filter(Boolean)
@@ -440,7 +441,7 @@ function linkifyAsciiReferences(body: string, mentionBios: Record<string, string
       const label = linkLabel(url, appUrl)
       const displayLabel = label === url ? match.raw : label
       html += previewLink(
-        `<a href="${esc(url)}"${displayLabel === match.raw ? '' : ` title="${esc(url)}"`}${
+        `<a href="${esc(url)}" class="raw-link"${displayLabel === match.raw ? '' : ` title="${esc(url)}"`}${
           linkAttributes(url, appUrl)
         }>${esc(displayLabel)}</a>`,
         url,
@@ -507,7 +508,7 @@ export function linkify(body: string, mentionBios: Record<string, string> = {}, 
       const label = linkLabel(url, appUrl)
       const displayLabel = label === url ? token : label
       html += previewLink(
-        `<a href="${esc(url)}"${label === url ? '' : ` title="${esc(url)}"`}${linkAttributes(url, appUrl)}>${
+        `<a href="${esc(url)}" class="raw-link"${displayLabel === token ? '' : ` title="${esc(url)}"`}${linkAttributes(url, appUrl)}>${
           highlighted(displayLabel, highlightTerms)
         }</a>`,
         url,

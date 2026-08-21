@@ -1838,6 +1838,10 @@ nav form {
   padding-bottom: 1px;
 }
 
+.post-body .raw-link {
+  word-break: break-all;
+}
+
 .post-body a:hover,
 .parent-quote a:hover {
   color: var(--accent-dark);
