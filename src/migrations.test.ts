@@ -441,4 +441,25 @@ describe('database migrations', () => {
     expect(database.query('SELECT score,latest_activity_at FROM post_hot WHERE post_id=1').get())
       .toEqual({ score: 0, latest_activity_at: '2026-08-05 09:00:00' })
   })
+
+  test('rebuilds hot scores to include votes cast before vote-aware ranking', () => {
+    const database = new Database(':memory:')
+    database.run('PRAGMA foreign_keys=ON')
+    runMigrations(database)
+    database.run(`INSERT INTO users(id,handle,email,password) VALUES
+        (1,'author','author@example.com','x'),(2,'voter','voter@example.com','x');
+      INSERT INTO posts(id,user_id,body,created_at) VALUES
+        (1,1,'Question? #poll\nYes\nNo','2026-08-05 09:00:00');
+      INSERT INTO poll_options(id,post_id,position,label) VALUES(1,1,0,'Yes'),(2,1,1,'No');
+      INSERT INTO poll_votes(post_id,option_id,user_id,created_at)
+        VALUES(1,1,2,'2026-08-05 11:00:00');
+      UPDATE post_hot SET score=0,reply_count=0,score_updated_at='2026-08-05 09:00:00',
+        latest_activity_at='2026-08-05 09:00:00' WHERE post_id=1;
+      PRAGMA user_version=102;`)
+
+    runMigrations(database)
+
+    expect(database.query('SELECT score,reply_count,latest_activity_at FROM post_hot WHERE post_id=1').get())
+      .toEqual({ score: 1, reply_count: 0, latest_activity_at: '2026-08-05 11:00:00' })
+  })
 })
