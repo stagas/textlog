@@ -2807,10 +2807,7 @@ form.report-panel {
 
 @media (max-width: 520px) {
   .replybox {
-    margin-left: 0;
-    margin-right: 0;
-    padding-left: 0;
-    padding-right: var(--gutter);
+    margin-inline: 0;
   }
 
   :is(.write-compose, .edit-post-compose, .replybox, .bio-form) .posting-help {

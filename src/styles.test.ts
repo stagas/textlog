@@ -301,6 +301,8 @@ describe('in-memory stylesheet', () => {
 
   test('gives the mobile edit composer the same posting-help layout as write', async () => {
     const css = await Bun.file(new URL('./styles.css', import.meta.url)).text()
+    expect(css).toContain('@media (max-width: 520px) {\n  .replybox {\n    margin-inline: 0;')
+    expect(css).not.toContain('padding-left: 0;\n    padding-right: var(--gutter);')
     expect(css).toContain('.bio-form > label > input:not([type="checkbox"]),')
     expect(css).not.toContain('\n.bio-form input:not([type="checkbox"]),')
     expect(css).toContain('.bio-form + .account-danger-zone {\n  margin-top: var(--space-4);')
