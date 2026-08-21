@@ -63,6 +63,16 @@
   -webkit-tap-highlight-color: var(--tap-highlight);
 }
 
+html {
+  scroll-behavior: smooth;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+}
+
 @media (min-resolution: 1.75dppx) {
   :root { --hairline: 0.5px; }
 }
