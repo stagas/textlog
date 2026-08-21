@@ -4469,6 +4469,10 @@ form.report-panel {
   white-space: nowrap;
 }
 
+.post-context-author {
+  color: var(--muted);
+}
+
 .post-context-punctuation {
   margin-left: calc(-1 * var(--space-4));
 }

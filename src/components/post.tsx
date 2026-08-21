@@ -388,7 +388,7 @@ export function Post({
         unread={contextUnread}
       >
         {user?.id === p.user_id
-          ? <span className="postauthor">You</span>
+          ? <span className="postauthor post-context-author">You</span>
           : preview
           ? (
             <UserReference handle={p.handle} bio={p.bio} noteCount={p.note_count || 0} stats={p.profile_stats}
@@ -486,7 +486,7 @@ export function Post({
               <>
                 <div className="parent-quote-top">
                   {user?.id === parent.user_id
-                    ? <span className="postauthor">You</span>
+                    ? <span className="postauthor post-context-author">You</span>
                     : <UserReference handle={parent.handle} bio={parent.bio} noteCount={parent.note_count || 0}
                       stats={parent.profile_stats} following={parent.viewer_following}
                       followsViewer={parent.follows_viewer} user={user} href={'/u/' + parent.handle + referenceQuery}
