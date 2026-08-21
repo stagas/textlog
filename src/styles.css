@@ -1831,6 +1831,10 @@ nav form {
   line-height: 1.55;
 }
 
+.post .parent-quote.ascii-art .post-body {
+  line-height: 1.15;
+}
+
 .empty {
   margin: 0 var(--gutter);
   padding: var(--space-7) 0;

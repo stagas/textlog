@@ -1684,6 +1684,7 @@ test('Post marks #ascii and #ascii_art bodies and quoted parents for tight line 
   }))
 
   expect(html.match(/class="post-body ascii-art"/g)).toHaveLength(2)
+  expect(html).toContain('class="parent-quote ascii-art"')
 
   const regularHtml = renderToStaticMarkup(React.createElement(Post, {
     user: null,

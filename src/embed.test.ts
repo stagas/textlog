@@ -93,3 +93,30 @@ test('feed embeds render a quoted parent with its metadata and links', () => {
   expect(html).not.toContain('· replies</span>')
   expect(html).not.toContain('2 replies')
 })
+
+test('feed embeds mark an ASCII-art quoted parent on its container', () => {
+  const html = renderToStaticMarkup(React.createElement(Embed, {
+    posts: [{
+      id: 2,
+      user_id: 1,
+      parent_id: 1,
+      body: 'reply',
+      created_at: '2026-08-10 12:00:00',
+      deleted_at: null,
+      handle: 'alice',
+      parent: {
+        id: 1,
+        body: ' /\\_/\\\n( o.o )\n#ascii_art',
+        created_at: '2026-08-10 11:00:00',
+        deleted_at: null,
+        handle: 'bob',
+        reply_count: 1,
+      },
+    }],
+    title: '@alice',
+    href: '/u/alice',
+    accent: 'theme',
+  }))
+
+  expect(html).toContain('class="embed-parent ascii-art"')
+})

@@ -435,7 +435,8 @@ export function Post({
       <ReferenceFollowForms post={p} prefix={formPrefix} user={user}
         returnPath={returnPath || `/post/${p.id}#post-${p.id}`} />
       {parent && (
-        <blockquote className={'parent-quote' + (parent.deleted_at ? ' deleted-parent' : '')
+        <blockquote className={'parent-quote' + (containsAsciiArt(parent.body) ? ' ascii-art' : '')
+          + (parent.deleted_at ? ' deleted-parent' : '')
           + (hasTappableParent ? ' tappable-parent' : '')}
         >
           {hasTappableParent && (
