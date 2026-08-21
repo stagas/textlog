@@ -227,9 +227,10 @@ function shortenedUrlLabel(url: string) {
 }
 
 function linkLabel(url: string, appUrl: string | undefined) {
-  if (!appUrl || !url.startsWith(appUrl)) return shortenedUrlLabel(url)
-  const relative = url.slice(appUrl.length)
-  if (!relative) return '/'
+  const normalizedAppUrl = appUrl?.replace(/\/$/, '')
+  if (!normalizedAppUrl || !url.startsWith(normalizedAppUrl)) return shortenedUrlLabel(url)
+  const relative = url.slice(normalizedAppUrl.length)
+  if (!relative || relative === '/') return new URL(normalizedAppUrl).host
   return relative.startsWith('/') ? relative : `/${relative}`
 }
 
