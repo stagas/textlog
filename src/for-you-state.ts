@@ -1,6 +1,13 @@
 import type { Database } from 'bun:sqlite'
 import { isAdminEmail } from './admin'
 
+const descendsFromViewer = `EXISTS (WITH RECURSIVE ancestors(id,user_id,parent_id) AS (
+  SELECT ancestor.id,ancestor.user_id,ancestor.parent_id FROM posts ancestor WHERE ancestor.id=p.parent_id
+  UNION ALL
+  SELECT ancestor.id,ancestor.user_id,ancestor.parent_id FROM posts ancestor
+    JOIN ancestors child ON ancestor.id=child.parent_id
+) SELECT 1 FROM ancestors WHERE user_id=$viewer)`
+
 const visibleEvents = `
   SELECT 'post:' || printf('%020d',p.id) event_key FROM posts p
     WHERE p.deleted_at IS NULL AND p.user_id!=$viewer AND (p.user_id IN
@@ -17,7 +24,7 @@ const visibleEvents = `
     LEFT JOIN posts parent ON parent.id=p.parent_id
     LEFT JOIN post_mentions pm ON pm.post_id=p.id AND pm.user_id=$viewer
     WHERE p.deleted_at IS NULL AND p.user_id!=$viewer
-      AND (parent.user_id=$viewer OR pm.user_id IS NOT NULL)
+      AND (${descendsFromViewer} OR pm.user_id IS NOT NULL)
       AND NOT EXISTS (SELECT 1 FROM blocks b WHERE
         (b.blocker_id=$viewer AND b.blocked_id=p.user_id) OR
         (b.blocker_id=p.user_id AND b.blocked_id=$viewer))
@@ -62,7 +69,7 @@ const visibleToMeEvents = `
     LEFT JOIN posts parent ON parent.id=p.parent_id
     LEFT JOIN post_mentions pm ON pm.post_id=p.id AND pm.user_id=$viewer
     WHERE p.deleted_at IS NULL AND p.user_id!=$viewer
-      AND (parent.user_id=$viewer OR pm.user_id IS NOT NULL)
+      AND (${descendsFromViewer} OR pm.user_id IS NOT NULL)
       AND NOT EXISTS (SELECT 1 FROM blocks b WHERE
         (b.blocker_id=$viewer AND b.blocked_id=p.user_id) OR
         (b.blocker_id=p.user_id AND b.blocked_id=$viewer))

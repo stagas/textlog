@@ -120,7 +120,8 @@ describe('public API', () => {
         (1,2,'2026-08-03 09:00:00'),(2,1,'2026-08-03 17:00:00');
       INSERT INTO posts(id,user_id,parent_id,body,created_at) VALUES
         (6,2,NULL,'followed author','2026-08-03 15:00:00'),
-        (7,2,NULL,'tag match #textlog','2026-08-03 16:00:00');
+        (7,2,NULL,'tag match #textlog','2026-08-03 16:00:00'),
+        (8,2,2,'descendant of Alice reply','2026-08-03 16:30:00');
       INSERT INTO post_hashtags(post_id,tag) VALUES(7,'textlog');
       INSERT INTO hashtag_follows(user_id,tag,created_at) VALUES
         (1,'textlog','2026-08-03 08:00:00'),(2,'textlog','2026-08-03 18:00:00');`)
@@ -132,11 +133,14 @@ describe('public API', () => {
     const toMe = await (await request(app, '/api/v1/activities/to-me', { headers })).json() as any
 
     expect(forYou.data.map((activity: any) => activity.type))
-      .toEqual(['tag_follow', 'user_follow', 'post', 'post', 'reply'])
+      .toEqual(['tag_follow', 'user_follow', 'reply', 'post', 'post', 'reply'])
     expect(forYou.data.find((activity: any) => activity.type === 'tag_follow').payload)
       .toMatchObject({ actor: { handle: 'bob' }, target: { tag: 'textlog' } })
     expect(forYou.data.find((activity: any) => activity.type === 'post').payload).toMatchObject({ id: 7 })
-    expect(toMe.data.map((activity: any) => activity.type)).toEqual(['user_follow', 'reply'])
+    expect(toMe.data.map((activity: any) => activity.type)).toEqual(['user_follow', 'reply', 'reply'])
+    expect(toMe.data.find((activity: any) => activity.payload.id === 8)).toMatchObject({
+      type: 'reply', payload: { body: 'descendant of Alice reply' },
+    })
     expect(toMe.data.find((activity: any) => activity.type === 'user_follow').payload)
       .toMatchObject({ actor: { handle: 'bob' }, target: { handle: 'alice' } })
     expect(forYou.has_unread).toBe(true)
@@ -148,7 +152,7 @@ describe('public API', () => {
         headers,
       })).json() as any
     expect(firstPage.data.map((activity: any) => activity.type)).toEqual(['tag_follow', 'user_follow'])
-    expect(secondPage.data.map((activity: any) => activity.payload.id)).toEqual([7, 6])
+    expect(secondPage.data.map((activity: any) => activity.payload.id)).toEqual([8, 7])
     expect((await request(app, '/api/v1/activities/for-you?cursor=broken', { headers })).status).toBe(400)
 
     const selectedRead = await request(app, '/api/v1/activities/for-you/read', { method: 'POST', headers: {

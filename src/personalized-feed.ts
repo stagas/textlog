@@ -6,7 +6,14 @@ import { resolveHandle } from './handles'
 import { enrichPosts, visibleTagFollowerCounts, visibleUserProfileStats } from './posts'
 import type { PersonalizedFeedData, PersonalizedTimelineRow, User } from './types'
 
-const PERSONALIZED_FEED_SNAPSHOT_VERSION = 2
+const PERSONALIZED_FEED_SNAPSHOT_VERSION = 3
+
+const descendsFromViewer = `EXISTS (WITH RECURSIVE ancestors(id,user_id,parent_id) AS (
+  SELECT ancestor.id,ancestor.user_id,ancestor.parent_id FROM posts ancestor WHERE ancestor.id=p.parent_id
+  UNION ALL
+  SELECT ancestor.id,ancestor.user_id,ancestor.parent_id FROM posts ancestor
+    JOIN ancestors child ON ancestor.id=child.parent_id
+) SELECT 1 FROM ancestors WHERE user_id=$viewer)`
 
 export function loadPersonalizedFeed(database: Database, user: User, page: number, pageSize: number, toMe: boolean,
   path: string, markRead = true): PersonalizedFeedData
@@ -34,16 +41,16 @@ export function loadPersonalizedFeed(database: Database, user: User, page: numbe
           OR (b.blocker_id=p.user_id AND b.blocked_id=$viewer))
         AND NOT EXISTS (SELECT 1 FROM post_hashtags tph JOIN blocked_hashtags bh ON bh.tag=tph.tag
           WHERE tph.post_id=p.id AND bh.user_id=$viewer)
-        AND parent.user_id IS NOT $viewer AND pm.user_id IS NULL
+        AND NOT ${descendsFromViewer} AND pm.user_id IS NULL
       UNION ALL
       SELECT p.id,p.user_id,p.body,p.created_at,p.parent_id,p.deleted_at,p.has_latex,p.has_links,p.has_code,u.handle,
         EXISTS(SELECT 1 FROM follows vf WHERE vf.follower_id=$viewer AND vf.following_id=p.user_id) following,
-        CASE WHEN parent.user_id=$viewer THEN 'reply' ELSE 'mention' END activity_kind,
+        CASE WHEN ${descendsFromViewer} THEN 'reply' ELSE 'mention' END activity_kind,
         'post:' || printf('%020d',p.id) event_key,p.user_id actor_id,u.handle actor_handle,u.bio actor_bio,
         NULL target_handle,NULL target_tag,NULL target_bio,0 target_is_viewer,1 targeted_to_viewer,NULL posts
       FROM posts p JOIN users u ON u.id=p.user_id LEFT JOIN posts parent ON parent.id=p.parent_id
       LEFT JOIN post_mentions pm ON pm.post_id=p.id AND pm.user_id=$viewer
-      WHERE p.deleted_at IS NULL AND p.user_id!=$viewer AND (parent.user_id=$viewer OR pm.user_id IS NOT NULL)
+      WHERE p.deleted_at IS NULL AND p.user_id!=$viewer AND (${descendsFromViewer} OR pm.user_id IS NOT NULL)
         AND NOT EXISTS (SELECT 1 FROM blocks b WHERE (b.blocker_id=$viewer AND b.blocked_id=p.user_id)
           OR (b.blocker_id=p.user_id AND b.blocked_id=$viewer))
         AND NOT EXISTS (SELECT 1 FROM post_hashtags tph JOIN blocked_hashtags bh ON bh.tag=tph.tag

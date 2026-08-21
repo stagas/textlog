@@ -61,6 +61,27 @@ test('for-you renders a single author without a filter shell', () => {
   expect(html).not.toContain('for-you-hide-action')
 })
 
+test('for-you labels a descendant that replies to its own author as continued', () => {
+  const parent = { id: 10, user_id: 2, parent_id: 9, body: 'earlier reply',
+    created_at: '2026-08-19 09:00:00', deleted_at: null, handle: 'alice', reply_count: 1 }
+  const activity = {
+    ...postActivity(11, 2, 'alice'),
+    parent_id: parent.id,
+    parent,
+    activity_kind: 'reply' as const,
+    targeted_to_viewer: true,
+    renderedPost: { ...postActivity(11, 2, 'alice'), parent_id: parent.id, parent },
+  }
+  const html = renderToStaticMarkup(<Feed
+    user={{ id: 1, handle: 'reader', email: 'reader@example.com', bio: '', handle_chosen_at: '2026-08-19 09:00:00' }}
+    data={{ timeline: [activity], page: 1, totalPages: 1, toMeCount: 1,
+      forYouCount: 1, forYouUnread: false, toMeUnread: true }}
+  />)
+
+  expect(html).toContain('<span class="post-context">continued:</span>')
+  expect(html).not.toContain('replied to you:')
+})
+
 test('for-you does not put hide actions on follow activity', () => {
   const followActivity = {
     ...postActivity(12, 4, 'carol'),

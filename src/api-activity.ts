@@ -32,6 +32,13 @@ export type ApiActivity = {
 
 type ActivityCursor = { createdAt: string; key: string }
 
+const descendsFromViewer = `EXISTS (WITH RECURSIVE ancestors(id,user_id,parent_id) AS (
+  SELECT ancestor.id,ancestor.user_id,ancestor.parent_id FROM posts ancestor WHERE ancestor.id=p.parent_id
+  UNION ALL
+  SELECT ancestor.id,ancestor.user_id,ancestor.parent_id FROM posts ancestor
+    JOIN ancestors child ON ancestor.id=child.parent_id
+) SELECT 1 FROM ancestors WHERE user_id=$viewer)`
+
 function encodeCursor(cursor: ActivityCursor) {
   return Buffer.from(JSON.stringify([1, cursor.createdAt, cursor.key])).toString('base64url')
 }
@@ -75,11 +82,11 @@ export function apiActivities(database: Database, origin: string, user: User, op
       WHERE fyr.user_id=$viewer AND fyr.event_key=timeline.event_key) unread
     FROM (
       SELECT p.id post_id,p.created_at,
-        CASE WHEN parent.user_id=$viewer THEN 'reply'
+        CASE WHEN ${descendsFromViewer} THEN 'reply'
           WHEN pm.user_id IS NOT NULL THEN 'mention' ELSE 'post' END type,
         'post:' || printf('%020d',p.id) event_key,u.handle actor_handle,
         NULL target_handle,NULL target_tag,
-        CASE WHEN parent.user_id=$viewer OR pm.user_id IS NOT NULL THEN 1 ELSE 0 END targeted_to_viewer
+        CASE WHEN ${descendsFromViewer} OR pm.user_id IS NOT NULL THEN 1 ELSE 0 END targeted_to_viewer
       FROM posts p JOIN users u ON u.id=p.user_id
       LEFT JOIN posts parent ON parent.id=p.parent_id
       LEFT JOIN post_mentions pm ON pm.post_id=p.id AND pm.user_id=$viewer
@@ -87,7 +94,7 @@ export function apiActivities(database: Database, origin: string, user: User, op
         AND (p.user_id IN (SELECT following_id FROM follows WHERE follower_id=$viewer)
           OR p.id IN (SELECT ph.post_id FROM post_hashtags ph JOIN hashtag_follows hf ON hf.tag=ph.tag
             WHERE hf.user_id=$viewer)
-          OR parent.user_id=$viewer OR pm.user_id IS NOT NULL)
+          OR ${descendsFromViewer} OR pm.user_id IS NOT NULL)
         AND NOT EXISTS (SELECT 1 FROM blocks b WHERE
           (b.blocker_id=$viewer AND b.blocked_id=p.user_id)
           OR (b.blocker_id=p.user_id AND b.blocked_id=$viewer))

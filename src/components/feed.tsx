@@ -70,9 +70,7 @@ export function Feed({ user, data, title, path = '/for-you', pageUrl, notificati
           key={row.event_key}
         >
           <Post p={row.renderedPost!} user={user} showReplyCount tappable contextUnread={!!row.unread}
-            returnPath={`${returnPath}#post-${row.id}`} contextLabel={row.activity_kind === 'reply'
-            ? 'replied to you:'
-            : undefined} />
+            returnPath={`${returnPath}#post-${row.id}`} />
         </div>
       )
       : (
