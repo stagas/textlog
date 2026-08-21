@@ -62,6 +62,11 @@ describe('in-memory stylesheet', () => {
     expect(css).not.toContain('.parent-quote .poll-meta { color: var(--quote-ink); }')
   })
 
+  test('lets taps pass through poll results to the post hit area', async () => {
+    const css = await Bun.file(new URL('./styles.css', import.meta.url)).text()
+    expect(css).toContain('.poll-results { pointer-events: none; }')
+  })
+
   test('highlights a post or activity entry opened through its stable anchor', async () => {
     const css = await Bun.file(new URL('./styles.css', import.meta.url)).text()
     expect(css).toContain('.post:target,\n.activity-follow:target {')
