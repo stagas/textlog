@@ -114,6 +114,10 @@ test('web manifest is cached by browsers', async () => {
   expect(response.status).toBe(200)
   expect(response.headers.get('content-type')).toContain('application/json')
   expect(response.headers.get('cache-control')).toBe('public, max-age=86400, stale-while-revalidate=604800')
+  expect(await response.json()).toMatchObject({
+    theme_color: '#e5e8e1',
+    background_color: '#171a17',
+  })
 })
 
 async function signup(handle: string, email: string, _password: string, ip?: string) {

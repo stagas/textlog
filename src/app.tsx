@@ -390,8 +390,8 @@ app.get('/site.webmanifest', c =>
       { src: '/android-chrome-512x512.png', sizes: '512x512', type: 'image/png' },
       { src: '/maskable-icon-512x512.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' },
     ],
-    theme_color: '#20231f',
-    background_color: '#f4f3ee',
+    theme_color: '#e5e8e1',
+    background_color: '#171a17',
     display: 'standalone',
     start_url: '/',
   }, 200, { 'cache-control': 'public, max-age=86400, stale-while-revalidate=604800' }))
