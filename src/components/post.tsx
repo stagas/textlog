@@ -387,7 +387,9 @@ export function Post({
       <MetaRow className={`posttop${contextLabel ? ' posttop-context' : ''}${preview ? ' preview-post-meta' : ''}`}
         unread={contextUnread}
       >
-        {preview
+        {user?.id === p.user_id
+          ? <span className="postauthor">You</span>
+          : preview
           ? (
             <UserReference handle={p.handle} bio={p.bio} noteCount={p.note_count || 0} stats={p.profile_stats}
               following={p.viewer_following} followsViewer={p.follows_viewer} user={user}
@@ -483,10 +485,12 @@ export function Post({
             : (
               <>
                 <div className="parent-quote-top">
-                  <UserReference handle={parent.handle} bio={parent.bio} noteCount={parent.note_count || 0}
-                    stats={parent.profile_stats} following={parent.viewer_following}
-                    followsViewer={parent.follows_viewer} user={user} href={'/u/' + parent.handle + referenceQuery}
-                    rel={navigationRel} navigationQuery={referenceQuery} referenceData={parent.bio_reference} />
+                  {user?.id === parent.user_id
+                    ? <span className="postauthor">You</span>
+                    : <UserReference handle={parent.handle} bio={parent.bio} noteCount={parent.note_count || 0}
+                      stats={parent.profile_stats} following={parent.viewer_following}
+                      followsViewer={parent.follows_viewer} user={user} href={'/u/' + parent.handle + referenceQuery}
+                      rel={navigationRel} navigationQuery={referenceQuery} referenceData={parent.bio_reference} />}
                   {parentContextLabel && <span className="post-context">{parentContextLabel}</span>}
                   {parentContextTarget && (
                     <>
