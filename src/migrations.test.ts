@@ -460,6 +460,6 @@ describe('database migrations', () => {
     runMigrations(database)
 
     expect(database.query('SELECT score,reply_count,latest_activity_at FROM post_hot WHERE post_id=1').get())
-      .toEqual({ score: 1, reply_count: 0, latest_activity_at: '2026-08-05 11:00:00' })
+      .toEqual({ score: 2, reply_count: 0, latest_activity_at: '2026-08-05 11:00:00' })
   })
 })

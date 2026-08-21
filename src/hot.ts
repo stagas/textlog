@@ -26,13 +26,14 @@ export type HotCursor = {
   direction: 'next' | 'previous'
 }
 
-export const hotRankingVersion = 92
+export const hotRankingVersion = 95
 const cursorVersion = hotRankingVersion
 const activityHalfLifeHours = 6
 const postWeight = 0
 const directReplyWeight = 2
-const pollVoteWeight = 1
+const pollVoteWeight = 2
 const replyRecencyHalfLifeHours = 0.5
+const pollVoteRecencyHalfLifeHours = 3
 const maxExponentiallyWeightedReplies = 15
 const unboostedReplyCount = 5
 const repliesPerDiscussionWeightDoubling = 1.5
@@ -76,6 +77,8 @@ const recentPostTierBonus = 100
 const yesterdayPostHours = 48
 const yesterdayPostTierBonus = 50
 const recentReplyActivityBoost = 300
+const recentPollVoteActivityBoost = 500
+const recentPollVoteSaturationScore = 12
 const recentParticipantActivityWeight = 100
 const recentParticipantActivityHalfLifeHours = 1
 const matureDiscussionLowTierBonus = 16
@@ -348,8 +351,10 @@ export function getHotPosts(
   if (publicOnly) filters.push('u.deleted_at IS NULL')
   if (minimumDiscussionReplies > 0) {
     filters.push(`(h.reply_count>=? OR (h.reply_count BETWEEN 1 AND 2
-      AND max(0,(julianday(?) - julianday(h.latest_activity_at))*24)<=${veryRecentReplyCandidateHours}))`)
-    parameters.push(minimumDiscussionReplies, timestamp)
+      AND max(0,(julianday(?) - julianday(h.latest_activity_at))*24)<=${veryRecentReplyCandidateHours})
+      OR (h.reply_count=0 AND h.score>0
+      AND max(0,(julianday(?) - julianday(h.latest_activity_at))*24)<=${recentReplyPriorityHours}))`)
+    parameters.push(minimumDiscussionReplies, timestamp, timestamp)
   }
   if (cursor) {
     const comparison = cursor.direction === 'previous' ? '>' : '<'
@@ -406,7 +411,8 @@ export function getHotPosts(
       *pow(2,max(0,min(h.reply_count,${maxExponentiallyWeightedReplies})-${unboostedReplyCount})
         /${repliesPerDiscussionWeightDoubling})
       *pow(0.5,max(0,(julianday(ranking_time.as_of) - julianday(h.score_updated_at))*24)
-        /${replyRecencyHalfLifeHours})
+        /CASE WHEN h.reply_count=0 AND h.score>0 THEN ${pollVoteRecencyHalfLifeHours}
+          ELSE ${replyRecencyHalfLifeHours} END)
       *(1 + CASE WHEN h.reply_count > 0 THEN ${recentCommentBoost}.0
         *pow(0.5,max(0,(julianday(ranking_time.as_of) - julianday(h.latest_activity_at))*24)
           /${recentCommentBoostHalfLifeHours}) ELSE 0 END) recency_score,
@@ -455,6 +461,10 @@ export function getHotPosts(
       (base_score*(1+${recentPostBoost}*max(0,1-post_age_hours/${recentPostBoostHours}.0))
       +candidate_weight*CASE WHEN base_score>0 AND reply_count>0 AND reply_age_hours<${recentReplyPriorityHours}
         THEN ${recentReplyActivityBoost}*CASE reply_count WHEN 1 THEN ${singleReplyRecentActivityWeight} ELSE 1 END
+          *max(0,1-reply_age_hours/${recentReplyPriorityHours}.0) ELSE 0 END
+      +candidate_weight*CASE WHEN base_score>0 AND reply_count=0 AND reply_age_hours<${recentReplyPriorityHours}
+        THEN ${recentPollVoteActivityBoost}
+          *pow(min(1,base_score/${recentPollVoteSaturationScore}.0),2)
           *max(0,1-reply_age_hours/${recentReplyPriorityHours}.0) ELSE 0 END
       +candidate_weight*CASE WHEN base_score>0 AND reply_count>=3 THEN
         ${recentParticipantActivityWeight}*participant_recency_score ELSE 0 END

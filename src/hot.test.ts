@@ -58,7 +58,7 @@ describe('hot feed ranking', () => {
     post(1, '2026-08-03 12:00:00')
     post(2, '2026-08-02 12:00:00')
 
-    const results = getHotPosts(database, 20, null, asOf)
+    const results = getHotPosts(database, 20, null, asOf, -1, false, 2)
     expect(results).toEqual([])
   })
 
@@ -75,8 +75,9 @@ describe('hot feed ranking', () => {
       .get() as { score: number; reply_count: number; latest_activity_at: string }
     expect(stored.reply_count).toBe(0)
     expect(stored.latest_activity_at).toBe('2026-08-03 12:00:00')
-    expect(stored.score).toBeCloseTo(1 + Math.pow(0.5, 1 / 6))
+    expect(stored.score).toBeCloseTo(2 * (1 + Math.pow(0.5, 1 / 6)))
     expect(getHotPosts(database, 20, null, asOf).map(result => result.id)).toEqual([1])
+    expect(getHotPosts(database, 20, null, '2026-08-03T15:00:00.000Z')[0].hot_score).toBeGreaterThan(1)
 
     rebuildHotPosts(database)
     const rebuilt = database.query('SELECT score,reply_count,latest_activity_at FROM post_hot WHERE post_id=1')
@@ -84,6 +85,24 @@ describe('hot feed ranking', () => {
     expect(rebuilt.score).toBeCloseTo(stored.score)
     expect(rebuilt.reply_count).toBe(stored.reply_count)
     expect(rebuilt.latest_activity_at).toBe(stored.latest_activity_at)
+  })
+
+  test('sustained recent voting can lead hot without making a lone vote dominant', () => {
+    post(1, '2026-08-03 04:00:00')
+    post(2, '2026-08-03 04:00:00')
+    database.run(`CREATE TABLE poll_votes (
+      post_id INTEGER NOT NULL,option_id INTEGER NOT NULL,user_id INTEGER NOT NULL,created_at TEXT NOT NULL,
+      PRIMARY KEY(post_id,user_id));`)
+    const insert = database.query('INSERT INTO poll_votes VALUES(?,?,?,?)')
+    insert.run(1, 1, 2, '2026-08-03 11:00:00')
+    for (let userId = 10; userId < 22; userId++) insert.run(2, 1, userId, '2026-08-03 11:00:00')
+    recordHotActivity(database, 1)
+    recordHotActivity(database, 2)
+
+    const results = getHotPosts(database, 20, null, asOf, -1, false, 2)
+    expect(results[0].id).toBe(2)
+    expect(results[0].hot_score).toBeGreaterThan(400)
+    expect(results.find(result => result.id === 1)!.hot_score).toBeLessThan(30)
   })
 
   test('ranks a replied thread without considering an unreplied new post', () => {
