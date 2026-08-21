@@ -2082,3 +2082,17 @@ test('Post renders moderation controls only for admins on the detail page', () =
   expect(adminDetailHtml).toContain('/admin/posts/2/delete')
   expect(userDetailHtml).not.toContain('/admin/posts/2/delete')
 })
+
+test('Post detail places moderate immediately before report for admins', () => {
+  const html = renderToStaticMarkup(React.createElement(Post, {
+    user: { id: 1, handle: 'admin', email: 'GSTAGAS@gmail.com', bio: '' },
+    p: { id: 2, user_id: 2, parent_id: null, body: 'note', handle: 'writer',
+      created_at: '2026-08-03 12:00:00', deleted_at: null },
+    showModerateAction: true,
+    reportHref: '/post/2?report=1',
+  }))
+
+  const footer = html.slice(html.indexOf('<div class="postfoot">'), html.indexOf('</div></article>'))
+  expect(footer.indexOf('moderate')).toBeLessThan(footer.indexOf('report'))
+  expect(html.slice(0, html.indexOf('<div class="postfoot">'))).not.toContain('moderate this post')
+})

@@ -344,6 +344,7 @@ export function Post({
     ? actionQuery
     : '?from=' + encodeURIComponent(returnPath || `/post/${p.id}#post-${p.id}`)
   const continued = p.parent_id && p.parent?.user_id === p.user_id
+  const canModerate = showModerateAction && isAdmin(user)
   const contextTarget = !p.poll && contextLabel == null && p.parent_id && !continued && p.viewer_context !== 'reply'
     ? p.parent
     : null
@@ -436,8 +437,7 @@ export function Post({
               {canonicalTimestamp ? 'permalink' : 'read'}
             </a>
           )}
-        {(flatHref || treeHref || showOwnerActions && user?.id === p.user_id
-          || showModerateAction && isAdmin(user) || topHref || backHref) && (
+        {(flatHref || treeHref || showOwnerActions && user?.id === p.user_id || topHref || backHref) && (
           <div className="post-navigation-actions">
             {showOwnerActions && user?.id === p.user_id && (
               <div className="post-actions">
@@ -447,13 +447,6 @@ export function Post({
             )}
             {flatHref && <a className="quiet post-top-link" href={flatHref}>flat</a>}
             {treeHref && <a className="quiet post-top-link" href={treeHref}>tree</a>}
-            {showModerateAction && isAdmin(user) && (
-              <div className="post-actions admin-post-actions">
-                <a className="quiet danger" href={'/admin/posts/' + p.id + '/delete'} aria-label="moderate this post">
-                  moderate
-                </a>
-              </div>
-            )}
             {topHref && <a className="quiet post-top-link" href={topHref}>top</a>}
             {backHref && <a className="quiet post-back-link" href={backHref}>back</a>}
           </div>
@@ -472,14 +465,23 @@ export function Post({
           hashtagFollowerCounts: p.hashtag_follower_counts, linkPreviews: p.link_previews }),
       }} />
       {preview ? <PollPreview body={p.body} /> : <Poll p={p} returnPath={returnPath} />}
-      {!parent && (showReplyAction || reportHref) && (
+      {!parent && (showReplyAction || canModerate || reportHref) && (
       <MetaRow className={`postfoot${preview ? ' preview-post-meta' : ''}`}>
         {!parent && showReplyAction && (preview
           ? <span className="quiet preview-reply">{resolvedReplyLabel}</span>
           : <a className="quiet post-reply-link" href={resolvedReplyHref} rel="nofollow"
             aria-label={`${resolvedReplyLabel} to @${p.handle}`}>{resolvedReplyLabel}</a>)}
-        {reportHref && (
-          <a className="quiet report-link" href={reportHref} aria-label={`report post by @${p.handle}`}>report</a>
+        {(canModerate || reportHref) && (
+          <span className="post-actions">
+            {canModerate && (
+              <a className="quiet danger" href={'/admin/posts/' + p.id + '/delete'} aria-label="moderate this post">
+                moderate
+              </a>
+            )}
+            {reportHref && (
+              <a className="quiet report-link" href={reportHref} aria-label={`report post by @${p.handle}`}>report</a>
+            )}
+          </span>
         )}
       </MetaRow>
       )}
@@ -551,14 +553,23 @@ export function Post({
             )}
         </blockquote>
       )}
-      {parent && (showReplyAction || reportHref) && (
+      {parent && (showReplyAction || canModerate || reportHref) && (
         <MetaRow className={`postfoot postfoot-after-quote${preview ? ' preview-post-meta' : ''}`}>
           {showReplyAction && (preview
             ? <span className="quiet preview-reply">{resolvedReplyLabel}</span>
             : <a className="quiet post-reply-link" href={resolvedReplyHref} rel="nofollow"
               aria-label={`${resolvedReplyLabel} to @${p.handle}`}>{resolvedReplyLabel}</a>)}
-          {reportHref && (
-            <a className="quiet report-link" href={reportHref} aria-label={`report post by @${p.handle}`}>report</a>
+          {(canModerate || reportHref) && (
+            <span className="post-actions">
+              {canModerate && (
+                <a className="quiet danger" href={'/admin/posts/' + p.id + '/delete'} aria-label="moderate this post">
+                  moderate
+                </a>
+              )}
+              {reportHref && (
+                <a className="quiet report-link" href={reportHref} aria-label={`report post by @${p.handle}`}>report</a>
+              )}
+            </span>
           )}
         </MetaRow>
       )}

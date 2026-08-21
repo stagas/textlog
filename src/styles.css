@@ -1697,6 +1697,10 @@ nav form {
   gap: var(--space-4);
 }
 
+.postfoot > .post-actions {
+  margin-left: auto;
+}
+
 .post-actions .quiet:not(.danger):not(.report-link) {
   color: var(--accent);
 }
