@@ -1,4 +1,5 @@
 import { backgroundDatabaseCall, databaseService } from './database-service'
+import { formatRelativeTime } from './relative-time'
 
 type MaterializedFeedKind = 'latest' | 'hot' | 'for-you' | 'to-me' | 'about'
 
@@ -10,25 +11,11 @@ type MaterializedResponse = {
 
 const materializations = new Map<string, Promise<MaterializedResponse>>()
 
-function refreshMaterializedTimestamps(html: string, now = Date.now()) {
+export function refreshMaterializedTimestamps(html: string, now = Date.now()) {
   return html.replace(/<time\b([^>]*)>([^<]*)<\/time>/g, (time, attributes) => {
     const dateTime = attributes.match(/\bdateTime=(?:"([^"]+)"|'([^']+)')/)?.slice(1).find(Boolean)
     if (!dateTime) return time
-    const seconds = Math.max(0, Math.floor((now - new Date(dateTime.replace(' ', 'T') + 'Z').getTime()) / 1000))
-    const minutes = Math.floor(seconds / 60)
-    const hours = Math.floor(minutes / 60)
-    const days = Math.floor(hours / 24)
-    const months = Math.floor(days / 30)
-    const value = seconds < 60 ? `${Math.max(1, seconds)}s` : minutes < 60
-      ? `${minutes}m`
-      : hours < 24
-      ? `${hours}h`
-      : days < 30
-      ? `${days}d`
-      : months < 12
-      ? `${months}mo`
-      : `${Math.floor(days / 365)}y`
-    return `<time${attributes}>${value}</time>`
+    return `<time${attributes}>${formatRelativeTime(dateTime, now)}</time>`
   })
 }
 
