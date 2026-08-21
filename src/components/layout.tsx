@@ -66,7 +66,7 @@ export function Layout({
   // Older callers that predate the marker already represent established accounts.
   const ready = user?.handle_chosen_at !== null
   const accountMenuPopover = user && (
-    <div className="account-menu-popover" {...mobile ? { id: 'account-menu-popover', popover: 'auto' } : {}}>
+    <div className="account-menu-popover">
       <a href={profileHref}>profile</a>
       <a href={accountHref}>account</a>
       <LogoutForm>
@@ -85,12 +85,10 @@ export function Layout({
           {isAdmin(user) && <a href="/admin">admin</a>}
           {mobile
             ? (
-              <div className="account-menu">
-                <button className="account-menu-handle" type="button" popoverTarget="account-menu-popover">
-                  @{user.handle}
-                </button>
+              <details className="account-menu">
+                <summary className="account-menu-handle">@{user.handle}</summary>
                 {accountMenuPopover}
-              </div>
+              </details>
             )
             : (
               <div className="account-menu">
@@ -148,7 +146,7 @@ export function Layout({
           </>
         )}
         {mobile && <link href="https://fonts.cdnfonts.com/css/dejavu-sans-mono" rel="stylesheet" />}
-        <link rel="stylesheet" href="/styles.css?v=488" />
+        <link rel="stylesheet" href="/styles.css?v=489" />
         <style>{themeCss}</style>
       </head>
       <body className={`density-${density}${user?.show_link_previews === 0 ? ' link-previews-disabled' : ''}`}>

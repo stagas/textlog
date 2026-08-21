@@ -280,14 +280,22 @@ header>.account-nav {
   align-items: center;
 }
 
-.account-menu button.account-menu-handle {
-  anchor-name: --account-menu-handle;
+.account-menu button.account-menu-handle,
+.account-menu summary.account-menu-handle {
   padding: 0;
   color: var(--accent);
   background: none;
   border: 0;
   font: inherit;
   cursor: pointer;
+}
+
+.account-menu summary.account-menu-handle {
+  list-style: none;
+}
+
+.account-menu summary.account-menu-handle::-webkit-details-marker {
+  display: none;
 }
 
 .account-menu-popover {
@@ -303,12 +311,9 @@ header>.account-nav {
   box-shadow: 0 8px 24px rgb(0 0 0 / 14%);
 }
 
-.account-menu:hover .account-menu-popover:not([popover]),
-.account-menu:focus-within .account-menu-popover:not([popover]) {
-  display: grid;
-}
-
-.account-menu-popover:popover-open {
+.account-menu:not(details):hover .account-menu-popover,
+.account-menu:not(details):focus-within .account-menu-popover,
+.account-menu[open] > .account-menu-popover {
   display: grid;
 }
 
@@ -551,19 +556,6 @@ header>.account-nav {
 }
 
 @media (hover: none), (pointer: coarse) {
-  .account-menu-popover[popover] {
-    position: fixed;
-    top: calc(82px - var(--space-2));
-    right: var(--gutter);
-    bottom: auto;
-    left: auto;
-    width: max-content;
-    height: max-content;
-    position-anchor: --account-menu-handle;
-    inset: calc(anchor(bottom) + var(--space-2)) anchor(right) auto auto;
-    margin: 0;
-  }
-
   .reference-menu .reference-menu-popover,
   .reference-menu::after {
     display: none !important;

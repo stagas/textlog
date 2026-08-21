@@ -41,8 +41,24 @@ import React from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
 import { maskEmail } from './components/auth'
 import { HotFeed } from './components/hot-feed'
+import { Layout } from './components/layout'
 import { PublicFeed } from './components/public-feed'
 import { TagFeed } from './components/tag-feed'
+import { withAppearance } from './theme'
+
+test('mobile account navigation uses an in-flow details menu', () => {
+  const request = new Request('https://textlog.test/', {
+    headers: { 'user-agent': 'Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) Mobile/15E148' },
+  })
+  const html = withAppearance(request, () => renderToStaticMarkup(React.createElement(Layout, {
+    user: { id: 1, handle: 'reader', email: 'reader@example.com', bio: '', handle_chosen_at: '2026-01-01' },
+    children: React.createElement('p', null, 'Hello'),
+  })))
+
+  expect(html).toContain('<details class="account-menu"><summary class="account-menu-handle">@reader</summary>')
+  expect(html).not.toContain('popoverTarget="account-menu-popover"')
+  expect(html).not.toContain('popover="auto"')
+})
 
 test('panels gallery renders every shared panel variation', () => {
   const html = renderToStaticMarkup(React.createElement(PanelsGallery))
