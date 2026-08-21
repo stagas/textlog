@@ -15,7 +15,6 @@ import { instance } from '../../instance.config'
 import { backgroundDatabaseCall, databaseService } from '../database-service'
 import { decodeHotCursor, hotRankingVersion } from '../hot'
 import {
-  donationBannerDismissed,
   donationBannerDismissedCookie,
   feedPreference,
   notificationBannerDismissed,
@@ -30,7 +29,7 @@ import { withAppearance } from '../theme'
 import { currentUser } from '../utils'
 
 async function showNotificationBanner(request: Request, user: ReturnType<typeof currentUser>) {
-  if (!user) return instance.links.donate && !donationBannerDismissed(request) ? 'donate' : false
+  if (!user) return false
   const userAgent = notificationUserAgent(request)
   const state = await databaseService().call('feeds.bannerState', { userId: user.id, userAgent })
   const { inviteHandled, notificationsEnabled, improvementDismissed, appearanceHandled, donationDismissed } = state
@@ -373,9 +372,9 @@ export function registerFeedsRoutes(app: Hono) {
 
   app.get('/about', async c => {
     const user = currentUser(c.req.raw)
-    if (user) return page(<About user={user} topPosts={[]} />)
+    if (user) return page(<About user={user} />)
     return await rpcMaterializedFeedPage(c.req.raw, 'about', -1,
-      async () => page(<About user={null} topPosts={await databaseService().call('feeds.aboutTopPosts', {})} />))
+      async () => page(<About user={null} />))
   })
   app.get('/contact', c => page(<Contact user={currentUser(c.req.raw)} />))
   app.get('/dmca', c => page(<Dmca user={currentUser(c.req.raw)} />))

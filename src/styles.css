@@ -1155,6 +1155,10 @@ nav form {
   margin-top: var(--space-4);
 }
 
+.feed-about {
+  padding-bottom: var(--space-7);
+}
+
 .recap-page {
   padding-bottom: 0;
 }
@@ -1235,22 +1239,6 @@ nav form {
   justify-content: center;
   flex-wrap: wrap;
   gap: var(--space-3);
-}
-
-.static-page .about-hot-heading {
-  margin-top: var(--space-7);
-}
-
-.about-page-guest {
-  padding-bottom: 0;
-}
-
-.about-hot-more {
-  padding: var(--space-5) var(--gutter) var(--space-6);
-}
-
-.post:has(+ .about-hot-more) {
-  border-bottom: 1px solid var(--soft);
 }
 
 .static-page .legal-updated {

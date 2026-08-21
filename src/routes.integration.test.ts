@@ -207,7 +207,7 @@ test('stats are public without exposing admin operations', async () => {
   expect(html).not.toContain('recent admin actions')
 })
 
-test('only the donation banner is shown to logged-out visitors', async () => {
+test('notification banners are hidden from logged-out visitors', async () => {
   const home = await request('/')
   expect(home.status).toBe(303)
   expect(home.headers.get('location')).toBe('/hot')
@@ -215,8 +215,8 @@ test('only the donation banner is shown to logged-out visitors', async () => {
     const response = await request(path)
     expect(response.status).toBe(200)
     const html = await response.text()
-    expect(html).toContain('class="notification-banner"')
-    expect(html).toContain('support us on open collective')
+    expect(html).not.toContain('class="notification-banner"')
+    expect(html).not.toContain('support us on open collective')
     expect(html).not.toContain('enable notifications')
     expect(html).not.toContain('customize appearance')
   }
@@ -522,9 +522,9 @@ test('account security creates one-time, revocable API keys', async () => {
 
 test('consequential account, content, reporting, and admin flows work over HTTP', async () => {
   const guestHot = await (await request('/hot')).text()
-  expect(guestHot).toContain('href="/donation/banner/accept"')
-  expect(guestHot).toContain('❤️ support us on open collective')
-  expect(guestHot).toContain('will donate later')
+  expect(guestHot).not.toContain('href="/donation/banner/accept"')
+  expect(guestHot).not.toContain('❤️ support us on open collective')
+  expect(guestHot).not.toContain('will donate later')
   const guestDonationAcceptance = await request('/donation/banner/accept')
   expect(guestDonationAcceptance.status).toBe(303)
   expect(guestDonationAcceptance.headers.get('location')).toBe('https://opencollective.com/textlog')

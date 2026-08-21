@@ -1,16 +1,13 @@
 import { instance } from '../../instance.config'
 import { appName } from '../brand'
 import type { User } from '../types'
-import type { PostView } from '../types'
 import { Layout } from './layout'
 import { ActionPair } from './page-shared'
-import { Post } from './post'
 
-export function About({ user, topPosts = [] }: { user: User | null; topPosts?: PostView[] }) {
+export function AboutContent({ user, embedded = false }: { user: User | null; embedded?: boolean }) {
   const name = appName()
   return (
-    <Layout user={user} title="about">
-      <article className={`static-page about-page${user ? '' : ' about-page-guest'}`}>
+    <article className={`static-page about-page${embedded ? ' feed-about' : ''}`}>
         <p className="eyebrow">about</p>
         <h1>A quieter place for your thoughts.</h1>
         <p>
@@ -61,21 +58,17 @@ export function About({ user, topPosts = [] }: { user: User | null; topPosts?: P
             <h2>What's next?</h2>
             <ActionPair className="about-actions"
               primary={<a className="button" href="/enter" rel="nofollow">join the community</a>}
-              secondary={<a href="/hot">browse notes</a>} />
-            <h2 className="about-hot-heading">What's happening</h2>
+              secondary={<a href={embedded ? '#feed-tabs' : '/hot'}>browse notes</a>} />
           </>
         )}
-      </article>
-      {!user && (topPosts.length
-        ? topPosts.map(post => (
-          <Post key={post.id} p={post} user={null} showReplyCount tappable returnPath={`/#post-${post.id}`} />
-        ))
-        : <div className="empty">No featured notes yet.</div>)}
-      {!user && (
-        <div className="about-hot-more">
-          <a className="button" href="/hot">browse more</a>
-        </div>
-      )}
+    </article>
+  )
+}
+
+export function About({ user }: { user: User | null }) {
+  return (
+    <Layout user={user} title="about">
+      <AboutContent user={user} />
     </Layout>
   )
 }

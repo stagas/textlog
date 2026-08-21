@@ -1,6 +1,7 @@
 import type { HotCursor } from '../hot'
 import type { User } from '../types'
 import type { PostFeedPage } from '../types'
+import { AboutContent } from './about'
 import { Layout } from './layout'
 import { FeedTabs, GlobalFeedEmpty, Pagination } from './page-shared'
 import { Post } from './post'
@@ -22,10 +23,12 @@ export function HotFeed(
     <Layout user={user} title={title} pageUrl={pageUrl} notificationBanner={notificationBanner}
       feeds={{ title: 'Hot notes', rss: '/hot.rss', atom: '/hot.atom' }}
     >
+      {!user && <AboutContent user={null} embedded />}
       <h1 className="visually-hidden">Hot notes</h1>
       <FeedTabs active="hot" user={user} forYouCount={feed.forYouCount} forYouUnread={feed.forYouUnread}
         toMeCount={feed.toMeCount} toMeUnread={feed.toMeUnread} />
-      {feed.page > 1 && <Pagination page={feed.page} totalPages={feed.totalPages} path={path} top />}
+      {feed.page > 1 && <Pagination page={feed.page} totalPages={feed.totalPages} path={path}
+        anchor={user ? undefined : 'feed-tabs'} top />}
       {feed.posts.length
         ? feed.posts.map(post => (
           <Post key={post.id} p={post} user={user} showReplyCount tappable
@@ -38,7 +41,8 @@ export function HotFeed(
             No notes on this page. <a href="/hot">Return to the first page</a>.
           </div>
         )}
-      <Pagination page={feed.page} totalPages={feed.totalPages} path={path} />
+      <Pagination page={feed.page} totalPages={feed.totalPages} path={path}
+        anchor={user ? undefined : 'feed-tabs'} />
     </Layout>
   )
 }

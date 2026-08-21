@@ -219,7 +219,7 @@ export function VerificationRequired() {
 }
 
 export function Pagination(
-  { page, totalPages, path, pageParam = 'page', label = 'Pagination', compact = false, top = false }: {
+  { page, totalPages, path, pageParam = 'page', label = 'Pagination', compact = false, top = false, anchor }: {
     page: number
     totalPages: number
     path: string
@@ -227,12 +227,14 @@ export function Pagination(
     label?: string
     compact?: boolean
     top?: boolean
+    anchor?: string
   },
 ) {
   if (totalPages <= 1) return null
   const separator = path.includes('?') ? '&' : '?'
   const [formPath, formQuery = ''] = path.split('?', 2)
   const formParameters = [...new URLSearchParams(formQuery)].filter(([name]) => name !== pageParam)
+  const fragment = anchor ? `#${anchor}` : ''
   const windowStart = Math.max(1, Math.min(page - 1, totalPages - 2))
   const windowPages = Array.from({ length: Math.min(3, totalPages) }, (_, index) => windowStart + index)
   const pages = [...new Set([1, ...windowPages, totalPages])].sort((a, b) => a - b)
@@ -242,7 +244,7 @@ export function Pagination(
     >
       {page > 1
         ? (
-          <a className="pagination-edge" href={`${path}${separator}${pageParam}=${page - 1}`}
+          <a className="pagination-edge" href={`${path}${separator}${pageParam}=${page - 1}${fragment}`}
             aria-label="Previous page"
           >
             ← prev
@@ -256,7 +258,8 @@ export function Pagination(
               && <span className="ellipsis" aria-hidden="true">…</span>}
             {value === page
               ? (
-                <form className="pagination-current-form" method="get" action={formPath} aria-current="page">
+                <form className="pagination-current-form" method="get" action={`${formPath}${fragment}`}
+                  aria-current="page">
                   {formParameters.map(([name, parameterValue]) => (
                     <input key={`${name}:${parameterValue}`} type="hidden" name={name} value={parameterValue} />
                   ))}
@@ -265,13 +268,14 @@ export function Pagination(
                     inputMode="numeric" enterKeyHint="go" />
                 </form>
               )
-              : <a href={`${path}${separator}${pageParam}=${value}`} aria-label={`Page ${value}`}>{value}</a>}
+              : <a href={`${path}${separator}${pageParam}=${value}${fragment}`} aria-label={`Page ${value}`}>{value}</a>}
           </React.Fragment>
         ))}
       </div>
       {page < totalPages
         ? (
-          <a className="pagination-edge" href={`${path}${separator}${pageParam}=${page + 1}`} aria-label="Next page">
+          <a className="pagination-edge" href={`${path}${separator}${pageParam}=${page + 1}${fragment}`}
+            aria-label="Next page">
             next →
           </a>
         )
@@ -328,7 +332,7 @@ export function FeedTabs(
   forYouUnread = forYouUnread || toMeUnread
   return (
     <>
-      <nav className="feed-tabs" aria-label="Feed">
+      <nav className="feed-tabs" id="feed-tabs" aria-label="Feed">
         {user && (
           <a className={active === 'following' ? 'active' : ''}
             aria-current={active === 'following' ? 'page' : undefined} href="/for-you"
@@ -338,12 +342,12 @@ export function FeedTabs(
           </a>
         )}
         <a className={active === 'hot' ? 'active' : ''} aria-current={active === 'hot' ? 'page' : undefined}
-          href="/hot"
+          href={user ? '/hot' : '/hot#feed-tabs'}
         >
           hot
         </a>
         <a className={active === 'latest' ? 'active' : ''} aria-current={active === 'latest' ? 'page' : undefined}
-          href="/latest"
+          href={user ? '/latest' : '/latest#feed-tabs'}
         >
           latest
         </a>

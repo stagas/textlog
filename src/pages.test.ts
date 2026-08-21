@@ -990,10 +990,34 @@ describe('About', () => {
     expect(html).toContain('<span class="action-separator">or</span>')
     expect(html).toContain('class="button" href="/enter" rel="nofollow">join the community</a>')
     expect(html).toContain('href="/hot">browse notes</a>')
-    expect(html).toContain('<h2 class="about-hot-heading">What&#x27;s happening</h2>')
-    expect(html).not.toContain('class="about-hot-posts"')
+    expect(html).not.toContain('What&#x27;s happening')
     expect(html).not.toContain('<iframe')
-    expect(html).toContain('class="about-hot-more"><a class="button" href="/hot">browse more</a>')
+    expect(html).not.toContain('>browse more</a>')
+  })
+
+  test('appears above public feed tabs only for guest visitors', () => {
+    const feed = { posts: [], page: 1, totalItems: 20, totalPages: 2 }
+    const guestHot = renderToStaticMarkup(React.createElement(HotFeed, { user: null, feed }))
+    const guestLatest = renderToStaticMarkup(React.createElement(PublicFeed, { user: null, feed, path: '/latest' }))
+    const user = { id: 1, handle: 'reader', email: 'reader@example.com', bio: '' }
+    const signedInHot = renderToStaticMarkup(React.createElement(HotFeed, { user }))
+    const signedInLatest = renderToStaticMarkup(React.createElement(PublicFeed, { user, path: '/latest' }))
+
+    for (const html of [guestHot, guestLatest]) {
+      expect(html).toContain('class="static-page about-page feed-about"')
+      expect(html).toContain('href="#feed-tabs">browse notes</a>')
+      expect(html).toContain('href="/hot#feed-tabs"')
+      expect(html).toContain('href="/latest#feed-tabs"')
+      expect(html).toContain('?page=2#feed-tabs" aria-label="Page 2"')
+      expect(html).toContain('?page=2#feed-tabs" aria-label="Next page"')
+      expect(html.indexOf('about-page feed-about')).toBeLessThan(html.indexOf('id="feed-tabs"'))
+    }
+    for (const html of [signedInHot, signedInLatest]) {
+      expect(html).not.toContain('class="static-page about-page feed-about"')
+      expect(html).toContain('href="/hot"')
+      expect(html).toContain('href="/latest"')
+      expect(html).not.toContain('#feed-tabs')
+    }
   })
 
   test('does not show the guest calls to action to signed-in visitors', () => {
