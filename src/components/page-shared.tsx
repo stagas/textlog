@@ -377,8 +377,8 @@ export function FeedTabs(
           {unreadHref && <a className="activity-side-link" href={unreadHref}>first unread</a>}
           {lastUnreadHref && <span className="feed-tabs-action-separator" aria-hidden="true">·</span>}
           {lastUnreadHref && <a className="activity-side-link" href={lastUnreadHref}>last unread</a>}
-          {unreadHref && <span className="feed-tabs-action-separator" aria-hidden="true">·</span>}
-          <form method="post" action={toMe ? '/to-me/read-all' : '/for-you/read-all'}>
+          {unreadHref && <span className="feed-tabs-action-separator feed-read-action-separator" aria-hidden="true">·</span>}
+          <form className="feed-read-action-form" method="post" action={toMe ? '/to-me/read-all' : '/for-you/read-all'}>
             <button className="activity-side-link">mark all read</button>
           </form>
         </div>

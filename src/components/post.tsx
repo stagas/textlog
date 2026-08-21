@@ -405,7 +405,16 @@ export function Post({
               href={'/u/' + p.handle + referenceQuery} rel={navigationRel} navigationQuery={referenceQuery}
               referenceData={p.bio_reference} extraAction={authorPopoverAction} />
           )}
-        {contextLabel && <span className="post-context">{contextLabel}</span>}
+        {contextLabel && (canonicalTimestamp
+          ? (
+            <>
+              <a className="post-context" href={`/post/${p.id}`}>
+                {typeof contextLabel === 'string' ? contextLabel.replace(/:$/, '') : contextLabel}
+              </a>
+              {!contextTarget && <span className="post-context post-context-punctuation">:</span>}
+            </>
+          )
+          : <span className="post-context">{contextLabel}</span>)}
         {contextTarget && (
           <>
             <UserReference handle={contextTarget.handle} bio={contextTarget.bio}
@@ -420,32 +429,35 @@ export function Post({
         )}
         {preview
           ? <span className="postdate">read</span>
-          : !tappable && (
+          : !tappable && !canonicalTimestamp && (
             <a className="postdate" href={canonicalTimestamp ? `/post/${p.id}` : detailPath}
               rel={canonicalTimestamp ? undefined : navigationRel}
             >
               {canonicalTimestamp ? 'permalink' : 'read'}
             </a>
           )}
-        {topHref && <a className="quiet post-top-link" href={topHref}>top</a>}
-        {flatHref && <a className="quiet post-top-link" href={flatHref}>flat</a>}
-        {treeHref && <a className="quiet post-top-link" href={treeHref}>tree</a>}
-        {reportHref && (
-          <a className="quiet report-link" href={reportHref} aria-label={`report post by @${p.handle}`}>report</a>
-        )}
-        {showOwnerActions && user?.id === p.user_id && (
-          <div className="post-actions">
-            <a className="quiet" href={'/post/' + p.id + '/edit' + actionQuery} aria-label="edit this post">edit</a>
+        {(flatHref || treeHref || showOwnerActions && user?.id === p.user_id
+          || showModerateAction && isAdmin(user) || topHref || backHref) && (
+          <div className="post-navigation-actions">
+            {showOwnerActions && user?.id === p.user_id && (
+              <div className="post-actions">
+                <a className="quiet" href={'/post/' + p.id + '/edit' + actionQuery}
+                  aria-label="edit this post">edit</a>
+              </div>
+            )}
+            {flatHref && <a className="quiet post-top-link" href={flatHref}>flat</a>}
+            {treeHref && <a className="quiet post-top-link" href={treeHref}>tree</a>}
+            {showModerateAction && isAdmin(user) && (
+              <div className="post-actions admin-post-actions">
+                <a className="quiet danger" href={'/admin/posts/' + p.id + '/delete'} aria-label="moderate this post">
+                  moderate
+                </a>
+              </div>
+            )}
+            {topHref && <a className="quiet post-top-link" href={topHref}>top</a>}
+            {backHref && <a className="quiet post-back-link" href={backHref}>back</a>}
           </div>
         )}
-        {showModerateAction && isAdmin(user) && (
-          <div className="post-actions admin-post-actions">
-            <a className="quiet danger" href={'/admin/posts/' + p.id + '/delete'} aria-label="moderate this post">
-              moderate
-            </a>
-          </div>
-        )}
-        {backHref && <a className="quiet post-back-link" href={backHref}>back</a>}
         {foldControlId && (
           <label className="quiet thread-fold" htmlFor={foldControlId} title="fold or unfold replies">
             <span className="visually-hidden">fold or unfold replies</span>
@@ -460,12 +472,15 @@ export function Post({
           hashtagFollowerCounts: p.hashtag_follower_counts, linkPreviews: p.link_previews }),
       }} />
       {preview ? <PollPreview body={p.body} /> : <Poll p={p} returnPath={returnPath} />}
-      {!parent && showReplyAction && (
+      {!parent && (showReplyAction || reportHref) && (
       <MetaRow className={`postfoot${preview ? ' preview-post-meta' : ''}`}>
         {!parent && showReplyAction && (preview
           ? <span className="quiet preview-reply">{resolvedReplyLabel}</span>
           : <a className="quiet post-reply-link" href={resolvedReplyHref} rel="nofollow"
             aria-label={`${resolvedReplyLabel} to @${p.handle}`}>{resolvedReplyLabel}</a>)}
+        {reportHref && (
+          <a className="quiet report-link" href={reportHref} aria-label={`report post by @${p.handle}`}>report</a>
+        )}
       </MetaRow>
       )}
       <ReferenceFollowForms post={p} prefix={formPrefix} user={user}
@@ -536,12 +551,15 @@ export function Post({
             )}
         </blockquote>
       )}
-      {parent && showReplyAction && (
+      {parent && (showReplyAction || reportHref) && (
         <MetaRow className={`postfoot postfoot-after-quote${preview ? ' preview-post-meta' : ''}`}>
           {showReplyAction && (preview
             ? <span className="quiet preview-reply">{resolvedReplyLabel}</span>
             : <a className="quiet post-reply-link" href={resolvedReplyHref} rel="nofollow"
               aria-label={`${resolvedReplyLabel} to @${p.handle}`}>{resolvedReplyLabel}</a>)}
+          {reportHref && (
+            <a className="quiet report-link" href={reportHref} aria-label={`report post by @${p.handle}`}>report</a>
+          )}
         </MetaRow>
       )}
     </article>

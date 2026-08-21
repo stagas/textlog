@@ -797,6 +797,20 @@ nav form {
 .feed-read-action form { margin: 0; }
 
 @media (max-width: 600px) {
+  .feed-read-action {
+    flex-wrap: wrap;
+    row-gap: var(--space-2);
+  }
+
+  .feed-read-action-separator {
+    display: none;
+  }
+
+  .feed-read-action-form {
+    flex: 0 0 100%;
+    text-align: center;
+  }
+
   .feed-tabs {
     align-items: flex-end;
   }
@@ -1691,6 +1705,10 @@ nav form {
 
 .report-link {
   color: var(--report-ink);
+}
+
+.postfoot .report-link {
+  margin-left: auto;
 }
 
 .report-link:hover {
@@ -4477,6 +4495,14 @@ form.report-panel {
   white-space: nowrap;
 }
 
+a.post-context {
+  color: var(--muted);
+}
+
+a.post-context:hover {
+  color: var(--quote-ink);
+}
+
 .post-context-author {
   color: var(--muted);
 }
@@ -4736,8 +4762,14 @@ form.report-panel {
   margin-bottom: var(--space-5);
 }
 
-.posttop .post-back-link {
+.post-navigation-actions {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-4);
   margin-left: auto;
+}
+
+.posttop .post-back-link {
   color: var(--accent);
 }
 

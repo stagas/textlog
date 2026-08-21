@@ -1855,7 +1855,7 @@ test('Post carries its originating cursor into detail, reply, and edit links', (
   expect(html).not.toContain('/post/2/delete')
 })
 
-test('Post-page permalink uses the canonical post URL', () => {
+test('Post pages use the context text as the canonical permalink', () => {
   const html = renderToStaticMarkup(React.createElement(Post, {
     p: { id: 2, user_id: 1, parent_id: null, body: 'A note', handle: 'writer', created_at: '2026-08-03 12:00:00',
       deleted_at: null },
@@ -1863,20 +1863,27 @@ test('Post-page permalink uses the canonical post URL', () => {
     returnPath: '/latest?page=2#post-2',
     canonicalTimestamp: true,
   }))
-  expect(html).toContain('class="postdate" href="/post/2"')
-  expect(html).toContain('class="postdate" href="/post/2">permalink</a>')
-  expect(html).not.toContain('class="postdate" href="/post/2?from=')
+  expect(html).toContain('<a class="post-context" href="/post/2">wrote</a>'
+    + '<span class="post-context post-context-punctuation">:</span>')
+  expect(html).not.toContain('href="/post/2">wrote:</a>')
+  expect(html).not.toContain('>permalink</a>')
 })
 
-test('Reply pages show a top link immediately after the permalink', () => {
+test('Reply pages show a top link after the linked reply context', () => {
   const html = renderToStaticMarkup(React.createElement(Post, {
     p: { id: 3, user_id: 1, parent_id: 2, body: 'A reply', handle: 'writer', created_at: '2026-08-03 12:00:00',
-      deleted_at: null },
+      deleted_at: null, parent: { id: 2, user_id: 2, parent_id: null, body: 'Parent', handle: 'parent',
+        created_at: '2026-08-03 11:00:00', deleted_at: null, reply_count: 1 } },
     user: null,
     canonicalTimestamp: true,
     topHref: '/post/1?from=%2Flatest%23post-3',
+    backHref: '/latest#post-3',
   }))
-  expect(html).toContain('</a><a class="quiet post-top-link" href="/post/1?from=%2Flatest%23post-3">top</a>')
+  expect(html).toContain('<a class="post-context" href="/post/3">replied to</a>')
+  expect(html).toContain('<div class="post-navigation-actions"><a class="quiet post-top-link" '
+    + 'href="/post/1?from=%2Flatest%23post-3">top</a><a class="quiet post-back-link" '
+    + 'href="/latest#post-3">back</a></div>')
+  expect(html).not.toContain('>permalink</a>')
 })
 
 test('Conversation roots show a flat link in the top-link action slot', () => {
@@ -1887,7 +1894,7 @@ test('Conversation roots show a flat link in the top-link action slot', () => {
     canonicalTimestamp: true,
     flatHref: '/post/1?flat=1',
   }))
-  expect(html).toContain('</a><a class="quiet post-top-link" href="/post/1?flat=1">flat</a>')
+  expect(html).toContain('<a class="quiet post-top-link" href="/post/1?flat=1">flat</a>')
 })
 
 test('Flat conversations show a tree link in the same action slot', () => {
@@ -1898,9 +1905,7 @@ test('Flat conversations show a tree link in the same action slot', () => {
     canonicalTimestamp: true,
     treeHref: '/post/1?from=%2Flatest%23post-1',
   }))
-  expect(html).toContain(
-    '</a><a class="quiet post-top-link" href="/post/1?from=%2Flatest%23post-1">tree</a>',
-  )
+  expect(html).toContain('<a class="quiet post-top-link" href="/post/1?from=%2Flatest%23post-1">tree</a>')
 })
 
 test('Flat thread replies render descendants in depth-first order without nested branches', () => {
@@ -2032,6 +2037,20 @@ test('Post detail can make only its quoted parent tappable', () => {
 
   expect(html).toContain('class="parent-hit-area" href="/post/1"')
   expect(html).not.toContain('class="post-hit-area"')
+})
+
+test('Post detail places report opposite reply in the footer', () => {
+  const html = renderToStaticMarkup(React.createElement(Post, {
+    user: { id: 3, handle: 'reader', email: 'reader@example.com', bio: '' },
+    p: { id: 2, user_id: 1, parent_id: null, body: 'note', handle: 'writer',
+      created_at: '2026-08-03 12:00:00', deleted_at: null },
+    reportHref: '/post/2?report=1',
+  }))
+
+  const footer = html.slice(html.indexOf('<div class="postfoot">'), html.indexOf('</div></article>'))
+  expect(footer).toContain('class="quiet post-reply-link"')
+  expect(footer).toContain('class="quiet report-link" href="/post/2?report=1"')
+  expect(html.slice(0, html.indexOf('<div class="postfoot">'))).not.toContain('class="quiet report-link"')
 })
 
 test('Post renders moderation controls only for admins on the detail page', () => {
