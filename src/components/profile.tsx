@@ -256,7 +256,9 @@ export function Profile(
             ? (
               <>
                 <p>{tab === 'replies' ? 'You haven’t posted any replies yet.' : 'You haven’t posted any notes yet.'}</p>
-                {tab === 'notes' && <a className="button" href="/write">write a note</a>}
+                {tab === 'replies'
+                  ? <a className="button" href="/">browse notes</a>
+                  : <a className="button" href="/write">write a note</a>}
               </>
             )
             : tab === 'replies'

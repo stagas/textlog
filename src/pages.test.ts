@@ -1326,6 +1326,21 @@ test('An empty profile only offers its owner a way to write a note', () => {
   expect(html).not.toContain('>write a note</a>')
 })
 
+test('An empty replies tab offers its owner a way to browse notes', () => {
+  const user = { id: 1, handle: 'reader', email: 'reader@example.com', bio: '' }
+  const html = renderToStaticMarkup(React.createElement(Profile, {
+    user,
+    profile: user,
+    following: false,
+    posts: [],
+    tab: 'replies',
+  }))
+
+  expect(html).toContain('You haven’t posted any replies yet.')
+  expect(html).toContain('<a class="button" href="/">browse notes</a>')
+  expect(html).not.toContain('>write a note</a>')
+})
+
 test('An empty following tab offers its owner a way to explore', () => {
   const user = { id: 1, handle: 'reader', email: 'reader@example.com', bio: '' }
   const html = renderToStaticMarkup(React.createElement(Connections, {

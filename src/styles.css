@@ -3337,7 +3337,7 @@ form.report-panel {
 }
 
 .connections-empty {
-  margin-top: var(--space-3);
+  margin: var(--space-3) 0 0;
   padding-inline: 0;
   border-top: 1px solid var(--soft);
 }
