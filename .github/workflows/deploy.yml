@@ -85,8 +85,12 @@ jobs:
           ssh -p "${SSH_PORT:-22}" "$SSH_USER@$SSH_HOST" "bash -lc '
             export BUN_INSTALL="\${BUN_INSTALL:-\$HOME/.bun}"
             export PATH="\$BUN_INSTALL/bin:\$HOME/.local/bin:/usr/local/bin:/usr/bin:/bin:\$PATH"
+            if ! command -v bun >/dev/null || [ "\$(bun --version)" != "1.4.0" ]; then
+              curl -fsSL https://bun.com/install | bash -s "bun-v1.4.0"
+            fi
             cd "$REMOTE_PATH"
             command -v bun
+            test "\$(bun --version)" = "1.4.0"
             bun install --frozen-lockfile
           '"
 
