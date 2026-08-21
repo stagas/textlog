@@ -2351,9 +2351,8 @@ textarea.form-control {
   resize: vertical;
   font-size: 0.8125rem;
   line-height: 1.65;
-  overflow-x: auto;
-  overflow-wrap: normal;
-  white-space: pre;
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
 }
 
 .button-wide {
