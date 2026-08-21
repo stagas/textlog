@@ -1116,7 +1116,7 @@ test('consequential account, content, reporting, and admin flows work over HTTP'
   for (let index = 1; index <= 81; index++) insertFeedPost.run(alice.id, `cursor note ${index}`)
   const latestFirst = await request('/latest')
   const latestFirstBody = await latestFirst.text()
-  const latestNext = latestFirstBody.match(/href="(\/latest\?page=2)"/)?.[1]
+  const latestNext = latestFirstBody.match(/href="(\/latest\?page=2#feed-tabs)"/)?.[1]
   expect(latestNext).toBeTruthy()
   expect(latestFirstBody).toContain('cursor note 81')
   expect(latestFirstBody).not.toContain(post.body)
