@@ -42,7 +42,13 @@ describe('in-memory stylesheet', () => {
   test('keeps the quoted-post hit area out of the generic inner-link positioning rule', async () => {
     const css = await Bun.file(new URL('./styles.css', import.meta.url)).text()
     expect(css).toContain('.tappable-post a:not(.post-hit-area):not(.parent-hit-area)')
-    expect(css).toContain('.tappable-post .parent-hit-area {\n    position: absolute;')
+    expect(css).toContain('.tappable-post .parent-hit-area {\n  position: absolute;')
+    expect(css).toContain(
+      '.tappable-post input,\n.tappable-post .post-spoiler summary {\n  position: relative;\n  z-index: 21;',
+    )
+    expect(css).toContain('.tappable-post:has(> .post-hit-area:hover),')
+    expect(css).toContain('background: color-mix(in srgb, var(--accent) 5%, transparent);')
+    expect(css).toContain('background: color-mix(in srgb, var(--quote-bg), white 2%);')
   })
 
   test('uses quoted-post text color for polls inside quoted parents', async () => {
@@ -59,11 +65,12 @@ describe('in-memory stylesheet', () => {
   test('highlights a post or activity entry opened through its stable anchor', async () => {
     const css = await Bun.file(new URL('./styles.css', import.meta.url)).text()
     expect(css).toContain('.post:target,\n.activity-follow:target {')
-    expect(css).toContain('background: rgb(128 128 128 / 25%);')
     expect(css).toContain('animation: post-target-fade 3s ease-in forwards;')
     expect(css).toContain('@keyframes post-target-fade {')
+    expect(css).toContain('from { box-shadow: inset 0 0 0 9999px rgb(128 128 128 / 25%); }')
+    expect(css).toContain('to { box-shadow: inset 0 0 0 9999px transparent; }')
     expect(css).toContain('@media (prefers-reduced-motion: reduce) {')
-    expect(css).not.toContain('box-shadow: inset 3px 0 var(--accent);')
+    expect(css).toContain('background: rgb(128 128 128 / 25%);\n    animation: none;')
   })
 
   test('centers the read-all action on the unread activity highlight', async () => {
@@ -267,7 +274,9 @@ describe('in-memory stylesheet', () => {
     expect(css).toContain(
       '.tappable-post a:not(.post-hit-area):not(.parent-hit-area):not(.remote-link-popover),',
     )
-    expect(css).toContain('.tappable-post input {\n    position: relative;\n    z-index: 21;')
+    expect(css).toContain(
+      '.tappable-post input,\n.tappable-post .post-spoiler summary {\n  position: relative;\n  z-index: 21;',
+    )
     expect(cardRule).toContain('cursor: pointer;')
   })
 

@@ -1741,7 +1741,9 @@ test('Post renders an opt-in feed hit area without changing detail posts', () =>
   expect(feedHtml).toContain('class="post tappable-post"')
   expect(feedHtml).toContain('id="post-2"')
   expect(feedHtml).toContain('class="post-hit-area" href="/post/2" aria-label="open post by @writer"')
+  expect(feedHtml).not.toContain('class="postdate"')
   expect(detailHtml).not.toContain('post-hit-area')
+  expect(detailHtml).toContain('class="postdate" href="/post/2"')
 })
 
 test('Post carries its originating cursor into detail, reply, and edit links', () => {
@@ -1898,7 +1900,7 @@ test('A quoted post gets its own higher-priority hit area in tappable feeds', ()
   expect(html).toContain('class="parent-hit-area" href="/post/1?from=%2Flatest%3Fcursor%3Dabc%23post-2"')
   expect(html).toContain('class="reference-menu-trigger postauthor" '
     + 'href="/u/parent?from=%2Flatest%3Fcursor%3Dabc%23post-2"')
-  expect(html).toContain('class="postdate" href="/post/1?from=%2Flatest%3Fcursor%3Dabc%23post-2"')
+  expect(html).not.toContain('class="postdate" href="/post/1?from=%2Flatest%3Fcursor%3Dabc%23post-2"')
   expect(html).toContain('href="/post/1?reply=1&amp;from=%2Flatest%3Fcursor%3Dabc%23post-2"')
 })
 

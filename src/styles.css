@@ -1534,66 +1534,70 @@ nav form {
 
 .post:target,
 .activity-follow:target {
-  background: rgb(128 128 128 / 25%);
   animation: post-target-fade 3s ease-in forwards;
 }
 
 @keyframes post-target-fade {
-  to { background: transparent; }
+  from { box-shadow: inset 0 0 0 9999px rgb(128 128 128 / 25%); }
+  to { box-shadow: inset 0 0 0 9999px transparent; }
 }
 
 @media (prefers-reduced-motion: reduce) {
   .post:target,
-  .activity-follow:target { animation: none; }
+  .activity-follow:target {
+    background: rgb(128 128 128 / 25%);
+    animation: none;
+  }
 }
 
-.post-hit-area {
-  display: none;
+.tappable-post {
+  position: relative;
 }
 
-.parent-hit-area {
-  display: none;
+.tappable-post:has(> .post-hit-area:hover),
+.tappable-post:has(> .post-hit-area:focus-visible) {
+  background: color-mix(in srgb, var(--accent) 5%, transparent);
 }
 
-@media (max-width: 700px), (hover: none) and (pointer: coarse) {
-  .tappable-post {
-    position: relative;
-  }
+.tappable-post .tappable-parent:has(> .parent-hit-area:hover),
+.tappable-post .tappable-parent:has(> .parent-hit-area:focus-visible) {
+  background: color-mix(in srgb, var(--quote-bg), white 2%);
+}
 
-  .tappable-post .post-hit-area {
-    position: absolute;
-    z-index: 1;
-    inset: 0;
-    display: block;
-    border: 0;
-  }
+.tappable-post .post-hit-area {
+  position: absolute;
+  z-index: 1;
+  inset: 0;
+  display: block;
+  border: 0;
+}
 
-  .tappable-post .tappable-parent {
-    position: relative;
-    z-index: 2;
-  }
+.tappable-post .tappable-parent {
+  position: relative;
+  z-index: 2;
+}
 
-  .tappable-post .parent-hit-area {
-    position: absolute;
-    z-index: 1;
-    inset: 0;
-    display: block;
-    border: 0;
-  }
+.tappable-post .parent-hit-area {
+  position: absolute;
+  z-index: 1;
+  inset: 0;
+  display: block;
+  border: 0;
+}
 
-  .tappable-post a:not(.post-hit-area):not(.parent-hit-area):not(.remote-link-popover),
-  .tappable-post button,
-  .tappable-post label,
-  .tappable-post input {
-    position: relative;
-    z-index: 21;
-  }
+.tappable-post a:not(.post-hit-area):not(.parent-hit-area):not(.remote-link-popover),
+.tappable-post button,
+.tappable-post label,
+.tappable-post input,
+.tappable-post .post-spoiler summary {
+  position: relative;
+  z-index: 21;
+}
 
-  .tappable-post .post-hit-area:focus-visible,
-  .tappable-post .parent-hit-area:focus-visible {
-    outline: 2px solid var(--accent);
-    outline-offset: -2px;
-  }
+.tappable-post .post-hit-area:focus-visible,
+.tappable-post .parent-hit-area:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
 }
 
 .feed-tabs+.post {

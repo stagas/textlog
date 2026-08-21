@@ -377,7 +377,7 @@ export function Post({
           ? (
             <span className="postdate">read</span>
           )
-          : (
+          : !tappable && (
             <a className="postdate" href={canonicalTimestamp ? `/post/${p.id}` : detailPath}
               rel={canonicalTimestamp ? undefined : navigationRel}
             >
@@ -448,9 +448,11 @@ export function Post({
                     stats={parent.profile_stats} following={parent.viewer_following}
                     followsViewer={parent.follows_viewer} user={user} href={'/u/' + parent.handle + referenceQuery}
                     rel={navigationRel} navigationQuery={referenceQuery} referenceData={parent.bio_reference} />
-                  <a className="postdate" href={parentDetailPath} rel={navigationRel}>
-                    read
-                  </a>
+                  {!hasTappableParent && (
+                    <a className="postdate" href={parentDetailPath} rel={navigationRel}>
+                      read
+                    </a>
+                  )}
                   {tappable && parent.top_id && (
                     <a className="quiet post-top-link"
                       href={conversationTopPath(parent.top_id, parent.id, returnPath)}>top</a>
