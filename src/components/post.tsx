@@ -40,6 +40,10 @@ function renderedPollBody(body: string) {
   return pollDisplayBody(body)
 }
 
+function isDeletedHandle(handle: string) {
+  return /^deleted-\d+$/.test(handle)
+}
+
 function PollPreview({ body }: { body: string }) {
   const poll = parsePoll(body)
   if (!poll) return null
@@ -380,7 +384,7 @@ export function Post({
     return (
       <article className="post deleted-post" id={`post-${p.id}`}>
         <a href={detailPath} rel={navigationRel}>
-          (deleted)
+          (deleted post)
         </a>
       </article>
     )
@@ -419,11 +423,13 @@ export function Post({
           : <span className="post-context">{contextLabel}</span>)}
         {contextTarget && (
           <>
-            <UserReference handle={contextTarget.handle} bio={contextTarget.bio}
-              noteCount={contextTarget.note_count || 0} stats={contextTarget.profile_stats}
-              following={contextTarget.viewer_following} followsViewer={contextTarget.follows_viewer} user={user}
-              href={`/u/${contextTarget.handle}${referenceQuery}`} rel={navigationRel}
-              navigationQuery={referenceQuery} referenceData={contextTarget.bio_reference} />
+            {isDeletedHandle(contextTarget.handle)
+              ? <span className="post-context deleted-context">(deleted account)</span>
+              : <UserReference handle={contextTarget.handle} bio={contextTarget.bio}
+                noteCount={contextTarget.note_count || 0} stats={contextTarget.profile_stats}
+                following={contextTarget.viewer_following} followsViewer={contextTarget.follows_viewer} user={user}
+                href={`/u/${contextTarget.handle}${referenceQuery}`} rel={navigationRel}
+                navigationQuery={referenceQuery} referenceData={contextTarget.bio_reference} />}
             <span className="post-context post-context-punctuation">
               {p.viewer_mentioned ? ' and mentioned you:' : ':'}
             </span>
@@ -498,7 +504,7 @@ export function Post({
               aria-label={`open quoted post by @${parent.handle}`} />
           )}
           {parent.deleted_at
-            ? <a href={parentDetailPath} rel={navigationRel}>(deleted)</a>
+            ? <a href={parentDetailPath} rel={navigationRel}>(deleted post)</a>
             : (
               <>
                 <div className="parent-quote-top">
@@ -511,12 +517,14 @@ export function Post({
                   {parentContextLabel && <span className="post-context">{parentContextLabel}</span>}
                   {parentContextTarget && (
                     <>
-                      <UserReference handle={parentContextTarget.handle} bio={parentContextTarget.bio}
-                        noteCount={parentContextTarget.note_count || 0} stats={parentContextTarget.profile_stats}
-                        following={parentContextTarget.viewer_following}
-                        followsViewer={parentContextTarget.follows_viewer} user={user}
-                        href={`/u/${parentContextTarget.handle}${referenceQuery}`} rel={navigationRel}
-                        navigationQuery={referenceQuery} referenceData={parentContextTarget.bio_reference} />
+                      {isDeletedHandle(parentContextTarget.handle)
+                        ? <span className="post-context deleted-context">(deleted account)</span>
+                        : <UserReference handle={parentContextTarget.handle} bio={parentContextTarget.bio}
+                          noteCount={parentContextTarget.note_count || 0} stats={parentContextTarget.profile_stats}
+                          following={parentContextTarget.viewer_following}
+                          followsViewer={parentContextTarget.follows_viewer} user={user}
+                          href={`/u/${parentContextTarget.handle}${referenceQuery}`} rel={navigationRel}
+                          navigationQuery={referenceQuery} referenceData={parentContextTarget.bio_reference} />}
                       <span className="post-context post-context-punctuation">
                         {parent.viewer_mentioned ? ' and mentioned you:' : ':'}
                       </span>

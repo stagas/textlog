@@ -55,7 +55,7 @@ export function ConfirmAccountDelete({ user, handle, passwordEnabled = false, to
               : (
                 <p className="account-delete-copy">
                   This cannot be undone. Your profile and account data will be removed. Your notes will remain only as
-                  “(deleted)” tombstones so conversations stay readable.
+                  “(deleted post)” tombstones so conversations stay readable.
                 </p>
               )}
             {invalid

@@ -118,7 +118,7 @@ export function AdminDashboard(
                       reported by <a href={`/u/${report.reporter_handle}`}>@{report.reporter_handle}</a>
                     </span>
                   </div>
-                  <p>{report.post_deleted_at ? '(deleted)' : report.post_body}</p>
+                  <p>{report.post_deleted_at ? '(deleted post)' : report.post_body}</p>
                   <div className="admin-report-targets">
                     <a href={`/post/${report.post_id}`}>post #{report.post_id}</a>
                     <a href={`/u/${report.author_handle}`}>@{report.author_handle}</a>

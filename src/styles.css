@@ -4558,6 +4558,10 @@ a.post-context:hover {
   color: var(--muted);
 }
 
+.deleted-context {
+  color: var(--quote-ink);
+}
+
 .post-context-punctuation {
   margin-left: calc(-1 * var(--space-4));
 }

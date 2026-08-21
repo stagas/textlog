@@ -15,7 +15,7 @@ export function ConfirmDelete({ user, post, returnPath }: { user: User; post: Po
         <p className="eyebrow">note deletion</p>
         <h1>Delete this post?</h1>
         <p className="account-delete-copy">
-          This can’t be undone. Replies will remain, with this post shown as “(deleted)” where the conversation needs
+          This can’t be undone. Replies will remain, with this post shown as “(deleted post)” where the conversation needs
           it.
         </p>
         <blockquote aria-label="Post to delete">{displayPostBody(post.body)}</blockquote>

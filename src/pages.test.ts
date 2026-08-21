@@ -720,6 +720,9 @@ test('posts describe whether their author wrote or replied', () => {
   const mentioned = renderToStaticMarkup(React.createElement(Post, {
     p: { ...base, id: 14, parent_id: parent.id, parent, viewer_mentioned: true }, user,
   }))
+  const replyToDeletedUser = renderToStaticMarkup(React.createElement(Post, {
+    p: { ...base, id: 15, parent_id: parent.id, parent: { ...parent, handle: 'deleted-363' } }, user,
+  }))
 
   expect(topLevel).toContain('<span class="post-context">wrote:</span>')
   expect(reply).toContain('<span class="post-context">replied to</span><span class="reference-menu">')
@@ -731,6 +734,10 @@ test('posts describe whether their author wrote or replied', () => {
   expect(continuation).not.toContain('replied to')
   expect(poll).toContain('<span class="post-context">created a poll:</span>')
   expect(mentioned).toContain('<span class="post-context post-context-punctuation"> and mentioned you:</span>')
+  expect(replyToDeletedUser).toContain('<span class="post-context">replied to</span>'
+    + '<span class="post-context deleted-context">(deleted account)</span>')
+  expect(replyToDeletedUser).not.toContain('<span class="post-context">replied to</span>'
+    + '<span class="reference-menu"><a class="reference-menu-trigger postauthor" href="/u/deleted-363')
 })
 
 test('quoted parents use the same attribution wording', () => {
@@ -747,6 +754,15 @@ test('quoted parents use the same attribution wording', () => {
   expect(html).toContain('<div class="parent-quote-top"><span class="reference-menu">')
   expect(html).toContain('<span class="post-context">replied to</span><span class="reference-menu">')
   expect(html).toContain('class="reference-menu-trigger postauthor" href="/u/root?from=')
+
+  const deletedRootHtml = renderToStaticMarkup(React.createElement(Post, {
+    p: { id: 3, user_id: 3, parent_id: quoted.id,
+      parent: { ...quoted, parent: { ...root, handle: 'deleted-1' } }, body: 'Current',
+      created_at: '2026-08-20 12:00:00', deleted_at: null, handle: 'reader' }, user,
+  }))
+  expect(deletedRootHtml).toContain('<span class="post-context">replied to</span>'
+    + '<span class="post-context deleted-context">(deleted account)</span>')
+  expect(deletedRootHtml).not.toContain('/u/deleted-1')
 })
 
 test('posts by the viewer use plain you instead of a linked handle', () => {
