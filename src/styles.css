@@ -293,7 +293,7 @@ header>.account-nav {
   right: 0;
   display: none;
   width: 100%;
-  height: var(--space-1);
+  height: var(--space-2);
   content: '';
 }
 

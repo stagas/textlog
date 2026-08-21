@@ -223,6 +223,8 @@ describe('in-memory stylesheet', () => {
 
   test('opens reference popovers on hover and keyboard focus', async () => {
     const css = await Bun.file(new URL('./styles.css', import.meta.url)).text()
+    const accountBridgeRule = css.slice(css.indexOf('.account-menu::after {'), css.indexOf('.account-menu:hover::after'))
+    expect(accountBridgeRule).toContain('height: var(--space-2);')
     const popoverRule = css.slice(css.indexOf('.reference-menu-popover {'), css.indexOf('.reference-menu-popover-tag'))
     expect(popoverRule).toContain('z-index: 22;')
     expect(css).toContain('.reference-menu:hover > .reference-menu-popover {')
