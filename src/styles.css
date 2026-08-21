@@ -1673,6 +1673,10 @@ nav form {
   margin-top: calc(var(--space-2) + 2px);
 }
 
+.parent-quote-foot {
+  font-size: 0.6875rem;
+}
+
 .posttop .quiet,
 .postfoot .quiet,
 .parent-quote-foot .quiet {
