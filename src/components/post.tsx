@@ -33,7 +33,7 @@ function Poll({ p, returnPath }: { p: PostView | NonNullable<PostView['parent']>
           )
       })}
       <span className="poll-meta">{showResults
-        ? <>{p.poll.totalVotes} {p.poll.totalVotes === 1 ? 'vote' : 'votes'} · {p.poll.expired
+        ? <>{p.poll.expired
           ? 'ended'
           : `${hoursLeft} ${hoursLeft === 1 ? 'hour' : 'hours'} left to vote`}</>
         : <>{hoursLeft} {hoursLeft === 1 ? 'hour' : 'hours'} left to vote</>}</span>
