@@ -7,7 +7,6 @@ import { searchTerms } from '../search'
 import type { User } from '../types'
 import { displayBio, linkify } from '../utils'
 import { enterHref } from './auth-links'
-import { LogoutForm } from './logout-form'
 import { Panel } from './panel'
 import { BioReferenceForms, TagReference, UserReference } from './post'
 
@@ -465,14 +464,6 @@ export function ProfileHeader(
                 <ProfileControls user={user} profile={profile} following={following} followsViewer={followsViewer}
                   blocked={blocked} />
               )}
-            {user?.id === profile.id && (
-              <div className="profile-owner-actions">
-                <a className="profile-edit-link" href="/account/edit">account</a>
-                <LogoutForm>
-                  <button className="profile-edit-link profile-logout">logout</button>
-                </LogoutForm>
-              </div>
-            )}
           </div>
           <p className="profile-bio" dangerouslySetInnerHTML={{ __html: linkify(displayBio(profile.bio)) }} />
         </div>

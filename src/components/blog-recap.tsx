@@ -18,7 +18,7 @@ const highlights = [
     <a href="/to-me">To Me</a> keep every conversation connected.
   </>],
   ['04', 'Make it feel like yours', '/account/edit/appearance',
-    <>Choose your theme, accent, typeface, font size, density, page size, timezone, and link-preview preference.</>],
+    <>Choose your theme, accent, typeface, font size, density, page size, and link-preview preference.</>],
   ['05', 'Stay close, anywhere', null, <>
     <a href="/account/edit/notifications">Notifications</a>, <a href="/account/accounts">multiple accounts</a>, and{' '}
     <a href="/account/security">password or magic-link entry and private personalized feeds</a> keep you in the loop.

@@ -1,10 +1,8 @@
 import { Fragment } from 'react'
 import { extractHashtags, extractMentions } from '../content'
-import { DEFAULT_TIMEZONE, TIMEZONE_CHOICES } from '../timezone'
 import type { BioReferenceData, PostView, ProfileRow, User } from '../types'
 import { displayBio, linkify, referenceFormId } from '../utils'
 import { Layout } from './layout'
-import { LogoutForm } from './logout-form'
 import { FormMessage, Pagination, PostingHelp, PostingSuggestionResults, type PostingSuggestionSearch, ProfileControls,
   ProfileHeader, ProfileTabs } from './page-shared'
 import { Post } from './post'
@@ -90,24 +88,11 @@ export function Profile(
                 <ProfileControls user={user} profile={profile} following={following} followsViewer={followsViewer}
                   blocked={blocked} />
               )}
-            {(editing || user?.id === profile.id) && (
+            {(editing || (returnPath && user?.id === profile.id)) && (
               <div className="profile-owner-actions">
                 {editing
                   ? <a className="profile-edit-link" href={returnPath || '/u/' + profile.handle}>back</a>
-                  : (
-                    <>
-                      {user?.id === profile.id && (
-                        <>
-                          <a className="profile-edit-link" href="/account/edit">account</a>
-                          <LogoutForm>
-                            <button className="profile-edit-link profile-logout">logout</button>
-                          </LogoutForm>
-                        </>
-                      )}
-                      {returnPath && user?.id === profile.id
-                        && <a className="profile-edit-link profile-owner-back-link" href={returnPath}>back</a>}
-                    </>
-                  )}
+                  : <a className="profile-edit-link profile-owner-back-link" href={returnPath}>back</a>}
               </div>
             )}
           </div>
@@ -132,16 +117,6 @@ export function Profile(
                   </label>
                   <PostingSuggestionResults search={suggestionSearch} />
                   <PostingHelp maxLength={160} maxLines={5} search={suggestionSearch} />
-                  <label className="form-label profile-timezone-setting">
-                    timezone
-                    <select className="form-control form-select" name="timezone"
-                      defaultValue={profile.timezone || DEFAULT_TIMEZONE}
-                    >
-                      {TIMEZONE_CHOICES.map(timezone => (
-                        <option value={timezone.value} key={timezone.value}>{timezone.label}</option>
-                      ))}
-                    </select>
-                  </label>
                   <div className="composefoot">
                     <button className="button">save profile →</button>
                   </div>

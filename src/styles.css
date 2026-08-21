@@ -280,6 +280,16 @@ header>.account-nav {
   align-items: center;
 }
 
+.account-menu button.account-menu-handle {
+  anchor-name: --account-menu-handle;
+  padding: 0;
+  color: var(--accent);
+  background: none;
+  border: 0;
+  font: inherit;
+  cursor: pointer;
+}
+
 .account-menu-popover {
   position: absolute;
   z-index: 10;
@@ -295,6 +305,10 @@ header>.account-nav {
 
 .account-menu:hover .account-menu-popover,
 .account-menu:focus-within .account-menu-popover {
+  display: grid;
+}
+
+.account-menu-popover:popover-open {
   display: grid;
 }
 
@@ -537,8 +551,13 @@ header>.account-nav {
 }
 
 @media (hover: none), (pointer: coarse) {
-  .account-menu .account-menu-popover,
-  .account-menu::after,
+  .account-menu-popover[popover] {
+    position: fixed;
+    position-anchor: --account-menu-handle;
+    inset: calc(anchor(bottom) + var(--space-2)) anchor(right) auto auto;
+    margin: 0;
+  }
+
   .reference-menu .reference-menu-popover,
   .reference-menu::after {
     display: none !important;
@@ -2344,6 +2363,9 @@ textarea.form-control {
   resize: vertical;
   font-size: 0.8125rem;
   line-height: 1.65;
+  overflow-x: auto;
+  overflow-wrap: normal;
+  white-space: pre;
 }
 
 .button-wide {
@@ -3497,14 +3519,6 @@ form.report-panel {
   font-size: 0.625rem;
 }
 
-.bio-form .profile-timezone-setting {
-  gap: var(--space-2);
-}
-
-.profile-timezone-setting .form-select {
-  color: var(--ink);
-}
-
 .bio-form > .composefoot {
   display: flex;
   justify-content: flex-end;
@@ -4019,7 +4033,8 @@ form.report-panel {
 
   .profile.profile-owner:not(.profile-editing) .profile-owner-actions {
     grid-column: 2;
-    grid-row: 1 / span 2;
+    grid-row: 1;
+    align-self: center;
     flex-direction: column;
     align-items: flex-end;
     gap: var(--space-1);
@@ -4067,6 +4082,23 @@ form.report-panel {
   .account-danger-zone {
     align-items: flex-start;
     flex-direction: column;
+  }
+
+  .account-danger-zone .button,
+  .security-section > .button,
+  .security-form > .button,
+  .appearance-page form > .button {
+    align-self: flex-end;
+    justify-self: end;
+  }
+
+  .notification-actions {
+    justify-content: flex-end;
+  }
+
+  .account-choice > form,
+  .account-create-persona > form {
+    margin-left: auto;
   }
 
 }

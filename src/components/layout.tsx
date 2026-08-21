@@ -65,6 +65,15 @@ export function Layout({
   }
   // Older callers that predate the marker already represent established accounts.
   const ready = user?.handle_chosen_at !== null
+  const accountMenuPopover = user && (
+    <div className="account-menu-popover" {...mobile ? { id: 'account-menu-popover', popover: 'auto' } : {}}>
+      <a href={profileHref}>profile</a>
+      <a href={accountHref}>account</a>
+      <LogoutForm>
+        <button type="submit">logout</button>
+      </LogoutForm>
+    </div>
+  )
   const navigation = user && ready
     ? (
       <>
@@ -74,16 +83,21 @@ export function Layout({
         <span className="account-nav-row account-nav-primary">
           <a href="/write">write</a>
           {isAdmin(user) && <a href="/admin">admin</a>}
-          <div className="account-menu">
-            <a className="account-menu-handle" href={profileHref}>@{user.handle}</a>
-            <div className="account-menu-popover">
-              <a href={profileHref}>profile</a>
-              <a href={accountHref}>account</a>
-              <LogoutForm>
-                <button type="submit">logout</button>
-              </LogoutForm>
-            </div>
-          </div>
+          {mobile
+            ? (
+              <div className="account-menu">
+                <button className="account-menu-handle" type="button" popoverTarget="account-menu-popover">
+                  @{user.handle}
+                </button>
+                {accountMenuPopover}
+              </div>
+            )
+            : (
+              <div className="account-menu">
+                <a className="account-menu-handle" href={profileHref}>@{user.handle}</a>
+                {accountMenuPopover}
+              </div>
+            )}
         </span>
       </>
     )
@@ -134,7 +148,7 @@ export function Layout({
           </>
         )}
         {mobile && <link href="https://fonts.cdnfonts.com/css/dejavu-sans-mono" rel="stylesheet" />}
-        <link rel="stylesheet" href="/styles.css?v=475" />
+        <link rel="stylesheet" href="/styles.css?v=482" />
         <style>{themeCss}</style>
       </head>
       <body className={`density-${density}${user?.show_link_previews === 0 ? ' link-previews-disabled' : ''}`}>
