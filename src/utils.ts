@@ -211,6 +211,13 @@ function linkLabel(url: string, appUrl: string | undefined) {
   return relative.startsWith('/') ? relative : `/${relative}`
 }
 
+function renderedRawLinkLabel(label: string, render: (value: string) => string) {
+  const pathStart = label.indexOf('/')
+  if (pathStart < 0) return render(label)
+  return render(label.slice(0, pathStart))
+    + `<span class="raw-link-rest">${render(label.slice(pathStart))}</span>`
+}
+
 const urlMatcher = new LinkifyIt({ fuzzyLink: true, fuzzyEmail: false })
   .tlds(tlds)
 
@@ -443,7 +450,7 @@ function linkifyAsciiReferences(body: string, mentionBios: Record<string, string
       html += previewLink(
         `<a href="${esc(url)}" class="raw-link"${displayLabel === match.raw ? '' : ` title="${esc(url)}"`}${
           linkAttributes(url, appUrl)
-        }>${esc(displayLabel)}</a>`,
+        }>${renderedRawLinkLabel(displayLabel, esc)}</a>`,
         url,
         appUrl,
         popover,
@@ -509,7 +516,7 @@ export function linkify(body: string, mentionBios: Record<string, string> = {}, 
       const displayLabel = label === url ? token : label
       html += previewLink(
         `<a href="${esc(url)}" class="raw-link"${displayLabel === token ? '' : ` title="${esc(url)}"`}${linkAttributes(url, appUrl)}>${
-          highlighted(displayLabel, highlightTerms)
+          renderedRawLinkLabel(displayLabel, value => highlighted(value, highlightTerms))
         }</a>`,
         url,
         appUrl,

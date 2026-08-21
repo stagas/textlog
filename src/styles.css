@@ -1839,6 +1839,10 @@ nav form {
 }
 
 .post-body .raw-link {
+  word-break: normal;
+}
+
+.post-body .raw-link-rest {
   word-break: break-all;
 }
 
