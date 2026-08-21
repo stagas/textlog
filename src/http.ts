@@ -101,7 +101,8 @@ export function securityHeaders(devReload = false, appUrl: string | undefined = 
       embeddable ? 'frame-ancestors *' : 'frame-ancestors \'none\'',
       'object-src \'none\'',
       'img-src \'self\' data: https:',
-      'style-src \'self\' \'unsafe-inline\'',
+      'style-src \'self\' \'unsafe-inline\' https://fonts.cdnfonts.com',
+      'font-src \'self\' https://fonts.cdnfonts.com',
       devReload ? 'script-src \'self\' \'unsafe-inline\'' : scripts ? 'script-src \'self\'' : 'script-src \'none\'',
       'connect-src \'self\'',
     ].join('; '),
@@ -211,7 +212,9 @@ export function applyHtmlCachePolicy(request: Request, response: Response) {
   if (!policy.startsWith('public')) return
   const vary = response.headers.get('vary')
   const values = vary?.split(',').map(value => value.trim().toLowerCase()) || []
-  if (!values.includes('cookie')) response.headers.set('vary', vary ? `${vary}, Cookie` : 'Cookie')
+  const additions = [!values.includes('user-agent') && 'User-Agent', !values.includes('cookie') && 'Cookie']
+    .filter(Boolean)
+  if (additions.length) response.headers.set('vary', [vary, ...additions].filter(Boolean).join(', '))
 }
 
 const crawlerUserAgent =

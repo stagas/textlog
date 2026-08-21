@@ -5,6 +5,7 @@ import { appHost, appHostname, appIdentifier, appName, appOrigin, clientIpHeader
 import { Layout } from './components/layout'
 import { sessionCookie } from './http'
 import { sessionToken } from './utils'
+import { withAppearance } from './theme'
 
 const original = {
   APP_NAME: Bun.env.APP_NAME,
@@ -46,5 +47,18 @@ describe('instance branding', () => {
         + '<span class="footer-response-time">__TEXTLOG_RESPONSE_TIME__</span></span>',
     )
     expect(html).not.toContain('textlog.cc')
+  })
+
+  test('loads DejaVu Sans Mono only for mobile user agents', () => {
+    const render = (userAgent: string) => withAppearance(new Request('https://notes.example.org', {
+      headers: { 'user-agent': userAgent },
+    }), () => renderToStaticMarkup(React.createElement(Layout, null, React.createElement('p', null, 'Hello'))))
+
+    expect(render('Mozilla/5.0 (Linux; Android 15) AppleWebKit/537.36 Mobile Safari/537.36')).toContain(
+      '<link href="https://fonts.cdnfonts.com/css/dejavu-sans-mono" rel="stylesheet"/>',
+    )
+    expect(render('Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 Chrome/140.0 Safari/537.36')).not.toContain(
+      'fonts.cdnfonts.com/css/dejavu-sans-mono',
+    )
   })
 })

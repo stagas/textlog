@@ -7,6 +7,7 @@ import { isAdmin } from '../admin'
 import { resolvedDensity } from '../request-preferences'
 import { RESPONSE_TIME_PLACEHOLDER } from '../response-time'
 import type { User } from '../types'
+import { isMobileRequest } from '../user-agent'
 import { enterHref } from './auth-links'
 import { LogoutForm } from './logout-form'
 
@@ -37,13 +38,15 @@ export function Layout({
   children: React.ReactNode
 }) {
   const selectedAppearance = activeAppearance()
-  const density = resolvedDensity(activeRequest())
+  const request = activeRequest()
+  const density = resolvedDensity(request)
+  const mobile = isMobileRequest(request)
   const appearanceVersion = `${selectedAppearance.theme}.${selectedAppearance.accent}`
   const themeCss = activeThemeStyles()
   const logoSvg = activeThemeLogoSvg()
   const name = appName()
   const origin = appOrigin()
-  const requestUrl = new URL(activeRequest().url)
+  const requestUrl = new URL(request.url)
   const currentPath = requestUrl.pathname + requestUrl.search
   const writeShortcutHref = requestUrl.pathname === '/write'
     ? '/write'
@@ -130,7 +133,8 @@ export function Layout({
             <link rel="alternate" type="application/atom+xml" title={`${feeds.title} (Atom)`} href={feeds.atom} />
           </>
         )}
-        <link rel="stylesheet" href="/styles.css?v=474" />
+        {mobile && <link href="https://fonts.cdnfonts.com/css/dejavu-sans-mono" rel="stylesheet" />}
+        <link rel="stylesheet" href="/styles.css?v=475" />
         <style>{themeCss}</style>
       </head>
       <body className={`density-${density}${user?.show_link_previews === 0 ? ' link-previews-disabled' : ''}`}>

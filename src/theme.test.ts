@@ -88,6 +88,21 @@ test('font preference is validated and emitted by the theme stylesheet', () => {
   expect(themeStyles(invalid)).not.toContain('display:none')
 })
 
+test('mobile user agents use DejaVu Sans Mono for the system font', () => {
+  const mobile = new Request('https://textlog.cc', {
+    headers: { 'user-agent': 'Mozilla/5.0 (Linux; Android 15; Pixel 9) AppleWebKit/537.36 Mobile Safari/537.36' },
+  })
+  expect(themeStyles(mobile)).toContain('--font-monospace:"DejaVu Sans Mono", monospace')
+
+  const custom = new Request('https://textlog.cc', {
+    headers: {
+      cookie: 'font=menlo',
+      'user-agent': 'Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) Mobile/15E148',
+    },
+  })
+  expect(themeStyles(custom)).toContain('--font-monospace:Menlo, monospace')
+})
+
 test('sans serif and primary font preferences are validated independently', () => {
   const request = new Request('https://textlog.cc', {
     headers: { cookie: 'font=menlo; sans-serif-font=inter; primary-font=sans-serif' },

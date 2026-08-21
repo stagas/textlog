@@ -216,7 +216,7 @@ describe('HTML cache policy', () => {
     const response = html()
     applyHtmlCachePolicy(request, response)
     expect(response.headers.get('cache-control')).toBe('public, max-age=30, stale-while-revalidate=120')
-    expect(response.headers.get('vary')).toBe('Cookie')
+    expect(response.headers.get('vary')).toBe('User-Agent, Cookie')
   })
 
   test('prevents storage for authenticated and sensitive pages', () => {
