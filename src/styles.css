@@ -1641,7 +1641,7 @@ nav form {
 
 .postfoot,
 .parent-quote-foot {
-  margin-top: var(--space-2);
+  margin-top: calc(var(--space-2) + 2px);
 }
 
 .posttop .quiet,
@@ -1714,7 +1714,7 @@ nav form {
 
 .post-body {
   position: relative;
-  margin: var(--space-3) 0 0;
+  margin: calc(var(--space-3) + 2px) 0 0;
   font-size: 0.8125rem;
   line-height: 1.65;
   white-space: pre-wrap;
