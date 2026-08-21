@@ -88,7 +88,7 @@ export type PostView = PostRow & {
 }
 
 export type PostFeedPage = { posts: PostView[]; page: number; totalItems: number; totalPages: number;
-  forYouUnread?: boolean; toMeUnread?: boolean; forYouCount?: number }
+  forYouUnread?: boolean; toMeUnread?: boolean; forYouCount?: number; toMeCount?: number }
 export type ApiPost = {
   id: number
   top_id: number | null

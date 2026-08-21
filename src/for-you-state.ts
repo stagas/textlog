@@ -105,6 +105,12 @@ export function hasUnreadToMe(userId: number, database: Database) {
     .get(stateParameters(userId, database))
 }
 
+export function unreadToMeCount(userId: number, database: Database) {
+  return (database.query(`SELECT count(DISTINCT event_key) count FROM (${visibleToMeEvents}) event WHERE NOT EXISTS
+    (SELECT 1 FROM to_me_reads seen WHERE seen.user_id=$viewer AND seen.event_key=event.event_key)`)
+    .get(stateParameters(userId, database)) as { count: number }).count
+}
+
 export function markForYouEntriesRead(userId: number, eventKeys: string[], toMe: boolean, database: Database) {
   if (!eventKeys.length) return
   const insert = database.query('INSERT OR IGNORE INTO for_you_reads(user_id,event_key) VALUES(?,?)')

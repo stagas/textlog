@@ -18,7 +18,7 @@ import { suggestedPeople, suggestedPeopleCount, trendingTagCount, trendingTags }
 import { issueFeedKey, userForFeedKey } from './feed-keys'
 import { feedSnapshotPage } from './feed-snapshots'
 import { hasUnreadForYou, hasUnreadToMe, markAllForYouRead, markVisibleForYouEntriesRead,
-  unreadForYouCount } from './for-you-state'
+  unreadForYouCount, unreadToMeCount } from './for-you-state'
 import { resolveHandle } from './handles'
 import { claimInitialHandle, updateProfileHandle } from './handles'
 import { getHotPosts, type HotPost, hotRankingVersion } from './hot'
@@ -1709,6 +1709,7 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
       return { posts: enrichPosts(database, snapshot.items, viewerId), page: snapshot.page,
         totalItems: snapshot.totalItems, totalPages: snapshot.totalPages,
         forYouCount: viewerId >= 0 ? unreadForYouCount(viewerId, database) : 0,
+        toMeCount: viewerId >= 0 ? unreadToMeCount(viewerId, database) : 0,
         forYouUnread: viewerId >= 0 && hasUnreadForYou(viewerId, database),
         toMeUnread: viewerId >= 0 && hasUnreadToMe(viewerId, database) } as DatabaseDomainOutput<K>
     }
@@ -1719,6 +1720,7 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
       return { posts: enrichPosts(database, snapshot.items, viewerId), page: snapshot.page,
         totalItems: snapshot.totalItems, totalPages: snapshot.totalPages,
         forYouCount: viewerId >= 0 ? unreadForYouCount(viewerId, database) : 0,
+        toMeCount: viewerId >= 0 ? unreadToMeCount(viewerId, database) : 0,
         forYouUnread: viewerId >= 0 && hasUnreadForYou(viewerId, database),
         toMeUnread: viewerId >= 0 && hasUnreadToMe(viewerId, database) } as DatabaseDomainOutput<K>
     }

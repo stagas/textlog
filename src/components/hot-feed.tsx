@@ -24,7 +24,7 @@ export function HotFeed(
     >
       <h1 className="visually-hidden">Hot notes</h1>
       <FeedTabs active="hot" user={user} forYouCount={feed.forYouCount} forYouUnread={feed.forYouUnread}
-        toMeUnread={feed.toMeUnread} />
+        toMeCount={feed.toMeCount} toMeUnread={feed.toMeUnread} />
       {feed.page > 1 && <Pagination page={feed.page} totalPages={feed.totalPages} path={path} top />}
       {feed.posts.length
         ? feed.posts.map(post => (

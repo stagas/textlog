@@ -348,9 +348,9 @@ export function FeedTabs(
         >
           latest
         </a>
-        {(active === 'following' || activityReadStatus !== undefined) && (
+        {(active === 'following' || toMeCount > 0 || activityReadStatus !== undefined) && (
           <span className="feed-tabs-read-status">
-            {active === 'following' && (
+            {(active === 'following' || toMeCount > 0) && (
               <a className={`activity-side-link${toMe ? '' : ' has-to-me-count'}`} href={toMe ? '/for-you' : '/to-me'}>
                 {toMe ? 'all' : (
                   <>
