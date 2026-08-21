@@ -118,6 +118,14 @@ export function PostingMorePopover() {
               </dd>
             </div>
             <div>
+              <dt>Strikethrough</dt>
+              <dd>
+                <code>
+                  <b>~</b>text<b>~</b> or <b>~~</b>text<b>~~</b>
+                </code>
+              </dd>
+            </div>
+            <div>
               <dt>Code fences</dt>
               <dd>
                 <code>

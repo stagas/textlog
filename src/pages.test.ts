@@ -173,6 +173,8 @@ test('posting helpers are searchable details and show copyable highlighted resul
   expect(html).toContain('popoverTarget="posting-help-mentions">@mentions</button>')
   expect(html).toContain('id="posting-help-more" popover="auto"')
   expect(html).toContain('for="posting-help-formatting" role="tab">Formatting</label>')
+  expect(html).toContain('<dt>Strikethrough</dt>')
+  expect(html).toContain('<b>~</b>text<b>~</b> or <b>~~</b>text<b>~~</b>')
   expect(html).toContain('for="posting-help-emoji" role="tab">Emoji</label>')
   expect(html).toContain('class="posting-help-emoji-panel" aria-label="Emoji to copy and paste"')
   expect(html).toContain('title="Select and copy">😀</span>')

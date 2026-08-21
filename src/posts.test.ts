@@ -90,6 +90,18 @@ describe('post persistence', () => {
         '<a href="https://www-cdn.anthropic.com/reports/Risk%20Report.pdf" title="https://www-cdn.anthropic.com/reports/Risk%20Report.pdf" target="_blank" rel="nofollow ugc noopener noreferrer">Anthropic Risk August 2026 [pdf]</a>',
       )
   })
+  test('renders Markdown strikethrough in posts', () => {
+    expect(linkify('Keep ~~remove~~ revise')).toBe('Keep <del>remove</del> revise')
+    expect(linkify('hey ~strike through~')).toBe('hey <del>strike through</del>')
+    expect(linkify('Keep ~~remove~~ revise', {}, [], undefined,
+      { has_latex: 0, has_links: 0, has_code: 0 }))
+      .toBe('Keep <del>remove</del> revise')
+    expect(linkify('hey ~strike through~', {}, [], undefined,
+      { has_latex: 0, has_links: 0, has_code: 0 }))
+      .toBe('hey <del>strike through</del>')
+    expect(linkify('Keep \\~~literal~~')).toBe('Keep \\~~literal~~')
+    expect(linkify('Keep \\~literal~')).toBe('Keep \\~literal~')
+  })
   test('keeps ASCII-art markup literal while linking tags and handles', () => {
     const body = '[eye](https://example.com) $x^2$ <nose> @Reader #ascii example.org/art'
     expect(linkify(body, { reader: 'Reader bio' })).toBe(

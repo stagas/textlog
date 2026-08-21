@@ -234,7 +234,7 @@ export function markdownUrl(destination: string) {
 type LinkToken = {
   index: number
   lastIndex: number
-  kind: 'code' | 'code-fence' | 'latex-fence' | 'math' | 'markdown' | 'url' | 'reference'
+  kind: 'code' | 'code-fence' | 'latex-fence' | 'math' | 'markdown' | 'strikethrough' | 'url' | 'reference'
   raw: string
   url?: string
   label?: string
@@ -320,6 +320,12 @@ export function linkTokens(body: string, flags?: PostContentFlags): LinkToken[] 
     }
   }
   if (!flags || flags.has_latex) tokens.push(...mathTokens(body, tokens))
+  for (const match of body.matchAll(/(?<!~)(~{1,2})(?!~)([^~\r\n]*?\S[^~\r\n]*?)\1(?!~)/g)) {
+    if (!escapedAt(body, match.index)) {
+      tokens.push({ index: match.index, lastIndex: match.index + match[0].length, kind: 'strikethrough',
+        raw: match[0], label: match[2] })
+    }
+  }
   if (!flags || flags.has_links) {
     for (const match of body.matchAll(/\[((?:\\[\[\]]|[^\]\r\n])+)\]\(([^\s<>")]+)\)/gi)) {
       const url = markdownUrl(match[2])
@@ -341,7 +347,8 @@ export function linkTokens(body: string, flags?: PostContentFlags): LinkToken[] 
       tokens.push({ index: match.index, lastIndex: match.index + match[0].length, kind: 'reference', raw: match[0] })
     }
   }
-  const priority = { 'code-fence': 0, 'latex-fence': 0, code: 1, math: 2, markdown: 3, url: 4, reference: 5 }
+  const priority = { 'code-fence': 0, 'latex-fence': 0, code: 1, math: 2, markdown: 3, strikethrough: 4,
+    url: 5, reference: 6 }
   return tokens.sort((a, b) => a.index - b.index || priority[a.kind] - priority[b.kind])
 }
 
@@ -473,7 +480,9 @@ export function linkify(body: string, mentionBios: Record<string, string> = {}, 
   if (containsAsciiArt(body)) {
     return linkifyAsciiReferences(body, mentionBios, appUrl, navigationQuery, hashtagCounts, mentionNoteCounts, popover)
   }
-  if (flags && !flags.has_latex && !flags.has_links && !flags.has_code) return highlighted(body, highlightTerms)
+  if (flags && !flags.has_latex && !flags.has_links && !flags.has_code && !body.includes('~')) {
+    return highlighted(body, highlightTerms)
+  }
   let html = ''
   let end = 0
   for (const match of linkTokens(body, flags)) {
@@ -498,6 +507,9 @@ export function linkify(body: string, mentionBios: Record<string, string> = {}, 
         appUrl,
         popover,
       )
+    }
+    else if (match.kind === 'strikethrough') {
+      html += `<del>${renderedText(match.label!, highlightTerms)}</del>`
     }
     else if (match.kind === 'url') {
       const url = match.url!

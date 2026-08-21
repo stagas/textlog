@@ -1706,6 +1706,10 @@ nav form {
   overflow-wrap: anywhere;
 }
 
+.post-body del {
+  text-decoration: line-through;
+}
+
 .post-spoiler {
   margin-top: var(--space-1);
 }

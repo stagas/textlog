@@ -10,6 +10,7 @@ type MaterializedResponse = {
 }
 
 const materializations = new Map<string, Promise<MaterializedResponse>>()
+const MATERIALIZED_HTML_VERSION = 1
 
 export function refreshMaterializedTimestamps(html: string, now = Date.now()) {
   return html.replace(/<time\b([^>]*)>([^<]*)<\/time>/g, (time, attributes) => {
@@ -31,7 +32,7 @@ export async function rpcMaterializedFeedPage(request: Request, kind: Materializ
   renderForCache?: () => Response | Promise<Response>)
 {
   if (Bun.env.DEV_RELOAD === 'true') return await render()
-  const variant = `${cacheVersion ? `${cacheVersion}|` : ''}${appearanceVariant(request)}`
+  const variant = `${MATERIALIZED_HTML_VERSION}|${cacheVersion ? `${cacheVersion}|` : ''}${appearanceVariant(request)}`
   const call = background ? backgroundDatabaseCall : databaseService().call.bind(databaseService())
   const key = `${background ? 'background' : 'foreground'}\0${kind}\0${viewerId}\0${variant}`
   let materialization = materializations.get(key)
