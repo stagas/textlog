@@ -5,7 +5,7 @@ import { displayBio, linkify } from '../utils'
 import { Layout } from './layout'
 import { ActionPair, Pagination, TagPeopleList } from './page-shared'
 import { Panel } from './panel'
-import { UserReference } from './post'
+import { BioReferenceForms, UserReference } from './post'
 import { SearchForm } from './search'
 
 const PEOPLE_PAGE_SIZE = 8
@@ -63,7 +63,8 @@ export function Explore({ user, welcome = false, tagsPage = 1, peoplePage = 1, d
         <section>
           <h2>Trending tags</h2>
           {tags.length
-            ? <TagPeopleList user={user} tags={tags} returnPath={tag => `${explorePath()}#tag-${tag.tag}`} />
+            ? <TagPeopleList user={user} tags={tags} returnPath={tag => `${explorePath()}#tag-${tag.tag}`}
+              showPopover={false} />
             : <p className="section-empty">No hashtags yet.</p>}
           <Pagination page={tagsPage} totalPages={Math.ceil(tagsTotal / TAG_PAGE_SIZE)} path={tagsPath}
             pageParam="tagsPage" label="Tags pagination" compact />
@@ -77,9 +78,9 @@ export function Explore({ user, welcome = false, tagsPage = 1, peoplePage = 1, d
                   <div>
                     <UserReference handle={p.handle} bio={p.bio} noteCount={p.posts} stats={profileStats[p.id]}
                       following={p.following} user={user} followsViewer={p.followsViewer}
+                      showPopover={false}
                       href={`/u/${p.handle}?from=${encodeURIComponent(exploreReturnPath(p.id))}`}
                       navigationQuery={`?from=${encodeURIComponent(exploreReturnPath(p.id))}`} />
-                    <small>{p.posts} {p.posts === 1 ? 'note' : 'notes'}</small>
                   </div>
                   {user && (
                     <form method="post" action={'/follow/' + p.handle}>
@@ -92,7 +93,21 @@ export function Explore({ user, welcome = false, tagsPage = 1, peoplePage = 1, d
                     </form>
                   )}
                 </div>
-                <p className="profile-bio" dangerouslySetInnerHTML={{ __html: linkify(displayBio(p.bio)) }} />
+                <p className="profile-bio" dangerouslySetInnerHTML={{
+                  __html: linkify(displayBio(p.bio), p.bioReference?.mentionBios || {}, [], undefined, undefined, '',
+                    p.bioReference?.hashtagCounts || {}, p.bioReference?.mentionNoteCounts || {}, {
+                    signedIn: !!user,
+                    currentHandle: user?.handle,
+                    formPrefix: `explore-person-${p.id}-bio`,
+                    linkPreviews: p.bioLinkPreviews,
+                    mentionFollowing: p.bioReference?.mentionFollowing,
+                    mentionFollowsViewer: p.bioReference?.mentionFollowsViewer,
+                    mentionProfileStats: p.bioReference?.mentionProfileStats,
+                    hashtagFollowing: p.bioReference?.hashtagFollowing,
+                    hashtagFollowerCounts: p.bioReference?.hashtagFollowerCounts,
+                  }),
+                }} />
+                <BioReferenceForms data={p.bioReference} prefix={`explore-person-${p.id}-bio`} user={user} />
               </article>
             ))}
             {!people.length && <p className="section-empty">No people to suggest.</p>}

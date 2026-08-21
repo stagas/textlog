@@ -30,6 +30,7 @@ export type ReferencePopoverOptions = {
   hashtagFollowerCounts?: Record<string, number>
   linkPreviews?: Record<string, LinkPreview>
   mentionPopovers?: boolean
+  referencePopovers?: boolean
 }
 
 function previewLink(html: string, url: string, appUrl: string | undefined, popover?: ReferencePopoverOptions) {
@@ -60,31 +61,6 @@ function previewLink(html: string, url: string, appUrl: string | undefined, popo
     + `${linkAttributes(url, appUrl).trimStart()} `
     + `style="--preview-image:url(&quot;${esc(cssUrl)}&quot;)${aspect}"><span class="${imageClass}" role="img" `
     + `aria-label="${esc(preview.title || `Preview of ${hostname}`)}"></span>${details}</a></span>`
-}
-
-function profileStatLinks(handle: string, stats: UserProfileStats, navigationQuery = '') {
-  const base = `/u/${handle}`
-  const href = (tab?: string) =>
-    tab
-      ? `${base}?tab=${tab}${navigationQuery ? `&${navigationQuery.slice(1)}` : ''}`
-      : `${base}${navigationQuery}`
-  const count = (value: number, singular: string, plural = singular + 's') =>
-    `${value.toLocaleString()} ${value === 1 ? singular : plural}`
-  return `<span class="reference-profile-tabs"><a href="${href()}">${count(stats.notes, 'note')}</a>`
-    + `<a href="${href('replies')}">${count(stats.replies, 'reply', 'replies')}</a>`
-    + `<a href="${href('following')}">${count(stats.followingTags, 'tag')}, ${
-      count(stats.following, 'user')
-    } following</a>`
-    + `<a href="${href('followers')}">${count(stats.followers, 'follower')}</a></span>`
-}
-
-function tagStatLinks(tag: string, notes: number, followers: number, navigationQuery = '') {
-  const base = `/tag/${encodeURIComponent(tag)}`
-  const followersHref = `${base}?tab=followers${navigationQuery ? `&${navigationQuery.slice(1)}` : ''}`
-  const count = (value: number, singular: string) =>
-    `${value.toLocaleString()} ${value === 1 ? singular : singular + 's'}`
-  return `<span class="reference-profile-tabs"><a href="${base}${navigationQuery}">${count(notes, 'note')}</a>`
-    + `<a href="${followersHref}">${count(followers, 'follower')}</a></span>`
 }
 
 export function referenceFormId(prefix: string, kind: 'user' | 'tag', value: string,
@@ -422,14 +398,13 @@ function renderedReference(token: string, mentionBios: Record<string, string>,
   const hasData = isUser ? mentionBios[key] !== undefined : hashtagCounts[key] !== undefined
   if (isUser && !hasData) return label
   if (!hasData) return `<a href="${href}">${label}</a>`
+  if (popover?.referencePopovers === false) return `<a href="${href}">${label}</a>`
   if (isUser && popover?.mentionPopovers === false) return `<a href="${href}">${label}</a>`
   const count = isUser ? mentionNoteCounts[key] || 0 : hashtagCounts[key]
   const referencePopover = popover && (!isUser || popover.mentionPopovers !== false) ? popover : undefined
   if (!referencePopover) {
-    const title = isUser
-      ? userHoverTitle(count, mentionBios[key])
-      : `${count.toLocaleString()} ${count === 1 ? 'note' : 'notes'}`
-    return `<a href="${href}" title="${esc(title)}">${label}</a>`
+    if (!isUser) return `<a href="${href}">${label}</a>`
+    return `<a href="${href}" title="${esc(userHoverTitle(count, mentionBios[key]))}">${label}</a>`
   }
   const following = isUser ? !!referencePopover.mentionFollowing?.[key] : !!referencePopover.hashtagFollowing?.[key]
   const followsViewer = isUser && !!referencePopover.mentionFollowsViewer?.[key]
@@ -446,13 +421,7 @@ function renderedReference(token: string, mentionBios: Record<string, string>,
     }">block</button></span>`
     : '<a class="button" href="/enter" rel="nofollow">enter to follow</a>'
   return `<span class="reference-menu"><a class="reference-menu-trigger" href="${href}">${label}</a>`
-    + `<span class="reference-menu-popover${isUser ? '' : ' reference-menu-popover-tag'}">${
-      isUser && referencePopover.mentionProfileStats?.[key]
-        ? profileStatLinks(key, referencePopover.mentionProfileStats[key], navigationQuery)
-        : isUser
-        ? `<span>${count.toLocaleString()} ${count === 1 ? 'note' : 'notes'}</span>`
-        : tagStatLinks(key, count, referencePopover.hashtagFollowerCounts?.[key] || 0, navigationQuery)
-    }`
+    + `<span class="reference-menu-popover${isUser ? '' : ' reference-menu-popover-tag'}">`
     + (isUser
       ? `<span class="reference-popover-bio">${
         linkify(displayBio(mentionBios[key]), {}, [], Bun.env.APP_URL, undefined, navigationQuery)

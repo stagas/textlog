@@ -221,10 +221,9 @@ describe('post persistence', () => {
     expect(html).toContain('<a href="/tag/caf%C3%A9">#café</a>')
   })
 
-  test('adds visible note counts to hashtag titles', () => {
+  test('links hashtags without exposing note counts in titles', () => {
     expect(linkify('#Topic #empty', {}, [], undefined, undefined, '', { topic: 1, empty: 0 }))
-      .toBe('<a href="/tag/topic" title="1 note">#Topic</a> '
-        + '<a href="/tag/empty" title="0 notes">#empty</a>')
+      .toBe('<a href="/tag/topic">#Topic</a> <a href="/tag/empty">#empty</a>')
   })
 
   test('renders hover popovers with bios and standard follow buttons', () => {
@@ -235,19 +234,16 @@ describe('post persistence', () => {
       mentionProfileStats: {
         reader: { notes: 20, replies: 34, followers: 8, following: 5, followingTags: 2 },
       } })
-    expect(html).toContain('<span class="reference-menu-popover"><span class="reference-profile-tabs">'
-      + '<a href="/u/reader">20 notes</a><a href="/u/reader?tab=replies">34 replies</a>'
-      + '<a href="/u/reader?tab=following">2 tags, 5 users following</a>'
-      + '<a href="/u/reader?tab=followers">8 followers</a></span>'
+    expect(html).toContain('<span class="reference-menu-popover">'
       + '<span class="reference-popover-bio">Builds things</span>')
+    expect(html).not.toContain('reference-profile-tabs')
     expect(html).toContain('<button class="button button-muted" type="submit" '
       + 'form="post-1-user-reader">unfollow</button>')
     expect(html).toContain('<span class="follows-you">follows you</span>')
     expect(html).toContain('<button class="quiet danger" type="submit" '
       + 'form="post-1-user-reader-block">block</button>')
     expect(html).toContain('<span class="reference-menu-popover reference-menu-popover-tag">'
-      + '<span class="reference-profile-tabs"><a href="/tag/topic">20 notes</a>'
-      + '<a href="/tag/topic?tab=followers">8 followers</a></span>')
+      + '<span class="reference-popover-actions">')
     expect(html).toContain('<button class="button" type="submit" form="post-1-tag-topic">follow</button>')
     expect(html).toContain('<button class="quiet danger" type="submit" '
       + 'form="post-1-tag-topic-block">block</button>')

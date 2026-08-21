@@ -57,12 +57,12 @@ export function TagFeed(
         <a className={tab === 'notes' ? 'active' : ''} aria-current={tab === 'notes' ? 'page' : undefined}
           href={`${tagPath}${returnPath ? `?from=${encodeURIComponent(returnPath)}` : ''}`}
         >
-          {total.toLocaleString()} {total === 1 ? 'note' : 'notes'}
+          notes
         </a>
         <a className={tab === 'followers' ? 'active' : ''} aria-current={tab === 'followers' ? 'page' : undefined}
           href={`${tagPath}?tab=followers${returnPath ? `&from=${encodeURIComponent(returnPath)}` : ''}`}
         >
-          {followerTotal.toLocaleString()} {followerTotal === 1 ? 'follower' : 'followers'}
+          followers
         </a>
       </nav>
       {page > 1

@@ -712,8 +712,8 @@ test('Tag pages keep actions beside the tag and a contextual back link on the ri
   expect(html).not.toContain('class="tag-note-count"')
   expect(html).toContain('class="profile-action tag-handle-actions"')
   expect(html).toContain('class="profile-edit-link tag-back-link" href="/latest#post-2">back</a>')
-  expect(html).toContain('aria-current="page" href="/tag/notes?from=%2Flatest%23post-2">0 notes</a>')
-  expect(html).toContain('href="/tag/notes?tab=followers&amp;from=%2Flatest%23post-2">23 followers</a>')
+  expect(html).toContain('aria-current="page" href="/tag/notes?from=%2Flatest%23post-2">notes</a>')
+  expect(html).toContain('href="/tag/notes?tab=followers&amp;from=%2Flatest%23post-2">followers</a>')
   expect(html.indexOf('>follow</button>')).toBeLessThan(html.indexOf('>block</button>'))
   expect(html.indexOf('>block</button>')).toBeLessThan(html.indexOf('>back</a>'))
 })
@@ -732,8 +732,8 @@ test('Tag follower tabs list people with compact follow controls', () => {
     followerTotal: 1,
   }))
 
-  expect(html).toContain('href="/tag/notes">14 notes</a>')
-  expect(html).toContain('aria-current="page" href="/tag/notes?tab=followers">1 follower</a>')
+  expect(html).toContain('href="/tag/notes">notes</a>')
+  expect(html).toContain('aria-current="page" href="/tag/notes?tab=followers">followers</a>')
   expect(html).toContain('id="person-3"')
   expect(html).toContain('href="/u/writer">@writer</a>')
   expect(html).toContain('action="/follow/writer"')
@@ -1294,8 +1294,8 @@ test('Profile places a contextual back link in the handle row', () => {
   expect(html).toContain('href="/latest#post-2">back</a>')
   expect(html).not.toContain('class="profile-user-details"')
   expect(html.indexOf('aria-label="follow @writer"')).toBeLessThan(html.indexOf('href="/latest#post-2">back</a>'))
-  expect(html).toContain('href="/u/writer?from=%2Flatest%23post-2">0 notes</a>')
-  expect(html).toContain('href="/u/writer?tab=replies&amp;from=%2Flatest%23post-2">0 replies</a>')
+  expect(html).toContain('href="/u/writer?from=%2Flatest%23post-2">notes</a>')
+  expect(html).toContain('href="/u/writer?tab=replies&amp;from=%2Flatest%23post-2">replies</a>')
   expect(html).toContain('href="/u/writer?tab=following&amp;from=%2Flatest%23post-2"')
   expect(html).toContain('href="/u/writer?tab=followers&amp;from=%2Flatest%23post-2"')
 })
@@ -1517,9 +1517,8 @@ test('Profile linkifies Markdown links and tags in the bio', () => {
   }))
 
   expect(html).toContain('<span class="reference-menu"><a class="reference-menu-trigger" '
-    + 'href="/tag/textlog">#TextLog</a><span class="reference-menu-popover reference-menu-popover-tag">'
-    + '<span class="reference-profile-tabs"><a href="/tag/textlog">')
-  expect(html).toContain('<a href="/tag/textlog?tab=followers">')
+    + 'href="/tag/textlog">#TextLog</a><span class="reference-menu-popover reference-menu-popover-tag">')
+  expect(html).not.toContain('reference-profile-tabs')
   expect(html).toContain(
     '<a href="https://example.com/" title="https://example.com/" target="_blank" rel="nofollow ugc noopener noreferrer">my site</a>.',
   )
@@ -1759,7 +1758,7 @@ test('Post carries its originating cursor into detail, reply, and edit links', (
   expect(html).toContain('id="post-2-user-friend-block" action="/block/friend" method="post"')
   expect(html).toContain('id="post-2-tag-topic" action="/tag-follow/topic" method="post"')
   expect(html).toContain('id="post-2-tag-topic-block" action="/tag-block/topic" method="post"')
-  expect(html).toContain('href="/tag/topic?tab=followers&from=%2Flatest%3Fcursor%3Dabc%23post-2">2 followers</a>')
+  expect(html).not.toContain('reference-profile-tabs')
   expect(html).not.toContain('/post/2/delete')
 })
 

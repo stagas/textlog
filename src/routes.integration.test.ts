@@ -1202,9 +1202,7 @@ test('consequential account, content, reporting, and admin flows work over HTTP'
   const followedPersonFeed = await (await request('/for-you', { cookie: aliceCookie })).text()
   expect(followedPersonFeed).toContain('<a class="reference-menu-trigger postauthor" '
     + 'href="/u/bob?from=%2Ffor-you%23activity-user-follow-')
-  expect(followedPersonFeed).toContain('<span class="reference-profile-tabs"><a '
-    + 'href="/u/bob?from=%2Ffor-you%23activity-user-follow-')
-  expect(followedPersonFeed).toContain('<a href="/u/bob?tab=replies&amp;from=%2Ffor-you%23activity-user-follow-')
+  expect(followedPersonFeed).not.toContain('reference-profile-tabs')
   expect(followedPersonFeed).toContain('<span class="reference-popover-bio">Bob builds things</span>'
     + '<span class="reference-popover-actions"><form action="/follow/bob" method="post">'
     + '<input type="hidden" name="from" value="/for-you#activity-user-follow-')
@@ -1293,7 +1291,8 @@ test('consequential account, content, reporting, and admin flows work over HTTP'
   expect(followedTagFeed).toContain('<a class="reference-menu-trigger postauthor" '
     + 'href="/u/bob?from=%2Ffor-you%23activity-tag-follow-')
   expect(followedTagFeed).toContain('<span class="reference-popover-bio">Bob builds things</span>')
-  expect(followedTagFeed).toContain('<a href="/tag/shared?from=%2Ffor-you%23activity-tag-follow-')
+  expect(followedTagFeed).toContain('<a class="reference-menu-trigger" '
+    + 'href="/tag/shared?from=%2Ffor-you%23activity-tag-follow-')
   expect(followedTagFeed).toContain('<a class="activity-follow-stats" href="/tag/shared?from=')
   expect(followedTagFeed).toContain('<form action="/tag-follow/shared" method="post">'
     + '<input type="hidden" name="from" value="/for-you#activity-tag-follow-')

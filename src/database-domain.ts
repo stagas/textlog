@@ -36,6 +36,7 @@ import { loadBioReferenceData, loadThreadReplies } from './posts'
 import { enrichPosts } from './posts'
 import { visibleTagFollowerCounts, visibleUserProfileStats } from './posts'
 import { createPost, updatePost } from './posts'
+import { userBioLinkPreviews } from './link-preview'
 import { voteInPoll } from './polls'
 import { createPublicArchive, publicArchiveIsCurrent } from './public-archive'
 import { RECAP_POPULAR_NOTE_IDS, recapEmail } from './recap-email'
@@ -52,6 +53,8 @@ function attachPeopleStats(database: Database, people: import('./types').PersonV
     `SELECT follower_id FROM follows WHERE following_id=? AND follower_id IN (${people.map(() => '?').join(',')})`,
   ).all(viewerId, ...people.map(person => person.id)) as { follower_id: number }[]).map(row => row.follower_id))
   return people.map(person => ({ ...person, profileStats: stats.get(person.id),
+    bioLinkPreviews: userBioLinkPreviews(database, person.id),
+    bioReference: loadBioReferenceData(database, person.bio, person.id, viewerId),
     followsViewer: followers.has(person.id) })
   )
 }

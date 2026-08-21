@@ -293,7 +293,7 @@ header>.account-nav {
   right: 0;
   display: none;
   width: 100%;
-  height: var(--space-2);
+  height: var(--space-1);
   content: '';
 }
 
@@ -352,6 +352,16 @@ header>.account-nav {
   white-space: normal;
 }
 
+.reference-menu-popover::before,
+.remote-link-popover::before {
+  position: absolute;
+  right: 0;
+  bottom: 100%;
+  left: 0;
+  height: var(--space-2);
+  content: '';
+}
+
 .reference-menu-popover-tag {
   min-width: 0;
 }
@@ -362,6 +372,10 @@ header>.account-nav {
 
 .reference-menu .reference-menu-popover.reference-menu-popover-tag .button {
   margin-top: var(--space-2);
+}
+
+.reference-menu .reference-menu-popover.reference-menu-popover-tag > .button:first-child {
+  margin-top: 0;
 }
 
 .reference-menu:hover > .reference-menu-popover {
@@ -549,6 +563,12 @@ header>.account-nav {
   white-space: pre-wrap;
   overflow-wrap: anywhere;
   tab-size: 4;
+}
+
+.reference-menu-popover > .reference-popover-bio:first-child,
+.reference-menu-popover > .reference-popover-actions:first-child,
+.reference-menu-popover > .button:first-child {
+  margin-top: 0;
 }
 
 .reference-profile-tabs {

@@ -9,7 +9,7 @@ import { displayBio, linkify } from '../utils'
 import { enterHref } from './auth-links'
 import { LogoutForm } from './logout-form'
 import { Panel } from './panel'
-import { TagReference, UserReference } from './post'
+import { BioReferenceForms, TagReference, UserReference } from './post'
 
 const postTitleLength = 60
 
@@ -513,30 +513,27 @@ export function ProfileTabs(
       <a className={active === 'notes' ? 'active' : ''} aria-current={active === 'notes' ? 'page' : undefined}
         href={tabHref()}
       >
-        {notes} {notes === 1 ? 'note' : 'notes'}
+        notes
       </a>
       <a className={active === 'replies' ? 'active' : ''} aria-current={active === 'replies' ? 'page' : undefined}
         href={tabHref('replies')}
       >
-        {replies} {replies === 1 ? 'reply' : 'replies'}
+        replies
       </a>
       <a className={active === 'following' ? 'active' : ''} aria-current={active === 'following' ? 'page' : undefined}
         href={tabHref('following')}
       >
-        {followingTags} {followingTags === 1 ? 'tag' : 'tags'}, {following} {following === 1 ? 'user' : 'users'}{' '}
         following
       </a>
       <a className={active === 'followers' ? 'active' : ''} aria-current={active === 'followers' ? 'page' : undefined}
         href={tabHref('followers')}
       >
-        {followers} {followers === 1 ? 'follower' : 'followers'}
+        followers
       </a>
       {showBlocked && (
         <a className={active === 'blocked' ? 'active' : ''} aria-current={active === 'blocked' ? 'page' : undefined}
           href={tabHref('blocked')}
         >
-          {blockedTags} {blockedTags === 1 ? 'tag' : 'tags'}, {blockedPeople} {blockedPeople === 1 ? 'user' : 'users'}
-          {' '}
           blocked
         </a>
       )}
@@ -560,12 +557,14 @@ export function HighlightedText({ text, terms = [] }: { text: string; terms?: st
   )
 }
 
-export function TagPeopleList({ user, tags, followingKey = 'following', highlightTerms = [], returnPath }: {
+export function TagPeopleList({ user, tags, followingKey = 'following', highlightTerms = [], returnPath,
+  showPopover = true }: {
   user: User | null
   tags: TagView[]
   followingKey?: 'following' | 'viewerFollowing'
   highlightTerms?: string[]
   returnPath?: (tag: TagView) => string
+  showPopover?: boolean
 }) {
   return (
     <div className="people tag-people">
@@ -574,13 +573,12 @@ export function TagPeopleList({ user, tags, followingKey = 'following', highligh
           <div>
             <div>
               <TagReference tag={tag.tag} noteCount={tag.count} followerCount={tag.followerCount || 0}
-                following={tag[followingKey]} user={user}
+                following={tag[followingKey]} user={user} showPopover={showPopover}
                 navigationQuery={returnPath ? `?from=${encodeURIComponent(returnPath(tag))}` : ''} label={
                 <>
                   #<HighlightedText text={tag.tag} terms={highlightTerms} />
                 </>
               } />
-              <small>{tag.count} {tag.count === 1 ? 'note' : 'notes'}</small>
             </div>
             {user && (
               <form method="post" action={`/tag-follow/${encodeURIComponent(tag.tag)}`}>
@@ -606,7 +604,6 @@ export function BlockedTagList({ user, tags }: { user: User; tags: TagView[] }) 
             <div>
               <TagReference tag={tag.tag} noteCount={tag.count} followerCount={tag.followerCount || 0} user={user}
                 showFollowAction={false} />
-              <small>{tag.count} {tag.count === 1 ? 'note' : 'notes'}</small>
             </div>
             <form method="post" action={`/tag-block/${encodeURIComponent(tag.tag)}`}>
               <button className="button">unblock</button>
@@ -639,12 +636,15 @@ export function BlockedPeopleList({ user, people }: { user: User; people: Person
   )
 }
 
-export function ConnectionPeople({ user, people, className = '', highlightTerms = [], returnPath }: {
+export function ConnectionPeople({ user, people, className = '', highlightTerms = [], returnPath, showNoteCount = true,
+  showPopover = true }: {
   user: User | null
   people: PersonView[]
   className?: string
   highlightTerms?: string[]
   returnPath?: (person: PersonView) => string
+  showNoteCount?: boolean
+  showPopover?: boolean
 }) {
   return (
     <div className={`people ${className}`.trim()}>
@@ -654,15 +654,28 @@ export function ConnectionPeople({ user, people, className = '', highlightTerms 
             <div>
               <UserReference handle={person.handle} bio={person.bio} noteCount={person.posts}
                 stats={person.profileStats} following={person.viewerFollowing} followsViewer={person.followsViewer}
-                user={user} href={`/u/${person.handle}`} label={
+                user={user} href={`/u/${person.handle}`} showPopover={showPopover} label={
                 <>
                   @<HighlightedText text={person.handle} terms={highlightTerms} />
                 </>
               } />
-              <small>{person.posts} {person.posts === 1 ? 'note' : 'notes'}</small>
+              {showNoteCount && <small>{person.posts} {person.posts === 1 ? 'note' : 'notes'}</small>}
               <p className="profile-bio" dangerouslySetInnerHTML={{
-                __html: linkify(displayBio(person.bio), {}, person.bio ? highlightTerms : []),
+                __html: linkify(displayBio(person.bio), person.bioReference?.mentionBios || {},
+                  person.bio ? highlightTerms : [], undefined, undefined, '', person.bioReference?.hashtagCounts || {},
+                  person.bioReference?.mentionNoteCounts || {}, {
+                    signedIn: !!user,
+                    currentHandle: user?.handle,
+                    formPrefix: `person-${person.id}-bio`,
+                    linkPreviews: person.bioLinkPreviews,
+                    mentionFollowing: person.bioReference?.mentionFollowing,
+                    mentionFollowsViewer: person.bioReference?.mentionFollowsViewer,
+                    mentionProfileStats: person.bioReference?.mentionProfileStats,
+                    hashtagFollowing: person.bioReference?.hashtagFollowing,
+                    hashtagFollowerCounts: person.bioReference?.hashtagFollowerCounts,
+                  }),
               }} />
+              <BioReferenceForms data={person.bioReference} prefix={`person-${person.id}-bio`} user={user} />
             </div>
             {user && user.id !== person.id && (
               <form method="post" action={`/follow/${person.handle}`}>

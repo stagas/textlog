@@ -50,7 +50,7 @@ export function Connections(
               {tags.length
                 ? kind === 'blocked'
                   ? <BlockedTagList user={user!} tags={tags} />
-                  : <TagPeopleList user={user} tags={tags} followingKey="viewerFollowing" />
+                  : <TagPeopleList user={user} tags={tags} followingKey="viewerFollowing" showPopover={false} />
                 : (
                   <div className="empty connections-empty">
                     {kind === 'blocked'
@@ -71,7 +71,7 @@ export function Connections(
               {people.length
                 ? kind === 'blocked'
                   ? <BlockedPeopleList user={user!} people={people} />
-                  : <ConnectionPeople user={user} people={people} />
+                  : <ConnectionPeople user={user} people={people} showNoteCount={false} showPopover={false} />
                 : (
                   <div className="empty connections-empty">
                     {kind === 'blocked'
@@ -92,7 +92,8 @@ export function Connections(
           </div>
         )
         : people.length
-        ? <ConnectionPeople user={user} people={people} className="connections-list" />
+        ? <ConnectionPeople user={user} people={people} className="connections-list" showNoteCount={false}
+          showPopover={false} />
         : (
           <div className={`empty${user?.id === profile.id && kind === 'following' ? ' empty-actions' : ''}`}>
             {user?.id === profile.id && kind === 'following'

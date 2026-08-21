@@ -62,7 +62,7 @@ function PollPreview({ body }: { body: string }) {
 
 export function UserReference(
   { handle, bio, noteCount, following, followsViewer, user, href, rel, currentHandle, stats, navigationQuery = '',
-    showFollowAction = true, label, referenceData, extraAction }: {
+    showFollowAction = true, showPopover = true, label, referenceData, extraAction }: {
       handle: string
       bio?: string
       noteCount: number
@@ -75,6 +75,7 @@ export function UserReference(
       stats?: UserProfileStats
       navigationQuery?: string
       showFollowAction?: boolean
+      showPopover?: boolean
       label?: React.ReactNode
       referenceData?: BioReferenceData
       extraAction?: React.ReactNode
@@ -89,33 +90,12 @@ export function UserReference(
   const bioMentionProfileStats = referenceData?.mentionProfileStats || {}
   const bioMentionNoteCounts = referenceData?.mentionNoteCounts || {}
   const bioFormPrefix = `handle-${handle.toLowerCase()}-bio`
-  const profileHref = (tab?: string) =>
-    tab
-      ? `/u/${handle}?tab=${tab}${navigationQuery ? `&${navigationQuery.slice(1)}` : ''}`
-      : `/u/${handle}${navigationQuery}`
   return (
     <span className="reference-menu">
       {href
         ? <a className="reference-menu-trigger postauthor" href={href} rel={rel}>{label || <>@{handle}</>}</a>
         : <span className="reference-menu-trigger postauthor" tabIndex={0}>{label || <>@{handle}</>}</span>}
-      <span className="reference-menu-popover">
-        {stats
-          ? (
-            <span className="reference-profile-tabs">
-              <a href={profileHref()}>{stats.notes.toLocaleString()} {stats.notes === 1 ? 'note' : 'notes'}</a>
-              <a href={profileHref('replies')}>
-                {stats.replies.toLocaleString()} {stats.replies === 1 ? 'reply' : 'replies'}
-              </a>
-              <a href={profileHref('following')}>
-                {stats.followingTags.toLocaleString()} {stats.followingTags === 1 ? 'tag' : 'tags'},{' '}
-                {stats.following.toLocaleString()} {stats.following === 1 ? 'user' : 'users'} following
-              </a>
-              <a href={profileHref('followers')}>
-                {stats.followers.toLocaleString()} {stats.followers === 1 ? 'follower' : 'followers'}
-              </a>
-            </span>
-          )
-          : <span>{noteCount.toLocaleString()} {noteCount === 1 ? 'note' : 'notes'}</span>}
+      {showPopover && <span className="reference-menu-popover">
         <span className="reference-popover-bio" dangerouslySetInnerHTML={{
           __html: linkify(displayBio(bio), bioMentionBios, [], undefined, undefined, navigationQuery, bioTagCounts,
             bioMentionNoteCounts, {
@@ -147,8 +127,8 @@ export function UserReference(
             </span>
           )
           : <a className="button" href={enterHref()} rel="nofollow">enter to follow</a>)}
-      </span>
-      {user && bioTags.map(tag => (
+      </span>}
+      {showPopover && user && bioTags.map(tag => (
         <React.Fragment key={tag}>
           <form className="reference-follow-form" id={referenceFormId(bioFormPrefix, 'tag', tag)} method="post"
             action={'/tag-follow/' + encodeURIComponent(tag)} />
@@ -156,7 +136,7 @@ export function UserReference(
             action={'/tag-block/' + encodeURIComponent(tag)} />
         </React.Fragment>
       ))}
-      {user && Object.keys(bioMentionBios).map(bioHandle => (
+      {showPopover && user && Object.keys(bioMentionBios).map(bioHandle => (
         <React.Fragment key={`user-${bioHandle}`}>
           <form className="reference-follow-form" id={referenceFormId(bioFormPrefix, 'user', bioHandle)} method="post"
             action={'/follow/' + encodeURIComponent(bioHandle)} />
@@ -169,7 +149,8 @@ export function UserReference(
 }
 
 export function TagReference(
-  { tag, noteCount, followerCount, following, user, href, navigationQuery = '', showFollowAction = true, label }: {
+  { tag, noteCount, followerCount, following, user, href, navigationQuery = '', showFollowAction = true,
+    showPopover = true, label }: {
     tag: string
     noteCount: number
     followerCount: number
@@ -178,24 +159,17 @@ export function TagReference(
     href?: string
     navigationQuery?: string
     showFollowAction?: boolean
+    showPopover?: boolean
     label?: React.ReactNode
   },
 ) {
   const tagPath = `/tag/${encodeURIComponent(tag)}`
   const followReturnPath = new URLSearchParams(navigationQuery.slice(1)).get('from') || undefined
-  const count = (value: number, singular: string) =>
-    `${value.toLocaleString()} ${value === 1 ? singular : singular + 's'}`
   return (
     <span className="reference-menu">
       <a className="reference-menu-trigger" href={href || tagPath + navigationQuery}>{label || <>#{tag}</>}</a>
-      <span className="reference-menu-popover reference-menu-popover-tag">
-        <span className="reference-profile-tabs">
-          <a href={tagPath + navigationQuery}>{count(noteCount, 'note')}</a>
-          <a href={`${tagPath}?tab=followers${navigationQuery ? `&${navigationQuery.slice(1)}` : ''}`}>
-            {count(followerCount, 'follower')}
-          </a>
-        </span>
-        {showFollowAction && (user
+      {showPopover && showFollowAction && <span className="reference-menu-popover reference-menu-popover-tag">
+        {user
           ? (
             <span className="reference-popover-actions">
               <form method="post" action={`/tag-follow/${encodeURIComponent(tag)}`}>
@@ -209,10 +183,32 @@ export function TagReference(
               </form>
             </span>
           )
-          : <a className="button" href={enterHref()} rel="nofollow">enter to follow</a>)}
-      </span>
+          : <a className="button" href={enterHref()} rel="nofollow">enter to follow</a>}
+      </span>}
     </span>
   )
+}
+
+export function BioReferenceForms({ data, prefix, user }: {
+  data?: BioReferenceData
+  prefix: string
+  user: User | null
+}) {
+  if (!user || !data) return null
+  return <>
+    {Object.keys(data.hashtagFollowing).map(tag => <React.Fragment key={`tag-${tag}`}>
+      <form className="reference-follow-form" id={referenceFormId(prefix, 'tag', tag)} method="post"
+        action={`/tag-follow/${encodeURIComponent(tag)}`} />
+      <form className="reference-follow-form" id={referenceFormId(prefix, 'tag', tag, 'block')} method="post"
+        action={`/tag-block/${encodeURIComponent(tag)}`} />
+    </React.Fragment>)}
+    {Object.keys(data.mentionBios).map(handle => <React.Fragment key={`user-${handle}`}>
+      <form className="reference-follow-form" id={referenceFormId(prefix, 'user', handle)} method="post"
+        action={`/follow/${encodeURIComponent(handle)}`} />
+      <form className="reference-follow-form" id={referenceFormId(prefix, 'user', handle, 'block')} method="post"
+        action={`/block/${encodeURIComponent(handle)}`} />
+    </React.Fragment>)}
+  </>
 }
 
 function ReferenceFollowForms(

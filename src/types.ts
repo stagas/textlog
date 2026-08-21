@@ -265,6 +265,8 @@ export type PersonView = ProfileRow & {
   viewerFollowing?: boolean
   followsViewer?: boolean
   profileStats?: UserProfileStats
+  bioLinkPreviews?: Record<string, LinkPreview>
+  bioReference?: BioReferenceData
 }
 
 export type TagView = {
