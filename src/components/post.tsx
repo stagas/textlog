@@ -11,7 +11,6 @@ import { parsePoll, pollDisplayBody } from '../polls'
 function Poll({ p, returnPath }: { p: PostView | NonNullable<PostView['parent']>; returnPath?: string }) {
   if (!p.poll) return null
   const showResults = p.poll.expired || p.poll.viewerVoted
-  const hoursLeft = Math.max(1, Math.ceil((p.poll.expiresAt - Date.now()) / (60 * 60 * 1000)))
   return (
     <div className={`poll${showResults ? ' poll-results' : ''}`} aria-label="Poll">
       {p.poll.options.map(option => {
@@ -32,11 +31,6 @@ function Poll({ p, returnPath }: { p: PostView | NonNullable<PostView['parent']>
             </form>
           )
       })}
-      <span className="poll-meta">{showResults
-        ? <>{p.poll.expired
-          ? 'ended'
-          : `${hoursLeft} ${hoursLeft === 1 ? 'hour' : 'hours'} left to vote`}</>
-        : <>{hoursLeft} {hoursLeft === 1 ? 'hour' : 'hours'} left to vote</>}</span>
     </div>
   )
 }
@@ -55,7 +49,6 @@ function PollPreview({ body }: { body: string }) {
           {option}
         </div>
       ))}
-      <span className="poll-meta">24 hours left to vote</span>
     </div>
   )
 }
