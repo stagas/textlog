@@ -4616,6 +4616,10 @@ a.post-context:hover {
   margin-right: calc(1ch - var(--space-2));
 }
 
+.activity-follow-main .activity-follow-full-stop {
+  margin-left: calc(-1 * var(--space-2));
+}
+
 .activity-follow-main a {
   overflow: hidden;
   text-overflow: ellipsis;

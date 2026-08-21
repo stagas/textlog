@@ -99,6 +99,9 @@ test('for-you does not put hide actions on follow activity', () => {
 
   expect(html).not.toContain('for-you-hide-input for-you-hide-4')
   expect(html).not.toContain(':has(.for-you-hide-4:checked) .for-you-author-4')
+  expect(html).toContain('>@dave</a>')
+  expect(html).not.toContain('>@dave.</a>')
+  expect(html).toContain('<span class="activity-follow-full-stop">.</span>')
 })
 
 test('a followed-you event offers to follow back', () => {
