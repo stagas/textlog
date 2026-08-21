@@ -13,7 +13,7 @@ const visibleEvents = `
     WHERE p.deleted_at IS NULL AND p.user_id!=$viewer AND (p.user_id IN
       (SELECT following_id FROM follows WHERE follower_id=$viewer) OR p.id IN
       (SELECT ph.post_id FROM post_hashtags ph JOIN hashtag_follows hf ON hf.tag=ph.tag
-        WHERE hf.user_id=$viewer))
+        WHERE hf.user_id=$viewer) OR ${descendsFromViewer})
       AND NOT EXISTS (SELECT 1 FROM blocks b WHERE
         (b.blocker_id=$viewer AND b.blocked_id=p.user_id) OR
         (b.blocker_id=p.user_id AND b.blocked_id=$viewer))
@@ -24,7 +24,7 @@ const visibleEvents = `
     LEFT JOIN posts parent ON parent.id=p.parent_id
     LEFT JOIN post_mentions pm ON pm.post_id=p.id AND pm.user_id=$viewer
     WHERE p.deleted_at IS NULL AND p.user_id!=$viewer
-      AND (${descendsFromViewer} OR pm.user_id IS NOT NULL)
+      AND (parent.user_id=$viewer OR pm.user_id IS NOT NULL)
       AND NOT EXISTS (SELECT 1 FROM blocks b WHERE
         (b.blocker_id=$viewer AND b.blocked_id=p.user_id) OR
         (b.blocker_id=p.user_id AND b.blocked_id=$viewer))
@@ -69,7 +69,7 @@ const visibleToMeEvents = `
     LEFT JOIN posts parent ON parent.id=p.parent_id
     LEFT JOIN post_mentions pm ON pm.post_id=p.id AND pm.user_id=$viewer
     WHERE p.deleted_at IS NULL AND p.user_id!=$viewer
-      AND (${descendsFromViewer} OR pm.user_id IS NOT NULL)
+      AND (parent.user_id=$viewer OR pm.user_id IS NOT NULL)
       AND NOT EXISTS (SELECT 1 FROM blocks b WHERE
         (b.blocker_id=$viewer AND b.blocked_id=p.user_id) OR
         (b.blocker_id=p.user_id AND b.blocked_id=$viewer))
@@ -108,7 +108,7 @@ export function unreadForYouCount(userId: number, database: Database) {
 
 export function hasUnreadToMe(userId: number, database: Database) {
   return !!database.query(`SELECT 1 FROM (${visibleToMeEvents}) event WHERE NOT EXISTS
-    (SELECT 1 FROM for_you_reads seen WHERE seen.user_id=$viewer AND seen.event_key=event.event_key) LIMIT 1`)
+    (SELECT 1 FROM to_me_reads seen WHERE seen.user_id=$viewer AND seen.event_key=event.event_key) LIMIT 1`)
     .get(stateParameters(userId, database))
 }
 

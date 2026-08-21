@@ -133,14 +133,17 @@ describe('public API', () => {
     const toMe = await (await request(app, '/api/v1/activities/to-me', { headers })).json() as any
 
     expect(forYou.data.map((activity: any) => activity.type))
-      .toEqual(['tag_follow', 'user_follow', 'reply', 'post', 'post', 'reply'])
+      .toEqual(['tag_follow', 'user_follow', 'post', 'post', 'post', 'reply'])
     expect(forYou.data.find((activity: any) => activity.type === 'tag_follow').payload)
       .toMatchObject({ actor: { handle: 'bob' }, target: { tag: 'textlog' } })
-    expect(forYou.data.find((activity: any) => activity.type === 'post').payload).toMatchObject({ id: 7 })
-    expect(toMe.data.map((activity: any) => activity.type)).toEqual(['user_follow', 'reply', 'reply'])
-    expect(toMe.data.find((activity: any) => activity.payload.id === 8)).toMatchObject({
-      type: 'reply', payload: { body: 'descendant of Alice reply' },
+    expect(forYou.data.find((activity: any) => activity.payload.id === 7)).toMatchObject({
+      type: 'post', payload: { id: 7 },
     })
+    expect(forYou.data.find((activity: any) => activity.payload.id === 8)).toMatchObject({
+      type: 'post', payload: { body: 'descendant of Alice reply' },
+    })
+    expect(toMe.data.map((activity: any) => activity.type)).toEqual(['user_follow', 'reply'])
+    expect(toMe.data.some((activity: any) => activity.payload.id === 8)).toBe(false)
     expect(toMe.data.find((activity: any) => activity.type === 'user_follow').payload)
       .toMatchObject({ actor: { handle: 'bob' }, target: { handle: 'alice' } })
     expect(forYou.has_unread).toBe(true)

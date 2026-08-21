@@ -52,7 +52,7 @@ export function Feed({ user, data, title, path = '/for-you', pageUrl, notificati
   toMe?: boolean
 }) {
   const returnPath = path + (data.page > 1 ? `?page=${data.page}` : '')
-  const hasUnread = toMe ? data.toMeUnread : data.forYouUnread || data.toMeUnread
+  const hasUnread = toMe ? data.toMeUnread : data.forYouUnread
   const unreadPage = data.unreadHref
     ? Number(new URL(data.unreadHref, 'http://localhost').searchParams.get('page') || 1)
     : null

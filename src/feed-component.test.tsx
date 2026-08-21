@@ -68,8 +68,8 @@ test('for-you labels a descendant that replies to its own author as continued', 
     ...postActivity(11, 2, 'alice'),
     parent_id: parent.id,
     parent,
-    activity_kind: 'reply' as const,
-    targeted_to_viewer: true,
+    activity_kind: 'post' as const,
+    targeted_to_viewer: false,
     renderedPost: { ...postActivity(11, 2, 'alice'), parent_id: parent.id, parent },
   }
   const html = renderToStaticMarkup(<Feed
@@ -181,6 +181,8 @@ test('to-me omits hide actions and keeps top pagination before entries', () => {
 
   expect(html).not.toContain('for-you-hide-input')
   expect(html.indexOf('pagination pagination-top')).toBeLessThan(html.indexOf('for-you-item for-you-author-2'))
+  expect(html).toContain('href="/to-me?page=2#post-20">first unread</a>')
+  expect(html).toContain('action="/to-me/read-all"')
 })
 
 test('hot and latest show the to-me link when it has unread content', () => {

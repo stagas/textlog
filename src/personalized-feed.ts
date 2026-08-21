@@ -1,12 +1,13 @@
 import type { Database } from 'bun:sqlite'
 import { isAdmin } from './admin'
 import { feedSnapshotPage } from './feed-snapshots'
-import { hasUnreadForYou, hasUnreadToMe, markForYouEntriesRead, unreadForYouCount } from './for-you-state'
+import { hasUnreadForYou, hasUnreadToMe, markForYouEntriesRead, unreadForYouCount,
+  unreadToMeCount } from './for-you-state'
 import { resolveHandle } from './handles'
 import { enrichPosts, visibleTagFollowerCounts, visibleUserProfileStats } from './posts'
 import type { PersonalizedFeedData, PersonalizedTimelineRow, User } from './types'
 
-const PERSONALIZED_FEED_SNAPSHOT_VERSION = 3
+const PERSONALIZED_FEED_SNAPSHOT_VERSION = 4
 
 const descendsFromViewer = `EXISTS (WITH RECURSIVE ancestors(id,user_id,parent_id) AS (
   SELECT ancestor.id,ancestor.user_id,ancestor.parent_id FROM posts ancestor WHERE ancestor.id=p.parent_id
@@ -36,21 +37,22 @@ export function loadPersonalizedFeed(database: Database, user: User, page: numbe
       LEFT JOIN post_mentions pm ON pm.post_id=p.id AND pm.user_id=$viewer
       WHERE p.deleted_at IS NULL AND p.user_id!=$viewer AND (p.user_id IN
         (SELECT following_id FROM follows WHERE follower_id=$viewer) OR p.id IN
-        (SELECT ph.post_id FROM post_hashtags ph JOIN hashtag_follows hf ON hf.tag=ph.tag WHERE hf.user_id=$viewer))
+        (SELECT ph.post_id FROM post_hashtags ph JOIN hashtag_follows hf ON hf.tag=ph.tag WHERE hf.user_id=$viewer)
+        OR ${descendsFromViewer})
         AND NOT EXISTS (SELECT 1 FROM blocks b WHERE (b.blocker_id=$viewer AND b.blocked_id=p.user_id)
           OR (b.blocker_id=p.user_id AND b.blocked_id=$viewer))
         AND NOT EXISTS (SELECT 1 FROM post_hashtags tph JOIN blocked_hashtags bh ON bh.tag=tph.tag
           WHERE tph.post_id=p.id AND bh.user_id=$viewer)
-        AND NOT ${descendsFromViewer} AND pm.user_id IS NULL
+        AND parent.user_id IS NOT $viewer AND pm.user_id IS NULL
       UNION ALL
       SELECT p.id,p.user_id,p.body,p.created_at,p.parent_id,p.deleted_at,p.has_latex,p.has_links,p.has_code,u.handle,
         EXISTS(SELECT 1 FROM follows vf WHERE vf.follower_id=$viewer AND vf.following_id=p.user_id) following,
-        CASE WHEN ${descendsFromViewer} THEN 'reply' ELSE 'mention' END activity_kind,
+        CASE WHEN parent.user_id=$viewer THEN 'reply' ELSE 'mention' END activity_kind,
         'post:' || printf('%020d',p.id) event_key,p.user_id actor_id,u.handle actor_handle,u.bio actor_bio,
         NULL target_handle,NULL target_tag,NULL target_bio,0 target_is_viewer,1 targeted_to_viewer,NULL posts
       FROM posts p JOIN users u ON u.id=p.user_id LEFT JOIN posts parent ON parent.id=p.parent_id
       LEFT JOIN post_mentions pm ON pm.post_id=p.id AND pm.user_id=$viewer
-      WHERE p.deleted_at IS NULL AND p.user_id!=$viewer AND (${descendsFromViewer} OR pm.user_id IS NOT NULL)
+      WHERE p.deleted_at IS NULL AND p.user_id!=$viewer AND (parent.user_id=$viewer OR pm.user_id IS NOT NULL)
         AND NOT EXISTS (SELECT 1 FROM blocks b WHERE (b.blocker_id=$viewer AND b.blocked_id=p.user_id)
           OR (b.blocker_id=p.user_id AND b.blocked_id=$viewer))
         AND NOT EXISTS (SELECT 1 FROM post_hashtags tph JOIN blocked_hashtags bh ON bh.tag=tph.tag
@@ -126,12 +128,7 @@ export function loadPersonalizedFeed(database: Database, user: User, page: numbe
       .all(user.id, ...snapshot.items.map(row => row.event_key)) as { event_key: string }[]).map(row => row.event_key))
     : new Set<string>()
   const timeline = snapshot.items.map(row => ({ ...row, unread: Number(!readKeys.has(row.event_key)) }))
-  const targetedKeys = timeline.filter(row => row.targeted_to_viewer).map(row => row.event_key)
-  const seenToMe = targetedKeys.length
-    ? new Set((database.query(`SELECT event_key FROM to_me_reads
-    WHERE user_id=? AND event_key IN (${targetedKeys.map(() => '?').join(',')})`)
-      .all(user.id, ...targetedKeys) as { event_key: string }[]).map(row => row.event_key))
-    : new Set<string>()
+  const toMeCount = unreadToMeCount(user.id, database)
   const actorStats = visibleUserProfileStats(database, timeline.map(row => row.actor_id), user.id)
   const targets = new Map(timeline.flatMap(row => {
     if (!row.target_handle) return []
@@ -157,21 +154,22 @@ export function loadPersonalizedFeed(database: Database, user: User, page: numbe
     targetFollowsViewer: row.target_handle ? followerIds.has(targets.get(row.target_handle)!) : undefined,
     tagFollowerCount: row.target_tag ? tagCounts[row.target_tag] || 0 : undefined })
   )
-  if (markRead) {
-    markForYouEntriesRead(user.id, timeline.filter(row => row.unread).map(row => row.event_key), toMe, database)
+  if (markRead && !toMe) {
+    markForYouEntriesRead(user.id, timeline.filter(row => row.unread).map(row => row.event_key), false, database)
   }
   const forYouUnread = hasUnreadForYou(user.id, database)
   const toMeUnread = hasUnreadToMe(user.id, database)
-  const firstUnread = forYouUnread || toMeUnread
+  const hasUnread = toMe ? toMeUnread : forYouUnread
+  const firstUnread = hasUnread
     ? database.query(`SELECT item.position,item.payload
-    FROM feed_snapshot_items item LEFT JOIN for_you_reads seen ON seen.user_id=?
+    FROM feed_snapshot_items item LEFT JOIN ${readsTable} seen ON seen.user_id=?
       AND seen.event_key=json_extract(item.payload,'$.event_key')
     WHERE item.snapshot_id=? AND seen.event_key IS NULL ORDER BY item.position LIMIT 1`)
       .get(user.id, snapshot.snapshotId) as { position: number; payload: string } | null
     : null
   const lastUnread = firstUnread
     ? database.query(`SELECT item.position,item.payload
-    FROM feed_snapshot_items item LEFT JOIN for_you_reads seen ON seen.user_id=?
+    FROM feed_snapshot_items item LEFT JOIN ${readsTable} seen ON seen.user_id=?
       AND seen.event_key=json_extract(item.payload,'$.event_key')
     WHERE item.snapshot_id=? AND seen.event_key IS NULL ORDER BY item.position DESC LIMIT 1`)
       .get(user.id, snapshot.snapshotId) as { position: number; payload: string } | null
@@ -185,8 +183,11 @@ export function loadPersonalizedFeed(database: Database, user: User, page: numbe
       : `activity-${row.event_key.replace(/[^a-z0-9_-]+/gi, '-')}`
     return `${path}${page > 1 ? `?page=${page}` : ''}#${anchor}`
   }
+  if (markRead && toMe) {
+    markForYouEntriesRead(user.id, timeline.filter(row => row.unread).map(row => row.event_key), true, database)
+  }
   return { timeline: resultTimeline, page: snapshot.page, totalPages: snapshot.totalPages,
-    toMeCount: targetedKeys.filter(key => !seenToMe.has(key)).length, forYouCount: unreadForYouCount(user.id, database),
+    toMeCount, forYouCount: unreadForYouCount(user.id, database),
     forYouUnread, toMeUnread, unreadHref: unreadHref(firstUnread),
     lastUnreadHref: lastUnread?.position !== firstUnread?.position ? unreadHref(lastUnread) : undefined }
 }

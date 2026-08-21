@@ -1353,7 +1353,8 @@ test('consequential account, content, reporting, and admin flows work over HTTP'
     .get(alice.id, visitedGeneralReadKey)).toBeTruthy()
 
   const unreadToMeHtml = await (await request('/to-me', { cookie: aliceCookie })).text()
-  expect(unreadToMeHtml).not.toContain('action="/to-me/read-all"')
+  expect(unreadToMeHtml).toContain('action="/to-me/read-all"')
+  expect(unreadToMeHtml).toContain('>first unread</a>')
   expect(unreadToMeHtml).toContain('activity-item-directed-unread')
   expect(unreadToMeHtml).toContain('class="unread-dot" aria-label="unread"')
   expect(database.query('SELECT 1 FROM for_you_reads WHERE user_id=? AND event_key=?')

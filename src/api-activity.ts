@@ -82,11 +82,11 @@ export function apiActivities(database: Database, origin: string, user: User, op
       WHERE fyr.user_id=$viewer AND fyr.event_key=timeline.event_key) unread
     FROM (
       SELECT p.id post_id,p.created_at,
-        CASE WHEN ${descendsFromViewer} THEN 'reply'
+        CASE WHEN parent.user_id=$viewer THEN 'reply'
           WHEN pm.user_id IS NOT NULL THEN 'mention' ELSE 'post' END type,
         'post:' || printf('%020d',p.id) event_key,u.handle actor_handle,
         NULL target_handle,NULL target_tag,
-        CASE WHEN ${descendsFromViewer} OR pm.user_id IS NOT NULL THEN 1 ELSE 0 END targeted_to_viewer
+        CASE WHEN parent.user_id=$viewer OR pm.user_id IS NOT NULL THEN 1 ELSE 0 END targeted_to_viewer
       FROM posts p JOIN users u ON u.id=p.user_id
       LEFT JOIN posts parent ON parent.id=p.parent_id
       LEFT JOIN post_mentions pm ON pm.post_id=p.id AND pm.user_id=$viewer
