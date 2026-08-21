@@ -275,6 +275,7 @@ header>.account-nav {
 
 .account-menu {
   position: relative;
+  z-index: 31;
   display: inline-flex;
   align-items: center;
 }
