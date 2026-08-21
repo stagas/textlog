@@ -31,6 +31,7 @@ function Poll({ p, returnPath }: { p: PostView | NonNullable<PostView['parent']>
             </form>
           )
       })}
+      {p.poll.expired && <span className="poll-meta">{p.poll.totalVotes} voted</span>}
     </div>
   )
 }
