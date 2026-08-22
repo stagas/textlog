@@ -4851,7 +4851,9 @@ a.post-context:hover {
 }
 
 .feed-tabs + .feed-thread,
-.feed-tabs + .feed-read-action + .feed-thread {
+.feed-tabs + .feed-read-action + .feed-thread,
+.feed-tabs + .for-you-item > .feed-thread,
+.feed-read-action + .for-you-item > .feed-thread {
   border-top: 0;
 }
 
