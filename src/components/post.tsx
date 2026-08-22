@@ -409,7 +409,7 @@ export function Post({
         unread={contextUnread}
       >
         {user?.id === p.user_id
-          ? <span className="postauthor post-context-author">you</span>
+          ? <span className={preview ? 'post-context post-context-author' : 'postauthor post-context-author'}>you</span>
           : preview
           ? (
             <UserReference handle={p.handle} bio={p.bio} noteCount={p.note_count || 0} stats={p.profile_stats}
@@ -436,6 +436,8 @@ export function Post({
           <>
             {isDeletedHandle(contextTarget.handle)
               ? <span className="post-context deleted-context">(deleted account)</span>
+              : preview
+              ? <span className="preview-context-target">@{contextTarget.handle}</span>
               : <UserReference handle={contextTarget.handle} bio={contextTarget.bio}
                 noteCount={contextTarget.note_count || 0} stats={contextTarget.profile_stats}
                 following={contextTarget.viewer_following} followsViewer={contextTarget.follows_viewer} user={user}
@@ -447,15 +449,13 @@ export function Post({
             </span>
           </>
         )}
-        {preview
-          ? <span className="postdate">read</span>
-          : !tappable && !canonicalTimestamp && (
+        {!preview && !tappable && !canonicalTimestamp && (
             <a className="postdate" href={canonicalTimestamp ? `/post/${p.id}` : detailPath}
               rel={canonicalTimestamp ? undefined : navigationRel}
             >
               {canonicalTimestamp ? 'permalink' : 'read'}
             </a>
-          )}
+        )}
         {foldControlId && (
           <label className="quiet thread-fold" htmlFor={foldControlId} title="fold or unfold replies">
             <span className="visually-hidden">fold or unfold replies</span>

@@ -28,7 +28,7 @@ export function EditPost(
               returnPath={returnPath} backHref={returnPath} />
           </div>
         )}
-        {preview && post.parent_id && parent && <ReplyPreview parentId={parent.id} user={user} body={body} />}
+        {preview && post.parent_id && parent && <ReplyPreview parent={parent} user={user} body={body} />}
         {preview && !post.parent_id && (
           <div className="compose-post-preview">
             <h2>preview</h2>

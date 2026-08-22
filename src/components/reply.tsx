@@ -14,7 +14,7 @@ import {
   VerificationRequired,
 } from './page-shared'
 import { Panel } from './panel'
-import { Post, PreviewPost, ThreadReplies } from './post'
+import { Post, ThreadReplies } from './post'
 
 export function ReplyBox(
   { action, body, error, placeholder, hidden, beforeTextarea, secondary, primary, className = 'replybox',
@@ -51,22 +51,23 @@ export function ReplyBox(
   )
 }
 
-export function ReplyPreview({ parentId, user, body }: { parentId: number; user: User; body: string }) {
+export function ReplyPreview({ parent, user, body }: { parent: PostView; user: User; body: string }) {
   return (
     <div className="reply-preview">
       <p className="eyebrow">preview</p>
       <div className="reply-branch">
         <div className="reply-node">
-          <PreviewPost p={{
+          <Post p={{
             id: 0,
             user_id: user.id,
-            parent_id: parentId,
+            parent_id: parent.id,
             body,
             created_at: new Date().toISOString().slice(0, 19).replace('T', ' '),
             deleted_at: null,
             handle: user.handle,
             bio: user.bio,
-          }} />
+            parent: { ...parent, reply_count: parent.reply_count || 0 },
+          }} user={user} preview showParent={false} />
         </div>
       </div>
     </div>
@@ -113,7 +114,7 @@ export function Reply(
           <ReportPanel post={post} showForm={showReport} reported={reported} reason={reportReason}
             error={reportError} />
         )}
-        {preview && <ReplyPreview parentId={post.id} user={user} body={body} />}
+        {preview && <ReplyPreview parent={post} user={user} body={body} />}
         {showForm && (
           canPublishPosts(user)
             ? (

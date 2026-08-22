@@ -124,6 +124,11 @@ describe('in-memory stylesheet', () => {
     const css = await Bun.file(new URL('./styles.css', import.meta.url)).text()
     expect(css).toContain('.reply-preview .preview-reply {\n  color: var(--accent);\n  cursor: pointer;')
     expect(css).toContain('.reply-preview .preview-reply:hover {\n  color: var(--accent-dark);')
+    expect(css).toContain('.compose-post-preview .postauthor:not(.post-context-author) {')
+    expect(css).toContain('.preview-post-meta > :not(.reference-menu):not(.post-context):not(.preview-context-target) {')
+    expect(css).toContain('.compose-post-preview .preview-post-meta > .post-context {\n  color: var(--muted);\n  cursor: default;\n  border-bottom: 0;')
+    expect(css).toContain('.preview-post-meta > .post-context-author {\n  margin-left: 0;')
+    expect(css).toContain('.preview-post-meta > .preview-context-target {\n  margin-left: calc(-1 * var(--space-4) + 1ch);')
   })
 
   test('styles conversation top links like reply actions', async () => {

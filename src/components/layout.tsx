@@ -52,6 +52,7 @@ export function Layout({
   const name = appName()
   const origin = appOrigin()
   const requestUrl = new URL(request.url)
+  const showGuestJoin = !user && ['/hot', '/latest'].includes(requestUrl.pathname)
   const onWritePage = requestUrl.pathname === '/write'
   const currentPath = requestUrl.pathname + requestUrl.search
   const writeShortcutHref = onWritePage
@@ -161,7 +162,7 @@ export function Layout({
           </>
         )}
         {mobile && <link href="https://fonts.cdnfonts.com/css/dejavu-sans-mono" rel="stylesheet" />}
-        <link rel="stylesheet" href="/styles.css?v=606" />
+        <link rel="stylesheet" href="/styles.css?v=613" />
         <style>{themeCss}</style>
       </head>
       <body className={`density-${density}${user?.show_link_previews === 0 ? ' link-previews-disabled' : ''}${
@@ -229,7 +230,7 @@ export function Layout({
         )}
         {user && ready && mobileWriteAction && <MobileWriteAction />}
         <main id="main-content">{children}</main>
-        {!user && (
+        {showGuestJoin && (
           <div className="guest-join-row">
             <a className="button" href="/enter" rel="nofollow">join the community</a>
           </div>

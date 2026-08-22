@@ -3272,7 +3272,7 @@ form.report-panel {
   margin-top: var(--space-4);
 }
 
-.compose-post-preview .postauthor {
+.compose-post-preview .postauthor:not(.post-context-author) {
   color: var(--accent);
 }
 
@@ -3285,18 +3285,36 @@ form.report-panel {
   z-index: 3;
 }
 
-.preview-post-meta > * {
+.preview-post-meta > :not(.post-context):not(.preview-context-target) {
   color: var(--accent);
   cursor: pointer;
 }
 
-.preview-post-meta > :not(.reference-menu) {
+.preview-post-meta > :not(.reference-menu):not(.post-context):not(.preview-context-target) {
   padding-bottom: 0;
   border-bottom: var(--hairline) solid var(--link-border);
 }
 
-.preview-post-meta > *:hover {
+.preview-post-meta > :not(.post-context):not(.preview-context-target):hover {
   color: var(--accent-dark);
+}
+
+.compose-post-preview .preview-post-meta > .post-context {
+  color: var(--muted);
+  cursor: default;
+  border-bottom: 0;
+}
+
+.preview-post-meta > .post-context-author {
+  margin-left: 0;
+}
+
+.preview-post-meta > .preview-context-target {
+  margin-left: calc(-1 * var(--space-4) + 1ch);
+  padding-bottom: 0;
+  color: var(--accent);
+  cursor: default;
+  border-bottom: var(--hairline) solid var(--link-border);
 }
 
 

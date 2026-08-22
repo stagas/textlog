@@ -160,8 +160,10 @@ test('compose offers a server-rendered post preview', () => {
     preview.indexOf('<div class="panel panel-surface panel-medium compose write-compose">'),
   )).not.toContain('<div class="compose-post-preview">')
   expect(preview).toContain('Hello <a href="/tag/world"')
-  expect(preview).toContain('<div class="posttop posttop-context preview-post-meta"><span class="postauthor post-context-author">you</span>')
+  expect(preview).toContain('<div class="posttop posttop-context preview-post-meta"><span class="post-context post-context-author">you</span>')
+  expect(preview).not.toContain('<span class="postauthor post-context-author">you</span>')
   expect(preview).toContain('<span class="post-context">wrote:</span>')
+  expect(preview).not.toContain('<span class="postdate">read</span>')
   expect(preview).not.toContain('href="/post/0"')
   expect(preview).toContain('<span class="quiet preview-reply">continue</span>')
   expect(preview).not.toContain('href="#"')
@@ -305,9 +307,11 @@ test('editing a reply shows its parent context above the textarea', () => {
   expect(preview.indexOf('<div class="reply-preview">')).toBeLessThan(preview.indexOf('<textarea'))
   const previewPost = preview.slice(preview.indexOf('<div class="reply-preview">'),
     preview.indexOf('<div class="panel panel-surface panel-medium replybox">'))
-  expect(previewPost).toContain('<div class="posttop preview-post-meta"><span class="reference-menu">')
-  expect(previewPost).toContain('<span class="postdate"')
-  expect(previewPost).toContain('<span class="quiet preview-reply">reply</span>')
+  expect(previewPost).toContain('<span class="post-context post-context-author">you</span>')
+  expect(previewPost).toContain('<span class="post-context">replied to</span><span class="preview-context-target">@author</span>')
+  expect(previewPost).toContain('<span class="post-context post-context-punctuation">:</span>')
+  expect(previewPost).not.toContain('<span class="postdate"')
+  expect(previewPost).toContain('<span class="quiet preview-reply">continue</span>')
   expect(previewPost).not.toContain('<a ')
 })
 
@@ -335,7 +339,7 @@ test('reply forms offer the same server-rendered preview flow', () => {
   )
   expect(html.indexOf('<textarea')).toBeLessThan(html.indexOf('<div class="composefoot">'))
   expect(html).toContain('Reply <a href="/tag/here"')
-  expect(html).toContain('<span class="quiet preview-reply">reply</span>')
+  expect(html).toContain('<span class="quiet preview-reply">continue</span>')
   expect(html).not.toContain('href="#"')
   expect(html).not.toContain('href="/post/0"')
   expect(html).not.toContain('NaN')
@@ -1080,8 +1084,10 @@ describe('About', () => {
 
   test('appears above public feed tabs only for guest visitors', () => {
     const feed = { posts: [], page: 1, totalItems: 20, totalPages: 2 }
-    const guestHot = renderToStaticMarkup(React.createElement(HotFeed, { user: null, feed }))
-    const guestLatest = renderToStaticMarkup(React.createElement(PublicFeed, { user: null, feed, path: '/latest' }))
+    const guestHot = withAppearance(new Request('https://textlog.test/hot'), () =>
+      renderToStaticMarkup(React.createElement(HotFeed, { user: null, feed })))
+    const guestLatest = withAppearance(new Request('https://textlog.test/latest'), () =>
+      renderToStaticMarkup(React.createElement(PublicFeed, { user: null, feed, path: '/latest' })))
     const user = { id: 1, handle: 'reader', email: 'reader@example.com', bio: '' }
     const signedInHot = renderToStaticMarkup(React.createElement(HotFeed, { user }))
     const signedInLatest = renderToStaticMarkup(React.createElement(PublicFeed, { user, path: '/latest' }))
@@ -1116,11 +1122,10 @@ describe('About', () => {
     expect(html).not.toContain('class="about-hot-more"')
   })
 
-  test('shows the guest join action above the footer on every anonymous page', () => {
+  test('does not show the feed join action on other anonymous pages', () => {
     const html = renderToStaticMarkup(React.createElement(Contact, { user: null }))
 
-    expect(html).toContain('class="guest-join-row"><a class="button" href="/enter" rel="nofollow">join the community</a>')
-    expect(html.indexOf('class="guest-join-row"')).toBeLessThan(html.indexOf('class="site-footer"'))
+    expect(html).not.toContain('class="guest-join-row"')
   })
 })
 
