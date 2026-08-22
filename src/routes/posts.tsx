@@ -1,6 +1,8 @@
 import {
   Compose,
+  ConfirmDraftDelete,
   ConfirmDelete,
+  Drafts,
   EditPost,
   PublicThread,
   Reply,
@@ -31,6 +33,11 @@ function notifyPost(postId: number, userId: number, handle: string) {
 }
 
 const saveFailureMessage = 'Something went wrong while saving. Your text is still here; please try again.'
+
+function draftId(fields: Record<string, string>) {
+  const id = Number(fields.draft_id)
+  return Number.isInteger(id) && id > 0 ? id : undefined
+}
 
 async function postingSuggestionSearch(fields: Record<string, string>,
   viewerId: number): Promise<PostingSuggestionSearch | null>
@@ -80,6 +87,72 @@ export function registerPostsRoutes(app: Hono) {
   })
   app.get('/compose', c => c.redirect('/write', 301))
   app.get('/post', c => c.redirect('/write', 303))
+
+  app.get('/drafts', async c => {
+    const user = currentUser(c.req.raw)
+    if (!user) return redirect('/enter?next=' + encodeURIComponent('/drafts'))
+    const drafts = await databaseService().call('drafts.list', { userId: user.id })
+    const returnPath = c.req.query('from') ? safeNext(c.req.query('from')) : undefined
+    return page(<Drafts user={user} drafts={drafts} returnPath={returnPath} />)
+  })
+
+  app.get('/drafts/:id/edit', async c => {
+    const user = currentUser(c.req.raw)
+    if (!user) return redirect('/enter?next=' + encodeURIComponent(c.req.path))
+    const id = Number(c.req.param('id'))
+    const draft = Number.isInteger(id) ? await databaseService().call('drafts.get', { id, userId: user.id }) : null
+    if (!draft) return c.text('Not found', 404)
+    const returnPath = c.req.query('from') ? safeNext(c.req.query('from')) : undefined
+    const draftsPath = `/drafts${returnPath ? '?from=' + encodeURIComponent(returnPath) : ''}`
+    if (draft.parent_id === null) {
+      return page(<Compose user={user} body={draft.body} draftId={draft.id} returnPath={draftsPath} />)
+    }
+    const loaded = await databaseService().call('posts.replyParent', { id: draft.parent_id, userId: user.id })
+    if (loaded.status !== 'ready') return c.text(loaded.status === 'forbidden' ? 'Forbidden' : 'Not found',
+      loaded.status === 'forbidden' ? 403 : 404)
+    return page(<Reply user={user} post={loaded.post} showForm body={draft.body} draftId={draft.id}
+      returnPath={draftsPath} />)
+  })
+
+  app.get('/drafts/:id/delete', async c => {
+    const user = currentUser(c.req.raw)
+    if (!user) return redirect('/enter?next=' + encodeURIComponent(c.req.path))
+    const id = Number(c.req.param('id'))
+    const draft = Number.isInteger(id) ? await databaseService().call('drafts.get', { id, userId: user.id }) : null
+    if (!draft) return c.text('Not found', 404)
+    const returnPath = c.req.query('from') ? safeNext(c.req.query('from')) : undefined
+    return page(<ConfirmDraftDelete user={user} draft={draft} returnPath={returnPath} />)
+  })
+
+  app.post('/drafts/:id/delete', async c => {
+    const user = currentUser(c.req.raw)
+    if (!user) return redirect('/enter')
+    const id = Number(c.req.param('id'))
+    const fields = await form(c.req.raw)
+    if (!Number.isInteger(id) || !await databaseService().call('drafts.delete', { id, userId: user.id })) {
+      return c.text('Not found', 404)
+    }
+    const returnPath = fields.from ? safeNext(fields.from) : undefined
+    return redirect(`/drafts${returnPath ? '?from=' + encodeURIComponent(returnPath) : ''}`)
+  })
+
+  app.post('/drafts/:id', async c => {
+    const user = currentUser(c.req.raw)
+    if (!user) return redirect('/enter')
+    const id = Number(c.req.param('id'))
+    const existing = Number.isInteger(id)
+      ? await databaseService().call('drafts.get', { id, userId: user.id })
+      : null
+    if (!existing) return c.text('Not found', 404)
+    const fields = await form(c.req.raw)
+    const body = normalizePostBody(fields.body || '')
+    if (!validPostBody(body)) return c.text(postBodyValidationMessage(body), 400)
+    const result = await databaseService().call('drafts.save', {
+      id, userId: user.id, parentId: existing.parent_id, body,
+    })
+    if (result.status === 'not_found') return c.text('Not found', 404)
+    return redirect(fields.from ? safeNext(fields.from) : '/drafts')
+  })
 
   app.get('/post/:id', async c => {
     const id = Number(c.req.param('id'))
@@ -152,15 +225,27 @@ export function registerPostsRoutes(app: Hono) {
     const f = await form(c.req.raw)
     const returnPath = f.from ? safeNext(f.from) : '/'
     const body = normalizePostBody(f.body || '')
+    const editingDraftId = draftId(f)
     const suggestionSearch = await postingSuggestionSearch(f, user.id)
     if (suggestionSearch) {
-      return page(<Compose user={user} body={body} returnPath={returnPath} suggestionSearch={suggestionSearch} />)
+      return page(<Compose user={user} body={body} draftId={editingDraftId} returnPath={returnPath}
+        suggestionSearch={suggestionSearch} />)
     }
     if (!validPostBody(body)) {
-      return page(<Compose user={user} body={body} error={postBodyValidationMessage(body)} returnPath={returnPath} />,
+      return page(<Compose user={user} body={body} draftId={editingDraftId} error={postBodyValidationMessage(body)}
+        returnPath={returnPath} />,
         400)
     }
-    if (f.action === 'preview') return page(<Compose user={user} body={body} preview returnPath={returnPath} />)
+    if (f.action === 'preview') {
+      return page(<Compose user={user} body={body} draftId={editingDraftId} preview returnPath={returnPath} />)
+    }
+    if (f.action === 'draft') {
+      const result = await databaseService().call('drafts.save', {
+        id: editingDraftId ?? null, userId: user.id, parentId: null, body,
+      })
+      if (result.status === 'not_found') return c.text('Not found', 404)
+      return redirect(`/drafts?from=${encodeURIComponent(returnPath)}`)
+    }
     try {
       const moderation = await moderateText(body)
       if (!moderation.ok) {
@@ -185,11 +270,13 @@ export function registerPostsRoutes(app: Hono) {
       if (!result.duplicate) publishPost(result.id)
       if (!result.duplicate) await persistPreviews(result.id, 'save', body)
       if (!result.duplicate) notifyPost(result.id, user.id, user.handle)
+      if (editingDraftId) await databaseService().call('drafts.delete', { id: editingDraftId, userId: user.id })
       return rememberFeed(redirect(`/latest#post-${result.id}`), 'latest')
     }
     catch (error) {
       logError('POST /post', error)
-      return page(<Compose user={user} body={body} error={saveFailureMessage} returnPath={returnPath} />, 500)
+      return page(<Compose user={user} body={body} draftId={editingDraftId} error={saveFailureMessage}
+        returnPath={returnPath} />, 500)
     }
   })
 
@@ -324,28 +411,40 @@ export function registerPostsRoutes(app: Hono) {
     const f = await form(c.req.raw)
     const returnPath = f.from ? safeNext(f.from) : undefined
     const body = normalizePostBody(f.body || '')
+    const editingDraftId = draftId(f)
     const suggestionSearch = await postingSuggestionSearch(f, user.id)
     if (suggestionSearch) {
       return page(
-        <Reply user={user} post={parent} showForm body={body} returnPath={returnPath}
+        <Reply user={user} post={parent} showForm body={body} draftId={editingDraftId} returnPath={returnPath}
           suggestionSearch={suggestionSearch} />,
       )
     }
     if (!validPostBody(body)) {
       return page(
         <Reply user={user} post={parent} showForm error={postBodyValidationMessage(body)} body={body}
+          draftId={editingDraftId}
           returnPath={returnPath} />,
         400,
       )
     }
     if (f.action === 'preview') {
-      return page(<Reply user={user} post={parent} showForm body={body} preview returnPath={returnPath} />)
+      return page(<Reply user={user} post={parent} showForm body={body} draftId={editingDraftId} preview
+        returnPath={returnPath} />)
+    }
+    if (f.action === 'draft') {
+      const result = await databaseService().call('drafts.save', {
+        id: editingDraftId ?? null, userId: user.id, parentId, body,
+      })
+      if (result.status === 'not_found') return c.text('Not found', 404)
+      const draftReturnPath = returnPath || `/post/${parentId}`
+      return redirect(`/drafts?from=${encodeURIComponent(draftReturnPath)}`)
     }
     try {
       const moderation = await moderateText(body)
       if (!moderation.ok) {
         return page(
           <Reply user={user} post={parent} showForm error={moderationMessage(moderation.reason)} body={body}
+            draftId={editingDraftId}
             returnPath={returnPath} />,
           moderation.reason === 'flagged' ? 422 : 503,
         )
@@ -367,12 +466,14 @@ export function registerPostsRoutes(app: Hono) {
       if (!result.duplicate) publishPost(result.id)
       if (!result.duplicate) await persistPreviews(result.id, 'save', body)
       if (!result.duplicate) notifyPost(result.id, user.id, user.handle)
+      if (editingDraftId) await databaseService().call('drafts.delete', { id: editingDraftId, userId: user.id })
       return redirect(postedReplyPath(parentId, result.id, returnPath))
     }
     catch (error) {
       logError(`POST /post/${parentId}/reply`, error)
       return page(
-        <Reply user={user} post={parent} showForm error={saveFailureMessage} body={body} returnPath={returnPath} />,
+        <Reply user={user} post={parent} showForm error={saveFailureMessage} body={body} draftId={editingDraftId}
+          returnPath={returnPath} />,
         500,
       )
     }

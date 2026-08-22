@@ -18,7 +18,7 @@ import { Post, PreviewPost, ThreadReplies } from './post'
 
 export function ReplyBox(
   { action, body, error, placeholder, hidden, beforeTextarea, secondary, primary, className = 'replybox',
-    suggestionSearch }: {
+    suggestionSearch, draftId }: {
       action: string
       body: string
       error?: string
@@ -29,12 +29,14 @@ export function ReplyBox(
       primary: React.ReactNode
       className?: string
       suggestionSearch?: PostingSuggestionSearch | null
+      draftId?: number
     },
 ) {
   return (
     <Panel className={className}>
       <form method="post" action={action}>
         {hidden}
+        {draftId && <input type="hidden" name="draft_id" value={draftId} />}
         <FormMessage error={error} />
         {beforeTextarea}
         <textarea className="form-control" name="body" maxLength={280} required autoFocus defaultValue={body}
@@ -73,7 +75,8 @@ export function ReplyPreview({ parentId, user, body }: { parentId: number; user:
 
 export function Reply(
   { user, post, replies = [], showForm, showReport = false, reported = false, error, body = '', reportReason = '',
-    reportError, social, preview = false, returnPath, topHref, flatHref, treeHref, flat = false, suggestionSearch }: {
+    reportError, social, preview = false, returnPath, topHref, flatHref, treeHref, flat = false, suggestionSearch,
+    draftId }: {
       user: User
       post: PostView
       replies?: PostView[]
@@ -92,6 +95,7 @@ export function Reply(
       treeHref?: string
       flat?: boolean
       suggestionSearch?: PostingSuggestionSearch | null
+      draftId?: number
     },
 ) {
   return (
@@ -114,7 +118,7 @@ export function Reply(
           canPublishPosts(user)
             ? (
               <ReplyBox action={'/post/' + post.id + '/reply'} body={body} error={error}
-                suggestionSearch={suggestionSearch} placeholder={'Reply to @' + post.handle + '…'}
+                suggestionSearch={suggestionSearch} draftId={draftId} placeholder={'Reply to @' + post.handle + '…'}
                 hidden={returnPath && <input type="hidden" name="from" value={returnPath} />}
                 secondary={
                   <span className="edit-post-actions">
@@ -124,6 +128,8 @@ export function Reply(
                       cancel
                     </a>
                     <button className="secondary-action" name="action" value="preview">preview</button>
+                    <button className="secondary-action" name="action" value="draft"
+                      formAction={draftId ? `/drafts/${draftId}` : undefined}>draft</button>
                   </span>
                 } primary={<button className="button" accessKey="p">post →</button>} />
             )

@@ -925,6 +925,44 @@ test('consequential account, content, reporting, and admin flows work over HTTP'
   expect(resetLogin.status).toBe(303)
   aliceCookie = sessionCookie(resetLogin)
 
+  const savedNoteDraft = await request('/post', {
+    method: 'POST', cookie: aliceCookie, form: { body: 'A saved note draft', action: 'draft', from: '/latest' },
+  })
+  expect(savedNoteDraft.status).toBe(303)
+  expect(savedNoteDraft.headers.get('location')).toBe('/drafts?from=%2Flatest')
+  const noteDraft = database.query('SELECT id,body,parent_id FROM drafts WHERE user_id=?').get(alice.id) as {
+    id: number; body: string; parent_id: number | null
+  }
+  expect(noteDraft.parent_id).toBeNull()
+  const draftsPageHtml = await (await request('/drafts?from=%2Flatest', { cookie: aliceCookie })).text()
+  expect(draftsPageHtml).toContain('A saved note draft')
+  expect(draftsPageHtml).toContain('href="/latest">back</a>')
+  expect(draftsPageHtml).toContain(`/drafts/${noteDraft.id}/edit?from=%2Flatest`)
+  const draftEditHtml = await (await request(`/drafts/${noteDraft.id}/edit?from=%2Flatest`, {
+    cookie: aliceCookie,
+  })).text()
+  expect(draftEditHtml).toContain('A saved note draft')
+  expect(draftEditHtml).toContain(`name="draft_id" value="${noteDraft.id}"`)
+  expect(draftEditHtml).toContain(`formAction="/drafts/${noteDraft.id}"`)
+  const overwrittenDraft = await request(`/drafts/${noteDraft.id}`, {
+    method: 'POST', cookie: aliceCookie, form: { body: 'The overwritten note draft', action: 'draft' },
+  })
+  expect(overwrittenDraft.status).toBe(303)
+  expect((database.query('SELECT count(*) count FROM drafts WHERE user_id=?').get(alice.id) as { count: number })
+    .count).toBe(1)
+  expect((database.query('SELECT body FROM drafts WHERE id=?').get(noteDraft.id) as { body: string }).body)
+    .toBe('The overwritten note draft')
+  const confirmDraftDeleteHtml = await (await request(`/drafts/${noteDraft.id}/delete?from=%2Flatest`, {
+    cookie: aliceCookie,
+  })).text()
+  expect(confirmDraftDeleteHtml).toContain('Delete this draft?')
+  expect(confirmDraftDeleteHtml).toContain('The overwritten note draft')
+  expect(confirmDraftDeleteHtml).toContain('href="/drafts?from=%2Flatest">cancel</a>')
+  const deletedDraft = await request(`/drafts/${noteDraft.id}/delete`, { method: 'POST', cookie: aliceCookie,
+    form: {} })
+  expect(deletedDraft.status).toBe(303)
+  expect(database.query('SELECT 1 FROM drafts WHERE id=?').get(noteDraft.id)).toBeNull()
+
   const createPost = await request('/post', {
     method: 'POST',
     cookie: aliceCookie,
@@ -934,6 +972,24 @@ test('consequential account, content, reporting, and admin flows work over HTTP'
   const post = database.query('SELECT id,body FROM posts WHERE user_id=? ORDER BY id DESC LIMIT 1')
     .get(alice.id) as { id: number; body: string }
   expect(createPost.headers.get('location')).toBe(`/latest#post-${post.id}`)
+
+  const savedReplyDraft = await request(`/post/${post.id}/reply`, {
+    method: 'POST', cookie: aliceCookie, form: { body: 'A saved reply draft', action: 'draft' },
+  })
+  expect(savedReplyDraft.status).toBe(303)
+  expect(savedReplyDraft.headers.get('location')).toBe(`/drafts?from=${encodeURIComponent(`/post/${post.id}`)}`)
+  const replyDraft = database.query('SELECT id,parent_id FROM drafts WHERE user_id=?').get(alice.id) as {
+    id: number; parent_id: number
+  }
+  expect(replyDraft.parent_id).toBe(post.id)
+  const replyDraftEditHtml = await (await request(`/drafts/${replyDraft.id}/edit`, { cookie: aliceCookie })).text()
+  expect(replyDraftEditHtml).toContain('A saved reply draft')
+  expect(replyDraftEditHtml).toContain(`action="/post/${post.id}/reply"`)
+  const publishedReplyDraft = await request(`/post/${post.id}/reply`, {
+    method: 'POST', cookie: aliceCookie, form: { body: 'Published reply draft', draft_id: String(replyDraft.id) },
+  })
+  expect(publishedReplyDraft.status).toBe(303)
+  expect(database.query('SELECT 1 FROM drafts WHERE id=?').get(replyDraft.id)).toBeNull()
 
   const routeOversizedPost = await request('/post', {
     method: 'POST',

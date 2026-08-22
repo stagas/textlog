@@ -1351,6 +1351,17 @@ export const migrations: Migration[] = [
       CREATE INDEX reports_status_created ON reports(status,created_at DESC);`)
     },
   },
+  {
+    version: 106,
+    name: 'post_drafts',
+    up(database) {
+      database.run(`CREATE TABLE IF NOT EXISTS drafts (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        parent_id INTEGER REFERENCES posts(id) ON DELETE CASCADE,body TEXT NOT NULL CHECK(length(body) BETWEEN 1 AND 280),
+        created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP);
+      CREATE INDEX IF NOT EXISTS drafts_user_updated ON drafts(user_id,updated_at DESC,id DESC);`)
+    },
+  },
 ]
 
 export const latestMigrationVersion = migrations.at(-1)!.version

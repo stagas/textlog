@@ -282,4 +282,7 @@ export type TagView = {
 }
 export type User = { id: number; handle: string; email: string; bio: string; suspended_at?: string | null;
   email_verified_at?: string | null; activity_read_at?: string | null; handle_chosen_at?: string | null;
-  timezone?: string | null; show_link_previews?: number; recap_emails?: number }
+  timezone?: string | null; show_link_previews?: number; recap_emails?: number; draft_count?: number }
+
+export type DraftView = { id: number; body: string; parent_id: number | null; created_at: string; updated_at: string;
+  parent_handle?: string | null; parent?: ParentPost | null }

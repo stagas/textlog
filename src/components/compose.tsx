@@ -14,13 +14,14 @@ import { Panel } from './panel'
 import { Post } from './post'
 
 export function Compose(
-  { user, error, body = '', preview = false, returnPath = '/', suggestionSearch }: {
+  { user, error, body = '', preview = false, returnPath = '/', suggestionSearch, draftId }: {
     user: User
     error?: string
     body?: string
     preview?: boolean
     returnPath?: string
     suggestionSearch?: PostingSuggestionSearch | null
+    draftId?: number
   },
 ) {
   if (!canPublishPosts(user)) {
@@ -54,6 +55,7 @@ export function Compose(
         </h1>
         <form method="post" action="/post">
           <input type="hidden" name="from" value={returnPath} />
+          {draftId && <input type="hidden" name="draft_id" value={draftId} />}
           <FormMessage error={error} />
           <textarea className="form-control" name="body" maxLength={280} required autoFocus defaultValue={body}
             autoComplete="off" inputMode="text" enterKeyHint="enter" />
@@ -64,6 +66,8 @@ export function Compose(
               <span className="edit-post-actions">
                 <a className="secondary-action cancel-action edit-post-cancel" href={returnPath}>cancel</a>
                 <button className="secondary-action" name="action" value="preview">preview</button>
+                <button className="secondary-action" name="action" value="draft"
+                  formAction={draftId ? `/drafts/${draftId}` : undefined}>draft</button>
               </span>
             } primary={<button className="button" accessKey="p">post →</button>} />
           </div>

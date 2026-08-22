@@ -322,13 +322,16 @@ export function Post({
   authorPopoverAction,
   continuationHref,
   continuationLabel = 'read more',
+  className,
+  topActions,
 }: { p: PostView; user: User | null; showReplyAction?: boolean; showOwnerActions?: boolean;
   showModerateAction?: boolean; showParent?: boolean; showReplyCount?: boolean; replyHref?: string; replyLabel?: string;
   reportHref?: string; foldControlId?: string; highlightTerms?: string[]; tappable?: boolean; tappableParent?: boolean;
   contextLabel?: React.ReactNode; contextUnread?: boolean; contextDirectedUnread?: boolean; preview?: boolean;
   returnPath?: string; backHref?: string;
   canonicalTimestamp?: boolean; topHref?: string; flatHref?: string; treeHref?: string;
-  authorPopoverAction?: React.ReactNode; continuationHref?: string; continuationLabel?: string })
+  authorPopoverAction?: React.ReactNode; continuationHref?: string; continuationLabel?: string;
+  className?: string; topActions?: React.ReactNode })
 {
   const parent = showParent ? p.parent : null
   const parentContinued = parent?.parent_id && parent.parent?.user_id === parent.user_id
@@ -395,7 +398,7 @@ export function Post({
     )
   }
   return (
-    <article className={`post${tappable || hasTappableParent ? ' tappable-post' : ''}${
+    <article className={`post${className ? ` ${className}` : ''}${tappable || hasTappableParent ? ' tappable-post' : ''}${
       contextDirectedUnread ? ' activity-item-directed-unread' : ''}`} id={`post-${p.id}`}>
       {tappable && (
         <a className="post-hit-area" href={detailPath} rel={navigationRel} aria-label={`open post by @${p.handle}`} />
@@ -460,8 +463,9 @@ export function Post({
           <a className="quiet post-top-link"
             href={replyAnchorReturnPath(parent.top_id || parent.id, parent.top_id || parent.id, returnPath)}>top</a>
         )}
-        {(flatHref || treeHref || showOwnerActions && user?.id === p.user_id || topHref || backHref) && (
+        {(flatHref || treeHref || showOwnerActions && user?.id === p.user_id || topHref || backHref || topActions) && (
           <div className="post-navigation-actions">
+            {topActions}
             {showOwnerActions && user?.id === p.user_id && (
               <div className="post-actions">
                 <a className="quiet" href={'/post/' + p.id + '/edit' + actionQuery}

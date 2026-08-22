@@ -85,6 +85,7 @@ export function Layout({
       <>
         <span className="account-nav-row account-nav-secondary">
           <a href="/explore">explore</a>
+          {!!user.draft_count && <a href="/drafts">drafts</a>}
         </span>
         <span className="account-nav-row account-nav-primary">
           {mobile
@@ -159,7 +160,7 @@ export function Layout({
           </>
         )}
         {mobile && <link href="https://fonts.cdnfonts.com/css/dejavu-sans-mono" rel="stylesheet" />}
-        <link rel="stylesheet" href="/styles.css?v=548" />
+        <link rel="stylesheet" href="/styles.css?v=567" />
         <style>{themeCss}</style>
       </head>
       <body className={`density-${density}${user?.show_link_previews === 0 ? ' link-previews-disabled' : ''}${

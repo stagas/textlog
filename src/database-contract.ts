@@ -1,5 +1,5 @@
 import type { DensityChoice, PageSizeChoice } from './request-preferences'
-import type { ApiKeyView, ApiPost, BioReferenceData, DashboardStats, EmbedData, ExploreData, FeedKeyView, LinkPreview,
+import type { ApiKeyView, ApiPost, BioReferenceData, DashboardStats, DraftView, EmbedData, ExploreData, FeedKeyView, LinkPreview,
   PersonalizedFeedData, PersonView, PostFeedPage, PostView, ProfileOverviewData, SearchResultsData, SessionView,
   TagPageData, User } from './types'
 import type { AdminActionView, AdminReportView, IllegalActivityReportView, PostRow, ProfileRow } from './types'
@@ -217,6 +217,11 @@ export type DatabaseDomainOperations = {
   'posts.ogData': { input: { id: number }; output: { body: string; handle: string } | null }
   'posts.suggestions': { input: { kind: 'hashtags' | 'mentions'; query: string; viewerId: number };
     output: { results: string[]; truncated: boolean } }
+  'drafts.list': { input: { userId: number }; output: DraftView[] }
+  'drafts.get': { input: { id: number; userId: number }; output: DraftView | null }
+  'drafts.save': { input: { id: number | null; userId: number; parentId: number | null; body: string };
+    output: { status: 'ready'; id: number } | { status: 'not_found' } }
+  'drafts.delete': { input: { id: number; userId: number }; output: boolean }
   'posts.votePoll': { input: { postId: number; optionId: number; userId: number };
     output: 'ready' | 'already_voted' | 'expired' | 'not_found' }
   'profiles.bioReferences': { input: { bio: string; profileId: number; viewerId: number }; output: BioReferenceData }

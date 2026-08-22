@@ -283,6 +283,26 @@ header>nav>a:not(.button),
   gap: clamp(12px, 3vw, 22px);
 }
 
+@media (min-width: 601px) {
+  header.authenticated-header {
+    flex-wrap: nowrap;
+  }
+
+  header > .account-nav {
+    min-width: 0;
+    flex: 1;
+    flex-wrap: nowrap;
+  }
+
+  .account-nav-row {
+    flex: none;
+  }
+
+  .account-nav-secondary {
+    margin-left: auto;
+  }
+}
+
 .mobile-write-action {
   display: none;
 }
@@ -2467,6 +2487,25 @@ textarea.form-control {
   gap: var(--space-4);
 }
 
+.drafts-heading {
+  padding: var(--space-7) var(--gutter) var(--space-5);
+}
+
+.drafts-empty {
+  margin: 0;
+  padding: 0 var(--gutter) var(--space-5);
+  color: var(--muted);
+  font-size: 0.6875rem;
+}
+
+.draft-post > .posttop > :not(.post-navigation-actions) {
+  display: none;
+}
+
+.draft-post > .posttop > .post-navigation-actions {
+  margin-left: 0;
+}
+
 .edit-post-delete-action {
   display: flex;
   justify-content: flex-end;
@@ -2925,6 +2964,47 @@ form.report-panel {
   gap: 1ch;
 }
 
+:is(.write-compose, .replybox) .posting-help {
+  gap: 2px 1ch;
+}
+
+:is(.write-compose, .replybox) .posting-help-limits {
+  flex-basis: 100%;
+}
+
+:is(.write-compose, .replybox) .posting-help-separator {
+  display: none;
+}
+
+:is(.write-compose, .replybox) .posting-help-search .posting-help-popover {
+  right: auto;
+  left: var(--gutter);
+  transform: none;
+}
+
+:is(.write-compose, .replybox) .form-actions {
+  width: auto;
+  flex: none;
+  flex-wrap: nowrap;
+  justify-content: flex-end;
+}
+
+:is(.write-compose, .replybox) .edit-post-actions {
+  display: flex;
+  flex-wrap: nowrap;
+  white-space: nowrap;
+}
+
+:is(.write-compose, .replybox) .composefoot {
+  display: flex;
+  flex-wrap: nowrap;
+}
+
+:is(.write-compose, .replybox) .posting-help {
+  min-width: 0;
+  flex: 1;
+}
+
 @media (max-width: 520px) {
   .replybox {
     margin-inline: 0;
@@ -2963,7 +3043,9 @@ form.report-panel {
   }
 
   :is(.write-compose, .edit-post-compose, .replybox) .composefoot .form-actions {
+    width: auto;
     align-items: center;
+    flex-wrap: nowrap;
     justify-content: flex-end;
   }
 

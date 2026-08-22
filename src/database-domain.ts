@@ -114,6 +114,8 @@ function sessionUser(database: Database, token: string | null): User | null {
     FROM sessions s JOIN users u ON u.id=s.user_id
     WHERE s.token_hash=? AND s.expires_at>? AND u.deleted_at IS NULL AND u.suspended_at IS NULL`)
     .get(sessionHash(token), Date.now()) as User | null
+  if (user) user.draft_count = (database.query('SELECT count(*) count FROM drafts WHERE user_id=?')
+    .get(user.id) as { count: number }).count
   if (user) markSessionUsed(database, token, Date.now())
   return user
 }
@@ -848,6 +850,47 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
         ? found.rows.map(row => 'tag' in row ? row.tag : '')
         : found.rows.map(row => 'handle' in row ? row.handle : '')
       return { results, truncated: found.total > 20 } as DatabaseDomainOutput<K>
+    }
+    case 'drafts.list': {
+      const { userId } = input as DatabaseDomainInput<'drafts.list'>
+      const drafts = database.query(`SELECT d.id,d.body,d.parent_id,d.created_at,d.updated_at,u.handle parent_handle
+        FROM drafts d LEFT JOIN posts p ON p.id=d.parent_id LEFT JOIN users u ON u.id=p.user_id
+        WHERE d.user_id=? ORDER BY d.updated_at DESC,d.id DESC`).all(userId) as import('./types').DraftView[]
+      const parentIds = drafts.flatMap(draft => draft.parent_id ? [draft.parent_id] : [])
+      const parentRows = parentIds.length
+        ? database.query(`SELECT p.*,u.handle,u.bio FROM posts p JOIN users u ON u.id=p.user_id
+          WHERE p.id IN (${parentIds.map(() => '?').join(',')})`).all(...parentIds) as PostView[]
+        : []
+      const parents = new Map(enrichPosts(database, parentRows, userId)
+        .map(parent => [parent.id, { ...parent, reply_count: parent.reply_count || 0 }]))
+      return drafts.map(draft => ({ ...draft, parent: draft.parent_id ? parents.get(draft.parent_id) || null : null })) as
+        DatabaseDomainOutput<K>
+    }
+    case 'drafts.get': {
+      const { id, userId } = input as DatabaseDomainInput<'drafts.get'>
+      return (database.query(`SELECT d.id,d.body,d.parent_id,d.created_at,d.updated_at,u.handle parent_handle
+        FROM drafts d LEFT JOIN posts p ON p.id=d.parent_id LEFT JOIN users u ON u.id=p.user_id
+        WHERE d.id=? AND d.user_id=?`).get(id, userId) || null) as DatabaseDomainOutput<K>
+    }
+    case 'drafts.save': {
+      const { id, userId, parentId, body } = input as DatabaseDomainInput<'drafts.save'>
+      if (parentId !== null && !database.query('SELECT 1 FROM posts WHERE id=? AND deleted_at IS NULL').get(parentId)) {
+        return { status: 'not_found' } as DatabaseDomainOutput<K>
+      }
+      if (id !== null) {
+        const result = database.query(`UPDATE drafts SET body=?,parent_id=?,updated_at=CURRENT_TIMESTAMP
+          WHERE id=? AND user_id=?`).run(body, parentId, id, userId)
+        if (!result.changes) return { status: 'not_found' } as DatabaseDomainOutput<K>
+        return { status: 'ready', id } as DatabaseDomainOutput<K>
+      }
+      const result = database.query('INSERT INTO drafts(user_id,parent_id,body) VALUES(?,?,?)')
+        .run(userId, parentId, body)
+      return { status: 'ready', id: Number(result.lastInsertRowid) } as DatabaseDomainOutput<K>
+    }
+    case 'drafts.delete': {
+      const { id, userId } = input as DatabaseDomainInput<'drafts.delete'>
+      return !!database.query('DELETE FROM drafts WHERE id=? AND user_id=?').run(id, userId).changes as
+        DatabaseDomainOutput<K>
     }
     case 'posts.votePoll': {
       const { postId, optionId, userId } = input as DatabaseDomainInput<'posts.votePoll'>
