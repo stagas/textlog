@@ -4,7 +4,7 @@ import type { PostFeedPage } from '../types'
 import { AboutContent } from './about'
 import { Layout } from './layout'
 import { FeedTabs, GlobalFeedEmpty, Pagination } from './page-shared'
-import { Post } from './post'
+import { FeedThreads } from './post'
 
 export function HotFeed(
   { feed = { posts: [], page: 1, totalItems: 0, totalPages: 1 }, user, title, path = '/hot', pageUrl,
@@ -30,10 +30,7 @@ export function HotFeed(
       {feed.page > 1 && <Pagination page={feed.page} totalPages={feed.totalPages} path={path}
         anchor={user ? undefined : 'feed-tabs'} top />}
       {feed.posts.length
-        ? feed.posts.map(post => (
-          <Post key={post.id} p={post} user={user} showReplyCount tappable
-            returnPath={`${returnPath}#post-${post.id}`} />
-        ))
+        ? <FeedThreads posts={feed.posts} user={user} returnPath={returnPath} />
         : feed.page === 1
         ? <GlobalFeedEmpty user={user} />
         : (

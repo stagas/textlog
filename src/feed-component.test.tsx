@@ -36,6 +36,25 @@ function postActivity(id: number, actorId: number, handle: string): Personalized
   }
 }
 
+test('feed pages reconstruct threads from only the posts on that page', () => {
+  const root = { id: 10, user_id: 2, parent_id: null, body: 'root note', created_at: '2026-08-19 10:00:00',
+    deleted_at: null, handle: 'alice', reply_count: 2 }
+  const reply = { id: 11, user_id: 3, parent_id: 10, body: 'page reply', created_at: '2026-08-19 11:00:00',
+    deleted_at: null, handle: 'bob', reply_count: 0, parent: { ...root, reply_count: 2 } }
+  const orphan = { id: 12, user_id: 4, parent_id: 99, body: 'parent is off page',
+    created_at: '2026-08-19 12:00:00', deleted_at: null, handle: 'cara', reply_count: 0,
+    parent: { ...root, id: 99, body: 'off-page parent', reply_count: 1 } }
+  const html = renderToStaticMarkup(<PublicFeed feed={{ posts: [reply, orphan, root], page: 1, totalItems: 3,
+    totalPages: 1 }} path="/latest" />)
+
+  expect(html.match(/id="post-10"/g)).toHaveLength(1)
+  expect(html.match(/id="post-11"/g)).toHaveLength(1)
+  expect(html.match(/id="post-12"/g)).toHaveLength(1)
+  expect(html.match(/class="post-page-thread feed-thread"/g)).toHaveLength(2)
+  expect(html.indexOf('id="post-10"')).toBeLessThan(html.indexOf('id="post-11"'))
+  expect(html).toContain('class="reply-branch"')
+})
+
 test('for-you does not render author hide-all controls', () => {
   const html = renderToStaticMarkup(<Feed
     user={{ id: 1, handle: 'reader', email: 'reader@example.com', bio: '', handle_chosen_at: '2026-08-19 09:00:00' }}

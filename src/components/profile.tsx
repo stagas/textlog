@@ -5,7 +5,7 @@ import { displayBio, linkify, referenceFormId } from '../utils'
 import { Layout } from './layout'
 import { FormMessage, Pagination, PostingHelp, PostingSuggestionResults, type PostingSuggestionSearch, ProfileControls,
   ProfileHeader, ProfileTabs } from './page-shared'
-import { Post } from './post'
+import { FeedThreads, Post } from './post'
 
 export function Profile(
   { user, profile, posts, following, followsViewer = false, bio = profile.bio || '', editHandle = profile.handle,
@@ -218,9 +218,7 @@ export function Profile(
       {!editing && !blocked && !blockedByProfile && page > 1
         && <Pagination path={paginationPath} page={page} totalPages={totalPages} top />}
       {!editing && !blocked && !blockedByProfile
-        && posts.map(post => (
-          <Post key={post.id} p={post} user={user} showReplyCount tappable returnPath={`${feedPath}#post-${post.id}`} />
-        ))}
+        && <FeedThreads posts={posts} user={user} returnPath={feedPath} />}
       {!editing && !blocked && !blockedByProfile && total === 0 && (
         <div className={`empty${user?.id === profile.id ? ' empty-actions' : ''}`}>
           {user?.id === profile.id

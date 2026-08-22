@@ -661,3 +661,25 @@ export function ThreadReplies(
   }
   return renderBranch(parentId, 1)
 }
+
+/** Render only the posts supplied by a feed, joining replies to parents that are on the same page. */
+export function FeedThreads(
+  { posts, user, returnPath }: { posts: PostView[]; user: User | null; returnPath: string },
+) {
+  if (!posts.length) return null
+  const ids = new Set(posts.map(post => post.id))
+  const roots = posts.filter(post => !post.parent_id || !ids.has(post.parent_id))
+  return (
+    <>
+      {roots.map(post => (
+        <div className="post-page-thread feed-thread" key={post.id}>
+          <div className="thread-root">
+            <Post p={post} user={user} showReplyCount tappable returnPath={`${returnPath}#post-${post.id}`} />
+          </div>
+          <ThreadReplies parentId={post.id} replies={posts} user={user}
+            returnPath={`${returnPath}#post-${post.id}`} />
+        </div>
+      ))}
+    </>
+  )
+}

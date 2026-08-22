@@ -4,7 +4,7 @@ import type { PersonView, PostView } from '../types'
 import { enterHref } from './auth-links'
 import { Layout } from './layout'
 import { ConnectionPeople, Pagination } from './page-shared'
-import { Post } from './post'
+import { FeedThreads } from './post'
 
 export function TagFeed(
   { user, tag, following, blocked = false, posts, page, total, followerTotal = 0, people = [], tab = 'notes', social,
@@ -80,9 +80,7 @@ export function TagFeed(
         : blocked
         ? <div className="empty relationship-notice">You blocked this tag. Unblock it to see its notes.</div>
         : posts.length
-        ? posts.map(post => (
-          <Post p={post} user={user} key={post.id} showReplyCount tappable returnPath={`${feedPath}#post-${post.id}`} />
-        ))
+        ? <FeedThreads posts={posts} user={user} returnPath={feedPath} />
         : <div className="empty">No notes use this hashtag yet.</div>}
       <Pagination page={page} totalPages={Math.ceil((tab === 'followers' ? followerTotal : total)
         / (tab === 'followers' ? CONNECTION_PAGE_SIZE : notePageSize))} path={paginationPath} />

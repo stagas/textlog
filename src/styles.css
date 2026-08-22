@@ -4819,6 +4819,21 @@ a.post-context:hover {
   letter-spacing: -.5px;
 }
 
+.feed-thread .thread-root>.post>.post-body {
+  font-size: 0.8125rem;
+  line-height: 1.65;
+  letter-spacing: normal;
+}
+
+.post-page-thread.feed-thread {
+  margin-bottom: 0;
+  border-top: 1px solid var(--soft);
+}
+
+.post-page-thread.feed-thread:has(> .reply-branch) {
+  margin-bottom: var(--space-5);
+}
+
 .post-page-thread {
   margin-bottom: var(--space-5);
 }

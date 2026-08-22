@@ -3,7 +3,7 @@ import { displayBio, linkify } from '../utils'
 import { Layout } from './layout'
 import { MetaRow } from './meta'
 import { ActionPair, FeedTabs, Pagination } from './page-shared'
-import { Post, TagReference, UserReference } from './post'
+import { FeedThreads, TagReference, UserReference } from './post'
 
 export type ForYouCursor = { createdAt: string; key: string; direction: 'next' | 'previous' }
 
@@ -57,6 +57,24 @@ export function Feed({ user, data, title, path = '/for-you', pageUrl, notificati
     ? Number(new URL(data.unreadHref, 'http://localhost').searchParams.get('page') || 1)
     : null
   const showTopPagination = data.page > 1 || (data.page === 1 && unreadPage !== null && unreadPage > 1)
+  const timelinePosts = data.timeline.filter(row => ['post', 'reply', 'mention'].includes(row.activity_kind))
+  const timelinePostIds = new Set(timelinePosts.map(row => row.id))
+  const visibleTimeline = data.timeline.filter(row => !['post', 'reply', 'mention'].includes(row.activity_kind)
+    || !row.parent_id || !timelinePostIds.has(row.parent_id))
+  const threadPosts = (rootId: number) => {
+    const included = new Set([rootId])
+    let changed = true
+    while (changed) {
+      changed = false
+      for (const row of timelinePosts) {
+        if (row.parent_id && included.has(row.parent_id) && !included.has(row.id)) {
+          included.add(row.id)
+          changed = true
+        }
+      }
+    }
+    return timelinePosts.filter(row => included.has(row.id)).map(row => row.renderedPost!)
+  }
   const renderTimelineRow = (row: PersonalizedTimelineRow) => {
     const activityAnchor = `activity-${row.event_key.replace(/[^a-z0-9_-]+/gi, '-')}`
     const activityReturnPath = `${returnPath}#${activityAnchor}`
@@ -69,8 +87,7 @@ export function Feed({ user, data, title, path = '/for-you', pageUrl, notificati
           }`}
           key={row.event_key}
         >
-          <Post p={row.renderedPost!} user={user} showReplyCount tappable contextUnread={!!row.unread}
-            returnPath={`${returnPath}#post-${row.id}`} />
+          <FeedThreads posts={threadPosts(row.id)} user={user} returnPath={returnPath} />
         </div>
       )
       : (
@@ -147,7 +164,7 @@ export function Feed({ user, data, title, path = '/for-you', pageUrl, notificati
         lastUnreadHref={data.lastUnreadHref} forYouUnread={data.forYouUnread} toMeUnread={data.toMeUnread} />
       {showTopPagination && <Pagination page={data.page} totalPages={data.totalPages} path={path} top />}
       {data.timeline.length
-        ? groupSimilarActivities(data.timeline).map(group =>
+        ? groupSimilarActivities(visibleTimeline).map(group =>
             group.rows.length > 1 && group.collapsible
               ? (
                 <div className="activity-group" key={group.rows[0].event_key}>
