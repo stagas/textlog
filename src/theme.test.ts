@@ -1,5 +1,6 @@
 import { expect, test } from 'bun:test'
-import { activeAppearance, appearance, appearanceCookie, fontChoice, fontCookie, fontSizeChoice, fontSizeCookie,
+import { activeAppearance, activeThemeBackgrounds, appearance, appearanceCookie, fontChoice, fontCookie,
+  fontSizeChoice, fontSizeCookie,
   primaryFontChoice, primaryFontCookie, sansSerifFontChoice, sansSerifFontCookie, themeLogoSvg, themeStyles,
   versionedAppearance, withAppearance } from './theme'
 
@@ -13,6 +14,12 @@ test('appearance reads valid choices and falls back safely', () => {
 test('appearance is available while rendering a request', () => {
   const request = new Request('http://localhost', { headers: { cookie: 'appearance=dracula.cyan' } })
   expect(withAppearance(request, activeAppearance)).toEqual({ theme: 'dracula', accent: 'cyan' })
+})
+
+test('theme backgrounds follow the active appearance', () => {
+  expect(activeThemeBackgrounds()).toEqual({ light: '#f4f3ee', dark: '#171a17' })
+  const request = new Request('http://localhost', { headers: { cookie: 'appearance=sepia.amber' } })
+  expect(withAppearance(request, activeThemeBackgrounds)).toEqual({ default: '#f4ecd8' })
 })
 
 test('appearance cookie is long-lived, server-only, and secure on HTTPS', () => {

@@ -142,6 +142,12 @@ export function activeThemeLogoSvg() {
   return themeLogoSvg(request)
 }
 
+export function activeThemeBackgrounds() {
+  const selected = activeAppearance()
+  if (selected.theme === 'system') return { light: palettes.light.bg, dark: palettes.dark.bg }
+  return { default: palettes[selected.theme].bg }
+}
+
 export function versionedAppearance(value: string | null | undefined): Appearance | null {
   if (!value) return null
   const [theme, accent, extra] = value.split('.')

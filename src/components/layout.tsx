@@ -1,5 +1,7 @@
 import { appHost, appName, appOrigin } from '../brand'
-import { activeAppearance, activeRequest, activeThemeLogoSvg, activeThemeStyles } from '../theme'
+import {
+  activeAppearance, activeRequest, activeThemeBackgrounds, activeThemeLogoSvg, activeThemeStyles,
+} from '../theme'
 
 import React from 'react'
 import { instance } from '../../instance.config'
@@ -43,6 +45,7 @@ export function Layout({
   const mobile = isMobileRequest(request)
   const appearanceVersion = `${selectedAppearance.theme}.${selectedAppearance.accent}`
   const themeCss = activeThemeStyles()
+  const themeBackgrounds = activeThemeBackgrounds()
   const logoSvg = activeThemeLogoSvg()
   const name = appName()
   const origin = appOrigin()
@@ -113,7 +116,14 @@ export function Layout({
         <meta charSet="utf-8" />
         <meta name="viewport" content="width=device-width,initial-scale=1" />
         <meta name="color-scheme" content="light dark" />
-        <meta name="theme-color" content="#171a17" />
+        {'default' in themeBackgrounds
+          ? <meta name="theme-color" content={themeBackgrounds.default} />
+          : (
+            <>
+              <meta name="theme-color" content={themeBackgrounds.light} media="(prefers-color-scheme: light)" />
+              <meta name="theme-color" content={themeBackgrounds.dark} media="(prefers-color-scheme: dark)" />
+            </>
+          )}
         <title>{`${title ? `${title} · ` : ''}${name}`}</title>
         <>
           <meta name="description" content={share.description} />
