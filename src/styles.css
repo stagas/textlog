@@ -2976,9 +2976,13 @@ form.report-panel {
   display: none;
 }
 
+:is(.write-compose, .replybox) > form {
+  anchor-name: --posting-form;
+}
+
 :is(.write-compose, .replybox) .posting-help-search .posting-help-popover {
   right: auto;
-  left: var(--gutter);
+  left: anchor(--posting-form left);
   transform: none;
 }
 
@@ -3097,7 +3101,7 @@ form.report-panel {
   position: fixed;
   z-index: 10;
   inset: auto auto var(--space-6) 50%;
-  margin: 0 0 var(--space-2);
+  margin: 0;
   left: 50%;
   transform: translateX(-50%);
   width: max-content;
