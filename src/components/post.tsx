@@ -607,6 +607,9 @@ export function ThreadReplies(
     siblings.push(reply)
     children.set(reply.parent_id!, siblings)
   }
+  for (const siblings of children.values()) {
+    siblings.sort((a, b) => a.created_at.localeCompare(b.created_at) || a.id - b.id)
+  }
   const descendantCounts = new Map<number, number>()
   const visibleDescendantCount = (id: number): number => {
     const cached = descendantCounts.get(id)

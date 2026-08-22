@@ -148,7 +148,7 @@ test('feed trees render a shared off-page parent once for sibling replies', () =
   expect(html.match(/class="post-page-thread feed-thread"/g)).toHaveLength(1)
   expect(html.match(/class="parent-quote/g)).toBeNull()
   expect(html.indexOf('id="post-30"')).toBeLessThan(html.indexOf('id="post-32"'))
-  expect(html.indexOf('id="post-32"')).toBeLessThan(html.indexOf('id="post-31"'))
+  expect(html.indexOf('id="post-31"')).toBeLessThan(html.indexOf('id="post-32"'))
 })
 
 test('threaded feed replies link to descendants omitted from the page', () => {
