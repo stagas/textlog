@@ -316,13 +316,15 @@ header>nav>a:not(.button),
   .mobile-write-action {
     position: fixed;
     z-index: 30;
-    right: max(var(--space-4), env(safe-area-inset-right));
-    bottom: max(var(--space-4), env(safe-area-inset-bottom));
+    right: calc(var(--space-5) + env(safe-area-inset-right));
+    bottom: calc(var(--space-5) + env(safe-area-inset-bottom));
     display: flex;
   }
 
   .mobile-write-action .button {
-    min-height: calc(1.5em + 2 * var(--space-3));
+    min-height: calc(1.5em + 2 * var(--space-4));
+    padding: var(--space-4) var(--space-5);
+    font-size: 0.875rem;
     box-shadow: 0 4px 16px rgb(0 0 0 / 20%);
   }
 
