@@ -25,6 +25,7 @@ export function PublicFeed(
   const viewHref = `${viewPath}${user ? '' : '#feed-tabs'}`
   return (
     <Layout user={user} title={path === '/latest' ? 'latest' : undefined} pageUrl={pageUrl}
+      mobileWriteAction={Boolean(user)}
       notificationBanner={notificationBanner}
       feeds={{ title: 'Latest notes', rss: '/latest.rss', atom: '/latest.atom' }}
     >

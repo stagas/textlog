@@ -27,6 +27,7 @@ export function Layout({
   feeds,
   notificationBanner = false,
   logoutNavigation = false,
+  mobileWriteAction = false,
   children,
 }: {
   title?: string
@@ -37,6 +38,7 @@ export function Layout({
   pageUrl?: string
   feeds?: { title: string; rss: string; atom: string }
   notificationBanner?: false | 'notifications' | 'appearance' | 'invite' | 'notification-update' | 'donate'
+  mobileWriteAction?: boolean
   children: React.ReactNode
 }) {
   const selectedAppearance = activeAppearance()
@@ -84,7 +86,7 @@ export function Layout({
           <a href="/explore">explore</a>
         </span>
         <span className="account-nav-row account-nav-primary">
-          <a href="/write">write</a>
+          <a className="nav-write-action" href="/write">write</a>
           {isAdmin(user) && <a href="/admin">admin</a>}
           {mobile
             ? (
@@ -157,10 +159,11 @@ export function Layout({
           </>
         )}
         {mobile && <link href="https://fonts.cdnfonts.com/css/dejavu-sans-mono" rel="stylesheet" />}
-        <link rel="stylesheet" href="/styles.css?v=531" />
+        <link rel="stylesheet" href="/styles.css?v=540" />
         <style>{themeCss}</style>
       </head>
-      <body className={`density-${density}${user?.show_link_previews === 0 ? ' link-previews-disabled' : ''}`}>
+      <body className={`density-${density}${user?.show_link_previews === 0 ? ' link-previews-disabled' : ''}${
+        mobileWriteAction ? ' has-mobile-write-action' : ''}`}>
         {user && ready && <a className="skip-link" href={writeShortcutHref} accessKey="w">write</a>}
         <a className="skip-link" href="#main-content">skip to content</a>
         <header className={user ? 'authenticated-header' : undefined}>
@@ -222,6 +225,7 @@ export function Layout({
             </form>
           </aside>
         )}
+        {user && ready && mobileWriteAction && <MobileWriteAction />}
         <main id="main-content">{children}</main>
         <footer className="site-footer">
           <span>
@@ -229,15 +233,20 @@ export function Layout({
             <a className="footer-host-link" href="/stats">stats</a> <span aria-hidden="true">·</span>{' '}
             <span className="footer-response-time">{RESPONSE_TIME_PLACEHOLDER}</span>
           </span>
-          {instance.links.getMobileApp && (
-            <a
-              className="button mobile-app-footer"
-              href={instance.links.getMobileApp}
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              get mobile app
-            </a>
+          {(instance.links.getMobileApp || (user && ready)) && (
+            <div className="footer-mobile-actions">
+              {instance.links.getMobileApp && (
+                <a
+                  className="button mobile-app-footer"
+                  href={instance.links.getMobileApp}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  get mobile app
+                </a>
+              )}
+              {user && ready && <a className="button footer-write-action" href="/write">write a note</a>}
+            </div>
           )}
           <nav aria-label="Footer">
             <a href="/about">about</a>
@@ -257,6 +266,10 @@ export function Layout({
       </body>
     </html>
   )
+}
+
+export function MobileWriteAction() {
+  return <div className="mobile-write-action"><a className="button" href="/write">write</a></div>
 }
 
 function DevReload({ bootId }: { bootId: string }) {

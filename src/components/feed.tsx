@@ -187,7 +187,7 @@ export function Feed({ user, data, title, path = '/for-you', pageUrl, notificati
       )
   }
   return (
-    <Layout user={user} title={title} pageUrl={pageUrl} notificationBanner={notificationBanner}>
+    <Layout user={user} title={title} pageUrl={pageUrl} notificationBanner={notificationBanner} mobileWriteAction>
       <h1 className="visually-hidden">Your feed</h1>
       <FeedTabs active="following" user={user} forYouReadStatus={data.timeline.length ? hasUnread : undefined}
         toMe={toMe} toMeCount={toMe ? 0 : data.toMeCount} forYouCount={data.forYouCount} unreadHref={data.unreadHref}

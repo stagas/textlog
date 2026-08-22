@@ -27,6 +27,7 @@ export function HotFeed(
   const viewHref = `${viewPath}${user ? '' : '#feed-tabs'}`
   return (
     <Layout user={user} title={title} pageUrl={pageUrl} notificationBanner={notificationBanner}
+      mobileWriteAction={Boolean(user)}
       feeds={{ title: 'Hot notes', rss: '/hot.rss', atom: '/hot.atom' }}
     >
       {!user && <AboutContent user={null} embedded />}

@@ -273,6 +273,40 @@ header>.account-nav {
   gap: clamp(12px, 3vw, 22px);
 }
 
+.mobile-write-action {
+  display: none;
+}
+
+@media (max-width: 600px) {
+  .has-mobile-write-action .nav-write-action {
+    display: none;
+  }
+
+  .mobile-write-action {
+    position: sticky;
+    z-index: 30;
+    top: calc(100dvh - max(var(--space-4), env(safe-area-inset-bottom)) - (1.5em + 2 * var(--space-3)));
+    display: flex;
+    justify-content: flex-end;
+    width: 100%;
+    max-width: 760px;
+    height: calc(1.5em + 2 * var(--space-3));
+    margin: 0 auto calc(-1 * (1.5em + 2 * var(--space-3)));
+    padding-right: max(var(--space-4), env(safe-area-inset-right));
+  }
+
+  .mobile-write-action .button {
+    min-height: calc(1.5em + 2 * var(--space-3));
+    box-shadow: 0 4px 16px rgb(0 0 0 / 20%);
+  }
+
+  .has-mobile-write-action .site-footer {
+    position: relative;
+    z-index: 31;
+    background: var(--bg);
+  }
+}
+
 .account-menu {
   position: relative;
   z-index: 31;
@@ -900,7 +934,7 @@ nav form {
   color: var(--tab-hover);
 }
 
-.site-footer .mobile-app-footer {
+.site-footer .footer-mobile-actions {
   display: none;
 }
 
@@ -918,8 +952,11 @@ nav form {
     row-gap: var(--space-2);
   }
 
-  .site-footer .mobile-app-footer {
-    display: block;
+  .site-footer .footer-mobile-actions {
+    display: flex;
+    align-items: stretch;
+    justify-content: center;
+    gap: var(--space-3);
   }
 }
 

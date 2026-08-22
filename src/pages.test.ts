@@ -669,6 +669,7 @@ test('signed-in pages put the write shortcut before skip to content', () => {
   const contentShortcut = '<a class="skip-link" href="#main-content">skip to content</a>'
   expect(html).toContain(writeShortcut)
   expect(html.indexOf(writeShortcut)).toBeLessThan(html.indexOf(contentShortcut))
+  expect(html).not.toContain('class="mobile-write-action"')
 })
 
 test('guest pages keep skip to content as their first shortcut', () => {
@@ -676,6 +677,18 @@ test('guest pages keep skip to content as their first shortcut', () => {
 
   expect(html).not.toContain('accessKey="w">write</a>')
   expect(html).toContain('<body class="density-regular"><a class="skip-link" href="#main-content">skip to content</a>')
+})
+
+test('signed-in feeds put the mobile write action outside the main scroll boundary', () => {
+  const html = renderToStaticMarkup(React.createElement(PublicFeed, {
+    user: { id: 1, handle: 'reader', email: 'reader@example.com', bio: '' },
+    feed: { posts: [], page: 1, totalItems: 0, totalPages: 2 },
+  }))
+
+  const writeAction = '<div class="mobile-write-action"><a class="button" href="/write">write</a></div>'
+  expect(html).toContain('has-mobile-write-action')
+  expect(html).toContain(writeAction)
+  expect(html.indexOf(writeAction)).toBeLessThan(html.indexOf('<main id="main-content">'))
 })
 
 test('public collection pages advertise their RSS and Atom feeds', () => {
@@ -945,11 +958,15 @@ test('embed examples show every format and use stagas for the user feed', () => 
 
 test('footer offers the mobile app in a mobile-only row', () => {
   const html = renderToStaticMarkup(React.createElement(About, { user: null }))
+  const signedInHtml = renderToStaticMarkup(React.createElement(About, {
+    user: { id: 1, handle: 'reader', email: 'reader@example.com', bio: '' },
+  }))
 
   expect(html).toContain(
     'class="button mobile-app-footer" href="https://github.com/Faultless/textlog_flutter/releases"',
   )
   expect(html).toContain('get mobile app</a>')
+  expect(signedInHtml).toContain('<a class="button footer-write-action" href="/write">write a note</a>')
 })
 
 test('footer links to stats next to the app host', () => {
@@ -1456,7 +1473,7 @@ test('An empty profile only offers its owner a way to write a note', () => {
   }))
 
   expect(html).toContain('@reader hasn’t posted any notes yet.')
-  expect(html).not.toContain('>write a note</a>')
+  expect(html).not.toContain('<a class="button" href="/write">write a note</a>')
 })
 
 test('An empty replies tab offers its owner a way to browse notes', () => {
@@ -1471,7 +1488,7 @@ test('An empty replies tab offers its owner a way to browse notes', () => {
 
   expect(html).toContain('You haven’t posted any replies yet.')
   expect(html).toContain('<a class="button" href="/">browse notes</a>')
-  expect(html).not.toContain('>write a note</a>')
+  expect(html).not.toContain('<a class="button" href="/write">write a note</a>')
 })
 
 test('An empty following tab offers its owner a way to explore', () => {
