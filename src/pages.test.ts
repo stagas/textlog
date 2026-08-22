@@ -1417,7 +1417,8 @@ test('Profile places a contextual back link in the handle row', () => {
   }))
 
   expect(html).toContain('class="profile-action profile-handle-actions"')
-  expect(html).toContain('class="profile-action profile-back-action"')
+  expect(html).toContain('class="profile-edit-link profile-title-back-link"')
+  expect(html).not.toContain('class="profile-action profile-back-action"')
   expect(html).toContain('href="/latest#post-2">back</a>')
   expect(html).not.toContain('class="profile-user-details"')
   expect(html.indexOf('aria-label="follow @writer"')).toBeLessThan(html.indexOf('href="/latest#post-2">back</a>'))

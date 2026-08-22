@@ -3255,6 +3255,10 @@ form.report-panel {
   grid-template-columns: minmax(0, 1fr);
 }
 
+.profile:not(.profile-owner):not(.profile-editing) {
+  grid-template-columns: minmax(0, 1fr);
+}
+
 .profile-content {
   min-width: 0;
 }
@@ -3345,12 +3349,17 @@ form.report-panel {
 .profile-title-row {
   display: flex;
   align-items: center;
+  flex-wrap: wrap;
   justify-content: space-between;
   gap: var(--space-4);
 }
 
 .profile-title-row-actions {
   justify-content: flex-start;
+}
+
+.profile-title-back-link {
+  margin-left: auto;
 }
 
 .security-header {
@@ -4004,18 +4013,21 @@ form.report-panel {
     grid-template-columns: minmax(0, 1fr) auto;
   }
 
-  .profile:not(.profile-editing) .profile-content,
-  .profile:not(.profile-editing) .profile-title-row {
+  .profile:not(.profile-owner):not(.profile-editing) {
+    display: block;
+  }
+
+  .profile.profile-owner:not(.profile-editing) .profile-content,
+  .profile.profile-owner:not(.profile-editing) .profile-title-row {
     display: contents;
   }
 
-  .profile:not(.profile-editing) h1 {
+  .profile.profile-owner:not(.profile-editing) h1 {
     grid-column: 1;
     grid-row: 1;
   }
 
-  .profile:not(.profile-editing) .profile-handle-actions,
-  .profile:not(.profile-editing) .profile-owner-actions {
+  .profile.profile-owner:not(.profile-editing) .profile-owner-actions {
     grid-column: 1 / -1;
     grid-row: 2;
   }
@@ -4047,12 +4059,6 @@ form.report-panel {
 
   .profile:not(.profile-editing) .profile-back-action:empty {
     display: none;
-  }
-
-  .profile:not(.profile-editing) .profile-bio {
-    grid-column: 1 / -1;
-    grid-row: 3;
-    margin-top: 0;
   }
 
   .profile.profile-owner:not(.profile-editing) .profile-bio {

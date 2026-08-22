@@ -88,6 +88,8 @@ export function Profile(
                 <ProfileControls user={user} profile={profile} following={following} followsViewer={followsViewer}
                   blocked={blocked} />
               )}
+            {!editing && returnPath && user?.id !== profile.id
+              && <a className="profile-edit-link profile-title-back-link" href={returnPath}>back</a>}
             {(editing || (returnPath && user?.id === profile.id)) && (
               <div className="profile-owner-actions">
                 {editing

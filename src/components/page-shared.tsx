@@ -468,22 +468,24 @@ export function ProfileHeader(
                 <ProfileControls user={user} profile={profile} following={following} followsViewer={followsViewer}
                   blocked={blocked} />
               )}
+            {!editing && returnPath && user?.id !== profile.id
+              && <a className="profile-edit-link profile-title-back-link" href={returnPath}>back</a>}
           </div>
           <p className="profile-bio" dangerouslySetInnerHTML={{ __html: linkify(displayBio(profile.bio)) }} />
         </div>
       )}
-      <div className={`profile-action profile-back-action${
-        user?.id === profile.id
-          ? ' profile-owner-mobile-back'
-          : ''
-      }`}>
-        {returnPath && !editing
-          && <a className="profile-edit-link" href={returnPath}>back</a>}
-        {!controlsInTitle && (
+      {!controlsInTitle && (
+        <div className={`profile-action profile-back-action${
+          user?.id === profile.id
+            ? ' profile-owner-mobile-back'
+            : ''
+        }`}>
+          {returnPath && !editing
+            && <a className="profile-edit-link" href={returnPath}>back</a>}
           <ProfileControls user={user} profile={profile} following={following} followsViewer={followsViewer}
             blocked={blocked} />
-        )}
-      </div>
+        </div>
+      )}
     </section>
   )
 }
