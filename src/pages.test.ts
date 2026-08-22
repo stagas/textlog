@@ -1567,6 +1567,7 @@ test('Connection bios render enriched mention and hashtag hover cards', () => {
       posts: 1,
       viewerFollowing: false,
       bioReference: {
+        linkPreviews: {},
         mentionBios: { friend: 'A friendly bio' },
         mentionNoteCounts: { friend: 3 },
         mentionProfileStats: { friend: { notes: 3, replies: 1, followers: 2, following: 4, followingTags: 1 } },
