@@ -94,6 +94,7 @@ describe('in-memory stylesheet', () => {
 
   test('makes header navigation actions full-height hit targets', async () => {
     const css = await Bun.file(new URL('./styles.css', import.meta.url)).text()
+    expect(css).toContain('.brand {\n  color: var(--ink);\n  display: inline-flex;\n  align-self: stretch;')
     expect(css).toContain('header>nav {\n  max-width: 100%;\n  margin-left: auto;\n  align-self: stretch;')
     expect(css).toContain('header>nav>a:not(.button),\n.account-nav-row>a:not(.button),\n.account-menu-handle {')
     expect(css).toContain('.account-nav-row {\n  display: flex;\n  align-self: stretch;')
