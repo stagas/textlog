@@ -944,7 +944,7 @@ test('footer offers the mobile app in a mobile-only row', () => {
   const html = renderToStaticMarkup(React.createElement(About, { user: null }))
 
   expect(html).toContain(
-    'class="button mobile-app-footer" href="https://github.com/Faultless/textlog_flutter"',
+    'class="button mobile-app-footer" href="https://github.com/Faultless/textlog_flutter/releases"',
   )
   expect(html).toContain('get mobile app</a>')
 })
