@@ -4945,6 +4945,7 @@ a.post-context:hover {
   cursor: pointer;
   padding: 0.9375rem;
   margin: -0.9375rem;
+  margin-left: calc(-0.9375rem - var(--space-4) + var(--space-2));
   user-select: none;
 }
 
