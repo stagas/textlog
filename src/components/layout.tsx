@@ -74,6 +74,7 @@ export function Layout({
     <div className="account-menu-popover">
       <a href={profileHref}>profile</a>
       <a href={accountHref}>account</a>
+      {isAdmin(user) && <a href="/admin">admin</a>}
       <LogoutForm>
         <button type="submit">logout</button>
       </LogoutForm>
@@ -86,7 +87,6 @@ export function Layout({
           <a href="/explore">explore</a>
         </span>
         <span className="account-nav-row account-nav-primary">
-          {isAdmin(user) && <a href="/admin">admin</a>}
           {mobile
             ? (
               <details className="account-menu">

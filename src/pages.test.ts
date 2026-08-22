@@ -60,6 +60,16 @@ test('mobile account navigation uses an in-flow details menu', () => {
   expect(html).not.toContain('popover="auto"')
 })
 
+test('admin navigation lives in the handle menu below account', () => {
+  const html = renderToStaticMarkup(React.createElement(Layout, {
+    user: { id: 1, handle: 'admin', email: 'gstagas@gmail.com', bio: '' },
+    children: React.createElement('p', null, 'Hello'),
+  }))
+
+  expect(html).toContain('href="/account/edit?from=%2F">account</a><a href="/admin">admin</a>')
+  expect(html.indexOf('href="/admin">admin</a>')).toBeLessThan(html.indexOf('action="/logout"'))
+})
+
 test('panels gallery renders every shared panel variation', () => {
   const html = renderToStaticMarkup(React.createElement(PanelsGallery))
 
@@ -1425,6 +1435,7 @@ test('Profile places owner actions in the handle row', () => {
   expect(html).toContain('class="account-menu-popover"')
   expect(html).toContain('href="/u/reader?from=%2F">profile</a>')
   expect(html).toContain('href="/account/edit?from=%2F">account</a>')
+  expect(html).not.toContain('href="/admin">admin</a>')
   expect(html).not.toContain('class="mobile-account-footer"')
   expect(html.indexOf('class="account-menu-handle" href="/u/reader?from=%2F"')).toBeLessThan(
     html.indexOf('class="button nav-write-action" href="/write"'),
