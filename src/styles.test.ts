@@ -309,12 +309,12 @@ describe('in-memory stylesheet', () => {
     expect(css).toContain('.link-preview-setting .form-checkbox {\n  width: 16px;\n  height: 16px;')
   })
 
-  test('keeps unsupported posting-help popovers hidden', async () => {
+  test('keeps posting help inline and lets expanded content span the action row', async () => {
     const css = await Bun.file(new URL('./styles.css', import.meta.url)).text()
-    expect(css).toContain('line-height: 1.5;\n  overflow-x: hidden;\n  background: var(--panel);')
-    expect(css).toContain('.posting-help-popover[popover] {\n  display: none;')
-    expect(css).toContain('.posting-help-popover[popover]:popover-open {\n  display: block;')
-    expect(css).toContain('.posting-help-search .posting-help-popover[popover]:popover-open {\n  display: flex;')
+    expect(css).toContain('.posting-help-details {\n  display: block;\n  grid-column: 1 / -1;')
+    expect(css).toContain('width: 100%;\n  margin-top: var(--space-5);')
+    expect(css).toContain('.posting-help-summary-link {\n  width: fit-content;')
+    expect(css).not.toContain('.posting-help-popover')
   })
 
   test('gives the mobile edit composer the same posting-help layout as write', async () => {
@@ -324,12 +324,8 @@ describe('in-memory stylesheet', () => {
     expect(css).toContain('.bio-form > label > input:not([type="checkbox"]),')
     expect(css).not.toContain('\n.bio-form input:not([type="checkbox"]),')
     expect(css).toContain('.bio-form + .account-danger-zone {\n  margin-top: var(--space-4);')
-    expect(css).toContain(
-      ':is(.write-compose, .edit-post-compose, .replybox, .bio-form) .posting-help {',
-    )
-    expect(css).toContain(
-      ':is(.write-compose, .edit-post-compose, .replybox, .bio-form) .posting-help-limits {',
-    )
+    expect(css).toContain('.composefoot .posting-help {\n  display: contents;')
+    expect(css).toContain('grid-template-rows: 1.25em 1.25em;\n  align-content: center;')
     expect(css).toContain(
       ':is(.write-compose, .edit-post-compose, .replybox, .bio-form) .composefoot {',
     )

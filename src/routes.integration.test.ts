@@ -1093,7 +1093,7 @@ test('consequential account, content, reporting, and admin flows work over HTTP'
   expect(hashtagHelperHtml).toContain('>replay this draft</textarea>')
   expect(hashtagHelperHtml).toContain('name="hashtag_query" value="route"')
   expect(hashtagHelperHtml).toContain('#<mark>route</mark>helper')
-  expect(hashtagHelperHtml).not.toContain('class="posting-help-more posting-help-search" open=""')
+  expect(hashtagHelperHtml).toContain('<details class="posting-help-details" open="">')
   const mentionHelper = await request(`/post/${post.id}/reply`, {
     method: 'POST',
     cookie: aliceCookie,

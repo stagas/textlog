@@ -49,45 +49,32 @@ export type PostingSuggestionSearch = {
   truncated?: boolean
 }
 
-export function PostingSuggestionPopover({ kind, label, search }: {
+function PostingSuggestionSearchField({ kind, search }: {
   kind: PostingSuggestionSearch['kind']
-  label: string
   search?: PostingSuggestionSearch | null
 }) {
   const active = search?.kind === kind
   const inputName = kind === 'hashtags' ? 'hashtag_query' : 'mention_query'
   const searchLabel = kind === 'hashtags' ? 'hashtags' : 'handles'
-  const popoverId = `posting-help-${kind}`
   return (
-    <span className={`posting-help-more posting-help-search posting-help-${kind}`}>
-      <button className="posting-help-trigger" type="button" popoverTarget={popoverId}>{label}</button>
-      <div className="posting-help-popover" id={popoverId} popover="auto">
-        <label>
-          <span className="visually-hidden">search {searchLabel}</span>
-          <input type="search" name={inputName} maxLength={100} defaultValue={active ? search.query : ''}
-            placeholder={`search ${searchLabel}`} autoComplete="off" inputMode="search" enterKeyHint="search" />
-        </label>
-        <button className="button" type="submit" name="action" value={`search-${kind}`} formNoValidate>
-          search
-        </button>
-      </div>
-    </span>
+    <div className="posting-help-search">
+      <label>
+        <span>Search {searchLabel}</span>
+        <input type="search" name={inputName} maxLength={100} defaultValue={active ? search.query : ''}
+          placeholder={`search ${searchLabel}`} autoComplete="off" inputMode="search" enterKeyHint="search" />
+      </label>
+      <button className="button" type="submit" name="action" value={`search-${kind}`} formNoValidate>
+        search
+      </button>
+    </div>
   )
 }
 
-export function PostingMorePopover() {
+function PostingFormattingHelp() {
   return (
-    <span className="posting-help-more posting-help-and-more">
-      <button className="posting-help-trigger" type="button" popoverTarget="posting-help-more">and more</button>
-      <div className="posting-help-popover posting-help-tabs" id="posting-help-more" popover="auto">
-          <input className="posting-help-tab-input" type="radio" name="posting-help-tab" id="posting-help-formatting"
-            defaultChecked />
-          <input className="posting-help-tab-input" type="radio" name="posting-help-tab" id="posting-help-emoji" />
-          <div className="posting-help-tab-list" role="tablist" aria-label="Writing help">
-            <label htmlFor="posting-help-formatting" role="tab">Formatting</label>
-            <label htmlFor="posting-help-emoji" role="tab">Emoji</label>
-          </div>
-          <dl className="posting-help-formatting-panel">
+    <section className="posting-help-section">
+      <h2>Formatting</h2>
+      <dl className="posting-help-formatting-panel">
             <div>
               <dt>Regular links</dt>
               <dd>
@@ -148,13 +135,29 @@ export function PostingMorePopover() {
                 </code>
               </dd>
             </div>
-          </dl>
-          <div className="posting-help-emoji-panel" aria-label="Emoji to copy and paste">
-            {'😀 😃 😄 😁 😆 😅 😂 🤣 😊 😇 🙂 🙃 😉 😌 😍 🥰 😘 😋 😛 😜 🤪 🤨 🧐 🤓 😎 🤩 🥳 😏 😒 😞 😔 😟 😕 🙁 ☹️ 😣 😖 😫 😩 🥺 😢 😭 😤 😠 😡 🤬 🤯 😳 🥵 🥶 😱 😨 😰 😥 😓 🤗 🤔 🫣 🤭 🫢 🤫 🤥 😶 😐 😑 😬 🙄 😯 😦 😧 😮 😲 🥱 😴 🤤 😪 😵 🤐 🥴 🤢 🤮 🤧 😷 🤒 🤕 🤑 🤠 😈 👿 👻 💀 ☠️ 👽 🤖 🎃 😺 😸 😹 😻 😼 😽 🙀 😿 😾 ❤️ 🧡 💛 💚 💙 💜 🖤 🤍 🤎 💔 ❣️ 💕 💞 💓 💗 💖 💘 💝 💟 👍 👎 👌 🤌 ✌️ 🤞 🤟 🤘 🤙 👈 👉 👆 👇 ☝️ ✋ 🤚 🖐️ 🖖 👋 🤝 👏 🙌 🫶 👐 🤲 🙏 ✍️ 💪 👀 👁️ 🧠 🫀 🫁 🌱 🌿 ☘️ 🍀 🌸 🌺 🌻 🌞 🌙 ⭐ ✨ ⚡ 🔥 🌈 ☀️ ☁️ ❄️ ☕ 🍕 🍎 🎉 🎊 🎈 🎁 🎵 🎶 🎨 📚 💡 ✅ ❌ ⚠️ 🚀 🌍 💻 📱 🔒 🔑'
-              .split(' ').map((emoji, index) => <span key={`${emoji}-${index}`} title="Select and copy">{emoji}</span>)}
-          </div>
-      </div>
-    </span>
+            <div>
+              <dt>Polls</dt>
+              <dd>
+                <code>
+                  Which one? <b>#poll</b><br />
+                  First option<br />
+                  Second option
+                </code>
+                <br />
+                <small>Use 2–8 unique options.</small>
+              </dd>
+            </div>
+            <div>
+              <dt>Spoilers</dt>
+              <dd>
+                <code>
+                  Visible text <b>#spoiler</b><br />
+                  Hidden text
+                </code>
+              </dd>
+            </div>
+      </dl>
+    </section>
   )
 }
 
@@ -165,14 +168,31 @@ export function PostingHelp({ maxLength = 280, maxLines = 10, search }: {
 }) {
   return (
     <div className="posting-help">
-      <span className="posting-help-limits">
-        {maxLength} chars / {maxLines} lines max <span className="posting-help-separator">·</span>
-      </span>
-      <span>use</span>
-      <PostingSuggestionPopover kind="hashtags" label="#hashtags" search={search} />
-      <span>and</span>
-      <PostingSuggestionPopover kind="mentions" label="@mentions" search={search} />
-      <PostingMorePopover />
+      <details className="posting-help-details" open={!!search}>
+        <summary>
+          <span className="posting-help-limits">{maxLength} chars / {maxLines} lines max</span>
+          <span className="posting-help-summary-link">use #hashtags, @mentions and more</span>
+        </summary>
+        <div className="posting-help-content">
+          <section className="posting-help-section">
+            <h2>Find hashtags and people</h2>
+            <div className="posting-help-searches">
+              <PostingSuggestionSearchField kind="hashtags" search={search} />
+              <PostingSuggestionSearchField kind="mentions" search={search} />
+            </div>
+          </section>
+          <PostingFormattingHelp />
+          <section className="posting-help-section">
+            <h2>Emoji</h2>
+            <div className="posting-help-emoji-panel" aria-label="Emoji to copy and paste">
+              {'😀 😃 😄 😁 😆 😅 😂 🤣 😊 😇 🙂 🙃 😉 😌 😍 🥰 😘 😋 😛 😜 🤪 🤨 🧐 🤓 😎 🤩 🥳 😏 😒 😞 😔 😟 😕 🙁 ☹️ 😣 😖 😫 😩 🥺 😢 😭 😤 😠 😡 🤬 🤯 😳 🥵 🥶 😱 😨 😰 😥 😓 🤗 🤔 🫣 🤭 🫢 🤫 🤥 😶 😐 😑 😬 🙄 😯 😦 😧 😮 😲 🥱 😴 🤤 😪 😵 🤐 🥴 🤢 🤮 🤧 😷 🤒 🤕 🤑 🤠 😈 👿 👻 💀 ☠️ 👽 🤖 🎃 😺 😸 😹 😻 😼 😽 🙀 😿 😾 ❤️ 🧡 💛 💚 💙 💜 🖤 🤍 🤎 💔 ❣️ 💕 💞 💓 💗 💖 💘 💝 💟 👍 👎 👌 🤌 ✌️ 🤞 🤟 🤘 🤙 👈 👉 👆 👇 ☝️ ✋ 🤚 🖐️ 🖖 👋 🤝 👏 🙌 🫶 👐 🤲 🙏 ✍️ 💪 👀 👁️ 🧠 🫀 🫁 🌱 🌿 ☘️ 🍀 🌸 🌺 🌻 🌞 🌙 ⭐ ✨ ⚡ 🔥 🌈 ☀️ ☁️ ❄️ ☕ 🍕 🍎 🎉 🎊 🎈 🎁 🎵 🎶 🎨 📚 💡 ✅ ❌ ⚠️ 🚀 🌍 💻 📱 🔒 🔑'
+                .split(' ').map((emoji, index) => (
+                  <span key={`${emoji}-${index}`} title="Select and copy">{emoji}</span>
+                ))}
+            </div>
+          </section>
+        </div>
+      </details>
     </div>
   )
 }
