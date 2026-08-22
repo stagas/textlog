@@ -662,7 +662,9 @@ export function ConnectionPeople({ user, people, className = '', highlightTerms 
             <div>
               <UserReference handle={person.handle} bio={person.bio} noteCount={person.posts}
                 stats={person.profileStats} following={person.viewerFollowing} followsViewer={person.followsViewer}
-                user={user} href={`/u/${person.handle}`} showPopover={showPopover} label={
+                user={user} href={`/u/${person.handle}${
+                  returnPath ? `?from=${encodeURIComponent(returnPath(person))}` : ''
+                }`} showPopover={showPopover} label={
                 <>
                   @<HighlightedText text={person.handle} terms={highlightTerms} />
                 </>

@@ -840,7 +840,9 @@ test('Tag follower tabs list people with compact follow controls', () => {
   expect(html).toContain('href="/tag/notes">notes</a>')
   expect(html).toContain('aria-current="page" href="/tag/notes?tab=followers">followers</a>')
   expect(html).toContain('id="person-3"')
-  expect(html).toContain('href="/u/writer">@writer</a>')
+  expect(html).toContain(
+    'href="/u/writer?from=%2Ftag%2Fnotes%3Ftab%3Dfollowers%23person-3">@writer</a>',
+  )
   expect(html).toContain('action="/follow/writer"')
 })
 
@@ -1507,6 +1509,51 @@ test('Following and followers paginate every 10 people', () => {
 
     expect(html).toContain(`href="/u/reader?tab=${kind}&amp;page=2"`)
   }
+})
+
+test('Following and follower links return to the originating connection', () => {
+  const profile = { id: 1, handle: 'reader', email: 'reader@example.com', bio: '' }
+  const person = { id: 2, handle: 'writer', email: 'writer@example.com', bio: '', posts: 1,
+    viewerFollowing: false }
+  const following = renderToStaticMarkup(React.createElement(Connections, {
+    user: profile,
+    profile,
+    people: [person],
+    tags: [{ tag: 'notes', count: 1, viewerFollowing: true }],
+    kind: 'following',
+    page: 2,
+    total: 11,
+    tagsPage: 3,
+    tagsTotal: 25,
+    noteCount: 0,
+    followerCount: 0,
+    followingCount: 11,
+    followingTagCount: 25,
+    following: false,
+  }))
+  const followers = renderToStaticMarkup(React.createElement(Connections, {
+    user: profile,
+    profile,
+    people: [person],
+    kind: 'followers',
+    page: 2,
+    total: 11,
+    noteCount: 0,
+    followerCount: 11,
+    followingCount: 0,
+    followingTagCount: 0,
+    following: false,
+  }))
+
+  expect(following).toContain(
+    'href="/tag/notes?from=%2Fu%2Freader%3Ftab%3Dfollowing%26page%3D2%26tagsPage%3D3%23tag-notes"',
+  )
+  expect(following).toContain(
+    'href="/u/writer?from=%2Fu%2Freader%3Ftab%3Dfollowing%26page%3D2%26tagsPage%3D3%23person-2"',
+  )
+  expect(followers).toContain(
+    'href="/u/writer?from=%2Fu%2Freader%3Ftab%3Dfollowers%26page%3D2%23person-2"',
+  )
 })
 
 test('Connection people do not render a zero when they do not follow the viewer', () => {

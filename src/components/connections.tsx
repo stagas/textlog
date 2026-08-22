@@ -35,6 +35,11 @@ export function Connections(
     returnPath
       ? `${path}${path.includes('?') ? '&' : '?'}from=${encodeURIComponent(returnPath)}`
       : path
+  const connectionReturnPath = (anchor: string) => withFrom(
+    `/u/${profile.handle}?tab=${kind}${page > 1 ? `&page=${page}` : ''}${
+      kind === 'following' && tagsPage > 1 ? `&tagsPage=${tagsPage}` : ''
+    }`,
+  ) + anchor
   return (
     <Layout user={user} title={`${kind} @${profile.handle}`} social={social}>
       <ProfileHeader user={user} profile={profile} following={following} followsViewer={followsViewer}
@@ -50,7 +55,8 @@ export function Connections(
               {tags.length
                 ? kind === 'blocked'
                   ? <BlockedTagList user={user!} tags={tags} />
-                  : <TagPeopleList user={user} tags={tags} followingKey="viewerFollowing" showPopover={false} />
+                  : <TagPeopleList user={user} tags={tags} followingKey="viewerFollowing" showPopover={false}
+                    returnPath={tag => connectionReturnPath(`#tag-${tag.tag}`)} />
                 : (
                   <div className="empty connections-empty">
                     {kind === 'blocked'
@@ -71,7 +77,8 @@ export function Connections(
               {people.length
                 ? kind === 'blocked'
                   ? <BlockedPeopleList user={user!} people={people} />
-                  : <ConnectionPeople user={user} people={people} showNoteCount={false} showPopover={false} />
+                  : <ConnectionPeople user={user} people={people} showNoteCount={false} showPopover={false}
+                    returnPath={person => connectionReturnPath(`#person-${person.id}`)} />
                 : (
                   <div className="empty connections-empty">
                     {kind === 'blocked'
@@ -93,7 +100,7 @@ export function Connections(
         )
         : people.length
         ? <ConnectionPeople user={user} people={people} className="connections-list" showNoteCount={false}
-          showPopover={false} />
+          showPopover={false} returnPath={person => connectionReturnPath(`#person-${person.id}`)} />
         : (
           <div className={`empty${user?.id === profile.id && kind === 'following' ? ' empty-actions' : ''}`}>
             {user?.id === profile.id && kind === 'following'
