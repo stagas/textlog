@@ -60,7 +60,11 @@ export function Feed({ user, data, title, path = '/for-you', pageUrl, notificati
   const timelinePosts = data.timeline.filter(row => ['post', 'reply', 'mention'].includes(row.activity_kind))
   const timelinePostIds = new Set(timelinePosts.map(row => row.id))
   const threadPosts = (rootId: number) => {
-    const included = new Set([rootId])
+    const root = timelinePosts.find(row => row.id === rootId)
+    const sharedOrphanSiblings = root?.parent_id && !timelinePostIds.has(root.parent_id)
+      ? timelinePosts.filter(row => row.parent_id === root.parent_id)
+      : []
+    const included = new Set(sharedOrphanSiblings.length > 1 ? sharedOrphanSiblings.map(row => row.id) : [rootId])
     let changed = true
     while (changed) {
       changed = false
@@ -75,8 +79,13 @@ export function Feed({ user, data, title, path = '/for-you', pageUrl, notificati
   }
   const timelinePositions = new Map(data.timeline.map((row, index) => [row.event_key, index]))
   const timelinePostPositions = new Map(data.timeline.map((row, index) => [row.id, index]))
-  const visibleTimeline = data.timeline.filter(row => !['post', 'reply', 'mention'].includes(row.activity_kind)
-    || !row.parent_id || !timelinePostIds.has(row.parent_id))
+  const visibleTimeline = data.timeline.filter((row, index) => {
+    if (!['post', 'reply', 'mention'].includes(row.activity_kind)) return true
+    if (row.parent_id && timelinePostIds.has(row.parent_id)) return false
+    if (!row.parent_id) return true
+    return data.timeline.findIndex(candidate => ['post', 'reply', 'mention'].includes(candidate.activity_kind)
+      && candidate.parent_id === row.parent_id) === index
+  })
     .sort((a, b) => {
       const position = (row: PersonalizedTimelineRow) => ['post', 'reply', 'mention'].includes(row.activity_kind)
         ? Math.min(...threadPosts(row.id).map(post => timelinePostPositions.get(post.id)!))

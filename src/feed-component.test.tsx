@@ -75,6 +75,42 @@ test('standalone feed posts do not offer to read an undisplayed thread', () => {
   expect(html).not.toContain('>read more</a>')
 })
 
+test('to-me deduplicates the shared parent of sibling reply activities', () => {
+  const parent = { id: 25, user_id: 1, parent_id: null, body: 'one shared parent',
+    created_at: '2026-08-19 09:00:00', deleted_at: null, handle: 'reader', reply_count: 2 }
+  const activity = (id: number, handle: string): PersonalizedTimelineRow => ({
+    ...postActivity(id, id, handle),
+    parent_id: parent.id,
+    parent,
+    activity_kind: 'reply',
+    renderedPost: { ...postActivity(id, id, handle), parent_id: parent.id, parent },
+  })
+  const html = renderToStaticMarkup(<Feed
+    user={{ id: 1, handle: 'reader', email: 'reader@example.com', bio: '', handle_chosen_at: '2026-08-19 09:00:00' }}
+    data={{ timeline: [activity(27, 'cara'), activity(26, 'bob')], page: 1, totalPages: 1, toMeCount: 2,
+      forYouCount: 0, forYouUnread: false, toMeUnread: true }} toMe
+  />)
+
+  expect(html.match(/one shared parent/g)).toHaveLength(1)
+  expect(html.match(/class="post-page-thread feed-thread"/g)).toHaveLength(1)
+  expect(html.match(/class="parent-quote/g)).toBeNull()
+})
+
+test('feed trees render a shared off-page parent once for sibling replies', () => {
+  const parent = { id: 30, user_id: 2, parent_id: null, body: 'shared context',
+    created_at: '2026-08-19 09:00:00', deleted_at: null, handle: 'alice', reply_count: 2 }
+  const reply = (id: number, handle: string) => ({ id, user_id: id, parent_id: parent.id, body: `${handle} reply`,
+    created_at: `2026-08-19 1${id - 30}:00:00`, deleted_at: null, handle, reply_count: 0, parent })
+  const html = renderToStaticMarkup(<PublicFeed feed={{ posts: [reply(32, 'cara'), reply(31, 'bob')], page: 1,
+    totalItems: 2, totalPages: 1 }} />)
+
+  expect(html.match(/shared context/g)).toHaveLength(1)
+  expect(html.match(/class="post-page-thread feed-thread"/g)).toHaveLength(1)
+  expect(html.match(/class="parent-quote/g)).toBeNull()
+  expect(html.indexOf('id="post-30"')).toBeLessThan(html.indexOf('id="post-32"'))
+  expect(html.indexOf('id="post-32"')).toBeLessThan(html.indexOf('id="post-31"'))
+})
+
 test('for-you does not render author hide-all controls', () => {
   const html = renderToStaticMarkup(<Feed
     user={{ id: 1, handle: 'reader', email: 'reader@example.com', bio: '', handle_chosen_at: '2026-08-19 09:00:00' }}

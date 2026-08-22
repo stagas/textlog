@@ -667,10 +667,28 @@ export function FeedThreads(
   { posts, user, returnPath }: { posts: PostView[]; user: User | null; returnPath: string },
 ) {
   if (!posts.length) return null
-  const ids = new Set(posts.map(post => post.id))
-  const positions = new Map(posts.map((post, index) => [post.id, index]))
-  const children = new Map<number, PostView[]>()
+  const sourceIds = new Set(posts.map(post => post.id))
+  const missingParentReferences = new Map<number, PostView[]>()
   for (const post of posts) {
+    if (!post.parent_id || sourceIds.has(post.parent_id) || !post.parent) continue
+    missingParentReferences.set(post.parent_id, [...(missingParentReferences.get(post.parent_id) || []), post])
+  }
+  const sharedParents: PostView[] = []
+  for (const references of missingParentReferences.values()) {
+    if (references.length < 2) continue
+    const parent = references[0].parent!
+    sharedParents.push({
+      ...parent,
+      user_id: parent.user_id ?? -1,
+      parent_id: parent.parent_id ?? null,
+      reply_count: parent.reply_count || 0,
+    })
+  }
+  const treePosts = [...posts, ...sharedParents]
+  const ids = new Set(treePosts.map(post => post.id))
+  const positions = new Map(treePosts.map((post, index) => [post.id, index]))
+  const children = new Map<number, PostView[]>()
+  for (const post of treePosts) {
     if (!post.parent_id || !ids.has(post.parent_id)) continue
     children.set(post.parent_id, [...(children.get(post.parent_id) || []), post])
   }
@@ -696,7 +714,7 @@ export function FeedThreads(
     visit(root.id)
     return count
   }
-  const roots = posts.filter(post => !post.parent_id || !ids.has(post.parent_id))
+  const roots = treePosts.filter(post => !post.parent_id || !ids.has(post.parent_id))
     .sort((a, b) => conversationPosition(a) - conversationPosition(b))
   return (
     <>
@@ -709,7 +727,7 @@ export function FeedThreads(
             <div className="thread-root">
               <Post p={post} user={user} showReplyCount tappable returnPath={anchoredReturnPath} />
             </div>
-            <ThreadReplies parentId={post.id} replies={posts} user={user} returnPath={anchoredReturnPath} />
+            <ThreadReplies parentId={post.id} replies={treePosts} user={user} returnPath={anchoredReturnPath} />
             {continuesElsewhere && (
               <div className="thread-continuation feed-thread-continuation">
                 <a className="quiet" rel="nofollow"
