@@ -200,20 +200,21 @@ export function registerFeedsRoutes(app: Hono) {
     if (!user) return redirect('/enter?next=' + encodeURIComponent('/for-you'))
     rememberFeedVisitor(c.req.raw, user)
     const cursorValue = c.req.query('cursor')
+    const flat = c.req.query('view') === 'flat'
     if (cursorValue && !decodeForYouCursor(cursorValue)) return c.text('Invalid cursor', 400)
     const notificationBanner = await showNotificationBanner(c.req.raw, user)
     const data = await databaseService().call('feeds.personalizedPage', { user, page: currentPage(c.req.query('page')),
-      pageSize: resolvedPageSize(c.req.raw), toMe: false, path: '/for-you' })
+      pageSize: resolvedPageSize(c.req.raw), toMe: false, path: flat ? '/for-you?view=flat' : '/for-you' })
     const render = () =>
       page(
-        <Feed user={user} data={data} title="for you" notificationBanner={notificationBanner} />,
+        <Feed user={user} data={data} title="for you" notificationBanner={notificationBanner} flat={flat} />,
       )
     const renderForCache = () =>
       page(
         <Feed user={user} data={{ ...data, timeline: data.timeline.map(row => ({ ...row, unread: 0 })) }}
           title="for you" notificationBanner={notificationBanner} />,
       )
-    const response = !notificationBanner && currentPage(c.req.query('page')) === 1 && !cursorValue
+    const response = !flat && !notificationBanner && currentPage(c.req.query('page')) === 1 && !cursorValue
       ? await rpcMaterializedFeedPage(c.req.raw, 'for-you', user.id, render, false, 0, false, renderForCache)
       : render()
     const remembered = rememberFeed(response, 'following')
@@ -225,15 +226,17 @@ export function registerFeedsRoutes(app: Hono) {
     const user = currentUser(c.req.raw)
     rememberFeedVisitor(c.req.raw, user)
     const cursorValue = c.req.query('cursor')
+    const flat = c.req.query('view') === 'flat'
     const cursor = decodePostCursor(cursorValue)
     if (cursorValue && !cursor) return c.text('Invalid cursor', 400)
     const notificationBanner = await showNotificationBanner(c.req.raw, user)
     const render = async () => {
       const feed = await databaseService().call('feeds.latestPage', { viewerId: user?.id ?? -1,
         page: currentPage(c.req.query('page')), pageSize: resolvedPageSize(c.req.raw) })
-      return page(<PublicFeed user={user} feed={feed} path="/latest" notificationBanner={notificationBanner} />)
+      return page(<PublicFeed user={user} feed={feed} path="/latest" notificationBanner={notificationBanner}
+        flat={flat} />)
     }
-    const response = (!user || !notificationBanner) && currentPage(c.req.query('page')) === 1 && !cursorValue
+    const response = !flat && (!user || !notificationBanner) && currentPage(c.req.query('page')) === 1 && !cursorValue
       ? await rpcMaterializedFeedPage(c.req.raw, 'latest', user?.id ?? -1, render)
       : await render()
     const remembered = rememberFeed(response, 'latest')
@@ -252,20 +255,22 @@ export function registerFeedsRoutes(app: Hono) {
     const user = currentUser(c.req.raw)
     if (!user) return redirect('/enter?next=' + encodeURIComponent('/to-me'))
     const cursorValue = c.req.query('cursor')
+    const flat = c.req.query('view') === 'flat'
     if (cursorValue && !decodeForYouCursor(cursorValue)) return c.text('Invalid cursor', 400)
     const notificationBanner = await showNotificationBanner(c.req.raw, user)
     const data = await databaseService().call('feeds.personalizedPage', { user, page: currentPage(c.req.query('page')),
-      pageSize: resolvedPageSize(c.req.raw), toMe: true, path: '/to-me' })
+      pageSize: resolvedPageSize(c.req.raw), toMe: true, path: flat ? '/to-me?view=flat' : '/to-me' })
     const render = () =>
       page(
-        <Feed user={user} data={data} title="to me" path="/to-me" toMe notificationBanner={notificationBanner} />,
+        <Feed user={user} data={data} title="to me" path="/to-me" toMe notificationBanner={notificationBanner}
+          flat={flat} />,
       )
     const renderForCache = () =>
       page(
         <Feed user={user} data={{ ...data, timeline: data.timeline.map(row => ({ ...row, unread: 0 })) }} title="to me"
           path="/to-me" toMe notificationBanner={notificationBanner} />,
       )
-    const response = !notificationBanner && currentPage(c.req.query('page')) === 1 && !cursorValue
+    const response = !flat && !notificationBanner && currentPage(c.req.query('page')) === 1 && !cursorValue
       ? await rpcMaterializedFeedPage(c.req.raw, 'to-me', user.id, render, false, 0, false, renderForCache)
       : render()
     return rememberFeed(response, 'following')
@@ -282,14 +287,15 @@ export function registerFeedsRoutes(app: Hono) {
     const user = currentUser(c.req.raw)
     rememberFeedVisitor(c.req.raw, user)
     const cursorValue = c.req.query('cursor')
+    const flat = c.req.query('view') === 'flat'
     if (cursorValue && !decodeHotCursor(cursorValue)) return c.text('Invalid cursor', 400)
     const notificationBanner = await showNotificationBanner(c.req.raw, user)
     const render = async () => {
       const feed = await databaseService().call('feeds.hotPage', { viewerId: user?.id ?? -1,
         page: currentPage(c.req.query('page')), pageSize: resolvedPageSize(c.req.raw) })
-      return page(<HotFeed user={user} feed={feed} title="hot" notificationBanner={notificationBanner} />)
+      return page(<HotFeed user={user} feed={feed} title="hot" notificationBanner={notificationBanner} flat={flat} />)
     }
-    const response = (!user || !notificationBanner) && currentPage(c.req.query('page')) === 1 && !cursorValue
+    const response = !flat && (!user || !notificationBanner) && currentPage(c.req.query('page')) === 1 && !cursorValue
       ? await rpcMaterializedFeedPage(c.req.raw, 'hot', user?.id ?? -1, render, false, hotRankingVersion)
       : await render()
     const remembered = rememberFeed(response, 'hot')

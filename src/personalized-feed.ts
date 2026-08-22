@@ -181,7 +181,7 @@ export function loadPersonalizedFeed(database: Database, user: User, page: numbe
     const anchor = ['post', 'reply', 'mention'].includes(row.activity_kind)
       ? `post-${row.id}`
       : `activity-${row.event_key.replace(/[^a-z0-9_-]+/gi, '-')}`
-    return `${path}${page > 1 ? `?page=${page}` : ''}#${anchor}`
+    return `${path}${page > 1 ? `${path.includes('?') ? '&' : '?'}page=${page}` : ''}#${anchor}`
   }
   return { timeline: resultTimeline, page: snapshot.page, totalPages: snapshot.totalPages,
     toMeCount, forYouCount: unreadForYouCount(user.id, database),

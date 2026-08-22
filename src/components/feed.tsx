@@ -3,7 +3,7 @@ import { displayBio, linkify } from '../utils'
 import { Layout } from './layout'
 import { MetaRow } from './meta'
 import { ActionPair, FeedTabs, Pagination } from './page-shared'
-import { FeedThreads, TagReference, UserReference } from './post'
+import { FeedThreads, Post, TagReference, UserReference } from './post'
 
 export type ForYouCursor = { createdAt: string; key: string; direction: 'next' | 'previous' }
 
@@ -42,7 +42,8 @@ export function groupSimilarActivities(timeline: PersonalizedTimelineRow[]): Tim
   return groups
 }
 
-export function Feed({ user, data, title, path = '/for-you', pageUrl, notificationBanner = false, toMe = false }: {
+export function Feed({ user, data, title, path = '/for-you', pageUrl, notificationBanner = false, toMe = false,
+  flat = false }: {
   user: User
   data: PersonalizedFeedData
   title?: string
@@ -50,8 +51,13 @@ export function Feed({ user, data, title, path = '/for-you', pageUrl, notificati
   pageUrl?: string
   notificationBanner?: false | 'notifications' | 'appearance' | 'invite' | 'notification-update' | 'donate'
   toMe?: boolean
+  flat?: boolean
 }) {
-  const returnPath = path + (data.page > 1 ? `?page=${data.page}` : '')
+  const feedPath = flat ? `${path}?view=flat` : path
+  const returnPath = feedPath + (data.page > 1 ? `${flat ? '&' : '?'}page=${data.page}` : '')
+  const viewHref = flat
+    ? path + (data.page > 1 ? `?page=${data.page}` : '')
+    : `${path}?view=flat${data.page > 1 ? `&page=${data.page}` : ''}`
   const hasUnread = toMe ? data.toMeUnread : data.forYouUnread
   const unreadPage = data.unreadHref
     ? Number(new URL(data.unreadHref, 'http://localhost').searchParams.get('page') || 1)
@@ -104,7 +110,10 @@ export function Feed({ user, data, title, path = '/for-you', pageUrl, notificati
           }`}
           key={row.event_key}
         >
-          <FeedThreads posts={threadPosts(row.id)} user={user} returnPath={returnPath} />
+          {flat
+            ? <Post p={row.renderedPost!} user={user} showReplyCount tappable contextUnread={!!row.unread}
+              returnPath={`${returnPath}#post-${row.id}`} />
+            : <FeedThreads posts={threadPosts(row.id)} user={user} returnPath={returnPath} />}
         </div>
       )
       : (
@@ -178,10 +187,11 @@ export function Feed({ user, data, title, path = '/for-you', pageUrl, notificati
       <h1 className="visually-hidden">Your feed</h1>
       <FeedTabs active="following" user={user} forYouReadStatus={data.timeline.length ? hasUnread : undefined}
         toMe={toMe} toMeCount={toMe ? 0 : data.toMeCount} forYouCount={data.forYouCount} unreadHref={data.unreadHref}
-        lastUnreadHref={data.lastUnreadHref} forYouUnread={data.forYouUnread} toMeUnread={data.toMeUnread} />
-      {showTopPagination && <Pagination page={data.page} totalPages={data.totalPages} path={path} top />}
+        lastUnreadHref={data.lastUnreadHref} forYouUnread={data.forYouUnread} toMeUnread={data.toMeUnread}
+        viewMode={flat ? 'flat' : 'tree'} viewHref={viewHref} />
+      {showTopPagination && <Pagination page={data.page} totalPages={data.totalPages} path={feedPath} top />}
       {data.timeline.length
-        ? groupSimilarActivities(visibleTimeline).map(group =>
+        ? groupSimilarActivities(flat ? data.timeline : visibleTimeline).map(group =>
             group.rows.length > 1 && group.collapsible
               ? (
                 <div className="activity-group" key={group.rows[0].event_key}>
@@ -216,7 +226,7 @@ export function Feed({ user, data, title, path = '/for-you', pageUrl, notificati
             No activity on this page. <a href="/for-you">Return to the first page</a>.
           </div>
         )}
-      <Pagination page={data.page} totalPages={data.totalPages} path={path} />
+      <Pagination page={data.page} totalPages={data.totalPages} path={feedPath} />
     </Layout>
   )
 }

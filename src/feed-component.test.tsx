@@ -60,6 +60,34 @@ test('feed pages reconstruct threads from only the posts on that page', () => {
     + 'rel="nofollow">read more</a>')
 })
 
+test('flat feed view restores source order and offers the tree toggle after to me', () => {
+  const root = { id: 50, user_id: 2, parent_id: null, body: 'older root', created_at: '2026-08-19 09:00:00',
+    deleted_at: null, handle: 'alice', reply_count: 1 }
+  const reply = { id: 51, user_id: 3, parent_id: root.id, body: 'newer reply',
+    created_at: '2026-08-19 10:00:00', deleted_at: null, handle: 'bob', reply_count: 0, parent: root }
+  const html = renderToStaticMarkup(<PublicFeed user={{ id: 1, handle: 'reader', email: 'reader@example.com', bio: '' }}
+    feed={{ posts: [reply, root], page: 2, totalItems: 4, totalPages: 2, toMeCount: 1 }} path="/latest"
+    flat />)
+
+  expect(html).not.toContain('class="post-page-thread feed-thread"')
+  expect(html.indexOf('id="post-51"')).toBeLessThan(html.indexOf('id="post-50"'))
+  expect(html).toContain('href="/latest?page=2">tree</a>')
+  expect(html.indexOf('class="to-me-label"')).toBeLessThan(html.indexOf('href="/latest?page=2">tree</a>'))
+  expect(html).toContain('href="/latest?view=flat&amp;page=1"')
+  expect(html).toContain('href="/to-me?view=flat"')
+})
+
+test('hot and latest put the view toggle after to me when it is present', () => {
+  const feed = { posts: [], page: 1, totalItems: 0, totalPages: 1, toMeCount: 2 }
+  const user = { id: 1, handle: 'reader', email: 'reader@example.com', bio: '' }
+  for (const html of [
+    renderToStaticMarkup(<PublicFeed user={user} feed={feed} path="/latest" />),
+    renderToStaticMarkup(<HotFeed user={user} feed={feed} />),
+  ]) {
+    expect(html.indexOf('class="to-me-label"')).toBeLessThan(html.indexOf('>flat</a>'))
+  }
+})
+
 test('feed tree roots retain ASCII-art rendering', () => {
   const post = { id: 20, user_id: 2, parent_id: null, body: ' /\\_/\\\n( o.o )\n#ascii',
     created_at: '2026-08-19 10:00:00', deleted_at: null, handle: 'alice', reply_count: 0 }

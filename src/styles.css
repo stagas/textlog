@@ -786,6 +786,12 @@ nav form {
 
 .feed-tabs-read-status form { margin: 0; }
 
+.feed-tabs-view-filters {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
 .feed-tabs .feed-tabs-read-status .activity-side-link {
   padding: 0;
   color: var(--accent);

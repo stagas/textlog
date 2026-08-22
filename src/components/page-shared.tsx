@@ -315,7 +315,7 @@ export function CursorPagination({ path, previousCursor, nextCursor }: {
 
 export function FeedTabs(
   { active, user, forYouReadStatus, activityReadStatus, toMe = false, toMeCount = 0, forYouCount = 0, unreadHref,
-    lastUnreadHref, forYouUnread = false, toMeUnread = false }: {
+    lastUnreadHref, forYouUnread = false, toMeUnread = false, viewMode = 'tree', viewHref }: {
       active: 'following' | 'activity' | 'hot' | 'latest'
       user: User | null
       forYouReadStatus?: boolean
@@ -327,42 +327,53 @@ export function FeedTabs(
       lastUnreadHref?: string
       forYouUnread?: boolean
       toMeUnread?: boolean
+      viewMode?: 'tree' | 'flat'
+      viewHref?: string
     },
 ) {
   forYouUnread = forYouUnread || toMeUnread
   const hasDistinctLastUnread = !!lastUnreadHref && lastUnreadHref !== unreadHref
+  const viewQuery = viewMode === 'flat' ? '?view=flat' : ''
   return (
     <>
       <nav className="feed-tabs" id="feed-tabs" aria-label="Feed">
         {user && (
           <a className={active === 'following' ? 'active' : ''}
-            aria-current={active === 'following' ? 'page' : undefined} href="/for-you"
+            aria-current={active === 'following' ? 'page' : undefined} href={`/for-you${viewQuery}`}
           >
             for you
             {forYouCount > 0 && <span className="to-me-count">{forYouCount}</span>}
           </a>
         )}
         <a className={active === 'hot' ? 'active' : ''} aria-current={active === 'hot' ? 'page' : undefined}
-          href={user ? '/hot' : '/hot#feed-tabs'}
+          href={user ? `/hot${viewQuery}` : `/hot${viewQuery}#feed-tabs`}
         >
           hot
         </a>
         <a className={active === 'latest' ? 'active' : ''} aria-current={active === 'latest' ? 'page' : undefined}
-          href={user ? '/latest' : '/latest#feed-tabs'}
+          href={user ? `/latest${viewQuery}` : `/latest${viewQuery}#feed-tabs`}
         >
           latest
         </a>
-        {(active === 'following' || toMeCount > 0 || activityReadStatus !== undefined) && (
+        {(viewHref || active === 'following' || toMeCount > 0 || activityReadStatus !== undefined) && (
           <span className="feed-tabs-read-status">
-            {(active === 'following' || toMeCount > 0) && (
-              <a className={`activity-side-link${toMe ? '' : ' has-to-me-count'}`} href={toMe ? '/for-you' : '/to-me'}>
-                {toMe ? 'all' : (
-                  <>
-                    <span className="to-me-label">to me</span>
-                    {toMeCount > 0 && <span className="to-me-count">{toMeCount}</span>}
-                  </>
+            {(viewHref || active === 'following' || toMeCount > 0) && (
+              <span className="feed-tabs-view-filters">
+                {(active === 'following' || toMeCount > 0) && (
+                  <a className={`activity-side-link${toMe ? '' : ' has-to-me-count'}`}
+                    href={`${toMe ? '/for-you' : '/to-me'}${viewQuery}`}>
+                    {toMe ? 'all' : (
+                      <>
+                        <span className="to-me-label">to me</span>
+                        {toMeCount > 0 && <span className="to-me-count">{toMeCount}</span>}
+                      </>
+                    )}
+                  </a>
                 )}
-              </a>
+                {viewHref && (
+                  <a className="activity-side-link" href={viewHref}>{viewMode === 'flat' ? 'tree' : 'flat'}</a>
+                )}
+              </span>
             )}
             {activityReadStatus !== undefined
               && (activityReadStatus
