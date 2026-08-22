@@ -749,7 +749,10 @@ test('posts describe whether their author wrote or replied', () => {
   expect(continuation).toContain('<span class="post-context">continued:</span>')
   expect(continuation).not.toContain('replied to')
   expect(poll).toContain('<span class="post-context">created a poll:</span>')
-  expect(mentioned).toContain('<span class="post-context post-context-punctuation"> and mentioned you:</span>')
+  expect(mentioned).toContain('<span class="post-context">replied to</span><span class="reference-menu">')
+  expect(mentioned).not.toContain('<span class="post-context">replied to and mentioned you:</span>')
+  expect(mentioned).toContain('<span class="post-context post-context-punctuation post-context-mention-suffix">'
+    + ' and mentioned you:</span>')
   expect(replyToDeletedUser).toContain('<span class="post-context">replied to</span>'
     + '<span class="post-context deleted-context">(deleted account)</span>')
   expect(replyToDeletedUser).not.toContain('<span class="post-context">replied to</span>'

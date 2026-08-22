@@ -311,6 +311,7 @@ export function Post({
   tappableParent = false,
   contextLabel,
   contextUnread = false,
+  contextDirectedUnread = false,
   preview = false,
   returnPath,
   backHref,
@@ -324,7 +325,8 @@ export function Post({
 }: { p: PostView; user: User | null; showReplyAction?: boolean; showOwnerActions?: boolean;
   showModerateAction?: boolean; showParent?: boolean; showReplyCount?: boolean; replyHref?: string; replyLabel?: string;
   reportHref?: string; foldControlId?: string; highlightTerms?: string[]; tappable?: boolean; tappableParent?: boolean;
-  contextLabel?: React.ReactNode; contextUnread?: boolean; preview?: boolean; returnPath?: string; backHref?: string;
+  contextLabel?: React.ReactNode; contextUnread?: boolean; contextDirectedUnread?: boolean; preview?: boolean;
+  returnPath?: string; backHref?: string;
   canonicalTimestamp?: boolean; topHref?: string; flatHref?: string; treeHref?: string;
   authorPopoverAction?: React.ReactNode; continuationHref?: string; continuationLabel?: string })
 {
@@ -366,7 +368,8 @@ export function Post({
         ? 'replied to'
         : undefined
       : `wrote${p.viewer_mentioned ? ' and mentioned you' : ''}:`)
-  if (p.viewer_mentioned && typeof contextLabel === 'string' && !contextLabel.includes('mentioned you')) {
+  if (p.viewer_mentioned && !contextTarget && typeof contextLabel === 'string'
+    && !contextLabel.includes('mentioned you')) {
     contextLabel = contextLabel.replace(/:$/, '') + ' and mentioned you:'
   }
   const detailPath = '/post/' + p.id + (returnPath ? '?from=' + encodeURIComponent(returnPath) : '')
@@ -392,7 +395,8 @@ export function Post({
     )
   }
   return (
-    <article className={`post${tappable || hasTappableParent ? ' tappable-post' : ''}`} id={`post-${p.id}`}>
+    <article className={`post${tappable || hasTappableParent ? ' tappable-post' : ''}${
+      contextDirectedUnread ? ' activity-item-directed-unread' : ''}`} id={`post-${p.id}`}>
       {tappable && (
         <a className="post-hit-area" href={detailPath} rel={navigationRel} aria-label={`open post by @${p.handle}`} />
       )}
@@ -432,7 +436,8 @@ export function Post({
                 following={contextTarget.viewer_following} followsViewer={contextTarget.follows_viewer} user={user}
                 href={`/u/${contextTarget.handle}${referenceQuery}`} rel={navigationRel}
                 navigationQuery={referenceQuery} referenceData={contextTarget.bio_reference} />}
-            <span className="post-context post-context-punctuation">
+            <span className={`post-context post-context-punctuation${
+              p.viewer_mentioned ? ' post-context-mention-suffix' : ''}`}>
               {p.viewer_mentioned ? ' and mentioned you:' : ':'}
             </span>
           </>
@@ -596,10 +601,11 @@ export function Post({
 
 export function ThreadReplies(
   { parentId, replies, user, returnPath, excludePostId, flat = false, showMissingContinuations = false,
-    continuationLabel = 'read more', continuationReturnPath, contextUnreadPostIds }: { parentId: number; replies: PostView[];
+    continuationLabel = 'read more', continuationReturnPath, contextUnreadPostIds,
+    contextDirectedUnreadPostIds }: { parentId: number; replies: PostView[];
     user: User | null; returnPath?: string; excludePostId?: number; flat?: boolean;
     showMissingContinuations?: boolean; continuationLabel?: string; continuationReturnPath?: string;
-    contextUnreadPostIds?: ReadonlySet<number> },
+    contextUnreadPostIds?: ReadonlySet<number>; contextDirectedUnreadPostIds?: ReadonlySet<number> },
 ) {
   if (!replies.length) return null
   const children = new Map<number, PostView[]>()
@@ -633,6 +639,7 @@ export function ThreadReplies(
         {foldControlId && <input className="thread-fold-input" type="checkbox" id={foldControlId} />}
         <Post p={reply} user={user} showParent={false} foldControlId={foldControlId}
           returnPath={anchoredReturnPath} contextUnread={contextUnreadPostIds?.has(reply.id)}
+          contextDirectedUnread={contextDirectedUnreadPostIds?.has(reply.id)}
           replyHref={user ? undefined : '/enter?next=' + encodeURIComponent('/post/' + reply.id + '?reply=1'
             + '&from=' + encodeURIComponent(anchoredReturnPath))} replyLabel={user ? undefined : 'enter to reply'}
           continuationHref={continuationHref} continuationLabel={continuationLabel} tappable />
@@ -677,8 +684,9 @@ export function ThreadReplies(
 
 /** Render only the posts supplied by a feed, joining replies to parents that are on the same page. */
 export function FeedThreads(
-  { posts, user, returnPath, contextUnreadPostIds }: { posts: PostView[]; user: User | null; returnPath: string;
-    contextUnreadPostIds?: ReadonlySet<number> },
+  { posts, user, returnPath, contextUnreadPostIds, contextDirectedUnreadPostIds }: { posts: PostView[];
+    user: User | null; returnPath: string; contextUnreadPostIds?: ReadonlySet<number>;
+    contextDirectedUnreadPostIds?: ReadonlySet<number> },
 ) {
   if (!posts.length) return null
   const sourceIds = new Set(posts.map(post => post.id))
@@ -743,13 +751,15 @@ export function FeedThreads(
             <div className="thread-root">
               <Post p={post} user={user} showReplyCount tappable returnPath={anchoredReturnPath}
                 contextUnread={contextUnreadPostIds?.has(post.id)} foldControlId={foldControlId}
+                contextDirectedUnread={contextDirectedUnreadPostIds?.has(post.id)}
                 continuationHref={continuesElsewhere
                   ? `/post/${post.id}?from=${encodeURIComponent(anchoredReturnPath)}`
                   : undefined} />
             </div>
             <ThreadReplies parentId={post.id} replies={treePosts} user={user} returnPath={anchoredReturnPath}
               showMissingContinuations continuationLabel="read more" continuationReturnPath={returnPath}
-              contextUnreadPostIds={contextUnreadPostIds} />
+              contextUnreadPostIds={contextUnreadPostIds}
+              contextDirectedUnreadPostIds={contextDirectedUnreadPostIds} />
           </div>
         )
       })}

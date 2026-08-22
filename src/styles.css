@@ -4583,6 +4583,10 @@ a.post-context:hover {
   margin-left: calc(-1 * var(--space-4));
 }
 
+.post-context-mention-suffix {
+  margin-left: calc(-1 * var(--space-4) + 1ch);
+}
+
 .post-context + .reference-menu {
   margin-left: calc(-1 * var(--space-4) + 1ch);
 }

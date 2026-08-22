@@ -146,6 +146,7 @@ test('threaded activity replies retain their unread dots', () => {
     parent,
     activity_kind: 'reply',
     unread: 1,
+    targeted_to_viewer: true,
     renderedPost: { ...childBase.renderedPost!, parent_id: root.id, parent },
   }
   const html = renderToStaticMarkup(<Feed
@@ -155,6 +156,7 @@ test('threaded activity replies retain their unread dots', () => {
   />)
 
   expect(html.match(/class="unread-dot" aria-label="unread"/g)).toHaveLength(1)
+  expect(html).toContain('class="post tappable-post activity-item-directed-unread" id="post-29"')
   expect(html.indexOf('id="post-29"')).toBeLessThan(html.indexOf('class="unread-dot" aria-label="unread"'))
 })
 

@@ -66,6 +66,8 @@ export function Feed({ user, data, title, path = '/for-you', pageUrl, notificati
   const timelinePosts = data.timeline.filter(row => ['post', 'reply', 'mention'].includes(row.activity_kind))
   const timelinePostIds = new Set(timelinePosts.map(row => row.id))
   const unreadPostIds = new Set(timelinePosts.filter(row => row.unread).map(row => row.id))
+  const directedUnreadPostIds = new Set(timelinePosts.filter(row => row.unread && row.targeted_to_viewer)
+    .map(row => row.id))
   const threadPosts = (rootId: number) => {
     const root = timelinePosts.find(row => row.id === rootId)
     const sharedOrphanSiblings = root?.parent_id && !timelinePostIds.has(root.parent_id)
@@ -107,7 +109,7 @@ export function Feed({ user, data, title, path = '/for-you', pageUrl, notificati
       ? (
         <div
           className={`for-you-item for-you-author-${row.actor_id}${
-            row.unread && row.targeted_to_viewer ? ' activity-item-directed-unread' : ''
+            flat && row.unread && row.targeted_to_viewer ? ' activity-item-directed-unread' : ''
           }`}
           key={row.event_key}
         >
@@ -115,7 +117,7 @@ export function Feed({ user, data, title, path = '/for-you', pageUrl, notificati
             ? <Post p={row.renderedPost!} user={user} showReplyCount tappable contextUnread={!!row.unread}
               returnPath={`${returnPath}#post-${row.id}`} />
             : <FeedThreads posts={threadPosts(row.id)} user={user} returnPath={returnPath}
-              contextUnreadPostIds={unreadPostIds} />}
+              contextUnreadPostIds={unreadPostIds} contextDirectedUnreadPostIds={directedUnreadPostIds} />}
         </div>
       )
       : (
