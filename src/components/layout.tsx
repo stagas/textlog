@@ -113,6 +113,7 @@ export function Layout({
         <meta charSet="utf-8" />
         <meta name="viewport" content="width=device-width,initial-scale=1" />
         <meta name="color-scheme" content="light dark" />
+        <meta name="theme-color" content="#171a17" />
         <title>{`${title ? `${title} · ` : ''}${name}`}</title>
         <>
           <meta name="description" content={share.description} />
