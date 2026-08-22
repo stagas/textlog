@@ -3064,7 +3064,11 @@ form.report-panel {
 }
 
 .posting-help-details {
-  display: contents;
+  display: block;
+  grid-column: 1;
+  grid-row: 1;
+  min-width: 0;
+  width: 100%;
 }
 
 .posting-help-details summary,
@@ -3104,12 +3108,8 @@ form.report-panel {
   display: none;
 }
 
-.posting-help-details:not([open]) .posting-help-content {
-  display: none;
-}
-
 .posting-help-content {
-  display: grid;
+  display: none;
   grid-column: 1 / -1;
   grid-row: 2;
   gap: var(--space-4);
@@ -3121,6 +3121,10 @@ form.report-panel {
   line-height: 1.5;
   background: var(--background);
   border: 1px solid var(--soft);
+}
+
+.posting-help-details[open] + .posting-help-content {
+  display: grid;
 }
 
 .posting-help-section {

@@ -311,7 +311,8 @@ describe('in-memory stylesheet', () => {
 
   test('keeps posting help inline and lets expanded content span the action row', async () => {
     const css = await Bun.file(new URL('./styles.css', import.meta.url)).text()
-    expect(css).toContain('.posting-help-details {\n  display: contents;')
+    expect(css).toContain('.posting-help-details {\n  display: block;\n  grid-column: 1;')
+    expect(css).toContain('.posting-help-details[open] + .posting-help-content {\n  display: grid;')
     expect(css).toContain('width: 100%;\n  margin-top: var(--space-5);')
     expect(css).toContain('.posting-help-summary-link {\n  display: inline-block;')
     expect(css).toContain('width: fit-content;\n  line-height: 1.35;')

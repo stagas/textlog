@@ -169,14 +169,15 @@ export function PostingHelp({ maxLength = 280, maxLines = 10, search }: {
   return (
     <div className="posting-help">
       <details className="posting-help-details" open={!!search}>
-        <summary>
+        <summary aria-controls="posting-help-content">
           <span className="posting-help-summary-link">
             <span className="posting-help-limits">{maxLength} chars / {maxLines} lines max</span>
             <br />
             use #hashtags, @mentions and more
           </span>
         </summary>
-        <div className="posting-help-content">
+      </details>
+        <div className="posting-help-content" id="posting-help-content">
           <section className="posting-help-section">
             <h2>Find hashtags and people</h2>
             <div className="posting-help-searches">
@@ -195,7 +196,6 @@ export function PostingHelp({ maxLength = 280, maxLines = 10, search }: {
             </div>
           </section>
         </div>
-      </details>
     </div>
   )
 }
