@@ -628,6 +628,9 @@ export function ThreadReplies(
   }
   const renderReply = (reply: PostView, childBranch?: React.ReactNode, continuesElsewhere = false) => {
     const anchoredReturnPath = replyAnchorReturnPath(parentId, reply.id, returnPath)
+    const postReturnPath = continuationReturnPath
+      ? `${continuationReturnPath}#post-${reply.id}`
+      : anchoredReturnPath
     const foldControlId = childBranch ? `thread-fold-${reply.id}` : undefined
     const continuationHref = continuesElsewhere
       ? '/post/' + reply.id + '?from=' + encodeURIComponent(
@@ -638,10 +641,10 @@ export function ThreadReplies(
       <div className="reply-node" key={reply.id}>
         {foldControlId && <input className="thread-fold-input" type="checkbox" id={foldControlId} />}
         <Post p={reply} user={user} showParent={false} foldControlId={foldControlId}
-          returnPath={anchoredReturnPath} contextUnread={contextUnreadPostIds?.has(reply.id)}
+          returnPath={postReturnPath} contextUnread={contextUnreadPostIds?.has(reply.id)}
           contextDirectedUnread={contextDirectedUnreadPostIds?.has(reply.id)}
           replyHref={user ? undefined : '/enter?next=' + encodeURIComponent('/post/' + reply.id + '?reply=1'
-            + '&from=' + encodeURIComponent(anchoredReturnPath))} replyLabel={user ? undefined : 'enter to reply'}
+            + '&from=' + encodeURIComponent(postReturnPath))} replyLabel={user ? undefined : 'enter to reply'}
           continuationHref={continuationHref} continuationLabel={continuationLabel} tappable />
         {childBranch}
       </div>

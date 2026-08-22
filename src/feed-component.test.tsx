@@ -54,6 +54,7 @@ test('feed pages reconstruct threads from only the posts on that page', () => {
   expect(html.indexOf('id="post-10"')).toBeLessThan(html.indexOf('id="post-11"'))
   expect(html.indexOf('id="post-10"')).toBeLessThan(html.indexOf('id="post-12"'))
   expect(html).toContain('class="reply-branch"')
+  expect(html).toContain('class="post-hit-area" href="/post/11?from=%2Flatest%23post-11"')
   expect(html).toContain('class="thread-fold-input" type="checkbox" id="feed-thread-fold-10"')
   expect(html).toContain('for="feed-thread-fold-10" title="fold or unfold replies"')
   expect(html).toContain('class="quiet post-continuation-link" href="/post/10?from=%2Flatest%23post-10" '
