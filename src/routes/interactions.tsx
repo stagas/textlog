@@ -53,7 +53,7 @@ export function registerInteractionsRoutes(app: Hono) {
     if (!user) return redirect('/enter')
     const postId = Number(c.req.param('id'))
     const f = await form(c.req.raw)
-    const validReason = ['harassment', 'spam', 'impersonation', 'other'].includes(f.reason)
+    const validReason = ['harassment', 'spam', 'impersonation', 'bot', 'other'].includes(f.reason)
     const result = await databaseService().call('interactions.reportPost', {
       userId: user.id,
       postId,

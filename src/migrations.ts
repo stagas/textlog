@@ -120,7 +120,7 @@ export const migrations: Migration[] = [
       CREATE TABLE IF NOT EXISTS reports (
         id INTEGER PRIMARY KEY AUTOINCREMENT,reporter_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
         post_id INTEGER NOT NULL REFERENCES posts(id) ON DELETE CASCADE,
-        reason TEXT NOT NULL CHECK(reason IN ('harassment','spam','impersonation','other')),
+        reason TEXT NOT NULL CHECK(reason IN ('harassment','spam','impersonation','bot','other')),
         created_at TEXT DEFAULT CURRENT_TIMESTAMP,UNIQUE(reporter_id,post_id));
       CREATE INDEX IF NOT EXISTS posts_parent ON posts(parent_id,created_at);
       CREATE INDEX IF NOT EXISTS posts_user_created ON posts(user_id,created_at DESC);
@@ -1330,6 +1330,25 @@ export const migrations: Migration[] = [
     name: 'increase_poll_vote_hot_weight',
     up(database) {
       rebuildHotPosts(database)
+    },
+  },
+  {
+    version: 105,
+    name: 'bot_report_reason',
+    up(database) {
+      if (!database.query("SELECT 1 FROM sqlite_master WHERE type='table' AND name='reports'").get()) return
+      database.run(`CREATE TABLE reports_new (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,reporter_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        post_id INTEGER NOT NULL REFERENCES posts(id) ON DELETE CASCADE,
+        reason TEXT NOT NULL CHECK(reason IN ('harassment','spam','impersonation','bot','other')),
+        created_at TEXT DEFAULT CURRENT_TIMESTAMP,status TEXT NOT NULL DEFAULT 'open',resolved_at TEXT,
+        resolved_by INTEGER REFERENCES users(id),UNIQUE(reporter_id,post_id));
+      INSERT INTO reports_new(id,reporter_id,post_id,reason,created_at,status,resolved_at,resolved_by)
+        SELECT id,reporter_id,post_id,reason,created_at,status,resolved_at,resolved_by FROM reports;
+      DROP TABLE reports;
+      ALTER TABLE reports_new RENAME TO reports;
+      CREATE INDEX reports_created ON reports(created_at DESC);
+      CREATE INDEX reports_status_created ON reports(status,created_at DESC);`)
     },
   },
 ]

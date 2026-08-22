@@ -722,11 +722,12 @@ export function ReportPanel({ post, showForm, reported, reason = '', error }: {
           reason
           <select className="form-control form-select" name="reason" required defaultValue={reason}>
             <option value="" disabled>choose a reason</option>
-            {reason && !['harassment', 'spam', 'impersonation', 'other'].includes(reason)
+            {reason && !['harassment', 'spam', 'impersonation', 'bot', 'other'].includes(reason)
               && <option value={reason} hidden>{reason}</option>}
             <option value="harassment">harassment</option>
             <option value="spam">spam</option>
             <option value="impersonation">impersonation</option>
+            <option value="bot">bot</option>
             <option value="other">other</option>
           </select>
         </label>

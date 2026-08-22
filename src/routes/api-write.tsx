@@ -340,8 +340,8 @@ export function registerApiWriteRoutes(app: Hono, service: DatabaseService,
     if (!Number.isInteger(id) || id < 1) return fail('invalid_post_id', 'Post ID must be a positive integer', 400)
     const payload = await body(c)
     const reason = text(payload?.reason)
-    if (!['harassment', 'spam', 'impersonation', 'other'].includes(reason)) {
-      return fail('invalid_reason', 'Reason must be harassment, spam, impersonation or other', 400)
+    if (!['harassment', 'spam', 'impersonation', 'bot', 'other'].includes(reason)) {
+      return fail('invalid_reason', 'Reason must be harassment, spam, impersonation, bot or other', 400)
     }
     const result = await service.call('interactions.reportPost', { userId: guard.user!.id, postId: id, reason })
     if (result.status === 'not_found') return fail('not_found', 'Post not found', 404)

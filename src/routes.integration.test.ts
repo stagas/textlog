@@ -1416,13 +1416,13 @@ test('consequential account, content, reporting, and admin flows work over HTTP'
   const report = await request(`/post/${post.id}/report`, {
     method: 'POST',
     cookie: bobCookie,
-    form: { reason: 'spam' },
+    form: { reason: 'bot' },
   })
   expect(report.status).toBe(303)
   expect(report.headers.get('location')).toBe(`/post/${post.id}?reported=1`)
   const reportRow = database.query('SELECT id,status,reason FROM reports WHERE reporter_id=? AND post_id=?')
     .get(bob.id, post.id) as { id: number; status: string; reason: string }
-  expect(reportRow).toMatchObject({ status: 'open', reason: 'spam' })
+  expect(reportRow).toMatchObject({ status: 'open', reason: 'bot' })
 
   const emailDeleteCookie = await signup('emaildelete', 'email-delete@example.com', 'unused')
   const emailChangeRequest = await request('/account/email/change', {

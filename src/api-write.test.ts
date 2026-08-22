@@ -232,10 +232,10 @@ describe('API writes', () => {
     expect((await call(app, '/api/v1/posts/1/report', {
       method: 'POST',
       token: 'alice-token',
-      body: { reason: 'spam' },
+      body: { reason: 'bot' },
     })).status).toBe(200)
     expect(database.query('SELECT reason FROM reports WHERE reporter_id=1 AND post_id=1').get())
-      .toMatchObject({ reason: 'spam' })
+      .toMatchObject({ reason: 'bot' })
 
     expect((await call(app, '/api/v1/posts/1/report', {
       method: 'POST',
