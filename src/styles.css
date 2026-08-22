@@ -278,7 +278,7 @@ header>.account-nav {
 }
 
 @media (max-width: 600px) {
-  .has-mobile-write-action .nav-write-action {
+  .account-nav .nav-write-action {
     display: none;
   }
 

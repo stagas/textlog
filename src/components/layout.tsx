@@ -86,7 +86,6 @@ export function Layout({
           <a href="/explore">explore</a>
         </span>
         <span className="account-nav-row account-nav-primary">
-          <a className="nav-write-action" href="/write">write</a>
           {isAdmin(user) && <a href="/admin">admin</a>}
           {mobile
             ? (
@@ -101,6 +100,7 @@ export function Layout({
                 {accountMenuPopover}
               </div>
             )}
+          <a className="button nav-write-action" href="/write">write</a>
         </span>
       </>
     )
@@ -159,7 +159,7 @@ export function Layout({
           </>
         )}
         {mobile && <link href="https://fonts.cdnfonts.com/css/dejavu-sans-mono" rel="stylesheet" />}
-        <link rel="stylesheet" href="/styles.css?v=541" />
+        <link rel="stylesheet" href="/styles.css?v=544" />
         <style>{themeCss}</style>
       </head>
       <body className={`density-${density}${user?.show_link_previews === 0 ? ' link-previews-disabled' : ''}${
