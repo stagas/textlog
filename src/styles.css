@@ -1569,7 +1569,14 @@ nav form {
 .post,
 .activity-follow {
   border-top: 1px solid var(--soft);
+}
+
+.activity-follow {
   scroll-margin-block: var(--space-5);
+}
+
+.post {
+  scroll-margin-block: 0;
 }
 
 .post:target,
