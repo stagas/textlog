@@ -1844,13 +1844,16 @@ nav form {
 
 .post-body > .reference-menu {
   display: inline;
-  padding-bottom: 1px;
   line-height: inherit;
   vertical-align: baseline;
+  border-bottom: 0;
 }
 
-.post-body > a {
+.post-body a:not(.remote-link-popover):not(.reference-menu-popover a),
+.post-body > .reference-menu > a.reference-menu-trigger {
   padding-bottom: 1px;
+  border-bottom: var(--hairline) solid var(--link-border);
+  text-decoration: none;
 }
 
 .post-body .raw-link {
