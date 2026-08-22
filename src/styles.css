@@ -4847,6 +4847,11 @@ a.post-context:hover {
   border-top: 1px solid var(--soft);
 }
 
+.feed-tabs + .feed-thread,
+.feed-tabs + .feed-read-action + .feed-thread {
+  border-top: 0;
+}
+
 .post-page-thread.feed-thread:has(> .reply-branch) {
   margin-bottom: var(--space-5);
 }
