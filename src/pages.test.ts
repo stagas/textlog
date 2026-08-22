@@ -2033,9 +2033,12 @@ test('A quoted post gets its own higher-priority hit area in tappable feeds', ()
     + 'href="/u/parent?from=%2Flatest%3Fcursor%3Dabc%23post-2"')
   expect(html).not.toContain('class="postdate" href="/post/1?from=%2Flatest%3Fcursor%3Dabc%23post-2"')
   expect(html).toContain('href="/post/1?reply=1&amp;from=%2Flatest%3Fcursor%3Dabc%23post-2"')
+  expect(html).toContain(
+    'href="/post/1?from=%2Fpost%2F2%3Ffrom%3D%252Flatest%253Fcursor%253Dabc%2523post-2%23post-2#post-1">top</a>',
+  )
 })
 
-test('Nested quoted posts link to the conversation top before reply in feeds', () => {
+test('Nested feed posts link to the conversation top from the descendant metadata only', () => {
   const html = renderToStaticMarkup(React.createElement(Post, {
     user: { id: 9, handle: 'reader', email: 'reader@example.com', bio: '' },
     tappable: true,
@@ -2061,9 +2064,10 @@ test('Nested quoted posts link to the conversation top before reply in feeds', (
     },
   }))
 
-  const top = 'href="/post/1?from=%2Fpost%2F2%3Ffrom%3D%252Flatest%2523post-3%23post-2#post-1">top</a>'
-  expect(html).toContain(top)
-  expect(html.indexOf(top)).toBeLessThan(html.indexOf('aria-label="reply to @parent"'))
+  expect(html).toContain('<div class="posttop posttop-context"><span class="reference-menu">')
+  const top = 'href="/post/1?from=%2Fpost%2F3%3Ffrom%3D%252Flatest%2523post-3%23post-3#post-1">top</a>'
+  expect(html).toContain(`${top}</div>`)
+  expect(html.match(/>top<\/a>/g)).toHaveLength(1)
 })
 
 test('Post detail can make only its quoted parent tappable', () => {

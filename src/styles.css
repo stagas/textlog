@@ -1700,6 +1700,10 @@ nav form {
   color: var(--accent-dark);
 }
 
+.posttop > .post-top-link {
+  margin-left: auto;
+}
+
 .post-actions {
   display: flex;
   align-items: baseline;

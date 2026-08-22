@@ -444,6 +444,10 @@ export function Post({
               {canonicalTimestamp ? 'permalink' : 'read'}
             </a>
           )}
+        {tappable && parent && (
+          <a className="quiet post-top-link"
+            href={conversationTopPath(parent.top_id || parent.id, p.id, returnPath)}>top</a>
+        )}
         {(flatHref || treeHref || showOwnerActions && user?.id === p.user_id || topHref || backHref) && (
           <div className="post-navigation-actions">
             {showOwnerActions && user?.id === p.user_id && (
@@ -532,10 +536,6 @@ export function Post({
                   )}
                   {!hasTappableParent && (
                     <a className="postdate" href={parentDetailPath} rel={navigationRel}>read</a>
-                  )}
-                  {tappable && parent.top_id && (
-                    <a className="quiet post-top-link"
-                      href={conversationTopPath(parent.top_id, parent.id, returnPath)}>top</a>
                   )}
                 </div>
                 <div className={`post-body${containsAsciiArt(parent.body) ? ' ascii-art' : ''}`} dangerouslySetInnerHTML={{

@@ -115,6 +115,7 @@ describe('in-memory stylesheet', () => {
     expect(css).toContain(
       '.postfoot .post-reply-link:hover,\n.posttop .post-top-link:hover,',
     )
+    expect(css).toContain('.posttop > .post-top-link {\n  margin-left: auto;\n}')
   })
 
   test('keeps the edit cancel action muted', async () => {
