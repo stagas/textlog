@@ -722,10 +722,13 @@ export function FeedThreads(
         const anchoredReturnPath = `${returnPath}#post-${post.id}`
         const visibleReplies = visibleReplyCount(post)
         const continuesElsewhere = visibleReplies > 0 && (post.reply_count || 0) > visibleReplies
+        const foldControlId = visibleReplies > 0 ? `feed-thread-fold-${post.id}` : undefined
         return (
           <div className="post-page-thread feed-thread" key={post.id}>
+            {foldControlId && <input className="thread-fold-input" type="checkbox" id={foldControlId} />}
             <div className="thread-root">
-              <Post p={post} user={user} showReplyCount tappable returnPath={anchoredReturnPath} />
+              <Post p={post} user={user} showReplyCount tappable returnPath={anchoredReturnPath}
+                foldControlId={foldControlId} />
             </div>
             <ThreadReplies parentId={post.id} replies={treePosts} user={user} returnPath={anchoredReturnPath} />
             {continuesElsewhere && (

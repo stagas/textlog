@@ -54,6 +54,8 @@ test('feed pages reconstruct threads from only the posts on that page', () => {
   expect(html.indexOf('id="post-10"')).toBeLessThan(html.indexOf('id="post-11"'))
   expect(html.indexOf('id="post-10"')).toBeLessThan(html.indexOf('id="post-12"'))
   expect(html).toContain('class="reply-branch"')
+  expect(html).toContain('class="thread-fold-input" type="checkbox" id="feed-thread-fold-10"')
+  expect(html).toContain('for="feed-thread-fold-10" title="fold or unfold replies"')
   expect(html).toContain('class="thread-continuation feed-thread-continuation"><a class="quiet" rel="nofollow" '
     + 'href="/post/10?from=%2Flatest%23post-10">read more</a>')
 })
@@ -72,6 +74,7 @@ test('standalone feed posts do not offer to read an undisplayed thread', () => {
   const html = renderToStaticMarkup(<PublicFeed feed={{ posts: [post], page: 1, totalItems: 1, totalPages: 1 }} />)
 
   expect(html).not.toContain('feed-thread-continuation')
+  expect(html).not.toContain('feed-thread-fold-21')
   expect(html).not.toContain('>read more</a>')
 })
 

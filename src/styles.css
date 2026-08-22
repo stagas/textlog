@@ -4845,6 +4845,10 @@ a.post-context:hover {
   margin-bottom: var(--space-5);
 }
 
+.post-page-thread.feed-thread:has(> .thread-fold-input:checked) {
+  margin-bottom: 0;
+}
+
 .post-page-thread {
   margin-bottom: var(--space-5);
 }
@@ -4956,11 +4960,24 @@ a.post-context:hover {
   content: '+';
 }
 
+.feed-thread>.thread-fold-input:checked+.thread-root .thread-fold::after {
+  content: '+';
+}
+
 .thread-fold-input:checked~.reply-branch {
   display: none;
 }
 
+.feed-thread>.thread-fold-input:checked~:is(.reply-branch, .feed-thread-continuation) {
+  display: none;
+}
+
 .thread-fold-input:focus-visible+.post .thread-fold {
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
+}
+
+.feed-thread>.thread-fold-input:focus-visible+.thread-root .thread-fold {
   outline: 2px solid var(--accent);
   outline-offset: 3px;
 }
