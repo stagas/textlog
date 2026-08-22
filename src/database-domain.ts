@@ -23,6 +23,8 @@ import { resolveHandle } from './handles'
 import { claimInitialHandle, updateProfileHandle } from './handles'
 import { getHotPosts, type HotPost, hotRankingVersion } from './hot'
 import { isImageKey } from './image-storage'
+import { initializeLatestReads, latestPostState, markAllLatestRead, markLatestPostsRead,
+  unreadLatestCount } from './latest-state'
 import { runBoundedCleanup } from './maintenance'
 import { MAX_MATERIALIZED_PAGES } from './materialized-feed-pages'
 import { PAGE_SIZE } from './pagination'
@@ -296,6 +298,7 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
             const created = database.query(`INSERT INTO users(handle,email,password,email_verified_at,account_group_id)
               VALUES(?,?,'!',CURRENT_TIMESTAMP,?) RETURNING id`).get(handle, group.email, group.id) as { id: number }
             newUserId = created.id
+            initializeLatestReads(created.id, database)
             break
           }
           catch {}
@@ -1462,6 +1465,7 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
                 const created = database.query(`INSERT INTO users(handle,email,password,email_verified_at)
                   VALUES(?,?,'!',CURRENT_TIMESTAMP) RETURNING id`).get(handle, link.email) as { id: number }
                 userId = created.id
+                initializeLatestReads(created.id, database)
                 createAccountGroup(database, userId, link.email)
                 chosen = false
                 break
@@ -1740,7 +1744,7 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
       return recapPosts(database, -1) as DatabaseDomainOutput<K>
     }
     case 'feeds.latestPage': {
-      const { viewerId, page, pageSize } = input as DatabaseDomainInput<'feeds.latestPage'>
+      const { viewerId, page, pageSize, markRead = true } = input as DatabaseDomainInput<'feeds.latestPage'>
       const parameters = [viewerId, viewerId, viewerId, viewerId, viewerId]
       const snapshot = feedSnapshotPage<PostView>(database, 'latest', viewerId, page, () =>
         database.query(
@@ -1751,12 +1755,41 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
           AND (? < 0 OR NOT EXISTS (SELECT 1 FROM post_hashtags ph JOIN blocked_hashtags bh ON bh.tag=ph.tag
             WHERE ph.post_id=p.id AND bh.user_id=?)) ORDER BY p.id DESC`,
         ).all(...parameters) as PostView[], pageSize, cacheDb)
-      return { posts: enrichPosts(database, snapshot.items, viewerId), page: snapshot.page,
+      const state = viewerId >= 0 ? latestPostState(viewerId, database) : []
+      const unread = state.filter(row => row.unread)
+      const posts = enrichPosts(database, snapshot.items, viewerId)
+      const pageIds = new Set(snapshot.items.map(post => post.id))
+      const parentReferences = new Map<number, number>()
+      for (const post of posts) {
+        if (post.parent_id && !pageIds.has(post.parent_id) && post.parent) {
+          parentReferences.set(post.parent_id, (parentReferences.get(post.parent_id) || 0) + 1)
+        }
+      }
+      const displayedIds = new Set([...pageIds, ...parentReferences.keys()])
+      const unreadPostIds = unread.filter(row => displayedIds.has(row.id)).map(row => row.id)
+      const directedUnreadPostIds = unread.filter(row => row.targeted_to_viewer && displayedIds.has(row.id))
+        .map(row => row.id)
+      const readOnPage = new Set(unreadPostIds)
+      const remainingUnread = markRead ? unread.filter(row => !readOnPage.has(row.id)) : unread
+      const href = (row: { id: number } | undefined) => row
+        ? `/latest${Math.floor(state.findIndex(item => item.id === row.id) / pageSize) + 1 > 1
+          ? `?page=${Math.floor(state.findIndex(item => item.id === row.id) / pageSize) + 1}` : ''}#post-${row.id}`
+        : undefined
+      if (viewerId >= 0 && markRead && unreadPostIds.length) {
+        markLatestPostsRead(viewerId, unreadPostIds, database)
+        cacheDb.query(`DELETE FROM materialized_feed_pages_v2 WHERE viewer_id=?
+          AND kind IN ('latest','hot','for-you','to-me')`).run(viewerId)
+      }
+      const result = { posts, page: snapshot.page,
         totalItems: snapshot.totalItems, totalPages: snapshot.totalPages,
         forYouCount: viewerId >= 0 ? unreadForYouCount(viewerId, database) : 0,
         toMeCount: viewerId >= 0 ? unreadToMeCount(viewerId, database) : 0,
         forYouUnread: viewerId >= 0 && hasUnreadForYou(viewerId, database),
-        toMeUnread: viewerId >= 0 && hasUnreadToMe(viewerId, database) } as DatabaseDomainOutput<K>
+        toMeUnread: viewerId >= 0 && hasUnreadToMe(viewerId, database), latestUnread: remainingUnread.length > 0,
+        latestCount: unread.length,
+        unreadPostIds, directedUnreadPostIds, unreadHref: href(remainingUnread[0]),
+        lastUnreadHref: href(remainingUnread.length > 1 ? remainingUnread.at(-1) : undefined) }
+      return result as DatabaseDomainOutput<K>
     }
     case 'feeds.hotPage': {
       const { viewerId, page, pageSize } = input as DatabaseDomainInput<'feeds.hotPage'>
@@ -1766,6 +1799,7 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
         totalItems: snapshot.totalItems, totalPages: snapshot.totalPages,
         forYouCount: viewerId >= 0 ? unreadForYouCount(viewerId, database) : 0,
         toMeCount: viewerId >= 0 ? unreadToMeCount(viewerId, database) : 0,
+        latestCount: viewerId >= 0 ? unreadLatestCount(viewerId, database) : 0,
         forYouUnread: viewerId >= 0 && hasUnreadForYou(viewerId, database),
         toMeUnread: viewerId >= 0 && hasUnreadToMe(viewerId, database) } as DatabaseDomainOutput<K>
     }
@@ -1840,6 +1874,13 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
     case 'feeds.markRead': {
       const { userId, toMe } = input as DatabaseDomainInput<'feeds.markRead'>
       markAllForYouRead(userId, toMe, database)
+      return null as DatabaseDomainOutput<K>
+    }
+    case 'feeds.markLatestRead': {
+      const { userId } = input as DatabaseDomainInput<'feeds.markLatestRead'>
+      markAllLatestRead(userId, database)
+      cacheDb.query(`DELETE FROM materialized_feed_pages_v2 WHERE viewer_id=?
+        AND kind IN ('latest','hot','for-you','to-me')`).run(userId)
       return null as DatabaseDomainOutput<K>
     }
     case 'cache.materializedFeedGet': {

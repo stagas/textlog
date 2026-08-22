@@ -1,4 +1,5 @@
 import type { Database } from 'bun:sqlite'
+import { markLatestPostsRead } from './latest-state'
 import { publishPost } from './api-broker'
 import { extractHashtags, extractMentions, postContentFlags } from './content'
 import { resolveHandle } from './handles'
@@ -143,6 +144,7 @@ export function createPost(
     recordHotActivity(database, postId)
     database.query(`INSERT OR IGNORE INTO for_you_reads(user_id,event_key)
       VALUES(?,'post:' || printf('%020d',?))`).run(userId, postId)
+    markLatestPostsRead(userId, [postId], database)
   })
   if (publish && 'id' in result && !result.duplicate) publishPost(result.id)
   return result

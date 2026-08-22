@@ -342,7 +342,8 @@ export type DatabaseDomainOperations = {
     followers: number
   } } | null }
   'feeds.aboutTopPosts': { input: Record<string, never>; output: PostView[] }
-  'feeds.latestPage': { input: { viewerId: number; page: number; pageSize: PageSizeChoice }; output: PostFeedPage }
+  'feeds.latestPage': { input: { viewerId: number; page: number; pageSize: PageSizeChoice; markRead?: boolean };
+    output: PostFeedPage }
   'feeds.hotPage': { input: { viewerId: number; page: number; pageSize: PageSizeChoice }; output: PostFeedPage }
   'feeds.personalizedPage': {
     input: { user: User; page: number; pageSize: PageSizeChoice; toMe: boolean; path: string; markRead?: boolean }
@@ -363,6 +364,7 @@ export type DatabaseDomainOperations = {
     output: null
   }
   'feeds.markRead': { input: { userId: number; toMe: boolean }; output: null }
+  'feeds.markLatestRead': { input: { userId: number }; output: null }
   'cache.materializedFeedGet': {
     input: { kind: 'latest' | 'hot' | 'for-you' | 'to-me' | 'about'; viewerId: number; variant: string }
     output: { html: string | null; generation: number }

@@ -1362,6 +1362,64 @@ export const migrations: Migration[] = [
       CREATE INDEX IF NOT EXISTS drafts_user_updated ON drafts(user_id,updated_at DESC,id DESC);`)
     },
   },
+  {
+    version: 107,
+    name: 'latest_reads',
+    up(database) {
+      database.run(`CREATE TABLE IF NOT EXISTS latest_reads (
+        user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        post_id INTEGER NOT NULL REFERENCES posts(id) ON DELETE CASCADE,
+        read_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        PRIMARY KEY(user_id,post_id));
+      CREATE INDEX IF NOT EXISTS latest_reads_user_read_at ON latest_reads(user_id,read_at);`)
+    },
+  },
+  {
+    version: 108,
+    name: 'backfill_latest_reads_from_last_visit',
+    up(database) {
+      const hasTable = (name: string) => !!database.query(
+        'SELECT 1 FROM sqlite_master WHERE type=\'table\' AND name=?',
+      ).get(name)
+      if (!hasTable('sessions') || !hasTable('posts') || !hasTable('latest_reads')) return
+      database.run(`INSERT OR IGNORE INTO latest_reads(user_id,post_id,read_at)
+        SELECT visits.user_id,p.id,datetime(visits.last_used_at / 1000,'unixepoch')
+        FROM (SELECT user_id,max(last_used_at) last_used_at FROM sessions
+          WHERE last_used_at IS NOT NULL GROUP BY user_id) visits
+        JOIN posts p ON p.created_at<=datetime(visits.last_used_at / 1000,'unixepoch');`)
+    },
+  },
+  {
+    version: 109,
+    name: 'initialize_latest_reads_for_new_users',
+    up(database) {
+      const hasTable = (name: string) => !!database.query(
+        'SELECT 1 FROM sqlite_master WHERE type=\'table\' AND name=?',
+      ).get(name)
+      if (!hasTable('users') || !hasTable('posts') || !hasTable('latest_reads')) return
+      database.run(`CREATE TRIGGER IF NOT EXISTS latest_reads_initialize_user AFTER INSERT ON users BEGIN
+        INSERT OR IGNORE INTO latest_reads(user_id,post_id)
+          SELECT new.id,id FROM posts;
+      END;`)
+    },
+  },
+  {
+    version: 110,
+    name: 'backfill_latest_reads_before_account_creation',
+    up(database) {
+      const hasTable = (name: string) => !!database.query(
+        'SELECT 1 FROM sqlite_master WHERE type=\'table\' AND name=?',
+      ).get(name)
+      if (!hasTable('users') || !hasTable('posts') || !hasTable('latest_reads')) return
+      const userColumns = (database.query('PRAGMA table_info(users)').all() as Array<{ name: string }>)
+        .map(column => column.name)
+      const postColumns = (database.query('PRAGMA table_info(posts)').all() as Array<{ name: string }>)
+        .map(column => column.name)
+      if (!userColumns.includes('created_at') || !postColumns.includes('created_at')) return
+      database.run(`INSERT OR IGNORE INTO latest_reads(user_id,post_id)
+        SELECT u.id,p.id FROM users u JOIN posts p ON p.created_at<=u.created_at;`)
+    },
+  },
 ]
 
 export const latestMigrationVersion = migrations.at(-1)!.version

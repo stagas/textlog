@@ -311,6 +311,7 @@ export function Post({
   tappableParent = false,
   contextLabel,
   contextUnread = false,
+  contextParentUnread = false,
   contextDirectedUnread = false,
   preview = false,
   returnPath,
@@ -327,7 +328,8 @@ export function Post({
 }: { p: PostView; user: User | null; showReplyAction?: boolean; showOwnerActions?: boolean;
   showModerateAction?: boolean; showParent?: boolean; showReplyCount?: boolean; replyHref?: string; replyLabel?: string;
   reportHref?: string; foldControlId?: string; highlightTerms?: string[]; tappable?: boolean; tappableParent?: boolean;
-  contextLabel?: React.ReactNode; contextUnread?: boolean; contextDirectedUnread?: boolean; preview?: boolean;
+  contextLabel?: React.ReactNode; contextUnread?: boolean; contextParentUnread?: boolean;
+  contextDirectedUnread?: boolean; preview?: boolean;
   returnPath?: string; backHref?: string;
   canonicalTimestamp?: boolean; topHref?: string; flatHref?: string; treeHref?: string;
   authorPopoverAction?: React.ReactNode; continuationHref?: string; continuationLabel?: string;
@@ -525,7 +527,7 @@ export function Post({
             ? <a href={parentDetailPath} rel={navigationRel}>(deleted post)</a>
             : (
               <>
-                <div className="parent-quote-top">
+                <MetaRow className="parent-quote-top" unread={contextParentUnread}>
                   {user?.id === parent.user_id
                     ? <span className="postauthor post-context-author">you</span>
                     : <UserReference handle={parent.handle} bio={parent.bio} noteCount={parent.note_count || 0}
@@ -551,7 +553,7 @@ export function Post({
                   {!hasTappableParent && (
                     <a className="postdate" href={parentDetailPath} rel={navigationRel}>read</a>
                   )}
-                </div>
+                </MetaRow>
                 <div className={`post-body${containsAsciiArt(parent.body) ? ' ascii-art' : ''}`} dangerouslySetInnerHTML={{
                   __html: linkify(displayPostBody(renderedPollBody(parent.body)), parent.mention_bios, [], undefined, renderFlags(parent),
                     referenceQuery, parent.hashtag_counts, parent.mention_note_counts, { signedIn: !!user,
@@ -758,6 +760,7 @@ export function FeedThreads(
             <div className="thread-root">
               <Post p={post} user={user} showReplyCount tappable returnPath={anchoredReturnPath}
                 contextUnread={contextUnreadPostIds?.has(post.id)} foldControlId={foldControlId}
+                contextParentUnread={!!post.parent && contextUnreadPostIds?.has(post.parent.id)}
                 contextDirectedUnread={contextDirectedUnreadPostIds?.has(post.id)}
                 continuationHref={continuesElsewhere
                   ? `/post/${post.id}?from=${encodeURIComponent(anchoredReturnPath)}`

@@ -33,7 +33,8 @@ export function HotFeed(
       {!user && <AboutContent user={null} embedded />}
       <h1 className="visually-hidden">Hot notes</h1>
       <FeedTabs active="hot" user={user} forYouCount={feed.forYouCount} forYouUnread={feed.forYouUnread}
-        toMeCount={feed.toMeCount} toMeUnread={feed.toMeUnread} viewMode={flat ? 'flat' : 'tree'} viewHref={viewHref} />
+        toMeCount={feed.toMeCount} toMeUnread={feed.toMeUnread} latestCount={feed.latestCount}
+        viewMode={flat ? 'flat' : 'tree'} viewHref={viewHref} />
       {feed.page > 1 && <Pagination page={feed.page} totalPages={feed.totalPages} path={feedPath}
         anchor={user ? undefined : 'feed-tabs'} top />}
       {feed.posts.length

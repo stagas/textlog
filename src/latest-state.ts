@@ -1,0 +1,42 @@
+import type { Database } from 'bun:sqlite'
+
+export function latestPostState(userId: number, database: Database) {
+  return database.query(`SELECT p.id,
+    NOT EXISTS (SELECT 1 FROM latest_reads r WHERE r.user_id=? AND r.post_id=p.id) unread,
+    CASE WHEN parent.user_id=? OR pm.user_id IS NOT NULL THEN 1 ELSE 0 END targeted_to_viewer
+    FROM posts p
+    LEFT JOIN posts parent ON parent.id=p.parent_id
+    LEFT JOIN post_mentions pm ON pm.post_id=p.id AND pm.user_id=?
+    WHERE p.deleted_at IS NULL
+      AND NOT EXISTS (SELECT 1 FROM blocks b WHERE
+        (b.blocker_id=? AND b.blocked_id=p.user_id) OR (b.blocker_id=p.user_id AND b.blocked_id=?))
+      AND NOT EXISTS (SELECT 1 FROM post_hashtags ph JOIN blocked_hashtags bh ON bh.tag=ph.tag
+        WHERE ph.post_id=p.id AND bh.user_id=?)
+    ORDER BY p.id DESC`).all(userId, userId, userId, userId, userId, userId) as Array<{
+      id: number
+      unread: number
+      targeted_to_viewer: number
+    }>
+}
+
+export function markLatestPostsRead(userId: number, postIds: number[], database: Database) {
+  if (!postIds.length) return
+  if (!database.query("SELECT 1 FROM sqlite_master WHERE type='table' AND name='latest_reads'").get()) return
+  const insert = database.query('INSERT OR IGNORE INTO latest_reads(user_id,post_id) VALUES(?,?)')
+  database.transaction(() => postIds.forEach(id => insert.run(userId, id)))()
+}
+
+export function unreadLatestCount(userId: number, database: Database) {
+  return latestPostState(userId, database).filter(row => row.unread).length
+}
+
+export function initializeLatestReads(userId: number, database: Database) {
+  if (!database.query("SELECT 1 FROM sqlite_master WHERE type='table' AND name='latest_reads'").get()) return
+  database.query(`INSERT OR IGNORE INTO latest_reads(user_id,post_id)
+    SELECT ?,id FROM posts WHERE deleted_at IS NULL`).run(userId)
+}
+
+export function markAllLatestRead(userId: number, database: Database) {
+  database.query(`INSERT OR IGNORE INTO latest_reads(user_id,post_id)
+    SELECT ?,id FROM posts WHERE deleted_at IS NULL`).run(userId)
+}

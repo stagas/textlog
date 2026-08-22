@@ -1,4 +1,5 @@
 import type { Database } from 'bun:sqlite'
+import { initializeLatestReads } from './latest-state'
 
 export type ResolvedHandle = { id: number; handle: string; alias: boolean }
 
@@ -21,8 +22,10 @@ export function createAccount(database: Database, handle: string, email: string,
     if (database.query('SELECT 1 FROM handle_history WHERE handle=? COLLATE NOCASE').get(handle)) {
       throw new Error('Handle is reserved')
     }
-    return database.query('INSERT INTO users(handle,email,password) VALUES(?,?,?) RETURNING id')
+    const created = database.query('INSERT INTO users(handle,email,password) VALUES(?,?,?) RETURNING id')
       .get(handle, email, password) as { id: number }
+    initializeLatestReads(created.id, database)
+    return created
   })()
 }
 

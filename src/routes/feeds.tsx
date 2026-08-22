@@ -125,7 +125,7 @@ async function warmFeedPage(request: Request, kind: PrimaryFeed,
     }
     if (kind === 'latest') {
       await rpcMaterializedFeedPage(feedRequest, kind, viewerId, async () => {
-        const feed = await backgroundDatabaseCall('feeds.latestPage', { viewerId, page: 1, pageSize })
+        const feed = await backgroundDatabaseCall('feeds.latestPage', { viewerId, page: 1, pageSize, markRead: false })
         return page(<PublicFeed user={user} feed={feed} path="/latest" />)
       }, false, 0, true)
       return
@@ -236,12 +236,19 @@ export function registerFeedsRoutes(app: Hono) {
       return page(<PublicFeed user={user} feed={feed} path="/latest" notificationBanner={notificationBanner}
         flat={flat} />)
     }
-    const response = !flat && (!user || !notificationBanner) && currentPage(c.req.query('page')) === 1 && !cursorValue
-      ? await rpcMaterializedFeedPage(c.req.raw, 'latest', user?.id ?? -1, render)
+    const response = !user && !flat && !notificationBanner && currentPage(c.req.query('page')) === 1 && !cursorValue
+      ? await rpcMaterializedFeedPage(c.req.raw, 'latest', -1, render)
       : await render()
     const remembered = rememberFeed(response, 'latest')
     warmOtherFeedPages(c.req.raw, 'latest', user)
     return remembered
+  })
+
+  app.post('/latest/read-all', async c => {
+    const user = currentUser(c.req.raw)
+    if (!user) return redirect('/enter?next=' + encodeURIComponent('/latest'))
+    await databaseService().call('feeds.markLatestRead', { userId: user.id })
+    return redirect('/latest')
   })
 
   app.post('/for-you/read-all', async c => {

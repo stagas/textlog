@@ -61,6 +61,55 @@ test('feed pages reconstruct threads from only the posts on that page', () => {
     + 'rel="nofollow">read more</a>')
 })
 
+test('latest renders independent unread controls, thread dots, and directed highlights', () => {
+  const root = { id: 70, user_id: 2, parent_id: null, body: 'unread root', created_at: '2026-08-19 10:00:00',
+    deleted_at: null, handle: 'alice', reply_count: 1 }
+  const reply = { id: 71, user_id: 3, parent_id: 70, body: 'directed unread reply',
+    created_at: '2026-08-19 11:00:00', deleted_at: null, handle: 'bob', reply_count: 0, parent: root }
+  const user = { id: 1, handle: 'reader', email: 'reader@example.com', bio: '' }
+  const html = renderToStaticMarkup(<PublicFeed user={user} path="/latest" feed={{
+    posts: [reply, root], page: 1, totalItems: 6, totalPages: 3, latestUnread: true,
+    latestCount: 4, unreadPostIds: [70, 71], directedUnreadPostIds: [71],
+    unreadHref: '/latest?page=2#post-60', lastUnreadHref: '/latest?page=3#post-50',
+  }} />)
+
+  expect(html.match(/class="unread-dot" aria-label="unread"/g)).toHaveLength(2)
+  expect(html).toContain('class="post tappable-post activity-item-directed-unread" id="post-71"')
+  expect(html).toContain('href="/latest?page=2#post-60">first unread</a>')
+  expect(html).toContain('href="/latest?page=3#post-50">last unread</a>')
+  expect(html).toContain('action="/latest/read-all"')
+  expect(html).toContain('latest<span class="to-me-count">4</span>')
+})
+
+test('latest keeps the arrival count but hides read actions when the rendered page consumes every unread', () => {
+  const post = { id: 80, user_id: 2, parent_id: null, body: 'just read', created_at: '2026-08-19 10:00:00',
+    deleted_at: null, handle: 'alice', reply_count: 0 }
+  const user = { id: 1, handle: 'reader', email: 'reader@example.com', bio: '' }
+  const html = renderToStaticMarkup(<PublicFeed user={user} path="/latest" feed={{
+    posts: [post], page: 1, totalItems: 1, totalPages: 1, latestUnread: false, latestCount: 1,
+    unreadPostIds: [80], directedUnreadPostIds: [],
+  }} />)
+
+  expect(html).toContain('class="unread-dot" aria-label="unread"')
+  expect(html).toContain('latest<span class="to-me-count">1</span>')
+  expect(html).not.toContain('action="/latest/read-all"')
+})
+
+test('latest gives an unread dot to an off-page parent quoted by a reply', () => {
+  const parent = { id: 90, user_id: 2, parent_id: null, body: 'off-page unread parent',
+    created_at: '2026-08-19 10:00:00', deleted_at: null, handle: 'alice', reply_count: 1 }
+  const reply = { id: 91, user_id: 3, parent_id: 90, body: 'reply on this page',
+    created_at: '2026-08-19 11:00:00', deleted_at: null, handle: 'bob', reply_count: 0, parent }
+  const user = { id: 1, handle: 'reader', email: 'reader@example.com', bio: '' }
+  const html = renderToStaticMarkup(<PublicFeed user={user} path="/latest" feed={{
+    posts: [reply], page: 1, totalItems: 1, totalPages: 1, latestUnread: false, latestCount: 0,
+    unreadPostIds: [90, 91], directedUnreadPostIds: [],
+  }} />)
+
+  expect(html.match(/class="unread-dot" aria-label="unread"/g)).toHaveLength(2)
+  expect(html).toContain('<div class="parent-quote-top"><span class="unread-dot" aria-label="unread"></span>')
+})
+
 test('flat feed view restores source order and offers the tree toggle after to me', () => {
   const root = { id: 50, user_id: 2, parent_id: null, body: 'older root', created_at: '2026-08-19 09:00:00',
     deleted_at: null, handle: 'alice', reply_count: 1 }

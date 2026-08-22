@@ -338,7 +338,8 @@ export function CursorPagination({ path, previousCursor, nextCursor }: {
 
 export function FeedTabs(
   { active, user, forYouReadStatus, activityReadStatus, toMe = false, toMeCount = 0, forYouCount = 0, unreadHref,
-    lastUnreadHref, forYouUnread = false, toMeUnread = false, viewMode = 'tree', viewHref }: {
+    lastUnreadHref, forYouUnread = false, toMeUnread = false, latestCount = 0, viewMode = 'tree', viewHref,
+    readAction }: {
       active: 'following' | 'activity' | 'hot' | 'latest'
       user: User | null
       forYouReadStatus?: boolean
@@ -350,8 +351,10 @@ export function FeedTabs(
       lastUnreadHref?: string
       forYouUnread?: boolean
       toMeUnread?: boolean
+      latestCount?: number
       viewMode?: 'tree' | 'flat'
       viewHref?: string
+      readAction?: string
     },
 ) {
   forYouUnread = forYouUnread || toMeUnread
@@ -377,6 +380,7 @@ export function FeedTabs(
           href={user ? `/latest${viewQuery}` : `/latest${viewQuery}#feed-tabs`}
         >
           latest
+          {latestCount > 0 && <span className="to-me-count">{latestCount}</span>}
         </a>
         {(viewHref || active === 'following' || toMeCount > 0 || activityReadStatus !== undefined) && (
           <span className="feed-tabs-read-status">
@@ -418,7 +422,8 @@ export function FeedTabs(
           {hasDistinctLastUnread && <span className="feed-tabs-action-separator" aria-hidden="true">·</span>}
           {hasDistinctLastUnread && <a className="activity-side-link" href={lastUnreadHref}>last unread</a>}
           {unreadHref && <span className="feed-tabs-action-separator feed-read-action-separator" aria-hidden="true">·</span>}
-          <form className="feed-read-action-form" method="post" action={toMe ? '/to-me/read-all' : '/for-you/read-all'}>
+          <form className="feed-read-action-form" method="post"
+            action={readAction || (toMe ? '/to-me/read-all' : '/for-you/read-all')}>
             <button className="activity-side-link">mark all read</button>
           </form>
         </div>

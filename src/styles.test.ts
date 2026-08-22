@@ -86,6 +86,12 @@ describe('in-memory stylesheet', () => {
     )
   })
 
+  test('removes the top border from a grouped first activity', async () => {
+    const css = await Bun.file(new URL('./styles.css', import.meta.url)).text()
+    expect(css).toContain('.feed-tabs+.activity-group > .activity-follow:first-child,')
+    expect(css).toContain('.feed-read-action+.activity-group > .activity-follow:first-child {\n  border-top: 0;')
+  })
+
   test('uses the active accent for the mobile tap highlight', async () => {
     const css = await Bun.file(new URL('./styles.css', import.meta.url)).text()
     expect(css).toContain('--tap-highlight: color-mix(in srgb, var(--accent) 24%, transparent);')

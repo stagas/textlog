@@ -147,6 +147,54 @@ describe('database migrations', () => {
     expect(reapplied).toEqual([])
   })
 
+  test('marks latest posts before each user most recent visit as read', () => {
+    const database = new Database(':memory:')
+    database.run(`PRAGMA foreign_keys=ON;
+      CREATE TABLE users(id INTEGER PRIMARY KEY);
+      CREATE TABLE posts(id INTEGER PRIMARY KEY,user_id INTEGER NOT NULL REFERENCES users(id),created_at TEXT);
+      CREATE TABLE sessions(token_hash TEXT PRIMARY KEY,user_id INTEGER NOT NULL REFERENCES users(id),
+        last_used_at INTEGER);
+      CREATE TABLE latest_reads(user_id INTEGER NOT NULL REFERENCES users(id),
+        post_id INTEGER NOT NULL REFERENCES posts(id),read_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        PRIMARY KEY(user_id,post_id));
+      INSERT INTO users(id) VALUES(1),(2),(3);
+      INSERT INTO posts(id,user_id,created_at) VALUES
+        (10,2,'2026-08-20 09:00:00'),(11,2,'2026-08-20 11:00:00'),(12,2,'2026-08-20 13:00:00');
+      INSERT INTO sessions(token_hash,user_id,last_used_at) VALUES
+        ('old',1,${new Date('2026-08-20T10:00:00Z').getTime()}),
+        ('new',1,${new Date('2026-08-20T12:00:00Z').getTime()}),
+        ('other',2,${new Date('2026-08-20T10:00:00Z').getTime()});
+      PRAGMA user_version=107;`)
+
+    expect(runMigrations(database)).toBe(110)
+    expect(database.query('SELECT user_id,post_id FROM latest_reads ORDER BY user_id,post_id').all()).toEqual([
+      { user_id: 1, post_id: 10 },
+      { user_id: 1, post_id: 11 },
+      { user_id: 2, post_id: 10 },
+    ])
+    database.query('INSERT INTO users(id) VALUES(4)').run()
+    expect(database.query('SELECT post_id FROM latest_reads WHERE user_id=4 ORDER BY post_id').all()).toEqual([
+      { post_id: 10 }, { post_id: 11 }, { post_id: 12 },
+    ])
+  })
+
+  test('repairs accounts whose existing posts were not initialized as latest reads', () => {
+    const database = new Database(':memory:')
+    database.run(`CREATE TABLE users(id INTEGER PRIMARY KEY,created_at TEXT);
+      CREATE TABLE posts(id INTEGER PRIMARY KEY,user_id INTEGER,created_at TEXT);
+      CREATE TABLE sessions(token_hash TEXT PRIMARY KEY,user_id INTEGER,last_used_at INTEGER);
+      CREATE TABLE latest_reads(user_id INTEGER,post_id INTEGER,read_at TEXT DEFAULT CURRENT_TIMESTAMP,
+        PRIMARY KEY(user_id,post_id));
+      INSERT INTO users VALUES(1,'2026-08-20 12:00:00');
+      INSERT INTO posts VALUES
+        (10,2,'2026-08-20 11:00:00'),(11,2,'2026-08-20 12:00:00'),(12,2,'2026-08-20 13:00:00');
+      PRAGMA user_version=109;`)
+
+    expect(runMigrations(database)).toBe(110)
+    expect(database.query('SELECT post_id FROM latest_reads WHERE user_id=1 ORDER BY post_id').all())
+      .toEqual([{ post_id: 10 }, { post_id: 11 }])
+  })
+
   test('upgrades legacy data and backfills person-follow but not tag-follow activity timestamps', () => {
     const database = new Database(':memory:')
     database.run('PRAGMA foreign_keys=ON')

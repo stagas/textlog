@@ -1725,6 +1725,11 @@ nav form {
   border-top: 0;
 }
 
+.feed-tabs+.activity-group > .activity-follow:first-child,
+.feed-read-action+.activity-group > .activity-follow:first-child {
+  border-top: 0;
+}
+
 .feed-tabs+.activity-item .post,
 .feed-tabs+.activity-item .activity-follow {
   border-top: 0;
@@ -4664,6 +4669,15 @@ form.report-panel {
 
 .for-you-item .posttop .unread-dot {
   margin-right: calc(1ch - var(--space-4));
+}
+
+.feed-thread .posttop .unread-dot,
+.post.tappable-post > .posttop .unread-dot {
+  margin-right: calc(1ch - var(--space-4));
+}
+
+.parent-quote-top .unread-dot {
+  margin-right: -5px;
 }
 
 .activity-more > summary {

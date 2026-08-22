@@ -189,10 +189,13 @@ export function Feed({ user, data, title, path = '/for-you', pageUrl, notificati
   return (
     <Layout user={user} title={title} pageUrl={pageUrl} notificationBanner={notificationBanner} mobileWriteAction>
       <h1 className="visually-hidden">Your feed</h1>
-      <FeedTabs active="following" user={user} forYouReadStatus={data.timeline.length ? hasUnread : undefined}
+      <FeedTabs active="following" user={user}
+        forYouReadStatus={data.timeline.length
+          ? hasUnread && unreadPage !== null && unreadPage > data.page
+          : undefined}
         toMe={toMe} toMeCount={toMe ? 0 : data.toMeCount} forYouCount={data.forYouCount} unreadHref={data.unreadHref}
         lastUnreadHref={data.lastUnreadHref} forYouUnread={data.forYouUnread} toMeUnread={data.toMeUnread}
-        viewMode={flat ? 'flat' : 'tree'} viewHref={viewHref} />
+        latestCount={data.latestCount} viewMode={flat ? 'flat' : 'tree'} viewHref={viewHref} />
       {showTopPagination && <Pagination page={data.page} totalPages={data.totalPages} path={feedPath} top />}
       {data.timeline.length
         ? groupSimilarActivities(flat ? data.timeline : visibleTimeline).map(group =>

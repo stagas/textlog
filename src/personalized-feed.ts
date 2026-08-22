@@ -4,6 +4,7 @@ import { feedSnapshotPage } from './feed-snapshots'
 import { hasUnreadForYou, hasUnreadToMe, markForYouEntriesRead, unreadForYouCount,
   unreadToMeCount } from './for-you-state'
 import { resolveHandle } from './handles'
+import { unreadLatestCount } from './latest-state'
 import { enrichPosts, visibleTagFollowerCounts, visibleUserProfileStats } from './posts'
 import type { PersonalizedFeedData, PersonalizedTimelineRow, User } from './types'
 
@@ -153,10 +154,11 @@ export function loadPersonalizedFeed(database: Database, user: User, page: numbe
     targetFollowsViewer: row.target_handle ? followerIds.has(targets.get(row.target_handle)!) : undefined,
     tagFollowerCount: row.target_tag ? tagCounts[row.target_tag] || 0 : undefined })
   )
+  const toMeCount = unreadToMeCount(user.id, database)
+  const forYouCount = unreadForYouCount(user.id, database)
   if (markRead) {
     markForYouEntriesRead(user.id, timeline.filter(row => row.unread).map(row => row.event_key), toMe, database)
   }
-  const toMeCount = unreadToMeCount(user.id, database)
   const forYouUnread = hasUnreadForYou(user.id, database)
   const toMeUnread = hasUnreadToMe(user.id, database)
   const hasUnread = toMe ? toMeUnread : forYouUnread
@@ -184,7 +186,7 @@ export function loadPersonalizedFeed(database: Database, user: User, page: numbe
     return `${path}${page > 1 ? `${path.includes('?') ? '&' : '?'}page=${page}` : ''}#${anchor}`
   }
   return { timeline: resultTimeline, page: snapshot.page, totalPages: snapshot.totalPages,
-    toMeCount, forYouCount: unreadForYouCount(user.id, database),
+    toMeCount, forYouCount, latestCount: unreadLatestCount(user.id, database),
     forYouUnread, toMeUnread, unreadHref: unreadHref(firstUnread),
     lastUnreadHref: lastUnread?.position !== firstUnread?.position ? unreadHref(lastUnread) : undefined }
 }
