@@ -93,7 +93,7 @@ export function registerProfilesRoutes(app: Hono) {
           total={blockedPeopleCount} noteCount={noteCount} replyCount={replyCount} followerCount={followerCount}
           followingCount={followingCount} followingTagCount={followingTagCount} following={following}
           blockedPeopleCount={blockedPeopleCount} blockedTagCount={blockedTagCount} social={social}
-          returnPath={returnPath} />,
+          returnPath={returnPath} bioReference={bioReference} />,
       )
     }
     if (tab === 'following' || tab === 'followers') {
@@ -131,7 +131,7 @@ export function registerProfilesRoutes(app: Hono) {
           replyCount={replyCount} followerCount={followerCount} followingCount={followingCount}
           followingTagCount={followingTagCount} following={following} followsViewer={followsViewer}
           blockedPeopleCount={blockedPeopleCount} blockedTagCount={blockedTagCount} social={social}
-          returnPath={returnPath} />,
+          returnPath={returnPath} bioReference={bioReference} />,
       )
     }
     const cursorValue = c.req.query('cursor')

@@ -1,4 +1,4 @@
-import type { PersonView, PostView, ProfileRow, TagView } from '../types'
+import type { BioReferenceData, PersonView, PostView, ProfileRow, TagView } from '../types'
 
 import React from 'react'
 import { isAdmin } from '../admin'
@@ -433,7 +433,7 @@ export function ProfileControls({ user, profile, following, followsViewer = fals
 
 export function ProfileHeader(
   { user, profile, following, followsViewer = false, blocked = false, editing = false, returnPath,
-    controlsInTitle = true, children }: {
+    controlsInTitle = true, bioReference, children }: {
       user: User | null
       profile: ProfileRow
       following: boolean
@@ -442,6 +442,7 @@ export function ProfileHeader(
       editing?: boolean
       returnPath?: string
       controlsInTitle?: boolean
+      bioReference?: BioReferenceData
       children?: React.ReactNode
     },
 ) {
@@ -474,7 +475,21 @@ export function ProfileHeader(
             {!editing && returnPath && user?.id !== profile.id
               && <a className="profile-edit-link profile-title-back-link" href={returnPath}>back</a>}
           </div>
-          <p className="profile-bio" dangerouslySetInnerHTML={{ __html: linkify(displayBio(profile.bio)) }} />
+          <p className="profile-bio" dangerouslySetInnerHTML={{
+            __html: linkify(displayBio(profile.bio), bioReference?.mentionBios || {}, [], undefined, undefined, '',
+              bioReference?.hashtagCounts || {}, bioReference?.mentionNoteCounts || {}, {
+                signedIn: !!user,
+                currentHandle: user?.handle,
+                formPrefix: `profile-${profile.id}-bio`,
+                mentionFollowing: bioReference?.mentionFollowing,
+                mentionFollowsViewer: bioReference?.mentionFollowsViewer,
+                mentionProfileStats: bioReference?.mentionProfileStats,
+                hashtagFollowing: bioReference?.hashtagFollowing,
+                hashtagFollowerCounts: bioReference?.hashtagFollowerCounts,
+                linkPreviews: bioReference?.linkPreviews,
+              }),
+          }} />
+          <BioReferenceForms data={bioReference} prefix={`profile-${profile.id}-bio`} user={user} />
         </div>
       )}
       {!controlsInTitle && (
@@ -611,7 +626,7 @@ export function BlockedTagList({ user, tags }: { user: User; tags: TagView[] }) 
           <div>
             <div>
               <TagReference tag={tag.tag} noteCount={tag.count} followerCount={tag.followerCount || 0} user={user}
-                showFollowAction={false} />
+                showFollowAction={false} showPopover={false} />
             </div>
             <form method="post" action={`/tag-block/${encodeURIComponent(tag.tag)}`}>
               <button className="button">unblock</button>
@@ -631,7 +646,8 @@ export function BlockedPeopleList({ user, people }: { user: User; people: Person
           <div>
             <div>
               <UserReference handle={person.handle} bio={person.bio} noteCount={person.posts}
-                stats={person.profileStats} user={user} href={`/u/${person.handle}`} showFollowAction={false} />
+                stats={person.profileStats} user={user} href={`/u/${person.handle}`} showFollowAction={false}
+                showPopover={false} />
               <small>{person.posts} {person.posts === 1 ? 'note' : 'notes'}</small>
             </div>
             <form method="post" action={`/block/${person.handle}`}>
@@ -664,7 +680,7 @@ export function ConnectionPeople({ user, people, className = '', highlightTerms 
                 stats={person.profileStats} following={person.viewerFollowing} followsViewer={person.followsViewer}
                 user={user} href={`/u/${person.handle}${
                   returnPath ? `?from=${encodeURIComponent(returnPath(person))}` : ''
-                }`} showPopover={showPopover} label={
+                }`} showPopover={showPopover} referenceData={person.bioReference} label={
                 <>
                   @<HighlightedText text={person.handle} terms={highlightTerms} />
                 </>

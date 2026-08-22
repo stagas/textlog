@@ -1583,6 +1583,7 @@ test('Connection bios render enriched mention and hashtag hover cards', () => {
   expect(html).toContain('class="reference-menu-popover"')
   expect(html).toContain('A friendly bio')
   expect(html).toContain('class="reference-menu-popover reference-menu-popover-tag"')
+  expect(html.match(/A friendly bio/g)).toHaveLength(2)
 })
 
 test('Connection people do not render a zero when they do not follow the viewer', () => {

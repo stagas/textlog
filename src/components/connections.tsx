@@ -1,5 +1,5 @@
 import { CONNECTION_PAGE_SIZE, PAGE_SIZE, TAG_PAGE_SIZE } from '../pagination'
-import type { User } from '../types'
+import type { BioReferenceData, User } from '../types'
 import type { PersonView, ProfileRow } from '../types'
 import { Layout } from './layout'
 import { BlockedPeopleList, BlockedTagList, ConnectionPeople, Pagination, ProfileHeader, ProfileTabs,
@@ -8,7 +8,7 @@ import { BlockedPeopleList, BlockedTagList, ConnectionPeople, Pagination, Profil
 export function Connections(
   { user, profile, people, tags = [], kind, page, total, tagsPage = 1, tagsTotal = 0, noteCount, followerCount,
     followingCount, followingTagCount, following, followsViewer = false, social, replyCount = 0, blockedPeopleCount = 0,
-    blockedTagCount = 0, returnPath }: {
+    blockedTagCount = 0, returnPath, bioReference }: {
       user: User | null
       profile: ProfileRow
       people: PersonView[]
@@ -28,6 +28,7 @@ export function Connections(
       blockedPeopleCount?: number
       blockedTagCount?: number
       returnPath?: string
+      bioReference?: BioReferenceData
       social?: { description: string; image: string; url: string; type?: 'article' | 'profile'; imageAlt?: string }
     },
 ) {
@@ -43,7 +44,7 @@ export function Connections(
   return (
     <Layout user={user} title={`${kind} @${profile.handle}`} social={social}>
       <ProfileHeader user={user} profile={profile} following={following} followsViewer={followsViewer}
-        returnPath={returnPath} />
+        returnPath={returnPath} bioReference={bioReference} />
       <ProfileTabs profile={profile} active={kind} notes={noteCount} replies={replyCount} followers={followerCount}
         following={followingCount} followingTags={followingTagCount} showBlocked={user?.id === profile.id}
         blockedPeople={blockedPeopleCount} blockedTags={blockedTagCount} returnPath={returnPath} />
@@ -100,7 +101,8 @@ export function Connections(
         )
         : people.length
         ? <ConnectionPeople user={user} people={people} className="connections-list" showNoteCount={false}
-          showPopover={false} returnPath={person => connectionReturnPath(`#person-${person.id}`)} />
+          showPopover={false}
+          returnPath={person => connectionReturnPath(`#person-${person.id}`)} />
         : (
           <div className={`empty${user?.id === profile.id && kind === 'following' ? ' empty-actions' : ''}`}>
             {user?.id === profile.id && kind === 'following'
