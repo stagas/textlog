@@ -60,6 +60,16 @@ test('mobile account navigation uses an in-flow details menu', () => {
   expect(html).not.toContain('popover="auto"')
 })
 
+test('write page omits the redundant header write action', () => {
+  const request = new Request('https://textlog.test/write')
+  const html = withAppearance(request, () => renderToStaticMarkup(React.createElement(Layout, {
+    user: { id: 1, handle: 'reader', email: 'reader@example.com', bio: '', handle_chosen_at: '2026-01-01' },
+    children: React.createElement('p', null, 'Write'),
+  })))
+
+  expect(html).not.toContain('class="button nav-write-action"')
+})
+
 test('admin navigation lives in the handle menu below account', () => {
   const html = renderToStaticMarkup(React.createElement(Layout, {
     user: { id: 1, handle: 'admin', email: 'gstagas@gmail.com', bio: '' },

@@ -52,8 +52,9 @@ export function Layout({
   const name = appName()
   const origin = appOrigin()
   const requestUrl = new URL(request.url)
+  const onWritePage = requestUrl.pathname === '/write'
   const currentPath = requestUrl.pathname + requestUrl.search
-  const writeShortcutHref = requestUrl.pathname === '/write'
+  const writeShortcutHref = onWritePage
     ? '/write'
     : '/write?from=' + encodeURIComponent(currentPath)
   const profileHref = user ? `/u/${user.handle}?from=${encodeURIComponent(currentPath)}` : ''
@@ -101,7 +102,7 @@ export function Layout({
                 {accountMenuPopover}
               </div>
             )}
-          <a className="button nav-write-action" href="/write">write</a>
+          {!onWritePage && <a className="button nav-write-action" href="/write">write</a>}
         </span>
       </>
     )
