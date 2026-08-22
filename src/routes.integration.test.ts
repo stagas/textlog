@@ -197,6 +197,7 @@ test('stats are public without exposing admin operations', async () => {
   expect(html).toContain('<span>users</span>')
   expect(html).toContain('<span>median/avg notes per user</span>')
   expect(html).toContain('<span>active users · 24h</span>')
+  expect(html).toContain('<span>active users · 1mo</span>')
   expect(html).toMatch(/<strong>[\d.,]+%<\/strong><span>Conversion rate · yesterday<\/span>/)
   expect(html).toMatch(/<strong>[\d.,]+%<\/strong><span>Signup-to-active conversion · yesterday<\/span>/)
   expect(html).not.toContain('<span>suspended</span>')

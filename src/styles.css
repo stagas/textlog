@@ -4445,6 +4445,23 @@ form.report-panel {
   color: var(--ink);
 }
 
+.admin-ip-requests summary {
+  color: var(--muted);
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  cursor: pointer;
+}
+
+.admin-ip-requests summary span {
+  margin-left: 6px;
+  color: var(--ink);
+}
+
+.admin-ip-requests details[open] summary {
+  margin-bottom: var(--space-4);
+}
+
 .admin-report {
   padding: var(--space-4) 0;
   border-top: 1px solid var(--soft);

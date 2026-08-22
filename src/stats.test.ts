@@ -49,3 +49,23 @@ test('post and note stats include all accounts', () => {
   expect(stats.postsYesterday).toBe(1)
   database.close()
 })
+
+test('DAU and MAU count distinct active users in rolling windows', () => {
+  const database = new Database(':memory:')
+  runMigrations(database)
+  database.run(`INSERT INTO users(id,handle,email,password) VALUES
+    (1,'daily','daily@example.com','x'),
+    (2,'monthly','monthly@example.com','x'),
+    (3,'inactive','inactive@example.com','x');
+    INSERT INTO posts(user_id,body,created_at) VALUES
+    (1,'first today',datetime('now','-2 hours')),
+    (1,'second today',datetime('now','-1 hour')),
+    (2,'this month',datetime('now','-10 days')),
+    (3,'too old',datetime('now','-31 days'));`)
+
+  const stats = dashboardStats(database)
+
+  expect(stats.dau).toBe(1)
+  expect(stats.mau).toBe(2)
+  database.close()
+})

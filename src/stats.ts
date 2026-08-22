@@ -38,7 +38,15 @@ export function dashboardStats(database: Database): DashboardStats {
       UNION ALL SELECT reporter_id,created_at FROM reports
     ) activity JOIN users ON users.id=activity.user_id
       WHERE users.deleted_at IS NULL
-        AND activity.created_at>=datetime('now','-1 day')) activeUsers24h,
+        AND activity.created_at>=datetime('now','-1 day')) dau,
+    (SELECT count(DISTINCT activity.user_id) FROM (
+      SELECT user_id,created_at FROM posts
+      UNION ALL SELECT follower_id,created_at FROM follows
+      UNION ALL SELECT blocker_id,created_at FROM blocks
+      UNION ALL SELECT reporter_id,created_at FROM reports
+    ) activity JOIN users ON users.id=activity.user_id
+      WHERE users.deleted_at IS NULL
+        AND activity.created_at>=datetime('now','-30 days')) mau,
     (SELECT count(DISTINCT users.id) FROM users JOIN (
       SELECT user_id,created_at FROM posts
       UNION ALL SELECT follower_id,created_at FROM follows

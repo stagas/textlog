@@ -32,31 +32,33 @@ export function AdminDashboard(
       />
       <StatsGrid stats={stats} />
       <section className="admin-section admin-ip-requests">
-        <h2>
-          top IPs today <span>{ipRequests.length}</span>
-        </h2>
-        {ipRequests.length
-          ? (
-            <div className="admin-ip-list">
-              {ipRequests.map(ip => (
-                <article key={ip.hash}>
-                  <code>{ip.obfuscated}</code>
-                  <div className="admin-ip-actions">
-                    <span>{ip.requests.toLocaleString()} requests</span>
-                    {ip.blocked
-                      ? <span className="danger">blocked today</span>
-                      : (
-                        <form method="post" action="/admin/ip-blocks">
-                          <input type="hidden" name="hash" value={ip.hash} />
-                          <button className="quiet danger">block</button>
-                        </form>
-                      )}
-                  </div>
-                </article>
-              ))}
-            </div>
-          )
-          : <p className="section-empty">No requests recorded today.</p>}
+        <details>
+          <summary>
+            top IPs today <span>{ipRequests.length}</span>
+          </summary>
+          {ipRequests.length
+            ? (
+              <div className="admin-ip-list">
+                {ipRequests.map(ip => (
+                  <article key={ip.hash}>
+                    <code>{ip.obfuscated}</code>
+                    <div className="admin-ip-actions">
+                      <span>{ip.requests.toLocaleString()} requests</span>
+                      {ip.blocked
+                        ? <span className="danger">blocked today</span>
+                        : (
+                          <form method="post" action="/admin/ip-blocks">
+                            <input type="hidden" name="hash" value={ip.hash} />
+                            <button className="quiet danger">block</button>
+                          </form>
+                        )}
+                    </div>
+                  </article>
+                ))}
+              </div>
+            )
+            : <p className="section-empty">No requests recorded today.</p>}
+        </details>
       </section>
       <section className="admin-section">
         <h2>

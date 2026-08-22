@@ -408,7 +408,8 @@ test('admin metrics use locale-aware number formatting', () => {
       replies: 0,
       openReports: 0,
       activeUsersYesterday: 0,
-      activeUsers24h: 56,
+      dau: 56,
+      mau: 789,
       activatedNewUsersYesterday: 1,
       usersYesterday: 2,
       users24h: 1,
@@ -434,6 +435,7 @@ test('admin metrics use locale-aware number formatting', () => {
   expect(html).toContain(`<strong>${(1234567).toLocaleString()}</strong><span>users</span>`)
   expect(html).toContain('<strong>12</strong><span>users online · 30m</span>')
   expect(html).toContain('<strong>56</strong><span>active users · 24h</span>')
+  expect(html).toContain('<strong>789</strong><span>active users · 1mo</span>')
   expect(html).toContain(
     `<strong>${
       (200 / 3).toLocaleString(undefined, { maximumFractionDigits: 2 })
@@ -444,6 +446,8 @@ test('admin metrics use locale-aware number formatting', () => {
   expect(html).toContain('<strong>2/2.5</strong><span>median/avg notes per user</span>')
   expect(html).toContain('class="account-settings-heading admin-header"')
   expect(html).toContain('class="profile-edit-link" href="/admin/email">send email</a>')
+  expect(html).toContain('<section class="admin-section admin-ip-requests"><details><summary>top IPs today <span>2</span>')
+  expect(html).not.toContain('<section class="admin-section admin-ip-requests"><details open=""')
   expect(html).toContain('<code>aaaaa</code><div class="admin-ip-actions"><span>250 requests</span>')
   expect(html).toContain('action="/admin/ip-blocks"')
   expect(html).not.toContain('a'.repeat(64) + '</code>')
