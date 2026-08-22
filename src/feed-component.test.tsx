@@ -88,6 +88,15 @@ test('hot and latest put the view toggle after to me when it is present', () => 
   }
 })
 
+test('anonymous public feed view toggles return to the feed tabs', () => {
+  const feed = { posts: [], page: 2, totalItems: 2, totalPages: 2 }
+  const latest = renderToStaticMarkup(<PublicFeed feed={feed} path="/latest" />)
+  const hot = renderToStaticMarkup(<HotFeed user={null} feed={feed} />)
+
+  expect(latest).toContain('href="/latest?view=flat&amp;page=2#feed-tabs">flat</a>')
+  expect(hot).toContain('href="/hot?view=flat&amp;page=2#feed-tabs">flat</a>')
+})
+
 test('feed tree roots retain ASCII-art rendering', () => {
   const post = { id: 20, user_id: 2, parent_id: null, body: ' /\\_/\\\n( o.o )\n#ascii',
     created_at: '2026-08-19 10:00:00', deleted_at: null, handle: 'alice', reply_count: 0 }

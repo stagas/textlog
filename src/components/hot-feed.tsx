@@ -21,9 +21,10 @@ export function HotFeed(
 ) {
   const feedPath = flat ? `${path}?view=flat` : path
   const returnPath = feedPath + (feed.page > 1 ? `${flat ? '&' : '?'}page=${feed.page}` : '')
-  const viewHref = flat
+  const viewPath = flat
     ? path + (feed.page > 1 ? `?page=${feed.page}` : '')
     : `${path}?view=flat${feed.page > 1 ? `&page=${feed.page}` : ''}`
+  const viewHref = `${viewPath}${user ? '' : '#feed-tabs'}`
   return (
     <Layout user={user} title={title} pageUrl={pageUrl} notificationBanner={notificationBanner}
       feeds={{ title: 'Hot notes', rss: '/hot.rss', atom: '/hot.atom' }}

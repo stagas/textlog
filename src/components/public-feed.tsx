@@ -19,9 +19,10 @@ export function PublicFeed(
 ) {
   const feedPath = flat ? `${path}?view=flat` : path
   const returnPath = feedPath + (feed.page > 1 ? `${flat ? '&' : '?'}page=${feed.page}` : '')
-  const viewHref = flat
+  const viewPath = flat
     ? path + (feed.page > 1 ? `?page=${feed.page}` : '')
     : `${path}?view=flat${feed.page > 1 ? `&page=${feed.page}` : ''}`
+  const viewHref = `${viewPath}${user ? '' : '#feed-tabs'}`
   return (
     <Layout user={user} title={path === '/latest' ? 'latest' : undefined} pageUrl={pageUrl}
       notificationBanner={notificationBanner}
