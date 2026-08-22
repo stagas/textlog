@@ -750,7 +750,8 @@ test('consequential account, content, reporting, and admin flows work over HTTP'
     cookie: aliceCookie,
     userAgent: 'alice-other-browser',
   })).text()
-  expect(linkPreviewsDisabledHome).toContain('<body class="density-regular link-previews-disabled">')
+  expect(linkPreviewsDisabledHome)
+    .toContain('<body class="density-regular link-previews-disabled has-mobile-write-action">')
   const linkPreviewSettings = await (await request('/account/edit/appearance?tab=misc', {
     cookie: aliceCookie,
     userAgent: 'alice-other-browser',
