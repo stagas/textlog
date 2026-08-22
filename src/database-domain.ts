@@ -1791,6 +1791,10 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
         lastUnreadHref: href(remainingUnread.length > 1 ? remainingUnread.at(-1) : undefined) }
       return result as DatabaseDomainOutput<K>
     }
+    case 'feeds.latestUnreadCount': {
+      const { userId } = input as DatabaseDomainInput<'feeds.latestUnreadCount'>
+      return unreadLatestCount(userId, database) as DatabaseDomainOutput<K>
+    }
     case 'feeds.hotPage': {
       const { viewerId, page, pageSize } = input as DatabaseDomainInput<'feeds.hotPage'>
       const snapshot = feedSnapshotPage<HotPost>(database, `hot:${hotRankingVersion}`, viewerId, page,

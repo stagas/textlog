@@ -124,6 +124,7 @@ async function warmFeedPage(request: Request, kind: PrimaryFeed,
       return
     }
     if (kind === 'latest') {
+      if (user && await backgroundDatabaseCall('feeds.latestUnreadCount', { userId: user.id }) > 0) return
       await rpcMaterializedFeedPage(feedRequest, kind, viewerId, async () => {
         const feed = await backgroundDatabaseCall('feeds.latestPage', { viewerId, page: 1, pageSize, markRead: false })
         return page(<PublicFeed user={user} feed={feed} path="/latest" />)
@@ -230,14 +231,17 @@ export function registerFeedsRoutes(app: Hono) {
     const cursor = decodePostCursor(cursorValue)
     if (cursorValue && !cursor) return c.text('Invalid cursor', 400)
     const notificationBanner = await showNotificationBanner(c.req.raw, user)
+    const canUseMaterializedPage = !user
+      || await databaseService().call('feeds.latestUnreadCount', { userId: user.id }) === 0
     const render = async () => {
       const feed = await databaseService().call('feeds.latestPage', { viewerId: user?.id ?? -1,
         page: currentPage(c.req.query('page')), pageSize: resolvedPageSize(c.req.raw) })
       return page(<PublicFeed user={user} feed={feed} path="/latest" notificationBanner={notificationBanner}
         flat={flat} />)
     }
-    const response = !user && !flat && !notificationBanner && currentPage(c.req.query('page')) === 1 && !cursorValue
-      ? await rpcMaterializedFeedPage(c.req.raw, 'latest', -1, render)
+    const response = canUseMaterializedPage && !flat && !notificationBanner
+      && currentPage(c.req.query('page')) === 1 && !cursorValue
+      ? await rpcMaterializedFeedPage(c.req.raw, 'latest', user ? user.id : -1, render)
       : await render()
     const remembered = rememberFeed(response, 'latest')
     warmOtherFeedPages(c.req.raw, 'latest', user)

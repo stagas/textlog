@@ -344,6 +344,7 @@ export type DatabaseDomainOperations = {
   'feeds.aboutTopPosts': { input: Record<string, never>; output: PostView[] }
   'feeds.latestPage': { input: { viewerId: number; page: number; pageSize: PageSizeChoice; markRead?: boolean };
     output: PostFeedPage }
+  'feeds.latestUnreadCount': { input: { userId: number }; output: number }
   'feeds.hotPage': { input: { viewerId: number; page: number; pageSize: PageSizeChoice }; output: PostFeedPage }
   'feeds.personalizedPage': {
     input: { user: User; page: number; pageSize: PageSizeChoice; toMe: boolean; path: string; markRead?: boolean }

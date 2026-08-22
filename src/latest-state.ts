@@ -27,7 +27,13 @@ export function markLatestPostsRead(userId: number, postIds: number[], database:
 }
 
 export function unreadLatestCount(userId: number, database: Database) {
-  return latestPostState(userId, database).filter(row => row.unread).length
+  return (database.query(`SELECT count(*) count FROM posts p
+    WHERE p.deleted_at IS NULL
+      AND NOT EXISTS (SELECT 1 FROM latest_reads r WHERE r.user_id=? AND r.post_id=p.id)
+      AND NOT EXISTS (SELECT 1 FROM blocks b WHERE
+        (b.blocker_id=? AND b.blocked_id=p.user_id) OR (b.blocker_id=p.user_id AND b.blocked_id=?))
+      AND NOT EXISTS (SELECT 1 FROM post_hashtags ph JOIN blocked_hashtags bh ON bh.tag=ph.tag
+        WHERE ph.post_id=p.id AND bh.user_id=?)`).get(userId, userId, userId, userId) as { count: number }).count
 }
 
 export function initializeLatestReads(userId: number, database: Database) {
