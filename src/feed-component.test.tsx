@@ -56,8 +56,8 @@ test('feed pages reconstruct threads from only the posts on that page', () => {
   expect(html).toContain('class="reply-branch"')
   expect(html).toContain('class="thread-fold-input" type="checkbox" id="feed-thread-fold-10"')
   expect(html).toContain('for="feed-thread-fold-10" title="fold or unfold replies"')
-  expect(html).toContain('class="thread-continuation feed-thread-continuation"><a class="quiet" rel="nofollow" '
-    + 'href="/post/10?from=%2Flatest%23post-10">read more</a>')
+  expect(html).toContain('class="quiet post-continuation-link" href="/post/10?from=%2Flatest%23post-10" '
+    + 'rel="nofollow">read more</a>')
 })
 
 test('feed tree roots retain ASCII-art rendering', () => {
@@ -73,7 +73,7 @@ test('standalone feed posts do not offer to read an undisplayed thread', () => {
     deleted_at: null, handle: 'alice', reply_count: 3 }
   const html = renderToStaticMarkup(<PublicFeed feed={{ posts: [post], page: 1, totalItems: 1, totalPages: 1 }} />)
 
-  expect(html).not.toContain('feed-thread-continuation')
+  expect(html).not.toContain('post-continuation-link')
   expect(html).not.toContain('feed-thread-fold-21')
   expect(html).not.toContain('>read more</a>')
 })
@@ -112,6 +112,33 @@ test('feed trees render a shared off-page parent once for sibling replies', () =
   expect(html.match(/class="parent-quote/g)).toBeNull()
   expect(html.indexOf('id="post-30"')).toBeLessThan(html.indexOf('id="post-32"'))
   expect(html.indexOf('id="post-32"')).toBeLessThan(html.indexOf('id="post-31"'))
+})
+
+test('threaded feed replies link to descendants omitted from the page', () => {
+  const root = { id: 40, user_id: 2, parent_id: null, body: 'root', created_at: '2026-08-19 09:00:00',
+    deleted_at: null, handle: 'alice', reply_count: 3 }
+  const reply = { id: 41, user_id: 3, parent_id: root.id, body: 'visible reply',
+    created_at: '2026-08-19 10:00:00', deleted_at: null, handle: 'bob', reply_count: 2, parent: root }
+  const html = renderToStaticMarkup(<PublicFeed feed={{ posts: [reply, root], page: 1, totalItems: 2,
+    totalPages: 1 }} path="/latest" />)
+
+  expect(html).toContain('class="quiet post-continuation-link" href="/post/41?from=%2Flatest%23post-41" '
+    + 'rel="nofollow">read more</a>')
+})
+
+test('threaded feed replies do not show read more before an included descendant', () => {
+  const root = { id: 45, user_id: 2, parent_id: null, body: 'root', created_at: '2026-08-19 09:00:00',
+    deleted_at: null, handle: 'alice', reply_count: 3 }
+  const reply = { id: 46, user_id: 3, parent_id: root.id, body: 'visible reply',
+    created_at: '2026-08-19 10:00:00', deleted_at: null, handle: 'bob', reply_count: 2, parent: root }
+  const child = { id: 47, user_id: 4, parent_id: reply.id, body: 'visible child',
+    created_at: '2026-08-19 11:00:00', deleted_at: null, handle: 'cara', reply_count: 0, parent: reply }
+  const html = renderToStaticMarkup(<PublicFeed feed={{ posts: [child, reply, root], page: 1, totalItems: 3,
+    totalPages: 1 }} path="/latest" />)
+
+  expect(html).toContain('id="post-47"')
+  expect(html).not.toContain('class="quiet post-continuation-link" href="/post/46?from=%2Flatest%23post-46" '
+    + 'rel="nofollow">read more</a>')
 })
 
 test('for-you does not render author hide-all controls', () => {

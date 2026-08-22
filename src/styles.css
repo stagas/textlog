@@ -4908,28 +4908,12 @@ a.post-context:hover {
 }
 
 
-.thread-continuation {
-  padding: 0 var(--gutter) var(--space-4);
-  font-size: 0.75rem;
-}
-
-.thread-continuation .quiet {
-  font-size: inherit;
-}
-
-.thread-continuation .quiet:hover {
-  color: var(--tab-hover);
-}
-
-.feed-thread-continuation {
-  margin-left: clamp(18px, 3vw, 28px);
-  padding-top: var(--space-3);
-  padding-bottom: var(--space-1);
-  border-left: 1px solid var(--soft);
-}
-
-.feed-thread-continuation .quiet {
+.postfoot .post-continuation-link {
   color: var(--muted);
+}
+
+.postfoot .post-continuation-link:hover {
+  color: var(--tab-hover);
 }
 
 .thread-fold-input {
@@ -4969,7 +4953,7 @@ a.post-context:hover {
   display: none;
 }
 
-.feed-thread>.thread-fold-input:checked~:is(.reply-branch, .feed-thread-continuation) {
+.feed-thread>.thread-fold-input:checked~.reply-branch {
   display: none;
 }
 

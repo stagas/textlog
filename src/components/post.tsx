@@ -319,12 +319,14 @@ export function Post({
   flatHref,
   treeHref,
   authorPopoverAction,
+  continuationHref,
+  continuationLabel = 'read more',
 }: { p: PostView; user: User | null; showReplyAction?: boolean; showOwnerActions?: boolean;
   showModerateAction?: boolean; showParent?: boolean; showReplyCount?: boolean; replyHref?: string; replyLabel?: string;
   reportHref?: string; foldControlId?: string; highlightTerms?: string[]; tappable?: boolean; tappableParent?: boolean;
   contextLabel?: React.ReactNode; contextUnread?: boolean; preview?: boolean; returnPath?: string; backHref?: string;
   canonicalTimestamp?: boolean; topHref?: string; flatHref?: string; treeHref?: string;
-  authorPopoverAction?: React.ReactNode })
+  authorPopoverAction?: React.ReactNode; continuationHref?: string; continuationLabel?: string })
 {
   const parent = showParent ? p.parent : null
   const parentContinued = parent?.parent_id && parent.parent?.user_id === parent.user_id
@@ -476,12 +478,15 @@ export function Post({
           hashtagFollowerCounts: p.hashtag_follower_counts, linkPreviews: p.link_previews }),
       }} />
       {preview ? <PollPreview body={p.body} /> : <Poll p={p} returnPath={returnPath} />}
-      {!parent && (showReplyAction || canModerate || reportHref) && (
+      {!parent && (showReplyAction || continuationHref || canModerate || reportHref) && (
       <MetaRow className={`postfoot${preview ? ' preview-post-meta' : ''}`}>
         {!parent && showReplyAction && (preview
           ? <span className="quiet preview-reply">{resolvedReplyLabel}</span>
           : <a className="quiet post-reply-link" href={resolvedReplyHref} rel="nofollow"
             aria-label={`${resolvedReplyLabel} to @${p.handle}`}>{resolvedReplyLabel}</a>)}
+        {continuationHref && <a className="quiet post-continuation-link" href={continuationHref} rel="nofollow">
+          {continuationLabel}
+        </a>}
         {(canModerate || reportHref) && (
           <span className="post-actions">
             {canModerate && (
@@ -562,12 +567,15 @@ export function Post({
             )}
         </blockquote>
       )}
-      {parent && (showReplyAction || canModerate || reportHref) && (
+      {parent && (showReplyAction || continuationHref || canModerate || reportHref) && (
         <MetaRow className={`postfoot postfoot-after-quote${preview ? ' preview-post-meta' : ''}`}>
           {showReplyAction && (preview
             ? <span className="quiet preview-reply">{resolvedReplyLabel}</span>
             : <a className="quiet post-reply-link" href={resolvedReplyHref} rel="nofollow"
               aria-label={`${resolvedReplyLabel} to @${p.handle}`}>{resolvedReplyLabel}</a>)}
+          {continuationHref && <a className="quiet post-continuation-link" href={continuationHref} rel="nofollow">
+            {continuationLabel}
+          </a>}
           {(canModerate || reportHref) && (
             <span className="post-actions">
               {canModerate && (
@@ -587,8 +595,10 @@ export function Post({
 }
 
 export function ThreadReplies(
-  { parentId, replies, user, returnPath, excludePostId, flat = false }: { parentId: number; replies: PostView[];
-    user: User | null; returnPath?: string; excludePostId?: number; flat?: boolean },
+  { parentId, replies, user, returnPath, excludePostId, flat = false, showMissingContinuations = false,
+    continuationLabel = 'read more', continuationReturnPath }: { parentId: number; replies: PostView[];
+    user: User | null; returnPath?: string; excludePostId?: number; flat?: boolean;
+    showMissingContinuations?: boolean; continuationLabel?: string; continuationReturnPath?: string },
 ) {
   if (!replies.length) return null
   const children = new Map<number, PostView[]>()
@@ -609,6 +619,11 @@ export function ThreadReplies(
   const renderReply = (reply: PostView, childBranch?: React.ReactNode, continuesElsewhere = false) => {
     const anchoredReturnPath = replyAnchorReturnPath(parentId, reply.id, returnPath)
     const foldControlId = childBranch ? `thread-fold-${reply.id}` : undefined
+    const continuationHref = continuesElsewhere
+      ? '/post/' + reply.id + '?from=' + encodeURIComponent(
+          continuationReturnPath ? `${continuationReturnPath}#post-${reply.id}` : anchoredReturnPath,
+        )
+      : undefined
     return (
       <div className="reply-node" key={reply.id}>
         {foldControlId && <input className="thread-fold-input" type="checkbox" id={foldControlId} />}
@@ -616,17 +631,8 @@ export function ThreadReplies(
           returnPath={anchoredReturnPath}
           replyHref={user ? undefined : '/enter?next=' + encodeURIComponent('/post/' + reply.id + '?reply=1'
             + '&from=' + encodeURIComponent(anchoredReturnPath))} replyLabel={user ? undefined : 'enter to reply'}
-          tappable />
+          continuationHref={continuationHref} continuationLabel={continuationLabel} tappable />
         {childBranch}
-        {continuesElsewhere && (
-          <div className="thread-continuation">
-            <a className="quiet" rel="nofollow"
-              href={'/post/' + reply.id + '?from=' + encodeURIComponent(anchoredReturnPath)}
-            >
-              more replies
-            </a>
-          </div>
-        )}
       </div>
     )
   }
@@ -650,8 +656,11 @@ export function ThreadReplies(
       <div className="reply-branch">
         {branch.map(reply => {
           const descendantCount = visibleDescendantCount(reply.id)
-          const continuesElsewhere = !reply.deleted_at && depth >= MAX_VISIBLE_REPLY_DEPTH && descendantCount > 0
-          const childBranch = continuesElsewhere ? null : renderBranch(reply.id, depth + 1)
+          const truncatedByDepth = !reply.deleted_at && depth >= MAX_VISIBLE_REPLY_DEPTH && descendantCount > 0
+          const hasMissingDescendants = !reply.deleted_at && showMissingContinuations
+            && descendantCount === 0 && (reply.reply_count || 0) > 0
+          const continuesElsewhere = truncatedByDepth || hasMissingDescendants
+          const childBranch = truncatedByDepth ? null : renderBranch(reply.id, depth + 1)
           if (reply.deleted_at) return <React.Fragment key={reply.id}>{childBranch}</React.Fragment>
           if (reply.id === excludePostId) return <React.Fragment key={reply.id}>{childBranch}</React.Fragment>
           return renderReply(reply, childBranch, continuesElsewhere)
@@ -728,15 +737,12 @@ export function FeedThreads(
             {foldControlId && <input className="thread-fold-input" type="checkbox" id={foldControlId} />}
             <div className="thread-root">
               <Post p={post} user={user} showReplyCount tappable returnPath={anchoredReturnPath}
-                foldControlId={foldControlId} />
+                foldControlId={foldControlId} continuationHref={continuesElsewhere
+                  ? `/post/${post.id}?from=${encodeURIComponent(anchoredReturnPath)}`
+                  : undefined} />
             </div>
-            <ThreadReplies parentId={post.id} replies={treePosts} user={user} returnPath={anchoredReturnPath} />
-            {continuesElsewhere && (
-              <div className="thread-continuation feed-thread-continuation">
-                <a className="quiet" rel="nofollow"
-                  href={`/post/${post.id}?from=${encodeURIComponent(anchoredReturnPath)}`}>read more</a>
-              </div>
-            )}
+            <ThreadReplies parentId={post.id} replies={treePosts} user={user} returnPath={anchoredReturnPath}
+              showMissingContinuations continuationLabel="read more" continuationReturnPath={returnPath} />
           </div>
         )
       })}
