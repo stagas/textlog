@@ -136,6 +136,28 @@ test('to-me deduplicates the shared parent of sibling reply activities', () => {
   expect(html.match(/class="parent-quote/g)).toBeNull()
 })
 
+test('threaded activity replies retain their unread dots', () => {
+  const root = postActivity(28, 2, 'alice')
+  const parent = { ...root.renderedPost!, reply_count: 0 }
+  const childBase = postActivity(29, 3, 'bob')
+  const child: PersonalizedTimelineRow = {
+    ...childBase,
+    parent_id: root.id,
+    parent,
+    activity_kind: 'reply',
+    unread: 1,
+    renderedPost: { ...childBase.renderedPost!, parent_id: root.id, parent },
+  }
+  const html = renderToStaticMarkup(<Feed
+    user={{ id: 1, handle: 'reader', email: 'reader@example.com', bio: '', handle_chosen_at: '2026-08-19 09:00:00' }}
+    data={{ timeline: [child, root], page: 1, totalPages: 1, toMeCount: 1, forYouCount: 1,
+      forYouUnread: true, toMeUnread: true }} toMe
+  />)
+
+  expect(html.match(/class="unread-dot" aria-label="unread"/g)).toHaveLength(1)
+  expect(html.indexOf('id="post-29"')).toBeLessThan(html.indexOf('class="unread-dot" aria-label="unread"'))
+})
+
 test('feed trees render a shared off-page parent once for sibling replies', () => {
   const parent = { id: 30, user_id: 2, parent_id: null, body: 'shared context',
     created_at: '2026-08-19 09:00:00', deleted_at: null, handle: 'alice', reply_count: 2 }

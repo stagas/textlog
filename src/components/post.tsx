@@ -596,9 +596,10 @@ export function Post({
 
 export function ThreadReplies(
   { parentId, replies, user, returnPath, excludePostId, flat = false, showMissingContinuations = false,
-    continuationLabel = 'read more', continuationReturnPath }: { parentId: number; replies: PostView[];
+    continuationLabel = 'read more', continuationReturnPath, contextUnreadPostIds }: { parentId: number; replies: PostView[];
     user: User | null; returnPath?: string; excludePostId?: number; flat?: boolean;
-    showMissingContinuations?: boolean; continuationLabel?: string; continuationReturnPath?: string },
+    showMissingContinuations?: boolean; continuationLabel?: string; continuationReturnPath?: string;
+    contextUnreadPostIds?: ReadonlySet<number> },
 ) {
   if (!replies.length) return null
   const children = new Map<number, PostView[]>()
@@ -631,7 +632,7 @@ export function ThreadReplies(
       <div className="reply-node" key={reply.id}>
         {foldControlId && <input className="thread-fold-input" type="checkbox" id={foldControlId} />}
         <Post p={reply} user={user} showParent={false} foldControlId={foldControlId}
-          returnPath={anchoredReturnPath}
+          returnPath={anchoredReturnPath} contextUnread={contextUnreadPostIds?.has(reply.id)}
           replyHref={user ? undefined : '/enter?next=' + encodeURIComponent('/post/' + reply.id + '?reply=1'
             + '&from=' + encodeURIComponent(anchoredReturnPath))} replyLabel={user ? undefined : 'enter to reply'}
           continuationHref={continuationHref} continuationLabel={continuationLabel} tappable />
@@ -676,7 +677,8 @@ export function ThreadReplies(
 
 /** Render only the posts supplied by a feed, joining replies to parents that are on the same page. */
 export function FeedThreads(
-  { posts, user, returnPath }: { posts: PostView[]; user: User | null; returnPath: string },
+  { posts, user, returnPath, contextUnreadPostIds }: { posts: PostView[]; user: User | null; returnPath: string;
+    contextUnreadPostIds?: ReadonlySet<number> },
 ) {
   if (!posts.length) return null
   const sourceIds = new Set(posts.map(post => post.id))
@@ -740,12 +742,14 @@ export function FeedThreads(
             {foldControlId && <input className="thread-fold-input" type="checkbox" id={foldControlId} />}
             <div className="thread-root">
               <Post p={post} user={user} showReplyCount tappable returnPath={anchoredReturnPath}
-                foldControlId={foldControlId} continuationHref={continuesElsewhere
+                contextUnread={contextUnreadPostIds?.has(post.id)} foldControlId={foldControlId}
+                continuationHref={continuesElsewhere
                   ? `/post/${post.id}?from=${encodeURIComponent(anchoredReturnPath)}`
                   : undefined} />
             </div>
             <ThreadReplies parentId={post.id} replies={treePosts} user={user} returnPath={anchoredReturnPath}
-              showMissingContinuations continuationLabel="read more" continuationReturnPath={returnPath} />
+              showMissingContinuations continuationLabel="read more" continuationReturnPath={returnPath}
+              contextUnreadPostIds={contextUnreadPostIds} />
           </div>
         )
       })}

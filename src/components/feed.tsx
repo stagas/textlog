@@ -65,6 +65,7 @@ export function Feed({ user, data, title, path = '/for-you', pageUrl, notificati
   const showTopPagination = data.page > 1 || (data.page === 1 && unreadPage !== null && unreadPage > 1)
   const timelinePosts = data.timeline.filter(row => ['post', 'reply', 'mention'].includes(row.activity_kind))
   const timelinePostIds = new Set(timelinePosts.map(row => row.id))
+  const unreadPostIds = new Set(timelinePosts.filter(row => row.unread).map(row => row.id))
   const threadPosts = (rootId: number) => {
     const root = timelinePosts.find(row => row.id === rootId)
     const sharedOrphanSiblings = root?.parent_id && !timelinePostIds.has(root.parent_id)
@@ -113,7 +114,8 @@ export function Feed({ user, data, title, path = '/for-you', pageUrl, notificati
           {flat
             ? <Post p={row.renderedPost!} user={user} showReplyCount tappable contextUnread={!!row.unread}
               returnPath={`${returnPath}#post-${row.id}`} />
-            : <FeedThreads posts={threadPosts(row.id)} user={user} returnPath={returnPath} />}
+            : <FeedThreads posts={threadPosts(row.id)} user={user} returnPath={returnPath}
+              contextUnreadPostIds={unreadPostIds} />}
         </div>
       )
       : (
