@@ -1564,6 +1564,32 @@ test('Following and followers paginate every 10 people', () => {
   }
 })
 
+test('Connection sorting can only be changed on the viewer’s own profile', () => {
+  const profile = { id: 1, handle: 'reader', email: 'reader@example.com', bio: '' }
+  const person = { id: 2, handle: 'writer', email: 'writer@example.com', bio: '', posts: 1,
+    viewerFollowing: false }
+  const own = renderToStaticMarkup(React.createElement(Connections, {
+    user: profile, profile, people: [person], kind: 'followers', sort: 'abc', page: 1, total: 1,
+    noteCount: 0, followerCount: 1, followingCount: 0, followingTagCount: 0, following: false,
+  }))
+  const recent = renderToStaticMarkup(React.createElement(Connections, {
+    user: profile, profile, people: [person], kind: 'following', sort: 'recent', page: 2, total: 11,
+    tagsPage: 3, tagsTotal: 21, tags: [], noteCount: 0, followerCount: 0, followingCount: 11,
+    followingTagCount: 21, following: false,
+  }))
+  const other = renderToStaticMarkup(React.createElement(Connections, {
+    user: { ...profile, id: 3 }, profile, people: [person], kind: 'followers', page: 1, total: 1,
+    noteCount: 0, followerCount: 1, followingCount: 0, followingTagCount: 0, following: false,
+  }))
+
+  expect(own).toContain('href="/u/reader?tab=followers">recent</a>')
+  expect(recent).toContain('href="/u/reader?tab=following&amp;sort=abc&amp;tagsPage=3">abc</a>')
+  expect(recent).toContain('href="/u/reader?tab=following&amp;tagsPage=3&amp;page=1"')
+  expect(other).not.toContain('>recent</a>')
+  expect(other).not.toContain('>abc</a>')
+  expect(other).not.toContain('<h2>People</h2>')
+})
+
 test('Following and follower links return to the originating connection', () => {
   const profile = { id: 1, handle: 'reader', email: 'reader@example.com', bio: '' }
   const person = { id: 2, handle: 'writer', email: 'writer@example.com', bio: '', posts: 1,

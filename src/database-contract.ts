@@ -231,7 +231,8 @@ export type DatabaseDomainOperations = {
     tags: { tag: string; count: number; viewerFollowing: boolean }[]
   } }
   'profiles.connectionsPage': {
-    input: { profileId: number; viewerId: number; page: number; tagsPage: number; kind: 'following' | 'followers' }
+    input: { profileId: number; viewerId: number; page: number; tagsPage: number; kind: 'following' | 'followers';
+      sort: 'abc' | 'recent' }
     output: { people: PersonView[]; tags: { tag: string; count: number; viewerFollowing: boolean }[]; total: number }
   }
   'profiles.postsPage': {

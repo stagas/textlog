@@ -3504,8 +3504,34 @@ form.report-panel {
   padding: 0 var(--gutter);
 }
 
+.connections-list:not(.connections-list-headed) article:first-child {
+  border-top: 0;
+}
+
 .connections-columns {
   padding-top: var(--space-5);
+}
+
+.connections-heading {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+}
+
+.connections-heading-wide {
+  margin: var(--space-5) var(--gutter) 0;
+}
+
+.connections-heading h2 {
+  color: var(--muted);
+  font-size: 0.75rem;
+  font-weight: 400;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.connections-heading a {
+  font-size: 0.6875rem;
 }
 
 .connections-empty {

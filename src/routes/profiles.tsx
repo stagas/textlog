@@ -98,17 +98,22 @@ export function registerProfilesRoutes(app: Hono) {
     }
     if (tab === 'following' || tab === 'followers') {
       const connectionPage = profilePage
+      const connectionSort = user?.id === profile.id
+        ? c.req.query('sort') === 'abc' ? 'abc' : 'recent'
+        : 'abc'
       const connection = await databaseService().call('profiles.connectionsPage', {
         profileId: profile.id,
         viewerId,
         page: connectionPage,
         tagsPage,
         kind: tab,
+        sort: connectionSort,
       })
       const { people, tags, total: connectionTotal } = connection
       const lastConnectionPage = Math.max(1, Math.ceil(connectionTotal / CONNECTION_PAGE_SIZE))
       if (connectionPage > lastConnectionPage) {
         const query = new URLSearchParams({ tab })
+        if (connectionSort === 'abc') query.set('sort', 'abc')
         if (tab === 'following') {
           if (lastConnectionPage > 1) query.set('page', String(lastConnectionPage))
           if (tagsPage > 1) query.set('tagsPage', String(tagsPage))
@@ -120,6 +125,7 @@ export function registerProfilesRoutes(app: Hono) {
         const lastTagPage = Math.max(1, Math.ceil(followingTagCount / TAG_PAGE_SIZE))
         if (tagsPage > lastTagPage) {
           const query = new URLSearchParams({ tab: 'following' })
+          if (connectionSort === 'abc') query.set('sort', 'abc')
           if (connectionPage > 1) query.set('page', String(connectionPage))
           if (lastTagPage > 1) query.set('tagsPage', String(lastTagPage))
           return redirect(`/u/${profile.handle}?${query}`)
@@ -127,6 +133,7 @@ export function registerProfilesRoutes(app: Hono) {
       }
       return page(
         <Connections user={user} profile={profile} people={people} tags={tags} kind={tab} page={connectionPage}
+          sort={connectionSort}
           total={connectionTotal} tagsPage={tagsPage} tagsTotal={followingTagCount} noteCount={noteCount}
           replyCount={replyCount} followerCount={followerCount} followingCount={followingCount}
           followingTagCount={followingTagCount} following={following} followsViewer={followsViewer}

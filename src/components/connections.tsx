@@ -6,7 +6,8 @@ import { BlockedPeopleList, BlockedTagList, ConnectionPeople, Pagination, Profil
   TagPeopleList } from './page-shared'
 
 export function Connections(
-  { user, profile, people, tags = [], kind, page, total, tagsPage = 1, tagsTotal = 0, noteCount, followerCount,
+  { user, profile, people, tags = [], kind, page, total, tagsPage = 1, tagsTotal = 0, sort = 'recent', noteCount,
+    followerCount,
     followingCount, followingTagCount, following, followsViewer = false, social, replyCount = 0, blockedPeopleCount = 0,
     blockedTagCount = 0, returnPath, bioReference }: {
       user: User | null
@@ -14,6 +15,7 @@ export function Connections(
       people: PersonView[]
       tags?: { tag: string; count: number; viewerFollowing: boolean }[]
       kind: 'following' | 'followers' | 'blocked'
+      sort?: 'abc' | 'recent'
       page: number
       total: number
       tagsPage?: number
@@ -36,8 +38,14 @@ export function Connections(
     returnPath
       ? `${path}${path.includes('?') ? '&' : '?'}from=${encodeURIComponent(returnPath)}`
       : path
+  const sortQuery = sort === 'abc' && user?.id === profile.id && kind !== 'blocked' ? '&sort=abc' : ''
+  const sortToggle = user?.id === profile.id && kind !== 'blocked' && (
+    <a href={withFrom(`/u/${profile.handle}?tab=${kind}${sort === 'recent' ? '&sort=abc' : ''}${
+      kind === 'following' && tagsPage > 1 ? `&tagsPage=${tagsPage}` : ''
+    }`)}>{sort === 'recent' ? 'abc' : 'recent'}</a>
+  )
   const connectionReturnPath = (anchor: string) => withFrom(
-    `/u/${profile.handle}?tab=${kind}${page > 1 ? `&page=${page}` : ''}${
+    `/u/${profile.handle}?tab=${kind}${sortQuery}${page > 1 ? `&page=${page}` : ''}${
       kind === 'following' && tagsPage > 1 ? `&tagsPage=${tagsPage}` : ''
     }`,
   ) + anchor
@@ -69,12 +77,13 @@ export function Connections(
                 )}
               {kind === 'following' && (
                 <Pagination page={tagsPage} totalPages={Math.ceil(tagsTotal / TAG_PAGE_SIZE)}
-                  path={withFrom(`/u/${profile.handle}?tab=following${page > 1 ? `&page=${page}` : ''}`)}
+                  path={withFrom(`/u/${profile.handle}?tab=following${sortQuery}${
+                    page > 1 ? `&page=${page}` : ''}`)}
                   pageParam="tagsPage" label="Tags pagination" compact />
               )}
             </section>
             <section>
-              <h2>People</h2>
+              <div className="connections-heading"><h2>People</h2>{sortToggle}</div>
               {people.length
                 ? kind === 'blocked'
                   ? <BlockedPeopleList user={user!} people={people} />
@@ -92,6 +101,7 @@ export function Connections(
               <Pagination page={page}
                 totalPages={Math.ceil(total / (kind === 'blocked' ? PAGE_SIZE : CONNECTION_PAGE_SIZE))}
                 path={withFrom(`/u/${profile.handle}?tab=${kind}${
+                  sortQuery}${
                   kind === 'following' && tagsPage > 1
                     ? `&tagsPage=${tagsPage}`
                     : ''
@@ -100,9 +110,12 @@ export function Connections(
           </div>
         )
         : people.length
-        ? <ConnectionPeople user={user} people={people} className="connections-list" showNoteCount={false}
-          showPopover={false}
-          returnPath={person => connectionReturnPath(`#person-${person.id}`)} />
+        ? <>
+          {sortToggle && <div className="connections-heading connections-heading-wide"><h2>People</h2>{sortToggle}</div>}
+          <ConnectionPeople user={user} people={people}
+            className={`connections-list${sortToggle ? ' connections-list-headed' : ''}`} showNoteCount={false}
+            showPopover={false} returnPath={person => connectionReturnPath(`#person-${person.id}`)} />
+        </>
         : (
           <div className={`empty${user?.id === profile.id && kind === 'following' ? ' empty-actions' : ''}`}>
             {user?.id === profile.id && kind === 'following'
@@ -121,11 +134,11 @@ export function Connections(
         )}
       {kind !== 'following' && kind !== 'blocked' && (
         <Pagination page={page} totalPages={Math.ceil(total / CONNECTION_PAGE_SIZE)}
-          path={withFrom(`/u/${profile.handle}?tab=${kind}`)} />
+          path={withFrom(`/u/${profile.handle}?tab=${kind}${sortQuery}`)} />
       )}
       {kind === 'following' && !people.length && !tags.length && (
         <Pagination page={page} totalPages={Math.ceil(total / CONNECTION_PAGE_SIZE)}
-          path={withFrom(`/u/${profile.handle}?tab=following${tagsPage > 1 ? `&tagsPage=${tagsPage}` : ''}`)}
+          path={withFrom(`/u/${profile.handle}?tab=following${sortQuery}${tagsPage > 1 ? `&tagsPage=${tagsPage}` : ''}`)}
           label="People pagination" compact />
       )}
     </Layout>

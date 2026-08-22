@@ -951,13 +951,15 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
       return { people, tags } as DatabaseDomainOutput<K>
     }
     case 'profiles.connectionsPage': {
-      const { profileId, viewerId, page, tagsPage, kind } = input as DatabaseDomainInput<'profiles.connectionsPage'>
+      const { profileId, viewerId, page, tagsPage, kind, sort } =
+        input as DatabaseDomainInput<'profiles.connectionsPage'>
       const join = kind === 'following'
         ? 'JOIN follows f ON f.following_id=u.id WHERE f.follower_id=?'
         : 'JOIN follows f ON f.follower_id=u.id WHERE f.following_id=?'
-      const connectionOrder = kind === 'followers'
+      const alphabeticalOrder = kind === 'followers'
         ? 'viewerFollowing ASC,followsViewer DESC,u.handle'
         : 'u.handle'
+      const connectionOrder = sort === 'recent' ? 'f.created_at DESC,u.handle' : alphabeticalOrder
       const people = (database.query(
         `SELECT u.*, (SELECT count(*) FROM posts p WHERE p.user_id=u.id AND p.deleted_at IS NULL) posts,
         EXISTS(SELECT 1 FROM follows vf WHERE vf.follower_id=? AND vf.following_id=u.id) viewerFollowing,
