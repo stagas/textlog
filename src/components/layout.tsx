@@ -111,7 +111,7 @@ export function Layout({
     <html lang="en">
       <head>
         <meta charSet="utf-8" />
-        <meta name="viewport" content="width=device-width,initial-scale=1" />
+        <meta name="viewport" content="width=device-width,initial-scale=1,interactive-widget=resizes-content" />
         <meta name="color-scheme" content="light dark" />
         <meta name="theme-color" content="#171a17" />
         <title>{`${title ? `${title} · ` : ''}${name}`}</title>
