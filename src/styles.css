@@ -258,6 +258,7 @@ header {
 header>nav {
   max-width: 100%;
   margin-left: auto;
+  align-self: stretch;
   flex-wrap: wrap;
   justify-content: flex-end;
 }
@@ -266,8 +267,17 @@ header>.account-nav {
   align-items: center;
 }
 
+header>nav>a:not(.button),
+.account-nav-row>a:not(.button),
+.account-menu-handle {
+  display: inline-flex;
+  align-items: center;
+  align-self: stretch;
+}
+
 .account-nav-row {
   display: flex;
+  align-self: stretch;
   align-items: center;
   justify-content: flex-end;
   gap: clamp(12px, 3vw, 22px);
@@ -306,6 +316,7 @@ header>.account-nav {
   position: relative;
   z-index: 31;
   display: inline-flex;
+  align-self: stretch;
   align-items: center;
 }
 
@@ -330,7 +341,7 @@ header>.account-nav {
 .account-menu-popover {
   position: absolute;
   z-index: 10;
-  top: calc(100% + var(--space-2));
+  top: calc(50% + .75em + var(--space-2));
   right: 0;
   display: none;
   min-width: 9rem;
@@ -348,7 +359,7 @@ header>.account-nav {
 
 .account-menu::after {
   position: absolute;
-  top: 100%;
+  top: calc(50% + .75em);
   right: 0;
   display: none;
   width: 100%;

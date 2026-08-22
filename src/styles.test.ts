@@ -92,6 +92,16 @@ describe('in-memory stylesheet', () => {
     expect(css).toContain('-webkit-tap-highlight-color: var(--tap-highlight);')
   })
 
+  test('makes header navigation actions full-height hit targets', async () => {
+    const css = await Bun.file(new URL('./styles.css', import.meta.url)).text()
+    expect(css).toContain('header>nav {\n  max-width: 100%;\n  margin-left: auto;\n  align-self: stretch;')
+    expect(css).toContain('header>nav>a:not(.button),\n.account-nav-row>a:not(.button),\n.account-menu-handle {')
+    expect(css).toContain('.account-nav-row {\n  display: flex;\n  align-self: stretch;')
+    expect(css).toContain('.account-menu {\n  position: relative;\n  z-index: 31;\n  display: inline-flex;\n  align-self: stretch;')
+    expect(css).toContain('top: calc(50% + .75em + var(--space-2));')
+    expect(css).toContain('top: calc(50% + .75em);')
+  })
+
   test('keeps inactive notification actions hidden despite button display styles', async () => {
     const css = await Bun.file(new URL('./styles.css', import.meta.url)).text()
     expect(css).toContain('.notification-actions [hidden] { display: none; }')
