@@ -170,8 +170,11 @@ export function PostingHelp({ maxLength = 280, maxLines = 10, search }: {
     <div className="posting-help">
       <details className="posting-help-details" open={!!search}>
         <summary>
-          <span className="posting-help-limits">{maxLength} chars / {maxLines} lines max</span>
-          <span className="posting-help-summary-link">use #hashtags, @mentions and more</span>
+          <span className="posting-help-summary-link">
+            <span className="posting-help-limits">{maxLength} chars / {maxLines} lines max</span>
+            <br />
+            use #hashtags, @mentions and more
+          </span>
         </summary>
         <div className="posting-help-content">
           <section className="posting-help-section">

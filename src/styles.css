@@ -3064,21 +3064,19 @@ form.report-panel {
 }
 
 .posting-help-details {
-  display: block;
-  grid-column: 1 / -1;
-  grid-row: 1;
-  align-self: start;
-  width: 100%;
+  display: contents;
 }
 
 .posting-help-details summary,
 .posting-help-details[open] > summary {
-  display: grid;
-  grid-template-rows: 1.25em 1.25em;
-  align-content: center;
-  height: calc(1.125rem + 2 * var(--space-3));
+  display: flex;
+  grid-column: 1;
+  grid-row: 1;
+  align-self: center;
+  min-height: calc(1.125rem + 2 * var(--space-3));
   width: fit-content;
-  gap: 3px;
+  max-width: 100%;
+  align-items: center;
   color: var(--muted);
   font: inherit;
   line-height: 1.25;
@@ -3086,10 +3084,15 @@ form.report-panel {
   cursor: pointer;
   user-select: none;
   list-style: none;
+  overflow-wrap: anywhere;
 }
 
 .posting-help-summary-link {
+  display: inline-block;
+  max-width: 100%;
   width: fit-content;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
   border-bottom: var(--hairline) solid var(--link-border);
 }
 
@@ -3107,6 +3110,8 @@ form.report-panel {
 
 .posting-help-content {
   display: grid;
+  grid-column: 1 / -1;
+  grid-row: 2;
   gap: var(--space-4);
   width: 100%;
   margin-top: var(--space-5);
@@ -3208,7 +3213,7 @@ form.report-panel {
 :is(.write-compose, .edit-post-compose, .replybox) .composefoot .form-actions {
   grid-column: 2;
   grid-row: 1;
-  align-self: start;
+  align-self: center;
 }
 
 @media (max-width: 520px) {

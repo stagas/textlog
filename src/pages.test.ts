@@ -197,7 +197,7 @@ test('posting helpers are searchable details and show copyable highlighted resul
 
   expect(html).toContain('<details class="posting-help-details" open="">')
   expect(html).toContain('<span class="posting-help-limits">280 chars / 10 lines max</span>')
-  expect(html).toContain('<span class="posting-help-summary-link">use #hashtags, @mentions and more</span>')
+  expect(html).toContain('<br/>use #hashtags, @mentions and more</span>')
   expect(html).toContain('<h2>Find hashtags and people</h2>')
   expect(html).toContain('<h2>Formatting</h2>')
   expect(html).toContain('<dt>Strikethrough</dt>')
@@ -1403,7 +1403,7 @@ test('Profile edit offers a data download without rendering notes', () => {
   expect(html).toContain('aria-describedby="profile-handle-help"')
   expect(html).toContain('<details class="posting-help-details">')
   expect(html).toContain('<span class="posting-help-limits">160 chars / 5 lines max</span>')
-  expect(html).toContain('<span class="posting-help-summary-link">use #hashtags, @mentions and more</span>')
+  expect(html).toContain('<br/>use #hashtags, @mentions and more</span>')
   expect(html).toContain('<h2>Find hashtags and people</h2>')
   expect(html).toContain('<h2>Formatting</h2>')
   expect(html).toContain('<h2>Emoji</h2>')

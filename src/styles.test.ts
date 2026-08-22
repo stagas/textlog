@@ -311,9 +311,10 @@ describe('in-memory stylesheet', () => {
 
   test('keeps posting help inline and lets expanded content span the action row', async () => {
     const css = await Bun.file(new URL('./styles.css', import.meta.url)).text()
-    expect(css).toContain('.posting-help-details {\n  display: block;\n  grid-column: 1 / -1;')
+    expect(css).toContain('.posting-help-details {\n  display: contents;')
     expect(css).toContain('width: 100%;\n  margin-top: var(--space-5);')
-    expect(css).toContain('.posting-help-summary-link {\n  width: fit-content;')
+    expect(css).toContain('.posting-help-summary-link {\n  display: inline-block;')
+    expect(css).toContain('width: fit-content;\n  line-height: 1.35;')
     expect(css).not.toContain('.posting-help-popover')
   })
 
@@ -325,7 +326,7 @@ describe('in-memory stylesheet', () => {
     expect(css).not.toContain('\n.bio-form input:not([type="checkbox"]),')
     expect(css).toContain('.bio-form + .account-danger-zone {\n  margin-top: var(--space-4);')
     expect(css).toContain('.composefoot .posting-help {\n  display: contents;')
-    expect(css).toContain('grid-template-rows: 1.25em 1.25em;\n  align-content: center;')
+    expect(css).toContain('display: flex;\n  grid-column: 1;\n  grid-row: 1;')
     expect(css).toContain(
       ':is(.write-compose, .edit-post-compose, .replybox, .bio-form) .composefoot {',
     )
