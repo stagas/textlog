@@ -444,6 +444,11 @@ export function Post({
               {canonicalTimestamp ? 'permalink' : 'read'}
             </a>
           )}
+        {foldControlId && (
+          <label className="quiet thread-fold" htmlFor={foldControlId} title="fold or unfold replies">
+            <span className="visually-hidden">fold or unfold replies</span>
+          </label>
+        )}
         {tappable && parent && (
           <a className="quiet post-top-link"
             href={replyAnchorReturnPath(parent.top_id || parent.id, parent.top_id || parent.id, returnPath)}>top</a>
@@ -461,11 +466,6 @@ export function Post({
             {topHref && <a className="quiet post-top-link" href={topHref}>top</a>}
             {backHref && <a className="quiet post-back-link" href={backHref}>back</a>}
           </div>
-        )}
-        {foldControlId && (
-          <label className="quiet thread-fold" htmlFor={foldControlId} title="fold or unfold replies">
-            <span className="visually-hidden">fold or unfold replies</span>
-          </label>
         )}
       </MetaRow>
       <div className={`post-body${isAsciiArt ? ' ascii-art' : ''}`} dangerouslySetInnerHTML={{
