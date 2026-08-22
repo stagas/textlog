@@ -668,7 +668,25 @@ export function FeedThreads(
 ) {
   if (!posts.length) return null
   const ids = new Set(posts.map(post => post.id))
+  const positions = new Map(posts.map((post, index) => [post.id, index]))
+  const children = new Map<number, PostView[]>()
+  for (const post of posts) {
+    if (!post.parent_id || !ids.has(post.parent_id)) continue
+    children.set(post.parent_id, [...(children.get(post.parent_id) || []), post])
+  }
+  const conversationPosition = (root: PostView) => {
+    let position = positions.get(root.id)!
+    const visit = (parentId: number) => {
+      for (const child of children.get(parentId) || []) {
+        position = Math.min(position, positions.get(child.id)!)
+        visit(child.id)
+      }
+    }
+    visit(root.id)
+    return position
+  }
   const roots = posts.filter(post => !post.parent_id || !ids.has(post.parent_id))
+    .sort((a, b) => conversationPosition(a) - conversationPosition(b))
   return (
     <>
       {roots.map(post => (

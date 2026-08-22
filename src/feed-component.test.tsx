@@ -52,6 +52,7 @@ test('feed pages reconstruct threads from only the posts on that page', () => {
   expect(html.match(/id="post-12"/g)).toHaveLength(1)
   expect(html.match(/class="post-page-thread feed-thread"/g)).toHaveLength(2)
   expect(html.indexOf('id="post-10"')).toBeLessThan(html.indexOf('id="post-11"'))
+  expect(html.indexOf('id="post-10"')).toBeLessThan(html.indexOf('id="post-12"'))
   expect(html).toContain('class="reply-branch"')
 })
 

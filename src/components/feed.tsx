@@ -59,8 +59,6 @@ export function Feed({ user, data, title, path = '/for-you', pageUrl, notificati
   const showTopPagination = data.page > 1 || (data.page === 1 && unreadPage !== null && unreadPage > 1)
   const timelinePosts = data.timeline.filter(row => ['post', 'reply', 'mention'].includes(row.activity_kind))
   const timelinePostIds = new Set(timelinePosts.map(row => row.id))
-  const visibleTimeline = data.timeline.filter(row => !['post', 'reply', 'mention'].includes(row.activity_kind)
-    || !row.parent_id || !timelinePostIds.has(row.parent_id))
   const threadPosts = (rootId: number) => {
     const included = new Set([rootId])
     let changed = true
@@ -75,6 +73,16 @@ export function Feed({ user, data, title, path = '/for-you', pageUrl, notificati
     }
     return timelinePosts.filter(row => included.has(row.id)).map(row => row.renderedPost!)
   }
+  const timelinePositions = new Map(data.timeline.map((row, index) => [row.event_key, index]))
+  const timelinePostPositions = new Map(data.timeline.map((row, index) => [row.id, index]))
+  const visibleTimeline = data.timeline.filter(row => !['post', 'reply', 'mention'].includes(row.activity_kind)
+    || !row.parent_id || !timelinePostIds.has(row.parent_id))
+    .sort((a, b) => {
+      const position = (row: PersonalizedTimelineRow) => ['post', 'reply', 'mention'].includes(row.activity_kind)
+        ? Math.min(...threadPosts(row.id).map(post => timelinePostPositions.get(post.id)!))
+        : timelinePositions.get(row.event_key)!
+      return position(a) - position(b)
+    })
   const renderTimelineRow = (row: PersonalizedTimelineRow) => {
     const activityAnchor = `activity-${row.event_key.replace(/[^a-z0-9_-]+/gi, '-')}`
     const activityReturnPath = `${returnPath}#${activityAnchor}`
