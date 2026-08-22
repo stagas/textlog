@@ -1556,6 +1556,34 @@ test('Following and follower links return to the originating connection', () => 
   )
 })
 
+test('Connection bios render enriched mention and hashtag hover cards', () => {
+  const html = renderToStaticMarkup(React.createElement(ConnectionPeople, {
+    user: { id: 1, handle: 'reader', email: 'reader@example.com', bio: '' },
+    people: [{
+      id: 2,
+      handle: 'writer',
+      email: 'writer@example.com',
+      bio: 'Reading @friend and #notes',
+      posts: 1,
+      viewerFollowing: false,
+      bioReference: {
+        mentionBios: { friend: 'A friendly bio' },
+        mentionNoteCounts: { friend: 3 },
+        mentionProfileStats: { friend: { notes: 3, replies: 1, followers: 2, following: 4, followingTags: 1 } },
+        mentionFollowing: { friend: false },
+        mentionFollowsViewer: { friend: false },
+        hashtagCounts: { notes: 5 },
+        hashtagFollowerCounts: { notes: 2 },
+        hashtagFollowing: { notes: false },
+      },
+    }],
+  }))
+
+  expect(html).toContain('class="reference-menu-popover"')
+  expect(html).toContain('A friendly bio')
+  expect(html).toContain('class="reference-menu-popover reference-menu-popover-tag"')
+})
+
 test('Connection people do not render a zero when they do not follow the viewer', () => {
   const html = renderToStaticMarkup(React.createElement(ConnectionPeople, {
     user: { id: 1, handle: 'reader', email: 'reader@example.com', bio: '' },

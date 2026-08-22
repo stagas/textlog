@@ -944,7 +944,7 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
         FROM hashtag_follows hf WHERE hf.user_id=? ORDER BY hf.tag LIMIT ? OFFSET ?`)
           .all(viewerId, viewerId, viewerId, viewerId, profileId, TAG_PAGE_SIZE, (tagsPage - 1) * TAG_PAGE_SIZE)
         : []
-      return { people, tags, total } as DatabaseDomainOutput<K>
+      return { people: attachPeopleStats(database, people, viewerId), tags, total } as DatabaseDomainOutput<K>
     }
     case 'profiles.postsPage': {
       const { profileId, viewerId, page, pageSize, kind } = input as DatabaseDomainInput<'profiles.postsPage'>
