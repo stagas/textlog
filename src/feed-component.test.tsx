@@ -204,7 +204,9 @@ test('to-me omits hide actions and keeps top pagination before entries', () => {
 
   expect(html).not.toContain('for-you-hide-input')
   expect(html.indexOf('pagination pagination-top')).toBeLessThan(html.indexOf('for-you-item for-you-author-2'))
-  expect(html).toContain('href="/to-me?page=2#post-20">first unread</a>')
+  expect(html).toContain('href="/to-me?page=2#post-20">unread</a>')
+  expect(html).not.toContain('>first unread</a>')
+  expect(html).not.toContain('>last unread</a>')
   expect(html).toContain('action="/to-me/read-all"')
 })
 
