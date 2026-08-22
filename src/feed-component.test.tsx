@@ -56,6 +56,14 @@ test('feed pages reconstruct threads from only the posts on that page', () => {
   expect(html).toContain('class="reply-branch"')
 })
 
+test('feed tree roots retain ASCII-art rendering', () => {
+  const post = { id: 20, user_id: 2, parent_id: null, body: ' /\\_/\\\n( o.o )\n#ascii',
+    created_at: '2026-08-19 10:00:00', deleted_at: null, handle: 'alice', reply_count: 0 }
+  const html = renderToStaticMarkup(<PublicFeed feed={{ posts: [post], page: 1, totalItems: 1, totalPages: 1 }} />)
+
+  expect(html).toContain('class="post-body ascii-art"')
+})
+
 test('for-you does not render author hide-all controls', () => {
   const html = renderToStaticMarkup(<Feed
     user={{ id: 1, handle: 'reader', email: 'reader@example.com', bio: '', handle_chosen_at: '2026-08-19 09:00:00' }}

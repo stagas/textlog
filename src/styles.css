@@ -4831,6 +4831,11 @@ a.post-context:hover {
   letter-spacing: normal;
 }
 
+.thread-root>.post>.post-body.ascii-art {
+  line-height: 1.15;
+  letter-spacing: normal;
+}
+
 .post-page-thread.feed-thread {
   margin-bottom: 0;
   border-top: 1px solid var(--soft);
