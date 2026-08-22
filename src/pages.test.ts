@@ -2112,7 +2112,7 @@ test('A quoted post gets its own higher-priority hit area in tappable feeds', ()
   expect(html).not.toContain('class="postdate" href="/post/1?from=%2Flatest%3Fcursor%3Dabc%23post-2"')
   expect(html).toContain('href="/post/1?reply=1&amp;from=%2Flatest%3Fcursor%3Dabc%23post-2"')
   expect(html).toContain(
-    'href="/post/1?from=%2Fpost%2F2%3Ffrom%3D%252Flatest%253Fcursor%253Dabc%2523post-2%23post-2#post-1">top</a>',
+    'href="/post/1?from=%2Flatest%3Fcursor%3Dabc%23post-2#post-1">top</a>',
   )
 })
 
@@ -2143,7 +2143,7 @@ test('Nested feed posts link to the conversation top from the descendant metadat
   }))
 
   expect(html).toContain('<div class="posttop posttop-context"><span class="reference-menu">')
-  const top = 'href="/post/1?from=%2Fpost%2F3%3Ffrom%3D%252Flatest%2523post-3%23post-3#post-1">top</a>'
+  const top = 'href="/post/1?from=%2Flatest%23post-3#post-1">top</a>'
   expect(html).toContain(`${top}</div>`)
   expect(html.match(/>top<\/a>/g)).toHaveLength(1)
 })

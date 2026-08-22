@@ -446,7 +446,7 @@ export function Post({
           )}
         {tappable && parent && (
           <a className="quiet post-top-link"
-            href={conversationTopPath(parent.top_id || parent.id, p.id, returnPath)}>top</a>
+            href={replyAnchorReturnPath(parent.top_id || parent.id, parent.top_id || parent.id, returnPath)}>top</a>
         )}
         {(flatHref || treeHref || showOwnerActions && user?.id === p.user_id || topHref || backHref) && (
           <div className="post-navigation-actions">
