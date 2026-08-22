@@ -1088,18 +1088,21 @@ describe('About', () => {
 
     for (const html of [guestHot, guestLatest]) {
       expect(html).toContain('class="static-page about-page feed-about"')
+      expect(html).toContain('class="guest-join-row"><a class="button" href="/enter" rel="nofollow">join the community</a>')
       expect(html).toContain('href="#feed-tabs">browse notes</a>')
       expect(html).toContain('href="/hot#feed-tabs"')
       expect(html).toContain('href="/latest#feed-tabs"')
       expect(html).toContain('?page=2#feed-tabs" aria-label="Page 2"')
       expect(html).toContain('?page=2#feed-tabs" aria-label="Next page"')
       expect(html.indexOf('about-page feed-about')).toBeLessThan(html.indexOf('id="feed-tabs"'))
+      expect(html.lastIndexOf('aria-label="Pagination"')).toBeLessThan(html.indexOf('class="guest-join-row"'))
     }
     for (const html of [signedInHot, signedInLatest]) {
       expect(html).not.toContain('class="static-page about-page feed-about"')
       expect(html).toContain('href="/hot"')
       expect(html).toContain('href="/latest"')
       expect(html).not.toContain('#feed-tabs')
+      expect(html).not.toContain('class="guest-join-row"')
     }
   })
 
@@ -1111,6 +1114,13 @@ describe('About', () => {
     expect(html).not.toContain('class="about-actions"')
     expect(html).not.toContain('>browse notes</a>')
     expect(html).not.toContain('class="about-hot-more"')
+  })
+
+  test('shows the guest join action above the footer on every anonymous page', () => {
+    const html = renderToStaticMarkup(React.createElement(Contact, { user: null }))
+
+    expect(html).toContain('class="guest-join-row"><a class="button" href="/enter" rel="nofollow">join the community</a>')
+    expect(html.indexOf('class="guest-join-row"')).toBeLessThan(html.indexOf('class="site-footer"'))
   })
 })
 

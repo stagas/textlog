@@ -161,7 +161,7 @@ export function Layout({
           </>
         )}
         {mobile && <link href="https://fonts.cdnfonts.com/css/dejavu-sans-mono" rel="stylesheet" />}
-        <link rel="stylesheet" href="/styles.css?v=603" />
+        <link rel="stylesheet" href="/styles.css?v=605" />
         <style>{themeCss}</style>
       </head>
       <body className={`density-${density}${user?.show_link_previews === 0 ? ' link-previews-disabled' : ''}${
@@ -229,6 +229,11 @@ export function Layout({
         )}
         {user && ready && mobileWriteAction && <MobileWriteAction />}
         <main id="main-content">{children}</main>
+        {!user && (
+          <div className="guest-join-row">
+            <a className="button" href="/enter" rel="nofollow">join the community</a>
+          </div>
+        )}
         <footer className="site-footer">
           <span>
             <a className="footer-host-link" href="/">{appHost()}</a> <span aria-hidden="true">/</span>{' '}

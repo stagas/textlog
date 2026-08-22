@@ -1623,6 +1623,13 @@ nav form {
   padding-inline: 1px;
 }
 
+.guest-join-row {
+  display: flex;
+  justify-content: center;
+  padding: var(--space-5) var(--gutter);
+  border-top: 1px solid var(--soft);
+}
+
 .pagination-compact {
   padding-inline: 0;
 }
