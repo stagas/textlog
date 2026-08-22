@@ -283,16 +283,11 @@ header>.account-nav {
   }
 
   .mobile-write-action {
-    position: sticky;
+    position: fixed;
     z-index: 30;
-    top: calc(100dvh - max(var(--space-4), env(safe-area-inset-bottom)) - (1.5em + 2 * var(--space-3)));
+    right: max(var(--space-4), env(safe-area-inset-right));
+    bottom: max(var(--space-4), env(safe-area-inset-bottom));
     display: flex;
-    justify-content: flex-end;
-    width: 100%;
-    max-width: 760px;
-    height: calc(1.5em + 2 * var(--space-3));
-    margin: 0 auto calc(-1 * (1.5em + 2 * var(--space-3)));
-    padding-right: max(var(--space-4), env(safe-area-inset-right));
   }
 
   .mobile-write-action .button {
