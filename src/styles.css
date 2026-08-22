@@ -4913,6 +4913,21 @@ a.post-context:hover {
   font-size: inherit;
 }
 
+.thread-continuation .quiet:hover {
+  color: var(--tab-hover);
+}
+
+.feed-thread-continuation {
+  margin-left: clamp(18px, 3vw, 28px);
+  padding-top: var(--space-3);
+  padding-bottom: var(--space-1);
+  border-left: 1px solid var(--soft);
+}
+
+.feed-thread-continuation .quiet {
+  color: var(--muted);
+}
+
 .thread-fold-input {
   position: absolute;
   width: 1px;

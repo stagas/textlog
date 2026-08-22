@@ -685,19 +685,40 @@ export function FeedThreads(
     visit(root.id)
     return position
   }
+  const visibleReplyCount = (root: PostView) => {
+    let count = 0
+    const visit = (parentId: number) => {
+      for (const child of children.get(parentId) || []) {
+        if (!child.deleted_at) count++
+        visit(child.id)
+      }
+    }
+    visit(root.id)
+    return count
+  }
   const roots = posts.filter(post => !post.parent_id || !ids.has(post.parent_id))
     .sort((a, b) => conversationPosition(a) - conversationPosition(b))
   return (
     <>
-      {roots.map(post => (
-        <div className="post-page-thread feed-thread" key={post.id}>
-          <div className="thread-root">
-            <Post p={post} user={user} showReplyCount tappable returnPath={`${returnPath}#post-${post.id}`} />
+      {roots.map(post => {
+        const anchoredReturnPath = `${returnPath}#post-${post.id}`
+        const visibleReplies = visibleReplyCount(post)
+        const continuesElsewhere = visibleReplies > 0 && (post.reply_count || 0) > visibleReplies
+        return (
+          <div className="post-page-thread feed-thread" key={post.id}>
+            <div className="thread-root">
+              <Post p={post} user={user} showReplyCount tappable returnPath={anchoredReturnPath} />
+            </div>
+            <ThreadReplies parentId={post.id} replies={posts} user={user} returnPath={anchoredReturnPath} />
+            {continuesElsewhere && (
+              <div className="thread-continuation feed-thread-continuation">
+                <a className="quiet" rel="nofollow"
+                  href={`/post/${post.id}?from=${encodeURIComponent(anchoredReturnPath)}`}>read more</a>
+              </div>
+            )}
           </div>
-          <ThreadReplies parentId={post.id} replies={posts} user={user}
-            returnPath={`${returnPath}#post-${post.id}`} />
-        </div>
-      ))}
+        )
+      })}
     </>
   )
 }

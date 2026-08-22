@@ -54,6 +54,8 @@ test('feed pages reconstruct threads from only the posts on that page', () => {
   expect(html.indexOf('id="post-10"')).toBeLessThan(html.indexOf('id="post-11"'))
   expect(html.indexOf('id="post-10"')).toBeLessThan(html.indexOf('id="post-12"'))
   expect(html).toContain('class="reply-branch"')
+  expect(html).toContain('class="thread-continuation feed-thread-continuation"><a class="quiet" rel="nofollow" '
+    + 'href="/post/10?from=%2Flatest%23post-10">read more</a>')
 })
 
 test('feed tree roots retain ASCII-art rendering', () => {
@@ -62,6 +64,15 @@ test('feed tree roots retain ASCII-art rendering', () => {
   const html = renderToStaticMarkup(<PublicFeed feed={{ posts: [post], page: 1, totalItems: 1, totalPages: 1 }} />)
 
   expect(html).toContain('class="post-body ascii-art"')
+})
+
+test('standalone feed posts do not offer to read an undisplayed thread', () => {
+  const post = { id: 21, user_id: 2, parent_id: null, body: 'root only', created_at: '2026-08-19 10:00:00',
+    deleted_at: null, handle: 'alice', reply_count: 3 }
+  const html = renderToStaticMarkup(<PublicFeed feed={{ posts: [post], page: 1, totalItems: 1, totalPages: 1 }} />)
+
+  expect(html).not.toContain('feed-thread-continuation')
+  expect(html).not.toContain('>read more</a>')
 })
 
 test('for-you does not render author hide-all controls', () => {
