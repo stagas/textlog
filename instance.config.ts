@@ -51,7 +51,7 @@ export const instance: InstanceConfiguration = {
     address: 'Rue de la Presse 35, 1000 Brussels, Belgium',
   },
   links: {
-    getMobileApp: 'https://github.com/Faultless/textlog_flutter',
+    getMobileApp: 'https://github.com/Faultless/textlog_flutter/releases',
     irc: 'ircs://irc.libera.chat/#textlog',
     github: 'https://github.com/stagas/textlog',
     donate: 'https://opencollective.com/textlog',
