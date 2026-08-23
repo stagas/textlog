@@ -3550,7 +3550,7 @@ form.report-panel {
 
 .profile-presence-code .api-key-output {
   overflow-wrap: anywhere;
-  word-break: break-word;
+  word-break: break-all;
   white-space: normal;
 }
 
