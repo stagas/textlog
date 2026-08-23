@@ -1082,6 +1082,7 @@ test('consequential account, content, reporting, and admin flows work over HTTP'
   expect(searchHtml).toContain('>0 tags</a>')
   expect(searchHtml).toContain('>0 people</a>')
   expect(searchHtml).toContain('A <mark>route</mark>-<mark>level</mark> integration post')
+  expect(searchHtml).not.toContain('>read</a>')
   database.query('INSERT OR IGNORE INTO post_hashtags(post_id,tag) VALUES(?,?)').run(post.id, 'routehelper')
   const hashtagHelper = await request('/post', {
     method: 'POST',

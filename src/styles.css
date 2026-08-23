@@ -4395,6 +4395,13 @@ form.report-panel {
   line-height: 1;
 }
 
+.explore-tag-chip mark {
+  margin: 0;
+  padding: 0;
+  color: inherit;
+  background: color-mix(in srgb, var(--accent) 35%, transparent);
+}
+
 .explore-tag-chip.button:not(.button-muted),
 .explore-tag-chip.button:not(.button-muted):hover,
 .explore-tag-chip.button:not(.button-muted):active {
@@ -4467,6 +4474,12 @@ form.report-panel {
 
 .search-tabs + .people {
   padding: 0 var(--gutter);
+}
+
+.search-tabs + .explore-tag-chips {
+  margin-right: var(--gutter);
+  margin-left: var(--gutter);
+  border-top: 0;
 }
 
 .post mark,

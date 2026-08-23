@@ -615,6 +615,32 @@ export function HighlightedText({ text, terms = [] }: { text: string; terms?: st
   )
 }
 
+export function TagChips({ user, tags, followingKey = 'following', highlightTerms = [], returnPath }: {
+  user: User | null
+  tags: TagView[]
+  followingKey?: 'following' | 'viewerFollowing'
+  highlightTerms?: string[]
+  returnPath: string
+}) {
+  return (
+    <div className="explore-tag-chips">
+      {tags.map(tag => user
+        ? (
+          <form key={tag.tag} method="post" action={`/tag-follow/${encodeURIComponent(tag.tag)}`}>
+            <input type="hidden" name="from" value={returnPath} />
+            <button className={`button explore-tag-chip${tag[followingKey] ? ' button-muted' : ''}`}
+              aria-pressed={tag[followingKey]} title={`${tag[followingKey] ? 'Unfollow' : 'Follow'} #${tag.tag}`}>
+              <span>#<HighlightedText text={tag.tag} terms={highlightTerms} /></span>
+            </button>
+          </form>
+        )
+        : <a key={tag.tag} className="button explore-tag-chip" href={`/tag/${encodeURIComponent(tag.tag)}`}>
+          <span>#<HighlightedText text={tag.tag} terms={highlightTerms} /></span>
+        </a>)}
+    </div>
+  )
+}
+
 export function TagPeopleList({ user, tags, followingKey = 'following', highlightTerms = [], returnPath,
   showPopover = true }: {
   user: User | null

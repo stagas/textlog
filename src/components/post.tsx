@@ -359,6 +359,7 @@ export function Post({
   continuationLabel = 'more',
   className,
   topActions,
+  showReadAction = true,
 }: { p: PostView; user: User | null; showReplyAction?: boolean; showOwnerActions?: boolean;
   showModerateAction?: boolean; showParent?: boolean; showReplyCount?: boolean; replyHref?: string; replyLabel?: string;
   reportHref?: string; foldControlId?: string; highlightTerms?: string[]; tappable?: boolean; tappableParent?: boolean;
@@ -367,7 +368,7 @@ export function Post({
   returnPath?: string; backHref?: string;
   canonicalTimestamp?: boolean; topHref?: string; flatHref?: string; treeHref?: string;
   authorPopoverAction?: React.ReactNode; continuationHref?: string; continuationLabel?: string;
-  className?: string; topActions?: React.ReactNode })
+  className?: string; topActions?: React.ReactNode; showReadAction?: boolean })
 {
   const parent = showParent ? p.parent : null
   const parentContinued = parent?.parent_id && parent.parent?.user_id === parent.user_id
@@ -485,7 +486,7 @@ export function Post({
             </span>
           </>
         )}
-        {!preview && !tappable && !canonicalTimestamp && (
+        {showReadAction && !preview && !tappable && !canonicalTimestamp && (
             <a className="postdate" href={canonicalTimestamp ? `/post/${p.id}` : detailPath}
               rel={canonicalTimestamp ? undefined : navigationRel}
             >

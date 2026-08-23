@@ -3,7 +3,7 @@ import { EXPLORE_TAG_PAGE_SIZE } from '../pagination'
 import type { ExploreData, User } from '../types'
 import { displayBio, linkify } from '../utils'
 import { Layout } from './layout'
-import { ActionPair, Pagination } from './page-shared'
+import { ActionPair, Pagination, TagChips } from './page-shared'
 import { Panel } from './panel'
 import { BioReferenceForms, UserReference } from './post'
 import { SearchForm } from './search'
@@ -63,23 +63,7 @@ export function Explore({ user, welcome = false, tagsPage = 1, peoplePage = 1, d
         <section className="explore-tags" id="explore-tags">
           <h2>Trending tags</h2>
           {tags.length
-            ? (
-              <div className="explore-tag-chips">
-                {tags.map(tag => user
-                  ? (
-                    <form key={tag.tag} method="post" action={`/tag-follow/${encodeURIComponent(tag.tag)}`}>
-                      <input type="hidden" name="from" value={`${explorePath()}#explore-tags`} />
-                      <button className={`button explore-tag-chip${tag.following ? ' button-muted' : ''}`}
-                        aria-pressed={tag.following} title={`${tag.following ? 'Unfollow' : 'Follow'} #${tag.tag}`}>
-                        #{tag.tag}
-                      </button>
-                    </form>
-                  )
-                  : <a key={tag.tag} className="button explore-tag-chip" href={`/tag/${encodeURIComponent(tag.tag)}`}>
-                    #{tag.tag}
-                  </a>)}
-              </div>
-            )
+            ? <TagChips user={user} tags={tags} returnPath={`${explorePath()}#explore-tags`} />
             : <p className="section-empty">No hashtags yet.</p>}
           <Pagination page={tagsPage} totalPages={Math.ceil(tagsTotal / EXPLORE_TAG_PAGE_SIZE)} path={tagsPath}
             pageParam="tagsPage" label="Tags pagination" compact anchor="explore-tags" />

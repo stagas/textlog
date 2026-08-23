@@ -1,7 +1,7 @@
 import type { User } from '../types'
 import type { SearchResultsData } from '../types'
 import { Layout } from './layout'
-import { ConnectionPeople, Pagination, TagPeopleList } from './page-shared'
+import { ConnectionPeople, Pagination, TagChips } from './page-shared'
 import { Post } from './post'
 
 export type SearchTab = 'notes' | 'tags' | 'people'
@@ -60,11 +60,12 @@ export function SearchResults({ user, query, page, tab = 'notes', results }: {
       </nav>
       {results.posts.map(post => (
         <Post key={post.id} p={post} user={user} showReplyCount highlightTerms={results.highlights}
-          returnPath={searchPostReturnPath(query, page, post.id)} />
+          returnPath={searchPostReturnPath(query, page, post.id)} showReadAction={false} />
       ))}
       {!!results.tags.length && (
-        <TagPeopleList user={user} tags={results.tags} followingKey="viewerFollowing"
-          highlightTerms={results.highlights} />
+        <TagChips user={user} tags={results.tags} followingKey="viewerFollowing"
+          highlightTerms={results.highlights}
+          returnPath={`/search?q=${encodeURIComponent(query)}&tab=tags${page > 1 ? `&page=${page}` : ''}`} />
       )}
       {!!results.people.length && (
         <ConnectionPeople user={user} people={results.people} className="search-people"

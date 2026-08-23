@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test'
-import { ConnectionPeople, Pagination, TagPeopleList } from './components/page-shared'
+import { ConnectionPeople, Pagination, TagChips } from './components/page-shared'
 import {
   About,
   AccountApiKeyCreate,
@@ -455,14 +455,14 @@ test('write and reply previews apply ASCII-art spacing rules', () => {
   expect(reply).toContain('<div class="post-body ascii-art">')
 })
 
-test('search result cards highlight tag, handle, and bio matches while keeping follow controls', () => {
+test('search results use explore tag chips and highlight handle and bio matches', () => {
   const user = { id: 1, handle: 'reader', email: 'reader@example.com', bio: '' }
-  const tags = renderToStaticMarkup(React.createElement(TagPeopleList, {
+  const tags = renderToStaticMarkup(React.createElement(TagChips, {
     user,
     tags: [{ tag: 'typescript', count: 2, viewerFollowing: false }],
     followingKey: 'viewerFollowing',
     highlightTerms: ['type'],
-    returnPath: tag => `/explore?tagsPage=3#tag-${tag.tag}`,
+    returnPath: '/search?q=type&tab=tags&page=3',
   }))
   const people = renderToStaticMarkup(React.createElement(ConnectionPeople, {
     user,
@@ -471,11 +471,10 @@ test('search result cards highlight tag, handle, and bio matches while keeping f
     returnPath: person => searchPersonReturnPath('type writer', 3, person.id),
   }))
 
-  expect(tags).toContain('#<mark>type</mark>script')
-  expect(tags).toContain('>follow</button>')
-  expect(tags).toContain('id="tag-typescript"')
-  expect(tags).toContain('href="/tag/typescript?from=%2Fexplore%3FtagsPage%3D3%23tag-typescript"')
-  expect(tags).toContain('name="from" value="/explore?tagsPage=3#tag-typescript"')
+  expect(tags).toContain('<span>#<mark>type</mark>script</span>')
+  expect(tags).toContain('class="explore-tag-chips"')
+  expect(tags).toContain('class="button explore-tag-chip" aria-pressed="false"')
+  expect(tags).toContain('name="from" value="/search?q=type&amp;tab=tags&amp;page=3"')
   expect(people).toContain('@<mark>type</mark>writer')
   expect(people).toContain('<mark>Type</mark>s useful notes')
   expect(people).toContain('>unfollow</button>')
