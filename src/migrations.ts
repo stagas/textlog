@@ -1639,9 +1639,27 @@ export const migrations: Migration[] = [
     name: 'backfill_missed_hashtag_follow_activity',
     up(database) {
       // API hashtag follows created before this migration omitted created_at, which kept them out of For You.
-      // The rows do not retain their write source or original time, so surface all undated follows from now on.
+      // The rows do not retain their write source or original time, so keep them as historical baseline activity.
       if (!database.query("SELECT 1 FROM sqlite_master WHERE type='table' AND name='hashtag_follows'").get()) return
-      database.run('UPDATE hashtag_follows SET created_at=CURRENT_TIMESTAMP WHERE created_at IS NULL')
+      database.run("UPDATE hashtag_follows SET created_at='1970-01-01 00:00:00' WHERE created_at IS NULL")
+    },
+  },
+  {
+    version: 119,
+    name: 'move_backfilled_hashtag_follows_to_past',
+    up(database) {
+      if (!database.query("SELECT 1 FROM sqlite_master WHERE type='table' AND name='hashtag_follows'").get()) return
+      // Migration 118 originally assigned migration time to every undated row. There is no provenance with which to
+      // separate that cohort, so treat every relationship that predates this corrective migration as read baseline
+      // activity for every existing account, then move it into the past.
+      if (database.query("SELECT 1 FROM sqlite_master WHERE type='table' AND name='for_you_reads'").get()
+        && database.query("SELECT 1 FROM sqlite_master WHERE type='table' AND name='users'").get()) {
+        database.run(`INSERT OR IGNORE INTO for_you_reads(user_id,event_key,read_at)
+          SELECT u.id,'tag-follow:' || printf('%020d',hf.user_id) || ':' || hf.tag ||
+            ':1970-01-01 00:00:00',CURRENT_TIMESTAMP
+          FROM users u CROSS JOIN hashtag_follows hf`)
+      }
+      database.run("UPDATE hashtag_follows SET created_at='1970-01-01 00:00:00'")
     },
   },
 ]

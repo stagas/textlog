@@ -197,6 +197,30 @@ describe('database migrations', () => {
       .toEqual([{ post_id: 10 }, { post_id: 11 }])
   })
 
+  test('moves migration-time hashtag follows into the past without losing read state', () => {
+    const database = new Database(':memory:')
+    database.run(`CREATE TABLE users(id INTEGER PRIMARY KEY);
+      CREATE TABLE hashtag_follows(user_id INTEGER NOT NULL,tag TEXT NOT NULL,created_at TEXT,
+        PRIMARY KEY(user_id,tag));
+      CREATE TABLE for_you_reads(user_id INTEGER NOT NULL,event_key TEXT NOT NULL,
+        read_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,PRIMARY KEY(user_id,event_key));
+      INSERT INTO users VALUES(1),(2),(3);
+      INSERT INTO hashtag_follows VALUES(2,'news','2026-08-23 12:00:00');
+      INSERT INTO for_you_reads VALUES(1,
+        'tag-follow:00000000000000000002:news:2026-08-23 12:00:00','2026-08-23 12:01:00');
+      PRAGMA user_version=118;`)
+
+    expect(runMigrations(database)).toBe(latestMigrationVersion)
+    expect(database.query('SELECT created_at FROM hashtag_follows').get())
+      .toEqual({ created_at: '1970-01-01 00:00:00' })
+    expect(database.query(`SELECT read_at FROM for_you_reads
+      WHERE event_key='tag-follow:00000000000000000002:news:1970-01-01 00:00:00'`).get())
+      .toMatchObject({ read_at: expect.any(String) })
+    expect(database.query(`SELECT count(*) count FROM for_you_reads
+      WHERE event_key='tag-follow:00000000000000000002:news:1970-01-01 00:00:00'`).get())
+      .toEqual({ count: 3 })
+  })
+
   test('upgrades legacy data and backfills follow activity timestamps', () => {
     const database = new Database(':memory:')
     database.run('PRAGMA foreign_keys=ON')
@@ -218,7 +242,7 @@ describe('database migrations', () => {
     }).created_at).not.toBeNull()
     expect((database.query('SELECT created_at FROM hashtag_follows WHERE tag=\'legacy\'').get() as {
       created_at: string | null
-    }).created_at).not.toBeNull()
+    }).created_at).toBe('1970-01-01 00:00:00')
     expect(database.query('SELECT token_hash FROM sessions').get())
       .toEqual({ token_hash: sessionHash('legacy-cookie') })
     expect(database.query(`SELECT g.primary_user_id,g.selected_user_id,u.account_group_id
@@ -261,7 +285,7 @@ describe('database migrations', () => {
       { body: 'deleted #日本語', created_at: '2020-02-03 04:05:06' },
     ])
     expect(database.query('SELECT tag,created_at FROM hashtag_follows').all())
-      .toEqual([{ tag: 'stale', created_at: '2022-03-04 05:06:07' }])
+      .toEqual([{ tag: 'stale', created_at: '1970-01-01 00:00:00' }])
     expect(database.query('SELECT tag FROM tag_search WHERE tag_search MATCH \'ελλάδα\'').get())
       .toEqual({ tag: 'ελλάδα' })
   })
@@ -288,8 +312,8 @@ describe('database migrations', () => {
     expect(database.query('SELECT tag FROM tag_search WHERE tag_search MATCH \'actual\'').get())
       .toEqual({ tag: 'actual' })
     expect(database.query('SELECT tag,created_at FROM hashtag_follows ORDER BY tag').all()).toEqual([
-      { tag: 'actual', created_at: '2026-08-02 03:04:05' },
-      { tag: 'plain', created_at: '2026-08-01 02:03:04' },
+      { tag: 'actual', created_at: '1970-01-01 00:00:00' },
+      { tag: 'plain', created_at: '1970-01-01 00:00:00' },
     ])
   })
 
@@ -315,8 +339,8 @@ describe('database migrations', () => {
     expect(database.query('SELECT post_id,tag FROM post_hashtags ORDER BY post_id,tag').all())
       .toEqual([{ post_id: 1, tag: 'visible' }])
     expect(database.query('SELECT tag,created_at FROM hashtag_follows ORDER BY tag').all()).toEqual([
-      { tag: 'inline', created_at: '2026-08-03 04:05:06' },
-      { tag: 'visible', created_at: '2026-08-04 05:06:07' },
+      { tag: 'inline', created_at: '1970-01-01 00:00:00' },
+      { tag: 'visible', created_at: '1970-01-01 00:00:00' },
     ])
     expect(database.query('SELECT user_id,tag FROM blocked_hashtags').all())
       .toEqual([{ user_id: 2, tag: 'fenced' }])
