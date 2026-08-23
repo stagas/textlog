@@ -5430,9 +5430,11 @@ a.post-context:hover {
 }
 
 .post-body.ascii-art {
+  z-index: 2;
   display: block;
   max-width: 100%;
   overflow-x: auto;
+  overscroll-behavior-inline: contain;
   font-family: var(--font-monospace);
   line-height: 1.15;
   overflow-wrap: normal;

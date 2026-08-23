@@ -208,7 +208,7 @@ describe('in-memory stylesheet', () => {
 
   test('preserves ASCII art whitespace and scrolls it horizontally without a scrollbar', async () => {
     const css = await Bun.file(new URL('./styles.css', import.meta.url)).text()
-    expect(css).toContain('.post-body.ascii-art {\n  display: block;\n  max-width: 100%;\n  overflow-x: auto;')
+    expect(css).toContain('.post-body.ascii-art {\n  z-index: 2;\n  display: block;\n  max-width: 100%;\n  overflow-x: auto;\n  overscroll-behavior-inline: contain;')
     expect(css).toContain('overflow-wrap: normal;\n  scrollbar-width: none;\n  white-space: pre;')
     expect(css).toContain('.post-body.ascii-art::-webkit-scrollbar {\n  display: none;\n}')
   })
