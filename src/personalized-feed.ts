@@ -9,7 +9,7 @@ import { unreadLatestCount } from './latest-state'
 import { enrichPosts, visibleTagFollowerCounts, visibleUserProfileStats } from './posts'
 import type { PersonalizedFeedData, PersonalizedTimelineRow, User } from './types'
 
-export const PERSONALIZED_FEED_SNAPSHOT_VERSION = 5
+export const PERSONALIZED_FEED_SNAPSHOT_VERSION = 6
 
 const descendsFromViewer = `EXISTS (WITH RECURSIVE ancestors(id,user_id,parent_id) AS (
   SELECT ancestor.id,ancestor.user_id,ancestor.parent_id FROM posts ancestor WHERE ancestor.id=p.parent_id
@@ -37,8 +37,8 @@ export function loadPersonalizedFeed(database: Database, user: User, page: numbe
         0 targeted_to_viewer,NULL posts
       FROM posts p JOIN users u ON u.id=p.user_id LEFT JOIN posts parent ON parent.id=p.parent_id
       LEFT JOIN post_mentions pm ON pm.post_id=p.id AND pm.user_id=$viewer
-      WHERE p.deleted_at IS NULL AND ((p.user_id!=$viewer AND (p.user_id IN
-        (SELECT following_id FROM follows WHERE follower_id=$viewer) OR ${descendsFromViewer})) OR p.id IN
+      WHERE p.deleted_at IS NULL AND (p.user_id=$viewer OR p.user_id IN
+        (SELECT following_id FROM follows WHERE follower_id=$viewer) OR ${descendsFromViewer} OR p.id IN
         (SELECT ph.post_id FROM post_hashtags ph JOIN hashtag_follows hf ON hf.tag=ph.tag WHERE hf.user_id=$viewer))
         AND NOT EXISTS (SELECT 1 FROM blocks b WHERE (b.blocker_id=$viewer AND b.blocked_id=p.user_id)
           OR (b.blocker_id=p.user_id AND b.blocked_id=$viewer))

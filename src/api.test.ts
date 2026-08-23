@@ -179,7 +179,7 @@ describe('public API', () => {
     const toMe = await (await request(app, '/api/v1/activities/to-me', { headers })).json() as any
 
     expect(forYou.data.map((activity: any) => activity.type))
-      .toEqual(['tag_follow', 'user_follow', 'post', 'post', 'post', 'post', 'reply', 'post'])
+      .toEqual(['tag_follow', 'user_follow', 'post', 'post', 'post', 'post', 'post', 'reply', 'post'])
     expect(forYou.data.find((activity: any) => activity.type === 'tag_follow').payload)
       .toMatchObject({ actor: { handle: 'bob' }, target: { tag: 'textlog' } })
     expect(forYou.data.find((activity: any) => activity.payload.id === 7)).toMatchObject({
@@ -190,6 +190,9 @@ describe('public API', () => {
     })
     expect(forYou.data.find((activity: any) => activity.payload.id === 9)).toMatchObject({
       type: 'post', payload: { body: 'own tag match #textlog' },
+    })
+    expect(forYou.data.find((activity: any) => activity.payload.id === 3)).toMatchObject({
+      type: 'post', payload: { body: 'a latest' },
     })
     expect(toMe.data.map((activity: any) => activity.type)).toEqual(['user_follow', 'reply'])
     expect(toMe.data.some((activity: any) => activity.payload.id === 8)).toBe(false)
