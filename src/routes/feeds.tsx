@@ -111,17 +111,16 @@ async function warmFeedPage(request: Request, kind: PrimaryFeed,
     const viewerId = user?.id ?? -1
     if (kind === 'for-you') {
       if (!user) return
-      await rpcMaterializedFeedPage(feedRequest, kind, viewerId, async () => {
-        const data = await backgroundDatabaseCall('feeds.personalizedPage', {
-          user,
-          page: 1,
-          pageSize,
-          toMe: false,
-          path: '/for-you',
-          markRead: false,
-        })
-        return page(<Feed user={user} data={data} title="for you" />)
-      }, false, 0, true)
+      // Warm the ordered snapshot, but leave personalized HTML to a foreground request. A background render contains
+      // unread indicators without consuming them, so caching it would keep serving stale dots and counts.
+      await backgroundDatabaseCall('feeds.personalizedPage', {
+        user,
+        page: 1,
+        pageSize,
+        toMe: false,
+        path: '/for-you',
+        markRead: false,
+      })
       return
     }
     if (kind === 'latest') {
