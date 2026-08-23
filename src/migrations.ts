@@ -1455,14 +1455,15 @@ export const migrations: Migration[] = [
         DROP TRIGGER IF EXISTS personalized_feed_users_delete;
 
         CREATE TRIGGER IF NOT EXISTS personalized_feed_posts_insert AFTER INSERT ON posts BEGIN
-          ${clear(`SELECT follower_id FROM follows WHERE following_id=NEW.user_id
+          ${clear(`SELECT NEW.user_id UNION SELECT follower_id FROM follows WHERE following_id=NEW.user_id
             UNION SELECT user_id FROM (WITH RECURSIVE ancestors(id,user_id,parent_id) AS (
               SELECT id,user_id,parent_id FROM posts WHERE id=NEW.parent_id UNION ALL
               SELECT p.id,p.user_id,p.parent_id FROM posts p JOIN ancestors a ON p.id=a.parent_id
             ) SELECT user_id FROM ancestors)`)}
         END;
         CREATE TRIGGER IF NOT EXISTS personalized_feed_posts_update AFTER UPDATE ON posts BEGIN
-          ${clear(`SELECT follower_id FROM follows WHERE following_id IN (OLD.user_id,NEW.user_id)
+          ${clear(`SELECT OLD.user_id UNION SELECT NEW.user_id
+            UNION SELECT follower_id FROM follows WHERE following_id IN (OLD.user_id,NEW.user_id)
             UNION SELECT user_id FROM (WITH RECURSIVE ancestors(id,user_id,parent_id) AS (
               SELECT id,user_id,parent_id FROM posts WHERE id IN (OLD.parent_id,NEW.parent_id) UNION ALL
               SELECT p.id,p.user_id,p.parent_id FROM posts p JOIN ancestors a ON p.id=a.parent_id
@@ -1471,7 +1472,7 @@ export const migrations: Migration[] = [
               WHERE json_extract(i.payload,'$.id')=OLD.id`)}
         END;
         CREATE TRIGGER IF NOT EXISTS personalized_feed_posts_delete AFTER DELETE ON posts BEGIN
-          ${clear(`SELECT follower_id FROM follows WHERE following_id=OLD.user_id
+          ${clear(`SELECT OLD.user_id UNION SELECT follower_id FROM follows WHERE following_id=OLD.user_id
             UNION SELECT user_id FROM (WITH RECURSIVE ancestors(id,user_id,parent_id) AS (
               SELECT id,user_id,parent_id FROM posts WHERE id=OLD.parent_id UNION ALL
               SELECT p.id,p.user_id,p.parent_id FROM posts p JOIN ancestors a ON p.id=a.parent_id
@@ -1670,6 +1671,14 @@ export const migrations: Migration[] = [
       const quizzes = database.query(`SELECT id,body FROM posts
         WHERE deleted_at IS NULL AND lower(body) LIKE '%#quiz%'`).all() as Array<{ id: number; body: string }>
       for (const quiz of quizzes) syncPoll(database, quiz.id, quiz.body)
+    },
+  },
+  {
+    version: 121,
+    name: 'invalidate_own_personalized_posts',
+    up(database) {
+      // Self-authored posts now appear in For You, so their author must participate in post snapshot invalidation.
+      migrations.find(migration => migration.version === 112)!.up(database)
     },
   },
 ]

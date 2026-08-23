@@ -607,4 +607,22 @@ describe('database migrations', () => {
     expect(() => database.query("UPDATE posts SET body='works' WHERE id=1").run()).not.toThrow()
     expect(database.query('PRAGMA foreign_key_check').all()).toEqual([])
   })
+
+  test('invalidates an author personalized feed when their own posts change', () => {
+    const database = new Database(':memory:')
+    database.run('PRAGMA foreign_keys=ON')
+    runMigrations(database)
+    database.run("INSERT INTO users(id,handle,email,password) VALUES(1,'author','author@example.com','x')")
+    const generation = () => (database.query(
+      'SELECT generation FROM personalized_feed_generations WHERE viewer_id=1',
+    ).get() as { generation: number }).generation
+
+    const initial = generation()
+    database.run("INSERT INTO posts(id,user_id,body) VALUES(1,1,'hello')")
+    expect(generation()).toBe(initial + 1)
+    database.run("UPDATE posts SET body='edited' WHERE id=1")
+    expect(generation()).toBe(initial + 2)
+    database.run('DELETE FROM posts WHERE id=1')
+    expect(generation()).toBe(initial + 3)
+  })
 })
