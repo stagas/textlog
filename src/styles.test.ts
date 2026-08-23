@@ -201,6 +201,18 @@ describe('in-memory stylesheet', () => {
     expect(css).toContain('body.density-compact :where(p, li, textarea):not(.ascii-art)')
   })
 
+  test('tightens ASCII art line spacing for mobile user agents only', async () => {
+    const css = await Bun.file(new URL('./styles.css', import.meta.url)).text()
+    expect(css).toContain('body.mobile-agent .ascii-art {\n  line-height: 1 !important;\n}')
+  })
+
+  test('preserves ASCII art whitespace and scrolls it horizontally without a scrollbar', async () => {
+    const css = await Bun.file(new URL('./styles.css', import.meta.url)).text()
+    expect(css).toContain('.post-body.ascii-art {\n  display: block;\n  max-width: 100%;\n  overflow-x: auto;')
+    expect(css).toContain('overflow-wrap: normal;\n  scrollbar-width: none;\n  white-space: pre;')
+    expect(css).toContain('.post-body.ascii-art::-webkit-scrollbar {\n  display: none;\n}')
+  })
+
   test('uses shared component utilities for repeated visual patterns', async () => {
     const css = await Bun.file(new URL('./styles.css', import.meta.url)).text()
     expect(css).toContain('.pagination-top {\n  border-top: 0;\n}')

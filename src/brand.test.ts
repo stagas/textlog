@@ -54,11 +54,16 @@ describe('instance branding', () => {
       headers: { 'user-agent': userAgent },
     }), () => renderToStaticMarkup(React.createElement(Layout, null, React.createElement('p', null, 'Hello'))))
 
-    expect(render('Mozilla/5.0 (Linux; Android 15) AppleWebKit/537.36 Mobile Safari/537.36')).toContain(
+    const mobile = render('Mozilla/5.0 (Linux; Android 15) AppleWebKit/537.36 Mobile Safari/537.36')
+    const desktop = render('Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 Chrome/140.0 Safari/537.36')
+
+    expect(mobile).toContain(
       '<link href="https://fonts.cdnfonts.com/css/dejavu-sans-mono" rel="stylesheet"/>',
     )
-    expect(render('Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 Chrome/140.0 Safari/537.36')).not.toContain(
+    expect(mobile).toContain('<body class="density-regular mobile-agent">')
+    expect(desktop).not.toContain(
       'fonts.cdnfonts.com/css/dejavu-sans-mono',
     )
+    expect(desktop).not.toContain('mobile-agent')
   })
 })

@@ -5430,8 +5430,18 @@ a.post-context:hover {
 }
 
 .post-body.ascii-art {
+  display: block;
+  max-width: 100%;
+  overflow-x: auto;
   font-family: var(--font-monospace);
   line-height: 1.15;
+  overflow-wrap: normal;
+  scrollbar-width: none;
+  white-space: pre;
+}
+
+.post-body.ascii-art::-webkit-scrollbar {
+  display: none;
 }
 
 .post code, .post pre {
@@ -5453,6 +5463,10 @@ a.post-context:hover {
 .compose-post-preview .post-body.ascii-art,
 .reply-preview .post-body.ascii-art {
   line-height: 1.15;
+}
+
+body.mobile-agent .ascii-art {
+  line-height: 1 !important;
 }
 
 body.density-compact :where(p, li, textarea):not(.ascii-art) {

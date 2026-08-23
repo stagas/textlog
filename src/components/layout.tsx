@@ -162,10 +162,11 @@ export function Layout({
           </>
         )}
         {mobile && <link href="https://fonts.cdnfonts.com/css/dejavu-sans-mono" rel="stylesheet" />}
-        <link rel="stylesheet" href="/styles.css?v=705" />
+        <link rel="stylesheet" href="/styles.css?v=714" />
         <style>{themeCss}</style>
       </head>
-      <body className={`density-${density}${user?.show_link_previews === 0 ? ' link-previews-disabled' : ''}${
+      <body className={`density-${density}${mobile ? ' mobile-agent' : ''}${
+        user?.show_link_previews === 0 ? ' link-previews-disabled' : ''}${
         mobileWriteAction ? ' has-mobile-write-action' : ''}`}>
         {user && ready && <a className="skip-link" href={writeShortcutHref} accessKey="w">write</a>}
         <a className="skip-link" href="#main-content">skip to content</a>
