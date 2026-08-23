@@ -459,6 +459,10 @@ header>nav>a:not(.button),
   min-width: 0;
 }
 
+.reference-menu-popover:not(:has(.reference-popover-bio)) {
+  min-width: 0;
+}
+
 .reference-menu-popover-tag > a {
   justify-self: start;
 }
