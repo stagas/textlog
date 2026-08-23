@@ -4152,13 +4152,13 @@ form.report-panel {
 .parent-quote .poll-option button,
 .parent-quote .poll-result,
 .parent-quote .poll-preview-option { color: var(--quote-ink); }
-.todo { position: relative; z-index: 2; display: grid; gap: 0; margin-top: 0; font-size: .8125rem; pointer-events: none; }
-.thread-root>.post>.todo { font-size: clamp(.9375rem, 2.25vw, 1.125rem); line-height: 1.55; letter-spacing: -.5px; }
-.feed-thread .thread-root>.post>.todo { font-size: .8125rem; line-height: 1.65; letter-spacing: normal; }
+.todo { position: relative; z-index: 2; display: grid; gap: 0; margin-top: 0; font-size: .8125rem; line-height: 1.35; pointer-events: none; }
+.thread-root>.post>.todo { font-size: clamp(.9375rem, 2.25vw, 1.125rem); letter-spacing: -.5px; }
+.feed-thread .thread-root>.post>.todo { font-size: .8125rem; letter-spacing: normal; }
 .todo-item { position: relative; display: flex; align-items: center; width: fit-content; max-width: 100%; margin: 0; }
 .todo-text { min-height: 1.35em; white-space: pre-wrap; }
 .todo-item > button,
-.todo-item-static { gap: 0; padding: 0; color: var(--ink); background: transparent; border: 0; font: inherit; line-height: 1.35; text-align: left; }
+.todo-item-static { gap: 0; padding: 0; color: var(--ink); background: transparent; border: 0; font: inherit; line-height: inherit; text-align: left; }
 .todo-item > button { display: flex; pointer-events: auto; cursor: pointer; touch-action: manipulation; }
 .todo-editable .todo-item > button { position: absolute; inset: 0; width: 100%; }
 .todo-editable .todo-label { margin-left: 4ch; pointer-events: none; }
@@ -4181,9 +4181,9 @@ form.report-panel {
 .todo-check-checked { color: var(--accent-dark); }
 .todo-done { color: var(--muted); text-decoration: line-through; }
 .todo .post-spoiler { margin-top: 0; }
-.todo .post-spoiler summary { pointer-events: auto; }
-.todo .post-spoiler-content { display: grid; }
-.parent-quote .todo { font-size: .75rem; line-height: 1.55; letter-spacing: normal; }
+.todo .post-spoiler summary { line-height: 1.65; pointer-events: auto; }
+.todo .post-spoiler-content { display: grid; margin-top: 0; }
+.parent-quote .todo { font-size: .75rem; letter-spacing: normal; }
 .parent-quote .todo-item > button,
 .parent-quote .todo-item-static { color: var(--quote-ink); }
 .font-size-larger>span:first-of-type { font-size: 20px; }

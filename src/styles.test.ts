@@ -69,9 +69,10 @@ describe('in-memory stylesheet', () => {
 
   test('lets taps pass through todos that the viewer cannot edit', async () => {
     const css = await Bun.file(new URL('./styles.css', import.meta.url)).text()
-    expect(css).toContain('.todo { position: relative; z-index: 2; display: grid; gap: 0; margin-top: 0; font-size: .8125rem; pointer-events: none; }')
+    expect(css).toContain('.todo { position: relative; z-index: 2; display: grid; gap: 0; margin-top: 0; font-size: .8125rem; line-height: 1.35; pointer-events: none; }')
     expect(css).toContain('.thread-root>.post>.todo { font-size: clamp(.9375rem, 2.25vw, 1.125rem);')
     expect(css).toContain('.feed-thread .thread-root>.post>.todo { font-size: .8125rem;')
+    expect(css).toContain('font: inherit; line-height: inherit; text-align: left;')
     expect(css).toContain('.todo-check-checked { color: var(--accent-dark); }')
     expect(css).toContain('.todo-item > button:hover .todo-check,\n.todo-item > button:hover + .todo-label { color: var(--accent); }')
     expect(css).toContain('margin-right: 1ch; color: var(--muted); font: inherit;')
@@ -84,7 +85,9 @@ describe('in-memory stylesheet', () => {
     expect(css).toContain('.todo :is(.reference-menu-popover, .remote-link-popover) { pointer-events: auto; }')
     expect(css).toContain('.todo-editable .todo-label :is(a, button) {')
     expect(css).toContain('.todo a { pointer-events: auto; }')
-    expect(css).toContain('.parent-quote .todo { font-size: .75rem; line-height: 1.55; letter-spacing: normal; }')
+    expect(css).toContain('.todo .post-spoiler summary { line-height: 1.65; pointer-events: auto; }')
+    expect(css).toContain('.todo .post-spoiler-content { display: grid; margin-top: 0; }')
+    expect(css).toContain('.parent-quote .todo { font-size: .75rem; letter-spacing: normal; }')
   })
 
   test('highlights a post or activity entry opened through its stable anchor', async () => {
