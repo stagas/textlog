@@ -35,22 +35,22 @@ export type ReferencePopoverOptions = {
 }
 
 function previewLink(html: string, url: string, appUrl: string | undefined, popover?: ReferencePopoverOptions) {
-  const vocarooMp3Url = (() => {
+  const vocarooAudioUrl = (() => {
     try {
       const parsed = new URL(url)
       if (!['voca.ro', 'www.voca.ro', 'vocaroo.com', 'www.vocaroo.com'].includes(parsed.hostname.toLowerCase())) {
         return undefined
       }
       const id = parsed.pathname.match(/^\/([a-z0-9]+)\/?$/i)?.[1]
-      return id ? `https://media1.vocaroo.com/mp3/${id}` : undefined
+      return id ? `/media/vocaroo/${encodeURIComponent(id)}` : undefined
     }
     catch {
       return undefined
     }
   })()
-  if (popover && vocarooMp3Url) {
+  if (popover && vocarooAudioUrl) {
     return `<span class="remote-link-menu">${html}<span class="remote-link-popover remote-link-audio-popover">`
-      + `<audio controls preload="none" src="${esc(vocarooMp3Url)}"></audio></span></span>`
+      + `<audio controls preload="none" src="${esc(vocarooAudioUrl)}"></audio></span></span>`
   }
   const preview = popover?.linkPreviews?.[url]
   if (!preview) return html

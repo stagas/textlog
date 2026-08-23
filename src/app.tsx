@@ -29,6 +29,7 @@ import { registerEmbedRoutes } from './routes/embed'
 import { prewarmRecentFeedVisitors, prewarmRecentFeedVisitorsOnInit, registerFeedsRoutes } from './routes/feeds'
 import { registerIllegalActivityRoutes } from './routes/illegal-activity'
 import { registerInteractionsRoutes } from './routes/interactions'
+import { registerMediaRoutes } from './routes/media'
 import { registerPostsRoutes } from './routes/posts'
 import { registerProfilesRoutes } from './routes/profiles'
 import { registerSearchRoutes } from './routes/search'
@@ -479,6 +480,7 @@ registerAuthRoutes(app)
 registerAccountRoutes(app)
 registerPostsRoutes(app)
 registerInteractionsRoutes(app)
+registerMediaRoutes(app)
 registerIllegalActivityRoutes(app)
 registerAdminRoutes(app)
 registerStatsRoutes(app)

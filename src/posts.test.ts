@@ -377,8 +377,7 @@ describe('post persistence', () => {
     })
     expect(html).toContain(`href="${url}"`)
     expect(html).toContain('class="remote-link-popover remote-link-audio-popover"')
-    expect(html).toContain('<audio controls preload="none" '
-      + 'src="https://media1.vocaroo.com/mp3/140JOkFnkmRv"></audio>')
+    expect(html).toContain('<audio controls preload="none" src="/media/vocaroo/140JOkFnkmRv"></audio>')
   })
 
   test('opens local link previews in the current tab like their post links', () => {
