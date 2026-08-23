@@ -514,6 +514,32 @@ describe('hot feed ranking', () => {
     expect(head.hot_score).toBeGreaterThan(root.hot_score)
   })
 
+  test('gives a deep new reply its thread strength while sharply decaying its old ancestors', () => {
+    database.run(`INSERT INTO users(id,handle) VALUES(2,'paratoner');
+      INSERT INTO users(id,handle) VALUES(3,'avioli');`)
+    postBy(2, 658, '2026-07-20 13:37:35')
+    postBy(1, 677, '2026-07-20 15:18:40', 658)
+    postBy(2, 679, '2026-07-20 15:39:42', 677)
+    postBy(1, 680, '2026-07-20 15:41:38', 679)
+    postBy(2, 681, '2026-07-20 15:49:15', 680)
+    postBy(3, 2194, '2026-08-03 12:00:00', 681)
+
+    const rootScore = database.query('SELECT score FROM post_hot WHERE post_id=658').get() as { score: number }
+    const discussionScore = database.query('SELECT score FROM post_hot WHERE post_id=680').get() as { score: number }
+    expect(discussionScore.score).toBeGreaterThan(rootScore.score)
+    for (let id = 10_000; id < 10_045; id++) {
+      database.query('INSERT INTO posts VALUES(?,?,?,?,?,?)')
+        .run(id, 1, null, `filler ${id}`, '2026-08-03 08:00:00', null)
+      database.query('INSERT INTO post_hot VALUES(?,?,?,?,?,?)')
+        .run(id, 0.1, 1, 1, '2026-08-03 10:00:00', '2026-08-03 10:00:00')
+    }
+    const results = getHotPosts(database, 100, null, asOf, -1, false, 2)
+    expect(results[0].id).toBe(2194)
+    expect(results.findIndex(result => result.id === 681)).toBeGreaterThan(0)
+    expect(results.findIndex(result => result.id === 681)).toBeLessThan(40)
+    expect(results.findIndex(result => [658, 677, 679, 680].includes(result.id))).toBeGreaterThanOrEqual(40)
+  })
+
   test('smoothly demotes a reply when its conversation root already ranks above it', () => {
     database.run(`INSERT INTO users(id,handle) VALUES(2,'reply-author');
       INSERT INTO users(id,handle) VALUES(3,'nested-author');`)

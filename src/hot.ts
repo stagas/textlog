@@ -26,7 +26,7 @@ export type HotCursor = {
   direction: 'next' | 'previous'
 }
 
-export const hotRankingVersion = 95
+export const hotRankingVersion = 98
 const cursorVersion = hotRankingVersion
 const activityHalfLifeHours = 6
 const postWeight = 0
@@ -63,6 +63,8 @@ const longDiscussionCommentsPerDoubling = 5
 const replyCandidateDepthWeight = 0.6
 const replyCandidateBaseWeight = 0.02
 const replyRootCoverageScale = 0.00000005
+const immediateReplyAncestorWeight = 0.05
+const revivedAncestorWeight = 0.0000000001
 const hotTailRecencyHalfLifeHours = 6
 const hotTailRecencyFloor = 0.000000000001
 const hotTailRecencyFloorHalfLifeHours = 24
@@ -353,7 +355,8 @@ export function getHotPosts(
     filters.push(`(h.reply_count>=? OR (h.reply_count BETWEEN 1 AND 2
       AND max(0,(julianday(?) - julianday(h.latest_activity_at))*24)<=${veryRecentReplyCandidateHours})
       OR (h.reply_count=0 AND h.score>0
-      AND max(0,(julianday(?) - julianday(h.latest_activity_at))*24)<=${recentReplyPriorityHours}))`)
+      AND max(0,(julianday(?) - julianday(h.latest_activity_at))*24)<=${recentReplyPriorityHours})
+      OR ranked.inherited=1)`)
     parameters.push(minimumDiscussionReplies, timestamp, timestamp)
   }
   if (cursor) {
@@ -374,17 +377,39 @@ export function getHotPosts(
     SELECT p.id,count(child.id) direct_reply_count FROM posts p
     LEFT JOIN posts child ON child.parent_id=p.id AND child.deleted_at IS NULL GROUP BY p.id
   ), branch_candidates AS (
-    SELECT root.id root_id,child.id head_id,root_count.direct_reply_count root_direct_replies,
-      child_count.direct_reply_count head_direct_replies,
+    SELECT root.id root_id,candidate.id head_id,root_count.direct_reply_count root_direct_replies,
+      candidate_count.direct_reply_count head_direct_replies,
+      CASE WHEN candidate_hot.reply_count>=2
+        AND candidate_hot.latest_activity_at=root_hot.latest_activity_at
+        AND (julianday(root_hot.latest_activity_at)-julianday(root.created_at))*24>=${staleTailPostHours}
+        AND candidate_hot.score>root_hot.score THEN 1 ELSE 0 END is_revival,
+      (SELECT recent.id FROM post_depth recent_depth JOIN posts recent ON recent.id=recent_depth.id
+        WHERE recent_depth.root_id=root.id AND recent.created_at=root_hot.latest_activity_at
+          AND recent.deleted_at IS NULL
+        ORDER BY recent_depth.depth DESC,recent.id DESC LIMIT 1) latest_post_id,
       row_number() OVER (PARTITION BY root.id
-        ORDER BY child_count.direct_reply_count DESC,child.created_at ASC,child.id ASC) branch_rank
-    FROM posts root JOIN posts child ON child.parent_id=root.id AND child.deleted_at IS NULL
+        ORDER BY candidate_hot.score DESC,candidate_hot.reply_count DESC,
+          candidate_count.direct_reply_count DESC,post_depth.depth DESC,candidate.created_at ASC,candidate.id ASC)
+        branch_rank
+    FROM posts root JOIN post_depth ON post_depth.root_id=root.id AND post_depth.depth>0
+    JOIN posts candidate ON candidate.id=post_depth.id AND candidate.deleted_at IS NULL
     JOIN direct_counts root_count ON root_count.id=root.id
-    JOIN direct_counts child_count ON child_count.id=child.id
+    JOIN direct_counts candidate_count ON candidate_count.id=candidate.id
+    JOIN post_hot root_hot ON root_hot.post_id=root.id
+    JOIN post_hot candidate_hot ON candidate_hot.post_id=candidate.id
     WHERE root.parent_id IS NULL AND root.deleted_at IS NULL
+      AND ((post_depth.depth=1 AND candidate_count.direct_reply_count>=2
+          AND candidate_count.direct_reply_count>root_count.direct_reply_count)
+        OR (candidate_hot.reply_count>=2
+          AND candidate_hot.latest_activity_at=root_hot.latest_activity_at
+          AND (julianday(root_hot.latest_activity_at)-julianday(root.created_at))*24>=${staleTailPostHours}
+          AND candidate_hot.score>root_hot.score))
   ), branch_heads AS (
-    SELECT root_id,head_id FROM branch_candidates
-    WHERE branch_rank=1 AND head_direct_replies>=2 AND head_direct_replies>root_direct_replies
+    SELECT branch_candidates.root_id,head_id,
+      CASE WHEN is_revival=1 THEN latest_post_id ELSE head_id END representative_id,
+      CASE WHEN is_revival=1 THEN latest_post.parent_id END immediate_ancestor_id,is_revival
+    FROM branch_candidates LEFT JOIN posts latest_post ON latest_post.id=branch_candidates.latest_post_id
+    WHERE branch_rank=1
   ), direct_participant_activity AS (
     SELECT reply.parent_id candidate_id,${activityAuthorIdentity} participant_id,
       max(reply.created_at) latest_reply_at FROM posts reply
@@ -482,24 +507,37 @@ export function getHotPosts(
       pow(0.5,reply_age_hours/${hotTailRecencyHalfLifeHours}.0) ELSE 1 END hot_score
     FROM ranked_unaged
   ), ranked_candidates AS (
-    SELECT candidate.post_id,candidate.hot_score candidate_score FROM ranked_raw candidate
-  ), ranked_tree(post_id,candidate_score,coverage_weight,depth) AS (
-    SELECT candidate.post_id,candidate.candidate_score,1,0 FROM ranked_candidates candidate
+    SELECT candidate.post_id,
+      CASE WHEN branch_heads.is_revival=1 AND branch_heads.representative_id=candidate.post_id
+        THEN max(candidate.hot_score,head.hot_score,root.hot_score)
+        WHEN branch_heads.is_revival=1 AND branch_heads.immediate_ancestor_id=candidate.post_id
+        THEN max(candidate.hot_score,${immediateReplyAncestorWeight}*max(head.hot_score,root.hot_score))
+        ELSE candidate.hot_score END candidate_score,
+      CASE WHEN branch_heads.is_revival=1 AND branch_heads.representative_id=candidate.post_id
+        THEN 1 ELSE 0 END inherited
+    FROM ranked_raw candidate
+    LEFT JOIN branch_heads ON branch_heads.representative_id=candidate.post_id
+      OR (branch_heads.is_revival=1 AND branch_heads.immediate_ancestor_id=candidate.post_id)
+    LEFT JOIN ranked_raw head ON head.post_id=branch_heads.head_id
+    LEFT JOIN ranked_raw root ON root.post_id=branch_heads.root_id
+  ), ranked_tree(post_id,candidate_score,coverage_weight,depth,inherited) AS (
+    SELECT candidate.post_id,candidate.candidate_score,1,0,candidate.inherited FROM ranked_candidates candidate
     JOIN posts p ON p.id=candidate.post_id WHERE p.parent_id IS NULL
     UNION ALL
-    SELECT child.id,candidate.candidate_score,ranked_tree.coverage_weight
-      *CASE WHEN branch_heads.head_id=child.id THEN 1
-        WHEN ranked_tree.candidate_score>=candidate.candidate_score THEN
-        min(1,${replyRootCoverageScale}*candidate.candidate_score/ranked_tree.candidate_score) ELSE 1 END,
-      ranked_tree.depth+1
+    SELECT child.id,candidate.candidate_score,
+      CASE WHEN branch_heads.representative_id=child.id OR branch_heads.immediate_ancestor_id=child.id
+        THEN 1 ELSE ranked_tree.coverage_weight
+        *CASE WHEN ranked_tree.candidate_score>=candidate.candidate_score THEN
+          min(1,${replyRootCoverageScale}*candidate.candidate_score/ranked_tree.candidate_score) ELSE 1 END END,
+      ranked_tree.depth+1,candidate.inherited
     FROM ranked_tree JOIN posts child ON child.parent_id=ranked_tree.post_id
     JOIN ranked_candidates candidate ON candidate.post_id=child.id
-    LEFT JOIN branch_heads ON branch_heads.head_id=child.id
+    LEFT JOIN branch_heads ON branch_heads.representative_id=child.id OR branch_heads.immediate_ancestor_id=child.id
   ), representative_scores AS (
-    SELECT branch_heads.root_id,branch_heads.head_id,head.candidate_score head_score
-    FROM branch_heads JOIN ranked_candidates head ON head.post_id=branch_heads.head_id
+    SELECT branch_heads.root_id,branch_heads.representative_id,representative.candidate_score representative_score
+    FROM branch_heads JOIN ranked_candidates representative ON representative.post_id=branch_heads.representative_id
   ), ranked AS (
-    SELECT ranked_tree.post_id,(candidate_score*coverage_weight
+    SELECT ranked_tree.post_id,ranked_tree.inherited,(candidate_score*coverage_weight
       +CASE WHEN candidate_score>0 THEN ${hotTailRecencyFloor}
         *pow(0.5,max(0,(julianday(ranking_time.as_of)-julianday(h.latest_activity_at))*24)
           /${hotTailRecencyFloorHalfLifeHours}.0)
@@ -511,10 +549,17 @@ export function getHotPosts(
         AND (julianday(ranking_time.as_of)-julianday(h.latest_activity_at))*24>${recentReplyPriorityHours}
         THEN ${quietSmallDiscussionTailWeight} ELSE 1 END
       *CASE WHEN representative_scores.root_id=ranked_tree.post_id
-        AND representative_scores.head_score>=candidate_score THEN
-        min(1,${replyRootCoverageScale}*candidate_score/representative_scores.head_score) ELSE 1 END hot_score
+        AND representative_scores.representative_score>=candidate_score THEN
+        min(1,${replyRootCoverageScale}*candidate_score/representative_scores.representative_score) ELSE 1 END
+      *CASE WHEN revived_branch.root_id IS NOT NULL
+        AND revived_branch.representative_id!=ranked_tree.post_id
+        AND revived_branch.immediate_ancestor_id!=ranked_tree.post_id
+        THEN ${revivedAncestorWeight} ELSE 1 END hot_score
     FROM ranked_tree JOIN post_hot h ON h.post_id=ranked_tree.post_id CROSS JOIN ranking_time
     LEFT JOIN representative_scores ON representative_scores.root_id=ranked_tree.post_id
+    JOIN post_depth ranked_depth ON ranked_depth.id=ranked_tree.post_id
+    LEFT JOIN branch_heads revived_branch ON revived_branch.root_id=ranked_depth.root_id
+      AND revived_branch.is_revival=1
   ) SELECT p.*,u.handle,ranked.hot_score,h.latest_activity_at,h.reply_count,h.activity_count
     FROM ranked JOIN post_hot h ON h.post_id=ranked.post_id
     JOIN posts p ON p.id=ranked.post_id JOIN users u ON u.id=p.user_id
