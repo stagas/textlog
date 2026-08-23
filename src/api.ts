@@ -127,7 +127,11 @@ function apiExtras(database: Database, postIds: number[], viewerId: number) {
   if (postIds.length && database.query(
     "SELECT 1 FROM sqlite_master WHERE type='table' AND name='post_link_previews'",
   ).get()) {
-    const rows = database.query(`SELECT post_id,url,image_url,title,description,site_name,image_width,image_height,mime_type
+    const mimeTypeColumn = database.query(
+      "SELECT 1 FROM pragma_table_info('post_link_previews') WHERE name='mime_type'",
+    ).get() ? 'mime_type' : 'NULL AS mime_type'
+    const rows = database.query(`SELECT post_id,url,image_url,title,description,site_name,image_width,image_height,
+      ${mimeTypeColumn}
       FROM post_link_previews WHERE post_id IN (${postIds.map(() => '?').join(',')})`).all(...postIds) as Array<{
         post_id: number; url: string; image_url: string; title: string | null; description: string | null;
         site_name: string | null; image_width: number | null; image_height: number | null; mime_type: string | null

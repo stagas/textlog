@@ -585,15 +585,21 @@ export async function replaceBioLinkPreviews(database: Database, userId: number,
   }
   const oldKeys = storedBioPreviewKeys(database, userId)
   const newKeys = previews.flatMap(preview => preview.imageKey ? [preview.imageKey] : [])
-  const insert = database.query(`INSERT INTO user_bio_link_previews
+  const supportsMimeType = database.query(
+    "SELECT 1 FROM pragma_table_info('user_bio_link_previews') WHERE name='mime_type'",
+  ).get()
+  const insert = supportsMimeType ? database.query(`INSERT INTO user_bio_link_previews
     (user_id,url,image_url,title,description,site_name,image_width,image_height,mime_type) VALUES(?,?,?,?,?,?,?,?,?)`)
+    : database.query(`INSERT INTO user_bio_link_previews
+      (user_id,url,image_url,title,description,site_name,image_width,image_height) VALUES(?,?,?,?,?,?,?,?)`)
   try {
     database.transaction(() => {
       database.query('DELETE FROM user_bio_link_previews WHERE user_id=?').run(userId)
       for (const preview of previews) {
-        insert.run(userId, preview.url, preview.imageKey || preview.imageUrl, preview.title || null,
+        const values = [userId, preview.url, preview.imageKey || preview.imageUrl, preview.title || null,
           preview.description || null, preview.siteName || null, preview.imageWidth || null,
-          preview.imageHeight || null, preview.mimeType || null)
+          preview.imageHeight || null]
+        insert.run(...values, ...(supportsMimeType ? [preview.mimeType || null] : []))
       }
     })()
   }
