@@ -195,6 +195,26 @@ function PostingFormattingHelp() {
                 <small>Only [ ] and [x] lines become items. Click your items to toggle them.</small>
               </dd>
             </div>
+            <div>
+              <dt>Pinned notes</dt>
+              <dd>
+                <code>
+                  Keep this visible <b>#pin</b>
+                </code>
+                <br />
+                <small>Your latest #pin is shown first on your profile, independently for notes and replies.</small>
+              </dd>
+            </div>
+            <div>
+              <dt>Locked conversations</dt>
+              <dd>
+                <code>
+                  No more replies <b>#lock</b>
+                </code>
+                <br />
+                <small>Prevents new replies to this note and every reply beneath it.</small>
+              </dd>
+            </div>
       </dl>
     </section>
   )
