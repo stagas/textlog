@@ -27,6 +27,7 @@ import { postRateLimitMessage } from '../post-rate-limit'
 import { sendPushForPost } from '../push'
 import { normalizeSearchQuery } from '../search'
 import { currentUser } from '../utils'
+import { toggleTodo } from '../todos'
 
 function notifyPost(postId: number, userId: number, handle: string) {
   void sendPushForPost(postId, userId, handle).catch(error => logError('activity push failed', error))
@@ -301,6 +302,28 @@ export function registerPostsRoutes(app: Hono) {
     if (!Number.isInteger(optionId) || optionId < 1) return c.text('Invalid poll option', 400)
     const result = await databaseService().call('posts.votePoll', { postId, optionId, userId: user.id })
     if (result === 'not_found') return c.text('Not found', 404)
+    const requested = f.from ? safeNext(f.from) : `/post/${postId}`
+    const target = new URL(requested, 'http://textlog.local')
+    return redirect(`${target.pathname}${target.search}#post-${postId}`)
+  })
+
+  app.post('/post/:id/todo', async c => {
+    const user = currentUser(c.req.raw)
+    const postId = Number(c.req.param('id'))
+    if (!Number.isInteger(postId) || postId < 1) return c.text('Not found', 404)
+    if (!user) return redirect('/enter?next=' + encodeURIComponent(`/post/${postId}#post-${postId}`))
+    const loaded = await databaseService().call('posts.editData', { id: postId, userId: user.id })
+    if (loaded.status === 'not_found') return c.text('Not found', 404)
+    if (loaded.status === 'forbidden') return c.text('Forbidden', 403)
+    const f = await form(c.req.raw)
+    const itemIndex = Number(f.item)
+    const body = Number.isInteger(itemIndex) && itemIndex >= 0 ? toggleTodo(loaded.post.body, itemIndex) : null
+    if (!body) return c.text('Invalid todo item', 400)
+    const result = await databaseService().call('api.updatePost', {
+      userId: user.id, id: postId, body, origin: new URL(c.req.url).origin,
+    })
+    if (result.status !== 'ready') return c.text(result.status === 'not_found' ? 'Not found' : 'Forbidden',
+      result.status === 'not_found' ? 404 : 403)
     const requested = f.from ? safeNext(f.from) : `/post/${postId}`
     const target = new URL(requested, 'http://textlog.local')
     return redirect(`${target.pathname}${target.search}#post-${postId}`)

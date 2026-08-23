@@ -35,7 +35,8 @@ import {
   RecapEmails,
   Reply,
 } from './components/pages'
-import { conversationTopPath, Post, postedReplyPath, replyAnchorReturnPath, ThreadReplies } from './components/post'
+import { conversationTopPath, Post, postedReplyPath, PreviewPost, replyAnchorReturnPath,
+  ThreadReplies } from './components/post'
 import { searchPersonReturnPath, searchPostReturnPath } from './components/search'
 
 import React from 'react'
@@ -185,6 +186,47 @@ test('compose previews inline polls with their visible tag and options', () => {
   expect(html).toContain('>Windows</div>')
   expect(html).toContain('>MacOS</div>')
   expect(html).toContain('>Linux</div>')
+})
+
+test('todos are clickable only for their author', () => {
+  const body = 'Weekend #todo\n[ ] Buy milk\n[x] Call Sam'
+  const post = { id: 7, user_id: 1, parent_id: null, body, created_at: '2026-08-23 10:00:00',
+    deleted_at: null, handle: 'writer', reply_count: 0 }
+  const author = { id: 1, handle: 'writer', email: 'writer@example.com', bio: '' }
+  const viewer = { id: 2, handle: 'reader', email: 'reader@example.com', bio: '' }
+  const owned = renderToStaticMarkup(React.createElement(Post, { p: post, user: author }))
+  const viewed = renderToStaticMarkup(React.createElement(Post, { p: post, user: viewer }))
+
+  expect(owned).toContain('Weekend <a href="/tag/todo')
+  expect(owned).toContain('action="/post/7/todo"')
+  expect(owned).toContain('<span class="todo-check" aria-hidden="true">[ ]</span>')
+  expect(owned).toContain('<span class="todo-check todo-check-checked" aria-hidden="true">[✓]</span>')
+  expect(owned).toContain('<span class="todo-label todo-done">Call Sam</span>')
+  expect(viewed).toContain('class="todo-item todo-item-static"')
+  expect(viewed).not.toContain('action="/post/7/todo"')
+})
+
+test('top-level edit previews render todo items and preserve their leading blank line', () => {
+  const html = renderToStaticMarkup(React.createElement(PreviewPost, { p: {
+    id: 7, user_id: 1, parent_id: null,
+    body: "my today's #todo list\n\n[x] wake up\n[ ] work",
+    created_at: '2026-08-23 10:00:00', deleted_at: null, handle: 'writer', reply_count: 0,
+  } }))
+
+  expect(html).toContain('aria-label="Todo preview"')
+  expect(html).toContain('class="todo-text"> </div>')
+  expect(html).toContain('<span class="todo-check todo-check-checked" aria-hidden="true">[✓]</span>')
+  expect(html).toContain('<span class="todo-check" aria-hidden="true">[ ]</span>')
+})
+
+test('todo previews preserve regular text between checkbox lines', () => {
+  const html = renderToStaticMarkup(React.createElement(Compose, {
+    user: { id: 1, handle: 'writer', email: 'writer@example.com', bio: '', email_verified_at: '2026-08-20' },
+    body: "my today's #todo list\n\n[x] wake up\n[x] drink coffee\n[ ] work\nand possibly\n[ ] contemplate existence",
+    preview: true,
+  }))
+  expect(html.indexOf('>work</span>')).toBeLessThan(html.indexOf('>and possibly</div>'))
+  expect(html.indexOf('>and possibly</div>')).toBeLessThan(html.indexOf('>contemplate existence</span>'))
 })
 
 test('draft cards linkify mentions, hashtags, and links', () => {

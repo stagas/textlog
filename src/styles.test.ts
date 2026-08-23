@@ -67,6 +67,17 @@ describe('in-memory stylesheet', () => {
     expect(css).toContain('.poll-results { pointer-events: none; }')
   })
 
+  test('lets taps pass through todos that the viewer cannot edit', async () => {
+    const css = await Bun.file(new URL('./styles.css', import.meta.url)).text()
+    expect(css).toContain('.todo { position: relative; z-index: 2; display: grid; gap: 0; margin-top: 0; font-size: .8125rem; pointer-events: none; }')
+    expect(css).toContain('.thread-root>.post>.todo { font-size: clamp(.9375rem, 2.25vw, 1.125rem);')
+    expect(css).toContain('.feed-thread .thread-root>.post>.todo { font-size: .8125rem;')
+    expect(css).toContain('.todo-check-checked { color: var(--accent-dark); }')
+    expect(css).toContain('margin-right: 1ch; color: var(--muted); font: inherit;')
+    expect(css).toContain('.todo-item { width: fit-content; max-width: 100%; margin: 0; }')
+    expect(css).toContain('.todo-item button { width: auto; pointer-events: auto; cursor: pointer;')
+  })
+
   test('highlights a post or activity entry opened through its stable anchor', async () => {
     const css = await Bun.file(new URL('./styles.css', import.meta.url)).text()
     expect(css).toContain('.post:target,\n.activity-follow:target {')

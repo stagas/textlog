@@ -4148,6 +4148,20 @@ form.report-panel {
 .parent-quote .poll-option button,
 .parent-quote .poll-result,
 .parent-quote .poll-preview-option { color: var(--quote-ink); }
+.todo { position: relative; z-index: 2; display: grid; gap: 0; margin-top: 0; font-size: .8125rem; pointer-events: none; }
+.thread-root>.post>.todo { font-size: clamp(.9375rem, 2.25vw, 1.125rem); line-height: 1.55; letter-spacing: -.5px; }
+.feed-thread .thread-root>.post>.todo { font-size: .8125rem; line-height: 1.65; letter-spacing: normal; }
+.todo-item { width: fit-content; max-width: 100%; margin: 0; }
+.todo-text { min-height: 1.35em; white-space: pre-wrap; }
+.todo-item button,
+.todo-item-static { display: flex; align-items: center; width: 100%; gap: 0; padding: 0; color: var(--ink); background: transparent; border: 0; font: inherit; line-height: 1.35; text-align: left; }
+.todo-item button { width: auto; pointer-events: auto; cursor: pointer; touch-action: manipulation; }
+.todo-item button:hover .todo-label { color: var(--accent-dark); }
+.todo-check { flex: 0 0 auto; margin-right: 1ch; color: var(--muted); font: inherit; }
+.todo-check-checked { color: var(--accent-dark); }
+.todo-done { color: var(--muted); text-decoration: line-through; }
+.parent-quote .todo-item button,
+.parent-quote .todo-item-static { color: var(--quote-ink); }
 .font-size-larger>span:first-of-type { font-size: 20px; }
 .primary-font-monospace { font-family: var(--font-monospace); }
 .primary-font-sans-serif { font-family: var(--font-sans-serif); }

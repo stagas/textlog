@@ -7,6 +7,7 @@ import { displayBio, displayPostBody, linkify, referenceFormId } from '../utils'
 import { enterHref } from './auth-links'
 import { MetaRow } from './meta'
 import { parsePoll, pollDisplayBody } from '../polls'
+import { parseTodo, todoDisplayBody } from '../todos'
 
 function Poll({ p, returnPath }: { p: PostView | NonNullable<PostView['parent']>; returnPath?: string }) {
   if (!p.poll) return null
@@ -37,7 +38,7 @@ function Poll({ p, returnPath }: { p: PostView | NonNullable<PostView['parent']>
 }
 
 function renderedPollBody(body: string) {
-  return pollDisplayBody(body)
+  return todoDisplayBody(pollDisplayBody(body))
 }
 
 function isDeletedHandle(handle: string) {
@@ -52,6 +53,38 @@ function PollPreview({ body }: { body: string }) {
       {poll.options.map(option => (
         <div className="poll-option poll-preview-option" key={option}>
           {option}
+        </div>
+      ))}
+    </div>
+  )
+}
+
+function Todo({ p, user, preview, returnPath }: { p: PostView | NonNullable<PostView['parent']>; user: User | null;
+  preview?: boolean; returnPath?: string }) {
+  const todo = parseTodo(p.body)
+  if (!todo) return null
+  const editable = !preview && user?.id === p.user_id
+  return (
+    <div className={`todo${editable ? ' todo-editable' : ''}`} aria-label={preview ? 'Todo preview' : 'Todo list'}>
+      {todo.entries.map(entry => entry.type === 'text'
+        ? <div className="todo-text" key={entry.line}>{entry.text || '\u00a0'}</div>
+        : editable ? (
+        <form method="post" action={`/post/${p.id}/todo`} className="todo-item" key={entry.item.line}>
+          <input type="hidden" name="item" value={entry.itemIndex} />
+          <input type="hidden" name="from" value={returnPath || `/post/${p.id}`} />
+          <button type="submit" aria-label={`${entry.item.checked ? 'mark incomplete' : 'mark complete'}: ${entry.item.label}`}>
+            <span className={`todo-check${entry.item.checked ? ' todo-check-checked' : ''}`} aria-hidden="true">
+              [{entry.item.checked ? '✓' : ' '}]
+            </span>
+            <span className={entry.item.checked ? 'todo-label todo-done' : 'todo-label'}>{entry.item.label}</span>
+          </button>
+        </form>
+      ) : (
+        <div className="todo-item todo-item-static" key={entry.item.line}>
+          <span className={`todo-check${entry.item.checked ? ' todo-check-checked' : ''}`} aria-hidden="true">
+            [{entry.item.checked ? '✓' : ' '}]
+          </span>
+          <span className={entry.item.checked ? 'todo-label todo-done' : 'todo-label'}>{entry.item.label}</span>
         </div>
       ))}
     </div>
@@ -287,6 +320,7 @@ export function PreviewPost({ p }: { p: PostView }) {
           hashtagFollowerCounts: p.hashtag_follower_counts, linkPreviews: p.link_previews }),
       }} />
       <PollPreview body={p.body} />
+      <Todo p={p} user={null} preview />
       <MetaRow className="postfoot preview-post-meta">
         <span className="quiet preview-reply">reply</span>
       </MetaRow>
@@ -492,6 +526,7 @@ export function Post({
           linkUnknownMentions: preview || p.id < 0 }),
       }} />
       {preview ? <PollPreview body={p.body} /> : <Poll p={p} returnPath={returnPath} />}
+      <Todo p={p} user={user} preview={preview} returnPath={returnPath} />
       {!parent && (showReplyAction || resolvedContinuationHref || canModerate || reportHref) && (
       <MetaRow className={`postfoot${preview ? ' preview-post-meta' : ''}`}>
         {!parent && showReplyAction && (preview
