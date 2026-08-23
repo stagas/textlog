@@ -5358,6 +5358,18 @@ a.post-context:hover {
   font-family: var(--font-monospace);
 }
 
+.post .code-fence {
+  display: block;
+  max-width: 100%;
+  overflow-x: auto;
+  scrollbar-width: none;
+  white-space: pre;
+}
+
+.post .code-fence::-webkit-scrollbar {
+  display: none;
+}
+
 .compose-post-preview .post-body.ascii-art,
 .reply-preview .post-body.ascii-art {
   line-height: 1.15;
