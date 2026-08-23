@@ -1,3 +1,5 @@
+import { withoutMarkdownCode } from './content'
+
 export type TodoItem = { label: string; checked: boolean; line: number }
 
 export type TodoEntry = { type: 'item'; item: TodoItem; itemIndex: number }
@@ -10,7 +12,7 @@ const todoPrefix = /^\s*\[([ xX])\](?:[ \t]?)(.*)$/
 
 export function parseTodo(body: string): TodoDefinition | null {
   const lines = body.split('\n')
-  const marker = lines.findIndex(line => todoMarker.test(line))
+  const marker = withoutMarkdownCode(body).split('\n').findIndex(line => todoMarker.test(line))
   if (marker < 0) return null
   const items: TodoItem[] = []
   const entries: TodoEntry[] = lines.slice(marker + 1).map((line, offset) => {
@@ -30,7 +32,7 @@ export function todoDisplayBody(body: string) {
   const todo = parseTodo(body)
   if (!todo) return body
   const lines = body.split('\n')
-  const marker = lines.findIndex(line => todoMarker.test(line))
+  const marker = withoutMarkdownCode(body).split('\n').findIndex(line => todoMarker.test(line))
   return lines.slice(0, marker + 1).join('\n').trimEnd()
 }
 

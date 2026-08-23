@@ -529,4 +529,37 @@ describe('database migrations', () => {
     expect(database.query('SELECT count(*) count FROM feed_snapshots WHERE viewer_id=999').get()).toEqual({ count: 0 })
     expect(() => database.query("UPDATE posts SET body='(deleted)' WHERE id=1").run()).not.toThrow()
   })
+
+  test('reinstalls foreign-key-safe personalized feed triggers on existing databases', () => {
+    const database = new Database(':memory:')
+    database.run('PRAGMA foreign_keys=ON')
+    runMigrations(database)
+    database.run(`INSERT INTO users(id,handle,email,password) VALUES(1,'author','author@example.com','x');
+      INSERT INTO posts(id,user_id,body) VALUES(1,1,'hello');
+      DROP TRIGGER personalized_feed_posts_update;
+      CREATE TRIGGER personalized_feed_posts_update AFTER UPDATE ON posts BEGIN
+        INSERT INTO personalized_feed_generations(viewer_id,generation)
+        WITH affected(id) AS (
+          SELECT viewer_id FROM feed_snapshots s JOIN feed_snapshot_items i ON i.snapshot_id=s.id
+          WHERE json_extract(i.payload,'$.id')=OLD.id
+        ) SELECT id,2 FROM affected WHERE id IS NOT NULL
+        ON CONFLICT(viewer_id) DO UPDATE SET generation=generation+1;
+      END;
+      PRAGMA foreign_keys=OFF;
+      INSERT INTO feed_snapshots(kind,viewer_id,generation,total_items) VALUES('for-you:stale',999,1,1);
+      INSERT INTO feed_snapshot_items(snapshot_id,position,payload)
+        VALUES(last_insert_rowid(),0,'{"id":1}');
+      PRAGMA foreign_keys=ON;
+      PRAGMA user_version=114;`)
+
+    expect(() => database.query("UPDATE posts SET body='fails' WHERE id=1").run()).toThrow()
+
+    runMigrations(database)
+
+    const sql = (database.query(`SELECT sql FROM sqlite_master
+      WHERE type='trigger' AND name='personalized_feed_posts_update'`).get() as { sql: string }).sql
+    expect(sql).toContain('JOIN users ON users.id=affected.id')
+    expect(() => database.query("UPDATE posts SET body='works' WHERE id=1").run()).not.toThrow()
+    expect(database.query('PRAGMA foreign_key_check').all()).toEqual([])
+  })
 })

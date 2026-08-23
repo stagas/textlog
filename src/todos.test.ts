@@ -19,6 +19,10 @@ describe('todos', () => {
     expect(parseTodo("my today's [#todo](http://localhost:3000/tag/todo) list\nwork")).toBeNull()
   })
 
+  test('does not activate a todo marker inside fenced code', () => {
+    expect(parseTodo('Example:\n```text\n#todo\n[ ] Buy milk\n```')).toBeNull()
+  })
+
   test('keeps the visible heading and marker out of the item list', () => {
     expect(todoDisplayBody('Weekend\n#todo\nnotes stay\n[ ] Buy milk')).toBe('Weekend\n#todo')
     expect(todoDisplayBody("my today's #todo list\nBuy milk")).toBe("my today's #todo list\nBuy milk")

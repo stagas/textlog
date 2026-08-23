@@ -1,6 +1,7 @@
 import type { Database } from 'bun:sqlite'
 import type { PollView } from './types'
 import { recordHotActivity } from './hot'
+import { withoutMarkdownCode } from './content'
 
 export const POLL_LIFETIME_MS = 24 * 60 * 60 * 1000
 
@@ -12,7 +13,7 @@ function pollsAvailable(database: Database) {
 
 export function parsePoll(body: string): PollDefinition | null {
   const lines = body.split('\n')
-  const marker = lines.findIndex(line => /(?:^|\s)#poll\s*$/i.test(line))
+  const marker = withoutMarkdownCode(body).split('\n').findIndex(line => /(?:^|\s)#poll\s*$/i.test(line))
   if (marker < 0) return null
   const markerLine = lines[marker]
   const markerStart = markerLine.toLowerCase().lastIndexOf('#poll')
@@ -26,7 +27,7 @@ export function pollDisplayBody(body: string) {
   const poll = parsePoll(body)
   if (!poll) return body
   const lines = body.split('\n')
-  const marker = lines.findIndex(line => /(?:^|\s)#poll\s*$/i.test(line))
+  const marker = withoutMarkdownCode(body).split('\n').findIndex(line => /(?:^|\s)#poll\s*$/i.test(line))
   return lines.slice(0, marker + 1).join('\n').trim()
 }
 

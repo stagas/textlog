@@ -13,6 +13,10 @@ describe('polls', () => {
     })
   })
 
+  test('does not activate a poll marker inside fenced code', () => {
+    expect(parsePoll('Example:\n```text\n#poll\nTea\nCoffee\n```')).toBeNull()
+  })
+
   test('allows one vote per user and reveals totals to that voter', () => {
     const db = new Database(':memory:')
     db.run(`PRAGMA foreign_keys=ON;

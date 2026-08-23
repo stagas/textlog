@@ -1574,6 +1574,15 @@ export const migrations: Migration[] = [
         END;`)
     },
   },
+  {
+    version: 115,
+    name: 'reinstall_safe_personalized_feed_triggers',
+    up(database) {
+      // Existing databases retain the trigger SQL originally installed by migration 112.
+      // Re-run its idempotent installer so the affected-user query is joined against users.
+      migrations.find(migration => migration.version === 112)!.up(database)
+    },
+  },
 ]
 
 export const latestMigrationVersion = migrations.at(-1)!.version

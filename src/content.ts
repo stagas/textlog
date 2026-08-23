@@ -13,7 +13,7 @@ export const MAX_HASHTAGS_PER_POST = 5
 
 const urlMatcher = new LinkifyIt({ fuzzyLink: true, fuzzyEmail: false }).tlds(tlds)
 
-function withoutMarkdownCode(body: string) {
+export function withoutMarkdownCode(body: string) {
   const characters = body.split('')
   const lines = [...body.matchAll(/.*(?:\n|$)/g)]
   let fence: { marker: string; length: number } | undefined
@@ -70,7 +70,8 @@ export function containsAsciiArt(body: string) {
 
 export function splitSpoilerBody(body: string) {
   const lines = body.split('\n')
-  const spoilerLine = lines.findIndex(line => extractHashtags(line).includes('spoiler'))
+  const searchableLines = withoutMarkdownCode(body).split('\n')
+  const spoilerLine = searchableLines.findIndex(line => extractHashtags(line).includes('spoiler'))
   return spoilerLine < 0
     ? { visible: body, hidden: '' }
     : {
