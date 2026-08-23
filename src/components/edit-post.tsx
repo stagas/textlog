@@ -25,7 +25,7 @@ export function EditPost(
         {post.parent_id && parent && (
           <div className="thread-root">
             <Post p={parent} user={user} showReplyAction={false} showOwnerActions showModerateAction tappableParent
-              returnPath={returnPath} backHref={returnPath} />
+              returnPath={returnPath} backHref={returnPath} showReadAction={false} />
           </div>
         )}
         {preview && post.parent_id && parent && <ReplyPreview parent={parent} user={user} body={body} />}

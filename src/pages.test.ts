@@ -413,6 +413,7 @@ test('editing a reply shows its parent context above the textarea', () => {
   expect(html).toContain('class="thread-root"')
   expect(html).toContain('class="panel panel-surface panel-medium replybox"')
   expect(html).toContain('Parent note')
+  expect(html).not.toContain('>read</a>')
   expect(html).toContain('class="quiet post-back-link" href="/latest?cursor=abc#post-3">back</a>')
   expect(html).toContain('name="from" value="/latest?cursor=abc#post-3"')
   expect(html).toContain('href="/post/3/delete?from=%2Flatest%3Fcursor%3Dabc%23post-3"')
