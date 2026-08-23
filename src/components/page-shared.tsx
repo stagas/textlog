@@ -109,6 +109,22 @@ function PostingFormattingHelp() {
               </dd>
             </div>
             <div>
+              <dt>Bold</dt>
+              <dd>
+                <code>
+                  <b>*</b>text<b>*</b> or <b>**</b>text<b>**</b>
+                </code>
+              </dd>
+            </div>
+            <div>
+              <dt>Underline</dt>
+              <dd>
+                <code>
+                  <b>_</b>text<b>_</b> or <b>__</b>text<b>__</b>
+                </code>
+              </dd>
+            </div>
+            <div>
               <dt>Code fences</dt>
               <dd>
                 <code>

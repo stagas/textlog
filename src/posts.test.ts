@@ -118,6 +118,14 @@ describe('post persistence', () => {
     expect(linkify('Keep \\~~literal~~')).toBe('Keep \\~~literal~~')
     expect(linkify('Keep \\~literal~')).toBe('Keep \\~literal~')
   })
+  test('renders single and double Markdown bold and underline markers in posts', () => {
+    expect(linkify('*bold* and **also bold**')).toBe('<strong>bold</strong> and <strong>also bold</strong>')
+    expect(linkify('_underlined_ and __also underlined__')).toBe('<u>underlined</u> and <u>also underlined</u>')
+    expect(linkify('*bold* _underlined_', {}, [], undefined,
+      { has_latex: 0, has_links: 0, has_code: 0 }))
+      .toBe('<strong>bold</strong> <u>underlined</u>')
+    expect(linkify('\\*literal* and \\_literal_')).toBe('\\*literal* and \\_literal_')
+  })
   test('keeps ASCII-art markup literal while linking tags and handles', () => {
     const body = '[eye](https://example.com) $x^2$ <nose> @Reader #ascii example.org/art'
     expect(linkify(body, { reader: 'Reader bio' })).toBe(

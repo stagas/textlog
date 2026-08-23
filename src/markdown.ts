@@ -22,6 +22,12 @@ export function sanitizedMarkdownHtml(body: string) {
   // feeds by rendering its alt text as a link instead of sanitizing it away.
   renderer.image = ({ href, title, text }) =>
     `<a href="${html(href)}"${title ? ` title="${html(title)}"` : ''}>${html(text || href)}</a>`
+  renderer.em = token => token.raw.startsWith('_')
+    ? `<u>${renderer.parser.parseInline(token.tokens)}</u>`
+    : `<strong>${renderer.parser.parseInline(token.tokens)}</strong>`
+  renderer.strong = token => token.raw.startsWith('__')
+    ? `<u>${renderer.parser.parseInline(token.tokens)}</u>`
+    : `<strong>${renderer.parser.parseInline(token.tokens)}</strong>`
   const rendered = marked.parse(displayPostBody(body), { async: false, breaks: true, gfm: true, renderer })
   return sanitizeHtml(rendered, {
     allowedTags: [
@@ -49,6 +55,7 @@ export function sanitizedMarkdownHtml(body: string) {
       'th',
       'thead',
       'tr',
+      'u',
       'ul',
     ],
     allowedAttributes: { a: ['href', 'title'] },

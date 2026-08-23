@@ -1940,6 +1940,10 @@ nav form {
   text-decoration: line-through;
 }
 
+.post-body u {
+  text-decoration: underline;
+}
+
 .post-spoiler {
   margin-top: var(--space-1);
 }

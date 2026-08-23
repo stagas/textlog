@@ -238,7 +238,8 @@ export function markdownUrl(destination: string) {
 type LinkToken = {
   index: number
   lastIndex: number
-  kind: 'code' | 'code-fence' | 'latex-fence' | 'math' | 'markdown' | 'strikethrough' | 'url' | 'reference'
+  kind: 'bold' | 'code' | 'code-fence' | 'latex-fence' | 'math' | 'markdown' | 'strikethrough' | 'underline'
+    | 'url' | 'reference'
   raw: string
   url?: string
   label?: string
@@ -330,6 +331,17 @@ export function linkTokens(body: string, flags?: PostContentFlags): LinkToken[] 
         raw: match[0], label: match[2] })
     }
   }
+  for (const [marker, kind] of [['*', 'bold'], ['_', 'underline']] as const) {
+    const escapedMarker = marker === '*' ? '\\*' : '_'
+    const expression = new RegExp(`(?<!${escapedMarker})(${escapedMarker}{1,2})(?!${escapedMarker})`
+      + `([^${escapedMarker}\\r\\n]*?\\S[^${escapedMarker}\\r\\n]*?)\\1(?!${escapedMarker})`, 'g')
+    for (const match of body.matchAll(expression)) {
+      if (!escapedAt(body, match.index)) {
+        tokens.push({ index: match.index, lastIndex: match.index + match[0].length, kind,
+          raw: match[0], label: match[2] })
+      }
+    }
+  }
   if (!flags || flags.has_links) {
     for (const match of body.matchAll(/!?\[((?:\\[\[\]]|[^\]\r\n])+)\]\(([^\s<>")]+)\)/gi)) {
       const url = markdownUrl(match[2])
@@ -360,7 +372,7 @@ export function linkTokens(body: string, flags?: PostContentFlags): LinkToken[] 
     }
   }
   const priority = { 'code-fence': 0, 'latex-fence': 0, code: 1, math: 2, markdown: 3, strikethrough: 4,
-    url: 5, reference: 6 }
+    bold: 4, underline: 4, url: 5, reference: 6 }
   return tokens.sort((a, b) => a.index - b.index || priority[a.kind] - priority[b.kind])
 }
 
@@ -492,7 +504,7 @@ export function linkify(body: string, mentionBios: Record<string, string> = {}, 
   if (containsAsciiArt(body)) {
     return linkifyAsciiReferences(body, mentionBios, appUrl, navigationQuery, hashtagCounts, mentionNoteCounts, popover)
   }
-  if (flags && !flags.has_latex && !flags.has_links && !flags.has_code && !body.includes('~')) {
+  if (flags && !flags.has_latex && !flags.has_links && !flags.has_code && !/[~*_]/.test(body)) {
     return highlighted(body, highlightTerms)
   }
   let html = ''
@@ -522,6 +534,12 @@ export function linkify(body: string, mentionBios: Record<string, string> = {}, 
     }
     else if (match.kind === 'strikethrough') {
       html += `<del>${renderedText(match.label!, highlightTerms)}</del>`
+    }
+    else if (match.kind === 'bold') {
+      html += `<strong>${renderedText(match.label!, highlightTerms)}</strong>`
+    }
+    else if (match.kind === 'underline') {
+      html += `<u>${renderedText(match.label!, highlightTerms)}</u>`
     }
     else if (match.kind === 'url') {
       const url = match.url!
