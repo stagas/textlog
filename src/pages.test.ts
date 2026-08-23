@@ -505,6 +505,8 @@ test('explore renders tag toggles above a full-width people section', () => {
   expect(html).toContain('<section class="explore-people" id="explore-people"><h2>People to follow</h2>')
   expect(html).toContain('href="/explore?tagsPage=2#explore-tags"')
   expect(html).toContain('href="/explore?peoplePage=2#explore-people"')
+  expect(html.indexOf('aria-label="Tags pagination"')).toBeGreaterThan(html.indexOf('class="explore-tag-chips"'))
+  expect(html.indexOf('aria-label="People pagination"')).toBeLessThan(html.indexOf('class="people"'))
 })
 
 test('search post replies return to the originating result and page', () => {
@@ -1671,24 +1673,27 @@ test('An empty following tab offers its owner a way to explore', () => {
   expect(html).toContain('<a class="button" href="/explore">explore tags &amp; people</a>')
 })
 
-test('Following and followers paginate every 10 people', () => {
+test('Following and followers paginate every 8 people', () => {
   const profile = { id: 1, handle: 'reader', email: 'reader@example.com', bio: '' }
+  const person = { id: 2, handle: 'writer', email: 'writer@example.com', bio: '', posts: 1,
+    viewerFollowing: false }
   for (const kind of ['following', 'followers'] as const) {
     const html = renderToStaticMarkup(React.createElement(Connections, {
       user: null,
       profile,
-      people: [],
+      people: [person],
       kind,
       page: 1,
-      total: 11,
+      total: 9,
       noteCount: 0,
-      followerCount: 11,
-      followingCount: 11,
+      followerCount: 9,
+      followingCount: 9,
       followingTagCount: 0,
       following: false,
     }))
 
     expect(html).toContain(`href="/u/reader?tab=${kind}&amp;page=2#connections-people-heading"`)
+    expect(html.indexOf('aria-label="People pagination"')).toBeLessThan(html.indexOf('connection-people'))
   }
 })
 
