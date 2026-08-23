@@ -2,7 +2,10 @@ import type { Database } from 'bun:sqlite'
 import { extractHashtags, extractMentions } from './content'
 import { encodeHotCursor, getHotPosts, type HotCursor, hotCursor } from './hot'
 import { searchExpression } from './search'
-import type { ApiPost } from './types'
+import { decodeHtmlEntities } from './link-preview'
+import { getImageUrl, isImageKey } from './image-storage'
+import { loadPolls } from './polls'
+import type { ApiPost, LinkPreview } from './types'
 export type { ApiPost } from './types'
 
 export const API_DEFAULT_LIMIT = 20
@@ -119,25 +122,71 @@ function enrichApiRows<T extends Omit<ApiPostRow, 'reply_count' | 'top_id'>>(dat
   return withTopIds(database, withReplyCounts(database, rows))
 }
 
-function serializePostsWithParents(database: Database, rows: ApiPostRow[], origin: string): ApiPost[] {
+function apiExtras(database: Database, postIds: number[], viewerId: number) {
+  const previews = new Map<number, Record<string, LinkPreview>>()
+  if (postIds.length && database.query(
+    "SELECT 1 FROM sqlite_master WHERE type='table' AND name='post_link_previews'",
+  ).get()) {
+    const rows = database.query(`SELECT post_id,url,image_url,title,description,site_name,image_width,image_height
+      FROM post_link_previews WHERE post_id IN (${postIds.map(() => '?').join(',')})`).all(...postIds) as Array<{
+        post_id: number; url: string; image_url: string; title: string | null; description: string | null;
+        site_name: string | null; image_width: number | null; image_height: number | null
+      }>
+    for (const row of rows) {
+      const values = previews.get(row.post_id) || {}
+      values[row.url] = { imageUrl: isImageKey(row.image_url) ? getImageUrl(row.image_url) : row.image_url,
+        title: row.title ? decodeHtmlEntities(row.title) : undefined,
+        description: row.description ? decodeHtmlEntities(row.description) : undefined,
+        siteName: row.site_name ? decodeHtmlEntities(row.site_name) : undefined,
+        imageWidth: row.image_width || undefined, imageHeight: row.image_height || undefined }
+      previews.set(row.post_id, values)
+    }
+  }
+  return { previews, polls: loadPolls(database, postIds, viewerId) }
+}
+
+function withApiExtras(post: ApiPost, extras: ReturnType<typeof apiExtras>, id: number): ApiPost {
+  const poll = extras.polls.get(id)
+  const reveal = !!poll && (poll.expired || poll.viewerVoted)
+  return { ...post, link_previews: extras.previews.get(id) || {}, poll: poll ? {
+    options: poll.options.map(option => ({ id: option.id, label: option.label,
+      votes: reveal ? option.votes : null, selected: option.selected })),
+    total_votes: reveal ? poll.totalVotes : null, expired: poll.expired,
+    expires_at: new Date(poll.expiresAt).toISOString(), viewer_voted: poll.viewerVoted,
+  } : null }
+}
+
+function serializePostsWithParents(database: Database, rows: ApiPostRow[], origin: string, viewerId = -1): ApiPost[] {
   const parentIds = [...new Set(rows.flatMap(row => row.parent_id === null ? [] : [row.parent_id]))]
   let parentsById = new Map<number, ApiPost>()
   if (parentIds.length) {
     const placeholders = parentIds.map(() => '?').join(',')
+    const visibility = viewerId < 0 ? '' : `AND NOT EXISTS (SELECT 1 FROM blocks b WHERE
+      (b.blocker_id=? AND b.blocked_id=p.user_id) OR (b.blocker_id=p.user_id AND b.blocked_id=?))
+      AND NOT EXISTS (SELECT 1 FROM post_hashtags ph JOIN blocked_hashtags bh ON bh.tag=ph.tag
+        WHERE ph.post_id=p.id AND bh.user_id=?)`
     const parentRows = database.query(`${postSelect} WHERE p.id IN (${placeholders})
-      AND p.deleted_at IS NULL AND u.deleted_at IS NULL`).all(...parentIds) as ApiPostRow[]
-    const parents = enrichApiRows(database, parentRows).map(row => serializePost(row, origin))
+      AND p.deleted_at IS NULL AND u.deleted_at IS NULL ${visibility}`)
+      .all(...parentIds, ...(viewerId < 0 ? [] : [viewerId, viewerId, viewerId])) as ApiPostRow[]
+    const enrichedParents = enrichApiRows(database, parentRows)
+    const parentExtras = apiExtras(database, enrichedParents.map(row => row.id), viewerId)
+    const parents = enrichedParents.map(row => withApiExtras(serializePost(row, origin), parentExtras, row.id))
     parentsById = new Map(parents.map(parent => [parent.id, parent]))
   }
-  return rows.map(row => ({ ...serializePost(row, origin),
+  const extras = apiExtras(database, rows.map(row => row.id), viewerId)
+  return rows.map(row => ({ ...withApiExtras(serializePost(row, origin), extras, row.id),
     parent: row.parent_id === null ? null : parentsById.get(row.parent_id) || null })
   )
 }
 
-export function apiPost(database: Database, id: number, origin: string) {
-  const row = database.query(`${postSelect} WHERE p.id=? AND p.deleted_at IS NULL AND u.deleted_at IS NULL`)
-    .get(id) as ApiPostRow | null
-  return row ? serializePostsWithParents(database, enrichApiRows(database, [row]), origin)[0] : null
+export function apiPost(database: Database, id: number, origin: string, viewerId = -1) {
+  const visibility = viewerId < 0 ? '' : `AND NOT EXISTS (SELECT 1 FROM blocks b WHERE
+    (b.blocker_id=? AND b.blocked_id=p.user_id) OR (b.blocker_id=p.user_id AND b.blocked_id=?))
+    AND NOT EXISTS (SELECT 1 FROM post_hashtags ph JOIN blocked_hashtags bh ON bh.tag=ph.tag
+      WHERE ph.post_id=p.id AND bh.user_id=?)`
+  const row = database.query(`${postSelect} WHERE p.id=? AND p.deleted_at IS NULL AND u.deleted_at IS NULL
+    ${visibility}`).get(id, ...(viewerId < 0 ? [] : [viewerId, viewerId, viewerId])) as ApiPostRow | null
+  return row ? serializePostsWithParents(database, enrichApiRows(database, [row]), origin, viewerId)[0] : null
 }
 
 export function apiPosts(database: Database, origin: string, options: {
@@ -148,9 +197,18 @@ export function apiPosts(database: Database, origin: string, options: {
   tag?: string
   repliesOnly?: boolean
   topLevelOnly?: boolean
+  viewerId?: number
 }) {
   const filters = ['p.deleted_at IS NULL', 'u.deleted_at IS NULL']
   const parameters: Array<string | number> = []
+  if ((options.viewerId ?? -1) >= 0) {
+    filters.push(`NOT EXISTS (SELECT 1 FROM blocks b WHERE
+      (b.blocker_id=? AND b.blocked_id=p.user_id) OR (b.blocker_id=p.user_id AND b.blocked_id=?))`)
+    parameters.push(options.viewerId!, options.viewerId!)
+    filters.push(`NOT EXISTS (SELECT 1 FROM post_hashtags ph JOIN blocked_hashtags bh ON bh.tag=ph.tag
+      WHERE ph.post_id=p.id AND bh.user_id=?)`)
+    parameters.push(options.viewerId!)
+  }
   if (options.repliesOnly) filters.push('p.parent_id IS NOT NULL')
   if (options.topLevelOnly) filters.push('p.parent_id IS NULL')
   if (options.before !== null) {
@@ -174,7 +232,7 @@ export function apiPosts(database: Database, origin: string, options: {
   const hasMore = rows.length > options.limit
   const pageRows = enrichApiRows(database, rows.slice(0, options.limit))
   return {
-    data: serializePostsWithParents(database, pageRows, origin),
+    data: serializePostsWithParents(database, pageRows, origin, options.viewerId ?? -1),
     pagination: { next_cursor: hasMore ? encodeCursor(pageRows[pageRows.length - 1].id) : null },
   }
 }
@@ -183,6 +241,7 @@ export function apiReplies(database: Database, origin: string, parentId: number,
   limit: number
   before: number | null
   depth: number
+  viewerId?: number
 }) {
   const beforeFilter = options.before === null ? '' : 'AND thread.id < ?'
   const parameters = options.before === null
@@ -203,34 +262,41 @@ export function apiReplies(database: Database, origin: string, parentId: number,
   const selected = rows.slice(0, options.limit)
   const pageRows = enrichApiRows(database, selected)
   return {
-    data: serializePostsWithParents(database, pageRows, origin)
+    data: serializePostsWithParents(database, pageRows, origin, options.viewerId ?? -1)
       .map((post, index) => ({ ...post, depth: pageRows[index].depth })),
     pagination: { next_cursor: hasMore ? encodeCursor(pageRows[pageRows.length - 1].id) : null },
   }
 }
 
-export function apiHotPosts(database: Database, origin: string, limit: number, cursor: HotCursor | null) {
+export function apiHotPosts(database: Database, origin: string, limit: number, cursor: HotCursor | null,
+  viewerId = -1) {
   const asOf = cursor?.asOf || new Date().toISOString()
-  const rows = getHotPosts(database, limit + 1, cursor, asOf, -1, true)
+  const rows = getHotPosts(database, limit + 1, cursor, asOf, viewerId, true)
   const hasMore = rows.length > limit
   const selected = rows.slice(0, limit)
   const pageRows = enrichApiRows(database, selected)
   return {
-    data: serializePostsWithParents(database, pageRows, origin),
+    data: serializePostsWithParents(database, pageRows, origin, viewerId),
     pagination: { next_cursor: hasMore ? encodeHotCursor(hotCursor(rows[limit - 1], asOf)) : null },
   }
 }
 
-export function apiSearchPosts(database: Database, origin: string, query: string, limit: number, offset = 0) {
+export function apiSearchPosts(database: Database, origin: string, query: string, limit: number, offset = 0,
+  viewerId = -1) {
   const expression = searchExpression(query)
+  const visibility = viewerId < 0 ? '' : `AND NOT EXISTS (SELECT 1 FROM blocks b WHERE
+    (b.blocker_id=? AND b.blocked_id=p.user_id) OR (b.blocker_id=p.user_id AND b.blocked_id=?))
+    AND NOT EXISTS (SELECT 1 FROM post_hashtags ph JOIN blocked_hashtags bh ON bh.tag=ph.tag
+      WHERE ph.post_id=p.id AND bh.user_id=?)`
+  const visibilityParameters = viewerId < 0 ? [] : [viewerId, viewerId, viewerId]
   const rows = database.query(`${postSelect} JOIN post_search ON post_search.rowid=p.id
     WHERE post_search MATCH ? AND p.deleted_at IS NULL AND u.deleted_at IS NULL
-    ORDER BY bm25(post_search),p.id DESC LIMIT ? OFFSET ?`)
-    .all(expression, limit + 1, offset) as ApiPostRow[]
+    ${visibility} ORDER BY bm25(post_search),p.id DESC LIMIT ? OFFSET ?`)
+    .all(expression, ...visibilityParameters, limit + 1, offset) as ApiPostRow[]
   const hasMore = rows.length > limit
   const pageRows = enrichApiRows(database, rows.slice(0, limit))
   return {
-    data: serializePostsWithParents(database, pageRows, origin),
+    data: serializePostsWithParents(database, pageRows, origin, viewerId),
     pagination: { next_cursor: hasMore ? encodeCursor(offset + limit) : null },
   }
 }

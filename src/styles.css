@@ -1032,6 +1032,69 @@ nav form {
   margin-top: var(--space-6);
 }
 
+.api-docs-section {
+  border-top: 1px solid var(--soft);
+}
+
+.api-docs-section:first-of-type {
+  margin-top: var(--space-6);
+}
+
+.api-docs-section:last-of-type {
+  border-bottom: 1px solid var(--soft);
+}
+
+.api-docs-section > summary {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  min-height: 52px;
+  padding: var(--space-3) 0;
+  color: var(--ink);
+  cursor: pointer;
+  list-style: none;
+  user-select: none;
+}
+
+.api-docs-section > summary::-webkit-details-marker {
+  display: none;
+}
+
+.api-docs-section > summary::before {
+  content: "";
+  flex: 0 0 auto;
+  width: 0;
+  height: 0;
+  border-top: 5px solid transparent;
+  border-bottom: 5px solid transparent;
+  border-left: 7px solid var(--accent);
+  transition: transform .15s ease;
+}
+
+.api-docs-section[open] > summary::before {
+  transform: rotate(90deg);
+}
+
+.api-docs .api-docs-section > summary h2 {
+  margin: 0;
+  color: inherit;
+  font-size: 0.9375rem;
+}
+
+.api-docs-section > summary:hover,
+.api-docs-section > summary:focus-visible {
+  color: var(--accent-dark);
+}
+
+.api-docs-section > summary:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
+}
+
+.api-docs-section[open] {
+  padding-bottom: var(--space-5);
+}
+
 .api-query-param {
   color: var(--ink);
 }

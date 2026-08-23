@@ -24,9 +24,12 @@ function fixture(now?: () => number) {
     CREATE TABLE post_mentions (post_id INTEGER NOT NULL,user_id INTEGER NOT NULL);
     CREATE TABLE hashtag_follows (user_id INTEGER NOT NULL,tag TEXT NOT NULL,created_at TEXT);
     CREATE TABLE blocked_hashtags (user_id INTEGER NOT NULL,tag TEXT NOT NULL);
+    CREATE TABLE post_link_previews (post_id INTEGER NOT NULL,url TEXT NOT NULL,image_url TEXT NOT NULL,title TEXT,
+      description TEXT,site_name TEXT,image_width INTEGER,image_height INTEGER);
     CREATE TABLE for_you_reads (user_id INTEGER NOT NULL,event_key TEXT NOT NULL);
     CREATE TABLE to_me_reads (user_id INTEGER NOT NULL,event_key TEXT NOT NULL);
     CREATE TABLE activity_reads (user_id INTEGER NOT NULL,event_key TEXT NOT NULL);
+    CREATE TABLE latest_reads (user_id INTEGER NOT NULL,post_id INTEGER NOT NULL,PRIMARY KEY(user_id,post_id));
     CREATE TABLE sessions (token_hash TEXT PRIMARY KEY,user_id INTEGER NOT NULL,expires_at INTEGER NOT NULL,
       created_at INTEGER NOT NULL,user_agent TEXT NOT NULL,last_used_at INTEGER NOT NULL);
     CREATE TABLE auth_rate_limits (id INTEGER PRIMARY KEY AUTOINCREMENT,scope TEXT NOT NULL,key_hash TEXT NOT NULL,
@@ -49,6 +52,8 @@ function fixture(now?: () => number) {
       (5,1,NULL,'deleted post','2026-08-03 14:00:00');
     UPDATE posts SET deleted_at='2026-08-03 15:00:00' WHERE id=5;
     INSERT INTO post_hashtags(post_id,tag) VALUES(1,'textlog');
+    INSERT INTO post_link_previews(post_id,url,image_url,title) VALUES
+      (1,'https://example.com','https://example.com/image.jpg','Example');
     INSERT INTO follows(follower_id,following_id) VALUES(2,1);
     INSERT INTO handle_history(handle,user_id) VALUES('oldalice',1);
     INSERT INTO post_hot SELECT id,0,0,0,created_at,created_at FROM posts;
@@ -81,6 +86,8 @@ describe('public API', () => {
     expect(payload.data.find((post: any) => post.id === 2).parent).toMatchObject({ id: 1 })
     expect(payload.data.find((post: any) => post.id === 2).parent.parent).toBeUndefined()
     expect(payload.data.find((post: any) => post.id === 1).parent).toBeNull()
+    expect(payload.data.find((post: any) => post.id === 1).link_previews['https://example.com'])
+      .toMatchObject({ imageUrl: 'https://example.com/image.jpg', title: 'Example' })
     expect(payload.data[2]).toMatchObject({
       top_id: null,
       body: 'hello #textlog @bob',
@@ -121,6 +128,29 @@ describe('public API', () => {
     expect(second.pagination.next_cursor).toBeNull()
     expect((await request(app, '/api/v1/feeds/latest?limit=101')).status).toBe(400)
     expect((await request(app, '/api/v1/feeds/latest?cursor=broken')).status).toBe(400)
+  })
+
+  test('returns latest unread state and marks selected or all posts read', async () => {
+    const { app, database } = fixture()
+    const token = 'latest-token'
+    const now = Date.now()
+    database.query(`INSERT INTO sessions(token_hash,user_id,expires_at,created_at,user_agent,last_used_at)
+      VALUES(?,?,?,?,?,?)`).run(sessionHash(token), 1, now + 60_000, now, 'test', now)
+    const headers = { authorization: `Bearer ${token}` }
+    const initial = await (await request(app, '/api/v1/feeds/latest', { headers })).json() as any
+    expect(initial).toMatchObject({ has_unread: true, unread_count: 3 })
+    expect(initial.data.every((post: any) => post.unread)).toBe(true)
+    const selected = await request(app, '/api/v1/feeds/latest/read', { method: 'POST', headers: {
+      ...headers, 'content-type': 'application/json',
+    }, body: JSON.stringify({ post_ids: [3] }) })
+    expect(await selected.json()).toEqual({ data: { read: 1 } })
+    const afterSelected = await (await request(app, '/api/v1/feeds/latest', { headers })).json() as any
+    expect(afterSelected).toMatchObject({ has_unread: true, unread_count: 2 })
+    expect(afterSelected.data.find((post: any) => post.id === 3).unread).toBe(false)
+    const all = await request(app, '/api/v1/feeds/latest/read-all', { method: 'POST', headers })
+    expect(await all.json()).toEqual({ data: { read_all: true, read: 2 } })
+    const completed = await (await request(app, '/api/v1/feeds/latest', { headers })).json() as any
+    expect(completed).toMatchObject({ has_unread: false, unread_count: 0 })
   })
 
   test('requires authentication for personalized activity and returns the web activity shape', async () => {
@@ -305,6 +335,26 @@ describe('public API', () => {
     expect((await request(app, '/api/v1/tags/invalid-tag/followers')).status).toBe(400)
   })
 
+  test('discovers people and tags with independent cursors and authenticated state', async () => {
+    const { app, database } = fixture()
+    const token = 'explore-token'
+    const now = Date.now()
+    database.query(`INSERT INTO sessions(token_hash,user_id,expires_at,created_at,user_agent,last_used_at)
+      VALUES(?,?,?,?,?,?)`).run(sessionHash(token), 1, now + 60_000, now, 'test', now)
+    database.run(`UPDATE users SET handle_chosen_at='2026-08-01' WHERE id IN (1,2);
+      INSERT INTO follows(follower_id,following_id,created_at) VALUES(1,2,'2026-08-03');
+      INSERT INTO hashtag_follows(user_id,tag,created_at) VALUES(1,'textlog','2026-08-03');
+      INSERT INTO posts(id,user_id,parent_id,body,created_at) VALUES(6,2,NULL,'fresh #textlog',CURRENT_TIMESTAMP);
+      INSERT INTO post_hashtags(post_id,tag) VALUES(6,'textlog');`)
+    const anonymous = await (await request(app, '/api/v1/explore?people_limit=1&tags_limit=1')).json() as any
+    expect(anonymous).toHaveProperty('pagination.people_next_cursor')
+    expect(anonymous.data.tags[0]).toMatchObject({ tag: 'textlog' })
+    const authenticated = await (await request(app, '/api/v1/explore?people_limit=1&tags_limit=1', {
+      headers: { authorization: `Bearer ${token}` },
+    })).json() as any
+    expect(authenticated.data.tags[0]).toMatchObject({ tag: 'textlog', following: true })
+  })
+
   test('reports aggregate descendant counts without embedding reply bodies', async () => {
     const { app, database } = fixture()
     database.run(`INSERT INTO posts(id,user_id,parent_id,body,created_at) VALUES
@@ -368,7 +418,7 @@ describe('public API', () => {
     expect(rss.headers.get('content-type')).toBe('application/rss+xml; charset=utf-8')
     expect(rss.headers.get('access-control-allow-origin')).toBe('*')
     expect(spec.openapi).toBe('3.1.0')
-    expect(Object.keys(spec.paths)).toHaveLength(35)
+    expect(Object.keys(spec.paths)).toHaveLength(44)
     expect(spec.paths['/activities/for-you'].get.responses['401']).toBeDefined()
     expect(spec.paths['/activities/to-me'].get.responses['401']).toBeDefined()
     expect(spec.paths['/users/{handle}/blocks'].get.responses['403']).toBeDefined()
@@ -383,8 +433,12 @@ describe('public API', () => {
     expect(spec.paths['/users/{handle}/notes'].get.summary).toBe('User\'s latest notes')
     expect(spec.paths['/users/{handle}/replies'].get.parameters.map((parameter: any) => parameter.name))
       .toEqual(['handle', 'limit', 'cursor'])
-    expect(spec.paths['/search'].get.security).toEqual([])
+    expect(spec.paths['/search'].get.security).toEqual([{}, { bearerAuth: [] }])
     expect(spec.paths['/feeds/latest.{format}'].get.parameters[0].schema.enum).toEqual(['rss', 'atom'])
+    expect(spec.paths['/feeds/latest'].get['x-root-aliases']).toEqual(['/latest.json'])
+    expect(spec.paths['/feeds/hot'].get['x-root-aliases']).toEqual(['/hot.json'])
+    expect(spec.paths['/feeds/latest.{format}'].get['x-root-aliases']).toEqual(['/latest.rss', '/latest.atom'])
+    expect(spec.paths['/feeds/hot.{format}'].get['x-root-aliases']).toEqual(['/hot.rss', '/hot.atom'])
     const repliesOperation = spec.paths['/posts/{id}/replies'].get
     expect(repliesOperation.parameters.find((parameter: any) => parameter.name === 'depth').schema)
       .toMatchObject({ type: 'integer', minimum: 1, maximum: 20, default: 1 })
@@ -400,6 +454,40 @@ describe('public API', () => {
     expect(spec.components.schemas.User.required).toContain('replies_count')
     expect(spec.paths['/users/{handle}'].get.responses['200'].content['application/json'].schema.properties.data.$ref)
       .toBe('#/components/schemas/User')
+    expect(spec.security).toEqual([])
+    for (const path of ['/feeds/latest/read', '/feeds/latest/read-all', '/drafts', '/drafts/{id}',
+      '/drafts/{id}/publish', '/posts/{id}/poll/votes', '/tags/{tag}/follow', '/tags/{tag}/block']) {
+      for (const operation of Object.values(spec.paths[path]) as any[]) {
+        expect(operation.security).toEqual([{ bearerAuth: [] }])
+      }
+    }
+    for (const [path, item] of Object.entries(spec.paths) as Array<[string, any]>) {
+      const variables = [...path.matchAll(/\{([^}]+)\}/g)].map(match => match[1])
+      for (const [method, operation] of Object.entries(item) as Array<[string, any]>) {
+        expect(operation.summary, `${method.toUpperCase()} ${path} needs a summary`).toBeTruthy()
+        expect(operation.responses, `${method.toUpperCase()} ${path} needs responses`).toBeTruthy()
+        const pathParameters = (operation.parameters || []).filter((parameter: any) => parameter.in === 'path')
+        expect(pathParameters.map((parameter: any) => parameter.name).sort(),
+          `${method.toUpperCase()} ${path} must document every path parameter`).toEqual(variables.sort())
+      }
+    }
+    for (const [path, method] of [['/auth/request', 'post'], ['/auth/verify', 'post'], ['/me', 'patch'],
+      ['/posts', 'post'], ['/posts/{id}', 'patch'], ['/posts/{id}/report', 'post'],
+      ['/posts/{id}/poll/votes', 'post'], ['/drafts', 'post'], ['/drafts/{id}', 'patch']] as const) {
+      expect(spec.paths[path][method].requestBody, `${method.toUpperCase()} ${path} needs a JSON request body`)
+        .toBeTruthy()
+    }
+    const refs: string[] = []
+    const collectRefs = (value: unknown) => {
+      if (!value || typeof value !== 'object') return
+      if ('$ref' in value && typeof (value as any).$ref === 'string') refs.push((value as any).$ref)
+      for (const child of Object.values(value)) collectRefs(child)
+    }
+    collectRefs(spec)
+    for (const ref of refs) {
+      expect(ref.startsWith('#/components/schemas/')).toBe(true)
+      expect(spec.components.schemas[ref.slice('#/components/schemas/'.length)], `Missing schema for ${ref}`).toBeTruthy()
+    }
     expect(mutation.status).toBe(405)
     expect(mutation.headers.get('allow')).toBe('GET, HEAD, OPTIONS')
     const missing = await request(app, '/api/v1/unknown')

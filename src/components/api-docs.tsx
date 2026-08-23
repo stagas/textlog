@@ -20,6 +20,15 @@ function CodeBlock({ language, children }: { language: 'bash' | 'html' | 'json';
   )
 }
 
+function ApiSection({ title, id, children }: { title: string; id?: string; children: ReactNode }) {
+  return (
+    <details className="api-docs-section">
+      <summary><h2 id={id}>{title}</h2></summary>
+      {children}
+    </details>
+  )
+}
+
 const endpoints: ReadonlyArray<readonly [string, string, ReactNode, boolean?]> = [
   ['POST', '/auth/request', 'Email a sign-in code to an existing account.'],
   ['POST', '/auth/verify', 'Exchange the code for a session token.'],
@@ -39,6 +48,13 @@ const endpoints: ReadonlyArray<readonly [string, string, ReactNode, boolean?]> =
     to detect omitted descendants. Top-level posts have a null <code>top_id</code>.
   </>],
   ['POST', '/posts/:id/report', 'Report a post.', true],
+  ['POST', '/posts/:id/poll/votes', 'Vote in a poll. Results appear after voting or expiration.', true],
+  ['GET', '/drafts', 'List your drafts.', true],
+  ['POST', '/drafts', 'Create a post or reply draft.', true],
+  ['GET', '/drafts/:id', 'Get one of your drafts.', true],
+  ['PATCH', '/drafts/:id', 'Update one of your drafts.', true],
+  ['DELETE', '/drafts/:id', 'Delete one of your drafts.', true],
+  ['POST', '/drafts/:id/publish', 'Atomically publish and remove a draft.', true],
   ['GET', '/users/:handle', <>
     Get a public profile and relationship totals. Your authenticated profile also includes private blocked-user and
     blocked-tag counts.
@@ -57,7 +73,27 @@ const endpoints: ReadonlyArray<readonly [string, string, ReactNode, boolean?]> =
   ['DELETE', '/users/:handle/block', 'Unblock a user.', true],
   ['GET', '/users/:handle/blocks', 'List accounts you have blocked. The handle must be your own.', true],
   ['GET', '/feeds/latest', 'Get the latest public posts and replies.'],
+  ['GET', '/latest.json', <>
+    Root-level JSON alias of <code>/api/v1/feeds/latest</code>.
+  </>],
+  ['GET', '/latest.rss', <>
+    Root-level RSS alias of <code>/api/v1/feeds/latest.rss</code>.
+  </>],
+  ['GET', '/latest.atom', <>
+    Root-level Atom alias of <code>/api/v1/feeds/latest.atom</code>.
+  </>],
+  ['POST', '/feeds/latest/read', 'Mark selected latest-feed posts as read using post_ids.', true],
+  ['POST', '/feeds/latest/read-all', 'Mark every visible latest-feed post as read.', true],
   ['GET', '/feeds/hot', 'Get posts ranked by recent activity and replies.'],
+  ['GET', '/hot.json', <>
+    Root-level JSON alias of <code>/api/v1/feeds/hot</code>.
+  </>],
+  ['GET', '/hot.rss', <>
+    Root-level RSS alias of <code>/api/v1/feeds/hot.rss</code>.
+  </>],
+  ['GET', '/hot.atom', <>
+    Root-level Atom alias of <code>/api/v1/feeds/hot.atom</code>.
+  </>],
   ['GET', '/activities/for-you', 'Get activity from followed people and tags, plus activity directed to you.', true],
   ['POST', '/activities/for-you/read', 'Mark selected activities as read using their activity_ids.', true],
   ['POST', '/activities/for-you/read-all', 'Mark every for-you activity as read.', true],
@@ -67,6 +103,11 @@ const endpoints: ReadonlyArray<readonly [string, string, ReactNode, boolean?]> =
   ['GET', '/tags/:tag', 'Get hashtag details and post and follower counts.'],
   ['GET', '/tags/:tag/posts', 'Get the latest posts carrying a hashtag.'],
   ['GET', '/tags/:tag/followers', 'List accounts following a hashtag.'],
+  ['POST', '/tags/:tag/follow', 'Follow a hashtag.', true],
+  ['DELETE', '/tags/:tag/follow', 'Unfollow a hashtag.', true],
+  ['POST', '/tags/:tag/block', 'Block a hashtag.', true],
+  ['DELETE', '/tags/:tag/block', 'Unblock a hashtag.', true],
+  ['GET', '/explore', 'Discover suggested people and trending hashtags.'],
   ['GET', '/search?q=:query', 'Search public posts by text.'],
   ['GET', '/firehose', 'Stream new posts as server-sent events.'],
 ] as const
@@ -90,14 +131,15 @@ export function ApiDocs({ user }: { user: User | null }) {
           account or API key, except personalized activity. Personalized activity and writing use a bearer token.
         </p>
 
-        <h2>Base URL</h2>
+        <ApiSection title="Base URL">
         <pre><code>{origin}/api/v1</code></pre>
         <p>
           All API endpoints allow cross-origin requests. The machine-readable specification is at{' '}
           <a href="/api/openapi.json">/api/openapi.json</a>.
         </p>
+        </ApiSection>
 
-        <h2>Endpoints</h2>
+        <ApiSection title="Endpoints">
         <dl className="api-endpoints">
           {endpoints.map(([method, path, description, authentication]) => (
             <div className="api-endpoint" key={`${method}:${path}`}>
@@ -125,8 +167,9 @@ export function ApiDocs({ user }: { user: User | null }) {
           </code>{' '}
           authentication bearer token required
         </p>
+        </ApiSection>
 
-        <h2>RSS and Atom</h2>
+        <ApiSection title="RSS and Atom">
         <p>
           Feed collections are also available as RSS 2.0 or Atom 1.0. Add <code>.rss</code> or <code>.atom</code>{' '}
           to the collection address and enter it manually in a feed reader.
@@ -135,6 +178,13 @@ export function ApiDocs({ user }: { user: User | null }) {
 /feeds/hot.atom
 /users/:handle/posts.rss
 /tags/:tag/posts.atom`}</code></pre>
+        <p>The latest and hot feeds also have shorter root-level aliases:</p>
+        <pre><code>{`/latest.json
+/latest.rss
+/latest.atom
+/hot.json
+/hot.rss
+/hot.atom`}</code></pre>
         <p>
           Signed-in users can generate private, personalized For You RSS and Atom URLs under <strong>Feed key</strong>
           {' '}
@@ -144,8 +194,9 @@ export function ApiDocs({ user }: { user: User | null }) {
         </p>
         <pre><code>{`/feeds/for-you/:key.rss
 /feeds/for-you/:key.atom`}</code></pre>
+        </ApiSection>
 
-        <h2 id="public-archive">Public data archive</h2>
+        <ApiSection title="Public data archive" id="public-archive">
         <p>
           Download the latest daily, read-only snapshot as{' '}
           <a href="/dump.zip">dump.zip</a>. It contains paginated JSON files for public handles and bios, posts and
@@ -154,8 +205,9 @@ export function ApiDocs({ user }: { user: User | null }) {
           data.
         </p>
         <CodeBlock language="bash">{`curl -O ${origin}/dump.zip`}</CodeBlock>
+        </ApiSection>
 
-        <h2 id="embeds">Embeds</h2>
+        <ApiSection title="Embeds" id="embeds">
         <p>
           Add a read-only {name}{' '}
           card to any website with an iframe. Copy an example and replace the handle, hashtag, or post number. Feed
@@ -208,8 +260,9 @@ export function ApiDocs({ user }: { user: User | null }) {
           <code>liberation</code>, <code>ubuntu</code>, <code>noto</code>, <code>droid</code>, <code>source</code>,{' '}
           <code>roboto</code>, <code>fira</code>, <code>jetbrains</code>, and <code>hack</code>.
         </p>
+        </ApiSection>
 
-        <h2>Pagination</h2>
+        <ApiSection title="Pagination">
         <p>
           Collections accept <code>limit</code> from 1–100 (default 20). Pass the opaque{' '}
           <code>pagination.next_cursor</code> value back as <code>cursor</code>{' '}
@@ -229,12 +282,19 @@ export function ApiDocs({ user }: { user: User | null }) {
           <code>tag_follow</code>, or <code>signup</code>; <code>payload</code>{' '}
           contains the corresponding post or actor and target.
         </p>
+        <p>
+          Explore has independent <code>people_limit</code>, <code>people_cursor</code>, <code>tags_limit</code>, and
+          {' '}<code>tags_cursor</code> parameters. When a bearer token is supplied, reads include viewer relationship
+          state and omit blocked people and hashtags.
+        </p>
+        </ApiSection>
 
-        <h2>Search</h2>
+        <ApiSection title="Search">
         <p>Search is public and uses the same prefix matching as the website. Separate words must all match.</p>
         <CodeBlock language="bash">{`curl '${origin}/api/v1/search?q=quiet+notes&limit=10'`}</CodeBlock>
+        </ApiSection>
 
-        <h2>Firehose</h2>
+        <ApiSection title="Firehose">
         <p>
           The firehose is live-only and includes top-level posts and replies. Each new post arrives as a{' '}
           <code>post</code> event. Reconnects begin from that moment and do not replay missed events.
@@ -243,8 +303,9 @@ export function ApiDocs({ user }: { user: User | null }) {
 events.addEventListener('post', event => {
   const post = JSON.parse(event.data)
 })`}</code></pre>
+        </ApiSection>
 
-        <h2>Writing</h2>
+        <ApiSection title="Writing">
         <p>
           Every account can use the write endpoints. Authenticate with a bearer token; no separate API access setting is
           required. For long-running integrations, <a href="/account/api-keys/new">generate a revocable API key</a>.
@@ -261,6 +322,10 @@ curl -X POST ${origin}/api/v1/auth/verify \\
   -H 'content-type: application/json' -d '{"email":"you@example.com","code":"123456"}'`}
         </CodeBlock>
         <p>
+          Posts include link previews and poll metadata. Live poll counts are hidden until you vote or the poll expires.
+          Drafts support ordinary CRUD plus an atomic publish endpoint.
+        </p>
+        <p>
           The returned token is an ordinary session. Both session tokens and generated API keys can be sent as bearer
           tokens and revoked under account security. Cookies are never accepted for writes.
         </p>
@@ -269,7 +334,8 @@ curl -X POST ${origin}/api/v1/auth/verify \\
   -H "authorization: Bearer $TOKEN" \\
   -H 'content-type: application/json' -d '{"body":"hello from an app"}'`}
         </CodeBlock>
-        <h2>Limits and errors</h2>
+        </ApiSection>
+        <ApiSection title="Limits and errors">
         <p>
           API reads are limited to 120 requests per minute per IP. Writes are limited to 60 per hour per account, and
           posting keeps the same limit as the website: five posts every five minutes. A limited response uses{' '}
@@ -280,6 +346,7 @@ curl -X POST ${origin}/api/v1/auth/verify \\
   "error": { "code": "not_found", "message": "Post not found" }
 }`}
         </CodeBlock>
+        </ApiSection>
       </article>
     </Layout>
   )

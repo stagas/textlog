@@ -103,6 +103,14 @@ export type ApiPost = {
   url: string
   api_url: string
   author: { handle: string; url: string; api_url: string }
+  link_previews?: Record<string, LinkPreview>
+  poll?: {
+    options: Array<{ id: number; label: string; votes: number | null; selected: boolean }>
+    total_votes: number | null
+    expired: boolean
+    expires_at: string
+    viewer_voted: boolean
+  } | null
   parent?: ApiPost | null
 }
 export type SearchResultsData = {

@@ -23,6 +23,11 @@ function fixture() {
       PRIMARY KEY(blocker_id,blocked_id));
     CREATE TABLE blocked_hashtags (user_id INTEGER NOT NULL,tag TEXT NOT NULL,PRIMARY KEY(user_id,tag));
     CREATE TABLE hashtag_follows (user_id INTEGER NOT NULL,tag TEXT NOT NULL,PRIMARY KEY(user_id,tag));
+    CREATE TABLE drafts (id INTEGER PRIMARY KEY AUTOINCREMENT,user_id INTEGER NOT NULL,parent_id INTEGER,body TEXT,
+      created_at TEXT DEFAULT CURRENT_TIMESTAMP,updated_at TEXT DEFAULT CURRENT_TIMESTAMP);
+    CREATE TABLE poll_options (id INTEGER PRIMARY KEY AUTOINCREMENT,post_id INTEGER NOT NULL,position INTEGER,label TEXT);
+    CREATE TABLE poll_votes (post_id INTEGER NOT NULL,option_id INTEGER NOT NULL,user_id INTEGER NOT NULL,
+      created_at TEXT DEFAULT CURRENT_TIMESTAMP,PRIMARY KEY(post_id,user_id));
     CREATE TABLE reports (reporter_id INTEGER NOT NULL,post_id INTEGER NOT NULL,reason TEXT NOT NULL,
       status TEXT NOT NULL DEFAULT 'open',created_at TEXT DEFAULT CURRENT_TIMESTAMP,resolved_at TEXT,
       PRIMARY KEY(reporter_id,post_id));
@@ -301,6 +306,53 @@ describe('API writes', () => {
     expect(await limited.json()).toMatchObject({ error: { code: 'rate_limited' } })
     expect(database.query('SELECT count(*) count FROM api_rate_limit_buckets WHERE scope=\'api-write\'').get())
       .toMatchObject({ count: 1 })
+  })
+
+  test('creates, updates, paginates and atomically publishes drafts', async () => {
+    const { app, database } = fixture()
+    const created = await call(app, '/api/v1/drafts', { method: 'POST', token: 'alice-token',
+      body: { body: 'draft one', parent_id: 1 } })
+    expect(created.status).toBe(201)
+    const draft = (await created.json() as any).data
+    expect(draft).toMatchObject({ body: 'draft one', parent_id: 1, parent: { id: 1 } })
+    expect((await call(app, `/api/v1/drafts/${draft.id}`, { method: 'PATCH', token: 'alice-token',
+      body: { body: 'published reply' } })).status).toBe(200)
+    const listed = await (await call(app, '/api/v1/drafts?limit=1', { token: 'alice-token' })).json() as any
+    expect(listed.data).toHaveLength(1)
+    const published = await call(app, `/api/v1/drafts/${draft.id}/publish`, {
+      method: 'POST', token: 'alice-token',
+    })
+    expect(published.status).toBe(201)
+    expect((await published.json() as any).data).toMatchObject({ body: 'published reply', parent_id: 1 })
+    expect(database.query('SELECT count(*) count FROM drafts').get()).toEqual({ count: 0 })
+  })
+
+  test('votes in polls without revealing live results before voting', async () => {
+    const { app } = fixture()
+    const created = await post(app, 'bob-token', { body: 'Choose one #poll\nred\nblue' })
+    const pollPost = (await created.json() as any).data
+    expect(pollPost.poll.total_votes).toBeNull()
+    expect(pollPost.poll.options[0].votes).toBeNull()
+    const voted = await call(app, `/api/v1/posts/${pollPost.id}/poll/votes`, { method: 'POST', token: 'alice-token',
+      body: { option_id: pollPost.poll.options[0].id } })
+    expect(voted.status).toBe(201)
+    const data = (await voted.json() as any).data
+    expect(data.poll).toMatchObject({ total_votes: 1, viewer_voted: true })
+    expect(data.poll.options[0]).toMatchObject({ votes: 1, selected: true })
+    expect((await call(app, `/api/v1/posts/${pollPost.id}/poll/votes`, { method: 'POST', token: 'alice-token',
+      body: { option_id: pollPost.poll.options[1].id } })).status).toBe(409)
+  })
+
+  test('idempotently follows and blocks hashtags', async () => {
+    const { app, database } = fixture()
+    for (let i = 0; i < 2; i++) expect((await call(app, '/api/v1/tags/news/follow', {
+      method: 'POST', token: 'alice-token',
+    })).status).toBe(200)
+    expect(database.query("SELECT count(*) count FROM hashtag_follows WHERE tag='news'").get()).toEqual({ count: 1 })
+    expect((await call(app, '/api/v1/tags/news/block', { method: 'POST', token: 'alice-token' })).status).toBe(200)
+    expect(database.query("SELECT count(*) count FROM hashtag_follows WHERE tag='news'").get()).toEqual({ count: 0 })
+    expect(database.query("SELECT count(*) count FROM blocked_hashtags WHERE tag='news'").get()).toEqual({ count: 1 })
+    expect((await call(app, '/api/v1/tags/news/block', { method: 'DELETE', token: 'alice-token' })).status).toBe(200)
   })
 })
 

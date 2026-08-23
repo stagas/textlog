@@ -942,7 +942,7 @@ describe('postTitle', () => {
   })
 })
 
-test('API documentation is linked from the footer and describes the firehose', () => {
+  test('API documentation is linked from the footer and describes the firehose', () => {
   const html = renderToStaticMarkup(React.createElement(ApiDocs, { user: null }))
   expect(html).toContain('href="/api">api</a>')
   expect(html).toContain('class="api-title-brand"')
@@ -1080,6 +1080,20 @@ describe('About', () => {
     expect(html).not.toContain('What&#x27;s happening')
     expect(html).not.toContain('<iframe')
     expect(html).not.toContain('>browse more</a>')
+  })
+
+  test('API documentation lists root feed aliases', () => {
+    const html = renderToStaticMarkup(React.createElement(ApiDocs, { user: null }))
+    for (const alias of ['/latest.json', '/latest.rss', '/latest.atom', '/hot.json', '/hot.rss', '/hot.atom']) {
+      expect(html).toContain(alias)
+    }
+  })
+
+  test('API documentation sections are closed disclosures by default', () => {
+    const html = renderToStaticMarkup(React.createElement(ApiDocs, { user: null }))
+    expect((html.match(/<details class="api-docs-section">/g) || [])).toHaveLength(10)
+    expect(html).not.toContain('<details class="api-docs-section" open=""')
+    expect(html).toContain('<summary><h2>Endpoints</h2></summary>')
   })
 
   test('appears above public feed tabs only for guest visitors', () => {

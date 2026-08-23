@@ -247,7 +247,7 @@ export async function sendPushForUserFollow(actorId: number, actorHandle: string
 }
 
 export async function sendPushForTagFollow(actorId: number, actorHandle: string, tag: string, database?: Database,
-  vapid: VapidConfiguration | null = vapidConfiguration())
+  vapid: VapidConfiguration | null = vapidConfiguration(), service?: DatabaseService)
 {
   if (!vapid) return
   const subscriptions = database
@@ -259,9 +259,9 @@ export async function sendPushForTagFollow(actorId: number, actorHandle: string,
         (b.blocker_id=ps.user_id AND b.blocked_id=?) OR (b.blocked_id=ps.user_id AND b.blocker_id=?))
       AND NOT EXISTS (SELECT 1 FROM blocked_hashtags bh WHERE bh.user_id=ps.user_id AND bh.tag=?)`)
       .all(actorId, actorId, tag, actorId, actorId, tag) as PushSubscriptionRow[]
-    : await databaseService().call('push.tagFollowDelivery', { actorId, tag })
+    : await (service || databaseService()).call('push.tagFollowDelivery', { actorId, tag })
   queueFollowActivity(actorId, actorHandle, `#${tag}`, `/tag/${encodeURIComponent(tag)}`, subscriptions, database,
-    vapid)
+    vapid, service)
 }
 
 export async function sendPushForSignup(userId: number, handle: string, database?: Database,

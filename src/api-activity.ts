@@ -143,7 +143,7 @@ export function apiActivities(database: Database, origin: string, user: User, op
   const data = selected.flatMap((row): ApiActivity[] => {
     const common = { id: row.event_key, type: row.type, created_at: isoTimestamp(row.created_at), unread: !!row.unread }
     if (row.post_id !== null) {
-      const post = apiPost(database, row.post_id, origin)
+      const post = apiPost(database, row.post_id, origin, user.id)
       return post ? [{ ...common, payload: post }] : []
     }
     const actor = userReference(origin, row.actor_handle)

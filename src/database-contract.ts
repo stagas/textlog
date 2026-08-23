@@ -248,13 +248,14 @@ export type DatabaseDomainOperations = {
   }
   'api.publicRead': { input:
     | { kind: 'collection'; origin: string; limit: number; before: number | null;
-      handle?: string; tag?: string; repliesOnly?: boolean; topLevelOnly?: boolean }
+      handle?: string; tag?: string; repliesOnly?: boolean; topLevelOnly?: boolean; viewerId?: number }
     | { kind: 'hot'; origin: string; limit: number;
       cursor: { asOf: string; score: number; latestActivityAt: string; createdAt: string; id: number;
-        direction: 'next' | 'previous' } | null }
-    | { kind: 'search'; origin: string; query: string; limit: number; offset: number }
-    | { kind: 'post'; origin: string; id: number }
-    | { kind: 'replies'; origin: string; id: number; limit: number; before: number | null; depth: number };
+        direction: 'next' | 'previous' } | null; viewerId?: number }
+    | { kind: 'search'; origin: string; query: string; limit: number; offset: number; viewerId?: number }
+    | { kind: 'post'; origin: string; id: number; viewerId?: number }
+    | { kind: 'replies'; origin: string; id: number; limit: number; before: number | null; depth: number;
+      viewerId?: number };
     output: { status: 'ready'; value: unknown } | { status: 'not_found' } }
   'api.activities': {
     input: { user: User; origin: string; limit: number; cursor: { createdAt: string; key: string } | null;
@@ -263,10 +264,13 @@ export type DatabaseDomainOperations = {
   }
   'api.markActivitiesRead': { input: { userId: number; activityIds: string[]; toMe: boolean }; output: number }
   'api.markAllActivitiesRead': { input: { userId: number; toMe: boolean }; output: null }
+  'api.latestState': { input: { userId: number }; output: { unreadIds: number[]; unreadCount: number } }
+  'api.markLatestRead': { input: { userId: number; postIds: number[] }; output: number }
+  'api.markAllLatestRead': { input: { userId: number }; output: number }
   'api.profile': { input: { handle: string; viewerId: number | null; origin: string };
     output: { status: 'not_found' } | { status: 'redirect'; handle: string } | { status: 'ready'; value: unknown;
       private: boolean } }
-  'api.tagDetails': { input: { tag: string; origin: string };
+  'api.tagDetails': { input: { tag: string; origin: string; viewerId: number | null };
     output: { status: 'not_found' } | { status: 'ready'; value: unknown } }
   'api.relationships': {
     input: { kind: 'blocks' | 'following' | 'followers' | 'followingTags' | 'tagFollowers'; handle?: string;
@@ -282,6 +286,15 @@ export type DatabaseDomainOperations = {
     output: { status: 'not_found' | 'self' | 'blocked' } | { status: 'ready'; changed: boolean; targetId: number;
       targetHandle: string }
   }
+  'api.tagRelationshipMutation': {
+    input: { userId: number; tag: string; action: 'follow' | 'unfollow' | 'block' | 'unblock' }
+    output: { changed: boolean }
+  }
+  'api.explore': { input: { viewerId: number; origin: string; peopleLimit: number; peopleOffset: number;
+    tagsLimit: number; tagsOffset: number }; output: unknown }
+  'api.publishDraft': { input: { userId: number; id: number; body: string; parentId: number | null; origin: string };
+    output: { status: 'not_found' } | { status: 'rate_limited'; retryAfter: number } | { status: 'ready'; id: number;
+      duplicate: boolean; post: ApiPost } }
   'api.createPost': { input: { userId: number; body: string; parentId: number | null; origin: string };
     output: { status: 'not_found' } | { status: 'rate_limited'; retryAfter: number } | { status: 'ready'; id: number;
       duplicate: boolean; post: ApiPost } }
