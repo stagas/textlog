@@ -5266,6 +5266,13 @@ a.post-context:hover {
   border: 0;
 }
 
+.thread-root.profile-pinned-surround {
+  width: calc(100% - var(--gutter));
+  margin: 0;
+  margin-left: var(--gutter);
+  border-left: 4px solid color-mix(in srgb, var(--accent) 65%, var(--soft));
+}
+
 .thread-root>.post>.post-body {
   margin-bottom: 0;
   font-size: clamp(0.9375rem, 2.25vw, 1.125rem);

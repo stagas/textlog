@@ -836,7 +836,7 @@ export function FeedThreads(
         return (
           <div className="post-page-thread feed-thread" key={post.id}>
             {foldControlId && <input className="thread-fold-input" type="checkbox" id={foldControlId} />}
-            <div className="thread-root">
+            <div className={`thread-root${post.profile_pinned ? ' profile-pinned-surround' : ''}`}>
               <Post p={post} user={user} tappable returnPath={anchoredReturnPath}
                 highlightTerms={highlightTerms}
                 contextUnread={contextUnreadPostIds?.has(post.id)} foldControlId={foldControlId}

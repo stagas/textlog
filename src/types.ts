@@ -67,6 +67,7 @@ export type ParentPost = Pick<PostRow,
 
 export type PostView = PostRow & {
   handle: string
+  profile_pinned?: number | boolean
   viewer_context?: 'reply' | 'mention'
   viewer_mentioned?: boolean
   bio?: string

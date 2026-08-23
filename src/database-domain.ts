@@ -1004,13 +1004,19 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
     case 'profiles.postsPage': {
       const { profileId, viewerId, page, pageSize, kind } = input as DatabaseDomainInput<'profiles.postsPage'>
       const postKindFilter = kind === 'replies' ? 'AND p.parent_id IS NOT NULL' : 'AND p.parent_id IS NULL'
-      const snapshot = feedSnapshotPage<PostView>(database, `profile:${profileId}:${kind}`, viewerId, page,
+      const pinnedKindFilter = kind === 'replies'
+        ? 'AND pinned.parent_id IS NOT NULL'
+        : 'AND pinned.parent_id IS NULL'
+      const snapshot = feedSnapshotPage<PostView>(database, `profile:v2:${profileId}:${kind}`, viewerId, page,
         () =>
-          database.query(`SELECT p.*,u.handle FROM posts p JOIN users u ON u.id=p.user_id
+          database.query(`SELECT p.*,u.handle,p.id=(SELECT max(pinned.id) FROM posts pinned
+            JOIN post_hashtags pin_tag ON pin_tag.post_id=pinned.id AND pin_tag.tag='pin'
+            WHERE pinned.user_id=p.user_id AND pinned.deleted_at IS NULL ${pinnedKindFilter}) profile_pinned
+          FROM posts p JOIN users u ON u.id=p.user_id
           WHERE p.user_id=? AND p.deleted_at IS NULL AND (? < 0 OR NOT EXISTS
             (SELECT 1 FROM post_hashtags ph JOIN blocked_hashtags bh ON bh.tag=ph.tag
               WHERE ph.post_id=p.id AND bh.user_id=?)) ${postKindFilter}
-          ORDER BY p.id DESC`).all(profileId, viewerId, viewerId) as PostView[], pageSize)
+          ORDER BY profile_pinned DESC,p.id DESC`).all(profileId, viewerId, viewerId) as PostView[], pageSize)
       return { posts: enrichPosts(database, snapshot.items, viewerId), page: snapshot.page,
         totalItems: snapshot.totalItems, totalPages: snapshot.totalPages } as DatabaseDomainOutput<K>
     }
