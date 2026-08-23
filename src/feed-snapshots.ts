@@ -14,6 +14,21 @@ export type FeedSnapshotPage<T> = {
   totalPages: number
 }
 
+function globalFeedGeneration(database: Database) {
+  return (database.query('SELECT generation FROM feed_snapshot_generation WHERE id=1').get() as {
+    generation: number
+  }).generation
+}
+
+function personalizedFeedGeneration(database: Database, viewerId: number) {
+  const available = database.query(`SELECT 1 FROM sqlite_master
+    WHERE type='table' AND name='personalized_feed_generations'`).get()
+  if (!available) return globalFeedGeneration(database)
+  return (database.query(`SELECT generation FROM personalized_feed_generations WHERE viewer_id=?`).get(viewerId) as {
+    generation: number
+  } | null)?.generation ?? 1
+}
+
 /** Persist an ordered feed generation so restarts do not force it to be rebuilt. */
 export function feedSnapshotPage<T>(database: Database, kind: string, viewerId: number, page: number, build: () => T[],
   pageSize = PAGE_SIZE, cache: Database = cacheDb): FeedSnapshotPage<T>
@@ -23,12 +38,8 @@ export function feedSnapshotPage<T>(database: Database, kind: string, viewerId: 
   // generation prevents an unrelated post anywhere on the site from rebuilding every viewer's timeline.
   const personalized = kind.startsWith('for-you:') || kind.startsWith('to-me:')
   const generation = personalized
-    ? (database.query(`SELECT generation FROM personalized_feed_generations WHERE viewer_id=?`).get(viewerId) as {
-      generation: number
-    } | null)?.generation ?? 1
-    : (database.query('SELECT generation FROM feed_snapshot_generation WHERE id=1').get() as {
-      generation: number
-    }).generation
+    ? personalizedFeedGeneration(database, viewerId)
+    : globalFeedGeneration(database)
   let snapshot = storage.query(`SELECT id,total_items,created_at FROM feed_snapshots
     WHERE kind=? AND viewer_id=? AND generation=?`).get(kind, viewerId, generation) as { id: number;
     total_items: number; created_at: string } | null

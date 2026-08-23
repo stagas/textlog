@@ -76,6 +76,17 @@ test('personalized snapshots do not depend on the global generation', () => {
   expect(builds).toBe(1)
 })
 
+test('personalized snapshots fall back to the global generation before their migration is applied', () => {
+  const db = database()
+  db.run('DROP TABLE personalized_feed_generations')
+  let builds = 0
+  const build = () => [{ id: ++builds }]
+
+  expect(feedSnapshotPage(db, 'for-you:v4', 7, 1, build, 20, db).items).toEqual([{ id: 1 }])
+  db.run('UPDATE feed_snapshot_generation SET generation=generation+1 WHERE id=1')
+  expect(feedSnapshotPage(db, 'for-you:v4', 7, 1, build, 20, db).items).toEqual([{ id: 2 }])
+})
+
 test('snapshot creation removes stale, obsolete hot, and least recently used snapshots', () => {
   const db = database()
   const insert = db.query(`INSERT INTO feed_snapshots(kind,viewer_id,generation,total_items,last_accessed_at)
