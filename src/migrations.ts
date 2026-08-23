@@ -1429,7 +1429,7 @@ export const migrations: Migration[] = [
         viewer_id INTEGER PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,generation INTEGER NOT NULL DEFAULT 1);
         INSERT OR IGNORE INTO personalized_feed_generations(viewer_id) SELECT id FROM users;`)
       const clear = (viewer: string) => `INSERT INTO personalized_feed_generations(viewer_id,generation)
-        WITH affected(id) AS (${viewer}) SELECT id,2 FROM affected WHERE id IS NOT NULL
+        WITH affected(id) AS (${viewer}) SELECT affected.id,2 FROM affected JOIN users ON users.id=affected.id
         ON CONFLICT(viewer_id) DO UPDATE SET generation=generation+1;`
       database.run(`
         DELETE FROM feed_snapshots WHERE kind LIKE 'for-you:%' OR kind LIKE 'to-me:%';
@@ -1561,6 +1561,17 @@ export const migrations: Migration[] = [
       if (database.query("SELECT 1 FROM sqlite_master WHERE type='table' AND name='user_bio_link_previews'").get()) {
         addColumn(database, 'user_bio_link_previews', 'mime_type', 'TEXT')
       }
+    },
+  },
+  {
+    version: 114,
+    name: 'remove_orphaned_feed_snapshots',
+    up(database) {
+      if (!database.query("SELECT 1 FROM sqlite_master WHERE type='table' AND name='feed_snapshots'").get()) return
+      database.run(`DELETE FROM feed_snapshots WHERE viewer_id NOT IN (SELECT id FROM users);
+        CREATE TRIGGER IF NOT EXISTS feed_snapshots_delete_user AFTER DELETE ON users BEGIN
+          DELETE FROM feed_snapshots WHERE viewer_id=OLD.id;
+        END;`)
     },
   },
 ]

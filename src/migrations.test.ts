@@ -510,4 +510,23 @@ describe('database migrations', () => {
     expect(database.query('SELECT score,reply_count,latest_activity_at FROM post_hot WHERE post_id=1').get())
       .toEqual({ score: 2, reply_count: 0, latest_activity_at: '2026-08-05 11:00:00' })
   })
+
+  test('removes orphaned feed snapshots before post updates invalidate personalized feeds', () => {
+    const database = new Database(':memory:')
+    database.run('PRAGMA foreign_keys=ON')
+    runMigrations(database)
+    database.run(`INSERT INTO users(id,handle,email,password) VALUES(1,'author','author@example.com','x');
+      INSERT INTO posts(id,user_id,body) VALUES(1,1,'hello');
+      PRAGMA foreign_keys=OFF;
+      INSERT INTO feed_snapshots(kind,viewer_id,generation,total_items) VALUES('for-you:stale',999,1,1);
+      INSERT INTO feed_snapshot_items(snapshot_id,position,payload)
+        VALUES(last_insert_rowid(),0,'{"id":1}');
+      PRAGMA foreign_keys=ON;
+      PRAGMA user_version=113;`)
+
+    runMigrations(database)
+
+    expect(database.query('SELECT count(*) count FROM feed_snapshots WHERE viewer_id=999').get()).toEqual({ count: 0 })
+    expect(() => database.query("UPDATE posts SET body='(deleted)' WHERE id=1").run()).not.toThrow()
+  })
 })
