@@ -23,6 +23,7 @@ import {
   EditPost,
   EmbedExamples,
   ErrorPage,
+  Explore,
   ForgotPassword,
   Legal,
   MagicLinkSent,
@@ -480,6 +481,31 @@ test('search result cards highlight tag, handle, and bio matches while keeping f
   expect(people).toContain('>unfollow</button>')
   expect(people).toContain('id="person-2"')
   expect(people).toContain('name="from" value="/search?q=type%20writer&amp;tab=people&amp;page=3#person-2"')
+})
+
+test('explore renders tag toggles above a full-width people section', () => {
+  const user = { id: 1, handle: 'reader', email: 'reader@example.com', bio: '' }
+  const html = renderToStaticMarkup(React.createElement(Explore, {
+    user,
+    data: {
+      tags: [
+        { tag: 'followed', count: 2, following: true },
+        { tag: 'new', count: 1, following: false },
+      ],
+      people: [],
+      peopleTotal: 9,
+      tagsTotal: 25,
+      profileStats: {},
+    },
+  }))
+
+  expect(html).toContain('class="explore-tags" id="explore-tags"')
+  expect(html).toContain('class="button explore-tag-chip button-muted" aria-pressed="true"')
+  expect(html).toContain('class="button explore-tag-chip" aria-pressed="false"')
+  expect(html).toContain('name="from" value="/explore#explore-tags"')
+  expect(html).toContain('<section class="explore-people" id="explore-people"><h2>People to follow</h2>')
+  expect(html).toContain('href="/explore?tagsPage=2#explore-tags"')
+  expect(html).toContain('href="/explore?peoplePage=2#explore-people"')
 })
 
 test('search post replies return to the originating result and page', () => {
@@ -1663,7 +1689,7 @@ test('Following and followers paginate every 10 people', () => {
       following: false,
     }))
 
-    expect(html).toContain(`href="/u/reader?tab=${kind}&amp;page=2"`)
+    expect(html).toContain(`href="/u/reader?tab=${kind}&amp;page=2#connections-people-heading"`)
   }
 })
 
@@ -1687,10 +1713,12 @@ test('Connection sorting can only be changed on the viewer’s own profile', () 
 
   expect(own).toContain('href="/u/reader?tab=followers">recent</a>')
   expect(recent).toContain('href="/u/reader?tab=following&amp;sort=abc&amp;tagsPage=3">abc</a>')
-  expect(recent).toContain('href="/u/reader?tab=following&amp;tagsPage=3&amp;page=1"')
+  expect(recent).toContain(
+    'href="/u/reader?tab=following&amp;tagsPage=3&amp;page=1#connections-people-heading"',
+  )
   expect(other).not.toContain('>recent</a>')
   expect(other).not.toContain('>abc</a>')
-  expect(other).not.toContain('<h2>People</h2>')
+  expect(other).toContain('<h2 id="connections-people-heading">People</h2>')
 })
 
 test('Following and follower links return to the originating connection', () => {
@@ -1728,7 +1756,8 @@ test('Following and follower links return to the originating connection', () => 
   }))
 
   expect(following).toContain(
-    'href="/tag/notes?from=%2Fu%2Freader%3Ftab%3Dfollowing%26page%3D2%26tagsPage%3D3%23tag-notes"',
+    '<form id="tag-notes" action="/tag-follow/notes" method="post"><input type="hidden" name="from" '
+      + 'value="/u/reader?tab=following&amp;page=2&amp;tagsPage=3#tag-notes"/>',
   )
   expect(following).toContain(
     'href="/u/writer?from=%2Fu%2Freader%3Ftab%3Dfollowing%26page%3D2%26tagsPage%3D3%23person-2"',
@@ -1874,7 +1903,7 @@ test('Current pagination page is an enter-to-navigate bounded input that preserv
   )
 })
 
-test('Followed tags paginate every 12 tags', () => {
+test('Followed tags paginate every 24 tags', () => {
   const html = renderToStaticMarkup(React.createElement(Connections, {
     user: null,
     profile: { id: 1, handle: 'reader', email: 'reader@example.com', bio: '' },
@@ -1883,7 +1912,7 @@ test('Followed tags paginate every 12 tags', () => {
     kind: 'following',
     page: 1,
     total: 0,
-    tagsTotal: 13,
+    tagsTotal: 25,
     noteCount: 0,
     followerCount: 0,
     followingCount: 0,
@@ -1891,7 +1920,9 @@ test('Followed tags paginate every 12 tags', () => {
     following: false,
   }))
 
-  expect(html).toContain('href="/u/reader?tab=following&amp;tagsPage=2"')
+  expect(html).toContain(
+    'href="/u/reader?tab=following&amp;tagsPage=2#connections-tags-heading"',
+  )
 })
 
 test('Profile linkifies Markdown links and tags in the bio', () => {

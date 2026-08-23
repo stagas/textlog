@@ -30,6 +30,7 @@ import { MAX_MATERIALIZED_PAGES } from './materialized-feed-pages'
 import { PAGE_SIZE } from './pagination'
 import { TAG_PAGE_SIZE } from './pagination'
 import { CONNECTION_PAGE_SIZE } from './pagination'
+import { EXPLORE_TAG_PAGE_SIZE } from './pagination'
 import { consumePasswordCaptcha, issuePasswordCaptcha, passwordCaptchaRequired,
   recordFailedPassword } from './password-login-captcha'
 import { consumePasswordLoginNonce, issuePasswordLoginNonce } from './password-login-nonce'
@@ -2106,7 +2107,8 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
       const result = {
         people: attachPeopleStats(database, people, viewerId),
         tags: attachTagStats(database,
-          trendingTags(database, viewerId, TAG_PAGE_SIZE, undefined, (tagsPage - 1) * TAG_PAGE_SIZE), viewerId),
+          trendingTags(database, viewerId, EXPLORE_TAG_PAGE_SIZE, undefined,
+            (tagsPage - 1) * EXPLORE_TAG_PAGE_SIZE), viewerId),
         peopleTotal: suggestedPeopleCount(database, viewerId),
         tagsTotal: trendingTagCount(database, viewerId),
         profileStats,

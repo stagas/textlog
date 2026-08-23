@@ -2,8 +2,7 @@ import { CONNECTION_PAGE_SIZE, PAGE_SIZE, TAG_PAGE_SIZE } from '../pagination'
 import type { BioReferenceData, User } from '../types'
 import type { PersonView, ProfileRow } from '../types'
 import { Layout } from './layout'
-import { BlockedPeopleList, BlockedTagList, ConnectionPeople, Pagination, ProfileHeader, ProfileTabs,
-  TagPeopleList } from './page-shared'
+import { BlockedPeopleList, BlockedTagList, ConnectionPeople, Pagination, ProfileHeader, ProfileTabs } from './page-shared'
 
 export function Connections(
   { user, profile, people, tags = [], kind, page, total, tagsPage = 1, tagsTotal = 0, sort = 'recent', noteCount,
@@ -58,14 +57,32 @@ export function Connections(
         blockedPeople={blockedPeopleCount} blockedTags={blockedTagCount} returnPath={returnPath} />
       {(kind === 'following' || kind === 'blocked') && (people.length || tags.length)
         ? (
-          <div className="columns connections-columns">
+          <div className={`columns connections-columns${kind === 'following' ? ' connections-columns-stacked' : ''}`}>
             <section>
-              <h2>Tags</h2>
+              <h2 id="connections-tags-heading">Tags</h2>
               {tags.length
                 ? kind === 'blocked'
                   ? <BlockedTagList user={user!} tags={tags} />
-                  : <TagPeopleList user={user} tags={tags} followingKey="viewerFollowing" showPopover={false}
-                    returnPath={tag => connectionReturnPath(`#tag-${tag.tag}`)} />
+                  : (
+                    <div className="explore-tag-chips">
+                      {tags.map(tag => user
+                        ? (
+                          <form key={tag.tag} id={`tag-${tag.tag}`} method="post"
+                            action={`/tag-follow/${encodeURIComponent(tag.tag)}`}>
+                            <input type="hidden" name="from"
+                              value={connectionReturnPath(`#tag-${tag.tag}`)} />
+                            <button className={`button explore-tag-chip${
+                              tag.viewerFollowing ? ' button-muted' : ''}`}
+                              aria-pressed={!!tag.viewerFollowing}
+                              title={`${tag.viewerFollowing ? 'Unfollow' : 'Follow'} #${tag.tag}`}>
+                              #{tag.tag}
+                            </button>
+                          </form>
+                        )
+                        : <a key={tag.tag} id={`tag-${tag.tag}`} className="button explore-tag-chip"
+                          href={`/tag/${encodeURIComponent(tag.tag)}`}>#{tag.tag}</a>)}
+                    </div>
+                  )
                 : (
                   <div className="empty connections-empty">
                     {kind === 'blocked'
@@ -79,11 +96,11 @@ export function Connections(
                 <Pagination page={tagsPage} totalPages={Math.ceil(tagsTotal / TAG_PAGE_SIZE)}
                   path={withFrom(`/u/${profile.handle}?tab=following${sortQuery}${
                     page > 1 ? `&page=${page}` : ''}`)}
-                  pageParam="tagsPage" label="Tags pagination" compact />
+                  pageParam="tagsPage" label="Tags pagination" compact anchor="connections-tags-heading" />
               )}
             </section>
             <section>
-              <div className="connections-heading"><h2>People</h2>{sortToggle}</div>
+              <div className="connections-heading"><h2 id="connections-people-heading">People</h2>{sortToggle}</div>
               {people.length
                 ? kind === 'blocked'
                   ? <BlockedPeopleList user={user!} people={people} />
@@ -105,15 +122,17 @@ export function Connections(
                   kind === 'following' && tagsPage > 1
                     ? `&tagsPage=${tagsPage}`
                     : ''
-                }`)} label="People pagination" compact />
+                }`)} label="People pagination" compact anchor="connections-people-heading" />
             </section>
           </div>
         )
         : people.length
         ? <>
-          {sortToggle && <div className="connections-heading connections-heading-wide"><h2>People</h2>{sortToggle}</div>}
+          <div className="connections-heading connections-heading-wide">
+            <h2 id="connections-people-heading">People</h2>{sortToggle}
+          </div>
           <ConnectionPeople user={user} people={people}
-            className={`connections-list${sortToggle ? ' connections-list-headed' : ''}`} showNoteCount={false}
+            className="connections-list connections-list-headed" showNoteCount={false}
             showPopover={false} returnPath={person => connectionReturnPath(`#person-${person.id}`)} />
         </>
         : (
@@ -134,12 +153,12 @@ export function Connections(
         )}
       {kind !== 'following' && kind !== 'blocked' && (
         <Pagination page={page} totalPages={Math.ceil(total / CONNECTION_PAGE_SIZE)}
-          path={withFrom(`/u/${profile.handle}?tab=${kind}${sortQuery}`)} />
+          path={withFrom(`/u/${profile.handle}?tab=${kind}${sortQuery}`)} anchor="connections-people-heading" />
       )}
       {kind === 'following' && !people.length && !tags.length && (
         <Pagination page={page} totalPages={Math.ceil(total / CONNECTION_PAGE_SIZE)}
           path={withFrom(`/u/${profile.handle}?tab=following${sortQuery}${tagsPage > 1 ? `&tagsPage=${tagsPage}` : ''}`)}
-          label="People pagination" compact />
+          label="People pagination" compact anchor="connections-people-heading" />
       )}
     </Layout>
   )

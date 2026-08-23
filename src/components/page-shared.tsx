@@ -706,7 +706,7 @@ export function ConnectionPeople({ user, people, className = '', highlightTerms 
   showPopover?: boolean
 }) {
   return (
-    <div className={`people ${className}`.trim()}>
+    <div className={`people connection-people ${className}`.trim()}>
       {people.map(person => (
         <article key={person.id} id={`person-${person.id}`}>
           <div>

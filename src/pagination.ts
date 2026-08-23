@@ -1,6 +1,7 @@
 export const PAGE_SIZE = 40
 export const CONNECTION_PAGE_SIZE = 10
-export const TAG_PAGE_SIZE = 12
+export const TAG_PAGE_SIZE = 24
+export const EXPLORE_TAG_PAGE_SIZE = 24
 
 export type PostCursor = { id: number; direction: 'next' | 'previous' }
 

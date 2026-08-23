@@ -3625,6 +3625,10 @@ form.report-panel {
   padding-top: var(--space-5);
 }
 
+.columns.connections-columns-stacked {
+  grid-template-columns: minmax(0, 1fr);
+}
+
 .connections-heading {
   display: flex;
   align-items: baseline;
@@ -4356,6 +4360,63 @@ form.report-panel {
   padding: var(--space-6) var(--gutter) 0;
 }
 
+.explore-content {
+  padding: var(--space-6) var(--gutter) 0;
+}
+
+#explore-tags,
+#explore-people,
+#connections-tags-heading,
+#connections-people-heading {
+  scroll-margin-top: var(--space-3);
+}
+
+.explore-content > section + section {
+  margin-top: var(--space-6);
+}
+
+.explore-tag-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin-bottom: var(--space-4);
+  padding-top: var(--space-3);
+  border-top: 1px solid var(--soft);
+}
+
+.explore-tag-chips form {
+  margin: 0;
+}
+
+.explore-tag-chip {
+  min-height: 34px;
+  padding: 7px 11px;
+  font-size: 0.6875rem;
+  line-height: 1;
+}
+
+.explore-tag-chip.button:not(.button-muted),
+.explore-tag-chip.button:not(.button-muted):hover,
+.explore-tag-chip.button:not(.button-muted):active {
+  color: var(--ink);
+  background: transparent;
+}
+
+.explore-tag-chip.button:not(.button-muted):hover {
+  color: var(--accent-dark);
+  background: var(--soft);
+}
+
+.explore-people > .people {
+  width: 100%;
+}
+
+.explore-people .people article > div,
+.connection-people article > div {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) max-content;
+}
+
 .explore-search,
 .search-header {
   padding: var(--space-6) var(--gutter) 0;
@@ -5014,7 +5075,8 @@ a.post-context:hover {
   color: var(--muted);
 }
 
-.columns h2 {
+.columns h2,
+.explore-content h2 {
   color: var(--muted);
   font-size: 0.75rem;
   font-weight: 400;

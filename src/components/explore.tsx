@@ -1,9 +1,9 @@
 import { appName } from '../brand'
-import { TAG_PAGE_SIZE } from '../pagination'
+import { EXPLORE_TAG_PAGE_SIZE } from '../pagination'
 import type { ExploreData, User } from '../types'
 import { displayBio, linkify } from '../utils'
 import { Layout } from './layout'
-import { ActionPair, Pagination, TagPeopleList } from './page-shared'
+import { ActionPair, Pagination } from './page-shared'
 import { Panel } from './panel'
 import { BioReferenceForms, UserReference } from './post'
 import { SearchForm } from './search'
@@ -59,17 +59,32 @@ export function Explore({ user, welcome = false, tagsPage = 1, peoplePage = 1, d
           <SearchForm placeholder="search notes, tags or people" />
         </section>
       )}
-      <div className="columns">
-        <section>
+      <div className="explore-content">
+        <section className="explore-tags" id="explore-tags">
           <h2>Trending tags</h2>
           {tags.length
-            ? <TagPeopleList user={user} tags={tags} returnPath={tag => `${explorePath()}#tag-${tag.tag}`}
-              showPopover={false} />
+            ? (
+              <div className="explore-tag-chips">
+                {tags.map(tag => user
+                  ? (
+                    <form key={tag.tag} method="post" action={`/tag-follow/${encodeURIComponent(tag.tag)}`}>
+                      <input type="hidden" name="from" value={`${explorePath()}#explore-tags`} />
+                      <button className={`button explore-tag-chip${tag.following ? ' button-muted' : ''}`}
+                        aria-pressed={tag.following} title={`${tag.following ? 'Unfollow' : 'Follow'} #${tag.tag}`}>
+                        #{tag.tag}
+                      </button>
+                    </form>
+                  )
+                  : <a key={tag.tag} className="button explore-tag-chip" href={`/tag/${encodeURIComponent(tag.tag)}`}>
+                    #{tag.tag}
+                  </a>)}
+              </div>
+            )
             : <p className="section-empty">No hashtags yet.</p>}
-          <Pagination page={tagsPage} totalPages={Math.ceil(tagsTotal / TAG_PAGE_SIZE)} path={tagsPath}
-            pageParam="tagsPage" label="Tags pagination" compact />
+          <Pagination page={tagsPage} totalPages={Math.ceil(tagsTotal / EXPLORE_TAG_PAGE_SIZE)} path={tagsPath}
+            pageParam="tagsPage" label="Tags pagination" compact anchor="explore-tags" />
         </section>
-        <section>
+        <section className="explore-people" id="explore-people">
           <h2>{user ? 'People to follow' : 'People'}</h2>
           <div className="people">
             {people.map(p => (
@@ -81,6 +96,20 @@ export function Explore({ user, welcome = false, tagsPage = 1, peoplePage = 1, d
                       showPopover={false}
                       href={`/u/${p.handle}?from=${encodeURIComponent(exploreReturnPath(p.id))}`}
                       navigationQuery={`?from=${encodeURIComponent(exploreReturnPath(p.id))}`} />
+                    <p className="profile-bio" dangerouslySetInnerHTML={{
+                      __html: linkify(displayBio(p.bio), p.bioReference?.mentionBios || {}, [], undefined, undefined, '',
+                        p.bioReference?.hashtagCounts || {}, p.bioReference?.mentionNoteCounts || {}, {
+                        signedIn: !!user,
+                        currentHandle: user?.handle,
+                        formPrefix: `explore-person-${p.id}-bio`,
+                        linkPreviews: p.bioLinkPreviews,
+                        mentionFollowing: p.bioReference?.mentionFollowing,
+                        mentionFollowsViewer: p.bioReference?.mentionFollowsViewer,
+                        mentionProfileStats: p.bioReference?.mentionProfileStats,
+                        hashtagFollowing: p.bioReference?.hashtagFollowing,
+                        hashtagFollowerCounts: p.bioReference?.hashtagFollowerCounts,
+                      }),
+                    }} />
                   </div>
                   {user && (
                     <form method="post" action={'/follow/' + p.handle}>
@@ -93,27 +122,13 @@ export function Explore({ user, welcome = false, tagsPage = 1, peoplePage = 1, d
                     </form>
                   )}
                 </div>
-                <p className="profile-bio" dangerouslySetInnerHTML={{
-                  __html: linkify(displayBio(p.bio), p.bioReference?.mentionBios || {}, [], undefined, undefined, '',
-                    p.bioReference?.hashtagCounts || {}, p.bioReference?.mentionNoteCounts || {}, {
-                    signedIn: !!user,
-                    currentHandle: user?.handle,
-                    formPrefix: `explore-person-${p.id}-bio`,
-                    linkPreviews: p.bioLinkPreviews,
-                    mentionFollowing: p.bioReference?.mentionFollowing,
-                    mentionFollowsViewer: p.bioReference?.mentionFollowsViewer,
-                    mentionProfileStats: p.bioReference?.mentionProfileStats,
-                    hashtagFollowing: p.bioReference?.hashtagFollowing,
-                    hashtagFollowerCounts: p.bioReference?.hashtagFollowerCounts,
-                  }),
-                }} />
                 <BioReferenceForms data={p.bioReference} prefix={`explore-person-${p.id}-bio`} user={user} />
               </article>
             ))}
             {!people.length && <p className="section-empty">No people to suggest.</p>}
           </div>
           <Pagination page={peoplePage} totalPages={Math.ceil(peopleTotal / PEOPLE_PAGE_SIZE)} path={peoplePath}
-            pageParam="peoplePage" label="People pagination" compact />
+            pageParam="peoplePage" label="People pagination" compact anchor="explore-people" />
         </section>
       </div>
     </Layout>
