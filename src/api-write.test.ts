@@ -23,7 +23,8 @@ function fixture() {
     CREATE TABLE blocks (blocker_id INTEGER NOT NULL,blocked_id INTEGER NOT NULL,
       PRIMARY KEY(blocker_id,blocked_id));
     CREATE TABLE blocked_hashtags (user_id INTEGER NOT NULL,tag TEXT NOT NULL,PRIMARY KEY(user_id,tag));
-    CREATE TABLE hashtag_follows (user_id INTEGER NOT NULL,tag TEXT NOT NULL,PRIMARY KEY(user_id,tag));
+    CREATE TABLE hashtag_follows (user_id INTEGER NOT NULL,tag TEXT NOT NULL,created_at TEXT,
+      PRIMARY KEY(user_id,tag));
     CREATE TABLE drafts (id INTEGER PRIMARY KEY AUTOINCREMENT,user_id INTEGER NOT NULL,parent_id INTEGER,body TEXT,
       created_at TEXT DEFAULT CURRENT_TIMESTAMP,updated_at TEXT DEFAULT CURRENT_TIMESTAMP);
     CREATE TABLE poll_options (id INTEGER PRIMARY KEY AUTOINCREMENT,post_id INTEGER NOT NULL,position INTEGER,label TEXT);
@@ -380,6 +381,8 @@ describe('API writes', () => {
       method: 'POST', token: 'alice-token',
     })).status).toBe(200)
     expect(database.query("SELECT count(*) count FROM hashtag_follows WHERE tag='news'").get()).toEqual({ count: 1 })
+    expect(database.query("SELECT created_at FROM hashtag_follows WHERE tag='news'").get())
+      .toMatchObject({ created_at: expect.any(String) })
     expect((await call(app, '/api/v1/tags/news/block', { method: 'POST', token: 'alice-token' })).status).toBe(200)
     expect(database.query("SELECT count(*) count FROM hashtag_follows WHERE tag='news'").get()).toEqual({ count: 0 })
     expect(database.query("SELECT count(*) count FROM blocked_hashtags WHERE tag='news'").get()).toEqual({ count: 1 })

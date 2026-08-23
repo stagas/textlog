@@ -197,7 +197,7 @@ describe('database migrations', () => {
       .toEqual([{ post_id: 10 }, { post_id: 11 }])
   })
 
-  test('upgrades legacy data and backfills person-follow but not tag-follow activity timestamps', () => {
+  test('upgrades legacy data and backfills follow activity timestamps', () => {
     const database = new Database(':memory:')
     database.run('PRAGMA foreign_keys=ON')
     migrations[0].up(database)
@@ -216,8 +216,9 @@ describe('database migrations', () => {
     expect((database.query('SELECT created_at FROM follows WHERE follower_id=1').get() as {
       created_at: string | null
     }).created_at).not.toBeNull()
-    expect(database.query('SELECT created_at FROM hashtag_follows WHERE tag=\'legacy\'').get())
-      .toEqual({ created_at: null })
+    expect((database.query('SELECT created_at FROM hashtag_follows WHERE tag=\'legacy\'').get() as {
+      created_at: string | null
+    }).created_at).not.toBeNull()
     expect(database.query('SELECT token_hash FROM sessions').get())
       .toEqual({ token_hash: sessionHash('legacy-cookie') })
     expect(database.query(`SELECT g.primary_user_id,g.selected_user_id,u.account_group_id

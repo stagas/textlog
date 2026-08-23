@@ -1634,6 +1634,16 @@ export const migrations: Migration[] = [
       }
     },
   },
+  {
+    version: 118,
+    name: 'backfill_missed_hashtag_follow_activity',
+    up(database) {
+      // API hashtag follows created before this migration omitted created_at, which kept them out of For You.
+      // The rows do not retain their write source or original time, so surface all undated follows from now on.
+      if (!database.query("SELECT 1 FROM sqlite_master WHERE type='table' AND name='hashtag_follows'").get()) return
+      database.run('UPDATE hashtag_follows SET created_at=CURRENT_TIMESTAMP WHERE created_at IS NULL')
+    },
+  },
 ]
 
 export const latestMigrationVersion = migrations.at(-1)!.version

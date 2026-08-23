@@ -1326,7 +1326,7 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
       const { userId, tag, action } = input as DatabaseDomainInput<'api.tagRelationshipMutation'>
       let changed = false
       if (action === 'follow') changed = database.query(
-        'INSERT OR IGNORE INTO hashtag_follows(user_id,tag) VALUES(?,?)',
+        'INSERT OR IGNORE INTO hashtag_follows(user_id,tag,created_at) VALUES(?,?,CURRENT_TIMESTAMP)',
       ).run(userId, tag).changes > 0
       else if (action === 'unfollow') changed = database.query(
         'DELETE FROM hashtag_follows WHERE user_id=? AND tag=?',
