@@ -33,7 +33,7 @@ export function groupSimilarActivities(timeline: PersonalizedTimelineRow[]): Tim
   const similarityKey = (row: PersonalizedTimelineRow) =>
     ['post', 'reply', 'mention'].includes(row.activity_kind)
       ? null
-      : `${row.activity_kind}:${row.target_is_viewer}`
+      : `${row.actor_id}:${row.activity_kind}:${row.target_is_viewer}`
   for (const row of timeline) {
     const key = similarityKey(row)
     const previous = groups.at(-1)

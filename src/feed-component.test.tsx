@@ -1,7 +1,7 @@
 import { expect, test } from 'bun:test'
 import React from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
-import { Feed } from './components/feed'
+import { Feed, groupSimilarActivities } from './components/feed'
 import { HotFeed } from './components/hot-feed'
 import { PublicFeed } from './components/public-feed'
 import type { PersonalizedTimelineRow } from './types'
@@ -35,6 +35,26 @@ function postActivity(id: number, actorId: number, handle: string): Personalized
     renderedPost: post,
   }
 }
+
+test('activity details compact only consecutive actions by the same actor', () => {
+  const followActivity = (id: number, actorId: number): PersonalizedTimelineRow => ({
+    ...postActivity(id, actorId, `person-${actorId}`),
+    activity_kind: 'tag_follow',
+    event_key: `tag_follow:${id}`,
+    target_tag: `tag-${id}`,
+  })
+  const first = followActivity(1, 2)
+  const sameActor = followActivity(2, 2)
+  const differentActor = followActivity(3, 3)
+
+  expect(groupSimilarActivities([first, sameActor])).toEqual([
+    { rows: [first, sameActor], collapsible: true },
+  ])
+  expect(groupSimilarActivities([first, differentActor])).toEqual([
+    { rows: [first], collapsible: true },
+    { rows: [differentActor], collapsible: true },
+  ])
+})
 
 test('feed pages reconstruct threads from only the posts on that page', () => {
   const root = { id: 10, user_id: 2, parent_id: null, body: 'root note', created_at: '2026-08-19 10:00:00',
