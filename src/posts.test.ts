@@ -65,6 +65,14 @@ describe('post persistence', () => {
         'read <a href="https://example.com/people/O&#39;Brien/profile" class="raw-link" title="https://example.com/people/O&#39;Brien/profile" target="_blank" rel="nofollow ugc noopener noreferrer">example.com<span class="raw-link-rest">/people/O&#39;Brien/profile</span></a>',
       )
   })
+  test('hides protocols in raw links adjacent to reference punctuation', () => {
+    for (const prefix of ['!', '#', '@']) {
+      expect(linkify(`${prefix}https://example.com/path`))
+        .toBe(`${prefix}<a href="https://example.com/path" class="raw-link" title="https://example.com/path" `
+          + 'target="_blank" rel="nofollow ugc noopener noreferrer">example.com'
+          + '<span class="raw-link-rest">/path</span></a>')
+    }
+  })
   test('shortens long URL labels without changing their destinations', () => {
     expect(linkify('https://www.example.com/a/very/long/path/final-part/?tracking=123'))
       .toBe(

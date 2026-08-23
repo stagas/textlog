@@ -337,13 +337,21 @@ export function linkTokens(body: string, flags?: PostContentFlags): LinkToken[] 
       const url = match.schema ? match.url : `https://${match.raw}`
       tokens.push({ index: match.index, lastIndex: match.lastIndex, kind: 'url', raw: match.raw, url })
     }
+    const overlapsUrl = (index: number, lastIndex: number) => tokens.some(token => token.kind === 'url'
+      && index < token.lastIndex && lastIndex > token.index)
     for (const match of body.matchAll(/(?<![A-Za-z0-9_])@[A-Za-z0-9_]+/g)) {
-      tokens.push({ index: match.index, lastIndex: match.index + match[0].length, kind: 'reference', raw: match[0] })
+      const lastIndex = match.index + match[0].length
+      if (!overlapsUrl(match.index, lastIndex)) {
+        tokens.push({ index: match.index, lastIndex, kind: 'reference', raw: match[0] })
+      }
     }
     let hashtagCount = 0
     for (const match of body.matchAll(/(?<![\p{L}\p{M}\p{N}_])#[\p{L}\p{M}\p{N}_]+/gu)) {
       if (hashtagCount++ === MAX_HASHTAGS_PER_POST) break
-      tokens.push({ index: match.index, lastIndex: match.index + match[0].length, kind: 'reference', raw: match[0] })
+      const lastIndex = match.index + match[0].length
+      if (!overlapsUrl(match.index, lastIndex)) {
+        tokens.push({ index: match.index, lastIndex, kind: 'reference', raw: match[0] })
+      }
     }
   }
   const priority = { 'code-fence': 0, 'latex-fence': 0, code: 1, math: 2, markdown: 3, strikethrough: 4,
