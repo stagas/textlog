@@ -232,7 +232,7 @@ export function registerFeedsRoutes(app: Hono) {
       )
     }
     const response = !flat && !notificationBanner && currentPage(c.req.query('page')) === 1 && !cursorValue
-      ? await rpcMaterializedFeedPage(c.req.raw, 'for-you', user.id, render, false, 2, false, renderForCache,
+      ? await rpcMaterializedFeedPage(c.req.raw, 'for-you', user.id, render, false, 3, false, renderForCache,
         async () => {
           await databaseService().call('feeds.markPersonalizedSnapshotPageRead', { userId: user.id, pageSize,
             toMe: false })

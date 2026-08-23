@@ -19,6 +19,17 @@ type ActivityRow = {
 
 type UserReference = { handle: string; url: string; api_url: string }
 
+const hasVisibleDescendantFromAnotherUser = `EXISTS (WITH RECURSIVE descendants(id,user_id,parent_id,deleted_at) AS (
+  SELECT child.id,child.user_id,child.parent_id,child.deleted_at FROM posts child WHERE child.parent_id=p.id
+  UNION ALL
+  SELECT child.id,child.user_id,child.parent_id,child.deleted_at FROM posts child
+    JOIN descendants parent ON child.parent_id=parent.id
+) SELECT 1 FROM descendants d WHERE d.user_id!=$viewer AND d.deleted_at IS NULL
+  AND NOT EXISTS (SELECT 1 FROM blocks b WHERE
+    (b.blocker_id=$viewer AND b.blocked_id=d.user_id) OR (b.blocker_id=d.user_id AND b.blocked_id=$viewer))
+  AND NOT EXISTS (SELECT 1 FROM post_hashtags ph JOIN blocked_hashtags bh ON bh.tag=ph.tag
+    WHERE ph.post_id=d.id AND bh.user_id=$viewer))`
+
 export type ApiActivity = {
   id: string
   type: ActivityKind
@@ -91,7 +102,7 @@ export function apiActivities(database: Database, origin: string, user: User, op
       LEFT JOIN posts parent ON parent.id=p.parent_id
       LEFT JOIN post_mentions pm ON pm.post_id=p.id AND pm.user_id=$viewer
       WHERE p.deleted_at IS NULL AND u.deleted_at IS NULL
-        AND (p.user_id=$viewer OR p.user_id IN
+        AND ((p.user_id=$viewer AND ${hasVisibleDescendantFromAnotherUser}) OR p.user_id IN
           (SELECT following_id FROM follows WHERE follower_id=$viewer)
           OR ${descendsFromViewer} OR pm.user_id IS NOT NULL
           OR p.id IN (SELECT ph.post_id FROM post_hashtags ph JOIN hashtag_follows hf ON hf.tag=ph.tag

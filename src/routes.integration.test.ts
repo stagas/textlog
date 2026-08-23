@@ -6,7 +6,6 @@ import { Database } from 'bun:sqlite'
 import { createHmac } from 'node:crypto'
 import { createServer } from 'node:net'
 import { tmpdir } from 'node:os'
-import { markAllForYouRead } from './for-you-state'
 import { issueRecapUnsubscribeToken } from './recap-emails'
 
 setDefaultTimeout(30_000)
@@ -1215,11 +1214,10 @@ test('consequential account, content, reporting, and admin flows work over HTTP'
 
   const forYouFirstBody = await (await request('/for-you', { cookie: aliceCookie })).text()
   expect(forYouFirstBody).not.toContain('/for-you?cursor=')
-  expect(forYouFirstBody).toContain('cursor note 81')
-  expect(forYouFirstBody).not.toContain(post.body)
-  expect(forYouFirstBody).toContain('action="/for-you/read-all"')
+  expect(forYouFirstBody).not.toContain('cursor note 81')
+  expect(forYouFirstBody).toContain(post.body)
+  expect(forYouFirstBody).not.toContain('action="/for-you/read-all"')
   expect(forYouFirstBody).not.toContain('class="for-you-item activity-item-unread"')
-  markAllForYouRead(alice.id, false, database)
 
   const profileFirstBody = await (await request('/u/alice')).text()
   const profileNext = profileFirstBody.match(/href="(\/u\/alice\?page=2)"/)?.[1]
@@ -1302,9 +1300,9 @@ test('consequential account, content, reporting, and admin flows work over HTTP'
   expect(followedPersonFeed).toContain('<form action="/follow/bob" method="post">'
     + '<input type="hidden" name="from" value="/for-you#a-')
   expect(followedPersonFeed).not.toContain('action="/follow/alice"')
-  expect(followedPersonFeed).toContain('action="/for-you/read-all"')
+  expect(followedPersonFeed).not.toContain('action="/for-you/read-all"')
   expect(followedPersonFeed).not.toContain('you&#x27;ve seen it all')
-  expect(followedPersonFeed).toContain('href="/for-you">for you<span class="to-me-count">')
+  expect(followedPersonFeed).toContain('href="/for-you">for you<span class="to-me-count">1</span></a>')
   expect(followedPersonFeed).toContain('href="/to-me"><span class="to-me-label">to me</span>'
     + '<span class="to-me-count">1</span></a>')
   expect(followedPersonFeed).not.toContain('href="/to-me"><span class="unread-dot"')
