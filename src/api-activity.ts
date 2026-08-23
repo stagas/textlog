@@ -118,7 +118,7 @@ export function apiActivities(database: Database, origin: string, user: User, op
         'tag-follow:' || printf('%020d',actor.id) || ':' || hf.tag || ':' || hf.created_at,
         actor.handle,NULL,hf.tag,0
       FROM hashtag_follows hf JOIN users actor ON actor.id=hf.user_id
-      WHERE hf.created_at IS NOT NULL AND actor.id!=$viewer
+      WHERE hf.created_at IS NOT NULL AND hf.created_at!='1970-01-01 00:00:00' AND actor.id!=$viewer
         AND (EXISTS (SELECT 1 FROM follows vf WHERE vf.follower_id=$viewer AND vf.following_id=actor.id)
           OR EXISTS (SELECT 1 FROM hashtag_follows vt WHERE vt.user_id=$viewer AND vt.tag=hf.tag))
         AND actor.deleted_at IS NULL AND actor.suspended_at IS NULL

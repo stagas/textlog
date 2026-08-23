@@ -1373,6 +1373,8 @@ test('consequential account, content, reporting, and admin flows work over HTTP'
   expect(await invalidTagFollow.text()).toContain('We couldn&#x27;t process that request.')
   database.query('UPDATE hashtag_follows SET created_at=\'2099-01-02 00:00:00\' WHERE user_id=? AND tag=\'shared\'')
     .run(bob.id)
+  database.query(`INSERT INTO hashtag_follows(user_id,tag,created_at)
+    VALUES(?,'historical','1970-01-01 00:00:00')`).run(bob.id)
   const followedTagFeed = await (await request('/for-you', { cookie: aliceCookie })).text()
   expect(followedTagFeed).toContain('<a class="reference-menu-trigger postauthor" '
     + 'href="/u/bob?from=%2Ffor-you%23a-')
@@ -1385,6 +1387,7 @@ test('consequential account, content, reporting, and admin flows work over HTTP'
   expect(followedTagFeed).not.toContain('<time dateTime="2099-01-02 00:00:00"')
   expect(followedTagFeed).not.toContain('<span aria-hidden="true">·</span><span>0 notes</span></a>')
   expect(followedTagFeed).not.toContain('@alice</a><span>followed</span><a href="/tag/shared">#shared</a>')
+  expect(followedTagFeed).not.toContain('/tag/historical')
   const sharedReplyResponse = await request(`/post/${post.id}/reply`, {
     method: 'POST',
     cookie: bobCookie,

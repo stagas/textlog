@@ -168,7 +168,8 @@ describe('public API', () => {
         (8,2,2,'descendant of Alice reply','2026-08-03 16:30:00');
       INSERT INTO post_hashtags(post_id,tag) VALUES(7,'textlog');
       INSERT INTO hashtag_follows(user_id,tag,created_at) VALUES
-        (1,'textlog','2026-08-03 08:00:00'),(2,'textlog','2026-08-03 18:00:00');`)
+        (1,'textlog','2026-08-03 08:00:00'),(2,'textlog','2026-08-03 18:00:00'),
+        (2,'historical','1970-01-01 00:00:00');`)
     const headers = { authorization: `Bearer ${token}` }
 
     expect((await request(app, '/api/v1/activities/for-you')).status).toBe(401)
