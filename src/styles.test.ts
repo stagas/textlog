@@ -76,6 +76,7 @@ describe('in-memory stylesheet', () => {
     expect(css).toContain('margin-right: 1ch; color: var(--muted); font: inherit;')
     expect(css).toContain('.todo-item { width: fit-content; max-width: 100%; margin: 0; }')
     expect(css).toContain('.todo-item button { width: auto; pointer-events: auto; cursor: pointer;')
+    expect(css).toContain('.parent-quote .todo { font-size: .75rem; line-height: 1.55; letter-spacing: normal; }')
   })
 
   test('highlights a post or activity entry opened through its stable anchor', async () => {

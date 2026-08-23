@@ -601,6 +601,7 @@ export function Post({
                     hashtagFollowerCounts: parent.hashtag_follower_counts, linkPreviews: parent.link_previews }),
                 }} />
                 <Poll p={parent} returnPath={returnPath} />
+                <Todo p={parent} user={user} preview={preview} returnPath={returnPath} />
                 <div className="parent-quote-foot">
                   <a className="quiet" href={user
                     ? parentReplyPath

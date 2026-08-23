@@ -229,6 +229,21 @@ test('todo previews preserve regular text between checkbox lines', () => {
   expect(html.indexOf('>and possibly</div>')).toBeLessThan(html.indexOf('>contemplate existence</span>'))
 })
 
+test('quoted parents render their todos', () => {
+  const user = { id: 2, handle: 'reader', email: 'reader@example.com', bio: '' }
+  const html = renderToStaticMarkup(React.createElement(Post, { user, showParent: true, p: {
+    id: 8, user_id: 2, parent_id: 7, body: 'reply', created_at: '2026-08-23 10:01:00', deleted_at: null,
+    handle: 'reader', reply_count: 0,
+    parent: { id: 7, user_id: 1, parent_id: null, body: '#todo\n[ ] quoted task',
+      created_at: '2026-08-23 10:00:00', deleted_at: null, handle: 'writer', reply_count: 1 },
+  } }))
+
+  expect(html).toContain('<blockquote class="parent-quote"')
+  expect(html).toContain('aria-label="Todo list"')
+  expect(html).toContain('<span class="todo-label">quoted task</span>')
+  expect(html).not.toContain('action="/post/7/todo"')
+})
+
 test('draft cards linkify mentions, hashtags, and links', () => {
   const user = { id: 1, handle: 'writer', email: 'writer@example.com', bio: '' }
   const html = renderToStaticMarkup(React.createElement(Drafts, {

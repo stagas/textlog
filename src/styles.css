@@ -4160,6 +4160,7 @@ form.report-panel {
 .todo-check { flex: 0 0 auto; margin-right: 1ch; color: var(--muted); font: inherit; }
 .todo-check-checked { color: var(--accent-dark); }
 .todo-done { color: var(--muted); text-decoration: line-through; }
+.parent-quote .todo { font-size: .75rem; line-height: 1.55; letter-spacing: normal; }
 .parent-quote .todo-item button,
 .parent-quote .todo-item-static { color: var(--quote-ink); }
 .font-size-larger>span:first-of-type { font-size: 20px; }
