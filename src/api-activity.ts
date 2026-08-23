@@ -90,11 +90,12 @@ export function apiActivities(database: Database, origin: string, user: User, op
       FROM posts p JOIN users u ON u.id=p.user_id
       LEFT JOIN posts parent ON parent.id=p.parent_id
       LEFT JOIN post_mentions pm ON pm.post_id=p.id AND pm.user_id=$viewer
-      WHERE p.deleted_at IS NULL AND u.deleted_at IS NULL AND p.user_id!=$viewer
-        AND (p.user_id IN (SELECT following_id FROM follows WHERE follower_id=$viewer)
+      WHERE p.deleted_at IS NULL AND u.deleted_at IS NULL
+        AND ((p.user_id!=$viewer AND (p.user_id IN
+          (SELECT following_id FROM follows WHERE follower_id=$viewer)
+          OR ${descendsFromViewer} OR pm.user_id IS NOT NULL))
           OR p.id IN (SELECT ph.post_id FROM post_hashtags ph JOIN hashtag_follows hf ON hf.tag=ph.tag
-            WHERE hf.user_id=$viewer)
-          OR ${descendsFromViewer} OR pm.user_id IS NOT NULL)
+            WHERE hf.user_id=$viewer))
         AND NOT EXISTS (SELECT 1 FROM blocks b WHERE
           (b.blocker_id=$viewer AND b.blocked_id=p.user_id)
           OR (b.blocker_id=p.user_id AND b.blocked_id=$viewer))

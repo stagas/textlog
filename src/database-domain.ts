@@ -34,7 +34,7 @@ import { EXPLORE_TAG_PAGE_SIZE } from './pagination'
 import { consumePasswordCaptcha, issuePasswordCaptcha, passwordCaptchaRequired,
   recordFailedPassword } from './password-login-captcha'
 import { consumePasswordLoginNonce, issuePasswordLoginNonce } from './password-login-nonce'
-import { loadPersonalizedFeed } from './personalized-feed'
+import { loadPersonalizedFeed, PERSONALIZED_FEED_SNAPSHOT_VERSION } from './personalized-feed'
 import { loadBioReferenceData, loadThreadReplies } from './posts'
 import { enrichPosts } from './posts'
 import { visibleTagFollowerCounts, visibleUserProfileStats } from './posts'
@@ -1917,7 +1917,7 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
     }
     case 'feeds.markPersonalizedSnapshotPageRead': {
       const { userId, pageSize, toMe } = input as DatabaseDomainInput<'feeds.markPersonalizedSnapshotPageRead'>
-      const kind = `${toMe ? 'to-me' : 'for-you'}:v4`
+      const kind = `${toMe ? 'to-me' : 'for-you'}:v${PERSONALIZED_FEED_SNAPSHOT_VERSION}`
       const snapshot = database.query(`SELECT id FROM feed_snapshots WHERE kind=? AND viewer_id=?
         ORDER BY id DESC LIMIT 1`).get(kind, userId) as { id: number } | null
       if (snapshot) {
