@@ -1,4 +1,5 @@
 import type { Database } from 'bun:sqlite'
+import { activityAnchor } from './activity-anchor'
 import { isAdmin } from './admin'
 import { feedSnapshotPage } from './feed-snapshots'
 import { hasUnreadForYou, hasUnreadToMe, markForYouEntriesRead, unreadForYouCount,
@@ -182,7 +183,7 @@ export function loadPersonalizedFeed(database: Database, user: User, page: numbe
     const page = Math.floor(item.position / pageSize) + 1
     const anchor = ['post', 'reply', 'mention'].includes(row.activity_kind)
       ? `post-${row.id}`
-      : `activity-${row.event_key.replace(/[^a-z0-9_-]+/gi, '-')}`
+      : activityAnchor(row.event_key)
     return `${path}${page > 1 ? `${path.includes('?') ? '&' : '?'}page=${page}` : ''}#${anchor}`
   }
   return { timeline: resultTimeline, page: snapshot.page, totalPages: snapshot.totalPages,

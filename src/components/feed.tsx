@@ -1,4 +1,5 @@
 import type { PersonalizedFeedData, PersonalizedTimelineRow, User } from '../types'
+import { activityAnchor } from '../activity-anchor'
 import { displayBio, linkify } from '../utils'
 import { Layout } from './layout'
 import { MetaRow } from './meta'
@@ -102,8 +103,8 @@ export function Feed({ user, data, title, path = '/for-you', pageUrl, notificati
       return position(a) - position(b)
     })
   const renderTimelineRow = (row: PersonalizedTimelineRow) => {
-    const activityAnchor = `activity-${row.event_key.replace(/[^a-z0-9_-]+/gi, '-')}`
-    const activityReturnPath = `${returnPath}#${activityAnchor}`
+    const anchor = activityAnchor(row.event_key)
+    const activityReturnPath = `${returnPath}#${anchor}`
     const fromQuery = `?from=${encodeURIComponent(activityReturnPath)}`
     return ['post', 'reply', 'mention'].includes(row.activity_kind)
       ? (
@@ -125,7 +126,7 @@ export function Feed({ user, data, title, path = '/for-you', pageUrl, notificati
           row.unread && row.targeted_to_viewer
             ? ' activity-item-directed-unread'
             : ''
-        }`} key={row.event_key} id={activityAnchor}>
+        }`} key={row.event_key} id={anchor}>
           <div className="activity-follow-content">
             <MetaRow className="activity-follow-main" unread={!!row.unread}>
               <UserReference handle={row.actor_handle} bio={row.actor_bio} noteCount={row.actorProfileStats?.notes || 0}

@@ -341,7 +341,7 @@ test('a followed-you event offers to follow back', () => {
 
   expect(html).toContain('>follow back</button>')
   expect(html).toContain('</div><form action="/follow/carol" method="post"><input type="hidden" '
-    + 'name="from" value="/for-you#activity-user-follow-12"/><button class="button">follow back</button>')
+    + 'name="from" value="/for-you#a-IEy7ZWXnSxMC"/><button class="button">follow back</button>')
 })
 
 test('for-you does not put hide actions on posts by people', () => {

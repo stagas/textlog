@@ -1258,18 +1258,18 @@ test('consequential account, content, reporting, and admin flows work over HTTP'
   database.query('UPDATE users SET bio=\'Bob builds things\' WHERE id=?').run(bob.id)
   const followedPersonFeed = await (await request('/for-you', { cookie: aliceCookie })).text()
   expect(followedPersonFeed).toContain('<a class="reference-menu-trigger postauthor" '
-    + 'href="/u/bob?from=%2Ffor-you%23activity-user-follow-')
+    + 'href="/u/bob?from=%2Ffor-you%23a-')
   expect(followedPersonFeed).not.toContain('reference-profile-tabs')
   expect(followedPersonFeed).toContain('<span class="reference-popover-bio">Bob builds things</span>'
     + '<span class="reference-popover-actions"><form action="/follow/bob" method="post">'
-    + '<input type="hidden" name="from" value="/for-you#activity-user-follow-')
+    + '<input type="hidden" name="from" value="/for-you#a-')
   expect(followedPersonFeed).toContain('<button '
     + 'class="button button-muted" type="submit">unfollow</button>')
   expect(followedPersonFeed).toContain('<form action="/block/bob" method="post">'
     + '<button class="quiet danger" type="submit">block</button></form>')
   expect(followedPersonFeed).toContain('<p class="profile-bio">Bob builds things</p>')
   expect(followedPersonFeed).toContain('<form action="/follow/bob" method="post">'
-    + '<input type="hidden" name="from" value="/for-you#activity-user-follow-')
+    + '<input type="hidden" name="from" value="/for-you#a-')
   expect(followedPersonFeed).not.toContain('action="/follow/alice"')
   expect(followedPersonFeed).not.toContain('action="/for-you/read-all"')
   expect(followedPersonFeed).not.toContain('you&#x27;ve seen it all')
@@ -1346,13 +1346,13 @@ test('consequential account, content, reporting, and admin flows work over HTTP'
     .run(bob.id)
   const followedTagFeed = await (await request('/for-you', { cookie: aliceCookie })).text()
   expect(followedTagFeed).toContain('<a class="reference-menu-trigger postauthor" '
-    + 'href="/u/bob?from=%2Ffor-you%23activity-tag-follow-')
+    + 'href="/u/bob?from=%2Ffor-you%23a-')
   expect(followedTagFeed).toContain('<span class="reference-popover-bio">Bob builds things</span>')
   expect(followedTagFeed).toContain('<a class="reference-menu-trigger" '
-    + 'href="/tag/shared?from=%2Ffor-you%23activity-tag-follow-')
+    + 'href="/tag/shared?from=%2Ffor-you%23a-')
   expect(followedTagFeed).not.toContain('activity-follow-stats')
   expect(followedTagFeed).toContain('<form action="/tag-follow/shared" method="post">'
-    + '<input type="hidden" name="from" value="/for-you#activity-tag-follow-')
+    + '<input type="hidden" name="from" value="/for-you#a-')
   expect(followedTagFeed).not.toContain('<time dateTime="2099-01-02 00:00:00"')
   expect(followedTagFeed).not.toContain('<span aria-hidden="true">·</span><span>0 notes</span></a>')
   expect(followedTagFeed).not.toContain('@alice</a><span>followed</span><a href="/tag/shared">#shared</a>')
