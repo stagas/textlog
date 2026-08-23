@@ -153,6 +153,18 @@ function PostingFormattingHelp() {
                 </code>
               </dd>
             </div>
+            <div>
+              <dt>Todos</dt>
+              <dd>
+                <code>
+                  Today <b>#todo</b><br />
+                  <b>[ ]</b> First task<br />
+                  <b>[x]</b> Finished task
+                </code>
+                <br />
+                <small>Only [ ] and [x] lines become items. Click your items to toggle them.</small>
+              </dd>
+            </div>
       </dl>
     </section>
   )
