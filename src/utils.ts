@@ -44,7 +44,7 @@ function previewLink(html: string, url: string, appUrl: string | undefined, popo
   const cssUrl = preview.imageUrl.replace(/["'\\\n\r\f]/g, character => `\\${character}`)
   const aspect = preview.imageWidth && preview.imageHeight
     ? `;--preview-ratio:${preview.imageWidth / preview.imageHeight};--preview-width:${
-      200 * preview.imageWidth / preview.imageHeight
+      Math.min(200, preview.imageHeight) * preview.imageWidth / preview.imageHeight
     }px`
     : ''
   const imageClass = `remote-link-image${aspect ? ' remote-link-image-sized' : ''}`

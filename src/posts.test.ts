@@ -345,6 +345,18 @@ describe('post persistence', () => {
     expect(html).not.toContain('background-image')
   })
 
+  test('does not enlarge a link preview image shorter than the hover card maximum', () => {
+    const url = 'https://example.com/small-image'
+    const html = linkify(url, {}, [], undefined, undefined, '', {}, {}, {
+      signedIn: false,
+      formPrefix: 'post-1',
+      linkPreviews: {
+        [url]: { imageUrl: 'https://cdn.example.com/small.jpg', imageWidth: 120, imageHeight: 60 },
+      },
+    })
+    expect(html).toContain('--preview-ratio:2;--preview-width:120px')
+  })
+
   test('renders audio link previews without preloading media', () => {
     const url = 'https://example.com/episode.mp3'
     const html = linkify(url, {}, [], undefined, undefined, '', {}, {}, {
