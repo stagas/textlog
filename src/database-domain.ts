@@ -38,7 +38,7 @@ import { loadPersonalizedFeed, PERSONALIZED_FEED_SNAPSHOT_VERSION } from './pers
 import { loadBioReferenceData, loadThreadReplies } from './posts'
 import { enrichPosts } from './posts'
 import { visibleTagFollowerCounts, visibleUserProfileStats } from './posts'
-import { createPost, updatePost } from './posts'
+import { createPost, isThreadLocked, updatePost } from './posts'
 import { userBioLinkPreviews } from './link-preview'
 import { voteInPoll } from './polls'
 import { createPublicArchive, publicArchiveIsCurrent } from './public-archive'
@@ -1375,6 +1375,9 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
       }
       if (draft.parent_id !== null && !database.query('SELECT 1 FROM posts WHERE id=? AND deleted_at IS NULL')
         .get(draft.parent_id)) return { status: 'not_found' } as DatabaseDomainOutput<K>
+      if (draft.parent_id !== null && isThreadLocked(database, draft.parent_id)) {
+        return { status: 'locked' } as DatabaseDomainOutput<K>
+      }
       const created = database.transaction(() => {
         const value = createPost(database, request.userId, draft.body, draft.parent_id, false)
         if (!('retryAfter' in value)) {
@@ -1395,6 +1398,7 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
         const parent = database.query('SELECT user_id FROM posts WHERE id=? AND deleted_at IS NULL')
           .get(parentId) as { user_id: number } | null
         if (!parent) return { status: 'not_found' } as DatabaseDomainOutput<K>
+        if (isThreadLocked(database, parentId)) return { status: 'locked' } as DatabaseDomainOutput<K>
         const blocked = database.query(`SELECT 1 FROM blocks WHERE
           (blocker_id=? AND blocked_id=?) OR (blocker_id=? AND blocked_id=?)`)
           .get(userId, parent.user_id, parent.user_id, userId)

@@ -564,9 +564,9 @@ export function Post({
       }} />
       {preview ? <PollPreview body={p.body} /> : <Poll p={p} returnPath={returnPath} />}
       <Todo p={p} user={user} preview={preview} returnPath={returnPath} formPrefix={formPrefix} />
-      {!parent && (showReplyAction || resolvedContinuationHref || canModerate || reportHref) && (
+      {!parent && (showReplyAction && !p.thread_locked || resolvedContinuationHref || canModerate || reportHref) && (
       <MetaRow className={`postfoot${preview ? ' preview-post-meta' : ''}`}>
-        {!parent && showReplyAction && (preview
+        {!parent && showReplyAction && !p.thread_locked && (preview
           ? <span className="quiet preview-reply">{resolvedReplyLabel}</span>
           : <a className="quiet post-reply-link" href={resolvedReplyHref} rel="nofollow"
             aria-label={`${resolvedReplyLabel} to @${p.handle}`}>{resolvedReplyLabel}</a>)}
@@ -640,7 +640,7 @@ export function Post({
                 <Poll p={parent} returnPath={returnPath} />
                 <Todo p={parent} user={user} preview={preview} returnPath={returnPath}
                   formPrefix={`${formPrefix}-parent-${parent.id}`} />
-                <div className="parent-quote-foot">
+                {!parent.thread_locked && <div className="parent-quote-foot">
                   <a className="quiet" href={user
                     ? parentReplyPath
                     : '/enter?next=' + encodeURIComponent(parentReplyPath)} rel="nofollow"
@@ -648,16 +648,16 @@ export function Post({
                   >
                     {user ? user.id === parent.user_id ? 'continue' : 'reply' : 'enter to reply'}
                   </a>
-                </div>
+                </div>}
                 <ReferenceFollowForms post={parent} prefix={`${formPrefix}-parent-${parent.id}`} user={user}
                   returnPath={returnPath || `/post/${p.id}#post-${p.id}`} />
               </>
             )}
         </blockquote>
       )}
-      {parent && (showReplyAction || resolvedContinuationHref || canModerate || reportHref) && (
+      {parent && (showReplyAction && !p.thread_locked || resolvedContinuationHref || canModerate || reportHref) && (
         <MetaRow className={`postfoot postfoot-after-quote${preview ? ' preview-post-meta' : ''}`}>
-          {showReplyAction && (preview
+          {showReplyAction && !p.thread_locked && (preview
             ? <span className="quiet preview-reply">{resolvedReplyLabel}</span>
             : <a className="quiet post-reply-link" href={resolvedReplyHref} rel="nofollow"
               aria-label={`${resolvedReplyLabel} to @${p.handle}`}>{resolvedReplyLabel}</a>)}

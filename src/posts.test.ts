@@ -1,6 +1,6 @@
 import { Database } from 'bun:sqlite'
 import { describe, expect, test } from 'bun:test'
-import { createPost, enrichPosts } from './posts'
+import { createPost, enrichPosts, isThreadLocked } from './posts'
 import type { PostView } from './types'
 import { displayPostBody, linkify } from './utils'
 
@@ -448,6 +448,20 @@ describe('post persistence', () => {
     const [view] = enrichPosts(db, [child])
     expect(view.parent?.reply_count).toBe(1)
     expect(view.parent?.body).toBe('parent')
+  })
+
+  test('locks a note and all of its descendants when an ancestor has #lock', () => {
+    const db = database()
+    db.run(`INSERT INTO posts(id,user_id,parent_id,body) VALUES
+      (1,1,NULL,'root #lock'),(2,2,1,'child'),(3,1,2,'grandchild'),(4,2,NULL,'open');
+      INSERT INTO post_hashtags(post_id,tag) VALUES(1,'lock');`)
+    const posts = db.query(`SELECT p.*,u.handle FROM posts p JOIN users u ON u.id=p.user_id
+      WHERE p.id IN (1,2,3,4) ORDER BY p.id`).all() as PostView[]
+
+    expect(enrichPosts(db, posts).map(post => !!post.thread_locked)).toEqual([true, true, true, false])
+    expect(enrichPosts(db, [posts[2]])[0].parent?.thread_locked).toBe(true)
+    expect(isThreadLocked(db, 3)).toBe(true)
+    expect(isThreadLocked(db, 4)).toBe(false)
   })
 
   test('classifies replies and mentions addressed to the viewer', () => {

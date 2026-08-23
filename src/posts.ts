@@ -150,6 +150,15 @@ export function createPost(
   return result
 }
 
+export function isThreadLocked(database: Database, postId: number) {
+  return !!database.query(`WITH RECURSIVE ancestors(id,parent_id) AS (
+    SELECT id,parent_id FROM posts WHERE id=? AND deleted_at IS NULL
+    UNION ALL
+    SELECT p.id,p.parent_id FROM posts p JOIN ancestors ON p.id=ancestors.parent_id
+  ) SELECT 1 FROM ancestors JOIN post_hashtags ph ON ph.post_id=ancestors.id
+    WHERE ph.tag='lock' LIMIT 1`).get(postId)
+}
+
 export function updatePost(database: Database, postId: number, body: string) {
   database.transaction(() => {
     database.query('UPDATE posts SET body=? WHERE id=?').run(body, postId)
@@ -208,6 +217,13 @@ export function enrichPosts(database: Database, posts: PostView[], viewerId = -1
       ) SELECT id FROM ancestors`).all(...directParentIds) as { id: number }[]).map(row => row.id)
     : []
   const previewPostIds = [...new Set([...ids, ...parentIds])]
+  const lockedPostIds = new Set((database.query(`WITH RECURSIVE ancestors(start_id,id,parent_id) AS (
+    SELECT id,id,parent_id FROM posts WHERE id IN (${previewPostIds.map(() => '?').join(',')})
+    UNION ALL
+    SELECT ancestors.start_id,p.id,p.parent_id FROM posts p JOIN ancestors ON p.id=ancestors.parent_id
+  ) SELECT DISTINCT ancestors.start_id id FROM ancestors
+    JOIN post_hashtags ph ON ph.post_id=ancestors.id WHERE ph.tag='lock'`).all(...previewPostIds) as { id: number }[])
+    .map(row => row.id))
   const viewerMentionedPostIds = viewerId < 0
     ? new Set<number>()
     : new Set((database.query(`SELECT pm.post_id FROM post_mentions pm JOIN posts p ON p.id=pm.post_id
@@ -291,6 +307,7 @@ export function enrichPosts(database: Database, posts: PostView[], viewerId = -1
       parentBodies.push(parent.body)
       parent.reply_count = countById.get(parent.id) || 0
       parent.top_id = parent.parent_id ? topByParentId.get(parent.id) || null : null
+      parent.thread_locked = lockedPostIds.has(parent.id)
       parent.link_previews = previewsByPost.get(parent.id)
       for (const handle of extractMentions(parent.body)) addMentionBio(handle)
       for (const handle of extractMentions(parent.bio || '')) addMentionBio(handle)
@@ -385,6 +402,7 @@ export function enrichPosts(database: Database, posts: PostView[], viewerId = -1
     reply_count: countById.get(post.id) || 0,
     parent: post.parent_id ? parents.get(post.parent_id) || null : null,
     poll: polls.get(post.id),
+    thread_locked: lockedPostIds.has(post.id),
   }))
 }
 

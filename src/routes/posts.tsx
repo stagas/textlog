@@ -261,6 +261,7 @@ export function registerPostsRoutes(app: Hono) {
         parentId: null,
         origin: new URL(c.req.url).origin,
       })
+      if (result.status === 'locked') return c.text('This thread is locked', 409)
       if (result.status === 'rate_limited') {
         return page(
           <Compose user={user} body={body} error={postRateLimitMessage(result.retryAfter)} returnPath={returnPath} />,
@@ -478,6 +479,7 @@ export function registerPostsRoutes(app: Hono) {
         parentId,
         origin: new URL(c.req.url).origin,
       })
+      if (result.status === 'locked') return c.text('This thread is locked', 409)
       if (result.status === 'rate_limited') {
         return page(
           <Reply user={user} post={parent} showForm error={postRateLimitMessage(result.retryAfter)} body={body}

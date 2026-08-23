@@ -240,6 +240,7 @@ export function registerApiWriteRoutes(app: Hono, service: DatabaseService,
       origin: apiOrigin(c.req.url, appUrl),
     })
     if (result.status === 'not_found') return fail('not_found', 'Post not found', 404)
+    if (result.status === 'locked') return fail('thread_locked', 'This thread is locked', 409)
     if (result.status === 'rate_limited') {
       return fail('post_rate_limited', postRateLimitMessage(result.retryAfter), 429, result.retryAfter)
     }
@@ -352,6 +353,7 @@ export function registerApiWriteRoutes(app: Hono, service: DatabaseService,
     const result = await service.call('api.publishDraft', { userId: guard.user!.id, id, body: draft.body,
       parentId: draft.parent_id, origin: apiOrigin(c.req.url, appUrl) })
     if (result.status === 'not_found') return fail('not_found', 'Draft or parent post not found', 404)
+    if (result.status === 'locked') return fail('thread_locked', 'This thread is locked', 409)
     if (result.status === 'rate_limited') return fail('post_rate_limited', postRateLimitMessage(result.retryAfter),
       429, result.retryAfter)
     if (!result.duplicate) publishPost(result.id)

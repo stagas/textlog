@@ -131,6 +131,20 @@ describe('API writes', () => {
     expect((await post(app, 'alice-token', { body: 'x', parent_id: 999 })).status).toBe(404)
   })
 
+  test('refuses replies anywhere below a #lock note', async () => {
+    const { app, database } = fixture()
+    database.run(`UPDATE posts SET body='locked #lock' WHERE id=1;
+      INSERT INTO post_hashtags(post_id,tag) VALUES(1,'lock');
+      INSERT INTO posts(id,user_id,parent_id,body) VALUES(2,2,1,'existing child');`)
+
+    for (const parentId of [1, 2]) {
+      const response = await post(app, 'alice-token', { body: `reply to ${parentId}`, parent_id: parentId })
+      expect(response.status).toBe(409)
+      expect(await response.json()).toMatchObject({ error: { code: 'thread_locked' } })
+    }
+    expect(database.query('SELECT count(*) count FROM posts').get()).toEqual({ count: 2 })
+  })
+
   test('keeps the same posting limit as the website', async () => {
     const { app } = fixture()
     for (let i = 0; i < 5; i++) {

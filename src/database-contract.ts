@@ -293,10 +293,10 @@ export type DatabaseDomainOperations = {
   'api.explore': { input: { viewerId: number; origin: string; peopleLimit: number; peopleOffset: number;
     tagsLimit: number; tagsOffset: number }; output: unknown }
   'api.publishDraft': { input: { userId: number; id: number; body: string; parentId: number | null; origin: string };
-    output: { status: 'not_found' } | { status: 'rate_limited'; retryAfter: number } | { status: 'ready'; id: number;
+    output: { status: 'not_found' } | { status: 'locked' } | { status: 'rate_limited'; retryAfter: number } | { status: 'ready'; id: number;
       duplicate: boolean; post: ApiPost } }
   'api.createPost': { input: { userId: number; body: string; parentId: number | null; origin: string };
-    output: { status: 'not_found' } | { status: 'rate_limited'; retryAfter: number } | { status: 'ready'; id: number;
+    output: { status: 'not_found' } | { status: 'locked' } | { status: 'rate_limited'; retryAfter: number } | { status: 'ready'; id: number;
       duplicate: boolean; post: ApiPost } }
   'api.updatePost': { input: { userId: number; id: number; body: string; origin: string };
     output: { status: 'not_found' | 'forbidden' } | { status: 'ready'; post: ApiPost } }

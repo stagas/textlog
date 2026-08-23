@@ -63,6 +63,7 @@ export type ParentPost = Pick<PostRow,
   bio_reference?: BioReferenceData
   reply_count: number
   top_id?: number | null
+  thread_locked?: boolean
 }
 
 export type PostView = PostRow & {
@@ -87,6 +88,7 @@ export type PostView = PostRow & {
   poll?: PollView
   reply_count?: number
   parent?: ParentPost | null
+  thread_locked?: boolean
 }
 
 export type PostFeedPage = { posts: PostView[]; page: number; totalItems: number; totalPages: number;

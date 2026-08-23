@@ -121,6 +121,17 @@ test('blog recap uses the site layout and shared post presentation', () => {
   expect(html).toContain('class="site-footer"')
 })
 
+test('locked notes and descendants omit reply controls and reply forms', () => {
+  const user = { id: 1, handle: 'reader', email: 'reader@example.com', bio: '' }
+  const post = { id: 9, user_id: 2, parent_id: null, body: 'Closed #lock', created_at: '2026-08-23 10:00:00',
+    deleted_at: null, handle: 'writer', reply_count: 0, thread_locked: true }
+  const card = renderToStaticMarkup(React.createElement(Post, { p: post, user, showReplyAction: true }))
+  const page = renderToStaticMarkup(React.createElement(Reply, { user, post, showForm: true }))
+
+  expect(card).not.toContain('post-reply-link')
+  expect(page).not.toContain('class="panel panel-surface panel-medium replybox"')
+})
+
 test('account switcher errors use the shared error notice', () => {
   const user = { id: 1, handle: 'reader', email: 'reader@example.com', bio: '' }
   const html = renderToStaticMarkup(React.createElement(AccountSwitcher, {

@@ -116,7 +116,7 @@ export function Reply(
             error={reportError} />
         )}
         {preview && <ReplyPreview parent={post} user={user} body={body} />}
-        {showForm && (
+        {showForm && !post.thread_locked && (
           canPublishPosts(user)
             ? (
               <ReplyBox action={'/post/' + post.id + '/reply'} body={body} error={error}

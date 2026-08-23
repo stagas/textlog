@@ -5434,6 +5434,7 @@ a.post-context:hover {
   display: block;
   max-width: 100%;
   overflow-x: auto;
+  overflow-y: hidden;
   overscroll-behavior-inline: contain;
   font-family: var(--font-monospace);
   line-height: 1.15;
