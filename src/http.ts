@@ -101,6 +101,7 @@ export function securityHeaders(devReload = false, appUrl: string | undefined = 
       embeddable ? 'frame-ancestors *' : 'frame-ancestors \'none\'',
       'object-src \'none\'',
       'img-src \'self\' data: https:',
+      'media-src \'self\' https:',
       'style-src \'self\' \'unsafe-inline\' https://fonts.cdnfonts.com',
       'font-src \'self\' https://fonts.cdnfonts.com',
       devReload ? 'script-src \'self\' \'unsafe-inline\'' : scripts ? 'script-src \'self\'' : 'script-src \'none\'',

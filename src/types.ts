@@ -1,5 +1,5 @@
 export type LinkPreview = { imageUrl: string; imageKey?: string; title?: string; description?: string;
-  siteName?: string; imageWidth?: number; imageHeight?: number }
+  siteName?: string; imageWidth?: number; imageHeight?: number; mimeType?: string }
 
 export type PostRow = {
   id: number

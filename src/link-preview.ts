@@ -244,6 +244,36 @@ async function fetchHtml(initialUrl: URL) {
   return null
 }
 
+async function audioMimeType(initialUrl: URL) {
+  let url = initialUrl
+  for (let redirects = 0; redirects <= 3; redirects++) {
+    let response = await fetch(url, {
+      method: 'HEAD', redirect: 'manual', signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
+      headers: { accept: 'audio/*,text/html;q=0.8', 'user-agent': 'textlog-link-preview/1.0' },
+    })
+    if (response.status === 405 || response.status === 501) {
+      response = await fetch(url, {
+        redirect: 'manual', signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
+        headers: { accept: 'audio/*,text/html;q=0.8', range: 'bytes=0-0',
+          'user-agent': 'textlog-link-preview/1.0' },
+      })
+      await response.body?.cancel()
+    }
+    if (response.status >= 300 && response.status < 400) {
+      const location = response.headers.get('location')
+      if (!location) return null
+      const redirected = await publicHttpUrl(new URL(location, url).href)
+      if (!redirected) return null
+      url = redirected
+      continue
+    }
+    if (!response.ok) return null
+    const mimeType = response.headers.get('content-type')?.split(';', 1)[0].trim().toLowerCase()
+    return mimeType?.startsWith('audio/') ? mimeType : null
+  }
+  return null
+}
+
 async function fetchYouTubeChannel(initialUrl: URL) {
   let url = initialUrl
   for (let redirects = 0; redirects <= 3; redirects++) {
@@ -383,6 +413,12 @@ export async function discoverLinkPreviews(body: string, database?: Database) {
       if (ownPreview) return ownPreview
       const url = await publicHttpUrl(rawUrl)
       if (!url) return null
+      const mimeType = await audioMimeType(url)
+      if (mimeType) {
+        const filename = decodeURIComponent(url.pathname.split('/').pop() || url.hostname)
+        return { url: rawUrl, imageUrl: rawUrl, title: filename, siteName: url.hostname.replace(/^www\./, ''),
+          mimeType }
+      }
       if (isDirectImageUrl(url.href)) {
         if (url.protocol !== 'https:' && url.origin !== appOrigin()) return null
         const image = await storedImage(url)
@@ -439,15 +475,22 @@ function writeLinkPreviews(database: Database, postId: number, previews: ({ url:
   replacedKeys: string[] = [])
 {
   const existing = database.query('SELECT image_url FROM post_link_previews WHERE post_id=? AND url=?')
-  const insert = database.query(`INSERT INTO post_link_previews
+  const supportsMimeType = database.query("SELECT 1 FROM pragma_table_info('post_link_previews') WHERE name='mime_type'")
+    .get()
+  const insert = supportsMimeType ? database.query(`INSERT INTO post_link_previews
+    (post_id,url,image_url,title,description,site_name,image_width,image_height,mime_type) VALUES(?,?,?,?,?,?,?,?,?)
+    ON CONFLICT(post_id,url) DO UPDATE SET image_url=excluded.image_url,title=excluded.title,
+      description=excluded.description,site_name=excluded.site_name,image_width=excluded.image_width,
+      image_height=excluded.image_height,mime_type=excluded.mime_type`) : database.query(`INSERT INTO post_link_previews
     (post_id,url,image_url,title,description,site_name,image_width,image_height) VALUES(?,?,?,?,?,?,?,?)
     ON CONFLICT(post_id,url) DO UPDATE SET image_url=excluded.image_url,title=excluded.title,
       description=excluded.description,site_name=excluded.site_name,image_width=excluded.image_width,
       image_height=excluded.image_height`)
   for (const preview of previews) {
     const previous = existing.get(postId, preview.url) as { image_url: string } | null
-    insert.run(postId, preview.url, preview.imageKey || preview.imageUrl, preview.title || null,
-      preview.description || null, preview.siteName || null, preview.imageWidth || null, preview.imageHeight || null)
+    const values = [postId, preview.url, preview.imageKey || preview.imageUrl, preview.title || null,
+      preview.description || null, preview.siteName || null, preview.imageWidth || null, preview.imageHeight || null]
+    insert.run(...values, ...(supportsMimeType ? [preview.mimeType || null] : []))
     if (previous && isImageKey(previous.image_url) && previous.image_url !== preview.imageKey) {
       replacedKeys.push(previous.image_url)
     }
@@ -511,7 +554,7 @@ function storedBioPreviewKeys(database: Database, userId: number) {
 
 export function userBioLinkPreviews(database: Database, userId: number) {
   if (!bioLinkPreviewTableAvailable(database)) return {}
-  const rows = database.query(`SELECT url,image_url,title,description,site_name,image_width,image_height
+  const rows = database.query(`SELECT url,image_url,title,description,site_name,image_width,image_height,mime_type
     FROM user_bio_link_previews WHERE user_id=?`).all(userId) as {
     url: string
     image_url: string
@@ -520,6 +563,7 @@ export function userBioLinkPreviews(database: Database, userId: number) {
     site_name: string | null
     image_width: number | null
     image_height: number | null
+    mime_type: string | null
   }[]
   return Object.fromEntries(rows.map(row => [row.url, {
     imageUrl: isImageKey(row.image_url) ? getImageUrl(row.image_url) : row.image_url,
@@ -528,6 +572,7 @@ export function userBioLinkPreviews(database: Database, userId: number) {
     siteName: row.site_name ? decodeHtmlEntities(row.site_name) : undefined,
     imageWidth: row.image_width || undefined,
     imageHeight: row.image_height || undefined,
+    mimeType: row.mime_type || undefined,
   }]))
 }
 
@@ -541,14 +586,14 @@ export async function replaceBioLinkPreviews(database: Database, userId: number,
   const oldKeys = storedBioPreviewKeys(database, userId)
   const newKeys = previews.flatMap(preview => preview.imageKey ? [preview.imageKey] : [])
   const insert = database.query(`INSERT INTO user_bio_link_previews
-    (user_id,url,image_url,title,description,site_name,image_width,image_height) VALUES(?,?,?,?,?,?,?,?)`)
+    (user_id,url,image_url,title,description,site_name,image_width,image_height,mime_type) VALUES(?,?,?,?,?,?,?,?,?)`)
   try {
     database.transaction(() => {
       database.query('DELETE FROM user_bio_link_previews WHERE user_id=?').run(userId)
       for (const preview of previews) {
         insert.run(userId, preview.url, preview.imageKey || preview.imageUrl, preview.title || null,
           preview.description || null, preview.siteName || null, preview.imageWidth || null,
-          preview.imageHeight || null)
+          preview.imageHeight || null, preview.mimeType || null)
       }
     })()
   }

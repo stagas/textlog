@@ -36,6 +36,10 @@ export type ReferencePopoverOptions = {
 function previewLink(html: string, url: string, appUrl: string | undefined, popover?: ReferencePopoverOptions) {
   const preview = popover?.linkPreviews?.[url]
   if (!preview) return html
+  if (preview.mimeType?.toLowerCase().startsWith('audio/')) {
+    return `<span class="remote-link-menu">${html}<span class="remote-link-popover remote-link-audio-popover">`
+      + `<audio controls preload="none" src="${esc(url)}"></audio></span></span>`
+  }
   const cssUrl = preview.imageUrl.replace(/["'\\\n\r\f]/g, character => `\\${character}`)
   const aspect = preview.imageWidth && preview.imageHeight
     ? `;--preview-ratio:${preview.imageWidth / preview.imageHeight};--preview-width:${

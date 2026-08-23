@@ -1435,14 +1435,14 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
       database.transaction(() => {
         if (mode === 'replace') database.query('DELETE FROM post_link_previews WHERE post_id=?').run(postId)
         const insert = database.query(`INSERT INTO post_link_previews
-          (post_id,url,image_url,title,description,site_name,image_width,image_height) VALUES(?,?,?,?,?,?,?,?)
+          (post_id,url,image_url,title,description,site_name,image_width,image_height,mime_type) VALUES(?,?,?,?,?,?,?,?,?)
           ON CONFLICT(post_id,url) DO UPDATE SET image_url=excluded.image_url,title=excluded.title,
             description=excluded.description,site_name=excluded.site_name,image_width=excluded.image_width,
-            image_height=excluded.image_height`)
+            image_height=excluded.image_height,mime_type=excluded.mime_type`)
         for (const preview of previews) {
           insert.run(postId, preview.url, preview.imageKey || preview.imageUrl, preview.title || null,
             preview.description || null, preview.siteName || null, preview.imageWidth || null,
-            preview.imageHeight || null)
+            preview.imageHeight || null, preview.mimeType || null)
         }
       })()
       const retained = mode === 'save'
@@ -1469,11 +1469,11 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
       database.transaction(() => {
         database.query('DELETE FROM user_bio_link_previews WHERE user_id=?').run(userId)
         const insert = database.query(`INSERT INTO user_bio_link_previews
-          (user_id,url,image_url,title,description,site_name,image_width,image_height) VALUES(?,?,?,?,?,?,?,?)`)
+          (user_id,url,image_url,title,description,site_name,image_width,image_height,mime_type) VALUES(?,?,?,?,?,?,?,?,?)`)
         for (const preview of previews) {
           insert.run(userId, preview.url, preview.imageKey || preview.imageUrl, preview.title || null,
             preview.description || null, preview.siteName || null, preview.imageWidth || null,
-            preview.imageHeight || null)
+            preview.imageHeight || null, preview.mimeType || null)
         }
       })()
       return { obsoleteImageKeys: oldKeys.filter(key => !newKeys.includes(key)) } as DatabaseDomainOutput<K>

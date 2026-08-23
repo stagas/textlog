@@ -593,6 +593,16 @@ header>nav>a:not(.button),
   -webkit-line-clamp: 3;
 }
 
+.remote-link-audio-popover {
+  padding: var(--space-3);
+  cursor: default;
+}
+
+.remote-link-audio-popover audio {
+  display: block;
+  width: 100%;
+}
+
 .remote-link-menu:hover .remote-link-popover {
   display: grid;
   animation: reference-popover-reveal 0s 500ms both;

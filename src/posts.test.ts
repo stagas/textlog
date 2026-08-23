@@ -337,6 +337,18 @@ describe('post persistence', () => {
     expect(html).not.toContain('background-image')
   })
 
+  test('renders audio link previews without preloading media', () => {
+    const url = 'https://example.com/episode.mp3'
+    const html = linkify(url, {}, [], undefined, undefined, '', {}, {}, {
+      signedIn: false,
+      formPrefix: 'post-1',
+      linkPreviews: { [url]: { imageUrl: url, mimeType: 'audio/mpeg' } },
+    })
+    expect(html).toContain('class="remote-link-popover remote-link-audio-popover"')
+    expect(html).toContain(`<audio controls preload="none" src="${url}"></audio>`)
+    expect(html).not.toContain('--preview-image')
+  })
+
   test('opens local link previews in the current tab like their post links', () => {
     const url = 'https://textlog.test/post/1'
     const html = linkify(url, {}, [], 'https://textlog.test', undefined, '', {}, {}, {

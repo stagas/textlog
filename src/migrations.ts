@@ -1551,6 +1551,18 @@ export const migrations: Migration[] = [
       `)
     },
   },
+  {
+    version: 113,
+    name: 'link_preview_mime_types',
+    up(database) {
+      if (database.query("SELECT 1 FROM sqlite_master WHERE type='table' AND name='post_link_previews'").get()) {
+        addColumn(database, 'post_link_previews', 'mime_type', 'TEXT')
+      }
+      if (database.query("SELECT 1 FROM sqlite_master WHERE type='table' AND name='user_bio_link_previews'").get()) {
+        addColumn(database, 'user_bio_link_previews', 'mime_type', 'TEXT')
+      }
+    },
+  },
 ]
 
 export const latestMigrationVersion = migrations.at(-1)!.version

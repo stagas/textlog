@@ -196,6 +196,7 @@ describe('security headers', () => {
     expect(securityHeaders()['Content-Security-Policy']).toContain('script-src \'none\'')
     expect(securityHeaders()['Content-Security-Policy']).toContain('style-src \'self\' \'unsafe-inline\'')
     expect(securityHeaders()['Content-Security-Policy']).toContain('img-src \'self\' data: https:')
+    expect(securityHeaders()['Content-Security-Policy']).toContain('media-src \'self\' https:')
     expect(securityHeaders(true)['Content-Security-Policy']).toContain('script-src \'self\' \'unsafe-inline\'')
     expect(securityHeaders()['X-Frame-Options']).toBe('DENY')
     expect(securityHeaders(false, undefined, true)['X-Frame-Options']).toBeUndefined()

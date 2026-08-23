@@ -218,7 +218,7 @@ export function enrichPosts(database: Database, posts: PostView[], viewerId = -1
   const previewRows = database.query(
       'SELECT 1 FROM sqlite_master WHERE type=\'table\' AND name=\'post_link_previews\'',
     ).get()
-    ? database.query(`SELECT post_id,url,image_url,title,description,site_name,image_width,image_height
+    ? database.query(`SELECT post_id,url,image_url,title,description,site_name,image_width,image_height,mime_type
       FROM post_link_previews WHERE post_id IN
       (${previewPostIds.map(() => '?').join(',')})`).all(...previewPostIds) as {
       post_id: number
@@ -229,6 +229,7 @@ export function enrichPosts(database: Database, posts: PostView[], viewerId = -1
       site_name: string | null
       image_width: number | null
       image_height: number | null
+      mime_type: string | null
     }[]
     : []
   const previewsByPost = new Map<number, Record<string, LinkPreview>>()
@@ -238,7 +239,7 @@ export function enrichPosts(database: Database, posts: PostView[], viewerId = -1
       title: row.title ? decodeHtmlEntities(row.title) : undefined,
       description: row.description ? decodeHtmlEntities(row.description) : undefined,
       siteName: row.site_name ? decodeHtmlEntities(row.site_name) : undefined, imageWidth: row.image_width || undefined,
-      imageHeight: row.image_height || undefined }
+      imageHeight: row.image_height || undefined, mimeType: row.mime_type || undefined }
     previewsByPost.set(row.post_id, previews)
   }
   const countRootIds = [...new Set([...ids, ...parentIds])]

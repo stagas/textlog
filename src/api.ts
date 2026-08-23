@@ -127,10 +127,10 @@ function apiExtras(database: Database, postIds: number[], viewerId: number) {
   if (postIds.length && database.query(
     "SELECT 1 FROM sqlite_master WHERE type='table' AND name='post_link_previews'",
   ).get()) {
-    const rows = database.query(`SELECT post_id,url,image_url,title,description,site_name,image_width,image_height
+    const rows = database.query(`SELECT post_id,url,image_url,title,description,site_name,image_width,image_height,mime_type
       FROM post_link_previews WHERE post_id IN (${postIds.map(() => '?').join(',')})`).all(...postIds) as Array<{
         post_id: number; url: string; image_url: string; title: string | null; description: string | null;
-        site_name: string | null; image_width: number | null; image_height: number | null
+        site_name: string | null; image_width: number | null; image_height: number | null; mime_type: string | null
       }>
     for (const row of rows) {
       const values = previews.get(row.post_id) || {}
@@ -138,7 +138,8 @@ function apiExtras(database: Database, postIds: number[], viewerId: number) {
         title: row.title ? decodeHtmlEntities(row.title) : undefined,
         description: row.description ? decodeHtmlEntities(row.description) : undefined,
         siteName: row.site_name ? decodeHtmlEntities(row.site_name) : undefined,
-        imageWidth: row.image_width || undefined, imageHeight: row.image_height || undefined }
+        imageWidth: row.image_width || undefined, imageHeight: row.image_height || undefined,
+        mimeType: row.mime_type || undefined }
       previews.set(row.post_id, values)
     }
   }
