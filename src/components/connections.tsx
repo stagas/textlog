@@ -121,8 +121,16 @@ export function Connections(
                       : user?.id === profile.id
                       ? 'You haven’t followed anyone yet.'
                       : 'No followed people yet.'}
-                  </div>
+                    </div>
                 )}
+              <Pagination page={page}
+                totalPages={Math.ceil(total / (kind === 'blocked' ? PAGE_SIZE : CONNECTION_PAGE_SIZE))}
+                path={withFrom(`/u/${profile.handle}?tab=${kind}${
+                  sortQuery}${
+                  kind === 'following' && tagsPage > 1
+                    ? `&tagsPage=${tagsPage}`
+                    : ''
+                }`)} label="People pagination" compact anchor="connections-people-heading" />
             </section>
           </div>
         )
@@ -132,10 +140,14 @@ export function Connections(
             <h2 id="connections-people-heading">People</h2>{sortToggle}
           </div>
           <Pagination page={page} totalPages={Math.ceil(total / CONNECTION_PAGE_SIZE)}
-            path={withFrom(`/u/${profile.handle}?tab=${kind}${sortQuery}`)} anchor="connections-people-heading" />
+            path={withFrom(`/u/${profile.handle}?tab=${kind}${sortQuery}`)} label="People pagination"
+            anchor="connections-people-heading" />
           <ConnectionPeople user={user} people={people}
             className="connections-list connections-list-headed" showNoteCount={false}
             showPopover={false} returnPath={person => connectionReturnPath(`#person-${person.id}`)} />
+          <Pagination page={page} totalPages={Math.ceil(total / CONNECTION_PAGE_SIZE)}
+            path={withFrom(`/u/${profile.handle}?tab=${kind}${sortQuery}`)} label="People pagination"
+            anchor="connections-people-heading" />
         </>
         : (
           <div className={`empty${user?.id === profile.id && kind === 'following' ? ' empty-actions' : ''}`}>

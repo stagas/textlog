@@ -113,6 +113,8 @@ export function Explore({ user, welcome = false, tagsPage = 1, peoplePage = 1, d
             ))}
             {!people.length && <p className="section-empty">No people to suggest.</p>}
           </div>
+          <Pagination page={peoplePage} totalPages={Math.ceil(peopleTotal / PEOPLE_PAGE_SIZE)} path={peoplePath}
+            pageParam="peoplePage" label="People pagination" compact anchor="explore-people" />
         </section>
       </div>
     </Layout>

@@ -5152,6 +5152,10 @@ a.post-context:hover {
   margin-bottom: var(--space-6);
 }
 
+.people:has(+ .pagination) {
+  margin-bottom: 0;
+}
+
 .people article {
   padding: var(--space-3) 0;
   border-top: 1px solid var(--soft);
