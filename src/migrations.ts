@@ -1420,6 +1420,137 @@ export const migrations: Migration[] = [
         SELECT u.id,p.id FROM users u JOIN posts p ON p.created_at<=u.created_at;`)
     },
   },
+  {
+    version: 112,
+    name: 'target_personalized_feed_snapshots',
+    up(database) {
+      if (!database.query(`SELECT 1 FROM sqlite_master WHERE type='table' AND name='feed_snapshots'`).get()) return
+      database.run(`CREATE TABLE IF NOT EXISTS personalized_feed_generations (
+        viewer_id INTEGER PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,generation INTEGER NOT NULL DEFAULT 1);
+        INSERT OR IGNORE INTO personalized_feed_generations(viewer_id) SELECT id FROM users;`)
+      const clear = (viewer: string) => `INSERT INTO personalized_feed_generations(viewer_id,generation)
+        WITH affected(id) AS (${viewer}) SELECT id,2 FROM affected WHERE id IS NOT NULL
+        ON CONFLICT(viewer_id) DO UPDATE SET generation=generation+1;`
+      database.run(`
+        DELETE FROM feed_snapshots WHERE kind LIKE 'for-you:%' OR kind LIKE 'to-me:%';
+        DROP TRIGGER IF EXISTS personalized_feed_posts_insert;
+        DROP TRIGGER IF EXISTS personalized_feed_posts_update;
+        DROP TRIGGER IF EXISTS personalized_feed_posts_delete;
+        DROP TRIGGER IF EXISTS personalized_feed_post_tags_insert;
+        DROP TRIGGER IF EXISTS personalized_feed_post_tags_delete;
+        DROP TRIGGER IF EXISTS personalized_feed_mentions_insert;
+        DROP TRIGGER IF EXISTS personalized_feed_mentions_delete;
+        DROP TRIGGER IF EXISTS personalized_feed_follows_insert;
+        DROP TRIGGER IF EXISTS personalized_feed_follows_update;
+        DROP TRIGGER IF EXISTS personalized_feed_follows_delete;
+        DROP TRIGGER IF EXISTS personalized_feed_hashtag_follows_insert;
+        DROP TRIGGER IF EXISTS personalized_feed_hashtag_follows_update;
+        DROP TRIGGER IF EXISTS personalized_feed_hashtag_follows_delete;
+        DROP TRIGGER IF EXISTS personalized_feed_blocks_insert;
+        DROP TRIGGER IF EXISTS personalized_feed_blocks_delete;
+        DROP TRIGGER IF EXISTS personalized_feed_blocked_tags_insert;
+        DROP TRIGGER IF EXISTS personalized_feed_blocked_tags_delete;
+        DROP TRIGGER IF EXISTS personalized_feed_users_insert;
+        DROP TRIGGER IF EXISTS personalized_feed_users_update;
+        DROP TRIGGER IF EXISTS personalized_feed_users_delete;
+
+        CREATE TRIGGER IF NOT EXISTS personalized_feed_posts_insert AFTER INSERT ON posts BEGIN
+          ${clear(`SELECT follower_id FROM follows WHERE following_id=NEW.user_id
+            UNION SELECT user_id FROM (WITH RECURSIVE ancestors(id,user_id,parent_id) AS (
+              SELECT id,user_id,parent_id FROM posts WHERE id=NEW.parent_id UNION ALL
+              SELECT p.id,p.user_id,p.parent_id FROM posts p JOIN ancestors a ON p.id=a.parent_id
+            ) SELECT user_id FROM ancestors)`)}
+        END;
+        CREATE TRIGGER IF NOT EXISTS personalized_feed_posts_update AFTER UPDATE ON posts BEGIN
+          ${clear(`SELECT follower_id FROM follows WHERE following_id IN (OLD.user_id,NEW.user_id)
+            UNION SELECT user_id FROM (WITH RECURSIVE ancestors(id,user_id,parent_id) AS (
+              SELECT id,user_id,parent_id FROM posts WHERE id IN (OLD.parent_id,NEW.parent_id) UNION ALL
+              SELECT p.id,p.user_id,p.parent_id FROM posts p JOIN ancestors a ON p.id=a.parent_id
+            ) SELECT user_id FROM ancestors)
+            UNION SELECT viewer_id FROM feed_snapshots s JOIN feed_snapshot_items i ON i.snapshot_id=s.id
+              WHERE json_extract(i.payload,'$.id')=OLD.id`)}
+        END;
+        CREATE TRIGGER IF NOT EXISTS personalized_feed_posts_delete AFTER DELETE ON posts BEGIN
+          ${clear(`SELECT follower_id FROM follows WHERE following_id=OLD.user_id
+            UNION SELECT user_id FROM (WITH RECURSIVE ancestors(id,user_id,parent_id) AS (
+              SELECT id,user_id,parent_id FROM posts WHERE id=OLD.parent_id UNION ALL
+              SELECT p.id,p.user_id,p.parent_id FROM posts p JOIN ancestors a ON p.id=a.parent_id
+            ) SELECT user_id FROM ancestors)
+            UNION SELECT viewer_id FROM feed_snapshots s JOIN feed_snapshot_items i ON i.snapshot_id=s.id
+              WHERE json_extract(i.payload,'$.id')=OLD.id`)}
+        END;
+
+        CREATE TRIGGER IF NOT EXISTS personalized_feed_post_tags_insert AFTER INSERT ON post_hashtags BEGIN
+          ${clear(`SELECT user_id FROM hashtag_follows WHERE tag=NEW.tag`)}
+        END;
+        CREATE TRIGGER IF NOT EXISTS personalized_feed_post_tags_delete AFTER DELETE ON post_hashtags BEGIN
+          ${clear(`SELECT user_id FROM hashtag_follows WHERE tag=OLD.tag`)}
+        END;
+        CREATE TRIGGER IF NOT EXISTS personalized_feed_mentions_insert AFTER INSERT ON post_mentions BEGIN
+          ${clear('SELECT NEW.user_id')}
+        END;
+        CREATE TRIGGER IF NOT EXISTS personalized_feed_mentions_delete AFTER DELETE ON post_mentions BEGIN
+          ${clear('SELECT OLD.user_id')}
+        END;
+
+        CREATE TRIGGER IF NOT EXISTS personalized_feed_follows_insert AFTER INSERT ON follows BEGIN
+          ${clear(`SELECT NEW.follower_id UNION SELECT NEW.following_id
+            UNION SELECT follower_id FROM follows WHERE following_id=NEW.follower_id`)}
+        END;
+        CREATE TRIGGER IF NOT EXISTS personalized_feed_follows_update AFTER UPDATE ON follows BEGIN
+          ${clear(`SELECT OLD.follower_id UNION SELECT OLD.following_id
+            UNION SELECT NEW.follower_id UNION SELECT NEW.following_id
+            UNION SELECT follower_id FROM follows WHERE following_id IN (OLD.follower_id,NEW.follower_id)`)}
+        END;
+        CREATE TRIGGER IF NOT EXISTS personalized_feed_follows_delete AFTER DELETE ON follows BEGIN
+          ${clear(`SELECT OLD.follower_id UNION SELECT OLD.following_id
+            UNION SELECT follower_id FROM follows WHERE following_id=OLD.follower_id`)}
+        END;
+
+        CREATE TRIGGER IF NOT EXISTS personalized_feed_hashtag_follows_insert AFTER INSERT ON hashtag_follows BEGIN
+          ${clear(`SELECT NEW.user_id UNION SELECT follower_id FROM follows WHERE following_id=NEW.user_id
+            UNION SELECT user_id FROM hashtag_follows WHERE tag=NEW.tag`)}
+        END;
+        CREATE TRIGGER IF NOT EXISTS personalized_feed_hashtag_follows_update AFTER UPDATE ON hashtag_follows BEGIN
+          ${clear(`SELECT OLD.user_id UNION SELECT NEW.user_id
+            UNION SELECT follower_id FROM follows WHERE following_id IN (OLD.user_id,NEW.user_id)
+            UNION SELECT user_id FROM hashtag_follows WHERE tag IN (OLD.tag,NEW.tag)`)}
+        END;
+        CREATE TRIGGER IF NOT EXISTS personalized_feed_hashtag_follows_delete AFTER DELETE ON hashtag_follows BEGIN
+          ${clear(`SELECT OLD.user_id UNION SELECT follower_id FROM follows WHERE following_id=OLD.user_id
+            UNION SELECT user_id FROM hashtag_follows WHERE tag=OLD.tag`)}
+        END;
+
+        CREATE TRIGGER IF NOT EXISTS personalized_feed_blocks_insert AFTER INSERT ON blocks BEGIN
+          ${clear('SELECT NEW.blocker_id UNION SELECT NEW.blocked_id')}
+        END;
+        CREATE TRIGGER IF NOT EXISTS personalized_feed_blocks_delete AFTER DELETE ON blocks BEGIN
+          ${clear('SELECT OLD.blocker_id UNION SELECT OLD.blocked_id')}
+        END;
+        CREATE TRIGGER IF NOT EXISTS personalized_feed_blocked_tags_insert AFTER INSERT ON blocked_hashtags BEGIN
+          ${clear('SELECT NEW.user_id')}
+        END;
+        CREATE TRIGGER IF NOT EXISTS personalized_feed_blocked_tags_delete AFTER DELETE ON blocked_hashtags BEGIN
+          ${clear('SELECT OLD.user_id')}
+        END;
+
+        CREATE TRIGGER IF NOT EXISTS personalized_feed_users_insert AFTER INSERT ON users BEGIN
+          INSERT INTO personalized_feed_generations(viewer_id,generation) VALUES(NEW.id,1)
+            ON CONFLICT(viewer_id) DO UPDATE SET generation=generation+1;
+          UPDATE personalized_feed_generations SET generation=generation+1 WHERE viewer_id!=NEW.id;
+        END;
+        CREATE TRIGGER IF NOT EXISTS personalized_feed_users_update AFTER UPDATE ON users BEGIN
+          ${clear(`SELECT NEW.id UNION SELECT follower_id FROM follows WHERE following_id=NEW.id
+            UNION SELECT viewer_id FROM feed_snapshots s JOIN feed_snapshot_items i ON i.snapshot_id=s.id
+              WHERE json_extract(i.payload,'$.actor_id')=NEW.id
+                OR json_extract(i.payload,'$.target_handle') IN (OLD.handle,NEW.handle)`)}
+        END;
+        CREATE TRIGGER IF NOT EXISTS personalized_feed_users_delete AFTER DELETE ON users BEGIN
+          ${clear(`SELECT OLD.id UNION SELECT follower_id FROM follows WHERE following_id=OLD.id`)}
+        END;
+      `)
+    },
+  },
 ]
 
 export const latestMigrationVersion = migrations.at(-1)!.version

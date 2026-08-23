@@ -7,6 +7,7 @@ function database() {
   db.run(`PRAGMA foreign_keys=ON;
     CREATE TABLE feed_snapshot_generation(id INTEGER PRIMARY KEY,generation INTEGER NOT NULL);
     INSERT INTO feed_snapshot_generation VALUES(1,1);
+    CREATE TABLE personalized_feed_generations(viewer_id INTEGER PRIMARY KEY,generation INTEGER NOT NULL);
     CREATE TABLE feed_snapshots(id INTEGER PRIMARY KEY AUTOINCREMENT,kind TEXT NOT NULL,viewer_id INTEGER NOT NULL,
       generation INTEGER NOT NULL,total_items INTEGER NOT NULL,created_at TEXT DEFAULT CURRENT_TIMESTAMP,
       last_accessed_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -59,6 +60,20 @@ test('global latest and hot snapshots are stored in the disposable cache databas
     { kind: 'hot:54' },
     { kind: 'latest' },
   ])
+})
+
+test('personalized snapshots do not depend on the global generation', () => {
+  const db = database()
+  let builds = 0
+  const build = () => {
+    builds++
+    return [{ id: builds }]
+  }
+
+  expect(feedSnapshotPage(db, 'for-you:v4', 7, 1, build, 20, db).items).toEqual([{ id: 1 }])
+  db.run('UPDATE feed_snapshot_generation SET generation=generation+1 WHERE id=1')
+  expect(feedSnapshotPage(db, 'for-you:v4', 7, 1, build, 20, db).items).toEqual([{ id: 1 }])
+  expect(builds).toBe(1)
 })
 
 test('snapshot creation removes stale, obsolete hot, and least recently used snapshots', () => {

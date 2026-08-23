@@ -166,7 +166,7 @@ describe('database migrations', () => {
         ('other',2,${new Date('2026-08-20T10:00:00Z').getTime()});
       PRAGMA user_version=107;`)
 
-    expect(runMigrations(database)).toBe(110)
+    expect(runMigrations(database)).toBe(latestMigrationVersion)
     expect(database.query('SELECT user_id,post_id FROM latest_reads ORDER BY user_id,post_id').all()).toEqual([
       { user_id: 1, post_id: 10 },
       { user_id: 1, post_id: 11 },
@@ -190,7 +190,7 @@ describe('database migrations', () => {
         (10,2,'2026-08-20 11:00:00'),(11,2,'2026-08-20 12:00:00'),(12,2,'2026-08-20 13:00:00');
       PRAGMA user_version=109;`)
 
-    expect(runMigrations(database)).toBe(110)
+    expect(runMigrations(database)).toBe(latestMigrationVersion)
     expect(database.query('SELECT post_id FROM latest_reads WHERE user_id=1 ORDER BY post_id').all())
       .toEqual([{ post_id: 10 }, { post_id: 11 }])
   })
