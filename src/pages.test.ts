@@ -36,9 +36,9 @@ import {
   RecapEmails,
   Reply,
 } from './components/pages'
-import { conversationTopPath, Post, postedReplyPath, PreviewPost, replyAnchorReturnPath,
+import { conversationTopPath, FeedThreads, Post, postedReplyPath, PreviewPost, replyAnchorReturnPath,
   ThreadReplies } from './components/post'
-import { searchPersonReturnPath, searchPostReturnPath } from './components/search'
+import { SearchResults, searchPersonReturnPath, searchPostReturnPath } from './components/search'
 
 import React from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
@@ -564,6 +564,50 @@ test('explore renders tag toggles above a full-width people section', () => {
 test('search post replies return to the originating result and page', () => {
   expect(searchPostReturnPath('ascii art', 1, 42)).toBe('/search?q=ascii%20art#post-42')
   expect(searchPostReturnPath('ascii art', 3, 42)).toBe('/search?q=ascii%20art&page=3#post-42')
+})
+
+test('search results render pagination above and below starting on the first page', () => {
+  const html = renderToStaticMarkup(React.createElement(SearchResults, {
+    user: null,
+    query: 'needle',
+    page: 1,
+    results: {
+      totals: { notes: 1234567, tags: 0, people: 0 },
+      posts: [],
+      tags: [],
+      people: [],
+      highlights: ['needle'],
+      totalPages: 3,
+    },
+  }))
+
+  expect(html.match(/<nav class="pagination/g)).toHaveLength(2)
+  expect(html).toContain('<nav class="pagination pagination-top"')
+  expect(html).toContain(`>${(1234567).toLocaleString()} notes</a>`)
+})
+
+test('feed threads highlight search matches while retaining tappable reply navigation', () => {
+  const html = renderToStaticMarkup(React.createElement(FeedThreads, {
+    user: null,
+    returnPath: '/search?q=needle&page=2',
+    highlightTerms: ['needle'],
+    posts: [{
+      id: 42,
+      user_id: 2,
+      parent_id: 7,
+      body: 'A needle in a reply',
+      created_at: '2026-08-23 10:00:00',
+      deleted_at: null,
+      handle: 'writer',
+      parent: { id: 7, user_id: 3, parent_id: null, body: 'Parent', created_at: '2026-08-23 09:00:00',
+        deleted_at: null, handle: 'parent', reply_count: 1 },
+    }],
+  }))
+
+  expect(html).toContain('A <mark>needle</mark> in a reply')
+  expect(html).toContain('class="quiet post-top-link"')
+  expect(html).toContain('from=%2Fsearch%3Fq%3Dneedle%26page%3D2%23post-42')
+  expect(html).not.toContain('>read</a>')
 })
 
 test('admin metrics use locale-aware number formatting', () => {

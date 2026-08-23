@@ -669,10 +669,11 @@ export function Post({
 export function ThreadReplies(
   { parentId, replies, user, returnPath, excludePostId, flat = false, showMissingContinuations = false,
     continuationLabel = 'more', continuationReturnPath, contextUnreadPostIds,
-    contextDirectedUnreadPostIds }: { parentId: number; replies: PostView[];
+    contextDirectedUnreadPostIds, highlightTerms = [] }: { parentId: number; replies: PostView[];
     user: User | null; returnPath?: string; excludePostId?: number; flat?: boolean;
     showMissingContinuations?: boolean; continuationLabel?: string; continuationReturnPath?: string;
-    contextUnreadPostIds?: ReadonlySet<number>; contextDirectedUnreadPostIds?: ReadonlySet<number> },
+    contextUnreadPostIds?: ReadonlySet<number>; contextDirectedUnreadPostIds?: ReadonlySet<number>;
+    highlightTerms?: string[] },
 ) {
   if (!replies.length) return null
   const children = new Map<number, PostView[]>()
@@ -710,6 +711,7 @@ export function ThreadReplies(
         <Post p={reply} user={user} showParent={false} foldControlId={foldControlId}
           returnPath={postReturnPath} contextUnread={contextUnreadPostIds?.has(reply.id)}
           contextDirectedUnread={contextDirectedUnreadPostIds?.has(reply.id)}
+          highlightTerms={highlightTerms}
           replyHref={user ? undefined : '/enter?next=' + encodeURIComponent('/post/' + reply.id + '?reply=1'
             + '&from=' + encodeURIComponent(postReturnPath))} replyLabel={user ? undefined : 'enter to reply'}
           continuationHref={continuationHref} continuationLabel={continuationLabel} tappable />
@@ -754,9 +756,9 @@ export function ThreadReplies(
 
 /** Render only the posts supplied by a feed, joining replies to parents that are on the same page. */
 export function FeedThreads(
-  { posts, user, returnPath, contextUnreadPostIds, contextDirectedUnreadPostIds }: { posts: PostView[];
+  { posts, user, returnPath, contextUnreadPostIds, contextDirectedUnreadPostIds, highlightTerms = [] }: { posts: PostView[];
     user: User | null; returnPath: string; contextUnreadPostIds?: ReadonlySet<number>;
-    contextDirectedUnreadPostIds?: ReadonlySet<number> },
+    contextDirectedUnreadPostIds?: ReadonlySet<number>; highlightTerms?: string[] },
 ) {
   if (!posts.length) return null
   const sourceIds = new Set(posts.map(post => post.id))
@@ -820,6 +822,7 @@ export function FeedThreads(
             {foldControlId && <input className="thread-fold-input" type="checkbox" id={foldControlId} />}
             <div className="thread-root">
               <Post p={post} user={user} tappable returnPath={anchoredReturnPath}
+                highlightTerms={highlightTerms}
                 contextUnread={contextUnreadPostIds?.has(post.id)} foldControlId={foldControlId}
                 contextParentUnread={!!post.parent && contextUnreadPostIds?.has(post.parent.id)}
                 contextDirectedUnread={contextDirectedUnreadPostIds?.has(post.id)}
@@ -830,7 +833,7 @@ export function FeedThreads(
             <ThreadReplies parentId={post.id} replies={treePosts} user={user} returnPath={anchoredReturnPath}
               showMissingContinuations continuationLabel="more" continuationReturnPath={returnPath}
               contextUnreadPostIds={contextUnreadPostIds}
-              contextDirectedUnreadPostIds={contextDirectedUnreadPostIds} />
+              contextDirectedUnreadPostIds={contextDirectedUnreadPostIds} highlightTerms={highlightTerms} />
           </div>
         )
       })}

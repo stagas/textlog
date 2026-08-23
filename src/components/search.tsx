@@ -2,7 +2,7 @@ import type { User } from '../types'
 import type { SearchResultsData } from '../types'
 import { Layout } from './layout'
 import { ConnectionPeople, Pagination, TagChips } from './page-shared'
-import { Post } from './post'
+import { FeedThreads } from './post'
 
 export type SearchTab = 'notes' | 'tags' | 'people'
 
@@ -43,6 +43,7 @@ export function SearchResults({ user, query, page, tab = 'notes', results }: {
 }) {
   const queryParameter = query ? `?q=${encodeURIComponent(query)}` : ''
   const tabPath = (value: SearchTab) => `/search${queryParameter}${queryParameter ? '&' : '?'}tab=${value}`
+  const paginationPath = `/search?q=${encodeURIComponent(query)}${tab === 'notes' ? '' : `&tab=${tab}`}`
   return (
     <Layout user={user} title={query ? `search: ${query}` : 'search'}>
       <section className="search-header">
@@ -54,14 +55,14 @@ export function SearchResults({ user, query, page, tab = 'notes', results }: {
           <a key={value} href={tabPath(value)} className={tab === value ? 'active' : ''}
             aria-current={tab === value ? 'page' : undefined}
           >
-            {results.totals[value]} {value}
+            {results.totals[value].toLocaleString()} {value}
           </a>
         ))}
       </nav>
-      {results.posts.map(post => (
-        <Post key={post.id} p={post} user={user} showReplyCount highlightTerms={results.highlights}
-          returnPath={searchPostReturnPath(query, page, post.id)} showReadAction={false} />
-      ))}
+      <Pagination page={page} totalPages={results.totalPages} path={paginationPath} top />
+      <FeedThreads posts={results.posts} user={user}
+        returnPath={`/search?q=${encodeURIComponent(query)}${page > 1 ? `&page=${page}` : ''}`}
+        highlightTerms={results.highlights} />
       {!!results.tags.length && (
         <TagChips user={user} tags={results.tags} followingKey="viewerFollowing"
           highlightTerms={results.highlights}
@@ -72,8 +73,7 @@ export function SearchResults({ user, query, page, tab = 'notes', results }: {
           highlightTerms={results.highlights} returnPath={person => searchPersonReturnPath(query, page, person.id)} />
       )}
       {query && !results[tab === 'notes' ? 'posts' : tab].length && <div className="empty">No matching {tab}.</div>}
-      <Pagination page={page} totalPages={results.totalPages}
-        path={`/search?q=${encodeURIComponent(query)}${tab === 'notes' ? '' : `&tab=${tab}`}`} />
+      <Pagination page={page} totalPages={results.totalPages} path={paginationPath} />
     </Layout>
   )
 }
