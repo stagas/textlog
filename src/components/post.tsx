@@ -147,7 +147,7 @@ export function UserReference(
         ? <a className="reference-menu-trigger postauthor" href={href} rel={rel}>{label || <>@{handle}</>}</a>
         : <span className="reference-menu-trigger postauthor" tabIndex={0}>{label || <>@{handle}</>}</span>}
       {showPopover && <span className="reference-menu-popover">
-        <span className="reference-popover-bio" dangerouslySetInnerHTML={{
+        <span className={`reference-popover-bio${bio?.trimEnd() ? '' : ' bio-empty'}`} dangerouslySetInnerHTML={{
           __html: linkify(displayBio(bio), bioMentionBios, [], undefined, undefined, navigationQuery, bioTagCounts,
             bioMentionNoteCounts, {
             signedIn: !!user,

@@ -538,7 +538,7 @@ export function ProfileHeader(
             {!editing && returnPath && user?.id !== profile.id
               && <a className="profile-edit-link profile-title-back-link" href={returnPath}>back</a>}
           </div>
-          <p className="profile-bio" dangerouslySetInnerHTML={{
+          <p className={`profile-bio${profile.bio?.trimEnd() ? '' : ' bio-empty'}`} dangerouslySetInnerHTML={{
             __html: linkify(displayBio(profile.bio), bioReference?.mentionBios || {}, [], undefined, undefined, '',
               bioReference?.hashtagCounts || {}, bioReference?.mentionNoteCounts || {}, {
                 signedIn: !!user,
@@ -775,7 +775,7 @@ export function ConnectionPeople({ user, people, className = '', highlightTerms 
                 </>
               } />
               {showNoteCount && <small>{person.posts} {person.posts === 1 ? 'note' : 'notes'}</small>}
-              <p className="profile-bio" dangerouslySetInnerHTML={{
+              <p className={`profile-bio${person.bio?.trimEnd() ? '' : ' bio-empty'}`} dangerouslySetInnerHTML={{
                 __html: linkify(displayBio(person.bio), person.bioReference?.mentionBios || {},
                   person.bio ? highlightTerms : [], undefined, undefined, '', person.bioReference?.hashtagCounts || {},
                   person.bioReference?.mentionNoteCounts || {}, {

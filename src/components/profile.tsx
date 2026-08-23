@@ -177,7 +177,7 @@ export function Profile(
               </>
             )
             : (
-              <p className="profile-bio" dangerouslySetInnerHTML={{
+              <p className={`profile-bio${profile.bio?.trimEnd() ? '' : ' bio-empty'}`} dangerouslySetInnerHTML={{
                 __html: linkify(displayBio(profile.bio), references.mentionBios, [], undefined, undefined, '',
                   references.hashtagCounts, references.mentionNoteCounts, {
                   signedIn: !!user,

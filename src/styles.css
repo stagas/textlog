@@ -5192,6 +5192,11 @@ a.post-context:hover {
   line-height: 1.45;
 }
 
+.profile-bio.bio-empty,
+.reference-popover-bio.bio-empty {
+  color: var(--muted);
+}
+
 .thread-root .post {
   padding: var(--space-5) var(--gutter);
   border: 0;

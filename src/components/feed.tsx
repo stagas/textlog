@@ -155,7 +155,8 @@ export function Feed({ user, data, title, path = '/for-you', pageUrl, notificati
                 && <span className="activity-follow-full-stop">.</span>}
             </MetaRow>
             {(row.activity_kind === 'user_follow' || row.activity_kind === 'signup') && (
-              <p className="profile-bio" dangerouslySetInnerHTML={{ __html: linkify(displayBio(row.target_bio)) }} />
+              <p className={`profile-bio${row.target_bio?.trimEnd() ? '' : ' bio-empty'}`}
+                dangerouslySetInnerHTML={{ __html: linkify(displayBio(row.target_bio)) }} />
             )}
           </div>
           {row.actor_id !== user.id && (
