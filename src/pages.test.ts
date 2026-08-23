@@ -2179,6 +2179,13 @@ test('Profile and hashtag feeds show no reply metadata beside post dates', () =>
     following: false,
     posts: [post],
   }))
+  const profileRepliesHtml = renderToStaticMarkup(React.createElement(Profile, {
+    user: null,
+    profile,
+    following: false,
+    posts: [{ ...post, parent_id: 1 }],
+    tab: 'replies',
+  }))
   const tagHtml = renderToStaticMarkup(React.createElement(TagFeed, {
     user: null,
     tag: 'notes',
@@ -2192,6 +2199,11 @@ test('Profile and hashtag feeds show no reply metadata beside post dates', () =>
   expect(tagHtml).not.toContain('· replies</span>')
   expect(profileHtml).not.toContain('3 replies')
   expect(tagHtml).not.toContain('3 replies')
+  expect(profileHtml).not.toContain('class="posttop')
+  expect(profileHtml).toContain('post-without-top-meta')
+  expect(profileRepliesHtml).toContain('class="posttop')
+  expect(profileRepliesHtml).not.toContain('post-without-top-meta')
+  expect(tagHtml).toContain('class="posttop')
 })
 
 test('Profile note and reply actions link back to their originating feed entries', () => {

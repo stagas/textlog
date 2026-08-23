@@ -245,7 +245,7 @@ export function Profile(
       {!editing && !blocked && !blockedByProfile && page > 1
         && <Pagination path={paginationPath} page={page} totalPages={totalPages} top />}
       {!editing && !blocked && !blockedByProfile
-        && <FeedThreads posts={posts} user={user} returnPath={feedPath} />}
+        && <FeedThreads posts={posts} user={user} returnPath={feedPath} hideTopMeta={tab !== 'replies'} />}
       {!editing && !blocked && !blockedByProfile && total === 0 && (
         <div className={`empty${user?.id === profile.id ? ' empty-actions' : ''}`}>
           {user?.id === profile.id

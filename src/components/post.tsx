@@ -396,6 +396,7 @@ export function Post({
   className,
   topActions,
   showReadAction = true,
+  hideTopMeta = false,
 }: { p: PostView; user: User | null; showReplyAction?: boolean; showOwnerActions?: boolean;
   showModerateAction?: boolean; showParent?: boolean; showReplyCount?: boolean; replyHref?: string; replyLabel?: string;
   reportHref?: string; foldControlId?: string; highlightTerms?: string[]; tappable?: boolean; tappableParent?: boolean;
@@ -404,7 +405,7 @@ export function Post({
   returnPath?: string; backHref?: string;
   canonicalTimestamp?: boolean; topHref?: string; flatHref?: string; treeHref?: string;
   authorPopoverAction?: React.ReactNode; continuationHref?: string; continuationLabel?: string;
-  className?: string; topActions?: React.ReactNode; showReadAction?: boolean })
+  className?: string; topActions?: React.ReactNode; showReadAction?: boolean; hideTopMeta?: boolean })
 {
   const parent = showParent ? p.parent : null
   const parentContinued = parent?.parent_id && parent.parent?.user_id === parent.user_id
@@ -473,12 +474,13 @@ export function Post({
     )
   }
   return (
-    <article className={`post${className ? ` ${className}` : ''}${tappable || hasTappableParent ? ' tappable-post' : ''}${
+    <article className={`post${className ? ` ${className}` : ''}${hideTopMeta ? ' post-without-top-meta' : ''}${
+      tappable || hasTappableParent ? ' tappable-post' : ''}${
       contextDirectedUnread ? ' activity-item-directed-unread' : ''}`} id={`post-${p.id}`}>
       {tappable && (
         <a className="post-hit-area" href={detailPath} rel={navigationRel} aria-label={`open post by @${p.handle}`} />
       )}
-      <MetaRow className={`posttop${contextLabel ? ' posttop-context' : ''}${preview ? ' preview-post-meta' : ''}`}
+      {!hideTopMeta && <MetaRow className={`posttop${contextLabel ? ' posttop-context' : ''}${preview ? ' preview-post-meta' : ''}`}
         unread={contextUnread}
       >
         {user?.id === p.user_id
@@ -553,7 +555,7 @@ export function Post({
             {backHref && <a className="quiet post-back-link" href={backHref}>back</a>}
           </div>
         )}
-      </MetaRow>
+      </MetaRow>}
       <div className={`post-body${isAsciiArt ? ' ascii-art' : ''}`} dangerouslySetInnerHTML={{
         __html: linkify(displayPostBody(renderedPollBody(p.body)), p.mention_bios, highlightTerms, undefined, renderFlags(p),
           referenceQuery, p.hashtag_counts, p.mention_note_counts, { signedIn: !!user, currentHandle: user?.handle,
@@ -685,11 +687,11 @@ export function Post({
 export function ThreadReplies(
   { parentId, replies, user, returnPath, excludePostId, flat = false, showMissingContinuations = false,
     continuationLabel = 'more', continuationReturnPath, contextUnreadPostIds,
-    contextDirectedUnreadPostIds, highlightTerms = [] }: { parentId: number; replies: PostView[];
+    contextDirectedUnreadPostIds, highlightTerms = [], hideTopMeta = false }: { parentId: number; replies: PostView[];
     user: User | null; returnPath?: string; excludePostId?: number; flat?: boolean;
     showMissingContinuations?: boolean; continuationLabel?: string; continuationReturnPath?: string;
     contextUnreadPostIds?: ReadonlySet<number>; contextDirectedUnreadPostIds?: ReadonlySet<number>;
-    highlightTerms?: string[] },
+    highlightTerms?: string[]; hideTopMeta?: boolean },
 ) {
   if (!replies.length) return null
   const children = new Map<number, PostView[]>()
@@ -730,7 +732,7 @@ export function ThreadReplies(
           highlightTerms={highlightTerms}
           replyHref={user ? undefined : '/enter?next=' + encodeURIComponent('/post/' + reply.id + '?reply=1'
             + '&from=' + encodeURIComponent(postReturnPath))} replyLabel={user ? undefined : 'enter to reply'}
-          continuationHref={continuationHref} continuationLabel={continuationLabel} tappable />
+          continuationHref={continuationHref} continuationLabel={continuationLabel} tappable hideTopMeta={hideTopMeta} />
         {childBranch}
       </div>
     )
@@ -772,9 +774,10 @@ export function ThreadReplies(
 
 /** Render only the posts supplied by a feed, joining replies to parents that are on the same page. */
 export function FeedThreads(
-  { posts, user, returnPath, contextUnreadPostIds, contextDirectedUnreadPostIds, highlightTerms = [] }: { posts: PostView[];
+  { posts, user, returnPath, contextUnreadPostIds, contextDirectedUnreadPostIds, highlightTerms = [],
+    hideTopMeta = false }: { posts: PostView[];
     user: User | null; returnPath: string; contextUnreadPostIds?: ReadonlySet<number>;
-    contextDirectedUnreadPostIds?: ReadonlySet<number>; highlightTerms?: string[] },
+    contextDirectedUnreadPostIds?: ReadonlySet<number>; highlightTerms?: string[]; hideTopMeta?: boolean },
 ) {
   if (!posts.length) return null
   const sourceIds = new Set(posts.map(post => post.id))
@@ -839,6 +842,7 @@ export function FeedThreads(
             <div className={`thread-root${post.profile_pinned ? ' profile-pinned-surround' : ''}`}>
               <Post p={post} user={user} tappable returnPath={anchoredReturnPath}
                 highlightTerms={highlightTerms}
+                hideTopMeta={hideTopMeta}
                 contextUnread={contextUnreadPostIds?.has(post.id)} foldControlId={foldControlId}
                 contextParentUnread={!!post.parent && contextUnreadPostIds?.has(post.parent.id)}
                 contextDirectedUnread={contextDirectedUnreadPostIds?.has(post.id)}
@@ -849,7 +853,8 @@ export function FeedThreads(
             <ThreadReplies parentId={post.id} replies={treePosts} user={user} returnPath={anchoredReturnPath}
               showMissingContinuations continuationLabel="more" continuationReturnPath={returnPath}
               contextUnreadPostIds={contextUnreadPostIds}
-              contextDirectedUnreadPostIds={contextDirectedUnreadPostIds} highlightTerms={highlightTerms} />
+              contextDirectedUnreadPostIds={contextDirectedUnreadPostIds} highlightTerms={highlightTerms}
+              hideTopMeta={hideTopMeta} />
           </div>
         )
       })}

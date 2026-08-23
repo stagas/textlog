@@ -1936,6 +1936,14 @@ nav form {
   overflow-wrap: anywhere;
 }
 
+.post-without-top-meta > .post-body {
+  margin-top: 0;
+}
+
+.thread-root .post.post-without-top-meta {
+  padding-top: calc(var(--space-4) + var(--space-1));
+}
+
 .post-body del {
   text-decoration: line-through;
 }
