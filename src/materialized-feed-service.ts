@@ -9,7 +9,7 @@ type MaterializedResponse = {
 }
 
 const materializations = new Map<string, Promise<MaterializedResponse>>()
-const MATERIALIZED_HTML_VERSION = 4
+const MATERIALIZED_HTML_VERSION = 5
 
 function appearanceVariant(request: Request) {
   const cookie = request.headers.get('cookie') || ''
@@ -20,7 +20,7 @@ function appearanceVariant(request: Request) {
 
 export async function rpcMaterializedFeedPage(request: Request, kind: MaterializedFeedKind, viewerId: number,
   render: () => Response | Promise<Response>, rerenderForCache = false, cacheVersion = 0, background = false,
-  renderForCache?: () => Response | Promise<Response>)
+  renderForCache?: () => Response | Promise<Response>, onCacheHit?: () => void | Promise<void>)
 {
   if (Bun.env.DEV_RELOAD === 'true') return await render()
   const variant = `${MATERIALIZED_HTML_VERSION}|${cacheVersion ? `${cacheVersion}|` : ''}${appearanceVariant(request)}`
@@ -31,6 +31,7 @@ export async function rpcMaterializedFeedPage(request: Request, kind: Materializ
     materialization = (async () => {
       const cached = await call('cache.materializedFeedGet', { kind, viewerId, variant })
       if (cached.html) {
+        await onCacheHit?.()
         return { body: cached.html, status: 200,
           headers: [['content-type', 'text/html;charset=utf-8'], ['cache-control', 'private, no-store']] }
       }

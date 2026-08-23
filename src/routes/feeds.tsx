@@ -27,6 +27,7 @@ import { withRequestContext } from '../request-context'
 import { resolvedDensity, resolvedPageSize } from '../request-preferences'
 import { withAppearance } from '../theme'
 import { currentUser } from '../utils'
+import type { PersonalizedFeedData } from '../types'
 
 async function showNotificationBanner(request: Request, user: ReturnType<typeof currentUser>) {
   if (!user) return false
@@ -204,20 +205,35 @@ export function registerFeedsRoutes(app: Hono) {
     const flat = c.req.query('view') === 'flat'
     if (cursorValue && !decodeForYouCursor(cursorValue)) return c.text('Invalid cursor', 400)
     const notificationBanner = await showNotificationBanner(c.req.raw, user)
-    const data = await databaseService().call('feeds.personalizedPage', { user, page: currentPage(c.req.query('page')),
-      pageSize: resolvedPageSize(c.req.raw), toMe: false, path: flat ? '/for-you?view=flat' : '/for-you' })
-    const render = () =>
+    const pageSize = resolvedPageSize(c.req.raw)
+    let dataPromise: Promise<PersonalizedFeedData> | undefined
+    const data = () => {
+      if (!dataPromise) dataPromise = databaseService().call('feeds.personalizedPage', {
+        user, page: currentPage(c.req.query('page')), pageSize, toMe: false,
+        path: flat ? '/for-you?view=flat' : '/for-you',
+      })
+      return dataPromise
+    }
+    const render = async () =>
       page(
-        <Feed user={user} data={data} title="for you" notificationBanner={notificationBanner} flat={flat} />,
+        <Feed user={user} data={await data()} title="for you" notificationBanner={notificationBanner} flat={flat} />,
       )
-    const renderForCache = () =>
-      page(
-        <Feed user={user} data={{ ...data, timeline: data.timeline.map(row => ({ ...row, unread: 0 })) }}
-          title="for you" notificationBanner={notificationBanner} />,
+    const renderForCache = async () => {
+      const feed = await data()
+      const consumed = new Set(feed.timeline.filter(row => row.unread).map(row => row.event_key)).size
+      return page(
+        <Feed user={user} data={{ ...feed, forYouCount: Math.max(0, feed.forYouCount - consumed),
+          timeline: feed.timeline.map(row => ({ ...row, unread: 0 })) }} title="for you"
+          notificationBanner={notificationBanner} />,
       )
+    }
     const response = !flat && !notificationBanner && currentPage(c.req.query('page')) === 1 && !cursorValue
-      ? await rpcMaterializedFeedPage(c.req.raw, 'for-you', user.id, render, false, 0, false, renderForCache)
-      : render()
+      ? await rpcMaterializedFeedPage(c.req.raw, 'for-you', user.id, render, false, 0, false, renderForCache,
+        async () => {
+          await databaseService().call('feeds.markPersonalizedSnapshotPageRead', { userId: user.id, pageSize,
+            toMe: false })
+        })
+      : await render()
     const remembered = rememberFeed(response, 'following')
     warmOtherFeedPages(c.req.raw, 'for-you', user)
     return remembered

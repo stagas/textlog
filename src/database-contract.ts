@@ -350,6 +350,10 @@ export type DatabaseDomainOperations = {
     input: { user: User; page: number; pageSize: PageSizeChoice; toMe: boolean; path: string; markRead?: boolean }
     output: PersonalizedFeedData
   }
+  'feeds.markPersonalizedSnapshotPageRead': {
+    input: { userId: number; pageSize: PageSizeChoice; toMe: boolean }
+    output: null
+  }
   'feeds.bannerState': { input: { userId: number; userAgent: string | null }; output: {
     inviteHandled: boolean
     notificationsEnabled: boolean

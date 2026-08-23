@@ -17,7 +17,7 @@ import { confirmEmailToken } from './email-verification'
 import { suggestedPeople, suggestedPeopleCount, trendingTagCount, trendingTags } from './explore'
 import { issueFeedKey, userForFeedKey } from './feed-keys'
 import { feedSnapshotPage } from './feed-snapshots'
-import { hasUnreadForYou, hasUnreadToMe, markAllForYouRead, markVisibleForYouEntriesRead,
+import { hasUnreadForYou, hasUnreadToMe, markAllForYouRead, markForYouEntriesRead, markVisibleForYouEntriesRead,
   unreadForYouCount, unreadToMeCount } from './for-you-state'
 import { resolveHandle } from './handles'
 import { claimInitialHandle, updateProfileHandle } from './handles'
@@ -1817,6 +1817,21 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
           AND kind IN ('latest','hot','for-you','to-me')`).run(user.id)
       }
       return result as DatabaseDomainOutput<K>
+    }
+    case 'feeds.markPersonalizedSnapshotPageRead': {
+      const { userId, pageSize, toMe } = input as DatabaseDomainInput<'feeds.markPersonalizedSnapshotPageRead'>
+      const kind = `${toMe ? 'to-me' : 'for-you'}:v4`
+      const snapshot = database.query(`SELECT id FROM feed_snapshots WHERE kind=? AND viewer_id=?
+        ORDER BY id DESC LIMIT 1`).get(kind, userId) as { id: number } | null
+      if (snapshot) {
+        const rows = database.query(`SELECT json_extract(payload,'$.event_key') event_key
+          FROM feed_snapshot_items WHERE snapshot_id=? AND position<? ORDER BY position`)
+          .all(snapshot.id, pageSize) as Array<{ event_key: string }>
+        markForYouEntriesRead(userId, rows.map(row => row.event_key), toMe, database)
+        cacheDb.query(`DELETE FROM materialized_feed_pages_v2 WHERE viewer_id=?
+          AND kind IN ('latest','hot','to-me')`).run(userId)
+      }
+      return null as DatabaseDomainOutput<K>
     }
     case 'feeds.bannerState': {
       const { userId, userAgent } = input as DatabaseDomainInput<'feeds.bannerState'>
