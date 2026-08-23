@@ -230,6 +230,54 @@ test('todo previews preserve regular text between checkbox lines', () => {
   expect(html.indexOf('>and possibly</div>')).toBeLessThan(html.indexOf('>contemplate existence</span>'))
 })
 
+test('todos compose with spoiler sections while preserving toggle indices', () => {
+  const body = '#todo\n[ ] visible task\n#spoiler\n[x] hidden task\n[ ] another hidden task'
+  const post = { id: 7, user_id: 1, parent_id: null, body, created_at: '2026-08-23 10:00:00',
+    deleted_at: null, handle: 'writer', reply_count: 0 }
+  const author = { id: 1, handle: 'writer', email: 'writer@example.com', bio: '' }
+  const html = renderToStaticMarkup(React.createElement(Post, { p: post, user: author }))
+
+  expect(html).toContain('<div class="todo-text"><a href="/tag/spoiler?from=')
+  expect(html).toContain('>#spoiler</a></div><details class="post-spoiler todo-spoiler">')
+  expect(html).toContain('<summary>reveal</summary><div class="post-spoiler-content">')
+  expect(html).toContain('<input type="hidden" name="item" value="1"/>')
+  expect(html.indexOf('<summary>reveal</summary>')).toBeLessThan(html.indexOf('>hidden task</span>'))
+  expect(html.indexOf('>hidden task</span>')).toBeLessThan(html.indexOf('>another hidden task</span>'))
+})
+
+test('todo text and labels render links, Markdown, and LaTeX', () => {
+  const body = '#todo\nRead #notes and [the docs](https://example.com/docs)\n[ ] Calculate $x^2$ for @reader'
+  const post = { id: 7, user_id: 1, parent_id: null, body, created_at: '2026-08-23 10:00:00',
+    deleted_at: null, handle: 'writer', reply_count: 0, mention_bios: { reader: 'A reader' } }
+  const author = { id: 1, handle: 'writer', email: 'writer@example.com', bio: '' }
+  const html = renderToStaticMarkup(React.createElement(Post, { p: post, user: author }))
+
+  expect(html).toContain('<a href="/tag/notes?from=')
+  expect(html).toContain('<a href="https://example.com/docs" title="https://example.com/docs"')
+  expect(html).toContain('>the docs</a>')
+  expect(html).toContain('<math')
+  expect(html).toContain('href="/u/reader?from=')
+  expect(html.indexOf('</button><span class="todo-label">')).toBeGreaterThan(-1)
+})
+
+test('todo references and links render the same hover cards as post text', () => {
+  const body = '#todo\n[ ] Read #notes with @reader at https://example.com/docs'
+  const post = { id: 7, user_id: 1, parent_id: null, body, created_at: '2026-08-23 10:00:00',
+    deleted_at: null, handle: 'writer', reply_count: 0, mention_bios: { reader: 'A reader' },
+    hashtag_counts: { notes: 3 }, hashtag_follower_counts: { notes: 2 }, link_previews: {
+      'https://example.com/docs': { imageUrl: 'https://example.com/preview.png', title: 'Example docs',
+        description: 'Documentation' },
+    } }
+  const author = { id: 1, handle: 'writer', email: 'writer@example.com', bio: '' }
+  const html = renderToStaticMarkup(React.createElement(Post, { p: post, user: author }))
+
+  expect(html).toContain('href="/tag/notes?from=')
+  expect(html).toContain('class="reference-menu-popover reference-menu-popover-tag"')
+  expect(html).toContain('class="reference-menu"')
+  expect(html).toContain('class="remote-link-menu"')
+  expect(html).toContain('Example docs')
+})
+
 test('quoted parents render their todos', () => {
   const user = { id: 2, handle: 'reader', email: 'reader@example.com', bio: '' }
   const html = renderToStaticMarkup(React.createElement(Post, { user, showParent: true, p: {

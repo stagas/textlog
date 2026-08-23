@@ -4155,17 +4155,36 @@ form.report-panel {
 .todo { position: relative; z-index: 2; display: grid; gap: 0; margin-top: 0; font-size: .8125rem; pointer-events: none; }
 .thread-root>.post>.todo { font-size: clamp(.9375rem, 2.25vw, 1.125rem); line-height: 1.55; letter-spacing: -.5px; }
 .feed-thread .thread-root>.post>.todo { font-size: .8125rem; line-height: 1.65; letter-spacing: normal; }
-.todo-item { width: fit-content; max-width: 100%; margin: 0; }
+.todo-item { position: relative; display: flex; align-items: center; width: fit-content; max-width: 100%; margin: 0; }
 .todo-text { min-height: 1.35em; white-space: pre-wrap; }
-.todo-item button,
-.todo-item-static { display: flex; align-items: center; width: 100%; gap: 0; padding: 0; color: var(--ink); background: transparent; border: 0; font: inherit; line-height: 1.35; text-align: left; }
-.todo-item button { width: auto; pointer-events: auto; cursor: pointer; touch-action: manipulation; }
-.todo-item button:hover .todo-label { color: var(--accent-dark); }
+.todo-item > button,
+.todo-item-static { gap: 0; padding: 0; color: var(--ink); background: transparent; border: 0; font: inherit; line-height: 1.35; text-align: left; }
+.todo-item > button { display: flex; pointer-events: auto; cursor: pointer; touch-action: manipulation; }
+.todo-editable .todo-item > button { position: absolute; inset: 0; width: 100%; }
+.todo-editable .todo-label { margin-left: 4ch; pointer-events: none; }
+.todo :is(.reference-menu, .remote-link-menu) {
+  position: relative;
+  z-index: 23;
+  pointer-events: auto;
+}
+.todo :is(.reference-menu, .remote-link-menu):is(:hover, :focus-within) { z-index: 24; }
+.todo :is(.reference-menu-popover, .remote-link-popover) { pointer-events: auto; }
+.todo-editable .todo-label :is(a, button) {
+  position: relative;
+  z-index: 23;
+  pointer-events: auto;
+}
+.todo a { pointer-events: auto; }
 .todo-check { flex: 0 0 auto; margin-right: 1ch; color: var(--muted); font: inherit; }
+.todo-item > button:hover .todo-check,
+.todo-item > button:hover + .todo-label { color: var(--accent); }
 .todo-check-checked { color: var(--accent-dark); }
 .todo-done { color: var(--muted); text-decoration: line-through; }
+.todo .post-spoiler { margin-top: 0; }
+.todo .post-spoiler summary { pointer-events: auto; }
+.todo .post-spoiler-content { display: grid; }
 .parent-quote .todo { font-size: .75rem; line-height: 1.55; letter-spacing: normal; }
-.parent-quote .todo-item button,
+.parent-quote .todo-item > button,
 .parent-quote .todo-item-static { color: var(--quote-ink); }
 .font-size-larger>span:first-of-type { font-size: 20px; }
 .primary-font-monospace { font-family: var(--font-monospace); }

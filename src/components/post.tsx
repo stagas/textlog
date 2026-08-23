@@ -59,34 +59,54 @@ function PollPreview({ body }: { body: string }) {
   )
 }
 
-function Todo({ p, user, preview, returnPath }: { p: PostView | NonNullable<PostView['parent']>; user: User | null;
-  preview?: boolean; returnPath?: string }) {
+function Todo({ p, user, preview, returnPath, formPrefix }: { p: PostView | NonNullable<PostView['parent']>;
+  user: User | null; preview?: boolean; returnPath?: string; formPrefix: string }) {
   const todo = parseTodo(p.body)
   if (!todo) return null
   const editable = !preview && user?.id === p.user_id
-  return (
-    <div className={`todo${editable ? ' todo-editable' : ''}`} aria-label={preview ? 'Todo preview' : 'Todo list'}>
-      {todo.entries.map(entry => entry.type === 'text'
-        ? <div className="todo-text" key={entry.line}>{entry.text || '\u00a0'}</div>
-        : editable ? (
-        <form method="post" action={`/post/${p.id}/todo`} className="todo-item" key={entry.item.line}>
-          <input type="hidden" name="item" value={entry.itemIndex} />
-          <input type="hidden" name="from" value={returnPath || `/post/${p.id}`} />
-          <button type="submit" aria-label={`${entry.item.checked ? 'mark incomplete' : 'mark complete'}: ${entry.item.label}`}>
-            <span className={`todo-check${entry.item.checked ? ' todo-check-checked' : ''}`} aria-hidden="true">
-              [{entry.item.checked ? '✓' : ' '}]
-            </span>
-            <span className={entry.item.checked ? 'todo-label todo-done' : 'todo-label'}>{entry.item.label}</span>
-          </button>
-        </form>
-      ) : (
-        <div className="todo-item todo-item-static" key={entry.item.line}>
+  const navigationQuery = preview ? '' : '?from=' + encodeURIComponent(returnPath || `/post/${p.id}#post-${p.id}`)
+  const richText = (text: string) => ({ __html: linkify(text, p.mention_bios, [], undefined, renderFlags(p),
+    navigationQuery, p.hashtag_counts, p.mention_note_counts, { signedIn: !!user, currentHandle: user?.handle,
+      formPrefix, mentionFollowing: p.mention_following, mentionFollowsViewer: p.mention_follows_viewer,
+      mentionProfileStats: p.mention_profile_stats, hashtagFollowing: p.hashtag_following,
+      hashtagFollowerCounts: p.hashtag_follower_counts, linkPreviews: p.link_previews,
+      linkUnknownMentions: preview || p.id < 0 }, false) })
+  const spoilerEntry = todo.entries.findIndex(entry => entry.type === 'text'
+    && extractHashtags(entry.text).includes('spoiler'))
+  const renderEntries = (entries: typeof todo.entries) => entries.map(entry => entry.type === 'text'
+    ? entry.text
+      ? <div className="todo-text" key={entry.line} dangerouslySetInnerHTML={richText(entry.text)} />
+      : <div className="todo-text" key={entry.line}>{'\u00a0'}</div>
+    : editable ? (
+      <form method="post" action={`/post/${p.id}/todo`} className="todo-item" key={entry.item.line}>
+        <input type="hidden" name="item" value={entry.itemIndex} />
+        <input type="hidden" name="from" value={returnPath || `/post/${p.id}`} />
+        <button type="submit" aria-label={`${entry.item.checked ? 'mark incomplete' : 'mark complete'}: ${entry.item.label}`}>
           <span className={`todo-check${entry.item.checked ? ' todo-check-checked' : ''}`} aria-hidden="true">
             [{entry.item.checked ? '✓' : ' '}]
           </span>
-          <span className={entry.item.checked ? 'todo-label todo-done' : 'todo-label'}>{entry.item.label}</span>
-        </div>
-      ))}
+        </button>
+        <span className={entry.item.checked ? 'todo-label todo-done' : 'todo-label'}
+          dangerouslySetInnerHTML={richText(entry.item.label)} />
+      </form>
+    ) : (
+      <div className="todo-item todo-item-static" key={entry.item.line}>
+        <span className={`todo-check${entry.item.checked ? ' todo-check-checked' : ''}`} aria-hidden="true">
+          [{entry.item.checked ? '✓' : ' '}]
+        </span>
+        <span className={entry.item.checked ? 'todo-label todo-done' : 'todo-label'}
+          dangerouslySetInnerHTML={richText(entry.item.label)} />
+      </div>
+    ))
+  return (
+    <div className={`todo${editable ? ' todo-editable' : ''}`} aria-label={preview ? 'Todo preview' : 'Todo list'}>
+      {renderEntries(spoilerEntry < 0 ? todo.entries : todo.entries.slice(0, spoilerEntry + 1))}
+      {spoilerEntry >= 0 && spoilerEntry < todo.entries.length - 1 && (
+        <details className="post-spoiler todo-spoiler">
+          <summary>reveal</summary>
+          <div className="post-spoiler-content">{renderEntries(todo.entries.slice(spoilerEntry + 1))}</div>
+        </details>
+      )}
     </div>
   )
 }
@@ -320,7 +340,7 @@ export function PreviewPost({ p }: { p: PostView }) {
           hashtagFollowerCounts: p.hashtag_follower_counts, linkPreviews: p.link_previews }),
       }} />
       <PollPreview body={p.body} />
-      <Todo p={p} user={null} preview />
+      <Todo p={p} user={null} preview formPrefix={formPrefix} />
       <MetaRow className="postfoot preview-post-meta">
         <span className="quiet preview-reply">reply</span>
       </MetaRow>
@@ -527,7 +547,7 @@ export function Post({
           linkUnknownMentions: preview || p.id < 0 }),
       }} />
       {preview ? <PollPreview body={p.body} /> : <Poll p={p} returnPath={returnPath} />}
-      <Todo p={p} user={user} preview={preview} returnPath={returnPath} />
+      <Todo p={p} user={user} preview={preview} returnPath={returnPath} formPrefix={formPrefix} />
       {!parent && (showReplyAction || resolvedContinuationHref || canModerate || reportHref) && (
       <MetaRow className={`postfoot${preview ? ' preview-post-meta' : ''}`}>
         {!parent && showReplyAction && (preview
@@ -602,7 +622,8 @@ export function Post({
                     hashtagFollowerCounts: parent.hashtag_follower_counts, linkPreviews: parent.link_previews }),
                 }} />
                 <Poll p={parent} returnPath={returnPath} />
-                <Todo p={parent} user={user} preview={preview} returnPath={returnPath} />
+                <Todo p={parent} user={user} preview={preview} returnPath={returnPath}
+                  formPrefix={`${formPrefix}-parent-${parent.id}`} />
                 <div className="parent-quote-foot">
                   <a className="quiet" href={user
                     ? parentReplyPath
