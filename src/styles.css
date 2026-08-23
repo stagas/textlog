@@ -707,6 +707,10 @@ header>nav>a:not(.button),
 }
 
 .reference-popover-actions:has(.follows-you) {
+  margin-top: calc(var(--space-2) + 0.75rem);
+}
+
+.reference-menu-popover:not(:has(.reference-popover-bio)) > .reference-popover-actions:has(.follows-you) {
   margin-top: 0.75rem;
 }
 
