@@ -369,6 +369,18 @@ describe('post persistence', () => {
     expect(html).not.toContain('--preview-image')
   })
 
+  test('renders Vocaroo links as direct MP3 audio previews', () => {
+    const url = 'https://voca.ro/140JOkFnkmRv'
+    const html = linkify(`[recording](${url})`, {}, [], undefined, undefined, '', {}, {}, {
+      signedIn: false,
+      formPrefix: 'post-1',
+    })
+    expect(html).toContain(`href="${url}"`)
+    expect(html).toContain('class="remote-link-popover remote-link-audio-popover"')
+    expect(html).toContain('<audio controls preload="none" '
+      + 'src="https://media1.vocaroo.com/mp3/140JOkFnkmRv"></audio>')
+  })
+
   test('opens local link previews in the current tab like their post links', () => {
     const url = 'https://textlog.test/post/1'
     const html = linkify(url, {}, [], 'https://textlog.test', undefined, '', {}, {}, {
