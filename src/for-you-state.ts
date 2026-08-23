@@ -21,7 +21,9 @@ const hasVisibleDescendantFromAnotherUser = `EXISTS (WITH RECURSIVE descendants(
 
 const visibleEvents = `
   SELECT 'post:' || printf('%020d',p.id) event_key FROM posts p
-    WHERE p.deleted_at IS NULL AND ((p.user_id=$viewer AND ${hasVisibleDescendantFromAnotherUser}) OR p.user_id IN
+    LEFT JOIN posts parent ON parent.id=p.parent_id
+    WHERE p.deleted_at IS NULL AND ((p.user_id=$viewer AND (parent.user_id!=$viewer OR
+      ${hasVisibleDescendantFromAnotherUser})) OR p.user_id IN
       (SELECT following_id FROM follows WHERE follower_id=$viewer) OR ${descendsFromViewer} OR p.id IN
       (SELECT ph.post_id FROM post_hashtags ph JOIN hashtag_follows hf ON hf.tag=ph.tag
         WHERE hf.user_id=$viewer))

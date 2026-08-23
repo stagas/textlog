@@ -102,7 +102,8 @@ export function apiActivities(database: Database, origin: string, user: User, op
       LEFT JOIN posts parent ON parent.id=p.parent_id
       LEFT JOIN post_mentions pm ON pm.post_id=p.id AND pm.user_id=$viewer
       WHERE p.deleted_at IS NULL AND u.deleted_at IS NULL
-        AND ((p.user_id=$viewer AND ${hasVisibleDescendantFromAnotherUser}) OR p.user_id IN
+        AND ((p.user_id=$viewer AND (parent.user_id!=$viewer OR
+          ${hasVisibleDescendantFromAnotherUser})) OR p.user_id IN
           (SELECT following_id FROM follows WHERE follower_id=$viewer)
           OR ${descendsFromViewer} OR pm.user_id IS NOT NULL
           OR p.id IN (SELECT ph.post_id FROM post_hashtags ph JOIN hashtag_follows hf ON hf.tag=ph.tag
