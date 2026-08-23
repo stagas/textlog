@@ -1037,7 +1037,7 @@ test('consequential account, content, reporting, and admin flows work over HTTP'
   expect(await unsupportedPost.text()).toContain('We couldn&#x27;t read that request.')
 
   expect(post.body).toBe('A route-level integration post')
-  const invalidPostBody = `remember post ${'x'.repeat(270)}`
+  const invalidPostBody = `remember post ${'x'.repeat(490)}`
   const invalidPost = await request('/post', {
     method: 'POST',
     cookie: aliceCookie,
@@ -1045,7 +1045,7 @@ test('consequential account, content, reporting, and admin flows work over HTTP'
   })
   expect(invalidPost.status).toBe(400)
   expect(await invalidPost.text()).toContain(invalidPostBody)
-  const invalidReplyBody = `remember reply ${'x'.repeat(270)}`
+  const invalidReplyBody = `remember reply ${'x'.repeat(490)}`
   const invalidReply = await request(`/post/${post.id}/reply`, {
     method: 'POST',
     cookie: aliceCookie,
@@ -1066,7 +1066,7 @@ test('consequential account, content, reporting, and admin flows work over HTTP'
   expect(replyPreviewHtml).toContain('A nested reply preview')
   expect(replyPreviewHtml).toContain('<blockquote class="parent-quote')
   expect(replyPreviewHtml).toContain('A route-level integration post')
-  const invalidEditBody = `remember edit ${'x'.repeat(271)}`
+  const invalidEditBody = `remember edit ${'x'.repeat(490)}`
   const invalidEdit = await request(`/post/${post.id}/edit`, {
     method: 'POST',
     cookie: aliceCookie,
@@ -1124,7 +1124,7 @@ test('consequential account, content, reporting, and admin flows work over HTTP'
   const mentionHelperHtml = await mentionHelper.text()
   expect(mentionHelperHtml).toContain('@<mark>ali</mark>ce')
   expect(mentionHelperHtml).toContain('name="mention_query" value="ali"')
-  expect(mentionHelperHtml).toContain('name="body" maxLength="280" required="" autofocus=""')
+  expect(mentionHelperHtml).toContain('name="body" maxLength="500" required="" autofocus=""')
   expect(mentionHelperHtml).not.toContain('name="mention_query" maxLength="100" required=""')
   const implicitMentionHelper = await request(`/post/${post.id}/reply`, {
     method: 'POST',

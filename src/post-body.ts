@@ -1,4 +1,4 @@
-export const POST_MAX = 280
+export const POST_MAX = 500
 export const POST_MAX_LINES = 10
 
 // Textareas expose line breaks as \n, but form submission may serialize them as

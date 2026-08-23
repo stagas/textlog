@@ -84,7 +84,7 @@ export const migrations: Migration[] = [
         expires_at INTEGER NOT NULL);
       CREATE TABLE IF NOT EXISTS posts (
         id INTEGER PRIMARY KEY AUTOINCREMENT,user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-        body TEXT NOT NULL CHECK(length(body) BETWEEN 1 AND 280),created_at TEXT DEFAULT CURRENT_TIMESTAMP);
+        body TEXT NOT NULL CHECK(length(body) BETWEEN 1 AND 500),created_at TEXT DEFAULT CURRENT_TIMESTAMP);
       CREATE TABLE IF NOT EXISTS follows (
         follower_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
         following_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
@@ -1357,7 +1357,7 @@ export const migrations: Migration[] = [
     up(database) {
       database.run(`CREATE TABLE IF NOT EXISTS drafts (
         id INTEGER PRIMARY KEY AUTOINCREMENT,user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-        parent_id INTEGER REFERENCES posts(id) ON DELETE CASCADE,body TEXT NOT NULL CHECK(length(body) BETWEEN 1 AND 280),
+        parent_id INTEGER REFERENCES posts(id) ON DELETE CASCADE,body TEXT NOT NULL CHECK(length(body) BETWEEN 1 AND 500),
         created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP);
       CREATE INDEX IF NOT EXISTS drafts_user_updated ON drafts(user_id,updated_at DESC,id DESC);`)
     },
@@ -1590,6 +1590,48 @@ export const migrations: Migration[] = [
       database.run(`CREATE TABLE IF NOT EXISTS bio_banner_dismissals (
         user_id INTEGER PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
         dismissed_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP);`)
+    },
+  },
+  {
+    version: 117,
+    name: 'increase_post_character_limit',
+    transaction: false,
+    up(database) {
+      const tableSql = (name: string) => (database.query(
+        `SELECT sql FROM sqlite_master WHERE type='table' AND name=?`,
+      ).get(name) as { sql: string } | null)?.sql || ''
+      database.run('PRAGMA legacy_alter_table=ON')
+      try {
+        if (tableSql('posts').includes('CHECK(length(body) BETWEEN 1 AND 280)')) {
+          const postObjects = database.query(`SELECT sql FROM sqlite_master
+            WHERE tbl_name='posts' AND type IN ('index','trigger') AND sql IS NOT NULL`).all() as { sql: string }[]
+          database.run(`ALTER TABLE posts RENAME TO posts_old;
+            CREATE TABLE posts (
+              id INTEGER PRIMARY KEY AUTOINCREMENT,user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+              body TEXT NOT NULL CHECK(length(body) BETWEEN 1 AND 500),created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+              parent_id INTEGER REFERENCES posts(id) ON DELETE CASCADE,deleted_at TEXT,
+              has_latex INTEGER CHECK(has_latex IN (0,1)),has_links INTEGER CHECK(has_links IN (0,1)),
+              has_code INTEGER CHECK(has_code IN (0,1)));
+            INSERT INTO posts SELECT * FROM posts_old;
+            DROP TABLE posts_old;`)
+          for (const { sql } of postObjects) database.run(sql)
+        }
+
+        if (tableSql('drafts').includes('CHECK(length(body) BETWEEN 1 AND 280)')) {
+          database.run(`ALTER TABLE drafts RENAME TO drafts_old;
+            CREATE TABLE drafts (
+              id INTEGER PRIMARY KEY AUTOINCREMENT,user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+              parent_id INTEGER REFERENCES posts(id) ON DELETE CASCADE,
+              body TEXT NOT NULL CHECK(length(body) BETWEEN 1 AND 500),
+              created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP);
+            INSERT INTO drafts SELECT * FROM drafts_old;
+            DROP TABLE drafts_old;
+            CREATE INDEX drafts_user_updated ON drafts(user_id,updated_at DESC,id DESC);`)
+        }
+      }
+      finally {
+        database.run('PRAGMA legacy_alter_table=OFF')
+      }
     },
   },
 ]

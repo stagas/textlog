@@ -1,3 +1,4 @@
+import { POST_MAX } from '../post-body'
 import { canPublishPosts } from '../posting-policy'
 import type { User } from '../types'
 import type { PostView } from '../types'
@@ -57,7 +58,7 @@ export function Compose(
           <input type="hidden" name="from" value={returnPath} />
           {draftId && <input type="hidden" name="draft_id" value={draftId} />}
           <FormMessage error={error} />
-          <textarea className="form-control" name="body" maxLength={280} required autoFocus defaultValue={body}
+          <textarea className="form-control" name="body" maxLength={POST_MAX} required autoFocus defaultValue={body}
             autoComplete="off" inputMode="text" enterKeyHint="enter" />
           <PostingSuggestionResults search={suggestionSearch} />
           <div className="composefoot">

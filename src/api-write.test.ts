@@ -151,11 +151,12 @@ describe('API writes', () => {
     expect((await again.json() as any).data.id).toBe((await first.json() as any).data.id)
   })
 
-  test('rejects bodies outside 1 to 280 characters', async () => {
+  test('rejects bodies outside 1 to 500 characters', async () => {
     const { app } = fixture()
 
     expect((await post(app, 'alice-token', { body: '   ' })).status).toBe(400)
-    expect((await post(app, 'alice-token', { body: 'x'.repeat(281) })).status).toBe(400)
+    expect((await post(app, 'alice-token', { body: 'x'.repeat(500) })).status).toBe(201)
+    expect((await post(app, 'alice-token', { body: 'x'.repeat(501) })).status).toBe(400)
   })
 
   test('rejects posts over ten lines with a useful server error', async () => {

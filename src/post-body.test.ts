@@ -3,10 +3,10 @@ import { normalizePostBody, postBodyValidationMessage, validPostBody } from './p
 
 describe('post bodies', () => {
   test('counts submitted textarea line breaks as one character', () => {
-    const submitted = `${'x'.repeat(277)}\r\n`
+    const submitted = `${'x'.repeat(497)}\r\n`
     const body = normalizePostBody(submitted)
 
-    expect(body).toHaveLength(278)
+    expect(body).toHaveLength(498)
     expect(validPostBody(body)).toBe(true)
   })
 
@@ -16,7 +16,7 @@ describe('post bodies', () => {
 
   test('still rejects empty and genuinely oversized bodies', () => {
     expect(validPostBody('   \n')).toBe(false)
-    expect(validPostBody('x'.repeat(281))).toBe(false)
+    expect(validPostBody('x'.repeat(501))).toBe(false)
   })
 
   test('allows up to ten lines and rejects eleven', () => {
@@ -27,11 +27,11 @@ describe('post bodies', () => {
   test('reports exact counts for each exceeded limit', () => {
     const body = Array(11).fill('x').join('\n')
     expect(postBodyValidationMessage(body)).toBe('The note exceeds the limit: 11/10 lines.')
-    expect(postBodyValidationMessage('x'.repeat(281))).toBe('The note exceeds the limit: 281/280 characters.')
+    expect(postBodyValidationMessage('x'.repeat(501))).toBe('The note exceeds the limit: 501/500 characters.')
 
-    const overBothLimits = `${'x'.repeat(279)}\n${Array(11).fill('x').join('\n')}`
+    const overBothLimits = `${'x'.repeat(489)}\n${Array(11).fill('x').join('\n')}`
     expect(postBodyValidationMessage(overBothLimits)).toBe(
-      'The note exceeds the limit: 301/280 characters and 12/10 lines.',
+      'The note exceeds the limit: 511/500 characters and 12/10 lines.',
     )
   })
 })

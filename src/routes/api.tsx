@@ -8,6 +8,7 @@ import { type DatabaseService, databaseService } from '../database-service'
 import { decodeHotCursor } from '../hot'
 import { logError } from '../log'
 import { MAX_SEARCH_LENGTH, normalizeSearchQuery, searchExpression } from '../search'
+import { POST_MAX } from '../post-body'
 import type { User } from '../types'
 import { apiUser, currentUser } from '../utils'
 import { registerApiWriteRoutes } from './api-write'
@@ -61,7 +62,7 @@ function openApiDocument() {
       id: { type: 'integer' },
       top_id: { type: ['integer', 'null'],
         description: 'ID of the top-level post in this thread, or null when this post is already top-level.' },
-      body: { type: 'string', maxLength: 280 },
+      body: { type: 'string', maxLength: POST_MAX },
       created_at: { type: 'string', format: 'date-time' },
       parent_id: { type: ['integer', 'null'] },
       reply_count: { type: 'integer' },
@@ -430,16 +431,16 @@ function openApiDocument() {
           maxItems: 100, uniqueItems: true, items: { type: 'string', minLength: 1, maxLength: 500 } } },
       }, PostWriteRequest: {
         type: 'object', required: ['body'], additionalProperties: false, properties: {
-          body: { type: 'string', minLength: 1, maxLength: 280 },
+          body: { type: 'string', minLength: 1, maxLength: POST_MAX },
         },
       }, PostCreateRequest: {
         type: 'object', required: ['body'], additionalProperties: false, properties: {
-          body: { type: 'string', minLength: 1, maxLength: 280 },
+          body: { type: 'string', minLength: 1, maxLength: POST_MAX },
           parent_id: { type: ['integer', 'null'], minimum: 1 },
         },
       }, DraftUpdateRequest: {
         type: 'object', minProperties: 1, additionalProperties: false, properties: {
-          body: { type: 'string', minLength: 1, maxLength: 280 },
+          body: { type: 'string', minLength: 1, maxLength: POST_MAX },
           parent_id: { type: ['integer', 'null'], minimum: 1 },
         },
       }, Draft: {

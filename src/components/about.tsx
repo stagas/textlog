@@ -16,7 +16,7 @@ export function AboutContent({ user, embedded = false }: { user: User | null; em
           turning every thought into a performance.
         </p>
         <p>
-          Notes are limited to 280 characters. The constraint keeps them quick to write and read, making room for one
+          Notes are limited to 500 characters. The constraint keeps them quick to write and read, making room for one
           thought at a time.
         </p>
         <h2>Small by design</h2>

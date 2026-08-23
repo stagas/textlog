@@ -1,4 +1,5 @@
 import type React from 'react'
+import { POST_MAX } from '../post-body'
 import { canPublishPosts } from '../posting-policy'
 import type { User } from '../types'
 import type { PostView } from '../types'
@@ -39,7 +40,7 @@ export function ReplyBox(
         {draftId && <input type="hidden" name="draft_id" value={draftId} />}
         <FormMessage error={error} />
         {beforeTextarea}
-        <textarea className="form-control" name="body" maxLength={280} required autoFocus defaultValue={body}
+        <textarea className="form-control" name="body" maxLength={POST_MAX} required autoFocus defaultValue={body}
           placeholder={placeholder} autoComplete="off" inputMode="text" enterKeyHint="enter" />
         <PostingSuggestionResults search={suggestionSearch} />
         <div className="composefoot">

@@ -4,7 +4,7 @@
 
 [textlog](https://textlog.cc) is a simple social text log for sharing short notes, following people and hashtags, and joining conversations—without turning every thought into a performance.
 
-Notes are limited to 280 characters. The constraint keeps them quick to write and easy to read, making room for one thought at a time.
+Notes are limited to 500 characters. The constraint keeps them quick to write and easy to read, making room for one thought at a time.
 
 ## Small by design
 
