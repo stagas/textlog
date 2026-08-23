@@ -322,7 +322,7 @@ export function Post({
   treeHref,
   authorPopoverAction,
   continuationHref,
-  continuationLabel = 'read more',
+  continuationLabel = 'more',
   className,
   topActions,
 }: { p: PostView; user: User | null; showReplyAction?: boolean; showOwnerActions?: boolean;
@@ -378,6 +378,8 @@ export function Post({
     contextLabel = contextLabel.replace(/:$/, '') + ' and mentioned you:'
   }
   const detailPath = '/post/' + p.id + (returnPath ? '?from=' + encodeURIComponent(returnPath) : '')
+  const resolvedContinuationHref = continuationHref
+    ?? (showReplyCount && (p.reply_count || 0) > 0 ? detailPath : undefined)
   const parentDetailPath = parent
     ? '/post/' + parent.id + (returnPath ? '?from=' + encodeURIComponent(returnPath) : '')
     : ''
@@ -489,13 +491,13 @@ export function Post({
           hashtagFollowerCounts: p.hashtag_follower_counts, linkPreviews: p.link_previews }),
       }} />
       {preview ? <PollPreview body={p.body} /> : <Poll p={p} returnPath={returnPath} />}
-      {!parent && (showReplyAction || continuationHref || canModerate || reportHref) && (
+      {!parent && (showReplyAction || resolvedContinuationHref || canModerate || reportHref) && (
       <MetaRow className={`postfoot${preview ? ' preview-post-meta' : ''}`}>
         {!parent && showReplyAction && (preview
           ? <span className="quiet preview-reply">{resolvedReplyLabel}</span>
           : <a className="quiet post-reply-link" href={resolvedReplyHref} rel="nofollow"
             aria-label={`${resolvedReplyLabel} to @${p.handle}`}>{resolvedReplyLabel}</a>)}
-        {continuationHref && <a className="quiet post-continuation-link" href={continuationHref} rel="nofollow">
+        {resolvedContinuationHref && <a className="quiet post-continuation-link" href={resolvedContinuationHref} rel="nofollow">
           {continuationLabel}
         </a>}
         {(canModerate || reportHref) && (
@@ -578,13 +580,13 @@ export function Post({
             )}
         </blockquote>
       )}
-      {parent && (showReplyAction || continuationHref || canModerate || reportHref) && (
+      {parent && (showReplyAction || resolvedContinuationHref || canModerate || reportHref) && (
         <MetaRow className={`postfoot postfoot-after-quote${preview ? ' preview-post-meta' : ''}`}>
           {showReplyAction && (preview
             ? <span className="quiet preview-reply">{resolvedReplyLabel}</span>
             : <a className="quiet post-reply-link" href={resolvedReplyHref} rel="nofollow"
               aria-label={`${resolvedReplyLabel} to @${p.handle}`}>{resolvedReplyLabel}</a>)}
-          {continuationHref && <a className="quiet post-continuation-link" href={continuationHref} rel="nofollow">
+          {resolvedContinuationHref && <a className="quiet post-continuation-link" href={resolvedContinuationHref} rel="nofollow">
             {continuationLabel}
           </a>}
           {(canModerate || reportHref) && (
@@ -607,7 +609,7 @@ export function Post({
 
 export function ThreadReplies(
   { parentId, replies, user, returnPath, excludePostId, flat = false, showMissingContinuations = false,
-    continuationLabel = 'read more', continuationReturnPath, contextUnreadPostIds,
+    continuationLabel = 'more', continuationReturnPath, contextUnreadPostIds,
     contextDirectedUnreadPostIds }: { parentId: number; replies: PostView[];
     user: User | null; returnPath?: string; excludePostId?: number; flat?: boolean;
     showMissingContinuations?: boolean; continuationLabel?: string; continuationReturnPath?: string;
@@ -678,7 +680,7 @@ export function ThreadReplies(
           const descendantCount = visibleDescendantCount(reply.id)
           const truncatedByDepth = !reply.deleted_at && depth >= MAX_VISIBLE_REPLY_DEPTH && descendantCount > 0
           const hasMissingDescendants = !reply.deleted_at && showMissingContinuations
-            && descendantCount === 0 && (reply.reply_count || 0) > 0
+            && (reply.reply_count || 0) > descendantCount
           const continuesElsewhere = truncatedByDepth || hasMissingDescendants
           const childBranch = truncatedByDepth ? null : renderBranch(reply.id, depth + 1)
           if (reply.deleted_at) return <React.Fragment key={reply.id}>{childBranch}</React.Fragment>
@@ -752,13 +754,13 @@ export function FeedThreads(
       {roots.map(post => {
         const anchoredReturnPath = `${returnPath}#post-${post.id}`
         const visibleReplies = visibleReplyCount(post)
-        const continuesElsewhere = visibleReplies > 0 && (post.reply_count || 0) > visibleReplies
+        const continuesElsewhere = (post.reply_count || 0) > visibleReplies
         const foldControlId = visibleReplies > 0 ? `feed-thread-fold-${post.id}` : undefined
         return (
           <div className="post-page-thread feed-thread" key={post.id}>
             {foldControlId && <input className="thread-fold-input" type="checkbox" id={foldControlId} />}
             <div className="thread-root">
-              <Post p={post} user={user} showReplyCount tappable returnPath={anchoredReturnPath}
+              <Post p={post} user={user} tappable returnPath={anchoredReturnPath}
                 contextUnread={contextUnreadPostIds?.has(post.id)} foldControlId={foldControlId}
                 contextParentUnread={!!post.parent && contextUnreadPostIds?.has(post.parent.id)}
                 contextDirectedUnread={contextDirectedUnreadPostIds?.has(post.id)}
@@ -767,7 +769,7 @@ export function FeedThreads(
                   : undefined} />
             </div>
             <ThreadReplies parentId={post.id} replies={treePosts} user={user} returnPath={anchoredReturnPath}
-              showMissingContinuations continuationLabel="read more" continuationReturnPath={returnPath}
+              showMissingContinuations continuationLabel="more" continuationReturnPath={returnPath}
               contextUnreadPostIds={contextUnreadPostIds}
               contextDirectedUnreadPostIds={contextDirectedUnreadPostIds} />
           </div>
