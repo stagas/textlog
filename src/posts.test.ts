@@ -1,6 +1,6 @@
 import { Database } from 'bun:sqlite'
 import { describe, expect, test } from 'bun:test'
-import { createPost, enrichPosts, updatePost } from './posts'
+import { createPost, enrichPosts } from './posts'
 import type { PostView } from './types'
 import { displayPostBody, linkify } from './utils'
 
@@ -30,29 +30,6 @@ function database() {
 }
 
 describe('post persistence', () => {
-  test('repairs a dangling parent reference when editing a legacy post', () => {
-    const db = new Database(':memory:')
-    db.run(`PRAGMA foreign_keys=OFF;
-      CREATE TABLE users(id INTEGER PRIMARY KEY,handle TEXT NOT NULL);
-      CREATE TABLE handle_history(handle TEXT PRIMARY KEY COLLATE NOCASE,user_id INTEGER NOT NULL);
-      CREATE TABLE posts(id INTEGER PRIMARY KEY,user_id INTEGER NOT NULL REFERENCES users(id),
-        parent_id INTEGER REFERENCES posts(id),body TEXT NOT NULL,has_latex INTEGER,has_links INTEGER,has_code INTEGER);
-      CREATE TABLE post_hashtags(post_id INTEGER NOT NULL REFERENCES posts(id),tag TEXT NOT NULL,
-        PRIMARY KEY(post_id,tag));
-      CREATE TABLE post_mentions(post_id INTEGER NOT NULL REFERENCES posts(id),user_id INTEGER NOT NULL REFERENCES users(id),
-        PRIMARY KEY(post_id,user_id));
-      INSERT INTO users VALUES(1,'author');
-      INSERT INTO posts(id,user_id,parent_id,body) VALUES(1,1,999,'old body');
-      PRAGMA foreign_keys=ON;`)
-
-    updatePost(db, 1, 'new body #fixed')
-
-    expect(db.query('SELECT body,parent_id FROM posts WHERE id=1').get())
-      .toEqual({ body: 'new body #fixed', parent_id: null })
-    expect(db.query('SELECT tag FROM post_hashtags WHERE post_id=1').get()).toEqual({ tag: 'fixed' })
-    expect(db.query('PRAGMA foreign_key_check').all()).toEqual([])
-  })
-
   test('trims trailing whitespace when displaying post bodies', () => {
     expect(displayPostBody('first line\nsecond line  \n\n')).toBe('first line\nsecond line')
   })

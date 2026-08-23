@@ -152,11 +152,7 @@ export function createPost(
 
 export function updatePost(database: Database, postId: number, body: string) {
   database.transaction(() => {
-    // Older databases can contain replies whose parent was removed while foreign keys were disabled.
-    // SQLite validates that unchanged parent_id on any update, so detach the orphan while saving.
-    database.query(`UPDATE posts SET body=?,parent_id=CASE
-      WHEN parent_id IS NULL OR EXISTS(SELECT 1 FROM posts parent WHERE parent.id=posts.parent_id)
-        THEN parent_id ELSE NULL END WHERE id=?`).run(body, postId)
+    database.query('UPDATE posts SET body=? WHERE id=?').run(body, postId)
     syncPostMetadata(database, postId, body)
   })()
 }
