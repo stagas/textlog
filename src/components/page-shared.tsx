@@ -58,11 +58,9 @@ function PostingSuggestionSearchField({ kind, search }: {
   const searchLabel = kind === 'hashtags' ? 'hashtags' : 'handles'
   return (
     <div className="posting-help-search">
-      <label>
-        <span>Search {searchLabel}</span>
-        <input type="search" name={inputName} maxLength={100} defaultValue={active ? search.query : ''}
-          placeholder={`search ${searchLabel}`} autoComplete="off" inputMode="search" enterKeyHint="search" />
-      </label>
+      <input type="search" name={inputName} aria-label={`Search ${searchLabel}`} maxLength={100}
+        defaultValue={active ? search.query : ''} placeholder={`search ${searchLabel}`} autoComplete="off"
+        inputMode="search" enterKeyHint="search" />
       <button className="button" type="submit" name="action" value={`search-${kind}`} formNoValidate>
         search
       </button>
@@ -73,7 +71,6 @@ function PostingSuggestionSearchField({ kind, search }: {
 function PostingFormattingHelp() {
   return (
     <section className="posting-help-section">
-      <h2>Formatting</h2>
       <dl className="posting-help-formatting-panel">
             <div>
               <dt>Regular links</dt>
@@ -161,10 +158,11 @@ function PostingFormattingHelp() {
   )
 }
 
-export function PostingHelp({ maxLength = 280, maxLines = 10, search }: {
+export function PostingHelp({ maxLength = 280, maxLines = 10, search, oneLine = false }: {
   maxLength?: number
   maxLines?: number
   search?: PostingSuggestionSearch | null
+  oneLine?: boolean
 }) {
   return (
     <div className="posting-help">
@@ -172,14 +170,13 @@ export function PostingHelp({ maxLength = 280, maxLines = 10, search }: {
         <summary aria-controls="posting-help-content">
           <span className="posting-help-summary-link">
             <span className="posting-help-limits">{maxLength} chars / {maxLines} lines max</span>
-            <br />
+            {oneLine ? ' · ' : <br />}
             use #hashtags, @mentions and more
           </span>
         </summary>
       </details>
         <div className="posting-help-content" id="posting-help-content">
           <section className="posting-help-section">
-            <h2>Find hashtags and people</h2>
             <div className="posting-help-searches">
               <PostingSuggestionSearchField kind="hashtags" search={search} />
               <PostingSuggestionSearchField kind="mentions" search={search} />
@@ -187,7 +184,6 @@ export function PostingHelp({ maxLength = 280, maxLines = 10, search }: {
           </section>
           <PostingFormattingHelp />
           <section className="posting-help-section">
-            <h2>Emoji</h2>
             <div className="posting-help-emoji-panel" aria-label="Emoji to copy and paste">
               {'😀 😃 😄 😁 😆 😅 😂 🤣 😊 😇 🙂 🙃 😉 😌 😍 🥰 😘 😋 😛 😜 🤪 🤨 🧐 🤓 😎 🤩 🥳 😏 😒 😞 😔 😟 😕 🙁 ☹️ 😣 😖 😫 😩 🥺 😢 😭 😤 😠 😡 🤬 🤯 😳 🥵 🥶 😱 😨 😰 😥 😓 🤗 🤔 🫣 🤭 🫢 🤫 🤥 😶 😐 😑 😬 🙄 😯 😦 😧 😮 😲 🥱 😴 🤤 😪 😵 🤐 🥴 🤢 🤮 🤧 😷 🤒 🤕 🤑 🤠 😈 👿 👻 💀 ☠️ 👽 🤖 🎃 😺 😸 😹 😻 😼 😽 🙀 😿 😾 ❤️ 🧡 💛 💚 💙 💜 🖤 🤍 🤎 💔 ❣️ 💕 💞 💓 💗 💖 💘 💝 💟 👍 👎 👌 🤌 ✌️ 🤞 🤟 🤘 🤙 👈 👉 👆 👇 ☝️ ✋ 🤚 🖐️ 🖖 👋 🤝 👏 🙌 🫶 👐 🤲 🙏 ✍️ 💪 👀 👁️ 🧠 🫀 🫁 🌱 🌿 ☘️ 🍀 🌸 🌺 🌻 🌞 🌙 ⭐ ✨ ⚡ 🔥 🌈 ☀️ ☁️ ❄️ ☕ 🍕 🍎 🎉 🎊 🎈 🎁 🎵 🎶 🎨 📚 💡 ✅ ❌ ⚠️ 🚀 🌍 💻 📱 🔒 🔑'
                 .split(' ').map((emoji, index) => (

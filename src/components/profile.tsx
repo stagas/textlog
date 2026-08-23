@@ -112,13 +112,15 @@ export function Profile(
                       Handles must be 2–24 characters and use only letters, numbers, or underscores.
                     </span>
                   </label>
-                  <label>
-                    bio<textarea name="bio" maxLength={160} defaultValue={bio}
-                      placeholder="Tell people a little about yourself…" autoComplete="off" inputMode="text"
-                      enterKeyHint="enter" />
-                  </label>
-                  <PostingSuggestionResults search={suggestionSearch} />
-                  <PostingHelp maxLength={160} maxLines={5} search={suggestionSearch} />
+                  <div className="bio-field">
+                    <label>
+                      bio<textarea name="bio" maxLength={160} defaultValue={bio}
+                        placeholder="Tell people a little about yourself…" autoComplete="off" inputMode="text"
+                        enterKeyHint="enter" />
+                    </label>
+                    <PostingSuggestionResults search={suggestionSearch} />
+                    <PostingHelp maxLength={160} maxLines={5} search={suggestionSearch} oneLine />
+                  </div>
                   <div className="composefoot">
                     <button className="button">save profile →</button>
                   </div>

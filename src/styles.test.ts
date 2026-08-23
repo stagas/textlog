@@ -337,6 +337,8 @@ describe('in-memory stylesheet', () => {
     expect(css).toContain('.bio-form > label > input:not([type="checkbox"]),')
     expect(css).not.toContain('\n.bio-form input:not([type="checkbox"]),')
     expect(css).toContain('.bio-form + .account-danger-zone {\n  margin-top: var(--space-4);')
+    expect(css).toContain('.bio-field .posting-help-details summary,')
+    expect(css).toContain('min-height: 0;')
     expect(css).toContain('.composefoot .posting-help {\n  display: contents;')
     expect(css).toContain('display: flex;\n  grid-column: 1;\n  grid-row: 1;')
     expect(css).toContain(

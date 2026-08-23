@@ -3119,19 +3119,27 @@ form.report-panel {
   width: min(15rem, calc(100vw - 8rem));
   padding: var(--space-2);
   color: var(--ink);
+  font: inherit;
   background: var(--background);
   border: 1px solid var(--soft);
 }
 
+.posting-help-search input::placeholder {
+  color: var(--muted);
+  opacity: 1;
+}
+
 .posting-help-search input::-webkit-search-cancel-button {
+  width: 10px;
+  height: 10px;
+  appearance: none;
+  background: var(--muted);
+  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 10 10'%3E%3Cpath d='M1 1l8 8M9 1L1 9' stroke='black' stroke-width='1.5'/%3E%3C/svg%3E") center / 10px 10px no-repeat;
   cursor: pointer;
-  filter: grayscale(1);
-  opacity: 0.45;
 }
 
 .posting-help-search input::-webkit-search-cancel-button:hover {
-  filter: brightness(0) invert(1);
-  opacity: 1;
+  background: var(--ink);
 }
 
 .posting-help-search .button {
@@ -3716,9 +3724,23 @@ form.report-panel {
   margin-top: var(--space-6);
 }
 
-.bio-form > .posting-help {
+.bio-field {
+  display: grid;
+  gap: var(--space-2);
+}
+
+.bio-field > .posting-help {
   color: var(--muted);
-  font-size: 0.625rem;
+  font-size: 0.6875rem;
+}
+
+.bio-field > .posting-suggestion-results {
+  margin-bottom: var(--space-2);
+}
+
+.bio-field .posting-help-details summary,
+.bio-field .posting-help-details[open] > summary {
+  min-height: 0;
 }
 
 .bio-form > .composefoot {
