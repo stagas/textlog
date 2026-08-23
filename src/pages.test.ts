@@ -19,6 +19,7 @@ import {
   ConfirmEmail,
   Connections,
   Contact,
+  Drafts,
   EditPost,
   EmbedExamples,
   ErrorPage,
@@ -140,7 +141,9 @@ test('compose offers a server-rendered post preview', () => {
   const user = { id: 1, handle: 'writer', email: 'writer@example.com', bio: 'Writes things',
     email_verified_at: '2026-08-12 10:00:00', handle_chosen_at: '2026-08-12 10:00:00' }
   const form = renderToStaticMarkup(React.createElement(Compose, { user }))
-  const preview = renderToStaticMarkup(React.createElement(Compose, { user, body: 'Hello #world', preview: true }))
+  const preview = renderToStaticMarkup(React.createElement(Compose, {
+    user, body: 'Hello @reader, see #world at https://example.com', preview: true,
+  }))
 
   expect(form).toContain('value="preview" name="action">preview</button>')
   expect(form).toContain('class="button" accessKey="p">post →</button>')
@@ -159,7 +162,8 @@ test('compose offers a server-rendered post preview', () => {
   expect(preview.slice(
     preview.indexOf('<div class="panel panel-surface panel-medium compose write-compose">'),
   )).not.toContain('<div class="compose-post-preview">')
-  expect(preview).toContain('Hello <a href="/tag/world"')
+  expect(preview).toContain('Hello <a href="/u/reader">@reader</a>, see <a href="/tag/world"')
+  expect(preview).toContain('<a href="https://example.com" class="raw-link"')
   expect(preview).toContain('<div class="posttop posttop-context preview-post-meta"><span class="post-context post-context-author">you</span>')
   expect(preview).not.toContain('<span class="postauthor post-context-author">you</span>')
   expect(preview).toContain('<span class="post-context">wrote:</span>')
@@ -181,6 +185,19 @@ test('compose previews inline polls with their visible tag and options', () => {
   expect(html).toContain('>Windows</div>')
   expect(html).toContain('>MacOS</div>')
   expect(html).toContain('>Linux</div>')
+})
+
+test('draft cards linkify mentions, hashtags, and links', () => {
+  const user = { id: 1, handle: 'writer', email: 'writer@example.com', bio: '' }
+  const html = renderToStaticMarkup(React.createElement(Drafts, {
+    user,
+    drafts: [{ id: 7, parent_id: null, body: '@reader #world https://example.com',
+      created_at: '2026-08-23 10:00:00', updated_at: '2026-08-23 10:00:00' }],
+  }))
+
+  expect(html).toContain('<a href="/u/reader?from=%2Fpost%2F-7%23post--7">@reader</a>')
+  expect(html).toContain('<a href="/tag/world?from=%2Fpost%2F-7%23post--7">#world</a>')
+  expect(html).toContain('<a href="https://example.com" class="raw-link"')
 })
 
 test('compose carries its originating page through preview and offers cancel before preview', () => {

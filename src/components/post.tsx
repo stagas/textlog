@@ -488,7 +488,8 @@ export function Post({
           referenceQuery, p.hashtag_counts, p.mention_note_counts, { signedIn: !!user, currentHandle: user?.handle,
           formPrefix, mentionFollowing: p.mention_following, mentionFollowsViewer: p.mention_follows_viewer,
           mentionProfileStats: p.mention_profile_stats, hashtagFollowing: p.hashtag_following,
-          hashtagFollowerCounts: p.hashtag_follower_counts, linkPreviews: p.link_previews }),
+          hashtagFollowerCounts: p.hashtag_follower_counts, linkPreviews: p.link_previews,
+          linkUnknownMentions: preview || p.id < 0 }),
       }} />
       {preview ? <PollPreview body={p.body} /> : <Poll p={p} returnPath={returnPath} />}
       {!parent && (showReplyAction || resolvedContinuationHref || canModerate || reportHref) && (

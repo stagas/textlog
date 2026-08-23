@@ -31,6 +31,7 @@ export type ReferencePopoverOptions = {
   linkPreviews?: Record<string, LinkPreview>
   mentionPopovers?: boolean
   referencePopovers?: boolean
+  linkUnknownMentions?: boolean
 }
 
 function previewLink(html: string, url: string, appUrl: string | undefined, popover?: ReferencePopoverOptions) {
@@ -406,7 +407,7 @@ function renderedReference(token: string, mentionBios: Record<string, string>,
     : `/tag/${encodeURIComponent(key)}${navigationQuery}`
   const label = highlighted(`${token[0]}${value}`, highlightTerms)
   const hasData = isUser ? mentionBios[key] !== undefined : hashtagCounts[key] !== undefined
-  if (isUser && !hasData) return label
+  if (isUser && !hasData) return popover?.linkUnknownMentions ? `<a href="${href}">${label}</a>` : label
   if (!hasData) return `<a href="${href}">${label}</a>`
   if (popover?.referencePopovers === false) return `<a href="${href}">${label}</a>`
   if (isUser && popover?.mentionPopovers === false) return `<a href="${href}">${label}</a>`
