@@ -8,12 +8,30 @@ import type { Hono } from 'hono'
 import { appName } from '../brand'
 import { databaseService } from '../database-service'
 import { markdownPlainText } from '../markdown'
-import { renderProfileOg } from '../og'
+import { renderFollowBadge, renderProfileOg } from '../og'
 import { CONNECTION_PAGE_SIZE, decodePostCursor, TAG_PAGE_SIZE } from '../pagination'
 import { resolvedPageSize } from '../request-preferences'
 import { currentUser } from '../utils'
 
 export function registerProfilesRoutes(app: Hono) {
+  app.get('/u/:handle/follow.png', async c => {
+    const data = await databaseService().call('profiles.ogData', { handle: c.req.param('handle') })
+    if (!data) return c.text('Not found', 404, { 'access-control-allow-origin': '*' })
+    if (data.canonicalHandle) return c.redirect(`/u/${data.canonicalHandle}/follow.png`, 301)
+    const image = renderFollowBadge(data.profile!.handle)
+    const body = image.buffer.slice(image.byteOffset, image.byteOffset + image.byteLength) as ArrayBuffer
+    return new Response(body, {
+      headers: {
+        'content-type': 'image/png',
+        'content-length': String(image.byteLength),
+        'cache-control': 'public, max-age=3600, must-revalidate',
+        'access-control-allow-origin': '*',
+        'cross-origin-resource-policy': 'cross-origin',
+        'x-content-type-options': 'nosniff',
+      },
+    })
+  })
+
   app.get('/u/:handle/og.png', async c => {
     const data = await databaseService().call('profiles.ogData', { handle: c.req.param('handle') })
     if (!data) return c.text('Not found', 404)

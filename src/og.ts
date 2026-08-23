@@ -171,6 +171,55 @@ function drawLogo(ctx: CanvasRenderingContext2D, x: number, y: number, scale = 3
   ctx.restore()
 }
 
+export function renderFollowBadge(handle: string) {
+  const brand = appName()
+  const pixelRatio = 1
+  const height = 64
+  const fontSize = 28
+  const canvas = createCanvas(1, height * pixelRatio)
+  const measure = canvas.getContext('2d')
+  measure.font = `400 ${fontSize}px monospace`
+  const regularPrefixWidth = measure.measureText('follow ').width + measure.measureText(' on').width
+  const markScale = 1.55
+  const markWidth = (21 - 2.47) * markScale
+  measure.font = `700 ${fontSize}px monospace`
+  const handleWidth = measure.measureText(`@${handle}`).width
+  const brandWidth = measure.measureText(brand).width
+  const width = Math.ceil(18 + regularPrefixWidth + handleWidth + 16 + markWidth + 9 + brandWidth + 18)
+  canvas.width = width * pixelRatio
+  const ctx = canvas.getContext('2d')
+  ctx.scale(pixelRatio, pixelRatio)
+
+  ctx.fillStyle = '#111512'
+  ctx.fillRect(0, 0, width, height)
+
+  ctx.font = `400 ${fontSize}px monospace`
+  ctx.textBaseline = 'middle'
+  let x = 18
+  const baseline = height / 2 + 1
+  ctx.fillStyle = textColor
+  ctx.fillText('follow ', x, baseline)
+  x += ctx.measureText('follow ').width
+  ctx.font = `700 ${fontSize}px monospace`
+  ctx.fillStyle = accentColor
+  ctx.fillText(`@${handle}`, x, baseline)
+  x += ctx.measureText(`@${handle}`).width
+  ctx.font = `400 ${fontSize}px monospace`
+  ctx.fillStyle = textColor
+  ctx.fillText(' on', x, baseline)
+  x += ctx.measureText(' on').width + 16
+
+  // Keep the mark and wordmark together as the brand lockup. drawLogo's
+  // visible path occupies x=2.47..21 and y=7..19 within its local space.
+  drawLogo(ctx, x - 2.47 * markScale, height / 2 - 13 * markScale + 1, markScale)
+  x += markWidth + 9
+  ctx.fillStyle = textColor
+  ctx.font = `700 ${fontSize}px monospace`
+  ctx.fillText(brand, x, baseline)
+
+  return canvas.toBuffer('image/png')
+}
+
 export function renderDefaultOg() {
   const brand = appName()
   const canvas = createCanvas(width, height)

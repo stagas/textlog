@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test'
 import { createCanvas, Image } from 'canvas'
-import { postOgText, renderDefaultOg, renderPostOg, renderProfileOg, renderTagOg } from './og'
+import { postOgText, renderDefaultOg, renderFollowBadge, renderPostOg, renderProfileOg, renderTagOg } from './og'
 import { pollDisplayBody } from './polls'
 
 function visiblePixels(imageBuffer: Buffer, x: number, y: number, width: number, height: number) {
@@ -103,6 +103,16 @@ describe('renderProfileOg', () => {
       .not.toHaveLength(0)
     expect(renderProfileOg('tester', 'Studies $E = mc^2$ and $$x = \\frac{-b}{2a}$$'))
       .not.toHaveLength(0)
+  })
+})
+
+describe('renderFollowBadge', () => {
+  test('renders a compact PNG sized to its handle', () => {
+    const short = renderFollowBadge('ana')
+    const long = renderFollowBadge('a_longer_handle')
+    expect(short.subarray(0, 8)).toEqual(Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]))
+    expect(short.readUInt32BE(20)).toBe(64)
+    expect(long.readUInt32BE(16)).toBeGreaterThan(short.readUInt32BE(16))
   })
 })
 

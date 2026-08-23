@@ -3502,6 +3502,53 @@ form.report-panel {
   padding-top: 0;
 }
 
+.profile-presence {
+  margin: 0 var(--gutter) var(--space-5);
+  background: var(--quote-bg);
+  border: 1px solid var(--soft);
+}
+
+.profile-presence > summary {
+  padding: var(--space-3) var(--space-4);
+  color: var(--accent);
+  cursor: pointer;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.profile-presence-content {
+  padding: 0 var(--space-4) var(--space-4);
+}
+
+.profile-presence-preview {
+  display: inline-block;
+  max-width: 100%;
+  border: 0;
+}
+
+.profile-presence-preview img {
+  display: block;
+  max-width: 100%;
+  width: auto;
+  height: 32px;
+}
+
+.profile-presence-content p {
+  margin: var(--space-3) 0;
+  color: var(--muted);
+  font-size: 0.75rem;
+}
+
+.profile-presence-code {
+  margin-top: var(--space-3);
+}
+
+.profile-presence-code .api-key-output {
+  overflow-wrap: anywhere;
+  word-break: break-word;
+  white-space: normal;
+}
+
 .profile-action {
   align-self: start;
   display: flex;
