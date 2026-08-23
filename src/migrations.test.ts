@@ -127,6 +127,8 @@ describe('database migrations', () => {
     expect(database.query(`SELECT count(*) count FROM sqlite_master
       WHERE type='table' AND name='invite_banner_dismissals'`).get()).toEqual({ count: 1 })
     expect(database.query(`SELECT count(*) count FROM sqlite_master
+      WHERE type='table' AND name='bio_banner_dismissals'`).get()).toEqual({ count: 1 })
+    expect(database.query(`SELECT count(*) count FROM sqlite_master
       WHERE type='table' AND name='recap_unsubscribe_tokens'`).get()).toEqual({ count: 1 })
     expect(database.query(`SELECT count(*) count FROM sqlite_master
       WHERE type='table' AND name='recap_email_deliveries'`).get()).toEqual({ count: 1 })

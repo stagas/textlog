@@ -373,12 +373,14 @@ export type DatabaseDomainOperations = {
     improvementDismissed: boolean
     notificationsHandled: boolean
     appearanceHandled: boolean
+    bioMissing: boolean
+    bioHandled: boolean
     donationDismissed: boolean
   } }
   'feeds.recordBanner': {
     input: { userId: number; userAgent: string | null;
       action: 'notifications-dismissed' | 'notification-improvements-dismissed' | 'appearance-dismissed'
-        | 'appearance-seen' | 'invite-dismissed' | 'donation-dismissed' }
+        | 'appearance-seen' | 'invite-dismissed' | 'bio-dismissed' | 'donation-dismissed' }
     output: null
   }
   'feeds.markRead': { input: { userId: number; toMe: boolean }; output: null }

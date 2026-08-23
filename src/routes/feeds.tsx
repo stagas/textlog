@@ -33,14 +33,19 @@ async function showNotificationBanner(request: Request, user: ReturnType<typeof 
   if (!user) return false
   const userAgent = notificationUserAgent(request)
   const state = await databaseService().call('feeds.bannerState', { userId: user.id, userAgent })
-  const { inviteHandled, notificationsEnabled, improvementDismissed, appearanceHandled, donationDismissed } = state
+  const { inviteHandled, notificationsEnabled, improvementDismissed, appearanceHandled, bioMissing, bioHandled,
+    donationDismissed } = state
+  const bioPending = bioMissing && !bioHandled
   if (!userAgent) {
-    const choices = inviteHandled ? ['notifications', 'appearance'] : ['notifications', 'appearance', 'invite']
-    return choices[Math.floor(Math.random() * choices.length)] as 'notifications' | 'appearance' | 'invite'
+    const choices = ['notifications', 'appearance', ...(inviteHandled ? [] : ['invite']), ...(bioPending ? ['bio'] : [])]
+    return choices[Math.floor(Math.random() * choices.length)] as 'notifications' | 'appearance' | 'invite' | 'bio'
   }
   if (notificationsEnabled && !improvementDismissed) return 'notification-update'
   const notificationsHandled = notificationBannerDismissed(request, user.id) || state.notificationsHandled
-  if (notificationsHandled && appearanceHandled && !inviteHandled) return 'invite'
+  if (notificationsHandled && appearanceHandled && (!inviteHandled || bioPending)) {
+    const choices = [...(inviteHandled ? [] : ['invite']), ...(bioPending ? ['bio'] : [])]
+    return choices[Math.floor(Math.random() * choices.length)] as 'invite' | 'bio'
+  }
   if (notificationsHandled && appearanceHandled) {
     return instance.links.donate && !donationDismissed ? 'donate' : false
   }
@@ -366,6 +371,20 @@ export function registerFeedsRoutes(app: Hono) {
     const user = currentUser(c.req.raw)
     if (!user) return redirect('/enter')
     await databaseService().call('feeds.recordBanner', { userId: user.id, userAgent: null, action: 'invite-dismissed' })
+    return redirect(safeRefererPath(c.req.header('referer'), c.req.url))
+  })
+
+  app.get('/bio/banner/accept', async c => {
+    const user = currentUser(c.req.raw)
+    if (!user) return redirect('/enter?next=' + encodeURIComponent('/account/edit'))
+    await databaseService().call('feeds.recordBanner', { userId: user.id, userAgent: null, action: 'bio-dismissed' })
+    return redirect('/account/edit')
+  })
+
+  app.post('/bio/banner/dismiss', async c => {
+    const user = currentUser(c.req.raw)
+    if (!user) return redirect('/enter')
+    await databaseService().call('feeds.recordBanner', { userId: user.id, userAgent: null, action: 'bio-dismissed' })
     return redirect(safeRefererPath(c.req.header('referer'), c.req.url))
   })
 

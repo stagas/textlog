@@ -50,7 +50,7 @@ export function Feed({ user, data, title, path = '/for-you', pageUrl, notificati
   title?: string
   path?: string
   pageUrl?: string
-  notificationBanner?: false | 'notifications' | 'appearance' | 'invite' | 'notification-update' | 'donate'
+  notificationBanner?: false | 'notifications' | 'appearance' | 'invite' | 'bio' | 'notification-update' | 'donate'
   toMe?: boolean
   flat?: boolean
 }) {

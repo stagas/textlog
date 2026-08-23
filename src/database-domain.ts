@@ -1955,6 +1955,8 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
             userAgent),
         appearanceHandled: !!userAgent
           && exists('SELECT 1 FROM appearance_user_agents WHERE user_id=? AND user_agent=? LIMIT 1', userId, userAgent),
+        bioMissing: exists("SELECT 1 FROM users WHERE id=? AND trim(coalesce(bio,''))='' LIMIT 1", userId),
+        bioHandled: exists('SELECT 1 FROM bio_banner_dismissals WHERE user_id=? LIMIT 1', userId),
         donationDismissed: exists('SELECT 1 FROM donation_banner_dismissals WHERE user_id=? LIMIT 1', userId),
       }
       return result as DatabaseDomainOutput<K>
@@ -1982,6 +1984,12 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
       else if (action === 'invite-dismissed') {
         database.query(
           `INSERT INTO invite_banner_dismissals(user_id) VALUES(?)
+        ON CONFLICT(user_id) DO UPDATE SET dismissed_at=CURRENT_TIMESTAMP`,
+        ).run(userId)
+      }
+      else if (action === 'bio-dismissed') {
+        database.query(
+          `INSERT INTO bio_banner_dismissals(user_id) VALUES(?)
         ON CONFLICT(user_id) DO UPDATE SET dismissed_at=CURRENT_TIMESTAMP`,
         ).run(userId)
       }

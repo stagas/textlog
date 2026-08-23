@@ -692,6 +692,13 @@ test('consequential account, content, reporting, and admin flows work over HTTP'
     userAgent: 'alice-dismissed-browser',
   })
   expect(dismissedAppearance.status).toBe(303)
+  const dismissedBio = await request('/bio/banner/dismiss', {
+    method: 'POST',
+    cookie: aliceCookie,
+    userAgent: 'alice-dismissed-browser',
+  })
+  expect(dismissedBio.status).toBe(303)
+  expect(database.query('SELECT 1 FROM bio_banner_dismissals WHERE user_id=?').get(alice.id)).toBeDefined()
   const fullyDismissedHome = await (await request('/for-you', {
     cookie: aliceCookie,
     userAgent: 'alice-dismissed-browser',
@@ -703,11 +710,24 @@ test('consequential account, content, reporting, and admin flows work over HTTP'
     userAgent: 'alice-dismissed-browser',
   })
   expect(dismissedInvite.status).toBe(303)
+  database.query('DELETE FROM bio_banner_dismissals WHERE user_id=?').run(alice.id)
   const setupDismissedHome = await (await request('/for-you', {
     cookie: aliceCookie,
     userAgent: 'alice-dismissed-browser',
   })).text()
-  expect(setupDismissedHome).toContain('support us on open collective')
+  expect(setupDismissedHome).toContain('href="/bio/banner/accept">edit your bio</a>')
+  const openedBioEditor = await request('/bio/banner/accept', {
+    cookie: aliceCookie,
+    userAgent: 'alice-dismissed-browser',
+  })
+  expect(openedBioEditor.status).toBe(303)
+  expect(openedBioEditor.headers.get('location')).toBe('/account/edit')
+  expect(database.query('SELECT 1 FROM bio_banner_dismissals WHERE user_id=?').get(alice.id)).toBeDefined()
+  const bioHandledHome = await (await request('/for-you', {
+    cookie: aliceCookie,
+    userAgent: 'alice-dismissed-browser',
+  })).text()
+  expect(bioHandledHome).toContain('support us on open collective')
   const acceptedDonation = await request('/donation/banner/accept', {
     cookie: aliceCookie,
     userAgent: 'alice-dismissed-browser',

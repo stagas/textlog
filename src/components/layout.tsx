@@ -37,7 +37,7 @@ export function Layout({
     imageAlt?: string }
   pageUrl?: string
   feeds?: { title: string; rss: string; atom: string }
-  notificationBanner?: false | 'notifications' | 'appearance' | 'invite' | 'notification-update' | 'donate'
+  notificationBanner?: false | 'notifications' | 'appearance' | 'invite' | 'bio' | 'notification-update' | 'donate'
   mobileWriteAction?: boolean
   children: React.ReactNode
 }) {
@@ -162,7 +162,7 @@ export function Layout({
           </>
         )}
         {mobile && <link href="https://fonts.cdnfonts.com/css/dejavu-sans-mono" rel="stylesheet" />}
-        <link rel="stylesheet" href="/styles.css?v=671" />
+        <link rel="stylesheet" href="/styles.css?v=672" />
         <style>{themeCss}</style>
       </head>
       <body className={`density-${density}${user?.show_link_previews === 0 ? ' link-previews-disabled' : ''}${
@@ -199,6 +199,8 @@ export function Layout({
               ? '/account/edit/appearance'
               : notificationBanner === 'invite'
               ? '/account/edit/invite'
+              : notificationBanner === 'bio'
+              ? '/bio/banner/accept'
               : '/account/edit/notifications'}
               className={notificationBanner === 'donate' ? 'notification-banner-donate-link' : undefined}
               {...notificationBanner === 'donate' ? { target: '_blank', rel: 'noopener noreferrer' } : {}}
@@ -209,6 +211,8 @@ export function Layout({
                 ? 'customize appearance'
                 : notificationBanner === 'invite'
                 ? 'invite friends'
+                : notificationBanner === 'bio'
+                ? 'edit your bio'
                 : notificationBanner === 'notification-update'
                 ? 'check the improved notifications'
                 : 'enable notifications'}
@@ -220,6 +224,8 @@ export function Layout({
               ? '/appearance/banner/dismiss'
               : notificationBanner === 'invite'
               ? '/invite/banner/dismiss'
+              : notificationBanner === 'bio'
+              ? '/bio/banner/dismiss'
               : notificationBanner === 'notification-update'
               ? '/notifications/improvements/dismiss'
               : '/notifications/banner/dismiss'}

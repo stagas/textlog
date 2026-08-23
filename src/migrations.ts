@@ -1583,6 +1583,15 @@ export const migrations: Migration[] = [
       migrations.find(migration => migration.version === 112)!.up(database)
     },
   },
+  {
+    version: 116,
+    name: 'bio_banner_dismissals',
+    up(database) {
+      database.run(`CREATE TABLE IF NOT EXISTS bio_banner_dismissals (
+        user_id INTEGER PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
+        dismissed_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP);`)
+    },
+  },
 ]
 
 export const latestMigrationVersion = migrations.at(-1)!.version

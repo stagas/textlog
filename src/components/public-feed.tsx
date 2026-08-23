@@ -13,7 +13,7 @@ export function PublicFeed(
       user?: User | null
       path?: string
       pageUrl?: string
-      notificationBanner?: false | 'notifications' | 'appearance' | 'invite' | 'notification-update' | 'donate'
+      notificationBanner?: false | 'notifications' | 'appearance' | 'invite' | 'bio' | 'notification-update' | 'donate'
       flat?: boolean
     },
 ) {
