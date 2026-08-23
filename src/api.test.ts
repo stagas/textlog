@@ -95,6 +95,20 @@ describe('public API', () => {
     expect(JSON.stringify(payload)).not.toContain('user_id')
   })
 
+  test('aliases the latest and hot JSON feeds at root paths', async () => {
+    const { app } = fixture()
+    const latestResponse = await request(app, '/latest.json?limit=2')
+    const latest = await latestResponse.json() as any
+    const hot = await (await request(app, '/hot.json?limit=2')).json() as any
+
+    expect(latest.data.map((post: any) => post.id)).toEqual([3, 2])
+    expect(latestResponse.headers.get('access-control-allow-origin')).toBe('*')
+    expect(latest.pagination.next_cursor).toBeTruthy()
+    expect(hot.data.map((post: any) => post.id)).toEqual([1])
+    expect((await request(app, '/latest.json?limit=101')).status).toBe(400)
+    expect((await request(app, '/hot.json?cursor=broken')).status).toBe(400)
+  })
+
   test('uses stable cursor pagination and validates pagination input', async () => {
     const { app } = fixture()
     const first = await (await request(app, '/api/v1/feeds/latest?limit=2')).json() as any

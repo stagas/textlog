@@ -1,4 +1,4 @@
-import type { Context, Hono } from 'hono'
+import type { Context, Hono, MiddlewareHandler } from 'hono'
 import { API_DEFAULT_REPLY_DEPTH, API_MAX_REPLY_DEPTH, apiOrigin, parseCollectionParams } from '../api'
 import { decodeActivityCursor } from '../api-activity'
 import { subscribeToPosts } from '../api-broker'
@@ -337,7 +337,7 @@ export function registerApiRoutes(app: Hono, appUrl: string | null | undefined =
     )
   })
 
-  app.use('/api/*', async (c, next) => {
+  const apiMiddleware: MiddlewareHandler = async (c, next) => {
     if (c.req.method === 'OPTIONS') {
       return new Response(null, { status: 204, headers: {
         'access-control-allow-origin': '*',
@@ -355,9 +355,12 @@ export function registerApiRoutes(app: Hono, appUrl: string | null | undefined =
     }
     c.header('access-control-allow-origin', '*')
     c.header('vary', 'Origin')
-  })
+  }
+  app.use('/api/*', apiMiddleware)
+  app.use('/latest.json', apiMiddleware)
+  app.use('/hot.json', apiMiddleware)
 
-  app.use('/api/v1/*', async (c, next) => {
+  const jsonRateLimitMiddleware: MiddlewareHandler = async (c, next) => {
     if (c.req.method === 'OPTIONS' || c.req.path === '/api/v1/firehose') return next()
     const ip = c.req.header(clientIpHeaderName()) || '-'
     const limited = await service.call('system.consumeBucketedAttempt', {
@@ -369,14 +372,19 @@ export function registerApiRoutes(app: Hono, appUrl: string | null | undefined =
     })
     if (limited) return apiError('rate_limited', 'Too many API requests', 429, limited.retryAfter)
     return next()
-  })
+  }
+  app.use('/api/v1/*', jsonRateLimitMiddleware)
+  app.use('/latest.json', jsonRateLimitMiddleware)
+  app.use('/hot.json', jsonRateLimitMiddleware)
 
   registerSyndicationRoutes(app, service, appUrl)
   registerApiWriteRoutes(app, service, requestApiUser, appUrl)
 
   app.get('/api/openapi.json', () => jsonResponse(openApiDocument(), 200, 'public, max-age=3600'))
 
-  app.get('/api/v1/feeds/latest', c => collection(c, service, {}, appUrl))
+  const latestFeed = (c: Context) => collection(c, service, {}, appUrl)
+  app.get('/latest.json', latestFeed)
+  app.get('/api/v1/feeds/latest', latestFeed)
 
   for (const [path, kind] of [['for-you', 'personalizedFor'], ['to-me', 'toMeFor']] as const) {
     app.get(`/api/v1/activities/${path}`, async c => {
@@ -439,7 +447,7 @@ export function registerApiRoutes(app: Hono, appUrl: string | null | undefined =
     return jsonResponse(result.status === 'ready' ? result.value : null)
   })
 
-  app.get('/api/v1/feeds/hot', async c => {
+  const hotFeed = async (c: Context) => {
     const parsed = parseCollectionParams(c.req.query('limit'))
     if (!parsed) {
       return apiError('invalid_pagination', 'limit must be 1–100 and cursor must be a valid opaque cursor', 400)
@@ -452,7 +460,9 @@ export function registerApiRoutes(app: Hono, appUrl: string | null | undefined =
     const result = await service.call('api.publicRead', { kind: 'hot', origin: apiOrigin(c.req.url, appUrl),
       limit: parsed.limit, cursor })
     return jsonResponse(result.status === 'ready' ? result.value : null)
-  })
+  }
+  app.get('/hot.json', hotFeed)
+  app.get('/api/v1/feeds/hot', hotFeed)
 
   app.get('/api/v1/posts/:id', async c => {
     const id = Number(c.req.param('id'))

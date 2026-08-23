@@ -101,6 +101,10 @@ describe('post persistence', () => {
       .toBe(
         '<a href="https://www-cdn.anthropic.com/reports/Risk%20Report.pdf" title="https://www-cdn.anthropic.com/reports/Risk%20Report.pdf" target="_blank" rel="nofollow ugc noopener noreferrer">Anthropic Risk August 2026 [pdf]</a>',
       )
+    expect(linkify('![https://ibb.co/WpfV1DbH](https://ibb.co/WpfV1DbH)'))
+      .toBe(
+        '<a href="https://ibb.co/WpfV1DbH" title="https://ibb.co/WpfV1DbH" target="_blank" rel="nofollow ugc noopener noreferrer">https://ibb.co/WpfV1DbH</a>',
+      )
   })
   test('renders Markdown strikethrough in posts', () => {
     expect(linkify('Keep ~~remove~~ revise')).toBe('Keep <del>remove</del> revise')
