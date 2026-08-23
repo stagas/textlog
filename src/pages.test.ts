@@ -1652,13 +1652,14 @@ test('Profile edit offers a data download without rendering notes', () => {
   expect(html).not.toContain('class="profile-user-details"')
 })
 
-test('Profile offers a copy-paste presence badge with a safe new-tab profile link', () => {
+test('Profile edit offers an expanded copy-paste presence badge with a safe new-tab profile link', () => {
   const profile = { id: 2, handle: 'writer', email: '', bio: 'Writes things' }
   const html = renderToStaticMarkup(React.createElement(Profile, {
-    user: null,
+    user: profile,
     profile,
     following: false,
     posts: [],
+    editing: true,
     social: {
       description: 'Writes things',
       image: 'https://textlog.test/u/writer/og.png',
@@ -1667,11 +1668,17 @@ test('Profile offers a copy-paste presence badge with a safe new-tab profile lin
     },
   }))
 
-  expect(html).toContain('<summary>Share your presence</summary>')
+  expect(html).toContain('<h2 id="profile-presence-heading">Share your presence</h2>')
+  expect(html).not.toContain('<details class="profile-presence"')
   expect(html).toContain('href="https://textlog.test/u/writer" target="_blank" rel="noopener noreferrer"')
   expect(html).toContain('src="https://textlog.test/u/writer/follow.png"')
   expect(html).toContain('class="form-control magic-link-value api-key-output" tabindex="0"')
   expect(html).toContain('&lt;a href=&quot;https://textlog.test/u/writer&quot; target=&quot;_blank&quot;')
+
+  const publicHtml = renderToStaticMarkup(React.createElement(Profile, {
+    user: null, profile, following: false, posts: [],
+  }))
+  expect(publicHtml).not.toContain('Share your presence')
 })
 
 test('Profile places owner actions in the handle row', () => {

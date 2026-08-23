@@ -57,9 +57,28 @@ export function Profile(
     || { hashtagCounts: {}, hashtagFollowerCounts: {}, hashtagFollowing: {}, mentionBios: {}, mentionNoteCounts: {},
       mentionProfileStats: {}, mentionFollowing: {}, mentionFollowsViewer: {}, linkPreviews: {} }
   const bioFormPrefix = `profile-${profile.id}-bio`
-  const profileUrl = social?.url || `/u/${profile.handle}`
+  const configuredOrigin = Bun.env.APP_URL?.replace(/\/$/, '')
+  const profileUrl = social?.url || `${configuredOrigin || ''}/u/${profile.handle}`
   const badgeUrl = `${profileUrl}/follow.png`
   const presenceCode = `<a href="${profileUrl}" target="_blank" rel="noopener noreferrer"><img src="${badgeUrl}" alt="Follow @${profile.handle} on textlog" height="32"></a>`
+  const presence = (
+    <section className="profile-presence" aria-labelledby="profile-presence-heading">
+      <h2 id="profile-presence-heading">Share your presence</h2>
+      <div className="profile-presence-content">
+        <a className="profile-presence-preview" href={profileUrl} target="_blank" rel="noopener noreferrer">
+          <img src={badgeUrl} alt={`Follow @${profile.handle} on textlog`} height="32" />
+        </a>
+        <p>Paste this into your site to help people find and follow you on textlog.</p>
+        <div className="magic-link-output profile-presence-code">
+          <output className="form-control magic-link-value api-key-output" tabIndex={0}
+            aria-label="profile presence embed code"
+          >
+            {presenceCode}
+          </output>
+        </div>
+      </div>
+    </section>
+  )
   return (
     <Layout user={user} title={`@${profile.handle}`} social={social} feeds={{
       title: `Notes by @${profile.handle}`,
@@ -128,6 +147,7 @@ export function Profile(
                     <button className="button">save profile →</button>
                   </div>
                 </form>
+                <div className="profile-presence-section">{presence}</div>
                 <div className="account-danger-zone">
                   <div>
                     <strong>Appearance</strong>
@@ -211,24 +231,6 @@ export function Profile(
               ))}
         </div>
       </ProfileHeader>
-      {!editing && !blocked && !blockedByProfile && (
-        <details className="profile-presence">
-          <summary>Share your presence</summary>
-          <div className="profile-presence-content">
-            <a className="profile-presence-preview" href={profileUrl} target="_blank" rel="noopener noreferrer">
-              <img src={badgeUrl} alt={`Follow @${profile.handle} on textlog`} height="32" />
-            </a>
-            <p>Paste this into your site to help people find and follow you on textlog.</p>
-            <div className="magic-link-output profile-presence-code">
-              <output className="form-control magic-link-value api-key-output" tabIndex={0}
-                aria-label="profile presence embed code"
-              >
-                {presenceCode}
-              </output>
-            </div>
-          </div>
-        </details>
-      )}
       {blocked || blockedByProfile
         ? (
           <div className="empty relationship-notice">

@@ -3502,16 +3502,21 @@ form.report-panel {
   padding-top: 0;
 }
 
+.profile-presence-section {
+  margin-top: var(--space-4);
+  border-top: 1px solid var(--soft);
+}
+
 .profile-presence {
-  margin: 0 var(--gutter) var(--space-5);
+  margin: var(--space-4) 0;
   background: var(--quote-bg);
   border: 1px solid var(--soft);
 }
 
-.profile-presence > summary {
+.profile-presence > h2 {
+  margin: 0;
   padding: var(--space-3) var(--space-4);
   color: var(--accent);
-  cursor: pointer;
   font-size: 0.75rem;
   font-weight: 600;
 }
