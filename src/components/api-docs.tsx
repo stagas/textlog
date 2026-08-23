@@ -73,27 +73,9 @@ const endpoints: ReadonlyArray<readonly [string, string, ReactNode, boolean?]> =
   ['DELETE', '/users/:handle/block', 'Unblock a user.', true],
   ['GET', '/users/:handle/blocks', 'List accounts you have blocked. The handle must be your own.', true],
   ['GET', '/feeds/latest', 'Get the latest public posts and replies.'],
-  ['GET', '/latest.json', <>
-    Root-level JSON alias of <code>/api/v1/feeds/latest</code>.
-  </>],
-  ['GET', '/latest.rss', <>
-    Root-level RSS alias of <code>/api/v1/feeds/latest.rss</code>.
-  </>],
-  ['GET', '/latest.atom', <>
-    Root-level Atom alias of <code>/api/v1/feeds/latest.atom</code>.
-  </>],
   ['POST', '/feeds/latest/read', 'Mark selected latest-feed posts as read using post_ids.', true],
   ['POST', '/feeds/latest/read-all', 'Mark every visible latest-feed post as read.', true],
   ['GET', '/feeds/hot', 'Get posts ranked by recent activity and replies.'],
-  ['GET', '/hot.json', <>
-    Root-level JSON alias of <code>/api/v1/feeds/hot</code>.
-  </>],
-  ['GET', '/hot.rss', <>
-    Root-level RSS alias of <code>/api/v1/feeds/hot.rss</code>.
-  </>],
-  ['GET', '/hot.atom', <>
-    Root-level Atom alias of <code>/api/v1/feeds/hot.atom</code>.
-  </>],
   ['GET', '/activities/for-you', 'Get activity from followed people and tags, plus activity directed to you.', true],
   ['POST', '/activities/for-you/read', 'Mark selected activities as read using their activity_ids.', true],
   ['POST', '/activities/for-you/read-all', 'Mark every for-you activity as read.', true],
