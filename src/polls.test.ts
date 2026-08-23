@@ -17,6 +17,36 @@ describe('polls', () => {
     expect(parsePoll('Example:\n```text\n#poll\nTea\nCoffee\n```')).toBeNull()
   })
 
+  test('parses a quiz with exactly one marked correct answer', () => {
+    expect(parsePoll('Capital of Greece? #quiz\nRome\n> Athens\nParis')).toEqual({
+      question: 'Capital of Greece?', options: ['Rome', 'Athens', 'Paris'], kind: 'quiz', correctIndex: 1,
+    })
+    expect(parsePoll('Invalid #quiz\n> One\n> Two')).toBeNull()
+    expect(parsePoll('Invalid #quiz\nOne\nTwo')).toBeNull()
+    expect(parsePoll('Capital? #quiz\nRome\n> Athens\n\nAthens has been the capital since 1834.')).toEqual({
+      question: 'Capital?', options: ['Rome', 'Athens'], kind: 'quiz', correctIndex: 1,
+      explanation: 'Athens has been the capital since 1834.',
+    })
+  })
+
+  test('quizzes do not expire', () => {
+    const db = new Database(':memory:')
+    db.run(`CREATE TABLE users(id INTEGER PRIMARY KEY);
+      CREATE TABLE posts(id INTEGER PRIMARY KEY,user_id INTEGER,body TEXT,created_at TEXT,deleted_at TEXT);
+      CREATE TABLE blocks(blocker_id INTEGER,blocked_id INTEGER);
+      CREATE TABLE post_hashtags(post_id INTEGER,tag TEXT);
+      CREATE TABLE blocked_hashtags(user_id INTEGER,tag TEXT);
+      CREATE TABLE poll_options(id INTEGER PRIMARY KEY AUTOINCREMENT,post_id INTEGER,position INTEGER,label TEXT);
+      CREATE TABLE poll_votes(post_id INTEGER,option_id INTEGER,user_id INTEGER,created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+        PRIMARY KEY(post_id,user_id));
+      INSERT INTO users VALUES(1);
+      INSERT INTO posts VALUES(1,1,'Old quiz #quiz\n> Yes\nNo','2000-01-01 00:00:00',NULL);`)
+    syncPoll(db, 1, 'Old quiz #quiz\n> Yes\nNo')
+    const quiz = loadPolls(db, [1], 1).get(1)!
+    expect(quiz).toMatchObject({ kind: 'quiz', expired: false, expiresAt: null })
+    expect(voteInPoll(db, 1, quiz.options[0].id, 1)).toBe('ready')
+  })
+
   test('allows one vote per user and reveals totals to that voter', () => {
     const db = new Database(':memory:')
     db.run(`PRAGMA foreign_keys=ON;

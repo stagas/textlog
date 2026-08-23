@@ -475,11 +475,14 @@ function openApiDocument() {
           description: { type: 'string' }, siteName: { type: 'string' }, imageWidth: { type: 'integer' },
           imageHeight: { type: 'integer' } },
       }, Poll: {
-        type: 'object', required: ['options', 'total_votes', 'expired', 'expires_at', 'viewer_voted'], properties: {
+        type: 'object', required: ['options', 'kind', 'total_votes', 'expired', 'expires_at', 'viewer_voted'], properties: {
           options: { type: 'array', items: { type: 'object', required: ['id', 'label', 'votes', 'selected'],
             properties: { id: { type: 'integer' }, label: { type: 'string' }, votes: { type: ['integer', 'null'] },
-              selected: { type: 'boolean' } } } }, total_votes: { type: ['integer', 'null'] },
-          expired: { type: 'boolean' }, expires_at: { type: 'string', format: 'date-time' },
+              selected: { type: 'boolean' }, correct: { type: ['boolean', 'null'],
+                description: 'Quiz answer correctness; null until the viewer answers.' } } } },
+          kind: { type: 'string', enum: ['poll', 'quiz'] }, total_votes: { type: ['integer', 'null'] },
+          explanation: { type: ['string', 'null'], description: 'Quiz explanation; null until the viewer answers.' },
+          expired: { type: 'boolean' }, expires_at: { type: ['string', 'null'], format: 'date-time' },
           viewer_voted: { type: 'boolean' },
         },
       }, QuotedPost: quotedPostSchema, Post: postSchema, Activity: {

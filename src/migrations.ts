@@ -2,7 +2,7 @@ import type { Database } from 'bun:sqlite'
 import { extractHashtags, extractMentions, postContentFlags } from './content'
 import { rebuildHotPosts } from './hot'
 import { migrateLegacySessionTokens } from './sessions'
-import { parsePoll } from './polls'
+import { parsePoll, syncPoll } from './polls'
 
 type Migration = { version: number; name: string; transaction?: boolean; up(database: Database): void }
 
@@ -1660,6 +1660,16 @@ export const migrations: Migration[] = [
           FROM users u CROSS JOIN hashtag_follows hf`)
       }
       database.run("UPDATE hashtag_follows SET created_at='1970-01-01 00:00:00'")
+    },
+  },
+  {
+    version: 120,
+    name: 'split_quiz_explanations_from_answers',
+    up(database) {
+      if (!database.query("SELECT 1 FROM sqlite_master WHERE type='table' AND name='poll_options'").get()) return
+      const quizzes = database.query(`SELECT id,body FROM posts
+        WHERE deleted_at IS NULL AND lower(body) LIKE '%#quiz%'`).all() as Array<{ id: number; body: string }>
+      for (const quiz of quizzes) syncPoll(database, quiz.id, quiz.body)
     },
   },
 ]

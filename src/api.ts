@@ -155,9 +155,12 @@ function withApiExtras(post: ApiPost, extras: ReturnType<typeof apiExtras>, id: 
   const reveal = !!poll && (poll.expired || poll.viewerVoted)
   return { ...post, link_previews: extras.previews.get(id) || {}, poll: poll ? {
     options: poll.options.map(option => ({ id: option.id, label: option.label,
-      votes: reveal ? option.votes : null, selected: option.selected })),
+      votes: reveal ? option.votes : null, selected: option.selected,
+      ...(poll.kind === 'quiz' ? { correct: reveal ? !!option.correct : null } : {}) })),
+    kind: poll.kind || 'poll',
+    ...(poll.kind === 'quiz' ? { explanation: reveal ? poll.explanation || null : null } : {}),
     total_votes: reveal ? poll.totalVotes : null, expired: poll.expired,
-    expires_at: new Date(poll.expiresAt).toISOString(), viewer_voted: poll.viewerVoted,
+    expires_at: poll.expiresAt === null ? null : new Date(poll.expiresAt).toISOString(), viewer_voted: poll.viewerVoted,
   } : null }
 }
 

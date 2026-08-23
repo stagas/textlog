@@ -14,8 +14,9 @@ export type PostRow = {
   link_previews?: Record<string, LinkPreview>
 }
 
-export type PollView = { options: Array<{ id: number; label: string; votes: number; selected: boolean }>
-  totalVotes: number; expired: boolean; expiresAt: number; viewerVoted: boolean }
+export type PollView = { options: Array<{ id: number; label: string; votes: number; selected: boolean; correct?: boolean }>
+  kind?: 'poll' | 'quiz'
+  totalVotes: number; expired: boolean; expiresAt: number | null; viewerVoted: boolean; explanation?: string }
 
 export type UserProfileStats = {
   notes: number
@@ -105,10 +106,12 @@ export type ApiPost = {
   author: { handle: string; url: string; api_url: string }
   link_previews?: Record<string, LinkPreview>
   poll?: {
-    options: Array<{ id: number; label: string; votes: number | null; selected: boolean }>
+    options: Array<{ id: number; label: string; votes: number | null; selected: boolean; correct?: boolean | null }>
+    kind: 'poll' | 'quiz'
+    explanation?: string | null
     total_votes: number | null
     expired: boolean
-    expires_at: string
+    expires_at: string | null
     viewer_voted: boolean
   } | null
   parent?: ApiPost | null

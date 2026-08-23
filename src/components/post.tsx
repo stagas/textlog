@@ -11,16 +11,25 @@ import { parseTodo, todoDisplayBody } from '../todos'
 
 function Poll({ p, returnPath }: { p: PostView | NonNullable<PostView['parent']>; returnPath?: string }) {
   if (!p.poll) return null
+  const kind = p.poll.kind || 'poll'
   const showResults = p.poll.expired || p.poll.viewerVoted
+  const explanationHtml = p.poll.explanation ? linkify(displayPostBody(p.poll.explanation), p.mention_bios, [],
+    undefined, renderFlags(p), returnPath ? '?from=' + encodeURIComponent(returnPath) : '', p.hashtag_counts,
+    p.mention_note_counts) : ''
   return (
-    <div className={`poll${showResults ? ' poll-results' : ''}`} aria-label="Poll">
+    <div className={`poll ${kind}${showResults ? ' poll-results' : ''}`}
+      aria-label={kind === 'quiz' ? 'Quiz' : 'Poll'}>
       {p.poll.options.map(option => {
         const percent = p.poll!.totalVotes ? Math.round(option.votes / p.poll!.totalVotes * 100) : 0
         return showResults
           ? (
-            <div className={`poll-result${option.selected ? ' poll-selected' : ''}`} key={option.id}>
+            <div className={`poll-result${option.selected ? ' poll-selected' : ''}${option.correct ? ' quiz-correct' : ''}${option.selected && !option.correct && kind === 'quiz' ? ' quiz-incorrect' : ''}`} key={option.id}>
               <span className="poll-result-fill" style={{ width: `${percent}%` }} />
-              <span className="poll-option-label">{option.label}</span>
+              <span className="poll-option-label">{option.label}{kind === 'quiz' && option.correct
+                ? <span className="quiz-mark quiz-mark-correct" aria-label="correct">✓</span>
+                : kind === 'quiz' && option.selected
+                  ? <span className="quiz-mark quiz-mark-incorrect" aria-label="incorrect">✗</span>
+                  : null}</span>
               <span className="poll-option-count">{percent}%</span>
             </div>
           )
@@ -32,6 +41,8 @@ function Poll({ p, returnPath }: { p: PostView | NonNullable<PostView['parent']>
             </form>
           )
       })}
+      {showResults && explanationHtml && <div className="quiz-explanation"
+        dangerouslySetInnerHTML={{ __html: explanationHtml }} />}
       {p.poll.expired && <span className="poll-meta">{p.poll.totalVotes} voted</span>}
     </div>
   )
@@ -49,12 +60,17 @@ function PollPreview({ body }: { body: string }) {
   const poll = parsePoll(body)
   if (!poll) return null
   return (
-    <div className="poll poll-preview" aria-label="Poll preview">
-      {poll.options.map(option => (
-        <div className="poll-option poll-preview-option" key={option}>
-          {option}
+    <div className={`poll ${poll.kind || 'poll'} poll-preview`}
+      aria-label={poll.kind === 'quiz' ? 'Quiz preview' : 'Poll preview'}>
+      {poll.options.map((option, index) => (
+        <div className={`poll-option poll-preview-option${index === poll.correctIndex ? ' quiz-correct' : ''}`} key={option}>
+          {option}{index === poll.correctIndex
+            ? <span className="quiz-mark quiz-mark-correct" aria-label="correct">✓</span>
+            : null}
         </div>
       ))}
+      {poll.explanation && <div className="quiz-explanation"
+        dangerouslySetInnerHTML={{ __html: linkify(displayPostBody(poll.explanation)) }} />}
     </div>
   )
 }
@@ -395,7 +411,7 @@ export function Post({
   const parentContextTarget = parent?.parent_id && !parent.poll && !parentContinued
     && parent.parent?.user_id !== user?.id ? parent.parent : null
   const parentContextLabel = parent?.poll
-    ? `created a poll${parent.viewer_mentioned ? ' and mentioned you' : ''}:`
+    ? `created a ${parent.poll.kind || 'poll'}${parent.viewer_mentioned ? ' and mentioned you' : ''}:`
     : parentContinued
     ? `continued${parent?.viewer_mentioned ? ' and mentioned you' : ''}:`
     : parent?.parent_id
@@ -418,7 +434,7 @@ export function Post({
     ? p.parent
     : null
   contextLabel = p.poll
-    ? `created a poll${p.viewer_mentioned ? ' and mentioned you' : ''}:`
+    ? `created a ${p.poll.kind || 'poll'}${p.viewer_mentioned ? ' and mentioned you' : ''}:`
     : contextLabel ?? (p.parent_id
       ? continued
         ? `continued${p.viewer_mentioned ? ' and mentioned you' : ''}:`

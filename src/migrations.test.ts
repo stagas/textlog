@@ -538,6 +538,24 @@ describe('database migrations', () => {
       .toEqual({ score: 2, reply_count: 0, latest_activity_at: '2026-08-05 11:00:00' })
   })
 
+  test('removes quiz explanations that were stored as answer options', () => {
+    const database = new Database(':memory:')
+    database.run('PRAGMA foreign_keys=ON')
+    runMigrations(database)
+    database.run(`INSERT INTO users(id,handle,email,password) VALUES(1,'author','author@example.com','x');
+      INSERT INTO posts(id,user_id,body,created_at) VALUES
+        (1,1,'Planet? #quiz\nEarth\n> Jupiter\n\nJupiter has the shortest day.','2026-08-23 09:00:00');
+      DELETE FROM poll_options WHERE post_id=1;
+      INSERT INTO poll_options(post_id,position,label) VALUES
+        (1,0,'Earth'),(1,1,'Jupiter'),(1,2,'Jupiter has the shortest day.');
+      PRAGMA user_version=119;`)
+
+    runMigrations(database)
+
+    expect(database.query('SELECT position,label FROM poll_options WHERE post_id=1 ORDER BY position').all())
+      .toEqual([{ position: 0, label: 'Earth' }, { position: 1, label: 'Jupiter' }])
+  })
+
   test('removes orphaned feed snapshots before post updates invalidate personalized feeds', () => {
     const database = new Database(':memory:')
     database.run('PRAGMA foreign_keys=ON')

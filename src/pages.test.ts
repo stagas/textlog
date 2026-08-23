@@ -189,6 +189,17 @@ test('compose previews inline polls with their visible tag and options', () => {
   expect(html).toContain('>Linux</div>')
 })
 
+test('compose previews quizzes and identifies the correct answer', () => {
+  const html = renderToStaticMarkup(React.createElement(Compose, {
+    user: { id: 1, handle: 'writer', email: 'writer@example.com', bio: '', email_verified_at: '2026-08-20' },
+    body: 'Capital of Greece? #quiz\nRome\n> Athens\nParis\n\nAthens *is* the capital.', preview: true,
+  }))
+  expect(html).toContain('Capital of Greece? <a href="/tag/quiz')
+  expect(html).toContain('aria-label="Quiz preview"')
+  expect(html).toContain('quiz-correct">Athens<span class="quiz-mark quiz-mark-correct" aria-label="correct">✓</span></div>')
+  expect(html).toContain('<div class="quiz-explanation">Athens <strong>is</strong> the capital.</div>')
+})
+
 test('todos are clickable only for their author', () => {
   const body = 'Weekend #todo\n[ ] Buy milk\n[x] Call Sam'
   const post = { id: 7, user_id: 1, parent_id: null, body, created_at: '2026-08-23 10:00:00',

@@ -161,6 +161,20 @@ function PostingFormattingHelp() {
               </dd>
             </div>
             <div>
+              <dt>Quizzes</dt>
+              <dd>
+                <code>
+                  Which one? <b>#quiz</b><br />
+                  Wrong answer<br />
+                  <b>&gt; </b>Correct answer<br />
+                  <br />
+                  Explanation revealed after answering
+                </code>
+                <br />
+                <small>Mark exactly one of 2–8 unique answers with &gt;. Text after a blank line is revealed after answering.</small>
+              </dd>
+            </div>
+            <div>
               <dt>Spoilers</dt>
               <dd>
                 <code>

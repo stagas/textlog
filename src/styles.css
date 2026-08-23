@@ -4189,6 +4189,8 @@ form.report-panel {
 .font-size-large>span:first-of-type { font-size: 18px; }
 
 .poll { position: relative; z-index: 2; display: grid; gap: var(--space-1); margin-top: var(--space-2); font-size: 0.8125rem; }
+.thread-root>.post>.poll.quiz { font-size: clamp(.9375rem, 2.25vw, 1.125rem); letter-spacing: -.5px; }
+.feed-thread .thread-root>.post>.poll.quiz { font-size: .8125rem; letter-spacing: normal; }
 .poll-option { display: block; width: 100%; margin: 0; }
 .poll-option button,
 .poll-result { position: relative; width: 100%; min-height: 1.875rem; padding: var(--space-1) var(--space-2); color: var(--ink); background: transparent; border: var(--hairline) solid var(--soft); font-size: inherit; line-height: 1.35; text-align: left; overflow: hidden; }
@@ -4198,6 +4200,12 @@ form.report-panel {
 .poll-result { display: flex; align-items: center; justify-content: space-between; gap: var(--space-2); }
 .poll-result-fill { position: absolute; inset: 0 auto 0 0; background: var(--soft); opacity: .5; }
 .poll-selected { border-color: var(--accent); }
+.quiz-correct { border-color: var(--success-ink); }
+.quiz-incorrect { color: var(--danger-link-hover); background: color-mix(in srgb, var(--danger-link-hover) 12%, transparent); border-color: var(--danger-link-hover); }
+.quiz-mark { display: inline-block; margin-left: var(--space-2); font-size: 1.25em; font-weight: bold; line-height: 1; vertical-align: -.08em; }
+.quiz-mark-correct { color: var(--success-ink); }
+.quiz-mark-incorrect { color: var(--danger-link-hover); }
+.quiz-explanation { margin-top: var(--space-1); }
 .poll-option-label,
 .poll-option-count { position: relative; }
 .poll-option-count,
