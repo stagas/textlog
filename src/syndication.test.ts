@@ -128,6 +128,17 @@ describe('RSS and Atom feeds', () => {
     expect(atom).not.toContain('<script')
   })
 
+  test('keeps Markdown image links visible in RSS and Atom entries', async () => {
+    const imageLink = '![https://ibb.co/WpfV1DbH](https://ibb.co/WpfV1DbH)'
+    const app = fixture(imageLink)
+    const rss = await (await app.request('https://textlog.cc/latest.rss')).text()
+    const atom = await (await app.request('https://textlog.cc/latest.atom')).text()
+    const link = '&lt;a href=&quot;https://ibb.co/WpfV1DbH&quot;&gt;https://ibb.co/WpfV1DbH&lt;/a&gt;'
+
+    expect(rss).toContain(link)
+    expect(atom).toContain(link)
+  })
+
   test('filters user and hashtag feeds and redirects historical handles', async () => {
     const app = fixture()
     const user = await (await app.request('https://textlog.cc/u/Alice.atom')).text()

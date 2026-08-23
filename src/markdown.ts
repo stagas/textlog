@@ -7,6 +7,10 @@ function xml(value: string) {
   return value.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
 }
 
+function html(value: string) {
+  return xml(value).replace(/"/g, '&quot;').replace(/'/g, '&#39;')
+}
+
 export function sanitizedMarkdownHtml(body: string) {
   const renderer = new marked.Renderer()
   renderer.html = ({ text }) =>
@@ -14,6 +18,10 @@ export function sanitizedMarkdownHtml(body: string) {
         .test(text)
       ? text
       : xml(text)
+  // Posts do not embed remote images. Keep Markdown image syntax useful in
+  // feeds by rendering its alt text as a link instead of sanitizing it away.
+  renderer.image = ({ href, title, text }) =>
+    `<a href="${html(href)}"${title ? ` title="${html(title)}"` : ''}>${html(text || href)}</a>`
   const rendered = marked.parse(displayPostBody(body), { async: false, breaks: true, gfm: true, renderer })
   return sanitizeHtml(rendered, {
     allowedTags: [
