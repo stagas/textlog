@@ -82,7 +82,7 @@ export function Explore({ user, welcome = false, tagsPage = 1, peoplePage = 1, d
                       showPopover={false}
                       href={`/u/${p.handle}?from=${encodeURIComponent(exploreReturnPath(p.id))}`}
                       navigationQuery={`?from=${encodeURIComponent(exploreReturnPath(p.id))}`} />
-                    <p className={`profile-bio${p.bio?.trimEnd() ? '' : ' bio-empty'}`} dangerouslySetInnerHTML={{
+                    {p.bio?.trim() && <p className="profile-bio" dangerouslySetInnerHTML={{
                       __html: linkify(displayBio(p.bio), p.bioReference?.mentionBios || {}, [], undefined, undefined, '',
                         p.bioReference?.hashtagCounts || {}, p.bioReference?.mentionNoteCounts || {}, {
                         signedIn: !!user,
@@ -95,7 +95,7 @@ export function Explore({ user, welcome = false, tagsPage = 1, peoplePage = 1, d
                         hashtagFollowing: p.bioReference?.hashtagFollowing,
                         hashtagFollowerCounts: p.bioReference?.hashtagFollowerCounts,
                       }),
-                    }} />
+                    }} />}
                   </div>
                   {user && (
                     <form method="post" action={'/follow/' + p.handle}>

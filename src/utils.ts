@@ -13,7 +13,8 @@ import type { User } from './types'
 import type { LinkPreview, UserProfileStats } from './types'
 
 export function userHoverTitle(noteCount: number, bio?: string) {
-  return `${noteCount.toLocaleString()} ${noteCount === 1 ? 'note' : 'notes'}\n\n${displayBio(bio)}`
+  const noteLabel = `${noteCount.toLocaleString()} ${noteCount === 1 ? 'note' : 'notes'}`
+  return bio?.trim() ? `${noteLabel}\n\n${displayBio(bio)}` : noteLabel
 }
 
 export const displayBio = (bio?: string | null) => bio?.trimEnd() || 'No bio yet.'
@@ -462,7 +463,7 @@ function renderedReference(token: string, mentionBios: Record<string, string>,
     : '<a class="button" href="/enter" rel="nofollow">enter to follow</a>'
   return `<span class="reference-menu"><a class="reference-menu-trigger" href="${href}">${label}</a>`
     + `<span class="reference-menu-popover${isUser ? '' : ' reference-menu-popover-tag'}">`
-    + (isUser
+    + (isUser && mentionBios[key]?.trim()
       ? `<span class="reference-popover-bio">${
         linkify(displayBio(mentionBios[key]), {}, [], Bun.env.APP_URL, undefined, navigationQuery)
       }</span>`

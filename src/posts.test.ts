@@ -49,7 +49,7 @@ describe('post persistence', () => {
     expect(linkify('hello @Reader', { reader: 'Builder & "tester"' }))
       .toContain('<a href="/u/reader" title="0 notes\n\nBuilder &amp; &quot;tester&quot;">@Reader</a>')
     expect(linkify('hello @Reader', { reader: '' }))
-      .toContain('<a href="/u/reader" title="0 notes\n\nNo bio yet.">@Reader</a>')
+      .toContain('<a href="/u/reader" title="0 notes">@Reader</a>')
     expect(linkify('@Reader', { reader: 'Bio' }, [], undefined, undefined, '', {}, { reader: 1234 }))
       .toContain(`title="${(1234).toLocaleString()} notes\n\nBio"`)
     expect(linkify('@Reader', { reader: 'Bio  \n' }))
@@ -57,7 +57,7 @@ describe('post persistence', () => {
   })
   test('does not linkify handles that were not found', () => {
     expect(linkify('hello @Missing and @Reader', { reader: '' }))
-      .toBe('hello @Missing and <a href="/u/reader" title="0 notes\n\nNo bio yet.">@Reader</a>')
+      .toBe('hello @Missing and <a href="/u/reader" title="0 notes">@Reader</a>')
   })
   test('keeps apostrophes in linkified URLs', () => {
     expect(linkify('read https://example.com/people/O\'Brien/profile'))
@@ -289,6 +289,16 @@ describe('post persistence', () => {
     expect(html).toContain('<button class="button" type="submit" form="post-1-tag-topic">follow</button>')
     expect(html).toContain('<button class="quiet danger" type="submit" '
       + 'form="post-1-tag-topic-block">block</button>')
+  })
+
+  test('omits the bio row from hover popovers when the bio is blank', () => {
+    const html = linkify('@Reader', { reader: '  \n' }, [], undefined, undefined, '', {}, { reader: 2 }, {
+      signedIn: false,
+      formPrefix: 'post-1',
+    })
+    expect(html).toContain('<span class="reference-menu-popover">')
+    expect(html).not.toContain('reference-popover-bio')
+    expect(html).not.toContain('No bio yet.')
   })
 
   test('keeps handles flat while allowing tag and link popovers inside a bio popover', () => {

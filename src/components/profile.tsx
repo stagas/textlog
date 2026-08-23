@@ -199,8 +199,9 @@ export function Profile(
                 </div>
               </>
             )
-            : (
-              <p className={`profile-bio${profile.bio?.trimEnd() ? '' : ' bio-empty'}`} dangerouslySetInnerHTML={{
+            : profile.bio?.trim()
+            ? (
+              <p className="profile-bio" dangerouslySetInnerHTML={{
                 __html: linkify(displayBio(profile.bio), references.mentionBios, [], undefined, undefined, '',
                   references.hashtagCounts, references.mentionNoteCounts, {
                   signedIn: !!user,
@@ -214,7 +215,7 @@ export function Profile(
                   linkPreviews: references.linkPreviews,
                 }),
               }} />
-            )}
+            ) : null}
           {!editing && user
             && [...bioTags.map(tag => ({ kind: 'tag' as const, value: tag })),
               ...bioHandles.map(handle => ({ kind: 'user' as const, value: handle }))].map(reference => (

@@ -667,7 +667,7 @@ header>nav>a:not(.button),
 }
 
 .reference-menu-popover > .reference-popover-bio:first-child,
-.reference-menu-popover > .reference-popover-actions:first-child,
+.reference-menu-popover > .reference-popover-actions:first-child:not(:has(.follows-you)),
 .reference-menu-popover > .button:first-child {
   margin-top: 0;
 }
@@ -703,7 +703,7 @@ header>nav>a:not(.button),
 }
 
 .reference-popover-actions:has(.follows-you) {
-  margin-top: calc(var(--space-2) + 0.75rem);
+  margin-top: 0.75rem;
 }
 
 .reference-popover-actions .follow-action,

@@ -1972,9 +1972,8 @@ test('Connection people do not render a zero when they do not follow the viewer'
 
   expect(html).not.toContain('follows you')
   expect(html).not.toContain('<form method="post" action="/follow/writer">0')
-  expect(html).toContain(
-    '<p class="profile-bio bio-empty">No bio yet.</p></div><form action="/follow/writer" method="post">',
-  )
+  expect(html).not.toContain('profile-bio')
+  expect(html).not.toContain('No bio yet.')
   expect(html).toContain('<button class="button">follow</button>')
 })
 

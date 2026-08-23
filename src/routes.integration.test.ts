@@ -1619,7 +1619,7 @@ test('consequential account, content, reporting, and admin flows work over HTTP'
   expect(adminActivity).not.toContain('href="/tag/null"')
   expect(adminActivity).not.toContain('>#null</a>')
   expect(adminActivity).toContain('activity-follow')
-  expect(adminActivity).toContain('<p class="profile-bio bio-empty">No bio yet.</p>')
+  expect(adminActivity).not.toContain('<p class="profile-bio bio-empty">No bio yet.</p>')
   expect(adminActivity).toContain('action="/follow/alice"')
   expect(adminActivity).toContain('<button class="button">follow</button>')
   expect(adminActivity).not.toContain('action="/follow/admin"')

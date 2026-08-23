@@ -154,8 +154,8 @@ export function Feed({ user, data, title, path = '/for-you', pageUrl, notificati
               {!row.target_is_viewer && (row.activity_kind === 'user_follow' || row.activity_kind === 'tag_follow')
                 && <span className="activity-follow-full-stop">.</span>}
             </MetaRow>
-            {(row.activity_kind === 'user_follow' || row.activity_kind === 'signup') && (
-              <p className={`profile-bio${row.target_bio?.trimEnd() ? '' : ' bio-empty'}`}
+            {(row.activity_kind === 'user_follow' || row.activity_kind === 'signup') && row.target_bio?.trim() && (
+              <p className="profile-bio"
                 dangerouslySetInnerHTML={{ __html: linkify(displayBio(row.target_bio)) }} />
             )}
           </div>
