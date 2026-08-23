@@ -888,12 +888,18 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
       }
       const result = database.query('INSERT INTO drafts(user_id,parent_id,body) VALUES(?,?,?)')
         .run(userId, parentId, body)
+      cacheDb.query(`DELETE FROM materialized_feed_pages_v2 WHERE viewer_id=?
+        AND kind IN ('latest','hot','for-you','to-me')`).run(userId)
       return { status: 'ready', id: Number(result.lastInsertRowid) } as DatabaseDomainOutput<K>
     }
     case 'drafts.delete': {
       const { id, userId } = input as DatabaseDomainInput<'drafts.delete'>
-      return !!database.query('DELETE FROM drafts WHERE id=? AND user_id=?').run(id, userId).changes as
-        DatabaseDomainOutput<K>
+      const deleted = !!database.query('DELETE FROM drafts WHERE id=? AND user_id=?').run(id, userId).changes
+      if (deleted) {
+        cacheDb.query(`DELETE FROM materialized_feed_pages_v2 WHERE viewer_id=?
+          AND kind IN ('latest','hot','for-you','to-me')`).run(userId)
+      }
+      return deleted as DatabaseDomainOutput<K>
     }
     case 'posts.votePoll': {
       const { postId, optionId, userId } = input as DatabaseDomainInput<'posts.votePoll'>
@@ -1371,6 +1377,8 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
       })()
       if ('retryAfter' in created) return { status: 'rate_limited', retryAfter: created.retryAfter } as
         DatabaseDomainOutput<K>
+      cacheDb.query(`DELETE FROM materialized_feed_pages_v2 WHERE viewer_id=?
+        AND kind IN ('latest','hot','for-you','to-me')`).run(request.userId)
       return { status: 'ready', id: created.id, duplicate: created.duplicate,
         post: apiPost(database, created.id, request.origin, request.userId)! } as DatabaseDomainOutput<K>
     }

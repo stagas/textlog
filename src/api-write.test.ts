@@ -4,6 +4,7 @@ import { Hono } from 'hono'
 import { readFileSync, unlinkSync } from 'node:fs'
 import { executeDatabaseDomain } from './database-domain'
 import type { DatabaseService } from './database-service'
+import { cacheDb } from './cache-db'
 import { registerApiRoutes } from './routes/api'
 import { WRITE_LIMIT } from './routes/api-write'
 import { apiUser, hash } from './utils'
@@ -310,21 +311,50 @@ describe('API writes', () => {
 
   test('creates, updates, paginates and atomically publishes drafts', async () => {
     const { app, database } = fixture()
+    const cacheVariant = `draft-create-${crypto.randomUUID()}`
+    const insertMaterialization = cacheDb.query(`INSERT INTO materialized_feed_pages_v2
+      (kind,viewer_id,variant,generation,html) VALUES(?,?,?,?,?)`)
+    for (const kind of ['latest', 'hot', 'for-you', 'to-me']) {
+      insertMaterialization.run(kind, 1, cacheVariant, 1, '<p>cached</p>')
+    }
+    insertMaterialization.run('latest', 2, cacheVariant, 1, '<p>other viewer</p>')
     const created = await call(app, '/api/v1/drafts', { method: 'POST', token: 'alice-token',
       body: { body: 'draft one', parent_id: 1 } })
     expect(created.status).toBe(201)
+    expect(cacheDb.query('SELECT count(*) count FROM materialized_feed_pages_v2 WHERE viewer_id=? AND variant=?')
+      .get(1, cacheVariant)).toEqual({ count: 0 })
+    expect(cacheDb.query('SELECT count(*) count FROM materialized_feed_pages_v2 WHERE viewer_id=? AND variant=?')
+      .get(2, cacheVariant)).toEqual({ count: 1 })
+    cacheDb.query('DELETE FROM materialized_feed_pages_v2 WHERE variant=?').run(cacheVariant)
     const draft = (await created.json() as any).data
     expect(draft).toMatchObject({ body: 'draft one', parent_id: 1, parent: { id: 1 } })
     expect((await call(app, `/api/v1/drafts/${draft.id}`, { method: 'PATCH', token: 'alice-token',
       body: { body: 'published reply' } })).status).toBe(200)
     const listed = await (await call(app, '/api/v1/drafts?limit=1', { token: 'alice-token' })).json() as any
     expect(listed.data).toHaveLength(1)
+    insertMaterialization.run('latest', 1, cacheVariant, 1, '<p>cached before publish</p>')
     const published = await call(app, `/api/v1/drafts/${draft.id}/publish`, {
       method: 'POST', token: 'alice-token',
     })
     expect(published.status).toBe(201)
+    expect(cacheDb.query('SELECT count(*) count FROM materialized_feed_pages_v2 WHERE viewer_id=? AND variant=?')
+      .get(1, cacheVariant)).toEqual({ count: 0 })
     expect((await published.json() as any).data).toMatchObject({ body: 'published reply', parent_id: 1 })
     expect(database.query('SELECT count(*) count FROM drafts').get()).toEqual({ count: 0 })
+  })
+
+  test('invalidates feed materializations when deleting a draft', async () => {
+    const { app } = fixture()
+    const created = await call(app, '/api/v1/drafts', { method: 'POST', token: 'alice-token',
+      body: { body: 'draft to delete' } })
+    const draft = (await created.json() as any).data
+    const cacheVariant = `draft-delete-${crypto.randomUUID()}`
+    cacheDb.query(`INSERT INTO materialized_feed_pages_v2(kind,viewer_id,variant,generation,html)
+      VALUES('latest',1,?,1,'<p>cached</p>')`).run(cacheVariant)
+    expect((await call(app, `/api/v1/drafts/${draft.id}`, { method: 'DELETE', token: 'alice-token' })).status)
+      .toBe(200)
+    expect(cacheDb.query('SELECT count(*) count FROM materialized_feed_pages_v2 WHERE viewer_id=? AND variant=?')
+      .get(1, cacheVariant)).toEqual({ count: 0 })
   })
 
   test('votes in polls without revealing live results before voting', async () => {
