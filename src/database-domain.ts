@@ -1833,14 +1833,8 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
       if (!resolved) return null as DatabaseDomainOutput<K>
       if (resolved.alias) return { canonicalHandle: resolved.handle } as DatabaseDomainOutput<K>
       const profile = database.query(
-        `SELECT u.handle,u.bio,
-        (SELECT count(*) FROM posts p WHERE p.user_id=u.id AND p.deleted_at IS NULL) notes,
-        (SELECT count(*) FROM follows f WHERE f.follower_id=u.id) following,
-        (SELECT count(*) FROM hashtag_follows hf WHERE hf.user_id=u.id) followingTags,
-        (SELECT count(*) FROM follows f WHERE f.following_id=u.id) followers
-        FROM users u WHERE u.id=? AND u.deleted_at IS NULL`,
-      ).get(resolved.id) as { handle: string; bio: string; notes: number; following: number; followingTags: number;
-        followers: number } | null
+        'SELECT handle,bio FROM users WHERE id=? AND deleted_at IS NULL',
+      ).get(resolved.id) as { handle: string; bio: string } | null
       return (profile ? { profile } : null) as DatabaseDomainOutput<K>
     }
     case 'feeds.aboutTopPosts': {

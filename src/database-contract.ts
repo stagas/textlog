@@ -349,10 +349,6 @@ export type DatabaseDomainOperations = {
   'profiles.ogData': { input: { handle: string }; output: { canonicalHandle?: string; profile?: {
     handle: string
     bio: string
-    notes: number
-    following: number
-    followingTags: number
-    followers: number
   } } | null }
   'feeds.aboutTopPosts': { input: Record<string, never>; output: PostView[] }
   'feeds.latestPage': { input: { viewerId: number; page: number; pageSize: PageSizeChoice; markRead?: boolean };

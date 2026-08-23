@@ -21,7 +21,7 @@ export function registerProfilesRoutes(app: Hono) {
       return c.redirect(`/u/${data.canonicalHandle}/og.png`, 301)
     }
     const profile = data.profile!
-    const image = renderProfileOg(profile.handle, profile.bio, profile)
+    const image = renderProfileOg(profile.handle, profile.bio)
     const body = image.buffer.slice(image.byteOffset, image.byteOffset + image.byteLength) as ArrayBuffer
     return new Response(body, {
       headers: {
@@ -69,7 +69,7 @@ export function registerProfilesRoutes(app: Hono) {
     const description = markdownPlainText(profile.bio) || `@${profile.handle} on ${appName()}`
     const social = {
       description,
-      image: `${profileUrl}/og.png?v=2`,
+      image: `${profileUrl}/og.png?v=3`,
       url: profileUrl,
       type: 'profile' as const,
       imageAlt: `Profile for @${profile.handle}: ${description}`,

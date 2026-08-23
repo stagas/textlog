@@ -86,24 +86,22 @@ describe('renderPostOg', () => {
 })
 
 describe('renderProfileOg', () => {
-  const counts = { notes: 12, following: 34, followingTags: 5, followers: 56 }
-
   test('renders a 1200 by 630 PNG', () => {
-    const image = renderProfileOg('tester', 'A short bio about the profile owner.', counts)
+    const image = renderProfileOg('tester', 'A short bio about the profile owner.')
     expect(image.subarray(0, 8)).toEqual(Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]))
     expect(image.readUInt32BE(16)).toBe(1200)
     expect(image.readUInt32BE(20)).toBe(630)
   })
 
   test('renders empty and multiline bios', () => {
-    expect(renderProfileOg('tester', '', counts)).not.toHaveLength(0)
-    expect(renderProfileOg('tester', 'first line\nsecond line', counts)).not.toHaveLength(0)
+    expect(renderProfileOg('tester', '')).not.toHaveLength(0)
+    expect(renderProfileOg('tester', 'first line\nsecond line')).not.toHaveLength(0)
   })
 
   test('renders linkified bio content', () => {
-    expect(renderProfileOg('tester', 'At [my site](https://example.com), with @friend and #writing.', counts))
+    expect(renderProfileOg('tester', 'At [my site](https://example.com), with @friend and #writing.'))
       .not.toHaveLength(0)
-    expect(renderProfileOg('tester', 'Studies $E = mc^2$ and $$x = \\frac{-b}{2a}$$', counts))
+    expect(renderProfileOg('tester', 'Studies $E = mc^2$ and $$x = \\frac{-b}{2a}$$'))
       .not.toHaveLength(0)
   })
 })

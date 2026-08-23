@@ -343,11 +343,7 @@ export function renderPostOg(body: string, handle: string) {
   return canvas.toBuffer('image/png')
 }
 
-export function renderProfileOg(
-  handle: string,
-  bio: string,
-  counts: { notes: number; following: number; followingTags: number; followers: number },
-) {
+export function renderProfileOg(handle: string, bio: string) {
   const canvas = createCanvas(width, height)
   const ctx = canvas.getContext('2d')
   drawBackground(ctx)
@@ -358,11 +354,8 @@ export function renderProfileOg(
     handleSize -= 2
     ctx.font = `700 ${handleSize}px monospace`
   }
-  ctx.fillStyle = accentColor
-  ctx.fillText('@', 80, 245)
-  const prefixWidth = ctx.measureText('@').width
-  ctx.fillStyle = textColor
-  ctx.fillText(handle, 80 + prefixWidth, 245)
+  const handleText = `@${handle}`
+  const handleWidth = ctx.measureText(handleText).width
 
   const profileBio = postOgText(bio.trimEnd() || 'No bio yet.')
   let size = 46
@@ -372,64 +365,41 @@ export function renderProfileOg(
     ctx.font = `500 ${size}px monospace`
     lines = linesFor(ctx, profileBio.text, maxTextWidth)
     lineHeight = Math.round(size * 1.35)
-    if (lines.length * lineHeight <= 165) break
+    if (lines.length * lineHeight <= 220) break
   }
   size = Math.max(size, 28)
-  const visibleLineCount = Math.floor(165 / lineHeight)
+  const visibleLineCount = Math.floor(220 / lineHeight)
   if (lines.length > visibleLineCount) {
     lines = lines.slice(0, visibleLineCount)
     lines[lines.length - 1] = lines[lines.length - 1].replace(/\s+$/, '') + '…'
   }
 
+  const gap = 48
+  const blockHeight = handleSize + gap + lines.length * lineHeight
+  const blockTop = 155 + (height - 155 - blockHeight) / 2 - 36
+  const handleBaseline = blockTop + handleSize
+
+  ctx.font = `500 ${size}px monospace`
+  const blockWidth = Math.max(handleWidth, ...lines.map(line => ctx.measureText(line).width))
+  const blockX = (width - blockWidth) / 2
+
+  ctx.font = `700 ${handleSize}px monospace`
+  ctx.fillStyle = accentColor
+  ctx.fillText('@', blockX, handleBaseline)
+  const prefixWidth = ctx.measureText('@').width
+  ctx.fillStyle = textColor
+  ctx.fillText(handle, blockX + prefixWidth, handleBaseline)
+
   ctx.fillStyle = textColor
   ctx.font = `500 ${size}px monospace`
-  let y = 340
+  let y = handleBaseline + gap + size
   let searchFrom = 0
   for (const line of lines) {
     const lineStart = profileBio.text.indexOf(line, searchFrom)
-    drawLinkedLine(ctx, line, 80, y, lineStart < 0 ? searchFrom : lineStart, profileBio.links, profileBio.code,
+    drawLinkedLine(ctx, line, blockX, y, lineStart < 0 ? searchFrom : lineStart, profileBio.links, profileBio.code,
       profileBio.math)
     searchFrom = (lineStart < 0 ? searchFrom : lineStart) + line.length
     y += lineHeight
-  }
-
-  const stats = [
-    [
-      { text: String(counts.notes), accent: true },
-      { text: ` ${counts.notes === 1 ? 'note' : 'notes'}` },
-    ],
-    [
-      { text: String(counts.followingTags), accent: true },
-      { text: ` ${counts.followingTags === 1 ? 'tag' : 'tags'}, ` },
-      { text: String(counts.following), accent: true },
-      { text: ` ${counts.following === 1 ? 'user' : 'users'} following` },
-    ],
-    [
-      { text: String(counts.followers), accent: true },
-      { text: ` ${counts.followers === 1 ? 'follower' : 'followers'}` },
-    ],
-  ]
-  let statsSize = 30
-  ctx.font = `500 ${statsSize}px monospace`
-  const statsText = stats.map(stat => stat.map(part => part.text).join('')).join('  ·  ')
-  while (ctx.measureText(statsText).width > maxTextWidth && statsSize > 20) {
-    statsSize -= 2
-    ctx.font = `500 ${statsSize}px monospace`
-  }
-  ctx.fillStyle = textColor
-  let statsX = 80
-  for (const [index, stat] of stats.entries()) {
-    if (index > 0) {
-      ctx.fillStyle = accentColor
-      ctx.fillText('·', statsX, 565)
-      statsX += ctx.measureText('·  ').width
-    }
-    for (const part of stat) {
-      ctx.fillStyle = part.accent ? accentColor : textColor
-      ctx.fillText(part.text, statsX, 565)
-      statsX += ctx.measureText(part.text).width
-    }
-    statsX += ctx.measureText('  ').width
   }
 
   return canvas.toBuffer('image/png')
