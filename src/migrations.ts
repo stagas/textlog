@@ -18,6 +18,39 @@ function dropColumn(database: Database, table: string, name: string) {
   if (columns(database, table).includes(name)) database.run(`ALTER TABLE ${table} DROP COLUMN ${name}`)
 }
 
+export function normalizeInternalPostPreviews(database: Database, appUrl?: string) {
+  if (!database.query("SELECT 1 FROM sqlite_master WHERE type='table' AND name='post_link_previews'").get()
+    || !database.query(
+      "SELECT 1 FROM pragma_table_info('post_link_previews') WHERE name='linked_post_id'",
+    ).get()) return
+  let origin: string | null = null
+  try { origin = appUrl ? new URL(appUrl).origin : null }
+  catch { /* Configuration validation handles malformed APP_URL. */ }
+  if (!origin) return
+  const rows = database.query('SELECT post_id,url FROM post_link_previews').all() as Array<{
+    post_id: number; url: string
+  }>
+  const targetExists = database.query(
+    `SELECT 1 FROM posts p JOIN users u ON u.id=p.user_id WHERE p.id=? AND p.deleted_at IS NULL
+      AND u.deleted_at IS NULL AND u.suspended_at IS NULL`,
+  )
+  const makeNative = database.query(`UPDATE post_link_previews SET linked_post_id=?,image_url=url,
+    title=NULL,description=NULL,site_name=NULL,image_width=NULL,image_height=NULL,mime_type=NULL
+    WHERE post_id=? AND url=?`)
+  const remove = database.query('DELETE FROM post_link_previews WHERE post_id=? AND url=?')
+  for (const row of rows) {
+    try {
+      const url = new URL(row.url)
+      const match = url.origin === origin && url.pathname.match(/^\/post\/([1-9]\d*)$/)
+      if (!match) continue
+      const linkedPostId = Number(match[1])
+      if (targetExists.get(linkedPostId)) makeNative.run(linkedPostId, row.post_id, row.url)
+      else remove.run(row.post_id, row.url)
+    }
+    catch { /* Ignore malformed external preview URLs. */ }
+  }
+}
+
 function backfillMentions(database: Database) {
   const users = database.query('SELECT id,handle FROM users').all() as { id: number; handle: string }[]
   const userIds = new Map(users.map(user => [user.handle.toLowerCase(), user.id]))
@@ -1738,36 +1771,7 @@ export const migrations: Migration[] = [
     version: 125,
     name: 'remove_internal_post_og_previews',
     up(database) {
-      if (!database.query("SELECT 1 FROM sqlite_master WHERE type='table' AND name='post_link_previews'").get()
-        || !database.query(
-          "SELECT 1 FROM pragma_table_info('post_link_previews') WHERE name='linked_post_id'",
-        ).get()) return
-      let origin: string | null = null
-      try { origin = Bun.env.APP_URL ? new URL(Bun.env.APP_URL).origin : null }
-      catch { /* Configuration validation handles malformed APP_URL. */ }
-      if (!origin) return
-      const rows = database.query('SELECT post_id,url FROM post_link_previews').all() as Array<{
-        post_id: number; url: string
-      }>
-      const targetExists = database.query(
-        `SELECT 1 FROM posts p JOIN users u ON u.id=p.user_id WHERE p.id=? AND p.deleted_at IS NULL
-          AND u.deleted_at IS NULL AND u.suspended_at IS NULL`,
-      )
-      const makeNative = database.query(`UPDATE post_link_previews SET linked_post_id=?,image_url=url,
-        title=NULL,description=NULL,site_name=NULL,image_width=NULL,image_height=NULL,mime_type=NULL
-        WHERE post_id=? AND url=?`)
-      const remove = database.query('DELETE FROM post_link_previews WHERE post_id=? AND url=?')
-      for (const row of rows) {
-        try {
-          const url = new URL(row.url)
-          const match = url.origin === origin && url.pathname.match(/^\/post\/([1-9]\d*)$/)
-          if (!match) continue
-          const linkedPostId = Number(match[1])
-          if (targetExists.get(linkedPostId)) makeNative.run(linkedPostId, row.post_id, row.url)
-          else remove.run(row.post_id, row.url)
-        }
-        catch { /* Ignore malformed external preview URLs. */ }
-      }
+      normalizeInternalPostPreviews(database, Bun.env.APP_URL)
     },
   },
 ]
