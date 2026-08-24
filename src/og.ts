@@ -17,6 +17,8 @@ const postMinFontSize = 52
 const textColor = '#f0f3ee'
 const accentColor = '#9abd8e'
 const codeColor = '#a8afa4'
+const quoteBorderColor = '#68716a'
+const quoteTextColor = '#aeb6ad'
 const headerWordmarkOffsetY = 8
 const defaultWordmarkOffsetY = 10
 const mathPlaceholder = '\uFFFC'
@@ -24,6 +26,8 @@ const mathImageCache = new Map<string, Image>()
 
 type OgRange = { start: number; end: number }
 type OgMath = OgRange & { source: string; display: boolean }
+type OgTextStyle = 'bold' | 'italics' | 'underline' | 'strikethrough' | 'redacted' | 'quote'
+type OgStyles = Record<OgTextStyle, OgRange[]>
 
 function mathImage(svg: string, width: number, height: number) {
   const key = `${width}x${height}\0${svg}`
@@ -116,6 +120,18 @@ export function postOgText(body: string) {
   const links: OgRange[] = []
   const code: OgRange[] = []
   const math: OgMath[] = []
+  const styles: OgStyles = {
+    bold: [], italics: [], underline: [], strikethrough: [], redacted: [], quote: [],
+  }
+  const quotedLines: boolean[] = []
+  let unquotedBody = ''
+  for (const [index, line] of body.replace(/\r/g, '').split('\n').entries()) {
+    if (index) unquotedBody += '\n'
+    const quote = line.match(/^>\s?/)
+    quotedLines.push(Boolean(quote))
+    unquotedBody += quote ? line.slice(quote[0].length) : line
+  }
+  body = unquotedBody
   let text = ''
   let sourceEnd = 0
   for (const token of linkTokens(body)) {
@@ -139,6 +155,11 @@ export function postOgText(body: string) {
       text += token.label!
       code.push({ start, end: text.length })
     }
+    else if (token.kind === 'bold' || token.kind === 'italics' || token.kind === 'underline'
+      || token.kind === 'strikethrough' || token.kind === 'redacted') {
+      text += token.label!
+      styles[token.kind].push({ start, end: text.length })
+    }
     else if (token.kind === 'markdown') {
       text += token.label!
       links.push({ start, end: text.length })
@@ -150,7 +171,12 @@ export function postOgText(body: string) {
     sourceEnd = token.lastIndex
   }
   text += body.slice(sourceEnd)
-  return { text, links, code, math }
+  let renderedLineStart = 0
+  for (const [index, line] of text.split('\n').entries()) {
+    if (quotedLines[index]) styles.quote.push({ start: renderedLineStart, end: renderedLineStart + line.length })
+    renderedLineStart += line.length + 1
+  }
+  return { text, links, code, math, styles }
 }
 
 function drawLogo(ctx: CanvasRenderingContext2D, x: number, y: number, scale = 3, color = accentColor) {
@@ -268,24 +294,38 @@ function drawLinkedLine(
   links: Array<{ start: number; end: number }>,
   code: Array<{ start: number; end: number }>,
   math: OgMath[],
+  styles: OgStyles,
 ) {
   let drawX = x
-  const styles = Array.from({ length: line.length }, (_, index) => {
+  const characterStyles = Array.from({ length: line.length }, (_, index) => {
     const position = lineStart + index
-    if (links.some(link => position >= link.start && position < link.end)) return 'link'
-    if (code.some(range => position >= range.start && position < range.end)) return 'code'
-    if (math.some(range => position >= range.start && position < range.end)) return 'math'
-    return 'text'
+    const base = links.some(link => position >= link.start && position < link.end) ? 'link'
+      : code.some(range => position >= range.start && position < range.end) ? 'code'
+      : math.some(range => position >= range.start && position < range.end) ? 'math' : 'text'
+    const modifiers = (Object.keys(styles) as OgTextStyle[])
+      .filter(name => styles[name].some(range => position >= range.start && position < range.end))
+    return `${base}:${modifiers.join(',')}`
   })
 
-  const draw = (text: string, style: 'text' | 'link' | 'code' | 'math') => {
+  const draw = (text: string, style: 'text' | 'link' | 'code' | 'math', start: number) => {
     if (!text) return
-    ctx.fillStyle = style === 'link' ? accentColor : style === 'code' ? codeColor : textColor
-    ctx.fillText(text, drawX, y)
+    const active = (Object.keys(styles) as OgTextStyle[])
+      .filter(name => styles[name].some(range => start >= range.start && start < range.end))
+    const fontSize = Number(ctx.font.match(/(\d+(?:\.\d+)?)px/)?.[1] || 20)
+    const weight = active.includes('bold') ? 800 : style === 'code' ? 600 : 500
+    const slant = active.includes('italics') ? 'italic ' : ''
+    ctx.font = `${slant}${weight} ${fontSize}px monospace`
+    ctx.fillStyle = style === 'link' ? accentColor : style === 'code' ? codeColor
+      : active.includes('quote') ? quoteTextColor : textColor
     const metrics = ctx.measureText(text)
     const nextX = drawX + metrics.width
+    if (active.includes('redacted')) {
+      ctx.fillStyle = codeColor
+      ctx.fillRect(drawX, y - metrics.actualBoundingBoxAscent, metrics.width,
+        metrics.actualBoundingBoxAscent + metrics.actualBoundingBoxDescent)
+    }
+    else ctx.fillText(text, drawX, y)
     if (style === 'link') {
-      const fontSize = Number(ctx.font.match(/(\d+(?:\.\d+)?)px/)?.[1] || 20)
       const textTop = y - ctx.measureText('M').actualBoundingBoxAscent
       const underlineY = textTop + fontSize * 1.05
       ctx.strokeStyle = accentColor
@@ -293,6 +333,17 @@ function drawLinkedLine(
       ctx.beginPath()
       ctx.moveTo(drawX, underlineY)
       ctx.lineTo(nextX, underlineY)
+      ctx.stroke()
+    }
+    if (active.includes('underline') || active.includes('strikethrough')) {
+      ctx.strokeStyle = ctx.fillStyle
+      ctx.lineWidth = Math.max(2, fontSize * 0.035)
+      const decorationY = active.includes('strikethrough')
+        ? y - metrics.actualBoundingBoxAscent * 0.38
+        : y + Math.max(3, metrics.actualBoundingBoxDescent * 0.55)
+      ctx.beginPath()
+      ctx.moveTo(drawX, decorationY)
+      ctx.lineTo(nextX, decorationY)
       ctx.stroke()
     }
     drawX = nextX
@@ -316,10 +367,11 @@ function drawLinkedLine(
         continue
       }
     }
-    const style = styles[cursor]
+    const signature = characterStyles[cursor]
+    const style = signature.split(':')[0] as 'text' | 'link' | 'code' | 'math'
     let next = cursor + 1
-    while (next < line.length && styles[next] === style) next++
-    draw(line.slice(cursor, next), style)
+    while (next < line.length && characterStyles[next] === signature) next++
+    draw(line.slice(cursor, next), style, lineStart + cursor)
     cursor = next
   }
 }
@@ -388,7 +440,13 @@ export function renderPostOg(body: string, handle: string) {
   let searchFrom = 0
   for (const line of fitted.lines) {
     const lineStart = post.text.indexOf(line, searchFrom)
-    drawLinkedLine(ctx, line, 80, y, lineStart < 0 ? searchFrom : lineStart, post.links, post.code, post.math)
+    const resolvedStart = lineStart < 0 ? searchFrom : lineStart
+    const quoted = post.styles.quote.some(range => resolvedStart >= range.start && resolvedStart < range.end)
+    if (quoted) {
+      ctx.fillStyle = quoteBorderColor
+      ctx.fillRect(80, y - fitted.size, 7, fitted.lineHeight)
+    }
+    drawLinkedLine(ctx, line, quoted ? 110 : 80, y, resolvedStart, post.links, post.code, post.math, post.styles)
     searchFrom = (lineStart < 0 ? searchFrom : lineStart) + line.length
     y += fitted.lineHeight
   }
@@ -457,7 +515,7 @@ export function renderProfileOg(handle: string, bio: string) {
   for (const line of lines) {
     const lineStart = profileBio.text.indexOf(line, searchFrom)
     drawLinkedLine(ctx, line, blockX, y, lineStart < 0 ? searchFrom : lineStart, profileBio.links, profileBio.code,
-      profileBio.math)
+      profileBio.math, profileBio.styles)
     searchFrom = (lineStart < 0 ? searchFrom : lineStart) + line.length
     y += lineHeight
   }

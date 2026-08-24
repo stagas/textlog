@@ -33,8 +33,25 @@ describe('renderPostOg', () => {
       links: [{ start: 5, end: 13 }],
       code: [],
       math: [],
+      styles: { bold: [], italics: [], underline: [], strikethrough: [], redacted: [], quote: [] },
     })
     expect(renderPostOg('Read [the docs](https://example.com/docs) today', 'tester')).not.toHaveLength(0)
+  })
+
+  test('removes formatting markers and records all post text styles', () => {
+    expect(postOgText('> *bold* /italic/ _under_ ~gone~ |secret|')).toEqual({
+      text: 'bold italic under gone secret',
+      links: [], code: [], math: [],
+      styles: {
+        bold: [{ start: 0, end: 4 }],
+        italics: [{ start: 5, end: 11 }],
+        underline: [{ start: 12, end: 17 }],
+        strikethrough: [{ start: 18, end: 22 }],
+        redacted: [{ start: 23, end: 29 }],
+        quote: [{ start: 0, end: 29 }],
+      },
+    })
+    expect(renderPostOg('> *bold* /italic/ _under_ ~gone~ |secret|', 'tester')).not.toHaveLength(0)
   })
 
   test('omits unrevealed spoiler text from the image', () => {
@@ -61,18 +78,21 @@ describe('renderPostOg', () => {
       ],
       code: [],
       math: [],
+      styles: { bold: [], italics: [], underline: [], strikethrough: [], redacted: [], quote: [] },
     })
     expect(postOgText('Keep `example.com` literal')).toEqual({
       text: 'Keep example.com literal',
       links: [],
       code: [{ start: 5, end: 16 }],
       math: [],
+      styles: { bold: [], italics: [], underline: [], strikethrough: [], redacted: [], quote: [] },
     })
     expect(postOgText('Before\n```js\nconst answer = 42\n```\nafter')).toEqual({
       text: 'Before\nconst answer = 42\nafter',
       links: [],
       code: [{ start: 7, end: 24 }],
       math: [],
+      styles: { bold: [], italics: [], underline: [], strikethrough: [], redacted: [], quote: [] },
     })
   })
 
