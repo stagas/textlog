@@ -13,6 +13,8 @@ function fixture() {
       bio TEXT DEFAULT '',password TEXT NOT NULL,deleted_at TEXT);
     CREATE TABLE handle_history (handle TEXT PRIMARY KEY COLLATE NOCASE,user_id INTEGER NOT NULL
       REFERENCES users(id) ON DELETE CASCADE,created_at TEXT DEFAULT CURRENT_TIMESTAMP);
+    CREATE TABLE handle_change_events (id INTEGER PRIMARY KEY AUTOINCREMENT,user_id INTEGER NOT NULL
+      REFERENCES users(id) ON DELETE CASCADE,changed_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP);
     INSERT INTO users(handle,email,password) VALUES('alpha','alpha@example.com','x'),('other','other@example.com','x');`)
   return database
 }
@@ -44,6 +46,22 @@ describe('handle history', () => {
     updateProfileHandle(database, 1, 'alpha', 'bio only')
 
     expect(database.query('SELECT * FROM handle_history').all()).toHaveLength(0)
+    expect(database.query('SELECT * FROM handle_change_events').all()).toHaveLength(0)
+  })
+
+  test('allows two handle changes per calendar month and resets the next month', () => {
+    const database = fixture()
+    updateProfileHandle(database, 1, 'beta', '')
+    updateProfileHandle(database, 1, 'gamma', '')
+
+    expect(() => updateProfileHandle(database, 1, 'delta', '')).toThrow('two per month')
+    expect(database.query('SELECT handle FROM users WHERE id=1').get()).toEqual({ handle: 'gamma' })
+    expect(database.query('SELECT COUNT(*) count FROM handle_change_events WHERE user_id=1').get())
+      .toEqual({ count: 2 })
+
+    database.query("UPDATE handle_change_events SET changed_at=datetime('now','start of month','-1 day')").run()
+    updateProfileHandle(database, 1, 'delta', '')
+    expect(database.query('SELECT handle FROM users WHERE id=1').get()).toEqual({ handle: 'delta' })
   })
 
   test('lets the same account group reclaim a deleted persona handle', () => {
@@ -56,6 +74,8 @@ describe('handle history', () => {
     const persona = database.query(`INSERT INTO users(handle,email,password,account_group_id)
       VALUES('temporary','shared@example.com','!',?) RETURNING id`).get(group.id) as { id: number }
     claimInitialHandle(database, persona.id, 'reclaim_me')
+    expect(database.query('SELECT COUNT(*) count FROM handle_change_events WHERE user_id=?').get(persona.id))
+      .toEqual({ count: 0 })
     database.query('INSERT INTO account_creation_events(account_group_id,user_id) VALUES(?,?)')
       .run(group.id, persona.id)
     anonymizeUser(database, persona.id)

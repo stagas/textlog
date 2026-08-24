@@ -3,6 +3,13 @@ import { initializeLatestReads } from './latest-state'
 
 export type ResolvedHandle = { id: number; handle: string; alias: boolean }
 
+export class HandleChangeLimitError extends Error {
+  constructor() {
+    super('Handle changes are limited to two per month')
+    this.name = 'HandleChangeLimitError'
+  }
+}
+
 export function resolveHandle(database: Database, requestedHandle: string): ResolvedHandle | null {
   const current = database.query(
     'SELECT id,handle FROM users WHERE handle=? COLLATE NOCASE AND deleted_at IS NULL',
@@ -86,6 +93,11 @@ export function updateProfileHandle(database: Database, userId: number, handle: 
     if (!account) throw new Error('Account not found')
 
     if (account.handle.toLowerCase() !== handle.toLowerCase()) {
+      const changesThisMonth = database.query(`SELECT COUNT(*) count FROM handle_change_events
+        WHERE user_id=? AND changed_at>=datetime('now','start of month')
+          AND changed_at<datetime('now','start of month','+1 month')`).get(userId) as { count: number }
+      if (changesThisMonth.count >= 2) throw new HandleChangeLimitError()
+
       const currentOwner = database.query(
         'SELECT id FROM users WHERE handle=? COLLATE NOCASE AND deleted_at IS NULL',
       ).get(handle) as { id: number } | null
@@ -101,6 +113,7 @@ export function updateProfileHandle(database: Database, userId: number, handle: 
 
       database.query('INSERT OR IGNORE INTO handle_history(handle,user_id) VALUES(?,?)')
         .run(account.handle.toLowerCase(), userId)
+      database.query('INSERT INTO handle_change_events(user_id) VALUES(?)').run(userId)
       if (claim.reclaimed && database.query(
         'SELECT 1 FROM sqlite_master WHERE type=\'table\' AND name=\'account_creation_events\'',
       ).get()) {

@@ -385,9 +385,12 @@ export function registerAccountRoutes(app: Hono) {
       timezone: submittedTimezone,
     })
     if (updated.status !== 'ready') {
+      const error = updated.status === 'change-limit'
+        ? 'You can change your handle up to two times per month. Try again next month.'
+        : 'That username is unavailable.'
       return page(
         <Profile user={user} profile={{ ...user, timezone: submittedTimezone }} posts={[]} following={false} bio={bio}
-          editHandle={submittedHandle} editing error="That username is unavailable." returnPath={returnPath} />,
+          editHandle={submittedHandle} editing error={error} returnPath={returnPath} />,
         400,
       )
     }

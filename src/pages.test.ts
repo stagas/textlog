@@ -1718,6 +1718,7 @@ test('Profile edit offers a data download without rendering notes', () => {
   expect(html).toContain('href="/account/security?from=%2Flatest%3Fpage%3D2"')
   expect(html).toContain('href="/account/edit/notifications?from=%2Flatest%3Fpage%3D2"')
   expect(html).toContain('Handles must be 2–24 characters')
+  expect(html).toContain('You can change your handle up to two times per month.')
   expect(html).toContain('aria-describedby="profile-handle-help"')
   expect(html).toContain('<details class="posting-help-details">')
   expect(html).toContain('<span class="posting-help-limits">160 chars / 5 lines max</span>')

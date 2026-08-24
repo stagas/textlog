@@ -1774,6 +1774,18 @@ export const migrations: Migration[] = [
       normalizeInternalPostPreviews(database, Bun.env.APP_URL)
     },
   },
+  {
+    version: 126,
+    name: 'monthly_handle_change_limit',
+    up(database) {
+      database.run(`CREATE TABLE IF NOT EXISTS handle_change_events (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        changed_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP);
+      CREATE INDEX IF NOT EXISTS handle_change_events_user_changed
+        ON handle_change_events(user_id,changed_at);`)
+    },
+  },
 ]
 
 export const latestMigrationVersion = migrations.at(-1)!.version

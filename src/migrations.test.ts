@@ -53,6 +53,9 @@ describe('database migrations', () => {
     expect(userColumns).not.toContain('api_writes_enabled_at')
     expect((database.query('PRAGMA table_info(handle_history)').all() as { name: string }[])
       .map(column => column.name)).toContain('account_group_id')
+    expect(database.query(
+      "SELECT count(*) count FROM sqlite_master WHERE type='table' AND name='handle_change_events'",
+    ).get()).toEqual({ count: 1 })
     expect(
       database.query('SELECT count(*) count FROM sqlite_master WHERE type=\'table\' AND name=\'activity_reads\'').get(),
     )

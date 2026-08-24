@@ -150,6 +150,7 @@ export function Profile(
                       spellCheck={false} />
                     <span id="profile-handle-help" className="form-hint">
                       Handles must be 2–24 characters and use only letters, numbers, or underscores.
+                      {' '}You can change your handle up to two times per month.
                     </span>
                   </label>
                   <div className="bio-field">

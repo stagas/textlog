@@ -20,7 +20,7 @@ import { feedSnapshotPage } from './feed-snapshots'
 import { hasUnreadForYou, hasUnreadToMe, markAllForYouRead, markForYouEntriesRead, markVisibleForYouEntriesRead,
   unreadForYouCount, unreadToMeCount } from './for-you-state'
 import { resolveHandle } from './handles'
-import { claimInitialHandle, updateProfileHandle } from './handles'
+import { claimInitialHandle, HandleChangeLimitError, updateProfileHandle } from './handles'
 import { getHotPosts, type HotPost, hotRankingVersion } from './hot'
 import { isImageKey } from './image-storage'
 import { initializeLatestReads, latestPostState, markAllLatestRead, markLatestPostsRead,
@@ -435,7 +435,10 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
         })()
         return { status: 'ready' } as DatabaseDomainOutput<K>
       }
-      catch {
+      catch (error) {
+        if (error instanceof HandleChangeLimitError) {
+          return { status: 'change-limit' } as DatabaseDomainOutput<K>
+        }
         return { status: 'unavailable' } as DatabaseDomainOutput<K>
       }
     }
