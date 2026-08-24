@@ -56,8 +56,8 @@ const endpoints: ReadonlyArray<readonly [string, string, ReactNode, boolean?]> =
   ['DELETE', '/drafts/:id', 'Delete one of your drafts.', true],
   ['POST', '/drafts/:id/publish', 'Atomically publish and remove a draft.', true],
   ['GET', '/users/:handle', <>
-    Get a public profile and relationship totals. Your authenticated profile also includes private blocked-user and
-    blocked-tag counts.
+    Get a public profile, relationship totals, and its pinned note and reply. Your authenticated profile also includes
+    private blocked-user and blocked-tag counts.
   </>],
   ['GET', '/users/:handle/notes', 'Get a user\'s latest top-level notes.'],
   ['GET', '/users/:handle/posts', <>

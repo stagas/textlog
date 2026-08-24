@@ -149,7 +149,7 @@ function openApiDocument() {
   } }, '404': { description: 'Not found' }, '429': { description: 'Rate limited' } }
   return {
     openapi: '3.1.0',
-    info: { title: `${appName()} public API`, version: '1.3.0',
+    info: { title: `${appName()} public API`, version: '1.4.0',
       description: 'Public reads and authenticated writes for every account.' },
     servers: [{ url: '/api/v1' }],
     paths: {
@@ -519,7 +519,8 @@ function openApiDocument() {
       }, User: {
         type: 'object',
         required: ['handle', 'bio', 'created_at', 'post_count', 'replies_count', 'follower_count',
-          'following_user_count', 'following_tag_count', 'following_count', 'url', 'api_url'],
+          'following_user_count', 'following_tag_count', 'following_count', 'pinned_note', 'pinned_reply', 'url',
+          'api_url'],
         properties: {
           handle: { type: 'string' },
           bio: { type: 'string' },
@@ -531,6 +532,10 @@ function openApiDocument() {
           following_tag_count: { type: 'integer', minimum: 0 },
           following_count: { type: 'integer', minimum: 0,
             description: 'Backward-compatible alias for following_user_count.' },
+          pinned_note: { anyOf: [{ $ref: '#/components/schemas/Post' }, { type: 'null' }],
+            description: 'The newest undeleted top-level note tagged #pin, or null.' },
+          pinned_reply: { anyOf: [{ $ref: '#/components/schemas/Post' }, { type: 'null' }],
+            description: 'The newest undeleted reply tagged #pin, or null.' },
           following: { type: 'boolean', description: 'Returned when bearer authentication is supplied.' },
           follows_viewer: { type: 'boolean', description: 'Returned when bearer authentication is supplied.' },
           blocked: { type: 'boolean', description: 'Returned when bearer authentication is supplied.' },

@@ -51,7 +51,7 @@ function fixture(now?: () => number) {
       (4,3,NULL,'private by deletion','2026-08-03 13:00:00'),
       (5,1,NULL,'deleted post','2026-08-03 14:00:00');
     UPDATE posts SET deleted_at='2026-08-03 15:00:00' WHERE id=5;
-    INSERT INTO post_hashtags(post_id,tag) VALUES(1,'textlog');
+    INSERT INTO post_hashtags(post_id,tag) VALUES(1,'textlog'),(1,'pin');
     INSERT INTO post_link_previews(post_id,url,image_url,title) VALUES
       (1,'https://example.com','https://example.com/image.jpg','Example');
     INSERT INTO follows(follower_id,following_id) VALUES(2,1);
@@ -276,7 +276,8 @@ describe('public API', () => {
   test('serves single posts, replies, users, and tags with documented errors', async () => {
     const { app, database } = fixture()
     database.run(`INSERT INTO posts(id,user_id,parent_id,body,created_at)
-      VALUES(6,1,2,'alice replies','2026-08-03 14:30:00')`)
+      VALUES(6,1,2,'alice replies','2026-08-03 14:30:00');
+      INSERT INTO post_hashtags(post_id,tag) VALUES(6,'pin')`)
     const post = await (await request(app, '/api/v1/posts/1')).json() as any
     const reply = await (await request(app, '/api/v1/posts/2')).json() as any
     const replies = await (await request(app, '/api/v1/posts/1/replies')).json() as any
@@ -293,6 +294,8 @@ describe('public API', () => {
     expect(replies.data.map((item: any) => item.id)).toEqual([2])
     expect(user.data).toMatchObject({ handle: 'alice', bio: 'builder', post_count: 2, replies_count: 1,
       follower_count: 1, following_user_count: 0, following_tag_count: 0, following_count: 0 })
+    expect(user.data.pinned_note).toMatchObject({ id: 1, body: 'hello #textlog @bob' })
+    expect(user.data.pinned_reply).toMatchObject({ id: 6, body: 'alice replies', top_id: 1 })
     expect(user.data.email).toBeUndefined()
     expect(userPosts.data.map((item: any) => item.id)).toEqual([3, 1])
     expect(userNotes).toEqual(userPosts)
@@ -439,6 +442,9 @@ describe('public API', () => {
     expect(spec.paths['/users/{handle}/following/tags'].get).toBeDefined()
     expect(spec.paths['/tags/{tag}/followers'].get).toBeDefined()
     expect(spec.components.schemas.User.required).toContain('following_tag_count')
+    expect(spec.components.schemas.User.required).toContain('pinned_note')
+    expect(spec.components.schemas.User.required).toContain('pinned_reply')
+    expect(spec.components.schemas.User.properties.pinned_note.anyOf[0].$ref).toBe('#/components/schemas/Post')
     expect(spec.components.schemas.User.properties.blocked_tag_count).toBeDefined()
     expect(spec.components.schemas.Tag.required).toContain('follower_count')
     expect(spec.components.schemas.Activity.properties.type.enum).toContain('user_follow')

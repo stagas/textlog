@@ -1205,13 +1205,26 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
         blocked: !!database.query('SELECT 1 FROM blocks WHERE blocker_id=? AND blocked_id=?')
           .get(viewerId, resolved.id),
       }
+      const pinnedIds = database.query(`SELECT
+        max(CASE WHEN p.parent_id IS NULL THEN p.id END) pinned_note_id,
+        max(CASE WHEN p.parent_id IS NOT NULL THEN p.id END) pinned_reply_id
+        FROM posts p JOIN post_hashtags ph ON ph.post_id=p.id AND ph.tag='pin'
+        WHERE p.user_id=? AND p.deleted_at IS NULL`).get(resolved.id) as {
+        pinned_note_id: number | null
+        pinned_reply_id: number | null
+      }
+      const pinnedNote = pinnedIds.pinned_note_id === null ? null
+        : apiPost(database, pinnedIds.pinned_note_id, origin, viewerId ?? -1)
+      const pinnedReply = pinnedIds.pinned_reply_id === null ? null
+        : apiPost(database, pinnedIds.pinned_reply_id, origin, viewerId ?? -1)
       const normalized = found.handle.toLowerCase()
       const value = {
         data: { handle: normalized, bio: found.bio,
           created_at: new Date(found.created_at.replace(' ', 'T') + 'Z').toISOString(), post_count: found.post_count,
           replies_count: found.replies_count, follower_count: found.follower_count,
           following_user_count: found.following_user_count, following_tag_count: found.following_tag_count,
-          following_count: found.following_user_count, ...viewerState, ...(blockCounts || {}),
+          following_count: found.following_user_count, pinned_note: pinnedNote, pinned_reply: pinnedReply,
+          ...viewerState, ...(blockCounts || {}),
           url: `${origin}/u/${encodeURIComponent(normalized)}`,
           api_url: `${origin}/api/v1/users/${encodeURIComponent(normalized)}` },
       }
