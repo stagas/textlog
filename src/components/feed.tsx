@@ -131,9 +131,8 @@ export function Feed({ user, data, title, path = '/for-you', pageUrl, notificati
             <MetaRow className="activity-follow-main" unread={!!row.unread}>
               <UserReference handle={row.actor_handle} bio={row.actor_bio} noteCount={row.actorProfileStats?.notes || 0}
                 stats={row.actorProfileStats} following={!!row.following} followsViewer={row.actorFollowsViewer}
-                user={user} href={row.activity_kind === 'signup'
-                ? `/admin/users/${row.actor_id}`
-                : `/u/${row.actor_handle}${fromQuery}`} navigationQuery={fromQuery} />
+                user={user} href={`/u/${row.actor_handle}${fromQuery}`} navigationQuery={fromQuery}
+                showPopover={row.activity_kind !== 'signup'} />
               <span className="activity-context">
                 {row.activity_kind === 'signup' ? 'signed up:' : row.target_is_viewer ? 'followed you:' : 'followed'}
               </span>
@@ -142,13 +141,14 @@ export function Feed({ user, data, title, path = '/for-you', pageUrl, notificati
                   <UserReference handle={row.target_handle!} bio={row.target_bio || ''} noteCount={row.posts || 0}
                     stats={row.targetProfileStats} following={!!row.following} user={user}
                     followsViewer={row.targetFollowsViewer} href={`/u/${row.target_handle}${fromQuery}`}
-                    navigationQuery={fromQuery} />
+                    navigationQuery={fromQuery} showPopover={false} />
                 )
                 : row.activity_kind === 'tag_follow'
                 ? (
                   <TagReference tag={row.target_tag!} noteCount={row.posts || 0}
                     followerCount={row.tagFollowerCount || 0} following={!!row.following} user={user}
-                    href={`/tag/${encodeURIComponent(row.target_tag!)}${fromQuery}`} navigationQuery={fromQuery} />
+                    href={`/tag/${encodeURIComponent(row.target_tag!)}${fromQuery}`} navigationQuery={fromQuery}
+                    showPopover={false} />
                 )
                 : null}
               {!row.target_is_viewer && (row.activity_kind === 'user_follow' || row.activity_kind === 'tag_follow')

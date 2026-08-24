@@ -340,6 +340,37 @@ test('for-you does not put hide actions on follow activity', () => {
   expect(html).toContain('<span class="activity-follow-full-stop">.</span>')
 })
 
+test('activity targets do not duplicate their details in hovercards', () => {
+  const followActivity = {
+    ...postActivity(12, 4, 'carol'),
+    activity_kind: 'user_follow' as const,
+    event_key: 'user-follow:12',
+    target_handle: 'dave',
+    target_bio: 'Dave builds things',
+    renderedPost: undefined,
+  }
+  const signupActivity = {
+    ...postActivity(13, 5, 'erin'),
+    activity_kind: 'signup' as const,
+    event_key: 'signup:13',
+    target_bio: 'Erin builds things',
+    renderedPost: undefined,
+  }
+  const user = { id: 1, handle: 'reader', email: 'reader@example.com', bio: '',
+    handle_chosen_at: '2026-08-19 09:00:00' }
+
+  const followHtml = renderToStaticMarkup(<Feed user={user} data={{ timeline: [followActivity], page: 1,
+    totalPages: 1, toMeCount: 0, forYouCount: 0, forYouUnread: false, toMeUnread: false }} />)
+  const signupHtml = renderToStaticMarkup(<Feed user={user} data={{ timeline: [signupActivity], page: 1,
+    totalPages: 1, toMeCount: 0, forYouCount: 0, forYouUnread: false, toMeUnread: false }} />)
+
+  expect(followHtml).toContain('href="/u/dave?from=%2Ffor-you%23a-')
+  expect(followHtml).not.toContain('<span class="reference-popover-bio">Dave builds things</span>')
+  expect(signupHtml).toContain('href="/u/erin?from=%2Ffor-you%23a-')
+  expect(signupHtml).not.toContain('/admin/users/5')
+  expect(signupHtml).not.toContain('reference-menu-popover')
+})
+
 test('a followed-you event offers to follow back', () => {
   const followActivity = {
     ...postActivity(12, 4, 'carol'),
