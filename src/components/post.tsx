@@ -61,8 +61,10 @@ export function isProbablyNonEnglish(text: string) {
 }
 
 export function googleTranslateHref(text: string) {
-  const query = new URLSearchParams({ sl: 'auto', tl: 'en', text, op: 'translate' })
-  return `https://translate.google.com/?${query}`
+  // The Google Translate Android app intercepts translate.google.com links but drops their
+  // text parameters. Google Search preserves the query in both its app and mobile browsers.
+  const query = new URLSearchParams({ q: `translate to English: ${text}` })
+  return `https://www.google.com/search?${query}`
 }
 
 function PollPreview({ body }: { body: string }) {

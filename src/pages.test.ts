@@ -2632,6 +2632,9 @@ test('probable non-English posts offer a right-aligned Google Translate action',
   const footer = html.slice(html.indexOf('<div class="postfoot">'), html.indexOf('</div></article>'))
   expect(footer).toContain('class="quiet post-reply-link"')
   expect(footer).toContain(`href="${googleTranslateHref(body).replaceAll('&', '&amp;')}"`)
+  const translateUrl = new URL(googleTranslateHref(body))
+  expect(translateUrl.hostname).toBe('www.google.com')
+  expect(translateUrl.searchParams.get('q')).toBe(`translate to English: ${body}`)
   expect(footer.indexOf('translate')).toBeLessThan(footer.indexOf('report'))
 })
 
