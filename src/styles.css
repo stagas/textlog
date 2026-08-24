@@ -598,6 +598,7 @@ header>nav>a:not(.button),
 }
 
 .remote-link-audio-popover {
+  grid-template-rows: max-content;
   padding: var(--space-3);
   cursor: default;
 }
@@ -707,7 +708,7 @@ header>nav>a:not(.button),
 }
 
 .reference-popover-actions:has(.follows-you) {
-  margin-top: calc(var(--space-2) + 0.75rem);
+  margin-top: 1rem;
 }
 
 .reference-menu-popover:not(:has(.reference-popover-bio)) > .reference-popover-actions:has(.follows-you) {
