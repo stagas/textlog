@@ -5595,15 +5595,17 @@ a.post-context:hover {
 }
 
 .thread-fold::after {
-  content: '\2212';
+  content: '\203a';
+  display: inline-block;
+  transform: rotate(90deg) scale(1.5);
 }
 
 .thread-fold-input:checked+.post .thread-fold::after {
-  content: '+';
+  transform: scale(1.5);
 }
 
 .feed-thread>.thread-fold-input:checked+.thread-root .thread-fold::after {
-  content: '+';
+  transform: scale(1.5);
 }
 
 .thread-fold-input:checked~.reply-branch {
