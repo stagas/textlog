@@ -598,7 +598,7 @@ header>nav>a:not(.button),
 }
 
 .remote-link-audio-popover {
-  padding: 0;
+  padding: var(--space-3);
   cursor: default;
 }
 
