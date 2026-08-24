@@ -65,7 +65,8 @@ type RecentFeedVisitor = {
 
 const recentFeedVisitors = new Map<number, RecentFeedVisitor>()
 const recentFeedVisitorLimit = 30
-let recentVisitorPrewarmScheduled = false
+const recentVisitorPrewarmDelayMs = 10_000
+let recentVisitorPrewarmTimer: ReturnType<typeof setTimeout> | undefined
 
 const feedVariantCookieNames = new Set([
   'appearance',
@@ -157,10 +158,9 @@ function warmOtherFeedPages(request: Request, current: PrimaryFeed,
 }
 
 export function prewarmRecentFeedVisitors() {
-  if (recentVisitorPrewarmScheduled) return
-  recentVisitorPrewarmScheduled = true
-  setTimeout(() => {
-    recentVisitorPrewarmScheduled = false
+  if (recentVisitorPrewarmTimer) clearTimeout(recentVisitorPrewarmTimer)
+  recentVisitorPrewarmTimer = setTimeout(() => {
+    recentVisitorPrewarmTimer = undefined
     const visitors = [...recentFeedVisitors.values()]
     void (async () => {
       for (const { density, pageSize, request, user } of visitors) {
@@ -172,7 +172,7 @@ export function prewarmRecentFeedVisitors() {
     })().catch(error => {
       console.error('Could not prewarm recent feed visitors', error)
     })
-  }, 0)
+  }, recentVisitorPrewarmDelayMs)
 }
 
 export async function prewarmRecentFeedVisitorsOnInit() {
