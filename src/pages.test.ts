@@ -1324,9 +1324,10 @@ describe('About', () => {
 
   test('API documentation sections are closed disclosures by default', () => {
     const html = renderToStaticMarkup(React.createElement(ApiDocs, { user: null }))
-    expect((html.match(/<details class="api-docs-section">/g) || [])).toHaveLength(10)
+    expect((html.match(/<details class="api-docs-section">/g) || [])).toHaveLength(9)
     expect(html).not.toContain('<details class="api-docs-section" open=""')
     expect(html).toContain('<summary><h2>Endpoints</h2></summary>')
+    expect(html).toContain('<summary><h2>Endpoints</h2></summary><div class="api-base-url"><h3>Base URL</h3>')
   })
 
   test('appears above public feed tabs only for guest visitors', () => {

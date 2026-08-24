@@ -112,16 +112,16 @@ export function ApiDocs({ user }: { user: User | null }) {
           The public API is a small way to build feeds, profile cards, post embeds, and live widgets. Reading needs no
           account or API key, except personalized activity. Personalized activity and writing use a bearer token.
         </p>
-
-        <ApiSection title="Base URL">
-        <pre><code>{origin}/api/v1</code></pre>
         <p>
           All API endpoints allow cross-origin requests. The machine-readable specification is at{' '}
           <a href="/api/openapi.json">/api/openapi.json</a>.
         </p>
-        </ApiSection>
 
         <ApiSection title="Endpoints">
+        <div className="api-base-url">
+          <h3>Base URL</h3>
+          <pre><code>{origin}/api/v1</code></pre>
+        </div>
         <dl className="api-endpoints">
           {endpoints.map(([method, path, description, authentication]) => (
             <div className="api-endpoint" key={`${method}:${path}`}>

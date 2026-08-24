@@ -1131,6 +1131,30 @@ nav form {
   white-space: pre;
 }
 
+.api-base-url {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  gap: var(--space-4);
+  margin-bottom: var(--space-4);
+}
+
+.api-docs .api-base-url h3,
+.api-docs .api-base-url pre {
+  margin: 0;
+}
+
+.api-base-url h3 {
+  color: var(--muted);
+  font-size: 0.75rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.api-base-url code {
+  user-select: all;
+}
+
 .api-docs .hljs-comment,
 .api-docs .hljs-meta {
   color: var(--muted);
