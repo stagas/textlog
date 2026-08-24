@@ -1486,8 +1486,8 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
     }
     case 'api.unpublishPost': {
       const { userId, id, body } = input as DatabaseDomainInput<'api.unpublishPost'>
-      const existing = database.query('SELECT user_id,parent_id FROM posts WHERE id=? AND deleted_at IS NULL')
-        .get(id) as { user_id: number; parent_id: number | null } | null
+      const existing = database.query('SELECT user_id,parent_id,body FROM posts WHERE id=? AND deleted_at IS NULL')
+        .get(id) as { user_id: number; parent_id: number | null; body: string } | null
       if (!existing) return { status: 'not_found' } as DatabaseDomainOutput<K>
       if (existing.user_id !== userId) return { status: 'forbidden' } as DatabaseDomainOutput<K>
       const available = database.query(
@@ -1500,7 +1500,7 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
       let draftId = 0
       database.transaction(() => {
         const draft = database.query('INSERT INTO drafts(user_id,parent_id,body) VALUES(?,?,?)')
-          .run(userId, existing.parent_id, body)
+          .run(userId, existing.parent_id, body ?? existing.body)
         draftId = Number(draft.lastInsertRowid)
         softDeletePost(database, id)
         if (available) database.query('DELETE FROM post_link_previews WHERE post_id=?').run(id)

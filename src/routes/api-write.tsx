@@ -426,6 +426,22 @@ export function registerApiWriteRoutes(app: Hono, service: DatabaseService,
     return json({ data: { deleted: true } })
   })
 
+  app.post('/api/v1/posts/:id/unpublish', async c => {
+    const guard = await writer(service, requestApiUser, c)
+    if (guard.error) return guard.error
+    const id = Number(c.req.param('id'))
+    if (!Number.isInteger(id) || id < 1) return fail('invalid_post_id', 'Post ID must be a positive integer', 400)
+    const result = await service.call('api.unpublishPost', { userId: guard.user!.id, id })
+    if (result.status !== 'ready') {
+      return result.status === 'not_found'
+        ? fail('not_found', 'Post not found', 404)
+        : fail('forbidden', 'That post belongs to someone else', 403)
+    }
+    await deleteImagesAfterCommit(result.imageKeys)
+    const draft = await service.call('drafts.get', { id: result.draftId, userId: guard.user!.id })
+    return json({ data: await draftJson(draft!, apiOrigin(c.req.url, appUrl), guard.user!.id) }, 201)
+  })
+
   app.post('/api/v1/users/:handle/follow', async c => {
     const guard = await writer(service, requestApiUser, c)
     if (guard.error) return guard.error

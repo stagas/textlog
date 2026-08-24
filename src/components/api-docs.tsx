@@ -41,6 +41,7 @@ const endpoints: ReadonlyArray<readonly [string, string, ReactNode, boolean?]> =
   ['GET', '/posts/:id', 'Get a single public post.'],
   ['PATCH', '/posts/:id', 'Edit a post you own.', true],
   ['DELETE', '/posts/:id', 'Delete a post you own. Replies remain and the post becomes a “(deleted post)” tombstone.', true],
+  ['POST', '/posts/:id/unpublish', 'Move a post you own back into your drafts.', true],
   ['GET', '/posts/:id/replies', <>
     Get replies recursively. Use the optional <code>depth</code>{' '}
     query parameter (1–20, default 1). Each reply is returned with its depth, parent ID, and{' '}

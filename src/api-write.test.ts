@@ -208,6 +208,22 @@ describe('API writes', () => {
     expect((await call(app, `/api/v1/posts/${created.id}`)).status).toBe(404)
   })
 
+  test('unpublishes only your own posts back into drafts', async () => {
+    const { app, database } = fixture()
+    const created = (await (await post(app, 'alice-token', { body: 'publish then reconsider' })).json() as any).data
+
+    expect((await call(app, '/api/v1/posts/1/unpublish', { method: 'POST', token: 'alice-token' })).status).toBe(403)
+    const unpublished = await call(app, `/api/v1/posts/${created.id}/unpublish`, {
+      method: 'POST', token: 'alice-token',
+    })
+
+    expect(unpublished.status).toBe(201)
+    expect((await unpublished.json() as any).data).toMatchObject({ body: 'publish then reconsider', parent_id: null })
+    expect(database.query('SELECT deleted_at FROM posts WHERE id=?').get(created.id))
+      .toMatchObject({ deleted_at: expect.any(String) })
+    expect((await call(app, `/api/v1/posts/${created.id}`)).status).toBe(404)
+  })
+
   test('follows, unfollows and refuses to follow yourself', async () => {
     const { app, database } = fixture()
 

@@ -339,6 +339,11 @@ function openApiDocument() {
           } }), responses: { ...writeResponses, '201': postResponse,
             '409': errorResponse('The poll expired or the account already voted') } },
       },
+      '/posts/{id}/unpublish': {
+        post: { summary: 'Move a post you own back to drafts', security: authSecurity,
+          parameters: [postIdParameter],
+          responses: { ...writeResponses, '201': dataResponse({ $ref: '#/components/schemas/Draft' }) } },
+      },
       '/drafts': {
         get: { summary: 'List your drafts', security: authSecurity, parameters: collectionParameters,
           responses: { ...writeResponses, '200': { description: 'Paginated drafts', content: { 'application/json': {

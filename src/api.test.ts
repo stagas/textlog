@@ -434,7 +434,7 @@ describe('public API', () => {
     expect(rss.headers.get('content-type')).toBe('application/rss+xml; charset=utf-8')
     expect(rss.headers.get('access-control-allow-origin')).toBe('*')
     expect(spec.openapi).toBe('3.1.0')
-    expect(Object.keys(spec.paths)).toHaveLength(44)
+    expect(Object.keys(spec.paths)).toHaveLength(45)
     expect(spec.paths['/activities/for-you'].get.responses['401']).toBeDefined()
     expect(spec.paths['/activities/to-me'].get.responses['401']).toBeDefined()
     expect(spec.paths['/users/{handle}/blocks'].get.responses['403']).toBeDefined()
@@ -475,7 +475,8 @@ describe('public API', () => {
       .toBe('#/components/schemas/User')
     expect(spec.security).toEqual([])
     for (const path of ['/feeds/latest/read', '/feeds/latest/read-all', '/drafts', '/drafts/{id}',
-      '/drafts/{id}/publish', '/posts/{id}/poll/votes', '/tags/{tag}/follow', '/tags/{tag}/block']) {
+      '/drafts/{id}/publish', '/posts/{id}/unpublish', '/posts/{id}/poll/votes', '/tags/{tag}/follow',
+      '/tags/{tag}/block']) {
       for (const operation of Object.values(spec.paths[path]) as any[]) {
         expect(operation.security).toEqual([{ bearerAuth: [] }])
       }
