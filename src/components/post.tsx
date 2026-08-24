@@ -56,6 +56,15 @@ function isDeletedHandle(handle: string) {
   return /^deleted-\d+$/.test(handle)
 }
 
+export function isProbablyNonEnglish(text: string) {
+  return Array.from(text).some(character => /\p{L}/u.test(character) && !/[A-Za-z]/.test(character))
+}
+
+export function googleTranslateHref(text: string) {
+  const query = new URLSearchParams({ sl: 'auto', tl: 'en', text, op: 'translate' })
+  return `https://translate.google.com/?${query}`
+}
+
 function PollPreview({ body }: { body: string }) {
   const poll = parsePoll(body)
   if (!poll) return null
@@ -469,6 +478,7 @@ export function Post({
   const resolvedReplyLabel = replyLabel ?? (user
     ? user.id === p.user_id ? 'continue' : 'reply'
     : 'enter to reply')
+  const translateHref = !preview && isProbablyNonEnglish(p.body) ? googleTranslateHref(p.body) : undefined
   if (p.deleted_at) {
     return (
       <article className="post deleted-post" id={`post-${p.id}`}>
@@ -571,7 +581,7 @@ export function Post({
       }} />
       {preview ? <PollPreview body={p.body} /> : <Poll p={p} returnPath={returnPath} />}
       <Todo p={p} user={user} preview={preview} returnPath={returnPath} formPrefix={formPrefix} />
-      {!parent && (showReplyAction && !p.thread_locked || resolvedContinuationHref || canModerate || reportHref) && (
+      {!parent && (showReplyAction && !p.thread_locked || resolvedContinuationHref || translateHref || canModerate || reportHref) && (
       <MetaRow className={`postfoot${preview ? ' preview-post-meta' : ''}`}>
         {!parent && showReplyAction && !p.thread_locked && (preview
           ? <span className="quiet preview-reply">{resolvedReplyLabel}</span>
@@ -580,8 +590,12 @@ export function Post({
         {resolvedContinuationHref && <a className="quiet post-continuation-link" href={resolvedContinuationHref} rel="nofollow">
           {continuationLabel}
         </a>}
-        {(canModerate || reportHref) && (
+        {(translateHref || canModerate || reportHref) && (
           <span className="post-actions">
+            {translateHref && (
+              <a className="quiet translate-link" href={translateHref} target="_blank"
+                rel="nofollow noopener noreferrer" aria-label={`translate post by @${p.handle} to English`}>translate</a>
+            )}
             {canModerate && (
               <a className="quiet danger" href={'/admin/posts/' + p.id + '/delete'} aria-label="moderate this post">
                 moderate
@@ -662,7 +676,7 @@ export function Post({
             )}
         </blockquote>
       )}
-      {parent && (showReplyAction && !p.thread_locked || resolvedContinuationHref || canModerate || reportHref) && (
+      {parent && (showReplyAction && !p.thread_locked || resolvedContinuationHref || translateHref || canModerate || reportHref) && (
         <MetaRow className={`postfoot postfoot-after-quote${preview ? ' preview-post-meta' : ''}`}>
           {showReplyAction && !p.thread_locked && (preview
             ? <span className="quiet preview-reply">{resolvedReplyLabel}</span>
@@ -671,8 +685,12 @@ export function Post({
           {resolvedContinuationHref && <a className="quiet post-continuation-link" href={resolvedContinuationHref} rel="nofollow">
             {continuationLabel}
           </a>}
-          {(canModerate || reportHref) && (
+          {(translateHref || canModerate || reportHref) && (
             <span className="post-actions">
+              {translateHref && (
+                <a className="quiet translate-link" href={translateHref} target="_blank"
+                  rel="nofollow noopener noreferrer" aria-label={`translate post by @${p.handle} to English`}>translate</a>
+              )}
               {canModerate && (
                 <a className="quiet danger" href={'/admin/posts/' + p.id + '/delete'} aria-label="moderate this post">
                   moderate

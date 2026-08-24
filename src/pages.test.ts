@@ -36,7 +36,7 @@ import {
   RecapEmails,
   Reply,
 } from './components/pages'
-import { conversationTopPath, FeedThreads, Post, postedReplyPath, PreviewPost, replyAnchorReturnPath,
+import { conversationTopPath, FeedThreads, googleTranslateHref, isProbablyNonEnglish, Post, postedReplyPath, PreviewPost, replyAnchorReturnPath,
   ThreadReplies } from './components/post'
 import { SearchResults, searchPersonReturnPath, searchPostReturnPath } from './components/search'
 
@@ -2614,6 +2614,35 @@ test('Post detail places report opposite reply in the footer', () => {
   expect(footer).toContain('class="quiet post-reply-link"')
   expect(footer).toContain('class="quiet report-link" href="/post/2?report=1"')
   expect(html.slice(0, html.indexOf('<div class="postfoot">'))).not.toContain('class="quiet report-link"')
+})
+
+test('probable non-English posts offer a right-aligned Google Translate action', () => {
+  expect(isProbablyNonEnglish('An English note with emoji 🎉 and numbers 123')).toBe(false)
+  expect(isProbablyNonEnglish('Una nota en español')).toBe(true)
+  expect(isProbablyNonEnglish('Ελληνικό κείμενο')).toBe(true)
+
+  const body = 'Una nota en español'
+  const html = renderToStaticMarkup(React.createElement(Post, {
+    user: { id: 3, handle: 'reader', email: 'reader@example.com', bio: '' },
+    p: { id: 2, user_id: 1, parent_id: null, body, handle: 'writer',
+      created_at: '2026-08-03 12:00:00', deleted_at: null },
+    reportHref: '/post/2?report=1',
+  }))
+
+  const footer = html.slice(html.indexOf('<div class="postfoot">'), html.indexOf('</div></article>'))
+  expect(footer).toContain('class="quiet post-reply-link"')
+  expect(footer).toContain(`href="${googleTranslateHref(body).replaceAll('&', '&amp;')}"`)
+  expect(footer.indexOf('translate')).toBeLessThan(footer.indexOf('report'))
+})
+
+test('English posts do not offer translation', () => {
+  const html = renderToStaticMarkup(React.createElement(Post, {
+    user: null,
+    p: { id: 2, user_id: 1, parent_id: null, body: 'Just an English note 🎉', handle: 'writer',
+      created_at: '2026-08-03 12:00:00', deleted_at: null },
+  }))
+
+  expect(html).not.toContain('translate-link')
 })
 
 test('Post renders moderation controls only for admins on the detail page', () => {
