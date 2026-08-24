@@ -1388,6 +1388,16 @@ nav form {
   margin-top: var(--space-4);
 }
 
+.post-page-actions {
+  justify-content: center;
+  padding: var(--space-5) var(--gutter);
+  border-top: 1px solid var(--soft);
+}
+
+.public-post-page-thread {
+  margin-bottom: var(--space-3);
+}
+
 .feed-about {
   padding-bottom: var(--space-7);
 }

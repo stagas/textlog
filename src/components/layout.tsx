@@ -163,7 +163,7 @@ export function Layout({
           </>
         )}
         {mobile && <link href="https://fonts.cdnfonts.com/css/dejavu-sans-mono" rel="stylesheet" />}
-        <link rel="stylesheet" href="/styles.css?v=794" />
+        <link rel="stylesheet" href="/styles.css?v=797" />
         <style>{themeCss}</style>
       </head>
       <body className={`density-${density}${mobile ? ' mobile-agent' : ''}${

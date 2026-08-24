@@ -34,6 +34,7 @@ import {
   PasswordLogin,
   postTitle,
   Profile,
+  PublicThread,
   RecapEmails,
   Reply,
 } from './components/pages'
@@ -2503,6 +2504,18 @@ test('Post pages use the context text as the canonical permalink', () => {
     + '<span class="post-context post-context-punctuation">:</span>')
   expect(html).not.toContain('href="/post/2">wrote:</a>')
   expect(html).not.toContain('>permalink</a>')
+})
+
+test('Public post pages end with join and browse actions', () => {
+  const html = renderToStaticMarkup(React.createElement(PublicThread, {
+    post: { id: 2, user_id: 1, parent_id: null, body: 'A note', handle: 'writer',
+      created_at: '2026-08-03 12:00:00', deleted_at: null },
+  }))
+
+  expect(html).toContain('class="post-page-thread public-post-page-thread"')
+  expect(html).toContain('class="action-pair post-page-actions"')
+  expect(html).toContain('class="button" href="/enter" rel="nofollow">join the community</a>')
+  expect(html).toContain('href="/hot">browse more notes</a>')
 })
 
 test('Reply pages show a top link after the linked reply context', () => {
