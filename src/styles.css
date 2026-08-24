@@ -4722,6 +4722,10 @@ form.report-panel {
   margin: 0;
 }
 
+.explore-section-heading > .connections-heading {
+  gap: var(--space-3);
+}
+
 .explore-section-heading .pagination {
   flex: 0 1 auto;
   margin-left: auto;
@@ -4737,12 +4741,12 @@ form.report-panel {
   display: none;
 }
 
-.explore-section-heading-mobile h2,
-.explore-section-heading-mobile .pagination {
+.explore-section-heading-mobile > h2,
+.explore-section-heading-mobile > .pagination {
   width: 100%;
 }
 
-.explore-section-heading-mobile .pagination {
+.explore-section-heading-mobile > .pagination {
   flex-basis: 100%;
   margin-left: 0;
 }

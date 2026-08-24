@@ -590,7 +590,10 @@ test('explore renders tag toggles above a full-width people section', () => {
   expect(html).toContain('class="button explore-tag-chip button-muted" aria-pressed="true"')
   expect(html).toContain('class="button explore-tag-chip" aria-pressed="false"')
   expect(html).toContain('name="from" value="/explore#explore-tags"')
-  expect(html).toContain('<section class="explore-people" id="explore-people"><h2>People to follow</h2>')
+  expect(html).toContain(
+    '<section class="explore-people" id="explore-people"><div class="explore-section-heading">'
+      + '<h2>People to follow</h2><nav class="pagination pagination-compact"',
+  )
   expect(html).toContain('href="/explore?tagsPage=2&amp;_scroll=instant#explore-tags"')
   expect(html).toContain('href="/explore?peoplePage=2&amp;_scroll=instant#explore-people"')
   expect(html).toContain('<div class="explore-section-heading"><h2>Trending tags</h2><nav class="pagination pagination-compact"')

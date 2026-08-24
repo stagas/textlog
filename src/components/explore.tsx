@@ -71,9 +71,11 @@ export function Explore({ user, welcome = false, tagsPage = 1, peoplePage = 1, d
             : <p className="section-empty">No hashtags yet.</p>}
         </section>
         <section className="explore-people" id="explore-people">
-          <h2>{user ? 'People to follow' : 'People'}</h2>
-          <Pagination page={peoplePage} totalPages={Math.ceil(peopleTotal / PEOPLE_PAGE_SIZE)} path={peoplePath}
-            pageParam="peoplePage" label="People pagination" compact anchor="explore-people" />
+          <div className={paginationHeadingClass()}>
+            <h2>{user ? 'People to follow' : 'People'}</h2>
+            <Pagination page={peoplePage} totalPages={Math.ceil(peopleTotal / PEOPLE_PAGE_SIZE)} path={peoplePath}
+              pageParam="peoplePage" label="People pagination" compact anchor="explore-people" />
+          </div>
           <div className="people">
             {people.map(p => (
               <article key={p.id} id={`person-${p.id}`}>

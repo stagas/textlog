@@ -106,15 +106,19 @@ export function Connections(
                 )}
             </section>
             <section>
-              <div className="connections-heading"><h2 id="connections-people-heading">People</h2>{sortToggle}</div>
-              <Pagination page={page}
-                totalPages={Math.ceil(total / (kind === 'blocked' ? PAGE_SIZE : CONNECTION_PAGE_SIZE))}
-                path={withFrom(`/u/${profile.handle}?tab=${kind}${
-                  sortQuery}${
-                  kind === 'following' && tagsPage > 1
-                    ? `&tagsPage=${tagsPage}`
-                    : ''
-                }`)} label="People pagination" compact anchor="connections-people-heading" />
+              <div className={paginationHeadingClass()}>
+                <div className="connections-heading">
+                  <h2 id="connections-people-heading">People</h2>{sortToggle}
+                </div>
+                <Pagination page={page}
+                  totalPages={Math.ceil(total / (kind === 'blocked' ? PAGE_SIZE : CONNECTION_PAGE_SIZE))}
+                  path={withFrom(`/u/${profile.handle}?tab=${kind}${
+                    sortQuery}${
+                    kind === 'following' && tagsPage > 1
+                      ? `&tagsPage=${tagsPage}`
+                      : ''
+                  }`)} label="People pagination" compact anchor="connections-people-heading" />
+              </div>
               {people.length
                 ? kind === 'blocked'
                   ? <BlockedPeopleList user={user!} people={people} />
