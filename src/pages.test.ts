@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test'
-import { ConnectionPeople, Pagination, TagChips } from './components/page-shared'
+import { ConnectionPeople, Pagination, paginationHeadingClass, TagChips } from './components/page-shared'
 import {
   About,
   AccountApiKeyCreate,
@@ -2023,6 +2023,16 @@ test('Compact column pagination shows labeled arrow controls and neighboring pag
   expect(html).toContain('aria-label="Next page">next →</a>')
   for (const page of [4, 6]) expect(html).toContain(`>${page}</`)
   expect(html).toContain('name="tagsPage" value="5"')
+})
+
+test('Pagination headings use the backend mobile user-agent signal for full-width controls', () => {
+  const mobileRequest = new Request('https://textlog.test/explore', {
+    headers: { 'user-agent': 'Mozilla/5.0 (Linux; Android 15; Pixel 9) AppleWebKit/537.36 Mobile Safari/537.36' },
+  })
+  expect(withAppearance(mobileRequest, paginationHeadingClass))
+    .toBe('explore-section-heading explore-section-heading-mobile')
+  expect(withAppearance(new Request('https://textlog.test/explore'), paginationHeadingClass))
+    .toBe('explore-section-heading')
 })
 
 test('Compact column pagination shows three page boxes at either edge', () => {

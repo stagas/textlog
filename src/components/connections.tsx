@@ -2,7 +2,9 @@ import { CONNECTION_PAGE_SIZE, PAGE_SIZE, TAG_PAGE_SIZE } from '../pagination'
 import type { BioReferenceData, User } from '../types'
 import type { PersonView, ProfileRow } from '../types'
 import { Layout } from './layout'
-import { BlockedPeopleList, BlockedTagList, ConnectionPeople, Pagination, ProfileHeader, ProfileTabs } from './page-shared'
+import {
+  BlockedPeopleList, BlockedTagList, ConnectionPeople, Pagination, paginationHeadingClass, ProfileHeader, ProfileTabs,
+} from './page-shared'
 
 export function Connections(
   { user, profile, people, tags = [], kind, page, total, tagsPage = 1, tagsTotal = 0, sort = 'recent', noteCount,
@@ -61,7 +63,7 @@ export function Connections(
             <section>
               {kind === 'following'
                 ? (
-                  <div className="explore-section-heading">
+                  <div className={paginationHeadingClass()}>
                     <h2 id="connections-tags-heading">Tags</h2>
                     <Pagination page={tagsPage} totalPages={Math.ceil(tagsTotal / TAG_PAGE_SIZE)}
                       path={withFrom(`/u/${profile.handle}?tab=following${sortQuery}${

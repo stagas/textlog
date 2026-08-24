@@ -4726,16 +4726,22 @@ form.report-panel {
   border-top: 0;
 }
 
-@media (max-width: 600px) {
-  .explore-section-heading h2,
-  .explore-section-heading .pagination {
-    width: 100%;
-  }
+.explore-section-heading:not(.explore-section-heading-mobile) .pagination:has(> .placeholder:last-child) {
+  grid-template-columns: 1fr auto;
+}
 
-  .explore-section-heading .pagination {
-    flex-basis: 100%;
-    margin-left: 0;
-  }
+.explore-section-heading:not(.explore-section-heading-mobile) .pagination > .placeholder:last-child {
+  display: none;
+}
+
+.explore-section-heading-mobile h2,
+.explore-section-heading-mobile .pagination {
+  width: 100%;
+}
+
+.explore-section-heading-mobile .pagination {
+  flex-basis: 100%;
+  margin-left: 0;
 }
 
 .explore-tag-chips {

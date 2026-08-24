@@ -3,7 +3,7 @@ import { EXPLORE_TAG_PAGE_SIZE } from '../pagination'
 import type { ExploreData, User } from '../types'
 import { displayBio, linkify } from '../utils'
 import { Layout } from './layout'
-import { ActionPair, Pagination, TagChips } from './page-shared'
+import { ActionPair, Pagination, paginationHeadingClass, TagChips } from './page-shared'
 import { Panel } from './panel'
 import { BioReferenceForms, UserReference } from './post'
 import { SearchForm } from './search'
@@ -61,7 +61,7 @@ export function Explore({ user, welcome = false, tagsPage = 1, peoplePage = 1, d
       )}
       <div className="explore-content">
         <section className="explore-tags" id="explore-tags">
-          <div className="explore-section-heading">
+          <div className={paginationHeadingClass()}>
             <h2>Trending tags</h2>
             <Pagination page={tagsPage} totalPages={Math.ceil(tagsTotal / EXPLORE_TAG_PAGE_SIZE)} path={tagsPath}
               pageParam="tagsPage" label="Tags pagination" compact anchor="explore-tags" />

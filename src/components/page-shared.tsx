@@ -4,13 +4,19 @@ import React from 'react'
 import { isAdmin } from '../admin'
 import { markdownPlainText } from '../markdown'
 import { searchTerms } from '../search'
+import { activeRequest } from '../theme'
 import type { User } from '../types'
+import { isMobileRequest } from '../user-agent'
 import { displayBio, linkify } from '../utils'
 import { enterHref } from './auth-links'
 import { Panel } from './panel'
 import { BioReferenceForms, TagReference, UserReference } from './post'
 
 const postTitleLength = 60
+
+export function paginationHeadingClass() {
+  return `explore-section-heading${isMobileRequest(activeRequest()) ? ' explore-section-heading-mobile' : ''}`
+}
 
 export function postTitle(body: string) {
   const text = markdownPlainText(body)
