@@ -3132,6 +3132,7 @@ form.report-panel {
 .posting-help-emoji-panel {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(1.75rem, 1fr));
+  align-content: start;
   gap: var(--space-1);
   max-height: 10rem;
   padding-right: var(--space-1);
@@ -3222,7 +3223,7 @@ form.report-panel {
   display: inline-block;
   max-width: 100%;
   width: fit-content;
-  line-height: 1.35;
+  line-height: 1.5;
   overflow-wrap: anywhere;
   border-bottom: var(--hairline) solid var(--link-border);
 }
@@ -3305,6 +3306,7 @@ form.report-panel {
   gap: 0;
   margin-bottom: var(--space-3);
   border-bottom: 1px solid var(--soft);
+  overflow-x: auto;
 }
 
 .posting-help-tabs label {
@@ -3319,22 +3321,34 @@ form.report-panel {
 
 .posting-help-tab-panel { display: none; }
 
-.posting-help-tab-input:first-of-type:checked ~ .posting-help-tabs label:first-child,
-.posting-help-tab-input:nth-of-type(2):checked ~ .posting-help-tabs label:nth-child(2) {
+.posting-help-tab-input:nth-of-type(1):checked ~ .posting-help-tabs label:nth-child(1),
+.posting-help-tab-input:nth-of-type(2):checked ~ .posting-help-tabs label:nth-child(2),
+.posting-help-tab-input:nth-of-type(3):checked ~ .posting-help-tabs label:nth-child(3),
+.posting-help-tab-input:nth-of-type(4):checked ~ .posting-help-tabs label:nth-child(4) {
   color: var(--ink);
   border-bottom-color: var(--accent);
 }
 
-.posting-help-tab-input:first-of-type:focus-visible ~ .posting-help-tabs label:first-child,
-.posting-help-tab-input:nth-of-type(2):focus-visible ~ .posting-help-tabs label:nth-child(2) {
+.posting-help-tab-input:nth-of-type(1):focus-visible ~ .posting-help-tabs label:nth-child(1),
+.posting-help-tab-input:nth-of-type(2):focus-visible ~ .posting-help-tabs label:nth-child(2),
+.posting-help-tab-input:nth-of-type(3):focus-visible ~ .posting-help-tabs label:nth-child(3),
+.posting-help-tab-input:nth-of-type(4):focus-visible ~ .posting-help-tabs label:nth-child(4) {
   outline: 2px solid var(--accent);
   outline-offset: -2px;
 }
 
-.posting-help-tab-input:first-of-type:checked ~ .posting-help-formatting-panel,
-.posting-help-tab-input:nth-of-type(2):checked ~ .posting-help-modifiers-panel {
+.posting-help-tab-input:nth-of-type(1):checked ~ .posting-help-emoji-panel {
+  display: grid;
+}
+
+.posting-help-tab-input:nth-of-type(2):checked ~ .posting-help-formatting-panel,
+.posting-help-tab-input:nth-of-type(3):checked ~ .posting-help-modifiers-panel {
   display: grid;
   gap: var(--space-2);
+}
+
+.posting-help-tab-input:nth-of-type(4):checked ~ .posting-help-search-panel {
+  display: block;
 }
 
 .posting-help-tab-panel > div {
@@ -3344,6 +3358,16 @@ form.report-panel {
   align-items: start;
   padding-bottom: var(--space-2);
   border-bottom: 1px solid var(--soft);
+}
+
+.posting-help-tab-panel > div:last-child {
+  padding-bottom: 0;
+  border-bottom: 0;
+}
+
+.posting-help-search-panel > .posting-help-searches {
+  padding-bottom: 0;
+  border-bottom: 0;
 }
 
 .posting-help-tab-panel dt,
@@ -3397,13 +3421,6 @@ form.report-panel {
   font-size: inherit;
   font-weight: normal;
   text-align: left;
-}
-
-.posting-help-section .posting-help-emoji-panel {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(1.75rem, 1fr));
-  max-height: 10rem;
-  overflow-y: auto;
 }
 
 :is(.write-compose, .edit-post-compose, .replybox) .composefoot {

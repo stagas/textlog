@@ -68,17 +68,28 @@ function PostingSuggestionSearchField({ kind, search }: {
   )
 }
 
-function PostingFormattingHelp() {
+function PostingHelpTabs({ search }: { search?: PostingSuggestionSearch | null }) {
   const tabId = React.useId()
   return (
-    <section className="posting-help-section posting-help-syntax">
-      <input className="posting-help-tab-input" type="radio" name={`${tabId}-tab`} id={`${tabId}-formatting`}
-        defaultChecked />
+    <section className="posting-help-tabs-section">
+      <input className="posting-help-tab-input" type="radio" name={`${tabId}-tab`} id={`${tabId}-emoji`}
+        defaultChecked={!search} />
+      <input className="posting-help-tab-input" type="radio" name={`${tabId}-tab`} id={`${tabId}-formatting`} />
       <input className="posting-help-tab-input" type="radio" name={`${tabId}-tab`} id={`${tabId}-modifiers`} />
+      <input className="posting-help-tab-input" type="radio" name={`${tabId}-tab`} id={`${tabId}-search`}
+        defaultChecked={!!search} />
       <nav className="posting-help-tabs" aria-label="Writing help">
+        <label htmlFor={`${tabId}-emoji`}>emoji</label>
         <label htmlFor={`${tabId}-formatting`}>formatting</label>
         <label htmlFor={`${tabId}-modifiers`}>modifiers</label>
+        <label htmlFor={`${tabId}-search`}>search</label>
       </nav>
+      <div className="posting-help-emoji-panel posting-help-tab-panel" aria-label="Emoji to copy and paste">
+        {'😀 😃 😄 😁 😆 😅 😂 🤣 😊 😇 🙂 🙃 😉 😌 😍 🥰 😘 😋 😛 😜 🤪 🤨 🧐 🤓 😎 🤩 🥳 😏 😒 😞 😔 😟 😕 🙁 ☹️ 😣 😖 😫 😩 🥺 😢 😭 😤 😠 😡 🤬 🤯 😳 🥵 🥶 😱 😨 😰 😥 😓 🤗 🤔 🫣 🤭 🫢 🤫 🤥 😶 😐 😑 😬 🙄 😯 😦 😧 😮 😲 🥱 😴 🤤 😪 😵 🤐 🥴 🤢 🤮 🤧 😷 🤒 🤕 🤑 🤠 😈 👿 👻 💀 ☠️ 👽 🤖 🎃 😺 😸 😹 😻 😼 😽 🙀 😿 😾 ❤️ 🧡 💛 💚 💙 💜 🖤 🤍 🤎 💔 ❣️ 💕 💞 💓 💗 💖 💘 💝 💟 👍 👎 👌 🤌 ✌️ 🤞 🤟 🤘 🤙 👈 👉 👆 👇 ☝️ ✋ 🤚 🖐️ 🖖 👋 🤝 👏 🙌 🫶 👐 🤲 🙏 ✍️ 💪 👀 👁️ 🧠 🫀 🫁 🌱 🌿 ☘️ 🍀 🌸 🌺 🌻 🌞 🌙 ⭐ ✨ ⚡ 🔥 🌈 ☀️ ☁️ ❄️ ☕ 🍕 🍎 🎉 🎊 🎈 🎁 🎵 🎶 🎨 📚 💡 ✅ ❌ ⚠️ 🚀 🌍 💻 📱 🔒 🔑'
+          .split(' ').map((emoji, index) => (
+            <span key={`${emoji}-${index}`} title="Select and copy">{emoji}</span>
+          ))}
+      </div>
       <dl className="posting-help-formatting-panel posting-help-tab-panel">
             <div>
               <dd>
@@ -222,6 +233,12 @@ function PostingFormattingHelp() {
                 <small>Prevents new replies to this note and every reply beneath it.</small></dt>
             </div>
       </dl>
+      <div className="posting-help-search-panel posting-help-tab-panel">
+        <div className="posting-help-searches">
+          <PostingSuggestionSearchField kind="hashtags" search={search} />
+          <PostingSuggestionSearchField kind="mentions" search={search} />
+        </div>
+      </div>
     </section>
   )
 }
@@ -244,21 +261,7 @@ export function PostingHelp({ maxLength = 500, maxLines = 10, search, oneLine = 
         </summary>
       </details>
         <div className="posting-help-content" id="posting-help-content">
-          <section className="posting-help-section">
-            <div className="posting-help-searches">
-              <PostingSuggestionSearchField kind="hashtags" search={search} />
-              <PostingSuggestionSearchField kind="mentions" search={search} />
-            </div>
-          </section>
-          <PostingFormattingHelp />
-          <section className="posting-help-section">
-            <div className="posting-help-emoji-panel" aria-label="Emoji to copy and paste">
-              {'😀 😃 😄 😁 😆 😅 😂 🤣 😊 😇 🙂 🙃 😉 😌 😍 🥰 😘 😋 😛 😜 🤪 🤨 🧐 🤓 😎 🤩 🥳 😏 😒 😞 😔 😟 😕 🙁 ☹️ 😣 😖 😫 😩 🥺 😢 😭 😤 😠 😡 🤬 🤯 😳 🥵 🥶 😱 😨 😰 😥 😓 🤗 🤔 🫣 🤭 🫢 🤫 🤥 😶 😐 😑 😬 🙄 😯 😦 😧 😮 😲 🥱 😴 🤤 😪 😵 🤐 🥴 🤢 🤮 🤧 😷 🤒 🤕 🤑 🤠 😈 👿 👻 💀 ☠️ 👽 🤖 🎃 😺 😸 😹 😻 😼 😽 🙀 😿 😾 ❤️ 🧡 💛 💚 💙 💜 🖤 🤍 🤎 💔 ❣️ 💕 💞 💓 💗 💖 💘 💝 💟 👍 👎 👌 🤌 ✌️ 🤞 🤟 🤘 🤙 👈 👉 👆 👇 ☝️ ✋ 🤚 🖐️ 🖖 👋 🤝 👏 🙌 🫶 👐 🤲 🙏 ✍️ 💪 👀 👁️ 🧠 🫀 🫁 🌱 🌿 ☘️ 🍀 🌸 🌺 🌻 🌞 🌙 ⭐ ✨ ⚡ 🔥 🌈 ☀️ ☁️ ❄️ ☕ 🍕 🍎 🎉 🎊 🎈 🎁 🎵 🎶 🎨 📚 💡 ✅ ❌ ⚠️ 🚀 🌍 💻 📱 🔒 🔑'
-                .split(' ').map((emoji, index) => (
-                  <span key={`${emoji}-${index}`} title="Select and copy">{emoji}</span>
-                ))}
-            </div>
-          </section>
+          <PostingHelpTabs search={search} />
         </div>
     </div>
   )
