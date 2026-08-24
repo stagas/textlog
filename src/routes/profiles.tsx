@@ -8,7 +8,7 @@ import type { Hono } from 'hono'
 import { appName } from '../brand'
 import { databaseService } from '../database-service'
 import { markdownPlainText } from '../markdown'
-import { renderFollowBadge, renderProfileOg } from '../og'
+import { renderFollowBadge, renderProfileOg, type FollowBadgeTheme } from '../og'
 import { CONNECTION_PAGE_SIZE, decodePostCursor, TAG_PAGE_SIZE } from '../pagination'
 import { resolvedPageSize } from '../request-preferences'
 import { currentUser } from '../utils'
@@ -17,8 +17,12 @@ export function registerProfilesRoutes(app: Hono) {
   app.get('/u/:handle/follow.png', async c => {
     const data = await databaseService().call('profiles.ogData', { handle: c.req.param('handle') })
     if (!data) return c.text('Not found', 404, { 'access-control-allow-origin': '*' })
-    if (data.canonicalHandle) return c.redirect(`/u/${data.canonicalHandle}/follow.png`, 301)
-    const image = renderFollowBadge(data.profile!.handle)
+    const requestedTheme = c.req.query('theme')
+    const theme: FollowBadgeTheme = requestedTheme === 'light' || requestedTheme === 'sepia'
+      || requestedTheme === 'dracula' ? requestedTheme : 'dark'
+    const themeQuery = theme === 'dark' ? '' : `?theme=${theme}`
+    if (data.canonicalHandle) return c.redirect(`/u/${data.canonicalHandle}/follow.png${themeQuery}`, 301)
+    const image = renderFollowBadge(data.profile!.handle, theme)
     const body = image.buffer.slice(image.byteOffset, image.byteOffset + image.byteLength) as ArrayBuffer
     return new Response(body, {
       headers: {

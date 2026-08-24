@@ -60,22 +60,40 @@ export function Profile(
   const configuredOrigin = Bun.env.APP_URL?.replace(/\/$/, '')
   const profileUrl = social?.url || `${configuredOrigin || ''}/u/${profile.handle}`
   const badgeUrl = `${profileUrl}/follow.png`
-  const presenceCode = `<a href="${profileUrl}" target="_blank" rel="noopener noreferrer"><img src="${badgeUrl}" alt="Follow @${profile.handle} on textlog" height="32"></a>`
+  const presenceThemes = [
+    { name: 'light', imageUrl: `${badgeUrl}?theme=light` },
+    { name: 'dark', imageUrl: badgeUrl },
+    { name: 'sepia', imageUrl: `${badgeUrl}?theme=sepia` },
+    { name: 'dracula', imageUrl: `${badgeUrl}?theme=dracula` },
+  ] as const
+  const presenceCode = (imageUrl: string) => `<a href="${profileUrl}" target="_blank" rel="noopener noreferrer"><img src="${imageUrl}" alt="Follow @${profile.handle} on textlog" height="32"></a>`
   const presence = (
     <section className="profile-presence" aria-labelledby="profile-presence-heading">
       <h2 id="profile-presence-heading">Share your presence</h2>
       <div className="profile-presence-content">
-        <a className="profile-presence-preview" href={profileUrl} target="_blank" rel="noopener noreferrer">
-          <img src={badgeUrl} alt={`Follow @${profile.handle} on textlog`} height="32" />
-        </a>
-        <p>Paste this into your site to help people find and follow you on textlog.</p>
-        <div className="magic-link-output profile-presence-code">
-          <output className="form-control magic-link-value api-key-output" tabIndex={0}
-            aria-label="profile presence embed code"
-          >
-            {presenceCode}
-          </output>
+        {presenceThemes.map(theme => (
+          <input className="profile-presence-tab-input visually-hidden" type="radio" name="presence-theme"
+            id={`presence-theme-${theme.name}`} defaultChecked={theme.name === 'dark'} key={theme.name} />
+        ))}
+        <div className="profile-presence-tabs" role="tablist" aria-label="Button palette">
+          {presenceThemes.map(theme => (
+            <label htmlFor={`presence-theme-${theme.name}`} role="tab" key={theme.name}>{theme.name}</label>
+          ))}
         </div>
+        {presenceThemes.map(theme => (
+          <div className={`profile-presence-panel profile-presence-panel-${theme.name}`} key={theme.name}>
+            <a className="profile-presence-preview" href={profileUrl} target="_blank" rel="noopener noreferrer">
+              <img src={theme.imageUrl} alt={`Follow @${profile.handle} on textlog`} height="32" />
+            </a>
+            <p>Paste this into your site to help people find and follow you on textlog.</p>
+            <div className="magic-link-output profile-presence-code">
+              <output className="form-control magic-link-value api-key-output" tabIndex={0}
+                aria-label={theme.name === 'dark' ? 'profile presence embed code' : `${theme.name} profile presence embed code`}>
+                {presenceCode(theme.imageUrl)}
+              </output>
+            </div>
+          </div>
+        ))}
       </div>
     </section>
   )

@@ -1707,6 +1707,11 @@ test('Profile edit offers an expanded copy-paste presence badge with a safe new-
   expect(html).not.toContain('<details class="profile-presence"')
   expect(html).toContain('href="https://textlog.test/u/writer" target="_blank" rel="noopener noreferrer"')
   expect(html).toContain('src="https://textlog.test/u/writer/follow.png"')
+  expect(html).toContain('class="profile-presence-tabs" role="tablist" aria-label="Button palette"')
+  expect(html).toContain('src="https://textlog.test/u/writer/follow.png?theme=light"')
+  expect(html).toContain('src="https://textlog.test/u/writer/follow.png?theme=sepia"')
+  expect(html).toContain('src="https://textlog.test/u/writer/follow.png?theme=dracula"')
+  expect(html).toContain('https://textlog.test/u/writer/follow.png?theme=dracula')
   expect(html).toContain('class="form-control magic-link-value api-key-output" tabindex="0"')
   expect(html).toContain('&lt;a href=&quot;https://textlog.test/u/writer&quot; target=&quot;_blank&quot;')
 

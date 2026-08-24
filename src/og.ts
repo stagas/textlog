@@ -152,11 +152,11 @@ export function postOgText(body: string) {
   return { text, links, code, math }
 }
 
-function drawLogo(ctx: CanvasRenderingContext2D, x: number, y: number, scale = 3) {
+function drawLogo(ctx: CanvasRenderingContext2D, x: number, y: number, scale = 3, color = accentColor) {
   ctx.save()
   ctx.translate(x, y)
   ctx.scale(scale, scale)
-  ctx.fillStyle = '#9abd8e'
+  ctx.fillStyle = color
   ctx.beginPath()
   ctx.rect(13, 16, 8, 3)
   ctx.moveTo(8.5, 13)
@@ -171,7 +171,17 @@ function drawLogo(ctx: CanvasRenderingContext2D, x: number, y: number, scale = 3
   ctx.restore()
 }
 
-export function renderFollowBadge(handle: string) {
+export type FollowBadgeTheme = 'light' | 'dark' | 'sepia' | 'dracula'
+
+const followBadgePalettes: Record<FollowBadgeTheme, { background: string; foreground: string; accent: string }> = {
+  light: { background: '#f4f3ee', foreground: '#20231f', accent: '#749668' },
+  dark: { background: '#171a17', foreground: '#e5e8e1', accent: '#9abd8e' },
+  sepia: { background: '#f4ecd8', foreground: '#433422', accent: '#8a6d3b' },
+  dracula: { background: '#282a36', foreground: '#f8f8f2', accent: '#bd93f9' },
+}
+
+export function renderFollowBadge(handle: string, theme: FollowBadgeTheme = 'dark') {
+  const palette = followBadgePalettes[theme]
   const brand = appName()
   const pixelRatio = 1
   const height = 64
@@ -190,30 +200,30 @@ export function renderFollowBadge(handle: string) {
   const ctx = canvas.getContext('2d')
   ctx.scale(pixelRatio, pixelRatio)
 
-  ctx.fillStyle = '#111512'
+  ctx.fillStyle = palette.background
   ctx.fillRect(0, 0, width, height)
 
   ctx.font = `400 ${fontSize}px monospace`
   ctx.textBaseline = 'middle'
   let x = 18
   const baseline = height / 2 + 1
-  ctx.fillStyle = textColor
+  ctx.fillStyle = palette.foreground
   ctx.fillText('follow ', x, baseline)
   x += ctx.measureText('follow ').width
   ctx.font = `700 ${fontSize}px monospace`
-  ctx.fillStyle = accentColor
+  ctx.fillStyle = palette.accent
   ctx.fillText(`@${handle}`, x, baseline)
   x += ctx.measureText(`@${handle}`).width
   ctx.font = `400 ${fontSize}px monospace`
-  ctx.fillStyle = textColor
+  ctx.fillStyle = palette.foreground
   ctx.fillText(' on', x, baseline)
   x += ctx.measureText(' on').width + 16
 
   // Keep the mark and wordmark together as the brand lockup. drawLogo's
   // visible path occupies x=2.47..21 and y=7..19 within its local space.
-  drawLogo(ctx, x - 2.47 * markScale, height / 2 - 13 * markScale + 1, markScale)
+  drawLogo(ctx, x - 2.47 * markScale, height / 2 - 13 * markScale + 1, markScale, palette.accent)
   x += markWidth + 9
-  ctx.fillStyle = textColor
+  ctx.fillStyle = palette.foreground
   ctx.font = `700 ${fontSize}px monospace`
   ctx.fillText(brand, x, baseline)
 
