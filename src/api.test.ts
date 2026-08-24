@@ -61,6 +61,8 @@ function fixture(now?: () => number) {
     INSERT INTO post_search(post_search) VALUES('rebuild');
   `)
   rebuildHotPosts(database)
+  database.query(`UPDATE post_hot SET score_updated_at=CURRENT_TIMESTAMP,
+    latest_activity_at=CURRENT_TIMESTAMP WHERE post_id=1`).run()
   const app = new Hono()
   const service: DatabaseService = { call: (operation, input) => executeDatabaseDomain(database, operation, input) }
   registerApiRoutes(app, null, now, service, request => apiUser(request, database))
@@ -372,6 +374,8 @@ describe('public API', () => {
     database.run(`UPDATE posts SET deleted_at='2026-08-03 14:50:00' WHERE id=7`)
     database.run(`INSERT INTO post_hot VALUES(6,0,0,0,'2026-08-03 14:30:00','2026-08-03 14:30:00')`)
     rebuildHotPosts(database)
+    database.query(`UPDATE post_hot SET score_updated_at=CURRENT_TIMESTAMP,
+      latest_activity_at=CURRENT_TIMESTAMP WHERE post_id=1`).run()
 
     const latest = await (await request(app, '/api/v1/feeds/latest')).json() as any
     const hot = await (await request(app, '/api/v1/feeds/hot')).json() as any

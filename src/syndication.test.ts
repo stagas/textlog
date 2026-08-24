@@ -46,6 +46,8 @@ function fixture(firstPostBody?: string) {
   `)
   if (firstPostBody !== undefined) database.query('UPDATE posts SET body=? WHERE id=1').run(firstPostBody)
   rebuildHotPosts(database)
+  database.query(`UPDATE post_hot SET score_updated_at=CURRENT_TIMESTAMP,
+    latest_activity_at=CURRENT_TIMESTAMP WHERE post_id=1`).run()
   const app = new Hono()
   const service: DatabaseService = { call: (operation, input) => executeDatabaseDomain(database, operation, input) }
   registerSyndicationRoutes(app, service, null)
