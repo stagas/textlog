@@ -1,4 +1,5 @@
 import type { ApiPost } from './api'
+import { decodeHtmlEntities } from './link-preview'
 import { markdownPlainText, sanitizedMarkdownHtml } from './markdown'
 import { markdownUrl } from './utils'
 
@@ -51,14 +52,17 @@ function feedUpdated(feed: SyndicationFeed) {
 
 function feedContent(feed: SyndicationFeed, body: string) {
   const html = sanitizedMarkdownHtml(body)
-  return html.replace(/\bhref="([^"]+)"/g, (attribute, href: string) => {
-    if (/^(?:https?:|mailto:)/i.test(href)) return attribute
+  return html.replace(/\bhref="([^"]+)"/g, (_attribute, href: string) => {
+    const decodedHref = decodeHtmlEntities(href)
+    if (/["'<>\u0000-\u001f\u007f]/.test(decodedHref)) return ''
+    const escapedHref = (value: string) => xml(value)
+    if (/^(?:https?:|mailto:)/i.test(decodedHref)) return `href="${escapedHref(decodedHref)}"`
     try {
-      const absolute = markdownUrl(href) || new URL(href, feed.pageUrl).href
-      return `href="${absolute}"`
+      const absolute = markdownUrl(decodedHref) || new URL(decodedHref, feed.pageUrl).href
+      return `href="${escapedHref(absolute)}"`
     }
     catch {
-      return attribute
+      return ''
     }
   })
 }

@@ -141,6 +141,17 @@ describe('RSS and Atom feeds', () => {
     expect(atom).toContain(link)
   })
 
+  test('does not resolve quote-tainted feed links relative to profile URLs', async () => {
+    const imageUrl = 'https://cf-og.textlog.cc/images/b02499ef-7697-44de-b66a-63b9e6dc2c4f.png'
+    const app = fixture(`![image](${imageUrl}\\" ) [query](https://example.com/image?a=1&b=2)`)
+    const atom = await (await app.request('https://textlog.cc/u/Alice.atom')).text()
+
+    expect(atom).not.toContain(`${imageUrl}&amp;quot;`)
+    expect(atom).not.toContain(`/u/${imageUrl}`)
+    expect(atom).toContain('&lt;a &gt;image&lt;/a&gt;')
+    expect(atom).toContain('href=&quot;https://example.com/image?a=1&amp;amp;b=2&quot;')
+  })
+
   test('filters user and hashtag feeds and redirects historical handles', async () => {
     const app = fixture()
     const user = await (await app.request('https://textlog.cc/u/Alice.atom')).text()
