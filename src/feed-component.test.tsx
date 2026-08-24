@@ -143,7 +143,7 @@ test('flat feed view restores source order and offers the tree toggle after to m
   expect(html.indexOf('id="post-51"')).toBeLessThan(html.indexOf('id="post-50"'))
   expect(html).toContain('href="/latest?page=2">tree</a>')
   expect(html.indexOf('class="to-me-label"')).toBeLessThan(html.indexOf('href="/latest?page=2">tree</a>'))
-  expect(html).toContain('href="/latest?view=flat&amp;page=1"')
+  expect(html).toContain('href="/latest?view=flat&amp;page=1&amp;_scroll=instant"')
   expect(html).toContain('href="/to-me?view=flat"')
 })
 
