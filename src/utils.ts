@@ -256,7 +256,8 @@ export function markdownUrl(destination: string) {
 type LinkToken = {
   index: number
   lastIndex: number
-  kind: 'bold' | 'code' | 'code-fence' | 'italics' | 'latex-fence' | 'math' | 'markdown' | 'strikethrough'
+  kind: 'bold' | 'code' | 'code-fence' | 'italics' | 'latex-fence' | 'math' | 'markdown' | 'redacted'
+    | 'strikethrough'
     | 'underline'
     | 'url' | 'reference'
   raw: string
@@ -367,6 +368,12 @@ export function linkTokens(body: string, flags?: PostContentFlags): LinkToken[] 
         raw: match[0], label: match[1] })
     }
   }
+  for (const match of body.matchAll(/(?<!\|)\|(?!\|)([^|\r\n]*?\S[^|\r\n]*?)\|(?!\|)/g)) {
+    if (!escapedAt(body, match.index)) {
+      tokens.push({ index: match.index, lastIndex: match.index + match[0].length, kind: 'redacted',
+        raw: match[0], label: match[1] })
+    }
+  }
   if (!flags || flags.has_links) {
     for (const match of body.matchAll(/!?\[((?:\\[\[\]]|[^\]\r\n])+)\]\(([^\s<>")]+)\)/gi)) {
       const url = markdownUrl(match[2])
@@ -396,8 +403,8 @@ export function linkTokens(body: string, flags?: PostContentFlags): LinkToken[] 
       }
     }
   }
-  const priority = { 'code-fence': 0, 'latex-fence': 0, code: 1, math: 2, markdown: 3, strikethrough: 4,
-    bold: 4, italics: 4, underline: 4, url: 5, reference: 6 }
+  const priority = { 'code-fence': 0, 'latex-fence': 0, code: 1, math: 2, markdown: 3, redacted: 4,
+    strikethrough: 4, bold: 4, italics: 4, underline: 4, url: 5, reference: 6 }
   return tokens.sort((a, b) => a.index - b.index || priority[a.kind] - priority[b.kind])
 }
 
@@ -531,7 +538,7 @@ export function linkify(body: string, mentionBios: Record<string, string> = {}, 
   if (containsAsciiArt(body)) {
     return linkifyAsciiReferences(body, mentionBios, appUrl, navigationQuery, hashtagCounts, mentionNoteCounts, popover)
   }
-  if (flags && !flags.has_latex && !flags.has_links && !flags.has_code && !/[~*_/]/.test(body)) {
+  if (flags && !flags.has_latex && !flags.has_links && !flags.has_code && !/[~*_/|]/.test(body)) {
     return highlighted(body, highlightTerms)
   }
   let html = ''
@@ -570,6 +577,9 @@ export function linkify(body: string, mentionBios: Record<string, string> = {}, 
     }
     else if (match.kind === 'italics') {
       html += `<em>${renderedText(match.label!, highlightTerms)}</em>`
+    }
+    else if (match.kind === 'redacted') {
+      html += `<span class="redacted" tabindex="0">${renderedText(match.label!, highlightTerms)}</span>`
     }
     else if (match.kind === 'url') {
       const url = match.url!

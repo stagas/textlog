@@ -160,6 +160,14 @@ function PostingHelpTabs({ search }: { search?: PostingSuggestionSearch | null }
             <div>
               <dd>
                 <code>
+                  <b>|</b>redacted<b>|</b>
+                </code>
+              </dd>
+              <dt>Redacted until hovered or tapped</dt>
+            </div>
+            <div>
+              <dd>
+                <code>
                   <b>```</b>…<b>```</b>
                 </code>
               </dd>

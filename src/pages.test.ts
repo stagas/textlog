@@ -367,6 +367,8 @@ test('posting helpers are searchable details and show copyable highlighted resul
   expect(html).toContain('class="posting-help-modifiers-panel posting-help-tab-panel"')
   expect(html).toContain('<dt>Strikethrough</dt>')
   expect(html).toContain('<b>~</b>text<b>~</b> or <b>~~</b>text<b>~~</b>')
+  expect(html).toContain('<b>|</b>redacted<b>|</b>')
+  expect(html).toContain('<dt>Redacted until hovered or tapped</dt>')
   expect(html).toContain('<span class="posting-help-modifier-heading">Polls</span><small>Use 2–8 unique options.</small>')
   expect(html).toContain('Which one? <b>#poll</b><br/>First option<br/>Second option')
   expect(html).toContain('<span class="posting-help-modifier-heading">Spoilers</span><small>Text after #spoiler is hidden until revealed.</small>')

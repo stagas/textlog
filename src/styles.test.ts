@@ -44,7 +44,8 @@ describe('in-memory stylesheet', () => {
     expect(css).toContain('.tappable-post a:not(.post-hit-area):not(.parent-hit-area)')
     expect(css).toContain('.tappable-post .parent-hit-area {\n  position: absolute;')
     expect(css).toContain(
-      '.tappable-post input,\n.tappable-post .post-spoiler-summary {\n  position: relative;\n  z-index: 21;',
+      '.tappable-post input,\n.tappable-post .post-spoiler-summary,\n.tappable-post .redacted {\n'
+        + '  position: relative;\n  z-index: 21;',
     )
     expect(css).toContain('.tappable-post:has(> .post-hit-area:hover),')
     expect(css).toContain('background: color-mix(in srgb, var(--accent) 5%, transparent);')
@@ -366,7 +367,8 @@ describe('in-memory stylesheet', () => {
       '.tappable-post a:not(.post-hit-area):not(.parent-hit-area):not(.remote-link-popover),',
     )
     expect(css).toContain(
-      '.tappable-post input,\n.tappable-post .post-spoiler-summary {\n  position: relative;\n  z-index: 21;',
+      '.tappable-post input,\n.tappable-post .post-spoiler-summary,\n.tappable-post .redacted {\n'
+        + '  position: relative;\n  z-index: 21;',
     )
     expect(cardRule).toContain('cursor: pointer;')
   })

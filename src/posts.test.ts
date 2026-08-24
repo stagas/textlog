@@ -135,6 +135,14 @@ describe('post persistence', () => {
       .toBe('<em>italics</em>')
     expect(linkify('Keep \\/literal/')).toBe('Keep \\/literal/')
   })
+  test('renders pipe-delimited redacted text for hover, focus, and mobile taps', () => {
+    expect(linkify('The answer is |classified|.'))
+      .toBe('The answer is <span class="redacted" tabindex="0">classified</span>.')
+    expect(linkify('|hidden words|', {}, [], undefined, { has_latex: 0, has_links: 0, has_code: 0 }))
+      .toBe('<span class="redacted" tabindex="0">hidden words</span>')
+    expect(linkify('Keep \\|literal|')).toBe('Keep \\|literal|')
+    expect(linkify('Use `|literal|`')).toBe('Use <code>|literal|</code>')
+  })
   test('keeps ASCII-art markup literal while linking tags and handles', () => {
     const body = '[eye](https://example.com) $x^2$ <nose> @Reader #ascii example.org/art'
     expect(linkify(body, { reader: 'Reader bio' })).toBe(

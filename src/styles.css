@@ -1828,7 +1828,8 @@ nav form {
 .tappable-post button,
 .tappable-post label,
 .tappable-post input,
-.tappable-post .post-spoiler-summary {
+.tappable-post .post-spoiler-summary,
+.tappable-post .redacted {
   position: relative;
   z-index: 21;
 }
@@ -1995,6 +1996,24 @@ nav form {
 
 .post-body u {
   text-decoration: underline;
+}
+
+.redacted {
+  color: var(--ink);
+  background-color: var(--ink);
+  cursor: pointer;
+  outline: none;
+}
+
+.redacted:hover,
+.redacted:focus {
+  color: inherit;
+  background-color: transparent;
+}
+
+.redacted:focus-visible {
+  outline: var(--focus-ring-width) solid var(--accent);
+  outline-offset: 2px;
 }
 
 .post-spoiler {
