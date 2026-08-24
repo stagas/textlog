@@ -423,10 +423,12 @@ export function Post({
   className?: string; topActions?: React.ReactNode; showReadAction?: boolean; hideTopMeta?: boolean })
 {
   if (p.link_previews && Object.values(p.link_previews).some(preview => preview.linkedPost)) {
+    const linkedPostReturnPath = returnPath || `/post/${p.id}#post-${p.id}`
     p = { ...p, link_previews: Object.fromEntries(Object.entries(p.link_previews).map(([url, preview]) => [url,
       preview.linkedPost
         ? { ...preview, renderedPostHtml: renderToStaticMarkup(<Post p={preview.linkedPost as PostView} user={user}
-          showParent={false} showReplyCount tappable showReadAction={false} className="internal-post-card" />) }
+          showParent={false} showReplyCount tappable showReadAction={false} className="internal-post-card"
+          returnPath={linkedPostReturnPath} />), linkedPostReturnPath }
         : preview,
     ])) }
   }

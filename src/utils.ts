@@ -56,7 +56,18 @@ function previewLink(html: string, url: string, appUrl: string | undefined, popo
   const preview = popover?.linkPreviews?.[url]
   if (!preview) return html
   if (preview.renderedPostHtml) {
-    return `<span class="remote-link-menu internal-post-link-menu">${html}`
+    const triggerHtml = (() => {
+      if (!preview.linkedPostReturnPath) return html
+      try {
+        const destination = new URL(url)
+        destination.searchParams.set('from', preview.linkedPostReturnPath)
+        return html.replace(`href="${esc(url)}"`, `href="${esc(destination.href)}"`)
+      }
+      catch {
+        return html
+      }
+    })()
+    return `<span class="remote-link-menu internal-post-link-menu">${triggerHtml}`
       + `<span class="remote-link-popover internal-post-popover">${preview.renderedPostHtml}</span></span>`
   }
   if (preview.linkedPost) return html
