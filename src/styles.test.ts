@@ -125,7 +125,8 @@ describe('in-memory stylesheet', () => {
   test('animates thread folding with a collapsible grid track', async () => {
     const css = await Bun.file(new URL('./styles.css', import.meta.url)).text()
     expect(css).toContain('.reply-branch {\n  display: grid;\n  grid-template-rows: 1fr;')
-    expect(css).toContain('.thread-branch-content {\n  min-height: 0;\n  overflow: hidden;')
+    expect(css).toContain('.thread-branch-content {\n  min-height: 0;\n  overflow: visible;')
+    expect(css).toContain('.thread-fold-input:checked~.reply-branch .thread-branch-content {\n  overflow: hidden;')
     expect(css).toContain('.thread-fold-input:checked~.reply-branch {\n  grid-template-rows: 0fr;')
     expect(css).toContain('transition: grid-template-rows 200ms ease, visibility 0s 200ms;')
   })
@@ -135,6 +136,10 @@ describe('in-memory stylesheet', () => {
     expect(css).toContain('.activity-more-content {\n  display: grid;\n  grid-template-rows: 0fr;')
     expect(css).toContain('.activity-more-content-inner {\n  min-height: 0;\n  overflow: hidden;')
     expect(css).toContain('.activity-more-input:checked ~ .activity-more-content {\n  grid-template-rows: 1fr;')
+    expect(css).toContain(
+      '.activity-more-input:checked ~ .activity-more-content .activity-more-content-inner {\n'
+      + '  overflow: visible;\n  transition: overflow 0s 200ms;',
+    )
     expect(css).toContain('.activity-more-summary::before {\n  content: "";')
     expect(css).toContain('.activity-more-input:checked + .activity-more-summary::before {\n  transform: rotate(90deg);')
   })

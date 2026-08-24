@@ -2087,6 +2087,8 @@ nav form {
 
 .post-spoiler:has(.post-spoiler-input:checked) .post-spoiler-content-inner {
   margin-top: var(--space-1);
+  overflow: visible;
+  transition: overflow 0s 200ms;
 }
 
 .post-body a,
@@ -5552,6 +5554,11 @@ a.post-context:hover {
   transition: grid-template-rows 200ms ease, visibility 0s;
 }
 
+.activity-more-input:checked ~ .activity-more-content .activity-more-content-inner {
+  overflow: visible;
+  transition: overflow 0s 200ms;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .activity-more-summary::before,
   .activity-more-content,
@@ -5728,6 +5735,10 @@ a.post-context:hover {
 
 .thread-branch-content {
   min-height: 0;
+  overflow: visible;
+}
+
+.thread-fold-input:checked~.reply-branch .thread-branch-content {
   overflow: hidden;
 }
 
