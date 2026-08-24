@@ -2,4 +2,5 @@
 .embed-post p code{color:var(--quote-ink)}
 .embed-post .embed-parent p code{color:color-mix(in srgb,var(--quote-ink),var(--muted))}
 .embed-post .post-quote{display:block;margin:.5lh 0;padding-left:10px;border-left:3px solid var(--soft);color:color-mix(in srgb,var(--quote-ink) 55%,var(--muted))}
+.embed-post .code-fence{display:block;max-width:100%;margin:.5lh 0;padding-left:10px;overflow-x:auto;border-left:3px solid var(--soft);scrollbar-width:none;white-space:pre}
 .embed-post p math{font-size:1.12em;white-space:normal}.embed-post p .math-display{display:block;margin-block:1.65em 0;text-align:left}.embed-post p .math-display>math{display:inline-block;display:inline math}

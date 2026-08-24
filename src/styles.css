@@ -5870,7 +5870,10 @@ a.post-context:hover {
 .post .code-fence {
   display: block;
   max-width: 100%;
+  margin: 0.5lh 0;
+  padding-left: var(--space-3);
   overflow-x: auto;
+  border-left: 3px solid var(--soft);
   scrollbar-width: none;
   white-space: pre;
 }
