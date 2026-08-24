@@ -2550,6 +2550,13 @@ textarea.form-control {
   white-space: pre-wrap;
 }
 
+:is(.write-compose, .replybox) textarea {
+  field-sizing: content;
+  height: auto;
+  min-height: calc(5lh + 28px);
+  max-height: calc(10lh + 28px);
+}
+
 .button-wide {
   width: 100%;
   margin-top: var(--space-2);
@@ -4357,7 +4364,10 @@ form.report-panel {
 }
 
 .bio-form textarea {
-  height: 96px;
+  field-sizing: content;
+  height: auto;
+  min-height: calc(3lh + 28px);
+  max-height: calc(5lh + 28px);
   line-height: 1.55;
 }
 
