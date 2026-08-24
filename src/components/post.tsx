@@ -60,11 +60,9 @@ export function isProbablyNonEnglish(text: string) {
   return Array.from(text).some(character => /\p{L}/u.test(character) && !/[A-Za-z]/.test(character))
 }
 
-export function googleTranslateHref(text: string) {
-  // The Google Translate Android app intercepts translate.google.com links but drops their
-  // text parameters. Google Search preserves the query in both its app and mobile browsers.
-  const query = new URLSearchParams({ q: `translate to English: ${text}` })
-  return `https://www.google.com/search?${query}`
+export function translateHref(text: string) {
+  const query = new URLSearchParams({ q: `!tr ${text}` })
+  return `https://duckduckgo.com/?${query}`
 }
 
 function PollPreview({ body }: { body: string }) {
@@ -480,7 +478,7 @@ export function Post({
   const resolvedReplyLabel = replyLabel ?? (user
     ? user.id === p.user_id ? 'continue' : 'reply'
     : 'enter to reply')
-  const translateHref = !preview && isProbablyNonEnglish(p.body) ? googleTranslateHref(p.body) : undefined
+  const resolvedTranslateHref = !preview && isProbablyNonEnglish(p.body) ? translateHref(p.body) : undefined
   if (p.deleted_at) {
     return (
       <article className="post deleted-post" id={`post-${p.id}`}>
@@ -583,7 +581,7 @@ export function Post({
       }} />
       {preview ? <PollPreview body={p.body} /> : <Poll p={p} returnPath={returnPath} />}
       <Todo p={p} user={user} preview={preview} returnPath={returnPath} formPrefix={formPrefix} />
-      {!parent && (showReplyAction && !p.thread_locked || resolvedContinuationHref || translateHref || canModerate || reportHref) && (
+      {!parent && (showReplyAction && !p.thread_locked || resolvedContinuationHref || resolvedTranslateHref || canModerate || reportHref) && (
       <MetaRow className={`postfoot${preview ? ' preview-post-meta' : ''}`}>
         {!parent && showReplyAction && !p.thread_locked && (preview
           ? <span className="quiet preview-reply">{resolvedReplyLabel}</span>
@@ -592,10 +590,10 @@ export function Post({
         {resolvedContinuationHref && <a className="quiet post-continuation-link" href={resolvedContinuationHref} rel="nofollow">
           {continuationLabel}
         </a>}
-        {(translateHref || canModerate || reportHref) && (
+        {(resolvedTranslateHref || canModerate || reportHref) && (
           <span className="post-actions">
-            {translateHref && (
-              <a className="quiet translate-link" href={translateHref} target="_blank"
+            {resolvedTranslateHref && (
+              <a className="quiet translate-link" href={resolvedTranslateHref} target="_blank"
                 rel="nofollow noopener noreferrer" aria-label={`translate post by @${p.handle} to English`}>translate</a>
             )}
             {canModerate && (
@@ -678,7 +676,7 @@ export function Post({
             )}
         </blockquote>
       )}
-      {parent && (showReplyAction && !p.thread_locked || resolvedContinuationHref || translateHref || canModerate || reportHref) && (
+      {parent && (showReplyAction && !p.thread_locked || resolvedContinuationHref || resolvedTranslateHref || canModerate || reportHref) && (
         <MetaRow className={`postfoot postfoot-after-quote${preview ? ' preview-post-meta' : ''}`}>
           {showReplyAction && !p.thread_locked && (preview
             ? <span className="quiet preview-reply">{resolvedReplyLabel}</span>
@@ -687,10 +685,10 @@ export function Post({
           {resolvedContinuationHref && <a className="quiet post-continuation-link" href={resolvedContinuationHref} rel="nofollow">
             {continuationLabel}
           </a>}
-          {(translateHref || canModerate || reportHref) && (
+          {(resolvedTranslateHref || canModerate || reportHref) && (
             <span className="post-actions">
-              {translateHref && (
-                <a className="quiet translate-link" href={translateHref} target="_blank"
+              {resolvedTranslateHref && (
+                <a className="quiet translate-link" href={resolvedTranslateHref} target="_blank"
                   rel="nofollow noopener noreferrer" aria-label={`translate post by @${p.handle} to English`}>translate</a>
               )}
               {canModerate && (

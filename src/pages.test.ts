@@ -36,7 +36,8 @@ import {
   RecapEmails,
   Reply,
 } from './components/pages'
-import { conversationTopPath, FeedThreads, googleTranslateHref, isProbablyNonEnglish, Post, postedReplyPath, PreviewPost, replyAnchorReturnPath,
+import { conversationTopPath, FeedThreads, isProbablyNonEnglish, Post, postedReplyPath, PreviewPost, replyAnchorReturnPath,
+  translateHref,
   ThreadReplies } from './components/post'
 import { SearchResults, searchPersonReturnPath, searchPostReturnPath } from './components/search'
 
@@ -2616,7 +2617,7 @@ test('Post detail places report opposite reply in the footer', () => {
   expect(html.slice(0, html.indexOf('<div class="postfoot">'))).not.toContain('class="quiet report-link"')
 })
 
-test('probable non-English posts offer a right-aligned Google Translate action', () => {
+test('probable non-English posts offer a right-aligned DuckDuckGo translate action', () => {
   expect(isProbablyNonEnglish('An English note with emoji 🎉 and numbers 123')).toBe(false)
   expect(isProbablyNonEnglish('Una nota en español')).toBe(true)
   expect(isProbablyNonEnglish('Ελληνικό κείμενο')).toBe(true)
@@ -2631,10 +2632,10 @@ test('probable non-English posts offer a right-aligned Google Translate action',
 
   const footer = html.slice(html.indexOf('<div class="postfoot">'), html.indexOf('</div></article>'))
   expect(footer).toContain('class="quiet post-reply-link"')
-  expect(footer).toContain(`href="${googleTranslateHref(body).replaceAll('&', '&amp;')}"`)
-  const translateUrl = new URL(googleTranslateHref(body))
-  expect(translateUrl.hostname).toBe('www.google.com')
-  expect(translateUrl.searchParams.get('q')).toBe(`translate to English: ${body}`)
+  expect(footer).toContain(`href="${translateHref(body).replaceAll('&', '&amp;')}"`)
+  const translateUrl = new URL(translateHref(body))
+  expect(translateUrl.hostname).toBe('duckduckgo.com')
+  expect(translateUrl.searchParams.get('q')).toBe(`!tr ${body}`)
   expect(footer.indexOf('translate')).toBeLessThan(footer.indexOf('report'))
 })
 
