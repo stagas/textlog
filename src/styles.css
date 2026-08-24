@@ -762,6 +762,10 @@ header>nav>a:not(.button),
   margin-top: var(--space-2);
 }
 
+.reference-popover-bio + .reference-popover-actions {
+  margin-top: 0;
+}
+
 .reference-popover-actions:has(.follows-you) {
   margin-top: 1rem;
 }

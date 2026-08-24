@@ -353,6 +353,7 @@ describe('in-memory stylesheet', () => {
     expect(css).toContain('.reference-menu-popover:not(:has(.reference-popover-bio)) > .reference-popover-actions:has(.follows-you) {')
     expect(css).toContain('margin-top: var(--space-2);\n  margin-bottom: var(--space-2);\n'
       + '  padding-bottom: var(--space-2);\n  border-bottom: 1px solid var(--soft);\n  color: var(--quote-ink);')
+    expect(css).toContain('.reference-popover-bio + .reference-popover-actions {\n  margin-top: 0;')
     expect(css).toContain('.reference-menu .reference-menu-popover .button {')
   })
 
