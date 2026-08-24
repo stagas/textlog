@@ -120,14 +120,6 @@ function PostingHelpTabs({ search }: { search?: PostingSuggestionSearch | null }
             <div>
               <dd>
                 <code>
-                  <b>`</b>code<b>`</b>
-                </code>
-              </dd>
-              <dt>Inline code</dt>
-            </div>
-            <div>
-              <dd>
-                <code>
                   <b>~</b>text<b>~</b> or <b>~~</b>text<b>~~</b>
                 </code>
               </dd>
@@ -160,10 +152,26 @@ function PostingHelpTabs({ search }: { search?: PostingSuggestionSearch | null }
             <div>
               <dd>
                 <code>
+                  <b>&gt;</b> text
+                </code>
+              </dd>
+              <dt>Quote</dt>
+            </div>
+            <div>
+              <dd>
+                <code>
                   <b>|</b>redacted<b>|</b>
                 </code>
               </dd>
-              <dt>Redacted until hovered or tapped</dt>
+              <dt>Redacted</dt>
+            </div>
+            <div>
+              <dd>
+                <code>
+                  <b>`</b>code<b>`</b>
+                </code>
+              </dd>
+              <dt>Inline code</dt>
             </div>
             <div>
               <dd>

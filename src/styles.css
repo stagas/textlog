@@ -2157,6 +2157,14 @@ nav form {
   color: var(--quote-ink);
 }
 
+.post-body .post-quote {
+  display: block;
+  margin: 0.5lh 0;
+  padding-left: var(--space-3);
+  border-left: 3px solid var(--soft);
+  color: color-mix(in srgb, var(--quote-ink) 55%, var(--muted));
+}
+
 .post-body math {
   font-size: 1.12em;
   white-space: normal;

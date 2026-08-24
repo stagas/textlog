@@ -538,6 +538,22 @@ export function linkify(body: string, mentionBios: Record<string, string> = {}, 
   if (containsAsciiArt(body)) {
     return linkifyAsciiReferences(body, mentionBios, appUrl, navigationQuery, hashtagCounts, mentionNoteCounts, popover)
   }
+  const lines = body.split('\n')
+  if (lines.some(line => /^>\s?/.test(line))) {
+    let html = ''
+    for (let index = 0; index < lines.length;) {
+      const quoted = /^>\s?/.test(lines[index])
+      const group: string[] = []
+      while (index < lines.length && /^>\s?/.test(lines[index]) === quoted) {
+        group.push(quoted ? lines[index].replace(/^>\s?/, '') : lines[index])
+        index++
+      }
+      const rendered = linkify(group.join('\n'), mentionBios, highlightTerms, appUrl, flags, navigationQuery,
+        hashtagCounts, mentionNoteCounts, popover, false)
+      html += quoted ? `<span class="post-quote">${rendered}</span>` : rendered
+    }
+    return html
+  }
   if (flags && !flags.has_latex && !flags.has_links && !flags.has_code && !/[~*_/|]/.test(body)) {
     return highlighted(body, highlightTerms)
   }

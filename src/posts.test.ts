@@ -128,6 +128,12 @@ describe('post persistence', () => {
       .toBe('<strong>bold</strong> <u>underlined</u>')
     expect(linkify('\\*literal* and \\_literal_')).toBe('\\*literal* and \\_literal_')
   })
+  test('renders consecutive greater-than lines as a quote while preserving inline formatting', () => {
+    expect(linkify('before\n> quoted *bold*\n> with #notes\nafter')).toBe(
+      'before<span class="post-quote">quoted <strong>bold</strong>\nwith '
+      + '<a href="/tag/notes">#notes</a></span>after',
+    )
+  })
   test('renders slash-delimited italics in posts without affecting URLs', () => {
     expect(linkify('/italics/ and https://example.com/a/b'))
       .toBe('<em>italics</em> and <a href="https://example.com/a/b" class="raw-link" title="https://example.com/a/b" target="_blank" rel="nofollow ugc noopener noreferrer">example.com<span class="raw-link-rest">/a/b</span></a>')
