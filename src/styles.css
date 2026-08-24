@@ -2139,8 +2139,7 @@ nav form {
 
 .post-spoiler:has(.post-spoiler-input:checked) .post-spoiler-content-inner {
   margin-top: var(--space-1);
-  overflow: visible;
-  transition: overflow 0s 200ms;
+  animation: disclosure-overflow 0s 200ms forwards;
 }
 
 .post-body a,
@@ -5607,8 +5606,11 @@ a.post-context:hover {
 }
 
 .activity-more-input:checked ~ .activity-more-content .activity-more-content-inner {
-  overflow: visible;
-  transition: overflow 0s 200ms;
+  animation: disclosure-overflow 0s 200ms forwards;
+}
+
+@keyframes disclosure-overflow {
+  to { overflow: visible; }
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -5616,6 +5618,11 @@ a.post-context:hover {
   .activity-more-content,
   .activity-more-input:checked ~ .activity-more-content {
     transition: none;
+  }
+
+  .activity-more-input:checked ~ .activity-more-content .activity-more-content-inner {
+    overflow: visible;
+    animation: none;
   }
 }
 
@@ -5787,11 +5794,13 @@ a.post-context:hover {
 
 .thread-branch-content {
   min-height: 0;
-  overflow: visible;
+  overflow: hidden;
+  animation: disclosure-overflow 0s 200ms forwards;
 }
 
 .thread-fold-input:checked~.reply-branch .thread-branch-content {
   overflow: hidden;
+  animation: none;
 }
 
 .reply-node>.post {
@@ -5897,6 +5906,16 @@ a.post-context:hover {
   .reply-branch,
   .thread-fold-input:checked~.reply-branch {
     transition: none;
+  }
+
+  .post-spoiler:has(.post-spoiler-input:checked) .post-spoiler-content-inner,
+  .thread-branch-content {
+    overflow: visible;
+    animation: none;
+  }
+
+  .thread-fold-input:checked~.reply-branch .thread-branch-content {
+    overflow: hidden;
   }
 }
 
