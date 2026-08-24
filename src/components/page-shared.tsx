@@ -69,11 +69,18 @@ function PostingSuggestionSearchField({ kind, search }: {
 }
 
 function PostingFormattingHelp() {
+  const tabId = React.useId()
   return (
-    <section className="posting-help-section">
-      <dl className="posting-help-formatting-panel">
+    <section className="posting-help-section posting-help-syntax">
+      <input className="posting-help-tab-input" type="radio" name={`${tabId}-tab`} id={`${tabId}-formatting`}
+        defaultChecked />
+      <input className="posting-help-tab-input" type="radio" name={`${tabId}-tab`} id={`${tabId}-modifiers`} />
+      <nav className="posting-help-tabs" aria-label="Writing help">
+        <label htmlFor={`${tabId}-formatting`}>formatting</label>
+        <label htmlFor={`${tabId}-modifiers`}>modifiers</label>
+      </nav>
+      <dl className="posting-help-formatting-panel posting-help-tab-panel">
             <div>
-              <dt>Regular links</dt>
               <dd>
                 <code>
                   <span className="posting-help-link">example.com</span> or
@@ -81,9 +88,9 @@ function PostingFormattingHelp() {
                   <span className="posting-help-link">https://example.com</span>
                 </code>
               </dd>
+              <dt>Regular links</dt>
             </div>
             <div>
-              <dt>Markdown links</dt>
               <dd>
                 <code>
                   <b>[</b>title<b>](</b>example.com<b>)</b> or
@@ -91,77 +98,78 @@ function PostingFormattingHelp() {
                   <b>[</b>title<b>](</b>https://example.com<b>)</b>
                 </code>
               </dd>
+              <dt>Markdown links</dt>
             </div>
             <div>
-              <dt>Inline code</dt>
               <dd>
                 <code>
                   <b>`</b>code<b>`</b>
                 </code>
               </dd>
+              <dt>Inline code</dt>
             </div>
             <div>
-              <dt>Strikethrough</dt>
               <dd>
                 <code>
                   <b>~</b>text<b>~</b> or <b>~~</b>text<b>~~</b>
                 </code>
               </dd>
+              <dt>Strikethrough</dt>
             </div>
             <div>
-              <dt>Bold</dt>
               <dd>
                 <code>
                   <b>*</b>text<b>*</b> or <b>**</b>text<b>**</b>
                 </code>
               </dd>
+              <dt>Bold</dt>
             </div>
             <div>
-              <dt>Underline</dt>
               <dd>
                 <code>
                   <b>_</b>text<b>_</b> or <b>__</b>text<b>__</b>
                 </code>
               </dd>
+              <dt>Underline</dt>
             </div>
             <div>
-              <dt>Code fences</dt>
               <dd>
                 <code>
                   <b>```</b>…<b>```</b>
                 </code>
               </dd>
+              <dt>Code fences</dt>
             </div>
             <div>
-              <dt>Inline LaTeX</dt>
               <dd>
                 <code>
                   <b>$</b>inline<b>$</b>
                 </code>
               </dd>
+              <dt>Inline LaTeX</dt>
             </div>
             <div>
-              <dt>Block LaTeX</dt>
               <dd>
                 <code>
                   <b>$$</b>block<b>$$</b>
                 </code>
               </dd>
+              <dt>Block LaTeX</dt>
             </div>
+      </dl>
+      <dl className="posting-help-modifiers-panel posting-help-tab-panel">
             <div>
-              <dt>Polls</dt>
               <dd>
                 <code>
                   Which one? <b>#poll</b><br />
                   First option<br />
                   Second option
                 </code>
-                <br />
-                <small>Use 2–8 unique options.</small>
               </dd>
+              <dt><span className="posting-help-modifier-heading">Polls</span>
+                <small>Use 2–8 unique options.</small></dt>
             </div>
             <div>
-              <dt>Quizzes</dt>
               <dd>
                 <code>
                   Which one? <b>#quiz</b><br />
@@ -170,50 +178,48 @@ function PostingFormattingHelp() {
                   <br />
                   Explanation revealed after answering
                 </code>
-                <br />
-                <small>Mark exactly one of 2–8 unique answers with &gt;. Text after a blank line is revealed after answering.</small>
               </dd>
+              <dt><span className="posting-help-modifier-heading">Quizzes</span>
+                <small>Mark exactly one of 2–8 unique answers with &gt;. Text after a blank line is revealed after answering.</small></dt>
             </div>
             <div>
-              <dt>Spoilers</dt>
               <dd>
                 <code>
                   Visible text <b>#spoiler</b><br />
                   Hidden text
                 </code>
               </dd>
+              <dt><span className="posting-help-modifier-heading">Spoilers</span>
+                <small>Text after #spoiler is hidden until revealed.</small></dt>
             </div>
             <div>
-              <dt>Todos</dt>
               <dd>
                 <code>
                   Today <b>#todo</b><br />
                   <b>[ ]</b> First task<br />
                   <b>[x]</b> Finished task
                 </code>
-                <br />
-                <small>Only [ ] and [x] lines become items. Click your items to toggle them.</small>
               </dd>
+              <dt><span className="posting-help-modifier-heading">Todos</span>
+                <small>Only [ ] and [x] lines become items. Click your items to toggle them.</small></dt>
             </div>
             <div>
-              <dt>Pinned notes</dt>
               <dd>
                 <code>
                   Keep this visible <b>#pin</b>
                 </code>
-                <br />
-                <small>Your latest #pin is shown first on your profile, independently for notes and replies.</small>
               </dd>
+              <dt><span className="posting-help-modifier-heading">Pinned notes</span>
+                <small>Your latest #pin is shown first on your profile, independently for notes and replies.</small></dt>
             </div>
             <div>
-              <dt>Locked conversations</dt>
               <dd>
                 <code>
                   No more replies <b>#lock</b>
                 </code>
-                <br />
-                <small>Prevents new replies to this note and every reply beneath it.</small>
               </dd>
+              <dt><span className="posting-help-modifier-heading">Locked conversations</span>
+                <small>Prevents new replies to this note and every reply beneath it.</small></dt>
             </div>
       </dl>
     </section>
