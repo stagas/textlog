@@ -15,6 +15,12 @@ describe('markdown', () => {
     expect(markdownPlainText('*bold* and _underlined_')).toBe('bold and underlined')
   })
 
+  test('renders slash-delimited italics', () => {
+    expect(sanitizedMarkdownHtml('/italics/ and https://example.com/a/b'))
+      .toBe('<p><em>italics</em> and <a href="https://example.com/a/b">https://example.com/a/b</a></p>')
+    expect(markdownPlainText('/italics/')).toBe('italics')
+  })
+
   test('preserves Markdown image links as safe links', () => {
     const imageLink = '![https://ibb.co/WpfV1DbH](https://ibb.co/WpfV1DbH)'
     expect(sanitizedMarkdownHtml(imageLink))

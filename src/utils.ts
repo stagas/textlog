@@ -256,7 +256,8 @@ export function markdownUrl(destination: string) {
 type LinkToken = {
   index: number
   lastIndex: number
-  kind: 'bold' | 'code' | 'code-fence' | 'latex-fence' | 'math' | 'markdown' | 'strikethrough' | 'underline'
+  kind: 'bold' | 'code' | 'code-fence' | 'italics' | 'latex-fence' | 'math' | 'markdown' | 'strikethrough'
+    | 'underline'
     | 'url' | 'reference'
   raw: string
   url?: string
@@ -360,6 +361,12 @@ export function linkTokens(body: string, flags?: PostContentFlags): LinkToken[] 
       }
     }
   }
+  for (const match of body.matchAll(/(?<!\S)\/([^\/\s](?:[^\/\r\n]*?[^\/\s])?)\/(?!\/)/g)) {
+    if (!escapedAt(body, match.index)) {
+      tokens.push({ index: match.index, lastIndex: match.index + match[0].length, kind: 'italics',
+        raw: match[0], label: match[1] })
+    }
+  }
   if (!flags || flags.has_links) {
     for (const match of body.matchAll(/!?\[((?:\\[\[\]]|[^\]\r\n])+)\]\(([^\s<>")]+)\)/gi)) {
       const url = markdownUrl(match[2])
@@ -390,7 +397,7 @@ export function linkTokens(body: string, flags?: PostContentFlags): LinkToken[] 
     }
   }
   const priority = { 'code-fence': 0, 'latex-fence': 0, code: 1, math: 2, markdown: 3, strikethrough: 4,
-    bold: 4, underline: 4, url: 5, reference: 6 }
+    bold: 4, italics: 4, underline: 4, url: 5, reference: 6 }
   return tokens.sort((a, b) => a.index - b.index || priority[a.kind] - priority[b.kind])
 }
 
@@ -522,7 +529,7 @@ export function linkify(body: string, mentionBios: Record<string, string> = {}, 
   if (containsAsciiArt(body)) {
     return linkifyAsciiReferences(body, mentionBios, appUrl, navigationQuery, hashtagCounts, mentionNoteCounts, popover)
   }
-  if (flags && !flags.has_latex && !flags.has_links && !flags.has_code && !/[~*_]/.test(body)) {
+  if (flags && !flags.has_latex && !flags.has_links && !flags.has_code && !/[~*_/]/.test(body)) {
     return highlighted(body, highlightTerms)
   }
   let html = ''
@@ -558,6 +565,9 @@ export function linkify(body: string, mentionBios: Record<string, string> = {}, 
     }
     else if (match.kind === 'underline') {
       html += `<u>${renderedText(match.label!, highlightTerms)}</u>`
+    }
+    else if (match.kind === 'italics') {
+      html += `<em>${renderedText(match.label!, highlightTerms)}</em>`
     }
     else if (match.kind === 'url') {
       const url = match.url!

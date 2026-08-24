@@ -3,6 +3,26 @@ import sanitizeHtml from 'sanitize-html'
 import { decodeHtmlEntities } from './link-preview'
 import { displayPostBody } from './utils'
 
+marked.use({
+  extensions: [{
+    name: 'slashItalics',
+    level: 'inline',
+    start(src) {
+      const match = /(?:^|\s)\/[^\/\s]/.exec(src)
+      return match ? match.index + (match[0].startsWith('/') ? 0 : 1) : undefined
+    },
+    tokenizer(src) {
+      const match = /^\/([^\/\s](?:[^\/\r\n]*?[^\/\s])?)\/(?!\/)/.exec(src)
+      if (!match) return
+      return { type: 'slashItalics', raw: match[0], text: match[1], tokens: this.lexer.inlineTokens(match[1]) }
+    },
+    renderer(token) {
+      return `<em>${this.parser.parseInline(token.tokens!)}</em>`
+    },
+    childTokens: ['tokens'],
+  }],
+})
+
 function xml(value: string) {
   return value.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
 }

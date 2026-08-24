@@ -146,6 +146,14 @@ function PostingHelpTabs({ search }: { search?: PostingSuggestionSearch | null }
             <div>
               <dd>
                 <code>
+                  <b>/</b>text<b>/</b>
+                </code>
+              </dd>
+              <dt>Italics</dt>
+            </div>
+            <div>
+              <dd>
+                <code>
                   <b>```</b>…<b>```</b>
                 </code>
               </dd>

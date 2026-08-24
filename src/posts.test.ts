@@ -126,6 +126,13 @@ describe('post persistence', () => {
       .toBe('<strong>bold</strong> <u>underlined</u>')
     expect(linkify('\\*literal* and \\_literal_')).toBe('\\*literal* and \\_literal_')
   })
+  test('renders slash-delimited italics in posts without affecting URLs', () => {
+    expect(linkify('/italics/ and https://example.com/a/b'))
+      .toBe('<em>italics</em> and <a href="https://example.com/a/b" class="raw-link" title="https://example.com/a/b" target="_blank" rel="nofollow ugc noopener noreferrer">example.com<span class="raw-link-rest">/a/b</span></a>')
+    expect(linkify('/italics/', {}, [], undefined, { has_latex: 0, has_links: 0, has_code: 0 }))
+      .toBe('<em>italics</em>')
+    expect(linkify('Keep \\/literal/')).toBe('Keep \\/literal/')
+  })
   test('keeps ASCII-art markup literal while linking tags and handles', () => {
     const body = '[eye](https://example.com) $x^2$ <nose> @Reader #ascii example.org/art'
     expect(linkify(body, { reader: 'Reader bio' })).toBe(
