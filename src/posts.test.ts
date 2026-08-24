@@ -218,6 +218,8 @@ describe('post persistence', () => {
   test('renders fenced code without linkifying its contents', () => {
     expect(linkify('before\n```ts\nconst tag = "#notes"\n```\nafter'))
       .toBe('before\n<code class="code-fence">const tag = &quot;#notes&quot;</code>\nafter')
+    expect(linkify('```text\n> quoted-looking code\n```'))
+      .toBe('<code class="code-fence">&gt; quoted-looking code</code>')
   })
 
   test('renders inline TeX as native MathML', () => {

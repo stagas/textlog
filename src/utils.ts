@@ -539,12 +539,20 @@ export function linkify(body: string, mentionBios: Record<string, string> = {}, 
     return linkifyAsciiReferences(body, mentionBios, appUrl, navigationQuery, hashtagCounts, mentionNoteCounts, popover)
   }
   const lines = body.split('\n')
-  if (lines.some(line => /^>\s?/.test(line))) {
+  const fencedRanges = linkTokens(body).filter(token => token.kind === 'code-fence' || token.kind === 'latex-fence')
+  let lineOffset = 0
+  const quotedLines = lines.map(line => {
+    const quoted = !fencedRanges.some(range => lineOffset >= range.index && lineOffset < range.lastIndex)
+      && /^>\s?/.test(line)
+    lineOffset += line.length + 1
+    return quoted
+  })
+  if (quotedLines.some(Boolean)) {
     let html = ''
     for (let index = 0; index < lines.length;) {
-      const quoted = /^>\s?/.test(lines[index])
+      const quoted = quotedLines[index]
       const group: string[] = []
-      while (index < lines.length && /^>\s?/.test(lines[index]) === quoted) {
+      while (index < lines.length && quotedLines[index] === quoted) {
         group.push(quoted ? lines[index].replace(/^>\s?/, '') : lines[index])
         index++
       }
