@@ -1440,6 +1440,31 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
       })()
       return { status: 'ready', imageKeys, parentId: existing.parent_id } as DatabaseDomainOutput<K>
     }
+    case 'api.unpublishPost': {
+      const { userId, id, body } = input as DatabaseDomainInput<'api.unpublishPost'>
+      const existing = database.query('SELECT user_id,parent_id FROM posts WHERE id=? AND deleted_at IS NULL')
+        .get(id) as { user_id: number; parent_id: number | null } | null
+      if (!existing) return { status: 'not_found' } as DatabaseDomainOutput<K>
+      if (existing.user_id !== userId) return { status: 'forbidden' } as DatabaseDomainOutput<K>
+      const available = database.query(
+        'SELECT 1 FROM sqlite_master WHERE type=\'table\' AND name=\'post_link_previews\'',
+      ).get()
+      const imageKeys = available
+        ? (database.query('SELECT image_url FROM post_link_previews WHERE post_id=?')
+          .all(id) as { image_url: string }[]).map(row => row.image_url).filter(isImageKey)
+        : []
+      let draftId = 0
+      database.transaction(() => {
+        const draft = database.query('INSERT INTO drafts(user_id,parent_id,body) VALUES(?,?,?)')
+          .run(userId, existing.parent_id, body)
+        draftId = Number(draft.lastInsertRowid)
+        softDeletePost(database, id)
+        if (available) database.query('DELETE FROM post_link_previews WHERE post_id=?').run(id)
+        cacheDb.query(`DELETE FROM materialized_feed_pages_v2 WHERE viewer_id=?
+          AND kind IN ('latest','hot','for-you','to-me')`).run(userId)
+      })()
+      return { status: 'ready', draftId, imageKeys } as DatabaseDomainOutput<K>
+    }
     case 'api.persistPostPreviews': {
       const { postId, mode, previews } = input as DatabaseDomainInput<'api.persistPostPreviews'>
       const available = database.query(

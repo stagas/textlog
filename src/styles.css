@@ -2728,8 +2728,18 @@ textarea.form-control {
 
 .edit-post-delete-action {
   display: flex;
+  align-items: center;
+  gap: var(--space-4);
   justify-content: flex-end;
   margin-bottom: var(--space-3);
+}
+
+.secondary-action.unpublish-action {
+  color: var(--report-ink);
+}
+
+.secondary-action.unpublish-action:hover {
+  color: var(--report-hover);
 }
 
 .edit-post-primary-actions {

@@ -302,6 +302,8 @@ export type DatabaseDomainOperations = {
     output: { status: 'not_found' | 'forbidden' } | { status: 'ready'; post: ApiPost } }
   'api.deletePost': { input: { userId: number; id: number };
     output: { status: 'not_found' | 'forbidden' } | { status: 'ready'; imageKeys: string[]; parentId: number | null } }
+  'api.unpublishPost': { input: { userId: number; id: number; body: string };
+    output: { status: 'not_found' | 'forbidden' } | { status: 'ready'; draftId: number; imageKeys: string[] } }
   'api.persistPostPreviews': {
     input: { postId: number; mode: 'save' | 'replace'; previews: Array<{ url: string } & LinkPreview> }
     output: { obsoleteImageKeys: string[] }

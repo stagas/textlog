@@ -341,6 +341,15 @@ export function registerPostsRoutes(app: Hono) {
     const f = await form(c.req.raw)
     const returnPath = f.from ? safeNext(f.from) : undefined
     const body = normalizePostBody(f.body || '')
+    if (f.action === 'unpublish') {
+      const result = await databaseService().call('api.unpublishPost', { userId: user.id, id, body })
+      if (result.status !== 'ready') {
+        return c.text(result.status === 'not_found' ? 'Not found' : 'Forbidden',
+          result.status === 'not_found' ? 404 : 403)
+      }
+      await deleteImagesAfterCommit(result.imageKeys)
+      return redirect('/drafts')
+    }
     const suggestionSearch = await postingSuggestionSearch(f, user.id)
     if (suggestionSearch) {
       return page(

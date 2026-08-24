@@ -399,7 +399,7 @@ test('posting helpers are searchable details and show copyable highlighted resul
   expect(html.indexOf('class="posting-suggestion-results"')).toBeLessThan(html.indexOf('class="composefoot"'))
 })
 
-test('post edit places delete above the textarea and keeps preview before save', () => {
+test('post edit places draft and delete above the textarea and keeps preview before save', () => {
   const user = { id: 1, handle: 'writer', email: 'writer@example.com', bio: '' }
   const post = { id: 2, user_id: 1, parent_id: null, body: 'Original', created_at: '2026-08-12 09:00:00',
     deleted_at: null }
@@ -410,8 +410,10 @@ test('post edit places delete above the textarea and keeps preview before save',
   expect(html).toContain('class="edit-post-primary-actions"')
   expect(html).toContain('class="edit-post-delete-action"')
   expect(html).toContain('class="secondary-action cancel-action edit-post-cancel"')
-  expect(html).toContain('class="secondary-action danger" href="/post/2/delete">delete note</a>')
-  expect(html.indexOf('>delete note</a>')).toBeLessThan(html.indexOf('<textarea'))
+  expect(html).toContain('value="unpublish" formNoValidate="" name="action">draft</button>')
+  expect(html).toContain('class="secondary-action danger" href="/post/2/delete">delete</a>')
+  expect(html.indexOf('>draft</button>')).toBeLessThan(html.indexOf('>delete</a>'))
+  expect(html.indexOf('>delete</a>')).toBeLessThan(html.indexOf('<textarea'))
   expect(html.indexOf('<textarea')).toBeLessThan(html.indexOf('>cancel</a>'))
   expect(html.indexOf('>preview</button>')).toBeLessThan(html.indexOf('>save →</button>'))
 })

@@ -1019,6 +1019,20 @@ test('consequential account, content, reporting, and admin flows work over HTTP'
     .get(alice.id) as { id: number; body: string }
   expect(createPost.headers.get('location')).toBe(`/latest#post-${post.id}`)
 
+  const unpublishable = database.query(
+    'INSERT INTO posts(user_id,parent_id,body,created_at) VALUES(?,NULL,?,datetime(\'now\')) RETURNING id',
+  ).get(alice.id, 'Published text before editing') as { id: number }
+  const unpublished = await request(`/post/${unpublishable.id}/edit`, {
+    method: 'POST', cookie: aliceCookie, form: { body: 'Text preserved in the draft', action: 'unpublish' },
+  })
+  expect(unpublished.status).toBe(303)
+  const unpublishedDraft = database.query('SELECT id,body,parent_id FROM drafts WHERE user_id=? AND body=?')
+    .get(alice.id, 'Text preserved in the draft') as { id: number; body: string; parent_id: number | null }
+  expect(unpublished.headers.get('location')).toBe('/drafts')
+  expect(unpublishedDraft.parent_id).toBeNull()
+  expect(database.query('SELECT deleted_at FROM posts WHERE id=?').get(unpublishable.id))
+    .toMatchObject({ deleted_at: expect.any(String) })
+
   const savedReplyDraft = await request(`/post/${post.id}/reply`, {
     method: 'POST', cookie: aliceCookie, form: { body: 'A saved reply draft', action: 'draft' },
   })

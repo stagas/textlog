@@ -40,8 +40,11 @@ export function EditPost(
           hidden={returnPath && <input type="hidden" name="from" value={returnPath} />}
           beforeTextarea={
             <div className="edit-post-delete-action">
+              <button className="secondary-action unpublish-action" name="action" value="unpublish" formNoValidate>
+                draft
+              </button>
               <a className="secondary-action danger" href={'/post/' + post.id + '/delete' + returnQuery}>
-                delete note
+                delete
               </a>
             </div>
           } secondary={
