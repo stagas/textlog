@@ -2617,7 +2617,7 @@ test('Post detail places report opposite reply in the footer', () => {
   expect(html.slice(0, html.indexOf('<div class="postfoot">'))).not.toContain('class="quiet report-link"')
 })
 
-test('probable non-English posts offer a right-aligned DuckDuckGo translate action', () => {
+test('probable non-English posts offer a right-aligned Bing Translate action', () => {
   expect(isProbablyNonEnglish('An English note with emoji 🎉 and numbers 123')).toBe(false)
   expect(isProbablyNonEnglish('Una nota en español')).toBe(true)
   expect(isProbablyNonEnglish('Ελληνικό κείμενο')).toBe(true)
@@ -2634,8 +2634,11 @@ test('probable non-English posts offer a right-aligned DuckDuckGo translate acti
   expect(footer).toContain('class="quiet post-reply-link"')
   expect(footer).toContain(`href="${translateHref(body).replaceAll('&', '&amp;')}"`)
   const translateUrl = new URL(translateHref(body))
-  expect(translateUrl.hostname).toBe('duckduckgo.com')
-  expect(translateUrl.searchParams.get('q')).toBe(`!tr ${body}`)
+  expect(translateUrl.hostname).toBe('www.bing.com')
+  expect(translateUrl.pathname).toBe('/translator')
+  expect(translateUrl.searchParams.get('from')).toBe('auto')
+  expect(translateUrl.searchParams.get('to')).toBe('en')
+  expect(translateUrl.searchParams.get('text')).toBe(body)
   expect(footer.indexOf('translate')).toBeLessThan(footer.indexOf('report'))
 })
 

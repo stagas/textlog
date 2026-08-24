@@ -61,8 +61,8 @@ export function isProbablyNonEnglish(text: string) {
 }
 
 export function translateHref(text: string) {
-  const query = new URLSearchParams({ q: `!tr ${text}` })
-  return `https://duckduckgo.com/?${query}`
+  const query = new URLSearchParams({ from: 'auto', to: 'en', text })
+  return `https://www.bing.com/translator?${query}`
 }
 
 function PollPreview({ body }: { body: string }) {
