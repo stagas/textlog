@@ -68,6 +68,10 @@ html {
   scrollbar-gutter: stable;
 }
 
+html.scroll-instant {
+  scroll-behavior: auto;
+}
+
 @media (prefers-reduced-motion: reduce) {
   html {
     scroll-behavior: auto;

@@ -718,6 +718,15 @@ test('pages advertise the dynamic favicon, touch icon, and manifest', () => {
   expect(html).not.toContain('rel="icon" href="/textlog.svg')
 })
 
+test('pages mark pagination and follow navigation for instant scrolling', () => {
+  const html = renderToStaticMarkup(React.createElement(About, { user: null }))
+  expect(html).toContain("const key = 'textlog-scroll-behavior'")
+  expect(html).toContain("link?.closest('.pagination')")
+  expect(html).toContain("action.startsWith('/follow/')")
+  expect(html).toContain("action.startsWith('/tag-follow/')")
+  expect(html).toContain("classList.add('scroll-instant')")
+})
+
 test('pages inline the cookie-aware theme and logo', () => {
   const html = renderToStaticMarkup(React.createElement(About, { user: null }))
   expect(html).toContain('<style>:root{color-scheme:light')
@@ -741,7 +750,7 @@ test('appearance theme tab is a server-rendered form with mobile appearance choi
   expect(html).toContain('class="accent-swatch accent-swatch-theme accent-swatch-theme-sepia"')
   expect(html).toContain('name="theme" checked="" value="sepia"')
   expect(html).toContain('name="accent" checked="" value="amber"')
-  expect(html).not.toContain('<script')
+  expect(html).not.toContain('src="/notifications.js"')
   expect(html).not.toContain('style=')
 })
 
@@ -864,7 +873,7 @@ test('notification settings are the only account page that loads their client sc
   expect(notifications).not.toContain('name="signups"')
   expect(notifications).toContain('save preferences</button>')
   expect(profile).toContain('href="/account/edit/notifications"')
-  expect(profile).not.toContain('<script')
+  expect(profile).not.toContain('src="/notifications.js"')
 })
 
 test('notification settings show new-user alerts only to administrators', () => {
@@ -923,7 +932,7 @@ test('appearance font tab lists local monospace fonts in their own families', ()
   expect(html).toContain('value="large"')
   expect(html).toContain('value="larger"')
   expect(html).toContain('Fonts are used from your device.')
-  expect(html).not.toContain('<script')
+  expect(html).not.toContain('src="/notifications.js"')
   expect(html).not.toContain('style=')
 })
 
