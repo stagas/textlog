@@ -9,34 +9,38 @@ import { appName } from '../brand'
 import { databaseService } from '../database-service'
 import { markdownPlainText } from '../markdown'
 import { renderFollowBadge, renderProfileOg, type FollowBadgeTheme } from '../og'
+import { cachedOgResponse, cacheOgResponse } from '../og-response-cache'
 import { CONNECTION_PAGE_SIZE, decodePostCursor, TAG_PAGE_SIZE } from '../pagination'
 import { resolvedPageSize } from '../request-preferences'
 import { currentUser } from '../utils'
 
 export function registerProfilesRoutes(app: Hono) {
   app.get('/u/:handle/follow.png', async c => {
-    const data = await databaseService().call('profiles.ogData', { handle: c.req.param('handle') })
-    if (!data) return c.text('Not found', 404, { 'access-control-allow-origin': '*' })
     const requestedTheme = c.req.query('theme')
     const theme: FollowBadgeTheme = requestedTheme === 'light' || requestedTheme === 'sepia'
       || requestedTheme === 'dracula' ? requestedTheme : 'dark'
+    const cacheKey = `follow:${c.req.param('handle')}:${theme}`
+    const cached = cachedOgResponse(cacheKey)
+    if (cached) return cached
+    const data = await databaseService().call('profiles.ogData', { handle: c.req.param('handle') })
+    if (!data) return c.text('Not found', 404, { 'access-control-allow-origin': '*' })
     const themeQuery = theme === 'dark' ? '' : `?theme=${theme}`
     if (data.canonicalHandle) return c.redirect(`/u/${data.canonicalHandle}/follow.png${themeQuery}`, 301)
     const image = renderFollowBadge(data.profile!.handle, theme)
-    const body = image.buffer.slice(image.byteOffset, image.byteOffset + image.byteLength) as ArrayBuffer
-    return new Response(body, {
-      headers: {
-        'content-type': 'image/png',
-        'content-length': String(image.byteLength),
-        'cache-control': 'public, max-age=3600, must-revalidate',
-        'access-control-allow-origin': '*',
-        'cross-origin-resource-policy': 'cross-origin',
-        'x-content-type-options': 'nosniff',
-      },
+    return cacheOgResponse(cacheKey, image, {
+      'content-type': 'image/png',
+      'content-length': String(image.byteLength),
+      'cache-control': 'public, max-age=3600, must-revalidate',
+      'access-control-allow-origin': '*',
+      'cross-origin-resource-policy': 'cross-origin',
+      'x-content-type-options': 'nosniff',
     })
   })
 
   app.get('/u/:handle/og.png', async c => {
+    const cacheKey = `profile:${c.req.param('handle')}`
+    const cached = cachedOgResponse(cacheKey)
+    if (cached) return cached
     const data = await databaseService().call('profiles.ogData', { handle: c.req.param('handle') })
     if (!data) return c.text('Not found', 404)
     if (data.canonicalHandle) {
@@ -44,13 +48,10 @@ export function registerProfilesRoutes(app: Hono) {
     }
     const profile = data.profile!
     const image = renderProfileOg(profile.handle, profile.bio)
-    const body = image.buffer.slice(image.byteOffset, image.byteOffset + image.byteLength) as ArrayBuffer
-    return new Response(body, {
-      headers: {
-        'content-type': 'image/png',
-        'content-length': String(image.byteLength),
-        'cache-control': 'public, max-age=3600, stale-while-revalidate=86400',
-      },
+    return cacheOgResponse(cacheKey, image, {
+      'content-type': 'image/png',
+      'content-length': String(image.byteLength),
+      'cache-control': 'public, max-age=3600, stale-while-revalidate=86400',
     })
   })
 

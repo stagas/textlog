@@ -7,6 +7,7 @@ import {
 } from '../components/pages'
 import { databaseService } from '../database-service'
 import { renderTagOg } from '../og'
+import { cachedOgResponse, cacheOgResponse } from '../og-response-cache'
 import { CONNECTION_PAGE_SIZE } from '../pagination'
 import { resolvedPageSize } from '../request-preferences'
 import { currentUser } from '../utils'
@@ -14,15 +15,15 @@ import { currentUser } from '../utils'
 export function registerTagsRoutes(app: Hono) {
   app.get('/tag/:tag/og.png', async c => {
     const tag = c.req.param('tag').toLowerCase()
+    const cacheKey = `tag:${tag}`
+    const cached = cachedOgResponse(cacheKey)
+    if (cached) return cached
     const total = await databaseService().call('tags.count', { tag })
     const image = renderTagOg(tag, total)
-    const body = image.buffer.slice(image.byteOffset, image.byteOffset + image.byteLength) as ArrayBuffer
-    return new Response(body, {
-      headers: {
-        'content-type': 'image/png',
-        'content-length': String(image.byteLength),
-        'cache-control': 'public, max-age=3600, stale-while-revalidate=86400',
-      },
+    return cacheOgResponse(cacheKey, image, {
+      'content-type': 'image/png',
+      'content-length': String(image.byteLength),
+      'cache-control': 'public, max-age=3600, stale-while-revalidate=86400',
     })
   })
 

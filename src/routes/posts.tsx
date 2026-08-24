@@ -15,6 +15,7 @@ import { form, page, redirect, rememberFeed, safeNext } from './shared'
 
 import type { Hono } from 'hono'
 import { publishPost } from '../api-broker'
+import { cachedAnonymousPostPage, materializeAnonymousPostPage } from '../anonymous-post-page-cache'
 import type { PostingSuggestionSearch } from '../components/page-shared'
 import { safeRefererPath } from '../http'
 import { deleteImages, deleteImagesAfterCommit } from '../image-storage'
@@ -22,6 +23,7 @@ import { discoverLinkPreviews } from '../link-preview'
 import { logError } from '../log'
 import { markdownPlainText } from '../markdown'
 import { renderPostOg } from '../og'
+import { cachedOgResponse, cacheOgResponse } from '../og-response-cache'
 import { normalizePostBody, postBodyValidationMessage, validPostBody } from '../post-body'
 import { postRateLimitMessage } from '../post-rate-limit'
 import { sendPushForPost } from '../push'
@@ -159,6 +161,11 @@ export function registerPostsRoutes(app: Hono) {
     const id = Number(c.req.param('id'))
     if (!Number.isInteger(id) || id < 1) return c.text('Not found', 404)
     const user = currentUser(c.req.raw)
+    const anonymousCacheKey = user ? null : new URL(c.req.url).pathname + new URL(c.req.url).search
+    if (anonymousCacheKey) {
+      const cached = cachedAnonymousPostPage(anonymousCacheKey)
+      if (cached) return cached
+    }
     const detail = await databaseService().call('posts.detail', { id, viewerId: user?.id ?? -1 })
     if (detail.status === 'not_found') return c.text('Not found', 404)
     const post = detail.post
@@ -198,24 +205,25 @@ export function registerPostsRoutes(app: Hono) {
           social={social} />,
       )
     }
-    return page(
+    const rendered = page(
       <PublicThread post={post} replies={replies} social={social} returnPath={returnPath} topHref={topHref}
         flatHref={flatHref} treeHref={treeHref} flat={flat} />,
     )
+    return materializeAnonymousPostPage(anonymousCacheKey!, rendered)
   })
 
   app.get('/post/:id/og.png', async c => {
     const id = Number(c.req.param('id'))
+    const cacheKey = `post:${id}`
+    const cached = cachedOgResponse(cacheKey)
+    if (cached) return cached
     const post = Number.isInteger(id) && id > 0 ? await databaseService().call('posts.ogData', { id }) : null
     if (!post) return c.text('Not found', 404)
     const image = renderPostOg(post.body, post.handle)
-    const body = image.buffer.slice(image.byteOffset, image.byteOffset + image.byteLength) as ArrayBuffer
-    return new Response(body, {
-      headers: {
-        'content-type': 'image/png',
-        'content-length': String(image.byteLength),
-        'cache-control': 'public, max-age=3600, stale-while-revalidate=86400',
-      },
+    return cacheOgResponse(cacheKey, image, {
+      'content-type': 'image/png',
+      'content-length': String(image.byteLength),
+      'cache-control': 'public, max-age=3600, stale-while-revalidate=86400',
     })
   })
 
