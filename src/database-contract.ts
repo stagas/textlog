@@ -38,6 +38,7 @@ export type DatabaseDomainOperations = {
   'maintenance.automatedBackup': { input: { directory: string; now: string }; output: unknown }
   'maintenance.publicArchive': { input: { path: string; now: string }; output: unknown | null }
   'maintenance.recapPreview': { input: { requestUrl: string }; output: string }
+  'maintenance.interactedPreview': { input: { requestUrl: string }; output: string }
   'blog.recapPosts': { input: { viewerId: number }; output: PostView[] }
   'auth.sessionUser': { input: { token: string | null }; output: User | null }
   'auth.apiUser': { input: { token: string | null; now: number }; output: User | null }
@@ -196,12 +197,21 @@ export type DatabaseDomainOperations = {
   'account.editSettings': { input: { userId: number }; output: {
     timezone: string
     recapEmails: number
+    interactionEmails: number
   } | null }
   'account.recapStatus': { input: { userId?: number; token?: string }; output: {
     id: number
     subscribed: boolean
   } | null }
   'account.setRecapPreference': { input: { userId?: number; token?: string; subscribed: boolean }; output: boolean }
+  'account.interactedStatus': { input: { userId?: number; token?: string }; output: {
+    id: number
+    subscribed: boolean
+  } | null }
+  'account.setInteractedPreference': {
+    input: { userId?: number; token?: string; subscribed: boolean }
+    output: boolean
+  }
   'stats.dashboard': { input: Record<string, never>; output: DashboardStats }
   'seo.sitemapIndex': { input: { requestUrl: string; appUrl?: string | null }; output: SerializedDomainResponse }
   'seo.sitemapSection': { input: { requestUrl: string; file: string; appUrl?: string | null };

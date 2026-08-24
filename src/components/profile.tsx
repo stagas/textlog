@@ -194,6 +194,13 @@ export function Profile(
                   </div>
                   <a className="button" href="/account/recap-emails">manage recap emails</a>
                 </div>
+                <div className="account-danger-zone" id="interaction-emails">
+                  <div>
+                    <strong>Interaction emails</strong>
+                    <span>Receive an email when people have replied to your notes.</span>
+                  </div>
+                  <a className="button" href="/account/interacted-emails">manage interaction emails</a>
+                </div>
                 <div className="account-danger-zone">
                   <div>
                     <strong>Invite friends</strong>

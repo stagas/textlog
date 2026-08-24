@@ -25,6 +25,7 @@ import {
   ErrorPage,
   Explore,
   ForgotPassword,
+  InteractedEmails,
   Legal,
   MagicLinkSent,
   NotFound,
@@ -850,6 +851,23 @@ test('account settings link to a focused recap email preference panel', () => {
   expect(unsubscribed).toContain('name="subscribed" value="1"')
   expect(unsubscribed).toContain('>subscribe</button>')
   expect(unsubscribed).toContain('You have been unsubscribed.')
+})
+
+test('account settings link to a focused interaction email preference panel', () => {
+  const user = { id: 1, handle: 'reader', email: 'reader@example.com', bio: '' }
+  const profile = renderToStaticMarkup(React.createElement(Profile, {
+    user, profile: { ...user, interaction_emails: 1 }, posts: [], following: false, editing: true,
+  }))
+  const preference = renderToStaticMarkup(React.createElement(InteractedEmails, {
+    user, subscribed: false, changed: true,
+  }))
+
+  expect(profile).toContain('id="interaction-emails"')
+  expect(profile).toContain('href="/account/interacted-emails">manage interaction emails</a>')
+  expect(preference).toContain('<h1 class="panel-heading">Interaction emails</h1>')
+  expect(preference).toContain('action="/account/interacted-emails"')
+  expect(preference).toContain('name="subscribed" value="1"')
+  expect(preference).toContain('You have been unsubscribed.')
 })
 
 test('notification settings are the only account page that loads their client script', () => {

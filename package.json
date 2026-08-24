@@ -14,6 +14,7 @@
     "backfill:link-previews": "bun scripts/backfill-link-previews.ts",
     "backfill:post-og-previews": "bun scripts/backfill-post-og-previews.ts",
     "email:recap:v1": "bun scripts/send-recap-email.ts",
+    "users:unread-replies": "bun scripts/list-unread-reply-users.ts",
     "stress:routes": "bun scripts/stress-routes.ts",
     "test": "bun test",
     "typecheck": "tsc --noEmit",

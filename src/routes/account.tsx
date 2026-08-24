@@ -20,6 +20,7 @@ import {
   ConfirmAccountDelete,
   ConfirmEmail,
   InviteFriends,
+  InteractedEmails,
   NotificationSettings,
   Profile,
   RecapEmails,
@@ -253,7 +254,8 @@ export function registerAccountRoutes(app: Hono) {
     return page(
       <Profile user={user}
         profile={{ ...user, timezone: settings?.timezone,
-          recap_emails: settings?.recapEmails }} posts={[]} following={false} editing returnPath={returnPath} />,
+          recap_emails: settings?.recapEmails, interaction_emails: settings?.interactionEmails }} posts={[]}
+        following={false} editing returnPath={returnPath} />,
     )
   })
 
@@ -290,6 +292,43 @@ export function registerAccountRoutes(app: Hono) {
     })
     if (!changed) return redirect('/enter?next=' + encodeURIComponent('/account/recap-emails'))
     return page(<RecapEmails user={user} subscribed={subscribed} token={user ? undefined : f.token} changed />)
+  })
+
+  app.get('/account/interacted-emails', async c => {
+    const user = currentUser(c.req.raw)
+    if (!user) return redirect('/enter?next=' + encodeURIComponent('/account/interacted-emails'))
+    const preference = await databaseService().call('account.interactedStatus', { userId: user.id })
+    return page(<InteractedEmails user={user} subscribed={preference?.subscribed !== false} />)
+  })
+
+  app.get('/account/interacted-emails/unsubscribe', async c => {
+    const value = c.req.query('token') || ''
+    const changed = await databaseService().call('account.setInteractedPreference', {
+      token: value, subscribed: false,
+    })
+    if (!changed) return page(<InteractedEmails subscribed={false} invalid />, 404)
+    return page(<InteractedEmails subscribed={false} token={value} changed />)
+  })
+
+  app.post('/account/interacted-emails/unsubscribe', async c => {
+    const value = c.req.query('token') || ''
+    const changed = await databaseService().call('account.setInteractedPreference', {
+      token: value, subscribed: false,
+    })
+    if (!changed) return c.text('Unsubscribe link unavailable', 404)
+    return c.text('Unsubscribed', 200)
+  })
+
+  app.post('/account/interacted-emails', async c => {
+    const user = currentUser(c.req.raw)
+    const f = await form(c.req.raw)
+    if (f.subscribed !== '0' && f.subscribed !== '1') return redirect('/account/interacted-emails')
+    const subscribed = f.subscribed === '1'
+    const changed = await databaseService().call('account.setInteractedPreference', {
+      userId: user?.id, token: user ? undefined : f.token, subscribed,
+    })
+    if (!changed) return redirect('/enter?next=' + encodeURIComponent('/account/interacted-emails'))
+    return page(<InteractedEmails user={user} subscribed={subscribed} token={user ? undefined : f.token} changed />)
   })
 
   app.post('/account/edit', async c => {

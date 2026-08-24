@@ -62,7 +62,9 @@ export function Legal({ user }: { user: User | null }) {
           We send essential account, security, and legally required messages. We may also occasionally email account
           holders a recap of new {name}{' '}
           features and popular public notes. Recap emails are optional: you can unsubscribe at any time using the link
-          in any recap email or the Recap emails control in account settings, and you can subscribe again later.
+          in any recap email or the Recap emails control in account settings, and you can subscribe again later. We may
+          also email you when people interact with your notes. Interaction emails are separately optional and can be
+          disabled from their unsubscribe link or the Interaction emails control in account settings.
         </p>
 
         <h2>Limitation of liability</h2>
@@ -137,7 +139,8 @@ export function Legal({ user }: { user: User | null }) {
             Email communications and preferences: performance of the service or steps you request, legal obligations
             where a notice requires receipt or decision communication, and our legitimate interest in occasionally
             informing account holders about service features and public community activity. You may object by
-            unsubscribing from recap emails at any time without affecting essential account or legal messages.
+            unsubscribing from recap or interaction emails at any time without affecting essential account or legal
+            messages.
           </li>
         </ul>
 
@@ -155,7 +158,7 @@ export function Legal({ user }: { user: User | null }) {
         <p>
           Session records expire after 365 days of inactivity; password-reset, magic-link and email-change records after
           one hour; appearance cookies after one year; daily visitor pseudonyms after seven days; and application HTTP
-          logs after at most 14 days. Recap-email preferences, unsubscribe tokens, and campaign delivery records are
+          logs after at most 14 days. Recap and interaction-email preferences, unsubscribe tokens, and campaign delivery records are
           retained as needed to honor opt-outs and prevent duplicate delivery. Public account and content data,
           connections, followed hashtags and blocks are held until you remove them or delete your account. Deletion
           anonymizes the account and content, while limited moderation, resolved report and audit records are retained
@@ -169,7 +172,7 @@ export function Legal({ user }: { user: User | null }) {
           Depending on the circumstances, you may request access, correction, erasure, restriction, portability, or
           object to processing based on legitimate interests. Where processing relies on consent, you may withdraw it
           without affecting earlier processing. In account settings you can correct your handle and bio, change your
-          email, manage your password and sessions, subscribe or unsubscribe from recap emails, download a JSON copy of
+          email, manage your password and sessions, subscribe or unsubscribe from recap and interaction emails, download a JSON copy of
           your account data, and delete your account.
           {instance.operator.email && (
             <>

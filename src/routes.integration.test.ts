@@ -7,6 +7,7 @@ import { createHmac } from 'node:crypto'
 import { createServer } from 'node:net'
 import { tmpdir } from 'node:os'
 import { issueRecapUnsubscribeToken } from './recap-emails'
+import { issueInteractedUnsubscribeToken } from './interacted-emails'
 
 setDefaultTimeout(30_000)
 
@@ -617,6 +618,19 @@ test('consequential account, content, reporting, and admin flows work over HTTP'
   const recapSettings = await (await request('/account/recap-emails', { cookie: aliceCookie })).text()
   expect(recapSettings).toContain('name="subscribed" value="1"')
   expect(recapSettings).toContain('>subscribe</button>')
+  expect(accountFromLatestHtml).toContain('id="interaction-emails"')
+  expect(accountFromLatestHtml).toContain('href="/account/interacted-emails"')
+  const interactedToken = issueInteractedUnsubscribeToken(database, alice.id)
+  const unsubscribedInteractions = await request(
+    '/account/interacted-emails/unsubscribe?token=' + encodeURIComponent(interactedToken),
+  )
+  expect(unsubscribedInteractions.status).toBe(200)
+  expect(await unsubscribedInteractions.text()).toContain('You have been unsubscribed.')
+  expect(database.query('SELECT interaction_emails FROM users WHERE id=?').get(alice.id))
+    .toEqual({ interaction_emails: 0 })
+  const interactedSettings = await (await request('/account/interacted-emails', { cookie: aliceCookie })).text()
+  expect(interactedSettings).toContain('name="subscribed" value="1"')
+  expect(interactedSettings).toContain('>subscribe</button>')
   const rememberedActivity = await request('/activity', { cookie: aliceCookie })
   expect(rememberedActivity.status).toBe(303)
   expect(rememberedActivity.headers.get('location')).toBe('/to-me')

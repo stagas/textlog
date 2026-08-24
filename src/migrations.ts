@@ -1681,6 +1681,32 @@ export const migrations: Migration[] = [
       migrations.find(migration => migration.version === 112)!.up(database)
     },
   },
+  {
+    version: 122,
+    name: 'interaction_email_subscription',
+    up(database) {
+      addColumn(database, 'users', 'interaction_emails',
+        'INTEGER NOT NULL DEFAULT 1 CHECK(interaction_emails IN (0,1))')
+      database.run(`CREATE TABLE IF NOT EXISTS interacted_unsubscribe_tokens (
+        token_hash TEXT PRIMARY KEY,user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP);`)
+    },
+  },
+  {
+    version: 123,
+    name: 'interaction_email_deliveries',
+    up(database) {
+      database.run(`CREATE TABLE IF NOT EXISTS interacted_email_deliveries (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,campaign_version TEXT NOT NULL,email TEXT NOT NULL,
+        user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        status TEXT NOT NULL CHECK(status IN ('sending','sent','failed','uncertain')),
+        run_id TEXT NOT NULL,idempotency_key TEXT NOT NULL UNIQUE,attempts INTEGER NOT NULL DEFAULT 0,
+        provider_id TEXT,error TEXT,created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,sent_at TEXT,
+        UNIQUE(campaign_version,email));
+      CREATE INDEX IF NOT EXISTS interacted_email_deliveries_status
+        ON interacted_email_deliveries(campaign_version,status,id);`)
+    },
+  },
 ]
 
 export const latestMigrationVersion = migrations.at(-1)!.version

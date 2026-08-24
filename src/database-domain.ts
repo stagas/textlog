@@ -43,6 +43,7 @@ import { userBioLinkPreviews } from './link-preview'
 import { voteInPoll } from './polls'
 import { createPublicArchive, publicArchiveIsCurrent } from './public-archive'
 import { RECAP_POPULAR_NOTE_IDS, recapEmail } from './recap-email'
+import { interactedEmail } from './interacted-email'
 import { searchPeople, searchPosts, searchTags, searchTerms } from './search'
 import { sitemapIndex, sitemapSection } from './seo'
 import { insertSession, markSessionUsed, renewSession, SESSION_LIFETIME_MS, sessionHash } from './sessions'
@@ -214,6 +215,10 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
     case 'maintenance.recapPreview': {
       const { requestUrl } = input as DatabaseDomainInput<'maintenance.recapPreview'>
       return recapEmail(database, requestUrl, 'audit-preview') as DatabaseDomainOutput<K>
+    }
+    case 'maintenance.interactedPreview': {
+      const { requestUrl } = input as DatabaseDomainInput<'maintenance.interactedPreview'>
+      return interactedEmail(requestUrl, 'audit-preview') as DatabaseDomainOutput<K>
     }
     case 'blog.recapPosts': {
       const { viewerId } = input as DatabaseDomainInput<'blog.recapPosts'>
@@ -562,7 +567,7 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
     }
     case 'account.editSettings': {
       const { userId } = input as DatabaseDomainInput<'account.editSettings'>
-      const row = database.query(`SELECT timezone,recap_emails recapEmails
+      const row = database.query(`SELECT timezone,recap_emails recapEmails,interaction_emails interactionEmails
         FROM users WHERE id=?`).get(userId)
       return (row || null) as DatabaseDomainOutput<K>
     }
@@ -588,6 +593,32 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
         : null
       if (!row) return false as DatabaseDomainOutput<K>
       database.query(`UPDATE users SET recap_emails=? WHERE email=(SELECT email FROM users WHERE id=?)`)
+        .run(subscribed ? 1 : 0, row.id)
+      return true as DatabaseDomainOutput<K>
+    }
+    case 'account.interactedStatus': {
+      const { userId, token } = input as DatabaseDomainInput<'account.interactedStatus'>
+      const row = userId
+        ? database.query('SELECT id,interaction_emails subscribed FROM users WHERE id=? AND deleted_at IS NULL')
+          .get(userId)
+        : token
+        ? database.query(`SELECT u.id,u.interaction_emails subscribed FROM interacted_unsubscribe_tokens t
+          JOIN users u ON u.id=t.user_id WHERE t.token_hash=? AND u.deleted_at IS NULL`)
+          .get(createHash('sha256').update(token).digest('hex'))
+        : null
+      if (!row) return null as DatabaseDomainOutput<K>
+      const result = row as { id: number; subscribed: number }
+      return { id: result.id, subscribed: result.subscribed !== 0 } as DatabaseDomainOutput<K>
+    }
+    case 'account.setInteractedPreference': {
+      const { userId, token, subscribed } = input as DatabaseDomainInput<'account.setInteractedPreference'>
+      const row = userId ? { id: userId } : token
+        ? database.query(`SELECT u.id FROM interacted_unsubscribe_tokens t
+          JOIN users u ON u.id=t.user_id WHERE t.token_hash=? AND u.deleted_at IS NULL`)
+          .get(createHash('sha256').update(token).digest('hex')) as { id: number } | null
+        : null
+      if (!row) return false as DatabaseDomainOutput<K>
+      database.query(`UPDATE users SET interaction_emails=? WHERE email=(SELECT email FROM users WHERE id=?)`)
         .run(subscribed ? 1 : 0, row.id)
       return true as DatabaseDomainOutput<K>
     }

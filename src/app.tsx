@@ -304,7 +304,7 @@ app.use('*', async (c, next) => {
   if (c.req.method !== 'GET' || !c.res.headers.get('content-type')?.includes('text/html')) return
   const url = new URL(c.req.url)
   const privatePath =
-    /^\/(?:enter|forgot-password|reset-password|choose-handle|write|compose|activity|admin|search|account|panels-gallery|recap-email)(?:\/|$)/
+    /^\/(?:enter|forgot-password|reset-password|choose-handle|write|compose|activity|admin|search|account|panels-gallery|recap-email|interacted-email)(?:\/|$)/
       .test(url.pathname) || /^\/post\/\d+\/(?:edit|delete)$/.test(url.pathname)
   const transientParameters = ['reply', 'report', 'reported', 'edit', 'welcome', 'reset', 'token']
   const navigationOnly = url.searchParams.has('from')
@@ -481,6 +481,10 @@ app.get('/blog/recap-v1', async c => {
 })
 app.get('/recap-email', async c =>
   c.html(await databaseService().call('maintenance.recapPreview', {
+    requestUrl: c.req.url,
+  }), 200, { 'cache-control': 'private, no-store' }))
+app.get('/interacted-email', async c =>
+  c.html(await databaseService().call('maintenance.interactedPreview', {
     requestUrl: c.req.url,
   }), 200, { 'cache-control': 'private, no-store' }))
 app.get('/server-error', () => {
