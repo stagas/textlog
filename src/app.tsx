@@ -1,4 +1,4 @@
-import { applyHtmlCachePolicy, blockedCrawlerResponse, canonicalizeCrawlerLinks, crawlerCanonicalRedirect,
+import { applyHtmlCachePolicy, canonicalizeCrawlerLinks, crawlerCanonicalRedirect,
   GLOBAL_REQUEST_BODY_LIMIT, isCrawlerRequest, isSameOriginRequest, RequestBodyError, requiresSameOrigin, safeLocalPath,
   securityHeaders } from './http'
 
@@ -261,8 +261,6 @@ app.use('*', async (c, next) => {
 })
 
 app.use('*', async (c, next) => {
-  const blocked = blockedCrawlerResponse(c.req.raw)
-  if (blocked) return blocked
   const redirect = crawlerCanonicalRedirect(c.req.raw)
   if (redirect) return redirect
   await next()
