@@ -170,7 +170,8 @@ export function ApiDocs({ user }: { user: User | null }) {
         <p>
           Signed-in users can generate private, personalized For You RSS and Atom URLs under <strong>Feed key</strong>
           {' '}
-          in account security. These unguessable URLs are read-only, require no bearer header, and must be kept secret.
+          in <a href="/account/security#feed-keys" target="_blank">account security</a>. These unguessable URLs are
+          read-only, require no bearer header, and must be kept secret.
           Each key can be named, expired, or revoked independently. Personalized feeds are marked private and are not
           publicly cached.
         </p>
@@ -309,7 +310,8 @@ curl -X POST ${origin}/api/v1/auth/verify \\
         </p>
         <p>
           The returned token is an ordinary session. Both session tokens and generated API keys can be sent as bearer
-          tokens and revoked under account security. Cookies are never accepted for writes.
+          tokens and revoked under <a href="/account/security" target="_blank">account security</a>. Cookies are never
+          accepted for writes.
         </p>
         <CodeBlock language="bash">
           {`curl -X POST ${origin}/api/v1/posts \\
