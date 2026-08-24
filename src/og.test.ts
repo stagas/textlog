@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test'
 import { createCanvas, Image } from 'canvas'
-import { postOgText, renderDefaultOg, renderFollowBadge, renderPostOg, renderProfileOg, renderTagOg } from './og'
+import { fitPost, postOgText, renderDefaultOg, renderFollowBadge, renderPostOg, renderProfileOg, renderTagOg } from './og'
 import { pollDisplayBody } from './polls'
 
 function visiblePixels(imageBuffer: Buffer, x: number, y: number, width: number, height: number) {
@@ -18,6 +18,15 @@ function visiblePixels(imageBuffer: Buffer, x: number, y: number, width: number,
 }
 
 describe('renderPostOg', () => {
+  test('keeps long post text readable and truncates it after five short lines', () => {
+    const context = createCanvas(1200, 630).getContext('2d')
+    const fitted = fitPost(context, Array.from({ length: 80 }, (_, index) => `word${index}`).join(' '))
+    expect(fitted.size).toBe(52)
+    expect(fitted.lines).toHaveLength(5)
+    expect(fitted.lines.every(line => line.length <= 34)).toBe(true)
+    expect(fitted.lines[4]).toEndWith('…')
+  })
+
   test('renders markdown links as their label without the URL', () => {
     expect(postOgText('Read [the docs](https://example.com/docs) today')).toEqual({
       text: 'Read the docs today',

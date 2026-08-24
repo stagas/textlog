@@ -11,6 +11,9 @@ const maxTextWidth = 1040
 const contentTop = 140
 const contentBottom = 510
 const maxTextHeight = contentBottom - contentTop
+const postMaxCharactersPerLine = 34
+const postMaxLines = 5
+const postMinFontSize = 52
 const textColor = '#f0f3ee'
 const accentColor = '#9abd8e'
 const codeColor = '#a8afa4'
@@ -49,7 +52,7 @@ function drawBackground(ctx: CanvasRenderingContext2D) {
   ctx.fillText(brand, brandX, brandBaseline)
 }
 
-function linesFor(ctx: CanvasRenderingContext2D, text: string, maxWidth: number) {
+function linesFor(ctx: CanvasRenderingContext2D, text: string, maxWidth: number, maxCharacters = Infinity) {
   const lines: string[] = []
   for (const sourceLine of text.replace(/\r/g, '').split('\n')) {
     let remaining = sourceLine.replace(/\t/g, '    ')
@@ -58,9 +61,10 @@ function linesFor(ctx: CanvasRenderingContext2D, text: string, maxWidth: number)
       continue
     }
 
-    while (ctx.measureText(remaining).width > maxWidth) {
+    while (remaining.length > maxCharacters || ctx.measureText(remaining).width > maxWidth) {
       let cut = 1
-      while (cut < remaining.length && ctx.measureText(remaining.slice(0, cut + 1)).width <= maxWidth) cut++
+      while (cut < remaining.length && cut < maxCharacters
+        && ctx.measureText(remaining.slice(0, cut + 1)).width <= maxWidth) cut++
 
       // Prefer a natural wrap point for prose. Only the single separator introduced
       // by wrapping is omitted; indentation and all explicit line breaks stay intact.
@@ -79,33 +83,30 @@ function linesFor(ctx: CanvasRenderingContext2D, text: string, maxWidth: number)
   return lines
 }
 
-function fitPost(ctx: CanvasRenderingContext2D, body: string, availableHeight = maxTextHeight, maxSize = 108) {
-  // Let the longest authored line influence the starting size. This favors fewer,
-  // longer rows instead of rendering large type and wrapping after only a few words.
-  const longestSourceLine = body.replace(/\r/g, '').split('\n')
-    .map(line => line.replace(/\t/g, '    '))
-    .reduce((longest, line) => line.length > longest.length ? line : longest, '')
-  ctx.font = `500 ${maxSize}px monospace`
-  const longestWidth = ctx.measureText(longestSourceLine).width
-  const widthFittedSize = longestWidth ? Math.floor(maxSize * maxTextWidth / longestWidth) : maxSize
-  const startingSize = Math.max(20, Math.min(maxSize, widthFittedSize))
-
-  // Wrapping is recalculated at every size because it also affects total height.
-  for (let size = startingSize; size >= 20; size -= 2) {
+export function fitPost(ctx: CanvasRenderingContext2D, body: string, availableHeight = maxTextHeight, maxSize = 108) {
+  // Preserve large type for short posts, but never shrink a long post into fine print.
+  // Long content is clamped below instead of being allowed to dictate the font size.
+  const minSize = Math.min(postMinFontSize, maxSize)
+  for (let size = maxSize; size >= minSize; size -= 2) {
     ctx.font = `500 ${size}px monospace`
-    const lines = linesFor(ctx, body, maxTextWidth)
+    const lines = linesFor(ctx, body, maxTextWidth, postMaxCharactersPerLine)
     const lineHeight = Math.round(size * 1.32)
-    if (lines.length * lineHeight <= availableHeight) return { lines, lineHeight, size }
+    if (lines.length <= postMaxLines && lines.length * lineHeight <= availableHeight) {
+      return { lines, lineHeight, size }
+    }
   }
-  const size = 20
-  const lineHeight = 26
+  const size = minSize
+  const lineHeight = Math.round(size * 1.32)
   ctx.font = `500 ${size}px monospace`
-  const lines = linesFor(ctx, body, maxTextWidth)
-  const visibleLineCount = Math.max(1, Math.floor(availableHeight / lineHeight))
+  const lines = linesFor(ctx, body, maxTextWidth, postMaxCharactersPerLine)
+  const visibleLineCount = Math.max(1, Math.min(postMaxLines, Math.floor(availableHeight / lineHeight)))
   const visibleLines = lines.slice(0, visibleLineCount)
   if (lines.length > visibleLineCount) {
     const last = visibleLines.length - 1
-    visibleLines[last] = visibleLines[last].replace(/\s+$/, '') + '…'
+    let truncated = visibleLines[last].replace(/\s+$/, '')
+    while (truncated && (truncated.length + 1 > postMaxCharactersPerLine
+      || ctx.measureText(`${truncated}…`).width > maxTextWidth)) truncated = truncated.slice(0, -1).replace(/\s+$/, '')
+    visibleLines[last] = `${truncated}…`
   }
   return { lines: visibleLines, lineHeight, size }
 }
