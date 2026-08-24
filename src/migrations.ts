@@ -1786,6 +1786,26 @@ export const migrations: Migration[] = [
         ON handle_change_events(user_id,changed_at);`)
     },
   },
+  {
+    version: 127,
+    name: 'invalidate_personalized_feeds_for_completed_signups',
+    up(database) {
+      database.run(`DROP TRIGGER IF EXISTS personalized_feed_users_update;
+        CREATE TRIGGER personalized_feed_users_update AFTER UPDATE ON users BEGIN
+          INSERT INTO personalized_feed_generations(viewer_id,generation)
+          WITH affected(id) AS (
+            SELECT NEW.id
+            UNION SELECT follower_id FROM follows WHERE following_id=NEW.id
+            UNION SELECT viewer_id FROM feed_snapshots s JOIN feed_snapshot_items i ON i.snapshot_id=s.id
+              WHERE json_extract(i.payload,'$.actor_id')=NEW.id
+                OR json_extract(i.payload,'$.target_handle') IN (OLD.handle,NEW.handle)
+            UNION SELECT id FROM users
+              WHERE OLD.handle_chosen_at IS NULL AND NEW.handle_chosen_at IS NOT NULL
+          ) SELECT affected.id,2 FROM affected JOIN users ON users.id=affected.id
+          ON CONFLICT(viewer_id) DO UPDATE SET generation=generation+1;
+        END;`)
+    },
+  },
 ]
 
 export const latestMigrationVersion = migrations.at(-1)!.version

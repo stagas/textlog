@@ -634,6 +634,23 @@ describe('database migrations', () => {
     expect(generation()).toBe(initial + 3)
   })
 
+  test('invalidates existing personalized feeds when a signup chooses a handle', () => {
+    const database = new Database(':memory:')
+    database.run('PRAGMA foreign_keys=ON')
+    runMigrations(database)
+    database.run(`INSERT INTO users(id,handle,email,password,handle_chosen_at)
+      VALUES(1,'admin','admin@example.com','x',CURRENT_TIMESTAMP),
+        (2,'pending','pending@example.com','x',NULL)`)
+    const generation = () => (database.query(
+      'SELECT generation FROM personalized_feed_generations WHERE viewer_id=1',
+    ).get() as { generation: number }).generation
+
+    const initial = generation()
+    database.run('UPDATE users SET handle_chosen_at=CURRENT_TIMESTAMP WHERE id=2')
+
+    expect(generation()).toBe(initial + 1)
+  })
+
   test('replaces legacy internal OG previews with native post references', () => {
     const database = new Database(':memory:')
     database.run(`CREATE TABLE users(id INTEGER PRIMARY KEY,deleted_at TEXT,suspended_at TEXT);
