@@ -3465,6 +3465,11 @@ form.report-panel {
   line-height: 1.5;
 }
 
+.posting-suggestion-result {
+  cursor: text;
+  user-select: all;
+}
+
 .posting-suggestion-results mark {
   color: white;
   background: color-mix(in srgb, var(--muted) 20%, transparent);

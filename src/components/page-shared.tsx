@@ -275,7 +275,7 @@ export function PostingSuggestionResults({ search }: { search?: PostingSuggestio
     <div className="posting-suggestion-results" aria-live="polite">
       {search.results.length
         ? search.results.map(result => (
-          <span key={result}>
+          <span className="posting-suggestion-result" key={result} title="Select and copy">
             {prefix}
             <HighlightedText text={result} terms={terms} />
           </span>

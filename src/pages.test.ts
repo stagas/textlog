@@ -390,6 +390,7 @@ test('posting helpers are searchable details and show copyable highlighted resul
     'required="" autofocus="" autoComplete="off" inputMode="text" enterKeyHint="enter">A draft worth keeping</textarea>',
   )
   expect(html).toContain('#<mark>type</mark>script')
+  expect(html).toContain('class="posting-suggestion-result" title="Select and copy"')
   expect(html).toContain('<span aria-label="More results">...</span>')
   expect(html).not.toContain('href="/tag/typescript"')
   expect(html.indexOf('class="posting-suggestion-results"')).toBeLessThan(html.indexOf('class="composefoot"'))
