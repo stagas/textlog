@@ -502,6 +502,8 @@ header>nav>a:not(.button),
 
 .remote-link-menu {
   position: relative;
+  display: inline-block;
+  max-width: 100%;
 }
 
 .remote-link-menu > a:not(.remote-link-popover) {
