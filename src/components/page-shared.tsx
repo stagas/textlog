@@ -348,7 +348,8 @@ export function Pagination(
     >
       {page > 1
         ? (
-          <a className="pagination-edge" href={`${path}${separator}${pageParam}=${page - 1}${fragment}`}
+          <a className="pagination-edge"
+            href={`${path}${separator}${pageParam}=${page - 1}&_scroll=instant${fragment}`}
             aria-label="Previous page"
           >
             ← prev
@@ -364,6 +365,7 @@ export function Pagination(
               ? (
                 <form className="pagination-current-form" method="get" action={`${formPath}${fragment}`}
                   aria-current="page">
+                  <input type="hidden" name="_scroll" value="instant" />
                   {formParameters.map(([name, parameterValue]) => (
                     <input key={`${name}:${parameterValue}`} type="hidden" name={name} value={parameterValue} />
                   ))}
@@ -372,13 +374,15 @@ export function Pagination(
                     inputMode="numeric" enterKeyHint="go" />
                 </form>
               )
-              : <a href={`${path}${separator}${pageParam}=${value}${fragment}`} aria-label={`Page ${value}`}>{value}</a>}
+              : <a href={`${path}${separator}${pageParam}=${value}&_scroll=instant${fragment}`}
+                aria-label={`Page ${value}`}>{value}</a>}
           </React.Fragment>
         ))}
       </div>
       {page < totalPages
         ? (
-          <a className="pagination-edge" href={`${path}${separator}${pageParam}=${page + 1}${fragment}`}
+          <a className="pagination-edge"
+            href={`${path}${separator}${pageParam}=${page + 1}&_scroll=instant${fragment}`}
             aria-label="Next page">
             next →
           </a>
@@ -399,7 +403,8 @@ export function CursorPagination({ path, previousCursor, nextCursor }: {
     <nav className="pagination hot-pagination" aria-label="Pagination">
       {previousCursor
         ? (
-          <a className="pagination-edge" href={`${path}${separator}cursor=${encodeURIComponent(previousCursor)}`}>
+          <a className="pagination-edge"
+            href={`${path}${separator}cursor=${encodeURIComponent(previousCursor)}&_scroll=instant`}>
             ← prev
           </a>
         )
@@ -407,7 +412,7 @@ export function CursorPagination({ path, previousCursor, nextCursor }: {
       {nextCursor
         ? (
           <a className="pagination-edge hot-pagination-next"
-            href={`${path}${separator}cursor=${encodeURIComponent(nextCursor)}`}
+            href={`${path}${separator}cursor=${encodeURIComponent(nextCursor)}&_scroll=instant`}
           >
             next →
           </a>

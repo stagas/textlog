@@ -52,6 +52,7 @@ export function Layout({
   const name = appName()
   const origin = appOrigin()
   const requestUrl = new URL(request.url)
+  const instantScroll = /(?:^|;\s*)textlog_scroll=instant(?:;|$)/.test(request.headers.get('cookie') || '')
   const showGuestJoin = !user && ['/hot', '/latest'].includes(requestUrl.pathname)
   const onWritePage = requestUrl.pathname === '/write'
   const currentPath = requestUrl.pathname + requestUrl.search
@@ -116,7 +117,7 @@ export function Layout({
       </>
     )
   return (
-    <html lang="en">
+    <html lang="en" className={instantScroll ? 'scroll-instant' : undefined}>
       <head>
         <meta charSet="utf-8" />
         <meta name="viewport" content="width=device-width,initial-scale=1" />
@@ -164,32 +165,6 @@ export function Layout({
         {mobile && <link href="https://fonts.cdnfonts.com/css/dejavu-sans-mono" rel="stylesheet" />}
         <link rel="stylesheet" href="/styles.css?v=769" />
         <style>{themeCss}</style>
-        <script dangerouslySetInnerHTML={{ __html: `
-          (() => {
-            const key = 'textlog-scroll-behavior';
-            try {
-              if (sessionStorage.getItem(key) === 'instant') document.documentElement.classList.add('scroll-instant');
-              sessionStorage.removeItem(key);
-            } catch {}
-            document.addEventListener('click', event => {
-              if (event.defaultPrevented || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey
-                || event.altKey) return;
-              const link = event.target instanceof Element ? event.target.closest('a') : null;
-              if (link?.closest('.pagination') && (!link.target || link.target === '_self')) {
-                try { sessionStorage.setItem(key, 'instant'); } catch {}
-              }
-            });
-            document.addEventListener('submit', event => {
-              const form = event.target;
-              if (!(form instanceof HTMLFormElement)) return;
-              const action = new URL(form.action, location.href).pathname;
-              if (form.classList.contains('pagination-current-form') || action.startsWith('/follow/')
-                || action.startsWith('/tag-follow/')) {
-                try { sessionStorage.setItem(key, 'instant'); } catch {}
-              }
-            });
-          })();
-        ` }} />
       </head>
       <body className={`density-${density}${mobile ? ' mobile-agent' : ''}${
         user?.show_link_previews === 0 ? ' link-previews-disabled' : ''}${

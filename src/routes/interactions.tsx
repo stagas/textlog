@@ -1,4 +1,4 @@
-import { clientErrorPage, currentPage, form, page, redirect, safeNext } from './shared'
+import { clientErrorPage, currentPage, form, instantScrollPath, page, redirect, safeNext } from './shared'
 
 import type { Hono } from 'hono'
 import {
@@ -33,10 +33,11 @@ export function registerInteractionsRoutes(app: Hono) {
     if (referer && URL.canParse(referer)) {
       const url = new URL(referer)
       if (url.pathname === '/explore' && /^\d+(,\d+){0,7}$/.test(f.explorePeople || '')) {
-        return redirect(returnPath, `explore_people=${f.explorePeople}; HttpOnly; Path=/explore; SameSite=Lax`)
+        return redirect(instantScrollPath(returnPath),
+          `explore_people=${f.explorePeople}; HttpOnly; Path=/explore; SameSite=Lax`)
       }
     }
-    return redirect(returnPath)
+    return redirect(instantScrollPath(returnPath))
   })
 
   app.post('/block/:handle', async c => {
@@ -88,9 +89,9 @@ export function registerInteractionsRoutes(app: Hono) {
       void sendPushForTagFollow(user.id, user.handle, tag)
         .catch(error => logError('tag follow activity push failed', error))
     }
-    return redirect(f.from
+    return redirect(instantScrollPath(f.from
       ? safeNext(f.from)
-      : safeRefererPath(c.req.header('referer'), c.req.url, '/tag/' + encodeURIComponent(tag)))
+      : safeRefererPath(c.req.header('referer'), c.req.url, '/tag/' + encodeURIComponent(tag))))
   })
 
   app.post('/tag-block/:tag', async c => {

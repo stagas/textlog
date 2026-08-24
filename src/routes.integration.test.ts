@@ -120,6 +120,19 @@ test('web manifest is cached by browsers', async () => {
   })
 })
 
+test('instant scroll actions are applied once without client-side scripts', async () => {
+  const marked = await request('/about?_scroll=instant')
+  expect(marked.status).toBe(303)
+  expect(marked.headers.get('location')).toBe('/about')
+  expect(marked.headers.get('set-cookie')).toContain('textlog_scroll=instant')
+
+  const destination = await request('/about', { cookie: 'textlog_scroll=instant' })
+  const html = await destination.text()
+  expect(html).toContain('<html lang="en" class="scroll-instant">')
+  expect(html).not.toContain('<script')
+  expect(destination.headers.get('set-cookie')).toContain('textlog_scroll=; Max-Age=0')
+})
+
 async function signup(handle: string, email: string, _password: string, ip?: string) {
   const response = await request('/enter', { method: 'POST', form: { email }, ip })
   expect(response.status).toBe(200)
@@ -1205,11 +1218,11 @@ test('consequential account, content, reporting, and admin flows work over HTTP'
   for (let index = 1; index <= 81; index++) insertFeedPost.run(alice.id, `cursor note ${index}`)
   const latestFirst = await request('/latest')
   const latestFirstBody = await latestFirst.text()
-  const latestNext = latestFirstBody.match(/href="(\/latest\?page=2#feed-tabs)"/)?.[1]
+  const latestNext = latestFirstBody.match(/href="(\/latest\?page=2&amp;_scroll=instant#feed-tabs)"/)?.[1]
   expect(latestNext).toBeTruthy()
   expect(latestFirstBody).toContain('cursor note 81')
   expect(latestFirstBody).not.toContain(post.body)
-  const latestSecondBody = await (await request(latestNext!)).text()
+  const latestSecondBody = await (await request('/latest?page=2')).text()
   expect(latestSecondBody).not.toContain(post.body)
   expect(latestSecondBody).toContain('← prev')
   expect(await (await request('/latest?page=3')).text()).toContain(post.body)
@@ -1222,10 +1235,10 @@ test('consequential account, content, reporting, and admin flows work over HTTP'
   expect(forYouFirstBody).not.toContain('class="for-you-item activity-item-unread"')
 
   const profileFirstBody = await (await request('/u/alice')).text()
-  const profileNext = profileFirstBody.match(/href="(\/u\/alice\?page=2)"/)?.[1]
+  const profileNext = profileFirstBody.match(/href="(\/u\/alice\?page=2&amp;_scroll=instant)"/)?.[1]
   expect(profileNext).toBeTruthy()
   expect(profileFirstBody).not.toContain(post.body)
-  expect(await (await request(profileNext!)).text()).not.toContain(post.body)
+  expect(await (await request('/u/alice?page=2')).text()).not.toContain(post.body)
   expect(await (await request('/u/alice?page=3')).text()).toContain(post.body)
   expect((await request('/latest?cursor=broken')).status).toBe(400)
   expect((await request('/for-you?cursor=broken', { cookie: aliceCookie })).status).toBe(400)
@@ -1370,7 +1383,7 @@ test('consequential account, content, reporting, and admin flows work over HTTP'
     form: { from: '/latest#post-2' },
   })
   expect(unicodeTagFollow.status).toBe(303)
-  expect(unicodeTagFollow.headers.get('location')).toBe('/latest#post-2')
+  expect(unicodeTagFollow.headers.get('location')).toBe('/latest?_scroll=instant#post-2')
   expect(database.query('SELECT 1 FROM hashtag_follows WHERE user_id=? AND tag=\'español\'').get(alice.id)).toBeTruthy()
   const invalidTagFollow = await request('/tag-follow/not-a-tag', { method: 'POST', cookie: aliceCookie })
   expect(invalidTagFollow.status).toBe(400)
@@ -1487,14 +1500,14 @@ test('consequential account, content, reporting, and admin flows work over HTTP'
       createdAt)
   }
   const activityFirstBody = await (await request('/to-me', { cookie: aliceCookie })).text()
-  const activityNext = activityFirstBody.match(/href="(\/to-me\?page=2)"/)?.[1]
+  const activityNext = activityFirstBody.match(/href="(\/to-me\?page=2&amp;_scroll=instant)"/)?.[1]
   expect(activityNext).toBeTruthy()
   expect(activityFirstBody).toContain('activity cursor reply 81')
   expect(activityFirstBody).not.toContain('oldest cursor boundary')
   expect(activityFirstBody).toContain('href="/to-me?page=2#')
   expect(activityFirstBody).toContain('action="/to-me/read-all"')
   insertActivityReply.run(bob.id, post.id, 'newer activity after cursor', '2080-02-01 12:00:00')
-  const activitySecondBody = await (await request(activityNext!, { cookie: aliceCookie })).text()
+  const activitySecondBody = await (await request('/to-me?page=2', { cookie: aliceCookie })).text()
   expect(activitySecondBody).not.toContain('oldest cursor boundary')
   expect(activitySecondBody).not.toContain('activity cursor reply 81')
   expect(activitySecondBody).toContain('← prev')

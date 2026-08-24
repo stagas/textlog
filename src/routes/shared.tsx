@@ -46,6 +46,12 @@ export function rememberFeed(response: Response, feed: 'following' | 'activity' 
 export function safeNext(value?: string) {
   return safeLocalPath(value)
 }
+export function instantScrollPath(path: string) {
+  const hashIndex = path.indexOf('#')
+  const beforeHash = hashIndex === -1 ? path : path.slice(0, hashIndex)
+  const hash = hashIndex === -1 ? '' : path.slice(hashIndex)
+  return `${beforeHash}${beforeHash.includes('?') ? '&' : '?'}_scroll=instant${hash}`
+}
 export function currentPage(value?: string) {
   const parsed = Number(value)
   return Number.isInteger(parsed) && parsed > 0 ? parsed : 1

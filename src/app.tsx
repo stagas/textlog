@@ -49,6 +49,22 @@ const publicArchivePath = Bun.env.PUBLIC_ARCHIVE_PATH || 'public/dump.zip'
 const bootId = crypto.randomUUID()
 configureDevReload(devReloadEnabled ? bootId : undefined)
 const app = new Hono()
+app.use('*', async (c, next) => {
+  const url = new URL(c.req.url)
+  if ((c.req.method === 'GET' || c.req.method === 'HEAD') && url.searchParams.get('_scroll') === 'instant') {
+    url.searchParams.delete('_scroll')
+    const location = url.pathname + url.search + url.hash
+    return new Response(null, { status: 303, headers: {
+      location,
+      'set-cookie': 'textlog_scroll=instant; Max-Age=10; HttpOnly; Path=/; SameSite=Lax',
+    } })
+  }
+  await next()
+  if (/(?:^|;\s*)textlog_scroll=instant(?:;|$)/.test(c.req.header('cookie') || '')
+    && c.res.headers.get('content-type')?.includes('text/html')) {
+    c.header('set-cookie', 'textlog_scroll=; Max-Age=0; HttpOnly; Path=/; SameSite=Lax', { append: true })
+  }
+})
 app.use('*', (c, next) => withAppearance(c.req.raw, next))
 app.use('*', (c, next) => {
   const user = currentUser(c.req.raw)

@@ -591,8 +591,8 @@ test('explore renders tag toggles above a full-width people section', () => {
   expect(html).toContain('class="button explore-tag-chip" aria-pressed="false"')
   expect(html).toContain('name="from" value="/explore#explore-tags"')
   expect(html).toContain('<section class="explore-people" id="explore-people"><h2>People to follow</h2>')
-  expect(html).toContain('href="/explore?tagsPage=2#explore-tags"')
-  expect(html).toContain('href="/explore?peoplePage=2#explore-people"')
+  expect(html).toContain('href="/explore?tagsPage=2&amp;_scroll=instant#explore-tags"')
+  expect(html).toContain('href="/explore?peoplePage=2&amp;_scroll=instant#explore-people"')
   expect(html).toContain('<div class="explore-section-heading"><h2>Trending tags</h2><nav class="pagination pagination-compact"')
   expect(html.indexOf('aria-label="Tags pagination"')).toBeLessThan(html.indexOf('class="explore-tag-chips"'))
   expect(html.indexOf('aria-label="People pagination"')).toBeLessThan(html.indexOf('class="people"'))
@@ -719,13 +719,13 @@ test('pages advertise the dynamic favicon, touch icon, and manifest', () => {
   expect(html).not.toContain('rel="icon" href="/textlog.svg')
 })
 
-test('pages mark pagination and follow navigation for instant scrolling', () => {
-  const html = renderToStaticMarkup(React.createElement(About, { user: null }))
-  expect(html).toContain("const key = 'textlog-scroll-behavior'")
-  expect(html).toContain("link?.closest('.pagination')")
-  expect(html).toContain("action.startsWith('/follow/')")
-  expect(html).toContain("action.startsWith('/tag-follow/')")
-  expect(html).toContain("classList.add('scroll-instant')")
+test('pagination requests instant scrolling without client-side scripts', () => {
+  const html = renderToStaticMarkup(React.createElement(Pagination, {
+    path: '/latest?view=flat', page: 2, totalPages: 3,
+  }))
+  expect(html).toContain('name="_scroll" value="instant"')
+  expect(html).toContain('page=1&amp;_scroll=instant')
+  expect(html).not.toContain('<script')
 })
 
 test('pages inline the cookie-aware theme and logo', () => {
@@ -751,7 +751,7 @@ test('appearance theme tab is a server-rendered form with mobile appearance choi
   expect(html).toContain('class="accent-swatch accent-swatch-theme accent-swatch-theme-sepia"')
   expect(html).toContain('name="theme" checked="" value="sepia"')
   expect(html).toContain('name="accent" checked="" value="amber"')
-  expect(html).not.toContain('src="/notifications.js"')
+  expect(html).not.toContain('<script')
   expect(html).not.toContain('style=')
 })
 
@@ -874,7 +874,7 @@ test('notification settings are the only account page that loads their client sc
   expect(notifications).not.toContain('name="signups"')
   expect(notifications).toContain('save preferences</button>')
   expect(profile).toContain('href="/account/edit/notifications"')
-  expect(profile).not.toContain('src="/notifications.js"')
+  expect(profile).not.toContain('<script')
 })
 
 test('notification settings show new-user alerts only to administrators', () => {
@@ -933,7 +933,7 @@ test('appearance font tab lists local monospace fonts in their own families', ()
   expect(html).toContain('value="large"')
   expect(html).toContain('value="larger"')
   expect(html).toContain('Fonts are used from your device.')
-  expect(html).not.toContain('src="/notifications.js"')
+  expect(html).not.toContain('<script')
   expect(html).not.toContain('style=')
 })
 
@@ -1360,8 +1360,8 @@ describe('About', () => {
       expect(html).toContain('href="#feed-tabs">browse notes</a>')
       expect(html).toContain('href="/hot#feed-tabs"')
       expect(html).toContain('href="/latest#feed-tabs"')
-      expect(html).toContain('?page=2#feed-tabs" aria-label="Page 2"')
-      expect(html).toContain('?page=2#feed-tabs" aria-label="Next page"')
+      expect(html).toContain('?page=2&amp;_scroll=instant#feed-tabs" aria-label="Page 2"')
+      expect(html).toContain('?page=2&amp;_scroll=instant#feed-tabs" aria-label="Next page"')
       expect(html.indexOf('about-page feed-about')).toBeLessThan(html.indexOf('id="feed-tabs"'))
       expect(html.lastIndexOf('aria-label="Pagination"')).toBeLessThan(html.indexOf('class="guest-join-row"'))
     }
@@ -1873,7 +1873,7 @@ test('Following and followers paginate every 8 people', () => {
       following: false,
     }))
 
-    expect(html).toContain(`href="/u/reader?tab=${kind}&amp;page=2#connections-people-heading"`)
+    expect(html).toContain(`href="/u/reader?tab=${kind}&amp;page=2&amp;_scroll=instant#connections-people-heading"`)
     expect(html.indexOf('aria-label="People pagination"')).toBeLessThan(html.indexOf('connection-people'))
     expect(html.lastIndexOf('aria-label="People pagination"')).toBeGreaterThan(html.indexOf('connection-people'))
   }
@@ -1900,7 +1900,7 @@ test('Connection sorting can only be changed on the viewer’s own profile', () 
   expect(own).toContain('href="/u/reader?tab=followers">recent</a>')
   expect(recent).toContain('href="/u/reader?tab=following&amp;sort=abc&amp;tagsPage=3">abc</a>')
   expect(recent).toContain(
-    'href="/u/reader?tab=following&amp;tagsPage=3&amp;page=1#connections-people-heading"',
+    'href="/u/reader?tab=following&amp;tagsPage=3&amp;page=1&amp;_scroll=instant#connections-people-heading"',
   )
   expect(other).not.toContain('>recent</a>')
   expect(other).not.toContain('>abc</a>')
@@ -2123,7 +2123,7 @@ test('Followed tags paginate every 24 tags', () => {
   }))
 
   expect(html).toContain(
-    'href="/u/reader?tab=following&amp;tagsPage=2#connections-tags-heading"',
+    'href="/u/reader?tab=following&amp;tagsPage=2&amp;_scroll=instant#connections-tags-heading"',
   )
 })
 
