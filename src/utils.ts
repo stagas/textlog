@@ -521,9 +521,11 @@ export function linkify(body: string, mentionBios: Record<string, string> = {}, 
     const renderPart = (part: string): string => linkify(part, mentionBios, highlightTerms, appUrl, flags,
       navigationQuery, hashtagCounts, mentionNoteCounts, popover, false)
     return renderPart(spoiler.visible)
-      + `<details class="post-spoiler"><summary>reveal</summary><span class="post-spoiler-content">${
+      + `<span class="post-spoiler"><label class="post-spoiler-summary">`
+      + `<input class="post-spoiler-input" type="checkbox"><span>reveal</span></label>`
+      + `<span class="post-spoiler-content"><span class="post-spoiler-content-inner">${
         renderPart(spoiler.hidden)
-      }</span></details>`
+      }</span></span></span>`
   }
   // Keep the drawing literal while retaining navigation for social references.
   if (containsAsciiArt(body)) {

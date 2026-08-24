@@ -260,10 +260,10 @@ test('todos compose with spoiler sections while preserving toggle indices', () =
   const html = renderToStaticMarkup(React.createElement(Post, { p: post, user: author }))
 
   expect(html).toContain('<div class="todo-text"><a href="/tag/spoiler?from=')
-  expect(html).toContain('>#spoiler</a></div><details class="post-spoiler todo-spoiler">')
-  expect(html).toContain('<summary>reveal</summary><div class="post-spoiler-content">')
+  expect(html).toContain('>#spoiler</a></div><div class="post-spoiler todo-spoiler">')
+  expect(html).toContain('<span>reveal</span></label><div class="post-spoiler-content">')
   expect(html).toContain('<input type="hidden" name="item" value="1"/>')
-  expect(html.indexOf('<summary>reveal</summary>')).toBeLessThan(html.indexOf('>hidden task</span>'))
+  expect(html.indexOf('<span>reveal</span>')).toBeLessThan(html.indexOf('>hidden task</span>'))
   expect(html.indexOf('>hidden task</span>')).toBeLessThan(html.indexOf('>another hidden task</span>'))
 })
 

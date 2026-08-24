@@ -118,10 +118,15 @@ function Todo({ p, user, preview, returnPath, formPrefix }: { p: PostView | NonN
     <div className={`todo${editable ? ' todo-editable' : ''}`} aria-label={preview ? 'Todo preview' : 'Todo list'}>
       {renderEntries(spoilerEntry < 0 ? todo.entries : todo.entries.slice(0, spoilerEntry + 1))}
       {spoilerEntry >= 0 && spoilerEntry < todo.entries.length - 1 && (
-        <details className="post-spoiler todo-spoiler">
-          <summary>reveal</summary>
-          <div className="post-spoiler-content">{renderEntries(todo.entries.slice(spoilerEntry + 1))}</div>
-        </details>
+        <div className="post-spoiler todo-spoiler">
+          <label className="post-spoiler-summary">
+            <input className="post-spoiler-input" type="checkbox" />
+            <span>reveal</span>
+          </label>
+          <div className="post-spoiler-content">
+            <div className="post-spoiler-content-inner">{renderEntries(todo.entries.slice(spoilerEntry + 1))}</div>
+          </div>
+        </div>
       )}
     </div>
   )
@@ -747,7 +752,11 @@ export function ThreadReplies(
     }
     visit(parentId)
     return flattened.length
-      ? <div className="reply-branch reply-branch-flat">{flattened.map(reply => renderReply(reply))}</div>
+      ? (
+        <div className="reply-branch reply-branch-flat">
+          <div className="thread-branch-content">{flattened.map(reply => renderReply(reply))}</div>
+        </div>
+      )
       : null
   }
   const renderBranch = (id: number, depth: number): React.ReactNode => {
@@ -755,17 +764,19 @@ export function ThreadReplies(
     if (!branch.length) return null
     return (
       <div className="reply-branch">
-        {branch.map(reply => {
-          const descendantCount = visibleDescendantCount(reply.id)
-          const truncatedByDepth = !reply.deleted_at && depth >= MAX_VISIBLE_REPLY_DEPTH && descendantCount > 0
-          const hasMissingDescendants = !reply.deleted_at && showMissingContinuations
-            && (reply.reply_count || 0) > descendantCount
-          const continuesElsewhere = truncatedByDepth || hasMissingDescendants
-          const childBranch = truncatedByDepth ? null : renderBranch(reply.id, depth + 1)
-          if (reply.deleted_at) return <React.Fragment key={reply.id}>{childBranch}</React.Fragment>
-          if (reply.id === excludePostId) return <React.Fragment key={reply.id}>{childBranch}</React.Fragment>
-          return renderReply(reply, childBranch, continuesElsewhere)
-        })}
+        <div className="thread-branch-content">
+          {branch.map(reply => {
+            const descendantCount = visibleDescendantCount(reply.id)
+            const truncatedByDepth = !reply.deleted_at && depth >= MAX_VISIBLE_REPLY_DEPTH && descendantCount > 0
+            const hasMissingDescendants = !reply.deleted_at && showMissingContinuations
+              && (reply.reply_count || 0) > descendantCount
+            const continuesElsewhere = truncatedByDepth || hasMissingDescendants
+            const childBranch = truncatedByDepth ? null : renderBranch(reply.id, depth + 1)
+            if (reply.deleted_at) return <React.Fragment key={reply.id}>{childBranch}</React.Fragment>
+            if (reply.id === excludePostId) return <React.Fragment key={reply.id}>{childBranch}</React.Fragment>
+            return renderReply(reply, childBranch, continuesElsewhere)
+          })}
+        </div>
       </div>
     )
   }

@@ -44,7 +44,7 @@ describe('in-memory stylesheet', () => {
     expect(css).toContain('.tappable-post a:not(.post-hit-area):not(.parent-hit-area)')
     expect(css).toContain('.tappable-post .parent-hit-area {\n  position: absolute;')
     expect(css).toContain(
-      '.tappable-post input,\n.tappable-post .post-spoiler summary {\n  position: relative;\n  z-index: 21;',
+      '.tappable-post input,\n.tappable-post .post-spoiler-summary {\n  position: relative;\n  z-index: 21;',
     )
     expect(css).toContain('.tappable-post:has(> .post-hit-area:hover),')
     expect(css).toContain('background: color-mix(in srgb, var(--accent) 5%, transparent);')
@@ -91,8 +91,8 @@ describe('in-memory stylesheet', () => {
     expect(css).toContain('.todo :is(.reference-menu-popover, .remote-link-popover) { pointer-events: auto; }')
     expect(css).toContain('.todo-editable .todo-label :is(a, button) {')
     expect(css).toContain('.todo a { pointer-events: auto; }')
-    expect(css).toContain('.todo .post-spoiler summary { line-height: 1.65; pointer-events: auto; }')
-    expect(css).toContain('.todo .post-spoiler-content { display: grid; margin-top: 0; }')
+    expect(css).toContain('.todo .post-spoiler-summary { line-height: 1.65; pointer-events: auto; }')
+    expect(css).toContain('.todo .post-spoiler:has(.post-spoiler-input:checked) .post-spoiler-content-inner { margin-top: 0; }')
     expect(css).toContain('.parent-quote .todo { font-size: .75rem; letter-spacing: normal; }')
   })
 
@@ -119,6 +119,23 @@ describe('in-memory stylesheet', () => {
     const css = await Bun.file(new URL('./styles.css', import.meta.url)).text()
     expect(css).toContain('.feed-tabs+.activity-group > .activity-follow:first-child,')
     expect(css).toContain('.feed-read-action+.activity-group > .activity-follow:first-child {\n  border-top: 0;')
+  })
+
+  test('animates thread folding with a collapsible grid track', async () => {
+    const css = await Bun.file(new URL('./styles.css', import.meta.url)).text()
+    expect(css).toContain('.reply-branch {\n  display: grid;\n  grid-template-rows: 1fr;')
+    expect(css).toContain('.thread-branch-content {\n  min-height: 0;\n  overflow: hidden;')
+    expect(css).toContain('.thread-fold-input:checked~.reply-branch {\n  grid-template-rows: 0fr;')
+    expect(css).toContain('transition: grid-template-rows 200ms ease, visibility 0s 200ms;')
+  })
+
+  test('animates grouped activity disclosures with a collapsible grid track', async () => {
+    const css = await Bun.file(new URL('./styles.css', import.meta.url)).text()
+    expect(css).toContain('.activity-more-content {\n  display: grid;\n  grid-template-rows: 0fr;')
+    expect(css).toContain('.activity-more-content-inner {\n  min-height: 0;\n  overflow: hidden;')
+    expect(css).toContain('.activity-more-input:checked ~ .activity-more-content {\n  grid-template-rows: 1fr;')
+    expect(css).toContain('.activity-more-summary::before {\n  content: "";')
+    expect(css).toContain('.activity-more-input:checked + .activity-more-summary::before {\n  transform: rotate(90deg);')
   })
 
   test('uses the active accent for the mobile tap highlight', async () => {
@@ -348,7 +365,7 @@ describe('in-memory stylesheet', () => {
       '.tappable-post a:not(.post-hit-area):not(.parent-hit-area):not(.remote-link-popover),',
     )
     expect(css).toContain(
-      '.tappable-post input,\n.tappable-post .post-spoiler summary {\n  position: relative;\n  z-index: 21;',
+      '.tappable-post input,\n.tappable-post .post-spoiler-summary {\n  position: relative;\n  z-index: 21;',
     )
     expect(cardRule).toContain('cursor: pointer;')
   })

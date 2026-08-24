@@ -36,13 +36,15 @@ describe('post persistence', () => {
 
   test('hides lines below a spoiler tag behind a reveal control', () => {
     expect(linkify('visible\n#spoiler\nhidden https://example.com'))
-      .toBe('visible\n<a href="/tag/spoiler">#spoiler</a><details class="post-spoiler"><summary>reveal</summary>'
-        + '<span class="post-spoiler-content">hidden <a href="https://example.com" class="raw-link" '
+      .toBe('visible\n<a href="/tag/spoiler">#spoiler</a><span class="post-spoiler">'
+        + '<label class="post-spoiler-summary"><input class="post-spoiler-input" type="checkbox">'
+        + '<span>reveal</span></label><span class="post-spoiler-content">'
+        + '<span class="post-spoiler-content-inner">hidden <a href="https://example.com" class="raw-link" '
         + 'title="https://example.com" target="_blank" rel="nofollow ugc noopener noreferrer">example.com</a>'
-        + '</span></details>')
-    expect(linkify('visible #spoilers\nstill visible')).not.toContain('<details')
-    expect(linkify('https://example.com/#spoiler\nstill visible')).not.toContain('<details')
-    expect(linkify('#SPOILER')).not.toContain('<details')
+        + '</span></span></span>')
+    expect(linkify('visible #spoilers\nstill visible')).not.toContain('class="post-spoiler"')
+    expect(linkify('https://example.com/#spoiler\nstill visible')).not.toContain('class="post-spoiler"')
+    expect(linkify('#SPOILER')).not.toContain('class="post-spoiler"')
   })
 
   test('adds escaped bios to linkified post mentions', () => {

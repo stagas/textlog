@@ -1821,7 +1821,7 @@ nav form {
 .tappable-post button,
 .tappable-post label,
 .tappable-post input,
-.tappable-post .post-spoiler summary {
+.tappable-post .post-spoiler-summary {
   position: relative;
   z-index: 21;
 }
@@ -1991,10 +1991,14 @@ nav form {
 }
 
 .post-spoiler {
+  display: block;
   margin-top: var(--space-1);
 }
 
-.post-spoiler summary {
+.post-spoiler-summary {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
   width: max-content;
   color: var(--accent);
   cursor: pointer;
@@ -2003,12 +2007,57 @@ nav form {
   user-select: none;
 }
 
-.post-spoiler summary:hover {
+.post-spoiler-summary::before {
+  content: "";
+  width: 0;
+  height: 0;
+  border-top: 4px solid transparent;
+  border-bottom: 4px solid transparent;
+  border-left: 6px solid currentColor;
+  transition: transform 200ms ease;
+}
+
+.post-spoiler:has(.post-spoiler-input:checked) .post-spoiler-summary::before {
+  transform: rotate(90deg);
+}
+
+.post-spoiler-summary:hover {
   color: var(--accent-dark);
 }
 
+.post-spoiler .post-spoiler-input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+.post-spoiler-input:focus-visible + span {
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
+}
+
 .post-spoiler-content {
-  display: block;
+  display: grid;
+  grid-template-rows: 0fr;
+  visibility: hidden;
+  transition: grid-template-rows 200ms ease, visibility 0s 200ms;
+}
+
+.post-spoiler-content-inner {
+  min-height: 0;
+  overflow: hidden;
+}
+
+.post-spoiler:has(.post-spoiler-input:checked) .post-spoiler-content {
+  grid-template-rows: 1fr;
+  visibility: visible;
+  transition: grid-template-rows 200ms ease, visibility 0s;
+}
+
+.post-spoiler:has(.post-spoiler-input:checked) .post-spoiler-content-inner {
   margin-top: var(--space-1);
 }
 
@@ -4437,8 +4486,8 @@ form.report-panel {
 .todo-check-checked { color: var(--accent-dark); }
 .todo-done { color: var(--muted); text-decoration: line-through; }
 .todo .post-spoiler { margin-top: 0; }
-.todo .post-spoiler summary { line-height: 1.65; pointer-events: auto; }
-.todo .post-spoiler-content { display: grid; margin-top: 0; }
+.todo .post-spoiler-summary { line-height: 1.65; pointer-events: auto; }
+.todo .post-spoiler:has(.post-spoiler-input:checked) .post-spoiler-content-inner { margin-top: 0; }
 .parent-quote .todo { font-size: .75rem; letter-spacing: normal; }
 .parent-quote .todo-item > button,
 .parent-quote .todo-item-static { color: var(--quote-ink); }
@@ -5169,7 +5218,7 @@ form.report-panel {
   margin-right: -5px;
 }
 
-.activity-more > summary {
+.activity-more-summary {
   user-select: none;
 }
 
@@ -5354,7 +5403,19 @@ a.post-context:hover {
   padding-bottom: var(--space-2);
 }
 
-.activity-more > summary {
+.activity-more-input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+.activity-more-summary {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
   padding: var(--space-1) var(--gutter) var(--space-5);
   border-top: 0;
   color: var(--accent);
@@ -5362,8 +5423,53 @@ a.post-context:hover {
   cursor: pointer;
 }
 
-.activity-more[open] > summary {
+.activity-more-summary::before {
+  content: "";
+  width: 0;
+  height: 0;
+  border-top: 4px solid transparent;
+  border-bottom: 4px solid transparent;
+  border-left: 6px solid currentColor;
+  transition: transform 200ms ease;
+}
+
+.activity-more-input:checked + .activity-more-summary {
   color: var(--muted);
+}
+
+.activity-more-input:checked + .activity-more-summary::before {
+  transform: rotate(90deg);
+}
+
+.activity-more-input:focus-visible + .activity-more-summary {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+}
+
+.activity-more-content {
+  display: grid;
+  grid-template-rows: 0fr;
+  visibility: hidden;
+  transition: grid-template-rows 200ms ease, visibility 0s 200ms;
+}
+
+.activity-more-content-inner {
+  min-height: 0;
+  overflow: hidden;
+}
+
+.activity-more-input:checked ~ .activity-more-content {
+  grid-template-rows: 1fr;
+  visibility: visible;
+  transition: grid-template-rows 200ms ease, visibility 0s;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .activity-more-summary::before,
+  .activity-more-content,
+  .activity-more-input:checked ~ .activity-more-content {
+    transition: none;
+  }
 }
 
 .columns h2,
@@ -5524,8 +5630,17 @@ a.post-context:hover {
 .posttop .post-back-link:hover { color: var(--accent-dark); }
 
 .reply-branch {
+  display: grid;
+  grid-template-rows: 1fr;
   margin-left: clamp(18px, 3vw, 28px);
   border-left: 1px solid var(--soft);
+  visibility: visible;
+  transition: grid-template-rows 200ms ease, visibility 0s;
+}
+
+.thread-branch-content {
+  min-height: 0;
+  overflow: hidden;
 }
 
 .reply-node>.post {
@@ -5595,25 +5710,43 @@ a.post-context:hover {
 }
 
 .thread-fold::after {
-  content: '\203a';
+  content: "";
   display: inline-block;
-  transform: rotate(90deg) scale(1.5);
+  width: 0;
+  height: 0;
+  border-top: 4px solid transparent;
+  border-bottom: 4px solid transparent;
+  border-left: 6px solid currentColor;
+  transform: rotate(90deg);
+  transition: transform 200ms ease;
 }
 
 .thread-fold-input:checked+.post .thread-fold::after {
-  transform: scale(1.5);
+  transform: none;
 }
 
 .feed-thread>.thread-fold-input:checked+.thread-root .thread-fold::after {
-  transform: scale(1.5);
+  transform: none;
 }
 
 .thread-fold-input:checked~.reply-branch {
-  display: none;
+  grid-template-rows: 0fr;
+  visibility: hidden;
+  transition: grid-template-rows 200ms ease, visibility 0s 200ms;
 }
 
 .feed-thread>.thread-fold-input:checked~.reply-branch {
-  display: none;
+  grid-template-rows: 0fr;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .thread-fold::after,
+  .post-spoiler-summary::before,
+  .post-spoiler-content,
+  .reply-branch,
+  .thread-fold-input:checked~.reply-branch {
+    transition: none;
+  }
 }
 
 .thread-fold-input:focus-visible+.post .thread-fold {

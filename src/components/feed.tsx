@@ -200,15 +200,22 @@ export function Feed({ user, data, title, path = '/for-you', pageUrl, notificati
         latestCount={data.latestCount} viewMode={flat ? 'flat' : 'tree'} viewHref={viewHref} />
       {showTopPagination && <Pagination page={data.page} totalPages={data.totalPages} path={feedPath} top />}
       {data.timeline.length
-        ? groupSimilarActivities(flat ? data.timeline : visibleTimeline).map(group =>
+        ? groupSimilarActivities(flat ? data.timeline : visibleTimeline).map((group, groupIndex) =>
             group.rows.length > 1 && group.collapsible
               ? (
                 <div className="activity-group" key={group.rows[0].event_key}>
                   {renderTimelineRow(group.rows[0])}
-                  <details className="activity-more">
-                    <summary>and {group.rows.length - 1} more</summary>
-                    {group.rows.slice(1).map(renderTimelineRow)}
-                  </details>
+                  <div className="activity-more">
+                    <input className="activity-more-input" type="checkbox" id={`activity-more-${groupIndex}`} />
+                    <label className="activity-more-summary" htmlFor={`activity-more-${groupIndex}`}>
+                      and {group.rows.length - 1} more
+                    </label>
+                    <div className="activity-more-content">
+                      <div className="activity-more-content-inner">
+                        {group.rows.slice(1).map(renderTimelineRow)}
+                      </div>
+                    </div>
+                  </div>
                 </div>
               )
               : renderTimelineRow(group.rows[0])
