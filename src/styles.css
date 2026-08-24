@@ -598,8 +598,7 @@ header>nav>a:not(.button),
 }
 
 .remote-link-audio-popover {
-  grid-template-rows: max-content;
-  padding: var(--space-3);
+  padding: 0;
   cursor: default;
 }
 
@@ -625,6 +624,11 @@ header>nav>a:not(.button),
 
 .remote-link-menu:focus-within .remote-link-popover {
   display: grid;
+}
+
+.remote-link-menu:hover .remote-link-audio-popover,
+.remote-link-menu:focus-within .remote-link-audio-popover {
+  display: block;
 }
 
 .post:has(.remote-link-menu:hover),
