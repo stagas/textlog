@@ -1188,6 +1188,7 @@ describe('postTitle', () => {
   expect(html).toContain('/tags/:tag/posts.atom')
   expect(html).toContain('href="/account/security#feed-keys" target="_blank">account security</a>')
   expect(html).toContain('href="/account/security" target="_blank">account security</a>')
+  expect(html).toContain('href="/account/api-keys/new" target="_blank">generate a revocable API key</a>')
   expect(html).toContain('href="/api/embed-examples"')
   expect(html.match(/class="api-endpoints"/g)).toHaveLength(1)
   expect(html).toContain('data-method="DELETE" data-auth="true"><span class="api-auth-dot"')
