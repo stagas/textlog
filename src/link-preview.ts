@@ -36,7 +36,7 @@ function isYouTubeChannelUrl(url: URL) {
   return isYouTubeUrl(url.href) && /^\/(?:@[^/]+|channel\/[^/]+|c\/[^/]+|user\/[^/]+)\/?$/i.test(url.pathname)
 }
 
-function ownPostPreview(database: Database, rawUrl: string) {
+function ownPostPreview(rawUrl: string, database?: Database): ({ url: string } & LinkPreview) | null {
   const origin = appOrigin()
   if (!origin) return null
   let url: URL
@@ -49,14 +49,17 @@ function ownPostPreview(database: Database, rawUrl: string) {
   if (url.origin !== origin) return null
   const match = url.pathname.match(/^\/post\/([1-9]\d*)$/)
   if (!match) return null
-  const post = database.query(`SELECT p.body,u.handle FROM posts p JOIN users u ON u.id=p.user_id
+  const linkedPostId = Number(match[1])
+  if (!database) return { url: rawUrl, imageUrl: rawUrl, linkedPostId }
+  const post = database.query(`SELECT p.id,p.body,u.handle FROM posts p JOIN users u ON u.id=p.user_id
     WHERE p.id=? AND p.deleted_at IS NULL AND u.deleted_at IS NULL AND u.suspended_at IS NULL`)
-    .get(Number(match[1])) as { body: string; handle: string } | null
+    .get(linkedPostId) as { id: number; body: string; handle: string } | null
   if (!post) return null
   const text = post.body.replace(/\s+/g, ' ').trim()
   return {
     url: rawUrl,
     imageUrl: `${origin}/post/${match[1]}/og.png?v=7`,
+    linkedPostId: post.id,
     title: `@${post.handle} wrote on ${appName()}`,
     description: text.slice(0, 500),
     siteName: appName(),
@@ -399,7 +402,7 @@ export async function storeRemotePreviewImage(rawUrl: string) {
   return { key, width: image.width, height: image.height }
 }
 
-export async function discoverLinkPreviews(body: string, database?: Database) {
+export async function discoverLinkPreviews(body: string, database?: Database): Promise<Array<{ url: string } & LinkPreview>> {
   const storedImage = async (url: URL) => {
     const image = await fetchImage(url)
     if (!image) return null
@@ -409,7 +412,7 @@ export async function discoverLinkPreviews(body: string, database?: Database) {
   }
   const preview = async (rawUrl: string) => {
     try {
-      const ownPreview = database && ownPostPreview(database, rawUrl)
+      const ownPreview = ownPostPreview(rawUrl, database)
       if (ownPreview) return ownPreview
       const url = await publicHttpUrl(rawUrl)
       if (!url) return null
@@ -475,9 +478,16 @@ function writeLinkPreviews(database: Database, postId: number, previews: ({ url:
   replacedKeys: string[] = [])
 {
   const existing = database.query('SELECT image_url FROM post_link_previews WHERE post_id=? AND url=?')
-  const supportsMimeType = database.query("SELECT 1 FROM pragma_table_info('post_link_previews') WHERE name='mime_type'")
-    .get()
-  const insert = supportsMimeType ? database.query(`INSERT INTO post_link_previews
+  const supportsLinkedPost = database.query(
+    "SELECT 1 FROM pragma_table_info('post_link_previews') WHERE name='linked_post_id'",
+  ).get()
+  const supportsMimeType = database.query("SELECT 1 FROM pragma_table_info('post_link_previews') WHERE name='mime_type'").get()
+  const insert = supportsLinkedPost ? database.query(`INSERT INTO post_link_previews
+    (post_id,url,image_url,title,description,site_name,image_width,image_height,mime_type,linked_post_id) VALUES(?,?,?,?,?,?,?,?,?,?)
+    ON CONFLICT(post_id,url) DO UPDATE SET image_url=excluded.image_url,title=excluded.title,
+      description=excluded.description,site_name=excluded.site_name,image_width=excluded.image_width,
+      image_height=excluded.image_height,mime_type=excluded.mime_type,linked_post_id=excluded.linked_post_id`)
+    : supportsMimeType ? database.query(`INSERT INTO post_link_previews
     (post_id,url,image_url,title,description,site_name,image_width,image_height,mime_type) VALUES(?,?,?,?,?,?,?,?,?)
     ON CONFLICT(post_id,url) DO UPDATE SET image_url=excluded.image_url,title=excluded.title,
       description=excluded.description,site_name=excluded.site_name,image_width=excluded.image_width,
@@ -490,7 +500,8 @@ function writeLinkPreviews(database: Database, postId: number, previews: ({ url:
     const previous = existing.get(postId, preview.url) as { image_url: string } | null
     const values = [postId, preview.url, preview.imageKey || preview.imageUrl, preview.title || null,
       preview.description || null, preview.siteName || null, preview.imageWidth || null, preview.imageHeight || null]
-    insert.run(...values, ...(supportsMimeType ? [preview.mimeType || null] : []))
+    insert.run(...values, ...(supportsMimeType ? [preview.mimeType || null] : []),
+      ...(supportsLinkedPost ? [preview.linkedPostId || null] : []))
     if (previous && isImageKey(previous.image_url) && previous.image_url !== preview.imageKey) {
       replacedKeys.push(previous.image_url)
     }

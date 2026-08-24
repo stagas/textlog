@@ -2235,6 +2235,50 @@ test('Post renders preloaded parent and reply data', () => {
   expect(html).toContain('aria-label="reply to @author">enter to reply</a>')
 })
 
+test('Post uses the full Post component for internal link hover cards', () => {
+  const url = 'https://textlog.test/post/12'
+  const html = renderToStaticMarkup(React.createElement(Post, { user: {
+    id: 1, handle: 'writer', email: 'writer@example.com', bio: '', suspended_at: null,
+  }, p: {
+    id: 1, user_id: 2, parent_id: null, body: url, created_at: '2026-08-24 10:00:00', deleted_at: null,
+    handle: 'linker', reply_count: 0, link_previews: { [url]: { imageUrl: url, linkedPost: {
+      id: 12, user_id: 1, parent_id: null, body: 'The linked note', handle: 'writer', reply_count: 2,
+      thread_locked: false,
+    } } },
+  } }))
+  const card = html.slice(html.indexOf('class="remote-link-popover internal-post-popover"'))
+  expect(card).toContain('class="post internal-post-card tappable-post"')
+  expect(card).toContain('class="post-hit-area" href="/post/12"')
+  expect(card).toContain('<span class="postauthor post-context-author">you</span>')
+  expect(card).toContain('<span class="post-context">wrote:</span>')
+  expect(card).toContain('The linked note')
+  expect(card).toContain('href="/post/12?reply=1"')
+  expect(card).toContain('>continue</a>')
+  expect(card).toContain('>more</a>')
+  expect(card).not.toContain('>read</a>')
+})
+
+test('internal post hover cards render linked quizzes with the full Post component', () => {
+  const url = 'https://textlog.test/post/12'
+  const html = renderToStaticMarkup(React.createElement(Post, { user: null, p: {
+    id: 1, user_id: 2, parent_id: null, body: url, created_at: '2026-08-24 10:00:00', deleted_at: null,
+    handle: 'linker', reply_count: 0, link_previews: { [url]: { imageUrl: url, linkedPost: {
+      id: 12, user_id: 3, parent_id: null, body: '#quiz\nMercury\n* Venus\nEarth', handle: 'quizzer',
+      reply_count: 0, thread_locked: false, poll: { kind: 'quiz', totalVotes: 0, expired: false,
+        expiresAt: null, viewerVoted: false, options: [
+          { id: 1, label: 'Mercury', votes: 0, selected: false, correct: false },
+          { id: 2, label: 'Venus', votes: 0, selected: false, correct: true },
+          { id: 3, label: 'Earth', votes: 0, selected: false, correct: false },
+        ] },
+    } } },
+  } }))
+  const card = html.slice(html.indexOf('class="remote-link-popover internal-post-popover"'))
+  expect(card).toContain('class="poll quiz" aria-label="Quiz"')
+  expect(card).toContain('action="/post/12/poll"')
+  expect(card).toContain('>Mercury</button>')
+  expect(card).toContain('>Venus</button>')
+})
+
 test('Profile and hashtag feeds show no reply metadata beside post dates', () => {
   const post = {
     id: 2,

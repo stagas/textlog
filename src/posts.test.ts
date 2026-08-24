@@ -426,6 +426,18 @@ describe('post persistence', () => {
     expect(html).not.toMatch(/class="remote-link-popover"[^>]+target="_blank"/)
   })
 
+  test('inserts server-rendered posts into local hover cards', () => {
+    const url = 'https://textlog.test/post/12'
+    const html = linkify(url, {}, [], 'https://textlog.test', undefined, '', {}, {}, {
+      signedIn: true, currentHandle: 'writer', formPrefix: 'post-1',
+      linkPreviews: { [url]: { imageUrl: url, renderedPostHtml:
+        '<article class="post internal-post-card tappable-post">rendered post</article>' } },
+    })
+    expect(html).toContain('class="remote-link-popover internal-post-popover"')
+    expect(html).toContain('<article class="post internal-post-card tappable-post">rendered post</article>')
+    expect(html).not.toContain('--preview-image')
+  })
+
   test('trims trailing whitespace from bios in user popovers', () => {
     const html = linkify('@reader', { reader: 'Builds things  \n' }, [], undefined, undefined, '', {}, { reader: 1 }, {
       signedIn: false,

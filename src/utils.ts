@@ -55,6 +55,11 @@ function previewLink(html: string, url: string, appUrl: string | undefined, popo
   }
   const preview = popover?.linkPreviews?.[url]
   if (!preview) return html
+  if (preview.renderedPostHtml) {
+    return `<span class="remote-link-menu internal-post-link-menu">${html}`
+      + `<span class="remote-link-popover internal-post-popover">${preview.renderedPostHtml}</span></span>`
+  }
+  if (preview.linkedPost) return html
   if (preview.mimeType?.toLowerCase().startsWith('audio/')) {
     return `<span class="remote-link-menu">${html}<span class="remote-link-popover remote-link-audio-popover">`
       + `<audio controls preload="none" src="${esc(url)}"></audio></span></span>`

@@ -1,4 +1,5 @@
 import React from 'react'
+import { renderToStaticMarkup } from 'react-dom/server'
 import { isAdmin } from '../admin'
 import { containsAsciiArt, extractHashtags, extractMentions } from '../content'
 import type { User } from '../types'
@@ -421,6 +422,14 @@ export function Post({
   authorPopoverAction?: React.ReactNode; continuationHref?: string; continuationLabel?: string;
   className?: string; topActions?: React.ReactNode; showReadAction?: boolean; hideTopMeta?: boolean })
 {
+  if (p.link_previews && Object.values(p.link_previews).some(preview => preview.linkedPost)) {
+    p = { ...p, link_previews: Object.fromEntries(Object.entries(p.link_previews).map(([url, preview]) => [url,
+      preview.linkedPost
+        ? { ...preview, renderedPostHtml: renderToStaticMarkup(<Post p={preview.linkedPost as PostView} user={user}
+          showParent={false} showReplyCount tappable showReadAction={false} className="internal-post-card" />) }
+        : preview,
+    ])) }
+  }
   const parent = showParent ? p.parent : null
   const parentContinued = parent?.parent_id && parent.parent?.user_id === parent.user_id
   const parentContextTarget = parent?.parent_id && !parent.poll && !parentContinued

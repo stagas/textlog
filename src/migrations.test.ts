@@ -630,4 +630,39 @@ describe('database migrations', () => {
     database.run('DELETE FROM posts WHERE id=1')
     expect(generation()).toBe(initial + 3)
   })
+
+  test('replaces legacy internal OG previews with native post references', () => {
+    const previous = Bun.env.APP_URL
+    Bun.env.APP_URL = 'http://localhost:3000'
+    const database = new Database(':memory:')
+    database.run(`CREATE TABLE users(id INTEGER PRIMARY KEY,deleted_at TEXT,suspended_at TEXT);
+      CREATE TABLE posts(id INTEGER PRIMARY KEY,user_id INTEGER,deleted_at TEXT);
+      CREATE TABLE post_link_previews(post_id INTEGER,url TEXT,image_url TEXT,title TEXT,description TEXT,
+        site_name TEXT,image_width INTEGER,image_height INTEGER,mime_type TEXT,linked_post_id INTEGER,
+        PRIMARY KEY(post_id,url));
+      INSERT INTO users(id) VALUES(1);
+      INSERT INTO posts(id,user_id) VALUES(12,1),(20,1);
+      INSERT INTO post_link_previews VALUES
+        (20,'http://localhost:3000/post/12','http://localhost:3000/post/12/og.png?v=7','old title',
+          'old description','textlog',1200,630,NULL,NULL),
+        (20,'http://localhost:3000/post/999','old-stale-image','stale',NULL,NULL,NULL,NULL,NULL,NULL),
+        (20,'https://example.com/story','remote-image','remote',NULL,NULL,NULL,NULL,NULL,NULL);`)
+    try {
+      migrations.find(migration => migration.version === 125)!.up(database)
+      expect(database.query(`SELECT url,image_url,title,description,site_name,image_width,image_height,
+        linked_post_id FROM post_link_previews WHERE url='http://localhost:3000/post/12'`).get()).toEqual({
+        url: 'http://localhost:3000/post/12', image_url: 'http://localhost:3000/post/12', title: null,
+        description: null, site_name: null, image_width: null, image_height: null, linked_post_id: 12,
+      })
+      expect(database.query(
+        "SELECT 1 FROM post_link_previews WHERE url='http://localhost:3000/post/999'",
+      ).get()).toBeNull()
+      expect(database.query(
+        "SELECT image_url,title FROM post_link_previews WHERE url='https://example.com/story'",
+      ).get()).toEqual({ image_url: 'remote-image', title: 'remote' })
+    }
+    finally {
+      Bun.env.APP_URL = previous
+    }
+  })
 })

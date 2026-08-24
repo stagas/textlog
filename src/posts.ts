@@ -231,11 +231,28 @@ export function enrichPosts(database: Database, posts: PostView[], viewerId = -1
       (${previewPostIds.map(() => '?').join(',')})`).all(viewerId, viewerId, ...previewPostIds) as { post_id: number }[])
       .map(row => row.post_id))
   const polls = loadPolls(database, previewPostIds, viewerId)
+  const supportsLinkedPostPreviews = database.query(
+    "SELECT 1 FROM pragma_table_info('post_link_previews') WHERE name='linked_post_id'",
+  ).get()
   const previewRows = database.query(
       'SELECT 1 FROM sqlite_master WHERE type=\'table\' AND name=\'post_link_previews\'',
     ).get()
-    ? database.query(`SELECT post_id,url,image_url,title,description,site_name,image_width,image_height,mime_type
-      FROM post_link_previews WHERE post_id IN
+    ? database.query(`SELECT lp.post_id,lp.url,lp.image_url,lp.title,lp.description,lp.site_name,lp.image_width,
+      lp.image_height,lp.mime_type,${supportsLinkedPostPreviews ? `lp.linked_post_id,
+      linked.user_id linked_user_id,linked.parent_id linked_parent_id,linked.body linked_body,
+      linked_user.handle linked_handle,linked_parent.user_id linked_parent_user_id,
+      linked_parent_user.handle linked_parent_handle,
+      (SELECT count(*) FROM posts reply WHERE reply.parent_id=linked.id AND reply.deleted_at IS NULL) linked_reply_count,
+      EXISTS(SELECT 1 FROM post_hashtags lock_tag WHERE lock_tag.post_id=linked.id AND lock_tag.tag='lock') linked_locked`
+      : `NULL linked_post_id,NULL linked_user_id,NULL linked_parent_id,NULL linked_body,NULL linked_handle,
+      NULL linked_parent_user_id,NULL linked_parent_handle,0 linked_reply_count,0 linked_locked`}
+      FROM post_link_previews lp
+      ${supportsLinkedPostPreviews ? `LEFT JOIN posts linked ON linked.id=lp.linked_post_id AND linked.deleted_at IS NULL
+      LEFT JOIN users linked_user ON linked_user.id=linked.user_id AND linked_user.deleted_at IS NULL
+        AND linked_user.suspended_at IS NULL` : ''}
+      ${supportsLinkedPostPreviews ? `LEFT JOIN posts linked_parent ON linked_parent.id=linked.parent_id
+      LEFT JOIN users linked_parent_user ON linked_parent_user.id=linked_parent.user_id` : ''}
+      WHERE lp.post_id IN
       (${previewPostIds.map(() => '?').join(',')})`).all(...previewPostIds) as {
       post_id: number
       url: string
@@ -246,8 +263,19 @@ export function enrichPosts(database: Database, posts: PostView[], viewerId = -1
       image_width: number | null
       image_height: number | null
       mime_type: string | null
+      linked_post_id: number | null
+      linked_user_id: number | null
+      linked_parent_id: number | null
+      linked_body: string | null
+      linked_handle: string | null
+      linked_parent_user_id: number | null
+      linked_parent_handle: string | null
+      linked_reply_count: number
+      linked_locked: number
     }[]
     : []
+  const linkedPolls = loadPolls(database,
+    [...new Set(previewRows.flatMap(row => row.linked_post_id ? [row.linked_post_id] : []))], viewerId)
   const previewsByPost = new Map<number, Record<string, LinkPreview>>()
   for (const row of previewRows) {
     const previews = previewsByPost.get(row.post_id) || {}
@@ -255,7 +283,16 @@ export function enrichPosts(database: Database, posts: PostView[], viewerId = -1
       title: row.title ? decodeHtmlEntities(row.title) : undefined,
       description: row.description ? decodeHtmlEntities(row.description) : undefined,
       siteName: row.site_name ? decodeHtmlEntities(row.site_name) : undefined, imageWidth: row.image_width || undefined,
-      imageHeight: row.image_height || undefined, mimeType: row.mime_type || undefined }
+      imageHeight: row.image_height || undefined, mimeType: row.mime_type || undefined,
+      linkedPostId: row.linked_post_id || undefined,
+      linkedPost: row.linked_post_id && row.linked_user_id && row.linked_body !== null && row.linked_handle
+        ? { id: row.linked_post_id, user_id: row.linked_user_id, parent_id: row.linked_parent_id,
+          body: row.linked_body, handle: row.linked_handle, reply_count: row.linked_reply_count,
+          thread_locked: !!row.linked_locked, poll: linkedPolls.get(row.linked_post_id),
+          parent: row.linked_parent_user_id && row.linked_parent_handle
+            ? { user_id: row.linked_parent_user_id, handle: row.linked_parent_handle }
+            : null }
+        : undefined }
     previewsByPost.set(row.post_id, previews)
   }
   const countRootIds = [...new Set([...ids, ...parentIds])]

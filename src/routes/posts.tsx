@@ -187,7 +187,7 @@ export function registerPostsRoutes(app: Hono) {
     const social = {
       title: `@${post.handle} wrote on textlog`,
       description: markdownPlainText(post.body),
-      image: `${postUrl}/og.png?v=7`,
+      image: `${postUrl}/og.png?v=8`,
       url: postUrl,
     }
     if (user) {

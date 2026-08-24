@@ -613,6 +613,48 @@ header>nav>a:not(.button),
   width: 100%;
 }
 
+.internal-post-popover {
+  width: max-content;
+  min-width: min(16rem, calc(100vw - 2 * var(--gutter)));
+  max-width: min(760px, calc(100vw - 2 * var(--gutter)));
+  padding: 0;
+  cursor: pointer;
+}
+
+.remote-link-popover.internal-post-popover > .post.internal-post-card {
+  width: max-content;
+  min-width: 100%;
+  max-width: 100%;
+  margin: 0;
+  padding: var(--space-4) !important;
+  border-top: 0;
+  font-size: 0.75rem;
+}
+
+.post.internal-post-card > :is(.posttop, .postfoot) {
+  font-size: 0.6875rem;
+}
+
+.post.internal-post-card .post-context {
+  font-size: inherit;
+}
+
+.post.internal-post-card > .post-body {
+  width: max-content;
+  max-width: 100%;
+  margin-top: var(--space-2);
+  font-size: 0.75rem;
+  line-height: 1.55;
+}
+
+.post.internal-post-card > .postfoot {
+  margin-top: var(--space-2);
+}
+
+.post.internal-post-card :is(.poll, .todo) {
+  font-size: 0.75rem;
+}
+
 .remote-link-menu:hover .remote-link-popover {
   display: grid;
   animation: reference-popover-reveal 0s 500ms both;

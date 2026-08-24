@@ -84,6 +84,7 @@ describe('link previews', () => {
       expect(await discoverLinkPreviews('http://localhost:3000/post/12', database)).toEqual([{
         url: 'http://localhost:3000/post/12',
         imageUrl: 'http://localhost:3000/post/12/og.png?v=7',
+        linkedPostId: 12,
         title: '@writer wrote on textlog',
         description: 'A local post worth sharing',
         siteName: 'textlog',
@@ -93,6 +94,21 @@ describe('link previews', () => {
     }
     finally {
       database.close()
+      Bun.env.APP_URL = previous
+    }
+  })
+
+  test('recognizes local post links without a main-thread database handle', async () => {
+    const previous = Bun.env.APP_URL
+    Bun.env.APP_URL = 'http://localhost:3000'
+    try {
+      expect(await discoverLinkPreviews('http://localhost:3000/post/12')).toEqual([{
+        url: 'http://localhost:3000/post/12',
+        imageUrl: 'http://localhost:3000/post/12',
+        linkedPostId: 12,
+      }])
+    }
+    finally {
       Bun.env.APP_URL = previous
     }
   })

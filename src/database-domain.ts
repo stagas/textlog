@@ -1509,7 +1509,16 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
       const newKeys = previews.flatMap(preview => preview.imageKey ? [preview.imageKey] : [])
       database.transaction(() => {
         if (mode === 'replace') database.query('DELETE FROM post_link_previews WHERE post_id=?').run(postId)
-        const insert = database.query(`INSERT INTO post_link_previews
+        const supportsLinkedPost = database.query(
+          "SELECT 1 FROM pragma_table_info('post_link_previews') WHERE name='linked_post_id'",
+        ).get()
+        const insert = supportsLinkedPost ? database.query(`INSERT INTO post_link_previews
+          (post_id,url,image_url,title,description,site_name,image_width,image_height,mime_type,linked_post_id)
+          VALUES(?,?,?,?,?,?,?,?,?,?)
+          ON CONFLICT(post_id,url) DO UPDATE SET image_url=excluded.image_url,title=excluded.title,
+            description=excluded.description,site_name=excluded.site_name,image_width=excluded.image_width,
+            image_height=excluded.image_height,mime_type=excluded.mime_type,linked_post_id=excluded.linked_post_id`)
+          : database.query(`INSERT INTO post_link_previews
           (post_id,url,image_url,title,description,site_name,image_width,image_height,mime_type) VALUES(?,?,?,?,?,?,?,?,?)
           ON CONFLICT(post_id,url) DO UPDATE SET image_url=excluded.image_url,title=excluded.title,
             description=excluded.description,site_name=excluded.site_name,image_width=excluded.image_width,
@@ -1517,7 +1526,7 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
         for (const preview of previews) {
           insert.run(postId, preview.url, preview.imageKey || preview.imageUrl, preview.title || null,
             preview.description || null, preview.siteName || null, preview.imageWidth || null,
-            preview.imageHeight || null, preview.mimeType || null)
+            preview.imageHeight || null, preview.mimeType || null, ...(supportsLinkedPost ? [preview.linkedPostId || null] : []))
         }
       })()
       const retained = mode === 'save'
