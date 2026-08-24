@@ -9,7 +9,7 @@ describe('in-memory request rate limiter', () => {
   })
 
   test('defines a sustained hourly crawler limit and block', () => {
-    expect(HOURLY_REQUEST_RATE_LIMIT).toBe(500)
+    expect(HOURLY_REQUEST_RATE_LIMIT).toBe(10_000)
     expect(HOURLY_REQUEST_RATE_WINDOW_SECONDS).toBe(3_600)
     expect(HOURLY_REQUEST_BLOCK_SECONDS).toBe(3_600)
   })

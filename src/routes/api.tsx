@@ -16,6 +16,7 @@ import { page } from './shared'
 import { registerSyndicationRoutes } from './syndication'
 
 const JSON_LIMIT = 120
+const AUTHENTICATED_JSON_LIMIT = 600
 const JSON_WINDOW_SECONDS = 60
 const SSE_HEARTBEAT_MS = 5_000
 
@@ -585,11 +586,12 @@ export function registerApiRoutes(app: Hono, appUrl: string | null | undefined =
 
   const jsonRateLimitMiddleware: MiddlewareHandler = async (c, next) => {
     if (c.req.method === 'OPTIONS' || c.req.path === '/api/v1/firehose') return next()
-    const ip = c.req.header(clientIpHeaderName()) || '-'
+    const user = requestApiUser(c.req.raw)
+    const identity = user ? String(user.id) : c.req.header(clientIpHeaderName()) || '-'
     const limited = await service.call('system.consumeBucketedAttempt', {
-      scope: 'api-json',
-      identity: ip,
-      attempts: JSON_LIMIT,
+      scope: user ? 'api-json-authenticated' : 'api-json',
+      identity,
+      attempts: user ? AUTHENTICATED_JSON_LIMIT : JSON_LIMIT,
       bucketSeconds: JSON_WINDOW_SECONDS,
       now: now(),
     })

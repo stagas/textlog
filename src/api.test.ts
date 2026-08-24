@@ -525,6 +525,29 @@ describe('public API', () => {
     )
   })
 
+  test('gives authenticated accounts a higher independent JSON request limit', async () => {
+    const { app, database } = fixture(() => 61_000)
+    const token = 'higher-rate-limit-token'
+    const now = Date.now()
+    database.query(`INSERT INTO sessions(token_hash,user_id,expires_at,created_at,user_agent,last_used_at)
+      VALUES(?,?,?,?,?,?)`).run(sessionHash(token), 1, now + 60_000, now, 'test', now)
+    const headers = { authorization: `Bearer ${token}`, 'x-textlog-client-ip': 'busy' }
+
+    for (let i = 0; i < 120; i++) {
+      expect((await request(app, '/api/v1/feeds/latest', {
+        headers: { 'x-textlog-client-ip': 'busy' },
+      })).status).toBe(200)
+    }
+    expect((await request(app, '/api/v1/feeds/latest', {
+      headers: { 'x-textlog-client-ip': 'busy' },
+    })).status).toBe(429)
+
+    for (let i = 0; i < 600; i++) {
+      expect((await request(app, '/api/v1/feeds/latest', { headers })).status).toBe(200)
+    }
+    expect((await request(app, '/api/v1/feeds/latest', { headers })).status).toBe(429)
+  })
+
   test('streams ready and live post events with non-buffering headers', async () => {
     const { app, database } = fixture()
     const controller = new AbortController()
