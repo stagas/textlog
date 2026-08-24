@@ -105,6 +105,19 @@ describe('hot feed ranking', () => {
     expect(results.find(result => result.id === 1)!.hot_score).toBeLessThan(30)
   })
 
+  test('poll-only activity and its author reply leave the front page after the initial window', () => {
+    post(1, '2026-08-02 12:00:00')
+    post(2, '2026-08-03 11:00:00', 1)
+    database.run(`CREATE TABLE poll_votes (
+      post_id INTEGER NOT NULL,option_id INTEGER NOT NULL,user_id INTEGER NOT NULL,created_at TEXT NOT NULL,
+      PRIMARY KEY(post_id,user_id));`)
+    const insert = database.query('INSERT INTO poll_votes VALUES(?,?,?,?)')
+    for (let userId = 2; userId <= 8; userId++) insert.run(1, 1, userId, '2026-08-03 03:00:00')
+    recordHotActivity(database, 1)
+
+    expect(getHotPosts(database, 20, null, asOf, -1, false, 2).map(result => result.id)).toEqual([])
+  })
+
   test('ranks a replied thread without considering an unreplied new post', () => {
     database.run(`INSERT INTO users(id,handle) VALUES(2,'replier');
       INSERT INTO users(id,handle) VALUES(3,'another');`)
@@ -458,7 +471,7 @@ describe('hot feed ranking', () => {
       .toEqual({ activity_count: 8 })
   })
 
-  test('strongly favors top-level posts over replies, then progressively penalizes reply depth', () => {
+  test('favors top-level posts while keeping active reply branches eligible', () => {
     database.run(`INSERT INTO users(id,handle) VALUES(2,'reply-author');
       INSERT INTO users(id,handle) VALUES(3,'nested-author');`)
     post(1, '2026-08-01 09:00:00')
@@ -473,8 +486,8 @@ describe('hot feed ranking', () => {
     const root = results.find(result => result.id === 1)!
     const direct = results.find(result => result.id === 2)!
     const nested = results.find(result => result.id === 3)!
-    expect(direct.hot_score).toBeCloseTo(root.hot_score * 0.02 * 0.000000001)
-    expect(nested.hot_score).toBeLessThan(direct.hot_score * 0.01)
+    expect(direct.hot_score).toBeLessThan(root.hot_score * 0.05)
+    expect(nested.hot_score).toBeLessThan(direct.hot_score)
   })
 
   test('applies reply depth penalties to every freshness boost', () => {
@@ -512,6 +525,25 @@ describe('hot feed ranking', () => {
     const root = results.find(result => result.id === 1)!
     const head = results.find(result => result.id === 2)!
     expect(head.hot_score).toBeGreaterThan(root.hot_score)
+  })
+
+  test('hands an old conversation to its newest descendant when one active branch keeps moving', () => {
+    database.run(`INSERT INTO users(id,handle) VALUES(2,'other-participant');`)
+    post(1, '2026-07-20 12:00:00')
+    postBy(2, 2, '2026-07-20 13:00:00', 1)
+    post(3, '2026-08-03 09:00:00', 2)
+    postBy(2, 4, '2026-08-03 10:00:00', 3)
+    post(5, '2026-08-03 11:00:00', 4)
+    postBy(2, 6, '2026-08-03 12:00:00', 5)
+
+    const results = getHotPosts(database, 20, null, asOf)
+    const newest = results.find(result => result.id === 6)!
+    const immediateAncestor = results.find(result => result.id === 5)!
+    const root = results.find(result => result.id === 1)!
+    expect(newest.hot_score).toBeGreaterThan(immediateAncestor.hot_score)
+    expect(immediateAncestor.hot_score).toBeGreaterThan(root.hot_score)
+    expect(results.find(result => result.id === 3)!.hot_score).toBeGreaterThan(root.hot_score)
+    expect(results.find(result => result.id === 4)!.hot_score).toBeGreaterThan(root.hot_score)
   })
 
   test('gives a deep new reply its thread strength while sharply decaying its old ancestors', () => {
@@ -646,18 +678,19 @@ describe('hot feed ranking', () => {
       .toBeCloseTo(0)
   })
 
-  test('a covered reply remains smoothly ranked after incremental and full score rebuilds', () => {
+  test('recent replies share a hot thread ranking after incremental and full score rebuilds', () => {
     database.query('INSERT INTO users(id,handle) VALUES(?,?)').run(2, 'replier')
     post(1, '2026-07-30 12:00:00')
     postBy(2, 2, '2026-08-03 10:00:00', 1)
     post(3, '2026-08-03 11:00:00', 2)
 
-    const results = getHotPosts(database, 20, null, asOf)
-    expect(results.map(result => result.id)).toEqual([1, 2])
+    const results = getHotPosts(database, 20, null, asOf, -1, false, 2)
+    expect(results.map(result => result.id)).toEqual([1, 2, 3])
+    expect(results.find(result => result.id === 3)!.hot_score).toBeGreaterThan(0)
 
     rebuildHotPosts(database)
-    const rebuilt = getHotPosts(database, 20, null, asOf)
-    expect(rebuilt.map(result => result.id)).toEqual([1, 2])
+    const rebuilt = getHotPosts(database, 20, null, asOf, -1, false, 2)
+    expect(rebuilt.map(result => result.id)).toEqual([1, 2, 3])
   })
 
   test('lets one-reply posts briefly enter the front-page hot feed', () => {
