@@ -1295,6 +1295,7 @@ nav form {
 
 .api-path {
   color: var(--ink);
+  user-select: all;
 }
 
 @media (max-width: 600px) {
