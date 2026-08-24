@@ -7,7 +7,7 @@ import { createImageKey, deleteImages, deleteImagesAfterCommit, getImageUrl, ima
 import type { LinkPreview } from './types'
 import { postLinks } from './utils'
 
-const MAX_LINKS = 3
+const MAX_LINKS = 5
 const MAX_HTML_BYTES = 1024 * 1024
 const MAX_YOUTUBE_CHANNEL_BYTES = 2 * 1024 * 1024
 const FETCH_TIMEOUT_MS = 5000

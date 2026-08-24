@@ -97,6 +97,31 @@ describe('link previews', () => {
     }
   })
 
+  test('creates previews for at most five links', async () => {
+    const previous = Bun.env.APP_URL
+    Bun.env.APP_URL = 'http://localhost:3000'
+    const database = new Database(':memory:')
+    database.run(`CREATE TABLE users(id INTEGER PRIMARY KEY,handle TEXT,deleted_at TEXT,suspended_at TEXT);
+      CREATE TABLE posts(id INTEGER PRIMARY KEY,user_id INTEGER,body TEXT,deleted_at TEXT);
+      INSERT INTO users(id,handle) VALUES(1,'writer');
+      INSERT INTO posts(id,user_id,body) VALUES
+        (1,1,'One'),(2,1,'Two'),(3,1,'Three'),(4,1,'Four'),(5,1,'Five'),(6,1,'Six');`)
+    try {
+      const body = Array.from({ length: 6 }, (_, index) => `http://localhost:3000/post/${index + 1}`).join(' ')
+      expect((await discoverLinkPreviews(body, database)).map(preview => preview.url)).toEqual([
+        'http://localhost:3000/post/1',
+        'http://localhost:3000/post/2',
+        'http://localhost:3000/post/3',
+        'http://localhost:3000/post/4',
+        'http://localhost:3000/post/5',
+      ])
+    }
+    finally {
+      database.close()
+      Bun.env.APP_URL = previous
+    }
+  })
+
   test('keeps existing preview rows when replacement persistence fails', async () => {
     const database = new Database(':memory:')
     database.run(`CREATE TABLE post_link_previews(post_id INTEGER,url TEXT,image_url TEXT,title TEXT,
