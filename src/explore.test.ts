@@ -164,25 +164,26 @@ describe('trending tags', () => {
         (1,2,'2026-08-07 23:00:00',NULL),(2,2,'2026-08-07 22:00:00',NULL),
         (3,3,'2026-08-06 00:00:00',NULL),(4,3,'2026-08-06 00:00:00',NULL),
         (5,3,'2026-08-06 00:00:00',NULL),(6,3,'2026-08-06 00:00:00',NULL),
-        (7,4,'2026-07-01 00:00:00',NULL),(8,5,'2026-08-07 23:30:00','2026-08-08 00:00:00');
+        (7,4,'2026-07-01 00:00:00',NULL),(8,5,'2026-08-07 23:30:00','2026-08-08 00:00:00'),
+        (9,4,'2026-07-30 00:00:00',NULL);
       INSERT INTO post_hashtags VALUES
         (1,'fresh'),(2,'fresh'),(3,'busy'),(4,'busy'),(5,'busy'),(6,'busy'),
-        (7,'historical'),(8,'deleted');
+        (7,'historical'),(8,'deleted'),(9,'older');
       INSERT INTO hashtag_follows VALUES(1,'fresh');
     `)
     return database
   }
 
-  test('ranks recent activity with decay and excludes stale and deleted notes', () => {
+  test('ranks activity across the extended window and excludes stale and deleted notes', () => {
     const tags = trendingTags(tagFixture(), 1, 12, '2026-08-08T00:00:00.000Z')
-    expect(tags.map(tag => tag.tag)).toEqual(['fresh', 'busy'])
-    expect(tags.map(tag => tag.count)).toEqual([2, 4])
+    expect(tags.map(tag => tag.tag)).toEqual(['fresh', 'busy', 'older'])
+    expect(tags.map(tag => tag.count)).toEqual([2, 4, 1])
     expect(tags[0].following).toBeTruthy()
   })
 
   test('respects blocked people and hashtags', () => {
     const database = tagFixture()
-    database.run(`INSERT INTO blocks VALUES(1,2); INSERT INTO blocked_hashtags VALUES(1,'busy');`)
+    database.run(`INSERT INTO blocks VALUES(1,2); INSERT INTO blocked_hashtags VALUES(1,'busy'),(1,'older');`)
     expect(trendingTags(database, 1, 12, '2026-08-08T00:00:00.000Z')).toEqual([])
   })
 })

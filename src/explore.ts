@@ -3,6 +3,8 @@ import type { PersonView } from './types'
 
 export type TrendingTag = { tag: string; count: number; following: boolean }
 
+const TRENDING_TAG_WINDOW_DAYS = 30
+
 export function trendingTags(database: Database, viewerId: number, limit = 12, now = new Date().toISOString(),
   offset = 0)
 {
@@ -12,7 +14,7 @@ export function trendingTags(database: Database, viewerId: number, limit = 12, n
       sum(pow(0.5,max(0,(julianday(?) - julianday(p.created_at))*24)/24.0)) trend_score,
       max(p.created_at) latest_post_at
       FROM post_hashtags ph JOIN posts p ON p.id=ph.post_id
-      WHERE p.deleted_at IS NULL AND p.created_at>=datetime(?,'-7 days')
+      WHERE p.deleted_at IS NULL AND p.created_at>=datetime(?,'-${TRENDING_TAG_WINDOW_DAYS} days')
       AND (? < 0 OR NOT EXISTS (SELECT 1 FROM blocks b WHERE
         (b.blocker_id=? AND b.blocked_id=p.user_id) OR (b.blocker_id=p.user_id AND b.blocked_id=?)))
       AND (? < 0 OR NOT EXISTS (SELECT 1 FROM blocked_hashtags bh WHERE bh.user_id=? AND bh.tag=ph.tag))
@@ -22,7 +24,7 @@ export function trendingTags(database: Database, viewerId: number, limit = 12, n
 
 export function trendingTagCount(database: Database, viewerId: number, now = new Date().toISOString()) {
   return (database.query(`SELECT count(DISTINCT ph.tag) count FROM post_hashtags ph JOIN posts p ON p.id=ph.post_id
-    WHERE p.deleted_at IS NULL AND p.created_at>=datetime(?,'-7 days')
+    WHERE p.deleted_at IS NULL AND p.created_at>=datetime(?,'-${TRENDING_TAG_WINDOW_DAYS} days')
     AND (? < 0 OR NOT EXISTS (SELECT 1 FROM blocks b WHERE
       (b.blocker_id=? AND b.blocked_id=p.user_id) OR (b.blocker_id=p.user_id AND b.blocked_id=?)))
     AND (? < 0 OR NOT EXISTS (SELECT 1 FROM blocked_hashtags bh WHERE bh.user_id=? AND bh.tag=ph.tag))`)
