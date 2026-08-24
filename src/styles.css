@@ -4702,6 +4702,38 @@ form.report-panel {
   margin-top: var(--space-6);
 }
 
+.explore-section-heading {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2) var(--space-4);
+  margin-bottom: var(--space-3);
+}
+
+.explore-section-heading h2 {
+  margin: 0;
+}
+
+.explore-section-heading .pagination {
+  flex: 0 1 auto;
+  margin-left: auto;
+  padding: 0;
+  border-top: 0;
+}
+
+@media (max-width: 600px) {
+  .explore-section-heading h2,
+  .explore-section-heading .pagination {
+    width: 100%;
+  }
+
+  .explore-section-heading .pagination {
+    flex-basis: 100%;
+    margin-left: 0;
+  }
+}
+
 .explore-tag-chips {
   display: flex;
   flex-wrap: wrap;

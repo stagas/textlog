@@ -59,7 +59,17 @@ export function Connections(
         ? (
           <div className={`columns connections-columns${kind === 'following' ? ' connections-columns-stacked' : ''}`}>
             <section>
-              <h2 id="connections-tags-heading">Tags</h2>
+              {kind === 'following'
+                ? (
+                  <div className="explore-section-heading">
+                    <h2 id="connections-tags-heading">Tags</h2>
+                    <Pagination page={tagsPage} totalPages={Math.ceil(tagsTotal / TAG_PAGE_SIZE)}
+                      path={withFrom(`/u/${profile.handle}?tab=following${sortQuery}${
+                        page > 1 ? `&page=${page}` : ''}`)}
+                      pageParam="tagsPage" label="Tags pagination" compact anchor="connections-tags-heading" />
+                  </div>
+                )
+                : <h2 id="connections-tags-heading">Tags</h2>}
               {tags.length
                 ? kind === 'blocked'
                   ? <BlockedTagList user={user!} tags={tags} />
@@ -92,12 +102,6 @@ export function Connections(
                       : 'No followed tags yet.'}
                   </div>
                 )}
-              {kind === 'following' && (
-                <Pagination page={tagsPage} totalPages={Math.ceil(tagsTotal / TAG_PAGE_SIZE)}
-                  path={withFrom(`/u/${profile.handle}?tab=following${sortQuery}${
-                    page > 1 ? `&page=${page}` : ''}`)}
-                  pageParam="tagsPage" label="Tags pagination" compact anchor="connections-tags-heading" />
-              )}
             </section>
             <section>
               <div className="connections-heading"><h2 id="connections-people-heading">People</h2>{sortToggle}</div>

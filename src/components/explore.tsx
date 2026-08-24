@@ -61,12 +61,14 @@ export function Explore({ user, welcome = false, tagsPage = 1, peoplePage = 1, d
       )}
       <div className="explore-content">
         <section className="explore-tags" id="explore-tags">
-          <h2>Trending tags</h2>
+          <div className="explore-section-heading">
+            <h2>Trending tags</h2>
+            <Pagination page={tagsPage} totalPages={Math.ceil(tagsTotal / EXPLORE_TAG_PAGE_SIZE)} path={tagsPath}
+              pageParam="tagsPage" label="Tags pagination" compact anchor="explore-tags" />
+          </div>
           {tags.length
             ? <TagChips user={user} tags={tags} returnPath={`${explorePath()}#explore-tags`} />
             : <p className="section-empty">No hashtags yet.</p>}
-          <Pagination page={tagsPage} totalPages={Math.ceil(tagsTotal / EXPLORE_TAG_PAGE_SIZE)} path={tagsPath}
-            pageParam="tagsPage" label="Tags pagination" compact anchor="explore-tags" />
         </section>
         <section className="explore-people" id="explore-people">
           <h2>{user ? 'People to follow' : 'People'}</h2>

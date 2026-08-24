@@ -592,7 +592,8 @@ test('explore renders tag toggles above a full-width people section', () => {
   expect(html).toContain('<section class="explore-people" id="explore-people"><h2>People to follow</h2>')
   expect(html).toContain('href="/explore?tagsPage=2#explore-tags"')
   expect(html).toContain('href="/explore?peoplePage=2#explore-people"')
-  expect(html.indexOf('aria-label="Tags pagination"')).toBeGreaterThan(html.indexOf('class="explore-tag-chips"'))
+  expect(html).toContain('<div class="explore-section-heading"><h2>Trending tags</h2><nav class="pagination pagination-compact"')
+  expect(html.indexOf('aria-label="Tags pagination"')).toBeLessThan(html.indexOf('class="explore-tag-chips"'))
   expect(html.indexOf('aria-label="People pagination"')).toBeLessThan(html.indexOf('class="people"'))
   expect(html.lastIndexOf('aria-label="People pagination"')).toBeGreaterThan(html.indexOf('class="people"'))
 })
@@ -1933,6 +1934,13 @@ test('Following and follower links return to the originating connection', () => 
   expect(following).toContain(
     '<form id="tag-notes" action="/tag-follow/notes" method="post"><input type="hidden" name="from" '
       + 'value="/u/reader?tab=following&amp;page=2&amp;tagsPage=3#tag-notes"/>',
+  )
+  expect(following).toContain(
+    '<div class="explore-section-heading"><h2 id="connections-tags-heading">Tags</h2>'
+      + '<nav class="pagination pagination-compact"',
+  )
+  expect(following.indexOf('aria-label="Tags pagination"')).toBeLessThan(
+    following.indexOf('class="explore-tag-chips"'),
   )
   expect(following).toContain(
     'href="/u/writer?from=%2Fu%2Freader%3Ftab%3Dfollowing%26page%3D2%26tagsPage%3D3%23person-2"',
