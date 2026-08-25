@@ -51,7 +51,7 @@ async function drainQueue() {
     const durationMs = finished - started
     const queueMs = started - message.queuedAt
     const slowMs = Number(Bun.env.DATABASE_SLOW_OPERATION_MS || 250)
-    if (durationMs >= slowMs || queueMs >= slowMs) {
+    if (Bun.env.DATABASE_LOG_SLOW_OPERATIONS === 'true' && (durationMs >= slowMs || queueMs >= slowMs)) {
       logInfo(`database operation=${message.operation} priority=${message.priority} duration_ms=${durationMs.toFixed(1)}`
         + ` queue_ms=${queueMs.toFixed(1)} foreground_queued=${foregroundQueue.length}`
         + ` background_queued=${backgroundQueue.length}`)
