@@ -137,7 +137,9 @@ test('/?reddit attributes a completed signup', async () => {
   const landing = await request('/?reddit', { ip: '203.0.113.83' })
   const attributionCookie = landing.headers.get('set-cookie')!.split(';', 1)[0]
   const email = 'reddit-attributed@example.com'
-  expect((await request('/enter', { method: 'POST', cookie: attributionCookie, form: { email } })).status).toBe(200)
+  expect((await request('/enter', {
+    method: 'POST', cookie: attributionCookie, form: { email }, ip: '203.0.113.83',
+  })).status).toBe(200)
   const emailMessage = capturedEmails().filter(message => message.to === email).at(-1)!
   const magic = await request(`/enter/magic?token=${encodeURIComponent(linkToken(emailMessage))}`, {
     cookie: attributionCookie,
