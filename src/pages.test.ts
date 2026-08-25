@@ -378,7 +378,7 @@ test('posting helpers are searchable details and show copyable highlighted resul
   expect(html.indexOf('<dt>Code fences</dt>')).toBeLessThan(html.indexOf('<dt>Inline LaTeX</dt>'))
   expect(html).toContain('<span class="posting-help-modifier-heading">Polls</span><small>Use 2–8 unique options.</small>')
   expect(html).toContain('Which one? <b>#poll</b><br/>First option<br/>Second option')
-  expect(html).toContain('<span class="posting-help-modifier-heading">Spoilers</span><small>Text after #spoiler is hidden until revealed.</small>')
+  expect(html).toContain('<span class="posting-help-modifier-heading">Spoilers</span><small>Text after #spoiler is hidden until revealed. Aliases: #sensitive, #contentwarning, #cw, and #triggerwarning.</small>')
   expect(html).toContain('Visible text <b>#spoiler</b><br/>Hidden text')
   expect(html).toContain('<span class="posting-help-modifier-heading">Todos</span><small>Only [ ] and [x] lines become items.')
   expect(html).toContain('Today <b>#todo</b><br/><b>[ ]</b> First task<br/><b>[x]</b> Finished task')

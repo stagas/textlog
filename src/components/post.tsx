@@ -1,7 +1,7 @@
 import React from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
 import { isAdmin } from '../admin'
-import { containsAsciiArt, extractHashtags, extractMentions } from '../content'
+import { containsAsciiArt, containsSpoilerTag, extractHashtags, extractMentions } from '../content'
 import type { User } from '../types'
 import type { BioReferenceData, PostView, UserProfileStats } from '../types'
 import { displayBio, displayPostBody, linkify, referenceFormId } from '../utils'
@@ -98,7 +98,7 @@ function Todo({ p, user, preview, returnPath, formPrefix }: { p: PostView | NonN
       hashtagFollowerCounts: p.hashtag_follower_counts, linkPreviews: p.link_previews,
       linkUnknownMentions: preview || p.id < 0 }, false) })
   const spoilerEntry = todo.entries.findIndex(entry => entry.type === 'text'
-    && extractHashtags(entry.text).includes('spoiler'))
+    && containsSpoilerTag(entry.text))
   const renderEntries = (entries: typeof todo.entries) => entries.map(entry => entry.type === 'text'
     ? entry.text
       ? <div className="todo-text" key={entry.line} dangerouslySetInnerHTML={richText(entry.text)} />

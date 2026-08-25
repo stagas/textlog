@@ -26,6 +26,14 @@ describe('content metadata extraction', () => {
       hidden: '',
     })
   })
+  test('supports spoiler hashtag aliases', () => {
+    for (const tag of ['sensitive', 'contentwarning', 'cw', 'triggerwarning']) {
+      expect(splitSpoilerBody(`visible\n#${tag}\nhidden`)).toEqual({
+        visible: `visible\n#${tag}`,
+        hidden: 'hidden',
+      })
+    }
+  })
   test('does not activate spoilers from inside fenced code', () => {
     const body = 'visible\n```text\n#spoiler\n```\nstill visible'
     expect(splitSpoilerBody(body)).toEqual({ visible: body, hidden: '' })

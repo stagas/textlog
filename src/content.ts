@@ -11,6 +11,14 @@ export function isValidHashtag(tag: string) {
 
 export const MAX_HASHTAGS_PER_POST = 5
 
+export const SPOILER_HASHTAGS = new Set([
+  'spoiler',
+  'sensitive',
+  'contentwarning',
+  'cw',
+  'triggerwarning',
+])
+
 const urlMatcher = new LinkifyIt({ fuzzyLink: true, fuzzyEmail: false }).tlds(tlds)
 
 export function withoutMarkdownCode(body: string) {
@@ -68,10 +76,14 @@ export function containsAsciiArt(body: string) {
   return extractHashtags(body).some(tag => tag === 'ascii' || tag === 'ascii_art')
 }
 
+export function containsSpoilerTag(body: string) {
+  return extractHashtags(body).some(tag => SPOILER_HASHTAGS.has(tag))
+}
+
 export function splitSpoilerBody(body: string) {
   const lines = body.split('\n')
   const searchableLines = withoutMarkdownCode(body).split('\n')
-  const spoilerLine = searchableLines.findIndex(line => extractHashtags(line).includes('spoiler'))
+  const spoilerLine = searchableLines.findIndex(containsSpoilerTag)
   return spoilerLine < 0
     ? { visible: body, hidden: '' }
     : {
