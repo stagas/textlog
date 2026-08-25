@@ -24,6 +24,15 @@ function personalizedFeedGeneration(database: Database, viewerId: number) {
   const available = database.query(`SELECT 1 FROM sqlite_master
     WHERE type='table' AND name='personalized_feed_generations'`).get()
   if (!available) return globalFeedGeneration(database)
+  if (database.query(`SELECT 1 FROM sqlite_master
+    WHERE type='table' AND name='pending_relationship_feed_invalidations'`).get()) {
+    database.transaction(() => {
+      const pending = database.query('DELETE FROM pending_relationship_feed_invalidations WHERE viewer_id=?')
+        .run(viewerId).changes
+      if (pending) database.query(`UPDATE personalized_feed_generations
+        SET generation=generation+1 WHERE viewer_id=?`).run(viewerId)
+    })()
+  }
   return (database.query(`SELECT generation FROM personalized_feed_generations WHERE viewer_id=?`).get(viewerId) as {
     generation: number
   } | null)?.generation ?? 1

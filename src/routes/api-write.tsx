@@ -14,6 +14,7 @@ import { normalizePostBody, POST_MAX, postBodyValidationMessage, validPostBody }
 import { postRateLimitMessage } from '../post-rate-limit'
 import { canPublishPosts } from '../posting-policy'
 import { sendPushForFollow, sendPushForPost, sendPushForTagFollow, sendPushForUserFollow } from '../push'
+import { scheduleRelationshipFeedInvalidation } from '../relationship-feed-invalidation'
 import { sessionHash } from '../sessions'
 import type { User } from '../types'
 import { bearerToken } from '../utils'
@@ -374,6 +375,7 @@ export function registerApiWriteRoutes(app: Hono, service: DatabaseService,
     if (!isValidHashtag(tag)) return fail('invalid_tag', 'Tag is invalid', 400)
     const action = enabled ? relationship : relationship === 'follow' ? 'unfollow' : 'unblock'
     const result = await service.call('api.tagRelationshipMutation', { userId: guard.user!.id, tag, action })
+    if (relationship === 'follow' && result.changed) scheduleRelationshipFeedInvalidation(service)
     if (relationship === 'follow' && enabled && result.changed) {
       void sendPushForTagFollow(guard.user!.id, guard.user!.handle, tag, undefined, undefined, service)
         .catch(error => logError('API tag follow push failed', error))
@@ -450,6 +452,7 @@ export function registerApiWriteRoutes(app: Hono, service: DatabaseService,
     const other = await service.call('api.relationshipMutation', { userId: guard.user!.id, handle, action: 'follow' })
     if (other.status === 'self') return fail('forbidden', 'That is your own account', 403)
     if (other.status !== 'ready') return fail('not_found', 'User not found', 404)
+    if (other.changed) scheduleRelationshipFeedInvalidation(service)
     if (other.changed) {
       void sendPushForFollow(guard.user!.id, guard.user!.handle, other.targetId, undefined, undefined, service)
         .catch(error => logError('API follow push failed', error))
@@ -468,6 +471,7 @@ export function registerApiWriteRoutes(app: Hono, service: DatabaseService,
     const other = await service.call('api.relationshipMutation', { userId: guard.user!.id, handle, action: 'unfollow' })
     if (other.status === 'self') return fail('forbidden', 'That is your own account', 403)
     if (other.status !== 'ready') return fail('not_found', 'User not found', 404)
+    if (other.changed) scheduleRelationshipFeedInvalidation(service)
     return json({ data: { following: false } })
   })
 

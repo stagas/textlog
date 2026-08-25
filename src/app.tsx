@@ -26,7 +26,8 @@ import { registerAdminRoutes } from './routes/admin'
 import { registerApiRoutes } from './routes/api'
 import { registerAuthRoutes } from './routes/auth'
 import { registerEmbedRoutes } from './routes/embed'
-import { prewarmRecentFeedVisitors, prewarmRecentFeedVisitorsOnInit, registerFeedsRoutes } from './routes/feeds'
+import { registerFeedsRoutes } from './routes/feeds'
+import { resumeRelationshipFeedInvalidation } from './relationship-feed-invalidation'
 import { registerIllegalActivityRoutes } from './routes/illegal-activity'
 import { registerInteractionsRoutes } from './routes/interactions'
 import { registerMediaRoutes } from './routes/media'
@@ -507,7 +508,7 @@ registerTagsRoutes(app)
 registerSearchRoutes(app)
 registerSeoRoutes(app)
 setTimeout(() => {
-  void prewarmRecentFeedVisitorsOnInit().catch(error => logError('initial feed cache warmup', error))
+  resumeRelationshipFeedInvalidation()
 }, 0)
 app.notFound(c => notFoundPage(c.req.raw))
 app.onError((error, c) => {
@@ -543,7 +544,6 @@ export default {
     const headers = new Headers(request.headers)
     headers.set(clientIpHeaderName(), address)
     const response = await app.fetch(new Request(request, { headers }))
-    if (request.method === 'POST' && response.status < 400) prewarmRecentFeedVisitors()
     if (!bypassRateLimits && response.status >= 400 && response.status < 500) {
       const clientErrorLimited = clientErrorRateLimiter.record(address)
       if (clientErrorLimited) return requestRateLimitResponse(request, clientErrorLimited.retryAfter)

@@ -1923,6 +1923,101 @@ export const migrations: Migration[] = [
         created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,PRIMARY KEY(campaign,user_id));`)
     },
   },
+  {
+    version: 134,
+    name: 'target_relationship_feed_invalidation',
+    up(database) {
+      const hasTable = (name: string) => !!database.query(
+        "SELECT 1 FROM sqlite_master WHERE type='table' AND name=?",
+      ).get(name)
+      database.run(`CREATE TABLE IF NOT EXISTS pending_relationship_feed_invalidations (
+        viewer_id INTEGER PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
+        queued_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP);
+
+      DROP TRIGGER IF EXISTS deferred_feed_follows_insert;
+      DROP TRIGGER IF EXISTS deferred_feed_follows_update;
+      DROP TRIGGER IF EXISTS deferred_feed_follows_delete;
+      DROP TRIGGER IF EXISTS deferred_feed_hashtag_follows_insert;
+      DROP TRIGGER IF EXISTS deferred_feed_hashtag_follows_update;
+      DROP TRIGGER IF EXISTS deferred_feed_hashtag_follows_delete;`)
+      if (!hasTable('users') || !hasTable('follows')) return
+      database.run(`CREATE TRIGGER deferred_feed_follows_insert AFTER INSERT ON follows BEGIN
+        INSERT OR IGNORE INTO pending_relationship_feed_invalidations(viewer_id)
+          SELECT id FROM users WHERE id IN (NEW.follower_id,NEW.following_id)
+            OR id IN (SELECT follower_id FROM follows WHERE following_id=NEW.follower_id);
+      END;
+      CREATE TRIGGER deferred_feed_follows_update AFTER UPDATE ON follows BEGIN
+        INSERT OR IGNORE INTO pending_relationship_feed_invalidations(viewer_id)
+          SELECT id FROM users WHERE id IN (OLD.follower_id,OLD.following_id,NEW.follower_id,NEW.following_id)
+            OR id IN (SELECT follower_id FROM follows
+              WHERE following_id IN (OLD.follower_id,NEW.follower_id));
+      END;
+      CREATE TRIGGER deferred_feed_follows_delete AFTER DELETE ON follows BEGIN
+        INSERT OR IGNORE INTO pending_relationship_feed_invalidations(viewer_id)
+          SELECT id FROM users WHERE id IN (OLD.follower_id,OLD.following_id)
+            OR id IN (SELECT follower_id FROM follows WHERE following_id=OLD.follower_id);
+      END;`)
+      if (hasTable('hashtag_follows')) database.run(`CREATE TRIGGER deferred_feed_hashtag_follows_insert
+      AFTER INSERT ON hashtag_follows BEGIN
+        INSERT OR IGNORE INTO pending_relationship_feed_invalidations(viewer_id)
+          SELECT id FROM users WHERE id=NEW.user_id
+            OR id IN (SELECT follower_id FROM follows WHERE following_id=NEW.user_id)
+            OR id IN (SELECT user_id FROM hashtag_follows WHERE tag=NEW.tag);
+      END;
+      CREATE TRIGGER deferred_feed_hashtag_follows_update AFTER UPDATE ON hashtag_follows BEGIN
+        INSERT OR IGNORE INTO pending_relationship_feed_invalidations(viewer_id)
+          SELECT id FROM users WHERE id IN (OLD.user_id,NEW.user_id)
+            OR id IN (SELECT follower_id FROM follows WHERE following_id IN (OLD.user_id,NEW.user_id))
+            OR id IN (SELECT user_id FROM hashtag_follows WHERE tag IN (OLD.tag,NEW.tag));
+      END;
+      CREATE TRIGGER deferred_feed_hashtag_follows_delete AFTER DELETE ON hashtag_follows BEGIN
+        INSERT OR IGNORE INTO pending_relationship_feed_invalidations(viewer_id)
+          SELECT id FROM users WHERE id=OLD.user_id
+            OR id IN (SELECT follower_id FROM follows WHERE following_id=OLD.user_id)
+            OR id IN (SELECT user_id FROM hashtag_follows WHERE tag=OLD.tag);
+      END;`)
+      if (hasTable('relationship_feed_invalidation')) database.run(`
+      INSERT OR IGNORE INTO pending_relationship_feed_invalidations(viewer_id)
+        SELECT id FROM users WHERE EXISTS (
+          SELECT 1 FROM relationship_feed_invalidation WHERE id=1 AND dirty=1);
+      UPDATE relationship_feed_invalidation SET dirty=0 WHERE id=1;`)
+    },
+  },
+  {
+    version: 135,
+    name: 'compact_latest_read_state',
+    up(database) {
+      const hasTable = (name: string) => !!database.query(
+        "SELECT 1 FROM sqlite_master WHERE type='table' AND name=?",
+      ).get(name)
+      if (!hasTable('users') || !hasTable('posts')) return
+      database.run(`CREATE TABLE IF NOT EXISTS latest_read_state (
+        user_id INTEGER PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
+        through_post_id INTEGER NOT NULL DEFAULT 0);
+      CREATE TABLE IF NOT EXISTS latest_read_exceptions (
+        user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        post_id INTEGER NOT NULL REFERENCES posts(id) ON DELETE CASCADE,
+        read_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        PRIMARY KEY(user_id,post_id));`)
+      if (hasTable('latest_reads')) {
+        const visiblePost = columns(database, 'posts').includes('deleted_at') ? 'p.deleted_at IS NULL' : '1'
+        database.run(`INSERT OR REPLACE INTO latest_read_state(user_id,through_post_id)
+          SELECT u.id,coalesce((SELECT min(p.id)-1 FROM posts p WHERE ${visiblePost}
+            AND NOT EXISTS (SELECT 1 FROM latest_reads r WHERE r.user_id=u.id AND r.post_id=p.id)),
+            (SELECT coalesce(max(id),0) FROM posts))
+          FROM users u;
+        INSERT OR IGNORE INTO latest_read_exceptions(user_id,post_id,read_at)
+          SELECT r.user_id,r.post_id,r.read_at FROM latest_reads r
+          JOIN latest_read_state s ON s.user_id=r.user_id WHERE r.post_id>s.through_post_id;
+        DROP TRIGGER IF EXISTS latest_reads_initialize_user;
+        DROP TABLE latest_reads;`)
+      }
+      database.run(`CREATE TRIGGER IF NOT EXISTS latest_read_state_initialize_user AFTER INSERT ON users BEGIN
+        INSERT INTO latest_read_state(user_id,through_post_id)
+          VALUES(NEW.id,coalesce((SELECT max(id) FROM posts),0));
+      END;`)
+    },
+  },
 ]
 
 export const latestMigrationVersion = migrations.at(-1)!.version

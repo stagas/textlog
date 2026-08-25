@@ -2,6 +2,7 @@ import { cacheDb } from './cache-db'
 import { executeDatabaseDomain } from './database-domain'
 import { configureDatabaseService } from './database-service'
 import { db } from './db'
+import { logInfo } from './log'
 import type { MainToRuntimeMessage, RuntimeToMainMessage } from './runtime-worker-protocol'
 
 declare const self: Worker
@@ -16,8 +17,9 @@ function send(message: RuntimeToMainMessage) {
   self.postMessage(message)
 }
 
-const foregroundQueue: Extract<MainToRuntimeMessage, { type: 'domain' }>[] = []
-const backgroundQueue: Extract<MainToRuntimeMessage, { type: 'domain' }>[] = []
+type QueuedDomainMessage = Extract<MainToRuntimeMessage, { type: 'domain' }> & { queuedAt: number }
+const foregroundQueue: QueuedDomainMessage[] = []
+const backgroundQueue: QueuedDomainMessage[] = []
 let processing = false
 let drainScheduled = false
 
@@ -36,6 +38,7 @@ async function drainQueue() {
   try {
     const message = foregroundQueue.shift() || backgroundQueue.shift()
     if (!message) return
+    const started = performance.now()
     try {
       const result = await executeDatabaseDomain(db, message.operation, message.input)
       send({ type: 'domainResult', id: message.id, result })
@@ -43,6 +46,15 @@ async function drainQueue() {
     catch (error) {
       const value = error instanceof Error ? error : new Error(String(error))
       send({ type: 'error', id: message.id, error: { name: value.name, message: value.message, stack: value.stack } })
+    }
+    const finished = performance.now()
+    const durationMs = finished - started
+    const queueMs = started - message.queuedAt
+    const slowMs = Number(Bun.env.DATABASE_SLOW_OPERATION_MS || 250)
+    if (durationMs >= slowMs || queueMs >= slowMs) {
+      logInfo(`database operation=${message.operation} priority=${message.priority} duration_ms=${durationMs.toFixed(1)}`
+        + ` queue_ms=${queueMs.toFixed(1)} foreground_queued=${foregroundQueue.length}`
+        + ` background_queued=${backgroundQueue.length}`)
     }
   }
   finally {
@@ -65,8 +77,9 @@ self.onmessage = event => {
     send({ type: 'domainResult', id: message.id, result: null })
     return
   }
-  if (message.priority === 'background') backgroundQueue.push(message)
-  else foregroundQueue.push(message)
+  const queued = { ...message, queuedAt: performance.now() }
+  if (message.priority === 'background') backgroundQueue.push(queued)
+  else foregroundQueue.push(queued)
   scheduleDrain()
 }
 

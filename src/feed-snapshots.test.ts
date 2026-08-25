@@ -76,6 +76,20 @@ test('personalized snapshots do not depend on the global generation', () => {
   expect(builds).toBe(1)
 })
 
+test('personalized snapshots consume a pending relationship invalidation before serving', () => {
+  const db = database()
+  db.run(`CREATE TABLE pending_relationship_feed_invalidations(
+    viewer_id INTEGER PRIMARY KEY,queued_at TEXT DEFAULT CURRENT_TIMESTAMP);
+    INSERT INTO personalized_feed_generations VALUES(7,1);`)
+  let builds = 0
+  const build = () => [{ id: ++builds }]
+
+  expect(feedSnapshotPage(db, 'for-you:v4', 7, 1, build, 20, db).items).toEqual([{ id: 1 }])
+  db.run('INSERT INTO pending_relationship_feed_invalidations(viewer_id) VALUES(7)')
+  expect(feedSnapshotPage(db, 'for-you:v4', 7, 1, build, 20, db).items).toEqual([{ id: 2 }])
+  expect(db.query('SELECT count(*) count FROM pending_relationship_feed_invalidations').get()).toEqual({ count: 0 })
+})
+
 test('personalized snapshots fall back to the global generation before their migration is applied', () => {
   const db = database()
   db.run('DROP TABLE personalized_feed_generations')

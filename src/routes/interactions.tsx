@@ -12,6 +12,7 @@ import {
 } from '../http'
 import { logError } from '../log'
 import { sendPushForFollow, sendPushForTagFollow, sendPushForUserFollow } from '../push'
+import { scheduleRelationshipFeedInvalidation } from '../relationship-feed-invalidation'
 import { currentUser } from '../utils'
 
 export function registerInteractionsRoutes(app: Hono) {
@@ -22,6 +23,7 @@ export function registerInteractionsRoutes(app: Hono) {
     if (!/^[a-z0-9_]{2,24}$/.test(handle)) return c.text('Invalid handle', 400)
     const f = await form(c.req.raw)
     const result = await databaseService().call('interactions.toggleFollow', { userId: user.id, handle })
+    if (result) scheduleRelationshipFeedInvalidation()
     if (result?.followed) {
       void sendPushForFollow(user.id, user.handle, result.targetId)
         .catch(error => logError('follow push failed', error))
@@ -85,6 +87,7 @@ export function registerInteractionsRoutes(app: Hono) {
       ? await form(c.req.raw)
       : {} as Record<string, string>
     const result = await databaseService().call('interactions.toggleTagFollow', { userId: user.id, tag })
+    scheduleRelationshipFeedInvalidation()
     if (result.followed) {
       void sendPushForTagFollow(user.id, user.handle, tag)
         .catch(error => logError('tag follow activity push failed', error))

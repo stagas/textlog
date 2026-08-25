@@ -2013,16 +2013,33 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
       return unreadLatestCount(userId, database) as DatabaseDomainOutput<K>
     }
     case 'feeds.flushRelationshipInvalidation': {
-      const changed = database.transaction(() => {
-        const pending = database.query('SELECT dirty FROM relationship_feed_invalidation WHERE id=1')
-          .get() as { dirty: number } | null
-        if (!pending?.dirty) return false
-        database.query('UPDATE feed_snapshot_generation SET generation=generation+1 WHERE id=1').run()
-        database.query('UPDATE personalized_feed_generations SET generation=generation+1').run()
-        database.query('UPDATE relationship_feed_invalidation SET dirty=0 WHERE id=1').run()
-        return true
+      if (!database.query(`SELECT 1 FROM sqlite_master
+        WHERE type='table' AND name='pending_relationship_feed_invalidations'`).get()) {
+        return { flushed: 0, remaining: 0 } as DatabaseDomainOutput<K>
+      }
+      const requestedLimit = (input as DatabaseDomainInput<'feeds.flushRelationshipInvalidation'>).limit ?? 100
+      const limit = Math.max(1, Math.min(500, Math.floor(requestedLimit)))
+      const viewerIds = database.query(`SELECT viewer_id FROM pending_relationship_feed_invalidations
+        ORDER BY queued_at,viewer_id LIMIT ?`).all(limit) as Array<{ viewer_id: number }>
+      database.transaction(() => {
+        const increment = database.query(`UPDATE personalized_feed_generations
+          SET generation=generation+1 WHERE viewer_id=?`)
+        const remove = database.query('DELETE FROM pending_relationship_feed_invalidations WHERE viewer_id=?')
+        for (const { viewer_id } of viewerIds) {
+          increment.run(viewer_id)
+          remove.run(viewer_id)
+        }
       })()
-      return changed as DatabaseDomainOutput<K>
+      if (viewerIds.length) {
+        const removeMaterialized = cacheDb.query(`DELETE FROM materialized_feed_pages_v2
+          WHERE viewer_id=? AND kind IN ('for-you','to-me')`)
+        cacheDb.transaction(() => {
+          for (const { viewer_id } of viewerIds) removeMaterialized.run(viewer_id)
+        })()
+      }
+      const remaining = (database.query('SELECT count(*) count FROM pending_relationship_feed_invalidations')
+        .get() as { count: number }).count
+      return { flushed: viewerIds.length, remaining } as DatabaseDomainOutput<K>
     }
     case 'feeds.hotPage': {
       const { viewerId, page, pageSize } = input as DatabaseDomainInput<'feeds.hotPage'>

@@ -205,15 +205,15 @@ describe('database migrations', () => {
       PRAGMA user_version=107;`)
 
     expect(runMigrations(database)).toBe(latestMigrationVersion)
-    expect(database.query('SELECT user_id,post_id FROM latest_reads ORDER BY user_id,post_id').all()).toEqual([
-      { user_id: 1, post_id: 10 },
-      { user_id: 1, post_id: 11 },
-      { user_id: 2, post_id: 10 },
+    expect(database.query(`SELECT user_id,through_post_id FROM latest_read_state
+      ORDER BY user_id`).all()).toEqual([
+      { user_id: 1, through_post_id: 11 },
+      { user_id: 2, through_post_id: 10 },
+      { user_id: 3, through_post_id: 9 },
     ])
     database.query('INSERT INTO users(id) VALUES(4)').run()
-    expect(database.query('SELECT post_id FROM latest_reads WHERE user_id=4 ORDER BY post_id').all()).toEqual([
-      { post_id: 10 }, { post_id: 11 }, { post_id: 12 },
-    ])
+    expect(database.query('SELECT through_post_id FROM latest_read_state WHERE user_id=4').get())
+      .toEqual({ through_post_id: 12 })
   })
 
   test('repairs accounts whose existing posts were not initialized as latest reads', () => {
@@ -229,8 +229,8 @@ describe('database migrations', () => {
       PRAGMA user_version=109;`)
 
     expect(runMigrations(database)).toBe(latestMigrationVersion)
-    expect(database.query('SELECT post_id FROM latest_reads WHERE user_id=1 ORDER BY post_id').all())
-      .toEqual([{ post_id: 10 }, { post_id: 11 }])
+    expect(database.query('SELECT through_post_id FROM latest_read_state WHERE user_id=1').get())
+      .toEqual({ through_post_id: 11 })
   })
 
   test('moves migration-time hashtag follows into the past without losing read state', () => {
@@ -679,7 +679,7 @@ describe('database migrations', () => {
     expect(generation()).toBe(initial + 1)
   })
 
-  test('defers relationship feed invalidation until the background flush', async () => {
+  test('coalesces targeted relationship feed invalidation until the background flush', async () => {
     const database = new Database(':memory:')
     database.run('PRAGMA foreign_keys=ON')
     runMigrations(database)
@@ -693,11 +693,13 @@ describe('database migrations', () => {
     database.run('INSERT INTO follows(follower_id,following_id) VALUES(1,2)')
 
     expect(generation()).toBe(initial)
-    expect(database.query('SELECT dirty FROM relationship_feed_invalidation WHERE id=1').get())
-      .toEqual({ dirty: 1 })
-    expect(await executeDatabaseDomain(database, 'feeds.flushRelationshipInvalidation', {})).toBe(true)
+    expect(database.query(`SELECT viewer_id FROM pending_relationship_feed_invalidations
+      ORDER BY viewer_id`).all()).toEqual([{ viewer_id: 1 }, { viewer_id: 2 }])
+    expect(await executeDatabaseDomain(database, 'feeds.flushRelationshipInvalidation', {}))
+      .toEqual({ flushed: 2, remaining: 0 })
     expect(generation()).toBe(initial + 1)
-    expect(await executeDatabaseDomain(database, 'feeds.flushRelationshipInvalidation', {})).toBe(false)
+    expect(await executeDatabaseDomain(database, 'feeds.flushRelationshipInvalidation', {}))
+      .toEqual({ flushed: 0, remaining: 0 })
   })
 
   test('replaces legacy internal OG previews with native post references', () => {

@@ -397,7 +397,7 @@ export type DatabaseDomainOperations = {
   }
   'feeds.markRead': { input: { userId: number; toMe: boolean }; output: null }
   'feeds.markLatestRead': { input: { userId: number }; output: null }
-  'feeds.flushRelationshipInvalidation': { input: Record<string, never>; output: boolean }
+  'feeds.flushRelationshipInvalidation': { input: { limit?: number }; output: { flushed: number; remaining: number } }
   'cache.materializedFeedGet': {
     input: { kind: 'latest' | 'hot' | 'for-you' | 'to-me' | 'about'; viewerId: number; variant: string }
     output: { html: string | null; generation: number }

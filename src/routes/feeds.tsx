@@ -67,8 +67,6 @@ type RecentFeedVisitor = {
 
 const recentFeedVisitors = new Map<number, RecentFeedVisitor>()
 const recentFeedVisitorLimit = 30
-const recentVisitorPrewarmDelayMs = 10_000
-let recentVisitorPrewarmTimer: ReturnType<typeof setTimeout> | undefined
 
 const feedVariantCookieNames = new Set([
   'appearance',
@@ -157,40 +155,6 @@ function warmOtherFeedPages(request: Request, current: PrimaryFeed,
         console.error('Could not warm feed caches', error)
       })
   }, 0)
-}
-
-export function prewarmRecentFeedVisitors() {
-  // Keep a bounded deadline for the batch. Resetting this timer on every successful POST can starve relationship
-  // invalidation indefinitely on an active instance, causing follow activity to remain absent from For You feeds.
-  if (recentVisitorPrewarmTimer) return
-  recentVisitorPrewarmTimer = setTimeout(() => {
-    recentVisitorPrewarmTimer = undefined
-    const visitors = [...recentFeedVisitors.values()]
-    void (async () => {
-      await backgroundDatabaseCall('feeds.flushRelationshipInvalidation', {})
-      for (const { density, pageSize, request, user } of visitors) {
-        for (const kind of ['for-you', 'hot', 'latest'] as PrimaryFeed[]) {
-          await withRequestContext({ sessionUser: user, apiUser: null, pageSize, density }, () =>
-            withAppearance(request, () => warmFeedPage(request, kind, user, pageSize)))
-        }
-      }
-    })().catch(error => {
-      console.error('Could not prewarm recent feed visitors', error)
-    })
-  }, recentVisitorPrewarmDelayMs)
-}
-
-export async function prewarmRecentFeedVisitorsOnInit() {
-  const visitors = await backgroundDatabaseCall('cache.recentFeedVisitors', {})
-  for (const { density, pageSize, requestUrl, cookie, user } of visitors) {
-    recentFeedVisitors.set(user.id, {
-      density,
-      pageSize,
-      user,
-      request: new Request(requestUrl, { headers: { cookie } }),
-    })
-  }
-  prewarmRecentFeedVisitors()
 }
 
 export function registerFeedsRoutes(app: Hono) {
