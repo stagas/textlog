@@ -18,6 +18,21 @@ test('latest unread state includes the viewer own posts and decreases as a page 
   expect(latestPostState(1, database).filter(row => row.unread).map(row => row.id)).toEqual([1])
 })
 
+test('latest unread state excludes whisper posts', () => {
+  const database = new Database(':memory:')
+  database.run(`CREATE TABLE posts (id INTEGER PRIMARY KEY,user_id INTEGER NOT NULL,parent_id INTEGER,
+    deleted_at TEXT);
+  CREATE TABLE latest_reads (user_id INTEGER NOT NULL,post_id INTEGER NOT NULL,PRIMARY KEY(user_id,post_id));
+  CREATE TABLE post_mentions (post_id INTEGER,user_id INTEGER);
+  CREATE TABLE blocks (blocker_id INTEGER,blocked_id INTEGER);
+  CREATE TABLE post_hashtags (post_id INTEGER,tag TEXT,PRIMARY KEY(post_id,tag));
+  CREATE TABLE blocked_hashtags (user_id INTEGER,tag TEXT);
+  INSERT INTO posts(id,user_id,parent_id) VALUES(1,2,NULL),(2,2,NULL),(3,2,2);
+  INSERT INTO post_hashtags VALUES(2,'whisper');`)
+
+  expect(latestPostState(1, database).map(row => row.id)).toEqual([1])
+})
+
 test('new users start with every existing latest post read', () => {
   const database = new Database(':memory:')
   database.run(`CREATE TABLE posts (id INTEGER PRIMARY KEY,user_id INTEGER NOT NULL,parent_id INTEGER,

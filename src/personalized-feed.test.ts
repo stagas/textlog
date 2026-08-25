@@ -1,0 +1,38 @@
+import { Database } from 'bun:sqlite'
+import { expect, test } from 'bun:test'
+import { runMigrations } from './migrations'
+import { loadPersonalizedFeed } from './personalized-feed'
+import type { User } from './types'
+
+test('whisper descendants stay in participant and original tag-follower personalized feeds', () => {
+  const database = new Database(':memory:', { strict: true })
+  runMigrations(database)
+  database.run(`INSERT INTO users(id,handle,email,password,bio) VALUES
+      (1,'alice','alice@example.com','!',''),
+      (2,'bob','bob@example.com','!',''),
+      (3,'charlie','charlie@example.com','!','');
+    INSERT INTO posts(id,user_id,parent_id,body,created_at) VALUES
+      (1,1,NULL,'public root','2026-08-03 10:00:00'),
+      (2,2,1,'start #whisper #topic','2026-08-03 11:00:00');
+    INSERT INTO post_hashtags(post_id,tag) VALUES(2,'whisper'),(2,'topic');
+    INSERT INTO hashtag_follows(user_id,tag,created_at) VALUES(3,'topic',CURRENT_TIMESTAMP);`)
+  const generation = (userId: number) => (database.query(
+    'SELECT generation FROM personalized_feed_generations WHERE viewer_id=?',
+  ).get(userId) as { generation: number }).generation
+  const aliceGeneration = generation(1)
+  const charlieGeneration = generation(3)
+  database.run(`INSERT INTO posts(id,user_id,parent_id,body,created_at)
+    VALUES(3,2,2,'untagged continuation','2026-08-03 12:00:00')`)
+  const alice: User = { id: 1, handle: 'alice', email: 'alice@example.com', bio: '' }
+  const charlie: User = { id: 3, handle: 'charlie', email: 'charlie@example.com', bio: '' }
+
+  const aliceToMe = loadPersonalizedFeed(database, alice, 1, 20, true, '/to-me', false)
+  const charlieForYou = loadPersonalizedFeed(database, charlie, 1, 20, false, '/for-you', false)
+  const charlieToMe = loadPersonalizedFeed(database, charlie, 1, 20, true, '/to-me', false)
+
+  expect(generation(1)).toBeGreaterThan(aliceGeneration)
+  expect(generation(3)).toBeGreaterThan(charlieGeneration)
+  expect(aliceToMe.timeline.filter(row => row.id).map(row => row.id)).toEqual([3, 2])
+  expect(charlieForYou.timeline.filter(row => row.id).map(row => row.id)).toEqual([3, 2])
+  expect(charlieToMe.timeline.some(row => row.id === 3)).toBeFalse()
+})

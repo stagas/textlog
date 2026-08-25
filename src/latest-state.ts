@@ -1,4 +1,5 @@
 import type { Database } from 'bun:sqlite'
+import { excludesWhisperPosts } from './whisper'
 
 function usesCompactReads(database: Database) {
   return !!database.query("SELECT 1 FROM sqlite_master WHERE type='table' AND name='latest_read_state'").get()
@@ -16,6 +17,7 @@ export function latestPostState(userId: number, database: Database) {
     LEFT JOIN posts parent ON parent.id=p.parent_id
     LEFT JOIN post_mentions pm ON pm.post_id=p.id AND pm.user_id=?
     WHERE p.deleted_at IS NULL
+      AND ${excludesWhisperPosts()}
       AND NOT EXISTS (SELECT 1 FROM blocks b WHERE
         (b.blocker_id=? AND b.blocked_id=p.user_id) OR (b.blocker_id=p.user_id AND b.blocked_id=?))
       AND NOT EXISTS (SELECT 1 FROM post_hashtags ph JOIN blocked_hashtags bh ON bh.tag=ph.tag
@@ -49,6 +51,7 @@ export function unreadLatestCount(userId: number, database: Database) {
     : 'EXISTS (SELECT 1 FROM latest_reads r WHERE r.user_id=? AND r.post_id=p.id)'
   return (database.query(`SELECT count(*) count FROM posts p
     WHERE p.deleted_at IS NULL
+      AND ${excludesWhisperPosts()}
       AND NOT (${read})
       AND NOT EXISTS (SELECT 1 FROM blocks b WHERE
         (b.blocker_id=? AND b.blocked_id=p.user_id) OR (b.blocker_id=p.user_id AND b.blocked_id=?))

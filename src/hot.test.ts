@@ -54,6 +54,15 @@ function fillHotRootRanks() {
 }
 
 describe('hot feed ranking', () => {
+  test('excludes whisper posts', () => {
+    post(1, '2026-08-03 10:00:00')
+    post(2, '2026-08-03 11:00:00', 1)
+    post(3, '2026-08-03 12:00:00', 1)
+    database.query("INSERT INTO post_hashtags(post_id,tag) VALUES(1,'whisper')").run()
+
+    expect(getHotPosts(database, 20, null, asOf)).toEqual([])
+  })
+
   test('excludes reply-free posts', () => {
     post(1, '2026-08-03 12:00:00')
     post(2, '2026-08-02 12:00:00')

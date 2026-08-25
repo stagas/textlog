@@ -1,6 +1,7 @@
 import type { Database } from 'bun:sqlite'
 import { extractHashtags, extractMentions } from './content'
 import { encodeHotCursor, getHotPosts, type HotCursor, hotCursor } from './hot'
+import { excludesWhisperPosts } from './whisper'
 import { searchExpression } from './search'
 import { decodeHtmlEntities } from './link-preview'
 import { getImageUrl, isImageKey } from './image-storage'
@@ -206,6 +207,7 @@ export function apiPosts(database: Database, origin: string, options: {
   repliesOnly?: boolean
   topLevelOnly?: boolean
   viewerId?: number
+  excludeWhispers?: boolean
 }) {
   const filters = ['p.deleted_at IS NULL', 'u.deleted_at IS NULL']
   const parameters: Array<string | number> = []
@@ -219,6 +221,7 @@ export function apiPosts(database: Database, origin: string, options: {
   }
   if (options.repliesOnly) filters.push('p.parent_id IS NOT NULL')
   if (options.topLevelOnly) filters.push('p.parent_id IS NULL')
+  if (options.excludeWhispers) filters.push(excludesWhisperPosts())
   if (options.before !== null) {
     filters.push('p.id < ?')
     parameters.push(options.before)

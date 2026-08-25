@@ -1,4 +1,5 @@
 import type { Database } from 'bun:sqlite'
+import { excludesWhisperPosts } from './whisper'
 
 export type HotPost = {
   id: number
@@ -26,7 +27,7 @@ export type HotCursor = {
   direction: 'next' | 'previous'
 }
 
-export const hotRankingVersion = 104
+export const hotRankingVersion = 105
 const cursorVersion = hotRankingVersion
 const activityHalfLifeHours = 6
 const postWeight = 0
@@ -347,7 +348,7 @@ export function getHotPosts(
   const candidateAuthorIdentity = tracksAccountGroups
     ? 'COALESCE(candidate_user.account_group_id,-candidate_user.id)'
     : 'candidate_user.id'
-  const filters = ['p.deleted_at IS NULL', 'ranked.hot_score > 0']
+  const filters = ['p.deleted_at IS NULL', excludesWhisperPosts(), 'ranked.hot_score > 0']
   const parameters: Array<string | number> = [timestamp]
   if (viewerId >= 0) {
     filters.push(`NOT EXISTS (SELECT 1 FROM blocks b WHERE

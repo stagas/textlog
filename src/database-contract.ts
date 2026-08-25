@@ -262,7 +262,8 @@ export type DatabaseDomainOperations = {
   }
   'api.publicRead': { input:
     | { kind: 'collection'; origin: string; limit: number; before: number | null;
-      handle?: string; tag?: string; repliesOnly?: boolean; topLevelOnly?: boolean; viewerId?: number }
+      handle?: string; tag?: string; repliesOnly?: boolean; topLevelOnly?: boolean; viewerId?: number;
+      excludeWhispers?: boolean }
     | { kind: 'hot'; origin: string; limit: number;
       cursor: { asOf: string; score: number; latestActivityAt: string; createdAt: string; id: number;
         direction: 'next' | 'previous' } | null; viewerId?: number }

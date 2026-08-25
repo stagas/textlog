@@ -3,6 +3,7 @@ import { isAdmin } from './admin'
 import { type ApiPost, apiPost, isoTimestamp } from './api'
 import { hasUnreadForYou, hasUnreadToMe } from './for-you-state'
 import type { User } from './types'
+import { whisperThreadRelevantToViewer, whisperThreadTargetsViewer } from './whisper'
 
 type ActivityKind = 'post' | 'reply' | 'mention' | 'user_follow' | 'tag_follow' | 'signup'
 
@@ -93,11 +94,12 @@ export function apiActivities(database: Database, origin: string, user: User, op
       WHERE fyr.user_id=$viewer AND fyr.event_key=timeline.event_key) unread
     FROM (
       SELECT p.id post_id,p.created_at,
-        CASE WHEN parent.user_id=$viewer THEN 'reply'
-          WHEN pm.user_id IS NOT NULL THEN 'mention' ELSE 'post' END type,
+        CASE WHEN pm.user_id IS NOT NULL THEN 'mention'
+          WHEN parent.user_id=$viewer OR ${whisperThreadTargetsViewer()} THEN 'reply' ELSE 'post' END type,
         'post:' || printf('%020d',p.id) event_key,u.handle actor_handle,
         NULL target_handle,NULL target_tag,
-        CASE WHEN parent.user_id=$viewer OR pm.user_id IS NOT NULL THEN 1 ELSE 0 END targeted_to_viewer
+        CASE WHEN parent.user_id=$viewer OR pm.user_id IS NOT NULL OR ${whisperThreadTargetsViewer()}
+          THEN 1 ELSE 0 END targeted_to_viewer
       FROM posts p JOIN users u ON u.id=p.user_id
       LEFT JOIN posts parent ON parent.id=p.parent_id
       LEFT JOIN post_mentions pm ON pm.post_id=p.id AND pm.user_id=$viewer
@@ -107,7 +109,7 @@ export function apiActivities(database: Database, origin: string, user: User, op
           (SELECT following_id FROM follows WHERE follower_id=$viewer)
           OR ${descendsFromViewer} OR pm.user_id IS NOT NULL
           OR p.id IN (SELECT ph.post_id FROM post_hashtags ph JOIN hashtag_follows hf ON hf.tag=ph.tag
-            WHERE hf.user_id=$viewer))
+            WHERE hf.user_id=$viewer) OR ${whisperThreadRelevantToViewer()})
         AND NOT EXISTS (SELECT 1 FROM blocks b WHERE
           (b.blocker_id=$viewer AND b.blocked_id=p.user_id)
           OR (b.blocker_id=p.user_id AND b.blocked_id=$viewer))

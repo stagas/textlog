@@ -102,6 +102,42 @@ describe('Web Push activity delivery', () => {
     }])
   })
 
+  test('does not send whispers as latest notifications but keeps for-you delivery', async () => {
+    const database = fixture()
+    database.run(`INSERT INTO posts(id,user_id,body) VALUES(3,1,'quiet #whisper #bun');
+      INSERT INTO post_hashtags(post_id,tag) VALUES(3,'whisper'),(3,'bun')`)
+    const payloads: string[] = []
+    webpush.sendNotification = (async (_subscription, payload) => {
+      payloads.push(String(payload))
+      return {} as never
+    }) as typeof webpush.sendNotification
+
+    await sendPushForPost(3, 1, 'author', database, vapid)
+    expect(payloads).toEqual([])
+
+    database.run(`UPDATE push_subscriptions SET notify_following_notes=1;
+      INSERT INTO hashtag_follows(user_id,tag,created_at) VALUES(2,'bun',CURRENT_TIMESTAMP)`)
+    await sendPushForPost(3, 1, 'author', database, vapid)
+    expect(payloads.map(payload => JSON.parse(payload).body)).toEqual(['quiet #whisper #bun'])
+  })
+
+  test('delivers untagged whisper descendants to an earlier conversation participant', async () => {
+    const database = fixture()
+    database.run(`INSERT INTO posts(id,user_id,parent_id,body) VALUES
+        (3,1,1,'starting this conversation #whisper'),
+        (4,1,3,'continuing without a tag');
+      INSERT INTO post_hashtags(post_id,tag) VALUES(3,'whisper')`)
+    const payloads: string[] = []
+    webpush.sendNotification = (async (_subscription, payload) => {
+      payloads.push(String(payload))
+      return {} as never
+    }) as typeof webpush.sendNotification
+
+    await sendPushForPost(4, 1, 'author', database, vapid)
+
+    expect(payloads.map(payload => JSON.parse(payload).body)).toEqual(['continuing without a tag'])
+  })
+
   test('uses plain text rather than Markdown in post notifications', async () => {
     const database = fixture()
     database.run(`INSERT INTO posts(id,user_id,body) VALUES

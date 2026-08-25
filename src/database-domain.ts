@@ -51,6 +51,7 @@ import { insertSession, markSessionUsed, renewSession, SESSION_LIFETIME_MS, sess
 import { dashboardStats } from './stats'
 import type { User } from './types'
 import type { PostView } from './types'
+import { excludesWhisperPosts, whisperThreadRelevantToViewer, whisperThreadTargetsViewer } from './whisper'
 
 function attachPeopleStats(database: Database, people: import('./types').PersonView[], viewerId: number) {
   const stats = visibleUserProfileStats(database, people.map(person => person.id), viewerId)
@@ -1116,7 +1117,7 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
       const posts = kind === 'hot'
         ? apiHotPosts(database, origin, API_DEFAULT_LIMIT, null).data
         : apiPosts(database, origin, { limit: API_DEFAULT_LIMIT, before: null,
-          ...(kind === 'latest' ? {} : { tag: identifier || '' }) }).data
+          ...(kind === 'latest' ? { excludeWhispers: true } : { tag: identifier || '' }) }).data
       return { status: 'ready', posts, activities: [], postTitlePrefixes: {} } as DatabaseDomainOutput<K>
     }
     case 'api.publicRead': {
@@ -1874,8 +1875,9 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
       if (!row) return { post: null, subscriptions: [] } as DatabaseDomainOutput<K>
       const subscriptions = database.query(`SELECT ps.endpoint,ps.p256dh,ps.auth,ps.user_id userId,
         recipient.handle recipientHandle,
-        (ps.user_id!=? AND EXISTS(SELECT 1 FROM posts child JOIN posts parent ON parent.id=child.parent_id
-          WHERE child.id=? AND parent.user_id=ps.user_id)) isReply,
+        (ps.user_id!=? AND (EXISTS(SELECT 1 FROM posts child JOIN posts parent ON parent.id=child.parent_id
+          WHERE child.id=? AND parent.user_id=ps.user_id)
+          OR ${whisperThreadTargetsViewer('ps.user_id', postId)})) isReply,
         (ps.user_id!=? AND EXISTS(SELECT 1 FROM post_mentions pm
           WHERE pm.post_id=? AND pm.user_id=ps.user_id)) isMention,
         ps.notify_replies notifyReplies,ps.notify_mentions notifyMentions
@@ -1884,17 +1886,21 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
           (b.blocker_id=? AND b.blocked_id=ps.user_id) OR (b.blocker_id=ps.user_id AND b.blocked_id=?))
         AND NOT EXISTS (SELECT 1 FROM post_hashtags ph JOIN blocked_hashtags bh ON bh.tag=ph.tag
           WHERE ph.post_id=? AND bh.user_id=ps.user_id)
-        AND ((ps.notify_latest=1 AND ps.user_id!=?) OR (ps.notify_following_notes=1 AND ps.user_id!=? AND (EXISTS
+        AND ((ps.notify_latest=1 AND ps.user_id!=? AND ${excludesWhisperPosts(postId)})
+          OR (ps.notify_following_notes=1 AND ps.user_id!=? AND (EXISTS
           (SELECT 1 FROM follows vf WHERE vf.follower_id=ps.user_id AND vf.following_id=?) OR EXISTS
           (SELECT 1 FROM post_hashtags ph JOIN hashtag_follows hf ON hf.tag=ph.tag
-            WHERE ph.post_id=? AND hf.user_id=ps.user_id))
+            WHERE ph.post_id=? AND hf.user_id=ps.user_id)
+          OR ${whisperThreadRelevantToViewer('ps.user_id', postId)})
           AND (ps.notify_following_only_to_me=0 OR EXISTS(SELECT 1 FROM posts direct_child
             JOIN posts direct_parent ON direct_parent.id=direct_child.parent_id
             WHERE direct_child.id=? AND direct_parent.user_id=ps.user_id) OR EXISTS(
             SELECT 1 FROM post_mentions direct_mention
-            WHERE direct_mention.post_id=? AND direct_mention.user_id=ps.user_id)))
-          OR (ps.notify_replies=1 AND ps.user_id!=? AND EXISTS(SELECT 1 FROM posts child
-            JOIN posts parent ON parent.id=child.parent_id WHERE child.id=? AND parent.user_id=ps.user_id))
+            WHERE direct_mention.post_id=? AND direct_mention.user_id=ps.user_id)
+          OR ${whisperThreadTargetsViewer('ps.user_id', postId)}))
+          OR (ps.notify_replies=1 AND ps.user_id!=? AND (EXISTS(SELECT 1 FROM posts child
+            JOIN posts parent ON parent.id=child.parent_id WHERE child.id=? AND parent.user_id=ps.user_id)
+            OR ${whisperThreadTargetsViewer('ps.user_id', postId)}))
           OR (ps.notify_mentions=1 AND ps.user_id!=? AND EXISTS(SELECT 1 FROM post_mentions pm
             WHERE pm.post_id=? AND pm.user_id=ps.user_id)))
         ORDER BY ps.endpoint,isReply DESC,isMention DESC,ps.user_id`)
@@ -1970,6 +1976,7 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
           WHERE p.deleted_at IS NULL AND (? < 0 OR NOT EXISTS
           (SELECT 1 FROM blocks b WHERE (b.blocker_id=? AND b.blocked_id=p.user_id)
             OR (b.blocker_id=p.user_id AND b.blocked_id=?)))
+          AND ${excludesWhisperPosts()}
           AND (? < 0 OR NOT EXISTS (SELECT 1 FROM post_hashtags ph JOIN blocked_hashtags bh ON bh.tag=ph.tag
             WHERE ph.post_id=p.id AND bh.user_id=?)) ORDER BY p.id DESC`,
         ).all(...parameters) as PostView[], pageSize, cacheDb)
@@ -2322,7 +2329,9 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
           ${where ? `WHERE ${where} AND` : 'WHERE'} p.deleted_at IS NULL AND u.deleted_at IS NULL
           ORDER BY p.id DESC LIMIT ?`).all(...parameters, 5) as PostView[], -1)
       let result: import('./types').EmbedData | null
-      if (request.kind === 'latest') result = { posts: latest(), title: 'latest', href: '/latest' }
+      if (request.kind === 'latest') {
+        result = { posts: latest(excludesWhisperPosts()), title: 'latest', href: '/latest' }
+      }
       else if (request.kind === 'hot') {
         result = { posts: enrichPosts(database, getHotPosts(database, 5, null, new Date(), -1, true), -1), title: 'hot',
           href: '/hot' }

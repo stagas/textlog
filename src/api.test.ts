@@ -76,6 +76,23 @@ function request(app: Hono, path: string, init?: RequestInit) {
 }
 
 describe('public API', () => {
+  test('excludes whispers from latest but keeps them on profile and tag collections', async () => {
+    const { app, database } = fixture()
+    database.query(`INSERT INTO posts(id,user_id,parent_id,body,created_at)
+      VALUES(6,1,NULL,'quiet #whisper #textlog','2026-08-03 16:00:00'),
+        (7,2,6,'an untagged descendant','2026-08-03 17:00:00')`).run()
+    database.query("INSERT INTO post_hashtags(post_id,tag) VALUES(6,'whisper'),(6,'textlog')").run()
+
+    const latest = await (await request(app, '/api/v1/feeds/latest')).json() as any
+    const profile = await (await request(app, '/api/v1/users/alice/posts')).json() as any
+    const tag = await (await request(app, '/api/v1/tags/textlog/posts')).json() as any
+
+    expect(latest.data.some((post: any) => post.id === 6)).toBeFalse()
+    expect(latest.data.some((post: any) => post.id === 7)).toBeFalse()
+    expect(profile.data.some((post: any) => post.id === 6)).toBeTrue()
+    expect(tag.data.some((post: any) => post.id === 6)).toBeTrue()
+  })
+
   test('returns serialized public posts without private account data', async () => {
     const { app } = fixture()
     const response = await request(app, '/api/v1/feeds/latest')
@@ -169,7 +186,7 @@ describe('public API', () => {
         (7,2,NULL,'tag match #textlog','2026-08-03 16:00:00'),
         (8,2,2,'descendant of Alice reply','2026-08-03 16:30:00'),
         (9,1,NULL,'own tag match #textlog','2026-08-03 15:30:00');
-      INSERT INTO post_hashtags(post_id,tag) VALUES(7,'textlog'),(9,'textlog');
+      INSERT INTO post_hashtags(post_id,tag) VALUES(2,'whisper'),(7,'textlog'),(9,'textlog');
       INSERT INTO hashtag_follows(user_id,tag,created_at) VALUES
         (1,'textlog','2026-08-03 08:00:00'),(2,'textlog','2026-08-03 18:00:00'),
         (2,'historical','1970-01-01 00:00:00');`)
@@ -181,14 +198,14 @@ describe('public API', () => {
     const toMe = await (await request(app, '/api/v1/activities/to-me', { headers })).json() as any
 
     expect(forYou.data.map((activity: any) => activity.type))
-      .toEqual(['tag_follow', 'user_follow', 'post', 'post', 'post', 'post', 'reply', 'post'])
+      .toEqual(['tag_follow', 'user_follow', 'reply', 'post', 'post', 'post', 'mention', 'post'])
     expect(forYou.data.find((activity: any) => activity.type === 'tag_follow').payload)
       .toMatchObject({ actor: { handle: 'bob' }, target: { tag: 'textlog' } })
     expect(forYou.data.find((activity: any) => activity.payload.id === 7)).toMatchObject({
       type: 'post', payload: { id: 7 },
     })
     expect(forYou.data.find((activity: any) => activity.payload.id === 8)).toMatchObject({
-      type: 'post', payload: { body: 'descendant of Alice reply' },
+      type: 'reply', payload: { body: 'descendant of Alice reply' },
     })
     expect(forYou.data.find((activity: any) => activity.payload.id === 9)).toMatchObject({
       type: 'post', payload: { body: 'own tag match #textlog' },
@@ -197,8 +214,8 @@ describe('public API', () => {
     expect(forYou.data.find((activity: any) => activity.payload.id === 1)).toMatchObject({
       type: 'post', payload: { body: 'hello #textlog @bob' },
     })
-    expect(toMe.data.map((activity: any) => activity.type)).toEqual(['user_follow', 'reply'])
-    expect(toMe.data.some((activity: any) => activity.payload.id === 8)).toBe(false)
+    expect(toMe.data.map((activity: any) => activity.type)).toEqual(['user_follow', 'reply', 'mention'])
+    expect(toMe.data.some((activity: any) => activity.payload.id === 8)).toBe(true)
     expect(toMe.data.find((activity: any) => activity.type === 'user_follow').payload)
       .toMatchObject({ actor: { handle: 'bob' }, target: { handle: 'alice' } })
     expect(forYou.has_unread).toBe(true)

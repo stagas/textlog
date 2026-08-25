@@ -624,7 +624,7 @@ export function registerApiRoutes(app: Hono, appUrl: string | null | undefined =
     }
     const user = requestApiUser(c.req.raw)
     const result = await service.call('api.publicRead', { kind: 'collection', origin: apiOrigin(c.req.url, appUrl),
-      ...parsed, viewerId: user?.id })
+      ...parsed, viewerId: user?.id, excludeWhispers: true })
     if (result.status !== 'ready') return jsonResponse(null)
     if (!user) return jsonResponse(result.value)
     const state = await service.call('api.latestState', { userId: user.id })
