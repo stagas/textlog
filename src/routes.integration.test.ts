@@ -121,6 +121,38 @@ test('web manifest is cached by browsers', async () => {
   })
 })
 
+test('/?reddit counts each IP once', async () => {
+  const attributed = await request('/?reddit', { ip: '203.0.113.80' })
+  expect(attributed.status).toBe(303)
+  expect(attributed.headers.get('set-cookie')).toContain('campaign_attribution=reddit')
+  expect((await request('/?reddit', { ip: '203.0.113.80' })).status).toBe(303)
+  expect((await request('/?reddit', { ip: '203.0.113.81' })).status).toBe(303)
+  expect((await request('/', { ip: '203.0.113.82' })).status).toBe(303)
+
+  expect(database.query(`SELECT count(*) count FROM campaign_visitors WHERE campaign='reddit'`).get())
+    .toEqual({ count: 2 })
+})
+
+test('/?reddit attributes a completed signup', async () => {
+  const landing = await request('/?reddit', { ip: '203.0.113.83' })
+  const attributionCookie = landing.headers.get('set-cookie')!.split(';', 1)[0]
+  const email = 'reddit-attributed@example.com'
+  expect((await request('/enter', { method: 'POST', cookie: attributionCookie, form: { email } })).status).toBe(200)
+  const emailMessage = capturedEmails().filter(message => message.to === email).at(-1)!
+  const magic = await request(`/enter/magic?token=${encodeURIComponent(linkToken(emailMessage))}`, {
+    cookie: attributionCookie,
+  })
+  const cookie = `${sessionCookie(magic)}; ${attributionCookie}`
+  const chosen = await request('/choose-handle', {
+    method: 'POST', cookie, form: { handle: 'reddit_user', next: '/explore?welcome=1' },
+  })
+
+  expect(chosen.status).toBe(303)
+  expect(chosen.headers.get('set-cookie')).toContain('campaign_attribution=; Max-Age=0')
+  expect(database.query(`SELECT count(*) count FROM campaign_signups WHERE campaign='reddit'`).get())
+    .toEqual({ count: 1 })
+})
+
 test('instant scroll actions are applied once without client-side scripts', async () => {
   const marked = await request('/about?_scroll=instant')
   expect(marked.status).toBe(303)

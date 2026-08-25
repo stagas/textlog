@@ -3,7 +3,7 @@ import { sessionCookieName } from '../brand'
 import { Auth, ChooseHandle, ForgotPassword, MagicLinkSent, PasswordLogin, ResetPassword } from '../components/pages'
 import { sendMagicLink, sendPasswordReset } from '../email'
 import { isDevelopment } from '../environment'
-import { clearSessionCookie, safeLocalPath, sessionCookie } from '../http'
+import { campaignAttribution, campaignAttributionCookie, clearSessionCookie, safeLocalPath, sessionCookie } from '../http'
 import { logError } from '../log'
 import { moderateText, moderationMessage } from '../moderation'
 
@@ -341,8 +341,10 @@ export function registerAuthRoutes(app: Hono) {
       }
       return page(<ChooseHandle handle={handle} next={next} error="That handle is unavailable." />, 400)
     }
+    const campaign = campaignAttribution(c.req.raw)
+    if (campaign) await databaseService().call('stats.recordCampaignSignup', { campaign, userId: user.id })
     void sendPushForSignup(user.id, handle).catch(error => logError('signup push failed', error))
-    return redirect(next)
+    return redirect(next, campaign ? campaignAttributionCookie('', 0) : undefined)
   })
 
   app.post('/logout', async c => {

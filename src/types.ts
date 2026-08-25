@@ -246,6 +246,8 @@ export type DashboardStats = {
   visitorsToday: number
   visitorsYesterday: number
   visitors7d: number
+  redditVisitors: number
+  redditNewUsers: number
 }
 
 export type AdminReportView = {

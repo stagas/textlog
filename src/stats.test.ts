@@ -69,3 +69,16 @@ test('DAU and MAU count distinct active users in rolling windows', () => {
   expect(stats.mau).toBe(2)
   database.close()
 })
+
+test('reddit visitor stat counts unique campaign visitors', () => {
+  const database = new Database(':memory:')
+  runMigrations(database)
+  database.run(`INSERT INTO campaign_visitors(campaign,visitor_hash) VALUES
+    ('reddit','first'),('reddit','second'),('another','first');
+    INSERT INTO users(id,handle,email,password) VALUES(10,'reddit_user','reddit@example.com','x');
+    INSERT INTO campaign_signups(campaign,user_id) VALUES('reddit',10)`)
+
+  expect(dashboardStats(database).redditVisitors).toBe(2)
+  expect(dashboardStats(database).redditNewUsers).toBe(1)
+  database.close()
+})

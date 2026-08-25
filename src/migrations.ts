@@ -1905,6 +1905,24 @@ export const migrations: Migration[] = [
       }
     },
   },
+  {
+    version: 132,
+    name: 'campaign_visitors',
+    up(database) {
+      database.run(`CREATE TABLE IF NOT EXISTS campaign_visitors (
+        campaign TEXT NOT NULL,visitor_hash TEXT NOT NULL,created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        PRIMARY KEY(campaign,visitor_hash));`)
+    },
+  },
+  {
+    version: 133,
+    name: 'campaign_signups',
+    up(database) {
+      database.run(`CREATE TABLE IF NOT EXISTS campaign_signups (
+        campaign TEXT NOT NULL,user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,PRIMARY KEY(campaign,user_id));`)
+    },
+  },
 ]
 
 export const latestMigrationVersion = migrations.at(-1)!.version

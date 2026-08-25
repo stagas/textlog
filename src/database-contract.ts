@@ -215,6 +215,8 @@ export type DatabaseDomainOperations = {
     output: boolean
   }
   'stats.dashboard': { input: Record<string, never>; output: DashboardStats }
+  'stats.recordCampaignVisitor': { input: { campaign: string; visitorHash: string }; output: boolean }
+  'stats.recordCampaignSignup': { input: { campaign: string; userId: number }; output: boolean }
   'seo.sitemapIndex': { input: { requestUrl: string; appUrl?: string | null }; output: SerializedDomainResponse }
   'seo.sitemapSection': { input: { requestUrl: string; file: string; appUrl?: string | null };
     output: SerializedDomainResponse | null }

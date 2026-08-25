@@ -8,14 +8,16 @@ import {
   Legal,
   PublicFeed,
 } from '../components/pages'
-import { currentPage, page, redirect, rememberFeed } from './shared'
+import { clientAddress, currentPage, page, redirect, rememberFeed } from './shared'
 
 import type { Hono } from 'hono'
 import { instance } from '../../instance.config'
 import { backgroundDatabaseCall, databaseService } from '../database-service'
 import { decodeHotCursor, hotRankingVersion } from '../hot'
+import { campaignIpPseudonym } from '../ip-privacy'
 import {
   donationBannerDismissedCookie,
+  campaignAttributionCookie,
   feedPreference,
   notificationBannerDismissed,
   notificationUserAgent,
@@ -193,8 +195,15 @@ export async function prewarmRecentFeedVisitorsOnInit() {
 
 export function registerFeedsRoutes(app: Hono) {
   app.get('/', async c => {
+    if (c.req.query('reddit') !== undefined) {
+      const visitorHash = campaignIpPseudonym(clientAddress(c), 'reddit')
+      if (visitorHash !== '-') {
+        await databaseService().call('stats.recordCampaignVisitor', { campaign: 'reddit', visitorHash })
+      }
+    }
     const user = currentUser(c.req.raw)
-    if (!user) return redirect('/hot' + new URL(c.req.url).search)
+    if (!user) return redirect('/hot' + new URL(c.req.url).search,
+      c.req.query('reddit') !== undefined ? campaignAttributionCookie('reddit') : undefined)
     const preferredFeed = feedPreference(c.req.raw)
     const path = preferredFeed === 'latest'
       ? '/latest'

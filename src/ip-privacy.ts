@@ -19,3 +19,12 @@ export function logIpPseudonym(address: string, at = new Date()) {
   const digest = ipPseudonym(address, 'http-log', at)
   return digest === '-' ? digest : digest.slice(0, 5)
 }
+
+export function campaignIpPseudonym(address: string, campaign: string,
+  secret = Bun.env.IP_PSEUDONYM_SECRET || ephemeralSecret)
+{
+  if (!address || address === '-') return '-'
+  return createHmac('sha256', secret)
+    .update(`textlog\0campaign\0${campaign}\0${address}`)
+    .digest('hex')
+}

@@ -14,6 +14,8 @@ const labels: [keyof DashboardStats, string][] = [
   ['visitorsToday', 'unique visitors · today'],
   ['visitorsYesterday', 'unique visitors · yesterday'],
   ['visitors7d', 'visitor-days · 7d'],
+  ['redditVisitors', 'unique visitors · reddit'],
+  ['redditNewUsers', 'new users · reddit'],
   ['activeUsersYesterday', 'active users · yesterday'],
   ['dau', 'active users · 24h'],
   ['mau', 'active users · 1mo'],
@@ -27,7 +29,9 @@ const labels: [keyof DashboardStats, string][] = [
 
 export function StatsGrid({ stats, publicOnly = false }: { stats: DashboardStats; publicOnly?: boolean }) {
   const visibleLabels = publicOnly
-    ? labels.filter(([key]) => !['suspendedUsers', 'usersOnline', 'anonymousOnline'].includes(key))
+    ? labels.filter(([key]) => ![
+      'suspendedUsers', 'usersOnline', 'anonymousOnline', 'redditVisitors', 'redditNewUsers',
+    ].includes(key))
     : labels
   const conversionRateYesterday = stats.visitorsYesterday === 0
     ? 0

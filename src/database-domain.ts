@@ -814,6 +814,18 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
     }
     case 'stats.dashboard':
       return dashboardStats(database) as DatabaseDomainOutput<K>
+    case 'stats.recordCampaignVisitor': {
+      const { campaign, visitorHash } = input as DatabaseDomainInput<'stats.recordCampaignVisitor'>
+      const result = database.query(`INSERT OR IGNORE INTO campaign_visitors(campaign,visitor_hash) VALUES(?,?)`)
+        .run(campaign, visitorHash)
+      return Boolean(result.changes) as DatabaseDomainOutput<K>
+    }
+    case 'stats.recordCampaignSignup': {
+      const { campaign, userId } = input as DatabaseDomainInput<'stats.recordCampaignSignup'>
+      const result = database.query(`INSERT OR IGNORE INTO campaign_signups(campaign,user_id) VALUES(?,?)`)
+        .run(campaign, userId)
+      return Boolean(result.changes) as DatabaseDomainOutput<K>
+    }
     case 'seo.sitemapIndex': {
       const { requestUrl, appUrl } = input as DatabaseDomainInput<'seo.sitemapIndex'>
       return await serialized(sitemapIndex(database, requestUrl, appUrl)) as DatabaseDomainOutput<K>

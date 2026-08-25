@@ -699,6 +699,8 @@ test('admin metrics use locale-aware number formatting', () => {
       visitorsToday: 3,
       visitorsYesterday: 3,
       visitors7d: 0,
+      redditVisitors: 1234,
+      redditNewUsers: 12,
     },
     reports: [],
     actions: [],
