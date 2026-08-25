@@ -476,8 +476,9 @@ export function Post({
     ])) }
   }
   const parent = showParent ? p.parent : null
-  const postPageAge = canonicalTimestamp ? approximatePostAge(p.created_at) : null
-  const postPageAgeTitle = canonicalTimestamp ? postAgeTitle(p.created_at) : undefined
+  const showApproximateAge = canonicalTimestamp || contextUnread
+  const postPageAge = showApproximateAge ? approximatePostAge(p.created_at) : null
+  const postPageAgeTitle = showApproximateAge ? postAgeTitle(p.created_at) : undefined
   const parentContinued = parent?.parent_id && parent.parent?.user_id === parent.user_id
   const parentContextTarget = parent?.parent_id && !parent.poll && !parentContinued
     && parent.parent?.user_id !== user?.id ? parent.parent : null
@@ -583,7 +584,7 @@ export function Post({
               {!contextTarget && <span className="post-context post-context-punctuation">:</span>}
             </>
           )
-          : <span className="post-context">{contextLabel}</span>)}
+          : <span className="post-context" title={postPageAgeTitle}>{contextLabel}</span>)}
         {contextTarget && (
           <>
             {isDeletedHandle(contextTarget.handle)
@@ -695,7 +696,12 @@ export function Post({
                       stats={parent.profile_stats} following={parent.viewer_following}
                       followsViewer={parent.follows_viewer} user={user} href={'/u/' + parent.handle + referenceQuery}
                       rel={navigationRel} navigationQuery={referenceQuery} referenceData={parent.bio_reference} />}
-                  {parentContextLabel && <span className="post-context">{parentContextLabel}</span>}
+                  {parentContextLabel && <span className="post-context"
+                    title={contextParentUnread ? postAgeTitle(parent.created_at) : undefined}>
+                    {contextParentUnread
+                      ? ageContextLabel(parentContextLabel, approximatePostAge(parent.created_at).wording)
+                      : parentContextLabel}
+                  </span>}
                   {parentContextTarget && (
                     <>
                       {isDeletedHandle(parentContextTarget.handle)

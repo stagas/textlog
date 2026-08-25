@@ -3,6 +3,7 @@ import React from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
 import { Feed, groupSimilarActivities } from './components/feed'
 import { HotFeed } from './components/hot-feed'
+import { postAgeTitle } from './components/post'
 import { PublicFeed } from './components/public-feed'
 import type { PersonalizedTimelineRow } from './types'
 
@@ -99,6 +100,22 @@ test('latest renders independent unread controls, thread dots, and directed high
   expect(html).toContain('href="/latest?page=3#post-50">last unread</a>')
   expect(html).toContain('action="/latest/read-all"')
   expect(html).toContain('latest<span class="to-me-count">4</span>')
+})
+
+test('latest shows approximate age wording only for unread post metadata', () => {
+  const createdAt = new Date(Date.now() - 6 * 60 * 60_000).toISOString()
+  const unread = { id: 72, user_id: 2, parent_id: null, body: 'unread note', created_at: createdAt,
+    deleted_at: null, handle: 'alice', reply_count: 0 }
+  const read = { ...unread, id: 73, body: 'read note' }
+  const user = { id: 1, handle: 'reader', email: 'reader@example.com', bio: '' }
+  const html = renderToStaticMarkup(<PublicFeed user={user} path="/latest" feed={{
+    posts: [unread, read], page: 1, totalItems: 2, totalPages: 1, unreadPostIds: [72],
+    directedUnreadPostIds: [],
+  }} />)
+
+  expect(html).toContain(`title="${postAgeTitle(createdAt)}">wrote recently:</span>`)
+  expect(html).toContain('id="post-73"')
+  expect(html.match(/wrote recently/g)).toHaveLength(1)
 })
 
 test('latest keeps the arrival count but hides read actions when the rendered page consumes every unread', () => {
