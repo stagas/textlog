@@ -2057,8 +2057,8 @@ nav form {
 }
 
 .redacted {
-  color: var(--ink);
-  background-color: var(--ink);
+  color: var(--quote-ink);
+  background-color: var(--quote-ink);
   cursor: pointer;
   outline: none;
 }
