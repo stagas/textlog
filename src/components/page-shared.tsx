@@ -262,6 +262,15 @@ function PostingHelpTabs({ search }: { search?: PostingSuggestionSearch | null }
               <dt><span className="posting-help-modifier-heading">Locked conversations</span>
                 <small>Prevents new replies to this note and every reply beneath it.</small></dt>
             </div>
+            <div>
+              <dd>
+                <code>
+                  Continue quietly <b>#whisper</b>
+                </code>
+              </dd>
+              <dt><span className="posting-help-modifier-heading">Whisper conversations</span>
+                <small>Keeps this note and every reply beneath it out of latest and hot. On a reply, only its direct parent starts in the conversation; people who reply or are mentioned inside the whisper branch join it. Followers of tags in the branch receive it in for you. The conversation remains public on profiles, tag pages, threads, and permalinks.</small></dt>
+            </div>
       </dl>
       <div className="posting-help-search-panel posting-help-tab-panel">
         <div className="posting-help-searches">

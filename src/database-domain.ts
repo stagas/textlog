@@ -51,7 +51,8 @@ import { insertSession, markSessionUsed, renewSession, SESSION_LIFETIME_MS, sess
 import { dashboardStats } from './stats'
 import type { User } from './types'
 import type { PostView } from './types'
-import { excludesWhisperPosts, whisperThreadRelevantToViewer, whisperThreadTargetsViewer } from './whisper'
+import { excludesWhisperPosts, isWhisperThread, whisperThreadRelevantToViewer,
+  whisperThreadTargetsViewer } from './whisper'
 
 function attachPeopleStats(database: Database, people: import('./types').PersonView[], viewerId: number) {
   const stats = visibleUserProfileStats(database, people.map(person => person.id), viewerId)
@@ -1887,10 +1888,10 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
         AND NOT EXISTS (SELECT 1 FROM post_hashtags ph JOIN blocked_hashtags bh ON bh.tag=ph.tag
           WHERE ph.post_id=? AND bh.user_id=ps.user_id)
         AND ((ps.notify_latest=1 AND ps.user_id!=? AND ${excludesWhisperPosts(postId)})
-          OR (ps.notify_following_notes=1 AND ps.user_id!=? AND (EXISTS
+          OR (ps.notify_following_notes=1 AND ps.user_id!=? AND ((NOT ${isWhisperThread(postId)} AND (EXISTS
           (SELECT 1 FROM follows vf WHERE vf.follower_id=ps.user_id AND vf.following_id=?) OR EXISTS
           (SELECT 1 FROM post_hashtags ph JOIN hashtag_follows hf ON hf.tag=ph.tag
-            WHERE ph.post_id=? AND hf.user_id=ps.user_id)
+            WHERE ph.post_id=? AND hf.user_id=ps.user_id)))
           OR ${whisperThreadRelevantToViewer('ps.user_id', postId)})
           AND (ps.notify_following_only_to_me=0 OR EXISTS(SELECT 1 FROM posts direct_child
             JOIN posts direct_parent ON direct_parent.id=direct_child.parent_id

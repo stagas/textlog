@@ -1,7 +1,7 @@
 import type { Database } from 'bun:sqlite'
 import { isAdminEmail } from './admin'
 import { markLatestPostsRead } from './latest-state'
-import { whisperThreadRelevantToViewer, whisperThreadTargetsViewer } from './whisper'
+import { isWhisperThread, whisperThreadRelevantToViewer, whisperThreadTargetsViewer } from './whisper'
 
 const descendsFromViewer = `EXISTS (WITH RECURSIVE ancestors(id,user_id,parent_id) AS (
   SELECT ancestor.id,ancestor.user_id,ancestor.parent_id FROM posts ancestor WHERE ancestor.id=p.parent_id
@@ -24,11 +24,12 @@ const hasVisibleDescendantFromAnotherUser = `EXISTS (WITH RECURSIVE descendants(
 const visibleEvents = `
   SELECT 'post:' || printf('%020d',p.id) event_key FROM posts p
     LEFT JOIN posts parent ON parent.id=p.parent_id
-    WHERE p.deleted_at IS NULL AND ((p.user_id=$viewer AND (parent.user_id!=$viewer OR
+    WHERE p.deleted_at IS NULL AND ((NOT ${isWhisperThread()} AND
+      ((p.user_id=$viewer AND (parent.user_id!=$viewer OR
       ${hasVisibleDescendantFromAnotherUser})) OR p.user_id IN
       (SELECT following_id FROM follows WHERE follower_id=$viewer) OR ${descendsFromViewer} OR p.id IN
       (SELECT ph.post_id FROM post_hashtags ph JOIN hashtag_follows hf ON hf.tag=ph.tag
-        WHERE hf.user_id=$viewer) OR ${whisperThreadRelevantToViewer()})
+        WHERE hf.user_id=$viewer))) OR ${whisperThreadRelevantToViewer()})
       AND NOT EXISTS (SELECT 1 FROM blocks b WHERE
         (b.blocker_id=$viewer AND b.blocked_id=p.user_id) OR
         (b.blocker_id=p.user_id AND b.blocked_id=$viewer))
