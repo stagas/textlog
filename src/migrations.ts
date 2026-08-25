@@ -1806,6 +1806,50 @@ export const migrations: Migration[] = [
         END;`)
     },
   },
+  {
+    version: 128,
+    name: 'defer_relationship_feed_invalidation',
+    up(database) {
+      database.run(`CREATE TABLE IF NOT EXISTS relationship_feed_invalidation (
+        id INTEGER PRIMARY KEY CHECK(id=1),dirty INTEGER NOT NULL DEFAULT 0);
+      INSERT OR IGNORE INTO relationship_feed_invalidation(id,dirty) VALUES(1,0);
+
+      DROP TRIGGER IF EXISTS deferred_feed_follows_insert;
+      DROP TRIGGER IF EXISTS deferred_feed_follows_update;
+      DROP TRIGGER IF EXISTS deferred_feed_follows_delete;
+      DROP TRIGGER IF EXISTS deferred_feed_hashtag_follows_insert;
+      DROP TRIGGER IF EXISTS deferred_feed_hashtag_follows_update;
+      DROP TRIGGER IF EXISTS deferred_feed_hashtag_follows_delete;
+      DROP TRIGGER IF EXISTS feed_generation_follows_insert;
+      DROP TRIGGER IF EXISTS feed_generation_follows_update;
+      DROP TRIGGER IF EXISTS feed_generation_follows_delete;
+      DROP TRIGGER IF EXISTS feed_generation_hashtag_follows_insert;
+      DROP TRIGGER IF EXISTS feed_generation_hashtag_follows_update;
+      DROP TRIGGER IF EXISTS feed_generation_hashtag_follows_delete;
+      DROP TRIGGER IF EXISTS personalized_feed_follows_insert;
+      DROP TRIGGER IF EXISTS personalized_feed_follows_update;
+      DROP TRIGGER IF EXISTS personalized_feed_follows_delete;
+      DROP TRIGGER IF EXISTS personalized_feed_hashtag_follows_insert;
+      DROP TRIGGER IF EXISTS personalized_feed_hashtag_follows_update;
+      DROP TRIGGER IF EXISTS personalized_feed_hashtag_follows_delete;`)
+      if (database.query("SELECT 1 FROM sqlite_master WHERE type='table' AND name='follows'").get()) {
+        database.run(`CREATE TRIGGER deferred_feed_follows_insert AFTER INSERT ON follows BEGIN
+        UPDATE relationship_feed_invalidation SET dirty=1 WHERE id=1; END;
+      CREATE TRIGGER deferred_feed_follows_update AFTER UPDATE ON follows BEGIN
+        UPDATE relationship_feed_invalidation SET dirty=1 WHERE id=1; END;
+      CREATE TRIGGER deferred_feed_follows_delete AFTER DELETE ON follows BEGIN
+        UPDATE relationship_feed_invalidation SET dirty=1 WHERE id=1; END;`)
+      }
+      if (database.query("SELECT 1 FROM sqlite_master WHERE type='table' AND name='hashtag_follows'").get()) {
+        database.run(`CREATE TRIGGER deferred_feed_hashtag_follows_insert AFTER INSERT ON hashtag_follows BEGIN
+        UPDATE relationship_feed_invalidation SET dirty=1 WHERE id=1; END;
+      CREATE TRIGGER deferred_feed_hashtag_follows_update AFTER UPDATE ON hashtag_follows BEGIN
+        UPDATE relationship_feed_invalidation SET dirty=1 WHERE id=1; END;
+      CREATE TRIGGER deferred_feed_hashtag_follows_delete AFTER DELETE ON hashtag_follows BEGIN
+        UPDATE relationship_feed_invalidation SET dirty=1 WHERE id=1; END;`)
+      }
+    },
+  },
 ]
 
 export const latestMigrationVersion = migrations.at(-1)!.version

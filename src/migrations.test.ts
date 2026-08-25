@@ -1,5 +1,6 @@
 import { Database } from 'bun:sqlite'
 import { describe, expect, test } from 'bun:test'
+import { executeDatabaseDomain } from './database-domain'
 import { databaseVersion, latestMigrationVersion, migrations, normalizeInternalPostPreviews, runMigrations } from './migrations'
 import { sessionHash } from './sessions'
 
@@ -649,6 +650,27 @@ describe('database migrations', () => {
     database.run('UPDATE users SET handle_chosen_at=CURRENT_TIMESTAMP WHERE id=2')
 
     expect(generation()).toBe(initial + 1)
+  })
+
+  test('defers relationship feed invalidation until the background flush', async () => {
+    const database = new Database(':memory:')
+    database.run('PRAGMA foreign_keys=ON')
+    runMigrations(database)
+    database.run(`INSERT INTO users(id,handle,email,password) VALUES
+      (1,'alice','alice@example.com','x'),(2,'bob','bob@example.com','x')`)
+    const generation = () => (database.query(
+      'SELECT generation FROM personalized_feed_generations WHERE viewer_id=1',
+    ).get() as { generation: number }).generation
+    const initial = generation()
+
+    database.run('INSERT INTO follows(follower_id,following_id) VALUES(1,2)')
+
+    expect(generation()).toBe(initial)
+    expect(database.query('SELECT dirty FROM relationship_feed_invalidation WHERE id=1').get())
+      .toEqual({ dirty: 1 })
+    expect(await executeDatabaseDomain(database, 'feeds.flushRelationshipInvalidation', {})).toBe(true)
+    expect(generation()).toBe(initial + 1)
+    expect(await executeDatabaseDomain(database, 'feeds.flushRelationshipInvalidation', {})).toBe(false)
   })
 
   test('replaces legacy internal OG previews with native post references', () => {

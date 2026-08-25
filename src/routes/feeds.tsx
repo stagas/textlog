@@ -163,6 +163,7 @@ export function prewarmRecentFeedVisitors() {
     recentVisitorPrewarmTimer = undefined
     const visitors = [...recentFeedVisitors.values()]
     void (async () => {
+      await backgroundDatabaseCall('feeds.flushRelationshipInvalidation', {})
       for (const { density, pageSize, request, user } of visitors) {
         for (const kind of ['for-you', 'hot', 'latest'] as PrimaryFeed[]) {
           await withRequestContext({ sessionUser: user, apiUser: null, pageSize, density }, () =>

@@ -1372,6 +1372,10 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
         changed = database.query('DELETE FROM blocks WHERE blocker_id=? AND blocked_id=?')
           .run(userId, target.id).changes > 0
       }
+      if (changed && (action === 'follow' || action === 'unfollow')) {
+        cacheDb.query(`DELETE FROM materialized_feed_pages_v2 WHERE viewer_id=?
+          AND kind IN ('latest','hot','for-you','to-me')`).run(userId)
+      }
       const result = { status: 'ready' as const, changed, targetId: target.id, targetHandle: target.handle }
       return result as DatabaseDomainOutput<K>
     }
@@ -1392,6 +1396,10 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
       })()
       else changed = database.query('DELETE FROM blocked_hashtags WHERE user_id=? AND tag=?')
         .run(userId, tag).changes > 0
+      if (changed && (action === 'follow' || action === 'unfollow')) {
+        cacheDb.query(`DELETE FROM materialized_feed_pages_v2 WHERE viewer_id=?
+          AND kind IN ('latest','hot','for-you','to-me')`).run(userId)
+      }
       return { changed } as DatabaseDomainOutput<K>
     }
     case 'api.explore': {
@@ -1983,6 +1991,18 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
       const { userId } = input as DatabaseDomainInput<'feeds.latestUnreadCount'>
       return unreadLatestCount(userId, database) as DatabaseDomainOutput<K>
     }
+    case 'feeds.flushRelationshipInvalidation': {
+      const changed = database.transaction(() => {
+        const pending = database.query('SELECT dirty FROM relationship_feed_invalidation WHERE id=1')
+          .get() as { dirty: number } | null
+        if (!pending?.dirty) return false
+        database.query('UPDATE feed_snapshot_generation SET generation=generation+1 WHERE id=1').run()
+        database.query('UPDATE personalized_feed_generations SET generation=generation+1').run()
+        database.query('UPDATE relationship_feed_invalidation SET dirty=0 WHERE id=1').run()
+        return true
+      })()
+      return changed as DatabaseDomainOutput<K>
+    }
     case 'feeds.hotPage': {
       const { viewerId, page, pageSize } = input as DatabaseDomainInput<'feeds.hotPage'>
       const snapshot = feedSnapshotPage<HotPost>(database, `hot:${hotRankingVersion}`, viewerId, page,
@@ -2318,6 +2338,8 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
           'INSERT OR IGNORE INTO follows(follower_id,following_id,created_at) VALUES(?,?,CURRENT_TIMESTAMP)',
         )
           .run(userId, target.id)}
+      cacheDb.query(`DELETE FROM materialized_feed_pages_v2 WHERE viewer_id=?
+        AND kind IN ('latest','hot','for-you','to-me')`).run(userId)
       return { targetId: target.id, targetHandle: target.handle, followed: !exists } as DatabaseDomainOutput<K>
     }
     case 'interactions.toggleBlock': {
@@ -2360,6 +2382,8 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
           'INSERT OR IGNORE INTO hashtag_follows(user_id,tag,created_at) VALUES(?,?,CURRENT_TIMESTAMP)',
         )
           .run(userId, tag)}
+      cacheDb.query(`DELETE FROM materialized_feed_pages_v2 WHERE viewer_id=?
+        AND kind IN ('latest','hot','for-you','to-me')`).run(userId)
       return { followed: !exists } as DatabaseDomainOutput<K>
     }
     case 'interactions.toggleTagBlock': {

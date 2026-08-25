@@ -226,14 +226,24 @@ describe('API writes', () => {
 
   test('follows, unfollows and refuses to follow yourself', async () => {
     const { app, database } = fixture()
+    const cacheVariant = `follow-${crypto.randomUUID()}`
+    const insertMaterialization = cacheDb.query(`INSERT INTO materialized_feed_pages_v2
+      (kind,viewer_id,variant,generation,html) VALUES(?,?,?,?,?)`)
+    insertMaterialization.run('latest', 1, cacheVariant, 1, '<p>stale follow button</p>')
+    insertMaterialization.run('latest', 2, cacheVariant, 1, '<p>other viewer</p>')
 
     expect((await call(app, '/api/v1/users/bob/follow', { method: 'POST', token: 'alice-token' })).status).toBe(200)
     expect(database.query('SELECT 1 FROM follows WHERE follower_id=1 AND following_id=2').get()).toBeTruthy()
+    expect(cacheDb.query('SELECT count(*) count FROM materialized_feed_pages_v2 WHERE viewer_id=1 AND variant=?')
+      .get(cacheVariant)).toEqual({ count: 0 })
+    expect(cacheDb.query('SELECT count(*) count FROM materialized_feed_pages_v2 WHERE viewer_id=2 AND variant=?')
+      .get(cacheVariant)).toEqual({ count: 1 })
 
     expect((await call(app, '/api/v1/users/bob/follow', { method: 'DELETE', token: 'alice-token' })).status).toBe(200)
     expect(database.query('SELECT 1 FROM follows WHERE follower_id=1 AND following_id=2').get()).toBeNull()
 
     expect((await call(app, '/api/v1/users/alice/follow', { method: 'POST', token: 'alice-token' })).status).toBe(403)
+    cacheDb.query('DELETE FROM materialized_feed_pages_v2 WHERE variant=?').run(cacheVariant)
   })
 
   test('blocking drops the follow, and a blocked pair cannot reply', async () => {
