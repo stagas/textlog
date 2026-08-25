@@ -367,8 +367,14 @@ test('activity targets do not duplicate their details in hovercards', () => {
   expect(followHtml).toContain('href="/u/dave?from=%2Ffor-you%23a-')
   expect(followHtml).not.toContain('<span class="reference-popover-bio">Dave builds things</span>')
   expect(signupHtml).toContain('href="/u/erin?from=%2Ffor-you%23a-')
+  expect(signupHtml).toContain('signed up.')
   expect(signupHtml).not.toContain('/admin/users/5')
   expect(signupHtml).not.toContain('reference-menu-popover')
+  const signupActivityHtml = signupHtml.match(/<article class="activity-follow"[\s\S]*?<\/article>/)?.[0]
+  expect(signupActivityHtml).toBeDefined()
+  expect(signupActivityHtml).not.toContain('<button')
+  expect(signupActivityHtml).not.toContain('<form')
+  expect(signupActivityHtml).not.toContain('follows you')
 })
 
 test('activity bios enrich hashtag and mention references with hovercards', () => {

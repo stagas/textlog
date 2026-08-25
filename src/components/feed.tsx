@@ -134,7 +134,7 @@ export function Feed({ user, data, title, path = '/for-you', pageUrl, notificati
                 user={user} href={`/u/${row.actor_handle}${fromQuery}`} navigationQuery={fromQuery}
                 referenceData={row.actorBioReferences} showPopover={row.activity_kind !== 'signup'} />
               <span className="activity-context">
-                {row.activity_kind === 'signup' ? 'signed up:' : row.target_is_viewer ? 'followed you:' : 'followed'}
+                {row.activity_kind === 'signup' ? 'signed up.' : row.target_is_viewer ? 'followed you:' : 'followed'}
               </span>
               {!row.target_is_viewer && row.activity_kind === 'user_follow'
                 ? (
@@ -178,23 +178,19 @@ export function Feed({ user, data, title, path = '/for-you', pageUrl, notificati
               </>
             })()}
           </div>
-          {row.actor_id !== user.id && (
-            <form method="post" action={row.target_is_viewer || row.activity_kind === 'signup'
+          {row.actor_id !== user.id && row.activity_kind !== 'signup' && (
+            <form method="post" action={row.target_is_viewer
               ? `/follow/${row.actor_handle}`
               : row.activity_kind === 'user_follow'
               ? `/follow/${row.target_handle}`
               : `/tag-follow/${row.target_tag}`}
             >
               <input type="hidden" name="from" value={activityReturnPath} />
-              {(!row.target_is_viewer && (row.activity_kind === 'signup'
-                ? row.actorFollowsViewer
-                : row.activity_kind === 'user_follow'
+              {(!row.target_is_viewer && (row.activity_kind === 'user_follow'
                 ? row.targetFollowsViewer
                 : false)) && <span className="follows-you">follows you</span>}
               <button className={`button${row.following ? ' button-muted' : ''}`}>
-                {row.following ? 'unfollow' : row.target_is_viewer || (row.activity_kind === 'signup'
-                    ? row.actorFollowsViewer
-                    : row.activity_kind === 'user_follow'
+                {row.following ? 'unfollow' : row.target_is_viewer || (row.activity_kind === 'user_follow'
                     ? row.targetFollowsViewer
                     : false)
                   ? 'follow back'
