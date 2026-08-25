@@ -494,7 +494,7 @@ test('to-me omits hide actions and keeps top pagination before entries', () => {
   expect(html).toContain('action="/to-me/read-all"')
 })
 
-test('hot and latest show the to-me link when it has unread content', () => {
+test('hot and latest show the to-me tab with its unread count', () => {
   const user = { id: 1, handle: 'reader', email: 'reader@example.com', bio: '',
     handle_chosen_at: '2026-08-19 09:00:00' }
   const feed = { posts: [], page: 1, totalItems: 0, totalPages: 1, toMeUnread: true, toMeCount: 3 }
@@ -503,12 +503,11 @@ test('hot and latest show the to-me link when it has unread content', () => {
     renderToStaticMarkup(<HotFeed user={user} feed={feed} />),
     renderToStaticMarkup(<PublicFeed user={user} feed={feed} path="/latest" />),
   ]) {
-    expect(html).toContain('href="/to-me"><span class="to-me-label">to me</span>'
-      + '<span class="to-me-count">3</span></a>')
+    expect(html).toContain('href="/to-me">to me<span class="to-me-count">3</span></a>')
   }
 })
 
-test('hot and latest hide the to-me link when it has no unread content', () => {
+test('hot and latest keep the to-me tab without a count when it has no unread content', () => {
   const user = { id: 1, handle: 'reader', email: 'reader@example.com', bio: '',
     handle_chosen_at: '2026-08-19 09:00:00' }
   const feed = { posts: [], page: 1, totalItems: 0, totalPages: 1, toMeUnread: false }
@@ -517,6 +516,6 @@ test('hot and latest hide the to-me link when it has no unread content', () => {
     renderToStaticMarkup(<HotFeed user={user} feed={feed} />),
     renderToStaticMarkup(<PublicFeed user={user} feed={feed} path="/latest" />),
   ]) {
-    expect(html).not.toContain('href="/to-me"')
+    expect(html).toContain('href="/to-me">to me</a>')
   }
 })
