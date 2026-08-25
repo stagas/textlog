@@ -1402,8 +1402,7 @@ test('consequential account, content, reporting, and admin flows work over HTTP'
   expect(followedPersonFeed).not.toContain('action="/for-you/read-all"')
   expect(followedPersonFeed).not.toContain('you&#x27;ve seen it all')
   expect(followedPersonFeed).toContain('href="/for-you">for you<span class="to-me-count">1</span></a>')
-  expect(followedPersonFeed).toContain('href="/to-me"><span class="to-me-label">to me</span>'
-    + '<span class="to-me-count">1</span></a>')
+  expect(followedPersonFeed).toContain('href="/to-me">to me<span class="to-me-count">1</span></a>')
   expect(followedPersonFeed).not.toContain('href="/to-me"><span class="unread-dot"')
   expect(followedPersonFeed).toContain('activity-follow activity-item-directed-unread')
   expect(followedPersonFeed).toContain('class="unread-dot" aria-label="unread"')
@@ -1547,6 +1546,9 @@ test('consequential account, content, reporting, and admin flows work over HTTP'
   const unreadToMeHtml = await (await request('/to-me', { cookie: aliceCookie })).text()
   expect(unreadToMeHtml).not.toContain('action="/to-me/read-all"')
   expect(unreadToMeHtml).not.toContain('>first unread</a>')
+  expect(unreadToMeHtml).toContain('class="active" aria-current="page" href="/to-me">to me'
+    + '<span class="to-me-count">2</span></a>')
+  expect(unreadToMeHtml).not.toContain('>all</a>')
   expect(unreadToMeHtml).toContain('activity-item-directed-unread')
   expect(unreadToMeHtml).toContain('class="unread-dot" aria-label="unread"')
   expect(database.query('SELECT 1 FROM for_you_reads WHERE user_id=? AND event_key=?')

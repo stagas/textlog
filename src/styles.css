@@ -942,14 +942,6 @@ nav form {
 
 .feed-tabs .feed-tabs-read-status .activity-side-link:hover { color: var(--accent-dark); }
 
-.feed-tabs .feed-tabs-read-status .activity-side-link.has-to-me-count {
-  border-bottom: 0;
-}
-
-.to-me-label {
-  border-bottom: var(--hairline) solid var(--link-border);
-}
-
 .to-me-count {
   min-width: 1.5em;
   padding: 1px var(--space-2);

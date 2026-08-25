@@ -285,7 +285,6 @@ describe('in-memory stylesheet', () => {
     expect(css).toContain('flex-wrap: wrap;')
     expect(css).toContain('.activity-item-directed-unread {')
     expect(css).toContain('.to-me-count {')
-    expect(css).toContain('.activity-side-link.has-to-me-count {')
     expect(css).not.toContain('.activity-item-unread {')
     expect(css).not.toContain('.sr-only')
   })

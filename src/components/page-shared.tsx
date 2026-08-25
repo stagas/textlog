@@ -466,11 +466,17 @@ export function FeedTabs(
     <>
       <nav className="feed-tabs" id="feed-tabs" aria-label="Feed">
         {user && (
-          <a className={active === 'following' ? 'active' : ''}
-            aria-current={active === 'following' ? 'page' : undefined} href={`/for-you${viewQuery}`}
+          <a className={active === 'following' && !toMe ? 'active' : ''}
+            aria-current={active === 'following' && !toMe ? 'page' : undefined} href={`/for-you${viewQuery}`}
           >
             for you
             {forYouCount > 0 && <span className="to-me-count">{forYouCount}</span>}
+          </a>
+        )}
+        {user && (
+          <a className={toMe ? 'active' : ''} aria-current={toMe ? 'page' : undefined} href={`/to-me${viewQuery}`}>
+            to me
+            {toMeCount > 0 && <span className="to-me-count">{toMeCount}</span>}
           </a>
         )}
         <a className={active === 'hot' ? 'active' : ''} aria-current={active === 'hot' ? 'page' : undefined}
@@ -484,24 +490,11 @@ export function FeedTabs(
           latest
           {latestCount > 0 && <span className="to-me-count">{latestCount}</span>}
         </a>
-        {(viewHref || active === 'following' || toMeCount > 0 || activityReadStatus !== undefined) && (
+        {(viewHref || activityReadStatus !== undefined) && (
           <span className="feed-tabs-read-status">
-            {(viewHref || active === 'following' || toMeCount > 0) && (
+            {viewHref && (
               <span className="feed-tabs-view-filters">
-                {(active === 'following' || toMeCount > 0) && (
-                  <a className={`activity-side-link${toMe ? '' : ' has-to-me-count'}`}
-                    href={`${toMe ? '/for-you' : '/to-me'}${viewQuery}`}>
-                    {toMe ? 'all' : (
-                      <>
-                        <span className="to-me-label">to me</span>
-                        {toMeCount > 0 && <span className="to-me-count">{toMeCount}</span>}
-                      </>
-                    )}
-                  </a>
-                )}
-                {viewHref && (
-                  <a className="activity-side-link" href={viewHref}>{viewMode === 'flat' ? 'tree' : 'flat'}</a>
-                )}
+                <a className="activity-side-link" href={viewHref}>{viewMode === 'flat' ? 'tree' : 'flat'}</a>
               </span>
             )}
             {activityReadStatus !== undefined

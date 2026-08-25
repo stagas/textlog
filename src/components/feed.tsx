@@ -210,7 +210,7 @@ export function Feed({ user, data, title, path = '/for-you', pageUrl, notificati
         forYouReadStatus={data.timeline.length
           ? hasUnread && unreadPage !== null && unreadPage > data.page
           : undefined}
-        toMe={toMe} toMeCount={toMe ? 0 : data.toMeCount} forYouCount={data.forYouCount} unreadHref={data.unreadHref}
+        toMe={toMe} toMeCount={data.toMeCount} forYouCount={data.forYouCount} unreadHref={data.unreadHref}
         lastUnreadHref={data.lastUnreadHref} forYouUnread={data.forYouUnread} toMeUnread={data.toMeUnread}
         latestCount={data.latestCount} viewMode={flat ? 'flat' : 'tree'} viewHref={viewHref} />
       {showTopPagination && <Pagination page={data.page} totalPages={data.totalPages} path={feedPath} top />}
