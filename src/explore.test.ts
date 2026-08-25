@@ -40,25 +40,23 @@ describe('explore suggestions', () => {
     expect(explorePivot(100, 7, '2026-08-04')).not.toBe(explorePivot(100, 7, '2026-08-05'))
   })
 
-  test('samples deterministically around the id range while respecting relationships', () => {
+  test('sorts by latest post while respecting blocks', () => {
     const database = fixture()
     const first = suggestedPeople(database, 1, 6, '2026-08-04')
     const second = suggestedPeople(database, 1, 6, '2026-08-04')
     expect(first.map(person => person.id)).toEqual(second.map(person => person.id))
-    expect(new Set(first.map(person => person.id))).toEqual(new Set([2, 3, 5, 6]))
+    expect(first.map(person => person.id)).toEqual([6, 5, 3, 2])
   })
 
-  test('includes people without bios but ranks comparable completed profiles first', () => {
+  test('includes people without bios without using profile quality for sorting', () => {
     const database = fixture()
     database.run(`UPDATE users SET bio='' WHERE id=5; UPDATE posts SET created_at='2026-08-01'`)
     const people = suggestedPeople(database, 1, 6, '2026-08-04')
     expect(people.map(person => person.id)).toContain(5)
-    expect(people.findIndex(person => person.id === 5)).toBeGreaterThan(
-      people.findIndex(person => person.id === 2),
-    )
+    expect(people.map(person => person.id)).toEqual([2, 3, 5, 6])
   })
 
-  test('includes newly joined people without notes in the rotation', () => {
+  test('excludes newly joined people without notes', () => {
     const database = fixture()
     database.run(`
       INSERT INTO users(id,handle,bio,created_at,handle_chosen_at) VALUES
@@ -67,10 +65,9 @@ describe('explore suggestions', () => {
     `)
 
     const people = suggestedPeople(database, 1, 8, '2026-08-04')
-    expect(people.map(person => person.id)).toContain(7)
+    expect(people.map(person => person.id)).not.toContain(7)
     expect(people.map(person => person.id)).not.toContain(8)
-    expect(people.find(person => person.id === 7)?.posts).toBe(0)
-    expect(suggestedPeopleCount(database, 1, '2026-08-04')).toBe(5)
+    expect(suggestedPeopleCount(database, 1, '2026-08-04')).toBe(4)
   })
 
   test('excludes people who have neither a bio nor notes', () => {
@@ -82,7 +79,7 @@ describe('explore suggestions', () => {
     expect(suggestedPeopleCount(database, 1, '2026-08-04')).toBe(4)
   })
 
-  test('includes followed people even when they would not otherwise qualify', () => {
+  test('excludes followed people when they have no posts', () => {
     const database = fixture()
     database.run(`
       INSERT INTO users(id,handle,bio,created_at,handle_chosen_at) VALUES
@@ -90,12 +87,11 @@ describe('explore suggestions', () => {
       INSERT INTO follows(follower_id,following_id,created_at) VALUES(1,7,'2026-08-01 12:00:00');
     `)
 
-    const quiet = suggestedPeople(database, 1, 8, '2026-08-04').find(person => person.id === 7)
-    expect(quiet?.following).toBeTruthy()
-    expect(suggestedPeopleCount(database, 1, '2026-08-04')).toBe(5)
+    expect(suggestedPeople(database, 1, 8, '2026-08-04').map(person => person.id)).not.toContain(7)
+    expect(suggestedPeopleCount(database, 1, '2026-08-04')).toBe(4)
   })
 
-  test('includes people without bios or notes after two combined follows', () => {
+  test('excludes people without posts after any number of follows', () => {
     const database = fixture()
     database.run(`
       INSERT INTO users(id,handle,bio,created_at,handle_chosen_at) VALUES
@@ -108,9 +104,10 @@ describe('explore suggestions', () => {
     `)
 
     const people = suggestedPeople(database, 1, 8, '2026-08-04')
-    expect(people.map(person => person.id)).toEqual(expect.arrayContaining([7, 8]))
+    expect(people.map(person => person.id)).not.toContain(7)
+    expect(people.map(person => person.id)).not.toContain(8)
     expect(people.map(person => person.id)).not.toContain(9)
-    expect(suggestedPeopleCount(database, 1, '2026-08-04')).toBe(6)
+    expect(suggestedPeopleCount(database, 1, '2026-08-04')).toBe(4)
   })
 
   test('excludes accounts that have not chosen a handle', () => {
@@ -122,7 +119,7 @@ describe('explore suggestions', () => {
     expect(suggestedPeopleCount(database, 1, '2026-08-04')).toBe(4)
   })
 
-  test('uses profile quality and daily rotation to break equal-activity ties', () => {
+  test('uses the id only to break equal latest-post timestamps', () => {
     const database = fixture()
     database.run(`
       UPDATE posts SET created_at='2026-08-01';
@@ -130,13 +127,7 @@ describe('explore suggestions', () => {
       INSERT INTO follows(follower_id,following_id) VALUES(2,5),(4,5),(2,6);
     `)
 
-    const boosted = suggestedPeople(database, 1, 6, '2026-08-04').map(person => person.id)
-    expect(new Set(boosted.slice(0, 2))).toEqual(new Set([2, 5]))
-    expect(boosted[2]).toBe(6)
-
-    const dayPivotingToTwo = Array.from({ length: 31 }, (_, day) => `2026-08-${String(day + 1).padStart(2, '0')}`)
-      .find(day => explorePivot(6, 1, day) === 2)!
-    expect(suggestedPeople(database, 1, 6, dayPivotingToTwo)[0].id).toBe(2)
+    expect(suggestedPeople(database, 1, 6, '2026-08-04').map(person => person.id)).toEqual([2, 3, 5, 6])
   })
 
   test('reports when a suggested person follows the viewer', () => {
@@ -147,7 +138,7 @@ describe('explore suggestions', () => {
     expect(people.find(person => person.id === 6)?.followsViewer).toBeTruthy()
   })
 
-  test('ranks everyone together by recent activity regardless of follow state', () => {
+  test('ranks only by latest post regardless of follow activity or state', () => {
     const database = fixture()
     database.run(`
       INSERT INTO follows(follower_id,following_id,created_at) VALUES(1,5,'2026-08-10 12:00:00');
@@ -157,7 +148,7 @@ describe('explore suggestions', () => {
     `)
 
     const people = suggestedPeople(database, 1, 8, '2026-08-10')
-    expect(people.map(person => person.id)).toEqual([3, 6, 2, 5])
+    expect(people.map(person => person.id)).toEqual([3, 2, 6, 5])
     expect(people.map(person => !!person.following)).toEqual([true, false, false, true])
   })
 })

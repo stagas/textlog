@@ -43,10 +43,8 @@ export function preserveSuggestedPeopleOrder<T extends { id: number }>(people: T
 }
 
 export function suggestedPeople(database: Database, viewerId: number, limit = 8,
-  day = new Date().toISOString().slice(0, 10), offset = 0)
+  _day = new Date().toISOString().slice(0, 10), offset = 0)
 {
-  const maxUserId = (database.query('SELECT coalesce(max(id),0) id FROM users').get() as { id: number }).id
-  const pivot = explorePivot(maxUserId, viewerId, day)
   return database.query(
     `WITH candidates AS (
       SELECT u.*, (SELECT count(*) FROM posts p WHERE p.user_id=u.id AND p.deleted_at IS NULL) posts,
@@ -54,41 +52,26 @@ export function suggestedPeople(database: Database, viewerId: number, limit = 8,
         WHERE followers.following_id=u.id AND follower.deleted_at IS NULL) follower_count,
       EXISTS(SELECT 1 FROM follows f WHERE f.follower_id=? AND f.following_id=u.id) following,
       EXISTS(SELECT 1 FROM follows rf WHERE rf.follower_id=u.id AND rf.following_id=?) followsViewer,
-      (SELECT max(activity.created_at) FROM (
-        SELECT u.created_at created_at
-        UNION ALL SELECT p.created_at FROM posts p WHERE p.user_id=u.id AND p.deleted_at IS NULL
-        UNION ALL SELECT f.created_at FROM follows f WHERE f.follower_id=u.id
-        UNION ALL SELECT hf.created_at FROM hashtag_follows hf WHERE hf.user_id=u.id
-      ) activity) latest_activity_at FROM users u
+      (SELECT max(p.created_at) FROM posts p
+        WHERE p.user_id=u.id AND p.deleted_at IS NULL) latest_post_at FROM users u
       WHERE u.id != ? AND u.deleted_at IS NULL AND u.handle_chosen_at IS NOT NULL
       AND (? < 0 OR NOT EXISTS (SELECT 1 FROM blocks b WHERE
         (b.blocker_id=? AND b.blocked_id=u.id) OR (b.blocker_id=u.id AND b.blocked_id=?)))
-      AND (EXISTS (SELECT 1 FROM follows f WHERE f.follower_id=? AND f.following_id=u.id)
-        OR EXISTS (SELECT 1 FROM posts p WHERE p.user_id=u.id AND p.deleted_at IS NULL)
-        OR (trim(coalesce(u.bio,''))!='' AND u.created_at>=datetime(?,'-7 days'))
-        OR ((SELECT count(*) FROM follows engagement WHERE engagement.follower_id=u.id)
-          + (SELECT count(*) FROM hashtag_follows engagement WHERE engagement.user_id=u.id))>=2)
+      AND EXISTS (SELECT 1 FROM posts p WHERE p.user_id=u.id AND p.deleted_at IS NULL)
     )
     SELECT * FROM candidates
-    ORDER BY latest_activity_at DESC,(posts > 2) DESC,
-      (trim(coalesce(bio,''))!='') DESC,((id - ? + ?) % ?) * 1.0 /
-      (1 + min(follower_count,8)*0.25 + min(posts,20)*0.05),id
+    ORDER BY latest_post_at DESC,id
     LIMIT ? OFFSET ?`,
-  ).all(viewerId, viewerId, viewerId, viewerId, viewerId, viewerId, viewerId, day, pivot, maxUserId, maxUserId, limit,
-    offset) as PersonView[]
+  ).all(viewerId, viewerId, viewerId, viewerId, viewerId, viewerId, limit, offset) as PersonView[]
 }
 
 export function suggestedPeopleCount(database: Database, viewerId: number,
-  day = new Date().toISOString().slice(0, 10))
+  _day = new Date().toISOString().slice(0, 10))
 {
   return (database.query(`SELECT count(*) count FROM users u WHERE u.id != ? AND u.deleted_at IS NULL
     AND u.handle_chosen_at IS NOT NULL
     AND (? < 0 OR NOT EXISTS (SELECT 1 FROM blocks b WHERE
       (b.blocker_id=? AND b.blocked_id=u.id) OR (b.blocker_id=u.id AND b.blocked_id=?)))
-    AND (EXISTS (SELECT 1 FROM follows f WHERE f.follower_id=? AND f.following_id=u.id)
-      OR EXISTS (SELECT 1 FROM posts p WHERE p.user_id=u.id AND p.deleted_at IS NULL)
-      OR (trim(coalesce(u.bio,''))!='' AND u.created_at>=datetime(?,'-7 days'))
-      OR ((SELECT count(*) FROM follows engagement WHERE engagement.follower_id=u.id)
-        + (SELECT count(*) FROM hashtag_follows engagement WHERE engagement.user_id=u.id))>=2)`)
-    .get(viewerId, viewerId, viewerId, viewerId, viewerId, day) as { count: number }).count
+    AND EXISTS (SELECT 1 FROM posts p WHERE p.user_id=u.id AND p.deleted_at IS NULL)`)
+    .get(viewerId, viewerId, viewerId, viewerId) as { count: number }).count
 }
