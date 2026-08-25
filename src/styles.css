@@ -4533,8 +4533,8 @@ form.report-panel {
 .font-size-large>span:first-of-type { font-size: 18px; }
 
 .poll { position: relative; z-index: 2; display: grid; gap: var(--space-1); margin-top: var(--space-2); font-size: 0.8125rem; }
-.thread-root>.post>.poll.quiz { font-size: clamp(.9375rem, 2.25vw, 1.125rem); letter-spacing: -.5px; }
-.feed-thread .thread-root>.post>.poll.quiz { font-size: .8125rem; letter-spacing: normal; }
+.thread-root>.post>.poll { font-size: clamp(.9375rem, 2.25vw, 1.125rem); letter-spacing: -.5px; }
+.feed-thread .thread-root>.post>.poll { font-size: .8125rem; letter-spacing: normal; }
 .poll-option { display: block; width: 100%; margin: 0; }
 .poll-option button,
 .poll-result { position: relative; width: 100%; min-height: 1.875rem; padding: var(--space-1) var(--space-2); color: var(--ink); background: transparent; border: var(--hairline) solid var(--soft); font-size: inherit; line-height: 1.35; text-align: left; overflow: hidden; }

@@ -68,10 +68,10 @@ describe('in-memory stylesheet', () => {
     expect(css).toContain('.poll-results { pointer-events: none; }')
   })
 
-  test('renders quiz answers and explanations at the surrounding post text size', async () => {
+  test('renders poll options at the surrounding post text size', async () => {
     const css = await Bun.file(new URL('./styles.css', import.meta.url)).text()
-    expect(css).toContain('.thread-root>.post>.poll.quiz { font-size: clamp(.9375rem, 2.25vw, 1.125rem);')
-    expect(css).toContain('.feed-thread .thread-root>.post>.poll.quiz { font-size: .8125rem;')
+    expect(css).toContain('.thread-root>.post>.poll { font-size: clamp(.9375rem, 2.25vw, 1.125rem);')
+    expect(css).toContain('.feed-thread .thread-root>.post>.poll { font-size: .8125rem;')
   })
 
   test('lets taps pass through todos that the viewer cannot edit', async () => {
