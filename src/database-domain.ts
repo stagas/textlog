@@ -2071,10 +2071,12 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
       const snapshot = database.query(`SELECT id FROM feed_snapshots WHERE kind=? AND viewer_id=?
         ORDER BY id DESC LIMIT 1`).get(kind, userId) as { id: number } | null
       if (snapshot) {
-        const rows = database.query(`SELECT json_extract(payload,'$.event_key') event_key
+        const rows = database.query(`SELECT json_extract(payload,'$.event_key') event_key,
+          coalesce(json_extract(payload,'$.targeted_to_viewer'),0) targeted_to_viewer
           FROM feed_snapshot_items WHERE snapshot_id=? AND position<? ORDER BY position`)
-          .all(snapshot.id, pageSize) as Array<{ event_key: string }>
-        markForYouEntriesRead(userId, rows.map(row => row.event_key), toMe, database)
+          .all(snapshot.id, pageSize) as Array<{ event_key: string; targeted_to_viewer: number }>
+        markForYouEntriesRead(userId, rows.map(row => row.event_key), toMe, database,
+          rows.filter(row => toMe || !row.targeted_to_viewer).map(row => row.event_key))
         cacheDb.query(`DELETE FROM materialized_feed_pages_v2 WHERE viewer_id=?
           AND kind IN ('latest','hot','to-me')`).run(userId)
       }

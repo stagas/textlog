@@ -173,11 +173,14 @@ export function loadPersonalizedFeed(database: Database, user: User, page: numbe
     targetFollowsViewer: row.target_handle ? followerIds.has(targets.get(row.target_handle)!) : undefined,
     tagFollowerCount: row.target_tag ? tagCounts[row.target_tag] || 0 : undefined })
   )
-  const toMeCount = unreadToMeCount(user.id, database)
-  const forYouCount = unreadForYouCount(user.id, database)
+  const visitedCount = toMe ? unreadToMeCount(user.id, database) : unreadForYouCount(user.id, database)
   if (markRead) {
-    markForYouEntriesRead(user.id, timeline.filter(row => row.unread).map(row => row.event_key), toMe, database)
+    const unreadTimeline = timeline.filter(row => row.unread)
+    const latestEventKeys = unreadTimeline.filter(row => toMe || !row.targeted_to_viewer).map(row => row.event_key)
+    markForYouEntriesRead(user.id, unreadTimeline.map(row => row.event_key), toMe, database, latestEventKeys)
   }
+  const toMeCount = toMe ? visitedCount : unreadToMeCount(user.id, database)
+  const forYouCount = toMe ? unreadForYouCount(user.id, database) : visitedCount
   const forYouUnread = hasUnreadForYou(user.id, database)
   const toMeUnread = hasUnreadToMe(user.id, database)
   const hasUnread = toMe ? toMeUnread : forYouUnread

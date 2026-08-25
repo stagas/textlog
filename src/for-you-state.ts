@@ -1,5 +1,6 @@
 import type { Database } from 'bun:sqlite'
 import { isAdminEmail } from './admin'
+import { markLatestPostsRead } from './latest-state'
 
 const descendsFromViewer = `EXISTS (WITH RECURSIVE ancestors(id,user_id,parent_id) AS (
   SELECT ancestor.id,ancestor.user_id,ancestor.parent_id FROM posts ancestor WHERE ancestor.id=p.parent_id
@@ -131,7 +132,9 @@ export function unreadToMeCount(userId: number, database: Database) {
     .get(stateParameters(userId, database)) as { count: number }).count
 }
 
-export function markForYouEntriesRead(userId: number, eventKeys: string[], toMe: boolean, database: Database) {
+export function markForYouEntriesRead(userId: number, eventKeys: string[], toMe: boolean, database: Database,
+  latestEventKeys = eventKeys)
+{
   if (!eventKeys.length) return
   const insert = database.query('INSERT OR IGNORE INTO for_you_reads(user_id,event_key) VALUES(?,?)')
   const insertToMe = toMe
@@ -147,6 +150,11 @@ export function markForYouEntriesRead(userId: number, eventKeys: string[], toMe:
       if (postId) insertActivity.run(userId, postId)
     })
   )()
+  const postIds = latestEventKeys.flatMap(eventKey => {
+    const postId = eventKey.match(/^post:(\d+)$/)?.[1]
+    return postId ? [Number(postId)] : []
+  })
+  markLatestPostsRead(userId, postIds, database)
 }
 
 export function markVisibleForYouEntriesRead(userId: number, eventKeys: string[], toMe = false, database: Database) {
