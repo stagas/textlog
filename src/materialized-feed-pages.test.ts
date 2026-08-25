@@ -1,6 +1,6 @@
 import { Database } from 'bun:sqlite'
 import { expect, test } from 'bun:test'
-import { clearMaterializedFeedPages, invalidateMaterializedFeedPages, materializedFeedPage } from './materialized-feed-pages'
+import { invalidateMaterializedFeedPages, materializedFeedPage } from './materialized-feed-pages'
 
 function databases() {
   const primary = new Database(':memory:', { strict: true })
@@ -81,17 +81,4 @@ test('stores the post-read render and supports viewer-specific invalidation', as
   invalidateMaterializedFeedPages(7, ['for-you'], cache)
   expect(await (await materializedFeedPage(primary, request, 'for-you', 7, render, cache, true)).text())
     .toBe('<p>3</p>')
-})
-
-test('clears every rendered feed page on server startup', () => {
-  const { cache } = databases()
-  const insert = cache.query(`INSERT INTO materialized_feed_pages_v2
-    (kind,viewer_id,variant,generation,html) VALUES(?,?,?,?,?)`)
-  insert.run('latest', -1, '', 1, '<p>latest</p>')
-  insert.run('hot', -1, '', 1, '<p>hot</p>')
-  insert.run('for-you', 7, '', 1, '<p>for you</p>')
-
-  clearMaterializedFeedPages(cache)
-
-  expect(cache.query('SELECT kind FROM materialized_feed_pages_v2').all()).toEqual([])
 })

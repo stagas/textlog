@@ -68,10 +68,14 @@ export function feedSnapshotPage<T>(database: Database, kind: string, viewerId: 
       const result = storage.query(`INSERT INTO feed_snapshots(kind,viewer_id,generation,total_items)
         VALUES(?,?,?,?)`).run(kind, viewerId, generation, items.length)
       const snapshotId = Number(result.lastInsertRowid)
-      const insert = storage.query(`INSERT INTO feed_snapshot_items(snapshot_id,position,payload)
-        VALUES(?,?,?)`)
-      for (let position = 0; position < items.length; position++) {
-        insert.run(snapshotId, position, JSON.stringify(items[position]))
+      const insertBatchSize = 100
+      for (let start = 0; start < items.length; start += insertBatchSize) {
+        const batch = items.slice(start, start + insertBatchSize)
+        const values = batch.map(() => '(?,?,?)').join(',')
+        const parameters = batch.flatMap((item, index) =>
+          [snapshotId, start + index, JSON.stringify(item)] as [number, number, string])
+        storage.query(`INSERT INTO feed_snapshot_items(snapshot_id,position,payload) VALUES ${values}`)
+          .run(...parameters)
       }
       storage.query(`DELETE FROM feed_snapshots WHERE id IN (
         SELECT id FROM feed_snapshots WHERE id != ?

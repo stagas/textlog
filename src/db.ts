@@ -1,12 +1,16 @@
 import { Database } from 'bun:sqlite'
 import { createDatabaseBackup, defaultBackupDirectory, defaultDatabasePath } from './database-backup'
+import { compactDatabaseAfterMigration } from './database-compaction'
 import { databaseVersion, latestMigrationVersion, runMigrations } from './migrations'
 export type { User } from './types'
 
 export const db = new Database(defaultDatabasePath, { create: true, strict: true })
 const busyTimeoutMs = Number(Bun.env.DATABASE_BUSY_TIMEOUT_MS || 5000)
+const cacheKiB = Math.max(2_000, Math.min(262_144, Number(Bun.env.DATABASE_CACHE_KIB || 32_768)))
+const mmapBytes = Math.max(0, Math.min(1_073_741_824, Number(Bun.env.DATABASE_MMAP_BYTES || 134_217_728)))
 db.run(`PRAGMA journal_mode=WAL; PRAGMA foreign_keys=ON; PRAGMA wal_autocheckpoint=1000;
-  PRAGMA busy_timeout=${busyTimeoutMs};`)
+  PRAGMA synchronous=NORMAL; PRAGMA temp_store=MEMORY; PRAGMA cache_size=-${cacheKiB};
+  PRAGMA mmap_size=${mmapBytes}; PRAGMA busy_timeout=${busyTimeoutMs};`)
 
 const startingVersion = databaseVersion(db)
 const hasUserTables = !!db.query(
@@ -23,6 +27,7 @@ if (startingVersion < latestMigrationVersion && hasUserTables) {
 
 runMigrations(db, migration => console.log(`database migrate v${migration.version} ${migration.name}`))
 db.query('PRAGMA wal_checkpoint(TRUNCATE)').get()
+if (startingVersion < latestMigrationVersion && hasUserTables) compactDatabaseAfterMigration(db, defaultDatabasePath)
 
 // Long-retention moderation records are pruned at startup; high-churn tables use periodic bounded maintenance.
 db.query('DELETE FROM illegal_activity_reports WHERE status!=\'open\' AND resolved_at<datetime(\'now\',\'-3 years\')')
