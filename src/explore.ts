@@ -38,6 +38,10 @@ export function explorePivot(maxUserId: number, viewerId: number, day = new Date
   return (hash >>> 0) % maxUserId + 1
 }
 
+export function preserveSuggestedPeopleOrder<T extends { id: number }>(people: T[], savedIds: number[]) {
+  return people.sort((a, b) => savedIds.indexOf(a.id) - savedIds.indexOf(b.id))
+}
+
 export function suggestedPeople(database: Database, viewerId: number, limit = 8,
   day = new Date().toISOString().slice(0, 10), offset = 0)
 {

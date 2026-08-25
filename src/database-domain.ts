@@ -14,7 +14,8 @@ import { exportUserData } from './data-export'
 import { createBootDatabaseBackup } from './database-backup'
 import type { DatabaseDomainInput, DatabaseDomainOperation, DatabaseDomainOutput } from './database-contract'
 import { confirmEmailToken } from './email-verification'
-import { suggestedPeople, suggestedPeopleCount, trendingTagCount, trendingTags } from './explore'
+import { preserveSuggestedPeopleOrder, suggestedPeople, suggestedPeopleCount, trendingTagCount, trendingTags }
+  from './explore'
 import { issueFeedKey, userForFeedKey } from './feed-keys'
 import { feedSnapshotPage } from './feed-snapshots'
 import { hasUnreadForYou, hasUnreadToMe, markAllForYouRead, markForYouEntriesRead, markVisibleForYouEntriesRead,
@@ -2205,7 +2206,7 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
         && ids.indexOf(id) === index
       ).slice(0, 8)
       const people = savedIds?.length
-        ? (database.query(
+        ? preserveSuggestedPeopleOrder((database.query(
           `SELECT u.*, (SELECT count(*) FROM posts p WHERE p.user_id=u.id AND p.deleted_at IS NULL) posts,
             EXISTS(SELECT 1 FROM follows f WHERE f.follower_id=? AND f.following_id=u.id) following,
             EXISTS(SELECT 1 FROM follows rf WHERE rf.follower_id=u.id AND rf.following_id=?) followsViewer
@@ -2213,9 +2214,7 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
             AND u.handle_chosen_at IS NOT NULL
             AND (? < 0 OR NOT EXISTS (SELECT 1 FROM blocks b WHERE
               (b.blocker_id=? AND b.blocked_id=u.id) OR (b.blocker_id=u.id AND b.blocked_id=?)))`,
-        ).all(viewerId, viewerId, ...savedIds, viewerId, viewerId, viewerId) as import('./types').PersonView[])
-          .sort((a, b) => Number(!!b.followsViewer) - Number(!!a.followsViewer)
-            || savedIds.indexOf(a.id) - savedIds.indexOf(b.id))
+        ).all(viewerId, viewerId, ...savedIds, viewerId, viewerId, viewerId) as import('./types').PersonView[]), savedIds)
         : suggestedPeople(database, viewerId, 8, undefined, (peoplePage - 1) * 8)
       const stats = visibleUserProfileStats(database, people.map(person => person.id), viewerId)
       const profileStats = Object.fromEntries(stats) as import('./types').ExploreData['profileStats']

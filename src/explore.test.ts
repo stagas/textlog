@@ -1,6 +1,7 @@
 import { Database } from 'bun:sqlite'
 import { describe, expect, test } from 'bun:test'
-import { explorePivot, suggestedPeople, suggestedPeopleCount, trendingTags } from './explore'
+import { explorePivot, preserveSuggestedPeopleOrder, suggestedPeople, suggestedPeopleCount, trendingTags }
+  from './explore'
 
 function fixture() {
   const database = new Database(':memory:')
@@ -24,6 +25,16 @@ function fixture() {
 }
 
 describe('explore suggestions', () => {
+  test('preserves the visible order after follow state changes', () => {
+    const people = [
+      { id: 2, followsViewer: true },
+      { id: 3, followsViewer: false },
+      { id: 5, followsViewer: true },
+    ]
+
+    expect(preserveSuggestedPeopleOrder(people, [5, 3, 2]).map(person => person.id)).toEqual([5, 3, 2])
+  })
+
   test('uses a stable daily pivot', () => {
     expect(explorePivot(100, 7, '2026-08-04')).toBe(explorePivot(100, 7, '2026-08-04'))
     expect(explorePivot(100, 7, '2026-08-04')).not.toBe(explorePivot(100, 7, '2026-08-05'))
