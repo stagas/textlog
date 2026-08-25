@@ -70,14 +70,14 @@ describe('in-memory stylesheet', () => {
 
   test('renders poll options at the surrounding post text size', async () => {
     const css = await Bun.file(new URL('./styles.css', import.meta.url)).text()
-    expect(css).toContain('.thread-root>.post>.poll { font-size: clamp(.9375rem, 2.25vw, 1.125rem);')
+    expect(css).toContain('.thread-root>.post>.poll { font-size: .9375rem;')
     expect(css).toContain('.feed-thread .thread-root>.post>.poll { font-size: .8125rem;')
   })
 
   test('lets taps pass through todos that the viewer cannot edit', async () => {
     const css = await Bun.file(new URL('./styles.css', import.meta.url)).text()
     expect(css).toContain('.todo { position: relative; z-index: 2; display: grid; gap: 0; margin-top: 0; font-size: .8125rem; line-height: 1.35; pointer-events: none; }')
-    expect(css).toContain('.thread-root>.post>.todo { font-size: clamp(.9375rem, 2.25vw, 1.125rem);')
+    expect(css).toContain('.thread-root>.post>.todo { font-size: .9375rem;')
     expect(css).toContain('.feed-thread .thread-root>.post>.todo { font-size: .8125rem;')
     expect(css).toContain('font: inherit; line-height: inherit; text-align: left;')
     expect(css).toContain('.todo-check-checked { color: var(--accent-dark); }')
