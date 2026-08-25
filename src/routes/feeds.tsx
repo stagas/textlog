@@ -158,7 +158,9 @@ function warmOtherFeedPages(request: Request, current: PrimaryFeed,
 }
 
 export function prewarmRecentFeedVisitors() {
-  if (recentVisitorPrewarmTimer) clearTimeout(recentVisitorPrewarmTimer)
+  // Keep a bounded deadline for the batch. Resetting this timer on every successful POST can starve relationship
+  // invalidation indefinitely on an active instance, causing follow activity to remain absent from For You feeds.
+  if (recentVisitorPrewarmTimer) return
   recentVisitorPrewarmTimer = setTimeout(() => {
     recentVisitorPrewarmTimer = undefined
     const visitors = [...recentFeedVisitors.values()]

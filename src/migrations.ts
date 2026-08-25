@@ -1850,6 +1850,14 @@ export const migrations: Migration[] = [
       }
     },
   },
+  {
+    version: 129,
+    name: 'queue_relationship_feed_catchup',
+    up(database) {
+      // Existing snapshots may have missed relationship changes while the old debounce was repeatedly postponed.
+      database.run('UPDATE relationship_feed_invalidation SET dirty=1 WHERE id=1')
+    },
+  },
 ]
 
 export const latestMigrationVersion = migrations.at(-1)!.version
