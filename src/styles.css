@@ -628,7 +628,7 @@ header>nav>a:not(.button),
   margin: 0;
   padding: var(--space-4) !important;
   border-top: 0;
-  font-size: 0.75rem;
+  font-size: 0.6875rem;
 }
 
 .post.internal-post-card > :is(.posttop, .postfoot) {
@@ -5270,6 +5270,13 @@ form.report-panel {
   grid-column: 1 / -1;
   margin: 0;
   color: var(--quote-ink);
+}
+
+.admin-banned-username-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2) var(--space-4);
+  font-size: 0.75rem;
 }
 
 .admin-user-list article .quiet {

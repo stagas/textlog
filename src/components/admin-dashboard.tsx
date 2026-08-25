@@ -180,13 +180,11 @@ export function AdminDashboard(
       <section className="admin-section admin-banned-usernames">
         <h2>banned usernames <span>{bannedUsernames.length}</span></h2>
         {bannedUsernames.length
-          ? bannedUsernames.map(entry => (
-            <article key={entry.username}>
-              <strong>@{entry.username}</strong>
-              <span>dropped by @{entry.actor_handle} · {fmtFull(entry.created_at)}</span>
-              {entry.note && <p>{entry.note}</p>}
-            </article>
-          ))
+          ? (
+            <div className="admin-banned-username-list">
+              {bannedUsernames.map(entry => <span key={entry.username}>@{entry.username}</span>)}
+            </div>
+          )
           : <p className="section-empty">No usernames have been dropped.</p>}
       </section>
       <section className="admin-section admin-actions-log">
