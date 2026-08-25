@@ -368,8 +368,9 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
         database.query('DELETE FROM push_subscriptions WHERE endpoint=? AND user_id=?').run(endpoint, userId)
         active = Boolean(database.query('SELECT 1 FROM push_subscriptions WHERE endpoint=? LIMIT 1').get(endpoint))
         if (userAgent) {
-          database.query(`DELETE FROM notification_user_agents
-          WHERE user_id=? AND user_agent=? AND status='enabled'`).run(userId, userAgent)
+          database.query(`INSERT INTO notification_user_agents(user_id,user_agent,status) VALUES(?,?,'dismissed')
+            ON CONFLICT(user_id,user_agent) DO UPDATE SET status='dismissed',updated_at=CURRENT_TIMESTAMP`)
+            .run(userId, userAgent)
         }
       })()
       return { active } as DatabaseDomainOutput<K>

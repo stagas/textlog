@@ -704,6 +704,28 @@ test('consequential account, content, reporting, and admin flows work over HTTP'
   expect(enabledDeviceHome).toContain('class="notification-banner"')
   expect(enabledDeviceHome).not.toContain('check the improved notifications')
   expect(enabledDeviceHome).toContain('href="/account/edit/appearance">customize appearance</a>')
+  const disabledEndpoint = 'https://push.example/alice-disabled-browser'
+  expect((await request('/account/push-subscription', {
+    method: 'POST',
+    cookie: aliceCookie,
+    userAgent: 'alice-disabled-browser',
+    json: { endpoint: disabledEndpoint, keys: { p256dh: 'test-key', auth: 'test-auth' } },
+  })).status).toBe(200)
+  const disabledPush = await request('/account/push-subscription', {
+    method: 'DELETE',
+    cookie: aliceCookie,
+    userAgent: 'alice-disabled-browser',
+    json: { endpoint: disabledEndpoint },
+  })
+  expect(disabledPush.status).toBe(200)
+  expect(database.query(`SELECT status FROM notification_user_agents WHERE user_id=? AND user_agent=?`)
+    .get(alice.id, 'alice-disabled-browser')).toEqual({ status: 'dismissed' })
+  const disabledDeviceHome = await (await request('/for-you', {
+    cookie: aliceCookie,
+    userAgent: 'alice-disabled-browser',
+  })).text()
+  expect(disabledDeviceHome).not.toContain('href="/account/edit/notifications">enable notifications</a>')
+  expect(disabledDeviceHome).toContain('href="/account/edit/appearance">customize appearance</a>')
   const otherBrowserHome = await (await request('/for-you', {
     cookie: aliceCookie,
     userAgent: 'alice-other-browser',
