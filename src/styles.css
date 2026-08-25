@@ -1002,6 +1002,10 @@ nav form {
   color: var(--tab-hover);
 }
 
+.feed-tabs > a:hover {
+  background: color-mix(in srgb, var(--accent) 5%, transparent);
+}
+
 .feed-tabs a.active {
   color: var(--ink);
   border-bottom-color: var(--accent);
