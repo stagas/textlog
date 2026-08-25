@@ -8,7 +8,7 @@ import type { User } from './types'
 export const ADMIN_EMAILS = new Set(instance.administrators.map(email => email.trim().toLowerCase()))
 
 export type AdminActionType = 'delete_post' | 'suspend_user' | 'restore_user' | 'delete_user' | 'resolve_report'
-  | 'dismiss_report'
+  | 'dismiss_report' | 'drop_username'
 
 export function isAdmin(user: Pick<User, 'email'> | null | undefined) {
   return !!user && ADMIN_EMAILS.has(user.email.trim().toLowerCase())

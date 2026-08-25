@@ -2,7 +2,7 @@ import { Database } from 'bun:sqlite'
 import { describe, expect, test } from 'bun:test'
 import { createAccountGroup } from './account-groups'
 import { anonymizeUser } from './admin'
-import { createAccount, resolveHandle, updateProfileHandle } from './handles'
+import { createAccount, dropUsername, resolveHandle, updateProfileHandle } from './handles'
 import { claimInitialHandle } from './handles'
 import { runMigrations } from './migrations'
 
@@ -10,11 +10,15 @@ function fixture() {
   const database = new Database(':memory:')
   database.run(`PRAGMA foreign_keys=ON;
     CREATE TABLE users (id INTEGER PRIMARY KEY AUTOINCREMENT,handle TEXT UNIQUE NOT NULL,email TEXT UNIQUE NOT NULL,
-      bio TEXT DEFAULT '',password TEXT NOT NULL,deleted_at TEXT);
+      bio TEXT DEFAULT '',password TEXT NOT NULL,deleted_at TEXT,handle_chosen_at TEXT);
     CREATE TABLE handle_history (handle TEXT PRIMARY KEY COLLATE NOCASE,user_id INTEGER NOT NULL
       REFERENCES users(id) ON DELETE CASCADE,created_at TEXT DEFAULT CURRENT_TIMESTAMP);
     CREATE TABLE handle_change_events (id INTEGER PRIMARY KEY AUTOINCREMENT,user_id INTEGER NOT NULL
       REFERENCES users(id) ON DELETE CASCADE,changed_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP);
+    CREATE TABLE banned_usernames (username TEXT PRIMARY KEY COLLATE NOCASE,dropped_user_id INTEGER,
+      dropped_by INTEGER,note TEXT DEFAULT '',created_at TEXT DEFAULT CURRENT_TIMESTAMP);
+    CREATE TABLE admin_actions (id INTEGER PRIMARY KEY,actor_id INTEGER,action TEXT,target_user_id INTEGER,
+      target_post_id INTEGER,note TEXT,created_at TEXT DEFAULT CURRENT_TIMESTAMP);
     INSERT INTO users(handle,email,password) VALUES('alpha','alpha@example.com','x'),('other','other@example.com','x');`)
   return database
 }
@@ -62,6 +66,26 @@ describe('handle history', () => {
     database.query("UPDATE handle_change_events SET changed_at=datetime('now','start of month','-1 day')").run()
     updateProfileHandle(database, 1, 'delta', '')
     expect(database.query('SELECT handle FROM users WHERE id=1').get()).toEqual({ handle: 'delta' })
+  })
+
+  test('drops and bans a username without recording a handle change or historical alias', () => {
+    const database = fixture()
+    database.query('INSERT INTO handle_history(handle,user_id) VALUES(?,?)').run('alpha', 1)
+    const dropped = dropUsername(database, 1, 2, 'policy violation')
+
+    expect(dropped.status).toBe('ready')
+    expect(database.query('SELECT handle,handle_chosen_at FROM users WHERE id=1').get()).toMatchObject({
+      handle_chosen_at: null,
+    })
+    expect((database.query('SELECT handle FROM users WHERE id=1').get() as { handle: string }).handle)
+      .toMatch(/^anon[0-9a-f]{12}$/)
+    expect(database.query('SELECT username,note FROM banned_usernames').get())
+      .toEqual({ username: 'alpha', note: 'policy violation' })
+    expect(database.query('SELECT * FROM handle_history WHERE handle=?').all('alpha')).toHaveLength(0)
+    expect(database.query('SELECT * FROM handle_change_events WHERE user_id=1').all()).toHaveLength(0)
+    expect(() => claimInitialHandle(database, 1, 'alpha')).toThrow('banned')
+    expect(() => updateProfileHandle(database, 2, 'alpha', '')).toThrow('banned')
+    expect(() => createAccount(database, 'ALPHA', 'third@example.com', 'x')).toThrow('banned')
   })
 
   test('lets the same account group reclaim a deleted persona handle', () => {

@@ -29,6 +29,7 @@ export function AdminUser({ user, target }: { user: User; target: ProfileRow }) 
             >
               {target.suspended_at ? 'restore account' : 'suspend account'}
             </a>
+            <a className="quiet danger" href={`/admin/users/${target.id}/drop-username`}>drop username</a>
             <a className="quiet danger" href={`/admin/users/${target.id}/delete`}>permanently delete account</a>
           </section>
         )}

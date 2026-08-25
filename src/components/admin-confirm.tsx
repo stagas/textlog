@@ -7,7 +7,7 @@ import { Panel } from './panel'
 
 export function AdminConfirm({ user, kind, target, post, returnTo = '/admin' }: {
   user: User
-  kind: 'delete_post' | 'suspend_user' | 'restore_user' | 'delete_user'
+  kind: 'delete_post' | 'suspend_user' | 'restore_user' | 'delete_user' | 'drop_username'
   target?: ProfileRow
   post?: PostRow & { handle?: string }
   returnTo?: string
@@ -19,11 +19,14 @@ export function AdminConfirm({ user, kind, target, post, returnTo = '/admin' }: 
       'Their sessions will end and they cannot log in until restored. Content remains visible.']
     : kind === 'restore_user'
     ? [`Restore @${target!.handle}?`, 'They will be able to log in and use the account again.']
+    : kind === 'drop_username'
+    ? [`Drop @${target!.handle}?`,
+      'The username will be permanently banned. Their account will get a temporary anonymous name and must choose again.']
     : [`Permanently delete @${target!.handle}?`,
       'This anonymizes the account and turns all of its posts into tombstones. It cannot be undone.']
   const action = kind === 'delete_post'
     ? `/admin/posts/${post!.id}/delete`
-    : `/admin/users/${target!.id}/${kind.replace('_user', '')}`
+    : `/admin/users/${target!.id}/${kind === 'drop_username' ? 'drop-username' : kind.replace('_user', '')}`
   return (
     <Layout user={user} title="admin moderation">
       <Panel className="confirm-delete admin-confirm">
@@ -40,7 +43,8 @@ export function AdminConfirm({ user, kind, target, post, returnTo = '/admin' }: 
           </label>
           <FormActions secondary={<a className="secondary-action cancel-action" href={returnTo}>cancel</a>}
             primary={
-              <button className={`button ${kind.includes('delete') || kind === 'suspend_user' ? 'button-danger' : ''}`}>
+              <button className={`button ${kind.includes('delete') || kind === 'suspend_user'
+                || kind === 'drop_username' ? 'button-danger' : ''}`}>
                 {kind.replaceAll('_', ' ')}
               </button>
             } />

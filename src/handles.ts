@@ -1,4 +1,6 @@
 import type { Database } from 'bun:sqlite'
+import { randomBytes } from 'node:crypto'
+import { recordAdminAction } from './admin'
 import { initializeLatestReads } from './latest-state'
 
 export type ResolvedHandle = { id: number; handle: string; alias: boolean }
@@ -8,6 +10,10 @@ export class HandleChangeLimitError extends Error {
     super('Handle changes are limited to two per month')
     this.name = 'HandleChangeLimitError'
   }
+}
+
+function bannedHandle(database: Database, handle: string) {
+  return Boolean(database.query('SELECT 1 FROM banned_usernames WHERE username=? COLLATE NOCASE').get(handle))
 }
 
 export function resolveHandle(database: Database, requestedHandle: string): ResolvedHandle | null {
@@ -26,6 +32,7 @@ export function resolveHandle(database: Database, requestedHandle: string): Reso
 
 export function createAccount(database: Database, handle: string, email: string, password: string) {
   return database.transaction(() => {
+    if (bannedHandle(database, handle)) throw new Error('Handle is banned')
     if (database.query('SELECT 1 FROM handle_history WHERE handle=? COLLATE NOCASE').get(handle)) {
       throw new Error('Handle is reserved')
     }
@@ -66,6 +73,7 @@ export function claimInitialHandle(database: Database, userId: number, handle: s
   onClaim?: (reclaimed: boolean) => void)
 {
   return database.transaction(() => {
+    if (bannedHandle(database, handle)) throw new Error('Handle is banned')
     if (database.query('SELECT 1 FROM users WHERE handle=? COLLATE NOCASE AND id!=? AND deleted_at IS NULL')
       .get(handle, userId)) throw new Error('Handle is unavailable')
     const claim = historicalHandleClaim(database, userId, handle)
@@ -93,6 +101,7 @@ export function updateProfileHandle(database: Database, userId: number, handle: 
     if (!account) throw new Error('Account not found')
 
     if (account.handle.toLowerCase() !== handle.toLowerCase()) {
+      if (bannedHandle(database, handle)) throw new Error('Handle is banned')
       const changesThisMonth = database.query(`SELECT COUNT(*) count FROM handle_change_events
         WHERE user_id=? AND changed_at>=datetime('now','start of month')
           AND changed_at<datetime('now','start of month','+1 month')`).get(userId) as { count: number }
@@ -122,5 +131,30 @@ export function updateProfileHandle(database: Database, userId: number, handle: 
     }
 
     database.query('UPDATE users SET handle=?,bio=? WHERE id=?').run(handle, bio, userId)
+  })()
+}
+
+export function dropUsername(database: Database, userId: number, actorId: number, note: string) {
+  return database.transaction(() => {
+    const account = database.query('SELECT handle FROM users WHERE id=? AND deleted_at IS NULL').get(userId) as
+      | { handle: string }
+      | null
+    if (!account) return { status: 'not_found' as const }
+    if (bannedHandle(database, account.handle)) return { status: 'already_banned' as const }
+    database.query(`INSERT INTO banned_usernames(username,dropped_user_id,dropped_by,note)
+      VALUES(?,?,?,?)`).run(account.handle.toLowerCase(), userId, actorId, note.trim().slice(0, 500))
+    database.query('DELETE FROM handle_history WHERE handle=? COLLATE NOCASE').run(account.handle)
+    let temporaryHandle = ''
+    for (let attempt = 0; attempt < 10; attempt++) {
+      const candidate = `anon${randomBytes(6).toString('hex')}`
+      if (database.query('SELECT 1 FROM users WHERE handle=? COLLATE NOCASE').get(candidate)) continue
+      if (bannedHandle(database, candidate)) continue
+      temporaryHandle = candidate
+      break
+    }
+    if (!temporaryHandle) throw new Error('Could not allocate temporary handle')
+    database.query('UPDATE users SET handle=?,handle_chosen_at=NULL WHERE id=?').run(temporaryHandle, userId)
+    recordAdminAction(database, actorId, 'drop_username', userId, null, note)
+    return { status: 'ready' as const, username: account.handle, temporaryHandle }
   })()
 }

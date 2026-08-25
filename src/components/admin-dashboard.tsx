@@ -9,7 +9,8 @@ import { Pagination } from './page-shared'
 import { StatsGrid } from './stats'
 
 export function AdminDashboard(
-  { user, stats, reports, actions, illegalReports = [], status, page, total, suspended = [], ipRequests = [] }: {
+  { user, stats, reports, actions, illegalReports = [], status, page, total, suspended = [], ipRequests = [],
+    bannedUsernames = [] }: {
     user: User
     stats: DashboardStats
     reports: AdminReportView[]
@@ -20,6 +21,8 @@ export function AdminDashboard(
     total: number
     suspended?: ProfileRow[]
     ipRequests?: Array<{ hash: string; obfuscated: string; requests: number; blocked: boolean }>
+    bannedUsernames?: Array<{ username: string; dropped_user_id: number | null; actor_handle: string;
+      note: string; created_at: string }>
   },
 ) {
   return (
@@ -170,6 +173,18 @@ export function AdminDashboard(
             </div>
           )
           : <p className="section-empty">No suspended users.</p>}
+      </section>
+      <section className="admin-section admin-banned-usernames">
+        <h2>banned usernames <span>{bannedUsernames.length}</span></h2>
+        {bannedUsernames.length
+          ? bannedUsernames.map(entry => (
+            <article key={entry.username}>
+              <strong>@{entry.username}</strong>
+              <span>dropped by @{entry.actor_handle} · {fmtFull(entry.created_at)}</span>
+              {entry.note && <p>{entry.note}</p>}
+            </article>
+          ))
+          : <p className="section-empty">No usernames have been dropped.</p>}
       </section>
       <section className="admin-section admin-actions-log">
         <h2>recent admin actions</h2>

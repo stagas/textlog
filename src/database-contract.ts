@@ -153,6 +153,8 @@ export type DatabaseDomainOperations = {
     suspended: ProfileRow[]
     illegalReports: IllegalActivityReportView[]
     ipRequests: Array<{ hash: string; obfuscated: string; requests: number; blocked: boolean }>
+    bannedUsernames: Array<{ username: string; dropped_user_id: number | null; actor_handle: string;
+      note: string; created_at: string }>
   } }
   'admin.blockIp': { input: { day: string; hash: string; actorId: number }; output: boolean }
   'admin.decideIllegalReport': { input: { id: number; decision: 'resolve' | 'dismiss'; reasons: string };
@@ -164,10 +166,10 @@ export type DatabaseDomainOperations = {
     output: { status: 'not_found' } | { status: 'ready'; imageKeys: string[] } }
   'admin.user': { input: { id: number }; output: ProfileRow | null }
   'admin.moderateUser': {
-    input: { id: number; actorId: number; action: 'suspend' | 'restore' | 'delete';
+    input: { id: number; actorId: number; action: 'suspend' | 'restore' | 'delete' | 'drop-username';
       note: string }
-    output: { status: 'not_found' | 'already_suspended' | 'not_suspended' } | { status: 'ready';
-      imageKeys: string[] }
+    output: { status: 'not_found' | 'already_suspended' | 'not_suspended' | 'already_banned' }
+      | { status: 'ready'; imageKeys: string[] }
   }
   'account.securityData': { input: { userId: number; currentSessionHash: string | null; now: number }; output: {
     sessions: SessionView[]

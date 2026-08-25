@@ -54,12 +54,13 @@ export function registerAdminRoutes(app: Hono) {
     const reportPage = currentPage(c.req.query('page'))
     await flushIpRequests()
     const data = await databaseService().call('admin.dashboard', { status, page: reportPage })
-    const { stats, total, reports, actions, suspended, illegalReports, ipRequests } = data
+    const { stats, total, reports, actions, suspended, illegalReports, ipRequests, bannedUsernames } = data
     const outOfRange = paginationRedirect(reportPage, total, `/admin?status=${status}`)
     if (outOfRange) return outOfRange
     return page(
       <AdminDashboard user={signedIn} stats={stats} reports={reports} actions={actions} illegalReports={illegalReports}
-        status={status} page={reportPage} total={total} suspended={suspended} ipRequests={ipRequests} />,
+        status={status} page={reportPage} total={total} suspended={suspended} ipRequests={ipRequests}
+        bannedUsernames={bannedUsernames} />,
     )
   })
 
@@ -165,7 +166,7 @@ export function registerAdminRoutes(app: Hono) {
     if (!isAdmin(signedIn)) return c.text('Forbidden', 403)
     const id = Number(c.req.param('id'))
     const action = c.req.param('action')
-    if (!['suspend', 'restore', 'delete'].includes(action)) return c.text('Not found', 404)
+    if (!['suspend', 'restore', 'delete', 'drop-username'].includes(action)) return c.text('Not found', 404)
     const target = Number.isInteger(id) ? await databaseService().call('admin.user', { id }) : null
     if (!target) return c.text('Not found', 404)
     if (target.id === signedIn.id || isAdminEmail(target.email)) return c.text('Protected admin account', 403)
@@ -173,7 +174,8 @@ export function registerAdminRoutes(app: Hono) {
     if (action === 'restore' && !target.suspended_at) return c.text('Account is not suspended', 409)
     return page(
       <AdminConfirm user={signedIn} target={target}
-        kind={action === 'suspend' ? 'suspend_user' : action === 'restore' ? 'restore_user' : 'delete_user'}
+        kind={action === 'suspend' ? 'suspend_user' : action === 'restore' ? 'restore_user'
+          : action === 'drop-username' ? 'drop_username' : 'delete_user'}
         returnTo={`/admin/users/${id}`} />,
     )
   })
@@ -184,7 +186,7 @@ export function registerAdminRoutes(app: Hono) {
     if (!isAdmin(signedIn)) return c.text('Forbidden', 403)
     const id = Number(c.req.param('id'))
     const action = c.req.param('action')
-    if (!Number.isInteger(id) || !['suspend', 'restore', 'delete'].includes(action)) {
+    if (!Number.isInteger(id) || !['suspend', 'restore', 'delete', 'drop-username'].includes(action)) {
       return c.text('Not found', 404)
     }
     const target = await databaseService().call('admin.user', { id })
@@ -196,7 +198,7 @@ export function registerAdminRoutes(app: Hono) {
     const changed = await databaseService().call('admin.moderateUser', {
       id,
       actorId: signedIn.id,
-      action: action as 'suspend' | 'restore' | 'delete',
+      action: action as 'suspend' | 'restore' | 'delete' | 'drop-username',
       note: f.note || '',
     })
     if (changed.status === 'not_found') return c.text('Not found', 404)

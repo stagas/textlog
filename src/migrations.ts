@@ -1858,6 +1858,32 @@ export const migrations: Migration[] = [
       database.run('UPDATE relationship_feed_invalidation SET dirty=1 WHERE id=1')
     },
   },
+  {
+    version: 130,
+    name: 'banned_usernames',
+    up(database) {
+      database.run(`CREATE TABLE IF NOT EXISTS banned_usernames (
+        username TEXT PRIMARY KEY COLLATE NOCASE,dropped_user_id INTEGER REFERENCES users(id),
+        dropped_by INTEGER NOT NULL REFERENCES users(id),note TEXT NOT NULL DEFAULT '',
+        created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP);
+      CREATE INDEX IF NOT EXISTS banned_usernames_created ON banned_usernames(created_at DESC);`)
+      const adminActions = database.query(
+        "SELECT sql FROM sqlite_master WHERE type='table' AND name='admin_actions'",
+      ).get() as { sql: string } | null
+      if (adminActions && !adminActions.sql.includes('drop_username')) {
+        database.run(`CREATE TABLE admin_actions_new (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,actor_id INTEGER NOT NULL REFERENCES users(id),
+        action TEXT NOT NULL CHECK(action IN ('delete_post','suspend_user','restore_user','delete_user',
+          'resolve_report','dismiss_report','drop_username')),
+        target_user_id INTEGER REFERENCES users(id),target_post_id INTEGER REFERENCES posts(id),
+        note TEXT NOT NULL DEFAULT '',created_at TEXT DEFAULT CURRENT_TIMESTAMP);
+      INSERT INTO admin_actions_new SELECT * FROM admin_actions;
+      DROP TABLE admin_actions;
+      ALTER TABLE admin_actions_new RENAME TO admin_actions;
+      CREATE INDEX admin_actions_created ON admin_actions(created_at DESC);`)
+      }
+    },
+  },
 ]
 
 export const latestMigrationVersion = migrations.at(-1)!.version

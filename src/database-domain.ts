@@ -20,7 +20,7 @@ import { issueFeedKey, userForFeedKey } from './feed-keys'
 import { feedSnapshotPage } from './feed-snapshots'
 import { hasUnreadForYou, hasUnreadToMe, markAllForYouRead, markForYouEntriesRead, markVisibleForYouEntriesRead,
   unreadForYouCount, unreadToMeCount } from './for-you-state'
-import { resolveHandle } from './handles'
+import { dropUsername, resolveHandle } from './handles'
 import { claimInitialHandle, HandleChangeLimitError, updateProfileHandle } from './handles'
 import { getHotPosts, type HotPost, hotRankingVersion } from './hot'
 import { isImageKey } from './image-storage'
@@ -717,8 +717,11 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
       const ipRequests = database.query(`SELECT ip_hash hash,substr(ip_hash,1,5) obfuscated,
         request_count requests,blocked_at IS NOT NULL blocked FROM daily_ip_requests
         WHERE day=? ORDER BY request_count DESC,ip_hash LIMIT 50`).all(day)
+      const bannedUsernames = database.query(`SELECT b.username,b.dropped_user_id,b.note,b.created_at,
+        actor.handle actor_handle FROM banned_usernames b JOIN users actor ON actor.id=b.dropped_by
+        ORDER BY b.created_at DESC,b.username LIMIT 100`).all()
       return { stats: dashboardStats(database), total, reports, actions, suspended, illegalReports,
-        ipRequests } as DatabaseDomainOutput<K>
+        ipRequests, bannedUsernames } as DatabaseDomainOutput<K>
     }
     case 'admin.blockIp': {
       const { day, hash, actorId } = input as DatabaseDomainInput<'admin.blockIp'>
@@ -786,6 +789,10 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
         return { status: 'already_suspended' } as DatabaseDomainOutput<K>
       }
       if (action === 'restore' && !target.suspended_at) return { status: 'not_suspended' } as DatabaseDomainOutput<K>
+      if (action === 'drop-username') {
+        const dropped = dropUsername(database, id, actorId, note)
+        return (dropped.status === 'ready' ? { status: 'ready', imageKeys: [] } : dropped) as DatabaseDomainOutput<K>
+      }
       let imageKeys: string[] = []
       database.transaction(() => {
         if (action === 'suspend') {
