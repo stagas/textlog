@@ -374,9 +374,11 @@ export function postAgeTitle(createdAt: string, now = Date.now()) {
   const date = new Date(createdAt.includes('T') ? createdAt : createdAt.replace(' ', 'T') + 'Z')
   const elapsedMinutes = Math.max(0, Math.round((now - date.getTime()) / 60_000))
   const relative = elapsedMinutes < 60
-    ? `${elapsedMinutes}mins ago`
+    ? 'just now'
+    : elapsedMinutes < 12 * 60
+    ? 'recently'
     : elapsedMinutes < 24 * 60
-    ? `${Math.round(elapsedMinutes / 60)}h ago`
+    ? 'not long ago'
     : elapsedMinutes >= 365 * 24 * 60
     ? `${Math.round(elapsedMinutes / (365 * 24 * 60))}y ago`
     : elapsedMinutes >= 30 * 24 * 60

@@ -2503,7 +2503,7 @@ test('Post pages use the context text as the canonical permalink', () => {
     canonicalTimestamp: true,
   }))
   expect(html).toContain('<a class="post-context" href="/post/2" title="')
-  expect(html).toContain('mins ago">just wrote</a>'
+  expect(html).toContain('just now">just wrote</a>'
     + '<span class="post-context post-context-punctuation">:</span>')
   expect(html).not.toContain('post-context-age')
   expect(html).not.toContain('href="/post/2">wrote:</a>')
@@ -2521,7 +2521,10 @@ test('Post page ages use approximate minute, hour, day, and older buckets', () =
   expect(approximatePostAge(ago(2 * 24 * 60 * 60_000), now)).toEqual({ label: '2d', wording: 'not long ago' })
   expect(approximatePostAge(ago(30 * 24 * 60 * 60_000), now)).toEqual({ label: '30d', wording: 'some time ago' })
   expect(approximatePostAge(ago(31 * 24 * 60 * 60_000), now)).toEqual({ label: 'older', wording: 'a long time ago' })
-  expect(postAgeTitle('2026-08-25T05:00:00Z', now)).toBe('Aug 2026, 7h ago')
+  expect(postAgeTitle(ago(30 * 60_000), now)).toBe('Aug 2026, just now')
+  expect(postAgeTitle('2026-08-25T05:00:00Z', now)).toBe('Aug 2026, recently')
+  expect(postAgeTitle(ago(18 * 60 * 60_000), now)).toBe('Aug 2026, not long ago')
+  expect(postAgeTitle(ago(24 * 60 * 60_000), now)).toBe('Aug 2026, 1d ago')
   expect(postAgeTitle(ago(8 * 24 * 60 * 60_000), now)).toBe('Aug 2026, 1w ago')
   expect(postAgeTitle(ago(14 * 24 * 60 * 60_000), now)).toBe('Aug 2026, 2w ago')
   expect(postAgeTitle(ago(60 * 24 * 60 * 60_000), now)).toBe('Jun 2026, 2mo ago')
@@ -2553,7 +2556,7 @@ test('Thread pages show approximate wording only on the primary post', () => {
 
   expect(html).not.toContain('post-context-age')
   expect(html).toContain('>wrote recently</a><span class="post-context post-context-punctuation">:</span>')
-  expect(html.match(/recently/g)).toHaveLength(1)
+  expect(html.match(/wrote recently/g)).toHaveLength(1)
 })
 
 test('Reply pages show a top link after the linked reply context', () => {
