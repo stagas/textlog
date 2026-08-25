@@ -2566,7 +2566,8 @@ test('Reply pages show a top link after the linked reply context', () => {
     topHref: '/post/1?from=%2Flatest%23post-3',
     backHref: '/latest#post-3',
   }))
-  expect(html).toContain('<a class="post-context" href="/post/3">replied to</a>')
+  expect(html).toContain('<a class="post-context" href="/post/3" title="')
+  expect(html).toContain('ago">replied to</a>')
   expect(html).toContain('<div class="post-navigation-actions"><a class="quiet post-top-link" '
     + 'href="/post/1?from=%2Flatest%23post-3">top</a><a class="quiet post-back-link" '
     + 'href="/latest#post-3">back</a></div>')
