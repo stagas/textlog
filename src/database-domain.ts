@@ -859,11 +859,11 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
         conversationRootId: root?.id ?? null } as DatabaseDomainOutput<K>
     }
     case 'posts.editData': {
-      const { id, userId } = input as DatabaseDomainInput<'posts.editData'>
+      const { id, userId, moderator } = input as DatabaseDomainInput<'posts.editData'>
       const post = database.query(`SELECT p.id,p.user_id,p.parent_id,p.body,p.created_at,p.deleted_at,u.handle
         FROM posts p JOIN users u ON u.id=p.user_id WHERE p.id=? AND p.deleted_at IS NULL`).get(id) as PostView | null
       if (!post) return { status: 'not_found' } as DatabaseDomainOutput<K>
-      if (post.user_id !== userId) return { status: 'forbidden' } as DatabaseDomainOutput<K>
+      if (post.user_id !== userId && !moderator) return { status: 'forbidden' } as DatabaseDomainOutput<K>
       const parent = post.parent_id
         ? database.query(`SELECT p.id,p.user_id,p.parent_id,p.body,p.created_at,p.deleted_at,
         p.has_latex,p.has_links,p.has_code,u.handle,u.bio FROM posts p JOIN users u ON u.id=p.user_id WHERE p.id=?`)
@@ -1475,12 +1475,13 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
         post: apiPost(database, created.id, origin, userId)! } as DatabaseDomainOutput<K>
     }
     case 'api.updatePost': {
-      const { userId, id, body, origin } = input as DatabaseDomainInput<'api.updatePost'>
+      const { userId, id, body, origin, moderator } = input as DatabaseDomainInput<'api.updatePost'>
       const existing = database.query('SELECT user_id,parent_id FROM posts WHERE id=? AND deleted_at IS NULL')
         .get(id) as { user_id: number; parent_id: number | null } | null
       if (!existing) return { status: 'not_found' } as DatabaseDomainOutput<K>
-      if (existing.user_id !== userId) return { status: 'forbidden' } as DatabaseDomainOutput<K>
+      if (existing.user_id !== userId && !moderator) return { status: 'forbidden' } as DatabaseDomainOutput<K>
       updatePost(database, id, body)
+      if (existing.user_id !== userId) recordAdminAction(database, userId, 'edit_post', existing.user_id, id, '')
       return { status: 'ready', post: apiPost(database, id, origin, userId)! } as DatabaseDomainOutput<K>
     }
     case 'api.deletePost': {

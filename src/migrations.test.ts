@@ -5,6 +5,33 @@ import { databaseVersion, latestMigrationVersion, migrations, normalizeInternalP
 import { sessionHash } from './sessions'
 
 describe('database migrations', () => {
+  test('adds moderator edits to the admin action constraint without losing existing actions', () => {
+    const database = new Database(':memory:')
+    database.run(`PRAGMA foreign_keys=ON;
+      CREATE TABLE users(id INTEGER PRIMARY KEY);
+      CREATE TABLE posts(id INTEGER PRIMARY KEY);
+      INSERT INTO users VALUES(1),(2);
+      INSERT INTO posts VALUES(10);
+      CREATE TABLE admin_actions (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,actor_id INTEGER NOT NULL REFERENCES users(id),
+        action TEXT NOT NULL CHECK(action IN ('delete_post','suspend_user','restore_user','delete_user',
+          'resolve_report','dismiss_report','drop_username')),
+        target_user_id INTEGER REFERENCES users(id),target_post_id INTEGER REFERENCES posts(id),
+        note TEXT NOT NULL DEFAULT '',created_at TEXT DEFAULT CURRENT_TIMESTAMP);
+      CREATE INDEX admin_actions_created ON admin_actions(created_at DESC);
+      INSERT INTO admin_actions(actor_id,action,target_user_id,target_post_id,note)
+        VALUES(1,'delete_post',2,10,'existing');
+      PRAGMA user_version=130;`)
+
+    expect(runMigrations(database)).toBe(latestMigrationVersion)
+    expect(database.query('SELECT action,note FROM admin_actions').get()).toEqual({
+      action: 'delete_post', note: 'existing',
+    })
+    expect(() => database.query(`INSERT INTO admin_actions(actor_id,action,target_user_id,target_post_id)
+      VALUES(1,'edit_post',2,10)`).run()).not.toThrow()
+    expect(database.query('PRAGMA foreign_key_check').all()).toEqual([])
+  })
+
   test('upgrades the original single feed key schema without invalidating its key', () => {
     const database = new Database(':memory:')
     database.run(`PRAGMA foreign_keys=ON;

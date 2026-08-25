@@ -425,6 +425,17 @@ test('post edit places draft and delete above the textarea and keeps preview bef
   expect(html.indexOf('>preview</button>')).toBeLessThan(html.indexOf('>save →</button>'))
 })
 
+test('moderator post editing keeps save but hides owner-only actions', () => {
+  const moderator = { id: 1, handle: 'moderator', email: 'gstagas@gmail.com', bio: '' }
+  const post = { id: 2, user_id: 2, parent_id: null, body: 'Original', created_at: '2026-08-12 09:00:00',
+    deleted_at: null, handle: 'writer' }
+  const html = renderToStaticMarkup(React.createElement(EditPost, { user: moderator, post, moderator: true }))
+
+  expect(html).toContain('>save →</button>')
+  expect(html).not.toContain('value="unpublish"')
+  expect(html).not.toContain('href="/post/2/delete"')
+})
+
 test('post deletion uses the standard centered confirmation panel', () => {
   const user = { id: 1, handle: 'writer', email: 'writer@example.com', bio: '' }
   const post = { id: 2, user_id: 1, parent_id: null, body: 'Original note', created_at: '2026-08-12 09:00:00',
@@ -2801,6 +2812,7 @@ test('Post renders moderation controls only for admins on the detail page', () =
     user: { id: 1, handle: 'admin', email: 'GSTAGAS@gmail.com', bio: '' },
     p,
     showModerateAction: true,
+    showOwnerActions: true,
   }))
   const userDetailHtml = renderToStaticMarkup(React.createElement(Post, {
     user: { id: 3, handle: 'reader', email: 'reader@example.com', bio: '' },
@@ -2810,7 +2822,10 @@ test('Post renders moderation controls only for admins on the detail page', () =
 
   expect(adminFeedHtml).not.toContain('/admin/posts/2/delete')
   expect(adminDetailHtml).toContain('/admin/posts/2/delete')
+  expect(adminDetailHtml).toContain('href="/post/2/edit" aria-label="edit this post">edit</a>')
+  expect(adminDetailHtml.indexOf('href="/post/2/edit"')).toBeLessThan(adminDetailHtml.indexOf('<div class="postfoot">'))
   expect(userDetailHtml).not.toContain('/admin/posts/2/delete')
+  expect(userDetailHtml).not.toContain('href="/post/2/edit"')
 })
 
 test('Post detail places moderate immediately before report for admins', () => {

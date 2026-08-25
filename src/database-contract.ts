@@ -221,7 +221,7 @@ export type DatabaseDomainOperations = {
   'posts.threadReplies': { input: { parentId: number; viewerId: number }; output: PostView[] }
   'posts.detail': { input: { id: number; viewerId: number };
     output: { status: 'not_found' } | { status: 'ready'; post: PostView; conversationRootId: number | null } }
-  'posts.editData': { input: { id: number; userId: number };
+  'posts.editData': { input: { id: number; userId: number; moderator?: boolean };
     output: { status: 'not_found' } | { status: 'forbidden' } | { status: 'ready'; post: PostView;
       parent: PostView | null } }
   'posts.replyParent': { input: { id: number; userId: number };
@@ -310,7 +310,7 @@ export type DatabaseDomainOperations = {
   'api.createPost': { input: { userId: number; body: string; parentId: number | null; origin: string };
     output: { status: 'not_found' } | { status: 'locked' } | { status: 'rate_limited'; retryAfter: number } | { status: 'ready'; id: number;
       duplicate: boolean; post: ApiPost } }
-  'api.updatePost': { input: { userId: number; id: number; body: string; origin: string };
+  'api.updatePost': { input: { userId: number; id: number; body: string; origin: string; moderator?: boolean };
     output: { status: 'not_found' | 'forbidden' } | { status: 'ready'; post: ApiPost } }
   'api.deletePost': { input: { userId: number; id: number };
     output: { status: 'not_found' | 'forbidden' } | { status: 'ready'; imageKeys: string[]; parentId: number | null } }

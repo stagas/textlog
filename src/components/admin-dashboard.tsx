@@ -126,6 +126,9 @@ export function AdminDashboard(
                   <p>{report.post_deleted_at ? '(deleted post)' : report.post_body}</p>
                   <div className="admin-report-targets">
                     <a href={`/post/${report.post_id}`}>post #{report.post_id}</a>
+                    {!report.post_deleted_at && (
+                      <a href={`/post/${report.post_id}/edit?from=${encodeURIComponent('/admin')}`}>edit post</a>
+                    )}
                     <a href={`/u/${report.author_handle}`}>@{report.author_handle}</a>
                     {report.resolver_handle && <span>handled by @{report.resolver_handle}</span>}
                   </div>

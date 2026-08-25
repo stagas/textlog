@@ -6,9 +6,10 @@ import { Post, PreviewPost, ThreadReplies } from './post'
 import { ReplyBox, ReplyPreview } from './reply'
 
 export function EditPost(
-  { user, post, parent, replies = [], error, body = post.body, preview = false, returnPath, suggestionSearch }: {
+  { user, post, parent, replies = [], error, body = post.body, preview = false, returnPath, suggestionSearch,
+    moderator = false }: {
     user: User
-    post: PostRow
+    post: PostRow & { handle?: string }
     parent?: PostView | null
     replies?: PostView[]
     error?: string
@@ -16,6 +17,7 @@ export function EditPost(
     preview?: boolean
     returnPath?: string
     suggestionSearch?: PostingSuggestionSearch | null
+    moderator?: boolean
   },
 ) {
   const returnQuery = returnPath ? '?from=' + encodeURIComponent(returnPath) : ''
@@ -32,13 +34,13 @@ export function EditPost(
         {preview && !post.parent_id && (
           <div className="compose-post-preview">
             <h2>preview</h2>
-            <PreviewPost p={{ ...post, body, handle: user.handle, bio: user.bio }} />
+            <PreviewPost p={{ ...post, body, handle: post.handle || user.handle, bio: moderator ? '' : user.bio }} />
           </div>
         )}
         <ReplyBox action={'/post/' + post.id + '/edit'} body={body} error={error} suggestionSearch={suggestionSearch}
           className={post.parent_id && parent ? 'replybox' : 'compose edit-post-compose'}
           hidden={returnPath && <input type="hidden" name="from" value={returnPath} />}
-          beforeTextarea={
+          beforeTextarea={!moderator &&
             <div className="edit-post-delete-action">
               <button className="secondary-action unpublish-action" name="action" value="unpublish" formNoValidate>
                 draft

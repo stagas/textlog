@@ -35,6 +35,10 @@ function fixture() {
       PRIMARY KEY(reporter_id,post_id));
     CREATE TABLE post_hashtags (post_id INTEGER NOT NULL,tag TEXT NOT NULL,PRIMARY KEY(post_id,tag));
     CREATE TABLE post_mentions (post_id INTEGER NOT NULL,user_id INTEGER NOT NULL,PRIMARY KEY(post_id,user_id));
+    CREATE TABLE admin_actions (id INTEGER PRIMARY KEY AUTOINCREMENT,actor_id INTEGER NOT NULL,
+      action TEXT NOT NULL CHECK(action IN ('delete_post','edit_post','suspend_user','restore_user','delete_user',
+        'resolve_report','dismiss_report','drop_username')),
+      target_user_id INTEGER,target_post_id INTEGER,note TEXT,created_at TEXT DEFAULT CURRENT_TIMESTAMP);
     CREATE TABLE for_you_reads (user_id INTEGER NOT NULL,event_key TEXT NOT NULL,
       read_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,PRIMARY KEY(user_id,event_key));
     CREATE TABLE sessions (token_hash TEXT PRIMARY KEY,user_id INTEGER NOT NULL,expires_at INTEGER NOT NULL,
@@ -87,6 +91,26 @@ beforeEach(() => {
 })
 
 describe('API writes', () => {
+  test('allows an explicitly authorized moderator to edit another user\'s post and records it', async () => {
+    const { database } = fixture()
+
+    expect(await executeDatabaseDomain(database, 'posts.editData', { id: 1, userId: 1 })).toEqual({
+      status: 'forbidden',
+    })
+    expect((await executeDatabaseDomain(database, 'posts.editData', {
+      id: 1, userId: 1, moderator: true,
+    })).status).toBe('ready')
+
+    const result = await executeDatabaseDomain(database, 'api.updatePost', {
+      id: 1, userId: 1, body: 'edited by moderator', origin: 'https://textlog.test', moderator: true,
+    })
+    expect(result.status).toBe('ready')
+    expect(database.query('SELECT body FROM posts WHERE id=1').get()).toEqual({ body: 'edited by moderator' })
+    expect(database.query(`SELECT actor_id,action,target_user_id,target_post_id FROM admin_actions`).get()).toEqual({
+      actor_id: 1, action: 'edit_post', target_user_id: 2, target_post_id: 1,
+    })
+  })
+
   test('refuses without a token, and never accepts a cookie', async () => {
     const { app } = fixture()
 

@@ -619,10 +619,11 @@ export function Post({
           <a className="quiet post-top-link"
             href={replyAnchorReturnPath(parent.top_id || parent.id, parent.top_id || parent.id, returnPath)}>top</a>
         )}
-        {(flatHref || treeHref || showOwnerActions && user?.id === p.user_id || topHref || backHref || topActions) && (
+        {(flatHref || treeHref || showOwnerActions && (user?.id === p.user_id || canModerate) || topHref || backHref
+          || topActions) && (
           <div className="post-navigation-actions">
             {topActions}
-            {showOwnerActions && user?.id === p.user_id && (
+            {showOwnerActions && (user?.id === p.user_id || canModerate) && (
               <div className="post-actions">
                 <a className="quiet" href={'/post/' + p.id + '/edit' + actionQuery}
                   aria-label="edit this post">edit</a>

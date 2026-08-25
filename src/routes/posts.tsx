@@ -15,6 +15,7 @@ import { form, page, redirect, rememberFeed, safeNext } from './shared'
 
 import type { Hono } from 'hono'
 import { publishPost } from '../api-broker'
+import { isAdmin } from '../admin'
 import { cachedAnonymousPostPage, materializeAnonymousPostPage } from '../anonymous-post-page-cache'
 import type { PostingSuggestionSearch } from '../components/page-shared'
 import { safeRefererPath } from '../http'
@@ -294,11 +295,14 @@ export function registerPostsRoutes(app: Hono) {
     const user = currentUser(c.req.raw)
     if (!user) return redirect('/enter?next=' + encodeURIComponent(c.req.path))
     const id = Number(c.req.param('id'))
-    const loaded = Number.isInteger(id) ? await databaseService().call('posts.editData', { id, userId: user.id }) : null
+    const loaded = Number.isInteger(id) ? await databaseService().call('posts.editData', {
+      id, userId: user.id, moderator: isAdmin(user),
+    }) : null
     if (!loaded || loaded.status === 'not_found') return c.text('Not found', 404)
     if (loaded.status === 'forbidden') return c.text('Forbidden', 403)
     const returnPath = c.req.query('from') ? safeNext(c.req.query('from')) : undefined
-    return page(<EditPost user={user} post={loaded.post} parent={loaded.parent} returnPath={returnPath} />)
+    return page(<EditPost user={user} post={loaded.post} parent={loaded.parent} returnPath={returnPath}
+      moderator={user.id !== loaded.post.user_id} />)
   })
 
   app.post('/post/:id/poll', async c => {
@@ -342,14 +346,19 @@ export function registerPostsRoutes(app: Hono) {
     const user = currentUser(c.req.raw)
     if (!user) return redirect('/enter')
     const id = Number(c.req.param('id'))
-    const loaded = Number.isInteger(id) ? await databaseService().call('posts.editData', { id, userId: user.id }) : null
+    const moderator = isAdmin(user)
+    const loaded = Number.isInteger(id) ? await databaseService().call('posts.editData', {
+      id, userId: user.id, moderator,
+    }) : null
     if (!loaded || loaded.status === 'not_found') return c.text('Not found', 404)
     if (loaded.status === 'forbidden') return c.text('Forbidden', 403)
     const { post, parent } = loaded
     const f = await form(c.req.raw)
     const returnPath = f.from ? safeNext(f.from) : undefined
     const body = normalizePostBody(f.body || '')
+    const moderating = user.id !== post.user_id
     if (f.action === 'unpublish') {
+      if (moderating) return c.text('Forbidden', 403)
       const result = await databaseService().call('api.unpublishPost', { userId: user.id, id, body })
       if (result.status !== 'ready') {
         return c.text(result.status === 'not_found' ? 'Not found' : 'Forbidden',
@@ -361,27 +370,28 @@ export function registerPostsRoutes(app: Hono) {
     const suggestionSearch = await postingSuggestionSearch(f, user.id)
     if (suggestionSearch) {
       return page(
-        <EditPost user={user} post={post} parent={parent} body={body} returnPath={returnPath}
+        <EditPost user={user} post={post} parent={parent} body={body} returnPath={returnPath} moderator={moderating}
           suggestionSearch={suggestionSearch} />,
       )
     }
     if (!validPostBody(body)) {
       return page(
-        <EditPost user={user} post={post} parent={parent} body={body} returnPath={returnPath}
+        <EditPost user={user} post={post} parent={parent} body={body} returnPath={returnPath} moderator={moderating}
           error={postBodyValidationMessage(body)} />,
         400,
       )
     }
     if (f.action === 'preview') {
       return page(
-        <EditPost user={user} post={post} parent={parent} body={body} preview returnPath={returnPath} />,
+        <EditPost user={user} post={post} parent={parent} body={body} preview returnPath={returnPath}
+          moderator={moderating} />,
       )
     }
     try {
       const moderation = await moderateText(body)
       if (!moderation.ok) {
         return page(
-          <EditPost user={user} post={post} parent={parent} body={body} returnPath={returnPath}
+          <EditPost user={user} post={post} parent={parent} body={body} returnPath={returnPath} moderator={moderating}
             error={moderationMessage(moderation.reason)} />,
           moderation.reason === 'flagged' ? 422 : 503,
         )
@@ -391,6 +401,7 @@ export function registerPostsRoutes(app: Hono) {
         id,
         body,
         origin: new URL(c.req.url).origin,
+        moderator,
       })
       if (result.status !== 'ready') {
         return c.text(result.status === 'not_found' ? 'Not found' : 'Forbidden',
@@ -402,7 +413,7 @@ export function registerPostsRoutes(app: Hono) {
     catch (error) {
       logError(`POST /post/${id}/edit`, error)
       return page(
-        <EditPost user={user} post={post} parent={parent} body={body} returnPath={returnPath}
+        <EditPost user={user} post={post} parent={parent} body={body} returnPath={returnPath} moderator={moderating}
           error={saveFailureMessage} />,
         500,
       )
