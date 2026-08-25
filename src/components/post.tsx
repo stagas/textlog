@@ -356,6 +356,47 @@ export function conversationTopPath(threadRootId: number, replyId: number, retur
   return `/post/${threadRootId}?from=${encodeURIComponent(deepPostPath)}#post-${threadRootId}`
 }
 
+type PostAge = { label: string; wording: 'just' | 'recently' | 'not long ago' | 'some time ago' | 'a long time ago' }
+
+export function approximatePostAge(createdAt: string, now = Date.now()): PostAge {
+  const timestamp = Date.parse(createdAt.includes('T') ? createdAt : createdAt.replace(' ', 'T') + 'Z')
+  const elapsedMinutes = Math.max(0, Math.round((now - timestamp) / 60_000))
+  if (elapsedMinutes < 60) return { label: `${elapsedMinutes}mins`, wording: 'just' }
+  const elapsedHours = Math.round(elapsedMinutes / 60)
+  if (elapsedMinutes < 12 * 60) return { label: `${elapsedHours}h`, wording: 'recently' }
+  const elapsedDays = Math.max(1, Math.round(elapsedHours / 24))
+  if (elapsedMinutes < 7 * 24 * 60) return { label: `${elapsedDays}d`, wording: 'not long ago' }
+  if (elapsedDays <= 30) return { label: `${elapsedDays}d`, wording: 'some time ago' }
+  return { label: 'older', wording: 'a long time ago' }
+}
+
+export function postAgeTitle(createdAt: string, now = Date.now()) {
+  const date = new Date(createdAt.includes('T') ? createdAt : createdAt.replace(' ', 'T') + 'Z')
+  const elapsedMinutes = Math.max(0, Math.round((now - date.getTime()) / 60_000))
+  const relative = elapsedMinutes < 60
+    ? `${elapsedMinutes}mins ago`
+    : elapsedMinutes < 24 * 60
+    ? `${Math.round(elapsedMinutes / 60)}h ago`
+    : elapsedMinutes >= 365 * 24 * 60
+    ? `${Math.round(elapsedMinutes / (365 * 24 * 60))}y ago`
+    : elapsedMinutes >= 30 * 24 * 60
+    ? `${Math.round(elapsedMinutes / (30 * 24 * 60))}mo ago`
+    : elapsedMinutes > 7 * 24 * 60
+    ? `${Math.round(elapsedMinutes / (7 * 24 * 60))}w ago`
+    : `${Math.round(elapsedMinutes / (24 * 60))}d ago`
+  const monthYear = new Intl.DateTimeFormat('en', { month: 'short', year: 'numeric', timeZone: 'UTC' }).format(date)
+  return `${monthYear}, ${relative}`
+}
+
+function ageContextLabel(label: string, wording: PostAge['wording']) {
+  const plain = label.replace(/:$/, '')
+  const mentionSuffix = ' and mentioned you'
+  const hasMention = plain.endsWith(mentionSuffix)
+  const attribution = hasMention ? plain.slice(0, -mentionSuffix.length) : plain
+  const aged = wording === 'just' ? `just ${attribution}` : `${attribution} ${wording}`
+  return aged + (hasMention ? mentionSuffix : '') + ':'
+}
+
 export function PreviewPost({ p }: { p: PostView }) {
   const formPrefix = `preview-post-${p.id}`
   return (
@@ -433,6 +474,8 @@ export function Post({
     ])) }
   }
   const parent = showParent ? p.parent : null
+  const postPageAge = canonicalTimestamp ? approximatePostAge(p.created_at) : null
+  const postPageAgeTitle = canonicalTimestamp ? postAgeTitle(p.created_at) : undefined
   const parentContinued = parent?.parent_id && parent.parent?.user_id === parent.user_id
   const parentContextTarget = parent?.parent_id && !parent.poll && !parentContinued
     && parent.parent?.user_id !== user?.id ? parent.parent : null
@@ -470,6 +513,9 @@ export function Post({
         ? 'replied to'
         : undefined
       : `wrote${p.viewer_mentioned ? ' and mentioned you' : ''}:`)
+  if (postPageAge && !contextTarget && typeof contextLabel === 'string') {
+    contextLabel = ageContextLabel(contextLabel, postPageAge.wording)
+  }
   if (p.viewer_mentioned && !contextTarget && typeof contextLabel === 'string'
     && !contextLabel.includes('mentioned you')) {
     contextLabel = contextLabel.replace(/:$/, '') + ' and mentioned you:'
@@ -526,8 +572,11 @@ export function Post({
         {contextLabel && (canonicalTimestamp
           ? (
             <>
-              <a className="post-context" href={`/post/${p.id}`}>
-                {typeof contextLabel === 'string' ? contextLabel.replace(/:$/, '') : contextLabel}
+              <a className="post-context" href={`/post/${p.id}`} title={postPageAgeTitle}>
+                {typeof contextLabel === 'string'
+                  ? (contextTarget && postPageAge?.wording === 'just' ? 'just ' : '')
+                    + contextLabel.replace(/:$/, '')
+                  : contextLabel}
               </a>
               {!contextTarget && <span className="post-context post-context-punctuation">:</span>}
             </>
@@ -545,8 +594,10 @@ export function Post({
                 href={`/u/${contextTarget.handle}${referenceQuery}`} rel={navigationRel}
                 navigationQuery={referenceQuery} referenceData={contextTarget.bio_reference} />}
             <span className={`post-context post-context-punctuation${
-              p.viewer_mentioned ? ' post-context-mention-suffix' : ''}`}>
-              {p.viewer_mentioned ? ' and mentioned you:' : ':'}
+              p.viewer_mentioned ? ' post-context-mention-suffix' : ''}`} title={postPageAgeTitle}>
+              {p.viewer_mentioned
+                ? `${postPageAge && postPageAge.wording !== 'just' ? `\u00a0${postPageAge.wording} ` : ' '}and mentioned you:`
+                : postPageAge && postPageAge.wording !== 'just' ? `\u00a0${postPageAge.wording}:` : ':'}
             </span>
           </>
         )}

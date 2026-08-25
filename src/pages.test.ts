@@ -38,8 +38,8 @@ import {
   RecapEmails,
   Reply,
 } from './components/pages'
-import { conversationTopPath, FeedThreads, isProbablyNonEnglish, Post, postedReplyPath, PreviewPost, replyAnchorReturnPath,
-  translateHref,
+import { approximatePostAge, conversationTopPath, FeedThreads, isProbablyNonEnglish, Post, postAgeTitle,
+  postedReplyPath, PreviewPost, replyAnchorReturnPath, translateHref,
   ThreadReplies } from './components/post'
 import { SearchResults, searchPersonReturnPath, searchPostReturnPath } from './components/search'
 
@@ -2494,17 +2494,38 @@ test('Post carries its originating cursor into detail, reply, and edit links', (
 })
 
 test('Post pages use the context text as the canonical permalink', () => {
+  const thirtyMinutesAgo = new Date(Date.now() - 30 * 60_000).toISOString()
   const html = renderToStaticMarkup(React.createElement(Post, {
-    p: { id: 2, user_id: 1, parent_id: null, body: 'A note', handle: 'writer', created_at: '2026-08-03 12:00:00',
+    p: { id: 2, user_id: 1, parent_id: null, body: 'A note', handle: 'writer', created_at: thirtyMinutesAgo,
       deleted_at: null },
     user: null,
     returnPath: '/latest?page=2#post-2',
     canonicalTimestamp: true,
   }))
-  expect(html).toContain('<a class="post-context" href="/post/2">wrote</a>'
+  expect(html).toContain('<a class="post-context" href="/post/2" title="')
+  expect(html).toContain('mins ago">just wrote</a>'
     + '<span class="post-context post-context-punctuation">:</span>')
+  expect(html).not.toContain('post-context-age')
   expect(html).not.toContain('href="/post/2">wrote:</a>')
   expect(html).not.toContain('>permalink</a>')
+})
+
+test('Post page ages use approximate minute, hour, day, and older buckets', () => {
+  const now = Date.parse('2026-08-25T12:00:00Z')
+  const ago = (milliseconds: number) => new Date(now - milliseconds).toISOString()
+
+  expect(approximatePostAge(ago(30 * 60_000), now)).toEqual({ label: '30mins', wording: 'just' })
+  expect(approximatePostAge(ago(6 * 60 * 60_000), now)).toEqual({ label: '6h', wording: 'recently' })
+  expect(approximatePostAge(ago(11 * 60 * 60_000), now)).toEqual({ label: '11h', wording: 'recently' })
+  expect(approximatePostAge(ago(12 * 60 * 60_000), now)).toEqual({ label: '1d', wording: 'not long ago' })
+  expect(approximatePostAge(ago(2 * 24 * 60 * 60_000), now)).toEqual({ label: '2d', wording: 'not long ago' })
+  expect(approximatePostAge(ago(30 * 24 * 60 * 60_000), now)).toEqual({ label: '30d', wording: 'some time ago' })
+  expect(approximatePostAge(ago(31 * 24 * 60 * 60_000), now)).toEqual({ label: 'older', wording: 'a long time ago' })
+  expect(postAgeTitle('2026-08-25T05:00:00Z', now)).toBe('Aug 2026, 7h ago')
+  expect(postAgeTitle(ago(8 * 24 * 60 * 60_000), now)).toBe('Aug 2026, 1w ago')
+  expect(postAgeTitle(ago(14 * 24 * 60 * 60_000), now)).toBe('Aug 2026, 2w ago')
+  expect(postAgeTitle(ago(60 * 24 * 60 * 60_000), now)).toBe('Jun 2026, 2mo ago')
+  expect(postAgeTitle(ago(2 * 365 * 24 * 60 * 60_000), now)).toBe('Aug 2024, 2y ago')
 })
 
 test('Public post pages end with join and browse actions', () => {
@@ -2517,6 +2538,22 @@ test('Public post pages end with join and browse actions', () => {
   expect(html).toContain('class="action-pair post-page-actions"')
   expect(html).toContain('class="button" href="/enter" rel="nofollow">join the community</a>')
   expect(html).toContain('href="/hot">browse more notes</a>')
+})
+
+test('Thread pages show approximate wording only on the primary post', () => {
+  const createdAt = new Date(Date.now() - 6 * 60 * 60_000).toISOString()
+  const html = renderToStaticMarkup(React.createElement(PublicThread, {
+    post: { id: 1, user_id: 1, parent_id: null, body: 'Root', handle: 'root', created_at: createdAt,
+      deleted_at: null },
+    replies: [
+      { id: 2, user_id: 2, parent_id: 1, body: 'First', handle: 'one', created_at: createdAt, deleted_at: null },
+      { id: 3, user_id: 3, parent_id: 2, body: 'Second', handle: 'two', created_at: createdAt, deleted_at: null },
+    ],
+  }))
+
+  expect(html).not.toContain('post-context-age')
+  expect(html).toContain('>wrote recently</a><span class="post-context post-context-punctuation">:</span>')
+  expect(html.match(/recently/g)).toHaveLength(1)
 })
 
 test('Reply pages show a top link after the linked reply context', () => {
