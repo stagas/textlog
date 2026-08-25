@@ -6,7 +6,7 @@ import { hasUnreadForYou, hasUnreadToMe, markForYouEntriesRead, unreadForYouCoun
   unreadToMeCount } from './for-you-state'
 import { resolveHandle } from './handles'
 import { unreadLatestCount } from './latest-state'
-import { enrichPosts, visibleTagFollowerCounts, visibleUserProfileStats } from './posts'
+import { enrichPosts, loadBioReferenceData, visibleTagFollowerCounts, visibleUserProfileStats } from './posts'
 import type { PersonalizedFeedData, PersonalizedTimelineRow, User } from './types'
 
 export const PERSONALIZED_FEED_SNAPSHOT_VERSION = 8
@@ -156,13 +156,20 @@ export function loadPersonalizedFeed(database: Database, user: User, page: numbe
     : new Set<number>()
   const tagCounts = visibleTagFollowerCounts(database, timeline.flatMap(row => row.target_tag ? [row.target_tag] : []),
     user.id)
+  const bioReferences = new Map(relevantIds.map(id => {
+    const row = timeline.find(candidate => candidate.actor_id === id)
+    const bio = row?.actor_bio || timeline.find(candidate => targets.get(candidate.target_handle || '') === id)?.target_bio || ''
+    return [id, loadBioReferenceData(database, bio, id, user.id)] as const
+  }))
   const enriched = new Map(
     enrichPosts(database, timeline.filter(row => ['post', 'reply', 'mention'].includes(row.activity_kind)), user.id)
       .map(post => [post.id, post]),
   )
   const resultTimeline = timeline.map(row => ({ ...row, renderedPost: row.id ? enriched.get(row.id) : undefined,
     actorProfileStats: actorStats.get(row.actor_id), actorFollowsViewer: followerIds.has(row.actor_id),
+    actorBioReferences: bioReferences.get(row.actor_id),
     targetProfileStats: row.target_handle ? targetStats.get(targets.get(row.target_handle)!) : undefined,
+    targetBioReferences: row.target_handle ? bioReferences.get(targets.get(row.target_handle)!) : undefined,
     targetFollowsViewer: row.target_handle ? followerIds.has(targets.get(row.target_handle)!) : undefined,
     tagFollowerCount: row.target_tag ? tagCounts[row.target_tag] || 0 : undefined })
   )

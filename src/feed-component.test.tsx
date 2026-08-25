@@ -371,6 +371,37 @@ test('activity targets do not duplicate their details in hovercards', () => {
   expect(signupHtml).not.toContain('reference-menu-popover')
 })
 
+test('activity bios enrich hashtag and mention references with hovercards', () => {
+  const followActivity = {
+    ...postActivity(12, 4, 'carol'),
+    activity_kind: 'user_follow' as const,
+    event_key: 'user-follow:references',
+    target_handle: 'dave',
+    target_bio: 'Builds #tools with @alice',
+    targetBioReferences: {
+      hashtagCounts: { tools: 3 },
+      hashtagFollowerCounts: { tools: 2 },
+      hashtagFollowing: { tools: false },
+      mentionBios: { alice: 'Makes useful things' },
+      mentionNoteCounts: { alice: 4 },
+      mentionProfileStats: { alice: { notes: 4, replies: 0, followers: 2, following: 1, followingTags: 0 } },
+      mentionFollowing: { alice: false },
+      mentionFollowsViewer: { alice: false },
+      linkPreviews: {},
+    },
+    renderedPost: undefined,
+  }
+  const user = { id: 1, handle: 'reader', email: 'reader@example.com', bio: '',
+    handle_chosen_at: '2026-08-19 09:00:00' }
+  const html = renderToStaticMarkup(<Feed user={user} data={{ timeline: [followActivity], page: 1,
+    totalPages: 1, toMeCount: 0, forYouCount: 0, forYouUnread: false, toMeUnread: false }} />)
+
+  expect(html).toContain('class="reference-menu-popover reference-menu-popover-tag"')
+  expect(html).toContain('Makes useful things')
+  expect(html).toContain('action="/tag-follow/tools"')
+  expect(html).toContain('action="/follow/alice"')
+})
+
 test('a followed-you event offers to follow back', () => {
   const followActivity = {
     ...postActivity(12, 4, 'carol'),

@@ -4,7 +4,7 @@ import { displayBio, linkify } from '../utils'
 import { Layout } from './layout'
 import { MetaRow } from './meta'
 import { ActionPair, FeedTabs, Pagination } from './page-shared'
-import { FeedThreads, Post, TagReference, UserReference } from './post'
+import { BioReferenceForms, FeedThreads, Post, TagReference, UserReference } from './post'
 
 export type ForYouCursor = { createdAt: string; key: string; direction: 'next' | 'previous' }
 
@@ -132,7 +132,7 @@ export function Feed({ user, data, title, path = '/for-you', pageUrl, notificati
               <UserReference handle={row.actor_handle} bio={row.actor_bio} noteCount={row.actorProfileStats?.notes || 0}
                 stats={row.actorProfileStats} following={!!row.following} followsViewer={row.actorFollowsViewer}
                 user={user} href={`/u/${row.actor_handle}${fromQuery}`} navigationQuery={fromQuery}
-                showPopover={row.activity_kind !== 'signup'} />
+                referenceData={row.actorBioReferences} showPopover={row.activity_kind !== 'signup'} />
               <span className="activity-context">
                 {row.activity_kind === 'signup' ? 'signed up:' : row.target_is_viewer ? 'followed you:' : 'followed'}
               </span>
@@ -141,7 +141,7 @@ export function Feed({ user, data, title, path = '/for-you', pageUrl, notificati
                   <UserReference handle={row.target_handle!} bio={row.target_bio || ''} noteCount={row.posts || 0}
                     stats={row.targetProfileStats} following={!!row.following} user={user}
                     followsViewer={row.targetFollowsViewer} href={`/u/${row.target_handle}${fromQuery}`}
-                    navigationQuery={fromQuery} showPopover={false} />
+                    navigationQuery={fromQuery} referenceData={row.targetBioReferences} showPopover={false} />
                 )
                 : row.activity_kind === 'tag_follow'
                 ? (
@@ -154,10 +154,29 @@ export function Feed({ user, data, title, path = '/for-you', pageUrl, notificati
               {!row.target_is_viewer && (row.activity_kind === 'user_follow' || row.activity_kind === 'tag_follow')
                 && <span className="activity-follow-full-stop">.</span>}
             </MetaRow>
-            {(row.activity_kind === 'user_follow' || row.activity_kind === 'signup') && row.target_bio?.trim() && (
-              <p className="profile-bio"
-                dangerouslySetInnerHTML={{ __html: linkify(displayBio(row.target_bio)) }} />
-            )}
+            {(row.activity_kind === 'user_follow' || row.activity_kind === 'signup') && row.target_bio?.trim() && (() => {
+              const references = row.activity_kind === 'signup' || row.target_is_viewer
+                ? row.actorBioReferences
+                : row.targetBioReferences
+              const prefix = `activity-${anchor}-bio`
+              return <>
+                <p className="profile-bio" dangerouslySetInnerHTML={{
+                  __html: linkify(displayBio(row.target_bio), references?.mentionBios, [], undefined, undefined,
+                    fromQuery, references?.hashtagCounts, references?.mentionNoteCounts, {
+                      signedIn: true,
+                      currentHandle: user.handle,
+                      formPrefix: prefix,
+                      mentionFollowing: references?.mentionFollowing,
+                      mentionFollowsViewer: references?.mentionFollowsViewer,
+                      mentionProfileStats: references?.mentionProfileStats,
+                      hashtagFollowing: references?.hashtagFollowing,
+                      hashtagFollowerCounts: references?.hashtagFollowerCounts,
+                      linkPreviews: references?.linkPreviews,
+                    }),
+                }} />
+                <BioReferenceForms data={references} prefix={prefix} user={user} />
+              </>
+            })()}
           </div>
           {row.actor_id !== user.id && (
             <form method="post" action={row.target_is_viewer || row.activity_kind === 'signup'

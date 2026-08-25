@@ -166,6 +166,8 @@ export type PersonalizedTimelineRow = PostView & {
   renderedPost?: PostView
   actorProfileStats?: UserProfileStats
   targetProfileStats?: UserProfileStats
+  actorBioReferences?: BioReferenceData
+  targetBioReferences?: BioReferenceData
   actorFollowsViewer?: boolean
   targetFollowsViewer?: boolean
   tagFollowerCount?: number
