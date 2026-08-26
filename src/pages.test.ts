@@ -1498,7 +1498,7 @@ test('footer links to stats next to the app host', () => {
   const html = renderToStaticMarkup(React.createElement(About, { user: null }))
 
   expect(html).toMatch(
-    /<span><a class="footer-host-link" href="\/">[^<]+<\/a> <span aria-hidden="true">\/<\/span> <a class="footer-host-link" href="\/stats">stats<\/a> <span aria-hidden="true">·<\/span> <span class="footer-response-time">__TEXTLOG_RESPONSE_TIME__<\/span><\/span>/,
+    /<span><a class="footer-host-link" href="\/">[^<]+<\/a> <span aria-hidden="true">\/<\/span> <a class="footer-host-link" href="\/stats">stats<\/a><\/span>/,
   )
 })
 

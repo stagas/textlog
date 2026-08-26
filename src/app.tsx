@@ -22,7 +22,6 @@ import { flushIpRequests, isIpBlocked, loadBlockedIps, recordIpRequest } from '.
 import { ClientErrorRateLimiter, HOURLY_REQUEST_BLOCK_SECONDS, HOURLY_REQUEST_RATE_LIMIT,
   HOURLY_REQUEST_RATE_WINDOW_SECONDS, NESTED_FROM_MAX_DEPTH, nestedFromDepth, NestedFromRateLimiter,
   rateLimitedResponse, RequestRateLimiter } from './request-rate-limit'
-import { updateResponseTime } from './response-time'
 import { registerAccountRoutes } from './routes/account'
 import { registerAdminRoutes } from './routes/admin'
 import { registerApiRoutes } from './routes/api'
@@ -265,19 +264,6 @@ app.use('*', async (c, next) => {
 app.use('*', async (c, next) => {
   await next()
   c.res = await compressResponse(c.req.raw, c.res)
-})
-
-app.use('*', async (c, next) => {
-  const started = performance.now()
-  await next()
-  if (!c.res.headers.get('content-type')?.includes('text/html')) return
-  const html = await c.res.text()
-  const headers = new Headers(c.res.headers)
-  headers.delete('content-length')
-  c.res = new Response(updateResponseTime(html, performance.now() - started), {
-    status: c.res.status,
-    headers,
-  })
 })
 
 app.use('*', async (c, next) => {

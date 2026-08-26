@@ -11,7 +11,6 @@ import React from 'react'
 import { instance } from '../../instance.config'
 import { isAdmin } from '../admin'
 import { resolvedDensity } from '../request-preferences'
-import { RESPONSE_TIME_PLACEHOLDER } from '../response-time'
 import type { User } from '../types'
 import { isMobileRequest } from '../user-agent'
 import { enterHref } from './auth-links'
@@ -252,8 +251,7 @@ export function Layout({
         <footer className="site-footer">
           <span>
             <a className="footer-host-link" href="/">{appHost()}</a> <span aria-hidden="true">/</span>{' '}
-            <a className="footer-host-link" href="/stats">stats</a> <span aria-hidden="true">·</span>{' '}
-            <span className="footer-response-time">{RESPONSE_TIME_PLACEHOLDER}</span>
+            <a className="footer-host-link" href="/stats">stats</a>
           </span>
           {(instance.links.getMobileApp || (user && ready)) && (
             <div className="footer-mobile-actions">

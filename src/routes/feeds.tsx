@@ -73,6 +73,8 @@ type RecentFeedVisitor = {
 
 const recentFeedVisitors = new Map<number, RecentFeedVisitor>()
 const recentFeedVisitorLimit = 30
+const feedWarmTimes = new Map<string, number>()
+const feedWarmIntervalMs = 5_000
 
 const feedVariantCookieNames = new Set([
   'appearance',
@@ -156,8 +158,14 @@ function warmOtherFeedPages(request: Request, current: PrimaryFeed,
   const pageSize = resolvedPageSize(request)
   const kinds: PrimaryFeed[] = user ? ['for-you', 'hot', 'latest'] : ['hot', 'latest']
   setTimeout(() => {
-    void Promise.all(kinds.filter(kind => kind !== current)
-      .map(kind => warmFeedPage(request, kind, user, pageSize))).catch(error => {
+    const now = Date.now()
+    const pending = kinds.filter(kind => kind !== current).filter(kind => {
+      const key = `${user?.id ?? -1}:${kind}:${pageSize}:${feedVariantCookie(request)}`
+      if (now - (feedWarmTimes.get(key) || 0) < feedWarmIntervalMs) return false
+      feedWarmTimes.set(key, now)
+      return true
+    })
+    void Promise.all(pending.map(kind => warmFeedPage(request, kind, user, pageSize))).catch(error => {
         console.error('Could not warm feed caches', error)
       })
   }, 0)
@@ -282,26 +290,29 @@ export function registerFeedsRoutes(app: Hono) {
     const expandedRootId = positiveInteger(c.req.query('expand'))
     if (cursorValue && !decodeForYouCursor(cursorValue)) return c.text('Invalid cursor', 400)
     const notificationBanner = await showNotificationBanner(c.req.raw, user)
-    const data = await databaseService().call('feeds.personalizedPage', { user, page: currentPage(c.req.query('page')),
-      pageSize: resolvedPageSize(c.req.raw), toMe: true, path: '/to-me' })
-    const render = () =>
+    let dataPromise: Promise<PersonalizedFeedData> | undefined
+    const data = () => dataPromise ||= databaseService().call('feeds.personalizedPage', {
+      user, page: currentPage(c.req.query('page')), pageSize: resolvedPageSize(c.req.raw), toMe: true, path: '/to-me',
+    })
+    const render = async () =>
       page(
-        <Feed user={user} data={data} title="to me" path="/to-me" toMe notificationBanner={notificationBanner}
+        <Feed user={user} data={await data()} title="to me" path="/to-me" toMe notificationBanner={notificationBanner}
           expandedRootId={expandedRootId} />,
       )
-    const renderForCache = () => {
-      const consumed = new Set(data.timeline.filter(row => row.unread).map(row => row.event_key)).size
+    const renderForCache = async () => {
+      const feed = await data()
+      const consumed = new Set(feed.timeline.filter(row => row.unread).map(row => row.event_key)).size
       return page(
         <Feed user={user}
-          data={{ ...data, forYouCount: Math.max(0, data.forYouCount - consumed),
-            toMeCount: Math.max(0, data.toMeCount - consumed),
-            timeline: data.timeline.map(row => ({ ...row, unread: 0 })) }} title="to me" path="/to-me" toMe
+          data={{ ...feed, forYouCount: Math.max(0, feed.forYouCount - consumed),
+            toMeCount: Math.max(0, feed.toMeCount - consumed),
+            timeline: feed.timeline.map(row => ({ ...row, unread: 0 })) }} title="to me" path="/to-me" toMe
           notificationBanner={notificationBanner} expandedRootId={expandedRootId} />,
       )
     }
     const response = !notificationBanner && currentPage(c.req.query('page')) === 1 && !cursorValue && !expandedRootId
       ? await rpcMaterializedFeedPage(c.req.raw, 'to-me', user.id, render, false, 0, false, renderForCache)
-      : render()
+      : await render()
     return rememberFeed(response, 'following')
   })
 

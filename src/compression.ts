@@ -2,6 +2,26 @@ import { brotliCompressSync, constants, gzipSync } from 'node:zlib'
 import { preferredStylesEncoding } from './styles'
 
 const compressibleType = /^(?:text\/|application\/(?:json|javascript|xml|rss\+xml|atom\+xml|xhtml\+xml|svg\+xml))/i
+const compressedBodies = new Map<string, Uint8Array>()
+const MAX_COMPRESSED_BODIES = 256
+
+function cachedCompression(source: Uint8Array, encoding: 'br' | 'gzip') {
+  const key = `${encoding}:${Bun.hash(source)}:${source.byteLength}`
+  const cached = compressedBodies.get(key)
+  if (cached) {
+    compressedBodies.delete(key)
+    compressedBodies.set(key, cached)
+    return cached
+  }
+  const compressed = Uint8Array.from(encoding === 'br'
+    ? brotliCompressSync(source, { params: { [constants.BROTLI_PARAM_QUALITY]: 4 } })
+    : gzipSync(source, { level: 4 }))
+  compressedBodies.set(key, compressed)
+  while (compressedBodies.size > MAX_COMPRESSED_BODIES) {
+    compressedBodies.delete(compressedBodies.keys().next().value!)
+  }
+  return compressed
+}
 
 function addVary(headers: Headers, value: string) {
   const existing = headers.get('vary')
@@ -31,9 +51,7 @@ export async function compressResponse(request: Request, response: Response, thr
   // spend tens of milliseconds on a feed response, serializing otherwise independent requests. Moderate settings
   // retain nearly all of the transfer-size benefit while keeping per-request CPU bounded. Static assets are still
   // precompressed separately by the styles pipeline.
-  const compressed = encoding === 'br'
-    ? brotliCompressSync(source, { params: { [constants.BROTLI_PARAM_QUALITY]: 4 } })
-    : gzipSync(source, { level: 4 })
+  const compressed = cachedCompression(source, encoding)
   const headers = new Headers(response.headers)
   headers.delete('content-length')
   headers.set('content-encoding', encoding)
