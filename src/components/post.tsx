@@ -907,7 +907,7 @@ export function Post({
 export function ThreadReplies(
   { parentId, replies, user, returnPath, excludePostId, flat = false, showMissingContinuations = false,
     continuationLabel = 'more', continuationReturnPath, contextUnreadPostIds, contextDirectedUnreadPostIds,
-    highlightTerms = [], hideTopMeta = false, collapsedPreviewPostId }: {
+    highlightTerms = [], hideTopMeta = false, collapsedPreviewPostIds = [] }: {
       parentId: number
       replies: PostView[]
       user: User | null
@@ -921,7 +921,7 @@ export function ThreadReplies(
       contextDirectedUnreadPostIds?: ReadonlySet<number>
       highlightTerms?: string[]
       hideTopMeta?: boolean
-      collapsedPreviewPostId?: number
+      collapsedPreviewPostIds?: number[]
     },
 ) {
   if (!replies.length) return null
@@ -934,13 +934,16 @@ export function ThreadReplies(
   for (const siblings of children.values()) {
     siblings.sort((a, b) => a.created_at.localeCompare(b.created_at) || a.id - b.id)
   }
+  const collapsedPreviewPosts = new Set(collapsedPreviewPostIds)
   const collapsedPreviewPath = new Set<number>()
-  if (collapsedPreviewPostId) {
+  if (collapsedPreviewPostIds.length) {
     const byId = new Map(replies.map(reply => [reply.id, reply]))
-    let current = byId.get(collapsedPreviewPostId)
-    while (current && current.id !== parentId) {
-      collapsedPreviewPath.add(current.id)
-      current = current.parent_id ? byId.get(current.parent_id) : undefined
+    for (const previewPostId of collapsedPreviewPostIds) {
+      let current = byId.get(previewPostId)
+      while (current && current.id !== parentId) {
+        collapsedPreviewPath.add(current.id)
+        current = current.parent_id ? byId.get(current.parent_id) : undefined
+      }
     }
   }
   const descendantCounts = new Map<number, number>()
@@ -966,11 +969,11 @@ export function ThreadReplies(
     return (
       <div
         className={`reply-node${collapsedPreviewPath.has(reply.id) ? ' collapsed-preview-path' : ''}${
-          reply.id === collapsedPreviewPostId ? ' collapsed-preview-post' : ''
+          collapsedPreviewPosts.has(reply.id) ? ' collapsed-preview-post' : ''
         }`}
         key={reply.id}
       >
-        {reply.id === collapsedPreviewPostId && (
+        {reply.id === collapsedPreviewPostIds.at(-1) && (
           <div className="quiet thread-ancestor-gap collapsed-preview-gap" aria-label="Earlier replies hidden">…</div>
         )}
         {reply.feed_ancestor_gap && (
@@ -1009,7 +1012,7 @@ export function ThreadReplies(
     const branch = children.get(id) || []
     if (!branch.length) return null
     return (
-      <div className={`reply-branch${collapsedPreviewPostId ? ' feed-thread-collapsed-branch' : ''}`}>
+      <div className={`reply-branch${collapsedPreviewPostIds.length ? ' feed-thread-collapsed-branch' : ''}`}>
         <div className="thread-branch-content">
           {branch.map(reply => {
             const descendantCount = visibleDescendantCount(reply.id)
@@ -1144,20 +1147,20 @@ export function FeedThreads(
     visit(root.id)
     return linear
   }
-  const collapsedPreviewPost = (root: PostView) => {
-    let selected: PostView | undefined
+  const collapsedPreviewPosts = (root: PostView) => {
+    const selected: PostView[] = []
     const visit = (parentId: number) => {
       for (const child of children.get(parentId) || []) {
-        if (!child.deleted_at && (!selected || child.created_at > selected.created_at
-          || (child.created_at === selected.created_at && child.id > selected.id)))
-        {
-          selected = child
-        }
+        if (!child.deleted_at) selected.push(child)
         visit(child.id)
       }
     }
     visit(root.id)
-    return selected
+    selected.sort((a, b) => b.created_at.localeCompare(a.created_at) || b.id - a.id)
+    if (selected.length > 1
+      && Date.parse(`${selected[0].created_at.replace(' ', 'T')}Z`)
+        - Date.parse(`${selected[1].created_at.replace(' ', 'T')}Z`) < 24 * 60 * 60_000) return selected.slice(0, 2)
+    return selected.slice(0, 1)
   }
   const roots = treePosts.filter(post => !post.parent_id || !ids.has(post.parent_id))
     .sort((a, b) => conversationPosition(a) - conversationPosition(b))
@@ -1166,11 +1169,12 @@ export function FeedThreads(
       {roots.map(post => {
         const anchoredReturnPath = `${returnPath}#post-${post.id}`
         const visibleReplies = visibleReplyCount(post)
-        const collapsedPreview = visibleReplies > 1 ? collapsedPreviewPost(post) : undefined
+        const collapsedPreview = visibleReplies > 0 ? collapsedPreviewPosts(post) : []
+        const canCollapse = visibleReplies > collapsedPreview.length
         const continuesElsewhere = (post.reply_count || 0) > visibleReplies
         const foldControlId = visibleReplies > 0 ? `feed-thread-fold-${post.id}` : undefined
         const reconstructedLinearHotThread = promoteAncestors === 'all' && isLinearConversation(post)
-        const collapsed = visibleReplies > 1 && !reconstructedLinearHotThread
+        const collapsed = canCollapse && !reconstructedLinearHotThread
           && !hasUnreadReply(post) && expandedRootId !== post.id
         const expandedReturnPath = (() => {
           const target = new URL(returnPath, 'http://textlog.local')
@@ -1195,7 +1199,8 @@ export function FeedThreads(
               showMissingContinuations continuationLabel="more"
               continuationReturnPath={collapsed ? expandedReturnPath : returnPath}
               contextUnreadPostIds={contextUnreadPostIds} contextDirectedUnreadPostIds={contextDirectedUnreadPostIds}
-              highlightTerms={highlightTerms} hideTopMeta={hideTopMeta} collapsedPreviewPostId={collapsedPreview?.id} />
+              highlightTerms={highlightTerms} hideTopMeta={hideTopMeta}
+              collapsedPreviewPostIds={canCollapse ? collapsedPreview.map(reply => reply.id) : []} />
           </div>
         )
       })}

@@ -718,7 +718,7 @@ test('feed threads highlight search matches while retaining tappable reply navig
   expect(html).not.toContain('>read</a>')
 })
 
-test('feed conversations fold multiple read replies but expand one or any unread reply', () => {
+test('feed conversations stay expanded when all visible replies fit the preview', () => {
   const root = { id: 1, user_id: 1, parent_id: null, body: 'Root', created_at: '2026-08-23 09:00:00', deleted_at: null,
     handle: 'root', reply_count: 2 }
   const firstReply = { id: 2, user_id: 2, parent_id: 1, body: 'Reply', created_at: '2026-08-23 10:00:00',
@@ -731,11 +731,11 @@ test('feed conversations fold multiple read replies but expand one or any unread
     posts: [root, firstReply, secondReply],
   }))
 
-  expect(html).toContain('class="thread-fold-input" type="checkbox" id="feed-thread-fold-1" checked=""')
-  expect(html).toContain('collapsed-preview-post')
-  expect(html).toContain('class="quiet thread-ancestor-gap collapsed-preview-gap" '
-    + 'aria-label="Earlier replies hidden">…</div>')
-  expect(html).toContain('href="/post/2?from=%2Flatest%3Fexpand%3D1%23post-2"')
+  expect(html).toContain('class="thread-fold-input" type="checkbox" id="feed-thread-fold-1"')
+  expect(html).not.toContain('id="feed-thread-fold-1" checked=""')
+  expect(html).not.toContain('collapsed-preview-post')
+  expect(html).not.toContain('aria-label="Earlier replies hidden"')
+  expect(html).toContain('href="/post/2?from=%2Flatest%23post-2"')
 
   const returned = renderToStaticMarkup(React.createElement(FeedThreads, {
     user: null,
@@ -763,7 +763,7 @@ test('feed conversations fold multiple read replies but expand one or any unread
   expect(unread).not.toContain('id="feed-thread-fold-1" checked=""')
 })
 
-test('folded feed conversations preview the newest reply instead of the deepest reply', () => {
+test('folded feed conversations preview the two newest replies from a recent burst', () => {
   const root = { id: 1, user_id: 1, parent_id: null, body: 'Root', created_at: '2026-08-23 09:00:00', deleted_at: null,
     handle: 'root', reply_count: 2 }
   const olderReply = { id: 2, user_id: 2, parent_id: 1, body: 'Older reply', created_at: '2026-08-23 10:00:00',
@@ -779,7 +779,24 @@ test('folded feed conversations preview the newest reply instead of the deepest 
   }))
 
   expect(html).toMatch(/collapsed-preview-post[^>]*>[\s\S]*?Newest reply/)
-  expect(html).not.toMatch(/collapsed-preview-post[^>]*>[\s\S]*?Older deep reply/)
+  expect(html.match(/collapsed-preview-post/g)).toHaveLength(2)
+  expect(html).toMatch(/collapsed-preview-post[^>]*>[\s\S]*?Older deep reply/)
+})
+
+test('folded feed conversations reveal only one reply when the next newest is over 24 hours older', () => {
+  const root = { id: 1, user_id: 1, parent_id: null, body: 'Root', created_at: '2026-08-20 09:00:00', deleted_at: null,
+    handle: 'root', reply_count: 2 }
+  const olderReply = { id: 2, user_id: 2, parent_id: 1, body: 'Older reply', created_at: '2026-08-23 10:00:00',
+    deleted_at: null, handle: 'reply', reply_count: 0, parent: root }
+  const recentReply = { id: 3, user_id: 3, parent_id: 1, body: 'Recent reply', created_at: '2026-08-25 11:00:00',
+    deleted_at: null, handle: 'recent', reply_count: 0, parent: root }
+  const html = renderToStaticMarkup(React.createElement(FeedThreads, {
+    user: null,
+    returnPath: '/latest',
+    posts: [root, olderReply, recentReply],
+  }))
+
+  expect(html.match(/collapsed-preview-post/g)).toHaveLength(1)
 })
 
 test('promoted deep feed activity anchors at its recent branch instead of resurrecting the root', () => {
