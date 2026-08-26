@@ -1,4 +1,6 @@
-export function isWhisperThread(postId: 'p.id' | number = 'p.id') {
+type WhisperPostId = 'p.id' | 'descendants.id' | 'child.id' | 'reply.id' | number
+
+export function isWhisperThread(postId: WhisperPostId = 'p.id') {
   return `EXISTS (WITH RECURSIVE whisper_ancestors(id,parent_id) AS (
     SELECT whisper_post.id,whisper_post.parent_id FROM posts whisper_post WHERE whisper_post.id=${postId}
     UNION ALL
@@ -9,7 +11,7 @@ export function isWhisperThread(postId: 'p.id' | number = 'p.id') {
     WHERE whisper_tag.tag='whisper')`
 }
 
-export function excludesWhisperPosts(postId: 'p.id' | number = 'p.id') {
+export function excludesWhisperPosts(postId: WhisperPostId = 'p.id') {
   return `NOT ${isWhisperThread(postId)}`
 }
 

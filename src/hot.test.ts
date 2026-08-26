@@ -63,6 +63,34 @@ describe('hot feed ranking', () => {
     expect(getHotPosts(database, 20, null, asOf)).toEqual([])
   })
 
+  test('does not count whisper branches as hot activity', () => {
+    database.run(`INSERT INTO users(id,handle) VALUES(2,'replier');
+      INSERT INTO users(id,handle) VALUES(3,'another');`)
+    post(1, '2026-08-03 08:00:00')
+    postBy(2, 2, '2026-08-03 10:00:00', 1)
+    database.query('INSERT INTO post_hashtags(post_id,tag) VALUES(2,\'whisper\')').run()
+    postBy(3, 3, '2026-08-03 11:00:00', 2)
+
+    recordHotActivity(database, 2)
+    expect(database.query(`SELECT score,reply_count,activity_count,latest_activity_at
+      FROM post_hot WHERE post_id=1`).get()).toEqual({
+      score: 0,
+      reply_count: 0,
+      activity_count: 0,
+      latest_activity_at: '2026-08-03 08:00:00',
+    })
+
+    rebuildHotPosts(database)
+    expect(database.query(`SELECT score,reply_count,activity_count,latest_activity_at
+      FROM post_hot WHERE post_id=1`).get()).toEqual({
+      score: 0,
+      reply_count: 0,
+      activity_count: 0,
+      latest_activity_at: '2026-08-03 08:00:00',
+    })
+    expect(getHotPosts(database, 20, null, asOf)).toEqual([])
+  })
+
   test('excludes reply-free posts', () => {
     post(1, '2026-08-03 12:00:00')
     post(2, '2026-08-02 12:00:00')

@@ -186,6 +186,7 @@ export function rebuildHotPosts(database: Database, postIds?: number[]) {
       LEFT JOIN users reply_user ON reply_user.id=descendants.user_id
       JOIN users candidate_user ON candidate_user.id=candidate.user_id
       WHERE descendants.deleted_at IS NULL
+        AND ${excludesWhisperPosts('descendants.id')}
         AND ${replyIdentity}!=${candidateIdentity}
     ), activity(candidate_id,created_at,weight,is_reply) AS (
       SELECT id,created_at,${postWeight},0 FROM posts WHERE deleted_at IS NULL
@@ -205,6 +206,7 @@ export function rebuildHotPosts(database: Database, postIds?: number[]) {
       LEFT JOIN users reply_user ON reply_user.id=descendants.user_id
       JOIN users candidate_user ON candidate_user.id=candidate.user_id
       WHERE descendants.deleted_at IS NULL
+        AND ${excludesWhisperPosts('descendants.id')}
         AND ${replyIdentity}!=${candidateIdentity}
     ), latest AS (
       SELECT candidate_id,max(created_at) latest_activity_at FROM (
@@ -217,7 +219,9 @@ export function rebuildHotPosts(database: Database, postIds?: number[]) {
       JOIN posts candidate ON candidate.id=descendants.candidate_id
       LEFT JOIN users reply_user ON reply_user.id=descendants.user_id
       JOIN users candidate_user ON candidate_user.id=candidate.user_id
-      WHERE descendants.deleted_at IS NULL AND ${replyIdentity}!=${candidateIdentity}
+      WHERE descendants.deleted_at IS NULL
+        AND ${excludesWhisperPosts('descendants.id')}
+        AND ${replyIdentity}!=${candidateIdentity}
       GROUP BY descendants.candidate_id
     ) SELECT activity.candidate_id post_id,latest.latest_activity_at,sum(activity.is_reply) reply_count,
       COALESCE(totals.activity_count,0) activity_count,
@@ -266,6 +270,7 @@ export function rebuildHotPosts(database: Database, postIds?: number[]) {
     LEFT JOIN users reply_user ON reply_user.id=descendants.user_id
     JOIN users candidate_user ON candidate_user.id=candidate.user_id
     WHERE descendants.deleted_at IS NULL
+      AND ${excludesWhisperPosts('descendants.id')}
       AND ${replyIdentity}!=${candidateIdentity}
   ), activity(id,created_at,weight,boosts_recency,is_reply) AS (
     SELECT id,created_at,${postWeight},1,0 FROM posts WHERE id=? AND deleted_at IS NULL
@@ -279,6 +284,7 @@ export function rebuildHotPosts(database: Database, postIds?: number[]) {
     LEFT JOIN users reply_user ON reply_user.id=descendants.user_id
     JOIN users candidate_user ON candidate_user.id=candidate.user_id
     WHERE descendants.deleted_at IS NULL
+      AND ${excludesWhisperPosts('descendants.id')}
     ${
     tracksPollVotes
       ? `UNION ALL
@@ -391,7 +397,8 @@ export function getHotPosts(
       FROM post_depth JOIN posts child ON child.parent_id=post_depth.id
   ), direct_counts AS (
     SELECT p.id,count(child.id) direct_reply_count FROM posts p
-    LEFT JOIN posts child ON child.parent_id=p.id AND child.deleted_at IS NULL GROUP BY p.id
+    LEFT JOIN posts child ON child.parent_id=p.id AND child.deleted_at IS NULL
+      AND ${excludesWhisperPosts('child.id')} GROUP BY p.id
   ), branch_candidates AS (
     SELECT root.id root_id,candidate.id head_id,root_count.direct_reply_count root_direct_replies,
       candidate_count.direct_reply_count head_direct_replies,
@@ -433,6 +440,7 @@ export function getHotPosts(
       JOIN posts candidate ON candidate.id=reply.parent_id
       JOIN users candidate_user ON candidate_user.id=candidate.user_id
       WHERE reply.deleted_at IS NULL AND ${activityAuthorIdentity}!=${candidateAuthorIdentity}
+        AND ${excludesWhisperPosts('reply.id')}
       GROUP BY reply.parent_id,${activityAuthorIdentity}
   ), participant_recency AS (
     SELECT candidate_id,sum(pow(0.5,max(0,(julianday(?) - julianday(latest_reply_at))*24)
