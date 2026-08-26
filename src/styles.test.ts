@@ -137,11 +137,15 @@ describe('in-memory stylesheet', () => {
       + '  grid-template-rows: 1fr;')
     expect(css).toContain('.post-page-thread.feed-thread:has(> .thread-fold-input:checked)'
       + ':has(> .feed-thread-collapsed-branch) {\n  margin-bottom: var(--space-5);')
-    expect(css).toContain('.reply-node:not(.collapsed-preview-path) {\n  display: none;')
-    expect(css).toContain('.thread-ancestor-gap:not(.collapsed-preview-gap) {\n  display: none;')
+    expect(css).toContain('.feed-thread-collapsed-branch {\n  interpolate-size: allow-keywords;')
+    expect(css).toContain('.feed-thread-collapsed-branch .collapsed-preview-gap {\n'
+      + '  height: 0;\n  padding-top: 0;')
+    expect(css).toContain('.reply-node:not(.collapsed-preview-path) {\n  height: 0;')
+    expect(css).toContain('.thread-ancestor-gap:not(.collapsed-preview-gap) {\n  height: 0;')
+    expect(css).toContain('transition: height 200ms ease, padding 200ms ease;')
     expect(css).toContain('.collapsed-preview-post>.post,\n'
       + '.feed-thread>.thread-fold-input:checked~.feed-thread-collapsed-branch .collapsed-preview-gap {\n'
-      + '  display: block;')
+      + '  height: auto;')
   })
 
   test('animates grouped activity disclosures with a collapsible grid track', async () => {

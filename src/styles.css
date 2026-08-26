@@ -5951,14 +5951,27 @@ a.post-context:hover {
   grid-template-rows: 0fr;
 }
 
-.collapsed-preview-gap {
-  display: none;
-}
-
 .feed-thread>.thread-fold-input:checked~.feed-thread-collapsed-branch {
   grid-template-rows: 1fr;
   visibility: visible;
   transition: none;
+}
+
+.feed-thread-collapsed-branch {
+  interpolate-size: allow-keywords;
+}
+
+.feed-thread-collapsed-branch .reply-node,
+.feed-thread-collapsed-branch .collapsed-preview-path>.post,
+.feed-thread-collapsed-branch .thread-ancestor-gap {
+  height: auto;
+  overflow: hidden;
+  transition: height 200ms ease, padding 200ms ease;
+}
+
+.feed-thread-collapsed-branch .collapsed-preview-gap {
+  height: 0;
+  padding-top: 0;
 }
 
 .post-page-thread.feed-thread:has(> .thread-fold-input:checked):has(> .feed-thread-collapsed-branch) {
@@ -5966,16 +5979,19 @@ a.post-context:hover {
 }
 
 .feed-thread>.thread-fold-input:checked~.feed-thread-collapsed-branch .reply-node:not(.collapsed-preview-path) {
-  display: none;
+  height: 0;
 }
 
 .feed-thread>.thread-fold-input:checked~.feed-thread-collapsed-branch .collapsed-preview-path>.post {
-  display: none;
+  height: 0;
+  padding-top: 0;
+  padding-bottom: 0;
 }
 
 .feed-thread>.thread-fold-input:checked~.feed-thread-collapsed-branch
   .thread-ancestor-gap:not(.collapsed-preview-gap) {
-  display: none;
+  height: 0;
+  padding-top: 0;
 }
 
 .feed-thread>.thread-fold-input:checked~.feed-thread-collapsed-branch .collapsed-preview-path>.reply-branch {
@@ -5985,7 +6001,13 @@ a.post-context:hover {
 
 .feed-thread>.thread-fold-input:checked~.feed-thread-collapsed-branch .collapsed-preview-post>.post,
 .feed-thread>.thread-fold-input:checked~.feed-thread-collapsed-branch .collapsed-preview-gap {
-  display: block;
+  height: auto;
+  padding-top: var(--space-2);
+}
+
+.feed-thread>.thread-fold-input:checked~.feed-thread-collapsed-branch .collapsed-preview-post>.post {
+  padding-top: var(--space-3);
+  padding-bottom: var(--space-4);
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -6001,6 +6023,12 @@ a.post-context:hover {
   .thread-branch-content {
     overflow: visible;
     animation: none;
+  }
+
+  .feed-thread-collapsed-branch .reply-node,
+  .feed-thread-collapsed-branch .collapsed-preview-path>.post,
+  .feed-thread-collapsed-branch .thread-ancestor-gap {
+    transition: none;
   }
 
   .thread-fold-input:checked~.reply-branch .thread-branch-content {
