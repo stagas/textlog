@@ -1043,15 +1043,32 @@ export function FeedThreads(
   if (!posts.length) return null
   const treePosts = [...posts]
   const ids = new Set(posts.map(post => post.id))
+  const externalChildren = new Map<number, PostView[]>()
+  for (const post of posts) {
+    if (!post.parent_id || ids.has(post.parent_id)) continue
+    externalChildren.set(post.parent_id, [...(externalChildren.get(post.parent_id) || []), post])
+  }
+  for (const [parentId, children] of externalChildren) {
+    if (!promoteAncestors && children.length < 2) continue
+    const parent = children.find(child => child.parent?.id === parentId)?.parent
+    if (!parent || ids.has(parent.id)) continue
+    treePosts.push({ ...parent, user_id: parent.user_id ?? -1,
+      parent_id: parent.parent_id ?? null, reply_count: parent.reply_count || 0,
+      ...(promoteAncestors && promoteAncestors !== 'all' && parent.parent_id != null
+        ? { feed_ancestor_gap: true }
+        : {}) })
+    ids.add(parent.id)
+  }
   if (promoteAncestors) {
     for (const post of posts) {
       const immediateParent = post.parent
       if (!immediateParent) continue
-      if (ids.has(immediateParent.id)) continue
-      treePosts.push({ ...immediateParent, user_id: immediateParent.user_id ?? -1,
-        parent_id: immediateParent.parent_id ?? null, reply_count: immediateParent.reply_count || 0,
-        feed_ancestor_gap: promoteAncestors !== 'all' && immediateParent.parent_id != null })
-      ids.add(immediateParent.id)
+      if (!ids.has(immediateParent.id)) {
+        treePosts.push({ ...immediateParent, user_id: immediateParent.user_id ?? -1,
+          parent_id: immediateParent.parent_id ?? null, reply_count: immediateParent.reply_count || 0,
+          feed_ancestor_gap: promoteAncestors !== 'all' && immediateParent.parent_id != null })
+        ids.add(immediateParent.id)
+      }
       if (promoteAncestors === 'all') {
         let ancestor = immediateParent.parent
         while (ancestor) {
@@ -1074,6 +1091,26 @@ export function FeedThreads(
         ids.add(rootAncestor.id)
       }
     }
+    if (promoteAncestors !== 'all') {
+      let promotedSharedParent = true
+      while (promotedSharedParent) {
+        promotedSharedParent = false
+        const sharedAncestors = new Map<number, PostView[]>()
+        for (const post of treePosts) {
+          if (!post.parent_id || ids.has(post.parent_id)) continue
+          sharedAncestors.set(post.parent_id, [...(sharedAncestors.get(post.parent_id) || []), post])
+        }
+        for (const [parentId, children] of sharedAncestors) {
+          if (children.length < 2) continue
+          const parent = children.find(child => child.parent?.id === parentId)?.parent
+          if (!parent || ids.has(parent.id)) continue
+          treePosts.push({ ...parent, user_id: parent.user_id ?? -1,
+            parent_id: parent.parent_id ?? null, reply_count: parent.reply_count || 0 })
+          ids.add(parent.id)
+          promotedSharedParent = true
+        }
+      }
+    }
     for (let index = 0; index < treePosts.length; index++) {
       const post = treePosts[index]
       if (!post.parent_id || ids.has(post.parent_id)) continue
@@ -1082,20 +1119,6 @@ export function FeedThreads(
       treePosts[index] = { ...post, parent_id: ancestor?.id ?? null,
         ...(contextUnreadPostIds?.has(post.id) ? { parent: ancestor } : {}),
         feed_ancestor_gap: post.feed_ancestor_gap || !!ancestor }
-    }
-  }
-  else {
-    const references = new Map<number, PostView[]>()
-    for (const post of posts) {
-      if (!post.parent_id || ids.has(post.parent_id) || !post.parent) continue
-      references.set(post.parent_id, [...(references.get(post.parent_id) || []), post])
-    }
-    for (const siblings of references.values()) {
-      if (siblings.length < 2) continue
-      const parent = siblings[0].parent!
-      treePosts.push({ ...parent, user_id: parent.user_id ?? -1, parent_id: parent.parent_id ?? null,
-        reply_count: parent.reply_count || 0 })
-      ids.add(parent.id)
     }
   }
   const positions = new Map(treePosts.map((post, index) => [post.id, index]))

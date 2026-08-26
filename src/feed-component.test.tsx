@@ -3,7 +3,7 @@ import React from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
 import { Feed, groupSimilarActivities } from './components/feed'
 import { HotFeed } from './components/hot-feed'
-import { postAgeTitle } from './components/post'
+import { FeedThreads, postAgeTitle } from './components/post'
 import { PublicFeed } from './components/public-feed'
 import type { ParentPost, PersonalizedTimelineRow } from './types'
 
@@ -288,6 +288,66 @@ test('feed trees render a shared off-page parent once for sibling replies', () =
   expect(html.match(/class="parent-quote/g)).toBeNull()
   expect(html.indexOf('id="post-30"')).toBeLessThan(html.indexOf('id="post-32"'))
   expect(html.indexOf('id="post-31"')).toBeLessThan(html.indexOf('id="post-32"'))
+})
+
+test('feed trees promote a shared parent when only one sibling carries the quoted record', () => {
+  const parent = { id: 494, user_id: 2, parent_id: null, body: 'shared parent 494',
+    created_at: '2026-08-08 14:20:43', deleted_at: null, handle: 'alice', reply_count: 2 }
+  const older = { id: 496, user_id: 3, parent_id: parent.id, body: 'older reply',
+    created_at: '2026-08-08 14:25:42', deleted_at: null, handle: 'bob', reply_count: 0, parent: null }
+  const newer = { id: 549, user_id: 4, parent_id: parent.id, body: 'newer reply',
+    created_at: '2026-08-08 18:55:52', deleted_at: null, handle: 'cara', reply_count: 0, parent }
+  const html = renderToStaticMarkup(
+    <FeedThreads posts={[newer, older]} user={null} returnPath="/tag/example" />,
+  )
+
+  expect(html.match(/shared parent 494/g)).toHaveLength(1)
+  expect(html.match(/class="post-page-thread feed-thread"/g)).toHaveLength(1)
+  expect(html.match(/class="parent-quote/g)).toBeNull()
+  expect(html.indexOf('id="post-494"')).toBeLessThan(html.indexOf('id="post-496"'))
+  expect(html.indexOf('id="post-496"')).toBeLessThan(html.indexOf('id="post-549"'))
+})
+
+test('latest joins promoted branches beneath their shared grandparent', () => {
+  const root = { id: 494, user_id: 2, parent_id: null, body: 'shared conversation root',
+    created_at: '2026-08-08 14:20:43', deleted_at: null, handle: 'alice', reply_count: 2 }
+  const left = { id: 496, user_id: 3, parent_id: root.id, body: 'left branch',
+    created_at: '2026-08-08 14:25:42', deleted_at: null, handle: 'bob', reply_count: 1, parent: root }
+  const right = { id: 549, user_id: 4, parent_id: root.id, body: 'right branch',
+    created_at: '2026-08-08 18:55:52', deleted_at: null, handle: 'cara', reply_count: 1, parent: root }
+  const leftReply = { id: 2516, user_id: 5, parent_id: left.id, body: 'new left reply',
+    created_at: '2026-08-26 05:27:01', deleted_at: null, handle: 'dan', reply_count: 0, parent: left }
+  const rightReply = { id: 2432, user_id: 6, parent_id: right.id, body: 'new right reply',
+    created_at: '2026-08-25 13:30:21', deleted_at: null, handle: 'erin', reply_count: 0, parent: right }
+  const html = renderToStaticMarkup(
+    <PublicFeed path="/latest"
+      feed={{ posts: [leftReply, rightReply], page: 1, totalItems: 1, totalPages: 1 }} />,
+  )
+
+  expect(html.match(/shared conversation root/g)).toHaveLength(1)
+  expect(html.match(/class="post-page-thread feed-thread"/g)).toHaveLength(1)
+  expect(html.match(/class="parent-quote/g)).toBeNull()
+  expect(html.indexOf('id="post-494"')).toBeLessThan(html.indexOf('id="post-496"'))
+  expect(html.indexOf('id="post-496"')).toBeLessThan(html.indexOf('id="post-2516"'))
+  expect(html.indexOf('id="post-549"')).toBeLessThan(html.indexOf('id="post-2432"'))
+})
+
+test('collapsed latest keeps a visible newest reply nested beneath its visible parent', () => {
+  const root = { id: 494, user_id: 2, parent_id: null, body: 'conversation root',
+    created_at: '2026-08-08 14:20:43', deleted_at: null, handle: 'alice', reply_count: 3 }
+  const branch = { id: 496, user_id: 3, parent_id: root.id, body: 'branch',
+    created_at: '2026-08-08 14:25:42', deleted_at: null, handle: 'bob', reply_count: 2, parent: root }
+  const parent = { id: 2516, user_id: 4, parent_id: branch.id, body: 'visible parent',
+    created_at: '2026-08-26 05:27:01', deleted_at: null, handle: 'cara', reply_count: 1, parent: branch }
+  const child = { id: 2582, user_id: 5, parent_id: parent.id, body: 'visible child',
+    created_at: '2026-08-26 18:34:27', deleted_at: null, handle: 'dan', reply_count: 0, parent }
+  const html = renderToStaticMarkup(
+    <PublicFeed path="/latest"
+      feed={{ posts: [child, parent, branch, root], page: 1, totalItems: 1, totalPages: 1 }} />,
+  )
+
+  expect(html).toContain('id="feed-thread-fold-494" checked=""')
+  expect(html).toMatch(/reply-node collapsed-preview-path collapsed-preview-post[^>]*>[\s\S]*?id="post-2516"[\s\S]*?reply-branch[\s\S]*?reply-node collapsed-preview-path collapsed-preview-post[^>]*>[\s\S]*?id="post-2582"/)
 })
 
 test('threaded feed replies link to descendants omitted from the page', () => {

@@ -154,6 +154,8 @@ describe('in-memory stylesheet', () => {
       + '  height: 0;\n  padding-top: 0;')
     expect(css).toContain('.reply-node:not(.collapsed-preview-path) {\n  height: 0;')
     expect(css).toContain('.thread-ancestor-gap:not(.collapsed-preview-gap) {\n  height: 0;')
+    expect(css).toContain('.collapsed-preview-path:not(.collapsed-preview-post)>.reply-branch {\n'
+      + '  margin-left: 0;')
     expect(css).toContain('transition: height 200ms ease, padding 200ms ease;')
     expect(css).toContain('.collapsed-preview-post>.post,\n'
       + '.feed-thread>.thread-fold-input:checked~.feed-thread-collapsed-branch .collapsed-preview-gap {\n'

@@ -17,7 +17,7 @@ const memoryMaterializations = new Map<string, MemoryMaterialization>()
 const MAX_MEMORY_MATERIALIZATIONS = 256
 const ANONYMOUS_MEMORY_TTL_MS = 30_000
 const PERSONALIZED_MEMORY_TTL_MS = 500
-const MATERIALIZED_HTML_VERSION = 22
+const MATERIALIZED_HTML_VERSION = 23
 
 function memoryCacheEnabled() {
   // Integration tests mutate their SQLite fixture directly, bypassing the runtime service and its normal cache
