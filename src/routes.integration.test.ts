@@ -6,8 +6,8 @@ import { Database } from 'bun:sqlite'
 import { createHmac } from 'node:crypto'
 import { createServer } from 'node:net'
 import { tmpdir } from 'node:os'
-import { issueRecapUnsubscribeToken } from './recap-emails'
 import { issueInteractedUnsubscribeToken } from './interacted-emails'
+import { issueRecapUnsubscribeToken } from './recap-emails'
 
 setDefaultTimeout(30_000)
 
@@ -138,7 +138,10 @@ test('/?reddit attributes a completed signup', async () => {
   const attributionCookie = landing.headers.get('set-cookie')!.split(';', 1)[0]
   const email = 'reddit-attributed@example.com'
   expect((await request('/enter', {
-    method: 'POST', cookie: attributionCookie, form: { email }, ip: '203.0.113.83',
+    method: 'POST',
+    cookie: attributionCookie,
+    form: { email },
+    ip: '203.0.113.83',
   })).status).toBe(200)
   const emailMessage = capturedEmails().filter(message => message.to === email).at(-1)!
   const magic = await request(`/enter/magic?token=${encodeURIComponent(linkToken(emailMessage))}`, {
@@ -146,7 +149,9 @@ test('/?reddit attributes a completed signup', async () => {
   })
   const cookie = `${sessionCookie(magic)}; ${attributionCookie}`
   const chosen = await request('/choose-handle', {
-    method: 'POST', cookie, form: { handle: 'reddit_user', next: '/explore?welcome=1' },
+    method: 'POST',
+    cookie,
+    form: { handle: 'reddit_user', next: '/explore?welcome=1' },
   })
 
   expect(chosen.status).toBe(303)
@@ -1042,12 +1047,16 @@ test('consequential account, content, reporting, and admin flows work over HTTP'
   aliceCookie = sessionCookie(resetLogin)
 
   const savedNoteDraft = await request('/post', {
-    method: 'POST', cookie: aliceCookie, form: { body: 'A saved note draft', action: 'draft', from: '/latest' },
+    method: 'POST',
+    cookie: aliceCookie,
+    form: { body: 'A saved note draft', action: 'draft', from: '/latest' },
   })
   expect(savedNoteDraft.status).toBe(303)
   expect(savedNoteDraft.headers.get('location')).toBe('/drafts?from=%2Flatest')
   const noteDraft = database.query('SELECT id,body,parent_id FROM drafts WHERE user_id=?').get(alice.id) as {
-    id: number; body: string; parent_id: number | null
+    id: number
+    body: string
+    parent_id: number | null
   }
   expect(noteDraft.parent_id).toBeNull()
   const draftsPageHtml = await (await request('/drafts?from=%2Flatest', { cookie: aliceCookie })).text()
@@ -1061,7 +1070,9 @@ test('consequential account, content, reporting, and admin flows work over HTTP'
   expect(draftEditHtml).toContain(`name="draft_id" value="${noteDraft.id}"`)
   expect(draftEditHtml).toContain(`formAction="/drafts/${noteDraft.id}"`)
   const overwrittenDraft = await request(`/drafts/${noteDraft.id}`, {
-    method: 'POST', cookie: aliceCookie, form: { body: 'The overwritten note draft', action: 'draft' },
+    method: 'POST',
+    cookie: aliceCookie,
+    form: { body: 'The overwritten note draft', action: 'draft' },
   })
   expect(overwrittenDraft.status).toBe(303)
   expect((database.query('SELECT count(*) count FROM drafts WHERE user_id=?').get(alice.id) as { count: number })
@@ -1093,7 +1104,9 @@ test('consequential account, content, reporting, and admin flows work over HTTP'
     'INSERT INTO posts(user_id,parent_id,body,created_at) VALUES(?,NULL,?,datetime(\'now\')) RETURNING id',
   ).get(alice.id, 'Published text before editing') as { id: number }
   const unpublished = await request(`/post/${unpublishable.id}/edit`, {
-    method: 'POST', cookie: aliceCookie, form: { body: 'Text preserved in the draft', action: 'unpublish' },
+    method: 'POST',
+    cookie: aliceCookie,
+    form: { body: 'Text preserved in the draft', action: 'unpublish' },
   })
   expect(unpublished.status).toBe(303)
   const unpublishedDraft = database.query('SELECT id,body,parent_id FROM drafts WHERE user_id=? AND body=?')
@@ -1104,19 +1117,24 @@ test('consequential account, content, reporting, and admin flows work over HTTP'
     .toMatchObject({ deleted_at: expect.any(String) })
 
   const savedReplyDraft = await request(`/post/${post.id}/reply`, {
-    method: 'POST', cookie: aliceCookie, form: { body: 'A saved reply draft', action: 'draft' },
+    method: 'POST',
+    cookie: aliceCookie,
+    form: { body: 'A saved reply draft', action: 'draft' },
   })
   expect(savedReplyDraft.status).toBe(303)
   expect(savedReplyDraft.headers.get('location')).toBe(`/drafts?from=${encodeURIComponent(`/post/${post.id}`)}`)
   const replyDraft = database.query('SELECT id,parent_id FROM drafts WHERE user_id=?').get(alice.id) as {
-    id: number; parent_id: number
+    id: number
+    parent_id: number
   }
   expect(replyDraft.parent_id).toBe(post.id)
   const replyDraftEditHtml = await (await request(`/drafts/${replyDraft.id}/edit`, { cookie: aliceCookie })).text()
   expect(replyDraftEditHtml).toContain('A saved reply draft')
   expect(replyDraftEditHtml).toContain(`action="/post/${post.id}/reply"`)
   const publishedReplyDraft = await request(`/post/${post.id}/reply`, {
-    method: 'POST', cookie: aliceCookie, form: { body: 'Published reply draft', draft_id: String(replyDraft.id) },
+    method: 'POST',
+    cookie: aliceCookie,
+    form: { body: 'Published reply draft', draft_id: String(replyDraft.id) },
   })
   expect(publishedReplyDraft.status).toBe(303)
   expect(database.query('SELECT 1 FROM drafts WHERE id=?').get(replyDraft.id)).toBeNull()
@@ -1474,7 +1492,8 @@ test('consequential account, content, reporting, and admin flows work over HTTP'
   database.query(`INSERT INTO hashtag_follows(user_id,tag,created_at)
     VALUES(?,'historical','1970-01-01 00:00:00')`).run(bob.id)
   const includedHashtagActivity = await request('/account/edit/appearance', {
-    method: 'POST', cookie: aliceCookie,
+    method: 'POST',
+    cookie: aliceCookie,
     form: { tab: 'misc', pageSize: '20', density: 'regular', includeHashtagFollowActivity: 'yes' },
   })
   expect(includedHashtagActivity.status).toBe(303)

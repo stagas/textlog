@@ -24,7 +24,9 @@ export function registerMediaRoutes(app: Hono, fetcher: Fetcher = fetch) {
         signal: AbortSignal.timeout(UPSTREAM_TIMEOUT_MS),
       })
       const responseHeaders = new Headers()
-      for (const name of ['accept-ranges', 'content-length', 'content-range', 'content-type', 'etag', 'last-modified']) {
+      for (const name of ['accept-ranges', 'content-length', 'content-range', 'content-type', 'etag',
+        'last-modified'])
+      {
         const value = upstream.headers.get(name)
         if (value) responseHeaders.set(name, value)
       }

@@ -1,7 +1,7 @@
 import type { Database } from 'bun:sqlite'
-import type { PollView } from './types'
-import { recordHotActivity } from './hot'
 import { withoutMarkdownCode } from './content'
+import { recordHotActivity } from './hot'
+import type { PollView } from './types'
 
 export const POLL_LIFETIME_MS = 24 * 60 * 60 * 1000
 
@@ -9,7 +9,7 @@ export type PollDefinition = { question: string; options: string[]; kind?: 'quiz
   explanation?: string }
 
 function pollsAvailable(database: Database) {
-  return !!database.query("SELECT 1 FROM sqlite_master WHERE type='table' AND name='poll_options'").get()
+  return !!database.query('SELECT 1 FROM sqlite_master WHERE type=\'table\' AND name=\'poll_options\'').get()
 }
 
 export function parsePoll(body: string): PollDefinition | null {
@@ -30,8 +30,8 @@ export function parsePoll(body: string): PollDefinition | null {
   const options = answerLines.map(option => kind === 'quiz' ? option.replace(/^>\s+/, '').trim() : option)
   if (!question || options.length < 2 || options.length > 8 || new Set(options).size !== options.length) return null
   if (kind === 'quiz' && correct.filter(Boolean).length !== 1) return null
-  return { question, options, ...(kind === 'quiz' ? { kind, correctIndex: correct.indexOf(true),
-    ...(explanation ? { explanation } : {}) } : {}) }
+  return { question, options,
+    ...(kind === 'quiz' ? { kind, correctIndex: correct.indexOf(true), ...(explanation ? { explanation } : {}) } : {}) }
 }
 
 export function pollDisplayBody(body: string) {
@@ -63,8 +63,9 @@ export function loadPolls(database: Database, postIds: number[], viewerId: numbe
       max(CASE WHEN v.user_id=? THEN 1 ELSE 0 END) selected
     FROM poll_options o LEFT JOIN poll_votes v ON v.option_id=o.id
     WHERE o.post_id IN (${placeholders}) GROUP BY o.id ORDER BY o.post_id,o.position`)
-    .all(viewerId, ...postIds) as Array<{ post_id: number; id: number; position: number; label: string;
-      votes: number; selected: number }>
+    .all(viewerId, ...postIds) as Array<
+      { post_id: number; id: number; position: number; label: string; votes: number; selected: number }
+    >
   const created = database.query(`SELECT id,created_at,body FROM posts WHERE id IN (${placeholders})`)
     .all(...postIds) as Array<{ id: number; created_at: string; body: string }>
   const createdById = new Map(created.map(row => [row.id, row.created_at]))
@@ -80,13 +81,21 @@ export function loadPolls(database: Database, postIds: number[], viewerId: numbe
     const definition = definitionsById.get(postId)
     const kind: NonNullable<PollView['kind']> = definition?.kind || 'poll'
     const correctIndex = definition?.correctIndex
-    const expiresAt = kind === 'quiz' ? null
+    const expiresAt = kind === 'quiz'
+      ? null
       : Date.parse(createdAt.replace(' ', 'T') + (createdAt.endsWith('Z') ? '' : 'Z')) + POLL_LIFETIME_MS
     const totalVotes = options.reduce((sum, option) => sum + option.votes, 0)
-    return [postId, { options: options.map((option, index) => ({ ...option,
-      correct: kind === 'quiz' ? index === correctIndex : undefined })), kind, totalVotes,
-      expired: expiresAt !== null && Date.now() >= expiresAt, expiresAt,
-      viewerVoted: options.some(option => option.selected), explanation: definition?.explanation }]
+    return [postId, {
+      options: options.map((option, index) => ({ ...option,
+        correct: kind === 'quiz' ? index === correctIndex : undefined })
+      ),
+      kind,
+      totalVotes,
+      expired: expiresAt !== null && Date.now() >= expiresAt,
+      expiresAt,
+      viewerVoted: options.some(option => option.selected),
+      explanation: definition?.explanation,
+    }]
   }))
 }
 
@@ -97,8 +106,8 @@ export function voteInPoll(database: Database, postId: number, optionId: number,
       AND NOT EXISTS (SELECT 1 FROM blocks b WHERE
         (b.blocker_id=? AND b.blocked_id=p.user_id) OR (b.blocker_id=p.user_id AND b.blocked_id=?))
       AND NOT EXISTS (SELECT 1 FROM post_hashtags ph JOIN blocked_hashtags bh ON bh.tag=ph.tag
-        WHERE ph.post_id=p.id AND bh.user_id=?)`).get(optionId, postId, userId, userId, userId) as
-      { id: number; created_at: string; body: string } | null
+        WHERE ph.post_id=p.id AND bh.user_id=?)`).get(optionId, postId, userId, userId, userId) as { id: number;
+    created_at: string; body: string } | null
   if (!option) return 'not_found' as const
   const createdAt = Date.parse(option.created_at.replace(' ', 'T') + (option.created_at.endsWith('Z') ? '' : 'Z'))
   if (parsePoll(option.body)?.kind !== 'quiz' && Date.now() >= createdAt + POLL_LIFETIME_MS) return 'expired' as const
@@ -106,7 +115,7 @@ export function voteInPoll(database: Database, postId: number, optionId: number,
     .run(postId, optionId, userId).changes
   if (changed) recordHotActivity(database, postId)
   if (changed && database.query(
-    "SELECT 1 FROM sqlite_master WHERE type='table' AND name='feed_snapshot_generation'",
+    'SELECT 1 FROM sqlite_master WHERE type=\'table\' AND name=\'feed_snapshot_generation\'',
   ).get()) database.query('UPDATE feed_snapshot_generation SET generation=generation+1 WHERE id=1').run()
   return changed ? 'ready' as const : 'already_voted' as const
 }

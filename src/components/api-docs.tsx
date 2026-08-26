@@ -23,7 +23,9 @@ function CodeBlock({ language, children }: { language: 'bash' | 'html' | 'json';
 function ApiSection({ title, id, children }: { title: string; id?: string; children: ReactNode }) {
   return (
     <details className="api-docs-section">
-      <summary><h2 id={id}>{title}</h2></summary>
+      <summary>
+        <h2 id={id}>{title}</h2>
+      </summary>
       {children}
     </details>
   )
@@ -40,7 +42,8 @@ const endpoints: ReadonlyArray<readonly [string, string, ReactNode, boolean?]> =
   </>, true],
   ['GET', '/posts/:id', 'Get a single public post.'],
   ['PATCH', '/posts/:id', 'Edit a post you own.', true],
-  ['DELETE', '/posts/:id', 'Delete a post you own. Replies remain and the post becomes a “(deleted post)” tombstone.', true],
+  ['DELETE', '/posts/:id', 'Delete a post you own. Replies remain and the post becomes a “(deleted post)” tombstone.',
+    true],
   ['POST', '/posts/:id/unpublish', 'Move a post you own back into your drafts.', true],
   ['GET', '/posts/:id/replies', <>
     Get replies recursively. Use the optional <code>depth</code>{' '}
@@ -119,95 +122,95 @@ export function ApiDocs({ user }: { user: User | null }) {
         </p>
 
         <ApiSection title="Endpoints">
-        <div className="api-base-url">
-          <h3>Base URL</h3>
-          <pre><code>{origin}/api/v1</code></pre>
-        </div>
-        <dl className="api-endpoints">
-          {endpoints.map(([method, path, description, authentication]) => (
-            <div className="api-endpoint" key={`${method}:${path}`}>
-              <dt>
-                <code>
-                  <span className="api-method" data-method={method} data-auth={authentication || undefined}>
-                    {!!authentication && <span className="api-auth-dot" aria-hidden="true" />}
-                    {method}
-                  </span>
-                  <span className="api-path">{path}</span>
-                </code>
-              </dt>
-              <dd>
-                <span>{description}</span>
-              </dd>
-            </div>
-          ))}
-        </dl>
-        <p className="api-auth-legend">
-          <code>
-            <span className="api-method" data-auth="true">
-              <span className="api-auth-dot" aria-hidden="true" />
-              VERB
-            </span>
-          </code>{' '}
-          authentication bearer token required
-        </p>
+          <div className="api-base-url">
+            <h3>Base URL</h3>
+            <pre><code>{origin}/api/v1</code></pre>
+          </div>
+          <dl className="api-endpoints">
+            {endpoints.map(([method, path, description, authentication]) => (
+              <div className="api-endpoint" key={`${method}:${path}`}>
+                <dt>
+                  <code>
+                    <span className="api-method" data-method={method} data-auth={authentication || undefined}>
+                      {!!authentication && <span className="api-auth-dot" aria-hidden="true" />}
+                      {method}
+                    </span>
+                    <span className="api-path">{path}</span>
+                  </code>
+                </dt>
+                <dd>
+                  <span>{description}</span>
+                </dd>
+              </div>
+            ))}
+          </dl>
+          <p className="api-auth-legend">
+            <code>
+              <span className="api-method" data-auth="true">
+                <span className="api-auth-dot" aria-hidden="true" />
+                VERB
+              </span>
+            </code>{' '}
+            authentication bearer token required
+          </p>
         </ApiSection>
 
         <ApiSection title="RSS and Atom">
-        <p>
-          Feed collections are also available as RSS 2.0 or Atom 1.0. Add <code>.rss</code> or <code>.atom</code>{' '}
-          to the collection address and enter it manually in a feed reader.
-        </p>
-        <pre><code>{`/feeds/latest.rss
+          <p>
+            Feed collections are also available as RSS 2.0 or Atom 1.0. Add <code>.rss</code> or <code>.atom</code>{' '}
+            to the collection address and enter it manually in a feed reader.
+          </p>
+          <pre><code>{`/feeds/latest.rss
 /feeds/hot.atom
 /users/:handle/posts.rss
 /tags/:tag/posts.atom`}</code></pre>
-        <p>The latest and hot feeds also have shorter root-level aliases:</p>
-        <pre><code>{`/latest.json
+          <p>The latest and hot feeds also have shorter root-level aliases:</p>
+          <pre><code>{`/latest.json
 /latest.rss
 /latest.atom
 /hot.json
 /hot.rss
 /hot.atom`}</code></pre>
-        <p>
-          Signed-in users can generate private, personalized For You RSS and Atom URLs under <strong>Feed key</strong>
-          {' '}
-          in <a href="/account/security#feed-keys" target="_blank">account security</a>. These unguessable URLs are
-          read-only, require no bearer header, and must be kept secret.
-          Each key can be named, expired, or revoked independently. Personalized feeds are marked private and are not
-          publicly cached.
-        </p>
-        <pre><code>{`/feeds/for-you/:key.rss
+          <p>
+            Signed-in users can generate private, personalized For You RSS and Atom URLs under <strong>Feed key</strong>
+            {' '}
+            in{' '}
+            <a href="/account/security#feed-keys" target="_blank">account security</a>. These unguessable URLs are
+            read-only, require no bearer header, and must be kept secret. Each key can be named, expired, or revoked
+            independently. Personalized feeds are marked private and are not publicly cached.
+          </p>
+          <pre><code>{`/feeds/for-you/:key.rss
 /feeds/for-you/:key.atom`}</code></pre>
         </ApiSection>
 
         <ApiSection title="Public data archive" id="public-archive">
-        <p>
-          Download the latest daily, read-only snapshot as{' '}
-          <a href="/dump.zip">dump.zip</a>. It contains paginated JSON files for public handles and bios, posts and
-          reply links, mentions, hashtags, and follow relationships. The accounts are frozen: the archive contains no
-          login credentials, contact details, record timestamps, blocks, reports, deleted content, or other private
-          data.
-        </p>
-        <CodeBlock language="bash">{`curl -O ${origin}/dump.zip`}</CodeBlock>
+          <p>
+            Download the latest daily, read-only snapshot as{' '}
+            <a href="/dump.zip">dump.zip</a>. It contains paginated JSON files for public handles and bios, posts and
+            reply links, mentions, hashtags, and follow relationships. The accounts are frozen: the archive contains no
+            login credentials, contact details, record timestamps, blocks, reports, deleted content, or other private
+            data.
+          </p>
+          <CodeBlock language="bash">{`curl -O ${origin}/dump.zip`}</CodeBlock>
         </ApiSection>
 
         <ApiSection title="Embeds" id="embeds">
-        <p>
-          Add a read-only {name}{' '}
-          card to any website with an iframe. Copy an example and replace the handle, hashtag, or post number. Feed
-          embeds show the five newest notes and all links open {name}. See every format together on the{' '}
-          <a href="/api/embed-examples">live embed examples page</a>.
-        </p>
-        <CodeBlock language="html">
-          {`<iframe
+          <p>
+            Add a read-only {name}{' '}
+            card to any website with an iframe. Copy an example and replace the handle, hashtag, or post number. Feed
+            embeds show the five newest notes and all links open {name}. See every format together on the{' '}
+            <a href="/api/embed-examples">live embed examples page</a>.
+          </p>
+          <CodeBlock language="html">
+            {`<iframe
   src="${origin}/embed/user/alice?theme=system&accent=sage&font=menlo"
   title="@alice on ${name}"
   width="100%" height="520" loading="lazy"
   style="border:0"
 ></iframe>`}
-        </CodeBlock>
-        <CodeBlock language="html">
-          {`<!-- latest notes -->
+          </CodeBlock>
+          <CodeBlock language="html">
+            {`<!-- latest notes -->
 <iframe src="${origin}/embed/latest?theme=dark&accent=purple"
   title="Latest notes on ${name}" width="100%" height="520" style="border:0"></iframe>
 
@@ -222,116 +225,119 @@ export function ApiDocs({ user }: { user: User | null }) {
 <!-- one post -->
 <iframe src="${origin}/embed/post/123?theme=sepia&accent=rust"
   title="Post 123 on ${name}" width="100%" height="220" style="border:0"></iframe>`}
-        </CodeBlock>
-        <p>
-          Appearance uses the <code className="api-query-param">theme</code>,{' '}
-          <code className="api-query-param">accent</code>, and <code className="api-query-param">font</code>{' '}
-          query parameters.
-        </p>
-        <p>
-          Themes: <code>system</code>, <code>light</code>, <code>dark</code>, <code>sepia</code>, and{' '}
-          <code>dracula</code>.
-        </p>
-        <p>
-          Accents: <code>theme</code>, <code>sage</code>, <code>purple</code>, <code>cyan</code>, <code>pink</code>,
-          {' '}
-          <code>amber</code>, <code>blue</code>, and <code>rust</code>.
-        </p>
-        <p>
-          Fonts: <code>system</code>, <code>sf</code>, <code>menlo</code>, <code>monaco</code>, <code>consolas</code>,
-          {' '}
-          <code>cascadia</code>, <code>courier</code>, <code>lucida</code>, <code>dejavu</code>,{' '}
-          <code>liberation</code>, <code>ubuntu</code>, <code>noto</code>, <code>droid</code>, <code>source</code>,{' '}
-          <code>roboto</code>, <code>fira</code>, <code>jetbrains</code>, and <code>hack</code>.
-        </p>
+          </CodeBlock>
+          <p>
+            Appearance uses the <code className="api-query-param">theme</code>,{' '}
+            <code className="api-query-param">accent</code>, and <code className="api-query-param">font</code>{' '}
+            query parameters.
+          </p>
+          <p>
+            Themes: <code>system</code>, <code>light</code>, <code>dark</code>, <code>sepia</code>, and{' '}
+            <code>dracula</code>.
+          </p>
+          <p>
+            Accents: <code>theme</code>, <code>sage</code>, <code>purple</code>, <code>cyan</code>, <code>pink</code>,
+            {' '}
+            <code>amber</code>, <code>blue</code>, and <code>rust</code>.
+          </p>
+          <p>
+            Fonts: <code>system</code>, <code>sf</code>, <code>menlo</code>, <code>monaco</code>, <code>consolas</code>,
+            {' '}
+            <code>cascadia</code>, <code>courier</code>, <code>lucida</code>, <code>dejavu</code>,{' '}
+            <code>liberation</code>, <code>ubuntu</code>, <code>noto</code>, <code>droid</code>, <code>source</code>,
+            {' '}
+            <code>roboto</code>, <code>fira</code>, <code>jetbrains</code>, and <code>hack</code>.
+          </p>
         </ApiSection>
 
         <ApiSection title="Pagination">
-        <p>
-          Collections accept <code>limit</code> from 1–100 (default 20). Pass the opaque{' '}
-          <code>pagination.next_cursor</code> value back as <code>cursor</code>{' '}
-          to fetch the next page. Replies include their immediate quoted post in{' '}
-          <code>parent</code>, so displaying a feed needs no per-post follow-up requests.
-        </p>
-        <CodeBlock language="bash">{`curl '${origin}/api/v1/feeds/latest?limit=10'`}</CodeBlock>
-        <CodeBlock language="bash">
-          {`curl '${origin}/api/v1/activities/for-you?limit=10' \\
+          <p>
+            Collections accept <code>limit</code> from 1–100 (default 20). Pass the opaque{' '}
+            <code>pagination.next_cursor</code> value back as <code>cursor</code>{' '}
+            to fetch the next page. Replies include their immediate quoted post in{' '}
+            <code>parent</code>, so displaying a feed needs no per-post follow-up requests.
+          </p>
+          <CodeBlock language="bash">{`curl '${origin}/api/v1/feeds/latest?limit=10'`}</CodeBlock>
+          <CodeBlock language="bash">
+            {`curl '${origin}/api/v1/activities/for-you?limit=10' \\
   -H "authorization: Bearer $TOKEN"`}
-        </CodeBlock>
-        <p>
-          Personalized activity collections return <code>has_unread</code> and typed activity objects. Each activity’s
-          {' '}
-          <code>type</code> is <code>post</code>, <code>reply</code>, <code>mention</code>, <code>user_follow</code>,
-          {' '}
-          <code>tag_follow</code>, or <code>signup</code>; <code>payload</code>{' '}
-          contains the corresponding post or actor and target.
-        </p>
-        <p>
-          Explore has independent <code>people_limit</code>, <code>people_cursor</code>, <code>tags_limit</code>, and
-          {' '}<code>tags_cursor</code> parameters. When a bearer token is supplied, reads include viewer relationship
-          state and omit blocked people and hashtags.
-        </p>
+          </CodeBlock>
+          <p>
+            Personalized activity collections return <code>has_unread</code> and typed activity objects. Each activity’s
+            {' '}
+            <code>type</code> is <code>post</code>, <code>reply</code>, <code>mention</code>, <code>user_follow</code>,
+            {' '}
+            <code>tag_follow</code>, or <code>signup</code>; <code>payload</code>{' '}
+            contains the corresponding post or actor and target.
+          </p>
+          <p>
+            Explore has independent <code>people_limit</code>, <code>people_cursor</code>, <code>tags_limit</code>, and
+            {' '}
+            <code>tags_cursor</code>{' '}
+            parameters. When a bearer token is supplied, reads include viewer relationship state and omit blocked people
+            and hashtags.
+          </p>
         </ApiSection>
 
         <ApiSection title="Search">
-        <p>Search is public and uses the same prefix matching as the website. Separate words must all match.</p>
-        <CodeBlock language="bash">{`curl '${origin}/api/v1/search?q=quiet+notes&limit=10'`}</CodeBlock>
+          <p>Search is public and uses the same prefix matching as the website. Separate words must all match.</p>
+          <CodeBlock language="bash">{`curl '${origin}/api/v1/search?q=quiet+notes&limit=10'`}</CodeBlock>
         </ApiSection>
 
         <ApiSection title="Firehose">
-        <p>
-          The firehose is live-only and includes top-level posts and replies. Each new post arrives as a{' '}
-          <code>post</code> event. Reconnects begin from that moment and do not replay missed events.
-        </p>
-        <pre><code>{`const events = new EventSource('${origin}/api/v1/firehose')
+          <p>
+            The firehose is live-only and includes top-level posts and replies. Each new post arrives as a{' '}
+            <code>post</code> event. Reconnects begin from that moment and do not replay missed events.
+          </p>
+          <pre><code>{`const events = new EventSource('${origin}/api/v1/firehose')
 events.addEventListener('post', event => {
   const post = JSON.parse(event.data)
 })`}</code></pre>
         </ApiSection>
 
         <ApiSection title="Writing">
-        <p>
-          Every account can use the write endpoints. Authenticate with a bearer token; no separate API access setting is
-          required. For long-running integrations,{' '}
-          <a href="/account/api-keys/new" target="_blank">generate a revocable API key</a>.
-        </p>
-        <p>
-          Sign in with the code emailed alongside your magic link. Accounts are only created in a browser, so the API
-          cannot sign anyone up.
-        </p>
-        <CodeBlock language="bash">
-          {`curl -X POST ${origin}/api/v1/auth/request \\
+          <p>
+            Every account can use the write endpoints. Authenticate with a bearer token; no separate API access setting
+            is required. For long-running integrations,{' '}
+            <a href="/account/api-keys/new" target="_blank">generate a revocable API key</a>.
+          </p>
+          <p>
+            Sign in with the code emailed alongside your magic link. Accounts are only created in a browser, so the API
+            cannot sign anyone up.
+          </p>
+          <CodeBlock language="bash">
+            {`curl -X POST ${origin}/api/v1/auth/request \\
   -H 'content-type: application/json' -d '{"email":"you@example.com"}'
 
 curl -X POST ${origin}/api/v1/auth/verify \\
   -H 'content-type: application/json' -d '{"email":"you@example.com","code":"123456"}'`}
-        </CodeBlock>
-        <p>
-          Posts include link previews and poll metadata. Live poll counts are hidden until you vote or the poll expires.
-          Drafts support ordinary CRUD plus an atomic publish endpoint.
-        </p>
-        <p>
-          The returned token is an ordinary session. Both session tokens and generated API keys can be sent as bearer
-          tokens and revoked under <a href="/account/security" target="_blank">account security</a>. Cookies are never
-          accepted for writes.
-        </p>
-        <CodeBlock language="bash">
-          {`curl -X POST ${origin}/api/v1/posts \\
+          </CodeBlock>
+          <p>
+            Posts include link previews and poll metadata. Live poll counts are hidden until you vote or the poll
+            expires. Drafts support ordinary CRUD plus an atomic publish endpoint.
+          </p>
+          <p>
+            The returned token is an ordinary session. Both session tokens and generated API keys can be sent as bearer
+            tokens and revoked under{' '}
+            <a href="/account/security" target="_blank">account security</a>. Cookies are never accepted for writes.
+          </p>
+          <CodeBlock language="bash">
+            {`curl -X POST ${origin}/api/v1/posts \\
   -H "authorization: Bearer $TOKEN" \\
   -H 'content-type: application/json' -d '{"body":"hello from an app"}'`}
-        </CodeBlock>
+          </CodeBlock>
         </ApiSection>
         <ApiSection title="Limits and errors">
-        <p>
-          API reads are limited to 120 requests per minute per IP. Writes are limited to 60 per hour per account, and
-          posting keeps the same limit as the website: five posts every five minutes. A limited response uses{' '}
-          <code>429</code> and includes <code>Retry-After</code>.
-        </p>
-        <CodeBlock language="json">
-          {`{
+          <p>
+            API reads are limited to 120 requests per minute per IP. Writes are limited to 60 per hour per account, and
+            posting keeps the same limit as the website: five posts every five minutes. A limited response uses{' '}
+            <code>429</code> and includes <code>Retry-After</code>.
+          </p>
+          <CodeBlock language="json">
+            {`{
   "error": { "code": "not_found", "message": "Post not found" }
 }`}
-        </CodeBlock>
+          </CodeBlock>
         </ApiSection>
       </article>
     </Layout>

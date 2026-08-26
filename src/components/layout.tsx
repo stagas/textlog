@@ -1,6 +1,10 @@
 import { appHost, appName, appOrigin } from '../brand'
 import {
-  activeAppearance, activeRequest, activeThemeBackgrounds, activeThemeLogoSvg, activeThemeStyles,
+  activeAppearance,
+  activeRequest,
+  activeThemeBackgrounds,
+  activeThemeLogoSvg,
+  activeThemeStyles,
 } from '../theme'
 
 import React from 'react'
@@ -166,9 +170,11 @@ export function Layout({
         <link rel="stylesheet" href="/styles.css?v=840" />
         <style>{themeCss}</style>
       </head>
-      <body className={`density-${density}${mobile ? ' mobile-agent' : ''}${
-        user?.show_link_previews === 0 ? ' link-previews-disabled' : ''}${
-        mobileWriteAction ? ' has-mobile-write-action' : ''}`}>
+      <body
+        className={`density-${density}${mobile ? ' mobile-agent' : ''}${
+          user?.show_link_previews === 0 ? ' link-previews-disabled' : ''
+        }${mobileWriteAction ? ' has-mobile-write-action' : ''}`}
+      >
         {user && ready && <a className="skip-link" href={writeShortcutHref} accessKey="w">write</a>}
         <a className="skip-link" href="#main-content">skip to content</a>
         <header className={user ? 'authenticated-header' : undefined}>
@@ -285,7 +291,11 @@ export function Layout({
 }
 
 export function MobileWriteAction() {
-  return <div className="mobile-write-action"><a className="button" href="/write">write</a></div>
+  return (
+    <div className="mobile-write-action">
+      <a className="button" href="/write">write</a>
+    </div>
+  )
 }
 
 function DevReload({ bootId }: { bootId: string }) {

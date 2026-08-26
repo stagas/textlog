@@ -14,8 +14,7 @@ export function Legal({ user }: { user: User | null }) {
 
         <h2>Operator and fiscal host</h2>
         <p>
-          {name} is operated by the{' '}
-          {instance.operator.url
+          {name} is operated by the {instance.operator.url
             ? (
               <a href={instance.operator.url} target="_blank" rel="noopener noreferrer">
                 {instance.operator.name}
@@ -158,13 +157,13 @@ export function Legal({ user }: { user: User | null }) {
         <p>
           Session records expire after 365 days of inactivity; password-reset, magic-link and email-change records after
           one hour; appearance cookies after one year; daily visitor pseudonyms after seven days; and application HTTP
-          logs after at most 14 days. Recap and interaction-email preferences, unsubscribe tokens, and campaign delivery records are
-          retained as needed to honor opt-outs and prevent duplicate delivery. Public account and content data,
-          connections, followed hashtags and blocks are held until you remove them or delete your account. Deletion
-          anonymizes the account and content, while limited moderation, resolved report and audit records are retained
-          for three years where needed to document decisions, establish legal claims and protect users. Open reports
-          remain until reviewed. Backups follow the configured backup-retention period (14 days by default), after which
-          deleted data ages out.
+          logs after at most 14 days. Recap and interaction-email preferences, unsubscribe tokens, and campaign delivery
+          records are retained as needed to honor opt-outs and prevent duplicate delivery. Public account and content
+          data, connections, followed hashtags and blocks are held until you remove them or delete your account.
+          Deletion anonymizes the account and content, while limited moderation, resolved report and audit records are
+          retained for three years where needed to document decisions, establish legal claims and protect users. Open
+          reports remain until reviewed. Backups follow the configured backup-retention period (14 days by default),
+          after which deleted data ages out.
         </p>
 
         <h3>Your rights</h3>
@@ -172,8 +171,8 @@ export function Legal({ user }: { user: User | null }) {
           Depending on the circumstances, you may request access, correction, erasure, restriction, portability, or
           object to processing based on legitimate interests. Where processing relies on consent, you may withdraw it
           without affecting earlier processing. In account settings you can correct your handle and bio, change your
-          email, manage your password and sessions, subscribe or unsubscribe from recap and interaction emails, download a JSON copy of
-          your account data, and delete your account.
+          email, manage your password and sessions, subscribe or unsubscribe from recap and interaction emails, download
+          a JSON copy of your account data, and delete your account.
           {instance.operator.email && (
             <>
               You can also email <a href={`mailto:${instance.operator.email}`}>{instance.operator.email}</a>.

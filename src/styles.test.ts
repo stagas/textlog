@@ -57,7 +57,7 @@ describe('in-memory stylesheet', () => {
     expect(css).toContain('.parent-quote .poll { font-size: 0.75rem; }')
     expect(css).toContain(
       '.parent-quote .poll-option button,\n.parent-quote .poll-result,\n'
-      + '.parent-quote .poll-preview-option { color: var(--quote-ink); }',
+        + '.parent-quote .poll-preview-option { color: var(--quote-ink); }',
     )
     expect(css).not.toContain('.parent-quote .poll-option-count,')
     expect(css).not.toContain('.parent-quote .poll-meta { color: var(--quote-ink); }')
@@ -76,14 +76,20 @@ describe('in-memory stylesheet', () => {
 
   test('lets taps pass through todos that the viewer cannot edit', async () => {
     const css = await Bun.file(new URL('./styles.css', import.meta.url)).text()
-    expect(css).toContain('.todo { position: relative; z-index: 2; display: grid; gap: 0; margin-top: 0; font-size: .8125rem; line-height: 1.35; pointer-events: none; }')
+    expect(css).toContain(
+      '.todo { position: relative; z-index: 2; display: grid; gap: 0; margin-top: 0; font-size: .8125rem; line-height: 1.35; pointer-events: none; }',
+    )
     expect(css).toContain('.thread-root>.post>.todo { font-size: .9375rem;')
     expect(css).toContain('.feed-thread .thread-root>.post>.todo { font-size: .8125rem;')
     expect(css).toContain('font: inherit; line-height: inherit; text-align: left;')
     expect(css).toContain('.todo-check-checked { color: var(--accent-dark); }')
-    expect(css).toContain('.todo-item > button:hover .todo-check,\n.todo-item > button:hover + .todo-label { color: var(--accent); }')
+    expect(css).toContain(
+      '.todo-item > button:hover .todo-check,\n.todo-item > button:hover + .todo-label { color: var(--accent); }',
+    )
     expect(css).toContain('margin-right: 1ch; color: var(--muted); font: inherit;')
-    expect(css).toContain('.todo-item { position: relative; display: flex; align-items: center; width: fit-content; max-width: 100%; margin: 0; }')
+    expect(css).toContain(
+      '.todo-item { position: relative; display: flex; align-items: center; width: fit-content; max-width: 100%; margin: 0; }',
+    )
     expect(css).toContain('.todo-editable .todo-item > button { position: absolute; inset: 0; width: 100%; }')
     expect(css).toContain('.todo-editable .todo-label { margin-left: 4ch; pointer-events: none; }')
     expect(css).toContain('.todo :is(.reference-menu, .remote-link-menu) {')
@@ -93,7 +99,9 @@ describe('in-memory stylesheet', () => {
     expect(css).toContain('.todo-editable .todo-label :is(a, button) {')
     expect(css).toContain('.todo a { pointer-events: auto; }')
     expect(css).toContain('.todo .post-spoiler-summary { line-height: 1.65; pointer-events: auto; }')
-    expect(css).toContain('.todo .post-spoiler:has(.post-spoiler-input:checked) .post-spoiler-content-inner { margin-top: 0; }')
+    expect(css).toContain(
+      '.todo .post-spoiler:has(.post-spoiler-input:checked) .post-spoiler-content-inner { margin-top: 0; }',
+    )
     expect(css).toContain('.parent-quote .todo { font-size: .75rem; letter-spacing: normal; }')
   })
 
@@ -125,8 +133,12 @@ describe('in-memory stylesheet', () => {
   test('animates thread folding with a collapsible grid track', async () => {
     const css = await Bun.file(new URL('./styles.css', import.meta.url)).text()
     expect(css).toContain('.reply-branch {\n  display: grid;\n  grid-template-rows: 1fr;')
-    expect(css).toContain('.thread-branch-content {\n  min-height: 0;\n  overflow: hidden;\n  animation: disclosure-overflow 0s 200ms forwards;')
-    expect(css).toContain('.thread-fold-input:checked~.reply-branch .thread-branch-content {\n  overflow: hidden;\n  animation: none;')
+    expect(css).toContain(
+      '.thread-branch-content {\n  min-height: 0;\n  overflow: hidden;\n  animation: disclosure-overflow 0s 200ms forwards;',
+    )
+    expect(css).toContain(
+      '.thread-fold-input:checked~.reply-branch .thread-branch-content {\n  overflow: hidden;\n  animation: none;',
+    )
     expect(css).toContain('.thread-fold-input:checked~.reply-branch {\n  grid-template-rows: 0fr;')
     expect(css).toContain('transition: grid-template-rows 200ms ease, visibility 0s 200ms;')
   })
@@ -155,15 +167,17 @@ describe('in-memory stylesheet', () => {
     expect(css).toContain('.activity-more-input:checked ~ .activity-more-content {\n  grid-template-rows: 1fr;')
     expect(css).toContain(
       '.activity-more-input:checked ~ .activity-more-content .activity-more-content-inner {\n'
-      + '  animation: disclosure-overflow 0s 200ms forwards;',
+        + '  animation: disclosure-overflow 0s 200ms forwards;',
     )
     expect(css).toContain('@keyframes disclosure-overflow {\n  to { overflow: visible; }\n}')
     expect(css).toContain(
       '.post-spoiler:has(.post-spoiler-input:checked) .post-spoiler-content-inner {\n'
-      + '  margin-top: var(--space-1);\n  animation: disclosure-overflow 0s 200ms forwards;',
+        + '  margin-top: var(--space-1);\n  animation: disclosure-overflow 0s 200ms forwards;',
     )
     expect(css).toContain('.activity-more-summary::before {\n  content: "";')
-    expect(css).toContain('.activity-more-input:checked + .activity-more-summary::before {\n  transform: rotate(90deg);')
+    expect(css).toContain(
+      '.activity-more-input:checked + .activity-more-summary::before {\n  transform: rotate(90deg);',
+    )
   })
 
   test('uses the active accent for the mobile tap highlight', async () => {
@@ -178,7 +192,9 @@ describe('in-memory stylesheet', () => {
     expect(css).toContain('header>nav {\n  max-width: 100%;\n  margin-left: auto;\n  align-self: stretch;')
     expect(css).toContain('header>nav>a:not(.button),\n.account-nav-row>a:not(.button),\n.account-menu-handle {')
     expect(css).toContain('.account-nav-row {\n  display: flex;\n  align-self: stretch;')
-    expect(css).toContain('.account-menu {\n  position: relative;\n  z-index: 31;\n  display: inline-flex;\n  align-self: stretch;')
+    expect(css).toContain(
+      '.account-menu {\n  position: relative;\n  z-index: 31;\n  display: inline-flex;\n  align-self: stretch;',
+    )
     expect(css).toContain('top: calc(50% + .75em + var(--space-2));')
     expect(css).toContain('top: calc(50% + .75em);')
   })
@@ -199,10 +215,16 @@ describe('in-memory stylesheet', () => {
     expect(css).toContain('.reply-preview .preview-reply {\n  color: var(--accent);\n  cursor: pointer;')
     expect(css).toContain('.reply-preview .preview-reply:hover {\n  color: var(--accent-dark);')
     expect(css).toContain('.compose-post-preview .postauthor:not(.post-context-author) {')
-    expect(css).toContain('.preview-post-meta > :not(.reference-menu):not(.post-context):not(.preview-context-target) {')
-    expect(css).toContain('.compose-post-preview .preview-post-meta > .post-context {\n  color: var(--muted);\n  cursor: default;\n  border-bottom: 0;')
+    expect(css).toContain(
+      '.preview-post-meta > :not(.reference-menu):not(.post-context):not(.preview-context-target) {',
+    )
+    expect(css).toContain(
+      '.compose-post-preview .preview-post-meta > .post-context {\n  color: var(--muted);\n  cursor: default;\n  border-bottom: 0;',
+    )
     expect(css).toContain('.preview-post-meta > .post-context-author {\n  margin-left: 0;')
-    expect(css).toContain('.preview-post-meta > .preview-context-target {\n  margin-left: calc(-1 * var(--space-4) + 1ch);')
+    expect(css).toContain(
+      '.preview-post-meta > .preview-context-target {\n  margin-left: calc(-1 * var(--space-4) + 1ch);',
+    )
   })
 
   test('styles conversation top links like reply actions', async () => {
@@ -253,7 +275,9 @@ describe('in-memory stylesheet', () => {
 
   test('preserves ASCII art whitespace and scrolls it horizontally without a scrollbar', async () => {
     const css = await Bun.file(new URL('./styles.css', import.meta.url)).text()
-    expect(css).toContain('.post-body.ascii-art {\n  z-index: 2;\n  display: block;\n  max-width: 100%;\n  overflow-x: auto;\n  overflow-y: hidden;\n  overscroll-behavior-inline: contain;')
+    expect(css).toContain(
+      '.post-body.ascii-art {\n  z-index: 2;\n  display: block;\n  max-width: 100%;\n  overflow-x: auto;\n  overflow-y: hidden;\n  overscroll-behavior-inline: contain;',
+    )
     expect(css).toContain('overflow-wrap: normal;\n  scrollbar-width: none;\n  white-space: pre;')
     expect(css).toContain('.post-body.ascii-art::-webkit-scrollbar {\n  display: none;\n}')
   })
@@ -343,7 +367,8 @@ describe('in-memory stylesheet', () => {
 
   test('opens reference popovers on hover and keyboard focus', async () => {
     const css = await Bun.file(new URL('./styles.css', import.meta.url)).text()
-    const accountBridgeRule = css.slice(css.indexOf('.account-menu-handle::after {'), css.indexOf('.account-menu-popover a,'))
+    const accountBridgeRule = css.slice(css.indexOf('.account-menu-handle::after {'),
+      css.indexOf('.account-menu-popover a,'))
     expect(accountBridgeRule).toContain('height: var(--space-2);')
     expect(accountBridgeRule).not.toContain('pointer-events: none;')
     const popoverRule = css.slice(css.indexOf('.reference-menu-popover {'), css.indexOf('.reference-menu-popover-tag'))
@@ -367,11 +392,15 @@ describe('in-memory stylesheet', () => {
     expect(css).toContain('.reference-popover-bio {\n  display: block;\n  width: 100%;')
     expect(css).toContain('.reference-menu-popover > .reference-popover-actions:first-child:not(:has(.follows-you)),')
     expect(css).toContain('.reference-menu-popover:not(:has(.reference-popover-bio)) {\n  min-width: 0;')
-    expect(css).toContain('.reference-menu-popover:not(:has(.reference-popover-bio)) > .reference-popover-actions:has(.follows-you) {')
+    expect(css).toContain(
+      '.reference-menu-popover:not(:has(.reference-popover-bio)) > .reference-popover-actions:has(.follows-you) {',
+    )
     expect(css).toContain('margin-top: var(--space-2);\n  margin-bottom: var(--space-2);\n'
       + '  padding-bottom: var(--space-2);\n  border-bottom: 1px solid var(--soft);\n  color: var(--quote-ink);')
     expect(css).toContain('.reference-popover-bio + .reference-popover-actions {\n  margin-top: 0;')
-    expect(css).toContain('.reference-popover-bio-own {\n  margin-bottom: 0;\n  padding-bottom: 0;\n  border-bottom: 0;')
+    expect(css).toContain(
+      '.reference-popover-bio-own {\n  margin-bottom: 0;\n  padding-bottom: 0;\n  border-bottom: 0;',
+    )
     expect(css).toContain('.reference-menu .reference-menu-popover .button {')
   })
 

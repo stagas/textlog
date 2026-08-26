@@ -1,9 +1,9 @@
 import { Database } from 'bun:sqlite'
 import { expect, test } from 'bun:test'
-import { runMigrations } from './migrations'
 import { apiActivities } from './api-activity'
-import { loadPersonalizedFeed } from './personalized-feed'
 import { markLatestPostsRead } from './latest-state'
+import { runMigrations } from './migrations'
+import { loadPersonalizedFeed } from './personalized-feed'
 import type { User } from './types'
 
 test('whisper descendants stay in participant and original tag-follower personalized feeds', () => {
@@ -22,9 +22,10 @@ test('whisper descendants stay in participant and original tag-follower personal
     INSERT INTO post_hashtags(post_id,tag) VALUES(3,'whisper'),(3,'topic');
     INSERT INTO hashtag_follows(user_id,tag,created_at) VALUES(3,'topic','2026-08-03 10:30:00');
     INSERT INTO follows(follower_id,following_id,created_at) VALUES(4,2,'2026-08-03 10:30:00');`)
-  const generation = (userId: number) => (database.query(
-    'SELECT generation FROM personalized_feed_generations WHERE viewer_id=?',
-  ).get(userId) as { generation: number }).generation
+  const generation = (userId: number) =>
+    (database.query(
+      'SELECT generation FROM personalized_feed_generations WHERE viewer_id=?',
+    ).get(userId) as { generation: number }).generation
   const aliceGeneration = generation(1)
   const charlieGeneration = generation(3)
   database.run(`INSERT INTO posts(id,user_id,parent_id,body,created_at)
@@ -107,8 +108,7 @@ test('For You follow activity can be hidden independently for people and hashtag
       (1,2,'2026-08-03 09:00:00'),(2,3,'2026-08-03 10:00:00'),(3,1,'2026-08-03 12:00:00');
     INSERT INTO hashtag_follows(user_id,tag,created_at) VALUES(2,'topic','2026-08-03 11:00:00');
     UPDATE users SET hide_people_follow_activity=1,hide_hashtag_follow_activity=0 WHERE id=1;`)
-  const viewer: User = { id: 1, handle: 'viewer', email: 'viewer@example.com', bio: '',
-    hide_people_follow_activity: 1 }
+  const viewer: User = { id: 1, handle: 'viewer', email: 'viewer@example.com', bio: '', hide_people_follow_activity: 1 }
 
   const peopleHidden = loadPersonalizedFeed(database, viewer, 1, 20, false, '/for-you', false)
   expect(peopleHidden.timeline.map(row => row.activity_kind)).toEqual(['user_follow', 'tag_follow'])
@@ -162,10 +162,11 @@ test('For You only includes activity created after following a person or hashtag
     .toEqual(['target'])
   expect(feed.forYouCount).toBe(4)
 
-  const api = apiActivities(database, 'https://textlog.test', viewer,
-    { limit: 20, cursor: null, toMe: false })
-  expect(api.data.flatMap(activity => activity.type === 'post' && 'id' in activity.payload
-    ? [activity.payload.id]
-    : []).sort())
+  const api = apiActivities(database, 'https://textlog.test', viewer, { limit: 20, cursor: null, toMe: false })
+  expect(api.data.flatMap(activity =>
+    activity.type === 'post' && 'id' in activity.payload
+      ? [activity.payload.id]
+      : []
+  ).sort())
     .toEqual([2, 4])
 })

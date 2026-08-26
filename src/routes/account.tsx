@@ -19,8 +19,8 @@ import {
   ChangeAppearance,
   ConfirmAccountDelete,
   ConfirmEmail,
-  InviteFriends,
   InteractedEmails,
+  InviteFriends,
   NotificationSettings,
   Profile,
   RecapEmails,
@@ -224,8 +224,8 @@ export function registerAccountRoutes(app: Hono) {
     const userAgent = notificationUserAgent(c.req.raw)
     await databaseService().call('account.savePushSubscription', { userId: user.id, endpoint, p256dh, auth, deviceId,
       userAgent, preferencesProvided: Boolean(value.preferences),
-      preferences: { latest, replies, mentions, follows, signups, followActivity, followingNotes,
-        followingOnlyToMe, peopleFollowActivity, hashtagFollowActivity } })
+      preferences: { latest, replies, mentions, follows, signups, followActivity, followingNotes, followingOnlyToMe,
+        peopleFollowActivity, hashtagFollowActivity } })
     c.header('Set-Cookie', notificationDeviceCookie(deviceId), { append: true })
     return c.json({ saved: true })
   })
@@ -257,9 +257,9 @@ export function registerAccountRoutes(app: Hono) {
     const settings = await databaseService().call('account.editSettings', { userId: user.id })
     return page(
       <Profile user={user}
-        profile={{ ...user, timezone: settings?.timezone,
-          recap_emails: settings?.recapEmails, interaction_emails: settings?.interactionEmails }} posts={[]}
-        following={false} editing returnPath={returnPath} />,
+        profile={{ ...user, timezone: settings?.timezone, recap_emails: settings?.recapEmails,
+          interaction_emails: settings?.interactionEmails }} posts={[]} following={false} editing
+        returnPath={returnPath} />,
     )
   })
 
@@ -308,7 +308,8 @@ export function registerAccountRoutes(app: Hono) {
   app.get('/account/interacted-emails/unsubscribe', async c => {
     const value = c.req.query('token') || ''
     const changed = await databaseService().call('account.setInteractedPreference', {
-      token: value, subscribed: false,
+      token: value,
+      subscribed: false,
     })
     if (!changed) return page(<InteractedEmails subscribed={false} invalid />, 404)
     return page(<InteractedEmails subscribed={false} token={value} changed />)
@@ -317,7 +318,8 @@ export function registerAccountRoutes(app: Hono) {
   app.post('/account/interacted-emails/unsubscribe', async c => {
     const value = c.req.query('token') || ''
     const changed = await databaseService().call('account.setInteractedPreference', {
-      token: value, subscribed: false,
+      token: value,
+      subscribed: false,
     })
     if (!changed) return c.text('Unsubscribe link unavailable', 404)
     return c.text('Unsubscribed', 200)
@@ -329,7 +331,9 @@ export function registerAccountRoutes(app: Hono) {
     if (f.subscribed !== '0' && f.subscribed !== '1') return redirect('/account/interacted-emails')
     const subscribed = f.subscribed === '1'
     const changed = await databaseService().call('account.setInteractedPreference', {
-      userId: user?.id, token: user ? undefined : f.token, subscribed,
+      userId: user?.id,
+      token: user ? undefined : f.token,
+      subscribed,
     })
     if (!changed) return redirect('/enter?next=' + encodeURIComponent('/account/interacted-emails'))
     return page(<InteractedEmails user={user} subscribed={subscribed} token={user ? undefined : f.token} changed />)
@@ -377,7 +381,8 @@ export function registerAccountRoutes(app: Hono) {
       if (!moderation.ok) {
         return page(
           <Profile user={user} profile={{ ...user, timezone: submittedTimezone }} posts={[]} following={false} bio={bio}
-            editHandle={submittedHandle} editing error={moderationMessage(moderation.reason)} returnPath={returnPath} />,
+            editHandle={submittedHandle} editing error={moderationMessage(moderation.reason)}
+            returnPath={returnPath} />,
           moderation.reason === 'flagged' ? 422 : 503,
         )
       }
@@ -423,8 +428,7 @@ export function registerAccountRoutes(app: Hono) {
         selectedSize={fontSizeChoice(c.req.raw)} selectedPageSize={resolvedPageSize(c.req.raw)} tab={tab}
         selectedDensity={resolvedDensity(c.req.raw)} selectedLinkPreviews={user.show_link_previews !== 0}
         includePeopleFollowActivity={user.hide_people_follow_activity !== 1}
-        includeHashtagFollowActivity={user.hide_hashtag_follow_activity !== 1}
-        returnPath={returnPath} />,
+        includeHashtagFollowActivity={user.hide_hashtag_follow_activity !== 1} returnPath={returnPath} />,
     )
   })
 
@@ -909,9 +913,9 @@ export function registerAccountRoutes(app: Hono) {
     const value = c.req.query('token') || ''
     if (value) {
       const account = await databaseService().call('account.deletionInfo', {
-          selector: { tokenHash: hash(value) },
-          now: Date.now(),
-        })
+        selector: { tokenHash: hash(value) },
+        now: Date.now(),
+      })
       return account
         ? page(<ConfirmAccountDelete user={currentUser(c.req.raw)} handle={account.handle} token={value} />)
         : page(<ConfirmAccountDelete user={currentUser(c.req.raw)} invalid />, 400)

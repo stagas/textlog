@@ -3,7 +3,8 @@ import { sessionCookieName } from '../brand'
 import { Auth, ChooseHandle, ForgotPassword, MagicLinkSent, PasswordLogin, ResetPassword } from '../components/pages'
 import { sendMagicLink, sendPasswordReset } from '../email'
 import { isDevelopment } from '../environment'
-import { campaignAttribution, campaignAttributionCookie, clearSessionCookie, safeLocalPath, sessionCookie } from '../http'
+import { campaignAttribution, campaignAttributionCookie, clearSessionCookie, safeLocalPath,
+  sessionCookie } from '../http'
 import { logError } from '../log'
 import { moderateText, moderationMessage } from '../moderation'
 

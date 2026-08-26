@@ -38,8 +38,7 @@ const milestones = [
     marker: '04',
     title: 'Make it feel like yours',
     path: '/account/edit/appearance',
-    copy: () =>
-      'Choose your theme, accent, typeface, font size, density, page size, and link-preview preference.',
+    copy: () => 'Choose your theme, accent, typeface, font size, density, page size, and link-preview preference.',
   },
   {
     marker: '05',

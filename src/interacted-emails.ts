@@ -6,4 +6,3 @@ export function issueInteractedUnsubscribeToken(database: Database, userId: numb
   database.query('INSERT INTO interacted_unsubscribe_tokens(token_hash,user_id) VALUES(?,?)').run(hash(value), userId)
   return value
 }
-

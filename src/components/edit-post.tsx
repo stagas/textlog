@@ -8,17 +8,17 @@ import { ReplyBox, ReplyPreview } from './reply'
 export function EditPost(
   { user, post, parent, replies = [], error, body = post.body, preview = false, returnPath, suggestionSearch,
     moderator = false }: {
-    user: User
-    post: PostRow & { handle?: string }
-    parent?: PostView | null
-    replies?: PostView[]
-    error?: string
-    body?: string
-    preview?: boolean
-    returnPath?: string
-    suggestionSearch?: PostingSuggestionSearch | null
-    moderator?: boolean
-  },
+      user: User
+      post: PostRow & { handle?: string }
+      parent?: PostView | null
+      replies?: PostView[]
+      error?: string
+      body?: string
+      preview?: boolean
+      returnPath?: string
+      suggestionSearch?: PostingSuggestionSearch | null
+      moderator?: boolean
+    },
 ) {
   const returnQuery = returnPath ? '?from=' + encodeURIComponent(returnPath) : ''
   return (
@@ -39,8 +39,8 @@ export function EditPost(
         )}
         <ReplyBox action={'/post/' + post.id + '/edit'} body={body} error={error} suggestionSearch={suggestionSearch}
           className={post.parent_id && parent ? 'replybox' : 'compose edit-post-compose'}
-          hidden={returnPath && <input type="hidden" name="from" value={returnPath} />}
-          beforeTextarea={!moderator &&
+          hidden={returnPath && <input type="hidden" name="from" value={returnPath} />} beforeTextarea={!moderator
+          && (
             <div className="edit-post-delete-action">
               <button className="secondary-action unpublish-action" name="action" value="unpublish" formNoValidate>
                 draft
@@ -49,7 +49,7 @@ export function EditPost(
                 delete
               </a>
             </div>
-          } secondary={
+          )} secondary={
           <span className="edit-post-actions">
             <a className="secondary-action cancel-action edit-post-cancel" href={'/post/' + post.id + returnQuery}>
               cancel

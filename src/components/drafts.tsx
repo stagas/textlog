@@ -14,7 +14,11 @@ export function Drafts({ user, drafts, returnPath }: { user: User; drafts: Draft
         <PageHeading className="drafts-heading" eyebrow="writing" title="drafts"
           action={returnPath && <a className="profile-edit-link" href={returnPath}>back</a>} />
         {drafts.length === 0
-          ? <p className="drafts-empty">You don’t have any drafts. <a href="/">Back to the homepage</a>.</p>
+          ? (
+            <p className="drafts-empty">
+              You don’t have any drafts. <a href="/">Back to the homepage</a>.
+            </p>
+          )
           : drafts.map(draft => (
             <Post key={draft.id} p={{
               id: -draft.id,
@@ -26,12 +30,13 @@ export function Drafts({ user, drafts, returnPath }: { user: User; drafts: Draft
               handle: user.handle,
               bio: user.bio,
               parent: draft.parent,
-            }} user={user} className="draft-post" showReplyAction={false} tappableParent topActions={
-              <span className="post-actions">
-                <a className="quiet" href={`/drafts/${draft.id}/edit${editFrom}`}>edit</a>
-                <a className="quiet danger" href={`/drafts/${draft.id}/delete${editFrom}`}>delete</a>
-              </span>
-            } />
+            }} user={user} className="draft-post" showReplyAction={false} tappableParent
+              topActions={
+                <span className="post-actions">
+                  <a className="quiet" href={`/drafts/${draft.id}/edit${editFrom}`}>edit</a>
+                  <a className="quiet danger" href={`/drafts/${draft.id}/delete${editFrom}`}>delete</a>
+                </span>
+              } />
           ))}
       </div>
     </Layout>

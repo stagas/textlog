@@ -23,7 +23,8 @@ export function Dmca({ user }: { user: User | null }) {
         </p>
         {instance.fiscalHost && (
           <p>
-            Legal correspondence may also be addressed to {instance.fiscalHost.legalName}, fiscal host of the {name}{' '}
+            Legal correspondence may also be addressed to {instance.fiscalHost.legalName}, fiscal host of the {name}
+            {' '}
             collective, at {instance.fiscalHost.address}.
           </p>
         )}

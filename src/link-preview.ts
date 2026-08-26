@@ -251,14 +251,16 @@ async function audioMimeType(initialUrl: URL) {
   let url = initialUrl
   for (let redirects = 0; redirects <= 3; redirects++) {
     let response = await fetch(url, {
-      method: 'HEAD', redirect: 'manual', signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
+      method: 'HEAD',
+      redirect: 'manual',
+      signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
       headers: { accept: 'audio/*,text/html;q=0.8', 'user-agent': 'textlog-link-preview/1.0' },
     })
     if (response.status === 405 || response.status === 501) {
       response = await fetch(url, {
-        redirect: 'manual', signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
-        headers: { accept: 'audio/*,text/html;q=0.8', range: 'bytes=0-0',
-          'user-agent': 'textlog-link-preview/1.0' },
+        redirect: 'manual',
+        signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
+        headers: { accept: 'audio/*,text/html;q=0.8', range: 'bytes=0-0', 'user-agent': 'textlog-link-preview/1.0' },
       })
       await response.body?.cancel()
     }
@@ -402,7 +404,9 @@ export async function storeRemotePreviewImage(rawUrl: string) {
   return { key, width: image.width, height: image.height }
 }
 
-export async function discoverLinkPreviews(body: string, database?: Database): Promise<Array<{ url: string } & LinkPreview>> {
+export async function discoverLinkPreviews(body: string,
+  database?: Database): Promise<Array<{ url: string } & LinkPreview>>
+{
   const storedImage = async (url: URL) => {
     const image = await fetchImage(url)
     if (!image) return null
@@ -479,19 +483,24 @@ function writeLinkPreviews(database: Database, postId: number, previews: ({ url:
 {
   const existing = database.query('SELECT image_url FROM post_link_previews WHERE post_id=? AND url=?')
   const supportsLinkedPost = database.query(
-    "SELECT 1 FROM pragma_table_info('post_link_previews') WHERE name='linked_post_id'",
+    'SELECT 1 FROM pragma_table_info(\'post_link_previews\') WHERE name=\'linked_post_id\'',
   ).get()
-  const supportsMimeType = database.query("SELECT 1 FROM pragma_table_info('post_link_previews') WHERE name='mime_type'").get()
-  const insert = supportsLinkedPost ? database.query(`INSERT INTO post_link_previews
+  const supportsMimeType = database.query(
+    'SELECT 1 FROM pragma_table_info(\'post_link_previews\') WHERE name=\'mime_type\'',
+  ).get()
+  const insert = supportsLinkedPost
+    ? database.query(`INSERT INTO post_link_previews
     (post_id,url,image_url,title,description,site_name,image_width,image_height,mime_type,linked_post_id) VALUES(?,?,?,?,?,?,?,?,?,?)
     ON CONFLICT(post_id,url) DO UPDATE SET image_url=excluded.image_url,title=excluded.title,
       description=excluded.description,site_name=excluded.site_name,image_width=excluded.image_width,
       image_height=excluded.image_height,mime_type=excluded.mime_type,linked_post_id=excluded.linked_post_id`)
-    : supportsMimeType ? database.query(`INSERT INTO post_link_previews
+    : supportsMimeType
+    ? database.query(`INSERT INTO post_link_previews
     (post_id,url,image_url,title,description,site_name,image_width,image_height,mime_type) VALUES(?,?,?,?,?,?,?,?,?)
     ON CONFLICT(post_id,url) DO UPDATE SET image_url=excluded.image_url,title=excluded.title,
       description=excluded.description,site_name=excluded.site_name,image_width=excluded.image_width,
-      image_height=excluded.image_height,mime_type=excluded.mime_type`) : database.query(`INSERT INTO post_link_previews
+      image_height=excluded.image_height,mime_type=excluded.mime_type`)
+    : database.query(`INSERT INTO post_link_previews
     (post_id,url,image_url,title,description,site_name,image_width,image_height) VALUES(?,?,?,?,?,?,?,?)
     ON CONFLICT(post_id,url) DO UPDATE SET image_url=excluded.image_url,title=excluded.title,
       description=excluded.description,site_name=excluded.site_name,image_width=excluded.image_width,
@@ -597,9 +606,10 @@ export async function replaceBioLinkPreviews(database: Database, userId: number,
   const oldKeys = storedBioPreviewKeys(database, userId)
   const newKeys = previews.flatMap(preview => preview.imageKey ? [preview.imageKey] : [])
   const supportsMimeType = database.query(
-    "SELECT 1 FROM pragma_table_info('user_bio_link_previews') WHERE name='mime_type'",
+    'SELECT 1 FROM pragma_table_info(\'user_bio_link_previews\') WHERE name=\'mime_type\'',
   ).get()
-  const insert = supportsMimeType ? database.query(`INSERT INTO user_bio_link_previews
+  const insert = supportsMimeType
+    ? database.query(`INSERT INTO user_bio_link_previews
     (user_id,url,image_url,title,description,site_name,image_width,image_height,mime_type) VALUES(?,?,?,?,?,?,?,?,?)`)
     : database.query(`INSERT INTO user_bio_link_previews
       (user_id,url,image_url,title,description,site_name,image_width,image_height) VALUES(?,?,?,?,?,?,?,?)`)

@@ -1,8 +1,8 @@
 import { describe, expect, test } from 'bun:test'
-import { applyHtmlCachePolicy, canonicalizeCrawlerLinks, clearSessionCookie,
-  crawlerCanonicalRedirect, feedPreference, feedPreferenceCookie, FORM_REQUEST_BODY_LIMIT, htmlCacheControl,
-  isCrawlerRequest, isSameOriginRequest, limitedFormData, RequestBodyError, requiresSameOrigin, safeLocalPath,
-  safeRefererPath, securityHeaders, sessionCookie, stringField } from './http'
+import { applyHtmlCachePolicy, canonicalizeCrawlerLinks, clearSessionCookie, crawlerCanonicalRedirect, feedPreference,
+  feedPreferenceCookie, FORM_REQUEST_BODY_LIMIT, htmlCacheControl, isCrawlerRequest, isSameOriginRequest,
+  limitedFormData, RequestBodyError, requiresSameOrigin, safeLocalPath, safeRefererPath, securityHeaders, sessionCookie,
+  stringField } from './http'
 
 describe('local redirects', () => {
   test('accepts local paths and rejects ambiguous or external targets', () => {
@@ -92,7 +92,6 @@ describe('local redirects', () => {
       + '<a href="https://example.com/?from=external">external</a>')
     expect(response.headers.get('vary')).toBe('User-Agent')
   })
-
 })
 
 describe('request values and cookies', () => {

@@ -7,8 +7,8 @@ import { ApiDocs, EmbedExamples } from '../components/pages'
 import { type DatabaseService, databaseService } from '../database-service'
 import { decodeHotCursor } from '../hot'
 import { logError } from '../log'
-import { MAX_SEARCH_LENGTH, normalizeSearchQuery, searchExpression } from '../search'
 import { POST_MAX } from '../post-body'
+import { MAX_SEARCH_LENGTH, normalizeSearchQuery, searchExpression } from '../search'
 import type { User } from '../types'
 import { apiUser, currentUser } from '../utils'
 import { registerApiWriteRoutes } from './api-write'
@@ -153,30 +153,34 @@ function openApiDocument() {
       description: 'Public reads and authenticated writes for every account.' },
     servers: [{ url: '/api/v1' }],
     paths: {
-      '/feeds/latest': { get: { summary: 'Latest posts', security: optionalAuthSecurity,
-        description: 'Bearer authentication is optional. Authenticated responses add unread state to each post and '
-          + 'include has_unread and unread_count.', parameters: collectionParameters,
-        responses: { ...jsonResponses, '200': collectionResponse }, 'x-root-aliases': ['/latest.json'] } },
-      '/feeds/latest/read': { post: { summary: 'Mark selected latest posts as read', security: authSecurity,
-        requestBody: requestBody({ type: 'object', required: ['post_ids'], properties: { post_ids: { type: 'array',
-          minItems: 1, maxItems: 100, uniqueItems: true, items: { type: 'integer', minimum: 1 } } } }),
-        responses: { ...writeResponses, '200': dataResponse({ type: 'object', required: ['read'], properties: {
-          read: { type: 'integer', minimum: 0 },
-        } }) } } },
+      '/feeds/latest': {
+        get: { summary: 'Latest posts', security: optionalAuthSecurity,
+          description: 'Bearer authentication is optional. Authenticated responses add unread state to each post and '
+            + 'include has_unread and unread_count.', parameters: collectionParameters,
+          responses: { ...jsonResponses, '200': collectionResponse }, 'x-root-aliases': ['/latest.json'] },
+      },
+      '/feeds/latest/read': {
+        post: { summary: 'Mark selected latest posts as read', security: authSecurity,
+          requestBody: requestBody({ type: 'object', required: ['post_ids'], properties: {
+            post_ids: { type: 'array', minItems: 1, maxItems: 100, uniqueItems: true,
+              items: { type: 'integer', minimum: 1 } },
+          } }), responses: { ...writeResponses, '200': dataResponse({ type: 'object', required: ['read'], properties: {
+            read: { type: 'integer', minimum: 0 },
+          } }) } },
+      },
       '/feeds/latest/read-all': {
         post: { summary: 'Mark every visible latest post as read', security: authSecurity,
-          responses: { ...writeResponses, '200': dataResponse({ type: 'object', required: ['read_all', 'read'],
-            properties: { read_all: { type: 'boolean' }, read: { type: 'integer', minimum: 0 } } }) } },
+          responses: { ...writeResponses,
+            '200': dataResponse({ type: 'object', required: ['read_all', 'read'],
+              properties: { read_all: { type: 'boolean' }, read: { type: 'integer', minimum: 0 } } }) } },
       },
       '/activities/for-you': {
         get: { summary: 'Activity personalized for the authenticated account', security: authSecurity,
-          parameters: collectionParameters,
-          responses: { ...activityResponses, '401': writeResponses['401'] } },
+          parameters: collectionParameters, responses: { ...activityResponses, '401': writeResponses['401'] } },
       },
       '/activities/to-me': {
         get: { summary: 'Activity directed to the authenticated account', security: authSecurity,
-          parameters: collectionParameters,
-          responses: { ...activityResponses, '401': writeResponses['401'] } },
+          parameters: collectionParameters, responses: { ...activityResponses, '401': writeResponses['401'] } },
       },
       '/activities/for-you/read': {
         post: { summary: 'Mark selected for-you activities as read', security: authSecurity,
@@ -192,9 +196,10 @@ function openApiDocument() {
       '/activities/to-me/read-all': {
         post: { summary: 'Mark all to-me activities as read', security: authSecurity, responses: writeResponses },
       },
-      '/feeds/hot': { get: { summary: 'Hot posts', security: optionalAuthSecurity,
-        parameters: collectionParameters, responses: { ...jsonResponses, '200': collectionResponse },
-        'x-root-aliases': ['/hot.json'] } },
+      '/feeds/hot': {
+        get: { summary: 'Hot posts', security: optionalAuthSecurity, parameters: collectionParameters,
+          responses: { ...jsonResponses, '200': collectionResponse }, 'x-root-aliases': ['/hot.json'] },
+      },
       '/search': { get: { summary: 'Search public posts', security: optionalAuthSecurity, parameters: [
         { name: 'q', in: 'query', required: true,
           schema: { type: 'string', minLength: 1, maxLength: MAX_SEARCH_LENGTH } },
@@ -282,14 +287,18 @@ function openApiDocument() {
           parameters: [tagParameter, ...collectionParameters],
           responses: { ...jsonResponses, '200': collectionResponse } },
       },
-      '/tags/{tag}': { get: { summary: 'Hashtag details', security: optionalAuthSecurity,
-        parameters: [tagParameter], responses: { ...jsonResponses, '200': dataResponse({
-          $ref: '#/components/schemas/Tag',
-        }) } } },
-      '/tags/{tag}/followers': { get: { summary: 'Accounts following a hashtag', parameters: [tagParameter,
-        ...collectionParameters], responses: { ...jsonResponses, '200': { description: 'Paginated accounts', content: {
-          'application/json': { schema: { $ref: '#/components/schemas/UserReferenceCollection' } },
-        } } } } },
+      '/tags/{tag}': {
+        get: { summary: 'Hashtag details', security: optionalAuthSecurity, parameters: [tagParameter],
+          responses: { ...jsonResponses, '200': dataResponse({
+            $ref: '#/components/schemas/Tag',
+          }) } },
+      },
+      '/tags/{tag}/followers': {
+        get: { summary: 'Accounts following a hashtag', parameters: [tagParameter, ...collectionParameters],
+          responses: { ...jsonResponses, '200': { description: 'Paginated accounts', content: {
+            'application/json': { schema: { $ref: '#/components/schemas/UserReferenceCollection' } },
+          } } } },
+      },
       '/tags/{tag}/posts.{format}': { get: { summary: 'Hashtag posts as RSS or Atom', parameters: [
         { name: 'tag', in: 'path', required: true, schema: { type: 'string' } },
         formatParameter,
@@ -313,8 +322,9 @@ function openApiDocument() {
             code: { type: 'string', pattern: '^\\d{6}$' },
           } }), responses: writeResponses },
       },
-      '/auth/session': { delete: { summary: 'Revoke the current token', security: authSecurity,
-        responses: writeResponses } },
+      '/auth/session': {
+        delete: { summary: 'Revoke the current token', security: authSecurity, responses: writeResponses },
+      },
       '/me': {
         get: { summary: 'The signed-in account', security: authSecurity,
           responses: { ...writeResponses, '200': dataResponse({ $ref: '#/components/schemas/Account' }) } },
@@ -323,9 +333,11 @@ function openApiDocument() {
             bio: { type: 'string', maxLength: 160 },
           } }), responses: { ...writeResponses, '200': dataResponse({ $ref: '#/components/schemas/Account' }) } },
       },
-      '/posts': { post: { summary: 'Create a post or reply', security: authSecurity,
-        requestBody: requestBody({ $ref: '#/components/schemas/PostCreateRequest' }),
-        responses: { ...writeResponses, '200': postResponse, '201': postResponse } } },
+      '/posts': {
+        post: { summary: 'Create a post or reply', security: authSecurity,
+          requestBody: requestBody({ $ref: '#/components/schemas/PostCreateRequest' }),
+          responses: { ...writeResponses, '200': postResponse, '201': postResponse } },
+      },
       '/posts/{id}/report': {
         post: { summary: 'Report a post', security: authSecurity, parameters: [postIdParameter],
           requestBody: requestBody({ type: 'object', required: ['reason'], properties: {
@@ -336,12 +348,12 @@ function openApiDocument() {
         post: { summary: 'Vote in a poll', security: authSecurity, parameters: [postIdParameter],
           requestBody: requestBody({ type: 'object', required: ['option_id'], properties: {
             option_id: { type: 'integer', minimum: 1 },
-          } }), responses: { ...writeResponses, '201': postResponse,
+          } }),
+          responses: { ...writeResponses, '201': postResponse,
             '409': errorResponse('The poll expired or the account already voted') } },
       },
       '/posts/{id}/unpublish': {
-        post: { summary: 'Move a post you own back to drafts', security: authSecurity,
-          parameters: [postIdParameter],
+        post: { summary: 'Move a post you own back to drafts', security: authSecurity, parameters: [postIdParameter],
           responses: { ...writeResponses, '201': dataResponse({ $ref: '#/components/schemas/Draft' }) } },
       },
       '/drafts': {
@@ -362,17 +374,20 @@ function openApiDocument() {
         delete: { summary: 'Delete one of your drafts', security: authSecurity, parameters: [draftIdParameter],
           responses: writeResponses },
       },
-      '/drafts/{id}/publish': { post: { summary: 'Atomically publish a draft', security: authSecurity,
-        parameters: [draftIdParameter], responses: { ...writeResponses, '200': postResponse, '201': postResponse } } },
-      '/explore': { get: { summary: 'Discover people and trending hashtags', security: optionalAuthSecurity,
-        parameters: [
+      '/drafts/{id}/publish': {
+        post: { summary: 'Atomically publish a draft', security: authSecurity, parameters: [draftIdParameter],
+          responses: { ...writeResponses, '200': postResponse, '201': postResponse } },
+      },
+      '/explore': {
+        get: { summary: 'Discover people and trending hashtags', security: optionalAuthSecurity, parameters: [
           { name: 'people_limit', in: 'query', schema: { type: 'integer', minimum: 1, maximum: 100, default: 20 } },
           { name: 'people_cursor', in: 'query', schema: { type: 'string' } },
           { name: 'tags_limit', in: 'query', schema: { type: 'integer', minimum: 1, maximum: 100, default: 20 } },
           { name: 'tags_cursor', in: 'query', schema: { type: 'string' } },
         ], responses: { ...jsonResponses, '200': { description: 'People and hashtag suggestions', content: {
           'application/json': { schema: { $ref: '#/components/schemas/ExploreResponse' } },
-        } } } } },
+        } } } },
+      },
       '/tags/{tag}/follow': {
         post: { summary: 'Follow a hashtag', security: authSecurity, parameters: [tagParameter],
           responses: writeResponses },
@@ -401,94 +416,147 @@ function openApiDocument() {
     security: [],
     components: {
       schemas: { Error: {
-        type: 'object', required: ['error'], properties: { error: { type: 'object', required: ['code', 'message'],
-          properties: { code: { type: 'string' }, message: { type: 'string' } } } },
+        type: 'object',
+        required: ['error'],
+        properties: {
+          error: { type: 'object', required: ['code', 'message'],
+            properties: { code: { type: 'string' }, message: { type: 'string' } } },
+        },
       }, Pagination: {
-        type: 'object', required: ['next_cursor'], properties: { next_cursor: { type: ['string', 'null'] } },
+        type: 'object',
+        required: ['next_cursor'],
+        properties: { next_cursor: { type: ['string', 'null'] } },
       }, UserReference: {
-        type: 'object', required: ['handle', 'url', 'api_url'], properties: { handle: { type: 'string' },
-          url: { type: 'string', format: 'uri' }, api_url: { type: 'string', format: 'uri' } },
+        type: 'object',
+        required: ['handle', 'url', 'api_url'],
+        properties: { handle: { type: 'string' }, url: { type: 'string', format: 'uri' },
+          api_url: { type: 'string', format: 'uri' } },
       }, UserReferenceCollection: {
-        type: 'object', required: ['data', 'pagination'], properties: {
+        type: 'object',
+        required: ['data', 'pagination'],
+        properties: {
           data: { type: 'array', items: { $ref: '#/components/schemas/UserReference' } },
           pagination: { $ref: '#/components/schemas/Pagination' },
         },
       }, TagCollection: {
-        type: 'object', required: ['data', 'pagination'], properties: {
+        type: 'object',
+        required: ['data', 'pagination'],
+        properties: {
           data: { type: 'array', items: { $ref: '#/components/schemas/Tag' } },
           pagination: { $ref: '#/components/schemas/Pagination' },
         },
       }, Account: {
-        type: 'object', required: ['handle', 'email', 'bio', 'email_verified', 'can_post'], properties: {
-          handle: { type: 'string' }, email: { type: 'string', format: 'email' }, bio: { type: 'string' },
-          email_verified: { type: 'boolean' }, can_post: { type: 'boolean' },
+        type: 'object',
+        required: ['handle', 'email', 'bio', 'email_verified', 'can_post'],
+        properties: {
+          handle: { type: 'string' },
+          email: { type: 'string', format: 'email' },
+          bio: { type: 'string' },
+          email_verified: { type: 'boolean' },
+          can_post: { type: 'boolean' },
         },
       }, PostCollection: {
-        type: 'object', required: ['data', 'pagination'], properties: {
-          data: { type: 'array', items: { allOf: [{ $ref: '#/components/schemas/Post' }, { type: 'object',
-            properties: { unread: { type: 'boolean', description: 'Present on authenticated latest-feed reads.' } } }] } },
+        type: 'object',
+        required: ['data', 'pagination'],
+        properties: {
+          data: { type: 'array', items: {
+            allOf: [{ $ref: '#/components/schemas/Post' }, { type: 'object', properties: {
+              unread: { type: 'boolean', description: 'Present on authenticated latest-feed reads.' },
+            } }],
+          } },
           pagination: { $ref: '#/components/schemas/Pagination' },
           has_unread: { type: 'boolean', description: 'Present on authenticated latest-feed reads.' },
-          unread_count: { type: 'integer', minimum: 0,
-            description: 'Present on authenticated latest-feed reads.' },
+          unread_count: { type: 'integer', minimum: 0, description: 'Present on authenticated latest-feed reads.' },
         },
       }, ActivityReadRequest: {
-        type: 'object', required: ['activity_ids'], properties: { activity_ids: { type: 'array', minItems: 1,
-          maxItems: 100, uniqueItems: true, items: { type: 'string', minLength: 1, maxLength: 500 } } },
+        type: 'object',
+        required: ['activity_ids'],
+        properties: {
+          activity_ids: { type: 'array', minItems: 1, maxItems: 100, uniqueItems: true,
+            items: { type: 'string', minLength: 1, maxLength: 500 } },
+        },
       }, PostWriteRequest: {
-        type: 'object', required: ['body'], additionalProperties: false, properties: {
+        type: 'object',
+        required: ['body'],
+        additionalProperties: false,
+        properties: {
           body: { type: 'string', minLength: 1, maxLength: POST_MAX },
         },
       }, PostCreateRequest: {
-        type: 'object', required: ['body'], additionalProperties: false, properties: {
+        type: 'object',
+        required: ['body'],
+        additionalProperties: false,
+        properties: {
           body: { type: 'string', minLength: 1, maxLength: POST_MAX },
           parent_id: { type: ['integer', 'null'], minimum: 1 },
         },
       }, DraftUpdateRequest: {
-        type: 'object', minProperties: 1, additionalProperties: false, properties: {
+        type: 'object',
+        minProperties: 1,
+        additionalProperties: false,
+        properties: {
           body: { type: 'string', minLength: 1, maxLength: POST_MAX },
           parent_id: { type: ['integer', 'null'], minimum: 1 },
         },
       }, Draft: {
-        type: 'object', required: ['id', 'body', 'parent_id', 'created_at', 'updated_at', 'parent'], properties: {
-          id: { type: 'integer' }, body: { type: 'string' }, parent_id: { type: ['integer', 'null'] },
-          created_at: { type: 'string', format: 'date-time' }, updated_at: { type: 'string', format: 'date-time' },
+        type: 'object',
+        required: ['id', 'body', 'parent_id', 'created_at', 'updated_at', 'parent'],
+        properties: {
+          id: { type: 'integer' },
+          body: { type: 'string' },
+          parent_id: { type: ['integer', 'null'] },
+          created_at: { type: 'string', format: 'date-time' },
+          updated_at: { type: 'string', format: 'date-time' },
           parent: { anyOf: [{ $ref: '#/components/schemas/Post' }, { type: 'null' }] },
         },
       }, DraftCollection: {
-        type: 'object', required: ['data', 'pagination'], properties: {
+        type: 'object',
+        required: ['data', 'pagination'],
+        properties: {
           data: { type: 'array', items: { $ref: '#/components/schemas/Draft' } },
           pagination: { $ref: '#/components/schemas/Pagination' },
         },
       }, ExplorePerson: {
-        type: 'object', required: ['handle', 'bio', 'post_count', 'following', 'follows_viewer', 'url', 'api_url'],
+        type: 'object',
+        required: ['handle', 'bio', 'post_count', 'following', 'follows_viewer', 'url', 'api_url'],
         properties: { handle: { type: 'string' }, bio: { type: 'string' }, post_count: { type: 'integer' },
           following: { type: 'boolean' }, follows_viewer: { type: 'boolean' }, url: { type: 'string', format: 'uri' },
           api_url: { type: 'string', format: 'uri' } },
       }, ExploreTag: {
         allOf: [{ $ref: '#/components/schemas/Tag' }],
       }, ExploreResponse: {
-        type: 'object', required: ['data', 'pagination'], properties: {
+        type: 'object',
+        required: ['data', 'pagination'],
+        properties: {
           data: { type: 'object', required: ['people', 'tags'], properties: {
             people: { type: 'array', items: { $ref: '#/components/schemas/ExplorePerson' } },
             tags: { type: 'array', items: { $ref: '#/components/schemas/ExploreTag' } },
-          } }, pagination: { type: 'object', required: ['people_next_cursor', 'tags_next_cursor'], properties: {
-            people_next_cursor: { type: ['string', 'null'] }, tags_next_cursor: { type: ['string', 'null'] },
+          } },
+          pagination: { type: 'object', required: ['people_next_cursor', 'tags_next_cursor'], properties: {
+            people_next_cursor: { type: ['string', 'null'] },
+            tags_next_cursor: { type: ['string', 'null'] },
           } },
         },
       }, LinkPreview: {
-        type: 'object', required: ['imageUrl'], properties: { imageUrl: { type: 'string' }, title: { type: 'string' },
-          description: { type: 'string' }, siteName: { type: 'string' }, imageWidth: { type: 'integer' },
-          imageHeight: { type: 'integer' } },
+        type: 'object',
+        required: ['imageUrl'],
+        properties: { imageUrl: { type: 'string' }, title: { type: 'string' }, description: { type: 'string' },
+          siteName: { type: 'string' }, imageWidth: { type: 'integer' }, imageHeight: { type: 'integer' } },
       }, Poll: {
-        type: 'object', required: ['options', 'kind', 'total_votes', 'expired', 'expires_at', 'viewer_voted'], properties: {
-          options: { type: 'array', items: { type: 'object', required: ['id', 'label', 'votes', 'selected'],
-            properties: { id: { type: 'integer' }, label: { type: 'string' }, votes: { type: ['integer', 'null'] },
-              selected: { type: 'boolean' }, correct: { type: ['boolean', 'null'],
-                description: 'Quiz answer correctness; null until the viewer answers.' } } } },
-          kind: { type: 'string', enum: ['poll', 'quiz'] }, total_votes: { type: ['integer', 'null'] },
+        type: 'object',
+        required: ['options', 'kind', 'total_votes', 'expired', 'expires_at', 'viewer_voted'],
+        properties: {
+          options: { type: 'array',
+            items: { type: 'object', required: ['id', 'label', 'votes', 'selected'],
+              properties: { id: { type: 'integer' }, label: { type: 'string' }, votes: { type: ['integer', 'null'] },
+                selected: { type: 'boolean' },
+                correct: { type: ['boolean', 'null'],
+                  description: 'Quiz answer correctness; null until the viewer answers.' } } } },
+          kind: { type: 'string', enum: ['poll', 'quiz'] },
+          total_votes: { type: ['integer', 'null'] },
           explanation: { type: ['string', 'null'], description: 'Quiz explanation; null until the viewer answers.' },
-          expired: { type: 'boolean' }, expires_at: { type: ['string', 'null'], format: 'date-time' },
+          expired: { type: 'boolean' },
+          expires_at: { type: ['string', 'null'], format: 'date-time' },
           viewer_voted: { type: 'boolean' },
         },
       }, QuotedPost: quotedPostSchema, Post: postSchema, Activity: {
@@ -640,11 +708,16 @@ export function registerApiRoutes(app: Hono, appUrl: string | null | undefined =
     const user = requestApiUser(c.req.raw)
     if (!user) return apiError('unauthorized', 'Provide a bearer token from /api/v1/auth/verify', 401)
     let payload: unknown
-    try { payload = await c.req.json() }
-    catch { return apiError('invalid_body', 'Provide post_ids as an array of post IDs', 400) }
+    try {
+      payload = await c.req.json()
+    }
+    catch {
+      return apiError('invalid_body', 'Provide post_ids as an array of post IDs', 400)
+    }
     const postIds = (payload as { post_ids?: unknown })?.post_ids
     if (!Array.isArray(postIds) || postIds.length < 1 || postIds.length > 100
-      || postIds.some(id => !Number.isInteger(id) || Number(id) < 1)) {
+      || postIds.some(id => !Number.isInteger(id) || Number(id) < 1))
+    {
       return apiError('invalid_body', 'Provide 1–100 positive post_ids from the latest feed', 400)
     }
     const read = await service.call('api.markLatestRead', { userId: user.id,
@@ -812,8 +885,7 @@ export function registerApiRoutes(app: Hono, appUrl: string | null | undefined =
     if (resolved.alias) {
       return c.redirect(`/api/v1/users/${encodeURIComponent(resolved.handle)}/replies${new URL(c.req.url).search}`, 308)
     }
-    return collection(c, service, { handle: resolved.handle, repliesOnly: true }, appUrl,
-      requestApiUser(c.req.raw)?.id)
+    return collection(c, service, { handle: resolved.handle, repliesOnly: true }, appUrl, requestApiUser(c.req.raw)?.id)
   })
 
   app.get('/api/v1/users/:handle/blocks', async c => {
@@ -891,7 +963,8 @@ export function registerApiRoutes(app: Hono, appUrl: string | null | undefined =
     const tag = c.req.param('tag').toLowerCase()
     if (!/^[a-z0-9_]+$/.test(tag)) return apiError('invalid_tag', 'Tag is invalid', 400)
     const origin = apiOrigin(c.req.url, appUrl)
-    const result = await service.call('api.tagDetails', { tag, origin, viewerId: requestApiUser(c.req.raw)?.id ?? null })
+    const result = await service.call('api.tagDetails', { tag, origin,
+      viewerId: requestApiUser(c.req.raw)?.id ?? null })
     return result.status === 'ready' ? jsonResponse(result.value) : apiError('not_found', 'Tag not found', 404)
   })
 
@@ -918,7 +991,10 @@ export function registerApiRoutes(app: Hono, appUrl: string | null | undefined =
     const result = await service.call('api.explore', { viewerId: requestApiUser(c.req.raw)?.id ?? -1,
       origin: apiOrigin(c.req.url, appUrl), peopleLimit: people.limit, peopleOffset: people.before || 0,
       tagsLimit: tags.limit, tagsOffset: tags.before || 0 }) as {
-        people: unknown[]; tags: unknown[]; people_has_more: boolean; tags_has_more: boolean
+        people: unknown[]
+        tags: unknown[]
+        people_has_more: boolean
+        tags_has_more: boolean
       }
     return jsonResponse({ data: { people: result.people, tags: result.tags }, pagination: {
       people_next_cursor: result.people_has_more ? encodeCursor((people.before || 0) + people.limit) : null,

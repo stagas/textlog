@@ -121,7 +121,12 @@ export function postOgText(body: string) {
   const code: OgRange[] = []
   const math: OgMath[] = []
   const styles: OgStyles = {
-    bold: [], italics: [], underline: [], strikethrough: [], redacted: [], quote: [],
+    bold: [],
+    italics: [],
+    underline: [],
+    strikethrough: [],
+    redacted: [],
+    quote: [],
   }
   const quotedLines: boolean[] = []
   let unquotedBody = ''
@@ -156,7 +161,8 @@ export function postOgText(body: string) {
       code.push({ start, end: text.length })
     }
     else if (token.kind === 'bold' || token.kind === 'italics' || token.kind === 'underline'
-      || token.kind === 'strikethrough' || token.kind === 'redacted') {
+      || token.kind === 'strikethrough' || token.kind === 'redacted')
+    {
       text += token.label!
       styles[token.kind].push({ start, end: text.length })
     }
@@ -299,9 +305,13 @@ function drawLinkedLine(
   let drawX = x
   const characterStyles = Array.from({ length: line.length }, (_, index) => {
     const position = lineStart + index
-    const base = links.some(link => position >= link.start && position < link.end) ? 'link'
-      : code.some(range => position >= range.start && position < range.end) ? 'code'
-      : math.some(range => position >= range.start && position < range.end) ? 'math' : 'text'
+    const base = links.some(link => position >= link.start && position < link.end)
+      ? 'link'
+      : code.some(range => position >= range.start && position < range.end)
+      ? 'code'
+      : math.some(range => position >= range.start && position < range.end)
+      ? 'math'
+      : 'text'
     const modifiers = (Object.keys(styles) as OgTextStyle[])
       .filter(name => styles[name].some(range => position >= range.start && position < range.end))
     return `${base}:${modifiers.join(',')}`
@@ -315,8 +325,11 @@ function drawLinkedLine(
     const weight = active.includes('bold') ? 800 : style === 'code' ? 600 : 500
     const slant = active.includes('italics') ? 'italic ' : ''
     ctx.font = `${slant}${weight} ${fontSize}px monospace`
-    ctx.fillStyle = style === 'link' ? accentColor : style === 'code' ? codeColor
-      : active.includes('quote') ? quoteTextColor : textColor
+    ctx.fillStyle = style === 'link' ? accentColor : style === 'code'
+      ? codeColor
+      : active.includes('quote')
+      ? quoteTextColor
+      : textColor
     const metrics = ctx.measureText(text)
     const nextX = drawX + metrics.width
     if (active.includes('redacted')) {

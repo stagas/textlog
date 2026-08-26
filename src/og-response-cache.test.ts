@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, test } from 'bun:test'
-import { cacheOgResponse, cachedOgResponse, clearOgResponseCache } from './og-response-cache'
+import { cachedOgResponse, cacheOgResponse, clearOgResponseCache } from './og-response-cache'
 
 afterEach(clearOgResponseCache)
 

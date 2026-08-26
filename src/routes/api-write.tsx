@@ -16,9 +16,9 @@ import { canPublishPosts } from '../posting-policy'
 import { sendPushForFollow, sendPushForPost, sendPushForTagFollow, sendPushForUserFollow } from '../push'
 import { scheduleRelationshipFeedInvalidation } from '../relationship-feed-invalidation'
 import { sessionHash } from '../sessions'
+import { postTranslation } from '../translation'
 import type { User } from '../types'
 import { bearerToken } from '../utils'
-import { postTranslation } from '../translation'
 import { emailPattern } from './auth'
 import { clientAddress } from './shared'
 
@@ -112,10 +112,16 @@ export function registerApiWriteRoutes(app: Hono, service: DatabaseService,
     const user = requestApiUser(c.req.raw)
     return user ? { user } : { error: fail('unauthorized', 'Provide a bearer token from /api/v1/auth/verify', 401) }
   }
-  const draftJson = async (draft: { id: number; body: string; parent_id: number | null; created_at: string;
-    updated_at: string }, origin: string, userId: number) => {
+  const draftJson = async (
+    draft: { id: number; body: string; parent_id: number | null; created_at: string; updated_at: string },
+    origin: string,
+    userId: number,
+  ) => {
     const parent = draft.parent_id === null ? null : await service.call('api.publicRead', {
-      kind: 'post', id: draft.parent_id, origin, viewerId: userId,
+      kind: 'post',
+      id: draft.parent_id,
+      origin,
+      viewerId: userId,
     })
     return { id: draft.id, body: draft.body, parent_id: draft.parent_id,
       created_at: new Date(draft.created_at.replace(' ', 'T') + 'Z').toISOString(),
@@ -308,7 +314,8 @@ export function registerApiWriteRoutes(app: Hono, service: DatabaseService,
     const id = Number(c.req.param('id'))
     if (!Number.isInteger(id) || id < 1) return fail('invalid_draft_id', 'Draft ID must be positive', 400)
     const draft = await service.call('drafts.get', { id, userId: guard.user.id })
-    return draft ? json({ data: await draftJson(draft, apiOrigin(c.req.url, appUrl), guard.user.id) })
+    return draft
+      ? json({ data: await draftJson(draft, apiOrigin(c.req.url, appUrl), guard.user.id) })
       : fail('not_found', 'Draft not found', 404)
   })
 
@@ -322,8 +329,11 @@ export function registerApiWriteRoutes(app: Hono, service: DatabaseService,
     const payload = await body(c)
     const content = normalizePostBody(payload?.body === undefined ? existing.body : text(payload.body))
     if (!validPostBody(content)) return fail('invalid_body', postBodyValidationMessage(content), 400)
-    const parentId = payload?.parent_id === undefined ? existing.parent_id
-      : payload.parent_id === null ? null : Number(payload.parent_id)
+    const parentId = payload?.parent_id === undefined
+      ? existing.parent_id
+      : payload.parent_id === null
+      ? null
+      : Number(payload.parent_id)
     if (parentId !== null && (!Number.isInteger(parentId) || parentId < 1)) {
       return fail('invalid_parent', 'parent_id must be a positive post ID', 400)
     }
@@ -339,7 +349,8 @@ export function registerApiWriteRoutes(app: Hono, service: DatabaseService,
     const id = Number(c.req.param('id'))
     if (!Number.isInteger(id) || id < 1) return fail('invalid_draft_id', 'Draft ID must be positive', 400)
     return await service.call('drafts.delete', { id, userId: guard.user!.id })
-      ? json({ data: { deleted: true } }) : fail('not_found', 'Draft not found', 404)
+      ? json({ data: { deleted: true } })
+      : fail('not_found', 'Draft not found', 404)
   })
 
   app.post('/api/v1/drafts/:id/publish', async c => {
@@ -351,19 +362,24 @@ export function registerApiWriteRoutes(app: Hono, service: DatabaseService,
     const draft = await service.call('drafts.get', { id, userId: guard.user!.id })
     if (!draft) return fail('not_found', 'Draft not found', 404)
     const moderation = await moderateText(draft.body)
-    if (!moderation.ok) return fail(moderation.reason === 'flagged' ? 'flagged' : 'unavailable',
-      moderationMessage(moderation.reason), moderation.reason === 'flagged' ? 422 : 503)
+    if (!moderation.ok) {
+      return fail(moderation.reason === 'flagged' ? 'flagged' : 'unavailable', moderationMessage(moderation.reason),
+        moderation.reason === 'flagged' ? 422 : 503)
+    }
     const result = await service.call('api.publishDraft', { userId: guard.user!.id, id, body: draft.body,
-      parentId: draft.parent_id, origin: apiOrigin(c.req.url, appUrl),
-      translation: await postTranslation(draft.body) })
+      parentId: draft.parent_id, origin: apiOrigin(c.req.url, appUrl), translation: await postTranslation(draft.body) })
     if (result.status === 'not_found') return fail('not_found', 'Draft or parent post not found', 404)
     if (result.status === 'locked') return fail('thread_locked', 'This thread is locked', 409)
-    if (result.status === 'rate_limited') return fail('post_rate_limited', postRateLimitMessage(result.retryAfter),
-      429, result.retryAfter)
+    if (result.status === 'rate_limited') {
+      return fail('post_rate_limited', postRateLimitMessage(result.retryAfter), 429, result.retryAfter)
+    }
     if (!result.duplicate) publishPost(result.id)
     if (!result.duplicate) await persistPostPreviews(service, result.id, 'save', await discoverLinkPreviews(draft.body))
-    if (!result.duplicate) void sendPushForPost(result.id, guard.user!.id, guard.user!.handle, undefined, undefined,
-      service).catch(error => logError('API draft publish push failed', error))
+    if (!result.duplicate) {
+      void sendPushForPost(result.id, guard.user!.id, guard.user!.handle, undefined, undefined, service).catch(error =>
+        logError('API draft publish push failed', error)
+      )
+    }
     return json({ data: result.post }, result.duplicate ? 200 : 201)
   })
 

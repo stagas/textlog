@@ -111,11 +111,9 @@ describe('post persistence', () => {
   test('renders Markdown strikethrough in posts', () => {
     expect(linkify('Keep ~~remove~~ revise')).toBe('Keep <del>remove</del> revise')
     expect(linkify('hey ~strike through~')).toBe('hey <del>strike through</del>')
-    expect(linkify('Keep ~~remove~~ revise', {}, [], undefined,
-      { has_latex: 0, has_links: 0, has_code: 0 }))
+    expect(linkify('Keep ~~remove~~ revise', {}, [], undefined, { has_latex: 0, has_links: 0, has_code: 0 }))
       .toBe('Keep <del>remove</del> revise')
-    expect(linkify('hey ~strike through~', {}, [], undefined,
-      { has_latex: 0, has_links: 0, has_code: 0 }))
+    expect(linkify('hey ~strike through~', {}, [], undefined, { has_latex: 0, has_links: 0, has_code: 0 }))
       .toBe('hey <del>strike through</del>')
     expect(linkify('Keep \\~~literal~~')).toBe('Keep \\~~literal~~')
     expect(linkify('Keep \\~literal~')).toBe('Keep \\~literal~')
@@ -123,20 +121,21 @@ describe('post persistence', () => {
   test('renders single and double Markdown bold and underline markers in posts', () => {
     expect(linkify('*bold* and **also bold**')).toBe('<strong>bold</strong> and <strong>also bold</strong>')
     expect(linkify('_underlined_ and __also underlined__')).toBe('<u>underlined</u> and <u>also underlined</u>')
-    expect(linkify('*bold* _underlined_', {}, [], undefined,
-      { has_latex: 0, has_links: 0, has_code: 0 }))
+    expect(linkify('*bold* _underlined_', {}, [], undefined, { has_latex: 0, has_links: 0, has_code: 0 }))
       .toBe('<strong>bold</strong> <u>underlined</u>')
     expect(linkify('\\*literal* and \\_literal_')).toBe('\\*literal* and \\_literal_')
   })
   test('renders consecutive greater-than lines as a quote while preserving inline formatting', () => {
     expect(linkify('before\n> quoted *bold*\n> with #notes\nafter')).toBe(
       'before<span class="post-quote">quoted <strong>bold</strong>\nwith '
-      + '<a href="/tag/notes">#notes</a></span>after',
+        + '<a href="/tag/notes">#notes</a></span>after',
     )
   })
   test('renders slash-delimited italics in posts without affecting URLs', () => {
     expect(linkify('/italics/ and https://example.com/a/b'))
-      .toBe('<em>italics</em> and <a href="https://example.com/a/b" class="raw-link" title="https://example.com/a/b" target="_blank" rel="nofollow ugc noopener noreferrer">example.com<span class="raw-link-rest">/a/b</span></a>')
+      .toBe(
+        '<em>italics</em> and <a href="https://example.com/a/b" class="raw-link" title="https://example.com/a/b" target="_blank" rel="nofollow ugc noopener noreferrer">example.com<span class="raw-link-rest">/a/b</span></a>',
+      )
     expect(linkify('/italics/', {}, [], undefined, { has_latex: 0, has_links: 0, has_code: 0 }))
       .toBe('<em>italics</em>')
     expect(linkify('Keep \\/literal/')).toBe('Keep \\/literal/')
@@ -174,21 +173,33 @@ describe('post persistence', () => {
   })
   test('opens links starting with APP_URL in the current tab', () => {
     expect(linkify('https://textlog.cc', {}, [], 'https://textlog.cc'))
-      .toBe('<a href="https://textlog.cc" class="raw-link" title="https://textlog.cc" rel="nofollow ugc">textlog.cc</a>')
+      .toBe(
+        '<a href="https://textlog.cc" class="raw-link" title="https://textlog.cc" rel="nofollow ugc">textlog.cc</a>',
+      )
     expect(linkify('https://textlog.cc/', {}, [], 'https://textlog.cc'))
-      .toBe('<a href="https://textlog.cc/" class="raw-link" title="https://textlog.cc/" rel="nofollow ugc">textlog.cc</a>')
+      .toBe(
+        '<a href="https://textlog.cc/" class="raw-link" title="https://textlog.cc/" rel="nofollow ugc">textlog.cc</a>',
+      )
     expect(linkify('https://textlog.test/post/1', {}, [], 'https://textlog.test'))
-      .toBe('<a href="https://textlog.test/post/1" class="raw-link" title="https://textlog.test/post/1" rel="nofollow ugc"><span class="raw-link-rest">/post/1</span></a>')
+      .toBe(
+        '<a href="https://textlog.test/post/1" class="raw-link" title="https://textlog.test/post/1" rel="nofollow ugc"><span class="raw-link-rest">/post/1</span></a>',
+      )
     expect(linkify('[post](https://textlog.test/post/1)', {}, [], 'https://textlog.test'))
       .toBe('<a href="https://textlog.test/post/1" title="https://textlog.test/post/1" rel="nofollow ugc">post</a>')
     expect(linkify('textlog.cc/post/1', {}, [], 'https://textlog.cc'))
-      .toBe('<a href="https://textlog.cc/post/1" class="raw-link" title="https://textlog.cc/post/1" rel="nofollow ugc"><span class="raw-link-rest">/post/1</span></a>')
+      .toBe(
+        '<a href="https://textlog.cc/post/1" class="raw-link" title="https://textlog.cc/post/1" rel="nofollow ugc"><span class="raw-link-rest">/post/1</span></a>',
+      )
   })
   test('normalizes literal APP_URL links when APP_URL has a trailing slash', () => {
     expect(linkify('https://textlog.test/', {}, [], 'https://textlog.test/'))
-      .toBe('<a href="https://textlog.test/" class="raw-link" title="https://textlog.test/" rel="nofollow ugc">textlog.test</a>')
+      .toBe(
+        '<a href="https://textlog.test/" class="raw-link" title="https://textlog.test/" rel="nofollow ugc">textlog.test</a>',
+      )
     expect(linkify('https://textlog.test/post/1', {}, [], 'https://textlog.test/'))
-      .toBe('<a href="https://textlog.test/post/1" class="raw-link" title="https://textlog.test/post/1" rel="nofollow ugc"><span class="raw-link-rest">/post/1</span></a>')
+      .toBe(
+        '<a href="https://textlog.test/post/1" class="raw-link" title="https://textlog.test/post/1" rel="nofollow ugc"><span class="raw-link-rest">/post/1</span></a>',
+      )
   })
   test('escapes Markdown link labels and destinations', () => {
     expect(linkify('[<test>](https://example.com/a\'b)'))
@@ -439,9 +450,13 @@ describe('post persistence', () => {
   test('inserts server-rendered posts into local hover cards', () => {
     const url = 'https://textlog.test/post/12'
     const html = linkify(url, {}, [], 'https://textlog.test', undefined, '', {}, {}, {
-      signedIn: true, currentHandle: 'writer', formPrefix: 'post-1',
-      linkPreviews: { [url]: { imageUrl: url, renderedPostHtml:
-        '<article class="post internal-post-card tappable-post">rendered post</article>' } },
+      signedIn: true,
+      currentHandle: 'writer',
+      formPrefix: 'post-1',
+      linkPreviews: {
+        [url]: { imageUrl: url,
+          renderedPostHtml: '<article class="post internal-post-card tappable-post">rendered post</article>' },
+      },
     })
     expect(html).toContain('class="remote-link-popover internal-post-popover"')
     expect(html).toContain('<article class="post internal-post-card tappable-post">rendered post</article>')

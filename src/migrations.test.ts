@@ -1,7 +1,8 @@
 import { Database } from 'bun:sqlite'
 import { describe, expect, test } from 'bun:test'
 import { executeDatabaseDomain } from './database-domain'
-import { databaseVersion, latestMigrationVersion, migrations, normalizeInternalPostPreviews, runMigrations } from './migrations'
+import { databaseVersion, latestMigrationVersion, migrations, normalizeInternalPostPreviews,
+  runMigrations } from './migrations'
 import { sessionHash } from './sessions'
 
 describe('database migrations', () => {
@@ -25,10 +26,13 @@ describe('database migrations', () => {
 
     expect(runMigrations(database)).toBe(latestMigrationVersion)
     expect(database.query('SELECT action,note FROM admin_actions').get()).toEqual({
-      action: 'delete_post', note: 'existing',
+      action: 'delete_post',
+      note: 'existing',
     })
-    expect(() => database.query(`INSERT INTO admin_actions(actor_id,action,target_user_id,target_post_id)
-      VALUES(1,'edit_post',2,10)`).run()).not.toThrow()
+    expect(() =>
+      database.query(`INSERT INTO admin_actions(actor_id,action,target_user_id,target_post_id)
+      VALUES(1,'edit_post',2,10)`).run()
+    ).not.toThrow()
     expect(database.query('PRAGMA foreign_key_check').all()).toEqual([])
   })
 
@@ -82,7 +86,7 @@ describe('database migrations', () => {
     expect((database.query('PRAGMA table_info(handle_history)').all() as { name: string }[])
       .map(column => column.name)).toContain('account_group_id')
     expect(database.query(
-      "SELECT count(*) count FROM sqlite_master WHERE type='table' AND name='handle_change_events'",
+      'SELECT count(*) count FROM sqlite_master WHERE type=\'table\' AND name=\'handle_change_events\'',
     ).get()).toEqual({ count: 1 })
     expect(
       database.query('SELECT count(*) count FROM sqlite_master WHERE type=\'table\' AND name=\'activity_reads\'').get(),
@@ -380,9 +384,9 @@ describe('database migrations', () => {
     ])
     expect(database.query('SELECT user_id,tag FROM blocked_hashtags').all())
       .toEqual([{ user_id: 2, tag: 'fenced' }])
-    expect(database.query("SELECT tag FROM tag_search WHERE tag_search MATCH 'visible'").get())
+    expect(database.query('SELECT tag FROM tag_search WHERE tag_search MATCH \'visible\'').get())
       .toEqual({ tag: 'visible' })
-    expect(database.query("SELECT tag FROM tag_search WHERE tag_search MATCH 'inline'").get()).toBeNull()
+    expect(database.query('SELECT tag FROM tag_search WHERE tag_search MATCH \'inline\'').get()).toBeNull()
   })
 
   test('repairs account deletion tables created by the original version 30 migration', () => {
@@ -608,7 +612,7 @@ describe('database migrations', () => {
     runMigrations(database)
 
     expect(database.query('SELECT count(*) count FROM feed_snapshots WHERE viewer_id=999').get()).toEqual({ count: 0 })
-    expect(() => database.query("UPDATE posts SET body='(deleted)' WHERE id=1").run()).not.toThrow()
+    expect(() => database.query('UPDATE posts SET body=\'(deleted)\' WHERE id=1').run()).not.toThrow()
   })
 
   test('reinstalls foreign-key-safe personalized feed triggers on existing databases', () => {
@@ -633,14 +637,14 @@ describe('database migrations', () => {
       PRAGMA foreign_keys=ON;
       PRAGMA user_version=114;`)
 
-    expect(() => database.query("UPDATE posts SET body='fails' WHERE id=1").run()).toThrow()
+    expect(() => database.query('UPDATE posts SET body=\'fails\' WHERE id=1').run()).toThrow()
 
     runMigrations(database)
 
     const sql = (database.query(`SELECT sql FROM sqlite_master
       WHERE type='trigger' AND name='personalized_feed_posts_update'`).get() as { sql: string }).sql
     expect(sql).toContain('JOIN users ON users.id=affected.id')
-    expect(() => database.query("UPDATE posts SET body='works' WHERE id=1").run()).not.toThrow()
+    expect(() => database.query('UPDATE posts SET body=\'works\' WHERE id=1').run()).not.toThrow()
     expect(database.query('PRAGMA foreign_key_check').all()).toEqual([])
   })
 
@@ -648,15 +652,16 @@ describe('database migrations', () => {
     const database = new Database(':memory:')
     database.run('PRAGMA foreign_keys=ON')
     runMigrations(database)
-    database.run("INSERT INTO users(id,handle,email,password) VALUES(1,'author','author@example.com','x')")
-    const generation = () => (database.query(
-      'SELECT generation FROM personalized_feed_generations WHERE viewer_id=1',
-    ).get() as { generation: number }).generation
+    database.run('INSERT INTO users(id,handle,email,password) VALUES(1,\'author\',\'author@example.com\',\'x\')')
+    const generation = () =>
+      (database.query(
+        'SELECT generation FROM personalized_feed_generations WHERE viewer_id=1',
+      ).get() as { generation: number }).generation
 
     const initial = generation()
-    database.run("INSERT INTO posts(id,user_id,body) VALUES(1,1,'hello')")
+    database.run('INSERT INTO posts(id,user_id,body) VALUES(1,1,\'hello\')')
     expect(generation()).toBe(initial + 1)
-    database.run("UPDATE posts SET body='edited' WHERE id=1")
+    database.run('UPDATE posts SET body=\'edited\' WHERE id=1')
     expect(generation()).toBe(initial + 2)
     database.run('DELETE FROM posts WHERE id=1')
     expect(generation()).toBe(initial + 3)
@@ -674,12 +679,13 @@ describe('database migrations', () => {
       INSERT INTO follows(follower_id,following_id) VALUES(1,2);
       INSERT INTO posts(id,user_id,body,parent_id) VALUES
         (1,2,'root',NULL),(2,3,'middle',1);`)
-    const generation = () => (database.query(
-      'SELECT generation FROM personalized_feed_generations WHERE viewer_id=1',
-    ).get() as { generation: number }).generation
+    const generation = () =>
+      (database.query(
+        'SELECT generation FROM personalized_feed_generations WHERE viewer_id=1',
+      ).get() as { generation: number }).generation
     const initial = generation()
 
-    database.run("INSERT INTO posts(id,user_id,body,parent_id) VALUES(3,4,'deep reply',2)")
+    database.run('INSERT INTO posts(id,user_id,body,parent_id) VALUES(3,4,\'deep reply\',2)')
 
     expect(generation()).toBe(initial + 1)
   })
@@ -691,9 +697,10 @@ describe('database migrations', () => {
     database.run(`INSERT INTO users(id,handle,email,password,handle_chosen_at)
       VALUES(1,'admin','admin@example.com','x',CURRENT_TIMESTAMP),
         (2,'pending','pending@example.com','x',NULL)`)
-    const generation = () => (database.query(
-      'SELECT generation FROM personalized_feed_generations WHERE viewer_id=1',
-    ).get() as { generation: number }).generation
+    const generation = () =>
+      (database.query(
+        'SELECT generation FROM personalized_feed_generations WHERE viewer_id=1',
+      ).get() as { generation: number }).generation
 
     const initial = generation()
     database.run('UPDATE users SET handle_chosen_at=CURRENT_TIMESTAMP WHERE id=2')
@@ -707,9 +714,10 @@ describe('database migrations', () => {
     runMigrations(database)
     database.run(`INSERT INTO users(id,handle,email,password) VALUES
       (1,'alice','alice@example.com','x'),(2,'bob','bob@example.com','x')`)
-    const generation = () => (database.query(
-      'SELECT generation FROM personalized_feed_generations WHERE viewer_id=1',
-    ).get() as { generation: number }).generation
+    const generation = () =>
+      (database.query(
+        'SELECT generation FROM personalized_feed_generations WHERE viewer_id=1',
+      ).get() as { generation: number }).generation
     const initial = generation()
 
     database.run('INSERT INTO follows(follower_id,following_id) VALUES(1,2)')
@@ -741,14 +749,20 @@ describe('database migrations', () => {
     normalizeInternalPostPreviews(database, 'http://localhost:3000')
     expect(database.query(`SELECT url,image_url,title,description,site_name,image_width,image_height,
         linked_post_id FROM post_link_previews WHERE url='http://localhost:3000/post/12'`).get()).toEqual({
-        url: 'http://localhost:3000/post/12', image_url: 'http://localhost:3000/post/12', title: null,
-        description: null, site_name: null, image_width: null, image_height: null, linked_post_id: 12,
+      url: 'http://localhost:3000/post/12',
+      image_url: 'http://localhost:3000/post/12',
+      title: null,
+      description: null,
+      site_name: null,
+      image_width: null,
+      image_height: null,
+      linked_post_id: 12,
     })
     expect(database.query(
-        "SELECT 1 FROM post_link_previews WHERE url='http://localhost:3000/post/999'",
-      ).get()).toBeNull()
+      'SELECT 1 FROM post_link_previews WHERE url=\'http://localhost:3000/post/999\'',
+    ).get()).toBeNull()
     expect(database.query(
-        "SELECT image_url,title FROM post_link_previews WHERE url='https://example.com/story'",
-      ).get()).toEqual({ image_url: 'remote-image', title: 'remote' })
+      'SELECT image_url,title FROM post_link_previews WHERE url=\'https://example.com/story\'',
+    ).get()).toEqual({ image_url: 'remote-image', title: 'remote' })
   })
 })

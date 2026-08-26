@@ -11,12 +11,21 @@ export type AppearanceTab = 'theme' | 'font' | 'misc'
 export function ChangeAppearance(
   { user, selected, selectedFont, selectedSansSerifFont = 'system-sans', selectedPrimaryFont = 'monospace',
     selectedSize = 'regular', selectedPageSize = 20, selectedDensity = 'regular', selectedLinkPreviews = true,
-    includePeopleFollowActivity = false, includeHashtagFollowActivity = false,
-    tab = 'theme', returnPath }: { user: User; selected: Appearance; selectedFont: FontChoice;
-      selectedSansSerifFont?: SansSerifFontChoice; selectedPrimaryFont?: PrimaryFontChoice;
-      selectedSize?: FontSizeChoice; tab?: AppearanceTab; selectedPageSize?: PageSizeChoice;
-      selectedDensity?: DensityChoice; selectedLinkPreviews?: boolean; returnPath?: string;
-      includePeopleFollowActivity?: boolean; includeHashtagFollowActivity?: boolean },
+    includePeopleFollowActivity = false, includeHashtagFollowActivity = false, tab = 'theme', returnPath }: {
+      user: User
+      selected: Appearance
+      selectedFont: FontChoice
+      selectedSansSerifFont?: SansSerifFontChoice
+      selectedPrimaryFont?: PrimaryFontChoice
+      selectedSize?: FontSizeChoice
+      tab?: AppearanceTab
+      selectedPageSize?: PageSizeChoice
+      selectedDensity?: DensityChoice
+      selectedLinkPreviews?: boolean
+      returnPath?: string
+      includePeopleFollowActivity?: boolean
+      includeHashtagFollowActivity?: boolean
+    },
 ) {
   const fromQuery = returnPath ? `&from=${encodeURIComponent(returnPath)}` : ''
   return (
@@ -182,8 +191,8 @@ export function ChangeAppearance(
                   <span>Include people&apos;s follow activity in For You</span>
                 </label>
                 <label className="link-preview-setting">
-                  <input className="form-checkbox" type="checkbox" role="switch"
-                    name="includeHashtagFollowActivity" value="yes" defaultChecked={includeHashtagFollowActivity} />
+                  <input className="form-checkbox" type="checkbox" role="switch" name="includeHashtagFollowActivity"
+                    value="yes" defaultChecked={includeHashtagFollowActivity} />
                   <span>Include hashtag follow activity in For You</span>
                 </label>
               </fieldset>

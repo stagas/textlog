@@ -4,8 +4,8 @@ import { renderToStaticMarkup } from 'react-dom/server'
 import { appHost, appHostname, appIdentifier, appName, appOrigin, clientIpHeaderName, sessionCookieName } from './brand'
 import { Layout } from './components/layout'
 import { sessionCookie } from './http'
-import { sessionToken } from './utils'
 import { withAppearance } from './theme'
+import { sessionToken } from './utils'
 
 const original = {
   APP_NAME: Bun.env.APP_NAME,
@@ -50,9 +50,10 @@ describe('instance branding', () => {
   })
 
   test('loads DejaVu Sans Mono only for mobile user agents', () => {
-    const render = (userAgent: string) => withAppearance(new Request('https://notes.example.org', {
-      headers: { 'user-agent': userAgent },
-    }), () => renderToStaticMarkup(React.createElement(Layout, null, React.createElement('p', null, 'Hello'))))
+    const render = (userAgent: string) =>
+      withAppearance(new Request('https://notes.example.org', {
+        headers: { 'user-agent': userAgent },
+      }), () => renderToStaticMarkup(React.createElement(Layout, null, React.createElement('p', null, 'Hello'))))
 
     const mobile = render('Mozilla/5.0 (Linux; Android 15) AppleWebKit/537.36 Mobile Safari/537.36')
     const desktop = render('Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 Chrome/140.0 Safari/537.36')

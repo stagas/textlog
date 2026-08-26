@@ -1,6 +1,7 @@
 import { describe, expect, test } from 'bun:test'
 import { createCanvas, Image } from 'canvas'
-import { fitPost, postOgText, renderDefaultOg, renderFollowBadge, renderPostOg, renderProfileOg, renderTagOg } from './og'
+import { fitPost, postOgText, renderDefaultOg, renderFollowBadge, renderPostOg, renderProfileOg,
+  renderTagOg } from './og'
 import { pollDisplayBody } from './polls'
 
 function visiblePixels(imageBuffer: Buffer, x: number, y: number, width: number, height: number) {
@@ -41,7 +42,9 @@ describe('renderPostOg', () => {
   test('removes formatting markers and records all post text styles', () => {
     expect(postOgText('> *bold* /italic/ _under_ ~gone~ |secret|')).toEqual({
       text: 'bold italic under gone secret',
-      links: [], code: [], math: [],
+      links: [],
+      code: [],
+      math: [],
       styles: {
         bold: [{ start: 0, end: 4 }],
         italics: [{ start: 5, end: 11 }],

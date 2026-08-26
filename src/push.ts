@@ -1,6 +1,4 @@
 import type { Database } from 'bun:sqlite'
-import { excludesWhisperPosts, isWhisperThread, whisperThreadRelevantToViewer,
-  whisperThreadTargetsViewer } from './whisper'
 import webpush from 'web-push'
 import { ADMIN_EMAILS } from './admin'
 import { splitSpoilerBody } from './content'
@@ -8,6 +6,8 @@ import { type DatabaseService, databaseService } from './database-service'
 import { isDevelopment } from './environment'
 import { logError } from './log'
 import { markdownPlainText } from './markdown'
+import { excludesWhisperPosts, isWhisperThread, whisperThreadRelevantToViewer,
+  whisperThreadTargetsViewer } from './whisper'
 
 export type PushMessage = { title: string; body: string; url: string }
 type PushSubscriptionRow = { endpoint: string; p256dh: string; auth: string }
@@ -173,8 +173,8 @@ export async function sendPushForPost(postId: number, actorId: number, actorHand
       OR (ps.notify_mentions=1 AND ps.user_id!=? AND EXISTS(
         SELECT 1 FROM post_mentions pm WHERE pm.post_id=? AND pm.user_id=ps.user_id)))
     ORDER BY ps.endpoint,is_reply DESC,is_mention DESC,ps.user_id`)
-      .all(actorId, postId, actorId, postId, actorId, actorId, postId, actorId, actorId, actorId, postId,
-        postId, postId, actorId, postId, actorId, postId) as (PushSubscriptionRow & {
+      .all(actorId, postId, actorId, postId, actorId, actorId, postId, actorId, actorId, actorId, postId, postId,
+        postId, actorId, postId, actorId, postId) as (PushSubscriptionRow & {
           user_id: number
           is_reply: number
           is_mention: number

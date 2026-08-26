@@ -1,15 +1,17 @@
-import { describe, expect, test } from 'bun:test'
 import { Database } from 'bun:sqlite'
+import { describe, expect, test } from 'bun:test'
 import { loadPolls, parsePoll, syncPoll, voteInPoll } from './polls'
 
 describe('polls', () => {
   test('parses a question followed by the poll marker and options', () => {
     expect(parsePoll('Tea or coffee?\n#poll\nTea\nCoffee')).toEqual({
-      question: 'Tea or coffee?', options: ['Tea', 'Coffee'],
+      question: 'Tea or coffee?',
+      options: ['Tea', 'Coffee'],
     })
     expect(parsePoll('Not a poll\n#poll\nOnly one')).toBeNull()
     expect(parsePoll('Best OS? #poll\nWindows\nMacOS\nLinux')).toEqual({
-      question: 'Best OS?', options: ['Windows', 'MacOS', 'Linux'],
+      question: 'Best OS?',
+      options: ['Windows', 'MacOS', 'Linux'],
     })
   })
 
@@ -19,12 +21,18 @@ describe('polls', () => {
 
   test('parses a quiz with exactly one marked correct answer', () => {
     expect(parsePoll('Capital of Greece? #quiz\nRome\n> Athens\nParis')).toEqual({
-      question: 'Capital of Greece?', options: ['Rome', 'Athens', 'Paris'], kind: 'quiz', correctIndex: 1,
+      question: 'Capital of Greece?',
+      options: ['Rome', 'Athens', 'Paris'],
+      kind: 'quiz',
+      correctIndex: 1,
     })
     expect(parsePoll('Invalid #quiz\n> One\n> Two')).toBeNull()
     expect(parsePoll('Invalid #quiz\nOne\nTwo')).toBeNull()
     expect(parsePoll('Capital? #quiz\nRome\n> Athens\n\nAthens has been the capital since 1834.')).toEqual({
-      question: 'Capital?', options: ['Rome', 'Athens'], kind: 'quiz', correctIndex: 1,
+      question: 'Capital?',
+      options: ['Rome', 'Athens'],
+      kind: 'quiz',
+      correctIndex: 1,
       explanation: 'Athens has been the capital since 1834.',
     })
   })

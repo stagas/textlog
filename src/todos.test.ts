@@ -12,11 +12,11 @@ describe('todos', () => {
   })
 
   test('accepts a todo hashtag anywhere on its line', () => {
-    expect(parseTodo("my today's #todo list\n[x] wake up\n[ ] drink coffee")?.items).toEqual([
+    expect(parseTodo('my today\'s #todo list\n[x] wake up\n[ ] drink coffee')?.items).toEqual([
       { label: 'wake up', checked: true, line: 1 },
       { label: 'drink coffee', checked: false, line: 2 },
     ])
-    expect(parseTodo("my today's [#todo](http://localhost:3000/tag/todo) list\nwork")).toBeNull()
+    expect(parseTodo('my today\'s [#todo](http://localhost:3000/tag/todo) list\nwork')).toBeNull()
   })
 
   test('does not activate a todo marker inside fenced code', () => {
@@ -25,7 +25,7 @@ describe('todos', () => {
 
   test('keeps the visible heading and marker out of the item list', () => {
     expect(todoDisplayBody('Weekend\n#todo\nnotes stay\n[ ] Buy milk')).toBe('Weekend\n#todo')
-    expect(todoDisplayBody("my today's #todo list\nBuy milk")).toBe("my today's #todo list\nBuy milk")
+    expect(todoDisplayBody('my today\'s #todo list\nBuy milk')).toBe('my today\'s #todo list\nBuy milk')
   })
 
   test('toggles an item by rewriting the post body', () => {
@@ -35,10 +35,10 @@ describe('todos', () => {
   })
 
   test('preserves whitespace and non-todo lines', () => {
-    const body = "my today's #todo list\n\n[x] wake up\nplain note\n[ ] work"
+    const body = 'my today\'s #todo list\n\n[x] wake up\nplain note\n[ ] work'
     expect(parseTodo(body)?.entries.map(entry => entry.type === 'text' ? entry.text : entry.item.label))
       .toEqual(['', 'wake up', 'plain note', 'work'])
-    expect(todoDisplayBody(body)).toBe("my today's #todo list")
+    expect(todoDisplayBody(body)).toBe('my today\'s #todo list')
     expect(toggleTodo('x #todo\n  [ ]   spaced item  ', 0)).toBe('x #todo\n  [x]   spaced item  ')
   })
 })

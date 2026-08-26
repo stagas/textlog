@@ -14,22 +14,22 @@ import type { Hono } from 'hono'
 import { instance } from '../../instance.config'
 import { backgroundDatabaseCall, databaseService } from '../database-service'
 import { decodeHotCursor, hotRankingVersion } from '../hot'
-import { campaignIpPseudonym } from '../ip-privacy'
 import {
-  donationBannerDismissedCookie,
   campaignAttributionCookie,
+  donationBannerDismissedCookie,
   feedPreference,
   notificationBannerDismissed,
   notificationUserAgent,
   safeRefererPath,
 } from '../http'
+import { campaignIpPseudonym } from '../ip-privacy'
 import { rpcMaterializedFeedPage } from '../materialized-feed-service'
 import { decodePostCursor } from '../pagination'
 import { withRequestContext } from '../request-context'
 import { resolvedDensity, resolvedPageSize } from '../request-preferences'
 import { withAppearance } from '../theme'
-import { currentUser } from '../utils'
 import type { PersonalizedFeedData } from '../types'
+import { currentUser } from '../utils'
 
 async function showNotificationBanner(request: Request, user: ReturnType<typeof currentUser>) {
   if (!user) return false
@@ -39,7 +39,8 @@ async function showNotificationBanner(request: Request, user: ReturnType<typeof 
     donationDismissed } = state
   const bioPending = bioMissing && !bioHandled
   if (!userAgent) {
-    const choices = ['notifications', 'appearance', ...(inviteHandled ? [] : ['invite']), ...(bioPending ? ['bio'] : [])]
+    const choices = ['notifications', 'appearance', ...(inviteHandled ? [] : ['invite']),
+      ...(bioPending ? ['bio'] : [])]
     return choices[Math.floor(Math.random() * choices.length)] as 'notifications' | 'appearance' | 'invite' | 'bio'
   }
   if (notificationsEnabled && !improvementDismissed) return 'notification-update'
@@ -171,8 +172,10 @@ export function registerFeedsRoutes(app: Hono) {
       }
     }
     const user = currentUser(c.req.raw)
-    if (!user) return redirect('/hot' + new URL(c.req.url).search,
-      c.req.query('reddit') !== undefined ? campaignAttributionCookie('reddit') : undefined)
+    if (!user) {
+      return redirect('/hot' + new URL(c.req.url).search,
+        c.req.query('reddit') !== undefined ? campaignAttributionCookie('reddit') : undefined)
+    }
     const preferredFeed = feedPreference(c.req.raw)
     const path = preferredFeed === 'latest'
       ? '/latest'
@@ -193,10 +196,15 @@ export function registerFeedsRoutes(app: Hono) {
     const pageSize = resolvedPageSize(c.req.raw)
     let dataPromise: Promise<PersonalizedFeedData> | undefined
     const data = () => {
-      if (!dataPromise) dataPromise = databaseService().call('feeds.personalizedPage', {
-        user, page: currentPage(c.req.query('page')), pageSize, toMe: false,
-        path: '/for-you',
-      })
+      if (!dataPromise) {
+        dataPromise = databaseService().call('feeds.personalizedPage', {
+          user,
+          page: currentPage(c.req.query('page')),
+          pageSize,
+          toMe: false,
+          path: '/for-you',
+        })
+      }
       return dataPromise
     }
     const render = async () =>
@@ -208,8 +216,9 @@ export function registerFeedsRoutes(app: Hono) {
       const feed = await data()
       const consumed = new Set(feed.timeline.filter(row => row.unread).map(row => row.event_key)).size
       return page(
-        <Feed user={user} data={{ ...feed, forYouCount: Math.max(0, feed.forYouCount - consumed),
-          timeline: feed.timeline.map(row => ({ ...row, unread: 0 })) }} title="for you"
+        <Feed user={user}
+          data={{ ...feed, forYouCount: Math.max(0, feed.forYouCount - consumed),
+            timeline: feed.timeline.map(row => ({ ...row, unread: 0 })) }} title="for you"
           notificationBanner={notificationBanner} expandedRootId={expandedRootId} />,
       )
     }
@@ -238,11 +247,13 @@ export function registerFeedsRoutes(app: Hono) {
     const render = async () => {
       const feed = await databaseService().call('feeds.latestPage', { viewerId: user?.id ?? -1,
         page: currentPage(c.req.query('page')), pageSize: resolvedPageSize(c.req.raw) })
-      return page(<PublicFeed user={user} feed={feed} path="/latest" notificationBanner={notificationBanner}
-        expandedRootId={expandedRootId} />)
+      return page(
+        <PublicFeed user={user} feed={feed} path="/latest" notificationBanner={notificationBanner}
+          expandedRootId={expandedRootId} />,
+      )
     }
     const response = canUseMaterializedPage && !notificationBanner
-      && currentPage(c.req.query('page')) === 1 && !cursorValue && !expandedRootId
+        && currentPage(c.req.query('page')) === 1 && !cursorValue && !expandedRootId
       ? await rpcMaterializedFeedPage(c.req.raw, 'latest', user ? user.id : -1, render)
       : await render()
     const remembered = rememberFeed(response, 'latest')
@@ -281,11 +292,11 @@ export function registerFeedsRoutes(app: Hono) {
     const renderForCache = () => {
       const consumed = new Set(data.timeline.filter(row => row.unread).map(row => row.event_key)).size
       return page(
-        <Feed user={user} data={{ ...data,
-          forYouCount: Math.max(0, data.forYouCount - consumed),
-          toMeCount: Math.max(0, data.toMeCount - consumed),
-          timeline: data.timeline.map(row => ({ ...row, unread: 0 })) }} title="to me"
-          path="/to-me" toMe notificationBanner={notificationBanner} expandedRootId={expandedRootId} />,
+        <Feed user={user}
+          data={{ ...data, forYouCount: Math.max(0, data.forYouCount - consumed),
+            toMeCount: Math.max(0, data.toMeCount - consumed),
+            timeline: data.timeline.map(row => ({ ...row, unread: 0 })) }} title="to me" path="/to-me" toMe
+          notificationBanner={notificationBanner} expandedRootId={expandedRootId} />,
       )
     }
     const response = !notificationBanner && currentPage(c.req.query('page')) === 1 && !cursorValue && !expandedRootId
@@ -311,11 +322,13 @@ export function registerFeedsRoutes(app: Hono) {
     const render = async () => {
       const feed = await databaseService().call('feeds.hotPage', { viewerId: user?.id ?? -1,
         page: currentPage(c.req.query('page')), pageSize: resolvedPageSize(c.req.raw) })
-      return page(<HotFeed user={user} feed={feed} title="hot" notificationBanner={notificationBanner}
-        expandedRootId={expandedRootId} />)
+      return page(
+        <HotFeed user={user} feed={feed} title="hot" notificationBanner={notificationBanner}
+          expandedRootId={expandedRootId} />,
+      )
     }
     const response = (!user || !notificationBanner) && currentPage(c.req.query('page')) === 1 && !cursorValue
-      && !expandedRootId
+        && !expandedRootId
       ? await rpcMaterializedFeedPage(c.req.raw, 'hot', user?.id ?? -1, render, false, hotRankingVersion)
       : await render()
     const remembered = rememberFeed(response, 'hot')
@@ -413,8 +426,7 @@ export function registerFeedsRoutes(app: Hono) {
   app.get('/about', async c => {
     const user = currentUser(c.req.raw)
     if (user) return page(<About user={user} />)
-    return await rpcMaterializedFeedPage(c.req.raw, 'about', -1,
-      async () => page(<About user={null} />))
+    return await rpcMaterializedFeedPage(c.req.raw, 'about', -1, async () => page(<About user={null} />))
   })
   app.get('/contact', c => page(<Contact user={currentUser(c.req.raw)} />))
   app.get('/dmca', c => page(<Dmca user={currentUser(c.req.raw)} />))

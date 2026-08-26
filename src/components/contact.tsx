@@ -16,15 +16,13 @@ export function Contact({ user }: { user: User | null }) {
 
         <h2>Collective</h2>
         <p>
-          {name} is operated by the{' '}
-          {instance.operator.url
+          {name} is operated by the {instance.operator.url
             ? (
               <a href={instance.operator.url} target="_blank" rel="noopener noreferrer">
                 {instance.operator.name}
               </a>
             )
-            : instance.operator.name}, fiscally hosted by{' '}
-          {instance.fiscalHost
+            : instance.operator.name}, fiscally hosted by {instance.fiscalHost
             ? <a href={instance.fiscalHost.url} target="_blank" rel="noopener noreferrer">{instance.fiscalHost.name}</a>
             : 'our fiscal host'}.
         </p>
@@ -60,11 +58,13 @@ export function Contact({ user }: { user: User | null }) {
           <>
             <h2>Legal and financial correspondence</h2>
             <p>
-              {instance.fiscalHost.legalName}<br />
+              {instance.fiscalHost.legalName}
+              <br />
               Fiscal host of the{' '}
               <a href="https://opencollective.com/textlog" target="_blank" rel="noopener noreferrer">
                 {name} collective
-              </a><br />
+              </a>
+              <br />
               {instance.fiscalHost.address}
             </p>
           </>

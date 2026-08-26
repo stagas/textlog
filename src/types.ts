@@ -20,9 +20,15 @@ export type PostRow = {
   link_previews?: Record<string, LinkPreview>
 }
 
-export type PollView = { options: Array<{ id: number; label: string; votes: number; selected: boolean; correct?: boolean }>
+export type PollView = {
+  options: Array<{ id: number; label: string; votes: number; selected: boolean; correct?: boolean }>
   kind?: 'poll' | 'quiz'
-  totalVotes: number; expired: boolean; expiresAt: number | null; viewerVoted: boolean; explanation?: string }
+  totalVotes: number
+  expired: boolean
+  expiresAt: number | null
+  viewerVoted: boolean
+  explanation?: string
+}
 
 export type UserProfileStats = {
   notes: number
@@ -99,9 +105,9 @@ export type PostView = PostRow & {
 }
 
 export type PostFeedPage = { posts: PostView[]; page: number; totalItems: number; totalPages: number;
-  forYouUnread?: boolean; toMeUnread?: boolean; forYouCount?: number; toMeCount?: number
-  latestUnread?: boolean; latestCount?: number; unreadPostIds?: number[]; directedUnreadPostIds?: number[]
-  unreadHref?: string; lastUnreadHref?: string }
+  forYouUnread?: boolean; toMeUnread?: boolean; forYouCount?: number; toMeCount?: number; latestUnread?: boolean;
+  latestCount?: number; unreadPostIds?: number[]; directedUnreadPostIds?: number[]; unreadHref?: string;
+  lastUnreadHref?: string }
 export type ApiPost = {
   id: number
   top_id: number | null
@@ -313,8 +319,7 @@ export type TagView = {
 export type User = { id: number; handle: string; email: string; bio: string; suspended_at?: string | null;
   email_verified_at?: string | null; activity_read_at?: string | null; handle_chosen_at?: string | null;
   timezone?: string | null; show_link_previews?: number; recap_emails?: number; interaction_emails?: number;
-  hide_people_follow_activity?: number; hide_hashtag_follow_activity?: number;
-  draft_count?: number }
+  hide_people_follow_activity?: number; hide_hashtag_follow_activity?: number; draft_count?: number }
 
 export type DraftView = { id: number; body: string; parent_id: number | null; created_at: string; updated_at: string;
   parent_handle?: string | null; parent?: ParentPost | null }

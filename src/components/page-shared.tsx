@@ -92,185 +92,211 @@ function PostingHelpTabs({ search }: { search?: PostingSuggestionSearch | null }
       </nav>
       <div className="posting-help-emoji-panel posting-help-tab-panel" aria-label="Emoji to copy and paste">
         {'😀 😃 😄 😁 😆 😅 😂 🤣 😊 😇 🙂 🙃 😉 😌 😍 🥰 😘 😋 😛 😜 🤪 🤨 🧐 🤓 😎 🤩 🥳 😏 😒 😞 😔 😟 😕 🙁 ☹️ 😣 😖 😫 😩 🥺 😢 😭 😤 😠 😡 🤬 🤯 😳 🥵 🥶 😱 😨 😰 😥 😓 🤗 🤔 🫣 🤭 🫢 🤫 🤥 😶 😐 😑 😬 🙄 😯 😦 😧 😮 😲 🥱 😴 🤤 😪 😵 🤐 🥴 🤢 🤮 🤧 😷 🤒 🤕 🤑 🤠 😈 👿 👻 💀 ☠️ 👽 🤖 🎃 😺 😸 😹 😻 😼 😽 🙀 😿 😾 ❤️ 🧡 💛 💚 💙 💜 🖤 🤍 🤎 💔 ❣️ 💕 💞 💓 💗 💖 💘 💝 💟 👍 👎 👌 🤌 ✌️ 🤞 🤟 🤘 🤙 👈 👉 👆 👇 ☝️ ✋ 🤚 🖐️ 🖖 👋 🤝 👏 🙌 🫶 👐 🤲 🙏 ✍️ 💪 👀 👁️ 🧠 🫀 🫁 🌱 🌿 ☘️ 🍀 🌸 🌺 🌻 🌞 🌙 ⭐ ✨ ⚡ 🔥 🌈 ☀️ ☁️ ❄️ ☕ 🍕 🍎 🎉 🎊 🎈 🎁 🎵 🎶 🎨 📚 💡 ✅ ❌ ⚠️ 🚀 🌍 💻 📱 🔒 🔑'
-          .split(' ').map((emoji, index) => (
-            <span key={`${emoji}-${index}`} title="Select and copy">{emoji}</span>
-          ))}
+          .split(' ').map((emoji, index) => <span key={`${emoji}-${index}`} title="Select and copy">{emoji}</span>)}
       </div>
       <dl className="posting-help-formatting-panel posting-help-tab-panel">
-            <div>
-              <dd>
-                <code>
-                  <span className="posting-help-link">example.com</span> or
-                  <br />
-                  <span className="posting-help-link">https://example.com</span>
-                </code>
-              </dd>
-              <dt>Regular links</dt>
-            </div>
-            <div>
-              <dd>
-                <code>
-                  <b>[</b>title<b>](</b>example.com<b>)</b> or
-                  <br />
-                  <b>[</b>title<b>](</b>https://example.com<b>)</b>
-                </code>
-              </dd>
-              <dt>Markdown links</dt>
-            </div>
-            <div>
-              <dd>
-                <code>
-                  <b>~</b>text<b>~</b> or <b>~~</b>text<b>~~</b>
-                </code>
-              </dd>
-              <dt>Strikethrough</dt>
-            </div>
-            <div>
-              <dd>
-                <code>
-                  <b>*</b>text<b>*</b> or <b>**</b>text<b>**</b>
-                </code>
-              </dd>
-              <dt>Bold</dt>
-            </div>
-            <div>
-              <dd>
-                <code>
-                  <b>_</b>text<b>_</b> or <b>__</b>text<b>__</b>
-                </code>
-              </dd>
-              <dt>Underline</dt>
-            </div>
-            <div>
-              <dd>
-                <code>
-                  <b>/</b>text<b>/</b>
-                </code>
-              </dd>
-              <dt>Italics</dt>
-            </div>
-            <div>
-              <dd>
-                <code>
-                  <b>&gt;</b> text
-                </code>
-              </dd>
-              <dt>Quote</dt>
-            </div>
-            <div>
-              <dd>
-                <code>
-                  <b>|</b>redacted<b>|</b>
-                </code>
-              </dd>
-              <dt>Redacted</dt>
-            </div>
-            <div>
-              <dd>
-                <code>
-                  <b>`</b>code<b>`</b>
-                </code>
-              </dd>
-              <dt>Inline code</dt>
-            </div>
-            <div>
-              <dd>
-                <code>
-                  <b>```</b>…<b>```</b>
-                </code>
-              </dd>
-              <dt>Code fences</dt>
-            </div>
-            <div>
-              <dd>
-                <code>
-                  <b>$</b>inline<b>$</b>
-                </code>
-              </dd>
-              <dt>Inline LaTeX</dt>
-            </div>
-            <div>
-              <dd>
-                <code>
-                  <b>$$</b>block<b>$$</b>
-                </code>
-              </dd>
-              <dt>Block LaTeX</dt>
-            </div>
+        <div>
+          <dd>
+            <code>
+              <span className="posting-help-link">example.com</span> or
+              <br />
+              <span className="posting-help-link">https://example.com</span>
+            </code>
+          </dd>
+          <dt>Regular links</dt>
+        </div>
+        <div>
+          <dd>
+            <code>
+              <b>[</b>title<b>](</b>example.com<b>)</b> or
+              <br />
+              <b>[</b>title<b>](</b>https://example.com<b>)</b>
+            </code>
+          </dd>
+          <dt>Markdown links</dt>
+        </div>
+        <div>
+          <dd>
+            <code>
+              <b>~</b>text<b>~</b> or <b>~~</b>text<b>~~</b>
+            </code>
+          </dd>
+          <dt>Strikethrough</dt>
+        </div>
+        <div>
+          <dd>
+            <code>
+              <b>*</b>text<b>*</b> or <b>**</b>text<b>**</b>
+            </code>
+          </dd>
+          <dt>Bold</dt>
+        </div>
+        <div>
+          <dd>
+            <code>
+              <b>_</b>text<b>_</b> or <b>__</b>text<b>__</b>
+            </code>
+          </dd>
+          <dt>Underline</dt>
+        </div>
+        <div>
+          <dd>
+            <code>
+              <b>/</b>text<b>/</b>
+            </code>
+          </dd>
+          <dt>Italics</dt>
+        </div>
+        <div>
+          <dd>
+            <code>
+              <b>&gt;</b> text
+            </code>
+          </dd>
+          <dt>Quote</dt>
+        </div>
+        <div>
+          <dd>
+            <code>
+              <b>|</b>redacted<b>|</b>
+            </code>
+          </dd>
+          <dt>Redacted</dt>
+        </div>
+        <div>
+          <dd>
+            <code>
+              <b>`</b>code<b>`</b>
+            </code>
+          </dd>
+          <dt>Inline code</dt>
+        </div>
+        <div>
+          <dd>
+            <code>
+              <b>```</b>…<b>```</b>
+            </code>
+          </dd>
+          <dt>Code fences</dt>
+        </div>
+        <div>
+          <dd>
+            <code>
+              <b>$</b>inline<b>$</b>
+            </code>
+          </dd>
+          <dt>Inline LaTeX</dt>
+        </div>
+        <div>
+          <dd>
+            <code>
+              <b>$$</b>block<b>$$</b>
+            </code>
+          </dd>
+          <dt>Block LaTeX</dt>
+        </div>
       </dl>
       <dl className="posting-help-modifiers-panel posting-help-tab-panel">
-            <div>
-              <dd>
-                <code>
-                  Which one? <b>#poll</b><br />
-                  First option<br />
-                  Second option
-                </code>
-              </dd>
-              <dt><span className="posting-help-modifier-heading">Polls</span>
-                <small>Use 2–8 unique options.</small></dt>
-            </div>
-            <div>
-              <dd>
-                <code>
-                  Which one? <b>#quiz</b><br />
-                  Wrong answer<br />
-                  <b>&gt; </b>Correct answer<br />
-                  <br />
-                  Explanation revealed after answering
-                </code>
-              </dd>
-              <dt><span className="posting-help-modifier-heading">Quizzes</span>
-                <small>Mark exactly one of 2–8 unique answers with &gt;. Text after a blank line is revealed after answering.</small></dt>
-            </div>
-            <div>
-              <dd>
-                <code>
-                  Visible text <b>#spoiler</b><br />
-                  Hidden text
-                </code>
-              </dd>
-              <dt><span className="posting-help-modifier-heading">Spoilers</span>
-                <small>Text after #spoiler is hidden until revealed. Aliases: #sensitive, #contentwarning, #cw, and #triggerwarning.</small></dt>
-            </div>
-            <div>
-              <dd>
-                <code>
-                  Today <b>#todo</b><br />
-                  <b>[ ]</b> First task<br />
-                  <b>[x]</b> Finished task
-                </code>
-              </dd>
-              <dt><span className="posting-help-modifier-heading">Todos</span>
-                <small>Only [ ] and [x] lines become items. Click your items to toggle them.</small></dt>
-            </div>
-            <div>
-              <dd>
-                <code>
-                  Keep this visible <b>#pin</b>
-                </code>
-              </dd>
-              <dt><span className="posting-help-modifier-heading">Pinned notes</span>
-                <small>Your latest #pin is shown first on your profile, independently for notes and replies.</small></dt>
-            </div>
-            <div>
-              <dd>
-                <code>
-                  No more replies <b>#lock</b>
-                </code>
-              </dd>
-              <dt><span className="posting-help-modifier-heading">Locked conversations</span>
-                <small>Prevents new replies to this note and every reply beneath it.</small></dt>
-            </div>
-            <div>
-              <dd>
-                <code>
-                  Continue quietly <b>#whisper</b>
-                </code>
-              </dd>
-              <dt><span className="posting-help-modifier-heading">Whisper conversations</span>
-                <small>Keeps this note and every reply beneath it out of latest and hot. On a reply, only its direct parent starts in the conversation; people who reply or are mentioned inside the whisper branch join it. Followers of tags in the branch receive it in for you. The conversation remains public on profiles, tag pages, threads, and permalinks.</small></dt>
-            </div>
+        <div>
+          <dd>
+            <code>
+              Which one? <b>#poll</b>
+              <br />
+              First option<br />
+              Second option
+            </code>
+          </dd>
+          <dt>
+            <span className="posting-help-modifier-heading">Polls</span>
+            <small>Use 2–8 unique options.</small>
+          </dt>
+        </div>
+        <div>
+          <dd>
+            <code>
+              Which one? <b>#quiz</b>
+              <br />
+              Wrong answer<br />
+              <b>&gt;</b>Correct answer<br />
+              <br />
+              Explanation revealed after answering
+            </code>
+          </dd>
+          <dt>
+            <span className="posting-help-modifier-heading">Quizzes</span>
+            <small>
+              Mark exactly one of 2–8 unique answers with &gt;. Text after a blank line is revealed after answering.
+            </small>
+          </dt>
+        </div>
+        <div>
+          <dd>
+            <code>
+              Visible text <b>#spoiler</b>
+              <br />
+              Hidden text
+            </code>
+          </dd>
+          <dt>
+            <span className="posting-help-modifier-heading">Spoilers</span>
+            <small>
+              Text after #spoiler is hidden until revealed. Aliases: #sensitive, #contentwarning, #cw, and
+              #triggerwarning.
+            </small>
+          </dt>
+        </div>
+        <div>
+          <dd>
+            <code>
+              Today <b>#todo</b>
+              <br />
+              <b>[ ]</b> First task<br />
+              <b>[x]</b> Finished task
+            </code>
+          </dd>
+          <dt>
+            <span className="posting-help-modifier-heading">Todos</span>
+            <small>Only [ ] and [x] lines become items. Click your items to toggle them.</small>
+          </dt>
+        </div>
+        <div>
+          <dd>
+            <code>
+              Keep this visible <b>#pin</b>
+            </code>
+          </dd>
+          <dt>
+            <span className="posting-help-modifier-heading">Pinned notes</span>
+            <small>Your latest #pin is shown first on your profile, independently for notes and replies.</small>
+          </dt>
+        </div>
+        <div>
+          <dd>
+            <code>
+              No more replies <b>#lock</b>
+            </code>
+          </dd>
+          <dt>
+            <span className="posting-help-modifier-heading">Locked conversations</span>
+            <small>Prevents new replies to this note and every reply beneath it.</small>
+          </dt>
+        </div>
+        <div>
+          <dd>
+            <code>
+              Continue quietly <b>#whisper</b>
+            </code>
+          </dd>
+          <dt>
+            <span className="posting-help-modifier-heading">Whisper conversations</span>
+            <small>
+              Keeps this note and every reply beneath it out of latest and hot. On a reply, only its direct parent
+              starts in the conversation; people who reply or are mentioned inside the whisper branch join it. Followers
+              of tags in the branch receive it in for you. The conversation remains public on profiles, tag pages,
+              threads, and permalinks.
+            </small>
+          </dt>
+        </div>
       </dl>
       <div className="posting-help-search-panel posting-help-tab-panel">
         <div className="posting-help-searches">
@@ -299,9 +325,9 @@ export function PostingHelp({ maxLength = 500, maxLines = 10, search, oneLine = 
           </span>
         </summary>
       </details>
-        <div className="posting-help-content" id="posting-help-content">
-          <PostingHelpTabs search={search} />
-        </div>
+      <div className="posting-help-content" id="posting-help-content">
+        <PostingHelpTabs search={search} />
+      </div>
     </div>
   )
 }
@@ -373,8 +399,7 @@ export function Pagination(
     >
       {page > 1
         ? (
-          <a className="pagination-edge"
-            href={`${path}${separator}${pageParam}=${page - 1}&_scroll=instant${fragment}`}
+          <a className="pagination-edge" href={`${path}${separator}${pageParam}=${page - 1}&_scroll=instant${fragment}`}
             aria-label="Previous page"
           >
             ← prev
@@ -389,7 +414,8 @@ export function Pagination(
             {value === page
               ? (
                 <form className="pagination-current-form" method="get" action={`${formPath}${fragment}`}
-                  aria-current="page">
+                  aria-current="page"
+                >
                   <input type="hidden" name="_scroll" value="instant" />
                   {formParameters.map(([name, parameterValue]) => (
                     <input key={`${name}:${parameterValue}`} type="hidden" name={name} value={parameterValue} />
@@ -399,16 +425,21 @@ export function Pagination(
                     inputMode="numeric" enterKeyHint="go" />
                 </form>
               )
-              : <a href={`${path}${separator}${pageParam}=${value}&_scroll=instant${fragment}`}
-                aria-label={`Page ${value}`}>{value}</a>}
+              : (
+                <a href={`${path}${separator}${pageParam}=${value}&_scroll=instant${fragment}`}
+                  aria-label={`Page ${value}`}
+                >
+                  {value}
+                </a>
+              )}
           </React.Fragment>
         ))}
       </div>
       {page < totalPages
         ? (
-          <a className="pagination-edge"
-            href={`${path}${separator}${pageParam}=${page + 1}&_scroll=instant${fragment}`}
-            aria-label="Next page">
+          <a className="pagination-edge" href={`${path}${separator}${pageParam}=${page + 1}&_scroll=instant${fragment}`}
+            aria-label="Next page"
+          >
             next →
           </a>
         )
@@ -429,7 +460,8 @@ export function CursorPagination({ path, previousCursor, nextCursor }: {
       {previousCursor
         ? (
           <a className="pagination-edge"
-            href={`${path}${separator}cursor=${encodeURIComponent(previousCursor)}&_scroll=instant`}>
+            href={`${path}${separator}cursor=${encodeURIComponent(previousCursor)}&_scroll=instant`}
+          >
             ← prev
           </a>
         )
@@ -449,8 +481,7 @@ export function CursorPagination({ path, previousCursor, nextCursor }: {
 
 export function FeedTabs(
   { active, user, forYouReadStatus, activityReadStatus, toMe = false, toMeCount = 0, forYouCount = 0, unreadHref,
-    lastUnreadHref, forYouUnread = false, toMeUnread = false, latestCount = 0,
-    readAction }: {
+    lastUnreadHref, forYouUnread = false, toMeUnread = false, latestCount = 0, readAction }: {
       active: 'following' | 'activity' | 'hot' | 'latest'
       user: User | null
       forYouReadStatus?: boolean
@@ -512,14 +543,19 @@ export function FeedTabs(
       {forYouReadStatus && (
         <div className="feed-read-action">
           {unreadHref && <span className="activity-side-status">jump to</span>}
-          {unreadHref && <a className="activity-side-link" href={unreadHref}>
-            {hasDistinctLastUnread ? 'first unread' : 'unread'}
-          </a>}
+          {unreadHref && (
+            <a className="activity-side-link" href={unreadHref}>
+              {hasDistinctLastUnread ? 'first unread' : 'unread'}
+            </a>
+          )}
           {hasDistinctLastUnread && <span className="feed-tabs-action-separator" aria-hidden="true">·</span>}
           {hasDistinctLastUnread && <a className="activity-side-link" href={lastUnreadHref}>last unread</a>}
-          {unreadHref && <span className="feed-tabs-action-separator feed-read-action-separator" aria-hidden="true">·</span>}
+          {unreadHref && (
+            <span className="feed-tabs-action-separator feed-read-action-separator" aria-hidden="true">·</span>
+          )}
           <form className="feed-read-action-form" method="post"
-            action={readAction || (toMe ? '/to-me/read-all' : '/for-you/read-all')}>
+            action={readAction || (toMe ? '/to-me/read-all' : '/for-you/read-all')}
+          >
             <button className="activity-side-link">mark all read</button>
           </form>
         </div>
@@ -610,9 +646,10 @@ export function ProfileHeader(
             {!editing && returnPath && user?.id !== profile.id
               && <a className="profile-edit-link profile-title-back-link" href={returnPath}>back</a>}
           </div>
-          {profile.bio?.trim() && <p className="profile-bio" dangerouslySetInnerHTML={{
-            __html: linkify(displayBio(profile.bio), bioReference?.mentionBios || {}, [], undefined, undefined, '',
-              bioReference?.hashtagCounts || {}, bioReference?.mentionNoteCounts || {}, {
+          {profile.bio?.trim() && (
+            <p className="profile-bio" dangerouslySetInnerHTML={{
+              __html: linkify(displayBio(profile.bio), bioReference?.mentionBios || {}, [], undefined, undefined, '',
+                bioReference?.hashtagCounts || {}, bioReference?.mentionNoteCounts || {}, {
                 signedIn: !!user,
                 currentHandle: user?.handle,
                 formPrefix: `profile-${profile.id}-bio`,
@@ -623,7 +660,8 @@ export function ProfileHeader(
                 hashtagFollowerCounts: bioReference?.hashtagFollowerCounts,
                 linkPreviews: bioReference?.linkPreviews,
               }),
-          }} />}
+            }} />
+          )}
           <BioReferenceForms data={bioReference} prefix={`profile-${profile.id}-bio`} user={user} />
         </div>
       )}
@@ -715,33 +753,42 @@ export function HighlightedText({ text, terms = [] }: { text: string; terms?: st
   )
 }
 
-export function TagChips({ user, tags, followingKey = 'following', highlightTerms = [], returnPath,
-  showTagLinks = false }: {
-  user: User | null
-  tags: TagView[]
-  followingKey?: 'following' | 'viewerFollowing'
-  highlightTerms?: string[]
-  returnPath: string
-  showTagLinks?: boolean
-}) {
+export function TagChips(
+  { user, tags, followingKey = 'following', highlightTerms = [], returnPath, showTagLinks = false }: {
+    user: User | null
+    tags: TagView[]
+    followingKey?: 'following' | 'viewerFollowing'
+    highlightTerms?: string[]
+    returnPath: string
+    showTagLinks?: boolean
+  },
+) {
   return (
     <div className="explore-tag-chips">
       {tags.map(tag => {
         const tagHref = `/tag/${encodeURIComponent(tag.tag)}${
-          showTagLinks ? `?from=${encodeURIComponent(returnPath)}` : ''}`
+          showTagLinks ? `?from=${encodeURIComponent(returnPath)}` : ''
+        }`
         const chip = user
           ? (
             <form method="post" action={`/tag-follow/${encodeURIComponent(tag.tag)}`}>
               <input type="hidden" name="from" value={returnPath} />
               <button className={`button explore-tag-chip${tag[followingKey] ? ' button-muted' : ''}`}
-                aria-pressed={tag[followingKey]} title={`${tag[followingKey] ? 'Unfollow' : 'Follow'} #${tag.tag}`}>
-                <span>#<HighlightedText text={tag.tag} terms={highlightTerms} /></span>
+                aria-pressed={tag[followingKey]} title={`${tag[followingKey] ? 'Unfollow' : 'Follow'} #${tag.tag}`}
+              >
+                <span>
+                  #<HighlightedText text={tag.tag} terms={highlightTerms} />
+                </span>
               </button>
             </form>
           )
-          : <a className="button explore-tag-chip" href={tagHref}>
-            <span>#<HighlightedText text={tag.tag} terms={highlightTerms} /></span>
-          </a>
+          : (
+            <a className="button explore-tag-chip" href={tagHref}>
+              <span>
+                #<HighlightedText text={tag.tag} terms={highlightTerms} />
+              </span>
+            </a>
+          )
         return showTagLinks
           ? (
             <div className="explore-tag-card" key={tag.tag}>
@@ -756,15 +803,16 @@ export function TagChips({ user, tags, followingKey = 'following', highlightTerm
   )
 }
 
-export function TagPeopleList({ user, tags, followingKey = 'following', highlightTerms = [], returnPath,
-  showPopover = true }: {
-  user: User | null
-  tags: TagView[]
-  followingKey?: 'following' | 'viewerFollowing'
-  highlightTerms?: string[]
-  returnPath?: (tag: TagView) => string
-  showPopover?: boolean
-}) {
+export function TagPeopleList(
+  { user, tags, followingKey = 'following', highlightTerms = [], returnPath, showPopover = true }: {
+    user: User | null
+    tags: TagView[]
+    followingKey?: 'following' | 'viewerFollowing'
+    highlightTerms?: string[]
+    returnPath?: (tag: TagView) => string
+    showPopover?: boolean
+  },
+) {
   return (
     <div className="people tag-people">
       {tags.map(tag => (
@@ -836,16 +884,17 @@ export function BlockedPeopleList({ user, people }: { user: User; people: Person
   )
 }
 
-export function ConnectionPeople({ user, people, className = '', highlightTerms = [], returnPath, showNoteCount = true,
-  showPopover = true }: {
-  user: User | null
-  people: PersonView[]
-  className?: string
-  highlightTerms?: string[]
-  returnPath?: (person: PersonView) => string
-  showNoteCount?: boolean
-  showPopover?: boolean
-}) {
+export function ConnectionPeople(
+  { user, people, className = '', highlightTerms = [], returnPath, showNoteCount = true, showPopover = true }: {
+    user: User | null
+    people: PersonView[]
+    className?: string
+    highlightTerms?: string[]
+    returnPath?: (person: PersonView) => string
+    showNoteCount?: boolean
+    showPopover?: boolean
+  },
+) {
   return (
     <div className={`people connection-people ${className}`.trim()}>
       {people.map(person => (
@@ -854,18 +903,19 @@ export function ConnectionPeople({ user, people, className = '', highlightTerms 
             <div>
               <UserReference handle={person.handle} bio={person.bio} noteCount={person.posts}
                 stats={person.profileStats} following={person.viewerFollowing} followsViewer={person.followsViewer}
-                user={user} href={`/u/${person.handle}${
-                  returnPath ? `?from=${encodeURIComponent(returnPath(person))}` : ''
-                }`} showPopover={showPopover} referenceData={person.bioReference} label={
+                user={user}
+                href={`/u/${person.handle}${returnPath ? `?from=${encodeURIComponent(returnPath(person))}` : ''}`}
+                showPopover={showPopover} referenceData={person.bioReference} label={
                 <>
                   @<HighlightedText text={person.handle} terms={highlightTerms} />
                 </>
               } />
               {showNoteCount && <small>{person.posts} {person.posts === 1 ? 'note' : 'notes'}</small>}
-              {person.bio?.trim() && <p className="profile-bio" dangerouslySetInnerHTML={{
-                __html: linkify(displayBio(person.bio), person.bioReference?.mentionBios || {},
-                  person.bio ? highlightTerms : [], undefined, undefined, '', person.bioReference?.hashtagCounts || {},
-                  person.bioReference?.mentionNoteCounts || {}, {
+              {person.bio?.trim() && (
+                <p className="profile-bio" dangerouslySetInnerHTML={{
+                  __html: linkify(displayBio(person.bio), person.bioReference?.mentionBios || {},
+                    person.bio ? highlightTerms : [], undefined, undefined, '',
+                    person.bioReference?.hashtagCounts || {}, person.bioReference?.mentionNoteCounts || {}, {
                     signedIn: !!user,
                     currentHandle: user?.handle,
                     formPrefix: `person-${person.id}-bio`,
@@ -876,7 +926,8 @@ export function ConnectionPeople({ user, people, className = '', highlightTerms 
                     hashtagFollowing: person.bioReference?.hashtagFollowing,
                     hashtagFollowerCounts: person.bioReference?.hashtagFollowerCounts,
                   }),
-              }} />}
+                }} />
+              )}
               <BioReferenceForms data={person.bioReference} prefix={`person-${person.id}-bio`} user={user} />
             </div>
             {user && user.id !== person.id && (

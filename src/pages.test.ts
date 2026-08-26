@@ -39,9 +39,8 @@ import {
   Reply,
 } from './components/pages'
 import { approximatePostAge, conversationTopPath, FeedThreads, isProbablyNonEnglish, Post, postAgeTitle,
-  postedReplyPath, PreviewPost, replyAnchorReturnPath,
-  ThreadReplies } from './components/post'
-import { SearchResults, searchPersonReturnPath, searchPostReturnPath } from './components/search'
+  postedReplyPath, PreviewPost, replyAnchorReturnPath, ThreadReplies } from './components/post'
+import { searchPersonReturnPath, searchPostReturnPath, SearchResults } from './components/search'
 
 import React from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
@@ -56,10 +55,11 @@ test('mobile account navigation uses an in-flow details menu', () => {
   const request = new Request('https://textlog.test/', {
     headers: { 'user-agent': 'Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) Mobile/15E148' },
   })
-  const html = withAppearance(request, () => renderToStaticMarkup(React.createElement(Layout, {
-    user: { id: 1, handle: 'reader', email: 'reader@example.com', bio: '', handle_chosen_at: '2026-01-01' },
-    children: React.createElement('p', null, 'Hello'),
-  })))
+  const html = withAppearance(request, () =>
+    renderToStaticMarkup(React.createElement(Layout, {
+      user: { id: 1, handle: 'reader', email: 'reader@example.com', bio: '', handle_chosen_at: '2026-01-01' },
+      children: React.createElement('p', null, 'Hello'),
+    })))
 
   expect(html).toContain('<details class="account-menu"><summary class="account-menu-handle">@reader</summary>')
   expect(html).not.toContain('popoverTarget="account-menu-popover"')
@@ -68,10 +68,11 @@ test('mobile account navigation uses an in-flow details menu', () => {
 
 test('write page omits the redundant header write action', () => {
   const request = new Request('https://textlog.test/write')
-  const html = withAppearance(request, () => renderToStaticMarkup(React.createElement(Layout, {
-    user: { id: 1, handle: 'reader', email: 'reader@example.com', bio: '', handle_chosen_at: '2026-01-01' },
-    children: React.createElement('p', null, 'Write'),
-  })))
+  const html = withAppearance(request, () =>
+    renderToStaticMarkup(React.createElement(Layout, {
+      user: { id: 1, handle: 'reader', email: 'reader@example.com', bio: '', handle_chosen_at: '2026-01-01' },
+      children: React.createElement('p', null, 'Write'),
+    })))
 
   expect(html).not.toContain('class="button nav-write-action"')
 })
@@ -158,7 +159,9 @@ test('compose offers a server-rendered post preview', () => {
     email_verified_at: '2026-08-12 10:00:00', handle_chosen_at: '2026-08-12 10:00:00' }
   const form = renderToStaticMarkup(React.createElement(Compose, { user }))
   const preview = renderToStaticMarkup(React.createElement(Compose, {
-    user, body: 'Hello @reader, see #world at https://example.com', preview: true,
+    user,
+    body: 'Hello @reader, see #world at https://example.com',
+    preview: true,
   }))
 
   expect(form).toContain('value="preview" name="action">preview</button>')
@@ -180,7 +183,9 @@ test('compose offers a server-rendered post preview', () => {
   )).not.toContain('<div class="compose-post-preview">')
   expect(preview).toContain('Hello <a href="/u/reader">@reader</a>, see <a href="/tag/world"')
   expect(preview).toContain('<a href="https://example.com" class="raw-link"')
-  expect(preview).toContain('<div class="posttop posttop-context preview-post-meta"><span class="post-context post-context-author">you</span>')
+  expect(preview).toContain(
+    '<div class="posttop posttop-context preview-post-meta"><span class="post-context post-context-author">you</span>',
+  )
   expect(preview).not.toContain('<span class="postauthor post-context-author">you</span>')
   expect(preview).toContain('<span class="post-context">wrote:</span>')
   expect(preview).not.toContain('<span class="postdate">read</span>')
@@ -206,18 +211,21 @@ test('compose previews inline polls with their visible tag and options', () => {
 test('compose previews quizzes and identifies the correct answer', () => {
   const html = renderToStaticMarkup(React.createElement(Compose, {
     user: { id: 1, handle: 'writer', email: 'writer@example.com', bio: '', email_verified_at: '2026-08-20' },
-    body: 'Capital of Greece? #quiz\nRome\n> Athens\nParis\n\nAthens *is* the capital.', preview: true,
+    body: 'Capital of Greece? #quiz\nRome\n> Athens\nParis\n\nAthens *is* the capital.',
+    preview: true,
   }))
   expect(html).toContain('Capital of Greece? <a href="/tag/quiz')
   expect(html).toContain('aria-label="Quiz preview"')
-  expect(html).toContain('quiz-correct">Athens<span class="quiz-mark quiz-mark-correct" aria-label="correct">✓</span></div>')
+  expect(html).toContain(
+    'quiz-correct">Athens<span class="quiz-mark quiz-mark-correct" aria-label="correct">✓</span></div>',
+  )
   expect(html).toContain('<div class="quiz-explanation">Athens <strong>is</strong> the capital.</div>')
 })
 
 test('todos are clickable only for their author', () => {
   const body = 'Weekend #todo\n[ ] Buy milk\n[x] Call Sam'
-  const post = { id: 7, user_id: 1, parent_id: null, body, created_at: '2026-08-23 10:00:00',
-    deleted_at: null, handle: 'writer', reply_count: 0 }
+  const post = { id: 7, user_id: 1, parent_id: null, body, created_at: '2026-08-23 10:00:00', deleted_at: null,
+    handle: 'writer', reply_count: 0 }
   const author = { id: 1, handle: 'writer', email: 'writer@example.com', bio: '' }
   const viewer = { id: 2, handle: 'reader', email: 'reader@example.com', bio: '' }
   const owned = renderToStaticMarkup(React.createElement(Post, { p: post, user: author }))
@@ -234,9 +242,14 @@ test('todos are clickable only for their author', () => {
 
 test('top-level edit previews render todo items and preserve their leading blank line', () => {
   const html = renderToStaticMarkup(React.createElement(PreviewPost, { p: {
-    id: 7, user_id: 1, parent_id: null,
-    body: "my today's #todo list\n\n[x] wake up\n[ ] work",
-    created_at: '2026-08-23 10:00:00', deleted_at: null, handle: 'writer', reply_count: 0,
+    id: 7,
+    user_id: 1,
+    parent_id: null,
+    body: 'my today\'s #todo list\n\n[x] wake up\n[ ] work',
+    created_at: '2026-08-23 10:00:00',
+    deleted_at: null,
+    handle: 'writer',
+    reply_count: 0,
   } }))
 
   expect(html).toContain('aria-label="Todo preview"')
@@ -248,7 +261,7 @@ test('top-level edit previews render todo items and preserve their leading blank
 test('todo previews preserve regular text between checkbox lines', () => {
   const html = renderToStaticMarkup(React.createElement(Compose, {
     user: { id: 1, handle: 'writer', email: 'writer@example.com', bio: '', email_verified_at: '2026-08-20' },
-    body: "my today's #todo list\n\n[x] wake up\n[x] drink coffee\n[ ] work\nand possibly\n[ ] contemplate existence",
+    body: 'my today\'s #todo list\n\n[x] wake up\n[x] drink coffee\n[ ] work\nand possibly\n[ ] contemplate existence',
     preview: true,
   }))
   expect(html.indexOf('>work</span>')).toBeLessThan(html.indexOf('>and possibly</div>'))
@@ -257,8 +270,8 @@ test('todo previews preserve regular text between checkbox lines', () => {
 
 test('todos compose with spoiler sections while preserving toggle indices', () => {
   const body = '#todo\n[ ] visible task\n#spoiler\n[x] hidden task\n[ ] another hidden task'
-  const post = { id: 7, user_id: 1, parent_id: null, body, created_at: '2026-08-23 10:00:00',
-    deleted_at: null, handle: 'writer', reply_count: 0 }
+  const post = { id: 7, user_id: 1, parent_id: null, body, created_at: '2026-08-23 10:00:00', deleted_at: null,
+    handle: 'writer', reply_count: 0 }
   const author = { id: 1, handle: 'writer', email: 'writer@example.com', bio: '' }
   const html = renderToStaticMarkup(React.createElement(Post, { p: post, user: author }))
 
@@ -272,8 +285,8 @@ test('todos compose with spoiler sections while preserving toggle indices', () =
 
 test('todo text and labels render links, Markdown, and LaTeX', () => {
   const body = '#todo\nRead #notes and [the docs](https://example.com/docs)\n[ ] Calculate $x^2$ for @reader'
-  const post = { id: 7, user_id: 1, parent_id: null, body, created_at: '2026-08-23 10:00:00',
-    deleted_at: null, handle: 'writer', reply_count: 0, mention_bios: { reader: 'A reader' } }
+  const post = { id: 7, user_id: 1, parent_id: null, body, created_at: '2026-08-23 10:00:00', deleted_at: null,
+    handle: 'writer', reply_count: 0, mention_bios: { reader: 'A reader' } }
   const author = { id: 1, handle: 'writer', email: 'writer@example.com', bio: '' }
   const html = renderToStaticMarkup(React.createElement(Post, { p: post, user: author }))
 
@@ -287,9 +300,9 @@ test('todo text and labels render links, Markdown, and LaTeX', () => {
 
 test('todo references and links render the same hover cards as post text', () => {
   const body = '#todo\n[ ] Read #notes with @reader at https://example.com/docs'
-  const post = { id: 7, user_id: 1, parent_id: null, body, created_at: '2026-08-23 10:00:00',
-    deleted_at: null, handle: 'writer', reply_count: 0, mention_bios: { reader: 'A reader' },
-    hashtag_counts: { notes: 3 }, hashtag_follower_counts: { notes: 2 }, link_previews: {
+  const post = { id: 7, user_id: 1, parent_id: null, body, created_at: '2026-08-23 10:00:00', deleted_at: null,
+    handle: 'writer', reply_count: 0, mention_bios: { reader: 'A reader' }, hashtag_counts: { notes: 3 },
+    hashtag_follower_counts: { notes: 2 }, link_previews: {
       'https://example.com/docs': { imageUrl: 'https://example.com/preview.png', title: 'Example docs',
         description: 'Documentation' },
     } }
@@ -306,10 +319,16 @@ test('todo references and links render the same hover cards as post text', () =>
 test('quoted parents render their todos', () => {
   const user = { id: 2, handle: 'reader', email: 'reader@example.com', bio: '' }
   const html = renderToStaticMarkup(React.createElement(Post, { user, showParent: true, p: {
-    id: 8, user_id: 2, parent_id: 7, body: 'reply', created_at: '2026-08-23 10:01:00', deleted_at: null,
-    handle: 'reader', reply_count: 0,
-    parent: { id: 7, user_id: 1, parent_id: null, body: '#todo\n[ ] quoted task',
-      created_at: '2026-08-23 10:00:00', deleted_at: null, handle: 'writer', reply_count: 1 },
+    id: 8,
+    user_id: 2,
+    parent_id: 7,
+    body: 'reply',
+    created_at: '2026-08-23 10:01:00',
+    deleted_at: null,
+    handle: 'reader',
+    reply_count: 0,
+    parent: { id: 7, user_id: 1, parent_id: null, body: '#todo\n[ ] quoted task', created_at: '2026-08-23 10:00:00',
+      deleted_at: null, handle: 'writer', reply_count: 1 },
   } }))
 
   expect(html).toContain('<blockquote class="parent-quote"')
@@ -322,8 +341,8 @@ test('draft cards linkify mentions, hashtags, and links', () => {
   const user = { id: 1, handle: 'writer', email: 'writer@example.com', bio: '' }
   const html = renderToStaticMarkup(React.createElement(Drafts, {
     user,
-    drafts: [{ id: 7, parent_id: null, body: '@reader #world https://example.com',
-      created_at: '2026-08-23 10:00:00', updated_at: '2026-08-23 10:00:00' }],
+    drafts: [{ id: 7, parent_id: null, body: '@reader #world https://example.com', created_at: '2026-08-23 10:00:00',
+      updated_at: '2026-08-23 10:00:00' }],
   }))
 
   expect(html).toContain('<a href="/u/reader?from=%2Fpost%2F-7%23post--7">@reader</a>')
@@ -376,22 +395,36 @@ test('posting helpers are searchable details and show copyable highlighted resul
   expect(html.indexOf('<dt>Inline code</dt>')).toBeLessThan(html.indexOf('<dt>Code fences</dt>'))
   expect(html.indexOf('<dt>Redacted</dt>')).toBeLessThan(html.indexOf('<dt>Inline code</dt>'))
   expect(html.indexOf('<dt>Code fences</dt>')).toBeLessThan(html.indexOf('<dt>Inline LaTeX</dt>'))
-  expect(html).toContain('<span class="posting-help-modifier-heading">Polls</span><small>Use 2–8 unique options.</small>')
+  expect(html).toContain(
+    '<span class="posting-help-modifier-heading">Polls</span><small>Use 2–8 unique options.</small>',
+  )
   expect(html).toContain('Which one? <b>#poll</b><br/>First option<br/>Second option')
-  expect(html).toContain('<span class="posting-help-modifier-heading">Spoilers</span><small>Text after #spoiler is hidden until revealed. Aliases: #sensitive, #contentwarning, #cw, and #triggerwarning.</small>')
+  expect(html).toContain(
+    '<span class="posting-help-modifier-heading">Spoilers</span><small>Text after #spoiler is hidden until revealed. Aliases: #sensitive, #contentwarning, #cw, and #triggerwarning.</small>',
+  )
   expect(html).toContain('Visible text <b>#spoiler</b><br/>Hidden text')
-  expect(html).toContain('<span class="posting-help-modifier-heading">Todos</span><small>Only [ ] and [x] lines become items.')
+  expect(html).toContain(
+    '<span class="posting-help-modifier-heading">Todos</span><small>Only [ ] and [x] lines become items.',
+  )
   expect(html).toContain('Today <b>#todo</b><br/><b>[ ]</b> First task<br/><b>[x]</b> Finished task')
   expect(html).toContain('Only [ ] and [x] lines become items. Click your items to toggle them.')
-  expect(html).toContain('<span class="posting-help-modifier-heading">Pinned notes</span><small>Your latest #pin is shown first on your profile')
+  expect(html).toContain(
+    '<span class="posting-help-modifier-heading">Pinned notes</span><small>Your latest #pin is shown first on your profile',
+  )
   expect(html).toContain('Keep this visible <b>#pin</b>')
   expect(html).toContain('Your latest #pin is shown first on your profile, independently for notes and replies.')
-  expect(html).toContain('<span class="posting-help-modifier-heading">Locked conversations</span><small>Prevents new replies to this note')
+  expect(html).toContain(
+    '<span class="posting-help-modifier-heading">Locked conversations</span><small>Prevents new replies to this note',
+  )
   expect(html).toContain('No more replies <b>#lock</b>')
   expect(html).toContain('Prevents new replies to this note and every reply beneath it.')
-  expect(html).toContain('<span class="posting-help-modifier-heading">Whisper conversations</span><small>Keeps this note and every reply beneath it out of latest and hot.')
+  expect(html).toContain(
+    '<span class="posting-help-modifier-heading">Whisper conversations</span><small>Keeps this note and every reply beneath it out of latest and hot.',
+  )
   expect(html).toContain('Continue quietly <b>#whisper</b>')
-  expect(html).toContain('On a reply, only its direct parent starts in the conversation; people who reply or are mentioned inside the whisper branch join it.')
+  expect(html).toContain(
+    'On a reply, only its direct parent starts in the conversation; people who reply or are mentioned inside the whisper branch join it.',
+  )
   expect(html).toContain('Followers of tags in the branch receive it in for you.')
   expect(html).toContain('The conversation remains public on profiles, tag pages, threads, and permalinks.')
   expect(html).not.toContain('<h2>Emoji</h2>')
@@ -498,7 +531,9 @@ test('editing a reply shows its parent context above the textarea', () => {
   const previewPost = preview.slice(preview.indexOf('<div class="reply-preview">'),
     preview.indexOf('<div class="panel panel-surface panel-medium replybox">'))
   expect(previewPost).toContain('<span class="post-context post-context-author">you</span>')
-  expect(previewPost).toContain('<span class="post-context">replied to</span><span class="preview-context-target">@author</span>')
+  expect(previewPost).toContain(
+    '<span class="post-context">replied to</span><span class="preview-context-target">@author</span>',
+  )
   expect(previewPost).toContain('<span class="post-context post-context-punctuation">:</span>')
   expect(previewPost).not.toContain('<span class="postdate"')
   expect(previewPost).toContain('<span class="quiet preview-reply">continue</span>')
@@ -626,7 +661,9 @@ test('explore renders tag toggles above a full-width people section', () => {
   )
   expect(html).toContain('href="/explore?tagsPage=2&amp;_scroll=instant#explore-tags"')
   expect(html).toContain('href="/explore?peoplePage=2&amp;_scroll=instant#explore-people"')
-  expect(html).toContain('<div class="explore-section-heading"><h2>Trending tags</h2><nav class="pagination pagination-compact"')
+  expect(html).toContain(
+    '<div class="explore-section-heading"><h2>Trending tags</h2><nav class="pagination pagination-compact"',
+  )
   expect(html.indexOf('aria-label="Tags pagination"')).toBeLessThan(html.indexOf('class="explore-tag-chips"'))
   expect(html.indexOf('aria-label="People pagination"')).toBeLessThan(html.indexOf('class="people"'))
   expect(html.lastIndexOf('aria-label="People pagination"')).toBeGreaterThan(html.indexOf('class="people"'))
@@ -670,8 +707,8 @@ test('feed threads highlight search matches while retaining tappable reply navig
       created_at: '2026-08-23 10:00:00',
       deleted_at: null,
       handle: 'writer',
-      parent: { id: 7, user_id: 3, parent_id: null, body: 'Parent', created_at: '2026-08-23 09:00:00',
-        deleted_at: null, handle: 'parent', reply_count: 1 },
+      parent: { id: 7, user_id: 3, parent_id: null, body: 'Parent', created_at: '2026-08-23 09:00:00', deleted_at: null,
+        handle: 'parent', reply_count: 1 },
     }],
   }))
 
@@ -682,12 +719,12 @@ test('feed threads highlight search matches while retaining tappable reply navig
 })
 
 test('feed conversations fold multiple read replies but expand one or any unread reply', () => {
-  const root = { id: 1, user_id: 1, parent_id: null, body: 'Root', created_at: '2026-08-23 09:00:00',
-    deleted_at: null, handle: 'root', reply_count: 2 }
+  const root = { id: 1, user_id: 1, parent_id: null, body: 'Root', created_at: '2026-08-23 09:00:00', deleted_at: null,
+    handle: 'root', reply_count: 2 }
   const firstReply = { id: 2, user_id: 2, parent_id: 1, body: 'Reply', created_at: '2026-08-23 10:00:00',
     deleted_at: null, handle: 'reply', reply_count: 0, parent: root }
-  const secondReply = { id: 3, user_id: 2, parent_id: 1, body: 'Another reply',
-    created_at: '2026-08-23 11:00:00', deleted_at: null, handle: 'reply', reply_count: 0, parent: root }
+  const secondReply = { id: 3, user_id: 2, parent_id: 1, body: 'Another reply', created_at: '2026-08-23 11:00:00',
+    deleted_at: null, handle: 'reply', reply_count: 0, parent: root }
   const html = renderToStaticMarkup(React.createElement(FeedThreads, {
     user: null,
     returnPath: '/latest',
@@ -710,7 +747,9 @@ test('feed conversations fold multiple read replies but expand one or any unread
   expect(returned).toContain('href="/post/2?from=%2Flatest%23post-2"')
 
   const single = renderToStaticMarkup(React.createElement(FeedThreads, {
-    user: null, returnPath: '/latest', posts: [{ ...root, reply_count: 1 }, firstReply],
+    user: null,
+    returnPath: '/latest',
+    posts: [{ ...root, reply_count: 1 }, firstReply],
   }))
   expect(single).not.toContain('id="feed-thread-fold-1" checked=""')
 
@@ -725,16 +764,18 @@ test('feed conversations fold multiple read replies but expand one or any unread
 })
 
 test('folded feed conversations preview the newest reply instead of the deepest reply', () => {
-  const root = { id: 1, user_id: 1, parent_id: null, body: 'Root', created_at: '2026-08-23 09:00:00',
-    deleted_at: null, handle: 'root', reply_count: 2 }
-  const olderReply = { id: 2, user_id: 2, parent_id: 1, body: 'Older reply',
-    created_at: '2026-08-23 10:00:00', deleted_at: null, handle: 'reply', reply_count: 1, parent: root }
-  const olderDeepReply = { id: 3, user_id: 3, parent_id: 2, body: 'Older deep reply',
-    created_at: '2026-08-23 11:00:00', deleted_at: null, handle: 'deep', reply_count: 0, parent: olderReply }
-  const newerReply = { id: 4, user_id: 4, parent_id: 1, body: 'Newest reply',
-    created_at: '2026-08-23 12:00:00', deleted_at: null, handle: 'newest', reply_count: 0, parent: root }
+  const root = { id: 1, user_id: 1, parent_id: null, body: 'Root', created_at: '2026-08-23 09:00:00', deleted_at: null,
+    handle: 'root', reply_count: 2 }
+  const olderReply = { id: 2, user_id: 2, parent_id: 1, body: 'Older reply', created_at: '2026-08-23 10:00:00',
+    deleted_at: null, handle: 'reply', reply_count: 1, parent: root }
+  const olderDeepReply = { id: 3, user_id: 3, parent_id: 2, body: 'Older deep reply', created_at: '2026-08-23 11:00:00',
+    deleted_at: null, handle: 'deep', reply_count: 0, parent: olderReply }
+  const newerReply = { id: 4, user_id: 4, parent_id: 1, body: 'Newest reply', created_at: '2026-08-23 12:00:00',
+    deleted_at: null, handle: 'newest', reply_count: 0, parent: root }
   const html = renderToStaticMarkup(React.createElement(FeedThreads, {
-    user: null, returnPath: '/latest', posts: [root, olderReply, olderDeepReply, newerReply],
+    user: null,
+    returnPath: '/latest',
+    posts: [root, olderReply, olderDeepReply, newerReply],
   }))
 
   expect(html).toMatch(/collapsed-preview-post[^>]*>[\s\S]*?Newest reply/)
@@ -749,7 +790,10 @@ test('promoted deep feed activity anchors at its recent branch instead of resurr
   const recent = { id: 3, user_id: 3, parent_id: 2, body: 'Recent answer', created_at: '2026-08-23 10:00:00',
     deleted_at: null, handle: 'recent', reply_count: 0, parent: branch }
   const html = renderToStaticMarkup(React.createElement(FeedThreads, {
-    user: null, returnPath: '/for-you', posts: [recent], promoteAncestors: true,
+    user: null,
+    returnPath: '/for-you',
+    posts: [recent],
+    promoteAncestors: true,
   }))
 
   expect(html).toContain('Deep branch')
@@ -813,7 +857,9 @@ test('admin metrics use locale-aware number formatting', () => {
   expect(html).toContain('<strong>2/2.5</strong><span>median/avg notes per user</span>')
   expect(html).toContain('class="account-settings-heading admin-header"')
   expect(html).toContain('class="profile-edit-link" href="/admin/email">send email</a>')
-  expect(html).toContain('<section class="admin-section admin-ip-requests"><details><summary>top IPs today <span>2</span>')
+  expect(html).toContain(
+    '<section class="admin-section admin-ip-requests"><details><summary>top IPs today <span>2</span>',
+  )
   expect(html).not.toContain('<section class="admin-section admin-ip-requests"><details open=""')
   expect(html).toContain('<code>aaaaa</code><div class="admin-ip-actions"><span>250 requests</span>')
   expect(html).toContain('action="/admin/ip-blocks"')
@@ -834,7 +880,9 @@ test('pages advertise the dynamic favicon, touch icon, and manifest', () => {
 
 test('pagination requests instant scrolling without client-side scripts', () => {
   const html = renderToStaticMarkup(React.createElement(Pagination, {
-    path: '/latest?view=flat', page: 2, totalPages: 3,
+    path: '/latest?view=flat',
+    page: 2,
+    totalPages: 3,
   }))
   expect(html).toContain('name="_scroll" value="instant"')
   expect(html).toContain('page=1&amp;_scroll=instant')
@@ -843,11 +891,19 @@ test('pagination requests instant scrolling without client-side scripts', () => 
 
 test('latest renders conversations only as trees', () => {
   const post = {
-    id: 42, user_id: 2, parent_id: null, body: 'A latest note', created_at: '2026-08-23 10:00:00',
-    deleted_at: null, handle: 'writer', reply_count: 0,
+    id: 42,
+    user_id: 2,
+    parent_id: null,
+    body: 'A latest note',
+    created_at: '2026-08-23 10:00:00',
+    deleted_at: null,
+    handle: 'writer',
+    reply_count: 0,
   }
   const tree = renderToStaticMarkup(React.createElement(PublicFeed, {
-    user: null, path: '/latest', feed: { posts: [post], page: 1, totalItems: 1, totalPages: 1 },
+    user: null,
+    path: '/latest',
+    feed: { posts: [post], page: 1, totalItems: 1, totalPages: 1 },
   }))
   expect(tree).toContain('class="post-page-thread feed-thread"')
   expect(tree).not.toContain('view=flat')
@@ -989,10 +1045,16 @@ test('account settings link to a focused recap email preference panel', () => {
 test('account settings link to a focused interaction email preference panel', () => {
   const user = { id: 1, handle: 'reader', email: 'reader@example.com', bio: '' }
   const profile = renderToStaticMarkup(React.createElement(Profile, {
-    user, profile: { ...user, interaction_emails: 1 }, posts: [], following: false, editing: true,
+    user,
+    profile: { ...user, interaction_emails: 1 },
+    posts: [],
+    following: false,
+    editing: true,
   }))
   const preference = renderToStaticMarkup(React.createElement(InteractedEmails, {
-    user, subscribed: false, changed: true,
+    user,
+    subscribed: false,
+    changed: true,
   }))
 
   expect(profile).toContain('id="interaction-emails"')
@@ -1162,8 +1224,8 @@ test('latest and hot feeds label posts addressed to the viewer', () => {
   const user = { id: 2, handle: 'reader', email: 'reader@example.com', bio: '' }
   const parent = { id: 4, user_id: user.id, parent_id: null, body: 'parent', created_at: '2026-08-20 11:00:00',
     deleted_at: null, handle: user.handle, reply_count: 1 }
-  const post = { id: 9, user_id: 1, parent_id: 4, body: 'hello', created_at: '2026-08-20 12:00:00',
-    deleted_at: null, handle: 'writer', viewer_context: 'reply' as const, parent }
+  const post = { id: 9, user_id: 1, parent_id: 4, body: 'hello', created_at: '2026-08-20 12:00:00', deleted_at: null,
+    handle: 'writer', viewer_context: 'reply' as const, parent }
   const feed = { posts: [post], page: 1, totalItems: 1, totalPages: 1 }
 
   const latest = renderToStaticMarkup(React.createElement(PublicFeed, { user, feed, path: '/latest' }))
@@ -1180,26 +1242,33 @@ test('posts describe whether their author wrote or replied', () => {
   const base = { user_id: 1, body: 'hello', created_at: '2026-08-20 12:00:00', deleted_at: null, handle: 'writer' }
 
   const topLevel = renderToStaticMarkup(React.createElement(Post, {
-    p: { ...base, id: 9, parent_id: null }, user,
+    p: { ...base, id: 9, parent_id: null },
+    user,
   }))
   const reply = renderToStaticMarkup(React.createElement(Post, {
-    p: { ...base, id: 10, parent_id: parent.id, parent }, user,
+    p: { ...base, id: 10, parent_id: parent.id, parent },
+    user,
   }))
   const replyToViewer = renderToStaticMarkup(React.createElement(Post, {
-    p: { ...base, id: 11, parent_id: parent.id, parent, viewer_context: 'reply' }, user,
+    p: { ...base, id: 11, parent_id: parent.id, parent, viewer_context: 'reply' },
+    user,
   }))
   const continuation = renderToStaticMarkup(React.createElement(Post, {
-    p: { ...base, id: 12, parent_id: parent.id, parent: { ...parent, user_id: base.user_id } }, user,
+    p: { ...base, id: 12, parent_id: parent.id, parent: { ...parent, user_id: base.user_id } },
+    user,
   }))
   const poll = renderToStaticMarkup(React.createElement(Post, {
     p: { ...base, id: 13, parent_id: null,
-      poll: { options: [], totalVotes: 0, expired: false, expiresAt: Date.now() + 60_000, viewerVoted: false } }, user,
+      poll: { options: [], totalVotes: 0, expired: false, expiresAt: Date.now() + 60_000, viewerVoted: false } },
+    user,
   }))
   const mentioned = renderToStaticMarkup(React.createElement(Post, {
-    p: { ...base, id: 14, parent_id: parent.id, parent, viewer_mentioned: true }, user,
+    p: { ...base, id: 14, parent_id: parent.id, parent, viewer_mentioned: true },
+    user,
   }))
   const replyToDeletedUser = renderToStaticMarkup(React.createElement(Post, {
-    p: { ...base, id: 15, parent_id: parent.id, parent: { ...parent, handle: 'deleted-363' } }, user,
+    p: { ...base, id: 15, parent_id: parent.id, parent: { ...parent, handle: 'deleted-363' } },
+    user,
   }))
 
   expect(topLevel).toContain('<span class="post-context">wrote:</span>')
@@ -1223,13 +1292,14 @@ test('posts describe whether their author wrote or replied', () => {
 
 test('quoted parents use the same attribution wording', () => {
   const user = { id: 3, handle: 'reader', email: 'reader@example.com', bio: '' }
-  const root = { id: 1, user_id: 1, parent_id: null, body: 'Root', created_at: '2026-08-20 10:00:00',
-    deleted_at: null, handle: 'root', reply_count: 2 }
+  const root = { id: 1, user_id: 1, parent_id: null, body: 'Root', created_at: '2026-08-20 10:00:00', deleted_at: null,
+    handle: 'root', reply_count: 2 }
   const quoted = { id: 2, user_id: 2, parent_id: root.id, parent: root, body: 'Reply',
     created_at: '2026-08-20 11:00:00', deleted_at: null, handle: 'foo', reply_count: 1 }
   const html = renderToStaticMarkup(React.createElement(Post, {
-    p: { id: 3, user_id: 3, parent_id: quoted.id, parent: quoted, body: 'Current',
-      created_at: '2026-08-20 12:00:00', deleted_at: null, handle: 'reader' }, user,
+    p: { id: 3, user_id: 3, parent_id: quoted.id, parent: quoted, body: 'Current', created_at: '2026-08-20 12:00:00',
+      deleted_at: null, handle: 'reader' },
+    user,
   }))
 
   expect(html).toContain('<div class="parent-quote-top"><span class="reference-menu">')
@@ -1237,9 +1307,9 @@ test('quoted parents use the same attribution wording', () => {
   expect(html).toContain('class="reference-menu-trigger postauthor" href="/u/root?from=')
 
   const deletedRootHtml = renderToStaticMarkup(React.createElement(Post, {
-    p: { id: 3, user_id: 3, parent_id: quoted.id,
-      parent: { ...quoted, parent: { ...root, handle: 'deleted-1' } }, body: 'Current',
-      created_at: '2026-08-20 12:00:00', deleted_at: null, handle: 'reader' }, user,
+    p: { id: 3, user_id: 3, parent_id: quoted.id, parent: { ...quoted, parent: { ...root, handle: 'deleted-1' } },
+      body: 'Current', created_at: '2026-08-20 12:00:00', deleted_at: null, handle: 'reader' },
+    user,
   }))
   expect(deletedRootHtml).toContain('<span class="post-context">replied to</span>'
     + '<span class="post-context deleted-context">(deleted account)</span>')
@@ -1248,15 +1318,18 @@ test('quoted parents use the same attribution wording', () => {
 
 test('posts by the viewer use plain you instead of a linked handle', () => {
   const user = { id: 1, handle: 'reader', email: 'reader@example.com', bio: '' }
-  const own = { id: 1, user_id: 1, parent_id: null, body: 'Mine', created_at: '2026-08-20 10:00:00',
-    deleted_at: null, handle: 'reader' }
+  const own = { id: 1, user_id: 1, parent_id: null, body: 'Mine', created_at: '2026-08-20 10:00:00', deleted_at: null,
+    handle: 'reader' }
   const post = renderToStaticMarkup(React.createElement(Post, { p: own, user }))
   const quoted = renderToStaticMarkup(React.createElement(Post, {
     p: { id: 2, user_id: 2, parent_id: own.id, parent: { ...own, reply_count: 1 }, body: 'Reply',
-      created_at: '2026-08-20 11:00:00', deleted_at: null, handle: 'foo' }, user,
+      created_at: '2026-08-20 11:00:00', deleted_at: null, handle: 'foo' },
+    user,
   }))
 
-  expect(post).toContain('<span class="postauthor post-context-author">you</span><span class="post-context">wrote:</span>')
+  expect(post).toContain(
+    '<span class="postauthor post-context-author">you</span><span class="post-context">wrote:</span>',
+  )
   expect(post).not.toContain('href="/u/reader')
   expect(quoted).toContain('<div class="parent-quote-top"><span class="postauthor post-context-author">you</span>'
     + '<span class="post-context">wrote:</span>')
@@ -1358,7 +1431,7 @@ describe('postTitle', () => {
   })
 })
 
-  test('API documentation is linked from the footer and describes the firehose', () => {
+test('API documentation is linked from the footer and describes the firehose', () => {
   const html = renderToStaticMarkup(React.createElement(ApiDocs, { user: null }))
   expect(html).toContain('href="/api">api</a>')
   expect(html).toContain('class="api-title-brand"')
@@ -1510,7 +1583,7 @@ describe('About', () => {
 
   test('API documentation sections are closed disclosures by default', () => {
     const html = renderToStaticMarkup(React.createElement(ApiDocs, { user: null }))
-    expect((html.match(/<details class="api-docs-section">/g) || [])).toHaveLength(9)
+    expect(html.match(/<details class="api-docs-section">/g) || []).toHaveLength(9)
     expect(html).not.toContain('<details class="api-docs-section" open=""')
     expect(html).toContain('<summary><h2>Endpoints</h2></summary>')
     expect(html).toContain('<summary><h2>Endpoints</h2></summary><div class="api-base-url"><h3>Base URL</h3>')
@@ -1518,17 +1591,19 @@ describe('About', () => {
 
   test('appears above public feed tabs only for guest visitors', () => {
     const feed = { posts: [], page: 1, totalItems: 20, totalPages: 2 }
-    const guestHot = withAppearance(new Request('https://textlog.test/hot'), () =>
-      renderToStaticMarkup(React.createElement(HotFeed, { user: null, feed })))
-    const guestLatest = withAppearance(new Request('https://textlog.test/latest'), () =>
-      renderToStaticMarkup(React.createElement(PublicFeed, { user: null, feed, path: '/latest' })))
+    const guestHot = withAppearance(new Request('https://textlog.test/hot'),
+      () => renderToStaticMarkup(React.createElement(HotFeed, { user: null, feed })))
+    const guestLatest = withAppearance(new Request('https://textlog.test/latest'),
+      () => renderToStaticMarkup(React.createElement(PublicFeed, { user: null, feed, path: '/latest' })))
     const user = { id: 1, handle: 'reader', email: 'reader@example.com', bio: '' }
     const signedInHot = renderToStaticMarkup(React.createElement(HotFeed, { user }))
     const signedInLatest = renderToStaticMarkup(React.createElement(PublicFeed, { user, path: '/latest' }))
 
     for (const html of [guestHot, guestLatest]) {
       expect(html).toContain('class="static-page about-page feed-about"')
-      expect(html).toContain('class="guest-join-row"><a class="button" href="/enter" rel="nofollow">join the community</a>')
+      expect(html).toContain(
+        'class="guest-join-row"><a class="button" href="/enter" rel="nofollow">join the community</a>',
+      )
       expect(html).toContain('href="#feed-tabs">browse notes</a>')
       expect(html).toContain('href="/hot#feed-tabs"')
       expect(html).toContain('href="/latest#feed-tabs"')
@@ -1803,7 +1878,9 @@ test('enabling password login requests email confirmation before showing passwor
   expect(requestHtml).toContain('class="panel-shell enable-password-shell"')
   expect(requestHtml).toContain('class="panel panel-surface panel-medium enable-password-panel"')
   expect(requestHtml).toContain('<h1 class="panel-heading">Enable password login</h1>')
-  expect(requestHtml).toContain('<p class="panel-copy">We’ll email you a secure link before you can set a password.</p>')
+  expect(requestHtml).toContain(
+    '<p class="panel-copy">We’ll email you a secure link before you can set a password.</p>',
+  )
   expect(requestHtml).toContain('class="form-actions-secondary"><a class="secondary-action" href="/account/security"')
   expect(requestHtml).not.toContain('name="newPassword"')
 
@@ -1904,7 +1981,10 @@ test('Profile edit offers an expanded copy-paste presence badge with a safe new-
   expect(html).toContain('&lt;a href=&quot;https://textlog.test/u/writer&quot; target=&quot;_blank&quot;')
 
   const publicHtml = renderToStaticMarkup(React.createElement(Profile, {
-    user: null, profile, following: false, posts: [],
+    user: null,
+    profile,
+    following: false,
+    posts: [],
   }))
   expect(publicHtml).not.toContain('Share your presence')
 })
@@ -2029,8 +2109,7 @@ test('An empty following tab offers its owner a way to explore', () => {
 
 test('Following and followers paginate every 8 people', () => {
   const profile = { id: 1, handle: 'reader', email: 'reader@example.com', bio: '' }
-  const person = { id: 2, handle: 'writer', email: 'writer@example.com', bio: '', posts: 1,
-    viewerFollowing: false }
+  const person = { id: 2, handle: 'writer', email: 'writer@example.com', bio: '', posts: 1, viewerFollowing: false }
   for (const kind of ['following', 'followers'] as const) {
     const html = renderToStaticMarkup(React.createElement(Connections, {
       user: null,
@@ -2054,20 +2133,50 @@ test('Following and followers paginate every 8 people', () => {
 
 test('Connection sorting can only be changed on the viewer’s own profile', () => {
   const profile = { id: 1, handle: 'reader', email: 'reader@example.com', bio: '' }
-  const person = { id: 2, handle: 'writer', email: 'writer@example.com', bio: '', posts: 1,
-    viewerFollowing: false }
+  const person = { id: 2, handle: 'writer', email: 'writer@example.com', bio: '', posts: 1, viewerFollowing: false }
   const own = renderToStaticMarkup(React.createElement(Connections, {
-    user: profile, profile, people: [person], kind: 'followers', sort: 'abc', page: 1, total: 1,
-    noteCount: 0, followerCount: 1, followingCount: 0, followingTagCount: 0, following: false,
+    user: profile,
+    profile,
+    people: [person],
+    kind: 'followers',
+    sort: 'abc',
+    page: 1,
+    total: 1,
+    noteCount: 0,
+    followerCount: 1,
+    followingCount: 0,
+    followingTagCount: 0,
+    following: false,
   }))
   const recent = renderToStaticMarkup(React.createElement(Connections, {
-    user: profile, profile, people: [person], kind: 'following', sort: 'recent', page: 2, total: 11,
-    tagsPage: 3, tagsTotal: 21, tags: [], noteCount: 0, followerCount: 0, followingCount: 11,
-    followingTagCount: 21, following: false,
+    user: profile,
+    profile,
+    people: [person],
+    kind: 'following',
+    sort: 'recent',
+    page: 2,
+    total: 11,
+    tagsPage: 3,
+    tagsTotal: 21,
+    tags: [],
+    noteCount: 0,
+    followerCount: 0,
+    followingCount: 11,
+    followingTagCount: 21,
+    following: false,
   }))
   const other = renderToStaticMarkup(React.createElement(Connections, {
-    user: { ...profile, id: 3 }, profile, people: [person], kind: 'followers', page: 1, total: 1,
-    noteCount: 0, followerCount: 1, followingCount: 0, followingTagCount: 0, following: false,
+    user: { ...profile, id: 3 },
+    profile,
+    people: [person],
+    kind: 'followers',
+    page: 1,
+    total: 1,
+    noteCount: 0,
+    followerCount: 1,
+    followingCount: 0,
+    followingTagCount: 0,
+    following: false,
   }))
 
   expect(own).toContain('href="/u/reader?tab=followers">recent</a>')
@@ -2082,8 +2191,7 @@ test('Connection sorting can only be changed on the viewer’s own profile', () 
 
 test('Following and follower links return to the originating connection', () => {
   const profile = { id: 1, handle: 'reader', email: 'reader@example.com', bio: '' }
-  const person = { id: 2, handle: 'writer', email: 'writer@example.com', bio: '', posts: 1,
-    viewerFollowing: false }
+  const person = { id: 2, handle: 'writer', email: 'writer@example.com', bio: '', posts: 1, viewerFollowing: false }
   const following = renderToStaticMarkup(React.createElement(Connections, {
     user: profile,
     profile,
@@ -2385,11 +2493,27 @@ test('Post renders preloaded parent and reply data', () => {
 test('Post uses the full Post component for internal link hover cards', () => {
   const url = 'https://textlog.test/post/12'
   const html = renderToStaticMarkup(React.createElement(Post, { user: {
-    id: 1, handle: 'writer', email: 'writer@example.com', bio: '', suspended_at: null,
+    id: 1,
+    handle: 'writer',
+    email: 'writer@example.com',
+    bio: '',
+    suspended_at: null,
   }, p: {
-    id: 1, user_id: 2, parent_id: null, body: url, created_at: '2026-08-24 10:00:00', deleted_at: null,
-    handle: 'linker', reply_count: 0, link_previews: { [url]: { imageUrl: url, linkedPost: {
-      id: 12, user_id: 1, parent_id: null, body: 'The linked note', handle: 'writer', reply_count: 2,
+    id: 1,
+    user_id: 2,
+    parent_id: null,
+    body: url,
+    created_at: '2026-08-24 10:00:00',
+    deleted_at: null,
+    handle: 'linker',
+    reply_count: 0,
+    link_previews: { [url]: { imageUrl: url, linkedPost: {
+      id: 12,
+      user_id: 1,
+      parent_id: null,
+      body: 'The linked note',
+      handle: 'writer',
+      reply_count: 2,
       thread_locked: false,
     } } },
   } }))
@@ -2410,15 +2534,27 @@ test('Post uses the full Post component for internal link hover cards', () => {
 test('internal post hover cards render linked quizzes with the full Post component', () => {
   const url = 'https://textlog.test/post/12'
   const html = renderToStaticMarkup(React.createElement(Post, { user: null, p: {
-    id: 1, user_id: 2, parent_id: null, body: url, created_at: '2026-08-24 10:00:00', deleted_at: null,
-    handle: 'linker', reply_count: 0, link_previews: { [url]: { imageUrl: url, linkedPost: {
-      id: 12, user_id: 3, parent_id: null, body: '#quiz\nMercury\n* Venus\nEarth', handle: 'quizzer',
-      reply_count: 0, thread_locked: false, poll: { kind: 'quiz', totalVotes: 0, expired: false,
-        expiresAt: null, viewerVoted: false, options: [
-          { id: 1, label: 'Mercury', votes: 0, selected: false, correct: false },
-          { id: 2, label: 'Venus', votes: 0, selected: false, correct: true },
-          { id: 3, label: 'Earth', votes: 0, selected: false, correct: false },
-        ] },
+    id: 1,
+    user_id: 2,
+    parent_id: null,
+    body: url,
+    created_at: '2026-08-24 10:00:00',
+    deleted_at: null,
+    handle: 'linker',
+    reply_count: 0,
+    link_previews: { [url]: { imageUrl: url, linkedPost: {
+      id: 12,
+      user_id: 3,
+      parent_id: null,
+      body: '#quiz\nMercury\n* Venus\nEarth',
+      handle: 'quizzer',
+      reply_count: 0,
+      thread_locked: false,
+      poll: { kind: 'quiz', totalVotes: 0, expired: false, expiresAt: null, viewerVoted: false, options: [
+        { id: 1, label: 'Mercury', votes: 0, selected: false, correct: false },
+        { id: 2, label: 'Venus', votes: 0, selected: false, correct: true },
+        { id: 3, label: 'Earth', votes: 0, selected: false, correct: false },
+      ] },
     } } },
   } }))
   const card = html.slice(html.indexOf('class="remote-link-popover internal-post-popover"'))
@@ -2678,8 +2814,8 @@ test('Post page ages use approximate minute, hour, day, and older buckets', () =
 
 test('Public post pages end with join and browse actions', () => {
   const html = renderToStaticMarkup(React.createElement(PublicThread, {
-    post: { id: 2, user_id: 1, parent_id: null, body: 'A note', handle: 'writer',
-      created_at: '2026-08-03 12:00:00', deleted_at: null },
+    post: { id: 2, user_id: 1, parent_id: null, body: 'A note', handle: 'writer', created_at: '2026-08-03 12:00:00',
+      deleted_at: null },
   }))
 
   expect(html).toContain('class="post-page-thread public-post-page-thread"')
@@ -2691,8 +2827,7 @@ test('Public post pages end with join and browse actions', () => {
 test('Thread pages show approximate wording only on the primary post', () => {
   const createdAt = new Date(Date.now() - 6 * 60 * 60_000).toISOString()
   const html = renderToStaticMarkup(React.createElement(PublicThread, {
-    post: { id: 1, user_id: 1, parent_id: null, body: 'Root', handle: 'root', created_at: createdAt,
-      deleted_at: null },
+    post: { id: 1, user_id: 1, parent_id: null, body: 'Root', handle: 'root', created_at: createdAt, deleted_at: null },
     replies: [
       { id: 2, user_id: 2, parent_id: 1, body: 'First', handle: 'one', created_at: createdAt, deleted_at: null },
       { id: 3, user_id: 3, parent_id: 2, body: 'Second', handle: 'two', created_at: createdAt, deleted_at: null },
@@ -2707,8 +2842,9 @@ test('Thread pages show approximate wording only on the primary post', () => {
 test('Reply pages show a top link after the linked reply context', () => {
   const html = renderToStaticMarkup(React.createElement(Post, {
     p: { id: 3, user_id: 1, parent_id: 2, body: 'A reply', handle: 'writer', created_at: '2026-08-03 12:00:00',
-      deleted_at: null, parent: { id: 2, user_id: 2, parent_id: null, body: 'Parent', handle: 'parent',
-        created_at: '2026-08-03 11:00:00', deleted_at: null, reply_count: 1 } },
+      deleted_at: null,
+      parent: { id: 2, user_id: 2, parent_id: null, body: 'Parent', handle: 'parent', created_at: '2026-08-03 11:00:00',
+        deleted_at: null, reply_count: 1 } },
     user: null,
     canonicalTimestamp: true,
     topHref: '/post/1?from=%2Flatest%23post-3',
@@ -2725,8 +2861,8 @@ test('Reply pages show a top link after the linked reply context', () => {
 test('Conversation roots show a flat link in the top-link action slot', () => {
   const html = renderToStaticMarkup(React.createElement(Post, {
     user: null,
-    p: { id: 1, user_id: 1, parent_id: null, body: 'Root', handle: 'author',
-      created_at: '2026-08-03 10:00:00', deleted_at: null },
+    p: { id: 1, user_id: 1, parent_id: null, body: 'Root', handle: 'author', created_at: '2026-08-03 10:00:00',
+      deleted_at: null },
     canonicalTimestamp: true,
     flatHref: '/post/1?flat=1',
   }))
@@ -2736,8 +2872,8 @@ test('Conversation roots show a flat link in the top-link action slot', () => {
 test('Flat conversations show a tree link in the same action slot', () => {
   const html = renderToStaticMarkup(React.createElement(Post, {
     user: null,
-    p: { id: 1, user_id: 1, parent_id: null, body: 'Root', handle: 'author',
-      created_at: '2026-08-03 10:00:00', deleted_at: null },
+    p: { id: 1, user_id: 1, parent_id: null, body: 'Root', handle: 'author', created_at: '2026-08-03 10:00:00',
+      deleted_at: null },
     canonicalTimestamp: true,
     treeHref: '/post/1?from=%2Flatest%23post-1',
   }))
@@ -2746,8 +2882,13 @@ test('Flat conversations show a tree link in the same action slot', () => {
 
 test('Flat thread replies render descendants in depth-first order without nested branches', () => {
   const reply = (id: number, parentId: number, body: string) => ({
-    id, user_id: 1, parent_id: parentId, body, handle: 'author',
-    created_at: `2026-08-03 1${id}:00:00`, deleted_at: null,
+    id,
+    user_id: 1,
+    parent_id: parentId,
+    body,
+    handle: 'author',
+    created_at: `2026-08-03 1${id}:00:00`,
+    deleted_at: null,
   })
   const html = renderToStaticMarkup(React.createElement(ThreadReplies, {
     parentId: 1,
@@ -2764,8 +2905,8 @@ test('Flat thread replies render descendants in depth-first order without nested
 test('Post threads show stored translations on replies', () => {
   const html = renderToStaticMarkup(React.createElement(ThreadReplies, {
     parentId: 1,
-    replies: [{ id: 2, user_id: 1, parent_id: 1, body: 'Ελληνικό κείμενο', translation: 'Greek text',
-      handle: 'author', created_at: '2026-08-03 12:00:00', deleted_at: null }],
+    replies: [{ id: 2, user_id: 1, parent_id: 1, body: 'Ελληνικό κείμενο', translation: 'Greek text', handle: 'author',
+      created_at: '2026-08-03 12:00:00', deleted_at: null }],
     user: null,
   }))
 
@@ -2893,8 +3034,8 @@ test('Post detail can make only its quoted parent tappable', () => {
 test('Post detail places report opposite reply in the footer', () => {
   const html = renderToStaticMarkup(React.createElement(Post, {
     user: { id: 3, handle: 'reader', email: 'reader@example.com', bio: '' },
-    p: { id: 2, user_id: 1, parent_id: null, body: 'note', handle: 'writer',
-      created_at: '2026-08-03 12:00:00', deleted_at: null },
+    p: { id: 2, user_id: 1, parent_id: null, body: 'note', handle: 'writer', created_at: '2026-08-03 12:00:00',
+      deleted_at: null },
     reportHref: '/post/2?report=1',
   }))
 
@@ -2916,8 +3057,7 @@ test('stored post translations render in the note', () => {
     user: { id: 3, handle: 'reader', email: 'reader@example.com', bio: '' },
     p: { id: 2, user_id: 1, parent_id: null, body,
       translation: 'Spanish information: #action from @reader at example.com', handle: 'writer',
-      mention_bios: { reader: '' },
-      created_at: '2026-08-03 12:00:00', deleted_at: null },
+      mention_bios: { reader: '' }, created_at: '2026-08-03 12:00:00', deleted_at: null },
     highlightTerms: ['information'],
     reportHref: '/post/2?report=1',
   }))
@@ -2978,8 +3118,8 @@ test('Post renders moderation controls only for admins on the detail page', () =
 test('Post detail places moderate immediately before report for admins', () => {
   const html = renderToStaticMarkup(React.createElement(Post, {
     user: { id: 1, handle: 'admin', email: 'GSTAGAS@gmail.com', bio: '' },
-    p: { id: 2, user_id: 2, parent_id: null, body: 'note', handle: 'writer',
-      created_at: '2026-08-03 12:00:00', deleted_at: null },
+    p: { id: 2, user_id: 2, parent_id: null, body: 'note', handle: 'writer', created_at: '2026-08-03 12:00:00',
+      deleted_at: null },
     showModerateAction: true,
     reportHref: '/post/2?report=1',
   }))

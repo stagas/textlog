@@ -11,19 +11,20 @@ import { StatsGrid } from './stats'
 export function AdminDashboard(
   { user, stats, reports, actions, illegalReports = [], status, page, total, suspended = [], ipRequests = [],
     bannedUsernames = [] }: {
-    user: User
-    stats: DashboardStats
-    reports: AdminReportView[]
-    actions: AdminActionView[]
-    illegalReports?: IllegalActivityReportView[]
-    status: 'open' | 'resolved' | 'dismissed'
-    page: number
-    total: number
-    suspended?: ProfileRow[]
-    ipRequests?: Array<{ hash: string; obfuscated: string; requests: number; blocked: boolean }>
-    bannedUsernames?: Array<{ username: string; dropped_user_id: number | null; actor_handle: string;
-      note: string; created_at: string }>
-  },
+      user: User
+      stats: DashboardStats
+      reports: AdminReportView[]
+      actions: AdminActionView[]
+      illegalReports?: IllegalActivityReportView[]
+      status: 'open' | 'resolved' | 'dismissed'
+      page: number
+      total: number
+      suspended?: ProfileRow[]
+      ipRequests?: Array<{ hash: string; obfuscated: string; requests: number; blocked: boolean }>
+      bannedUsernames?: Array<
+        { username: string; dropped_user_id: number | null; actor_handle: string; note: string; created_at: string }
+      >
+    },
 ) {
   return (
     <Layout user={user} title="admin">
@@ -178,7 +179,9 @@ export function AdminDashboard(
           : <p className="section-empty">No suspended users.</p>}
       </section>
       <section className="admin-section admin-banned-usernames">
-        <h2>banned usernames <span>{bannedUsernames.length}</span></h2>
+        <h2>
+          banned usernames <span>{bannedUsernames.length}</span>
+        </h2>
         {bannedUsernames.length
           ? (
             <div className="admin-banned-username-list">

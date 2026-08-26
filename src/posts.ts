@@ -1,13 +1,13 @@
 import type { Database } from 'bun:sqlite'
-import { markLatestPostsRead } from './latest-state'
 import { publishPost } from './api-broker'
 import { extractHashtags, extractMentions, postContentFlags } from './content'
 import { resolveHandle } from './handles'
 import { recordHotActivity } from './hot'
 import { getImageUrl, isImageKey } from './image-storage'
+import { markLatestPostsRead } from './latest-state'
 import { decodeHtmlEntities, userBioLinkPreviews } from './link-preview'
-import { insertRateLimitedPost } from './post-rate-limit'
 import { loadPolls, syncPoll } from './polls'
+import { insertRateLimitedPost } from './post-rate-limit'
 import type { BioReferenceData, LinkPreview, ParentPost, PostView, UserProfileStats } from './types'
 
 export function loadBioReferenceData(database: Database, bio: string, profileId: number,
@@ -141,7 +141,7 @@ export function createPost(
   translation: string | null = null,
 ) {
   const supportsTranslation = !!database.query(
-    "SELECT 1 FROM pragma_table_info('posts') WHERE name='translation'",
+    'SELECT 1 FROM pragma_table_info(\'posts\') WHERE name=\'translation\'',
   ).get()
   const result = insertRateLimitedPost(database, userId, body, parentId, postId => {
     if (supportsTranslation) database.query('UPDATE posts SET translation=? WHERE id=?').run(translation, postId)
@@ -167,10 +167,12 @@ export function isThreadLocked(database: Database, postId: number) {
 export function updatePost(database: Database, postId: number, body: string, translation: string | null = null) {
   database.transaction(() => {
     const supportsTranslation = !!database.query(
-      "SELECT 1 FROM pragma_table_info('posts') WHERE name='translation'",
+      'SELECT 1 FROM pragma_table_info(\'posts\') WHERE name=\'translation\'',
     ).get()
-    if (supportsTranslation) database.query('UPDATE posts SET body=?,translation=? WHERE id=?')
-      .run(body, translation, postId)
+    if (supportsTranslation) {
+      database.query('UPDATE posts SET body=?,translation=? WHERE id=?')
+        .run(body, translation, postId)
+    }
     else database.query('UPDATE posts SET body=? WHERE id=?').run(body, postId)
     syncPostMetadata(database, postId, body)
   })()
@@ -179,7 +181,7 @@ export function updatePost(database: Database, postId: number, body: string, tra
 export function enrichPosts(database: Database, posts: PostView[], viewerId = -1) {
   if (!posts.length) return posts
   const supportsTranslations = !!database.query(
-    "SELECT 1 FROM pragma_table_info('posts') WHERE name='translation'",
+    'SELECT 1 FROM pragma_table_info(\'posts\') WHERE name=\'translation\'',
   ).get()
   const ids = posts.map(post => post.id)
   const viewerContextByPostId = new Map<number, 'reply' | 'mention'>()
@@ -241,30 +243,43 @@ export function enrichPosts(database: Database, posts: PostView[], viewerId = -1
     ? new Set<number>()
     : new Set((database.query(`SELECT pm.post_id FROM post_mentions pm JOIN posts p ON p.id=pm.post_id
       WHERE pm.user_id=? AND p.user_id!=? AND pm.post_id IN
-      (${previewPostIds.map(() => '?').join(',')})`).all(viewerId, viewerId, ...previewPostIds) as { post_id: number }[])
+      (${previewPostIds.map(() => '?').join(',')})`).all(viewerId, viewerId, ...previewPostIds) as {
+      post_id: number
+    }[])
       .map(row => row.post_id))
   const polls = loadPolls(database, previewPostIds, viewerId)
   const supportsLinkedPostPreviews = database.query(
-    "SELECT 1 FROM pragma_table_info('post_link_previews') WHERE name='linked_post_id'",
+    'SELECT 1 FROM pragma_table_info(\'post_link_previews\') WHERE name=\'linked_post_id\'',
   ).get()
   const previewRows = database.query(
       'SELECT 1 FROM sqlite_master WHERE type=\'table\' AND name=\'post_link_previews\'',
     ).get()
     ? database.query(`SELECT lp.post_id,lp.url,lp.image_url,lp.title,lp.description,lp.site_name,lp.image_width,
-      lp.image_height,lp.mime_type,${supportsLinkedPostPreviews ? `lp.linked_post_id,
+      lp.image_height,lp.mime_type,${
+      supportsLinkedPostPreviews
+        ? `lp.linked_post_id,
       linked.user_id linked_user_id,linked.parent_id linked_parent_id,linked.body linked_body,
       linked_user.handle linked_handle,linked_parent.user_id linked_parent_user_id,
       linked_parent_user.handle linked_parent_handle,
       (SELECT count(*) FROM posts reply WHERE reply.parent_id=linked.id AND reply.deleted_at IS NULL) linked_reply_count,
       EXISTS(SELECT 1 FROM post_hashtags lock_tag WHERE lock_tag.post_id=linked.id AND lock_tag.tag='lock') linked_locked`
-      : `NULL linked_post_id,NULL linked_user_id,NULL linked_parent_id,NULL linked_body,NULL linked_handle,
-      NULL linked_parent_user_id,NULL linked_parent_handle,0 linked_reply_count,0 linked_locked`}
+        : `NULL linked_post_id,NULL linked_user_id,NULL linked_parent_id,NULL linked_body,NULL linked_handle,
+      NULL linked_parent_user_id,NULL linked_parent_handle,0 linked_reply_count,0 linked_locked`
+    }
       FROM post_link_previews lp
-      ${supportsLinkedPostPreviews ? `LEFT JOIN posts linked ON linked.id=lp.linked_post_id AND linked.deleted_at IS NULL
+      ${
+      supportsLinkedPostPreviews
+        ? `LEFT JOIN posts linked ON linked.id=lp.linked_post_id AND linked.deleted_at IS NULL
       LEFT JOIN users linked_user ON linked_user.id=linked.user_id AND linked_user.deleted_at IS NULL
-        AND linked_user.suspended_at IS NULL` : ''}
-      ${supportsLinkedPostPreviews ? `LEFT JOIN posts linked_parent ON linked_parent.id=linked.parent_id
-      LEFT JOIN users linked_parent_user ON linked_parent_user.id=linked_parent.user_id` : ''}
+        AND linked_user.suspended_at IS NULL`
+        : ''
+    }
+      ${
+      supportsLinkedPostPreviews
+        ? `LEFT JOIN posts linked_parent ON linked_parent.id=linked.parent_id
+      LEFT JOIN users linked_parent_user ON linked_parent_user.id=linked_parent.user_id`
+        : ''
+    }
       WHERE lp.post_id IN
       (${previewPostIds.map(() => '?').join(',')})`).all(...previewPostIds) as {
       post_id: number
@@ -287,8 +302,9 @@ export function enrichPosts(database: Database, posts: PostView[], viewerId = -1
       linked_locked: number
     }[]
     : []
-  const linkedPolls = loadPolls(database,
-    [...new Set(previewRows.flatMap(row => row.linked_post_id ? [row.linked_post_id] : []))], viewerId)
+  const linkedPolls = loadPolls(database, [
+    ...new Set(previewRows.flatMap(row => row.linked_post_id ? [row.linked_post_id] : [])),
+  ], viewerId)
   const previewsByPost = new Map<number, Record<string, LinkPreview>>()
   for (const row of previewRows) {
     const previews = previewsByPost.get(row.post_id) || {}
@@ -299,10 +315,9 @@ export function enrichPosts(database: Database, posts: PostView[], viewerId = -1
       imageHeight: row.image_height || undefined, mimeType: row.mime_type || undefined,
       linkedPostId: row.linked_post_id || undefined,
       linkedPost: row.linked_post_id && row.linked_user_id && row.linked_body !== null && row.linked_handle
-        ? { id: row.linked_post_id, user_id: row.linked_user_id, parent_id: row.linked_parent_id,
-          body: row.linked_body, handle: row.linked_handle, reply_count: row.linked_reply_count,
-          thread_locked: !!row.linked_locked, poll: linkedPolls.get(row.linked_post_id),
-          parent: row.linked_parent_user_id && row.linked_parent_handle
+        ? { id: row.linked_post_id, user_id: row.linked_user_id, parent_id: row.linked_parent_id, body: row.linked_body,
+          handle: row.linked_handle, reply_count: row.linked_reply_count, thread_locked: !!row.linked_locked,
+          poll: linkedPolls.get(row.linked_post_id), parent: row.linked_parent_user_id && row.linked_parent_handle
             ? { user_id: row.linked_parent_user_id, handle: row.linked_parent_handle }
             : null }
         : undefined }
@@ -460,8 +475,10 @@ export function enrichPosts(database: Database, posts: PostView[], viewerId = -1
 
 export function loadThreadReplies(database: Database, parentId: number, viewerId = -1) {
   const translationColumn = database.query(
-    "SELECT 1 FROM pragma_table_info('posts') WHERE name='translation'",
-  ).get() ? 'translation' : 'NULL translation'
+      'SELECT 1 FROM pragma_table_info(\'posts\') WHERE name=\'translation\'',
+    ).get()
+    ? 'translation'
+    : 'NULL translation'
   const rows = database.query(`WITH RECURSIVE thread AS (
       SELECT p.*,u.handle,1 depth FROM posts p JOIN users u ON u.id=p.user_id WHERE p.parent_id=? AND (? < 0 OR NOT EXISTS
         (SELECT 1 FROM blocks b WHERE (b.blocker_id=? AND b.blocked_id=p.user_id) OR (b.blocker_id=p.user_id AND b.blocked_id=?)))

@@ -66,7 +66,8 @@ export function Profile(
     { name: 'sepia', imageUrl: `${badgeUrl}?theme=sepia` },
     { name: 'dracula', imageUrl: `${badgeUrl}?theme=dracula` },
   ] as const
-  const presenceCode = (imageUrl: string) => `<a href="${profileUrl}" target="_blank" rel="noopener noreferrer"><img src="${imageUrl}" alt="Follow @${profile.handle} on textlog" height="32"></a>`
+  const presenceCode = (imageUrl: string) =>
+    `<a href="${profileUrl}" target="_blank" rel="noopener noreferrer"><img src="${imageUrl}" alt="Follow @${profile.handle} on textlog" height="32"></a>`
   const presence = (
     <section className="profile-presence" aria-labelledby="profile-presence-heading">
       <h2 id="profile-presence-heading">Share your presence</h2>
@@ -88,7 +89,10 @@ export function Profile(
             <p>Paste this into your site to help people find and follow you on textlog.</p>
             <div className="magic-link-output profile-presence-code">
               <output className="form-control magic-link-value api-key-output" tabIndex={0}
-                aria-label={theme.name === 'dark' ? 'profile presence embed code' : `${theme.name} profile presence embed code`}>
+                aria-label={theme.name === 'dark'
+                  ? 'profile presence embed code'
+                  : `${theme.name} profile presence embed code`}
+              >
                 {presenceCode(theme.imageUrl)}
               </output>
             </div>
@@ -149,8 +153,8 @@ export function Profile(
                       autoComplete="username" inputMode="text" enterKeyHint="next" autoCapitalize="none"
                       spellCheck={false} />
                     <span id="profile-handle-help" className="form-hint">
-                      Handles must be 2–24 characters and use only letters, numbers, or underscores.
-                      {' '}You can change your handle up to two times per month.
+                      Handles must be 2–24 characters and use only letters, numbers, or underscores.{' '}
+                      You can change your handle up to two times per month.
                     </span>
                   </label>
                   <div className="bio-field">
@@ -241,7 +245,8 @@ export function Profile(
                   linkPreviews: references.linkPreviews,
                 }),
               }} />
-            ) : null}
+            )
+            : null}
           {!editing && user
             && [...bioTags.map(tag => ({ kind: 'tag' as const, value: tag })),
               ...bioHandles.map(handle => ({ kind: 'user' as const, value: handle }))].map(reference => (

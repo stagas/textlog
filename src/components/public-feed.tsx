@@ -26,25 +26,27 @@ export function PublicFeed(
     : null
   return (
     <Layout user={user} title={path === '/latest' ? 'latest' : undefined} pageUrl={pageUrl}
-      mobileWriteAction={Boolean(user)}
-      notificationBanner={notificationBanner}
+      mobileWriteAction={Boolean(user)} notificationBanner={notificationBanner}
       feeds={{ title: 'Latest notes', rss: '/latest.rss', atom: '/latest.atom' }}
     >
       {!user && <AboutContent user={null} embedded />}
       <h1 className="visually-hidden">Latest notes</h1>
       <FeedTabs active="latest" user={user} forYouCount={feed.forYouCount} forYouUnread={feed.forYouUnread}
-        toMeCount={feed.toMeCount} toMeUnread={feed.toMeUnread}
-        latestCount={feed.latestCount}
+        toMeCount={feed.toMeCount} toMeUnread={feed.toMeUnread} latestCount={feed.latestCount}
         forYouReadStatus={user && feed.posts.length
           ? !!feed.latestUnread && unreadPage !== null && unreadPage > feed.page
-          : undefined} unreadHref={feed.unreadHref}
-        lastUnreadHref={feed.lastUnreadHref} readAction="/latest/read-all" />
-      {feed.page > 1 && <Pagination page={feed.page} totalPages={feed.totalPages} path={feedPath}
-        anchor={user ? undefined : 'feed-tabs'} top />}
+          : undefined} unreadHref={feed.unreadHref} lastUnreadHref={feed.lastUnreadHref}
+        readAction="/latest/read-all" />
+      {feed.page > 1 && (
+        <Pagination page={feed.page} totalPages={feed.totalPages} path={feedPath}
+          anchor={user ? undefined : 'feed-tabs'} top />
+      )}
       {feed.posts.length
-        ? <FeedThreads posts={feed.posts} user={user} returnPath={returnPath}
-            promoteAncestors expandedRootId={expandedRootId}
-            contextUnreadPostIds={unreadPostIds} contextDirectedUnreadPostIds={directedUnreadPostIds} />
+        ? (
+          <FeedThreads posts={feed.posts} user={user} returnPath={returnPath} promoteAncestors
+            expandedRootId={expandedRootId} contextUnreadPostIds={unreadPostIds}
+            contextDirectedUnreadPostIds={directedUnreadPostIds} />
+        )
         : feed.page === 1
         ? <GlobalFeedEmpty user={user} />
         : (

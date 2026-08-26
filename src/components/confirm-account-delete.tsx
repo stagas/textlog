@@ -4,17 +4,18 @@ import { Layout } from './layout'
 import { FormActions, FormMessage } from './page-shared'
 import { CenteredPanel, Panel } from './panel'
 
-export function ConfirmAccountDelete({ user, handle, passwordEnabled = false, token, confirmationUrl, sent = false,
-  invalid = false, error }: {
-  user?: User | null
-  handle?: string
-  passwordEnabled?: boolean
-  token?: string
-  confirmationUrl?: string
-  sent?: boolean
-  invalid?: boolean
-  error?: string
-}) {
+export function ConfirmAccountDelete(
+  { user, handle, passwordEnabled = false, token, confirmationUrl, sent = false, invalid = false, error }: {
+    user?: User | null
+    handle?: string
+    passwordEnabled?: boolean
+    token?: string
+    confirmationUrl?: string
+    sent?: boolean
+    invalid?: boolean
+    error?: string
+  },
+) {
   const emailConfirmation = !!token
   const accountHandle = handle || user?.handle
   const handleLabel = accountHandle ? `@${accountHandle}` : 'your account'
@@ -28,9 +29,8 @@ export function ConfirmAccountDelete({ user, handle, passwordEnabled = false, to
             <p className="eyebrow">confirmation required</p>
             <h1>Check your email to delete {handleLabel}.</h1>
             <p className="verify-email-copy">
-              We sent a confirmation link to{' '}
-              <strong>{user?.email && maskEmail(user.email)}</strong>. <strong>{handleLabel}</strong> has not been
-              deleted.
+              We sent a confirmation link to <strong>{user?.email && maskEmail(user.email)}</strong>.{' '}
+              <strong>{handleLabel}</strong> has not been deleted.
             </p>
             <p className="account-delete-expiry">
               The link expires in one hour. Open it to review and confirm deletion.
@@ -38,9 +38,7 @@ export function ConfirmAccountDelete({ user, handle, passwordEnabled = false, to
             <p className="email-delivery-hint">Can’t find it? Check your spam or junk folder.</p>
             <div className="welcome-actions verify-email-actions">
               <a className="button" href="/account/edit">back to account</a>
-              {confirmationUrl && (
-                <a className="button" href={confirmationUrl}>open development confirmation link</a>
-              )}
+              {confirmationUrl && <a className="button" href={confirmationUrl}>open development confirmation link</a>}
             </div>
           </Panel>
         )

@@ -173,10 +173,11 @@ export function registerAdminRoutes(app: Hono) {
     if (action === 'suspend' && target.suspended_at) return c.text('Account is already suspended', 409)
     if (action === 'restore' && !target.suspended_at) return c.text('Account is not suspended', 409)
     return page(
-      <AdminConfirm user={signedIn} target={target}
-        kind={action === 'suspend' ? 'suspend_user' : action === 'restore' ? 'restore_user'
-          : action === 'drop-username' ? 'drop_username' : 'delete_user'}
-        returnTo={`/admin/users/${id}`} />,
+      <AdminConfirm user={signedIn} target={target} kind={action === 'suspend' ? 'suspend_user' : action === 'restore'
+        ? 'restore_user'
+        : action === 'drop-username'
+        ? 'drop_username'
+        : 'delete_user'} returnTo={`/admin/users/${id}`} />,
     )
   })
 

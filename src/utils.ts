@@ -4,7 +4,7 @@ import { createHash, randomBytes } from 'node:crypto'
 import tlds from 'tlds'
 import { userForApiKey } from './api-keys'
 import { sessionCookieName } from './brand'
-import { containsAsciiArt, MAX_HASHTAGS_PER_POST, splitSpoilerBody, type PostContentFlags } from './content'
+import { containsAsciiArt, MAX_HASHTAGS_PER_POST, type PostContentFlags, splitSpoilerBody } from './content'
 import { texToMathML } from './math'
 import { requestContext } from './request-context'
 import { markSessionUsed, sessionHash } from './sessions'
@@ -141,7 +141,7 @@ function userForSession(token: string | null, database: Database): User | null {
     try {
       const preferences = database.query(`SELECT show_link_previews,hide_people_follow_activity,
           hide_hashtag_follow_activity FROM users WHERE id=?`).get(user.id) as Pick<User,
-            'show_link_previews' | 'hide_people_follow_activity' | 'hide_hashtag_follow_activity'> | null
+        'show_link_previews' | 'hide_people_follow_activity' | 'hide_hashtag_follow_activity'> | null
       if (preferences) Object.assign(user, preferences)
     }
     catch {}
@@ -273,10 +273,8 @@ export function markdownUrl(destination: string) {
 type LinkToken = {
   index: number
   lastIndex: number
-  kind: 'bold' | 'code' | 'code-fence' | 'italics' | 'latex-fence' | 'math' | 'markdown' | 'redacted'
-    | 'strikethrough'
-    | 'underline'
-    | 'url' | 'reference'
+  kind: 'bold' | 'code' | 'code-fence' | 'italics' | 'latex-fence' | 'math' | 'markdown' | 'redacted' | 'strikethrough'
+    | 'underline' | 'url' | 'reference'
   raw: string
   url?: string
   label?: string
@@ -364,8 +362,8 @@ export function linkTokens(body: string, flags?: PostContentFlags): LinkToken[] 
   if (!flags || flags.has_latex) tokens.push(...mathTokens(body, tokens))
   for (const match of body.matchAll(/(?<!~)(~{1,2})(?!~)([^~\r\n]*?\S[^~\r\n]*?)\1(?!~)/g)) {
     if (!escapedAt(body, match.index)) {
-      tokens.push({ index: match.index, lastIndex: match.index + match[0].length, kind: 'strikethrough',
-        raw: match[0], label: match[2] })
+      tokens.push({ index: match.index, lastIndex: match.index + match[0].length, kind: 'strikethrough', raw: match[0],
+        label: match[2] })
     }
   }
   for (const [marker, kind] of [['*', 'bold'], ['_', 'underline']] as const) {
@@ -374,21 +372,21 @@ export function linkTokens(body: string, flags?: PostContentFlags): LinkToken[] 
       + `([^${escapedMarker}\\r\\n]*?\\S[^${escapedMarker}\\r\\n]*?)\\1(?!${escapedMarker})`, 'g')
     for (const match of body.matchAll(expression)) {
       if (!escapedAt(body, match.index)) {
-        tokens.push({ index: match.index, lastIndex: match.index + match[0].length, kind,
-          raw: match[0], label: match[2] })
+        tokens.push({ index: match.index, lastIndex: match.index + match[0].length, kind, raw: match[0],
+          label: match[2] })
       }
     }
   }
   for (const match of body.matchAll(/(?<!\S)\/([^\/\s](?:[^\/\r\n]*?[^\/\s])?)\/(?!\/)/g)) {
     if (!escapedAt(body, match.index)) {
-      tokens.push({ index: match.index, lastIndex: match.index + match[0].length, kind: 'italics',
-        raw: match[0], label: match[1] })
+      tokens.push({ index: match.index, lastIndex: match.index + match[0].length, kind: 'italics', raw: match[0],
+        label: match[1] })
     }
   }
   for (const match of body.matchAll(/(?<!\|)\|(?!\|)([^|\r\n]*?\S[^|\r\n]*?)\|(?!\|)/g)) {
     if (!escapedAt(body, match.index)) {
-      tokens.push({ index: match.index, lastIndex: match.index + match[0].length, kind: 'redacted',
-        raw: match[0], label: match[1] })
+      tokens.push({ index: match.index, lastIndex: match.index + match[0].length, kind: 'redacted', raw: match[0],
+        label: match[1] })
     }
   }
   if (!flags || flags.has_links) {
@@ -403,8 +401,11 @@ export function linkTokens(body: string, flags?: PostContentFlags): LinkToken[] 
       const url = match.schema ? match.url : `https://${match.raw}`
       tokens.push({ index: match.index, lastIndex: match.lastIndex, kind: 'url', raw: match.raw, url })
     }
-    const overlapsUrl = (index: number, lastIndex: number) => tokens.some(token => token.kind === 'url'
-      && index < token.lastIndex && lastIndex > token.index)
+    const overlapsUrl = (index: number, lastIndex: number) =>
+      tokens.some(token =>
+        token.kind === 'url'
+        && index < token.lastIndex && lastIndex > token.index
+      )
     for (const match of body.matchAll(/(?<![A-Za-z0-9_])@[A-Za-z0-9_]+/g)) {
       const lastIndex = match.index + match[0].length
       if (!overlapsUrl(match.index, lastIndex)) {
@@ -420,8 +421,8 @@ export function linkTokens(body: string, flags?: PostContentFlags): LinkToken[] 
       }
     }
   }
-  const priority = { 'code-fence': 0, 'latex-fence': 0, code: 1, math: 2, markdown: 3, redacted: 4,
-    strikethrough: 4, bold: 4, italics: 4, underline: 4, url: 5, reference: 6 }
+  const priority = { 'code-fence': 0, 'latex-fence': 0, code: 1, math: 2, markdown: 3, redacted: 4, strikethrough: 4,
+    bold: 4, italics: 4, underline: 4, url: 5, reference: 6 }
   return tokens.sort((a, b) => a.index - b.index || priority[a.kind] - priority[b.kind])
 }
 
@@ -496,9 +497,12 @@ function renderedReference(token: string, mentionBios: Record<string, string>,
     + `<span class="reference-menu-popover${isUser ? '' : ' reference-menu-popover-tag'}">`
     + (isUser && (mentionBios[key]?.trim() || ownUser)
       ? `<span class="reference-popover-bio${ownUser ? ' reference-popover-bio-own' : ''}${
-        mentionBios[key]?.trim() ? '' : ' bio-empty'}">${mentionBios[key]?.trim()
+        mentionBios[key]?.trim() ? '' : ' bio-empty'
+      }">${
+        mentionBios[key]?.trim()
           ? linkify(displayBio(mentionBios[key]), {}, [], Bun.env.APP_URL, undefined, navigationQuery)
-          : 'No bio yet'}</span>`
+          : 'No bio yet'
+      }</span>`
       : '')
     + `${action}</span></span>`
 }
@@ -543,8 +547,9 @@ export function linkify(body: string, mentionBios: Record<string, string> = {}, 
 {
   const spoiler = renderSpoiler ? splitSpoilerBody(body) : { visible: body, hidden: '' }
   if (spoiler.hidden) {
-    const renderPart = (part: string): string => linkify(part, mentionBios, highlightTerms, appUrl, flags,
-      navigationQuery, hashtagCounts, mentionNoteCounts, popover, false)
+    const renderPart = (part: string): string =>
+      linkify(part, mentionBios, highlightTerms, appUrl, flags, navigationQuery, hashtagCounts, mentionNoteCounts,
+        popover, false)
     return renderPart(spoiler.visible)
       + `<span class="post-spoiler"><label class="post-spoiler-summary">`
       + `<input class="post-spoiler-input" type="checkbox"><span>reveal</span></label>`
@@ -628,9 +633,9 @@ export function linkify(body: string, mentionBios: Record<string, string> = {}, 
       const label = linkLabel(url, appUrl)
       const displayLabel = label === url ? token : label
       html += previewLink(
-        `<a href="${esc(url)}" class="raw-link"${displayLabel === token ? '' : ` title="${esc(url)}"`}${linkAttributes(url, appUrl)}>${
-          renderedRawLinkLabel(displayLabel, value => highlighted(value, highlightTerms))
-        }</a>`,
+        `<a href="${esc(url)}" class="raw-link"${displayLabel === token ? '' : ` title="${esc(url)}"`}${
+          linkAttributes(url, appUrl)
+        }>${renderedRawLinkLabel(displayLabel, value => highlighted(value, highlightTerms))}</a>`,
         url,
         appUrl,
         popover,

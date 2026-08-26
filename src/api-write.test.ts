@@ -2,9 +2,9 @@ import { Database } from 'bun:sqlite'
 import { beforeEach, describe, expect, test } from 'bun:test'
 import { Hono } from 'hono'
 import { readFileSync, unlinkSync } from 'node:fs'
+import { cacheDb } from './cache-db'
 import { executeDatabaseDomain } from './database-domain'
 import type { DatabaseService } from './database-service'
-import { cacheDb } from './cache-db'
 import { registerApiRoutes } from './routes/api'
 import { WRITE_LIMIT } from './routes/api-write'
 import { apiUser, hash } from './utils'
@@ -98,16 +98,25 @@ describe('API writes', () => {
       status: 'forbidden',
     })
     expect((await executeDatabaseDomain(database, 'posts.editData', {
-      id: 1, userId: 1, moderator: true,
+      id: 1,
+      userId: 1,
+      moderator: true,
     })).status).toBe('ready')
 
     const result = await executeDatabaseDomain(database, 'api.updatePost', {
-      id: 1, userId: 1, body: 'edited by moderator', origin: 'https://textlog.test', moderator: true,
+      id: 1,
+      userId: 1,
+      body: 'edited by moderator',
+      origin: 'https://textlog.test',
+      moderator: true,
     })
     expect(result.status).toBe('ready')
     expect(database.query('SELECT body FROM posts WHERE id=1').get()).toEqual({ body: 'edited by moderator' })
     expect(database.query(`SELECT actor_id,action,target_user_id,target_post_id FROM admin_actions`).get()).toEqual({
-      actor_id: 1, action: 'edit_post', target_user_id: 2, target_post_id: 1,
+      actor_id: 1,
+      action: 'edit_post',
+      target_user_id: 2,
+      target_post_id: 1,
     })
   })
 
@@ -238,7 +247,8 @@ describe('API writes', () => {
 
     expect((await call(app, '/api/v1/posts/1/unpublish', { method: 'POST', token: 'alice-token' })).status).toBe(403)
     const unpublished = await call(app, `/api/v1/posts/${created.id}/unpublish`, {
-      method: 'POST', token: 'alice-token',
+      method: 'POST',
+      token: 'alice-token',
     })
 
     expect(unpublished.status).toBe(201)
@@ -394,13 +404,16 @@ describe('API writes', () => {
     cacheDb.query('DELETE FROM materialized_feed_pages_v2 WHERE variant=?').run(cacheVariant)
     const draft = (await created.json() as any).data
     expect(draft).toMatchObject({ body: 'draft one', parent_id: 1, parent: { id: 1 } })
-    expect((await call(app, `/api/v1/drafts/${draft.id}`, { method: 'PATCH', token: 'alice-token',
-      body: { body: 'published reply' } })).status).toBe(200)
+    expect(
+      (await call(app, `/api/v1/drafts/${draft.id}`, { method: 'PATCH', token: 'alice-token',
+        body: { body: 'published reply' } })).status,
+    ).toBe(200)
     const listed = await (await call(app, '/api/v1/drafts?limit=1', { token: 'alice-token' })).json() as any
     expect(listed.data).toHaveLength(1)
     insertMaterialization.run('latest', 1, cacheVariant, 1, '<p>cached before publish</p>')
     const published = await call(app, `/api/v1/drafts/${draft.id}/publish`, {
-      method: 'POST', token: 'alice-token',
+      method: 'POST',
+      token: 'alice-token',
     })
     expect(published.status).toBe(201)
     expect(cacheDb.query('SELECT count(*) count FROM materialized_feed_pages_v2 WHERE viewer_id=? AND variant=?')
@@ -435,21 +448,26 @@ describe('API writes', () => {
     const data = (await voted.json() as any).data
     expect(data.poll).toMatchObject({ total_votes: 1, viewer_voted: true })
     expect(data.poll.options[0]).toMatchObject({ votes: 1, selected: true })
-    expect((await call(app, `/api/v1/posts/${pollPost.id}/poll/votes`, { method: 'POST', token: 'alice-token',
-      body: { option_id: pollPost.poll.options[1].id } })).status).toBe(409)
+    expect(
+      (await call(app, `/api/v1/posts/${pollPost.id}/poll/votes`, { method: 'POST', token: 'alice-token',
+        body: { option_id: pollPost.poll.options[1].id } })).status,
+    ).toBe(409)
   })
 
   test('idempotently follows and blocks hashtags', async () => {
     const { app, database } = fixture()
-    for (let i = 0; i < 2; i++) expect((await call(app, '/api/v1/tags/news/follow', {
-      method: 'POST', token: 'alice-token',
-    })).status).toBe(200)
-    expect(database.query("SELECT count(*) count FROM hashtag_follows WHERE tag='news'").get()).toEqual({ count: 1 })
-    expect(database.query("SELECT created_at FROM hashtag_follows WHERE tag='news'").get())
+    for (let i = 0; i < 2; i++) {
+      expect((await call(app, '/api/v1/tags/news/follow', {
+        method: 'POST',
+        token: 'alice-token',
+      })).status).toBe(200)
+    }
+    expect(database.query('SELECT count(*) count FROM hashtag_follows WHERE tag=\'news\'').get()).toEqual({ count: 1 })
+    expect(database.query('SELECT created_at FROM hashtag_follows WHERE tag=\'news\'').get())
       .toMatchObject({ created_at: expect.any(String) })
     expect((await call(app, '/api/v1/tags/news/block', { method: 'POST', token: 'alice-token' })).status).toBe(200)
-    expect(database.query("SELECT count(*) count FROM hashtag_follows WHERE tag='news'").get()).toEqual({ count: 0 })
-    expect(database.query("SELECT count(*) count FROM blocked_hashtags WHERE tag='news'").get()).toEqual({ count: 1 })
+    expect(database.query('SELECT count(*) count FROM hashtag_follows WHERE tag=\'news\'').get()).toEqual({ count: 0 })
+    expect(database.query('SELECT count(*) count FROM blocked_hashtags WHERE tag=\'news\'').get()).toEqual({ count: 1 })
     expect((await call(app, '/api/v1/tags/news/block', { method: 'DELETE', token: 'alice-token' })).status).toBe(200)
   })
 })

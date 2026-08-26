@@ -1,12 +1,12 @@
 import type { Database } from 'bun:sqlite'
 import { extractHashtags, extractMentions } from './content'
 import { encodeHotCursor, getHotPosts, type HotCursor, hotCursor } from './hot'
-import { excludesWhisperPosts } from './whisper'
-import { searchExpression } from './search'
-import { decodeHtmlEntities } from './link-preview'
 import { getImageUrl, isImageKey } from './image-storage'
+import { decodeHtmlEntities } from './link-preview'
 import { loadPolls } from './polls'
+import { searchExpression } from './search'
 import type { ApiPost, LinkPreview } from './types'
+import { excludesWhisperPosts } from './whisper'
 export type { ApiPost } from './types'
 
 export const API_DEFAULT_LIMIT = 20
@@ -128,17 +128,26 @@ function enrichApiRows<T extends Omit<ApiPostRow, 'reply_count' | 'top_id'>>(dat
 function apiExtras(database: Database, postIds: number[], viewerId: number) {
   const previews = new Map<number, Record<string, LinkPreview>>()
   if (postIds.length && database.query(
-    "SELECT 1 FROM sqlite_master WHERE type='table' AND name='post_link_previews'",
+    'SELECT 1 FROM sqlite_master WHERE type=\'table\' AND name=\'post_link_previews\'',
   ).get()) {
     const mimeTypeColumn = database.query(
-      "SELECT 1 FROM pragma_table_info('post_link_previews') WHERE name='mime_type'",
-    ).get() ? 'mime_type' : 'NULL AS mime_type'
+        'SELECT 1 FROM pragma_table_info(\'post_link_previews\') WHERE name=\'mime_type\'',
+      ).get()
+      ? 'mime_type'
+      : 'NULL AS mime_type'
     const rows = database.query(`SELECT post_id,url,image_url,title,description,site_name,image_width,image_height,
       ${mimeTypeColumn}
       FROM post_link_previews WHERE post_id IN (${postIds.map(() => '?').join(',')})`).all(...postIds) as Array<{
-        post_id: number; url: string; image_url: string; title: string | null; description: string | null;
-        site_name: string | null; image_width: number | null; image_height: number | null; mime_type: string | null
-      }>
+      post_id: number
+      url: string
+      image_url: string
+      title: string | null
+      description: string | null
+      site_name: string | null
+      image_width: number | null
+      image_height: number | null
+      mime_type: string | null
+    }>
     for (const row of rows) {
       const values = previews.get(row.post_id) || {}
       values[row.url] = { imageUrl: isImageKey(row.image_url) ? getImageUrl(row.image_url) : row.image_url,
@@ -156,15 +165,19 @@ function apiExtras(database: Database, postIds: number[], viewerId: number) {
 function withApiExtras(post: ApiPost, extras: ReturnType<typeof apiExtras>, id: number): ApiPost {
   const poll = extras.polls.get(id)
   const reveal = !!poll && (poll.expired || poll.viewerVoted)
-  return { ...post, link_previews: extras.previews.get(id) || {}, poll: poll ? {
-    options: poll.options.map(option => ({ id: option.id, label: option.label,
-      votes: reveal ? option.votes : null, selected: option.selected,
-      ...(poll.kind === 'quiz' ? { correct: reveal ? !!option.correct : null } : {}) })),
-    kind: poll.kind || 'poll',
-    ...(poll.kind === 'quiz' ? { explanation: reveal ? poll.explanation || null : null } : {}),
-    total_votes: reveal ? poll.totalVotes : null, expired: poll.expired,
-    expires_at: poll.expiresAt === null ? null : new Date(poll.expiresAt).toISOString(), viewer_voted: poll.viewerVoted,
-  } : null }
+  return { ...post, link_previews: extras.previews.get(id) || {}, poll: poll
+    ? {
+      options: poll.options.map(option => ({ id: option.id, label: option.label, votes: reveal ? option.votes : null,
+        selected: option.selected, ...(poll.kind === 'quiz' ? { correct: reveal ? !!option.correct : null } : {}) })
+      ),
+      kind: poll.kind || 'poll',
+      ...(poll.kind === 'quiz' ? { explanation: reveal ? poll.explanation || null : null } : {}),
+      total_votes: reveal ? poll.totalVotes : null,
+      expired: poll.expired,
+      expires_at: poll.expiresAt === null ? null : new Date(poll.expiresAt).toISOString(),
+      viewer_voted: poll.viewerVoted,
+    }
+    : null }
 }
 
 function serializePostsWithParents(database: Database, rows: ApiPostRow[], origin: string, viewerId = -1): ApiPost[] {
@@ -282,7 +295,8 @@ export function apiReplies(database: Database, origin: string, parentId: number,
 }
 
 export function apiHotPosts(database: Database, origin: string, limit: number, cursor: HotCursor | null,
-  viewerId = -1) {
+  viewerId = -1)
+{
   const asOf = cursor?.asOf || new Date().toISOString()
   const rows = getHotPosts(database, limit + 1, cursor, asOf, viewerId, true)
   const hasMore = rows.length > limit
@@ -295,7 +309,8 @@ export function apiHotPosts(database: Database, origin: string, limit: number, c
 }
 
 export function apiSearchPosts(database: Database, origin: string, query: string, limit: number, offset = 0,
-  viewerId = -1) {
+  viewerId = -1)
+{
   const expression = searchExpression(query)
   const visibility = viewerId < 0 ? '' : `AND NOT EXISTS (SELECT 1 FROM blocks b WHERE
     (b.blocker_id=? AND b.blocked_id=p.user_id) OR (b.blocker_id=p.user_id AND b.blocked_id=?))

@@ -32,8 +32,10 @@ export function RecapEmails({ user, subscribed, token, changed = false, invalid 
               <form method="post" action="/account/recap-emails">
                 {token && <input type="hidden" name="token" value={token} />}
                 <input type="hidden" name="subscribed" value={subscribed ? '0' : '1'} />
-                <FormActions secondary={user && <a className="secondary-action" href="/account/edit">back to account</a>}
-                  primary={<button className="button">{subscribed ? 'unsubscribe' : 'subscribe'}</button>} />
+                <FormActions
+                  secondary={user && <a className="secondary-action" href="/account/edit">back to account</a>}
+                  primary={<button className="button">{subscribed ? 'unsubscribe' : 'subscribe'}</button>}
+                />
               </form>
             </>
           )}

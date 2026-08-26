@@ -35,11 +35,11 @@ describe('post search', () => {
 
   test('indexes stored translations and keeps them current', () => {
     const database = testDatabase()
-    database.run("UPDATE posts SET translation='A translated observatory' WHERE id=3")
+    database.run('UPDATE posts SET translation=\'A translated observatory\' WHERE id=3')
     expect(searchPosts(database, 'observatory').rows.map(post => post.id)).toEqual([3])
     expect(searchPosts(database, 'observatory').rows[0]?.translation).toBe('A translated observatory')
 
-    database.run("UPDATE posts SET translation='A translated greenhouse' WHERE id=3")
+    database.run('UPDATE posts SET translation=\'A translated greenhouse\' WHERE id=3')
     expect(searchPosts(database, 'observatory').total).toBe(0)
     expect(searchPosts(database, 'greenhouse').rows.map(post => post.id)).toEqual([3])
     database.run('UPDATE posts SET translation=NULL WHERE id=3')

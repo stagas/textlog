@@ -29,8 +29,10 @@ function personalizedFeedGeneration(database: Database, viewerId: number) {
     database.transaction(() => {
       const pending = database.query('DELETE FROM pending_relationship_feed_invalidations WHERE viewer_id=?')
         .run(viewerId).changes
-      if (pending) database.query(`UPDATE personalized_feed_generations
+      if (pending) {
+        database.query(`UPDATE personalized_feed_generations
         SET generation=generation+1 WHERE viewer_id=?`).run(viewerId)
+      }
     })()
   }
   return (database.query(`SELECT generation FROM personalized_feed_generations WHERE viewer_id=?`).get(viewerId) as {
@@ -73,7 +75,8 @@ export function feedSnapshotPage<T>(database: Database, kind: string, viewerId: 
         const batch = items.slice(start, start + insertBatchSize)
         const values = batch.map(() => '(?,?,?)').join(',')
         const parameters = batch.flatMap((item, index) =>
-          [snapshotId, start + index, JSON.stringify(item)] as [number, number, string])
+          [snapshotId, start + index, JSON.stringify(item)] as [number, number, string]
+        )
         storage.query(`INSERT INTO feed_snapshot_items(snapshot_id,position,payload) VALUES ${values}`)
           .run(...parameters)
       }

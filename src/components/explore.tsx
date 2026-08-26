@@ -82,24 +82,25 @@ export function Explore({ user, welcome = false, tagsPage = 1, peoplePage = 1, d
                 <div>
                   <div>
                     <UserReference handle={p.handle} bio={p.bio} noteCount={p.posts} stats={profileStats[p.id]}
-                      following={p.following} user={user} followsViewer={p.followsViewer}
-                      showPopover={false}
+                      following={p.following} user={user} followsViewer={p.followsViewer} showPopover={false}
                       href={`/u/${p.handle}?from=${encodeURIComponent(exploreReturnPath(p.id))}`}
                       navigationQuery={`?from=${encodeURIComponent(exploreReturnPath(p.id))}`} />
-                    {p.bio?.trim() && <p className="profile-bio" dangerouslySetInnerHTML={{
-                      __html: linkify(displayBio(p.bio), p.bioReference?.mentionBios || {}, [], undefined, undefined, '',
-                        p.bioReference?.hashtagCounts || {}, p.bioReference?.mentionNoteCounts || {}, {
-                        signedIn: !!user,
-                        currentHandle: user?.handle,
-                        formPrefix: `explore-person-${p.id}-bio`,
-                        linkPreviews: p.bioLinkPreviews,
-                        mentionFollowing: p.bioReference?.mentionFollowing,
-                        mentionFollowsViewer: p.bioReference?.mentionFollowsViewer,
-                        mentionProfileStats: p.bioReference?.mentionProfileStats,
-                        hashtagFollowing: p.bioReference?.hashtagFollowing,
-                        hashtagFollowerCounts: p.bioReference?.hashtagFollowerCounts,
-                      }),
-                    }} />}
+                    {p.bio?.trim() && (
+                      <p className="profile-bio" dangerouslySetInnerHTML={{
+                        __html: linkify(displayBio(p.bio), p.bioReference?.mentionBios || {}, [], undefined, undefined,
+                          '', p.bioReference?.hashtagCounts || {}, p.bioReference?.mentionNoteCounts || {}, {
+                          signedIn: !!user,
+                          currentHandle: user?.handle,
+                          formPrefix: `explore-person-${p.id}-bio`,
+                          linkPreviews: p.bioLinkPreviews,
+                          mentionFollowing: p.bioReference?.mentionFollowing,
+                          mentionFollowsViewer: p.bioReference?.mentionFollowsViewer,
+                          mentionProfileStats: p.bioReference?.mentionProfileStats,
+                          hashtagFollowing: p.bioReference?.hashtagFollowing,
+                          hashtagFollowerCounts: p.bioReference?.hashtagFollowerCounts,
+                        }),
+                      }} />
+                    )}
                   </div>
                   {user && (
                     <form method="post" action={'/follow/' + p.handle}>

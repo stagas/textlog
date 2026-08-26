@@ -1,7 +1,7 @@
 import {
   Compose,
-  ConfirmDraftDelete,
   ConfirmDelete,
+  ConfirmDraftDelete,
   Drafts,
   EditPost,
   PublicThread,
@@ -14,9 +14,9 @@ import { canPublishPosts } from '../posting-policy'
 import { form, page, redirect, rememberFeed, safeNext } from './shared'
 
 import type { Hono } from 'hono'
-import { publishPost } from '../api-broker'
 import { isAdmin } from '../admin'
 import { cachedAnonymousPostPage, materializeAnonymousPostPage } from '../anonymous-post-page-cache'
+import { publishPost } from '../api-broker'
 import type { PostingSuggestionSearch } from '../components/page-shared'
 import { safeRefererPath } from '../http'
 import { deleteImages, deleteImagesAfterCommit } from '../image-storage'
@@ -29,9 +29,9 @@ import { normalizePostBody, postBodyValidationMessage, validPostBody } from '../
 import { postRateLimitMessage } from '../post-rate-limit'
 import { sendPushForPost } from '../push'
 import { normalizeSearchQuery } from '../search'
-import { currentUser } from '../utils'
 import { toggleTodo } from '../todos'
 import { postTranslation } from '../translation'
+import { currentUser } from '../utils'
 
 function notifyPost(postId: number, userId: number, handle: string) {
   void sendPushForPost(postId, userId, handle).catch(error => logError('activity push failed', error))
@@ -113,10 +113,13 @@ export function registerPostsRoutes(app: Hono) {
       return page(<Compose user={user} body={draft.body} draftId={draft.id} returnPath={draftsPath} />)
     }
     const loaded = await databaseService().call('posts.replyParent', { id: draft.parent_id, userId: user.id })
-    if (loaded.status !== 'ready') return c.text(loaded.status === 'forbidden' ? 'Forbidden' : 'Not found',
-      loaded.status === 'forbidden' ? 403 : 404)
-    return page(<Reply user={user} post={loaded.post} showForm body={draft.body} draftId={draft.id}
-      returnPath={draftsPath} />)
+    if (loaded.status !== 'ready') {
+      return c.text(loaded.status === 'forbidden' ? 'Forbidden' : 'Not found',
+        loaded.status === 'forbidden' ? 403 : 404)
+    }
+    return page(
+      <Reply user={user} post={loaded.post} showForm body={draft.body} draftId={draft.id} returnPath={draftsPath} />,
+    )
   })
 
   app.get('/drafts/:id/delete', async c => {
@@ -153,7 +156,10 @@ export function registerPostsRoutes(app: Hono) {
     const body = normalizePostBody(fields.body || '')
     if (!validPostBody(body)) return c.text(postBodyValidationMessage(body), 400)
     const result = await databaseService().call('drafts.save', {
-      id, userId: user.id, parentId: existing.parent_id, body,
+      id,
+      userId: user.id,
+      parentId: existing.parent_id,
+      body,
     })
     if (result.status === 'not_found') return c.text('Not found', 404)
     return redirect(fields.from ? safeNext(fields.from) : '/drafts')
@@ -202,9 +208,8 @@ export function registerPostsRoutes(app: Hono) {
     if (user) {
       return page(
         <Reply user={user} post={post} replies={replies} showForm={c.req.query('reply') === '1'} returnPath={returnPath}
-          topHref={topHref} flatHref={flatHref} treeHref={treeHref} flat={flat} showReport={c.req.query('report') === '1'}
-          reported={c.req.query('reported') === '1'}
-          social={social} />,
+          topHref={topHref} flatHref={flatHref} treeHref={treeHref} flat={flat}
+          showReport={c.req.query('report') === '1'} reported={c.req.query('reported') === '1'} social={social} />,
       )
     }
     const rendered = page(
@@ -239,20 +244,27 @@ export function registerPostsRoutes(app: Hono) {
     const editingDraftId = draftId(f)
     const suggestionSearch = await postingSuggestionSearch(f, user.id)
     if (suggestionSearch) {
-      return page(<Compose user={user} body={body} draftId={editingDraftId} returnPath={returnPath}
-        suggestionSearch={suggestionSearch} />)
+      return page(
+        <Compose user={user} body={body} draftId={editingDraftId} returnPath={returnPath}
+          suggestionSearch={suggestionSearch} />,
+      )
     }
     if (!validPostBody(body)) {
-      return page(<Compose user={user} body={body} draftId={editingDraftId} error={postBodyValidationMessage(body)}
-        returnPath={returnPath} />,
-        400)
+      return page(
+        <Compose user={user} body={body} draftId={editingDraftId} error={postBodyValidationMessage(body)}
+          returnPath={returnPath} />,
+        400,
+      )
     }
     if (f.action === 'preview') {
       return page(<Compose user={user} body={body} draftId={editingDraftId} preview returnPath={returnPath} />)
     }
     if (f.action === 'draft') {
       const result = await databaseService().call('drafts.save', {
-        id: editingDraftId ?? null, userId: user.id, parentId: null, body,
+        id: editingDraftId ?? null,
+        userId: user.id,
+        parentId: null,
+        body,
       })
       if (result.status === 'not_found') return c.text('Not found', 404)
       return redirect(`/drafts?from=${encodeURIComponent(returnPath)}`)
@@ -288,8 +300,10 @@ export function registerPostsRoutes(app: Hono) {
     }
     catch (error) {
       logError('POST /post', error)
-      return page(<Compose user={user} body={body} draftId={editingDraftId} error={saveFailureMessage}
-        returnPath={returnPath} />, 500)
+      return page(
+        <Compose user={user} body={body} draftId={editingDraftId} error={saveFailureMessage} returnPath={returnPath} />,
+        500,
+      )
     }
   })
 
@@ -297,14 +311,20 @@ export function registerPostsRoutes(app: Hono) {
     const user = currentUser(c.req.raw)
     if (!user) return redirect('/enter?next=' + encodeURIComponent(c.req.path))
     const id = Number(c.req.param('id'))
-    const loaded = Number.isInteger(id) ? await databaseService().call('posts.editData', {
-      id, userId: user.id, moderator: isAdmin(user),
-    }) : null
+    const loaded = Number.isInteger(id)
+      ? await databaseService().call('posts.editData', {
+        id,
+        userId: user.id,
+        moderator: isAdmin(user),
+      })
+      : null
     if (!loaded || loaded.status === 'not_found') return c.text('Not found', 404)
     if (loaded.status === 'forbidden') return c.text('Forbidden', 403)
     const returnPath = c.req.query('from') ? safeNext(c.req.query('from')) : undefined
-    return page(<EditPost user={user} post={loaded.post} parent={loaded.parent} returnPath={returnPath}
-      moderator={user.id !== loaded.post.user_id} />)
+    return page(
+      <EditPost user={user} post={loaded.post} parent={loaded.parent} returnPath={returnPath}
+        moderator={user.id !== loaded.post.user_id} />,
+    )
   })
 
   app.post('/post/:id/poll', async c => {
@@ -335,11 +355,16 @@ export function registerPostsRoutes(app: Hono) {
     const body = Number.isInteger(itemIndex) && itemIndex >= 0 ? toggleTodo(loaded.post.body, itemIndex) : null
     if (!body) return c.text('Invalid todo item', 400)
     const result = await databaseService().call('api.updatePost', {
-      userId: user.id, id: postId, body, origin: new URL(c.req.url).origin,
+      userId: user.id,
+      id: postId,
+      body,
+      origin: new URL(c.req.url).origin,
       translation: await postTranslation(body),
     })
-    if (result.status !== 'ready') return c.text(result.status === 'not_found' ? 'Not found' : 'Forbidden',
-      result.status === 'not_found' ? 404 : 403)
+    if (result.status !== 'ready') {
+      return c.text(result.status === 'not_found' ? 'Not found' : 'Forbidden',
+        result.status === 'not_found' ? 404 : 403)
+    }
     const requested = f.from ? safeNext(f.from) : `/post/${postId}`
     const target = new URL(requested, 'http://textlog.local')
     return redirect(`${target.pathname}${target.search}#post-${postId}`)
@@ -350,9 +375,13 @@ export function registerPostsRoutes(app: Hono) {
     if (!user) return redirect('/enter')
     const id = Number(c.req.param('id'))
     const moderator = isAdmin(user)
-    const loaded = Number.isInteger(id) ? await databaseService().call('posts.editData', {
-      id, userId: user.id, moderator,
-    }) : null
+    const loaded = Number.isInteger(id)
+      ? await databaseService().call('posts.editData', {
+        id,
+        userId: user.id,
+        moderator,
+      })
+      : null
     if (!loaded || loaded.status === 'not_found') return c.text('Not found', 404)
     if (loaded.status === 'forbidden') return c.text('Forbidden', 403)
     const { post, parent } = loaded
@@ -478,18 +507,22 @@ export function registerPostsRoutes(app: Hono) {
     if (!validPostBody(body)) {
       return page(
         <Reply user={user} post={parent} showForm error={postBodyValidationMessage(body)} body={body}
-          draftId={editingDraftId}
-          returnPath={returnPath} />,
+          draftId={editingDraftId} returnPath={returnPath} />,
         400,
       )
     }
     if (f.action === 'preview') {
-      return page(<Reply user={user} post={parent} showForm body={body} draftId={editingDraftId} preview
-        returnPath={returnPath} />)
+      return page(
+        <Reply user={user} post={parent} showForm body={body} draftId={editingDraftId} preview
+          returnPath={returnPath} />,
+      )
     }
     if (f.action === 'draft') {
       const result = await databaseService().call('drafts.save', {
-        id: editingDraftId ?? null, userId: user.id, parentId, body,
+        id: editingDraftId ?? null,
+        userId: user.id,
+        parentId,
+        body,
       })
       if (result.status === 'not_found') return c.text('Not found', 404)
       const draftReturnPath = returnPath || `/post/${parentId}`
@@ -500,8 +533,7 @@ export function registerPostsRoutes(app: Hono) {
       if (!moderation.ok) {
         return page(
           <Reply user={user} post={parent} showForm error={moderationMessage(moderation.reason)} body={body}
-            draftId={editingDraftId}
-            returnPath={returnPath} />,
+            draftId={editingDraftId} returnPath={returnPath} />,
           moderation.reason === 'flagged' ? 422 : 503,
         )
       }

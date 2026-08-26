@@ -63,7 +63,7 @@ describe('handle history', () => {
     expect(database.query('SELECT COUNT(*) count FROM handle_change_events WHERE user_id=1').get())
       .toEqual({ count: 2 })
 
-    database.query("UPDATE handle_change_events SET changed_at=datetime('now','start of month','-1 day')").run()
+    database.query('UPDATE handle_change_events SET changed_at=datetime(\'now\',\'start of month\',\'-1 day\')').run()
     updateProfileHandle(database, 1, 'delta', '')
     expect(database.query('SELECT handle FROM users WHERE id=1').get()).toEqual({ handle: 'delta' })
   })

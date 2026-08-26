@@ -64,8 +64,7 @@ export function SearchResults({ user, query, page, tab = 'notes', results }: {
         returnPath={`/search?q=${encodeURIComponent(query)}${page > 1 ? `&page=${page}` : ''}`}
         highlightTerms={results.highlights} />
       {!!results.tags.length && (
-        <TagChips user={user} tags={results.tags} followingKey="viewerFollowing"
-          highlightTerms={results.highlights}
+        <TagChips user={user} tags={results.tags} followingKey="viewerFollowing" highlightTerms={results.highlights}
           returnPath={`/search?q=${encodeURIComponent(query)}&tab=tags${page > 1 ? `&page=${page}` : ''}`} />
       )}
       {!!results.people.length && (

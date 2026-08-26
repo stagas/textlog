@@ -44,9 +44,8 @@ export function loadPersonalizedFeed(database: Database, user: User, page: numbe
   const readsTable = toMe ? 'to_me_reads' : 'for_you_reads'
   const filter = toMe ? 'WHERE timeline.targeted_to_viewer=1' : ''
   const snapshotKind = `${toMe ? 'to-me' : 'for-you'}:v${PERSONALIZED_FEED_SNAPSHOT_VERSION}`
-  const snapshot = feedSnapshotPage<PersonalizedTimelineRow[]>(database, snapshotKind, user.id, page,
-    () => {
-      const rows = database.query(`SELECT timeline.*,
+  const snapshot = feedSnapshotPage<PersonalizedTimelineRow[]>(database, snapshotKind, user.id, page, () => {
+    const rows = database.query(`SELECT timeline.*,
       NOT EXISTS(SELECT 1 FROM ${readsTable} seen WHERE seen.user_id=$viewer
         AND seen.event_key=timeline.event_key) unread FROM (
       SELECT p.id,p.user_id,p.body,p.translation,p.created_at,p.parent_id,p.deleted_at,
@@ -151,30 +150,32 @@ export function loadPersonalizedFeed(database: Database, user: User, page: numbe
       FROM users u WHERE $admin=1 AND u.handle_chosen_at IS NOT NULL AND u.deleted_at IS NULL
         AND u.suspended_at IS NULL
       ) timeline ${filter} ORDER BY timeline.created_at DESC,timeline.event_key DESC`).all({
-        viewer: user.id,
-        admin: Number(isAdmin(user)),
-        hidePeopleFollowActivity: user.hide_people_follow_activity || 0,
-        hideHashtagFollowActivity: user.hide_hashtag_follow_activity || 0,
-      }) as PersonalizedTimelineRow[]
-      const postRows = rows.filter(row => row.id !== null
-        && ['post', 'reply', 'mention'].includes(row.activity_kind))
-      const byId = new Map(postRows.map(row => [row.id, row]))
-      const rootByPost = new Map<number, number>()
-      if (postRows.length) {
-        const ancestry = database.query(`WITH RECURSIVE ancestry(origin,id,parent_id) AS (
+      viewer: user.id,
+      admin: Number(isAdmin(user)),
+      hidePeopleFollowActivity: user.hide_people_follow_activity || 0,
+      hideHashtagFollowActivity: user.hide_hashtag_follow_activity || 0,
+    }) as PersonalizedTimelineRow[]
+    const postRows = rows.filter(row =>
+      row.id !== null
+      && ['post', 'reply', 'mention'].includes(row.activity_kind)
+    )
+    const byId = new Map(postRows.map(row => [row.id, row]))
+    const rootByPost = new Map<number, number>()
+    if (postRows.length) {
+      const ancestry = database.query(`WITH RECURSIVE ancestry(origin,id,parent_id) AS (
           SELECT id,id,parent_id FROM posts WHERE id IN (${postRows.map(() => '?').join(',')})
           UNION ALL SELECT a.origin,p.id,p.parent_id FROM posts p JOIN ancestry a ON p.id=a.parent_id
         ) SELECT origin,id root_id FROM ancestry WHERE parent_id IS NULL`).all(
-          ...postRows.map(row => row.id),
-        ) as { origin: number, root_id: number }[]
-        for (const row of ancestry) rootByPost.set(row.origin, row.root_id)
-      }
-      const rootId = (row: PersonalizedTimelineRow) => row.id === null ? null : rootByPost.get(row.id) || row.id
-      const emittedThreads = new Set<number | null>()
-      const roots = [...new Set(postRows.map(rootId).filter((id): id is number => id !== null))]
-      const threadActivity = new Map<number, string>()
-      if (roots.length) {
-        const activity = database.query(`WITH RECURSIVE descendants(root_id,id,user_id,created_at) AS (
+        ...postRows.map(row => row.id),
+      ) as { origin: number; root_id: number }[]
+      for (const row of ancestry) rootByPost.set(row.origin, row.root_id)
+    }
+    const rootId = (row: PersonalizedTimelineRow) => row.id === null ? null : rootByPost.get(row.id) || row.id
+    const emittedThreads = new Set<number | null>()
+    const roots = [...new Set(postRows.map(rootId).filter((id): id is number => id !== null))]
+    const threadActivity = new Map<number, string>()
+    if (roots.length) {
+      const activity = database.query(`WITH RECURSIVE descendants(root_id,id,user_id,created_at) AS (
           SELECT id,id,user_id,created_at FROM posts WHERE id IN (${roots.map(() => '?').join(',')})
           UNION ALL
           SELECT d.root_id,p.id,p.user_id,p.created_at FROM posts p JOIN descendants d ON p.parent_id=d.id
@@ -184,31 +185,32 @@ export function loadPersonalizedFeed(database: Database, user: User, page: numbe
           (b.blocker_id=? AND b.blocked_id=d.user_id) OR (b.blocker_id=d.user_id AND b.blocked_id=?))
           AND NOT EXISTS (SELECT 1 FROM post_hashtags ph JOIN blocked_hashtags bh ON bh.tag=ph.tag
             WHERE ph.post_id=d.id AND bh.user_id=?)
-        GROUP BY d.root_id`).all(...roots, user.id, user.id, user.id) as { root_id: number, created_at: string }[]
-        for (const row of activity) threadActivity.set(row.root_id, row.created_at)
+        GROUP BY d.root_id`).all(...roots, user.id, user.id, user.id) as { root_id: number; created_at: string }[]
+      for (const row of activity) threadActivity.set(row.root_id, row.created_at)
+    }
+    const result: { rows: PersonalizedTimelineRow[]; created_at: string; order: string }[] = []
+    for (const row of rows) {
+      if (row.id === null || !['post', 'reply', 'mention'].includes(row.activity_kind)) {
+        result.push({ rows: [row], created_at: row.created_at, order: row.event_key })
+        continue
       }
-      const result: { rows: PersonalizedTimelineRow[], created_at: string, order: string }[] = []
-      for (const row of rows) {
-        if (row.id === null || !['post', 'reply', 'mention'].includes(row.activity_kind)) {
-          result.push({ rows: [row], created_at: row.created_at, order: row.event_key })
-          continue
-        }
-        const root = rootId(row)
-        if (emittedThreads.has(root)) continue
-        emittedThreads.add(root)
-        const conversation = postRows.filter(candidate => rootId(candidate) === root)
-        const rootRow = byId.get(root!)
-        const replies = conversation.filter(candidate => candidate.parent_id !== null)
-        const keepsRoot = rootRow?.parent_id === null
-          && (conversation[0]?.id === rootRow.id || replies[0]?.parent_id === rootRow.id)
-        const threadRows = keepsRoot ? [rootRow!] : []
-        threadRows.push(...(toMe ? replies : replies.slice(0, 2)))
-        if (threadRows.length) result.push({ rows: threadRows,
-          created_at: threadActivity.get(root!) || row.created_at, order: row.event_key })
+      const root = rootId(row)
+      if (emittedThreads.has(root)) continue
+      emittedThreads.add(root)
+      const conversation = postRows.filter(candidate => rootId(candidate) === root)
+      const rootRow = byId.get(root!)
+      const replies = conversation.filter(candidate => candidate.parent_id !== null)
+      const keepsRoot = rootRow?.parent_id === null
+        && (conversation[0]?.id === rootRow.id || replies[0]?.parent_id === rootRow.id)
+      const threadRows = keepsRoot ? [rootRow!] : []
+      threadRows.push(...(toMe ? replies : replies.slice(0, 2)))
+      if (threadRows.length) {
+        result.push({ rows: threadRows, created_at: threadActivity.get(root!) || row.created_at, order: row.event_key })
       }
-      return result.sort((a, b) => b.created_at.localeCompare(a.created_at) || b.order.localeCompare(a.order))
-        .map(entry => entry.rows)
-    }, pageSize)
+    }
+    return result.sort((a, b) => b.created_at.localeCompare(a.created_at) || b.order.localeCompare(a.order))
+      .map(entry => entry.rows)
+  }, pageSize)
 
   const snapshotRows = snapshot.items.flat()
   const readKeys = snapshotRows.length
@@ -234,7 +236,8 @@ export function loadPersonalizedFeed(database: Database, user: User, page: numbe
     user.id)
   const bioReferences = new Map(relevantIds.map(id => {
     const row = timeline.find(candidate => candidate.actor_id === id)
-    const bio = row?.actor_bio || timeline.find(candidate => targets.get(candidate.target_handle || '') === id)?.target_bio || ''
+    const bio = row?.actor_bio
+      || timeline.find(candidate => targets.get(candidate.target_handle || '') === id)?.target_bio || ''
     return [id, loadBioReferenceData(database, bio, id, user.id)] as const
   }))
   const enriched = new Map(
@@ -283,8 +286,7 @@ export function loadPersonalizedFeed(database: Database, user: User, page: numbe
       : activityAnchor(row.event_key)
     return `${path}${page > 1 ? `${path.includes('?') ? '&' : '?'}page=${page}` : ''}#${anchor}`
   }
-  return { timeline: resultTimeline, page: snapshot.page, totalPages: snapshot.totalPages,
-    toMeCount, forYouCount, latestCount: unreadLatestCount(user.id, database),
-    forYouUnread, toMeUnread, unreadHref: unreadHref(firstUnread),
+  return { timeline: resultTimeline, page: snapshot.page, totalPages: snapshot.totalPages, toMeCount, forYouCount,
+    latestCount: unreadLatestCount(user.id, database), forYouUnread, toMeUnread, unreadHref: unreadHref(firstUnread),
     lastUnreadHref: lastUnread?.payload !== firstUnread?.payload ? unreadHref(lastUnread) : undefined }
 }

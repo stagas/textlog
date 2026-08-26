@@ -1,4 +1,4 @@
-import { databaseService, type DatabaseService } from './database-service'
+import { type DatabaseService, databaseService } from './database-service'
 import { logError } from './log'
 
 const quietDelayMs = 10_000

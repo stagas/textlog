@@ -43,8 +43,12 @@ export function AdminConfirm({ user, kind, target, post, returnTo = '/admin' }: 
           </label>
           <FormActions secondary={<a className="secondary-action cancel-action" href={returnTo}>cancel</a>}
             primary={
-              <button className={`button ${kind.includes('delete') || kind === 'suspend_user'
-                || kind === 'drop_username' ? 'button-danger' : ''}`}>
+              <button className={`button ${
+                kind.includes('delete') || kind === 'suspend_user'
+                  || kind === 'drop_username'
+                  ? 'button-danger'
+                  : ''
+              }`}>
                 {kind.replaceAll('_', ' ')}
               </button>
             } />

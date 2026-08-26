@@ -1,8 +1,8 @@
 import type { Database } from 'bun:sqlite'
 import { extractHashtags, extractMentions, postContentFlags } from './content'
 import { rebuildHotPosts } from './hot'
-import { migrateLegacySessionTokens } from './sessions'
 import { parsePoll, syncPoll } from './polls'
+import { migrateLegacySessionTokens } from './sessions'
 
 type Migration = { version: number; name: string; transaction?: boolean; up(database: Database): void }
 
@@ -19,16 +19,19 @@ function dropColumn(database: Database, table: string, name: string) {
 }
 
 export function normalizeInternalPostPreviews(database: Database, appUrl?: string) {
-  if (!database.query("SELECT 1 FROM sqlite_master WHERE type='table' AND name='post_link_previews'").get()
+  if (!database.query('SELECT 1 FROM sqlite_master WHERE type=\'table\' AND name=\'post_link_previews\'').get()
     || !database.query(
-      "SELECT 1 FROM pragma_table_info('post_link_previews') WHERE name='linked_post_id'",
+      'SELECT 1 FROM pragma_table_info(\'post_link_previews\') WHERE name=\'linked_post_id\'',
     ).get()) return
   let origin: string | null = null
-  try { origin = appUrl ? new URL(appUrl).origin : null }
+  try {
+    origin = appUrl ? new URL(appUrl).origin : null
+  }
   catch { /* Configuration validation handles malformed APP_URL. */ }
   if (!origin) return
   const rows = database.query('SELECT post_id,url FROM post_link_previews').all() as Array<{
-    post_id: number; url: string
+    post_id: number
+    url: string
   }>
   const targetExists = database.query(
     `SELECT 1 FROM posts p JOIN users u ON u.id=p.user_id WHERE p.id=? AND p.deleted_at IS NULL
@@ -1306,7 +1309,7 @@ export const migrations: Migration[] = [
       dropColumn(database, 'users', 'bot_managed')
       dropColumn(database, 'push_subscriptions', 'notify_following_bots')
       dropColumn(database, 'push_subscriptions', 'notify_bots')
-      if (database.query("SELECT 1 FROM sqlite_master WHERE type='table' AND name='admin_actions'").get()) {
+      if (database.query('SELECT 1 FROM sqlite_master WHERE type=\'table\' AND name=\'admin_actions\'').get()) {
         database.run(`CREATE TABLE admin_actions_new (
             id INTEGER PRIMARY KEY AUTOINCREMENT,actor_id INTEGER NOT NULL REFERENCES users(id),
             action TEXT NOT NULL CHECK(action IN ('delete_post','suspend_user','restore_user','delete_user',
@@ -1325,7 +1328,7 @@ export const migrations: Migration[] = [
     version: 101,
     name: 'post_polls',
     up(database) {
-      if (!database.query("SELECT 1 FROM sqlite_master WHERE type='table' AND name='posts'").get()) return
+      if (!database.query('SELECT 1 FROM sqlite_master WHERE type=\'table\' AND name=\'posts\'').get()) return
       database.run(`CREATE TABLE IF NOT EXISTS poll_options (
         id INTEGER PRIMARY KEY AUTOINCREMENT,post_id INTEGER NOT NULL REFERENCES posts(id) ON DELETE CASCADE,
         position INTEGER NOT NULL,label TEXT NOT NULL,UNIQUE(post_id,position));
@@ -1336,8 +1339,9 @@ export const migrations: Migration[] = [
         created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,PRIMARY KEY(post_id,user_id));
       CREATE INDEX IF NOT EXISTS poll_votes_option ON poll_votes(option_id);`)
       const insert = database.query('INSERT OR IGNORE INTO poll_options(post_id,position,label) VALUES(?,?,?)')
-      const posts = database.query('SELECT id,body FROM posts WHERE deleted_at IS NULL').all() as
-        Array<{ id: number; body: string }>
+      const posts = database.query('SELECT id,body FROM posts WHERE deleted_at IS NULL').all() as Array<
+        { id: number; body: string }
+      >
       for (const post of posts) {
         parsePoll(post.body)?.options.forEach((label, position) => insert.run(post.id, position, label))
       }
@@ -1347,7 +1351,7 @@ export const migrations: Migration[] = [
     version: 102,
     name: 'markdown_code_hashtag_backfill',
     up(database) {
-      if (!database.query("SELECT 1 FROM sqlite_master WHERE type='table' AND name='posts'").get()) return
+      if (!database.query('SELECT 1 FROM sqlite_master WHERE type=\'table\' AND name=\'posts\'').get()) return
       rebuildPostHashtags(database)
     },
   },
@@ -1369,7 +1373,7 @@ export const migrations: Migration[] = [
     version: 105,
     name: 'bot_report_reason',
     up(database) {
-      if (!database.query("SELECT 1 FROM sqlite_master WHERE type='table' AND name='reports'").get()) return
+      if (!database.query('SELECT 1 FROM sqlite_master WHERE type=\'table\' AND name=\'reports\'').get()) return
       database.run(`CREATE TABLE reports_new (
         id INTEGER PRIMARY KEY AUTOINCREMENT,reporter_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
         post_id INTEGER NOT NULL REFERENCES posts(id) ON DELETE CASCADE,
@@ -1411,9 +1415,10 @@ export const migrations: Migration[] = [
     version: 108,
     name: 'backfill_latest_reads_from_last_visit',
     up(database) {
-      const hasTable = (name: string) => !!database.query(
-        'SELECT 1 FROM sqlite_master WHERE type=\'table\' AND name=?',
-      ).get(name)
+      const hasTable = (name: string) =>
+        !!database.query(
+          'SELECT 1 FROM sqlite_master WHERE type=\'table\' AND name=?',
+        ).get(name)
       if (!hasTable('sessions') || !hasTable('posts') || !hasTable('latest_reads')) return
       database.run(`INSERT OR IGNORE INTO latest_reads(user_id,post_id,read_at)
         SELECT visits.user_id,p.id,datetime(visits.last_used_at / 1000,'unixepoch')
@@ -1426,9 +1431,10 @@ export const migrations: Migration[] = [
     version: 109,
     name: 'initialize_latest_reads_for_new_users',
     up(database) {
-      const hasTable = (name: string) => !!database.query(
-        'SELECT 1 FROM sqlite_master WHERE type=\'table\' AND name=?',
-      ).get(name)
+      const hasTable = (name: string) =>
+        !!database.query(
+          'SELECT 1 FROM sqlite_master WHERE type=\'table\' AND name=?',
+        ).get(name)
       if (!hasTable('users') || !hasTable('posts') || !hasTable('latest_reads')) return
       database.run(`CREATE TRIGGER IF NOT EXISTS latest_reads_initialize_user AFTER INSERT ON users BEGIN
         INSERT OR IGNORE INTO latest_reads(user_id,post_id)
@@ -1440,9 +1446,10 @@ export const migrations: Migration[] = [
     version: 110,
     name: 'backfill_latest_reads_before_account_creation',
     up(database) {
-      const hasTable = (name: string) => !!database.query(
-        'SELECT 1 FROM sqlite_master WHERE type=\'table\' AND name=?',
-      ).get(name)
+      const hasTable = (name: string) =>
+        !!database.query(
+          'SELECT 1 FROM sqlite_master WHERE type=\'table\' AND name=?',
+        ).get(name)
       if (!hasTable('users') || !hasTable('posts') || !hasTable('latest_reads')) return
       const userColumns = (database.query('PRAGMA table_info(users)').all() as Array<{ name: string }>)
         .map(column => column.name)
@@ -1461,7 +1468,8 @@ export const migrations: Migration[] = [
       database.run(`CREATE TABLE IF NOT EXISTS personalized_feed_generations (
         viewer_id INTEGER PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,generation INTEGER NOT NULL DEFAULT 1);
         INSERT OR IGNORE INTO personalized_feed_generations(viewer_id) SELECT id FROM users;`)
-      const clear = (viewer: string) => `INSERT INTO personalized_feed_generations(viewer_id,generation)
+      const clear = (viewer: string) =>
+        `INSERT INTO personalized_feed_generations(viewer_id,generation)
         WITH affected(id) AS (${viewer}) SELECT affected.id,2 FROM affected JOIN users ON users.id=affected.id
         ON CONFLICT(viewer_id) DO UPDATE SET generation=generation+1;`
       database.run(`
@@ -1488,30 +1496,36 @@ export const migrations: Migration[] = [
         DROP TRIGGER IF EXISTS personalized_feed_users_delete;
 
         CREATE TRIGGER IF NOT EXISTS personalized_feed_posts_insert AFTER INSERT ON posts BEGIN
-          ${clear(`SELECT NEW.user_id UNION SELECT follower_id FROM follows WHERE following_id=NEW.user_id
+          ${
+        clear(`SELECT NEW.user_id UNION SELECT follower_id FROM follows WHERE following_id=NEW.user_id
             UNION SELECT user_id FROM (WITH RECURSIVE ancestors(id,user_id,parent_id) AS (
               SELECT id,user_id,parent_id FROM posts WHERE id=NEW.parent_id UNION ALL
               SELECT p.id,p.user_id,p.parent_id FROM posts p JOIN ancestors a ON p.id=a.parent_id
-            ) SELECT user_id FROM ancestors)`)}
+            ) SELECT user_id FROM ancestors)`)
+      }
         END;
         CREATE TRIGGER IF NOT EXISTS personalized_feed_posts_update AFTER UPDATE ON posts BEGIN
-          ${clear(`SELECT OLD.user_id UNION SELECT NEW.user_id
+          ${
+        clear(`SELECT OLD.user_id UNION SELECT NEW.user_id
             UNION SELECT follower_id FROM follows WHERE following_id IN (OLD.user_id,NEW.user_id)
             UNION SELECT user_id FROM (WITH RECURSIVE ancestors(id,user_id,parent_id) AS (
               SELECT id,user_id,parent_id FROM posts WHERE id IN (OLD.parent_id,NEW.parent_id) UNION ALL
               SELECT p.id,p.user_id,p.parent_id FROM posts p JOIN ancestors a ON p.id=a.parent_id
             ) SELECT user_id FROM ancestors)
             UNION SELECT viewer_id FROM feed_snapshots s JOIN feed_snapshot_items i ON i.snapshot_id=s.id
-              WHERE json_extract(i.payload,'$.id')=OLD.id`)}
+              WHERE json_extract(i.payload,'$.id')=OLD.id`)
+      }
         END;
         CREATE TRIGGER IF NOT EXISTS personalized_feed_posts_delete AFTER DELETE ON posts BEGIN
-          ${clear(`SELECT OLD.user_id UNION SELECT follower_id FROM follows WHERE following_id=OLD.user_id
+          ${
+        clear(`SELECT OLD.user_id UNION SELECT follower_id FROM follows WHERE following_id=OLD.user_id
             UNION SELECT user_id FROM (WITH RECURSIVE ancestors(id,user_id,parent_id) AS (
               SELECT id,user_id,parent_id FROM posts WHERE id=OLD.parent_id UNION ALL
               SELECT p.id,p.user_id,p.parent_id FROM posts p JOIN ancestors a ON p.id=a.parent_id
             ) SELECT user_id FROM ancestors)
             UNION SELECT viewer_id FROM feed_snapshots s JOIN feed_snapshot_items i ON i.snapshot_id=s.id
-              WHERE json_extract(i.payload,'$.id')=OLD.id`)}
+              WHERE json_extract(i.payload,'$.id')=OLD.id`)
+      }
         END;
 
         CREATE TRIGGER IF NOT EXISTS personalized_feed_post_tags_insert AFTER INSERT ON post_hashtags BEGIN
@@ -1528,31 +1542,43 @@ export const migrations: Migration[] = [
         END;
 
         CREATE TRIGGER IF NOT EXISTS personalized_feed_follows_insert AFTER INSERT ON follows BEGIN
-          ${clear(`SELECT NEW.follower_id UNION SELECT NEW.following_id
-            UNION SELECT follower_id FROM follows WHERE following_id=NEW.follower_id`)}
+          ${
+        clear(`SELECT NEW.follower_id UNION SELECT NEW.following_id
+            UNION SELECT follower_id FROM follows WHERE following_id=NEW.follower_id`)
+      }
         END;
         CREATE TRIGGER IF NOT EXISTS personalized_feed_follows_update AFTER UPDATE ON follows BEGIN
-          ${clear(`SELECT OLD.follower_id UNION SELECT OLD.following_id
+          ${
+        clear(`SELECT OLD.follower_id UNION SELECT OLD.following_id
             UNION SELECT NEW.follower_id UNION SELECT NEW.following_id
-            UNION SELECT follower_id FROM follows WHERE following_id IN (OLD.follower_id,NEW.follower_id)`)}
+            UNION SELECT follower_id FROM follows WHERE following_id IN (OLD.follower_id,NEW.follower_id)`)
+      }
         END;
         CREATE TRIGGER IF NOT EXISTS personalized_feed_follows_delete AFTER DELETE ON follows BEGIN
-          ${clear(`SELECT OLD.follower_id UNION SELECT OLD.following_id
-            UNION SELECT follower_id FROM follows WHERE following_id=OLD.follower_id`)}
+          ${
+        clear(`SELECT OLD.follower_id UNION SELECT OLD.following_id
+            UNION SELECT follower_id FROM follows WHERE following_id=OLD.follower_id`)
+      }
         END;
 
         CREATE TRIGGER IF NOT EXISTS personalized_feed_hashtag_follows_insert AFTER INSERT ON hashtag_follows BEGIN
-          ${clear(`SELECT NEW.user_id UNION SELECT follower_id FROM follows WHERE following_id=NEW.user_id
-            UNION SELECT user_id FROM hashtag_follows WHERE tag=NEW.tag`)}
+          ${
+        clear(`SELECT NEW.user_id UNION SELECT follower_id FROM follows WHERE following_id=NEW.user_id
+            UNION SELECT user_id FROM hashtag_follows WHERE tag=NEW.tag`)
+      }
         END;
         CREATE TRIGGER IF NOT EXISTS personalized_feed_hashtag_follows_update AFTER UPDATE ON hashtag_follows BEGIN
-          ${clear(`SELECT OLD.user_id UNION SELECT NEW.user_id
+          ${
+        clear(`SELECT OLD.user_id UNION SELECT NEW.user_id
             UNION SELECT follower_id FROM follows WHERE following_id IN (OLD.user_id,NEW.user_id)
-            UNION SELECT user_id FROM hashtag_follows WHERE tag IN (OLD.tag,NEW.tag)`)}
+            UNION SELECT user_id FROM hashtag_follows WHERE tag IN (OLD.tag,NEW.tag)`)
+      }
         END;
         CREATE TRIGGER IF NOT EXISTS personalized_feed_hashtag_follows_delete AFTER DELETE ON hashtag_follows BEGIN
-          ${clear(`SELECT OLD.user_id UNION SELECT follower_id FROM follows WHERE following_id=OLD.user_id
-            UNION SELECT user_id FROM hashtag_follows WHERE tag=OLD.tag`)}
+          ${
+        clear(`SELECT OLD.user_id UNION SELECT follower_id FROM follows WHERE following_id=OLD.user_id
+            UNION SELECT user_id FROM hashtag_follows WHERE tag=OLD.tag`)
+      }
         END;
 
         CREATE TRIGGER IF NOT EXISTS personalized_feed_blocks_insert AFTER INSERT ON blocks BEGIN
@@ -1574,10 +1600,12 @@ export const migrations: Migration[] = [
           UPDATE personalized_feed_generations SET generation=generation+1 WHERE viewer_id!=NEW.id;
         END;
         CREATE TRIGGER IF NOT EXISTS personalized_feed_users_update AFTER UPDATE ON users BEGIN
-          ${clear(`SELECT NEW.id UNION SELECT follower_id FROM follows WHERE following_id=NEW.id
+          ${
+        clear(`SELECT NEW.id UNION SELECT follower_id FROM follows WHERE following_id=NEW.id
             UNION SELECT viewer_id FROM feed_snapshots s JOIN feed_snapshot_items i ON i.snapshot_id=s.id
               WHERE json_extract(i.payload,'$.actor_id')=NEW.id
-                OR json_extract(i.payload,'$.target_handle') IN (OLD.handle,NEW.handle)`)}
+                OR json_extract(i.payload,'$.target_handle') IN (OLD.handle,NEW.handle)`)
+      }
         END;
         CREATE TRIGGER IF NOT EXISTS personalized_feed_users_delete AFTER DELETE ON users BEGIN
           ${clear(`SELECT OLD.id UNION SELECT follower_id FROM follows WHERE following_id=OLD.id`)}
@@ -1589,10 +1617,12 @@ export const migrations: Migration[] = [
     version: 113,
     name: 'link_preview_mime_types',
     up(database) {
-      if (database.query("SELECT 1 FROM sqlite_master WHERE type='table' AND name='post_link_previews'").get()) {
+      if (database.query('SELECT 1 FROM sqlite_master WHERE type=\'table\' AND name=\'post_link_previews\'').get()) {
         addColumn(database, 'post_link_previews', 'mime_type', 'TEXT')
       }
-      if (database.query("SELECT 1 FROM sqlite_master WHERE type='table' AND name='user_bio_link_previews'").get()) {
+      if (database.query('SELECT 1 FROM sqlite_master WHERE type=\'table\' AND name=\'user_bio_link_previews\'')
+        .get())
+      {
         addColumn(database, 'user_bio_link_previews', 'mime_type', 'TEXT')
       }
     },
@@ -1601,7 +1631,7 @@ export const migrations: Migration[] = [
     version: 114,
     name: 'remove_orphaned_feed_snapshots',
     up(database) {
-      if (!database.query("SELECT 1 FROM sqlite_master WHERE type='table' AND name='feed_snapshots'").get()) return
+      if (!database.query('SELECT 1 FROM sqlite_master WHERE type=\'table\' AND name=\'feed_snapshots\'').get()) return
       database.run(`DELETE FROM feed_snapshots WHERE viewer_id NOT IN (SELECT id FROM users);
         CREATE TRIGGER IF NOT EXISTS feed_snapshots_delete_user AFTER DELETE ON users BEGIN
           DELETE FROM feed_snapshots WHERE viewer_id=OLD.id;
@@ -1631,9 +1661,10 @@ export const migrations: Migration[] = [
     name: 'increase_post_character_limit',
     transaction: false,
     up(database) {
-      const tableSql = (name: string) => (database.query(
-        `SELECT sql FROM sqlite_master WHERE type='table' AND name=?`,
-      ).get(name) as { sql: string } | null)?.sql || ''
+      const tableSql = (name: string) =>
+        (database.query(
+          `SELECT sql FROM sqlite_master WHERE type='table' AND name=?`,
+        ).get(name) as { sql: string } | null)?.sql || ''
       database.run('PRAGMA legacy_alter_table=ON')
       try {
         if (tableSql('posts').includes('CHECK(length(body) BETWEEN 1 AND 280)')) {
@@ -1674,33 +1705,34 @@ export const migrations: Migration[] = [
     up(database) {
       // API hashtag follows created before this migration omitted created_at, which kept them out of For You.
       // The rows do not retain their write source or original time, so keep them as historical baseline activity.
-      if (!database.query("SELECT 1 FROM sqlite_master WHERE type='table' AND name='hashtag_follows'").get()) return
-      database.run("UPDATE hashtag_follows SET created_at='1970-01-01 00:00:00' WHERE created_at IS NULL")
+      if (!database.query('SELECT 1 FROM sqlite_master WHERE type=\'table\' AND name=\'hashtag_follows\'').get()) return
+      database.run('UPDATE hashtag_follows SET created_at=\'1970-01-01 00:00:00\' WHERE created_at IS NULL')
     },
   },
   {
     version: 119,
     name: 'move_backfilled_hashtag_follows_to_past',
     up(database) {
-      if (!database.query("SELECT 1 FROM sqlite_master WHERE type='table' AND name='hashtag_follows'").get()) return
+      if (!database.query('SELECT 1 FROM sqlite_master WHERE type=\'table\' AND name=\'hashtag_follows\'').get()) return
       // Migration 118 originally assigned migration time to every undated row. There is no provenance with which to
       // separate that cohort, so treat every relationship that predates this corrective migration as read baseline
       // activity for every existing account, then move it into the past.
-      if (database.query("SELECT 1 FROM sqlite_master WHERE type='table' AND name='for_you_reads'").get()
-        && database.query("SELECT 1 FROM sqlite_master WHERE type='table' AND name='users'").get()) {
+      if (database.query('SELECT 1 FROM sqlite_master WHERE type=\'table\' AND name=\'for_you_reads\'').get()
+        && database.query('SELECT 1 FROM sqlite_master WHERE type=\'table\' AND name=\'users\'').get())
+      {
         database.run(`INSERT OR IGNORE INTO for_you_reads(user_id,event_key,read_at)
           SELECT u.id,'tag-follow:' || printf('%020d',hf.user_id) || ':' || hf.tag ||
             ':1970-01-01 00:00:00',CURRENT_TIMESTAMP
           FROM users u CROSS JOIN hashtag_follows hf`)
       }
-      database.run("UPDATE hashtag_follows SET created_at='1970-01-01 00:00:00'")
+      database.run('UPDATE hashtag_follows SET created_at=\'1970-01-01 00:00:00\'')
     },
   },
   {
     version: 120,
     name: 'split_quiz_explanations_from_answers',
     up(database) {
-      if (!database.query("SELECT 1 FROM sqlite_master WHERE type='table' AND name='poll_options'").get()) return
+      if (!database.query('SELECT 1 FROM sqlite_master WHERE type=\'table\' AND name=\'poll_options\'').get()) return
       const quizzes = database.query(`SELECT id,body FROM posts
         WHERE deleted_at IS NULL AND lower(body) LIKE '%#quiz%'`).all() as Array<{ id: number; body: string }>
       for (const quiz of quizzes) syncPoll(database, quiz.id, quiz.body)
@@ -1744,15 +1776,19 @@ export const migrations: Migration[] = [
     version: 124,
     name: 'native_post_link_previews',
     up(database) {
-      if (!database.query("SELECT 1 FROM sqlite_master WHERE type='table' AND name='post_link_previews'").get()) return
-      addColumn(database, 'post_link_previews',
-        'linked_post_id', 'INTEGER REFERENCES posts(id) ON DELETE SET NULL')
+      if (!database.query('SELECT 1 FROM sqlite_master WHERE type=\'table\' AND name=\'post_link_previews\'').get()) {
+        return
+      }
+      addColumn(database, 'post_link_previews', 'linked_post_id', 'INTEGER REFERENCES posts(id) ON DELETE SET NULL')
       let origin: string | null = null
-      try { origin = Bun.env.APP_URL ? new URL(Bun.env.APP_URL).origin : null }
+      try {
+        origin = Bun.env.APP_URL ? new URL(Bun.env.APP_URL).origin : null
+      }
       catch { /* Configuration validation handles malformed APP_URL. */ }
       if (!origin) return
       const rows = database.query('SELECT post_id,url FROM post_link_previews').all() as Array<{
-        post_id: number; url: string
+        post_id: number
+        url: string
       }>
       const update = database.query(
         'UPDATE post_link_previews SET linked_post_id=?,image_url=url WHERE post_id=? AND url=?',
@@ -1832,7 +1868,7 @@ export const migrations: Migration[] = [
       DROP TRIGGER IF EXISTS personalized_feed_hashtag_follows_insert;
       DROP TRIGGER IF EXISTS personalized_feed_hashtag_follows_update;
       DROP TRIGGER IF EXISTS personalized_feed_hashtag_follows_delete;`)
-      if (database.query("SELECT 1 FROM sqlite_master WHERE type='table' AND name='follows'").get()) {
+      if (database.query('SELECT 1 FROM sqlite_master WHERE type=\'table\' AND name=\'follows\'').get()) {
         database.run(`CREATE TRIGGER deferred_feed_follows_insert AFTER INSERT ON follows BEGIN
         UPDATE relationship_feed_invalidation SET dirty=1 WHERE id=1; END;
       CREATE TRIGGER deferred_feed_follows_update AFTER UPDATE ON follows BEGIN
@@ -1840,7 +1876,7 @@ export const migrations: Migration[] = [
       CREATE TRIGGER deferred_feed_follows_delete AFTER DELETE ON follows BEGIN
         UPDATE relationship_feed_invalidation SET dirty=1 WHERE id=1; END;`)
       }
-      if (database.query("SELECT 1 FROM sqlite_master WHERE type='table' AND name='hashtag_follows'").get()) {
+      if (database.query('SELECT 1 FROM sqlite_master WHERE type=\'table\' AND name=\'hashtag_follows\'').get()) {
         database.run(`CREATE TRIGGER deferred_feed_hashtag_follows_insert AFTER INSERT ON hashtag_follows BEGIN
         UPDATE relationship_feed_invalidation SET dirty=1 WHERE id=1; END;
       CREATE TRIGGER deferred_feed_hashtag_follows_update AFTER UPDATE ON hashtag_follows BEGIN
@@ -1868,7 +1904,7 @@ export const migrations: Migration[] = [
         created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP);
       CREATE INDEX IF NOT EXISTS banned_usernames_created ON banned_usernames(created_at DESC);`)
       const adminActions = database.query(
-        "SELECT sql FROM sqlite_master WHERE type='table' AND name='admin_actions'",
+        'SELECT sql FROM sqlite_master WHERE type=\'table\' AND name=\'admin_actions\'',
       ).get() as { sql: string } | null
       if (adminActions && !adminActions.sql.includes('drop_username')) {
         database.run(`CREATE TABLE admin_actions_new (
@@ -1889,7 +1925,7 @@ export const migrations: Migration[] = [
     name: 'moderator_post_edits',
     up(database) {
       const adminActions = database.query(
-        "SELECT sql FROM sqlite_master WHERE type='table' AND name='admin_actions'",
+        'SELECT sql FROM sqlite_master WHERE type=\'table\' AND name=\'admin_actions\'',
       ).get() as { sql: string } | null
       if (adminActions && !adminActions.sql.includes('edit_post')) {
         database.run(`CREATE TABLE admin_actions_new (
@@ -1927,9 +1963,10 @@ export const migrations: Migration[] = [
     version: 134,
     name: 'target_relationship_feed_invalidation',
     up(database) {
-      const hasTable = (name: string) => !!database.query(
-        "SELECT 1 FROM sqlite_master WHERE type='table' AND name=?",
-      ).get(name)
+      const hasTable = (name: string) =>
+        !!database.query(
+          'SELECT 1 FROM sqlite_master WHERE type=\'table\' AND name=?',
+        ).get(name)
       database.run(`CREATE TABLE IF NOT EXISTS pending_relationship_feed_invalidations (
         viewer_id INTEGER PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
         queued_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP);
@@ -1957,7 +1994,8 @@ export const migrations: Migration[] = [
           SELECT id FROM users WHERE id IN (OLD.follower_id,OLD.following_id)
             OR id IN (SELECT follower_id FROM follows WHERE following_id=OLD.follower_id);
       END;`)
-      if (hasTable('hashtag_follows')) database.run(`CREATE TRIGGER deferred_feed_hashtag_follows_insert
+      if (hasTable('hashtag_follows')) {
+        database.run(`CREATE TRIGGER deferred_feed_hashtag_follows_insert
       AFTER INSERT ON hashtag_follows BEGIN
         INSERT OR IGNORE INTO pending_relationship_feed_invalidations(viewer_id)
           SELECT id FROM users WHERE id=NEW.user_id
@@ -1976,20 +2014,24 @@ export const migrations: Migration[] = [
             OR id IN (SELECT follower_id FROM follows WHERE following_id=OLD.user_id)
             OR id IN (SELECT user_id FROM hashtag_follows WHERE tag=OLD.tag);
       END;`)
-      if (hasTable('relationship_feed_invalidation')) database.run(`
+      }
+      if (hasTable('relationship_feed_invalidation')) {
+        database.run(`
       INSERT OR IGNORE INTO pending_relationship_feed_invalidations(viewer_id)
         SELECT id FROM users WHERE EXISTS (
           SELECT 1 FROM relationship_feed_invalidation WHERE id=1 AND dirty=1);
       UPDATE relationship_feed_invalidation SET dirty=0 WHERE id=1;`)
+      }
     },
   },
   {
     version: 135,
     name: 'compact_latest_read_state',
     up(database) {
-      const hasTable = (name: string) => !!database.query(
-        "SELECT 1 FROM sqlite_master WHERE type='table' AND name=?",
-      ).get(name)
+      const hasTable = (name: string) =>
+        !!database.query(
+          'SELECT 1 FROM sqlite_master WHERE type=\'table\' AND name=?',
+        ).get(name)
       if (!hasTable('users') || !hasTable('posts')) return
       database.run(`CREATE TABLE IF NOT EXISTS latest_read_state (
         user_id INTEGER PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
@@ -2065,7 +2107,7 @@ export const migrations: Migration[] = [
     version: 138,
     name: 'stored_post_translations',
     up(database) {
-      if (database.query("SELECT 1 FROM sqlite_master WHERE type='table' AND name='posts'").get()) {
+      if (database.query('SELECT 1 FROM sqlite_master WHERE type=\'table\' AND name=\'posts\'').get()) {
         addColumn(database, 'posts', 'translation', 'TEXT')
       }
     },
@@ -2074,7 +2116,7 @@ export const migrations: Migration[] = [
     version: 139,
     name: 'translated_post_full_text_search',
     up(database) {
-      if (!database.query("SELECT 1 FROM sqlite_master WHERE type='table' AND name='posts'").get()
+      if (!database.query('SELECT 1 FROM sqlite_master WHERE type=\'table\' AND name=\'posts\'').get()
         || !columns(database, 'posts').includes('body')) return
       database.run(`DROP TRIGGER IF EXISTS post_search_insert;
       DROP TRIGGER IF EXISTS post_search_delete;
@@ -2150,7 +2192,9 @@ export const migrations: Migration[] = [
     version: 142,
     name: 'split_follow_activity_notification_preferences',
     up(database) {
-      if (!database.query("SELECT 1 FROM sqlite_master WHERE type='table' AND name='push_subscriptions'").get()) return
+      if (!database.query('SELECT 1 FROM sqlite_master WHERE type=\'table\' AND name=\'push_subscriptions\'').get()) {
+        return
+      }
       addColumn(database, 'push_subscriptions', 'notify_people_follow_activity',
         'INTEGER NOT NULL DEFAULT 0 CHECK(notify_people_follow_activity IN (0,1))')
       addColumn(database, 'push_subscriptions', 'notify_hashtag_follow_activity',
@@ -2161,7 +2205,7 @@ export const migrations: Migration[] = [
     version: 143,
     name: 'hide_ambient_follow_activity_by_default',
     up(database) {
-      if (!database.query("SELECT 1 FROM sqlite_master WHERE type='table' AND name='users'").get()) return
+      if (!database.query('SELECT 1 FROM sqlite_master WHERE type=\'table\' AND name=\'users\'').get()) return
       if (!database.query(`SELECT 1 FROM sqlite_master
         WHERE type='table' AND name='personalized_feed_generations'`).get()) return
       database.run('UPDATE users SET hide_people_follow_activity=1,hide_hashtag_follow_activity=1')
@@ -2171,7 +2215,9 @@ export const migrations: Migration[] = [
     version: 144,
     name: 'disable_ambient_follow_activity_notifications_by_default',
     up(database) {
-      if (!database.query("SELECT 1 FROM sqlite_master WHERE type='table' AND name='push_subscriptions'").get()) return
+      if (!database.query('SELECT 1 FROM sqlite_master WHERE type=\'table\' AND name=\'push_subscriptions\'').get()) {
+        return
+      }
       database.run(`UPDATE push_subscriptions SET notify_people_follow_activity=0,
         notify_hashtag_follow_activity=0`)
     },

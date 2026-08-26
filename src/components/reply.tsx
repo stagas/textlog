@@ -106,10 +106,9 @@ export function Reply(
         <div className="thread-root">
           <Post p={post} user={user} showReplyAction={!showForm} showOwnerActions showModerateAction tappableParent
             returnPath={returnPath} backHref={returnPath} canonicalTimestamp topHref={topHref} flatHref={flatHref}
-            treeHref={treeHref}
-            reportHref={user.id !== post.user_id && !showReport && !reported
-              ? `/post/${post.id}?report=1${returnPath ? '&from=' + encodeURIComponent(returnPath) : ''}`
-              : undefined} />
+            treeHref={treeHref} reportHref={user.id !== post.user_id && !showReport && !reported
+            ? `/post/${post.id}?report=1${returnPath ? '&from=' + encodeURIComponent(returnPath) : ''}`
+            : undefined} />
         </div>
         {user.id !== post.user_id && (
           <ReportPanel post={post} showForm={showReport} reported={reported} reason={reportReason}
@@ -131,7 +130,10 @@ export function Reply(
                     </a>
                     <button className="secondary-action" name="action" value="preview">preview</button>
                     <button className="secondary-action" name="action" value="draft"
-                      formAction={draftId ? `/drafts/${draftId}` : undefined}>draft</button>
+                      formAction={draftId ? `/drafts/${draftId}` : undefined}
+                    >
+                      draft
+                    </button>
                   </span>
                 } primary={<button className="button" accessKey="p">post →</button>} />
             )

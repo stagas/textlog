@@ -42,15 +42,16 @@ test('interaction campaign sends eligible recipients once with Resend pacing and
   const options = {
     database,
     minReplies: 1,
-    env: { APP_URL: 'https://textlog.test', EMAIL_FROM: 'textlog <hello@textlog.test>',
-      RESEND_API_KEY: 'secret' },
+    env: { APP_URL: 'https://textlog.test', EMAIL_FROM: 'textlog <hello@textlog.test>', RESEND_API_KEY: 'secret' },
     request: (async (_input: string | URL | Request, init?: RequestInit) => {
       requests.push({ headers: new Headers(init?.headers), body: JSON.parse(String(init?.body)) })
       return ++attempt === 1
         ? new Response('slow down', { status: 429, headers: { 'retry-after': '2' } })
         : Response.json({ id: 'message-1' })
     }) as typeof fetch,
-    sleep: async (ms: number) => { sleeps.push(ms) },
+    sleep: async (ms: number) => {
+      sleeps.push(ms)
+    },
     log: () => {},
   }
 
@@ -70,7 +71,9 @@ test('interaction campaign sends eligible recipients once with Resend pacing and
   expect(String(requests[1].body.html)).toContain('/account/interacted-emails/unsubscribe?token=')
   expect(database.query('SELECT count(*) count FROM interacted_unsubscribe_tokens').get()).toEqual({ count: 1 })
   expect(database.query(`SELECT status,attempts,provider_id FROM interacted_email_deliveries`).get()).toEqual({
-    status: 'sent', attempts: 2, provider_id: 'message-1',
+    status: 'sent',
+    attempts: 2,
+    provider_id: 'message-1',
   })
 })
 
@@ -80,9 +83,11 @@ test('interaction campaign does not retry an ambiguous delivery on restart', asy
   const options = {
     database,
     minReplies: 1,
-    env: { APP_URL: 'https://textlog.test', EMAIL_FROM: 'textlog <hello@textlog.test>',
-      RESEND_API_KEY: 'secret' },
-    request: (async () => { requests++; throw new Error('connection lost after request') }) as unknown as typeof fetch,
+    env: { APP_URL: 'https://textlog.test', EMAIL_FROM: 'textlog <hello@textlog.test>', RESEND_API_KEY: 'secret' },
+    request: (async () => {
+      requests++
+      throw new Error('connection lost after request')
+    }) as unknown as typeof fetch,
     sleep: async () => {},
     log: () => {},
   }

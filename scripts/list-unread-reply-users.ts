@@ -12,8 +12,7 @@ const MAX_RATE_LIMIT_RETRIES = 10
 
 type Candidate = { id: number; handle: string; email: string; email_verified_at: string | null;
   interaction_emails: number; unread_replies: number; oldest_reply_at: string; newest_reply_at: string }
-export type UnreadReplyUser = Pick<Candidate,
-  'handle' | 'unread_replies' | 'oldest_reply_at' | 'newest_reply_at'>
+export type UnreadReplyUser = Pick<Candidate, 'handle' | 'unread_replies' | 'oldest_reply_at' | 'newest_reply_at'>
 type Delivery = { id: number; status: 'sending' | 'sent' | 'failed' | 'uncertain'; run_id: string;
   idempotency_key: string }
 export type InteractedCampaignEnvironment = { APP_URL?: string; EMAIL_FROM?: string; RESEND_API_KEY?: string }
@@ -43,11 +42,13 @@ function required(value: string | undefined, name: string) {
 }
 
 export function unreadReplyCandidates(database: Database, options: {
-  minReplies: number; maxDays?: number; version?: InteractedCampaignVersion
+  minReplies: number
+  maxDays?: number
+  version?: InteractedCampaignVersion
 }) {
   const ageFilter = options.maxDays === undefined
     ? ''
-    : "AND reply.created_at >= datetime('now', '-' || ? || ' days')"
+    : 'AND reply.created_at >= datetime(\'now\', \'-\' || ? || \' days\')'
   return database.query(`
     SELECT recipient.id,recipient.handle,recipient.email,recipient.email_verified_at,
            recipient.interaction_emails,count(*) AS unread_replies,
@@ -68,22 +69,33 @@ export function unreadReplyCandidates(database: Database, options: {
         WHERE ph.post_id=reply.id AND bh.user_id=recipient.id)
     GROUP BY recipient.id,recipient.handle,recipient.email,recipient.email_verified_at,recipient.interaction_emails
     HAVING count(*) >= ?
-      ${options.version === 'v2' ? `AND min(reply.created_at) >= (
+      ${
+    options.version === 'v2'
+      ? `AND min(reply.created_at) >= (
         SELECT min(created_at) FROM interacted_email_deliveries WHERE campaign_version='v1'
-      )` : ''}
+      )`
+      : ''
+  }
     ORDER BY unread_replies DESC,newest_reply_at DESC,recipient.handle COLLATE NOCASE
-  `).all(...(options.maxDays === undefined ? [options.minReplies] : [options.maxDays, options.minReplies])) as Candidate[]
+  `).all(
+    ...(options.maxDays === undefined ? [options.minReplies] : [options.maxDays, options.minReplies]),
+  ) as Candidate[]
 }
 
 export function unreadReplyUsers(database: Database, options: {
-  minReplies: number; maxDays?: number; version?: InteractedCampaignVersion
+  minReplies: number
+  maxDays?: number
+  version?: InteractedCampaignVersion
 }) {
-  return unreadReplyCandidates(database, options).map(({ handle, unread_replies, oldest_reply_at, newest_reply_at }) =>
-    ({ handle, unread_replies, oldest_reply_at, newest_reply_at }))
+  return unreadReplyCandidates(database, options).map((
+    { handle, unread_replies, oldest_reply_at, newest_reply_at },
+  ) => ({ handle, unread_replies, oldest_reply_at, newest_reply_at }))
 }
 
 function recipients(database: Database, options: {
-  minReplies: number; maxDays?: number; version?: InteractedCampaignVersion
+  minReplies: number
+  maxDays?: number
+  version?: InteractedCampaignVersion
 }) {
   const byEmail = new Map<string, Candidate>()
   for (const candidate of unreadReplyCandidates(database, options)) {
@@ -126,9 +138,14 @@ Unsubscribe from interaction emails: ${unsubscribeUrl}`
 }
 
 export async function sendInteractedCampaign(options: {
-  database: Database; minReplies: number; maxDays?: number; env?: InteractedCampaignEnvironment;
-  version?: InteractedCampaignVersion;
-  request?: typeof fetch; sleep?: (ms: number) => Promise<void>; stopping?: () => boolean;
+  database: Database
+  minReplies: number
+  maxDays?: number
+  env?: InteractedCampaignEnvironment
+  version?: InteractedCampaignVersion
+  request?: typeof fetch
+  sleep?: (ms: number) => Promise<void>
+  stopping?: () => boolean
   log?: (message: string) => void
 }) {
   const env = options.env || Bun.env
@@ -147,10 +164,15 @@ export async function sendInteractedCampaign(options: {
   for (const recipient of recipients(options.database, options)) {
     if (stopping()) break
     const delivery = claimDelivery(options.database, recipient, runId, version)
-    if (!delivery) { skipped++; continue }
+    if (!delivery) {
+      skipped++
+      continue
+    }
     const unsubscribeToken = issueInteractedUnsubscribeToken(options.database, recipient.id)
     const unsubscribe = new URL(
-      `/account/interacted-emails/unsubscribe?token=${encodeURIComponent(unsubscribeToken)}`, origin).href
+      `/account/interacted-emails/unsubscribe?token=${encodeURIComponent(unsubscribeToken)}`,
+      origin,
+    ).href
     const html = interactedEmail(origin, unsubscribeToken)
     let rateLimitAttempt = 0
     while (true) {
@@ -165,8 +187,7 @@ export async function sendInteractedCampaign(options: {
           method: 'POST',
           headers: { authorization: `Bearer ${apiKey}`, 'content-type': 'application/json',
             'idempotency-key': delivery.idempotency_key },
-          body: JSON.stringify({ from, to: [recipient.email],
-            subject: `People have interacted with you · ${name}`,
+          body: JSON.stringify({ from, to: [recipient.email], subject: `People have interacted with you · ${name}`,
             text: plainText(name, origin, unsubscribe), html,
             headers: { 'List-Unsubscribe': `<${unsubscribe}>`,
               'List-Unsubscribe-Post': 'List-Unsubscribe=One-Click' } }),
@@ -207,9 +228,14 @@ export async function sendInteractedCampaign(options: {
 
 if (import.meta.main) {
   const args = Bun.argv.slice(2)
-  if (args.includes('--help')) { console.log(usage); process.exit(0) }
-  const unknown = args.filter(value => value !== '--help' && value !== '--send-email' && value !== '--v2'
-    && !value.startsWith('--min-replies=') && !value.startsWith('--max-days='))
+  if (args.includes('--help')) {
+    console.log(usage)
+    process.exit(0)
+  }
+  const unknown = args.filter(value =>
+    value !== '--help' && value !== '--send-email' && value !== '--v2'
+    && !value.startsWith('--min-replies=') && !value.startsWith('--max-days=')
+  )
   if (unknown.length) throw new Error(`Unknown argument: ${unknown[0]}\n\n${usage}`)
   const minReplies = positiveIntegerArgument(args, 'min-replies', 1)!
   const maxDays = positiveIntegerArgument(args, 'max-days')
@@ -223,24 +249,28 @@ if (import.meta.main) {
       else {
         console.table(rows)
         const replies = rows.reduce((total, row) => total + row.unread_replies, 0)
-        console.log(`${rows.length} user${rows.length === 1 ? '' : 's'}, ${replies} unread repl${
-          replies === 1 ? 'y' : 'ies'}`)
+        console.log(
+          `${rows.length} user${rows.length === 1 ? '' : 's'}, ${replies} unread repl${replies === 1 ? 'y' : 'ies'}`,
+        )
       }
     }
     else {
       database.run('PRAGMA foreign_keys=ON; PRAGMA busy_timeout=5000;')
       runMigrations(database, migration => console.log(`database migrate v${migration.version} ${migration.name}`))
       let stopping = false
-      for (const signal of ['SIGINT', 'SIGTERM'] as const) process.on(signal, () => {
-        if (!stopping) console.log(`received ${signal}; finishing the current recipient before stopping`)
-        stopping = true
-      })
-      const result = await sendInteractedCampaign({ database, minReplies, maxDays, version,
-        stopping: () => stopping })
-      console.log(`interaction campaign ${result.version}: sent=${result.sent} skipped=${result.skipped} ` +
-        `failed=${result.failed}${result.stopped ? ' stopped=true' : ''}`)
+      for (const signal of ['SIGINT', 'SIGTERM'] as const) {
+        process.on(signal, () => {
+          if (!stopping) console.log(`received ${signal}; finishing the current recipient before stopping`)
+          stopping = true
+        })
+      }
+      const result = await sendInteractedCampaign({ database, minReplies, maxDays, version, stopping: () => stopping })
+      console.log(`interaction campaign ${result.version}: sent=${result.sent} skipped=${result.skipped} `
+        + `failed=${result.failed}${result.stopped ? ' stopped=true' : ''}`)
       if (result.failed) process.exitCode = 1
     }
   }
-  finally { database.close() }
+  finally {
+    database.close()
+  }
 }

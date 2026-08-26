@@ -8,7 +8,7 @@ import type { Hono } from 'hono'
 import { appName } from '../brand'
 import { databaseService } from '../database-service'
 import { markdownPlainText } from '../markdown'
-import { renderFollowBadge, renderProfileOg, type FollowBadgeTheme } from '../og'
+import { type FollowBadgeTheme, renderFollowBadge, renderProfileOg } from '../og'
 import { cachedOgResponse, cacheOgResponse } from '../og-response-cache'
 import { CONNECTION_PAGE_SIZE, decodePostCursor, TAG_PAGE_SIZE } from '../pagination'
 import { resolvedPageSize } from '../request-preferences'
@@ -18,7 +18,9 @@ export function registerProfilesRoutes(app: Hono) {
   app.get('/u/:handle/follow.png', async c => {
     const requestedTheme = c.req.query('theme')
     const theme: FollowBadgeTheme = requestedTheme === 'light' || requestedTheme === 'sepia'
-      || requestedTheme === 'dracula' ? requestedTheme : 'dark'
+        || requestedTheme === 'dracula'
+      ? requestedTheme
+      : 'dark'
     const cacheKey = `follow:${c.req.param('handle')}:${theme}`
     const cached = cachedOgResponse(cacheKey)
     if (cached) return cached
@@ -156,9 +158,8 @@ export function registerProfilesRoutes(app: Hono) {
       }
       return page(
         <Connections user={user} profile={profile} people={people} tags={tags} kind={tab} page={connectionPage}
-          sort={connectionSort}
-          total={connectionTotal} tagsPage={tagsPage} tagsTotal={followingTagCount} noteCount={noteCount}
-          replyCount={replyCount} followerCount={followerCount} followingCount={followingCount}
+          sort={connectionSort} total={connectionTotal} tagsPage={tagsPage} tagsTotal={followingTagCount}
+          noteCount={noteCount} replyCount={replyCount} followerCount={followerCount} followingCount={followingCount}
           followingTagCount={followingTagCount} following={following} followsViewer={followsViewer}
           blockedPeopleCount={blockedPeopleCount} blockedTagCount={blockedTagCount} social={social}
           returnPath={returnPath} bioReference={bioReference} />,

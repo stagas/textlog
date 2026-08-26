@@ -2,7 +2,7 @@ import type { Database } from 'bun:sqlite'
 import { excludesWhisperPosts } from './whisper'
 
 function usesCompactReads(database: Database) {
-  return !!database.query("SELECT 1 FROM sqlite_master WHERE type='table' AND name='latest_read_state'").get()
+  return !!database.query('SELECT 1 FROM sqlite_master WHERE type=\'table\' AND name=\'latest_read_state\'').get()
 }
 
 export function latestPostState(userId: number, database: Database) {
@@ -23,8 +23,8 @@ export function latestPostState(userId: number, database: Database) {
       AND NOT EXISTS (SELECT 1 FROM post_hashtags ph JOIN blocked_hashtags bh ON bh.tag=ph.tag
         WHERE ph.post_id=p.id AND bh.user_id=?)
     ORDER BY p.id DESC`).all(...(usesCompactReads(database)
-      ? [userId, userId, userId, userId, userId, userId, userId]
-      : [userId, userId, userId, userId, userId, userId])) as Array<{
+    ? [userId, userId, userId, userId, userId, userId, userId]
+    : [userId, userId, userId, userId, userId, userId])) as Array<{
       id: number
       unread: number
       targeted_to_viewer: number
@@ -39,7 +39,7 @@ export function markLatestPostsRead(userId: number, postIds: number[], database:
     database.transaction(() => postIds.forEach(id => insert.run(userId, id)))()
     return
   }
-  if (!database.query("SELECT 1 FROM sqlite_master WHERE type='table' AND name='latest_reads'").get()) return
+  if (!database.query('SELECT 1 FROM sqlite_master WHERE type=\'table\' AND name=\'latest_reads\'').get()) return
   const insert = database.query('INSERT OR IGNORE INTO latest_reads(user_id,post_id) VALUES(?,?)')
   database.transaction(() => postIds.forEach(id => insert.run(userId, id)))()
 }
@@ -57,8 +57,8 @@ export function unreadLatestCount(userId: number, database: Database) {
         (b.blocker_id=? AND b.blocked_id=p.user_id) OR (b.blocker_id=p.user_id AND b.blocked_id=?))
       AND NOT EXISTS (SELECT 1 FROM post_hashtags ph JOIN blocked_hashtags bh ON bh.tag=ph.tag
       WHERE ph.post_id=p.id AND bh.user_id=?)`).get(...(usesCompactReads(database)
-      ? [userId, userId, userId, userId, userId]
-      : [userId, userId, userId, userId])) as { count: number }).count
+    ? [userId, userId, userId, userId, userId]
+    : [userId, userId, userId, userId])) as { count: number }).count
 }
 
 export function initializeLatestReads(userId: number, database: Database) {
@@ -69,7 +69,7 @@ export function initializeLatestReads(userId: number, database: Database) {
       .run(userId)
     return
   }
-  if (!database.query("SELECT 1 FROM sqlite_master WHERE type='table' AND name='latest_reads'").get()) return
+  if (!database.query('SELECT 1 FROM sqlite_master WHERE type=\'table\' AND name=\'latest_reads\'').get()) return
   database.query(`INSERT OR IGNORE INTO latest_reads(user_id,post_id)
     SELECT ?,id FROM posts WHERE deleted_at IS NULL`).run(userId)
 }

@@ -1,5 +1,5 @@
-import { applyHtmlCachePolicy, canonicalizeCrawlerLinks, crawlerCanonicalRedirect,
-  GLOBAL_REQUEST_BODY_LIMIT, isCrawlerRequest, isSameOriginRequest, RequestBodyError, requiresSameOrigin, safeLocalPath,
+import { applyHtmlCachePolicy, canonicalizeCrawlerLinks, crawlerCanonicalRedirect, GLOBAL_REQUEST_BODY_LIMIT,
+  isCrawlerRequest, isSameOriginRequest, RequestBodyError, requiresSameOrigin, safeLocalPath,
   securityHeaders } from './http'
 
 import { Hono } from 'hono'
@@ -17,6 +17,7 @@ import { clientIp, logError, logHttp, logReady, redactHttpPath, shouldLogHttp } 
 import { MAINTENANCE_INTERVAL_MS } from './maintenance'
 import { renderDefaultOg } from './og'
 import { PUBLIC_ARCHIVE_CHECK_INTERVAL_MS } from './public-archive'
+import { resumeRelationshipFeedInvalidation } from './relationship-feed-invalidation'
 import { flushIpRequests, isIpBlocked, loadBlockedIps, recordIpRequest } from './request-ip-blocks'
 import { ClientErrorRateLimiter, HOURLY_REQUEST_BLOCK_SECONDS, HOURLY_REQUEST_RATE_LIMIT,
   HOURLY_REQUEST_RATE_WINDOW_SECONDS, NESTED_FROM_MAX_DEPTH, nestedFromDepth, NestedFromRateLimiter,
@@ -28,7 +29,6 @@ import { registerApiRoutes } from './routes/api'
 import { registerAuthRoutes } from './routes/auth'
 import { registerEmbedRoutes } from './routes/embed'
 import { registerFeedsRoutes } from './routes/feeds'
-import { resumeRelationshipFeedInvalidation } from './relationship-feed-invalidation'
 import { registerIllegalActivityRoutes } from './routes/illegal-activity'
 import { registerInteractionsRoutes } from './routes/interactions'
 import { registerMediaRoutes } from './routes/media'
@@ -63,7 +63,8 @@ app.use('*', async (c, next) => {
   }
   await next()
   if (/(?:^|;\s*)textlog_scroll=instant(?:;|$)/.test(c.req.header('cookie') || '')
-    && c.res.headers.get('content-type')?.includes('text/html')) {
+    && c.res.headers.get('content-type')?.includes('text/html'))
+  {
     c.header('set-cookie', 'textlog_scroll=; Max-Age=0; HttpOnly; Path=/; SameSite=Lax', { append: true })
   }
 })

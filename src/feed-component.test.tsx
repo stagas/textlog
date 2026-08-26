@@ -62,11 +62,12 @@ test('feed pages reconstruct threads with available off-page ancestors', () => {
     deleted_at: null, handle: 'alice', reply_count: 2 }
   const reply = { id: 11, user_id: 3, parent_id: 10, body: 'page reply', created_at: '2026-08-19 11:00:00',
     deleted_at: null, handle: 'bob', reply_count: 0, parent: { ...root, reply_count: 2 } }
-  const orphan = { id: 12, user_id: 4, parent_id: 99, body: 'parent is off page',
-    created_at: '2026-08-19 12:00:00', deleted_at: null, handle: 'cara', reply_count: 0,
+  const orphan = { id: 12, user_id: 4, parent_id: 99, body: 'parent is off page', created_at: '2026-08-19 12:00:00',
+    deleted_at: null, handle: 'cara', reply_count: 0,
     parent: { ...root, id: 99, body: 'off-page parent', reply_count: 1 } }
-  const html = renderToStaticMarkup(<PublicFeed feed={{ posts: [reply, orphan, root], page: 1, totalItems: 3,
-    totalPages: 1 }} path="/latest" />)
+  const html = renderToStaticMarkup(
+    <PublicFeed feed={{ posts: [reply, orphan, root], page: 1, totalItems: 3, totalPages: 1 }} path="/latest" />,
+  )
 
   expect(html.match(/id="post-10"/g)).toHaveLength(1)
   expect(html.match(/id="post-11"/g)).toHaveLength(1)
@@ -87,13 +88,20 @@ test('feed pages reconstruct threads with available off-page ancestors', () => {
 test('latest renders independent unread controls, thread dots, and directed highlights', () => {
   const root = { id: 70, user_id: 2, parent_id: null, body: 'unread root', created_at: '2026-08-19 10:00:00',
     deleted_at: null, handle: 'alice', reply_count: 1 }
-  const reply = { id: 71, user_id: 3, parent_id: 70, body: 'directed unread reply',
-    created_at: '2026-08-19 11:00:00', deleted_at: null, handle: 'bob', reply_count: 0, parent: root }
+  const reply = { id: 71, user_id: 3, parent_id: 70, body: 'directed unread reply', created_at: '2026-08-19 11:00:00',
+    deleted_at: null, handle: 'bob', reply_count: 0, parent: root }
   const user = { id: 1, handle: 'reader', email: 'reader@example.com', bio: '' }
   const html = renderToStaticMarkup(<PublicFeed user={user} path="/latest" feed={{
-    posts: [reply, root], page: 1, totalItems: 6, totalPages: 3, latestUnread: true,
-    latestCount: 4, unreadPostIds: [70, 71], directedUnreadPostIds: [71],
-    unreadHref: '/latest?page=2#post-60', lastUnreadHref: '/latest?page=3#post-50',
+    posts: [reply, root],
+    page: 1,
+    totalItems: 6,
+    totalPages: 3,
+    latestUnread: true,
+    latestCount: 4,
+    unreadPostIds: [70, 71],
+    directedUnreadPostIds: [71],
+    unreadHref: '/latest?page=2#post-60',
+    lastUnreadHref: '/latest?page=3#post-50',
   }} />)
 
   expect(html.match(/class="unread-dot" aria-label="unread"/g)).toHaveLength(2)
@@ -105,15 +113,17 @@ test('latest renders independent unread controls, thread dots, and directed high
 })
 
 test('a deep unread reply moves its root first and compresses read ancestors', () => {
-  const root = { id: 100, user_id: 2, parent_id: null, body: 'active root',
-    created_at: '2026-08-19 08:00:00', deleted_at: null, handle: 'alice', reply_count: 4 }
+  const root = { id: 100, user_id: 2, parent_id: null, body: 'active root', created_at: '2026-08-19 08:00:00',
+    deleted_at: null, handle: 'alice', reply_count: 4 }
   const readAncestor = { ...root, id: 101, parent_id: root.id, body: 'read ancestor', parent: root }
   const immediate = { ...root, id: 102, parent_id: readAncestor.id, body: 'immediate parent', parent: readAncestor }
   const unreadReply = { ...root, id: 103, user_id: 3, parent_id: immediate.id, body: 'new unread reply',
     created_at: '2026-08-19 12:00:00', handle: 'bob', reply_count: 0, parent: immediate }
   const otherRoot = { ...root, id: 104, body: 'other root', created_at: '2026-08-19 11:00:00' }
-  const html = renderToStaticMarkup(<PublicFeed feed={{ posts: [unreadReply, otherRoot], page: 1,
-    totalItems: 2, totalPages: 1, unreadPostIds: [103] }} path="/latest" />)
+  const html = renderToStaticMarkup(
+    <PublicFeed feed={{ posts: [unreadReply, otherRoot], page: 1, totalItems: 2, totalPages: 1, unreadPostIds: [103] }}
+      path="/latest" />,
+  )
 
   expect(html.indexOf('active root')).toBeLessThan(html.indexOf('other root'))
   expect(html).not.toContain('read ancestor')
@@ -123,12 +133,16 @@ test('a deep unread reply moves its root first and compresses read ancestors', (
 
 test('latest shows approximate age wording only for unread post metadata', () => {
   const createdAt = new Date(Date.now() - 6 * 60 * 60_000).toISOString()
-  const unread = { id: 72, user_id: 2, parent_id: null, body: 'unread note', created_at: createdAt,
-    deleted_at: null, handle: 'alice', reply_count: 0 }
+  const unread = { id: 72, user_id: 2, parent_id: null, body: 'unread note', created_at: createdAt, deleted_at: null,
+    handle: 'alice', reply_count: 0 }
   const read = { ...unread, id: 73, body: 'read note' }
   const user = { id: 1, handle: 'reader', email: 'reader@example.com', bio: '' }
   const html = renderToStaticMarkup(<PublicFeed user={user} path="/latest" feed={{
-    posts: [unread, read], page: 1, totalItems: 2, totalPages: 1, unreadPostIds: [72],
+    posts: [unread, read],
+    page: 1,
+    totalItems: 2,
+    totalPages: 1,
+    unreadPostIds: [72],
     directedUnreadPostIds: [],
   }} />)
 
@@ -142,8 +156,14 @@ test('latest keeps the arrival count but hides read actions when the rendered pa
     deleted_at: null, handle: 'alice', reply_count: 0 }
   const user = { id: 1, handle: 'reader', email: 'reader@example.com', bio: '' }
   const html = renderToStaticMarkup(<PublicFeed user={user} path="/latest" feed={{
-    posts: [post], page: 1, totalItems: 1, totalPages: 1, latestUnread: false, latestCount: 1,
-    unreadPostIds: [80], directedUnreadPostIds: [],
+    posts: [post],
+    page: 1,
+    totalItems: 1,
+    totalPages: 1,
+    latestUnread: false,
+    latestCount: 1,
+    unreadPostIds: [80],
+    directedUnreadPostIds: [],
   }} />)
 
   expect(html).toContain('class="unread-dot" aria-label="unread"')
@@ -154,12 +174,18 @@ test('latest keeps the arrival count but hides read actions when the rendered pa
 test('latest gives unread dots to a reply and its promoted off-page parent', () => {
   const parent = { id: 90, user_id: 2, parent_id: null, body: 'off-page unread parent',
     created_at: '2026-08-19 10:00:00', deleted_at: null, handle: 'alice', reply_count: 1 }
-  const reply = { id: 91, user_id: 3, parent_id: 90, body: 'reply on this page',
-    created_at: '2026-08-19 11:00:00', deleted_at: null, handle: 'bob', reply_count: 0, parent }
+  const reply = { id: 91, user_id: 3, parent_id: 90, body: 'reply on this page', created_at: '2026-08-19 11:00:00',
+    deleted_at: null, handle: 'bob', reply_count: 0, parent }
   const user = { id: 1, handle: 'reader', email: 'reader@example.com', bio: '' }
   const html = renderToStaticMarkup(<PublicFeed user={user} path="/latest" feed={{
-    posts: [reply], page: 1, totalItems: 1, totalPages: 1, latestUnread: false, latestCount: 0,
-    unreadPostIds: [90, 91], directedUnreadPostIds: [],
+    posts: [reply],
+    page: 1,
+    totalItems: 1,
+    totalPages: 1,
+    latestUnread: false,
+    latestCount: 0,
+    unreadPostIds: [90, 91],
+    directedUnreadPostIds: [],
   }} />)
 
   expect(html.match(/class="unread-dot" aria-label="unread"/g)).toHaveLength(2)
@@ -202,8 +228,8 @@ test('standalone feed posts with replies link to their thread', () => {
 })
 
 test('to-me deduplicates the shared parent of sibling reply activities', () => {
-  const parent = { id: 25, user_id: 1, parent_id: null, body: 'one shared parent',
-    created_at: '2026-08-19 09:00:00', deleted_at: null, handle: 'reader', reply_count: 2 }
+  const parent = { id: 25, user_id: 1, parent_id: null, body: 'one shared parent', created_at: '2026-08-19 09:00:00',
+    deleted_at: null, handle: 'reader', reply_count: 2 }
   const activity = (id: number, handle: string): PersonalizedTimelineRow => ({
     ...postActivity(id, id, handle),
     parent_id: parent.id,
@@ -213,8 +239,9 @@ test('to-me deduplicates the shared parent of sibling reply activities', () => {
   })
   const html = renderToStaticMarkup(<Feed
     user={{ id: 1, handle: 'reader', email: 'reader@example.com', bio: '', handle_chosen_at: '2026-08-19 09:00:00' }}
-    data={{ timeline: [activity(27, 'cara'), activity(26, 'bob')], page: 1, totalPages: 1, toMeCount: 2,
-      forYouCount: 0, forYouUnread: false, toMeUnread: true }} toMe
+    data={{ timeline: [activity(27, 'cara'), activity(26, 'bob')], page: 1, totalPages: 1, toMeCount: 2, forYouCount: 0,
+      forYouUnread: false, toMeUnread: true }}
+    toMe
   />)
 
   expect(html.match(/one shared parent/g)).toHaveLength(1)
@@ -237,8 +264,9 @@ test('threaded activity replies retain their unread dots', () => {
   }
   const html = renderToStaticMarkup(<Feed
     user={{ id: 1, handle: 'reader', email: 'reader@example.com', bio: '', handle_chosen_at: '2026-08-19 09:00:00' }}
-    data={{ timeline: [child, root], page: 1, totalPages: 1, toMeCount: 1, forYouCount: 1,
-      forYouUnread: true, toMeUnread: true }} toMe
+    data={{ timeline: [child, root], page: 1, totalPages: 1, toMeCount: 1, forYouCount: 1, forYouUnread: true,
+      toMeUnread: true }}
+    toMe
   />)
 
   expect(html.match(/class="unread-dot" aria-label="unread"/g)).toHaveLength(1)
@@ -247,12 +275,13 @@ test('threaded activity replies retain their unread dots', () => {
 })
 
 test('feed trees render a shared off-page parent once for sibling replies', () => {
-  const parent = { id: 30, user_id: 2, parent_id: null, body: 'shared context',
-    created_at: '2026-08-19 09:00:00', deleted_at: null, handle: 'alice', reply_count: 2 }
+  const parent = { id: 30, user_id: 2, parent_id: null, body: 'shared context', created_at: '2026-08-19 09:00:00',
+    deleted_at: null, handle: 'alice', reply_count: 2 }
   const reply = (id: number, handle: string) => ({ id, user_id: id, parent_id: parent.id, body: `${handle} reply`,
     created_at: `2026-08-19 1${id - 30}:00:00`, deleted_at: null, handle, reply_count: 0, parent })
-  const html = renderToStaticMarkup(<PublicFeed feed={{ posts: [reply(32, 'cara'), reply(31, 'bob')], page: 1,
-    totalItems: 2, totalPages: 1 }} />)
+  const html = renderToStaticMarkup(
+    <PublicFeed feed={{ posts: [reply(32, 'cara'), reply(31, 'bob')], page: 1, totalItems: 2, totalPages: 1 }} />,
+  )
 
   expect(html.match(/shared context/g)).toHaveLength(1)
   expect(html.match(/class="post-page-thread feed-thread"/g)).toHaveLength(1)
@@ -262,26 +291,28 @@ test('feed trees render a shared off-page parent once for sibling replies', () =
 })
 
 test('threaded feed replies link to descendants omitted from the page', () => {
-  const root = { id: 40, user_id: 2, parent_id: null, body: 'root', created_at: '2026-08-19 09:00:00',
-    deleted_at: null, handle: 'alice', reply_count: 3 }
-  const reply = { id: 41, user_id: 3, parent_id: root.id, body: 'visible reply',
-    created_at: '2026-08-19 10:00:00', deleted_at: null, handle: 'bob', reply_count: 2, parent: root }
-  const html = renderToStaticMarkup(<PublicFeed feed={{ posts: [reply, root], page: 1, totalItems: 2,
-    totalPages: 1 }} path="/latest" />)
+  const root = { id: 40, user_id: 2, parent_id: null, body: 'root', created_at: '2026-08-19 09:00:00', deleted_at: null,
+    handle: 'alice', reply_count: 3 }
+  const reply = { id: 41, user_id: 3, parent_id: root.id, body: 'visible reply', created_at: '2026-08-19 10:00:00',
+    deleted_at: null, handle: 'bob', reply_count: 2, parent: root }
+  const html = renderToStaticMarkup(
+    <PublicFeed feed={{ posts: [reply, root], page: 1, totalItems: 2, totalPages: 1 }} path="/latest" />,
+  )
 
   expect(html).toContain('class="quiet post-continuation-link" href="/post/41?from=%2Flatest%23post-41" '
     + 'rel="nofollow">more</a>')
 })
 
 test('threaded feed replies do not show more when every descendant is visible', () => {
-  const root = { id: 45, user_id: 2, parent_id: null, body: 'root', created_at: '2026-08-19 09:00:00',
-    deleted_at: null, handle: 'alice', reply_count: 3 }
-  const reply = { id: 46, user_id: 3, parent_id: root.id, body: 'visible reply',
-    created_at: '2026-08-19 10:00:00', deleted_at: null, handle: 'bob', reply_count: 1, parent: root }
-  const child = { id: 47, user_id: 4, parent_id: reply.id, body: 'visible child',
-    created_at: '2026-08-19 11:00:00', deleted_at: null, handle: 'cara', reply_count: 0, parent: reply }
-  const html = renderToStaticMarkup(<PublicFeed feed={{ posts: [child, reply, root], page: 1, totalItems: 3,
-    totalPages: 1 }} path="/latest" />)
+  const root = { id: 45, user_id: 2, parent_id: null, body: 'root', created_at: '2026-08-19 09:00:00', deleted_at: null,
+    handle: 'alice', reply_count: 3 }
+  const reply = { id: 46, user_id: 3, parent_id: root.id, body: 'visible reply', created_at: '2026-08-19 10:00:00',
+    deleted_at: null, handle: 'bob', reply_count: 1, parent: root }
+  const child = { id: 47, user_id: 4, parent_id: reply.id, body: 'visible child', created_at: '2026-08-19 11:00:00',
+    deleted_at: null, handle: 'cara', reply_count: 0, parent: reply }
+  const html = renderToStaticMarkup(
+    <PublicFeed feed={{ posts: [child, reply, root], page: 1, totalItems: 3, totalPages: 1 }} path="/latest" />,
+  )
 
   expect(html).toContain('id="post-47"')
   expect(html).not.toContain('class="quiet post-continuation-link" href="/post/46?from=%2Flatest%23post-46" '
@@ -314,8 +345,8 @@ test('for-you renders a single author without a filter shell', () => {
 })
 
 test('for-you labels a descendant that replies to its own author as continued', () => {
-  const parent = { id: 10, user_id: 2, parent_id: 9, body: 'earlier reply',
-    created_at: '2026-08-19 09:00:00', deleted_at: null, handle: 'alice', reply_count: 1 }
+  const parent = { id: 10, user_id: 2, parent_id: 9, body: 'earlier reply', created_at: '2026-08-19 09:00:00',
+    deleted_at: null, handle: 'alice', reply_count: 1 }
   const activity = {
     ...postActivity(11, 2, 'alice'),
     parent_id: parent.id,
@@ -327,8 +358,8 @@ test('for-you labels a descendant that replies to its own author as continued', 
   }
   const html = renderToStaticMarkup(<Feed
     user={{ id: 1, handle: 'reader', email: 'reader@example.com', bio: '', handle_chosen_at: '2026-08-19 09:00:00' }}
-    data={{ timeline: [activity], page: 1, totalPages: 1, toMeCount: 1,
-      forYouCount: 1, forYouUnread: false, toMeUnread: true }}
+    data={{ timeline: [activity], page: 1, totalPages: 1, toMeCount: 1, forYouCount: 1, forYouUnread: false,
+      toMeUnread: true }}
   />)
 
   expect(html).toContain('continued some time ago:</span>')
@@ -339,13 +370,12 @@ test('for-you positions a root by its newest deep reply when timeline ancestors 
   const rootRow = postActivity(120, 2, 'alice')
   rootRow.created_at = '2026-08-19 08:00:00'
   const root: ParentPost = { id: rootRow.id, user_id: rootRow.user_id, parent_id: null,
-    body: 'active conversation root', created_at: rootRow.created_at, deleted_at: null,
-    handle: rootRow.handle, reply_count: 3 }
+    body: 'active conversation root', created_at: rootRow.created_at, deleted_at: null, handle: rootRow.handle,
+    reply_count: 3 }
   rootRow.renderedPost = { ...rootRow.renderedPost!, ...root }
-  const missingAncestor: ParentPost = { ...root, id: 121, parent_id: root.id,
-    body: 'omitted ancestor', parent: root }
-  const immediate: ParentPost = { ...root, id: 122, parent_id: missingAncestor.id,
-    body: 'immediate context', parent: missingAncestor }
+  const missingAncestor: ParentPost = { ...root, id: 121, parent_id: root.id, body: 'omitted ancestor', parent: root }
+  const immediate: ParentPost = { ...root, id: 122, parent_id: missingAncestor.id, body: 'immediate context',
+    parent: missingAncestor }
   const deepRow = postActivity(123, 3, 'bob')
   deepRow.parent_id = immediate.id
   deepRow.created_at = '2026-08-19 12:00:00'
@@ -357,8 +387,8 @@ test('for-you positions a root by its newest deep reply when timeline ancestors 
   earlier.renderedPost = { ...earlier.renderedPost!, body: 'earlier standalone post', created_at: earlier.created_at }
   const html = renderToStaticMarkup(<Feed
     user={{ id: 1, handle: 'reader', email: 'reader@example.com', bio: '', handle_chosen_at: '2026-08-19 09:00:00' }}
-    data={{ timeline: [deepRow, earlier, rootRow], page: 1, totalPages: 1, toMeCount: 0,
-      forYouCount: 1, forYouUnread: true, toMeUnread: false }}
+    data={{ timeline: [deepRow, earlier, rootRow], page: 1, totalPages: 1, toMeCount: 0, forYouCount: 1,
+      forYouUnread: true, toMeUnread: false }}
   />)
 
   expect(html.match(/active conversation root/g)).toHaveLength(1)
@@ -408,10 +438,16 @@ test('activity targets do not duplicate their details in hovercards', () => {
   const user = { id: 1, handle: 'reader', email: 'reader@example.com', bio: '',
     handle_chosen_at: '2026-08-19 09:00:00' }
 
-  const followHtml = renderToStaticMarkup(<Feed user={user} data={{ timeline: [followActivity], page: 1,
-    totalPages: 1, toMeCount: 0, forYouCount: 0, forYouUnread: false, toMeUnread: false }} />)
-  const signupHtml = renderToStaticMarkup(<Feed user={user} data={{ timeline: [signupActivity], page: 1,
-    totalPages: 1, toMeCount: 0, forYouCount: 0, forYouUnread: false, toMeUnread: false }} />)
+  const followHtml = renderToStaticMarkup(
+    <Feed user={user}
+      data={{ timeline: [followActivity], page: 1, totalPages: 1, toMeCount: 0, forYouCount: 0, forYouUnread: false,
+        toMeUnread: false }} />,
+  )
+  const signupHtml = renderToStaticMarkup(
+    <Feed user={user}
+      data={{ timeline: [signupActivity], page: 1, totalPages: 1, toMeCount: 0, forYouCount: 0, forYouUnread: false,
+        toMeUnread: false }} />,
+  )
 
   expect(followHtml).toContain('href="/u/dave?from=%2Ffor-you%23a-')
   expect(followHtml).not.toContain('<span class="reference-popover-bio">Dave builds things</span>')
@@ -448,8 +484,11 @@ test('activity bios enrich hashtag and mention references with hovercards', () =
   }
   const user = { id: 1, handle: 'reader', email: 'reader@example.com', bio: '',
     handle_chosen_at: '2026-08-19 09:00:00' }
-  const html = renderToStaticMarkup(<Feed user={user} data={{ timeline: [followActivity], page: 1,
-    totalPages: 1, toMeCount: 0, forYouCount: 0, forYouUnread: false, toMeUnread: false }} />)
+  const html = renderToStaticMarkup(
+    <Feed user={user}
+      data={{ timeline: [followActivity], page: 1, totalPages: 1, toMeCount: 0, forYouCount: 0, forYouUnread: false,
+        toMeUnread: false }} />,
+  )
 
   expect(html).toContain('class="reference-menu-popover reference-menu-popover-tag"')
   expect(html).toContain('Makes useful things')

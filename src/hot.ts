@@ -109,7 +109,7 @@ function hasActivityCount(database: Database) {
 }
 
 function hasPollVotes(database: Database) {
-  return Boolean(database.query("SELECT 1 FROM sqlite_master WHERE type='table' AND name='poll_votes'").get())
+  return Boolean(database.query('SELECT 1 FROM sqlite_master WHERE type=\'table\' AND name=\'poll_votes\'').get())
 }
 
 export function encodeHotCursor(cursor: HotCursor) {
@@ -192,9 +192,13 @@ export function rebuildHotPosts(database: Database, postIds?: number[]) {
       UNION ALL
       SELECT candidate_id,created_at,${directReplyWeight}*pow(0.5,depth-1),1
       FROM ranked_replies WHERE reply_rank=1
-      ${tracksPollVotes ? `UNION ALL
+      ${
+        tracksPollVotes
+          ? `UNION ALL
       SELECT votes.post_id,votes.created_at,${pollVoteWeight},0 FROM poll_votes votes
-      JOIN posts voted_post ON voted_post.id=votes.post_id WHERE voted_post.deleted_at IS NULL` : ''}
+      JOIN posts voted_post ON voted_post.id=votes.post_id WHERE voted_post.deleted_at IS NULL`
+          : ''
+      }
     ), recency_replies AS (
       SELECT descendants.candidate_id,descendants.created_at FROM descendants
       JOIN posts candidate ON candidate.id=descendants.candidate_id
@@ -275,9 +279,13 @@ export function rebuildHotPosts(database: Database, postIds?: number[]) {
     LEFT JOIN users reply_user ON reply_user.id=descendants.user_id
     JOIN users candidate_user ON candidate_user.id=candidate.user_id
     WHERE descendants.deleted_at IS NULL
-    ${tracksPollVotes ? `UNION ALL
+    ${
+    tracksPollVotes
+      ? `UNION ALL
     SELECT votes.option_id,votes.created_at,${pollVoteWeight},1,0 FROM poll_votes votes
-    WHERE votes.post_id=?` : ''}
+    WHERE votes.post_id=?`
+      : ''
+  }
   ) SELECT created_at,weight,boosts_recency,is_reply FROM activity`)
   const update = database.query(tracksReplyCount && tracksActivityCount
     ? 'UPDATE post_hot SET score=?,reply_count=?,activity_count=?,score_updated_at=?,latest_activity_at=? WHERE post_id=?'
@@ -287,11 +295,11 @@ export function rebuildHotPosts(database: Database, postIds?: number[]) {
   for (const candidate of candidates) {
     const events = activity.all(candidate.id, candidate.id, candidate.id, candidate.id,
       ...(tracksPollVotes ? [candidate.id] : [])) as {
-      created_at: string
-      weight: number
-      boosts_recency: number
-      is_reply: number
-    }[]
+        created_at: string
+        weight: number
+        boosts_recency: number
+        is_reply: number
+      }[]
     if (!events.length) {
       if (tracksReplyCount && tracksActivityCount) {
         update.run(0, 0, 0, '1970-01-01 00:00:00', '1970-01-01 00:00:00', candidate.id)

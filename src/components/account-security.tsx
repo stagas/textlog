@@ -299,15 +299,21 @@ export function AccountPassword({ user, enabled, token, request = false, sent = 
 }) {
   return (
     <Layout user={user} title={enabled ? 'change password' : 'enable password login'}>
-      <CenteredPanel shellClassName={request ? 'enable-password-shell' : 'auth-shell'}
-        className={request ? 'enable-password-panel' : `auth-panel password-panel${enabled ? '' : ' enable-password-panel'}`}
-        width={enabled ? 'narrow' : 'medium'}
+      <CenteredPanel shellClassName={request ? 'enable-password-shell' : 'auth-shell'} className={request
+        ? 'enable-password-panel'
+        : `auth-panel password-panel${enabled ? '' : ' enable-password-panel'}`} width={enabled ? 'narrow' : 'medium'}
       >
         {request
           ? <PanelHeading as="h1">Enable password login</PanelHeading>
           : (
             <h1>
-              {invalid ? 'Link unavailable' : sent ? 'Check your email' : enabled ? 'Change password' : 'Set a password'}
+              {invalid
+                ? 'Link unavailable'
+                : sent
+                ? 'Check your email'
+                : enabled
+                ? 'Change password'
+                : 'Set a password'}
             </h1>
           )}
         {error && <p className="status-message status-error" role="alert">{error}</p>}

@@ -2,7 +2,8 @@ import { withoutMarkdownCode } from './content'
 
 export type TodoItem = { label: string; checked: boolean; line: number }
 
-export type TodoEntry = { type: 'item'; item: TodoItem; itemIndex: number }
+export type TodoEntry =
+  | { type: 'item'; item: TodoItem; itemIndex: number }
   | { type: 'text'; text: string; line: number }
 
 export type TodoDefinition = { items: TodoItem[]; entries: TodoEntry[] }

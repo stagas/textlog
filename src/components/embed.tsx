@@ -51,9 +51,14 @@ export function Embed(
                     dangerouslySetInnerHTML={{ __html: embedLinks(post.body, post.mention_bios) }} />
                   {post.parent && (
                     <blockquote className={'embed-parent' + (containsAsciiArt(post.parent.body) ? ' ascii-art' : '')
-                      + (post.parent.deleted_at ? ' deleted-parent' : '')}>
+                      + (post.parent.deleted_at ? ' deleted-parent' : '')}
+                    >
                       {post.parent.deleted_at
-                        ? <a href={`/post/${post.parent.id}`} target="_blank" rel="noopener noreferrer">(deleted post)</a>
+                        ? (
+                          <a href={`/post/${post.parent.id}`} target="_blank" rel="noopener noreferrer">
+                            (deleted post)
+                          </a>
+                        )
                         : (
                           <>
                             <div className="embed-parent-top">

@@ -1,7 +1,7 @@
 import type { DensityChoice, PageSizeChoice } from './request-preferences'
-import type { ApiKeyView, ApiPost, BioReferenceData, DashboardStats, DraftView, EmbedData, ExploreData, FeedKeyView, LinkPreview,
-  PersonalizedFeedData, PersonView, PostFeedPage, PostView, ProfileOverviewData, SearchResultsData, SessionView,
-  TagPageData, User } from './types'
+import type { ApiKeyView, ApiPost, BioReferenceData, DashboardStats, DraftView, EmbedData, ExploreData, FeedKeyView,
+  LinkPreview, PersonalizedFeedData, PersonView, PostFeedPage, PostView, ProfileOverviewData, SearchResultsData,
+  SessionView, TagPageData, User } from './types'
 import type { AdminActionView, AdminReportView, IllegalActivityReportView, PostRow, ProfileRow } from './types'
 
 export type DatabaseHealthResult = {
@@ -153,8 +153,9 @@ export type DatabaseDomainOperations = {
     suspended: ProfileRow[]
     illegalReports: IllegalActivityReportView[]
     ipRequests: Array<{ hash: string; obfuscated: string; requests: number; blocked: boolean }>
-    bannedUsernames: Array<{ username: string; dropped_user_id: number | null; actor_handle: string;
-      note: string; created_at: string }>
+    bannedUsernames: Array<
+      { username: string; dropped_user_id: number | null; actor_handle: string; note: string; created_at: string }
+    >
   } }
   'admin.blockIp': { input: { day: string; hash: string; actorId: number }; output: boolean }
   'admin.decideIllegalReport': { input: { id: number; decision: 'resolve' | 'dismiss'; reasons: string };
@@ -166,9 +167,9 @@ export type DatabaseDomainOperations = {
     output: { status: 'not_found' } | { status: 'ready'; imageKeys: string[] } }
   'admin.user': { input: { id: number }; output: ProfileRow | null }
   'admin.moderateUser': {
-    input: { id: number; actorId: number; action: 'suspend' | 'restore' | 'delete' | 'drop-username';
-      note: string }
-    output: { status: 'not_found' | 'already_suspended' | 'not_suspended' | 'already_banned' }
+    input: { id: number; actorId: number; action: 'suspend' | 'restore' | 'delete' | 'drop-username'; note: string }
+    output:
+      | { status: 'not_found' | 'already_suspended' | 'not_suspended' | 'already_banned' }
       | { status: 'ready'; imageKeys: string[] }
   }
   'account.securityData': { input: { userId: number; currentSessionHash: string | null; now: number }; output: {
@@ -261,17 +262,15 @@ export type DatabaseDomainOperations = {
       >; postTitlePrefixes: Record<number, string> }
   }
   'api.publicRead': { input:
-    | { kind: 'collection'; origin: string; limit: number; before: number | null;
-      handle?: string; tag?: string; repliesOnly?: boolean; topLevelOnly?: boolean; viewerId?: number;
-      excludeWhispers?: boolean }
+    | { kind: 'collection'; origin: string; limit: number; before: number | null; handle?: string; tag?: string;
+      repliesOnly?: boolean; topLevelOnly?: boolean; viewerId?: number; excludeWhispers?: boolean }
     | { kind: 'hot'; origin: string; limit: number;
       cursor: { asOf: string; score: number; latestActivityAt: string; createdAt: string; id: number;
         direction: 'next' | 'previous' } | null; viewerId?: number }
     | { kind: 'search'; origin: string; query: string; limit: number; offset: number; viewerId?: number }
     | { kind: 'post'; origin: string; id: number; viewerId?: number }
     | { kind: 'replies'; origin: string; id: number; limit: number; before: number | null; depth: number;
-      viewerId?: number };
-    output: { status: 'ready'; value: unknown } | { status: 'not_found' } }
+      viewerId?: number }; output: { status: 'ready'; value: unknown } | { status: 'not_found' } }
   'api.activities': {
     input: { user: User; origin: string; limit: number; cursor: { createdAt: string; key: string } | null;
       toMe: boolean }
@@ -305,19 +304,35 @@ export type DatabaseDomainOperations = {
     input: { userId: number; tag: string; action: 'follow' | 'unfollow' | 'block' | 'unblock' }
     output: { changed: boolean }
   }
-  'api.explore': { input: { viewerId: number; origin: string; peopleLimit: number; peopleOffset: number;
-    tagsLimit: number; tagsOffset: number }; output: unknown }
-  'api.publishDraft': { input: { userId: number; id: number; body: string; parentId: number | null; origin: string;
-    translation?: string | null };
-    output: { status: 'not_found' } | { status: 'locked' } | { status: 'rate_limited'; retryAfter: number } | { status: 'ready'; id: number;
-      duplicate: boolean; post: ApiPost } }
-  'api.createPost': { input: { userId: number; body: string; parentId: number | null; origin: string;
-    translation?: string | null };
-    output: { status: 'not_found' } | { status: 'locked' } | { status: 'rate_limited'; retryAfter: number } | { status: 'ready'; id: number;
-      duplicate: boolean; post: ApiPost } }
-  'api.updatePost': { input: { userId: number; id: number; body: string; origin: string; moderator?: boolean;
-    translation?: string | null };
-    output: { status: 'not_found' | 'forbidden' } | { status: 'ready'; post: ApiPost } }
+  'api.explore': {
+    input: { viewerId: number; origin: string; peopleLimit: number; peopleOffset: number; tagsLimit: number;
+      tagsOffset: number }
+    output: unknown
+  }
+  'api.publishDraft': {
+    input: { userId: number; id: number; body: string; parentId: number | null; origin: string;
+      translation?: string | null }
+    output: { status: 'not_found' } | { status: 'locked' } | { status: 'rate_limited'; retryAfter: number } | {
+      status: 'ready'
+      id: number
+      duplicate: boolean
+      post: ApiPost
+    }
+  }
+  'api.createPost': {
+    input: { userId: number; body: string; parentId: number | null; origin: string; translation?: string | null }
+    output: { status: 'not_found' } | { status: 'locked' } | { status: 'rate_limited'; retryAfter: number } | {
+      status: 'ready'
+      id: number
+      duplicate: boolean
+      post: ApiPost
+    }
+  }
+  'api.updatePost': {
+    input: { userId: number; id: number; body: string; origin: string; moderator?: boolean;
+      translation?: string | null }
+    output: { status: 'not_found' | 'forbidden' } | { status: 'ready'; post: ApiPost }
+  }
   'api.deletePost': { input: { userId: number; id: number };
     output: { status: 'not_found' | 'forbidden' } | { status: 'ready'; imageKeys: string[]; parentId: number | null } }
   'api.unpublishPost': { input: { userId: number; id: number; body?: string };

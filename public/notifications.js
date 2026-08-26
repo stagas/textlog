@@ -12,7 +12,8 @@
   const forYou = preferenceInputs.find(input => input.name === 'forYou')
   const onlyToMe = preferenceInputs.find(input => input.name === 'onlyToMe')
   const forYouDependents = preferenceInputs.filter(input =>
-    ['onlyToMe', 'peopleFollowActivity', 'hashtagFollowActivity'].includes(input.name))
+    ['onlyToMe', 'peopleFollowActivity', 'hashtagFollowActivity'].includes(input.name)
+  )
   const handle = script.dataset.handle
 
   const supported = 'serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window

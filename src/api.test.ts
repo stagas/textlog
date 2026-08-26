@@ -81,7 +81,7 @@ describe('public API', () => {
     database.query(`INSERT INTO posts(id,user_id,parent_id,body,created_at)
       VALUES(6,1,NULL,'quiet #whisper #textlog','2026-08-03 16:00:00'),
         (7,2,6,'an untagged descendant','2026-08-03 17:00:00')`).run()
-    database.query("INSERT INTO post_hashtags(post_id,tag) VALUES(6,'whisper'),(6,'textlog')").run()
+    database.query('INSERT INTO post_hashtags(post_id,tag) VALUES(6,\'whisper\'),(6,\'textlog\')').run()
 
     const latest = await (await request(app, '/api/v1/feeds/latest')).json() as any
     const profile = await (await request(app, '/api/v1/users/alice/posts')).json() as any
@@ -160,7 +160,8 @@ describe('public API', () => {
     expect(initial).toMatchObject({ has_unread: true, unread_count: 3 })
     expect(initial.data.every((post: any) => post.unread)).toBe(true)
     const selected = await request(app, '/api/v1/feeds/latest/read', { method: 'POST', headers: {
-      ...headers, 'content-type': 'application/json',
+      ...headers,
+      'content-type': 'application/json',
     }, body: JSON.stringify({ post_ids: [3] }) })
     expect(await selected.json()).toEqual({ data: { read: 1 } })
     const afterSelected = await (await request(app, '/api/v1/feeds/latest', { headers })).json() as any
@@ -202,17 +203,21 @@ describe('public API', () => {
     expect(forYou.data.find((activity: any) => activity.type === 'tag_follow').payload)
       .toMatchObject({ actor: { handle: 'bob' }, target: { tag: 'textlog' } })
     expect(forYou.data.find((activity: any) => activity.payload.id === 7)).toMatchObject({
-      type: 'post', payload: { id: 7 },
+      type: 'post',
+      payload: { id: 7 },
     })
     expect(forYou.data.find((activity: any) => activity.payload.id === 8)).toMatchObject({
-      type: 'reply', payload: { body: 'descendant of Alice reply' },
+      type: 'reply',
+      payload: { body: 'descendant of Alice reply' },
     })
     expect(forYou.data.find((activity: any) => activity.payload.id === 9)).toMatchObject({
-      type: 'post', payload: { body: 'own tag match #textlog' },
+      type: 'post',
+      payload: { body: 'own tag match #textlog' },
     })
     expect(forYou.data.some((activity: any) => activity.payload.id === 3)).toBe(false)
     expect(forYou.data.find((activity: any) => activity.payload.id === 1)).toMatchObject({
-      type: 'post', payload: { body: 'hello #textlog @bob' },
+      type: 'post',
+      payload: { body: 'hello #textlog @bob' },
     })
     expect(toMe.data.map((activity: any) => activity.type)).toEqual(['user_follow', 'reply', 'mention'])
     expect(toMe.data.some((activity: any) => activity.payload.id === 8)).toBe(true)
@@ -493,7 +498,8 @@ describe('public API', () => {
     expect(spec.security).toEqual([])
     for (const path of ['/feeds/latest/read', '/feeds/latest/read-all', '/drafts', '/drafts/{id}',
       '/drafts/{id}/publish', '/posts/{id}/unpublish', '/posts/{id}/poll/votes', '/tags/{tag}/follow',
-      '/tags/{tag}/block']) {
+      '/tags/{tag}/block'])
+    {
       for (const operation of Object.values(spec.paths[path]) as any[]) {
         expect(operation.security).toEqual([{ bearerAuth: [] }])
       }
@@ -508,9 +514,10 @@ describe('public API', () => {
           `${method.toUpperCase()} ${path} must document every path parameter`).toEqual(variables.sort())
       }
     }
-    for (const [path, method] of [['/auth/request', 'post'], ['/auth/verify', 'post'], ['/me', 'patch'],
-      ['/posts', 'post'], ['/posts/{id}', 'patch'], ['/posts/{id}/report', 'post'],
-      ['/posts/{id}/poll/votes', 'post'], ['/drafts', 'post'], ['/drafts/{id}', 'patch']] as const) {
+    for (const [path, method] of [['/auth/request', 'post'], ['/auth/verify', 'post'], ['/me', 'patch'], ['/posts',
+      'post'], ['/posts/{id}', 'patch'], ['/posts/{id}/report', 'post'], ['/posts/{id}/poll/votes', 'post'], ['/drafts',
+      'post'], ['/drafts/{id}', 'patch']] as const)
+    {
       expect(spec.paths[path][method].requestBody, `${method.toUpperCase()} ${path} needs a JSON request body`)
         .toBeTruthy()
     }
@@ -523,7 +530,8 @@ describe('public API', () => {
     collectRefs(spec)
     for (const ref of refs) {
       expect(ref.startsWith('#/components/schemas/')).toBe(true)
-      expect(spec.components.schemas[ref.slice('#/components/schemas/'.length)], `Missing schema for ${ref}`).toBeTruthy()
+      expect(spec.components.schemas[ref.slice('#/components/schemas/'.length)], `Missing schema for ${ref}`)
+        .toBeTruthy()
     }
     expect(mutation.status).toBe(405)
     expect(mutation.headers.get('allow')).toBe('GET, HEAD, OPTIONS')

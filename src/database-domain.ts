@@ -14,8 +14,8 @@ import { exportUserData } from './data-export'
 import { createBootDatabaseBackup } from './database-backup'
 import type { DatabaseDomainInput, DatabaseDomainOperation, DatabaseDomainOutput } from './database-contract'
 import { confirmEmailToken } from './email-verification'
-import { preserveSuggestedPeopleOrder, suggestedPeople, suggestedPeopleCount, trendingTagCount, trendingTags }
-  from './explore'
+import { preserveSuggestedPeopleOrder, suggestedPeople, suggestedPeopleCount, trendingTagCount,
+  trendingTags } from './explore'
 import { issueFeedKey, userForFeedKey } from './feed-keys'
 import { feedSnapshotPage } from './feed-snapshots'
 import { hasUnreadForYou, hasUnreadToMe, markAllForYouRead, markForYouEntriesRead, markVisibleForYouEntriesRead,
@@ -24,8 +24,10 @@ import { dropUsername, resolveHandle } from './handles'
 import { claimInitialHandle, HandleChangeLimitError, updateProfileHandle } from './handles'
 import { getHotPosts, type HotPost, hotRankingVersion } from './hot'
 import { isImageKey } from './image-storage'
+import { interactedEmail } from './interacted-email'
 import { initializeLatestReads, latestPostState, markAllLatestRead, markLatestPostsRead,
   unreadLatestCount } from './latest-state'
+import { userBioLinkPreviews } from './link-preview'
 import { runBoundedCleanup } from './maintenance'
 import { MAX_MATERIALIZED_PAGES } from './materialized-feed-pages'
 import { PAGE_SIZE } from './pagination'
@@ -36,15 +38,13 @@ import { consumePasswordCaptcha, issuePasswordCaptcha, passwordCaptchaRequired,
   recordFailedPassword } from './password-login-captcha'
 import { consumePasswordLoginNonce, issuePasswordLoginNonce } from './password-login-nonce'
 import { loadPersonalizedFeed, PERSONALIZED_FEED_SNAPSHOT_VERSION } from './personalized-feed'
+import { voteInPoll } from './polls'
 import { loadBioReferenceData, loadThreadReplies } from './posts'
 import { enrichPosts } from './posts'
 import { visibleTagFollowerCounts, visibleUserProfileStats } from './posts'
 import { createPost, isThreadLocked, updatePost } from './posts'
-import { userBioLinkPreviews } from './link-preview'
-import { voteInPoll } from './polls'
 import { createPublicArchive, publicArchiveIsCurrent } from './public-archive'
 import { RECAP_POPULAR_NOTE_IDS, recapEmail } from './recap-email'
-import { interactedEmail } from './interacted-email'
 import { searchPeople, searchPosts, searchTags, searchTerms } from './search'
 import { sitemapIndex, sitemapSection } from './seo'
 import { insertSession, markSessionUsed, renewSession, SESSION_LIFETIME_MS, sessionHash } from './sessions'
@@ -100,8 +100,9 @@ function groupPostsByConversation<T extends { id: number }>(database: Database, 
     SELECT id,id,parent_id FROM posts WHERE id IN (${posts.map(() => '?').join(',')})
     UNION ALL SELECT ancestry.origin,parent.id,parent.parent_id FROM ancestry
       JOIN posts parent ON parent.id=ancestry.parent_id
-  ) SELECT origin,id root_id FROM ancestry WHERE parent_id IS NULL`).all(...posts.map(post => post.id)) as
-    Array<{ origin: number; root_id: number }>
+  ) SELECT origin,id root_id FROM ancestry WHERE parent_id IS NULL`).all(...posts.map(post => post.id)) as Array<
+    { origin: number; root_id: number }
+  >
   const rootById = new Map(roots.map(row => [row.origin, row.root_id]))
   const conversations = new Map<number, T[]>()
   for (const post of posts) {
@@ -146,8 +147,10 @@ function sessionUser(database: Database, token: string | null): User | null {
     FROM sessions s JOIN users u ON u.id=s.user_id
     WHERE s.token_hash=? AND s.expires_at>? AND u.deleted_at IS NULL AND u.suspended_at IS NULL`)
     .get(sessionHash(token), Date.now()) as User | null
-  if (user) user.draft_count = (database.query('SELECT count(*) count FROM drafts WHERE user_id=?')
-    .get(user.id) as { count: number }).count
+  if (user) {
+    user.draft_count = (database.query('SELECT count(*) count FROM drafts WHERE user_id=?')
+      .get(user.id) as { count: number }).count
+  }
   if (user) markSessionUsed(database, token, Date.now())
   return user
 }
@@ -377,9 +380,9 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
             notify_people_follow_activity=coalesce(?,push_subscriptions.notify_people_follow_activity),
             notify_hashtag_follow_activity=coalesce(?,push_subscriptions.notify_hashtag_follow_activity)`)
           .run(endpoint, userId, p256dh, auth, deviceId, latest ?? 1, replies ?? 1, mentions ?? 1, follows ?? 1, 0,
-            signups ?? 1, followActivity ?? 1, followingNotes ?? 1, followingOnlyToMe ?? 0,
-            peopleFollowActivity ?? 0, hashtagFollowActivity ?? 0, latest, replies, mentions, follows, signups,
-            followActivity, followingNotes, followingOnlyToMe, peopleFollowActivity, hashtagFollowActivity)
+            signups ?? 1, followActivity ?? 1, followingNotes ?? 1, followingOnlyToMe ?? 0, peopleFollowActivity ?? 0,
+            hashtagFollowActivity ?? 0, latest, replies, mentions, follows, signups, followActivity, followingNotes,
+            followingOnlyToMe, peopleFollowActivity, hashtagFollowActivity)
         if (userAgent) {
           database.query(`INSERT INTO notification_user_agents(user_id,user_agent,status) VALUES(?,?,'enabled')
             ON CONFLICT(user_id,user_agent) DO UPDATE SET status='enabled',updated_at=CURRENT_TIMESTAMP`)
@@ -583,15 +586,15 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
     case 'account.saveAppearancePreferences': {
       const { userId, deviceId, pageSize, density, showLinkPreviews, hidePeopleFollowActivity,
         hideHashtagFollowActivity } = input as DatabaseDomainInput<
-        'account.saveAppearancePreferences'
-      >
+          'account.saveAppearancePreferences'
+        >
       database.transaction(() => {
         database.query(`INSERT INTO device_settings(user_id,device_id,page_size,density) VALUES(?,?,?,?)
           ON CONFLICT(user_id,device_id) DO UPDATE SET page_size=excluded.page_size,density=excluded.density,
             updated_at=CURRENT_TIMESTAMP`).run(userId, deviceId, pageSize, density)
         database.query(`UPDATE users SET show_link_previews=?,hide_people_follow_activity=?,
-          hide_hashtag_follow_activity=? WHERE id=?`).run(showLinkPreviews ? 1 : 0,
-          hidePeopleFollowActivity ? 1 : 0, hideHashtagFollowActivity ? 1 : 0, userId)
+          hide_hashtag_follow_activity=? WHERE id=?`).run(showLinkPreviews ? 1 : 0, hidePeopleFollowActivity ? 1 : 0,
+          hideHashtagFollowActivity ? 1 : 0, userId)
         database.query(`UPDATE personalized_feed_generations SET generation=generation+1 WHERE viewer_id=?`)
           .run(userId)
         cacheDb.query(`DELETE FROM materialized_feed_pages_v2 WHERE viewer_id=? AND kind IN ('for-you','to-me')`)
@@ -759,8 +762,8 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
       const bannedUsernames = database.query(`SELECT b.username,b.dropped_user_id,b.note,b.created_at,
         actor.handle actor_handle FROM banned_usernames b JOIN users actor ON actor.id=b.dropped_by
         ORDER BY b.created_at DESC,b.username LIMIT 100`).all()
-      return { stats: dashboardStats(database), total, reports, actions, suspended, illegalReports,
-        ipRequests, bannedUsernames } as DatabaseDomainOutput<K>
+      return { stats: dashboardStats(database), total, reports, actions, suspended, illegalReports, ipRequests,
+        bannedUsernames } as DatabaseDomainOutput<K>
     }
     case 'admin.blockIp': {
       const { day, hash, actorId } = input as DatabaseDomainInput<'admin.blockIp'>
@@ -960,8 +963,9 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
         : []
       const parents = new Map(enrichPosts(database, parentRows, userId)
         .map(parent => [parent.id, { ...parent, reply_count: parent.reply_count || 0 }]))
-      return drafts.map(draft => ({ ...draft, parent: draft.parent_id ? parents.get(draft.parent_id) || null : null })) as
-        DatabaseDomainOutput<K>
+      return drafts.map(draft => ({ ...draft,
+        parent: draft.parent_id ? parents.get(draft.parent_id) || null : null })
+      ) as DatabaseDomainOutput<K>
     }
     case 'drafts.get': {
       const { id, userId } = input as DatabaseDomainInput<'drafts.get'>
@@ -1054,8 +1058,9 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
       return { people, tags } as DatabaseDomainOutput<K>
     }
     case 'profiles.connectionsPage': {
-      const { profileId, viewerId, page, tagsPage, kind, sort } =
-        input as DatabaseDomainInput<'profiles.connectionsPage'>
+      const { profileId, viewerId, page, tagsPage, kind, sort } = input as DatabaseDomainInput<
+        'profiles.connectionsPage'
+      >
       const join = kind === 'following'
         ? 'JOIN follows f ON f.following_id=u.id WHERE f.follower_id=?'
         : 'JOIN follows f ON f.follower_id=u.id WHERE f.following_id=?'
@@ -1072,10 +1077,10 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
         ORDER BY ${connectionOrder} LIMIT ? OFFSET ?`,
       ).all(viewerId, viewerId, profileId, viewerId, viewerId, viewerId, CONNECTION_PAGE_SIZE,
         (page - 1) * CONNECTION_PAGE_SIZE) as import('./types').PersonView[]).map(person => ({
-        ...person,
-        viewerFollowing: !!person.viewerFollowing,
-        followsViewer: !!person.followsViewer,
-      }))
+          ...person,
+          viewerFollowing: !!person.viewerFollowing,
+          followsViewer: !!person.followsViewer,
+        }))
       const countWhere = kind === 'following' ? 'follower_id=?' : 'following_id=?'
       const counterpart = kind === 'following' ? 'f.following_id' : 'f.follower_id'
       const total = (database.query(`SELECT count(*) count FROM follows f WHERE ${countWhere}
@@ -1206,8 +1211,10 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
     }
     case 'api.latestState': {
       const { userId } = input as DatabaseDomainInput<'api.latestState'>
-      const unreadIds = latestPostState(userId, database).filter(row => row.unread
-        && apiPost(database, row.id, 'http://api.local', userId)).map(row => row.id)
+      const unreadIds = latestPostState(userId, database).filter(row =>
+        row.unread
+        && apiPost(database, row.id, 'http://api.local', userId)
+      ).map(row => row.id)
       return { unreadIds, unreadCount: unreadIds.length } as DatabaseDomainOutput<K>
     }
     case 'api.markLatestRead': {
@@ -1220,8 +1227,10 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
     }
     case 'api.markAllLatestRead': {
       const { userId } = input as DatabaseDomainInput<'api.markAllLatestRead'>
-      const unread = latestPostState(userId, database).filter(row => row.unread
-        && apiPost(database, row.id, 'http://api.local', userId)).length
+      const unread = latestPostState(userId, database).filter(row =>
+        row.unread
+        && apiPost(database, row.id, 'http://api.local', userId)
+      ).length
       markAllLatestRead(userId, database)
       return unread as DatabaseDomainOutput<K>
     }
@@ -1275,9 +1284,11 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
         pinned_note_id: number | null
         pinned_reply_id: number | null
       }
-      const pinnedNote = pinnedIds.pinned_note_id === null ? null
+      const pinnedNote = pinnedIds.pinned_note_id === null
+        ? null
         : apiPost(database, pinnedIds.pinned_note_id, origin, viewerId ?? -1)
-      const pinnedReply = pinnedIds.pinned_reply_id === null ? null
+      const pinnedReply = pinnedIds.pinned_reply_id === null
+        ? null
         : apiPost(database, pinnedIds.pinned_reply_id, origin, viewerId ?? -1)
       const normalized = found.handle.toLowerCase()
       const value = {
@@ -1286,8 +1297,7 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
           replies_count: found.replies_count, follower_count: found.follower_count,
           following_user_count: found.following_user_count, following_tag_count: found.following_tag_count,
           following_count: found.following_user_count, pinned_note: pinnedNote, pinned_reply: pinnedReply,
-          ...viewerState, ...(blockCounts || {}),
-          url: `${origin}/u/${encodeURIComponent(normalized)}`,
+          ...viewerState, ...(blockCounts || {}), url: `${origin}/u/${encodeURIComponent(normalized)}`,
           api_url: `${origin}/api/v1/users/${encodeURIComponent(normalized)}` },
       }
       return { status: 'ready', value, private: !!blockCounts } as DatabaseDomainOutput<K>
@@ -1441,20 +1451,26 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
     case 'api.tagRelationshipMutation': {
       const { userId, tag, action } = input as DatabaseDomainInput<'api.tagRelationshipMutation'>
       let changed = false
-      if (action === 'follow') changed = database.query(
-        'INSERT OR IGNORE INTO hashtag_follows(user_id,tag,created_at) VALUES(?,?,CURRENT_TIMESTAMP)',
-      ).run(userId, tag).changes > 0
-      else if (action === 'unfollow') changed = database.query(
-        'DELETE FROM hashtag_follows WHERE user_id=? AND tag=?',
-      ).run(userId, tag).changes > 0
-      else if (action === 'block') changed = database.transaction(() => {
-        const inserted = database.query('INSERT OR IGNORE INTO blocked_hashtags(user_id,tag) VALUES(?,?)')
-          .run(userId, tag).changes > 0
-        database.query('DELETE FROM hashtag_follows WHERE user_id=? AND tag=?').run(userId, tag)
-        return inserted
-      })()
-      else changed = database.query('DELETE FROM blocked_hashtags WHERE user_id=? AND tag=?')
-        .run(userId, tag).changes > 0
+      if (action === 'follow') {
+        changed = database.query(
+          'INSERT OR IGNORE INTO hashtag_follows(user_id,tag,created_at) VALUES(?,?,CURRENT_TIMESTAMP)',
+        ).run(userId, tag).changes > 0
+      }
+      else if (action === 'unfollow') {
+        changed = database.query(
+          'DELETE FROM hashtag_follows WHERE user_id=? AND tag=?',
+        ).run(userId, tag).changes > 0
+      }
+      else if (action === 'block') {
+        changed = database.transaction(() => {
+          const inserted = database.query('INSERT OR IGNORE INTO blocked_hashtags(user_id,tag) VALUES(?,?)')
+            .run(userId, tag).changes > 0
+          database.query('DELETE FROM hashtag_follows WHERE user_id=? AND tag=?').run(userId, tag)
+          return inserted
+        })()
+      }
+      else {changed = database.query('DELETE FROM blocked_hashtags WHERE user_id=? AND tag=?')
+          .run(userId, tag).changes > 0}
       if (changed && (action === 'follow' || action === 'unfollow')) {
         cacheDb.query(`DELETE FROM materialized_feed_pages_v2 WHERE viewer_id=?
           AND kind IN ('latest','hot','for-you','to-me')`).run(userId)
@@ -1463,10 +1479,12 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
     }
     case 'api.explore': {
       const request = input as DatabaseDomainInput<'api.explore'>
-      const people = attachPeopleStats(database, suggestedPeople(database, request.viewerId,
-        request.peopleLimit + 1, undefined, request.peopleOffset), request.viewerId)
-      const tags = attachTagStats(database, trendingTags(database, request.viewerId,
-        request.tagsLimit + 1, undefined, request.tagsOffset), request.viewerId)
+      const people = attachPeopleStats(database,
+        suggestedPeople(database, request.viewerId, request.peopleLimit + 1, undefined, request.peopleOffset),
+        request.viewerId)
+      const tags = attachTagStats(database,
+        trendingTags(database, request.viewerId, request.tagsLimit + 1, undefined, request.tagsOffset),
+        request.viewerId)
       const person = (value: import('./types').PersonView) => ({ handle: value.handle.toLowerCase(), bio: value.bio,
         post_count: value.posts, following: !!value.following, follows_viewer: !!value.followsViewer,
         url: `${request.origin}/u/${encodeURIComponent(value.handle.toLowerCase())}`,
@@ -1476,9 +1494,8 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
         url: `${request.origin}/tag/${encodeURIComponent(value.tag)}`,
         api_url: `${request.origin}/api/v1/tags/${encodeURIComponent(value.tag)}` })
       return { people: people.slice(0, request.peopleLimit).map(person),
-        tags: tags.slice(0, request.tagsLimit).map(tag),
-        people_has_more: people.length > request.peopleLimit, tags_has_more: tags.length > request.tagsLimit } as
-        DatabaseDomainOutput<K>
+        tags: tags.slice(0, request.tagsLimit).map(tag), people_has_more: people.length > request.peopleLimit,
+        tags_has_more: tags.length > request.tagsLimit } as DatabaseDomainOutput<K>
     }
     case 'api.publishDraft': {
       const request = input as DatabaseDomainInput<'api.publishDraft'>
@@ -1500,8 +1517,9 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
         }
         return value
       })()
-      if ('retryAfter' in created) return { status: 'rate_limited', retryAfter: created.retryAfter } as
-        DatabaseDomainOutput<K>
+      if ('retryAfter' in created) {
+        return { status: 'rate_limited', retryAfter: created.retryAfter } as DatabaseDomainOutput<K>
+      }
       cacheDb.query(`DELETE FROM materialized_feed_pages_v2 WHERE viewer_id=?
         AND kind IN ('latest','hot','for-you','to-me')`).run(request.userId)
       return { status: 'ready', id: created.id, duplicate: created.duplicate,
@@ -1595,9 +1613,10 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
       database.transaction(() => {
         if (mode === 'replace') database.query('DELETE FROM post_link_previews WHERE post_id=?').run(postId)
         const supportsLinkedPost = database.query(
-          "SELECT 1 FROM pragma_table_info('post_link_previews') WHERE name='linked_post_id'",
+          'SELECT 1 FROM pragma_table_info(\'post_link_previews\') WHERE name=\'linked_post_id\'',
         ).get()
-        const insert = supportsLinkedPost ? database.query(`INSERT INTO post_link_previews
+        const insert = supportsLinkedPost
+          ? database.query(`INSERT INTO post_link_previews
           (post_id,url,image_url,title,description,site_name,image_width,image_height,mime_type,linked_post_id)
           VALUES(?,?,?,?,?,?,?,?,?,?)
           ON CONFLICT(post_id,url) DO UPDATE SET image_url=excluded.image_url,title=excluded.title,
@@ -1611,7 +1630,8 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
         for (const preview of previews) {
           insert.run(postId, preview.url, preview.imageKey || preview.imageUrl, preview.title || null,
             preview.description || null, preview.siteName || null, preview.imageWidth || null,
-            preview.imageHeight || null, preview.mimeType || null, ...(supportsLinkedPost ? [preview.linkedPostId || null] : []))
+            preview.imageHeight || null, preview.mimeType || null,
+            ...(supportsLinkedPost ? [preview.linkedPostId || null] : []))
         }
       })()
       const retained = mode === 'save'
@@ -1942,8 +1962,8 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
           OR (ps.notify_mentions=1 AND ps.user_id!=? AND EXISTS(SELECT 1 FROM post_mentions pm
             WHERE pm.post_id=? AND pm.user_id=ps.user_id)))
         ORDER BY ps.endpoint,isReply DESC,isMention DESC,ps.user_id`)
-        .all(actorId, postId, actorId, postId, actorId, actorId, postId, actorId, actorId, actorId, postId,
-          postId, postId, actorId, postId, actorId, postId)
+        .all(actorId, postId, actorId, postId, actorId, actorId, postId, actorId, actorId, actorId, postId, postId,
+          postId, actorId, postId, actorId, postId)
       return { post: row, subscriptions } as DatabaseDomainOutput<K>
     }
     case 'push.followDelivery': {
@@ -2079,14 +2099,12 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
         cacheDb.query(`DELETE FROM materialized_feed_pages_v2 WHERE viewer_id=?
           AND kind IN ('latest','hot','for-you','to-me')`).run(viewerId)
       }
-      const result = { posts, page: snapshot.page,
-        totalItems: snapshot.totalItems, totalPages: snapshot.totalPages,
+      const result = { posts, page: snapshot.page, totalItems: snapshot.totalItems, totalPages: snapshot.totalPages,
         forYouCount: viewerId >= 0 ? unreadForYouCount(viewerId, database) : 0,
         toMeCount: viewerId >= 0 ? unreadToMeCount(viewerId, database) : 0,
         forYouUnread: viewerId >= 0 && hasUnreadForYou(viewerId, database),
         toMeUnread: viewerId >= 0 && hasUnreadToMe(viewerId, database), latestUnread: remainingUnread.length > 0,
-        latestCount: unread.length,
-        unreadPostIds, directedUnreadPostIds, unreadHref: href(remainingUnread[0]),
+        latestCount: unread.length, unreadPostIds, directedUnreadPostIds, unreadHref: href(remainingUnread[0]),
         lastUnreadHref: href(remainingUnread.length > 1 ? remainingUnread.at(-1) : undefined) }
       return result as DatabaseDomainOutput<K>
     }
@@ -2126,8 +2144,9 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
     case 'feeds.hotPage': {
       const { viewerId, page, pageSize } = input as DatabaseDomainInput<'feeds.hotPage'>
       const snapshot = feedSnapshotPage<HotPost[]>(database, `hot:${hotRankingVersion}:conversations`, viewerId, page,
-        () => groupPostsByConversation(database,
-          getHotPosts(database, 1_000_000, null, new Date(), viewerId, false, 2)), pageSize, cacheDb)
+        () =>
+          groupPostsByConversation(database, getHotPosts(database, 1_000_000, null, new Date(), viewerId, false, 2)),
+        pageSize, cacheDb)
       return { posts: enrichPosts(database, snapshot.items.flat(), viewerId), page: snapshot.page,
         totalItems: snapshot.totalItems, totalPages: snapshot.totalPages,
         forYouCount: viewerId >= 0 ? unreadForYouCount(viewerId, database) : 0,
@@ -2158,8 +2177,9 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
           FROM feed_snapshot_items item,json_each(item.payload) entry
           WHERE item.snapshot_id=? AND item.position<? ORDER BY item.position,entry.key`)
           .all(snapshot.id, pageSize) as Array<{ event_key: string; targeted_to_viewer: number }>
-        markForYouEntriesRead(userId, rows.map(row => row.event_key), toMe, database,
-          rows.filter(row => toMe || !row.targeted_to_viewer).map(row => row.event_key))
+        markForYouEntriesRead(userId, rows.map(row => row.event_key), toMe, database, rows.filter(row =>
+          toMe || !row.targeted_to_viewer
+        ).map(row => row.event_key))
         cacheDb.query(`DELETE FROM materialized_feed_pages_v2 WHERE viewer_id=?
           AND kind IN ('latest','hot','to-me')`).run(userId)
       }
@@ -2184,7 +2204,7 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
             userAgent),
         appearanceHandled: !!userAgent
           && exists('SELECT 1 FROM appearance_user_agents WHERE user_id=? AND user_agent=? LIMIT 1', userId, userAgent),
-        bioMissing: exists("SELECT 1 FROM users WHERE id=? AND trim(coalesce(bio,''))='' LIMIT 1", userId),
+        bioMissing: exists('SELECT 1 FROM users WHERE id=? AND trim(coalesce(bio,\'\'))=\'\' LIMIT 1', userId),
         bioHandled: exists('SELECT 1 FROM bio_banner_dismissals WHERE user_id=? LIMIT 1', userId),
         donationDismissed: exists('SELECT 1 FROM donation_banner_dismissals WHERE user_id=? LIMIT 1', userId),
       }
@@ -2254,7 +2274,8 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
         html: string
       } | null
       if (cached && viewerId >= 0
-        && materializedForYouCount(cached.html) !== unreadForYouCount(viewerId, database)) {
+        && materializedForYouCount(cached.html) !== unreadForYouCount(viewerId, database))
+      {
         cacheDb.query(`DELETE FROM materialized_feed_pages_v2
           WHERE kind=? AND viewer_id=? AND variant=? AND generation=?`).run(kind, viewerId, variant, generation)
         return { html: null, generation } as DatabaseDomainOutput<K>
@@ -2333,7 +2354,7 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
         && ids.indexOf(id) === index
       ).slice(0, 8)
       const people = savedIds?.length
-        ? preserveSuggestedPeopleOrder((database.query(
+        ? preserveSuggestedPeopleOrder(database.query(
           `SELECT u.*, (SELECT count(*) FROM posts p WHERE p.user_id=u.id AND p.deleted_at IS NULL) posts,
             EXISTS(SELECT 1 FROM follows f WHERE f.follower_id=? AND f.following_id=u.id) following,
             EXISTS(SELECT 1 FROM follows rf WHERE rf.follower_id=u.id AND rf.following_id=?) followsViewer
@@ -2341,15 +2362,16 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
             AND u.handle_chosen_at IS NOT NULL
             AND (? < 0 OR NOT EXISTS (SELECT 1 FROM blocks b WHERE
               (b.blocker_id=? AND b.blocked_id=u.id) OR (b.blocker_id=u.id AND b.blocked_id=?)))`,
-        ).all(viewerId, viewerId, ...savedIds, viewerId, viewerId, viewerId) as import('./types').PersonView[]), savedIds)
+        ).all(viewerId, viewerId, ...savedIds, viewerId, viewerId, viewerId) as import('./types').PersonView[],
+          savedIds)
         : suggestedPeople(database, viewerId, 8, undefined, (peoplePage - 1) * 8)
       const stats = visibleUserProfileStats(database, people.map(person => person.id), viewerId)
       const profileStats = Object.fromEntries(stats) as import('./types').ExploreData['profileStats']
       const result = {
         people: attachPeopleStats(database, people, viewerId),
         tags: attachTagStats(database,
-          trendingTags(database, viewerId, EXPLORE_TAG_PAGE_SIZE, undefined,
-            (tagsPage - 1) * EXPLORE_TAG_PAGE_SIZE), viewerId),
+          trendingTags(database, viewerId, EXPLORE_TAG_PAGE_SIZE, undefined, (tagsPage - 1) * EXPLORE_TAG_PAGE_SIZE),
+          viewerId),
         peopleTotal: suggestedPeopleCount(database, viewerId),
         tagsTotal: trendingTagCount(database, viewerId),
         profileStats,

@@ -10,9 +10,11 @@ afterEach(() => {
 
 describe('Google post translation', () => {
   test('sends eligible text as plain text and decodes the translated response', async () => {
-    const fetchMock = mock((_input: string | URL | Request, _init?: RequestInit) => Promise.resolve(new Response(JSON.stringify({
-      data: { translations: [{ translatedText: 'Hello &amp; welcome' }] },
-    }), { status: 200 })))
+    const fetchMock = mock((_input: string | URL | Request, _init?: RequestInit) =>
+      Promise.resolve(new Response(JSON.stringify({
+        data: { translations: [{ translatedText: 'Hello &amp; welcome' }] },
+      }), { status: 200 }))
+    )
     globalThis.fetch = fetchMock as unknown as typeof fetch
 
     await expect(translateToEnglish('Γεια σου', 'secret key')).resolves.toBe('Hello & welcome')
@@ -24,7 +26,8 @@ describe('Google post translation', () => {
 
   test('does not call Google for notes that did not previously show translate', async () => {
     const fetchMock = mock((_input: string | URL | Request, _init?: RequestInit) =>
-      Promise.reject(new Error('should not fetch')))
+      Promise.reject(new Error('should not fetch'))
+    )
     globalThis.fetch = fetchMock as unknown as typeof fetch
     await expect(postTranslation('An English note 🎉')).resolves.toBeNull()
     expect(fetchMock).not.toHaveBeenCalled()
@@ -41,8 +44,13 @@ describe('Google post translation', () => {
         (5,'Удаленная заметка',NULL,CURRENT_TIMESTAMP);`)
     const events: string[] = []
     const count = await backfillPostTranslations(database, {
-      translate: async body => { events.push(`translate:${body}`); return `English ${body}` },
-      wait: async milliseconds => { events.push(`wait:${milliseconds}`) },
+      translate: async body => {
+        events.push(`translate:${body}`)
+        return `English ${body}`
+      },
+      wait: async milliseconds => {
+        events.push(`wait:${milliseconds}`)
+      },
     })
 
     expect(count).toBe(2)

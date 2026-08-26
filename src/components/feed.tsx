@@ -1,5 +1,5 @@
-import type { PersonalizedFeedData, PersonalizedTimelineRow, User } from '../types'
 import { activityAnchor } from '../activity-anchor'
+import type { PersonalizedFeedData, PersonalizedTimelineRow, User } from '../types'
 import { displayBio, linkify } from '../utils'
 import { Layout } from './layout'
 import { MetaRow } from './meta'
@@ -43,17 +43,18 @@ export function groupSimilarActivities(timeline: PersonalizedTimelineRow[]): Tim
   return groups
 }
 
-export function Feed({ user, data, title, path = '/for-you', pageUrl, notificationBanner = false, toMe = false,
-  expandedRootId }: {
-  user: User
-  data: PersonalizedFeedData
-  title?: string
-  path?: string
-  pageUrl?: string
-  notificationBanner?: false | 'notifications' | 'appearance' | 'invite' | 'bio' | 'notification-update' | 'donate'
-  toMe?: boolean
-  expandedRootId?: number
-}) {
+export function Feed(
+  { user, data, title, path = '/for-you', pageUrl, notificationBanner = false, toMe = false, expandedRootId }: {
+    user: User
+    data: PersonalizedFeedData
+    title?: string
+    path?: string
+    pageUrl?: string
+    notificationBanner?: false | 'notifications' | 'appearance' | 'invite' | 'bio' | 'notification-update' | 'donate'
+    toMe?: boolean
+    expandedRootId?: number
+  },
+) {
   const feedPath = path
   const returnPath = feedPath + (data.page > 1 ? `?page=${data.page}` : '')
   const hasUnread = toMe ? data.toMeUnread : data.forYouUnread
@@ -84,13 +85,16 @@ export function Feed({ user, data, title, path = '/for-you', pageUrl, notificati
   const timelinePostPositions = new Map(displayTimeline.map((row, index) => [row.id, index]))
   const visibleTimeline = displayTimeline.filter((row, index) => {
     if (!['post', 'reply', 'mention'].includes(row.activity_kind)) return true
-    return displayTimeline.findIndex(candidate => ['post', 'reply', 'mention'].includes(candidate.activity_kind)
-      && conversationRootId(candidate) === conversationRootId(row)) === index
+    return displayTimeline.findIndex(candidate =>
+      ['post', 'reply', 'mention'].includes(candidate.activity_kind)
+      && conversationRootId(candidate) === conversationRootId(row)
+    ) === index
   })
     .sort((a, b) => {
-      const position = (row: PersonalizedTimelineRow) => ['post', 'reply', 'mention'].includes(row.activity_kind)
-        ? Math.min(...threadPosts(row).map(post => timelinePostPositions.get(post.id)!))
-        : timelinePositions.get(row.event_key)!
+      const position = (row: PersonalizedTimelineRow) =>
+        ['post', 'reply', 'mention'].includes(row.activity_kind)
+          ? Math.min(...threadPosts(row).map(post => timelinePostPositions.get(post.id)!))
+          : timelinePositions.get(row.event_key)!
       return position(a) - position(b)
     })
   const renderTimelineRow = (row: PersonalizedTimelineRow) => {
@@ -103,10 +107,9 @@ export function Feed({ user, data, title, path = '/for-you', pageUrl, notificati
           className={`for-you-item for-you-author-${row.actor_id}`}
           key={row.event_key}
         >
-          <FeedThreads posts={threadPosts(row)} user={user} returnPath={returnPath}
-              promoteAncestors={!toMe}
-              expandedRootId={expandedRootId}
-              contextUnreadPostIds={unreadPostIds} contextDirectedUnreadPostIds={directedUnreadPostIds} />
+          <FeedThreads posts={threadPosts(row)} user={user} returnPath={returnPath} promoteAncestors={!toMe}
+            expandedRootId={expandedRootId} contextUnreadPostIds={unreadPostIds}
+            contextDirectedUnreadPostIds={directedUnreadPostIds} />
         </div>
       )
       : (
@@ -143,29 +146,32 @@ export function Feed({ user, data, title, path = '/for-you', pageUrl, notificati
               {!row.target_is_viewer && (row.activity_kind === 'user_follow' || row.activity_kind === 'tag_follow')
                 && <span className="activity-follow-full-stop">.</span>}
             </MetaRow>
-            {(row.activity_kind === 'user_follow' || row.activity_kind === 'signup') && row.target_bio?.trim() && (() => {
-              const references = row.activity_kind === 'signup' || row.target_is_viewer
-                ? row.actorBioReferences
-                : row.targetBioReferences
-              const prefix = `activity-${anchor}-bio`
-              return <>
-                <p className="profile-bio" dangerouslySetInnerHTML={{
-                  __html: linkify(displayBio(row.target_bio), references?.mentionBios, [], undefined, undefined,
-                    fromQuery, references?.hashtagCounts, references?.mentionNoteCounts, {
-                      signedIn: true,
-                      currentHandle: user.handle,
-                      formPrefix: prefix,
-                      mentionFollowing: references?.mentionFollowing,
-                      mentionFollowsViewer: references?.mentionFollowsViewer,
-                      mentionProfileStats: references?.mentionProfileStats,
-                      hashtagFollowing: references?.hashtagFollowing,
-                      hashtagFollowerCounts: references?.hashtagFollowerCounts,
-                      linkPreviews: references?.linkPreviews,
-                    }),
-                }} />
-                <BioReferenceForms data={references} prefix={prefix} user={user} />
-              </>
-            })()}
+            {(row.activity_kind === 'user_follow' || row.activity_kind === 'signup') && row.target_bio?.trim()
+              && (() => {
+                const references = row.activity_kind === 'signup' || row.target_is_viewer
+                  ? row.actorBioReferences
+                  : row.targetBioReferences
+                const prefix = `activity-${anchor}-bio`
+                return (
+                  <>
+                    <p className="profile-bio" dangerouslySetInnerHTML={{
+                      __html: linkify(displayBio(row.target_bio), references?.mentionBios, [], undefined, undefined,
+                        fromQuery, references?.hashtagCounts, references?.mentionNoteCounts, {
+                        signedIn: true,
+                        currentHandle: user.handle,
+                        formPrefix: prefix,
+                        mentionFollowing: references?.mentionFollowing,
+                        mentionFollowsViewer: references?.mentionFollowsViewer,
+                        mentionProfileStats: references?.mentionProfileStats,
+                        hashtagFollowing: references?.hashtagFollowing,
+                        hashtagFollowerCounts: references?.hashtagFollowerCounts,
+                        linkPreviews: references?.linkPreviews,
+                      }),
+                    }} />
+                    <BioReferenceForms data={references} prefix={prefix} user={user} />
+                  </>
+                )
+              })()}
           </div>
           {row.actor_id !== user.id && row.activity_kind !== 'signup' && (
             <form method="post" action={row.target_is_viewer
@@ -195,35 +201,33 @@ export function Feed({ user, data, title, path = '/for-you', pageUrl, notificati
   return (
     <Layout user={user} title={title} pageUrl={pageUrl} notificationBanner={notificationBanner} mobileWriteAction>
       <h1 className="visually-hidden">Your feed</h1>
-      <FeedTabs active="following" user={user}
-        forYouReadStatus={data.timeline.length
-          ? hasUnread && unreadPage !== null && unreadPage > data.page
-          : undefined}
-        toMe={toMe} toMeCount={data.toMeCount} forYouCount={data.forYouCount} unreadHref={data.unreadHref}
+      <FeedTabs active="following" user={user} forYouReadStatus={data.timeline.length
+        ? hasUnread && unreadPage !== null && unreadPage > data.page
+        : undefined} toMe={toMe} toMeCount={data.toMeCount} forYouCount={data.forYouCount} unreadHref={data.unreadHref}
         lastUnreadHref={data.lastUnreadHref} forYouUnread={data.forYouUnread} toMeUnread={data.toMeUnread}
         latestCount={data.latestCount} />
       {showTopPagination && <Pagination page={data.page} totalPages={data.totalPages} path={feedPath} top />}
       {displayTimeline.length
         ? groupSimilarActivities(visibleTimeline).map((group, groupIndex) =>
-            group.rows.length > 1 && group.collapsible
-              ? (
-                <div className="activity-group" key={group.rows[0].event_key}>
-                  {renderTimelineRow(group.rows[0])}
-                  <div className="activity-more">
-                    <input className="activity-more-input" type="checkbox" id={`activity-more-${groupIndex}`} />
-                    <label className="activity-more-summary" htmlFor={`activity-more-${groupIndex}`}>
-                      and {group.rows.length - 1} more
-                    </label>
-                    <div className="activity-more-content">
-                      <div className="activity-more-content-inner">
-                        {group.rows.slice(1).map(renderTimelineRow)}
-                      </div>
+          group.rows.length > 1 && group.collapsible
+            ? (
+              <div className="activity-group" key={group.rows[0].event_key}>
+                {renderTimelineRow(group.rows[0])}
+                <div className="activity-more">
+                  <input className="activity-more-input" type="checkbox" id={`activity-more-${groupIndex}`} />
+                  <label className="activity-more-summary" htmlFor={`activity-more-${groupIndex}`}>
+                    and {group.rows.length - 1} more
+                  </label>
+                  <div className="activity-more-content">
+                    <div className="activity-more-content-inner">
+                      {group.rows.slice(1).map(renderTimelineRow)}
                     </div>
                   </div>
                 </div>
-              )
-              : renderTimelineRow(group.rows[0])
-          )
+              </div>
+            )
+            : renderTimelineRow(group.rows[0])
+        )
         : data.page === 1
         ? (
           <div className="empty empty-actions">

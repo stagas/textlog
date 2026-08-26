@@ -29,9 +29,15 @@ const labels: [keyof DashboardStats, string][] = [
 
 export function StatsGrid({ stats, publicOnly = false }: { stats: DashboardStats; publicOnly?: boolean }) {
   const visibleLabels = publicOnly
-    ? labels.filter(([key]) => ![
-      'suspendedUsers', 'usersOnline', 'anonymousOnline', 'redditVisitors', 'redditNewUsers',
-    ].includes(key))
+    ? labels.filter(([key]) =>
+      ![
+        'suspendedUsers',
+        'usersOnline',
+        'anonymousOnline',
+        'redditVisitors',
+        'redditNewUsers',
+      ].includes(key)
+    )
     : labels
   const conversionRateYesterday = stats.visitorsYesterday === 0
     ? 0
