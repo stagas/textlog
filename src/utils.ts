@@ -133,16 +133,16 @@ export const bearerToken = (req: Request) => req.headers.get('authorization')?.m
 function userForSession(token: string | null, database: Database): User | null {
   const tokenHash = sessionHash(token)
   if (!tokenHash) return null
-  const user = database.query(`SELECT u.id,u.handle,u.email,u.bio,u.suspended_at,u.email_verified_at,u.handle_chosen_at,
-      u.hide_people_follow_activity,u.hide_hashtag_follow_activity
+  const user = database.query(`SELECT u.id,u.handle,u.email,u.bio,u.suspended_at,u.email_verified_at,u.handle_chosen_at
     FROM sessions s JOIN users u ON u.id=s.user_id
     WHERE s.token_hash=? AND s.expires_at>? AND u.deleted_at IS NULL AND u.suspended_at IS NULL`)
     .get(tokenHash, Date.now()) as User | null
   if (user) {
     try {
-      user.show_link_previews = (database.query('SELECT show_link_previews FROM users WHERE id=?').get(user.id) as {
-        show_link_previews: number
-      } | null)?.show_link_previews
+      const preferences = database.query(`SELECT show_link_previews,hide_people_follow_activity,
+          hide_hashtag_follow_activity FROM users WHERE id=?`).get(user.id) as Pick<User,
+            'show_link_previews' | 'hide_people_follow_activity' | 'hide_hashtag_follow_activity'> | null
+      if (preferences) Object.assign(user, preferences)
     }
     catch {}
   }

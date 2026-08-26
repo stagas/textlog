@@ -917,6 +917,14 @@ export function FeedThreads(
         parent_id: immediateParent.parent_id ?? null, reply_count: immediateParent.reply_count || 0,
         feed_ancestor_gap: immediateParent.parent_id != null })
       ids.add(immediateParent.id)
+      let rootAncestor = immediateParent
+      while (rootAncestor.parent) rootAncestor = rootAncestor.parent
+      if (contextUnreadPostIds?.has(post.id)
+        && rootAncestor.id !== immediateParent.id && !ids.has(rootAncestor.id)) {
+        treePosts.push({ ...rootAncestor, user_id: rootAncestor.user_id ?? -1,
+          parent_id: rootAncestor.parent_id ?? null, reply_count: rootAncestor.reply_count || 0 })
+        ids.add(rootAncestor.id)
+      }
     }
     for (let index = 0; index < treePosts.length; index++) {
       const post = treePosts[index]
@@ -924,6 +932,7 @@ export function FeedThreads(
       let ancestor = post.parent
       while (ancestor && !ids.has(ancestor.id)) ancestor = ancestor.parent
       treePosts[index] = { ...post, parent_id: ancestor?.id ?? null,
+        ...(contextUnreadPostIds?.has(post.id) ? { parent: ancestor } : {}),
         feed_ancestor_gap: post.feed_ancestor_gap || !!ancestor }
     }
   } else {

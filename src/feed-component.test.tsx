@@ -167,20 +167,20 @@ test('latest gives unread dots to a reply and its promoted off-page parent', () 
   expect(html).not.toContain('class="parent-quote"')
 })
 
-test('latest omits the view toggle while hot retains it', () => {
+test('latest and hot omit the view toggle', () => {
   const feed = { posts: [], page: 1, totalItems: 0, totalPages: 1, toMeCount: 2 }
   const user = { id: 1, handle: 'reader', email: 'reader@example.com', bio: '' }
   expect(renderToStaticMarkup(<PublicFeed user={user} feed={feed} path="/latest" />)).not.toContain('>flat</a>')
-  expect(renderToStaticMarkup(<HotFeed user={user} feed={feed} />)).toContain('>flat</a>')
+  expect(renderToStaticMarkup(<HotFeed user={user} feed={feed} />)).not.toContain('>flat</a>')
 })
 
-test('anonymous public feed view toggles return to the feed tabs', () => {
+test('anonymous public feeds omit view toggles', () => {
   const feed = { posts: [], page: 2, totalItems: 2, totalPages: 2 }
   const latest = renderToStaticMarkup(<PublicFeed feed={feed} path="/latest" />)
   const hot = renderToStaticMarkup(<HotFeed user={null} feed={feed} />)
 
   expect(latest).not.toContain('>flat</a>')
-  expect(hot).toContain('href="/hot?view=flat&amp;page=2#feed-tabs">flat</a>')
+  expect(hot).not.toContain('>flat</a>')
 })
 
 test('feed tree roots retain ASCII-art rendering', () => {
