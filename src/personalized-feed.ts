@@ -6,11 +6,12 @@ import { hasUnreadForYou, hasUnreadToMe, markForYouEntriesRead, unreadForYouCoun
   unreadToMeCount } from './for-you-state'
 import { resolveHandle } from './handles'
 import { unreadLatestCount } from './latest-state'
+import { recentConversationReplies } from './latest-conversation'
 import { enrichPosts, loadBioReferenceData, visibleTagFollowerCounts, visibleUserProfileStats } from './posts'
 import type { PersonalizedFeedData, PersonalizedTimelineRow, User } from './types'
 import { isWhisperThread, whisperThreadRelevantToViewer, whisperThreadTargetsViewer } from './whisper'
 
-export const PERSONALIZED_FEED_SNAPSHOT_VERSION = 23
+export const PERSONALIZED_FEED_SNAPSHOT_VERSION = 24
 
 const descendsFromViewer = `EXISTS (WITH RECURSIVE ancestors(id,user_id,parent_id) AS (
   SELECT ancestor.id,ancestor.user_id,ancestor.parent_id FROM posts ancestor WHERE ancestor.id=p.parent_id
@@ -205,7 +206,7 @@ export function loadPersonalizedFeed(database: Database, user: User, page: numbe
       const keepsRoot = rootRow?.parent_id === null
         && (conversation[0]?.id === rootRow.id || replies[0]?.parent_id === rootRow.id)
       const threadRows = keepsRoot ? [rootRow!] : []
-      threadRows.push(...(toMe ? replies : replies.slice(0, 2)))
+      threadRows.push(...(toMe ? replies : recentConversationReplies(conversation)))
       if (threadRows.length) {
         result.push({ rows: threadRows, created_at: threadActivity.get(root!) || row.created_at, order: row.event_key })
       }

@@ -97,6 +97,28 @@ test('personalized pages count conversations rather than their embedded replies'
   expect(secondPage.timeline.map(row => row.id)).toEqual([3, 2])
 })
 
+test('For You includes a recent reply burst while leaving older replies out of the page', () => {
+  const database = new Database(':memory:', { strict: true })
+  runMigrations(database)
+  database.run(`INSERT INTO users(id,handle,email,password,bio) VALUES
+      (1,'viewer','viewer@example.com','!',''),
+      (2,'followed','followed@example.com','!',''),
+      (3,'replier','replier@example.com','!','');
+    INSERT INTO follows(follower_id,following_id,created_at) VALUES(1,2,'2026-08-01 08:00:00');
+    INSERT INTO posts(id,user_id,parent_id,body,created_at) VALUES
+      (895,2,NULL,'root','2026-08-11 09:41:26'),
+      (922,3,895,'old reply','2026-08-11 14:41:06'),
+      (2599,3,895,'recent one','2026-08-26 22:03:54'),
+      (2600,3,895,'recent two','2026-08-26 22:07:23'),
+      (2602,3,895,'recent three','2026-08-26 22:10:21'),
+      (2607,3,895,'recent four','2026-08-26 23:28:22');`)
+  const viewer: User = { id: 1, handle: 'viewer', email: 'viewer@example.com', bio: '' }
+
+  const feed = loadPersonalizedFeed(database, viewer, 1, 20, false, '/for-you', false)
+
+  expect(feed.timeline.filter(row => row.id).map(row => row.id)).toEqual([895, 2607, 2602, 2600, 2599])
+})
+
 test('For You follow activity can be hidden independently for people and hashtags', () => {
   const database = new Database(':memory:', { strict: true })
   runMigrations(database)
