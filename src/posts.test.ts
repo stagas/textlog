@@ -326,6 +326,16 @@ describe('post persistence', () => {
     expect(html).not.toContain('No bio yet.')
   })
 
+  test('renders a muted empty bio without a divider in the current user hover popover', () => {
+    const html = linkify('@Reader', { reader: '' }, [], undefined, undefined, '', {}, { reader: 2 }, {
+      signedIn: true,
+      currentHandle: 'reader',
+      formPrefix: 'post-1',
+    })
+    expect(html).toContain('<span class="reference-popover-bio reference-popover-bio-own bio-empty">No bio yet</span>')
+    expect(html).not.toContain('reference-popover-actions')
+  })
+
   test('keeps handles flat while allowing tag and link popovers inside a bio popover', () => {
     const url = 'https://example.com/about'
     const html = linkify(`Talks with @friend about #Topic at ${url}`, { friend: 'Nested bio' }, [], undefined,

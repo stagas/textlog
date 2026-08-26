@@ -493,10 +493,11 @@ function renderedReference(token: string, mentionBios: Record<string, string>,
     : '<a class="button" href="/enter" rel="nofollow">enter to follow</a>'
   return `<span class="reference-menu"><a class="reference-menu-trigger" href="${href}">${label}</a>`
     + `<span class="reference-menu-popover${isUser ? '' : ' reference-menu-popover-tag'}">`
-    + (isUser && mentionBios[key]?.trim()
-      ? `<span class="reference-popover-bio">${
-        linkify(displayBio(mentionBios[key]), {}, [], Bun.env.APP_URL, undefined, navigationQuery)
-      }</span>`
+    + (isUser && (mentionBios[key]?.trim() || ownUser)
+      ? `<span class="reference-popover-bio${ownUser ? ' reference-popover-bio-own' : ''}${
+        mentionBios[key]?.trim() ? '' : ' bio-empty'}">${mentionBios[key]?.trim()
+          ? linkify(displayBio(mentionBios[key]), {}, [], Bun.env.APP_URL, undefined, navigationQuery)
+          : 'No bio yet'}</span>`
       : '')
     + `${action}</span></span>`
 }

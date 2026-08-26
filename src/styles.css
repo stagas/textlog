@@ -720,6 +720,12 @@ header>nav>a:not(.button),
   tab-size: 4;
 }
 
+.reference-popover-bio-own {
+  margin-bottom: 0;
+  padding-bottom: 0;
+  border-bottom: 0;
+}
+
 .reference-menu-popover > .reference-popover-bio:first-child,
 .reference-menu-popover > .reference-popover-actions:first-child:not(:has(.follows-you)),
 .reference-menu-popover > .button:first-child {

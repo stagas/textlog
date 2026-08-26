@@ -2791,12 +2791,13 @@ test('stored post translations render in the note', () => {
       translation: 'Spanish information: #action from @reader at example.com', handle: 'writer',
       mention_bios: { reader: '' },
       created_at: '2026-08-03 12:00:00', deleted_at: null },
+    highlightTerms: ['information'],
     reportHref: '/post/2?report=1',
   }))
 
   const translation = html.slice(html.indexOf('<div class="post-body post-translation">'),
     html.indexOf('<div class="postfoot">'))
-  expect(translation).toContain('<div class="post-quote">Spanish information: ')
+  expect(translation).toContain('<div class="post-quote">Spanish <mark>information</mark>: ')
   expect(translation).toContain('href="/tag/action?from=')
   expect(translation).toContain('href="/u/reader?from=')
   expect(translation).toContain('href="https://example.com" class="raw-link"')

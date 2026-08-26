@@ -2070,6 +2070,34 @@ export const migrations: Migration[] = [
       }
     },
   },
+  {
+    version: 139,
+    name: 'translated_post_full_text_search',
+    up(database) {
+      if (!database.query("SELECT 1 FROM sqlite_master WHERE type='table' AND name='posts'").get()
+        || !columns(database, 'posts').includes('body')) return
+      database.run(`DROP TRIGGER IF EXISTS post_search_insert;
+      DROP TRIGGER IF EXISTS post_search_delete;
+      DROP TRIGGER IF EXISTS post_search_update;
+      DROP TABLE IF EXISTS post_search;
+      CREATE VIRTUAL TABLE post_search USING fts5(
+        body,translation,content='posts',content_rowid='id',tokenize='unicode61'
+      );
+      CREATE TRIGGER post_search_insert AFTER INSERT ON posts BEGIN
+        INSERT INTO post_search(rowid,body,translation) VALUES(new.id,new.body,new.translation);
+      END;
+      CREATE TRIGGER post_search_delete AFTER DELETE ON posts BEGIN
+        INSERT INTO post_search(post_search,rowid,body,translation)
+          VALUES('delete',old.id,old.body,old.translation);
+      END;
+      CREATE TRIGGER post_search_update AFTER UPDATE OF body,translation ON posts BEGIN
+        INSERT INTO post_search(post_search,rowid,body,translation)
+          VALUES('delete',old.id,old.body,old.translation);
+        INSERT INTO post_search(rowid,body,translation) VALUES(new.id,new.body,new.translation);
+      END;
+      INSERT INTO post_search(post_search) VALUES('rebuild');`)
+    },
+  },
 ]
 
 export const latestMigrationVersion = migrations.at(-1)!.version

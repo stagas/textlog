@@ -185,9 +185,12 @@ export function UserReference(
         ? <a className="reference-menu-trigger postauthor" href={href} rel={rel}>{label || <>@{handle}</>}</a>
         : <span className="reference-menu-trigger postauthor" tabIndex={0}>{label || <>@{handle}</>}</span>}
       {showPopover && <span className="reference-menu-popover">
-        {bio?.trim() && <span className="reference-popover-bio" dangerouslySetInnerHTML={{
-          __html: linkify(displayBio(bio), bioMentionBios, [], undefined, undefined, navigationQuery, bioTagCounts,
-            bioMentionNoteCounts, {
+        {(bio?.trim() || ownUser) && <span
+          className={`reference-popover-bio${ownUser ? ' reference-popover-bio-own' : ''}${
+            bio?.trim() ? '' : ' bio-empty'}`}
+          dangerouslySetInnerHTML={{
+          __html: bio?.trim() ? linkify(displayBio(bio), bioMentionBios, [], undefined, undefined, navigationQuery,
+            bioTagCounts, bioMentionNoteCounts, {
             signedIn: !!user,
             currentHandle: user?.handle,
             formPrefix: bioFormPrefix,
@@ -197,7 +200,7 @@ export function UserReference(
             hashtagFollowing: referenceData?.hashtagFollowing,
             hashtagFollowerCounts: bioTagFollowerCounts,
             linkPreviews: referenceData?.linkPreviews,
-          }),
+          }) : 'No bio yet',
         }} />}
         {showFollowAction && !ownUser && (user
           ? (

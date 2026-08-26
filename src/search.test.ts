@@ -33,6 +33,19 @@ describe('post search', () => {
     expect(searchPosts(database, 'telescope').total).toBe(0)
   })
 
+  test('indexes stored translations and keeps them current', () => {
+    const database = testDatabase()
+    database.run("UPDATE posts SET translation='A translated observatory' WHERE id=3")
+    expect(searchPosts(database, 'observatory').rows.map(post => post.id)).toEqual([3])
+    expect(searchPosts(database, 'observatory').rows[0]?.translation).toBe('A translated observatory')
+
+    database.run("UPDATE posts SET translation='A translated greenhouse' WHERE id=3")
+    expect(searchPosts(database, 'observatory').total).toBe(0)
+    expect(searchPosts(database, 'greenhouse').rows.map(post => post.id)).toEqual([3])
+    database.run('UPDATE posts SET translation=NULL WHERE id=3')
+    expect(searchPosts(database, 'greenhouse').total).toBe(0)
+  })
+
   test('applies blocks blocked hashtags and deletion visibility', () => {
     const database = testDatabase()
     database.run(`INSERT INTO blocks(blocker_id,blocked_id) VALUES(1,2);
