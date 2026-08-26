@@ -131,6 +131,19 @@ describe('in-memory stylesheet', () => {
     expect(css).toContain('transition: grid-template-rows 200ms ease, visibility 0s 200ms;')
   })
 
+  test('folded feed threads retain only their deep reply preview', async () => {
+    const css = await Bun.file(new URL('./styles.css', import.meta.url)).text()
+    expect(css).toContain('.feed-thread>.thread-fold-input:checked~.feed-thread-collapsed-branch {\n'
+      + '  grid-template-rows: 1fr;')
+    expect(css).toContain('.post-page-thread.feed-thread:has(> .thread-fold-input:checked)'
+      + ':has(> .feed-thread-collapsed-branch) {\n  margin-bottom: var(--space-5);')
+    expect(css).toContain('.reply-node:not(.collapsed-preview-path) {\n  display: none;')
+    expect(css).toContain('.thread-ancestor-gap:not(.collapsed-preview-gap) {\n  display: none;')
+    expect(css).toContain('.collapsed-preview-post>.post,\n'
+      + '.feed-thread>.thread-fold-input:checked~.feed-thread-collapsed-branch .collapsed-preview-gap {\n'
+      + '  display: block;')
+  })
+
   test('animates grouped activity disclosures with a collapsible grid track', async () => {
     const css = await Bun.file(new URL('./styles.css', import.meta.url)).text()
     expect(css).toContain('.activity-more-content {\n  display: grid;\n  grid-template-rows: 0fr;')

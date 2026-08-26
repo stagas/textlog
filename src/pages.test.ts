@@ -695,6 +695,9 @@ test('feed conversations fold multiple read replies but expand one or any unread
   }))
 
   expect(html).toContain('class="thread-fold-input" type="checkbox" id="feed-thread-fold-1" checked=""')
+  expect(html).toContain('collapsed-preview-post')
+  expect(html).toContain('class="quiet thread-ancestor-gap collapsed-preview-gap" '
+    + 'aria-label="Earlier replies hidden">…</div>')
   expect(html).toContain('href="/post/2?from=%2Flatest%3Fexpand%3D1%23post-2"')
 
   const returned = renderToStaticMarkup(React.createElement(FeedThreads, {

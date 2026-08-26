@@ -5951,6 +5951,43 @@ a.post-context:hover {
   grid-template-rows: 0fr;
 }
 
+.collapsed-preview-gap {
+  display: none;
+}
+
+.feed-thread>.thread-fold-input:checked~.feed-thread-collapsed-branch {
+  grid-template-rows: 1fr;
+  visibility: visible;
+  transition: none;
+}
+
+.post-page-thread.feed-thread:has(> .thread-fold-input:checked):has(> .feed-thread-collapsed-branch) {
+  margin-bottom: var(--space-5);
+}
+
+.feed-thread>.thread-fold-input:checked~.feed-thread-collapsed-branch .reply-node:not(.collapsed-preview-path) {
+  display: none;
+}
+
+.feed-thread>.thread-fold-input:checked~.feed-thread-collapsed-branch .collapsed-preview-path>.post {
+  display: none;
+}
+
+.feed-thread>.thread-fold-input:checked~.feed-thread-collapsed-branch
+  .thread-ancestor-gap:not(.collapsed-preview-gap) {
+  display: none;
+}
+
+.feed-thread>.thread-fold-input:checked~.feed-thread-collapsed-branch .collapsed-preview-path>.reply-branch {
+  margin-left: 0;
+  border-left: 0;
+}
+
+.feed-thread>.thread-fold-input:checked~.feed-thread-collapsed-branch .collapsed-preview-post>.post,
+.feed-thread>.thread-fold-input:checked~.feed-thread-collapsed-branch .collapsed-preview-gap {
+  display: block;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .thread-fold::after,
   .post-spoiler-summary::before,

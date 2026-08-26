@@ -804,11 +804,12 @@ export function Post({
 export function ThreadReplies(
   { parentId, replies, user, returnPath, excludePostId, flat = false, showMissingContinuations = false,
     continuationLabel = 'more', continuationReturnPath, contextUnreadPostIds,
-    contextDirectedUnreadPostIds, highlightTerms = [], hideTopMeta = false }: { parentId: number; replies: PostView[];
+    contextDirectedUnreadPostIds, highlightTerms = [], hideTopMeta = false, collapsedPreviewPostId }: {
+    parentId: number; replies: PostView[];
     user: User | null; returnPath?: string; excludePostId?: number; flat?: boolean;
     showMissingContinuations?: boolean; continuationLabel?: string; continuationReturnPath?: string;
     contextUnreadPostIds?: ReadonlySet<number>; contextDirectedUnreadPostIds?: ReadonlySet<number>;
-    highlightTerms?: string[]; hideTopMeta?: boolean },
+    highlightTerms?: string[]; hideTopMeta?: boolean; collapsedPreviewPostId?: number },
 ) {
   if (!replies.length) return null
   const children = new Map<number, PostView[]>()
@@ -819,6 +820,15 @@ export function ThreadReplies(
   }
   for (const siblings of children.values()) {
     siblings.sort((a, b) => a.created_at.localeCompare(b.created_at) || a.id - b.id)
+  }
+  const collapsedPreviewPath = new Set<number>()
+  if (collapsedPreviewPostId) {
+    const byId = new Map(replies.map(reply => [reply.id, reply]))
+    let current = byId.get(collapsedPreviewPostId)
+    while (current && current.id !== parentId) {
+      collapsedPreviewPath.add(current.id)
+      current = current.parent_id ? byId.get(current.parent_id) : undefined
+    }
   }
   const descendantCounts = new Map<number, number>()
   const visibleDescendantCount = (id: number): number => {
@@ -841,7 +851,10 @@ export function ThreadReplies(
         )
       : undefined
     return (
-      <div className="reply-node" key={reply.id}>
+      <div className={`reply-node${collapsedPreviewPath.has(reply.id) ? ' collapsed-preview-path' : ''}${
+        reply.id === collapsedPreviewPostId ? ' collapsed-preview-post' : ''}`} key={reply.id}>
+        {reply.id === collapsedPreviewPostId && <div className="quiet thread-ancestor-gap collapsed-preview-gap"
+          aria-label="Earlier replies hidden">…</div>}
         {reply.feed_ancestor_gap && <div className="quiet thread-ancestor-gap"
           aria-label="Earlier replies omitted">…</div>}
         {foldControlId && <input className="thread-fold-input" type="checkbox" id={foldControlId} />}
@@ -877,7 +890,7 @@ export function ThreadReplies(
     const branch = children.get(id) || []
     if (!branch.length) return null
     return (
-      <div className="reply-branch">
+      <div className={`reply-branch${collapsedPreviewPostId ? ' feed-thread-collapsed-branch' : ''}`}>
         <div className="thread-branch-content">
           {branch.map(reply => {
             const descendantCount = visibleDescendantCount(reply.id)
@@ -988,6 +1001,21 @@ export function FeedThreads(
     visit(root.id)
     return unread
   }
+  const collapsedPreviewPost = (root: PostView) => {
+    let selected: { post: PostView; depth: number } | undefined
+    const visit = (parentId: number, depth: number) => {
+      for (const child of children.get(parentId) || []) {
+        if (!child.deleted_at && (!selected || depth > selected.depth
+          || (depth === selected.depth && (child.created_at > selected.post.created_at
+            || (child.created_at === selected.post.created_at && child.id > selected.post.id))))) {
+          selected = { post: child, depth }
+        }
+        visit(child.id, depth + 1)
+      }
+    }
+    visit(root.id, 1)
+    return selected?.post
+  }
   const roots = treePosts.filter(post => !post.parent_id || !ids.has(post.parent_id))
     .sort((a, b) => conversationPosition(a) - conversationPosition(b))
   return (
@@ -995,6 +1023,7 @@ export function FeedThreads(
       {roots.map(post => {
         const anchoredReturnPath = `${returnPath}#post-${post.id}`
         const visibleReplies = visibleReplyCount(post)
+        const collapsedPreview = visibleReplies > 1 ? collapsedPreviewPost(post) : undefined
         const continuesElsewhere = (post.reply_count || 0) > visibleReplies
         const foldControlId = visibleReplies > 0 ? `feed-thread-fold-${post.id}` : undefined
         const collapsed = visibleReplies > 1 && !hasUnreadReply(post) && expandedRootId !== post.id
@@ -1023,7 +1052,7 @@ export function FeedThreads(
               continuationReturnPath={collapsed ? expandedReturnPath : returnPath}
               contextUnreadPostIds={contextUnreadPostIds}
               contextDirectedUnreadPostIds={contextDirectedUnreadPostIds} highlightTerms={highlightTerms}
-              hideTopMeta={hideTopMeta} />
+              hideTopMeta={hideTopMeta} collapsedPreviewPostId={collapsedPreview?.id} />
           </div>
         )
       })}
