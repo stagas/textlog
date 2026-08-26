@@ -71,6 +71,12 @@ function attachTagStats(database: Database, tags: import('./types').TagView[], v
   return tags.map(tag => ({ ...tag, followerCount: counts[tag.tag] || 0 }))
 }
 
+export function materializedForYouCount(html: string) {
+  return Number(html.match(
+    /href="\/for-you"[^>]*>for you<span class="to-me-count">(\d+)<\/span>/,
+  )?.[1] || 0)
+}
+
 function recapPosts(database: Database, viewerId: number) {
   if (!RECAP_POPULAR_NOTE_IDS.length) return []
   const placeholders = RECAP_POPULAR_NOTE_IDS.map(() => '?').join(',')
@@ -2247,6 +2253,12 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
         WHERE kind=? AND viewer_id=? AND variant=? AND generation=?`).get(kind, viewerId, variant, generation) as {
         html: string
       } | null
+      if (cached && viewerId >= 0
+        && materializedForYouCount(cached.html) !== unreadForYouCount(viewerId, database)) {
+        cacheDb.query(`DELETE FROM materialized_feed_pages_v2
+          WHERE kind=? AND viewer_id=? AND variant=? AND generation=?`).run(kind, viewerId, variant, generation)
+        return { html: null, generation } as DatabaseDomainOutput<K>
+      }
       return { html: cached?.html ?? null, generation } as DatabaseDomainOutput<K>
     }
     case 'cache.materializedFeedPut': {
@@ -2256,9 +2268,7 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
       }).generation
       if (generation !== currentGeneration) return null as DatabaseDomainOutput<K>
       if (viewerId >= 0) {
-        const cachedForYouCount = Number(html.match(
-          /href="\/for-you"[^>]*>for you<span class="to-me-count">(\d+)<\/span>/,
-        )?.[1] || 0)
+        const cachedForYouCount = materializedForYouCount(html)
         if (cachedForYouCount !== unreadForYouCount(viewerId, database)) return null as DatabaseDomainOutput<K>
       }
       cacheDb.transaction(() => {
