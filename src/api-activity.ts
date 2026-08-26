@@ -106,10 +106,10 @@ export function apiActivities(database: Database, origin: string, user: User, op
       WHERE p.deleted_at IS NULL AND u.deleted_at IS NULL
         AND ((NOT ${isWhisperThread()} AND ((p.user_id=$viewer AND (parent.user_id!=$viewer OR
           ${hasVisibleDescendantFromAnotherUser})) OR p.user_id IN
-          (SELECT following_id FROM follows WHERE follower_id=$viewer)
+          (SELECT following_id FROM follows WHERE follower_id=$viewer AND p.created_at>=created_at)
           OR ${descendsFromViewer} OR pm.user_id IS NOT NULL
           OR p.id IN (SELECT ph.post_id FROM post_hashtags ph JOIN hashtag_follows hf ON hf.tag=ph.tag
-            WHERE hf.user_id=$viewer))) OR ${whisperThreadRelevantToViewer()})
+            WHERE hf.user_id=$viewer AND p.created_at>=hf.created_at))) OR ${whisperThreadRelevantToViewer()})
         AND NOT EXISTS (SELECT 1 FROM blocks b WHERE
           (b.blocker_id=$viewer AND b.blocked_id=p.user_id)
           OR (b.blocker_id=p.user_id AND b.blocked_id=$viewer))
@@ -122,7 +122,7 @@ export function apiActivities(database: Database, origin: string, user: User, op
       FROM follows f JOIN users actor ON actor.id=f.follower_id JOIN users target ON target.id=f.following_id
       WHERE f.created_at IS NOT NULL AND actor.id!=$viewer
         AND (target.id=$viewer OR EXISTS (SELECT 1 FROM follows vf
-          WHERE vf.follower_id=$viewer AND vf.following_id=actor.id))
+          WHERE vf.follower_id=$viewer AND vf.following_id=actor.id AND f.created_at>=vf.created_at))
         AND actor.deleted_at IS NULL AND actor.suspended_at IS NULL
         AND target.deleted_at IS NULL AND target.suspended_at IS NULL
         AND NOT EXISTS (SELECT 1 FROM blocks b WHERE
@@ -134,8 +134,10 @@ export function apiActivities(database: Database, origin: string, user: User, op
         actor.handle,NULL,hf.tag,0
       FROM hashtag_follows hf JOIN users actor ON actor.id=hf.user_id
       WHERE hf.created_at IS NOT NULL AND hf.created_at!='1970-01-01 00:00:00' AND actor.id!=$viewer
-        AND (EXISTS (SELECT 1 FROM follows vf WHERE vf.follower_id=$viewer AND vf.following_id=actor.id)
-          OR EXISTS (SELECT 1 FROM hashtag_follows vt WHERE vt.user_id=$viewer AND vt.tag=hf.tag))
+        AND (EXISTS (SELECT 1 FROM follows vf WHERE vf.follower_id=$viewer AND vf.following_id=actor.id
+          AND hf.created_at>=vf.created_at)
+          OR EXISTS (SELECT 1 FROM hashtag_follows vt WHERE vt.user_id=$viewer AND vt.tag=hf.tag
+            AND hf.created_at>=vt.created_at))
         AND actor.deleted_at IS NULL AND actor.suspended_at IS NULL
         AND NOT EXISTS (SELECT 1 FROM blocks b WHERE
           (b.blocker_id=$viewer AND b.blocked_id=actor.id)

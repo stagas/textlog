@@ -34,6 +34,7 @@ export function whisperThreadRelevantToViewer(viewer = '$viewer', postId: 'p.id'
     LEFT JOIN post_hashtags relevant_tag ON relevant_tag.post_id=relevant.id
     LEFT JOIN hashtag_follows relevant_follow ON relevant_follow.tag=relevant_tag.tag
       AND relevant_follow.user_id=${viewer}
+      AND relevant_follow.created_at<=(SELECT created_at FROM posts WHERE id=${postId})
     WHERE relevant.user_id=${viewer} OR whisper_parent.user_id=${viewer}
       OR relevant_mention.user_id IS NOT NULL
       OR relevant_follow.user_id IS NOT NULL

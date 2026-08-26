@@ -10,7 +10,7 @@ import { enrichPosts, loadBioReferenceData, visibleTagFollowerCounts, visibleUse
 import type { PersonalizedFeedData, PersonalizedTimelineRow, User } from './types'
 import { isWhisperThread, whisperThreadRelevantToViewer, whisperThreadTargetsViewer } from './whisper'
 
-export const PERSONALIZED_FEED_SNAPSHOT_VERSION = 20
+export const PERSONALIZED_FEED_SNAPSHOT_VERSION = 21
 
 const descendsFromViewer = `EXISTS (WITH RECURSIVE ancestors(id,user_id,parent_id) AS (
   SELECT ancestor.id,ancestor.user_id,ancestor.parent_id FROM posts ancestor WHERE ancestor.id=p.parent_id
@@ -25,7 +25,7 @@ const descendsFromFollowedUser = `EXISTS (WITH RECURSIVE ancestors(id,user_id,pa
   SELECT ancestor.id,ancestor.user_id,ancestor.parent_id FROM posts ancestor
     JOIN ancestors child ON ancestor.id=child.parent_id
 ) SELECT 1 FROM ancestors JOIN follows ON follows.following_id=ancestors.user_id
-  WHERE follows.follower_id=$viewer)`
+  WHERE follows.follower_id=$viewer AND p.created_at>=follows.created_at)`
 
 const hasVisibleDescendantFromAnotherUser = `EXISTS (WITH RECURSIVE descendants(id,user_id,parent_id,deleted_at) AS (
   SELECT child.id,child.user_id,child.parent_id,child.deleted_at FROM posts child WHERE child.parent_id=p.id
@@ -61,10 +61,10 @@ export function loadPersonalizedFeed(database: Database, user: User, page: numbe
       WHERE p.deleted_at IS NULL AND ((NOT ${isWhisperThread()} AND
         ((p.user_id=$viewer AND (parent.user_id!=$viewer OR
         ${hasVisibleDescendantFromAnotherUser})) OR p.user_id IN
-        (SELECT following_id FROM follows WHERE follower_id=$viewer) OR ${descendsFromViewer}
+        (SELECT following_id FROM follows WHERE follower_id=$viewer AND p.created_at>=created_at) OR ${descendsFromViewer}
         OR ${descendsFromFollowedUser} OR p.id IN
         (SELECT ph.post_id FROM post_hashtags ph JOIN hashtag_follows hf ON hf.tag=ph.tag
-          WHERE hf.user_id=$viewer)))
+          WHERE hf.user_id=$viewer AND p.created_at>=hf.created_at)))
         OR ${whisperThreadRelevantToViewer()})
         AND NOT EXISTS (SELECT 1 FROM blocks b WHERE (b.blocker_id=$viewer AND b.blocked_id=p.user_id)
           OR (b.blocker_id=p.user_id AND b.blocked_id=$viewer))
@@ -99,7 +99,8 @@ export function loadPersonalizedFeed(database: Database, user: User, page: numbe
         (SELECT count(*) FROM posts tp WHERE tp.user_id=target.id AND tp.deleted_at IS NULL) posts
       FROM follows f JOIN users actor ON actor.id=f.follower_id JOIN users target ON target.id=f.following_id
       WHERE f.created_at IS NOT NULL AND actor.id!=$viewer AND EXISTS
-        (SELECT 1 FROM follows vf WHERE vf.follower_id=$viewer AND vf.following_id=actor.id) AND target.id!=$viewer
+        (SELECT 1 FROM follows vf WHERE vf.follower_id=$viewer AND vf.following_id=actor.id
+          AND f.created_at>=vf.created_at) AND target.id!=$viewer
         AND $hidePeopleFollowActivity=0 AND actor.deleted_at IS NULL AND actor.suspended_at IS NULL
         AND target.deleted_at IS NULL AND target.suspended_at IS NULL
         AND NOT EXISTS (SELECT 1 FROM blocks b WHERE b.blocker_id=$viewer AND b.blocked_id IN (actor.id,target.id)
@@ -116,8 +117,10 @@ export function loadPersonalizedFeed(database: Database, user: User, page: numbe
           WHERE ph.tag=hf.tag AND hp.deleted_at IS NULL) posts
       FROM hashtag_follows hf JOIN users actor ON actor.id=hf.user_id
       WHERE hf.created_at IS NOT NULL AND hf.created_at!='1970-01-01 00:00:00' AND actor.id!=$viewer AND (EXISTS
-        (SELECT 1 FROM follows vf WHERE vf.follower_id=$viewer AND vf.following_id=actor.id) OR EXISTS
-        (SELECT 1 FROM hashtag_follows vt WHERE vt.user_id=$viewer AND vt.tag=hf.tag))
+        (SELECT 1 FROM follows vf WHERE vf.follower_id=$viewer AND vf.following_id=actor.id
+          AND hf.created_at>=vf.created_at) OR EXISTS
+        (SELECT 1 FROM hashtag_follows vt WHERE vt.user_id=$viewer AND vt.tag=hf.tag
+          AND hf.created_at>=vt.created_at))
         AND $hideHashtagFollowActivity=0 AND actor.deleted_at IS NULL AND actor.suspended_at IS NULL
         AND NOT EXISTS (SELECT 1 FROM blocks b WHERE (b.blocker_id=$viewer AND b.blocked_id=actor.id)
           OR (b.blocker_id=actor.id AND b.blocked_id=$viewer))
