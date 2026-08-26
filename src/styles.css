@@ -384,19 +384,13 @@ header>nav>a:not(.button),
   display: grid;
 }
 
-.account-menu::after {
+.account-menu-handle::after {
   position: absolute;
   top: calc(50% + .75em);
   right: 0;
-  display: none;
   width: 100%;
   height: var(--space-2);
   content: '';
-}
-
-.account-menu:hover::after,
-.account-menu:focus-within::after {
-  display: block;
 }
 
 .account-menu-popover a,
