@@ -58,7 +58,11 @@ function isDeletedHandle(handle: string) {
 }
 
 export function isProbablyNonEnglish(text: string) {
-  return Array.from(text).some(character => /\p{L}/u.test(character) && !/[A-Za-z]/.test(character))
+  let nonEnglishLetterCount = 0
+  for (const character of text) {
+    if (/\p{L}/u.test(character) && !/[A-Za-z]/.test(character) && ++nonEnglishLetterCount > 2) return true
+  }
+  return false
 }
 
 export function translateHref(text: string) {

@@ -2768,10 +2768,12 @@ test('Post detail places report opposite reply in the footer', () => {
 
 test('probable non-English posts offer a right-aligned Bing Translate action', () => {
   expect(isProbablyNonEnglish('An English note with emoji 🎉 and numbers 123')).toBe(false)
-  expect(isProbablyNonEnglish('Una nota en español')).toBe(true)
+  expect(isProbablyNonEnglish('One accent: café')).toBe(false)
+  expect(isProbablyNonEnglish('Two accents: café señor')).toBe(false)
+  expect(isProbablyNonEnglish('Three accents: café señor à Paris')).toBe(true)
   expect(isProbablyNonEnglish('Ελληνικό κείμενο')).toBe(true)
 
-  const body = 'Una nota en español'
+  const body = 'Información española: acción'
   const html = renderToStaticMarkup(React.createElement(Post, {
     user: { id: 3, handle: 'reader', email: 'reader@example.com', bio: '' },
     p: { id: 2, user_id: 1, parent_id: null, body, handle: 'writer',
