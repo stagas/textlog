@@ -31,6 +31,7 @@ import { sendPushForPost } from '../push'
 import { normalizeSearchQuery } from '../search'
 import { currentUser } from '../utils'
 import { toggleTodo } from '../todos'
+import { postTranslation } from '../translation'
 
 function notifyPost(postId: number, userId: number, handle: string) {
   void sendPushForPost(postId, userId, handle).catch(error => logError('activity push failed', error))
@@ -269,6 +270,7 @@ export function registerPostsRoutes(app: Hono) {
         body,
         parentId: null,
         origin: new URL(c.req.url).origin,
+        translation: await postTranslation(body),
       })
       if (result.status === 'locked') return c.text('This thread is locked', 409)
       if (result.status === 'rate_limited') {
@@ -334,6 +336,7 @@ export function registerPostsRoutes(app: Hono) {
     if (!body) return c.text('Invalid todo item', 400)
     const result = await databaseService().call('api.updatePost', {
       userId: user.id, id: postId, body, origin: new URL(c.req.url).origin,
+      translation: await postTranslation(body),
     })
     if (result.status !== 'ready') return c.text(result.status === 'not_found' ? 'Not found' : 'Forbidden',
       result.status === 'not_found' ? 404 : 403)
@@ -402,6 +405,7 @@ export function registerPostsRoutes(app: Hono) {
         body,
         origin: new URL(c.req.url).origin,
         moderator,
+        translation: await postTranslation(body),
       })
       if (result.status !== 'ready') {
         return c.text(result.status === 'not_found' ? 'Not found' : 'Forbidden',
@@ -506,6 +510,7 @@ export function registerPostsRoutes(app: Hono) {
         body,
         parentId,
         origin: new URL(c.req.url).origin,
+        translation: await postTranslation(body),
       })
       if (result.status === 'locked') return c.text('This thread is locked', 409)
       if (result.status === 'rate_limited') {

@@ -138,8 +138,13 @@ export function createPost(
   body: string,
   parentId: number | null = null,
   publish = true,
+  translation: string | null = null,
 ) {
+  const supportsTranslation = !!database.query(
+    "SELECT 1 FROM pragma_table_info('posts') WHERE name='translation'",
+  ).get()
   const result = insertRateLimitedPost(database, userId, body, parentId, postId => {
+    if (supportsTranslation) database.query('UPDATE posts SET translation=? WHERE id=?').run(translation, postId)
     syncPostMetadata(database, postId, body)
     recordHotActivity(database, postId)
     database.query(`INSERT OR IGNORE INTO for_you_reads(user_id,event_key)
@@ -159,9 +164,14 @@ export function isThreadLocked(database: Database, postId: number) {
     WHERE ph.tag='lock' LIMIT 1`).get(postId)
 }
 
-export function updatePost(database: Database, postId: number, body: string) {
+export function updatePost(database: Database, postId: number, body: string, translation: string | null = null) {
   database.transaction(() => {
-    database.query('UPDATE posts SET body=? WHERE id=?').run(body, postId)
+    const supportsTranslation = !!database.query(
+      "SELECT 1 FROM pragma_table_info('posts') WHERE name='translation'",
+    ).get()
+    if (supportsTranslation) database.query('UPDATE posts SET body=?,translation=? WHERE id=?')
+      .run(body, translation, postId)
+    else database.query('UPDATE posts SET body=? WHERE id=?').run(body, postId)
     syncPostMetadata(database, postId, body)
   })()
 }
@@ -444,6 +454,9 @@ export function enrichPosts(database: Database, posts: PostView[], viewerId = -1
 }
 
 export function loadThreadReplies(database: Database, parentId: number, viewerId = -1) {
+  const translationColumn = database.query(
+    "SELECT 1 FROM pragma_table_info('posts') WHERE name='translation'",
+  ).get() ? 'translation' : 'NULL translation'
   const rows = database.query(`WITH RECURSIVE thread AS (
       SELECT p.*,u.handle,1 depth FROM posts p JOIN users u ON u.id=p.user_id WHERE p.parent_id=? AND (? < 0 OR NOT EXISTS
         (SELECT 1 FROM blocks b WHERE (b.blocker_id=? AND b.blocked_id=p.user_id) OR (b.blocker_id=p.user_id AND b.blocked_id=?)))
@@ -455,7 +468,8 @@ export function loadThreadReplies(database: Database, parentId: number, viewerId
         (SELECT 1 FROM blocks b WHERE (b.blocker_id=? AND b.blocked_id=p.user_id) OR (b.blocker_id=p.user_id AND b.blocked_id=?)))
         AND (? < 0 OR NOT EXISTS (SELECT 1 FROM post_hashtags ph JOIN blocked_hashtags bh ON bh.tag=ph.tag
           WHERE ph.post_id=p.id AND bh.user_id=?))
-    ) SELECT id,user_id,parent_id,body,created_at,deleted_at,has_latex,has_links,has_code,handle,depth
+    ) SELECT id,user_id,parent_id,body,${translationColumn},created_at,deleted_at,
+      has_latex,has_links,has_code,handle,depth
       FROM thread ORDER BY created_at ASC,id ASC`).all(parentId, viewerId, viewerId, viewerId, viewerId, viewerId,
     viewerId, viewerId, viewerId, viewerId, viewerId) as (PostView & { depth: number })[]
   return enrichPosts(database, rows, viewerId) as Array<PostView & { depth: number }>

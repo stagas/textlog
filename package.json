@@ -13,6 +13,7 @@
     "archive:public": "bun scripts/archive-public-data.ts",
     "backfill:link-previews": "bun scripts/backfill-link-previews.ts",
     "backfill:post-og-previews": "bun scripts/backfill-post-og-previews.ts",
+    "backfill:post-translations": "bun scripts/backfill-post-translations.ts",
     "email:recap:v1": "bun scripts/send-recap-email.ts",
     "users:unread-replies": "bun scripts/list-unread-reply-users.ts",
     "stress:routes": "bun scripts/stress-routes.ts",

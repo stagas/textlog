@@ -1457,7 +1457,8 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
         return { status: 'locked' } as DatabaseDomainOutput<K>
       }
       const created = database.transaction(() => {
-        const value = createPost(database, request.userId, draft.body, draft.parent_id, false)
+        const value = createPost(database, request.userId, draft.body, draft.parent_id, false,
+          request.translation ?? null)
         if (!('retryAfter' in value)) {
           database.query('DELETE FROM drafts WHERE id=? AND user_id=?').run(request.id, request.userId)
         }
@@ -1471,7 +1472,7 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
         post: apiPost(database, created.id, request.origin, request.userId)! } as DatabaseDomainOutput<K>
     }
     case 'api.createPost': {
-      const { userId, body, parentId, origin } = input as DatabaseDomainInput<'api.createPost'>
+      const { userId, body, parentId, origin, translation } = input as DatabaseDomainInput<'api.createPost'>
       if (parentId !== null) {
         const parent = database.query('SELECT user_id FROM posts WHERE id=? AND deleted_at IS NULL')
           .get(parentId) as { user_id: number } | null
@@ -1482,7 +1483,7 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
           .get(userId, parent.user_id, parent.user_id, userId)
         if (blocked) return { status: 'not_found' } as DatabaseDomainOutput<K>
       }
-      const created = createPost(database, userId, body, parentId, false)
+      const created = createPost(database, userId, body, parentId, false, translation ?? null)
       if ('retryAfter' in created) {
         return { status: 'rate_limited', retryAfter: created.retryAfter } as DatabaseDomainOutput<K>
       }
@@ -1490,12 +1491,12 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
         post: apiPost(database, created.id, origin, userId)! } as DatabaseDomainOutput<K>
     }
     case 'api.updatePost': {
-      const { userId, id, body, origin, moderator } = input as DatabaseDomainInput<'api.updatePost'>
+      const { userId, id, body, origin, moderator, translation } = input as DatabaseDomainInput<'api.updatePost'>
       const existing = database.query('SELECT user_id,parent_id FROM posts WHERE id=? AND deleted_at IS NULL')
         .get(id) as { user_id: number; parent_id: number | null } | null
       if (!existing) return { status: 'not_found' } as DatabaseDomainOutput<K>
       if (existing.user_id !== userId && !moderator) return { status: 'forbidden' } as DatabaseDomainOutput<K>
-      updatePost(database, id, body)
+      updatePost(database, id, body, translation ?? null)
       if (existing.user_id !== userId) recordAdminAction(database, userId, 'edit_post', existing.user_id, id, '')
       return { status: 'ready', post: apiPost(database, id, origin, userId)! } as DatabaseDomainOutput<K>
     }

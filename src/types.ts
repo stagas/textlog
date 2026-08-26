@@ -11,6 +11,7 @@ export type PostRow = {
   user_id: number
   parent_id: number | null
   body: string
+  translation?: string | null
   created_at: string
   deleted_at: string | null
   has_latex?: number | null
@@ -44,7 +45,7 @@ export type BioReferenceData = {
 }
 
 export type ParentPost = Pick<PostRow,
-  'id' | 'body' | 'created_at' | 'deleted_at' | 'has_latex' | 'has_links' | 'has_code'> & {
+  'id' | 'body' | 'translation' | 'created_at' | 'deleted_at' | 'has_latex' | 'has_links' | 'has_code'> & {
   handle: string
   parent_id?: number | null
   user_id?: number
@@ -104,6 +105,7 @@ export type ApiPost = {
   id: number
   top_id: number | null
   body: string
+  translation?: string | null
   created_at: string
   parent_id: number | null
   reply_count: number

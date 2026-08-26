@@ -2024,8 +2024,9 @@ nav form {
 .post-body {
   position: relative;
   margin: calc(var(--space-3) + 2px) 0 0;
-  font-size: 0.8125rem;
-  line-height: 1.65;
+  font-size: var(--post-body-font-size, 0.8125rem);
+  line-height: var(--post-body-line-height, 1.65);
+  letter-spacing: var(--post-body-letter-spacing, normal);
   white-space: pre-wrap;
   overflow-wrap: anywhere;
 }
@@ -2212,6 +2213,10 @@ nav form {
   padding-left: var(--space-3);
   border-left: 3px solid var(--soft);
   color: color-mix(in srgb, var(--quote-ink) 55%, var(--muted));
+}
+
+.post-body.post-translation {
+  margin-top: 0;
 }
 
 .post-body math {
@@ -5718,6 +5723,9 @@ a.post-context:hover {
 }
 
 .thread-root .post {
+  --post-body-font-size: 0.9375rem;
+  --post-body-line-height: 1.55;
+  --post-body-letter-spacing: -.5px;
   padding: var(--space-5) var(--gutter);
   border: 0;
 }
@@ -5731,15 +5739,12 @@ a.post-context:hover {
 
 .thread-root>.post>.post-body {
   margin-bottom: 0;
-  font-size: 0.9375rem;
-  line-height: 1.55;
-  letter-spacing: -.5px;
 }
 
-.feed-thread .thread-root>.post>.post-body {
-  font-size: 0.8125rem;
-  line-height: 1.65;
-  letter-spacing: normal;
+.feed-thread .thread-root>.post {
+  --post-body-font-size: 0.8125rem;
+  --post-body-line-height: 1.65;
+  --post-body-letter-spacing: normal;
 }
 
 .thread-root>.post>.post-body.ascii-art {

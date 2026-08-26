@@ -39,7 +39,7 @@ import {
   Reply,
 } from './components/pages'
 import { approximatePostAge, conversationTopPath, FeedThreads, isProbablyNonEnglish, Post, postAgeTitle,
-  postedReplyPath, PreviewPost, replyAnchorReturnPath, translateHref,
+  postedReplyPath, PreviewPost, replyAnchorReturnPath,
   ThreadReplies } from './components/post'
 import { SearchResults, searchPersonReturnPath, searchPostReturnPath } from './components/search'
 
@@ -2634,6 +2634,17 @@ test('Flat thread replies render descendants in depth-first order without nested
   expect(html.indexOf('id="post-4"')).toBeLessThan(html.indexOf('id="post-3"'))
 })
 
+test('Post threads show stored translations on replies', () => {
+  const html = renderToStaticMarkup(React.createElement(ThreadReplies, {
+    parentId: 1,
+    replies: [{ id: 2, user_id: 1, parent_id: 1, body: 'Ελληνικό κείμενο', translation: 'Greek text',
+      handle: 'author', created_at: '2026-08-03 12:00:00', deleted_at: null }],
+    user: null,
+  }))
+
+  expect(html).toContain('<div class="post-body post-translation"><span class="post-quote">Greek text</span></div>')
+})
+
 test('conversation top links return to the deep reply and preserve its original back path', () => {
   expect(conversationTopPath(1, 3)).toBe('/post/1?from=%2Fpost%2F3%23post-3#post-1')
   expect(conversationTopPath(1, 3, '/latest#post-3'))
@@ -2766,7 +2777,7 @@ test('Post detail places report opposite reply in the footer', () => {
   expect(html.slice(0, html.indexOf('<div class="postfoot">'))).not.toContain('class="quiet report-link"')
 })
 
-test('probable non-English posts offer a right-aligned Bing Translate action', () => {
+test('stored post translations render in the note', () => {
   expect(isProbablyNonEnglish('An English note with emoji 🎉 and numbers 123')).toBe(false)
   expect(isProbablyNonEnglish('One accent: café')).toBe(false)
   expect(isProbablyNonEnglish('Two accents: café señor')).toBe(false)
@@ -2776,21 +2787,13 @@ test('probable non-English posts offer a right-aligned Bing Translate action', (
   const body = 'Información española: acción'
   const html = renderToStaticMarkup(React.createElement(Post, {
     user: { id: 3, handle: 'reader', email: 'reader@example.com', bio: '' },
-    p: { id: 2, user_id: 1, parent_id: null, body, handle: 'writer',
+    p: { id: 2, user_id: 1, parent_id: null, body, translation: 'Spanish information: action', handle: 'writer',
       created_at: '2026-08-03 12:00:00', deleted_at: null },
     reportHref: '/post/2?report=1',
   }))
 
-  const footer = html.slice(html.indexOf('<div class="postfoot">'), html.indexOf('</div></article>'))
-  expect(footer).toContain('class="quiet post-reply-link"')
-  expect(footer).toContain(`href="${translateHref(body).replaceAll('&', '&amp;')}"`)
-  const translateUrl = new URL(translateHref(body))
-  expect(translateUrl.hostname).toBe('www.bing.com')
-  expect(translateUrl.pathname).toBe('/translator')
-  expect(translateUrl.searchParams.get('from')).toBe('auto')
-  expect(translateUrl.searchParams.get('to')).toBe('en')
-  expect(translateUrl.searchParams.get('text')).toBe(body)
-  expect(footer.indexOf('translate')).toBeLessThan(footer.indexOf('report'))
+  expect(html).toContain('<div class="post-body post-translation"><span class="post-quote">Spanish information: action</span></div>')
+  expect(html).not.toContain('translate-link')
 })
 
 test('English posts do not offer translation', () => {

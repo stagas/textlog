@@ -1,6 +1,6 @@
 import { Database } from 'bun:sqlite'
 import { describe, expect, test } from 'bun:test'
-import { createPost, enrichPosts, isThreadLocked } from './posts'
+import { createPost, enrichPosts, isThreadLocked, loadThreadReplies } from './posts'
 import type { PostView } from './types'
 import { displayPostBody, linkify } from './utils'
 
@@ -11,7 +11,7 @@ function database() {
       suspended_at TEXT);
     CREATE TABLE handle_history (handle TEXT PRIMARY KEY COLLATE NOCASE,user_id INTEGER NOT NULL);
     CREATE TABLE posts (id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER NOT NULL, parent_id INTEGER,
-      body TEXT NOT NULL, created_at TEXT DEFAULT CURRENT_TIMESTAMP, deleted_at TEXT,
+      body TEXT NOT NULL, translation TEXT, created_at TEXT DEFAULT CURRENT_TIMESTAMP, deleted_at TEXT,
       has_latex INTEGER,has_links INTEGER,has_code INTEGER);
     CREATE TABLE post_hashtags (post_id INTEGER NOT NULL, tag TEXT NOT NULL CHECK(tag != 'fail'), PRIMARY KEY(post_id,tag));
     CREATE TABLE post_mentions (post_id INTEGER NOT NULL, user_id INTEGER NOT NULL, PRIMARY KEY(post_id,user_id));
@@ -495,6 +495,18 @@ describe('post persistence', () => {
     const [view] = enrichPosts(db, [child])
     expect(view.parent?.reply_count).toBe(1)
     expect(view.parent?.body).toBe('parent')
+  })
+
+  test('loads stored translations for replies in a post thread', () => {
+    const db = database()
+    db.run(`INSERT INTO posts(id,user_id,parent_id,body,translation) VALUES
+      (1,1,NULL,'root',NULL),(2,2,1,'Ελληνικό κείμενο','Greek text')`)
+
+    expect(loadThreadReplies(db, 1)[0]).toMatchObject({
+      id: 2,
+      body: 'Ελληνικό κείμενο',
+      translation: 'Greek text',
+    })
   })
 
   test('locks a note and all of its descendants when an ancestor has #lock', () => {

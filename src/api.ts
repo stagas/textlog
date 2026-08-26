@@ -18,6 +18,7 @@ type ApiPostRow = {
   id: number
   top_id: number | null
   body: string
+  translation?: string | null
   parent_id: number | null
   created_at: string
   handle: string
@@ -62,6 +63,7 @@ export function serializePost(row: ApiPostRow, origin: string): ApiPost {
     id: row.id,
     top_id: row.top_id,
     body: row.body,
+    ...(row.translation ? { translation: row.translation } : {}),
     created_at: isoTimestamp(row.created_at),
     parent_id: row.parent_id,
     reply_count: row.reply_count,
@@ -77,7 +79,7 @@ export function serializePost(row: ApiPostRow, origin: string): ApiPost {
   }
 }
 
-const postSelect = `SELECT p.id,p.id top_id,p.body,p.parent_id,p.created_at,u.handle,
+const postSelect = `SELECT p.*,p.id top_id,u.handle,
   0 reply_count
   FROM posts p JOIN users u ON u.id=p.user_id`
 

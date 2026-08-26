@@ -307,13 +307,16 @@ export type DatabaseDomainOperations = {
   }
   'api.explore': { input: { viewerId: number; origin: string; peopleLimit: number; peopleOffset: number;
     tagsLimit: number; tagsOffset: number }; output: unknown }
-  'api.publishDraft': { input: { userId: number; id: number; body: string; parentId: number | null; origin: string };
+  'api.publishDraft': { input: { userId: number; id: number; body: string; parentId: number | null; origin: string;
+    translation?: string | null };
     output: { status: 'not_found' } | { status: 'locked' } | { status: 'rate_limited'; retryAfter: number } | { status: 'ready'; id: number;
       duplicate: boolean; post: ApiPost } }
-  'api.createPost': { input: { userId: number; body: string; parentId: number | null; origin: string };
+  'api.createPost': { input: { userId: number; body: string; parentId: number | null; origin: string;
+    translation?: string | null };
     output: { status: 'not_found' } | { status: 'locked' } | { status: 'rate_limited'; retryAfter: number } | { status: 'ready'; id: number;
       duplicate: boolean; post: ApiPost } }
-  'api.updatePost': { input: { userId: number; id: number; body: string; origin: string; moderator?: boolean };
+  'api.updatePost': { input: { userId: number; id: number; body: string; origin: string; moderator?: boolean;
+    translation?: string | null };
     output: { status: 'not_found' | 'forbidden' } | { status: 'ready'; post: ApiPost } }
   'api.deletePost': { input: { userId: number; id: number };
     output: { status: 'not_found' | 'forbidden' } | { status: 'ready'; imageKeys: string[]; parentId: number | null } }

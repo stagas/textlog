@@ -18,6 +18,7 @@ import { scheduleRelationshipFeedInvalidation } from '../relationship-feed-inval
 import { sessionHash } from '../sessions'
 import type { User } from '../types'
 import { bearerToken } from '../utils'
+import { postTranslation } from '../translation'
 import { emailPattern } from './auth'
 import { clientAddress } from './shared'
 
@@ -239,6 +240,7 @@ export function registerApiWriteRoutes(app: Hono, service: DatabaseService,
       body: content,
       parentId,
       origin: apiOrigin(c.req.url, appUrl),
+      translation: await postTranslation(content),
     })
     if (result.status === 'not_found') return fail('not_found', 'Post not found', 404)
     if (result.status === 'locked') return fail('thread_locked', 'This thread is locked', 409)
@@ -352,7 +354,8 @@ export function registerApiWriteRoutes(app: Hono, service: DatabaseService,
     if (!moderation.ok) return fail(moderation.reason === 'flagged' ? 'flagged' : 'unavailable',
       moderationMessage(moderation.reason), moderation.reason === 'flagged' ? 422 : 503)
     const result = await service.call('api.publishDraft', { userId: guard.user!.id, id, body: draft.body,
-      parentId: draft.parent_id, origin: apiOrigin(c.req.url, appUrl) })
+      parentId: draft.parent_id, origin: apiOrigin(c.req.url, appUrl),
+      translation: await postTranslation(draft.body) })
     if (result.status === 'not_found') return fail('not_found', 'Draft or parent post not found', 404)
     if (result.status === 'locked') return fail('thread_locked', 'This thread is locked', 409)
     if (result.status === 'rate_limited') return fail('post_rate_limited', postRateLimitMessage(result.retryAfter),
@@ -403,6 +406,7 @@ export function registerApiWriteRoutes(app: Hono, service: DatabaseService,
       id,
       body: content,
       origin: apiOrigin(c.req.url, appUrl),
+      translation: await postTranslation(content),
     })
     if (result.status !== 'ready') {
       return result.status === 'not_found'

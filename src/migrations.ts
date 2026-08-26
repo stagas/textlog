@@ -2061,6 +2061,15 @@ export const migrations: Migration[] = [
         END;`)
     },
   },
+  {
+    version: 138,
+    name: 'stored_post_translations',
+    up(database) {
+      if (database.query("SELECT 1 FROM sqlite_master WHERE type='table' AND name='posts'").get()) {
+        addColumn(database, 'posts', 'translation', 'TEXT')
+      }
+    },
+  },
 ]
 
 export const latestMigrationVersion = migrations.at(-1)!.version
