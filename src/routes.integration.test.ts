@@ -1555,6 +1555,10 @@ test('consequential account, content, reporting, and admin flows work over HTTP'
   expect(unreadToMeHtml).toContain('class="unread-dot" aria-label="unread"')
   expect(database.query('SELECT 1 FROM for_you_reads WHERE user_id=? AND event_key=?')
     .get(alice.id, forYouReadKey)).toBeTruthy()
+  const revisitedToMeHtml = await (await request('/to-me', { cookie: aliceCookie })).text()
+  expect(revisitedToMeHtml).toContain('href="/for-you">for you</a>')
+  expect(revisitedToMeHtml).toContain('href="/to-me">to me</a>')
+  expect(revisitedToMeHtml).not.toContain('class="unread-dot" aria-label="unread"')
 
   const generalFeedPost = database.query('INSERT INTO posts(user_id,body) VALUES(?,?) RETURNING id')
     .get(bob.id, 'unread general feed note') as { id: number }

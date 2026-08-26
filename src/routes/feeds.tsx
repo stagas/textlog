@@ -278,11 +278,16 @@ export function registerFeedsRoutes(app: Hono) {
         <Feed user={user} data={data} title="to me" path="/to-me" toMe notificationBanner={notificationBanner}
           expandedRootId={expandedRootId} />,
       )
-    const renderForCache = () =>
-      page(
-        <Feed user={user} data={{ ...data, timeline: data.timeline.map(row => ({ ...row, unread: 0 })) }} title="to me"
+    const renderForCache = () => {
+      const consumed = new Set(data.timeline.filter(row => row.unread).map(row => row.event_key)).size
+      return page(
+        <Feed user={user} data={{ ...data,
+          forYouCount: Math.max(0, data.forYouCount - consumed),
+          toMeCount: Math.max(0, data.toMeCount - consumed),
+          timeline: data.timeline.map(row => ({ ...row, unread: 0 })) }} title="to me"
           path="/to-me" toMe notificationBanner={notificationBanner} expandedRootId={expandedRootId} />,
       )
+    }
     const response = !notificationBanner && currentPage(c.req.query('page')) === 1 && !cursorValue && !expandedRootId
       ? await rpcMaterializedFeedPage(c.req.raw, 'to-me', user.id, render, false, 0, false, renderForCache)
       : render()
