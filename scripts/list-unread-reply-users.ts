@@ -5,7 +5,8 @@ import { interactedEmail } from '../src/interacted-email'
 import { issueInteractedUnsubscribeToken } from '../src/interacted-emails'
 import { runMigrations } from '../src/migrations'
 
-export const INTERACTED_CAMPAIGN_VERSION = 'v1'
+export type InteractedCampaignVersion = 'v1' | 'v2'
+export const INTERACTED_CAMPAIGN_VERSION: InteractedCampaignVersion = 'v1'
 const SEND_INTERVAL_MS = 1_000
 const MAX_RATE_LIMIT_RETRIES = 10
 
@@ -22,6 +23,7 @@ const usage = `Usage: bun run users:unread-replies -- [options]
 Options:
   --min-replies=N  Only include users with at least N unread replies (default 1)
   --max-days=N     Only consider replies from the last N days (default: all time)
+  --v2             Use campaign v2 and omit users with unread replies predating v1
   --send-email     Send the interaction email through Resend (default: list only)
   --help           Show this help`
 
@@ -40,7 +42,9 @@ function required(value: string | undefined, name: string) {
   return trimmed
 }
 
-export function unreadReplyCandidates(database: Database, options: { minReplies: number; maxDays?: number }) {
+export function unreadReplyCandidates(database: Database, options: {
+  minReplies: number; maxDays?: number; version?: InteractedCampaignVersion
+}) {
   const ageFilter = options.maxDays === undefined
     ? ''
     : "AND reply.created_at >= datetime('now', '-' || ? || ' days')"
@@ -64,16 +68,23 @@ export function unreadReplyCandidates(database: Database, options: { minReplies:
         WHERE ph.post_id=reply.id AND bh.user_id=recipient.id)
     GROUP BY recipient.id,recipient.handle,recipient.email,recipient.email_verified_at,recipient.interaction_emails
     HAVING count(*) >= ?
+      ${options.version === 'v2' ? `AND min(reply.created_at) >= (
+        SELECT min(created_at) FROM interacted_email_deliveries WHERE campaign_version='v1'
+      )` : ''}
     ORDER BY unread_replies DESC,newest_reply_at DESC,recipient.handle COLLATE NOCASE
   `).all(...(options.maxDays === undefined ? [options.minReplies] : [options.maxDays, options.minReplies])) as Candidate[]
 }
 
-export function unreadReplyUsers(database: Database, options: { minReplies: number; maxDays?: number }) {
+export function unreadReplyUsers(database: Database, options: {
+  minReplies: number; maxDays?: number; version?: InteractedCampaignVersion
+}) {
   return unreadReplyCandidates(database, options).map(({ handle, unread_replies, oldest_reply_at, newest_reply_at }) =>
     ({ handle, unread_replies, oldest_reply_at, newest_reply_at }))
 }
 
-function recipients(database: Database, options: { minReplies: number; maxDays?: number }) {
+function recipients(database: Database, options: {
+  minReplies: number; maxDays?: number; version?: InteractedCampaignVersion
+}) {
   const byEmail = new Map<string, Candidate>()
   for (const candidate of unreadReplyCandidates(database, options)) {
     if (!candidate.email_verified_at || candidate.interaction_emails === 0) continue
@@ -83,13 +94,13 @@ function recipients(database: Database, options: { minReplies: number; maxDays?:
   return [...byEmail.values()]
 }
 
-function claimDelivery(database: Database, recipient: Candidate, runId: string) {
-  const key = `interacted-${INTERACTED_CAMPAIGN_VERSION}-${crypto.randomUUID()}`
+function claimDelivery(database: Database, recipient: Candidate, runId: string, version: InteractedCampaignVersion) {
+  const key = `interacted-${version}-${crypto.randomUUID()}`
   database.query(`INSERT OR IGNORE INTO interacted_email_deliveries
     (campaign_version,email,user_id,status,run_id,idempotency_key) VALUES(?,?,?,'sending',?,?)`)
-    .run(INTERACTED_CAMPAIGN_VERSION, recipient.email, recipient.id, runId, key)
+    .run(version, recipient.email, recipient.id, runId, key)
   let delivery = database.query(`SELECT id,status,run_id,idempotency_key FROM interacted_email_deliveries
-    WHERE campaign_version=? AND email=?`).get(INTERACTED_CAMPAIGN_VERSION, recipient.email) as Delivery
+    WHERE campaign_version=? AND email=?`).get(version, recipient.email) as Delivery
   if (delivery.status === 'failed') {
     database.query(`UPDATE interacted_email_deliveries SET status='sending',run_id=?,error=NULL
       WHERE id=? AND status='failed'`).run(runId, delivery.id)
@@ -116,6 +127,7 @@ Unsubscribe from interaction emails: ${unsubscribeUrl}`
 
 export async function sendInteractedCampaign(options: {
   database: Database; minReplies: number; maxDays?: number; env?: InteractedCampaignEnvironment;
+  version?: InteractedCampaignVersion;
   request?: typeof fetch; sleep?: (ms: number) => Promise<void>; stopping?: () => boolean;
   log?: (message: string) => void
 }) {
@@ -129,11 +141,12 @@ export async function sendInteractedCampaign(options: {
   const log = options.log || console.log
   const runId = crypto.randomUUID()
   const name = appName()
+  const version = options.version || INTERACTED_CAMPAIGN_VERSION
   let sent = 0, skipped = 0, failed = 0, lastRequestAt = 0
 
   for (const recipient of recipients(options.database, options)) {
     if (stopping()) break
-    const delivery = claimDelivery(options.database, recipient, runId)
+    const delivery = claimDelivery(options.database, recipient, runId, version)
     if (!delivery) { skipped++; continue }
     const unsubscribeToken = issueInteractedUnsubscribeToken(options.database, recipient.id)
     const unsubscribe = new URL(
@@ -189,22 +202,23 @@ export async function sendInteractedCampaign(options: {
       break
     }
   }
-  return { version: INTERACTED_CAMPAIGN_VERSION, sent, skipped, failed, stopped: stopping() }
+  return { version, sent, skipped, failed, stopped: stopping() }
 }
 
 if (import.meta.main) {
   const args = Bun.argv.slice(2)
   if (args.includes('--help')) { console.log(usage); process.exit(0) }
-  const unknown = args.filter(value => value !== '--help' && value !== '--send-email'
+  const unknown = args.filter(value => value !== '--help' && value !== '--send-email' && value !== '--v2'
     && !value.startsWith('--min-replies=') && !value.startsWith('--max-days='))
   if (unknown.length) throw new Error(`Unknown argument: ${unknown[0]}\n\n${usage}`)
   const minReplies = positiveIntegerArgument(args, 'min-replies', 1)!
   const maxDays = positiveIntegerArgument(args, 'max-days')
   const sendEmail = args.includes('--send-email')
+  const version: InteractedCampaignVersion = args.includes('--v2') ? 'v2' : 'v1'
   const database = new Database(Bun.env.DATABASE_PATH || defaultDatabasePath, { readonly: !sendEmail, strict: true })
   try {
     if (!sendEmail) {
-      const rows = unreadReplyUsers(database, { minReplies, maxDays })
+      const rows = unreadReplyUsers(database, { minReplies, maxDays, version })
       if (!rows.length) console.log('No users found.')
       else {
         console.table(rows)
@@ -221,7 +235,8 @@ if (import.meta.main) {
         if (!stopping) console.log(`received ${signal}; finishing the current recipient before stopping`)
         stopping = true
       })
-      const result = await sendInteractedCampaign({ database, minReplies, maxDays, stopping: () => stopping })
+      const result = await sendInteractedCampaign({ database, minReplies, maxDays, version,
+        stopping: () => stopping })
       console.log(`interaction campaign ${result.version}: sent=${result.sent} skipped=${result.skipped} ` +
         `failed=${result.failed}${result.stopped ? ' stopped=true' : ''}`)
       if (result.failed) process.exitCode = 1

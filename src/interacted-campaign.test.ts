@@ -91,3 +91,15 @@ test('interaction campaign does not retry an ambiguous delivery on restart', asy
   expect(requests).toBe(1)
   expect(database.query('SELECT status FROM interacted_email_deliveries').get()).toEqual({ status: 'uncertain' })
 })
+
+test('v2 omits users with unread replies predating the v1 campaign', () => {
+  const database = campaignDatabase()
+  database.run(`INSERT INTO interacted_email_deliveries
+    (campaign_version,email,user_id,status,run_id,idempotency_key,created_at)
+    VALUES ('v1','sent@example.com',99,'sent','old-run','old-key','2026-08-02 12:00:00')`)
+
+  expect(unreadReplyCandidates(database, { minReplies: 1, version: 'v2' })).toHaveLength(0)
+
+  database.run(`UPDATE posts SET created_at='2026-08-03 10:00:00' WHERE parent_id IS NOT NULL`)
+  expect(unreadReplyCandidates(database, { minReplies: 1, version: 'v2' })).toHaveLength(3)
+})

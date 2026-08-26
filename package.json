@@ -16,6 +16,7 @@
     "backfill:post-translations": "bun scripts/backfill-post-translations.ts",
     "email:recap:v1": "bun scripts/send-recap-email.ts",
     "users:unread-replies": "bun scripts/list-unread-reply-users.ts",
+    "users:unread-replies:v2": "bun scripts/list-unread-reply-users.ts --v2",
     "stress:routes": "bun scripts/stress-routes.ts",
     "test": "bun test",
     "typecheck": "tsc --noEmit",
