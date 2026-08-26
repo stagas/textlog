@@ -2098,6 +2098,44 @@ export const migrations: Migration[] = [
       INSERT INTO post_search(post_search) VALUES('rebuild');`)
     },
   },
+  {
+    version: 140,
+    name: 'invalidate_thread_followers_on_reply',
+    up(database) {
+      if (!database.query(`SELECT 1 FROM sqlite_master
+        WHERE type='table' AND name='personalized_feed_generations'`).get()) return
+      database.run(`DROP TRIGGER IF EXISTS personalized_feed_posts_insert;
+        CREATE TRIGGER personalized_feed_posts_insert AFTER INSERT ON posts BEGIN
+          INSERT INTO personalized_feed_generations(viewer_id,generation)
+          WITH RECURSIVE ancestors(id,user_id,parent_id) AS (
+            SELECT id,user_id,parent_id FROM posts WHERE id=NEW.parent_id UNION ALL
+            SELECT p.id,p.user_id,p.parent_id FROM posts p JOIN ancestors a ON p.id=a.parent_id
+          ), affected(id) AS (
+            SELECT NEW.user_id
+            UNION SELECT follower_id FROM follows WHERE following_id=NEW.user_id
+            UNION SELECT user_id FROM ancestors
+            UNION SELECT f.follower_id FROM ancestors a
+              JOIN follows f ON f.following_id=a.user_id
+            UNION SELECT recipient_id FROM (SELECT pm.user_id recipient_id FROM ancestors
+              JOIN post_mentions pm ON pm.post_id=ancestors.id
+              WHERE EXISTS (SELECT 1 FROM ancestors JOIN post_hashtags whisper_tag
+                ON whisper_tag.post_id=ancestors.id WHERE whisper_tag.tag='whisper'))
+            UNION SELECT hf.user_id FROM ancestors
+              JOIN post_hashtags ph ON ph.post_id=ancestors.id
+              JOIN hashtag_follows hf ON hf.tag=ph.tag
+              WHERE EXISTS (SELECT 1 FROM ancestors JOIN post_hashtags whisper_tag
+                ON whisper_tag.post_id=ancestors.id WHERE whisper_tag.tag='whisper')
+          ) SELECT affected.id,2 FROM affected JOIN users ON users.id=affected.id
+          ON CONFLICT(viewer_id) DO UPDATE SET generation=generation+1;
+        END;
+        UPDATE personalized_feed_generations SET generation=generation+1;
+        DELETE FROM feed_snapshots WHERE kind LIKE 'for-you:%' OR kind LIKE 'to-me:%';`)
+      if (database.query(`SELECT 1 FROM sqlite_master
+        WHERE type='table' AND name='feed_snapshot_generation'`).get()) {
+        database.query('UPDATE feed_snapshot_generation SET generation=generation+1 WHERE id=1').run()
+      }
+    },
+  },
 ]
 
 export const latestMigrationVersion = migrations.at(-1)!.version

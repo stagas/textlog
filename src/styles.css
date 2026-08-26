@@ -5810,6 +5810,12 @@ a.post-context:hover {
   animation: disclosure-overflow 0s 200ms forwards;
 }
 
+.thread-ancestor-gap {
+  padding: var(--space-2) var(--gutter) 0;
+  font-size: 0.875rem;
+  letter-spacing: 0.2em;
+}
+
 .thread-fold-input:checked~.reply-branch .thread-branch-content {
   overflow: hidden;
   animation: none;

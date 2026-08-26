@@ -662,6 +662,28 @@ describe('database migrations', () => {
     expect(generation()).toBe(initial + 3)
   })
 
+  test('invalidates followers of thread ancestors when a deep reply is added', () => {
+    const database = new Database(':memory:')
+    database.run('PRAGMA foreign_keys=ON')
+    runMigrations(database)
+    database.run(`INSERT INTO users(id,handle,email,password) VALUES
+      (1,'viewer','viewer@example.com','x'),
+      (2,'root-author','root@example.com','x'),
+      (3,'middle-author','middle@example.com','x'),
+      (4,'replier','reply@example.com','x');
+      INSERT INTO follows(follower_id,following_id) VALUES(1,2);
+      INSERT INTO posts(id,user_id,body,parent_id) VALUES
+        (1,2,'root',NULL),(2,3,'middle',1);`)
+    const generation = () => (database.query(
+      'SELECT generation FROM personalized_feed_generations WHERE viewer_id=1',
+    ).get() as { generation: number }).generation
+    const initial = generation()
+
+    database.run("INSERT INTO posts(id,user_id,body,parent_id) VALUES(3,4,'deep reply',2)")
+
+    expect(generation()).toBe(initial + 1)
+  })
+
   test('invalidates existing personalized feeds when a signup chooses a handle', () => {
     const database = new Database(':memory:')
     database.run('PRAGMA foreign_keys=ON')

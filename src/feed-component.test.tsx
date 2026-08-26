@@ -5,7 +5,7 @@ import { Feed, groupSimilarActivities } from './components/feed'
 import { HotFeed } from './components/hot-feed'
 import { postAgeTitle } from './components/post'
 import { PublicFeed } from './components/public-feed'
-import type { PersonalizedTimelineRow } from './types'
+import type { ParentPost, PersonalizedTimelineRow } from './types'
 
 function postActivity(id: number, actorId: number, handle: string): PersonalizedTimelineRow {
   const post = {
@@ -102,6 +102,23 @@ test('latest renders independent unread controls, thread dots, and directed high
   expect(html).toContain('href="/latest?page=3#post-50">last unread</a>')
   expect(html).toContain('action="/latest/read-all"')
   expect(html).toContain('latest<span class="to-me-count">4</span>')
+})
+
+test('a deep unread reply moves its root first and compresses read ancestors', () => {
+  const root = { id: 100, user_id: 2, parent_id: null, body: 'active root',
+    created_at: '2026-08-19 08:00:00', deleted_at: null, handle: 'alice', reply_count: 4 }
+  const readAncestor = { ...root, id: 101, parent_id: root.id, body: 'read ancestor', parent: root }
+  const immediate = { ...root, id: 102, parent_id: readAncestor.id, body: 'immediate parent', parent: readAncestor }
+  const unreadReply = { ...root, id: 103, user_id: 3, parent_id: immediate.id, body: 'new unread reply',
+    created_at: '2026-08-19 12:00:00', handle: 'bob', reply_count: 0, parent: immediate }
+  const otherRoot = { ...root, id: 104, body: 'other root', created_at: '2026-08-19 11:00:00' }
+  const html = renderToStaticMarkup(<PublicFeed feed={{ posts: [unreadReply, otherRoot], page: 1,
+    totalItems: 2, totalPages: 1, unreadPostIds: [103] }} path="/latest" />)
+
+  expect(html.indexOf('active root')).toBeLessThan(html.indexOf('other root'))
+  expect(html).not.toContain('read ancestor')
+  expect(html).toContain('aria-label="Earlier replies omitted">…</div>')
+  expect(html.indexOf('immediate parent')).toBeLessThan(html.indexOf('new unread reply'))
 })
 
 test('latest shows approximate age wording only for unread post metadata', () => {
@@ -316,6 +333,38 @@ test('for-you labels a descendant that replies to its own author as continued', 
 
   expect(html).toContain('continued some time ago:</span>')
   expect(html).not.toContain('replied to you:')
+})
+
+test('for-you positions a root by its newest deep reply when timeline ancestors are missing', () => {
+  const rootRow = postActivity(120, 2, 'alice')
+  rootRow.created_at = '2026-08-19 08:00:00'
+  const root: ParentPost = { id: rootRow.id, user_id: rootRow.user_id, parent_id: null,
+    body: 'active conversation root', created_at: rootRow.created_at, deleted_at: null,
+    handle: rootRow.handle, reply_count: 3 }
+  rootRow.renderedPost = { ...rootRow.renderedPost!, ...root }
+  const missingAncestor: ParentPost = { ...root, id: 121, parent_id: root.id,
+    body: 'omitted ancestor', parent: root }
+  const immediate: ParentPost = { ...root, id: 122, parent_id: missingAncestor.id,
+    body: 'immediate context', parent: missingAncestor }
+  const deepRow = postActivity(123, 3, 'bob')
+  deepRow.parent_id = immediate.id
+  deepRow.created_at = '2026-08-19 12:00:00'
+  deepRow.unread = 1
+  deepRow.renderedPost = { ...deepRow.renderedPost!, parent_id: immediate.id, parent: immediate,
+    body: 'newest deep reply', created_at: deepRow.created_at }
+  const earlier = postActivity(124, 4, 'cara')
+  earlier.created_at = '2026-08-19 11:00:00'
+  earlier.renderedPost = { ...earlier.renderedPost!, body: 'earlier standalone post', created_at: earlier.created_at }
+  const html = renderToStaticMarkup(<Feed
+    user={{ id: 1, handle: 'reader', email: 'reader@example.com', bio: '', handle_chosen_at: '2026-08-19 09:00:00' }}
+    data={{ timeline: [deepRow, earlier, rootRow], page: 1, totalPages: 1, toMeCount: 0,
+      forYouCount: 1, forYouUnread: true, toMeUnread: false }}
+  />)
+
+  expect(html.match(/active conversation root/g)).toHaveLength(1)
+  expect(html.indexOf('active conversation root')).toBeLessThan(html.indexOf('earlier standalone post'))
+  expect(html).not.toContain('omitted ancestor')
+  expect(html).toContain('newest deep reply')
 })
 
 test('for-you does not put hide actions on follow activity', () => {

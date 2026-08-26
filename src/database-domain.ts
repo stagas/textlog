@@ -1974,8 +1974,8 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
       const state = viewerId >= 0 ? latestPostState(viewerId, database) : []
       const unreadIds = new Set(state.filter(row => row.unread).map(row => row.id))
       const parameters = [viewerId, viewerId, viewerId, viewerId, viewerId]
-      const snapshot = feedSnapshotPage<PostView>(database, 'latest-roots-v1', viewerId, page, () =>
-        database.query(
+      const snapshot = feedSnapshotPage<PostView>(database, 'latest-roots-v2', viewerId, page, () => {
+        const rows = database.query(
           `SELECT p.*,u.handle FROM posts p JOIN users u ON u.id=p.user_id
           WHERE p.deleted_at IS NULL AND (? < 0 OR NOT EXISTS
           (SELECT 1 FROM blocks b WHERE (b.blocker_id=? AND b.blocked_id=p.user_id)
@@ -1983,10 +1983,33 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
           AND ${excludesWhisperPosts()}
           AND (? < 0 OR NOT EXISTS (SELECT 1 FROM post_hashtags ph JOIN blocked_hashtags bh ON bh.tag=ph.tag
             WHERE ph.post_id=p.id AND bh.user_id=?)) ORDER BY p.id DESC`,
-        ).all(...parameters).filter(post => {
-          const row = post as PostView
-          return row.parent_id === null || unreadIds.has(row.id)
-        }) as PostView[], pageSize, cacheDb)
+        ).all(...parameters) as PostView[]
+        const byId = new Map(rows.map(row => [row.id, row]))
+        const rootIds = new Map<number, number>()
+        const rootId = (post: PostView) => {
+          const cached = rootIds.get(post.id)
+          if (cached !== undefined) return cached
+          let current = post
+          const visited: number[] = []
+          while (current.parent_id && byId.has(current.parent_id)) {
+            visited.push(current.id)
+            current = byId.get(current.parent_id)!
+          }
+          for (const id of visited) rootIds.set(id, current.id)
+          rootIds.set(current.id, current.id)
+          return current.id
+        }
+        const conversations = new Map<number, PostView[]>()
+        for (const row of rows) {
+          const id = rootId(row)
+          conversations.set(id, [...(conversations.get(id) || []), row])
+        }
+        return [...conversations.entries()].flatMap(([id, conversation]) => {
+          const root = byId.get(id)
+          const unreadReplies = conversation.filter(row => row.parent_id !== null && unreadIds.has(row.id))
+          return root?.parent_id === null ? [root, ...unreadReplies] : unreadReplies
+        })
+      }, pageSize, cacheDb)
       const unread = state.filter(row => row.unread)
       const posts = enrichPosts(database, snapshot.items, viewerId)
       const pageIds = new Set(snapshot.items.map(post => post.id))
@@ -2008,7 +2031,7 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
         : undefined
       if (viewerId >= 0 && markRead && unreadPostIds.length) {
         markLatestPostsRead(viewerId, unreadPostIds, database)
-        cacheDb.query("DELETE FROM feed_snapshots WHERE kind='latest-roots-v1' AND viewer_id=?").run(viewerId)
+        cacheDb.query("DELETE FROM feed_snapshots WHERE kind='latest-roots-v2' AND viewer_id=?").run(viewerId)
         cacheDb.query(`DELETE FROM materialized_feed_pages_v2 WHERE viewer_id=?
           AND kind IN ('latest','hot','for-you','to-me')`).run(viewerId)
       }

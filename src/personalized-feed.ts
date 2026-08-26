@@ -10,7 +10,7 @@ import { enrichPosts, loadBioReferenceData, visibleTagFollowerCounts, visibleUse
 import type { PersonalizedFeedData, PersonalizedTimelineRow, User } from './types'
 import { isWhisperThread, whisperThreadRelevantToViewer, whisperThreadTargetsViewer } from './whisper'
 
-export const PERSONALIZED_FEED_SNAPSHOT_VERSION = 12
+export const PERSONALIZED_FEED_SNAPSHOT_VERSION = 15
 
 const descendsFromViewer = `EXISTS (WITH RECURSIVE ancestors(id,user_id,parent_id) AS (
   SELECT ancestor.id,ancestor.user_id,ancestor.parent_id FROM posts ancestor WHERE ancestor.id=p.parent_id
@@ -18,6 +18,18 @@ const descendsFromViewer = `EXISTS (WITH RECURSIVE ancestors(id,user_id,parent_i
   SELECT ancestor.id,ancestor.user_id,ancestor.parent_id FROM posts ancestor
     JOIN ancestors child ON ancestor.id=child.parent_id
 ) SELECT 1 FROM ancestors WHERE user_id=$viewer)`
+
+const descendsFromFollowedUser = `EXISTS (WITH RECURSIVE ancestors(id,user_id,parent_id) AS (
+  SELECT ancestor.id,ancestor.user_id,ancestor.parent_id FROM posts ancestor WHERE ancestor.id=p.parent_id
+  UNION ALL
+  SELECT ancestor.id,ancestor.user_id,ancestor.parent_id FROM posts ancestor
+    JOIN ancestors child ON ancestor.id=child.parent_id
+) SELECT 1 FROM ancestors JOIN follows ON follows.following_id=ancestors.user_id
+  WHERE follows.follower_id=$viewer)`
+
+const unreadInLatest = `NOT (p.id<=coalesce((SELECT through_post_id FROM latest_read_state
+  WHERE user_id=$viewer),0) OR EXISTS (SELECT 1 FROM latest_read_exceptions latest_seen
+    WHERE latest_seen.user_id=$viewer AND latest_seen.post_id=p.id))`
 
 const hasVisibleDescendantFromAnotherUser = `EXISTS (WITH RECURSIVE descendants(id,user_id,parent_id,deleted_at) AS (
   SELECT child.id,child.user_id,child.parent_id,child.deleted_at FROM posts child WHERE child.parent_id=p.id
@@ -34,14 +46,11 @@ export function loadPersonalizedFeed(database: Database, user: User, page: numbe
   path: string, markRead = true): PersonalizedFeedData
 {
   const readsTable = toMe ? 'to_me_reads' : 'for_you_reads'
-  const filter = toMe
-    ? 'WHERE timeline.targeted_to_viewer=1'
-    : `WHERE timeline.parent_id IS NULL OR NOT EXISTS (
-      SELECT 1 FROM ${readsTable} seen WHERE seen.user_id=$viewer AND seen.event_key=timeline.event_key)`
+  const filter = toMe ? 'WHERE timeline.targeted_to_viewer=1' : ''
   const snapshotKind = `${toMe ? 'to-me' : 'for-you'}:v${PERSONALIZED_FEED_SNAPSHOT_VERSION}`
   const snapshot = feedSnapshotPage<PersonalizedTimelineRow>(database, snapshotKind, user.id, page,
-    () =>
-      database.query(`SELECT timeline.*,
+    () => {
+      const rows = database.query(`SELECT timeline.*,
       NOT EXISTS(SELECT 1 FROM ${readsTable} seen WHERE seen.user_id=$viewer
         AND seen.event_key=timeline.event_key) unread FROM (
       SELECT p.id,p.user_id,p.body,p.translation,p.created_at,p.parent_id,p.deleted_at,
@@ -56,7 +65,8 @@ export function loadPersonalizedFeed(database: Database, user: User, page: numbe
       WHERE p.deleted_at IS NULL AND ((NOT ${isWhisperThread()} AND
         ((p.user_id=$viewer AND (parent.user_id!=$viewer OR
         ${hasVisibleDescendantFromAnotherUser})) OR p.user_id IN
-        (SELECT following_id FROM follows WHERE follower_id=$viewer) OR ${descendsFromViewer} OR p.id IN
+        (SELECT following_id FROM follows WHERE follower_id=$viewer) OR ${descendsFromViewer}
+        OR (${descendsFromFollowedUser} AND ${unreadInLatest}) OR p.id IN
         (SELECT ph.post_id FROM post_hashtags ph JOIN hashtag_follows hf ON hf.tag=ph.tag
           WHERE hf.user_id=$viewer)))
         OR ${whisperThreadRelevantToViewer()})
@@ -144,7 +154,58 @@ export function loadPersonalizedFeed(database: Database, user: User, page: numbe
       ) timeline ${filter} ORDER BY timeline.created_at DESC,timeline.event_key DESC`).all({
         viewer: user.id,
         admin: Number(isAdmin(user)),
-      }) as PersonalizedTimelineRow[], pageSize)
+      }) as PersonalizedTimelineRow[]
+      if (toMe) return rows
+      const postRows = rows.filter(row => row.id !== null
+        && ['post', 'reply', 'mention'].includes(row.activity_kind))
+      const byId = new Map(postRows.map(row => [row.id, row]))
+      const rootByPost = new Map<number, number>()
+      if (postRows.length) {
+        const ancestry = database.query(`WITH RECURSIVE ancestry(origin,id,parent_id) AS (
+          SELECT id,id,parent_id FROM posts WHERE id IN (${postRows.map(() => '?').join(',')})
+          UNION ALL SELECT a.origin,p.id,p.parent_id FROM posts p JOIN ancestry a ON p.id=a.parent_id
+        ) SELECT origin,id root_id FROM ancestry WHERE parent_id IS NULL`).all(
+          ...postRows.map(row => row.id),
+        ) as { origin: number, root_id: number }[]
+        for (const row of ancestry) rootByPost.set(row.origin, row.root_id)
+      }
+      const rootId = (row: PersonalizedTimelineRow) => row.id === null ? null : rootByPost.get(row.id) || row.id
+      const emittedThreads = new Set<number | null>()
+      const roots = [...new Set(postRows.map(rootId).filter((id): id is number => id !== null))]
+      const threadActivity = new Map<number, string>()
+      if (roots.length) {
+        const activity = database.query(`WITH RECURSIVE descendants(root_id,id,user_id,created_at) AS (
+          SELECT id,id,user_id,created_at FROM posts WHERE id IN (${roots.map(() => '?').join(',')})
+          UNION ALL
+          SELECT d.root_id,p.id,p.user_id,p.created_at FROM posts p JOIN descendants d ON p.parent_id=d.id
+          WHERE p.deleted_at IS NULL
+        ) SELECT d.root_id,max(d.created_at) created_at FROM descendants d
+        WHERE NOT EXISTS (SELECT 1 FROM blocks b WHERE
+          (b.blocker_id=? AND b.blocked_id=d.user_id) OR (b.blocker_id=d.user_id AND b.blocked_id=?))
+          AND NOT EXISTS (SELECT 1 FROM post_hashtags ph JOIN blocked_hashtags bh ON bh.tag=ph.tag
+            WHERE ph.post_id=d.id AND bh.user_id=?)
+        GROUP BY d.root_id`).all(...roots, user.id, user.id, user.id) as { root_id: number, created_at: string }[]
+        for (const row of activity) threadActivity.set(row.root_id, row.created_at)
+      }
+      const result: { rows: PersonalizedTimelineRow[], created_at: string, order: string }[] = []
+      for (const row of rows) {
+        if (row.id === null || !['post', 'reply', 'mention'].includes(row.activity_kind)) {
+          result.push({ rows: [row], created_at: row.created_at, order: row.event_key })
+          continue
+        }
+        const root = rootId(row)
+        if (emittedThreads.has(root)) continue
+        emittedThreads.add(root)
+        const conversation = postRows.filter(candidate => rootId(candidate) === root)
+        const rootRow = byId.get(root!)
+        const threadRows = rootRow?.parent_id === null ? [rootRow] : []
+        threadRows.push(...conversation.filter(candidate => candidate.parent_id !== null && candidate.unread))
+        if (threadRows.length) result.push({ rows: threadRows,
+          created_at: threadActivity.get(root!) || row.created_at, order: row.event_key })
+      }
+      return result.sort((a, b) => b.created_at.localeCompare(a.created_at) || b.order.localeCompare(a.order))
+        .flatMap(entry => entry.rows)
+    }, pageSize)
 
   const readKeys = snapshot.items.length
     ? new Set((database.query(`SELECT event_key FROM ${readsTable}

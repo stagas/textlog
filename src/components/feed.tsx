@@ -66,40 +66,33 @@ export function Feed({ user, data, title, path = '/for-you', pageUrl, notificati
   const showTopPagination = data.page > 1 || (data.page === 1 && unreadPage !== null && unreadPage > 1)
   const displayTimeline = toMe ? data.timeline : data.timeline.filter(row => !row.parent_id || row.unread)
   const timelinePosts = displayTimeline.filter(row => ['post', 'reply', 'mention'].includes(row.activity_kind))
-  const timelinePostIds = new Set(timelinePosts.map(row => row.id))
   const unreadPostIds = new Set(timelinePosts.filter(row => row.unread).map(row => row.id))
   const directedUnreadPostIds = new Set(timelinePosts.filter(row => row.unread && row.targeted_to_viewer)
     .map(row => row.id))
-  const threadPosts = (rootId: number) => {
-    const root = timelinePosts.find(row => row.id === rootId)
-    const sharedOrphanSiblings = root?.parent_id && !timelinePostIds.has(root.parent_id)
-      ? timelinePosts.filter(row => row.parent_id === root.parent_id)
-      : []
-    const included = new Set(sharedOrphanSiblings.length > 1 ? sharedOrphanSiblings.map(row => row.id) : [rootId])
-    let changed = true
-    while (changed) {
-      changed = false
-      for (const row of timelinePosts) {
-        if (row.parent_id && included.has(row.parent_id) && !included.has(row.id)) {
-          included.add(row.id)
-          changed = true
-        }
-      }
+  const conversationRootId = (row: PersonalizedTimelineRow) => {
+    let rootId = row.id
+    let parent = row.renderedPost?.parent
+    while (parent) {
+      rootId = parent.id
+      parent = parent.parent
     }
-    return timelinePosts.filter(row => included.has(row.id)).map(row => row.renderedPost!)
+    return rootId
+  }
+  const threadPosts = (row: PersonalizedTimelineRow) => {
+    const rootId = conversationRootId(row)
+    return timelinePosts.filter(candidate => conversationRootId(candidate) === rootId)
+      .map(candidate => candidate.renderedPost!)
   }
   const timelinePositions = new Map(displayTimeline.map((row, index) => [row.event_key, index]))
   const timelinePostPositions = new Map(displayTimeline.map((row, index) => [row.id, index]))
   const visibleTimeline = displayTimeline.filter((row, index) => {
     if (!['post', 'reply', 'mention'].includes(row.activity_kind)) return true
-    if (row.parent_id && timelinePostIds.has(row.parent_id)) return false
-    if (!row.parent_id) return true
     return displayTimeline.findIndex(candidate => ['post', 'reply', 'mention'].includes(candidate.activity_kind)
-      && candidate.parent_id === row.parent_id) === index
+      && conversationRootId(candidate) === conversationRootId(row)) === index
   })
     .sort((a, b) => {
       const position = (row: PersonalizedTimelineRow) => ['post', 'reply', 'mention'].includes(row.activity_kind)
-        ? Math.min(...threadPosts(row.id).map(post => timelinePostPositions.get(post.id)!))
+        ? Math.min(...threadPosts(row).map(post => timelinePostPositions.get(post.id)!))
         : timelinePositions.get(row.event_key)!
       return position(a) - position(b)
     })
@@ -118,7 +111,7 @@ export function Feed({ user, data, title, path = '/for-you', pageUrl, notificati
           {flat
             ? <Post p={row.renderedPost!} user={user} showReplyCount tappable contextUnread={!!row.unread}
               returnPath={`${returnPath}#post-${row.id}`} />
-            : <FeedThreads posts={threadPosts(row.id)} user={user} returnPath={returnPath}
+            : <FeedThreads posts={threadPosts(row)} user={user} returnPath={returnPath}
               promoteAncestors={!toMe}
               contextUnreadPostIds={unreadPostIds} contextDirectedUnreadPostIds={directedUnreadPostIds} />}
         </div>

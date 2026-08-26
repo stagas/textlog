@@ -95,6 +95,7 @@ export type PostView = PostRow & {
   reply_count?: number
   parent?: ParentPost | null
   thread_locked?: boolean
+  feed_ancestor_gap?: boolean
 }
 
 export type PostFeedPage = { posts: PostView[]; page: number; totalItems: number; totalPages: number;

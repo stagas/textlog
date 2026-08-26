@@ -2,6 +2,7 @@ import { Database } from 'bun:sqlite'
 import { expect, test } from 'bun:test'
 import { runMigrations } from './migrations'
 import { loadPersonalizedFeed } from './personalized-feed'
+import { markLatestPostsRead } from './latest-state'
 import type { User } from './types'
 
 test('whisper descendants stay in participant and original tag-follower personalized feeds', () => {
@@ -45,4 +46,27 @@ test('whisper descendants stay in participant and original tag-follower personal
   expect(charlieToMe.timeline.some(row => row.id === 4)).toBeFalse()
   expect(daveForYou.timeline.some(row => row.id === 4)).toBeFalse()
   expect(daveToMe.timeline.some(row => row.id === 4)).toBeFalse()
+})
+
+test('a new deep reply in a followed thread is included with its root', () => {
+  const database = new Database(':memory:', { strict: true })
+  runMigrations(database)
+  database.run(`INSERT INTO users(id,handle,email,password,bio) VALUES
+      (1,'viewer','viewer@example.com','!',''),
+      (2,'followed','followed@example.com','!',''),
+      (3,'middle','middle@example.com','!',''),
+      (4,'replier','replier@example.com','!','');
+    INSERT INTO follows(follower_id,following_id,created_at) VALUES(1,2,CURRENT_TIMESTAMP);
+    INSERT INTO posts(id,user_id,parent_id,body,created_at) VALUES
+      (1,2,NULL,'root','2026-08-03 09:00:00'),
+      (2,3,1,'middle','2026-08-03 10:00:00');`)
+  markLatestPostsRead(1, [1, 2], database)
+  database.run(`INSERT INTO posts(id,user_id,parent_id,body,created_at)
+    VALUES(3,4,2,'deep reply','2026-08-03 11:00:00')`)
+  const viewer: User = { id: 1, handle: 'viewer', email: 'viewer@example.com', bio: '' }
+
+  const feed = loadPersonalizedFeed(database, viewer, 1, 20, false, '/for-you', false)
+
+  expect(feed.timeline.filter(row => row.id).map(row => row.id)).toEqual([1, 3])
+  expect(feed.timeline.find(row => row.id === 3)?.unread).toBe(1)
 })

@@ -1039,8 +1039,10 @@ test('public collection pages advertise their RSS and Atom feeds', () => {
 
 test('latest and hot feeds label posts addressed to the viewer', () => {
   const user = { id: 2, handle: 'reader', email: 'reader@example.com', bio: '' }
+  const parent = { id: 4, user_id: user.id, parent_id: null, body: 'parent', created_at: '2026-08-20 11:00:00',
+    deleted_at: null, handle: user.handle, reply_count: 1 }
   const post = { id: 9, user_id: 1, parent_id: 4, body: 'hello', created_at: '2026-08-20 12:00:00',
-    deleted_at: null, handle: 'writer', viewer_context: 'reply' as const }
+    deleted_at: null, handle: 'writer', viewer_context: 'reply' as const, parent }
   const feed = { posts: [post], page: 1, totalItems: 1, totalPages: 1 }
 
   const latest = renderToStaticMarkup(React.createElement(PublicFeed, { user, feed, path: '/latest' }))

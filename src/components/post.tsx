@@ -842,6 +842,8 @@ export function ThreadReplies(
       : undefined
     return (
       <div className="reply-node" key={reply.id}>
+        {reply.feed_ancestor_gap && <div className="quiet thread-ancestor-gap"
+          aria-label="Earlier replies omitted">…</div>}
         {foldControlId && <input className="thread-fold-input" type="checkbox" id={foldControlId} />}
         <Post p={reply} user={user} showParent={false} foldControlId={foldControlId}
           returnPath={postReturnPath} contextUnread={contextUnreadPostIds?.has(reply.id)}
@@ -908,15 +910,23 @@ export function FeedThreads(
   const ids = new Set(posts.map(post => post.id))
   if (promoteAncestors) {
     for (const post of posts) {
-      let parent = post.parent
-      while (parent) {
-        if (!ids.has(parent.id)) {
-          treePosts.push({ ...parent, user_id: parent.user_id ?? -1, parent_id: parent.parent_id ?? null,
-            reply_count: parent.reply_count || 0 })
-          ids.add(parent.id)
-        }
-        parent = parent.parent
+      const immediateParent = post.parent
+      if (!immediateParent) continue
+      let root = immediateParent
+      while (root.parent) root = root.parent
+      for (const ancestor of immediateParent.id === root.id ? [root] : [immediateParent, root]) {
+        if (ids.has(ancestor.id)) continue
+        treePosts.push({ ...ancestor, user_id: ancestor.user_id ?? -1, parent_id: ancestor.parent_id ?? null,
+          reply_count: ancestor.reply_count || 0 })
+        ids.add(ancestor.id)
       }
+    }
+    for (let index = 0; index < treePosts.length; index++) {
+      const post = treePosts[index]
+      if (!post.parent_id || ids.has(post.parent_id)) continue
+      let ancestor = post.parent
+      while (ancestor && !ids.has(ancestor.id)) ancestor = ancestor.parent
+      treePosts[index] = { ...post, parent_id: ancestor?.id ?? null, feed_ancestor_gap: !!ancestor }
     }
   } else {
     const references = new Map<number, PostView[]>()
