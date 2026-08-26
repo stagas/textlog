@@ -88,7 +88,7 @@ export class RequestRateLimiter {
   }
 }
 
-/** Counts local navigation links nested through repeatedly encoded `from` parameters. */
+/** Counts local navigation links nested through `from`, including a `/enter` `next` destination. */
 export function nestedFromDepth(requestUrl: string, maximum = NESTED_FROM_MAX_DEPTH) {
   let url: URL
   try {
@@ -100,6 +100,7 @@ export function nestedFromDepth(requestUrl: string, maximum = NESTED_FROM_MAX_DE
 
   let depth = 0
   let from = url.searchParams.get('from')
+  if (from === null && url.pathname === '/enter') from = url.searchParams.get('next')
   while (from !== null && depth < maximum) {
     depth++
     try {

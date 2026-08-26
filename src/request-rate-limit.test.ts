@@ -64,11 +64,14 @@ describe('in-memory request rate limiter', () => {
 describe('nested from rate limiter', () => {
   const nested = 'https://textlog.test/?from=%2Fpost%2F1071%3Ffrom%3D%252Fpost%252F1064%253Ffrom%253D%25252Fpost%25252F697%25253Ffrom%25253D%2525252Fpost%2525252F1066%2525253Ffrom%2525253D%252525252Flatest%2525252523post-1070'
   const fourDeep = 'https://textlog.test/?from=%2Fpost%2F925%3Ffrom%3D%252Fpost%252F1507%253Ffrom%253D%25252Fpost%25252F925%25253Ffrom%25253D%2525252Fpost%2525252F937'
+  const enterNext = 'https://textlog.test/enter?next=%2Fpost%2F1577%3Freply%3D1%26from%3D%252Fpost%252F925%253Ffrom%253D%25252Fpost%25252F1026%25253Ffrom%25253D%2525252Fpost%2525252F925%2525253Ffrom%2525253D%252525252Fpost%252525252F954%252525253Ffrom%252525253D%25252525252Fpost%25252525252F925'
 
   test('counts repeatedly encoded from links up to the enforcement depth', () => {
     expect(nestedFromDepth('https://textlog.test/post/1?from=%2Flatest')).toBe(1)
     expect(nestedFromDepth(fourDeep)).toBe(4)
     expect(nestedFromDepth(nested)).toBe(4)
+    expect(nestedFromDepth(enterNext)).toBe(4)
+    expect(nestedFromDepth('https://textlog.test/enter?next=%2Fpost%2F1')).toBe(1)
     expect(nestedFromDepth('https://textlog.test/latest')).toBe(0)
   })
 
