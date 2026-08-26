@@ -40,7 +40,7 @@ import { consumePasswordLoginNonce, issuePasswordLoginNonce } from './password-l
 import { loadPersonalizedFeed, PERSONALIZED_FEED_SNAPSHOT_VERSION } from './personalized-feed'
 import { voteInPoll } from './polls'
 import { loadBioReferenceData, loadThreadReplies } from './posts'
-import { enrichPosts } from './posts'
+import { enrichPosts, rewireVisibleAncestorGaps } from './posts'
 import { visibleTagFollowerCounts, visibleUserProfileStats } from './posts'
 import { createPost, isThreadLocked, updatePost } from './posts'
 import { createPublicArchive, publicArchiveIsCurrent } from './public-archive'
@@ -896,9 +896,8 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
         .get(id) as PostView | null
       if (!found) return { status: 'not_found' } as DatabaseDomainOutput<K>
       if (viewerId >= 0) {
-        const blocked = database.query(`SELECT 1 FROM blocks WHERE
-          (blocker_id=? AND blocked_id=?) OR (blocker_id=? AND blocked_id=?)`)
-          .get(viewerId, found.user_id, found.user_id, viewerId)
+        const blocked = database.query('SELECT 1 FROM blocks WHERE blocker_id=? AND blocked_id=?')
+          .get(viewerId, found.user_id)
         const blockedTag = database.query(`SELECT 1 FROM post_hashtags ph JOIN blocked_hashtags bh ON bh.tag=ph.tag
           WHERE ph.post_id=? AND bh.user_id=?`).get(id, viewerId)
         if (blocked || blockedTag) return { status: 'not_found' } as DatabaseDomainOutput<K>
@@ -909,7 +908,12 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
         SELECT p.id,p.parent_id,ancestors.depth+1 FROM posts p JOIN ancestors ON p.id=ancestors.parent_id
       ) SELECT id FROM ancestors ORDER BY depth DESC LIMIT 1`).get(id) as { id: number } | null
         : null
-      return { status: 'ready', post: enrichPosts(database, [found], viewerId)[0],
+      const post = enrichPosts(database, [found], viewerId)[0]
+      if (post.parent_id && !post.parent) {
+        post.parent = { id: post.parent_id, body: '', translation: null, created_at: found.created_at,
+          deleted_at: null, has_latex: 0, has_links: 0, has_code: 0, handle: '', reply_count: 0, unavailable: true }
+      }
+      return { status: 'ready', post,
         conversationRootId: root?.id ?? null } as DatabaseDomainOutput<K>
     }
     case 'posts.editData': {
@@ -2028,14 +2032,13 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
     case 'feeds.latestPage': {
       const { viewerId, page, pageSize, markRead = true } = input as DatabaseDomainInput<'feeds.latestPage'>
       const state = viewerId >= 0 ? latestPostState(viewerId, database) : []
-      const parameters = [viewerId, viewerId, viewerId, viewerId, viewerId]
+      const parameters = [viewerId, viewerId, viewerId, viewerId]
       const snapshotKind = 'latest-roots-v5'
       const snapshot = feedSnapshotPage<PostView[]>(database, snapshotKind, viewerId, page, () => {
         const rows = database.query(
           `SELECT p.*,u.handle FROM posts p JOIN users u ON u.id=p.user_id
           WHERE p.deleted_at IS NULL AND (? < 0 OR NOT EXISTS
-          (SELECT 1 FROM blocks b WHERE (b.blocker_id=? AND b.blocked_id=p.user_id)
-            OR (b.blocker_id=p.user_id AND b.blocked_id=?)))
+          (SELECT 1 FROM blocks b WHERE b.blocker_id=? AND b.blocked_id=p.user_id))
           AND ${excludesWhisperPosts()}
           AND (? < 0 OR NOT EXISTS (SELECT 1 FROM post_hashtags ph JOIN blocked_hashtags bh ON bh.tag=ph.tag
             WHERE ph.post_id=p.id AND bh.user_id=?)) ORDER BY p.id DESC`,
@@ -2147,7 +2150,8 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
         () =>
           groupPostsByConversation(database, getHotPosts(database, 1_000_000, null, new Date(), viewerId, false, 2)),
         pageSize, cacheDb)
-      return { posts: enrichPosts(database, snapshot.items.flat(), viewerId), page: snapshot.page,
+      return { posts: rewireVisibleAncestorGaps(database,
+        enrichPosts(database, snapshot.items.flat(), viewerId)), page: snapshot.page,
         totalItems: snapshot.totalItems, totalPages: snapshot.totalPages,
         forYouCount: viewerId >= 0 ? unreadForYouCount(viewerId, database) : 0,
         toMeCount: viewerId >= 0 ? unreadToMeCount(viewerId, database) : 0,

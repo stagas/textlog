@@ -1,6 +1,6 @@
 import { Database } from 'bun:sqlite'
 import { describe, expect, test } from 'bun:test'
-import { createPost, enrichPosts, isThreadLocked, loadThreadReplies } from './posts'
+import { createPost, enrichPosts, isThreadLocked, loadThreadReplies, rewireVisibleAncestorGaps } from './posts'
 import type { PostView } from './types'
 import { displayPostBody, linkify } from './utils'
 
@@ -520,6 +520,27 @@ describe('post persistence', () => {
     const [view] = enrichPosts(db, [child])
     expect(view.parent?.reply_count).toBe(1)
     expect(view.parent?.body).toBe('parent')
+  })
+
+  test('rewires a feed reply across an unavailable parent to its nearest visible ancestor', () => {
+    const db = database()
+    db.run(`INSERT INTO posts(id,user_id,parent_id,body) VALUES
+      (494,1,NULL,'root'),(496,1,494,'visible ancestor'),(2516,1,496,'hidden parent'),
+      (2582,2,2516,'visible reply')`)
+    const visible = [
+      { id: 2582, user_id: 2, parent_id: 2516, body: 'visible reply', handle: 'reader',
+        created_at: '2026-08-26 18:34:27', deleted_at: null, parent: null },
+      { id: 496, user_id: 1, parent_id: 494, body: 'visible ancestor', handle: 'author',
+        created_at: '2026-08-08 14:25:42', deleted_at: null },
+      { id: 494, user_id: 1, parent_id: null, body: 'root', handle: 'author',
+        created_at: '2026-08-08 14:20:43', deleted_at: null },
+    ] as PostView[]
+
+    expect(rewireVisibleAncestorGaps(db, visible)[0]).toMatchObject({
+      id: 2582,
+      parent_id: 496,
+    })
+    expect(rewireVisibleAncestorGaps(db, visible)[0].feed_ancestor_gap).toBeUndefined()
   })
 
   test('loads stored translations for replies in a post thread', () => {

@@ -34,7 +34,8 @@ export function HotFeed(
           anchor={user ? undefined : 'feed-tabs'} top />
       )}
       {feed.posts.length
-        ? <FeedThreads posts={feed.posts} user={user} returnPath={returnPath} expandedRootId={expandedRootId} />
+        ? <FeedThreads posts={feed.posts} user={user} returnPath={returnPath} expandedRootId={expandedRootId}
+          promoteAncestors="all" />
         : feed.page === 1
         ? <GlobalFeedEmpty user={user} />
         : (

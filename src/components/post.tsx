@@ -771,14 +771,16 @@ export function Post({
         returnPath={returnPath || `/post/${p.id}#post-${p.id}`} />
       {parent && (
         <blockquote className={'parent-quote' + (containsAsciiArt(parent.body) ? ' ascii-art' : '')
-          + (parent.deleted_at ? ' deleted-parent' : '')
-          + (hasTappableParent ? ' tappable-parent' : '')}
+          + (parent.deleted_at || parent.unavailable ? ' deleted-parent' : '')
+          + (hasTappableParent && !parent.unavailable ? ' tappable-parent' : '')}
         >
-          {hasTappableParent && (
+          {hasTappableParent && !parent.unavailable && (
             <a className="parent-hit-area" href={parentDetailPath} rel={navigationRel}
               aria-label={`open quoted post by @${parent.handle}`} />
           )}
-          {parent.deleted_at
+          {parent.unavailable
+            ? <span>(unavailable post)</span>
+            : parent.deleted_at
             ? <a href={parentDetailPath} rel={navigationRel}>(deleted post)</a>
             : (
               <>
@@ -1033,7 +1035,7 @@ export function FeedThreads(
     hideTopMeta = false, promoteAncestors = false, expandedRootId }: { posts: PostView[]; user: User | null;
       returnPath: string; contextUnreadPostIds?: ReadonlySet<number>;
       contextDirectedUnreadPostIds?: ReadonlySet<number>; highlightTerms?: string[]; hideTopMeta?: boolean;
-      promoteAncestors?: boolean; expandedRootId?: number },
+      promoteAncestors?: boolean | 'all'; expandedRootId?: number },
 ) {
   if (!posts.length) return null
   const treePosts = [...posts]
@@ -1045,8 +1047,20 @@ export function FeedThreads(
       if (ids.has(immediateParent.id)) continue
       treePosts.push({ ...immediateParent, user_id: immediateParent.user_id ?? -1,
         parent_id: immediateParent.parent_id ?? null, reply_count: immediateParent.reply_count || 0,
-        feed_ancestor_gap: immediateParent.parent_id != null })
+        feed_ancestor_gap: promoteAncestors !== 'all' && immediateParent.parent_id != null })
       ids.add(immediateParent.id)
+      if (promoteAncestors === 'all') {
+        let ancestor = immediateParent.parent
+        while (ancestor) {
+          if (!ids.has(ancestor.id)) {
+            treePosts.push({ ...ancestor, user_id: ancestor.user_id ?? -1,
+              parent_id: ancestor.parent_id ?? null, reply_count: ancestor.reply_count || 0 })
+            ids.add(ancestor.id)
+          }
+          ancestor = ancestor.parent
+        }
+        continue
+      }
       let rootAncestor = immediateParent
       while (rootAncestor.parent) rootAncestor = rootAncestor.parent
       if (contextUnreadPostIds?.has(post.id)
@@ -1120,6 +1134,16 @@ export function FeedThreads(
     visit(root.id)
     return unread
   }
+  const isLinearConversation = (root: PostView) => {
+    let linear = true
+    const visit = (parentId: number) => {
+      const replies = children.get(parentId) || []
+      if (replies.length > 1) linear = false
+      for (const reply of replies) visit(reply.id)
+    }
+    visit(root.id)
+    return linear
+  }
   const collapsedPreviewPost = (root: PostView) => {
     let selected: PostView | undefined
     const visit = (parentId: number) => {
@@ -1145,7 +1169,9 @@ export function FeedThreads(
         const collapsedPreview = visibleReplies > 1 ? collapsedPreviewPost(post) : undefined
         const continuesElsewhere = (post.reply_count || 0) > visibleReplies
         const foldControlId = visibleReplies > 0 ? `feed-thread-fold-${post.id}` : undefined
-        const collapsed = visibleReplies > 1 && !hasUnreadReply(post) && expandedRootId !== post.id
+        const reconstructedLinearHotThread = promoteAncestors === 'all' && isLinearConversation(post)
+        const collapsed = visibleReplies > 1 && !reconstructedLinearHotThread
+          && !hasUnreadReply(post) && expandedRootId !== post.id
         const expandedReturnPath = (() => {
           const target = new URL(returnPath, 'http://textlog.local')
           target.searchParams.set('expand', String(post.id))

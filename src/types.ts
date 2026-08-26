@@ -53,6 +53,7 @@ export type BioReferenceData = {
 export type ParentPost = Pick<PostRow,
   'id' | 'body' | 'translation' | 'created_at' | 'deleted_at' | 'has_latex' | 'has_links' | 'has_code'> & {
   handle: string
+  unavailable?: boolean
   parent_id?: number | null
   user_id?: number
   bio?: string

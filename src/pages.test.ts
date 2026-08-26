@@ -911,6 +911,28 @@ test('latest renders conversations only as trees', () => {
   expect(tree).not.toContain('>tree</a>')
 })
 
+test('hot feed conversations reconstruct the complete ancestor tree', () => {
+  const root = { id: 494, user_id: 4, parent_id: null, body: 'Conversation root',
+    created_at: '2026-08-08 14:20:43', deleted_at: null, handle: 'root', reply_count: 3 }
+  const ancestor = { id: 496, user_id: 1, parent_id: root.id, body: 'Earlier context',
+    created_at: '2026-08-08 14:25:42', deleted_at: null, handle: 'ancestor', reply_count: 2, parent: root }
+  const parent = { id: 2516, user_id: 2, parent_id: ancestor.id, body: 'Quoted parent',
+    created_at: '2026-08-26 05:27:01', deleted_at: null, handle: 'parent', reply_count: 1, parent: ancestor }
+  const reply = { id: 2582, user_id: 3, parent_id: parent.id, body: 'Current reply',
+    created_at: '2026-08-26 18:34:27', deleted_at: null, handle: 'reply', reply_count: 0, parent }
+  const html = renderToStaticMarkup(React.createElement(HotFeed, {
+    user: null,
+    feed: { posts: [reply, parent], page: 1, totalItems: 1, totalPages: 1 },
+  }))
+
+  expect(html.indexOf('Conversation root')).toBeLessThan(html.indexOf('Earlier context'))
+  expect(html.indexOf('Earlier context')).toBeLessThan(html.indexOf('Quoted parent'))
+  expect(html.indexOf('Quoted parent')).toBeLessThan(html.indexOf('Current reply'))
+  expect(html.match(/Conversation root/g)).toHaveLength(1)
+  expect(html.match(/Earlier context/g)).toHaveLength(1)
+  expect(html).not.toContain('id="feed-thread-fold-494" checked=""')
+})
+
 test('pages inline the cookie-aware theme and logo', () => {
   const html = renderToStaticMarkup(React.createElement(About, { user: null }))
   expect(html).toContain('<style>:root{color-scheme:light')
@@ -1314,6 +1336,19 @@ test('quoted parents use the same attribution wording', () => {
   expect(deletedRootHtml).toContain('<span class="post-context">replied to</span>'
     + '<span class="post-context deleted-context">(deleted account)</span>')
   expect(deletedRootHtml).not.toContain('/u/deleted-1')
+})
+
+test('reply detail renders a placeholder for an unavailable quoted parent', () => {
+  const html = renderToStaticMarkup(React.createElement(Post, {
+    p: { id: 2582, user_id: 3, parent_id: 2516, body: 'Current reply', created_at: '2026-08-26 18:34:27',
+      deleted_at: null, handle: 'reply', parent: { id: 2516, body: '', translation: null,
+        created_at: '2026-08-26 18:34:27', deleted_at: null, has_latex: 0, has_links: 0, has_code: 0,
+        handle: '', reply_count: 0, unavailable: true } },
+    user: { id: 3, handle: 'reply', email: 'reply@example.com', bio: '' },
+  }))
+
+  expect(html).toContain('<blockquote class="parent-quote deleted-parent"><span>(unavailable post)</span></blockquote>')
+  expect(html).not.toContain('open quoted post')
 })
 
 test('posts by the viewer use plain you instead of a linked handle', () => {

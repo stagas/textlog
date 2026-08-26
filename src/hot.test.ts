@@ -778,7 +778,7 @@ describe('hot feed ranking', () => {
       .map(result => result.id)).toEqual([2, 1])
   })
 
-  test('hides posts when either user has blocked the other', () => {
+  test('only hides posts from accounts the viewer blocked', () => {
     database.query('INSERT INTO users(id,handle) VALUES(?,?)').run(2, 'blocked')
     post(1, '2026-08-03 11:00:00')
     database.query('INSERT INTO posts VALUES(?,?,?,?,?,?)')
@@ -789,9 +789,11 @@ describe('hot feed ranking', () => {
     database.run(`UPDATE post_hot SET score=4,reply_count=2 WHERE post_id IN (1,2)`)
     database.query('INSERT INTO blocks VALUES(?,?)').run(2, 1)
 
-    const results = getHotPosts(database, 20, null, asOf, 1)
-    expect(results.map(result => result.id)).toEqual([1])
-    expect(results[0].hot_score).toBeGreaterThan(0)
+    expect(getHotPosts(database, 20, null, asOf, 1).map(result => result.id)).toEqual([2, 1])
+    database.query('INSERT INTO blocks VALUES(?,?)').run(1, 2)
+    const filtered = getHotPosts(database, 20, null, asOf, 1)
+    expect(filtered.map(result => result.id)).toEqual([1])
+    expect(filtered[0].hot_score).toBeGreaterThan(0)
   })
 
   test('hides every post carrying a blocked hashtag', () => {

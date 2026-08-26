@@ -326,12 +326,12 @@ export function enrichPosts(database: Database, posts: PostView[], viewerId = -1
   const countRootIds = [...new Set([...ids, ...parentIds])]
   const placeholders = countRootIds.map(() => '?').join(',')
   const visibleReply = viewerId < 0 ? '' : `AND NOT EXISTS (SELECT 1 FROM blocks b WHERE
-    (b.blocker_id=? AND b.blocked_id=p.user_id) OR (b.blocker_id=p.user_id AND b.blocked_id=?))
+    b.blocker_id=? AND b.blocked_id=p.user_id)
     AND NOT EXISTS (SELECT 1 FROM post_hashtags ph JOIN blocked_hashtags bh ON bh.tag=ph.tag
       WHERE ph.post_id=p.id AND bh.user_id=?)`
   const countParameters = viewerId < 0
     ? countRootIds
-    : [...countRootIds, viewerId, viewerId, viewerId]
+    : [...countRootIds, viewerId, viewerId]
   const counts = database.query(
     `WITH RECURSIVE descendants(root_id,id,deleted_at) AS (
       SELECT id,id,deleted_at FROM posts WHERE id IN (${placeholders})
@@ -348,12 +348,12 @@ export function enrichPosts(database: Database, posts: PostView[], viewerId = -1
   if (parentIds.length) {
     const parentPlaceholders = parentIds.map(() => '?').join(',')
     const parentFilter = viewerId < 0 ? '' : `AND NOT EXISTS (SELECT 1 FROM blocks b WHERE
-      (b.blocker_id=? AND b.blocked_id=p.user_id) OR (b.blocker_id=p.user_id AND b.blocked_id=?))
+      b.blocker_id=? AND b.blocked_id=p.user_id)
       AND NOT EXISTS (SELECT 1 FROM post_hashtags ph JOIN blocked_hashtags bh ON bh.tag=ph.tag
         WHERE ph.post_id=p.id AND bh.user_id=?)`
     const parentParameters = viewerId < 0
       ? parentIds
-      : [...parentIds, viewerId, viewerId, viewerId]
+      : [...parentIds, viewerId, viewerId]
     const rows = database.query(
       `SELECT p.id,p.user_id,p.parent_id,p.body,${supportsTranslations ? 'p.translation' : 'NULL translation'},
         p.created_at,p.deleted_at,p.has_latex,p.has_links,p.has_code,u.handle,u.bio,
@@ -473,6 +473,32 @@ export function enrichPosts(database: Database, posts: PostView[], viewerId = -1
   }))
 }
 
+export function rewireVisibleAncestorGaps(database: Database, posts: PostView[]) {
+  if (!posts.length) return posts
+  const visibleIds = new Set(posts.map(post => post.id))
+  const disconnected = posts.filter(post => post.parent_id && !visibleIds.has(post.parent_id) && !post.parent)
+  if (!disconnected.length) return posts
+  const rows = database.query(`WITH RECURSIVE ancestors(origin,id,parent_id,depth) AS (
+    SELECT child.id,parent.id,parent.parent_id,1 FROM posts child JOIN posts parent ON parent.id=child.parent_id
+      WHERE child.id IN (${disconnected.map(() => '?').join(',')})
+    UNION ALL
+    SELECT ancestors.origin,parent.id,parent.parent_id,ancestors.depth+1 FROM ancestors
+      JOIN posts parent ON parent.id=ancestors.parent_id
+  ) SELECT origin,id,depth FROM ancestors ORDER BY origin,depth`).all(...disconnected.map(post => post.id)) as Array<{
+    origin: number
+    id: number
+    depth: number
+  }>
+  const nearestVisibleAncestor = new Map<number, number>()
+  for (const row of rows) {
+    if (visibleIds.has(row.id) && !nearestVisibleAncestor.has(row.origin)) nearestVisibleAncestor.set(row.origin, row.id)
+  }
+  return posts.map(post => {
+    const ancestorId = nearestVisibleAncestor.get(post.id)
+    return ancestorId === undefined ? post : { ...post, parent_id: ancestorId }
+  })
+}
+
 export function loadThreadReplies(database: Database, parentId: number, viewerId = -1) {
   const translationColumn = database.query(
       'SELECT 1 FROM pragma_table_info(\'posts\') WHERE name=\'translation\'',
@@ -481,18 +507,18 @@ export function loadThreadReplies(database: Database, parentId: number, viewerId
     : 'NULL translation'
   const rows = database.query(`WITH RECURSIVE thread AS (
       SELECT p.*,u.handle,1 depth FROM posts p JOIN users u ON u.id=p.user_id WHERE p.parent_id=? AND (? < 0 OR NOT EXISTS
-        (SELECT 1 FROM blocks b WHERE (b.blocker_id=? AND b.blocked_id=p.user_id) OR (b.blocker_id=p.user_id AND b.blocked_id=?)))
+        (SELECT 1 FROM blocks b WHERE b.blocker_id=? AND b.blocked_id=p.user_id))
         AND (? < 0 OR NOT EXISTS (SELECT 1 FROM post_hashtags ph JOIN blocked_hashtags bh ON bh.tag=ph.tag
           WHERE ph.post_id=p.id AND bh.user_id=?))
       UNION ALL
       SELECT p.*,u.handle,thread.depth+1 FROM posts p JOIN users u ON u.id=p.user_id
         JOIN thread ON p.parent_id=thread.id WHERE (? < 0 OR NOT EXISTS
-        (SELECT 1 FROM blocks b WHERE (b.blocker_id=? AND b.blocked_id=p.user_id) OR (b.blocker_id=p.user_id AND b.blocked_id=?)))
+        (SELECT 1 FROM blocks b WHERE b.blocker_id=? AND b.blocked_id=p.user_id))
         AND (? < 0 OR NOT EXISTS (SELECT 1 FROM post_hashtags ph JOIN blocked_hashtags bh ON bh.tag=ph.tag
           WHERE ph.post_id=p.id AND bh.user_id=?))
     ) SELECT id,user_id,parent_id,body,${translationColumn},created_at,deleted_at,
       has_latex,has_links,has_code,handle,depth
-      FROM thread ORDER BY created_at ASC,id ASC`).all(parentId, viewerId, viewerId, viewerId, viewerId, viewerId,
-    viewerId, viewerId, viewerId, viewerId, viewerId) as (PostView & { depth: number })[]
+      FROM thread ORDER BY created_at ASC,id ASC`).all(parentId, viewerId, viewerId, viewerId, viewerId,
+    viewerId, viewerId, viewerId, viewerId) as (PostView & { depth: number })[]
   return enrichPosts(database, rows, viewerId) as Array<PostView & { depth: number }>
 }
