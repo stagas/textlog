@@ -7,7 +7,7 @@ export const HOURLY_REQUEST_BLOCK_SECONDS = 60 * 60
 export const REQUEST_RATE_MAX_IPS = 50_000
 export const CLIENT_ERROR_RATE_LIMIT = 10
 export const CLIENT_ERROR_RATE_WINDOW_SECONDS = 5 * 60
-export const NESTED_FROM_MAX_DEPTH = 5
+export const NESTED_FROM_MAX_DEPTH = 4
 export const NESTED_FROM_BLOCK_SECONDS = 60 * 60
 
 type Entry = {
