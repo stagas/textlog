@@ -16,6 +16,7 @@ test('whisper descendants stay in participant and original tag-follower personal
       (1,4,NULL,'public root','2026-08-03 09:00:00'),
       (2,1,1,'ordinary reply','2026-08-03 10:00:00'),
       (3,2,2,'start #whisper #topic','2026-08-03 11:00:00');
+    UPDATE posts SET translation='translated whisper' WHERE id=3;
     INSERT INTO post_hashtags(post_id,tag) VALUES(3,'whisper'),(3,'topic');
     INSERT INTO hashtag_follows(user_id,tag,created_at) VALUES(3,'topic',CURRENT_TIMESTAMP);
     INSERT INTO follows(follower_id,following_id,created_at) VALUES(4,2,CURRENT_TIMESTAMP);`)
@@ -40,6 +41,7 @@ test('whisper descendants stay in participant and original tag-follower personal
   expect(generation(3)).toBeGreaterThan(charlieGeneration)
   expect(aliceToMe.timeline.filter(row => row.id).map(row => row.id)).toEqual([4, 3])
   expect(charlieForYou.timeline.filter(row => row.id).map(row => row.id)).toEqual([4, 3])
+  expect(charlieForYou.timeline.find(row => row.id === 3)?.renderedPost?.translation).toBe('translated whisper')
   expect(charlieToMe.timeline.some(row => row.id === 4)).toBeFalse()
   expect(daveForYou.timeline.some(row => row.id === 4)).toBeFalse()
   expect(daveToMe.timeline.some(row => row.id === 4)).toBeFalse()

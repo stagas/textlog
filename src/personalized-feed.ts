@@ -10,7 +10,7 @@ import { enrichPosts, loadBioReferenceData, visibleTagFollowerCounts, visibleUse
 import type { PersonalizedFeedData, PersonalizedTimelineRow, User } from './types'
 import { isWhisperThread, whisperThreadRelevantToViewer, whisperThreadTargetsViewer } from './whisper'
 
-export const PERSONALIZED_FEED_SNAPSHOT_VERSION = 10
+export const PERSONALIZED_FEED_SNAPSHOT_VERSION = 11
 
 const descendsFromViewer = `EXISTS (WITH RECURSIVE ancestors(id,user_id,parent_id) AS (
   SELECT ancestor.id,ancestor.user_id,ancestor.parent_id FROM posts ancestor WHERE ancestor.id=p.parent_id
@@ -41,7 +41,8 @@ export function loadPersonalizedFeed(database: Database, user: User, page: numbe
       database.query(`SELECT timeline.*,
       NOT EXISTS(SELECT 1 FROM ${readsTable} seen WHERE seen.user_id=$viewer
         AND seen.event_key=timeline.event_key) unread FROM (
-      SELECT p.id,p.user_id,p.body,p.created_at,p.parent_id,p.deleted_at,p.has_latex,p.has_links,p.has_code,u.handle,
+      SELECT p.id,p.user_id,p.body,p.translation,p.created_at,p.parent_id,p.deleted_at,
+        p.has_latex,p.has_links,p.has_code,u.handle,
         EXISTS(SELECT 1 FROM follows vf WHERE vf.follower_id=$viewer AND vf.following_id=p.user_id) following,
         'post' activity_kind,'post:' || printf('%020d',p.id) event_key,p.user_id actor_id,
         u.handle actor_handle,u.bio actor_bio,NULL target_handle,NULL target_tag,NULL target_bio,
@@ -63,7 +64,8 @@ export function loadPersonalizedFeed(database: Database, user: User, page: numbe
         AND (p.user_id=$viewer OR (parent.user_id IS NOT $viewer AND pm.user_id IS NULL
           AND NOT ${whisperThreadTargetsViewer()}))
       UNION ALL
-      SELECT p.id,p.user_id,p.body,p.created_at,p.parent_id,p.deleted_at,p.has_latex,p.has_links,p.has_code,u.handle,
+      SELECT p.id,p.user_id,p.body,p.translation,p.created_at,p.parent_id,p.deleted_at,
+        p.has_latex,p.has_links,p.has_code,u.handle,
         EXISTS(SELECT 1 FROM follows vf WHERE vf.follower_id=$viewer AND vf.following_id=p.user_id) following,
         CASE WHEN pm.user_id IS NOT NULL THEN 'mention' ELSE 'reply' END activity_kind,
         'post:' || printf('%020d',p.id) event_key,p.user_id actor_id,u.handle actor_handle,u.bio actor_bio,
@@ -77,7 +79,7 @@ export function loadPersonalizedFeed(database: Database, user: User, page: numbe
         AND NOT EXISTS (SELECT 1 FROM post_hashtags tph JOIN blocked_hashtags bh ON bh.tag=tph.tag
           WHERE tph.post_id=p.id AND bh.user_id=$viewer)
       UNION ALL
-      SELECT NULL id,actor.id user_id,NULL body,f.created_at,NULL parent_id,NULL deleted_at,NULL has_latex,
+      SELECT NULL id,actor.id user_id,NULL body,NULL translation,f.created_at,NULL parent_id,NULL deleted_at,NULL has_latex,
         NULL has_links,NULL has_code,actor.handle,
         EXISTS(SELECT 1 FROM follows tf WHERE tf.follower_id=$viewer AND tf.following_id=target.id) following,
         'user_follow' activity_kind,
@@ -94,7 +96,7 @@ export function loadPersonalizedFeed(database: Database, user: User, page: numbe
         AND NOT EXISTS (SELECT 1 FROM blocks b WHERE b.blocker_id=$viewer AND b.blocked_id IN (actor.id,target.id)
           OR b.blocked_id=$viewer AND b.blocker_id IN (actor.id,target.id))
       UNION ALL
-      SELECT NULL id,actor.id user_id,NULL body,hf.created_at,NULL parent_id,NULL deleted_at,NULL has_latex,
+      SELECT NULL id,actor.id user_id,NULL body,NULL translation,hf.created_at,NULL parent_id,NULL deleted_at,NULL has_latex,
         NULL has_links,NULL has_code,actor.handle,
         EXISTS(SELECT 1 FROM hashtag_follows vt WHERE vt.user_id=$viewer AND vt.tag=hf.tag) following,
         'tag_follow' activity_kind,
@@ -112,7 +114,7 @@ export function loadPersonalizedFeed(database: Database, user: User, page: numbe
           OR (b.blocker_id=actor.id AND b.blocked_id=$viewer))
         AND NOT EXISTS (SELECT 1 FROM blocked_hashtags bh WHERE bh.user_id=$viewer AND bh.tag=hf.tag)
       UNION ALL
-      SELECT NULL id,actor.id user_id,NULL body,f.created_at,NULL parent_id,NULL deleted_at,NULL has_latex,
+      SELECT NULL id,actor.id user_id,NULL body,NULL translation,f.created_at,NULL parent_id,NULL deleted_at,NULL has_latex,
         NULL has_links,NULL has_code,actor.handle,
         EXISTS(SELECT 1 FROM follows vf WHERE vf.follower_id=$viewer AND vf.following_id=actor.id) following,
         'user_follow' activity_kind,
@@ -126,7 +128,7 @@ export function loadPersonalizedFeed(database: Database, user: User, page: numbe
         AND actor.suspended_at IS NULL AND NOT EXISTS (SELECT 1 FROM blocks b WHERE
           (b.blocker_id=$viewer AND b.blocked_id=actor.id) OR (b.blocker_id=actor.id AND b.blocked_id=$viewer))
       UNION ALL
-      SELECT NULL id,u.id user_id,NULL body,u.handle_chosen_at created_at,NULL parent_id,NULL deleted_at,
+      SELECT NULL id,u.id user_id,NULL body,NULL translation,u.handle_chosen_at created_at,NULL parent_id,NULL deleted_at,
         NULL has_latex,NULL has_links,NULL has_code,u.handle,
         EXISTS(SELECT 1 FROM follows vf WHERE vf.follower_id=$viewer AND vf.following_id=u.id) following,
         'signup' activity_kind,'signup:' || printf('%020d',u.id) || ':' || u.handle_chosen_at event_key,
