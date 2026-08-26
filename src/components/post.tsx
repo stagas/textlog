@@ -1159,7 +1159,7 @@ export function FeedThreads(
     selected.sort((a, b) => b.created_at.localeCompare(a.created_at) || b.id - a.id)
     if (selected.length > 1
       && Date.parse(`${selected[0].created_at.replace(' ', 'T')}Z`)
-        - Date.parse(`${selected[1].created_at.replace(' ', 'T')}Z`) < 24 * 60 * 60_000) return selected.slice(0, 2)
+        - Date.parse(`${selected[1].created_at.replace(' ', 'T')}Z`) < 48 * 60 * 60_000) return selected.slice(0, 2)
     return selected.slice(0, 1)
   }
   const roots = treePosts.filter(post => !post.parent_id || !ids.has(post.parent_id))

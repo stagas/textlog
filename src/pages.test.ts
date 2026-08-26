@@ -783,12 +783,12 @@ test('folded feed conversations preview the two newest replies from a recent bur
   expect(html).toMatch(/collapsed-preview-post[^>]*>[\s\S]*?Older deep reply/)
 })
 
-test('folded feed conversations reveal only one reply when the next newest is over 24 hours older', () => {
+test('folded feed conversations reveal only one reply when the next newest is over 48 hours older', () => {
   const root = { id: 1, user_id: 1, parent_id: null, body: 'Root', created_at: '2026-08-20 09:00:00', deleted_at: null,
     handle: 'root', reply_count: 2 }
   const olderReply = { id: 2, user_id: 2, parent_id: 1, body: 'Older reply', created_at: '2026-08-23 10:00:00',
     deleted_at: null, handle: 'reply', reply_count: 0, parent: root }
-  const recentReply = { id: 3, user_id: 3, parent_id: 1, body: 'Recent reply', created_at: '2026-08-25 11:00:00',
+  const recentReply = { id: 3, user_id: 3, parent_id: 1, body: 'Recent reply', created_at: '2026-08-25 11:00:01',
     deleted_at: null, handle: 'recent', reply_count: 0, parent: root }
   const html = renderToStaticMarkup(React.createElement(FeedThreads, {
     user: null,

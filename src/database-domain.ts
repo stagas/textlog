@@ -2034,7 +2034,7 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
       const { viewerId, page, pageSize, markRead = true } = input as DatabaseDomainInput<'feeds.latestPage'>
       const state = viewerId >= 0 ? latestPostState(viewerId, database) : []
       const parameters = [viewerId, viewerId, viewerId, viewerId]
-      const snapshotKind = 'latest-roots-v6'
+      const snapshotKind = 'latest-roots-v7'
       const snapshot = feedSnapshotPage<PostView[]>(database, snapshotKind, viewerId, page, () => {
         const rows = database.query(
           `SELECT p.*,u.handle FROM posts p JOIN users u ON u.id=p.user_id

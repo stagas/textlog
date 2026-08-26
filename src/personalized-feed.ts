@@ -11,7 +11,7 @@ import { enrichPosts, loadBioReferenceData, visibleTagFollowerCounts, visibleUse
 import type { PersonalizedFeedData, PersonalizedTimelineRow, User } from './types'
 import { isWhisperThread, whisperThreadRelevantToViewer, whisperThreadTargetsViewer } from './whisper'
 
-export const PERSONALIZED_FEED_SNAPSHOT_VERSION = 24
+export const PERSONALIZED_FEED_SNAPSHOT_VERSION = 25
 
 const descendsFromViewer = `EXISTS (WITH RECURSIVE ancestors(id,user_id,parent_id) AS (
   SELECT ancestor.id,ancestor.user_id,ancestor.parent_id FROM posts ancestor WHERE ancestor.id=p.parent_id
