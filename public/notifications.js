@@ -11,6 +11,8 @@
   const preferenceInputs = [...preferences.querySelectorAll('input')]
   const forYou = preferenceInputs.find(input => input.name === 'forYou')
   const onlyToMe = preferenceInputs.find(input => input.name === 'onlyToMe')
+  const forYouDependents = preferenceInputs.filter(input =>
+    ['onlyToMe', 'peopleFollowActivity', 'hashtagFollowActivity'].includes(input.name))
   const handle = script.dataset.handle
 
   const supported = 'serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window
@@ -37,10 +39,14 @@
       .filter(input => input.name !== 'onlyToMe' && input.name !== 'forYou')
       .map(input => [input.name, input.checked])), followingNotes: forYou.checked, replies: forYou.checked,
       mentions: forYou.checked, follows: forYou.checked, followActivity: forYou.checked && !onlyToMe.checked,
+      peopleFollowActivity: forYou.checked && !onlyToMe.checked
+        && preferenceInputs.find(input => input.name === 'peopleFollowActivity').checked,
+      hashtagFollowActivity: forYou.checked && !onlyToMe.checked
+        && preferenceInputs.find(input => input.name === 'hashtagFollowActivity').checked,
       followingOnlyToMe: onlyToMe.checked }
   }
   const syncForYou = () => {
-    onlyToMe.disabled = !forYou.checked
+    for (const input of forYouDependents) input.disabled = !forYou.checked
   }
   const save = (subscription, includePreferences = true) =>
     fetch('/account/push-subscription', {

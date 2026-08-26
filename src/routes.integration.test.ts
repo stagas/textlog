@@ -874,7 +874,7 @@ test('consequential account, content, reporting, and admin flows work over HTTP'
   expect(await pushPreferences.json()).toEqual({
     enabled: true,
     preferences: { latest: 0, replies: 1, mentions: 0, follows: 1, followActivity: 1, followingNotes: 1,
-      followingOnlyToMe: 0 },
+      followingOnlyToMe: 0, peopleFollowActivity: 0, hashtagFollowActivity: 0 },
   })
   const cacheBustedHome = await request('/?v=94721')
   expect(cacheBustedHome.status).toBe(303)
@@ -1479,6 +1479,11 @@ test('consequential account, content, reporting, and admin flows work over HTTP'
     .run(bob.id)
   database.query(`INSERT INTO hashtag_follows(user_id,tag,created_at)
     VALUES(?,'historical','1970-01-01 00:00:00')`).run(bob.id)
+  const includedHashtagActivity = await request('/account/edit/appearance', {
+    method: 'POST', cookie: aliceCookie,
+    form: { tab: 'misc', pageSize: '20', density: 'regular', includeHashtagFollowActivity: 'yes' },
+  })
+  expect(includedHashtagActivity.status).toBe(303)
   const followedTagFeed = await (await request('/for-you', { cookie: aliceCookie })).text()
   expect(followedTagFeed).toContain('<a class="reference-menu-trigger postauthor" '
     + 'href="/u/bob?from=%2Ffor-you%23a-')

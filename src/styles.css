@@ -4364,6 +4364,7 @@ form.report-panel {
 
 .notification-toggle:last-of-type { border-bottom: 0; }
 .notification-toggle-parent { border-bottom: 0; }
+.notification-toggle-dependent:not(.notification-toggle-group-end) { border-bottom: 0; }
 .notification-toggle.notification-toggle-group-end { border-bottom: 1px solid var(--soft); }
 .notification-toggle > span:first-child { display: grid; gap: var(--space-1); }
 .notification-toggle strong { font-size: 0.75rem; }

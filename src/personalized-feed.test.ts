@@ -70,3 +70,30 @@ test('a new deep reply in a followed thread is included with its root', () => {
   expect(feed.timeline.filter(row => row.id).map(row => row.id)).toEqual([1, 3])
   expect(feed.timeline.find(row => row.id === 3)?.unread).toBe(1)
 })
+
+test('For You follow activity can be hidden independently for people and hashtags', () => {
+  const database = new Database(':memory:', { strict: true })
+  runMigrations(database)
+  database.run(`INSERT INTO users(id,handle,email,password,bio) VALUES
+      (1,'viewer','viewer@example.com','!',''),
+      (2,'friend','friend@example.com','!',''),
+      (3,'person','person@example.com','!','');
+    INSERT INTO follows(follower_id,following_id,created_at) VALUES
+      (1,2,'2026-08-03 09:00:00'),(2,3,'2026-08-03 10:00:00'),(3,1,'2026-08-03 12:00:00');
+    INSERT INTO hashtag_follows(user_id,tag,created_at) VALUES(2,'topic','2026-08-03 11:00:00');`)
+  const viewer: User = { id: 1, handle: 'viewer', email: 'viewer@example.com', bio: '',
+    hide_people_follow_activity: 1 }
+
+  const peopleHidden = loadPersonalizedFeed(database, viewer, 1, 20, false, '/for-you', false)
+  expect(peopleHidden.timeline.map(row => row.activity_kind)).toEqual(['user_follow', 'tag_follow'])
+  expect(Number(peopleHidden.timeline[0]?.target_is_viewer)).toBe(1)
+  const directedFollow = loadPersonalizedFeed(database, viewer, 1, 20, true, '/to-me', false)
+  expect(directedFollow.timeline.map(row => row.activity_kind)).toEqual(['user_follow'])
+
+  database.query('UPDATE personalized_feed_generations SET generation=generation+1 WHERE viewer_id=1').run()
+  viewer.hide_people_follow_activity = 0
+  viewer.hide_hashtag_follow_activity = 1
+  const hashtagsHidden = loadPersonalizedFeed(database, viewer, 1, 20, false, '/for-you', false)
+  expect(hashtagsHidden.timeline).toHaveLength(2)
+  expect(hashtagsHidden.timeline.every(row => row.activity_kind === 'user_follow')).toBeTrue()
+})

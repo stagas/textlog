@@ -2136,6 +2136,46 @@ export const migrations: Migration[] = [
       }
     },
   },
+  {
+    version: 141,
+    name: 'for_you_follow_activity_preferences',
+    up(database) {
+      addColumn(database, 'users', 'hide_people_follow_activity',
+        'INTEGER NOT NULL DEFAULT 1 CHECK(hide_people_follow_activity IN (0,1))')
+      addColumn(database, 'users', 'hide_hashtag_follow_activity',
+        'INTEGER NOT NULL DEFAULT 1 CHECK(hide_hashtag_follow_activity IN (0,1))')
+    },
+  },
+  {
+    version: 142,
+    name: 'split_follow_activity_notification_preferences',
+    up(database) {
+      if (!database.query("SELECT 1 FROM sqlite_master WHERE type='table' AND name='push_subscriptions'").get()) return
+      addColumn(database, 'push_subscriptions', 'notify_people_follow_activity',
+        'INTEGER NOT NULL DEFAULT 0 CHECK(notify_people_follow_activity IN (0,1))')
+      addColumn(database, 'push_subscriptions', 'notify_hashtag_follow_activity',
+        'INTEGER NOT NULL DEFAULT 0 CHECK(notify_hashtag_follow_activity IN (0,1))')
+    },
+  },
+  {
+    version: 143,
+    name: 'hide_ambient_follow_activity_by_default',
+    up(database) {
+      if (!database.query("SELECT 1 FROM sqlite_master WHERE type='table' AND name='users'").get()) return
+      if (!database.query(`SELECT 1 FROM sqlite_master
+        WHERE type='table' AND name='personalized_feed_generations'`).get()) return
+      database.run('UPDATE users SET hide_people_follow_activity=1,hide_hashtag_follow_activity=1')
+    },
+  },
+  {
+    version: 144,
+    name: 'disable_ambient_follow_activity_notifications_by_default',
+    up(database) {
+      if (!database.query("SELECT 1 FROM sqlite_master WHERE type='table' AND name='push_subscriptions'").get()) return
+      database.run(`UPDATE push_subscriptions SET notify_people_follow_activity=0,
+        notify_hashtag_follow_activity=0`)
+    },
+  },
 ]
 
 export const latestMigrationVersion = migrations.at(-1)!.version

@@ -117,7 +117,7 @@ import { DENSITY_CHOICES, type DensityChoice, PAGE_SIZE_CHOICES, type PageSizeCh
 function sessionUser(database: Database, token: string | null): User | null {
   if (!token) return null
   const user = database.query(`SELECT u.id,u.handle,u.email,u.bio,u.suspended_at,u.email_verified_at,
-      u.handle_chosen_at,u.show_link_previews,u.timezone
+      u.handle_chosen_at,u.show_link_previews,u.hide_people_follow_activity,u.hide_hashtag_follow_activity,u.timezone
     FROM sessions s JOIN users u ON u.id=s.user_id
     WHERE s.token_hash=? AND s.expires_at>? AND u.deleted_at IS NULL AND u.suspended_at IS NULL`)
     .get(sessionHash(token), Date.now()) as User | null
@@ -131,7 +131,7 @@ function apiUser(database: Database, token: string | null, now: number): User | 
   if (!token?.startsWith('tlk_')) return null
   const tokenHash = createHash('sha256').update(token).digest('hex')
   const row = database.query(`SELECT u.id,u.handle,u.email,u.bio,u.suspended_at,u.email_verified_at,
-      u.handle_chosen_at,u.timezone,k.id key_id
+      u.handle_chosen_at,u.timezone,u.hide_people_follow_activity,u.hide_hashtag_follow_activity,k.id key_id
     FROM api_keys k JOIN users u ON u.id=k.user_id
     WHERE k.token_hash=? AND (k.expires_at IS NULL OR k.expires_at>?)
       AND u.deleted_at IS NULL AND u.suspended_at IS NULL`).get(tokenHash, now) as (User & { key_id: number }) | null
@@ -323,21 +323,23 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
       if (!endpoint) return null as DatabaseDomainOutput<K>
       return database.query(`SELECT notify_latest latest,notify_replies replies,notify_mentions mentions,
         notify_follows follows,notify_follow_activity followActivity,notify_following_notes followingNotes,
-        notify_following_only_to_me followingOnlyToMe${includeSignups ? ',notify_signups signups' : ''}
+        notify_following_only_to_me followingOnlyToMe,notify_people_follow_activity peopleFollowActivity,
+        notify_hashtag_follow_activity hashtagFollowActivity${includeSignups ? ',notify_signups signups' : ''}
         FROM push_subscriptions WHERE endpoint=? AND user_id=?`).get(endpoint, userId) as DatabaseDomainOutput<K>
     }
     case 'account.savePushSubscription': {
       const { userId, endpoint, p256dh, auth, deviceId, userAgent, preferencesProvided, preferences } =
         input as DatabaseDomainInput<'account.savePushSubscription'>
-      const { latest, replies, mentions, follows, signups, followActivity, followingNotes, followingOnlyToMe } =
-        preferences
+      const { latest, replies, mentions, follows, signups, followActivity, followingNotes, followingOnlyToMe,
+        peopleFollowActivity, hashtagFollowActivity } = preferences
       database.transaction(() => {
         database.query('UPDATE push_subscriptions SET p256dh=?,auth=?,device_id=? WHERE endpoint=?')
           .run(p256dh, auth, deviceId, endpoint)
         database.query(`INSERT INTO push_subscriptions(endpoint,user_id,p256dh,auth,device_id,
             notify_latest,notify_replies,notify_mentions,notify_follows,notify_own_posts,notify_signups,
-            notify_follow_activity,notify_following_notes,notify_following_only_to_me)
-            VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+            notify_follow_activity,notify_following_notes,notify_following_only_to_me,
+            notify_people_follow_activity,notify_hashtag_follow_activity)
+            VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
           ON CONFLICT(endpoint,user_id) DO UPDATE SET p256dh=excluded.p256dh,auth=excluded.auth,
             device_id=excluded.device_id,notify_latest=coalesce(?,push_subscriptions.notify_latest),
             notify_replies=coalesce(?,push_subscriptions.notify_replies),
@@ -346,10 +348,13 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
             notify_signups=coalesce(?,push_subscriptions.notify_signups),
             notify_follow_activity=coalesce(?,push_subscriptions.notify_follow_activity),
             notify_following_notes=coalesce(?,push_subscriptions.notify_following_notes),
-            notify_following_only_to_me=coalesce(?,push_subscriptions.notify_following_only_to_me)`)
+            notify_following_only_to_me=coalesce(?,push_subscriptions.notify_following_only_to_me),
+            notify_people_follow_activity=coalesce(?,push_subscriptions.notify_people_follow_activity),
+            notify_hashtag_follow_activity=coalesce(?,push_subscriptions.notify_hashtag_follow_activity)`)
           .run(endpoint, userId, p256dh, auth, deviceId, latest ?? 1, replies ?? 1, mentions ?? 1, follows ?? 1, 0,
-            signups ?? 1, followActivity ?? 1, followingNotes ?? 1, followingOnlyToMe ?? 0, latest, replies,
-            mentions, follows, signups, followActivity, followingNotes, followingOnlyToMe)
+            signups ?? 1, followActivity ?? 1, followingNotes ?? 1, followingOnlyToMe ?? 0,
+            peopleFollowActivity ?? 0, hashtagFollowActivity ?? 0, latest, replies, mentions, follows, signups,
+            followActivity, followingNotes, followingOnlyToMe, peopleFollowActivity, hashtagFollowActivity)
         if (userAgent) {
           database.query(`INSERT INTO notification_user_agents(user_id,user_agent,status) VALUES(?,?,'enabled')
             ON CONFLICT(user_id,user_agent) DO UPDATE SET status='enabled',updated_at=CURRENT_TIMESTAMP`)
@@ -551,15 +556,21 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
       return { imageKeys } as DatabaseDomainOutput<K>
     }
     case 'account.saveAppearancePreferences': {
-      const { userId, deviceId, pageSize, density, showLinkPreviews } = input as DatabaseDomainInput<
+      const { userId, deviceId, pageSize, density, showLinkPreviews, hidePeopleFollowActivity,
+        hideHashtagFollowActivity } = input as DatabaseDomainInput<
         'account.saveAppearancePreferences'
       >
       database.transaction(() => {
         database.query(`INSERT INTO device_settings(user_id,device_id,page_size,density) VALUES(?,?,?,?)
           ON CONFLICT(user_id,device_id) DO UPDATE SET page_size=excluded.page_size,density=excluded.density,
             updated_at=CURRENT_TIMESTAMP`).run(userId, deviceId, pageSize, density)
-        database.query('UPDATE users SET show_link_previews=? WHERE id=?')
-          .run(showLinkPreviews ? 1 : 0, userId)
+        database.query(`UPDATE users SET show_link_previews=?,hide_people_follow_activity=?,
+          hide_hashtag_follow_activity=? WHERE id=?`).run(showLinkPreviews ? 1 : 0,
+          hidePeopleFollowActivity ? 1 : 0, hideHashtagFollowActivity ? 1 : 0, userId)
+        database.query(`UPDATE personalized_feed_generations SET generation=generation+1 WHERE viewer_id=?`)
+          .run(userId)
+        cacheDb.query(`DELETE FROM materialized_feed_pages_v2 WHERE viewer_id=? AND kind IN ('for-you','to-me')`)
+          .run(userId)
       })()
       return null as DatabaseDomainOutput<K>
     }
@@ -1919,7 +1930,7 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
     case 'push.userFollowDelivery': {
       const { actorId, targetId } = input as DatabaseDomainInput<'push.userFollowDelivery'>
       return database.query(`SELECT ps.endpoint,ps.p256dh,ps.auth FROM push_subscriptions ps
-        WHERE ps.notify_follow_activity=1 AND ps.user_id NOT IN (?,?)
+        WHERE ps.notify_people_follow_activity=1 AND ps.user_id NOT IN (?,?)
           AND EXISTS (SELECT 1 FROM follows vf WHERE vf.follower_id=ps.user_id AND vf.following_id=?)
           AND NOT EXISTS (SELECT 1 FROM blocks b WHERE
             b.blocker_id=ps.user_id AND b.blocked_id IN (?,?) OR
@@ -1940,7 +1951,7 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
     case 'push.tagFollowDelivery': {
       const { actorId, tag } = input as DatabaseDomainInput<'push.tagFollowDelivery'>
       return database.query(`SELECT ps.endpoint,ps.p256dh,ps.auth FROM push_subscriptions ps
-        WHERE ps.notify_follow_activity=1 AND ps.user_id!=? AND (EXISTS
+        WHERE ps.notify_hashtag_follow_activity=1 AND ps.user_id!=? AND (EXISTS
           (SELECT 1 FROM follows vf WHERE vf.follower_id=ps.user_id AND vf.following_id=?) OR EXISTS
           (SELECT 1 FROM hashtag_follows vhf WHERE vhf.user_id=ps.user_id AND vhf.tag=?))
         AND NOT EXISTS (SELECT 1 FROM blocks b WHERE

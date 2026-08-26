@@ -63,6 +63,26 @@ export function NotificationSettings({ user, publicKey, ios = false, returnPath 
                   <span />
                 </span>
               </label>
+              <label className="notification-toggle notification-toggle-dependent">
+                <span>
+                  <strong>include people&apos;s follow activity</strong>
+                  <small>When someone you follow follows a person</small>
+                </span>
+                <input type="checkbox" name="peopleFollowActivity" />
+                <span className="notification-toggle-track" aria-hidden="true">
+                  <span />
+                </span>
+              </label>
+              <label className="notification-toggle notification-toggle-dependent">
+                <span>
+                  <strong>include hashtag follow activity</strong>
+                  <small>When someone follows a hashtag relevant to you</small>
+                </span>
+                <input type="checkbox" name="hashtagFollowActivity" />
+                <span className="notification-toggle-track" aria-hidden="true">
+                  <span />
+                </span>
+              </label>
               <label className="notification-toggle notification-toggle-dependent notification-toggle-group-end">
                 <span>
                   <strong>only to me</strong>

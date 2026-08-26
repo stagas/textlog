@@ -192,7 +192,7 @@ export type DatabaseDomainOperations = {
   'account.deleteEmailToken': { input: { tokenHash: string }; output: null }
   'account.saveAppearancePreferences': {
     input: { userId: number; deviceId: string; pageSize: PageSizeChoice; density: DensityChoice;
-      showLinkPreviews: boolean }
+      showLinkPreviews: boolean; hidePeopleFollowActivity: boolean; hideHashtagFollowActivity: boolean }
     output: null
   }
   'account.updateProfileFlags': { input: { userId: number; timezone: string }; output: null }

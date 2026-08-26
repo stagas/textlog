@@ -337,8 +337,9 @@ describe('Web Push activity delivery', () => {
     database.run(`INSERT INTO users(id,handle,email,password) VALUES(3,'watcher','watcher@example.com','!');
       INSERT INTO follows(follower_id,following_id,created_at) VALUES(3,1,CURRENT_TIMESTAMP);
       INSERT INTO hashtag_follows(user_id,tag,created_at) VALUES(3,'bun',CURRENT_TIMESTAMP);
-      INSERT INTO push_subscriptions(endpoint,user_id,p256dh,auth)
-        VALUES('https://push.example/watcher',3,'watcher-key','watcher-auth')`)
+      INSERT INTO push_subscriptions(endpoint,user_id,p256dh,auth,notify_people_follow_activity,
+        notify_hashtag_follow_activity)
+        VALUES('https://push.example/watcher',3,'watcher-key','watcher-auth',1,1)`)
     const payloads: string[] = []
     webpush.sendNotification = (async (_subscription, payload) => {
       payloads.push(String(payload))
@@ -355,7 +356,7 @@ describe('Web Push activity delivery', () => {
       body: '@author followed @recipient, #bun',
       url: '/for-you',
     }])
-    database.run('UPDATE push_subscriptions SET notify_follow_activity=0 WHERE user_id=3')
+    database.run('UPDATE push_subscriptions SET notify_hashtag_follow_activity=0 WHERE user_id=3')
     await sendPushForTagFollow(1, 'author', 'bun', database, vapid)
     expect(payloads).toHaveLength(1)
   })

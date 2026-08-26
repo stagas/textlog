@@ -810,6 +810,12 @@ test('appearance misc tab offers supported page sizes as radio cards', () => {
   expect(html).toContain('name="showLinkPreviews" checked="" value="yes"')
   expect(html).toContain('<legend>ui</legend>')
   expect(html).toContain('Show link previews')
+  expect(html).toContain('name="includePeopleFollowActivity" value="yes"')
+  expect(html).toContain('Include people&#x27;s follow activity in For You')
+  expect(html).toContain('name="includeHashtagFollowActivity" value="yes"')
+  expect(html).toContain('Include hashtag follow activity in For You')
+  expect(html).not.toContain('name="includePeopleFollowActivity" checked=""')
+  expect(html).not.toContain('name="includeHashtagFollowActivity" checked=""')
   expect(html).toContain('save misc →')
 })
 
@@ -823,6 +829,19 @@ test('appearance misc tab can render link previews disabled', () => {
   }))
   expect(html).toContain('name="showLinkPreviews" value="yes"')
   expect(html).not.toContain('name="showLinkPreviews" checked=""')
+})
+
+test('appearance misc tab checks included For You follow activity', () => {
+  const html = renderToStaticMarkup(React.createElement(ChangeAppearance, {
+    user: { id: 1, handle: 'reader', email: 'reader@example.com', bio: '' },
+    selected: { theme: 'system', accent: 'theme' },
+    selectedFont: 'system',
+    includePeopleFollowActivity: true,
+    includeHashtagFollowActivity: true,
+    tab: 'misc',
+  }))
+  expect(html).toContain('name="includePeopleFollowActivity" checked="" value="yes"')
+  expect(html).toContain('name="includeHashtagFollowActivity" checked="" value="yes"')
 })
 
 test('account settings pages share one consistent heading', () => {
@@ -920,6 +939,13 @@ test('notification settings are the only account page that loads their client sc
   expect(notifications).not.toContain('name="followActivity"')
   expect(notifications).toContain('notify @reader about')
   expect(notifications).toContain('Only notes addressed to me')
+  expect(notifications).toContain('name="peopleFollowActivity"')
+  expect(notifications).toContain('include people&#x27;s follow activity')
+  expect(notifications).toContain('name="hashtagFollowActivity"')
+  expect(notifications).toContain('include hashtag follow activity')
+  expect(notifications.indexOf('name="peopleFollowActivity"')).toBeLessThan(
+    notifications.indexOf('name="onlyToMe"'),
+  )
   expect(notifications).not.toContain('name="signups"')
   expect(notifications).toContain('save preferences</button>')
   expect(profile).toContain('href="/account/edit/notifications"')

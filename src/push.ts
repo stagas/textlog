@@ -240,7 +240,7 @@ export async function sendPushForUserFollow(actorId: number, actorHandle: string
   if (!vapid || actorId === targetId) return
   const subscriptions = database
     ? database.query(`SELECT ps.endpoint,ps.p256dh,ps.auth FROM push_subscriptions ps
-    WHERE ps.notify_follow_activity=1 AND ps.user_id NOT IN (?,?)
+    WHERE ps.notify_people_follow_activity=1 AND ps.user_id NOT IN (?,?)
       AND EXISTS (SELECT 1 FROM follows vf WHERE vf.follower_id=ps.user_id AND vf.following_id=?)
       AND NOT EXISTS (SELECT 1 FROM blocks b WHERE
         b.blocker_id=ps.user_id AND b.blocked_id IN (?,?) OR
@@ -257,7 +257,7 @@ export async function sendPushForTagFollow(actorId: number, actorHandle: string,
   if (!vapid) return
   const subscriptions = database
     ? database.query(`SELECT ps.endpoint,ps.p256dh,ps.auth FROM push_subscriptions ps
-    WHERE ps.notify_follow_activity=1 AND ps.user_id!=? AND (EXISTS
+    WHERE ps.notify_hashtag_follow_activity=1 AND ps.user_id!=? AND (EXISTS
       (SELECT 1 FROM follows vf WHERE vf.follower_id=ps.user_id AND vf.following_id=?) OR EXISTS
       (SELECT 1 FROM hashtag_follows vhf WHERE vhf.user_id=ps.user_id AND vhf.tag=?))
       AND NOT EXISTS (SELECT 1 FROM blocks b WHERE

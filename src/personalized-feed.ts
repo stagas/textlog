@@ -10,7 +10,7 @@ import { enrichPosts, loadBioReferenceData, visibleTagFollowerCounts, visibleUse
 import type { PersonalizedFeedData, PersonalizedTimelineRow, User } from './types'
 import { isWhisperThread, whisperThreadRelevantToViewer, whisperThreadTargetsViewer } from './whisper'
 
-export const PERSONALIZED_FEED_SNAPSHOT_VERSION = 15
+export const PERSONALIZED_FEED_SNAPSHOT_VERSION = 17
 
 const descendsFromViewer = `EXISTS (WITH RECURSIVE ancestors(id,user_id,parent_id) AS (
   SELECT ancestor.id,ancestor.user_id,ancestor.parent_id FROM posts ancestor WHERE ancestor.id=p.parent_id
@@ -104,7 +104,7 @@ export function loadPersonalizedFeed(database: Database, user: User, page: numbe
       FROM follows f JOIN users actor ON actor.id=f.follower_id JOIN users target ON target.id=f.following_id
       WHERE f.created_at IS NOT NULL AND actor.id!=$viewer AND EXISTS
         (SELECT 1 FROM follows vf WHERE vf.follower_id=$viewer AND vf.following_id=actor.id) AND target.id!=$viewer
-        AND actor.deleted_at IS NULL AND actor.suspended_at IS NULL
+        AND $hidePeopleFollowActivity=0 AND actor.deleted_at IS NULL AND actor.suspended_at IS NULL
         AND target.deleted_at IS NULL AND target.suspended_at IS NULL
         AND NOT EXISTS (SELECT 1 FROM blocks b WHERE b.blocker_id=$viewer AND b.blocked_id IN (actor.id,target.id)
           OR b.blocked_id=$viewer AND b.blocker_id IN (actor.id,target.id))
@@ -122,7 +122,7 @@ export function loadPersonalizedFeed(database: Database, user: User, page: numbe
       WHERE hf.created_at IS NOT NULL AND hf.created_at!='1970-01-01 00:00:00' AND actor.id!=$viewer AND (EXISTS
         (SELECT 1 FROM follows vf WHERE vf.follower_id=$viewer AND vf.following_id=actor.id) OR EXISTS
         (SELECT 1 FROM hashtag_follows vt WHERE vt.user_id=$viewer AND vt.tag=hf.tag))
-        AND actor.deleted_at IS NULL AND actor.suspended_at IS NULL
+        AND $hideHashtagFollowActivity=0 AND actor.deleted_at IS NULL AND actor.suspended_at IS NULL
         AND NOT EXISTS (SELECT 1 FROM blocks b WHERE (b.blocker_id=$viewer AND b.blocked_id=actor.id)
           OR (b.blocker_id=actor.id AND b.blocked_id=$viewer))
         AND NOT EXISTS (SELECT 1 FROM blocked_hashtags bh WHERE bh.user_id=$viewer AND bh.tag=hf.tag)
@@ -154,6 +154,8 @@ export function loadPersonalizedFeed(database: Database, user: User, page: numbe
       ) timeline ${filter} ORDER BY timeline.created_at DESC,timeline.event_key DESC`).all({
         viewer: user.id,
         admin: Number(isAdmin(user)),
+        hidePeopleFollowActivity: user.hide_people_follow_activity || 0,
+        hideHashtagFollowActivity: user.hide_hashtag_follow_activity || 0,
       }) as PersonalizedTimelineRow[]
       if (toMe) return rows
       const postRows = rows.filter(row => row.id !== null

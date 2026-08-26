@@ -183,6 +183,8 @@ export function registerAccountRoutes(app: Hono) {
       mentions: 1,
       follows: 1,
       followActivity: 1,
+      peopleFollowActivity: 0,
+      hashtagFollowActivity: 0,
       ...(isAdmin(user) ? { signups: 1 } : {}),
     } })
   })
@@ -213,6 +215,8 @@ export function registerAccountRoutes(app: Hono) {
     const mentions = preference('mentions')
     const follows = preference('follows')
     const followActivity = preference('followActivity')
+    const peopleFollowActivity = preference('peopleFollowActivity')
+    const hashtagFollowActivity = preference('hashtagFollowActivity')
     const followingNotes = preference('followingNotes')
     const followingOnlyToMe = preference('followingOnlyToMe')
     const signups = isAdmin(user) ? preference('signups') : null
@@ -221,7 +225,7 @@ export function registerAccountRoutes(app: Hono) {
     await databaseService().call('account.savePushSubscription', { userId: user.id, endpoint, p256dh, auth, deviceId,
       userAgent, preferencesProvided: Boolean(value.preferences),
       preferences: { latest, replies, mentions, follows, signups, followActivity, followingNotes,
-        followingOnlyToMe } })
+        followingOnlyToMe, peopleFollowActivity, hashtagFollowActivity } })
     c.header('Set-Cookie', notificationDeviceCookie(deviceId), { append: true })
     return c.json({ saved: true })
   })
@@ -418,6 +422,8 @@ export function registerAccountRoutes(app: Hono) {
         selectedSansSerifFont={sansSerifFontChoice(c.req.raw)} selectedPrimaryFont={primaryFontChoice(c.req.raw)}
         selectedSize={fontSizeChoice(c.req.raw)} selectedPageSize={resolvedPageSize(c.req.raw)} tab={tab}
         selectedDensity={resolvedDensity(c.req.raw)} selectedLinkPreviews={user.show_link_previews !== 0}
+        includePeopleFollowActivity={user.hide_people_follow_activity !== 1}
+        includeHashtagFollowActivity={user.hide_hashtag_follow_activity !== 1}
         returnPath={returnPath} />,
     )
   })
@@ -447,6 +453,8 @@ export function registerAccountRoutes(app: Hono) {
         pageSize: selectedPageSize,
         density: selectedDensity,
         showLinkPreviews: f.showLinkPreviews === 'yes',
+        hidePeopleFollowActivity: f.includePeopleFollowActivity !== 'yes',
+        hideHashtagFollowActivity: f.includeHashtagFollowActivity !== 'yes',
       })
       await markAppearanceBannerHandled(c.req.raw, user.id)
       return redirect('/account/edit/appearance' + query, notificationDeviceCookie(deviceId))
