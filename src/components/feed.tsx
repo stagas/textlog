@@ -214,7 +214,8 @@ export function Feed({ user, data, title, path = '/for-you', pageUrl, notificati
           : undefined}
         toMe={toMe} toMeCount={data.toMeCount} forYouCount={data.forYouCount} unreadHref={data.unreadHref}
         lastUnreadHref={data.lastUnreadHref} forYouUnread={data.forYouUnread} toMeUnread={data.toMeUnread}
-        latestCount={data.latestCount} viewMode={flat ? 'flat' : 'tree'} viewHref={viewHref} />
+        latestCount={data.latestCount} viewMode={toMe ? (flat ? 'flat' : 'tree') : undefined}
+        viewHref={toMe ? viewHref : undefined} />
       {showTopPagination && <Pagination page={data.page} totalPages={data.totalPages} path={feedPath} top />}
       {displayTimeline.length
         ? groupSimilarActivities(flat ? displayTimeline : visibleTimeline).map((group, groupIndex) =>

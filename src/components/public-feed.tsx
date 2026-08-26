@@ -7,22 +7,17 @@ import { FeedThreads, Post } from './post'
 
 export function PublicFeed(
   { feed = { posts: [], page: 1, totalItems: 0, totalPages: 1 }, user = null, path = '/', pageUrl,
-    notificationBanner = false, flat = false }: {
+    notificationBanner = false }: {
       feed?: PostFeedPage
       cursor?: unknown
       user?: User | null
       path?: string
       pageUrl?: string
       notificationBanner?: false | 'notifications' | 'appearance' | 'invite' | 'bio' | 'notification-update' | 'donate'
-      flat?: boolean
     },
 ) {
-  const feedPath = flat ? `${path}?view=flat` : path
-  const returnPath = feedPath + (feed.page > 1 ? `${flat ? '&' : '?'}page=${feed.page}` : '')
-  const viewPath = flat
-    ? path + (feed.page > 1 ? `?page=${feed.page}` : '')
-    : `${path}?view=flat${feed.page > 1 ? `&page=${feed.page}` : ''}`
-  const viewHref = `${viewPath}${user ? '' : '#feed-tabs'}`
+  const feedPath = path
+  const returnPath = feedPath + (feed.page > 1 ? `?page=${feed.page}` : '')
   const unreadPostIds = new Set(feed.unreadPostIds || [])
   const directedUnreadPostIds = new Set(feed.directedUnreadPostIds || [])
   const unreadPage = feed.unreadHref
@@ -37,7 +32,7 @@ export function PublicFeed(
       {!user && <AboutContent user={null} embedded />}
       <h1 className="visually-hidden">Latest notes</h1>
       <FeedTabs active="latest" user={user} forYouCount={feed.forYouCount} forYouUnread={feed.forYouUnread}
-        toMeCount={feed.toMeCount} toMeUnread={feed.toMeUnread} viewMode={flat ? 'flat' : 'tree'} viewHref={viewHref}
+        toMeCount={feed.toMeCount} toMeUnread={feed.toMeUnread}
         latestCount={feed.latestCount}
         forYouReadStatus={user && feed.posts.length
           ? !!feed.latestUnread && unreadPage !== null && unreadPage > feed.page
@@ -46,12 +41,7 @@ export function PublicFeed(
       {feed.page > 1 && <Pagination page={feed.page} totalPages={feed.totalPages} path={feedPath}
         anchor={user ? undefined : 'feed-tabs'} top />}
       {feed.posts.length
-        ? flat
-          ? feed.posts.map(post => <Post key={post.id} p={post} user={user} showReplyCount tappable
-            contextUnread={unreadPostIds.has(post.id)} contextDirectedUnread={directedUnreadPostIds.has(post.id)}
-            contextParentUnread={!!post.parent && unreadPostIds.has(post.parent.id)}
-            returnPath={`${returnPath}#post-${post.id}`} />)
-          : <FeedThreads posts={feed.posts} user={user} returnPath={returnPath}
+        ? <FeedThreads posts={feed.posts} user={user} returnPath={returnPath}
             promoteAncestors
             contextUnreadPostIds={unreadPostIds} contextDirectedUnreadPostIds={directedUnreadPostIds} />
         : feed.page === 1

@@ -182,7 +182,7 @@ export function registerFeedsRoutes(app: Hono) {
     if (!user) return redirect('/enter?next=' + encodeURIComponent('/for-you'))
     rememberFeedVisitor(c.req.raw, user)
     const cursorValue = c.req.query('cursor')
-    const flat = c.req.query('view') === 'flat'
+    const flat = false
     if (cursorValue && !decodeForYouCursor(cursorValue)) return c.text('Invalid cursor', 400)
     const notificationBanner = await showNotificationBanner(c.req.raw, user)
     const pageSize = resolvedPageSize(c.req.raw)
@@ -223,7 +223,7 @@ export function registerFeedsRoutes(app: Hono) {
     const user = currentUser(c.req.raw)
     rememberFeedVisitor(c.req.raw, user)
     const cursorValue = c.req.query('cursor')
-    const flat = c.req.query('view') === 'flat'
+    const flat = false
     const cursor = decodePostCursor(cursorValue)
     if (cursorValue && !cursor) return c.text('Invalid cursor', 400)
     const notificationBanner = await showNotificationBanner(c.req.raw, user)
@@ -233,7 +233,7 @@ export function registerFeedsRoutes(app: Hono) {
       const feed = await databaseService().call('feeds.latestPage', { viewerId: user?.id ?? -1,
         page: currentPage(c.req.query('page')), pageSize: resolvedPageSize(c.req.raw) })
       return page(<PublicFeed user={user} feed={feed} path="/latest" notificationBanner={notificationBanner}
-        flat={flat} />)
+      />)
     }
     const response = canUseMaterializedPage && !flat && !notificationBanner
       && currentPage(c.req.query('page')) === 1 && !cursorValue
