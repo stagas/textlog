@@ -64,7 +64,7 @@ export function Feed({ user, data, title, path = '/for-you', pageUrl, notificati
     ? Number(new URL(data.unreadHref, 'http://localhost').searchParams.get('page') || 1)
     : null
   const showTopPagination = data.page > 1 || (data.page === 1 && unreadPage !== null && unreadPage > 1)
-  const displayTimeline = toMe ? data.timeline : data.timeline.filter(row => !row.parent_id || row.unread)
+  const displayTimeline = data.timeline
   const timelinePosts = displayTimeline.filter(row => ['post', 'reply', 'mention'].includes(row.activity_kind))
   const unreadPostIds = new Set(timelinePosts.filter(row => row.unread).map(row => row.id))
   const directedUnreadPostIds = new Set(timelinePosts.filter(row => row.unread && row.targeted_to_viewer)
@@ -207,8 +207,7 @@ export function Feed({ user, data, title, path = '/for-you', pageUrl, notificati
           : undefined}
         toMe={toMe} toMeCount={data.toMeCount} forYouCount={data.forYouCount} unreadHref={data.unreadHref}
         lastUnreadHref={data.lastUnreadHref} forYouUnread={data.forYouUnread} toMeUnread={data.toMeUnread}
-        latestCount={data.latestCount} viewMode={toMe ? (flat ? 'flat' : 'tree') : undefined}
-        viewHref={toMe ? viewHref : undefined} />
+        latestCount={data.latestCount} viewMode={flat ? 'flat' : 'tree'} viewHref={viewHref} />
       {showTopPagination && <Pagination page={data.page} totalPages={data.totalPages} path={feedPath} top />}
       {displayTimeline.length
         ? groupSimilarActivities(flat ? displayTimeline : visibleTimeline).map((group, groupIndex) =>

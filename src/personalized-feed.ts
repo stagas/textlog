@@ -10,7 +10,7 @@ import { enrichPosts, loadBioReferenceData, visibleTagFollowerCounts, visibleUse
 import type { PersonalizedFeedData, PersonalizedTimelineRow, User } from './types'
 import { isWhisperThread, whisperThreadRelevantToViewer, whisperThreadTargetsViewer } from './whisper'
 
-export const PERSONALIZED_FEED_SNAPSHOT_VERSION = 17
+export const PERSONALIZED_FEED_SNAPSHOT_VERSION = 19
 
 const descendsFromViewer = `EXISTS (WITH RECURSIVE ancestors(id,user_id,parent_id) AS (
   SELECT ancestor.id,ancestor.user_id,ancestor.parent_id FROM posts ancestor WHERE ancestor.id=p.parent_id
@@ -26,10 +26,6 @@ const descendsFromFollowedUser = `EXISTS (WITH RECURSIVE ancestors(id,user_id,pa
     JOIN ancestors child ON ancestor.id=child.parent_id
 ) SELECT 1 FROM ancestors JOIN follows ON follows.following_id=ancestors.user_id
   WHERE follows.follower_id=$viewer)`
-
-const unreadInLatest = `NOT (p.id<=coalesce((SELECT through_post_id FROM latest_read_state
-  WHERE user_id=$viewer),0) OR EXISTS (SELECT 1 FROM latest_read_exceptions latest_seen
-    WHERE latest_seen.user_id=$viewer AND latest_seen.post_id=p.id))`
 
 const hasVisibleDescendantFromAnotherUser = `EXISTS (WITH RECURSIVE descendants(id,user_id,parent_id,deleted_at) AS (
   SELECT child.id,child.user_id,child.parent_id,child.deleted_at FROM posts child WHERE child.parent_id=p.id
@@ -66,7 +62,7 @@ export function loadPersonalizedFeed(database: Database, user: User, page: numbe
         ((p.user_id=$viewer AND (parent.user_id!=$viewer OR
         ${hasVisibleDescendantFromAnotherUser})) OR p.user_id IN
         (SELECT following_id FROM follows WHERE follower_id=$viewer) OR ${descendsFromViewer}
-        OR (${descendsFromFollowedUser} AND ${unreadInLatest}) OR p.id IN
+        OR ${descendsFromFollowedUser} OR p.id IN
         (SELECT ph.post_id FROM post_hashtags ph JOIN hashtag_follows hf ON hf.tag=ph.tag
           WHERE hf.user_id=$viewer)))
         OR ${whisperThreadRelevantToViewer()})
@@ -201,7 +197,7 @@ export function loadPersonalizedFeed(database: Database, user: User, page: numbe
         const conversation = postRows.filter(candidate => rootId(candidate) === root)
         const rootRow = byId.get(root!)
         const threadRows = rootRow?.parent_id === null ? [rootRow] : []
-        threadRows.push(...conversation.filter(candidate => candidate.parent_id !== null && candidate.unread))
+        threadRows.push(...conversation.filter(candidate => candidate.parent_id !== null).slice(0, 2))
         if (threadRows.length) result.push({ rows: threadRows,
           created_at: threadActivity.get(root!) || row.created_at, order: row.event_key })
       }

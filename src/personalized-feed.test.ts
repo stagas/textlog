@@ -48,7 +48,7 @@ test('whisper descendants stay in participant and original tag-follower personal
   expect(daveToMe.timeline.some(row => row.id === 4)).toBeFalse()
 })
 
-test('a new deep reply in a followed thread is included with its root', () => {
+test('a recent deep reply in a followed thread stays included after Latest marks it read', () => {
   const database = new Database(':memory:', { strict: true })
   runMigrations(database)
   database.run(`INSERT INTO users(id,handle,email,password,bio) VALUES
@@ -63,11 +63,12 @@ test('a new deep reply in a followed thread is included with its root', () => {
   markLatestPostsRead(1, [1, 2], database)
   database.run(`INSERT INTO posts(id,user_id,parent_id,body,created_at)
     VALUES(3,4,2,'deep reply','2026-08-03 11:00:00')`)
+  markLatestPostsRead(1, [3], database)
   const viewer: User = { id: 1, handle: 'viewer', email: 'viewer@example.com', bio: '' }
 
   const feed = loadPersonalizedFeed(database, viewer, 1, 20, false, '/for-you', false)
 
-  expect(feed.timeline.filter(row => row.id).map(row => row.id)).toEqual([1, 3])
+  expect(feed.timeline.filter(row => row.id).map(row => row.id)).toEqual([1, 3, 2])
   expect(feed.timeline.find(row => row.id === 3)?.unread).toBe(1)
 })
 

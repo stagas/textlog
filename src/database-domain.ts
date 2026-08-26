@@ -1983,9 +1983,9 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
     case 'feeds.latestPage': {
       const { viewerId, page, pageSize, markRead = true } = input as DatabaseDomainInput<'feeds.latestPage'>
       const state = viewerId >= 0 ? latestPostState(viewerId, database) : []
-      const unreadIds = new Set(state.filter(row => row.unread).map(row => row.id))
       const parameters = [viewerId, viewerId, viewerId, viewerId, viewerId]
-      const snapshot = feedSnapshotPage<PostView>(database, 'latest-roots-v2', viewerId, page, () => {
+      const snapshotKind = 'latest-roots-v3'
+      const snapshot = feedSnapshotPage<PostView>(database, snapshotKind, viewerId, page, () => {
         const rows = database.query(
           `SELECT p.*,u.handle FROM posts p JOIN users u ON u.id=p.user_id
           WHERE p.deleted_at IS NULL AND (? < 0 OR NOT EXISTS
@@ -2017,8 +2017,8 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
         }
         return [...conversations.entries()].flatMap(([id, conversation]) => {
           const root = byId.get(id)
-          const unreadReplies = conversation.filter(row => row.parent_id !== null && unreadIds.has(row.id))
-          return root?.parent_id === null ? [root, ...unreadReplies] : unreadReplies
+          const recentReplies = conversation.filter(row => row.parent_id !== null).slice(0, 2)
+          return root?.parent_id === null ? [root, ...recentReplies] : recentReplies
         })
       }, pageSize, cacheDb)
       const unread = state.filter(row => row.unread)
@@ -2042,7 +2042,7 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
         : undefined
       if (viewerId >= 0 && markRead && unreadPostIds.length) {
         markLatestPostsRead(viewerId, unreadPostIds, database)
-        cacheDb.query("DELETE FROM feed_snapshots WHERE kind='latest-roots-v2' AND viewer_id=?").run(viewerId)
+        cacheDb.query('DELETE FROM feed_snapshots WHERE kind=? AND viewer_id=?').run(snapshotKind, viewerId)
         cacheDb.query(`DELETE FROM materialized_feed_pages_v2 WHERE viewer_id=?
           AND kind IN ('latest','hot','for-you','to-me')`).run(viewerId)
       }

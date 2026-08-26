@@ -1434,7 +1434,7 @@ test('consequential account, content, reporting, and admin flows work over HTTP'
   expect(latestWithQuote).toContain('A reply quoting Bob')
   expect(latestWithQuote).toContain(bobPostBody)
   const latestAfterReplyRead = await (await request('/latest', { cookie: aliceCookie })).text()
-  expect(latestAfterReplyRead).not.toContain('A reply quoting Bob')
+  expect(latestAfterReplyRead).toContain('A reply quoting Bob')
   expect(latestAfterReplyRead).toContain(bobPostBody)
   const forYouWithOwnReply = await (await request('/for-you', { cookie: aliceCookie })).text()
   expect(forYouWithOwnReply).toContain('A reply quoting Bob')
