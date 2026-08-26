@@ -7,6 +7,8 @@ export const HOURLY_REQUEST_BLOCK_SECONDS = 60 * 60
 export const REQUEST_RATE_MAX_IPS = 50_000
 export const CLIENT_ERROR_RATE_LIMIT = 10
 export const CLIENT_ERROR_RATE_WINDOW_SECONDS = 5 * 60
+export const NESTED_FROM_MAX_DEPTH = 5
+export const NESTED_FROM_BLOCK_SECONDS = 60 * 60
 
 type Entry = {
   windowStartedAt: number
@@ -83,6 +85,51 @@ export class RequestRateLimiter {
     for (const [address, entry] of this.entries) {
       if (entry.blockedUntil <= now && entry.lastSeenAt <= staleBefore) this.entries.delete(address)
     }
+  }
+}
+
+/** Counts local navigation links nested through repeatedly encoded `from` parameters. */
+export function nestedFromDepth(requestUrl: string, maximum = NESTED_FROM_MAX_DEPTH) {
+  let url: URL
+  try {
+    url = new URL(requestUrl)
+  }
+  catch {
+    return 0
+  }
+
+  let depth = 0
+  let from = url.searchParams.get('from')
+  while (from !== null && depth < maximum) {
+    depth++
+    try {
+      from = new URL(from, url.origin).searchParams.get('from')
+    }
+    catch {
+      break
+    }
+  }
+  return depth
+}
+
+/** Blocks an address for a fixed period after suspicious nested navigation. */
+export class NestedFromRateLimiter {
+  private readonly blockedUntil = new Map<string, number>()
+
+  check(address: string, now = Date.now()) {
+    if (!address || address === '-') return null
+    const until = this.blockedUntil.get(address)
+    if (!until) return null
+    if (until <= now) {
+      this.blockedUntil.delete(address)
+      return null
+    }
+    return { retryAfter: Math.max(1, Math.ceil((until - now) / 1000)) }
+  }
+
+  block(address: string, now = Date.now()) {
+    if (address && address !== '-') this.blockedUntil.set(address, now + NESTED_FROM_BLOCK_SECONDS * 1000)
+    return { retryAfter: NESTED_FROM_BLOCK_SECONDS }
   }
 }
 

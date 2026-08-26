@@ -19,7 +19,8 @@ import { renderDefaultOg } from './og'
 import { PUBLIC_ARCHIVE_CHECK_INTERVAL_MS } from './public-archive'
 import { flushIpRequests, isIpBlocked, loadBlockedIps, recordIpRequest } from './request-ip-blocks'
 import { ClientErrorRateLimiter, HOURLY_REQUEST_BLOCK_SECONDS, HOURLY_REQUEST_RATE_LIMIT,
-  HOURLY_REQUEST_RATE_WINDOW_SECONDS, rateLimitedResponse, RequestRateLimiter } from './request-rate-limit'
+  HOURLY_REQUEST_RATE_WINDOW_SECONDS, NESTED_FROM_MAX_DEPTH, nestedFromDepth, NestedFromRateLimiter,
+  rateLimitedResponse, RequestRateLimiter } from './request-rate-limit'
 import { updateResponseTime } from './response-time'
 import { registerAccountRoutes } from './routes/account'
 import { registerAdminRoutes } from './routes/admin'
@@ -131,6 +132,7 @@ const hourlyRequestRateLimiter = new RequestRateLimiter({
   blockSeconds: HOURLY_REQUEST_BLOCK_SECONDS,
 })
 const clientErrorRateLimiter = new ClientErrorRateLimiter()
+const nestedFromRateLimiter = new NestedFromRateLimiter()
 await loadBlockedIps()
 const ipRequestTimer = setInterval(
   () => void flushIpRequests().catch(error => logError('IP request buffer flush failed', error)),
@@ -529,6 +531,9 @@ export default {
   async fetch(request: Request, server: Bun.Server<unknown>) {
     const address = clientIp(request, server.requestIP(request)?.address)
     recordIpRequest(address)
+    const nestedFromLimited = nestedFromRateLimiter.check(address)
+      ?? (nestedFromDepth(request.url) >= NESTED_FROM_MAX_DEPTH ? nestedFromRateLimiter.block(address) : null)
+    if (nestedFromLimited) return requestRateLimitResponse(request, nestedFromLimited.retryAfter)
     if (isIpBlocked(address)) {
       const now = new Date()
       const nextDay = Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() + 1)
