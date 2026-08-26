@@ -326,6 +326,7 @@ test('for-you labels a descendant that replies to its own author as continued', 
     parent,
     activity_kind: 'post' as const,
     targeted_to_viewer: false,
+    unread: 1,
     renderedPost: { ...postActivity(11, 2, 'alice'), parent_id: parent.id, parent },
   }
   const html = renderToStaticMarkup(<Feed
@@ -334,7 +335,7 @@ test('for-you labels a descendant that replies to its own author as continued', 
       forYouCount: 1, forYouUnread: false, toMeUnread: true }}
   />)
 
-  expect(html).toContain('<span class="post-context">continued:</span>')
+  expect(html).toContain('continued some time ago:</span>')
   expect(html).not.toContain('replied to you:')
 })
 
