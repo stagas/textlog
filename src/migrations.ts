@@ -2222,6 +2222,13 @@ export const migrations: Migration[] = [
         notify_hashtag_follow_activity=0`)
     },
   },
+  {
+    version: 145,
+    name: 'exclude_whisper_branches_from_hot_scores',
+    up(database) {
+      rebuildHotPosts(database)
+    },
+  },
 ]
 
 export const latestMigrationVersion = migrations.at(-1)!.version

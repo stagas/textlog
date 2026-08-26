@@ -454,6 +454,31 @@ describe('database migrations', () => {
     expect(() => runMigrations(database)).toThrow('newer than supported')
   })
 
+  test('rebuilds hot scores without whisper branch activity', () => {
+    const database = new Database(':memory:')
+    runMigrations(database)
+    database.run(`INSERT INTO users(id,handle,email,password) VALUES
+        (1,'author','author@example.com','x'),(2,'replying','replying@example.com','x');
+      INSERT INTO posts(id,user_id,parent_id,body,created_at) VALUES
+        (1,1,NULL,'root','2026-08-26 10:00:00'),
+        (2,2,1,'quiet #whisper','2026-08-26 11:00:00'),
+        (3,2,2,'inherited quiet reply','2026-08-26 12:00:00');
+      INSERT INTO post_hashtags(post_id,tag) VALUES(2,'whisper');
+      UPDATE post_hot SET score=4,reply_count=1,activity_count=2,
+        score_updated_at='2026-08-26 12:00:00',latest_activity_at='2026-08-26 12:00:00' WHERE post_id=1;
+      PRAGMA user_version=144;`)
+
+    runMigrations(database)
+
+    expect(database.query(`SELECT score,reply_count,activity_count,latest_activity_at
+      FROM post_hot WHERE post_id=1`).get()).toEqual({
+      score: 0,
+      reply_count: 0,
+      activity_count: 0,
+      latest_activity_at: '2026-08-26 10:00:00',
+    })
+  })
+
   test('does not retain bot account flags', () => {
     const database = new Database(':memory:')
     runMigrations(database)
