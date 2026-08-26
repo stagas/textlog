@@ -912,21 +912,19 @@ export function FeedThreads(
     for (const post of posts) {
       const immediateParent = post.parent
       if (!immediateParent) continue
-      let root = immediateParent
-      while (root.parent) root = root.parent
-      for (const ancestor of immediateParent.id === root.id ? [root] : [immediateParent, root]) {
-        if (ids.has(ancestor.id)) continue
-        treePosts.push({ ...ancestor, user_id: ancestor.user_id ?? -1, parent_id: ancestor.parent_id ?? null,
-          reply_count: ancestor.reply_count || 0 })
-        ids.add(ancestor.id)
-      }
+      if (ids.has(immediateParent.id)) continue
+      treePosts.push({ ...immediateParent, user_id: immediateParent.user_id ?? -1,
+        parent_id: immediateParent.parent_id ?? null, reply_count: immediateParent.reply_count || 0,
+        feed_ancestor_gap: immediateParent.parent_id != null })
+      ids.add(immediateParent.id)
     }
     for (let index = 0; index < treePosts.length; index++) {
       const post = treePosts[index]
       if (!post.parent_id || ids.has(post.parent_id)) continue
       let ancestor = post.parent
       while (ancestor && !ids.has(ancestor.id)) ancestor = ancestor.parent
-      treePosts[index] = { ...post, parent_id: ancestor?.id ?? null, feed_ancestor_gap: !!ancestor }
+      treePosts[index] = { ...post, parent_id: ancestor?.id ?? null,
+        feed_ancestor_gap: post.feed_ancestor_gap || !!ancestor }
     }
   } else {
     const references = new Map<number, PostView[]>()

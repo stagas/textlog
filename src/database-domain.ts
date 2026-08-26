@@ -2003,7 +2003,7 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
       const { viewerId, page, pageSize, markRead = true } = input as DatabaseDomainInput<'feeds.latestPage'>
       const state = viewerId >= 0 ? latestPostState(viewerId, database) : []
       const parameters = [viewerId, viewerId, viewerId, viewerId, viewerId]
-      const snapshotKind = 'latest-roots-v4'
+      const snapshotKind = 'latest-roots-v5'
       const snapshot = feedSnapshotPage<PostView[]>(database, snapshotKind, viewerId, page, () => {
         const rows = database.query(
           `SELECT p.*,u.handle FROM posts p JOIN users u ON u.id=p.user_id
@@ -2037,7 +2037,9 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
         return [...conversations.entries()].map(([id, conversation]) => {
           const root = byId.get(id)
           const recentReplies = conversation.filter(row => row.parent_id !== null).slice(0, 2)
-          return root?.parent_id === null ? [root, ...recentReplies] : recentReplies
+          const keepsRoot = root?.parent_id === null
+            && (conversation[0]?.id === root.id || recentReplies[0]?.parent_id === root.id)
+          return keepsRoot ? [root!, ...recentReplies] : recentReplies
         }).filter(conversation => conversation.length)
       }, pageSize, cacheDb)
       const unread = state.filter(row => row.unread)

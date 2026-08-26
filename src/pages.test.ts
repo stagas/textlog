@@ -708,6 +708,24 @@ test('feed conversations fold multiple read replies but expand one or any unread
   expect(unread).not.toContain('id="feed-thread-fold-1" checked=""')
 })
 
+test('promoted deep feed activity anchors at its recent branch instead of resurrecting the root', () => {
+  const root = { id: 1, user_id: 1, parent_id: null, body: 'Old root', created_at: '2025-01-01 09:00:00',
+    deleted_at: null, handle: 'root', reply_count: 1 }
+  const branch = { id: 2, user_id: 2, parent_id: 1, body: 'Deep branch', created_at: '2025-01-02 09:00:00',
+    deleted_at: null, handle: 'branch', reply_count: 1, parent: root }
+  const recent = { id: 3, user_id: 3, parent_id: 2, body: 'Recent answer', created_at: '2026-08-23 10:00:00',
+    deleted_at: null, handle: 'recent', reply_count: 0, parent: branch }
+  const html = renderToStaticMarkup(React.createElement(FeedThreads, {
+    user: null, returnPath: '/for-you', posts: [recent], promoteAncestors: true,
+  }))
+
+  expect(html).toContain('Deep branch')
+  expect(html).toContain('Recent answer')
+  expect(html).toContain('<blockquote class="parent-quote tappable-parent">')
+  expect(html).toContain('Old root')
+  expect(html).not.toContain('aria-label="Earlier replies omitted">…</div>')
+})
+
 test('admin metrics use locale-aware number formatting', () => {
   const html = renderToStaticMarkup(React.createElement(AdminDashboard, {
     user: { id: 1, handle: 'admin', email: 'gstagas@gmail.com', bio: '' },

@@ -69,7 +69,7 @@ test('a recent deep reply in a followed thread stays included after Latest marks
 
   const feed = loadPersonalizedFeed(database, viewer, 1, 20, false, '/for-you', false)
 
-  expect(feed.timeline.filter(row => row.id).map(row => row.id)).toEqual([1, 3, 2])
+  expect(feed.timeline.filter(row => row.id).map(row => row.id)).toEqual([3, 2])
   expect(feed.timeline.find(row => row.id === 3)?.unread).toBe(1)
 })
 
@@ -93,7 +93,7 @@ test('personalized pages count conversations rather than their embedded replies'
 
   expect(firstPage.totalPages).toBe(2)
   expect(firstPage.timeline.map(row => row.id)).toEqual([4])
-  expect(secondPage.timeline.map(row => row.id)).toEqual([1, 3, 2])
+  expect(secondPage.timeline.map(row => row.id)).toEqual([3, 2])
 })
 
 test('For You follow activity can be hidden independently for people and hashtags', () => {
