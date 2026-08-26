@@ -4,7 +4,7 @@ import { displayBio, linkify } from '../utils'
 import { Layout } from './layout'
 import { MetaRow } from './meta'
 import { ActionPair, FeedTabs, Pagination } from './page-shared'
-import { BioReferenceForms, FeedThreads, Post, TagReference, UserReference } from './post'
+import { BioReferenceForms, FeedThreads, TagReference, UserReference } from './post'
 
 export type ForYouCursor = { createdAt: string; key: string; direction: 'next' | 'previous' }
 
@@ -43,8 +43,7 @@ export function groupSimilarActivities(timeline: PersonalizedTimelineRow[]): Tim
   return groups
 }
 
-export function Feed({ user, data, title, path = '/for-you', pageUrl, notificationBanner = false, toMe = false,
-  flat = false }: {
+export function Feed({ user, data, title, path = '/for-you', pageUrl, notificationBanner = false, toMe = false }: {
   user: User
   data: PersonalizedFeedData
   title?: string
@@ -52,13 +51,9 @@ export function Feed({ user, data, title, path = '/for-you', pageUrl, notificati
   pageUrl?: string
   notificationBanner?: false | 'notifications' | 'appearance' | 'invite' | 'bio' | 'notification-update' | 'donate'
   toMe?: boolean
-  flat?: boolean
 }) {
-  const feedPath = flat ? `${path}?view=flat` : path
-  const returnPath = feedPath + (data.page > 1 ? `${flat ? '&' : '?'}page=${data.page}` : '')
-  const viewHref = flat
-    ? path + (data.page > 1 ? `?page=${data.page}` : '')
-    : `${path}?view=flat${data.page > 1 ? `&page=${data.page}` : ''}`
+  const feedPath = path
+  const returnPath = feedPath + (data.page > 1 ? `?page=${data.page}` : '')
   const hasUnread = toMe ? data.toMeUnread : data.forYouUnread
   const unreadPage = data.unreadHref
     ? Number(new URL(data.unreadHref, 'http://localhost').searchParams.get('page') || 1)
@@ -103,17 +98,12 @@ export function Feed({ user, data, title, path = '/for-you', pageUrl, notificati
     return ['post', 'reply', 'mention'].includes(row.activity_kind)
       ? (
         <div
-          className={`for-you-item for-you-author-${row.actor_id}${
-            flat && row.unread && row.targeted_to_viewer ? ' activity-item-directed-unread' : ''
-          }`}
+          className={`for-you-item for-you-author-${row.actor_id}`}
           key={row.event_key}
         >
-          {flat
-            ? <Post p={row.renderedPost!} user={user} showReplyCount tappable contextUnread={!!row.unread}
-              returnPath={`${returnPath}#post-${row.id}`} />
-            : <FeedThreads posts={threadPosts(row)} user={user} returnPath={returnPath}
+          <FeedThreads posts={threadPosts(row)} user={user} returnPath={returnPath}
               promoteAncestors={!toMe}
-              contextUnreadPostIds={unreadPostIds} contextDirectedUnreadPostIds={directedUnreadPostIds} />}
+              contextUnreadPostIds={unreadPostIds} contextDirectedUnreadPostIds={directedUnreadPostIds} />
         </div>
       )
       : (
@@ -207,10 +197,10 @@ export function Feed({ user, data, title, path = '/for-you', pageUrl, notificati
           : undefined}
         toMe={toMe} toMeCount={data.toMeCount} forYouCount={data.forYouCount} unreadHref={data.unreadHref}
         lastUnreadHref={data.lastUnreadHref} forYouUnread={data.forYouUnread} toMeUnread={data.toMeUnread}
-        latestCount={data.latestCount} viewMode={flat ? 'flat' : 'tree'} viewHref={viewHref} />
+        latestCount={data.latestCount} />
       {showTopPagination && <Pagination page={data.page} totalPages={data.totalPages} path={feedPath} top />}
       {displayTimeline.length
-        ? groupSimilarActivities(flat ? displayTimeline : visibleTimeline).map((group, groupIndex) =>
+        ? groupSimilarActivities(visibleTimeline).map((group, groupIndex) =>
             group.rows.length > 1 && group.collapsible
               ? (
                 <div className="activity-group" key={group.rows[0].event_key}>

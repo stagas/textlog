@@ -182,7 +182,6 @@ export function registerFeedsRoutes(app: Hono) {
     if (!user) return redirect('/enter?next=' + encodeURIComponent('/for-you'))
     rememberFeedVisitor(c.req.raw, user)
     const cursorValue = c.req.query('cursor')
-    const flat = c.req.query('view') === 'flat'
     if (cursorValue && !decodeForYouCursor(cursorValue)) return c.text('Invalid cursor', 400)
     const notificationBanner = await showNotificationBanner(c.req.raw, user)
     const pageSize = resolvedPageSize(c.req.raw)
@@ -190,13 +189,13 @@ export function registerFeedsRoutes(app: Hono) {
     const data = () => {
       if (!dataPromise) dataPromise = databaseService().call('feeds.personalizedPage', {
         user, page: currentPage(c.req.query('page')), pageSize, toMe: false,
-        path: flat ? '/for-you?view=flat' : '/for-you',
+        path: '/for-you',
       })
       return dataPromise
     }
     const render = async () =>
       page(
-        <Feed user={user} data={await data()} title="for you" notificationBanner={notificationBanner} flat={flat} />,
+        <Feed user={user} data={await data()} title="for you" notificationBanner={notificationBanner} />,
       )
     const renderForCache = async () => {
       const feed = await data()
@@ -207,7 +206,7 @@ export function registerFeedsRoutes(app: Hono) {
           notificationBanner={notificationBanner} />,
       )
     }
-    const response = !flat && !notificationBanner && currentPage(c.req.query('page')) === 1 && !cursorValue
+    const response = !notificationBanner && currentPage(c.req.query('page')) === 1 && !cursorValue
       ? await rpcMaterializedFeedPage(c.req.raw, 'for-you', user.id, render, false, 11, false, renderForCache,
         async () => {
           await databaseService().call('feeds.markPersonalizedSnapshotPageRead', { userId: user.id, pageSize,
@@ -223,7 +222,6 @@ export function registerFeedsRoutes(app: Hono) {
     const user = currentUser(c.req.raw)
     rememberFeedVisitor(c.req.raw, user)
     const cursorValue = c.req.query('cursor')
-    const flat = c.req.query('view') === 'flat'
     const cursor = decodePostCursor(cursorValue)
     if (cursorValue && !cursor) return c.text('Invalid cursor', 400)
     const notificationBanner = await showNotificationBanner(c.req.raw, user)
@@ -232,10 +230,9 @@ export function registerFeedsRoutes(app: Hono) {
     const render = async () => {
       const feed = await databaseService().call('feeds.latestPage', { viewerId: user?.id ?? -1,
         page: currentPage(c.req.query('page')), pageSize: resolvedPageSize(c.req.raw) })
-      return page(<PublicFeed user={user} feed={feed} path="/latest" notificationBanner={notificationBanner}
-        flat={flat} />)
+      return page(<PublicFeed user={user} feed={feed} path="/latest" notificationBanner={notificationBanner} />)
     }
-    const response = canUseMaterializedPage && !flat && !notificationBanner
+    const response = canUseMaterializedPage && !notificationBanner
       && currentPage(c.req.query('page')) === 1 && !cursorValue
       ? await rpcMaterializedFeedPage(c.req.raw, 'latest', user ? user.id : -1, render)
       : await render()
@@ -262,22 +259,20 @@ export function registerFeedsRoutes(app: Hono) {
     const user = currentUser(c.req.raw)
     if (!user) return redirect('/enter?next=' + encodeURIComponent('/to-me'))
     const cursorValue = c.req.query('cursor')
-    const flat = c.req.query('view') === 'flat'
     if (cursorValue && !decodeForYouCursor(cursorValue)) return c.text('Invalid cursor', 400)
     const notificationBanner = await showNotificationBanner(c.req.raw, user)
     const data = await databaseService().call('feeds.personalizedPage', { user, page: currentPage(c.req.query('page')),
-      pageSize: resolvedPageSize(c.req.raw), toMe: true, path: flat ? '/to-me?view=flat' : '/to-me' })
+      pageSize: resolvedPageSize(c.req.raw), toMe: true, path: '/to-me' })
     const render = () =>
       page(
-        <Feed user={user} data={data} title="to me" path="/to-me" toMe notificationBanner={notificationBanner}
-          flat={flat} />,
+        <Feed user={user} data={data} title="to me" path="/to-me" toMe notificationBanner={notificationBanner} />,
       )
     const renderForCache = () =>
       page(
         <Feed user={user} data={{ ...data, timeline: data.timeline.map(row => ({ ...row, unread: 0 })) }} title="to me"
           path="/to-me" toMe notificationBanner={notificationBanner} />,
       )
-    const response = !flat && !notificationBanner && currentPage(c.req.query('page')) === 1 && !cursorValue
+    const response = !notificationBanner && currentPage(c.req.query('page')) === 1 && !cursorValue
       ? await rpcMaterializedFeedPage(c.req.raw, 'to-me', user.id, render, false, 0, false, renderForCache)
       : render()
     return rememberFeed(response, 'following')
@@ -294,15 +289,14 @@ export function registerFeedsRoutes(app: Hono) {
     const user = currentUser(c.req.raw)
     rememberFeedVisitor(c.req.raw, user)
     const cursorValue = c.req.query('cursor')
-    const flat = c.req.query('view') === 'flat'
     if (cursorValue && !decodeHotCursor(cursorValue)) return c.text('Invalid cursor', 400)
     const notificationBanner = await showNotificationBanner(c.req.raw, user)
     const render = async () => {
       const feed = await databaseService().call('feeds.hotPage', { viewerId: user?.id ?? -1,
         page: currentPage(c.req.query('page')), pageSize: resolvedPageSize(c.req.raw) })
-      return page(<HotFeed user={user} feed={feed} title="hot" notificationBanner={notificationBanner} flat={flat} />)
+      return page(<HotFeed user={user} feed={feed} title="hot" notificationBanner={notificationBanner} />)
     }
-    const response = !flat && (!user || !notificationBanner) && currentPage(c.req.query('page')) === 1 && !cursorValue
+    const response = (!user || !notificationBanner) && currentPage(c.req.query('page')) === 1 && !cursorValue
       ? await rpcMaterializedFeedPage(c.req.raw, 'hot', user?.id ?? -1, render, false, hotRankingVersion)
       : await render()
     const remembered = rememberFeed(response, 'hot')

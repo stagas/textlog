@@ -449,7 +449,7 @@ export function CursorPagination({ path, previousCursor, nextCursor }: {
 
 export function FeedTabs(
   { active, user, forYouReadStatus, activityReadStatus, toMe = false, toMeCount = 0, forYouCount = 0, unreadHref,
-    lastUnreadHref, forYouUnread = false, toMeUnread = false, latestCount = 0, viewMode = 'tree', viewHref,
+    lastUnreadHref, forYouUnread = false, toMeUnread = false, latestCount = 0,
     readAction }: {
       active: 'following' | 'activity' | 'hot' | 'latest'
       user: User | null
@@ -463,49 +463,41 @@ export function FeedTabs(
       forYouUnread?: boolean
       toMeUnread?: boolean
       latestCount?: number
-      viewMode?: 'tree' | 'flat'
-      viewHref?: string
       readAction?: string
     },
 ) {
   forYouUnread = forYouUnread || toMeUnread
   const hasDistinctLastUnread = !!lastUnreadHref && lastUnreadHref !== unreadHref
-  const viewQuery = viewMode === 'flat' ? '?view=flat' : ''
   return (
     <>
       <nav className="feed-tabs" id="feed-tabs" aria-label="Feed">
         {user && (
           <a className={active === 'following' && !toMe ? 'active' : ''}
-            aria-current={active === 'following' && !toMe ? 'page' : undefined} href={`/for-you${viewQuery}`}
+            aria-current={active === 'following' && !toMe ? 'page' : undefined} href="/for-you"
           >
             for you
             {forYouCount > 0 && <span className="to-me-count">{forYouCount}</span>}
           </a>
         )}
         {user && (
-          <a className={toMe ? 'active' : ''} aria-current={toMe ? 'page' : undefined} href={`/to-me${viewQuery}`}>
+          <a className={toMe ? 'active' : ''} aria-current={toMe ? 'page' : undefined} href="/to-me">
             to me
             {toMeCount > 0 && <span className="to-me-count">{toMeCount}</span>}
           </a>
         )}
         <a className={active === 'hot' ? 'active' : ''} aria-current={active === 'hot' ? 'page' : undefined}
-          href={user ? `/hot${viewQuery}` : `/hot${viewQuery}#feed-tabs`}
+          href={user ? '/hot' : '/hot#feed-tabs'}
         >
           hot
         </a>
         <a className={active === 'latest' ? 'active' : ''} aria-current={active === 'latest' ? 'page' : undefined}
-          href={user ? `/latest${viewQuery}` : `/latest${viewQuery}#feed-tabs`}
+          href={user ? '/latest' : '/latest#feed-tabs'}
         >
           latest
           {latestCount > 0 && <span className="to-me-count">{latestCount}</span>}
         </a>
-        {(viewHref || activityReadStatus !== undefined) && (
+        {activityReadStatus !== undefined && (
           <span className="feed-tabs-read-status">
-            {viewHref && (
-              <span className="feed-tabs-view-filters">
-                <a className="activity-side-link" href={viewHref}>{viewMode === 'flat' ? 'tree' : 'flat'}</a>
-              </span>
-            )}
             {activityReadStatus !== undefined
               && (activityReadStatus
                 ? (

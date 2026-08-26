@@ -783,7 +783,7 @@ test('pagination requests instant scrolling without client-side scripts', () => 
   expect(html).not.toContain('<script')
 })
 
-test('latest offers flat and tree feed views', () => {
+test('latest renders conversations only as trees', () => {
   const post = {
     id: 42, user_id: 2, parent_id: null, body: 'A latest note', created_at: '2026-08-23 10:00:00',
     deleted_at: null, handle: 'writer', reply_count: 0,
@@ -791,15 +791,10 @@ test('latest offers flat and tree feed views', () => {
   const tree = renderToStaticMarkup(React.createElement(PublicFeed, {
     user: null, path: '/latest', feed: { posts: [post], page: 1, totalItems: 1, totalPages: 1 },
   }))
-  const flat = renderToStaticMarkup(React.createElement(PublicFeed, {
-    user: null, path: '/latest', flat: true,
-    feed: { posts: [post], page: 1, totalItems: 1, totalPages: 1 },
-  }))
-
-  expect(tree).toContain('href="/latest?view=flat#feed-tabs">flat</a>')
   expect(tree).toContain('class="post-page-thread feed-thread"')
-  expect(flat).toContain('href="/latest#feed-tabs">tree</a>')
-  expect(flat).not.toContain('class="post-page-thread feed-thread"')
+  expect(tree).not.toContain('view=flat')
+  expect(tree).not.toContain('>flat</a>')
+  expect(tree).not.toContain('>tree</a>')
 })
 
 test('pages inline the cookie-aware theme and logo', () => {

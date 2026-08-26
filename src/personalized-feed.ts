@@ -10,7 +10,7 @@ import { enrichPosts, loadBioReferenceData, visibleTagFollowerCounts, visibleUse
 import type { PersonalizedFeedData, PersonalizedTimelineRow, User } from './types'
 import { isWhisperThread, whisperThreadRelevantToViewer, whisperThreadTargetsViewer } from './whisper'
 
-export const PERSONALIZED_FEED_SNAPSHOT_VERSION = 19
+export const PERSONALIZED_FEED_SNAPSHOT_VERSION = 20
 
 const descendsFromViewer = `EXISTS (WITH RECURSIVE ancestors(id,user_id,parent_id) AS (
   SELECT ancestor.id,ancestor.user_id,ancestor.parent_id FROM posts ancestor WHERE ancestor.id=p.parent_id
@@ -44,7 +44,7 @@ export function loadPersonalizedFeed(database: Database, user: User, page: numbe
   const readsTable = toMe ? 'to_me_reads' : 'for_you_reads'
   const filter = toMe ? 'WHERE timeline.targeted_to_viewer=1' : ''
   const snapshotKind = `${toMe ? 'to-me' : 'for-you'}:v${PERSONALIZED_FEED_SNAPSHOT_VERSION}`
-  const snapshot = feedSnapshotPage<PersonalizedTimelineRow>(database, snapshotKind, user.id, page,
+  const snapshot = feedSnapshotPage<PersonalizedTimelineRow[]>(database, snapshotKind, user.id, page,
     () => {
       const rows = database.query(`SELECT timeline.*,
       NOT EXISTS(SELECT 1 FROM ${readsTable} seen WHERE seen.user_id=$viewer
@@ -153,7 +153,6 @@ export function loadPersonalizedFeed(database: Database, user: User, page: numbe
         hidePeopleFollowActivity: user.hide_people_follow_activity || 0,
         hideHashtagFollowActivity: user.hide_hashtag_follow_activity || 0,
       }) as PersonalizedTimelineRow[]
-      if (toMe) return rows
       const postRows = rows.filter(row => row.id !== null
         && ['post', 'reply', 'mention'].includes(row.activity_kind))
       const byId = new Map(postRows.map(row => [row.id, row]))
@@ -197,20 +196,22 @@ export function loadPersonalizedFeed(database: Database, user: User, page: numbe
         const conversation = postRows.filter(candidate => rootId(candidate) === root)
         const rootRow = byId.get(root!)
         const threadRows = rootRow?.parent_id === null ? [rootRow] : []
-        threadRows.push(...conversation.filter(candidate => candidate.parent_id !== null).slice(0, 2))
+        const replies = conversation.filter(candidate => candidate.parent_id !== null)
+        threadRows.push(...(toMe ? replies : replies.slice(0, 2)))
         if (threadRows.length) result.push({ rows: threadRows,
           created_at: threadActivity.get(root!) || row.created_at, order: row.event_key })
       }
       return result.sort((a, b) => b.created_at.localeCompare(a.created_at) || b.order.localeCompare(a.order))
-        .flatMap(entry => entry.rows)
+        .map(entry => entry.rows)
     }, pageSize)
 
-  const readKeys = snapshot.items.length
+  const snapshotRows = snapshot.items.flat()
+  const readKeys = snapshotRows.length
     ? new Set((database.query(`SELECT event_key FROM ${readsTable}
-    WHERE user_id=? AND event_key IN (${snapshot.items.map(() => '?').join(',')})`)
-      .all(user.id, ...snapshot.items.map(row => row.event_key)) as { event_key: string }[]).map(row => row.event_key))
+    WHERE user_id=? AND event_key IN (${snapshotRows.map(() => '?').join(',')})`)
+      .all(user.id, ...snapshotRows.map(row => row.event_key)) as { event_key: string }[]).map(row => row.event_key))
     : new Set<string>()
-  const timeline = snapshot.items.map(row => ({ ...row, unread: Number(!readKeys.has(row.event_key)) }))
+  const timeline = snapshotRows.map(row => ({ ...row, unread: Number(!readKeys.has(row.event_key)) }))
   const actorStats = visibleUserProfileStats(database, timeline.map(row => row.actor_id), user.id)
   const targets = new Map(timeline.flatMap(row => {
     if (!row.target_handle) return []
@@ -255,17 +256,17 @@ export function loadPersonalizedFeed(database: Database, user: User, page: numbe
   const toMeUnread = hasUnreadToMe(user.id, database)
   const hasUnread = toMe ? toMeUnread : forYouUnread
   const firstUnread = hasUnread
-    ? database.query(`SELECT item.position,item.payload
-    FROM feed_snapshot_items item LEFT JOIN ${readsTable} seen ON seen.user_id=?
-      AND seen.event_key=json_extract(item.payload,'$.event_key')
-    WHERE item.snapshot_id=? AND seen.event_key IS NULL ORDER BY item.position LIMIT 1`)
+    ? database.query(`SELECT item.position,row.value payload
+    FROM feed_snapshot_items item,json_each(item.payload) row
+      LEFT JOIN ${readsTable} seen ON seen.user_id=? AND seen.event_key=json_extract(row.value,'$.event_key')
+    WHERE item.snapshot_id=? AND seen.event_key IS NULL ORDER BY item.position,row.key LIMIT 1`)
       .get(user.id, snapshot.snapshotId) as { position: number; payload: string } | null
     : null
   const lastUnread = firstUnread
-    ? database.query(`SELECT item.position,item.payload
-    FROM feed_snapshot_items item LEFT JOIN ${readsTable} seen ON seen.user_id=?
-      AND seen.event_key=json_extract(item.payload,'$.event_key')
-    WHERE item.snapshot_id=? AND seen.event_key IS NULL ORDER BY item.position DESC LIMIT 1`)
+    ? database.query(`SELECT item.position,row.value payload
+    FROM feed_snapshot_items item,json_each(item.payload) row
+      LEFT JOIN ${readsTable} seen ON seen.user_id=? AND seen.event_key=json_extract(row.value,'$.event_key')
+    WHERE item.snapshot_id=? AND seen.event_key IS NULL ORDER BY item.position DESC,row.key DESC LIMIT 1`)
       .get(user.id, snapshot.snapshotId) as { position: number; payload: string } | null
     : null
   const unreadHref = (item: { position: number; payload: string } | null) => {
@@ -280,5 +281,5 @@ export function loadPersonalizedFeed(database: Database, user: User, page: numbe
   return { timeline: resultTimeline, page: snapshot.page, totalPages: snapshot.totalPages,
     toMeCount, forYouCount, latestCount: unreadLatestCount(user.id, database),
     forYouUnread, toMeUnread, unreadHref: unreadHref(firstUnread),
-    lastUnreadHref: lastUnread?.position !== firstUnread?.position ? unreadHref(lastUnread) : undefined }
+    lastUnreadHref: lastUnread?.payload !== firstUnread?.payload ? unreadHref(lastUnread) : undefined }
 }

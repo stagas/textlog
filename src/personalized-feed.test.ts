@@ -72,6 +72,29 @@ test('a recent deep reply in a followed thread stays included after Latest marks
   expect(feed.timeline.find(row => row.id === 3)?.unread).toBe(1)
 })
 
+test('personalized pages count conversations rather than their embedded replies', () => {
+  const database = new Database(':memory:', { strict: true })
+  runMigrations(database)
+  database.run(`INSERT INTO users(id,handle,email,password,bio) VALUES
+      (1,'viewer','viewer@example.com','!',''),
+      (2,'followed','followed@example.com','!',''),
+      (3,'replier','replier@example.com','!','');
+    INSERT INTO follows(follower_id,following_id,created_at) VALUES(1,2,CURRENT_TIMESTAMP);
+    INSERT INTO posts(id,user_id,parent_id,body,created_at) VALUES
+      (1,2,NULL,'first root','2026-08-03 09:00:00'),
+      (2,3,1,'first reply','2026-08-03 10:00:00'),
+      (3,3,2,'second reply','2026-08-03 11:00:00'),
+      (4,2,NULL,'second root','2026-08-03 12:00:00');`)
+  const viewer: User = { id: 1, handle: 'viewer', email: 'viewer@example.com', bio: '' }
+
+  const firstPage = loadPersonalizedFeed(database, viewer, 1, 1, false, '/for-you', false)
+  const secondPage = loadPersonalizedFeed(database, viewer, 2, 1, false, '/for-you', false)
+
+  expect(firstPage.totalPages).toBe(2)
+  expect(firstPage.timeline.map(row => row.id)).toEqual([4])
+  expect(secondPage.timeline.map(row => row.id)).toEqual([1, 3, 2])
+})
+
 test('For You follow activity can be hidden independently for people and hashtags', () => {
   const database = new Database(':memory:', { strict: true })
   runMigrations(database)

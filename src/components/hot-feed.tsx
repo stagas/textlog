@@ -4,11 +4,11 @@ import type { PostFeedPage } from '../types'
 import { AboutContent } from './about'
 import { Layout } from './layout'
 import { FeedTabs, GlobalFeedEmpty, Pagination } from './page-shared'
-import { FeedThreads, Post } from './post'
+import { FeedThreads } from './post'
 
 export function HotFeed(
   { feed = { posts: [], page: 1, totalItems: 0, totalPages: 1 }, user, title, path = '/hot', pageUrl,
-    notificationBanner = false, flat = false }: {
+    notificationBanner = false }: {
       feed?: PostFeedPage
       cursor?: HotCursor | null
       user: User | null
@@ -16,15 +16,10 @@ export function HotFeed(
       path?: string
       pageUrl?: string
       notificationBanner?: false | 'notifications' | 'appearance' | 'invite' | 'bio' | 'notification-update' | 'donate'
-      flat?: boolean
     },
 ) {
-  const feedPath = flat ? `${path}?view=flat` : path
-  const returnPath = feedPath + (feed.page > 1 ? `${flat ? '&' : '?'}page=${feed.page}` : '')
-  const viewPath = flat
-    ? path + (feed.page > 1 ? `?page=${feed.page}` : '')
-    : `${path}?view=flat${feed.page > 1 ? `&page=${feed.page}` : ''}`
-  const viewHref = `${viewPath}${user ? '' : '#feed-tabs'}`
+  const feedPath = path
+  const returnPath = feedPath + (feed.page > 1 ? `?page=${feed.page}` : '')
   return (
     <Layout user={user} title={title} pageUrl={pageUrl} notificationBanner={notificationBanner}
       mobileWriteAction={Boolean(user)}
@@ -33,15 +28,11 @@ export function HotFeed(
       {!user && <AboutContent user={null} embedded />}
       <h1 className="visually-hidden">Hot notes</h1>
       <FeedTabs active="hot" user={user} forYouCount={feed.forYouCount} forYouUnread={feed.forYouUnread}
-        toMeCount={feed.toMeCount} toMeUnread={feed.toMeUnread} latestCount={feed.latestCount}
-        viewMode={flat ? 'flat' : 'tree'} viewHref={viewHref} />
+        toMeCount={feed.toMeCount} toMeUnread={feed.toMeUnread} latestCount={feed.latestCount} />
       {feed.page > 1 && <Pagination page={feed.page} totalPages={feed.totalPages} path={feedPath}
         anchor={user ? undefined : 'feed-tabs'} top />}
       {feed.posts.length
-        ? flat
-          ? feed.posts.map(post => <Post key={post.id} p={post} user={user} showReplyCount tappable
-            returnPath={`${returnPath}#post-${post.id}`} />)
-          : <FeedThreads posts={feed.posts} user={user} returnPath={returnPath} />
+        ? <FeedThreads posts={feed.posts} user={user} returnPath={returnPath} />
         : feed.page === 1
         ? <GlobalFeedEmpty user={user} />
         : (

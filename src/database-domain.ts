@@ -88,6 +88,25 @@ function recapPosts(database: Database, viewerId: number) {
   return enrichPosts(database, RECAP_POPULAR_NOTE_IDS.flatMap(id => byId.has(id) ? [byId.get(id)!] : []), viewerId)
 }
 
+function groupPostsByConversation<T extends { id: number }>(database: Database, posts: T[]) {
+  if (!posts.length) return []
+  const roots = database.query(`WITH RECURSIVE ancestry(origin,id,parent_id) AS (
+    SELECT id,id,parent_id FROM posts WHERE id IN (${posts.map(() => '?').join(',')})
+    UNION ALL SELECT ancestry.origin,parent.id,parent.parent_id FROM ancestry
+      JOIN posts parent ON parent.id=ancestry.parent_id
+  ) SELECT origin,id root_id FROM ancestry WHERE parent_id IS NULL`).all(...posts.map(post => post.id)) as
+    Array<{ origin: number; root_id: number }>
+  const rootById = new Map(roots.map(row => [row.origin, row.root_id]))
+  const conversations = new Map<number, T[]>()
+  for (const post of posts) {
+    const rootId = rootById.get(post.id) || post.id
+    const conversation = conversations.get(rootId)
+    if (conversation) conversation.push(post)
+    else conversations.set(rootId, [post])
+  }
+  return [...conversations.values()]
+}
+
 function removePreviewRecords(database: Database, userId: number, postId?: number) {
   const keys: string[] = []
   if (database.query('SELECT 1 FROM sqlite_master WHERE type=\'table\' AND name=\'post_link_previews\'').get()) {
@@ -1984,8 +2003,8 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
       const { viewerId, page, pageSize, markRead = true } = input as DatabaseDomainInput<'feeds.latestPage'>
       const state = viewerId >= 0 ? latestPostState(viewerId, database) : []
       const parameters = [viewerId, viewerId, viewerId, viewerId, viewerId]
-      const snapshotKind = 'latest-roots-v3'
-      const snapshot = feedSnapshotPage<PostView>(database, snapshotKind, viewerId, page, () => {
+      const snapshotKind = 'latest-roots-v4'
+      const snapshot = feedSnapshotPage<PostView[]>(database, snapshotKind, viewerId, page, () => {
         const rows = database.query(
           `SELECT p.*,u.handle FROM posts p JOIN users u ON u.id=p.user_id
           WHERE p.deleted_at IS NULL AND (? < 0 OR NOT EXISTS
@@ -2015,15 +2034,16 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
           const id = rootId(row)
           conversations.set(id, [...(conversations.get(id) || []), row])
         }
-        return [...conversations.entries()].flatMap(([id, conversation]) => {
+        return [...conversations.entries()].map(([id, conversation]) => {
           const root = byId.get(id)
           const recentReplies = conversation.filter(row => row.parent_id !== null).slice(0, 2)
           return root?.parent_id === null ? [root, ...recentReplies] : recentReplies
-        })
+        }).filter(conversation => conversation.length)
       }, pageSize, cacheDb)
       const unread = state.filter(row => row.unread)
-      const posts = enrichPosts(database, snapshot.items, viewerId)
-      const pageIds = new Set(snapshot.items.map(post => post.id))
+      const snapshotPosts = snapshot.items.flat()
+      const posts = enrichPosts(database, snapshotPosts, viewerId)
+      const pageIds = new Set(snapshotPosts.map(post => post.id))
       const parentReferences = new Map<number, number>()
       for (const post of posts) {
         if (post.parent_id && !pageIds.has(post.parent_id) && post.parent) {
@@ -2036,10 +2056,15 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
         .map(row => row.id)
       const readOnPage = new Set(unreadPostIds)
       const remainingUnread = markRead ? unread.filter(row => !readOnPage.has(row.id)) : unread
-      const href = (row: { id: number } | undefined) => row
-        ? `/latest${Math.floor(state.findIndex(item => item.id === row.id) / pageSize) + 1 > 1
-          ? `?page=${Math.floor(state.findIndex(item => item.id === row.id) / pageSize) + 1}` : ''}#post-${row.id}`
-        : undefined
+      const snapshotPositions = new Map((cacheDb.query(`SELECT json_extract(item.value,'$.id') id,
+        snapshot_item.position FROM feed_snapshot_items snapshot_item,json_each(snapshot_item.payload) item
+        WHERE snapshot_item.snapshot_id=?`).all(snapshot.snapshotId) as Array<{ id: number; position: number }>)
+        .map(row => [row.id, row.position]))
+      const href = (row: { id: number } | undefined) => {
+        if (!row) return undefined
+        const rowPage = Math.floor((snapshotPositions.get(row.id) || 0) / pageSize) + 1
+        return `/latest${rowPage > 1 ? `?page=${rowPage}` : ''}#post-${row.id}`
+      }
       if (viewerId >= 0 && markRead && unreadPostIds.length) {
         markLatestPostsRead(viewerId, unreadPostIds, database)
         cacheDb.query('DELETE FROM feed_snapshots WHERE kind=? AND viewer_id=?').run(snapshotKind, viewerId)
@@ -2092,9 +2117,10 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
     }
     case 'feeds.hotPage': {
       const { viewerId, page, pageSize } = input as DatabaseDomainInput<'feeds.hotPage'>
-      const snapshot = feedSnapshotPage<HotPost>(database, `hot:${hotRankingVersion}`, viewerId, page,
-        () => getHotPosts(database, 1_000_000, null, new Date(), viewerId, false, 2), pageSize, cacheDb)
-      return { posts: enrichPosts(database, snapshot.items, viewerId), page: snapshot.page,
+      const snapshot = feedSnapshotPage<HotPost[]>(database, `hot:${hotRankingVersion}:conversations`, viewerId, page,
+        () => groupPostsByConversation(database,
+          getHotPosts(database, 1_000_000, null, new Date(), viewerId, false, 2)), pageSize, cacheDb)
+      return { posts: enrichPosts(database, snapshot.items.flat(), viewerId), page: snapshot.page,
         totalItems: snapshot.totalItems, totalPages: snapshot.totalPages,
         forYouCount: viewerId >= 0 ? unreadForYouCount(viewerId, database) : 0,
         toMeCount: viewerId >= 0 ? unreadToMeCount(viewerId, database) : 0,
@@ -2119,9 +2145,10 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
       const snapshot = database.query(`SELECT id FROM feed_snapshots WHERE kind=? AND viewer_id=?
         ORDER BY id DESC LIMIT 1`).get(kind, userId) as { id: number } | null
       if (snapshot) {
-        const rows = database.query(`SELECT json_extract(payload,'$.event_key') event_key,
-          coalesce(json_extract(payload,'$.targeted_to_viewer'),0) targeted_to_viewer
-          FROM feed_snapshot_items WHERE snapshot_id=? AND position<? ORDER BY position`)
+        const rows = database.query(`SELECT json_extract(entry.value,'$.event_key') event_key,
+          coalesce(json_extract(entry.value,'$.targeted_to_viewer'),0) targeted_to_viewer
+          FROM feed_snapshot_items item,json_each(item.payload) entry
+          WHERE item.snapshot_id=? AND item.position<? ORDER BY item.position,entry.key`)
           .all(snapshot.id, pageSize) as Array<{ event_key: string; targeted_to_viewer: number }>
         markForYouEntriesRead(userId, rows.map(row => row.event_key), toMe, database,
           rows.filter(row => toMe || !row.targeted_to_viewer).map(row => row.event_key))
