@@ -895,33 +895,43 @@ export function ThreadReplies(
   return renderBranch(parentId, 1)
 }
 
-/** Render only the posts supplied by a feed, joining replies to parents that are on the same page. */
+/** Render feed posts as conversations, filling in any available ancestor context. */
 export function FeedThreads(
   { posts, user, returnPath, contextUnreadPostIds, contextDirectedUnreadPostIds, highlightTerms = [],
-    hideTopMeta = false }: { posts: PostView[];
+    hideTopMeta = false, promoteAncestors = false }: { posts: PostView[];
     user: User | null; returnPath: string; contextUnreadPostIds?: ReadonlySet<number>;
-    contextDirectedUnreadPostIds?: ReadonlySet<number>; highlightTerms?: string[]; hideTopMeta?: boolean },
+    contextDirectedUnreadPostIds?: ReadonlySet<number>; highlightTerms?: string[]; hideTopMeta?: boolean;
+    promoteAncestors?: boolean },
 ) {
   if (!posts.length) return null
-  const sourceIds = new Set(posts.map(post => post.id))
-  const missingParentReferences = new Map<number, PostView[]>()
-  for (const post of posts) {
-    if (!post.parent_id || sourceIds.has(post.parent_id) || !post.parent) continue
-    missingParentReferences.set(post.parent_id, [...(missingParentReferences.get(post.parent_id) || []), post])
+  const treePosts = [...posts]
+  const ids = new Set(posts.map(post => post.id))
+  if (promoteAncestors) {
+    for (const post of posts) {
+      let parent = post.parent
+      while (parent) {
+        if (!ids.has(parent.id)) {
+          treePosts.push({ ...parent, user_id: parent.user_id ?? -1, parent_id: parent.parent_id ?? null,
+            reply_count: parent.reply_count || 0 })
+          ids.add(parent.id)
+        }
+        parent = parent.parent
+      }
+    }
+  } else {
+    const references = new Map<number, PostView[]>()
+    for (const post of posts) {
+      if (!post.parent_id || ids.has(post.parent_id) || !post.parent) continue
+      references.set(post.parent_id, [...(references.get(post.parent_id) || []), post])
+    }
+    for (const siblings of references.values()) {
+      if (siblings.length < 2) continue
+      const parent = siblings[0].parent!
+      treePosts.push({ ...parent, user_id: parent.user_id ?? -1, parent_id: parent.parent_id ?? null,
+        reply_count: parent.reply_count || 0 })
+      ids.add(parent.id)
+    }
   }
-  const sharedParents: PostView[] = []
-  for (const references of missingParentReferences.values()) {
-    if (references.length < 2) continue
-    const parent = references[0].parent!
-    sharedParents.push({
-      ...parent,
-      user_id: parent.user_id ?? -1,
-      parent_id: parent.parent_id ?? null,
-      reply_count: parent.reply_count || 0,
-    })
-  }
-  const treePosts = [...posts, ...sharedParents]
-  const ids = new Set(treePosts.map(post => post.id))
   const positions = new Map(treePosts.map((post, index) => [post.id, index]))
   const children = new Map<number, PostView[]>()
   for (const post of treePosts) {

@@ -64,7 +64,8 @@ export function Feed({ user, data, title, path = '/for-you', pageUrl, notificati
     ? Number(new URL(data.unreadHref, 'http://localhost').searchParams.get('page') || 1)
     : null
   const showTopPagination = data.page > 1 || (data.page === 1 && unreadPage !== null && unreadPage > 1)
-  const timelinePosts = data.timeline.filter(row => ['post', 'reply', 'mention'].includes(row.activity_kind))
+  const displayTimeline = toMe ? data.timeline : data.timeline.filter(row => !row.parent_id || row.unread)
+  const timelinePosts = displayTimeline.filter(row => ['post', 'reply', 'mention'].includes(row.activity_kind))
   const timelinePostIds = new Set(timelinePosts.map(row => row.id))
   const unreadPostIds = new Set(timelinePosts.filter(row => row.unread).map(row => row.id))
   const directedUnreadPostIds = new Set(timelinePosts.filter(row => row.unread && row.targeted_to_viewer)
@@ -87,13 +88,13 @@ export function Feed({ user, data, title, path = '/for-you', pageUrl, notificati
     }
     return timelinePosts.filter(row => included.has(row.id)).map(row => row.renderedPost!)
   }
-  const timelinePositions = new Map(data.timeline.map((row, index) => [row.event_key, index]))
-  const timelinePostPositions = new Map(data.timeline.map((row, index) => [row.id, index]))
-  const visibleTimeline = data.timeline.filter((row, index) => {
+  const timelinePositions = new Map(displayTimeline.map((row, index) => [row.event_key, index]))
+  const timelinePostPositions = new Map(displayTimeline.map((row, index) => [row.id, index]))
+  const visibleTimeline = displayTimeline.filter((row, index) => {
     if (!['post', 'reply', 'mention'].includes(row.activity_kind)) return true
     if (row.parent_id && timelinePostIds.has(row.parent_id)) return false
     if (!row.parent_id) return true
-    return data.timeline.findIndex(candidate => ['post', 'reply', 'mention'].includes(candidate.activity_kind)
+    return displayTimeline.findIndex(candidate => ['post', 'reply', 'mention'].includes(candidate.activity_kind)
       && candidate.parent_id === row.parent_id) === index
   })
     .sort((a, b) => {
@@ -118,6 +119,7 @@ export function Feed({ user, data, title, path = '/for-you', pageUrl, notificati
             ? <Post p={row.renderedPost!} user={user} showReplyCount tappable contextUnread={!!row.unread}
               returnPath={`${returnPath}#post-${row.id}`} />
             : <FeedThreads posts={threadPosts(row.id)} user={user} returnPath={returnPath}
+              promoteAncestors={!toMe}
               contextUnreadPostIds={unreadPostIds} contextDirectedUnreadPostIds={directedUnreadPostIds} />}
         </div>
       )
@@ -214,8 +216,8 @@ export function Feed({ user, data, title, path = '/for-you', pageUrl, notificati
         lastUnreadHref={data.lastUnreadHref} forYouUnread={data.forYouUnread} toMeUnread={data.toMeUnread}
         latestCount={data.latestCount} viewMode={flat ? 'flat' : 'tree'} viewHref={viewHref} />
       {showTopPagination && <Pagination page={data.page} totalPages={data.totalPages} path={feedPath} top />}
-      {data.timeline.length
-        ? groupSimilarActivities(flat ? data.timeline : visibleTimeline).map((group, groupIndex) =>
+      {displayTimeline.length
+        ? groupSimilarActivities(flat ? displayTimeline : visibleTimeline).map((group, groupIndex) =>
             group.rows.length > 1 && group.collapsible
               ? (
                 <div className="activity-group" key={group.rows[0].event_key}>

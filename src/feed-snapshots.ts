@@ -42,7 +42,7 @@ function personalizedFeedGeneration(database: Database, viewerId: number) {
 export function feedSnapshotPage<T>(database: Database, kind: string, viewerId: number, page: number, build: () => T[],
   pageSize = PAGE_SIZE, cache: Database = cacheDb): FeedSnapshotPage<T>
 {
-  const storage = kind === 'latest' || kind === 'hot' || kind.startsWith('hot:') ? cache : database
+  const storage = kind.startsWith('latest') || kind === 'hot' || kind.startsWith('hot:') ? cache : database
   // Personalized snapshots have per-viewer generations maintained by database triggers. Keeping them off the global
   // generation prevents an unrelated post anywhere on the site from rebuilding every viewer's timeline.
   const personalized = kind.startsWith('for-you:') || kind.startsWith('to-me:')

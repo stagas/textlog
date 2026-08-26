@@ -57,7 +57,7 @@ test('activity details compact only consecutive actions by the same actor', () =
   ])
 })
 
-test('feed pages reconstruct threads from only the posts on that page', () => {
+test('feed pages reconstruct threads with available off-page ancestors', () => {
   const root = { id: 10, user_id: 2, parent_id: null, body: 'root note', created_at: '2026-08-19 10:00:00',
     deleted_at: null, handle: 'alice', reply_count: 2 }
   const reply = { id: 11, user_id: 3, parent_id: 10, body: 'page reply', created_at: '2026-08-19 11:00:00',
@@ -74,6 +74,8 @@ test('feed pages reconstruct threads from only the posts on that page', () => {
   expect(html.match(/class="post-page-thread feed-thread"/g)).toHaveLength(2)
   expect(html.indexOf('id="post-10"')).toBeLessThan(html.indexOf('id="post-11"'))
   expect(html.indexOf('id="post-10"')).toBeLessThan(html.indexOf('id="post-12"'))
+  expect(html.indexOf('id="post-99"')).toBeLessThan(html.indexOf('id="post-12"'))
+  expect(html.match(/off-page parent/g)).toHaveLength(1)
   expect(html).toContain('class="reply-branch"')
   expect(html).toContain('class="post-hit-area" href="/post/11?from=%2Flatest%23post-11"')
   expect(html).toContain('class="thread-fold-input" type="checkbox" id="feed-thread-fold-10"')
@@ -132,7 +134,7 @@ test('latest keeps the arrival count but hides read actions when the rendered pa
   expect(html).not.toContain('action="/latest/read-all"')
 })
 
-test('latest gives an unread dot to an off-page parent quoted by a reply', () => {
+test('latest gives unread dots to a reply and its promoted off-page parent', () => {
   const parent = { id: 90, user_id: 2, parent_id: null, body: 'off-page unread parent',
     created_at: '2026-08-19 10:00:00', deleted_at: null, handle: 'alice', reply_count: 1 }
   const reply = { id: 91, user_id: 3, parent_id: 90, body: 'reply on this page',
@@ -144,7 +146,8 @@ test('latest gives an unread dot to an off-page parent quoted by a reply', () =>
   }} />)
 
   expect(html.match(/class="unread-dot" aria-label="unread"/g)).toHaveLength(2)
-  expect(html).toContain('<div class="parent-quote-top"><span class="unread-dot" aria-label="unread"></span>')
+  expect(html).toContain('id="post-90"')
+  expect(html).not.toContain('class="parent-quote"')
 })
 
 test('flat feed view restores source order and offers the tree toggle after to me', () => {

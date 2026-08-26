@@ -10,7 +10,7 @@ import { enrichPosts, loadBioReferenceData, visibleTagFollowerCounts, visibleUse
 import type { PersonalizedFeedData, PersonalizedTimelineRow, User } from './types'
 import { isWhisperThread, whisperThreadRelevantToViewer, whisperThreadTargetsViewer } from './whisper'
 
-export const PERSONALIZED_FEED_SNAPSHOT_VERSION = 11
+export const PERSONALIZED_FEED_SNAPSHOT_VERSION = 12
 
 const descendsFromViewer = `EXISTS (WITH RECURSIVE ancestors(id,user_id,parent_id) AS (
   SELECT ancestor.id,ancestor.user_id,ancestor.parent_id FROM posts ancestor WHERE ancestor.id=p.parent_id
@@ -34,7 +34,10 @@ export function loadPersonalizedFeed(database: Database, user: User, page: numbe
   path: string, markRead = true): PersonalizedFeedData
 {
   const readsTable = toMe ? 'to_me_reads' : 'for_you_reads'
-  const filter = toMe ? 'WHERE timeline.targeted_to_viewer=1' : ''
+  const filter = toMe
+    ? 'WHERE timeline.targeted_to_viewer=1'
+    : `WHERE timeline.parent_id IS NULL OR NOT EXISTS (
+      SELECT 1 FROM ${readsTable} seen WHERE seen.user_id=$viewer AND seen.event_key=timeline.event_key)`
   const snapshotKind = `${toMe ? 'to-me' : 'for-you'}:v${PERSONALIZED_FEED_SNAPSHOT_VERSION}`
   const snapshot = feedSnapshotPage<PersonalizedTimelineRow>(database, snapshotKind, user.id, page,
     () =>

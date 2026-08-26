@@ -52,6 +52,7 @@ export function PublicFeed(
             contextParentUnread={!!post.parent && unreadPostIds.has(post.parent.id)}
             returnPath={`${returnPath}#post-${post.id}`} />)
           : <FeedThreads posts={feed.posts} user={user} returnPath={returnPath}
+            promoteAncestors
             contextUnreadPostIds={unreadPostIds} contextDirectedUnreadPostIds={directedUnreadPostIds} />
         : feed.page === 1
         ? <GlobalFeedEmpty user={user} />
