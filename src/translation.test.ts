@@ -33,6 +33,25 @@ describe('Google post translation', () => {
     expect(fetchMock).not.toHaveBeenCalled()
   })
 
+  test('does not store a translation when Google detects English', async () => {
+    const fetchMock = mock((_input: string | URL | Request, _init?: RequestInit) =>
+      Promise.resolve(new Response(JSON.stringify({
+        data: { translations: [{ translatedText: 'Already English', detectedSourceLanguage: 'en' }] },
+      }), { status: 200 })))
+    globalThis.fetch = fetchMock as unknown as typeof fetch
+
+    await expect(translateToEnglish('𐑐𐑵𐑯', 'secret key')).resolves.toBeNull()
+  })
+
+  test('leaves an English-detected backfill candidate without a translation', async () => {
+    const database = new Database(':memory:', { strict: true })
+    database.run(`CREATE TABLE posts(id INTEGER PRIMARY KEY,body TEXT NOT NULL,translation TEXT,deleted_at TEXT);
+      INSERT INTO posts VALUES(1,'𐑐𐑵𐑯',NULL,NULL);`)
+
+    expect(await backfillPostTranslations(database, { translate: async () => null, wait: async () => {} })).toBe(1)
+    expect(database.query('SELECT translation FROM posts WHERE id=1').get()).toEqual({ translation: null })
+  })
+
   test('backfills eligible notes serially with one-second gaps and resumes safely', async () => {
     const database = new Database(':memory:', { strict: true })
     database.run(`CREATE TABLE posts(id INTEGER PRIMARY KEY,body TEXT NOT NULL,translation TEXT,deleted_at TEXT);

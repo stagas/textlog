@@ -5,7 +5,7 @@ import { decodeHtmlEntities } from './link-preview'
 const GOOGLE_TRANSLATE_URL = 'https://translation.googleapis.com/language/translate/v2'
 
 type TranslateResponse = {
-  data?: { translations?: Array<{ translatedText?: string }> }
+  data?: { translations?: Array<{ translatedText?: string; detectedSourceLanguage?: string }> }
   error?: { message?: string }
 }
 
@@ -17,11 +17,12 @@ export async function translateToEnglish(text: string, apiKey = Bun.env.GOOGLE_T
     body: JSON.stringify({ q: text, target: 'en', format: 'text' }),
   })
   const result = await response.json().catch(() => null) as TranslateResponse | null
-  const translated = result?.data?.translations?.[0]?.translatedText
+  const translation = result?.data?.translations?.[0]
+  const translated = translation?.translatedText
   if (!response.ok || typeof translated !== 'string') {
     throw new Error(`Google Translate failed (${response.status}): ${result?.error?.message || 'invalid response'}`)
   }
-  return decodeHtmlEntities(translated)
+  return translation?.detectedSourceLanguage?.toLowerCase() === 'en' ? null : decodeHtmlEntities(translated)
 }
 
 export function postTranslation(body: string) {
@@ -29,7 +30,7 @@ export function postTranslation(body: string) {
 }
 
 export async function backfillPostTranslations(database: Database, options: {
-  translate?: (body: string) => Promise<string>
+  translate?: (body: string) => Promise<string | null>
   wait?: (milliseconds: number) => Promise<void>
   onTranslated?: (id: number) => void
 } = {}) {
@@ -42,8 +43,10 @@ export async function backfillPostTranslations(database: Database, options: {
   for (const [index, row] of eligible.entries()) {
     if (index) await wait(1000)
     const translation = await translate(row.body)
-    update.run(translation, row.id)
-    options.onTranslated?.(row.id)
+    if (translation !== null) {
+      update.run(translation, row.id)
+      options.onTranslated?.(row.id)
+    }
   }
   return eligible.length
 }
