@@ -970,6 +970,17 @@ export function FeedThreads(
     visit(root.id)
     return count
   }
+  const hasUnreadReply = (root: PostView) => {
+    let unread = false
+    const visit = (parentId: number) => {
+      for (const child of children.get(parentId) || []) {
+        if (contextUnreadPostIds?.has(child.id)) unread = true
+        visit(child.id)
+      }
+    }
+    visit(root.id)
+    return unread
+  }
   const roots = treePosts.filter(post => !post.parent_id || !ids.has(post.parent_id))
     .sort((a, b) => conversationPosition(a) - conversationPosition(b))
   return (
@@ -981,7 +992,8 @@ export function FeedThreads(
         const foldControlId = visibleReplies > 0 ? `feed-thread-fold-${post.id}` : undefined
         return (
           <div className="post-page-thread feed-thread" key={post.id}>
-            {foldControlId && <input className="thread-fold-input" type="checkbox" id={foldControlId} />}
+            {foldControlId && <input className="thread-fold-input" type="checkbox" id={foldControlId}
+              defaultChecked={!hasUnreadReply(post)} />}
             <div className={`thread-root${post.profile_pinned ? ' profile-pinned-surround' : ''}`}>
               <Post p={post} user={user} tappable returnPath={anchoredReturnPath}
                 highlightTerms={highlightTerms}

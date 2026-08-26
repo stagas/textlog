@@ -678,6 +678,29 @@ test('feed threads highlight search matches while retaining tappable reply navig
   expect(html).not.toContain('>read</a>')
 })
 
+test('feed conversations with embedded replies start folded', () => {
+  const root = { id: 1, user_id: 1, parent_id: null, body: 'Root', created_at: '2026-08-23 09:00:00',
+    deleted_at: null, handle: 'root', reply_count: 1 }
+  const html = renderToStaticMarkup(React.createElement(FeedThreads, {
+    user: null,
+    returnPath: '/latest',
+    posts: [root, { id: 2, user_id: 2, parent_id: 1, body: 'Reply', created_at: '2026-08-23 10:00:00',
+      deleted_at: null, handle: 'reply', reply_count: 0, parent: root }],
+  }))
+
+  expect(html).toContain('class="thread-fold-input" type="checkbox" id="feed-thread-fold-1" checked=""')
+
+  const unread = renderToStaticMarkup(React.createElement(FeedThreads, {
+    user: null,
+    returnPath: '/latest',
+    contextUnreadPostIds: new Set([2]),
+    posts: [root, { id: 2, user_id: 2, parent_id: 1, body: 'Reply', created_at: '2026-08-23 10:00:00',
+      deleted_at: null, handle: 'reply', reply_count: 0, parent: root }],
+  }))
+  expect(unread).toContain('class="thread-fold-input" type="checkbox" id="feed-thread-fold-1"')
+  expect(unread).not.toContain('id="feed-thread-fold-1" checked=""')
+})
+
 test('admin metrics use locale-aware number formatting', () => {
   const html = renderToStaticMarkup(React.createElement(AdminDashboard, {
     user: { id: 1, handle: 'admin', email: 'gstagas@gmail.com', bio: '' },
