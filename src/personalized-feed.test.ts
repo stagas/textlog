@@ -105,22 +105,27 @@ test('For You follow activity can be hidden independently for people and hashtag
       (3,'person','person@example.com','!','');
     INSERT INTO follows(follower_id,following_id,created_at) VALUES
       (1,2,'2026-08-03 09:00:00'),(2,3,'2026-08-03 10:00:00'),(3,1,'2026-08-03 12:00:00');
-    INSERT INTO hashtag_follows(user_id,tag,created_at) VALUES(2,'topic','2026-08-03 11:00:00');`)
+    INSERT INTO hashtag_follows(user_id,tag,created_at) VALUES(2,'topic','2026-08-03 11:00:00');
+    UPDATE users SET hide_people_follow_activity=1,hide_hashtag_follow_activity=0 WHERE id=1;`)
   const viewer: User = { id: 1, handle: 'viewer', email: 'viewer@example.com', bio: '',
     hide_people_follow_activity: 1 }
 
   const peopleHidden = loadPersonalizedFeed(database, viewer, 1, 20, false, '/for-you', false)
   expect(peopleHidden.timeline.map(row => row.activity_kind)).toEqual(['user_follow', 'tag_follow'])
+  expect(peopleHidden.forYouCount).toBe(2)
+  expect(peopleHidden.unreadHref).toBeDefined()
   expect(Number(peopleHidden.timeline[0]?.target_is_viewer)).toBe(1)
   const directedFollow = loadPersonalizedFeed(database, viewer, 1, 20, true, '/to-me', false)
   expect(directedFollow.timeline.map(row => row.activity_kind)).toEqual(['user_follow'])
 
   database.query('UPDATE personalized_feed_generations SET generation=generation+1 WHERE viewer_id=1').run()
+  database.query('UPDATE users SET hide_people_follow_activity=0,hide_hashtag_follow_activity=1 WHERE id=1').run()
   viewer.hide_people_follow_activity = 0
   viewer.hide_hashtag_follow_activity = 1
   const hashtagsHidden = loadPersonalizedFeed(database, viewer, 1, 20, false, '/for-you', false)
   expect(hashtagsHidden.timeline).toHaveLength(2)
   expect(hashtagsHidden.timeline.every(row => row.activity_kind === 'user_follow')).toBeTrue()
+  expect(hashtagsHidden.forYouCount).toBe(2)
 })
 
 test('For You only includes activity created after following a person or hashtag', () => {
@@ -145,6 +150,7 @@ test('For You only includes activity created after following a person or hashtag
       (3,3,'old #topic note','2026-08-03 09:00:00'),
       (4,3,'new #topic note','2026-08-03 11:00:00');
     INSERT INTO post_hashtags(post_id,tag) VALUES(3,'topic'),(4,'topic');`)
+  database.query(`UPDATE users SET hide_people_follow_activity=0,hide_hashtag_follow_activity=0 WHERE id=1`).run()
   const viewer: User = { id: 1, handle: 'viewer', email: 'viewer@example.com', bio: '' }
 
   const feed = loadPersonalizedFeed(database, viewer, 1, 20, false, '/for-you', false)

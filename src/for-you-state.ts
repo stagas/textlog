@@ -53,6 +53,7 @@ const visibleEvents = `
     WHERE f.created_at IS NOT NULL AND actor.id!=$viewer AND EXISTS
       (SELECT 1 FROM follows vf WHERE vf.follower_id=$viewer AND vf.following_id=actor.id
         AND f.created_at>=vf.created_at)
+      AND target.id!=$viewer AND $hidePeopleFollowActivity=0
       AND actor.deleted_at IS NULL AND actor.suspended_at IS NULL
       AND target.deleted_at IS NULL AND target.suspended_at IS NULL
       AND NOT EXISTS (SELECT 1 FROM blocks b WHERE
@@ -66,6 +67,7 @@ const visibleEvents = `
         AND hf.created_at>=vf.created_at) OR EXISTS
       (SELECT 1 FROM hashtag_follows vt WHERE vt.user_id=$viewer AND vt.tag=hf.tag
         AND hf.created_at>=vt.created_at))
+      AND $hideHashtagFollowActivity=0
       AND actor.deleted_at IS NULL AND actor.suspended_at IS NULL
       AND NOT EXISTS (SELECT 1 FROM blocks b WHERE
         (b.blocker_id=$viewer AND b.blocked_id=actor.id) OR
@@ -110,12 +112,15 @@ const visibleForYouEvents = `
   SELECT event_key FROM (${visibleToMeEvents})`
 
 function stateParameters(userId: number, database: Database) {
-  const account = database.query('SELECT email FROM users WHERE id=?').get(userId) as { email: string } | null
-  return { viewer: userId, admin: Number(!!account && isAdminEmail(account.email)) }
+  const account = database.query('SELECT * FROM users WHERE id=?').get(userId) as { email: string;
+    hide_people_follow_activity?: number; hide_hashtag_follow_activity?: number } | null
+  return { viewer: userId, admin: Number(!!account && isAdminEmail(account.email)),
+    hidePeopleFollowActivity: account?.hide_people_follow_activity || 0,
+    hideHashtagFollowActivity: account?.hide_hashtag_follow_activity || 0 }
 }
 
 export function hasUnreadForYou(userId: number, database: Database) {
-  return !!database.query(`SELECT 1 FROM (${visibleForYouEvents}) event WHERE NOT EXISTS
+  return !!database.query(`SELECT 1 FROM (${visibleEvents}) event WHERE NOT EXISTS
     (SELECT 1 FROM for_you_reads seen WHERE seen.user_id=$viewer AND seen.event_key=event.event_key) LIMIT 1`)
     .get(stateParameters(userId, database))
 }
