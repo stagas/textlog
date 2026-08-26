@@ -1403,24 +1403,23 @@ test('consequential account, content, reporting, and admin flows work over HTTP'
     .run(bob.id, alice.id)
   database.query('UPDATE users SET bio=\'Bob builds things\' WHERE id=?').run(bob.id)
   const followedPersonFeed = await (await request('/for-you', { cookie: aliceCookie })).text()
-  expect(followedPersonFeed).toContain('<a class="reference-menu-trigger postauthor" '
-    + 'href="/u/bob?from=%2Ffor-you%23a-')
-  expect(followedPersonFeed).not.toContain('reference-profile-tabs')
-  expect(followedPersonFeed).toContain('<p class="profile-bio">Bob builds things</p>')
-  expect(followedPersonFeed).toContain('<form action="/follow/bob" method="post">'
-    + '<input type="hidden" name="from" value="/for-you#a-')
-  expect(followedPersonFeed).toContain('<button class="button button-muted">unfollow</button>')
-  expect(followedPersonFeed).not.toContain('action="/follow/alice"')
-  expect(followedPersonFeed).not.toContain('action="/for-you/read-all"')
-  expect(followedPersonFeed).not.toContain('you&#x27;ve seen it all')
-  expect(followedPersonFeed).toContain('href="/for-you">for you<span class="to-me-count">1</span></a>')
+  expect(followedPersonFeed).not.toContain('Bob builds things')
+  expect(followedPersonFeed).toContain('href="/for-you">for you</a>')
   expect(followedPersonFeed).toContain('href="/to-me">to me<span class="to-me-count">1</span></a>')
-  expect(followedPersonFeed).not.toContain('href="/to-me"><span class="unread-dot"')
-  expect(followedPersonFeed).toContain('activity-follow activity-item-directed-unread')
-  expect(followedPersonFeed).toContain('class="unread-dot" aria-label="unread"')
-  const revisitedForYou = await (await request('/for-you', { cookie: aliceCookie })).text()
-  expect(revisitedForYou).not.toContain('class="unread-dot" aria-label="unread"')
-  expect(revisitedForYou).not.toContain('activity-item-directed-unread')
+  const followedPersonToMe = await (await request('/to-me', { cookie: aliceCookie })).text()
+  expect(followedPersonToMe).toContain('<a class="reference-menu-trigger postauthor" '
+    + 'href="/u/bob?from=%2Fto-me%23a-')
+  expect(followedPersonToMe).not.toContain('reference-profile-tabs')
+  expect(followedPersonToMe).toContain('<p class="profile-bio">Bob builds things</p>')
+  expect(followedPersonToMe).toContain('<form action="/follow/bob" method="post">'
+    + '<input type="hidden" name="from" value="/to-me#a-')
+  expect(followedPersonToMe).toContain('<button class="button button-muted">unfollow</button>')
+  expect(followedPersonToMe).not.toContain('action="/follow/alice"')
+  expect(followedPersonToMe).toContain('activity-follow activity-item-directed-unread')
+  expect(followedPersonToMe).toContain('class="unread-dot" aria-label="unread"')
+  const revisitedToMe = await (await request('/to-me', { cookie: aliceCookie })).text()
+  expect(revisitedToMe).not.toContain('class="unread-dot" aria-label="unread"')
+  expect(revisitedToMe).not.toContain('activity-item-directed-unread')
   const updateBob = await request('/account/edit', {
     method: 'POST',
     cookie: bobCookie,
@@ -1568,7 +1567,7 @@ test('consequential account, content, reporting, and admin flows work over HTTP'
   expect(unreadToMeHtml).not.toContain('action="/to-me/read-all"')
   expect(unreadToMeHtml).not.toContain('>first unread</a>')
   expect(unreadToMeHtml).toContain('class="active" aria-current="page" href="/to-me">to me'
-    + '<span class="to-me-count">2</span></a>')
+    + '<span class="to-me-count">1</span></a>')
   expect(unreadToMeHtml).not.toContain('>all</a>')
   expect(unreadToMeHtml).toContain('activity-item-directed-unread')
   expect(unreadToMeHtml).toContain('class="unread-dot" aria-label="unread"')

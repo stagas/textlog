@@ -111,10 +111,9 @@ test('For You follow activity can be hidden independently for people and hashtag
   const viewer: User = { id: 1, handle: 'viewer', email: 'viewer@example.com', bio: '', hide_people_follow_activity: 1 }
 
   const peopleHidden = loadPersonalizedFeed(database, viewer, 1, 20, false, '/for-you', false)
-  expect(peopleHidden.timeline.map(row => row.activity_kind)).toEqual(['user_follow', 'tag_follow'])
-  expect(peopleHidden.forYouCount).toBe(2)
+  expect(peopleHidden.timeline.map(row => row.activity_kind)).toEqual(['tag_follow'])
+  expect(peopleHidden.forYouCount).toBe(1)
   expect(peopleHidden.unreadHref).toBeDefined()
-  expect(Number(peopleHidden.timeline[0]?.target_is_viewer)).toBe(1)
   const directedFollow = loadPersonalizedFeed(database, viewer, 1, 20, true, '/to-me', false)
   expect(directedFollow.timeline.map(row => row.activity_kind)).toEqual(['user_follow'])
 

@@ -77,6 +77,7 @@ const visibleEvents = `
   SELECT 'user-follow:' || printf('%020d',f.follower_id) || ':' || printf('%020d',$viewer) || ':' || f.created_at
     FROM follows f JOIN users actor ON actor.id=f.follower_id
     WHERE f.following_id=$viewer AND f.created_at IS NOT NULL
+      AND $hidePeopleFollowActivity=0
       AND actor.deleted_at IS NULL AND actor.suspended_at IS NULL
       AND NOT EXISTS (SELECT 1 FROM blocks b WHERE
         (b.blocker_id=$viewer AND b.blocked_id=actor.id) OR

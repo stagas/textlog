@@ -10,7 +10,7 @@ import { enrichPosts, loadBioReferenceData, visibleTagFollowerCounts, visibleUse
 import type { PersonalizedFeedData, PersonalizedTimelineRow, User } from './types'
 import { isWhisperThread, whisperThreadRelevantToViewer, whisperThreadTargetsViewer } from './whisper'
 
-export const PERSONALIZED_FEED_SNAPSHOT_VERSION = 22
+export const PERSONALIZED_FEED_SNAPSHOT_VERSION = 23
 
 const descendsFromViewer = `EXISTS (WITH RECURSIVE ancestors(id,user_id,parent_id) AS (
   SELECT ancestor.id,ancestor.user_id,ancestor.parent_id FROM posts ancestor WHERE ancestor.id=p.parent_id
@@ -136,6 +136,7 @@ export function loadPersonalizedFeed(database: Database, user: User, page: numbe
         (SELECT count(*) FROM posts fp WHERE fp.user_id=actor.id AND fp.deleted_at IS NULL) posts
       FROM follows f JOIN users actor ON actor.id=f.follower_id
       WHERE f.following_id=$viewer AND f.created_at IS NOT NULL AND actor.deleted_at IS NULL
+        AND ($toMe=1 OR $hidePeopleFollowActivity=0)
         AND actor.suspended_at IS NULL AND NOT EXISTS (SELECT 1 FROM blocks b WHERE
           (b.blocker_id=$viewer AND b.blocked_id=actor.id) OR (b.blocker_id=actor.id AND b.blocked_id=$viewer))
       UNION ALL
@@ -151,6 +152,7 @@ export function loadPersonalizedFeed(database: Database, user: User, page: numbe
         AND u.suspended_at IS NULL
       ) timeline ${filter} ORDER BY timeline.created_at DESC,timeline.event_key DESC`).all({
       viewer: user.id,
+      toMe: Number(toMe),
       admin: Number(isAdmin(user)),
       hidePeopleFollowActivity: user.hide_people_follow_activity || 0,
       hideHashtagFollowActivity: user.hide_hashtag_follow_activity || 0,
