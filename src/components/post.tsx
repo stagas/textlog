@@ -53,10 +53,10 @@ function renderedPollBody(body: string) {
   return todoDisplayBody(pollDisplayBody(body))
 }
 
-function Translation({ text }: { text?: string | null }) {
-  return text ? (
+function Translation({ html }: { html?: string }) {
+  return html ? (
     <div className="post-body post-translation">
-      <span className="post-quote">{text}</span>
+      <div className="post-quote" dangerouslySetInnerHTML={{ __html: html }} />
     </div>
   ) : null
 }
@@ -545,6 +545,14 @@ export function Post({
   const resolvedReplyLabel = replyLabel ?? (user
     ? user.id === p.user_id ? 'continue' : 'reply'
     : 'enter to reply')
+  const translationHtml = p.translation
+    ? linkify(displayPostBody(p.translation), p.mention_bios, highlightTerms, undefined, renderFlags(p),
+        referenceQuery, p.hashtag_counts, p.mention_note_counts, { signedIn: !!user, currentHandle: user?.handle,
+        formPrefix: `${formPrefix}-translation`, mentionFollowing: p.mention_following,
+        mentionFollowsViewer: p.mention_follows_viewer, mentionProfileStats: p.mention_profile_stats,
+        hashtagFollowing: p.hashtag_following, hashtagFollowerCounts: p.hashtag_follower_counts,
+        linkPreviews: p.link_previews, linkUnknownMentions: preview || p.id < 0 })
+    : undefined
   if (p.deleted_at) {
     return (
       <article className="post deleted-post" id={`post-${p.id}`}>
@@ -651,7 +659,7 @@ export function Post({
           hashtagFollowerCounts: p.hashtag_follower_counts, linkPreviews: p.link_previews,
           linkUnknownMentions: preview || p.id < 0 }),
       }} />
-      {!preview && <Translation text={p.translation} />}
+      {!preview && <Translation html={translationHtml} />}
       {preview ? <PollPreview body={p.body} /> : <Poll p={p} returnPath={returnPath} />}
       <Todo p={p} user={user} preview={preview} returnPath={returnPath} formPrefix={formPrefix} />
       {!parent && (showReplyAction && !p.thread_locked || resolvedContinuationHref || canModerate || reportHref) && (
@@ -732,7 +740,19 @@ export function Post({
                     mentionProfileStats: parent.mention_profile_stats, hashtagFollowing: parent.hashtag_following,
                     hashtagFollowerCounts: parent.hashtag_follower_counts, linkPreviews: parent.link_previews }),
                 }} />
-                <Translation text={parent.translation} />
+                <Translation html={parent.translation
+                  ? linkify(displayPostBody(parent.translation), parent.mention_bios, [], undefined,
+                      renderFlags(parent), referenceQuery, parent.hashtag_counts, parent.mention_note_counts, {
+                        signedIn: !!user, currentHandle: user?.handle,
+                        formPrefix: `${formPrefix}-parent-${parent.id}-translation`,
+                        mentionFollowing: parent.mention_following,
+                        mentionFollowsViewer: parent.mention_follows_viewer,
+                        mentionProfileStats: parent.mention_profile_stats,
+                        hashtagFollowing: parent.hashtag_following,
+                        hashtagFollowerCounts: parent.hashtag_follower_counts,
+                        linkPreviews: parent.link_previews,
+                      })
+                  : undefined} />
                 <Poll p={parent} returnPath={returnPath} />
                 <Todo p={parent} user={user} preview={preview} returnPath={returnPath}
                   formPrefix={`${formPrefix}-parent-${parent.id}`} />

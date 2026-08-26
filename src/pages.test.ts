@@ -2642,7 +2642,7 @@ test('Post threads show stored translations on replies', () => {
     user: null,
   }))
 
-  expect(html).toContain('<div class="post-body post-translation"><span class="post-quote">Greek text</span></div>')
+  expect(html).toContain('<div class="post-body post-translation"><div class="post-quote">Greek text</div></div>')
 })
 
 test('conversation top links return to the deep reply and preserve its original back path', () => {
@@ -2787,12 +2787,19 @@ test('stored post translations render in the note', () => {
   const body = 'Información española: acción'
   const html = renderToStaticMarkup(React.createElement(Post, {
     user: { id: 3, handle: 'reader', email: 'reader@example.com', bio: '' },
-    p: { id: 2, user_id: 1, parent_id: null, body, translation: 'Spanish information: action', handle: 'writer',
+    p: { id: 2, user_id: 1, parent_id: null, body,
+      translation: 'Spanish information: #action from @reader at example.com', handle: 'writer',
+      mention_bios: { reader: '' },
       created_at: '2026-08-03 12:00:00', deleted_at: null },
     reportHref: '/post/2?report=1',
   }))
 
-  expect(html).toContain('<div class="post-body post-translation"><span class="post-quote">Spanish information: action</span></div>')
+  const translation = html.slice(html.indexOf('<div class="post-body post-translation">'),
+    html.indexOf('<div class="postfoot">'))
+  expect(translation).toContain('<div class="post-quote">Spanish information: ')
+  expect(translation).toContain('href="/tag/action?from=')
+  expect(translation).toContain('href="/u/reader?from=')
+  expect(translation).toContain('href="https://example.com" class="raw-link"')
   expect(html).not.toContain('translate-link')
 })
 

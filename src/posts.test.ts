@@ -509,6 +509,20 @@ describe('post persistence', () => {
     })
   })
 
+  test('enriches mentions and hashtags that appear only in a translation', () => {
+    const db = database()
+    db.run(`INSERT INTO posts(id,user_id,body,translation) VALUES
+      (1,1,'original','Translated for @reader with #topic')`)
+    const post = db.query('SELECT p.*,u.handle FROM posts p JOIN users u ON u.id=p.user_id WHERE p.id=1')
+      .get() as PostView
+
+    expect(enrichPosts(db, [post])[0]).toMatchObject({
+      mention_bios: { reader: '' },
+      mention_note_counts: { reader: 0 },
+      hashtag_counts: { topic: 0 },
+    })
+  })
+
   test('locks a note and all of its descendants when an ancestor has #lock', () => {
     const db = database()
     db.run(`INSERT INTO posts(id,user_id,parent_id,body) VALUES

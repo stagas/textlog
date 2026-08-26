@@ -178,6 +178,9 @@ export function updatePost(database: Database, postId: number, body: string, tra
 
 export function enrichPosts(database: Database, posts: PostView[], viewerId = -1) {
   if (!posts.length) return posts
+  const supportsTranslations = !!database.query(
+    "SELECT 1 FROM pragma_table_info('posts') WHERE name='translation'",
+  ).get()
   const ids = posts.map(post => post.id)
   const viewerContextByPostId = new Map<number, 'reply' | 'mention'>()
   if (viewerId >= 0) {
@@ -200,7 +203,7 @@ export function enrichPosts(database: Database, posts: PostView[], viewerId = -1
   const bioByUserId = new Map(authors.map(author => [author.id, author.bio]))
 
   const mentionedHandles = [...new Set([
-    ...posts.flatMap(post => extractMentions(post.body)),
+    ...posts.flatMap(post => [post.body, post.translation || ''].flatMap(extractMentions)),
     ...authors.flatMap(author => extractMentions(author.bio)),
   ])]
   const mentionBios: Record<string, string> = {}
@@ -337,7 +340,8 @@ export function enrichPosts(database: Database, posts: PostView[], viewerId = -1
       ? parentIds
       : [...parentIds, viewerId, viewerId, viewerId]
     const rows = database.query(
-      `SELECT p.id,p.user_id,p.parent_id,p.body,p.created_at,p.deleted_at,p.has_latex,p.has_links,p.has_code,u.handle,u.bio,
+      `SELECT p.id,p.user_id,p.parent_id,p.body,${supportsTranslations ? 'p.translation' : 'NULL translation'},
+        p.created_at,p.deleted_at,p.has_latex,p.has_links,p.has_code,u.handle,u.bio,
         0 reply_count
         FROM posts p JOIN users u ON u.id=p.user_id WHERE p.id IN (${parentPlaceholders}) ${parentFilter}`,
     ).all(...parentParameters) as ParentPost[]
@@ -351,17 +355,18 @@ export function enrichPosts(database: Database, posts: PostView[], viewerId = -1
     }[]
     const topByParentId = new Map(roots.map(root => [root.start_id, root.top_id]))
     for (const parent of rows) {
-      parentBodies.push(parent.body)
+      parentBodies.push(parent.body, parent.translation || '')
       parent.reply_count = countById.get(parent.id) || 0
       parent.top_id = parent.parent_id ? topByParentId.get(parent.id) || null : null
       parent.thread_locked = lockedPostIds.has(parent.id)
       parent.link_previews = previewsByPost.get(parent.id)
       for (const handle of extractMentions(parent.body)) addMentionBio(handle)
+      for (const handle of extractMentions(parent.translation || '')) addMentionBio(handle)
       for (const handle of extractMentions(parent.bio || '')) addMentionBio(handle)
     }
     parents = new Map(rows.map(parent => [parent.id, parent]))
   }
-  const hashtagCounts = visibleHashtagCounts(database, [...posts.map(post => post.body),
+  const hashtagCounts = visibleHashtagCounts(database, [...posts.flatMap(post => [post.body, post.translation || '']),
     ...authors.map(author => author.bio), ...parentBodies, ...[...parents.values()].map(parent => parent.bio || '')],
     viewerId)
   const profileStats = visibleUserProfileStats(database, [...userIds,
