@@ -117,7 +117,8 @@ export function Feed({ user, data, title, path = '/for-you', pageUrl, notificati
               <UserReference handle={row.actor_handle} bio={row.actor_bio} noteCount={row.actorProfileStats?.notes || 0}
                 stats={row.actorProfileStats} following={!!row.following} followsViewer={row.actorFollowsViewer}
                 user={user} href={`/u/${row.actor_handle}${fromQuery}`} navigationQuery={fromQuery}
-                referenceData={row.actorBioReferences} showPopover={row.activity_kind !== 'signup'} />
+                referenceData={row.actorBioReferences}
+                showPopover={row.activity_kind !== 'signup' && !row.target_is_viewer} />
               <span className="activity-context">
                 {row.activity_kind === 'signup' ? 'signed up.' : row.target_is_viewer ? 'followed you:' : 'followed'}
               </span>

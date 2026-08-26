@@ -466,6 +466,7 @@ test('a followed-you event offers to follow back', () => {
     target_bio: '',
     target_is_viewer: true,
     targeted_to_viewer: true,
+    actor_bio: 'Carol builds things',
     following: false,
     actorFollowsViewer: true,
     renderedPost: undefined,
@@ -477,6 +478,8 @@ test('a followed-you event offers to follow back', () => {
   />)
 
   expect(html).toContain('>follow back</button>')
+  expect(html).toContain('href="/u/carol?from=%2Ffor-you%23a-IEy7ZWXnSxMC"')
+  expect(html).not.toContain('reference-menu-popover')
   expect(html).toContain('</div><form action="/follow/carol" method="post"><input type="hidden" '
     + 'name="from" value="/for-you#a-IEy7ZWXnSxMC"/><button class="button">follow back</button>')
 })
