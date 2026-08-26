@@ -77,9 +77,10 @@ export function Connections(
                   ? <BlockedTagList user={user!} tags={tags} />
                   : (
                     <div className="explore-tag-chips">
-                      {tags.map(tag => user
-                        ? (
-                          <form key={tag.tag} id={`tag-${tag.tag}`} method="post"
+                      {tags.map(tag => (
+                        <div className="explore-tag-card" key={tag.tag} id={`tag-${tag.tag}`}>
+                          {user
+                            ? <form method="post"
                             action={`/tag-follow/${encodeURIComponent(tag.tag)}`}>
                             <input type="hidden" name="from"
                               value={connectionReturnPath(`#tag-${tag.tag}`)} />
@@ -89,10 +90,15 @@ export function Connections(
                               title={`${tag.viewerFollowing ? 'Unfollow' : 'Follow'} #${tag.tag}`}>
                               #{tag.tag}
                             </button>
-                          </form>
-                        )
-                        : <a key={tag.tag} id={`tag-${tag.tag}`} className="button explore-tag-chip"
-                          href={`/tag/${encodeURIComponent(tag.tag)}`}>#{tag.tag}</a>)}
+                            </form>
+                            : <a className="button explore-tag-chip"
+                              href={`/tag/${encodeURIComponent(tag.tag)}?from=${
+                                encodeURIComponent(connectionReturnPath(`#tag-${tag.tag}`))}`}>#{tag.tag}</a>}
+                          <a className="explore-tag-link" href={`/tag/${encodeURIComponent(tag.tag)}?from=${
+                            encodeURIComponent(connectionReturnPath(`#tag-${tag.tag}`))}`}
+                            title={`View #${tag.tag}`} aria-label={`View #${tag.tag}`} />
+                        </div>
+                      ))}
                     </div>
                   )
                 : (

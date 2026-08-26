@@ -67,7 +67,7 @@ export function Explore({ user, welcome = false, tagsPage = 1, peoplePage = 1, d
               pageParam="tagsPage" label="Tags pagination" compact anchor="explore-tags" />
           </div>
           {tags.length
-            ? <TagChips user={user} tags={tags} returnPath={`${explorePath()}#explore-tags`} />
+            ? <TagChips user={user} tags={tags} returnPath={`${explorePath()}#explore-tags`} showTagLinks />
             : <p className="section-empty">No hashtags yet.</p>}
         </section>
         <section className="explore-people" id="explore-people">

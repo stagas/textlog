@@ -715,28 +715,43 @@ export function HighlightedText({ text, terms = [] }: { text: string; terms?: st
   )
 }
 
-export function TagChips({ user, tags, followingKey = 'following', highlightTerms = [], returnPath }: {
+export function TagChips({ user, tags, followingKey = 'following', highlightTerms = [], returnPath,
+  showTagLinks = false }: {
   user: User | null
   tags: TagView[]
   followingKey?: 'following' | 'viewerFollowing'
   highlightTerms?: string[]
   returnPath: string
+  showTagLinks?: boolean
 }) {
   return (
     <div className="explore-tag-chips">
-      {tags.map(tag => user
-        ? (
-          <form key={tag.tag} method="post" action={`/tag-follow/${encodeURIComponent(tag.tag)}`}>
-            <input type="hidden" name="from" value={returnPath} />
-            <button className={`button explore-tag-chip${tag[followingKey] ? ' button-muted' : ''}`}
-              aria-pressed={tag[followingKey]} title={`${tag[followingKey] ? 'Unfollow' : 'Follow'} #${tag.tag}`}>
-              <span>#<HighlightedText text={tag.tag} terms={highlightTerms} /></span>
-            </button>
-          </form>
-        )
-        : <a key={tag.tag} className="button explore-tag-chip" href={`/tag/${encodeURIComponent(tag.tag)}`}>
-          <span>#<HighlightedText text={tag.tag} terms={highlightTerms} /></span>
-        </a>)}
+      {tags.map(tag => {
+        const tagHref = `/tag/${encodeURIComponent(tag.tag)}${
+          showTagLinks ? `?from=${encodeURIComponent(returnPath)}` : ''}`
+        const chip = user
+          ? (
+            <form method="post" action={`/tag-follow/${encodeURIComponent(tag.tag)}`}>
+              <input type="hidden" name="from" value={returnPath} />
+              <button className={`button explore-tag-chip${tag[followingKey] ? ' button-muted' : ''}`}
+                aria-pressed={tag[followingKey]} title={`${tag[followingKey] ? 'Unfollow' : 'Follow'} #${tag.tag}`}>
+                <span>#<HighlightedText text={tag.tag} terms={highlightTerms} /></span>
+              </button>
+            </form>
+          )
+          : <a className="button explore-tag-chip" href={tagHref}>
+            <span>#<HighlightedText text={tag.tag} terms={highlightTerms} /></span>
+          </a>
+        return showTagLinks
+          ? (
+            <div className="explore-tag-card" key={tag.tag}>
+              {chip}
+              <a className="explore-tag-link" href={tagHref} title={`View #${tag.tag}`}
+                aria-label={`View #${tag.tag}`} />
+            </div>
+          )
+          : <React.Fragment key={tag.tag}>{chip}</React.Fragment>
+      })}
     </div>
   )
 }

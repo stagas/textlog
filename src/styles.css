@@ -4862,6 +4862,39 @@ form.report-panel {
   margin: 0;
 }
 
+.explore-tag-card {
+  display: inline-flex;
+  align-items: stretch;
+  border: 1px solid var(--soft);
+}
+
+.explore-tag-card .explore-tag-chip {
+  padding-right: 9px;
+}
+
+.explore-tag-link {
+  display: grid;
+  min-width: 30px;
+  place-items: center;
+  color: var(--muted);
+  border-bottom: 0;
+  border-left: 1px solid var(--soft);
+}
+
+.explore-tag-link::after {
+  content: "";
+  width: 0;
+  height: 0;
+  border-top: 4px solid transparent;
+  border-bottom: 4px solid transparent;
+  border-left: 6px solid currentColor;
+}
+
+.explore-tag-link:hover {
+  color: var(--accent-dark);
+  background: var(--soft);
+}
+
 .explore-tag-chip {
   min-height: 34px;
   padding: 7px 11px;

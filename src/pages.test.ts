@@ -618,6 +618,9 @@ test('explore renders tag toggles above a full-width people section', () => {
   expect(html).toContain('class="button explore-tag-chip" aria-pressed="false"')
   expect(html).toContain('name="from" value="/explore#explore-tags"')
   expect(html).toContain(
+    'class="explore-tag-link" href="/tag/followed?from=%2Fexplore%23explore-tags" title="View #followed"',
+  )
+  expect(html).toContain(
     '<section class="explore-people" id="explore-people"><div class="explore-section-heading">'
       + '<h2>People to follow</h2><nav class="pagination pagination-compact"',
   )
@@ -2082,8 +2085,12 @@ test('Following and follower links return to the originating connection', () => 
   }))
 
   expect(following).toContain(
-    '<form id="tag-notes" action="/tag-follow/notes" method="post"><input type="hidden" name="from" '
+    '<div class="explore-tag-card" id="tag-notes"><form action="/tag-follow/notes" method="post"><input type="hidden" name="from" '
       + 'value="/u/reader?tab=following&amp;page=2&amp;tagsPage=3#tag-notes"/>',
+  )
+  expect(following).toContain(
+    'class="explore-tag-link" href="/tag/notes?from=%2Fu%2Freader%3Ftab%3Dfollowing%26page%3D2%26tagsPage%3D3%23tag-notes" '
+      + 'title="View #notes"',
   )
   expect(following).toContain(
     '<div class="explore-section-heading"><h2 id="connections-tags-heading">Tags</h2>'
