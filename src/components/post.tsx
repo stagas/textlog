@@ -1002,19 +1002,18 @@ export function FeedThreads(
     return unread
   }
   const collapsedPreviewPost = (root: PostView) => {
-    let selected: { post: PostView; depth: number } | undefined
-    const visit = (parentId: number, depth: number) => {
+    let selected: PostView | undefined
+    const visit = (parentId: number) => {
       for (const child of children.get(parentId) || []) {
-        if (!child.deleted_at && (!selected || depth > selected.depth
-          || (depth === selected.depth && (child.created_at > selected.post.created_at
-            || (child.created_at === selected.post.created_at && child.id > selected.post.id))))) {
-          selected = { post: child, depth }
+        if (!child.deleted_at && (!selected || child.created_at > selected.created_at
+          || (child.created_at === selected.created_at && child.id > selected.id))) {
+          selected = child
         }
-        visit(child.id, depth + 1)
+        visit(child.id)
       }
     }
-    visit(root.id, 1)
-    return selected?.post
+    visit(root.id)
+    return selected
   }
   const roots = treePosts.filter(post => !post.parent_id || !ids.has(post.parent_id))
     .sort((a, b) => conversationPosition(a) - conversationPosition(b))

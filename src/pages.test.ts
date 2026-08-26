@@ -724,6 +724,23 @@ test('feed conversations fold multiple read replies but expand one or any unread
   expect(unread).not.toContain('id="feed-thread-fold-1" checked=""')
 })
 
+test('folded feed conversations preview the newest reply instead of the deepest reply', () => {
+  const root = { id: 1, user_id: 1, parent_id: null, body: 'Root', created_at: '2026-08-23 09:00:00',
+    deleted_at: null, handle: 'root', reply_count: 2 }
+  const olderReply = { id: 2, user_id: 2, parent_id: 1, body: 'Older reply',
+    created_at: '2026-08-23 10:00:00', deleted_at: null, handle: 'reply', reply_count: 1, parent: root }
+  const olderDeepReply = { id: 3, user_id: 3, parent_id: 2, body: 'Older deep reply',
+    created_at: '2026-08-23 11:00:00', deleted_at: null, handle: 'deep', reply_count: 0, parent: olderReply }
+  const newerReply = { id: 4, user_id: 4, parent_id: 1, body: 'Newest reply',
+    created_at: '2026-08-23 12:00:00', deleted_at: null, handle: 'newest', reply_count: 0, parent: root }
+  const html = renderToStaticMarkup(React.createElement(FeedThreads, {
+    user: null, returnPath: '/latest', posts: [root, olderReply, olderDeepReply, newerReply],
+  }))
+
+  expect(html).toMatch(/collapsed-preview-post[^>]*>[\s\S]*?Newest reply/)
+  expect(html).not.toMatch(/collapsed-preview-post[^>]*>[\s\S]*?Older deep reply/)
+})
+
 test('promoted deep feed activity anchors at its recent branch instead of resurrecting the root', () => {
   const root = { id: 1, user_id: 1, parent_id: null, body: 'Old root', created_at: '2025-01-01 09:00:00',
     deleted_at: null, handle: 'root', reply_count: 1 }
