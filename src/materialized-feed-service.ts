@@ -9,7 +9,7 @@ type MaterializedResponse = {
 }
 
 const materializations = new Map<string, Promise<MaterializedResponse>>()
-const MATERIALIZED_HTML_VERSION = 20
+const MATERIALIZED_HTML_VERSION = 21
 
 function appearanceVariant(request: Request) {
   const cookie = request.headers.get('cookie') || ''
