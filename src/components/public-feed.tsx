@@ -7,13 +7,14 @@ import { FeedThreads } from './post'
 
 export function PublicFeed(
   { feed = { posts: [], page: 1, totalItems: 0, totalPages: 1 }, user = null, path = '/', pageUrl,
-    notificationBanner = false }: {
+    notificationBanner = false, expandedRootId }: {
       feed?: PostFeedPage
       cursor?: unknown
       user?: User | null
       path?: string
       pageUrl?: string
       notificationBanner?: false | 'notifications' | 'appearance' | 'invite' | 'bio' | 'notification-update' | 'donate'
+      expandedRootId?: number
     },
 ) {
   const feedPath = path
@@ -42,7 +43,7 @@ export function PublicFeed(
         anchor={user ? undefined : 'feed-tabs'} top />}
       {feed.posts.length
         ? <FeedThreads posts={feed.posts} user={user} returnPath={returnPath}
-            promoteAncestors
+            promoteAncestors expandedRootId={expandedRootId}
             contextUnreadPostIds={unreadPostIds} contextDirectedUnreadPostIds={directedUnreadPostIds} />
         : feed.page === 1
         ? <GlobalFeedEmpty user={user} />

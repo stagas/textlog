@@ -900,10 +900,10 @@ export function ThreadReplies(
 /** Render feed posts as conversations, filling in any available ancestor context. */
 export function FeedThreads(
   { posts, user, returnPath, contextUnreadPostIds, contextDirectedUnreadPostIds, highlightTerms = [],
-    hideTopMeta = false, promoteAncestors = false }: { posts: PostView[];
+    hideTopMeta = false, promoteAncestors = false, expandedRootId }: { posts: PostView[];
     user: User | null; returnPath: string; contextUnreadPostIds?: ReadonlySet<number>;
     contextDirectedUnreadPostIds?: ReadonlySet<number>; highlightTerms?: string[]; hideTopMeta?: boolean;
-    promoteAncestors?: boolean },
+    promoteAncestors?: boolean; expandedRootId?: number },
 ) {
   if (!posts.length) return null
   const treePosts = [...posts]
@@ -997,10 +997,16 @@ export function FeedThreads(
         const visibleReplies = visibleReplyCount(post)
         const continuesElsewhere = (post.reply_count || 0) > visibleReplies
         const foldControlId = visibleReplies > 0 ? `feed-thread-fold-${post.id}` : undefined
+        const collapsed = visibleReplies > 1 && !hasUnreadReply(post) && expandedRootId !== post.id
+        const expandedReturnPath = (() => {
+          const target = new URL(returnPath, 'http://textlog.local')
+          target.searchParams.set('expand', String(post.id))
+          return target.pathname + target.search
+        })()
         return (
           <div className="post-page-thread feed-thread" key={post.id}>
             {foldControlId && <input className="thread-fold-input" type="checkbox" id={foldControlId}
-              defaultChecked={visibleReplies > 1 && !hasUnreadReply(post)} />}
+              defaultChecked={collapsed} />}
             <div className={`thread-root${post.profile_pinned ? ' profile-pinned-surround' : ''}`}>
               <Post p={post} user={user} tappable returnPath={anchoredReturnPath}
                 highlightTerms={highlightTerms}
@@ -1013,7 +1019,8 @@ export function FeedThreads(
                   : undefined} />
             </div>
             <ThreadReplies parentId={post.id} replies={treePosts} user={user} returnPath={anchoredReturnPath}
-              showMissingContinuations continuationLabel="more" continuationReturnPath={returnPath}
+              showMissingContinuations continuationLabel="more"
+              continuationReturnPath={collapsed ? expandedReturnPath : returnPath}
               contextUnreadPostIds={contextUnreadPostIds}
               contextDirectedUnreadPostIds={contextDirectedUnreadPostIds} highlightTerms={highlightTerms}
               hideTopMeta={hideTopMeta} />

@@ -695,6 +695,16 @@ test('feed conversations fold multiple read replies but expand one or any unread
   }))
 
   expect(html).toContain('class="thread-fold-input" type="checkbox" id="feed-thread-fold-1" checked=""')
+  expect(html).toContain('href="/post/2?from=%2Flatest%3Fexpand%3D1%23post-2"')
+
+  const returned = renderToStaticMarkup(React.createElement(FeedThreads, {
+    user: null,
+    returnPath: '/latest',
+    expandedRootId: 1,
+    posts: [root, firstReply, secondReply],
+  }))
+  expect(returned).not.toContain('id="feed-thread-fold-1" checked=""')
+  expect(returned).toContain('href="/post/2?from=%2Flatest%23post-2"')
 
   const single = renderToStaticMarkup(React.createElement(FeedThreads, {
     user: null, returnPath: '/latest', posts: [{ ...root, reply_count: 1 }, firstReply],

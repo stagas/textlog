@@ -43,7 +43,8 @@ export function groupSimilarActivities(timeline: PersonalizedTimelineRow[]): Tim
   return groups
 }
 
-export function Feed({ user, data, title, path = '/for-you', pageUrl, notificationBanner = false, toMe = false }: {
+export function Feed({ user, data, title, path = '/for-you', pageUrl, notificationBanner = false, toMe = false,
+  expandedRootId }: {
   user: User
   data: PersonalizedFeedData
   title?: string
@@ -51,6 +52,7 @@ export function Feed({ user, data, title, path = '/for-you', pageUrl, notificati
   pageUrl?: string
   notificationBanner?: false | 'notifications' | 'appearance' | 'invite' | 'bio' | 'notification-update' | 'donate'
   toMe?: boolean
+  expandedRootId?: number
 }) {
   const feedPath = path
   const returnPath = feedPath + (data.page > 1 ? `?page=${data.page}` : '')
@@ -103,6 +105,7 @@ export function Feed({ user, data, title, path = '/for-you', pageUrl, notificati
         >
           <FeedThreads posts={threadPosts(row)} user={user} returnPath={returnPath}
               promoteAncestors={!toMe}
+              expandedRootId={expandedRootId}
               contextUnreadPostIds={unreadPostIds} contextDirectedUnreadPostIds={directedUnreadPostIds} />
         </div>
       )

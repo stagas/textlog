@@ -8,7 +8,7 @@ import { FeedThreads } from './post'
 
 export function HotFeed(
   { feed = { posts: [], page: 1, totalItems: 0, totalPages: 1 }, user, title, path = '/hot', pageUrl,
-    notificationBanner = false }: {
+    notificationBanner = false, expandedRootId }: {
       feed?: PostFeedPage
       cursor?: HotCursor | null
       user: User | null
@@ -16,6 +16,7 @@ export function HotFeed(
       path?: string
       pageUrl?: string
       notificationBanner?: false | 'notifications' | 'appearance' | 'invite' | 'bio' | 'notification-update' | 'donate'
+      expandedRootId?: number
     },
 ) {
   const feedPath = path
@@ -32,7 +33,7 @@ export function HotFeed(
       {feed.page > 1 && <Pagination page={feed.page} totalPages={feed.totalPages} path={feedPath}
         anchor={user ? undefined : 'feed-tabs'} top />}
       {feed.posts.length
-        ? <FeedThreads posts={feed.posts} user={user} returnPath={returnPath} />
+        ? <FeedThreads posts={feed.posts} user={user} returnPath={returnPath} expandedRootId={expandedRootId} />
         : feed.page === 1
         ? <GlobalFeedEmpty user={user} />
         : (
