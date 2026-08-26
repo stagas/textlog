@@ -2273,13 +2273,6 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
         WHERE kind=? AND viewer_id=? AND variant=? AND generation=?`).get(kind, viewerId, variant, generation) as {
         html: string
       } | null
-      if (cached && viewerId >= 0
-        && materializedForYouCount(cached.html) !== unreadForYouCount(viewerId, database))
-      {
-        cacheDb.query(`DELETE FROM materialized_feed_pages_v2
-          WHERE kind=? AND viewer_id=? AND variant=? AND generation=?`).run(kind, viewerId, variant, generation)
-        return { html: null, generation } as DatabaseDomainOutput<K>
-      }
       return { html: cached?.html ?? null, generation } as DatabaseDomainOutput<K>
     }
     case 'cache.materializedFeedPut': {

@@ -250,8 +250,6 @@ export function registerFeedsRoutes(app: Hono) {
     const cursor = decodePostCursor(cursorValue)
     if (cursorValue && !cursor) return c.text('Invalid cursor', 400)
     const notificationBanner = await showNotificationBanner(c.req.raw, user)
-    const canUseMaterializedPage = !user
-      || await databaseService().call('feeds.latestUnreadCount', { userId: user.id }) === 0
     const render = async () => {
       const feed = await databaseService().call('feeds.latestPage', { viewerId: user?.id ?? -1,
         page: currentPage(c.req.query('page')), pageSize: resolvedPageSize(c.req.raw) })
@@ -260,7 +258,7 @@ export function registerFeedsRoutes(app: Hono) {
           expandedRootId={expandedRootId} />,
       )
     }
-    const response = canUseMaterializedPage && !notificationBanner
+    const response = !notificationBanner
         && currentPage(c.req.query('page')) === 1 && !cursorValue && !expandedRootId
       ? await rpcMaterializedFeedPage(c.req.raw, 'latest', user ? user.id : -1, render)
       : await render()
