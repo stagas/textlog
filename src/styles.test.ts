@@ -273,10 +273,10 @@ describe('in-memory stylesheet', () => {
     expect(css).toContain('body.mobile-agent .ascii-art {\n  line-height: 1 !important;\n}')
   })
 
-  test('preserves ASCII art whitespace and scrolls it horizontally without a scrollbar', async () => {
+  test('preserves ASCII art whitespace, shows it vertically, and scrolls it horizontally without a scrollbar', async () => {
     const css = await Bun.file(new URL('./styles.css', import.meta.url)).text()
     expect(css).toContain(
-      '.post-body.ascii-art {\n  z-index: 2;\n  display: block;\n  max-width: 100%;\n  overflow-x: auto;\n  overflow-y: hidden;\n  overscroll-behavior-inline: contain;',
+      '.post-body.ascii-art {\n  z-index: 2;\n  display: block;\n  max-width: 100%;\n  padding-block: 0.15em;\n  overflow-x: auto;\n  overflow-y: visible;\n  overscroll-behavior-inline: contain;',
     )
     expect(css).toContain('overflow-wrap: normal;\n  scrollbar-width: none;\n  white-space: pre;')
     expect(css).toContain('.post-body.ascii-art::-webkit-scrollbar {\n  display: none;\n}')

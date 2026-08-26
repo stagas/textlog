@@ -6050,8 +6050,9 @@ a.post-context:hover {
   z-index: 2;
   display: block;
   max-width: 100%;
+  padding-block: 0.15em;
   overflow-x: auto;
-  overflow-y: hidden;
+  overflow-y: visible;
   overscroll-behavior-inline: contain;
   font-family: var(--font-monospace);
   line-height: 1.15;
