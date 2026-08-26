@@ -165,7 +165,10 @@
         })
         if (!response.ok) throw new Error('Could not remove subscription')
         const result = await response.json()
-        if (!result.active) await subscription.unsubscribe()
+        if (!result.active) {
+          await subscription.unsubscribe()
+          await registration.unregister()
+        }
       }
       disable.removeAttribute('aria-disabled')
       setState(`Notifications disabled for @${handle} on this browser.`, false)
