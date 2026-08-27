@@ -24,6 +24,24 @@ test('moderators see blocked-user leaf posts in For You with relationship metada
   expect(feed.timeline.find(row => row.id === 1)?.renderedPost?.blocked_viewer).toBeTrue()
 })
 
+test('For You preserves moderation warnings in rendered posts', () => {
+  const database = new Database(':memory:', { strict: true })
+  runMigrations(database)
+  database.run(`INSERT INTO users(id,handle,email,password,bio) VALUES
+      (1,'viewer','viewer@example.com','!',''),
+      (2,'followed','followed@example.com','!','');
+    INSERT INTO follows(follower_id,following_id,created_at) VALUES(1,2,'2026-08-03 08:00:00');
+    INSERT INTO posts(id,user_id,body,created_at,moderation_category,moderation_score) VALUES
+      (1,2,'moderated post','2026-08-03 09:00:00','self-harm/intent',0.42);`)
+  const viewer: User = { id: 1, handle: 'viewer', email: 'viewer@example.com', bio: '' }
+
+  const feed = loadPersonalizedFeed(database, viewer, 1, 20, false, '/for-you', false)
+  const post = feed.timeline.find(row => row.id === 1)?.renderedPost
+
+  expect(post?.moderation_category).toBe('self-harm/intent')
+  expect(post?.moderation_score).toBe(0.42)
+})
+
 test('whisper descendants stay in participant and original tag-follower personalized feeds', () => {
   const database = new Database(':memory:', { strict: true })
   runMigrations(database)
