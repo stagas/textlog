@@ -17,7 +17,7 @@ type MemoryMaterialization = MaterializedResponse & {
 }
 const memoryMaterializations = new Map<string, MemoryMaterialization>()
 const MAX_MEMORY_MATERIALIZATIONS = 256
-const MATERIALIZED_HTML_VERSION = 25
+const MATERIALIZED_HTML_VERSION = 26
 let memoryGeneration = 0
 
 export function invalidateMaterializedFeedMemory() {
@@ -69,6 +69,7 @@ export async function rpcMaterializedFeedPage(request: Request, kind: Materializ
     if (!memory.hitActionDone && onCacheHit) {
       memory.hitActionDone = true
       await onCacheHit()
+      if (renderForCache) memory.body = await (await renderForCache()).text()
     }
     const headers = new Headers(memory.headers)
     headers.set('x-feed-cache', 'memory')
@@ -81,6 +82,18 @@ export async function rpcMaterializedFeedPage(request: Request, kind: Materializ
       const cached = await call('cache.materializedFeedGet', { kind, viewerId, variant })
       if (cached.html) {
         await onCacheHit?.()
+        const responseHtml = onCacheHit && renderForCache
+          ? await (await renderForCache()).text()
+          : cached.html
+        if (responseHtml !== cached.html) {
+          await call('cache.materializedFeedPut', {
+            kind,
+            viewerId,
+            variant,
+            generation: cached.generation,
+            html: responseHtml,
+          })
+        }
         if (cached.stale && !revalidations.has(key)) {
           const revalidation = (async () => {
             const response = await render()
@@ -104,7 +117,7 @@ export async function rpcMaterializedFeedPage(request: Request, kind: Materializ
             if (revalidations.get(key) === revalidation) revalidations.delete(key)
           }).catch(error => console.error(`Could not refresh stale ${kind} feed`, error))
         }
-        return { body: cached.html, status: 200,
+        return { body: responseHtml, status: 200,
           headers: [['content-type', 'text/html;charset=utf-8'], ['cache-control', 'private, no-store'],
             ['x-feed-cache', cached.stale ? 'stale' : 'durable']] }
       }
