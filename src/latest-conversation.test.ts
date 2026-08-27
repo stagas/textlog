@@ -1,5 +1,5 @@
 import { expect, test } from 'bun:test'
-import { recentConversationReplies } from './latest-conversation'
+import { isRecentConversationRoot, recentConversationReplies } from './latest-conversation'
 
 const reply = (id: number, createdAt: string) => ({ id, parent_id: 895, created_at: createdAt })
 
@@ -25,4 +25,16 @@ test('Latest includes additional replies from the newest 48-hour burst', () => {
   ]
 
   expect(recentConversationReplies(conversation).map(post => post.id)).toEqual([4, 3, 2])
+})
+
+test('Latest retains a recent root when its newest replies are nested', () => {
+  const root = { id: 1, parent_id: null, created_at: '2026-08-27 17:34:29' }
+  const conversation = [
+    { id: 3, parent_id: 2, created_at: '2026-08-27 19:35:47' },
+    { id: 2, parent_id: 1, created_at: '2026-08-27 18:20:32' },
+    root,
+  ]
+
+  expect(isRecentConversationRoot(root, conversation)).toBeTrue()
+  expect(isRecentConversationRoot({ ...root, created_at: '2026-08-24 17:34:29' }, conversation)).toBeFalse()
 })

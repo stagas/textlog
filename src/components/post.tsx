@@ -1087,7 +1087,7 @@ export function ThreadReplies(
         {collapsedPreviewGapPosts.has(reply.id) && (
           <div className="quiet thread-ancestor-gap collapsed-preview-gap" aria-label="Earlier replies hidden">…</div>
         )}
-        {reply.feed_ancestor_gap && !collapsedPreviewPostIds.length && (
+        {reply.feed_ancestor_gap && (
           <div className="quiet thread-ancestor-gap" aria-label="Earlier replies omitted">…</div>
         )}
         {foldControlId && <input className="thread-fold-input" type="checkbox" id={foldControlId} />}

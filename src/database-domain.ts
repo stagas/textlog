@@ -27,7 +27,7 @@ import { getHotPosts, hotFeedProjectionNeedsRefresh, type HotPost, hotRankingVer
   refreshHotFeedProjection } from './hot'
 import { isImageKey } from './image-storage'
 import { interactedEmail } from './interacted-email'
-import { recentConversationReplies } from './latest-conversation'
+import { isRecentConversationRoot, recentConversationReplies } from './latest-conversation'
 import { initializeLatestReads, latestUnreadPostState, markAllLatestRead, markLatestPostsRead,
   unreadLatestCount } from './latest-state'
 import { userBioLinkPreviews } from './link-preview'
@@ -2326,7 +2326,8 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
         const root = conversation.find(row => row.id === id)
         const recentReplies = recentConversationReplies(conversation)
         const keepsRoot = root?.parent_id === null
-          && (conversation[0]?.id === root.id || recentReplies[0]?.parent_id === root.id)
+          && (conversation[0]?.id === root.id || recentReplies[0]?.parent_id === root.id
+            || isRecentConversationRoot(root, conversation))
         return keepsRoot ? [root!, ...recentReplies] : recentReplies
       })
       const unread = state.filter(row => row.unread)

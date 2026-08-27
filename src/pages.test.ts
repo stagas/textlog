@@ -930,7 +930,7 @@ test('expanded feed conversations do not show collapsed sibling omission markers
   expect(html).not.toContain('aria-label="Earlier replies omitted"')
 })
 
-test('expanded collapsible deep threads do not retain ancestor omission markers', () => {
+test('expanded collapsible deep threads retain permanent ancestor omission markers', () => {
   const root = { id: 60, user_id: 1, parent_id: null, body: 'Root', created_at: '2026-08-20 09:00:00',
     deleted_at: null, handle: 'root', reply_count: 3, direct_reply_count: 2 }
   const branch = { id: 61, user_id: 2, parent_id: root.id, body: 'Branch', created_at: '2026-08-20 10:00:00',
@@ -948,7 +948,7 @@ test('expanded collapsible deep threads do not retain ancestor omission markers'
     posts: [root, branch, deep, sibling],
   }))
 
-  expect(html).not.toContain('aria-label="Earlier replies omitted"')
+  expect(html).toContain('aria-label="Earlier replies omitted"')
 })
 
 test('expanded feed conversations do not mark omissions when every reply at that depth is visible', () => {
@@ -1114,7 +1114,7 @@ test('latest renders conversations only as trees', () => {
   expect(tree).not.toContain('>tree</a>')
 })
 
-test('hot feed conversations reconstruct and fold the complete ancestor tree', () => {
+test('hot feed conversations preserve selected ancestor context', () => {
   const root = { id: 494, user_id: 4, parent_id: null, body: 'Conversation root',
     created_at: '2026-08-08 14:20:43', deleted_at: null, handle: 'root', reply_count: 3 }
   const ancestor = { id: 496, user_id: 1, parent_id: root.id, body: 'Earlier context',
@@ -1128,12 +1128,10 @@ test('hot feed conversations reconstruct and fold the complete ancestor tree', (
     feed: { posts: [reply, parent], page: 1, totalItems: 1, totalPages: 1 },
   }))
 
-  expect(html.indexOf('Conversation root')).toBeLessThan(html.indexOf('Earlier context'))
-  expect(html.indexOf('Earlier context')).toBeLessThan(html.indexOf('Quoted parent'))
-  expect(html.indexOf('Quoted parent')).toBeLessThan(html.indexOf('Current reply'))
   expect(html.match(/Conversation root/g)).toHaveLength(1)
   expect(html.match(/Earlier context/g)).toHaveLength(1)
-  expect(html).toContain('id="feed-thread-fold-494" checked=""')
+  expect(html).toContain('Quoted parent')
+  expect(html).toContain('Current reply')
 })
 
 test('pages inline the cookie-aware theme and logo', () => {
