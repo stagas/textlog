@@ -17,4 +17,21 @@ describe('executable notes', () => {
     expect(await executePostCode('#exec\n```python\nprint(42)\n```', 'development'))
       .toContain('only supports JavaScript')
   })
+
+  test('sends conventional fence aliases as Piston language names', async () => {
+    const originalFetch = globalThis.fetch
+    let requestBody: unknown
+    globalThis.fetch = (async (_input: string | URL | Request, init?: RequestInit) => {
+      requestBody = JSON.parse(String(init?.body))
+      return Response.json({ run: { output: '42\n' } })
+    }) as typeof fetch
+    try {
+      expect(await executePostCode('#exec\n```js\nconsole.log(6 * 7)\n```', 'production',
+        'http://localhost:2000')).toBe('42\n')
+      expect(requestBody).toMatchObject({ language: 'javascript', version: '*' })
+    }
+    finally {
+      globalThis.fetch = originalFetch
+    }
+  })
 })

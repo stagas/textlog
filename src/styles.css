@@ -6417,11 +6417,14 @@ a.post-context:hover {
 }
 
 .post .code-fence.execution-output {
-  margin-top: 1lh;
-  margin-bottom: 0.5lh;
+  margin-bottom: 0;
   font-size: var(--post-body-font-size, 0.8125rem);
   line-height: var(--post-body-line-height, 1.65);
   letter-spacing: var(--post-body-letter-spacing, normal);
+}
+
+.post-body.ends-code-fence .code-fence:last-child {
+  margin-bottom: 0;
 }
 
 .post .code-fence::-webkit-scrollbar {

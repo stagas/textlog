@@ -4,6 +4,14 @@ export type ExecutableCode = { language: string; code: string }
 
 const EXEC_TIMEOUT_MS = 10_000
 const MAX_OUTPUT_LENGTH = 20_000
+const PISTON_LANGUAGE_ALIASES: Record<string, string> = {
+  js: 'javascript',
+  py: 'python',
+  rb: 'ruby',
+  sh: 'bash',
+  shell: 'bash',
+  ts: 'typescript',
+}
 
 export function executableCode(body: string): ExecutableCode | null {
   if (!body.split(/\r?\n/).some(line => /^\s*#exec\s*$/.test(line))) return null
@@ -44,7 +52,11 @@ async function executePiston(code: ExecutableCode, pistonUrl: string) {
   const response = await fetch(new URL('/api/v2/execute', pistonUrl), {
     method: 'POST',
     headers: { 'content-type': 'application/json' },
-    body: JSON.stringify({ language: code.language, version: '*', files: [{ content: code.code }] }),
+    body: JSON.stringify({
+      language: PISTON_LANGUAGE_ALIASES[code.language] || code.language,
+      version: '*',
+      files: [{ content: code.code }],
+    }),
     signal: AbortSignal.timeout(EXEC_TIMEOUT_MS),
   })
   if (!response.ok) throw new Error(`Piston returned HTTP ${response.status}`)

@@ -487,7 +487,8 @@ export function PreviewPost({ p }: { p: PostView }) {
         <span className="postdate">read</span>
       </MetaRow>
       <ContentWarning p={p} controlId={`${formPrefix}-content-warning`}>
-        <div className={`post-body${containsAsciiArt(p.body) ? ' ascii-art' : ''}`} dangerouslySetInnerHTML={{
+        <div className={`post-body${containsAsciiArt(p.body) ? ' ascii-art' : ''}${endsWithCodeFence(p.body)
+          ? ' ends-code-fence' : ''}`} dangerouslySetInnerHTML={{
           __html: linkify(displayPostBody(renderedPollBody(p.body)), p.mention_bios, [], undefined, renderFlags(p), '',
             p.hashtag_counts, p.mention_note_counts, { signedIn: false, currentHandle: p.handle, formPrefix,
             hashtagFollowerCounts: p.hashtag_follower_counts, linkPreviews: p.link_previews }),
@@ -504,7 +505,12 @@ export function PreviewPost({ p }: { p: PostView }) {
 }
 
 function ExecutionOutput({ output }: { output: string }) {
-  return <code className="code-fence execution-output">{output || '(no output)'}</code>
+  if (!output.trim()) return null
+  return <code className="code-fence execution-output">{output}</code>
+}
+
+function endsWithCodeFence(body: string) {
+  return /(?:^|\n)[ \t]*```[ \t]*$/.test(body.trimEnd())
 }
 
 export function Post({
@@ -759,7 +765,8 @@ export function Post({
       )}
       <ContentWarning p={p} controlId={`${formPrefix}-content-warning`}
         showImmediately={user?.show_moderated_content === 1 || suppressContentWarning}>
-        <div className={`post-body${isAsciiArt ? ' ascii-art' : ''}`} dangerouslySetInnerHTML={{
+        <div className={`post-body${isAsciiArt ? ' ascii-art' : ''}${endsWithCodeFence(p.body)
+          ? ' ends-code-fence' : ''}`} dangerouslySetInnerHTML={{
           __html: linkify(displayPostBody(renderedPollBody(p.body)), p.mention_bios, highlightTerms, undefined,
             renderFlags(p), referenceQuery, p.hashtag_counts, p.mention_note_counts, { signedIn: !!user,
             currentHandle: user?.handle, formPrefix, mentionFollowing: p.mention_following,
@@ -858,7 +865,8 @@ export function Post({
                 </MetaRow>
                 <ContentWarning p={parent} controlId={`${formPrefix}-parent-${parent.id}-content-warning`}
                   showImmediately={user?.show_moderated_content === 1 || suppressContentWarning}>
-                  <div className={`post-body${containsAsciiArt(parent.body) ? ' ascii-art' : ''}`}
+                  <div className={`post-body${containsAsciiArt(parent.body) ? ' ascii-art' : ''}${
+                    endsWithCodeFence(parent.body) ? ' ends-code-fence' : ''}`}
                     dangerouslySetInnerHTML={{
                     __html: linkify(displayPostBody(renderedPollBody(parent.body)), parent.mention_bios, [], undefined,
                       renderFlags(parent), referenceQuery, parent.hashtag_counts, parent.mention_note_counts, {
