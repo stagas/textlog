@@ -83,7 +83,7 @@ export function clientIp(request: Request, socketIp?: string) {
 }
 
 export function logHttp(method: string, path: string, status: number, durationMs: number, ip = '-', username?: string,
-  userAgent = '-')
+  userAgent = '-', feedCache?: string | null)
 {
   const action = semanticAction(method, path)
   const timing = durationMs < 1000 ? `${durationMs.toFixed(0)}ms` : `${(durationMs / 1000).toFixed(2)}s`
@@ -97,6 +97,7 @@ export function logHttp(method: string, path: string, status: number, durationMs
     path,
   ]
   if (action) parts.push(paint(action, status >= 400 ? 'yellow' : 'magenta'))
+  if (feedCache) parts.push(paint(`feed_cache=${feedCache}`, 'dim'))
   if (Bun.env.LOG_USER_AGENT !== 'false') {
     const safeUserAgent = userAgent.replace(/[\u0000-\u001f\u007f]+/g, ' ').trim().slice(0, 200) || '-'
     parts.push(paint(`ua=${JSON.stringify(safeUserAgent)}`, 'dim'))

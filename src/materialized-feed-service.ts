@@ -9,6 +9,7 @@ type MaterializedResponse = {
 }
 
 const materializations = new Map<string, Promise<MaterializedResponse>>()
+const revalidations = new Map<string, Promise<void>>()
 type MemoryMaterialization = MaterializedResponse & {
   expiresAt: number
   hitActionDone: boolean
@@ -61,7 +62,9 @@ export async function rpcMaterializedFeedPage(request: Request, kind: Materializ
       memory.hitActionDone = true
       await onCacheHit()
     }
-    return new Response(memory.body, { status: memory.status, headers: memory.headers })
+    const headers = new Headers(memory.headers)
+    headers.set('x-feed-cache', 'memory')
+    return new Response(memory.body, { status: memory.status, headers })
   }
   if (memory) memoryMaterializations.delete(key)
   let materialization = materializations.get(key)
@@ -70,8 +73,32 @@ export async function rpcMaterializedFeedPage(request: Request, kind: Materializ
       const cached = await call('cache.materializedFeedGet', { kind, viewerId, variant })
       if (cached.html) {
         await onCacheHit?.()
+        if (cached.stale && !revalidations.has(key)) {
+          const revalidation = (async () => {
+            const response = await render()
+            if (response.status !== 200) return
+            const html = await response.text()
+            const cachedHtml = renderForCache
+              ? await (await renderForCache()).text()
+              : rerenderForCache
+              ? await (await render()).text()
+              : html
+            await call('cache.materializedFeedPut', {
+              kind,
+              viewerId,
+              variant,
+              generation: cached.generation,
+              html: cachedHtml,
+            })
+          })()
+          revalidations.set(key, revalidation)
+          void revalidation.finally(() => {
+            if (revalidations.get(key) === revalidation) revalidations.delete(key)
+          }).catch(error => console.error(`Could not refresh stale ${kind} feed`, error))
+        }
         return { body: cached.html, status: 200,
-          headers: [['content-type', 'text/html;charset=utf-8'], ['cache-control', 'private, no-store']] }
+          headers: [['content-type', 'text/html;charset=utf-8'], ['cache-control', 'private, no-store'],
+            ['x-feed-cache', cached.stale ? 'stale' : 'durable']] }
       }
       const response = await render()
       const html = await response.text()
@@ -89,7 +116,7 @@ export async function rpcMaterializedFeedPage(request: Request, kind: Materializ
           html: cachedHtml,
         })
       }
-      return { body: html, status: response.status, headers: [...response.headers.entries()] }
+      return { body: html, status: response.status, headers: [...response.headers.entries(), ['x-feed-cache', 'miss']] }
     })()
     materializations.set(key, materialization)
     void materialization.finally(() => {

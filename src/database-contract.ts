@@ -430,7 +430,7 @@ export type DatabaseDomainOperations = {
   'feeds.flushRelationshipInvalidation': { input: { limit?: number }; output: { flushed: number; remaining: number } }
   'cache.materializedFeedGet': {
     input: { kind: 'latest' | 'hot' | 'for-you' | 'to-me' | 'about'; viewerId: number; variant: string }
-    output: { html: string | null; generation: number }
+    output: { html: string | null; generation: number; stale: boolean }
   }
   'cache.materializedFeedPut': {
     input: { kind: 'latest' | 'hot' | 'for-you' | 'to-me' | 'about'; viewerId: number; variant: string;

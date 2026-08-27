@@ -2507,6 +2507,65 @@ export const migrations: Migration[] = [
         UPDATE hot_feed_projection_state SET dirty=1 WHERE id=1;`)
     },
   },
+  {
+    version: 153,
+    name: 'safe_feed_publication_generations',
+    up(database) {
+      if (!database.query("SELECT 1 FROM sqlite_master WHERE type='table' AND name='posts'").get()
+        || !database.query("SELECT 1 FROM sqlite_master WHERE type='table' AND name='feed_snapshot_generation'").get()) {
+        return
+      }
+      const generation = (database.query('SELECT generation FROM feed_snapshot_generation WHERE id=1').get() as {
+        generation: number
+      } | null)?.generation || 1
+      database.run(`CREATE TABLE IF NOT EXISTS feed_publication_state (
+          id INTEGER PRIMARY KEY CHECK(id=1),additive_generation INTEGER NOT NULL,
+          strict_generation INTEGER NOT NULL
+        );
+        INSERT OR IGNORE INTO feed_publication_state(id,additive_generation,strict_generation)
+          VALUES(1,${generation},1);
+        CREATE TRIGGER IF NOT EXISTS feed_publication_posts_insert AFTER INSERT ON posts BEGIN
+          UPDATE feed_publication_state SET additive_generation=additive_generation+1 WHERE id=1;
+        END;
+        CREATE TRIGGER IF NOT EXISTS feed_publication_posts_update AFTER UPDATE ON posts BEGIN
+          UPDATE feed_publication_state SET additive_generation=additive_generation+1,
+            strict_generation=strict_generation+1 WHERE id=1;
+        END;
+        CREATE TRIGGER IF NOT EXISTS feed_publication_posts_delete AFTER DELETE ON posts BEGIN
+          UPDATE feed_publication_state SET additive_generation=additive_generation+1,
+            strict_generation=strict_generation+1 WHERE id=1;
+        END;
+        CREATE TRIGGER IF NOT EXISTS feed_publication_users_update AFTER UPDATE ON users BEGIN
+          UPDATE feed_publication_state SET additive_generation=additive_generation+1,
+            strict_generation=strict_generation+1 WHERE id=1;
+        END;
+        CREATE TRIGGER IF NOT EXISTS feed_publication_users_delete AFTER DELETE ON users BEGIN
+          UPDATE feed_publication_state SET additive_generation=additive_generation+1,
+            strict_generation=strict_generation+1 WHERE id=1;
+        END;
+        CREATE TRIGGER IF NOT EXISTS feed_publication_blocks_insert AFTER INSERT ON blocks BEGIN
+          UPDATE feed_publication_state SET additive_generation=additive_generation+1,
+            strict_generation=strict_generation+1 WHERE id=1;
+        END;
+        CREATE TRIGGER IF NOT EXISTS feed_publication_blocks_delete AFTER DELETE ON blocks BEGIN
+          UPDATE feed_publication_state SET additive_generation=additive_generation+1,
+            strict_generation=strict_generation+1 WHERE id=1;
+        END;
+        CREATE TRIGGER IF NOT EXISTS feed_publication_blocked_tags_insert AFTER INSERT ON blocked_hashtags BEGIN
+          UPDATE feed_publication_state SET additive_generation=additive_generation+1,
+            strict_generation=strict_generation+1 WHERE id=1;
+        END;
+        CREATE TRIGGER IF NOT EXISTS feed_publication_blocked_tags_delete AFTER DELETE ON blocked_hashtags BEGIN
+          UPDATE feed_publication_state SET additive_generation=additive_generation+1,
+            strict_generation=strict_generation+1 WHERE id=1;
+        END;`)
+      if (database.query("SELECT 1 FROM sqlite_master WHERE type='table' AND name='poll_votes'").get()) {
+        database.run(`CREATE TRIGGER IF NOT EXISTS feed_publication_poll_votes_insert AFTER INSERT ON poll_votes BEGIN
+          UPDATE feed_publication_state SET additive_generation=additive_generation+1 WHERE id=1;
+        END;`)
+      }
+    },
+  },
 ]
 
 export const latestMigrationVersion = migrations.at(-1)!.version

@@ -28,7 +28,7 @@ import { registerAdminRoutes } from './routes/admin'
 import { registerApiRoutes } from './routes/api'
 import { registerAuthRoutes } from './routes/auth'
 import { registerEmbedRoutes } from './routes/embed'
-import { registerFeedsRoutes } from './routes/feeds'
+import { loadRecentFeedVisitors, registerFeedsRoutes, warmNextRecentLatestFeed } from './routes/feeds'
 import { registerIllegalActivityRoutes } from './routes/illegal-activity'
 import { registerInteractionsRoutes } from './routes/interactions'
 import { registerMediaRoutes } from './routes/media'
@@ -136,6 +136,7 @@ const clientErrorRateLimiter = new ClientErrorRateLimiter()
 const nestedFromRateLimiter = new NestedFromRateLimiter()
 await loadBlockedIps()
 startPostPushWorker()
+await loadRecentFeedVisitors()
 let hotProjectionRefreshRunning = false
 const hotProjectionWorker = new Worker(new URL('./hot-projection-worker.ts', import.meta.url))
 let finishInitialHotProjection: (() => void) | undefined
@@ -171,6 +172,10 @@ refreshHotProjection()
 await initialHotProjection
 const hotProjectionTimer = setInterval(refreshHotProjection, 30_000)
 hotProjectionTimer.unref()
+const recentLatestWarmTimer = setInterval(() => {
+  void warmNextRecentLatestFeed().catch(error => logError('recent latest feed warm failed', error))
+}, 2_000)
+recentLatestWarmTimer.unref()
 const ipRequestTimer = setInterval(
   () => void flushIpRequests().catch(error => logError('IP request buffer flush failed', error)),
   5_000,
@@ -293,7 +298,8 @@ app.use('*', async (c, next) => {
     const path = url.pathname
     if (shouldLogHttp(path, c.res.status, isCrawlerRequest(c.req.raw), Boolean(username))) {
       logHttp(c.req.method, redactHttpPath(`${path}${url.search}`), c.res.status, performance.now() - started,
-        c.req.header(clientIpHeaderName()) || '-', username, c.req.header('user-agent') || '-')
+        c.req.header(clientIpHeaderName()) || '-', username, c.req.header('user-agent') || '-',
+        c.res.headers.get('x-feed-cache'))
     }
   }
 })

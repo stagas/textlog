@@ -106,9 +106,23 @@ function materializedFeedGeneration(database: Database, kind: string, viewerId: 
     } | null
     return state?.refreshed_at ? Date.parse(state.refreshed_at) : 0
   }
+  if (kind === 'latest' && database.query(`SELECT 1 FROM sqlite_master
+    WHERE type='table' AND name='feed_publication_state'`).get()) {
+    return (database.query('SELECT additive_generation FROM feed_publication_state WHERE id=1').get() as {
+      additive_generation: number
+    }).additive_generation
+  }
   return (database.query('SELECT generation FROM feed_snapshot_generation WHERE id=1').get() as {
     generation: number
   }).generation
+}
+
+function materializedStrictGeneration(database: Database, kind: string) {
+  if (kind !== 'latest' || !database.query(`SELECT 1 FROM sqlite_master
+    WHERE type='table' AND name='feed_publication_state'`).get()) return 0
+  return (database.query('SELECT strict_generation FROM feed_publication_state WHERE id=1').get() as {
+    strict_generation: number
+  }).strict_generation
 }
 
 function hydrateMaterializedFeed(html: string, database: Database, viewerId: number) {
@@ -2463,19 +2477,32 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
     case 'cache.materializedFeedGet': {
       const { kind, viewerId, variant } = input as DatabaseDomainInput<'cache.materializedFeedGet'>
       const generation = materializedFeedGeneration(database, kind, viewerId)
-      const cached = cacheDb.query(`SELECT html FROM materialized_feed_pages_v2
+      const strictGeneration = materializedStrictGeneration(database, kind)
+      let cached = cacheDb.query(`SELECT html,generation FROM materialized_feed_pages_v2
         WHERE kind=? AND viewer_id=? AND variant=? AND generation=?`).get(kind, viewerId, variant, generation) as {
         html: string
+        generation: number
       } | null
+      let stale = false
+      if (!cached && kind === 'latest') {
+        cached = cacheDb.query(`SELECT html,generation FROM materialized_feed_pages_v2
+          WHERE kind=? AND viewer_id=? AND variant=? AND strict_generation=?
+          ORDER BY generation DESC LIMIT 1`).get(kind, viewerId, variant, strictGeneration) as {
+            html: string
+            generation: number
+          } | null
+        stale = !!cached
+      }
       if (cached) cacheDb.query(`UPDATE materialized_feed_pages_v2 SET created_at=CURRENT_TIMESTAMP
         WHERE kind=? AND viewer_id=? AND variant=? AND generation=?
-          AND created_at < datetime('now','-5 minutes')`).run(kind, viewerId, variant, generation)
+          AND created_at < datetime('now','-5 minutes')`).run(kind, viewerId, variant, cached.generation)
       return { html: cached ? hydrateMaterializedFeed(cached.html, database, viewerId) : null,
-        generation } as DatabaseDomainOutput<K>
+        generation, stale } as DatabaseDomainOutput<K>
     }
     case 'cache.materializedFeedPut': {
       const { kind, viewerId, variant, html, generation } = input as DatabaseDomainInput<'cache.materializedFeedPut'>
       const currentGeneration = materializedFeedGeneration(database, kind, viewerId)
+      const strictGeneration = materializedStrictGeneration(database, kind)
       if (generation !== currentGeneration) return null as DatabaseDomainOutput<K>
       if (viewerId >= 0) {
         const cachedForYouCount = materializedForYouCount(html)
@@ -2486,8 +2513,10 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
       cacheDb.transaction(() => {
         cacheDb.query('DELETE FROM materialized_feed_pages_v2 WHERE kind=? AND viewer_id=? AND generation!=?')
           .run(kind, viewerId, generation)
-        cacheDb.query(`INSERT OR REPLACE INTO materialized_feed_pages_v2(kind,viewer_id,variant,generation,html)
-          VALUES(?,?,?,?,?)`).run(kind, viewerId, variant, generation, materializedFeedTemplate(html))
+        cacheDb.query(`INSERT OR REPLACE INTO materialized_feed_pages_v2(
+          kind,viewer_id,variant,generation,html,strict_generation
+        ) VALUES(?,?,?,?,?,?)`).run(kind, viewerId, variant, generation, materializedFeedTemplate(html),
+          strictGeneration)
         cacheDb.query(`DELETE FROM materialized_feed_pages_v2 WHERE rowid IN (
           SELECT rowid FROM materialized_feed_pages_v2 ORDER BY created_at DESC,rowid DESC LIMIT -1 OFFSET ?
         )`).run(MAX_MATERIALIZED_PAGES)
@@ -2516,7 +2545,8 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
       >
       const result = rows.flatMap(row => {
         const user = database.query(`SELECT id,handle,email,bio,suspended_at,email_verified_at,handle_chosen_at,
-          show_link_previews,timezone FROM users WHERE id=? AND deleted_at IS NULL AND suspended_at IS NULL`)
+          show_link_previews,show_moderated_content,hide_people_follow_activity,hide_hashtag_follow_activity,timezone
+          FROM users WHERE id=? AND deleted_at IS NULL AND suspended_at IS NULL`)
           .get(row.user_id) as User | null
         return user
           ? [{ user, requestUrl: row.request_url, cookie: row.cookie, pageSize: row.page_size, density: row.density }]

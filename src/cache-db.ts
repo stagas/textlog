@@ -27,12 +27,19 @@ export function createCacheDatabase(path = defaultCachePath()) {
     CREATE INDEX IF NOT EXISTS feed_snapshots_last_accessed ON feed_snapshots(last_accessed_at);
     CREATE TABLE IF NOT EXISTS materialized_feed_pages_v2 (
       kind TEXT NOT NULL,viewer_id INTEGER NOT NULL,variant TEXT NOT NULL,generation INTEGER NOT NULL,html TEXT NOT NULL,
-      created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,PRIMARY KEY(kind,viewer_id,variant,generation));
+      strict_generation INTEGER NOT NULL DEFAULT 0,created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      PRIMARY KEY(kind,viewer_id,variant,generation));
     CREATE INDEX IF NOT EXISTS materialized_feed_pages_v2_created ON materialized_feed_pages_v2(created_at);
     CREATE TABLE IF NOT EXISTS recent_feed_visitors (
       user_id INTEGER PRIMARY KEY,request_url TEXT NOT NULL,cookie TEXT NOT NULL,page_size INTEGER NOT NULL,
       density TEXT NOT NULL,last_visited_at INTEGER NOT NULL);
     CREATE INDEX IF NOT EXISTS recent_feed_visitors_visited ON recent_feed_visitors(last_visited_at DESC);`)
+  const materializedColumns = database.query('PRAGMA table_info(materialized_feed_pages_v2)').all() as Array<{
+    name: string
+  }>
+  if (!materializedColumns.some(column => column.name === 'strict_generation')) {
+    database.run('ALTER TABLE materialized_feed_pages_v2 ADD COLUMN strict_generation INTEGER NOT NULL DEFAULT 0')
+  }
   return database
 }
 

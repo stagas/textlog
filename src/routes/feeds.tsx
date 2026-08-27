@@ -26,6 +26,8 @@ import { campaignIpPseudonym } from '../ip-privacy'
 import { rpcMaterializedFeedPage } from '../materialized-feed-service'
 import { decodePostCursor } from '../pagination'
 import { resolvedDensity, resolvedPageSize } from '../request-preferences'
+import { withRequestContext } from '../request-context'
+import { withAppearance } from '../theme'
 import type { PersonalizedFeedData } from '../types'
 import { currentUser } from '../utils'
 
@@ -74,6 +76,7 @@ type RecentFeedVisitor = {
 
 const recentFeedVisitors = new Map<number, RecentFeedVisitor>()
 const recentFeedVisitorLimit = 30
+let recentLatestWarmCursor = 0
 
 const feedVariantCookieNames = new Set([
   'appearance',
@@ -114,6 +117,36 @@ function rememberFeedVisitor(request: Request, user: NonNullable<ReturnType<type
     pageSize,
     density,
   }).catch(error => console.error('Could not remember recent feed visitor', error))
+}
+
+export async function warmNextRecentLatestFeed() {
+  const visitors = [...recentFeedVisitors.values()].reverse()
+  if (!visitors.length) return
+  const visitor = visitors[recentLatestWarmCursor++ % visitors.length]
+  await withRequestContext({ sessionUser: visitor.user, apiUser: null, pageSize: visitor.pageSize,
+    density: visitor.density }, () => withAppearance(visitor.request, async () => {
+    await rpcMaterializedFeedPage(visitor.request, 'latest', visitor.user.id, async () => {
+      const feed = await backgroundDatabaseCall('feeds.latestPage', {
+        viewerId: visitor.user.id,
+        page: 1,
+        pageSize: visitor.pageSize,
+        markRead: false,
+      })
+      return page(<PublicFeed user={visitor.user} feed={feed} path="/latest" />)
+    }, false, viewerCacheVersion(0, visitor.user), true)
+  }))
+}
+
+export async function loadRecentFeedVisitors() {
+  const visitors = await databaseService().call('cache.recentFeedVisitors', {})
+  for (const visitor of visitors) {
+    recentFeedVisitors.set(visitor.user.id, {
+      user: visitor.user,
+      request: new Request(visitor.requestUrl, { headers: { cookie: visitor.cookie } }),
+      pageSize: visitor.pageSize,
+      density: visitor.density,
+    })
+  }
 }
 
 export function registerFeedsRoutes(app: Hono) {
