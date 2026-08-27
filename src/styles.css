@@ -6076,7 +6076,8 @@ a.post-context:hover {
 .feed-thread-collapsed-branch .collapsed-preview-path>.post,
 .feed-thread-collapsed-branch .thread-ancestor-gap {
   height: auto;
-  transition: height 200ms ease, padding 200ms ease;
+  opacity: 1;
+  transition: height 200ms ease, padding 200ms ease, opacity 160ms ease;
 }
 
 .feed-thread>.thread-fold-input:checked~.feed-thread-collapsed-branch .reply-node,
@@ -6097,10 +6098,12 @@ a.post-context:hover {
 
 .feed-thread>.thread-fold-input:checked~.feed-thread-collapsed-branch .reply-node:not(.collapsed-preview-path) {
   height: 0;
+  opacity: 0;
 }
 
 .feed-thread>.thread-fold-input:checked~.feed-thread-collapsed-branch .collapsed-preview-path>.post {
   height: 0;
+  opacity: 0;
   padding-top: 0;
   padding-bottom: 0;
 }
@@ -6108,6 +6111,7 @@ a.post-context:hover {
 .feed-thread>.thread-fold-input:checked~.feed-thread-collapsed-branch
   .thread-ancestor-gap:not(.collapsed-preview-gap) {
   height: 0;
+  opacity: 0;
   padding-top: 0;
 }
 
@@ -6121,6 +6125,7 @@ a.post-context:hover {
 .feed-thread>.thread-fold-input:checked~.feed-thread-collapsed-branch .collapsed-preview-gap {
   display: block;
   height: auto;
+  opacity: 1;
   padding-top: var(--space-2);
 }
 
@@ -6134,7 +6139,10 @@ a.post-context:hover {
   .post-spoiler-summary::before,
   .post-spoiler-content,
   .reply-branch,
-  .thread-fold-input:checked~.reply-branch {
+  .thread-fold-input:checked~.reply-branch,
+  .feed-thread-collapsed-branch .reply-node,
+  .feed-thread-collapsed-branch .collapsed-preview-path>.post,
+  .feed-thread-collapsed-branch .thread-ancestor-gap {
     transition: none;
   }
 
