@@ -27,14 +27,14 @@ import { renderPostOg } from '../og'
 import { cachedOgResponse, cacheOgResponse } from '../og-response-cache'
 import { normalizePostBody, postBodyValidationMessage, validPostBody } from '../post-body'
 import { postRateLimitMessage } from '../post-rate-limit'
-import { sendPushForPost } from '../push'
+import { wakePostPushWorker } from '../push'
 import { normalizeSearchQuery } from '../search'
 import { toggleTodo } from '../todos'
 import { postTranslation } from '../translation'
 import { currentUser } from '../utils'
 
-function notifyPost(postId: number, userId: number, handle: string) {
-  void sendPushForPost(postId, userId, handle).catch(error => logError('activity push failed', error))
+function notifyPost() {
+  wakePostPushWorker()
 }
 
 const saveFailureMessage = 'Something went wrong while saving. Your text is still here; please try again.'
@@ -296,7 +296,7 @@ export function registerPostsRoutes(app: Hono) {
       if (result.status === 'not_found') throw new Error('Post parent unavailable')
       if (!result.duplicate) publishPost(result.id)
       if (!result.duplicate) await persistPreviews(result.id, 'save', body)
-      if (!result.duplicate) notifyPost(result.id, user.id, user.handle)
+      if (!result.duplicate) notifyPost()
       if (editingDraftId) await databaseService().call('drafts.delete', { id: editingDraftId, userId: user.id })
       return rememberFeed(redirect(`/latest#post-${result.id}`), 'latest')
     }
@@ -563,7 +563,7 @@ export function registerPostsRoutes(app: Hono) {
       if (result.status === 'not_found') return c.text('Not found', 404)
       if (!result.duplicate) publishPost(result.id)
       if (!result.duplicate) await persistPreviews(result.id, 'save', body)
-      if (!result.duplicate) notifyPost(result.id, user.id, user.handle)
+      if (!result.duplicate) notifyPost()
       if (editingDraftId) await databaseService().call('drafts.delete', { id: editingDraftId, userId: user.id })
       return redirect(postedReplyPath(parentId, result.id, returnPath))
     }

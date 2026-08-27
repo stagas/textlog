@@ -78,6 +78,10 @@ export function materializedForYouCount(html: string) {
   )?.[1] || 0)
 }
 
+function hasPostPushJobs(database: Database) {
+  return !!database.query("SELECT 1 FROM sqlite_master WHERE type='table' AND name='post_push_jobs'").get()
+}
+
 function recapPosts(database: Database, viewerId: number) {
   if (!RECAP_POPULAR_NOTE_IDS.length) return []
   const placeholders = RECAP_POPULAR_NOTE_IDS.map(() => '?').join(',')
@@ -1547,6 +1551,9 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
           request.translation ?? null, request.moderationCategory ?? null, request.moderationScore ?? null)
         if (!('retryAfter' in value)) {
           database.query('DELETE FROM drafts WHERE id=? AND user_id=?').run(request.id, request.userId)
+          if (!value.duplicate && hasPostPushJobs(database)) database
+            .query('INSERT OR IGNORE INTO post_push_jobs(post_id) VALUES(?)')
+            .run(value.id)
         }
         return value
       })()
@@ -1571,8 +1578,14 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
           .get(userId, parent.user_id, parent.user_id, userId)
         if (blocked) return { status: 'not_found' } as DatabaseDomainOutput<K>
       }
-      const created = createPost(database, userId, body, parentId, false, translation ?? null,
-        moderationCategory ?? null, moderationScore ?? null)
+      const created = database.transaction(() => {
+        const value = createPost(database, userId, body, parentId, false, translation ?? null,
+          moderationCategory ?? null, moderationScore ?? null)
+        if (!('retryAfter' in value) && !value.duplicate && hasPostPushJobs(database)) {
+          database.query('INSERT OR IGNORE INTO post_push_jobs(post_id) VALUES(?)').run(value.id)
+        }
+        return value
+      })()
       if ('retryAfter' in created) {
         return { status: 'rate_limited', retryAfter: created.retryAfter } as DatabaseDomainOutput<K>
       }
@@ -2003,6 +2016,34 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
         .all(actorId, postId, actorId, postId, actorId, actorId, postId, actorId, actorId, actorId, postId, postId,
           postId, actorId, postId, actorId, postId)
       return { post: row, subscriptions } as DatabaseDomainOutput<K>
+    }
+    case 'push.claimPostJobs': {
+      const { now, limit, leaseMs } = input as DatabaseDomainInput<'push.claimPostJobs'>
+      if (!hasPostPushJobs(database)) return [] as DatabaseDomainOutput<K>
+      return database.transaction(() => {
+        const rows = database.query(`SELECT job.post_id postId,p.user_id actorId,u.handle actorHandle,job.attempts
+          FROM post_push_jobs job JOIN posts p ON p.id=job.post_id JOIN users u ON u.id=p.user_id
+          WHERE job.next_attempt_at<=? AND (job.lease_until IS NULL OR job.lease_until<=?)
+          ORDER BY job.next_attempt_at,job.post_id LIMIT ?`).all(now, now, limit) as Array<{
+            postId: number; actorId: number; actorHandle: string; attempts: number
+          }>
+        const lease = database.query('UPDATE post_push_jobs SET lease_until=? WHERE post_id=?')
+        for (const row of rows) lease.run(now + leaseMs, row.postId)
+        return rows
+      })() as DatabaseDomainOutput<K>
+    }
+    case 'push.completePostJob': {
+      const { postId } = input as DatabaseDomainInput<'push.completePostJob'>
+      if (!hasPostPushJobs(database)) return null as DatabaseDomainOutput<K>
+      database.query('DELETE FROM post_push_jobs WHERE post_id=?').run(postId)
+      return null as DatabaseDomainOutput<K>
+    }
+    case 'push.retryPostJob': {
+      const { postId, attempts, nextAttemptAt, error } = input as DatabaseDomainInput<'push.retryPostJob'>
+      if (!hasPostPushJobs(database)) return null as DatabaseDomainOutput<K>
+      database.query(`UPDATE post_push_jobs SET attempts=?,next_attempt_at=?,lease_until=NULL,last_error=?
+        WHERE post_id=?`).run(attempts, nextAttemptAt, error.slice(0, 1000), postId)
+      return null as DatabaseDomainOutput<K>
     }
     case 'push.followDelivery': {
       const { followedId } = input as DatabaseDomainInput<'push.followDelivery'>

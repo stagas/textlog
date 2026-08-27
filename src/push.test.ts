@@ -100,6 +100,17 @@ describe('Web Push activity delivery', () => {
     expect(database.query('SELECT count(*) count FROM push_subscriptions').get()).toEqual({ count: 0 })
   })
 
+  test('propagates transient provider failures so durable delivery can retry', async () => {
+    const database = fixture()
+    webpush.sendNotification = (async () => {
+      throw { statusCode: 503 }
+    }) as typeof webpush.sendNotification
+
+    await expect(sendPushToUser(2, { title: 'test', body: 'test', url: '/' }, database, vapid))
+      .rejects.toThrow('Transient push delivery failure')
+    expect(database.query('SELECT count(*) count FROM push_subscriptions').get()).toEqual({ count: 1 })
+  })
+
   test('sends ordinary new posts to subscriptions that enabled latest', async () => {
     const database = fixture()
     database.run('INSERT INTO posts(id,user_id,body) VALUES(3,1,\'an ordinary note\')')

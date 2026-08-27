@@ -2247,6 +2247,21 @@ export const migrations: Migration[] = [
         'INTEGER NOT NULL DEFAULT 0 CHECK(show_moderated_content IN (0,1))')
     },
   },
+  {
+    version: 148,
+    name: 'durable_post_push_jobs',
+    up(database) {
+      if (!database.query('SELECT 1 FROM sqlite_master WHERE type=\'table\' AND name=\'posts\'').get()) return
+      database.run(`CREATE TABLE IF NOT EXISTS post_push_jobs (
+        post_id INTEGER PRIMARY KEY REFERENCES posts(id) ON DELETE CASCADE,
+        attempts INTEGER NOT NULL DEFAULT 0,
+        next_attempt_at INTEGER NOT NULL DEFAULT 0,
+        lease_until INTEGER,
+        last_error TEXT,
+        created_at INTEGER NOT NULL DEFAULT (unixepoch() * 1000));
+        CREATE INDEX IF NOT EXISTS post_push_jobs_due ON post_push_jobs(next_attempt_at,lease_until);`)
+    },
+  },
 ]
 
 export const latestMigrationVersion = migrations.at(-1)!.version

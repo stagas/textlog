@@ -13,7 +13,7 @@ import { moderateText, moderationMessage } from '../moderation'
 import { normalizePostBody, POST_MAX, postBodyValidationMessage, validPostBody } from '../post-body'
 import { postRateLimitMessage } from '../post-rate-limit'
 import { canPublishPosts } from '../posting-policy'
-import { sendPushForFollow, sendPushForPost, sendPushForTagFollow, sendPushForUserFollow } from '../push'
+import { sendPushForFollow, sendPushForTagFollow, sendPushForUserFollow, wakePostPushWorker } from '../push'
 import { scheduleRelationshipFeedInvalidation } from '../relationship-feed-invalidation'
 import { sessionHash } from '../sessions'
 import { postTranslation } from '../translation'
@@ -258,8 +258,7 @@ export function registerApiWriteRoutes(app: Hono, service: DatabaseService,
     if (!result.duplicate) publishPost(result.id)
     if (!result.duplicate) await persistPostPreviews(service, result.id, 'save', await discoverLinkPreviews(content))
     if (!result.duplicate) {
-      void sendPushForPost(result.id, user.id, user.handle, undefined, undefined, service)
-        .catch(error => logError('API activity push failed', error))
+      wakePostPushWorker(service)
     }
     return json({ data: result.post }, result.duplicate ? 200 : 201)
   })
@@ -379,9 +378,7 @@ export function registerApiWriteRoutes(app: Hono, service: DatabaseService,
     if (!result.duplicate) publishPost(result.id)
     if (!result.duplicate) await persistPostPreviews(service, result.id, 'save', await discoverLinkPreviews(draft.body))
     if (!result.duplicate) {
-      void sendPushForPost(result.id, guard.user!.id, guard.user!.handle, undefined, undefined, service).catch(error =>
-        logError('API draft publish push failed', error)
-      )
+      wakePostPushWorker(service)
     }
     return json({ data: result.post }, result.duplicate ? 200 : 201)
   })

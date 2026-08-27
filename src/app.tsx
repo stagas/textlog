@@ -17,6 +17,7 @@ import { clientIp, logError, logHttp, logReady, redactHttpPath, shouldLogHttp } 
 import { MAINTENANCE_INTERVAL_MS } from './maintenance'
 import { renderDefaultOg } from './og'
 import { PUBLIC_ARCHIVE_CHECK_INTERVAL_MS } from './public-archive'
+import { startPostPushWorker } from './push'
 import { resumeRelationshipFeedInvalidation } from './relationship-feed-invalidation'
 import { flushIpRequests, isIpBlocked, loadBlockedIps, recordIpRequest } from './request-ip-blocks'
 import { ClientErrorRateLimiter, HOURLY_REQUEST_BLOCK_SECONDS, HOURLY_REQUEST_RATE_LIMIT,
@@ -134,6 +135,7 @@ const hourlyRequestRateLimiter = new RequestRateLimiter({
 const clientErrorRateLimiter = new ClientErrorRateLimiter()
 const nestedFromRateLimiter = new NestedFromRateLimiter()
 await loadBlockedIps()
+startPostPushWorker()
 const ipRequestTimer = setInterval(
   () => void flushIpRequests().catch(error => logError('IP request buffer flush failed', error)),
   5_000,

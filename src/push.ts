@@ -24,6 +24,11 @@ type FollowActivityBatch = {
   vapid: VapidConfiguration
 }
 const followActivityBatches = new Map<string, FollowActivityBatch>()
+const postPushPollMs = 10_000
+const postPushLeaseMs = 2 * 60_000
+const postPushBatchSize = 20
+let postPushRunning = false
+let postPushTimer: ReturnType<typeof setInterval> | undefined
 
 function vapidConfiguration() {
   const subject = Bun.env.VAPID_SUBJECT?.trim()
@@ -46,6 +51,7 @@ async function sendToSubscriptions<T extends PushSubscriptionRow>(subscriptions:
   for (const subscription of subscriptions) {
     if (!devices.has(subscription.endpoint)) devices.set(subscription.endpoint, subscription)
   }
+  const transientErrors: unknown[] = []
   await Promise.all([...devices.values()].map(async subscription => {
     try {
       await webpush.sendNotification({
@@ -61,9 +67,57 @@ async function sendToSubscriptions<T extends PushSubscriptionRow>(subscriptions:
         if (database) database.query('DELETE FROM push_subscriptions WHERE endpoint=?').run(subscription.endpoint)
         else await (service || databaseService()).call('push.removeEndpoint', { endpoint: subscription.endpoint })
       }
-      else logError('push delivery failed', error)
+      else {
+        transientErrors.push(error)
+        logError('push delivery failed', error)
+      }
     }
   }))
+  if (transientErrors.length) throw new AggregateError(transientErrors, 'Transient push delivery failure')
+}
+
+function postPushDelay(attempts: number) {
+  return Math.min(60 * 60_000, 5_000 * 2 ** Math.min(attempts, 10))
+}
+
+export async function drainPostPushJobs(service: DatabaseService = databaseService(), now = Date.now()) {
+  if (postPushRunning || !vapidConfiguration()) return
+  postPushRunning = true
+  try {
+    const jobs = await service.call('push.claimPostJobs', {
+      now, limit: postPushBatchSize, leaseMs: postPushLeaseMs,
+    })
+    for (const job of jobs) {
+      try {
+        await sendPushForPost(job.postId, job.actorId, job.actorHandle, undefined, undefined, service)
+        await service.call('push.completePostJob', { postId: job.postId })
+      }
+      catch (error) {
+        const attempts = job.attempts + 1
+        await service.call('push.retryPostJob', {
+          postId: job.postId,
+          attempts,
+          nextAttemptAt: now + postPushDelay(attempts),
+          error: error instanceof Error ? `${error.name}: ${error.message}` : String(error),
+        })
+      }
+    }
+  }
+  finally {
+    postPushRunning = false
+  }
+}
+
+export function wakePostPushWorker(service: DatabaseService = databaseService()) {
+  queueMicrotask(() => void drainPostPushJobs(service).catch(error => logError('post push worker failed', error)))
+}
+
+export function startPostPushWorker(service: DatabaseService = databaseService()) {
+  if (postPushTimer) return postPushTimer
+  wakePostPushWorker(service)
+  postPushTimer = setInterval(() => wakePostPushWorker(service), postPushPollMs)
+  postPushTimer.unref()
+  return postPushTimer
 }
 
 async function flushFollowActivityBatch(key: string) {
