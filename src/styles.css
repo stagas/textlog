@@ -3735,24 +3735,14 @@ form.report-panel {
   }
 
   :is(.write-compose, .edit-post-compose, .replybox) .composefoot {
-    grid-template-columns: minmax(0, 1fr);
-    gap: var(--space-3);
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: var(--space-2);
   }
 
   :is(.write-compose, .edit-post-compose, .replybox) .composefoot .posting-help-details {
     grid-column: 1;
     grid-row: 1;
-  }
-
-  :is(.write-compose, .edit-post-compose, .replybox) .composefoot .form-actions {
-    grid-column: 1;
-    grid-row: 2;
-  }
-
-  :is(.write-compose, .edit-post-compose, .replybox) .composefoot .posting-help-content {
-    grid-column: 1;
-    grid-row: 3;
-    margin-top: 0;
+    font-size: 0.5625rem;
   }
 
   .posting-help-tabs {

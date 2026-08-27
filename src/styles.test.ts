@@ -479,13 +479,10 @@ describe('in-memory stylesheet', () => {
       ':is(.write-compose, .edit-post-compose, .replybox, .bio-form) .composefoot {',
     )
     expect(css).toContain(
-      ':is(.write-compose, .edit-post-compose, .replybox) .composefoot {\n    grid-template-columns: minmax(0, 1fr);',
+      ':is(.write-compose, .edit-post-compose, .replybox) .composefoot {\n    grid-template-columns: minmax(0, 1fr) auto;\n    gap: var(--space-2);',
     )
     expect(css).toContain(
-      '.composefoot .form-actions {\n    grid-column: 1;\n    grid-row: 2;',
-    )
-    expect(css).toContain(
-      '.composefoot .posting-help-content {\n    grid-column: 1;\n    grid-row: 3;\n    margin-top: 0;',
+      '.composefoot .posting-help-details {\n    grid-column: 1;\n    grid-row: 1;\n    font-size: 0.5625rem;',
     )
     expect(css).toContain(
       '.posting-help-tabs {\n    display: grid;\n    grid-template-columns: repeat(2, minmax(0, 1fr));',
