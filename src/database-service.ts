@@ -16,10 +16,17 @@ const feedMutations = new Set<DatabaseDomainOperation>([
   'api.publishDraft',
   'api.updatePost',
   'api.deletePost',
+  'api.markActivitiesRead',
+  'api.markAllActivitiesRead',
+  'api.markLatestRead',
+  'api.markAllLatestRead',
   'api.unpublishPost',
   'api.relationshipMutation',
   'api.tagRelationshipMutation',
   'api.updateBio',
+  'feeds.markLatestRead',
+  'feeds.markPersonalizedSnapshotPageRead',
+  'feeds.markRead',
   'posts.votePoll',
 ])
 
