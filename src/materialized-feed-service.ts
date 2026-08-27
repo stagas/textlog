@@ -4,6 +4,7 @@ type MaterializedFeedKind = 'latest' | 'hot' | 'for-you' | 'to-me' | 'about'
 
 type MaterializedResponse = {
   body: string
+  memoryBody?: string
   headers: [string, string][]
   status: number
 }
@@ -34,7 +35,7 @@ function memoryCacheEnabled() {
 }
 
 function rememberMaterialization(key: string, result: MaterializedResponse) {
-  const entry: MemoryMaterialization = { ...result, hitActionDone: false }
+  const entry: MemoryMaterialization = { ...result, body: result.memoryBody ?? result.body, hitActionDone: false }
   memoryMaterializations.delete(key)
   memoryMaterializations.set(key, entry)
   while (memoryMaterializations.size > MAX_MEMORY_MATERIALIZATIONS) {
@@ -106,12 +107,14 @@ export async function rpcMaterializedFeedPage(request: Request, kind: Materializ
       }
       const response = await render()
       const html = await response.text()
+      let memoryBody: string | undefined
       if (response.status === 200) {
         const cachedHtml = renderForCache
           ? await (await renderForCache()).text()
           : rerenderForCache
           ? await (await render()).text()
           : html
+        memoryBody = cachedHtml
         await call('cache.materializedFeedPut', {
           kind,
           viewerId,
@@ -120,7 +123,8 @@ export async function rpcMaterializedFeedPage(request: Request, kind: Materializ
           html: cachedHtml,
         })
       }
-      return { body: html, status: response.status, headers: [...response.headers.entries(), ['x-feed-cache', 'miss']] }
+      return { body: html, memoryBody, status: response.status,
+        headers: [...response.headers.entries(), ['x-feed-cache', 'miss']] }
     })()
     materializations.set(key, materialization)
     void materialization.finally(() => {
@@ -136,6 +140,6 @@ export async function rpcMaterializedFeedPage(request: Request, kind: Materializ
   if (startedAtMemoryGeneration !== memoryGeneration) {
     return new Response(result.body, { status: result.status, headers: result.headers })
   }
-  const remembered = rememberMaterialization(key, result)
-  return new Response(remembered.body, { status: remembered.status, headers: remembered.headers })
+  rememberMaterialization(key, result)
+  return new Response(result.body, { status: result.status, headers: result.headers })
 }
