@@ -994,13 +994,59 @@ nav form {
 .notification-banner button:hover { color: var(--tab-hover); }
 
 .install-guide ol {
+  counter-reset: install-step;
+  display: grid;
+  gap: 0;
   margin: var(--space-4) 0 var(--space-6);
-  padding-left: 1.5rem;
+  padding: 0;
+  list-style: none;
 }
 
 .install-guide li {
-  margin: 0 0 var(--space-3);
-  padding-left: var(--space-2);
+  counter-increment: install-step;
+  display: grid;
+  grid-template-columns: 1.5rem minmax(0, 1fr);
+  gap: var(--space-3);
+  align-items: start;
+  margin: 0;
+  padding: var(--space-3) 0;
+  color: var(--quote-ink);
+  font-size: 0.8125rem;
+  line-height: 1.75;
+  border-bottom: 1px solid var(--soft);
+}
+
+.install-guide li::before {
+  content: counter(install-step);
+  display: grid;
+  place-items: center;
+  width: 1.5rem;
+  height: 1.5rem;
+  color: var(--button-ink);
+  background: var(--button-bg);
+  font-size: 0.6875rem;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.install-step-copy {
+  min-width: 0;
+}
+
+.install-guide kbd {
+  display: inline-block;
+  margin: 0 0.1em;
+  padding: 0.05em 0.4em;
+  color: var(--ink);
+  background: var(--tag-bg);
+  font: 0.9em/1.45 var(--font-primary);
+  white-space: nowrap;
+  border: 1px solid var(--soft);
+  border-radius: 0;
+}
+
+.install-guide li:last-child {
+  border-bottom: 0;
 }
 
 .feed-tabs a {

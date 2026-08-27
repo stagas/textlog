@@ -171,7 +171,7 @@ export function Layout({
           </>
         )}
         {mobile && <link href="https://fonts.cdnfonts.com/css/dejavu-sans-mono" rel="stylesheet" />}
-        <link rel="stylesheet" href="/styles.css?v=902" />
+        <link rel="stylesheet" href="/styles.css?v=905" />
         <style>{themeCss}</style>
       </head>
       <body
@@ -200,7 +200,7 @@ export function Layout({
               </nav>
             )}
         </header>
-        {showPwaInstallBanner && requestUrl.pathname !== '/install' && (
+        {showPwaInstallBanner && !notificationBanner && requestUrl.pathname !== '/install' && (
           <aside className="notification-banner install-banner" aria-label="Install app">
             <a href="/install">install to home screen</a>
             <span aria-hidden="true">·</span>
