@@ -170,6 +170,8 @@ describe('in-memory stylesheet', () => {
     expect(css).toContain('.collapsed-preview-post>.post,\n'
       + '.feed-thread>.thread-fold-input:checked~.feed-thread-collapsed-branch .collapsed-preview-gap {\n'
       + '  display: block;\n  height: auto;\n  opacity: 1;')
+    expect(css).toContain('.collapsed-preview-deeper {\n'
+      + '  margin-left: clamp(18px, 3vw, 28px);\n  border-left: 1px solid var(--soft);')
   })
 
   test('animates grouped activity disclosures with a collapsible grid track', async () => {

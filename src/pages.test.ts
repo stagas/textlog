@@ -784,6 +784,70 @@ test('folded feed conversations preview the two newest replies from a recent bur
   expect(html).toMatch(/collapsed-preview-post[^>]*>[\s\S]*?Older deep reply/)
 })
 
+test('folded feed conversations distinguish previews from different depths', () => {
+  const root = { id: 5, user_id: 1, parent_id: null, body: 'Root', created_at: '2026-08-23 09:00:00',
+    deleted_at: null, handle: 'root', reply_count: 3 }
+  const shallow = { id: 6, user_id: 2, parent_id: 5, body: 'Shallow preview', created_at: '2026-08-23 12:00:00',
+    deleted_at: null, handle: 'shallow', reply_count: 0, parent: root }
+  const hidden = { id: 7, user_id: 3, parent_id: 5, body: 'Hidden branch', created_at: '2026-08-20 10:00:00',
+    deleted_at: null, handle: 'hidden', reply_count: 1, parent: root }
+  const hiddenChild = { id: 8, user_id: 3, parent_id: 7, body: 'Hidden child', created_at: '2026-08-20 11:00:00',
+    deleted_at: null, handle: 'hidden', reply_count: 1, parent: hidden }
+  const deep = { id: 9, user_id: 4, parent_id: 8, body: 'Deep preview', created_at: '2026-08-23 11:00:00',
+    deleted_at: null, handle: 'deep', reply_count: 0, parent: hiddenChild }
+  const html = renderToStaticMarkup(React.createElement(FeedThreads, {
+    user: null,
+    returnPath: '/hot',
+    posts: [root, shallow, hidden, hiddenChild, deep],
+  }))
+
+  expect(html).toMatch(/collapsed-preview-post collapsed-preview-deeper[^>]*>[\s\S]*?Deep preview/)
+  expect(html).toContain('<div class="reply-node collapsed-preview-path collapsed-preview-post"><article')
+})
+
+test('folded feed conversations do not double-indent a preview below another preview', () => {
+  const root = { id: 50, user_id: 1, parent_id: null, body: 'Root', created_at: '2026-08-20 09:00:00',
+    deleted_at: null, handle: 'root', reply_count: 3 }
+  const hidden = { id: 51, user_id: 2, parent_id: 50, body: 'Hidden', created_at: '2026-08-20 10:00:00',
+    deleted_at: null, handle: 'hidden', reply_count: 0, parent: root }
+  const parentPreview = { id: 52, user_id: 3, parent_id: 50, body: 'Parent preview',
+    created_at: '2026-08-23 11:00:00', deleted_at: null, handle: 'parent', reply_count: 1, parent: root }
+  const childPreview = { id: 53, user_id: 4, parent_id: 52, body: 'Child preview',
+    created_at: '2026-08-23 12:00:00', deleted_at: null, handle: 'child', reply_count: 0, parent: parentPreview }
+  const html = renderToStaticMarkup(React.createElement(FeedThreads, {
+    user: null,
+    returnPath: '/hot',
+    posts: [root, hidden, parentPreview, childPreview],
+  }))
+
+  expect(html.match(/collapsed-preview-post/g)).toHaveLength(2)
+  expect(html).not.toContain('collapsed-preview-deeper')
+})
+
+test('folded feed conversations render previews beyond the normal thread depth limit', () => {
+  const root = { id: 60, user_id: 1, parent_id: null, body: 'Root', created_at: '2026-08-20 09:00:00',
+    deleted_at: null, handle: 'root', reply_count: 1 }
+  const replies: any[] = []
+  let parent: any = root
+  for (let id = 61; id <= 67; id++) {
+    const reply = { id, user_id: id, parent_id: parent.id, body: `Reply ${id}`,
+      created_at: `2026-08-${id < 66 ? '20' : '23'} ${id === 67 ? '12' : '11'}:00:00`, deleted_at: null,
+      handle: `user${id}`, reply_count: id < 67 ? 1 : 0, parent }
+    replies.push(reply)
+    parent = reply
+  }
+  const html = renderToStaticMarkup(React.createElement(FeedThreads, {
+    user: null,
+    returnPath: '/hot',
+    posts: [root, ...replies],
+    promoteAncestors: 'all',
+  }))
+
+  expect(html).toContain('id="feed-thread-fold-60" checked=""')
+  expect(html).toMatch(/collapsed-preview-post[^>]*>[\s\S]*?Reply 67/)
+  expect(html).toMatch(/collapsed-preview-post[^>]*>[\s\S]*?Reply 66/)
+})
+
 test('new unread replies use the normal feed conversation folding rules', () => {
   const root = { id: 10, user_id: 1, parent_id: null, body: 'Root', created_at: '2026-08-23 09:00:00',
     deleted_at: null, handle: 'root', reply_count: 3 }
@@ -1050,7 +1114,7 @@ test('latest renders conversations only as trees', () => {
   expect(tree).not.toContain('>tree</a>')
 })
 
-test('hot feed conversations reconstruct the complete ancestor tree', () => {
+test('hot feed conversations reconstruct and fold the complete ancestor tree', () => {
   const root = { id: 494, user_id: 4, parent_id: null, body: 'Conversation root',
     created_at: '2026-08-08 14:20:43', deleted_at: null, handle: 'root', reply_count: 3 }
   const ancestor = { id: 496, user_id: 1, parent_id: root.id, body: 'Earlier context',
@@ -1069,7 +1133,7 @@ test('hot feed conversations reconstruct the complete ancestor tree', () => {
   expect(html.indexOf('Quoted parent')).toBeLessThan(html.indexOf('Current reply'))
   expect(html.match(/Conversation root/g)).toHaveLength(1)
   expect(html.match(/Earlier context/g)).toHaveLength(1)
-  expect(html).not.toContain('id="feed-thread-fold-494" checked=""')
+  expect(html).toContain('id="feed-thread-fold-494" checked=""')
 })
 
 test('pages inline the cookie-aware theme and logo', () => {

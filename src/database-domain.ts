@@ -2431,12 +2431,53 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
         LIMIT ? OFFSET ?`).all(...visibilityParameters, pageSize, (safePage - 1) * pageSize) as Array<{
           conversation_id: number
         }>).map(row => row.conversation_id)
-      const projectedRows = conversationIds.length ? database.query(`SELECT projection.post_id
+      const projectedRows = conversationIds.length ? database.query(`SELECT projection.post_id,
+        projection.conversation_id
         FROM hot_feed_projection projection JOIN posts p ON p.id=projection.post_id
         WHERE projection.conversation_id IN (${conversationIds.map(() => '?').join(',')}) AND ${visibility}
         ORDER BY projection.conversation_rank,projection.post_rank`)
-        .all(...conversationIds, ...visibilityParameters) as Array<{ post_id: number }> : []
-      const hotIds = projectedRows.map(row => row.post_id)
+        .all(...conversationIds, ...visibilityParameters) as Array<{ post_id: number; conversation_id: number }> : []
+      const branchRootRows = conversationIds.length ? database.query(`WITH RECURSIVE conversation_posts(
+        conversation_id,id,depth) AS (
+          SELECT id,id,0 FROM posts WHERE id IN (${conversationIds.map(() => '?').join(',')})
+          UNION ALL SELECT conversation_posts.conversation_id,child.id,conversation_posts.depth+1
+          FROM conversation_posts JOIN posts child ON child.parent_id=conversation_posts.id
+          WHERE child.deleted_at IS NULL
+        ), ranked_activity AS (
+          SELECT conversation_posts.conversation_id,p.id,p.parent_id,row_number() OVER (
+            PARTITION BY conversation_posts.conversation_id
+            ORDER BY h.score DESC,conversation_posts.depth DESC,p.id DESC) activity_rank
+          FROM conversation_posts JOIN posts p ON p.id=conversation_posts.id
+          JOIN post_hot h ON h.post_id=p.id WHERE ${excludesWhisperPosts('p.id')}
+        ) SELECT conversation_id,coalesce(parent_id,id) branch_root_id FROM ranked_activity WHERE activity_rank=1`)
+        .all(...conversationIds) as Array<{ conversation_id: number; branch_root_id: number }> : []
+      const branchRootByConversation = new Map(branchRootRows.map(row => [row.conversation_id, row.branch_root_id]))
+      const branchSeeds = conversationIds.map(conversationId => [
+        conversationId, branchRootByConversation.get(conversationId) || conversationId,
+      ] as const)
+      const previewRows = branchSeeds.length ? database.query(`WITH RECURSIVE conversation_posts(
+        conversation_id,id) AS (
+          ${branchSeeds.map(() => 'SELECT ? conversation_id,? id').join(' UNION ALL ')}
+          UNION ALL SELECT conversation_posts.conversation_id,child.id FROM conversation_posts
+          JOIN posts child ON child.parent_id=conversation_posts.id
+        ), ranked_previews AS (
+          SELECT conversation_posts.conversation_id,p.id post_id,row_number() OVER (
+            PARTITION BY conversation_posts.conversation_id ORDER BY p.created_at DESC,p.id DESC) preview_rank
+          FROM conversation_posts JOIN posts p ON p.id=conversation_posts.id
+          WHERE p.id!=conversation_posts.conversation_id AND ${visibility} AND ${excludesWhisperPosts('p.id')}
+        ) SELECT conversation_id,post_id FROM ranked_previews WHERE preview_rank<=2`)
+        .all(...branchSeeds.flat(), ...visibilityParameters) as Array<{
+          post_id: number; conversation_id: number
+        }> : []
+      const previewsByConversation = new Map<number, number[]>()
+      for (const row of previewRows) previewsByConversation.set(row.conversation_id,
+        [...(previewsByConversation.get(row.conversation_id) || []), row.post_id])
+      const includedIds = new Set<number>()
+      const hotIds = conversationIds.flatMap(conversationId => [
+        branchRootByConversation.get(conversationId) || projectedRows.find(row =>
+          row.conversation_id === conversationId)?.post_id || conversationId,
+        ...(previewsByConversation.get(conversationId) || []),
+      ].filter(id => !includedIds.has(id) && !!includedIds.add(id)))
       const hotRows = hotIds.length ? database.query(`SELECT p.*,u.handle,h.score hot_score,h.latest_activity_at,
         h.reply_count,h.activity_count FROM posts p JOIN users u ON u.id=p.user_id
         JOIN post_hot h ON h.post_id=p.id WHERE p.id IN (${hotIds.map(() => '?').join(',')})`)
@@ -2448,8 +2489,10 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
       })
       const forYouCount = viewerId >= 0 ? personalizedUnreadCount(database, viewerId, false) : 0
       const toMeCount = viewerId >= 0 ? personalizedUnreadCount(database, viewerId, true) : 0
-      return { posts: rewireVisibleAncestorGaps(database,
-        enrichPosts(database, posts, viewerId)), page: safePage, totalItems, totalPages,
+      const branchRootIds = new Set(branchRootRows.map(row => row.branch_root_id))
+      const enriched = rewireVisibleAncestorGaps(database, enrichPosts(database, posts, viewerId))
+        .map(post => branchRootIds.has(post.id) ? { ...post, feed_branch_root: true } : post)
+      return { posts: enriched, page: safePage, totalItems, totalPages,
         forYouCount, toMeCount,
         latestCount: viewerId >= 0 ? unreadLatestCount(viewerId, database) : 0,
         forYouUnread: forYouCount > 0,

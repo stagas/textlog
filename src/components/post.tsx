@@ -1011,15 +1011,29 @@ export function ThreadReplies(
   }
   const byId = new Map(replies.map(reply => [reply.id, reply]))
   const collapsedPreviewPosts = new Set(collapsedPreviewPostIds)
+  const collapsedPreviewDepths = new Map<number, number>()
   const collapsedPreviewPath = new Set<number>()
   if (collapsedPreviewPostIds.length) {
     for (const previewPostId of collapsedPreviewPostIds) {
       let current = byId.get(previewPostId)
+      let depth = 0
       while (current && current.id !== parentId) {
         collapsedPreviewPath.add(current.id)
+        depth++
         current = current.parent_id ? byId.get(current.parent_id) : undefined
       }
+      collapsedPreviewDepths.set(previewPostId, depth)
     }
+  }
+  const shallowestCollapsedPreviewDepth = Math.min(...collapsedPreviewDepths.values())
+  const needsCollapsedPreviewIndent = (postId: number) => {
+    if ((collapsedPreviewDepths.get(postId) || 0) <= shallowestCollapsedPreviewDepth) return false
+    let current = byId.get(postId)
+    while (current?.parent_id) {
+      if (collapsedPreviewPosts.has(current.parent_id)) return false
+      current = byId.get(current.parent_id)
+    }
+    return true
   }
   const collapsedPreviewGapPosts = new Set<number>()
   if (collapsedPreviewPostIds.length) {
@@ -1066,6 +1080,7 @@ export function ThreadReplies(
       <div
         className={`reply-node${collapsedPreviewPath.has(reply.id) ? ' collapsed-preview-path' : ''}${
           collapsedPreviewPosts.has(reply.id) ? ' collapsed-preview-post' : ''
+        }${needsCollapsedPreviewIndent(reply.id) ? ' collapsed-preview-deeper' : ''
         }`}
         key={reply.id}
       >
@@ -1113,6 +1128,7 @@ export function ThreadReplies(
           {branch.map(reply => {
             const descendantCount = visibleDescendantCount(reply.id)
             const truncatedByDepth = !reply.deleted_at && depth >= MAX_VISIBLE_REPLY_DEPTH && descendantCount > 0
+              && !collapsedPreviewPath.has(reply.id)
             const hasMissingDescendants = !reply.deleted_at && showMissingContinuations
               && (reply.reply_count || 0) > descendantCount
             const continuesElsewhere = truncatedByDepth || hasMissingDescendants
@@ -1141,7 +1157,7 @@ export function FeedThreads(
   const ids = new Set(posts.map(post => post.id))
   const externalChildren = new Map<number, PostView[]>()
   for (const post of posts) {
-    if (!post.parent_id || ids.has(post.parent_id)) continue
+    if (!post.parent_id || ids.has(post.parent_id) || post.feed_branch_root) continue
     externalChildren.set(post.parent_id, [...(externalChildren.get(post.parent_id) || []), post])
   }
   for (const [parentId, children] of externalChildren) {
@@ -1157,6 +1173,7 @@ export function FeedThreads(
   }
   if (promoteAncestors) {
     for (const post of posts) {
+      if (post.feed_branch_root) continue
       const immediateParent = post.parent
       if (!immediateParent) continue
       if (!ids.has(immediateParent.id)) {
@@ -1168,6 +1185,7 @@ export function FeedThreads(
       if (promoteAncestors === 'all') {
         let ancestor = immediateParent.parent
         while (ancestor) {
+          if (ids.has(ancestor.id)) break
           if (!ids.has(ancestor.id)) {
             treePosts.push({ ...ancestor, user_id: ancestor.user_id ?? -1,
               parent_id: ancestor.parent_id ?? null, reply_count: ancestor.reply_count || 0 })
@@ -1245,16 +1263,6 @@ export function FeedThreads(
     visit(root.id)
     return count
   }
-  const isLinearConversation = (root: PostView) => {
-    let linear = true
-    const visit = (parentId: number) => {
-      const replies = children.get(parentId) || []
-      if (replies.length > 1) linear = false
-      for (const reply of replies) visit(reply.id)
-    }
-    visit(root.id)
-    return linear
-  }
   const collapsedPreviewPosts = (root: PostView) => {
     const selected: PostView[] = []
     const visit = (parentId: number) => {
@@ -1281,8 +1289,7 @@ export function FeedThreads(
         const canCollapse = visibleReplies > collapsedPreview.length
         const continuesElsewhere = (post.reply_count || 0) > visibleReplies
         const foldControlId = visibleReplies > 0 ? `feed-thread-fold-${post.id}` : undefined
-        const reconstructedLinearHotThread = promoteAncestors === 'all' && isLinearConversation(post)
-        const collapsed = canCollapse && !reconstructedLinearHotThread && expandedRootId !== post.id
+        const collapsed = canCollapse && expandedRootId !== post.id
         const expandedReturnPath = (() => {
           const target = new URL(returnPath, 'http://textlog.local')
           target.searchParams.set('expand', String(post.id))

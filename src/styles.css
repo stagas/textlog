@@ -6342,6 +6342,11 @@ a.post-context:hover {
   padding-bottom: var(--space-4);
 }
 
+.feed-thread>.thread-fold-input:checked~.feed-thread-collapsed-branch .collapsed-preview-deeper {
+  margin-left: clamp(18px, 3vw, 28px);
+  border-left: 1px solid var(--soft);
+}
+
 @media (prefers-reduced-motion: reduce) {
   .thread-fold::after,
   .post-spoiler-summary::before,
