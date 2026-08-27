@@ -27,6 +27,7 @@ const feedMutations = new Set<DatabaseDomainOperation>([
   'feeds.markLatestRead',
   'feeds.markPersonalizedSnapshotPageRead',
   'feeds.markRead',
+  'feeds.personalizedPage',
   'posts.votePoll',
 ])
 
@@ -35,9 +36,14 @@ export function subscribeToFeedMutations(listener: (operation: DatabaseDomainOpe
   return () => feedMutationListeners.delete(listener)
 }
 
-function notifyFeedMutation(operation: DatabaseDomainOperation, result: unknown) {
+function notifyFeedMutation(operation: DatabaseDomainOperation, input: unknown, result: unknown) {
   if (!feedMutations.has(operation)) return
   if (operation === 'feeds.markPersonalizedSnapshotPageRead' && result === 0) return
+  if (operation === 'feeds.personalizedPage') {
+    const request = input as DatabaseDomainInput<'feeds.personalizedPage'>
+    const page = result as DatabaseDomainOutput<'feeds.personalizedPage'>
+    if (request.markRead === false || !page.timeline.some(row => row.unread)) return
+  }
   for (const listener of feedMutationListeners) listener(operation)
 }
 
@@ -45,13 +51,13 @@ export function configureDatabaseService(service: DatabaseService) {
   configuredService = {
     async call(operation, input) {
       const result = await service.call(operation, input)
-      notifyFeedMutation(operation, result)
+      notifyFeedMutation(operation, input, result)
       return result
     },
     ...(service.callBackground ? {
       async callBackground(operation, input) {
         const result = await service.callBackground!(operation, input)
-        notifyFeedMutation(operation, result)
+        notifyFeedMutation(operation, input, result)
         return result
       },
     } : {}),
