@@ -1,6 +1,6 @@
 import type { Database } from 'bun:sqlite'
 
-export const MAX_MATERIALIZED_PAGES = 128
+export const MAX_MATERIALIZED_PAGES = 1_024
 
 function appearanceVariant(request: Request) {
   const cookie = request.headers.get('cookie') || ''
@@ -33,6 +33,9 @@ export async function materializedFeedPage(database: Database, request: Request,
     html: string
   } | null
   if (cached) {
+    cache.query(`UPDATE materialized_feed_pages_v2 SET created_at=CURRENT_TIMESTAMP
+      WHERE kind=? AND viewer_id=? AND variant=? AND generation=?
+        AND created_at < datetime('now','-5 minutes')`).run(kind, viewerId, variant, generation)
     return new Response(cached.html, {
       headers: { 'content-type': 'text/html;charset=utf-8', 'cache-control': 'private, no-store' },
     })

@@ -2428,6 +2428,9 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
         WHERE kind=? AND viewer_id=? AND variant=? AND generation=?`).get(kind, viewerId, variant, generation) as {
         html: string
       } | null
+      if (cached) cacheDb.query(`UPDATE materialized_feed_pages_v2 SET created_at=CURRENT_TIMESTAMP
+        WHERE kind=? AND viewer_id=? AND variant=? AND generation=?
+          AND created_at < datetime('now','-5 minutes')`).run(kind, viewerId, variant, generation)
       return { html: cached?.html ?? null, generation } as DatabaseDomainOutput<K>
     }
     case 'cache.materializedFeedPut': {
