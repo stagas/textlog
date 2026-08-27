@@ -1,4 +1,4 @@
-import { backgroundDatabaseCall, databaseService } from './database-service'
+import { backgroundDatabaseCall, databaseService, subscribeToFeedMutations } from './database-service'
 
 type MaterializedFeedKind = 'latest' | 'hot' | 'for-you' | 'to-me' | 'about'
 
@@ -16,6 +16,15 @@ type MemoryMaterialization = MaterializedResponse & {
 const memoryMaterializations = new Map<string, MemoryMaterialization>()
 const MAX_MEMORY_MATERIALIZATIONS = 256
 const MATERIALIZED_HTML_VERSION = 23
+let memoryGeneration = 0
+
+export function invalidateMaterializedFeedMemory() {
+  memoryGeneration++
+  memoryMaterializations.clear()
+  materializations.clear()
+}
+
+subscribeToFeedMutations(invalidateMaterializedFeedMemory)
 
 function memoryCacheEnabled() {
   // Integration tests mutate their SQLite fixture directly, bypassing the runtime service and its normal cache
@@ -61,6 +70,7 @@ export async function rpcMaterializedFeedPage(request: Request, kind: Materializ
     headers.set('x-feed-cache', 'memory')
     return new Response(memory.body, { status: memory.status, headers })
   }
+  const startedAtMemoryGeneration = memoryGeneration
   let materialization = materializations.get(key)
   if (!materialization) {
     materialization = (async () => {
@@ -119,6 +129,13 @@ export async function rpcMaterializedFeedPage(request: Request, kind: Materializ
   }
   const result = await materialization
   if (!memoryCacheEnabled()) return new Response(result.body, { status: result.status, headers: result.headers })
+  if (result.headers.some(([name, value]) => name.toLowerCase() === 'x-feed-cache' && value === 'stale')) {
+    return new Response(result.body, { status: result.status, headers: result.headers })
+  }
+  // A publication may have completed while this page was rendering. Never let that older render repopulate the LRU.
+  if (startedAtMemoryGeneration !== memoryGeneration) {
+    return new Response(result.body, { status: result.status, headers: result.headers })
+  }
   const remembered = rememberMaterialization(key, result)
   return new Response(remembered.body, { status: remembered.status, headers: remembered.headers })
 }
