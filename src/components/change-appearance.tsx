@@ -1,5 +1,6 @@
 import { DENSITY_CHOICES, type DensityChoice, PAGE_SIZE_CHOICES, type PageSizeChoice } from '../request-preferences'
-import { ACCENT_CHOICES, type Appearance, FONT_CHOICES, FONT_SIZE_CHOICES, type FontChoice, type FontSizeChoice,
+import { ACCENT_CHOICES, type Appearance, CORNER_CHOICES, type CornerChoice, FONT_CHOICES, FONT_SIZE_CHOICES,
+  type FontChoice, type FontSizeChoice,
   PRIMARY_FONT_CHOICES, type PrimaryFontChoice, SANS_SERIF_FONT_CHOICES, type SansSerifFontChoice,
   THEME_CHOICES } from '../theme'
 import type { User } from '../types'
@@ -10,7 +11,8 @@ export type AppearanceTab = 'theme' | 'font' | 'misc'
 
 export function ChangeAppearance(
   { user, selected, selectedFont, selectedSansSerifFont = 'system-sans', selectedPrimaryFont = 'monospace',
-    selectedSize = 'regular', selectedPageSize = 20, selectedDensity = 'regular', selectedLinkPreviews = true,
+    selectedSize = 'regular', selectedPageSize = 20, selectedDensity = 'regular', selectedCorners = 'sharp',
+    selectedLinkPreviews = true,
     showModeratedContent = false, includePeopleFollowActivity = false, includeHashtagFollowActivity = false,
     tab = 'theme', returnPath }: {
       user: User
@@ -22,6 +24,7 @@ export function ChangeAppearance(
       tab?: AppearanceTab
       selectedPageSize?: PageSizeChoice
       selectedDensity?: DensityChoice
+      selectedCorners?: CornerChoice
       selectedLinkPreviews?: boolean
       showModeratedContent?: boolean
       returnPath?: string
@@ -182,6 +185,19 @@ export function ChangeAppearance(
               </fieldset>
               <fieldset>
                 <legend>ui</legend>
+                <div className="corners-setting">
+                  <span>corners</span>
+                  <div className="misc-options">
+                    {CORNER_CHOICES.map(corners => (
+                      <label key={corners} className="misc-option corner-option">
+                        <input type="radio" name="corners" value={corners}
+                          defaultChecked={selectedCorners === corners} />
+                        <span className={`corner-preview corner-preview-${corners}`} aria-hidden="true" />
+                        <span>{corners}</span>
+                      </label>
+                    ))}
+                  </div>
+                </div>
                 <label className="link-preview-setting">
                   <input className="form-checkbox" type="checkbox" role="switch" name="showLinkPreviews" value="yes"
                     defaultChecked={selectedLinkPreviews} />

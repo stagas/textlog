@@ -47,7 +47,8 @@ import { DENSITY_CHOICES, type DensityChoice, PAGE_SIZE_CHOICES, type PageSizeCh
   resolvedPageSize } from '../request-preferences'
 import { normalizeSearchQuery } from '../search'
 import { sessionHash } from '../sessions'
-import { ACCENT_CHOICES, type AccentChoice, appearance, appearanceCookie, FONT_CHOICES, FONT_SIZE_CHOICES,
+import { ACCENT_CHOICES, type AccentChoice, appearance, appearanceCookie, CORNER_CHOICES, type CornerChoice,
+  cornerChoice, cornerCookie, FONT_CHOICES, FONT_SIZE_CHOICES,
   type FontChoice, fontChoice, fontCookie, type FontSizeChoice, fontSizeChoice, fontSizeCookie, PRIMARY_FONT_CHOICES,
   type PrimaryFontChoice, primaryFontChoice, primaryFontCookie, SANS_SERIF_FONT_CHOICES, type SansSerifFontChoice,
   sansSerifFontChoice, sansSerifFontCookie, THEME_CHOICES, type ThemeChoice } from '../theme'
@@ -427,6 +428,7 @@ export function registerAccountRoutes(app: Hono) {
         selectedSansSerifFont={sansSerifFontChoice(c.req.raw)} selectedPrimaryFont={primaryFontChoice(c.req.raw)}
         selectedSize={fontSizeChoice(c.req.raw)} selectedPageSize={resolvedPageSize(c.req.raw)} tab={tab}
         selectedDensity={resolvedDensity(c.req.raw)} selectedLinkPreviews={user.show_link_previews !== 0}
+        selectedCorners={cornerChoice(c.req.raw)}
         showModeratedContent={user.show_moderated_content === 1}
         includePeopleFollowActivity={user.hide_people_follow_activity !== 1}
         includeHashtagFollowActivity={user.hide_hashtag_follow_activity !== 1} returnPath={returnPath} />,
@@ -443,7 +445,9 @@ export function registerAccountRoutes(app: Hono) {
     if (tab === 'misc') {
       const selectedPageSize = Number(f.pageSize) as PageSizeChoice
       const selectedDensity = f.density as DensityChoice
-      if (!PAGE_SIZE_CHOICES.includes(selectedPageSize) || !DENSITY_CHOICES.includes(selectedDensity)) {
+      const selectedCorners = (f.corners || cornerChoice(c.req.raw)) as CornerChoice
+      if (!PAGE_SIZE_CHOICES.includes(selectedPageSize) || !DENSITY_CHOICES.includes(selectedDensity)
+        || !CORNER_CHOICES.includes(selectedCorners)) {
         return page(
           <ChangeAppearance user={user} selected={appearance(c.req.raw)} selectedFont={fontChoice(c.req.raw)}
             selectedSize={fontSizeChoice(c.req.raw)} selectedPageSize={resolvedPageSize(c.req.raw)}
@@ -463,7 +467,9 @@ export function registerAccountRoutes(app: Hono) {
         hideHashtagFollowActivity: f.includeHashtagFollowActivity !== 'yes',
       })
       await markAppearanceBannerHandled(c.req.raw, user.id)
-      return redirect('/account/edit/appearance' + query, notificationDeviceCookie(deviceId))
+      const response = redirect('/account/edit/appearance' + query, notificationDeviceCookie(deviceId))
+      response.headers.append('set-cookie', cornerCookie(selectedCorners))
+      return response
     }
     if (tab === 'font') {
       const selected = f.font as FontChoice

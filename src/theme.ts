@@ -44,6 +44,7 @@ export const SANS_SERIF_FONT_CHOICES = [
   { value: 'liberation-sans', label: 'Liberation Sans', family: '"Liberation Sans", sans-serif' },
 ] as const
 export const PRIMARY_FONT_CHOICES = ['monospace', 'sans-serif'] as const
+export const CORNER_CHOICES = ['sharp', 'round'] as const
 export const FONT_SIZE_CHOICES = [
   { value: 'small', label: 'small', size: '14px' },
   { value: 'regular', label: 'regular', size: '16px' },
@@ -58,6 +59,7 @@ export type FontChoice = typeof FONT_CHOICES[number]['value']
 export type SansSerifFontChoice = typeof SANS_SERIF_FONT_CHOICES[number]['value']
 export type PrimaryFontChoice = typeof PRIMARY_FONT_CHOICES[number]
 export type FontSizeChoice = typeof FONT_SIZE_CHOICES[number]['value']
+export type CornerChoice = typeof CORNER_CHOICES[number]
 export const EMBED_FONT_CHOICES = {
   system: 'system',
   sf: 'sf-mono',
@@ -224,6 +226,15 @@ export function fontSizeCookie(value: FontSizeChoice, appUrl: string | undefined
   }
   catch {}
   return `font-size=${value}; Max-Age=${365 * 24 * 60 * 60}; HttpOnly; Path=/; SameSite=Lax${secure}`
+}
+
+export function cornerChoice(request: Request): CornerChoice {
+  const value = request.headers.get('cookie')?.match(/(?:^|;\s*)corners=([^;]+)/)?.[1] || ''
+  return CORNER_CHOICES.includes(value as CornerChoice) ? value as CornerChoice : 'sharp'
+}
+
+export function cornerCookie(value: CornerChoice, appUrl: string | undefined = Bun.env.APP_URL) {
+  return preferenceCookie('corners', value, appUrl)
 }
 
 function rules(name: keyof typeof palettes, accentChoice: AccentChoice) {

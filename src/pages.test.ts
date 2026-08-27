@@ -1105,6 +1105,7 @@ test('appearance misc tab offers supported page sizes as radio cards', () => {
     selectedFont: 'system',
     selectedPageSize: 40,
     selectedDensity: 'relaxed',
+    selectedCorners: 'round',
     tab: 'misc',
   }))
   expect(html).toContain('aria-current="page">misc</a>')
@@ -1113,6 +1114,8 @@ test('appearance misc tab offers supported page sizes as radio cards', () => {
   expect(html).toContain('name="pageSize" value="80"')
   expect(html).toContain('name="pageSize" value="100"')
   expect(html).toContain('name="density" value="compact"')
+  expect(html).toContain('name="corners" value="sharp"')
+  expect(html).toContain('name="corners" checked="" value="round"')
   expect(html).toContain('name="density" value="regular"')
   expect(html).toContain('name="density" checked="" value="relaxed"')
   expect(html).toContain('class="density-preview density-preview-compact"')

@@ -5,6 +5,7 @@ import {
   activeThemeBackgrounds,
   activeThemeLogoSvg,
   activeThemeStyles,
+  cornerChoice,
 } from '../theme'
 
 import React from 'react'
@@ -48,6 +49,7 @@ export function Layout({
   const request = activeRequest()
   const density = resolvedDensity(request)
   const mobile = isMobileRequest(request)
+  const corners = cornerChoice(request)
   const appearanceVersion = `${selectedAppearance.theme}.${selectedAppearance.accent}`
   const themeCss = activeThemeStyles()
   const themeBackgrounds = activeThemeBackgrounds()
@@ -166,11 +168,11 @@ export function Layout({
           </>
         )}
         {mobile && <link href="https://fonts.cdnfonts.com/css/dejavu-sans-mono" rel="stylesheet" />}
-        <link rel="stylesheet" href="/styles.css?v=882" />
+        <link rel="stylesheet" href="/styles.css?v=901" />
         <style>{themeCss}</style>
       </head>
       <body
-        className={`density-${density}${mobile ? ' mobile-agent' : ''}${
+        className={`density-${density}${corners === 'round' ? ' corners-round' : ''}${mobile ? ' mobile-agent' : ''}${
           user?.show_link_previews === 0 ? ' link-previews-disabled' : ''
         }${mobileWriteAction ? ' has-mobile-write-action' : ''}`}
       >

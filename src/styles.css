@@ -148,11 +148,97 @@ html.scroll-instant {
 }
 
 body {
+  --corner-radius: 0;
+  --corner-radius-small: 0;
   margin: 0;
   background: var(--bg);
   min-height: 100vh;
   display: flex;
   flex-direction: column;
+}
+
+body.corners-round {
+  --corner-radius: 8px;
+  --corner-radius-small: 4px;
+}
+
+/* Round every painted UI surface by default. Explicit circles declared below remain circular. */
+body.corners-round * {
+  border-radius: var(--corner-radius);
+}
+
+body.corners-round :is(a, .quiet, .reference-menu, .danger, .content-warning-action,
+  .activity-side-link, .posting-help-summary-link, .preview-post-meta > *,
+  .reply-preview .postdate, .reply-preview .preview-reply, .activity-follow-stats) {
+  border-radius: 0;
+}
+
+body.corners-round :is(button, .button) {
+  border-radius: var(--corner-radius);
+}
+
+body.corners-round .account-menu-popover :is(a, button) {
+  border-radius: var(--corner-radius-small);
+}
+
+body.corners-round .pagination :is(a, span, input) {
+  border-radius: var(--corner-radius);
+}
+
+body.corners-round .notification-toggle {
+  border-radius: 0;
+}
+
+body.corners-round :where(
+  header, .notification-banner, .feed-tabs, .feed-read-action, .site-footer, .api-docs-section,
+  .post-page-actions, .recap-highlights li, .recap-closing, .legal-page h2, .feed-relationship,
+  .pagination, .guest-join-row, .post, .activity-follow, .security-section, .api-key-lifetime,
+  .posting-help-section, .posting-help-tabs, .posting-help-tab-panel > div, .compose-post-preview,
+  .compose-post-preview h2, .profile-presence-section, .profile-presence-tabs, .connections-empty,
+  .bio-form > .composefoot, .account-choice, .account-create-persona, .notification-toggle,
+  .appearance-tabs, .explore-tag-chips, .activity-header, .admin-section, .admin-report,
+  .admin-actions-log article, .admin-user-list article, .admin-ip-list article, .section-empty,
+  .tags, .people article, .feed-thread, .reference-popover-bio
+) {
+  border-radius: 0;
+}
+
+body.corners-round :is(.posttop, .parent-quote-top, .postfoot) > :is(a, .reference-menu),
+body.corners-round :is(.post-body, .activity-follow-main, .feed-relationship-main) > .reference-menu,
+body.corners-round :is(.post-body .post-quote, .post .code-fence, .reply-branch,
+  .thread-root.profile-pinned-surround) {
+  border-radius: 0;
+}
+
+body.corners-round :is(.post, .reply-preview, .internal-post-card,
+  .internal-post-popover, .post-delete-panel blockquote, .compose-post-preview) {
+  border-radius: 0;
+}
+
+body.corners-round .parent-quote {
+  border-radius: var(--corner-radius);
+}
+
+body.corners-round :is(.feed-tabs, .appearance-tabs, .posting-help-tabs, .profile-presence-tabs,
+  .reference-profile-tabs),
+body.corners-round :is(.feed-tabs, .appearance-tabs, .posting-help-tabs, .profile-presence-tabs,
+  .reference-profile-tabs) > * {
+  border-radius: 0;
+}
+
+body.corners-round .explore-tag-card {
+  border-radius: var(--corner-radius);
+  overflow: hidden;
+}
+
+body.corners-round .explore-tag-card > form,
+body.corners-round .explore-tag-card > form > .explore-tag-chip,
+body.corners-round .explore-tag-card > .explore-tag-chip {
+  border-radius: var(--corner-radius) 0 0 var(--corner-radius) !important;
+}
+
+body.corners-round .explore-tag-card > .explore-tag-link {
+  border-radius: 0 var(--corner-radius) var(--corner-radius) 0;
 }
 
 body.density-compact {
@@ -952,6 +1038,11 @@ nav form {
   text-decoration: none;
   line-height: 1.4;
   text-align: center;
+}
+
+body.corners-round button,
+body.corners-round a.button {
+  border-radius: var(--corner-radius) !important;
 }
 
 .feed-tabs-action-separator { color: var(--muted); }
@@ -1759,7 +1850,7 @@ nav form {
   color: var(--button-ink);
   background: var(--button-bg);
   border: 0;
-  border-radius: 0;
+  border-radius: var(--corner-radius);
   font: inherit;
   text-align: center;
   appearance: textfield;
@@ -2602,7 +2693,7 @@ nav form {
   line-height: 1.5;
   background: var(--bg);
   border: 1px solid var(--soft);
-  border-radius: 0;
+  border-radius: var(--corner-radius);
   outline: none;
 }
 
@@ -2720,7 +2811,7 @@ textarea {
   font: inherit;
   background: var(--panel);
   border: 1px solid var(--soft);
-  border-radius: 0;
+  border-radius: var(--corner-radius);
   outline: none;
 }
 
@@ -2731,7 +2822,7 @@ textarea {
   font: inherit;
   background: var(--panel);
   border: 1px solid var(--soft);
-  border-radius: 0;
+  border-radius: var(--corner-radius);
   outline: none;
 }
 
@@ -2761,7 +2852,7 @@ textarea {
   width: 14px;
   height: 14px;
   border: 1px solid var(--soft);
-  border-radius: 2px;
+  border-radius: var(--corner-radius-small);
   background-color: var(--panel);
   accent-color: var(--accent);
   cursor: pointer;
@@ -3120,7 +3211,7 @@ textarea.form-control {
   resize: none;
   background: var(--quote-bg);
   border: var(--hairline) solid var(--link-border);
-  border-radius: 0;
+  border-radius: var(--corner-radius);
   outline: none;
 }
 
@@ -3436,7 +3527,7 @@ form.report-panel {
 .posting-help-emoji-panel span {
   cursor: text;
   user-select: all;
-  border-radius: 2px;
+  border-radius: var(--corner-radius-small);
 }
 
 .posting-help-emoji-panel span:hover {
@@ -4765,6 +4856,11 @@ form.report-panel {
 .misc-option:has(input:checked)>span:last-child { color: var(--ink); }
 .misc-option:has(input:focus-visible) { outline: 2px solid var(--accent); outline-offset: 3px; }
 .density-option { min-width: 82px; padding: 0; gap: var(--space-2); font-size: 0.5625rem; border: 0; }
+.corners-setting { display: grid; gap: var(--space-3); margin-bottom: var(--space-5); color: var(--muted); font-size: 0.75rem; }
+.corner-option { min-width: 100px; }
+.corner-preview { display: block; width: 42px; height: 25px; margin: 0 auto; border: 2px solid var(--accent); }
+.corner-preview-sharp { border-radius: 0 !important; }
+.corner-preview-round { border-radius: 8px !important; }
 .density-option:has(input:checked) { border-color: transparent; box-shadow: none; }
 .density-option:has(input:focus-visible) { outline: 0; }
 .density-option > .density-preview {
