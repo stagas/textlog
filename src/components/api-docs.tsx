@@ -77,13 +77,21 @@ const endpoints: ReadonlyArray<readonly [string, string, ReactNode, boolean?]> =
   ['DELETE', '/users/:handle/block', 'Unblock a user.', true],
   ['GET', '/users/:handle/blocks', 'List accounts you have blocked. The handle must be your own.', true],
   ['GET', '/feeds/latest', 'Get the latest public posts and replies.'],
+  ['GET', '/feeds/latest/conversations', 'Get the latest feed grouped and classified like the web app.'],
   ['POST', '/feeds/latest/read', 'Mark selected latest-feed posts as read using post_ids.', true],
   ['POST', '/feeds/latest/read-all', 'Mark every visible latest-feed post as read.', true],
   ['GET', '/feeds/hot', 'Get posts ranked by recent activity and replies.'],
+  ['GET', '/feeds/hot/conversations', 'Get the hot feed grouped and classified like the web app.'],
   ['GET', '/activities/for-you', 'Get activity from followed people and tags, plus activity directed to you.', true],
+  ['GET', '/activities/for-you/conversations', <>
+    Get For You activity in web timeline order, with post activity grouped into conversations.
+  </>, true],
   ['POST', '/activities/for-you/read', 'Mark selected activities as read using their activity_ids.', true],
   ['POST', '/activities/for-you/read-all', 'Mark every for-you activity as read.', true],
   ['GET', '/activities/to-me', 'Get replies, mentions, and follows directed to you.', true],
+  ['GET', '/activities/to-me/conversations', <>
+    Get To Me activity in web timeline order, with post activity grouped into conversations.
+  </>, true],
   ['POST', '/activities/to-me/read', 'Mark selected activities as read using their activity_ids.', true],
   ['POST', '/activities/to-me/read-all', 'Mark every to-me activity as read.', true],
   ['GET', '/tags/:tag', 'Get hashtag details and post and follower counts.'],
@@ -152,6 +160,49 @@ export function ApiDocs({ user }: { user: User | null }) {
               </span>
             </code>{' '}
             authentication bearer token required
+          </p>
+        </ApiSection>
+
+        <ApiSection title="Web-compatible threaded feeds" id="threaded-feeds">
+          <p>
+            Use the <code>/conversations</code> variants when a client should render the same feed structure as the web
+            app. The original endpoints remain flat, post- or activity-paginated collections for existing clients.
+            Threaded feeds paginate conversations using the web page sizes <code>20</code>, <code>40</code>,{' '}
+            <code>80</code>, or <code>100</code>.
+          </p>
+          <CodeBlock language="bash">{`curl '${origin}/api/v1/feeds/latest/conversations?limit=20'
+curl '${origin}/api/v1/feeds/hot/conversations?limit=20'
+
+curl '${origin}/api/v1/activities/for-you/conversations?limit=20' \\
+  -H "authorization: Bearer $TOKEN"
+curl '${origin}/api/v1/activities/to-me/conversations?limit=20' \\
+  -H "authorization: Bearer $TOKEN"`}</CodeBlock>
+          <p>
+            Public threaded feeds return conversation objects containing the exact posts selected for that web feed
+            page. Posts include <code>parent_id</code>, absolute <code>depth</code>, <code>classification</code>{' '}
+            (<code>root</code> or <code>reply</code>), <code>feed_ancestor_gap</code>, <code>unread</code>, and{' '}
+            <code>directed_to_viewer</code>. Follow each post’s parent relationship to build the visible reply tree.
+          </p>
+          <CodeBlock language="json">{`{
+  "data": [{
+    "id": 123,
+    "posts": [
+      { "id": 123, "parent_id": null, "depth": 0, "classification": "root" },
+      { "id": 140, "parent_id": 123, "depth": 1, "classification": "reply" }
+    ]
+  }],
+  "pagination": { "next_cursor": "opaque", "previous_cursor": null }
+}`}</CodeBlock>
+          <p>
+            Personalized conversation feeds require a bearer token. Their ordered <code>data</code> array mixes{' '}
+            <code>conversation</code> items with standalone typed <code>activity</code> items for user follows, hashtag
+            follows, and signups. Conversation posts retain <code>activity_id</code> and <code>activity_type</code>{' '}
+            (<code>post</code>, <code>reply</code>, or <code>mention</code>), so the existing activity read endpoints can
+            mark them read.
+          </p>
+          <p>
+            Pass <code>pagination.next_cursor</code> or <code>pagination.previous_cursor</code> back as{' '}
+            <code>cursor</code>. Reading these endpoints does not mark items read.
           </p>
         </ApiSection>
 

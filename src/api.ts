@@ -203,6 +203,24 @@ function serializePostsWithParents(database: Database, rows: ApiPostRow[], origi
   )
 }
 
+export function apiPostsByIds(database: Database, origin: string, ids: number[], viewerId = -1) {
+  if (!ids.length) return []
+  const placeholders = ids.map(() => '?').join(',')
+  const visibility = viewerId < 0 ? '' : `AND NOT EXISTS (SELECT 1 FROM blocks b WHERE
+    (b.blocker_id=? AND b.blocked_id=p.user_id) OR (b.blocker_id=p.user_id AND b.blocked_id=?))
+    AND NOT EXISTS (SELECT 1 FROM post_hashtags ph JOIN blocked_hashtags bh ON bh.tag=ph.tag
+      WHERE ph.post_id=p.id AND bh.user_id=?)`
+  const rows = database.query(`${postSelect} WHERE p.id IN (${placeholders})
+    AND p.deleted_at IS NULL AND u.deleted_at IS NULL ${visibility}`)
+    .all(...ids, ...(viewerId < 0 ? [] : [viewerId, viewerId, viewerId])) as ApiPostRow[]
+  const serialized = serializePostsWithParents(database, enrichApiRows(database, rows), origin, viewerId)
+  const byId = new Map(serialized.map(post => [post.id, post]))
+  return ids.flatMap(id => {
+    const post = byId.get(id)
+    return post ? [post] : []
+  })
+}
+
 export function apiPost(database: Database, id: number, origin: string, viewerId = -1) {
   const visibility = viewerId < 0 ? '' : `AND NOT EXISTS (SELECT 1 FROM blocks b WHERE
     (b.blocker_id=? AND b.blocked_id=p.user_id) OR (b.blocker_id=p.user_id AND b.blocked_id=?))

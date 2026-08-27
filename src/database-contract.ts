@@ -272,6 +272,10 @@ export type DatabaseDomainOperations = {
     | { kind: 'post'; origin: string; id: number; viewerId?: number }
     | { kind: 'replies'; origin: string; id: number; limit: number; before: number | null; depth: number;
       viewerId?: number }; output: { status: 'ready'; value: unknown } | { status: 'not_found' } }
+  'api.threadedFeed': { input: { kind: 'latest' | 'hot'; origin: string; viewerId: number; page: number;
+    pageSize: PageSizeChoice }; output: unknown }
+  'api.threadedActivityFeed': { input: { user: User; origin: string; toMe: boolean; page: number;
+    pageSize: PageSizeChoice }; output: unknown }
   'api.activities': {
     input: { user: User; origin: string; limit: number; cursor: { createdAt: string; key: string } | null;
       toMe: boolean }

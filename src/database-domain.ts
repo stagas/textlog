@@ -4,7 +4,8 @@ import { statSync } from 'node:fs'
 import { accountChoices, accountForEmail, accountGroupForUser, createAccountGroup, isPrimaryAccount,
   markGroupEmailVerified, MONTHLY_NEW_ACCOUNT_LIMIT, recentAccountCreations, selectAccount } from './account-groups'
 import { anonymizeUser, isAdminEmail, recordAdminAction, resolvePostReports, softDeletePost } from './admin'
-import { API_DEFAULT_LIMIT, apiHotPosts, apiPost, apiPosts, apiReplies, apiSearchPosts, encodeCursor } from './api'
+import { API_DEFAULT_LIMIT, apiHotPosts, apiPost, apiPosts, apiPostsByIds, apiReplies, apiSearchPosts,
+  encodeCursor } from './api'
 import { apiActivities } from './api-activity'
 import { issueApiKey } from './api-keys'
 import { consumeAuthAttempt, consumeBucketedAttempt, rateLimitKey } from './auth-rate-limit'
@@ -1284,6 +1285,106 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
         depth: request.depth,
         viewerId: request.viewerId,
       }) } as DatabaseDomainOutput<K>
+    }
+    case 'api.threadedFeed': {
+      const request = input as DatabaseDomainInput<'api.threadedFeed'>
+      const feed = request.kind === 'latest'
+        ? await executeDatabaseDomain(database, 'feeds.latestPage', { viewerId: request.viewerId,
+          page: request.page, pageSize: request.pageSize, markRead: false })
+        : await executeDatabaseDomain(database, 'feeds.hotPage', { viewerId: request.viewerId,
+          page: request.page, pageSize: request.pageSize })
+      const selected = new Map(feed.posts.map(post => [post.id, post]))
+      const posts = apiPostsByIds(database, request.origin, feed.posts.map(post => post.id), request.viewerId)
+      const postIds = posts.map(post => post.id)
+      const depths = postIds.length ? new Map((database.query(`WITH RECURSIVE ancestors(root_id,id,parent_id,depth) AS (
+        SELECT id,id,parent_id,0 FROM posts WHERE id IN (${postIds.map(() => '?').join(',')})
+        UNION ALL
+        SELECT ancestors.root_id,parent.id,parent.parent_id,ancestors.depth+1
+          FROM ancestors JOIN posts parent ON parent.id=ancestors.parent_id
+      ) SELECT root_id,max(depth) depth FROM ancestors GROUP BY root_id`).all(...postIds) as Array<{
+        root_id: number; depth: number
+      }>).map(row => [row.root_id, row.depth])) : new Map<number, number>()
+      const unread = new Set(feed.unreadPostIds || [])
+      const directed = new Set(feed.directedUnreadPostIds || [])
+      const conversations = new Map<number, Array<(typeof posts)[number] & {
+        classification: 'root' | 'reply'; depth: number; feed_ancestor_gap: boolean; unread: boolean;
+        directed_to_viewer: boolean
+      }>>()
+      for (const post of posts) {
+        const conversationId = post.top_id || post.id
+        const entries = conversations.get(conversationId) || []
+        entries.push({ ...post, classification: post.parent_id === null ? 'root' : 'reply', depth: depths.get(post.id) || 0,
+          feed_ancestor_gap: !!selected.get(post.id)?.feed_ancestor_gap, unread: unread.has(post.id),
+          directed_to_viewer: directed.has(post.id) })
+        conversations.set(conversationId, entries)
+      }
+      return {
+        data: [...conversations].map(([id, conversationPosts]) => ({ id, posts: conversationPosts })),
+        pagination: {
+          next_cursor: feed.page < feed.totalPages ? encodeCursor(feed.page + 1) : null,
+          previous_cursor: feed.page > 1 ? encodeCursor(feed.page - 1) : null,
+        },
+      } as DatabaseDomainOutput<K>
+    }
+    case 'api.threadedActivityFeed': {
+      const request = input as DatabaseDomainInput<'api.threadedActivityFeed'>
+      const feed = await executeDatabaseDomain(database, 'feeds.personalizedPage', {
+        user: request.user, page: request.page, pageSize: request.pageSize, toMe: request.toMe,
+        path: request.toMe ? '/to-me' : '/for-you', markRead: false,
+      })
+      const postRows = feed.timeline.filter(row => ['post', 'reply', 'mention'].includes(row.activity_kind))
+      const serialized = apiPostsByIds(database, request.origin, postRows.map(row => row.id), request.user.id)
+      const postById = new Map(serialized.map(post => [post.id, post]))
+      const rowById = new Map(postRows.map(row => [row.id, row]))
+      const postIds = serialized.map(post => post.id)
+      const depths = postIds.length ? new Map((database.query(`WITH RECURSIVE ancestors(root_id,id,parent_id,depth) AS (
+        SELECT id,id,parent_id,0 FROM posts WHERE id IN (${postIds.map(() => '?').join(',')})
+        UNION ALL SELECT ancestors.root_id,parent.id,parent.parent_id,ancestors.depth+1
+          FROM ancestors JOIN posts parent ON parent.id=ancestors.parent_id
+      ) SELECT root_id,max(depth) depth FROM ancestors GROUP BY root_id`).all(...postIds) as Array<{
+        root_id: number; depth: number
+      }>).map(row => [row.root_id, row.depth])) : new Map<number, number>()
+      const conversations = new Map<number, { position: number; posts: unknown[] }>()
+      const items: Array<{ position: number; value: unknown }> = []
+      const reference = (handle: string) => {
+        const normalized = handle.toLowerCase()
+        return { handle: normalized, url: `${request.origin}/u/${encodeURIComponent(normalized)}`,
+          api_url: `${request.origin}/api/v1/users/${encodeURIComponent(normalized)}` }
+      }
+      for (const [position, row] of feed.timeline.entries()) {
+        if (['post', 'reply', 'mention'].includes(row.activity_kind)) {
+          const post = postById.get(row.id)
+          if (!post) continue
+          const conversationId = post.top_id || post.id
+          const conversation = conversations.get(conversationId) || { position, posts: [] }
+          conversation.position = Math.min(conversation.position, position)
+          conversation.posts.push({ ...post, activity_id: row.event_key, activity_type: row.activity_kind,
+            classification: post.parent_id === null ? 'root' : 'reply', depth: depths.get(post.id) || 0,
+            feed_ancestor_gap: !!rowById.get(post.id)?.renderedPost?.feed_ancestor_gap, unread: !!row.unread,
+            directed_to_viewer: !!row.targeted_to_viewer })
+          conversations.set(conversationId, conversation)
+          continue
+        }
+        const target = row.target_handle
+          ? reference(row.target_handle)
+          : row.target_tag
+          ? { tag: row.target_tag, url: `${request.origin}/tag/${encodeURIComponent(row.target_tag)}`,
+            api_url: `${request.origin}/api/v1/tags/${encodeURIComponent(row.target_tag)}/posts` }
+          : undefined
+        items.push({ position, value: { type: 'activity', activity: {
+          id: row.event_key, type: row.activity_kind, created_at: new Date(`${row.created_at.replace(' ', 'T')}Z`)
+            .toISOString(), unread: !!row.unread, directed_to_viewer: !!row.targeted_to_viewer,
+          payload: { actor: reference(row.actor_handle), ...(target ? { target } : {}) },
+        } } })
+      }
+      for (const [id, conversation] of conversations) {
+        items.push({ position: conversation.position,
+          value: { type: 'conversation', conversation: { id, posts: conversation.posts } } })
+      }
+      items.sort((a, b) => a.position - b.position)
+      return { data: items.map(item => item.value), has_unread: request.toMe ? feed.toMeUnread : feed.forYouUnread,
+        pagination: { next_cursor: feed.page < feed.totalPages ? encodeCursor(feed.page + 1) : null,
+          previous_cursor: feed.page > 1 ? encodeCursor(feed.page - 1) : null } } as DatabaseDomainOutput<K>
     }
     case 'api.activities': {
       const request = input as DatabaseDomainInput<'api.activities'>

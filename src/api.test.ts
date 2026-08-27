@@ -5,6 +5,7 @@ import { publishPost } from './api-broker'
 import { executeDatabaseDomain } from './database-domain'
 import type { DatabaseService } from './database-service'
 import { rebuildHotPosts } from './hot'
+import { runMigrations } from './migrations'
 import { registerApiRoutes } from './routes/api'
 import { sessionHash } from './sessions'
 import { apiUser } from './utils'
@@ -135,6 +136,45 @@ describe('public API', () => {
     expect((await request(app, '/hot.json?cursor=broken')).status).toBe(400)
   })
 
+  test('serves conversation feeds using the same selections as the web app', async () => {
+    const database = new Database(':memory:', { strict: true })
+    runMigrations(database)
+    database.run(`INSERT INTO users(id,handle,email,password) VALUES
+      (1,'alice','alice@example.test','x'),(2,'bob','bob@example.test','x');
+      INSERT INTO posts(id,user_id,body,created_at) VALUES
+      (10,1,'first','2026-08-03 09:00:00'),(20,2,'second','2026-08-03 09:30:00');
+      INSERT INTO posts(id,user_id,parent_id,body,created_at) VALUES
+      (11,2,10,'reply','2026-08-03 10:00:00'),
+      (21,1,20,'reply','2026-08-03 10:10:00'),(22,2,20,'another reply','2026-08-03 10:20:00');`)
+    rebuildHotPosts(database)
+    await executeDatabaseDomain(database, 'feeds.refreshHotProjection', { force: true,
+      now: '2026-08-03T18:00:00.000Z' })
+    const app = new Hono()
+    const service: DatabaseService = { call: (operation, input) => executeDatabaseDomain(database, operation, input) }
+    registerApiRoutes(app, null, undefined, service, request => apiUser(request, database))
+
+    for (const kind of ['latest', 'hot'] as const) {
+      const web = await executeDatabaseDomain(database, kind === 'latest' ? 'feeds.latestPage' : 'feeds.hotPage',
+        kind === 'latest'
+          ? { viewerId: -1, page: 1, pageSize: 20, markRead: false }
+          : { viewerId: -1, page: 1, pageSize: 20 })
+      const response = await request(app, `/api/v1/feeds/${kind}/conversations?limit=20`)
+      const payload = await response.json() as any
+      const apiPosts = payload.data.flatMap((conversation: any) => conversation.posts)
+
+      expect(response.status).toBe(200)
+      expect(apiPosts.map((post: any) => post.id)).toEqual(web.posts.map(post => post.id))
+      expect(apiPosts.every((post: any) => ['root', 'reply'].includes(post.classification))).toBeTrue()
+      expect(apiPosts.every((post: any) => Number.isInteger(post.depth) && typeof post.unread === 'boolean'
+        && typeof post.directed_to_viewer === 'boolean')).toBeTrue()
+      expect(apiPosts.find((post: any) => post.id === 11)).toMatchObject({ classification: 'reply', depth: 1 })
+      expect(payload.pagination).toEqual({ next_cursor: null, previous_cursor: null })
+    }
+
+    expect((await request(app, '/api/v1/feeds/latest/conversations?limit=21')).status).toBe(400)
+    expect((await request(app, '/api/v1/feeds/hot/conversations?cursor=broken')).status).toBe(400)
+  })
+
   test('uses stable cursor pagination and validates pagination input', async () => {
     const { app } = fixture()
     const first = await (await request(app, '/api/v1/feeds/latest?limit=2')).json() as any
@@ -192,6 +232,8 @@ describe('public API', () => {
         (1,'textlog','2026-08-03 08:00:00'),(2,'textlog','2026-08-03 18:00:00'),
         (2,'historical','1970-01-01 00:00:00');`)
     const headers = { authorization: `Bearer ${token}` }
+    expect((await request(app, '/api/v1/activities/for-you/conversations')).status).toBe(401)
+    expect((await request(app, '/api/v1/activities/to-me/conversations')).status).toBe(401)
 
     expect((await request(app, '/api/v1/activities/for-you')).status).toBe(401)
     expect((await request(app, '/api/v1/activities/to-me')).status).toBe(401)
@@ -264,6 +306,47 @@ describe('public API', () => {
     expect(afterToMeReadAll.data.every((activity: any) => !activity.unread)).toBe(true)
     expect(afterToMeReadAll.has_unread).toBe(false)
     expect((await request(app, '/api/v1/activities/for-you/read', { method: 'POST', headers })).status).toBe(400)
+  })
+
+  test('groups personalized activity using the same timeline pages as the web app', async () => {
+    const database = new Database(':memory:', { strict: true })
+    runMigrations(database)
+    database.run(`INSERT INTO users(id,handle,email,password) VALUES
+      (1,'reader','reader@example.test','x'),(2,'alice','alice@example.test','x');
+      INSERT INTO follows(follower_id,following_id,created_at) VALUES(1,2,'2026-08-03 09:00:00');
+      INSERT INTO posts(id,user_id,body,created_at) VALUES(10,1,'reader root','2026-08-03 09:30:00'),
+        (20,2,'followed post','2026-08-03 10:00:00');
+      INSERT INTO posts(id,user_id,parent_id,body,created_at) VALUES
+        (21,2,10,'reply to reader','2026-08-03 10:30:00');`)
+    const user = database.query('SELECT * FROM users WHERE id=1').get() as any
+    const token = 'threaded-activity-token'
+    const now = Date.now()
+    database.query(`INSERT INTO sessions(token_hash,user_id,expires_at,created_at,user_agent,last_used_at)
+      VALUES(?,?,?,?,?,?)`).run(sessionHash(token), 1, now + 60_000, now, 'test', now)
+    const app = new Hono()
+    const service: DatabaseService = { call: (operation, input) => executeDatabaseDomain(database, operation, input) }
+    registerApiRoutes(app, null, undefined, service, incoming => apiUser(incoming, database))
+
+    for (const toMe of [false, true]) {
+      const web = await executeDatabaseDomain(database, 'feeds.personalizedPage', {
+        user, page: 1, pageSize: 20, toMe, path: toMe ? '/to-me' : '/for-you', markRead: false,
+      })
+      const api = await executeDatabaseDomain(database, 'api.threadedActivityFeed', {
+        user, origin: 'https://textlog.cc', toMe, page: 1, pageSize: 20,
+      }) as any
+      const response = await request(app, `/api/v1/activities/${toMe ? 'to-me' : 'for-you'}/conversations?limit=20`,
+        { headers: { authorization: `Bearer ${token}` } })
+      const httpApi = await response.json() as any
+      const eventIds = api.data.flatMap((item: any) => item.type === 'conversation'
+        ? item.conversation.posts.map((post: any) => post.activity_id)
+        : [item.activity.id])
+
+      expect(new Set(eventIds)).toEqual(new Set(web.timeline.map(row => row.event_key)))
+      expect(response.status).toBe(200)
+      expect(httpApi.data).toEqual(api.data)
+      expect(api.data.every((item: any) => ['conversation', 'activity'].includes(item.type))).toBeTrue()
+      expect(api.pagination).toEqual({ next_cursor: null, previous_cursor: null })
+    }
   })
 
   test('returns hot posts using the existing activity ranking with cursor pagination', async () => {
@@ -456,7 +539,11 @@ describe('public API', () => {
     expect(rss.headers.get('content-type')).toBe('application/rss+xml; charset=utf-8')
     expect(rss.headers.get('access-control-allow-origin')).toBe('*')
     expect(spec.openapi).toBe('3.1.0')
-    expect(Object.keys(spec.paths)).toHaveLength(45)
+    expect(Object.keys(spec.paths)).toHaveLength(49)
+    expect(spec.paths['/feeds/latest/conversations'].get).toBeDefined()
+    expect(spec.paths['/feeds/hot/conversations'].get).toBeDefined()
+    expect(spec.paths['/activities/for-you/conversations'].get).toBeDefined()
+    expect(spec.paths['/activities/to-me/conversations'].get).toBeDefined()
     expect(spec.paths['/activities/for-you'].get.responses['401']).toBeDefined()
     expect(spec.paths['/activities/to-me'].get.responses['401']).toBeDefined()
     expect(spec.paths['/users/{handle}/blocks'].get.responses['403']).toBeDefined()

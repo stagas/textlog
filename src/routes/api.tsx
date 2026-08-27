@@ -8,6 +8,7 @@ import { type DatabaseService, databaseService } from '../database-service'
 import { decodeHotCursor } from '../hot'
 import { logError } from '../log'
 import { POST_MAX } from '../post-body'
+import { PAGE_SIZE_CHOICES, type PageSizeChoice } from '../request-preferences'
 import { MAX_SEARCH_LENGTH, normalizeSearchQuery, searchExpression } from '../search'
 import type { User } from '../types'
 import { apiUser, currentUser } from '../utils'
@@ -91,6 +92,11 @@ function openApiDocument() {
     { name: 'limit', in: 'query', schema: { type: 'integer', minimum: 1, maximum: 100, default: 20 } },
     { name: 'cursor', in: 'query', schema: { type: 'string' } },
   ]
+  const threadedFeedParameters = [
+    { name: 'limit', in: 'query', schema: { type: 'integer', enum: [...PAGE_SIZE_CHOICES], default: 20 },
+      description: 'Conversations per page; matches a supported web feed page size.' },
+    { name: 'cursor', in: 'query', schema: { type: 'string' } },
+  ]
   const authSecurity = [{ bearerAuth: [] }]
   const optionalAuthSecurity = [{}, { bearerAuth: [] }]
   const errorResponse = (description: string) => ({ description, content: { 'application/json': {
@@ -107,6 +113,8 @@ function openApiDocument() {
   const collectionResponse = { description: 'Paginated post collection', content: { 'application/json': { schema: {
     $ref: '#/components/schemas/PostCollection',
   } } } }
+  const threadedFeedResponse = { description: 'A conversation-paginated feed matching the web application',
+    content: { 'application/json': { schema: { $ref: '#/components/schemas/ThreadedFeed' } } } }
   const postResponse = dataResponse({ $ref: '#/components/schemas/Post' })
   const activityResponses = { ...jsonResponses, '200': { description: 'A typed activity collection', content: {
     'application/json': { schema: { type: 'object', required: ['data', 'has_unread', 'pagination'], properties: {
@@ -182,6 +190,18 @@ function openApiDocument() {
         get: { summary: 'Activity directed to the authenticated account', security: authSecurity,
           parameters: collectionParameters, responses: { ...activityResponses, '401': writeResponses['401'] } },
       },
+      '/activities/for-you/conversations': {
+        get: { summary: 'For You activity grouped like the web feed', security: authSecurity,
+          parameters: threadedFeedParameters,
+          responses: { ...activityResponses, '200': { description: 'A web-compatible threaded activity feed',
+            content: { 'application/json': { schema: { $ref: '#/components/schemas/ThreadedActivityFeed' } } } } } },
+      },
+      '/activities/to-me/conversations': {
+        get: { summary: 'To Me activity grouped like the web feed', security: authSecurity,
+          parameters: threadedFeedParameters,
+          responses: { ...activityResponses, '200': { description: 'A web-compatible threaded activity feed',
+            content: { 'application/json': { schema: { $ref: '#/components/schemas/ThreadedActivityFeed' } } } } } },
+      },
       '/activities/for-you/read': {
         post: { summary: 'Mark selected for-you activities as read', security: authSecurity,
           requestBody: requestBody({ $ref: '#/components/schemas/ActivityReadRequest' }), responses: writeResponses },
@@ -199,6 +219,14 @@ function openApiDocument() {
       '/feeds/hot': {
         get: { summary: 'Hot posts', security: optionalAuthSecurity, parameters: collectionParameters,
           responses: { ...jsonResponses, '200': collectionResponse }, 'x-root-aliases': ['/hot.json'] },
+      },
+      '/feeds/latest/conversations': {
+        get: { summary: 'Latest feed grouped into web conversations', security: optionalAuthSecurity,
+          parameters: threadedFeedParameters, responses: { ...jsonResponses, '200': threadedFeedResponse } },
+      },
+      '/feeds/hot/conversations': {
+        get: { summary: 'Hot feed grouped into web conversations', security: optionalAuthSecurity,
+          parameters: threadedFeedParameters, responses: { ...jsonResponses, '200': threadedFeedResponse } },
       },
       '/search': { get: { summary: 'Search public posts', security: optionalAuthSecurity, parameters: [
         { name: 'q', in: 'query', required: true,
@@ -467,6 +495,44 @@ function openApiDocument() {
           pagination: { $ref: '#/components/schemas/Pagination' },
           has_unread: { type: 'boolean', description: 'Present on authenticated latest-feed reads.' },
           unread_count: { type: 'integer', minimum: 0, description: 'Present on authenticated latest-feed reads.' },
+        },
+      }, ThreadedFeedPost: {
+        allOf: [{ $ref: '#/components/schemas/Post' }, { type: 'object',
+          required: ['classification', 'depth', 'feed_ancestor_gap', 'unread', 'directed_to_viewer'], properties: {
+            classification: { type: 'string', enum: ['root', 'reply'] },
+            depth: { type: 'integer', minimum: 0, description: 'Absolute depth beneath the conversation root.' },
+            feed_ancestor_gap: { type: 'boolean',
+              description: 'True when unavailable ancestors were skipped by the web feed.' },
+            unread: { type: 'boolean', description: 'Whether this latest-feed post is unread for the viewer.' },
+            directed_to_viewer: { type: 'boolean',
+              description: 'Whether this unread latest-feed post is directed to the viewer.' },
+          } }],
+      }, ThreadedConversation: {
+        type: 'object', required: ['id', 'posts'], properties: {
+          id: { type: 'integer', description: 'Canonical top-level conversation post ID.' },
+          posts: { type: 'array', items: { $ref: '#/components/schemas/ThreadedFeedPost' } },
+        },
+      }, ThreadedFeed: {
+        type: 'object', required: ['data', 'pagination'], properties: {
+          data: { type: 'array', items: { $ref: '#/components/schemas/ThreadedConversation' } },
+          pagination: { type: 'object', required: ['next_cursor', 'previous_cursor'], properties: {
+            next_cursor: { type: ['string', 'null'] }, previous_cursor: { type: ['string', 'null'] },
+          } },
+        },
+      }, ThreadedActivityFeed: {
+        type: 'object', required: ['data', 'has_unread', 'pagination'], properties: {
+          data: { type: 'array', items: { oneOf: [
+            { type: 'object', required: ['type', 'conversation'], properties: {
+              type: { const: 'conversation' }, conversation: { $ref: '#/components/schemas/ThreadedConversation' },
+            } },
+            { type: 'object', required: ['type', 'activity'], properties: {
+              type: { const: 'activity' }, activity: { $ref: '#/components/schemas/Activity' },
+            } },
+          ] } },
+          has_unread: { type: 'boolean' },
+          pagination: { type: 'object', required: ['next_cursor', 'previous_cursor'], properties: {
+            next_cursor: { type: ['string', 'null'] }, previous_cursor: { type: ['string', 'null'] },
+          } },
         },
       }, ActivityReadRequest: {
         type: 'object',
@@ -778,6 +844,22 @@ export function registerApiRoutes(app: Hono, appUrl: string | null | undefined =
     })
   }
 
+  for (const [path, toMe] of [['for-you', false], ['to-me', true]] as const) {
+    app.get(`/api/v1/activities/${path}/conversations`, async c => {
+      const user = requestApiUser(c.req.raw)
+      if (!user) return apiError('unauthorized', 'Provide a bearer token from /api/v1/auth/verify', 401)
+      const parsed = parseCollectionParams(c.req.query('limit'), c.req.query('cursor'))
+      if (!parsed || !PAGE_SIZE_CHOICES.includes(parsed.limit as PageSizeChoice)) {
+        return apiError('invalid_pagination',
+          `limit must be one of ${PAGE_SIZE_CHOICES.join(', ')} and cursor must be a valid opaque cursor`, 400)
+      }
+      return jsonResponse(await service.call('api.threadedActivityFeed', {
+        user, origin: apiOrigin(c.req.url, appUrl), toMe, page: parsed.before || 1,
+        pageSize: parsed.limit as PageSizeChoice,
+      }), 200, 'no-store')
+    })
+  }
+
   app.get('/api/v1/search', async c => {
     const rawQuery = c.req.query('q') || ''
     const query = normalizeSearchQuery(rawQuery)
@@ -809,6 +891,24 @@ export function registerApiRoutes(app: Hono, appUrl: string | null | undefined =
   }
   app.get('/hot.json', hotFeed)
   app.get('/api/v1/feeds/hot', hotFeed)
+
+  const threadedFeed = (kind: 'latest' | 'hot') => async (c: Context) => {
+    const parsed = parseCollectionParams(c.req.query('limit'), c.req.query('cursor'))
+    if (!parsed || !PAGE_SIZE_CHOICES.includes(parsed.limit as PageSizeChoice)) {
+      return apiError('invalid_pagination',
+        `limit must be one of ${PAGE_SIZE_CHOICES.join(', ')} and cursor must be a valid opaque cursor`, 400)
+    }
+    const page = parsed.before || 1
+    return jsonResponse(await service.call('api.threadedFeed', {
+      kind,
+      origin: apiOrigin(c.req.url, appUrl),
+      viewerId: requestApiUser(c.req.raw)?.id ?? -1,
+      page,
+      pageSize: parsed.limit as PageSizeChoice,
+    }), 200, requestApiUser(c.req.raw) ? 'no-store' : undefined)
+  }
+  app.get('/api/v1/feeds/latest/conversations', threadedFeed('latest'))
+  app.get('/api/v1/feeds/hot/conversations', threadedFeed('hot'))
 
   app.get('/api/v1/posts/:id', async c => {
     const id = Number(c.req.param('id'))
