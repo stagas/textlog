@@ -140,6 +140,10 @@ describe('in-memory stylesheet', () => {
       '.thread-fold-input:checked~.reply-branch .thread-branch-content {\n  overflow: hidden;\n  animation: none;',
     )
     expect(css).toContain('.thread-fold-input:checked~.reply-branch {\n  grid-template-rows: 0fr;')
+    expect(css).toContain('.reply-branch:not(.feed-thread-collapsed-branch)>.thread-branch-content {\n'
+      + '  opacity: 1;\n  transition: opacity 120ms ease;')
+    expect(css).toContain('.thread-fold-input:checked~.reply-branch:not(.feed-thread-collapsed-branch)'
+      + '>.thread-branch-content {\n  opacity: 0;')
     expect(css).toContain('transition: grid-template-rows 200ms ease, visibility 0s 200ms;')
   })
 
@@ -156,7 +160,7 @@ describe('in-memory stylesheet', () => {
     expect(css).toContain('.thread-ancestor-gap:not(.collapsed-preview-gap) {\n  height: 0;')
     expect(css).toContain('.collapsed-preview-path:not(.collapsed-preview-post)>.reply-branch {\n'
       + '  margin-left: 0;')
-    expect(css).toContain('transition: height 200ms ease, padding 200ms ease, opacity 160ms ease;')
+    expect(css).toContain('transition: height 200ms ease, padding 200ms ease, opacity 120ms ease;')
     expect(css).toContain('.reply-node:not(.collapsed-preview-path) {\n  height: 0;\n  opacity: 0;')
     expect(css).toContain('.collapsed-preview-path>.post {\n  height: 0;\n  opacity: 0;')
     expect(css).toContain('.feed-thread>.thread-fold-input:checked~.feed-thread-collapsed-branch .reply-node,\n'

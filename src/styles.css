@@ -5955,6 +5955,11 @@ a.post-context:hover {
   animation: disclosure-overflow 0s 200ms forwards;
 }
 
+.reply-branch:not(.feed-thread-collapsed-branch)>.thread-branch-content {
+  opacity: 1;
+  transition: opacity 120ms ease;
+}
+
 .thread-ancestor-gap {
   padding: var(--space-2) var(--gutter) 0;
   font-size: 0.875rem;
@@ -5964,6 +5969,10 @@ a.post-context:hover {
 .thread-fold-input:checked~.reply-branch .thread-branch-content {
   overflow: hidden;
   animation: none;
+}
+
+.thread-fold-input:checked~.reply-branch:not(.feed-thread-collapsed-branch)>.thread-branch-content {
+  opacity: 0;
 }
 
 .reply-node>.post {
@@ -6077,7 +6086,7 @@ a.post-context:hover {
 .feed-thread-collapsed-branch .thread-ancestor-gap {
   height: auto;
   opacity: 1;
-  transition: height 200ms ease, padding 200ms ease, opacity 160ms ease;
+  transition: height 200ms ease, padding 200ms ease, opacity 120ms ease;
 }
 
 .feed-thread>.thread-fold-input:checked~.feed-thread-collapsed-branch .reply-node,
@@ -6140,6 +6149,7 @@ a.post-context:hover {
   .post-spoiler-content,
   .reply-branch,
   .thread-fold-input:checked~.reply-branch,
+  .reply-branch:not(.feed-thread-collapsed-branch)>.thread-branch-content,
   .feed-thread-collapsed-branch .reply-node,
   .feed-thread-collapsed-branch .collapsed-preview-path>.post,
   .feed-thread-collapsed-branch .thread-ancestor-gap {
