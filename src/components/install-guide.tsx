@@ -51,7 +51,7 @@ const guides: Record<InstallPlatform, { eyebrow: string; heading: string; intro:
     steps: [
       'Open this page in Chrome.',
       'Tap the three-dot menu in the upper-right corner.',
-      'Tap “Install app”. On some versions, the item is named “Add to Home screen”.',
+      'Tap “Install and create shortcut”. On some versions, the item is named “Install app” or “Add to Home screen”.',
       'Review the prompt and tap “Install”.',
       'Open the app from your Home Screen or app drawer.',
     ],

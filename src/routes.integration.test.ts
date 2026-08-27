@@ -152,6 +152,11 @@ test('install guide is tailored to the mobile browser', async () => {
   const html = await response.text()
   expect(html).toContain('iPhone or iPad · Safari')
   expect(html).toContain('Add to Home Screen')
+
+  const chrome = await request('/install', {
+    userAgent: 'Mozilla/5.0 (Linux; Android 15) AppleWebKit/537.36 Chrome/140 Mobile',
+  })
+  expect(await chrome.text()).toContain('Install and create shortcut')
 })
 
 test('/?reddit counts each IP once', async () => {
