@@ -18,8 +18,8 @@ import { preserveSuggestedPeopleOrder, suggestedPeople, suggestedPeopleCount, tr
   trendingTags } from './explore'
 import { issueFeedKey, userForFeedKey } from './feed-keys'
 import { feedSnapshotPage } from './feed-snapshots'
-import { hasUnreadForYou, hasUnreadToMe, markAllForYouRead, markForYouEntriesRead, markVisibleForYouEntriesRead,
-  unreadForYouCount, unreadToMeCount } from './for-you-state'
+import { markAllForYouRead, markForYouEntriesRead, markVisibleForYouEntriesRead, unreadForYouCount,
+  unreadToMeCount } from './for-you-state'
 import { dropUsername, resolveHandle } from './handles'
 import { claimInitialHandle, HandleChangeLimitError, updateProfileHandle } from './handles'
 import { getHotPosts, hotFeedProjectionNeedsRefresh, type HotPost, hotRankingVersion,
@@ -39,7 +39,7 @@ import { EXPLORE_TAG_PAGE_SIZE } from './pagination'
 import { consumePasswordCaptcha, issuePasswordCaptcha, passwordCaptchaRequired,
   recordFailedPassword } from './password-login-captcha'
 import { consumePasswordLoginNonce, issuePasswordLoginNonce } from './password-login-nonce'
-import { loadPersonalizedFeed, PERSONALIZED_FEED_SNAPSHOT_VERSION } from './personalized-feed'
+import { loadPersonalizedFeed, PERSONALIZED_FEED_SNAPSHOT_VERSION, personalizedUnreadCount } from './personalized-feed'
 import { voteInPoll } from './polls'
 import { loadBioReferenceData, loadThreadReplies } from './posts'
 import { enrichPosts, rewireVisibleAncestorGaps } from './posts'
@@ -2203,11 +2203,11 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
         cacheDb.query(`DELETE FROM materialized_feed_pages_v2 WHERE viewer_id=?
           AND kind IN ('latest','hot','for-you','to-me')`).run(viewerId)
       }
+      const forYouCount = viewerId >= 0 ? personalizedUnreadCount(database, viewerId, false) : 0
+      const toMeCount = viewerId >= 0 ? personalizedUnreadCount(database, viewerId, true) : 0
       const result = { posts, page: snapshot.page, totalItems: snapshot.totalItems, totalPages: snapshot.totalPages,
-        forYouCount: viewerId >= 0 ? unreadForYouCount(viewerId, database) : 0,
-        toMeCount: viewerId >= 0 ? unreadToMeCount(viewerId, database) : 0,
-        forYouUnread: viewerId >= 0 && hasUnreadForYou(viewerId, database),
-        toMeUnread: viewerId >= 0 && hasUnreadToMe(viewerId, database), latestUnread: remainingUnread.length > 0,
+        forYouCount, toMeCount, forYouUnread: forYouCount > 0,
+        toMeUnread: toMeCount > 0, latestUnread: remainingUnread.length > 0,
         latestCount: unread.length, unreadPostIds, directedUnreadPostIds, unreadHref: href(remainingUnread[0]),
         lastUnreadHref: href(remainingUnread.length > 1 ? remainingUnread.at(-1) : undefined) }
       return result as DatabaseDomainOutput<K>
@@ -2284,13 +2284,14 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
         const post = hotById.get(id)
         return post ? [post] : []
       })
+      const forYouCount = viewerId >= 0 ? personalizedUnreadCount(database, viewerId, false) : 0
+      const toMeCount = viewerId >= 0 ? personalizedUnreadCount(database, viewerId, true) : 0
       return { posts: rewireVisibleAncestorGaps(database,
         enrichPosts(database, posts, viewerId)), page: safePage, totalItems, totalPages,
-        forYouCount: viewerId >= 0 ? unreadForYouCount(viewerId, database) : 0,
-        toMeCount: viewerId >= 0 ? unreadToMeCount(viewerId, database) : 0,
+        forYouCount, toMeCount,
         latestCount: viewerId >= 0 ? unreadLatestCount(viewerId, database) : 0,
-        forYouUnread: viewerId >= 0 && hasUnreadForYou(viewerId, database),
-        toMeUnread: viewerId >= 0 && hasUnreadToMe(viewerId, database) } as DatabaseDomainOutput<K>
+        forYouUnread: forYouCount > 0,
+        toMeUnread: toMeCount > 0 } as DatabaseDomainOutput<K>
     }
     case 'feeds.refreshHotProjection': {
       const { force = false, now } = input as DatabaseDomainInput<'feeds.refreshHotProjection'>

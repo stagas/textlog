@@ -20,6 +20,8 @@ export const SPOILER_HASHTAGS = new Set([
 ])
 
 const urlMatcher = new LinkifyIt({ fuzzyLink: true, fuzzyEmail: false }).tlds(tlds)
+const hashtagCache = new Map<string, string[]>()
+const MAX_HASHTAG_CACHE_ENTRIES = 4_096
 
 export function withoutMarkdownCode(body: string) {
   const characters = body.split('')
@@ -60,6 +62,8 @@ export function withoutMarkdownCode(body: string) {
 }
 
 export function extractHashtags(body: string) {
+  const cached = hashtagCache.get(body)
+  if (cached) return cached
   const tags = new Set<string>()
   let count = 0
   const searchableBody = withoutMarkdownCode(body)
@@ -69,7 +73,10 @@ export function extractHashtags(body: string) {
     if (count++ === MAX_HASHTAGS_PER_POST) break
     tags.add(normalizeHashtag(match[1]))
   }
-  return [...tags]
+  const result = [...tags]
+  hashtagCache.set(body, result)
+  if (hashtagCache.size > MAX_HASHTAG_CACHE_ENTRIES) hashtagCache.delete(hashtagCache.keys().next().value!)
+  return result
 }
 
 export function containsAsciiArt(body: string) {

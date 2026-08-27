@@ -2,8 +2,7 @@ import type { Database } from 'bun:sqlite'
 import { activityAnchor } from './activity-anchor'
 import { isAdmin } from './admin'
 import { feedSnapshotPage } from './feed-snapshots'
-import { hasUnreadForYou, hasUnreadToMe, markForYouEntriesRead, unreadForYouCount,
-  unreadToMeCount } from './for-you-state'
+import { markForYouEntriesRead, unreadForYouCount, unreadToMeCount } from './for-you-state'
 import { resolveHandle } from './handles'
 import { unreadLatestCount } from './latest-state'
 import { recentConversationReplies } from './latest-conversation'
@@ -12,6 +11,25 @@ import type { PersonalizedFeedData, PersonalizedTimelineRow, User } from './type
 import { isWhisperThread, whisperThreadRelevantToViewer, whisperThreadTargetsViewer } from './whisper'
 
 export const PERSONALIZED_FEED_SNAPSHOT_VERSION = 28
+
+export function personalizedUnreadCount(database: Database, userId: number, toMe: boolean) {
+  const kind = `${toMe ? 'to-me' : 'for-you'}:v${PERSONALIZED_FEED_SNAPSHOT_VERSION}`
+  const reads = toMe ? 'to_me_reads' : 'for_you_reads'
+  const pending = database.query(`SELECT 1 FROM sqlite_master
+    WHERE type='table' AND name='pending_relationship_feed_invalidations'`).get()
+    && database.query('SELECT 1 FROM pending_relationship_feed_invalidations WHERE viewer_id=?').get(userId)
+  const generation = database.query(`SELECT generation FROM personalized_feed_generations WHERE viewer_id=?`)
+    .get(userId) as { generation: number } | null
+  const snapshot = !pending && generation
+    ? database.query(`SELECT id FROM feed_snapshots WHERE kind=? AND viewer_id=? AND generation=?`)
+      .get(kind, userId, generation.generation) as { id: number } | null
+    : null
+  if (!snapshot) return toMe ? unreadToMeCount(userId, database) : unreadForYouCount(userId, database)
+  return (database.query(`SELECT count(DISTINCT json_extract(entry.value,'$.event_key')) count
+    FROM feed_snapshot_items item,json_each(item.payload) entry
+    LEFT JOIN ${reads} seen ON seen.user_id=? AND seen.event_key=json_extract(entry.value,'$.event_key')
+    WHERE item.snapshot_id=? AND seen.event_key IS NULL`).get(userId, snapshot.id) as { count: number }).count
+}
 
 const descendsFromViewer = `EXISTS (WITH RECURSIVE ancestors(id,user_id,parent_id) AS (
   SELECT ancestor.id,ancestor.user_id,ancestor.parent_id FROM posts ancestor WHERE ancestor.id=p.parent_id
@@ -266,16 +284,16 @@ export function loadPersonalizedFeed(database: Database, user: User, page: numbe
     targetFollowsViewer: row.target_handle ? followerIds.has(targets.get(row.target_handle)!) : undefined,
     tagFollowerCount: row.target_tag ? tagCounts[row.target_tag] || 0 : undefined })
   )
-  const visitedCount = toMe ? unreadToMeCount(user.id, database) : unreadForYouCount(user.id, database)
+  const visitedCount = personalizedUnreadCount(database, user.id, toMe)
   if (markRead) {
     const unreadTimeline = timeline.filter(row => row.unread)
     const latestEventKeys = unreadTimeline.filter(row => toMe || !row.targeted_to_viewer).map(row => row.event_key)
     markForYouEntriesRead(user.id, unreadTimeline.map(row => row.event_key), toMe, database, latestEventKeys)
   }
-  const toMeCount = toMe ? visitedCount : unreadToMeCount(user.id, database)
-  const forYouCount = toMe ? unreadForYouCount(user.id, database) : visitedCount
-  const forYouUnread = hasUnreadForYou(user.id, database)
-  const toMeUnread = hasUnreadToMe(user.id, database)
+  const toMeCount = toMe ? visitedCount : personalizedUnreadCount(database, user.id, true)
+  const forYouCount = toMe ? personalizedUnreadCount(database, user.id, false) : visitedCount
+  const forYouUnread = forYouCount > 0
+  const toMeUnread = toMeCount > 0
   const hasUnread = toMe ? toMeUnread : forYouUnread
   const firstUnread = hasUnread
     ? database.query(`SELECT item.position,row.value payload

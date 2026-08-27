@@ -459,17 +459,24 @@ export function enrichPosts(database: Database, posts: PostView[], viewerId = -1
     .map(([handle, id]) => [handle, followerUserIds.has(id)]))
   const hashtagFollowing = Object.fromEntries(Object.keys(hashtagCounts)
     .map(tag => [tag, followedTags.has(tag)]))
-  const bioReference = (userId: number | undefined): BioReferenceData => ({
-    hashtagCounts,
-    hashtagFollowerCounts,
-    hashtagFollowing,
-    mentionBios,
-    mentionNoteCounts,
-    mentionProfileStats,
-    mentionFollowing,
-    mentionFollowsViewer,
-    linkPreviews: userId == null ? {} : userBioLinkPreviews(database, userId),
-  })
+  const bioReferences = new Map<number | undefined, BioReferenceData>()
+  const bioReference = (userId: number | undefined): BioReferenceData => {
+    const cached = bioReferences.get(userId)
+    if (cached) return cached
+    const reference = {
+      hashtagCounts,
+      hashtagFollowerCounts,
+      hashtagFollowing,
+      mentionBios,
+      mentionNoteCounts,
+      mentionProfileStats,
+      mentionFollowing,
+      mentionFollowsViewer,
+      linkPreviews: userId == null ? {} : userBioLinkPreviews(database, userId),
+    }
+    bioReferences.set(userId, reference)
+    return reference
+  }
   for (const parent of parents.values()) {
     parent.profile_stats = parent.user_id == null ? undefined : profileStats.get(parent.user_id)
     parent.note_count = parent.profile_stats?.notes || 0
