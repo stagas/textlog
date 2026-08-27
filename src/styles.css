@@ -6408,7 +6408,7 @@ a.post-context:hover {
 .post .code-fence {
   display: block;
   max-width: 100%;
-  margin: 0.5lh 0;
+  margin: 0.5lh 0 -0.5lh;
   padding-left: var(--space-3);
   overflow-x: auto;
   border-left: 3px solid var(--soft);

@@ -294,6 +294,11 @@ describe('in-memory stylesheet', () => {
     expect(css).toContain('.post-body.ascii-art::-webkit-scrollbar {\n  display: none;\n}')
   })
 
+  test('compensates fenced code spacing for its preserved trailing newline', async () => {
+    const css = await Bun.file(new URL('./styles.css', import.meta.url)).text()
+    expect(css).toContain('.post .code-fence {\n  display: block;\n  max-width: 100%;\n  margin: 0.5lh 0 -0.5lh;')
+  })
+
   test('uses shared component utilities for repeated visual patterns', async () => {
     const css = await Bun.file(new URL('./styles.css', import.meta.url)).text()
     expect(css).toContain('.pagination-top {\n  border-top: 0;\n}')
