@@ -29,6 +29,7 @@
   --report-hover: #77440f;
   --quote-ink: #6f766c;
   --quote-bg: rgb(116 150 104 / 6%);
+  --quote-surface: color-mix(in srgb, rgb(116 150 104) 6%, var(--bg));
   --error-ink: #7a3f39;
   --error-bg: #eee2de;
   --success-ink: #466342;
@@ -122,6 +123,7 @@ html.scroll-instant {
     --report-hover: #ffc37d;
     --quote-ink: #a8afa4;
     --quote-bg: rgb(154 189 142 / 8%);
+    --quote-surface: color-mix(in srgb, rgb(154 189 142) 8%, var(--bg));
     --error-ink: #efb3aa;
     --error-bg: #442b28;
     --success-ink: #b9d5b2;
@@ -2093,6 +2095,7 @@ nav form {
 .content-warning-overlay > span {
   padding-inline: var(--space-2);
   background: var(--bg);
+  box-shadow: 0 0 var(--space-2) var(--space-1) var(--bg);
 }
 
 .content-warning-toggle:not(:checked) ~ .content-warning-body {
@@ -2327,8 +2330,13 @@ nav form {
   margin: var(--space-2) 0 0 clamp(16px, 3vw, 24px);
   padding: var(--space-3);
   color: var(--quote-ink);
-  background: var(--quote-bg);
+  background: var(--quote-surface);
   font-size: 0.6875rem;
+}
+
+.parent-quote .content-warning-overlay > span {
+  background: var(--quote-surface);
+  box-shadow: 0 0 var(--space-2) var(--space-1) var(--quote-surface);
 }
 
 .parent-quote-top {

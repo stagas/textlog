@@ -534,6 +534,7 @@ export function Post({
   topActions,
   showReadAction = true,
   hideTopMeta = false,
+  suppressContentWarning = false,
 }: { p: PostView; user: User | null; showReplyAction?: boolean; showOwnerActions?: boolean;
   showModerateAction?: boolean; showParent?: boolean; showReplyCount?: boolean; replyHref?: string; replyLabel?: string;
   reportHref?: string; foldControlId?: string; highlightTerms?: string[]; tappable?: boolean; tappableParent?: boolean;
@@ -541,7 +542,7 @@ export function Post({
   contextDirectedUnread?: boolean; preview?: boolean; returnPath?: string; backHref?: string;
   canonicalTimestamp?: boolean; topHref?: string; flatHref?: string; treeHref?: string;
   authorPopoverAction?: React.ReactNode; continuationHref?: string; continuationLabel?: string; className?: string;
-  topActions?: React.ReactNode; showReadAction?: boolean; hideTopMeta?: boolean })
+  topActions?: React.ReactNode; showReadAction?: boolean; hideTopMeta?: boolean; suppressContentWarning?: boolean })
 {
   if (p.link_previews && Object.values(p.link_previews).some(preview => preview.linkedPost)) {
     const linkedPostReturnPath = returnPath || `/post/${p.id}#post-${p.id}`
@@ -751,7 +752,7 @@ export function Post({
         </MetaRow>
       )}
       <ContentWarning p={p} controlId={`${formPrefix}-content-warning`}
-        showImmediately={user?.show_moderated_content === 1}>
+        showImmediately={user?.show_moderated_content === 1 || suppressContentWarning}>
         <div className={`post-body${isAsciiArt ? ' ascii-art' : ''}`} dangerouslySetInnerHTML={{
           __html: linkify(displayPostBody(renderedPollBody(p.body)), p.mention_bios, highlightTerms, undefined,
             renderFlags(p), referenceQuery, p.hashtag_counts, p.mention_note_counts, { signedIn: !!user,
@@ -849,7 +850,7 @@ export function Post({
                   {!hasTappableParent && <a className="postdate" href={parentDetailPath} rel={navigationRel}>read</a>}
                 </MetaRow>
                 <ContentWarning p={parent} controlId={`${formPrefix}-parent-${parent.id}-content-warning`}
-                  showImmediately={user?.show_moderated_content === 1}>
+                  showImmediately={user?.show_moderated_content === 1 || suppressContentWarning}>
                   <div className={`post-body${containsAsciiArt(parent.body) ? ' ascii-art' : ''}`}
                     dangerouslySetInnerHTML={{
                     __html: linkify(displayPostBody(renderedPollBody(parent.body)), parent.mention_bios, [], undefined,

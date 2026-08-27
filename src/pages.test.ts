@@ -3315,6 +3315,37 @@ test('provider-positive posts render behind an accessible content warning', () =
   expect(html.indexOf('This post might contain')).toBeLessThan(html.indexOf('Sensitive note'))
 })
 
+test('moderated replies and quoted parents suppress consent screens only while replying', () => {
+  const warning = { moderation_category: 'self-harm/intent', moderation_score: 0.72 }
+  const reply = renderToStaticMarkup(React.createElement(Post, {
+    user: null,
+    p: { id: 3, user_id: 2, parent_id: 1, body: 'Moderated reply', handle: 'writer',
+      created_at: '2026-08-03 12:00:00', deleted_at: null, ...warning },
+  }))
+  const quoted = renderToStaticMarkup(React.createElement(Post, {
+    user: null,
+    p: { id: 4, user_id: 2, parent_id: 1, body: 'Ordinary reply', handle: 'writer',
+      created_at: '2026-08-03 12:00:00', deleted_at: null,
+      parent: { id: 1, user_id: 1, parent_id: null, body: 'Moderated parent', handle: 'parent',
+        created_at: '2026-08-03 11:00:00', deleted_at: null, reply_count: 1, ...warning } },
+  }))
+
+  const replying = renderToStaticMarkup(React.createElement(Post, {
+    user: null,
+    suppressContentWarning: true,
+    p: { id: 4, user_id: 2, parent_id: 1, body: 'Ordinary reply', handle: 'writer',
+      created_at: '2026-08-03 12:00:00', deleted_at: null, ...warning,
+      parent: { id: 1, user_id: 1, parent_id: null, body: 'Moderated parent', handle: 'parent',
+        created_at: '2026-08-03 11:00:00', deleted_at: null, reply_count: 1, ...warning } },
+  }))
+
+  expect(reply).toContain('content-warning')
+  expect(quoted).toContain('content-warning')
+  expect(replying).toContain('Ordinary reply')
+  expect(replying).toContain('Moderated parent')
+  expect(replying).not.toContain('content-warning')
+})
+
 test('Post renders moderation controls only for admins on the detail page', () => {
   const p = {
     id: 2,
