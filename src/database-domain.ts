@@ -162,8 +162,7 @@ function invalidateBlockVisibility(userIds: number[]) {
   cacheDb.transaction(() => {
     cacheDb.query(`DELETE FROM feed_snapshots WHERE viewer_id IN (${placeholders})
       AND (kind LIKE 'latest%' OR kind='hot' OR kind LIKE 'hot:%')`).run(...ids)
-    cacheDb.query(`DELETE FROM materialized_feed_pages_v2 WHERE viewer_id IN (${placeholders})
-      AND kind IN ('latest','hot','for-you','to-me')`).run(...ids)
+    cacheDb.query(`DELETE FROM materialized_feed_pages_v2 WHERE viewer_id IN (${placeholders})`).run(...ids)
   })()
 }
 
@@ -548,8 +547,7 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
         database.transaction(() => {
           updateProfileHandle(database, userId, handle, bio)
           database.query('UPDATE users SET timezone=? WHERE id=?').run(timezone, userId)
-          cacheDb.query(`DELETE FROM materialized_feed_pages_v2 WHERE viewer_id=?
-            AND kind IN ('latest','hot','for-you','to-me')`).run(userId)
+          cacheDb.query('DELETE FROM materialized_feed_pages_v2 WHERE viewer_id=?').run(userId)
         })()
         return { status: 'ready' } as DatabaseDomainOutput<K>
       }
@@ -688,8 +686,7 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
       const { userId, timezone } = input as DatabaseDomainInput<'account.updateProfileFlags'>
       database.transaction(() => {
         database.query('UPDATE users SET timezone=? WHERE id=?').run(timezone, userId)
-        cacheDb.query(`DELETE FROM materialized_feed_pages_v2 WHERE viewer_id=?
-          AND kind IN ('latest','hot','for-you','to-me')`).run(userId)
+        cacheDb.query('DELETE FROM materialized_feed_pages_v2 WHERE viewer_id=?').run(userId)
       })()
       return null as DatabaseDomainOutput<K>
     }
@@ -1076,8 +1073,7 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
       }
       const result = database.query('INSERT INTO drafts(user_id,parent_id,body) VALUES(?,?,?)')
         .run(userId, parentId, body)
-      cacheDb.query(`DELETE FROM materialized_feed_pages_v2 WHERE viewer_id=?
-        AND kind IN ('latest','hot','for-you','to-me')`).run(userId)
+      cacheDb.query('DELETE FROM materialized_feed_pages_v2 WHERE viewer_id=?').run(userId)
       return { status: 'ready', id: Number(result.lastInsertRowid) } as DatabaseDomainOutput<K>
     }
     case 'drafts.delete': {
@@ -1633,8 +1629,7 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
       if (changed) {
         if (action === 'block' || action === 'unblock') invalidateBlockVisibility([userId, target.id])
         else {
-          cacheDb.query(`DELETE FROM materialized_feed_pages_v2 WHERE viewer_id=?
-            AND kind IN ('latest','hot','for-you','to-me')`).run(userId)
+          cacheDb.query('DELETE FROM materialized_feed_pages_v2 WHERE viewer_id=?').run(userId)
         }
       }
       const result = { status: 'ready' as const, changed, targetId: target.id, targetHandle: target.handle }
@@ -1664,8 +1659,7 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
       else {changed = database.query('DELETE FROM blocked_hashtags WHERE user_id=? AND tag=?')
           .run(userId, tag).changes > 0}
       if (changed && (action === 'follow' || action === 'unfollow')) {
-        cacheDb.query(`DELETE FROM materialized_feed_pages_v2 WHERE viewer_id=?
-          AND kind IN ('latest','hot','for-you','to-me')`).run(userId)
+        cacheDb.query('DELETE FROM materialized_feed_pages_v2 WHERE viewer_id=?').run(userId)
       }
       return { changed } as DatabaseDomainOutput<K>
     }
@@ -2873,8 +2867,7 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
           'INSERT OR IGNORE INTO follows(follower_id,following_id,created_at) VALUES(?,?,CURRENT_TIMESTAMP)',
         )
           .run(userId, target.id)}
-      cacheDb.query(`DELETE FROM materialized_feed_pages_v2 WHERE viewer_id=?
-        AND kind IN ('latest','hot','for-you','to-me')`).run(userId)
+      cacheDb.query('DELETE FROM materialized_feed_pages_v2 WHERE viewer_id=?').run(userId)
       return { targetId: target.id, targetHandle: target.handle, followed: !exists } as DatabaseDomainOutput<K>
     }
     case 'interactions.toggleBlock': {
@@ -2932,6 +2925,7 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
           database.query('DELETE FROM hashtag_follows WHERE user_id=? AND tag=?').run(userId, tag)
         }
       })()
+      cacheDb.query('DELETE FROM materialized_feed_pages_v2 WHERE viewer_id=?').run(userId)
       return { blocked: !exists } as DatabaseDomainOutput<K>
     }
   }

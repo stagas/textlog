@@ -28,6 +28,10 @@ const feedMutations = new Set<DatabaseDomainOperation>([
   'feeds.markPersonalizedSnapshotPageRead',
   'feeds.markRead',
   'feeds.personalizedPage',
+  'interactions.toggleFollow',
+  'interactions.toggleTagFollow',
+  'interactions.toggleBlock',
+  'interactions.toggleTagBlock',
   'posts.votePoll',
 ])
 

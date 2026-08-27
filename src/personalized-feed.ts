@@ -284,7 +284,33 @@ export function loadPersonalizedFeed(database: Database, user: User, page: numbe
     WHERE user_id=? AND event_key IN (${snapshotRows.map(() => '?').join(',')})`)
       .all(user.id, ...snapshotRows.map(row => row.event_key)) as { event_key: string }[]).map(row => row.event_key))
     : new Set<string>()
-  const timeline = snapshotRows.map(row => ({ ...row, unread: Number(!readKeys.has(row.event_key)) }))
+  const targetUserIds = new Map(snapshotRows.flatMap(row => {
+    if (row.activity_kind !== 'user_follow' || row.target_is_viewer || !row.target_handle) return []
+    const target = resolveHandle(database, row.target_handle)
+    return target ? [[row.event_key, target.id] as const] : []
+  }))
+  const followIds = [...new Set(snapshotRows.flatMap(row => row.activity_kind === 'tag_follow'
+    ? []
+    : [targetUserIds.get(row.event_key) || row.actor_id]))]
+  const followedIds = followIds.length
+    ? new Set((database.query(`SELECT following_id FROM follows WHERE follower_id=?
+      AND following_id IN (${followIds.map(() => '?').join(',')})`).all(user.id, ...followIds) as Array<{
+        following_id: number
+      }>).map(row => row.following_id))
+    : new Set<number>()
+  const followTags = [...new Set(snapshotRows.flatMap(row => row.activity_kind === 'tag_follow' && row.target_tag
+    ? [row.target_tag]
+    : []))]
+  const followedTags = followTags.length
+    ? new Set((database.query(`SELECT tag FROM hashtag_follows WHERE user_id=?
+      AND tag IN (${followTags.map(() => '?').join(',')})`).all(user.id, ...followTags) as Array<{ tag: string }>)
+      .map(row => row.tag))
+    : new Set<string>()
+  const timeline = snapshotRows.map(row => ({ ...row,
+    following: row.activity_kind === 'tag_follow'
+      ? !!row.target_tag && followedTags.has(row.target_tag)
+      : followedIds.has(targetUserIds.get(row.event_key) || row.actor_id),
+    unread: Number(!readKeys.has(row.event_key)) }))
   const actorStats = visibleUserProfileStats(database, timeline.map(row => row.actor_id), user.id)
   const targets = new Map(timeline.flatMap(row => {
     if (!row.target_handle) return []

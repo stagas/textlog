@@ -206,6 +206,33 @@ test('For You follow activity can be hidden independently for people and hashtag
   expect(hashtagsHidden.forYouCount).toBe(2)
 })
 
+test('personalized snapshots refresh follow state for To Me and For You actions', () => {
+  const database = new Database(':memory:', { strict: true })
+  runMigrations(database)
+  database.run(`INSERT INTO users(id,handle,email,password,bio) VALUES
+      (1,'viewer','viewer@example.com','!',''),
+      (2,'actor','actor@example.com','!',''),
+      (3,'target','target@example.com','!','');
+    INSERT INTO follows(follower_id,following_id,created_at) VALUES
+      (2,1,'2026-08-27 09:00:00');`)
+  const viewer: User = { id: 1, handle: 'viewer', email: 'viewer@example.com', bio: '' }
+
+  const toMeBefore = loadPersonalizedFeed(database, viewer, 1, 20, true, '/to-me', false)
+  expect(toMeBefore.timeline.find(row => row.actor_id === 2)?.following).toBeFalse()
+
+  database.run(`INSERT INTO follows(follower_id,following_id,created_at) VALUES
+    (1,2,'2026-08-27 09:30:00'),(2,3,'2026-08-27 10:00:00');`)
+  const toMeAfter = loadPersonalizedFeed(database, viewer, 1, 20, true, '/to-me', false)
+  const forYouBefore = loadPersonalizedFeed(database, viewer, 1, 20, false, '/for-you', false)
+  expect(toMeAfter.timeline.find(row => row.actor_id === 2)?.following).toBeTrue()
+  expect(forYouBefore.timeline.find(row => row.target_handle === 'target')?.following).toBeFalse()
+
+  database.query(`INSERT INTO follows(follower_id,following_id,created_at)
+    VALUES(1,3,'2026-08-27 11:00:00')`).run()
+  const forYouAfter = loadPersonalizedFeed(database, viewer, 1, 20, false, '/for-you', false)
+  expect(forYouAfter.timeline.find(row => row.target_handle === 'target')?.following).toBeTrue()
+})
+
 test('For You only includes activity created after following a person or hashtag', () => {
   const database = new Database(':memory:', { strict: true })
   runMigrations(database)
