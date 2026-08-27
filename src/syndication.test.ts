@@ -183,6 +183,30 @@ describe('RSS and Atom feeds', () => {
     expect(await tag.text()).toContain('https://textlog.cc/api/v1/tags/textlog/posts.atom')
   })
 
+  test('loads the same latest and hot posts for JSON, RSS, and Atom', async () => {
+    const app = fixture()
+    const database = (app as any).database as Database
+    for (const kind of ['latest', 'hot'] as const) {
+      const syndication = await executeDatabaseDomain(database, 'syndication.load', {
+        kind, origin: 'https://textlog.cc',
+      })
+      const api = kind === 'latest'
+        ? await executeDatabaseDomain(database, 'api.publicRead', {
+          kind: 'collection', origin: 'https://textlog.cc', limit: 20, before: null, excludeWhispers: true,
+        })
+        : await executeDatabaseDomain(database, 'api.publicRead', {
+          kind: 'hot', origin: 'https://textlog.cc', limit: 20, cursor: null,
+        })
+
+      expect(syndication.status).toBe('ready')
+      expect(api.status).toBe('ready')
+      if (syndication.status === 'ready' && api.status === 'ready') {
+        const apiPosts = (api.value as { data: Array<{ id: number }> }).data
+        expect(syndication.posts.map(post => post.id)).toEqual(apiPosts.map(post => post.id))
+      }
+    }
+  })
+
   test('keeps user syndication aligned with the top-level API post collection', async () => {
     const app = fixture()
     const database = (app as any).database as Database

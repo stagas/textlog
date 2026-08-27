@@ -298,7 +298,9 @@ export function apiHotPosts(database: Database, origin: string, limit: number, c
   viewerId = -1)
 {
   const asOf = cursor?.asOf || new Date().toISOString()
-  const rows = getHotPosts(database, limit + 1, cursor, asOf, viewerId, true)
+  // Keep machine-readable hot feeds on the same eligibility threshold as the web hot projection. The web UI
+  // groups these ranked posts by conversation, while JSON/RSS/Atom retain post-based cursor pagination.
+  const rows = getHotPosts(database, limit + 1, cursor, asOf, viewerId, true, 2)
   const hasMore = rows.length > limit
   const selected = rows.slice(0, limit)
   const pageRows = enrichApiRows(database, selected)
