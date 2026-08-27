@@ -10,7 +10,7 @@ import { enrichPosts, loadBioReferenceData, visibleTagFollowerCounts, visibleUse
 import type { PersonalizedFeedData, PersonalizedTimelineRow, User } from './types'
 import { isWhisperThread, whisperThreadRelevantToViewer, whisperThreadTargetsViewer } from './whisper'
 
-export const PERSONALIZED_FEED_SNAPSHOT_VERSION = 29
+export const PERSONALIZED_FEED_SNAPSHOT_VERSION = 30
 const unreadCountProjection = new Map<string, number>()
 const MAX_UNREAD_COUNT_PROJECTIONS = 2_048
 
@@ -264,7 +264,9 @@ export function loadPersonalizedFeed(database: Database, user: User, page: numbe
       const threadRows = keepsRoot ? [rootRow!] : []
       threadRows.push(...(toMe ? replies : recentConversationReplies(conversation)))
       if (threadRows.length) {
-        result.push({ rows: threadRows, created_at: threadActivity.get(root!) || row.created_at, order: row.event_key })
+        result.push({ rows: threadRows,
+          created_at: toMe ? conversation[0]!.created_at : threadActivity.get(root!) || row.created_at,
+          order: row.event_key })
       }
     }
     return result.sort((a, b) => b.created_at.localeCompare(a.created_at) || b.order.localeCompare(a.order))

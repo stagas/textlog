@@ -133,6 +133,26 @@ test('personalized pages count conversations rather than their embedded replies'
   expect(secondPage.timeline.map(row => row.id)).toEqual([3, 2])
 })
 
+test('To Me conversations are ordered by their latest directed activity', () => {
+  const database = new Database(':memory:', { strict: true })
+  runMigrations(database)
+  database.run(`INSERT INTO users(id,handle,email,password,bio) VALUES
+      (1,'viewer','viewer@example.com','!',''),
+      (2,'first','first@example.com','!',''),
+      (3,'second','second@example.com','!','');
+    INSERT INTO posts(id,user_id,parent_id,body,created_at) VALUES
+      (1,1,NULL,'old root','2026-08-24 10:00:00'),
+      (2,2,1,'old directed reply','2026-08-24 11:00:00'),
+      (3,2,2,'recent reply not directed to viewer','2026-08-27 12:00:00'),
+      (4,1,NULL,'new root','2026-08-26 10:00:00'),
+      (5,3,4,'new directed reply','2026-08-26 11:00:00');`)
+  const viewer: User = { id: 1, handle: 'viewer', email: 'viewer@example.com', bio: '' }
+
+  const feed = loadPersonalizedFeed(database, viewer, 1, 20, true, '/to-me', false)
+
+  expect(feed.timeline.filter(row => row.id).map(row => row.id)).toEqual([5, 2])
+})
+
 test('For You includes a recent reply burst while leaving older replies out of the page', () => {
   const database = new Database(':memory:', { strict: true })
   runMigrations(database)
