@@ -165,7 +165,7 @@ describe('RSS and Atom feeds', () => {
     expect(tag).toContain('hello &amp; &lt;friends&gt; #textlog')
     expect(tag).not.toContain('a reply')
     const bot = await (await app.request('https://textlog.cc/u/Bob.atom')).text()
-    expect(bot).toContain('a reply')
+    expect(bot).not.toContain('a reply')
     expect(alias.status).toBe(301)
     expect(alias.headers.get('location')).toBe('/u/Alice.rss')
   })
@@ -181,6 +181,14 @@ describe('RSS and Atom feeds', () => {
     expect(await latest.text()).toContain('<id>https://textlog.cc/api/v1/feeds/latest.atom</id>')
     expect(await user.text()).toContain('https://textlog.cc/api/v1/users/Alice/posts.rss')
     expect(await tag.text()).toContain('https://textlog.cc/api/v1/tags/textlog/posts.atom')
+  })
+
+  test('keeps user syndication aligned with the top-level API post collection', async () => {
+    const app = fixture()
+    const feed = await (await app.request('https://textlog.cc/api/v1/users/Bob/posts.atom')).text()
+
+    expect(feed).not.toContain('a reply')
+    expect(feed).not.toContain('https://textlog.cc/post/2')
   })
 
   test('passes ordinary user and hashtag pages through to their HTML routes', async () => {

@@ -1214,7 +1214,8 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
         if (!resolved) return { status: 'not_found' } as DatabaseDomainOutput<K>
         if (resolved.alias) return { status: 'redirect', handle: resolved.handle } as DatabaseDomainOutput<K>
         return { status: 'ready', handle: resolved.handle,
-          posts: apiPosts(database, origin, { limit: API_DEFAULT_LIMIT, before: null, handle: resolved.handle }).data,
+          posts: apiPosts(database, origin, { limit: API_DEFAULT_LIMIT, before: null, handle: resolved.handle,
+            topLevelOnly: true }).data,
           activities: [], postTitlePrefixes: {} } as DatabaseDomainOutput<K>
       }
       if (kind === 'personalized') {

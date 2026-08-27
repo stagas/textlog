@@ -14,8 +14,10 @@ function defaultCachePath() {
 export function createCacheDatabase(path = defaultCachePath()) {
   if (path !== ':memory:') mkdirSync(dirname(path), { recursive: true, mode: 0o700 })
   const database = new Database(path, { create: true, strict: true })
+  const busyTimeoutMs = Number(Bun.env.DATABASE_BUSY_TIMEOUT_MS || 5000)
   database.run(`PRAGMA journal_mode=WAL; PRAGMA foreign_keys=ON; PRAGMA synchronous=NORMAL;
     PRAGMA temp_store=MEMORY; PRAGMA cache_size=-16384; PRAGMA mmap_size=67108864;
+    PRAGMA busy_timeout=${busyTimeoutMs};
     CREATE TABLE IF NOT EXISTS feed_snapshots (
       id INTEGER PRIMARY KEY AUTOINCREMENT,kind TEXT NOT NULL,viewer_id INTEGER NOT NULL,
       generation INTEGER NOT NULL,total_items INTEGER NOT NULL,created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
