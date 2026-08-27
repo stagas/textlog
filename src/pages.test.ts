@@ -3309,10 +3309,9 @@ test('provider-positive posts render behind an accessible content warning', () =
   expect(html).toContain('class="content-warning-toggle"')
   expect(html).toContain('type="checkbox"')
   expect(html).toContain('class="content-warning-body"')
-  expect(html).toContain('this post might contain self-harm/intent')
-  expect(html).toContain('self-harm/intent<br/>')
+  expect(html).toContain('class="content-warning-label">warning:</span> possible self-harm/intent content<br/>')
   expect(html).toContain('click to view anyway')
-  expect(html.indexOf('this post might contain')).toBeLessThan(html.indexOf('Sensitive note'))
+  expect(html.indexOf('content-warning-label')).toBeLessThan(html.indexOf('Sensitive note'))
 })
 
 test('moderated replies and quoted parents suppress consent screens only while replying', () => {

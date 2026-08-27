@@ -2085,6 +2085,10 @@ nav form {
   border-bottom: var(--hairline) solid var(--link-border);
 }
 
+.content-warning-label {
+  font-weight: 700;
+}
+
 .content-warning-body {
   grid-area: 1 / 1;
   min-width: 0;
