@@ -98,6 +98,12 @@ function hasHotTable(database: Database) {
   return Boolean(database.query('SELECT 1 FROM sqlite_master WHERE type=\'table\' AND name=\'post_hot\'').get())
 }
 
+export function hotScoresNeedRebuild(database: Database) {
+  if (!hasHotTable(database)) return false
+  return !!database.query(`SELECT 1 FROM posts p LEFT JOIN post_hot h ON h.post_id=p.id
+    WHERE h.post_id IS NULL LIMIT 1`).get()
+}
+
 function hasReplyCount(database: Database) {
   return (database.query('PRAGMA table_info(post_hot)').all() as { name: string }[])
     .some(column => column.name === 'reply_count')
@@ -154,6 +160,58 @@ export function recordHotActivity(database: Database, postId: number) {
     SELECT parent.id,parent.parent_id FROM ancestors JOIN posts parent ON parent.id=ancestors.parent_id
   ) SELECT id FROM ancestors`).all(postId) as { id: number }[]
   if (affected.length) rebuildHotPosts(database, affected.map(post => post.id))
+}
+
+export function refreshHotFeedProjection(database: Database, now = new Date()) {
+  if (!database.query("SELECT 1 FROM sqlite_master WHERE type='table' AND name='hot_feed_projection'").get()) {
+    return { conversations: 0, posts: 0 }
+  }
+  const tracksGeneration = (database.query('PRAGMA table_info(hot_feed_projection_state)').all() as Array<{
+    name: string
+  }>).some(column => column.name === 'generation')
+  const generation = tracksGeneration
+    ? (database.query('SELECT generation FROM hot_feed_projection_state WHERE id=1').get() as {
+      generation: number
+    }).generation
+    : 0
+  const ranked = getHotPosts(database, 1_000_000, null, now, -1, false, 2, false)
+  const roots = ranked.length ? database.query(`SELECT pc.post_id,pc.conversation_id FROM post_conversations pc
+    WHERE pc.post_id IN (${ranked.map(() => '?').join(',')})`).all(...ranked.map(post => post.id)) as Array<{
+      post_id: number
+      conversation_id: number
+    }> : []
+  const conversationByPost = new Map(roots.map(row => [row.post_id, row.conversation_id]))
+  const conversationRanks = new Map<number, number>()
+  const rows = ranked.map((post, rank) => {
+    const conversationId = conversationByPost.get(post.id) || post.id
+    if (!conversationRanks.has(conversationId)) conversationRanks.set(conversationId, conversationRanks.size)
+    return { post, rank, conversationId, conversationRank: conversationRanks.get(conversationId)! }
+  })
+  database.transaction(() => {
+    database.query('DELETE FROM hot_feed_projection').run()
+    const insert = database.query(`INSERT INTO hot_feed_projection(
+      post_id,conversation_id,conversation_rank,post_rank,hot_score,latest_activity_at
+    ) VALUES(?,?,?,?,?,?)`)
+    for (const row of rows) insert.run(row.post.id, row.conversationId, row.conversationRank, row.rank,
+      row.post.hot_score, row.post.latest_activity_at)
+    if (tracksGeneration) database.query(`UPDATE hot_feed_projection_state SET
+        dirty=CASE WHEN generation=? THEN 0 ELSE 1 END,ranking_version=?,refreshed_at=? WHERE id=1`)
+      .run(generation, hotRankingVersion, now.toISOString())
+    else database.query(`UPDATE hot_feed_projection_state SET dirty=0,ranking_version=?,refreshed_at=? WHERE id=1`)
+      .run(hotRankingVersion, now.toISOString())
+  })()
+  return { conversations: conversationRanks.size, posts: rows.length }
+}
+
+export function hotFeedProjectionNeedsRefresh(database: Database, now = Date.now(), maxAgeMs = 5 * 60_000) {
+  const state = database.query(`SELECT dirty,ranking_version,refreshed_at
+    FROM hot_feed_projection_state WHERE id=1`).get() as {
+    dirty: number
+    ranking_version: number
+    refreshed_at: string | null
+  } | null
+  return !state || !!state.dirty || state.ranking_version !== hotRankingVersion || !state.refreshed_at
+    || now - Date.parse(state.refreshed_at) >= maxAgeMs
 }
 
 export function rebuildHotPosts(database: Database, postIds?: number[]) {

@@ -398,6 +398,9 @@ export type DatabaseDomainOperations = {
     output: PostFeedPage }
   'feeds.latestUnreadCount': { input: { userId: number }; output: number }
   'feeds.hotPage': { input: { viewerId: number; page: number; pageSize: PageSizeChoice }; output: PostFeedPage }
+  'feeds.refreshHotProjection': { input: { force?: boolean; now?: string };
+    output: { refreshed: boolean; conversations: number; posts: number } }
+  'feeds.hotProjectionChanged': { input: Record<string, never>; output: null }
   'feeds.personalizedPage': {
     input: { user: User; page: number; pageSize: PageSizeChoice; toMe: boolean; path: string; markRead?: boolean }
     output: PersonalizedFeedData

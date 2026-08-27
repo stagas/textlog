@@ -1,6 +1,6 @@
 import type { Database } from 'bun:sqlite'
 import { extractHashtags, extractMentions, postContentFlags } from './content'
-import { rebuildHotPosts } from './hot'
+import { hotRankingVersion, rebuildHotPosts, refreshHotFeedProjection } from './hot'
 import { parsePoll, syncPoll } from './polls'
 import { migrateLegacySessionTokens } from './sessions'
 
@@ -2260,6 +2260,251 @@ export const migrations: Migration[] = [
         last_error TEXT,
         created_at INTEGER NOT NULL DEFAULT (unixepoch() * 1000));
         CREATE INDEX IF NOT EXISTS post_push_jobs_due ON post_push_jobs(next_attempt_at,lease_until);`)
+    },
+  },
+  {
+    version: 149,
+    name: 'materialized_conversation_heads',
+    up(database) {
+      if (!database.query('SELECT 1 FROM sqlite_master WHERE type=\'table\' AND name=\'posts\'').get()) return
+      const postColumns = columns(database, 'posts')
+      database.run(`CREATE TABLE IF NOT EXISTS post_conversations (
+          post_id INTEGER PRIMARY KEY REFERENCES posts(id) ON DELETE CASCADE,
+          conversation_id INTEGER NOT NULL REFERENCES posts(id) ON DELETE CASCADE
+        );
+        CREATE INDEX IF NOT EXISTS post_conversations_conversation
+          ON post_conversations(conversation_id,post_id DESC);`)
+      if (postColumns.includes('parent_id')) database.run(`WITH RECURSIVE conversations(id,conversation_id) AS (
+          SELECT id,id FROM posts WHERE parent_id IS NULL
+          UNION ALL
+          SELECT child.id,conversations.conversation_id FROM posts child
+          JOIN conversations ON conversations.id=child.parent_id
+        )
+        INSERT OR REPLACE INTO post_conversations(post_id,conversation_id)
+          SELECT posts.id,coalesce(conversations.conversation_id,posts.id) FROM posts
+          LEFT JOIN conversations ON conversations.id=posts.id;`)
+      else database.run('INSERT OR REPLACE INTO post_conversations SELECT id,id FROM posts')
+      const visible = postColumns.includes('deleted_at') ? 'p.deleted_at IS NULL AND ' : ''
+      const activityAt = postColumns.includes('created_at') ? 'p.created_at' : 'CURRENT_TIMESTAMP'
+      database.run(`CREATE TABLE IF NOT EXISTS conversation_heads (
+          conversation_id INTEGER PRIMARY KEY REFERENCES posts(id) ON DELETE CASCADE,
+          latest_post_id INTEGER NOT NULL REFERENCES posts(id) ON DELETE CASCADE,
+          activity_at TEXT NOT NULL
+        );
+        CREATE INDEX IF NOT EXISTS conversation_heads_latest
+          ON conversation_heads(latest_post_id DESC,conversation_id DESC);
+        INSERT OR REPLACE INTO conversation_heads(conversation_id,latest_post_id,activity_at)
+          SELECT pc.conversation_id,p.id,${activityAt} FROM post_conversations pc JOIN posts p ON p.id=pc.post_id
+          WHERE ${visible}p.id=(SELECT max(member.post_id) FROM post_conversations member
+            JOIN posts visible_post ON visible_post.id=member.post_id
+            WHERE member.conversation_id=pc.conversation_id${postColumns.includes('deleted_at')
+    ? ' AND visible_post.deleted_at IS NULL' : ''});`)
+      if (!postColumns.includes('parent_id') || !postColumns.includes('deleted_at')
+        || !postColumns.includes('created_at')) return
+      database.run(`CREATE TRIGGER IF NOT EXISTS conversation_heads_posts_insert AFTER INSERT ON posts BEGIN
+          INSERT INTO post_conversations(post_id,conversation_id) VALUES(NEW.id,coalesce(
+            (SELECT conversation_id FROM post_conversations WHERE post_id=NEW.parent_id),NEW.parent_id,NEW.id
+          ));
+          INSERT INTO conversation_heads(conversation_id,latest_post_id,activity_at)
+            SELECT conversation_id,NEW.id,NEW.created_at FROM post_conversations
+            WHERE post_id=NEW.id AND NEW.deleted_at IS NULL
+            ON CONFLICT(conversation_id) DO UPDATE SET
+              latest_post_id=CASE WHEN excluded.latest_post_id>latest_post_id
+                THEN excluded.latest_post_id ELSE latest_post_id END,
+              activity_at=CASE WHEN excluded.latest_post_id>latest_post_id
+                THEN excluded.activity_at ELSE activity_at END;
+        END;
+        CREATE TRIGGER IF NOT EXISTS conversation_heads_posts_rethread
+          AFTER UPDATE OF parent_id ON posts BEGIN
+          DELETE FROM conversation_heads WHERE conversation_id=coalesce(
+            (SELECT conversation_id FROM post_conversations WHERE post_id=OLD.parent_id),OLD.parent_id,OLD.id
+          );
+          UPDATE post_conversations SET conversation_id=coalesce(
+            (SELECT conversation_id FROM post_conversations WHERE post_id=NEW.parent_id),NEW.parent_id,NEW.id
+          ) WHERE post_id IN (
+            WITH RECURSIVE descendants(id) AS (
+              SELECT NEW.id UNION ALL SELECT p.id FROM posts p JOIN descendants d ON p.parent_id=d.id
+            ) SELECT id FROM descendants
+          );
+          INSERT INTO conversation_heads(conversation_id,latest_post_id,activity_at)
+            SELECT pc.conversation_id,p.id,p.created_at FROM post_conversations pc JOIN posts p ON p.id=pc.post_id
+            WHERE pc.conversation_id=coalesce(
+              (SELECT conversation_id FROM post_conversations WHERE post_id=OLD.parent_id),OLD.parent_id,OLD.id
+            ) AND p.deleted_at IS NULL ORDER BY p.id DESC LIMIT 1
+            ON CONFLICT(conversation_id) DO UPDATE SET
+              latest_post_id=excluded.latest_post_id,activity_at=excluded.activity_at;
+          INSERT INTO conversation_heads(conversation_id,latest_post_id,activity_at)
+            SELECT pc.conversation_id,p.id,p.created_at FROM post_conversations pc JOIN posts p ON p.id=pc.post_id
+            WHERE pc.conversation_id=(SELECT conversation_id FROM post_conversations WHERE post_id=NEW.id)
+              AND p.deleted_at IS NULL ORDER BY p.id DESC LIMIT 1
+            ON CONFLICT(conversation_id) DO UPDATE SET
+              latest_post_id=excluded.latest_post_id,activity_at=excluded.activity_at;
+        END;
+        CREATE TRIGGER IF NOT EXISTS conversation_heads_posts_visibility
+          AFTER UPDATE OF deleted_at,created_at ON posts BEGIN
+          DELETE FROM conversation_heads WHERE conversation_id=(
+            SELECT conversation_id FROM post_conversations WHERE post_id=NEW.id
+          );
+          INSERT INTO conversation_heads(conversation_id,latest_post_id,activity_at)
+            SELECT pc.conversation_id,p.id,p.created_at FROM post_conversations pc JOIN posts p ON p.id=pc.post_id
+            WHERE pc.conversation_id=(SELECT conversation_id FROM post_conversations WHERE post_id=NEW.id)
+              AND p.deleted_at IS NULL ORDER BY p.id DESC LIMIT 1;
+        END;
+        CREATE TRIGGER IF NOT EXISTS conversation_heads_posts_delete AFTER DELETE ON posts BEGIN
+          DELETE FROM conversation_heads WHERE conversation_id=coalesce(
+            (SELECT conversation_id FROM post_conversations WHERE post_id=OLD.parent_id),OLD.parent_id,OLD.id
+          );
+          INSERT INTO conversation_heads(conversation_id,latest_post_id,activity_at)
+            SELECT pc.conversation_id,p.id,p.created_at FROM post_conversations pc JOIN posts p ON p.id=pc.post_id
+            WHERE pc.conversation_id=coalesce(
+              (SELECT conversation_id FROM post_conversations WHERE post_id=OLD.parent_id),OLD.parent_id,OLD.id
+            ) AND p.deleted_at IS NULL ORDER BY p.id DESC LIMIT 1;
+        END;`)
+    },
+  },
+  {
+    version: 150,
+    name: 'personalized_post_candidates',
+    up(database) {
+      if (!database.query('SELECT 1 FROM sqlite_master WHERE type=\'table\' AND name=\'posts\'').get()
+        || !columns(database, 'posts').includes('parent_id')) return
+      database.run(`CREATE TABLE IF NOT EXISTS personalized_post_candidates (
+          viewer_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+          post_id INTEGER NOT NULL REFERENCES posts(id) ON DELETE CASCADE,
+          created_at TEXT NOT NULL,
+          PRIMARY KEY(viewer_id,post_id)
+        );
+        CREATE INDEX IF NOT EXISTS personalized_post_candidates_page
+          ON personalized_post_candidates(viewer_id,created_at DESC,post_id DESC);
+
+        INSERT OR IGNORE INTO personalized_post_candidates(viewer_id,post_id,created_at)
+          SELECT p.user_id,p.id,p.created_at FROM posts p;
+        INSERT OR IGNORE INTO personalized_post_candidates(viewer_id,post_id,created_at)
+          SELECT f.follower_id,p.id,p.created_at FROM posts p JOIN follows f ON f.following_id=p.user_id
+          WHERE f.created_at IS NULL OR p.created_at>=f.created_at;
+        INSERT OR IGNORE INTO personalized_post_candidates(viewer_id,post_id,created_at)
+          SELECT pm.user_id,p.id,p.created_at FROM post_mentions pm JOIN posts p ON p.id=pm.post_id;
+        INSERT OR IGNORE INTO personalized_post_candidates(viewer_id,post_id,created_at)
+          SELECT hf.user_id,p.id,p.created_at FROM post_hashtags ph JOIN posts p ON p.id=ph.post_id
+          JOIN hashtag_follows hf ON hf.tag=ph.tag WHERE p.created_at>=hf.created_at;
+        WITH RECURSIVE ancestry(post_id,ancestor_id) AS (
+          SELECT id,parent_id FROM posts WHERE parent_id IS NOT NULL
+          UNION ALL SELECT ancestry.post_id,p.parent_id FROM ancestry JOIN posts p ON p.id=ancestry.ancestor_id
+          WHERE p.parent_id IS NOT NULL
+        ) INSERT OR IGNORE INTO personalized_post_candidates(viewer_id,post_id,created_at)
+          SELECT ancestor.user_id,ancestry.post_id,child.created_at FROM ancestry
+          JOIN posts ancestor ON ancestor.id=ancestry.ancestor_id JOIN posts child ON child.id=ancestry.post_id
+          UNION SELECT f.follower_id,ancestry.post_id,child.created_at FROM ancestry
+          JOIN posts ancestor ON ancestor.id=ancestry.ancestor_id JOIN posts child ON child.id=ancestry.post_id
+          JOIN follows f ON f.following_id=ancestor.user_id
+          WHERE f.created_at IS NULL OR child.created_at>=f.created_at;
+
+        CREATE TRIGGER IF NOT EXISTS personalized_candidates_posts_insert AFTER INSERT ON posts BEGIN
+          INSERT OR IGNORE INTO personalized_post_candidates(viewer_id,post_id,created_at)
+            SELECT NEW.user_id,NEW.id,NEW.created_at
+            UNION SELECT follower_id,NEW.id,NEW.created_at FROM follows
+              WHERE following_id=NEW.user_id AND (created_at IS NULL OR NEW.created_at>=created_at)
+            UNION SELECT ancestor.user_id,NEW.id,NEW.created_at FROM posts ancestor WHERE ancestor.id IN (
+              WITH RECURSIVE ancestry(id,parent_id) AS (
+                SELECT id,parent_id FROM posts WHERE id=NEW.parent_id
+                UNION ALL SELECT p.id,p.parent_id FROM posts p JOIN ancestry a ON p.id=a.parent_id
+              ) SELECT id FROM ancestry
+            )
+            UNION SELECT f.follower_id,NEW.id,NEW.created_at FROM follows f WHERE f.following_id IN (
+              WITH RECURSIVE ancestry(id,user_id,parent_id) AS (
+                SELECT id,user_id,parent_id FROM posts WHERE id=NEW.parent_id
+                UNION ALL SELECT p.id,p.user_id,p.parent_id FROM posts p JOIN ancestry a ON p.id=a.parent_id
+              ) SELECT user_id FROM ancestry
+            ) AND (f.created_at IS NULL OR NEW.created_at>=f.created_at)
+            UNION SELECT pm.user_id,NEW.id,NEW.created_at FROM post_mentions pm WHERE pm.post_id IN (
+              WITH RECURSIVE ancestry(id,parent_id) AS (
+                SELECT id,parent_id FROM posts WHERE id=NEW.parent_id
+                UNION ALL SELECT p.id,p.parent_id FROM posts p JOIN ancestry a ON p.id=a.parent_id
+              ) SELECT id FROM ancestry
+            )
+            UNION SELECT hf.user_id,NEW.id,NEW.created_at FROM hashtag_follows hf
+              JOIN post_hashtags ph ON ph.tag=hf.tag WHERE ph.post_id IN (
+                WITH RECURSIVE ancestry(id,parent_id) AS (
+                  SELECT id,parent_id FROM posts WHERE id=NEW.parent_id
+                  UNION ALL SELECT p.id,p.parent_id FROM posts p JOIN ancestry a ON p.id=a.parent_id
+                ) SELECT id FROM ancestry
+              ) AND NEW.created_at>=hf.created_at;
+        END;
+        CREATE TRIGGER IF NOT EXISTS personalized_candidates_mentions_insert AFTER INSERT ON post_mentions BEGIN
+          INSERT OR IGNORE INTO personalized_post_candidates(viewer_id,post_id,created_at)
+            SELECT NEW.user_id,p.id,p.created_at FROM posts p WHERE p.id=NEW.post_id;
+        END;
+        CREATE TRIGGER IF NOT EXISTS personalized_candidates_tags_insert AFTER INSERT ON post_hashtags BEGIN
+          INSERT OR IGNORE INTO personalized_post_candidates(viewer_id,post_id,created_at)
+            SELECT hf.user_id,p.id,p.created_at FROM posts p JOIN hashtag_follows hf ON hf.tag=NEW.tag
+            WHERE p.id=NEW.post_id AND p.created_at>=hf.created_at;
+        END;
+        CREATE TRIGGER IF NOT EXISTS personalized_candidates_hashtag_follows_insert
+          AFTER INSERT ON hashtag_follows BEGIN
+          INSERT OR IGNORE INTO personalized_post_candidates(viewer_id,post_id,created_at)
+            SELECT NEW.user_id,p.id,p.created_at FROM post_hashtags ph JOIN posts p ON p.id=ph.post_id
+            WHERE ph.tag=NEW.tag AND p.created_at>=NEW.created_at;
+        END;
+        CREATE TRIGGER IF NOT EXISTS personalized_candidates_posts_created_update
+          AFTER UPDATE OF created_at ON posts BEGIN
+          UPDATE personalized_post_candidates SET created_at=NEW.created_at WHERE post_id=NEW.id;
+        END;`)
+    },
+  },
+  {
+    version: 151,
+    name: 'background_hot_feed_projection',
+    up(database) {
+      if (!database.query("SELECT 1 FROM sqlite_master WHERE type='table' AND name='post_hot'").get()
+        || !database.query("SELECT 1 FROM sqlite_master WHERE type='table' AND name='post_conversations'").get()) return
+      database.run(`CREATE TABLE IF NOT EXISTS hot_feed_projection (
+          post_id INTEGER PRIMARY KEY REFERENCES posts(id) ON DELETE CASCADE,
+          conversation_id INTEGER NOT NULL REFERENCES posts(id) ON DELETE CASCADE,
+          conversation_rank INTEGER NOT NULL,
+          post_rank INTEGER NOT NULL,
+          hot_score REAL NOT NULL,
+          latest_activity_at TEXT NOT NULL
+        );
+        CREATE INDEX IF NOT EXISTS hot_feed_projection_conversations
+          ON hot_feed_projection(conversation_rank,post_rank);
+        CREATE TABLE IF NOT EXISTS hot_feed_projection_state (
+          id INTEGER PRIMARY KEY CHECK(id=1),dirty INTEGER NOT NULL DEFAULT 1,
+          generation INTEGER NOT NULL DEFAULT 0,ranking_version INTEGER NOT NULL,refreshed_at TEXT
+        );
+        INSERT OR IGNORE INTO hot_feed_projection_state(id,dirty,generation,ranking_version)
+          VALUES(1,1,0,${hotRankingVersion});
+        CREATE TRIGGER IF NOT EXISTS hot_projection_post_hot_insert AFTER INSERT ON post_hot BEGIN
+          UPDATE hot_feed_projection_state SET dirty=1,generation=generation+1 WHERE id=1;
+        END;
+        CREATE TRIGGER IF NOT EXISTS hot_projection_post_hot_update AFTER UPDATE ON post_hot BEGIN
+          UPDATE hot_feed_projection_state SET dirty=1,generation=generation+1 WHERE id=1;
+        END;
+        CREATE TRIGGER IF NOT EXISTS hot_projection_post_hot_delete AFTER DELETE ON post_hot BEGIN
+          UPDATE hot_feed_projection_state SET dirty=1,generation=generation+1 WHERE id=1;
+        END;`)
+      refreshHotFeedProjection(database)
+    },
+  },
+  {
+    version: 152,
+    name: 'hot_projection_generation_guard',
+    up(database) {
+      if (!database.query("SELECT 1 FROM sqlite_master WHERE type='table' AND name='hot_feed_projection_state'")
+        .get()) return
+      addColumn(database, 'hot_feed_projection_state', 'generation', 'INTEGER NOT NULL DEFAULT 0')
+      database.run(`DROP TRIGGER IF EXISTS hot_projection_post_hot_insert;
+        DROP TRIGGER IF EXISTS hot_projection_post_hot_update;
+        DROP TRIGGER IF EXISTS hot_projection_post_hot_delete;
+        CREATE TRIGGER hot_projection_post_hot_insert AFTER INSERT ON post_hot BEGIN
+          UPDATE hot_feed_projection_state SET dirty=1,generation=generation+1 WHERE id=1;
+        END;
+        CREATE TRIGGER hot_projection_post_hot_update AFTER UPDATE ON post_hot BEGIN
+          UPDATE hot_feed_projection_state SET dirty=1,generation=generation+1 WHERE id=1;
+        END;
+        CREATE TRIGGER hot_projection_post_hot_delete AFTER DELETE ON post_hot BEGIN
+          UPDATE hot_feed_projection_state SET dirty=1,generation=generation+1 WHERE id=1;
+        END;
+        UPDATE hot_feed_projection_state SET dirty=1 WHERE id=1;`)
     },
   },
 ]

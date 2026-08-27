@@ -11,7 +11,7 @@ import { enrichPosts, loadBioReferenceData, visibleTagFollowerCounts, visibleUse
 import type { PersonalizedFeedData, PersonalizedTimelineRow, User } from './types'
 import { isWhisperThread, whisperThreadRelevantToViewer, whisperThreadTargetsViewer } from './whisper'
 
-export const PERSONALIZED_FEED_SNAPSHOT_VERSION = 27
+export const PERSONALIZED_FEED_SNAPSHOT_VERSION = 28
 
 const descendsFromViewer = `EXISTS (WITH RECURSIVE ancestors(id,user_id,parent_id) AS (
   SELECT ancestor.id,ancestor.user_id,ancestor.parent_id FROM posts ancestor WHERE ancestor.id=p.parent_id
@@ -58,7 +58,9 @@ export function loadPersonalizedFeed(database: Database, user: User, page: numbe
         0 targeted_to_viewer,NULL posts
       FROM posts p JOIN users u ON u.id=p.user_id LEFT JOIN posts parent ON parent.id=p.parent_id
       LEFT JOIN post_mentions pm ON pm.post_id=p.id AND pm.user_id=$viewer
-      WHERE p.deleted_at IS NULL AND ((NOT ${isWhisperThread()} AND
+      WHERE EXISTS (SELECT 1 FROM personalized_post_candidates candidate
+          WHERE candidate.viewer_id=$viewer AND candidate.post_id=p.id)
+        AND p.deleted_at IS NULL AND ((NOT ${isWhisperThread()} AND
         ((p.user_id=$viewer AND (parent.user_id!=$viewer OR
         ${hasVisibleDescendantFromAnotherUser})) OR p.user_id IN
         (SELECT following_id FROM follows WHERE follower_id=$viewer AND p.created_at>=created_at) OR ${descendsFromViewer}
@@ -82,7 +84,9 @@ export function loadPersonalizedFeed(database: Database, user: User, page: numbe
         NULL target_handle,NULL target_tag,NULL target_bio,0 target_is_viewer,1 targeted_to_viewer,NULL posts
       FROM posts p JOIN users u ON u.id=p.user_id LEFT JOIN posts parent ON parent.id=p.parent_id
       LEFT JOIN post_mentions pm ON pm.post_id=p.id AND pm.user_id=$viewer
-      WHERE p.deleted_at IS NULL AND p.user_id!=$viewer
+      WHERE EXISTS (SELECT 1 FROM personalized_post_candidates candidate
+          WHERE candidate.viewer_id=$viewer AND candidate.post_id=p.id)
+        AND p.deleted_at IS NULL AND p.user_id!=$viewer
         AND (parent.user_id=$viewer OR pm.user_id IS NOT NULL OR ${whisperThreadTargetsViewer()})
         AND ($bypassBlocks=1 OR NOT EXISTS (SELECT 1 FROM blocks b
           WHERE (b.blocker_id=$viewer AND b.blocked_id=p.user_id)

@@ -22,7 +22,8 @@ import { hasUnreadForYou, hasUnreadToMe, markAllForYouRead, markForYouEntriesRea
   unreadForYouCount, unreadToMeCount } from './for-you-state'
 import { dropUsername, resolveHandle } from './handles'
 import { claimInitialHandle, HandleChangeLimitError, updateProfileHandle } from './handles'
-import { getHotPosts, type HotPost, hotRankingVersion } from './hot'
+import { getHotPosts, hotFeedProjectionNeedsRefresh, type HotPost, hotRankingVersion,
+  refreshHotFeedProjection } from './hot'
 import { isImageKey } from './image-storage'
 import { interactedEmail } from './interacted-email'
 import { recentConversationReplies } from './latest-conversation'
@@ -2109,11 +2110,20 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
       const state = viewerId >= 0 ? latestPostState(viewerId, database) : []
       const blockViewerId = viewerIsModerator(database, viewerId) ? -1 : viewerId
       const parameters = [blockViewerId, blockViewerId, blockViewerId, viewerId, viewerId]
-      const snapshotKind = 'latest-roots-v9'
-      const snapshot = feedSnapshotPage<PostView[]>(database, snapshotKind, viewerId, page, () => {
+      const snapshotKind = 'latest-conversation-heads-v10'
+      const snapshot = feedSnapshotPage<number>(database, snapshotKind, viewerId, page, () => {
+        if (viewerId < 0) {
+          return (database.query(`SELECT h.conversation_id FROM conversation_heads h
+            WHERE NOT EXISTS (SELECT 1 FROM post_hashtags ph
+              WHERE ph.post_id=h.conversation_id AND ph.tag='whisper')
+            ORDER BY h.latest_post_id DESC,h.conversation_id DESC`).all() as Array<{ conversation_id: number }>)
+            .map(row => row.conversation_id)
+        }
         const rows = database.query(
-          `SELECT p.*,u.handle FROM posts p JOIN users u ON u.id=p.user_id
-          WHERE p.deleted_at IS NULL AND (? < 0 OR NOT EXISTS (WITH RECURSIVE ancestors(user_id,parent_id) AS (
+          `SELECT h.conversation_id FROM conversation_heads h WHERE EXISTS (
+          SELECT 1 FROM post_conversations pc JOIN posts p ON p.id=pc.post_id JOIN users u ON u.id=p.user_id
+          WHERE pc.conversation_id=h.conversation_id AND p.deleted_at IS NULL
+          AND (? < 0 OR NOT EXISTS (WITH RECURSIVE ancestors(user_id,parent_id) AS (
             SELECT p.user_id,p.parent_id
             UNION ALL
             SELECT parent.user_id,parent.parent_id FROM posts parent JOIN ancestors ON parent.id=ancestors.parent_id
@@ -2122,38 +2132,42 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
             OR (b.blocker_id=ancestors.user_id AND b.blocked_id=?)))
           AND ${excludesWhisperPosts()}
           AND (? < 0 OR NOT EXISTS (SELECT 1 FROM post_hashtags ph JOIN blocked_hashtags bh ON bh.tag=ph.tag
-            WHERE ph.post_id=p.id AND bh.user_id=?)) ORDER BY p.id DESC`,
-        ).all(...parameters) as PostView[]
-        const byId = new Map(rows.map(row => [row.id, row]))
-        const rootIds = new Map<number, number>()
-        const rootId = (post: PostView) => {
-          const cached = rootIds.get(post.id)
-          if (cached !== undefined) return cached
-          let current = post
-          const visited: number[] = []
-          while (current.parent_id && byId.has(current.parent_id)) {
-            visited.push(current.id)
-            current = byId.get(current.parent_id)!
-          }
-          for (const id of visited) rootIds.set(id, current.id)
-          rootIds.set(current.id, current.id)
-          return current.id
-        }
-        const conversations = new Map<number, PostView[]>()
-        for (const row of rows) {
-          const id = rootId(row)
-          conversations.set(id, [...(conversations.get(id) || []), row])
-        }
-        return [...conversations.entries()].map(([id, conversation]) => {
-          const root = byId.get(id)
-          const recentReplies = recentConversationReplies(conversation)
-          const keepsRoot = root?.parent_id === null
-            && (conversation[0]?.id === root.id || recentReplies[0]?.parent_id === root.id)
-          return keepsRoot ? [root!, ...recentReplies] : recentReplies
-        }).filter(conversation => conversation.length)
+            WHERE ph.post_id=p.id AND bh.user_id=?)) LIMIT 1)
+          ORDER BY h.latest_post_id DESC,h.conversation_id DESC`,
+        ).all(...parameters) as Array<{ conversation_id: number }>
+        return rows.map(row => row.conversation_id)
       }, pageSize, cacheDb)
+      const conversationIds = snapshot.items
+      const rows = conversationIds.length
+        ? database.query(`SELECT p.*,u.handle,pc.conversation_id FROM post_conversations pc
+          JOIN posts p ON p.id=pc.post_id JOIN users u ON u.id=p.user_id
+          WHERE pc.conversation_id IN (${conversationIds.map(() => '?').join(',')})
+          AND p.deleted_at IS NULL AND (? < 0 OR NOT EXISTS (WITH RECURSIVE ancestors(user_id,parent_id) AS (
+            SELECT p.user_id,p.parent_id
+            UNION ALL
+            SELECT parent.user_id,parent.parent_id FROM posts parent JOIN ancestors ON parent.id=ancestors.parent_id
+          ) SELECT 1 FROM ancestors JOIN blocks b ON
+            (b.blocker_id=? AND b.blocked_id=ancestors.user_id)
+            OR (b.blocker_id=ancestors.user_id AND b.blocked_id=?)))
+          AND ${excludesWhisperPosts()}
+          AND (? < 0 OR NOT EXISTS (SELECT 1 FROM post_hashtags ph JOIN blocked_hashtags bh ON bh.tag=ph.tag
+            WHERE ph.post_id=p.id AND bh.user_id=?)) ORDER BY p.id DESC`)
+          .all(...conversationIds, ...parameters) as Array<PostView & { conversation_id: number }>
+        : []
+      const byConversation = new Map<number, PostView[]>()
+      for (const row of rows) byConversation.set(row.conversation_id!, [
+        ...(byConversation.get(row.conversation_id!) || []), row,
+      ])
+      const snapshotPosts = conversationIds.flatMap(id => {
+        const conversation = byConversation.get(id) || []
+        if (!conversation.length) return []
+        const root = conversation.find(row => row.id === id)
+        const recentReplies = recentConversationReplies(conversation)
+        const keepsRoot = root?.parent_id === null
+          && (conversation[0]?.id === root.id || recentReplies[0]?.parent_id === root.id)
+        return keepsRoot ? [root!, ...recentReplies] : recentReplies
+      })
       const unread = state.filter(row => row.unread)
-      const snapshotPosts = snapshot.items.flat()
       const posts = enrichPosts(database, snapshotPosts, viewerId)
       const pageIds = new Set(snapshotPosts.map(post => post.id))
       const parentReferences = new Map<number, number>()
@@ -2168,13 +2182,19 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
         .map(row => row.id)
       const readOnPage = new Set(unreadPostIds)
       const remainingUnread = markRead ? unread.filter(row => !readOnPage.has(row.id)) : unread
-      const snapshotPositions = new Map((cacheDb.query(`SELECT json_extract(item.value,'$.id') id,
-        snapshot_item.position FROM feed_snapshot_items snapshot_item,json_each(snapshot_item.payload) item
-        WHERE snapshot_item.snapshot_id=?`).all(snapshot.snapshotId) as Array<{ id: number; position: number }>)
-        .map(row => [row.id, row.position]))
+      const snapshotPositions = new Map((cacheDb.query(`SELECT cast(payload AS INTEGER) conversation_id,position
+        FROM feed_snapshot_items WHERE snapshot_id=?`).all(snapshot.snapshotId) as Array<{
+          conversation_id: number; position: number
+        }>).map(row => [row.conversation_id, row.position]))
+      const unreadConversations = unread.length ? new Map((database.query(`SELECT p.id,pc.conversation_id
+        FROM post_conversations pc JOIN posts p ON p.id=pc.post_id
+        WHERE p.id IN (${unread.map(() => '?').join(',')})`).all(...unread.map(row => row.id)) as Array<{
+          id: number; conversation_id: number
+        }>).map(row => [row.id, row.conversation_id])) : new Map<number, number>()
       const href = (row: { id: number } | undefined) => {
         if (!row) return undefined
-        const rowPage = Math.floor((snapshotPositions.get(row.id) || 0) / pageSize) + 1
+        const rowPage = Math.floor((snapshotPositions.get(unreadConversations.get(row.id) || row.id) || 0)
+          / pageSize) + 1
         return `/latest${rowPage > 1 ? `?page=${rowPage}` : ''}#post-${row.id}`
       }
       if (viewerId >= 0 && markRead && unreadPostIds.length) {
@@ -2228,19 +2248,67 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
     case 'feeds.hotPage': {
       const { viewerId, page, pageSize } = input as DatabaseDomainInput<'feeds.hotPage'>
       const moderator = viewerIsModerator(database, viewerId)
-      const snapshot = feedSnapshotPage<HotPost[]>(database, `hot:${hotRankingVersion}:conversations`, viewerId, page,
-        () =>
-          groupPostsByConversation(database,
-            getHotPosts(database, 1_000_000, null, new Date(), viewerId, false, 2, moderator)),
-        pageSize, cacheDb)
+      const blockViewerId = moderator ? -1 : viewerId
+      const visibility = viewerId < 0 ? 'p.deleted_at IS NULL' : `p.deleted_at IS NULL
+        AND (? < 0 OR NOT EXISTS (SELECT 1 FROM blocks b WHERE
+          (b.blocker_id=? AND b.blocked_id=p.user_id)
+          OR (b.blocked_id=? AND b.blocker_id=p.user_id)))
+        AND NOT EXISTS (SELECT 1 FROM post_hashtags ph JOIN blocked_hashtags bh ON bh.tag=ph.tag
+          WHERE ph.post_id=p.id AND bh.user_id=?)`
+      const visibilityParameters = viewerId < 0
+        ? []
+        : [blockViewerId, blockViewerId, blockViewerId, viewerId]
+      const totalItems = (database.query(`SELECT count(DISTINCT projection.conversation_id) count
+        FROM hot_feed_projection projection JOIN posts p ON p.id=projection.post_id WHERE ${visibility}`)
+        .get(...visibilityParameters) as { count: number }).count
+      const totalPages = Math.max(1, Math.ceil(totalItems / pageSize))
+      const safePage = Math.min(page, totalPages)
+      const conversationIds = (database.query(`SELECT projection.conversation_id
+        FROM hot_feed_projection projection JOIN posts p ON p.id=projection.post_id WHERE ${visibility}
+        GROUP BY projection.conversation_id ORDER BY min(projection.conversation_rank)
+        LIMIT ? OFFSET ?`).all(...visibilityParameters, pageSize, (safePage - 1) * pageSize) as Array<{
+          conversation_id: number
+        }>).map(row => row.conversation_id)
+      const projectedRows = conversationIds.length ? database.query(`SELECT projection.post_id
+        FROM hot_feed_projection projection JOIN posts p ON p.id=projection.post_id
+        WHERE projection.conversation_id IN (${conversationIds.map(() => '?').join(',')}) AND ${visibility}
+        ORDER BY projection.conversation_rank,projection.post_rank`)
+        .all(...conversationIds, ...visibilityParameters) as Array<{ post_id: number }> : []
+      const hotIds = projectedRows.map(row => row.post_id)
+      const hotRows = hotIds.length ? database.query(`SELECT p.*,u.handle,h.score hot_score,h.latest_activity_at,
+        h.reply_count,h.activity_count FROM posts p JOIN users u ON u.id=p.user_id
+        JOIN post_hot h ON h.post_id=p.id WHERE p.id IN (${hotIds.map(() => '?').join(',')})`)
+        .all(...hotIds) as HotPost[] : []
+      const hotById = new Map(hotRows.map(post => [post.id, post]))
+      const posts = hotIds.flatMap(id => {
+        const post = hotById.get(id)
+        return post ? [post] : []
+      })
       return { posts: rewireVisibleAncestorGaps(database,
-        enrichPosts(database, snapshot.items.flat(), viewerId)), page: snapshot.page,
-        totalItems: snapshot.totalItems, totalPages: snapshot.totalPages,
+        enrichPosts(database, posts, viewerId)), page: safePage, totalItems, totalPages,
         forYouCount: viewerId >= 0 ? unreadForYouCount(viewerId, database) : 0,
         toMeCount: viewerId >= 0 ? unreadToMeCount(viewerId, database) : 0,
         latestCount: viewerId >= 0 ? unreadLatestCount(viewerId, database) : 0,
         forYouUnread: viewerId >= 0 && hasUnreadForYou(viewerId, database),
         toMeUnread: viewerId >= 0 && hasUnreadToMe(viewerId, database) } as DatabaseDomainOutput<K>
+    }
+    case 'feeds.refreshHotProjection': {
+      const { force = false, now } = input as DatabaseDomainInput<'feeds.refreshHotProjection'>
+      const refreshAt = now ? new Date(now) : new Date()
+      if (!force && !hotFeedProjectionNeedsRefresh(database, refreshAt.getTime())) {
+        const counts = database.query(`SELECT count(*) posts,count(DISTINCT conversation_id) conversations
+          FROM hot_feed_projection`).get() as { posts: number; conversations: number }
+        return { refreshed: false, ...counts } as DatabaseDomainOutput<K>
+      }
+      const result = refreshHotFeedProjection(database, refreshAt)
+      cacheDb.query("DELETE FROM feed_snapshots WHERE kind LIKE 'hot:%'").run()
+      cacheDb.query("DELETE FROM materialized_feed_pages_v2 WHERE kind='hot'").run()
+      return { refreshed: true, ...result } as DatabaseDomainOutput<K>
+    }
+    case 'feeds.hotProjectionChanged': {
+      cacheDb.query("DELETE FROM feed_snapshots WHERE kind LIKE 'hot:%'").run()
+      cacheDb.query("DELETE FROM materialized_feed_pages_v2 WHERE kind='hot'").run()
+      return null as DatabaseDomainOutput<K>
     }
     case 'feeds.personalizedPage': {
       const { user, page, pageSize, toMe, path, markRead = true } = input as DatabaseDomainInput<

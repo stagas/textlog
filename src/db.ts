@@ -1,7 +1,7 @@
 import { Database } from 'bun:sqlite'
 import { createDatabaseBackup, defaultBackupDirectory, defaultDatabasePath } from './database-backup'
 import { compactDatabaseAfterMigration } from './database-compaction'
-import { rebuildHotPosts } from './hot'
+import { hotScoresNeedRebuild, rebuildHotPosts } from './hot'
 import { databaseVersion, latestMigrationVersion, runMigrations } from './migrations'
 export type { User } from './types'
 
@@ -27,7 +27,7 @@ if (startingVersion < latestMigrationVersion && hasUserTables) {
 }
 
 runMigrations(db, migration => console.log(`database migrate v${migration.version} ${migration.name}`))
-rebuildHotPosts(db)
+if (hotScoresNeedRebuild(db)) rebuildHotPosts(db)
 db.query('PRAGMA wal_checkpoint(TRUNCATE)').get()
 if (startingVersion < latestMigrationVersion && hasUserTables) compactDatabaseAfterMigration(db, defaultDatabasePath)
 

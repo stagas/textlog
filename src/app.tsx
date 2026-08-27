@@ -136,6 +136,41 @@ const clientErrorRateLimiter = new ClientErrorRateLimiter()
 const nestedFromRateLimiter = new NestedFromRateLimiter()
 await loadBlockedIps()
 startPostPushWorker()
+let hotProjectionRefreshRunning = false
+const hotProjectionWorker = new Worker(new URL('./hot-projection-worker.ts', import.meta.url))
+let finishInitialHotProjection: (() => void) | undefined
+const initialHotProjection = new Promise<void>(resolve => {
+  finishInitialHotProjection = resolve
+})
+hotProjectionWorker.onmessage = async event => {
+  hotProjectionRefreshRunning = false
+  const result = event.data as { refreshed?: boolean; error?: string }
+  if (result.error) {
+    logError('hot feed projection refresh failed', new Error(result.error))
+    finishInitialHotProjection?.()
+    finishInitialHotProjection = undefined
+    return
+  }
+  if (result.refreshed) await databaseService().call('feeds.hotProjectionChanged', {})
+    .catch(error => logError('hot feed cache invalidation failed', error))
+  finishInitialHotProjection?.()
+  finishInitialHotProjection = undefined
+}
+hotProjectionWorker.onerror = event => {
+  hotProjectionRefreshRunning = false
+  finishInitialHotProjection?.()
+  finishInitialHotProjection = undefined
+  logError('hot feed projection worker failed', new Error(event.message))
+}
+const refreshHotProjection = () => {
+  if (hotProjectionRefreshRunning) return
+  hotProjectionRefreshRunning = true
+  hotProjectionWorker.postMessage({ now: new Date().toISOString() })
+}
+refreshHotProjection()
+await initialHotProjection
+const hotProjectionTimer = setInterval(refreshHotProjection, 30_000)
+hotProjectionTimer.unref()
 const ipRequestTimer = setInterval(
   () => void flushIpRequests().catch(error => logError('IP request buffer flush failed', error)),
   5_000,

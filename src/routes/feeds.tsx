@@ -25,9 +25,7 @@ import {
 import { campaignIpPseudonym } from '../ip-privacy'
 import { rpcMaterializedFeedPage } from '../materialized-feed-service'
 import { decodePostCursor } from '../pagination'
-import { withRequestContext } from '../request-context'
 import { resolvedDensity, resolvedPageSize } from '../request-preferences'
-import { withAppearance } from '../theme'
 import type { PersonalizedFeedData } from '../types'
 import { currentUser } from '../utils'
 
@@ -58,7 +56,6 @@ async function showNotificationBanner(request: Request, user: ReturnType<typeof 
   return Math.random() < 0.5 ? 'notifications' : 'appearance'
 }
 
-type PrimaryFeed = 'for-you' | 'latest' | 'hot'
 function viewerCacheVersion(base: number, user: ReturnType<typeof currentUser>) {
   return base * 2 + (user?.show_moderated_content === 1 ? 1 : 0)
 }
@@ -77,8 +74,6 @@ type RecentFeedVisitor = {
 
 const recentFeedVisitors = new Map<number, RecentFeedVisitor>()
 const recentFeedVisitorLimit = 30
-const feedWarmTimes = new Map<string, number>()
-const feedWarmIntervalMs = 5_000
 
 const feedVariantCookieNames = new Set([
   'appearance',
@@ -119,60 +114,6 @@ function rememberFeedVisitor(request: Request, user: NonNullable<ReturnType<type
     pageSize,
     density,
   }).catch(error => console.error('Could not remember recent feed visitor', error))
-}
-
-async function warmFeedPage(request: Request, kind: PrimaryFeed,
-  user: NonNullable<ReturnType<typeof currentUser>> | null, pageSize: ReturnType<typeof resolvedPageSize>)
-{
-  const feedRequest = new Request(new URL(`/${kind}`, request.url), { headers: request.headers })
-  return await withAppearance(feedRequest, async () => {
-    const viewerId = user?.id ?? -1
-    if (kind === 'for-you') {
-      if (!user) return
-      // Warm the ordered snapshot, but leave personalized HTML to a foreground request. A background render contains
-      // unread indicators without consuming them, so caching it would keep serving stale dots and counts.
-      await backgroundDatabaseCall('feeds.personalizedPage', {
-        user,
-        page: 1,
-        pageSize,
-        toMe: false,
-        path: '/for-you',
-        markRead: false,
-      })
-      return
-    }
-    if (kind === 'latest') {
-      if (user && await backgroundDatabaseCall('feeds.latestUnreadCount', { userId: user.id }) > 0) return
-      await rpcMaterializedFeedPage(feedRequest, kind, viewerId, async () => {
-        const feed = await backgroundDatabaseCall('feeds.latestPage', { viewerId, page: 1, pageSize, markRead: false })
-        return page(<PublicFeed user={user} feed={feed} path="/latest" />)
-      }, false, viewerCacheVersion(0, user), true)
-      return
-    }
-    await rpcMaterializedFeedPage(feedRequest, kind, viewerId, async () => {
-      const feed = await backgroundDatabaseCall('feeds.hotPage', { viewerId, page: 1, pageSize })
-      return page(<HotFeed user={user} feed={feed} title="hot" />)
-    }, false, viewerCacheVersion(hotRankingVersion, user), true)
-  })
-}
-
-function warmOtherFeedPages(request: Request, current: PrimaryFeed,
-  user: NonNullable<ReturnType<typeof currentUser>> | null)
-{
-  const pageSize = resolvedPageSize(request)
-  const kinds: PrimaryFeed[] = user ? ['for-you', 'hot', 'latest'] : ['hot', 'latest']
-  setTimeout(() => {
-    const now = Date.now()
-    const pending = kinds.filter(kind => kind !== current).filter(kind => {
-      const key = `${user?.id ?? -1}:${kind}:${pageSize}:${feedVariantCookie(request)}`
-      if (now - (feedWarmTimes.get(key) || 0) < feedWarmIntervalMs) return false
-      feedWarmTimes.set(key, now)
-      return true
-    })
-    void Promise.all(pending.map(kind => warmFeedPage(request, kind, user, pageSize))).catch(error => {
-        console.error('Could not warm feed caches', error)
-      })
-  }, 0)
 }
 
 export function registerFeedsRoutes(app: Hono) {
@@ -243,7 +184,6 @@ export function registerFeedsRoutes(app: Hono) {
         })
       : await render()
     const remembered = rememberFeed(response, 'following')
-    warmOtherFeedPages(c.req.raw, 'for-you', user)
     return remembered
   })
 
@@ -269,7 +209,6 @@ export function registerFeedsRoutes(app: Hono) {
         viewerCacheVersion(0, user))
       : await render()
     const remembered = rememberFeed(response, 'latest')
-    warmOtherFeedPages(c.req.raw, 'latest', user)
     return remembered
   })
 
@@ -349,7 +288,6 @@ export function registerFeedsRoutes(app: Hono) {
         viewerCacheVersion(hotRankingVersion, user))
       : await render()
     const remembered = rememberFeed(response, 'hot')
-    warmOtherFeedPages(c.req.raw, 'hot', user)
     return remembered
   })
 
