@@ -193,7 +193,8 @@ export type DatabaseDomainOperations = {
   'account.deleteEmailToken': { input: { tokenHash: string }; output: null }
   'account.saveAppearancePreferences': {
     input: { userId: number; deviceId: string; pageSize: PageSizeChoice; density: DensityChoice;
-      showLinkPreviews: boolean; hidePeopleFollowActivity: boolean; hideHashtagFollowActivity: boolean }
+      showLinkPreviews: boolean; showModeratedContent: boolean; hidePeopleFollowActivity: boolean;
+      hideHashtagFollowActivity: boolean }
     output: null
   }
   'account.updateProfileFlags': { input: { userId: number; timezone: string }; output: null }
@@ -351,6 +352,7 @@ export type DatabaseDomainOperations = {
     output: { status: 'invalid' } | { status: 'ready'; token: string; expiresAt: number; user: User } }
   'push.postDelivery': { input: { postId: number; actorId: number }; output: { post: {
     body: string
+    moderationCategory: string | null
     parentId: number | null
     parentHandle: string | null
   } | null; subscriptions: Array<{

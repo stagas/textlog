@@ -73,6 +73,22 @@ describe('Web Push activity delivery', () => {
     })
   })
 
+  test('replaces moderated post text with its category', async () => {
+    const database = fixture()
+    database.query('UPDATE posts SET moderation_category=?,moderation_score=? WHERE id=2')
+      .run('self-harm/intent', 0.72)
+    const payloads: string[] = []
+    webpush.sendNotification = (async (_subscription, payload) => {
+      payloads.push(String(payload))
+      return {} as never
+    }) as typeof webpush.sendNotification
+
+    await sendPushForPost(2, 1, 'author', database, vapid)
+
+    expect(JSON.parse(payloads[0]).body).toBe('(moderated due to self-harm/intent)')
+    expect(payloads[0]).not.toContain('hello @recipient')
+  })
+
   test('deletes a subscription after a 410 response', async () => {
     const database = fixture()
     webpush.sendNotification = (async () => {

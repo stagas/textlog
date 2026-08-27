@@ -867,6 +867,21 @@ test('consequential account, content, reporting, and admin flows work over HTTP'
   })).text()
   expect(linkPreviewSettings).toContain('name="showLinkPreviews" value="yes"')
   expect(linkPreviewSettings).not.toContain('name="showLinkPreviews" checked=""')
+  expect(linkPreviewSettings).not.toContain('name="showModeratedContent" checked=""')
+  const enabledModeratedContent = await request('/account/edit/appearance', {
+    method: 'POST',
+    cookie: aliceCookie,
+    userAgent: 'alice-browser',
+    form: { tab: 'misc', pageSize: '20', density: 'regular', showModeratedContent: 'yes' },
+  })
+  expect(enabledModeratedContent.status).toBe(303)
+  expect(database.query('SELECT show_moderated_content FROM users WHERE id=?').get(alice.id))
+    .toEqual({ show_moderated_content: 1 })
+  const moderatedContentSettings = await (await request('/account/edit/appearance?tab=misc', {
+    cookie: aliceCookie,
+    userAgent: 'alice-browser',
+  })).text()
+  expect(moderatedContentSettings).toContain('name="showModeratedContent" checked="" value="yes"')
   const configuredDeviceHome = await (await request('/for-you', {
     cookie: aliceCookie,
     userAgent: 'alice-browser',

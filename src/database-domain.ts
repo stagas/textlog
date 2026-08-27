@@ -163,7 +163,8 @@ import { DENSITY_CHOICES, type DensityChoice, PAGE_SIZE_CHOICES, type PageSizeCh
 function sessionUser(database: Database, token: string | null): User | null {
   if (!token) return null
   const user = database.query(`SELECT u.id,u.handle,u.email,u.bio,u.suspended_at,u.email_verified_at,
-      u.handle_chosen_at,u.show_link_previews,u.hide_people_follow_activity,u.hide_hashtag_follow_activity,u.timezone
+      u.handle_chosen_at,u.show_link_previews,u.show_moderated_content,u.hide_people_follow_activity,
+      u.hide_hashtag_follow_activity,u.timezone
     FROM sessions s JOIN users u ON u.id=s.user_id
     WHERE s.token_hash=? AND s.expires_at>? AND u.deleted_at IS NULL AND u.suspended_at IS NULL`)
     .get(sessionHash(token), Date.now()) as User | null
@@ -605,19 +606,20 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
     }
     case 'account.saveAppearancePreferences': {
       const { userId, deviceId, pageSize, density, showLinkPreviews, hidePeopleFollowActivity,
-        hideHashtagFollowActivity } = input as DatabaseDomainInput<
+        hideHashtagFollowActivity, showModeratedContent } = input as DatabaseDomainInput<
           'account.saveAppearancePreferences'
         >
       database.transaction(() => {
         database.query(`INSERT INTO device_settings(user_id,device_id,page_size,density) VALUES(?,?,?,?)
           ON CONFLICT(user_id,device_id) DO UPDATE SET page_size=excluded.page_size,density=excluded.density,
             updated_at=CURRENT_TIMESTAMP`).run(userId, deviceId, pageSize, density)
-        database.query(`UPDATE users SET show_link_previews=?,hide_people_follow_activity=?,
-          hide_hashtag_follow_activity=? WHERE id=?`).run(showLinkPreviews ? 1 : 0, hidePeopleFollowActivity ? 1 : 0,
-          hideHashtagFollowActivity ? 1 : 0, userId)
+        database.query(`UPDATE users SET show_link_previews=?,show_moderated_content=?,hide_people_follow_activity=?,
+          hide_hashtag_follow_activity=? WHERE id=?`).run(showLinkPreviews ? 1 : 0, showModeratedContent ? 1 : 0,
+          hidePeopleFollowActivity ? 1 : 0, hideHashtagFollowActivity ? 1 : 0, userId)
         database.query(`UPDATE personalized_feed_generations SET generation=generation+1 WHERE viewer_id=?`)
           .run(userId)
-        cacheDb.query(`DELETE FROM materialized_feed_pages_v2 WHERE viewer_id=? AND kind IN ('for-you','to-me')`)
+        cacheDb.query(`DELETE FROM materialized_feed_pages_v2 WHERE viewer_id=?
+          AND kind IN ('latest','hot','for-you','to-me')`)
           .run(userId)
       })()
       return null as DatabaseDomainOutput<K>
@@ -1957,10 +1959,12 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
     }
     case 'push.postDelivery': {
       const { postId, actorId } = input as DatabaseDomainInput<'push.postDelivery'>
-      const row = database.query(`SELECT child.body,child.parent_id parentId,parent_user.handle parentHandle
+      const row = database.query(`SELECT child.body,child.moderation_category moderationCategory,
+        child.parent_id parentId,parent_user.handle parentHandle
         FROM posts child LEFT JOIN posts parent ON parent.id=child.parent_id
         LEFT JOIN users parent_user ON parent_user.id=parent.user_id WHERE child.id=?`).get(postId) as {
         body: string
+        moderationCategory: string | null
         parentId: number | null
         parentHandle: string | null
       } | null

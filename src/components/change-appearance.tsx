@@ -11,7 +11,8 @@ export type AppearanceTab = 'theme' | 'font' | 'misc'
 export function ChangeAppearance(
   { user, selected, selectedFont, selectedSansSerifFont = 'system-sans', selectedPrimaryFont = 'monospace',
     selectedSize = 'regular', selectedPageSize = 20, selectedDensity = 'regular', selectedLinkPreviews = true,
-    includePeopleFollowActivity = false, includeHashtagFollowActivity = false, tab = 'theme', returnPath }: {
+    showModeratedContent = false, includePeopleFollowActivity = false, includeHashtagFollowActivity = false,
+    tab = 'theme', returnPath }: {
       user: User
       selected: Appearance
       selectedFont: FontChoice
@@ -22,6 +23,7 @@ export function ChangeAppearance(
       selectedPageSize?: PageSizeChoice
       selectedDensity?: DensityChoice
       selectedLinkPreviews?: boolean
+      showModeratedContent?: boolean
       returnPath?: string
       includePeopleFollowActivity?: boolean
       includeHashtagFollowActivity?: boolean
@@ -184,6 +186,11 @@ export function ChangeAppearance(
                   <input className="form-checkbox" type="checkbox" role="switch" name="showLinkPreviews" value="yes"
                     defaultChecked={selectedLinkPreviews} />
                   <span>Show link previews</span>
+                </label>
+                <label className="link-preview-setting">
+                  <input className="form-checkbox" type="checkbox" role="switch" name="showModeratedContent"
+                    value="yes" defaultChecked={showModeratedContent} />
+                  <span>Show moderated content</span>
                 </label>
                 <label className="link-preview-setting">
                   <input className="form-checkbox" type="checkbox" role="switch" name="includePeopleFollowActivity"

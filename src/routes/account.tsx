@@ -427,6 +427,7 @@ export function registerAccountRoutes(app: Hono) {
         selectedSansSerifFont={sansSerifFontChoice(c.req.raw)} selectedPrimaryFont={primaryFontChoice(c.req.raw)}
         selectedSize={fontSizeChoice(c.req.raw)} selectedPageSize={resolvedPageSize(c.req.raw)} tab={tab}
         selectedDensity={resolvedDensity(c.req.raw)} selectedLinkPreviews={user.show_link_previews !== 0}
+        showModeratedContent={user.show_moderated_content === 1}
         includePeopleFollowActivity={user.hide_people_follow_activity !== 1}
         includeHashtagFollowActivity={user.hide_hashtag_follow_activity !== 1} returnPath={returnPath} />,
     )
@@ -457,6 +458,7 @@ export function registerAccountRoutes(app: Hono) {
         pageSize: selectedPageSize,
         density: selectedDensity,
         showLinkPreviews: f.showLinkPreviews === 'yes',
+        showModeratedContent: f.showModeratedContent === 'yes',
         hidePeopleFollowActivity: f.includePeopleFollowActivity !== 'yes',
         hideHashtagFollowActivity: f.includeHashtagFollowActivity !== 'yes',
       })

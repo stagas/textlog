@@ -10,12 +10,13 @@ import { displayBio, displayPostBody, linkify, referenceFormId } from '../utils'
 import { enterHref } from './auth-links'
 import { MetaRow } from './meta'
 
-function ContentWarning({ p, controlId, children }: {
+function ContentWarning({ p, controlId, showImmediately = false, children }: {
   p: Pick<PostView, 'moderation_category' | 'moderation_score'>
   controlId: string
+  showImmediately?: boolean
   children: React.ReactNode
 }) {
-  if (!p.moderation_category) return <>{children}</>
+  if (!p.moderation_category || showImmediately) return <>{children}</>
   return (
     <div className="content-warning">
       <input className="content-warning-toggle" id={controlId} type="checkbox"
@@ -749,7 +750,8 @@ export function Post({
           )}
         </MetaRow>
       )}
-      <ContentWarning p={p} controlId={`${formPrefix}-content-warning`}>
+      <ContentWarning p={p} controlId={`${formPrefix}-content-warning`}
+        showImmediately={user?.show_moderated_content === 1}>
         <div className={`post-body${isAsciiArt ? ' ascii-art' : ''}`} dangerouslySetInnerHTML={{
           __html: linkify(displayPostBody(renderedPollBody(p.body)), p.mention_bios, highlightTerms, undefined,
             renderFlags(p), referenceQuery, p.hashtag_counts, p.mention_note_counts, { signedIn: !!user,
@@ -846,7 +848,8 @@ export function Post({
                   )}
                   {!hasTappableParent && <a className="postdate" href={parentDetailPath} rel={navigationRel}>read</a>}
                 </MetaRow>
-                <ContentWarning p={parent} controlId={`${formPrefix}-parent-${parent.id}-content-warning`}>
+                <ContentWarning p={parent} controlId={`${formPrefix}-parent-${parent.id}-content-warning`}
+                  showImmediately={user?.show_moderated_content === 1}>
                   <div className={`post-body${containsAsciiArt(parent.body) ? ' ascii-art' : ''}`}
                     dangerouslySetInnerHTML={{
                     __html: linkify(displayPostBody(renderedPollBody(parent.body)), parent.mention_bios, [], undefined,

@@ -1116,6 +1116,9 @@ test('appearance misc tab offers supported page sizes as radio cards', () => {
   expect(html).toContain('name="showLinkPreviews" checked="" value="yes"')
   expect(html).toContain('<legend>ui</legend>')
   expect(html).toContain('Show link previews')
+  expect(html).toContain('name="showModeratedContent" value="yes"')
+  expect(html).toContain('Show moderated content')
+  expect(html).not.toContain('name="showModeratedContent" checked=""')
   expect(html).toContain('name="includePeopleFollowActivity" value="yes"')
   expect(html).toContain('Include people&#x27;s follow activity in For You')
   expect(html).toContain('name="includeHashtagFollowActivity" value="yes"')
@@ -1135,6 +1138,26 @@ test('appearance misc tab can render link previews disabled', () => {
   }))
   expect(html).toContain('name="showLinkPreviews" value="yes"')
   expect(html).not.toContain('name="showLinkPreviews" checked=""')
+})
+
+test('appearance misc tab can enable moderated content without a consent screen', () => {
+  const settings = renderToStaticMarkup(React.createElement(ChangeAppearance, {
+    user: { id: 1, handle: 'reader', email: 'reader@example.com', bio: '' },
+    selected: { theme: 'system', accent: 'theme' },
+    selectedFont: 'system',
+    showModeratedContent: true,
+    tab: 'misc',
+  }))
+  expect(settings).toContain('name="showModeratedContent" checked="" value="yes"')
+
+  const post = renderToStaticMarkup(React.createElement(Post, {
+    user: { id: 1, handle: 'reader', email: 'reader@example.com', bio: '', show_moderated_content: 1 },
+    p: { id: 2, user_id: 2, parent_id: null, body: 'Sensitive note', handle: 'writer',
+      created_at: '2026-08-03 12:00:00', deleted_at: null, moderation_category: 'self-harm/intent',
+      moderation_score: 0.72 },
+  }))
+  expect(post).toContain('Sensitive note')
+  expect(post).not.toContain('content-warning')
 })
 
 test('appearance misc tab checks included For You follow activity', () => {

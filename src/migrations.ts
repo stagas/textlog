@@ -2238,6 +2238,15 @@ export const migrations: Migration[] = [
       addColumn(database, 'posts', 'moderation_score', 'REAL')
     },
   },
+  {
+    version: 147,
+    name: 'show_moderated_content_preference',
+    up(database) {
+      if (!database.query('SELECT 1 FROM sqlite_master WHERE type=\'table\' AND name=\'users\'').get()) return
+      addColumn(database, 'users', 'show_moderated_content',
+        'INTEGER NOT NULL DEFAULT 0 CHECK(show_moderated_content IN (0,1))')
+    },
+  },
 ]
 
 export const latestMigrationVersion = migrations.at(-1)!.version

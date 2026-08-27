@@ -128,17 +128,19 @@ export async function sendPushForPost(postId: number, actorId: number, actorHand
 {
   if (!vapid) return
   const directPost = database
-    ? database.query(`SELECT child.body,child.parent_id,parent_user.handle parent_handle
+    ? database.query(`SELECT child.body,child.moderation_category,child.parent_id,parent_user.handle parent_handle
     FROM posts child LEFT JOIN posts parent ON parent.id=child.parent_id
     LEFT JOIN users parent_user ON parent_user.id=parent.user_id WHERE child.id=?`).get(postId) as {
       body: string
+      moderation_category: string | null
       parent_id: number | null
       parent_handle: string | null
     } | null
     : null
   const loaded = database ? null : await (service || databaseService()).call('push.postDelivery', { postId, actorId })
   const post = directPost
-    ? { body: directPost.body, parentId: directPost.parent_id, parentHandle: directPost.parent_handle }
+    ? { body: directPost.body, moderationCategory: directPost.moderation_category,
+      parentId: directPost.parent_id, parentHandle: directPost.parent_handle }
     : loaded?.post
   if (!post) return
   const directSubscriptions = database
@@ -206,7 +208,9 @@ export async function sendPushForPost(postId: number, actorId: number, actorHand
           ? `replied to @${post.parentHandle}`
           : 'wrote'
       }`,
-      body: markdownPlainText(splitSpoilerBody(post.body).visible),
+      body: post.moderationCategory
+        ? `(moderated due to ${post.moderationCategory})`
+        : markdownPlainText(splitSpoilerBody(post.body).visible),
       url: `/post/${postId}`,
     }
   }, database, vapid, service)
