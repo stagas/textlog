@@ -2097,8 +2097,6 @@ nav form {
 
 .content-warning-toggle:not(:checked) ~ .content-warning-body {
   display: block;
-  max-height: 8rem;
-  overflow: hidden;
   filter: blur(.35rem);
   opacity: .8;
   pointer-events: none;

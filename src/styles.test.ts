@@ -474,6 +474,7 @@ describe('in-memory stylesheet', () => {
     const css = await Bun.file(new URL('./styles.css', import.meta.url)).text()
     expect(css).toContain('filter: blur(.35rem);')
     expect(css).toContain('opacity: .8;')
+    expect(css).not.toContain('max-height: 8rem;')
     expect(css).toContain('.content-warning-overlay > span {')
     expect(css).toContain('.content-warning-action {\n  color: var(--accent);\n  padding-inline: 0;\n  padding-bottom: 1px;\n  border-bottom: var(--hairline) solid var(--link-border);')
     expect(css).toContain('grid-area: 1 / 1;')
