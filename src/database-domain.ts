@@ -27,7 +27,7 @@ import { getHotPosts, hotFeedProjectionNeedsRefresh, type HotPost, hotRankingVer
 import { isImageKey } from './image-storage'
 import { interactedEmail } from './interacted-email'
 import { recentConversationReplies } from './latest-conversation'
-import { initializeLatestReads, latestPostState, markAllLatestRead, markLatestPostsRead,
+import { initializeLatestReads, latestUnreadPostState, markAllLatestRead, markLatestPostsRead,
   unreadLatestCount } from './latest-state'
 import { userBioLinkPreviews } from './link-preview'
 import { runBoundedCleanup } from './maintenance'
@@ -1300,25 +1300,23 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
     }
     case 'api.latestState': {
       const { userId } = input as DatabaseDomainInput<'api.latestState'>
-      const unreadIds = latestPostState(userId, database).filter(row =>
-        row.unread
-        && apiPost(database, row.id, 'http://api.local', userId)
+      const unreadIds = latestUnreadPostState(userId, database).filter(row =>
+        apiPost(database, row.id, 'http://api.local', userId)
       ).map(row => row.id)
       return { unreadIds, unreadCount: unreadIds.length } as DatabaseDomainOutput<K>
     }
     case 'api.markLatestRead': {
       const { userId, postIds } = input as DatabaseDomainInput<'api.markLatestRead'>
       const requested = new Set(postIds)
-      const visibleUnread = latestPostState(userId, database)
-        .filter(row => row.unread && requested.has(row.id)).map(row => row.id)
+      const visibleUnread = latestUnreadPostState(userId, database)
+        .filter(row => requested.has(row.id)).map(row => row.id)
       markLatestPostsRead(userId, visibleUnread, database)
       return visibleUnread.length as DatabaseDomainOutput<K>
     }
     case 'api.markAllLatestRead': {
       const { userId } = input as DatabaseDomainInput<'api.markAllLatestRead'>
-      const unread = latestPostState(userId, database).filter(row =>
-        row.unread
-        && apiPost(database, row.id, 'http://api.local', userId)
+      const unread = latestUnreadPostState(userId, database).filter(row =>
+        apiPost(database, row.id, 'http://api.local', userId)
       ).length
       markAllLatestRead(userId, database)
       return unread as DatabaseDomainOutput<K>
@@ -2161,7 +2159,12 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
     }
     case 'feeds.latestPage': {
       const { viewerId, page, pageSize, markRead = true } = input as DatabaseDomainInput<'feeds.latestPage'>
-      const state = viewerId >= 0 ? latestPostState(viewerId, database) : []
+      const state = viewerId >= 0 ? latestUnreadPostState(viewerId, database) : []
+      // Whisper ancestry checks are recursive and dominate large public-feed scans. Most installations and most
+      // generations have no whisper rows at all, so prove that once and remove thousands of recursive subqueries.
+      const excludesWhispers = database.query("SELECT 1 FROM post_hashtags WHERE tag='whisper' LIMIT 1").get()
+        ? excludesWhisperPosts()
+        : '1'
       const blockViewerId = viewerIsModerator(database, viewerId) ? -1 : viewerId
       const parameters = [blockViewerId, blockViewerId, blockViewerId, viewerId, viewerId]
       const snapshotKind = 'latest-conversation-heads-v10'
@@ -2184,7 +2187,7 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
           ) SELECT 1 FROM ancestors JOIN blocks b ON
             (b.blocker_id=? AND b.blocked_id=ancestors.user_id)
             OR (b.blocker_id=ancestors.user_id AND b.blocked_id=?)))
-          AND ${excludesWhisperPosts()}
+          AND ${excludesWhispers}
           AND (? < 0 OR NOT EXISTS (SELECT 1 FROM post_hashtags ph JOIN blocked_hashtags bh ON bh.tag=ph.tag
             WHERE ph.post_id=p.id AND bh.user_id=?)) LIMIT 1)
           ORDER BY h.latest_post_id DESC,h.conversation_id DESC`,
@@ -2203,7 +2206,7 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
           ) SELECT 1 FROM ancestors JOIN blocks b ON
             (b.blocker_id=? AND b.blocked_id=ancestors.user_id)
             OR (b.blocker_id=ancestors.user_id AND b.blocked_id=?)))
-          AND ${excludesWhisperPosts()}
+          AND ${excludesWhispers}
           AND (? < 0 OR NOT EXISTS (SELECT 1 FROM post_hashtags ph JOIN blocked_hashtags bh ON bh.tag=ph.tag
             WHERE ph.post_id=p.id AND bh.user_id=?)) ORDER BY p.id DESC`)
           .all(...conversationIds, ...parameters) as Array<PostView & { conversation_id: number }>
@@ -2381,19 +2384,20 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
       const kind = `${toMe ? 'to-me' : 'for-you'}:v${PERSONALIZED_FEED_SNAPSHOT_VERSION}`
       const snapshot = database.query(`SELECT id FROM feed_snapshots WHERE kind=? AND viewer_id=?
         ORDER BY id DESC LIMIT 1`).get(kind, userId) as { id: number } | null
+      let changed = 0
       if (snapshot) {
         const rows = database.query(`SELECT json_extract(entry.value,'$.event_key') event_key,
           coalesce(json_extract(entry.value,'$.targeted_to_viewer'),0) targeted_to_viewer
           FROM feed_snapshot_items item,json_each(item.payload) entry
           WHERE item.snapshot_id=? AND item.position<? ORDER BY item.position,entry.key`)
           .all(snapshot.id, pageSize) as Array<{ event_key: string; targeted_to_viewer: number }>
-        const changed = markForYouEntriesRead(userId, rows.map(row => row.event_key), toMe, database, rows.filter(row =>
+        changed = markForYouEntriesRead(userId, rows.map(row => row.event_key), toMe, database, rows.filter(row =>
           toMe || !row.targeted_to_viewer
         ).map(row => row.event_key))
         if (changed) cacheDb.query(`DELETE FROM materialized_feed_pages_v2 WHERE viewer_id=?
           AND kind IN (${toMe ? "'latest','for-you','to-me'" : "'latest'"})`).run(userId)
       }
-      return null as DatabaseDomainOutput<K>
+      return changed as DatabaseDomainOutput<K>
     }
     case 'feeds.bannerState': {
       const { userId, userAgent } = input as DatabaseDomainInput<'feeds.bannerState'>

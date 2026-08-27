@@ -1,4 +1,6 @@
-const MAX_POST_PAGES = 10
+import { subscribeToFeedMutations } from './database-service'
+
+const MAX_POST_PAGES = 256
 
 type MaterializedPostPage = {
   html: string
@@ -9,7 +11,9 @@ type MaterializedPostPage = {
 const pages = new Map<string, MaterializedPostPage>()
 
 function response(page: MaterializedPostPage) {
-  return new Response(page.html, { status: page.status, headers: page.headers })
+  const headers = new Headers(page.headers)
+  headers.set('x-page-cache', 'memory')
+  return new Response(page.html, { status: page.status, headers })
 }
 
 export function cachedAnonymousPostPage(key: string) {
@@ -33,9 +37,13 @@ export async function materializeAnonymousPostPage(key: string, rendered: Respon
     if (oldest === undefined) break
     pages.delete(oldest)
   }
-  return response(page)
+  const headers = new Headers(page.headers)
+  headers.set('x-page-cache', 'miss')
+  return new Response(page.html, { status: page.status, headers })
 }
 
 export function clearAnonymousPostPageCache() {
   pages.clear()
 }
+
+subscribeToFeedMutations(clearAnonymousPostPageCache)

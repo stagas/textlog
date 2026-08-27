@@ -35,8 +35,9 @@ export function subscribeToFeedMutations(listener: (operation: DatabaseDomainOpe
   return () => feedMutationListeners.delete(listener)
 }
 
-function notifyFeedMutation(operation: DatabaseDomainOperation) {
+function notifyFeedMutation(operation: DatabaseDomainOperation, result: unknown) {
   if (!feedMutations.has(operation)) return
+  if (operation === 'feeds.markPersonalizedSnapshotPageRead' && result === 0) return
   for (const listener of feedMutationListeners) listener(operation)
 }
 
@@ -44,13 +45,13 @@ export function configureDatabaseService(service: DatabaseService) {
   configuredService = {
     async call(operation, input) {
       const result = await service.call(operation, input)
-      notifyFeedMutation(operation)
+      notifyFeedMutation(operation, result)
       return result
     },
     ...(service.callBackground ? {
       async callBackground(operation, input) {
         const result = await service.callBackground!(operation, input)
-        notifyFeedMutation(operation)
+        notifyFeedMutation(operation, result)
         return result
       },
     } : {}),

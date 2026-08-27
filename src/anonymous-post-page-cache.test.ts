@@ -19,12 +19,12 @@ describe('anonymous post page cache', () => {
     expect(cached.headers.get('content-type')).toBe('text/html;charset=utf-8')
   })
 
-  test('keeps the 10 most recently used request variants', async () => {
-    for (let index = 0; index < 10; index++) {
+  test('keeps the 256 most recently used request variants', async () => {
+    for (let index = 0; index < 256; index++) {
       await materializeAnonymousPostPage(`/post/${index}`, new Response(String(index)))
     }
     expect(cachedAnonymousPostPage('/post/0')).not.toBeNull()
-    await materializeAnonymousPostPage('/post/10', new Response('10'))
+    await materializeAnonymousPostPage('/post/256', new Response('256'))
 
     expect(cachedAnonymousPostPage('/post/1')).toBeNull()
     expect(cachedAnonymousPostPage('/post/0')).not.toBeNull()

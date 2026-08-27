@@ -407,7 +407,7 @@ export type DatabaseDomainOperations = {
   }
   'feeds.markPersonalizedSnapshotPageRead': {
     input: { userId: number; pageSize: PageSizeChoice; toMe: boolean }
-    output: null
+    output: number
   }
   'feeds.bannerState': { input: { userId: number; userAgent: string | null }; output: {
     inviteHandled: boolean

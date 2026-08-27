@@ -139,6 +139,7 @@ startPostPushWorker()
 await loadRecentFeedVisitors()
 let publicationWarmScheduled = false
 subscribeToFeedMutations(operation => {
+  if (Bun.env.DISABLE_FEED_WARMING === 'true') return
   if (!['api.createPost', 'api.publishDraft', 'api.updatePost', 'api.deletePost', 'api.unpublishPost',
     'posts.votePoll'].includes(operation) || publicationWarmScheduled) return
   publicationWarmScheduled = true
@@ -183,7 +184,9 @@ await initialHotProjection
 const hotProjectionTimer = setInterval(refreshHotProjection, 30_000)
 hotProjectionTimer.unref()
 const recentLatestWarmTimer = setInterval(() => {
-  void warmNextRecentLatestFeed().catch(error => logError('recent latest feed warm failed', error))
+  if (Bun.env.DISABLE_FEED_WARMING !== 'true') {
+    void warmNextRecentLatestFeed().catch(error => logError('recent latest feed warm failed', error))
+  }
 }, 2_000)
 recentLatestWarmTimer.unref()
 const ipRequestTimer = setInterval(

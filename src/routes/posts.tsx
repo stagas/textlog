@@ -169,11 +169,10 @@ export function registerPostsRoutes(app: Hono) {
     const id = Number(c.req.param('id'))
     if (!Number.isInteger(id) || id < 1) return c.text('Not found', 404)
     const user = currentUser(c.req.raw)
-    const anonymousCacheKey = user ? null : new URL(c.req.url).pathname + new URL(c.req.url).search
-    if (anonymousCacheKey) {
-      const cached = cachedAnonymousPostPage(anonymousCacheKey)
-      if (cached) return cached
-    }
+    const requestUrl = new URL(c.req.url)
+    const postPageCacheKey = `${user?.id ?? 'anonymous'}\0${requestUrl.pathname}${requestUrl.search}`
+    const cached = cachedAnonymousPostPage(postPageCacheKey)
+    if (cached) return cached
     const detail = await databaseService().call('posts.detail', { id, viewerId: user?.id ?? -1 })
     if (detail.status === 'not_found') return c.text('Not found', 404)
     const post = detail.post
@@ -206,17 +205,17 @@ export function registerPostsRoutes(app: Hono) {
       url: postUrl,
     }
     if (user) {
-      return page(
+      return materializeAnonymousPostPage(postPageCacheKey, page(
         <Reply user={user} post={post} replies={replies} showForm={c.req.query('reply') === '1'} returnPath={returnPath}
           topHref={topHref} flatHref={flatHref} treeHref={treeHref} flat={flat}
           showReport={c.req.query('report') === '1'} reported={c.req.query('reported') === '1'} social={social} />,
-      )
+      ))
     }
     const rendered = page(
       <PublicThread post={post} replies={replies} social={social} returnPath={returnPath} topHref={topHref}
         flatHref={flatHref} treeHref={treeHref} flat={flat} />,
     )
-    return materializeAnonymousPostPage(anonymousCacheKey!, rendered)
+    return materializeAnonymousPostPage(postPageCacheKey, rendered)
   })
 
   app.get('/post/:id/og.png', async c => {

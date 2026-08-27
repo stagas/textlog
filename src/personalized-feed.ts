@@ -11,6 +11,17 @@ import type { PersonalizedFeedData, PersonalizedTimelineRow, User } from './type
 import { isWhisperThread, whisperThreadRelevantToViewer, whisperThreadTargetsViewer } from './whisper'
 
 export const PERSONALIZED_FEED_SNAPSHOT_VERSION = 28
+const unreadCountProjection = new Map<string, number>()
+const MAX_UNREAD_COUNT_PROJECTIONS = 2_048
+
+function rememberUnreadCount(key: string, count: number) {
+  unreadCountProjection.delete(key)
+  unreadCountProjection.set(key, count)
+  while (unreadCountProjection.size > MAX_UNREAD_COUNT_PROJECTIONS) {
+    unreadCountProjection.delete(unreadCountProjection.keys().next().value!)
+  }
+  return count
+}
 
 export function personalizedUnreadCount(database: Database, userId: number, toMe: boolean) {
   const kind = `${toMe ? 'to-me' : 'for-you'}:v${PERSONALIZED_FEED_SNAPSHOT_VERSION}`
@@ -24,7 +35,22 @@ export function personalizedUnreadCount(database: Database, userId: number, toMe
     ? database.query(`SELECT id FROM feed_snapshots WHERE kind=? AND viewer_id=? AND generation=?`)
       .get(kind, userId, generation.generation) as { id: number } | null
     : null
-  if (!snapshot) return toMe ? unreadToMeCount(userId, database) : unreadForYouCount(userId, database)
+  if (!snapshot) {
+    const reads = (database.query(`SELECT count(*) count FROM ${toMe ? 'to_me_reads' : 'for_you_reads'}
+      WHERE user_id=?`).get(userId) as { count: number }).count
+    const candidates = database.query(`SELECT count(*) count,coalesce(max(post_id),0) newest
+      FROM personalized_post_candidates WHERE viewer_id=?`).get(userId) as { count: number; newest: number }
+    const projectionKey = `${userId}\0${toMe ? 1 : 0}\0${pending ? 1 : 0}\0${generation?.generation || 0}\0${reads}`
+      + `\0${candidates.count}\0${candidates.newest}`
+    const projected = unreadCountProjection.get(projectionKey)
+    if (projected !== undefined) {
+      unreadCountProjection.delete(projectionKey)
+      unreadCountProjection.set(projectionKey, projected)
+      return projected
+    }
+    return rememberUnreadCount(projectionKey,
+      toMe ? unreadToMeCount(userId, database) : unreadForYouCount(userId, database))
+  }
   return (database.query(`SELECT count(DISTINCT json_extract(entry.value,'$.event_key')) count
     FROM feed_snapshot_items item,json_each(item.payload) entry
     LEFT JOIN ${reads} seen ON seen.user_id=? AND seen.event_key=json_extract(entry.value,'$.event_key')
