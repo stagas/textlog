@@ -31,7 +31,7 @@ import { decodePostCursor } from '../pagination'
 import { resolvedDensity, resolvedPageSize } from '../request-preferences'
 import { withRequestContext } from '../request-context'
 import { withAppearance } from '../theme'
-import type { PersonalizedFeedData } from '../types'
+import type { PersonalizedFeedData, PostFeedPage } from '../types'
 import { currentUser } from '../utils'
 
 async function showNotificationBanner(request: Request, user: ReturnType<typeof currentUser>) {
@@ -238,18 +238,30 @@ export function registerFeedsRoutes(app: Hono) {
     const cursor = decodePostCursor(cursorValue)
     if (cursorValue && !cursor) return c.text('Invalid cursor', 400)
     const notificationBanner = await showNotificationBanner(c.req.raw, user)
+    let dataPromise: Promise<PostFeedPage> | undefined
+    const data = () => dataPromise ||= databaseService().call('feeds.latestPage', { viewerId: user?.id ?? -1,
+      page: currentPage(c.req.query('page')), pageSize: resolvedPageSize(c.req.raw) })
     const render = async () => {
-      const feed = await databaseService().call('feeds.latestPage', { viewerId: user?.id ?? -1,
-        page: currentPage(c.req.query('page')), pageSize: resolvedPageSize(c.req.raw) })
+      const feed = await data()
       return page(
         <PublicFeed user={user} feed={feed} path="/latest" notificationBanner={notificationBanner}
           expandedRootId={expandedRootId} />,
       )
     }
+    const renderForCache = user ? async () => {
+      const feed = await data()
+      const consumed = new Set(feed.unreadPostIds || []).size
+      const latestCount = Math.max(0, (feed.latestCount || 0) - consumed)
+      return page(
+        <PublicFeed user={user} feed={{ ...feed, latestCount, latestUnread: latestCount > 0,
+          unreadPostIds: [], directedUnreadPostIds: [] }} path="/latest" notificationBanner={notificationBanner}
+          expandedRootId={expandedRootId} />,
+      )
+    } : undefined
     const response = !notificationBanner
         && currentPage(c.req.query('page')) === 1 && !cursorValue && !expandedRootId
       ? await rpcMaterializedFeedPage(c.req.raw, 'latest', user ? user.id : -1, render, false,
-        viewerCacheVersion(0, user))
+        viewerCacheVersion(0, user), false, renderForCache)
       : await render()
     const remembered = rememberFeed(response, 'latest')
     return remembered
