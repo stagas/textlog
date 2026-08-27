@@ -78,6 +78,7 @@ type RecentFeedVisitor = {
 }
 
 const recentFeedVisitors = new Map<number, RecentFeedVisitor>()
+const latestFeedCacheVersion = 1
 const recentFeedVisitorLimit = 30
 let recentLatestWarmCursor = 0
 
@@ -138,7 +139,7 @@ export async function warmNextRecentLatestFeed() {
         markRead: false,
       })
       return page(<PublicFeed user={visitor.user} feed={feed} path="/latest" />)
-    }, false, viewerCacheVersion(0, visitor.user), true)
+    }, false, viewerCacheVersion(latestFeedCacheVersion, visitor.user), true)
   }))
 }
 
@@ -264,7 +265,7 @@ export function registerFeedsRoutes(app: Hono) {
     const response = !notificationBanner
         && currentPage(c.req.query('page')) === 1 && !cursorValue && !expandedRootId
       ? await rpcMaterializedFeedPage(c.req.raw, 'latest', user ? user.id : -1, render, false,
-        viewerCacheVersion(0, user), false, renderForCache)
+        viewerCacheVersion(latestFeedCacheVersion, user), false, renderForCache)
       : await render()
     const remembered = rememberFeed(response, 'latest')
     return remembered
