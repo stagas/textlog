@@ -38,3 +38,17 @@ test('Latest retains a recent root when its newest replies are nested', () => {
   expect(isRecentConversationRoot(root, conversation)).toBeTrue()
   expect(isRecentConversationRoot({ ...root, created_at: '2026-08-24 17:34:29' }, conversation)).toBeFalse()
 })
+
+test('Latest prunes older intermediates from a recent nested reply path', () => {
+  const conversation = [
+    { id: 6, parent_id: 5, created_at: '2026-08-27 19:35:47' },
+    { id: 5, parent_id: 4, created_at: '2026-08-27 19:09:50' },
+    { id: 7, parent_id: 2, created_at: '2026-08-27 19:01:26' },
+    { id: 4, parent_id: 3, created_at: '2026-08-27 18:53:47' },
+    { id: 3, parent_id: 2, created_at: '2026-08-27 18:48:15' },
+    { id: 2, parent_id: 1, created_at: '2026-08-27 18:20:32' },
+    { id: 1, parent_id: null, created_at: '2026-08-27 17:34:29' },
+  ]
+
+  expect(recentConversationReplies(conversation).map(post => post.id)).toEqual([6, 5, 7])
+})
