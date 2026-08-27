@@ -20,7 +20,7 @@ function globalFeedGeneration(database: Database) {
   }).generation
 }
 
-function personalizedFeedGeneration(database: Database, viewerId: number) {
+export function personalizedFeedGeneration(database: Database, viewerId: number) {
   const available = database.query(`SELECT 1 FROM sqlite_master
     WHERE type='table' AND name='personalized_feed_generations'`).get()
   if (!available) return globalFeedGeneration(database)

@@ -282,6 +282,9 @@ type LinkToken = {
   display?: boolean
 }
 
+const linkTokenCache = new Map<string, LinkToken[]>()
+const MAX_LINK_TOKEN_CACHE_ENTRIES = 8_192
+
 function escapedAt(body: string, index: number) {
   let slashes = 0
   while (index > slashes && body[index - slashes - 1] === '\\') slashes++
@@ -347,6 +350,9 @@ function mathTokens(body: string, protectedTokens: LinkToken[]) {
 }
 
 export function linkTokens(body: string, flags?: PostContentFlags): LinkToken[] {
+  const cacheKey = `${flags?.has_latex ?? 2}${flags?.has_links ?? 2}${flags?.has_code ?? 2}\0${body}`
+  const cached = linkTokenCache.get(cacheKey)
+  if (cached) return cached
   const tokens: LinkToken[] = []
   if (!flags || flags.has_code || flags.has_latex) {
     for (const match of body.matchAll(/^```([^\r\n]*)\r?\n([\s\S]*?)\r?\n```(?=\r?$)/gm)) {
@@ -424,7 +430,10 @@ export function linkTokens(body: string, flags?: PostContentFlags): LinkToken[] 
   }
   const priority = { 'code-fence': 0, 'latex-fence': 0, code: 1, math: 2, markdown: 3, redacted: 4, strikethrough: 4,
     bold: 4, italics: 4, underline: 4, url: 5, reference: 6 }
-  return tokens.sort((a, b) => a.index - b.index || priority[a.kind] - priority[b.kind])
+  const result = tokens.sort((a, b) => a.index - b.index || priority[a.kind] - priority[b.kind])
+  linkTokenCache.set(cacheKey, result)
+  if (linkTokenCache.size > MAX_LINK_TOKEN_CACHE_ENTRIES) linkTokenCache.delete(linkTokenCache.keys().next().value!)
+  return result
 }
 
 export function postLinks(body: string) {

@@ -3390,8 +3390,10 @@ form.report-panel {
 }
 
 @media (max-width: 520px) {
-  .replybox {
+  .panel:is(.write-compose, .replybox) {
+    width: 100%;
     margin-inline: 0;
+    border-inline: 0;
   }
 
   :is(.write-compose, .edit-post-compose, .replybox, .bio-form) .composefoot {

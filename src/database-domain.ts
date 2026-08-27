@@ -17,7 +17,7 @@ import { confirmEmailToken } from './email-verification'
 import { preserveSuggestedPeopleOrder, suggestedPeople, suggestedPeopleCount, trendingTagCount,
   trendingTags } from './explore'
 import { issueFeedKey, userForFeedKey } from './feed-keys'
-import { feedSnapshotPage } from './feed-snapshots'
+import { feedSnapshotPage, personalizedFeedGeneration } from './feed-snapshots'
 import { markAllForYouRead, markForYouEntriesRead, markVisibleForYouEntriesRead, unreadForYouCount,
   unreadToMeCount } from './for-you-state'
 import { dropUsername, resolveHandle } from './handles'
@@ -77,6 +77,46 @@ export function materializedForYouCount(html: string) {
   return Number(html.match(
     /href="\/for-you"[^>]*>for you<span class="to-me-count">(\d+)<\/span>/,
   )?.[1] || 0)
+}
+
+export function materializedFeedTemplate(html: string) {
+  const token = (source: string, path: string, label: string, name: string) => source.replace(
+    new RegExp(`(<a[^>]*href="${path}"[^>]*>${label})(?:<span class="to-me-count">\\d+</span>)?(</a>)`),
+    `$1{{${name}-count}}$2`,
+  )
+  return token(token(token(html, '\/for-you', 'for you', 'for-you'), '\/to-me', 'to me', 'to-me'),
+    '\/latest', 'latest', 'latest')
+}
+
+export function hydrateMaterializedFeedCounts(html: string, counts: { forYou: number; toMe: number; latest: number }) {
+  const count = (value: number) => value ? `<span class="to-me-count">${value}</span>` : ''
+  return html.replaceAll('{{for-you-count}}', count(counts.forYou))
+    .replaceAll('{{to-me-count}}', count(counts.toMe))
+    .replaceAll('{{latest-count}}', count(counts.latest))
+}
+
+function materializedFeedGeneration(database: Database, kind: string, viewerId: number) {
+  if (viewerId >= 0 && (kind === 'for-you' || kind === 'to-me')) {
+    return personalizedFeedGeneration(database, viewerId)
+  }
+  if (kind === 'hot' && database.query(`SELECT 1 FROM sqlite_master
+    WHERE type='table' AND name='hot_feed_projection_state'`).get()) {
+    const state = database.query(`SELECT refreshed_at FROM hot_feed_projection_state WHERE id=1`).get() as {
+      refreshed_at: string | null
+    } | null
+    return state?.refreshed_at ? Date.parse(state.refreshed_at) : 0
+  }
+  return (database.query('SELECT generation FROM feed_snapshot_generation WHERE id=1').get() as {
+    generation: number
+  }).generation
+}
+
+function hydrateMaterializedFeed(html: string, database: Database, viewerId: number) {
+  if (viewerId < 0 || !html.includes('{{')) return html
+  const forYou = personalizedUnreadCount(database, viewerId, false)
+  const toMe = personalizedUnreadCount(database, viewerId, true)
+  const latest = unreadLatestCount(viewerId, database)
+  return hydrateMaterializedFeedCounts(html, { forYou, toMe, latest })
 }
 
 function hasPostPushJobs(database: Database) {
@@ -2201,7 +2241,7 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
         markLatestPostsRead(viewerId, unreadPostIds, database)
         cacheDb.query('DELETE FROM feed_snapshots WHERE kind=? AND viewer_id=?').run(snapshotKind, viewerId)
         cacheDb.query(`DELETE FROM materialized_feed_pages_v2 WHERE viewer_id=?
-          AND kind IN ('latest','hot','for-you','to-me')`).run(viewerId)
+          AND kind='latest'`).run(viewerId)
       }
       const forYouCount = viewerId >= 0 ? personalizedUnreadCount(database, viewerId, false) : 0
       const toMeCount = viewerId >= 0 ? personalizedUnreadCount(database, viewerId, true) : 0
@@ -2318,7 +2358,7 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
       const result = loadPersonalizedFeed(database, user, page, pageSize, toMe, path, markRead)
       if (markRead && result.timeline.some(row => row.unread)) {
         cacheDb.query(`DELETE FROM materialized_feed_pages_v2 WHERE viewer_id=?
-          AND kind IN ('latest','hot','for-you','to-me')`).run(user.id)
+          AND kind IN (${toMe ? "'latest','for-you','to-me'" : "'latest','for-you'"})`).run(user.id)
       }
       return result as DatabaseDomainOutput<K>
     }
@@ -2337,7 +2377,7 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
           toMe || !row.targeted_to_viewer
         ).map(row => row.event_key))
         if (changed) cacheDb.query(`DELETE FROM materialized_feed_pages_v2 WHERE viewer_id=?
-          AND kind IN ('latest','hot','to-me')`).run(userId)
+          AND kind IN (${toMe ? "'latest','for-you','to-me'" : "'latest'"})`).run(userId)
       }
       return null as DatabaseDomainOutput<K>
     }
@@ -2410,21 +2450,19 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
       const { userId, toMe } = input as DatabaseDomainInput<'feeds.markRead'>
       markAllForYouRead(userId, toMe, database)
       cacheDb.query(`DELETE FROM materialized_feed_pages_v2 WHERE viewer_id=?
-        AND kind IN ('latest','hot','for-you','to-me')`).run(userId)
+        AND kind IN (${toMe ? "'for-you','to-me'" : "'for-you'"})`).run(userId)
       return null as DatabaseDomainOutput<K>
     }
     case 'feeds.markLatestRead': {
       const { userId } = input as DatabaseDomainInput<'feeds.markLatestRead'>
       markAllLatestRead(userId, database)
       cacheDb.query(`DELETE FROM materialized_feed_pages_v2 WHERE viewer_id=?
-        AND kind IN ('latest','hot','for-you','to-me')`).run(userId)
+        AND kind='latest'`).run(userId)
       return null as DatabaseDomainOutput<K>
     }
     case 'cache.materializedFeedGet': {
       const { kind, viewerId, variant } = input as DatabaseDomainInput<'cache.materializedFeedGet'>
-      const generation = (database.query('SELECT generation FROM feed_snapshot_generation WHERE id=1').get() as {
-        generation: number
-      }).generation
+      const generation = materializedFeedGeneration(database, kind, viewerId)
       const cached = cacheDb.query(`SELECT html FROM materialized_feed_pages_v2
         WHERE kind=? AND viewer_id=? AND variant=? AND generation=?`).get(kind, viewerId, variant, generation) as {
         html: string
@@ -2432,23 +2470,24 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
       if (cached) cacheDb.query(`UPDATE materialized_feed_pages_v2 SET created_at=CURRENT_TIMESTAMP
         WHERE kind=? AND viewer_id=? AND variant=? AND generation=?
           AND created_at < datetime('now','-5 minutes')`).run(kind, viewerId, variant, generation)
-      return { html: cached?.html ?? null, generation } as DatabaseDomainOutput<K>
+      return { html: cached ? hydrateMaterializedFeed(cached.html, database, viewerId) : null,
+        generation } as DatabaseDomainOutput<K>
     }
     case 'cache.materializedFeedPut': {
       const { kind, viewerId, variant, html, generation } = input as DatabaseDomainInput<'cache.materializedFeedPut'>
-      const currentGeneration = (database.query('SELECT generation FROM feed_snapshot_generation WHERE id=1').get() as {
-        generation: number
-      }).generation
+      const currentGeneration = materializedFeedGeneration(database, kind, viewerId)
       if (generation !== currentGeneration) return null as DatabaseDomainOutput<K>
       if (viewerId >= 0) {
         const cachedForYouCount = materializedForYouCount(html)
-        if (cachedForYouCount !== unreadForYouCount(viewerId, database)) return null as DatabaseDomainOutput<K>
+        if (cachedForYouCount !== personalizedUnreadCount(database, viewerId, false)) {
+          return null as DatabaseDomainOutput<K>
+        }
       }
       cacheDb.transaction(() => {
         cacheDb.query('DELETE FROM materialized_feed_pages_v2 WHERE kind=? AND viewer_id=? AND generation!=?')
           .run(kind, viewerId, generation)
         cacheDb.query(`INSERT OR REPLACE INTO materialized_feed_pages_v2(kind,viewer_id,variant,generation,html)
-          VALUES(?,?,?,?,?)`).run(kind, viewerId, variant, generation, html)
+          VALUES(?,?,?,?,?)`).run(kind, viewerId, variant, generation, materializedFeedTemplate(html))
         cacheDb.query(`DELETE FROM materialized_feed_pages_v2 WHERE rowid IN (
           SELECT rowid FROM materialized_feed_pages_v2 ORDER BY created_at DESC,rowid DESC LIMIT -1 OFFSET ?
         )`).run(MAX_MATERIALIZED_PAGES)
