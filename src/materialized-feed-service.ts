@@ -11,13 +11,10 @@ type MaterializedResponse = {
 const materializations = new Map<string, Promise<MaterializedResponse>>()
 const revalidations = new Map<string, Promise<void>>()
 type MemoryMaterialization = MaterializedResponse & {
-  expiresAt: number
   hitActionDone: boolean
 }
 const memoryMaterializations = new Map<string, MemoryMaterialization>()
 const MAX_MEMORY_MATERIALIZATIONS = 256
-const ANONYMOUS_MEMORY_TTL_MS = 30_000
-const PERSONALIZED_MEMORY_TTL_MS = 500
 const MATERIALIZED_HTML_VERSION = 23
 
 function memoryCacheEnabled() {
@@ -27,10 +24,8 @@ function memoryCacheEnabled() {
   return Bun.env.NODE_ENV !== 'test' || Bun.env.ENABLE_MATERIALIZED_MEMORY_CACHE === 'true'
 }
 
-function rememberMaterialization(key: string, result: MaterializedResponse, viewerId: number) {
-  const entry: MemoryMaterialization = { ...result,
-    expiresAt: Date.now() + (viewerId < 0 ? ANONYMOUS_MEMORY_TTL_MS : PERSONALIZED_MEMORY_TTL_MS),
-    hitActionDone: false }
+function rememberMaterialization(key: string, result: MaterializedResponse) {
+  const entry: MemoryMaterialization = { ...result, hitActionDone: false }
   memoryMaterializations.delete(key)
   memoryMaterializations.set(key, entry)
   while (memoryMaterializations.size > MAX_MEMORY_MATERIALIZATIONS) {
@@ -53,9 +48,9 @@ export async function rpcMaterializedFeedPage(request: Request, kind: Materializ
   if (Bun.env.DEV_RELOAD === 'true') return await render()
   const variant = `${MATERIALIZED_HTML_VERSION}|${cacheVersion ? `${cacheVersion}|` : ''}${appearanceVariant(request)}`
   const call = background ? backgroundDatabaseCall : databaseService().call.bind(databaseService())
-  const key = `${background ? 'background' : 'foreground'}\0${kind}\0${viewerId}\0${variant}`
+  const key = `${kind}\0${viewerId}\0${variant}`
   const memory = memoryCacheEnabled() ? memoryMaterializations.get(key) : undefined
-  if (memory && memory.expiresAt > Date.now()) {
+  if (memory) {
     memoryMaterializations.delete(key)
     memoryMaterializations.set(key, memory)
     if (!memory.hitActionDone && onCacheHit) {
@@ -66,7 +61,6 @@ export async function rpcMaterializedFeedPage(request: Request, kind: Materializ
     headers.set('x-feed-cache', 'memory')
     return new Response(memory.body, { status: memory.status, headers })
   }
-  if (memory) memoryMaterializations.delete(key)
   let materialization = materializations.get(key)
   if (!materialization) {
     materialization = (async () => {
@@ -125,6 +119,6 @@ export async function rpcMaterializedFeedPage(request: Request, kind: Materializ
   }
   const result = await materialization
   if (!memoryCacheEnabled()) return new Response(result.body, { status: result.status, headers: result.headers })
-  const remembered = rememberMaterialization(key, result, viewerId)
+  const remembered = rememberMaterialization(key, result)
   return new Response(remembered.body, { status: remembered.status, headers: remembered.headers })
 }
