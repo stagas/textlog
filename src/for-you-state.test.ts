@@ -13,7 +13,8 @@ test('reading personalized post events also marks them read in latest', () => {
     INSERT INTO posts(id) VALUES(42);
   `)
 
-  markForYouEntriesRead(7, ['post:00000000000000000042'], true, database)
+  expect(markForYouEntriesRead(7, ['post:00000000000000000042'], true, database)).toBe(2)
+  expect(markForYouEntriesRead(7, ['post:00000000000000000042'], true, database)).toBe(0)
 
   expect(database.query('SELECT post_id FROM latest_reads WHERE user_id=7').all()).toEqual([{ post_id: 42 }])
   expect(database.query('SELECT event_key FROM to_me_reads WHERE user_id=7').all())

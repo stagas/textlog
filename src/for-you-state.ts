@@ -147,17 +147,18 @@ export function unreadToMeCount(userId: number, database: Database) {
 export function markForYouEntriesRead(userId: number, eventKeys: string[], toMe: boolean, database: Database,
   latestEventKeys = eventKeys)
 {
-  if (!eventKeys.length) return
+  if (!eventKeys.length) return 0
   const insert = database.query('INSERT OR IGNORE INTO for_you_reads(user_id,event_key) VALUES(?,?)')
   const insertToMe = toMe
     ? database.query('INSERT OR IGNORE INTO to_me_reads(user_id,event_key) VALUES(?,?)')
     : null
   const insertActivity = database.query(`INSERT OR IGNORE INTO activity_reads(user_id,event_key)
     VALUES(?,'post:' || CAST(? AS INTEGER))`)
+  let changed = 0
   database.transaction(() =>
     eventKeys.forEach(eventKey => {
-      insert.run(userId, eventKey)
-      insertToMe?.run(userId, eventKey)
+      changed += insert.run(userId, eventKey).changes
+      changed += insertToMe?.run(userId, eventKey).changes || 0
       const postId = eventKey.match(/^post:(\d+)$/)?.[1]
       if (postId) insertActivity.run(userId, postId)
     })
@@ -167,6 +168,7 @@ export function markForYouEntriesRead(userId: number, eventKeys: string[], toMe:
     return postId ? [Number(postId)] : []
   })
   markLatestPostsRead(userId, postIds, database)
+  return changed
 }
 
 export function markVisibleForYouEntriesRead(userId: number, eventKeys: string[], toMe = false, database: Database) {
