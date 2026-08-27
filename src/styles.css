@@ -6086,6 +6086,7 @@ a.post-context:hover {
 }
 
 .feed-thread-collapsed-branch .collapsed-preview-gap {
+  display: none;
   height: 0;
   padding-top: 0;
 }
@@ -6118,6 +6119,7 @@ a.post-context:hover {
 
 .feed-thread>.thread-fold-input:checked~.feed-thread-collapsed-branch .collapsed-preview-post>.post,
 .feed-thread>.thread-fold-input:checked~.feed-thread-collapsed-branch .collapsed-preview-gap {
+  display: block;
   height: auto;
   padding-top: var(--space-2);
 }
