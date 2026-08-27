@@ -10,7 +10,7 @@ import { BlogRecap } from './components/blog-recap'
 import { configureDevReload } from './components/layout'
 import { PanelsGallery } from './components/panels-gallery'
 import { compressResponse } from './compression'
-import { databaseService } from './database-service'
+import { databaseService, subscribeToFeedMutations } from './database-service'
 import { isDevelopment } from './environment'
 import { localImageFile, usesLocalImageStorage } from './image-storage'
 import { clientIp, logError, logHttp, logReady, redactHttpPath, shouldLogHttp } from './log'
@@ -28,7 +28,7 @@ import { registerAdminRoutes } from './routes/admin'
 import { registerApiRoutes } from './routes/api'
 import { registerAuthRoutes } from './routes/auth'
 import { registerEmbedRoutes } from './routes/embed'
-import { loadRecentFeedVisitors, registerFeedsRoutes, warmNextRecentLatestFeed } from './routes/feeds'
+import { loadRecentFeedVisitors, registerFeedsRoutes, warmNextRecentLatestFeed, warmRecentLatestFeeds } from './routes/feeds'
 import { registerIllegalActivityRoutes } from './routes/illegal-activity'
 import { registerInteractionsRoutes } from './routes/interactions'
 import { registerMediaRoutes } from './routes/media'
@@ -137,6 +137,16 @@ const nestedFromRateLimiter = new NestedFromRateLimiter()
 await loadBlockedIps()
 startPostPushWorker()
 await loadRecentFeedVisitors()
+let publicationWarmScheduled = false
+subscribeToFeedMutations(operation => {
+  if (!['api.createPost', 'api.publishDraft', 'api.updatePost', 'api.deletePost', 'api.unpublishPost',
+    'posts.votePoll'].includes(operation) || publicationWarmScheduled) return
+  publicationWarmScheduled = true
+  setTimeout(() => {
+    publicationWarmScheduled = false
+    void warmRecentLatestFeeds().catch(error => logError('write-through latest feed warm failed', error))
+  }, 50)
+})
 let hotProjectionRefreshRunning = false
 const hotProjectionWorker = new Worker(new URL('./hot-projection-worker.ts', import.meta.url))
 let finishInitialHotProjection: (() => void) | undefined

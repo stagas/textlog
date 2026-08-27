@@ -7,7 +7,7 @@ export interface DatabaseService {
 }
 
 let configuredService: DatabaseService | null = null
-const feedMutationListeners = new Set<() => void>()
+const feedMutationListeners = new Set<(operation: DatabaseDomainOperation) => void>()
 const feedMutations = new Set<DatabaseDomainOperation>([
   'account.updateProfile',
   'account.updateProfileFlags',
@@ -30,14 +30,14 @@ const feedMutations = new Set<DatabaseDomainOperation>([
   'posts.votePoll',
 ])
 
-export function subscribeToFeedMutations(listener: () => void) {
+export function subscribeToFeedMutations(listener: (operation: DatabaseDomainOperation) => void) {
   feedMutationListeners.add(listener)
   return () => feedMutationListeners.delete(listener)
 }
 
 function notifyFeedMutation(operation: DatabaseDomainOperation) {
   if (!feedMutations.has(operation)) return
-  for (const listener of feedMutationListeners) listener()
+  for (const listener of feedMutationListeners) listener(operation)
 }
 
 export function configureDatabaseService(service: DatabaseService) {

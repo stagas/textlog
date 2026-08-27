@@ -137,6 +137,11 @@ export async function warmNextRecentLatestFeed() {
   }))
 }
 
+export async function warmRecentLatestFeeds(limit = 5) {
+  const count = Math.min(limit, recentFeedVisitors.size)
+  for (let index = 0; index < count; index++) await warmNextRecentLatestFeed()
+}
+
 export async function loadRecentFeedVisitors() {
   const visitors = await databaseService().call('cache.recentFeedVisitors', {})
   for (const visitor of visitors) {
