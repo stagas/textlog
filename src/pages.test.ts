@@ -1387,6 +1387,32 @@ test('posts by the viewer use plain you instead of a linked handle', () => {
     + '<span class="post-context">wrote:</span>')
 })
 
+test('moderators see when a post author has blocked them', () => {
+  const html = renderToStaticMarkup(React.createElement(Post, {
+    p: { id: 2, user_id: 2, parent_id: null, body: 'Visible for moderation',
+      created_at: '2026-08-20 11:00:00', deleted_at: null, handle: 'blocker', blocked_viewer: true },
+    user: { id: 1, handle: 'admin', email: 'gstagas@gmail.com', bio: '' },
+  }))
+
+  expect(html).toContain('<span class="post-context">(user has blocked you)</span>')
+})
+
+test('moderators can view posts on a profile that blocked them', () => {
+  const html = renderToStaticMarkup(React.createElement(Profile, {
+    user: { id: 1, handle: 'admin', email: 'gstagas@gmail.com', bio: '' },
+    profile: { id: 2, handle: 'blocker', email: 'blocker@example.com', bio: '' },
+    posts: [{ id: 2, user_id: 2, parent_id: null, body: 'Visible for moderation',
+      created_at: '2026-08-20 11:00:00', deleted_at: null, handle: 'blocker', blocked_viewer: true }],
+    following: false,
+    blockedByProfile: true,
+    moderatorBypass: true,
+    total: 1,
+  }))
+
+  expect(html).toContain('Visible for moderation')
+  expect(html).not.toContain('This profile is unavailable.')
+})
+
 test('Tag pages keep actions beside the tag and a contextual back link on the right', () => {
   const html = renderToStaticMarkup(React.createElement(TagFeed, {
     user: { id: 2, handle: 'reader', email: 'reader@example.com', bio: '' },

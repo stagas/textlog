@@ -638,6 +638,34 @@ describe('post persistence', () => {
     expect(enrichPosts(db, [child], 2)[0].parent).toBeNull()
   })
 
+  test('excludes a blocker reply and every reply beneath it from threads', () => {
+    const db = database()
+    db.run(`INSERT INTO users(id,handle) VALUES(3,'blocker'),(4,'descendant');
+      INSERT INTO posts(id,user_id,parent_id,body,created_at) VALUES
+        (1,1,NULL,'parent','2026-08-03 10:00:00'),
+        (2,3,1,'blocker reply','2026-08-03 11:00:00'),
+        (3,4,2,'reply to blocker','2026-08-03 12:00:00'),
+        (4,4,1,'visible sibling','2026-08-03 13:00:00');
+      INSERT INTO blocks VALUES(3,2);`)
+
+    expect(loadThreadReplies(db, 1, 2).map(post => post.id)).toEqual([4])
+  })
+
+  test('shows blocker replies to moderators and marks who blocked them', () => {
+    const db = database()
+    db.run(`ALTER TABLE users ADD COLUMN email TEXT NOT NULL DEFAULT '';
+      UPDATE users SET email='gstagas@gmail.com' WHERE id=2;
+      INSERT INTO users(id,handle,email) VALUES(3,'blocker','blocker@example.com');
+      INSERT INTO posts(id,user_id,parent_id,body,created_at) VALUES
+        (1,1,NULL,'parent','2026-08-03 10:00:00'),
+        (2,3,1,'blocker reply','2026-08-03 11:00:00');
+      INSERT INTO blocks VALUES(3,2);`)
+
+    const replies = loadThreadReplies(db, 1, 2)
+    expect(replies.map(post => post.id)).toEqual([2])
+    expect(replies[0].blocked_viewer).toBeTrue()
+  })
+
   test('excludes replies and parent summaries carrying a blocked hashtag', () => {
     const db = database()
     db.run(`INSERT INTO posts(id,user_id,parent_id,body,created_at) VALUES

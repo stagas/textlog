@@ -5,6 +5,7 @@ import {
 import { currentPage, notFoundPage, page, paginationRedirect, redirect, safeNext } from './shared'
 
 import type { Hono } from 'hono'
+import { isAdmin } from '../admin'
 import { appName } from '../brand'
 import { databaseService } from '../database-service'
 import { markdownPlainText } from '../markdown'
@@ -78,6 +79,7 @@ export function registerProfilesRoutes(app: Hono) {
     const profilePage = currentPage(c.req.query('page'))
     const tagsPage = currentPage(c.req.query('tagsPage'))
     const viewerId = user?.id ?? -1
+    const moderatorBypass = isAdmin(user)
     const overview = await databaseService().call('profiles.overview', { profileId: resolved.id, viewerId })
     if (!overview) return notFoundPage(c.req.raw)
     const { profile, bioReference, noteCount, replyCount, following, followsViewer, blocked, blockedByProfile,
@@ -99,7 +101,7 @@ export function registerProfilesRoutes(app: Hono) {
       type: 'profile' as const,
       imageAlt: `Profile for @${profile.handle}: ${description}`,
     }
-    if (blocked || blockedByProfile) {
+    if ((blocked || blockedByProfile) && !moderatorBypass) {
       return page(
         <Profile user={user} profile={profile} posts={[]} following={false} blocked={blocked}
           blockedByProfile={blockedByProfile} total={0} followerCount={0} followingCount={0} followingTagCount={0}
@@ -171,12 +173,13 @@ export function registerProfilesRoutes(app: Hono) {
     const snapshot = await databaseService().call('profiles.postsPage', { profileId: profile.id, viewerId,
       page: profilePage, pageSize: resolvedPageSize(c.req.raw), kind: tab === 'replies' ? 'replies' : 'notes' })
     return page(
-      <Profile user={user} profile={profile} posts={blocked || blockedByProfile ? [] : snapshot.posts}
+      <Profile user={user} profile={profile} posts={(blocked || blockedByProfile) && !moderatorBypass
+        ? [] : snapshot.posts}
         following={following} followsViewer={followsViewer} blocked={blocked} total={total} noteCount={noteCount}
         replyCount={replyCount} tab={tab === 'replies' ? 'replies' : 'notes'} followerCount={followerCount}
         followingCount={followingCount} followingTagCount={followingTagCount} blockedPeopleCount={blockedPeopleCount}
         blockedTagCount={blockedTagCount} social={social} page={snapshot.page} totalPages={snapshot.totalPages}
-        returnPath={returnPath} bioReference={bioReference} />,
+        returnPath={returnPath} bioReference={bioReference} moderatorBypass={moderatorBypass} />,
     )
   })
 }

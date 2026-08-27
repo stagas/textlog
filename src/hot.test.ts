@@ -778,22 +778,22 @@ describe('hot feed ranking', () => {
       .map(result => result.id)).toEqual([2, 1])
   })
 
-  test('only hides posts from accounts the viewer blocked', () => {
+  test('hides conversations when either account blocked the other', () => {
     database.query('INSERT INTO users(id,handle) VALUES(?,?)').run(2, 'blocked')
+    database.query('INSERT INTO users(id,handle) VALUES(?,?)').run(3, 'replier')
     post(1, '2026-08-03 11:00:00')
-    database.query('INSERT INTO posts VALUES(?,?,?,?,?,?)')
-      .run(2, 2, null, 'hidden', '2026-08-03 12:00:00', null)
-    database.query('INSERT INTO post_hot VALUES(?,0,0,0,?,?)')
-      .run(2, '2026-08-03 12:00:00', '2026-08-03 12:00:00')
-    recordHotActivity(database, 2)
-    database.run(`UPDATE post_hot SET score=4,reply_count=2 WHERE post_id IN (1,2)`)
+    postBy(2, 2, '2026-08-03 10:00:00')
+    postBy(3, 3, '2026-08-03 11:00:00', 2)
+    database.run(`UPDATE post_hot SET score=4,reply_count=2 WHERE post_id IN (1,2,3)`)
     database.query('INSERT INTO blocks VALUES(?,?)').run(2, 1)
 
-    expect(getHotPosts(database, 20, null, asOf, 1).map(result => result.id)).toEqual([2, 1])
-    database.query('INSERT INTO blocks VALUES(?,?)').run(1, 2)
     const filtered = getHotPosts(database, 20, null, asOf, 1)
     expect(filtered.map(result => result.id)).toEqual([1])
     expect(filtered[0].hot_score).toBeGreaterThan(0)
+
+    database.run('DELETE FROM blocks')
+    database.query('INSERT INTO blocks VALUES(?,?)').run(1, 2)
+    expect(getHotPosts(database, 20, null, asOf, 1).map(result => result.id)).toEqual([1])
   })
 
   test('hides every post carrying a blocked hashtag', () => {

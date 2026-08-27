@@ -27,7 +27,7 @@ export type HotCursor = {
   direction: 'next' | 'previous'
 }
 
-export const hotRankingVersion = 105
+export const hotRankingVersion = 108
 const cursorVersion = hotRankingVersion
 const activityHalfLifeHours = 6
 const postWeight = 0
@@ -352,6 +352,7 @@ export function getHotPosts(
   viewerId = -1,
   publicOnly = false,
   minimumDiscussionReplies = 0,
+  bypassBlocks = false,
 ) {
   const timestamp = cursor?.asOf || (asOf instanceof Date ? asOf.toISOString() : asOf)
   const tracksAccountGroups = (database.query('PRAGMA table_info(users)').all() as { name: string }[])
@@ -364,9 +365,20 @@ export function getHotPosts(
     : 'candidate_user.id'
   const filters = ['p.deleted_at IS NULL', excludesWhisperPosts(), 'ranked.hot_score > 0']
   const parameters: Array<string | number> = [timestamp]
-  if (viewerId >= 0) {
-    filters.push('NOT EXISTS (SELECT 1 FROM blocks b WHERE b.blocker_id=? AND b.blocked_id=p.user_id)')
+  if (viewerId >= 0 && !bypassBlocks) {
+    filters.push(`NOT EXISTS (WITH RECURSIVE ancestors(user_id,parent_id) AS (
+      SELECT p.user_id,p.parent_id
+      UNION ALL
+      SELECT parent.user_id,parent.parent_id FROM posts parent JOIN ancestors ON parent.id=ancestors.parent_id
+    ) SELECT 1 FROM ancestors JOIN blocks b ON
+      (b.blocker_id=? AND b.blocked_id=ancestors.user_id)
+      OR (b.blocker_id=ancestors.user_id AND b.blocked_id=?))`)
+    parameters.push(viewerId, viewerId)
+    filters.push(`NOT EXISTS (SELECT 1 FROM post_hashtags ph JOIN blocked_hashtags bh ON bh.tag=ph.tag
+      WHERE ph.post_id=p.id AND bh.user_id=?)`)
     parameters.push(viewerId)
+  }
+  else if (viewerId >= 0) {
     filters.push(`NOT EXISTS (SELECT 1 FROM post_hashtags ph JOIN blocked_hashtags bh ON bh.tag=ph.tag
       WHERE ph.post_id=p.id AND bh.user_id=?)`)
     parameters.push(viewerId)

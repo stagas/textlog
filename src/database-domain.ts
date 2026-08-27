@@ -3,7 +3,7 @@ import { createHash, randomBytes, randomInt } from 'node:crypto'
 import { statSync } from 'node:fs'
 import { accountChoices, accountForEmail, accountGroupForUser, createAccountGroup, isPrimaryAccount,
   markGroupEmailVerified, MONTHLY_NEW_ACCOUNT_LIMIT, recentAccountCreations, selectAccount } from './account-groups'
-import { anonymizeUser, recordAdminAction, resolvePostReports, softDeletePost } from './admin'
+import { anonymizeUser, isAdminEmail, recordAdminAction, resolvePostReports, softDeletePost } from './admin'
 import { API_DEFAULT_LIMIT, apiHotPosts, apiPost, apiPosts, apiReplies, apiSearchPosts, encodeCursor } from './api'
 import { apiActivities } from './api-activity'
 import { issueApiKey } from './api-keys'
@@ -93,6 +93,25 @@ function recapPosts(database: Database, viewerId: number) {
       AND u.suspended_at IS NULL ${visibility}`).all(...parameters) as PostView[]
   const byId = new Map(rows.map(post => [post.id, post]))
   return enrichPosts(database, RECAP_POPULAR_NOTE_IDS.flatMap(id => byId.has(id) ? [byId.get(id)!] : []), viewerId)
+}
+
+function invalidateBlockVisibility(userIds: number[]) {
+  const ids = [...new Set(userIds)]
+  if (!ids.length) return
+  const placeholders = ids.map(() => '?').join(',')
+  cacheDb.transaction(() => {
+    cacheDb.query(`DELETE FROM feed_snapshots WHERE viewer_id IN (${placeholders})
+      AND (kind LIKE 'latest%' OR kind='hot' OR kind LIKE 'hot:%')`).run(...ids)
+    cacheDb.query(`DELETE FROM materialized_feed_pages_v2 WHERE viewer_id IN (${placeholders})
+      AND kind IN ('latest','hot','for-you','to-me')`).run(...ids)
+  })()
+}
+
+function viewerIsModerator(database: Database, viewerId: number) {
+  if (viewerId < 0) return false
+  if (!database.query("SELECT 1 FROM pragma_table_info('users') WHERE name='email'").get()) return false
+  const viewer = database.query('SELECT email FROM users WHERE id=?').get(viewerId) as { email: string } | null
+  return !!viewer && isAdminEmail(viewer.email)
 }
 
 function groupPostsByConversation<T extends { id: number }>(database: Database, posts: T[]) {
@@ -896,9 +915,14 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
       const found = database.query('SELECT p.*,u.handle FROM posts p JOIN users u ON u.id=p.user_id WHERE p.id=?')
         .get(id) as PostView | null
       if (!found) return { status: 'not_found' } as DatabaseDomainOutput<K>
-      if (viewerId >= 0) {
-        const blocked = database.query('SELECT 1 FROM blocks WHERE blocker_id=? AND blocked_id=?')
-          .get(viewerId, found.user_id)
+      if (viewerId >= 0 && !viewerIsModerator(database, viewerId)) {
+        const blocked = database.query(`WITH RECURSIVE ancestors(user_id,parent_id) AS (
+          SELECT user_id,parent_id FROM posts WHERE id=?
+          UNION ALL
+          SELECT parent.user_id,parent.parent_id FROM posts parent JOIN ancestors ON parent.id=ancestors.parent_id
+        ) SELECT 1 FROM ancestors JOIN blocks b ON
+          (b.blocker_id=? AND b.blocked_id=ancestors.user_id)
+          OR (b.blocker_id=ancestors.user_id AND b.blocked_id=?)`).get(id, viewerId, viewerId)
         const blockedTag = database.query(`SELECT 1 FROM post_hashtags ph JOIN blocked_hashtags bh ON bh.tag=ph.tag
           WHERE ph.post_id=? AND bh.user_id=?`).get(id, viewerId)
         if (blocked || blockedTag) return { status: 'not_found' } as DatabaseDomainOutput<K>
@@ -1446,9 +1470,12 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
         changed = database.query('DELETE FROM blocks WHERE blocker_id=? AND blocked_id=?')
           .run(userId, target.id).changes > 0
       }
-      if (changed && (action === 'follow' || action === 'unfollow')) {
-        cacheDb.query(`DELETE FROM materialized_feed_pages_v2 WHERE viewer_id=?
-          AND kind IN ('latest','hot','for-you','to-me')`).run(userId)
+      if (changed) {
+        if (action === 'block' || action === 'unblock') invalidateBlockVisibility([userId, target.id])
+        else {
+          cacheDb.query(`DELETE FROM materialized_feed_pages_v2 WHERE viewer_id=?
+            AND kind IN ('latest','hot','for-you','to-me')`).run(userId)
+        }
       }
       const result = { status: 'ready' as const, changed, targetId: target.id, targetHandle: target.handle }
       return result as DatabaseDomainOutput<K>
@@ -2033,13 +2060,19 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
     case 'feeds.latestPage': {
       const { viewerId, page, pageSize, markRead = true } = input as DatabaseDomainInput<'feeds.latestPage'>
       const state = viewerId >= 0 ? latestPostState(viewerId, database) : []
-      const parameters = [viewerId, viewerId, viewerId, viewerId]
-      const snapshotKind = 'latest-roots-v7'
+      const blockViewerId = viewerIsModerator(database, viewerId) ? -1 : viewerId
+      const parameters = [blockViewerId, blockViewerId, blockViewerId, viewerId, viewerId]
+      const snapshotKind = 'latest-roots-v9'
       const snapshot = feedSnapshotPage<PostView[]>(database, snapshotKind, viewerId, page, () => {
         const rows = database.query(
           `SELECT p.*,u.handle FROM posts p JOIN users u ON u.id=p.user_id
-          WHERE p.deleted_at IS NULL AND (? < 0 OR NOT EXISTS
-          (SELECT 1 FROM blocks b WHERE b.blocker_id=? AND b.blocked_id=p.user_id))
+          WHERE p.deleted_at IS NULL AND (? < 0 OR NOT EXISTS (WITH RECURSIVE ancestors(user_id,parent_id) AS (
+            SELECT p.user_id,p.parent_id
+            UNION ALL
+            SELECT parent.user_id,parent.parent_id FROM posts parent JOIN ancestors ON parent.id=ancestors.parent_id
+          ) SELECT 1 FROM ancestors JOIN blocks b ON
+            (b.blocker_id=? AND b.blocked_id=ancestors.user_id)
+            OR (b.blocker_id=ancestors.user_id AND b.blocked_id=?)))
           AND ${excludesWhisperPosts()}
           AND (? < 0 OR NOT EXISTS (SELECT 1 FROM post_hashtags ph JOIN blocked_hashtags bh ON bh.tag=ph.tag
             WHERE ph.post_id=p.id AND bh.user_id=?)) ORDER BY p.id DESC`,
@@ -2147,9 +2180,11 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
     }
     case 'feeds.hotPage': {
       const { viewerId, page, pageSize } = input as DatabaseDomainInput<'feeds.hotPage'>
+      const moderator = viewerIsModerator(database, viewerId)
       const snapshot = feedSnapshotPage<HotPost[]>(database, `hot:${hotRankingVersion}:conversations`, viewerId, page,
         () =>
-          groupPostsByConversation(database, getHotPosts(database, 1_000_000, null, new Date(), viewerId, false, 2)),
+          groupPostsByConversation(database,
+            getHotPosts(database, 1_000_000, null, new Date(), viewerId, false, 2, moderator)),
         pageSize, cacheDb)
       return { posts: rewireVisibleAncestorGaps(database,
         enrichPosts(database, snapshot.items.flat(), viewerId)), page: snapshot.page,
@@ -2502,6 +2537,7 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
           database.query('DELETE FROM follows WHERE follower_id=? AND following_id=?').run(userId, target.id)
         }
       })()
+      invalidateBlockVisibility([userId, target.id])
       return { targetHandle: target.handle, blocked: !exists } as DatabaseDomainOutput<K>
     }
     case 'interactions.reportPost': {

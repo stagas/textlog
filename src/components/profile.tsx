@@ -11,7 +11,8 @@ export function Profile(
   { user, profile, posts, following, followsViewer = false, bio = profile.bio || '', editHandle = profile.handle,
     editEmail = profile.email, error, editing = false, total = posts.length, noteCount = total, replyCount = 0,
     tab = 'notes', followerCount = 0, followingCount = 0, followingTagCount = 0, blockedPeopleCount = 0,
-    blockedTagCount = 0, blocked = false, blockedByProfile = false, social, page = 1, totalPages = 1, returnPath,
+    blockedTagCount = 0, blocked = false, blockedByProfile = false, moderatorBypass = false, social, page = 1,
+    totalPages = 1, returnPath,
     suggestionSearch, bioReference }: {
       user: User | null
       profile: ProfileRow
@@ -34,6 +35,7 @@ export function Profile(
       blockedTagCount?: number
       blocked?: boolean
       blockedByProfile?: boolean
+      moderatorBypass?: boolean
       page?: number
       totalPages?: number
       returnPath?: string
@@ -42,6 +44,7 @@ export function Profile(
       social?: { description: string; image: string; url: string; type?: 'article' | 'profile'; imageAlt?: string }
     },
 ) {
+  const hiddenByBlock = (blocked || blockedByProfile) && !moderatorBypass
   const feedQuery = new URLSearchParams()
   if (tab === 'replies') feedQuery.set('tab', 'replies')
   if (page > 1) feedQuery.set('page', String(page))
@@ -263,7 +266,7 @@ export function Profile(
               ))}
         </div>
       </ProfileHeader>
-      {blocked || blockedByProfile
+      {hiddenByBlock
         ? (
           <div className="empty relationship-notice">
             {blocked ? 'You blocked this user. Unblock them to see their notes.' : 'This profile is unavailable.'}
@@ -274,11 +277,11 @@ export function Profile(
             following={followingCount} followingTags={followingTagCount} showBlocked={user?.id === profile.id}
             blockedPeople={blockedPeopleCount} blockedTags={blockedTagCount} returnPath={returnPath} />
         )}
-      {!editing && !blocked && !blockedByProfile && page > 1
+      {!editing && !hiddenByBlock && page > 1
         && <Pagination path={paginationPath} page={page} totalPages={totalPages} top />}
-      {!editing && !blocked && !blockedByProfile
+      {!editing && !hiddenByBlock
         && <FeedThreads posts={posts} user={user} returnPath={feedPath} hideTopMeta={tab !== 'replies'} />}
-      {!editing && !blocked && !blockedByProfile && total === 0 && (
+      {!editing && !hiddenByBlock && total === 0 && (
         <div className={`empty${user?.id === profile.id ? ' empty-actions' : ''}`}>
           {user?.id === profile.id
             ? (
@@ -294,7 +297,7 @@ export function Profile(
             : `@${profile.handle} hasn’t posted any notes yet.`}
         </div>
       )}
-      {!editing && !blocked && !blockedByProfile
+      {!editing && !hiddenByBlock
         && <Pagination path={paginationPath} page={page} totalPages={totalPages} />}
     </Layout>
   )

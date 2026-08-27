@@ -61,6 +61,7 @@ export type ParentPost = Pick<PostRow,
   profile_stats?: UserProfileStats
   viewer_following?: boolean
   follows_viewer?: boolean
+  blocked_viewer?: boolean
   mention_bios?: Record<string, string>
   mention_note_counts?: Record<string, number>
   mention_profile_stats?: Record<string, UserProfileStats>
@@ -89,6 +90,7 @@ export type PostView = PostRow & {
   profile_stats?: UserProfileStats
   viewer_following?: boolean
   follows_viewer?: boolean
+  blocked_viewer?: boolean
   mention_bios?: Record<string, string>
   mention_note_counts?: Record<string, number>
   mention_profile_stats?: Record<string, UserProfileStats>

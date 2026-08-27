@@ -646,6 +646,7 @@ export function Post({
                 href={'/u/' + p.handle + referenceQuery} rel={navigationRel} navigationQuery={referenceQuery}
                 referenceData={p.bio_reference} extraAction={authorPopoverAction} />
             )}
+          {p.blocked_viewer && <span className="post-context">(user has blocked you)</span>}
           {contextLabel && (canonicalTimestamp
             ? (
               <>
