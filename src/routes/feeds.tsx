@@ -254,11 +254,9 @@ export function registerFeedsRoutes(app: Hono) {
     }
     const renderForCache = user ? async () => {
       const feed = await data()
-      const consumed = new Set(feed.unreadPostIds || []).size
-      const latestCount = Math.max(0, (feed.latestCount || 0) - consumed)
       return page(
-        <PublicFeed user={user} feed={{ ...feed, latestCount, latestUnread: latestCount > 0,
-          unreadPostIds: [], directedUnreadPostIds: [] }} path="/latest" notificationBanner={notificationBanner}
+        <PublicFeed user={user} feed={{ ...feed, unreadPostIds: [], directedUnreadPostIds: [] }} path="/latest"
+          notificationBanner={notificationBanner}
           expandedRootId={expandedRootId} />,
       )
     } : undefined

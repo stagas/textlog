@@ -2371,7 +2371,7 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
       const result = { posts, page: snapshot.page, totalItems: snapshot.totalItems, totalPages: snapshot.totalPages,
         forYouCount, toMeCount, forYouUnread: forYouCount > 0,
         toMeUnread: toMeCount > 0, latestUnread: remainingUnread.length > 0,
-        latestCount: unread.length, unreadPostIds, directedUnreadPostIds, unreadHref: href(remainingUnread[0]),
+        latestCount: remainingUnread.length, unreadPostIds, directedUnreadPostIds, unreadHref: href(remainingUnread[0]),
         lastUnreadHref: href(remainingUnread.length > 1 ? remainingUnread.at(-1) : undefined) }
       return result as DatabaseDomainOutput<K>
     }
