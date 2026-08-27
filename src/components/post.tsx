@@ -22,8 +22,8 @@ function ContentWarning({ p, controlId, showImmediately = false, children }: {
       <input className="content-warning-toggle" id={controlId} type="checkbox"
         aria-label={`Reveal post that might contain ${p.moderation_category}`} />
       <label className="content-warning-overlay" htmlFor={controlId}>
-        <span>This post might contain {p.moderation_category}.<br />
-          <span className="content-warning-action">Click to view anyway.</span>
+        <span>this post might contain {p.moderation_category}<br />
+          <span className="content-warning-action">click to view anyway</span>
         </span>
       </label>
       <div className="content-warning-body">{children}</div>
