@@ -8,6 +8,7 @@ import {
   Reply,
 } from '../components/pages'
 import { conversationTopPath, postedReplyPath } from '../components/post'
+import { executePostCode } from '../code-execution'
 import { databaseService } from '../database-service'
 import { moderateText, moderationMessage } from '../moderation'
 import { canPublishPosts } from '../posting-policy'
@@ -284,6 +285,7 @@ export function registerPostsRoutes(app: Hono) {
         translation: await postTranslation(body),
         moderationCategory: moderation.warning?.category,
         moderationScore: moderation.warning?.score,
+        executionOutput: await executePostCode(body),
       })
       if (result.status === 'locked') return c.text('This thread is locked', 409)
       if (result.status === 'rate_limited') {
@@ -440,6 +442,7 @@ export function registerPostsRoutes(app: Hono) {
         translation: await postTranslation(body),
         moderationCategory: moderation.warning?.category,
         moderationScore: moderation.warning?.score,
+        executionOutput: await executePostCode(body),
       })
       if (result.status !== 'ready') {
         return c.text(result.status === 'not_found' ? 'Not found' : 'Forbidden',
@@ -550,6 +553,7 @@ export function registerPostsRoutes(app: Hono) {
         translation: await postTranslation(body),
         moderationCategory: moderation.warning?.category,
         moderationScore: moderation.warning?.score,
+        executionOutput: await executePostCode(body),
       })
       if (result.status === 'locked') return c.text('This thread is locked', 409)
       if (result.status === 'rate_limited') {

@@ -13,6 +13,7 @@ const production = {
   R2_ENDPOINT: 'https://account.r2.cloudflarestorage.com',
   R2_BUCKET: 'textlog-images',
   R2_PUBLIC_URL: 'https://img.textlog.cc',
+  PISTON_URL: 'https://piston.example.com',
 }
 
 describe('startup configuration', () => {

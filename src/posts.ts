@@ -149,6 +149,7 @@ export function createPost(
   translation: string | null = null,
   moderationCategory: string | null = null,
   moderationScore: number | null = null,
+  executionOutput: string | null = null,
 ) {
   const supportsTranslation = !!database.query(
     'SELECT 1 FROM pragma_table_info(\'posts\') WHERE name=\'translation\'',
@@ -161,6 +162,9 @@ export function createPost(
     if (supportsModerationWarning) database.query(
       'UPDATE posts SET moderation_category=?,moderation_score=? WHERE id=?',
     ).run(moderationCategory, moderationScore, postId)
+    if (database.query("SELECT 1 FROM pragma_table_info('posts') WHERE name='execution_output'").get()) {
+      database.query('UPDATE posts SET execution_output=? WHERE id=?').run(executionOutput, postId)
+    }
     syncPostMetadata(database, postId, body)
     recordHotActivity(database, postId)
     database.query(`INSERT OR IGNORE INTO for_you_reads(user_id,event_key)
@@ -181,7 +185,8 @@ export function isThreadLocked(database: Database, postId: number) {
 }
 
 export function updatePost(database: Database, postId: number, body: string, translation: string | null = null,
-  moderationCategory: string | null = null, moderationScore: number | null = null)
+  moderationCategory: string | null = null, moderationScore: number | null = null,
+  executionOutput: string | null = null)
 {
   database.transaction(() => {
     const supportsTranslation = !!database.query(
@@ -198,6 +203,9 @@ export function updatePost(database: Database, postId: number, body: string, tra
     if (supportsModerationWarning) database.query(
       'UPDATE posts SET moderation_category=?,moderation_score=? WHERE id=?',
     ).run(moderationCategory, moderationScore, postId)
+    if (database.query("SELECT 1 FROM pragma_table_info('posts') WHERE name='execution_output'").get()) {
+      database.query('UPDATE posts SET execution_output=? WHERE id=?').run(executionOutput, postId)
+    }
     syncPostMetadata(database, postId, body)
   })()
 }
@@ -217,6 +225,9 @@ export function enrichPosts(database: Database, posts: PostView[], viewerId = -1
   ).get()
   const supportsModerationWarnings = !!database.query(
     'SELECT 1 FROM pragma_table_info(\'posts\') WHERE name=\'moderation_category\'',
+  ).get()
+  const supportsExecutionOutput = !!database.query(
+    "SELECT 1 FROM pragma_table_info('posts') WHERE name='execution_output'",
   ).get()
   const ids = posts.map(post => post.id)
   const viewerContextByPostId = new Map<number, 'reply' | 'mention'>()
@@ -394,6 +405,7 @@ export function enrichPosts(database: Database, posts: PostView[], viewerId = -1
     const rows = database.query(
       `SELECT p.id,p.user_id,p.parent_id,p.body,${supportsTranslations ? 'p.translation' : 'NULL translation'},
         p.created_at,p.deleted_at,p.has_latex,p.has_links,p.has_code,
+        ${supportsExecutionOutput ? 'p.execution_output' : 'NULL execution_output'},
         ${supportsModerationWarnings
           ? 'p.moderation_category,p.moderation_score'
           : 'NULL moderation_category,NULL moderation_score'},u.handle,u.bio,
@@ -551,6 +563,9 @@ export function rewireVisibleAncestorGaps(database: Database, posts: PostView[])
 
 export function loadThreadReplies(database: Database, parentId: number, viewerId = -1) {
   const blockViewerId = moderatorViewer(database, viewerId) ? -1 : viewerId
+  const supportsExecutionOutput = !!database.query(
+    "SELECT 1 FROM pragma_table_info('posts') WHERE name='execution_output'",
+  ).get()
   const translationColumn = database.query(
       'SELECT 1 FROM pragma_table_info(\'posts\') WHERE name=\'translation\'',
     ).get()
@@ -570,7 +585,7 @@ export function loadThreadReplies(database: Database, parentId: number, viewerId
         AND (? < 0 OR NOT EXISTS (SELECT 1 FROM post_hashtags ph JOIN blocked_hashtags bh ON bh.tag=ph.tag
           WHERE ph.post_id=p.id AND bh.user_id=?))
     ) SELECT id,user_id,parent_id,body,${translationColumn},created_at,deleted_at,
-      has_latex,has_links,has_code,handle,depth
+      has_latex,has_links,has_code,${supportsExecutionOutput ? 'execution_output' : 'NULL execution_output'},handle,depth
       FROM thread ORDER BY created_at ASC,id ASC`).all(parentId, blockViewerId, blockViewerId, blockViewerId,
     viewerId, viewerId, blockViewerId, blockViewerId, blockViewerId, viewerId, viewerId) as (PostView & { depth: number })[]
   return enrichPosts(database, rows, viewerId) as Array<PostView & { depth: number }>

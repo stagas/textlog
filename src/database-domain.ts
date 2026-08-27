@@ -1703,7 +1703,8 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
       }
       const created = database.transaction(() => {
         const value = createPost(database, request.userId, draft.body, draft.parent_id, false,
-          request.translation ?? null, request.moderationCategory ?? null, request.moderationScore ?? null)
+          request.translation ?? null, request.moderationCategory ?? null, request.moderationScore ?? null,
+          request.executionOutput ?? null)
         if (!('retryAfter' in value)) {
           database.query('DELETE FROM drafts WHERE id=? AND user_id=?').run(request.id, request.userId)
           if (!value.duplicate && hasPostPushJobs(database)) database
@@ -1721,7 +1722,7 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
         post: apiPost(database, created.id, request.origin, request.userId)! } as DatabaseDomainOutput<K>
     }
     case 'api.createPost': {
-      const { userId, body, parentId, origin, translation, moderationCategory, moderationScore } =
+      const { userId, body, parentId, origin, translation, moderationCategory, moderationScore, executionOutput } =
         input as DatabaseDomainInput<'api.createPost'>
       if (parentId !== null) {
         const parent = database.query('SELECT user_id FROM posts WHERE id=? AND deleted_at IS NULL')
@@ -1735,7 +1736,7 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
       }
       const created = database.transaction(() => {
         const value = createPost(database, userId, body, parentId, false, translation ?? null,
-          moderationCategory ?? null, moderationScore ?? null)
+          moderationCategory ?? null, moderationScore ?? null, executionOutput ?? null)
         if (!('retryAfter' in value) && !value.duplicate && hasPostPushJobs(database)) {
           database.query('INSERT OR IGNORE INTO post_push_jobs(post_id) VALUES(?)').run(value.id)
         }
@@ -1748,13 +1749,15 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
         post: apiPost(database, created.id, origin, userId)! } as DatabaseDomainOutput<K>
     }
     case 'api.updatePost': {
-      const { userId, id, body, origin, moderator, translation, moderationCategory, moderationScore } =
+      const { userId, id, body, origin, moderator, translation, moderationCategory, moderationScore,
+        executionOutput } =
         input as DatabaseDomainInput<'api.updatePost'>
       const existing = database.query('SELECT user_id,parent_id FROM posts WHERE id=? AND deleted_at IS NULL')
         .get(id) as { user_id: number; parent_id: number | null } | null
       if (!existing) return { status: 'not_found' } as DatabaseDomainOutput<K>
       if (existing.user_id !== userId && !moderator) return { status: 'forbidden' } as DatabaseDomainOutput<K>
-      updatePost(database, id, body, translation ?? null, moderationCategory ?? null, moderationScore ?? null)
+      updatePost(database, id, body, translation ?? null, moderationCategory ?? null, moderationScore ?? null,
+        executionOutput ?? null)
       if (existing.user_id !== userId) recordAdminAction(database, userId, 'edit_post', existing.user_id, id, '')
       return { status: 'ready', post: apiPost(database, id, origin, userId)! } as DatabaseDomainOutput<K>
     }

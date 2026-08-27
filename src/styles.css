@@ -6416,6 +6416,14 @@ a.post-context:hover {
   white-space: pre;
 }
 
+.post .code-fence.execution-output {
+  margin-top: 1lh;
+  margin-bottom: 0.5lh;
+  font-size: var(--post-body-font-size, 0.8125rem);
+  line-height: var(--post-body-line-height, 1.65);
+  letter-spacing: var(--post-body-letter-spacing, normal);
+}
+
 .post .code-fence::-webkit-scrollbar {
   display: none;
 }

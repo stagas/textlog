@@ -28,6 +28,7 @@ export type StartupConfiguration = {
   moderationDisabled: boolean
   moderationCategoryThresholds: string
   enableCaptchaAlways: boolean
+  pistonUrl: string | null
 }
 
 const allowedEnvironments = ['development', 'test', 'production'] as const
@@ -233,6 +234,20 @@ export function validateStartupConfiguration(env: Environment = Bun.env, options
     problems.push(`MODERATION_CATEGORY_THRESHOLDS ${error instanceof Error ? error.message : 'is invalid'}`)
   }
   const enableCaptchaAlways = booleanValue(env, 'ENABLE_CAPTCHA_ALWAYS', problems)
+  let pistonUrl: string | null = null
+  if (env.PISTON_URL?.trim()) {
+    try {
+      const parsed = new URL(env.PISTON_URL.trim())
+      if (!['http:', 'https:'].includes(parsed.protocol) || parsed.username || parsed.password) {
+        throw new Error('invalid URL')
+      }
+      pistonUrl = parsed.toString()
+    }
+    catch {
+      problems.push('PISTON_URL must be an absolute HTTP or HTTPS URL without credentials')
+    }
+  }
+  else if (environment === 'production') problems.push('PISTON_URL is required in production')
   if (!moderationDisabled && environment === 'production' && !env.OPENAI_API_KEY?.trim()) {
     problems.push('OPENAI_API_KEY is required in production unless MODERATION_DISABLED=true')
   }
@@ -275,5 +290,6 @@ export function validateStartupConfiguration(env: Environment = Bun.env, options
     moderationDisabled,
     moderationCategoryThresholds,
     enableCaptchaAlways,
+    pistonUrl,
   }
 }

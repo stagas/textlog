@@ -19,6 +19,7 @@ type ApiPostRow = {
   top_id: number | null
   body: string
   translation?: string | null
+  execution_output?: string | null
   parent_id: number | null
   created_at: string
   handle: string
@@ -64,6 +65,7 @@ export function serializePost(row: ApiPostRow, origin: string): ApiPost {
     top_id: row.top_id,
     body: row.body,
     ...(row.translation ? { translation: row.translation } : {}),
+    ...(row.execution_output !== undefined ? { execution_output: row.execution_output } : {}),
     created_at: isoTimestamp(row.created_at),
     parent_id: row.parent_id,
     reply_count: row.reply_count,

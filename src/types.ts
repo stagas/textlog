@@ -19,6 +19,7 @@ export type PostRow = {
   has_latex?: number | null
   has_links?: number | null
   has_code?: number | null
+  execution_output?: string | null
   link_previews?: Record<string, LinkPreview>
 }
 
@@ -54,6 +55,7 @@ export type BioReferenceData = {
 
 export type ParentPost = Pick<PostRow,
   'id' | 'body' | 'translation' | 'created_at' | 'deleted_at' | 'has_latex' | 'has_links' | 'has_code'
+  | 'execution_output'
   | 'moderation_category' | 'moderation_score'> & {
   handle: string
   unavailable?: boolean
@@ -121,6 +123,7 @@ export type ApiPost = {
   top_id: number | null
   body: string
   translation?: string | null
+  execution_output?: string | null
   created_at: string
   parent_id: number | null
   reply_count: number

@@ -4,6 +4,7 @@ import { publishPost } from '../api-broker'
 import { AUTH_LIMITS } from '../auth-rate-limit'
 import { bioBodyValidationMessage, normalizeBioBody, validBioBody } from '../bio-body'
 import { isValidHashtag, normalizeHashtag } from '../content'
+import { executePostCode } from '../code-execution'
 import type { DatabaseService } from '../database-service'
 import { sendMagicLink } from '../email'
 import { deleteImages, deleteImagesAfterCommit } from '../image-storage'
@@ -249,6 +250,7 @@ export function registerApiWriteRoutes(app: Hono, service: DatabaseService,
       translation: await postTranslation(content),
       moderationCategory: moderation.warning?.category,
       moderationScore: moderation.warning?.score,
+      executionOutput: await executePostCode(content),
     })
     if (result.status === 'not_found') return fail('not_found', 'Post not found', 404)
     if (result.status === 'locked') return fail('thread_locked', 'This thread is locked', 409)
@@ -369,7 +371,8 @@ export function registerApiWriteRoutes(app: Hono, service: DatabaseService,
     }
     const result = await service.call('api.publishDraft', { userId: guard.user!.id, id, body: draft.body,
       parentId: draft.parent_id, origin: apiOrigin(c.req.url, appUrl), translation: await postTranslation(draft.body),
-      moderationCategory: moderation.warning?.category, moderationScore: moderation.warning?.score })
+      moderationCategory: moderation.warning?.category, moderationScore: moderation.warning?.score,
+      executionOutput: await executePostCode(draft.body) })
     if (result.status === 'not_found') return fail('not_found', 'Draft or parent post not found', 404)
     if (result.status === 'locked') return fail('thread_locked', 'This thread is locked', 409)
     if (result.status === 'rate_limited') {
@@ -425,6 +428,7 @@ export function registerApiWriteRoutes(app: Hono, service: DatabaseService,
       translation: await postTranslation(content),
       moderationCategory: moderation.warning?.category,
       moderationScore: moderation.warning?.score,
+      executionOutput: await executePostCode(content),
     })
     if (result.status !== 'ready') {
       return result.status === 'not_found'

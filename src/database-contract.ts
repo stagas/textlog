@@ -316,7 +316,8 @@ export type DatabaseDomainOperations = {
   }
   'api.publishDraft': {
     input: { userId: number; id: number; body: string; parentId: number | null; origin: string;
-      translation?: string | null; moderationCategory?: string | null; moderationScore?: number | null }
+      translation?: string | null; moderationCategory?: string | null; moderationScore?: number | null;
+      executionOutput?: string | null }
     output: { status: 'not_found' } | { status: 'locked' } | { status: 'rate_limited'; retryAfter: number } | {
       status: 'ready'
       id: number
@@ -326,7 +327,7 @@ export type DatabaseDomainOperations = {
   }
   'api.createPost': {
     input: { userId: number; body: string; parentId: number | null; origin: string; translation?: string | null;
-      moderationCategory?: string | null; moderationScore?: number | null }
+      moderationCategory?: string | null; moderationScore?: number | null; executionOutput?: string | null }
     output: { status: 'not_found' } | { status: 'locked' } | { status: 'rate_limited'; retryAfter: number } | {
       status: 'ready'
       id: number
@@ -336,7 +337,8 @@ export type DatabaseDomainOperations = {
   }
   'api.updatePost': {
     input: { userId: number; id: number; body: string; origin: string; moderator?: boolean;
-      translation?: string | null; moderationCategory?: string | null; moderationScore?: number | null }
+      translation?: string | null; moderationCategory?: string | null; moderationScore?: number | null;
+      executionOutput?: string | null }
     output: { status: 'not_found' | 'forbidden' } | { status: 'ready'; post: ApiPost }
   }
   'api.deletePost': { input: { userId: number; id: number };

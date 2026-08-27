@@ -2566,6 +2566,15 @@ export const migrations: Migration[] = [
       }
     },
   },
+  {
+    version: 154,
+    name: 'post_execution_output',
+    up(database) {
+      if (database.query("SELECT 1 FROM sqlite_master WHERE type='table' AND name='posts'").get()) {
+        addColumn(database, 'posts', 'execution_output', 'TEXT')
+      }
+    },
+  },
 ]
 
 export const latestMigrationVersion = migrations.at(-1)!.version

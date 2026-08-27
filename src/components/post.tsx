@@ -492,6 +492,7 @@ export function PreviewPost({ p }: { p: PostView }) {
             p.hashtag_counts, p.mention_note_counts, { signedIn: false, currentHandle: p.handle, formPrefix,
             hashtagFollowerCounts: p.hashtag_follower_counts, linkPreviews: p.link_previews }),
         }} />
+        {p.execution_output !== null && p.execution_output !== undefined && <ExecutionOutput output={p.execution_output} />}
         <PollPreview body={p.body} />
         <Todo p={p} user={null} preview formPrefix={formPrefix} />
       </ContentWarning>
@@ -500,6 +501,10 @@ export function PreviewPost({ p }: { p: PostView }) {
       </MetaRow>
     </article>
   )
+}
+
+function ExecutionOutput({ output }: { output: string }) {
+  return <code className="code-fence execution-output">{output || '(no output)'}</code>
 }
 
 export function Post({
@@ -762,6 +767,7 @@ export function Post({
             hashtagFollowing: p.hashtag_following, hashtagFollowerCounts: p.hashtag_follower_counts,
             linkPreviews: p.link_previews, linkUnknownMentions: preview || p.id < 0 }),
         }} />
+        {p.execution_output !== null && p.execution_output !== undefined && <ExecutionOutput output={p.execution_output} />}
         {!preview && <Translation html={translationHtml} />}
         {preview ? <PollPreview body={p.body} /> : <Poll p={p} returnPath={returnPath} />}
         <Todo p={p} user={user} preview={preview} returnPath={returnPath} formPrefix={formPrefix} />
@@ -867,6 +873,8 @@ export function Post({
                       linkPreviews: parent.link_previews,
                     }),
                     }} />
+                  {parent.execution_output !== null && parent.execution_output !== undefined
+                    && <ExecutionOutput output={parent.execution_output} />}
                   <Translation html={parent.translation
                     ? linkify(displayPostBody(parent.translation), parent.mention_bios, [], undefined,
                     renderFlags(parent), referenceQuery, parent.hashtag_counts, parent.mention_note_counts, {
