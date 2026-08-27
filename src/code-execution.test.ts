@@ -4,8 +4,16 @@ import { executableCode, executePostCode } from './code-execution'
 describe('executable notes', () => {
   test('requires a standalone exec hashtag and a language fence', () => {
     expect(executableCode('#exec\n```js\nconsole.log(1)\n```')).toEqual({ language: 'js', code: 'console.log(1)' })
-    expect(executableCode('hello #exec\n```js\nconsole.log(1)\n```')).toBeNull()
+    expect(executableCode('hello #execute\n```js\nconsole.log(1)\n```')).toBeNull()
     expect(executableCode('#exec\n```\nconsole.log(1)\n```')).toBeNull()
+  })
+
+  test('runs the first code fence after an exec marker anywhere in the note', () => {
+    expect(executableCode('An example:\n```js\nconsole.log("not this")\n```\n\nRun this:\n#exec\n```js\n'
+      + 'console.log("this one")\n```\nAfterwards.')).toEqual({ language: 'js', code: 'console.log("this one")' })
+    expect(executableCode('Please run this #exec\n```js\nconsole.log(42)\n```'))
+      .toEqual({ language: 'js', code: 'console.log(42)' })
+    expect(executableCode('```text\n#exec\n```\n```js\nconsole.log(42)\n```')).toBeNull()
   })
 
   test('executes JavaScript locally and captures console output', async () => {

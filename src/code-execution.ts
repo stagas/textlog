@@ -14,9 +14,23 @@ const PISTON_LANGUAGE_ALIASES: Record<string, string> = {
   ts: 'typescript',
 }
 
+function executionMarkerEnd(body: string) {
+  let offset = 0
+  let fenced = false
+  for (const rawLine of body.split('\n')) {
+    const line = rawLine.replace(/\r$/, '')
+    if (/^\s*```/.test(line)) fenced = !fenced
+    else if (!fenced && /(?:^|\s)#exec\s*$/.test(line)) return offset + rawLine.length
+    offset += rawLine.length + 1
+  }
+  return null
+}
+
 export function executableCode(body: string): ExecutableCode | null {
-  if (!body.split(/\r?\n/).some(line => /^\s*#exec\s*$/.test(line))) return null
-  const match = /(?:^|\n)[ \t]*```([A-Za-z0-9_+.#-]+)[ \t]*\r?\n([\s\S]*?)\r?\n[ \t]*```(?:\r?\n|$)/.exec(body)
+  const markerEnd = executionMarkerEnd(body)
+  if (markerEnd === null) return null
+  const afterMarker = body.slice(markerEnd)
+  const match = /(?:^|\n)[ \t]*```([A-Za-z0-9_+.#-]+)[ \t]*\r?\n([\s\S]*?)\r?\n[ \t]*```(?:\r?\n|$)/.exec(afterMarker)
   if (!match) return null
   return { language: match[1].toLowerCase(), code: match[2] }
 }
@@ -74,7 +88,7 @@ export async function executePostCode(body: string, environment = Bun.env.NODE_E
 {
   const code = executableCode(body)
   if (!code) {
-    if (body.split(/\r?\n/).some(line => /^\s*#exec\s*$/.test(line))) {
+    if (executionMarkerEnd(body) !== null) {
       logInfo('code execution status=skipped reason=missing_language_fence')
     }
     return null
