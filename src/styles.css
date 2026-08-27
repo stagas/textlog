@@ -2120,6 +2120,10 @@ nav form {
   margin-top: var(--space-1);
 }
 
+.post-page-thread:not(.feed-thread) .content-warning + .postfoot {
+  margin-top: calc(var(--space-2) + 2px);
+}
+
 .post-without-top-meta > .post-body {
   margin-top: 0;
 }
@@ -2339,6 +2343,21 @@ nav form {
 .parent-quote .content-warning-overlay > span {
   background: var(--quote-surface);
   box-shadow: 0 0 var(--space-2) var(--space-1) var(--quote-surface);
+}
+
+.parent-quote .content-warning {
+  margin-top: calc(var(--space-1) / 2);
+}
+
+.parent-quote .content-warning-overlay {
+  padding-inline: var(--space-2);
+  font-size: 0.75rem;
+  line-height: 1.65;
+  letter-spacing: normal;
+}
+
+.parent-quote .content-warning + .parent-quote-foot {
+  margin-top: calc(var(--space-1) / 2);
 }
 
 .parent-quote-top {
