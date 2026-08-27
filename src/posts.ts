@@ -189,6 +189,7 @@ export function updatePost(database: Database, postId: number, body: string, tra
 export function enrichPosts(database: Database, posts: PostView[], viewerId = -1) {
   if (!posts.length) return posts
   const moderator = moderatorViewer(database, viewerId)
+  const blockViewerId = moderator ? -1 : viewerId
   const blockers = moderator && viewerId >= 0
     ? new Set((database.query(`SELECT blocker_id FROM blocks WHERE blocked_id=?
       AND blocker_id IN (${posts.map(() => '?').join(',')})`).all(viewerId, ...posts.map(post => post.user_id)) as {
@@ -346,7 +347,7 @@ export function enrichPosts(database: Database, posts: PostView[], viewerId = -1
       WHERE ph.post_id=p.id AND bh.user_id=?)`
   const countParameters = viewerId < 0
     ? countRootIds
-    : [...countRootIds, viewerId, viewerId, viewerId]
+    : [...countRootIds, blockViewerId, blockViewerId, viewerId]
   const counts = database.query(
     `WITH RECURSIVE descendants(root_id,id,deleted_at) AS (
       SELECT id,id,deleted_at FROM posts WHERE id IN (${placeholders})
@@ -368,7 +369,7 @@ export function enrichPosts(database: Database, posts: PostView[], viewerId = -1
         WHERE ph.post_id=p.id AND bh.user_id=?)`
     const parentParameters = viewerId < 0
       ? parentIds
-      : [...parentIds, viewerId, viewerId, viewerId]
+      : [...parentIds, blockViewerId, blockViewerId, viewerId]
     const rows = database.query(
       `SELECT p.id,p.user_id,p.parent_id,p.body,${supportsTranslations ? 'p.translation' : 'NULL translation'},
         p.created_at,p.deleted_at,p.has_latex,p.has_links,p.has_code,u.handle,u.bio,

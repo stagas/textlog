@@ -6,6 +6,24 @@ import { runMigrations } from './migrations'
 import { loadPersonalizedFeed } from './personalized-feed'
 import type { User } from './types'
 
+test('moderators see blocked-user leaf posts in For You with relationship metadata', () => {
+  const database = new Database(':memory:', { strict: true })
+  runMigrations(database)
+  database.run(`INSERT INTO users(id,handle,email,password,bio) VALUES
+      (1,'admin','gstagas@gmail.com','!',''),
+      (2,'blocker','blocker@example.com','!','');
+    INSERT INTO follows(follower_id,following_id,created_at) VALUES(1,2,'2026-08-03 08:00:00');
+    INSERT INTO blocks(blocker_id,blocked_id) VALUES(2,1);
+    INSERT INTO posts(id,user_id,parent_id,body,created_at) VALUES
+      (1,2,NULL,'moderator-visible leaf','2026-08-03 09:00:00');`)
+  const admin: User = { id: 1, handle: 'admin', email: 'gstagas@gmail.com', bio: '' }
+
+  const feed = loadPersonalizedFeed(database, admin, 1, 20, false, '/for-you', false)
+
+  expect(feed.timeline.map(row => row.id)).toContain(1)
+  expect(feed.timeline.find(row => row.id === 1)?.renderedPost?.blocked_viewer).toBeTrue()
+})
+
 test('whisper descendants stay in participant and original tag-follower personalized feeds', () => {
   const database = new Database(':memory:', { strict: true })
   runMigrations(database)

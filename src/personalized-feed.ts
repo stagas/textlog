@@ -11,7 +11,7 @@ import { enrichPosts, loadBioReferenceData, visibleTagFollowerCounts, visibleUse
 import type { PersonalizedFeedData, PersonalizedTimelineRow, User } from './types'
 import { isWhisperThread, whisperThreadRelevantToViewer, whisperThreadTargetsViewer } from './whisper'
 
-export const PERSONALIZED_FEED_SNAPSHOT_VERSION = 25
+export const PERSONALIZED_FEED_SNAPSHOT_VERSION = 26
 
 const descendsFromViewer = `EXISTS (WITH RECURSIVE ancestors(id,user_id,parent_id) AS (
   SELECT ancestor.id,ancestor.user_id,ancestor.parent_id FROM posts ancestor WHERE ancestor.id=p.parent_id
@@ -34,8 +34,8 @@ const hasVisibleDescendantFromAnotherUser = `EXISTS (WITH RECURSIVE descendants(
   SELECT child.id,child.user_id,child.parent_id,child.deleted_at FROM posts child
     JOIN descendants parent ON child.parent_id=parent.id
 ) SELECT 1 FROM descendants d WHERE d.user_id!=$viewer AND d.deleted_at IS NULL
-  AND NOT EXISTS (SELECT 1 FROM blocks b WHERE
-    (b.blocker_id=$viewer AND b.blocked_id=d.user_id) OR (b.blocker_id=d.user_id AND b.blocked_id=$viewer))
+  AND ($bypassBlocks=1 OR NOT EXISTS (SELECT 1 FROM blocks b WHERE
+    (b.blocker_id=$viewer AND b.blocked_id=d.user_id) OR (b.blocker_id=d.user_id AND b.blocked_id=$viewer)))
   AND NOT EXISTS (SELECT 1 FROM post_hashtags ph JOIN blocked_hashtags bh ON bh.tag=ph.tag
     WHERE ph.post_id=d.id AND bh.user_id=$viewer))`
 
@@ -66,8 +66,9 @@ export function loadPersonalizedFeed(database: Database, user: User, page: numbe
         (SELECT ph.post_id FROM post_hashtags ph JOIN hashtag_follows hf ON hf.tag=ph.tag
           WHERE hf.user_id=$viewer AND p.created_at>=hf.created_at)))
         OR ${whisperThreadRelevantToViewer()})
-        AND NOT EXISTS (SELECT 1 FROM blocks b WHERE (b.blocker_id=$viewer AND b.blocked_id=p.user_id)
-          OR (b.blocker_id=p.user_id AND b.blocked_id=$viewer))
+        AND ($bypassBlocks=1 OR NOT EXISTS (SELECT 1 FROM blocks b
+          WHERE (b.blocker_id=$viewer AND b.blocked_id=p.user_id)
+          OR (b.blocker_id=p.user_id AND b.blocked_id=$viewer)))
         AND NOT EXISTS (SELECT 1 FROM post_hashtags tph JOIN blocked_hashtags bh ON bh.tag=tph.tag
           WHERE tph.post_id=p.id AND bh.user_id=$viewer)
         AND (p.user_id=$viewer OR (parent.user_id IS NOT $viewer AND pm.user_id IS NULL
@@ -83,8 +84,9 @@ export function loadPersonalizedFeed(database: Database, user: User, page: numbe
       LEFT JOIN post_mentions pm ON pm.post_id=p.id AND pm.user_id=$viewer
       WHERE p.deleted_at IS NULL AND p.user_id!=$viewer
         AND (parent.user_id=$viewer OR pm.user_id IS NOT NULL OR ${whisperThreadTargetsViewer()})
-        AND NOT EXISTS (SELECT 1 FROM blocks b WHERE (b.blocker_id=$viewer AND b.blocked_id=p.user_id)
-          OR (b.blocker_id=p.user_id AND b.blocked_id=$viewer))
+        AND ($bypassBlocks=1 OR NOT EXISTS (SELECT 1 FROM blocks b
+          WHERE (b.blocker_id=$viewer AND b.blocked_id=p.user_id)
+          OR (b.blocker_id=p.user_id AND b.blocked_id=$viewer)))
         AND NOT EXISTS (SELECT 1 FROM post_hashtags tph JOIN blocked_hashtags bh ON bh.tag=tph.tag
           WHERE tph.post_id=p.id AND bh.user_id=$viewer)
       UNION ALL
@@ -103,8 +105,9 @@ export function loadPersonalizedFeed(database: Database, user: User, page: numbe
           AND f.created_at>=vf.created_at) AND target.id!=$viewer
         AND $hidePeopleFollowActivity=0 AND actor.deleted_at IS NULL AND actor.suspended_at IS NULL
         AND target.deleted_at IS NULL AND target.suspended_at IS NULL
-        AND NOT EXISTS (SELECT 1 FROM blocks b WHERE b.blocker_id=$viewer AND b.blocked_id IN (actor.id,target.id)
-          OR b.blocked_id=$viewer AND b.blocker_id IN (actor.id,target.id))
+        AND ($bypassBlocks=1 OR NOT EXISTS (SELECT 1 FROM blocks b
+          WHERE b.blocker_id=$viewer AND b.blocked_id IN (actor.id,target.id)
+          OR b.blocked_id=$viewer AND b.blocker_id IN (actor.id,target.id)))
       UNION ALL
       SELECT NULL id,actor.id user_id,NULL body,NULL translation,hf.created_at,NULL parent_id,NULL deleted_at,NULL has_latex,
         NULL has_links,NULL has_code,actor.handle,
@@ -122,8 +125,9 @@ export function loadPersonalizedFeed(database: Database, user: User, page: numbe
         (SELECT 1 FROM hashtag_follows vt WHERE vt.user_id=$viewer AND vt.tag=hf.tag
           AND hf.created_at>=vt.created_at))
         AND $hideHashtagFollowActivity=0 AND actor.deleted_at IS NULL AND actor.suspended_at IS NULL
-        AND NOT EXISTS (SELECT 1 FROM blocks b WHERE (b.blocker_id=$viewer AND b.blocked_id=actor.id)
-          OR (b.blocker_id=actor.id AND b.blocked_id=$viewer))
+        AND ($bypassBlocks=1 OR NOT EXISTS (SELECT 1 FROM blocks b
+          WHERE (b.blocker_id=$viewer AND b.blocked_id=actor.id)
+          OR (b.blocker_id=actor.id AND b.blocked_id=$viewer)))
         AND NOT EXISTS (SELECT 1 FROM blocked_hashtags bh WHERE bh.user_id=$viewer AND bh.tag=hf.tag)
       UNION ALL
       SELECT NULL id,actor.id user_id,NULL body,NULL translation,f.created_at,NULL parent_id,NULL deleted_at,NULL has_latex,
@@ -138,8 +142,8 @@ export function loadPersonalizedFeed(database: Database, user: User, page: numbe
       FROM follows f JOIN users actor ON actor.id=f.follower_id
       WHERE f.following_id=$viewer AND f.created_at IS NOT NULL AND actor.deleted_at IS NULL
         AND ($toMe=1 OR $hidePeopleFollowActivity=0)
-        AND actor.suspended_at IS NULL AND NOT EXISTS (SELECT 1 FROM blocks b WHERE
-          (b.blocker_id=$viewer AND b.blocked_id=actor.id) OR (b.blocker_id=actor.id AND b.blocked_id=$viewer))
+        AND actor.suspended_at IS NULL AND ($bypassBlocks=1 OR NOT EXISTS (SELECT 1 FROM blocks b WHERE
+          (b.blocker_id=$viewer AND b.blocked_id=actor.id) OR (b.blocker_id=actor.id AND b.blocked_id=$viewer)))
       UNION ALL
       SELECT NULL id,u.id user_id,NULL body,NULL translation,u.handle_chosen_at created_at,NULL parent_id,NULL deleted_at,
         NULL has_latex,NULL has_links,NULL has_code,u.handle,
@@ -155,6 +159,7 @@ export function loadPersonalizedFeed(database: Database, user: User, page: numbe
       viewer: user.id,
       toMe: Number(toMe),
       admin: Number(isAdmin(user)),
+      bypassBlocks: Number(isAdmin(user)),
       hidePeopleFollowActivity: user.hide_people_follow_activity || 0,
       hideHashtagFollowActivity: user.hide_hashtag_follow_activity || 0,
     }) as PersonalizedTimelineRow[]
@@ -184,11 +189,13 @@ export function loadPersonalizedFeed(database: Database, user: User, page: numbe
           SELECT d.root_id,p.id,p.user_id,p.created_at FROM posts p JOIN descendants d ON p.parent_id=d.id
           WHERE p.deleted_at IS NULL
         ) SELECT d.root_id,max(d.created_at) created_at FROM descendants d
-        WHERE NOT EXISTS (SELECT 1 FROM blocks b WHERE
-          (b.blocker_id=? AND b.blocked_id=d.user_id) OR (b.blocker_id=d.user_id AND b.blocked_id=?))
+        WHERE (?=1 OR NOT EXISTS (SELECT 1 FROM blocks b WHERE
+          (b.blocker_id=? AND b.blocked_id=d.user_id) OR (b.blocker_id=d.user_id AND b.blocked_id=?)))
           AND NOT EXISTS (SELECT 1 FROM post_hashtags ph JOIN blocked_hashtags bh ON bh.tag=ph.tag
             WHERE ph.post_id=d.id AND bh.user_id=?)
-        GROUP BY d.root_id`).all(...roots, user.id, user.id, user.id) as { root_id: number; created_at: string }[]
+        GROUP BY d.root_id`).all(...roots, Number(isAdmin(user)), user.id, user.id, user.id) as {
+          root_id: number; created_at: string
+        }[]
       for (const row of activity) threadActivity.set(row.root_id, row.created_at)
     }
     const result: { rows: PersonalizedTimelineRow[]; created_at: string; order: string }[] = []
