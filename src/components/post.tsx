@@ -10,6 +10,26 @@ import { displayBio, displayPostBody, linkify, referenceFormId } from '../utils'
 import { enterHref } from './auth-links'
 import { MetaRow } from './meta'
 
+function ContentWarning({ p, controlId, children }: {
+  p: Pick<PostView, 'moderation_category' | 'moderation_score'>
+  controlId: string
+  children: React.ReactNode
+}) {
+  if (!p.moderation_category) return <>{children}</>
+  return (
+    <div className="content-warning">
+      <input className="content-warning-toggle" id={controlId} type="checkbox"
+        aria-label={`Reveal post that might contain ${p.moderation_category}`} />
+      <label className="content-warning-overlay" htmlFor={controlId}>
+        <span>This post might contain {p.moderation_category}.<br />
+          <span className="content-warning-action">Click to view anyway.</span>
+        </span>
+      </label>
+      <div className="content-warning-body">{children}</div>
+    </div>
+  )
+}
+
 function Poll({ p, returnPath }: { p: PostView | NonNullable<PostView['parent']>; returnPath?: string }) {
   if (!p.poll) return null
   const kind = p.poll.kind || 'poll'
@@ -464,13 +484,15 @@ export function PreviewPost({ p }: { p: PostView }) {
           currentHandle={p.handle} referenceData={p.bio_reference} />
         <span className="postdate">read</span>
       </MetaRow>
-      <div className={`post-body${containsAsciiArt(p.body) ? ' ascii-art' : ''}`} dangerouslySetInnerHTML={{
-        __html: linkify(displayPostBody(renderedPollBody(p.body)), p.mention_bios, [], undefined, renderFlags(p), '',
-          p.hashtag_counts, p.mention_note_counts, { signedIn: false, currentHandle: p.handle, formPrefix,
-          hashtagFollowerCounts: p.hashtag_follower_counts, linkPreviews: p.link_previews }),
-      }} />
-      <PollPreview body={p.body} />
-      <Todo p={p} user={null} preview formPrefix={formPrefix} />
+      <ContentWarning p={p} controlId={`${formPrefix}-content-warning`}>
+        <div className={`post-body${containsAsciiArt(p.body) ? ' ascii-art' : ''}`} dangerouslySetInnerHTML={{
+          __html: linkify(displayPostBody(renderedPollBody(p.body)), p.mention_bios, [], undefined, renderFlags(p), '',
+            p.hashtag_counts, p.mention_note_counts, { signedIn: false, currentHandle: p.handle, formPrefix,
+            hashtagFollowerCounts: p.hashtag_follower_counts, linkPreviews: p.link_previews }),
+        }} />
+        <PollPreview body={p.body} />
+        <Todo p={p} user={null} preview formPrefix={formPrefix} />
+      </ContentWarning>
       <MetaRow className="postfoot preview-post-meta">
         <span className="quiet preview-reply">reply</span>
       </MetaRow>
@@ -727,17 +749,19 @@ export function Post({
           )}
         </MetaRow>
       )}
-      <div className={`post-body${isAsciiArt ? ' ascii-art' : ''}`} dangerouslySetInnerHTML={{
-        __html: linkify(displayPostBody(renderedPollBody(p.body)), p.mention_bios, highlightTerms, undefined,
-          renderFlags(p), referenceQuery, p.hashtag_counts, p.mention_note_counts, { signedIn: !!user,
-          currentHandle: user?.handle, formPrefix, mentionFollowing: p.mention_following,
-          mentionFollowsViewer: p.mention_follows_viewer, mentionProfileStats: p.mention_profile_stats,
-          hashtagFollowing: p.hashtag_following, hashtagFollowerCounts: p.hashtag_follower_counts,
-          linkPreviews: p.link_previews, linkUnknownMentions: preview || p.id < 0 }),
-      }} />
-      {!preview && <Translation html={translationHtml} />}
-      {preview ? <PollPreview body={p.body} /> : <Poll p={p} returnPath={returnPath} />}
-      <Todo p={p} user={user} preview={preview} returnPath={returnPath} formPrefix={formPrefix} />
+      <ContentWarning p={p} controlId={`${formPrefix}-content-warning`}>
+        <div className={`post-body${isAsciiArt ? ' ascii-art' : ''}`} dangerouslySetInnerHTML={{
+          __html: linkify(displayPostBody(renderedPollBody(p.body)), p.mention_bios, highlightTerms, undefined,
+            renderFlags(p), referenceQuery, p.hashtag_counts, p.mention_note_counts, { signedIn: !!user,
+            currentHandle: user?.handle, formPrefix, mentionFollowing: p.mention_following,
+            mentionFollowsViewer: p.mention_follows_viewer, mentionProfileStats: p.mention_profile_stats,
+            hashtagFollowing: p.hashtag_following, hashtagFollowerCounts: p.hashtag_follower_counts,
+            linkPreviews: p.link_previews, linkUnknownMentions: preview || p.id < 0 }),
+        }} />
+        {!preview && <Translation html={translationHtml} />}
+        {preview ? <PollPreview body={p.body} /> : <Poll p={p} returnPath={returnPath} />}
+        <Todo p={p} user={user} preview={preview} returnPath={returnPath} formPrefix={formPrefix} />
+      </ContentWarning>
       {!parent && (showReplyAction && !p.thread_locked || resolvedContinuationHref || canModerate || reportHref) && (
         <MetaRow className={`postfoot${preview ? ' preview-post-meta' : ''}`}>
           {!parent && showReplyAction && !p.thread_locked && (preview
@@ -822,8 +846,9 @@ export function Post({
                   )}
                   {!hasTappableParent && <a className="postdate" href={parentDetailPath} rel={navigationRel}>read</a>}
                 </MetaRow>
-                <div className={`post-body${containsAsciiArt(parent.body) ? ' ascii-art' : ''}`}
-                  dangerouslySetInnerHTML={{
+                <ContentWarning p={parent} controlId={`${formPrefix}-parent-${parent.id}-content-warning`}>
+                  <div className={`post-body${containsAsciiArt(parent.body) ? ' ascii-art' : ''}`}
+                    dangerouslySetInnerHTML={{
                     __html: linkify(displayPostBody(renderedPollBody(parent.body)), parent.mention_bios, [], undefined,
                       renderFlags(parent), referenceQuery, parent.hashtag_counts, parent.mention_note_counts, {
                       signedIn: !!user,
@@ -836,9 +861,9 @@ export function Post({
                       hashtagFollowerCounts: parent.hashtag_follower_counts,
                       linkPreviews: parent.link_previews,
                     }),
-                  }} />
-                <Translation html={parent.translation
-                  ? linkify(displayPostBody(parent.translation), parent.mention_bios, [], undefined,
+                    }} />
+                  <Translation html={parent.translation
+                    ? linkify(displayPostBody(parent.translation), parent.mention_bios, [], undefined,
                     renderFlags(parent), referenceQuery, parent.hashtag_counts, parent.mention_note_counts, {
                     signedIn: !!user,
                     currentHandle: user?.handle,
@@ -850,10 +875,11 @@ export function Post({
                     hashtagFollowerCounts: parent.hashtag_follower_counts,
                     linkPreviews: parent.link_previews,
                   })
-                  : undefined} />
-                <Poll p={parent} returnPath={returnPath} />
-                <Todo p={parent} user={user} preview={preview} returnPath={returnPath}
-                  formPrefix={`${formPrefix}-parent-${parent.id}`} />
+                    : undefined} />
+                  <Poll p={parent} returnPath={returnPath} />
+                  <Todo p={parent} user={user} preview={preview} returnPath={returnPath}
+                    formPrefix={`${formPrefix}-parent-${parent.id}`} />
+                </ContentWarning>
                 {!parent.thread_locked && (
                   <div className="parent-quote-foot">
                     <a className="quiet" href={user

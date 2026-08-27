@@ -3275,6 +3275,23 @@ test('English posts do not offer translation', () => {
   expect(html).not.toContain('translate-link')
 })
 
+test('provider-positive posts render behind an accessible content warning', () => {
+  const html = renderToStaticMarkup(React.createElement(Post, {
+    user: null,
+    p: { id: 2, user_id: 1, parent_id: null, body: 'Sensitive note', handle: 'writer',
+      created_at: '2026-08-03 12:00:00', deleted_at: null, moderation_category: 'self-harm/intent',
+      moderation_score: 0.72 },
+  }))
+
+  expect(html).toContain('class="content-warning-toggle"')
+  expect(html).toContain('type="checkbox"')
+  expect(html).toContain('class="content-warning-body"')
+  expect(html).toContain('This post might contain self-harm/intent.')
+  expect(html).toContain('self-harm/intent.<br/>')
+  expect(html).toContain('Click to view anyway.')
+  expect(html.indexOf('This post might contain')).toBeLessThan(html.indexOf('Sensitive note'))
+})
+
 test('Post renders moderation controls only for admins on the detail page', () => {
   const p = {
     id: 2,

@@ -469,4 +469,17 @@ describe('in-memory stylesheet', () => {
       ':is(.write-compose, .edit-post-compose, .replybox, .bio-form) .composefoot {',
     )
   })
+
+  test('strongly blurs warned content and removes the warning after reveal', async () => {
+    const css = await Bun.file(new URL('./styles.css', import.meta.url)).text()
+    expect(css).toContain('filter: blur(.35rem);')
+    expect(css).toContain('opacity: .8;')
+    expect(css).toContain('.content-warning-overlay > span {')
+    expect(css).toContain('.content-warning-action {\n  color: var(--accent);\n  padding-inline: 0;\n  padding-bottom: 1px;\n  border-bottom: var(--hairline) solid var(--link-border);')
+    expect(css).toContain('grid-area: 1 / 1;')
+    expect(css).toContain('font-size: var(--post-body-font-size, 0.8125rem);')
+    expect(css).not.toContain('.content-warning-overlay > span {\n  padding-inline: var(--space-2);\n  background: var(--bg);\n  box-shadow:')
+    expect(css).toContain('.content-warning-toggle:checked + .content-warning-overlay {\n  display: none;')
+    expect(css).not.toContain('Content revealed.')
+  })
 })

@@ -207,7 +207,7 @@ export function registerApiWriteRoutes(app: Hono, service: DatabaseService,
     if (bio) {
       const moderation = await moderateText(`bio: ${bio}`)
       if (!moderation.ok) {
-        return fail(moderation.reason === 'flagged' ? 'flagged' : 'unavailable', moderationMessage(moderation.reason),
+        return fail(moderation.reason === 'flagged' ? 'flagged' : 'unavailable', moderationMessage(moderation),
           moderation.reason === 'flagged' ? 422 : 503)
       }
     }
@@ -237,7 +237,7 @@ export function registerApiWriteRoutes(app: Hono, service: DatabaseService,
 
     const moderation = await moderateText(content)
     if (!moderation.ok) {
-      return fail(moderation.reason === 'flagged' ? 'flagged' : 'unavailable', moderationMessage(moderation.reason),
+      return fail(moderation.reason === 'flagged' ? 'flagged' : 'unavailable', moderationMessage(moderation),
         moderation.reason === 'flagged' ? 422 : 503)
     }
 
@@ -247,6 +247,8 @@ export function registerApiWriteRoutes(app: Hono, service: DatabaseService,
       parentId,
       origin: apiOrigin(c.req.url, appUrl),
       translation: await postTranslation(content),
+      moderationCategory: moderation.warning?.category,
+      moderationScore: moderation.warning?.score,
     })
     if (result.status === 'not_found') return fail('not_found', 'Post not found', 404)
     if (result.status === 'locked') return fail('thread_locked', 'This thread is locked', 409)
@@ -363,11 +365,12 @@ export function registerApiWriteRoutes(app: Hono, service: DatabaseService,
     if (!draft) return fail('not_found', 'Draft not found', 404)
     const moderation = await moderateText(draft.body)
     if (!moderation.ok) {
-      return fail(moderation.reason === 'flagged' ? 'flagged' : 'unavailable', moderationMessage(moderation.reason),
+      return fail(moderation.reason === 'flagged' ? 'flagged' : 'unavailable', moderationMessage(moderation),
         moderation.reason === 'flagged' ? 422 : 503)
     }
     const result = await service.call('api.publishDraft', { userId: guard.user!.id, id, body: draft.body,
-      parentId: draft.parent_id, origin: apiOrigin(c.req.url, appUrl), translation: await postTranslation(draft.body) })
+      parentId: draft.parent_id, origin: apiOrigin(c.req.url, appUrl), translation: await postTranslation(draft.body),
+      moderationCategory: moderation.warning?.category, moderationScore: moderation.warning?.score })
     if (result.status === 'not_found') return fail('not_found', 'Draft or parent post not found', 404)
     if (result.status === 'locked') return fail('thread_locked', 'This thread is locked', 409)
     if (result.status === 'rate_limited') {
@@ -414,7 +417,7 @@ export function registerApiWriteRoutes(app: Hono, service: DatabaseService,
     }
     const moderation = await moderateText(content)
     if (!moderation.ok) {
-      return fail(moderation.reason === 'flagged' ? 'flagged' : 'unavailable', moderationMessage(moderation.reason),
+      return fail(moderation.reason === 'flagged' ? 'flagged' : 'unavailable', moderationMessage(moderation),
         moderation.reason === 'flagged' ? 422 : 503)
     }
     const result = await service.call('api.updatePost', {
@@ -423,6 +426,8 @@ export function registerApiWriteRoutes(app: Hono, service: DatabaseService,
       body: content,
       origin: apiOrigin(c.req.url, appUrl),
       translation: await postTranslation(content),
+      moderationCategory: moderation.warning?.category,
+      moderationScore: moderation.warning?.score,
     })
     if (result.status !== 'ready') {
       return result.status === 'not_found'

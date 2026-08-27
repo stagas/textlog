@@ -14,6 +14,8 @@ export type PostRow = {
   translation?: string | null
   created_at: string
   deleted_at: string | null
+  moderation_category?: string | null
+  moderation_score?: number | null
   has_latex?: number | null
   has_links?: number | null
   has_code?: number | null
@@ -51,7 +53,8 @@ export type BioReferenceData = {
 }
 
 export type ParentPost = Pick<PostRow,
-  'id' | 'body' | 'translation' | 'created_at' | 'deleted_at' | 'has_latex' | 'has_links' | 'has_code'> & {
+  'id' | 'body' | 'translation' | 'created_at' | 'deleted_at' | 'has_latex' | 'has_links' | 'has_code'
+  | 'moderation_category' | 'moderation_score'> & {
   handle: string
   unavailable?: boolean
   parent_id?: number | null

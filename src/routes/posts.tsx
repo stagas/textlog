@@ -273,7 +273,7 @@ export function registerPostsRoutes(app: Hono) {
       const moderation = await moderateText(body)
       if (!moderation.ok) {
         return page(
-          <Compose user={user} body={body} error={moderationMessage(moderation.reason)} returnPath={returnPath} />,
+          <Compose user={user} body={body} error={moderationMessage(moderation)} returnPath={returnPath} />,
           moderation.reason === 'flagged' ? 422 : 503,
         )
       }
@@ -283,6 +283,8 @@ export function registerPostsRoutes(app: Hono) {
         parentId: null,
         origin: new URL(c.req.url).origin,
         translation: await postTranslation(body),
+        moderationCategory: moderation.warning?.category,
+        moderationScore: moderation.warning?.score,
       })
       if (result.status === 'locked') return c.text('This thread is locked', 409)
       if (result.status === 'rate_limited') {
@@ -360,6 +362,8 @@ export function registerPostsRoutes(app: Hono) {
       body,
       origin: new URL(c.req.url).origin,
       translation: await postTranslation(body),
+      moderationCategory: loaded.post.moderation_category,
+      moderationScore: loaded.post.moderation_score,
     })
     if (result.status !== 'ready') {
       return c.text(result.status === 'not_found' ? 'Not found' : 'Forbidden',
@@ -424,7 +428,7 @@ export function registerPostsRoutes(app: Hono) {
       if (!moderation.ok) {
         return page(
           <EditPost user={user} post={post} parent={parent} body={body} returnPath={returnPath} moderator={moderating}
-            error={moderationMessage(moderation.reason)} />,
+            error={moderationMessage(moderation)} />,
           moderation.reason === 'flagged' ? 422 : 503,
         )
       }
@@ -435,6 +439,8 @@ export function registerPostsRoutes(app: Hono) {
         origin: new URL(c.req.url).origin,
         moderator,
         translation: await postTranslation(body),
+        moderationCategory: moderation.warning?.category,
+        moderationScore: moderation.warning?.score,
       })
       if (result.status !== 'ready') {
         return c.text(result.status === 'not_found' ? 'Not found' : 'Forbidden',
@@ -532,7 +538,7 @@ export function registerPostsRoutes(app: Hono) {
       const moderation = await moderateText(body)
       if (!moderation.ok) {
         return page(
-          <Reply user={user} post={parent} showForm error={moderationMessage(moderation.reason)} body={body}
+          <Reply user={user} post={parent} showForm error={moderationMessage(moderation)} body={body}
             draftId={editingDraftId} returnPath={returnPath} />,
           moderation.reason === 'flagged' ? 422 : 503,
         )
@@ -543,6 +549,8 @@ export function registerPostsRoutes(app: Hono) {
         parentId,
         origin: new URL(c.req.url).origin,
         translation: await postTranslation(body),
+        moderationCategory: moderation.warning?.category,
+        moderationScore: moderation.warning?.score,
       })
       if (result.status === 'locked') return c.text('This thread is locked', 409)
       if (result.status === 'rate_limited') {

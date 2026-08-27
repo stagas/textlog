@@ -1,5 +1,6 @@
 import { accessSync, constants, existsSync, mkdirSync, statSync } from 'node:fs'
 import { dirname, resolve } from 'node:path'
+import { parseModerationThresholds } from './moderation'
 
 type Environment = Record<string, string | undefined>
 
@@ -25,6 +26,7 @@ export type StartupConfiguration = {
   logAnonymous: boolean
   logUserAgent: boolean
   moderationDisabled: boolean
+  moderationCategoryThresholds: string
   enableCaptchaAlways: boolean
 }
 
@@ -223,6 +225,13 @@ export function validateStartupConfiguration(env: Environment = Bun.env, options
   }
 
   const moderationDisabled = booleanValue(env, 'MODERATION_DISABLED', problems)
+  const moderationCategoryThresholds = env.MODERATION_CATEGORY_THRESHOLDS?.trim() || ''
+  try {
+    parseModerationThresholds(moderationCategoryThresholds)
+  }
+  catch (error) {
+    problems.push(`MODERATION_CATEGORY_THRESHOLDS ${error instanceof Error ? error.message : 'is invalid'}`)
+  }
   const enableCaptchaAlways = booleanValue(env, 'ENABLE_CAPTCHA_ALWAYS', problems)
   if (!moderationDisabled && environment === 'production' && !env.OPENAI_API_KEY?.trim()) {
     problems.push('OPENAI_API_KEY is required in production unless MODERATION_DISABLED=true')
@@ -264,6 +273,7 @@ export function validateStartupConfiguration(env: Environment = Bun.env, options
     logAnonymous,
     logUserAgent,
     moderationDisabled,
+    moderationCategoryThresholds,
     enableCaptchaAlways,
   }
 }

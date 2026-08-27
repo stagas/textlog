@@ -15,6 +15,7 @@ Bun.env.LOG_COLOR = String(configuration.logColor)
 Bun.env.LOG_ANONYMOUS = String(configuration.logAnonymous)
 Bun.env.LOG_USER_AGENT = String(configuration.logUserAgent)
 Bun.env.MODERATION_DISABLED = String(configuration.moderationDisabled)
+Bun.env.MODERATION_CATEGORY_THRESHOLDS = configuration.moderationCategoryThresholds
 Bun.env.ENABLE_CAPTCHA_ALWAYS = String(configuration.enableCaptchaAlways)
 Bun.env.HOST = configuration.host
 Bun.env.PORT = String(configuration.port)

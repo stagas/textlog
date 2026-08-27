@@ -2229,6 +2229,15 @@ export const migrations: Migration[] = [
       rebuildHotPosts(database)
     },
   },
+  {
+    version: 146,
+    name: 'post_moderation_warnings',
+    up(database) {
+      if (!database.query('SELECT 1 FROM sqlite_master WHERE type=\'table\' AND name=\'posts\'').get()) return
+      addColumn(database, 'posts', 'moderation_category', 'TEXT')
+      addColumn(database, 'posts', 'moderation_score', 'REAL')
+    },
+  },
 ]
 
 export const latestMigrationVersion = migrations.at(-1)!.version

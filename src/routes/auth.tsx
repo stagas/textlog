@@ -329,7 +329,7 @@ export function registerAuthRoutes(app: Hono) {
     if (!moderation.ok) {
       return page(<ChooseHandle handle={handle} next={next} error={moderation.reason === 'flagged'
         ? 'That handle may violate our content rules. Please choose another.'
-        : moderationMessage(moderation.reason)} />, moderation.reason === 'flagged' ? 422 : 503)
+        : moderationMessage(moderation)} />, moderation.reason === 'flagged' ? 422 : 503)
     }
     const claimed = await databaseService().call('auth.claimInitialHandle', { userId: user.id, handle })
     if (claimed.status !== 'ready') {

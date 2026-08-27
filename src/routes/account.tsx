@@ -381,7 +381,7 @@ export function registerAccountRoutes(app: Hono) {
       if (!moderation.ok) {
         return page(
           <Profile user={user} profile={{ ...user, timezone: submittedTimezone }} posts={[]} following={false} bio={bio}
-            editHandle={submittedHandle} editing error={moderationMessage(moderation.reason)}
+            editHandle={submittedHandle} editing error={moderationMessage(moderation)}
             returnPath={returnPath} />,
           moderation.reason === 'flagged' ? 422 : 503,
         )

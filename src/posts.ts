@@ -147,12 +147,20 @@ export function createPost(
   parentId: number | null = null,
   publish = true,
   translation: string | null = null,
+  moderationCategory: string | null = null,
+  moderationScore: number | null = null,
 ) {
   const supportsTranslation = !!database.query(
     'SELECT 1 FROM pragma_table_info(\'posts\') WHERE name=\'translation\'',
   ).get()
   const result = insertRateLimitedPost(database, userId, body, parentId, postId => {
     if (supportsTranslation) database.query('UPDATE posts SET translation=? WHERE id=?').run(translation, postId)
+    const supportsModerationWarning = !!database.query(
+      'SELECT 1 FROM pragma_table_info(\'posts\') WHERE name=\'moderation_category\'',
+    ).get()
+    if (supportsModerationWarning) database.query(
+      'UPDATE posts SET moderation_category=?,moderation_score=? WHERE id=?',
+    ).run(moderationCategory, moderationScore, postId)
     syncPostMetadata(database, postId, body)
     recordHotActivity(database, postId)
     database.query(`INSERT OR IGNORE INTO for_you_reads(user_id,event_key)
@@ -172,7 +180,9 @@ export function isThreadLocked(database: Database, postId: number) {
     WHERE ph.tag='lock' LIMIT 1`).get(postId)
 }
 
-export function updatePost(database: Database, postId: number, body: string, translation: string | null = null) {
+export function updatePost(database: Database, postId: number, body: string, translation: string | null = null,
+  moderationCategory: string | null = null, moderationScore: number | null = null)
+{
   database.transaction(() => {
     const supportsTranslation = !!database.query(
       'SELECT 1 FROM pragma_table_info(\'posts\') WHERE name=\'translation\'',
@@ -182,6 +192,12 @@ export function updatePost(database: Database, postId: number, body: string, tra
         .run(body, translation, postId)
     }
     else database.query('UPDATE posts SET body=? WHERE id=?').run(body, postId)
+    const supportsModerationWarning = !!database.query(
+      'SELECT 1 FROM pragma_table_info(\'posts\') WHERE name=\'moderation_category\'',
+    ).get()
+    if (supportsModerationWarning) database.query(
+      'UPDATE posts SET moderation_category=?,moderation_score=? WHERE id=?',
+    ).run(moderationCategory, moderationScore, postId)
     syncPostMetadata(database, postId, body)
   })()
 }
@@ -198,6 +214,9 @@ export function enrichPosts(database: Database, posts: PostView[], viewerId = -1
     : new Set<number>()
   const supportsTranslations = !!database.query(
     'SELECT 1 FROM pragma_table_info(\'posts\') WHERE name=\'translation\'',
+  ).get()
+  const supportsModerationWarnings = !!database.query(
+    'SELECT 1 FROM pragma_table_info(\'posts\') WHERE name=\'moderation_category\'',
   ).get()
   const ids = posts.map(post => post.id)
   const viewerContextByPostId = new Map<number, 'reply' | 'mention'>()
@@ -374,7 +393,10 @@ export function enrichPosts(database: Database, posts: PostView[], viewerId = -1
       : [...parentIds, blockViewerId, blockViewerId, viewerId]
     const rows = database.query(
       `SELECT p.id,p.user_id,p.parent_id,p.body,${supportsTranslations ? 'p.translation' : 'NULL translation'},
-        p.created_at,p.deleted_at,p.has_latex,p.has_links,p.has_code,u.handle,u.bio,
+        p.created_at,p.deleted_at,p.has_latex,p.has_links,p.has_code,
+        ${supportsModerationWarnings
+          ? 'p.moderation_category,p.moderation_score'
+          : 'NULL moderation_category,NULL moderation_score'},u.handle,u.bio,
         0 reply_count
         FROM posts p JOIN users u ON u.id=p.user_id WHERE p.id IN (${parentPlaceholders}) ${parentFilter}`,
     ).all(...parentParameters) as ParentPost[]
