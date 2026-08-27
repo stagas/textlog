@@ -3734,9 +3734,64 @@ form.report-panel {
     grid-template-columns: 1fr;
   }
 
-  .posting-help-tab-panel > div {
-    grid-template-columns: minmax(0, 1fr) minmax(7rem, 0.8fr);
+  :is(.write-compose, .edit-post-compose, .replybox) .composefoot {
+    grid-template-columns: minmax(0, 1fr);
     gap: var(--space-3);
+  }
+
+  :is(.write-compose, .edit-post-compose, .replybox) .composefoot .posting-help-details {
+    grid-column: 1;
+    grid-row: 1;
+  }
+
+  :is(.write-compose, .edit-post-compose, .replybox) .composefoot .form-actions {
+    grid-column: 1;
+    grid-row: 2;
+  }
+
+  :is(.write-compose, .edit-post-compose, .replybox) .composefoot .posting-help-content {
+    grid-column: 1;
+    grid-row: 3;
+    margin-top: 0;
+  }
+
+  .posting-help-tabs {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    overflow-x: visible;
+  }
+
+  .posting-help-tabs-section,
+  .posting-help-tab-panel {
+    min-width: 0;
+    max-width: 100%;
+  }
+
+  .posting-help-emoji-panel {
+    overflow-x: hidden;
+  }
+
+  .posting-help-tabs label {
+    min-width: 0;
+    text-align: center;
+  }
+
+  .posting-help-tab-panel > div {
+    grid-template-columns: minmax(0, 1fr);
+    gap: var(--space-3);
+  }
+
+  :is(.posting-help-formatting-panel, .posting-help-modifiers-panel) dt,
+  :is(.posting-help-formatting-panel, .posting-help-modifiers-panel) dd {
+    grid-column: 1;
+  }
+
+  :is(.posting-help-formatting-panel, .posting-help-modifiers-panel) dt {
+    grid-row: 1;
+  }
+
+  :is(.posting-help-formatting-panel, .posting-help-modifiers-panel) dd {
+    grid-row: 2;
   }
 
   .posting-help-content {
