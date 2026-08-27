@@ -59,6 +59,10 @@ async function showNotificationBanner(request: Request, user: ReturnType<typeof 
 }
 
 type PrimaryFeed = 'for-you' | 'latest' | 'hot'
+function viewerCacheVersion(base: number, user: ReturnType<typeof currentUser>) {
+  return base * 2 + (user?.show_moderated_content === 1 ? 1 : 0)
+}
+
 const positiveInteger = (value?: string) => {
   if (!value || !/^\d+$/.test(value)) return undefined
   const parsed = Number(value)
@@ -142,13 +146,13 @@ async function warmFeedPage(request: Request, kind: PrimaryFeed,
       await rpcMaterializedFeedPage(feedRequest, kind, viewerId, async () => {
         const feed = await backgroundDatabaseCall('feeds.latestPage', { viewerId, page: 1, pageSize, markRead: false })
         return page(<PublicFeed user={user} feed={feed} path="/latest" />)
-      }, false, 0, true)
+      }, false, viewerCacheVersion(0, user), true)
       return
     }
     await rpcMaterializedFeedPage(feedRequest, kind, viewerId, async () => {
       const feed = await backgroundDatabaseCall('feeds.hotPage', { viewerId, page: 1, pageSize })
       return page(<HotFeed user={user} feed={feed} title="hot" />)
-    }, false, hotRankingVersion, true)
+    }, false, viewerCacheVersion(hotRankingVersion, user), true)
   })
 }
 
@@ -231,7 +235,8 @@ export function registerFeedsRoutes(app: Hono) {
       )
     }
     const response = !notificationBanner && currentPage(c.req.query('page')) === 1 && !cursorValue && !expandedRootId
-      ? await rpcMaterializedFeedPage(c.req.raw, 'for-you', user.id, render, false, 11, false, renderForCache,
+      ? await rpcMaterializedFeedPage(c.req.raw, 'for-you', user.id, render, false,
+        viewerCacheVersion(11, user), false, renderForCache,
         async () => {
           await databaseService().call('feeds.markPersonalizedSnapshotPageRead', { userId: user.id, pageSize,
             toMe: false })
@@ -260,7 +265,8 @@ export function registerFeedsRoutes(app: Hono) {
     }
     const response = !notificationBanner
         && currentPage(c.req.query('page')) === 1 && !cursorValue && !expandedRootId
-      ? await rpcMaterializedFeedPage(c.req.raw, 'latest', user ? user.id : -1, render)
+      ? await rpcMaterializedFeedPage(c.req.raw, 'latest', user ? user.id : -1, render, false,
+        viewerCacheVersion(0, user))
       : await render()
     const remembered = rememberFeed(response, 'latest')
     warmOtherFeedPages(c.req.raw, 'latest', user)
@@ -309,7 +315,8 @@ export function registerFeedsRoutes(app: Hono) {
       )
     }
     const response = !notificationBanner && currentPage(c.req.query('page')) === 1 && !cursorValue && !expandedRootId
-      ? await rpcMaterializedFeedPage(c.req.raw, 'to-me', user.id, render, false, 0, false, renderForCache)
+      ? await rpcMaterializedFeedPage(c.req.raw, 'to-me', user.id, render, false,
+        viewerCacheVersion(0, user), false, renderForCache)
       : await render()
     return rememberFeed(response, 'following')
   })
@@ -338,7 +345,8 @@ export function registerFeedsRoutes(app: Hono) {
     }
     const response = (!user || !notificationBanner) && currentPage(c.req.query('page')) === 1 && !cursorValue
         && !expandedRootId
-      ? await rpcMaterializedFeedPage(c.req.raw, 'hot', user?.id ?? -1, render, false, hotRankingVersion)
+      ? await rpcMaterializedFeedPage(c.req.raw, 'hot', user?.id ?? -1, render, false,
+        viewerCacheVersion(hotRankingVersion, user))
       : await render()
     const remembered = rememberFeed(response, 'hot')
     warmOtherFeedPages(c.req.raw, 'hot', user)
