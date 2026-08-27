@@ -106,7 +106,7 @@ test('a recent deep reply in a followed thread stays included after Latest marks
 
   const feed = loadPersonalizedFeed(database, viewer, 1, 20, false, '/for-you', false)
 
-  expect(feed.timeline.filter(row => row.id).map(row => row.id)).toEqual([3, 2])
+  expect(feed.timeline.filter(row => row.id).map(row => row.id)).toEqual([3, 2, 1])
   expect(feed.timeline.find(row => row.id === 3)?.unread).toBe(1)
 })
 
@@ -130,7 +130,7 @@ test('personalized pages count conversations rather than their embedded replies'
 
   expect(firstPage.totalPages).toBe(2)
   expect(firstPage.timeline.map(row => row.id)).toEqual([4])
-  expect(secondPage.timeline.map(row => row.id)).toEqual([3, 2])
+  expect(secondPage.timeline.map(row => row.id)).toEqual([3, 2, 1])
 })
 
 test('To Me conversations are ordered by their latest directed activity', () => {
@@ -153,7 +153,7 @@ test('To Me conversations are ordered by their latest directed activity', () => 
   expect(feed.timeline.filter(row => row.id).map(row => row.id)).toEqual([5, 2])
 })
 
-test('For You includes a recent reply burst while leaving older replies out of the page', () => {
+test('For You includes unread replies beyond the recent reply preview', () => {
   const database = new Database(':memory:', { strict: true })
   runMigrations(database)
   database.run(`INSERT INTO users(id,handle,email,password,bio) VALUES
@@ -172,7 +172,8 @@ test('For You includes a recent reply burst while leaving older replies out of t
 
   const feed = loadPersonalizedFeed(database, viewer, 1, 20, false, '/for-you', false)
 
-  expect(feed.timeline.filter(row => row.id).map(row => row.id)).toEqual([895, 2607, 2602, 2600, 2599])
+  expect(feed.timeline.filter(row => row.id).map(row => row.id)).toEqual([895, 2607, 2602, 2600, 2599, 922])
+  expect(feed.timeline.find(row => row.id === 922)?.unread).toBe(1)
 })
 
 test('For You follow activity can be hidden independently for people and hashtags', () => {

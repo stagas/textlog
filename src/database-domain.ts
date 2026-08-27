@@ -2320,17 +2320,20 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
       for (const row of rows) byConversation.set(row.conversation_id!, [
         ...(byConversation.get(row.conversation_id!) || []), row,
       ])
+      const unread = state.filter(row => row.unread)
+      const unreadIds = new Set(unread.map(row => row.id))
       const snapshotPosts = conversationIds.flatMap(id => {
         const conversation = byConversation.get(id) || []
         if (!conversation.length) return []
         const root = conversation.find(row => row.id === id)
         const recentReplies = recentConversationReplies(conversation)
+        const includedIds = new Set([root?.id, ...recentReplies.map(reply => reply.id)])
+        const unreadReplies = conversation.filter(row => unreadIds.has(row.id) && !includedIds.has(row.id))
         const keepsRoot = root?.parent_id === null
           && (conversation[0]?.id === root.id || recentReplies[0]?.parent_id === root.id
             || isRecentConversationRoot(root, conversation))
-        return keepsRoot ? [root!, ...recentReplies] : recentReplies
+        return keepsRoot ? [root!, ...recentReplies, ...unreadReplies] : [...recentReplies, ...unreadReplies]
       })
-      const unread = state.filter(row => row.unread)
       const posts = enrichPosts(database, snapshotPosts, viewerId)
       const pageIds = new Set(snapshotPosts.map(post => post.id))
       const parentReferences = new Map<number, number>()

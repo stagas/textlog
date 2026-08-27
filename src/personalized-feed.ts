@@ -262,7 +262,12 @@ export function loadPersonalizedFeed(database: Database, user: User, page: numbe
       const keepsRoot = rootRow?.parent_id === null
         && (conversation[0]?.id === rootRow.id || replies[0]?.parent_id === rootRow.id)
       const threadRows = keepsRoot ? [rootRow!] : []
-      threadRows.push(...(toMe ? replies : recentConversationReplies(conversation)))
+      const previewReplies = toMe ? replies : recentConversationReplies(conversation)
+      threadRows.push(...previewReplies)
+      if (!toMe) {
+        const includedIds = new Set(threadRows.map(candidate => candidate.id))
+        threadRows.push(...conversation.filter(candidate => candidate.unread && !includedIds.has(candidate.id)))
+      }
       if (threadRows.length) {
         result.push({ rows: threadRows,
           created_at: toMe ? conversation[0]!.created_at : threadActivity.get(root!) || row.created_at,
