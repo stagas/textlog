@@ -3013,19 +3013,22 @@ test('Post pages use the context text as the canonical permalink', () => {
   expect(html).not.toContain('>permalink</a>')
 })
 
-test('Post page ages use approximate minute, hour, day, and older buckets', () => {
+test('Post page ages use aligned approximate wording buckets', () => {
   const now = Date.parse('2026-08-25T12:00:00Z')
   const ago = (milliseconds: number) => new Date(now - milliseconds).toISOString()
 
   expect(approximatePostAge(ago(30 * 60_000), now)).toEqual({ label: '30mins', wording: 'just' })
-  expect(approximatePostAge(ago(6 * 60 * 60_000), now)).toEqual({ label: '6h', wording: 'recently' })
-  expect(approximatePostAge(ago(11 * 60 * 60_000), now)).toEqual({ label: '11h', wording: 'recently' })
+  expect(approximatePostAge(ago(6 * 60 * 60_000), now)).toEqual({ label: '6h', wording: 'earlier' })
+  expect(approximatePostAge(ago(11 * 60 * 60_000), now)).toEqual({ label: '11h', wording: 'earlier' })
   expect(approximatePostAge(ago(12 * 60 * 60_000), now)).toEqual({ label: '1d', wording: 'not long ago' })
   expect(approximatePostAge(ago(2 * 24 * 60 * 60_000), now)).toEqual({ label: '2d', wording: 'not long ago' })
-  expect(approximatePostAge(ago(30 * 24 * 60 * 60_000), now)).toEqual({ label: '30d', wording: 'some time ago' })
-  expect(approximatePostAge(ago(31 * 24 * 60 * 60_000), now)).toEqual({ label: 'older', wording: 'a long time ago' })
+  expect(approximatePostAge(ago(3 * 24 * 60 * 60_000), now)).toEqual({ label: '3d', wording: 'a while ago' })
+  expect(approximatePostAge(ago(13 * 24 * 60 * 60_000), now)).toEqual({ label: '13d', wording: 'a while ago' })
+  expect(approximatePostAge(ago(14 * 24 * 60 * 60_000), now)).toEqual({ label: '14d', wording: 'some time ago' })
+  expect(approximatePostAge(ago(89 * 24 * 60 * 60_000), now)).toEqual({ label: '89d', wording: 'some time ago' })
+  expect(approximatePostAge(ago(90 * 24 * 60 * 60_000), now)).toEqual({ label: 'older', wording: 'a long time ago' })
   expect(postAgeTitle(ago(30 * 60_000), now)).toBe('Aug 2026, just now')
-  expect(postAgeTitle('2026-08-25T05:00:00Z', now)).toBe('Aug 2026, recently')
+  expect(postAgeTitle('2026-08-25T05:00:00Z', now)).toBe('Aug 2026, earlier')
   expect(postAgeTitle(ago(18 * 60 * 60_000), now)).toBe('Aug 2026, not long ago')
   expect(postAgeTitle(ago(24 * 60 * 60_000), now)).toBe('Aug 2026, 1d ago')
   expect(postAgeTitle(ago(8 * 24 * 60 * 60_000), now)).toBe('Aug 2026, 1w ago')
@@ -3057,8 +3060,8 @@ test('Thread pages show approximate wording only on the primary post', () => {
   }))
 
   expect(html).not.toContain('post-context-age')
-  expect(html).toContain('>wrote recently</a><span class="post-context post-context-punctuation">:</span>')
-  expect(html.match(/wrote recently/g)).toHaveLength(1)
+  expect(html).toContain('>wrote earlier</a><span class="post-context post-context-punctuation">:</span>')
+  expect(html.match(/wrote earlier/g)).toHaveLength(1)
 })
 
 test('Reply pages show a top link after the linked reply context', () => {
