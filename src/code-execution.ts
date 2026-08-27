@@ -1,4 +1,5 @@
 import vm from 'node:vm'
+import { logError, logInfo } from './log'
 
 export type ExecutableCode = { language: string; code: string }
 
@@ -72,13 +73,24 @@ export async function executePostCode(body: string, environment = Bun.env.NODE_E
   pistonUrl = Bun.env.PISTON_URL): Promise<string | null>
 {
   const code = executableCode(body)
-  if (!code) return null
+  if (!code) {
+    if (body.split(/\r?\n/).some(line => /^\s*#exec\s*$/.test(line))) {
+      logInfo('code execution status=skipped reason=missing_language_fence')
+    }
+    return null
+  }
+  const startedAt = performance.now()
   try {
-    return environment === 'production'
+    const output = environment === 'production'
       ? await executePiston(code, pistonUrl?.trim() || (() => { throw new Error('PISTON_URL is not configured') })())
       : await executeDevelopment(code)
+    logInfo(`code execution language=${code.language} status=succeeded output_bytes=${Buffer.byteLength(output)} `
+      + `duration_ms=${Math.round(performance.now() - startedAt)}`)
+    return output
   }
   catch (error) {
+    logError(`code execution language=${code.language} status=failed `
+      + `duration_ms=${Math.round(performance.now() - startedAt)}`, error)
     return limitedOutput(`Execution error: ${error instanceof Error ? error.message : String(error)}`)
   }
 }
