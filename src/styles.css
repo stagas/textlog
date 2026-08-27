@@ -2042,8 +2042,7 @@ nav form {
 .content-warning {
   position: relative;
   display: grid;
-  min-height: 5rem;
-  margin-top: calc(var(--space-3) + 2px);
+  margin: calc(var(--space-3) + 2px) 0 0;
   overflow: hidden;
 }
 
@@ -2063,7 +2062,7 @@ nav form {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  padding: var(--space-4);
+  padding: 0 var(--space-4);
   color: var(--ink);
   background: transparent;
   font-size: var(--post-body-font-size, 0.8125rem);
@@ -2089,7 +2088,6 @@ nav form {
 .content-warning-body {
   grid-area: 1 / 1;
   min-width: 0;
-  min-height: 5rem;
 }
 
 .content-warning-overlay > span {
@@ -2116,6 +2114,10 @@ nav form {
 
 .content-warning .post-body {
   margin-top: 0;
+}
+
+.content-warning + .postfoot {
+  margin-top: var(--space-1);
 }
 
 .post-without-top-meta > .post-body {
