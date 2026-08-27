@@ -1,5 +1,5 @@
 import { applyHtmlCachePolicy, canonicalizeCrawlerLinks, crawlerCanonicalRedirect, GLOBAL_REQUEST_BODY_LIMIT,
-  isCrawlerRequest, isSameOriginRequest, RequestBodyError, requiresSameOrigin, safeLocalPath,
+  isCrawlerRequest, isSameOriginRequest, pwaStandaloneCookie, RequestBodyError, requiresSameOrigin, safeLocalPath,
   securityHeaders } from './http'
 
 import { Hono } from 'hono'
@@ -53,6 +53,15 @@ configureDevReload(devReloadEnabled ? bootId : undefined)
 const app = new Hono()
 app.use('*', async (c, next) => {
   const url = new URL(c.req.url)
+  if ((c.req.method === 'GET' || c.req.method === 'HEAD') && url.pathname === '/'
+    && url.searchParams.has('pwa'))
+  {
+    url.searchParams.delete('pwa')
+    return new Response(null, { status: 303, headers: {
+      location: url.pathname + url.search + url.hash,
+      'set-cookie': pwaStandaloneCookie(),
+    } })
+  }
   if ((c.req.method === 'GET' || c.req.method === 'HEAD') && url.searchParams.get('_scroll') === 'instant') {
     url.searchParams.delete('_scroll')
     const location = url.pathname + url.search + url.hash
@@ -454,7 +463,7 @@ app.get('/site.webmanifest', c =>
     theme_color: '#e5e8e1',
     background_color: '#171a17',
     display: 'standalone',
-    start_url: '/',
+    start_url: '/?pwa',
   }, 200, { 'cache-control': 'public, max-age=86400, stale-while-revalidate=604800' }))
 app.get('/styles.css', async c => {
   const asset = styles ?? await loadStylesAsset(stylesPath)

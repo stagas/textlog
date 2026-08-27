@@ -1,4 +1,5 @@
 import { backgroundDatabaseCall, databaseService, subscribeToFeedMutations } from './database-service'
+import { isMobileRequest } from './user-agent'
 
 type MaterializedFeedKind = 'latest' | 'hot' | 'for-you' | 'to-me' | 'about'
 
@@ -16,7 +17,7 @@ type MemoryMaterialization = MaterializedResponse & {
 }
 const memoryMaterializations = new Map<string, MemoryMaterialization>()
 const MAX_MEMORY_MATERIALIZATIONS = 256
-const MATERIALIZED_HTML_VERSION = 23
+const MATERIALIZED_HTML_VERSION = 24
 let memoryGeneration = 0
 
 export function invalidateMaterializedFeedMemory() {
@@ -47,8 +48,10 @@ function rememberMaterialization(key: string, result: MaterializedResponse) {
 function appearanceVariant(request: Request) {
   const cookie = request.headers.get('cookie') || ''
   const names = ['appearance', 'font', 'sans-serif-font', 'primary-font', 'font-size', 'notification_device',
-    'donation_banner_dismissed']
-  return names.map(name => cookie.match(new RegExp(`(?:^|;\\s*)${name}=([^;]*)`))?.[1] || '').join('|')
+    'donation_banner_dismissed', 'pwa_standalone', 'pwa_install_banner_dismissed']
+  return `${isMobileRequest(request) ? 'mobile' : 'desktop'}|${
+    names.map(name => cookie.match(new RegExp(`(?:^|;\\s*)${name}=([^;]*)`))?.[1] || '').join('|')
+  }`
 }
 
 export async function rpcMaterializedFeedPage(request: Request, kind: MaterializedFeedKind, viewerId: number,

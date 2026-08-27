@@ -14,6 +14,7 @@ import { isAdmin } from '../admin'
 import { resolvedDensity } from '../request-preferences'
 import type { User } from '../types'
 import { isMobileRequest } from '../user-agent'
+import { pwaInstallBannerDismissed, pwaStandalone } from '../http'
 import { enterHref } from './auth-links'
 import { LogoutForm } from './logout-form'
 
@@ -49,6 +50,8 @@ export function Layout({
   const request = activeRequest()
   const density = resolvedDensity(request)
   const mobile = isMobileRequest(request)
+  const standalone = pwaStandalone(request)
+  const showPwaInstallBanner = mobile && !standalone && !pwaInstallBannerDismissed(request)
   const corners = cornerChoice(request)
   const appearanceVersion = `${selectedAppearance.theme}.${selectedAppearance.accent}`
   const themeCss = activeThemeStyles()
@@ -168,7 +171,7 @@ export function Layout({
           </>
         )}
         {mobile && <link href="https://fonts.cdnfonts.com/css/dejavu-sans-mono" rel="stylesheet" />}
-        <link rel="stylesheet" href="/styles.css?v=901" />
+        <link rel="stylesheet" href="/styles.css?v=902" />
         <style>{themeCss}</style>
       </head>
       <body
@@ -197,6 +200,15 @@ export function Layout({
               </nav>
             )}
         </header>
+        {showPwaInstallBanner && requestUrl.pathname !== '/install' && (
+          <aside className="notification-banner install-banner" aria-label="Install app">
+            <a href="/install">install to home screen</a>
+            <span aria-hidden="true">·</span>
+            <form method="post" action="/install/banner/dismiss">
+              <button className="quiet">dismiss</button>
+            </form>
+          </aside>
+        )}
         {notificationBanner && (
           <aside className="notification-banner" aria-label={notificationBanner === 'notification-update'
             ? 'Notification update'
@@ -255,9 +267,9 @@ export function Layout({
             <a className="footer-host-link" href="/">{appHost()}</a> <span aria-hidden="true">/</span>{' '}
             <a className="footer-host-link" href="/stats">stats</a>
           </span>
-          {(instance.links.getMobileApp || (user && ready)) && (
+          {((instance.links.getMobileApp && !standalone) || (user && ready)) && (
             <div className="footer-mobile-actions">
-              {instance.links.getMobileApp && (
+              {instance.links.getMobileApp && !standalone && (
                 <a
                   className="button mobile-app-footer"
                   href={instance.links.getMobileApp}

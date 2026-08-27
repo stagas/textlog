@@ -5,6 +5,8 @@ import {
   Dmca,
   Feed,
   HotFeed,
+  InstallGuide,
+  installPlatform,
   Legal,
   PublicFeed,
 } from '../components/pages'
@@ -20,6 +22,7 @@ import {
   feedPreference,
   notificationBannerDismissed,
   notificationUserAgent,
+  pwaInstallBannerDismissedCookie,
   safeRefererPath,
 } from '../http'
 import { campaignIpPseudonym } from '../ip-privacy'
@@ -85,6 +88,8 @@ const feedVariantCookieNames = new Set([
   'primary-font',
   'font-size',
   'notification_device',
+  'pwa_standalone',
+  'pwa_install_banner_dismissed',
 ])
 
 function feedVariantCookie(request: Request) {
@@ -421,6 +426,13 @@ export function registerFeedsRoutes(app: Hono) {
     if (user) return page(<About user={user} />)
     return await rpcMaterializedFeedPage(c.req.raw, 'about', -1, async () => page(<About user={null} />))
   })
+  app.get('/install', c => page(
+    <InstallGuide user={currentUser(c.req.raw)} platform={installPlatform(c.req.raw)} />,
+  ))
+  app.post('/install/banner/dismiss', c => redirect(
+    safeRefererPath(c.req.header('referer'), c.req.url),
+    pwaInstallBannerDismissedCookie(),
+  ))
   app.get('/contact', c => page(<Contact user={currentUser(c.req.raw)} />))
   app.get('/dmca', c => page(<Dmca user={currentUser(c.req.raw)} />))
   app.get('/legal', c => page(<Legal user={currentUser(c.req.raw)} />))

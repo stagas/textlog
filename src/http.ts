@@ -147,6 +147,8 @@ const NOTIFICATION_DEVICE_COOKIE = 'notification_device'
 const NOTIFICATION_BANNER_COOKIE = 'notification_banner_dismissed'
 const DONATION_BANNER_COOKIE = 'donation_banner_dismissed'
 const CAMPAIGN_ATTRIBUTION_COOKIE = 'campaign_attribution'
+const PWA_STANDALONE_COOKIE = 'pwa_standalone'
+const PWA_INSTALL_BANNER_COOKIE = 'pwa_install_banner_dismissed'
 
 function cookieValue(request: Request, name: string) {
   const escaped = name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
@@ -191,6 +193,26 @@ export function donationBannerDismissed(request: Request) {
 
 export function donationBannerDismissedCookie(appUrl: string | undefined = Bun.env.APP_URL) {
   return `${DONATION_BANNER_COOKIE}=1; Max-Age=${5 * 365 * 24 * 60 * 60}; HttpOnly; Path=/; SameSite=Lax${
+    secureCookie(appUrl)
+  }`
+}
+
+export function pwaStandalone(request: Request) {
+  return cookieValue(request, PWA_STANDALONE_COOKIE) === '1'
+}
+
+export function pwaInstallBannerDismissed(request: Request) {
+  return cookieValue(request, PWA_INSTALL_BANNER_COOKIE) === '1'
+}
+
+export function pwaStandaloneCookie(appUrl: string | undefined = Bun.env.APP_URL) {
+  return `${PWA_STANDALONE_COOKIE}=1; Max-Age=${5 * 365 * 24 * 60 * 60}; HttpOnly; Path=/; SameSite=Lax${
+    secureCookie(appUrl)
+  }`
+}
+
+export function pwaInstallBannerDismissedCookie(appUrl: string | undefined = Bun.env.APP_URL) {
+  return `${PWA_INSTALL_BANNER_COOKIE}=1; Max-Age=${5 * 365 * 24 * 60 * 60}; HttpOnly; Path=/; SameSite=Lax${
     secureCookie(appUrl)
   }`
 }

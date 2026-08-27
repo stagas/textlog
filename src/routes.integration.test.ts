@@ -118,7 +118,40 @@ test('web manifest is cached by browsers', async () => {
   expect(await response.json()).toMatchObject({
     theme_color: '#e5e8e1',
     background_color: '#171a17',
+    start_url: '/?pwa',
   })
+})
+
+test('PWA launch marks the client standalone and removes the launch parameter', async () => {
+  const response = await request('/?pwa')
+  expect(response.status).toBe(303)
+  expect(response.headers.get('location')).toBe('/')
+  expect(response.headers.get('set-cookie')).toContain('pwa_standalone=1')
+})
+
+test('mobile browsers see an install banner and can dismiss it', async () => {
+  const userAgent = 'Mozilla/5.0 (Linux; Android 15) AppleWebKit/537.36 Chrome/140 Mobile'
+  const mobile = await request('/about', { userAgent })
+  const mobileHtml = await mobile.text()
+  expect(mobileHtml).toContain('install to home screen')
+  expect(mobileHtml).toContain('get mobile app')
+
+  const standalone = await request('/about', { userAgent, cookie: 'pwa_standalone=1' })
+  const standaloneHtml = await standalone.text()
+  expect(standaloneHtml).not.toContain('install to home screen')
+  expect(standaloneHtml).not.toContain('get mobile app')
+
+  const dismissed = await request('/install/banner/dismiss', { method: 'POST', userAgent, form: {} })
+  expect(dismissed.headers.get('set-cookie')).toContain('pwa_install_banner_dismissed=1')
+})
+
+test('install guide is tailored to the mobile browser', async () => {
+  const response = await request('/install', {
+    userAgent: 'Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) Version/18 Mobile Safari/604.1',
+  })
+  const html = await response.text()
+  expect(html).toContain('iPhone or iPad · Safari')
+  expect(html).toContain('Add to Home Screen')
 })
 
 test('/?reddit counts each IP once', async () => {

@@ -993,6 +993,16 @@ nav form {
 }
 .notification-banner button:hover { color: var(--tab-hover); }
 
+.install-guide ol {
+  margin: var(--space-4) 0 var(--space-6);
+  padding-left: 1.5rem;
+}
+
+.install-guide li {
+  margin: 0 0 var(--space-3);
+  padding-left: var(--space-2);
+}
+
 .feed-tabs a {
   display: inline-flex;
   flex: 0 0 auto;
