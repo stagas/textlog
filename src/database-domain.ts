@@ -2326,13 +2326,21 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
         const conversation = byConversation.get(id) || []
         if (!conversation.length) return []
         const root = conversation.find(row => row.id === id)
-        const recentReplies = recentConversationReplies(conversation)
+        let recentReplies = recentConversationReplies(conversation)
         const includedIds = new Set([root?.id, ...recentReplies.map(reply => reply.id)])
         const unreadReplies = conversation.filter(row => unreadIds.has(row.id) && !includedIds.has(row.id))
         const keepsRoot = root?.parent_id === null
           && (conversation[0]?.id === root.id || recentReplies[0]?.parent_id === root.id
             || isRecentConversationRoot(root, conversation))
-        return keepsRoot ? [root!, ...recentReplies, ...unreadReplies] : [...recentReplies, ...unreadReplies]
+        if (keepsRoot) return [root!, ...recentReplies, ...unreadReplies]
+        recentReplies = recentConversationReplies(conversation, true)
+        const fullIncludedIds = new Set([root?.id, ...recentReplies.map(reply => reply.id)])
+        const fullUnreadReplies = conversation.filter(row => unreadIds.has(row.id) && !fullIncludedIds.has(row.id))
+        const selected = [...recentReplies, ...fullUnreadReplies]
+        const selectedIds = new Set(selected.map(row => row.id))
+        return selected.map(row => row.parent_id && !selectedIds.has(row.parent_id)
+          ? { ...row, feed_branch_root: true }
+          : row)
       })
       const posts = enrichPosts(database, snapshotPosts, viewerId)
       const pageIds = new Set(snapshotPosts.map(post => post.id))

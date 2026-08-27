@@ -131,6 +131,26 @@ test('a deep unread reply moves its root first and compresses read ancestors', (
   expect(html.indexOf('immediate parent')).toBeLessThan(html.indexOf('new unread reply'))
 })
 
+test('collapsed conversations render unread ancestors as posts instead of hidden quote paths', () => {
+  const root = { id: 200, user_id: 2, parent_id: null, body: 'top level', created_at: '2026-08-19 08:00:00',
+    deleted_at: null, handle: 'alice', reply_count: 4 }
+  const unread = { ...root, id: 201, parent_id: 200, body: 'actual unread reply',
+    created_at: '2026-08-19 09:00:00', parent: root }
+  const quotedPath = { ...root, id: 202, parent_id: 201, body: 'quoted path',
+    created_at: '2026-08-19 10:00:00', parent: unread }
+  const recent = { ...root, id: 203, parent_id: 202, body: 'recent reply',
+    created_at: '2026-08-19 11:00:00', parent: quotedPath }
+  const newest = { ...root, id: 204, parent_id: 203, body: 'newest reply', reply_count: 0,
+    created_at: '2026-08-19 12:00:00', parent: recent }
+  const html = renderToStaticMarkup(<PublicFeed path="/latest" feed={{
+    posts: [newest, recent, unread, root], page: 1, totalItems: 1, totalPages: 1, unreadPostIds: [201],
+  }} />)
+
+  expect(html.match(/collapsed-preview-post/g)).toHaveLength(3)
+  expect(html).toMatch(/collapsed-preview-post[^>]*>.*?id="post-201"/s)
+  expect(html).toContain('<div class="reply-node collapsed-preview-path"><div class="quiet thread-ancestor-gap"')
+})
+
 test('latest shows approximate age wording only for unread post metadata', () => {
   const createdAt = new Date(Date.now() - 6 * 60 * 60_000).toISOString()
   const unread = { id: 72, user_id: 2, parent_id: null, body: 'unread note', created_at: createdAt, deleted_at: null,

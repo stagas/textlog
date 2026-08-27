@@ -47,3 +47,48 @@ test('latest includes unread replies beyond the normal conversation preview', as
   expect(feed.latestCount).toBe(0)
   expect(await executeDatabaseDomain(database, 'feeds.latestUnreadCount', { userId: 1 })).toBe(0)
 })
+
+test('latest prunes reply ancestors when the recent conversation root is already present', async () => {
+  const database = new Database(':memory:', { strict: true })
+  runMigrations(database)
+  database.run(`INSERT INTO users(id,handle,email,password) VALUES
+    (1,'reader','reader@example.test','x'),(2,'writer','writer@example.test','x');
+    INSERT INTO posts(id,user_id,body,created_at) VALUES(100,2,'root','2026-08-27 09:00:00');
+    INSERT INTO posts(id,user_id,parent_id,body,created_at) VALUES
+    (101,2,100,'recent ancestor','2026-08-27 10:00:00'),
+    (102,2,101,'recent child','2026-08-27 11:00:00'),
+    (103,2,102,'newest child','2026-08-27 12:00:00');`)
+  markLatestPostsRead(1, [100, 101, 102, 103], database)
+  cacheDb.query("DELETE FROM feed_snapshots WHERE kind='latest-conversation-heads-v10' AND viewer_id=1").run()
+
+  const feed = await executeDatabaseDomain(database, 'feeds.latestPage', {
+    viewerId: 1, page: 1, pageSize: 20, markRead: false,
+  })
+
+  expect(feed.posts.map(post => post.id)).toEqual([100, 103, 102])
+  expect(feed.posts.find(post => post.id === 102)?.parent_id).toBe(101)
+})
+
+test('latest anchors an active branch at its oldest recent reply and quotes the older parent', async () => {
+  const database = new Database(':memory:', { strict: true })
+  runMigrations(database)
+  database.run(`INSERT INTO users(id,handle,email,password) VALUES
+    (1,'reader','reader@example.test','x'),(2,'writer','writer@example.test','x');
+    INSERT INTO posts(id,user_id,body,created_at) VALUES(100,2,'old root','2026-08-20 09:00:00');
+    INSERT INTO posts(id,user_id,parent_id,body,created_at) VALUES
+    (101,2,100,'old quoted parent','2026-08-20 10:00:00'),
+    (102,2,101,'active branch root','2026-08-27 09:00:00'),
+    (103,2,102,'recent child','2026-08-27 10:00:00'),
+    (104,2,103,'newest child','2026-08-27 11:00:00');`)
+  markLatestPostsRead(1, [100, 101], database)
+  cacheDb.query("DELETE FROM feed_snapshots WHERE kind='latest-conversation-heads-v10' AND viewer_id=1").run()
+
+  const feed = await executeDatabaseDomain(database, 'feeds.latestPage', {
+    viewerId: 1, page: 1, pageSize: 20, markRead: false,
+  })
+
+  expect(feed.posts.map(post => post.id)).toEqual([104, 103, 102])
+  expect(feed.posts.find(post => post.id === 102)).toMatchObject({
+    parent_id: 101, feed_branch_root: true, parent: { id: 101 },
+  })
+})

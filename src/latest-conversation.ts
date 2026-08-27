@@ -15,6 +15,7 @@ export function isRecentConversationRoot<T extends { parent_id: number | null; c
 
 export function recentConversationReplies<T extends { id: number; parent_id: number | null; created_at: string }>(
   conversation: T[],
+  keepAncestorChain = false,
 ) {
   const replies = conversation.filter(row => row.parent_id !== null)
   const newestReplyAt = replies[0]
@@ -24,6 +25,7 @@ export function recentConversationReplies<T extends { id: number; parent_id: num
     || Number.isFinite(newestReplyAt)
       && newestReplyAt - Date.parse(`${reply.created_at.replace(' ', 'T')}Z`)
         <= LATEST_REPLY_BURST_HOURS * 60 * 60_000)
+  if (keepAncestorChain) return recent
   const recentById = new Map(recent.map(reply => [reply.id, reply]))
   return recent.filter((reply, index) => {
     if (index < LATEST_MIN_RECENT_REPLIES) return true
