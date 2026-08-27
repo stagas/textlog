@@ -936,6 +936,33 @@ export function Post({
   )
 }
 
+type FeedPostProps = React.ComponentProps<typeof Post>
+type FeedPostFragment = { className: string; id: string; innerHtml: string }
+const feedPostFragments = new Map<string, FeedPostFragment>()
+const MAX_FEED_POST_FRAGMENTS = 1_024
+const FEED_POST_FRAGMENT_VERSION = 1
+
+function FeedPost(props: FeedPostProps) {
+  const key = JSON.stringify([FEED_POST_FRAGMENT_VERSION, props])
+  let fragment = feedPostFragments.get(key)
+  if (fragment) {
+    feedPostFragments.delete(key)
+    feedPostFragments.set(key, fragment)
+  }
+  else {
+    const rendered = renderToStaticMarkup(<Post {...props} />)
+    const match = rendered.match(/^<article class="([^"]*)" id="([^"]*)">([\s\S]*)<\/article>$/)
+    if (!match) return <Post {...props} />
+    fragment = { className: match[1], id: match[2], innerHtml: match[3] }
+    feedPostFragments.set(key, fragment)
+    while (feedPostFragments.size > MAX_FEED_POST_FRAGMENTS) {
+      feedPostFragments.delete(feedPostFragments.keys().next().value!)
+    }
+  }
+  return <article className={fragment.className} id={fragment.id}
+    dangerouslySetInnerHTML={{ __html: fragment.innerHtml }} />
+}
+
 export function ThreadReplies(
   { parentId, replies, user, returnPath, excludePostId, flat = false, showMissingContinuations = false,
     continuationLabel = 'more', continuationReturnPath, contextUnreadPostIds, contextDirectedUnreadPostIds,
@@ -1033,7 +1060,7 @@ export function ThreadReplies(
           <div className="quiet thread-ancestor-gap" aria-label="Earlier replies omitted">…</div>
         )}
         {foldControlId && <input className="thread-fold-input" type="checkbox" id={foldControlId} />}
-        <Post p={reply} user={user} showParent={false} foldControlId={foldControlId} returnPath={postReturnPath}
+        <FeedPost p={reply} user={user} showParent={false} foldControlId={foldControlId} returnPath={postReturnPath}
           contextUnread={contextUnreadPostIds?.has(reply.id)}
           contextDirectedUnread={contextDirectedUnreadPostIds?.has(reply.id)} highlightTerms={highlightTerms}
           replyHref={user ? undefined : '/enter?next=' + encodeURIComponent('/post/' + reply.id + '?reply=1'
@@ -1251,7 +1278,7 @@ export function FeedThreads(
               <input className="thread-fold-input" type="checkbox" id={foldControlId} defaultChecked={collapsed} />
             )}
             <div className={`thread-root${post.profile_pinned ? ' profile-pinned-surround' : ''}`}>
-              <Post p={post} user={user} tappable returnPath={anchoredReturnPath} highlightTerms={highlightTerms}
+              <FeedPost p={post} user={user} tappable returnPath={anchoredReturnPath} highlightTerms={highlightTerms}
                 hideTopMeta={hideTopMeta} contextUnread={contextUnreadPostIds?.has(post.id)}
                 foldControlId={foldControlId}
                 contextParentUnread={!!post.parent && contextUnreadPostIds?.has(post.parent.id)}
