@@ -262,6 +262,21 @@ function PostingHelpTabs({ search }: { search?: PostingSuggestionSearch | null }
         <div>
           <dd>
             <code>
+              Run this <b>#exec</b>
+              <br />
+              <b>```js</b><br />
+              console.log(6 * 7)<br />
+              <b>```</b>
+            </code>
+          </dd>
+          <dt>
+            <span className="posting-help-modifier-heading">Executable code</span>
+            <small>Runs the next language-tagged code fence and shows its output beneath the note.</small>
+          </dt>
+        </div>
+        <div>
+          <dd>
+            <code>
               Keep this visible <b>#pin</b>
             </code>
           </dd>
@@ -290,10 +305,8 @@ function PostingHelpTabs({ search }: { search?: PostingSuggestionSearch | null }
           <dt>
             <span className="posting-help-modifier-heading">Whisper conversations</span>
             <small>
-              Keeps this note and every reply beneath it out of latest and hot. On a reply, only its direct parent
-              starts in the conversation; people who reply or are mentioned inside the whisper branch join it. Followers
-              of tags in the branch receive it in for you. The conversation remains public on profiles, tag pages,
-              threads, and permalinks.
+              Keeps the branch out of latest and hot. Participants, mentions, and tag followers can receive it in for
+              you. It remains public elsewhere.
             </small>
           </dt>
         </div>

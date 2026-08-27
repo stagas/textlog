@@ -409,6 +409,10 @@ test('posting helpers are searchable details and show copyable highlighted resul
   expect(html).toContain('Today <b>#todo</b><br/><b>[ ]</b> First task<br/><b>[x]</b> Finished task')
   expect(html).toContain('Only [ ] and [x] lines become items. Click your items to toggle them.')
   expect(html).toContain(
+    '<span class="posting-help-modifier-heading">Executable code</span><small>Runs the next language-tagged code fence',
+  )
+  expect(html).toContain('Run this <b>#exec</b><br/><b>```js</b><br/>console.log(6 * 7)<br/><b>```</b>')
+  expect(html).toContain(
     '<span class="posting-help-modifier-heading">Pinned notes</span><small>Your latest #pin is shown first on your profile',
   )
   expect(html).toContain('Keep this visible <b>#pin</b>')
@@ -419,14 +423,11 @@ test('posting helpers are searchable details and show copyable highlighted resul
   expect(html).toContain('No more replies <b>#lock</b>')
   expect(html).toContain('Prevents new replies to this note and every reply beneath it.')
   expect(html).toContain(
-    '<span class="posting-help-modifier-heading">Whisper conversations</span><small>Keeps this note and every reply beneath it out of latest and hot.',
+    '<span class="posting-help-modifier-heading">Whisper conversations</span><small>Keeps the branch out of latest and hot.',
   )
   expect(html).toContain('Continue quietly <b>#whisper</b>')
-  expect(html).toContain(
-    'On a reply, only its direct parent starts in the conversation; people who reply or are mentioned inside the whisper branch join it.',
-  )
-  expect(html).toContain('Followers of tags in the branch receive it in for you.')
-  expect(html).toContain('The conversation remains public on profiles, tag pages, threads, and permalinks.')
+  expect(html).toContain('Participants, mentions, and tag followers can receive it in for you.')
+  expect(html).toContain('It remains public elsewhere.')
   expect(html).not.toContain('<h2>Emoji</h2>')
   expect(html).toContain('class="posting-help-emoji-panel posting-help-tab-panel" aria-label="Emoji to copy and paste"')
   expect(html).toContain('title="Select and copy">😀</span>')
