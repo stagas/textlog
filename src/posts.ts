@@ -349,16 +349,18 @@ export function enrichPosts(database: Database, posts: PostView[], viewerId = -1
     ? countRootIds
     : [...countRootIds, blockViewerId, blockViewerId, viewerId]
   const counts = database.query(
-    `WITH RECURSIVE descendants(root_id,id,deleted_at) AS (
-      SELECT id,id,deleted_at FROM posts WHERE id IN (${placeholders})
+    `WITH RECURSIVE descendants(root_id,id,parent_id,deleted_at) AS (
+      SELECT id,id,parent_id,deleted_at FROM posts WHERE id IN (${placeholders})
       UNION ALL
-      SELECT descendants.root_id,p.id,p.deleted_at FROM posts p
+      SELECT descendants.root_id,p.id,p.parent_id,p.deleted_at FROM posts p
         JOIN descendants ON p.parent_id=descendants.id WHERE 1=1 ${visibleReply}
     )
-    SELECT root_id,count(*) reply_count FROM descendants
+    SELECT root_id,count(*) reply_count,
+      sum(CASE WHEN parent_id=root_id THEN 1 ELSE 0 END) direct_reply_count FROM descendants
       WHERE id != root_id AND deleted_at IS NULL GROUP BY root_id`,
-  ).all(...countParameters) as { root_id: number; reply_count: number }[]
+  ).all(...countParameters) as { root_id: number; reply_count: number; direct_reply_count: number }[]
   const countById = new Map(counts.map(row => [row.root_id, row.reply_count]))
+  const directCountById = new Map(counts.map(row => [row.root_id, row.direct_reply_count]))
 
   let parents = new Map<number, ParentPost>()
   if (parentIds.length) {
@@ -388,6 +390,7 @@ export function enrichPosts(database: Database, posts: PostView[], viewerId = -1
     for (const parent of rows) {
       parentBodies.push(parent.body, parent.translation || '')
       parent.reply_count = countById.get(parent.id) || 0
+      parent.direct_reply_count = directCountById.get(parent.id) || 0
       parent.top_id = parent.parent_id ? topByParentId.get(parent.id) || null : null
       parent.thread_locked = lockedPostIds.has(parent.id)
       parent.link_previews = previewsByPost.get(parent.id)
@@ -484,6 +487,7 @@ export function enrichPosts(database: Database, posts: PostView[], viewerId = -1
     bio_reference: bioReference(post.user_id),
     link_previews: previewsByPost.get(post.id),
     reply_count: countById.get(post.id) || 0,
+    direct_reply_count: directCountById.get(post.id) || 0,
     parent: post.parent_id ? parents.get(post.parent_id) || null : null,
     poll: polls.get(post.id),
     thread_locked: lockedPostIds.has(post.id),

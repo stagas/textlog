@@ -783,6 +783,122 @@ test('folded feed conversations preview the two newest replies from a recent bur
   expect(html).toMatch(/collapsed-preview-post[^>]*>[\s\S]*?Older deep reply/)
 })
 
+test('new unread replies use the normal feed conversation folding rules', () => {
+  const root = { id: 10, user_id: 1, parent_id: null, body: 'Root', created_at: '2026-08-23 09:00:00',
+    deleted_at: null, handle: 'root', reply_count: 3 }
+  const reply = (id: number, created_at: string) => ({ id, user_id: 2, parent_id: root.id, body: `Reply ${id}`,
+    created_at, deleted_at: null, handle: 'reply', reply_count: 0, parent: root })
+  const newest = reply(13, '2026-08-23 12:00:00')
+  const html = renderToStaticMarkup(React.createElement(FeedThreads, {
+    user: null,
+    returnPath: '/latest',
+    contextUnreadPostIds: new Set([newest.id]),
+    posts: [root, reply(11, '2026-08-20 10:00:00'), reply(12, '2026-08-21 11:00:00'), newest],
+  }))
+
+  expect(html).toContain('id="feed-thread-fold-10" checked=""')
+  expect(html).toMatch(/collapsed-preview-post[^>]*>[\s\S]*?id="post-13"/)
+})
+
+test('folded feed conversations show a gap above a preview when same-depth replies are hidden', () => {
+  const root = { id: 20, user_id: 1, parent_id: null, body: 'Root', created_at: '2026-08-20 09:00:00',
+    deleted_at: null, handle: 'root', reply_count: 2 }
+  const older = { id: 21, user_id: 2, parent_id: root.id, body: 'Hidden sibling',
+    created_at: '2026-08-20 10:00:00', deleted_at: null, handle: 'older', reply_count: 0, parent: root }
+  const newest = { id: 22, user_id: 3, parent_id: root.id, body: 'Visible preview',
+    created_at: '2026-08-23 11:00:01', deleted_at: null, handle: 'newest', reply_count: 0, parent: root }
+  const html = renderToStaticMarkup(React.createElement(FeedThreads, {
+    user: null,
+    returnPath: '/latest',
+    posts: [root, older, newest],
+  }))
+
+  expect(html).toMatch(/collapsed-preview-post[^>]*>[\s\S]*?aria-label="Earlier replies hidden">…<\/div>[\s\S]*?id="post-22"/)
+})
+
+test('folded feed conversations show a gap when a same-depth preview path hides its post above', () => {
+  const root = { id: 30, user_id: 1, parent_id: null, body: 'Root', created_at: '2026-08-20 09:00:00',
+    deleted_at: null, handle: 'root', reply_count: 3 }
+  const branch = { id: 31, user_id: 2, parent_id: root.id, body: 'Hidden same-depth branch',
+    created_at: '2026-08-20 10:00:00', deleted_at: null, handle: 'branch', reply_count: 1, parent: root }
+  const deepPreview = { id: 32, user_id: 3, parent_id: branch.id, body: 'Deep preview',
+    created_at: '2026-08-23 11:00:00', deleted_at: null, handle: 'deep', reply_count: 0, parent: branch }
+  const siblingPreview = { id: 33, user_id: 4, parent_id: root.id, body: 'Same-depth preview',
+    created_at: '2026-08-23 11:30:00', deleted_at: null, handle: 'sibling', reply_count: 0, parent: root }
+  const html = renderToStaticMarkup(React.createElement(FeedThreads, {
+    user: null,
+    returnPath: '/latest',
+    posts: [root, branch, deepPreview, siblingPreview],
+  }))
+
+  expect(html).toMatch(/collapsed-preview-post[^>]*>[\s\S]*?aria-label="Earlier replies hidden">…<\/div>[\s\S]*?id="post-32"/)
+})
+
+test('folded feed conversations show a gap for same-depth replies omitted from the feed', () => {
+  const root = { id: 40, user_id: 1, parent_id: null, body: 'Root', created_at: '2026-08-20 09:00:00',
+    deleted_at: null, handle: 'root', reply_count: 4, direct_reply_count: 4 }
+  const visible = (id: number, created_at: string) => ({ id, user_id: id, parent_id: root.id, body: `Visible ${id}`,
+    created_at, deleted_at: null, handle: `user${id}`, reply_count: 0, parent: root })
+  const html = renderToStaticMarkup(React.createElement(FeedThreads, {
+    user: null,
+    returnPath: '/latest',
+    posts: [root, visible(43, '2026-08-23 11:00:00'), visible(44, '2026-08-23 11:30:00'),
+      visible(45, '2026-08-23 12:00:00')],
+  }))
+
+  expect(html).toMatch(/collapsed-preview-post[^>]*>[\s\S]*?aria-label="Earlier replies hidden">…<\/div>[\s\S]*?id="post-45"/)
+})
+
+test('expanded feed conversations mark earlier same-depth replies omitted from the feed', () => {
+  const root = { id: 895, user_id: 2, parent_id: null, body: 'Root', created_at: '2026-08-11 09:41:26',
+    deleted_at: null, handle: 'followed', reply_count: 5, direct_reply_count: 5 }
+  const visible = (id: number, created_at: string) => ({ id, user_id: 3, parent_id: root.id, body: `Reply ${id}`,
+    created_at, deleted_at: null, handle: 'replier', reply_count: 0, parent: root })
+  const html = renderToStaticMarkup(React.createElement(FeedThreads, {
+    user: null,
+    returnPath: '/for-you',
+    expandedRootId: root.id,
+    posts: [root, visible(2599, '2026-08-26 22:03:54'), visible(2600, '2026-08-26 22:07:23'),
+      visible(2602, '2026-08-26 22:10:21'), visible(2607, '2026-08-26 23:28:22')],
+  }))
+
+  expect(html).toMatch(/aria-label="Earlier replies omitted">…<\/div>[\s\S]*?id="post-2599"/)
+})
+
+test('expanded reconstructed branches coalesce ancestor and sibling omission markers', () => {
+  const root = { id: 494, user_id: 2, parent_id: null, body: 'Root', created_at: '2026-08-08 14:20:43',
+    deleted_at: null, handle: 'root', reply_count: 3, direct_reply_count: 3 }
+  const reply = { id: 496, user_id: 3, parent_id: root.id, body: 'Recent branch',
+    created_at: '2026-08-26 05:27:01', deleted_at: null, handle: 'reply', reply_count: 0, parent: root,
+    feed_ancestor_gap: true }
+  const html = renderToStaticMarkup(React.createElement(ThreadReplies, {
+    parentId: root.id,
+    replies: [root, reply],
+    user: null,
+    returnPath: '/latest',
+  }))
+
+  expect(html.match(/aria-label="Earlier replies omitted"/g)).toHaveLength(1)
+})
+
+test('expanded feed conversations do not mark omissions when every reply at that depth is visible', () => {
+  const root = { id: 50, user_id: 1, parent_id: null, body: 'Root', created_at: '2026-08-20 09:00:00',
+    deleted_at: null, handle: 'root', reply_count: 2, direct_reply_count: 1 }
+  const child = { id: 51, user_id: 2, parent_id: root.id, body: 'Only child', created_at: '2026-08-20 10:00:00',
+    deleted_at: null, handle: 'child', reply_count: 1, direct_reply_count: 1, parent: root }
+  const grandchild = { id: 52, user_id: 3, parent_id: child.id, body: 'Only grandchild',
+    created_at: '2026-08-20 11:00:00', deleted_at: null, handle: 'grandchild', reply_count: 0,
+    direct_reply_count: 0, parent: child }
+  const html = renderToStaticMarkup(React.createElement(ThreadReplies, {
+    parentId: root.id,
+    replies: [root, child, grandchild],
+    user: null,
+    returnPath: '/latest',
+  }))
+
+  expect(html).not.toContain('aria-label="Earlier replies omitted"')
+})
+
 test('folded feed conversations reveal only one reply when the next newest is over 48 hours older', () => {
   const root = { id: 1, user_id: 1, parent_id: null, body: 'Root', created_at: '2026-08-20 09:00:00', deleted_at: null,
     handle: 'root', reply_count: 2 }

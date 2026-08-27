@@ -76,6 +76,7 @@ export type ParentPost = Pick<PostRow,
   parent?: ParentPost | null
   bio_reference?: BioReferenceData
   reply_count: number
+  direct_reply_count?: number
   top_id?: number | null
   thread_locked?: boolean
 }
@@ -102,6 +103,7 @@ export type PostView = PostRow & {
   bio_reference?: BioReferenceData
   poll?: PollView
   reply_count?: number
+  direct_reply_count?: number
   parent?: ParentPost | null
   thread_locked?: boolean
   feed_ancestor_gap?: boolean

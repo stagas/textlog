@@ -935,10 +935,10 @@ export function ThreadReplies(
   for (const siblings of children.values()) {
     siblings.sort((a, b) => a.created_at.localeCompare(b.created_at) || a.id - b.id)
   }
+  const byId = new Map(replies.map(reply => [reply.id, reply]))
   const collapsedPreviewPosts = new Set(collapsedPreviewPostIds)
   const collapsedPreviewPath = new Set<number>()
   if (collapsedPreviewPostIds.length) {
-    const byId = new Map(replies.map(reply => [reply.id, reply]))
     for (const previewPostId of collapsedPreviewPostIds) {
       let current = byId.get(previewPostId)
       while (current && current.id !== parentId) {
@@ -946,6 +946,27 @@ export function ThreadReplies(
         current = current.parent_id ? byId.get(current.parent_id) : undefined
       }
     }
+  }
+  const collapsedPreviewGapPosts = new Set<number>()
+  if (collapsedPreviewPostIds.length) {
+    let hiddenPostAbove = false
+    const visit = (id: number) => {
+      for (const reply of children.get(id) || []) {
+        if (!reply.deleted_at) {
+          if (collapsedPreviewPosts.has(reply.id)) {
+            const parent = byId.get(reply.parent_id!)
+            const loadedSiblings = (children.get(reply.parent_id!) || []).filter(sibling => !sibling.deleted_at).length
+            const hasOmittedSiblings = parent?.direct_reply_count != null
+              && parent.direct_reply_count > loadedSiblings
+            if (hiddenPostAbove || hasOmittedSiblings) collapsedPreviewGapPosts.add(reply.id)
+            hiddenPostAbove = false
+          }
+          else hiddenPostAbove = true
+        }
+        visit(reply.id)
+      }
+    }
+    visit(parentId)
   }
   const descendantCounts = new Map<number, number>()
   const visibleDescendantCount = (id: number): number => {
@@ -956,7 +977,8 @@ export function ThreadReplies(
     descendantCounts.set(id, count)
     return count
   }
-  const renderReply = (reply: PostView, childBranch?: React.ReactNode, continuesElsewhere = false) => {
+  const renderReply = (reply: PostView, childBranch?: React.ReactNode, continuesElsewhere = false,
+    hasEarlierOmittedSibling = false) => {
     const anchoredReturnPath = replyAnchorReturnPath(parentId, reply.id, returnPath)
     const postReturnPath = continuationReturnPath
       ? `${continuationReturnPath}#post-${reply.id}`
@@ -974,8 +996,11 @@ export function ThreadReplies(
         }`}
         key={reply.id}
       >
-        {reply.id === collapsedPreviewPostIds.at(-1) && (
+        {collapsedPreviewGapPosts.has(reply.id) && (
           <div className="quiet thread-ancestor-gap collapsed-preview-gap" aria-label="Earlier replies hidden">…</div>
+        )}
+        {hasEarlierOmittedSibling && !reply.feed_ancestor_gap && (
+          <div className="quiet thread-ancestor-gap" aria-label="Earlier replies omitted">…</div>
         )}
         {reply.feed_ancestor_gap && (
           <div className="quiet thread-ancestor-gap" aria-label="Earlier replies omitted">…</div>
@@ -1012,6 +1037,10 @@ export function ThreadReplies(
   const renderBranch = (id: number, depth: number): React.ReactNode => {
     const branch = children.get(id) || []
     if (!branch.length) return null
+    const loadedReplyCount = branch.filter(reply => !reply.deleted_at).length
+    const directReplyCount = byId.get(id)?.direct_reply_count
+    const hasOmittedSiblings = directReplyCount != null && directReplyCount > loadedReplyCount
+    const firstVisibleReplyId = branch.find(reply => !reply.deleted_at && reply.id !== excludePostId)?.id
     return (
       <div className={`reply-branch${collapsedPreviewPostIds.length ? ' feed-thread-collapsed-branch' : ''}`}>
         <div className="thread-branch-content">
@@ -1024,7 +1053,8 @@ export function ThreadReplies(
             const childBranch = truncatedByDepth ? null : renderBranch(reply.id, depth + 1)
             if (reply.deleted_at) return <React.Fragment key={reply.id}>{childBranch}</React.Fragment>
             if (reply.id === excludePostId) return <React.Fragment key={reply.id}>{childBranch}</React.Fragment>
-            return renderReply(reply, childBranch, continuesElsewhere)
+            return renderReply(reply, childBranch, continuesElsewhere,
+              hasOmittedSiblings && reply.id === firstVisibleReplyId)
           })}
         </div>
       </div>
@@ -1150,17 +1180,6 @@ export function FeedThreads(
     visit(root.id)
     return count
   }
-  const hasUnreadReply = (root: PostView) => {
-    let unread = false
-    const visit = (parentId: number) => {
-      for (const child of children.get(parentId) || []) {
-        if (contextUnreadPostIds?.has(child.id)) unread = true
-        visit(child.id)
-      }
-    }
-    visit(root.id)
-    return unread
-  }
   const isLinearConversation = (root: PostView) => {
     let linear = true
     const visit = (parentId: number) => {
@@ -1198,8 +1217,7 @@ export function FeedThreads(
         const continuesElsewhere = (post.reply_count || 0) > visibleReplies
         const foldControlId = visibleReplies > 0 ? `feed-thread-fold-${post.id}` : undefined
         const reconstructedLinearHotThread = promoteAncestors === 'all' && isLinearConversation(post)
-        const collapsed = canCollapse && !reconstructedLinearHotThread
-          && !hasUnreadReply(post) && expandedRootId !== post.id
+        const collapsed = canCollapse && !reconstructedLinearHotThread && expandedRootId !== post.id
         const expandedReturnPath = (() => {
           const target = new URL(returnPath, 'http://textlog.local')
           target.searchParams.set('expand', String(post.id))
