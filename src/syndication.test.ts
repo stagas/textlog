@@ -185,8 +185,21 @@ describe('RSS and Atom feeds', () => {
 
   test('keeps user syndication aligned with the top-level API post collection', async () => {
     const app = fixture()
+    const database = (app as any).database as Database
+    const syndication = await executeDatabaseDomain(database, 'syndication.load', {
+      kind: 'user', origin: 'https://textlog.cc', identifier: 'Bob',
+    })
+    const api = await executeDatabaseDomain(database, 'api.publicRead', {
+      kind: 'collection', origin: 'https://textlog.cc', limit: 20, before: null, handle: 'Bob', topLevelOnly: true,
+    })
     const feed = await (await app.request('https://textlog.cc/api/v1/users/Bob/posts.atom')).text()
 
+    expect(syndication.status).toBe('ready')
+    expect(api.status).toBe('ready')
+    if (syndication.status === 'ready' && api.status === 'ready') {
+      const apiPosts = (api.value as { data: Array<{ id: number }> }).data
+      expect(syndication.posts.map(post => post.id)).toEqual(apiPosts.map(post => post.id))
+    }
     expect(feed).not.toContain('a reply')
     expect(feed).not.toContain('https://textlog.cc/post/2')
   })
