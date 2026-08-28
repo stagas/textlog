@@ -5,7 +5,7 @@ import { executeDatabaseDomain } from './database-domain'
 import { markLatestPostsRead } from './latest-state'
 import { runMigrations } from './migrations'
 
-test('latest count excludes posts consumed by the rendered page', async () => {
+test('latest count remains for the rendered page and is reduced on the next load', async () => {
   const database = new Database(':memory:', { strict: true })
   runMigrations(database)
   database.run(`INSERT INTO users(id,handle,email,password) VALUES
@@ -19,9 +19,15 @@ test('latest count excludes posts consumed by the rendered page', async () => {
   })
 
   expect(feed.unreadPostIds).toEqual([2, 1])
-  expect(feed.latestCount).toBe(0)
-  expect(feed.latestUnread).toBe(false)
+  expect(feed.latestCount).toBe(2)
+  expect(feed.latestUnread).toBe(true)
   expect(await executeDatabaseDomain(database, 'feeds.latestUnreadCount', { userId: 1 })).toBe(0)
+
+  const nextFeed = await executeDatabaseDomain(database, 'feeds.latestPage', {
+    viewerId: 1, page: 1, pageSize: 20,
+  })
+  expect(nextFeed.latestCount).toBe(0)
+  expect(nextFeed.latestUnread).toBe(false)
 })
 
 test('latest includes unread replies beyond the normal conversation preview', async () => {
@@ -44,7 +50,7 @@ test('latest includes unread replies beyond the normal conversation preview', as
 
   expect(feed.posts.map(post => post.id)).toContain(11)
   expect(feed.unreadPostIds).toEqual([11])
-  expect(feed.latestCount).toBe(0)
+  expect(feed.latestCount).toBe(1)
   expect(await executeDatabaseDomain(database, 'feeds.latestUnreadCount', { userId: 1 })).toBe(0)
 })
 

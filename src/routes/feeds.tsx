@@ -212,12 +212,9 @@ export function registerFeedsRoutes(app: Hono) {
     const renderForCache = async () => {
       const feed = await data()
       const consumed = new Set(feed.timeline.filter(row => row.unread).map(row => row.event_key)).size
-      const latestConsumed = new Set(feed.timeline.filter(row => row.unread && !row.targeted_to_viewer
-        && row.event_key.startsWith('post:')).map(row => row.event_key)).size
       return page(
         <Feed user={user}
           data={{ ...feed, forYouCount: Math.max(0, feed.forYouCount - consumed),
-            latestCount: Math.max(0, (feed.latestCount || 0) - latestConsumed),
             timeline: feed.timeline.map(row => ({ ...row, unread: 0 })) }} title="for you"
           notificationBanner={notificationBanner} expandedRootId={expandedRootId} />,
       )
@@ -254,8 +251,10 @@ export function registerFeedsRoutes(app: Hono) {
     }
     const renderForCache = user ? async () => {
       const feed = await data()
+      const latestCount = Math.max(0, (feed.latestCount || 0) - new Set(feed.unreadPostIds).size)
       return page(
-        <PublicFeed user={user} feed={{ ...feed, unreadPostIds: [], directedUnreadPostIds: [] }} path="/latest"
+        <PublicFeed user={user} feed={{ ...feed, latestCount, latestUnread: latestCount > 0,
+          unreadPostIds: [], directedUnreadPostIds: [] }} path="/latest"
           notificationBanner={notificationBanner}
           expandedRootId={expandedRootId} />,
       )
@@ -303,13 +302,10 @@ export function registerFeedsRoutes(app: Hono) {
     const renderForCache = async () => {
       const feed = await data()
       const consumed = new Set(feed.timeline.filter(row => row.unread).map(row => row.event_key)).size
-      const latestConsumed = new Set(feed.timeline.filter(row => row.unread && row.event_key.startsWith('post:'))
-        .map(row => row.event_key)).size
       return page(
         <Feed user={user}
           data={{ ...feed, forYouCount: Math.max(0, feed.forYouCount - consumed),
             toMeCount: Math.max(0, feed.toMeCount - consumed),
-            latestCount: Math.max(0, (feed.latestCount || 0) - latestConsumed),
             timeline: feed.timeline.map(row => ({ ...row, unread: 0 })) }} title="to me" path="/to-me" toMe
           notificationBanner={notificationBanner} expandedRootId={expandedRootId} />,
       )
