@@ -1,4 +1,4 @@
-import { cacheDb } from './cache-db'
+import { cacheDb, clearCacheDatabase } from './cache-db'
 import { executeDatabaseDomain } from './database-domain'
 import { configureDatabaseService } from './database-service'
 import { db } from './db'
@@ -68,6 +68,8 @@ async function drainQueue() {
 // Every Worker generation owns and validates both connections before advertising readiness.
 db.query('SELECT 1').get()
 cacheDb.query('SELECT 1').get()
+db.query('DELETE FROM feed_snapshots').run()
+clearCacheDatabase(cacheDb)
 
 self.onmessage = event => {
   const message = event.data as MainToRuntimeMessage

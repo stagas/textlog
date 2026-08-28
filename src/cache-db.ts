@@ -45,4 +45,12 @@ export function createCacheDatabase(path = defaultCachePath()) {
   return database
 }
 
+export function clearCacheDatabase(database: Database) {
+  database.transaction(() => {
+    database.query('DELETE FROM feed_snapshots').run()
+    database.query('DELETE FROM materialized_feed_pages_v2').run()
+    database.query('DELETE FROM recent_feed_visitors').run()
+  })()
+}
+
 export const cacheDb = createCacheDatabase()
