@@ -4,6 +4,36 @@ import { displayPostBody } from '../utils'
 import { Layout } from './layout'
 import { FormActions } from './page-shared'
 import { Panel } from './panel'
+import { translationLanguages } from '../translation'
+
+export function AdminTranslate({ user, post, returnTo }: {
+  user: User
+  post: PostRow & { handle?: string }
+  returnTo: string
+}) {
+  return (
+    <Layout user={user} title="translate post">
+      <Panel className="admin-confirm">
+        <p className="eyebrow">admin moderation</p>
+        <h1>Translate this post</h1>
+        <p>Select the language this post is written in. Google will translate it into English.</p>
+        <blockquote>{displayPostBody(post.body)}</blockquote>
+        <form method="post" action={`/admin/posts/${post.id}/translate`}>
+          <input type="hidden" name="returnTo" value={returnTo} />
+          <label>
+            source language
+            <select className="form-control form-select" name="source" defaultValue="" required>
+              <option value="" disabled>select language</option>
+              {translationLanguages.map(([code, label]) => <option key={code} value={code}>{label}</option>)}
+            </select>
+          </label>
+          <FormActions secondary={<a className="secondary-action cancel-action" href={returnTo}>cancel</a>}
+            primary={<button className="button">translate</button>} />
+        </form>
+      </Panel>
+    </Layout>
+  )
+}
 
 export function AdminConfirm({ user, kind, target, post, returnTo = '/admin' }: {
   user: User

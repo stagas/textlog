@@ -623,6 +623,7 @@ export function Post({
     contextLabel = contextLabel.replace(/:$/, '') + ' and mentioned you:'
   }
   const detailPath = '/post/' + p.id + (returnPath ? '?from=' + encodeURIComponent(returnPath) : '')
+  const translatePath = '/admin/posts/' + p.id + '/translate?from=' + encodeURIComponent(detailPath)
   const resolvedContinuationHref = continuationHref
     ?? (showReplyCount && (p.reply_count || 0) > 0 ? detailPath : undefined)
   const parentDetailPath = parent
@@ -803,10 +804,8 @@ export function Post({
             <span className="post-actions">
               {canModerate && (
                 <>
-                  <form method="post" action={'/admin/posts/' + p.id + '/translate'}>
-                    <input type="hidden" name="returnTo" value={returnPath || `/post/${p.id}`} />
-                    <button className="quiet" aria-label="translate this post with Google">translate</button>
-                  </form>
+                  <a className="quiet" href={translatePath}
+                    aria-label="translate this post with Google">translate</a>
                   <a className="quiet danger" href={'/admin/posts/' + p.id + '/delete'} aria-label="moderate this post">
                     moderate
                   </a>
@@ -947,9 +946,13 @@ export function Post({
           {(canModerate || reportHref) && (
             <span className="post-actions">
               {canModerate && (
-                <a className="quiet danger" href={'/admin/posts/' + p.id + '/delete'} aria-label="moderate this post">
-                  moderate
-                </a>
+                <>
+                  <a className="quiet" href={translatePath}
+                    aria-label="translate this post with Google">translate</a>
+                  <a className="quiet danger" href={'/admin/posts/' + p.id + '/delete'} aria-label="moderate this post">
+                    moderate
+                  </a>
+                </>
               )}
               {reportHref && (
                 <a className="quiet report-link" href={reportHref} aria-label={`report post by @${p.handle}`}>report</a>

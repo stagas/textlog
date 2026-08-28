@@ -1,6 +1,6 @@
 import { Database } from 'bun:sqlite'
 import { afterEach, describe, expect, mock, test } from 'bun:test'
-import { backfillPostTranslations, postTranslation, translateToEnglish } from './translation'
+import { backfillPostTranslations, postTranslation, translateText, translateToEnglish } from './translation'
 
 const originalFetch = globalThis.fetch
 afterEach(() => {
@@ -49,6 +49,16 @@ describe('Google post translation', () => {
     }), { status: 200 }))) as unknown as typeof fetch
 
     await expect(translateToEnglish('Already English', 'secret key', true)).resolves.toBe('Already English')
+  })
+
+  test('can translate a moderator-selected source language into English', async () => {
+    const fetchMock = mock((_input: string | URL | Request, _init?: RequestInit) => Promise.resolve(new Response(JSON.stringify({
+      data: { translations: [{ translatedText: 'Γειά' }] },
+    }), { status: 200 })))
+    globalThis.fetch = fetchMock as unknown as typeof fetch
+
+    await expect(translateText('Γειά', 'en', 'secret key', 'el')).resolves.toMatchObject({ text: 'Γειά' })
+    expect(JSON.parse(String(fetchMock.mock.calls[0]![1]?.body))).toMatchObject({ source: 'el', target: 'en' })
   })
 
   test('leaves an English-detected backfill candidate without a translation', async () => {

@@ -3,6 +3,7 @@ import {
   AdminConfirm,
   AdminDashboard,
   AdminEmail,
+  AdminTranslate,
   AdminUser,
 } from '../components/pages'
 import {
@@ -17,7 +18,7 @@ import { sendAdminEmail, sendReportDecision } from '../email'
 import { deleteImagesAfterCommit } from '../image-storage'
 import { cacheBlockedIp, flushIpRequests } from '../request-ip-blocks'
 import { currentUser } from '../utils'
-import { translateToEnglish } from '../translation'
+import { isTranslationLanguage, translateText } from '../translation'
 
 export function registerAdminRoutes(app: Hono) {
   app.get('/admin/email', c => {
@@ -151,6 +152,20 @@ export function registerAdminRoutes(app: Hono) {
     return redirect(safeLocalPath(f.returnTo, '/admin'))
   })
 
+  app.get('/admin/posts/:id/translate', async c => {
+    const signedIn = currentUser(c.req.raw)
+    if (!signedIn) return redirect('/enter?next=' + encodeURIComponent(c.req.path))
+    if (!isAdmin(signedIn)) return c.text('Forbidden', 403)
+    const id = Number(c.req.param('id'))
+    const post = Number.isInteger(id) ? await databaseService().call('admin.post', { id }) : null
+    if (!post) return c.text('Not found', 404)
+    const requestedReturnTo = c.req.query('from')
+    const returnTo = requestedReturnTo
+      ? safeLocalPath(requestedReturnTo, c.req.url, `/post/${id}`)
+      : safeRefererPath(c.req.header('referer'), c.req.url, `/post/${id}`)
+    return page(<AdminTranslate user={signedIn} post={post} returnTo={returnTo} />)
+  })
+
   app.post('/admin/posts/:id/translate', async c => {
     const signedIn = currentUser(c.req.raw)
     if (!signedIn) return redirect('/enter?next=' + encodeURIComponent(c.req.path))
@@ -159,12 +174,13 @@ export function registerAdminRoutes(app: Hono) {
     const post = Number.isInteger(id) ? await databaseService().call('admin.post', { id }) : null
     if (!post) return c.text('Not found', 404)
     const f = await form(c.req.raw)
+    const source = f.source || ''
+    if (!isTranslationLanguage(source)) return c.text('Invalid source language', 400)
     try {
-      const translation = await translateToEnglish(post.body, undefined, true)
-      if (translation === null) return c.text('Google did not return a translation', 502)
-      const saved = await databaseService().call('admin.translatePost', { id, translation })
+      const translation = await translateText(post.body, 'en', undefined, source)
+      const saved = await databaseService().call('admin.translatePost', { id, translation: translation.text })
       if (saved.status === 'not_found') return c.text('Not found', 404)
-      return redirect(safeLocalPath(f.returnTo, `/post/${id}`))
+      return redirect(safeLocalPath(f.returnTo, c.req.url, `/post/${id}`))
     }
     catch (error) {
       console.error(`Could not translate post ${id}`, error)

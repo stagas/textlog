@@ -3650,8 +3650,8 @@ test('Post renders moderation controls only for admins on the detail page', () =
 
   expect(adminFeedHtml).not.toContain('/admin/posts/2/delete')
   expect(adminDetailHtml).toContain('/admin/posts/2/delete')
-  expect(adminDetailHtml).toContain('action="/admin/posts/2/translate"')
-  expect(adminDetailHtml).toContain('aria-label="translate this post with Google">translate</button>')
+  expect(adminDetailHtml).toContain('href="/admin/posts/2/translate?from=%2Fpost%2F2"')
+  expect(adminDetailHtml).toContain('aria-label="translate this post with Google">translate</a>')
   expect(adminDetailHtml).toContain('href="/post/2/edit" aria-label="edit this post">edit</a>')
   expect(adminDetailHtml.indexOf('href="/post/2/edit"')).toBeLessThan(adminDetailHtml.indexOf('<div class="postfoot">'))
   expect(userDetailHtml).not.toContain('/admin/posts/2/delete')
@@ -3671,4 +3671,19 @@ test('Post detail places moderate immediately before report for admins', () => {
   const footer = html.slice(html.indexOf('<div class="postfoot">'), html.indexOf('</div></article>'))
   expect(footer.indexOf('moderate')).toBeLessThan(footer.indexOf('report'))
   expect(html.slice(0, html.indexOf('<div class="postfoot">'))).not.toContain('moderate this post')
+})
+
+test('Post detail shows translation moderation for a reply opened as the primary post', () => {
+  const html = renderToStaticMarkup(React.createElement(Post, {
+    user: { id: 1, handle: 'admin', email: 'GSTAGAS@gmail.com', bio: '' },
+    p: { id: 2716, user_id: 2, parent_id: 20, body: 'reply', handle: 'writer',
+      created_at: '2026-08-03 12:00:00', deleted_at: null,
+      parent: { id: 20, user_id: 3, parent_id: null, body: 'parent', handle: 'parent-author',
+        created_at: '2026-08-03 11:00:00', deleted_at: null, reply_count: 1 } },
+    showModerateAction: true,
+  }))
+
+  expect(html).toContain('href="/admin/posts/2716/translate?from=%2Fpost%2F2716"')
+  expect(html.match(/\/admin\/posts\/2716\/translate/g)).toHaveLength(1)
+  expect(html.indexOf('/admin/posts/2716/translate')).toBeGreaterThan(html.indexOf('class="parent-quote"'))
 })
