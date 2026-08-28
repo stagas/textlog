@@ -2038,6 +2038,11 @@ body.corners-round a.button {
   z-index: 2;
 }
 
+.tappable-post .tappable-parent:has(.remote-link-menu:hover),
+.tappable-post .tappable-parent:has(.remote-link-menu:focus-within) {
+  z-index: 30;
+}
+
 .tappable-post .parent-hit-area {
   position: absolute;
   z-index: 1;

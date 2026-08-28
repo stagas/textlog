@@ -463,6 +463,8 @@ describe('in-memory stylesheet', () => {
     expect(css).toContain('aspect-ratio: var(--preview-ratio, 1.91);')
     expect(css).toContain('.remote-link-image-sized {\n  background-size: contain;')
     expect(css).toContain('.post:has(.remote-link-menu:hover),')
+    expect(css).toContain('.tappable-post .tappable-parent:has(.remote-link-menu:hover),\n'
+      + '.tappable-post .tappable-parent:has(.remote-link-menu:focus-within) {\n  z-index: 30;')
     expect(css).toContain('animation: reference-popover-reveal 0s 500ms both;')
     expect(cardRule).toContain('z-index: 22;')
     expect(cardRule).not.toContain('background-image')
