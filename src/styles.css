@@ -729,6 +729,14 @@ header>nav>a:not(.button),
   line-height: 1.55;
 }
 
+.post.internal-post-card .code-fence.execution-output {
+  color: color-mix(in srgb, var(--quote-ink), var(--muted));
+  font-family: var(--font-monospace);
+  font-size: 0.75rem;
+  line-height: 1.55;
+  letter-spacing: normal;
+}
+
 .post.internal-post-card > .postfoot {
   margin-top: var(--space-2);
 }

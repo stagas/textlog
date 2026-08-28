@@ -2950,6 +2950,7 @@ test('Post uses the full Post component for internal link hover cards', () => {
       user_id: 1,
       parent_id: null,
       body: 'The linked note',
+      execution_output: 'result: 42',
       handle: 'writer',
       reply_count: 2,
       thread_locked: false,
@@ -2963,6 +2964,7 @@ test('Post uses the full Post component for internal link hover cards', () => {
   expect(card).toContain('<span class="postauthor post-context-author">you</span>')
   expect(card).toContain('<span class="post-context">wrote:</span>')
   expect(card).toContain('The linked note')
+  expect(card).toContain('<code class="code-fence execution-output">result: 42</code>')
   expect(card).toContain('href="/post/12?reply=1&amp;from=%2Fpost%2F1%23post-1"')
   expect(card).toContain('>continue</a>')
   expect(card).toContain('>more</a>')

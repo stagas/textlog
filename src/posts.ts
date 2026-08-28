@@ -305,11 +305,13 @@ export function enrichPosts(database: Database, posts: PostView[], viewerId = -1
       supportsLinkedPostPreviews
         ? `lp.linked_post_id,
       linked.user_id linked_user_id,linked.parent_id linked_parent_id,linked.body linked_body,
+      ${supportsExecutionOutput ? 'linked.execution_output' : 'NULL'} linked_execution_output,
       linked_user.handle linked_handle,linked_parent.user_id linked_parent_user_id,
       linked_parent_user.handle linked_parent_handle,
       (SELECT count(*) FROM posts reply WHERE reply.parent_id=linked.id AND reply.deleted_at IS NULL) linked_reply_count,
       EXISTS(SELECT 1 FROM post_hashtags lock_tag WHERE lock_tag.post_id=linked.id AND lock_tag.tag='lock') linked_locked`
-        : `NULL linked_post_id,NULL linked_user_id,NULL linked_parent_id,NULL linked_body,NULL linked_handle,
+        : `NULL linked_post_id,NULL linked_user_id,NULL linked_parent_id,NULL linked_body,
+      NULL linked_execution_output,NULL linked_handle,
       NULL linked_parent_user_id,NULL linked_parent_handle,0 linked_reply_count,0 linked_locked`
     }
       FROM post_link_previews lp
@@ -341,6 +343,7 @@ export function enrichPosts(database: Database, posts: PostView[], viewerId = -1
       linked_user_id: number | null
       linked_parent_id: number | null
       linked_body: string | null
+      linked_execution_output: string | null
       linked_handle: string | null
       linked_parent_user_id: number | null
       linked_parent_handle: string | null
@@ -362,7 +365,8 @@ export function enrichPosts(database: Database, posts: PostView[], viewerId = -1
       linkedPostId: row.linked_post_id || undefined,
       linkedPost: row.linked_post_id && row.linked_user_id && row.linked_body !== null && row.linked_handle
         ? { id: row.linked_post_id, user_id: row.linked_user_id, parent_id: row.linked_parent_id, body: row.linked_body,
-          handle: row.linked_handle, reply_count: row.linked_reply_count, thread_locked: !!row.linked_locked,
+          execution_output: row.linked_execution_output, handle: row.linked_handle,
+          reply_count: row.linked_reply_count, thread_locked: !!row.linked_locked,
           poll: linkedPolls.get(row.linked_post_id), parent: row.linked_parent_user_id && row.linked_parent_handle
             ? { user_id: row.linked_parent_user_id, handle: row.linked_parent_handle }
             : null }

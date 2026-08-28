@@ -74,6 +74,14 @@ describe('in-memory stylesheet', () => {
     expect(css).toContain('.feed-thread .thread-root>.post>.poll { font-size: .8125rem;')
   })
 
+  test('styles execution output consistently in internal post hover cards', async () => {
+    const css = await Bun.file(new URL('./styles.css', import.meta.url)).text()
+    expect(css).toContain('.post.internal-post-card .code-fence.execution-output {')
+    expect(css).toContain('color: color-mix(in srgb, var(--quote-ink), var(--muted));')
+    expect(css).toContain('font-family: var(--font-monospace);')
+    expect(css).toContain('font-size: 0.75rem;')
+  })
+
   test('lets taps pass through todos that the viewer cannot edit', async () => {
     const css = await Bun.file(new URL('./styles.css', import.meta.url)).text()
     expect(css).toContain(
