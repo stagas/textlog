@@ -6315,6 +6315,11 @@ a.post-context:hover {
   display: none;
 }
 
+.omitted-parent-reply {
+  margin-left: clamp(18px, 3vw, 28px);
+  border-left: 1px solid var(--soft);
+}
+
 .post-page-thread.feed-thread:has(> .thread-fold-input:checked):has(> .feed-thread-collapsed-branch) {
   margin-bottom: var(--space-5);
 }

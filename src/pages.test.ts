@@ -914,7 +914,7 @@ test('folded feed conversations show a gap for same-depth replies omitted from t
   expect(html).toMatch(/collapsed-preview-post[^>]*>[\s\S]*?aria-label="Earlier replies hidden">…<\/div>[\s\S]*?id="post-45"/)
 })
 
-test('expanded feed conversations do not show collapsed sibling omission markers', () => {
+test('expanded partial feed conversations place sibling omission markers before the newest visible reply', () => {
   const root = { id: 895, user_id: 2, parent_id: null, body: 'Root', created_at: '2026-08-11 09:41:26',
     deleted_at: null, handle: 'followed', reply_count: 5, direct_reply_count: 5 }
   const visible = (id: number, created_at: string) => ({ id, user_id: 3, parent_id: root.id, body: `Reply ${id}`,
@@ -927,7 +927,7 @@ test('expanded feed conversations do not show collapsed sibling omission markers
       visible(2602, '2026-08-26 22:10:21'), visible(2607, '2026-08-26 23:28:22')],
   }))
 
-  expect(html).not.toContain('aria-label="Earlier replies omitted"')
+  expect(html).toMatch(/id="post-2602"[\s\S]*?aria-label="Earlier replies omitted">…<\/div>[\s\S]*?id="post-2607"/)
 })
 
 test('expanded complete deep threads remove feed-projection ancestor omission markers', () => {
@@ -993,6 +993,34 @@ test('locally collapsible complete conversations only render the collapsed-previ
   expect(html).toContain('aria-label="Earlier replies hidden"')
   expect(html).toContain('aria-label="Earlier replies omitted"')
   expect(html).not.toContain('>more</a>')
+})
+
+test('partial conversations place sibling omission markers at the newest visible boundary', () => {
+  const root = { id: 35, user_id: 1, parent_id: null, body: 'Root', created_at: '2026-08-07 15:44:34',
+    deleted_at: null, handle: 'root', reply_count: 5, direct_reply_count: 3 }
+  const branch = { id: 37, user_id: 2, parent_id: root.id, body: 'Older branch',
+    created_at: '2026-08-07 15:45:17', deleted_at: null, handle: 'branch', reply_count: 1,
+    direct_reply_count: 2, parent: root }
+  const branchReply = { id: 47, user_id: 1, parent_id: branch.id, body: 'Visible branch reply',
+    created_at: '2026-08-07 15:53:52', deleted_at: null, handle: 'reply', reply_count: 0,
+    direct_reply_count: 0, parent: branch }
+  const newest = { id: 2716, user_id: 3, parent_id: root.id, body: 'Newest visible reply',
+    created_at: '2026-08-28 03:51:52', deleted_at: null, handle: 'newest', reply_count: 0,
+    direct_reply_count: 0, parent: root }
+  const newerOlderReply = { id: 41, user_id: 4, parent_id: root.id, body: 'Newer older reply',
+    created_at: '2026-08-07 15:46:39', deleted_at: null, handle: 'newer', reply_count: 0,
+    direct_reply_count: 0, parent: root }
+  const html = renderToStaticMarkup(React.createElement(FeedThreads, {
+    user: null,
+    returnPath: '/latest',
+    expandedRootId: root.id,
+    posts: [root, branchReply, newerOlderReply, newest],
+    promoteAncestors: true,
+  }))
+
+  expect(html).not.toContain('id="post-37"')
+  expect(html).toMatch(/class="reply-node omitted-parent-reply"[\s\S]*?aria-label="Earlier replies omitted">…<\/div>[\s\S]*?id="post-47"[\s\S]*?id="post-41"[\s\S]*?id="post-2716"/)
+  expect(html.match(/aria-label="Earlier replies omitted"/g)).toHaveLength(1)
 })
 
 test('expanded feed conversations do not mark omissions when every reply at that depth is visible', () => {

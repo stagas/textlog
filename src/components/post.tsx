@@ -1011,7 +1011,10 @@ export function ThreadReplies(
     children.set(reply.parent_id!, siblings)
   }
   for (const siblings of children.values()) {
-    siblings.sort((a, b) => a.created_at.localeCompare(b.created_at) || a.id - b.id)
+    const conversationCreatedAt = (reply: PostView) => reply.feed_ancestor_gap && reply.parent?.id !== reply.parent_id
+      ? reply.parent?.created_at || reply.created_at
+      : reply.created_at
+    siblings.sort((a, b) => conversationCreatedAt(a).localeCompare(conversationCreatedAt(b)) || a.id - b.id)
   }
   const byId = new Map(replies.map(reply => [reply.id, reply]))
   const collapsedPreviewPosts = new Set(collapsedPreviewPostIds)
@@ -1060,6 +1063,17 @@ export function ThreadReplies(
     }
     visit(parentId)
   }
+  const omittedSiblingGapPosts = new Set<number>()
+  for (const [branchParentId, siblings] of children) {
+    if (branchParentId !== parentId) continue
+    const parent = byId.get(branchParentId)
+    const visibleSiblings = siblings.filter(sibling => !sibling.deleted_at)
+    const loadedDirectSiblings = visibleSiblings.filter(sibling => (sibling.parent?.id || sibling.parent_id) === branchParentId)
+    if (parent?.direct_reply_count != null && parent.direct_reply_count > loadedDirectSiblings.length
+      && visibleSiblings.length && !visibleSiblings.some(sibling => sibling.feed_ancestor_gap)) {
+      omittedSiblingGapPosts.add(visibleSiblings.at(-1)!.id)
+    }
+  }
   const descendantCounts = new Map<number, number>()
   const visibleDescendantCount = (id: number): number => {
     const cached = descendantCounts.get(id)
@@ -1085,11 +1099,15 @@ export function ThreadReplies(
         className={`reply-node${collapsedPreviewPath.has(reply.id) ? ' collapsed-preview-path' : ''}${
           collapsedPreviewPosts.has(reply.id) ? ' collapsed-preview-post' : ''
         }${needsCollapsedPreviewIndent(reply.id) ? ' collapsed-preview-deeper' : ''
+        }${reply.feed_ancestor_gap && reply.parent?.id !== reply.parent_id ? ' omitted-parent-reply' : ''
         }`}
         key={reply.id}
       >
         {collapsedPreviewGapPosts.has(reply.id) && (
           <div className="quiet thread-ancestor-gap collapsed-preview-gap" aria-label="Earlier replies hidden">…</div>
+        )}
+        {omittedSiblingGapPosts.has(reply.id) && (
+          <div className="quiet thread-ancestor-gap" aria-label="Earlier replies omitted">…</div>
         )}
         {reply.feed_ancestor_gap && (
           <div className="quiet thread-ancestor-gap" aria-label="Earlier replies omitted">…</div>
@@ -1165,12 +1183,15 @@ export function FeedThreads(
     externalChildren.set(post.parent_id, [...(externalChildren.get(post.parent_id) || []), post])
   }
   for (const [parentId, children] of externalChildren) {
-    if (!promoteAncestors && children.length < 2) continue
     const parent = children.find(child => child.parent?.id === parentId)?.parent
     if (!parent || ids.has(parent.id)) continue
+    if (!promoteAncestors && children.length < 2) continue
+    if (children.length < 2 && parent.parent_id && ids.has(parent.parent_id)
+      && !contextUnreadPostIds?.has(parent.parent_id)) continue
     treePosts.push({ ...parent, user_id: parent.user_id ?? -1,
       parent_id: parent.parent_id ?? null, reply_count: parent.reply_count || 0,
       ...(promoteAncestors && promoteAncestors !== 'all' && parent.parent_id != null
+        && (!ids.has(parent.parent_id) || contextUnreadPostIds?.has(parent.parent_id))
         ? { feed_ancestor_gap: true }
         : {}) })
     ids.add(parent.id)
@@ -1180,10 +1201,14 @@ export function FeedThreads(
       if (post.feed_branch_root) continue
       const immediateParent = post.parent
       if (!immediateParent) continue
-      if (!ids.has(immediateParent.id)) {
+      const shouldPromoteImmediate = promoteAncestors === 'all' || immediateParent.parent_id == null
+        || !ids.has(immediateParent.parent_id)
+        || contextUnreadPostIds?.has(immediateParent.parent_id)
+      if (!ids.has(immediateParent.id) && shouldPromoteImmediate) {
         treePosts.push({ ...immediateParent, user_id: immediateParent.user_id ?? -1,
           parent_id: immediateParent.parent_id ?? null, reply_count: immediateParent.reply_count || 0,
-          feed_ancestor_gap: promoteAncestors !== 'all' && immediateParent.parent_id != null })
+          feed_ancestor_gap: promoteAncestors !== 'all' && immediateParent.parent_id != null
+            && !ids.has(immediateParent.parent_id) })
         ids.add(immediateParent.id)
       }
       if (promoteAncestors === 'all') {
