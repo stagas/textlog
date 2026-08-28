@@ -6320,6 +6320,12 @@ a.post-context:hover {
   border-left: 1px solid var(--soft);
 }
 
+.feed-thread>.thread-fold-input:checked~.feed-thread-collapsed-branch
+  .omitted-parent-reply.collapsed-preview-path:not(.collapsed-preview-post) {
+  margin-left: 0;
+  border-left: 0;
+}
+
 .post-page-thread.feed-thread:has(> .thread-fold-input:checked):has(> .feed-thread-collapsed-branch) {
   margin-bottom: var(--space-5);
 }

@@ -1071,7 +1071,7 @@ export function ThreadReplies(
     const loadedDirectSiblings = visibleSiblings.filter(sibling => (sibling.parent?.id || sibling.parent_id) === branchParentId)
     if (parent?.direct_reply_count != null && parent.direct_reply_count > loadedDirectSiblings.length
       && visibleSiblings.length && !visibleSiblings.some(sibling => sibling.feed_ancestor_gap)) {
-      omittedSiblingGapPosts.add(visibleSiblings.at(-1)!.id)
+      omittedSiblingGapPosts.add((loadedDirectSiblings[0] || visibleSiblings[0]).id)
     }
   }
   const descendantCounts = new Map<number, number>()

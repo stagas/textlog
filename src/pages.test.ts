@@ -914,7 +914,7 @@ test('folded feed conversations show a gap for same-depth replies omitted from t
   expect(html).toMatch(/collapsed-preview-post[^>]*>[\s\S]*?aria-label="Earlier replies hidden">…<\/div>[\s\S]*?id="post-45"/)
 })
 
-test('expanded partial feed conversations place sibling omission markers before the newest visible reply', () => {
+test('expanded partial feed conversations place sibling omission markers before the oldest visible reply', () => {
   const root = { id: 895, user_id: 2, parent_id: null, body: 'Root', created_at: '2026-08-11 09:41:26',
     deleted_at: null, handle: 'followed', reply_count: 5, direct_reply_count: 5 }
   const visible = (id: number, created_at: string) => ({ id, user_id: 3, parent_id: root.id, body: `Reply ${id}`,
@@ -927,7 +927,7 @@ test('expanded partial feed conversations place sibling omission markers before 
       visible(2602, '2026-08-26 22:10:21'), visible(2607, '2026-08-26 23:28:22')],
   }))
 
-  expect(html).toMatch(/id="post-2602"[\s\S]*?aria-label="Earlier replies omitted">…<\/div>[\s\S]*?id="post-2607"/)
+  expect(html).toMatch(/aria-label="Earlier replies omitted">…<\/div>[\s\S]*?id="post-2599"/)
 })
 
 test('expanded complete deep threads remove feed-projection ancestor omission markers', () => {
@@ -1021,6 +1021,76 @@ test('partial conversations place sibling omission markers at the newest visible
   expect(html).not.toContain('id="post-37"')
   expect(html).toMatch(/class="reply-node omitted-parent-reply"[\s\S]*?aria-label="Earlier replies omitted">…<\/div>[\s\S]*?id="post-47"[\s\S]*?id="post-41"[\s\S]*?id="post-2716"/)
   expect(html.match(/aria-label="Earlier replies omitted"/g)).toHaveLength(1)
+})
+
+test('collapsed nested previews mark an omitted path without adding preview indentation twice', () => {
+  const root = { id: 2686, user_id: 1, parent_id: null, body: 'Root', created_at: '2026-08-27 18:00:25',
+    deleted_at: null, handle: 'root', reply_count: 7, direct_reply_count: 2 }
+  const omittedParent = { id: 2687, user_id: 1, parent_id: root.id, body: 'Omitted parent',
+    created_at: '2026-08-27 18:00:52', deleted_at: null, handle: 'root', reply_count: 5 }
+  const path = { id: 2689, user_id: 1, parent_id: root.id, body: 'Rewired path',
+    created_at: '2026-08-27 18:03:46', deleted_at: null, handle: 'root', reply_count: 4,
+    parent: omittedParent, feed_ancestor_gap: true }
+  const parentPreview = { id: 2725, user_id: 1, parent_id: path.id, body: 'Parent preview',
+    created_at: '2026-08-28 07:35:50', deleted_at: null, handle: 'root', reply_count: 1, parent: path }
+  const childPreview = { id: 2727, user_id: 1, parent_id: parentPreview.id, body: 'Child preview',
+    created_at: '2026-08-28 07:51:56', deleted_at: null, handle: 'root', reply_count: 0, parent: parentPreview }
+  const sibling = { id: 2712, user_id: 2, parent_id: root.id, body: 'Older sibling',
+    created_at: '2026-08-28 01:50:52', deleted_at: null, handle: 'sibling', reply_count: 0, parent: root }
+  const html = renderToStaticMarkup(React.createElement(FeedThreads, {
+    user: null,
+    returnPath: '/latest',
+    posts: [root, path, parentPreview, childPreview, sibling],
+  }))
+
+  expect(html).toContain('reply-node collapsed-preview-path omitted-parent-reply')
+  expect(html.match(/collapsed-preview-post/g)).toHaveLength(2)
+})
+
+test('expanded direct-sibling omissions appear before the oldest loaded sibling', () => {
+  const root = { id: 875, user_id: 1, parent_id: null, body: 'Root', created_at: '2026-08-10 20:52:39',
+    deleted_at: null, handle: 'root', reply_count: 4, direct_reply_count: 3 }
+  const older = { id: 2604, user_id: 2, parent_id: root.id, body: 'Older loaded sibling',
+    created_at: '2026-08-26 22:37:34', deleted_at: null, handle: 'older', reply_count: 0,
+    direct_reply_count: 0, parent: root }
+  const newer = { id: 2615, user_id: 3, parent_id: root.id, body: 'Newer loaded sibling',
+    created_at: '2026-08-27 01:27:01', deleted_at: null, handle: 'newer', reply_count: 1,
+    direct_reply_count: 1, parent: root }
+  const child = { id: 2718, user_id: 1, parent_id: newer.id, body: 'Newest child',
+    created_at: '2026-08-28 06:13:09', deleted_at: null, handle: 'root', reply_count: 0,
+    direct_reply_count: 0, parent: newer }
+  const html = renderToStaticMarkup(React.createElement(FeedThreads, {
+    user: null,
+    returnPath: '/latest',
+    expandedRootId: root.id,
+    posts: [root, older, newer, child],
+  }))
+
+  expect(html).toMatch(/aria-label="Earlier replies omitted">…<\/div>[\s\S]*?id="post-2604"[\s\S]*?id="post-2615"/)
+  expect(html).not.toMatch(/id="post-2604"[\s\S]*?aria-label="Earlier replies omitted">…<\/div>[\s\S]*?id="post-2615"/)
+})
+
+test('collapsed previews retain extra depth when the preview itself has an omitted parent', () => {
+  const root = { id: 2515, user_id: 1, parent_id: null, body: 'Root', created_at: '2026-08-26 05:07:55',
+    deleted_at: null, handle: 'root', reply_count: 14, direct_reply_count: 6 }
+  const omittedParent = { id: 2701, user_id: 2, parent_id: root.id, body: 'Omitted parent',
+    created_at: '2026-08-27 20:45:37', deleted_at: null, handle: 'parent', reply_count: 1 }
+  const deeper = { id: 2706, user_id: 1, parent_id: root.id, body: 'Deeper preview',
+    created_at: '2026-08-27 22:16:52', deleted_at: null, handle: 'root', reply_count: 0,
+    parent: omittedParent, feed_ancestor_gap: true }
+  const sibling = { id: 2717, user_id: 3, parent_id: root.id, body: 'Sibling preview',
+    created_at: '2026-08-28 05:30:19', deleted_at: null, handle: 'sibling', reply_count: 0, parent: root }
+  const older = { id: 2705, user_id: 4, parent_id: root.id, body: 'Older reply',
+    created_at: '2026-08-27 22:14:39', deleted_at: null, handle: 'older', reply_count: 0, parent: root }
+  const html = renderToStaticMarkup(React.createElement(FeedThreads, {
+    user: null,
+    returnPath: '/latest',
+    posts: [root, deeper, sibling, older],
+  }))
+
+  expect(html).toMatch(/collapsed-preview-post omitted-parent-reply[^>]*>[\s\S]*?id="post-2706"/)
+  expect(html).toMatch(/collapsed-preview-post[^>]*>[\s\S]*?id="post-2717"/)
+  expect(html.match(/collapsed-preview-post omitted-parent-reply/g)).toHaveLength(1)
 })
 
 test('expanded feed conversations do not mark omissions when every reply at that depth is visible', () => {
