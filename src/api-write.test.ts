@@ -207,15 +207,15 @@ describe('API writes', () => {
     expect((await post(app, 'alice-token', { body: 'x'.repeat(501) })).status).toBe(400)
   })
 
-  test('rejects posts over ten lines with a useful server error', async () => {
+  test('rejects posts over fifteen lines with a useful server error', async () => {
     const { app } = fixture()
-    const response = await post(app, 'alice-token', { body: Array(11).fill('x').join('\n') })
+    const response = await post(app, 'alice-token', { body: Array(16).fill('x').join('\n') })
 
     expect(response.status).toBe(400)
     expect(await response.json()).toMatchObject({
       error: {
         code: 'invalid_body',
-        message: 'The note exceeds the limit: 11/10 lines.',
+        message: 'The note exceeds the limit: 16/15 lines.',
       },
     })
   })

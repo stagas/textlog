@@ -321,7 +321,7 @@ function PostingHelpTabs({ search }: { search?: PostingSuggestionSearch | null }
   )
 }
 
-export function PostingHelp({ maxLength = 500, maxLines = 10, search, oneLine = false }: {
+export function PostingHelp({ maxLength = 500, maxLines = 15, search, oneLine = false }: {
   maxLength?: number
   maxLines?: number
   search?: PostingSuggestionSearch | null

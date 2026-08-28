@@ -1,5 +1,5 @@
 export const POST_MAX = 500
-export const POST_MAX_LINES = 10
+export const POST_MAX_LINES = 15
 
 // Textareas expose line breaks as \n, but form submission may serialize them as
 // \r\n. Store and validate the textarea value's canonical representation so a

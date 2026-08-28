@@ -375,7 +375,7 @@ test('posting helpers are searchable details and show copyable highlighted resul
   }))
 
   expect(html).toContain('<details class="posting-help-details" open="">')
-  expect(html).toContain('<span class="posting-help-limits">500 chars / 10 lines max</span>')
+  expect(html).toContain('<span class="posting-help-limits">500 chars / 15 lines max</span>')
   expect(html).toContain('<br/>use #hashtags, @mentions and more</span>')
   expect(html).not.toContain('<h2>Find hashtags and people</h2>')
   expect(html).not.toContain('<h2>Formatting</h2>')
