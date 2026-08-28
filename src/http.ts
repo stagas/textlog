@@ -149,10 +149,23 @@ const DONATION_BANNER_COOKIE = 'donation_banner_dismissed'
 const CAMPAIGN_ATTRIBUTION_COOKIE = 'campaign_attribution'
 const PWA_STANDALONE_COOKIE = 'pwa_standalone'
 const PWA_INSTALL_BANNER_COOKIE = 'pwa_install_banner_dismissed'
+const EXPLORE_WELCOME_COOKIE = 'explore_welcome'
 
 function cookieValue(request: Request, name: string) {
   const escaped = name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
   return request.headers.get('cookie')?.match(new RegExp(`(?:^|;\\s*)${escaped}=([^;]+)`))?.[1] || null
+}
+
+export function exploreWelcome(request: Request) {
+  return cookieValue(request, EXPLORE_WELCOME_COOKIE) === '1'
+}
+
+export function exploreWelcomeCookie(value = '1', maxAge = 365 * 24 * 60 * 60,
+  appUrl: string | undefined = Bun.env.APP_URL)
+{
+  return `${EXPLORE_WELCOME_COOKIE}=${value}; Max-Age=${maxAge}; HttpOnly; Path=/explore; SameSite=Lax${
+    secureCookie(appUrl)
+  }`
 }
 
 export function campaignAttribution(request: Request) {
@@ -230,7 +243,7 @@ const publicHtmlPaths = new Set([
   '/api/embed-examples',
 ])
 const publicHtmlPattern = /^\/(?:u\/[a-z0-9_]{2,24}|post\/[1-9]\d*|tag\/[a-z0-9_]+|embed\/.+)$/i
-const transientHtmlParameters = ['reply', 'report', 'reported', 'edit', 'welcome', 'reset', 'token']
+const transientHtmlParameters = ['reply', 'report', 'reported', 'edit', 'reset', 'token']
 
 export function htmlCacheControl(request: Request, response: Response) {
   if (!['GET', 'HEAD'].includes(request.method) || response.status !== 200) return 'private, no-store'

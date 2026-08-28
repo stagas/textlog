@@ -23,7 +23,6 @@ export function Explore({ user, welcome = false, tagsPage = 1, peoplePage = 1, d
   const peoplePath = `/explore${tagsPage > 1 ? `?tagsPage=${tagsPage}` : ''}`
   const explorePath = () => {
     const query = new URLSearchParams()
-    if (welcome) query.set('welcome', '1')
     if (tagsPage > 1) query.set('tagsPage', String(tagsPage))
     if (peoplePage > 1) query.set('peoplePage', String(peoplePage))
     return `/explore${query.size ? `?${query}` : ''}`
@@ -34,7 +33,10 @@ export function Explore({ user, welcome = false, tagsPage = 1, peoplePage = 1, d
   return (
     <Layout user={user} title="explore">
       {user && welcome && (
-        <Panel as="section" width="wide" className="welcome-panel" role="status">
+        <Panel as="section" width="fluid" className="welcome-panel" role="status">
+          <form className="welcome-dismiss" method="post" action="/explore/welcome/dismiss">
+            <button type="submit" aria-label="Dismiss welcome"><span aria-hidden="true" /></button>
+          </form>
           <p className="eyebrow">welcome to {appName()}</p>
           <h1>Make this place yours.</h1>
           <p>Follow a few people or hashtags below, or start with a note of your own.</p>
@@ -43,12 +45,12 @@ export function Explore({ user, welcome = false, tagsPage = 1, peoplePage = 1, d
             secondary={<a href="/">browse notes</a>} />
           <nav className="welcome-settings" aria-label="Set up your account">
             <span>
-              <a href="/account/edit/notifications">enable notifications</a>
-              <a href="/account/edit/appearance">customize appearance</a>
+              <a className="button" href="/account/edit/notifications">enable notifications</a>
+              <a className="button" href="/account/edit/appearance">customize appearance</a>
             </span>
             <span>
-              <a href="/account/edit/invite">invite friends</a>
-              <a href="/account/password/enable">set up a password</a>
+              <a className="button" href="/account/edit/invite">invite friends</a>
+              <a className="button" href="/account/password/enable">set up a password</a>
             </span>
           </nav>
         </Panel>

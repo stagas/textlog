@@ -1980,7 +1980,7 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
       catch {
         return { status: 'unavailable' } as DatabaseDomainOutput<K>
       }
-      const nextPath = newAccount && link.next_path === '/' ? '/explore?welcome=1' : link.next_path
+      const nextPath = newAccount && link.next_path === '/' ? '/explore' : link.next_path
       return { status: 'ready', session, destination: chosen
         ? nextPath
         : `/choose-handle?next=${encodeURIComponent(nextPath)}` } as DatabaseDomainOutput<K>

@@ -361,7 +361,7 @@ app.use('*', async (c, next) => {
   const privatePath =
     /^\/(?:enter|forgot-password|reset-password|choose-handle|write|compose|activity|admin|search|account|panels-gallery|recap-email|interacted-email)(?:\/|$)/
       .test(url.pathname) || /^\/post\/\d+\/(?:edit|delete)$/.test(url.pathname)
-  const transientParameters = ['reply', 'report', 'reported', 'edit', 'welcome', 'reset', 'token']
+  const transientParameters = ['reply', 'report', 'reported', 'edit', 'reset', 'token']
   const navigationOnly = url.searchParams.has('from')
   const transient = transientParameters.some(name => url.searchParams.has(name))
   if (navigationOnly) c.header('X-Robots-Tag', 'noindex, follow')

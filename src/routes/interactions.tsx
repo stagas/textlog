@@ -8,6 +8,8 @@ import {
 import { isValidHashtag, normalizeHashtag } from '../content'
 import { databaseService } from '../database-service'
 import {
+  exploreWelcome,
+  exploreWelcomeCookie,
   safeRefererPath,
 } from '../http'
 import { logError } from '../log'
@@ -119,12 +121,17 @@ export function registerInteractionsRoutes(app: Hono) {
       peoplePage,
     })
     const response = page(
-      <Explore user={user} welcome={c.req.query('welcome') === '1'} tagsPage={tagsPage} peoplePage={peoplePage}
+      <Explore user={user} welcome={!!user && exploreWelcome(c.req.raw)} tagsPage={tagsPage} peoplePage={peoplePage}
         data={data} />,
     )
     if (savedPeople) {
       response.headers.append('set-cookie', 'explore_people=; Max-Age=0; Path=/explore; HttpOnly; SameSite=Lax')
     }
     return response
+  })
+
+  app.post('/explore/welcome/dismiss', c => {
+    if (!currentUser(c.req.raw)) return redirect('/enter')
+    return redirect('/explore', exploreWelcomeCookie('', 0))
   })
 }

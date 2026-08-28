@@ -3,7 +3,7 @@ import { sessionCookieName } from '../brand'
 import { Auth, ChooseHandle, ForgotPassword, MagicLinkSent, PasswordLogin, ResetPassword } from '../components/pages'
 import { sendMagicLink, sendPasswordReset } from '../email'
 import { isDevelopment } from '../environment'
-import { campaignAttribution, campaignAttributionCookie, clearSessionCookie, safeLocalPath,
+import { campaignAttribution, campaignAttributionCookie, clearSessionCookie, exploreWelcomeCookie, safeLocalPath,
   sessionCookie } from '../http'
 import { logError } from '../log'
 import { moderateText, moderationMessage } from '../moderation'
@@ -345,7 +345,9 @@ export function registerAuthRoutes(app: Hono) {
     const campaign = campaignAttribution(c.req.raw)
     if (campaign) await databaseService().call('stats.recordCampaignSignup', { campaign, userId: user.id })
     void sendPushForSignup(user.id, handle).catch(error => logError('signup push failed', error))
-    return redirect(next, campaign ? campaignAttributionCookie('', 0) : undefined)
+    const response = redirect(next, campaign ? campaignAttributionCookie('', 0) : undefined)
+    response.headers.append('set-cookie', exploreWelcomeCookie())
+    return response
   })
 
   app.post('/logout', async c => {

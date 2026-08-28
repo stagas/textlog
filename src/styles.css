@@ -5354,8 +5354,45 @@ form.report-panel {
 }
 
 .welcome-panel {
-  margin: var(--space-6) var(--gutter) 0;
+  position: relative;
+  width: calc(100% - (2 * var(--gutter)));
+  max-width: 620px;
+  margin: var(--space-6) auto 0;
   padding: clamp(22px, 5vw, 34px);
+  text-align: center;
+}
+
+.welcome-dismiss {
+  position: absolute;
+  top: var(--space-3);
+  right: var(--space-3);
+}
+
+.welcome-dismiss button {
+  position: relative;
+  width: 2rem;
+  height: 2rem;
+  padding: 0;
+  border: 0;
+  color: var(--quote-ink);
+  background: transparent;
+  cursor: pointer;
+}
+
+.welcome-dismiss button span,
+.welcome-dismiss button span::after {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 0.7rem;
+  height: 1px;
+  background: currentColor;
+  content: "";
+  transform: translate(-50%, -50%) rotate(45deg);
+}
+
+.welcome-dismiss button span::after {
+  transform: translate(-50%, -50%) rotate(-90deg);
 }
 
 .welcome-panel .eyebrow {
@@ -5377,6 +5414,10 @@ form.report-panel {
   font-size: 0.75rem;
 }
 
+.welcome-actions {
+  justify-content: center;
+}
+
 .welcome-settings {
   display: grid;
   gap: var(--space-2);
@@ -5386,12 +5427,16 @@ form.report-panel {
 
 .welcome-settings span {
   display: flex;
+  justify-content: center;
   flex-wrap: wrap;
-  gap: var(--space-2) var(--space-4);
+  gap: var(--space-2);
 }
 
-.welcome-settings a {
-  border-bottom: var(--hairline) solid var(--link-border);
+.welcome-settings .button {
+  box-sizing: border-box;
+  width: 11rem;
+  padding: var(--space-2) var(--space-3);
+  line-height: 1.25;
 }
 
 .verify-email-panel {

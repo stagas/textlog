@@ -34,6 +34,7 @@ import { confirmEmailToken, findEmailToken } from '../email-verification'
 import { isDevelopment } from '../environment'
 import {
   clearSessionCookie,
+  exploreWelcomeCookie,
   notificationDevice,
   notificationDeviceCookie,
   notificationUserAgent,
@@ -897,7 +898,9 @@ export function registerAccountRoutes(app: Hono) {
     const f = await form(c.req.raw)
     const result = await databaseService().call('account.confirmEmailToken', { value: f.token || '', now: Date.now() })
     if (!result.ok) return page(<ConfirmEmail invalid />, 400)
-    return redirect(result.kind === 'change' ? '/account/security?changed=email' : '/explore?welcome=1')
+    return result.kind === 'change'
+      ? redirect('/account/security?changed=email')
+      : redirect('/explore', exploreWelcomeCookie())
   })
 
   app.post('/account/sessions/revoke', async c => {

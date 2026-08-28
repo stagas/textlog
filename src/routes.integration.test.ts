@@ -189,7 +189,7 @@ test('/?reddit attributes a completed signup', async () => {
   const chosen = await request('/choose-handle', {
     method: 'POST',
     cookie,
-    form: { handle: 'reddit_user', next: '/explore?welcome=1' },
+    form: { handle: 'reddit_user', next: '/explore' },
   })
 
   expect(chosen.status).toBe(303)
@@ -225,7 +225,8 @@ async function signup(handle: string, email: string, _password: string, ip?: str
     const next = new URL(chooseLocation, origin).searchParams.get('next') || '/'
     const chosen = await request('/choose-handle', { method: 'POST', cookie, form: { handle, next } })
     expect(chosen.status).toBe(303)
-    expect(chosen.headers.get('location')).toBe('/explore?welcome=1')
+    expect(chosen.headers.get('location')).toBe('/explore')
+    expect(chosen.headers.get('set-cookie')).toContain('explore_welcome=1')
   }
   return cookie
 }
@@ -390,7 +391,7 @@ test('signed-in users can invite a deduplicated list of friends with join magic 
 
   const joined = await request(`/enter/magic?token=${encodeURIComponent(linkToken(firstMessages[0]!))}`)
   expect(joined.status).toBe(303)
-  expect(joined.headers.get('location')).toBe('/choose-handle?next=%2Fexplore%3Fwelcome%3D1')
+  expect(joined.headers.get('location')).toBe('/choose-handle?next=%2Fexplore')
 })
 
 test('accounts sharing an email can be created, switched, and selected by magic-link login', async () => {
@@ -953,14 +954,21 @@ test('consequential account, content, reporting, and admin flows work over HTTP'
   expect(tagSearchHtml).toContain('placeholder="search tags"')
   const peopleSearchHtml = await (await request('/search?q=hello&tab=people')).text()
   expect(peopleSearchHtml).toContain('placeholder="search people"')
-  const welcomeExplore = await request('/explore?welcome=1', { cookie: aliceCookie })
+  const welcomeCookie = `${aliceCookie}; explore_welcome=1`
+  const welcomeExplore = await request('/explore', { cookie: welcomeCookie })
   const welcomeExploreHtml = await welcomeExplore.text()
-  expect(welcomeExploreHtml).toContain('href="/u/alice?from=%2Fexplore%3Fwelcome%3D1">profile</a>')
+  expect(welcomeExploreHtml).toContain('href="/u/alice?from=%2Fexplore">profile</a>')
   expect(welcomeExploreHtml).not.toContain('action="/search"')
+  expect(welcomeExploreHtml).toContain('action="/explore/welcome/dismiss"')
+  expect(welcomeExploreHtml).toContain('aria-label="Dismiss welcome"')
   expect(welcomeExploreHtml).toContain('href="/account/edit/notifications">enable notifications</a>')
   expect(welcomeExploreHtml).toContain('href="/account/edit/appearance">customize appearance</a>')
   expect(welcomeExploreHtml).toContain('href="/account/edit/invite">invite friends</a>')
   expect(welcomeExploreHtml).toContain('href="/account/password/enable">set up a password</a>')
+  const dismissedWelcome = await request('/explore/welcome/dismiss', { method: 'POST', cookie: welcomeCookie })
+  expect(dismissedWelcome.status).toBe(303)
+  expect(dismissedWelcome.headers.get('location')).toBe('/explore')
+  expect(dismissedWelcome.headers.get('set-cookie')).toContain('explore_welcome=; Max-Age=0')
   const publicProfile = await request('/u/alice', { cookie: aliceCookie })
   expect(publicProfile.status).toBe(200)
   const followBadge = await request('/u/alice/follow.png')
