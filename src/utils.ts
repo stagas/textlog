@@ -74,7 +74,7 @@ function previewLink(html: string, url: string, appUrl: string | undefined, popo
       try {
         const destination = new URL(url)
         destination.searchParams.set('from', preview.linkedPostReturnPath)
-        return html.replace(`href="${esc(url)}"`, `href="${esc(destination.href)}"`)
+        return html.replace(/href="[^"]*"/, `href="${esc(destination.href)}"`)
       }
       catch {
         return html
@@ -288,7 +288,7 @@ type LinkToken = {
   index: number
   lastIndex: number
   kind: 'bold' | 'code' | 'code-fence' | 'italics' | 'latex-fence' | 'math' | 'markdown' | 'redacted' | 'strikethrough'
-    | 'underline' | 'url' | 'reference'
+    | 'underline' | 'url' | 'reference' | 'post-reference'
   raw: string
   url?: string
   label?: string
@@ -381,7 +381,7 @@ export function linkTokens(body: string, flags?: PostContentFlags): LinkToken[] 
     }
   }
   if (!flags || flags.has_latex) tokens.push(...mathTokens(body, tokens))
-  for (const match of body.matchAll(/(?<!~)(~{1,2})(?!~)([^~\r\n]*?\S[^~\r\n]*?)\1(?!~)/g)) {
+  for (const match of body.matchAll(/(?<!~)(~{1,2})(?![~0-9])([^~\r\n]*?\S[^~\r\n]*?)\1(?!~)/g)) {
     if (!escapedAt(body, match.index)) {
       tokens.push({ index: match.index, lastIndex: match.index + match[0].length, kind: 'strikethrough', raw: match[0],
         label: match[2] })
@@ -442,8 +442,15 @@ export function linkTokens(body: string, flags?: PostContentFlags): LinkToken[] 
       }
     }
   }
+  for (const match of body.matchAll(/(?<![\p{L}\p{M}\p{N}_~])~[0-9]+/gu)) {
+    const lastIndex = match.index + match[0].length
+    if (!escapedAt(body, match.index)
+      && !tokens.some(token => token.kind === 'url' && match.index < token.lastIndex && lastIndex > token.index)) {
+      tokens.push({ index: match.index, lastIndex, kind: 'post-reference', raw: match[0] })
+    }
+  }
   const priority = { 'code-fence': 0, 'latex-fence': 0, code: 1, math: 2, markdown: 3, redacted: 4, strikethrough: 4,
-    bold: 4, italics: 4, underline: 4, url: 5, reference: 6 }
+    bold: 4, italics: 4, underline: 4, url: 5, reference: 6, 'post-reference': 6 }
   const result = tokens.sort((a, b) => a.index - b.index || priority[a.kind] - priority[b.kind])
   linkTokenCache.set(cacheKey, result)
   if (linkTokenCache.size > MAX_LINK_TOKEN_CACHE_ENTRIES) linkTokenCache.delete(linkTokenCache.keys().next().value!)
@@ -461,6 +468,12 @@ export function postLinks(body: string) {
     end = token.lastIndex
   }
   return links
+}
+
+export function postReferenceIds(body: string) {
+  return linkTokens(body)
+    .filter(token => token.kind === 'post-reference')
+    .map(token => Number(token.raw.slice(1)))
 }
 
 function renderedText(value: string, highlightTerms: string[]) {
@@ -538,13 +551,19 @@ function linkifyAsciiReferences(body: string, mentionBios: Record<string, string
   let html = ''
   let end = 0
   const tokens = linkTokens(body, { has_latex: 1, has_links: 1, has_code: 1 })
-  const markupRanges = tokens.filter(token => token.kind !== 'reference' && token.kind !== 'url')
+  const markupRanges = tokens.filter(token => token.kind !== 'reference' && token.kind !== 'post-reference'
+    && token.kind !== 'url')
   for (const match of tokens) {
-    if ((match.kind !== 'reference' && match.kind !== 'url') || match.index < end
+    if ((match.kind !== 'reference' && match.kind !== 'post-reference' && match.kind !== 'url') || match.index < end
       || markupRanges.some(range => match.index >= range.index && match.index < range.lastIndex)) continue
     html += esc(body.slice(end, match.index))
     if (match.kind === 'reference') {
       html += renderedReference(match.raw, mentionBios, mentionNoteCounts, hashtagCounts, [], navigationQuery, popover)
+    }
+    else if (match.kind === 'post-reference') {
+      const href = `/post/${Number(match.raw.slice(1))}`
+      const previewUrl = appUrl ? `${appUrl.replace(/\/$/, '')}${href}` : href
+      html += previewLink(`<a href="${href}">${esc(match.raw)}</a>`, previewUrl, appUrl, popover)
     }
     else {
       const url = match.url!
@@ -668,6 +687,11 @@ export function linkify(body: string, mentionBios: Record<string, string> = {}, 
         appUrl,
         popover,
       )
+    }
+    else if (match.kind === 'post-reference') {
+      const href = `/post/${Number(token.slice(1))}`
+      const previewUrl = appUrl ? `${appUrl.replace(/\/$/, '')}${href}` : href
+      html += previewLink(`<a href="${href}">${highlighted(token, highlightTerms)}</a>`, previewUrl, appUrl, popover)
     }
     else {
       html += renderedReference(token, mentionBios, mentionNoteCounts, hashtagCounts, highlightTerms, navigationQuery,

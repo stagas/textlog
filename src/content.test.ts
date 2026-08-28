@@ -6,6 +6,7 @@ describe('content metadata extraction', () => {
     expect(postContentFlags('ordinary text')).toEqual({ has_latex: 0, has_links: 0, has_code: 0 })
     expect(postContentFlags('see example.com and @reader #notes'))
       .toEqual({ has_latex: 0, has_links: 1, has_code: 0 })
+    expect(postContentFlags('see ~123')).toEqual({ has_latex: 0, has_links: 1, has_code: 0 })
     expect(postContentFlags('`const x = 1` and $x^2$'))
       .toEqual({ has_latex: 1, has_links: 0, has_code: 1 })
     expect(postContentFlags('```latex\n\\frac{1}{2}\n```'))

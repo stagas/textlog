@@ -5,7 +5,7 @@ import { appName, appOrigin } from './brand'
 import { createImageKey, deleteImages, deleteImagesAfterCommit, getImageUrl, imageDimensions, isImageKey,
   MAX_IMAGE_BYTES, uploadImage, validateImageData } from './image-storage'
 import type { LinkPreview } from './types'
-import { postLinks } from './utils'
+import { postLinks, postReferenceIds } from './utils'
 
 const MAX_LINKS = 5
 const MAX_HTML_BYTES = 1024 * 1024
@@ -452,7 +452,11 @@ export async function discoverLinkPreviews(body: string,
       return null
     }
   }
-  const previews = await Promise.all(postLinks(body).slice(0, MAX_LINKS).map(preview))
+  const origin = appOrigin()
+  const urls = [...postLinks(body), ...(origin
+    ? postReferenceIds(body).map(id => `${origin}/post/${id}`)
+    : [])].filter((url, index, values) => values.indexOf(url) === index)
+  const previews = await Promise.all(urls.slice(0, MAX_LINKS).map(preview))
   return previews.filter(value => value !== null)
 }
 

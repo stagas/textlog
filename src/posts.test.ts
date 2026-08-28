@@ -118,6 +118,15 @@ describe('post persistence', () => {
     expect(linkify('Keep \\~~literal~~')).toBe('Keep \\~~literal~~')
     expect(linkify('Keep \\~literal~')).toBe('Keep \\~literal~')
   })
+  test('linkifies numerical tilde post references without conflicting with strikethrough', () => {
+    expect(linkify('see ~123 and ~strike through~', {}, [], 'https://textlog.test')).toBe(
+      'see <a href="/post/123">~123</a> and <del>strike through</del>',
+    )
+    expect(linkify('see ~123', {}, [], 'https://textlog.test', { has_latex: 0, has_links: 0, has_code: 0 }))
+      .toBe('see <a href="/post/123">~123</a>')
+    expect(linkify('escaped \\~123 and word~123', {}, [], 'https://textlog.test'))
+      .toBe('escaped \\~123 and word~123')
+  })
   test('renders single and double Markdown bold and underline markers in posts', () => {
     expect(linkify('*bold* and **also bold**')).toBe('<strong>bold</strong> and <strong>also bold</strong>')
     expect(linkify('_underlined_ and __also underlined__')).toBe('<u>underlined</u> and <u>also underlined</u>')
@@ -476,6 +485,21 @@ describe('post persistence', () => {
     expect(html).toContain('class="remote-link-popover internal-post-popover"')
     expect(html).toContain('<article class="post internal-post-card tappable-post">rendered post</article>')
     expect(html).not.toContain('--preview-image')
+  })
+
+  test('uses internal post hover cards for numerical tilde references', () => {
+    const url = 'https://textlog.test/post/12'
+    const html = linkify('see ~12', {}, [], 'https://textlog.test', undefined, '', {}, {}, {
+      signedIn: true,
+      formPrefix: 'post-1',
+      linkPreviews: {
+        [url]: { imageUrl: url, renderedPostHtml: '<article class="post">referenced post</article>',
+          linkedPostReturnPath: '/post/1#post-1' },
+      },
+    })
+    expect(html).toContain('class="remote-link-menu internal-post-link-menu"')
+    expect(html).toContain('href="https://textlog.test/post/12?from=%2Fpost%2F1%23post-1"')
+    expect(html).toContain('<article class="post">referenced post</article>')
   })
 
   test('trims trailing whitespace from bios in user popovers', () => {
