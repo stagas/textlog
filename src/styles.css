@@ -6362,13 +6362,7 @@ a.post-context:hover {
   border-left: 1px solid var(--soft);
 }
 
-.feed-thread>.thread-fold-input:not(:checked)~.feed-thread-collapsed-branch .omitted-parent-reply {
-  margin-left: 0;
-  border-left: 0;
-}
-
-.feed-thread>.thread-fold-input:checked~.feed-thread-collapsed-branch
-  .omitted-parent-reply.collapsed-preview-path {
+.feed-thread .omitted-parent-reply {
   margin-left: 0;
   border-left: 0;
 }

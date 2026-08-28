@@ -178,7 +178,7 @@ describe('in-memory stylesheet', () => {
       + '  display: none;')
     expect(css).toContain('.omitted-parent-reply {\n'
       + '  margin-left: clamp(18px, 3vw, 28px);\n  border-left: 1px solid var(--soft);')
-    expect(css).toContain('.omitted-parent-reply.collapsed-preview-path {\n'
+    expect(css).toContain('.feed-thread .omitted-parent-reply {\n'
       + '  margin-left: 0;\n  border-left: 0;')
     expect(css).toContain('.reply-node:not(.collapsed-preview-path) {\n  height: 0;')
     expect(css).toContain('.thread-ancestor-gap:not(.collapsed-preview-gap) {\n  height: 0;')
