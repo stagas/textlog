@@ -257,7 +257,8 @@ export function registerPostsRoutes(app: Hono) {
       )
     }
     if (f.action === 'preview') {
-      return page(<Compose user={user} body={body} draftId={editingDraftId} preview returnPath={returnPath} />)
+      return page(<Compose user={user} body={body} draftId={editingDraftId} preview
+        previewExecutionOutput={await executePostCode(body)} returnPath={returnPath} />)
     }
     if (f.action === 'draft') {
       const result = await databaseService().call('drafts.save', {
@@ -421,7 +422,7 @@ export function registerPostsRoutes(app: Hono) {
     if (f.action === 'preview') {
       return page(
         <EditPost user={user} post={post} parent={parent} body={body} preview returnPath={returnPath}
-          moderator={moderating} />,
+          moderator={moderating} previewExecutionOutput={await executePostCode(body)} />,
       )
     }
     try {
@@ -522,7 +523,7 @@ export function registerPostsRoutes(app: Hono) {
     if (f.action === 'preview') {
       return page(
         <Reply user={user} post={parent} showForm body={body} draftId={editingDraftId} preview
-          returnPath={returnPath} />,
+          previewExecutionOutput={await executePostCode(body)} returnPath={returnPath} />,
       )
     }
     if (f.action === 'draft') {

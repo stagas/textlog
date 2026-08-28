@@ -15,11 +15,12 @@ import { Panel } from './panel'
 import { Post } from './post'
 
 export function Compose(
-  { user, error, body = '', preview = false, returnPath = '/', suggestionSearch, draftId }: {
+  { user, error, body = '', preview = false, previewExecutionOutput, returnPath = '/', suggestionSearch, draftId }: {
     user: User
     error?: string
     body?: string
     preview?: boolean
+    previewExecutionOutput?: string | null
     returnPath?: string
     suggestionSearch?: PostingSuggestionSearch | null
     draftId?: number
@@ -42,6 +43,7 @@ export function Compose(
             user_id: user.id,
             parent_id: null,
             body,
+            execution_output: previewExecutionOutput,
             created_at: new Date().toISOString().slice(0, 19).replace('T', ' '),
             deleted_at: null,
             handle: user.handle,

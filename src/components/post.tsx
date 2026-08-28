@@ -478,14 +478,16 @@ function ageContextLabel(label: string, wording: PostAge['wording']) {
   return aged + (hasMention ? mentionSuffix : '') + ':'
 }
 
-export function PreviewPost({ p }: { p: PostView }) {
+export function PreviewPost({ p, user }: { p: PostView; user?: User }) {
   const formPrefix = `preview-post-${p.id}`
   return (
     <article className="post" id={`post-${p.id}`}>
-      <MetaRow className="posttop preview-post-meta">
-        <UserReference handle={p.handle} bio={p.bio} noteCount={p.note_count || 0} stats={p.profile_stats} user={null}
-          currentHandle={p.handle} referenceData={p.bio_reference} />
-        <span className="postdate">read</span>
+      <MetaRow className="posttop posttop-context preview-post-meta">
+        {user?.id === p.user_id
+          ? <span className="post-context post-context-author">you</span>
+          : <UserReference handle={p.handle} bio={p.bio} noteCount={p.note_count || 0} stats={p.profile_stats}
+            user={user || null} currentHandle={user?.handle} referenceData={p.bio_reference} />}
+        <span className="post-context">wrote:</span>
       </MetaRow>
       <ContentWarning p={p} controlId={`${formPrefix}-content-warning`}>
         <div className={`post-body${containsAsciiArt(p.body) ? ' ascii-art' : ''}${endsWithCodeFence(p.body)

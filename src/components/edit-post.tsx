@@ -7,7 +7,7 @@ import { ReplyBox, ReplyPreview } from './reply'
 
 export function EditPost(
   { user, post, parent, replies = [], error, body = post.body, preview = false, returnPath, suggestionSearch,
-    moderator = false }: {
+    moderator = false, previewExecutionOutput }: {
       user: User
       post: PostRow & { handle?: string }
       parent?: PostView | null
@@ -18,6 +18,7 @@ export function EditPost(
       returnPath?: string
       suggestionSearch?: PostingSuggestionSearch | null
       moderator?: boolean
+      previewExecutionOutput?: string | null
     },
 ) {
   const returnQuery = returnPath ? '?from=' + encodeURIComponent(returnPath) : ''
@@ -30,11 +31,13 @@ export function EditPost(
               returnPath={returnPath} backHref={returnPath} showReadAction={false} />
           </div>
         )}
-        {preview && post.parent_id && parent && <ReplyPreview parent={parent} user={user} body={body} />}
+        {preview && post.parent_id && parent && <ReplyPreview parent={parent} user={user} body={body}
+          executionOutput={previewExecutionOutput} />}
         {preview && !post.parent_id && (
           <div className="compose-post-preview">
             <h2>preview</h2>
-            <PreviewPost p={{ ...post, body, handle: post.handle || user.handle, bio: moderator ? '' : user.bio }} />
+            <PreviewPost user={user} p={{ ...post, body, execution_output: previewExecutionOutput,
+              handle: post.handle || user.handle, bio: moderator ? '' : user.bio }} />
           </div>
         )}
         <ReplyBox action={'/post/' + post.id + '/edit'} body={body} error={error} suggestionSearch={suggestionSearch}

@@ -52,7 +52,9 @@ export function ReplyBox(
   )
 }
 
-export function ReplyPreview({ parent, user, body }: { parent: PostView; user: User; body: string }) {
+export function ReplyPreview({ parent, user, body, executionOutput }: {
+  parent: PostView; user: User; body: string; executionOutput?: string | null
+}) {
   return (
     <div className="reply-preview">
       <p className="eyebrow">preview</p>
@@ -63,6 +65,7 @@ export function ReplyPreview({ parent, user, body }: { parent: PostView; user: U
             user_id: user.id,
             parent_id: parent.id,
             body,
+            execution_output: executionOutput,
             created_at: new Date().toISOString().slice(0, 19).replace('T', ' '),
             deleted_at: null,
             handle: user.handle,
@@ -78,7 +81,7 @@ export function ReplyPreview({ parent, user, body }: { parent: PostView; user: U
 export function Reply(
   { user, post, replies = [], showForm, showReport = false, reported = false, error, body = '', reportReason = '',
     reportError, social, preview = false, returnPath, topHref, flatHref, treeHref, flat = false, suggestionSearch,
-    draftId }: {
+    draftId, previewExecutionOutput }: {
       user: User
       post: PostView
       replies?: PostView[]
@@ -98,6 +101,7 @@ export function Reply(
       flat?: boolean
       suggestionSearch?: PostingSuggestionSearch | null
       draftId?: number
+      previewExecutionOutput?: string | null
     },
 ) {
   return (
@@ -115,7 +119,7 @@ export function Reply(
           <ReportPanel post={post} showForm={showReport} reported={reported} reason={reportReason}
             error={reportError} />
         )}
-        {preview && <ReplyPreview parent={post} user={user} body={body} />}
+        {preview && <ReplyPreview parent={post} user={user} body={body} executionOutput={previewExecutionOutput} />}
         {showForm && !post.thread_locked && (
           canPublishPosts(user)
             ? (
