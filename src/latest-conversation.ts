@@ -1,4 +1,5 @@
 const LATEST_MIN_RECENT_REPLIES = 3
+const LATEST_UNPRUNED_RECENT_REPLIES = 2
 const LATEST_MAX_RECENT_REPLIES = 5
 const LATEST_REPLY_BURST_HOURS = 48
 
@@ -28,7 +29,7 @@ export function recentConversationReplies<T extends { id: number; parent_id: num
   if (keepAncestorChain) return recent
   const recentById = new Map(recent.map(reply => [reply.id, reply]))
   return recent.filter((reply, index) => {
-    if (index < LATEST_MIN_RECENT_REPLIES) return true
+    if (index < LATEST_UNPRUNED_RECENT_REPLIES) return true
     return !recent.slice(0, index).some(newer => {
       let ancestorId = newer.parent_id
       while (ancestorId !== null) {
