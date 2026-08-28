@@ -76,14 +76,17 @@ export async function rpcMaterializedFeedPage(request: Request, kind: Materializ
   if (memory) {
     memoryMaterializations.delete(key)
     memoryMaterializations.set(key, memory)
+    const latestBody = kind === 'latest' && viewerId >= 0
+      ? await databaseService().call('cache.hydrateMaterializedFeed', { html: memory.body, viewerId })
+      : undefined
     if (!memory.hitActionDone && onCacheHit) {
       memory.hitActionDone = true
       await onCacheHit()
       if (renderForCache) memory.body = materializedBody(await (await renderForCache()).text())
     }
-    const body = viewerId >= 0
+    const body = latestBody ?? (viewerId >= 0
       ? await databaseService().call('cache.hydrateMaterializedFeed', { html: memory.body, viewerId })
-      : memory.body
+      : memory.body)
     const headers = new Headers(memory.headers)
     headers.set('x-feed-cache', 'memory')
     return new Response(body, { status: memory.status, headers })
@@ -95,16 +98,16 @@ export async function rpcMaterializedFeedPage(request: Request, kind: Materializ
       const cached = await call('cache.materializedFeedGet', { kind, viewerId, variant })
       if (cached.html) {
         await onCacheHit?.()
-        const responseHtml = onCacheHit && renderForCache
+        const cachedHtml = onCacheHit && renderForCache
           ? await (await renderForCache()).text()
           : cached.html
-        if (responseHtml !== cached.html) {
+        if (cachedHtml !== cached.html) {
           await call('cache.materializedFeedPut', {
             kind,
             viewerId,
             variant,
             generation: cached.generation,
-            html: responseHtml,
+            html: cachedHtml,
           })
         }
         if (cached.stale && !revalidations.has(key)) {
@@ -130,7 +133,7 @@ export async function rpcMaterializedFeedPage(request: Request, kind: Materializ
             if (revalidations.get(key) === revalidation) revalidations.delete(key)
           }).catch(error => console.error(`Could not refresh stale ${kind} feed`, error))
         }
-        return { body: responseHtml, status: 200,
+        return { body: kind === 'latest' ? cached.html : cachedHtml, status: 200,
           headers: [['content-type', 'text/html;charset=utf-8'], ['cache-control', 'private, no-store'],
             ['x-feed-cache', cached.stale ? 'stale' : 'durable']] }
       }
