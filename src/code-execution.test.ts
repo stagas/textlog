@@ -29,6 +29,14 @@ describe('executable notes', () => {
       .toEqual(['1', '2', '3', '4', '5', '6', '7', '8', '…', '12'])
   })
 
+  test('limits every rendered output line to 200 characters', () => {
+    const displayed = displayedExecutionOutput(`${'a'.repeat(250)}\nshort\n${'b'.repeat(201)}`).split('\n')
+    expect(displayed[0]).toBe(`${'a'.repeat(199)}…`)
+    expect(displayed[1]).toBe('short')
+    expect(displayed[2]).toBe(`${'b'.repeat(199)}…`)
+    expect(displayed.every(line => line.length <= 200)).toBe(true)
+  })
+
   test('does not execute other languages in development', async () => {
     expect(await executePostCode('#exec\n```python\nprint(42)\n```', 'development'))
       .toContain('only supports JavaScript')

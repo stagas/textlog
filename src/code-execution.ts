@@ -6,6 +6,7 @@ export type ExecutableCode = { language: string; code: string }
 const EXEC_TIMEOUT_MS = 10_000
 const MAX_OUTPUT_LENGTH = 20_000
 const MAX_OUTPUT_LINES = 10
+const MAX_OUTPUT_LINE_LENGTH = 200
 const PISTON_LANGUAGE_ALIASES: Record<string, string> = {
   js: 'javascript',
   py: 'python',
@@ -42,7 +43,9 @@ function boundedExecutionOutput(value: string) {
 
 export function displayedExecutionOutput(value: string) {
   const normalized = value.replace(/\r\n?/g, '\n')
-  const lines = normalized.split('\n')
+  const lines = normalized.split('\n').map(line => line.length <= MAX_OUTPUT_LINE_LENGTH
+    ? line
+    : `${line.slice(0, MAX_OUTPUT_LINE_LENGTH - 1)}…`)
   while (lines.length > 1 && lines.at(-1) === '') lines.pop()
   const lineLimited = lines.length > MAX_OUTPUT_LINES
     ? [...lines.slice(0, MAX_OUTPUT_LINES - 2), '…', lines.at(-1)!].join('\n')

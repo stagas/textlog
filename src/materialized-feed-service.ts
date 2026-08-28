@@ -36,13 +36,23 @@ function memoryCacheEnabled() {
 }
 
 function rememberMaterialization(key: string, result: MaterializedResponse) {
-  const entry: MemoryMaterialization = { ...result, body: result.memoryBody ?? result.body, hitActionDone: false }
+  const body = result.memoryBody ?? result.body
+  const entry: MemoryMaterialization = { ...result, body: materializedBody(body), hitActionDone: false }
   memoryMaterializations.delete(key)
   memoryMaterializations.set(key, entry)
   while (memoryMaterializations.size > MAX_MEMORY_MATERIALIZATIONS) {
     memoryMaterializations.delete(memoryMaterializations.keys().next().value!)
   }
   return entry
+}
+
+function materializedBody(html: string) {
+  const token = (source: string, path: string, label: string, name: string) => source.replace(
+    new RegExp(`(<a[^>]*href="${path}"[^>]*>${label})(?:<span class="to-me-count">\\d+</span>)?(</a>)`),
+    `$1{{${name}-count}}$2`,
+  )
+  return token(token(token(html, '\/for-you', 'for you', 'for-you'), '\/to-me', 'to me', 'to-me'),
+    '\/latest', 'latest', 'latest')
 }
 
 function appearanceVariant(request: Request) {
@@ -69,11 +79,14 @@ export async function rpcMaterializedFeedPage(request: Request, kind: Materializ
     if (!memory.hitActionDone && onCacheHit) {
       memory.hitActionDone = true
       await onCacheHit()
-      if (renderForCache) memory.body = await (await renderForCache()).text()
+      if (renderForCache) memory.body = materializedBody(await (await renderForCache()).text())
     }
+    const body = viewerId >= 0
+      ? await databaseService().call('cache.hydrateMaterializedFeed', { html: memory.body, viewerId })
+      : memory.body
     const headers = new Headers(memory.headers)
     headers.set('x-feed-cache', 'memory')
-    return new Response(memory.body, { status: memory.status, headers })
+    return new Response(body, { status: memory.status, headers })
   }
   const startedAtMemoryGeneration = memoryGeneration
   let materialization = materializations.get(key)

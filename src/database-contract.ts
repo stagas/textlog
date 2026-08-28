@@ -438,6 +438,7 @@ export type DatabaseDomainOperations = {
     input: { kind: 'latest' | 'hot' | 'for-you' | 'to-me' | 'about'; viewerId: number; variant: string }
     output: { html: string | null; generation: number; stale: boolean }
   }
+  'cache.hydrateMaterializedFeed': { input: { html: string; viewerId: number }; output: string }
   'cache.materializedFeedPut': {
     input: { kind: 'latest' | 'hot' | 'for-you' | 'to-me' | 'about'; viewerId: number; variant: string;
       generation: number; html: string }
