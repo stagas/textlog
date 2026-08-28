@@ -42,6 +42,10 @@ export function personalizedUnreadCount(database: Database, userId: number, toMe
       FROM personalized_post_candidates WHERE viewer_id=?`).get(userId) as { count: number; newest: number }
     const projectionKey = `${userId}\0${toMe ? 1 : 0}\0${pending ? 1 : 0}\0${generation?.generation || 0}\0${reads}`
       + `\0${candidates.count}\0${candidates.newest}`
+    // A pending relationship invalidation is only a boolean marker. More relationship changes can be folded into
+    // the same row without changing any part of the projection key, even though they can add or remove follow
+    // activity from the unread set. Recompute until the invalidation is consumed and a new generation is assigned.
+    if (pending) return toMe ? unreadToMeCount(userId, database) : unreadForYouCount(userId, database)
     const projected = unreadCountProjection.get(projectionKey)
     if (projected !== undefined) {
       unreadCountProjection.delete(projectionKey)

@@ -3,7 +3,7 @@ import { expect, test } from 'bun:test'
 import { apiActivities } from './api-activity'
 import { markLatestPostsRead } from './latest-state'
 import { runMigrations } from './migrations'
-import { loadPersonalizedFeed } from './personalized-feed'
+import { loadPersonalizedFeed, personalizedUnreadCount } from './personalized-feed'
 import type { User } from './types'
 
 test('moderators see blocked-user leaf posts in For You with relationship metadata', () => {
@@ -221,6 +221,26 @@ test('For You follow activity can be hidden independently for people and hashtag
   expect(hashtagsHidden.timeline).toHaveLength(2)
   expect(hashtagsHidden.timeline.every(row => row.activity_kind === 'user_follow')).toBeTrue()
   expect(hashtagsHidden.forYouCount).toBe(2)
+})
+
+test('unread count refreshes while relationship invalidation remains pending', () => {
+  const database = new Database(':memory:', { strict: true })
+  runMigrations(database)
+  database.run(`INSERT INTO users(id,handle,email,password,bio,hide_people_follow_activity) VALUES
+      (1,'viewer','viewer@example.com','!','',0),
+      (2,'friend','friend@example.com','!','',0),
+      (3,'first','first@example.com','!','',0),
+      (4,'second','second@example.com','!','',0);
+    INSERT INTO follows(follower_id,following_id,created_at) VALUES
+      (1,2,'2026-08-03 09:00:00'),(2,3,'2026-08-03 10:00:00');`)
+
+  expect(personalizedUnreadCount(database, 1, false)).toBe(1)
+
+  // The pending-invalidation row already exists, so this change does not alter the old memoization key.
+  database.query(`INSERT INTO follows(follower_id,following_id,created_at)
+    VALUES(2,4,'2026-08-03 11:00:00')`).run()
+
+  expect(personalizedUnreadCount(database, 1, false)).toBe(2)
 })
 
 test('personalized snapshots refresh follow state for To Me and For You actions', () => {
