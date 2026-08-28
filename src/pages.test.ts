@@ -400,7 +400,7 @@ test('posting helpers are searchable details and show copyable highlighted resul
   )
   expect(html).toContain('Which one? <b>#poll</b><br/>First option<br/>Second option')
   expect(html).toContain(
-    '<span class="posting-help-modifier-heading">Spoilers</span><small>Text after #spoiler is hidden until revealed. Aliases: #sensitive, #contentwarning, #cw, and #triggerwarning.</small>',
+    '<span class="posting-help-modifier-heading">Spoilers</span><small>Text after #spoiler is hidden until revealed. Aliases: #tldr, #sensitive, #contentwarning, #cw, and #triggerwarning.</small>',
   )
   expect(html).toContain('Visible text <b>#spoiler</b><br/>Hidden text')
   expect(html).toContain(

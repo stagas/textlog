@@ -240,8 +240,8 @@ function PostingHelpTabs({ search }: { search?: PostingSuggestionSearch | null }
           <dt>
             <span className="posting-help-modifier-heading">Spoilers</span>
             <small>
-              Text after #spoiler is hidden until revealed. Aliases: #sensitive, #contentwarning, #cw, and
-              #triggerwarning.
+              Text after #spoiler is hidden until revealed. Aliases: #tldr, #sensitive, #contentwarning, #cw,
+              and #triggerwarning.
             </small>
           </dt>
         </div>

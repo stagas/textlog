@@ -13,6 +13,7 @@ export const MAX_HASHTAGS_PER_POST = 5
 
 export const SPOILER_HASHTAGS = new Set([
   'spoiler',
+  'tldr',
   'sensitive',
   'contentwarning',
   'cw',

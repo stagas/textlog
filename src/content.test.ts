@@ -27,7 +27,7 @@ describe('content metadata extraction', () => {
     })
   })
   test('supports spoiler hashtag aliases', () => {
-    for (const tag of ['sensitive', 'contentwarning', 'cw', 'triggerwarning']) {
+    for (const tag of ['tldr', 'sensitive', 'contentwarning', 'cw', 'triggerwarning']) {
       expect(splitSpoilerBody(`visible\n#${tag}\nhidden`)).toEqual({
         visible: `visible\n#${tag}`,
         hidden: 'hidden',
