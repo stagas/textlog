@@ -6429,6 +6429,9 @@ a.post-context:hover {
 }
 
 .post .code-fence.execution-output {
+  box-sizing: border-box;
+  width: 100%;
+  min-width: 0;
   margin-bottom: 0.5lh;
   color: var(--quote-ink);
   font-size: var(--post-body-font-size, 0.8125rem);
