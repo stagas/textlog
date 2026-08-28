@@ -42,15 +42,14 @@ function boundedExecutionOutput(value: string) {
 }
 
 export function displayedExecutionOutput(value: string) {
-  const normalized = value.replace(/\r\n?/g, '\n')
-  const lines = normalized.split('\n').map(line => line.length <= MAX_OUTPUT_LINE_LENGTH
-    ? line
-    : `${line.slice(0, MAX_OUTPUT_LINE_LENGTH - 1)}…`)
-  while (lines.length > 1 && lines.at(-1) === '') lines.pop()
+  const normalized = value.replaceAll('Sandbox keeper received fatal signal 6', '').replace(/\r\n?/g, '\n')
+  const lines = normalized.split('\n')
   const lineLimited = lines.length > MAX_OUTPUT_LINES
-    ? [...lines.slice(0, MAX_OUTPUT_LINES - 2), '…', lines.at(-1)!].join('\n')
-    : lines.join('\n')
-  return lineLimited
+    ? [...lines.slice(0, MAX_OUTPUT_LINES - 2), '…', lines.at(-1)!]
+    : lines
+  return lineLimited.map(line => line.length <= MAX_OUTPUT_LINE_LENGTH
+    ? line
+    : `${line.slice(0, MAX_OUTPUT_LINE_LENGTH - 1)}…`).join('\n')
 }
 
 async function executeDevelopment(code: ExecutableCode) {

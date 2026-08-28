@@ -37,6 +37,12 @@ describe('executable notes', () => {
     expect(displayed.every(line => line.length <= 200)).toBe(true)
   })
 
+  test('removes the sandbox keeper fatal-signal message without trimming the rendered output', () => {
+    const output = 'answer 42\nSandbox keeper received fatal signal 6\n\n  '
+    expect(displayedExecutionOutput(output)).toBe('answer 42\n\n\n  ')
+    expect(output).toBe('answer 42\nSandbox keeper received fatal signal 6\n\n  ')
+  })
+
   test('does not execute other languages in development', async () => {
     expect(await executePostCode('#exec\n```python\nprint(42)\n```', 'development'))
       .toContain('only supports JavaScript')
