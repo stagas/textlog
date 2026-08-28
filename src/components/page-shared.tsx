@@ -1,4 +1,6 @@
 import type { BioReferenceData, PersonView, PostView, ProfileRow, TagView } from '../types'
+import { displayBio, linkify } from '../utils'
+import { BioReferenceForms, TagReference, UserReference } from './post'
 
 import React from 'react'
 import { isAdmin } from '../admin'
@@ -7,10 +9,8 @@ import { searchTerms } from '../search'
 import { activeRequest } from '../theme'
 import type { User } from '../types'
 import { isMobileRequest } from '../user-agent'
-import { displayBio, linkify } from '../utils'
 import { enterHref } from './auth-links'
 import { Panel } from './panel'
-import { BioReferenceForms, TagReference, UserReference } from './post'
 
 const postTitleLength = 60
 
@@ -240,8 +240,8 @@ function PostingHelpTabs({ search }: { search?: PostingSuggestionSearch | null }
           <dt>
             <span className="posting-help-modifier-heading">Spoilers</span>
             <small>
-              Text after #spoiler is hidden until revealed. Aliases: #tldr, #sensitive, #contentwarning, #cw,
-              and #triggerwarning.
+              Text after #spoiler is hidden until revealed. Aliases: #tldr, #sensitive, #contentwarning, #cw, and
+              #triggerwarning.
             </small>
           </dt>
         </div>
@@ -264,7 +264,8 @@ function PostingHelpTabs({ search }: { search?: PostingSuggestionSearch | null }
             <code>
               Run this <b>#exec</b>
               <br />
-              <b>```js</b><br />
+              <b>```js</b>
+              <br />
               console.log(6 * 7)<br />
               <b>```</b>
             </code>
@@ -542,16 +543,16 @@ export function FeedTabs(
         >
           hot
         </a>
+        <a className={active === 'random' ? 'active' : ''} aria-current={active === 'random' ? 'page' : undefined}
+          href={user ? '/random' : '/random?_scroll=instant#feed-tabs'}
+        >
+          random
+        </a>
         <a className={active === 'latest' ? 'active' : ''} aria-current={active === 'latest' ? 'page' : undefined}
           href={user ? '/latest' : '/latest?_scroll=instant#feed-tabs'}
         >
           latest
           {latestCount > 0 && <span className="to-me-count">{latestCount}</span>}
-        </a>
-        <a className={active === 'random' ? 'active' : ''} aria-current={active === 'random' ? 'page' : undefined}
-          href={user ? '/random' : '/random?_scroll=instant#feed-tabs'}
-        >
-          random
         </a>
         {activityReadStatus !== undefined && (
           <span className="feed-tabs-read-status">
