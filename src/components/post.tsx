@@ -560,16 +560,24 @@ export function Post({
   authorPopoverAction?: React.ReactNode; continuationHref?: string; continuationLabel?: string; className?: string;
   topActions?: React.ReactNode; showReadAction?: boolean; hideTopMeta?: boolean; suppressContentWarning?: boolean })
 {
-  if (p.link_previews && Object.values(p.link_previews).some(preview => preview.linkedPost)) {
-    const linkedPostReturnPath = returnPath || `/post/${p.id}#post-${p.id}`
-    p = { ...p,
-      link_previews: Object.fromEntries(Object.entries(p.link_previews).map(([url, preview]) => [url, preview.linkedPost
+  const linkedPostReturnPath = returnPath || `/post/${p.id}#post-${p.id}`
+  const renderLinkedPostPreviews = (linkPreviews: PostView['link_previews']) => linkPreviews
+    && Object.values(linkPreviews).some(preview => preview.linkedPost)
+    ? Object.fromEntries(Object.entries(linkPreviews).map(([url, preview]) => [url, preview.linkedPost
         ? { ...preview, renderedPostHtml: renderToStaticMarkup(
           <Post p={preview.linkedPost as PostView} user={user} showParent={false} showReplyCount tappable
             showReadAction={false} className="internal-post-card" returnPath={linkedPostReturnPath} />,
         ), linkedPostReturnPath }
         : preview]
-      )) }
+      ))
+    : linkPreviews
+  const linkPreviews = renderLinkedPostPreviews(p.link_previews)
+  const parentLinkPreviews = renderLinkedPostPreviews(p.parent?.link_previews)
+  if (linkPreviews !== p.link_previews || parentLinkPreviews !== p.parent?.link_previews) {
+    p = { ...p, link_previews: linkPreviews,
+      parent: p.parent && parentLinkPreviews !== p.parent.link_previews
+        ? { ...p.parent, link_previews: parentLinkPreviews }
+        : p.parent }
   }
   const parent = showParent ? p.parent : null
   const showApproximateAge = canonicalTimestamp || contextUnread

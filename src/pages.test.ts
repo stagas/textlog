@@ -2971,6 +2971,42 @@ test('Post uses the full Post component for internal link hover cards', () => {
   expect(card).not.toContain('>read</a>')
 })
 
+test('Post renders internal link hover cards inside quoted parents', () => {
+  const url = 'https://textlog.test/post/12'
+  const html = renderToStaticMarkup(React.createElement(Post, { user: null, p: {
+    id: 2,
+    user_id: 2,
+    parent_id: 1,
+    body: 'reply',
+    created_at: '2026-08-24 11:00:00',
+    deleted_at: null,
+    handle: 'replier',
+    reply_count: 0,
+    parent: {
+      id: 1,
+      user_id: 1,
+      parent_id: null,
+      body: url,
+      created_at: '2026-08-24 10:00:00',
+      deleted_at: null,
+      handle: 'author',
+      reply_count: 1,
+      link_previews: { [url]: { imageUrl: url, linkedPost: {
+        id: 12,
+        user_id: 3,
+        parent_id: null,
+        body: 'Linked from the quoted parent',
+        handle: 'linked-author',
+        reply_count: 0,
+      } } },
+    },
+  } }))
+  const quote = html.slice(html.indexOf('class="parent-quote'))
+  expect(quote).toContain('class="remote-link-menu internal-post-link-menu"')
+  expect(quote).toContain('class="remote-link-popover internal-post-popover"')
+  expect(quote).toContain('Linked from the quoted parent')
+})
+
 test('internal post hover cards render linked quizzes with the full Post component', () => {
   const url = 'https://textlog.test/post/12'
   const html = renderToStaticMarkup(React.createElement(Post, { user: null, p: {
