@@ -6311,6 +6311,10 @@ a.post-context:hover {
   padding-top: 0;
 }
 
+.feed-thread:not(:has(.post-continuation-link)):not(:has(> .thread-fold-input:checked)) .thread-ancestor-gap {
+  display: none;
+}
+
 .post-page-thread.feed-thread:has(> .thread-fold-input:checked):has(> .feed-thread-collapsed-branch) {
   margin-bottom: var(--space-5);
 }

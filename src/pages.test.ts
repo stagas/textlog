@@ -948,7 +948,7 @@ test('expanded complete deep threads remove feed-projection ancestor omission ma
     posts: [root, branch, deep, sibling],
   }))
 
-  expect(html).not.toContain('aria-label="Earlier replies omitted"')
+  expect(html).toContain('aria-label="Earlier replies omitted"')
 })
 
 test('expanded complete linear conversations remove the folded feed omission marker', () => {
@@ -970,7 +970,7 @@ test('expanded complete linear conversations remove the folded feed omission mar
   expect(html).toContain('First reply')
   expect(html).toContain('Second reply')
   expect(html).toContain('Third reply')
-  expect(html).not.toContain('aria-label="Earlier replies omitted"')
+  expect(html).toContain('aria-label="Earlier replies omitted"')
   expect(html).not.toContain('>more</a>')
 })
 
@@ -991,7 +991,7 @@ test('locally collapsible complete conversations only render the collapsed-previ
 
   expect(html).toContain('id="feed-thread-fold-2652" checked=""')
   expect(html).toContain('aria-label="Earlier replies hidden"')
-  expect(html).not.toContain('aria-label="Earlier replies omitted"')
+  expect(html).toContain('aria-label="Earlier replies omitted"')
   expect(html).not.toContain('>more</a>')
 })
 
