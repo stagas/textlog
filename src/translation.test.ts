@@ -43,6 +43,14 @@ describe('Google post translation', () => {
     await expect(translateToEnglish('𐑐𐑵𐑯', 'secret key')).resolves.toBeNull()
   })
 
+  test('can preserve Google output when a moderator forces translation of English-detected text', async () => {
+    globalThis.fetch = mock(() => Promise.resolve(new Response(JSON.stringify({
+      data: { translations: [{ translatedText: 'Already English', detectedSourceLanguage: 'en' }] },
+    }), { status: 200 }))) as unknown as typeof fetch
+
+    await expect(translateToEnglish('Already English', 'secret key', true)).resolves.toBe('Already English')
+  })
+
   test('leaves an English-detected backfill candidate without a translation', async () => {
     const database = new Database(':memory:', { strict: true })
     database.run(`CREATE TABLE posts(id INTEGER PRIMARY KEY,body TEXT NOT NULL,translation TEXT,deleted_at TEXT);

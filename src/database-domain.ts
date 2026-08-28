@@ -897,6 +897,12 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
       })()
       return { status: 'ready', imageKeys } as DatabaseDomainOutput<K>
     }
+    case 'admin.translatePost': {
+      const { id, translation } = input as DatabaseDomainInput<'admin.translatePost'>
+      const updated = database.query('UPDATE posts SET translation=? WHERE id=? AND deleted_at IS NULL')
+        .run(translation, id)
+      return (updated.changes ? { status: 'ready' } : { status: 'not_found' }) as DatabaseDomainOutput<K>
+    }
     case 'admin.user': {
       const { id } = input as DatabaseDomainInput<'admin.user'>
       return (database.query(`SELECT id,handle,email,bio,suspended_at,deleted_at FROM users

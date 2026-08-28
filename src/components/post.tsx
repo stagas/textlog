@@ -802,9 +802,15 @@ export function Post({
           {(canModerate || reportHref) && (
             <span className="post-actions">
               {canModerate && (
-                <a className="quiet danger" href={'/admin/posts/' + p.id + '/delete'} aria-label="moderate this post">
-                  moderate
-                </a>
+                <>
+                  <form method="post" action={'/admin/posts/' + p.id + '/translate'}>
+                    <input type="hidden" name="returnTo" value={returnPath || `/post/${p.id}`} />
+                    <button className="quiet" aria-label="translate this post with Google">translate</button>
+                  </form>
+                  <a className="quiet danger" href={'/admin/posts/' + p.id + '/delete'} aria-label="moderate this post">
+                    moderate
+                  </a>
+                </>
               )}
               {reportHref && (
                 <a className="quiet report-link" href={reportHref} aria-label={`report post by @${p.handle}`}>report</a>

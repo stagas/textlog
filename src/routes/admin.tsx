@@ -17,6 +17,7 @@ import { sendAdminEmail, sendReportDecision } from '../email'
 import { deleteImagesAfterCommit } from '../image-storage'
 import { cacheBlockedIp, flushIpRequests } from '../request-ip-blocks'
 import { currentUser } from '../utils'
+import { translateToEnglish } from '../translation'
 
 export function registerAdminRoutes(app: Hono) {
   app.get('/admin/email', c => {
@@ -148,6 +149,27 @@ export function registerAdminRoutes(app: Hono) {
     if (deleted.status === 'not_found') return c.text('Not found', 404)
     await deleteImagesAfterCommit(deleted.imageKeys)
     return redirect(safeLocalPath(f.returnTo, '/admin'))
+  })
+
+  app.post('/admin/posts/:id/translate', async c => {
+    const signedIn = currentUser(c.req.raw)
+    if (!signedIn) return redirect('/enter?next=' + encodeURIComponent(c.req.path))
+    if (!isAdmin(signedIn)) return c.text('Forbidden', 403)
+    const id = Number(c.req.param('id'))
+    const post = Number.isInteger(id) ? await databaseService().call('admin.post', { id }) : null
+    if (!post) return c.text('Not found', 404)
+    const f = await form(c.req.raw)
+    try {
+      const translation = await translateToEnglish(post.body, undefined, true)
+      if (translation === null) return c.text('Google did not return a translation', 502)
+      const saved = await databaseService().call('admin.translatePost', { id, translation })
+      if (saved.status === 'not_found') return c.text('Not found', 404)
+      return redirect(safeLocalPath(f.returnTo, `/post/${id}`))
+    }
+    catch (error) {
+      console.error(`Could not translate post ${id}`, error)
+      return c.text('Could not translate post', 502)
+    }
   })
 
   app.get('/admin/users/:id', async c => {

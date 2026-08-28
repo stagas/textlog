@@ -9,7 +9,9 @@ type TranslateResponse = {
   error?: { message?: string }
 }
 
-export async function translateToEnglish(text: string, apiKey = Bun.env.GOOGLE_TRANSLATE_API_KEY) {
+export async function translateToEnglish(text: string, apiKey = Bun.env.GOOGLE_TRANSLATE_API_KEY,
+  preserveDetectedEnglish = false)
+{
   if (!apiKey) throw new Error('GOOGLE_TRANSLATE_API_KEY is required to translate notes')
   const response = await fetch(`${GOOGLE_TRANSLATE_URL}?key=${encodeURIComponent(apiKey)}`, {
     method: 'POST',
@@ -22,7 +24,9 @@ export async function translateToEnglish(text: string, apiKey = Bun.env.GOOGLE_T
   if (!response.ok || typeof translated !== 'string') {
     throw new Error(`Google Translate failed (${response.status}): ${result?.error?.message || 'invalid response'}`)
   }
-  return translation?.detectedSourceLanguage?.toLowerCase() === 'en' ? null : decodeHtmlEntities(translated)
+  return !preserveDetectedEnglish && translation?.detectedSourceLanguage?.toLowerCase() === 'en'
+    ? null
+    : decodeHtmlEntities(translated)
 }
 
 export function postTranslation(body: string) {

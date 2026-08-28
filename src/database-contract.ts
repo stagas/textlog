@@ -165,6 +165,8 @@ export type DatabaseDomainOperations = {
   'admin.post': { input: { id: number }; output: (PostRow & { handle: string }) | null }
   'admin.deletePost': { input: { id: number; actorId: number; note: string };
     output: { status: 'not_found' } | { status: 'ready'; imageKeys: string[] } }
+  'admin.translatePost': { input: { id: number; translation: string };
+    output: { status: 'not_found' } | { status: 'ready' } }
   'admin.user': { input: { id: number }; output: ProfileRow | null }
   'admin.moderateUser': {
     input: { id: number; actorId: number; action: 'suspend' | 'restore' | 'delete' | 'drop-username'; note: string }

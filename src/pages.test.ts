@@ -3650,9 +3650,12 @@ test('Post renders moderation controls only for admins on the detail page', () =
 
   expect(adminFeedHtml).not.toContain('/admin/posts/2/delete')
   expect(adminDetailHtml).toContain('/admin/posts/2/delete')
+  expect(adminDetailHtml).toContain('action="/admin/posts/2/translate"')
+  expect(adminDetailHtml).toContain('aria-label="translate this post with Google">translate</button>')
   expect(adminDetailHtml).toContain('href="/post/2/edit" aria-label="edit this post">edit</a>')
   expect(adminDetailHtml.indexOf('href="/post/2/edit"')).toBeLessThan(adminDetailHtml.indexOf('<div class="postfoot">'))
   expect(userDetailHtml).not.toContain('/admin/posts/2/delete')
+  expect(userDetailHtml).not.toContain('/admin/posts/2/translate')
   expect(userDetailHtml).not.toContain('href="/post/2/edit"')
 })
 
