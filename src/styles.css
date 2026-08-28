@@ -2524,6 +2524,7 @@ body.corners-round a.button {
 }
 
 .post .parent-quote .code-fence.execution-output {
+  color: color-mix(in srgb, var(--quote-ink), var(--muted));
   font-size: 0.75rem;
   line-height: 1.55;
   letter-spacing: normal;
@@ -6429,6 +6430,7 @@ a.post-context:hover {
 
 .post .code-fence.execution-output {
   margin-bottom: 0.5lh;
+  color: var(--quote-ink);
   font-size: var(--post-body-font-size, 0.8125rem);
   line-height: var(--post-body-line-height, 1.65);
   letter-spacing: var(--post-body-letter-spacing, normal);
