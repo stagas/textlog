@@ -121,10 +121,13 @@ test('a recent deep reply in a followed thread stays included after Latest marks
   markLatestPostsRead(1, [3], database)
   const viewer: User = { id: 1, handle: 'viewer', email: 'viewer@example.com', bio: '' }
 
+  const badgeCount = personalizedUnreadCount(database, viewer.id, false)
+
   const feed = loadPersonalizedFeed(database, viewer, 1, 20, false, '/for-you', false)
 
   expect(feed.timeline.filter(row => row.id).map(row => row.id)).toEqual([3, 2, 1])
   expect(feed.timeline.find(row => row.id === 3)?.unread).toBe(1)
+  expect(badgeCount).toBe(feed.forYouCount)
 })
 
 test('personalized pages count conversations rather than their embedded replies', () => {

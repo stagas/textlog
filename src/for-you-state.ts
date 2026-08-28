@@ -10,6 +10,14 @@ const descendsFromViewer = `EXISTS (WITH RECURSIVE ancestors(id,user_id,parent_i
     JOIN ancestors child ON ancestor.id=child.parent_id
 ) SELECT 1 FROM ancestors WHERE user_id=$viewer)`
 
+const descendsFromFollowedUser = `EXISTS (WITH RECURSIVE ancestors(id,user_id,parent_id) AS (
+  SELECT ancestor.id,ancestor.user_id,ancestor.parent_id FROM posts ancestor WHERE ancestor.id=p.parent_id
+  UNION ALL
+  SELECT ancestor.id,ancestor.user_id,ancestor.parent_id FROM posts ancestor
+    JOIN ancestors child ON ancestor.id=child.parent_id
+) SELECT 1 FROM ancestors JOIN follows ON follows.following_id=ancestors.user_id
+  WHERE follows.follower_id=$viewer AND p.created_at>=follows.created_at)`
+
 const hasVisibleDescendantFromAnotherUser = `EXISTS (WITH RECURSIVE descendants(id,user_id,parent_id,deleted_at) AS (
   SELECT child.id,child.user_id,child.parent_id,child.deleted_at FROM posts child WHERE child.parent_id=p.id
   UNION ALL
@@ -28,7 +36,7 @@ const visibleEvents = `
       ((p.user_id=$viewer AND (parent.user_id!=$viewer OR
       ${hasVisibleDescendantFromAnotherUser})) OR p.user_id IN
       (SELECT following_id FROM follows WHERE follower_id=$viewer AND p.created_at>=created_at)
-      OR ${descendsFromViewer} OR p.id IN
+      OR ${descendsFromViewer} OR ${descendsFromFollowedUser} OR p.id IN
       (SELECT ph.post_id FROM post_hashtags ph JOIN hashtag_follows hf ON hf.tag=ph.tag
         WHERE hf.user_id=$viewer AND p.created_at>=hf.created_at))) OR ${whisperThreadRelevantToViewer()})
       AND NOT EXISTS (SELECT 1 FROM blocks b WHERE
