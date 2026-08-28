@@ -378,6 +378,14 @@ export function ActionPair({ primary, secondary, className = '' }: {
   )
 }
 
+export function GuestCommunityActions({ className = '' }: { className?: string }) {
+  return (
+    <ActionPair className={className}
+      primary={<a className="button" href="/enter" rel="nofollow">join the community</a>}
+      secondary={<a href="/hot">browse more notes</a>} />
+  )
+}
+
 export function VerificationRequired() {
   return (
     <Panel className="status-message status-error" role="alert">

@@ -3,8 +3,8 @@ import { extractHashtags, extractMentions } from '../content'
 import type { BioReferenceData, PostView, ProfileRow, User } from '../types'
 import { displayBio, linkify, referenceFormId } from '../utils'
 import { Layout } from './layout'
-import { FormMessage, Pagination, PostingHelp, PostingSuggestionResults, type PostingSuggestionSearch, ProfileControls,
-  ProfileHeader, ProfileTabs } from './page-shared'
+import { FormMessage, GuestCommunityActions, Pagination, PostingHelp, PostingSuggestionResults,
+  type PostingSuggestionSearch, ProfileControls, ProfileHeader, ProfileTabs } from './page-shared'
 import { FeedThreads, Post } from './post'
 
 export function Profile(
@@ -304,6 +304,7 @@ export function Profile(
       )}
       {!editing && !hiddenByBlock
         && <Pagination path={paginationPath} page={page} totalPages={totalPages} />}
+      {!user && !editing && <GuestCommunityActions className="post-page-actions" />}
     </Layout>
   )
 }

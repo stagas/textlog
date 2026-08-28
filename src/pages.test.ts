@@ -3293,6 +3293,31 @@ test('Public post pages end with join and browse actions', () => {
   expect(html).toContain('href="/hot">browse more notes</a>')
 })
 
+test('Anonymous tag and people pages end with join and browse actions', () => {
+  const profile = {
+    id: 1, handle: 'writer', email: 'writer@example.com', bio: '', created_at: '2026-08-03 12:00:00',
+  }
+  const pages = [
+    React.createElement(TagFeed, {
+      user: null, tag: 'writing', following: false, posts: [], page: 1, total: 0,
+    }),
+    React.createElement(Profile, {
+      user: null, profile, posts: [], following: false,
+    }),
+    React.createElement(Connections, {
+      user: null, profile, people: [], kind: 'followers', page: 1, total: 0, noteCount: 0,
+      followerCount: 0, followingCount: 0, followingTagCount: 0, following: false,
+    }),
+  ]
+
+  for (const page of pages) {
+    const html = renderToStaticMarkup(page)
+    expect(html).toContain('class="action-pair post-page-actions"')
+    expect(html).toContain('class="button" href="/enter" rel="nofollow">join the community</a>')
+    expect(html).toContain('href="/hot">browse more notes</a>')
+  }
+})
+
 test('Thread pages show approximate wording only on the primary post', () => {
   const createdAt = new Date(Date.now() - 6 * 60 * 60_000).toISOString()
   const html = renderToStaticMarkup(React.createElement(PublicThread, {

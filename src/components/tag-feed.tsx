@@ -3,7 +3,7 @@ import type { User } from '../types'
 import type { PersonView, PostView } from '../types'
 import { enterHref } from './auth-links'
 import { Layout } from './layout'
-import { ConnectionPeople, Pagination } from './page-shared'
+import { ConnectionPeople, GuestCommunityActions, Pagination } from './page-shared'
 import { FeedThreads } from './post'
 
 export function TagFeed(
@@ -84,6 +84,7 @@ export function TagFeed(
         : <div className="empty">No notes use this hashtag yet.</div>}
       <Pagination page={page} totalPages={Math.ceil((tab === 'followers' ? followerTotal : total)
         / (tab === 'followers' ? CONNECTION_PAGE_SIZE : notePageSize))} path={paginationPath} />
+      {!user && <GuestCommunityActions className="post-page-actions" />}
     </Layout>
   )
 }

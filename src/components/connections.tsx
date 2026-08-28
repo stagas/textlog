@@ -6,6 +6,7 @@ import {
   BlockedPeopleList,
   BlockedTagList,
   ConnectionPeople,
+  GuestCommunityActions,
   Pagination,
   paginationHeadingClass,
   ProfileHeader,
@@ -209,6 +210,7 @@ export function Connections(
           `/u/${profile.handle}?tab=following${sortQuery}${tagsPage > 1 ? `&tagsPage=${tagsPage}` : ''}`,
         )} label="People pagination" compact anchor="connections-people-heading" />
       )}
+      {!user && <GuestCommunityActions className="post-page-actions" />}
     </Layout>
   )
 }
