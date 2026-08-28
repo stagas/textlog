@@ -10,6 +10,7 @@ test('HTML relationship toggles invalidate in-memory personalized feeds', async 
   await databaseService().call('interactions.toggleTagFollow', { userId: 1, tag: 'topic' })
   await databaseService().call('interactions.toggleBlock', { userId: 1, handle: 'blocked' })
   await databaseService().call('interactions.toggleTagBlock', { userId: 1, tag: 'muted' })
+  await databaseService().call('admin.translatePost', { id: 42, translation: 'Translated text' })
   unsubscribe()
 
   expect(mutations).toEqual([
@@ -17,5 +18,6 @@ test('HTML relationship toggles invalidate in-memory personalized feeds', async 
     'interactions.toggleTagFollow',
     'interactions.toggleBlock',
     'interactions.toggleTagBlock',
+    'admin.translatePost',
   ])
 })
