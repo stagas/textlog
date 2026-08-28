@@ -27,7 +27,7 @@ export type HotCursor = {
   direction: 'next' | 'previous'
 }
 
-export const hotRankingVersion = 113
+export const hotRankingVersion = 117
 const cursorVersion = hotRankingVersion
 const activityHalfLifeHours = 6
 const postWeight = 0
@@ -382,22 +382,39 @@ export function getHotPosts(
   parameters.push(limit)
 
   const pollCounts = hasPollVotes(database)
-    ? 'SELECT post_id,count(*) vote_count FROM poll_votes GROUP BY post_id'
-    : 'SELECT NULL post_id,0 vote_count WHERE 0'
+    ? 'SELECT post_id,count(*) vote_count,max(created_at) latest_vote_at FROM poll_votes GROUP BY post_id'
+    : 'SELECT NULL post_id,0 vote_count,NULL latest_vote_at WHERE 0'
   const rows = database.query(`WITH poll_counts AS (${pollCounts}), ranking_time(as_of) AS (VALUES(?)),
     scored AS (
       SELECT h.post_id,CASE WHEN h.reply_count=0 AND h.activity_count=0
         AND COALESCE(poll_counts.vote_count,0)=0 THEN 0 ELSE
         (12.0*log(1+h.reply_count)/log(2)
           +3.0*log(1+h.activity_count)/log(2)
-          +8.0*log(1+COALESCE(poll_counts.vote_count,0))/log(2)
-          +min(4,h.score)
-          +2.0*pow(0.5,max(0,(julianday(ranking_time.as_of)-julianday(h.latest_activity_at))*24)/168.0))
-        *(0.9+0.1*pow(0.5,max(0,(julianday(ranking_time.as_of)-julianday(p.created_at))*24)/720.0)) END hot_score
+          +CASE WHEN COALESCE(poll_counts.vote_count,0)>0 THEN
+            8.0*log(1+min(poll_counts.vote_count,10))/log(2)
+              *pow(0.5,max(0,(julianday(ranking_time.as_of)-julianday(poll_counts.latest_vote_at))*24)/24.0)
+            ELSE 0 END
+          +CASE WHEN h.reply_count>0 OR h.activity_count>0 THEN min(4,h.score) ELSE 0 END
+          +20.0*pow(0.5,max(0,(julianday(ranking_time.as_of)-julianday(p.created_at))*24)/72.0)
+          +10.0*pow(0.5,max(0,(julianday(ranking_time.as_of)-julianday(h.latest_activity_at))*24)/48.0))
+        *(0.9+0.1*pow(0.5,max(0,(julianday(ranking_time.as_of)-julianday(p.created_at))*24)/720.0))
+        *CASE WHEN COALESCE(poll_counts.vote_count,0)>0 THEN
+          0.2+0.8*pow(0.5,max(0,
+            (julianday(ranking_time.as_of)-julianday(poll_counts.latest_vote_at))*24)/24.0)
+          ELSE 1 END END hot_score
       FROM post_hot h JOIN posts p ON p.id=h.post_id CROSS JOIN ranking_time
       LEFT JOIN poll_counts ON poll_counts.post_id=h.post_id
       WHERE p.parent_id IS NULL
-    ), ranked AS (SELECT post_id,hot_score FROM scored)
+    ), recent_leader AS (
+      SELECT scored.post_id FROM scored JOIN posts p ON p.id=scored.post_id
+      WHERE scored.hot_score>0 AND p.deleted_at IS NULL AND ${excludesWhisperPosts()}
+        AND max(0,(julianday((SELECT as_of FROM ranking_time))-julianday(p.created_at))*24)<=48
+      ORDER BY scored.hot_score DESC,p.created_at DESC,p.id DESC LIMIT 1
+    ), score_ceiling AS (SELECT COALESCE(max(hot_score),0) hot_score FROM scored), ranked AS (
+      SELECT scored.post_id,CASE WHEN recent_leader.post_id=scored.post_id
+        THEN score_ceiling.hot_score+1 ELSE scored.hot_score END hot_score
+      FROM scored CROSS JOIN score_ceiling LEFT JOIN recent_leader ON recent_leader.post_id=scored.post_id
+    )
     SELECT p.*,u.handle,ranked.hot_score,h.latest_activity_at,h.reply_count,h.activity_count
     FROM ranked JOIN post_hot h ON h.post_id=ranked.post_id
     JOIN posts p ON p.id=ranked.post_id JOIN users u ON u.id=p.user_id

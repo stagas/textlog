@@ -28,14 +28,14 @@ function post(userId: number, id: number, createdAt: string, parentId: number | 
 }
 
 describe('quality-first hot feed ranking', () => {
-  test('puts an excellent old conversation ahead of a modest fresh one', () => {
+  test('leads with a recent post while keeping an excellent old conversation next', () => {
     database.run(`INSERT INTO users(id,handle) VALUES(2,'r2'),(3,'r3'),(4,'r4'),(5,'r5')`)
     post(1, 1, '2024-01-01 12:00:00')
     for (let id = 2; id <= 5; id++) post(id, id, '2024-01-02 12:00:00', 1)
     post(1, 10, '2026-08-03 10:00:00')
     post(2, 11, '2026-08-03 11:00:00', 10)
 
-    expect(getHotPosts(database, 20, null, asOf).map(result => result.id)).toEqual([1, 10])
+    expect(getHotPosts(database, 20, null, asOf).map(result => result.id)).toEqual([10, 1])
   })
 
   test('returns conversation roots instead of promoting replies', () => {
@@ -59,21 +59,66 @@ describe('quality-first hot feed ranking', () => {
     expect(getHotPosts(database, 20, null, asOf).map(result => result.id)).toEqual([10, 1])
   })
 
+  test('brings several recent conversations up without removing strong old posts', () => {
+    database.run(`INSERT INTO users(id,handle) VALUES(2,'r2'),(3,'r3'),(4,'r4'),(5,'r5')`)
+    post(1, 1, '2026-07-01 12:00:00')
+    for (let id = 2; id <= 5; id++) post(id, id, '2026-07-02 12:00:00', 1)
+    for (const rootId of [10, 20, 30]) {
+      post(1, rootId, '2026-08-02 12:00:00')
+      post(2, rootId + 1, '2026-08-03 10:00:00', rootId)
+    }
+
+    const ids = getHotPosts(database, 20, null, asOf).map(result => result.id)
+    expect(ids.slice(0, 3).every(id => [10, 20, 30].includes(id))).toBeTrue()
+    expect(ids).toContain(1)
+  })
+
   test('requires independent engagement and ignores author-only replies', () => {
     post(1, 1, '2026-08-03 10:00:00')
     post(1, 2, '2026-08-03 11:00:00', 1)
     expect(getHotPosts(database, 20, null, asOf)).toEqual([])
   })
 
-  test('counts durable poll participation as quality', () => {
+  test('strongly discounts old poll participation', () => {
     post(1, 1, '2024-01-01 12:00:00')
+    database.run(`INSERT INTO users(id,handle) VALUES(2,'r2')`)
+    post(1, 10, '2026-08-03 10:00:00')
+    post(2, 11, '2026-08-03 11:00:00', 10)
     database.run(`CREATE TABLE poll_votes (post_id INTEGER NOT NULL,option_id INTEGER NOT NULL,
       user_id INTEGER NOT NULL,created_at TEXT NOT NULL,PRIMARY KEY(post_id,user_id))`)
     for (let userId = 2; userId <= 8; userId++) {
       database.query('INSERT INTO poll_votes VALUES(1,1,?,?)').run(userId, '2024-01-02 12:00:00')
     }
     recordHotActivity(database, 1)
-    expect(getHotPosts(database, 20, null, asOf, -1, false, 2).map(result => result.id)).toEqual([1])
+    const results = getHotPosts(database, 20, null, asOf)
+    expect(results.map(result => result.id)).toEqual([10, 1])
+    expect(results[1].hot_score).toBeLessThan(results[0].hot_score * 0.1)
+  })
+
+  test('ranks the newer active poll 2737 far above stale high-vote poll 2326', () => {
+    database.run(`INSERT INTO users(id,handle) VALUES(2,'r2'),(3,'r3'),(4,'r4'),(5,'r5'),(6,'r6');
+      CREATE TABLE poll_votes (post_id INTEGER NOT NULL,option_id INTEGER NOT NULL,
+        user_id INTEGER NOT NULL,created_at TEXT NOT NULL,PRIMARY KEY(post_id,user_id));`)
+    post(1, 2326, '2026-08-24 22:57:10')
+    post(1, 2737, '2026-08-28 09:47:07')
+    for (let userId = 2; userId <= 6; userId++) {
+      post(userId, 2400 + userId, '2026-08-26 03:16:28', 2326)
+      post(userId, 2740 + userId, '2026-08-28 13:25:09', 2737)
+    }
+    for (let userId = 10; userId < 64; userId++) {
+      database.query('INSERT INTO poll_votes VALUES(2326,1,?,?)').run(userId, '2026-08-25 22:51:45')
+    }
+    for (let userId = 70; userId < 78; userId++) {
+      database.query('INSERT INTO poll_votes VALUES(2737,1,?,?)').run(userId, '2026-08-28 12:57:26')
+    }
+    recordHotActivity(database, 2326)
+    recordHotActivity(database, 2737)
+
+    const results = getHotPosts(database, 20, null, '2026-08-28T14:00:00.000Z')
+    const oldPoll = results.find(result => result.id === 2326)!
+    const newPoll = results.find(result => result.id === 2737)!
+    expect(results.map(result => result.id)).toEqual([2737, 2326])
+    expect(oldPoll.hot_score).toBeLessThan(newPoll.hot_score * 0.5)
   })
 
   test('keeps cursor pagination deterministic', () => {
