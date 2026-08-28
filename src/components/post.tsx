@@ -1053,7 +1053,9 @@ export function ThreadReplies(
             const loadedSiblings = (children.get(reply.parent_id!) || []).filter(sibling => !sibling.deleted_at).length
             const hasOmittedSiblings = parent?.direct_reply_count != null
               && parent.direct_reply_count > loadedSiblings
-            if (hiddenPostAbove || hasOmittedSiblings) collapsedPreviewGapPosts.add(reply.id)
+            if (hiddenPostAbove || hasOmittedSiblings || reply.feed_ancestor_gap) {
+              collapsedPreviewGapPosts.add(reply.id)
+            }
             hiddenPostAbove = false
           }
           else hiddenPostAbove = true

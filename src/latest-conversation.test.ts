@@ -24,10 +24,10 @@ test('Latest includes additional replies from the newest 48-hour burst', () => {
     reply(1, '2026-08-23 23:00:00'),
   ]
 
-  expect(recentConversationReplies(conversation).map(post => post.id)).toEqual([4, 3, 2])
+  expect(recentConversationReplies(conversation).map(post => post.id)).toEqual([4, 3, 2, 1])
 })
 
-test('Latest keeps the two preceding replies when the newest reply arrives after an old conversation', () => {
+test('Latest keeps the three preceding replies when the newest reply arrives after an old conversation', () => {
   const conversation = [
     reply(2716, '2026-08-28 03:51:52'),
     reply(47, '2026-08-07 15:53:52'),
@@ -37,7 +37,7 @@ test('Latest keeps the two preceding replies when the newest reply arrives after
     { id: 35, parent_id: null, created_at: '2026-08-07 15:44:34' },
   ]
 
-  expect(recentConversationReplies(conversation).map(post => post.id)).toEqual([2716, 47, 41])
+  expect(recentConversationReplies(conversation).map(post => post.id)).toEqual([2716, 47, 41, 40])
 })
 
 test('Latest retains a recent root when its newest replies are nested', () => {

@@ -2334,7 +2334,23 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
         const keepsRoot = root?.parent_id === null
           && (conversation[0]?.id === root.id || recentReplies[0]?.parent_id === root.id
             || isRecentConversationRoot(root, conversation))
-        if (keepsRoot) return [root!, ...recentReplies, ...unreadReplies]
+        if (keepsRoot) {
+          const recentExpandableReplies = recentConversationReplies(conversation, true)
+          const expandableReplies = recentExpandableReplies.slice(0, 4)
+          const expandableIds = new Set([root!.id, ...expandableReplies.map(reply => reply.id)])
+          const needsParentContext = expandableReplies.some(reply => reply.parent_id !== null
+            && !expandableIds.has(reply.parent_id))
+          if (!needsParentContext) {
+            const connectedOlderReply = conversation.find(reply => reply.parent_id !== null
+              && !expandableIds.has(reply.id) && expandableIds.has(reply.parent_id))
+            if (connectedOlderReply) {
+              expandableReplies.push(connectedOlderReply)
+              expandableIds.add(connectedOlderReply.id)
+            }
+          }
+          return [root!, ...expandableReplies,
+            ...conversation.filter(row => unreadIds.has(row.id) && !expandableIds.has(row.id))]
+        }
         recentReplies = recentConversationReplies(conversation, true)
         const fullIncludedIds = new Set([root?.id, ...recentReplies.map(reply => reply.id)])
         const fullUnreadReplies = conversation.filter(row => unreadIds.has(row.id) && !fullIncludedIds.has(row.id))

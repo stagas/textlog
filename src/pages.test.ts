@@ -766,7 +766,7 @@ test('feed conversations stay expanded when all visible replies fit the preview'
 
 test('folded feed conversations preview the two newest replies from a recent burst', () => {
   const root = { id: 1, user_id: 1, parent_id: null, body: 'Root', created_at: '2026-08-23 09:00:00', deleted_at: null,
-    handle: 'root', reply_count: 2 }
+    handle: 'root', reply_count: 4 }
   const olderReply = { id: 2, user_id: 2, parent_id: 1, body: 'Older reply', created_at: '2026-08-23 10:00:00',
     deleted_at: null, handle: 'reply', reply_count: 1, parent: root }
   const olderDeepReply = { id: 3, user_id: 3, parent_id: 2, body: 'Older deep reply', created_at: '2026-08-23 11:00:00',
@@ -781,6 +781,7 @@ test('folded feed conversations preview the two newest replies from a recent bur
 
   expect(html).toMatch(/collapsed-preview-post[^>]*>[\s\S]*?Newest reply/)
   expect(html.match(/collapsed-preview-post/g)).toHaveLength(2)
+  expect(html).toContain('class="quiet thread-fold" for="feed-thread-fold-1"')
   expect(html).toMatch(/collapsed-preview-post[^>]*>[\s\S]*?Older deep reply/)
 })
 
@@ -1089,6 +1090,7 @@ test('collapsed previews retain extra depth when the preview itself has an omitt
   }))
 
   expect(html).toMatch(/collapsed-preview-post omitted-parent-reply[^>]*>[\s\S]*?id="post-2706"/)
+  expect(html).toMatch(/collapsed-preview-post omitted-parent-reply[^>]*>[\s\S]*?aria-label="Earlier replies hidden">…<\/div>[\s\S]*?id="post-2706"/)
   expect(html).toMatch(/collapsed-preview-post[^>]*>[\s\S]*?id="post-2717"/)
   expect(html.match(/collapsed-preview-post omitted-parent-reply/g)).toHaveLength(1)
 })

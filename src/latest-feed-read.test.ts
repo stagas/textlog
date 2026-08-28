@@ -54,7 +54,7 @@ test('latest includes unread replies beyond the normal conversation preview', as
   expect(await executeDatabaseDomain(database, 'feeds.latestUnreadCount', { userId: 1 })).toBe(0)
 })
 
-test('latest prunes reply ancestors when the recent conversation root is already present', async () => {
+test('latest keeps all reply ancestors available when the recent conversation root is present', async () => {
   const database = new Database(':memory:', { strict: true })
   runMigrations(database)
   database.run(`INSERT INTO users(id,handle,email,password) VALUES
@@ -71,8 +71,47 @@ test('latest prunes reply ancestors when the recent conversation root is already
     viewerId: 1, page: 1, pageSize: 20, markRead: false,
   })
 
-  expect(feed.posts.map(post => post.id)).toEqual([100, 103, 102])
+  expect(feed.posts.map(post => post.id)).toEqual([100, 103, 102, 101])
   expect(feed.posts.find(post => post.id === 102)?.parent_id).toBe(101)
+})
+
+test('latest keeps a rooted conversation available for local expansion', async () => {
+  const database = new Database(':memory:', { strict: true })
+  runMigrations(database)
+  database.run(`INSERT INTO users(id,handle,email,password) VALUES
+    (1,'reader','reader@example.test','x'),(2,'writer','writer@example.test','x');
+    INSERT INTO posts(id,user_id,body,created_at) VALUES(200,2,'root','2026-08-27 09:00:00');
+    INSERT INTO posts(id,user_id,parent_id,body,created_at) VALUES
+    (201,2,200,'first','2026-08-27 10:00:00'),(202,2,201,'second','2026-08-27 11:00:00'),
+    (203,2,202,'third','2026-08-27 12:00:00'),(204,2,203,'fourth','2026-08-27 13:00:00');`)
+  markLatestPostsRead(1, [200, 201, 202, 203, 204], database)
+  cacheDb.query("DELETE FROM feed_snapshots WHERE kind='latest-conversation-heads-v10' AND viewer_id=1").run()
+
+  const preview = await executeDatabaseDomain(database, 'feeds.latestPage', {
+    viewerId: 1, page: 1, pageSize: 20, markRead: false,
+  })
+  expect(preview.posts.map(post => post.id)).toEqual([200, 204, 203, 202, 201])
+})
+
+test('latest fills a fifth connected reply slot while retaining unread replies', async () => {
+  const database = new Database(':memory:', { strict: true })
+  runMigrations(database)
+  database.run(`INSERT INTO users(id,handle,email,password) VALUES
+    (1,'reader','reader@example.test','x'),(2,'writer','writer@example.test','x');
+    INSERT INTO posts(id,user_id,body,created_at) VALUES(300,2,'root','2026-08-27 09:00:00');
+    INSERT INTO posts(id,user_id,parent_id,body,created_at) VALUES
+    (301,2,300,'one','2026-08-27 10:00:00'),(302,2,300,'two','2026-08-27 11:00:00'),
+    (303,2,300,'three','2026-08-27 12:00:00'),(304,2,300,'four','2026-08-27 13:00:00'),
+    (305,2,300,'five','2026-08-27 14:00:00'),(306,2,300,'six','2026-08-27 15:00:00'),
+    (307,2,300,'seven','2026-08-27 16:00:00');`)
+  markLatestPostsRead(1, [300, 302, 303, 304, 305, 306, 307], database)
+  cacheDb.query("DELETE FROM feed_snapshots WHERE kind='latest-conversation-heads-v10' AND viewer_id=1").run()
+
+  const feed = await executeDatabaseDomain(database, 'feeds.latestPage', {
+    viewerId: 1, page: 1, pageSize: 20, markRead: false,
+  })
+
+  expect(feed.posts.map(post => post.id)).toEqual([300, 307, 306, 305, 304, 303, 301])
 })
 
 test('latest anchors an active branch at its oldest recent reply and quotes the older parent', async () => {
@@ -93,8 +132,8 @@ test('latest anchors an active branch at its oldest recent reply and quotes the 
     viewerId: 1, page: 1, pageSize: 20, markRead: false,
   })
 
-  expect(feed.posts.map(post => post.id)).toEqual([104, 103, 102])
-  expect(feed.posts.find(post => post.id === 102)).toMatchObject({
-    parent_id: 101, feed_branch_root: true, parent: { id: 101 },
+  expect(feed.posts.map(post => post.id)).toEqual([104, 103, 102, 101])
+  expect(feed.posts.find(post => post.id === 101)).toMatchObject({
+    parent_id: 100, feed_branch_root: true, parent: { id: 100 },
   })
 })
