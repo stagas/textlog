@@ -74,6 +74,7 @@ export function safeRefererPath(referer: string | undefined, requestUrl: string,
 // native client sends neither Origin nor Referer.
 export function requiresSameOrigin(method: string, path: string) {
   return method !== 'GET' && method !== 'HEAD' && !path.startsWith('/api/')
+    && path !== '/install/banner/dismiss'
 }
 
 export function isSameOriginRequest(request: Request, appUrl: string | null | undefined = Bun.env.APP_URL) {

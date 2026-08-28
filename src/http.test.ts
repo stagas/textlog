@@ -230,6 +230,7 @@ describe('same-origin enforcement', () => {
   test('guards browser form submissions', () => {
     expect(requiresSameOrigin('POST', '/post')).toBe(true)
     expect(requiresSameOrigin('POST', '/follow/alice')).toBe(true)
+    expect(requiresSameOrigin('POST', '/install/banner/dismiss')).toBe(false)
     expect(requiresSameOrigin('GET', '/post')).toBe(false)
   })
 

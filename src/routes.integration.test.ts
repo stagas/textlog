@@ -143,6 +143,13 @@ test('mobile browsers see an install banner and can dismiss it', async () => {
 
   const dismissed = await request('/install/banner/dismiss', { method: 'POST', userAgent, form: {} })
   expect(dismissed.headers.get('set-cookie')).toContain('pwa_install_banner_dismissed=1')
+
+  const anonymousDismissal = await fetch(`${origin}/install/banner/dismiss`, {
+    method: 'POST',
+    redirect: 'manual',
+  })
+  expect(anonymousDismissal.status).toBe(303)
+  expect(anonymousDismissal.headers.get('set-cookie')).toContain('pwa_install_banner_dismissed=1')
 })
 
 test('install guide is tailored to the mobile browser', async () => {
