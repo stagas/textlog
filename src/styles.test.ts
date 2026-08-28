@@ -82,6 +82,13 @@ describe('in-memory stylesheet', () => {
     expect(css).toContain('font-size: 0.75rem;')
   })
 
+  test('preserves ASCII art formatting in internal post hover cards', async () => {
+    const css = await Bun.file(new URL('./styles.css', import.meta.url)).text()
+    expect(css).toContain('.post.internal-post-card > .post-body.ascii-art {')
+    expect(css).toContain('font-family: var(--font-monospace);\n  line-height: 1.15;')
+    expect(css).toContain('letter-spacing: normal;\n  white-space: pre;')
+  })
+
   test('lets taps pass through todos that the viewer cannot edit', async () => {
     const css = await Bun.file(new URL('./styles.css', import.meta.url)).text()
     expect(css).toContain(

@@ -3004,6 +3004,32 @@ test('internal post hover cards render linked quizzes with the full Post compone
   expect(card).toContain('>Venus</button>')
 })
 
+test('internal post hover cards mark linked ASCII art for preserved formatting', () => {
+  const url = 'https://textlog.test/post/12'
+  const html = renderToStaticMarkup(React.createElement(Post, { user: null, p: {
+    id: 1,
+    user_id: 2,
+    parent_id: null,
+    body: url,
+    created_at: '2026-08-24 10:00:00',
+    deleted_at: null,
+    handle: 'linker',
+    reply_count: 0,
+    link_previews: { [url]: { imageUrl: url, linkedPost: {
+      id: 12,
+      user_id: 3,
+      parent_id: null,
+      body: ' /\\_/\\\n( o.o )\n #ascii',
+      handle: 'artist',
+      reply_count: 0,
+      thread_locked: false,
+    } } },
+  } }))
+  const card = html.slice(html.indexOf('class="remote-link-popover internal-post-popover"'))
+  expect(card).toContain('class="post-body ascii-art"')
+  expect(card).toContain(' /\\_/\\\n( o.o )')
+})
+
 test('Profile and hashtag feeds show no reply metadata beside post dates', () => {
   const post = {
     id: 2,
