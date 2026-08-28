@@ -347,8 +347,8 @@ export function loadPersonalizedFeed(database: Database, user: User, page: numbe
   const visitedCount = personalizedUnreadCount(database, user.id, toMe)
   if (markRead) {
     const unreadTimeline = timeline.filter(row => row.unread)
-    const latestEventKeys = unreadTimeline.filter(row => toMe || !row.targeted_to_viewer).map(row => row.event_key)
-    markForYouEntriesRead(user.id, unreadTimeline.map(row => row.event_key), toMe, database, latestEventKeys)
+    const eventKeys = unreadTimeline.map(row => row.event_key)
+    markForYouEntriesRead(user.id, eventKeys, toMe, database)
   }
   const toMeCount = toMe ? visitedCount : personalizedUnreadCount(database, user.id, true)
   const forYouCount = toMe ? personalizedUnreadCount(database, user.id, false) : visitedCount

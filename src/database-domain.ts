@@ -2545,9 +2545,7 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
           FROM feed_snapshot_items item,json_each(item.payload) entry
           WHERE item.snapshot_id=? AND item.position<? ORDER BY item.position,entry.key`)
           .all(snapshot.id, pageSize) as Array<{ event_key: string; targeted_to_viewer: number }>
-        changed = markForYouEntriesRead(userId, rows.map(row => row.event_key), toMe, database, rows.filter(row =>
-          toMe || !row.targeted_to_viewer
-        ).map(row => row.event_key))
+        changed = markForYouEntriesRead(userId, rows.map(row => row.event_key), toMe, database)
         if (changed) cacheDb.query(`DELETE FROM materialized_feed_pages_v2 WHERE viewer_id=?
           AND kind IN (${toMe ? "'latest','for-you','to-me'" : "'latest'"})`).run(userId)
       }

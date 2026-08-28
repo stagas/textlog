@@ -42,6 +42,23 @@ test('For You preserves moderation warnings in rendered posts', () => {
   expect(post?.moderation_score).toBe(0.42)
 })
 
+test('For You consumes overlapping directed posts from Latest before rendering its counter', () => {
+  const database = new Database(':memory:', { strict: true })
+  runMigrations(database)
+  database.run(`INSERT INTO users(id,handle,email,password,bio) VALUES
+      (1,'viewer','viewer@example.com','!',''),
+      (2,'writer','writer@example.com','!','');
+    INSERT INTO posts(id,user_id,parent_id,body,created_at) VALUES
+      (1,1,NULL,'viewer root','2026-08-03 09:00:00'),
+      (2,2,1,'directed reply','2026-08-03 10:00:00');`)
+  const viewer: User = { id: 1, handle: 'viewer', email: 'viewer@example.com', bio: '' }
+
+  const feed = loadPersonalizedFeed(database, viewer, 1, 20, false, '/for-you')
+
+  expect(feed.timeline.find(row => row.id === 2)?.targeted_to_viewer).toBeTruthy()
+  expect(feed.latestCount).toBe(0)
+})
+
 test('whisper descendants stay in participant and original tag-follower personalized feeds', () => {
   const database = new Database(':memory:', { strict: true })
   runMigrations(database)
