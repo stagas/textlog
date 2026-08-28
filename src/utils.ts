@@ -1,6 +1,9 @@
 import type { Database } from 'bun:sqlite'
 import { LinkifyIt } from 'linkify-it'
 import { createHash, randomBytes } from 'node:crypto'
+import hljs from 'highlight.js/lib/core'
+import javascript from 'highlight.js/lib/languages/javascript'
+import python from 'highlight.js/lib/languages/python'
 import tlds from 'tlds'
 import { userForApiKey } from './api-keys'
 import { sessionCookieName } from './brand'
@@ -11,6 +14,16 @@ import { markSessionUsed, sessionHash } from './sessions'
 import { activeTimezone, timezoneLabel } from './timezone'
 import type { User } from './types'
 import type { LinkPreview, UserProfileStats } from './types'
+
+hljs.registerLanguage('javascript', javascript)
+hljs.registerLanguage('python', python)
+
+const highlightedCodeLanguages: Record<string, 'javascript' | 'python'> = {
+  js: 'javascript',
+  javascript: 'javascript',
+  py: 'python',
+  python: 'python',
+}
 
 export function userHoverTitle(noteCount: number, bio?: string) {
   const noteLabel = `${noteCount.toLocaleString()} ${noteCount === 1 ? 'note' : 'notes'}`
@@ -279,6 +292,7 @@ type LinkToken = {
   raw: string
   url?: string
   label?: string
+  language?: string
   display?: boolean
 }
 
@@ -359,7 +373,7 @@ export function linkTokens(body: string, flags?: PostContentFlags): LinkToken[] 
       const language = match[1].trim().toLowerCase()
       tokens.push({ index: match.index, lastIndex: match.index + match[0].length,
         kind: language === 'latex' || language === 'tex' ? 'latex-fence' : 'code-fence', raw: match[0],
-        label: match[2] })
+        label: match[2], language })
     }
     for (const match of body.matchAll(/`([^`\r\n]+)`/g)) {
       tokens.push({ index: match.index, lastIndex: match.index + match[0].length, kind: 'code', raw: match[0],
@@ -605,7 +619,11 @@ export function linkify(body: string, mentionBios: Record<string, string> = {}, 
     html += renderedText(body.slice(end, match.index), highlightTerms)
     const token = match.raw
     if (match.kind === 'code' || match.kind === 'code-fence') {
-      html += `<code${match.kind === 'code-fence' ? ' class="code-fence"' : ''}>${esc(match.label)}</code>`
+      const language = match.language && highlightedCodeLanguages[match.language]
+      const code = language ? hljs.highlight(match.label!, { language }).value : esc(match.label)
+      html += `<code${match.kind === 'code-fence'
+        ? ` class="code-fence${language ? ` hljs language-${language}` : ''}"`
+        : ''}>${code}</code>`
     }
     else if (match.kind === 'latex-fence') {
       html += renderedMath(match.label!, true) || `<code class="code-fence">${esc(match.label)}</code>`

@@ -1355,24 +1355,28 @@ body.corners-round a.button {
   user-select: all;
 }
 
-.api-docs .hljs-comment,
-.api-docs .hljs-meta {
+:is(.api-docs, .post) .hljs-comment,
+:is(.api-docs, .post) .hljs-meta {
   color: var(--muted);
 }
 
-.api-docs .hljs-tag,
-.api-docs .hljs-keyword,
-.api-docs .hljs-built_in {
+:is(.api-docs, .post) .hljs-tag,
+:is(.api-docs, .post) .hljs-keyword,
+:is(.api-docs, .post) .hljs-built_in {
   color: var(--accent-dark);
 }
 
-.api-docs .hljs-name,
-.api-docs .hljs-attr,
-.api-docs .hljs-variable {
+:is(.api-docs, .post) .hljs-name,
+:is(.api-docs, .post) .hljs-title,
+:is(.api-docs, .post) .hljs-attr,
+:is(.api-docs, .post) .hljs-variable,
+:is(.api-docs, .post) .hljs-params {
   color: var(--api-patch-ink);
 }
 
-.api-docs .hljs-string {
+:is(.api-docs, .post) .hljs-string,
+:is(.api-docs, .post) .hljs-number,
+:is(.api-docs, .post) .hljs-literal {
   color: var(--api-post-ink);
 }
 

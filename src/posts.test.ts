@@ -233,6 +233,21 @@ describe('post persistence', () => {
       .toBe('<code class="code-fence">&gt; quoted-looking code</code>')
   })
 
+  test('syntax highlights JavaScript and Python fences only', () => {
+    const javascript = linkify('```js\nconst answer = 42\n```')
+    expect(javascript).toContain('<code class="code-fence hljs language-javascript">')
+    expect(javascript).toContain('<span class="hljs-keyword">const</span>')
+    expect(javascript).toContain('<span class="hljs-number">42</span>')
+
+    const python = linkify('```python\ndef answer():\n    return 42\n```')
+    expect(python).toContain('<code class="code-fence hljs language-python">')
+    expect(python).toContain('<span class="hljs-keyword">def</span>')
+    expect(python).toContain('<span class="hljs-keyword">return</span>')
+
+    expect(linkify('```ts\nconst answer = 42\n```'))
+      .toBe('<code class="code-fence">const answer = 42</code>')
+  })
+
   test('renders inline TeX as native MathML', () => {
     const html = linkify('Energy: $E = mc^2$.')
     expect(html).toStartWith('Energy: <math xmlns="http://www.w3.org/1998/Math/MathML">')
@@ -274,7 +289,7 @@ describe('post persistence', () => {
 
   test('ignores math delimiters in code spans and blocks', () => {
     expect(linkify('`$x$`\n```js\n$$y$$\n```'))
-      .toBe('<code>$x$</code>\n<code class="code-fence">$$y$$</code>')
+      .toBe('<code>$x$</code>\n<code class="code-fence hljs language-javascript">$$y$$</code>')
   })
 
   test('falls back to escaped source for malformed TeX', () => {
