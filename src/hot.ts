@@ -27,7 +27,7 @@ export type HotCursor = {
   direction: 'next' | 'previous'
 }
 
-export const hotRankingVersion = 108
+export const hotRankingVersion = 112
 const cursorVersion = hotRankingVersion
 const activityHalfLifeHours = 6
 const postWeight = 0
@@ -78,6 +78,7 @@ const veryRecentReplyCandidateHours = 4
 const recentPostBoost = 4
 const recentPostBoostHours = 24
 const recentPostTierBonus = 100
+const twoReplyRecentPostTierBonus = 70
 const yesterdayPostHours = 48
 const yesterdayPostTierBonus = 50
 const recentReplyActivityBoost = 300
@@ -93,6 +94,8 @@ const recentParticipantActivityWeight = 100
 const recentParticipantActivityHalfLifeHours = 1
 const matureDiscussionLowTierBonus = 16
 const matureDiscussionLowTierHours = 48
+const threeReplyReserve = 4
+const threeReplyReserveHalfLifeHours = 24
 
 function hasHotTable(database: Database) {
   return Boolean(database.query('SELECT 1 FROM sqlite_master WHERE type=\'table\' AND name=\'post_hot\'').get())
@@ -513,11 +516,14 @@ export function getHotPosts(
       GROUP BY reply.parent_id,${activityAuthorIdentity}
   ), participant_recency AS (
     SELECT candidate_id,sum(pow(0.5,max(0,(julianday(?) - julianday(latest_reply_at))*24)
-      /${recentParticipantActivityHalfLifeHours}.0)) participant_recency_score
+      /${recentParticipantActivityHalfLifeHours}.0)) participant_recency_score,
+      sum(CASE WHEN max(0,(julianday(?) - julianday(latest_reply_at))*24)
+        <=${recentReplyPriorityHours} THEN 1 ELSE 0 END) recent_participant_count
       FROM direct_participant_activity GROUP BY candidate_id
   ), ranking_time(as_of) AS (VALUES(?)), scored AS (
     SELECT h.post_id,h.reply_count,h.activity_count,
       COALESCE(participant_recency.participant_recency_score,0) participant_recency_score,
+      COALESCE(participant_recency.recent_participant_count,0) recent_participant_count,
       CASE WHEN branch_heads.head_id=h.post_id THEN 0 ELSE post_depth.depth END candidate_depth,
       max(0,(julianday(ranking_time.as_of)-julianday(p.created_at))*24) post_age_hours,
       max(0,(julianday(ranking_time.as_of)-julianday(h.latest_activity_at))*24) reply_age_hours,
@@ -562,7 +568,7 @@ export function getHotPosts(
     LEFT JOIN branch_heads ON branch_heads.head_id=h.post_id CROSS JOIN ranking_time
     LEFT JOIN participant_recency ON participant_recency.candidate_id=h.post_id
   ), ranked_base AS (
-    SELECT post_id,post_age_hours,reply_age_hours,reply_count,participant_recency_score,
+    SELECT post_id,post_age_hours,reply_age_hours,reply_count,participant_recency_score,recent_participant_count,
       CASE WHEN candidate_depth=0 THEN 1 ELSE
         ${replyCandidateBaseWeight}*pow(${replyCandidateDepthWeight},candidate_depth-1) END candidate_weight,
       (CASE
@@ -570,6 +576,8 @@ export function getHotPosts(
         1+reply_recency_priority+min(0.25,recency_score*0.01)
       WHEN reply_count=2 AND reply_age_hours<=${recentReplyPriorityHours} THEN
         0.225+reply_recency_priority*0.04
+      WHEN reply_count=3 THEN ${threeReplyReserve}
+        *pow(0.5,reply_age_hours/${threeReplyReserveHalfLifeHours}.0)
       WHEN reply_count>=3 THEN discussion_reserve
       ELSE max(recency_score,conversation_depth_reserve) END)
       *CASE WHEN candidate_depth=0 THEN 1 ELSE
@@ -579,15 +587,19 @@ export function getHotPosts(
       (base_score*(1+${recentPostBoost}*max(0,1-post_age_hours/${recentPostBoostHours}.0))
       +candidate_weight*CASE WHEN base_score>0 AND reply_count>0 AND reply_age_hours<${recentReplyPriorityHours}
         THEN ${recentReplyActivityBoost}*CASE reply_count WHEN 1 THEN ${singleReplyRecentActivityWeight} ELSE 1 END
+          *CASE WHEN post_age_hours>=${staleTailPostHours} AND recent_participant_count<=1
+            THEN 0 ELSE 1 END
           *max(0,1-reply_age_hours/${recentReplyPriorityHours}.0) ELSE 0 END
       +candidate_weight*CASE WHEN base_score>0 AND reply_count=0 AND reply_age_hours<${recentReplyPriorityHours}
         THEN ${recentPollVoteActivityBoost}
           *pow(min(1,base_score/${recentPollVoteSaturationScore}.0),2)
           *max(0,1-reply_age_hours/${recentReplyPriorityHours}.0) ELSE 0 END
       +candidate_weight*CASE WHEN base_score>0 AND reply_count>=3 THEN
-        ${recentParticipantActivityWeight}*participant_recency_score ELSE 0 END
+        ${recentParticipantActivityWeight}*participant_recency_score
+          *CASE WHEN post_age_hours>=${staleTailPostHours} AND recent_participant_count<=1
+            THEN 0 ELSE 1 END ELSE 0 END
       +candidate_weight*CASE WHEN base_score>0 AND reply_count>1 AND post_age_hours<${recentPostBoostHours}
-        THEN ${recentPostTierBonus}
+        THEN CASE WHEN reply_count=2 THEN ${twoReplyRecentPostTierBonus} ELSE ${recentPostTierBonus} END
         WHEN base_score>0 AND reply_count>1 AND post_age_hours<${yesterdayPostHours}
           AND reply_age_hours<=${recentReplyPriorityHours}
         THEN ${yesterdayPostTierBonus} ELSE 0 END
@@ -670,7 +682,7 @@ export function getHotPosts(
       *CASE WHEN ranked_tree.depth=0 THEN pow(0.5,max(0,
         (julianday(ranking_time.as_of)-julianday(h.latest_activity_at))*24-${staleTailPostHours})
           /${staleTailPostHalfLifeHours}.0) ELSE 1 END
-      *CASE WHEN ranked_tree.depth=0 AND h.reply_count<${discussionReserveReplyThreshold}
+      *CASE WHEN ranked_tree.depth=0 AND h.reply_count<3
         AND (julianday(ranking_time.as_of)-julianday(h.latest_activity_at))*24>${recentReplyPriorityHours}
         THEN ${quietSmallDiscussionTailWeight} ELSE 1 END
       *CASE WHEN representative_scores.root_id=ranked_tree.post_id
@@ -695,6 +707,6 @@ export function getHotPosts(
       h.latest_activity_at ${cursor?.direction === 'previous' ? 'ASC' : 'DESC'},
       p.created_at ${cursor?.direction === 'previous' ? 'ASC' : 'DESC'},
       p.id ${cursor?.direction === 'previous' ? 'ASC' : 'DESC'} LIMIT ?`)
-    .all(timestamp, ...parameters) as HotPost[]
+    .all(timestamp, timestamp, ...parameters) as HotPost[]
   return cursor?.direction === 'previous' ? rows.reverse() : rows
 }

@@ -324,16 +324,39 @@ describe('hot feed ranking', () => {
   })
 
   test('replies today strongly revive an older post', () => {
+    database.run(`INSERT INTO users(id,handle) VALUES(10,'recent-one'),(11,'recent-two')`)
     post(1, '2026-07-20 12:00:00')
+    postBy(10, 10, '2026-08-03 11:58:00', 1)
+    postBy(11, 11, '2026-08-03 11:59:00', 1)
     post(2, '2026-08-01 12:00:00')
-    database.run(`UPDATE post_hot SET score=0.01,reply_count=2,activity_count=2,
-      score_updated_at='2026-08-03 11:59:00',latest_activity_at='2026-08-03 11:59:00' WHERE post_id=1`)
     database.run(`UPDATE post_hot SET score=1000,reply_count=20,activity_count=20,
       score_updated_at='2026-08-02 11:59:00',latest_activity_at='2026-08-02 11:59:00' WHERE post_id=2`)
 
     const results = getHotPosts(database, 20, null, asOf)
-    expect(results.map(result => result.id)).toEqual([1, 2])
+    expect(results.filter(result => [1, 2].includes(result.id)).map(result => result.id)).toEqual([1, 2])
     expect(results[0].hot_score).toBeGreaterThan(290)
+  })
+
+  test('does not give an old discussion the full revival boost for one recent answer', () => {
+    database.run(`INSERT INTO users(id,handle) VALUES(10,'recent-one')`)
+    post(1, '2026-07-20 12:00:00')
+    postBy(10, 10, '2026-08-03 11:59:00', 1)
+    database.run(`UPDATE post_hot SET reply_count=3,activity_count=3 WHERE post_id=1`)
+
+    const result = getHotPosts(database, 20, null, asOf).find(post => post.id === 1)!
+    expect(result.hot_score).toBeGreaterThan(0)
+    expect(result.hot_score).toBeLessThan(100)
+  })
+
+  test('keeps three-reply engagement above an old thread resurfaced by one answer', () => {
+    post(1, '2026-07-20 12:00:00')
+    post(2, '2026-07-20 12:00:00')
+    database.run(`UPDATE post_hot SET score=3.44,reply_count=3,activity_count=3,
+      score_updated_at='2026-08-02 06:00:00',latest_activity_at='2026-08-02 06:00:00' WHERE post_id=1`)
+    database.run(`UPDATE post_hot SET score=2,reply_count=3,activity_count=3,
+      score_updated_at='2026-08-03 08:30:00',latest_activity_at='2026-08-03 08:30:00' WHERE post_id=2`)
+
+    expect(getHotPosts(database, 20, null, asOf).map(result => result.id).slice(0, 2)).toEqual([1, 2])
   })
 
   test('several very recent participants can lead hot', () => {
@@ -370,14 +393,16 @@ describe('hot feed ranking', () => {
   })
 
   test('very recent replies can outrank the post-age tiers', () => {
+    database.run(`INSERT INTO users(id,handle) VALUES(10,'recent-one'),(11,'recent-two')`)
     post(1, '2026-07-20 12:00:00')
+    postBy(10, 10, '2026-08-03 11:58:00', 1)
+    postBy(11, 11, '2026-08-03 11:59:00', 1)
     post(2, '2026-08-03 00:00:00')
-    database.run(`UPDATE post_hot SET score=0.01,reply_count=2,activity_count=2,
-      score_updated_at='2026-08-03 11:59:00',latest_activity_at='2026-08-03 11:59:00' WHERE post_id=1`)
     database.run(`UPDATE post_hot SET score=1000,reply_count=20,activity_count=20,
       score_updated_at='2026-08-03 00:00:00',latest_activity_at='2026-08-03 00:00:00' WHERE post_id=2`)
 
-    expect(getHotPosts(database, 20, null, asOf).map(result => result.id)).toEqual([1, 2])
+    expect(getHotPosts(database, 20, null, asOf).filter(result => [1, 2].includes(result.id)).map(result => result.id))
+      .toEqual([1, 2])
   })
 
   test('places recently quiet mature discussions low in hot', () => {
@@ -407,7 +432,18 @@ describe('hot feed ranking', () => {
     const newThread = results.find(result => result.id === 3)!
     const fiveDayThread = results.find(result => result.id === 5)!
     expect(fourDayThread.hot_score).toBeCloseTo(fiveDayThread.hot_score)
-    expect(newThread.hot_score).toBeCloseTo(100 + 300 + (0.225 + 0.04) * 5)
+    expect(newThread.hot_score).toBeCloseTo(70 + 300 + (0.225 + 0.04) * 5)
+  })
+
+  test('does not let the fresh-post tier make a two-participant thread hotter than broader discussions', () => {
+    post(1, '2026-08-03 04:00:00')
+    post(2, '2026-08-03 04:00:00')
+    database.run(`UPDATE post_hot SET score=2.4,reply_count=2,activity_count=3,
+      score_updated_at='2026-08-03 06:30:00',latest_activity_at='2026-08-03 06:30:00' WHERE post_id=1`)
+    database.run(`UPDATE post_hot SET score=4.25,reply_count=4,activity_count=7,
+      score_updated_at='2026-08-03 06:00:00',latest_activity_at='2026-08-03 06:00:00' WHERE post_id=2`)
+
+    expect(getHotPosts(database, 20, null, asOf).map(result => result.id).slice(0, 2)).toEqual([2, 1])
   })
 
   test('ranks minute- and hour-old posts with multiple replies ahead of day-old posts', () => {
@@ -583,7 +619,7 @@ describe('hot feed ranking', () => {
     expect(results.find(result => result.id === 4)!.hot_score).toBeGreaterThan(root.hot_score)
   })
 
-  test('gives a deep new reply its thread strength while sharply decaying its old ancestors', () => {
+  test('keeps a lone deep reply above its old ancestors without giving it the full thread revival boost', () => {
     database.run(`INSERT INTO users(id,handle) VALUES(2,'paratoner');
       INSERT INTO users(id,handle) VALUES(3,'avioli');`)
     postBy(2, 658, '2026-07-20 13:37:35')
@@ -603,9 +639,11 @@ describe('hot feed ranking', () => {
         .run(id, 0.1, 1, 1, '2026-08-03 10:00:00', '2026-08-03 10:00:00')
     }
     const results = getHotPosts(database, 100, null, asOf, -1, false, 2)
-    expect(results[0].id).toBe(2194)
+    expect(results.findIndex(result => result.id === 2194)).toBeGreaterThan(0)
+    expect(results.findIndex(result => result.id === 2194))
+      .toBeLessThan(results.findIndex(result => result.id === 681))
     expect(results.findIndex(result => result.id === 681)).toBeGreaterThan(0)
-    expect(results.findIndex(result => result.id === 681)).toBeLessThan(40)
+    expect(results.findIndex(result => result.id === 681)).toBeLessThan(50)
     expect(results.findIndex(result => [658, 677, 679, 680].includes(result.id))).toBeGreaterThanOrEqual(40)
   })
 
