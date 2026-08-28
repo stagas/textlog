@@ -442,7 +442,7 @@ export function linkTokens(body: string, flags?: PostContentFlags): LinkToken[] 
       }
     }
   }
-  for (const match of body.matchAll(/(?<![\p{L}\p{M}\p{N}_~])~[0-9]+/gu)) {
+  for (const match of body.matchAll(/(?<![\p{L}\p{M}\p{N}_&])&[0-9]+/gu)) {
     const lastIndex = match.index + match[0].length
     if (!escapedAt(body, match.index)
       && !tokens.some(token => token.kind === 'url' && match.index < token.lastIndex && lastIndex > token.index)) {
@@ -628,7 +628,7 @@ export function linkify(body: string, mentionBios: Record<string, string> = {}, 
     }
     return html
   }
-  if (flags && !flags.has_latex && !flags.has_links && !flags.has_code && !/[~*_/|]/.test(body)) {
+  if (flags && !flags.has_latex && !flags.has_links && !flags.has_code && !/[&~*_/|]/.test(body)) {
     return highlighted(body, highlightTerms)
   }
   let html = ''

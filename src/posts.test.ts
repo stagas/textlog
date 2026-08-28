@@ -118,14 +118,14 @@ describe('post persistence', () => {
     expect(linkify('Keep \\~~literal~~')).toBe('Keep \\~~literal~~')
     expect(linkify('Keep \\~literal~')).toBe('Keep \\~literal~')
   })
-  test('linkifies numerical tilde post references without conflicting with strikethrough', () => {
-    expect(linkify('see ~123 and ~strike through~', {}, [], 'https://textlog.test')).toBe(
-      'see <a href="/post/123">~123</a> and <del>strike through</del>',
+  test('linkifies numerical ampersand post references without conflicting with strikethrough', () => {
+    expect(linkify('see &123 and ~strike through~', {}, [], 'https://textlog.test')).toBe(
+      'see <a href="/post/123">&amp;123</a> and <del>strike through</del>',
     )
-    expect(linkify('see ~123', {}, [], 'https://textlog.test', { has_latex: 0, has_links: 0, has_code: 0 }))
-      .toBe('see <a href="/post/123">~123</a>')
-    expect(linkify('escaped \\~123 and word~123', {}, [], 'https://textlog.test'))
-      .toBe('escaped \\~123 and word~123')
+    expect(linkify('see &123', {}, [], 'https://textlog.test', { has_latex: 0, has_links: 0, has_code: 0 }))
+      .toBe('see <a href="/post/123">&amp;123</a>')
+    expect(linkify('escaped \\&123 and word&123 and old ~123', {}, [], 'https://textlog.test'))
+      .toBe('escaped \\&amp;123 and word&amp;123 and old ~123')
   })
   test('renders single and double Markdown bold and underline markers in posts', () => {
     expect(linkify('*bold* and **also bold**')).toBe('<strong>bold</strong> and <strong>also bold</strong>')
@@ -487,9 +487,9 @@ describe('post persistence', () => {
     expect(html).not.toContain('--preview-image')
   })
 
-  test('uses internal post hover cards for numerical tilde references', () => {
+  test('uses internal post hover cards for numerical ampersand references', () => {
     const url = 'https://textlog.test/post/12'
-    const html = linkify('see ~12', {}, [], 'https://textlog.test', undefined, '', {}, {}, {
+    const html = linkify('see &12', {}, [], 'https://textlog.test', undefined, '', {}, {}, {
       signedIn: true,
       formPrefix: 'post-1',
       linkPreviews: {

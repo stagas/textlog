@@ -117,7 +117,7 @@ export function postContentFlags(body: string): PostContentFlags {
   return {
     has_latex: body.includes('$') || /```\s*(?:latex|tex)(?:\s|$)/im.test(body) ? 1 : 0,
     has_links:
-      /(?:https?:\/\/|www\.|[A-Za-z0-9-]+\.[A-Za-z]{2,}|\[[^\]\r\n]+\]\(|(?<![A-Za-z0-9_])@[A-Za-z0-9_]+|(?<![\p{L}\p{M}\p{N}_])#[\p{L}\p{M}\p{N}_]+|(?<![\p{L}\p{M}\p{N}_~])~[0-9]+)/u
+      /(?:https?:\/\/|www\.|[A-Za-z0-9-]+\.[A-Za-z]{2,}|\[[^\]\r\n]+\]\(|(?<![A-Za-z0-9_])@[A-Za-z0-9_]+|(?<![\p{L}\p{M}\p{N}_])#[\p{L}\p{M}\p{N}_]+|(?<![\p{L}\p{M}\p{N}_&])&[0-9]+)/u
           .test(body)
         ? 1
         : 0,
