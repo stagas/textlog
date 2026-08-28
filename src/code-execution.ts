@@ -5,6 +5,7 @@ export type ExecutableCode = { language: string; code: string }
 
 const EXEC_TIMEOUT_MS = 10_000
 const MAX_OUTPUT_LENGTH = 20_000
+const MAX_OUTPUT_LINES = 10
 const PISTON_LANGUAGE_ALIASES: Record<string, string> = {
   js: 'javascript',
   py: 'python',
@@ -36,7 +37,13 @@ export function executableCode(body: string): ExecutableCode | null {
 }
 
 function limitedOutput(value: string) {
-  return value.length <= MAX_OUTPUT_LENGTH ? value : `${value.slice(0, MAX_OUTPUT_LENGTH)}\n… output truncated`
+  const normalized = value.replace(/\r\n?/g, '\n')
+  const lines = normalized.split('\n')
+  while (lines.length > 1 && lines.at(-1) === '') lines.pop()
+  const lineLimited = lines.length > MAX_OUTPUT_LINES
+    ? [...lines.slice(0, MAX_OUTPUT_LINES - 1), '…'].join('\n')
+    : lines.join('\n')
+  return lineLimited.length <= MAX_OUTPUT_LENGTH ? lineLimited : `${lineLimited.slice(0, MAX_OUTPUT_LENGTH - 1)}…`
 }
 
 async function executeDevelopment(code: ExecutableCode) {

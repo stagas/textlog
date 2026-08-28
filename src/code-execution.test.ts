@@ -21,6 +21,12 @@ describe('executable notes', () => {
       .toBe('answer 42')
   })
 
+  test('limits output to ten visible lines with an ellipsis', async () => {
+    const output = await executePostCode('#exec\n```js\nfor (let i = 1; i <= 12; i++) console.log(i)\n```',
+      'development')
+    expect(output?.split('\n')).toEqual(['1', '2', '3', '4', '5', '6', '7', '8', '9', '…'])
+  })
+
   test('does not execute other languages in development', async () => {
     expect(await executePostCode('#exec\n```python\nprint(42)\n```', 'development'))
       .toContain('only supports JavaScript')
@@ -35,7 +41,7 @@ describe('executable notes', () => {
     }) as typeof fetch
     try {
       expect(await executePostCode('#exec\n```js\nconsole.log(6 * 7)\n```', 'production',
-        'http://localhost:2000')).toBe('42\n')
+        'http://localhost:2000')).toBe('42')
       expect(requestBody).toMatchObject({ language: 'javascript', version: '*' })
     }
     finally {
