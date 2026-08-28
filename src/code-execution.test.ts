@@ -37,10 +37,18 @@ describe('executable notes', () => {
     expect(displayed.every(line => line.length <= 200)).toBe(true)
   })
 
-  test('removes the sandbox keeper fatal-signal message without trimming the rendered output', () => {
-    const output = 'answer 42\nSandbox keeper received fatal signal 6\n\n  '
-    expect(displayedExecutionOutput(output)).toBe('answer 42\n\n\n  ')
-    expect(output).toBe('answer 42\nSandbox keeper received fatal signal 6\n\n  ')
+  test('removes the sandbox keeper fatal-signal line before limiting rendered lines', () => {
+    const output = `${Array.from({ length: 12 }, (_, index) => index + 1).join('\n')}\n`
+      + 'Sandbox keeper received fatal signal 6'
+    expect(displayedExecutionOutput(output).split('\n'))
+      .toEqual(['1', '2', '3', '4', '5', '6', '7', '8', '…', '12'])
+    expect(output).toEndWith('\nSandbox keeper received fatal signal 6')
+  })
+
+  test('trims trailing whitespace before limiting rendered lines', () => {
+    const output = `${Array.from({ length: 12 }, (_, index) => index + 1).join('\n')}\n\n  `
+    expect(displayedExecutionOutput(output).split('\n'))
+      .toEqual(['1', '2', '3', '4', '5', '6', '7', '8', '…', '12'])
   })
 
   test('does not execute other languages in development', async () => {

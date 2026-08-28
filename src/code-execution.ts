@@ -42,7 +42,9 @@ function boundedExecutionOutput(value: string) {
 }
 
 export function displayedExecutionOutput(value: string) {
-  const normalized = value.replaceAll('Sandbox keeper received fatal signal 6', '').replace(/\r\n?/g, '\n')
+  const normalized = value.replace(/\r\n?/g, '\n')
+    .replace(/^Sandbox keeper received fatal signal 6\n?|\nSandbox keeper received fatal signal 6(?=\n|$)/g, '')
+    .trimEnd()
   const lines = normalized.split('\n')
   const lineLimited = lines.length > MAX_OUTPUT_LINES
     ? [...lines.slice(0, MAX_OUTPUT_LINES - 2), '…', lines.at(-1)!]
