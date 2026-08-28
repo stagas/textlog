@@ -986,7 +986,7 @@ function FeedPost(props: FeedPostProps) {
 export function ThreadReplies(
   { parentId, replies, user, returnPath, excludePostId, flat = false, showMissingContinuations = false,
     continuationLabel = 'more', continuationReturnPath, contextUnreadPostIds, contextDirectedUnreadPostIds,
-    highlightTerms = [], hideTopMeta = false, collapsedPreviewPostIds = [] }: {
+    highlightTerms = [], hideTopMeta = false, collapsedPreviewPostIds = [], hideAncestorGaps = false }: {
       parentId: number
       replies: PostView[]
       user: User | null
@@ -1001,6 +1001,7 @@ export function ThreadReplies(
       highlightTerms?: string[]
       hideTopMeta?: boolean
       collapsedPreviewPostIds?: number[]
+      hideAncestorGaps?: boolean
     },
 ) {
   if (!replies.length) return null
@@ -1091,7 +1092,7 @@ export function ThreadReplies(
         {collapsedPreviewGapPosts.has(reply.id) && (
           <div className="quiet thread-ancestor-gap collapsed-preview-gap" aria-label="Earlier replies hidden">…</div>
         )}
-        {reply.feed_ancestor_gap && (
+        {reply.feed_ancestor_gap && !hideAncestorGaps && (
           <div className="quiet thread-ancestor-gap" aria-label="Earlier replies omitted">…</div>
         )}
         {foldControlId && <input className="thread-fold-input" type="checkbox" id={foldControlId} />}
@@ -1321,6 +1322,7 @@ export function FeedThreads(
               continuationReturnPath={collapsed ? expandedReturnPath : returnPath}
               contextUnreadPostIds={contextUnreadPostIds} contextDirectedUnreadPostIds={contextDirectedUnreadPostIds}
               highlightTerms={highlightTerms} hideTopMeta={hideTopMeta}
+              hideAncestorGaps={!continuesElsewhere}
               collapsedPreviewPostIds={canCollapse ? collapsedPreview.map(reply => reply.id) : []} />
           </div>
         )

@@ -930,7 +930,7 @@ test('expanded feed conversations do not show collapsed sibling omission markers
   expect(html).not.toContain('aria-label="Earlier replies omitted"')
 })
 
-test('expanded collapsible deep threads retain permanent ancestor omission markers', () => {
+test('expanded complete deep threads remove feed-projection ancestor omission markers', () => {
   const root = { id: 60, user_id: 1, parent_id: null, body: 'Root', created_at: '2026-08-20 09:00:00',
     deleted_at: null, handle: 'root', reply_count: 3, direct_reply_count: 2 }
   const branch = { id: 61, user_id: 2, parent_id: root.id, body: 'Branch', created_at: '2026-08-20 10:00:00',
@@ -948,7 +948,51 @@ test('expanded collapsible deep threads retain permanent ancestor omission marke
     posts: [root, branch, deep, sibling],
   }))
 
-  expect(html).toContain('aria-label="Earlier replies omitted"')
+  expect(html).not.toContain('aria-label="Earlier replies omitted"')
+})
+
+test('expanded complete linear conversations remove the folded feed omission marker', () => {
+  const root = { id: 2652, user_id: 1, parent_id: null, body: 'Root', created_at: '2026-08-27 12:05:04',
+    deleted_at: null, handle: 'root', reply_count: 3 }
+  const first = { id: 2653, user_id: 2, parent_id: root.id, body: 'First reply', created_at: '2026-08-27 12:11:08',
+    deleted_at: null, handle: 'first', reply_count: 2, parent: root }
+  const second = { id: 2654, user_id: 1, parent_id: first.id, body: 'Second reply', created_at: '2026-08-27 12:28:13',
+    deleted_at: null, handle: 'second', reply_count: 1, parent: first, feed_ancestor_gap: true }
+  const third = { id: 2655, user_id: 2, parent_id: second.id, body: 'Third reply', created_at: '2026-08-27 12:55:26',
+    deleted_at: null, handle: 'third', reply_count: 0, parent: second }
+  const html = renderToStaticMarkup(React.createElement(FeedThreads, {
+    user: null,
+    returnPath: '/for-you',
+    expandedRootId: root.id,
+    posts: [root, first, second, third],
+  }))
+
+  expect(html).toContain('First reply')
+  expect(html).toContain('Second reply')
+  expect(html).toContain('Third reply')
+  expect(html).not.toContain('aria-label="Earlier replies omitted"')
+  expect(html).not.toContain('>more</a>')
+})
+
+test('locally collapsible complete conversations only render the collapsed-preview gap', () => {
+  const root = { id: 2652, user_id: 1, parent_id: null, body: 'Root', created_at: '2026-08-27 12:05:04',
+    deleted_at: null, handle: 'root', reply_count: 3 }
+  const first = { id: 2653, user_id: 2, parent_id: root.id, body: 'First reply', created_at: '2026-08-27 12:11:08',
+    deleted_at: null, handle: 'first', reply_count: 2, parent: root }
+  const second = { id: 2654, user_id: 1, parent_id: first.id, body: 'Second reply', created_at: '2026-08-27 12:28:13',
+    deleted_at: null, handle: 'second', reply_count: 1, parent: first, feed_ancestor_gap: true }
+  const third = { id: 2655, user_id: 2, parent_id: second.id, body: 'Third reply', created_at: '2026-08-27 12:55:26',
+    deleted_at: null, handle: 'third', reply_count: 0, parent: second }
+  const html = renderToStaticMarkup(React.createElement(FeedThreads, {
+    user: null,
+    returnPath: '/for-you',
+    posts: [root, first, second, third],
+  }))
+
+  expect(html).toContain('id="feed-thread-fold-2652" checked=""')
+  expect(html).toContain('aria-label="Earlier replies hidden"')
+  expect(html).not.toContain('aria-label="Earlier replies omitted"')
+  expect(html).not.toContain('>more</a>')
 })
 
 test('expanded feed conversations do not mark omissions when every reply at that depth is visible', () => {
