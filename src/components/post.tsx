@@ -1,6 +1,7 @@
 import React from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
 import { isAdmin } from '../admin'
+import { displayedExecutionOutput } from '../code-execution'
 import { containsAsciiArt, containsSpoilerTag, extractHashtags, extractMentions } from '../content'
 import { parsePoll, pollDisplayBody } from '../polls'
 import { parseTodo, todoDisplayBody } from '../todos'
@@ -505,8 +506,9 @@ export function PreviewPost({ p }: { p: PostView }) {
 }
 
 function ExecutionOutput({ output }: { output: string }) {
-  if (!output.trim()) return null
-  return <code className="code-fence execution-output">{output}</code>
+  const visibleOutput = displayedExecutionOutput(output)
+  if (!visibleOutput.trim()) return null
+  return <code className="code-fence execution-output">{visibleOutput}</code>
 }
 
 function endsWithCodeFence(body: string) {

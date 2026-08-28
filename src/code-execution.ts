@@ -36,14 +36,18 @@ export function executableCode(body: string): ExecutableCode | null {
   return { language: match[1].toLowerCase(), code: match[2] }
 }
 
-function limitedOutput(value: string) {
+function boundedExecutionOutput(value: string) {
+  return value.length <= MAX_OUTPUT_LENGTH ? value : `${value.slice(0, MAX_OUTPUT_LENGTH - 1)}…`
+}
+
+export function displayedExecutionOutput(value: string) {
   const normalized = value.replace(/\r\n?/g, '\n')
   const lines = normalized.split('\n')
   while (lines.length > 1 && lines.at(-1) === '') lines.pop()
   const lineLimited = lines.length > MAX_OUTPUT_LINES
-    ? [...lines.slice(0, MAX_OUTPUT_LINES - 1), '…'].join('\n')
+    ? [...lines.slice(0, MAX_OUTPUT_LINES - 2), '…', lines.at(-1)!].join('\n')
     : lines.join('\n')
-  return lineLimited.length <= MAX_OUTPUT_LENGTH ? lineLimited : `${lineLimited.slice(0, MAX_OUTPUT_LENGTH - 1)}…`
+  return lineLimited
 }
 
 async function executeDevelopment(code: ExecutableCode) {
@@ -67,7 +71,7 @@ async function executeDevelopment(code: ExecutableCode) {
   catch (error) {
     output.push(`Execution error: ${error instanceof Error ? error.message : String(error)}`)
   }
-  return limitedOutput(output.join('\n'))
+  return boundedExecutionOutput(output.join('\n'))
 }
 
 async function executePiston(code: ExecutableCode, pistonUrl: string) {
@@ -87,7 +91,7 @@ async function executePiston(code: ExecutableCode, pistonUrl: string) {
     compile?: { output?: string }
     run?: { output?: string }
   }
-  return limitedOutput(result.compile?.output || result.run?.output || result.message || '')
+  return boundedExecutionOutput(result.compile?.output || result.run?.output || result.message || '')
 }
 
 export async function executePostCode(body: string, environment = Bun.env.NODE_ENV,
@@ -112,6 +116,6 @@ export async function executePostCode(body: string, environment = Bun.env.NODE_E
   catch (error) {
     logError(`code execution language=${code.language} status=failed `
       + `duration_ms=${Math.round(performance.now() - startedAt)}`, error)
-    return limitedOutput(`Execution error: ${error instanceof Error ? error.message : String(error)}`)
+    return boundedExecutionOutput(`Execution error: ${error instanceof Error ? error.message : String(error)}`)
   }
 }

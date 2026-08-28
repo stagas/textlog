@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test'
-import { executableCode, executePostCode } from './code-execution'
+import { displayedExecutionOutput, executableCode, executePostCode } from './code-execution'
 
 describe('executable notes', () => {
   test('requires a standalone exec hashtag and a language fence', () => {
@@ -21,10 +21,12 @@ describe('executable notes', () => {
       .toBe('answer 42')
   })
 
-  test('limits output to ten visible lines with an ellipsis', async () => {
+  test('folds output to the first eight lines, an ellipsis, and the last line only when rendered', async () => {
     const output = await executePostCode('#exec\n```js\nfor (let i = 1; i <= 12; i++) console.log(i)\n```',
       'development')
-    expect(output?.split('\n')).toEqual(['1', '2', '3', '4', '5', '6', '7', '8', '9', '…'])
+    expect(output?.split('\n')).toHaveLength(12)
+    expect(displayedExecutionOutput(output!).split('\n'))
+      .toEqual(['1', '2', '3', '4', '5', '6', '7', '8', '…', '12'])
   })
 
   test('does not execute other languages in development', async () => {
@@ -41,7 +43,7 @@ describe('executable notes', () => {
     }) as typeof fetch
     try {
       expect(await executePostCode('#exec\n```js\nconsole.log(6 * 7)\n```', 'production',
-        'http://localhost:2000')).toBe('42')
+        'http://localhost:2000')).toBe('42\n')
       expect(requestBody).toMatchObject({ language: 'javascript', version: '*' })
     }
     finally {
