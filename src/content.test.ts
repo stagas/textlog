@@ -44,13 +44,18 @@ describe('content metadata extraction', () => {
     expect(extractHashtags('#Build something #build #Notes')).toEqual(['build', 'notes'])
   })
 
-  test('extracts only the first five hashtag occurrences', () => {
-    expect(extractHashtags('#one #two #three #four #five #six')).toEqual([
+  test('extracts only the first ten hashtag occurrences', () => {
+    expect(extractHashtags('#one #two #three #four #five #six #seven #eight #nine #ten #eleven')).toEqual([
       'one',
       'two',
       'three',
       'four',
       'five',
+      'six',
+      'seven',
+      'eight',
+      'nine',
+      'ten',
     ])
   })
 

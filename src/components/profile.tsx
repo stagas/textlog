@@ -1,4 +1,5 @@
 import { Fragment } from 'react'
+import { BIO_MAX, BIO_MAX_LINES } from '../bio-body'
 import { extractHashtags, extractMentions } from '../content'
 import type { BioReferenceData, PostView, ProfileRow, User } from '../types'
 import { displayBio, linkify, referenceFormId } from '../utils'
@@ -166,12 +167,12 @@ export function Profile(
                   </label>
                   <div className="bio-field">
                     <label>
-                      bio<textarea name="bio" maxLength={160} defaultValue={bio}
+                      bio<textarea name="bio" maxLength={BIO_MAX} defaultValue={bio}
                         placeholder="Tell people a little about yourself…" autoComplete="off" inputMode="text"
                         enterKeyHint="enter" />
                     </label>
                     <PostingSuggestionResults search={suggestionSearch} />
-                    <PostingHelp maxLength={160} maxLines={5} search={suggestionSearch} oneLine />
+                    <PostingHelp maxLength={BIO_MAX} maxLines={BIO_MAX_LINES} search={suggestionSearch} oneLine />
                   </div>
                   <div className="composefoot">
                     <button className="button">save profile →</button>

@@ -1280,7 +1280,7 @@ test('consequential account, content, reporting, and admin flows work over HTTP'
   expect(invalidProfileHtml).toContain('value="Alice!"')
   expect(invalidProfileHtml).toContain('You typed 6 characters.')
   expect(invalidProfileHtml).toContain('remember profile bio')
-  const multilineBio = Array(6).fill('bio line').join('\n')
+  const multilineBio = Array(11).fill('bio line').join('\n')
   const invalidMultilineBio = await request('/account/edit', {
     method: 'POST',
     cookie: aliceCookie,
@@ -1288,7 +1288,7 @@ test('consequential account, content, reporting, and admin flows work over HTTP'
   })
   expect(invalidMultilineBio.status).toBe(400)
   const invalidMultilineBioHtml = await invalidMultilineBio.text()
-  expect(invalidMultilineBioHtml).toContain('The bio exceeds the limit: 6/5 lines.')
+  expect(invalidMultilineBioHtml).toContain('The bio exceeds the limit: 11/10 lines.')
   expect(invalidMultilineBioHtml).toContain(multilineBio)
   const search = await request('/search?q=route-level', { cookie: aliceCookie })
   expect(search.status).toBe(200)

@@ -9,7 +9,7 @@ export function isValidHashtag(tag: string) {
   return /^[\p{L}\p{M}\p{N}_]{1,280}$/u.test(tag)
 }
 
-export const MAX_HASHTAGS_PER_POST = 5
+export const MAX_HASHTAGS_PER_POST = 10
 
 export const SPOILER_HASHTAGS = new Set([
   'spoiler',

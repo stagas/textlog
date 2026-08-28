@@ -357,11 +357,11 @@ describe('API writes', () => {
     const tooManyLines = await call(app, '/api/v1/me', {
       method: 'PATCH',
       token: 'alice-token',
-      body: { bio: Array(6).fill('x').join('\n') },
+      body: { bio: Array(11).fill('x').join('\n') },
     })
     expect(tooManyLines.status).toBe(400)
     expect(await tooManyLines.json()).toMatchObject({
-      error: { code: 'invalid_bio', message: 'The bio exceeds the limit: 6/5 lines.' },
+      error: { code: 'invalid_bio', message: 'The bio exceeds the limit: 11/10 lines.' },
     })
   })
 
