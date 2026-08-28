@@ -538,18 +538,18 @@ export function FeedTabs(
           </a>
         )}
         <a className={active === 'hot' ? 'active' : ''} aria-current={active === 'hot' ? 'page' : undefined}
-          href={user ? '/hot' : '/hot#feed-tabs'}
+          href={user ? '/hot' : '/hot?_scroll=instant#feed-tabs'}
         >
           hot
         </a>
         <a className={active === 'latest' ? 'active' : ''} aria-current={active === 'latest' ? 'page' : undefined}
-          href={user ? '/latest' : '/latest#feed-tabs'}
+          href={user ? '/latest' : '/latest?_scroll=instant#feed-tabs'}
         >
           latest
           {latestCount > 0 && <span className="to-me-count">{latestCount}</span>}
         </a>
         <a className={active === 'random' ? 'active' : ''} aria-current={active === 'random' ? 'page' : undefined}
-          href={user ? '/random' : '/random#feed-tabs'}
+          href={user ? '/random' : '/random?_scroll=instant#feed-tabs'}
         >
           random
         </a>

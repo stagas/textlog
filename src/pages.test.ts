@@ -2043,8 +2043,9 @@ describe('About', () => {
         'class="guest-join-row"><a class="button" href="/enter" rel="nofollow">join the community</a>',
       )
       expect(html).toContain('href="#feed-tabs">browse notes</a>')
-      expect(html).toContain('href="/hot#feed-tabs"')
-      expect(html).toContain('href="/latest#feed-tabs"')
+      expect(html).toContain('href="/hot?_scroll=instant#feed-tabs"')
+      expect(html).toContain('href="/latest?_scroll=instant#feed-tabs"')
+      expect(html).toContain('href="/random?_scroll=instant#feed-tabs"')
       expect(html).toContain('?page=2&amp;_scroll=instant#feed-tabs" aria-label="Page 2"')
       expect(html).toContain('?page=2&amp;_scroll=instant#feed-tabs" aria-label="Next page"')
       expect(html.indexOf('about-page feed-about')).toBeLessThan(html.indexOf('id="feed-tabs"'))
