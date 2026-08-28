@@ -18,6 +18,7 @@ export function PublicFeed(
     },
 ) {
   const feedPath = path
+  const random = path === '/random'
   const returnPath = feedPath + (feed.page > 1 ? `?page=${feed.page}` : '')
   const unreadPostIds = new Set(feed.unreadPostIds || [])
   const directedUnreadPostIds = new Set(feed.directedUnreadPostIds || [])
@@ -25,13 +26,14 @@ export function PublicFeed(
     ? Number(new URL(feed.unreadHref, 'http://localhost').searchParams.get('page') || 1)
     : null
   return (
-    <Layout user={user} title={path === '/latest' ? 'latest' : undefined} pageUrl={pageUrl}
+    <Layout user={user} title={path === '/latest' ? 'latest' : random ? 'random' : undefined} pageUrl={pageUrl}
       mobileWriteAction={Boolean(user)} notificationBanner={notificationBanner}
-      feeds={{ title: 'Latest notes', rss: '/latest.rss', atom: '/latest.atom' }}
+      feeds={random ? undefined : { title: 'Latest notes', rss: '/latest.rss', atom: '/latest.atom' }}
     >
       {!user && <AboutContent user={null} embedded />}
-      <h1 className="visually-hidden">Latest notes</h1>
-      <FeedTabs active="latest" user={user} forYouCount={feed.forYouCount} forYouUnread={feed.forYouUnread}
+      <h1 className="visually-hidden">{random ? 'Random conversations' : 'Latest notes'}</h1>
+      <FeedTabs active={random ? 'random' : 'latest'} user={user} forYouCount={feed.forYouCount}
+        forYouUnread={feed.forYouUnread}
         toMeCount={feed.toMeCount} toMeUnread={feed.toMeUnread} latestCount={feed.latestCount}
         forYouReadStatus={user && feed.posts.length
           ? !!feed.latestUnread && unreadPage !== null && unreadPage > feed.page

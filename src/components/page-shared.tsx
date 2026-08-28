@@ -503,7 +503,7 @@ export function CursorPagination({ path, previousCursor, nextCursor }: {
 export function FeedTabs(
   { active, user, forYouReadStatus, activityReadStatus, toMe = false, toMeCount = 0, forYouCount = 0, unreadHref,
     lastUnreadHref, forYouUnread = false, toMeUnread = false, latestCount = 0, readAction }: {
-      active: 'following' | 'activity' | 'hot' | 'latest'
+      active: 'following' | 'activity' | 'hot' | 'latest' | 'random'
       user: User | null
       forYouReadStatus?: boolean
       activityReadStatus?: boolean
@@ -547,6 +547,11 @@ export function FeedTabs(
         >
           latest
           {latestCount > 0 && <span className="to-me-count">{latestCount}</span>}
+        </a>
+        <a className={active === 'random' ? 'active' : ''} aria-current={active === 'random' ? 'page' : undefined}
+          href={user ? '/random' : '/random#feed-tabs'}
+        >
+          random
         </a>
         {activityReadStatus !== undefined && (
           <span className="feed-tabs-read-status">

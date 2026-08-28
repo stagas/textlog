@@ -178,6 +178,8 @@ export function registerFeedsRoutes(app: Hono) {
       ? '/latest'
       : preferredFeed === 'hot'
       ? '/hot'
+      : preferredFeed === 'random'
+      ? '/random'
       : '/for-you'
     return redirect(path + new URL(c.req.url).search)
   })
@@ -267,6 +269,20 @@ export function registerFeedsRoutes(app: Hono) {
       : await render()
     const remembered = rememberFeed(response, 'latest')
     return remembered
+  })
+
+  app.get('/random', async c => {
+    const user = currentUser(c.req.raw)
+    const expandedRootId = positiveInteger(c.req.query('expand'))
+    const notificationBanner = await showNotificationBanner(c.req.raw, user)
+    const feed = await databaseService().call('feeds.randomPage', {
+      viewerId: user?.id ?? -1,
+      pageSize: resolvedPageSize(c.req.raw),
+    })
+    return rememberFeed(page(
+      <PublicFeed user={user} feed={feed} path="/random" notificationBanner={notificationBanner}
+        expandedRootId={expandedRootId} />,
+    ), 'random')
   })
 
   app.post('/latest/read-all', async c => {

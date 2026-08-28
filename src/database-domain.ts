@@ -52,7 +52,7 @@ import { searchPeople, searchPosts, searchTags, searchTerms } from './search'
 import { sitemapIndex, sitemapSection } from './seo'
 import { insertSession, markSessionUsed, renewSession, SESSION_LIFETIME_MS, sessionHash } from './sessions'
 import { dashboardStats } from './stats'
-import type { User } from './types'
+import type { PostFeedPage, User } from './types'
 import type { PostView } from './types'
 import { excludesWhisperPosts, isWhisperThread, whisperThreadRelevantToViewer,
   whisperThreadTargetsViewer } from './whisper'
@@ -2269,6 +2269,22 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
     }
     case 'feeds.aboutTopPosts': {
       return recapPosts(database, -1) as DatabaseDomainOutput<K>
+    }
+    case 'feeds.randomPage': {
+      const { viewerId, pageSize } = input as DatabaseDomainInput<'feeds.randomPage'>
+      const first = await executeDatabaseDomain(database, 'feeds.latestPage', {
+        viewerId, page: 1, pageSize, markRead: false,
+      })
+      const randomPage = randomInt(1, first.totalPages + 1)
+      const sampled = randomPage === 1
+        ? first
+        : await executeDatabaseDomain(database, 'feeds.latestPage', {
+          viewerId, page: randomPage, pageSize, markRead: false,
+        })
+      const result: PostFeedPage = {
+        ...sampled, page: 1, totalPages: 1, totalItems: sampled.posts.length,
+      }
+      return result as DatabaseDomainOutput<K>
     }
     case 'feeds.latestPage': {
       const { viewerId, page, pageSize, markRead = true } = input as DatabaseDomainInput<'feeds.latestPage'>
