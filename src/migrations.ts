@@ -2575,6 +2575,30 @@ export const migrations: Migration[] = [
       }
     },
   },
+  {
+    version: 155,
+    name: 'show_note_streak_preference',
+    up(database) {
+      if (!database.query("SELECT 1 FROM sqlite_master WHERE type='table' AND name='users'").get()) return
+      addColumn(database, 'users', 'show_note_streak',
+        'INTEGER NOT NULL DEFAULT 1 CHECK(show_note_streak IN (0,1))')
+    },
+  },
+  {
+    version: 156,
+    name: 'enable_note_streak_by_default',
+    up(database) {
+      if (!database.query("SELECT 1 FROM sqlite_master WHERE type='table' AND name='users'").get()) return
+      if (!database.query(
+        "SELECT 1 FROM sqlite_master WHERE type='table' AND name='personalized_feed_generations'",
+      ).get()) return
+      database.run(`UPDATE users SET show_note_streak=1;
+        CREATE TRIGGER IF NOT EXISTS users_enable_note_streak_after_insert
+        AFTER INSERT ON users WHEN NEW.show_note_streak=0 BEGIN
+          UPDATE users SET show_note_streak=1 WHERE id=NEW.id;
+        END;`)
+    },
+  },
 ]
 
 export const latestMigrationVersion = migrations.at(-1)!.version

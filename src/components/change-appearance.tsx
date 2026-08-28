@@ -14,6 +14,7 @@ export function ChangeAppearance(
     selectedSize = 'regular', selectedPageSize = 20, selectedDensity = 'regular', selectedCorners = 'sharp',
     selectedLinkPreviews = true,
     showModeratedContent = false, includePeopleFollowActivity = false, includeHashtagFollowActivity = false,
+    showNoteStreak = true,
     tab = 'theme', returnPath }: {
       user: User
       selected: Appearance
@@ -30,6 +31,7 @@ export function ChangeAppearance(
       returnPath?: string
       includePeopleFollowActivity?: boolean
       includeHashtagFollowActivity?: boolean
+      showNoteStreak?: boolean
     },
 ) {
   const fromQuery = returnPath ? `&from=${encodeURIComponent(returnPath)}` : ''
@@ -202,6 +204,11 @@ export function ChangeAppearance(
                   <input className="form-checkbox" type="checkbox" role="switch" name="showLinkPreviews" value="yes"
                     defaultChecked={selectedLinkPreviews} />
                   <span>Show link previews</span>
+                </label>
+                <label className="link-preview-setting">
+                  <input className="form-checkbox" type="checkbox" role="switch" name="showNoteStreak"
+                    value="yes" defaultChecked={showNoteStreak} />
+                  <span>Show note streak</span>
                 </label>
                 <label className="link-preview-setting">
                   <input className="form-checkbox" type="checkbox" role="switch" name="showModeratedContent"

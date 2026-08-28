@@ -4126,6 +4126,28 @@ form.report-panel {
   padding-top: 0;
 }
 
+.note-streak {
+  margin-top: var(--space-3);
+}
+
+.note-streak-grid {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.note-streak-grid rect {
+  fill: transparent;
+  stroke: var(--soft);
+  stroke-width: 1;
+  vector-effect: non-scaling-stroke;
+}
+
+.note-streak-grid rect.active {
+  fill: #fff;
+  stroke: #fff;
+}
+
 .profile-presence-section {
   margin-top: var(--space-4);
   border-top: 1px solid var(--soft);

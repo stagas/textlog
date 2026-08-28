@@ -153,9 +153,9 @@ function userForSession(token: string | null, database: Database): User | null {
   if (user) {
     try {
       const preferences = database.query(`SELECT show_link_previews,show_moderated_content,hide_people_follow_activity,
-          hide_hashtag_follow_activity FROM users WHERE id=?`).get(user.id) as Pick<User,
+          hide_hashtag_follow_activity,show_note_streak FROM users WHERE id=?`).get(user.id) as Pick<User,
         'show_link_previews' | 'show_moderated_content' | 'hide_people_follow_activity'
-        | 'hide_hashtag_follow_activity'> | null
+        | 'hide_hashtag_follow_activity' | 'show_note_streak'> | null
       if (preferences) Object.assign(user, preferences)
     }
     catch {}

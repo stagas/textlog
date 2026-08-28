@@ -13,7 +13,7 @@ export function Profile(
     tab = 'notes', followerCount = 0, followingCount = 0, followingTagCount = 0, blockedPeopleCount = 0,
     blockedTagCount = 0, blocked = false, blockedByProfile = false, moderatorBypass = false, social, page = 1,
     totalPages = 1, returnPath,
-    suggestionSearch, bioReference }: {
+    suggestionSearch, bioReference, noteStreakDates = [] }: {
       user: User | null
       profile: ProfileRow
       posts: PostView[]
@@ -41,6 +41,7 @@ export function Profile(
       returnPath?: string
       suggestionSearch?: PostingSuggestionSearch | null
       bioReference?: BioReferenceData
+      noteStreakDates?: string[]
       social?: { description: string; image: string; url: string; type?: 'article' | 'profile'; imageAlt?: string }
     },
 ) {
@@ -104,6 +105,9 @@ export function Profile(
       </div>
     </section>
   )
+  const noteStreak = user?.id === profile.id && profile.show_note_streak === 1
+    ? <NoteStreak activeDates={noteStreakDates} />
+    : null
   return (
     <Layout user={user} title={`@${profile.handle}`} social={social} feeds={{
       title: `Notes by @${profile.handle}`,
@@ -264,6 +268,7 @@ export function Profile(
                       + encodeURIComponent(reference.value)} />
                 </Fragment>
               ))}
+          {!editing && noteStreak}
         </div>
       </ProfileHeader>
       {hiddenByBlock
@@ -300,5 +305,35 @@ export function Profile(
       {!editing && !hiddenByBlock
         && <Pagination path={paginationPath} page={page} totalPages={totalPages} />}
     </Layout>
+  )
+}
+
+function NoteStreak({ activeDates }: { activeDates: string[] }) {
+  const active = new Set(activeDates)
+  const naturalDate = new Intl.DateTimeFormat('en-GB', {
+    day: '2-digit', month: 'short', year: 'numeric', timeZone: 'UTC',
+  })
+  const today = new Date()
+  today.setUTCHours(0, 0, 0, 0)
+  const days = Array.from({ length: 365 }, (_, index) => {
+    const date = new Date(today)
+    date.setUTCDate(today.getUTCDate() - 364 + index)
+    return date.toISOString().slice(0, 10)
+  })
+  const leadingDays = new Date(`${days[0]}T00:00:00Z`).getUTCDay()
+  return (
+    <section className="note-streak" aria-label="Posting activity for the past year">
+      <svg className="note-streak-grid" viewBox="0 0 530 70" role="img">
+        {days.map((date, index) => {
+          const position = leadingDays + index
+          return (
+            <rect key={date} className={active.has(date) ? 'active' : undefined}
+              x={Math.floor(position / 7) * 10 + 1} y={(position % 7) * 10 + 1} width="8" height="8">
+              <title>{naturalDate.format(new Date(`${date}T00:00:00Z`))}</title>
+            </rect>
+          )
+        })}
+      </svg>
+    </section>
   )
 }

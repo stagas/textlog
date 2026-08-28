@@ -219,6 +219,7 @@ export type ProfileRow = {
   timezone?: string | null
   recap_emails?: number
   interaction_emails?: number
+  show_note_streak?: number
 }
 
 export type ProfileOverviewData = {
@@ -235,6 +236,7 @@ export type ProfileOverviewData = {
   followingTagCount: number
   blockedPeopleCount: number
   blockedTagCount: number
+  noteStreakDates: string[]
 }
 
 export type SessionView = { token: string; created_at: number; expires_at: number; user_agent: string;
@@ -332,6 +334,7 @@ export type User = { id: number; handle: string; email: string; bio: string; sus
   email_verified_at?: string | null; activity_read_at?: string | null; handle_chosen_at?: string | null;
   timezone?: string | null; show_link_previews?: number; recap_emails?: number; interaction_emails?: number;
   show_moderated_content?: number; hide_people_follow_activity?: number; hide_hashtag_follow_activity?: number;
+  show_note_streak?: number;
   draft_count?: number }
 
 export type DraftView = { id: number; body: string; parent_id: number | null; created_at: string; updated_at: string;

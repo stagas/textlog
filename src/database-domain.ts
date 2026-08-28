@@ -223,7 +223,7 @@ function sessionUser(database: Database, token: string | null): User | null {
   if (!token) return null
   const user = database.query(`SELECT u.id,u.handle,u.email,u.bio,u.suspended_at,u.email_verified_at,
       u.handle_chosen_at,u.show_link_previews,u.show_moderated_content,u.hide_people_follow_activity,
-      u.hide_hashtag_follow_activity,u.timezone
+      u.hide_hashtag_follow_activity,u.show_note_streak,u.timezone
     FROM sessions s JOIN users u ON u.id=s.user_id
     WHERE s.token_hash=? AND s.expires_at>? AND u.deleted_at IS NULL AND u.suspended_at IS NULL`)
     .get(sessionHash(token), Date.now()) as User | null
@@ -664,7 +664,7 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
     }
     case 'account.saveAppearancePreferences': {
       const { userId, deviceId, pageSize, density, showLinkPreviews, hidePeopleFollowActivity,
-        hideHashtagFollowActivity, showModeratedContent } = input as DatabaseDomainInput<
+        hideHashtagFollowActivity, showModeratedContent, showNoteStreak } = input as DatabaseDomainInput<
           'account.saveAppearancePreferences'
         >
       database.transaction(() => {
@@ -672,8 +672,9 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
           ON CONFLICT(user_id,device_id) DO UPDATE SET page_size=excluded.page_size,density=excluded.density,
             updated_at=CURRENT_TIMESTAMP`).run(userId, deviceId, pageSize, density)
         database.query(`UPDATE users SET show_link_previews=?,show_moderated_content=?,hide_people_follow_activity=?,
-          hide_hashtag_follow_activity=? WHERE id=?`).run(showLinkPreviews ? 1 : 0, showModeratedContent ? 1 : 0,
-          hidePeopleFollowActivity ? 1 : 0, hideHashtagFollowActivity ? 1 : 0, userId)
+          hide_hashtag_follow_activity=?,show_note_streak=? WHERE id=?`).run(showLinkPreviews ? 1 : 0,
+          showModeratedContent ? 1 : 0, hidePeopleFollowActivity ? 1 : 0, hideHashtagFollowActivity ? 1 : 0,
+          showNoteStreak ? 1 : 0, userId)
         database.query(`UPDATE personalized_feed_generations SET generation=generation+1 WHERE viewer_id=?`)
           .run(userId)
         cacheDb.query(`DELETE FROM materialized_feed_pages_v2 WHERE viewer_id=?
@@ -1092,7 +1093,8 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
     case 'profiles.overview': {
       const { profileId, viewerId } = input as DatabaseDomainInput<'profiles.overview'>
       const profile = database.query(
-        'SELECT id,handle,email,bio,created_at,suspended_at,deleted_at FROM users WHERE id=? AND deleted_at IS NULL',
+        `SELECT id,handle,email,bio,created_at,suspended_at,deleted_at,show_note_streak
+          FROM users WHERE id=? AND deleted_at IS NULL`,
       ).get(profileId) as import('./types').ProfileRow | null
       if (!profile) return null as DatabaseDomainOutput<K>
       const postCounts = database.query(`SELECT
@@ -1127,8 +1129,14 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
           blockedTagCount: number
         }
         : { blockedPeopleCount: 0, blockedTagCount: 0 }
+      const noteStreakDates = viewerId === profileId && profile.show_note_streak === 1
+        ? (database.query(`SELECT DISTINCT date(created_at) day FROM posts
+            WHERE user_id=? AND deleted_at IS NULL
+              AND date(created_at) BETWEEN date('now','-364 days') AND date('now')
+            ORDER BY day`).all(profileId) as { day: string }[]).map(row => row.day)
+        : []
       const result = { profile, bioReference: loadBioReferenceData(database, profile.bio, profileId, viewerId),
-        ...postCounts, following, followsViewer, blocked, blockedByProfile, ...counts, ...blockCounts }
+        ...postCounts, following, followsViewer, blocked, blockedByProfile, ...counts, ...blockCounts, noteStreakDates }
       return result as DatabaseDomainOutput<K>
     }
     case 'profiles.blockedPage': {
@@ -2705,7 +2713,8 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
       >
       const result = rows.flatMap(row => {
         const user = database.query(`SELECT id,handle,email,bio,suspended_at,email_verified_at,handle_chosen_at,
-          show_link_previews,show_moderated_content,hide_people_follow_activity,hide_hashtag_follow_activity,timezone
+          show_link_previews,show_moderated_content,hide_people_follow_activity,hide_hashtag_follow_activity,
+          show_note_streak,timezone
           FROM users WHERE id=? AND deleted_at IS NULL AND suspended_at IS NULL`)
           .get(row.user_id) as User | null
         return user

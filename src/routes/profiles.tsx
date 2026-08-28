@@ -84,6 +84,7 @@ export function registerProfilesRoutes(app: Hono) {
     if (!overview) return notFoundPage(c.req.raw)
     const { profile, bioReference, noteCount, replyCount, following, followsViewer, blocked, blockedByProfile,
       followerCount, followingCount, followingTagCount, blockedPeopleCount, blockedTagCount } = overview
+    const { noteStreakDates } = overview
     const tab = c.req.query('tab')
     if (tab && tab !== 'replies' && tab !== 'following' && tab !== 'followers' && tab !== 'blocked') {
       return notFoundPage(c.req.raw)
@@ -179,7 +180,8 @@ export function registerProfilesRoutes(app: Hono) {
         replyCount={replyCount} tab={tab === 'replies' ? 'replies' : 'notes'} followerCount={followerCount}
         followingCount={followingCount} followingTagCount={followingTagCount} blockedPeopleCount={blockedPeopleCount}
         blockedTagCount={blockedTagCount} social={social} page={snapshot.page} totalPages={snapshot.totalPages}
-        returnPath={returnPath} bioReference={bioReference} moderatorBypass={moderatorBypass} />,
+        returnPath={returnPath} bioReference={bioReference} moderatorBypass={moderatorBypass}
+        noteStreakDates={noteStreakDates} />,
     )
   })
 }
