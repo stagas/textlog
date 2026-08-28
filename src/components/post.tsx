@@ -1160,6 +1160,8 @@ export function FeedThreads(
   if (!posts.length) return null
   const treePosts = [...posts]
   const ids = new Set(posts.map(post => post.id))
+  const originalIds = new Set(ids)
+  const originalParentIds = new Map(posts.map(post => [post.id, post.parent_id]))
   const externalChildren = new Map<number, PostView[]>()
   for (const post of posts) {
     if (!post.parent_id || ids.has(post.parent_id) || post.feed_branch_root) continue
@@ -1296,6 +1298,15 @@ export function FeedThreads(
         const collapsedPreview = visibleReplies > 0 ? collapsedPreviewPosts(post) : []
         const canCollapse = visibleReplies > collapsedPreview.length
         const continuesElsewhere = (post.reply_count || 0) > visibleReplies
+        let hasMissingAncestorPath = false
+        const inspectAncestorPaths = (parentId: number) => {
+          for (const child of children.get(parentId) || []) {
+            const originalParentId = originalParentIds.get(child.id)
+            if (originalParentId && !originalIds.has(originalParentId)) hasMissingAncestorPath = true
+            inspectAncestorPaths(child.id)
+          }
+        }
+        inspectAncestorPaths(post.id)
         const foldControlId = visibleReplies > 0 ? `feed-thread-fold-${post.id}` : undefined
         const collapsed = canCollapse && expandedRootId !== post.id
         const expandedReturnPath = (() => {
@@ -1322,7 +1333,7 @@ export function FeedThreads(
               continuationReturnPath={collapsed ? expandedReturnPath : returnPath}
               contextUnreadPostIds={contextUnreadPostIds} contextDirectedUnreadPostIds={contextDirectedUnreadPostIds}
               highlightTerms={highlightTerms} hideTopMeta={hideTopMeta}
-              hideAncestorGaps={!continuesElsewhere}
+              hideAncestorGaps={!continuesElsewhere && !hasMissingAncestorPath}
               collapsedPreviewPostIds={canCollapse ? collapsedPreview.map(reply => reply.id) : []} />
           </div>
         )
