@@ -7,6 +7,7 @@ const EXEC_TIMEOUT_MS = 10_000
 const MAX_OUTPUT_LENGTH = 20_000
 const MAX_OUTPUT_LINES = 10
 const MAX_OUTPUT_LINE_LENGTH = 200
+const SANDBOX_FATAL_SIGNAL = 'Sandbox keeper received fatal signal 6'
 const PISTON_LANGUAGE_ALIASES: Record<string, string> = {
   js: 'javascript',
   py: 'python',
@@ -42,9 +43,8 @@ function boundedExecutionOutput(value: string) {
 }
 
 export function displayedExecutionOutput(value: string) {
-  const normalized = value.replace(/\r\n?/g, '\n')
-    .replace(/^Sandbox keeper received fatal signal 6\n?|\nSandbox keeper received fatal signal 6(?=\n|$)/g, '')
-    .trimEnd()
+  const normalized = value.replace(/\r\n?/g, '\n').split('\n')
+    .filter(line => !line.includes(SANDBOX_FATAL_SIGNAL)).join('\n').trimEnd()
   const lines = normalized.split('\n')
   const lineLimited = lines.length > MAX_OUTPUT_LINES
     ? [...lines.slice(0, MAX_OUTPUT_LINES - 2), '…', lines.at(-1)!]

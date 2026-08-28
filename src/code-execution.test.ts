@@ -45,6 +45,11 @@ describe('executable notes', () => {
     expect(output).toEndWith('\nSandbox keeper received fatal signal 6')
   })
 
+  test('removes a prefixed sandbox keeper fatal-signal line', () => {
+    expect(displayedExecutionOutput('answer 42\n//\\//Sandbox keeper received fatal signal 6'))
+      .toBe('answer 42')
+  })
+
   test('trims trailing whitespace before limiting rendered lines', () => {
     const output = `${Array.from({ length: 12 }, (_, index) => index + 1).join('\n')}\n\n  `
     expect(displayedExecutionOutput(output).split('\n'))
