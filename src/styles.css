@@ -6309,6 +6309,10 @@ a.post-context:hover {
   transition: none;
 }
 
+.feed-thread>.thread-fold-input:checked~.feed-thread-collapsed-branch .thread-branch-content {
+  overflow: visible;
+}
+
 .feed-thread-collapsed-branch {
   interpolate-size: allow-keywords;
 }
@@ -6321,8 +6325,9 @@ a.post-context:hover {
   transition: height 200ms ease, padding 200ms ease, opacity 120ms ease;
 }
 
-.feed-thread>.thread-fold-input:checked~.feed-thread-collapsed-branch .reply-node,
-.feed-thread>.thread-fold-input:checked~.feed-thread-collapsed-branch .collapsed-preview-path>.post,
+.feed-thread>.thread-fold-input:checked~.feed-thread-collapsed-branch .reply-node:not(.collapsed-preview-path),
+.feed-thread>.thread-fold-input:checked~.feed-thread-collapsed-branch
+  .collapsed-preview-path:not(.collapsed-preview-post)>.post,
 .feed-thread>.thread-fold-input:checked~.feed-thread-collapsed-branch .thread-ancestor-gap {
   overflow: hidden;
 }

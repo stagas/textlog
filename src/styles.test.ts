@@ -151,6 +151,8 @@ describe('in-memory stylesheet', () => {
     const css = await Bun.file(new URL('./styles.css', import.meta.url)).text()
     expect(css).toContain('.feed-thread>.thread-fold-input:checked~.feed-thread-collapsed-branch {\n'
       + '  grid-template-rows: 1fr;')
+    expect(css).toContain('.feed-thread>.thread-fold-input:checked~.feed-thread-collapsed-branch'
+      + ' .thread-branch-content {\n  overflow: visible;')
     expect(css).toContain('.post-page-thread.feed-thread:has(> .thread-fold-input:checked)'
       + ':has(> .feed-thread-collapsed-branch) {\n  margin-bottom: var(--space-5);')
     expect(css).toContain('.feed-thread-collapsed-branch {\n  interpolate-size: allow-keywords;')
@@ -170,8 +172,10 @@ describe('in-memory stylesheet', () => {
     expect(css).toContain('transition: height 200ms ease, padding 200ms ease, opacity 120ms ease;')
     expect(css).toContain('.reply-node:not(.collapsed-preview-path) {\n  height: 0;\n  opacity: 0;')
     expect(css).toContain('.collapsed-preview-path>.post {\n  height: 0;\n  opacity: 0;')
-    expect(css).toContain('.feed-thread>.thread-fold-input:checked~.feed-thread-collapsed-branch .reply-node,\n'
-      + '.feed-thread>.thread-fold-input:checked~.feed-thread-collapsed-branch .collapsed-preview-path>.post,\n'
+    expect(css).toContain('.feed-thread>.thread-fold-input:checked~.feed-thread-collapsed-branch'
+      + ' .reply-node:not(.collapsed-preview-path),\n'
+      + '.feed-thread>.thread-fold-input:checked~.feed-thread-collapsed-branch\n'
+      + '  .collapsed-preview-path:not(.collapsed-preview-post)>.post,\n'
       + '.feed-thread>.thread-fold-input:checked~.feed-thread-collapsed-branch .thread-ancestor-gap {\n'
       + '  overflow: hidden;')
     expect(css).toContain('.collapsed-preview-post>.post,\n'
