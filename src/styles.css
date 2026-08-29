@@ -2260,11 +2260,18 @@ body.corners-round a.button {
 }
 
 .activity-follow {
-  scroll-margin-block: var(--space-5);
+  scroll-margin-top: calc(var(--space-6) + var(--space-1));
 }
 
 .post {
-  scroll-margin-block: 0;
+  scroll-margin-top: calc(var(--space-6) + var(--space-1));
+}
+
+@media (max-width: 600px) {
+  .post,
+  .activity-follow {
+    scroll-margin-top: calc(var(--space-7) + var(--space-1));
+  }
 }
 
 .post:target,
