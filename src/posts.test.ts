@@ -344,7 +344,10 @@ describe('post persistence', () => {
     expect(html).toContain('<span class="follows-you">follows you</span>')
     expect(html).not.toContain('>block</button>')
     expect(html).toContain('<span class="reference-menu-popover reference-menu-popover-tag">'
+      + '<span class="mobile-reference-destination"><a class="button" href="/tag/topic">notes</a></span>'
       + '<span class="reference-popover-actions">')
+    expect(html).toContain('<span class="mobile-reference-destination"><a class="button" '
+      + 'href="/u/reader">profile</a></span>')
     expect(html).toContain('<button class="button" type="submit" form="post-1-tag-topic">follow</button>')
   })
 
@@ -495,6 +498,8 @@ describe('post persistence', () => {
       },
     })
     expect(html).toContain('class="remote-link-menu internal-post-link-menu"')
+    expect(html).toContain('<label class="mobile-post-popover-trigger"><input class="mobile-popover-toggle" '
+      + 'type="checkbox" aria-label="Toggle link preview"><span>&amp;12</span></label>')
     expect(html).toContain('href="https://textlog.test/post/12?from=%2Fpost%2F1%23post-1"')
     expect(html).toContain('<article class="post">referenced post</article>')
   })

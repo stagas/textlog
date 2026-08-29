@@ -11,6 +11,7 @@ import { LOCATION_MAP_STYLE_VERSION, LOCATION_ZOOM, locationMapKey, osmLocationU
 import { loadPolls, syncPoll } from './polls'
 import { insertRateLimitedPost } from './post-rate-limit'
 import type { BioReferenceData, LinkPreview, ParentPost, PostView, UserProfileStats } from './types'
+import { postReferenceIds } from './utils'
 
 function moderatorViewer(database: Database, viewerId: number) {
   if (viewerId < 0) return false
@@ -352,8 +353,21 @@ export function enrichPosts(database: Database, posts: PostView[], viewerId = -1
       linked_locked: number
     }[]
     : []
+  const nativeReferenceSources = database.query(`SELECT id,body FROM posts
+    WHERE id IN (${previewPostIds.map(() => '?').join(',')})`).all(...previewPostIds) as Array<{
+      id: number
+      body: string
+    }>
+  const nativeReferenceIdsByPost = new Map(nativeReferenceSources.map(source => [
+    source.id,
+    postReferenceIds(source.body),
+  ]))
+  const nativeReferenceIds = [...new Set([...nativeReferenceIdsByPost.values()].flat())]
   const linkedPolls = loadPolls(database, [
-    ...new Set(previewRows.flatMap(row => row.linked_post_id ? [row.linked_post_id] : [])),
+    ...new Set([
+      ...previewRows.flatMap(row => row.linked_post_id ? [row.linked_post_id] : []),
+      ...nativeReferenceIds,
+    ]),
   ], viewerId)
   const previewsByPost = new Map<number, Record<string, LinkPreview>>()
   for (const row of previewRows) {
@@ -373,6 +387,45 @@ export function enrichPosts(database: Database, posts: PostView[], viewerId = -1
             : null }
         : undefined }
     previewsByPost.set(row.post_id, previews)
+  }
+  if (nativeReferenceIds.length) {
+    const nativeRows = database.query(`SELECT p.id,p.user_id,p.parent_id,p.body,
+      ${supportsExecutionOutput ? 'p.execution_output' : 'NULL execution_output'},u.handle,
+      parent.user_id parent_user_id,parent_user.handle parent_handle,
+      (SELECT count(*) FROM posts reply WHERE reply.parent_id=p.id AND reply.deleted_at IS NULL) reply_count,
+      EXISTS(SELECT 1 FROM post_hashtags lock_tag WHERE lock_tag.post_id=p.id AND lock_tag.tag='lock') locked
+      FROM posts p JOIN users u ON u.id=p.user_id
+      LEFT JOIN posts parent ON parent.id=p.parent_id
+      LEFT JOIN users parent_user ON parent_user.id=parent.user_id
+      WHERE p.id IN (${nativeReferenceIds.map(() => '?').join(',')})
+      AND p.deleted_at IS NULL AND u.deleted_at IS NULL AND u.suspended_at IS NULL`)
+      .all(...nativeReferenceIds) as Array<{ id: number; user_id: number; parent_id: number | null; body: string;
+        execution_output: string | null; handle: string; parent_user_id: number | null; parent_handle: string | null;
+        reply_count: number; locked: number }>
+    const nativeById = new Map(nativeRows.map(row => [row.id, row]))
+    let origin = ''
+    try {
+      origin = Bun.env.APP_URL ? new URL(Bun.env.APP_URL).origin : ''
+    }
+    catch { /* Startup configuration reports malformed APP_URL values. */ }
+    for (const [postId, referenceIds] of nativeReferenceIdsByPost) {
+      const previews = previewsByPost.get(postId) || {}
+      for (const referenceId of referenceIds) {
+        const row = nativeById.get(referenceId)
+        if (!row) continue
+        const url = `${origin}/post/${referenceId}`
+        if (previews[url]) continue
+        previews[url] = { imageUrl: url, linkedPostId: referenceId, linkedPost: {
+          id: row.id, user_id: row.user_id, parent_id: row.parent_id, body: row.body,
+          execution_output: row.execution_output, handle: row.handle, reply_count: row.reply_count,
+          thread_locked: !!row.locked, poll: linkedPolls.get(row.id),
+          parent: row.parent_user_id && row.parent_handle
+            ? { user_id: row.parent_user_id, handle: row.parent_handle }
+            : null,
+        } }
+      }
+      if (Object.keys(previews).length) previewsByPost.set(postId, previews)
+    }
   }
   const locationsByPost = new Map<number, NonNullable<PostView['location']>>()
   if (database.query("SELECT 1 FROM sqlite_master WHERE type='table' AND name='post_locations'").get()) {

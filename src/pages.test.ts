@@ -3067,7 +3067,8 @@ test('Profile linkifies Markdown links and tags in the bio', () => {
     },
   }))
 
-  expect(html).toContain('<span class="reference-menu"><a class="reference-menu-trigger" '
+  expect(html).toContain('<span class="reference-menu"><input class="mobile-popover-toggle" type="checkbox" '
+    + 'aria-label="Toggle reference details"><a class="reference-menu-trigger" '
     + 'href="/tag/textlog">#TextLog</a><span class="reference-menu-popover reference-menu-popover-tag">')
   expect(html).not.toContain('reference-profile-tabs')
   expect(html).toContain(

@@ -68,7 +68,8 @@ function previewLink(html: string, url: string, appUrl: string | undefined, popo
     }
   })()
   if (popover && vocarooAudioUrl) {
-    return `<span class="remote-link-menu">${html}<span class="remote-link-popover remote-link-audio-popover">`
+    return `<span class="remote-link-menu"><input class="mobile-popover-toggle" type="checkbox" `
+      + `aria-label="Toggle link preview">${html}<span class="remote-link-popover remote-link-audio-popover">`
       + `<audio controls preload="none" src="${esc(vocarooAudioUrl)}"></audio></span></span>`
   }
   const preview = popover?.linkPreviews?.[url]
@@ -85,12 +86,19 @@ function previewLink(html: string, url: string, appUrl: string | undefined, popo
         return html
       }
     })()
-    return `<span class="remote-link-menu internal-post-link-menu">${triggerHtml}`
+    const mobileLabel = triggerHtml.match(/^<a\b[^>]*>([\s\S]*)<\/a>$/)?.[1]
+    return `<span class="remote-link-menu internal-post-link-menu">`
+      + (mobileLabel === undefined
+        ? `<input class="mobile-popover-toggle" type="checkbox" aria-label="Toggle link preview">`
+        : `<label class="mobile-post-popover-trigger"><input class="mobile-popover-toggle" type="checkbox" `
+          + `aria-label="Toggle link preview"><span>${mobileLabel}</span></label>`)
+      + triggerHtml
       + `<span class="remote-link-popover internal-post-popover">${preview.renderedPostHtml}</span></span>`
   }
   if (preview.linkedPost) return html
   if (preview.mimeType?.toLowerCase().startsWith('audio/')) {
-    return `<span class="remote-link-menu">${html}<span class="remote-link-popover remote-link-audio-popover">`
+    return `<span class="remote-link-menu"><input class="mobile-popover-toggle" type="checkbox" `
+      + `aria-label="Toggle link preview">${html}<span class="remote-link-popover remote-link-audio-popover">`
       + `<audio controls preload="none" src="${esc(url)}"></audio></span></span>`
   }
   const cssUrl = preview.imageUrl.replace(/["'\\\n\r\f]/g, character => `\\${character}`)
@@ -114,7 +122,8 @@ function previewLink(html: string, url: string, appUrl: string | undefined, popo
       preview.title ? `<strong class="remote-link-title">${esc(preview.title)}</strong>` : ''
     }${preview.description ? `<span class="remote-link-description">${esc(preview.description)}</span>` : ''}</span>`
     : ''
-  return `<span class="remote-link-menu">${html}<a class="remote-link-popover" href="${esc(url)}" `
+  return `<span class="remote-link-menu"><input class="mobile-popover-toggle" type="checkbox" `
+    + `aria-label="Toggle link preview">${html}<a class="remote-link-popover" href="${esc(url)}" `
     + `${linkAttributes(url, appUrl).trimStart()} `
     + `style="--preview-image:url(&quot;${esc(cssUrl)}&quot;)${aspect}"><span class="${imageClass}" role="img" `
     + `aria-label="${esc(preview.title || `Preview of ${hostname}`)}"></span>${details}</a></span>`
@@ -538,8 +547,12 @@ function renderedReference(token: string, mentionBios: Record<string, string>,
       following ? 'unfollow' : followsViewer ? 'follow back' : 'follow'
     }</button></span></span>`
     : '<a class="button" href="/enter" rel="nofollow">enter to follow</a>'
-  return `<span class="reference-menu"><a class="reference-menu-trigger" href="${href}">${label}</a>`
+  return `<span class="reference-menu"><input class="mobile-popover-toggle" type="checkbox" `
+    + `aria-label="Toggle reference details"><a class="reference-menu-trigger" href="${href}">${label}</a>`
     + `<span class="reference-menu-popover${isUser ? '' : ' reference-menu-popover-tag'}">`
+    + `<span class="mobile-reference-destination"><a class="button" href="${href}">${
+      isUser ? 'profile' : 'notes'
+    }</a></span>`
     + action
     + (isUser && (mentionBios[key]?.trim() || ownUser)
       ? `<span class="reference-popover-bio${ownUser ? ' reference-popover-bio-own' : ''}${

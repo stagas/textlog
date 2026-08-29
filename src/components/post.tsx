@@ -233,11 +233,15 @@ export function UserReference(
   const bioFormPrefix = `handle-${handle.toLowerCase()}-bio`
   return (
     <span className="reference-menu">
+      {showPopover && <input className="mobile-popover-toggle" type="checkbox" aria-label="Toggle reference details" />}
       {href
         ? <a className="reference-menu-trigger postauthor" href={href} rel={rel}>{label || <>@{handle}</>}</a>
         : <span className="reference-menu-trigger postauthor" tabIndex={0}>{label || <>@{handle}</>}</span>}
       {showPopover && (
         <span className="reference-menu-popover">
+          <span className="mobile-reference-destination">
+            <a className="button" href={href || `/u/${handle}${navigationQuery}`}>profile</a>
+          </span>
           {showFollowAction && !ownUser && (user
             ? (
               <span className="reference-popover-actions">
@@ -312,9 +316,15 @@ export function TagReference(
   const followReturnPath = new URLSearchParams(navigationQuery.slice(1)).get('from') || undefined
   return (
     <span className="reference-menu">
+      {showPopover && showFollowAction && (
+        <input className="mobile-popover-toggle" type="checkbox" aria-label="Toggle reference details" />
+      )}
       <a className="reference-menu-trigger" href={href || tagPath + navigationQuery}>{label || <>#{tag}</>}</a>
       {showPopover && showFollowAction && (
         <span className="reference-menu-popover reference-menu-popover-tag">
+          <span className="mobile-reference-destination">
+            <a className="button" href={href || tagPath + navigationQuery}>notes</a>
+          </span>
           {user
             ? (
               <span className="reference-popover-actions">
@@ -971,7 +981,7 @@ type FeedPostProps = React.ComponentProps<typeof Post>
 type FeedPostFragment = { className: string; id: string; innerHtml: string }
 const feedPostFragments = new Map<string, FeedPostFragment>()
 const MAX_FEED_POST_FRAGMENTS = 1_024
-const FEED_POST_FRAGMENT_VERSION = 1
+const FEED_POST_FRAGMENT_VERSION = 2
 
 function FeedPost(props: FeedPostProps) {
   const key = JSON.stringify([FEED_POST_FRAGMENT_VERSION, props])

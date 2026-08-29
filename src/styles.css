@@ -511,6 +511,18 @@ header>nav>a:not(.button),
   font: inherit;
 }
 
+.mobile-popover-toggle {
+  display: none;
+}
+
+.mobile-post-popover-trigger {
+  display: none;
+}
+
+.mobile-reference-destination {
+  display: none;
+}
+
 .reference-menu-popover {
   position: absolute;
   z-index: 22;
@@ -783,7 +795,46 @@ header>nav>a:not(.button),
   z-index: 30;
 }
 
-@media (hover: none), (pointer: coarse) {
+@media (hover: none), (pointer: coarse), (max-width: 760px) {
+  .reference-menu {
+    display: inline-block !important;
+    vertical-align: baseline;
+    anchor-scope: --mobile-reference-popover;
+  }
+
+  .reference-menu > .reference-menu-trigger {
+    anchor-name: --mobile-reference-popover;
+  }
+
+  .remote-link-menu {
+    anchor-scope: --mobile-link-preview;
+  }
+
+  .remote-link-menu > a:not(.remote-link-popover) {
+    anchor-name: --mobile-link-preview;
+  }
+
+  .internal-post-link-menu > .mobile-post-popover-trigger {
+    position: relative;
+    z-index: 23;
+    display: inline;
+    color: var(--accent);
+    cursor: pointer;
+    anchor-name: --mobile-link-preview;
+  }
+
+  .internal-post-link-menu > .mobile-post-popover-trigger > span {
+    border-bottom: var(--hairline) solid var(--link-border);
+  }
+
+  .internal-post-link-menu:has(> .mobile-post-popover-trigger) > a:not(.remote-link-popover) {
+    display: none;
+  }
+
+  .internal-post-link-menu > .mobile-post-popover-trigger > .mobile-popover-toggle {
+    display: none;
+  }
+
   .reference-menu .reference-menu-popover,
   .reference-menu::after {
     display: none !important;
@@ -791,6 +842,160 @@ header>nav>a:not(.button),
 
   .remote-link-popover {
     display: none !important;
+  }
+
+  :is(.reference-menu, .remote-link-menu) > .mobile-popover-toggle {
+    position: absolute;
+    z-index: 23;
+    top: 50%;
+    right: 0;
+    left: 0;
+    display: block;
+    width: 100%;
+    height: 1.5em;
+    margin: 0;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    opacity: 0;
+    cursor: pointer;
+    transform: translateY(-50%);
+    appearance: none;
+  }
+
+  .reference-menu > .mobile-popover-toggle:checked ~ .reference-menu-popover {
+    position: fixed;
+    position-anchor: --mobile-reference-popover;
+    top: calc(anchor(bottom) + var(--space-1));
+    left: 50%;
+    display: grid !important;
+    justify-items: center;
+    width: calc(100vw - 2 * var(--gutter));
+    max-width: calc(100vw - 2 * var(--gutter));
+    padding-top: var(--space-2);
+    text-align: center;
+    transform: translateX(-50%);
+    animation: none;
+  }
+
+  .reference-menu > .mobile-popover-toggle:checked
+    ~ .reference-menu-popover > .mobile-reference-destination {
+    align-self: end;
+    display: block;
+    width: 100%;
+    text-align: left;
+  }
+
+  .reference-menu > .mobile-popover-toggle:checked
+    ~ .reference-menu-popover > .mobile-reference-destination > a {
+    display: block;
+    width: 100%;
+    margin-top: 0;
+    text-align: center;
+  }
+
+  .reference-menu > .mobile-popover-toggle:checked ~ .reference-menu-popover .reference-popover-bio {
+    grid-column: 1 / -1;
+    justify-self: stretch;
+    width: 100%;
+    max-width: none;
+    margin: 0;
+    padding: var(--space-2) 0 0;
+    border-top: var(--hairline) solid var(--soft);
+    border-bottom: 0;
+    text-align: left;
+    transform: none;
+  }
+
+  .reference-menu > .mobile-popover-toggle:checked
+    ~ .reference-menu-popover:has(> .mobile-reference-destination):has(> .reference-popover-actions) {
+    display: grid !important;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    align-items: start;
+    gap: var(--space-2);
+    padding-top: var(--space-2);
+  }
+
+  .reference-menu > .mobile-popover-toggle:checked
+    ~ .reference-menu-popover > .reference-popover-actions {
+    justify-self: stretch;
+    width: 100%;
+    margin-top: 0;
+  }
+
+  .reference-menu > .mobile-popover-toggle:checked
+    ~ .reference-menu-popover .reference-popover-actions:has(.follows-you),
+  .reference-menu > .mobile-popover-toggle:checked
+    ~ .reference-menu-popover:has(> .reference-popover-actions .follows-you) > .reference-popover-bio {
+    margin-top: 0;
+  }
+
+  .reference-menu > .mobile-popover-toggle:checked
+    ~ .reference-menu-popover .reference-popover-actions .follows-you {
+    position: static;
+    transform: none;
+  }
+
+  .reference-menu > .mobile-popover-toggle:checked
+    ~ .reference-menu-popover .reference-popover-actions :is(.follow-action, form),
+  .reference-menu > .mobile-popover-toggle:checked
+    ~ .reference-menu-popover .reference-popover-actions .button {
+    width: 100%;
+  }
+
+  .remote-link-menu > .mobile-popover-toggle:checked ~ .remote-link-popover {
+    position: fixed;
+    position-anchor: --mobile-link-preview;
+    top: anchor(bottom);
+    left: 50%;
+    display: grid !important;
+    width: calc(100vw - 2 * var(--gutter));
+    max-width: calc(100vw - 2 * var(--gutter));
+    transform: translateX(-50%);
+    animation: none;
+  }
+
+  .internal-post-link-menu > .mobile-post-popover-trigger:has(> .mobile-popover-toggle:checked)
+    ~ .internal-post-popover {
+    position: fixed;
+    position-anchor: --mobile-link-preview;
+    top: anchor(bottom);
+    left: 50%;
+    display: grid !important;
+    width: calc(100vw - 2 * var(--gutter));
+    max-width: calc(100vw - 2 * var(--gutter));
+    transform: translateX(-50%);
+    animation: none;
+  }
+
+  .remote-link-menu > .mobile-popover-toggle:checked ~ .remote-link-popover:not(.internal-post-popover) {
+    justify-items: center;
+    text-align: center;
+  }
+
+  .remote-link-menu > .mobile-popover-toggle:checked
+    ~ .remote-link-popover:not(.internal-post-popover) .remote-link-copy {
+    align-items: stretch;
+    justify-self: stretch;
+    text-align: left;
+  }
+
+  .remote-link-menu > .mobile-popover-toggle:checked ~ .remote-link-audio-popover {
+    display: block !important;
+    animation: none;
+  }
+
+  .remote-link-menu > .mobile-popover-toggle:checked ~ .remote-link-popover .remote-link-image {
+    background-image: var(--preview-image);
+  }
+
+  .post:has(.mobile-popover-toggle:checked) {
+    position: relative;
+    z-index: 30;
+  }
+
+  .link-previews-disabled .remote-link-menu > .mobile-popover-toggle {
+    display: none;
   }
 
 }
