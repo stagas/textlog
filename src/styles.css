@@ -792,6 +792,7 @@ header>nav>a:not(.button),
   .remote-link-popover {
     display: none !important;
   }
+
 }
 
 .reference-menu::after {

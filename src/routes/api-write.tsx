@@ -9,6 +9,7 @@ import type { DatabaseService } from '../database-service'
 import { sendMagicLink } from '../email'
 import { deleteImages, deleteImagesAfterCommit } from '../image-storage'
 import { discoverLinkPreviews } from '../link-preview'
+import { parseLocationQuery, resolveLocation } from '../locations'
 import { logError } from '../log'
 import { moderateText, moderationMessage } from '../moderation'
 import { normalizePostBody, POST_MAX, postBodyValidationMessage, validPostBody } from '../post-body'
@@ -89,6 +90,19 @@ async function persistPostPreviews(service: DatabaseService, postId: number, mod
   catch (error) {
     await deleteImages(newKeys)
     throw error
+  }
+}
+
+async function persistPostLocation(service: DatabaseService, postId: number, content: string) {
+  const query = parseLocationQuery(content)
+  if (!query) return service.call('api.persistPostLocation', { postId, query: null, location: null })
+  try {
+    const cached = await service.call('api.cachedLocation', { query })
+    const location = cached === 'miss' ? null : cached || await resolveLocation(query)
+    await service.call('api.persistPostLocation', { postId, query, location })
+  }
+  catch (error) {
+    logError(`API location preview failed post=${postId}`, error)
   }
 }
 
@@ -259,6 +273,7 @@ export function registerApiWriteRoutes(app: Hono, service: DatabaseService,
     }
     if (!result.duplicate) publishPost(result.id)
     if (!result.duplicate) await persistPostPreviews(service, result.id, 'save', await discoverLinkPreviews(content))
+    if (!result.duplicate) await persistPostLocation(service, result.id, content)
     if (!result.duplicate) {
       wakePostPushWorker(service)
     }
@@ -380,6 +395,7 @@ export function registerApiWriteRoutes(app: Hono, service: DatabaseService,
     }
     if (!result.duplicate) publishPost(result.id)
     if (!result.duplicate) await persistPostPreviews(service, result.id, 'save', await discoverLinkPreviews(draft.body))
+    if (!result.duplicate) await persistPostLocation(service, result.id, draft.body)
     if (!result.duplicate) {
       wakePostPushWorker(service)
     }
@@ -436,6 +452,7 @@ export function registerApiWriteRoutes(app: Hono, service: DatabaseService,
         : fail('forbidden', 'That post belongs to someone else', 403)
     }
     await persistPostPreviews(service, id, 'replace', await discoverLinkPreviews(content))
+    await persistPostLocation(service, id, content)
     return json({ data: result.post })
   })
 

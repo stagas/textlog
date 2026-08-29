@@ -22,6 +22,7 @@ import type { PostingSuggestionSearch } from '../components/page-shared'
 import { safeRefererPath } from '../http'
 import { deleteImages, deleteImagesAfterCommit } from '../image-storage'
 import { discoverLinkPreviews } from '../link-preview'
+import { parseLocationQuery, resolveLocation } from '../locations'
 import { logError } from '../log'
 import { markdownPlainText } from '../markdown'
 import { renderPostOg } from '../og'
@@ -76,6 +77,19 @@ async function persistPreviews(postId: number, mode: 'save' | 'replace', body: s
   catch (error) {
     await deleteImages(newKeys)
     throw error
+  }
+  const query = parseLocationQuery(body)
+  if (!query) {
+    await databaseService().call('api.persistPostLocation', { postId, query: null, location: null })
+    return
+  }
+  try {
+    const cached = await databaseService().call('api.cachedLocation', { query })
+    const location = cached === 'miss' ? null : cached || await resolveLocation(query)
+    await databaseService().call('api.persistPostLocation', { postId, query, location })
+  }
+  catch (error) {
+    logError(`location preview failed post=${postId}`, error)
   }
 }
 

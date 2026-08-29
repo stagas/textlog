@@ -7,6 +7,9 @@ export type LinkPreview = { imageUrl: string; imageKey?: string; title?: string;
     parent?: { user_id: number; handle: string } | null
   } }
 
+export type LocationView = { query: string; latitude: number; longitude: number; displayName: string; url: string;
+  preview: LinkPreview }
+
 export type PostRow = {
   id: number
   user_id: number
@@ -22,6 +25,7 @@ export type PostRow = {
   has_code?: number | null
   execution_output?: string | null
   link_previews?: Record<string, LinkPreview>
+  location?: LocationView
 }
 
 export type PollView = {
@@ -77,6 +81,7 @@ export type ParentPost = Pick<PostRow,
   hashtag_follower_counts?: Record<string, number>
   hashtag_following?: Record<string, boolean>
   link_previews?: Record<string, LinkPreview>
+  location?: LocationView
   poll?: PollView
   viewer_mentioned?: boolean
   parent?: ParentPost | null
@@ -135,6 +140,7 @@ export type ApiPost = {
   api_url: string
   author: { handle: string; url: string; api_url: string }
   link_previews?: Record<string, LinkPreview>
+  location?: LocationView | null
   poll?: {
     options: Array<{ id: number; label: string; votes: number | null; selected: boolean; correct?: boolean | null }>
     kind: 'poll' | 'quiz'

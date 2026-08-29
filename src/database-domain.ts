@@ -25,7 +25,8 @@ import { dropUsername, resolveHandle } from './handles'
 import { claimInitialHandle, HandleChangeLimitError, updateProfileHandle } from './handles'
 import { getHotPosts, hotFeedProjectionNeedsRefresh, hotRankingVersion,
   refreshHotFeedProjection } from './hot'
-import { isImageKey } from './image-storage'
+import { getImageUrl, isImageKey } from './image-storage'
+import { LOCATION_ZOOM } from './locations'
 import { interactedEmail } from './interacted-email'
 import { isRecentConversationRoot, recentConversationReplies, recentExpandableConversationReplies } from './latest-conversation'
 import { initializeLatestReads, latestUnreadPostState, markAllLatestRead, markLatestPostsRead,
@@ -1901,6 +1902,66 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
         }
       })()
       return { obsoleteImageKeys: oldKeys.filter(key => !newKeys.includes(key)) } as DatabaseDomainOutput<K>
+    }
+    case 'api.cachedLocation': {
+      const { query } = input as DatabaseDomainInput<'api.cachedLocation'>
+      if (!database.query("SELECT 1 FROM sqlite_master WHERE type='table' AND name='location_geocodes'").get()) {
+        return null as DatabaseDomainOutput<K>
+      }
+      const supportsLanguage = database.query(
+        "SELECT 1 FROM pragma_table_info('location_geocodes') WHERE name='language'",
+      ).get()
+      const row = database.query(`SELECT g.query,g.latitude,g.longitude,g.display_name displayName,
+        m.image_key imageKey,m.width imageWidth,m.height imageHeight
+        FROM location_geocodes g LEFT JOIN location_map_previews m
+          ON m.cache_key=printf('${LOCATION_ZOOM}:%.6f:%.6f',g.latitude,g.longitude) WHERE g.query=?
+          ${supportsLanguage ? "AND g.language='en'" : 'AND 0'}`).get(query) as
+        Omit<import('./locations').ResolvedLocation, 'imageUrl'> | null
+      const supportsMisses = database.query(
+        "SELECT 1 FROM sqlite_master WHERE type='table' AND name='location_geocode_misses'",
+      ).get()
+      return row && row.imageKey ? { ...row, imageUrl: getImageUrl(row.imageKey) } as DatabaseDomainOutput<K>
+        : supportsMisses && database.query('SELECT 1 FROM location_geocode_misses WHERE query=?').get(query)
+        ? 'miss' as DatabaseDomainOutput<K> : null as DatabaseDomainOutput<K>
+    }
+    case 'api.persistPostLocation': {
+      const { postId, query, location } = input as DatabaseDomainInput<'api.persistPostLocation'>
+      if (!database.query("SELECT 1 FROM sqlite_master WHERE type='table' AND name='post_locations'").get()) {
+        return null as DatabaseDomainOutput<K>
+      }
+      const supportsMisses = database.query(
+        "SELECT 1 FROM sqlite_master WHERE type='table' AND name='location_geocode_misses'",
+      ).get()
+      database.transaction(() => {
+        database.query('DELETE FROM post_locations WHERE post_id=?').run(postId)
+        if (!location) {
+          if (query && supportsMisses) {
+            database.query('INSERT OR IGNORE INTO location_geocode_misses(query) VALUES(?)').run(query)
+          }
+          return
+        }
+        if (supportsMisses) database.query('DELETE FROM location_geocode_misses WHERE query=?').run(location.query)
+        const supportsLanguage = database.query(
+          "SELECT 1 FROM pragma_table_info('location_geocodes') WHERE name='language'",
+        ).get()
+        if (supportsLanguage) database.query(`INSERT INTO location_geocodes
+          (query,latitude,longitude,display_name,language) VALUES(?,?,?,?, 'en')
+          ON CONFLICT(query) DO UPDATE SET latitude=excluded.latitude,longitude=excluded.longitude,
+          display_name=excluded.display_name,language=excluded.language`).run(location.query, location.latitude,
+          location.longitude, location.displayName)
+        else database.query(`INSERT INTO location_geocodes(query,latitude,longitude,display_name) VALUES(?,?,?,?)
+          ON CONFLICT(query) DO UPDATE SET latitude=excluded.latitude,longitude=excluded.longitude,
+          display_name=excluded.display_name`).run(location.query, location.latitude, location.longitude,
+          location.displayName)
+        database.query(`INSERT INTO location_map_previews(cache_key,image_key,width,height) VALUES(?,?,?,?)
+          ON CONFLICT(cache_key) DO UPDATE SET image_key=excluded.image_key,width=excluded.width,height=excluded.height`)
+          .run(`${LOCATION_ZOOM}:${location.latitude.toFixed(6)}:${location.longitude.toFixed(6)}`, location.imageKey,
+            location.imageWidth, location.imageHeight)
+        database.query(`INSERT INTO post_locations(post_id,query,latitude,longitude,display_name)
+          VALUES(?,?,?,?,?)`).run(postId, location.query, location.latitude, location.longitude, location.displayName)
+      })()
+      cacheDb.query('DELETE FROM materialized_feed_pages_v2').run()
+      return null as DatabaseDomainOutput<K>
     }
     case 'api.requestSignIn': {
       const { email, origin, now } = input as DatabaseDomainInput<'api.requestSignIn'>

@@ -775,7 +775,7 @@ export function Post({
             currentHandle: user?.handle, formPrefix, mentionFollowing: p.mention_following,
             mentionFollowsViewer: p.mention_follows_viewer, mentionProfileStats: p.mention_profile_stats,
             hashtagFollowing: p.hashtag_following, hashtagFollowerCounts: p.hashtag_follower_counts,
-            linkPreviews: p.link_previews, linkUnknownMentions: preview || p.id < 0 }),
+            linkPreviews: p.link_previews, location: p.location, linkUnknownMentions: preview || p.id < 0 }),
         }} />
         {p.execution_output !== null && p.execution_output !== undefined && <ExecutionOutput output={p.execution_output} />}
         {!preview && <Translation html={translationHtml} />}

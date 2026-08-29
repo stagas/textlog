@@ -17,7 +17,7 @@ type MemoryMaterialization = MaterializedResponse & {
 }
 const memoryMaterializations = new Map<string, MemoryMaterialization>()
 const MAX_MEMORY_MATERIALIZATIONS = 256
-const MATERIALIZED_HTML_VERSION = 32
+const MATERIALIZED_HTML_VERSION = 33
 let memoryGeneration = 0
 
 export function invalidateMaterializedFeedMemory() {

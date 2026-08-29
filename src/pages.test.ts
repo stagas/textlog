@@ -402,6 +402,9 @@ test('posting helpers are searchable details and show copyable highlighted resul
   expect(html).toContain(
     '<span class="posting-help-modifier-heading">Spoilers</span><small>Text after #spoiler is hidden until revealed. Aliases: #tldr, #sensitive, #contentwarning, #cw, and #triggerwarning.</small>',
   )
+  expect(html).toContain(
+    '<span class="posting-help-modifier-heading">Maps</span><small>Shows a map preview for the first location line. Alias: #location.</small>',
+  )
   expect(html).toContain('Visible text <b>#spoiler</b><br/>Hidden text')
   expect(html).toContain(
     '<span class="posting-help-modifier-heading">Todos</span><small>Only [ ] and [x] lines become items.',

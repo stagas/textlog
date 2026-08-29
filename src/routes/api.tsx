@@ -59,7 +59,7 @@ function openApiDocument() {
   const quotedPostSchema = {
     type: 'object',
     required: ['id', 'top_id', 'body', 'created_at', 'parent_id', 'reply_count', 'tags', 'mentions', 'link_previews',
-      'poll', 'url', 'api_url', 'author'],
+      'location', 'poll', 'url', 'api_url', 'author'],
     properties: {
       id: { type: 'integer' },
       top_id: { type: ['integer', 'null'],
@@ -71,6 +71,12 @@ function openApiDocument() {
       tags: { type: 'array', items: { type: 'string' } },
       mentions: { type: 'array', items: { type: 'string' } },
       link_previews: { type: 'object', additionalProperties: { $ref: '#/components/schemas/LinkPreview' } },
+      location: { anyOf: [{ type: 'object', required: ['query', 'latitude', 'longitude', 'displayName', 'url',
+        'preview'], properties: {
+        query: { type: 'string' }, latitude: { type: 'number' }, longitude: { type: 'number' },
+        displayName: { type: 'string' }, url: { type: 'string', format: 'uri' },
+        preview: { $ref: '#/components/schemas/LinkPreview' },
+      } }, { type: 'null' }] },
       poll: { anyOf: [{ $ref: '#/components/schemas/Poll' }, { type: 'null' }] },
       url: { type: 'string', format: 'uri' },
       api_url: { type: 'string', format: 'uri' },

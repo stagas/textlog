@@ -7,6 +7,7 @@ import { recordHotActivity } from './hot'
 import { getImageUrl, isImageKey } from './image-storage'
 import { markLatestPostsRead } from './latest-state'
 import { decodeHtmlEntities, userBioLinkPreviews } from './link-preview'
+import { LOCATION_ZOOM, locationMapKey, osmLocationUrl } from './locations'
 import { loadPolls, syncPoll } from './polls'
 import { insertRateLimitedPost } from './post-rate-limit'
 import type { BioReferenceData, LinkPreview, ParentPost, PostView, UserProfileStats } from './types'
@@ -373,6 +374,24 @@ export function enrichPosts(database: Database, posts: PostView[], viewerId = -1
         : undefined }
     previewsByPost.set(row.post_id, previews)
   }
+  const locationsByPost = new Map<number, NonNullable<PostView['location']>>()
+  if (database.query("SELECT 1 FROM sqlite_master WHERE type='table' AND name='post_locations'").get()) {
+    const locationRows = database.query(`SELECT l.post_id,l.query,l.latitude,l.longitude,l.display_name,
+      m.image_key,m.width,m.height FROM post_locations l JOIN location_map_previews m ON m.cache_key=
+      printf('${LOCATION_ZOOM}:%.6f:%.6f',l.latitude,l.longitude) WHERE l.post_id IN
+      (${previewPostIds.map(() => '?').join(',')})`).all(...previewPostIds) as Array<{ post_id: number; query: string;
+      latitude: number; longitude: number; display_name: string; image_key: string; width: number; height: number }>
+    for (const row of locationRows) {
+      const location = { query: row.query, latitude: row.latitude, longitude: row.longitude,
+        displayName: row.display_name }
+      const [title, ...description] = row.display_name.split(',').map(part => part.trim()).filter(Boolean)
+      locationsByPost.set(row.post_id, { ...location, url: osmLocationUrl(location), preview: {
+        imageUrl: getImageUrl(row.image_key || locationMapKey(location)), title: title || row.query,
+        description: description.join(', ') || row.display_name, siteName: 'OpenStreetMap', imageWidth: row.width,
+        imageHeight: row.height,
+      } })
+    }
+  }
   const countRootIds = [...new Set([...ids, ...parentIds])]
   const placeholders = countRootIds.map(() => '?').join(',')
   const visibleReply = viewerId < 0 ? '' : `AND NOT EXISTS (SELECT 1 FROM blocks b WHERE
@@ -432,6 +451,7 @@ export function enrichPosts(database: Database, posts: PostView[], viewerId = -1
       parent.top_id = parent.parent_id ? topByParentId.get(parent.id) || null : null
       parent.thread_locked = lockedPostIds.has(parent.id)
       parent.link_previews = previewsByPost.get(parent.id)
+      parent.location = locationsByPost.get(parent.id)
       for (const handle of extractMentions(parent.body)) addMentionBio(handle)
       for (const handle of extractMentions(parent.translation || '')) addMentionBio(handle)
       for (const handle of extractMentions(parent.bio || '')) addMentionBio(handle)
@@ -531,6 +551,7 @@ export function enrichPosts(database: Database, posts: PostView[], viewerId = -1
     hashtag_following: hashtagFollowing,
     bio_reference: bioReference(post.user_id),
     link_previews: previewsByPost.get(post.id),
+    location: locationsByPost.get(post.id),
     reply_count: countById.get(post.id) || 0,
     direct_reply_count: directCountById.get(post.id) || 0,
     parent: post.parent_id ? parents.get(post.parent_id) || null : null,

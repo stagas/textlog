@@ -353,6 +353,14 @@ export type DatabaseDomainOperations = {
     input: { postId: number; mode: 'save' | 'replace'; previews: Array<{ url: string } & LinkPreview> }
     output: { obsoleteImageKeys: string[] }
   }
+  'api.cachedLocation': {
+    input: { query: string }
+    output: import('./locations').ResolvedLocation | 'miss' | null
+  }
+  'api.persistPostLocation': {
+    input: { postId: number; query: string | null; location: import('./locations').ResolvedLocation | null }
+    output: null
+  }
   'api.updateBio': { input: { userId: number; bio: string }; output: null }
   'api.persistBioPreviews': { input: { userId: number; previews: Array<{ url: string } & LinkPreview> };
     output: { obsoleteImageKeys: string[] } }

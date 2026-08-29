@@ -13,7 +13,7 @@ import { requestContext } from './request-context'
 import { markSessionUsed, sessionHash } from './sessions'
 import { activeTimezone, timezoneLabel } from './timezone'
 import type { User } from './types'
-import type { LinkPreview, UserProfileStats } from './types'
+import type { LinkPreview, LocationView, UserProfileStats } from './types'
 
 hljs.registerLanguage('javascript', javascript)
 hljs.registerLanguage('python', python)
@@ -43,6 +43,7 @@ export type ReferencePopoverOptions = {
   hashtagFollowing?: Record<string, boolean>
   hashtagFollowerCounts?: Record<string, number>
   linkPreviews?: Record<string, LinkPreview>
+  location?: LocationView
   mentionPopovers?: boolean
   referencePopovers?: boolean
   linkUnknownMentions?: boolean
@@ -113,6 +114,11 @@ function previewLink(html: string, url: string, appUrl: string | undefined, popo
     + `${linkAttributes(url, appUrl).trimStart()} `
     + `style="--preview-image:url(&quot;${esc(cssUrl)}&quot;)${aspect}"><span class="${imageClass}" role="img" `
     + `aria-label="${esc(preview.title || `Preview of ${hostname}`)}"></span>${details}</a></span>`
+}
+
+export function locationPreviewLink(html: string, location: LocationView, appUrl?: string) {
+  return previewLink(html, location.url, appUrl, { signedIn: false, formPrefix: 'location',
+    linkPreviews: { [location.url]: location.preview } })
 }
 
 export function referenceFormId(prefix: string, kind: 'user' | 'tag', value: string,
@@ -288,7 +294,7 @@ type LinkToken = {
   index: number
   lastIndex: number
   kind: 'bold' | 'code' | 'code-fence' | 'italics' | 'latex-fence' | 'math' | 'markdown' | 'redacted' | 'strikethrough'
-    | 'underline' | 'url' | 'reference' | 'post-reference'
+    | 'underline' | 'url' | 'reference' | 'post-reference' | 'location'
   raw: string
   url?: string
   label?: string
@@ -449,7 +455,7 @@ export function linkTokens(body: string, flags?: PostContentFlags): LinkToken[] 
       tokens.push({ index: match.index, lastIndex, kind: 'post-reference', raw: match[0] })
     }
   }
-  const priority = { 'code-fence': 0, 'latex-fence': 0, code: 1, math: 2, markdown: 3, redacted: 4, strikethrough: 4,
+  const priority = { location: -1, 'code-fence': 0, 'latex-fence': 0, code: 1, math: 2, markdown: 3, redacted: 4, strikethrough: 4,
     bold: 4, italics: 4, underline: 4, url: 5, reference: 6, 'post-reference': 6 }
   const result = tokens.sort((a, b) => a.index - b.index || priority[a.kind] - priority[b.kind])
   linkTokenCache.set(cacheKey, result)
@@ -632,7 +638,26 @@ export function linkify(body: string, mentionBios: Record<string, string> = {}, 
   }
   let html = ''
   let end = 0
-  for (const match of linkTokens(body, flags)) {
+  const locationToken = (() => {
+    if (!popover?.location) return null
+    const lines = body.split('\n')
+    const marker = lines.findIndex(line => /(?:^|\s)#(?:map|location)\s*$/i.test(line))
+    if (marker < 0) return null
+    let offset = lines.slice(0, marker + 1).reduce((length, line) => length + line.length + 1, 0)
+    for (const line of lines.slice(marker + 1)) {
+      const trimmed = line.trim()
+      if (trimmed) {
+        if (trimmed !== popover.location.query) return null
+        const index = offset + line.indexOf(trimmed)
+        return { index, lastIndex: index + trimmed.length, kind: 'location' as const, raw: trimmed }
+      }
+      offset += line.length + 1
+    }
+    return null
+  })()
+  const tokens = [...linkTokens(body, flags), ...(locationToken ? [locationToken] : [])]
+    .sort((a, b) => a.index - b.index || (a.kind === 'location' ? -1 : 1))
+  for (const match of tokens) {
     if (match.index < end) continue
     html += renderedText(body.slice(end, match.index), highlightTerms)
     const token = match.raw
@@ -691,6 +716,11 @@ export function linkify(body: string, mentionBios: Record<string, string> = {}, 
       const href = `/post/${Number(token.slice(1))}`
       const previewUrl = appUrl ? `${appUrl.replace(/\/$/, '')}${href}` : href
       html += previewLink(`<a href="${href}">${highlighted(token, highlightTerms)}</a>`, previewUrl, appUrl, popover)
+    }
+    else if (match.kind === 'location' && popover?.location) {
+      html += locationPreviewLink(`<a href="${esc(popover.location.url)}" target="_blank" `
+        + `rel="nofollow ugc noopener noreferrer">${highlighted(token, highlightTerms)}</a>`,
+      popover.location, appUrl)
     }
     else {
       html += renderedReference(token, mentionBios, mentionNoteCounts, hashtagCounts, highlightTerms, navigationQuery,

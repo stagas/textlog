@@ -7,6 +7,24 @@ import { databaseVersion, latestMigrationVersion, migrations, normalizeInternalP
 import { sessionHash } from './sessions'
 
 describe('database migrations', () => {
+  test('repairs location databases created before the miss cache was added', () => {
+    const database = new Database(':memory:')
+    database.run(`CREATE TABLE posts(id INTEGER PRIMARY KEY);
+      CREATE TABLE location_geocodes (
+        query TEXT PRIMARY KEY,latitude REAL NOT NULL,longitude REAL NOT NULL,display_name TEXT NOT NULL);
+      CREATE TABLE location_map_previews (
+        cache_key TEXT PRIMARY KEY,image_key TEXT NOT NULL,width INTEGER NOT NULL,height INTEGER NOT NULL);
+      CREATE TABLE post_locations (
+        post_id INTEGER PRIMARY KEY REFERENCES posts(id) ON DELETE CASCADE,
+        query TEXT NOT NULL,latitude REAL NOT NULL,longitude REAL NOT NULL,display_name TEXT NOT NULL);
+      PRAGMA user_version=160;`)
+
+    expect(runMigrations(database)).toBe(latestMigrationVersion)
+    expect(database.query(
+      "SELECT name FROM sqlite_master WHERE type='table' AND name='location_geocode_misses'",
+    ).get()).toEqual({ name: 'location_geocode_misses' })
+  })
+
   test('adds moderator edits to the admin action constraint without losing existing actions', () => {
     const database = new Database(':memory:')
     database.run(`PRAGMA foreign_keys=ON;

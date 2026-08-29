@@ -259,6 +259,19 @@ function PostingHelpTabs({ search }: { search?: PostingSuggestionSearch | null }
         <div>
           <dd>
             <code>
+              Going hiking <b>#map</b>
+              <br />
+              Kallikratis, Crete
+            </code>
+          </dd>
+          <dt>
+            <span className="posting-help-modifier-heading">Maps</span>
+            <small>Shows a map preview for the first location line. Alias: #location.</small>
+          </dt>
+        </div>
+        <div>
+          <dd>
+            <code>
               Today <b>#todo</b>
               <br />
               <b>[ ]</b> First task<br />

@@ -2625,6 +2625,34 @@ export const migrations: Migration[] = [
         'INTEGER NOT NULL DEFAULT 1 CHECK(notify_broadcasts IN (0,1))')
     },
   },
+  {
+    version: 160,
+    name: 'post_locations',
+    up(database) {
+      database.run(`CREATE TABLE IF NOT EXISTS location_geocodes (
+        query TEXT PRIMARY KEY,latitude REAL NOT NULL,longitude REAL NOT NULL,display_name TEXT NOT NULL);
+      CREATE TABLE IF NOT EXISTS location_geocode_misses (query TEXT PRIMARY KEY);
+      CREATE TABLE IF NOT EXISTS location_map_previews (
+        cache_key TEXT PRIMARY KEY,image_key TEXT NOT NULL,width INTEGER NOT NULL,height INTEGER NOT NULL);
+      CREATE TABLE IF NOT EXISTS post_locations (
+        post_id INTEGER PRIMARY KEY REFERENCES posts(id) ON DELETE CASCADE,
+        query TEXT NOT NULL,latitude REAL NOT NULL,longitude REAL NOT NULL,display_name TEXT NOT NULL);`)
+    },
+  },
+  {
+    version: 161,
+    name: 'location_geocode_misses',
+    up(database) {
+      database.run('CREATE TABLE IF NOT EXISTS location_geocode_misses (query TEXT PRIMARY KEY)')
+    },
+  },
+  {
+    version: 162,
+    name: 'location_geocode_language',
+    up(database) {
+      addColumn(database, 'location_geocodes', 'language', "TEXT NOT NULL DEFAULT ''")
+    },
+  },
 ]
 
 export const latestMigrationVersion = migrations.at(-1)!.version

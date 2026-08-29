@@ -14,6 +14,7 @@ const feedMutations = new Set<DatabaseDomainOperation>([
   'account.updateProfileFlags',
   'account.delete',
   'api.createPost',
+  'api.persistPostLocation',
   'api.publishDraft',
   'api.updatePost',
   'api.deletePost',
