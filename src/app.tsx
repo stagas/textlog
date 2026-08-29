@@ -611,14 +611,18 @@ export default {
       request.headers.get(clientIpHeaderName()) || server.requestIP(request)?.address)
     recordIpRequest(address)
     const url = new URL(request.url)
+    const authenticated = Boolean(currentUser(request))
     const navigationChallengeAsset = /^(?:\/styles\.css|\/theme\.css|\/textlog\.svg|\/favicon-theme\.svg|\/favicon\.ico|\/favicon-\d+x\d+\.png|\/apple-touch-icon\.png|\/android-chrome-\d+x\d+\.png|\/maskable-icon-\d+x\d+\.png|\/uploads\/)/
       .test(url.pathname)
-    if (navigationCaptchaGate.check(address) && url.pathname !== '/navigation-check' && !navigationChallengeAsset) {
+    if (!authenticated && navigationCaptchaGate.check(address) && url.pathname !== '/navigation-check'
+      && !navigationChallengeAsset)
+    {
       const target = url.pathname + url.search + url.hash
       return new Response(null, { status: 303,
         headers: { location: `/navigation-check?target=${encodeURIComponent(target)}` } })
     }
-    if (url.pathname !== '/navigation-check' && nestedFromDepth(request.url) >= NESTED_FROM_MAX_DEPTH
+    if (!authenticated && url.pathname !== '/navigation-check'
+      && nestedFromDepth(request.url) >= NESTED_FROM_MAX_DEPTH
       && !await isNavigationCaptchaAllowed(address))
     {
       navigationCaptchaGate.require(address)

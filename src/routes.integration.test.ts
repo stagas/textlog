@@ -1927,6 +1927,23 @@ test('consequential account, content, reporting, and admin flows work over HTTP'
   expect(Number(blockedRequest.headers.get('retry-after'))).toBeGreaterThan(0)
 }, 60_000)
 
+test('signed-in users can follow deeply nested backlinks without a navigation challenge', async () => {
+  const email = 'nested-navigation@example.com'
+  const ip = '203.0.113.200'
+  expect((await request('/enter', { method: 'POST', form: { email }, ip })).status).toBe(200)
+  const message = capturedEmails().filter(item => item.to === email).at(-1)!
+  const magic = await request(`/enter/magic?token=${encodeURIComponent(linkToken(message))}`, { ip })
+  const cookie = sessionCookie(magic)
+  expect((await request('/choose-handle', {
+    method: 'POST', cookie, form: { handle: 'nested_user', next: '/' }, ip,
+  })).status).toBe(303)
+
+  const nested = '/about?from=%2Fpost%2F1%3Ffrom%3D%252Fpost%252F2%253Ffrom%253D%25252Fpost%25252F3%25253Ffrom%25253D%2525252Flatest'
+  const response = await request(nested, { cookie, ip })
+  expect(response.status).toBe(200)
+  expect(response.headers.get('location')).toBeNull()
+})
+
 test('a nested navigation challenge gates every subsequent page for the resolved socket IP', async () => {
   const nested = '/?from=%2Fpost%2F1%3Ffrom%3D%252Fpost%252F2%253Ffrom%253D%25252Fpost%25252F3%25253Ffrom%25253D%2525252Flatest'
   const challenge = await request(nested)
