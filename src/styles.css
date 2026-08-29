@@ -980,6 +980,13 @@ nav form {
   border-bottom: 1px solid var(--soft);
 }
 
+#feed-tabs {
+  position: sticky;
+  z-index: 40;
+  top: calc(-1 * var(--space-4));
+  background: var(--bg);
+}
+
 .feed-tabs::-webkit-scrollbar {
   display: none;
 }

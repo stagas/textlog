@@ -141,6 +141,9 @@ describe('in-memory stylesheet', () => {
 
   test('removes the top border from a grouped first activity', async () => {
     const css = await Bun.file(new URL('./styles.css', import.meta.url)).text()
+    expect(css).toContain(
+      '#feed-tabs {\n  position: sticky;\n  z-index: 40;\n  top: calc(-1 * var(--space-4));\n  background: var(--bg);\n}',
+    )
     expect(css).toContain('.feed-tabs+.activity-group > .activity-follow:first-child,')
     expect(css).toContain('.feed-read-action+.activity-group > .activity-follow:first-child {\n  border-top: 0;')
   })
