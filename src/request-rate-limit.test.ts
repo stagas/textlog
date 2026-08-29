@@ -1,8 +1,7 @@
 import { describe, expect, test } from 'bun:test'
 import { CLIENT_ERROR_RATE_LIMIT, CLIENT_ERROR_RATE_WINDOW_SECONDS, ClientErrorRateLimiter,
   HOURLY_REQUEST_BLOCK_SECONDS, HOURLY_REQUEST_RATE_LIMIT, HOURLY_REQUEST_RATE_WINDOW_SECONDS,
-  NESTED_FROM_BLOCK_SECONDS, nestedFromDepth, NestedFromRateLimiter, rateLimitedResponse, rateLimitMessage,
-  REQUEST_RATE_LIMIT, RequestRateLimiter } from './request-rate-limit'
+  rateLimitedResponse, rateLimitMessage, REQUEST_RATE_LIMIT, RequestRateLimiter } from './request-rate-limit'
 
 describe('in-memory request rate limiter', () => {
   test('allows a modestly higher site-wide request burst', () => {
@@ -58,32 +57,6 @@ describe('in-memory request rate limiter', () => {
     expect(rateLimitMessage(61)).toContain('about 2 minutes')
     expect(rateLimitMessage(3_600)).toContain('about 1 hour')
     expect(rateLimitMessage(3_661)).toContain('about 1 hour and 2 minutes')
-  })
-})
-
-describe('nested from rate limiter', () => {
-  const nested =
-    'https://textlog.test/?from=%2Fpost%2F1071%3Ffrom%3D%252Fpost%252F1064%253Ffrom%253D%25252Fpost%25252F697%25253Ffrom%25253D%2525252Fpost%2525252F1066%2525253Ffrom%2525253D%252525252Flatest%2525252523post-1070'
-  const fourDeep =
-    'https://textlog.test/?from=%2Fpost%2F925%3Ffrom%3D%252Fpost%252F1507%253Ffrom%253D%25252Fpost%25252F925%25253Ffrom%25253D%2525252Fpost%2525252F937'
-  const enterNext =
-    'https://textlog.test/enter?next=%2Fpost%2F1577%3Freply%3D1%26from%3D%252Fpost%252F925%253Ffrom%253D%25252Fpost%25252F1026%25253Ffrom%25253D%2525252Fpost%2525252F925%2525253Ffrom%2525253D%252525252Fpost%252525252F954%252525253Ffrom%252525253D%25252525252Fpost%25252525252F925'
-
-  test('counts repeatedly encoded from links up to the enforcement depth', () => {
-    expect(nestedFromDepth('https://textlog.test/post/1?from=%2Flatest')).toBe(1)
-    expect(nestedFromDepth(fourDeep)).toBe(4)
-    expect(nestedFromDepth(nested)).toBe(4)
-    expect(nestedFromDepth(enterNext)).toBe(4)
-    expect(nestedFromDepth('https://textlog.test/enter?next=%2Fpost%2F1')).toBe(1)
-    expect(nestedFromDepth('https://textlog.test/latest')).toBe(0)
-  })
-
-  test('blocks only the triggering address for one hour', () => {
-    const limiter = new NestedFromRateLimiter()
-    expect(limiter.block('203.0.113.20', 1_000)).toEqual({ retryAfter: NESTED_FROM_BLOCK_SECONDS })
-    expect(limiter.check('203.0.113.20', 2_000)).toEqual({ retryAfter: 3_599 })
-    expect(limiter.check('203.0.113.21', 2_000)).toBeNull()
-    expect(limiter.check('203.0.113.20', 3_601_000)).toBeNull()
   })
 })
 

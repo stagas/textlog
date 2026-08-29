@@ -21,8 +21,7 @@ import { startPostPushWorker } from './push'
 import { resumeRelationshipFeedInvalidation } from './relationship-feed-invalidation'
 import { flushIpRequests, isIpBlocked, loadBlockedIps, recordIpRequest } from './request-ip-blocks'
 import { ClientErrorRateLimiter, HOURLY_REQUEST_BLOCK_SECONDS, HOURLY_REQUEST_RATE_LIMIT,
-  HOURLY_REQUEST_RATE_WINDOW_SECONDS, NESTED_FROM_MAX_DEPTH, nestedFromDepth, NestedFromRateLimiter,
-  rateLimitedResponse, RequestRateLimiter } from './request-rate-limit'
+  HOURLY_REQUEST_RATE_WINDOW_SECONDS, rateLimitedResponse, RequestRateLimiter } from './request-rate-limit'
 import { registerAccountRoutes } from './routes/account'
 import { registerAdminRoutes } from './routes/admin'
 import { registerApiRoutes } from './routes/api'
@@ -142,7 +141,6 @@ const hourlyRequestRateLimiter = new RequestRateLimiter({
   blockSeconds: HOURLY_REQUEST_BLOCK_SECONDS,
 })
 const clientErrorRateLimiter = new ClientErrorRateLimiter()
-const nestedFromRateLimiter = new NestedFromRateLimiter()
 await loadBlockedIps()
 startPostPushWorker()
 await loadRecentFeedVisitors()
@@ -583,9 +581,6 @@ export default {
   async fetch(request: Request, server: Bun.Server<unknown>) {
     const address = clientIp(request, server.requestIP(request)?.address)
     recordIpRequest(address)
-    const nestedFromLimited = nestedFromRateLimiter.check(address)
-      ?? (nestedFromDepth(request.url) >= NESTED_FROM_MAX_DEPTH ? nestedFromRateLimiter.block(address) : null)
-    if (nestedFromLimited) return requestRateLimitResponse(request, nestedFromLimited.retryAfter)
     if (isIpBlocked(address)) {
       const now = new Date()
       const nextDay = Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() + 1)
