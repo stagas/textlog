@@ -989,7 +989,7 @@ nav form {
   overflow-y: hidden;
   scrollbar-width: none;
   overscroll-behavior-inline: contain;
-  border-bottom: 1px solid var(--soft);
+  box-shadow: 0 1px 0 var(--soft);
 }
 
 #feed-tabs {
