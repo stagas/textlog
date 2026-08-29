@@ -4738,6 +4738,13 @@ form.report-panel {
   padding: var(--space-7) var(--gutter) 0;
 }
 
+.admin-header-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 2ch;
+  margin-left: auto;
+}
+
 .ios-notification-help {
   margin: var(--space-5) 0;
   padding: var(--space-4);

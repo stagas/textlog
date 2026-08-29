@@ -32,7 +32,10 @@ export function AdminDashboard(
         className="admin-header"
         eyebrow="operations"
         title="admin dashboard"
-        action={<a className="profile-edit-link" href="/admin/email">send email</a>}
+        action={<span className="admin-header-actions">
+          <a className="profile-edit-link" href="/admin/push">send push</a>
+          <a className="profile-edit-link" href="/admin/email">send email</a>
+        </span>}
       />
       <StatsGrid stats={stats} />
       <section className="admin-section admin-ip-requests">

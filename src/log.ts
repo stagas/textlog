@@ -53,6 +53,7 @@ const actionRoutes: Array<[RegExp, string]> = [
   [/^\/admin\/users\/\d+\/restore$/, 'admin.user.restore'],
   [/^\/admin\/users\/\d+\/delete$/, 'admin.user.delete'],
   [/^\/admin\/ip-blocks$/, 'admin.ip.block'],
+  [/^\/admin\/push$/, 'admin.push.send'],
 ]
 
 export function semanticAction(method: string, path: string) {

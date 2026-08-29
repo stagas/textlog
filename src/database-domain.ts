@@ -2252,9 +2252,15 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
     }
     case 'push.userDelivery': {
       const { userId } = input as DatabaseDomainInput<'push.userDelivery'>
-      const subscriptions = database.query('SELECT endpoint,p256dh,auth FROM push_subscriptions WHERE user_id=?')
+      const subscriptions = database.query(`SELECT ps.endpoint,ps.p256dh,ps.auth,u.handle username
+        FROM push_subscriptions ps JOIN users u ON u.id=ps.user_id WHERE ps.user_id=?`)
         .all(userId)
       return subscriptions as DatabaseDomainOutput<K>
+    }
+    case 'push.allDelivery': {
+      return database.query(`SELECT ps.endpoint,ps.p256dh,ps.auth,u.handle username FROM push_subscriptions ps
+        JOIN users u ON u.id=ps.user_id
+        WHERE u.deleted_at IS NULL AND u.suspended_at IS NULL ORDER BY ps.id`).all() as DatabaseDomainOutput<K>
     }
     case 'push.tagFollowDelivery': {
       const { actorId, tag } = input as DatabaseDomainInput<'push.tagFollowDelivery'>

@@ -4,13 +4,13 @@ import { ADMIN_EMAILS } from './admin'
 import { splitSpoilerBody } from './content'
 import { type DatabaseService, databaseService } from './database-service'
 import { isDevelopment } from './environment'
-import { logError } from './log'
+import { logError, logInfo } from './log'
 import { markdownPlainText } from './markdown'
 import { excludesWhisperPosts, isWhisperThread, whisperThreadRelevantToViewer,
   whisperThreadTargetsViewer } from './whisper'
 
 export type PushMessage = { title: string; body: string; url: string }
-type PushSubscriptionRow = { endpoint: string; p256dh: string; auth: string }
+type PushSubscriptionRow = { endpoint: string; p256dh: string; auth: string; username?: string }
 type VapidConfiguration = { subject: string; publicKey: string; privateKey: string }
 
 const followActivityBatchDelay = 2 * 60 * 1_000
@@ -43,7 +43,7 @@ export function vapidPublicKey() {
 
 async function sendToSubscriptions<T extends PushSubscriptionRow>(subscriptions: T[],
   messageFor: (subscription: T) => PushMessage, database: Database | undefined, vapid: VapidConfiguration,
-  service?: DatabaseService)
+  service?: DatabaseService, logDelivery = false)
 {
   if (isDevelopment() || !subscriptions.length) return
   webpush.setVapidDetails(vapid.subject, vapid.publicKey, vapid.privateKey)
@@ -53,11 +53,15 @@ async function sendToSubscriptions<T extends PushSubscriptionRow>(subscriptions:
   }
   const transientErrors: unknown[] = []
   await Promise.all([...devices.values()].map(async subscription => {
+    const target = `username=${JSON.stringify(subscription.username ? `@${subscription.username}` : 'unknown')}`
+      + ` endpoint=${JSON.stringify(pushEndpointLabel(subscription.endpoint))}`
+    if (logDelivery) logInfo(`admin push delivery status=started ${target}`)
     try {
       await webpush.sendNotification({
         endpoint: subscription.endpoint,
         keys: { p256dh: subscription.p256dh, auth: subscription.auth },
       }, JSON.stringify(messageFor(subscription)))
+      if (logDelivery) logInfo(`admin push delivery status=succeeded ${target}`)
     }
     catch (error) {
       const statusCode = typeof error === 'object' && error && 'statusCode' in error
@@ -66,14 +70,26 @@ async function sendToSubscriptions<T extends PushSubscriptionRow>(subscriptions:
       if (statusCode === 404 || statusCode === 410) {
         if (database) database.query('DELETE FROM push_subscriptions WHERE endpoint=?').run(subscription.endpoint)
         else await (service || databaseService()).call('push.removeEndpoint', { endpoint: subscription.endpoint })
+        if (logDelivery) logInfo(`admin push delivery status=removed status_code=${statusCode} ${target}`)
       }
       else {
         transientErrors.push(error)
-        logError('push delivery failed', error)
+        logError(`${logDelivery ? 'admin ' : ''}push delivery status=failed status_code=${statusCode || 'unknown'} ${target}`,
+          error)
       }
     }
   }))
   if (transientErrors.length) throw new AggregateError(transientErrors, 'Transient push delivery failure')
+}
+
+function pushEndpointLabel(endpoint: string) {
+  try {
+    const parsed = new URL(endpoint)
+    return parsed.origin
+  }
+  catch {
+    return 'invalid'
+  }
 }
 
 function postPushDelay(attempts: number) {
@@ -166,7 +182,7 @@ export async function flushPendingFollowActivityPushes() {
 }
 
 export async function sendPushToUser(userId: number, message: PushMessage, database?: Database,
-  vapid: VapidConfiguration | null = vapidConfiguration())
+  vapid: VapidConfiguration | null = vapidConfiguration(), logDelivery = false)
 {
   if (!vapid) return
   const subscriptions = database
@@ -174,7 +190,27 @@ export async function sendPushToUser(userId: number, message: PushMessage, datab
       'SELECT endpoint,p256dh,auth FROM push_subscriptions WHERE user_id=?',
     ).all(userId) as PushSubscriptionRow[]
     : await databaseService().call('push.userDelivery', { userId })
-  await sendToSubscriptions(subscriptions, () => message, database, vapid)
+  await sendToSubscriptions(subscriptions, () => message, database, vapid, undefined, logDelivery)
+}
+
+export async function sendPushToAll(message: PushMessage, service: DatabaseService = databaseService(),
+  delay: (milliseconds: number) => Promise<unknown> = milliseconds => Bun.sleep(milliseconds))
+{
+  const vapid = vapidConfiguration()
+  if (!vapid) return
+  const subscriptions = await service.call('push.allDelivery', {})
+  const endpoints = [...new Map(subscriptions.map(subscription => [subscription.endpoint, subscription])).values()]
+  const errors: unknown[] = []
+  for (let index = 0; index < endpoints.length; index++) {
+    try {
+      await sendToSubscriptions([endpoints[index]], () => message, undefined, vapid, service, true)
+    }
+    catch (error) {
+      errors.push(error)
+    }
+    if (index < endpoints.length - 1) await delay(1_000)
+  }
+  if (errors.length) throw new AggregateError(errors, 'One or more push notifications failed')
 }
 
 export async function sendPushForPost(postId: number, actorId: number, actorHandle: string, database?: Database,

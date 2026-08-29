@@ -393,7 +393,10 @@ export type DatabaseDomainOperations = {
   }> }
   'push.completePostJob': { input: { postId: number }; output: null }
   'push.retryPostJob': { input: { postId: number; attempts: number; nextAttemptAt: number; error: string }; output: null }
-  'push.userDelivery': { input: { userId: number }; output: Array<{ endpoint: string; p256dh: string; auth: string }> }
+  'push.userDelivery': { input: { userId: number };
+    output: Array<{ endpoint: string; p256dh: string; auth: string; username: string }> }
+  'push.allDelivery': { input: Record<string, never>;
+    output: Array<{ endpoint: string; p256dh: string; auth: string; username: string }> }
   'push.tagFollowDelivery': { input: { actorId: number; tag: string };
     output: Array<{ endpoint: string; p256dh: string; auth: string }> }
   'push.signupDelivery': { input: { administratorEmails: string[] };

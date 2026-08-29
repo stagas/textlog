@@ -3,6 +3,7 @@ import {
   AdminConfirm,
   AdminDashboard,
   AdminEmail,
+  AdminPush,
   AdminTranslate,
   AdminUser,
 } from '../components/pages'
@@ -19,8 +20,41 @@ import { deleteImagesAfterCommit } from '../image-storage'
 import { cacheBlockedIp, flushIpRequests } from '../request-ip-blocks'
 import { currentUser } from '../utils'
 import { isTranslationLanguage, translateText } from '../translation'
+import { sendPushToAll, sendPushToUser } from '../push'
 
 export function registerAdminRoutes(app: Hono) {
+  app.get('/admin/push', c => {
+    const signedIn = currentUser(c.req.raw)
+    if (!signedIn) return redirect('/enter?next=' + encodeURIComponent(c.req.path))
+    if (!isAdmin(signedIn)) return c.text('Forbidden', 403)
+    const sent = c.req.query('sent')
+    return page(<AdminPush user={signedIn} sent={sent === 'test' || sent === 'all' ? sent : undefined} />)
+  })
+
+  app.post('/admin/push', async c => {
+    const signedIn = currentUser(c.req.raw)
+    if (!signedIn) return redirect('/enter?next=' + encodeURIComponent('/admin/push'))
+    if (!isAdmin(signedIn)) return c.text('Forbidden', 403)
+    const fields = await form(c.req.raw)
+    const title = (fields.title || '').trim()
+    const body = (fields.body || '').trim()
+    const url = (fields.url || '').trim()
+    const audience = fields.audience
+    if (!title || title.length > 200) return c.text('Invalid title', 400)
+    if (!body || body.length > 2_000) return c.text('Invalid body', 400)
+    let validUrl = /^\/(?!\/)/.test(url)
+    if (!validUrl) try {
+      const parsed = new URL(url)
+      validUrl = ['http:', 'https:'].includes(parsed.protocol) && !parsed.username && !parsed.password
+    }
+    catch {}
+    if (!validUrl || url.length > 2_048) return c.text('Invalid destination URL', 400)
+    if (audience === 'test') await sendPushToUser(signedIn.id, { title, body, url }, undefined, undefined, true)
+    else if (audience === 'all') await sendPushToAll({ title, body, url })
+    else return c.text('Invalid audience', 400)
+    return redirect(`/admin/push?sent=${audience}`)
+  })
+
   app.get('/admin/email', c => {
     const signedIn = currentUser(c.req.raw)
     if (!signedIn) return redirect('/enter?next=' + encodeURIComponent(c.req.path))
