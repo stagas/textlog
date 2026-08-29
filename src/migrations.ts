@@ -2616,6 +2616,15 @@ export const migrations: Migration[] = [
       addColumn(database, 'daily_ip_requests', 'navigation_captcha_passed_at', 'TEXT')
     },
   },
+  {
+    version: 159,
+    name: 'push_broadcast_preferences',
+    up(database) {
+      if (!database.query("SELECT 1 FROM sqlite_master WHERE type='table' AND name='push_subscriptions'").get()) return
+      addColumn(database, 'push_subscriptions', 'notify_broadcasts',
+        'INTEGER NOT NULL DEFAULT 1 CHECK(notify_broadcasts IN (0,1))')
+    },
+  },
 ]
 
 export const latestMigrationVersion = migrations.at(-1)!.version

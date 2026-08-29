@@ -448,7 +448,8 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
       const { userId, endpoint, includeSignups } = input as DatabaseDomainInput<'account.pushPreferences'>
       if (!endpoint) return null as DatabaseDomainOutput<K>
       return database.query(`SELECT notify_latest latest,notify_replies replies,notify_mentions mentions,
-        notify_follows follows,notify_follow_activity followActivity,notify_following_notes followingNotes,
+        notify_follows follows,notify_follow_activity followActivity,notify_broadcasts broadcasts,
+        notify_following_notes followingNotes,
         notify_following_only_to_me followingOnlyToMe,notify_people_follow_activity peopleFollowActivity,
         notify_hashtag_follow_activity hashtagFollowActivity${includeSignups ? ',notify_signups signups' : ''}
         FROM push_subscriptions WHERE endpoint=? AND user_id=?`).get(endpoint, userId) as DatabaseDomainOutput<K>
@@ -456,16 +457,16 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
     case 'account.savePushSubscription': {
       const { userId, endpoint, p256dh, auth, deviceId, userAgent, preferencesProvided, preferences } =
         input as DatabaseDomainInput<'account.savePushSubscription'>
-      const { latest, replies, mentions, follows, signups, followActivity, followingNotes, followingOnlyToMe,
+      const { latest, replies, mentions, follows, signups, followActivity, broadcasts, followingNotes, followingOnlyToMe,
         peopleFollowActivity, hashtagFollowActivity } = preferences
       database.transaction(() => {
         database.query('UPDATE push_subscriptions SET p256dh=?,auth=?,device_id=? WHERE endpoint=?')
           .run(p256dh, auth, deviceId, endpoint)
         database.query(`INSERT INTO push_subscriptions(endpoint,user_id,p256dh,auth,device_id,
             notify_latest,notify_replies,notify_mentions,notify_follows,notify_own_posts,notify_signups,
-            notify_follow_activity,notify_following_notes,notify_following_only_to_me,
+            notify_follow_activity,notify_broadcasts,notify_following_notes,notify_following_only_to_me,
             notify_people_follow_activity,notify_hashtag_follow_activity)
-            VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+            VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
           ON CONFLICT(endpoint,user_id) DO UPDATE SET p256dh=excluded.p256dh,auth=excluded.auth,
             device_id=excluded.device_id,notify_latest=coalesce(?,push_subscriptions.notify_latest),
             notify_replies=coalesce(?,push_subscriptions.notify_replies),
@@ -473,14 +474,15 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
             notify_follows=coalesce(?,push_subscriptions.notify_follows),notify_own_posts=0,
             notify_signups=coalesce(?,push_subscriptions.notify_signups),
             notify_follow_activity=coalesce(?,push_subscriptions.notify_follow_activity),
+            notify_broadcasts=coalesce(?,push_subscriptions.notify_broadcasts),
             notify_following_notes=coalesce(?,push_subscriptions.notify_following_notes),
             notify_following_only_to_me=coalesce(?,push_subscriptions.notify_following_only_to_me),
             notify_people_follow_activity=coalesce(?,push_subscriptions.notify_people_follow_activity),
             notify_hashtag_follow_activity=coalesce(?,push_subscriptions.notify_hashtag_follow_activity)`)
           .run(endpoint, userId, p256dh, auth, deviceId, latest ?? 1, replies ?? 1, mentions ?? 1, follows ?? 1, 0,
-            signups ?? 1, followActivity ?? 1, followingNotes ?? 1, followingOnlyToMe ?? 0, peopleFollowActivity ?? 0,
-            hashtagFollowActivity ?? 0, latest, replies, mentions, follows, signups, followActivity, followingNotes,
-            followingOnlyToMe, peopleFollowActivity, hashtagFollowActivity)
+            signups ?? 1, followActivity ?? 1, broadcasts ?? 1, followingNotes ?? 1, followingOnlyToMe ?? 0,
+            peopleFollowActivity ?? 0, hashtagFollowActivity ?? 0, latest, replies, mentions, follows, signups,
+            followActivity, broadcasts, followingNotes, followingOnlyToMe, peopleFollowActivity, hashtagFollowActivity)
         if (userAgent) {
           database.query(`INSERT INTO notification_user_agents(user_id,user_agent,status) VALUES(?,?,'enabled')
             ON CONFLICT(user_id,user_agent) DO UPDATE SET status='enabled',updated_at=CURRENT_TIMESTAMP`)
@@ -2260,7 +2262,8 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
     case 'push.allDelivery': {
       return database.query(`SELECT ps.endpoint,ps.p256dh,ps.auth,u.handle username FROM push_subscriptions ps
         JOIN users u ON u.id=ps.user_id
-        WHERE u.deleted_at IS NULL AND u.suspended_at IS NULL ORDER BY ps.id`).all() as DatabaseDomainOutput<K>
+        WHERE ps.notify_broadcasts=1 AND u.deleted_at IS NULL AND u.suspended_at IS NULL
+        ORDER BY ps.id`).all() as DatabaseDomainOutput<K>
     }
     case 'push.tagFollowDelivery': {
       const { actorId, tag } = input as DatabaseDomainInput<'push.tagFollowDelivery'>

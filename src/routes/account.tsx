@@ -185,6 +185,7 @@ export function registerAccountRoutes(app: Hono) {
       mentions: 1,
       follows: 1,
       followActivity: 1,
+      broadcasts: 1,
       peopleFollowActivity: 0,
       hashtagFollowActivity: 0,
       ...(isAdmin(user) ? { signups: 1 } : {}),
@@ -217,6 +218,7 @@ export function registerAccountRoutes(app: Hono) {
     const mentions = preference('mentions')
     const follows = preference('follows')
     const followActivity = preference('followActivity')
+    const broadcasts = preference('broadcasts')
     const peopleFollowActivity = preference('peopleFollowActivity')
     const hashtagFollowActivity = preference('hashtagFollowActivity')
     const followingNotes = preference('followingNotes')
@@ -226,7 +228,8 @@ export function registerAccountRoutes(app: Hono) {
     const userAgent = notificationUserAgent(c.req.raw)
     await databaseService().call('account.savePushSubscription', { userId: user.id, endpoint, p256dh, auth, deviceId,
       userAgent, preferencesProvided: Boolean(value.preferences),
-      preferences: { latest, replies, mentions, follows, signups, followActivity, followingNotes, followingOnlyToMe,
+      preferences: { latest, replies, mentions, follows, signups, followActivity, broadcasts, followingNotes,
+        followingOnlyToMe,
         peopleFollowActivity, hashtagFollowActivity } })
     c.header('Set-Cookie', notificationDeviceCookie(deviceId), { append: true })
     return c.json({ saved: true })

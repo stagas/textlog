@@ -1657,6 +1657,8 @@ test('notification settings are the only account page that loads their client sc
   expect(notifications).toContain('name="peopleFollowActivity"')
   expect(notifications).toContain('include people&#x27;s follow activity')
   expect(notifications).toContain('name="hashtagFollowActivity"')
+  expect(notifications).toContain('name="broadcasts" checked=""')
+  expect(notifications).toContain('Announcements sent by the administrators')
   expect(notifications).toContain('include hashtag follow activity')
   expect(notifications.indexOf('name="peopleFollowActivity"')).toBeLessThan(
     notifications.indexOf('name="onlyToMe"'),

@@ -942,7 +942,7 @@ test('consequential account, content, reporting, and admin flows work over HTTP'
   expect(await pushPreferences.json()).toEqual({
     enabled: true,
     preferences: { latest: 0, replies: 1, mentions: 0, follows: 1, followActivity: 1, followingNotes: 1,
-      followingOnlyToMe: 0, peopleFollowActivity: 0, hashtagFollowActivity: 0 },
+      followingOnlyToMe: 0, broadcasts: 1, peopleFollowActivity: 0, hashtagFollowActivity: 0 },
   })
   const cacheBustedHome = await request('/?v=94721')
   expect(cacheBustedHome.status).toBe(303)

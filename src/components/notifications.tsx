@@ -94,6 +94,16 @@ export function NotificationSettings({ user, publicKey, ios = false, returnPath 
                 </span>
               </label>
             </fieldset>
+            <label className="notification-toggle">
+              <span>
+                <strong>broadcasts</strong>
+                <small>Announcements sent by the administrators</small>
+              </span>
+              <input type="checkbox" name="broadcasts" defaultChecked />
+              <span className="notification-toggle-track" aria-hidden="true">
+                <span />
+              </span>
+            </label>
             {[
               ...(isAdmin(user)
                 ? [['signups', 'new user signups', 'When a new user creates an account']]
