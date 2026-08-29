@@ -19,6 +19,8 @@ export type SerializedDomainResponse = {
 export type DatabaseDomainOperations = {
   'system.health': { input: { databasePath: string }; output: DatabaseHealthResult }
   'system.blockedIps': { input: { day: string }; output: string[] }
+  'system.navigationCaptchaAllowed': { input: { day: string; hash: string }; output: boolean }
+  'system.allowNavigationCaptcha': { input: { day: string; hash: string }; output: null }
   'system.consumeAuthAttempt': {
     input: { scope: string; identity: string; attempts: number; windowSeconds: number; now: number }
     output: { retryAfter: number } | null

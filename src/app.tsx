@@ -1,12 +1,13 @@
 import { applyHtmlCachePolicy, canonicalizeCrawlerLinks, crawlerCanonicalRedirect, GLOBAL_REQUEST_BODY_LIMIT,
-  isCrawlerRequest, isSameOriginRequest, pwaStandaloneCookie, RequestBodyError, requiresSameOrigin, safeLocalPath,
-  securityHeaders } from './http'
+  isCrawlerRequest, isSameOriginRequest, limitedFormData, pwaStandaloneCookie, RequestBodyError, requiresSameOrigin,
+  safeLocalPath, securityHeaders } from './http'
 
 import { Hono } from 'hono'
 import { bodyLimit } from 'hono/body-limit'
 import { BACKUP_CHECK_INTERVAL_MS } from './backup-automation'
 import { appName, clientIpHeaderName } from './brand'
 import { BlogRecap } from './components/blog-recap'
+import { NavigationCaptcha } from './components/navigation-captcha'
 import { configureDevReload } from './components/layout'
 import { PanelsGallery } from './components/panels-gallery'
 import { compressResponse } from './compression'
@@ -15,11 +16,14 @@ import { isDevelopment } from './environment'
 import { localImageFile, usesLocalImageStorage } from './image-storage'
 import { clientIp, logError, logHttp, logReady, redactHttpPath, shouldLogHttp } from './log'
 import { MAINTENANCE_INTERVAL_MS } from './maintenance'
+import { NESTED_FROM_MAX_DEPTH, NavigationCaptchaChallenges, NavigationCaptchaGate,
+  nestedFromDepth } from './navigation-captcha'
 import { renderDefaultOg } from './og'
 import { PUBLIC_ARCHIVE_CHECK_INTERVAL_MS } from './public-archive'
 import { startPostPushWorker } from './push'
 import { resumeRelationshipFeedInvalidation } from './relationship-feed-invalidation'
-import { flushIpRequests, isIpBlocked, loadBlockedIps, recordIpRequest } from './request-ip-blocks'
+import { allowNavigationCaptcha, flushIpRequests, isIpBlocked, isNavigationCaptchaAllowed, loadBlockedIps,
+  recordIpRequest } from './request-ip-blocks'
 import { ClientErrorRateLimiter, HOURLY_REQUEST_BLOCK_SECONDS, HOURLY_REQUEST_RATE_LIMIT,
   HOURLY_REQUEST_RATE_WINDOW_SECONDS, rateLimitedResponse, RequestRateLimiter } from './request-rate-limit'
 import { registerAccountRoutes } from './routes/account'
@@ -141,6 +145,8 @@ const hourlyRequestRateLimiter = new RequestRateLimiter({
   blockSeconds: HOURLY_REQUEST_BLOCK_SECONDS,
 })
 const clientErrorRateLimiter = new ClientErrorRateLimiter()
+const navigationCaptchaChallenges = new NavigationCaptchaChallenges()
+const navigationCaptchaGate = new NavigationCaptchaGate()
 await loadBlockedIps()
 startPostPushWorker()
 await loadRecentFeedVisitors()
@@ -357,7 +363,7 @@ app.use('*', async (c, next) => {
   if (c.req.method !== 'GET' || !c.res.headers.get('content-type')?.includes('text/html')) return
   const url = new URL(c.req.url)
   const privatePath =
-    /^\/(?:enter|forgot-password|reset-password|choose-handle|write|compose|activity|admin|search|account|panels-gallery|recap-email|interacted-email)(?:\/|$)/
+    /^\/(?:enter|forgot-password|reset-password|choose-handle|navigation-check|write|compose|activity|admin|search|account|panels-gallery|recap-email|interacted-email)(?:\/|$)/
       .test(url.pathname) || /^\/post\/\d+\/(?:edit|delete)$/.test(url.pathname)
   const transientParameters = ['reply', 'report', 'reported', 'edit', 'reset', 'token']
   const navigationOnly = url.searchParams.has('from')
@@ -526,6 +532,26 @@ app.get('/og.png', () => {
 })
 
 app.get('/client-error', c => clientErrorPage(c.req.raw))
+app.get('/navigation-check', c => {
+  const target = safeLocalPath(c.req.query('target'))
+  const address = c.req.header(clientIpHeaderName()) || '-'
+  return page(<NavigationCaptcha user={currentUser(c.req.raw)} target={target}
+    captcha={navigationCaptchaChallenges.issue(address)} />)
+})
+app.post('/navigation-check', async c => {
+  const form = await limitedFormData(c.req.raw)
+  const target = safeLocalPath(typeof form.get('target') === 'string' ? form.get('target') as string : undefined)
+  const token = typeof form.get('captchaToken') === 'string' ? form.get('captchaToken') as string : ''
+  const answer = typeof form.get('captchaAnswer') === 'string' ? form.get('captchaAnswer') as string : ''
+  const address = c.req.header(clientIpHeaderName()) || '-'
+  if (!navigationCaptchaChallenges.consume(address, token, answer)) {
+    return page(<NavigationCaptcha user={currentUser(c.req.raw)} target={target}
+      captcha={navigationCaptchaChallenges.issue(address)} error="That answer was not correct. Please try again." />, 400)
+  }
+  await allowNavigationCaptcha(address)
+  navigationCaptchaGate.allow(address)
+  return c.redirect(target, 303)
+})
 app.get('/panels-gallery', c => page(<PanelsGallery user={currentUser(c.req.raw)} />))
 app.get('/blog/recap-v1', async c => {
   const user = currentUser(c.req.raw)
@@ -579,8 +605,27 @@ export default {
   port: Number(Bun.env.PORT || 3000),
   host: Bun.env.HOST || '0.0.0.0',
   async fetch(request: Request, server: Bun.Server<unknown>) {
-    const address = clientIp(request, server.requestIP(request)?.address)
+    // server.tsx sanitizes and sets this header before cloning the original Bun request.
+    // requestIP() may no longer resolve the cloned Request, so prefer the trusted handoff.
+    const address = clientIp(request,
+      request.headers.get(clientIpHeaderName()) || server.requestIP(request)?.address)
     recordIpRequest(address)
+    const url = new URL(request.url)
+    const navigationChallengeAsset = /^(?:\/styles\.css|\/theme\.css|\/textlog\.svg|\/favicon-theme\.svg|\/favicon\.ico|\/favicon-\d+x\d+\.png|\/apple-touch-icon\.png|\/android-chrome-\d+x\d+\.png|\/maskable-icon-\d+x\d+\.png|\/uploads\/)/
+      .test(url.pathname)
+    if (navigationCaptchaGate.check(address) && url.pathname !== '/navigation-check' && !navigationChallengeAsset) {
+      const target = url.pathname + url.search + url.hash
+      return new Response(null, { status: 303,
+        headers: { location: `/navigation-check?target=${encodeURIComponent(target)}` } })
+    }
+    if (url.pathname !== '/navigation-check' && nestedFromDepth(request.url) >= NESTED_FROM_MAX_DEPTH
+      && !await isNavigationCaptchaAllowed(address))
+    {
+      navigationCaptchaGate.require(address)
+      const target = url.pathname + url.search + url.hash
+      return new Response(null, { status: 303,
+        headers: { location: `/navigation-check?target=${encodeURIComponent(target)}` } })
+    }
     if (isIpBlocked(address)) {
       const now = new Date()
       const nextDay = Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() + 1)

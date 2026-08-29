@@ -1926,3 +1926,18 @@ test('consequential account, content, reporting, and admin flows work over HTTP'
   expect(blockedRequest.status).toBe(429)
   expect(Number(blockedRequest.headers.get('retry-after'))).toBeGreaterThan(0)
 }, 60_000)
+
+test('a nested navigation challenge gates every subsequent page for the resolved socket IP', async () => {
+  const nested = '/?from=%2Fpost%2F1%3Ffrom%3D%252Fpost%252F2%253Ffrom%253D%25252Fpost%25252F3%25253Ffrom%25253D%2525252Flatest'
+  const challenge = await request(nested)
+  expect(challenge.status).toBe(303)
+  expect(challenge.headers.get('location')).toStartWith('/navigation-check?target=')
+
+  const otherPage = await request('/about')
+  expect(otherPage.status).toBe(303)
+  expect(otherPage.headers.get('location')).toBe('/navigation-check?target=%2Fabout')
+
+  const challengePage = await request(challenge.headers.get('location')!)
+  expect(challengePage.status).toBe(200)
+  expect(await challengePage.text()).toContain('It looks like you might be a bot')
+})

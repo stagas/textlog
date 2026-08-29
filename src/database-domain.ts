@@ -281,6 +281,18 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
       return database.query('SELECT ip_hash FROM daily_ip_requests WHERE day=? AND blocked_at IS NOT NULL')
         .all(day).map(row => (row as { ip_hash: string }).ip_hash) as DatabaseDomainOutput<K>
     }
+    case 'system.navigationCaptchaAllowed': {
+      const { day, hash } = input as DatabaseDomainInput<'system.navigationCaptchaAllowed'>
+      return Boolean(database.query(
+        'SELECT 1 FROM daily_ip_requests WHERE day=? AND ip_hash=? AND navigation_captcha_passed_at IS NOT NULL',
+      ).get(day, hash)) as DatabaseDomainOutput<K>
+    }
+    case 'system.allowNavigationCaptcha': {
+      const { day, hash } = input as DatabaseDomainInput<'system.allowNavigationCaptcha'>
+      database.query(`INSERT INTO daily_ip_requests(day,ip_hash,navigation_captcha_passed_at) VALUES(?,?,CURRENT_TIMESTAMP)
+        ON CONFLICT(day,ip_hash) DO UPDATE SET navigation_captcha_passed_at=CURRENT_TIMESTAMP`).run(day, hash)
+      return null as DatabaseDomainOutput<K>
+    }
     case 'maintenance.flushVisitors': {
       const { visits } = input as DatabaseDomainInput<'maintenance.flushVisitors'>
       if (!visits.length) return 0 as DatabaseDomainOutput<K>

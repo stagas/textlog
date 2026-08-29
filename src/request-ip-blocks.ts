@@ -6,6 +6,7 @@ export type DailyIpRequest = { hash: string; obfuscated: string; requests: numbe
 
 const pending = new Map<string, { day: string; hash: string; requests: number }>()
 const blocked = new Set<string>()
+const navigationCaptchaAllowed = new Set<string>()
 let flushing = false
 
 export function requestIpIdentity(address: string, at = new Date()) {
@@ -29,6 +30,22 @@ export function isIpBlocked(address: string, at = new Date()) {
 
 export function cacheBlockedIp(day: string, hash: string) {
   blocked.add(`${day}:${hash}`)
+}
+
+export async function isNavigationCaptchaAllowed(address: string, at = new Date()) {
+  if (!address || address === '-') return false
+  const { day, hash } = requestIpIdentity(address, at)
+  const key = `${day}:${hash}`
+  if (navigationCaptchaAllowed.has(key)) return true
+  const allowed = await databaseService().call('system.navigationCaptchaAllowed', { day, hash })
+  if (allowed) navigationCaptchaAllowed.add(key)
+  return allowed
+}
+
+export async function allowNavigationCaptcha(address: string, at = new Date()) {
+  const { day, hash } = requestIpIdentity(address, at)
+  await databaseService().call('system.allowNavigationCaptcha', { day, hash })
+  navigationCaptchaAllowed.add(`${day}:${hash}`)
 }
 
 export async function loadBlockedIps(day = new Date().toISOString().slice(0, 10)) {

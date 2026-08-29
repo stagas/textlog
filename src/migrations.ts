@@ -2608,6 +2608,14 @@ export const migrations: Migration[] = [
       rebuildPostHashtags(database)
     },
   },
+  {
+    version: 158,
+    name: 'daily_navigation_captcha_passes',
+    up(database) {
+      if (!database.query("SELECT 1 FROM sqlite_master WHERE type='table' AND name='daily_ip_requests'").get()) return
+      addColumn(database, 'daily_ip_requests', 'navigation_captcha_passed_at', 'TEXT')
+    },
+  },
 ]
 
 export const latestMigrationVersion = migrations.at(-1)!.version
