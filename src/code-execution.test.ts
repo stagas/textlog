@@ -86,6 +86,11 @@ describe('executable notes', () => {
         output: '//\\//Sandbox keeper received fatal signal 6\n', stderr: 'sandbox failed',
       } },
       { compile: { output: '\n' }, run: { output: '', message: 'stage failed' } },
+      { run: {
+        output: 'Sandbox keeper received fatal signal 6\n',
+        stderr: 'Sandbox keeper received fatal signal 6\n',
+        message: 'stdout length exceeded',
+      } },
     ]
     globalThis.fetch = (async (_input: string | URL | Request, _init?: RequestInit) =>
       Response.json(responses.shift())) as typeof fetch
@@ -94,6 +99,7 @@ describe('executable notes', () => {
       expect(await executePostCode(body, 'production', 'http://localhost:2000')).toBe('runtime failed')
       expect(await executePostCode(body, 'production', 'http://localhost:2000')).toBe('sandbox failed')
       expect(await executePostCode(body, 'production', 'http://localhost:2000')).toBe('stage failed')
+      expect(await executePostCode(body, 'production', 'http://localhost:2000')).toBe('stdout length exceeded')
     }
     finally {
       globalThis.fetch = originalFetch

@@ -97,8 +97,9 @@ async function executePiston(code: ExecutableCode, pistonUrl: string) {
   }
   const outputs = [result.compile?.output, result.run?.output]
   const output = outputs.find(value => value && displayedExecutionOutput(value).trim())
-  const error = [result.compile?.stderr, result.run?.stderr, result.compile?.message, result.run?.message,
-    result.message].find(value => value?.trim())
+  const errors = [result.compile?.stderr, result.run?.stderr, result.compile?.message, result.run?.message,
+    result.message]
+  const error = errors.find(value => value && displayedExecutionOutput(value).trim())
   return boundedExecutionOutput(output || error || outputs.find(value => value) || '')
 }
 
