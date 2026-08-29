@@ -470,9 +470,25 @@ describe('in-memory stylesheet', () => {
     expect(css).toContain(
       '.reference-menu-popover:not(:has(.reference-popover-bio)) > .reference-popover-actions:has(.follows-you) {',
     )
+    expect(css).toContain(
+      '.reference-menu-popover:has(> .reference-popover-actions .follows-you) > .reference-popover-bio {\n'
+      + '  margin-top: 1rem;',
+    )
     expect(css).toContain('margin-top: var(--space-2);\n  margin-bottom: var(--space-2);\n'
       + '  padding-bottom: var(--space-2);\n  border-bottom: 1px solid var(--soft);\n  color: var(--quote-ink);')
-    expect(css).toContain('.reference-popover-bio + .reference-popover-actions {\n  margin-top: 0;')
+    expect(css).toContain(
+      '.reference-menu-popover:has(> .reference-popover-actions):has(> .reference-popover-bio) {\n'
+      + '  grid-template-columns: max-content minmax(12rem, 1fr);',
+    )
+    expect(css).toContain(
+      '.reference-menu-popover:has(> .reference-popover-actions) > .reference-popover-bio {\n'
+      + '  margin: 0;\n  padding: 0;',
+    )
+    const bioColumnRule = css.slice(
+      css.indexOf('.reference-menu-popover:has(> .reference-popover-actions) > .reference-popover-bio {'),
+      css.indexOf('.reference-popover-bio-own {'),
+    )
+    expect(bioColumnRule).not.toContain('border-left:')
     expect(css).toContain(
       '.reference-popover-bio-own {\n  margin-bottom: 0;\n  padding-bottom: 0;\n  border-bottom: 0;',
     )

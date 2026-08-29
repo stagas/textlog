@@ -824,6 +824,18 @@ header>nav>a:not(.button),
   tab-size: 4;
 }
 
+.reference-menu-popover:has(> .reference-popover-actions):has(> .reference-popover-bio) {
+  grid-template-columns: max-content minmax(12rem, 1fr);
+  align-items: center;
+  column-gap: var(--space-2);
+}
+
+.reference-menu-popover:has(> .reference-popover-actions) > .reference-popover-bio {
+  margin: 0;
+  padding: 0;
+  border-bottom: 0;
+}
+
 .reference-popover-bio-own {
   margin-bottom: 0;
   padding-bottom: 0;
@@ -866,16 +878,16 @@ header>nav>a:not(.button),
   margin-top: var(--space-2);
 }
 
-.reference-popover-bio + .reference-popover-actions {
-  margin-top: 0;
-}
-
 .reference-popover-actions:has(.follows-you) {
   margin-top: 1rem;
 }
 
 .reference-menu-popover:not(:has(.reference-popover-bio)) > .reference-popover-actions:has(.follows-you) {
   margin-top: 0.75rem;
+}
+
+.reference-menu-popover:has(> .reference-popover-actions .follows-you) > .reference-popover-bio {
+  margin-top: 1rem;
 }
 
 .reference-popover-actions .follow-action,

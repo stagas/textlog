@@ -263,10 +263,6 @@ export function Profile(
                     id={referenceFormId(bioFormPrefix, reference.kind, reference.value)} method="post"
                     action={(reference.kind === 'tag' ? '/tag-follow/' : '/follow/')
                       + encodeURIComponent(reference.value)} />
-                  <form className="reference-follow-form"
-                    id={referenceFormId(bioFormPrefix, reference.kind, reference.value, 'block')} method="post"
-                    action={(reference.kind === 'tag' ? '/tag-block/' : '/block/')
-                      + encodeURIComponent(reference.value)} />
                 </Fragment>
               ))}
           {!editing && noteStreak}

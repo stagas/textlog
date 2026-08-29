@@ -238,6 +238,20 @@ export function UserReference(
         : <span className="reference-menu-trigger postauthor" tabIndex={0}>{label || <>@{handle}</>}</span>}
       {showPopover && (
         <span className="reference-menu-popover">
+          {showFollowAction && !ownUser && (user
+            ? (
+              <span className="reference-popover-actions">
+                <form method="post" action={'/follow/' + handle}>
+                  {followReturnPath && <input type="hidden" name="from" value={followReturnPath} />}
+                  {!!followsViewer && <span className="follows-you">follows you</span>}
+                  <button className={`button${following ? ' button-muted' : ''}`} type="submit">
+                    {following ? 'unfollow' : followsViewer ? 'follow back' : 'follow'}
+                  </button>
+                </form>
+                {extraAction}
+              </span>
+            )
+            : <a className="button" href={enterHref()} rel="nofollow">enter to follow</a>)}
           {(bio?.trim() || ownUser) && (
             <span
               className={`reference-popover-bio${ownUser ? ' reference-popover-bio-own' : ''}${
@@ -261,39 +275,18 @@ export function UserReference(
               }}
             />
           )}
-          {showFollowAction && !ownUser && (user
-            ? (
-              <span className="reference-popover-actions">
-                <form method="post" action={'/follow/' + handle}>
-                  {followReturnPath && <input type="hidden" name="from" value={followReturnPath} />}
-                  {!!followsViewer && <span className="follows-you">follows you</span>}
-                  <button className={`button${following ? ' button-muted' : ''}`} type="submit">
-                    {following ? 'unfollow' : followsViewer ? 'follow back' : 'follow'}
-                  </button>
-                </form>
-                <form method="post" action={'/block/' + handle}>
-                  <button className="quiet danger" type="submit">block</button>
-                </form>
-                {extraAction}
-              </span>
-            )
-            : <a className="button" href={enterHref()} rel="nofollow">enter to follow</a>)}
         </span>
       )}
       {showPopover && user && bioTags.map(tag => (
         <React.Fragment key={tag}>
           <form className="reference-follow-form" id={referenceFormId(bioFormPrefix, 'tag', tag)} method="post"
             action={'/tag-follow/' + encodeURIComponent(tag)} />
-          <form className="reference-follow-form" id={referenceFormId(bioFormPrefix, 'tag', tag, 'block')} method="post"
-            action={'/tag-block/' + encodeURIComponent(tag)} />
         </React.Fragment>
       ))}
       {showPopover && user && Object.keys(bioMentionBios).map(bioHandle => (
         <React.Fragment key={`user-${bioHandle}`}>
           <form className="reference-follow-form" id={referenceFormId(bioFormPrefix, 'user', bioHandle)} method="post"
             action={'/follow/' + encodeURIComponent(bioHandle)} />
-          <form className="reference-follow-form" id={referenceFormId(bioFormPrefix, 'user', bioHandle, 'block')}
-            method="post" action={'/block/' + encodeURIComponent(bioHandle)} />
         </React.Fragment>
       ))}
     </span>
@@ -331,9 +324,6 @@ export function TagReference(
                     {following ? 'unfollow' : 'follow'}
                   </button>
                 </form>
-                <form method="post" action={`/tag-block/${encodeURIComponent(tag)}`}>
-                  <button className="quiet danger" type="submit">block</button>
-                </form>
               </span>
             )
             : <a className="button" href={enterHref()} rel="nofollow">enter to follow</a>}
@@ -355,16 +345,12 @@ export function BioReferenceForms({ data, prefix, user }: {
         <React.Fragment key={`tag-${tag}`}>
           <form className="reference-follow-form" id={referenceFormId(prefix, 'tag', tag)} method="post"
             action={`/tag-follow/${encodeURIComponent(tag)}`} />
-          <form className="reference-follow-form" id={referenceFormId(prefix, 'tag', tag, 'block')} method="post"
-            action={`/tag-block/${encodeURIComponent(tag)}`} />
         </React.Fragment>
       ))}
       {Object.keys(data.mentionBios).map(handle => (
         <React.Fragment key={`user-${handle}`}>
           <form className="reference-follow-form" id={referenceFormId(prefix, 'user', handle)} method="post"
             action={`/follow/${encodeURIComponent(handle)}`} />
-          <form className="reference-follow-form" id={referenceFormId(prefix, 'user', handle, 'block')} method="post"
-            action={`/block/${encodeURIComponent(handle)}`} />
         </React.Fragment>
       ))}
     </>
@@ -387,8 +373,6 @@ function ReferenceFollowForms(
           >
             <input type="hidden" name="from" value={returnPath} />
           </form>
-          <form className="reference-follow-form" id={referenceFormId(prefix, 'user', handle, 'block')} method="post"
-            action={'/block/' + handle} />
         </React.Fragment>
       ))}
       {tags.map(tag => (
@@ -398,8 +382,6 @@ function ReferenceFollowForms(
           >
             <input type="hidden" name="from" value={returnPath} />
           </form>
-          <form className="reference-follow-form" id={referenceFormId(prefix, 'tag', tag, 'block')} method="post"
-            action={'/tag-block/' + encodeURIComponent(tag)} />
         </React.Fragment>
       ))}
     </>
