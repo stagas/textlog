@@ -95,7 +95,9 @@ async function executePiston(code: ExecutableCode, pistonUrl: string) {
     compile?: { output?: string }
     run?: { output?: string }
   }
-  return boundedExecutionOutput(result.compile?.output || result.run?.output || result.message || '')
+  const output = result.compile?.output || result.run?.output || ''
+  const visibleOutput = displayedExecutionOutput(output)
+  return boundedExecutionOutput(visibleOutput.trim() ? output : result.message || output)
 }
 
 export async function executePostCode(body: string, environment = Bun.env.NODE_ENV,

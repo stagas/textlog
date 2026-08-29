@@ -77,4 +77,22 @@ describe('executable notes', () => {
       globalThis.fetch = originalFetch
     }
   })
+
+  test('uses the Piston error message when cleaned execution output is empty', async () => {
+    const originalFetch = globalThis.fetch
+    const responses = [
+      { run: { output: '  \n' }, message: 'runtime failed' },
+      { run: { output: '//\\//Sandbox keeper received fatal signal 6\n' }, message: 'sandbox failed' },
+    ]
+    globalThis.fetch = (async (_input: string | URL | Request, _init?: RequestInit) =>
+      Response.json(responses.shift())) as typeof fetch
+    try {
+      const body = '#exec\n```js\nthrow new Error("oops")\n```'
+      expect(await executePostCode(body, 'production', 'http://localhost:2000')).toBe('runtime failed')
+      expect(await executePostCode(body, 'production', 'http://localhost:2000')).toBe('sandbox failed')
+    }
+    finally {
+      globalThis.fetch = originalFetch
+    }
+  })
 })
