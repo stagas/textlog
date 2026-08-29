@@ -154,6 +154,9 @@ describe('in-memory stylesheet', () => {
     expect(css).toContain(
       '#feed-tabs {\n  position: sticky;\n  z-index: 40;\n  top: calc(-1 * var(--space-4));\n  background: var(--bg);\n}',
     )
+    expect(css).toContain('@media (max-width: 600px) {\n  #feed-tabs {\n    top: 0;\n  }')
+    expect(css).toContain('.feed-tabs {\n    padding-top: 0;\n  }')
+    expect(css).toContain('.feed-tabs-scroll > a {\n    padding-top: calc(var(--space-2) + var(--space-4));\n  }')
     expect(css).toContain(
       '.profile-page-tabs {\n  position: sticky;\n  z-index: 40;\n  top: 0;\n  background: var(--bg);\n}',
     )

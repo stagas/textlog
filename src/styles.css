@@ -1166,6 +1166,14 @@ body.corners-round a.button {
 .feed-read-action form { margin: 0; }
 
 @media (max-width: 600px) {
+  #feed-tabs {
+    top: 0;
+  }
+
+  .feed-tabs {
+    padding-top: 0;
+  }
+
   .feed-read-action {
     flex-wrap: wrap;
     row-gap: var(--space-2);
@@ -1184,6 +1192,10 @@ body.corners-round a.button {
     align-items: flex-end;
     scrollbar-width: thin;
     scrollbar-color: var(--soft) transparent;
+  }
+
+  .feed-tabs-scroll > a {
+    padding-top: calc(var(--space-2) + var(--space-4));
   }
 
   .feed-tabs-scroll::-webkit-scrollbar {
