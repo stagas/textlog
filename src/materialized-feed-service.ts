@@ -17,7 +17,7 @@ type MemoryMaterialization = MaterializedResponse & {
 }
 const memoryMaterializations = new Map<string, MemoryMaterialization>()
 const MAX_MEMORY_MATERIALIZATIONS = 256
-const MATERIALIZED_HTML_VERSION = 31
+const MATERIALIZED_HTML_VERSION = 32
 let memoryGeneration = 0
 
 export function invalidateMaterializedFeedMemory() {
@@ -52,7 +52,8 @@ function materializedBody(html: string) {
     `$1{{${name}-count}}$2`,
   )
   return token(token(token(html, '\/my-feed', 'my feed', 'for-you'), '\/@', '@', 'to-me'),
-    '\/all', 'all', 'latest')
+    '\/all', 'all', 'latest').replace(/<a href="\/drafts">drafts<\/a>|(?=<\/span>\s*<span class="account-nav-row account-nav-primary">)/,
+      '{{drafts-link}}')
 }
 
 function appearanceVariant(request: Request) {

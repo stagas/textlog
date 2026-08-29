@@ -86,14 +86,17 @@ export function materializedFeedTemplate(html: string) {
     `$1{{${name}-count}}$2`,
   )
   return token(token(token(html, '\/my-feed', 'my feed', 'for-you'), '\/@', '@', 'to-me'),
-    '\/all', 'all', 'latest')
+    '\/all', 'all', 'latest').replace(/<a href="\/drafts">drafts<\/a>|(?=<\/span>\s*<span class="account-nav-row account-nav-primary">)/,
+      '{{drafts-link}}')
 }
 
-export function hydrateMaterializedFeedCounts(html: string, counts: { forYou: number; toMe: number; latest: number }) {
+export function hydrateMaterializedFeedCounts(html: string,
+  counts: { forYou: number; toMe: number; latest: number; drafts?: number }) {
   const count = (value: number) => value ? `<span class="to-me-count">${value}</span>` : ''
   return html.replaceAll('{{for-you-count}}', count(counts.forYou))
     .replaceAll('{{to-me-count}}', count(counts.toMe))
     .replaceAll('{{latest-count}}', count(counts.latest))
+    .replaceAll('{{drafts-link}}', counts.drafts ? '<a href="/drafts">drafts</a>' : '')
 }
 
 function materializedFeedGeneration(database: Database, kind: string, viewerId: number) {
@@ -131,7 +134,10 @@ function hydrateMaterializedFeed(html: string, database: Database, viewerId: num
   const forYou = personalizedUnreadCount(database, viewerId, false)
   const toMe = personalizedUnreadCount(database, viewerId, true)
   const latest = unreadLatestCount(viewerId, database)
-  return hydrateMaterializedFeedCounts(html, { forYou, toMe, latest })
+  const drafts = (database.query('SELECT count(*) count FROM drafts WHERE user_id=?').get(viewerId) as {
+    count: number
+  }).count
+  return hydrateMaterializedFeedCounts(html, { forYou, toMe, latest, drafts })
 }
 
 function hasPostPushJobs(database: Database) {

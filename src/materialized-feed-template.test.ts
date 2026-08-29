@@ -2,7 +2,8 @@ import { expect, test } from 'bun:test'
 import { hydrateMaterializedFeedCounts, materializedFeedTemplate } from './database-domain'
 
 test('materialized feed templates refresh tab counts without rerendering the page', () => {
-  const html = '<nav>'
+  const html = '<header><span class="account-nav-row account-nav-secondary"><a href="/explore">explore</a>'
+    + '<a href="/drafts">drafts</a></span><span class="account-nav-row account-nav-primary"></span></header><nav>'
     + '<a href="/@">@</a><a class="active" href="/my-feed">my feed<span class="to-me-count">9</span></a>'
     + '<a href="/all">all<span class="to-me-count">4</span></a>'
     + '</nav><main>expensive feed body</main>'
@@ -11,10 +12,22 @@ test('materialized feed templates refresh tab counts without rerendering the pag
   expect(template).toContain('my feed{{for-you-count}}')
   expect(template).toContain('@{{to-me-count}}')
   expect(template).toContain('all{{latest-count}}')
-  expect(hydrateMaterializedFeedCounts(template, { forYou: 0, toMe: 3, latest: 12 })).toBe(
-    '<nav><a href="/@">@<span class="to-me-count">3</span></a>'
+  expect(template).toContain('{{drafts-link}}')
+  expect(hydrateMaterializedFeedCounts(template, { forYou: 0, toMe: 3, latest: 12, drafts: 0 })).toBe(
+    '<header><span class="account-nav-row account-nav-secondary"><a href="/explore">explore</a>'
+      + '</span><span class="account-nav-row account-nav-primary"></span></header>'
+      + '<nav><a href="/@">@<span class="to-me-count">3</span></a>'
       + '<a class="active" href="/my-feed">my feed</a>'
       + '<a href="/all">all<span class="to-me-count">12</span></a>'
       + '</nav><main>expensive feed body</main>',
   )
+})
+
+test('materialized feed templates add a drafts link when a first draft is created', () => {
+  const html = '<span class="account-nav-row account-nav-secondary"><a href="/explore">explore</a></span>'
+    + '<span class="account-nav-row account-nav-primary"></span>'
+  const template = materializedFeedTemplate(html)
+
+  expect(hydrateMaterializedFeedCounts(template, { forYou: 0, toMe: 0, latest: 0, drafts: 1 }))
+    .toContain('<a href="/drafts">drafts</a>')
 })
