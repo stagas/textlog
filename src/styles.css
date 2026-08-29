@@ -984,12 +984,12 @@ nav form {
   max-width: 100vw;
   min-width: 0;
   gap: 0;
-  padding: var(--space-4) var(--gutter) 0;
+  padding: var(--space-4) var(--gutter) 1px;
   overflow-x: auto;
   overflow-y: hidden;
   scrollbar-width: none;
   overscroll-behavior-inline: contain;
-  box-shadow: 0 1px 0 var(--soft);
+  box-shadow: inset 0 -1px 0 var(--soft);
 }
 
 #feed-tabs {
