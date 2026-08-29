@@ -87,6 +87,11 @@ describe('in-memory stylesheet', () => {
     expect(css).toContain('font-size: 0.75rem;')
   })
 
+  test('uses ASCII-art line height for execution output', async () => {
+    const css = await Bun.file(new URL('./styles.css', import.meta.url)).text()
+    expect(css).toContain('.post .code-fence.execution-output.ascii-art {\n  line-height: 1.15;\n}')
+  })
+
   test('preserves ASCII art formatting in internal post hover cards', async () => {
     const css = await Bun.file(new URL('./styles.css', import.meta.url)).text()
     expect(css).toContain('.post.internal-post-card > .post-body.ascii-art {')

@@ -6619,6 +6619,10 @@ a.post-continuation-link:hover {
   letter-spacing: var(--post-body-letter-spacing, normal);
 }
 
+.post .code-fence.execution-output.ascii-art {
+  line-height: 1.15;
+}
+
 .post-body.ends-code-fence .code-fence:last-child {
   margin-bottom: 0;
 }
