@@ -1140,7 +1140,9 @@ export function ThreadReplies(
         {collapsedPreviewGapPosts.has(reply.id) && (
           expansionControlId
             ? <label className="quiet thread-ancestor-gap collapsed-preview-gap thread-fold-expander"
-                htmlFor={expansionControlId} aria-label="Expand earlier replies">…</label>
+                htmlFor={expansionControlId} aria-label="Expand earlier replies">
+                <span className="visually-hidden">expand earlier replies</span>
+              </label>
             : <div className="quiet thread-ancestor-gap collapsed-preview-gap"
                 aria-label="Earlier replies hidden">…</div>
         )}

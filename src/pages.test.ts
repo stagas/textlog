@@ -879,7 +879,7 @@ test('folded feed conversations show a gap above a preview when same-depth repli
     posts: [root, older, newest],
   }))
 
-  expect(html).toMatch(/collapsed-preview-post[^>]*>[\s\S]*?for="feed-thread-fold-20" aria-label="Expand earlier replies">…<\/label>[\s\S]*?id="post-22"/)
+  expect(html).toMatch(/collapsed-preview-post[^>]*>[\s\S]*?for="feed-thread-fold-20" aria-label="Expand earlier replies"><span class="visually-hidden">expand earlier replies<\/span><\/label>[\s\S]*?id="post-22"/)
 })
 
 test('folded feed conversations show a gap when a same-depth preview path hides its post above', () => {
@@ -897,7 +897,7 @@ test('folded feed conversations show a gap when a same-depth preview path hides 
     posts: [root, branch, deepPreview, siblingPreview],
   }))
 
-  expect(html).toMatch(/collapsed-preview-post[^>]*>[\s\S]*?for="feed-thread-fold-30" aria-label="Expand earlier replies">…<\/label>[\s\S]*?id="post-32"/)
+  expect(html).toMatch(/collapsed-preview-post[^>]*>[\s\S]*?for="feed-thread-fold-30" aria-label="Expand earlier replies"><span class="visually-hidden">expand earlier replies<\/span><\/label>[\s\S]*?id="post-32"/)
 })
 
 test('folded feed conversations show a gap for same-depth replies omitted from the feed', () => {
@@ -912,7 +912,7 @@ test('folded feed conversations show a gap for same-depth replies omitted from t
       visible(45, '2026-08-23 12:00:00')],
   }))
 
-  expect(html).toMatch(/collapsed-preview-post[^>]*>[\s\S]*?for="feed-thread-fold-40" aria-label="Expand earlier replies">…<\/label>[\s\S]*?id="post-45"/)
+  expect(html).toMatch(/collapsed-preview-post[^>]*>[\s\S]*?for="feed-thread-fold-40" aria-label="Expand earlier replies"><span class="visually-hidden">expand earlier replies<\/span><\/label>[\s\S]*?id="post-45"/)
 })
 
 test('expanded partial feed conversations place sibling omission markers before the oldest visible reply', () => {
@@ -1090,7 +1090,7 @@ test('collapsed previews retain extra depth when the preview itself has an omitt
   }))
 
   expect(html).toMatch(/collapsed-preview-post omitted-parent-reply[^>]*>[\s\S]*?id="post-2706"/)
-  expect(html).toMatch(/collapsed-preview-post omitted-parent-reply[^>]*>[\s\S]*?aria-label="Expand earlier replies">…<\/label>[\s\S]*?id="post-2706"/)
+  expect(html).toMatch(/collapsed-preview-post omitted-parent-reply[^>]*>[\s\S]*?aria-label="Expand earlier replies"><span class="visually-hidden">expand earlier replies<\/span><\/label>[\s\S]*?id="post-2706"/)
   expect(html).toMatch(/collapsed-preview-post[^>]*>[\s\S]*?id="post-2717"/)
   expect(html).not.toContain('collapsed-preview-post collapsed-preview-deeper omitted-parent-reply')
 })

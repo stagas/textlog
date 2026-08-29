@@ -6311,6 +6311,16 @@ a.post-context:hover {
   color: var(--accent-dark);
 }
 
+.collapsed-preview-gap.thread-fold-expander::after {
+  content: "";
+  display: inline-block;
+  width: 0;
+  height: 0;
+  border-top: 4px solid transparent;
+  border-bottom: 4px solid transparent;
+  border-left: 6px solid currentColor;
+}
+
 .thread-fold-input:checked~.reply-branch .thread-branch-content {
   overflow: hidden;
   animation: none;
@@ -6469,7 +6479,7 @@ a.post-continuation-link:hover {
   border-left: 1px solid var(--soft);
 }
 
-.feed-thread>.thread-fold-input:checked~.feed-thread-collapsed-branch .omitted-parent-reply {
+.feed-thread .omitted-parent-reply {
   margin-left: 0;
   border-left: 0;
 }

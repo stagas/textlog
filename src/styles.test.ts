@@ -177,6 +177,8 @@ describe('in-memory stylesheet', () => {
       + '  display: block;\n  border-bottom: 0;')
     expect(css).toContain('.collapsed-preview-gap.thread-fold-expander {\n'
       + '  color: var(--accent);\n  cursor: pointer;')
+    expect(css).toContain('.collapsed-preview-gap.thread-fold-expander::after {\n'
+      + '  content: "";')
     expect(css).toContain('.feed-thread>.thread-fold-input:checked+.thread-root .thread-fold {\n'
       + '  color: var(--accent);')
     expect(css).toContain('.feed-thread>.thread-fold-input:checked~.feed-thread-collapsed-branch {\n'
@@ -193,7 +195,7 @@ describe('in-memory stylesheet', () => {
       + '  display: none;')
     expect(css).toContain('.omitted-parent-reply {\n'
       + '  margin-left: clamp(18px, 3vw, 28px);\n  border-left: 1px solid var(--soft);')
-    expect(css).toContain('.feed-thread>.thread-fold-input:checked~.feed-thread-collapsed-branch .omitted-parent-reply {\n'
+    expect(css).toContain('.feed-thread .omitted-parent-reply {\n'
       + '  margin-left: 0;\n  border-left: 0;')
     expect(css).toContain('.reply-node:not(.collapsed-preview-path) {\n  height: 0;')
     expect(css).toContain('.thread-ancestor-gap:not(.collapsed-preview-gap) {\n'
