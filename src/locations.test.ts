@@ -2,7 +2,7 @@ import { Database } from 'bun:sqlite'
 import { describe, expect, test } from 'bun:test'
 import { executeDatabaseDomain } from './database-domain'
 import { apiPost } from './api'
-import { geocodeLocation, parseLocationQuery } from './locations'
+import { geocodeLocation, locationDestination, locationMapProvider, parseLocationQuery } from './locations'
 import type { LocationView } from './types'
 import { linkify } from './utils'
 
@@ -57,6 +57,22 @@ describe('#map', () => {
     expect(requestLanguage).toBe('en')
   })
 
+  test('selects native map destinations from the requesting platform', () => {
+    const location = { query: 'Kallikratis, Crete', latitude: 35.2, longitude: 24.2 }
+    const safari = 'Mozilla/5.0 (Macintosh; Intel Mac OS X) AppleWebKit/605.1.15 Version/18 Safari/605.1.15'
+    const iphone = 'Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) Mobile/15E148'
+    const android = 'Mozilla/5.0 (Linux; Android 15) AppleWebKit/537.36 Chrome/140 Mobile Safari/537.36'
+    const windows = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/140 Safari/537.36'
+    expect(locationMapProvider(safari)).toBe('apple')
+    expect(locationMapProvider(iphone)).toBe('apple')
+    expect(locationDestination(location, safari)).toStartWith('https://maps.apple.com/?')
+    expect(locationMapProvider(android)).toBe('google')
+    expect(locationMapProvider(windows)).toBe('google')
+    expect(locationDestination(location, windows)).toStartWith('https://www.google.com/maps/search/?')
+    expect(locationMapProvider('unknown')).toBe('openstreetmap')
+    expect(locationDestination(location, 'unknown')).toContain('openstreetmap.org')
+  })
+
   test('gracefully skips miss caching on a database awaiting the repair migration', async () => {
     const database = new Database(':memory:')
     database.run(`CREATE TABLE posts(id INTEGER PRIMARY KEY);
@@ -76,7 +92,7 @@ describe('#map', () => {
       displayName: 'Kallikratis, Sfakia, Crete, Greece',
       url: 'https://www.openstreetmap.org/?mlat=35.2&mlon=24.2#map=3/35.2/24.2', preview: {
         imageUrl: '/uploads/location-maps/test.png', title: 'Kallikratis',
-        description: 'Sfakia, Crete, Greece', siteName: 'OpenStreetMap', imageWidth: 600, imageHeight: 315,
+        description: 'Sfakia, Crete, Greece', imageWidth: 600, imageHeight: 315,
       } }
     const html = linkify('Going hiking #map\nKallikratis, Crete', {}, [], undefined, undefined, '',
       { map: 1 }, {}, { signedIn: false, formPrefix: 'post-1', location })
@@ -86,7 +102,7 @@ describe('#map', () => {
     expect(html).toContain('remote-link-image-sized')
     expect(html).toContain('Kallikratis')
     expect(html).toContain('Sfakia, Crete, Greece')
-    expect(html).toContain('OpenStreetMap')
+    expect(html).not.toContain('remote-link-site')
   })
 
   test('enriches the public API post shape with the stored location', () => {
@@ -104,9 +120,11 @@ describe('#map', () => {
       INSERT INTO post_hashtags VALUES(1,'map');
       INSERT INTO post_locations VALUES(1,'Kallikratis, Crete',35.2,24.2,'Kallikratis, Sfakia, Crete, Greece');
       INSERT INTO location_map_previews VALUES('3:35.200000:24.200000','location-maps/test.png',600,315);`)
-    expect(apiPost(database, 1, 'https://textlog.example')?.location).toMatchObject({
+    const apiLocation = apiPost(database, 1, 'https://textlog.example')?.location
+    expect(apiLocation).toMatchObject({
       query: 'Kallikratis, Crete', latitude: 35.2, longitude: 24.2,
-      preview: { imageUrl: '/uploads/location-maps/test.png', title: 'Kallikratis', siteName: 'OpenStreetMap' },
+      preview: { imageUrl: '/uploads/location-maps/test.png', title: 'Kallikratis' },
     })
+    expect(apiLocation?.preview.siteName).toBeUndefined()
   })
 })

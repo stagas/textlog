@@ -1,5 +1,6 @@
 import { backgroundDatabaseCall, databaseService, subscribeToFeedMutations } from './database-service'
 import { isMobileRequest } from './user-agent'
+import { locationMapProvider } from './locations'
 
 type MaterializedFeedKind = 'latest' | 'hot' | 'for-you' | 'to-me' | 'about'
 
@@ -61,6 +62,7 @@ function appearanceVariant(request: Request) {
   const names = ['appearance', 'font', 'sans-serif-font', 'primary-font', 'font-size', 'notification_device',
     'donation_banner_dismissed', 'pwa_standalone', 'pwa_install_banner_dismissed']
   return `${isMobileRequest(request) ? 'mobile' : 'desktop'}|${
+    locationMapProvider(request.headers.get('user-agent') || '')}|${
     names.map(name => cookie.match(new RegExp(`(?:^|;\\s*)${name}=([^;]*)`))?.[1] || '').join('|')
   }`
 }

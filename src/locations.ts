@@ -129,3 +129,30 @@ export function osmLocationUrl(location: Pick<LocationMetadata, 'latitude' | 'lo
   const { latitude: lat, longitude: lon } = location
   return `https://www.openstreetmap.org/?mlat=${lat}&mlon=${lon}#map=${LOCATION_ZOOM}/${lat}/${lon}`
 }
+
+export function locationMapProvider(userAgent: string) {
+  if (/(?:iPhone|iPad|iPod|Macintosh|Mac OS X)|Safari/i.test(userAgent)
+    && !/(?:Android|Chrome|Chromium|CriOS|Edg|OPR)/i.test(userAgent)) return 'apple' as const
+  if (/(?:Android|Linux|Windows)/i.test(userAgent)) return 'google' as const
+  if (/(?:iPhone|iPad|iPod|Macintosh|Mac OS X)/i.test(userAgent)) return 'apple' as const
+  return 'openstreetmap' as const
+}
+
+export function locationDestination(location: Pick<LocationMetadata, 'query' | 'latitude' | 'longitude'>,
+  userAgent: string)
+{
+  const provider = locationMapProvider(userAgent)
+  if (provider === 'apple') {
+    const url = new URL('https://maps.apple.com/')
+    url.searchParams.set('ll', `${location.latitude},${location.longitude}`)
+    url.searchParams.set('q', location.query)
+    return url.href
+  }
+  if (provider === 'google') {
+    const url = new URL('https://www.google.com/maps/search/')
+    url.searchParams.set('api', '1')
+    url.searchParams.set('query', `${location.latitude},${location.longitude}`)
+    return url.href
+  }
+  return osmLocationUrl(location)
+}

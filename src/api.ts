@@ -177,8 +177,7 @@ function apiExtras(database: Database, postIds: number[], viewerId: number) {
       const [title, ...description] = row.display_name.split(',').map(part => part.trim()).filter(Boolean)
       locations.set(row.post_id, { ...metadata, url: osmLocationUrl(metadata), preview: {
         imageUrl: getImageUrl(row.image_key), title: title || row.query,
-        description: description.join(', ') || row.display_name, siteName: 'OpenStreetMap', imageWidth: row.width,
-        imageHeight: row.height,
+        description: description.join(', ') || row.display_name, imageWidth: row.width, imageHeight: row.height,
       } })
     }
   }

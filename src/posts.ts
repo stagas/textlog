@@ -387,8 +387,7 @@ export function enrichPosts(database: Database, posts: PostView[], viewerId = -1
       const [title, ...description] = row.display_name.split(',').map(part => part.trim()).filter(Boolean)
       locationsByPost.set(row.post_id, { ...location, url: osmLocationUrl(location), preview: {
         imageUrl: getImageUrl(row.image_key || locationMapKey(location)), title: title || row.query,
-        description: description.join(', ') || row.display_name, siteName: 'OpenStreetMap', imageWidth: row.width,
-        imageHeight: row.height,
+        description: description.join(', ') || row.display_name, imageWidth: row.width, imageHeight: row.height,
       } })
     }
   }

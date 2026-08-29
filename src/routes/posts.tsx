@@ -22,7 +22,7 @@ import type { PostingSuggestionSearch } from '../components/page-shared'
 import { safeRefererPath } from '../http'
 import { deleteImages, deleteImagesAfterCommit } from '../image-storage'
 import { discoverLinkPreviews } from '../link-preview'
-import { parseLocationQuery, resolveLocation } from '../locations'
+import { locationMapProvider, parseLocationQuery, resolveLocation } from '../locations'
 import { logError } from '../log'
 import { markdownPlainText } from '../markdown'
 import { renderPostOg } from '../og'
@@ -185,7 +185,8 @@ export function registerPostsRoutes(app: Hono) {
     if (!Number.isInteger(id) || id < 1) return c.text('Not found', 404)
     const user = currentUser(c.req.raw)
     const requestUrl = new URL(c.req.url)
-    const postPageCacheKey = `${user?.id ?? 'anonymous'}\0${requestUrl.pathname}${requestUrl.search}`
+    const postPageCacheKey = `${user?.id ?? 'anonymous'}\0${
+      locationMapProvider(c.req.header('user-agent') || '')}\0${requestUrl.pathname}${requestUrl.search}`
     const cached = cachedAnonymousPostPage(postPageCacheKey)
     if (cached) return cached
     const detail = await databaseService().call('posts.detail', { id, viewerId: user?.id ?? -1 })

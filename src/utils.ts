@@ -10,8 +10,10 @@ import { sessionCookieName } from './brand'
 import { containsAsciiArt, MAX_HASHTAGS_PER_POST, type PostContentFlags, splitSpoilerBody } from './content'
 import { texToMathML } from './math'
 import { requestContext } from './request-context'
+import { locationDestination } from './locations'
 import { markSessionUsed, sessionHash } from './sessions'
 import { activeTimezone, timezoneLabel } from './timezone'
+import { activeRequest } from './theme'
 import type { User } from './types'
 import type { LinkPreview, LocationView, UserProfileStats } from './types'
 
@@ -49,7 +51,9 @@ export type ReferencePopoverOptions = {
   linkUnknownMentions?: boolean
 }
 
-function previewLink(html: string, url: string, appUrl: string | undefined, popover?: ReferencePopoverOptions) {
+function previewLink(html: string, url: string, appUrl: string | undefined, popover?: ReferencePopoverOptions,
+  suppressSite = false)
+{
   const vocarooAudioUrl = (() => {
     try {
       const parsed = new URL(url)
@@ -104,7 +108,7 @@ function previewLink(html: string, url: string, appUrl: string | undefined, popo
       return ''
     }
   })()
-  const site = preview.siteName || hostname
+  const site = suppressSite ? '' : preview.siteName || hostname
   const details = site || preview.title || preview.description
     ? `<span class="remote-link-copy">${site ? `<span class="remote-link-site">${esc(site)}</span>` : ''}${
       preview.title ? `<strong class="remote-link-title">${esc(preview.title)}</strong>` : ''
@@ -118,7 +122,7 @@ function previewLink(html: string, url: string, appUrl: string | undefined, popo
 
 export function locationPreviewLink(html: string, location: LocationView, appUrl?: string) {
   return previewLink(html, location.url, appUrl, { signedIn: false, formPrefix: 'location',
-    linkPreviews: { [location.url]: location.preview } })
+    linkPreviews: { [location.url]: location.preview } }, true)
 }
 
 export function referenceFormId(prefix: string, kind: 'user' | 'tag', value: string,
@@ -718,9 +722,11 @@ export function linkify(body: string, mentionBios: Record<string, string> = {}, 
       html += previewLink(`<a href="${href}">${highlighted(token, highlightTerms)}</a>`, previewUrl, appUrl, popover)
     }
     else if (match.kind === 'location' && popover?.location) {
-      html += locationPreviewLink(`<a href="${esc(popover.location.url)}" target="_blank" `
+      const location = { ...popover.location, url: locationDestination(popover.location,
+        activeRequest().headers.get('user-agent') || '') }
+      html += locationPreviewLink(`<a href="${esc(location.url)}" target="_blank" `
         + `rel="nofollow ugc noopener noreferrer">${highlighted(token, highlightTerms)}</a>`,
-      popover.location, appUrl)
+      location, appUrl)
     }
     else {
       html += renderedReference(token, mentionBios, mentionNoteCounts, hashtagCounts, highlightTerms, navigationQuery,
