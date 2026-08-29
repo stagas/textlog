@@ -4166,6 +4166,13 @@ form.report-panel {
   padding-top: 0;
 }
 
+.profile-page-tabs {
+  position: sticky;
+  z-index: 40;
+  top: 0;
+  background: var(--bg);
+}
+
 .note-streak {
   margin-top: var(--space-3);
 }

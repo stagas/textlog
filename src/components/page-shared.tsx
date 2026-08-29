@@ -732,7 +732,7 @@ export function ProfileTabs(
     return `${base}${query.size ? `?${query}` : ''}`
   }
   return (
-    <nav className="feed-tabs profile-tabs" aria-label={`@${profile.handle} profile`}>
+    <nav className="feed-tabs profile-tabs profile-page-tabs" aria-label={`@${profile.handle} profile`}>
       <a className={active === 'notes' ? 'active' : ''} aria-current={active === 'notes' ? 'page' : undefined}
         href={tabHref()}
       >
