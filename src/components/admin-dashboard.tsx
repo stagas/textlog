@@ -5,7 +5,7 @@ import { fmtFull } from '../utils'
 import { PageHeading } from './account-settings-header'
 import { maskEmail } from './email-address'
 import { Layout } from './layout'
-import { Pagination } from './page-shared'
+import { Pagination, TabHighlight } from './page-shared'
 import { StatsGrid } from './stats'
 
 export function AdminDashboard(
@@ -101,13 +101,16 @@ export function AdminDashboard(
           : <p className="section-empty">No open illegal activity reports.</p>}
       </section>
       <nav className="feed-tabs admin-tabs" aria-label="Report status">
-        {(['open', 'resolved', 'dismissed'] as const).map(value => (
-          <a key={value} className={status === value ? 'active' : ''}
-            aria-current={status === value ? 'page' : undefined} href={`/admin?status=${value}`}
-          >
-            {value}
-          </a>
-        ))}
+        <div className="feed-tabs-scroll">
+          {(['open', 'resolved', 'dismissed'] as const).map(value => (
+            <a key={value} className={status === value ? 'active' : ''}
+              aria-current={status === value ? 'page' : undefined} href={`/admin?status=${value}`}
+            >
+              <TabHighlight active={status === value} />
+              {value}
+            </a>
+          ))}
+        </div>
       </nav>
       <section className="admin-section">
         <h2>

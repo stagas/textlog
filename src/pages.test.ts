@@ -1954,7 +1954,7 @@ test('Tag pages keep actions beside the tag and a contextual back link on the ri
   expect(html).not.toContain('class="tag-note-count"')
   expect(html).toContain('class="profile-action tag-handle-actions"')
   expect(html).toContain('class="profile-edit-link tag-back-link" href="/latest#post-2">back</a>')
-  expect(html).toContain('aria-current="page" href="/tag/notes?from=%2Flatest%23post-2">notes</a>')
+  expect(html).toContain('aria-current="page" href="/tag/notes?from=%2Flatest%23post-2">')
   expect(html).toContain('href="/tag/notes?tab=followers&amp;from=%2Flatest%23post-2">followers</a>')
   expect(html.indexOf('>follow</button>')).toBeLessThan(html.indexOf('>block</button>'))
   expect(html.indexOf('>block</button>')).toBeLessThan(html.indexOf('>back</a>'))
@@ -1975,7 +1975,7 @@ test('Tag follower tabs list people with compact follow controls', () => {
   }))
 
   expect(html).toContain('href="/tag/notes">notes</a>')
-  expect(html).toContain('aria-current="page" href="/tag/notes?tab=followers">followers</a>')
+  expect(html).toContain('aria-current="page" href="/tag/notes?tab=followers">')
   expect(html).toContain('id="person-3"')
   expect(html).toContain(
     'href="/u/writer?from=%2Ftag%2Fnotes%3Ftab%3Dfollowers%23person-3">@writer</a>',
@@ -2647,7 +2647,7 @@ test('Profile places a contextual back link in the handle row', () => {
   expect(html).toContain('href="/latest#post-2">back</a>')
   expect(html).not.toContain('class="profile-user-details"')
   expect(html.indexOf('aria-label="follow @writer"')).toBeLessThan(html.indexOf('href="/latest#post-2">back</a>'))
-  expect(html).toContain('href="/u/writer?from=%2Flatest%23post-2">notes</a>')
+  expect(html).toContain('href="/u/writer?from=%2Flatest%23post-2">')
   expect(html).toContain('href="/u/writer?tab=replies&amp;from=%2Flatest%23post-2">replies</a>')
   expect(html).toContain('href="/u/writer?tab=following&amp;from=%2Flatest%23post-2"')
   expect(html).toContain('href="/u/writer?tab=followers&amp;from=%2Flatest%23post-2"')

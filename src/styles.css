@@ -984,22 +984,33 @@ nav form {
   max-width: 100vw;
   min-width: 0;
   gap: 0;
-  padding: var(--space-4) var(--gutter) 1px;
+  padding: var(--space-4) 0 0;
+}
+
+.feed-tabs-scroll {
+  display: flex;
+  flex: 1 1 auto;
+  align-items: center;
+  gap: 0;
+  width: 100%;
+  max-width: 100vw;
+  min-width: 0;
+  padding: 0 var(--gutter);
   overflow-x: auto;
   overflow-y: hidden;
   scrollbar-width: none;
   overscroll-behavior-inline: contain;
-  box-shadow: inset 0 -1px 0 var(--soft);
+  border-bottom: 1px solid var(--soft);
 }
 
 #feed-tabs {
   position: sticky;
   z-index: 40;
   top: calc(-1 * var(--space-4));
-  background: var(--bg);
+  background-color: var(--bg);
 }
 
-.feed-tabs::-webkit-scrollbar {
+.feed-tabs-scroll::-webkit-scrollbar {
   display: none;
 }
 
@@ -1086,14 +1097,15 @@ nav form {
 }
 
 .feed-tabs a {
+  position: relative;
   display: inline-flex;
   flex: 0 0 auto;
   align-items: center;
   gap: 5px;
-  padding: var(--space-2) var(--space-3);
+  padding: var(--space-2) var(--space-3) calc(var(--space-2) + 2px);
   color: var(--muted);
   white-space: nowrap;
-  border-bottom: 2px solid transparent;
+  border-bottom: 0;
 }
 
 .feed-tabs-read-status {
@@ -1168,18 +1180,18 @@ body.corners-round a.button {
     text-align: center;
   }
 
-  .feed-tabs {
+  .feed-tabs-scroll {
     align-items: flex-end;
     scrollbar-width: thin;
     scrollbar-color: var(--soft) transparent;
   }
 
-  .feed-tabs::-webkit-scrollbar {
+  .feed-tabs-scroll::-webkit-scrollbar {
     display: block;
     height: 4px;
   }
 
-  .feed-tabs::-webkit-scrollbar-thumb {
+  .feed-tabs-scroll::-webkit-scrollbar-thumb {
     background: var(--soft);
   }
 
@@ -1198,13 +1210,25 @@ body.corners-round a.button {
   color: var(--tab-hover);
 }
 
-.feed-tabs > a:hover {
-  background: color-mix(in srgb, var(--accent) 5%, transparent);
+.feed-tabs-scroll > a:hover {
+  background-color: color-mix(in srgb, var(--accent) 5%, transparent);
 }
 
 .feed-tabs a.active {
   color: var(--ink);
-  border-bottom-color: var(--accent);
+}
+
+.feed-tab-highlight {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  display: block;
+  width: 100%;
+  height: 2px;
+  color: var(--accent);
+  fill: currentColor;
+  pointer-events: none;
 }
 
 .site-footer {
@@ -4197,7 +4221,7 @@ form.report-panel {
   position: sticky;
   z-index: 40;
   top: 0;
-  background: var(--bg);
+  background-color: var(--bg);
 }
 
 .note-streak {

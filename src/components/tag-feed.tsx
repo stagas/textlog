@@ -3,7 +3,7 @@ import type { User } from '../types'
 import type { PersonView, PostView } from '../types'
 import { enterHref } from './auth-links'
 import { Layout } from './layout'
-import { ConnectionPeople, GuestCommunityActions, Pagination } from './page-shared'
+import { ConnectionPeople, GuestCommunityActions, Pagination, TabHighlight } from './page-shared'
 import { FeedThreads } from './post'
 
 export function TagFeed(
@@ -54,16 +54,21 @@ export function TagFeed(
         {returnPath && <a className="profile-edit-link tag-back-link" href={returnPath}>back</a>}
       </section>
       <nav className="feed-tabs profile-tabs" aria-label={`#${tag} tag`}>
-        <a className={tab === 'notes' ? 'active' : ''} aria-current={tab === 'notes' ? 'page' : undefined}
-          href={`${tagPath}${returnPath ? `?from=${encodeURIComponent(returnPath)}` : ''}`}
-        >
-          notes
-        </a>
-        <a className={tab === 'followers' ? 'active' : ''} aria-current={tab === 'followers' ? 'page' : undefined}
-          href={`${tagPath}?tab=followers${returnPath ? `&from=${encodeURIComponent(returnPath)}` : ''}`}
-        >
-          followers
-        </a>
+        <div className="feed-tabs-scroll">
+          <a className={tab === 'notes' ? 'active' : ''} aria-current={tab === 'notes' ? 'page' : undefined}
+            href={`${tagPath}${returnPath ? `?from=${encodeURIComponent(returnPath)}` : ''}`}
+          >
+            <TabHighlight active={tab === 'notes'} />
+            notes
+          </a>
+          <a className={tab === 'followers' ? 'active' : ''}
+            aria-current={tab === 'followers' ? 'page' : undefined}
+            href={`${tagPath}?tab=followers${returnPath ? `&from=${encodeURIComponent(returnPath)}` : ''}`}
+          >
+            <TabHighlight active={tab === 'followers'} />
+            followers
+          </a>
+        </div>
       </nav>
       {page > 1
         && (

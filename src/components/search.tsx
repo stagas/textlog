@@ -1,7 +1,7 @@
 import type { User } from '../types'
 import type { SearchResultsData } from '../types'
 import { Layout } from './layout'
-import { ConnectionPeople, Pagination, TagChips } from './page-shared'
+import { ConnectionPeople, Pagination, TabHighlight, TagChips } from './page-shared'
 import { FeedThreads } from './post'
 
 export type SearchTab = 'notes' | 'tags' | 'people'
@@ -51,13 +51,16 @@ export function SearchResults({ user, query, page, tab = 'notes', results }: {
         <SearchForm query={query} autoFocus={!query} tab={tab} />
       </section>
       <nav className="feed-tabs search-tabs" aria-label="Search type">
-        {(['notes', 'tags', 'people'] as SearchTab[]).map(value => (
-          <a key={value} href={tabPath(value)} className={tab === value ? 'active' : ''}
-            aria-current={tab === value ? 'page' : undefined}
-          >
-            {results.totals[value].toLocaleString()} {value}
-          </a>
-        ))}
+        <div className="feed-tabs-scroll">
+          {(['notes', 'tags', 'people'] as SearchTab[]).map(value => (
+            <a key={value} href={tabPath(value)} className={tab === value ? 'active' : ''}
+              aria-current={tab === value ? 'page' : undefined}
+            >
+              <TabHighlight active={tab === value} />
+              {results.totals[value].toLocaleString()} {value}
+            </a>
+          ))}
+        </div>
       </nav>
       <Pagination page={page} totalPages={results.totalPages} path={paginationPath} top />
       <FeedThreads posts={results.posts} user={user}

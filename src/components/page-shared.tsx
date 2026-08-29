@@ -18,6 +18,17 @@ export function paginationHeadingClass() {
   return `explore-section-heading${isMobileRequest(activeRequest()) ? ' explore-section-heading-mobile' : ''}`
 }
 
+export function TabHighlight({ active }: { active: boolean }) {
+  if (!active) return null
+  return (
+    <svg className="feed-tab-highlight" viewBox="0 0 100 2" preserveAspectRatio="none"
+      shapeRendering="crispEdges" aria-hidden="true" focusable="false"
+    >
+      <rect width="100" height="2" />
+    </svg>
+  )
+}
+
 export function postTitle(body: string) {
   const text = markdownPlainText(body)
   const characters = Array.from(text)
@@ -524,48 +535,57 @@ export function FeedTabs(
   return (
     <>
       <nav className="feed-tabs" id="feed-tabs" aria-label="Feed">
-        {user && (
-          <a className={toMe ? 'active' : ''} aria-current={toMe ? 'page' : undefined} href="/@">
-            @
-            {toMeCount > 0 && <span className="to-me-count">{toMeCount}</span>}
-          </a>
-        )}
-        {user && (
-          <a className={active === 'following' && !toMe ? 'active' : ''}
-            aria-current={active === 'following' && !toMe ? 'page' : undefined} href="/my-feed"
+        <div className="feed-tabs-scroll">
+          {user && (
+            <a className={toMe ? 'active' : ''} aria-current={toMe ? 'page' : undefined} href="/@">
+              <TabHighlight active={toMe} />
+              @
+              {toMeCount > 0 && <span className="to-me-count">{toMeCount}</span>}
+            </a>
+          )}
+          {user && (
+            <a className={active === 'following' && !toMe ? 'active' : ''}
+              aria-current={active === 'following' && !toMe ? 'page' : undefined} href="/my-feed"
+            >
+              <TabHighlight active={active === 'following' && !toMe} />
+              my feed
+              {forYouCount > 0 && <span className="to-me-count">{forYouCount}</span>}
+            </a>
+          )}
+          <a className={active === 'hot' ? 'active' : ''} aria-current={active === 'hot' ? 'page' : undefined}
+            href={user ? '/hot' : '/hot?_scroll=instant#feed-tabs'}
           >
-            my feed
-            {forYouCount > 0 && <span className="to-me-count">{forYouCount}</span>}
+            <TabHighlight active={active === 'hot'} />
+            hot
           </a>
-        )}
-        <a className={active === 'hot' ? 'active' : ''} aria-current={active === 'hot' ? 'page' : undefined}
-          href={user ? '/hot' : '/hot?_scroll=instant#feed-tabs'}
-        >
-          hot
-        </a>
-        <a className={active === 'random' ? 'active' : ''} aria-current={active === 'random' ? 'page' : undefined}
-          href={user ? '/any' : '/any?_scroll=instant#feed-tabs'}
-        >
-          any
-        </a>
-        <a className={active === 'latest' ? 'active' : ''} aria-current={active === 'latest' ? 'page' : undefined}
-          href={user ? '/all' : '/all?_scroll=instant#feed-tabs'}
-        >
-          all
-          {latestCount > 0 && <span className="to-me-count">{latestCount}</span>}
-        </a>
-        {activityReadStatus !== undefined && (
-          <span className="feed-tabs-read-status">
-            {activityReadStatus !== undefined
-              && (activityReadStatus
-                ? (
-                  <form method="post" action="/activity/read-all">
-                    <button className="activity-side-link">mark all as read</button>
-                  </form>
-                )
-                : <span className="activity-side-status">you've seen it all</span>)}
-          </span>
-        )}
+          <a className={active === 'random' ? 'active' : ''}
+            aria-current={active === 'random' ? 'page' : undefined}
+            href={user ? '/any' : '/any?_scroll=instant#feed-tabs'}
+          >
+            <TabHighlight active={active === 'random'} />
+            any
+          </a>
+          <a className={active === 'latest' ? 'active' : ''}
+            aria-current={active === 'latest' ? 'page' : undefined}
+            href={user ? '/all' : '/all?_scroll=instant#feed-tabs'}
+          >
+            <TabHighlight active={active === 'latest'} />
+            all
+            {latestCount > 0 && <span className="to-me-count">{latestCount}</span>}
+          </a>
+          {activityReadStatus !== undefined && (
+            <span className="feed-tabs-read-status">
+              {activityReadStatus !== undefined
+                && (activityReadStatus
+                  ? (
+                    <form method="post" action="/activity/read-all">
+                      <button className="activity-side-link">mark all as read</button>
+                    </form>
+                  )
+                  : <span className="activity-side-status">you've seen it all</span>)}
+            </span>
+          )}
+        </div>
       </nav>
       {forYouReadStatus && (
         <div className="feed-read-action">
@@ -733,33 +753,43 @@ export function ProfileTabs(
   }
   return (
     <nav className="feed-tabs profile-tabs profile-page-tabs" aria-label={`@${profile.handle} profile`}>
-      <a className={active === 'notes' ? 'active' : ''} aria-current={active === 'notes' ? 'page' : undefined}
-        href={tabHref()}
-      >
-        notes
-      </a>
-      <a className={active === 'replies' ? 'active' : ''} aria-current={active === 'replies' ? 'page' : undefined}
-        href={tabHref('replies')}
-      >
-        replies
-      </a>
-      <a className={active === 'following' ? 'active' : ''} aria-current={active === 'following' ? 'page' : undefined}
-        href={tabHref('following')}
-      >
-        following
-      </a>
-      <a className={active === 'followers' ? 'active' : ''} aria-current={active === 'followers' ? 'page' : undefined}
-        href={tabHref('followers')}
-      >
-        followers
-      </a>
-      {showBlocked && (
-        <a className={active === 'blocked' ? 'active' : ''} aria-current={active === 'blocked' ? 'page' : undefined}
-          href={tabHref('blocked')}
+      <div className="feed-tabs-scroll">
+        <a className={active === 'notes' ? 'active' : ''} aria-current={active === 'notes' ? 'page' : undefined}
+          href={tabHref()}
         >
-          blocked
+          <TabHighlight active={active === 'notes'} />
+          notes
         </a>
-      )}
+        <a className={active === 'replies' ? 'active' : ''} aria-current={active === 'replies' ? 'page' : undefined}
+          href={tabHref('replies')}
+        >
+          <TabHighlight active={active === 'replies'} />
+          replies
+        </a>
+        <a className={active === 'following' ? 'active' : ''}
+          aria-current={active === 'following' ? 'page' : undefined}
+          href={tabHref('following')}
+        >
+          <TabHighlight active={active === 'following'} />
+          following
+        </a>
+        <a className={active === 'followers' ? 'active' : ''}
+          aria-current={active === 'followers' ? 'page' : undefined}
+          href={tabHref('followers')}
+        >
+          <TabHighlight active={active === 'followers'} />
+          followers
+        </a>
+        {showBlocked && (
+          <a className={active === 'blocked' ? 'active' : ''}
+            aria-current={active === 'blocked' ? 'page' : undefined}
+            href={tabHref('blocked')}
+          >
+            <TabHighlight active={active === 'blocked'} />
+            blocked
+          </a>
+        )}
+      </div>
     </nav>
   )
 }
