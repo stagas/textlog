@@ -2263,7 +2263,7 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
       return database.query(`SELECT ps.endpoint,ps.p256dh,ps.auth,u.handle username FROM push_subscriptions ps
         JOIN users u ON u.id=ps.user_id
         WHERE ps.notify_broadcasts=1 AND u.deleted_at IS NULL AND u.suspended_at IS NULL
-        ORDER BY ps.id`).all() as DatabaseDomainOutput<K>
+        ORDER BY lower(u.handle),ps.endpoint`).all() as DatabaseDomainOutput<K>
     }
     case 'push.tagFollowDelivery': {
       const { actorId, tag } = input as DatabaseDomainInput<'push.tagFollowDelivery'>
