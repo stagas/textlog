@@ -2950,7 +2950,8 @@ main:has(> .write-compose) {
   border-bottom: 0;
 }
 
-.reply-compose {
+.replybox.reply-compose {
+  margin-bottom: 0;
   padding: 0;
   background: transparent;
   border-inline: 0;
@@ -3020,6 +3021,10 @@ main:has(> .write-compose) {
   border-top: 1px solid var(--soft);
 }
 
+.write-compose .composefoot {
+  margin-bottom: var(--space-4);
+}
+
 :is(.write-compose, .reply-compose) .posting-help-summary-link {
   border-bottom-color: var(--link-border);
 }
@@ -3029,7 +3034,7 @@ main:has(> .write-compose) {
 }
 
 :is(.write-compose, .reply-compose) .posting-help-content {
-  margin-top: var(--space-4);
+  margin-top: calc(var(--space-4) - var(--space-3));
   background: var(--bg);
 }
 
