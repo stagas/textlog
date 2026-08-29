@@ -1051,6 +1051,15 @@ export function ThreadReplies(
   }
   const shallowestCollapsedPreviewDepth = Math.min(...collapsedPreviewDepths.values())
   const needsCollapsedPreviewIndent = (postId: number) => {
+    const post = byId.get(postId)
+    if (collapsedPreviewPosts.has(postId) && post?.feed_ancestor_gap && post.parent?.id !== post.parent_id) {
+      let omittedParent = post.parent
+      while (omittedParent && omittedParent.id !== post.parent_id) {
+        if (collapsedPreviewPosts.has(omittedParent.id)) return false
+        omittedParent = omittedParent.parent
+      }
+      return true
+    }
     if ((collapsedPreviewDepths.get(postId) || 0) <= shallowestCollapsedPreviewDepth) return false
     let current = byId.get(postId)
     while (current?.parent_id) {

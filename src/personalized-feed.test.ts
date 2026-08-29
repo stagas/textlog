@@ -196,6 +196,34 @@ test('For You includes unread replies beyond the recent reply preview', () => {
   expect(feed.timeline.find(row => row.id === 922)?.unread).toBe(1)
 })
 
+test('For You keeps expandable parent context using the same two-to-five reply rule as Latest', () => {
+  const database = new Database(':memory:', { strict: true })
+  runMigrations(database)
+  database.run(`INSERT INTO users(id,handle,email,password,bio) VALUES
+      (1,'viewer','viewer@example.com','!',''),
+      (2,'root','root@example.com','!',''),
+      (3,'replier','replier@example.com','!',''),
+      (4,'older','older@example.com','!','');
+    INSERT INTO follows(follower_id,following_id,created_at) VALUES
+      (1,2,'2026-08-01 00:00:00'),(1,3,'2026-08-01 00:00:00'),(1,4,'2026-08-01 00:00:00');
+    INSERT INTO posts(id,user_id,parent_id,body,created_at) VALUES
+      (370,2,NULL,'root','2026-08-08 02:32:30'),
+      (2370,4,370,'older reply','2026-08-25 03:11:23'),
+      (2829,1,370,'viewer parent','2026-08-29 10:49:12'),
+      (2833,3,2829,'nested reply','2026-08-29 11:22:11'),
+      (2834,3,370,'direct sibling','2026-08-29 11:25:06');
+    INSERT INTO for_you_reads(user_id,event_key) VALUES
+      (1,'post:00000000000000000370'),(1,'post:00000000000000002370'),
+      (1,'post:00000000000000002829'),(1,'post:00000000000000002833'),
+      (1,'post:00000000000000002834');`)
+  const viewer: User = { id: 1, handle: 'viewer', email: 'viewer@example.com', bio: '' }
+
+  const feed = loadPersonalizedFeed(database, viewer, 1, 20, false, '/my-feed', false)
+
+  expect(feed.timeline.filter(row => row.id).map(row => row.id)).toEqual([370, 2834, 2833, 2829, 2370])
+  expect(feed.timeline.find(row => row.id === 2833)?.parent_id).toBe(2829)
+})
+
 test('For You follow activity can be hidden independently for people and hashtags', () => {
   const database = new Database(':memory:', { strict: true })
   runMigrations(database)

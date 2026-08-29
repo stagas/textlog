@@ -40,3 +40,21 @@ export function recentConversationReplies<T extends { id: number; parent_id: num
     })
   })
 }
+
+export function recentExpandableConversationReplies<
+  T extends { id: number; parent_id: number | null; created_at: string },
+>(conversation: T[]) {
+  const expandableReplies = recentConversationReplies(conversation, true).slice(0, 4)
+  const expandableIds = new Set([
+    ...conversation.filter(post => post.parent_id === null).map(post => post.id),
+    ...expandableReplies.map(reply => reply.id),
+  ])
+  const needsParentContext = expandableReplies.some(reply => reply.parent_id !== null
+    && !expandableIds.has(reply.parent_id))
+  if (!needsParentContext) {
+    const connectedOlderReply = conversation.find(reply => reply.parent_id !== null
+      && !expandableIds.has(reply.id) && expandableIds.has(reply.parent_id))
+    if (connectedOlderReply) expandableReplies.push(connectedOlderReply)
+  }
+  return expandableReplies
+}

@@ -1,5 +1,5 @@
 import { expect, test } from 'bun:test'
-import { isRecentConversationRoot, recentConversationReplies } from './latest-conversation'
+import { isRecentConversationRoot, recentConversationReplies, recentExpandableConversationReplies } from './latest-conversation'
 
 const reply = (id: number, createdAt: string) => ({ id, parent_id: 895, created_at: createdAt })
 
@@ -64,4 +64,17 @@ test('Latest prunes older intermediates from a recent nested reply path', () => 
   ]
 
   expect(recentConversationReplies(conversation).map(post => post.id)).toEqual([6, 5, 7])
+})
+
+test('expandable rooted conversations keep two to five replies including needed parent context', () => {
+  const conversation = [
+    { id: 2834, parent_id: 370, created_at: '2026-08-29 11:25:06' },
+    { id: 2833, parent_id: 2829, created_at: '2026-08-29 11:22:11' },
+    { id: 2829, parent_id: 370, created_at: '2026-08-29 10:49:12' },
+    { id: 2370, parent_id: 370, created_at: '2026-08-25 03:11:23' },
+    { id: 370, parent_id: null, created_at: '2026-08-08 02:32:30' },
+  ]
+
+  expect(recentExpandableConversationReplies(conversation).map(post => post.id))
+    .toEqual([2834, 2833, 2829, 2370])
 })

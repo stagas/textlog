@@ -27,7 +27,7 @@ import { getHotPosts, hotFeedProjectionNeedsRefresh, type HotPost, hotRankingVer
   refreshHotFeedProjection } from './hot'
 import { isImageKey } from './image-storage'
 import { interactedEmail } from './interacted-email'
-import { isRecentConversationRoot, recentConversationReplies } from './latest-conversation'
+import { isRecentConversationRoot, recentConversationReplies, recentExpandableConversationReplies } from './latest-conversation'
 import { initializeLatestReads, latestUnreadPostState, markAllLatestRead, markLatestPostsRead,
   unreadLatestCount } from './latest-state'
 import { userBioLinkPreviews } from './link-preview'
@@ -2369,19 +2369,8 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
           && (conversation[0]?.id === root.id || recentReplies[0]?.parent_id === root.id
             || isRecentConversationRoot(root, conversation))
         if (keepsRoot) {
-          const recentExpandableReplies = recentConversationReplies(conversation, true)
-          const expandableReplies = recentExpandableReplies.slice(0, 4)
+          const expandableReplies = recentExpandableConversationReplies(conversation)
           const expandableIds = new Set([root!.id, ...expandableReplies.map(reply => reply.id)])
-          const needsParentContext = expandableReplies.some(reply => reply.parent_id !== null
-            && !expandableIds.has(reply.parent_id))
-          if (!needsParentContext) {
-            const connectedOlderReply = conversation.find(reply => reply.parent_id !== null
-              && !expandableIds.has(reply.id) && expandableIds.has(reply.parent_id))
-            if (connectedOlderReply) {
-              expandableReplies.push(connectedOlderReply)
-              expandableIds.add(connectedOlderReply.id)
-            }
-          }
           return [root!, ...expandableReplies,
             ...conversation.filter(row => unreadIds.has(row.id) && !expandableIds.has(row.id))]
         }
