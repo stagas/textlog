@@ -198,7 +198,7 @@ export type DatabaseDomainOperations = {
   'account.saveAppearancePreferences': {
     input: { userId: number; deviceId: string; pageSize: PageSizeChoice; density: DensityChoice;
       showLinkPreviews: boolean; showModeratedContent: boolean; hidePeopleFollowActivity: boolean;
-      hideHashtagFollowActivity: boolean; showNoteStreak: boolean }
+      hideHashtagFollowActivity: boolean; showNoteStreak: boolean; showTimestamps: boolean }
     output: null
   }
   'account.updateProfileFlags': { input: { userId: number; timezone: string }; output: null }

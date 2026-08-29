@@ -39,7 +39,7 @@ import {
   Reply,
 } from './components/pages'
 import { approximatePostAge, conversationTopPath, FeedThreads, isProbablyNonEnglish, Post, postAgeTitle,
-  postedReplyPath, PreviewPost, replyAnchorReturnPath, ThreadReplies } from './components/post'
+  postedReplyPath, PreviewPost, replyAnchorReturnPath, shortPostAge, ThreadReplies } from './components/post'
 import { searchPersonReturnPath, searchPostReturnPath, SearchResults } from './components/search'
 
 import React from 'react'
@@ -1545,6 +1545,18 @@ test('appearance misc tab can render link previews disabled', () => {
   expect(html).not.toContain('name="showLinkPreviews" checked=""')
 })
 
+test('appearance misc tab offers opt-in timestamps', () => {
+  const html = renderToStaticMarkup(React.createElement(ChangeAppearance, {
+    user: { id: 1, handle: 'reader', email: 'reader@example.com', bio: '' },
+    selected: { theme: 'system', accent: 'theme' },
+    selectedFont: 'system',
+    showTimestamps: true,
+    tab: 'misc',
+  }))
+  expect(html).toContain('name="showTimestamps" checked="" value="yes"')
+  expect(html).toContain('<span>Show timestamps</span>')
+})
+
 test('appearance misc tab can enable moderated content without a consent screen', () => {
   const settings = renderToStaticMarkup(React.createElement(ChangeAppearance, {
     user: { id: 1, handle: 'reader', email: 'reader@example.com', bio: '' },
@@ -2583,6 +2595,20 @@ test('Profile edit offers a data download without rendering notes', () => {
   expect(html).not.toContain('class="profile-user-details"')
 })
 
+test('Profile edit shows timezone choices only when timestamps are enabled', () => {
+  const profile = { id: 1, handle: 'reader', email: 'reader@example.com', bio: '', show_timestamps: 1,
+    timezone: 'Europe/Athens' }
+  const html = renderToStaticMarkup(React.createElement(Profile, {
+    user: profile,
+    profile,
+    posts: [],
+    following: false,
+    editing: true,
+  }))
+  expect(html).toContain('name="timezone"')
+  expect(html).toContain('<option value="Europe/Athens" selected="">UTC +02/+03 — Athens, Helsinki, Bucharest</option>')
+})
+
 test('Profile edit offers an expanded copy-paste presence badge with a safe new-tab profile link', () => {
   const profile = { id: 2, handle: 'writer', email: '', bio: 'Writes things' }
   const html = renderToStaticMarkup(React.createElement(Profile, {
@@ -3607,6 +3633,32 @@ test('Reply pages show a top link after the linked reply context', () => {
     + 'href="/post/1?from=%2Flatest%23post-3">top</a><a class="quiet post-back-link" '
     + 'href="/latest#post-3">back</a></div>')
   expect(html).not.toContain('>permalink</a>')
+})
+
+test('opt-in timestamps are compact, muted, localized, and precede top actions', () => {
+  expect(shortPostAge('2026-08-30 12:00:00', Date.parse('2026-08-30T12:00:05Z'))).toBe('5s')
+  expect(shortPostAge('2026-08-30 12:00:00', Date.parse('2026-08-30T12:15:00Z'))).toBe('15m')
+  expect(shortPostAge('2026-08-29 12:00:00', Date.parse('2026-08-30T12:00:00Z'))).toBe('1d')
+  expect(shortPostAge('2026-08-16 12:00:00', Date.parse('2026-08-30T12:00:00Z'))).toBe('2w')
+
+  const html = renderToStaticMarkup(React.createElement(Post, {
+    p: { id: 3, user_id: 2, parent_id: null, body: 'A note', handle: 'writer',
+      created_at: '2026-08-30 12:00:00', deleted_at: null },
+    user: { id: 1, handle: 'reader', email: 'reader@example.com', bio: '', show_timestamps: 1 },
+    topHref: '/post/1',
+  }))
+  expect(html).toMatch(/<time class="post-relative-time"[^>]*title="Aug 30, 2026, 12:00 PM \(UTC \+00\)"[^>]*>.*?<\/time><a class="quiet post-top-link"/)
+})
+
+test('opt-in timestamps tolerate feed entries without a creation time', () => {
+  const html = renderToStaticMarkup(React.createElement(Post, {
+    p: { id: 3, user_id: 2, parent_id: null, body: 'A synthetic feed note', handle: 'writer',
+      created_at: undefined as unknown as string, deleted_at: null },
+    user: { id: 1, handle: 'reader', email: 'reader@example.com', bio: '', show_timestamps: 1 },
+    tappable: true,
+  }))
+  expect(html).not.toContain('post-relative-time')
+  expect(html).toContain('A synthetic feed note')
 })
 
 test('Conversation roots show a flat link in the top-link action slot', () => {

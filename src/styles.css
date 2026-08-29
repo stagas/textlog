@@ -6767,8 +6767,12 @@ a.post-context:hover {
 .post-navigation-actions {
   display: flex;
   align-items: baseline;
-  gap: var(--space-4);
+  gap: 2ch;
   margin-left: auto;
+}
+
+.post-relative-time {
+  color: var(--muted);
 }
 
 .posttop .post-back-link {

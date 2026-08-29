@@ -2653,6 +2653,15 @@ export const migrations: Migration[] = [
       addColumn(database, 'location_geocodes', 'language', "TEXT NOT NULL DEFAULT ''")
     },
   },
+  {
+    version: 163,
+    name: 'show_timestamps_preference',
+    up(database) {
+      if (!database.query("SELECT 1 FROM sqlite_master WHERE type='table' AND name='users'").get()) return
+      addColumn(database, 'users', 'show_timestamps',
+        'INTEGER NOT NULL DEFAULT 0 CHECK(show_timestamps IN (0,1))')
+    },
+  },
 ]
 
 export const latestMigrationVersion = migrations.at(-1)!.version

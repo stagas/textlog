@@ -436,7 +436,8 @@ export function registerAccountRoutes(app: Hono) {
         showModeratedContent={user.show_moderated_content === 1}
         includePeopleFollowActivity={user.hide_people_follow_activity !== 1}
         includeHashtagFollowActivity={user.hide_hashtag_follow_activity !== 1}
-        showNoteStreak={user.show_note_streak === 1} returnPath={returnPath} />,
+        showNoteStreak={user.show_note_streak === 1} showTimestamps={user.show_timestamps === 1}
+        returnPath={returnPath} />,
     )
   })
 
@@ -471,6 +472,7 @@ export function registerAccountRoutes(app: Hono) {
         hidePeopleFollowActivity: f.includePeopleFollowActivity !== 'yes',
         hideHashtagFollowActivity: f.includeHashtagFollowActivity !== 'yes',
         showNoteStreak: f.showNoteStreak === 'yes',
+        showTimestamps: f.showTimestamps === 'yes',
       })
       await markAppearanceBannerHandled(c.req.raw, user.id)
       const response = redirect('/account/edit/appearance' + query, notificationDeviceCookie(deviceId))
