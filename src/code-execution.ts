@@ -92,12 +92,14 @@ async function executePiston(code: ExecutableCode, pistonUrl: string) {
   if (!response.ok) throw new Error(`Piston returned HTTP ${response.status}`)
   const result = await response.json() as {
     message?: string
-    compile?: { output?: string }
-    run?: { output?: string }
+    compile?: { output?: string; stderr?: string; message?: string }
+    run?: { output?: string; stderr?: string; message?: string }
   }
-  const output = result.compile?.output || result.run?.output || ''
-  const visibleOutput = displayedExecutionOutput(output)
-  return boundedExecutionOutput(visibleOutput.trim() ? output : result.message || output)
+  const outputs = [result.compile?.output, result.run?.output]
+  const output = outputs.find(value => value && displayedExecutionOutput(value).trim())
+  const error = [result.compile?.stderr, result.run?.stderr, result.compile?.message, result.run?.message,
+    result.message].find(value => value?.trim())
+  return boundedExecutionOutput(output || error || outputs.find(value => value) || '')
 }
 
 export async function executePostCode(body: string, environment = Bun.env.NODE_ENV,

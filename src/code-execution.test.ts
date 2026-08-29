@@ -82,7 +82,10 @@ describe('executable notes', () => {
     const originalFetch = globalThis.fetch
     const responses = [
       { run: { output: '  \n' }, message: 'runtime failed' },
-      { run: { output: '//\\//Sandbox keeper received fatal signal 6\n' }, message: 'sandbox failed' },
+      { compile: { output: ' \n' }, run: {
+        output: '//\\//Sandbox keeper received fatal signal 6\n', stderr: 'sandbox failed',
+      } },
+      { compile: { output: '\n' }, run: { output: '', message: 'stage failed' } },
     ]
     globalThis.fetch = (async (_input: string | URL | Request, _init?: RequestInit) =>
       Response.json(responses.shift())) as typeof fetch
@@ -90,6 +93,7 @@ describe('executable notes', () => {
       const body = '#exec\n```js\nthrow new Error("oops")\n```'
       expect(await executePostCode(body, 'production', 'http://localhost:2000')).toBe('runtime failed')
       expect(await executePostCode(body, 'production', 'http://localhost:2000')).toBe('sandbox failed')
+      expect(await executePostCode(body, 'production', 'http://localhost:2000')).toBe('stage failed')
     }
     finally {
       globalThis.fetch = originalFetch
