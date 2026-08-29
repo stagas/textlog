@@ -5129,6 +5129,10 @@ form.report-panel {
     grid-row: 2;
   }
 
+  .profile.profile-owner:not(.profile-editing) .note-streak {
+    grid-column: 1 / -1;
+  }
+
   .profile-action {
     width: auto;
   }
