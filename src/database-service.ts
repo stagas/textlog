@@ -25,6 +25,8 @@ const feedMutations = new Set<DatabaseDomainOperation>([
   'api.relationshipMutation',
   'api.tagRelationshipMutation',
   'api.updateBio',
+  'drafts.save',
+  'drafts.delete',
   'feeds.markLatestRead',
   'feeds.markPersonalizedSnapshotPageRead',
   'feeds.markRead',
