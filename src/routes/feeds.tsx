@@ -190,6 +190,8 @@ export function registerFeedsRoutes(app: Hono) {
       ? '/hot'
       : preferredFeed === 'random'
       ? '/any'
+      : preferredFeed === 'activity'
+      ? '/@'
       : '/my-feed'
     return redirect(path + new URL(c.req.url).search)
   })
@@ -340,7 +342,7 @@ export function registerFeedsRoutes(app: Hono) {
       ? await rpcMaterializedFeedPage(c.req.raw, 'to-me', user.id, render, false,
         viewerCacheVersion(0, user), false, renderForCache)
       : await render()
-    return rememberFeed(response, 'following')
+    return rememberFeed(response, 'activity')
   })
 
   app.post('/@/read-all', async c => {
