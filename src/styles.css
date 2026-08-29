@@ -2036,7 +2036,9 @@ body.corners-round a.button {
 }
 
 .tappable-post:has(> .post-hit-area:hover),
-.tappable-post:has(> .post-hit-area:focus-visible) {
+.tappable-post:has(> .post-hit-area:focus-visible),
+.tappable-post:has(> .collapsed-post-expander:hover),
+.tappable-post:has(> .collapsed-post-expander:focus-visible) {
   background: color-mix(in srgb, var(--accent) 5%, transparent);
 }
 
@@ -2051,6 +2053,19 @@ body.corners-round a.button {
   inset: 0;
   display: block;
   border: 0;
+}
+
+.tappable-post .collapsed-post-expander {
+  position: absolute;
+  z-index: 20;
+  inset: 0;
+  display: block;
+  cursor: pointer;
+}
+
+.feed-thread>.thread-fold-input:not(:checked)~.thread-root .collapsed-post-expander,
+.feed-thread>.thread-fold-input:not(:checked)~.feed-thread-collapsed-branch .collapsed-post-expander {
+  display: none;
 }
 
 .tappable-post .tappable-parent {
@@ -6299,6 +6314,7 @@ a.post-context:hover {
 
 .thread-ancestor-gap.post-continuation-link {
   display: block;
+  color: var(--muted);
   border-bottom: 0;
 }
 
@@ -6309,16 +6325,6 @@ a.post-context:hover {
 
 .collapsed-preview-gap.thread-fold-expander:hover {
   color: var(--accent-dark);
-}
-
-.collapsed-preview-gap.thread-fold-expander::after {
-  content: "";
-  display: inline-block;
-  width: 0;
-  height: 0;
-  border-top: 4px solid transparent;
-  border-bottom: 4px solid transparent;
-  border-left: 6px solid currentColor;
 }
 
 .thread-fold-input:checked~.reply-branch .thread-branch-content {

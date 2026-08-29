@@ -732,8 +732,8 @@ test('feed conversations stay expanded when all visible replies fit the preview'
     posts: [root, firstReply, secondReply],
   }))
 
-  expect(html).toContain('class="thread-fold-input" type="checkbox" id="feed-thread-fold-1"')
-  expect(html).not.toContain('id="feed-thread-fold-1" checked=""')
+  expect(html).not.toContain('id="feed-thread-fold-1"')
+  expect(html).not.toContain('class="quiet thread-fold"')
   expect(html).not.toContain('collapsed-preview-post')
   expect(html).not.toContain('aria-label="Earlier replies hidden"')
   expect(html).toContain('href="/post/2?from=%2Flatest%23post-2"')
@@ -744,7 +744,7 @@ test('feed conversations stay expanded when all visible replies fit the preview'
     expandedRootId: 1,
     posts: [root, firstReply, secondReply],
   }))
-  expect(returned).not.toContain('id="feed-thread-fold-1" checked=""')
+  expect(returned).not.toContain('id="feed-thread-fold-1"')
   expect(returned).toContain('href="/post/2?from=%2Flatest%23post-2"')
 
   const single = renderToStaticMarkup(React.createElement(FeedThreads, {
@@ -752,7 +752,7 @@ test('feed conversations stay expanded when all visible replies fit the preview'
     returnPath: '/latest',
     posts: [{ ...root, reply_count: 1 }, firstReply],
   }))
-  expect(single).not.toContain('id="feed-thread-fold-1" checked=""')
+  expect(single).not.toContain('id="feed-thread-fold-1"')
 
   const unread = renderToStaticMarkup(React.createElement(FeedThreads, {
     user: null,
@@ -760,8 +760,8 @@ test('feed conversations stay expanded when all visible replies fit the preview'
     contextUnreadPostIds: new Set([2]),
     posts: [root, firstReply, secondReply],
   }))
-  expect(unread).toContain('class="thread-fold-input" type="checkbox" id="feed-thread-fold-1"')
-  expect(unread).not.toContain('id="feed-thread-fold-1" checked=""')
+  expect(unread).not.toContain('id="feed-thread-fold-1"')
+  expect(unread).not.toContain('class="quiet thread-fold"')
 })
 
 test('folded feed conversations preview the two newest replies from a recent burst', () => {
@@ -781,8 +781,25 @@ test('folded feed conversations preview the two newest replies from a recent bur
 
   expect(html).toMatch(/collapsed-preview-post[^>]*>[\s\S]*?Newest reply/)
   expect(html.match(/collapsed-preview-post/g)).toHaveLength(2)
+  expect(html.match(/feed-thread-collapsed-branch/g)).toHaveLength(1)
+  expect(html).not.toContain('id="thread-fold-2"')
+  expect(html).not.toContain('for="thread-fold-2"')
   expect(html).toContain('class="quiet thread-fold" for="feed-thread-fold-1"')
+  expect(html).toMatch(/class="thread-root"[^>]*>[\s\S]*?class="collapsed-post-expander" for="feed-thread-fold-1"/)
+  expect(html).toMatch(/collapsed-preview-post[^>]*>[\s\S]*?class="collapsed-post-expander" for="feed-thread-fold-1"/)
+  expect(html.match(/class="collapsed-post-expander"/g)).toHaveLength(3)
+  expect(html).toContain('aria-label="expand conversation containing post by @newest"')
   expect(html).toMatch(/collapsed-preview-post[^>]*>[\s\S]*?Older deep reply/)
+
+  const expanded = renderToStaticMarkup(React.createElement(FeedThreads, {
+    user: null,
+    returnPath: '/latest',
+    expandedRootId: 1,
+    posts: [root, olderReply, olderDeepReply, newerReply],
+  }))
+  expect(expanded.match(/class="collapsed-post-expander"/g)).toHaveLength(2)
+  expect(expanded).toContain('class="post-hit-area" href="/post/1')
+  expect(expanded).toContain('class="post-hit-area" href="/post/4')
 })
 
 test('folded feed conversations distinguish previews from different depths', () => {
@@ -879,7 +896,7 @@ test('folded feed conversations show a gap above a preview when same-depth repli
     posts: [root, older, newest],
   }))
 
-  expect(html).toMatch(/collapsed-preview-post[^>]*>[\s\S]*?for="feed-thread-fold-20" aria-label="Expand earlier replies"><span class="visually-hidden">expand earlier replies<\/span><\/label>[\s\S]*?id="post-22"/)
+  expect(html).toMatch(/collapsed-preview-post[^>]*>[\s\S]*?for="feed-thread-fold-20" aria-label="Expand earlier replies">…<\/label>[\s\S]*?id="post-22"/)
 })
 
 test('folded feed conversations show a gap when a same-depth preview path hides its post above', () => {
@@ -897,7 +914,7 @@ test('folded feed conversations show a gap when a same-depth preview path hides 
     posts: [root, branch, deepPreview, siblingPreview],
   }))
 
-  expect(html).toMatch(/collapsed-preview-post[^>]*>[\s\S]*?for="feed-thread-fold-30" aria-label="Expand earlier replies"><span class="visually-hidden">expand earlier replies<\/span><\/label>[\s\S]*?id="post-32"/)
+  expect(html).toMatch(/collapsed-preview-post[^>]*>[\s\S]*?for="feed-thread-fold-30" aria-label="Expand earlier replies">…<\/label>[\s\S]*?id="post-32"/)
 })
 
 test('folded feed conversations show a gap for same-depth replies omitted from the feed', () => {
@@ -912,7 +929,7 @@ test('folded feed conversations show a gap for same-depth replies omitted from t
       visible(45, '2026-08-23 12:00:00')],
   }))
 
-  expect(html).toMatch(/collapsed-preview-post[^>]*>[\s\S]*?for="feed-thread-fold-40" aria-label="Expand earlier replies"><span class="visually-hidden">expand earlier replies<\/span><\/label>[\s\S]*?id="post-45"/)
+  expect(html).toMatch(/collapsed-preview-post[^>]*>[\s\S]*?for="feed-thread-fold-40" aria-label="Expand earlier replies">…<\/label>[\s\S]*?id="post-45"/)
 })
 
 test('expanded partial feed conversations place sibling omission markers before the oldest visible reply', () => {
@@ -1090,7 +1107,7 @@ test('collapsed previews retain extra depth when the preview itself has an omitt
   }))
 
   expect(html).toMatch(/collapsed-preview-post collapsed-preview-deeper projected-reply-deeper omitted-parent-reply[^>]*>[\s\S]*?id="post-2706"/)
-  expect(html).toMatch(/collapsed-preview-post collapsed-preview-deeper projected-reply-deeper omitted-parent-reply[^>]*>[\s\S]*?aria-label="Expand earlier replies"><span class="visually-hidden">expand earlier replies<\/span><\/label>[\s\S]*?id="post-2706"/)
+  expect(html).toMatch(/collapsed-preview-post collapsed-preview-deeper projected-reply-deeper omitted-parent-reply[^>]*>[\s\S]*?aria-label="Expand earlier replies">…<\/label>[\s\S]*?id="post-2706"/)
   expect(html).toMatch(/collapsed-preview-post[^>]*>[\s\S]*?id="post-2717"/)
   expect(html).toContain('collapsed-preview-post collapsed-preview-deeper projected-reply-deeper omitted-parent-reply')
 })

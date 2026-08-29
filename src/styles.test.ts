@@ -43,11 +43,16 @@ describe('in-memory stylesheet', () => {
     const css = await Bun.file(new URL('./styles.css', import.meta.url)).text()
     expect(css).toContain('.tappable-post a:not(.post-hit-area):not(.parent-hit-area)')
     expect(css).toContain('.tappable-post .parent-hit-area {\n  position: absolute;')
+    expect(css).toContain('.tappable-post .collapsed-post-expander {\n  position: absolute;\n  z-index: 20;')
+    expect(css).toContain('.feed-thread>.thread-fold-input:not(:checked)~.thread-root .collapsed-post-expander,\n'
+      + '.feed-thread>.thread-fold-input:not(:checked)~.feed-thread-collapsed-branch'
+      + ' .collapsed-post-expander {\n  display: none;')
     expect(css).toContain(
       '.tappable-post input,\n.tappable-post .post-spoiler-summary,\n.tappable-post .redacted {\n'
         + '  position: relative;\n  z-index: 21;',
     )
     expect(css).toContain('.tappable-post:has(> .post-hit-area:hover),')
+    expect(css).toContain('.tappable-post:has(> .collapsed-post-expander:hover),')
     expect(css).toContain('background: color-mix(in srgb, var(--accent) 5%, transparent);')
     expect(css).toContain('background: color-mix(in srgb, var(--quote-bg), white 2%);')
   })
@@ -174,11 +179,10 @@ describe('in-memory stylesheet', () => {
     const css = await Bun.file(new URL('./styles.css', import.meta.url)).text()
     expect(css).toContain('a.post-continuation-link {\n  color: var(--accent);')
     expect(css).toContain('.thread-ancestor-gap.post-continuation-link {\n'
-      + '  display: block;\n  border-bottom: 0;')
+      + '  display: block;\n  color: var(--muted);\n  border-bottom: 0;')
     expect(css).toContain('.collapsed-preview-gap.thread-fold-expander {\n'
       + '  color: var(--muted);\n  cursor: pointer;')
-    expect(css).toContain('.collapsed-preview-gap.thread-fold-expander::after {\n'
-      + '  content: "";')
+    expect(css).not.toContain('.collapsed-preview-gap.thread-fold-expander::after')
     expect(css).not.toContain('.feed-thread>.thread-fold-input:checked+.thread-root .thread-fold {')
     expect(css).toContain('.feed-thread>.thread-fold-input:checked~.feed-thread-collapsed-branch {\n'
       + '  grid-template-rows: 1fr;')

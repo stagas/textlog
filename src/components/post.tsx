@@ -529,6 +529,7 @@ export function Post({
   replyLabel,
   reportHref,
   foldControlId,
+  collapsedExpansionControlId,
   highlightTerms = [],
   tappable = false,
   tappableParent = false,
@@ -553,7 +554,8 @@ export function Post({
   suppressContentWarning = false,
 }: { p: PostView; user: User | null; showReplyAction?: boolean; showOwnerActions?: boolean;
   showModerateAction?: boolean; showParent?: boolean; showReplyCount?: boolean; replyHref?: string; replyLabel?: string;
-  reportHref?: string; foldControlId?: string; highlightTerms?: string[]; tappable?: boolean; tappableParent?: boolean;
+  reportHref?: string; foldControlId?: string; collapsedExpansionControlId?: string; highlightTerms?: string[];
+  tappable?: boolean; tappableParent?: boolean;
   contextLabel?: React.ReactNode; contextUnread?: boolean; contextParentUnread?: boolean;
   contextDirectedUnread?: boolean; preview?: boolean; returnPath?: string; backHref?: string;
   canonicalTimestamp?: boolean; topHref?: string; flatHref?: string; treeHref?: string;
@@ -672,6 +674,12 @@ export function Post({
     >
       {tappable && (
         <a className="post-hit-area" href={detailPath} rel={navigationRel} aria-label={`open post by @${p.handle}`} />
+      )}
+      {collapsedExpansionControlId && (
+        <label className="collapsed-post-expander" htmlFor={collapsedExpansionControlId}
+          aria-label={`expand conversation containing post by @${p.handle}`}>
+          <span className="visually-hidden">expand conversation</span>
+        </label>
       )}
       {!hideTopMeta && (
         <MetaRow className={`posttop${contextLabel ? ' posttop-context' : ''}${preview ? ' preview-post-meta' : ''}`}
@@ -1139,7 +1147,6 @@ export function ThreadReplies(
     const postReturnPath = continuationReturnPath
       ? `${continuationReturnPath}#post-${reply.id}`
       : anchoredReturnPath
-    const foldControlId = childBranch ? `thread-fold-${reply.id}` : undefined
     const continuationHref = continuesElsewhere
       ? '/post/' + reply.id + '?from=' + encodeURIComponent(
         continuationReturnPath ? `${continuationReturnPath}#post-${reply.id}` : anchoredReturnPath,
@@ -1162,9 +1169,7 @@ export function ThreadReplies(
         {collapsedPreviewGapPosts.has(reply.id) && (
           expansionControlId
             ? <label className="quiet thread-ancestor-gap collapsed-preview-gap thread-fold-expander"
-                htmlFor={expansionControlId} aria-label="Expand earlier replies">
-                <span className="visually-hidden">expand earlier replies</span>
-              </label>
+                htmlFor={expansionControlId} aria-label="Expand earlier replies">…</label>
             : <div className="quiet thread-ancestor-gap collapsed-preview-gap"
                 aria-label="Earlier replies hidden">…</div>
         )}
@@ -1174,8 +1179,8 @@ export function ThreadReplies(
         {reply.feed_ancestor_gap && (
           omissionMarker('Earlier replies omitted')
         )}
-        {foldControlId && <input className="thread-fold-input" type="checkbox" id={foldControlId} />}
-        <FeedPost p={reply} user={user} showParent={false} foldControlId={foldControlId} returnPath={postReturnPath}
+        <FeedPost p={reply} user={user} showParent={false} returnPath={postReturnPath}
+          collapsedExpansionControlId={collapsedPreviewPosts.has(reply.id) ? expansionControlId : undefined}
           contextUnread={contextUnreadPostIds?.has(reply.id)}
           contextDirectedUnread={contextDirectedUnreadPostIds?.has(reply.id)} highlightTerms={highlightTerms}
           replyHref={user ? undefined : '/enter?next=' + encodeURIComponent('/post/' + reply.id + '?reply=1'
@@ -1207,7 +1212,9 @@ export function ThreadReplies(
     const branch = children.get(id) || []
     if (!branch.length) return null
     return (
-      <div className={`reply-branch${collapsedPreviewPostIds.length ? ' feed-thread-collapsed-branch' : ''}`}>
+      <div className={`reply-branch${collapsedPreviewPostIds.length && depth === 1
+        ? ' feed-thread-collapsed-branch'
+        : ''}`}>
         <div className="thread-branch-content">
           {branch.map(reply => {
             const descendantCount = visibleDescendantCount(reply.id)
@@ -1382,7 +1389,7 @@ export function FeedThreads(
         const collapsedPreview = visibleReplies > 0 ? collapsedPreviewPosts(post) : []
         const canCollapse = visibleReplies > collapsedPreview.length
         const continuesElsewhere = (post.reply_count || 0) > visibleReplies
-        const foldControlId = visibleReplies > 0 ? `feed-thread-fold-${post.id}` : undefined
+        const foldControlId = canCollapse ? `feed-thread-fold-${post.id}` : undefined
         const collapsed = canCollapse && expandedRootId !== post.id
         const expandedReturnPath = (() => {
           const target = new URL(returnPath, 'http://textlog.local')
@@ -1398,6 +1405,7 @@ export function FeedThreads(
               <FeedPost p={post} user={user} tappable returnPath={anchoredReturnPath} highlightTerms={highlightTerms}
                 hideTopMeta={hideTopMeta} contextUnread={contextUnreadPostIds?.has(post.id)}
                 foldControlId={foldControlId}
+                collapsedExpansionControlId={collapsed ? foldControlId : undefined}
                 contextParentUnread={!!post.parent && contextUnreadPostIds?.has(post.parent.id)}
                 contextDirectedUnread={contextDirectedUnreadPostIds?.has(post.id)} continuationHref={continuesElsewhere
                 ? `/post/${post.id}?from=${encodeURIComponent(anchoredReturnPath)}`
