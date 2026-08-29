@@ -73,6 +73,11 @@ describe('in-memory stylesheet', () => {
     expect(css).toContain('.poll-results { pointer-events: none; }')
   })
 
+  test('keeps poll percentages on one line', async () => {
+    const css = await Bun.file(new URL('./styles.css', import.meta.url)).text()
+    expect(css).toContain('.poll-option-count { white-space: nowrap; }')
+  })
+
   test('renders poll options at the surrounding post text size', async () => {
     const css = await Bun.file(new URL('./styles.css', import.meta.url)).text()
     expect(css).toContain('.thread-root>.post>.poll { font-size: .9375rem;')
