@@ -804,9 +804,11 @@ export function Post({
               </a>
             ))}
           {resolvedContinuationHref && (
-            <a className="quiet post-continuation-link" href={resolvedContinuationHref} rel="nofollow">
-              {continuationLabel}
-            </a>
+            continuationLabel === '…'
+              ? null
+              : <a className="quiet post-continuation-link" href={resolvedContinuationHref} rel="nofollow">
+                  {continuationLabel}
+                </a>
           )}
           {(canModerate || reportHref) && (
             <span className="post-actions">
@@ -947,9 +949,11 @@ export function Post({
               </a>
             ))}
           {resolvedContinuationHref && (
-            <a className="quiet post-continuation-link" href={resolvedContinuationHref} rel="nofollow">
-              {continuationLabel}
-            </a>
+            continuationLabel === '…'
+              ? null
+              : <a className="quiet post-continuation-link" href={resolvedContinuationHref} rel="nofollow">
+                  {continuationLabel}
+                </a>
           )}
           {(canModerate || reportHref) && (
             <span className="post-actions">
@@ -1003,7 +1007,7 @@ function FeedPost(props: FeedPostProps) {
 export function ThreadReplies(
   { parentId, replies, user, returnPath, excludePostId, flat = false, showMissingContinuations = false,
     continuationLabel = 'more', continuationReturnPath, contextUnreadPostIds, contextDirectedUnreadPostIds,
-    highlightTerms = [], hideTopMeta = false, collapsedPreviewPostIds = [] }: {
+    omissionHref, expansionControlId, highlightTerms = [], hideTopMeta = false, collapsedPreviewPostIds = [] }: {
       parentId: number
       replies: PostView[]
       user: User | null
@@ -1013,6 +1017,8 @@ export function ThreadReplies(
       showMissingContinuations?: boolean
       continuationLabel?: string
       continuationReturnPath?: string
+      omissionHref?: string
+      expansionControlId?: string
       contextUnreadPostIds?: ReadonlySet<number>
       contextDirectedUnreadPostIds?: ReadonlySet<number>
       highlightTerms?: string[]
@@ -1053,12 +1059,7 @@ export function ThreadReplies(
   const needsCollapsedPreviewIndent = (postId: number) => {
     const post = byId.get(postId)
     if (collapsedPreviewPosts.has(postId) && post?.feed_ancestor_gap && post.parent?.id !== post.parent_id) {
-      let omittedParent = post.parent
-      while (omittedParent && omittedParent.id !== post.parent_id) {
-        if (collapsedPreviewPosts.has(omittedParent.id)) return false
-        omittedParent = omittedParent.parent
-      }
-      return true
+      return false
     }
     if ((collapsedPreviewDepths.get(postId) || 0) <= shallowestCollapsedPreviewDepth) return false
     let current = byId.get(postId)
@@ -1070,6 +1071,7 @@ export function ThreadReplies(
   }
   const collapsedPreviewGapPosts = new Set<number>()
   if (collapsedPreviewPostIds.length) {
+    const previewHasAncestorGap = [...collapsedPreviewPath].some(id => byId.get(id)?.feed_ancestor_gap)
     let hiddenPostAbove = false
     const visit = (id: number) => {
       for (const reply of children.get(id) || []) {
@@ -1079,7 +1081,7 @@ export function ThreadReplies(
             const loadedSiblings = (children.get(reply.parent_id!) || []).filter(sibling => !sibling.deleted_at).length
             const hasOmittedSiblings = parent?.direct_reply_count != null
               && parent.direct_reply_count > loadedSiblings
-            if (hiddenPostAbove || hasOmittedSiblings || reply.feed_ancestor_gap) {
+            if (hiddenPostAbove || hasOmittedSiblings && !previewHasAncestorGap || reply.feed_ancestor_gap) {
               collapsedPreviewGapPosts.add(reply.id)
             }
             hiddenPostAbove = false
@@ -1122,6 +1124,10 @@ export function ThreadReplies(
         continuationReturnPath ? `${continuationReturnPath}#post-${reply.id}` : anchoredReturnPath,
       )
       : undefined
+    const omissionMarker = (label: string) => omissionHref
+      ? <a className="quiet thread-ancestor-gap post-continuation-link" href={omissionHref}
+          aria-label={label} rel="nofollow">…</a>
+      : <div className="quiet thread-ancestor-gap" aria-label={label}>…</div>
     return (
       <div
         className={`reply-node${collapsedPreviewPath.has(reply.id) ? ' collapsed-preview-path' : ''}${
@@ -1132,13 +1138,17 @@ export function ThreadReplies(
         key={reply.id}
       >
         {collapsedPreviewGapPosts.has(reply.id) && (
-          <div className="quiet thread-ancestor-gap collapsed-preview-gap" aria-label="Earlier replies hidden">…</div>
+          expansionControlId
+            ? <label className="quiet thread-ancestor-gap collapsed-preview-gap thread-fold-expander"
+                htmlFor={expansionControlId} aria-label="Expand earlier replies">…</label>
+            : <div className="quiet thread-ancestor-gap collapsed-preview-gap"
+                aria-label="Earlier replies hidden">…</div>
         )}
         {omittedSiblingGapPosts.has(reply.id) && (
-          <div className="quiet thread-ancestor-gap" aria-label="Earlier replies omitted">…</div>
+          omissionMarker('Earlier replies omitted')
         )}
         {reply.feed_ancestor_gap && (
-          <div className="quiet thread-ancestor-gap" aria-label="Earlier replies omitted">…</div>
+          omissionMarker('Earlier replies omitted')
         )}
         {foldControlId && <input className="thread-fold-input" type="checkbox" id={foldControlId} />}
         <FeedPost p={reply} user={user} showParent={false} foldControlId={foldControlId} returnPath={postReturnPath}
@@ -1367,11 +1377,13 @@ export function FeedThreads(
                 contextParentUnread={!!post.parent && contextUnreadPostIds?.has(post.parent.id)}
                 contextDirectedUnread={contextDirectedUnreadPostIds?.has(post.id)} continuationHref={continuesElsewhere
                 ? `/post/${post.id}?from=${encodeURIComponent(anchoredReturnPath)}`
-                : undefined} />
+                : undefined} continuationLabel="…" />
             </div>
             <ThreadReplies parentId={post.id} replies={treePosts} user={user} returnPath={anchoredReturnPath}
-              showMissingContinuations continuationLabel="more"
+              showMissingContinuations continuationLabel="…"
               continuationReturnPath={collapsed ? expandedReturnPath : returnPath}
+              omissionHref={`/post/${post.id}?from=${encodeURIComponent(`${expandedReturnPath}#post-${post.id}`)}`}
+              expansionControlId={foldControlId}
               contextUnreadPostIds={contextUnreadPostIds} contextDirectedUnreadPostIds={contextDirectedUnreadPostIds}
               highlightTerms={highlightTerms} hideTopMeta={hideTopMeta}
               collapsedPreviewPostIds={canCollapse ? collapsedPreview.map(reply => reply.id) : []} />

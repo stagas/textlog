@@ -81,8 +81,7 @@ test('feed pages reconstruct threads with available off-page ancestors', () => {
   expect(html).toContain('class="post-hit-area" href="/post/11?from=%2Flatest%23post-11"')
   expect(html).toContain('class="thread-fold-input" type="checkbox" id="feed-thread-fold-10"')
   expect(html).toContain('for="feed-thread-fold-10" title="fold or unfold replies"')
-  expect(html).toContain('class="quiet post-continuation-link" href="/post/10?from=%2Flatest%23post-10" '
-    + 'rel="nofollow">more</a>')
+  expect(html).not.toContain('post-continuation-marker')
 })
 
 test('latest renders independent unread controls, thread dots, and directed highlights', () => {
@@ -127,7 +126,7 @@ test('a deep unread reply moves its root first and compresses read ancestors', (
 
   expect(html.indexOf('active root')).toBeLessThan(html.indexOf('other root'))
   expect(html).not.toContain('read ancestor')
-  expect(html).toContain('aria-label="Earlier replies omitted">…</div>')
+  expect(html).toContain('href="/post/100?from=%2Flatest%3Fexpand%3D100%23post-100" aria-label="Earlier replies omitted" rel="nofollow">…</a>')
   expect(html.indexOf('immediate parent')).toBeLessThan(html.indexOf('new unread reply'))
 })
 
@@ -148,7 +147,7 @@ test('collapsed conversations render unread ancestors as posts instead of hidden
 
   expect(html.match(/collapsed-preview-post/g)).toHaveLength(3)
   expect(html).toMatch(/collapsed-preview-post[^>]*>.*?id="post-201"/s)
-  expect(html).toContain('<div class="reply-node collapsed-preview-path"><div class="quiet thread-ancestor-gap"')
+  expect(html).toContain('<div class="reply-node collapsed-preview-path"><a class="quiet thread-ancestor-gap post-continuation-link"')
 })
 
 test('latest shows approximate age wording only for unread post metadata', () => {
@@ -237,13 +236,12 @@ test('feed tree roots retain ASCII-art rendering', () => {
   expect(html).toContain('class="post-body ascii-art"')
 })
 
-test('standalone feed posts with replies link to their thread', () => {
+test('standalone feed posts with replies omit redundant footer dots', () => {
   const post = { id: 21, user_id: 2, parent_id: null, body: 'root only', created_at: '2026-08-19 10:00:00',
     deleted_at: null, handle: 'alice', reply_count: 3 }
   const html = renderToStaticMarkup(<PublicFeed feed={{ posts: [post], page: 1, totalItems: 1, totalPages: 1 }} />)
 
-  expect(html).toContain('class="quiet post-continuation-link" href="/post/21?from=%2F%23post-21" '
-    + 'rel="nofollow">more</a>')
+  expect(html).not.toContain('post-continuation-marker')
   expect(html).not.toContain('feed-thread-fold-21')
 })
 
@@ -370,7 +368,7 @@ test('collapsed latest keeps a visible newest reply nested beneath its visible p
   expect(html).toMatch(/reply-node collapsed-preview-path collapsed-preview-post[^>]*>[\s\S]*?id="post-2516"[\s\S]*?reply-branch[\s\S]*?reply-node collapsed-preview-path collapsed-preview-post[^>]*>[\s\S]*?id="post-2582"/)
 })
 
-test('threaded feed replies link to descendants omitted from the page', () => {
+test('threaded feed replies omit redundant footer dots', () => {
   const root = { id: 40, user_id: 2, parent_id: null, body: 'root', created_at: '2026-08-19 09:00:00', deleted_at: null,
     handle: 'alice', reply_count: 3 }
   const reply = { id: 41, user_id: 3, parent_id: root.id, body: 'visible reply', created_at: '2026-08-19 10:00:00',
@@ -379,8 +377,7 @@ test('threaded feed replies link to descendants omitted from the page', () => {
     <PublicFeed feed={{ posts: [reply, root], page: 1, totalItems: 2, totalPages: 1 }} path="/latest" />,
   )
 
-  expect(html).toContain('class="quiet post-continuation-link" href="/post/41?from=%2Flatest%23post-41" '
-    + 'rel="nofollow">more</a>')
+  expect(html).not.toContain('post-continuation-marker')
 })
 
 test('threaded feed replies do not show more when every descendant is visible', () => {
@@ -395,8 +392,7 @@ test('threaded feed replies do not show more when every descendant is visible', 
   )
 
   expect(html).toContain('id="post-47"')
-  expect(html).not.toContain('class="quiet post-continuation-link" href="/post/46?from=%2Flatest%23post-46" '
-    + 'rel="nofollow">more</a>')
+  expect(html).not.toMatch(/id="post-46"[\s\S]*?aria-label="more replies">…<\/span>/)
 })
 
 test('for-you does not render author hide-all controls', () => {

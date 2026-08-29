@@ -172,7 +172,11 @@ describe('in-memory stylesheet', () => {
 
   test('folded feed threads retain only their deep reply preview', async () => {
     const css = await Bun.file(new URL('./styles.css', import.meta.url)).text()
-    expect(css).toContain('.postfoot .post-continuation-link {\n  color: var(--accent);')
+    expect(css).toContain('a.post-continuation-link {\n  color: var(--accent);')
+    expect(css).toContain('.thread-ancestor-gap.post-continuation-link {\n'
+      + '  display: block;\n  border-bottom: 0;')
+    expect(css).toContain('.collapsed-preview-gap.thread-fold-expander {\n'
+      + '  color: var(--accent);\n  cursor: pointer;')
     expect(css).toContain('.feed-thread>.thread-fold-input:checked+.thread-root .thread-fold {\n'
       + '  color: var(--accent);')
     expect(css).toContain('.feed-thread>.thread-fold-input:checked~.feed-thread-collapsed-branch {\n'
@@ -189,10 +193,11 @@ describe('in-memory stylesheet', () => {
       + '  display: none;')
     expect(css).toContain('.omitted-parent-reply {\n'
       + '  margin-left: clamp(18px, 3vw, 28px);\n  border-left: 1px solid var(--soft);')
-    expect(css).toContain('.feed-thread .omitted-parent-reply {\n'
+    expect(css).toContain('.feed-thread>.thread-fold-input:checked~.feed-thread-collapsed-branch .omitted-parent-reply {\n'
       + '  margin-left: 0;\n  border-left: 0;')
     expect(css).toContain('.reply-node:not(.collapsed-preview-path) {\n  height: 0;')
-    expect(css).toContain('.thread-ancestor-gap:not(.collapsed-preview-gap) {\n  height: 0;')
+    expect(css).toContain('.thread-ancestor-gap:not(.collapsed-preview-gap) {\n'
+      + '  height: 0;\n  opacity: 0;\n  padding-top: 0;')
     expect(css).toContain('.collapsed-preview-path:not(.collapsed-preview-post)>.reply-branch {\n'
       + '  margin-left: 0;')
     expect(css).toContain('transition: height 200ms ease, padding 200ms ease, opacity 120ms ease;')

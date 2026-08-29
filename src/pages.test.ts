@@ -879,7 +879,7 @@ test('folded feed conversations show a gap above a preview when same-depth repli
     posts: [root, older, newest],
   }))
 
-  expect(html).toMatch(/collapsed-preview-post[^>]*>[\s\S]*?aria-label="Earlier replies hidden">…<\/div>[\s\S]*?id="post-22"/)
+  expect(html).toMatch(/collapsed-preview-post[^>]*>[\s\S]*?for="feed-thread-fold-20" aria-label="Expand earlier replies">…<\/label>[\s\S]*?id="post-22"/)
 })
 
 test('folded feed conversations show a gap when a same-depth preview path hides its post above', () => {
@@ -897,7 +897,7 @@ test('folded feed conversations show a gap when a same-depth preview path hides 
     posts: [root, branch, deepPreview, siblingPreview],
   }))
 
-  expect(html).toMatch(/collapsed-preview-post[^>]*>[\s\S]*?aria-label="Earlier replies hidden">…<\/div>[\s\S]*?id="post-32"/)
+  expect(html).toMatch(/collapsed-preview-post[^>]*>[\s\S]*?for="feed-thread-fold-30" aria-label="Expand earlier replies">…<\/label>[\s\S]*?id="post-32"/)
 })
 
 test('folded feed conversations show a gap for same-depth replies omitted from the feed', () => {
@@ -912,7 +912,7 @@ test('folded feed conversations show a gap for same-depth replies omitted from t
       visible(45, '2026-08-23 12:00:00')],
   }))
 
-  expect(html).toMatch(/collapsed-preview-post[^>]*>[\s\S]*?aria-label="Earlier replies hidden">…<\/div>[\s\S]*?id="post-45"/)
+  expect(html).toMatch(/collapsed-preview-post[^>]*>[\s\S]*?for="feed-thread-fold-40" aria-label="Expand earlier replies">…<\/label>[\s\S]*?id="post-45"/)
 })
 
 test('expanded partial feed conversations place sibling omission markers before the oldest visible reply', () => {
@@ -928,7 +928,7 @@ test('expanded partial feed conversations place sibling omission markers before 
       visible(2602, '2026-08-26 22:10:21'), visible(2607, '2026-08-26 23:28:22')],
   }))
 
-  expect(html).toMatch(/aria-label="Earlier replies omitted">…<\/div>[\s\S]*?id="post-2599"/)
+  expect(html).toMatch(/href="\/post\/895\?from=%2Ffor-you%3Fexpand%3D895%23post-895" aria-label="Earlier replies omitted" rel="nofollow">…<\/a>[\s\S]*?id="post-2599"/)
 })
 
 test('expanded complete deep threads remove feed-projection ancestor omission markers', () => {
@@ -991,7 +991,7 @@ test('locally collapsible complete conversations only render the collapsed-previ
   }))
 
   expect(html).toContain('id="feed-thread-fold-2652" checked=""')
-  expect(html).toContain('aria-label="Earlier replies hidden"')
+  expect(html).toContain('aria-label="Expand earlier replies"')
   expect(html).toContain('aria-label="Earlier replies omitted"')
   expect(html).not.toContain('>more</a>')
 })
@@ -1020,7 +1020,7 @@ test('partial conversations place sibling omission markers at the newest visible
   }))
 
   expect(html).not.toContain('id="post-37"')
-  expect(html).toMatch(/class="reply-node omitted-parent-reply"[\s\S]*?aria-label="Earlier replies omitted">…<\/div>[\s\S]*?id="post-47"[\s\S]*?id="post-41"[\s\S]*?id="post-2716"/)
+  expect(html).toMatch(/class="reply-node omitted-parent-reply"[\s\S]*?aria-label="Earlier replies omitted" rel="nofollow">…<\/a>[\s\S]*?id="post-47"[\s\S]*?id="post-41"[\s\S]*?id="post-2716"/)
   expect(html.match(/aria-label="Earlier replies omitted"/g)).toHaveLength(1)
 })
 
@@ -1067,8 +1067,8 @@ test('expanded direct-sibling omissions appear before the oldest loaded sibling'
     posts: [root, older, newer, child],
   }))
 
-  expect(html).toMatch(/aria-label="Earlier replies omitted">…<\/div>[\s\S]*?id="post-2604"[\s\S]*?id="post-2615"/)
-  expect(html).not.toMatch(/id="post-2604"[\s\S]*?aria-label="Earlier replies omitted">…<\/div>[\s\S]*?id="post-2615"/)
+  expect(html).toMatch(/aria-label="Earlier replies omitted" rel="nofollow">…<\/a>[\s\S]*?id="post-2604"[\s\S]*?id="post-2615"/)
+  expect(html).not.toMatch(/id="post-2604"[\s\S]*?aria-label="Earlier replies omitted" rel="nofollow">…<\/a>[\s\S]*?id="post-2615"/)
 })
 
 test('collapsed previews retain extra depth when the preview itself has an omitted parent', () => {
@@ -1089,10 +1089,10 @@ test('collapsed previews retain extra depth when the preview itself has an omitt
     posts: [root, deeper, sibling, older],
   }))
 
-  expect(html).toMatch(/collapsed-preview-post collapsed-preview-deeper omitted-parent-reply[^>]*>[\s\S]*?id="post-2706"/)
-  expect(html).toMatch(/collapsed-preview-post collapsed-preview-deeper omitted-parent-reply[^>]*>[\s\S]*?aria-label="Earlier replies hidden">…<\/div>[\s\S]*?id="post-2706"/)
+  expect(html).toMatch(/collapsed-preview-post omitted-parent-reply[^>]*>[\s\S]*?id="post-2706"/)
+  expect(html).toMatch(/collapsed-preview-post omitted-parent-reply[^>]*>[\s\S]*?aria-label="Expand earlier replies">…<\/label>[\s\S]*?id="post-2706"/)
   expect(html).toMatch(/collapsed-preview-post[^>]*>[\s\S]*?id="post-2717"/)
-  expect(html.match(/collapsed-preview-post collapsed-preview-deeper omitted-parent-reply/g)).toHaveLength(1)
+  expect(html).not.toContain('collapsed-preview-post collapsed-preview-deeper omitted-parent-reply')
 })
 
 test('collapsed feed previews indent a reply whose immediate parent was omitted', () => {
@@ -1113,7 +1113,7 @@ test('collapsed feed previews indent a reply whose immediate parent was omitted'
     posts: [root, nested, sibling, older],
   }))
 
-  expect(html).toMatch(/collapsed-preview-post collapsed-preview-deeper omitted-parent-reply[^>]*>[\s\S]*?id="post-2833"/)
+  expect(html).toMatch(/collapsed-preview-post omitted-parent-reply[^>]*>[\s\S]*?id="post-2833"/)
   expect(html).toMatch(/collapsed-preview-post[^>]*>[\s\S]*?id="post-2834"/)
   expect(html).toMatch(/class="reply-node collapsed-preview-path collapsed-preview-post"><article[^>]*id="post-2834"/)
 })
