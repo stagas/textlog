@@ -423,10 +423,10 @@ test('posting helpers are searchable details and show copyable highlighted resul
   expect(html).toContain('No more replies <b>#lock</b>')
   expect(html).toContain('Prevents new replies to this note and every reply beneath it.')
   expect(html).toContain(
-    '<span class="posting-help-modifier-heading">Whisper conversations</span><small>Keeps the branch out of latest and hot.',
+    '<span class="posting-help-modifier-heading">Whisper conversations</span><small>Keeps the branch out of all and hot.',
   )
   expect(html).toContain('Continue quietly <b>#whisper</b>')
-  expect(html).toContain('Participants, mentions, and tag followers can receive it in for you.')
+  expect(html).toContain('Participants, mentions, and tag followers can receive it in my feed.')
   expect(html).toContain('It remains public elsewhere.')
   expect(html).not.toContain('<h2>Emoji</h2>')
   expect(html).toContain('class="posting-help-emoji-panel posting-help-tab-panel" aria-label="Emoji to copy and paste"')
@@ -1335,9 +1335,9 @@ test('appearance misc tab offers supported page sizes as radio cards', () => {
   expect(html).toContain('Show moderated content')
   expect(html).not.toContain('name="showModeratedContent" checked=""')
   expect(html).toContain('name="includePeopleFollowActivity" value="yes"')
-  expect(html).toContain('Include people&#x27;s follow activity in For You')
+  expect(html).toContain('Include people&#x27;s follow activity in My Feed')
   expect(html).toContain('name="includeHashtagFollowActivity" value="yes"')
-  expect(html).toContain('Include hashtag follow activity in For You')
+  expect(html).toContain('Include hashtag follow activity in My Feed')
   expect(html).not.toContain('name="includePeopleFollowActivity" checked=""')
   expect(html).not.toContain('name="includeHashtagFollowActivity" checked=""')
   expect(html).toContain('save misc →')
@@ -1481,14 +1481,14 @@ test('notification settings are the only account page that loads their client sc
   expect(notifications).toContain('name="forYou" checked=""')
   expect(notifications).not.toContain('name="bots"')
   expect(notifications).toContain('name="onlyToMe" checked=""')
-  expect(notifications).toContain('only to me')
+  expect(notifications).toContain('@ only')
   expect(notifications).not.toContain('name="replies"')
   expect(notifications).not.toContain('name="mentions"')
   expect(notifications).not.toContain('name="follows"')
   expect(notifications).not.toContain('name="ownPosts"')
   expect(notifications).not.toContain('name="followActivity"')
   expect(notifications).toContain('notify @reader about')
-  expect(notifications).toContain('Only notes addressed to me')
+  expect(notifications).toContain('Only notes addressed to you')
   expect(notifications).toContain('name="peopleFollowActivity"')
   expect(notifications).toContain('include people&#x27;s follow activity')
   expect(notifications).toContain('name="hashtagFollowActivity"')
@@ -1607,8 +1607,8 @@ test('public collection pages advertise their RSS and Atom feeds', () => {
 
   expect(hot).toContain('type="application/rss+xml" title="Hot notes (RSS)" href="/hot.rss"')
   expect(hot).toContain('type="application/atom+xml" title="Hot notes (Atom)" href="/hot.atom"')
-  expect(latest).toContain('href="/latest.rss"')
-  expect(latest).toContain('href="/latest.atom"')
+  expect(latest).toContain('href="/all.rss"')
+  expect(latest).toContain('href="/all.atom"')
   expect(tag).toContain('href="/tag/ascii_art.rss"')
   expect(tag).toContain('href="/tag/ascii_art.atom"')
 })
@@ -1881,15 +1881,15 @@ test('API documentation is linked from the footer and describes the firehose', (
   expect(html.match(/class="api-endpoints"/g)).toHaveLength(1)
   expect(html).toContain('data-method="DELETE" data-auth="true"><span class="api-auth-dot"')
   expect(html).toContain('data-method="GET" data-auth="true"><span class="api-auth-dot"')
-  expect(html).toContain('class="api-path">/activities/for-you</span>')
-  expect(html).toContain('class="api-path">/feeds/latest/conversations</span>')
+  expect(html).toContain('class="api-path">/activities/my-feed</span>')
+  expect(html).toContain('class="api-path">/feeds/all/conversations</span>')
   expect(html).toContain('class="api-path">/feeds/hot/conversations</span>')
-  expect(html).toContain('class="api-path">/activities/for-you/conversations</span>')
-  expect(html).toContain('class="api-path">/activities/to-me/conversations</span>')
+  expect(html).toContain('class="api-path">/activities/my-feed/conversations</span>')
+  expect(html).toContain('class="api-path">/activities/@/conversations</span>')
   expect(html).toContain('id="threaded-feeds"')
   expect(html).toContain('Reading these endpoints does not mark items read.')
   expect(html).toContain('class="api-path">/users/:handle/blocks</span>')
-  expect(html).toContain('class="api-path">/activities/to-me/read-all</span>')
+  expect(html).toContain('class="api-path">/activities/@/read-all</span>')
   expect(html).toContain('class="api-path">/users/:handle/following/tags</span>')
   expect(html).toContain('class="api-path">/tags/:tag/followers</span>')
   expect(html).toContain('class="api-path">/tags/:tag</span>')
@@ -1911,7 +1911,7 @@ test('embed examples show every format and use stagas for the user feed', () => 
     tag: 'notes',
     postId: 42,
   }))
-  expect(html).toContain('/embed/latest?theme=light&amp;accent=sage&amp;font=menlo')
+  expect(html).toContain('/embed/all?theme=light&amp;accent=sage&amp;font=menlo')
   expect(html).toContain('/embed/hot?accent=purple&amp;font=consolas')
   expect(html).toContain('/embed/user/stagas?theme=dracula&amp;accent=cyan&amp;font=jetbrains')
   expect(html).toContain('/embed/tag/notes?theme=sepia&amp;accent=amber')
@@ -2014,7 +2014,7 @@ describe('About', () => {
 
   test('API documentation lists root feed aliases', () => {
     const html = renderToStaticMarkup(React.createElement(ApiDocs, { user: null }))
-    for (const alias of ['/latest.json', '/latest.rss', '/latest.atom', '/hot.json', '/hot.rss', '/hot.atom']) {
+    for (const alias of ['/all.json', '/all.rss', '/all.atom', '/hot.json', '/hot.rss', '/hot.atom']) {
       expect(html).toContain(alias)
     }
   })
@@ -2031,11 +2031,11 @@ describe('About', () => {
     const feed = { posts: [], page: 1, totalItems: 20, totalPages: 2 }
     const guestHot = withAppearance(new Request('https://textlog.test/hot'),
       () => renderToStaticMarkup(React.createElement(HotFeed, { user: null, feed })))
-    const guestLatest = withAppearance(new Request('https://textlog.test/latest'),
-      () => renderToStaticMarkup(React.createElement(PublicFeed, { user: null, feed, path: '/latest' })))
+    const guestLatest = withAppearance(new Request('https://textlog.test/all'),
+      () => renderToStaticMarkup(React.createElement(PublicFeed, { user: null, feed, path: '/all' })))
     const user = { id: 1, handle: 'reader', email: 'reader@example.com', bio: '' }
     const signedInHot = renderToStaticMarkup(React.createElement(HotFeed, { user }))
-    const signedInLatest = renderToStaticMarkup(React.createElement(PublicFeed, { user, path: '/latest' }))
+    const signedInLatest = renderToStaticMarkup(React.createElement(PublicFeed, { user, path: '/all' }))
 
     for (const html of [guestHot, guestLatest]) {
       expect(html).toContain('class="static-page about-page feed-about"')
@@ -2044,8 +2044,8 @@ describe('About', () => {
       )
       expect(html).toContain('href="#feed-tabs">browse notes</a>')
       expect(html).toContain('href="/hot?_scroll=instant#feed-tabs"')
-      expect(html).toContain('href="/latest?_scroll=instant#feed-tabs"')
-      expect(html).toContain('href="/random?_scroll=instant#feed-tabs"')
+      expect(html).toContain('href="/all?_scroll=instant#feed-tabs"')
+      expect(html).toContain('href="/any?_scroll=instant#feed-tabs"')
       expect(html).toContain('?page=2&amp;_scroll=instant#feed-tabs" aria-label="Page 2"')
       expect(html).toContain('?page=2&amp;_scroll=instant#feed-tabs" aria-label="Next page"')
       expect(html.indexOf('about-page feed-about')).toBeLessThan(html.indexOf('id="feed-tabs"'))
@@ -2054,7 +2054,7 @@ describe('About', () => {
     for (const html of [signedInHot, signedInLatest]) {
       expect(html).not.toContain('class="static-page about-page feed-about"')
       expect(html).toContain('href="/hot"')
-      expect(html).toContain('href="/latest"')
+      expect(html).toContain('href="/all"')
       expect(html).not.toContain('#feed-tabs')
       expect(html).not.toContain('class="guest-join-row"')
     }

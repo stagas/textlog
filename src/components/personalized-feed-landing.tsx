@@ -8,9 +8,9 @@ export function PersonalizedFeedLanding(
     user?: User | null; created?: boolean },
 ) {
   return (
-    <Layout user={user} title="For You feed" feeds={{ title: 'For You', rss: rssUrl, atom: atomUrl }}>
+    <Layout user={user} title="My Feed" feeds={{ title: 'My Feed', rss: rssUrl, atom: atomUrl }}>
       <CenteredPanel className="magic-link-page" width="medium">
-        <h1>For You feed</h1>
+        <h1>My Feed</h1>
         <p>
           {created
             ? 'Your private feed key was created. Copy and save this secret feed address now.'

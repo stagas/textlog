@@ -51,8 +51,8 @@ function materializedBody(html: string) {
     new RegExp(`(<a[^>]*href="${path}"[^>]*>${label})(?:<span class="to-me-count">\\d+</span>)?(</a>)`),
     `$1{{${name}-count}}$2`,
   )
-  return token(token(token(html, '\/for-you', 'for you', 'for-you'), '\/to-me', 'to me', 'to-me'),
-    '\/latest', 'latest', 'latest')
+  return token(token(token(html, '\/my-feed', 'my feed', 'for-you'), '\/@', '@', 'to-me'),
+    '\/all', 'all', 'latest')
 }
 
 function appearanceVariant(request: Request) {

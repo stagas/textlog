@@ -130,7 +130,7 @@ async function flushFollowActivityBatch(key: string) {
   await sendToSubscriptions([batch.subscription], () => ({
     title: message,
     body: message,
-    url: labels.length === 1 ? [...batch.items.values()][0] : '/for-you',
+    url: labels.length === 1 ? [...batch.items.values()][0] : '/my-feed',
   }), batch.database, batch.vapid, batch.service)
 }
 

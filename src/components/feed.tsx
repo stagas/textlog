@@ -44,7 +44,7 @@ export function groupSimilarActivities(timeline: PersonalizedTimelineRow[]): Tim
 }
 
 export function Feed(
-  { user, data, title, path = '/for-you', pageUrl, notificationBanner = false, toMe = false, expandedRootId }: {
+  { user, data, title, path = '/my-feed', pageUrl, notificationBanner = false, toMe = false, expandedRootId }: {
     user: User
     data: PersonalizedFeedData
     title?: string
@@ -247,7 +247,7 @@ export function Feed(
         )
         : (
           <div className="empty">
-            No activity on this page. <a href="/for-you">Return to the first page</a>.
+            No activity on this page. <a href="/my-feed">Return to the first page</a>.
           </div>
         )}
       <Pagination page={data.page} totalPages={data.totalPages} path={feedPath} />

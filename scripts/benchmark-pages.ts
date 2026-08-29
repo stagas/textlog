@@ -121,7 +121,7 @@ if (Bun.argv.includes('--help')) {
     `  --users=N   Fixture users (default 100)\n  --posts=N   Fixture posts (default 2000)\n` +
     `  --miss=N    Unique-variant samples per page (default 10)\n` +
     `  --warm=N    Warm samples per page (default 50)\n` +
-    `  --pages=LIST  Restrict pages, e.g. latest,for-you,post\n  --json      Print JSON only`)
+    `  --pages=LIST  Restrict pages, e.g. all,my-feed,post\n  --json      Print JSON only`)
   process.exit(0)
 }
 
@@ -135,12 +135,12 @@ const cachePath = join(directory, 'benchmark.cache.sqlite')
 const token = 'benchmark-session-token'
 const fixture = seed(databasePath, users, posts, token)
 const pages = [
-  ['latest', '/latest'], ['for-you', '/for-you'], ['to-me', '/to-me'], ['hot', '/hot'],
+  ['all', '/all'], ['my-feed', '/my-feed'], ['@', '/@'], ['hot', '/hot'],
   ['profile', `/u/${fixture.handle}`], ['post', `/post/${fixture.postId}`], ['explore', '/explore'],
 ] as const
 const scenarios: Scenario[] = (['anonymous', 'signed-in'] as const).flatMap(identity => pages
   .filter(([name]) => !selectedPages || selectedPages.includes(name))
-  .filter(([name]) => identity === 'signed-in' || !['for-you', 'to-me'].includes(name))
+  .filter(([name]) => identity === 'signed-in' || !['my-feed', '@'].includes(name))
   .map(([name, path]) => ({ identity, name, path })))
 const port = reservePort(), origin = `http://127.0.0.1:${port}`
 let server: Bun.Subprocess | undefined

@@ -132,7 +132,7 @@ function retryDelayMs(response: Response, attempt: number) {
 function plainText(name: string, origin: string, unsubscribeUrl: string) {
   return `People have interacted with you on ${name}.
 
-Someone replied to one of your notes. Go check it out: ${new URL('/to-me', origin).href}
+Someone replied to one of your notes. Go check it out: ${new URL('/@', origin).href}
 
 Unsubscribe from interaction emails: ${unsubscribeUrl}`
 }

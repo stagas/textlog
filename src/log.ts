@@ -67,9 +67,10 @@ export function shouldLogHttp(path: string, status: number, isCrawler = false, a
 }
 
 export function redactHttpPath(value: string) {
-  return value.replace(/^\/feeds\/for-you\/[^?]+/, match => {
+  return value.replace(/^\/feeds\/(?:my-feed|for-you)\/[^?]+/, match => {
     const format = match.endsWith('.atom') ? '.atom' : match.endsWith('.rss') ? '.rss' : ''
-    return `/feeds/for-you/[redacted]${format}`
+    const prefix = match.startsWith('/feeds/for-you/') ? '/feeds/for-you' : '/feeds/my-feed'
+    return `${prefix}/[redacted]${format}`
   })
 }
 

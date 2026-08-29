@@ -635,7 +635,7 @@ export function registerAccountRoutes(app: Hono) {
         400,
       )
     }
-    return c.redirect(`/feeds/for-you/${issued.value}?created=1`, 303)
+    return c.redirect(`/feeds/my-feed/${issued.value}?created=1`, 303)
   })
 
   app.post('/account/feed-keys/revoke', async c => {

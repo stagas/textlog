@@ -30,8 +30,8 @@ const milestones = [
     title: 'Follow the conversation',
     path: '/hot',
     copy: (origin: string) =>
-      `Threaded replies, backlinks, ${emailLink('jump-to-unread and activity in For You', '/for-you', origin)}, and ${
-        emailLink('To Me', '/to-me', origin)
+      `Threaded replies, backlinks, ${emailLink('jump-to-unread and activity in My Feed', '/my-feed', origin)}, and ${
+        emailLink('@', '/@', origin)
       } keep every conversation connected.`,
   },
   {
@@ -56,7 +56,7 @@ const milestones = [
     title: 'Built to travel',
     path: null,
     copy: (origin: string) =>
-      `${emailLink('RSS', '/latest.rss', origin)} and ${emailLink('Atom feeds', '/latest.atom', origin)}, ${
+      `${emailLink('RSS', '/all.rss', origin)} and ${emailLink('Atom feeds', '/all.atom', origin)}, ${
         emailLink('embeds', '/api/embed-examples', origin)
       }, ${emailLink('a documented API with write access', '/api', origin)}, and ${
         emailLink('a public archive', '/dump.zip', origin)

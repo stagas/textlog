@@ -122,13 +122,15 @@ describe('public API', () => {
     expect(JSON.stringify(payload)).not.toContain('user_id')
   })
 
-  test('aliases the latest and hot JSON feeds at root paths', async () => {
+  test('serves canonical all and backward-compatible latest JSON feeds at root paths', async () => {
     const { app } = fixture()
     const latestResponse = await request(app, '/latest.json?limit=2')
     const latest = await latestResponse.json() as any
+    const all = await (await request(app, '/all.json?limit=2')).json() as any
     const hot = await (await request(app, '/hot.json?limit=2')).json() as any
 
     expect(latest.data.map((post: any) => post.id)).toEqual([3, 2])
+    expect(all.data).toEqual(latest.data)
     expect(latestResponse.headers.get('access-control-allow-origin')).toBe('*')
     expect(latest.pagination.next_cursor).toBeTruthy()
     expect(hot.data.map((post: any) => post.id)).toEqual([1])
@@ -540,14 +542,14 @@ describe('public API', () => {
     expect(rss.headers.get('access-control-allow-origin')).toBe('*')
     expect(spec.openapi).toBe('3.1.0')
     expect(Object.keys(spec.paths)).toHaveLength(49)
-    expect(spec.paths['/feeds/latest/conversations'].get).toBeDefined()
+    expect(spec.paths['/feeds/all/conversations'].get).toBeDefined()
     expect(spec.paths['/feeds/hot/conversations'].get).toBeDefined()
-    expect(spec.paths['/activities/for-you/conversations'].get).toBeDefined()
-    expect(spec.paths['/activities/to-me/conversations'].get).toBeDefined()
-    expect(spec.paths['/activities/for-you'].get.responses['401']).toBeDefined()
-    expect(spec.paths['/activities/to-me'].get.responses['401']).toBeDefined()
+    expect(spec.paths['/activities/my-feed/conversations'].get).toBeDefined()
+    expect(spec.paths['/activities/@/conversations'].get).toBeDefined()
+    expect(spec.paths['/activities/my-feed'].get.responses['401']).toBeDefined()
+    expect(spec.paths['/activities/@'].get.responses['401']).toBeDefined()
     expect(spec.paths['/users/{handle}/blocks'].get.responses['403']).toBeDefined()
-    expect(spec.paths['/activities/for-you/read-all'].post).toBeDefined()
+    expect(spec.paths['/activities/my-feed/read-all'].post).toBeDefined()
     expect(spec.paths['/users/{handle}/following/tags'].get).toBeDefined()
     expect(spec.paths['/tags/{tag}/followers'].get).toBeDefined()
     expect(spec.components.schemas.User.required).toContain('following_tag_count')
@@ -562,10 +564,10 @@ describe('public API', () => {
     expect(spec.paths['/users/{handle}/replies'].get.parameters.map((parameter: any) => parameter.name))
       .toEqual(['handle', 'limit', 'cursor'])
     expect(spec.paths['/search'].get.security).toEqual([{}, { bearerAuth: [] }])
-    expect(spec.paths['/feeds/latest.{format}'].get.parameters[0].schema.enum).toEqual(['rss', 'atom'])
-    expect(spec.paths['/feeds/latest'].get['x-root-aliases']).toEqual(['/latest.json'])
+    expect(spec.paths['/feeds/all.{format}'].get.parameters[0].schema.enum).toEqual(['rss', 'atom'])
+    expect(spec.paths['/feeds/all'].get['x-root-aliases']).toEqual(['/all.json'])
     expect(spec.paths['/feeds/hot'].get['x-root-aliases']).toEqual(['/hot.json'])
-    expect(spec.paths['/feeds/latest.{format}'].get['x-root-aliases']).toEqual(['/latest.rss', '/latest.atom'])
+    expect(spec.paths['/feeds/all.{format}'].get['x-root-aliases']).toEqual(['/all.rss', '/all.atom'])
     expect(spec.paths['/feeds/hot.{format}'].get['x-root-aliases']).toEqual(['/hot.rss', '/hot.atom'])
     const repliesOperation = spec.paths['/posts/{id}/replies'].get
     expect(repliesOperation.parameters.find((parameter: any) => parameter.name === 'depth').schema)
@@ -583,17 +585,19 @@ describe('public API', () => {
     expect(spec.paths['/users/{handle}'].get.responses['200'].content['application/json'].schema.properties.data.$ref)
       .toBe('#/components/schemas/User')
     expect(spec.security).toEqual([])
-    for (const path of ['/feeds/latest/read', '/feeds/latest/read-all', '/drafts', '/drafts/{id}',
+    for (const path of ['/feeds/all/read', '/feeds/all/read-all', '/drafts', '/drafts/{id}',
       '/drafts/{id}/publish', '/posts/{id}/unpublish', '/posts/{id}/poll/votes', '/tags/{tag}/follow',
       '/tags/{tag}/block'])
     {
-      for (const operation of Object.values(spec.paths[path]) as any[]) {
+      for (const [method, operation] of Object.entries(spec.paths[path]) as Array<[string, any]>) {
+        if (method.startsWith('x-')) continue
         expect(operation.security).toEqual([{ bearerAuth: [] }])
       }
     }
     for (const [path, item] of Object.entries(spec.paths) as Array<[string, any]>) {
       const variables = [...path.matchAll(/\{([^}]+)\}/g)].map(match => match[1])
       for (const [method, operation] of Object.entries(item) as Array<[string, any]>) {
+        if (method.startsWith('x-')) continue
         expect(operation.summary, `${method.toUpperCase()} ${path} needs a summary`).toBeTruthy()
         expect(operation.responses, `${method.toUpperCase()} ${path} needs responses`).toBeTruthy()
         const pathParameters = (operation.parameters || []).filter((parameter: any) => parameter.in === 'path')

@@ -112,7 +112,7 @@ export function AccountSecurity(
           )}
         </SecuritySection>
         <SecuritySection id="feed-keys" title="Feed key"
-          description="Create a private, read-only RSS or Atom feed for your For You timeline. Treat its URL like a password."
+          description="Create a private, read-only RSS or Atom feed for My Feed. Treat its URL like a password."
         >
           <a className="button" href="/account/feed-keys/new">generate feed key →</a>
           {feedKeys.length > 0 && (
@@ -257,7 +257,7 @@ export function AccountFeedKeyCreate({ user, name = '', lifetime = 'year', error
         <AccountSettingsHeader title="generate feed key" />
       </section>
       <div className="security-page api-key-create-page">
-        <p className="api-key-create-intro">Create a read-only key for your personalized For You feed.</p>
+        <p className="api-key-create-intro">Create a read-only key for My Feed.</p>
         <FormMessage error={error} />
         <form className="security-form api-key-form" method="post" action="/account/feed-keys">
           <label>

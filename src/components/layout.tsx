@@ -61,7 +61,7 @@ export function Layout({
   const origin = appOrigin()
   const requestUrl = new URL(request.url)
   const instantScroll = /(?:^|;\s*)textlog_scroll=instant(?:;|$)/.test(request.headers.get('cookie') || '')
-  const showGuestJoin = !user && ['/hot', '/latest'].includes(requestUrl.pathname)
+  const showGuestJoin = !user && ['/hot', '/all'].includes(requestUrl.pathname)
   const onWritePage = requestUrl.pathname === '/write'
   const currentPath = requestUrl.pathname + requestUrl.search
   const writeShortcutHref = onWritePage

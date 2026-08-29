@@ -234,7 +234,8 @@ export function pwaInstallBannerDismissedCookie(appUrl: string | undefined = Bun
 const publicHtmlPaths = new Set([
   '/',
   '/hot',
-  '/latest',
+  '/all',
+  '/any',
   '/explore',
   '/about',
   '/contact',

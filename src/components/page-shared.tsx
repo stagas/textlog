@@ -306,8 +306,8 @@ function PostingHelpTabs({ search }: { search?: PostingSuggestionSearch | null }
           <dt>
             <span className="posting-help-modifier-heading">Whisper conversations</span>
             <small>
-              Keeps the branch out of latest and hot. Participants, mentions, and tag followers can receive it in for
-              you. It remains public elsewhere.
+              Keeps the branch out of all and hot. Participants, mentions, and tag followers can receive it in my feed.
+              It remains public elsewhere.
             </small>
           </dt>
         </div>
@@ -525,17 +525,17 @@ export function FeedTabs(
     <>
       <nav className="feed-tabs" id="feed-tabs" aria-label="Feed">
         {user && (
-          <a className={active === 'following' && !toMe ? 'active' : ''}
-            aria-current={active === 'following' && !toMe ? 'page' : undefined} href="/for-you"
-          >
-            for you
-            {forYouCount > 0 && <span className="to-me-count">{forYouCount}</span>}
+          <a className={toMe ? 'active' : ''} aria-current={toMe ? 'page' : undefined} href="/@">
+            @
+            {toMeCount > 0 && <span className="to-me-count">{toMeCount}</span>}
           </a>
         )}
         {user && (
-          <a className={toMe ? 'active' : ''} aria-current={toMe ? 'page' : undefined} href="/to-me">
-            to me
-            {toMeCount > 0 && <span className="to-me-count">{toMeCount}</span>}
+          <a className={active === 'following' && !toMe ? 'active' : ''}
+            aria-current={active === 'following' && !toMe ? 'page' : undefined} href="/my-feed"
+          >
+            my feed
+            {forYouCount > 0 && <span className="to-me-count">{forYouCount}</span>}
           </a>
         )}
         <a className={active === 'hot' ? 'active' : ''} aria-current={active === 'hot' ? 'page' : undefined}
@@ -544,14 +544,14 @@ export function FeedTabs(
           hot
         </a>
         <a className={active === 'random' ? 'active' : ''} aria-current={active === 'random' ? 'page' : undefined}
-          href={user ? '/random' : '/random?_scroll=instant#feed-tabs'}
+          href={user ? '/any' : '/any?_scroll=instant#feed-tabs'}
         >
-          random
+          any
         </a>
         <a className={active === 'latest' ? 'active' : ''} aria-current={active === 'latest' ? 'page' : undefined}
-          href={user ? '/latest' : '/latest?_scroll=instant#feed-tabs'}
+          href={user ? '/all' : '/all?_scroll=instant#feed-tabs'}
         >
-          latest
+          all
           {latestCount > 0 && <span className="to-me-count">{latestCount}</span>}
         </a>
         {activityReadStatus !== undefined && (
@@ -581,7 +581,7 @@ export function FeedTabs(
             <span className="feed-tabs-action-separator feed-read-action-separator" aria-hidden="true">·</span>
           )}
           <form className="feed-read-action-form" method="post"
-            action={readAction || (toMe ? '/to-me/read-all' : '/for-you/read-all')}
+            action={readAction || (toMe ? '/@/read-all' : '/my-feed/read-all')}
           >
             <button className="activity-side-link">mark all read</button>
           </form>

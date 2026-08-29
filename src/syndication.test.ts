@@ -238,12 +238,12 @@ describe('RSS and Atom feeds', () => {
     const app = fixture()
     const database = (app as any).database as Database
     const first = issueFeedKey(database, 4, 'first', null)
-    const rss = await app.request(`https://textlog.cc/feeds/for-you/${first.value}.rss`)
+    const rss = await app.request(`https://textlog.cc/feeds/my-feed/${first.value}.rss`)
     expect(rss.status).toBe(200)
     expect(rss.headers.get('cache-control')).toBe('private, no-store, max-age=0')
     expect(rss.headers.get('pragma')).toBe('no-cache')
     expect(rss.headers.get('access-control-allow-origin')).toBe('*')
-    expect(await rss.text()).toContain('<title>For You on textlog</title>')
+    expect(await rss.text()).toContain('<title>My Feed on textlog</title>')
 
     const second = issueFeedKey(database, 4, 'second', null)
     expect((await app.request(`https://textlog.cc/feeds/for-you/${first.value}.rss`)).status).toBe(200)

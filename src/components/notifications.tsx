@@ -45,8 +45,8 @@ export function NotificationSettings({ user, publicKey, ios = false, returnPath 
               <legend className="visually-hidden">feed notifications</legend>
               <label className="notification-toggle">
                 <span>
-                  <strong>latest</strong>
-                  <small>Everything in /latest</small>
+                  <strong>all</strong>
+                  <small>Everything in /all</small>
                 </span>
                 <input type="checkbox" name="latest" defaultChecked />
                 <span className="notification-toggle-track" aria-hidden="true">
@@ -55,7 +55,7 @@ export function NotificationSettings({ user, publicKey, ios = false, returnPath 
               </label>
               <label className="notification-toggle notification-toggle-parent">
                 <span>
-                  <strong>for you</strong>
+                  <strong>my feed</strong>
                   <small>Followed activity, replies, mentions, and new followers</small>
                 </span>
                 <input type="checkbox" name="forYou" defaultChecked />
@@ -85,8 +85,8 @@ export function NotificationSettings({ user, publicKey, ios = false, returnPath 
               </label>
               <label className="notification-toggle notification-toggle-dependent notification-toggle-group-end">
                 <span>
-                  <strong>only to me</strong>
-                  <small>Only notes addressed to me</small>
+                  <strong>@ only</strong>
+                  <small>Only notes addressed to you</small>
                 </span>
                 <input type="checkbox" name="onlyToMe" defaultChecked />
                 <span className="notification-toggle-track" aria-hidden="true">

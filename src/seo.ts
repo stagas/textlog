@@ -3,7 +3,7 @@ import { instance } from '../instance.config'
 
 export const SITEMAP_PAGE_SIZE = 10_000
 
-const staticPaths = ['/', '/hot', '/latest', '/explore', '/about', '/contact', '/legal', '/dmca', '/api']
+const staticPaths = ['/', '/hot', '/all', '/any', '/explore', '/about', '/contact', '/legal', '/dmca', '/api']
 
 function xml(value: string) {
   return value

@@ -7,7 +7,7 @@ test('interaction email links to unread activity and its own unsubscribe prefere
   expect(html).toStartWith('<!doctype html>')
   expect(html).toContain('People have interacted with you.')
   expect(html).toContain('Someone replied to one of your notes.')
-  expect(html).toContain('/to-me"')
+  expect(html).toContain('/@"')
   expect(html).toContain('>Go check it out →</a>')
   expect(html).toContain('/account/interacted-emails/unsubscribe?token=recipient-token')
   expect(html).toContain('>Unsubscribe from interaction emails</a>')

@@ -9,7 +9,7 @@ export function interactedEmail(requestOrigin: string, unsubscribeToken: string)
   const name = appName()
   const origin = Bun.env.APP_URL ? new URL(Bun.env.APP_URL).origin : new URL(requestOrigin).origin
   const logoUrl = new URL('/email-logo.png?v=1', origin).href
-  const activityUrl = new URL('/to-me', origin).href
+  const activityUrl = new URL('/@', origin).href
   const unsubscribeUrl = new URL(
     `/account/interacted-emails/unsubscribe?token=${encodeURIComponent(unsubscribeToken)}`,
     origin,

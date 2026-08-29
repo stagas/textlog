@@ -39,9 +39,9 @@ export function registerSyndicationRoutes(app: Hono, configuredService?: Databas
     const loaded = await service().call('syndication.load', { kind: 'latest', origin })
     if (loaded.status !== 'ready') return c.text('Not found', 404)
     return feedResponse(c, format, appUrl, {
-      title: `Latest notes on ${name}`,
-      description: `The latest public notes posted on ${name}.`,
-      pagePath: '/latest',
+      title: `All notes on ${name}`,
+      description: `All public notes posted on ${name}.`,
+      pagePath: '/all',
       feedPath,
       posts: loaded.posts,
     })
@@ -99,11 +99,12 @@ export function registerSyndicationRoutes(app: Hono, configuredService?: Databas
     const origin = apiOrigin(c.req.url, appUrl)
     const loaded = await service().call('syndication.load', { kind: 'personalized', origin, identifier: key })
     if (loaded.status !== 'ready') return c.text('Not found', 404)
-    const feedPath = `/feeds/for-you/${encodeURIComponent(key)}.${format}`
+    const feedPath = `${c.req.path.startsWith('/feeds/for-you/') ? '/feeds/for-you' : '/feeds/my-feed'}/${
+      encodeURIComponent(key)}.${format}`
     const response = syndicationResponse(format, {
-      title: `For You on ${name}`,
-      description: `The personalized For You notes for @${loaded.viewerHandle}.`,
-      pageUrl: `${origin}/for-you`,
+      title: `My Feed on ${name}`,
+      description: `The personalized My Feed notes for @${loaded.viewerHandle}.`,
+      pageUrl: `${origin}/my-feed`,
       feedUrl: `${origin}${feedPath}`,
       posts: loaded.posts,
       activities: loaded.activities,
@@ -116,23 +117,27 @@ export function registerSyndicationRoutes(app: Hono, configuredService?: Databas
   }
 
   for (const format of ['rss', 'atom'] as const) {
-    app.get(`/latest.${format}`, c => latest(c, format))
+    app.get(`/all.${format}`, c => latest(c, format, `/all.${format}`))
+    app.get(`/latest.${format}`, c => latest(c, format, `/latest.${format}`))
     app.get(`/hot.${format}`, c => hot(c, format))
+    app.get(`/api/v1/feeds/all.${format}`, c => latest(c, format, `/api/v1/feeds/all.${format}`))
     app.get(`/api/v1/feeds/latest.${format}`, c => latest(c, format, `/api/v1/feeds/latest.${format}`))
     app.get(`/api/v1/feeds/hot.${format}`, c => hot(c, format, `/api/v1/feeds/hot.${format}`))
   }
 
-  app.get('/feeds/for-you/:file', async c => {
-    const parsed = suffixed(c.req.param('file'))
+  const personalizedFeedRoute = async (c: Context) => {
+    const file = c.req.param('file')
+    if (!file) return c.text('Not found', 404)
+    const parsed = suffixed(file)
     if (!parsed) {
-      const key = c.req.param('file')
+      const key = file
       const origin = apiOrigin(c.req.url, appUrl)
       const loaded = await service().call('syndication.load', { kind: 'personalized', origin, identifier: key })
       if (loaded.status !== 'ready') return c.text('Not found', 404)
       const response = page(React.createElement(PersonalizedFeedLanding, {
-        landingUrl: `${origin}/feeds/for-you/${encodeURIComponent(key)}`,
-        rssUrl: `${origin}/feeds/for-you/${encodeURIComponent(key)}.rss`,
-        atomUrl: `${origin}/feeds/for-you/${encodeURIComponent(key)}.atom`,
+        landingUrl: `${origin}/feeds/my-feed/${encodeURIComponent(key)}`,
+        rssUrl: `${origin}/feeds/my-feed/${encodeURIComponent(key)}.rss`,
+        atomUrl: `${origin}/feeds/my-feed/${encodeURIComponent(key)}.atom`,
         user: currentUser(c.req.raw),
         created: c.req.query('created') === '1',
       }))
@@ -140,7 +145,9 @@ export function registerSyndicationRoutes(app: Hono, configuredService?: Databas
       return response
     }
     return personalized(c, parsed.name, parsed.format)
-  })
+  }
+  app.get('/feeds/my-feed/:file', personalizedFeedRoute)
+  app.get('/feeds/for-you/:file', personalizedFeedRoute)
 
   app.get('/u/:file', async (c, next: Next) => {
     const parsed = suffixed(c.req.param('file'))

@@ -157,18 +157,20 @@ function openApiDocument() {
   } }, '404': { description: 'Not found' }, '429': { description: 'Rate limited' } }
   return {
     openapi: '3.1.0',
-    info: { title: `${appName()} public API`, version: '1.4.0',
+    info: { title: `${appName()} public API`, version: '1.5.0',
       description: 'Public reads and authenticated writes for every account.' },
     servers: [{ url: '/api/v1' }],
     paths: {
-      '/feeds/latest': {
-        get: { summary: 'Latest posts', security: optionalAuthSecurity,
+      '/feeds/all': {
+        get: { summary: 'All posts', security: optionalAuthSecurity,
           description: 'Bearer authentication is optional. Authenticated responses add unread state to each post and '
             + 'include has_unread and unread_count.', parameters: collectionParameters,
-          responses: { ...jsonResponses, '200': collectionResponse }, 'x-root-aliases': ['/latest.json'] },
+          responses: { ...jsonResponses, '200': collectionResponse },
+          'x-root-aliases': ['/all.json'], 'x-backward-compatible-aliases': ['/feeds/latest', '/latest.json'] },
       },
-      '/feeds/latest/read': {
-        post: { summary: 'Mark selected latest posts as read', security: authSecurity,
+      '/feeds/all/read': {
+        'x-backward-compatible-aliases': ['/feeds/latest/read'],
+        post: { summary: 'Mark selected all-feed posts as read', security: authSecurity,
           requestBody: requestBody({ type: 'object', required: ['post_ids'], properties: {
             post_ids: { type: 'array', minItems: 1, maxItems: 100, uniqueItems: true,
               items: { type: 'integer', minimum: 1 } },
@@ -176,52 +178,62 @@ function openApiDocument() {
             read: { type: 'integer', minimum: 0 },
           } }) } },
       },
-      '/feeds/latest/read-all': {
-        post: { summary: 'Mark every visible latest post as read', security: authSecurity,
+      '/feeds/all/read-all': {
+        'x-backward-compatible-aliases': ['/feeds/latest/read-all'],
+        post: { summary: 'Mark every visible all-feed post as read', security: authSecurity,
           responses: { ...writeResponses,
             '200': dataResponse({ type: 'object', required: ['read_all', 'read'],
               properties: { read_all: { type: 'boolean' }, read: { type: 'integer', minimum: 0 } } }) } },
       },
-      '/activities/for-you': {
+      '/activities/my-feed': {
+        'x-backward-compatible-aliases': ['/activities/for-you'],
         get: { summary: 'Activity personalized for the authenticated account', security: authSecurity,
           parameters: collectionParameters, responses: { ...activityResponses, '401': writeResponses['401'] } },
       },
-      '/activities/to-me': {
+      '/activities/@': {
+        'x-backward-compatible-aliases': ['/activities/to-me'],
         get: { summary: 'Activity directed to the authenticated account', security: authSecurity,
           parameters: collectionParameters, responses: { ...activityResponses, '401': writeResponses['401'] } },
       },
-      '/activities/for-you/conversations': {
-        get: { summary: 'For You activity grouped like the web feed', security: authSecurity,
+      '/activities/my-feed/conversations': {
+        'x-backward-compatible-aliases': ['/activities/for-you/conversations'],
+        get: { summary: 'My Feed activity grouped like the web feed', security: authSecurity,
           parameters: threadedFeedParameters,
           responses: { ...activityResponses, '200': { description: 'A web-compatible threaded activity feed',
             content: { 'application/json': { schema: { $ref: '#/components/schemas/ThreadedActivityFeed' } } } } } },
       },
-      '/activities/to-me/conversations': {
-        get: { summary: 'To Me activity grouped like the web feed', security: authSecurity,
+      '/activities/@/conversations': {
+        'x-backward-compatible-aliases': ['/activities/to-me/conversations'],
+        get: { summary: '@ activity grouped like the web feed', security: authSecurity,
           parameters: threadedFeedParameters,
           responses: { ...activityResponses, '200': { description: 'A web-compatible threaded activity feed',
             content: { 'application/json': { schema: { $ref: '#/components/schemas/ThreadedActivityFeed' } } } } } },
       },
-      '/activities/for-you/read': {
-        post: { summary: 'Mark selected for-you activities as read', security: authSecurity,
+      '/activities/my-feed/read': {
+        'x-backward-compatible-aliases': ['/activities/for-you/read'],
+        post: { summary: 'Mark selected My Feed activities as read', security: authSecurity,
           requestBody: requestBody({ $ref: '#/components/schemas/ActivityReadRequest' }), responses: writeResponses },
       },
-      '/activities/for-you/read-all': {
-        post: { summary: 'Mark all for-you activities as read', security: authSecurity, responses: writeResponses },
+      '/activities/my-feed/read-all': {
+        'x-backward-compatible-aliases': ['/activities/for-you/read-all'],
+        post: { summary: 'Mark all My Feed activities as read', security: authSecurity, responses: writeResponses },
       },
-      '/activities/to-me/read': {
-        post: { summary: 'Mark selected to-me activities as read', security: authSecurity,
+      '/activities/@/read': {
+        'x-backward-compatible-aliases': ['/activities/to-me/read'],
+        post: { summary: 'Mark selected @ activities as read', security: authSecurity,
           requestBody: requestBody({ $ref: '#/components/schemas/ActivityReadRequest' }), responses: writeResponses },
       },
-      '/activities/to-me/read-all': {
-        post: { summary: 'Mark all to-me activities as read', security: authSecurity, responses: writeResponses },
+      '/activities/@/read-all': {
+        'x-backward-compatible-aliases': ['/activities/to-me/read-all'],
+        post: { summary: 'Mark all @ activities as read', security: authSecurity, responses: writeResponses },
       },
       '/feeds/hot': {
         get: { summary: 'Hot posts', security: optionalAuthSecurity, parameters: collectionParameters,
           responses: { ...jsonResponses, '200': collectionResponse }, 'x-root-aliases': ['/hot.json'] },
       },
-      '/feeds/latest/conversations': {
-        get: { summary: 'Latest feed grouped into web conversations', security: optionalAuthSecurity,
+      '/feeds/all/conversations': {
+        'x-backward-compatible-aliases': ['/feeds/latest/conversations'],
+        get: { summary: 'All feed grouped into web conversations', security: optionalAuthSecurity,
           parameters: threadedFeedParameters, responses: { ...jsonResponses, '200': threadedFeedResponse } },
       },
       '/feeds/hot/conversations': {
@@ -233,9 +245,10 @@ function openApiDocument() {
           schema: { type: 'string', minLength: 1, maxLength: MAX_SEARCH_LENGTH } },
         ...collectionParameters,
       ], responses: { ...jsonResponses, '200': collectionResponse } } },
-      '/feeds/latest.{format}': {
-        get: { summary: 'Latest posts as RSS or Atom', parameters: [formatParameter], responses: syndicationResponses,
-          'x-root-aliases': ['/latest.rss', '/latest.atom'] },
+      '/feeds/all.{format}': {
+        get: { summary: 'All posts as RSS or Atom', parameters: [formatParameter], responses: syndicationResponses,
+          'x-root-aliases': ['/all.rss', '/all.atom'],
+          'x-backward-compatible-aliases': ['/feeds/latest.{format}', '/latest.rss', '/latest.atom'] },
       },
       '/feeds/hot.{format}': {
         get: { summary: 'Hot posts as RSS or Atom', parameters: [formatParameter], responses: syndicationResponses,
@@ -725,6 +738,7 @@ export function registerApiRoutes(app: Hono, appUrl: string | null | undefined =
     c.header('vary', 'Origin')
   }
   app.use('/api/*', apiMiddleware)
+  app.use('/all.json', apiMiddleware)
   app.use('/latest.json', apiMiddleware)
   app.use('/hot.json', apiMiddleware)
 
@@ -743,6 +757,7 @@ export function registerApiRoutes(app: Hono, appUrl: string | null | undefined =
     return next()
   }
   app.use('/api/v1/*', jsonRateLimitMiddleware)
+  app.use('/all.json', jsonRateLimitMiddleware)
   app.use('/latest.json', jsonRateLimitMiddleware)
   app.use('/hot.json', jsonRateLimitMiddleware)
 
@@ -767,10 +782,12 @@ export function registerApiRoutes(app: Hono, appUrl: string | null | undefined =
     return jsonResponse({ ...value, data: value.data.map(post => ({ ...post, unread: unread.has(post.id) })),
       has_unread: state.unreadCount > 0, unread_count: state.unreadCount }, 200, 'no-store')
   }
+  app.get('/all.json', latestFeed)
   app.get('/latest.json', latestFeed)
+  app.get('/api/v1/feeds/all', latestFeed)
   app.get('/api/v1/feeds/latest', latestFeed)
 
-  app.post('/api/v1/feeds/latest/read', async c => {
+  const markAllFeedPostsRead = async (c: Context) => {
     const user = requestApiUser(c.req.raw)
     if (!user) return apiError('unauthorized', 'Provide a bearer token from /api/v1/auth/verify', 401)
     let payload: unknown
@@ -784,21 +801,27 @@ export function registerApiRoutes(app: Hono, appUrl: string | null | undefined =
     if (!Array.isArray(postIds) || postIds.length < 1 || postIds.length > 100
       || postIds.some(id => !Number.isInteger(id) || Number(id) < 1))
     {
-      return apiError('invalid_body', 'Provide 1–100 positive post_ids from the latest feed', 400)
+      return apiError('invalid_body', 'Provide 1–100 positive post_ids from the all feed', 400)
     }
     const read = await service.call('api.markLatestRead', { userId: user.id,
       postIds: [...new Set(postIds as number[])] })
     return jsonResponse({ data: { read } }, 200, 'no-store')
-  })
+  }
+  app.post('/api/v1/feeds/all/read', markAllFeedPostsRead)
+  app.post('/api/v1/feeds/latest/read', markAllFeedPostsRead)
 
-  app.post('/api/v1/feeds/latest/read-all', async c => {
+  const markAllFeedRead = async (c: Context) => {
     const user = requestApiUser(c.req.raw)
     if (!user) return apiError('unauthorized', 'Provide a bearer token from /api/v1/auth/verify', 401)
     const read = await service.call('api.markAllLatestRead', { userId: user.id })
     return jsonResponse({ data: { read_all: true, read } }, 200, 'no-store')
-  })
+  }
+  app.post('/api/v1/feeds/all/read-all', markAllFeedRead)
+  app.post('/api/v1/feeds/latest/read-all', markAllFeedRead)
 
-  for (const [path, kind] of [['for-you', 'personalizedFor'], ['to-me', 'toMeFor']] as const) {
+  for (const [path, kind] of [
+    ['my-feed', 'personalizedFor'], ['for-you', 'personalizedFor'], ['@', 'toMeFor'], ['to-me', 'toMeFor'],
+  ] as const) {
     app.get(`/api/v1/activities/${path}`, async c => {
       const user = requestApiUser(c.req.raw)
       if (!user) return apiError('unauthorized', 'Provide a bearer token from /api/v1/auth/verify', 401)
@@ -844,7 +867,7 @@ export function registerApiRoutes(app: Hono, appUrl: string | null | undefined =
     })
   }
 
-  for (const [path, toMe] of [['for-you', false], ['to-me', true]] as const) {
+  for (const [path, toMe] of [['my-feed', false], ['for-you', false], ['@', true], ['to-me', true]] as const) {
     app.get(`/api/v1/activities/${path}/conversations`, async c => {
       const user = requestApiUser(c.req.raw)
       if (!user) return apiError('unauthorized', 'Provide a bearer token from /api/v1/auth/verify', 401)
@@ -907,6 +930,7 @@ export function registerApiRoutes(app: Hono, appUrl: string | null | undefined =
       pageSize: parsed.limit as PageSizeChoice,
     }), 200, requestApiUser(c.req.raw) ? 'no-store' : undefined)
   }
+  app.get('/api/v1/feeds/all/conversations', threadedFeed('latest'))
   app.get('/api/v1/feeds/latest/conversations', threadedFeed('latest'))
   app.get('/api/v1/feeds/hot/conversations', threadedFeed('hot'))
 

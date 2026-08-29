@@ -125,7 +125,7 @@ async function benchmark(origin: string, route: string, concurrency: number, dur
 
 if (Bun.argv.includes('--help')) {
   console.log(
-    `Usage: bun run stress:routes -- [options]\n\nOptions:\n  --users=N          Seed users (default 200, max 10000)\n  --posts=N          Seed posts (default 10000, max 1000000)\n  --duration=N       Seconds per route/concurrency run (default 5, max 300)\n  --concurrency=LIST Concurrent clients, e.g. 1,10,25,50 (default 1,10,25)\n  --routes=LIST      Routes to test (default /hot,/latest)\n  --p95-target=N     Sustainable-capacity p95 threshold in ms (default 250)\n  --full-parsing     Ignore content flags to provide an A/B benchmark control\n  --json             Emit machine-readable JSON only`,
+    `Usage: bun run stress:routes -- [options]\n\nOptions:\n  --users=N          Seed users (default 200, max 10000)\n  --posts=N          Seed posts (default 10000, max 1000000)\n  --duration=N       Seconds per route/concurrency run (default 5, max 300)\n  --concurrency=LIST Concurrent clients, e.g. 1,10,25,50 (default 1,10,25)\n  --routes=LIST      Routes to test (default /hot,/all)\n  --p95-target=N     Sustainable-capacity p95 threshold in ms (default 250)\n  --full-parsing     Ignore content flags to provide an A/B benchmark control\n  --json             Emit machine-readable JSON only`,
   )
   process.exit(0)
 }
@@ -139,7 +139,7 @@ const concurrencies = [...new Set(listArgument('concurrency', '1,10,25').split('
 if (concurrencies.some(value => !Number.isInteger(value) || value < 1 || value > 1000)) {
   throw new Error('--concurrency values must be integers from 1 to 1000')
 }
-const routes = [...new Set(listArgument('routes', '/hot,/latest').split(',').map(value => value.trim()))]
+const routes = [...new Set(listArgument('routes', '/hot,/all').split(',').map(value => value.trim()))]
 if (routes.some(route => !route.startsWith('/') || route.startsWith('//'))) {
   throw new Error('--routes values must begin with one /')
 }

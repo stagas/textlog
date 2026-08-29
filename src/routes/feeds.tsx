@@ -12,7 +12,7 @@ import {
 } from '../components/pages'
 import { clientAddress, currentPage, page, redirect, rememberFeed } from './shared'
 
-import type { Hono } from 'hono'
+import type { Context, Hono } from 'hono'
 import { instance } from '../../instance.config'
 import { backgroundDatabaseCall, databaseService } from '../database-service'
 import { decodeHotCursor, hotRankingVersion } from '../hot'
@@ -105,7 +105,7 @@ function rememberFeedVisitor(request: Request, user: NonNullable<ReturnType<type
   const density = resolvedDensity(request)
   const pageSize = resolvedPageSize(request)
   const cookie = feedVariantCookie(request)
-  const requestUrl = new URL('/latest', request.url).href
+  const requestUrl = new URL('/all', request.url).href
   recentFeedVisitors.delete(user.id)
   recentFeedVisitors.set(user.id, {
     density,
@@ -138,7 +138,7 @@ export async function warmNextRecentLatestFeed() {
         pageSize: visitor.pageSize,
         markRead: false,
       })
-      return page(<PublicFeed user={visitor.user} feed={feed} path="/latest" />)
+      return page(<PublicFeed user={visitor.user} feed={feed} path="/all" />)
     }, false, viewerCacheVersion(latestFeedCacheVersion, visitor.user), true)
   }))
 }
@@ -161,6 +161,16 @@ export async function loadRecentFeedVisitors() {
 }
 
 export function registerFeedsRoutes(app: Hono) {
+  const moved = (path: string) => (c: Context) =>
+    c.redirect(path + new URL(c.req.url).search, 308)
+  app.get('/for-you', moved('/my-feed'))
+  app.get('/to-me', moved('/@'))
+  app.get('/random', moved('/any'))
+  app.get('/latest', moved('/all'))
+  app.post('/for-you/read-all', moved('/my-feed/read-all'))
+  app.post('/to-me/read-all', moved('/@/read-all'))
+  app.post('/latest/read-all', moved('/all/read-all'))
+
   app.get('/', async c => {
     if (c.req.query('reddit') !== undefined) {
       const visitorHash = campaignIpPseudonym(clientAddress(c), 'reddit')
@@ -175,18 +185,18 @@ export function registerFeedsRoutes(app: Hono) {
     }
     const preferredFeed = feedPreference(c.req.raw)
     const path = preferredFeed === 'latest'
-      ? '/latest'
+      ? '/all'
       : preferredFeed === 'hot'
       ? '/hot'
       : preferredFeed === 'random'
-      ? '/random'
-      : '/for-you'
+      ? '/any'
+      : '/my-feed'
     return redirect(path + new URL(c.req.url).search)
   })
 
-  app.get('/for-you', async c => {
+  app.get('/my-feed', async c => {
     const user = currentUser(c.req.raw)
-    if (!user) return redirect('/enter?next=' + encodeURIComponent('/for-you'))
+    if (!user) return redirect('/enter?next=' + encodeURIComponent('/my-feed'))
     rememberFeedVisitor(c.req.raw, user)
     const cursorValue = c.req.query('cursor')
     const expandedRootId = positiveInteger(c.req.query('expand'))
@@ -201,14 +211,14 @@ export function registerFeedsRoutes(app: Hono) {
           page: currentPage(c.req.query('page')),
           pageSize,
           toMe: false,
-          path: '/for-you',
+          path: '/my-feed',
         })
       }
       return dataPromise
     }
     const render = async () =>
       page(
-        <Feed user={user} data={await data()} title="for you" notificationBanner={notificationBanner}
+        <Feed user={user} data={await data()} title="my feed" notificationBanner={notificationBanner}
           expandedRootId={expandedRootId} />,
       )
     const renderForCache = async () => {
@@ -217,7 +227,7 @@ export function registerFeedsRoutes(app: Hono) {
       return page(
         <Feed user={user}
           data={{ ...feed, forYouCount: Math.max(0, feed.forYouCount - consumed),
-            timeline: feed.timeline.map(row => ({ ...row, unread: 0 })) }} title="for you"
+            timeline: feed.timeline.map(row => ({ ...row, unread: 0 })) }} title="my feed"
           notificationBanner={notificationBanner} expandedRootId={expandedRootId} />,
       )
     }
@@ -233,7 +243,7 @@ export function registerFeedsRoutes(app: Hono) {
     return remembered
   })
 
-  app.get('/latest', async c => {
+  app.get('/all', async c => {
     const user = currentUser(c.req.raw)
     rememberFeedVisitor(c.req.raw, user)
     const cursorValue = c.req.query('cursor')
@@ -247,7 +257,7 @@ export function registerFeedsRoutes(app: Hono) {
     const render = async () => {
       const feed = await data()
       return page(
-        <PublicFeed user={user} feed={feed} path="/latest" notificationBanner={notificationBanner}
+        <PublicFeed user={user} feed={feed} path="/all" notificationBanner={notificationBanner}
           expandedRootId={expandedRootId} />,
       )
     }
@@ -256,7 +266,7 @@ export function registerFeedsRoutes(app: Hono) {
       const latestCount = Math.max(0, (feed.latestCount || 0) - new Set(feed.unreadPostIds).size)
       return page(
         <PublicFeed user={user} feed={{ ...feed, latestCount, latestUnread: latestCount > 0,
-          unreadPostIds: [], directedUnreadPostIds: [] }} path="/latest"
+          unreadPostIds: [], directedUnreadPostIds: [] }} path="/all"
           notificationBanner={notificationBanner}
           expandedRootId={expandedRootId} />,
       )
@@ -271,7 +281,7 @@ export function registerFeedsRoutes(app: Hono) {
     return remembered
   })
 
-  app.get('/random', async c => {
+  app.get('/any', async c => {
     const user = currentUser(c.req.raw)
     const expandedRootId = positiveInteger(c.req.query('expand'))
     const notificationBanner = await showNotificationBanner(c.req.raw, user)
@@ -280,39 +290,39 @@ export function registerFeedsRoutes(app: Hono) {
       pageSize: resolvedPageSize(c.req.raw),
     })
     return rememberFeed(page(
-      <PublicFeed user={user} feed={feed} path="/random" notificationBanner={notificationBanner}
+      <PublicFeed user={user} feed={feed} path="/any" notificationBanner={notificationBanner}
         expandedRootId={expandedRootId} />,
     ), 'random')
   })
 
-  app.post('/latest/read-all', async c => {
+  app.post('/all/read-all', async c => {
     const user = currentUser(c.req.raw)
-    if (!user) return redirect('/enter?next=' + encodeURIComponent('/latest'))
+    if (!user) return redirect('/enter?next=' + encodeURIComponent('/all'))
     await databaseService().call('feeds.markLatestRead', { userId: user.id })
-    return redirect('/latest')
+    return redirect('/all')
   })
 
-  app.post('/for-you/read-all', async c => {
+  app.post('/my-feed/read-all', async c => {
     const user = currentUser(c.req.raw)
-    if (!user) return redirect('/enter?next=' + encodeURIComponent('/for-you'))
+    if (!user) return redirect('/enter?next=' + encodeURIComponent('/my-feed'))
     await databaseService().call('feeds.markRead', { userId: user.id, toMe: false })
-    return redirect('/for-you')
+    return redirect('/my-feed')
   })
 
-  app.get('/to-me', async c => {
+  app.get('/@', async c => {
     const user = currentUser(c.req.raw)
-    if (!user) return redirect('/enter?next=' + encodeURIComponent('/to-me'))
+    if (!user) return redirect('/enter?next=' + encodeURIComponent('/@'))
     const cursorValue = c.req.query('cursor')
     const expandedRootId = positiveInteger(c.req.query('expand'))
     if (cursorValue && !decodeForYouCursor(cursorValue)) return c.text('Invalid cursor', 400)
     const notificationBanner = await showNotificationBanner(c.req.raw, user)
     let dataPromise: Promise<PersonalizedFeedData> | undefined
     const data = () => dataPromise ||= databaseService().call('feeds.personalizedPage', {
-      user, page: currentPage(c.req.query('page')), pageSize: resolvedPageSize(c.req.raw), toMe: true, path: '/to-me',
+      user, page: currentPage(c.req.query('page')), pageSize: resolvedPageSize(c.req.raw), toMe: true, path: '/@',
     })
     const render = async () =>
       page(
-        <Feed user={user} data={await data()} title="to me" path="/to-me" toMe notificationBanner={notificationBanner}
+        <Feed user={user} data={await data()} title="@" path="/@" toMe notificationBanner={notificationBanner}
           expandedRootId={expandedRootId} />,
       )
     const renderForCache = async () => {
@@ -322,7 +332,7 @@ export function registerFeedsRoutes(app: Hono) {
         <Feed user={user}
           data={{ ...feed, forYouCount: Math.max(0, feed.forYouCount - consumed),
             toMeCount: Math.max(0, feed.toMeCount - consumed),
-            timeline: feed.timeline.map(row => ({ ...row, unread: 0 })) }} title="to me" path="/to-me" toMe
+            timeline: feed.timeline.map(row => ({ ...row, unread: 0 })) }} title="@" path="/@" toMe
           notificationBanner={notificationBanner} expandedRootId={expandedRootId} />,
       )
     }
@@ -333,11 +343,11 @@ export function registerFeedsRoutes(app: Hono) {
     return rememberFeed(response, 'following')
   })
 
-  app.post('/to-me/read-all', async c => {
+  app.post('/@/read-all', async c => {
     const user = currentUser(c.req.raw)
-    if (!user) return redirect('/enter?next=' + encodeURIComponent('/to-me'))
+    if (!user) return redirect('/enter?next=' + encodeURIComponent('/@'))
     await databaseService().call('feeds.markRead', { userId: user.id, toMe: true })
-    return redirect('/to-me')
+    return redirect('/@')
   })
 
   app.get('/hot', async c => {
@@ -441,14 +451,14 @@ export function registerFeedsRoutes(app: Hono) {
   app.get('/activity', c => {
     const user = currentUser(c.req.raw)
     if (!user) return redirect('/enter?next=' + encodeURIComponent('/activity'))
-    return redirect('/to-me')
+    return redirect('/@')
   })
 
   app.post('/activity/read-all', async c => {
     const user = currentUser(c.req.raw)
     if (!user) return redirect('/enter?next=' + encodeURIComponent('/activity'))
     await databaseService().call('feeds.markRead', { userId: user.id, toMe: true })
-    return redirect('/to-me')
+    return redirect('/@')
   })
 
   app.get('/about', async c => {

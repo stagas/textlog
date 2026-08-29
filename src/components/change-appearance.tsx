@@ -218,12 +218,12 @@ export function ChangeAppearance(
                 <label className="link-preview-setting">
                   <input className="form-checkbox" type="checkbox" role="switch" name="includePeopleFollowActivity"
                     value="yes" defaultChecked={includePeopleFollowActivity} />
-                  <span>Include people&apos;s follow activity in For You</span>
+                  <span>Include people&apos;s follow activity in My Feed</span>
                 </label>
                 <label className="link-preview-setting">
                   <input className="form-checkbox" type="checkbox" role="switch" name="includeHashtagFollowActivity"
                     value="yes" defaultChecked={includeHashtagFollowActivity} />
-                  <span>Include hashtag follow activity in For You</span>
+                  <span>Include hashtag follow activity in My Feed</span>
                 </label>
               </fieldset>
               <button className="button">save misc →</button>

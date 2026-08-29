@@ -14,8 +14,8 @@ const highlights = [
     make discovery easy.
   </>],
   ['03', 'Follow the conversation', '/hot', <>
-    Threaded replies, backlinks, <a href="/for-you">jump-to-unread and activity in For You</a>, and{' '}
-    <a href="/to-me">To Me</a> keep every conversation connected.
+    Threaded replies, backlinks, <a href="/my-feed">jump-to-unread and activity in My Feed</a>, and{' '}
+    <a href="/@">@</a> keep every conversation connected.
   </>],
   ['04', 'Make it feel like yours', '/account/edit/appearance',
     <>Choose your theme, accent, typeface, font size, density, page size, and link-preview preference.</>],
@@ -24,7 +24,7 @@ const highlights = [
     <a href="/account/security">password or magic-link entry and private personalized feeds</a> keep you in the loop.
   </>],
   ['06', 'Built to travel', null, <>
-    <a href="/latest.rss">RSS</a> and <a href="/latest.atom">Atom feeds</a>, <a href="/api/embed-examples">embeds</a>,
+    <a href="/all.rss">RSS</a> and <a href="/all.atom">Atom feeds</a>, <a href="/api/embed-examples">embeds</a>,
     {' '}
     <a href="/api">a documented API with write access</a>, and <a href="/dump.zip">a public archive</a>{' '}
     make your words portable.

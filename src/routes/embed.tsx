@@ -23,10 +23,12 @@ function response(request: Request, posts: PostView[], title: string, href: stri
 }
 
 export function registerEmbedRoutes(app: Hono) {
-  app.get('/embed/latest', async c => {
+  const all = async (c: import('hono').Context) => {
     const data = await databaseService().call('embeds.load', { kind: 'latest' })
     return response(c.req.raw, data!.posts, data!.title, data!.href)
-  })
+  }
+  app.get('/embed/all', all)
+  app.get('/embed/latest', all)
   app.get('/embed/hot', async c => {
     const data = await databaseService().call('embeds.load', { kind: 'hot' })
     return response(c.req.raw, data!.posts, data!.title, data!.href)

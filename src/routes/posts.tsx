@@ -300,7 +300,7 @@ export function registerPostsRoutes(app: Hono) {
       if (!result.duplicate) await persistPreviews(result.id, 'save', body)
       if (!result.duplicate) notifyPost()
       if (editingDraftId) await databaseService().call('drafts.delete', { id: editingDraftId, userId: user.id })
-      return rememberFeed(redirect(`/latest#post-${result.id}`), 'latest')
+      return rememberFeed(redirect(`/all#post-${result.id}`), 'latest')
     }
     catch (error) {
       logError('POST /post', error)

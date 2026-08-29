@@ -76,24 +76,24 @@ const endpoints: ReadonlyArray<readonly [string, string, ReactNode, boolean?]> =
   ['POST', '/users/:handle/block', 'Block a user.', true],
   ['DELETE', '/users/:handle/block', 'Unblock a user.', true],
   ['GET', '/users/:handle/blocks', 'List accounts you have blocked. The handle must be your own.', true],
-  ['GET', '/feeds/latest', 'Get the latest public posts and replies.'],
-  ['GET', '/feeds/latest/conversations', 'Get the latest feed grouped and classified like the web app.'],
-  ['POST', '/feeds/latest/read', 'Mark selected latest-feed posts as read using post_ids.', true],
-  ['POST', '/feeds/latest/read-all', 'Mark every visible latest-feed post as read.', true],
+  ['GET', '/feeds/all', 'Get all public posts and replies.'],
+  ['GET', '/feeds/all/conversations', 'Get the all feed grouped and classified like the web app.'],
+  ['POST', '/feeds/all/read', 'Mark selected all-feed posts as read using post_ids.', true],
+  ['POST', '/feeds/all/read-all', 'Mark every visible all-feed post as read.', true],
   ['GET', '/feeds/hot', 'Get posts ranked by recent activity and replies.'],
   ['GET', '/feeds/hot/conversations', 'Get the hot feed grouped and classified like the web app.'],
-  ['GET', '/activities/for-you', 'Get activity from followed people and tags, plus activity directed to you.', true],
-  ['GET', '/activities/for-you/conversations', <>
-    Get For You activity in web timeline order, with post activity grouped into conversations.
+  ['GET', '/activities/my-feed', 'Get activity from followed people and tags, plus activity directed to you.', true],
+  ['GET', '/activities/my-feed/conversations', <>
+    Get My Feed activity in web timeline order, with post activity grouped into conversations.
   </>, true],
-  ['POST', '/activities/for-you/read', 'Mark selected activities as read using their activity_ids.', true],
-  ['POST', '/activities/for-you/read-all', 'Mark every for-you activity as read.', true],
-  ['GET', '/activities/to-me', 'Get replies, mentions, and follows directed to you.', true],
-  ['GET', '/activities/to-me/conversations', <>
-    Get To Me activity in web timeline order, with post activity grouped into conversations.
+  ['POST', '/activities/my-feed/read', 'Mark selected activities as read using their activity_ids.', true],
+  ['POST', '/activities/my-feed/read-all', 'Mark every My Feed activity as read.', true],
+  ['GET', '/activities/@', 'Get replies, mentions, and follows directed to you.', true],
+  ['GET', '/activities/@/conversations', <>
+    Get @ activity in web timeline order, with post activity grouped into conversations.
   </>, true],
-  ['POST', '/activities/to-me/read', 'Mark selected activities as read using their activity_ids.', true],
-  ['POST', '/activities/to-me/read-all', 'Mark every to-me activity as read.', true],
+  ['POST', '/activities/@/read', 'Mark selected @ activities as read using their activity_ids.', true],
+  ['POST', '/activities/@/read-all', 'Mark every @ activity as read.', true],
   ['GET', '/tags/:tag', 'Get hashtag details and post and follower counts.'],
   ['GET', '/tags/:tag/posts', 'Get the latest posts carrying a hashtag.'],
   ['GET', '/tags/:tag/followers', 'List accounts following a hashtag.'],
@@ -170,12 +170,12 @@ export function ApiDocs({ user }: { user: User | null }) {
             Threaded feeds paginate conversations using the web page sizes <code>20</code>, <code>40</code>,{' '}
             <code>80</code>, or <code>100</code>.
           </p>
-          <CodeBlock language="bash">{`curl '${origin}/api/v1/feeds/latest/conversations?limit=20'
+          <CodeBlock language="bash">{`curl '${origin}/api/v1/feeds/all/conversations?limit=20'
 curl '${origin}/api/v1/feeds/hot/conversations?limit=20'
 
-curl '${origin}/api/v1/activities/for-you/conversations?limit=20' \\
+curl '${origin}/api/v1/activities/my-feed/conversations?limit=20' \\
   -H "authorization: Bearer $TOKEN"
-curl '${origin}/api/v1/activities/to-me/conversations?limit=20' \\
+curl '${origin}/api/v1/activities/@/conversations?limit=20' \\
   -H "authorization: Bearer $TOKEN"`}</CodeBlock>
           <p>
             Public threaded feeds return conversation objects containing the exact posts selected for that web feed
@@ -211,27 +211,31 @@ curl '${origin}/api/v1/activities/to-me/conversations?limit=20' \\
             Feed collections are also available as RSS 2.0 or Atom 1.0. Add <code>.rss</code> or <code>.atom</code>{' '}
             to the collection address and enter it manually in a feed reader.
           </p>
-          <pre><code>{`/feeds/latest.rss
+          <pre><code>{`/feeds/all.rss
 /feeds/hot.atom
 /users/:handle/posts.rss
 /tags/:tag/posts.atom`}</code></pre>
-          <p>The latest and hot feeds also have shorter root-level aliases:</p>
-          <pre><code>{`/latest.json
-/latest.rss
-/latest.atom
+          <p>The all and hot feeds also have shorter root-level aliases:</p>
+          <pre><code>{`/all.json
+/all.rss
+/all.atom
 /hot.json
 /hot.rss
 /hot.atom`}</code></pre>
           <p>
-            Signed-in users can generate private, personalized For You RSS and Atom URLs under <strong>Feed key</strong>
+            Signed-in users can generate private, personalized My Feed RSS and Atom URLs under <strong>Feed key</strong>
             {' '}
             in{' '}
             <a href="/account/security#feed-keys" target="_blank">account security</a>. These unguessable URLs are
             read-only, require no bearer header, and must be kept secret. Each key can be named, expired, or revoked
             independently. Personalized feeds are marked private and are not publicly cached.
           </p>
-          <pre><code>{`/feeds/for-you/:key.rss
-/feeds/for-you/:key.atom`}</code></pre>
+          <pre><code>{`/feeds/my-feed/:key.rss
+/feeds/my-feed/:key.atom`}</code></pre>
+          <p>
+            The former <code>latest</code>, <code>for-you</code>, and <code>to-me</code> API and feed addresses remain
+            available as backward-compatible aliases.
+          </p>
         </ApiSection>
 
         <ApiSection title="Public data archive" id="public-archive">
@@ -261,9 +265,9 @@ curl '${origin}/api/v1/activities/to-me/conversations?limit=20' \\
 ></iframe>`}
           </CodeBlock>
           <CodeBlock language="html">
-            {`<!-- latest notes -->
-<iframe src="${origin}/embed/latest?theme=dark&accent=purple"
-  title="Latest notes on ${name}" width="100%" height="520" style="border:0"></iframe>
+            {`<!-- all notes -->
+<iframe src="${origin}/embed/all?theme=dark&accent=purple"
+  title="All notes on ${name}" width="100%" height="520" style="border:0"></iframe>
 
 <!-- hot notes -->
 <iframe src="${origin}/embed/hot?theme=light&accent=blue"
@@ -308,9 +312,9 @@ curl '${origin}/api/v1/activities/to-me/conversations?limit=20' \\
             to fetch the next page. Replies include their immediate quoted post in{' '}
             <code>parent</code>, so displaying a feed needs no per-post follow-up requests.
           </p>
-          <CodeBlock language="bash">{`curl '${origin}/api/v1/feeds/latest?limit=10'`}</CodeBlock>
+          <CodeBlock language="bash">{`curl '${origin}/api/v1/feeds/all?limit=10'`}</CodeBlock>
           <CodeBlock language="bash">
-            {`curl '${origin}/api/v1/activities/for-you?limit=10' \\
+            {`curl '${origin}/api/v1/activities/my-feed?limit=10' \\
   -H "authorization: Bearer $TOKEN"`}
           </CodeBlock>
           <p>
@@ -401,7 +405,7 @@ export function EmbedExamples(
 ) {
   const name = appName()
   const examples = [
-    { title: 'Latest feed', src: '/embed/latest?theme=light&accent=sage&font=menlo', height: 520 },
+    { title: 'All feed', src: '/embed/all?theme=light&accent=sage&font=menlo', height: 520 },
     { title: 'Hot feed', src: '/embed/hot?accent=purple&font=consolas', height: 520 },
     ...(handle
       ? [{ title: `User feed · @${handle}`,

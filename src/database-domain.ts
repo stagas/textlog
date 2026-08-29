@@ -76,7 +76,7 @@ function attachTagStats(database: Database, tags: import('./types').TagView[], v
 
 export function materializedForYouCount(html: string) {
   return Number(html.match(
-    /href="\/for-you"[^>]*>for you<span class="to-me-count">(\d+)<\/span>/,
+    /href="\/my-feed"[^>]*>my feed<span class="to-me-count">(\d+)<\/span>/,
   )?.[1] || 0)
 }
 
@@ -85,8 +85,8 @@ export function materializedFeedTemplate(html: string) {
     new RegExp(`(<a[^>]*href="${path}"[^>]*>${label})(?:<span class="to-me-count">\\d+</span>)?(</a>)`),
     `$1{{${name}-count}}$2`,
   )
-  return token(token(token(html, '\/for-you', 'for you', 'for-you'), '\/to-me', 'to me', 'to-me'),
-    '\/latest', 'latest', 'latest')
+  return token(token(token(html, '\/my-feed', 'my feed', 'for-you'), '\/@', '@', 'to-me'),
+    '\/all', 'all', 'latest')
 }
 
 export function hydrateMaterializedFeedCounts(html: string, counts: { forYou: number; toMe: number; latest: number }) {
@@ -1352,7 +1352,7 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
       const request = input as DatabaseDomainInput<'api.threadedActivityFeed'>
       const feed = await executeDatabaseDomain(database, 'feeds.personalizedPage', {
         user: request.user, page: request.page, pageSize: request.pageSize, toMe: request.toMe,
-        path: request.toMe ? '/to-me' : '/for-you', markRead: false,
+        path: request.toMe ? '/@' : '/my-feed', markRead: false,
       })
       const postRows = feed.timeline.filter(row => ['post', 'reply', 'mention'].includes(row.activity_kind))
       const serialized = apiPostsByIds(database, request.origin, postRows.map(row => row.id), request.user.id)
@@ -2421,7 +2421,7 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
         if (!row) return undefined
         const rowPage = Math.floor((snapshotPositions.get(unreadConversations.get(row.id) || row.id) || 0)
           / pageSize) + 1
-        return `/latest${rowPage > 1 ? `?page=${rowPage}` : ''}#post-${row.id}`
+        return `/all${rowPage > 1 ? `?page=${rowPage}` : ''}#post-${row.id}`
       }
       if (viewerId >= 0 && markRead && unreadPostIds.length) {
         markLatestPostsRead(viewerId, unreadPostIds, database)
@@ -2872,7 +2872,7 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
           ORDER BY p.id DESC LIMIT ?`).all(...parameters, 5) as PostView[], -1)
       let result: import('./types').EmbedData | null
       if (request.kind === 'latest') {
-        result = { posts: latest(excludesWhisperPosts()), title: 'latest', href: '/latest' }
+        result = { posts: latest(excludesWhisperPosts()), title: 'all', href: '/all' }
       }
       else if (request.kind === 'hot') {
         result = { posts: enrichPosts(database, getHotPosts(database, 5, null, new Date(), -1, true), -1), title: 'hot',
