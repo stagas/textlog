@@ -430,7 +430,7 @@ header>nav>a:not(.button),
 
 .account-menu {
   position: relative;
-  z-index: 31;
+  z-index: 50;
   display: inline-flex;
   align-self: stretch;
   align-items: center;

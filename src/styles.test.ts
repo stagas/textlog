@@ -238,7 +238,7 @@ describe('in-memory stylesheet', () => {
     expect(css).toContain('header>nav>a:not(.button),\n.account-nav-row>a:not(.button),\n.account-menu-handle {')
     expect(css).toContain('.account-nav-row {\n  display: flex;\n  align-self: stretch;')
     expect(css).toContain(
-      '.account-menu {\n  position: relative;\n  z-index: 31;\n  display: inline-flex;\n  align-self: stretch;',
+      '.account-menu {\n  position: relative;\n  z-index: 50;\n  display: inline-flex;\n  align-self: stretch;',
     )
     expect(css).toContain('top: calc(50% + .75em + var(--space-2));')
     expect(css).toContain('top: calc(50% + .75em);')
