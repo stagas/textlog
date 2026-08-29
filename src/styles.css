@@ -5512,19 +5512,34 @@ form.report-panel {
 .explore-tag-card {
   display: inline-flex;
   align-items: stretch;
-  border: 1px solid var(--soft);
+  height: 28px;
+}
+
+.explore-tag-card form {
+  display: flex;
 }
 
 .explore-tag-card .explore-tag-chip {
+  min-height: 0;
   padding-right: 9px;
+}
+
+.explore-tag-card .explore-tag-chip.button:not(.button-muted) {
+  border: 1px solid var(--soft);
+  border-right: 0;
 }
 
 .explore-tag-link {
   display: grid;
-  min-width: 30px;
+  min-width: 26px;
+  padding-left: 1px;
   place-items: center;
   color: var(--muted);
-  border-bottom: 0;
+  border: 1px solid var(--soft);
+  border-left: 0;
+}
+
+.explore-tag-card:has(.explore-tag-chip.button:not(.button-muted)) .explore-tag-link {
   border-left: 1px solid var(--soft);
 }
 
@@ -5543,9 +5558,9 @@ form.report-panel {
 }
 
 .explore-tag-chip {
-  min-height: 34px;
-  padding: 7px 11px;
-  font-size: 0.6875rem;
+  min-height: 28px;
+  padding: 6px 11px;
+  font-size: 0.625rem;
   line-height: 1;
 }
 
