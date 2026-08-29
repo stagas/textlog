@@ -168,7 +168,7 @@ test('compose offers a server-rendered post preview', () => {
   expect(form).toContain('class="button" accessKey="p">post →</button>')
   expect(form.indexOf('>preview</button>')).toBeLessThan(form.indexOf('>post →</button>'))
   expect(preview).toContain('<h2>preview</h2>')
-  expect(preview).toContain('What&#x27;s on your mind')
+  expect(preview).toContain('What’s on your mind')
   expect(preview.indexOf('<h2>preview</h2>')).toBeLessThan(preview.indexOf('<form action="/post" method="post">'))
   expect(preview.indexOf('<h2>preview</h2>')).toBeLessThan(preview.indexOf('<h1 class="compose-heading">'))
   expect(preview.indexOf('<h1 class="compose-heading">')).toBeLessThan(

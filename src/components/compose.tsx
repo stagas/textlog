@@ -53,15 +53,17 @@ export function Compose(
       )}
       <Panel className="compose write-compose">
         <h1 className="compose-heading">
-          What's on your mind, <span className="compose-at">@</span>
+          What’s on your mind, <span className="compose-at">@</span>
           {user.handle}?
         </h1>
         <form method="post" action="/post">
           <input type="hidden" name="from" value={returnPath} />
           {draftId && <input type="hidden" name="draft_id" value={draftId} />}
           <FormMessage error={error} />
-          <textarea className="form-control" name="body" maxLength={POST_MAX} required autoFocus defaultValue={body}
-            autoComplete="off" inputMode="text" enterKeyHint="enter" />
+          <div className="compose-editor-row">
+            <textarea className="form-control" name="body" maxLength={POST_MAX} required autoFocus defaultValue={body}
+              autoComplete="off" inputMode="text" enterKeyHint="enter" />
+          </div>
           <PostingSuggestionResults search={suggestionSearch} />
           <div className="composefoot">
             <PostingHelp search={suggestionSearch} />

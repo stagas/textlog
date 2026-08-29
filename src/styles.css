@@ -2930,8 +2930,94 @@ body.corners-round a.button {
   }
 }
 
+main:has(> .write-compose) {
+  display: flex;
+  flex-direction: column;
+}
+
 .write-compose {
-  margin-top: var(--space-5);
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  margin-top: 0;
+  margin-bottom: 0;
+  padding: 0;
+  background: transparent;
+  border-inline: 0;
+  border-top: 0;
+  border-bottom: 0;
+}
+
+.write-compose .compose-heading {
+  margin: var(--space-4) 0 0;
+  padding: var(--space-4) var(--gutter);
+  color: var(--muted);
+  border-bottom: 1px solid var(--soft);
+  font-size: 1rem;
+  letter-spacing: normal;
+}
+
+@media (max-width: 520px) {
+  .write-compose .compose-heading {
+    text-align: center;
+  }
+}
+
+.write-compose form {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.write-compose .compose-editor-row {
+  padding: var(--space-3) var(--gutter);
+  background: var(--panel);
+}
+
+.write-compose textarea.form-control {
+  display: block;
+  width: 100%;
+  height: auto;
+  min-height: 7lh;
+  max-height: 15lh;
+  padding: 0;
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+  resize: none;
+  font-size: var(--post-body-font-size, 0.8125rem);
+  line-height: var(--post-body-line-height, 1.65);
+  letter-spacing: var(--post-body-letter-spacing, normal);
+}
+
+.write-compose textarea.form-control:focus-visible {
+  outline: 0;
+}
+
+.write-compose .posting-suggestion-results {
+  padding-inline: var(--gutter);
+}
+
+.write-compose .composefoot {
+  margin-top: 0;
+  margin-inline: 0;
+  padding: var(--space-4) var(--gutter) 0;
+  border-top: 1px solid var(--soft);
+}
+
+.write-compose .posting-help-summary-link {
+  border-bottom-color: var(--link-border);
+}
+
+.write-compose .posting-help-details summary:hover .posting-help-summary-link {
+  color: var(--tab-hover);
+}
+
+.write-compose .posting-help-content {
+  margin-top: var(--space-4);
+  background: var(--bg);
 }
 
 .edit-post-compose {
@@ -4052,6 +4138,91 @@ form.report-panel {
   }
 }
 
+.write-compose .composefoot {
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--space-3);
+}
+
+.write-compose .composefoot .form-actions {
+  grid-column: 1;
+  grid-row: 1;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  width: 100%;
+  gap: var(--space-2);
+}
+
+.write-compose .form-actions-secondary,
+.write-compose .edit-post-actions {
+  display: contents;
+}
+
+.write-compose .form-actions .secondary-action {
+  align-self: center;
+  justify-self: center;
+}
+
+.write-compose .form-actions > .button {
+  white-space: nowrap;
+}
+
+.write-compose .composefoot .posting-help-details {
+  grid-column: 1;
+  grid-row: 2;
+  width: fit-content;
+  justify-self: center;
+  text-align: center;
+}
+
+.write-compose .composefoot .posting-help-details summary {
+  text-align: center;
+}
+
+.write-compose .composefoot .posting-help-content {
+  grid-column: 1;
+  grid-row: 3;
+}
+
+@media (min-width: 521px) {
+  .write-compose .composefoot {
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: var(--space-3) var(--space-5);
+  }
+
+  .write-compose .composefoot .form-actions {
+    grid-column: 2;
+    grid-row: 1;
+    display: flex;
+    width: auto;
+    gap: var(--space-4);
+  }
+
+  .write-compose .form-actions-secondary,
+  .write-compose .edit-post-actions {
+    display: inline-flex;
+  }
+
+  .write-compose .edit-post-actions {
+    gap: var(--space-4);
+  }
+
+  .write-compose .composefoot .posting-help-details {
+    grid-column: 1;
+    grid-row: 1;
+    justify-self: start;
+    text-align: left;
+  }
+
+  .write-compose .composefoot .posting-help-details summary {
+    text-align: left;
+  }
+
+  .write-compose .composefoot .posting-help-content {
+    grid-column: 1 / -1;
+    grid-row: 2;
+  }
+}
+
 .posting-suggestion-results {
   display: flex;
   flex-wrap: wrap;
@@ -4081,7 +4252,7 @@ form.report-panel {
 }
 
 .compose-post-preview + .write-compose {
-  margin-top: var(--space-4);
+  margin-top: 0;
 }
 
 .compose-post-preview .postauthor:not(.post-context-author) {
