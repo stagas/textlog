@@ -172,6 +172,9 @@ describe('in-memory stylesheet', () => {
 
   test('folded feed threads retain only their deep reply preview', async () => {
     const css = await Bun.file(new URL('./styles.css', import.meta.url)).text()
+    expect(css).toContain('.postfoot .post-continuation-link {\n  color: var(--accent);')
+    expect(css).toContain('.feed-thread>.thread-fold-input:checked+.thread-root .thread-fold {\n'
+      + '  color: var(--accent);')
     expect(css).toContain('.feed-thread>.thread-fold-input:checked~.feed-thread-collapsed-branch {\n'
       + '  grid-template-rows: 1fr;')
     expect(css).toContain('.feed-thread>.thread-fold-input:checked~.feed-thread-collapsed-branch'

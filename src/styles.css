@@ -6345,11 +6345,11 @@ a.post-context:hover {
 
 
 .postfoot .post-continuation-link {
-  color: var(--muted);
+  color: var(--accent);
 }
 
 .postfoot .post-continuation-link:hover {
-  color: var(--tab-hover);
+  color: var(--accent-dark);
 }
 
 .thread-fold-input {
@@ -6370,6 +6370,14 @@ a.post-context:hover {
 }
 
 .thread-fold:hover {
+  color: var(--accent-dark);
+}
+
+.feed-thread>.thread-fold-input:checked+.thread-root .thread-fold {
+  color: var(--accent);
+}
+
+.feed-thread>.thread-fold-input:checked+.thread-root .thread-fold:hover {
   color: var(--accent-dark);
 }
 
