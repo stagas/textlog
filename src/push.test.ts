@@ -381,7 +381,7 @@ describe('Web Push activity delivery', () => {
     expect(payloads.map(payload => JSON.parse(payload))).toEqual([{
       title: '@author followed @recipient, #bun',
       body: '@author followed @recipient, #bun',
-      url: '/for-you',
+      url: '/my-feed',
     }])
     database.run('UPDATE push_subscriptions SET notify_hashtag_follow_activity=0 WHERE user_id=3')
     await sendPushForTagFollow(1, 'author', 'bun', database, vapid)

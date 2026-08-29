@@ -311,7 +311,7 @@ test('notification banners are hidden from logged-out visitors', async () => {
   const home = await request('/')
   expect(home.status).toBe(303)
   expect(home.headers.get('location')).toBe('/hot')
-  for (const path of ['/hot', '/latest']) {
+  for (const path of ['/hot', '/all']) {
     const response = await request(path)
     expect(response.status).toBe(200)
     const html = await response.text()
@@ -679,13 +679,13 @@ test('consequential account, content, reporting, and admin flows work over HTTP'
   expect((await request('/logout', { method: 'POST', cookie: ownLinkCookie, form: {} })).status).toBe(303)
   const authenticatedHome = await request('/', { cookie: aliceCookie })
   expect(authenticatedHome.status).toBe(303)
-  expect(authenticatedHome.headers.get('location')).toBe('/for-you')
+  expect(authenticatedHome.headers.get('location')).toBe('/my-feed')
   const authenticatedHomeHtml = await (await request(authenticatedHome.headers.get('location')!, {
     cookie: aliceCookie,
   })).text()
   expect(authenticatedHomeHtml).toContain('class="account-nav"')
   expect(authenticatedHomeHtml).toContain('@alice')
-  expect(authenticatedHomeHtml).toContain('href="/account/edit?from=%2Ffor-you">account</a>')
+  expect(authenticatedHomeHtml).toContain('href="/account/edit?from=%2Fmy-feed">account</a>')
   expect(authenticatedHomeHtml).not.toContain('href="/login">login</a>')
   expect(authenticatedHomeHtml).toContain('class="notification-banner"')
   const accountFromLatest = await request('/account/edit?from=%2Flatest%3Fpage%3D2', { cookie: aliceCookie })
@@ -718,20 +718,20 @@ test('consequential account, content, reporting, and admin flows work over HTTP'
   expect(interactedSettings).toContain('>subscribe</button>')
   const rememberedActivity = await request('/activity', { cookie: aliceCookie })
   expect(rememberedActivity.status).toBe(303)
-  expect(rememberedActivity.headers.get('location')).toBe('/to-me')
+  expect(rememberedActivity.headers.get('location')).toBe('/@')
   const activityHome = await request('/', { cookie: `${aliceCookie}; feed=activity` })
   expect(activityHome.status).toBe(303)
-  expect(activityHome.headers.get('location')).toBe('/for-you')
+  expect(activityHome.headers.get('location')).toBe('/my-feed')
   const latestHome = await request('/?page=2', { cookie: `${aliceCookie}; feed=latest` })
   expect(latestHome.status).toBe(303)
-  expect(latestHome.headers.get('location')).toBe('/latest?page=2')
+  expect(latestHome.headers.get('location')).toBe('/all?page=2')
   const hotHome = await request('/', { cookie: `${aliceCookie}; feed=hot` })
   expect(hotHome.status).toBe(303)
   expect(hotHome.headers.get('location')).toBe('/hot')
-  const activityHomeHtml = await (await request('/for-you', { cookie: `${aliceCookie}; feed=activity` })).text()
-  expect(activityHomeHtml).toContain('class="active" aria-current="page" href="/for-you"')
-  expect(activityHomeHtml).toContain('<title>for you · textlog</title>')
-  for (const path of ['/for-you', '/hot', '/latest']) {
+  const activityHomeHtml = await (await request('/my-feed', { cookie: `${aliceCookie}; feed=activity` })).text()
+  expect(activityHomeHtml).toContain('class="active" aria-current="page" href="/my-feed"')
+  expect(activityHomeHtml).toContain('<title>my feed · textlog</title>')
+  for (const path of ['/my-feed', '/hot', '/all']) {
     expect(await (await request(path, { cookie: aliceCookie })).text()).toContain('class="notification-banner"')
   }
   const notificationSettings = await request('/account/edit/notifications', { cookie: aliceCookie })
@@ -748,7 +748,7 @@ test('consequential account, content, reporting, and admin flows work over HTTP'
   expect(savedPush.status).toBe(200)
   const deviceCookie = savedPush.headers.get('set-cookie')?.match(/notification_device=[^;]+/)?.[0]
   expect(deviceCookie).toBeDefined()
-  const enabledDeviceHome = await (await request('/for-you', {
+  const enabledDeviceHome = await (await request('/my-feed', {
     cookie: aliceCookie,
     userAgent: 'alice-browser',
   })).text()
@@ -771,13 +771,13 @@ test('consequential account, content, reporting, and admin flows work over HTTP'
   expect(disabledPush.status).toBe(200)
   expect(database.query(`SELECT status FROM notification_user_agents WHERE user_id=? AND user_agent=?`)
     .get(alice.id, 'alice-disabled-browser')).toEqual({ status: 'dismissed' })
-  const disabledDeviceHome = await (await request('/for-you', {
+  const disabledDeviceHome = await (await request('/my-feed', {
     cookie: aliceCookie,
     userAgent: 'alice-disabled-browser',
   })).text()
   expect(disabledDeviceHome).not.toContain('href="/account/edit/notifications">enable notifications</a>')
   expect(disabledDeviceHome).toContain('href="/account/edit/appearance">customize appearance</a>')
-  const otherBrowserHome = await (await request('/for-you', {
+  const otherBrowserHome = await (await request('/my-feed', {
     cookie: aliceCookie,
     userAgent: 'alice-other-browser',
   })).text()
@@ -785,7 +785,7 @@ test('consequential account, content, reporting, and admin flows work over HTTP'
   expect(otherBrowserHome).not.toContain('check the improved notifications')
   database.query(`INSERT INTO notification_user_agents(user_id,user_agent,status) VALUES(?,?,'enabled')`)
     .run(alice.id, 'alice-improvements-browser')
-  const improvementsHome = await (await request('/for-you', {
+  const improvementsHome = await (await request('/my-feed', {
     cookie: aliceCookie,
     userAgent: 'alice-improvements-browser',
   })).text()
@@ -796,13 +796,13 @@ test('consequential account, content, reporting, and admin flows work over HTTP'
     userAgent: 'alice-improvements-browser',
   })
   expect(dismissedImprovements.status).toBe(303)
-  const improvementDismissedHome = await (await request('/for-you', {
+  const improvementDismissedHome = await (await request('/my-feed', {
     cookie: aliceCookie,
     userAgent: 'alice-improvements-browser',
   })).text()
   expect(improvementDismissedHome).not.toContain('check the improved notifications')
   expect(improvementDismissedHome).toContain('href="/account/edit/appearance">customize appearance</a>')
-  const legacyDismissedHome = await (await request('/for-you', {
+  const legacyDismissedHome = await (await request('/my-feed', {
     cookie: `${aliceCookie}; notification_banner_dismissed=${alice.id}`,
     userAgent: 'alice-legacy-browser',
   })).text()
@@ -815,7 +815,7 @@ test('consequential account, content, reporting, and admin flows work over HTTP'
   })
   expect(dismissed.status).toBe(303)
   expect(dismissed.headers.get('set-cookie')).toBeNull()
-  const dismissedHome = await (await request('/for-you', {
+  const dismissedHome = await (await request('/my-feed', {
     cookie: aliceCookie,
     userAgent: 'alice-dismissed-browser',
   })).text()
@@ -833,7 +833,7 @@ test('consequential account, content, reporting, and admin flows work over HTTP'
   })
   expect(dismissedBio.status).toBe(303)
   expect(database.query('SELECT 1 FROM bio_banner_dismissals WHERE user_id=?').get(alice.id)).toBeDefined()
-  const fullyDismissedHome = await (await request('/for-you', {
+  const fullyDismissedHome = await (await request('/my-feed', {
     cookie: aliceCookie,
     userAgent: 'alice-dismissed-browser',
   })).text()
@@ -845,7 +845,7 @@ test('consequential account, content, reporting, and admin flows work over HTTP'
   })
   expect(dismissedInvite.status).toBe(303)
   database.query('DELETE FROM bio_banner_dismissals WHERE user_id=?').run(alice.id)
-  const setupDismissedHome = await (await request('/for-you', {
+  const setupDismissedHome = await (await request('/my-feed', {
     cookie: aliceCookie,
     userAgent: 'alice-dismissed-browser',
   })).text()
@@ -857,7 +857,7 @@ test('consequential account, content, reporting, and admin flows work over HTTP'
   expect(openedBioEditor.status).toBe(303)
   expect(openedBioEditor.headers.get('location')).toBe('/account/edit')
   expect(database.query('SELECT 1 FROM bio_banner_dismissals WHERE user_id=?').get(alice.id)).toBeDefined()
-  const bioHandledHome = await (await request('/for-you', {
+  const bioHandledHome = await (await request('/my-feed', {
     cookie: aliceCookie,
     userAgent: 'alice-dismissed-browser',
   })).text()
@@ -870,7 +870,7 @@ test('consequential account, content, reporting, and admin flows work over HTTP'
   expect(acceptedDonation.headers.get('location')).toBe('https://opencollective.com/textlog')
   expect(acceptedDonation.headers.get('set-cookie')).toBeNull()
   expect(database.query('SELECT 1 FROM donation_banner_dismissals WHERE user_id=?').get(alice.id)).toBeDefined()
-  const donationDismissedHome = await (await request('/for-you', {
+  const donationDismissedHome = await (await request('/my-feed', {
     cookie: aliceCookie,
     userAgent: 'alice-dismissed-browser',
   })).text()
@@ -880,7 +880,7 @@ test('consequential account, content, reporting, and admin flows work over HTTP'
     userAgent: 'alice-browser',
   })
   expect(openedAppearance.status).toBe(200)
-  const merelyOpenedDeviceHome = await (await request('/for-you', {
+  const merelyOpenedDeviceHome = await (await request('/my-feed', {
     cookie: aliceCookie,
     userAgent: 'alice-browser',
   })).text()
@@ -901,7 +901,7 @@ test('consequential account, content, reporting, and admin flows work over HTTP'
   expect(disabledLinkPreviews.status).toBe(303)
   expect(database.query('SELECT show_link_previews FROM users WHERE id=?').get(alice.id))
     .toEqual({ show_link_previews: 0 })
-  const linkPreviewsDisabledHome = await (await request('/for-you', {
+  const linkPreviewsDisabledHome = await (await request('/my-feed', {
     cookie: aliceCookie,
     userAgent: 'alice-other-browser',
   })).text()
@@ -928,7 +928,7 @@ test('consequential account, content, reporting, and admin flows work over HTTP'
     userAgent: 'alice-browser',
   })).text()
   expect(moderatedContentSettings).toContain('name="showModeratedContent" checked="" value="yes"')
-  const configuredDeviceHome = await (await request('/for-you', {
+  const configuredDeviceHome = await (await request('/my-feed', {
     cookie: aliceCookie,
     userAgent: 'alice-browser',
   })).text()
@@ -1166,7 +1166,7 @@ test('consequential account, content, reporting, and admin flows work over HTTP'
   expect(createPost.status).toBe(303)
   const post = database.query('SELECT id,body FROM posts WHERE user_id=? ORDER BY id DESC LIMIT 1')
     .get(alice.id) as { id: number; body: string }
-  expect(createPost.headers.get('location')).toBe(`/latest#post-${post.id}`)
+  expect(createPost.headers.get('location')).toBe(`/all#post-${post.id}`)
 
   const unpublishable = database.query(
     'INSERT INTO posts(user_id,parent_id,body,created_at) VALUES(?,NULL,?,datetime(\'now\')) RETURNING id',
@@ -1362,7 +1362,7 @@ test('consequential account, content, reporting, and admin flows work over HTTP'
   )
   expect(crawledPasswordEntry.status).toBe(301)
   expect(crawledPasswordEntry.headers.get('location')).toBe(`${origin}/post/${post.id}`)
-  const crawledFeed = await request('/latest', { userAgent: 'Googlebot/2.1' })
+  const crawledFeed = await request('/all', { userAgent: 'Googlebot/2.1' })
   const crawledFeedHtml = await crawledFeed.text()
   expect(crawledFeedHtml).not.toContain('from=')
   expect(crawledFeedHtml).not.toContain('from%3D')
@@ -1386,22 +1386,22 @@ test('consequential account, content, reporting, and admin flows work over HTTP'
 
   const insertFeedPost = database.query('INSERT INTO posts(user_id,body) VALUES(?,?)')
   for (let index = 1; index <= 81; index++) insertFeedPost.run(alice.id, `cursor note ${index}`)
-  const latestFirst = await request('/latest')
+  const latestFirst = await request('/all')
   const latestFirstBody = await latestFirst.text()
-  const latestNext = latestFirstBody.match(/href="(\/latest\?page=2&amp;_scroll=instant#feed-tabs)"/)?.[1]
+  const latestNext = latestFirstBody.match(/href="(\/all\?page=2&amp;_scroll=instant#feed-tabs)"/)?.[1]
   expect(latestNext).toBeTruthy()
   expect(latestFirstBody).toContain('cursor note 81')
   expect(latestFirstBody).not.toContain(post.body)
-  const latestSecondBody = await (await request('/latest?page=2')).text()
+  const latestSecondBody = await (await request('/all?page=2')).text()
   expect(latestSecondBody).not.toContain(post.body)
   expect(latestSecondBody).toContain('← prev')
-  expect(await (await request('/latest?page=3')).text()).toContain(post.body)
+  expect(await (await request('/all?page=3')).text()).toContain(post.body)
 
-  const forYouFirstBody = await (await request('/for-you', { cookie: aliceCookie })).text()
-  expect(forYouFirstBody).not.toContain('/for-you?cursor=')
+  const forYouFirstBody = await (await request('/my-feed', { cookie: aliceCookie })).text()
+  expect(forYouFirstBody).not.toContain('/my-feed?cursor=')
   expect(forYouFirstBody).not.toContain('cursor note 81')
   expect(forYouFirstBody).toContain(post.body)
-  expect(forYouFirstBody).not.toContain('action="/for-you/read-all"')
+  expect(forYouFirstBody).not.toContain('action="/my-feed/read-all"')
   expect(forYouFirstBody).not.toContain('class="for-you-item activity-item-unread"')
 
   const profileFirstBody = await (await request('/u/alice')).text()
@@ -1410,12 +1410,12 @@ test('consequential account, content, reporting, and admin flows work over HTTP'
   expect(profileFirstBody).not.toContain(post.body)
   expect(await (await request('/u/alice?page=2')).text()).not.toContain(post.body)
   expect(await (await request('/u/alice?page=3')).text()).toContain(post.body)
-  expect((await request('/latest?cursor=broken')).status).toBe(400)
-  expect((await request('/for-you?cursor=broken', { cookie: aliceCookie })).status).toBe(400)
+  expect((await request('/all?cursor=broken')).status).toBe(400)
+  expect((await request('/my-feed?cursor=broken', { cookie: aliceCookie })).status).toBe(400)
   expect((await request('/activity?cursor=broken', { cookie: aliceCookie })).status).toBe(303)
   const invalidHomeCursor = await request('/?cursor=broken', { cookie: aliceCookie })
   expect(invalidHomeCursor.status).toBe(303)
-  expect(invalidHomeCursor.headers.get('location')).toBe('/for-you?cursor=broken')
+  expect(invalidHomeCursor.headers.get('location')).toBe('/my-feed?cursor=broken')
   expect((await request('/u/alice?cursor=broken')).status).toBe(400)
 
   const invalidIllegalActivity = await request('/report-illegal-activity', {
@@ -1470,22 +1470,22 @@ test('consequential account, content, reporting, and admin flows work over HTTP'
   database.query('UPDATE follows SET created_at=\'2099-01-01 00:00:00\' WHERE follower_id=? AND following_id=?')
     .run(bob.id, alice.id)
   database.query('UPDATE users SET bio=\'Bob builds things\' WHERE id=?').run(bob.id)
-  const followedPersonFeed = await (await request('/for-you', { cookie: aliceCookie })).text()
+  const followedPersonFeed = await (await request('/my-feed', { cookie: aliceCookie })).text()
   expect(followedPersonFeed).not.toContain('Bob builds things')
-  expect(followedPersonFeed).toContain('href="/for-you">for you</a>')
-  expect(followedPersonFeed).toContain('href="/to-me">to me<span class="to-me-count">1</span></a>')
-  const followedPersonToMe = await (await request('/to-me', { cookie: aliceCookie })).text()
+  expect(followedPersonFeed).toContain('href="/my-feed">my feed</a>')
+  expect(followedPersonFeed).toContain('href="/@">@<span class="to-me-count">1</span></a>')
+  const followedPersonToMe = await (await request('/@', { cookie: aliceCookie })).text()
   expect(followedPersonToMe).toContain('<a class="reference-menu-trigger postauthor" '
-    + 'href="/u/bob?from=%2Fto-me%23a-')
+    + 'href="/u/bob?from=%2F%40%23a-')
   expect(followedPersonToMe).not.toContain('reference-profile-tabs')
   expect(followedPersonToMe).toContain('<p class="profile-bio">Bob builds things</p>')
   expect(followedPersonToMe).toContain('<form action="/follow/bob" method="post">'
-    + '<input type="hidden" name="from" value="/to-me#a-')
+    + '<input type="hidden" name="from" value="/@#a-')
   expect(followedPersonToMe).toContain('<button class="button button-muted">unfollow</button>')
   expect(followedPersonToMe).not.toContain('action="/follow/alice"')
   expect(followedPersonToMe).toContain('activity-follow activity-item-directed-unread')
   expect(followedPersonToMe).toContain('class="unread-dot" aria-label="unread"')
-  const revisitedToMe = await (await request('/to-me', { cookie: aliceCookie })).text()
+  const revisitedToMe = await (await request('/@', { cookie: aliceCookie })).text()
   expect(revisitedToMe).not.toContain('class="unread-dot" aria-label="unread"')
   expect(revisitedToMe).not.toContain('activity-item-directed-unread')
   const updateBob = await request('/account/edit', {
@@ -1501,27 +1501,27 @@ test('consequential account, content, reporting, and admin flows work over HTTP'
   const bobPost = database.query('SELECT id FROM posts WHERE user_id=? AND body=?').get(bob.id, bobPostBody) as {
     id: number
   }
-  expect(await (await request('/latest')).text()).toContain(bobPostBody)
+  expect(await (await request('/all')).text()).toContain(bobPostBody)
   expect(await (await request('/u/bob')).text()).toContain(bobPostBody)
-  const forYouWithBobPost = await (await request('/for-you', { cookie: aliceCookie })).text()
+  const forYouWithBobPost = await (await request('/my-feed', { cookie: aliceCookie })).text()
   expect(forYouWithBobPost).toContain(bobPostBody)
   expect(forYouWithBobPost).not.toContain('class="quiet for-you-hide-action"')
   database.query('INSERT INTO posts(user_id,parent_id,body) VALUES(?,?,?)')
     .run(alice.id, bobPost.id, 'A reply quoting Bob')
   database.query('DELETE FROM feed_snapshots WHERE viewer_id=?').run(alice.id)
-  const latestWithQuote = await (await request('/latest', { cookie: aliceCookie })).text()
+  const latestWithQuote = await (await request('/all', { cookie: aliceCookie })).text()
   expect(latestWithQuote).toContain('A reply quoting Bob')
   expect(latestWithQuote).toContain(bobPostBody)
-  const latestAfterReplyRead = await (await request('/latest', { cookie: aliceCookie })).text()
+  const latestAfterReplyRead = await (await request('/all', { cookie: aliceCookie })).text()
   expect(latestAfterReplyRead).toContain('A reply quoting Bob')
   expect(latestAfterReplyRead).toContain(bobPostBody)
-  const forYouWithOwnReply = await (await request('/for-you', { cookie: aliceCookie })).text()
+  const forYouWithOwnReply = await (await request('/my-feed', { cookie: aliceCookie })).text()
   expect(forYouWithOwnReply).toContain('A reply quoting Bob')
-  const markedForYou = await request('/for-you/read-all', { method: 'POST', cookie: aliceCookie })
+  const markedForYou = await request('/my-feed/read-all', { method: 'POST', cookie: aliceCookie })
   expect(markedForYou.status).toBe(303)
-  expect(markedForYou.headers.get('location')).toBe('/for-you')
-  const readForYou = await (await request('/for-you', { cookie: aliceCookie })).text()
-  expect(readForYou).not.toContain('action="/for-you/read-all"')
+  expect(markedForYou.headers.get('location')).toBe('/my-feed')
+  const readForYou = await (await request('/my-feed', { cookie: aliceCookie })).text()
+  expect(readForYou).not.toContain('action="/my-feed/read-all"')
   expect(readForYou).not.toContain('you&#x27;ve seen it all')
   const blockBob = await request('/block/bob', { method: 'POST', cookie: aliceCookie })
   expect(blockBob.status).toBe(303)
@@ -1564,15 +1564,15 @@ test('consequential account, content, reporting, and admin flows work over HTTP'
     form: { tab: 'misc', pageSize: '20', density: 'regular', includeHashtagFollowActivity: 'yes' },
   })
   expect(includedHashtagActivity.status).toBe(303)
-  const followedTagFeed = await (await request('/for-you', { cookie: aliceCookie })).text()
+  const followedTagFeed = await (await request('/my-feed', { cookie: aliceCookie })).text()
   expect(followedTagFeed).toContain('<a class="reference-menu-trigger postauthor" '
-    + 'href="/u/bob?from=%2Ffor-you%23a-')
+    + 'href="/u/bob?from=%2Fmy-feed%23a-')
   expect(followedTagFeed).toContain('<span class="reference-popover-bio">Bob builds things</span>')
   expect(followedTagFeed).toContain('<a class="reference-menu-trigger" '
-    + 'href="/tag/shared?from=%2Ffor-you%23a-')
+    + 'href="/tag/shared?from=%2Fmy-feed%23a-')
   expect(followedTagFeed).not.toContain('activity-follow-stats')
   expect(followedTagFeed).toContain('<form action="/tag-follow/shared" method="post">'
-    + '<input type="hidden" name="from" value="/for-you#a-')
+    + '<input type="hidden" name="from" value="/my-feed#a-')
   expect(followedTagFeed).not.toContain('<time dateTime="2099-01-02 00:00:00"')
   expect(followedTagFeed).not.toContain('<span aria-hidden="true">·</span><span>0 notes</span></a>')
   expect(followedTagFeed).not.toContain('@alice</a><span>followed</span><a href="/tag/shared">#shared</a>')
@@ -1594,8 +1594,8 @@ test('consequential account, content, reporting, and admin flows work over HTTP'
     form: { body: 'Bot note discovered through #shared' },
   })
   expect(hashtagBotPost.status).toBe(303)
-  const hashtagForYou = await (await request('/for-you', { cookie: aliceCookie })).text()
-    + await (await request('/for-you?page=2', { cookie: aliceCookie })).text()
+  const hashtagForYou = await (await request('/my-feed', { cookie: aliceCookie })).text()
+    + await (await request('/my-feed?page=2', { cookie: aliceCookie })).text()
   expect(hashtagForYou).toContain('Bot note discovered through')
   expect(sharedReplyResponse.headers.get('location')).toBe(
     `/post/${post.id}?from=%2Flatest%3Fcursor%3Dabc%23post-1#post-${sharedReply.id}`,
@@ -1619,11 +1619,11 @@ test('consequential account, content, reporting, and admin flows work over HTTP'
   database.query('INSERT INTO post_hashtags(post_id,tag) VALUES(?,?)').run(visitedGeneralPost.id, 'shared')
   const visitedGeneralReadKey = `post:${String(visitedGeneralPost.id).padStart(20, '0')}`
 
-  const latestBeforeForYou = await (await request('/latest', { cookie: aliceCookie })).text()
-  expect(latestBeforeForYou).toContain('href="/for-you">for you<span class="to-me-count">1</span></a>')
-  await request('/for-you', { cookie: aliceCookie })
-  const latestAfterForYou = await (await request('/latest', { cookie: aliceCookie })).text()
-  expect(latestAfterForYou).toContain('href="/for-you">for you</a>')
+  const latestBeforeForYou = await (await request('/all', { cookie: aliceCookie })).text()
+  expect(latestBeforeForYou).toContain('href="/my-feed">my feed<span class="to-me-count">1</span></a>')
+  await request('/my-feed', { cookie: aliceCookie })
+  const latestAfterForYou = await (await request('/all', { cookie: aliceCookie })).text()
+  expect(latestAfterForYou).toContain('href="/my-feed">my feed</a>')
   expect(database.query('SELECT 1 FROM activity_reads WHERE user_id=? AND event_key=?')
     .get(alice.id, activityReadKey)).toBeTruthy()
   expect(database.query('SELECT 1 FROM for_you_reads WHERE user_id=? AND event_key=?')
@@ -1631,25 +1631,25 @@ test('consequential account, content, reporting, and admin flows work over HTTP'
   expect(database.query('SELECT 1 FROM for_you_reads WHERE user_id=? AND event_key=?')
     .get(alice.id, visitedGeneralReadKey)).toBeTruthy()
 
-  const unreadToMeHtml = await (await request('/to-me', { cookie: aliceCookie })).text()
-  expect(unreadToMeHtml).not.toContain('action="/to-me/read-all"')
+  const unreadToMeHtml = await (await request('/@', { cookie: aliceCookie })).text()
+  expect(unreadToMeHtml).not.toContain('action="/@/read-all"')
   expect(unreadToMeHtml).not.toContain('>first unread</a>')
-  expect(unreadToMeHtml).toContain('class="active" aria-current="page" href="/to-me">to me'
+  expect(unreadToMeHtml).toContain('class="active" aria-current="page" href="/@">@'
     + '<span class="to-me-count">1</span></a>')
   expect(unreadToMeHtml).not.toContain('>all</a>')
   expect(unreadToMeHtml).toContain('activity-item-directed-unread')
   expect(unreadToMeHtml).toContain('class="unread-dot" aria-label="unread"')
   expect(database.query('SELECT 1 FROM for_you_reads WHERE user_id=? AND event_key=?')
     .get(alice.id, forYouReadKey)).toBeTruthy()
-  const revisitedToMeHtml = await (await request('/to-me', { cookie: aliceCookie })).text()
-  expect(revisitedToMeHtml).toContain('href="/for-you">for you</a>')
-  expect(revisitedToMeHtml).toContain('href="/to-me">to me</a>')
+  const revisitedToMeHtml = await (await request('/@', { cookie: aliceCookie })).text()
+  expect(revisitedToMeHtml).toContain('href="/my-feed">my feed</a>')
+  expect(revisitedToMeHtml).toContain('href="/@">@</a>')
   expect(revisitedToMeHtml).not.toContain('class="unread-dot" aria-label="unread"')
 
   const generalFeedPost = database.query('INSERT INTO posts(user_id,body) VALUES(?,?) RETURNING id')
     .get(bob.id, 'unread general feed note') as { id: number }
   const generalFeedReadKey = `post:${String(generalFeedPost.id).padStart(20, '0')}`
-  await request('/to-me/read-all', { method: 'POST', cookie: aliceCookie })
+  await request('/@/read-all', { method: 'POST', cookie: aliceCookie })
   expect(database.query('SELECT 1 FROM for_you_reads WHERE user_id=? AND event_key=?')
     .get(alice.id, forYouReadKey)).toBeTruthy()
   expect(database.query('SELECT 1 FROM for_you_reads WHERE user_id=? AND event_key=?')
@@ -1663,7 +1663,7 @@ test('consequential account, content, reporting, and admin flows work over HTTP'
     .get(bob.id, 'general note cleared by for you #shared') as { id: number }
   database.query('INSERT INTO post_hashtags(post_id,tag) VALUES(?,?)').run(bulkGeneralPost.id, 'shared')
   const bulkGeneralReadKey = `post:${String(bulkGeneralPost.id).padStart(20, '0')}`
-  await request('/for-you/read-all', { method: 'POST', cookie: aliceCookie })
+  await request('/my-feed/read-all', { method: 'POST', cookie: aliceCookie })
   expect(database.query('SELECT 1 FROM for_you_reads WHERE user_id=? AND event_key=?')
     .get(alice.id, bulkGeneralReadKey)).toBeTruthy()
   expect(database.query('SELECT 1 FROM for_you_reads WHERE user_id=? AND event_key=?')
@@ -1677,15 +1677,15 @@ test('consequential account, content, reporting, and admin flows work over HTTP'
     insertActivityReply.run(bob.id, post.id, index === 1 ? 'oldest cursor boundary' : `activity cursor reply ${index}`,
       createdAt)
   }
-  const activityFirstBody = await (await request('/to-me', { cookie: aliceCookie })).text()
-  const activityNext = activityFirstBody.match(/href="(\/to-me\?page=2&amp;_scroll=instant)"/)?.[1]
+  const activityFirstBody = await (await request('/@', { cookie: aliceCookie })).text()
+  const activityNext = activityFirstBody.match(/href="(\/@\?page=2&amp;_scroll=instant)"/)?.[1]
   expect(activityNext).toBeUndefined()
   expect(activityFirstBody).toContain('activity cursor reply 81')
   expect(activityFirstBody).toContain('oldest cursor boundary')
-  expect(activityFirstBody).not.toContain('href="/to-me?page=2#')
-  expect(activityFirstBody).not.toContain('action="/to-me/read-all"')
+  expect(activityFirstBody).not.toContain('href="/@?page=2#')
+  expect(activityFirstBody).not.toContain('action="/@/read-all"')
   insertActivityReply.run(bob.id, post.id, 'newer activity after cursor', '2080-02-01 12:00:00')
-  const activitySecondBody = await (await request('/to-me?page=2', { cookie: aliceCookie })).text()
+  const activitySecondBody = await (await request('/@?page=2', { cookie: aliceCookie })).text()
   expect(activitySecondBody).toContain('oldest cursor boundary')
   expect(activitySecondBody).toContain('activity cursor reply 81')
   expect(activitySecondBody).not.toContain('← prev')
@@ -1804,7 +1804,7 @@ test('consequential account, content, reporting, and admin flows work over HTTP'
   expect(database.query('SELECT 1 FROM users WHERE handle=?').get('passworddelete')).toBeNull()
 
   const adminCookie = await signup('admin', 'gstagas@gmail.com', 'admin password 123')
-  const adminActivity = await (await request('/for-you', { cookie: adminCookie })).text()
+  const adminActivity = await (await request('/my-feed', { cookie: adminCookie })).text()
   expect(adminActivity).toContain('>@admin</a>')
   expect(adminActivity).toContain('>@alice</a>')
   expect(adminActivity).toContain('<span class="activity-context">signed up.</span>')
@@ -1816,14 +1816,14 @@ test('consequential account, content, reporting, and admin flows work over HTTP'
   expect(adminActivity).not.toContain('action="/follow/alice"')
   expect(adminActivity).not.toContain('<span class="follows-you">follows you</span>')
   expect(adminActivity).not.toContain('action="/follow/admin"')
-  expect(adminActivity).not.toContain('action="/for-you/read-all"')
+  expect(adminActivity).not.toContain('action="/my-feed/read-all"')
   const markedActivity = await request('/activity/read-all', { method: 'POST', cookie: adminCookie })
   expect(markedActivity.status).toBe(303)
-  expect(markedActivity.headers.get('location')).toBe('/to-me')
-  const readAdminActivity = await (await request('/for-you', { cookie: adminCookie })).text()
-  expect(readAdminActivity).not.toContain('action="/for-you/read-all"')
+  expect(markedActivity.headers.get('location')).toBe('/@')
+  const readAdminActivity = await (await request('/my-feed', { cookie: adminCookie })).text()
+  expect(readAdminActivity).not.toContain('action="/my-feed/read-all"')
   expect(readAdminActivity).not.toContain('you&#x27;ve seen it all')
-  const ordinaryActivity = await (await request('/for-you', { cookie: aliceCookie })).text()
+  const ordinaryActivity = await (await request('/my-feed', { cookie: aliceCookie })).text()
   expect(ordinaryActivity).not.toContain('signed up:</span>')
   const dashboard = await request('/admin', { cookie: adminCookie })
   expect(dashboard.status).toBe(200)
@@ -1898,8 +1898,8 @@ test('consequential account, content, reporting, and admin flows work over HTTP'
   expect(userActions).toEqual([{ action: 'suspend_user' }, { action: 'restore_user' }])
 
   const testBlockAddress = '198.51.100.77'
-  await request('/latest', { ip: testBlockAddress })
-  await request('/latest', { ip: testBlockAddress })
+  await request('/all', { ip: testBlockAddress })
+  await request('/all', { ip: testBlockAddress })
   const today = new Date().toISOString().slice(0, 10)
   const ipHash = createHmac('sha256', 'route-integration-ip-secret')
     .update(`textlog\0http-log\0${today}\0${testBlockAddress}`).digest('hex')
@@ -1922,7 +1922,7 @@ test('consequential account, content, reporting, and admin flows work over HTTP'
     WHERE day=date('now') AND ip_hash=?`).get(ipHash!) as { blocked_at: string | null }).toMatchObject({
     blocked_at: expect.any(String),
   })
-  const blockedRequest = await request('/latest', { ip: testBlockAddress })
+  const blockedRequest = await request('/all', { ip: testBlockAddress })
   expect(blockedRequest.status).toBe(429)
   expect(Number(blockedRequest.headers.get('retry-after'))).toBeGreaterThan(0)
 }, 60_000)

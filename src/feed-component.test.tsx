@@ -91,7 +91,7 @@ test('latest renders independent unread controls, thread dots, and directed high
   const reply = { id: 71, user_id: 3, parent_id: 70, body: 'directed unread reply', created_at: '2026-08-19 11:00:00',
     deleted_at: null, handle: 'bob', reply_count: 0, parent: root }
   const user = { id: 1, handle: 'reader', email: 'reader@example.com', bio: '' }
-  const html = renderToStaticMarkup(<PublicFeed user={user} path="/latest" feed={{
+  const html = renderToStaticMarkup(<PublicFeed user={user} path="/all" feed={{
     posts: [reply, root],
     page: 1,
     totalItems: 6,
@@ -100,16 +100,16 @@ test('latest renders independent unread controls, thread dots, and directed high
     latestCount: 4,
     unreadPostIds: [70, 71],
     directedUnreadPostIds: [71],
-    unreadHref: '/latest?page=2#post-60',
-    lastUnreadHref: '/latest?page=3#post-50',
+    unreadHref: '/all?page=2#post-60',
+    lastUnreadHref: '/all?page=3#post-50',
   }} />)
 
   expect(html.match(/class="unread-dot" aria-label="unread"/g)).toHaveLength(2)
   expect(html).toContain('class="post tappable-post activity-item-directed-unread" id="post-71"')
-  expect(html).toContain('href="/latest?page=2#post-60">first unread</a>')
-  expect(html).toContain('href="/latest?page=3#post-50">last unread</a>')
-  expect(html).toContain('action="/latest/read-all"')
-  expect(html).toContain('latest<span class="to-me-count">4</span>')
+  expect(html).toContain('href="/all?page=2#post-60">first unread</a>')
+  expect(html).toContain('href="/all?page=3#post-50">last unread</a>')
+  expect(html).toContain('action="/all/read-all"')
+  expect(html).toContain('all<span class="to-me-count">4</span>')
 })
 
 test('a deep unread reply moves its root first and compresses read ancestors', () => {
@@ -157,7 +157,7 @@ test('latest shows approximate age wording only for unread post metadata', () =>
     handle: 'alice', reply_count: 0 }
   const read = { ...unread, id: 73, body: 'read note' }
   const user = { id: 1, handle: 'reader', email: 'reader@example.com', bio: '' }
-  const html = renderToStaticMarkup(<PublicFeed user={user} path="/latest" feed={{
+  const html = renderToStaticMarkup(<PublicFeed user={user} path="/all" feed={{
     posts: [unread, read],
     page: 1,
     totalItems: 2,
@@ -187,8 +187,8 @@ test('latest keeps the arrival count but hides read actions when the rendered pa
   }} />)
 
   expect(html).toContain('class="unread-dot" aria-label="unread"')
-  expect(html).toContain('latest<span class="to-me-count">1</span>')
-  expect(html).not.toContain('action="/latest/read-all"')
+  expect(html).toContain('all<span class="to-me-count">1</span>')
+  expect(html).not.toContain('action="/all/read-all"')
 })
 
 test('latest gives unread dots to a reply and its promoted off-page parent', () => {
@@ -529,9 +529,9 @@ test('activity targets do not duplicate their details in hovercards', () => {
         toMeUnread: false }} />,
   )
 
-  expect(followHtml).toContain('href="/u/dave?from=%2Ffor-you%23a-')
+  expect(followHtml).toContain('href="/u/dave?from=%2Fmy-feed%23a-')
   expect(followHtml).not.toContain('<span class="reference-popover-bio">Dave builds things</span>')
-  expect(signupHtml).toContain('href="/u/erin?from=%2Ffor-you%23a-')
+  expect(signupHtml).toContain('href="/u/erin?from=%2Fmy-feed%23a-')
   expect(signupHtml).toContain('signed up.')
   expect(signupHtml).not.toContain('/admin/users/5')
   expect(signupHtml).not.toContain('reference-menu-popover')
@@ -597,10 +597,10 @@ test('a followed-you event offers to follow back', () => {
   />)
 
   expect(html).toContain('>follow back</button>')
-  expect(html).toContain('href="/u/carol?from=%2Ffor-you%23a-IEy7ZWXnSxMC"')
+  expect(html).toContain('href="/u/carol?from=%2Fmy-feed%23a-IEy7ZWXnSxMC"')
   expect(html).not.toContain('reference-menu-popover')
   expect(html).toContain('</div><form action="/follow/carol" method="post"><input type="hidden" '
-    + 'name="from" value="/for-you#a-IEy7ZWXnSxMC"/><button class="button">follow back</button>')
+    + 'name="from" value="/my-feed#a-IEy7ZWXnSxMC"/><button class="button">follow back</button>')
 })
 
 test('for-you does not put hide actions on posts by people', () => {
@@ -629,7 +629,7 @@ test('first for-you page shows top pagination when the first unread item is on a
   const html = renderToStaticMarkup(<Feed
     user={{ id: 1, handle: 'reader', email: 'reader@example.com', bio: '', handle_chosen_at: '2026-08-19 09:00:00' }}
     data={{ timeline: [postActivity(10, 2, 'alice'), postActivity(11, 3, 'bob')], page: 1, totalPages: 3, toMeCount: 0,
-      forYouCount: 1, forYouUnread: true, toMeUnread: false, unreadHref: '/for-you?page=2#post-20' }}
+      forYouCount: 1, forYouUnread: true, toMeUnread: false, unreadHref: '/my-feed?page=2#post-20' }}
   />)
 
   expect(html).toContain('pagination pagination-top')
@@ -639,30 +639,30 @@ test('for-you offers links to the first and last unread activity', () => {
   const html = renderToStaticMarkup(<Feed
     user={{ id: 1, handle: 'reader', email: 'reader@example.com', bio: '', handle_chosen_at: '2026-08-19 09:00:00' }}
     data={{ timeline: [postActivity(10, 2, 'alice')], page: 1, totalPages: 3, toMeCount: 0, forYouCount: 2,
-      forYouUnread: true, toMeUnread: false, unreadHref: '/for-you?page=2#post-20',
-      lastUnreadHref: '/for-you?page=3#post-30' }}
+      forYouUnread: true, toMeUnread: false, unreadHref: '/my-feed?page=2#post-20',
+      lastUnreadHref: '/my-feed?page=3#post-30' }}
   />)
 
   expect(html).toContain('<span class="activity-side-status">jump to</span>')
-  expect(html).toContain('href="/for-you?page=2#post-20">first unread</a>')
-  expect(html).toContain('href="/for-you?page=3#post-30">last unread</a>')
+  expect(html).toContain('href="/my-feed?page=2#post-20">first unread</a>')
+  expect(html).toContain('href="/my-feed?page=3#post-30">last unread</a>')
 })
 
 test('to-me omits hide actions and keeps top pagination before entries', () => {
   const html = renderToStaticMarkup(<Feed
     user={{ id: 1, handle: 'reader', email: 'reader@example.com', bio: '', handle_chosen_at: '2026-08-19 09:00:00' }}
     toMe
-    path="/to-me"
+    path="/@"
     data={{ timeline: [postActivity(10, 2, 'alice'), postActivity(11, 3, 'bob')], page: 1, totalPages: 3, toMeCount: 2,
-      forYouCount: 2, forYouUnread: false, toMeUnread: true, unreadHref: '/to-me?page=2#post-20' }}
+      forYouCount: 2, forYouUnread: false, toMeUnread: true, unreadHref: '/@?page=2#post-20' }}
   />)
 
   expect(html).not.toContain('for-you-hide-input')
   expect(html.indexOf('pagination pagination-top')).toBeLessThan(html.indexOf('for-you-item for-you-author-2'))
-  expect(html).toContain('href="/to-me?page=2#post-20">unread</a>')
+  expect(html).toContain('href="/@?page=2#post-20">unread</a>')
   expect(html).not.toContain('>first unread</a>')
   expect(html).not.toContain('>last unread</a>')
-  expect(html).toContain('action="/to-me/read-all"')
+  expect(html).toContain('action="/@/read-all"')
 })
 
 test('hot and latest show the to-me tab with its unread count', () => {
@@ -672,9 +672,9 @@ test('hot and latest show the to-me tab with its unread count', () => {
 
   for (const html of [
     renderToStaticMarkup(<HotFeed user={user} feed={feed} />),
-    renderToStaticMarkup(<PublicFeed user={user} feed={feed} path="/latest" />),
+    renderToStaticMarkup(<PublicFeed user={user} feed={feed} path="/all" />),
   ]) {
-    expect(html).toContain('href="/to-me">to me<span class="to-me-count">3</span></a>')
+    expect(html).toContain('href="/@">@<span class="to-me-count">3</span></a>')
   }
 })
 
@@ -685,8 +685,8 @@ test('hot and latest keep the to-me tab without a count when it has no unread co
 
   for (const html of [
     renderToStaticMarkup(<HotFeed user={user} feed={feed} />),
-    renderToStaticMarkup(<PublicFeed user={user} feed={feed} path="/latest" />),
+    renderToStaticMarkup(<PublicFeed user={user} feed={feed} path="/all" />),
   ]) {
-    expect(html).toContain('href="/to-me">to me</a>')
+    expect(html).toContain('href="/@">@</a>')
   }
 })

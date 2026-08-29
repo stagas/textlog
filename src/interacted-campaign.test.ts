@@ -67,7 +67,7 @@ test('interaction campaign sends eligible recipients once with Resend pacing and
     subject: 'People have interacted with you · textlog',
     headers: { 'List-Unsubscribe-Post': 'List-Unsubscribe=One-Click' },
   })
-  expect(String(requests[1].body.html)).toContain('/to-me')
+  expect(String(requests[1].body.html)).toContain('/@')
   expect(String(requests[1].body.html)).toContain('/account/interacted-emails/unsubscribe?token=')
   expect(database.query('SELECT count(*) count FROM interacted_unsubscribe_tokens').get()).toEqual({ count: 1 })
   expect(database.query(`SELECT status,attempts,provider_id FROM interacted_email_deliveries`).get()).toEqual({
