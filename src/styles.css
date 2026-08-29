@@ -2963,6 +2963,15 @@ main:has(> .write-compose) {
   border-top: 1px solid var(--soft);
 }
 
+.edit-write-compose .compose-editor-row {
+  border-top: 1px solid var(--soft);
+}
+
+:is(.edit-write-compose, .edit-reply-compose) .edit-post-delete-action {
+  margin-bottom: 0;
+  padding: var(--space-4) var(--gutter);
+}
+
 .write-compose .compose-heading {
   margin: var(--space-4) 0 0;
   padding: var(--space-4) var(--gutter);
@@ -4182,6 +4191,20 @@ form.report-panel {
 
 :is(.write-compose, .reply-compose) .form-actions > .button {
   white-space: nowrap;
+}
+
+:is(.edit-write-compose, .edit-reply-compose) .edit-post-primary-actions .button {
+  white-space: nowrap;
+}
+
+@media (max-width: 520px) {
+  :is(.edit-write-compose, .edit-reply-compose) .composefoot .form-actions {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  :is(.edit-write-compose, .edit-reply-compose) .edit-post-primary-actions {
+    display: contents;
+  }
 }
 
 :is(.write-compose, .reply-compose) .composefoot .posting-help-details {

@@ -1,7 +1,7 @@
 import type React from 'react'
 import { POST_MAX } from '../post-body'
 import { canPublishPosts } from '../posting-policy'
-import type { User } from '../types'
+import type { LocationView, User } from '../types'
 import type { PostView } from '../types'
 import { Layout } from './layout'
 import {
@@ -54,8 +54,8 @@ export function ReplyBox(
   )
 }
 
-export function ReplyPreview({ parent, user, body, executionOutput }: {
-  parent: PostView; user: User; body: string; executionOutput?: string | null
+export function ReplyPreview({ parent, user, body, executionOutput, location }: {
+  parent: PostView; user: User; body: string; executionOutput?: string | null; location?: LocationView
 }) {
   return (
     <div className="reply-preview">
@@ -68,6 +68,7 @@ export function ReplyPreview({ parent, user, body, executionOutput }: {
             parent_id: parent.id,
             body,
             execution_output: executionOutput,
+            location,
             created_at: new Date().toISOString().slice(0, 19).replace('T', ' '),
             deleted_at: null,
             handle: user.handle,
@@ -83,7 +84,7 @@ export function ReplyPreview({ parent, user, body, executionOutput }: {
 export function Reply(
   { user, post, replies = [], showForm, showReport = false, reported = false, error, body = '', reportReason = '',
     reportError, social, preview = false, returnPath, topHref, flatHref, treeHref, flat = false, suggestionSearch,
-    draftId, previewExecutionOutput }: {
+    draftId, previewExecutionOutput, previewLocation }: {
       user: User
       post: PostView
       replies?: PostView[]
@@ -104,6 +105,7 @@ export function Reply(
       suggestionSearch?: PostingSuggestionSearch | null
       draftId?: number
       previewExecutionOutput?: string | null
+      previewLocation?: LocationView
     },
 ) {
   return (
@@ -121,7 +123,8 @@ export function Reply(
           <ReportPanel post={post} showForm={showReport} reported={reported} reason={reportReason}
             error={reportError} />
         )}
-        {preview && <ReplyPreview parent={post} user={user} body={body} executionOutput={previewExecutionOutput} />}
+        {preview && <ReplyPreview parent={post} user={user} body={body} executionOutput={previewExecutionOutput}
+          location={previewLocation} />}
         {showForm && !post.thread_locked && (
           canPublishPosts(user)
             ? (

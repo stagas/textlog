@@ -3,7 +3,7 @@ import { extractHashtags, extractMentions } from './content'
 import { encodeHotCursor, getHotPosts, type HotCursor, hotCursor } from './hot'
 import { getImageUrl, isImageKey } from './image-storage'
 import { decodeHtmlEntities } from './link-preview'
-import { LOCATION_ZOOM, osmLocationUrl } from './locations'
+import { LOCATION_MAP_STYLE_VERSION, LOCATION_ZOOM, osmLocationUrl } from './locations'
 import { loadPolls } from './polls'
 import { searchExpression } from './search'
 import type { ApiPost, LinkPreview } from './types'
@@ -168,7 +168,7 @@ function apiExtras(database: Database, postIds: number[], viewerId: number) {
   ).get()) {
     const rows = database.query(`SELECT l.post_id,l.query,l.latitude,l.longitude,l.display_name,
       m.image_key,m.width,m.height FROM post_locations l JOIN location_map_previews m ON m.cache_key=
-      printf('${LOCATION_ZOOM}:%.6f:%.6f',l.latitude,l.longitude) WHERE l.post_id IN
+      printf('${LOCATION_ZOOM}:${LOCATION_MAP_STYLE_VERSION}:%.6f:%.6f',l.latitude,l.longitude) WHERE l.post_id IN
       (${postIds.map(() => '?').join(',')})`).all(...postIds) as Array<{ post_id: number; query: string;
       latitude: number; longitude: number; display_name: string; image_key: string; width: number; height: number }>
     for (const row of rows) {

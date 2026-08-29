@@ -208,6 +208,22 @@ test('compose previews inline polls with their visible tag and options', () => {
   expect(html).toContain('>Linux</div>')
 })
 
+test('compose previews map locations with the stored-style hovercard', () => {
+  const html = renderToStaticMarkup(React.createElement(Compose, {
+    user: { id: 1, handle: 'writer', email: 'writer@example.com', bio: '', email_verified_at: '2026-08-20' },
+    body: 'Going hiking #map\nKallikratis, Crete',
+    preview: true,
+    previewLocation: { query: 'Kallikratis, Crete', latitude: 35.2, longitude: 24.2,
+      displayName: 'Kallikratis, Crete, Greece',
+      url: 'https://www.openstreetmap.org/?mlat=35.2&mlon=24.2#map=3/35.2/24.2',
+      preview: { imageUrl: '/uploads/location-maps/test.png', title: 'Kallikratis',
+        description: 'Crete, Greece', imageWidth: 600, imageHeight: 315 } },
+  }))
+  expect(html).toContain('href="/tag/map')
+  expect(html).toContain('noopener noreferrer">Kallikratis, Crete</a><a class="remote-link-popover"')
+  expect(html).toContain('/uploads/location-maps/test.png')
+})
+
 test('compose previews quizzes and identifies the correct answer', () => {
   const html = renderToStaticMarkup(React.createElement(Compose, {
     user: { id: 1, handle: 'writer', email: 'writer@example.com', bio: '', email_verified_at: '2026-08-20' },
@@ -454,7 +470,9 @@ test('post edit places draft and delete above the textarea and keeps preview bef
     deleted_at: null }
   const html = renderToStaticMarkup(React.createElement(EditPost, { user, post }))
 
-  expect(html).toContain('class="panel panel-surface panel-medium compose edit-post-compose"')
+  expect(html).toContain(
+    'class="panel panel-surface panel-medium compose edit-post-compose write-compose edit-write-compose"',
+  )
   expect(html).toContain('class="edit-post-actions"')
   expect(html).toContain('class="edit-post-primary-actions"')
   expect(html).toContain('class="edit-post-delete-action"')
@@ -511,7 +529,9 @@ test('editing a reply shows its parent context above the textarea', () => {
 
   expect(html).toContain('class="post-page-thread"')
   expect(html).toContain('class="thread-root"')
-  expect(html).toContain('class="panel panel-surface panel-medium replybox"')
+  expect(html).toContain(
+    'class="panel panel-surface panel-medium replybox reply-compose edit-reply-compose"',
+  )
   expect(html).toContain('Parent note')
   expect(html).not.toContain('>read</a>')
   expect(html).toContain('class="quiet post-back-link" href="/latest?cursor=abc#post-3">back</a>')
@@ -533,7 +553,9 @@ test('editing a reply shows its parent context above the textarea', () => {
   expect(preview).toContain('Edited reply')
   expect(preview.indexOf('<div class="reply-preview">')).toBeLessThan(preview.indexOf('<textarea'))
   const previewPost = preview.slice(preview.indexOf('<div class="reply-preview">'),
-    preview.indexOf('<div class="panel panel-surface panel-medium replybox">'))
+    preview.indexOf(
+      '<div class="panel panel-surface panel-medium replybox reply-compose edit-reply-compose">',
+    ))
   expect(previewPost).toContain('<span class="post-context post-context-author">you</span>')
   expect(previewPost).toContain(
     '<span class="post-context">replied to</span><span class="preview-context-target">@author</span>',

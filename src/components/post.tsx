@@ -476,7 +476,7 @@ export function PreviewPost({ p, user }: { p: PostView; user?: User }) {
           ? ' ends-code-fence' : ''}`} dangerouslySetInnerHTML={{
           __html: linkify(displayPostBody(renderedPollBody(p.body)), p.mention_bios, [], undefined, renderFlags(p), '',
             p.hashtag_counts, p.mention_note_counts, { signedIn: false, currentHandle: p.handle, formPrefix,
-            hashtagFollowerCounts: p.hashtag_follower_counts, linkPreviews: p.link_previews }),
+            hashtagFollowerCounts: p.hashtag_follower_counts, linkPreviews: p.link_previews, location: p.location }),
         }} />
         {p.execution_output !== null && p.execution_output !== undefined && <ExecutionOutput output={p.execution_output} />}
         <PollPreview body={p.body} />

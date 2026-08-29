@@ -7,7 +7,7 @@ import { recordHotActivity } from './hot'
 import { getImageUrl, isImageKey } from './image-storage'
 import { markLatestPostsRead } from './latest-state'
 import { decodeHtmlEntities, userBioLinkPreviews } from './link-preview'
-import { LOCATION_ZOOM, locationMapKey, osmLocationUrl } from './locations'
+import { LOCATION_MAP_STYLE_VERSION, LOCATION_ZOOM, locationMapKey, osmLocationUrl } from './locations'
 import { loadPolls, syncPoll } from './polls'
 import { insertRateLimitedPost } from './post-rate-limit'
 import type { BioReferenceData, LinkPreview, ParentPost, PostView, UserProfileStats } from './types'
@@ -378,7 +378,7 @@ export function enrichPosts(database: Database, posts: PostView[], viewerId = -1
   if (database.query("SELECT 1 FROM sqlite_master WHERE type='table' AND name='post_locations'").get()) {
     const locationRows = database.query(`SELECT l.post_id,l.query,l.latitude,l.longitude,l.display_name,
       m.image_key,m.width,m.height FROM post_locations l JOIN location_map_previews m ON m.cache_key=
-      printf('${LOCATION_ZOOM}:%.6f:%.6f',l.latitude,l.longitude) WHERE l.post_id IN
+      printf('${LOCATION_ZOOM}:${LOCATION_MAP_STYLE_VERSION}:%.6f:%.6f',l.latitude,l.longitude) WHERE l.post_id IN
       (${previewPostIds.map(() => '?').join(',')})`).all(...previewPostIds) as Array<{ post_id: number; query: string;
       latitude: number; longitude: number; display_name: string; image_key: string; width: number; height: number }>
     for (const row of locationRows) {

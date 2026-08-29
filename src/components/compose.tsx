@@ -1,7 +1,7 @@
 import { POST_MAX } from '../post-body'
 import { canPublishPosts } from '../posting-policy'
 import type { User } from '../types'
-import type { PostView } from '../types'
+import type { LocationView, PostView } from '../types'
 import { Layout } from './layout'
 import {
   FormActions,
@@ -15,12 +15,14 @@ import { Panel } from './panel'
 import { Post } from './post'
 
 export function Compose(
-  { user, error, body = '', preview = false, previewExecutionOutput, returnPath = '/', suggestionSearch, draftId }: {
+  { user, error, body = '', preview = false, previewExecutionOutput, previewLocation, returnPath = '/',
+    suggestionSearch, draftId }: {
     user: User
     error?: string
     body?: string
     preview?: boolean
     previewExecutionOutput?: string | null
+    previewLocation?: LocationView
     returnPath?: string
     suggestionSearch?: PostingSuggestionSearch | null
     draftId?: number
@@ -44,6 +46,7 @@ export function Compose(
             parent_id: null,
             body,
             execution_output: previewExecutionOutput,
+            location: previewLocation,
             created_at: new Date().toISOString().slice(0, 19).replace('T', ' '),
             deleted_at: null,
             handle: user.handle,

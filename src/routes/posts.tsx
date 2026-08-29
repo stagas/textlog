@@ -22,7 +22,7 @@ import type { PostingSuggestionSearch } from '../components/page-shared'
 import { safeRefererPath } from '../http'
 import { deleteImages, deleteImagesAfterCommit } from '../image-storage'
 import { discoverLinkPreviews } from '../link-preview'
-import { locationMapProvider, parseLocationQuery, resolveLocation } from '../locations'
+import { locationMapProvider, osmLocationUrl, parseLocationQuery, resolveLocation } from '../locations'
 import { logError } from '../log'
 import { markdownPlainText } from '../markdown'
 import { renderPostOg } from '../og'
@@ -90,6 +90,29 @@ async function persistPreviews(postId: number, mode: 'save' | 'replace', body: s
   }
   catch (error) {
     logError(`location preview failed post=${postId}`, error)
+  }
+}
+
+async function previewLocation(body: string) {
+  const query = parseLocationQuery(body)
+  if (!query) return undefined
+  try {
+    const cached = await databaseService().call('api.cachedLocation', { query })
+    if (cached === 'miss') return undefined
+    const location = cached || await resolveLocation(query)
+    if (!cached) await databaseService().call('api.cacheLocation', { query, location })
+    if (!location) return undefined
+    const metadata = { query: location.query, latitude: location.latitude, longitude: location.longitude,
+      displayName: location.displayName }
+    const [title, ...description] = location.displayName.split(',').map(part => part.trim()).filter(Boolean)
+    return { ...metadata, url: osmLocationUrl(metadata), preview: {
+      imageUrl: location.imageUrl, imageWidth: location.imageWidth, imageHeight: location.imageHeight,
+      title: title || query, description: description.join(', ') || location.displayName,
+    } }
+  }
+  catch (error) {
+    logError('location preview failed while composing', error)
+    return undefined
   }
 }
 
@@ -273,7 +296,8 @@ export function registerPostsRoutes(app: Hono) {
     }
     if (f.action === 'preview') {
       return page(<Compose user={user} body={body} draftId={editingDraftId} preview
-        previewExecutionOutput={await executePostCode(body)} returnPath={returnPath} />)
+        previewExecutionOutput={await executePostCode(body)} previewLocation={await previewLocation(body)}
+        returnPath={returnPath} />)
     }
     if (f.action === 'draft') {
       const result = await databaseService().call('drafts.save', {
@@ -437,7 +461,8 @@ export function registerPostsRoutes(app: Hono) {
     if (f.action === 'preview') {
       return page(
         <EditPost user={user} post={post} parent={parent} body={body} preview returnPath={returnPath}
-          moderator={moderating} previewExecutionOutput={await executePostCode(body)} />,
+          moderator={moderating} previewExecutionOutput={await executePostCode(body)}
+          previewLocation={await previewLocation(body)} />,
       )
     }
     try {
@@ -538,7 +563,8 @@ export function registerPostsRoutes(app: Hono) {
     if (f.action === 'preview') {
       return page(
         <Reply user={user} post={parent} showForm body={body} draftId={editingDraftId} preview
-          previewExecutionOutput={await executePostCode(body)} returnPath={returnPath} />,
+          previewExecutionOutput={await executePostCode(body)} previewLocation={await previewLocation(body)}
+          returnPath={returnPath} />,
       )
     }
     if (f.action === 'draft') {

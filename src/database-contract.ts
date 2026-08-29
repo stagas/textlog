@@ -357,6 +357,10 @@ export type DatabaseDomainOperations = {
     input: { query: string }
     output: import('./locations').ResolvedLocation | 'miss' | null
   }
+  'api.cacheLocation': {
+    input: { query: string; location: import('./locations').ResolvedLocation | null }
+    output: null
+  }
   'api.persistPostLocation': {
     input: { postId: number; query: string | null; location: import('./locations').ResolvedLocation | null }
     output: null

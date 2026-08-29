@@ -1,5 +1,5 @@
 import type { User } from '../types'
-import type { PostRow, PostView } from '../types'
+import type { LocationView, PostRow, PostView } from '../types'
 import { Layout } from './layout'
 import type { PostingSuggestionSearch } from './page-shared'
 import { Post, PreviewPost, ThreadReplies } from './post'
@@ -7,7 +7,7 @@ import { ReplyBox, ReplyPreview } from './reply'
 
 export function EditPost(
   { user, post, parent, replies = [], error, body = post.body, preview = false, returnPath, suggestionSearch,
-    moderator = false, previewExecutionOutput }: {
+    moderator = false, previewExecutionOutput, previewLocation }: {
       user: User
       post: PostRow & { handle?: string }
       parent?: PostView | null
@@ -19,6 +19,7 @@ export function EditPost(
       suggestionSearch?: PostingSuggestionSearch | null
       moderator?: boolean
       previewExecutionOutput?: string | null
+      previewLocation?: LocationView
     },
 ) {
   const returnQuery = returnPath ? '?from=' + encodeURIComponent(returnPath) : ''
@@ -32,16 +33,18 @@ export function EditPost(
           </div>
         )}
         {preview && post.parent_id && parent && <ReplyPreview parent={parent} user={user} body={body}
-          executionOutput={previewExecutionOutput} />}
+          executionOutput={previewExecutionOutput} location={previewLocation} />}
         {preview && !post.parent_id && (
           <div className="compose-post-preview">
             <h2>preview</h2>
             <PreviewPost user={user} p={{ ...post, body, execution_output: previewExecutionOutput,
-              handle: post.handle || user.handle, bio: moderator ? '' : user.bio }} />
+              location: previewLocation, handle: post.handle || user.handle, bio: moderator ? '' : user.bio }} />
           </div>
         )}
         <ReplyBox action={'/post/' + post.id + '/edit'} body={body} error={error} suggestionSearch={suggestionSearch}
-          className={post.parent_id && parent ? 'replybox' : 'compose edit-post-compose'}
+          className={post.parent_id && parent
+            ? 'replybox reply-compose edit-reply-compose'
+            : 'compose edit-post-compose write-compose edit-write-compose'}
           hidden={returnPath && <input type="hidden" name="from" value={returnPath} />} beforeTextarea={!moderator
           && (
             <div className="edit-post-delete-action">

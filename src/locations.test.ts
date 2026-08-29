@@ -119,7 +119,7 @@ describe('#map', () => {
       INSERT INTO posts VALUES(1,1,NULL,'Going hiking #map\nKallikratis, Crete','2026-08-29',NULL,NULL);
       INSERT INTO post_hashtags VALUES(1,'map');
       INSERT INTO post_locations VALUES(1,'Kallikratis, Crete',35.2,24.2,'Kallikratis, Sfakia, Crete, Greece');
-      INSERT INTO location_map_previews VALUES('3:35.200000:24.200000','location-maps/test.png',600,315);`)
+      INSERT INTO location_map_previews VALUES('3:2:35.200000:24.200000','location-maps/test.png',600,315);`)
     const apiLocation = apiPost(database, 1, 'https://textlog.example')?.location
     expect(apiLocation).toMatchObject({
       query: 'Kallikratis, Crete', latitude: 35.2, longitude: 24.2,

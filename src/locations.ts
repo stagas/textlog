@@ -5,6 +5,7 @@ import { getImageUrl, uploadImage } from './image-storage'
 import { withoutMarkdownCode } from './content'
 
 export const LOCATION_ZOOM = 3
+export const LOCATION_MAP_STYLE_VERSION = 2
 const TIMEOUT_MS = 4_000
 const MAX_RESPONSE_BYTES = 1024 * 1024
 
@@ -62,7 +63,8 @@ function tilePosition(latitude: number, longitude: number, zoom: number) {
 }
 
 export function locationMapKey(location: LocationMetadata, zoom = LOCATION_ZOOM) {
-  const value = `${zoom}:${location.latitude.toFixed(6)}:${location.longitude.toFixed(6)}`
+  const value = `${zoom}:${LOCATION_MAP_STYLE_VERSION}:${location.latitude.toFixed(6)}:${
+    location.longitude.toFixed(6)}`
   return `location-maps/${createHash('sha256').update(value).digest('hex')}.png`
 }
 
@@ -96,7 +98,7 @@ export async function generateLocationMap(location: LocationMetadata, fetcher: t
     }
     context.beginPath()
     context.arc(width / 2, height / 2, 9, 0, Math.PI * 2)
-    context.fillStyle = '#d33'
+    context.fillStyle = '#3a6ea5'
     context.fill()
     context.lineWidth = 3
     context.strokeStyle = '#fff'
