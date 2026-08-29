@@ -6,7 +6,7 @@ import { containsAsciiArt, containsSpoilerTag, extractHashtags, extractMentions 
 import { parsePoll, pollDisplayBody } from '../polls'
 import { parseTodo, todoDisplayBody } from '../todos'
 import type { User } from '../types'
-import type { BioReferenceData, PostView, UserProfileStats } from '../types'
+import type { BioReferenceData, ParentPost, PostView, UserProfileStats } from '../types'
 import { displayBio, displayPostBody, linkify, referenceFormId } from '../utils'
 import { enterHref } from './auth-links'
 import { MetaRow } from './meta'
@@ -1007,7 +1007,8 @@ function FeedPost(props: FeedPostProps) {
 export function ThreadReplies(
   { parentId, replies, user, returnPath, excludePostId, flat = false, showMissingContinuations = false,
     continuationLabel = 'more', continuationReturnPath, contextUnreadPostIds, contextDirectedUnreadPostIds,
-    omissionHref, expansionControlId, highlightTerms = [], hideTopMeta = false, collapsedPreviewPostIds = [] }: {
+    omissionHref, expansionControlId, highlightTerms = [], hideTopMeta = false, collapsedPreviewPostIds = [],
+    projectedReplyIndent = false }: {
       parentId: number
       replies: PostView[]
       user: User | null
@@ -1024,6 +1025,7 @@ export function ThreadReplies(
       highlightTerms?: string[]
       hideTopMeta?: boolean
       collapsedPreviewPostIds?: number[]
+      projectedReplyIndent?: boolean
     },
 ) {
   if (!replies.length) return null
@@ -1040,27 +1042,48 @@ export function ThreadReplies(
     siblings.sort((a, b) => conversationCreatedAt(a).localeCompare(conversationCreatedAt(b)) || a.id - b.id)
   }
   const byId = new Map(replies.map(reply => [reply.id, reply]))
+  const canonicalDepths = new Map<number, number>()
+  const canonicalDepth = (postId: number) => {
+    const cached = canonicalDepths.get(postId)
+    if (cached !== undefined) return cached
+    let current: PostView | ParentPost | undefined = byId.get(postId)
+    let depth = 0
+    while (current && current.id !== parentId) {
+      depth++
+      current = current.parent_id
+        ? current.parent?.id !== current.parent_id
+          ? current.parent || undefined
+          : byId.get(current.parent_id) || current.parent || undefined
+        : undefined
+    }
+    canonicalDepths.set(postId, depth)
+    return depth
+  }
   const collapsedPreviewPosts = new Set(collapsedPreviewPostIds)
   const collapsedPreviewDepths = new Map<number, number>()
   const collapsedPreviewPath = new Set<number>()
   if (collapsedPreviewPostIds.length) {
     for (const previewPostId of collapsedPreviewPostIds) {
-      let current = byId.get(previewPostId)
-      let depth = 0
+      let current: PostView | ParentPost | undefined = byId.get(previewPostId)
       while (current && current.id !== parentId) {
         collapsedPreviewPath.add(current.id)
-        depth++
-        current = current.parent_id ? byId.get(current.parent_id) : undefined
+        current = current.parent_id
+          ? current.parent?.id !== current.parent_id
+            ? current.parent || undefined
+            : byId.get(current.parent_id) || current.parent || undefined
+          : undefined
       }
-      collapsedPreviewDepths.set(previewPostId, depth)
+      collapsedPreviewDepths.set(previewPostId, canonicalDepth(previewPostId))
     }
   }
+  const topLevelDepths = (children.get(parentId) || [])
+    .filter(reply => !reply.deleted_at)
+    .map(reply => canonicalDepth(reply.id))
+  const shallowestTopLevelDepth = Math.min(...topLevelDepths)
+  const needsProjectedReplyIndent = (reply: PostView) => projectedReplyIndent && reply.parent_id === parentId
+    && canonicalDepth(reply.id) > shallowestTopLevelDepth
   const shallowestCollapsedPreviewDepth = Math.min(...collapsedPreviewDepths.values())
   const needsCollapsedPreviewIndent = (postId: number) => {
-    const post = byId.get(postId)
-    if (collapsedPreviewPosts.has(postId) && post?.feed_ancestor_gap && post.parent?.id !== post.parent_id) {
-      return false
-    }
     if ((collapsedPreviewDepths.get(postId) || 0) <= shallowestCollapsedPreviewDepth) return false
     let current = byId.get(postId)
     while (current?.parent_id) {
@@ -1133,6 +1156,7 @@ export function ThreadReplies(
         className={`reply-node${collapsedPreviewPath.has(reply.id) ? ' collapsed-preview-path' : ''}${
           collapsedPreviewPosts.has(reply.id) ? ' collapsed-preview-post' : ''
         }${needsCollapsedPreviewIndent(reply.id) ? ' collapsed-preview-deeper' : ''
+        }${needsProjectedReplyIndent(reply) ? ' projected-reply-deeper' : ''
         }${reply.feed_ancestor_gap && reply.parent?.id !== reply.parent_id ? ' omitted-parent-reply' : ''
         }`}
         key={reply.id}
@@ -1388,7 +1412,8 @@ export function FeedThreads(
               expansionControlId={foldControlId}
               contextUnreadPostIds={contextUnreadPostIds} contextDirectedUnreadPostIds={contextDirectedUnreadPostIds}
               highlightTerms={highlightTerms} hideTopMeta={hideTopMeta}
-              collapsedPreviewPostIds={canCollapse ? collapsedPreview.map(reply => reply.id) : []} />
+              collapsedPreviewPostIds={canCollapse ? collapsedPreview.map(reply => reply.id) : []}
+              projectedReplyIndent={!collapsed} />
           </div>
         )
       })}

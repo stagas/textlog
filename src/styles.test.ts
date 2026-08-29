@@ -197,6 +197,9 @@ describe('in-memory stylesheet', () => {
       + '  margin-left: clamp(18px, 3vw, 28px);\n  border-left: 1px solid var(--soft);')
     expect(css).toContain('.feed-thread .omitted-parent-reply {\n'
       + '  margin-left: 0;\n  border-left: 0;')
+    expect(css).toContain('.feed-thread>.thread-fold-input:not(:checked)~.feed-thread-collapsed-branch'
+      + ' .projected-reply-deeper {\n'
+      + '  margin-left: clamp(18px, 3vw, 28px);\n  border-left: 1px solid var(--soft);')
     expect(css).toContain('.reply-node:not(.collapsed-preview-path) {\n  height: 0;')
     expect(css).toContain('.thread-ancestor-gap:not(.collapsed-preview-gap) {\n'
       + '  height: 0;\n  opacity: 0;\n  padding-top: 0;')

@@ -40,6 +40,38 @@ test('background hot projection preserves canonical ranking order', async () => 
   expect(projected).toEqual(expected)
 })
 
+test('hot enriches ranked roots with the same two-to-five recent replies as latest', async () => {
+  const db = new Database(':memory:', { strict: true })
+  runMigrations(db)
+  db.run(`INSERT INTO users(id,handle,email,password) VALUES
+    (1,'root','root@example.test','x'),(2,'first','first@example.test','x'),
+    (3,'second','second@example.test','x');
+    INSERT INTO posts(id,user_id,parent_id,body,created_at) VALUES
+    (100,1,NULL,'root','2026-08-20 09:00:00'),
+    (101,2,100,'reply 1','2026-08-27 09:00:00'),
+    (102,3,100,'reply 2','2026-08-27 10:00:00'),
+    (103,2,100,'reply 3','2026-08-27 11:00:00'),
+    (104,3,100,'reply 4','2026-08-27 12:00:00'),
+    (105,2,100,'reply 5','2026-08-27 13:00:00'),
+    (106,3,100,'reply 6','2026-08-27 14:00:00');`)
+  for (const id of [101, 102, 103, 104, 105, 106]) recordHotActivity(db, id)
+  await executeDatabaseDomain(db, 'feeds.refreshHotProjection', {
+    force: true,
+    now: '2026-08-27T15:00:00.000Z',
+  })
+
+  const latest = await executeDatabaseDomain(db, 'feeds.latestPage', {
+    viewerId: -1, page: 1, pageSize: 20, markRead: false,
+  })
+  const hot = await executeDatabaseDomain(db, 'feeds.hotPage', { viewerId: -1, page: 1, pageSize: 20 })
+  const conversationIds = (posts: typeof latest.posts) => posts
+    .filter(post => post.id === 100 || post.parent?.id === 100 || post.parent_id === 100)
+    .map(post => post.id)
+
+  expect(conversationIds(hot.posts)).toEqual(conversationIds(latest.posts))
+  expect(conversationIds(hot.posts)).toEqual([100, 106, 105, 104, 103, 102])
+})
+
 test('hot activity dirties the projection and clean projections age out', async () => {
   const db = database()
   const now = new Date('2026-08-27T10:30:00.000Z')

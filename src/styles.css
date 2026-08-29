@@ -6484,6 +6484,11 @@ a.post-continuation-link:hover {
   border-left: 0;
 }
 
+.feed-thread>.thread-fold-input:not(:checked)~.feed-thread-collapsed-branch .projected-reply-deeper {
+  margin-left: clamp(18px, 3vw, 28px);
+  border-left: 1px solid var(--soft);
+}
+
 .post-page-thread.feed-thread:has(> .thread-fold-input:checked):has(> .feed-thread-collapsed-branch) {
   margin-bottom: var(--space-5);
 }
