@@ -6511,7 +6511,9 @@ a.post-continuation-link:hover {
 }
 
 .feed-thread>.thread-fold-input:checked~.feed-thread-collapsed-branch
-  .collapsed-preview-path:not(.collapsed-preview-post)>.reply-branch {
+  .collapsed-preview-path:not(.collapsed-preview-post)>.reply-branch,
+.feed-thread>.thread-fold-input:checked~.feed-thread-collapsed-branch
+  .collapsed-preview-path-branch {
   margin-left: 0;
   border-left: 0;
 }

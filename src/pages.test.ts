@@ -842,6 +842,30 @@ test('folded feed conversations do not double-indent a preview below another pre
   expect(html).not.toContain('collapsed-preview-deeper')
 })
 
+test('folded feed conversations flatten a deleted ancestor on a collapsed preview path', () => {
+  const root = { id: 166, user_id: 1, parent_id: null, body: 'Root', created_at: '2026-08-07 19:14:53',
+    deleted_at: null, handle: 'root', reply_count: 4 }
+  const branch = { id: 177, user_id: 2, parent_id: root.id, body: 'Branch', created_at: '2026-08-07 19:36:41',
+    deleted_at: null, handle: 'branch', reply_count: 3, parent: root }
+  const deleted = { id: 200, user_id: 3, parent_id: branch.id, body: '(deleted)',
+    created_at: '2026-08-07 20:10:08', deleted_at: '2026-08-19 19:23:45', handle: 'deleted',
+    reply_count: 1, parent: branch }
+  const deep = { id: 211, user_id: 4, parent_id: deleted.id, body: 'Deep preview',
+    created_at: '2026-08-07 20:36:19', deleted_at: null, handle: 'deep', reply_count: 0, parent: deleted }
+  const shallow = { id: 360, user_id: 5, parent_id: branch.id, body: 'Shallow preview',
+    created_at: '2026-08-08 01:56:40', deleted_at: null, handle: 'shallow', reply_count: 0, parent: branch }
+  const older = { id: 191, user_id: 6, parent_id: branch.id, body: 'Older reply',
+    created_at: '2026-08-07 19:58:33', deleted_at: null, handle: 'older', reply_count: 0, parent: branch }
+  const html = renderToStaticMarkup(React.createElement(FeedThreads, {
+    user: null,
+    returnPath: '/hot',
+    posts: [root, branch, deleted, deep, shallow, older],
+  }))
+
+  expect(html).toContain('reply-branch collapsed-preview-path-branch')
+  expect(html).toMatch(/collapsed-preview-post collapsed-preview-deeper[^>]*>[\s\S]*?id="post-211"/)
+})
+
 test('folded feed conversations render previews beyond the normal thread depth limit', () => {
   const root = { id: 60, user_id: 1, parent_id: null, body: 'Root', created_at: '2026-08-20 09:00:00',
     deleted_at: null, handle: 'root', reply_count: 1 }

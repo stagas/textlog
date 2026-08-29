@@ -1214,7 +1214,7 @@ export function ThreadReplies(
     return (
       <div className={`reply-branch${collapsedPreviewPostIds.length && depth === 1
         ? ' feed-thread-collapsed-branch'
-        : ''}`}>
+        : ''}${collapsedPreviewPath.has(id) ? ' collapsed-preview-path-branch' : ''}`}>
         <div className="thread-branch-content">
           {branch.map(reply => {
             const descendantCount = visibleDescendantCount(reply.id)
