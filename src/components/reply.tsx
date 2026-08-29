@@ -18,7 +18,7 @@ import { Panel } from './panel'
 import { Post, ThreadReplies } from './post'
 
 export function ReplyBox(
-  { action, body, error, placeholder, hidden, beforeTextarea, secondary, primary, className = 'replybox',
+  { action, body, error, placeholder, hidden, beforeTextarea, secondary, primary, className = 'replybox reply-compose',
     suggestionSearch, draftId }: {
       action: string
       body: string
@@ -40,8 +40,10 @@ export function ReplyBox(
         {draftId && <input type="hidden" name="draft_id" value={draftId} />}
         <FormMessage error={error} />
         {beforeTextarea}
-        <textarea className="form-control" name="body" maxLength={POST_MAX} required autoFocus defaultValue={body}
-          placeholder={placeholder} autoComplete="off" inputMode="text" enterKeyHint="enter" />
+        <div className="compose-editor-row">
+          <textarea className="form-control" name="body" maxLength={POST_MAX} required autoFocus defaultValue={body}
+            placeholder={placeholder} autoComplete="off" inputMode="text" enterKeyHint="enter" />
+        </div>
         <PostingSuggestionResults search={suggestionSearch} />
         <div className="composefoot">
           <PostingHelp search={suggestionSearch} />

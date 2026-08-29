@@ -2949,6 +2949,18 @@ main:has(> .write-compose) {
   border-bottom: 0;
 }
 
+.reply-compose {
+  padding: 0;
+  background: transparent;
+  border-inline: 0;
+  border-top: 0;
+  border-bottom: 0;
+}
+
+.reply-compose .compose-editor-row {
+  border-top: 1px solid var(--soft);
+}
+
 .write-compose .compose-heading {
   margin: var(--space-4) 0 0;
   padding: var(--space-4) var(--gutter);
@@ -2971,12 +2983,12 @@ main:has(> .write-compose) {
   min-height: 0;
 }
 
-.write-compose .compose-editor-row {
+:is(.write-compose, .reply-compose) .compose-editor-row {
   padding: var(--space-3) var(--gutter);
   background: var(--panel);
 }
 
-.write-compose textarea.form-control {
+:is(.write-compose, .reply-compose) textarea.form-control {
   display: block;
   width: 100%;
   height: auto;
@@ -2992,30 +3004,30 @@ main:has(> .write-compose) {
   letter-spacing: var(--post-body-letter-spacing, normal);
 }
 
-.write-compose textarea.form-control:focus-visible {
+:is(.write-compose, .reply-compose) textarea.form-control:focus-visible {
   outline: 0;
 }
 
-.write-compose .posting-suggestion-results {
+:is(.write-compose, .reply-compose) .posting-suggestion-results {
   padding-inline: var(--gutter);
 }
 
-.write-compose .composefoot {
+:is(.write-compose, .reply-compose) .composefoot {
   margin-top: 0;
   margin-inline: 0;
   padding: var(--space-4) var(--gutter) 0;
   border-top: 1px solid var(--soft);
 }
 
-.write-compose .posting-help-summary-link {
+:is(.write-compose, .reply-compose) .posting-help-summary-link {
   border-bottom-color: var(--link-border);
 }
 
-.write-compose .posting-help-details summary:hover .posting-help-summary-link {
+:is(.write-compose, .reply-compose) .posting-help-details summary:hover .posting-help-summary-link {
   color: var(--tab-hover);
 }
 
-.write-compose .posting-help-content {
+:is(.write-compose, .reply-compose) .posting-help-content {
   margin-top: var(--space-4);
   background: var(--bg);
 }
@@ -4138,12 +4150,12 @@ form.report-panel {
   }
 }
 
-.write-compose .composefoot {
+:is(.write-compose, .reply-compose) .composefoot {
   grid-template-columns: minmax(0, 1fr);
   gap: var(--space-3);
 }
 
-.write-compose .composefoot .form-actions {
+:is(.write-compose, .reply-compose) .composefoot .form-actions {
   grid-column: 1;
   grid-row: 1;
   display: grid;
@@ -4152,21 +4164,21 @@ form.report-panel {
   gap: var(--space-2);
 }
 
-.write-compose .form-actions-secondary,
-.write-compose .edit-post-actions {
+:is(.write-compose, .reply-compose) .form-actions-secondary,
+:is(.write-compose, .reply-compose) .edit-post-actions {
   display: contents;
 }
 
-.write-compose .form-actions .secondary-action {
+:is(.write-compose, .reply-compose) .form-actions .secondary-action {
   align-self: center;
   justify-self: center;
 }
 
-.write-compose .form-actions > .button {
+:is(.write-compose, .reply-compose) .form-actions > .button {
   white-space: nowrap;
 }
 
-.write-compose .composefoot .posting-help-details {
+:is(.write-compose, .reply-compose) .composefoot .posting-help-details {
   grid-column: 1;
   grid-row: 2;
   width: fit-content;
@@ -4174,22 +4186,22 @@ form.report-panel {
   text-align: center;
 }
 
-.write-compose .composefoot .posting-help-details summary {
+:is(.write-compose, .reply-compose) .composefoot .posting-help-details summary {
   text-align: center;
 }
 
-.write-compose .composefoot .posting-help-content {
+:is(.write-compose, .reply-compose) .composefoot .posting-help-content {
   grid-column: 1;
   grid-row: 3;
 }
 
 @media (min-width: 521px) {
-  .write-compose .composefoot {
+  :is(.write-compose, .reply-compose) .composefoot {
     grid-template-columns: minmax(0, 1fr) auto;
     gap: var(--space-3) var(--space-5);
   }
 
-  .write-compose .composefoot .form-actions {
+  :is(.write-compose, .reply-compose) .composefoot .form-actions {
     grid-column: 2;
     grid-row: 1;
     display: flex;
@@ -4197,27 +4209,27 @@ form.report-panel {
     gap: var(--space-4);
   }
 
-  .write-compose .form-actions-secondary,
-  .write-compose .edit-post-actions {
+  :is(.write-compose, .reply-compose) .form-actions-secondary,
+  :is(.write-compose, .reply-compose) .edit-post-actions {
     display: inline-flex;
   }
 
-  .write-compose .edit-post-actions {
+  :is(.write-compose, .reply-compose) .edit-post-actions {
     gap: var(--space-4);
   }
 
-  .write-compose .composefoot .posting-help-details {
+  :is(.write-compose, .reply-compose) .composefoot .posting-help-details {
     grid-column: 1;
     grid-row: 1;
     justify-self: start;
     text-align: left;
   }
 
-  .write-compose .composefoot .posting-help-details summary {
+  :is(.write-compose, .reply-compose) .composefoot .posting-help-details summary {
     text-align: left;
   }
 
-  .write-compose .composefoot .posting-help-content {
+  :is(.write-compose, .reply-compose) .composefoot .posting-help-content {
     grid-column: 1 / -1;
     grid-row: 2;
   }

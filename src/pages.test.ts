@@ -561,7 +561,7 @@ test('reply forms offer the same server-rendered preview flow', () => {
   expect(html).toContain('<div class="reply-preview"><p class="eyebrow">preview</p><div class="reply-branch">')
   expect(html).not.toContain('<span class="post-context">preview:</span>')
   expect(html.indexOf('<div class="reply-preview">')).toBeLessThan(
-    html.indexOf('<div class="panel panel-surface panel-medium replybox">'),
+    html.indexOf('<div class="panel panel-surface panel-medium replybox reply-compose">'),
   )
   expect(html.indexOf('<textarea')).toBeLessThan(html.indexOf('<div class="composefoot">'))
   expect(html).toContain('Reply <a href="/tag/here"')
