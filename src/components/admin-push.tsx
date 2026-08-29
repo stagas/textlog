@@ -3,7 +3,11 @@ import { PageHeading } from './account-settings-header'
 import { Layout } from './layout'
 import { FormActions, FormMessage } from './page-shared'
 
-export function AdminPush({ user, sent }: { user: User; sent?: 'test' | 'all' }) {
+export function AdminPush({ user, sent, values }: {
+  user: User
+  sent?: 'test' | 'all'
+  values?: { title: string; body: string; url: string }
+}) {
   return (
     <Layout user={user} title="send push notification">
       <PageHeading
@@ -19,15 +23,18 @@ export function AdminPush({ user, sent }: { user: User; sent?: 'test' | 'all' })
         <form method="post" action="/admin/push">
           <label className="form-label">
             title
-            <input className="form-control" name="title" maxLength={200} required autoComplete="off" />
+            <input className="form-control" name="title" defaultValue={values?.title} maxLength={200} required
+              autoComplete="off" />
           </label>
           <label className="form-label">
             body
-            <textarea className="form-control" name="body" maxLength={2_000} required autoComplete="off" />
+            <textarea className="form-control" name="body" defaultValue={values?.body} maxLength={2_000} required
+              autoComplete="off" />
           </label>
           <label className="form-label">
             destination URL
-            <input className="form-control" name="url" maxLength={2_048} required autoComplete="off"
+            <input className="form-control" name="url" defaultValue={values?.url} maxLength={2_048} required
+              autoComplete="off"
               inputMode="url" placeholder="/latest or https://textlog.cc/" />
           </label>
           <FormActions

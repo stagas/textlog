@@ -49,7 +49,10 @@ export function registerAdminRoutes(app: Hono) {
     }
     catch {}
     if (!validUrl || url.length > 2_048) return c.text('Invalid destination URL', 400)
-    if (audience === 'test') await sendPushToUser(signedIn.id, { title, body, url }, undefined, undefined, true)
+    if (audience === 'test') {
+      await sendPushToUser(signedIn.id, { title, body, url }, undefined, undefined, true)
+      return page(<AdminPush user={signedIn} sent="test" values={{ title, body, url }} />)
+    }
     else if (audience === 'all') await sendPushToAll({ title, body, url })
     else return c.text('Invalid audience', 400)
     return redirect(`/admin/push?sent=${audience}`)
