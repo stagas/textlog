@@ -510,7 +510,7 @@ export function PreviewPost({ p, user }: { p: PostView; user?: User }) {
 function ExecutionOutput({ output }: { output: string }) {
   const visibleOutput = displayedExecutionOutput(output)
   if (!visibleOutput.trim()) return null
-  return <code className="code-fence execution-output">{visibleOutput}</code>
+  return <code className="code-fence execution-output ascii-art">{visibleOutput}</code>
 }
 
 function endsWithCodeFence(body: string) {

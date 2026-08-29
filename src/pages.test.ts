@@ -3130,7 +3130,7 @@ test('Post uses the full Post component for internal link hover cards', () => {
   expect(card).toContain('<span class="postauthor post-context-author">you</span>')
   expect(card).toContain('<span class="post-context">wrote:</span>')
   expect(card).toContain('The linked note')
-  expect(card).toContain('<code class="code-fence execution-output">result: 42</code>')
+  expect(card).toContain('<code class="code-fence execution-output ascii-art">result: 42</code>')
   expect(card).toContain('href="/post/12?reply=1&amp;from=%2Fpost%2F1%23post-1"')
   expect(card).toContain('>continue</a>')
   expect(card).toContain('>more</a>')
@@ -3356,6 +3356,35 @@ test('Post marks #ascii and #ascii_art bodies and quoted parents for tight line 
     },
   }))
   expect(regularHtml).not.toContain('class="ascii-art"')
+})
+
+test('execution output uses ASCII-art styling in posts, previews, and quoted parents', () => {
+  const post = {
+    id: 2,
+    user_id: 1,
+    parent_id: 1,
+    body: 'reply',
+    execution_output: 'reply output',
+    handle: 'writer',
+    created_at: '2026-08-03 12:00:00',
+    deleted_at: null,
+    parent: {
+      id: 1,
+      user_id: 2,
+      parent_id: null,
+      body: 'parent',
+      execution_output: 'parent output',
+      handle: 'author',
+      created_at: '2026-08-03 11:00:00',
+      deleted_at: null,
+      reply_count: 1,
+    },
+  }
+  const html = renderToStaticMarkup(React.createElement(Post, { user: null, p: post }))
+  const preview = renderToStaticMarkup(React.createElement(PreviewPost, { p: post }))
+
+  expect(html.match(/class="code-fence execution-output ascii-art"/g)).toHaveLength(2)
+  expect(preview).toContain('class="code-fence execution-output ascii-art"')
 })
 
 test('Post only renders owner actions when requested by the detail view', () => {
