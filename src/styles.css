@@ -1007,7 +1007,7 @@ nav form {
   position: sticky;
   z-index: 40;
   top: calc(-1 * var(--space-4));
-  background-color: var(--bg);
+  background: var(--bg);
 }
 
 .feed-tabs-scroll::-webkit-scrollbar {
@@ -4221,7 +4221,7 @@ form.report-panel {
   position: sticky;
   z-index: 40;
   top: 0;
-  background-color: var(--bg);
+  background: var(--bg);
 }
 
 .note-streak {
