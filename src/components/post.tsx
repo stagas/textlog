@@ -1079,7 +1079,7 @@ export function ThreadReplies(
     .map(reply => canonicalDepth(reply.id))
   const shallowestTopLevelDepth = Math.min(...topLevelDepths)
   const needsProjectedReplyIndent = (reply: PostView) => reply.parent_id === parentId
-    && canonicalDepth(reply.id) > shallowestTopLevelDepth
+    && shallowestTopLevelDepth === 1 && canonicalDepth(reply.id) > 1
   const shallowestCollapsedPreviewDepth = Math.min(...collapsedPreviewDepths.values())
   const needsCollapsedPreviewIndent = (postId: number) => {
     if ((collapsedPreviewDepths.get(postId) || 0) <= shallowestCollapsedPreviewDepth) return false

@@ -6303,7 +6303,7 @@ a.post-context:hover {
 }
 
 .collapsed-preview-gap.thread-fold-expander {
-  color: var(--accent);
+  color: var(--muted);
   cursor: pointer;
 }
 
@@ -6394,14 +6394,6 @@ a.post-continuation-link:hover {
 }
 
 .thread-fold:hover {
-  color: var(--accent-dark);
-}
-
-.feed-thread>.thread-fold-input:checked+.thread-root .thread-fold {
-  color: var(--accent);
-}
-
-.feed-thread>.thread-fold-input:checked+.thread-root .thread-fold:hover {
   color: var(--accent-dark);
 }
 

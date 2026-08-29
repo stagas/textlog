@@ -1166,7 +1166,7 @@ test('expanded hot post 925 indents both selected replies with omitted parents',
   expect(html).toMatch(/class="reply-node"><article[^>]*id="post-2440"/)
 })
 
-test('hot post 1174 uses its shallowest projected reply as the indentation baseline', () => {
+test('hot post 1174 keeps omitted branches on one baseline when no direct reply is selected', () => {
   const root = { id: 1174, user_id: 1, parent_id: null, body: 'Root', created_at: '2026-08-14 00:02:46',
     deleted_at: null, handle: 'root', reply_count: 2 }
   const shallowParent = { id: 2296, user_id: 2, parent_id: root.id, body: 'Shallow omitted parent',
@@ -1187,7 +1187,36 @@ test('hot post 1174 uses its shallowest projected reply as the indentation basel
   }))
 
   expect(html).toMatch(/class="reply-node omitted-parent-reply">[\s\S]*?id="post-2564"/)
-  expect(html).toMatch(/class="reply-node projected-reply-deeper omitted-parent-reply">[\s\S]*?id="post-2557"/)
+  expect(html).toMatch(/class="reply-node omitted-parent-reply">[\s\S]*?id="post-2557"/)
+  expect(html).not.toContain('projected-reply-deeper')
+})
+
+test('expanded hot post 2737 does not double-indent parallel omitted branches', () => {
+  const root = { id: 2737, user_id: 1, parent_id: null, body: 'Root', created_at: '2026-08-28 09:47:07',
+    deleted_at: null, handle: 'root', reply_count: 4 }
+  const omitted = (id: number, parentId: number) => ({ id: parentId, user_id: 2, parent_id: root.id,
+    body: 'Omitted parent', created_at: '2026-08-28 16:00:00', deleted_at: null, handle: 'parent',
+    reply_count: 1, parent: root })
+  const first = { id: 2806, user_id: 3, parent_id: root.id, body: 'First branch',
+    created_at: '2026-08-28 21:15:31', deleted_at: null, handle: 'first', reply_count: 1,
+    parent: omitted(2806, 2778), feed_ancestor_gap: true }
+  const firstChild = { id: 2809, user_id: 3, parent_id: first.id, body: 'First child',
+    created_at: '2026-08-28 21:17:43', deleted_at: null, handle: 'first', reply_count: 0, parent: first }
+  const second = { id: 2779, user_id: 4, parent_id: root.id, body: 'Second branch',
+    created_at: '2026-08-28 16:30:08', deleted_at: null, handle: 'second', reply_count: 1,
+    parent: omitted(2779, 2777), feed_ancestor_gap: true }
+  const secondChild = { id: 2789, user_id: 1, parent_id: second.id, body: 'Second child',
+    created_at: '2026-08-28 17:14:28', deleted_at: null, handle: 'root', reply_count: 0, parent: second }
+  const html = renderToStaticMarkup(React.createElement(FeedThreads, {
+    user: null,
+    returnPath: '/hot',
+    expandedRootId: root.id,
+    posts: [root, firstChild, first, secondChild, second],
+  }))
+
+  expect(html).not.toContain('projected-reply-deeper')
+  expect(html).toMatch(/class="reply-node omitted-parent-reply">[\s\S]*?id="post-2806"[\s\S]*?class="reply-branch/)
+  expect(html).toMatch(/class="reply-node omitted-parent-reply">[\s\S]*?id="post-2779"[\s\S]*?class="reply-branch/)
 })
 
 test('expanded feed conversations do not mark omissions when every reply at that depth is visible', () => {

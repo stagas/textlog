@@ -27,7 +27,7 @@ function post(userId: number, id: number, createdAt: string, parentId: number | 
   recordHotActivity(database, id)
 }
 
-describe('quality-first hot feed ranking', () => {
+describe('freshness-forward hot feed ranking', () => {
   test('leads with a recent post while keeping an excellent old conversation next', () => {
     database.run(`INSERT INTO users(id,handle) VALUES(2,'r2'),(3,'r3'),(4,'r4'),(5,'r5')`)
     post(1, 1, '2024-01-01 12:00:00')
@@ -49,14 +49,67 @@ describe('quality-first hot feed ranking', () => {
     expect(results[0].reply_count).toBe(2)
   })
 
-  test('uses freshness only as a small tie-breaker for equal quality', () => {
+  test('degrades an older conversation without erasing its engagement', () => {
     database.run(`INSERT INTO users(id,handle) VALUES(2,'r2')`)
     post(1, 1, '2025-01-01 12:00:00')
     post(2, 2, '2025-01-02 12:00:00', 1)
     post(1, 10, '2026-08-03 10:00:00')
     post(2, 11, '2026-08-03 11:00:00', 10)
 
-    expect(getHotPosts(database, 20, null, asOf).map(result => result.id)).toEqual([10, 1])
+    const results = getHotPosts(database, 20, null, asOf)
+    expect(results.map(result => result.id)).toEqual([10, 1])
+    expect(results[1].hot_score).toBeLessThan(results[0].hot_score * 0.7)
+    expect(results[1].hot_score).toBeGreaterThan(results[0].hot_score * 0.1)
+  })
+
+  test('promotes a newer conversation that quickly attracts several replies', () => {
+    database.run(`INSERT INTO users(id,handle) VALUES(2,'r2'),(3,'r3'),(4,'r4'),(5,'r5'),(6,'r6'),(7,'r7')`)
+    post(1, 1, '2026-07-04 09:00:00')
+    for (let id = 2; id <= 7; id++) post(id, id, '2026-07-05 09:00:00', 1)
+
+    post(1, 10, '2026-08-03 08:00:00')
+    post(2, 11, '2026-08-03 09:00:00', 10)
+    post(3, 12, '2026-08-03 10:00:00', 10)
+    post(4, 13, '2026-08-03 11:00:00', 10)
+
+    const results = getHotPosts(database, 20, null, asOf)
+    expect(results.map(result => result.id)).toEqual([10, 1])
+    expect(results[0].reply_count).toBe(3)
+    expect(results[0].hot_score).toBeGreaterThan(results[1].hot_score * 1.5)
+  })
+
+  test('rewards several replies arriving in a compact burst', () => {
+    database.run(`INSERT INTO users(id,handle) VALUES(2,'r2'),(3,'r3'),(4,'r4'),(5,'r5'),(6,'r6'),(7,'r7')`)
+    post(1, 1, '2026-08-02 08:00:00')
+    post(2, 2, '2026-08-02 16:00:00', 1)
+    post(3, 3, '2026-08-03 00:00:00', 1)
+    post(4, 4, '2026-08-03 08:00:00', 1)
+
+    post(1, 10, '2026-08-02 08:00:00')
+    post(5, 11, '2026-08-02 09:00:00', 10)
+    post(6, 12, '2026-08-02 10:00:00', 10)
+    post(7, 13, '2026-08-02 11:00:00', 10)
+
+    const results = getHotPosts(database, 20, null, asOf)
+    expect(results.map(result => result.id)).toEqual([10, 1])
+    expect(results[0].hot_score).toBeGreaterThan(results[1].hot_score)
+  })
+
+  test('lets a highly discussed older post leak in above routine recent activity', () => {
+    database.run(`INSERT INTO users(id,handle) VALUES
+      (2,'r2'),(3,'r3'),(4,'r4'),(5,'r5'),(6,'r6'),(7,'r7'),(8,'r8'),(9,'r9')`)
+    post(1, 1, '2026-07-04 09:00:00')
+    for (let id = 2; id <= 9; id++) post(id, id, '2026-07-05 09:00:00', 1)
+
+    post(1, 10, '2026-08-03 08:00:00')
+    post(2, 11, '2026-08-03 11:00:00', 10)
+    post(1, 20, '2026-08-03 08:00:00')
+    post(2, 21, '2026-08-03 11:00:00', 20)
+
+    const results = getHotPosts(database, 20, null, asOf)
+    expect(results.map(result => result.id)).toEqual([20, 10, 1])
+    expect(results[2].reply_count).toBe(8)
+    expect(results[2].hot_score).toBeGreaterThan(20)
   })
 
   test('brings several recent conversations up without removing strong old posts', () => {

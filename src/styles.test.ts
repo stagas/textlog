@@ -176,11 +176,10 @@ describe('in-memory stylesheet', () => {
     expect(css).toContain('.thread-ancestor-gap.post-continuation-link {\n'
       + '  display: block;\n  border-bottom: 0;')
     expect(css).toContain('.collapsed-preview-gap.thread-fold-expander {\n'
-      + '  color: var(--accent);\n  cursor: pointer;')
+      + '  color: var(--muted);\n  cursor: pointer;')
     expect(css).toContain('.collapsed-preview-gap.thread-fold-expander::after {\n'
       + '  content: "";')
-    expect(css).toContain('.feed-thread>.thread-fold-input:checked+.thread-root .thread-fold {\n'
-      + '  color: var(--accent);')
+    expect(css).not.toContain('.feed-thread>.thread-fold-input:checked+.thread-root .thread-fold {')
     expect(css).toContain('.feed-thread>.thread-fold-input:checked~.feed-thread-collapsed-branch {\n'
       + '  grid-template-rows: 1fr;')
     expect(css).toContain('.feed-thread>.thread-fold-input:checked~.feed-thread-collapsed-branch'

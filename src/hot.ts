@@ -27,7 +27,7 @@ export type HotCursor = {
   direction: 'next' | 'previous'
 }
 
-export const hotRankingVersion = 117
+export const hotRankingVersion = 122
 const cursorVersion = hotRankingVersion
 const activityHalfLifeHours = 6
 const postWeight = 0
@@ -390,14 +390,17 @@ export function getHotPosts(
         AND COALESCE(poll_counts.vote_count,0)=0 THEN 0 ELSE
         (12.0*log(1+h.reply_count)/log(2)
           +3.0*log(1+h.activity_count)/log(2)
+          +2.0*min(h.reply_count,12)
           +CASE WHEN COALESCE(poll_counts.vote_count,0)>0 THEN
             8.0*log(1+min(poll_counts.vote_count,10))/log(2)
               *pow(0.5,max(0,(julianday(ranking_time.as_of)-julianday(poll_counts.latest_vote_at))*24)/24.0)
             ELSE 0 END
           +CASE WHEN h.reply_count>0 OR h.activity_count>0 THEN min(4,h.score) ELSE 0 END
+          +6.0*log(1+h.reply_count)/log(2)*pow(0.5,max(0,
+            (julianday(h.latest_activity_at)-julianday(p.created_at))*24)/24.0)
           +20.0*pow(0.5,max(0,(julianday(ranking_time.as_of)-julianday(p.created_at))*24)/72.0)
           +10.0*pow(0.5,max(0,(julianday(ranking_time.as_of)-julianday(h.latest_activity_at))*24)/48.0))
-        *(0.9+0.1*pow(0.5,max(0,(julianday(ranking_time.as_of)-julianday(p.created_at))*24)/720.0))
+        *(0.45+0.55*pow(0.5,max(0,(julianday(ranking_time.as_of)-julianday(p.created_at))*24)/504.0))
         *CASE WHEN COALESCE(poll_counts.vote_count,0)>0 THEN
           0.2+0.8*pow(0.5,max(0,
             (julianday(ranking_time.as_of)-julianday(poll_counts.latest_vote_at))*24)/24.0)
