@@ -1007,8 +1007,7 @@ function FeedPost(props: FeedPostProps) {
 export function ThreadReplies(
   { parentId, replies, user, returnPath, excludePostId, flat = false, showMissingContinuations = false,
     continuationLabel = 'more', continuationReturnPath, contextUnreadPostIds, contextDirectedUnreadPostIds,
-    omissionHref, expansionControlId, highlightTerms = [], hideTopMeta = false, collapsedPreviewPostIds = [],
-    projectedReplyIndent = false }: {
+    omissionHref, expansionControlId, highlightTerms = [], hideTopMeta = false, collapsedPreviewPostIds = [] }: {
       parentId: number
       replies: PostView[]
       user: User | null
@@ -1025,7 +1024,6 @@ export function ThreadReplies(
       highlightTerms?: string[]
       hideTopMeta?: boolean
       collapsedPreviewPostIds?: number[]
-      projectedReplyIndent?: boolean
     },
 ) {
   if (!replies.length) return null
@@ -1080,7 +1078,7 @@ export function ThreadReplies(
     .filter(reply => !reply.deleted_at)
     .map(reply => canonicalDepth(reply.id))
   const shallowestTopLevelDepth = Math.min(...topLevelDepths)
-  const needsProjectedReplyIndent = (reply: PostView) => projectedReplyIndent && reply.parent_id === parentId
+  const needsProjectedReplyIndent = (reply: PostView) => reply.parent_id === parentId
     && canonicalDepth(reply.id) > shallowestTopLevelDepth
   const shallowestCollapsedPreviewDepth = Math.min(...collapsedPreviewDepths.values())
   const needsCollapsedPreviewIndent = (postId: number) => {
@@ -1412,8 +1410,7 @@ export function FeedThreads(
               expansionControlId={foldControlId}
               contextUnreadPostIds={contextUnreadPostIds} contextDirectedUnreadPostIds={contextDirectedUnreadPostIds}
               highlightTerms={highlightTerms} hideTopMeta={hideTopMeta}
-              collapsedPreviewPostIds={canCollapse ? collapsedPreview.map(reply => reply.id) : []}
-              projectedReplyIndent={!collapsed} />
+              collapsedPreviewPostIds={canCollapse ? collapsedPreview.map(reply => reply.id) : []} />
           </div>
         )
       })}

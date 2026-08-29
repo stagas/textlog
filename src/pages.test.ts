@@ -1044,7 +1044,7 @@ test('collapsed nested previews mark an omitted path without adding preview inde
     posts: [root, path, parentPreview, childPreview, sibling],
   }))
 
-  expect(html).toContain('reply-node collapsed-preview-path omitted-parent-reply')
+  expect(html).toContain('reply-node collapsed-preview-path projected-reply-deeper omitted-parent-reply')
   expect(html.match(/collapsed-preview-post/g)).toHaveLength(2)
 })
 
@@ -1089,10 +1089,10 @@ test('collapsed previews retain extra depth when the preview itself has an omitt
     posts: [root, deeper, sibling, older],
   }))
 
-  expect(html).toMatch(/collapsed-preview-post collapsed-preview-deeper omitted-parent-reply[^>]*>[\s\S]*?id="post-2706"/)
-  expect(html).toMatch(/collapsed-preview-post collapsed-preview-deeper omitted-parent-reply[^>]*>[\s\S]*?aria-label="Expand earlier replies"><span class="visually-hidden">expand earlier replies<\/span><\/label>[\s\S]*?id="post-2706"/)
+  expect(html).toMatch(/collapsed-preview-post collapsed-preview-deeper projected-reply-deeper omitted-parent-reply[^>]*>[\s\S]*?id="post-2706"/)
+  expect(html).toMatch(/collapsed-preview-post collapsed-preview-deeper projected-reply-deeper omitted-parent-reply[^>]*>[\s\S]*?aria-label="Expand earlier replies"><span class="visually-hidden">expand earlier replies<\/span><\/label>[\s\S]*?id="post-2706"/)
   expect(html).toMatch(/collapsed-preview-post[^>]*>[\s\S]*?id="post-2717"/)
-  expect(html).toContain('collapsed-preview-post collapsed-preview-deeper omitted-parent-reply')
+  expect(html).toContain('collapsed-preview-post collapsed-preview-deeper projected-reply-deeper omitted-parent-reply')
 })
 
 test('collapsed feed previews indent a reply whose immediate parent was omitted', () => {
@@ -1113,7 +1113,7 @@ test('collapsed feed previews indent a reply whose immediate parent was omitted'
     posts: [root, nested, sibling, older],
   }))
 
-  expect(html).toMatch(/collapsed-preview-post collapsed-preview-deeper omitted-parent-reply[^>]*>[\s\S]*?id="post-2833"/)
+  expect(html).toMatch(/collapsed-preview-post collapsed-preview-deeper projected-reply-deeper omitted-parent-reply[^>]*>[\s\S]*?id="post-2833"/)
   expect(html).toMatch(/collapsed-preview-post[^>]*>[\s\S]*?id="post-2834"/)
   expect(html).toMatch(/class="reply-node collapsed-preview-path collapsed-preview-post"><article[^>]*id="post-2834"/)
 })
