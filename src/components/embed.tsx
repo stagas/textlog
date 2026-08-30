@@ -23,7 +23,7 @@ export function Embed(
         <meta name="viewport" content="width=device-width,initial-scale=1" />
         <meta name="color-scheme" content="light dark" />
         <title>{`${title} · ${name}`}</title>
-        <link rel="stylesheet" href="/embed.css?v=8" />
+        <link rel="stylesheet" href="/embed.css?v=12" />
         <link rel="stylesheet" href={`/theme.css?${query}`} />
       </head>
       <body className="embed-body">
@@ -47,7 +47,7 @@ export function Embed(
                       read
                     </a>
                   </div>
-                  <p className={containsAsciiArt(post.body) ? 'ascii-art' : undefined}
+                  <div className={`embed-post-body${containsAsciiArt(post.body) ? ' ascii-art' : ''}`}
                     dangerouslySetInnerHTML={{ __html: embedLinks(post.body, post.mention_bios) }} />
                   {post.parent && (
                     <blockquote className={'embed-parent' + (containsAsciiArt(post.parent.body) ? ' ascii-art' : '')
@@ -71,7 +71,7 @@ export function Embed(
                                 read
                               </a>
                             </div>
-                            <p className={containsAsciiArt(post.parent.body) ? 'ascii-art' : undefined}
+                            <div className={`embed-post-body${containsAsciiArt(post.parent.body) ? ' ascii-art' : ''}`}
                               dangerouslySetInnerHTML={{
                                 __html: embedLinks(post.parent.body, post.parent.mention_bios),
                               }} />

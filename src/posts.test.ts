@@ -140,6 +140,45 @@ describe('post persistence', () => {
         + '<a href="/tag/notes">#notes</a></span>after',
     )
   })
+  test('renders GFM tables with alignment and rich post content in cells', () => {
+    const html = linkify('| Person | Status | Score |\n| :--- | :---: | ---: |\n'
+      + '| @reader | **ready** | 42 |', { reader: 'Reader bio' }, [], undefined, undefined, '', {}, {}, {
+      signedIn: true,
+      formPrefix: 'table',
+    })
+    expect(html).toContain('<div class="markdown-table-wrap"><table class="markdown-table"><thead>')
+    expect(html).toContain('<th scope="col" class="align-left">Person</th>')
+    expect(html).toContain('<th scope="col" class="align-center">Status</th>')
+    expect(html).toContain('<td class="align-left"><span class="reference-menu">')
+    expect(html).toContain('<td class="align-center"><strong>ready</strong></td>')
+    expect(html).toContain('<td class="align-right">42</td>')
+  })
+  test('renders an all-dashes table row as a thicker section rule', () => {
+    const body = '| Language   |    files |    blank |  comment |     code |\n'
+      + '| :--------- | -------: | -------: | -------: | -------: |\n'
+      + '| TypeScript |      278 |     3090 |     1921 |    45892 |\n'
+      + '| CSS        |        2 |     1132 |        1 |     6047 |\n'
+      + '| --------   | -------- | -------- | -------- | -------- |\n'
+      + '| SUM:       |      280 |     4222 |     1922 |    51939 |'
+    const html = linkify(body)
+    expect(html).toContain('<tr class="markdown-table-separator" aria-hidden="true"><td colspan="5"></td></tr>')
+    expect(html).toContain('<td class="align-left">SUM:</td>')
+    expect(html).not.toContain('>--------<')
+  })
+
+  test('renders Markdown tables inside quoted text and leaves table-looking code literal', () => {
+    expect(linkify('> | A | B |\n> | --- | --- |\n> | one | two |'))
+      .toContain('<div class="post-quote"><div class="markdown-table-wrap"><table class="markdown-table">')
+    expect(linkify('```text\n| A | B |\n| --- | --- |\n```'))
+      .toBe('<code class="code-fence">| A | B |\n| --- | --- |</code>')
+  })
+  test('renders Markdown horizontal rules in posts and quotes but not fenced code', () => {
+    expect(linkify('before\n---\nafter')).toBe('before\n<hr class="markdown-hr">\nafter')
+    expect(linkify('before\n* * *\nafter')).toBe('before\n<hr class="markdown-hr">\nafter')
+    expect(linkify('> above\n> ___\n> below'))
+      .toBe('<div class="post-quote">above\n<hr class="markdown-hr">\nbelow</div>')
+    expect(linkify('```text\n---\n```')).toBe('<code class="code-fence">---</code>')
+  })
   test('renders slash-delimited italics in posts without affecting URLs', () => {
     expect(linkify('/italics/ and https://example.com/a/b'))
       .toBe(

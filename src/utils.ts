@@ -512,6 +512,91 @@ function renderedMath(source: string, display: boolean) {
   return output && display ? `<span class="math-display">${output}</span>` : output
 }
 
+type MarkdownTable = {
+  index: number
+  lastIndex: number
+  headers: string[]
+  alignments: Array<'left' | 'center' | 'right' | undefined>
+  rows: string[][]
+}
+
+function markdownTableCells(line: string) {
+  if (!line.includes('|')) return null
+  const cells: string[] = []
+  let cell = ''
+  let codeTicks = 0
+  for (let index = 0; index < line.length; index++) {
+    const character = line[index]
+    if (character === '\\' && line[index + 1] === '|') {
+      cell += '|'
+      index++
+    }
+    else if (character === '`') {
+      let ticks = 1
+      while (line[index + ticks] === '`') ticks++
+      if (!codeTicks) codeTicks = ticks
+      else if (codeTicks === ticks) codeTicks = 0
+      cell += '`'.repeat(ticks)
+      index += ticks - 1
+    }
+    else if (character === '|' && !codeTicks) {
+      cells.push(cell.trim())
+      cell = ''
+    }
+    else cell += character
+  }
+  cells.push(cell.trim())
+  if (!cells[0]) cells.shift()
+  if (!cells.at(-1)) cells.pop()
+  return cells.length > 1 ? cells : null
+}
+
+function markdownTable(body: string): MarkdownTable | null {
+  const lines = body.split('\n')
+  const fencedRanges = linkTokens(body).filter(token => token.kind === 'code-fence' || token.kind === 'latex-fence')
+  let offset = 0
+  for (let index = 0; index < lines.length - 1; index++) {
+    const headerOffset = offset
+    const nextOffset = offset + lines[index].length + 1
+    offset = nextOffset
+    if (fencedRanges.some(range => headerOffset >= range.index && headerOffset < range.lastIndex)) continue
+    const headers = markdownTableCells(lines[index])
+    const delimiters = markdownTableCells(lines[index + 1])
+    if (!headers || !delimiters || headers.length !== delimiters.length
+      || !delimiters.every(cell => /^:?-{3,}:?$/.test(cell))) continue
+    const rows: string[][] = []
+    let endLine = index + 2
+    for (; endLine < lines.length; endLine++) {
+      const cells = markdownTableCells(lines[endLine])
+      if (!cells) break
+      rows.push(headers.map((_, cellIndex) => cells[cellIndex] || ''))
+    }
+    const lastIndex = lines.slice(0, endLine).reduce((length, line) => length + line.length + 1, 0) - 1
+    return {
+      index: headerOffset,
+      lastIndex,
+      headers,
+      alignments: delimiters.map(cell => cell.startsWith(':') && cell.endsWith(':') ? 'center'
+        : cell.endsWith(':') ? 'right' : cell.startsWith(':') ? 'left' : undefined),
+      rows,
+    }
+  }
+  return null
+}
+
+function markdownHorizontalRule(body: string) {
+  const fencedRanges = linkTokens(body).filter(token => token.kind === 'code-fence' || token.kind === 'latex-fence')
+  let offset = 0
+  for (const line of body.split('\n')) {
+    const match = /^ {0,3}(?:(?:\*[ \t]*){3,}|(?:-[ \t]*){3,}|(?:_[ \t]*){3,})$/.test(line)
+    if (match && !fencedRanges.some(range => offset >= range.index && offset < range.lastIndex)) {
+      return { index: offset, lastIndex: offset + line.length }
+    }
+    offset += line.length + 1
+  }
+  return null
+}
+
 function renderedReference(token: string, mentionBios: Record<string, string>,
   mentionNoteCounts: Record<string, number>, hashtagCounts: Record<string, number>, highlightTerms: string[],
   navigationQuery = '', popover?: ReferencePopoverOptions)
@@ -608,7 +693,7 @@ function linkifyAsciiReferences(body: string, mentionBios: Record<string, string
 export function linkify(body: string, mentionBios: Record<string, string> = {}, highlightTerms: string[] = [],
   appUrl: string | undefined = Bun.env.APP_URL, flags?: PostContentFlags, navigationQuery = '',
   hashtagCounts: Record<string, number> = {}, mentionNoteCounts: Record<string, number> = {},
-  popover?: ReferencePopoverOptions, renderSpoiler = true): string
+  popover?: ReferencePopoverOptions, renderSpoiler = true, renderBlocks = true): string
 {
   const spoiler = renderSpoiler ? splitSpoilerBody(body) : { visible: body, hidden: '' }
   if (spoiler.hidden) {
@@ -646,9 +731,40 @@ export function linkify(body: string, mentionBios: Record<string, string> = {}, 
       }
       const rendered = linkify(group.join('\n'), mentionBios, highlightTerms, appUrl, flags, navigationQuery,
         hashtagCounts, mentionNoteCounts, popover, false)
-      html += quoted ? `<span class="post-quote">${rendered}</span>` : rendered
+      const quoteTag = rendered.includes('<div class="markdown-table-wrap">') || rendered.includes('<hr ') ? 'div' : 'span'
+      html += quoted ? `<${quoteTag} class="post-quote">${rendered}</${quoteTag}>` : rendered
     }
     return html
+  }
+  const horizontalRule = renderBlocks ? markdownHorizontalRule(body) : null
+  if (horizontalRule) {
+    return linkify(body.slice(0, horizontalRule.index), mentionBios, highlightTerms, appUrl, flags, navigationQuery,
+      hashtagCounts, mentionNoteCounts, popover, false)
+      + '<hr class="markdown-hr">'
+      + linkify(body.slice(horizontalRule.lastIndex), mentionBios, highlightTerms, appUrl, flags, navigationQuery,
+        hashtagCounts, mentionNoteCounts, popover, false)
+  }
+  const table = renderBlocks ? markdownTable(body) : null
+  if (table) {
+    const renderCell = (cell: string) => linkify(cell, mentionBios, highlightTerms, appUrl, flags, navigationQuery,
+      hashtagCounts, mentionNoteCounts, popover, false, false)
+    const renderedRow = (cells: string[], tag: 'th' | 'td') => '<tr>' + cells.map((cell, index) => {
+      const alignment = table.alignments[index]
+      return `<${tag}${tag === 'th' ? ' scope="col"' : ''}${alignment ? ` class="align-${alignment}"` : ''}>${
+        renderCell(cell)
+      }</${tag}>`
+    }).join('') + '</tr>'
+    const renderedBodyRow = (row: string[]) => row.every(cell => /^-{3,}$/.test(cell))
+      ? `<tr class="markdown-table-separator" aria-hidden="true"><td colspan="${table.headers.length}"></td></tr>`
+      : renderedRow(row, 'td')
+    const renderedTable = '<div class="markdown-table-wrap"><table class="markdown-table"><thead>'
+      + renderedRow(table.headers, 'th') + '</thead><tbody>'
+      + table.rows.map(renderedBodyRow).join('') + '</tbody></table></div>'
+    return linkify(body.slice(0, table.index), mentionBios, highlightTerms, appUrl, flags, navigationQuery,
+      hashtagCounts, mentionNoteCounts, popover, false)
+      + renderedTable
+      + linkify(body.slice(table.lastIndex), mentionBios, highlightTerms, appUrl, flags, navigationQuery,
+        hashtagCounts, mentionNoteCounts, popover, false)
   }
   if (flags && !flags.has_latex && !flags.has_links && !flags.has_code && !/[&~*_/|]/.test(body)) {
     return highlighted(body, highlightTerms)

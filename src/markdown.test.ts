@@ -27,4 +27,16 @@ describe('markdown', () => {
       .toBe('<p><a href="https://ibb.co/WpfV1DbH">https://ibb.co/WpfV1DbH</a></p>')
     expect(markdownPlainText(imageLink)).toBe('https://ibb.co/WpfV1DbH')
   })
+
+  test('renders tables in sanitized and plain-text Markdown output', () => {
+    const table = '| Name | Count |\n| --- | ---: |\n| notes | 3 |'
+    expect(sanitizedMarkdownHtml(table)).toContain('<table>')
+    expect(sanitizedMarkdownHtml(table)).toContain('<th>Name</th>')
+    expect(markdownPlainText(table)).toBe('Name Count notes 3')
+  })
+
+  test('renders horizontal rules in sanitized and plain-text Markdown output', () => {
+    expect(sanitizedMarkdownHtml('before\n\n---\n\nafter')).toBe('<p>before</p>\n<hr />\n<p>after</p>')
+    expect(markdownPlainText('before\n\n---\n\nafter')).toBe('before after')
+  })
 })

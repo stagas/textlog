@@ -2793,6 +2793,51 @@ body.corners-round a.button {
   color: color-mix(in srgb, var(--quote-ink) 55%, var(--muted));
 }
 
+.post-body .markdown-hr {
+  height: 0;
+  margin: .75lh 0;
+  border: 0;
+  border-top: var(--hairline) solid var(--soft);
+}
+
+.post-body .markdown-table-wrap {
+  display: block;
+  max-width: 100%;
+  margin: .5lh 0;
+  overflow-x: auto;
+  white-space: normal;
+}
+
+.post-body .markdown-table {
+  width: max-content;
+  min-width: 100%;
+  border-spacing: 0;
+  border-collapse: collapse;
+}
+
+.post-body .markdown-table :is(th, td) {
+  padding: var(--space-1) var(--space-2);
+  border: var(--hairline) solid var(--soft);
+  text-align: left;
+  vertical-align: top;
+  overflow-wrap: normal;
+}
+
+.post-body .markdown-table th {
+  background: color-mix(in srgb, var(--soft) 45%, transparent);
+  font-weight: 700;
+}
+
+.post-body .markdown-table .markdown-table-separator td {
+  height: 0;
+  padding: 0;
+  border: 0;
+  border-top: 2px solid var(--soft);
+}
+
+.post-body .markdown-table .align-center { text-align: center; }
+.post-body .markdown-table .align-right { text-align: right; }
+
 .post-body.post-translation {
   margin-top: 0;
 }
