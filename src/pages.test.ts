@@ -2690,7 +2690,8 @@ test('Profile places owner actions in the handle row', () => {
   expect(html).toContain('class="account-nav-row account-nav-primary"')
   expect(html).toContain('class="account-nav-row account-nav-secondary"')
   expect(html).toContain('</div><a class="button nav-write-action" href="/write">write</a></span>')
-  expect(html).toContain('class="account-menu-handle" href="/u/reader?from=%2F">@reader</a>')
+  expect(html).toContain('class="account-menu-handle" href="/u/reader?from=%2F">@reader'
+    + '<span class="nav-mood">🤸</span></a>')
   expect(html).toContain('class="account-menu-popover"')
   expect(html).toContain('href="/u/reader?from=%2F">profile</a>')
   expect(html).toContain('href="/account/edit?from=%2F">account</a>')
