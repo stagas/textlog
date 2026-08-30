@@ -674,6 +674,19 @@ test('hot and latest show the to-me tab with its unread count', () => {
   }
 })
 
+test('tab counters cap counts at 99+', () => {
+  const user = { id: 1, handle: 'reader', email: 'reader@example.com', bio: '',
+    handle_chosen_at: '2026-08-19 09:00:00' }
+  const feed = { posts: [], page: 1, totalItems: 0, totalPages: 1, toMeUnread: true, toMeCount: 99,
+    forYouCount: 1234, latestCount: 100 }
+  const html = renderToStaticMarkup(<HotFeed user={user} feed={feed} />)
+
+  expect(html).toContain('href="/@">@<span class="to-me-count">99+</span></a>')
+  expect(html).toContain('my feed<span class="to-me-count">99+</span></a>')
+  expect(html).toContain('all<span class="to-me-count">99+</span></a>')
+  expect(html).not.toContain('1234')
+})
+
 test('hot and latest keep the to-me tab without a count when it has no unread content', () => {
   const user = { id: 1, handle: 'reader', email: 'reader@example.com', bio: '',
     handle_chosen_at: '2026-08-19 09:00:00' }

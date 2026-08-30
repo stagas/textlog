@@ -525,6 +525,10 @@ export function CursorPagination({ path, previousCursor, nextCursor }: {
   )
 }
 
+function TabCount({ count }: { count: number }) {
+  return count > 0 && <span className="to-me-count">{count >= 99 ? '99+' : count}</span>
+}
+
 export function FeedTabs(
   { active, user, forYouReadStatus, activityReadStatus, toMe = false, toMeCount = 0, forYouCount = 0, unreadHref,
     lastUnreadHref, forYouUnread = false, toMeUnread = false, latestCount = 0, readAction }: {
@@ -553,7 +557,7 @@ export function FeedTabs(
             <a className={toMe ? 'active' : ''} aria-current={toMe ? 'page' : undefined} href="/@">
               <TabHighlight active={toMe} />
               @
-              {toMeCount > 0 && <span className="to-me-count">{toMeCount}</span>}
+              <TabCount count={toMeCount} />
             </a>
           )}
           {user && (
@@ -562,7 +566,7 @@ export function FeedTabs(
             >
               <TabHighlight active={active === 'following' && !toMe} />
               my feed
-              {forYouCount > 0 && <span className="to-me-count">{forYouCount}</span>}
+              <TabCount count={forYouCount} />
             </a>
           )}
           <a className={active === 'hot' ? 'active' : ''} aria-current={active === 'hot' ? 'page' : undefined}
@@ -584,7 +588,7 @@ export function FeedTabs(
           >
             <TabHighlight active={active === 'latest'} />
             all
-            {latestCount > 0 && <span className="to-me-count">{latestCount}</span>}
+            <TabCount count={latestCount} />
           </a>
           {activityReadStatus !== undefined && (
             <span className="feed-tabs-read-status">
