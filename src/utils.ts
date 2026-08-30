@@ -764,10 +764,12 @@ export function linkify(body: string, mentionBios: Record<string, string> = {}, 
     const renderedTable = '<div class="markdown-table-wrap"><table class="markdown-table"><thead>'
       + renderedRow(table.headers, 'th') + '</thead><tbody>'
       + table.rows.map(renderedBodyRow).join('') + '</tbody></table></div>'
-    return linkify(body.slice(0, table.index), mentionBios, highlightTerms, appUrl, flags, navigationQuery,
+    const beforeTable = table.index > 0 && body[table.index - 1] === '\n' ? table.index - 1 : table.index
+    const afterTable = body[table.lastIndex] === '\n' ? table.lastIndex + 1 : table.lastIndex
+    return linkify(body.slice(0, beforeTable), mentionBios, highlightTerms, appUrl, flags, navigationQuery,
       hashtagCounts, mentionNoteCounts, popover, false)
       + renderedTable
-      + linkify(body.slice(table.lastIndex), mentionBios, highlightTerms, appUrl, flags, navigationQuery,
+      + linkify(body.slice(afterTable), mentionBios, highlightTerms, appUrl, flags, navigationQuery,
         hashtagCounts, mentionNoteCounts, popover, false)
   }
   if (flags && !flags.has_latex && !flags.has_links && !flags.has_code && !/[&~*_/|]/.test(body)) {

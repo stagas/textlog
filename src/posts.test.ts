@@ -172,6 +172,12 @@ describe('post persistence', () => {
     expect(linkify('```text\n| A | B |\n| --- | --- |\n```'))
       .toBe('<code class="code-fence">| A | B |\n| --- | --- |</code>')
   })
+  test('does not retain structural newlines around a rendered table', () => {
+    expect(linkify('before\n| A | B |\n| --- | --- |\n| one | two |\nafter'))
+      .toBe('before<div class="markdown-table-wrap"><table class="markdown-table"><thead>'
+        + '<tr><th scope="col">A</th><th scope="col">B</th></tr></thead><tbody>'
+        + '<tr><td>one</td><td>two</td></tr></tbody></table></div>after')
+  })
   test('renders Markdown horizontal rules in posts and quotes but not fenced code', () => {
     expect(linkify('before\n---\nafter')).toBe('before\n<hr class="markdown-hr">\nafter')
     expect(linkify('before\n* * *\nafter')).toBe('before\n<hr class="markdown-hr">\nafter')
