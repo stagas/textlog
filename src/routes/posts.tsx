@@ -295,7 +295,15 @@ export function registerPostsRoutes(app: Hono) {
       )
     }
     if (f.action === 'preview') {
-      return page(<Compose user={user} body={body} draftId={editingDraftId} preview
+      const result = await databaseService().call('drafts.save', {
+        id: editingDraftId ?? null,
+        userId: user.id,
+        parentId: null,
+        body,
+      })
+      if (result.status === 'not_found') return c.text('Not found', 404)
+      user.draft_count = Math.max(user.draft_count || 0, 1)
+      return page(<Compose user={user} body={body} draftId={result.id} preview
         previewExecutionOutput={await executePostCode(body)} previewLocation={await previewLocation(body)}
         returnPath={returnPath} />)
     }
@@ -561,8 +569,16 @@ export function registerPostsRoutes(app: Hono) {
       )
     }
     if (f.action === 'preview') {
+      const result = await databaseService().call('drafts.save', {
+        id: editingDraftId ?? null,
+        userId: user.id,
+        parentId,
+        body,
+      })
+      if (result.status === 'not_found') return c.text('Not found', 404)
+      user.draft_count = Math.max(user.draft_count || 0, 1)
       return page(
-        <Reply user={user} post={parent} showForm body={body} draftId={editingDraftId} preview
+        <Reply user={user} post={parent} showForm body={body} draftId={result.id} preview
           previewExecutionOutput={await executePostCode(body)} previewLocation={await previewLocation(body)}
           returnPath={returnPath} />,
       )

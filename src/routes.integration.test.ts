@@ -1139,6 +1139,17 @@ test('consequential account, content, reporting, and admin flows work over HTTP'
   expect(draftEditHtml).toContain('A saved note draft')
   expect(draftEditHtml).toContain(`name="draft_id" value="${noteDraft.id}"`)
   expect(draftEditHtml).toContain(`formAction="/drafts/${noteDraft.id}"`)
+  const previewedDraft = await request('/post', {
+    method: 'POST',
+    cookie: aliceCookie,
+    form: { body: 'The previewed note draft', action: 'preview', draft_id: String(noteDraft.id), from: '/latest' },
+  })
+  expect(previewedDraft.status).toBe(200)
+  expect(await previewedDraft.text()).toContain(`name="draft_id" value="${noteDraft.id}"`)
+  expect((database.query('SELECT count(*) count FROM drafts WHERE user_id=?').get(alice.id) as { count: number })
+    .count).toBe(1)
+  expect((database.query('SELECT body FROM drafts WHERE id=?').get(noteDraft.id) as { body: string }).body)
+    .toBe('The previewed note draft')
   const overwrittenDraft = await request(`/drafts/${noteDraft.id}`, {
     method: 'POST',
     cookie: aliceCookie,
@@ -1262,6 +1273,18 @@ test('consequential account, content, reporting, and admin flows work over HTTP'
   expect(replyPreview.status).toBe(200)
   const replyPreviewHtml = await replyPreview.text()
   expect(replyPreviewHtml).toContain('A nested reply preview')
+  const previewedReplyDraft = database.query('SELECT id,body,parent_id FROM drafts WHERE user_id=? AND body=?')
+    .get(alice.id, 'A nested reply preview') as { id: number; body: string; parent_id: number }
+  expect(previewedReplyDraft.parent_id).toBe(quotedReply.id)
+  expect(replyPreviewHtml).toContain(`name="draft_id" value="${previewedReplyDraft.id}"`)
+  const updatedReplyPreview = await request(`/post/${quotedReply.id}/reply`, {
+    method: 'POST',
+    cookie: aliceCookie,
+    form: { body: 'An updated nested reply preview', action: 'preview', draft_id: String(previewedReplyDraft.id) },
+  })
+  expect(updatedReplyPreview.status).toBe(200)
+  expect((database.query('SELECT body FROM drafts WHERE id=?').get(previewedReplyDraft.id) as { body: string }).body)
+    .toBe('An updated nested reply preview')
   expect(replyPreviewHtml).toContain('<blockquote class="parent-quote')
   expect(replyPreviewHtml).toContain('A route-level integration post')
   const invalidEditBody = `remember edit ${'x'.repeat(490)}`
