@@ -272,9 +272,9 @@ curl '${origin}/api/v1/activities/@/conversations?limit=20' \\
           <p>
             Download the latest daily, read-only snapshot as{' '}
             <a href="/dump.zip">dump.zip</a>. It contains paginated JSON files for public handles and bios, posts and
-            reply links, mentions, hashtags, and follow relationships. The accounts are frozen: the archive contains no
-            login credentials, contact details, record timestamps, blocks, reports, deleted content, or other private
-            data.
+            reply links, translations, code execution outputs, locations, mentions, hashtags, and follow relationships. The accounts are
+            frozen: the archive contains no bookmarks, login credentials, contact details, record timestamps, blocks,
+            reports, deleted content, or other private data.
           </p>
           <CodeBlock language="bash">{`curl -O ${origin}/dump.zip`}</CodeBlock>
         </ApiSection>

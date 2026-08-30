@@ -65,6 +65,27 @@ export async function createPublicArchive(database: Database, path: string, now 
       LEFT JOIN posts parent ON parent.id=p.parent_id LEFT JOIN users parent_user ON parent_user.id=parent.user_id
       WHERE p.deleted_at IS NULL AND u.deleted_at IS NULL AND u.suspended_at IS NULL
       ORDER BY p.created_at,p.id LIMIT ? OFFSET ?`)
+  addPages('translations', `SELECT count(*) AS count FROM posts p JOIN users u ON u.id=p.user_id
+      WHERE p.translation IS NOT NULL AND p.deleted_at IS NULL
+        AND u.deleted_at IS NULL AND u.suspended_at IS NULL`,
+    `SELECT 'post-' || p.id AS post,p.translation FROM posts p JOIN users u ON u.id=p.user_id
+      WHERE p.translation IS NOT NULL AND p.deleted_at IS NULL
+        AND u.deleted_at IS NULL AND u.suspended_at IS NULL
+      ORDER BY p.id LIMIT ? OFFSET ?`)
+  addPages('execution-outputs', `SELECT count(*) AS count FROM posts p JOIN users u ON u.id=p.user_id
+      WHERE p.execution_output IS NOT NULL AND p.deleted_at IS NULL
+        AND u.deleted_at IS NULL AND u.suspended_at IS NULL`,
+    `SELECT 'post-' || p.id AS post,p.execution_output AS output FROM posts p JOIN users u ON u.id=p.user_id
+      WHERE p.execution_output IS NOT NULL AND p.deleted_at IS NULL
+        AND u.deleted_at IS NULL AND u.suspended_at IS NULL
+      ORDER BY p.id LIMIT ? OFFSET ?`)
+  addPages('locations', `SELECT count(*) AS count FROM post_locations pl JOIN posts p ON p.id=pl.post_id
+      JOIN users u ON u.id=p.user_id WHERE p.deleted_at IS NULL
+        AND u.deleted_at IS NULL AND u.suspended_at IS NULL`,
+    `SELECT 'post-' || pl.post_id AS post,pl.query,pl.latitude,pl.longitude,pl.display_name
+      FROM post_locations pl JOIN posts p ON p.id=pl.post_id JOIN users u ON u.id=p.user_id
+      WHERE p.deleted_at IS NULL AND u.deleted_at IS NULL AND u.suspended_at IS NULL
+      ORDER BY pl.post_id LIMIT ? OFFSET ?`)
   addPages('hashtags', `SELECT count(*) AS count FROM post_hashtags ph JOIN posts p ON p.id=ph.post_id
       JOIN users u ON u.id=p.user_id WHERE p.deleted_at IS NULL AND u.deleted_at IS NULL AND u.suspended_at IS NULL`,
     `SELECT 'post-' || ph.post_id AS post,ph.tag FROM post_hashtags ph JOIN posts p ON p.id=ph.post_id
@@ -93,7 +114,7 @@ export async function createPublicArchive(database: Database, path: string, now 
       WHERE u.deleted_at IS NULL AND u.suspended_at IS NULL
       ORDER BY u.handle COLLATE NOCASE,h.tag LIMIT ? OFFSET ?`)
   zip.file('manifest.json',
-    json({ format: 'textlog-public-archive', version: 1, generated_at: generatedAt, page_size: pageSize, datasets,
+    json({ format: 'textlog-public-archive', version: 2, generated_at: generatedAt, page_size: pageSize, datasets,
       privacy: 'Public handles and public content only. Accounts are frozen and contain no authentication data.' }))
 
   mkdirSync(dirname(path), { recursive: true, mode: 0o755 })
