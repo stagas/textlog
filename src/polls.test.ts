@@ -1,6 +1,6 @@
 import { Database } from 'bun:sqlite'
 import { describe, expect, test } from 'bun:test'
-import { loadPolls, parsePoll, syncPoll, voteInPoll } from './polls'
+import { loadPolls, parsePoll, pollDisplayBody, syncPoll, voteInPoll } from './polls'
 
 describe('polls', () => {
   test('parses a question followed by the poll marker and options', () => {
@@ -35,6 +35,11 @@ describe('polls', () => {
       correctIndex: 1,
       explanation: 'Athens has been the capital since 1834.',
     })
+  })
+
+  test('keeps quiz answers and explanations out of the display body', () => {
+    expect(pollDisplayBody('Capital of Greece? #quiz\nRome\n> Athens\nParis\n\nAthens has been the capital since 1834.'))
+      .toBe('Capital of Greece? #quiz')
   })
 
   test('quizzes do not expire', () => {

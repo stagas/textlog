@@ -29,6 +29,7 @@ import { renderPostOg } from '../og'
 import { cachedOgResponse, cacheOgResponse } from '../og-response-cache'
 import { normalizePostBody, postBodyValidationMessage, validPostBody } from '../post-body'
 import { postRateLimitMessage } from '../post-rate-limit'
+import { pollDisplayBody } from '../polls'
 import { wakePostPushWorker } from '../push'
 import { normalizeSearchQuery } from '../search'
 import { toggleTodo } from '../todos'
@@ -239,7 +240,7 @@ export function registerPostsRoutes(app: Hono) {
     const postUrl = `${origin}/post/${post.id}`
     const social = {
       title: `@${post.handle} wrote on textlog`,
-      description: markdownPlainText(post.body),
+      description: markdownPlainText(pollDisplayBody(post.body)),
       image: `${postUrl}/og.png?v=8`,
       url: postUrl,
     }
