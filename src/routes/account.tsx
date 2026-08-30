@@ -354,17 +354,20 @@ export function registerAccountRoutes(app: Hono) {
     const submittedBio = normalizeBioBody(f.bio || '')
     const bio = submittedBio.trim() ? submittedBio : ''
     const submittedHandle = f.handle || ''
+    const submittedMood = f.mood || ''
     const submittedTimezone = f.timezone || user.timezone || DEFAULT_TIMEZONE
     const suggestionSearch = await profileSuggestionSearch(f, user.id)
     if (suggestionSearch) {
       return page(
         <Profile user={user} profile={{ ...user, timezone: submittedTimezone }} posts={[]} following={false} bio={bio}
-          editHandle={submittedHandle} editing returnPath={returnPath} suggestionSearch={suggestionSearch} />,
+          editHandle={submittedHandle} editMood={submittedMood} editing returnPath={returnPath}
+          suggestionSearch={suggestionSearch} />,
       )
     }
     const handle = submittedHandle.toLowerCase().replace(/^@/, '')
     const validHandle = /^[a-z0-9_]{2,24}$/.test(handle)
-    if (!validHandle || !validBioBody(bio) || !validTimezone(submittedTimezone)) {
+    const validMood = submittedMood === '' || /^\p{Extended_Pictographic}$/u.test(submittedMood)
+    if (!validHandle || !validMood || !validBioBody(bio) || !validTimezone(submittedTimezone)) {
       const handleCharacters = Array.from(submittedHandle).length
       const error = [
         !validHandle
@@ -373,11 +376,12 @@ export function registerAccountRoutes(app: Hono) {
           }. Use 2–24 letters, numbers, or underscores.`
           : '',
         !validBioBody(bio) ? bioBodyValidationMessage(bio) : '',
+        !validMood ? 'Mood should be an emoji.' : '',
         !validTimezone(submittedTimezone) ? 'Choose a valid timezone.' : '',
       ].filter(Boolean).join(' ')
       return page(
         <Profile user={user} profile={{ ...user, timezone: submittedTimezone }} posts={[]} following={false} bio={bio}
-          editHandle={submittedHandle} editing error={error} returnPath={returnPath} />,
+          editHandle={submittedHandle} editMood={submittedMood} editing error={error} returnPath={returnPath} />,
         400,
       )
     }
@@ -386,7 +390,7 @@ export function registerAccountRoutes(app: Hono) {
       if (!moderation.ok) {
         return page(
           <Profile user={user} profile={{ ...user, timezone: submittedTimezone }} posts={[]} following={false} bio={bio}
-            editHandle={submittedHandle} editing error={moderationMessage(moderation)}
+            editHandle={submittedHandle} editMood={submittedMood} editing error={moderationMessage(moderation)}
             returnPath={returnPath} />,
           moderation.reason === 'flagged' ? 422 : 503,
         )
@@ -395,6 +399,7 @@ export function registerAccountRoutes(app: Hono) {
     const updated = await databaseService().call('account.updateProfile', {
       userId: user.id,
       handle,
+      mood: submittedMood,
       bio,
       timezone: submittedTimezone,
     })
@@ -404,7 +409,7 @@ export function registerAccountRoutes(app: Hono) {
         : 'That username is unavailable.'
       return page(
         <Profile user={user} profile={{ ...user, timezone: submittedTimezone }} posts={[]} following={false} bio={bio}
-          editHandle={submittedHandle} editing error={error} returnPath={returnPath} />,
+          editHandle={submittedHandle} editMood={submittedMood} editing error={error} returnPath={returnPath} />,
         400,
       )
     }

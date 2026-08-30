@@ -123,7 +123,7 @@ export type DatabaseDomainOperations = {
     output: boolean }
   'account.changePassword': { input: { userId: number; passwordHash: string; currentSessionHash: string | null };
     output: null }
-  'account.updateProfile': { input: { userId: number; handle: string; bio: string; timezone: string };
+  'account.updateProfile': { input: { userId: number; handle: string; mood: string; bio: string; timezone: string };
     output: { status: 'ready' | 'unavailable' | 'change-limit' } }
   'account.export': { input: { userId: number; currentSession: string | null }; output: unknown }
   'account.emailChangeReadiness': { input: { userId: number; email: string };

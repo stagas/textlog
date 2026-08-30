@@ -2675,6 +2675,14 @@ export const migrations: Migration[] = [
         ON post_bookmarks(user_id,created_at DESC,post_id DESC);`)
     },
   },
+  {
+    version: 165,
+    name: 'profile_mood',
+    up(database) {
+      if (!database.query("SELECT 1 FROM sqlite_master WHERE type='table' AND name='users'").get()) return
+      addColumn(database, 'users', 'mood', "TEXT NOT NULL DEFAULT ''")
+    },
+  },
 ]
 
 export const latestMigrationVersion = migrations.at(-1)!.version

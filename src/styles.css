@@ -2754,6 +2754,22 @@ body.corners-round a.button {
   white-space: nowrap;
 }
 
+:is(.posttop, .parent-quote-top) > .reference-menu:has(> .post-mood) {
+  border-bottom: 0;
+  white-space: nowrap;
+}
+
+:is(.posttop, .parent-quote-top) > .reference-menu:has(> .post-mood) > .reference-menu-trigger {
+  display: inline;
+  padding-bottom: 2px;
+  border-bottom: var(--hairline) solid var(--link-border);
+}
+
+.post-mood {
+  margin-left: 1px;
+  white-space: nowrap;
+}
+
 .post-body > .reference-menu {
   display: inline;
   line-height: inherit;
@@ -3360,6 +3376,7 @@ main:has(> .write-compose) {
 
 .auth input,
 .bio-form > label > input:not([type="checkbox"]),
+.profile-identity-fields input,
 .account-delete-form input,
 .security-form input:not([type="hidden"]):not([type="checkbox"]):not([type="radio"]),
 .search-form input,
@@ -3461,6 +3478,7 @@ textarea {
 
 .auth input:focus-visible,
 .bio-form > label > input:not([type="checkbox"]):focus-visible,
+.profile-identity-fields input:focus-visible,
 .account-delete-form input:focus-visible,
 .security-form input:not([type="hidden"]):not([type="checkbox"]):not([type="radio"]):focus-visible,
 .search-form input:focus-visible,
@@ -4685,6 +4703,22 @@ form.report-panel {
   white-space: nowrap;
   font-size: clamp(1.375rem, 4vw, 1.75rem);
   font-weight: 600;
+}
+
+.profile.page-header h1:has(> .profile-mood) {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+}
+
+.profile.page-header h1:has(> .profile-mood) > .profile-canonical-link {
+  display: inline-block;
+}
+
+.profile-mood {
+  flex: none;
+  margin-left: 5px;
+  font-size: 0.75em;
 }
 
 .profile-canonical-link,
@@ -7216,4 +7250,19 @@ body.density-compact :where(p, li, textarea):not(.ascii-art) {
 
 body.density-relaxed :where(p, li, textarea):not(.ascii-art) {
   line-height: 1.7;
+}
+.profile-identity-fields {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: var(--space-2) var(--space-3);
+}
+
+.profile-identity-fields .form-hint {
+  grid-column: 1 / -1;
+}
+
+.profile-mood-field input {
+  width: 2ch;
+  min-width: calc(2ch + 28px);
+  text-align: center;
 }

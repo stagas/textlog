@@ -1928,10 +1928,20 @@ test('reply detail renders a placeholder for an unavailable quoted parent', () =
   expect(html).not.toContain('open quoted post')
 })
 
+test('post metadata places the author mood directly after the handle', () => {
+  const html = renderToStaticMarkup(React.createElement(Post, {
+    p: { id: 1, user_id: 2, parent_id: null, body: 'Moving', created_at: '2026-08-20 10:00:00',
+      deleted_at: null, handle: 'stagas', mood: '🤸' },
+    user: null,
+  }))
+
+  expect(html).toContain('>@stagas</a><span class="post-mood">🤸</span>')
+})
+
 test('posts by the viewer use plain you instead of a linked handle', () => {
   const user = { id: 1, handle: 'reader', email: 'reader@example.com', bio: '' }
   const own = { id: 1, user_id: 1, parent_id: null, body: 'Mine', created_at: '2026-08-20 10:00:00', deleted_at: null,
-    handle: 'reader' }
+    handle: 'reader', mood: '🤸' }
   const post = renderToStaticMarkup(React.createElement(Post, { p: own, user }))
   const quoted = renderToStaticMarkup(React.createElement(Post, {
     p: { id: 2, user_id: 2, parent_id: own.id, parent: { ...own, reply_count: 1 }, body: 'Reply',
@@ -1940,10 +1950,12 @@ test('posts by the viewer use plain you instead of a linked handle', () => {
   }))
 
   expect(post).toContain(
-    '<span class="postauthor post-context-author">you</span><span class="post-context">wrote:</span>',
+    '<span class="postauthor post-context-author">you<span class="post-mood">🤸</span></span>'
+      + '<span class="post-context">wrote:</span>',
   )
   expect(post).not.toContain('href="/u/reader')
-  expect(quoted).toContain('<div class="parent-quote-top"><span class="postauthor post-context-author">you</span>'
+  expect(quoted).toContain('<div class="parent-quote-top"><span class="postauthor post-context-author">you'
+    + '<span class="post-mood">🤸</span></span>'
     + '<span class="post-context">wrote:</span>')
 })
 
@@ -2649,7 +2661,8 @@ test('Profile edit offers an expanded copy-paste presence badge with a safe new-
 })
 
 test('Profile places owner actions in the handle row', () => {
-  const user = { id: 1, handle: 'reader', email: 'reader@example.com', bio: '', created_at: '2026-08-03 12:00:00' }
+  const user = { id: 1, handle: 'reader', mood: '🤸', email: 'reader@example.com', bio: '',
+    created_at: '2026-08-03 12:00:00' }
   const html = renderToStaticMarkup(React.createElement(Profile, {
     user,
     profile: user,
@@ -2662,6 +2675,7 @@ test('Profile places owner actions in the handle row', () => {
   expect(html).toContain(
     'class="profile-canonical-link" href="/u/reader" title="User ID: 1"><span class="identity-prefix">@</span>reader</a>',
   )
+  expect(html).toContain('</a><span class="profile-mood">🤸</span></h1>')
   expect(html).not.toContain('class="profile-user-details"')
   expect(html).not.toContain('class="profile-canonical-link" href="/u/reader?from=')
   expect(html).not.toContain('href="/account/edit">account</a>')

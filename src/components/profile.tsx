@@ -11,6 +11,7 @@ import { FeedThreads, Post } from './post'
 
 export function Profile(
   { user, profile, posts, following, followsViewer = false, bio = profile.bio || '', editHandle = profile.handle,
+    editMood = profile.mood || '',
     editEmail = profile.email, error, editing = false, total = posts.length, noteCount = total, replyCount = 0,
     tab = 'notes', followerCount = 0, followingCount = 0, followingTagCount = 0, blockedPeopleCount = 0,
     blockedTagCount = 0, blocked = false, blockedByProfile = false, moderatorBypass = false, social, page = 1,
@@ -23,6 +24,7 @@ export function Profile(
       followsViewer?: boolean
       bio?: string
       editHandle?: string
+      editMood?: string
       editEmail?: string
       error?: string
       editing?: boolean
@@ -134,6 +136,7 @@ export function Profile(
                 <span className="identity-prefix">@</span>
                 {profile.handle}
               </a>
+              {profile.mood && <span className="profile-mood">{profile.mood}</span>}
             </h1>
             {editing && <a className="profile-edit-link profile-switch-link" href="/account/accounts">switch</a>}
             {!editing && user?.id !== profile.id
@@ -157,15 +160,21 @@ export function Profile(
                 <form className="bio-form" method="post" action="/account/edit">
                   {returnPath && <input type="hidden" name="from" value={returnPath} />}
                   <FormMessage error={error} />
-                  <label>
-                    handle<input name="handle" aria-describedby="profile-handle-help" defaultValue={editHandle}
-                      autoComplete="username" inputMode="text" enterKeyHint="next" autoCapitalize="none"
-                      spellCheck={false} />
+                  <div className="profile-identity-fields">
+                    <label className="profile-handle-field">
+                      handle<input name="handle" aria-describedby="profile-handle-help" defaultValue={editHandle}
+                        autoComplete="username" inputMode="text" enterKeyHint="next" autoCapitalize="none"
+                        spellCheck={false} />
+                    </label>
+                    <label className="profile-mood-field">
+                      mood<input name="mood" aria-label="mood" defaultValue={editMood} autoComplete="off"
+                        inputMode="text" size={2} />
+                    </label>
                     <span id="profile-handle-help" className="form-hint">
                       Handles must be 2–24 characters and use only letters, numbers, or underscores.{' '}
                       You can change your handle up to two times per month.
                     </span>
-                  </label>
+                  </div>
                   <div className="bio-field">
                     <label>
                       bio<textarea name="bio" maxLength={BIO_MAX} defaultValue={bio}

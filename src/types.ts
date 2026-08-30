@@ -63,6 +63,7 @@ export type ParentPost = Pick<PostRow,
   | 'execution_output'
   | 'moderation_category' | 'moderation_score'> & {
   handle: string
+  mood?: string
   unavailable?: boolean
   parent_id?: number | null
   user_id?: number
@@ -94,6 +95,7 @@ export type ParentPost = Pick<PostRow,
 
 export type PostView = PostRow & {
   handle: string
+  mood?: string
   profile_pinned?: number | boolean
   viewer_context?: 'reply' | 'mention'
   viewer_mentioned?: boolean
@@ -220,6 +222,7 @@ export type ProfileRow = {
   handle: string
   email: string
   bio: string
+  mood?: string
   created_at?: string
   bio_link_previews?: Record<string, LinkPreview>
   suspended_at?: string | null
@@ -340,6 +343,7 @@ export type TagView = {
   followerCount?: number
 }
 export type User = { id: number; handle: string; email: string; bio: string; suspended_at?: string | null;
+  mood?: string;
   email_verified_at?: string | null; activity_read_at?: string | null; handle_chosen_at?: string | null;
   timezone?: string | null; show_link_previews?: number; recap_emails?: number; interaction_emails?: number;
   show_moderated_content?: number; hide_people_follow_activity?: number; hide_hashtag_follow_activity?: number;

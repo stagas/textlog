@@ -202,9 +202,10 @@ function Todo(
 }
 
 export function UserReference(
-  { handle, bio, noteCount, following, followsViewer, user, href, rel, currentHandle, stats, navigationQuery = '',
+  { handle, mood, bio, noteCount, following, followsViewer, user, href, rel, currentHandle, stats, navigationQuery = '',
     showFollowAction = true, showPopover = true, label, referenceData, extraAction }: {
       handle: string
+      mood?: string
       bio?: string
       noteCount: number
       following?: boolean
@@ -237,6 +238,7 @@ export function UserReference(
       {href
         ? <a className="reference-menu-trigger postauthor" href={href} rel={rel}>{label || <>@{handle}</>}</a>
         : <span className="reference-menu-trigger postauthor" tabIndex={0}>{label || <>@{handle}</>}</span>}
+      {mood && <span className="post-mood">{mood}</span>}
       {showPopover && (
         <span className="reference-menu-popover">
           <span className="mobile-reference-destination">
@@ -493,8 +495,9 @@ export function PreviewPost({ p, user }: { p: PostView; user?: User }) {
     <article className="post" id={`post-${p.id}`}>
       <MetaRow className="posttop posttop-context preview-post-meta">
         {user?.id === p.user_id
-          ? <span className="post-context post-context-author">you</span>
-          : <UserReference handle={p.handle} bio={p.bio} noteCount={p.note_count || 0} stats={p.profile_stats}
+          ? <span className="post-context post-context-author">you{p.mood
+            && <span className="post-mood">{p.mood}</span>}</span>
+          : <UserReference handle={p.handle} mood={p.mood} bio={p.bio} noteCount={p.note_count || 0} stats={p.profile_stats}
             user={user || null} currentHandle={user?.handle} referenceData={p.bio_reference} />}
         <span className="post-context">wrote:</span>
       </MetaRow>
@@ -700,17 +703,17 @@ export function Post({
           {user?.id === p.user_id
             ? (
               <span className={preview ? 'post-context post-context-author' : 'postauthor post-context-author'}>
-                you
+                you{p.mood && <span className="post-mood">{p.mood}</span>}
               </span>
             )
             : preview
             ? (
-              <UserReference handle={p.handle} bio={p.bio} noteCount={p.note_count || 0} stats={p.profile_stats}
+              <UserReference handle={p.handle} mood={p.mood} bio={p.bio} noteCount={p.note_count || 0} stats={p.profile_stats}
                 following={p.viewer_following} followsViewer={p.follows_viewer} user={user}
                 referenceData={p.bio_reference} extraAction={authorPopoverAction} />
             )
             : (
-              <UserReference handle={p.handle} bio={p.bio} noteCount={p.note_count || 0} stats={p.profile_stats}
+              <UserReference handle={p.handle} mood={p.mood} bio={p.bio} noteCount={p.note_count || 0} stats={p.profile_stats}
                 following={p.viewer_following} followsViewer={p.follows_viewer} user={user}
                 href={'/u/' + p.handle + referenceQuery} rel={navigationRel} navigationQuery={referenceQuery}
                 referenceData={p.bio_reference} extraAction={authorPopoverAction} />
@@ -882,9 +885,11 @@ export function Post({
               <>
                 <MetaRow className="parent-quote-top" unread={contextParentUnread}>
                   {user?.id === parent.user_id
-                    ? <span className="postauthor post-context-author">you</span>
+                    ? <span className="postauthor post-context-author">you{parent.mood
+                      && <span className="post-mood">{parent.mood}</span>}</span>
                     : (
-                      <UserReference handle={parent.handle} bio={parent.bio} noteCount={parent.note_count || 0}
+                      <UserReference handle={parent.handle} mood={parent.mood} bio={parent.bio}
+                        noteCount={parent.note_count || 0}
                         stats={parent.profile_stats} following={parent.viewer_following}
                         followsViewer={parent.follows_viewer} user={user} href={'/u/' + parent.handle + referenceQuery}
                         rel={navigationRel} navigationQuery={referenceQuery} referenceData={parent.bio_reference} />

@@ -213,6 +213,12 @@ export function updatePost(database: Database, postId: number, body: string, tra
 }
 
 export function enrichPosts(database: Database, posts: PostView[], viewerId = -1) {
+  const supportsMood = !!database.query("SELECT 1 FROM pragma_table_info('users') WHERE name='mood'").get()
+  const moodUserIds = [...new Set(posts.map(post => post.user_id))]
+  const moods = supportsMood && moodUserIds.length
+    ? new Map((database.query(`SELECT id,mood FROM users WHERE id IN (${moodUserIds.map(() => '?').join(',')})`)
+      .all(...moodUserIds) as Array<{ id: number; mood: string }>).map(row => [row.id, row.mood]))
+    : new Map<number, string>()
   if (!posts.length) return posts
   const moderator = moderatorViewer(database, viewerId)
   const blockViewerId = moderator ? -1 : viewerId
@@ -510,6 +516,16 @@ export function enrichPosts(database: Database, posts: PostView[], viewerId = -1
     }
     parents = new Map(rows.map(parent => [parent.id, parent]))
   }
+  if (supportsMood) {
+    const missingMoodUserIds = [...new Set([...parents.values()].flatMap(parent =>
+      parent.user_id == null || moods.has(parent.user_id) ? [] : [parent.user_id]))]
+    if (missingMoodUserIds.length) {
+      for (const row of database.query(`SELECT id,mood FROM users WHERE id IN (${
+        missingMoodUserIds.map(() => '?').join(',')})`).all(...missingMoodUserIds) as Array<{ id: number; mood: string }>) {
+        moods.set(row.id, row.mood)
+      }
+    }
+  }
   const hashtagCounts = visibleHashtagCounts(database, [...posts.flatMap(post => [post.body, post.translation || '']),
     ...authors.map(author => author.bio), ...parentBodies, ...[...parents.values()].map(parent => parent.bio || '')],
     viewerId)
@@ -566,6 +582,7 @@ export function enrichPosts(database: Database, posts: PostView[], viewerId = -1
     return reference
   }
   for (const parent of parents.values()) {
+    parent.mood = parent.user_id == null ? '' : moods.get(parent.user_id) || ''
     parent.profile_stats = parent.user_id == null ? undefined : profileStats.get(parent.user_id)
     parent.note_count = parent.profile_stats?.notes || 0
     parent.viewer_following = parent.user_id != null && followedUserIds.has(parent.user_id)
@@ -585,6 +602,7 @@ export function enrichPosts(database: Database, posts: PostView[], viewerId = -1
   }
   return posts.map(post => ({
     ...post,
+    mood: moods.get(post.user_id) || '',
     viewer_context: viewerContextByPostId.get(post.id),
     viewer_mentioned: viewerMentionedPostIds.has(post.id),
     bio: bioByUserId.get(post.user_id) ?? post.bio ?? '',

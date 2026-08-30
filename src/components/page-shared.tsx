@@ -697,6 +697,7 @@ export function ProfileHeader(
             <h1>
               <span className="identity-prefix">@</span>
               {profile.handle}
+              {profile.mood && <span className="profile-mood">{profile.mood}</span>}
             </h1>
             {!editing && user?.id !== profile.id
               && (

@@ -1282,6 +1282,18 @@ test('consequential account, content, reporting, and admin flows work over HTTP'
   expect(invalidProfileHtml).toContain('value="Alice!"')
   expect(invalidProfileHtml).toContain('You typed 6 characters.')
   expect(invalidProfileHtml).toContain('remember profile bio')
+  const invalidMood = await request('/account/edit', {
+    method: 'POST',
+    cookie: aliceCookie,
+    form: { handle: 'Alice', mood: 'hi', bio: 'remember profile bio' },
+  })
+  expect(invalidMood.status).toBe(400)
+  const invalidMoodHtml = await invalidMood.text()
+  expect(invalidMoodHtml).toContain('Mood should be an emoji.')
+  expect(invalidMoodHtml).toContain('name="mood" value="hi"')
+  database.query("UPDATE users SET mood='🤸' WHERE handle='alice'").run()
+  const moodSettingsHtml = await (await request('/account/edit', { cookie: aliceCookie })).text()
+  expect(moodSettingsHtml).toContain('name="mood" value="🤸"')
   const multilineBio = Array(11).fill('bio line').join('\n')
   const invalidMultilineBio = await request('/account/edit', {
     method: 'POST',
