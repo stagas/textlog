@@ -5,7 +5,8 @@ import { getImageUrl, uploadImage } from './image-storage'
 import { withoutMarkdownCode } from './content'
 
 export const LOCATION_ZOOM = 3
-export const LOCATION_MAP_STYLE_VERSION = 2
+export const LOCATION_MAP_STYLE_VERSION = 3
+export const MAPTILER_MAP_ID = 'topo-v2'
 const TIMEOUT_MS = 4_000
 const MAX_RESPONSE_BYTES = 1024 * 1024
 
@@ -68,7 +69,16 @@ export function locationMapKey(location: LocationMetadata, zoom = LOCATION_ZOOM)
   return `location-maps/${createHash('sha256').update(value).digest('hex')}.png`
 }
 
-export async function generateLocationMap(location: LocationMetadata, fetcher: typeof fetch = fetch) {
+export function mapTilerRasterTileUrl(x: number, y: number, apiKey: string, zoom = LOCATION_ZOOM) {
+  const url = new URL(`https://api.maptiler.com/maps/${MAPTILER_MAP_ID}/256/${zoom}/${x}/${y}.png`)
+  url.searchParams.set('key', apiKey)
+  return url
+}
+
+export async function generateLocationMap(location: LocationMetadata, fetcher: typeof fetch = fetch,
+  apiKey = Bun.env.MAPTILER_API_KEY?.trim())
+{
+  if (!apiKey) return null
   const width = 600
   const height = 315
   const center = tilePosition(location.latitude, location.longitude, LOCATION_ZOOM)
@@ -81,7 +91,7 @@ export async function generateLocationMap(location: LocationMetadata, fetcher: t
   try {
     const tiles = [] as Array<{ x: number; y: number; data: Uint8Array }>
     for (let y = firstY; y <= lastY; y++) for (let x = firstX; x <= lastX; x++) {
-      const url = new URL(`https://tile.openstreetmap.org/${LOCATION_ZOOM}/${x}/${y}.png`)
+      const url = mapTilerRasterTileUrl(x, y, apiKey)
       const response = await fetcher(url, { signal: AbortSignal.timeout(TIMEOUT_MS), headers: {
         accept: 'image/png', 'accept-language': 'en', 'user-agent': `${appName()} location preview/1.0`,
       } })
@@ -104,7 +114,7 @@ export async function generateLocationMap(location: LocationMetadata, fetcher: t
     context.strokeStyle = '#fff'
     context.stroke()
     context.font = '12px sans-serif'
-    const attribution = '© OpenStreetMap contributors'
+    const attribution = '© MapTiler © OpenStreetMap contributors'
     const textWidth = context.measureText(attribution).width
     context.fillStyle = 'rgba(255,255,255,.85)'
     context.fillRect(width - textWidth - 10, height - 19, textWidth + 10, 19)

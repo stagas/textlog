@@ -2,7 +2,8 @@ import { Database } from 'bun:sqlite'
 import { describe, expect, test } from 'bun:test'
 import { executeDatabaseDomain } from './database-domain'
 import { apiPost } from './api'
-import { geocodeLocation, locationDestination, locationMapProvider, parseLocationQuery } from './locations'
+import { geocodeLocation, locationDestination, locationMapProvider, mapTilerRasterTileUrl,
+  parseLocationQuery } from './locations'
 import type { LocationView } from './types'
 import { linkify } from './utils'
 
@@ -55,6 +56,13 @@ describe('#map', () => {
     })
     expect(new URL(requestUrl).searchParams.get('accept-language')).toBe('en')
     expect(requestLanguage).toBe('en')
+  })
+
+  test('uses MapTiler Topo raster tiles with the configured API key', () => {
+    const url = mapTilerRasterTileUrl(4, 3, 'test key')
+    expect(url.origin).toBe('https://api.maptiler.com')
+    expect(url.pathname).toBe('/maps/topo-v2/256/3/4/3.png')
+    expect(url.searchParams.get('key')).toBe('test key')
   })
 
   test('selects native map destinations from the requesting platform', () => {
@@ -119,7 +127,7 @@ describe('#map', () => {
       INSERT INTO posts VALUES(1,1,NULL,'Going hiking #map\nKallikratis, Crete','2026-08-29',NULL,NULL);
       INSERT INTO post_hashtags VALUES(1,'map');
       INSERT INTO post_locations VALUES(1,'Kallikratis, Crete',35.2,24.2,'Kallikratis, Sfakia, Crete, Greece');
-      INSERT INTO location_map_previews VALUES('3:2:35.200000:24.200000','location-maps/test.png',600,315);`)
+      INSERT INTO location_map_previews VALUES('3:3:35.200000:24.200000','location-maps/test.png',600,315);`)
     const apiLocation = apiPost(database, 1, 'https://textlog.example')?.location
     expect(apiLocation).toMatchObject({
       query: 'Kallikratis, Crete', latitude: 35.2, longitude: 24.2,
