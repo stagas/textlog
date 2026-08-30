@@ -228,7 +228,10 @@ import { DENSITY_CHOICES, type DensityChoice, PAGE_SIZE_CHOICES, type PageSizeCh
 
 function sessionUser(database: Database, token: string | null): User | null {
   if (!token) return null
-  const user = database.query(`SELECT u.id,u.handle,u.email,u.bio,u.mood,u.suspended_at,u.email_verified_at,
+  const moodColumn = database.query("SELECT 1 FROM pragma_table_info('users') WHERE name='mood'").get()
+    ? 'u.mood'
+    : "'' mood"
+  const user = database.query(`SELECT u.id,u.handle,u.email,u.bio,${moodColumn},u.suspended_at,u.email_verified_at,
       u.handle_chosen_at,u.show_link_previews,u.show_moderated_content,u.hide_people_follow_activity,
       u.hide_hashtag_follow_activity,u.show_note_streak,u.show_timestamps,u.timezone
     FROM sessions s JOIN users u ON u.id=s.user_id
@@ -245,7 +248,10 @@ function sessionUser(database: Database, token: string | null): User | null {
 function apiUser(database: Database, token: string | null, now: number): User | null {
   if (!token?.startsWith('tlk_')) return null
   const tokenHash = createHash('sha256').update(token).digest('hex')
-  const row = database.query(`SELECT u.id,u.handle,u.email,u.bio,u.mood,u.suspended_at,u.email_verified_at,
+  const moodColumn = database.query("SELECT 1 FROM pragma_table_info('users') WHERE name='mood'").get()
+    ? 'u.mood'
+    : "'' mood"
+  const row = database.query(`SELECT u.id,u.handle,u.email,u.bio,${moodColumn},u.suspended_at,u.email_verified_at,
       u.handle_chosen_at,u.timezone,u.hide_people_follow_activity,u.hide_hashtag_follow_activity,k.id key_id
     FROM api_keys k JOIN users u ON u.id=k.user_id
     WHERE k.token_hash=? AND (k.expires_at IS NULL OR k.expires_at>?)
@@ -1123,8 +1129,11 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
     }
     case 'profiles.overview': {
       const { profileId, viewerId } = input as DatabaseDomainInput<'profiles.overview'>
+      const moodColumn = database.query("SELECT 1 FROM pragma_table_info('users') WHERE name='mood'").get()
+        ? 'mood'
+        : "'' mood"
       const profile = database.query(
-        `SELECT id,handle,email,bio,mood,created_at,suspended_at,deleted_at,show_note_streak
+        `SELECT id,handle,email,bio,${moodColumn},created_at,suspended_at,deleted_at,show_note_streak
           FROM users WHERE id=? AND deleted_at IS NULL`,
       ).get(profileId) as import('./types').ProfileRow | null
       if (!profile) return null as DatabaseDomainOutput<K>
