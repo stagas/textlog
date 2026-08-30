@@ -1123,8 +1123,9 @@ test('consequential account, content, reporting, and admin flows work over HTTP'
   })
   expect(savedNoteDraft.status).toBe(303)
   expect(savedNoteDraft.headers.get('location')).toBe('/drafts?from=%2Flatest')
-  const noteDraft = database.query('SELECT id,body,parent_id FROM drafts WHERE user_id=?').get(alice.id) as {
+  const noteDraft = database.query('SELECT id,public_id,body,parent_id FROM drafts WHERE user_id=?').get(alice.id) as {
     id: number
+    public_id: string
     body: string
     parent_id: number | null
   }
@@ -1132,25 +1133,25 @@ test('consequential account, content, reporting, and admin flows work over HTTP'
   const draftsPageHtml = await (await request('/drafts?from=%2Flatest', { cookie: aliceCookie })).text()
   expect(draftsPageHtml).toContain('A saved note draft')
   expect(draftsPageHtml).toContain('href="/latest">back</a>')
-  expect(draftsPageHtml).toContain(`/drafts/${noteDraft.id}/edit?from=%2Flatest`)
-  const draftEditHtml = await (await request(`/drafts/${noteDraft.id}/edit?from=%2Flatest`, {
+  expect(draftsPageHtml).toContain(`/drafts/${noteDraft.public_id}/edit?from=%2Flatest`)
+  const draftEditHtml = await (await request(`/drafts/${noteDraft.public_id}/edit?from=%2Flatest`, {
     cookie: aliceCookie,
   })).text()
   expect(draftEditHtml).toContain('A saved note draft')
-  expect(draftEditHtml).toContain(`name="draft_id" value="${noteDraft.id}"`)
-  expect(draftEditHtml).toContain(`formAction="/drafts/${noteDraft.id}"`)
+  expect(draftEditHtml).toContain(`name="draft_id" value="${noteDraft.public_id}"`)
+  expect(draftEditHtml).toContain(`formAction="/drafts/${noteDraft.public_id}"`)
   const previewedDraft = await request('/post', {
     method: 'POST',
     cookie: aliceCookie,
-    form: { body: 'The previewed note draft', action: 'preview', draft_id: String(noteDraft.id), from: '/latest' },
+    form: { body: 'The previewed note draft', action: 'preview', draft_id: noteDraft.public_id, from: '/latest' },
   })
   expect(previewedDraft.status).toBe(200)
-  expect(await previewedDraft.text()).toContain(`name="draft_id" value="${noteDraft.id}"`)
+  expect(await previewedDraft.text()).toContain(`name="draft_id" value="${noteDraft.public_id}"`)
   expect((database.query('SELECT count(*) count FROM drafts WHERE user_id=?').get(alice.id) as { count: number })
     .count).toBe(1)
   expect((database.query('SELECT body FROM drafts WHERE id=?').get(noteDraft.id) as { body: string }).body)
     .toBe('The previewed note draft')
-  const overwrittenDraft = await request(`/drafts/${noteDraft.id}`, {
+  const overwrittenDraft = await request(`/drafts/${noteDraft.public_id}`, {
     method: 'POST',
     cookie: aliceCookie,
     form: { body: 'The overwritten note draft', action: 'draft' },
@@ -1160,13 +1161,13 @@ test('consequential account, content, reporting, and admin flows work over HTTP'
     .count).toBe(1)
   expect((database.query('SELECT body FROM drafts WHERE id=?').get(noteDraft.id) as { body: string }).body)
     .toBe('The overwritten note draft')
-  const confirmDraftDeleteHtml = await (await request(`/drafts/${noteDraft.id}/delete?from=%2Flatest`, {
+  const confirmDraftDeleteHtml = await (await request(`/drafts/${noteDraft.public_id}/delete?from=%2Flatest`, {
     cookie: aliceCookie,
   })).text()
   expect(confirmDraftDeleteHtml).toContain('Delete this draft?')
   expect(confirmDraftDeleteHtml).toContain('The overwritten note draft')
   expect(confirmDraftDeleteHtml).toContain('href="/drafts?from=%2Flatest">cancel</a>')
-  const deletedDraft = await request(`/drafts/${noteDraft.id}/delete`, { method: 'POST', cookie: aliceCookie,
+  const deletedDraft = await request(`/drafts/${noteDraft.public_id}/delete`, { method: 'POST', cookie: aliceCookie,
     form: {} })
   expect(deletedDraft.status).toBe(303)
   expect(database.query('SELECT 1 FROM drafts WHERE id=?').get(noteDraft.id)).toBeNull()
@@ -1204,18 +1205,19 @@ test('consequential account, content, reporting, and admin flows work over HTTP'
   })
   expect(savedReplyDraft.status).toBe(303)
   expect(savedReplyDraft.headers.get('location')).toBe(`/drafts?from=${encodeURIComponent(`/post/${post.id}`)}`)
-  const replyDraft = database.query('SELECT id,parent_id FROM drafts WHERE user_id=?').get(alice.id) as {
+  const replyDraft = database.query('SELECT id,public_id,parent_id FROM drafts WHERE user_id=?').get(alice.id) as {
     id: number
+    public_id: string
     parent_id: number
   }
   expect(replyDraft.parent_id).toBe(post.id)
-  const replyDraftEditHtml = await (await request(`/drafts/${replyDraft.id}/edit`, { cookie: aliceCookie })).text()
+  const replyDraftEditHtml = await (await request(`/drafts/${replyDraft.public_id}/edit`, { cookie: aliceCookie })).text()
   expect(replyDraftEditHtml).toContain('A saved reply draft')
   expect(replyDraftEditHtml).toContain(`action="/post/${post.id}/reply"`)
   const publishedReplyDraft = await request(`/post/${post.id}/reply`, {
     method: 'POST',
     cookie: aliceCookie,
-    form: { body: 'Published reply draft', draft_id: String(replyDraft.id) },
+    form: { body: 'Published reply draft', draft_id: replyDraft.public_id },
   })
   expect(publishedReplyDraft.status).toBe(303)
   expect(database.query('SELECT 1 FROM drafts WHERE id=?').get(replyDraft.id)).toBeNull()
@@ -1273,14 +1275,14 @@ test('consequential account, content, reporting, and admin flows work over HTTP'
   expect(replyPreview.status).toBe(200)
   const replyPreviewHtml = await replyPreview.text()
   expect(replyPreviewHtml).toContain('A nested reply preview')
-  const previewedReplyDraft = database.query('SELECT id,body,parent_id FROM drafts WHERE user_id=? AND body=?')
-    .get(alice.id, 'A nested reply preview') as { id: number; body: string; parent_id: number }
+  const previewedReplyDraft = database.query('SELECT id,public_id,body,parent_id FROM drafts WHERE user_id=? AND body=?')
+    .get(alice.id, 'A nested reply preview') as { id: number; public_id: string; body: string; parent_id: number }
   expect(previewedReplyDraft.parent_id).toBe(quotedReply.id)
-  expect(replyPreviewHtml).toContain(`name="draft_id" value="${previewedReplyDraft.id}"`)
+  expect(replyPreviewHtml).toContain(`name="draft_id" value="${previewedReplyDraft.public_id}"`)
   const updatedReplyPreview = await request(`/post/${quotedReply.id}/reply`, {
     method: 'POST',
     cookie: aliceCookie,
-    form: { body: 'An updated nested reply preview', action: 'preview', draft_id: String(previewedReplyDraft.id) },
+    form: { body: 'An updated nested reply preview', action: 'preview', draft_id: previewedReplyDraft.public_id },
   })
   expect(updatedReplyPreview.status).toBe(200)
   expect((database.query('SELECT body FROM drafts WHERE id=?').get(previewedReplyDraft.id) as { body: string }).body)

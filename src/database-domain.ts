@@ -1078,7 +1078,7 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
     }
     case 'drafts.list': {
       const { userId } = input as DatabaseDomainInput<'drafts.list'>
-      const drafts = database.query(`SELECT d.id,d.body,d.parent_id,d.created_at,d.updated_at,u.handle parent_handle
+      const drafts = database.query(`SELECT d.id,d.public_id,d.body,d.parent_id,d.created_at,d.updated_at,u.handle parent_handle
         FROM drafts d LEFT JOIN posts p ON p.id=d.parent_id LEFT JOIN users u ON u.id=p.user_id
         WHERE d.user_id=? ORDER BY d.updated_at DESC,d.id DESC`).all(userId) as import('./types').DraftView[]
       const parentIds = drafts.flatMap(draft => draft.parent_id ? [draft.parent_id] : [])
@@ -1094,9 +1094,9 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
     }
     case 'drafts.get': {
       const { id, userId } = input as DatabaseDomainInput<'drafts.get'>
-      return (database.query(`SELECT d.id,d.body,d.parent_id,d.created_at,d.updated_at,u.handle parent_handle
+      return (database.query(`SELECT d.id,d.public_id,d.body,d.parent_id,d.created_at,d.updated_at,u.handle parent_handle
         FROM drafts d LEFT JOIN posts p ON p.id=d.parent_id LEFT JOIN users u ON u.id=p.user_id
-        WHERE d.id=? AND d.user_id=?`).get(id, userId) || null) as DatabaseDomainOutput<K>
+        WHERE d.public_id=? AND d.user_id=?`).get(id, userId) || null) as DatabaseDomainOutput<K>
     }
     case 'drafts.save': {
       const { id, userId, parentId, body } = input as DatabaseDomainInput<'drafts.save'>
@@ -1105,18 +1105,19 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
       }
       if (id !== null) {
         const result = database.query(`UPDATE drafts SET body=?,parent_id=?,updated_at=CURRENT_TIMESTAMP
-          WHERE id=? AND user_id=?`).run(body, parentId, id, userId)
+          WHERE public_id=? AND user_id=?`).run(body, parentId, id, userId)
         if (!result.changes) return { status: 'not_found' } as DatabaseDomainOutput<K>
         return { status: 'ready', id } as DatabaseDomainOutput<K>
       }
-      const result = database.query('INSERT INTO drafts(user_id,parent_id,body) VALUES(?,?,?)')
-        .run(userId, parentId, body)
+      const publicId = crypto.randomUUID()
+      database.query('INSERT INTO drafts(public_id,user_id,parent_id,body) VALUES(?,?,?,?)')
+        .run(publicId, userId, parentId, body)
       cacheDb.query('DELETE FROM materialized_feed_pages_v2 WHERE viewer_id=?').run(userId)
-      return { status: 'ready', id: Number(result.lastInsertRowid) } as DatabaseDomainOutput<K>
+      return { status: 'ready', id: publicId } as DatabaseDomainOutput<K>
     }
     case 'drafts.delete': {
       const { id, userId } = input as DatabaseDomainInput<'drafts.delete'>
-      const deleted = !!database.query('DELETE FROM drafts WHERE id=? AND user_id=?').run(id, userId).changes
+      const deleted = !!database.query('DELETE FROM drafts WHERE public_id=? AND user_id=?').run(id, userId).changes
       if (deleted) {
         cacheDb.query(`DELETE FROM materialized_feed_pages_v2 WHERE viewer_id=?
           AND kind IN ('latest','hot','for-you','to-me')`).run(userId)
@@ -1765,7 +1766,7 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
     }
     case 'api.publishDraft': {
       const request = input as DatabaseDomainInput<'api.publishDraft'>
-      const draft = database.query('SELECT body,parent_id FROM drafts WHERE id=? AND user_id=?').get(request.id,
+      const draft = database.query('SELECT body,parent_id FROM drafts WHERE public_id=? AND user_id=?').get(request.id,
         request.userId) as { body: string; parent_id: number | null } | null
       if (!draft || draft.body !== request.body || draft.parent_id !== request.parentId) {
         return { status: 'not_found' } as DatabaseDomainOutput<K>
@@ -1780,7 +1781,7 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
           request.translation ?? null, request.moderationCategory ?? null, request.moderationScore ?? null,
           request.executionOutput ?? null)
         if (!('retryAfter' in value)) {
-          database.query('DELETE FROM drafts WHERE id=? AND user_id=?').run(request.id, request.userId)
+          database.query('DELETE FROM drafts WHERE public_id=? AND user_id=?').run(request.id, request.userId)
           if (!value.duplicate && hasPostPushJobs(database)) database
             .query('INSERT OR IGNORE INTO post_push_jobs(post_id) VALUES(?)')
             .run(value.id)
@@ -1868,11 +1869,10 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
         ? (database.query('SELECT image_url FROM post_link_previews WHERE post_id=?')
           .all(id) as { image_url: string }[]).map(row => row.image_url).filter(isImageKey)
         : []
-      let draftId = 0
+      const draftId = crypto.randomUUID()
       database.transaction(() => {
-        const draft = database.query('INSERT INTO drafts(user_id,parent_id,body) VALUES(?,?,?)')
-          .run(userId, existing.parent_id, body ?? existing.body)
-        draftId = Number(draft.lastInsertRowid)
+        database.query('INSERT INTO drafts(public_id,user_id,parent_id,body) VALUES(?,?,?,?)')
+          .run(draftId, userId, existing.parent_id, body ?? existing.body)
         softDeletePost(database, id)
         if (available) database.query('DELETE FROM post_link_previews WHERE post_id=?').run(id)
         cacheDb.query(`DELETE FROM materialized_feed_pages_v2 WHERE viewer_id=?

@@ -129,7 +129,7 @@ export function registerApiWriteRoutes(app: Hono, service: DatabaseService,
     return user ? { user } : { error: fail('unauthorized', 'Provide a bearer token from /api/v1/auth/verify', 401) }
   }
   const draftJson = async (
-    draft: { id: number; body: string; parent_id: number | null; created_at: string; updated_at: string },
+    draft: { public_id: string; body: string; parent_id: number | null; created_at: string; updated_at: string },
     origin: string,
     userId: number,
   ) => {
@@ -139,7 +139,7 @@ export function registerApiWriteRoutes(app: Hono, service: DatabaseService,
       origin,
       viewerId: userId,
     })
-    return { id: draft.id, body: draft.body, parent_id: draft.parent_id,
+    return { id: draft.public_id, body: draft.body, parent_id: draft.parent_id,
       created_at: new Date(draft.created_at.replace(' ', 'T') + 'Z').toISOString(),
       updated_at: new Date(draft.updated_at.replace(' ', 'T') + 'Z').toISOString(),
       parent: parent && parent.status === 'ready' ? (parent.value as { data: unknown }).data : null }
@@ -330,8 +330,7 @@ export function registerApiWriteRoutes(app: Hono, service: DatabaseService,
   app.get('/api/v1/drafts/:id', async c => {
     const guard = authenticated(c)
     if ('error' in guard) return guard.error
-    const id = Number(c.req.param('id'))
-    if (!Number.isInteger(id) || id < 1) return fail('invalid_draft_id', 'Draft ID must be positive', 400)
+    const id = c.req.param('id')
     const draft = await service.call('drafts.get', { id, userId: guard.user.id })
     return draft
       ? json({ data: await draftJson(draft, apiOrigin(c.req.url, appUrl), guard.user.id) })
@@ -341,8 +340,7 @@ export function registerApiWriteRoutes(app: Hono, service: DatabaseService,
   app.patch('/api/v1/drafts/:id', async c => {
     const guard = await writer(service, requestApiUser, c)
     if (guard.error) return guard.error
-    const id = Number(c.req.param('id'))
-    if (!Number.isInteger(id) || id < 1) return fail('invalid_draft_id', 'Draft ID must be positive', 400)
+    const id = c.req.param('id')
     const existing = await service.call('drafts.get', { id, userId: guard.user!.id })
     if (!existing) return fail('not_found', 'Draft not found', 404)
     const payload = await body(c)
@@ -365,8 +363,7 @@ export function registerApiWriteRoutes(app: Hono, service: DatabaseService,
   app.delete('/api/v1/drafts/:id', async c => {
     const guard = await writer(service, requestApiUser, c)
     if (guard.error) return guard.error
-    const id = Number(c.req.param('id'))
-    if (!Number.isInteger(id) || id < 1) return fail('invalid_draft_id', 'Draft ID must be positive', 400)
+    const id = c.req.param('id')
     return await service.call('drafts.delete', { id, userId: guard.user!.id })
       ? json({ data: { deleted: true } })
       : fail('not_found', 'Draft not found', 404)
@@ -376,8 +373,7 @@ export function registerApiWriteRoutes(app: Hono, service: DatabaseService,
     const guard = await writer(service, requestApiUser, c)
     if (guard.error) return guard.error
     if (!canPublishPosts(guard.user!)) return fail('email_unverified', 'Verify your email before posting', 403)
-    const id = Number(c.req.param('id'))
-    if (!Number.isInteger(id) || id < 1) return fail('invalid_draft_id', 'Draft ID must be positive', 400)
+    const id = c.req.param('id')
     const draft = await service.call('drafts.get', { id, userId: guard.user!.id })
     if (!draft) return fail('not_found', 'Draft not found', 404)
     const moderation = await moderateText(draft.body)

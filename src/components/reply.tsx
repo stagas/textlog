@@ -30,7 +30,7 @@ export function ReplyBox(
       primary: React.ReactNode
       className?: string
       suggestionSearch?: PostingSuggestionSearch | null
-      draftId?: number
+      draftId?: string
     },
 ) {
   return (
@@ -103,7 +103,7 @@ export function Reply(
       treeHref?: string
       flat?: boolean
       suggestionSearch?: PostingSuggestionSearch | null
-      draftId?: number
+      draftId?: string
       previewExecutionOutput?: string | null
       previewLocation?: LocationView
     },

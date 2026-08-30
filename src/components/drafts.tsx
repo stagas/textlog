@@ -33,8 +33,8 @@ export function Drafts({ user, drafts, returnPath }: { user: User; drafts: Draft
             }} user={user} className="draft-post" showReplyAction={false} tappableParent
               topActions={
                 <span className="post-actions">
-                  <a className="quiet" href={`/drafts/${draft.id}/edit${editFrom}`}>edit</a>
-                  <a className="quiet danger" href={`/drafts/${draft.id}/delete${editFrom}`}>delete</a>
+                  <a className="quiet" href={`/drafts/${draft.public_id}/edit${editFrom}`}>edit</a>
+                  <a className="quiet danger" href={`/drafts/${draft.public_id}/delete${editFrom}`}>delete</a>
                 </span>
               } />
           ))}
@@ -58,7 +58,7 @@ export function ConfirmDraftDelete({ user, draft, returnPath }: {
         <h1>Delete this draft?</h1>
         <p className="account-delete-copy">This can’t be undone.</p>
         <blockquote aria-label="Draft to delete">{displayPostBody(draft.body)}</blockquote>
-        <form className="post-delete-form" method="post" action={`/drafts/${draft.id}/delete`}>
+        <form className="post-delete-form" method="post" action={`/drafts/${draft.public_id}/delete`}>
           {returnPath && <input type="hidden" name="from" value={returnPath} />}
           <FormActions
             secondary={<a className="secondary-action cancel-action" href={draftsPath}>cancel</a>}

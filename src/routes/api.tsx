@@ -151,7 +151,8 @@ function openApiDocument() {
   const formatParameter = { name: 'format', in: 'path', required: true,
     schema: { type: 'string', enum: ['rss', 'atom'] } }
   const postIdParameter = { name: 'id', in: 'path', required: true, schema: { type: 'integer', minimum: 1 } }
-  const draftIdParameter = { name: 'id', in: 'path', required: true, schema: { type: 'integer', minimum: 1 } }
+  const draftIdParameter = { name: 'id', in: 'path', required: true,
+    schema: { type: 'string', format: 'uuid' } }
   const handleParameter = { name: 'handle', in: 'path', required: true, schema: { type: 'string' } }
   const tagParameter = { name: 'tag', in: 'path', required: true,
     schema: { type: 'string', pattern: '^[a-zA-Z0-9_]+$' } }
@@ -597,7 +598,7 @@ function openApiDocument() {
         type: 'object',
         required: ['id', 'body', 'parent_id', 'created_at', 'updated_at', 'parent'],
         properties: {
-          id: { type: 'integer' },
+          id: { type: 'string', format: 'uuid' },
           body: { type: 'string' },
           parent_id: { type: ['integer', 'null'] },
           created_at: { type: 'string', format: 'date-time' },

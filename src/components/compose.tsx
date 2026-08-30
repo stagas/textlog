@@ -25,7 +25,7 @@ export function Compose(
     previewLocation?: LocationView
     returnPath?: string
     suggestionSearch?: PostingSuggestionSearch | null
-    draftId?: number
+    draftId?: string
   },
 ) {
   if (!canPublishPosts(user)) {

@@ -2683,6 +2683,22 @@ export const migrations: Migration[] = [
       addColumn(database, 'users', 'mood', "TEXT NOT NULL DEFAULT ''")
     },
   },
+  {
+    version: 166,
+    name: 'opaque_draft_ids',
+    up(database) {
+      if (!database.query("SELECT 1 FROM sqlite_master WHERE type='table' AND name='drafts'").get()) return
+      addColumn(database, 'drafts', 'public_id', 'TEXT')
+      database.run("UPDATE drafts SET public_id=lower(hex(randomblob(16))) WHERE public_id IS NULL")
+      database.run(`CREATE UNIQUE INDEX IF NOT EXISTS drafts_public_id ON drafts(public_id);
+        CREATE TRIGGER IF NOT EXISTS drafts_require_public_id_insert BEFORE INSERT ON drafts
+        WHEN NEW.public_id IS NULL OR length(NEW.public_id)<32
+        BEGIN SELECT RAISE(ABORT,'draft public_id required'); END;
+        CREATE TRIGGER IF NOT EXISTS drafts_require_public_id_update BEFORE UPDATE OF public_id ON drafts
+        WHEN NEW.public_id IS NULL OR length(NEW.public_id)<32
+        BEGIN SELECT RAISE(ABORT,'draft public_id required'); END;`)
+    },
+  },
 ]
 
 export const latestMigrationVersion = migrations.at(-1)!.version

@@ -11,7 +11,7 @@ test('HTML mutations that change cached feed chrome invalidate in-memory pages',
   await databaseService().call('interactions.toggleBlock', { userId: 1, handle: 'blocked' })
   await databaseService().call('interactions.toggleTagBlock', { userId: 1, tag: 'muted' })
   await databaseService().call('drafts.save', { id: null, userId: 1, parentId: null, body: 'A draft' })
-  await databaseService().call('drafts.delete', { id: 1, userId: 1 })
+  await databaseService().call('drafts.delete', { id: 'opaque-draft-id', userId: 1 })
   await databaseService().call('admin.translatePost', { id: 42, translation: 'Translated text' })
   unsubscribe()
 

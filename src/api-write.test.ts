@@ -25,7 +25,7 @@ function fixture() {
     CREATE TABLE blocked_hashtags (user_id INTEGER NOT NULL,tag TEXT NOT NULL,PRIMARY KEY(user_id,tag));
     CREATE TABLE hashtag_follows (user_id INTEGER NOT NULL,tag TEXT NOT NULL,created_at TEXT,
       PRIMARY KEY(user_id,tag));
-    CREATE TABLE drafts (id INTEGER PRIMARY KEY AUTOINCREMENT,user_id INTEGER NOT NULL,parent_id INTEGER,body TEXT,
+    CREATE TABLE drafts (id INTEGER PRIMARY KEY AUTOINCREMENT,public_id TEXT UNIQUE,user_id INTEGER NOT NULL,parent_id INTEGER,body TEXT,
       created_at TEXT DEFAULT CURRENT_TIMESTAMP,updated_at TEXT DEFAULT CURRENT_TIMESTAMP);
     CREATE TABLE poll_options (id INTEGER PRIMARY KEY AUTOINCREMENT,post_id INTEGER NOT NULL,position INTEGER,label TEXT);
     CREATE TABLE poll_votes (post_id INTEGER NOT NULL,option_id INTEGER NOT NULL,user_id INTEGER NOT NULL,
@@ -426,6 +426,15 @@ describe('API writes', () => {
     cacheDb.query('DELETE FROM materialized_feed_pages_v2 WHERE variant=?').run(cacheVariant)
     const draft = (await created.json() as any).data
     expect(draft).toMatchObject({ body: 'draft one', parent_id: 1, parent: { id: 1 } })
+    expect(draft.id).toMatch(/^[0-9a-f]{8}-[0-9a-f-]{27}$/)
+    expect((await call(app, '/api/v1/drafts/1', { token: 'alice-token' })).status).toBe(404)
+    expect((await call(app, `/api/v1/drafts/${draft.id}`, { token: 'bob-token' })).status).toBe(404)
+    expect((await call(app, `/api/v1/drafts/${draft.id}`, { method: 'PATCH', token: 'bob-token',
+      body: { body: 'stolen' } })).status).toBe(404)
+    expect((await call(app, `/api/v1/drafts/${draft.id}`, { method: 'DELETE', token: 'bob-token' })).status).toBe(404)
+    expect((await call(app, `/api/v1/drafts/${draft.id}/publish`, {
+      method: 'POST', token: 'bob-token',
+    })).status).toBe(404)
     expect(
       (await call(app, `/api/v1/drafts/${draft.id}`, { method: 'PATCH', token: 'alice-token',
         body: { body: 'published reply' } })).status,

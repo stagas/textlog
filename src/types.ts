@@ -350,5 +350,5 @@ export type User = { id: number; handle: string; email: string; bio: string; sus
   show_note_streak?: number; show_timestamps?: number;
   draft_count?: number }
 
-export type DraftView = { id: number; body: string; parent_id: number | null; created_at: string; updated_at: string;
+export type DraftView = { id: number; public_id: string; body: string; parent_id: number | null; created_at: string; updated_at: string;
   parent_handle?: string | null; parent?: ParentPost | null }

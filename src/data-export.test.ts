@@ -11,7 +11,8 @@ test('account download includes user-owned content and private bookmark data wit
     (1,'alice','alice@example.com','secret-password'),(2,'bob','bob@example.com','other-secret');
     INSERT INTO posts(id,user_id,body,translation,execution_output) VALUES
     (1,2,'saved public note','translation','output'),(2,1,'my poll',NULL,NULL);
-    INSERT INTO drafts(user_id,parent_id,body) VALUES(1,1,'private draft');
+    INSERT INTO drafts(public_id,user_id,parent_id,body)
+      VALUES('00000000-0000-4000-8000-000000000001',1,1,'private draft');
     INSERT INTO post_bookmarks(user_id,post_id) VALUES(1,1);
     INSERT INTO poll_options(id,post_id,position,label) VALUES(1,2,0,'yes');
     INSERT INTO poll_votes(post_id,option_id,user_id) VALUES(2,1,1);

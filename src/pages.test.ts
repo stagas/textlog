@@ -362,7 +362,7 @@ test('draft cards linkify mentions, hashtags, and links', () => {
   const user = { id: 1, handle: 'writer', email: 'writer@example.com', bio: '' }
   const html = renderToStaticMarkup(React.createElement(Drafts, {
     user,
-    drafts: [{ id: 7, parent_id: null, body: '@reader #world https://example.com', created_at: '2026-08-23 10:00:00',
+    drafts: [{ id: 7, public_id: 'draft-public-id', parent_id: null, body: '@reader #world https://example.com', created_at: '2026-08-23 10:00:00',
       updated_at: '2026-08-23 10:00:00' }],
   }))
 

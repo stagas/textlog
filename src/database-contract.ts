@@ -238,10 +238,10 @@ export type DatabaseDomainOperations = {
   'posts.suggestions': { input: { kind: 'hashtags' | 'mentions'; query: string; viewerId: number };
     output: { results: string[]; truncated: boolean } }
   'drafts.list': { input: { userId: number }; output: DraftView[] }
-  'drafts.get': { input: { id: number; userId: number }; output: DraftView | null }
-  'drafts.save': { input: { id: number | null; userId: number; parentId: number | null; body: string };
-    output: { status: 'ready'; id: number } | { status: 'not_found' } }
-  'drafts.delete': { input: { id: number; userId: number }; output: boolean }
+  'drafts.get': { input: { id: string; userId: number }; output: DraftView | null }
+  'drafts.save': { input: { id: string | null; userId: number; parentId: number | null; body: string };
+    output: { status: 'ready'; id: string } | { status: 'not_found' } }
+  'drafts.delete': { input: { id: string; userId: number }; output: boolean }
   'posts.votePoll': { input: { postId: number; optionId: number; userId: number };
     output: 'ready' | 'already_voted' | 'expired' | 'not_found' }
   'profiles.bioReferences': { input: { bio: string; profileId: number; viewerId: number }; output: BioReferenceData }
@@ -323,7 +323,7 @@ export type DatabaseDomainOperations = {
     output: unknown
   }
   'api.publishDraft': {
-    input: { userId: number; id: number; body: string; parentId: number | null; origin: string;
+    input: { userId: number; id: string; body: string; parentId: number | null; origin: string;
       translation?: string | null; moderationCategory?: string | null; moderationScore?: number | null;
       executionOutput?: string | null }
     output: { status: 'not_found' } | { status: 'locked' } | { status: 'rate_limited'; retryAfter: number } | {
@@ -352,7 +352,7 @@ export type DatabaseDomainOperations = {
   'api.deletePost': { input: { userId: number; id: number };
     output: { status: 'not_found' | 'forbidden' } | { status: 'ready'; imageKeys: string[]; parentId: number | null } }
   'api.unpublishPost': { input: { userId: number; id: number; body?: string };
-    output: { status: 'not_found' | 'forbidden' } | { status: 'ready'; draftId: number; imageKeys: string[] } }
+    output: { status: 'not_found' | 'forbidden' } | { status: 'ready'; draftId: string; imageKeys: string[] } }
   'api.persistPostPreviews': {
     input: { postId: number; mode: 'save' | 'replace'; previews: Array<{ url: string } & LinkPreview> }
     output: { obsoleteImageKeys: string[] }
