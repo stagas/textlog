@@ -95,6 +95,9 @@ beforeEach(() => {
 describe('API writes', () => {
   test('allows an explicitly authorized moderator to edit another user\'s post and records it', async () => {
     const { database } = fixture()
+    const cacheVariant = `moderator-edit-${crypto.randomUUID()}`
+    cacheDb.query(`INSERT INTO materialized_feed_pages_v2(kind,viewer_id,variant,generation,html)
+      VALUES('hot',2,?,1,'<p>stale post</p>')`).run(cacheVariant)
 
     expect(await executeDatabaseDomain(database, 'posts.editData', { id: 1, userId: 1 })).toEqual({
       status: 'forbidden',
@@ -120,6 +123,7 @@ describe('API writes', () => {
       target_user_id: 2,
       target_post_id: 1,
     })
+    expect(cacheDb.query('SELECT 1 FROM materialized_feed_pages_v2 WHERE variant=?').get(cacheVariant)).toBeNull()
   })
 
   test('refuses without a token, and never accepts a cookie', async () => {
@@ -237,15 +241,22 @@ describe('API writes', () => {
       .status).toBe(403)
     expect((await call(app, '/api/v1/posts/1', { method: 'DELETE', token: 'alice-token' })).status).toBe(403)
 
+    const cacheVariant = `post-delete-${crypto.randomUUID()}`
+    cacheDb.query(`INSERT INTO materialized_feed_pages_v2(kind,viewer_id,variant,generation,html)
+      VALUES('hot',2,?,1,'<p>stale post</p>')`).run(cacheVariant)
     expect((await call(app, `/api/v1/posts/${created.id}`, { method: 'DELETE', token: 'alice-token' })).status).toBe(
       200,
     )
     expect((await call(app, `/api/v1/posts/${created.id}`)).status).toBe(404)
+    expect(cacheDb.query('SELECT 1 FROM materialized_feed_pages_v2 WHERE variant=?').get(cacheVariant)).toBeNull()
   })
 
   test('unpublishes only your own posts back into drafts', async () => {
     const { app, database } = fixture()
     const created = (await (await post(app, 'alice-token', { body: 'publish then reconsider' })).json() as any).data
+    const cacheVariant = `post-unpublish-${crypto.randomUUID()}`
+    cacheDb.query(`INSERT INTO materialized_feed_pages_v2(kind,viewer_id,variant,generation,html)
+      VALUES('hot',2,?,1,'<p>stale post</p>')`).run(cacheVariant)
 
     expect((await call(app, '/api/v1/posts/1/unpublish', { method: 'POST', token: 'alice-token' })).status).toBe(403)
     const unpublished = await call(app, `/api/v1/posts/${created.id}/unpublish`, {
@@ -258,6 +269,7 @@ describe('API writes', () => {
     expect(database.query('SELECT deleted_at FROM posts WHERE id=?').get(created.id))
       .toMatchObject({ deleted_at: expect.any(String) })
     expect((await call(app, `/api/v1/posts/${created.id}`)).status).toBe(404)
+    expect(cacheDb.query('SELECT 1 FROM materialized_feed_pages_v2 WHERE variant=?').get(cacheVariant)).toBeNull()
   })
 
   test('follows, unfollows and refuses to follow yourself', async () => {

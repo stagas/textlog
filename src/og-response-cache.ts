@@ -1,3 +1,5 @@
+import { subscribeToFeedMutations } from './database-service'
+
 const MAX_OG_RESPONSES = 10
 
 type CachedOgResponse = {
@@ -42,3 +44,16 @@ export function cacheOgResponse(key: string, body: Uint8Array, headers: HeadersI
 export function clearOgResponseCache() {
   responses.clear()
 }
+
+const postOgMutations = new Set([
+  'admin.deletePost',
+  'admin.translatePost',
+  'api.deletePost',
+  'api.persistPostLocation',
+  'api.unpublishPost',
+  'api.updatePost',
+])
+
+subscribeToFeedMutations(operation => {
+  if (postOgMutations.has(operation)) clearOgResponseCache()
+})

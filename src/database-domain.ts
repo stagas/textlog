@@ -173,6 +173,13 @@ function invalidateBlockVisibility(userIds: number[]) {
   })()
 }
 
+function invalidatePostFeedCaches() {
+  cacheDb.transaction(() => {
+    cacheDb.query('DELETE FROM feed_snapshots').run()
+    cacheDb.query('DELETE FROM materialized_feed_pages_v2').run()
+  })()
+}
+
 function viewerIsModerator(database: Database, viewerId: number) {
   if (viewerId < 0) return false
   if (!database.query("SELECT 1 FROM pragma_table_info('users') WHERE name='email'").get()) return false
@@ -922,6 +929,7 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
         resolvePostReports(database, id, actorId)
         recordAdminAction(database, actorId, 'delete_post', post.user_id, id, note)
       })()
+      invalidatePostFeedCaches()
       return { status: 'ready', imageKeys } as DatabaseDomainOutput<K>
     }
     case 'admin.translatePost': {
@@ -1834,6 +1842,7 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
       updatePost(database, id, body, translation ?? null, moderationCategory ?? null, moderationScore ?? null,
         executionOutput ?? null)
       if (existing.user_id !== userId) recordAdminAction(database, userId, 'edit_post', existing.user_id, id, '')
+      invalidatePostFeedCaches()
       return { status: 'ready', post: apiPost(database, id, origin, userId)! } as DatabaseDomainOutput<K>
     }
     case 'api.deletePost': {
@@ -1854,6 +1863,7 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
         softDeletePost(database, id)
         if (available) database.query('DELETE FROM post_link_previews WHERE post_id=?').run(id)
       })()
+      invalidatePostFeedCaches()
       return { status: 'ready', imageKeys, parentId: existing.parent_id } as DatabaseDomainOutput<K>
     }
     case 'api.unpublishPost': {
@@ -1875,9 +1885,8 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
           .run(draftId, userId, existing.parent_id, body ?? existing.body)
         softDeletePost(database, id)
         if (available) database.query('DELETE FROM post_link_previews WHERE post_id=?').run(id)
-        cacheDb.query(`DELETE FROM materialized_feed_pages_v2 WHERE viewer_id=?
-          AND kind IN ('latest','hot','for-you','to-me')`).run(userId)
       })()
+      invalidatePostFeedCaches()
       return { status: 'ready', draftId, imageKeys } as DatabaseDomainOutput<K>
     }
     case 'api.persistPostPreviews': {
