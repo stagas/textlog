@@ -6,7 +6,7 @@
   --soft: #d9dbd4;
   --accent: #749668;
   --accent-dark: #55734a;
-  --tap-highlight: color-mix(in srgb, var(--accent) 24%, transparent);
+  --tap-highlight: transparent;
   --selection-bg: var(--accent);
   --selection-ink: var(--ink);
   --panel: #fff;

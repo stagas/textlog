@@ -268,9 +268,9 @@ describe('in-memory stylesheet', () => {
     )
   })
 
-  test('uses the active accent for the mobile tap highlight', async () => {
+  test('uses a transparent mobile tap highlight', async () => {
     const css = await Bun.file(new URL('./styles.css', import.meta.url)).text()
-    expect(css).toContain('--tap-highlight: color-mix(in srgb, var(--accent) 24%, transparent);')
+    expect(css).toContain('--tap-highlight: transparent;')
     expect(css).toContain('-webkit-tap-highlight-color: var(--tap-highlight);')
   })
 
