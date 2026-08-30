@@ -44,6 +44,7 @@ describe('in-memory stylesheet', () => {
     expect(css).toContain('.tappable-post a:not(.post-hit-area):not(.parent-hit-area)')
     expect(css).toContain('.tappable-post .parent-hit-area {\n  position: absolute;')
     expect(css).toContain('.tappable-post .collapsed-post-expander {\n  position: absolute;\n  z-index: 20;')
+    expect(css).toContain('  cursor: cell;')
     expect(css).toContain('.feed-thread>.thread-fold-input:not(:checked)~.thread-root .collapsed-post-expander,\n'
       + '.feed-thread>.thread-fold-input:not(:checked)~.feed-thread-collapsed-branch'
       + ' .collapsed-post-expander {\n  display: none;')
@@ -208,7 +209,7 @@ describe('in-memory stylesheet', () => {
     expect(css).toContain('.thread-ancestor-gap.post-continuation-link {\n'
       + '  display: block;\n  color: var(--muted);\n  border-bottom: 0;')
     expect(css).toContain('.collapsed-preview-gap.thread-fold-expander {\n'
-      + '  color: var(--muted);\n  cursor: pointer;')
+      + '  color: var(--muted);\n  cursor: cell;')
     expect(css).not.toContain('.collapsed-preview-gap.thread-fold-expander::after')
     expect(css).not.toContain('.feed-thread>.thread-fold-input:checked+.thread-root .thread-fold {')
     expect(css).toContain('.feed-thread>.thread-fold-input:checked~.feed-thread-collapsed-branch {\n'

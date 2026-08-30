@@ -2358,7 +2358,7 @@ body.corners-round a.button {
   z-index: 20;
   inset: 0;
   display: block;
-  cursor: pointer;
+  cursor: cell;
 }
 
 .feed-thread>.thread-fold-input:not(:checked)~.thread-root .collapsed-post-expander,
@@ -6962,7 +6962,7 @@ a.post-context:hover {
 
 .collapsed-preview-gap.thread-fold-expander {
   color: var(--muted);
-  cursor: pointer;
+  cursor: cell;
 }
 
 .collapsed-preview-gap.thread-fold-expander:hover {
