@@ -6762,6 +6762,7 @@ a.post-context:hover {
 .post-page-thread.feed-thread {
   margin-bottom: 0;
   border-top: 1px solid var(--soft);
+  overflow-anchor: none;
 }
 
 .feed-tabs + .feed-thread,
@@ -6900,7 +6901,9 @@ a.post-continuation-link:hover {
 }
 
 .thread-fold-input {
-  position: absolute;
+  position: fixed;
+  top: 0;
+  left: 0;
   width: 1px;
   height: 1px;
   overflow: hidden;

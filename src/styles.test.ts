@@ -179,6 +179,8 @@ describe('in-memory stylesheet', () => {
 
   test('animates thread folding with a collapsible grid track', async () => {
     const css = await Bun.file(new URL('./styles.css', import.meta.url)).text()
+    expect(css).toContain('.post-page-thread.feed-thread {\n  margin-bottom: 0;\n  border-top: 1px solid var(--soft);\n  overflow-anchor: none;')
+    expect(css).toContain('.thread-fold-input {\n  position: fixed;\n  top: 0;\n  left: 0;')
     expect(css).toContain('.reply-branch {\n  display: grid;\n  grid-template-columns: minmax(0, 1fr);\n' +
       '  grid-template-rows: 1fr;\n  min-width: 0;')
     expect(css).toContain(
