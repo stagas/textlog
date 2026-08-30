@@ -3177,7 +3177,7 @@ main:has(> .write-compose) {
 }
 
 .replybox.reply-compose {
-  margin-bottom: 0;
+  margin-bottom: var(--space-4);
   padding: 0;
   background: transparent;
   border-inline: 0;
@@ -3243,6 +3243,11 @@ main:has(> .write-compose) {
 
 :is(.write-compose, .reply-compose) textarea.form-control:focus-visible {
   outline: 0;
+}
+
+.reply-compose textarea.form-control::placeholder {
+  color: var(--muted);
+  opacity: 1;
 }
 
 :is(.write-compose, .reply-compose) .posting-suggestion-results {
