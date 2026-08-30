@@ -64,7 +64,7 @@ export function semanticAction(method: string, path: string) {
 
 export function shouldLogHttp(path: string, status: number, isCrawler = false, authenticated = false) {
   return !isCrawler && (authenticated || Bun.env.LOG_ANONYMOUS !== 'false')
-    && (path !== '/__dev/restart' || status >= 400)
+    && (!['/__dev/restart', '/navigation-check'].includes(path) || status >= 400)
 }
 
 export function redactHttpPath(value: string) {

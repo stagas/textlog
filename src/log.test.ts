@@ -82,6 +82,11 @@ describe('shouldLogHttp', () => {
     expect(shouldLogHttp('/health', 200)).toBe(true)
   })
 
+  test('hides successful navigation challenges but preserves failures', () => {
+    expect(shouldLogHttp('/navigation-check', 200)).toBe(false)
+    expect(shouldLogHttp('/navigation-check', 400)).toBe(true)
+  })
+
   test('hides crawler activity regardless of response status', () => {
     expect(shouldLogHttp('/latest', 200, true)).toBe(false)
     expect(shouldLogHttp('/missing', 404, true)).toBe(false)
