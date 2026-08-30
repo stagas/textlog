@@ -402,6 +402,12 @@ header>nav>a:not(.button),
 }
 
 @media (max-width: 600px) {
+  header > .brand,
+  header > nav :is(a, button, summary),
+  .feed-tabs :is(a, button, summary) {
+    -webkit-tap-highlight-color: transparent;
+  }
+
   .account-nav .nav-write-action {
     display: none;
   }

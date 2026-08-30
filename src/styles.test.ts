@@ -289,6 +289,15 @@ describe('in-memory stylesheet', () => {
     )
   })
 
+  test('removes mobile navigation menu tap highlights', async () => {
+    const css = await Bun.file(new URL('./styles.css', import.meta.url)).text()
+    expect(css).toContain(
+      '@media (max-width: 600px) {\n  header > .brand,\n  header > nav :is(a, button, summary),\n'
+        + '  .feed-tabs :is(a, button, summary) {\n'
+        + '    -webkit-tap-highlight-color: transparent;',
+    )
+  })
+
   test('makes header navigation actions full-height hit targets', async () => {
     const css = await Bun.file(new URL('./styles.css', import.meta.url)).text()
     expect(css).toContain('.brand {\n  color: var(--ink);\n  display: inline-flex;\n  align-self: stretch;')
