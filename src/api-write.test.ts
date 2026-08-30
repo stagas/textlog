@@ -464,9 +464,15 @@ describe('API writes', () => {
     const pollPost = (await created.json() as any).data
     expect(pollPost.poll.total_votes).toBeNull()
     expect(pollPost.poll.options[0].votes).toBeNull()
+    const cacheVariant = `poll-vote-${crypto.randomUUID()}`
+    cacheDb.query(`INSERT INTO materialized_feed_pages_v2(kind,viewer_id,variant,generation,html)
+      VALUES('latest',1,?,1,'<p>voter cache</p>'),('latest',2,?,1,'<p>other voter cache</p>')`)
+      .run(cacheVariant, cacheVariant)
     const voted = await call(app, `/api/v1/posts/${pollPost.id}/poll/votes`, { method: 'POST', token: 'alice-token',
       body: { option_id: pollPost.poll.options[0].id } })
     expect(voted.status).toBe(201)
+    expect(cacheDb.query('SELECT count(*) count FROM materialized_feed_pages_v2 WHERE variant=?')
+      .get(cacheVariant)).toEqual({ count: 0 })
     const data = (await voted.json() as any).data
     expect(data.poll).toMatchObject({ total_votes: 1, viewer_voted: true })
     expect(data.poll.options[0]).toMatchObject({ votes: 1, selected: true })

@@ -1125,7 +1125,13 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
     }
     case 'posts.votePoll': {
       const { postId, optionId, userId } = input as DatabaseDomainInput<'posts.votePoll'>
-      return voteInPoll(database, postId, optionId, userId) as DatabaseDomainOutput<K>
+      const result = voteInPoll(database, postId, optionId, userId)
+      if (result === 'ready') {
+        // Poll totals are rendered into cached feeds for everyone who has voted, so a new vote can stale
+        // materializations belonging to viewers other than the voter as well.
+        cacheDb.query('DELETE FROM materialized_feed_pages_v2').run()
+      }
+      return result as DatabaseDomainOutput<K>
     }
     case 'profiles.overview': {
       const { profileId, viewerId } = input as DatabaseDomainInput<'profiles.overview'>
