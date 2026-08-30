@@ -6,7 +6,7 @@
   --soft: #d9dbd4;
   --accent: #749668;
   --accent-dark: #55734a;
-  --tap-highlight: transparent;
+  --tap-highlight: color-mix(in srgb, var(--accent) 24%, transparent);
   --selection-bg: var(--accent);
   --selection-ink: var(--ink);
   --panel: #fff;
@@ -2308,6 +2308,12 @@ body.corners-round a.button {
 
 .tappable-post {
   position: relative;
+}
+
+.tappable-post > .post-hit-area,
+.tappable-post .parent-hit-area,
+.tappable-post > .collapsed-post-expander {
+  -webkit-tap-highlight-color: transparent;
 }
 
 .tappable-post:has(> .post-hit-area:hover),

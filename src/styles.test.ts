@@ -268,10 +268,14 @@ describe('in-memory stylesheet', () => {
     )
   })
 
-  test('uses a transparent mobile tap highlight', async () => {
+  test('keeps the mobile tap highlight except on tappable post surfaces', async () => {
     const css = await Bun.file(new URL('./styles.css', import.meta.url)).text()
-    expect(css).toContain('--tap-highlight: transparent;')
+    expect(css).toContain('--tap-highlight: color-mix(in srgb, var(--accent) 24%, transparent);')
     expect(css).toContain('-webkit-tap-highlight-color: var(--tap-highlight);')
+    expect(css).toContain(
+      '.tappable-post > .post-hit-area,\n.tappable-post .parent-hit-area,\n'
+        + '.tappable-post > .collapsed-post-expander {\n  -webkit-tap-highlight-color: transparent;',
+    )
   })
 
   test('makes header navigation actions full-height hit targets', async () => {
