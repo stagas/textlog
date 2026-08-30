@@ -278,6 +278,17 @@ describe('in-memory stylesheet', () => {
     )
   })
 
+  test('removes tappable post hover backgrounds on touch devices', async () => {
+    const css = await Bun.file(new URL('./styles.css', import.meta.url)).text()
+    expect(css).toContain(
+      '@media (hover: none) {\n  .tappable-post:has(> .post-hit-area:hover),\n'
+        + '  .tappable-post:has(> .collapsed-post-expander:hover) {\n    background: transparent;',
+    )
+    expect(css).toContain(
+      '.tappable-post .tappable-parent:has(> .parent-hit-area:hover) {\n    background: transparent;',
+    )
+  })
+
   test('makes header navigation actions full-height hit targets', async () => {
     const css = await Bun.file(new URL('./styles.css', import.meta.url)).text()
     expect(css).toContain('.brand {\n  color: var(--ink);\n  display: inline-flex;\n  align-self: stretch;')

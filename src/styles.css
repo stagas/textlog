@@ -2328,6 +2328,17 @@ body.corners-round a.button {
   background: color-mix(in srgb, var(--quote-bg), white 2%);
 }
 
+@media (hover: none) {
+  .tappable-post:has(> .post-hit-area:hover),
+  .tappable-post:has(> .collapsed-post-expander:hover) {
+    background: transparent;
+  }
+
+  .tappable-post .tappable-parent:has(> .parent-hit-area:hover) {
+    background: transparent;
+  }
+}
+
 .tappable-post .post-hit-area {
   position: absolute;
   z-index: 1;
