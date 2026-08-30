@@ -535,7 +535,7 @@ header>nav>a:not(.button),
 
 .reference-menu-popover {
   position: absolute;
-  z-index: 22;
+  z-index: 50;
   top: calc(100% + var(--space-1));
   left: 0;
   display: none;
@@ -4777,6 +4777,14 @@ form.report-panel {
   margin: var(--space-2) 0 0;
   color: var(--quote-ink);
   font-size: 0.8125rem;
+}
+
+.profile:has(
+  .profile-bio :is(.reference-menu, .remote-link-menu):is(:hover, :focus-within),
+  .profile-bio .mobile-popover-toggle:checked
+) {
+  position: relative;
+  z-index: 50;
 }
 
 .profile-tabs {

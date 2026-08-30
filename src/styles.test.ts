@@ -173,6 +173,10 @@ describe('in-memory stylesheet', () => {
     expect(css).toContain(
       '.profile-page-tabs {\n  position: sticky;\n  z-index: 40;\n  top: 0;\n  background: var(--bg);\n}',
     )
+    expect(css).toContain('.reference-menu-popover {\n  position: absolute;\n  z-index: 50;')
+    expect(css).toContain('.profile:has(\n  .profile-bio :is(.reference-menu, .remote-link-menu)'
+      + ':is(:hover, :focus-within),\n  .profile-bio .mobile-popover-toggle:checked\n) {\n'
+      + '  position: relative;\n  z-index: 50;\n}')
     expect(css).toContain('.feed-tabs+.activity-group > .activity-follow:first-child,')
     expect(css).toContain('.feed-read-action+.activity-group > .activity-follow:first-child {\n  border-top: 0;')
   })
@@ -499,7 +503,7 @@ describe('in-memory stylesheet', () => {
     expect(accountBridgeRule).toContain('height: var(--space-2);')
     expect(accountBridgeRule).not.toContain('pointer-events: none;')
     const popoverRule = css.slice(css.indexOf('.reference-menu-popover {'), css.indexOf('.reference-menu-popover-tag'))
-    expect(popoverRule).toContain('z-index: 22;')
+    expect(popoverRule).toContain('z-index: 50;')
     expect(css).toContain('.reference-menu:hover > .reference-menu-popover {')
     expect(css).toContain('animation: reference-popover-reveal 0s 500ms both;')
     expect(css).toContain(
