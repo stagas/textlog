@@ -806,6 +806,19 @@ header>nav>a:not(.button),
 }
 
 @media (hover: none), (pointer: coarse) {
+  .post-body a[target="_blank"]:not(.remote-link-menu > a)::after {
+    display: inline-block;
+    content: '\21f1';
+    transform: translateY(-0.15em) scaleX(-1);
+  }
+
+  .post-body .remote-link-menu
+    > :is(a:not(.remote-link-popover), .mobile-post-popover-trigger)::after {
+    display: inline-block;
+    content: '\203a';
+    transform: rotate(90deg);
+  }
+
   .reference-menu {
     display: inline-block !important;
     vertical-align: baseline;

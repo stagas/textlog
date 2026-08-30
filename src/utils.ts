@@ -267,6 +267,7 @@ function shortenedUrlPart(part: string) {
 
 function shortenedUrlLabel(url: string) {
   const withoutProtocol = url.replace(/^https?:\/\//i, '')
+  if (/^https?:\/\/[^/]+\/$/i.test(url)) return withoutProtocol.slice(0, -1)
   if (withoutProtocol.length <= LONG_URL_LABEL_LENGTH) return withoutProtocol
   try {
     const parsed = new URL(url)

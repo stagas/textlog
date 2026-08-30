@@ -76,6 +76,10 @@ describe('post persistence', () => {
     }
   })
   test('shortens long URL labels without changing their destinations', () => {
+    expect(linkify('https://example.com/'))
+      .toContain('>example.com</a>')
+    expect(linkify('https://example.com/path/'))
+      .toContain('>example.com<span class="raw-link-rest">/path/</span></a>')
     expect(linkify('https://www.example.com/a/very/long/path/final-part/?tracking=123'))
       .toBe(
         '<a href="https://www.example.com/a/very/long/path/final-part/?tracking=123" class="raw-link" title="https://www.example.com/a/very/long/path/final-part/?tracking=123" target="_blank" rel="nofollow ugc noopener noreferrer">www.example.com<span class="raw-link-rest">/…/final-part/</span></a>',
