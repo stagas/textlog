@@ -2470,6 +2470,10 @@ body.corners-round a.button {
   margin: 0;
 }
 
+.post-actions .bookmark-link {
+  border-bottom: var(--hairline) solid var(--link-border);
+}
+
 .danger {
   color: var(--error-ink);
   border-bottom: var(--hairline) solid var(--link-border);
@@ -5863,6 +5867,10 @@ form.report-panel {
 .search-form {
   display: flex;
   gap: var(--space-2);
+}
+
+.bookmarks-header {
+  margin-bottom: var(--space-4);
 }
 
 .search-form input {

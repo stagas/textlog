@@ -16,8 +16,22 @@ import { logError } from '../log'
 import { sendPushForFollow, sendPushForTagFollow, sendPushForUserFollow } from '../push'
 import { scheduleRelationshipFeedInvalidation } from '../relationship-feed-invalidation'
 import { currentUser } from '../utils'
+import { clearAnonymousPostPageCache } from '../anonymous-post-page-cache'
 
 export function registerInteractionsRoutes(app: Hono) {
+  app.post('/post/:id/bookmark', async c => {
+    const user = currentUser(c.req.raw)
+    if (!user) return redirect('/enter')
+    const postId = Number(c.req.param('id'))
+    if (!Number.isInteger(postId) || postId < 1) return c.text('Not found', 404)
+    const f = await form(c.req.raw)
+    const result = await databaseService().call('interactions.toggleBookmark', { userId: user.id, postId })
+    if (result.status === 'not_found') return c.text('Not found', 404)
+    clearAnonymousPostPageCache()
+    return redirect(instantScrollPath(f.from ? safeNext(f.from)
+      : safeRefererPath(c.req.header('referer'), c.req.url, `/post/${postId}`)))
+  })
+
   app.post('/follow/:handle', async c => {
     const user = currentUser(c.req.raw)
     if (!user) return redirect('/enter')

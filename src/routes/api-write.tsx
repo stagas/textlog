@@ -2,6 +2,7 @@ import type { Context, Hono } from 'hono'
 import { apiOrigin, encodeCursor, parseCollectionParams } from '../api'
 import { publishPost } from '../api-broker'
 import { AUTH_LIMITS } from '../auth-rate-limit'
+import { clearAnonymousPostPageCache } from '../anonymous-post-page-cache'
 import { bioBodyValidationMessage, normalizeBioBody, validBioBody } from '../bio-body'
 import { isValidHashtag, normalizeHashtag } from '../content'
 import { executePostCode } from '../code-execution'
@@ -486,6 +487,21 @@ export function registerApiWriteRoutes(app: Hono, service: DatabaseService,
     const draft = await service.call('drafts.get', { id: result.draftId, userId: guard.user!.id })
     return json({ data: await draftJson(draft!, apiOrigin(c.req.url, appUrl), guard.user!.id) }, 201)
   })
+
+  const setBookmark = (bookmarked: boolean) => async (c: Context) => {
+    const guard = await writer(service, requestApiUser, c)
+    if (guard.error) return guard.error
+    const postId = Number(c.req.param('id'))
+    if (!Number.isInteger(postId) || postId < 1) {
+      return fail('invalid_post_id', 'Post ID must be a positive integer', 400)
+    }
+    const result = await service.call('interactions.setBookmark', { userId: guard.user!.id, postId, bookmarked })
+    if (result.status === 'not_found') return fail('not_found', 'Post not found', 404)
+    clearAnonymousPostPageCache()
+    return json({ data: { bookmarked: result.bookmarked } })
+  }
+  app.post('/api/v1/posts/:id/bookmark', setBookmark(true))
+  app.delete('/api/v1/posts/:id/bookmark', setBookmark(false))
 
   app.post('/api/v1/users/:handle/follow', async c => {
     const guard = await writer(service, requestApiUser, c)

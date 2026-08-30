@@ -251,6 +251,10 @@ function openApiDocument() {
           schema: { type: 'string', minLength: 1, maxLength: MAX_SEARCH_LENGTH } },
         ...collectionParameters,
       ], responses: { ...jsonResponses, '200': collectionResponse } } },
+      '/bookmarks': { get: { summary: 'List and search your bookmarks', security: authSecurity, parameters: [
+        { name: 'q', in: 'query', schema: { type: 'string', maxLength: MAX_SEARCH_LENGTH } },
+        ...collectionParameters,
+      ], responses: { ...jsonResponses, '200': collectionResponse, '401': writeResponses['401'] } } },
       '/feeds/all.{format}': {
         get: { summary: 'All posts as RSS or Atom', parameters: [formatParameter], responses: syndicationResponses,
           'x-root-aliases': ['/all.rss', '/all.atom'],
@@ -390,6 +394,12 @@ function openApiDocument() {
           requestBody: requestBody({ type: 'object', required: ['reason'], properties: {
             reason: { type: 'string', enum: ['harassment', 'spam', 'impersonation', 'bot', 'other'] },
           } }), responses: writeResponses },
+      },
+      '/posts/{id}/bookmark': {
+        post: { summary: 'Bookmark a post', security: authSecurity, parameters: [postIdParameter],
+          responses: writeResponses },
+        delete: { summary: 'Remove a post bookmark', security: authSecurity, parameters: [postIdParameter],
+          responses: writeResponses },
       },
       '/posts/{id}/poll/votes': {
         post: { summary: 'Vote in a poll', security: authSecurity, parameters: [postIdParameter],
@@ -902,6 +912,22 @@ export function registerApiRoutes(app: Hono, appUrl: string | null | undefined =
     const result = await service.call('api.publicRead', { kind: 'search', origin: apiOrigin(c.req.url, appUrl), query,
       limit: parsed.limit, offset: parsed.before || 0, viewerId: requestApiUser(c.req.raw)?.id })
     return jsonResponse(result.status === 'ready' ? result.value : null)
+  })
+
+  app.get('/api/v1/bookmarks', async c => {
+    const user = requestApiUser(c.req.raw)
+    if (!user) return apiError('unauthorized', 'Provide a bearer token from /api/v1/auth/verify', 401)
+    const rawQuery = c.req.query('q') || ''
+    const query = normalizeSearchQuery(rawQuery)
+    if (rawQuery.trim().length > MAX_SEARCH_LENGTH || query && !searchExpression(query)) {
+      return apiError('invalid_query', `q must contain searchable text up to ${MAX_SEARCH_LENGTH} characters`, 400)
+    }
+    const parsed = parseCollectionParams(c.req.query('limit'), c.req.query('cursor'))
+    if (!parsed) {
+      return apiError('invalid_pagination', 'limit must be 1–100 and cursor must be a valid opaque cursor', 400)
+    }
+    return jsonResponse(await service.call('api.bookmarks', { userId: user.id, origin: apiOrigin(c.req.url, appUrl),
+      query, limit: parsed.limit, before: parsed.before }), 200, 'no-store')
   })
 
   const hotFeed = async (c: Context) => {

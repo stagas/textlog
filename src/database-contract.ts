@@ -1,5 +1,5 @@
 import type { DensityChoice, PageSizeChoice } from './request-preferences'
-import type { ApiKeyView, ApiPost, BioReferenceData, DashboardStats, DraftView, EmbedData, ExploreData, FeedKeyView,
+import type { ApiKeyView, ApiPost, BioReferenceData, BookmarksData, DashboardStats, DraftView, EmbedData, ExploreData, FeedKeyView,
   LinkPreview, PersonalizedFeedData, PersonView, PostFeedPage, PostView, ProfileOverviewData, SearchResultsData,
   SessionView, TagPageData, User } from './types'
 import type { AdminActionView, AdminReportView, IllegalActivityReportView, PostRow, ProfileRow } from './types'
@@ -318,6 +318,10 @@ export type DatabaseDomainOperations = {
       tagsOffset: number }
     output: unknown
   }
+  'api.bookmarks': {
+    input: { userId: number; origin: string; query: string; limit: number; before: number | null }
+    output: unknown
+  }
   'api.publishDraft': {
     input: { userId: number; id: number; body: string; parentId: number | null; origin: string;
       translation?: string | null; moderationCategory?: string | null; moderationScore?: number | null;
@@ -475,6 +479,10 @@ export type DatabaseDomainOperations = {
     input: { query: string; viewerId: number; page: number; pageSize: PageSizeChoice; tab: 'notes' | 'tags' | 'people' }
     output: SearchResultsData
   }
+  'bookmarks.page': {
+    input: { userId: number; query: string; page: number; pageSize: PageSizeChoice }
+    output: BookmarksData
+  }
   'explore.page': { input: { viewerId: number; peopleIds?: number[]; tagsPage: number; peoplePage: number };
     output: ExploreData }
   'tags.count': { input: { tag: string }; output: number }
@@ -498,6 +506,10 @@ export type DatabaseDomainOperations = {
     output: { targetId: number; targetHandle: string; followed: boolean } | null }
   'interactions.toggleBlock': { input: { userId: number; handle: string };
     output: { targetHandle: string; blocked: boolean } | null }
+  'interactions.toggleBookmark': { input: { userId: number; postId: number };
+    output: { status: 'not_found' } | { status: 'ready'; bookmarked: boolean } }
+  'interactions.setBookmark': { input: { userId: number; postId: number; bookmarked: boolean };
+    output: { status: 'not_found' } | { status: 'ready'; bookmarked: boolean } }
   'interactions.reportPost': { input: { userId: number; postId: number; reason: string | null };
     output: { status: 'not_found' | 'own_post' | 'ready' | 'reported'; post?: PostView } }
   'interactions.toggleTagFollow': { input: { userId: number; tag: string }; output: { followed: boolean } }

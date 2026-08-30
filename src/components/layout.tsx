@@ -85,6 +85,7 @@ export function Layout({
     <div className="account-menu-popover">
       <a href={profileHref}>profile</a>
       <a href={accountHref}>account</a>
+      <a href="/bookmarks">bookmarks</a>
       {isAdmin(user) && <a href="/admin">admin</a>}
       <LogoutForm>
         <button type="submit">logout</button>
@@ -171,7 +172,7 @@ export function Layout({
           </>
         )}
         {mobile && <link href="https://fonts.cdnfonts.com/css/dejavu-sans-mono" rel="stylesheet" />}
-        <link rel="stylesheet" href="/styles.css?v=1128" />
+        <link rel="stylesheet" href="/styles.css?v=1130" />
         <style>{themeCss}</style>
       </head>
       <body

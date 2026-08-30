@@ -119,6 +119,7 @@ export type PostView = PostRow & {
   thread_locked?: boolean
   feed_ancestor_gap?: boolean
   feed_branch_root?: boolean
+  viewer_bookmarked?: boolean
 }
 
 export type PostFeedPage = { posts: PostView[]; page: number; totalItems: number; totalPages: number;
@@ -160,6 +161,7 @@ export type SearchResultsData = {
   highlights: string[]
   totalPages: number
 }
+export type BookmarksData = { posts: PostView[]; total: number; totalPages: number; highlights: string[] }
 export type ExploreData = {
   people: PersonView[]
   tags: TagView[]

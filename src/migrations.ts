@@ -2662,6 +2662,19 @@ export const migrations: Migration[] = [
         'INTEGER NOT NULL DEFAULT 0 CHECK(show_timestamps IN (0,1))')
     },
   },
+  {
+    version: 164,
+    name: 'post_bookmarks',
+    up(database) {
+      database.run(`CREATE TABLE IF NOT EXISTS post_bookmarks (
+        user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        post_id INTEGER NOT NULL REFERENCES posts(id) ON DELETE CASCADE,
+        created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        PRIMARY KEY(user_id,post_id));
+      CREATE INDEX IF NOT EXISTS post_bookmarks_user_created
+        ON post_bookmarks(user_id,created_at DESC,post_id DESC);`)
+    },
+  },
 ]
 
 export const latestMigrationVersion = migrations.at(-1)!.version

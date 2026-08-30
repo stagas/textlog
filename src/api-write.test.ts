@@ -35,6 +35,8 @@ function fixture() {
       PRIMARY KEY(reporter_id,post_id));
     CREATE TABLE post_hashtags (post_id INTEGER NOT NULL,tag TEXT NOT NULL,PRIMARY KEY(post_id,tag));
     CREATE TABLE post_mentions (post_id INTEGER NOT NULL,user_id INTEGER NOT NULL,PRIMARY KEY(post_id,user_id));
+    CREATE TABLE post_bookmarks (user_id INTEGER NOT NULL,post_id INTEGER NOT NULL,
+      created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,PRIMARY KEY(user_id,post_id));
     CREATE TABLE admin_actions (id INTEGER PRIMARY KEY AUTOINCREMENT,actor_id INTEGER NOT NULL,
       action TEXT NOT NULL CHECK(action IN ('delete_post','edit_post','suspend_user','restore_user','delete_user',
         'resolve_report','dismiss_report','drop_username')),
@@ -331,6 +333,26 @@ describe('API writes', () => {
       token: 'alice-token',
       body: { reason: 'spam' },
     })).status).toBe(400)
+  })
+
+  test('creates, lists and removes bookmarks idempotently', async () => {
+    const { app } = fixture()
+    expect((await call(app, '/api/v1/bookmarks')).status).toBe(401)
+
+    const saved = await call(app, '/api/v1/posts/1/bookmark', { method: 'POST', token: 'alice-token' })
+    expect(saved.status).toBe(200)
+    expect(await saved.json()).toEqual({ data: { bookmarked: true } })
+    expect((await call(app, '/api/v1/posts/1/bookmark', { method: 'POST', token: 'alice-token' })).status).toBe(200)
+
+    const listed = await (await call(app, '/api/v1/bookmarks', { token: 'alice-token' })).json() as any
+    expect(listed.data).toHaveLength(1)
+    expect(listed.data[0]).toMatchObject({ id: 1, body: 'a post by bob', bookmarked_at: expect.any(String) })
+    expect(listed.pagination).toEqual({ next_cursor: null })
+
+    const removed = await call(app, '/api/v1/posts/1/bookmark', { method: 'DELETE', token: 'alice-token' })
+    expect(await removed.json()).toEqual({ data: { bookmarked: false } })
+    const empty = await (await call(app, '/api/v1/bookmarks', { token: 'alice-token' })).json() as any
+    expect(empty.data).toEqual([])
   })
 
   test('reads and updates the signed-in account', async () => {

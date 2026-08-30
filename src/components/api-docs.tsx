@@ -52,6 +52,8 @@ const endpoints: ReadonlyArray<readonly [string, string, ReactNode, boolean?]> =
     to detect omitted descendants. Top-level posts have a null <code>top_id</code>.
   </>],
   ['POST', '/posts/:id/report', 'Report a post.', true],
+  ['POST', '/posts/:id/bookmark', 'Bookmark a post. Repeating the request is safe.', true],
+  ['DELETE', '/posts/:id/bookmark', 'Remove a post from your bookmarks.', true],
   ['POST', '/posts/:id/poll/votes', 'Vote in a poll. Results appear after voting or expiration.', true],
   ['GET', '/drafts', 'List your drafts.', true],
   ['POST', '/drafts', 'Create a post or reply draft.', true],
@@ -103,6 +105,9 @@ const endpoints: ReadonlyArray<readonly [string, string, ReactNode, boolean?]> =
   ['DELETE', '/tags/:tag/block', 'Unblock a hashtag.', true],
   ['GET', '/explore', 'Discover suggested people and trending hashtags.'],
   ['GET', '/search?q=:query', 'Search public posts by text.'],
+  ['GET', '/bookmarks', <>
+    List your bookmarks newest-bookmarked first. Optionally search them with <code>q</code>.
+  </>, true],
   ['GET', '/firehose', 'Stream new posts as server-sent events.'],
 ] as const
 
@@ -161,6 +166,31 @@ export function ApiDocs({ user }: { user: User | null }) {
             </code>{' '}
             authentication bearer token required
           </p>
+        </ApiSection>
+
+        <ApiSection title="Bookmarks" id="bookmarks">
+          <p>
+            Bookmark mutations are idempotent. The private collection is ordered by when each post was bookmarked,
+            newest first. Pass an optional <code>q</code> for full-text search and use the returned cursor for the next
+            page.
+          </p>
+          <CodeBlock language="bash">{`curl -X POST '${origin}/api/v1/posts/123/bookmark' \
+  -H "authorization: Bearer $TOKEN"
+
+curl '${origin}/api/v1/bookmarks?q=sqlite&limit=20' \
+  -H "authorization: Bearer $TOKEN"
+
+curl -X DELETE '${origin}/api/v1/posts/123/bookmark' \
+  -H "authorization: Bearer $TOKEN"`}</CodeBlock>
+          <CodeBlock language="json">{`{
+  "data": [{
+    "id": 123,
+    "body": "A saved note",
+    "bookmarked_at": "2026-08-30T12:00:00Z",
+    "parent": null
+  }],
+  "pagination": { "next_cursor": null }
+}`}</CodeBlock>
         </ApiSection>
 
         <ApiSection title="Web-compatible threaded feeds" id="threaded-feeds">

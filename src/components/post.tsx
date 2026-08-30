@@ -537,6 +537,7 @@ export function Post({
   replyHref,
   replyLabel,
   reportHref,
+  bookmarkAction = false,
   foldControlId,
   collapsedExpansionControlId,
   highlightTerms = [],
@@ -563,7 +564,8 @@ export function Post({
   suppressContentWarning = false,
 }: { p: PostView; user: User | null; showReplyAction?: boolean; showOwnerActions?: boolean;
   showModerateAction?: boolean; showParent?: boolean; showReplyCount?: boolean; replyHref?: string; replyLabel?: string;
-  reportHref?: string; foldControlId?: string; collapsedExpansionControlId?: string; highlightTerms?: string[];
+  reportHref?: string; bookmarkAction?: boolean; foldControlId?: string; collapsedExpansionControlId?: string;
+  highlightTerms?: string[];
   tappable?: boolean; tappableParent?: boolean;
   contextLabel?: React.ReactNode; contextUnread?: boolean; contextParentUnread?: boolean;
   contextDirectedUnread?: boolean; preview?: boolean; returnPath?: string; backHref?: string;
@@ -815,7 +817,8 @@ export function Post({
         {preview ? <PollPreview body={p.body} /> : <Poll p={p} returnPath={returnPath} />}
         <Todo p={p} user={user} preview={preview} returnPath={returnPath} formPrefix={formPrefix} />
       </ContentWarning>
-      {!parent && (showReplyAction && !p.thread_locked || resolvedContinuationHref || canModerate || reportHref) && (
+      {!parent && (showReplyAction && !p.thread_locked || resolvedContinuationHref || canModerate || reportHref
+        || bookmarkAction) && (
         <MetaRow className={`postfoot${preview ? ' preview-post-meta' : ''}`}>
           {!parent && showReplyAction && !p.thread_locked && (preview
             ? <span className="quiet preview-reply">{resolvedReplyLabel}</span>
@@ -833,7 +836,7 @@ export function Post({
                   {continuationLabel}
                 </a>
           )}
-          {(canModerate || reportHref) && (
+          {(canModerate || reportHref || bookmarkAction) && (
             <span className="post-actions">
               {canModerate && (
                 <>
@@ -846,6 +849,15 @@ export function Post({
               )}
               {reportHref && (
                 <a className="quiet report-link" href={reportHref} aria-label={`report post by @${p.handle}`}>report</a>
+              )}
+              {bookmarkAction && (
+                <form method="post" action={`/post/${p.id}/bookmark`}>
+                  <input type="hidden" name="from" value={detailPath} />
+                  <button className="quiet bookmark-link" type="submit"
+                    aria-label={`${p.viewer_bookmarked ? 'remove' : 'add'} bookmark`}>
+                    {p.viewer_bookmarked ? 'unbookmark' : 'bookmark'}
+                  </button>
+                </form>
               )}
             </span>
           )}
@@ -960,7 +972,8 @@ export function Post({
             )}
         </blockquote>
       )}
-      {parent && (showReplyAction && !p.thread_locked || resolvedContinuationHref || canModerate || reportHref) && (
+      {parent && (showReplyAction && !p.thread_locked || resolvedContinuationHref || canModerate || reportHref
+        || bookmarkAction) && (
         <MetaRow className={`postfoot postfoot-after-quote${preview ? ' preview-post-meta' : ''}`}>
           {showReplyAction && !p.thread_locked && (preview
             ? <span className="quiet preview-reply">{resolvedReplyLabel}</span>
@@ -978,7 +991,7 @@ export function Post({
                   {continuationLabel}
                 </a>
           )}
-          {(canModerate || reportHref) && (
+          {(canModerate || reportHref || bookmarkAction) && (
             <span className="post-actions">
               {canModerate && (
                 <>
@@ -991,6 +1004,15 @@ export function Post({
               )}
               {reportHref && (
                 <a className="quiet report-link" href={reportHref} aria-label={`report post by @${p.handle}`}>report</a>
+              )}
+              {bookmarkAction && (
+                <form method="post" action={`/post/${p.id}/bookmark`}>
+                  <input type="hidden" name="from" value={detailPath} />
+                  <button className="quiet bookmark-link" type="submit"
+                    aria-label={`${p.viewer_bookmarked ? 'remove' : 'add'} bookmark`}>
+                    {p.viewer_bookmarked ? 'unbookmark' : 'bookmark'}
+                  </button>
+                </form>
               )}
             </span>
           )}

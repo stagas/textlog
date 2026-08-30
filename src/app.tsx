@@ -30,6 +30,7 @@ import { registerAccountRoutes } from './routes/account'
 import { registerAdminRoutes } from './routes/admin'
 import { registerApiRoutes } from './routes/api'
 import { registerAuthRoutes } from './routes/auth'
+import { registerBookmarksRoutes } from './routes/bookmarks'
 import { registerEmbedRoutes } from './routes/embed'
 import { loadRecentFeedVisitors, registerFeedsRoutes, warmNextRecentLatestFeed, warmRecentLatestFeeds } from './routes/feeds'
 import { registerIllegalActivityRoutes } from './routes/illegal-activity'
@@ -574,6 +575,7 @@ registerApiRoutes(app)
 registerEmbedRoutes(app)
 registerFeedsRoutes(app)
 registerAuthRoutes(app)
+registerBookmarksRoutes(app)
 registerAccountRoutes(app)
 registerPostsRoutes(app)
 registerInteractionsRoutes(app)

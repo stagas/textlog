@@ -49,7 +49,7 @@ import { visibleTagFollowerCounts, visibleUserProfileStats } from './posts'
 import { createPost, isThreadLocked, updatePost } from './posts'
 import { createPublicArchive, publicArchiveIsCurrent } from './public-archive'
 import { RECAP_POPULAR_NOTE_IDS, recapEmail } from './recap-email'
-import { searchPeople, searchPosts, searchTags, searchTerms } from './search'
+import { searchExpression, searchPeople, searchPosts, searchTags, searchTerms } from './search'
 import { sitemapIndex, sitemapSection } from './seo'
 import { insertSession, markSessionUsed, renewSession, SESSION_LIFETIME_MS, sessionHash } from './sessions'
 import { dashboardStats } from './stats'
@@ -1021,6 +1021,10 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
       ) SELECT id FROM ancestors ORDER BY depth DESC LIMIT 1`).get(id) as { id: number } | null
         : null
       const post = enrichPosts(database, [found], viewerId)[0]
+      if (viewerId >= 0) {
+        post.viewer_bookmarked = !!database.query('SELECT 1 FROM post_bookmarks WHERE user_id=? AND post_id=?')
+          .get(viewerId, id)
+      }
       if (post.parent_id && !post.parent) {
         post.parent = { id: post.parent_id, body: '', translation: null, created_at: found.created_at,
           deleted_at: null, has_latex: 0, has_links: 0, has_code: 0, handle: '', reply_count: 0, unavailable: true }
@@ -1717,6 +1721,32 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
       return { people: people.slice(0, request.peopleLimit).map(person),
         tags: tags.slice(0, request.tagsLimit).map(tag), people_has_more: people.length > request.peopleLimit,
         tags_has_more: tags.length > request.tagsLimit } as DatabaseDomainOutput<K>
+    }
+    case 'api.bookmarks': {
+      const { userId, origin, query, limit, before } = input as DatabaseDomainInput<'api.bookmarks'>
+      const expression = searchExpression(query)
+      const searchJoin = expression ? 'JOIN post_search ON post_search.rowid=p.id' : ''
+      const filters = [before === null ? '' : 'pb.rowid<?', expression ? 'post_search MATCH ?' : '',
+        `p.deleted_at IS NULL AND u.deleted_at IS NULL AND u.suspended_at IS NULL
+        AND NOT EXISTS (SELECT 1 FROM blocks b WHERE
+          (b.blocker_id=? AND b.blocked_id=p.user_id) OR (b.blocker_id=p.user_id AND b.blocked_id=?))
+        AND NOT EXISTS (SELECT 1 FROM post_hashtags ph JOIN blocked_hashtags bh ON bh.tag=ph.tag
+          WHERE ph.post_id=p.id AND bh.user_id=?)`].filter(Boolean)
+      const parameters = [userId, ...(before === null ? [] : [before]), ...(expression ? [expression] : []),
+        userId, userId, userId, limit + 1]
+      const rows = database.query(`SELECT pb.rowid bookmark_cursor,pb.created_at bookmarked_at,p.id
+        FROM post_bookmarks pb JOIN posts p ON p.id=pb.post_id JOIN users u ON u.id=p.user_id ${searchJoin}
+        WHERE pb.user_id=? AND ${filters.join(' AND ')} ORDER BY pb.rowid DESC LIMIT ?`)
+        .all(...parameters) as Array<{ bookmark_cursor: number; bookmarked_at: string; id: number }>
+      const selected = rows.slice(0, limit)
+      const posts = apiPostsByIds(database, origin, selected.map(row => row.id), userId)
+      const metadata = new Map(selected.map(row => [row.id, row]))
+      const result = { data: posts.map(post => ({ ...post,
+        bookmarked_at: metadata.get(post.id)!.bookmarked_at.replace(' ', 'T') + 'Z' })),
+        pagination: { next_cursor: rows.length > limit
+          ? encodeCursor(selected[selected.length - 1].bookmark_cursor)
+          : null } }
+      return result as DatabaseDomainOutput<K>
     }
     case 'api.publishDraft': {
       const request = input as DatabaseDomainInput<'api.publishDraft'>
@@ -2832,6 +2862,29 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
         totalPages: Math.max(1, Math.ceil(selected.total / (tab === 'notes' ? pageSize : PAGE_SIZE))) }
       return result as DatabaseDomainOutput<K>
     }
+    case 'bookmarks.page': {
+      const { userId, query, page, pageSize } = input as DatabaseDomainInput<'bookmarks.page'>
+      const expression = searchExpression(query)
+      const matchJoin = expression ? 'JOIN post_search ON post_search.rowid=p.id' : ''
+      const matchWhere = expression ? 'AND post_search MATCH ?' : ''
+      const parameters = expression ? [userId, expression] : [userId]
+      const visible = `p.deleted_at IS NULL AND u.deleted_at IS NULL AND u.suspended_at IS NULL
+        AND NOT EXISTS (SELECT 1 FROM blocks b WHERE
+          (b.blocker_id=? AND b.blocked_id=p.user_id) OR (b.blocker_id=p.user_id AND b.blocked_id=?))
+        AND NOT EXISTS (SELECT 1 FROM post_hashtags ph JOIN blocked_hashtags bh ON bh.tag=ph.tag
+          WHERE ph.post_id=p.id AND bh.user_id=?)`
+      const total = (database.query(`SELECT count(*) count FROM post_bookmarks pb
+        JOIN posts p ON p.id=pb.post_id JOIN users u ON u.id=p.user_id ${matchJoin}
+        WHERE pb.user_id=? ${matchWhere} AND ${visible}`)
+        .get(...parameters, userId, userId, userId) as { count: number }).count
+      const rows = database.query(`SELECT p.*,u.handle FROM post_bookmarks pb
+        JOIN posts p ON p.id=pb.post_id JOIN users u ON u.id=p.user_id ${matchJoin}
+        WHERE pb.user_id=? ${matchWhere} AND ${visible}
+        ORDER BY pb.created_at DESC,pb.rowid DESC LIMIT ? OFFSET ?`)
+        .all(...parameters, userId, userId, userId, pageSize, (page - 1) * pageSize) as PostView[]
+      return { posts: enrichPosts(database, rows, userId), total,
+        totalPages: Math.max(1, Math.ceil(total / pageSize)), highlights: searchTerms(query) } as DatabaseDomainOutput<K>
+    }
     case 'explore.page': {
       const { viewerId, peopleIds, tagsPage, peoplePage } = input as DatabaseDomainInput<'explore.page'>
       const savedIds = peopleIds?.filter((id, index, ids) =>
@@ -2975,6 +3028,30 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
           .run(userId, target.id)}
       cacheDb.query('DELETE FROM materialized_feed_pages_v2 WHERE viewer_id=?').run(userId)
       return { targetId: target.id, targetHandle: target.handle, followed: !exists } as DatabaseDomainOutput<K>
+    }
+    case 'interactions.toggleBookmark': {
+      const { userId, postId } = input as DatabaseDomainInput<'interactions.toggleBookmark'>
+      const post = database.query(`SELECT 1 FROM posts p JOIN users u ON u.id=p.user_id
+        WHERE p.id=? AND p.deleted_at IS NULL AND u.deleted_at IS NULL AND u.suspended_at IS NULL`)
+        .get(postId)
+      if (!post) return { status: 'not_found' } as DatabaseDomainOutput<K>
+      const existing = database.query('SELECT 1 FROM post_bookmarks WHERE user_id=? AND post_id=?')
+        .get(userId, postId)
+      if (existing) database.query('DELETE FROM post_bookmarks WHERE user_id=? AND post_id=?').run(userId, postId)
+      else database.query('INSERT INTO post_bookmarks(user_id,post_id) VALUES(?,?)').run(userId, postId)
+      return { status: 'ready', bookmarked: !existing } as DatabaseDomainOutput<K>
+    }
+    case 'interactions.setBookmark': {
+      const { userId, postId, bookmarked } = input as DatabaseDomainInput<'interactions.setBookmark'>
+      const post = database.query(`SELECT 1 FROM posts p JOIN users u ON u.id=p.user_id
+        WHERE p.id=? AND p.deleted_at IS NULL AND u.deleted_at IS NULL AND u.suspended_at IS NULL`)
+        .get(postId)
+      if (!post) return { status: 'not_found' } as DatabaseDomainOutput<K>
+      if (bookmarked) {
+        database.query('INSERT OR IGNORE INTO post_bookmarks(user_id,post_id) VALUES(?,?)').run(userId, postId)
+      }
+      else database.query('DELETE FROM post_bookmarks WHERE user_id=? AND post_id=?').run(userId, postId)
+      return { status: 'ready', bookmarked } as DatabaseDomainOutput<K>
     }
     case 'interactions.toggleBlock': {
       const { userId, handle } = input as DatabaseDomainInput<'interactions.toggleBlock'>

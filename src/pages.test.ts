@@ -77,13 +77,15 @@ test('write page omits the redundant header write action', () => {
   expect(html).not.toContain('class="button nav-write-action"')
 })
 
-test('admin navigation lives in the handle menu below account', () => {
+test('bookmarks and admin navigation live in the handle menu below account', () => {
   const html = renderToStaticMarkup(React.createElement(Layout, {
     user: { id: 1, handle: 'admin', email: 'gstagas@gmail.com', bio: '' },
     children: React.createElement('p', null, 'Hello'),
   }))
 
-  expect(html).toContain('href="/account/edit?from=%2F">account</a><a href="/admin">admin</a>')
+  expect(html).toContain(
+    'href="/account/edit?from=%2F">account</a><a href="/bookmarks">bookmarks</a><a href="/admin">admin</a>',
+  )
   expect(html.indexOf('href="/admin">admin</a>')).toBeLessThan(html.indexOf('action="/logout"'))
 })
 
@@ -2225,7 +2227,7 @@ describe('About', () => {
 
   test('API documentation sections are closed disclosures by default', () => {
     const html = renderToStaticMarkup(React.createElement(ApiDocs, { user: null }))
-    expect(html.match(/<details class="api-docs-section">/g) || []).toHaveLength(10)
+    expect(html.match(/<details class="api-docs-section">/g) || []).toHaveLength(11)
     expect(html).not.toContain('<details class="api-docs-section" open=""')
     expect(html).toContain('<summary><h2>Endpoints</h2></summary>')
     expect(html).toContain('<summary><h2>Endpoints</h2></summary><div class="api-base-url"><h3>Base URL</h3>')
