@@ -169,6 +169,26 @@ function PostingHelpTabs({ search }: { search?: PostingSuggestionSearch | null }
         <div>
           <dd>
             <code>
+              <b>1.</b> first<br />
+              <b>2.</b> second<br />
+              <b>3.</b> third
+            </code>
+          </dd>
+          <dt>Numbered lists</dt>
+        </div>
+        <div>
+          <dd>
+            <code>
+              <b>-</b> first<br />
+              <b>-</b> second<br />
+              <b>-</b> third
+            </code>
+          </dd>
+          <dt>Bulleted lists</dt>
+        </div>
+        <div>
+          <dd>
+            <code>
               Name&nbsp; <b>|</b> Status <b>|</b> Count<br />
               ----- <b>|</b> :----- <b>|</b> ----:<br />
               notes <b>|</b> ready&nbsp; <b>|</b> &nbsp;&nbsp;&nbsp;&nbsp;3

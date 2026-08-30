@@ -413,6 +413,10 @@ test('posting helpers are searchable details and show copyable highlighted resul
   expect(html).toContain('<dt>Redacted</dt>')
   expect(html).toContain('<b>&gt;</b> text')
   expect(html).toContain('<dt>Quote</dt>')
+  expect(html).toContain('<b>1.</b> first<br/><b>2.</b> second<br/><b>3.</b> third')
+  expect(html).toContain('<dt>Numbered lists</dt>')
+  expect(html).toContain('<b>-</b> first<br/><b>-</b> second<br/><b>-</b> third')
+  expect(html).toContain('<dt>Bulleted lists</dt>')
   expect(html).toContain('<dt>Tables</dt>')
   expect(html).toContain(
     'Name\u00a0 <b>|</b> Status <b>|</b> Count<br/>----- <b>|</b> :----- <b>|</b> ----:<br/>'

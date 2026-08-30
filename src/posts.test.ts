@@ -189,6 +189,22 @@ describe('post persistence', () => {
       .toBe('<div class="post-quote">above\n<hr class="markdown-hr">\nbelow</div>')
     expect(linkify('```text\n---\n```')).toBe('<code class="code-fence">---</code>')
   })
+  test('renders numbered and bulleted Markdown lists with rich inline content', () => {
+    expect(linkify('before\n1. a\n2. *b*\n3. #c\nafter')).toBe(
+      'before<div class="markdown-list-wrap"><ol class="markdown-list"><li>a</li>'
+        + '<li><strong>b</strong></li><li><a href="/tag/c">#c</a></li></ol></div>after',
+    )
+    expect(linkify('- a\n- [b](https://example.com)\n- c')).toBe(
+      '<div class="markdown-list-wrap"><ul class="markdown-list"><li>a</li>'
+        + '<li><a href="https://example.com" title="https://example.com" target="_blank" '
+        + 'rel="nofollow ugc noopener noreferrer">b</a></li><li>c</li></ul></div>',
+    )
+    expect(linkify('> 1. a\n> 2. b')).toBe(
+      '<div class="post-quote"><div class="markdown-list-wrap"><ol class="markdown-list">'
+        + '<li>a</li><li>b</li></ol></div></div>',
+    )
+    expect(linkify('```text\n- not a list\n```')).toBe('<code class="code-fence">- not a list</code>')
+  })
   test('renders slash-delimited italics in posts without affecting URLs', () => {
     expect(linkify('/italics/ and https://example.com/a/b'))
       .toBe(

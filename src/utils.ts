@@ -602,6 +602,38 @@ function markdownHorizontalRule(body: string) {
   return null
 }
 
+type MarkdownList = {
+  index: number
+  lastIndex: number
+  ordered: boolean
+  start: number
+  items: string[]
+}
+
+function markdownList(body: string): MarkdownList | null {
+  const lines = body.split('\n')
+  const fencedRanges = linkTokens(body).filter(token => token.kind === 'code-fence' || token.kind === 'latex-fence')
+  let offset = 0
+  for (let index = 0; index < lines.length; index++) {
+    const lineOffset = offset
+    offset += lines[index].length + 1
+    if (fencedRanges.some(range => lineOffset >= range.index && lineOffset < range.lastIndex)) continue
+    const first = /^( {0,3})(?:(\d+)\.|([-+*]))[ \t]+(.+)$/.exec(lines[index])
+    if (!first) continue
+    const ordered = first[2] !== undefined
+    const items = [first[4]]
+    let endLine = index + 1
+    for (; endLine < lines.length; endLine++) {
+      const item = /^( {0,3})(?:(\d+)\.|([-+*]))[ \t]+(.+)$/.exec(lines[endLine])
+      if (!item || (item[2] !== undefined) !== ordered) break
+      items.push(item[4])
+    }
+    const lastIndex = lines.slice(0, endLine).reduce((length, line) => length + line.length + 1, 0) - 1
+    return { index: lineOffset, lastIndex, ordered, start: Number(first[2] || 1), items }
+  }
+  return null
+}
+
 function renderedReference(token: string, mentionBios: Record<string, string>,
   mentionNoteCounts: Record<string, number>, hashtagCounts: Record<string, number>, highlightTerms: string[],
   navigationQuery = '', popover?: ReferencePopoverOptions)
@@ -736,7 +768,8 @@ export function linkify(body: string, mentionBios: Record<string, string> = {}, 
       }
       const rendered = linkify(group.join('\n'), mentionBios, highlightTerms, appUrl, flags, navigationQuery,
         hashtagCounts, mentionNoteCounts, popover, false)
-      const quoteTag = rendered.includes('<div class="markdown-table-wrap">') || rendered.includes('<hr ') ? 'div' : 'span'
+      const quoteTag = rendered.includes('<div class="markdown-table-wrap">')
+        || rendered.includes('<div class="markdown-list-wrap">') || rendered.includes('<hr ') ? 'div' : 'span'
       html += quoted ? `<${quoteTag} class="post-quote">${rendered}</${quoteTag}>` : rendered
     }
     return html
@@ -747,6 +780,22 @@ export function linkify(body: string, mentionBios: Record<string, string> = {}, 
       hashtagCounts, mentionNoteCounts, popover, false)
       + '<hr class="markdown-hr">'
       + linkify(body.slice(horizontalRule.lastIndex), mentionBios, highlightTerms, appUrl, flags, navigationQuery,
+        hashtagCounts, mentionNoteCounts, popover, false)
+  }
+  const list = renderBlocks ? markdownList(body) : null
+  if (list) {
+    const tag = list.ordered ? 'ol' : 'ul'
+    const start = list.ordered && list.start !== 1 ? ` start="${list.start}"` : ''
+    const renderedList = `<div class="markdown-list-wrap"><${tag} class="markdown-list"${start}>`
+      + list.items.map(item => `<li>${linkify(item, mentionBios, highlightTerms, appUrl, flags, navigationQuery,
+        hashtagCounts, mentionNoteCounts, popover, false, false)}</li>`).join('')
+      + `</${tag}></div>`
+    const beforeList = list.index > 0 && body[list.index - 1] === '\n' ? list.index - 1 : list.index
+    const afterList = body[list.lastIndex] === '\n' ? list.lastIndex + 1 : list.lastIndex
+    return linkify(body.slice(0, beforeList), mentionBios, highlightTerms, appUrl, flags, navigationQuery,
+      hashtagCounts, mentionNoteCounts, popover, false)
+      + renderedList
+      + linkify(body.slice(afterList), mentionBios, highlightTerms, appUrl, flags, navigationQuery,
         hashtagCounts, mentionNoteCounts, popover, false)
   }
   const table = renderBlocks ? markdownTable(body) : null

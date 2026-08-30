@@ -2871,6 +2871,20 @@ body.corners-round a.button {
   border-top: var(--hairline) solid var(--soft);
 }
 
+.post-body .markdown-list-wrap {
+  margin: 0;
+  white-space: normal;
+}
+
+.post-body .markdown-list {
+  margin: 0;
+  padding-left: 2em;
+}
+
+.post-body .markdown-list li {
+  padding-left: var(--space-1);
+}
+
 .post-body .markdown-table-wrap {
   position: relative;
   z-index: 2;
