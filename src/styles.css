@@ -88,6 +88,9 @@ html.scroll-instant {
 }
 
 .emoji,
+.nav-mood,
+.post-mood,
+.profile-mood,
 .posting-help-emoji-panel {
   font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI Symbol", "Noto Sans Symbols 2", sans-serif;
 }
