@@ -35,7 +35,7 @@ export function HotFeed(
       )}
       {feed.posts.length
         ? <FeedThreads posts={feed.posts} user={user} returnPath={returnPath} expandedRootId={expandedRootId}
-          promoteAncestors />
+          expandedByDefault={!user && path === '/hot'} promoteAncestors />
         : feed.page === 1
         ? <GlobalFeedEmpty user={user} />
         : (

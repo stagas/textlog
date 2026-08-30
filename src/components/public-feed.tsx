@@ -46,6 +46,7 @@ export function PublicFeed(
       {feed.posts.length
         ? (
           <FeedThreads posts={feed.posts} user={user} returnPath={returnPath} promoteAncestors
+            expandedByDefault={!user && (path === '/all' || path === '/any')}
             expandedRootId={expandedRootId} contextUnreadPostIds={unreadPostIds}
             contextDirectedUnreadPostIds={directedUnreadPostIds} />
         )

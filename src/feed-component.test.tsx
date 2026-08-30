@@ -228,6 +228,36 @@ test('anonymous public feeds omit view toggles', () => {
   expect(hot).not.toContain('>flat</a>')
 })
 
+test('anonymous hot, all, and any feeds expand conversations by default', () => {
+  const root = { id: 1, user_id: 2, parent_id: null, body: 'root', created_at: '2026-08-19 09:00:00',
+    deleted_at: null, handle: 'alice', reply_count: 3 }
+  const replies = [1, 2, 3].map((offset) => ({
+    id: offset + 1,
+    user_id: offset + 2,
+    parent_id: root.id,
+    body: `reply ${offset}`,
+    created_at: `2026-08-19 ${9 + offset}:00:00`,
+    deleted_at: null,
+    handle: `person-${offset}`,
+    reply_count: 0,
+    parent: root,
+  }))
+  const feed = { posts: [root, ...replies], page: 1, totalItems: 4, totalPages: 1 }
+
+  for (const html of [
+    renderToStaticMarkup(<HotFeed user={null} feed={feed} />),
+    renderToStaticMarkup(<PublicFeed path="/all" feed={feed} />),
+    renderToStaticMarkup(<PublicFeed path="/any" feed={feed} />),
+  ]) {
+    expect(html).toContain('id="feed-thread-fold-1"')
+    expect(html).not.toContain('id="feed-thread-fold-1" checked=""')
+  }
+
+  const signedIn = renderToStaticMarkup(<PublicFeed user={{ id: 1, handle: 'reader', email: 'reader@example.com',
+    bio: '' }} path="/all" feed={feed} />)
+  expect(signedIn).toContain('id="feed-thread-fold-1" checked=""')
+})
+
 test('feed tree roots retain ASCII-art rendering', () => {
   const post = { id: 20, user_id: 2, parent_id: null, body: ' /\\_/\\\n( o.o )\n#ascii',
     created_at: '2026-08-19 10:00:00', deleted_at: null, handle: 'alice', reply_count: 0 }

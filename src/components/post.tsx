@@ -1280,10 +1280,11 @@ export function ThreadReplies(
 /** Render feed posts as conversations, filling in any available ancestor context. */
 export function FeedThreads(
   { posts, user, returnPath, contextUnreadPostIds, contextDirectedUnreadPostIds, highlightTerms = [],
-    hideTopMeta = false, promoteAncestors = false, expandedRootId }: { posts: PostView[]; user: User | null;
+    hideTopMeta = false, promoteAncestors = false, expandedRootId, expandedByDefault = false }: {
+      posts: PostView[]; user: User | null;
       returnPath: string; contextUnreadPostIds?: ReadonlySet<number>;
       contextDirectedUnreadPostIds?: ReadonlySet<number>; highlightTerms?: string[]; hideTopMeta?: boolean;
-      promoteAncestors?: boolean | 'all'; expandedRootId?: number },
+      promoteAncestors?: boolean | 'all'; expandedRootId?: number; expandedByDefault?: boolean },
 ) {
   if (!posts.length) return null
   const treePosts = [...posts]
@@ -1432,7 +1433,7 @@ export function FeedThreads(
         const canCollapse = visibleReplies > collapsedPreview.length
         const continuesElsewhere = (post.reply_count || 0) > visibleReplies
         const foldControlId = canCollapse ? `feed-thread-fold-${post.id}` : undefined
-        const collapsed = canCollapse && expandedRootId !== post.id
+        const collapsed = canCollapse && !expandedByDefault && expandedRootId !== post.id
         const expandedReturnPath = (() => {
           const target = new URL(returnPath, 'http://textlog.local')
           target.searchParams.set('expand', String(post.id))
