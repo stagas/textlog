@@ -62,8 +62,11 @@ export function semanticAction(method: string, path: string) {
   return actionRoutes.find(([pattern]) => pattern.test(pathname))?.[1] ?? 'http.mutate'
 }
 
-export function shouldLogHttp(path: string, status: number, isCrawler = false, authenticated = false) {
-  return !isCrawler && (authenticated || Bun.env.LOG_ANONYMOUS !== 'false')
+export function shouldLogHttp(path: string, status: number, isCrawler = false, authenticated = false,
+  campaign = false)
+{
+  return !isCrawler && (authenticated || Bun.env.LOG_ANONYMOUS !== 'false'
+    || campaign && Bun.env.LOG_CAMPAIGN === 'true')
     && (!['/__dev/restart', '/navigation-check'].includes(path) || status >= 400)
 }
 

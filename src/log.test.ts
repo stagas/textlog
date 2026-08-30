@@ -105,6 +105,24 @@ describe('shouldLogHttp', () => {
       else Bun.env.LOG_ANONYMOUS = original
     }
   })
+
+  test.serial('can preserve campaign requests while anonymous logging is disabled', () => {
+    const originalAnonymous = Bun.env.LOG_ANONYMOUS
+    const originalCampaign = Bun.env.LOG_CAMPAIGN
+    Bun.env.LOG_ANONYMOUS = 'false'
+    Bun.env.LOG_CAMPAIGN = 'true'
+    try {
+      expect(shouldLogHttp('/', 200, false, false, false)).toBe(false)
+      expect(shouldLogHttp('/', 200, false, false, true)).toBe(true)
+      expect(shouldLogHttp('/', 200, true, false, true)).toBe(false)
+    }
+    finally {
+      if (originalAnonymous === undefined) delete Bun.env.LOG_ANONYMOUS
+      else Bun.env.LOG_ANONYMOUS = originalAnonymous
+      if (originalCampaign === undefined) delete Bun.env.LOG_CAMPAIGN
+      else Bun.env.LOG_CAMPAIGN = originalCampaign
+    }
+  })
 })
 
 test('feed request logs preserve the route and format without exposing the key', () => {

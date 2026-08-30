@@ -24,6 +24,7 @@ export type StartupConfiguration = {
   trustProxy: boolean
   logColor: boolean
   logAnonymous: boolean
+  logCampaign: boolean
   logUserAgent: boolean
   moderationDisabled: boolean
   moderationCategoryThresholds: string
@@ -254,6 +255,7 @@ export function validateStartupConfiguration(env: Environment = Bun.env, options
   const trustProxy = booleanValue(env, 'TRUST_PROXY', problems)
   const logColor = booleanValue(env, 'LOG_COLOR', problems, true)
   const logAnonymous = booleanValue(env, 'LOG_ANONYMOUS', problems, true)
+  const logCampaign = booleanValue(env, 'LOG_CAMPAIGN', problems, false)
   const logUserAgent = booleanValue(env, 'LOG_USER_AGENT', problems, true)
 
   const host = env.HOST?.trim() || '0.0.0.0'
@@ -286,6 +288,7 @@ export function validateStartupConfiguration(env: Environment = Bun.env, options
     trustProxy,
     logColor,
     logAnonymous,
+    logCampaign,
     logUserAgent,
     moderationDisabled,
     moderationCategoryThresholds,

@@ -13,6 +13,7 @@ Bun.env.DEV_SEND_EMAILS = String(configuration.devSendEmails)
 Bun.env.TRUST_PROXY = String(configuration.trustProxy)
 Bun.env.LOG_COLOR = String(configuration.logColor)
 Bun.env.LOG_ANONYMOUS = String(configuration.logAnonymous)
+Bun.env.LOG_CAMPAIGN = String(configuration.logCampaign)
 Bun.env.LOG_USER_AGENT = String(configuration.logUserAgent)
 Bun.env.MODERATION_DISABLED = String(configuration.moderationDisabled)
 Bun.env.MODERATION_CATEGORY_THRESHOLDS = configuration.moderationCategoryThresholds

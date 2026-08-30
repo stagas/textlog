@@ -1,6 +1,6 @@
-import { applyHtmlCachePolicy, canonicalizeCrawlerLinks, crawlerCanonicalRedirect, GLOBAL_REQUEST_BODY_LIMIT,
-  isCrawlerRequest, isSameOriginRequest, limitedFormData, pwaStandaloneCookie, RequestBodyError, requiresSameOrigin,
-  safeLocalPath, securityHeaders } from './http'
+import { applyHtmlCachePolicy, campaignAttribution, canonicalizeCrawlerLinks, crawlerCanonicalRedirect,
+  GLOBAL_REQUEST_BODY_LIMIT, isCrawlerRequest, isSameOriginRequest, limitedFormData, pwaStandaloneCookie,
+  RequestBodyError, requiresSameOrigin, safeLocalPath, securityHeaders } from './http'
 
 import { Hono } from 'hono'
 import { bodyLimit } from 'hono/body-limit'
@@ -323,7 +323,8 @@ app.use('*', async (c, next) => {
   finally {
     const url = new URL(c.req.url)
     const path = url.pathname
-    if (shouldLogHttp(path, c.res.status, isCrawlerRequest(c.req.raw), Boolean(username))) {
+    const campaign = url.searchParams.has('reddit') || campaignAttribution(c.req.raw) === 'reddit'
+    if (shouldLogHttp(path, c.res.status, isCrawlerRequest(c.req.raw), Boolean(username), campaign)) {
       logHttp(c.req.method, redactHttpPath(`${path}${url.search}`), c.res.status, performance.now() - started,
         c.req.header(clientIpHeaderName()) || '-', username, c.req.header('user-agent') || '-',
         c.res.headers.get('x-feed-cache'))
