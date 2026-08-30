@@ -298,6 +298,16 @@ describe('in-memory stylesheet', () => {
     )
   })
 
+  test('keeps post tables above tappable overlays and horizontally scrollable', async () => {
+    const css = await Bun.file(new URL('./styles.css', import.meta.url)).text()
+    expect(css).toContain(
+      '.post-body .markdown-table-wrap {\n  position: relative;\n  z-index: 2;\n  display: block;\n'
+        + '  max-width: 100%;\n  margin: .5lh 0;\n  overflow-x: auto;\n'
+        + '  overscroll-behavior-inline: contain;\n  touch-action: pan-x pan-y;',
+    )
+    expect(css).toContain('-webkit-overflow-scrolling: touch;')
+  })
+
   test('makes header navigation actions full-height hit targets', async () => {
     const css = await Bun.file(new URL('./styles.css', import.meta.url)).text()
     expect(css).toContain('.brand {\n  color: var(--ink);\n  display: inline-flex;\n  align-self: stretch;')

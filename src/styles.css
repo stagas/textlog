@@ -2844,11 +2844,16 @@ body.corners-round a.button {
 }
 
 .post-body .markdown-table-wrap {
+  position: relative;
+  z-index: 2;
   display: block;
   max-width: 100%;
   margin: .5lh 0;
   overflow-x: auto;
+  overscroll-behavior-inline: contain;
+  touch-action: pan-x pan-y;
   white-space: normal;
+  -webkit-overflow-scrolling: touch;
 }
 
 .post-body .markdown-table {
