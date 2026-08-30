@@ -169,6 +169,16 @@ function PostingHelpTabs({ search }: { search?: PostingSuggestionSearch | null }
         <div>
           <dd>
             <code>
+              Name&nbsp; <b>|</b> Status <b>|</b> Count<br />
+              ----- <b>|</b> :----- <b>|</b> ----:<br />
+              notes <b>|</b> ready&nbsp; <b>|</b> &nbsp;&nbsp;&nbsp;&nbsp;3
+            </code>
+          </dd>
+          <dt>Tables</dt>
+        </div>
+        <div>
+          <dd>
+            <code>
               <b>|</b>redacted<b>|</b>
             </code>
           </dd>

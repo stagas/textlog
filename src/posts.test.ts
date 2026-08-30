@@ -141,8 +141,8 @@ describe('post persistence', () => {
     )
   })
   test('renders GFM tables with alignment and rich post content in cells', () => {
-    const html = linkify('| Person | Status | Score |\n| :--- | :---: | ---: |\n'
-      + '| @reader | **ready** | 42 |', { reader: 'Reader bio' }, [], undefined, undefined, '', {}, {}, {
+    const html = linkify('Person | Status | Score\n:--- | :---: | ---:\n'
+      + '@reader | **ready** | 42', { reader: 'Reader bio' }, [], undefined, undefined, '', {}, {}, {
       signedIn: true,
       formPrefix: 'table',
     })

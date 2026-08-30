@@ -413,6 +413,11 @@ test('posting helpers are searchable details and show copyable highlighted resul
   expect(html).toContain('<dt>Redacted</dt>')
   expect(html).toContain('<b>&gt;</b> text')
   expect(html).toContain('<dt>Quote</dt>')
+  expect(html).toContain('<dt>Tables</dt>')
+  expect(html).toContain(
+    'Name\u00a0 <b>|</b> Status <b>|</b> Count<br/>----- <b>|</b> :----- <b>|</b> ----:<br/>'
+      + 'notes <b>|</b> ready\u00a0 <b>|</b> \u00a0\u00a0\u00a0\u00a03',
+  )
   expect(html.indexOf('<dt>Inline code</dt>')).toBeLessThan(html.indexOf('<dt>Code fences</dt>'))
   expect(html.indexOf('<dt>Redacted</dt>')).toBeLessThan(html.indexOf('<dt>Inline code</dt>'))
   expect(html.indexOf('<dt>Code fences</dt>')).toBeLessThan(html.indexOf('<dt>Inline LaTeX</dt>'))
