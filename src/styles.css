@@ -454,6 +454,10 @@ header>nav>a:not(.button),
   display: none;
 }
 
+.nav-mood {
+  margin-left: 1px;
+}
+
 .account-menu-popover {
   position: absolute;
   z-index: 10;

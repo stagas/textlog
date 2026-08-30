@@ -103,13 +103,15 @@ export function Layout({
           {mobile
             ? (
               <details className="account-menu">
-                <summary className="account-menu-handle">@{user.handle}</summary>
+                <summary className="account-menu-handle">@{user.handle}{user.mood
+                  && <span className="nav-mood">{user.mood}</span>}</summary>
                 {accountMenuPopover}
               </details>
             )
             : (
               <div className="account-menu">
-                <a className="account-menu-handle" href={profileHref}>@{user.handle}</a>
+                <a className="account-menu-handle" href={profileHref}>@{user.handle}{user.mood
+                  && <span className="nav-mood">{user.mood}</span>}</a>
                 {accountMenuPopover}
               </div>
             )}
@@ -172,7 +174,7 @@ export function Layout({
           </>
         )}
         {mobile && <link href="https://fonts.cdnfonts.com/css/dejavu-sans-mono" rel="stylesheet" />}
-        <link rel="stylesheet" href="/styles.css?v=1146" />
+        <link rel="stylesheet" href="/styles.css?v=1147" />
         <style>{themeCss}</style>
       </head>
       <body
