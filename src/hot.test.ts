@@ -126,6 +126,22 @@ describe('freshness-forward hot feed ranking', () => {
     expect(ids).toContain(1)
   })
 
+  test('penalizes posts containing meta and each of its aliases', () => {
+    database.run(`INSERT INTO users(id,handle) VALUES(2,'r2'),(3,'r3'),(4,'r4'),(5,'r5')`)
+    for (const [id, tag] of [[10, null], [20, 'meta'], [30, 'tlog'], [40, 'textlog']] as const) {
+      post(1, id, '2026-08-03 10:00:00')
+      post(2, id + 1, '2026-08-03 11:00:00', id)
+      if (tag) database.query('INSERT INTO post_hashtags VALUES(?,?)').run(id, tag)
+    }
+
+    const results = getHotPosts(database, 20, null, asOf)
+    const ordinaryScore = results.find(result => result.id === 10)!.hot_score
+    expect(results.map(result => result.id)).toEqual([10, 40, 30, 20])
+    for (const id of [20, 30, 40]) {
+      expect(results.find(result => result.id === id)!.hot_score).toBeCloseTo((ordinaryScore - 1) * 0.5)
+    }
+  })
+
   test('requires independent engagement and ignores author-only replies', () => {
     post(1, 1, '2026-08-03 10:00:00')
     post(1, 2, '2026-08-03 11:00:00', 1)

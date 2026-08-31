@@ -1,4 +1,5 @@
 import type { Database } from 'bun:sqlite'
+import { META_HASHTAGS } from './meta-thread'
 import { excludesWhisperPosts } from './whisper'
 
 export type HotPost = {
@@ -27,12 +28,13 @@ export type HotCursor = {
   direction: 'next' | 'previous'
 }
 
-export const hotRankingVersion = 123
+export const hotRankingVersion = 124
 const cursorVersion = hotRankingVersion
 const activityHalfLifeHours = 6
 const postWeight = 0
 const directReplyWeight = 2
 const pollVoteWeight = 2
+const metaPostHotMultiplier = 0.5
 
 function hasHotTable(database: Database) {
   return Boolean(database.query('SELECT 1 FROM sqlite_master WHERE type=\'table\' AND name=\'post_hot\'').get())
@@ -404,7 +406,10 @@ export function getHotPosts(
         *CASE WHEN COALESCE(poll_counts.vote_count,0)>0 THEN
           0.2+0.8*pow(0.5,max(0,
             (julianday(ranking_time.as_of)-julianday(poll_counts.latest_vote_at))*24)/24.0)
-          ELSE 1 END END hot_score
+          ELSE 1 END
+        *CASE WHEN EXISTS (SELECT 1 FROM post_hashtags meta_tag WHERE meta_tag.post_id=p.id
+          AND meta_tag.tag IN (${META_HASHTAGS.map(tag => `'${tag}'`).join(',')}))
+          THEN ${metaPostHotMultiplier} ELSE 1 END END hot_score
       FROM post_hot h JOIN posts p ON p.id=h.post_id CROSS JOIN ranking_time
       LEFT JOIN poll_counts ON poll_counts.post_id=h.post_id
       WHERE p.parent_id IS NULL
