@@ -10,7 +10,7 @@ import { enrichPosts, loadBioReferenceData, visibleTagFollowerCounts, visibleUse
 import type { PersonalizedFeedData, PersonalizedTimelineRow, User } from './types'
 import { isWhisperThread, whisperThreadRelevantToViewer, whisperThreadTargetsViewer } from './whisper'
 
-export const PERSONALIZED_FEED_SNAPSHOT_VERSION = 38
+export const PERSONALIZED_FEED_SNAPSHOT_VERSION = 39
 const unreadCountProjection = new Map<string, number>()
 const MAX_UNREAD_COUNT_PROJECTIONS = 2_048
 

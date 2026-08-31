@@ -30,8 +30,12 @@ const rootedReplies = <T extends ConversationPost>(ordered: T[], root: T, recent
   const weightedIds = new Set(weighted.map(reply => reply.id))
   const selected = ordered.filter(reply => weightedIds.has(reply.id))
   const selectedIds = new Set([root.id, ...selected.map(reply => reply.id)])
-  const needsParentContext = selected.some(reply => reply.parent_id !== null && !selectedIds.has(reply.parent_id))
-  if (!needsParentContext) {
+  const missingParentId = selected.find(reply => reply.parent_id !== null && !selectedIds.has(reply.parent_id))?.parent_id
+  if (missingParentId != null) {
+    const missingParent = ordered.find(reply => reply.id === missingParentId && reply.parent_id !== null)
+    if (missingParent) selected.push(missingParent)
+  }
+  else {
     const connectedOlderReply = ordered.find(reply => reply.parent_id !== null
       && !selectedIds.has(reply.id) && selectedIds.has(reply.parent_id))
     if (connectedOlderReply) selected.push(connectedOlderReply)

@@ -224,6 +224,34 @@ test('My Feed keeps five replies for expansion after rebuilding its read snapsho
   expect(read.timeline.find(row => row.id === 2904)?.renderedPost?.feed_collapsed_preview).toBeTrue()
 })
 
+test('My Feed keeps post 2958 direct reply 2961 as the weighted preview anchor', () => {
+  const database = new Database(':memory:', { strict: true })
+  runMigrations(database)
+  database.run(`INSERT INTO users(id,handle,email,password,bio) VALUES
+      (1,'stagas','stagas@example.com','!',''),
+      (2,'evnm','evnm@example.com','!','');
+    INSERT INTO follows(follower_id,following_id,created_at) VALUES(1,2,'2026-08-01 08:00:00');
+    INSERT INTO posts(id,user_id,parent_id,body,created_at) VALUES
+      (2958,2,NULL,'root','2026-08-31 18:53:23'),
+      (2961,1,2958,'direct reply','2026-08-31 19:54:48'),
+      (2962,2,2961,'deep one','2026-08-31 19:55:17'),
+      (2963,1,2962,'deep two','2026-08-31 19:57:35'),
+      (2964,2,2963,'deep three','2026-08-31 19:58:44'),
+      (2965,1,2964,'latest reply','2026-08-31 20:00:49');`)
+  const viewer: User = { id: 1, handle: 'stagas', email: 'stagas@example.com', bio: '' }
+
+  loadPersonalizedFeed(database, viewer, 1, 20, false, '/my-feed')
+  const feed = loadPersonalizedFeed(database, viewer, 1, 20, false, '/my-feed', false)
+
+  expect(feed.timeline.filter(row => row.id).map(row => row.id))
+    .toEqual([2958, 2965, 2964, 2963, 2962, 2961])
+  expect(feed.timeline.find(row => row.id === 2965)?.renderedPost?.feed_collapsed_preview).toBeTrue()
+  expect(feed.timeline.find(row => row.id === 2961)?.renderedPost?.feed_collapsed_preview).toBeTrue()
+  for (const id of [2962, 2963, 2964]) {
+    expect(feed.timeline.find(row => row.id === id)?.renderedPost?.feed_collapsed_preview).toBeUndefined()
+  }
+})
+
 test('For You keeps expandable parent context using the same two-to-five reply rule as Latest', () => {
   const database = new Database(':memory:', { strict: true })
   runMigrations(database)

@@ -59,7 +59,7 @@ test('Latest retains a root when a fresh direct reply anchors the newest nested 
   ]).keepsRoot).toBeFalse()
 })
 
-test('Latest bounds a recent nested reply path in the unified projection', () => {
+test('Latest bounds a recent nested reply path at five while filling missing parent context', () => {
   const conversation = [
     { id: 6, parent_id: 5, created_at: '2026-08-27 19:35:47' },
     { id: 5, parent_id: 4, created_at: '2026-08-27 19:09:50' },
@@ -70,7 +70,7 @@ test('Latest bounds a recent nested reply path in the unified projection', () =>
     { id: 1, parent_id: null, created_at: '2026-08-27 17:34:29' },
   ]
 
-  expect(projectRecentConversation(conversation).replies.map(post => post.id)).toEqual([6, 5, 7, 4])
+  expect(projectRecentConversation(conversation).replies.map(post => post.id)).toEqual([6, 5, 7, 4, 2])
 })
 
 test('Latest groups fresh branches under their shared parent without promoting stale siblings', () => {
@@ -145,4 +145,20 @@ test('short rooted conversations retain an intermediate for expansion but omit i
   expect(projection.keepsRoot).toBeTrue()
   expect(projection.replies.map(post => post.id)).toEqual([2945, 2944, 2943])
   expect([...projection.previewReplyIds]).toEqual([2945, 2943])
+})
+
+test('rooted conversations use the fifth expansion slot for a missing direct ancestor', () => {
+  const conversation = [
+    { id: 2965, parent_id: 2964, created_at: '2026-08-31 20:00:49' },
+    { id: 2964, parent_id: 2963, created_at: '2026-08-31 19:58:44' },
+    { id: 2963, parent_id: 2962, created_at: '2026-08-31 19:57:35' },
+    { id: 2962, parent_id: 2961, created_at: '2026-08-31 19:55:17' },
+    { id: 2961, parent_id: 2958, created_at: '2026-08-31 19:54:48' },
+    { id: 2958, parent_id: null, created_at: '2026-08-31 18:53:23' },
+  ]
+  const projection = projectRecentConversation(conversation)
+
+  expect(projection.keepsRoot).toBeTrue()
+  expect(projection.replies.map(post => post.id)).toEqual([2965, 2964, 2963, 2962, 2961])
+  expect([...projection.previewReplyIds]).toEqual([2965, 2961])
 })
