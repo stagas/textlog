@@ -3935,6 +3935,7 @@ test('provider-positive posts render behind an accessible content warning', () =
   expect(html).toContain('class="content-warning-toggle"')
   expect(html).toContain('type="checkbox"')
   expect(html).toContain('class="content-warning-body"')
+  expect(html).toContain('class="content-warning-mask" aria-hidden="true">░░░░░░░░░ ░░░░</div>')
   expect(html).toContain('class="content-warning-label">warning:</span> possible self-harm/intent content<br/>')
   expect(html).toContain('click to view anyway')
   expect(html.indexOf('content-warning-label')).toBeLessThan(html.indexOf('Sensitive note'))

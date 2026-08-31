@@ -641,19 +641,20 @@ describe('in-memory stylesheet', () => {
     )
   })
 
-  test('strongly blurs warned content and removes the warning after reveal', async () => {
+  test('masks warned content and removes the warning after reveal', async () => {
     const css = await Bun.file(new URL('./styles.css', import.meta.url)).text()
-    expect(css).toContain('filter: blur(.35rem);')
-    expect(css).toContain('opacity: .8;')
+    expect(css).not.toContain('filter: blur(.35rem);')
+    expect(css).toContain('.content-warning-mask {')
+    expect(css).toContain('white-space: pre-wrap;')
     expect(css).not.toContain('max-height: 8rem;')
     expect(css).toContain('.content-warning-overlay > span {')
-    expect(css).toContain('box-shadow: 0 0 var(--space-2) var(--space-1) var(--bg);')
-    expect(css).toContain('.parent-quote .content-warning-overlay > span {\n  background: var(--quote-surface);')
+    expect(css).toContain('background: transparent;')
+    expect(css).not.toContain('.parent-quote .content-warning-overlay > span {')
     expect(css).toContain('.content-warning-action {\n  color: var(--accent);\n  padding-inline: 0;\n  padding-bottom: 1px;\n  border-bottom: var(--hairline) solid var(--link-border);')
     expect(css).toContain('grid-area: 1 / 1;')
     expect(css).toContain('font-size: var(--post-body-font-size, 0.8125rem);')
-    expect(css).toContain('box-shadow: 0 0 var(--space-2) var(--space-1) var(--quote-surface);')
     expect(css).toContain('.content-warning-toggle:checked + .content-warning-overlay {\n  display: none;')
+    expect(css).toContain('.content-warning-toggle:checked ~ .content-warning-mask {\n  display: none;')
     expect(css).not.toContain('Content revealed.')
   })
 

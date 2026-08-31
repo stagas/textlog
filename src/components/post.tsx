@@ -11,8 +11,13 @@ import { displayBio, displayPostBody, fmtFull, linkify, referenceFormId } from '
 import { enterHref } from './auth-links'
 import { MetaRow } from './meta'
 
-function ContentWarning({ p, controlId, showImmediately = false, children }: {
+function maskedContent(body: string) {
+  return Array.from(body, character => /\s/u.test(character) ? character : '░').join('')
+}
+
+function ContentWarning({ p, body, controlId, showImmediately = false, children }: {
   p: Pick<PostView, 'moderation_category' | 'moderation_score'>
+  body: string
   controlId: string
   showImmediately?: boolean
   children: React.ReactNode
@@ -27,6 +32,7 @@ function ContentWarning({ p, controlId, showImmediately = false, children }: {
           <span className="content-warning-action">click to view anyway</span>
         </span>
       </label>
+      <div className="content-warning-mask" aria-hidden="true">{maskedContent(body)}</div>
       <div className="content-warning-body">{children}</div>
     </div>
   )
@@ -501,7 +507,7 @@ export function PreviewPost({ p, user }: { p: PostView; user?: User }) {
             user={user || null} currentHandle={user?.handle} referenceData={p.bio_reference} />}
         <span className="post-context">wrote:</span>
       </MetaRow>
-      <ContentWarning p={p} controlId={`${formPrefix}-content-warning`}>
+      <ContentWarning p={p} body={p.body} controlId={`${formPrefix}-content-warning`}>
         <div className={`post-body${containsAsciiArt(p.body) ? ' ascii-art' : ''}${endsWithCodeFence(p.body)
           ? ' ends-code-fence' : ''}`} dangerouslySetInnerHTML={{
           __html: linkify(displayPostBody(renderedPollBody(p.body)), p.mention_bios, [], undefined, renderFlags(p), '',
@@ -804,7 +810,7 @@ export function Post({
           )}
         </MetaRow>
       )}
-      <ContentWarning p={p} controlId={`${formPrefix}-content-warning`}
+      <ContentWarning p={p} body={p.body} controlId={`${formPrefix}-content-warning`}
         showImmediately={user?.show_moderated_content === 1 || suppressContentWarning}>
         <div className={`post-body${isAsciiArt ? ' ascii-art' : ''}${endsWithCodeFence(p.body)
           ? ' ends-code-fence' : ''}`} dangerouslySetInnerHTML={{
@@ -922,7 +928,8 @@ export function Post({
                   )}
                   {!hasTappableParent && <a className="postdate" href={parentDetailPath} rel={navigationRel}>read</a>}
                 </MetaRow>
-                <ContentWarning p={parent} controlId={`${formPrefix}-parent-${parent.id}-content-warning`}
+                <ContentWarning p={parent} body={parent.body}
+                  controlId={`${formPrefix}-parent-${parent.id}-content-warning`}
                   showImmediately={user?.show_moderated_content === 1 || suppressContentWarning}>
                   <div className={`post-body${containsAsciiArt(parent.body) ? ' ascii-art' : ''}${
                     endsWithCodeFence(parent.body) ? ' ends-code-fence' : ''}`}
