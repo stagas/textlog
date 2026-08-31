@@ -767,6 +767,12 @@ header>nav>a:not(.button),
   line-height: 1.55;
 }
 
+.post.internal-post-card > .content-warning {
+  --post-body-font-size: 0.75rem;
+  --post-body-line-height: 1.55;
+  margin-top: var(--space-2);
+}
+
 .post.internal-post-card > .post-body.ascii-art {
   font-family: var(--font-monospace);
   line-height: 1.15;

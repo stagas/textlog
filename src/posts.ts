@@ -314,12 +314,14 @@ export function enrichPosts(database: Database, posts: PostView[], viewerId = -1
       supportsLinkedPostPreviews
         ? `lp.linked_post_id,
       linked.user_id linked_user_id,linked.parent_id linked_parent_id,linked.body linked_body,
+      linked.moderation_category linked_moderation_category,linked.moderation_score linked_moderation_score,
       ${supportsExecutionOutput ? 'linked.execution_output' : 'NULL'} linked_execution_output,
       linked_user.handle linked_handle,linked_parent.user_id linked_parent_user_id,
       linked_parent_user.handle linked_parent_handle,
       (SELECT count(*) FROM posts reply WHERE reply.parent_id=linked.id AND reply.deleted_at IS NULL) linked_reply_count,
       EXISTS(SELECT 1 FROM post_hashtags lock_tag WHERE lock_tag.post_id=linked.id AND lock_tag.tag='lock') linked_locked`
         : `NULL linked_post_id,NULL linked_user_id,NULL linked_parent_id,NULL linked_body,
+      NULL linked_moderation_category,NULL linked_moderation_score,
       NULL linked_execution_output,NULL linked_handle,
       NULL linked_parent_user_id,NULL linked_parent_handle,0 linked_reply_count,0 linked_locked`
     }
@@ -352,6 +354,8 @@ export function enrichPosts(database: Database, posts: PostView[], viewerId = -1
       linked_user_id: number | null
       linked_parent_id: number | null
       linked_body: string | null
+      linked_moderation_category: string | null
+      linked_moderation_score: number | null
       linked_execution_output: string | null
       linked_handle: string | null
       linked_parent_user_id: number | null
@@ -387,6 +391,7 @@ export function enrichPosts(database: Database, posts: PostView[], viewerId = -1
       linkedPostId: row.linked_post_id || undefined,
       linkedPost: row.linked_post_id && row.linked_user_id && row.linked_body !== null && row.linked_handle
         ? { id: row.linked_post_id, user_id: row.linked_user_id, parent_id: row.linked_parent_id, body: row.linked_body,
+          moderation_category: row.linked_moderation_category, moderation_score: row.linked_moderation_score,
           execution_output: row.linked_execution_output, handle: row.linked_handle,
           reply_count: row.linked_reply_count, thread_locked: !!row.linked_locked,
           poll: linkedPolls.get(row.linked_post_id), parent: row.linked_parent_user_id && row.linked_parent_handle
@@ -397,6 +402,7 @@ export function enrichPosts(database: Database, posts: PostView[], viewerId = -1
   }
   if (nativeReferenceIds.length) {
     const nativeRows = database.query(`SELECT p.id,p.user_id,p.parent_id,p.body,
+      p.moderation_category,p.moderation_score,
       ${supportsExecutionOutput ? 'p.execution_output' : 'NULL execution_output'},u.handle,
       parent.user_id parent_user_id,parent_user.handle parent_handle,
       (SELECT count(*) FROM posts reply WHERE reply.parent_id=p.id AND reply.deleted_at IS NULL) reply_count,
@@ -407,7 +413,8 @@ export function enrichPosts(database: Database, posts: PostView[], viewerId = -1
       WHERE p.id IN (${nativeReferenceIds.map(() => '?').join(',')})
       AND p.deleted_at IS NULL AND u.deleted_at IS NULL AND u.suspended_at IS NULL`)
       .all(...nativeReferenceIds) as Array<{ id: number; user_id: number; parent_id: number | null; body: string;
-        execution_output: string | null; handle: string; parent_user_id: number | null; parent_handle: string | null;
+        moderation_category: string | null; moderation_score: number | null; execution_output: string | null;
+        handle: string; parent_user_id: number | null; parent_handle: string | null;
         reply_count: number; locked: number }>
     const nativeById = new Map(nativeRows.map(row => [row.id, row]))
     let origin = ''
@@ -424,6 +431,7 @@ export function enrichPosts(database: Database, posts: PostView[], viewerId = -1
         if (previews[url]) continue
         previews[url] = { imageUrl: url, linkedPostId: referenceId, linkedPost: {
           id: row.id, user_id: row.user_id, parent_id: row.parent_id, body: row.body,
+          moderation_category: row.moderation_category, moderation_score: row.moderation_score,
           execution_output: row.execution_output, handle: row.handle, reply_count: row.reply_count,
           thread_locked: !!row.locked, poll: linkedPolls.get(row.id),
           parent: row.parent_user_id && row.parent_handle

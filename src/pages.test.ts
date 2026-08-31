@@ -3267,6 +3267,22 @@ test('Post renders internal link hover cards inside quoted parents', () => {
   expect(quote).toContain('Linked from the quoted parent')
 })
 
+test('internal post hover cards preserve moderation consent masks', () => {
+  const url = 'https://textlog.test/post/12'
+  const html = renderToStaticMarkup(React.createElement(Post, { user: null, p: {
+    id: 1, user_id: 2, parent_id: null, body: url, handle: 'linker',
+    created_at: '2026-08-24 10:00:00', deleted_at: null,
+    link_previews: { [url]: { imageUrl: url, linkedPost: {
+      id: 12, user_id: 1, parent_id: null, body: 'Sensitive hovercard', handle: 'writer',
+      reply_count: 0, thread_locked: false, moderation_category: 'violence', moderation_score: 0.8,
+    } } },
+  } }))
+  const card = html.slice(html.indexOf('class="remote-link-popover internal-post-popover"'))
+  expect(card).toContain('class="content-warning"')
+  expect(card).toContain('class="content-warning-mask" aria-hidden="true">░░░░░░░░░ ░░░░░░░░░</div>')
+  expect(card).toContain('possible violence content')
+})
+
 test('internal post hover cards render linked quizzes with the full Post component', () => {
   const url = 'https://textlog.test/post/12'
   const html = renderToStaticMarkup(React.createElement(Post, { user: null, p: {

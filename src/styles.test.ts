@@ -656,6 +656,8 @@ describe('in-memory stylesheet', () => {
     expect(css).toContain('.content-warning-toggle:checked + .content-warning-overlay {\n  display: none;')
     expect(css).toContain('.content-warning-toggle:checked ~ .content-warning-mask {\n  display: none;')
     expect(css).not.toContain('Content revealed.')
+    expect(css).toContain('.post.internal-post-card > .content-warning {\n  --post-body-font-size: 0.75rem;\n'
+      + '  --post-body-line-height: 1.55;\n  margin-top: var(--space-2);')
   })
 
   test('round corners use global surface tokens while preserving intentional circles', async () => {

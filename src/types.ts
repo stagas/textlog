@@ -3,7 +3,7 @@ export type LinkPreview = { imageUrl: string; imageKey?: string; title?: string;
   renderedPostHtml?: string; linkedPostReturnPath?: string;
   linkedPost?: Pick<PostView,
     'id' | 'user_id' | 'parent_id' | 'body' | 'handle' | 'reply_count' | 'thread_locked' | 'poll'
-    | 'execution_output'> & {
+    | 'execution_output' | 'moderation_category' | 'moderation_score'> & {
     parent?: { user_id: number; handle: string } | null
   } }
 
