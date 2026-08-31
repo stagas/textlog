@@ -4358,6 +4358,19 @@ form.report-panel {
   display: grid;
 }
 
+.posting-help-controlled-summary {
+  grid-column: 1 / -1;
+  overflow-x: auto;
+  color: var(--muted);
+  text-align: left;
+  white-space: nowrap;
+  scrollbar-width: none;
+}
+
+.posting-help-controlled-summary::-webkit-scrollbar {
+  display: none;
+}
+
 .posting-help-section {
   min-width: 0;
 }

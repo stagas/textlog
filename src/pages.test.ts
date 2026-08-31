@@ -1916,7 +1916,9 @@ test('signed-in feed pages put the write form before the feed tabs', () => {
     expect(html).toContain(
       '<label class="secondary-action posting-help-action" for="embedded-posting-help"><input class="posting-help-toggle" id="embedded-posting-help" type="checkbox" aria-controls="embedded-posting-help-content"/>help</label>',
     )
-    expect(html).not.toContain('use #hashtags, @mentions and more')
+    expect(html).toContain(
+      '<div class="posting-help-controlled-summary"><span class="posting-help-limits">500 chars / 15 lines max</span> · use #hashtags, @mentions and more</div>',
+    )
     expect(html).not.toContain('>cancel</a>')
     expect(html).toMatch(/class="compose-editor-row"[\s\S]*class="composefoot"[\s\S]*<\/div><\/form>/)
   }

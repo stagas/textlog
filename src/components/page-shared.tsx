@@ -402,6 +402,10 @@ export function PostingHelp({ maxLength = 500, maxLines = 15, search, oneLine = 
     return (
       <div className="posting-help posting-help-controlled">
         <div className="posting-help-content" id={`${controlledBy}-content`}>
+          <div className="posting-help-controlled-summary">
+            <span className="posting-help-limits">{maxLength} chars / {maxLines} lines max</span>
+            {' · use #hashtags, @mentions and more'}
+          </div>
           <PostingHelpTabs search={search} />
         </div>
       </div>
