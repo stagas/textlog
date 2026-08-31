@@ -34,14 +34,14 @@ function fixture(firstPostBody?: string) {
       (3,'Gone','gone@example.com','','2026-08-03 00:00:00'),(4,'Reader','reader@example.com','',NULL);
     INSERT INTO follows VALUES(4,1,'2026-08-01 00:00:00');
     INSERT INTO follows VALUES(1,2,'2026-08-03 09:00:00');
-    INSERT INTO hashtag_follows VALUES(4,'textlog','2026-08-01 00:00:00');
+    INSERT INTO hashtag_follows VALUES(4,'notes','2026-08-01 00:00:00');
     INSERT INTO handle_history VALUES('oldalice',1);
     INSERT INTO posts VALUES
-      (1,1,NULL,'hello & <friends> #textlog','2026-08-03 10:00:00',NULL),
+      (1,1,NULL,'hello & <friends> #notes','2026-08-03 10:00:00',NULL),
       (2,2,1,'a reply','2026-08-03 11:00:00',NULL),
       (3,1,NULL,'deleted','2026-08-03 12:00:00','2026-08-03 13:00:00'),
       (4,3,NULL,'gone author','2026-08-03 14:00:00',NULL);
-    INSERT INTO post_hashtags VALUES(1,'textlog');
+    INSERT INTO post_hashtags VALUES(1,'notes');
     INSERT INTO post_hot SELECT id,0,0,0,created_at,created_at FROM posts;
   `)
   if (firstPostBody !== undefined) database.query('UPDATE posts SET body=? WHERE id=1').run(firstPostBody)
@@ -94,7 +94,7 @@ describe('RSS and Atom feeds', () => {
     expect(response.headers.get('cache-control')).toContain('max-age=60')
     expect(body).toContain('<rss version="2.0"')
     expect(body).toContain('<atom:link href="https://textlog.cc/latest.rss" rel="self"')
-    expect(body).toContain('hello &amp; &lt;friends&gt; #textlog')
+    expect(body).toContain('hello &amp; &lt;friends&gt; #notes')
     expect(body).toContain('https://textlog.cc/post/2')
     expect(body).not.toContain('deleted')
     expect(body).not.toContain('gone author')
@@ -155,14 +155,14 @@ describe('RSS and Atom feeds', () => {
   test('filters user and hashtag feeds and redirects historical handles', async () => {
     const app = fixture()
     const user = await (await app.request('https://textlog.cc/u/Alice.atom')).text()
-    const tag = await (await app.request('https://textlog.cc/tag/TEXTLOG.rss')).text()
+    const tag = await (await app.request('https://textlog.cc/tag/NOTES.rss')).text()
     const alias = await app.request('https://textlog.cc/u/oldalice.rss')
 
-    expect(user).toContain('hello &amp; &lt;friends&gt; #textlog')
-    expect(user).toContain('<title>hello &amp; &lt;friends&gt; #textlog</title>')
+    expect(user).toContain('hello &amp; &lt;friends&gt; #notes')
+    expect(user).toContain('<title>hello &amp; &lt;friends&gt; #notes</title>')
     expect(user).not.toContain('<title>@alice:')
     expect(user).not.toContain('a reply')
-    expect(tag).toContain('hello &amp; &lt;friends&gt; #textlog')
+    expect(tag).toContain('hello &amp; &lt;friends&gt; #notes')
     expect(tag).not.toContain('a reply')
     const bot = await (await app.request('https://textlog.cc/u/Bob.atom')).text()
     expect(bot).not.toContain('a reply')
