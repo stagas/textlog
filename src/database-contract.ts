@@ -234,7 +234,8 @@ export type DatabaseDomainOperations = {
       parent: PostView | null } }
   'posts.replyParent': { input: { id: number; userId: number };
     output: { status: 'not_found' } | { status: 'forbidden' } | { status: 'ready'; post: PostView } }
-  'posts.ogData': { input: { id: number }; output: { body: string; handle: string } | null }
+  'posts.ogData': { input: { id: number };
+    output: { body: string; handle: string; moderation_category: string | null } | null }
   'posts.suggestions': { input: { kind: 'hashtags' | 'mentions'; query: string; viewerId: number };
     output: { results: string[]; truncated: boolean } }
   'drafts.list': { input: { userId: number }; output: DraftView[] }

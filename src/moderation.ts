@@ -142,3 +142,7 @@ export function moderationMessage(result: ModerationFailure) {
   if (result.reason === 'rate_limited') return 'Content verification is busy right now. Please wait a moment and try again.'
   return 'We could not verify this text right now. Please try again in a moment.'
 }
+
+export function moderatedContentDescription(category: string) {
+  return `(moderated due to ${category})`
+}

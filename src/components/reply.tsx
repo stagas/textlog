@@ -109,7 +109,7 @@ export function Reply(
     },
 ) {
   return (
-    <Layout user={user} title={postTitle(post.body)} social={social}>
+    <Layout user={user} title={postTitle(post.body, post.moderation_category)} social={social}>
       <div className="post-page-thread">
         <div className="thread-root">
           <Post p={post} user={user} showReplyAction={!showForm} showOwnerActions showModerateAction tappableParent

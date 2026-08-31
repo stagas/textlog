@@ -1071,7 +1071,7 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
     }
     case 'posts.ogData': {
       const { id } = input as DatabaseDomainInput<'posts.ogData'>
-      return (database.query(`SELECT p.body,u.handle FROM posts p JOIN users u ON u.id=p.user_id
+      return (database.query(`SELECT p.body,p.moderation_category,u.handle FROM posts p JOIN users u ON u.id=p.user_id
         WHERE p.id=? AND p.deleted_at IS NULL`).get(id) || null) as DatabaseDomainOutput<K>
     }
     case 'posts.suggestions': {

@@ -6,6 +6,7 @@ import { type DatabaseService, databaseService } from './database-service'
 import { isDevelopment } from './environment'
 import { logError, logInfo } from './log'
 import { markdownPlainText } from './markdown'
+import { moderatedContentDescription } from './moderation'
 import { excludesWhisperPosts, isWhisperThread, whisperThreadRelevantToViewer,
   whisperThreadTargetsViewer } from './whisper'
 
@@ -299,7 +300,7 @@ export async function sendPushForPost(postId: number, actorId: number, actorHand
           : 'wrote'
       }`,
       body: post.moderationCategory
-        ? `(moderated due to ${post.moderationCategory})`
+        ? moderatedContentDescription(post.moderationCategory)
         : markdownPlainText(splitSpoilerBody(post.body).visible),
       url: `/post/${postId}`,
     }

@@ -10,7 +10,7 @@ import {
 import { conversationTopPath, postedReplyPath } from '../components/post'
 import { executePostCode } from '../code-execution'
 import { databaseService } from '../database-service'
-import { moderateText, moderationMessage } from '../moderation'
+import { moderatedContentDescription, moderateText, moderationMessage } from '../moderation'
 import { canPublishPosts } from '../posting-policy'
 import { form, page, redirect, rememberFeed, safeNext } from './shared'
 
@@ -235,9 +235,12 @@ export function registerPostsRoutes(app: Hono) {
     const configuredOrigin = Bun.env.APP_URL?.replace(/\/$/, '')
     const origin = configuredOrigin || new URL(c.req.url).origin
     const postUrl = `${origin}/post/${post.id}`
+    const socialDescription = post.moderation_category
+      ? moderatedContentDescription(post.moderation_category)
+      : markdownPlainText(pollDisplayBody(post.body))
     const social = {
       title: `@${post.handle} wrote on textlog`,
-      description: markdownPlainText(pollDisplayBody(post.body)),
+      description: socialDescription,
       image: `${postUrl}/og.png?v=8`,
       url: postUrl,
     }
@@ -262,7 +265,9 @@ export function registerPostsRoutes(app: Hono) {
     if (cached) return cached
     const post = Number.isInteger(id) && id > 0 ? await databaseService().call('posts.ogData', { id }) : null
     if (!post) return c.text('Not found', 404)
-    const image = renderPostOg(post.body, post.handle)
+    const image = renderPostOg(post.moderation_category
+      ? moderatedContentDescription(post.moderation_category)
+      : post.body, post.handle)
     return cacheOgResponse(cacheKey, image, {
       'content-type': 'image/png',
       'content-length': String(image.byteLength),

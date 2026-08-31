@@ -10,7 +10,7 @@ export function PublicThread(
     returnPath?: string; topHref?: string; flatHref?: string; treeHref?: string; flat?: boolean },
 ) {
   return (
-    <Layout title={postTitle(post.body)} social={social}>
+    <Layout title={postTitle(post.body, post.moderation_category)} social={social}>
       <div className="post-page-thread public-post-page-thread">
         <div className="thread-root">
           <Post p={post} user={null} replyHref={'/enter?next=' + encodeURIComponent('/post/' + post.id + '?reply=1'

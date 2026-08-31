@@ -5,6 +5,7 @@ import { BioReferenceForms, TagReference, UserReference } from './post'
 import React from 'react'
 import { isAdmin } from '../admin'
 import { markdownPlainText } from '../markdown'
+import { moderatedContentDescription } from '../moderation'
 import { searchTerms } from '../search'
 import { activeRequest } from '../theme'
 import type { User } from '../types'
@@ -29,8 +30,8 @@ export function TabHighlight({ active }: { active: boolean }) {
   )
 }
 
-export function postTitle(body: string) {
-  const text = markdownPlainText(body)
+export function postTitle(body: string, moderationCategory?: string | null) {
+  const text = moderationCategory ? moderatedContentDescription(moderationCategory) : markdownPlainText(body)
   const characters = Array.from(text)
   return characters.length > postTitleLength
     ? `${characters.slice(0, postTitleLength - 1).join('').trimEnd()}…`

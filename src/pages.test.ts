@@ -2089,6 +2089,10 @@ describe('postTitle', () => {
     expect(title).toBe(`${'x'.repeat(59)}…`)
     expect(Array.from(title)).toHaveLength(60)
   })
+
+  test('replaces moderated post text with the notification description', () => {
+    expect(postTitle('Sensitive note', 'self-harm/intent')).toBe('(moderated due to self-harm/intent)')
+  })
 })
 
 test('API documentation is linked from the footer and describes the firehose', () => {
