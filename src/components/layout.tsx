@@ -83,10 +83,10 @@ export function Layout({
   const ready = user?.handle_chosen_at !== null
   const accountMenuPopover = user && (
     <div className="account-menu-popover">
+      {isAdmin(user) && <a href="/admin">admin</a>}
       <a href={profileHref}>profile</a>
       <a href={accountHref}>account</a>
       <a href="/bookmarks">bookmarks</a>
-      {isAdmin(user) && <a href="/admin">admin</a>}
       <LogoutForm>
         <button type="submit">logout</button>
       </LogoutForm>

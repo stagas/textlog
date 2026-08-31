@@ -79,14 +79,14 @@ test('write page omits the redundant header write action', () => {
   expect(html).not.toContain('class="button nav-write-action"')
 })
 
-test('bookmarks and admin navigation live in the handle menu below account', () => {
+test('admin navigation is the first child in the handle menu', () => {
   const html = renderToStaticMarkup(React.createElement(Layout, {
     user: { id: 1, handle: 'admin', mood: '🤸', email: 'gstagas@gmail.com', bio: '' },
     children: React.createElement('p', null, 'Hello'),
   }))
 
   expect(html).toContain(
-    'href="/account/edit?from=%2F">account</a><a href="/bookmarks">bookmarks</a><a href="/admin">admin</a>',
+    '<div class="account-menu-popover"><a href="/admin">admin</a><a href="/u/admin?from=%2F">profile</a>',
   )
   expect(html).toContain('>@admin<span class="nav-mood">🤸</span></a>')
   expect(html.indexOf('href="/admin">admin</a>')).toBeLessThan(html.indexOf('action="/logout"'))
