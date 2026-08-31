@@ -43,6 +43,7 @@ import { deleteImages, deleteImagesAfterCommit } from '../image-storage'
 import { deleteBioLinkPreviewImages, deleteLinkPreviewImages, discoverLinkPreviews } from '../link-preview'
 import { moderateText, moderationMessage } from '../moderation'
 import { accountForPasswordEnableToken, issuePasswordEnableToken } from '../password-enable'
+import { PAGE_SIZE } from '../pagination'
 import { vapidPublicKey } from '../push'
 import { DENSITY_CHOICES, type DensityChoice, PAGE_SIZE_CHOICES, type PageSizeChoice, resolvedDensity,
   resolvedPageSize } from '../request-preferences'
@@ -454,7 +455,7 @@ export function registerAccountRoutes(app: Hono) {
     const tab = f.tab === 'font' || f.tab === 'misc' ? f.tab : 'theme'
     const query = `?tab=${tab}${returnPath ? '&from=' + encodeURIComponent(returnPath) : ''}`
     if (tab === 'misc') {
-      const selectedPageSize = Number(f.pageSize) as PageSizeChoice
+      const selectedPageSize = PAGE_SIZE
       const selectedDensity = f.density as DensityChoice
       const selectedCorners = (f.corners || cornerChoice(c.req.raw)) as CornerChoice
       if (!PAGE_SIZE_CHOICES.includes(selectedPageSize) || !DENSITY_CHOICES.includes(selectedDensity)

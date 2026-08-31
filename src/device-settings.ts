@@ -6,14 +6,10 @@ import { DENSITY_CHOICES, type DensityChoice, PAGE_SIZE_CHOICES, type PageSizeCh
 
 export { DENSITY_CHOICES, type DensityChoice, PAGE_SIZE_CHOICES, type PageSizeChoice } from './request-preferences'
 
-export function devicePageSize(request: Request, userId: number | null | undefined,
-  database: Database = db): PageSizeChoice
+export function devicePageSize(_request: Request, _userId: number | null | undefined,
+  _database: Database = db): PageSizeChoice
 {
-  const deviceId = notificationDevice(request)
-  if (!userId || !deviceId) return PAGE_SIZE
-  const row = database.query('SELECT page_size pageSize FROM device_settings WHERE user_id=? AND device_id=?')
-    .get(userId, deviceId) as { pageSize: number } | null
-  return row && PAGE_SIZE_CHOICES.includes(row.pageSize as PageSizeChoice) ? row.pageSize as PageSizeChoice : PAGE_SIZE
+  return PAGE_SIZE
 }
 
 export function saveDevicePageSize(userId: number, deviceId: string, pageSize: PageSizeChoice,

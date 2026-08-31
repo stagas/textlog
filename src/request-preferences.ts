@@ -3,11 +3,8 @@ export type PageSizeChoice = typeof PAGE_SIZE_CHOICES[number]
 export const DENSITY_CHOICES = ['compact', 'regular', 'relaxed'] as const
 export type DensityChoice = typeof DENSITY_CHOICES[number]
 
-export function resolvedPageSize(request: Request): PageSizeChoice {
-  const context = requestContext()
-  if (context) return context.pageSize
-  const value = Number(request.headers.get('x-textlog-page-size'))
-  return PAGE_SIZE_CHOICES.includes(value as PageSizeChoice) ? value as PageSizeChoice : PAGE_SIZE
+export function resolvedPageSize(_request: Request): PageSizeChoice {
+  return PAGE_SIZE
 }
 
 export function resolvedDensity(request: Request): DensityChoice {

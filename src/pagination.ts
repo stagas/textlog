@@ -1,4 +1,4 @@
-export const PAGE_SIZE = 40
+export const PAGE_SIZE = 100
 export const CONNECTION_PAGE_SIZE = 8
 export const TAG_PAGE_SIZE = 24
 export const EXPLORE_TAG_PAGE_SIZE = 24

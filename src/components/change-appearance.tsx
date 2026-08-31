@@ -1,4 +1,4 @@
-import { DENSITY_CHOICES, type DensityChoice, PAGE_SIZE_CHOICES, type PageSizeChoice } from '../request-preferences'
+import { DENSITY_CHOICES, type DensityChoice, type PageSizeChoice } from '../request-preferences'
 import { ACCENT_CHOICES, type Appearance, CORNER_CHOICES, type CornerChoice, FONT_CHOICES, FONT_SIZE_CHOICES,
   type FontChoice, type FontSizeChoice,
   PRIMARY_FONT_CHOICES, type PrimaryFontChoice, SANS_SERIF_FONT_CHOICES, type SansSerifFontChoice,
@@ -11,7 +11,7 @@ export type AppearanceTab = 'theme' | 'font' | 'misc'
 
 export function ChangeAppearance(
   { user, selected, selectedFont, selectedSansSerifFont = 'system-sans', selectedPrimaryFont = 'monospace',
-    selectedSize = 'regular', selectedPageSize = 20, selectedDensity = 'regular', selectedCorners = 'sharp',
+    selectedSize = 'regular', selectedDensity = 'regular', selectedCorners = 'sharp',
     selectedLinkPreviews = true,
     showModeratedContent = false, includePeopleFollowActivity = false, includeHashtagFollowActivity = false,
     showNoteStreak = true, showTimestamps = false,
@@ -155,18 +155,7 @@ export function ChangeAppearance(
             <form method="post" action="/account/edit/appearance">
               <input type="hidden" name="tab" value="misc" />
               {returnPath && <input type="hidden" name="from" value={returnPath} />}
-              <fieldset>
-                <legend>page size</legend>
-                <div className="misc-options">
-                  {PAGE_SIZE_CHOICES.map(size => (
-                    <label key={size} className="misc-option">
-                      <input type="radio" name="pageSize" value={size} defaultChecked={selectedPageSize === size} />
-                      <span>{size}</span>
-                      <span>notes</span>
-                    </label>
-                  ))}
-                </div>
-              </fieldset>
+              <input type="hidden" name="pageSize" value="100" />
               <fieldset>
                 <legend>density</legend>
                 <div className="misc-options">

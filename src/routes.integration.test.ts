@@ -1424,12 +1424,12 @@ test('consequential account, content, reporting, and admin flows work over HTTP'
   expect(await hotFeed.text()).not.toContain(post.body)
 
   const insertFeedPost = database.query('INSERT INTO posts(user_id,body) VALUES(?,?)')
-  for (let index = 1; index <= 81; index++) insertFeedPost.run(alice.id, `cursor note ${index}`)
+  for (let index = 1; index <= 201; index++) insertFeedPost.run(alice.id, `cursor note ${index}`)
   const latestFirst = await request('/all')
   const latestFirstBody = await latestFirst.text()
   const latestNext = latestFirstBody.match(/href="(\/all\?page=2&amp;_scroll=instant#feed-tabs)"/)?.[1]
   expect(latestNext).toBeTruthy()
-  expect(latestFirstBody).toContain('cursor note 81')
+  expect(latestFirstBody).toContain('cursor note 102')
   expect(latestFirstBody).not.toContain(post.body)
   const latestSecondBody = await (await request('/all?page=2')).text()
   expect(latestSecondBody).not.toContain(post.body)

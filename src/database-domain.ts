@@ -232,7 +232,7 @@ function removePreviewRecords(database: Database, userId: number, postId?: numbe
   }
   return keys
 }
-import { DENSITY_CHOICES, type DensityChoice, PAGE_SIZE_CHOICES, type PageSizeChoice } from './request-preferences'
+import { DENSITY_CHOICES, type DensityChoice, type PageSizeChoice } from './request-preferences'
 
 function sessionUser(database: Database, token: string | null): User | null {
   if (!token) return null
@@ -398,9 +398,7 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
         ? database.query('SELECT page_size pageSize,density FROM device_settings WHERE user_id=? AND device_id=?')
           .get(signedIn.id, deviceId) as { pageSize: number; density: string } | null
         : null
-      const pageSize = row && PAGE_SIZE_CHOICES.includes(row.pageSize as PageSizeChoice)
-        ? row.pageSize as PageSizeChoice
-        : PAGE_SIZE
+      const pageSize = PAGE_SIZE
       const density = row && DENSITY_CHOICES.includes(row.density as DensityChoice)
         ? row.density as DensityChoice
         : 'regular'

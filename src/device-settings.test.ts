@@ -13,15 +13,15 @@ function database() {
   return database
 }
 
-test('page size is stored per user and notification device', () => {
+test('page size is forced to 100 for every user and device', () => {
   const db = database()
   const deviceId = 'device_abcdefghijklmnopqrst'
   const request = new Request('http://localhost', { headers: { cookie: `notification_device=${deviceId}` } })
-  expect(devicePageSize(request, 1, db)).toBe(40)
+  expect(devicePageSize(request, 1, db)).toBe(100)
   saveDevicePageSize(1, deviceId, 80, db)
-  expect(devicePageSize(request, 1, db)).toBe(80)
-  expect(devicePageSize(request, 2, db)).toBe(40)
-  expect(devicePageSize(new Request('http://localhost'), 1, db)).toBe(40)
+  expect(devicePageSize(request, 1, db)).toBe(100)
+  expect(devicePageSize(request, 2, db)).toBe(100)
+  expect(devicePageSize(new Request('http://localhost'), 1, db)).toBe(100)
   expect(deviceDensity(request, 1, db)).toBe('regular')
   saveDeviceDensity(1, deviceId, 'compact', db)
   expect(deviceDensity(request, 1, db)).toBe('compact')

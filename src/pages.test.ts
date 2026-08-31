@@ -1509,7 +1509,7 @@ test('appearance theme tab is a server-rendered form with mobile appearance choi
   expect(html).not.toContain('style=')
 })
 
-test('appearance misc tab offers supported page sizes as radio cards', () => {
+test('appearance misc tab hides page size and forces 100', () => {
   const html = renderToStaticMarkup(React.createElement(ChangeAppearance, {
     user: { id: 1, handle: 'reader', email: 'reader@example.com', bio: '' },
     selected: { theme: 'system', accent: 'theme' },
@@ -1520,10 +1520,8 @@ test('appearance misc tab offers supported page sizes as radio cards', () => {
     tab: 'misc',
   }))
   expect(html).toContain('aria-current="page">misc</a>')
-  expect(html).toContain('name="pageSize" value="20"')
-  expect(html).toContain('name="pageSize" checked="" value="40"')
-  expect(html).toContain('name="pageSize" value="80"')
-  expect(html).toContain('name="pageSize" value="100"')
+  expect(html).toContain('<input type="hidden" name="pageSize" value="100"/>')
+  expect(html).not.toContain('<legend>page size</legend>')
   expect(html).toContain('name="density" value="compact"')
   expect(html).toContain('name="corners" value="sharp"')
   expect(html).toContain('name="corners" checked="" value="round"')
