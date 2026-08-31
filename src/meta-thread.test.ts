@@ -34,7 +34,7 @@ test('meta aliases hide tagged posts and descendants from all and any while pres
   expect(all.posts).toEqual([])
   expect(any.posts).toEqual([])
   expect(hot.posts.map(post => post.id)).toContain(root.id)
-  expect(db.query('SELECT tag FROM post_hashtags WHERE post_id=?').get(root.id)).toEqual({ tag: 'meta' })
+  expect(db.query('SELECT tag FROM post_hashtags WHERE post_id=?').get(root.id)).toEqual({ tag: 'tlog' })
 
   const reader = db.query('SELECT * FROM users WHERE id=1').get() as User
   const myFeed = await executeDatabaseDomain(db, 'feeds.personalizedPage', {

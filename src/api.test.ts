@@ -473,7 +473,7 @@ describe('public API', () => {
     const authenticated = await (await request(app, '/api/v1/explore?people_limit=1&tags_limit=1', {
       headers: { authorization: `Bearer ${token}` },
     })).json() as any
-    expect(authenticated.data.tags[0]).toMatchObject({ tag: 'textlog', following: true })
+    expect(authenticated.data.tags[0]).toMatchObject({ tag: 'textlog', following: true, follower_count: 1 })
   })
 
   test('reports aggregate descendant counts without embedding reply bodies', async () => {

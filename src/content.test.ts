@@ -44,8 +44,8 @@ describe('content metadata extraction', () => {
     expect(extractHashtags('#Build something #build #Notes')).toEqual(['build', 'notes'])
   })
 
-  test('canonicalizes meta hashtag aliases', () => {
-    expect(extractHashtags('#meta #tlog #textlog')).toEqual(['meta'])
+  test('preserves distinct meta hashtag aliases', () => {
+    expect(extractHashtags('#meta #tlog #textlog')).toEqual(['meta', 'tlog', 'textlog'])
   })
 
   test('extracts only the first ten hashtag occurrences', () => {

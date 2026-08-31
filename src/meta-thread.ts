@@ -5,13 +5,6 @@
  * The first value is the canonical tag used for new metadata and follow relationships.
  */
 export const META_HASHTAGS = ['meta', 'tlog', 'textlog'] as const
-export const META_HASHTAG = META_HASHTAGS[0]
-
-const metaHashtags = new Set<string>(META_HASHTAGS)
-
-export function canonicalHashtag(tag: string) {
-  return metaHashtags.has(tag) ? META_HASHTAG : tag
-}
 
 type MetaPostId = 'p.id' | 'descendants.id' | 'h.conversation_id' | number
 

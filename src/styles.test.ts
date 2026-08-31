@@ -175,6 +175,14 @@ describe('in-memory stylesheet', () => {
       '.profile-page-tabs {\n  position: sticky;\n  z-index: 40;\n  top: 0;\n  background: var(--bg);\n}',
     )
     expect(css).toContain('.reference-menu-popover {\n  position: absolute;\n  z-index: 50;')
+    expect(css).toContain(
+      '#connections-tags-heading,\n#connections-people-heading {\n'
+      + '  scroll-margin-top: calc(var(--space-7) + var(--space-1));\n}',
+    )
+    expect(css).toContain(
+      '@media (max-width: 600px) {\n  #connections-tags-heading,\n  #connections-people-heading {\n'
+      + '    scroll-margin-top: calc(var(--space-8) + var(--space-1) + 2px);\n  }\n}',
+    )
     expect(css).toContain('.profile:has(\n  .profile-bio :is(.reference-menu, .remote-link-menu)'
       + ':is(:hover, :focus-within),\n  .profile-bio .mobile-popover-toggle:checked\n) {\n'
       + '  position: relative;\n  z-index: 50;\n}')

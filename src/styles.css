@@ -5872,10 +5872,20 @@ form.report-panel {
 }
 
 #explore-tags,
-#explore-people,
+#explore-people {
+  scroll-margin-top: var(--space-3);
+}
+
 #connections-tags-heading,
 #connections-people-heading {
-  scroll-margin-top: var(--space-3);
+  scroll-margin-top: calc(var(--space-7) + var(--space-1));
+}
+
+@media (max-width: 600px) {
+  #connections-tags-heading,
+  #connections-people-heading {
+    scroll-margin-top: calc(var(--space-8) + var(--space-1) + 2px);
+  }
 }
 
 .explore-content > section + section {

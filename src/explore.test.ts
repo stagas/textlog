@@ -1,7 +1,7 @@
 import { Database } from 'bun:sqlite'
 import { describe, expect, test } from 'bun:test'
 import { explorePivot, preserveSuggestedPeopleOrder, suggestedPeople, suggestedPeopleCount,
-  trendingTags } from './explore'
+  trendingTagCount, trendingTags } from './explore'
 
 function fixture() {
   const database = new Database(':memory:')
@@ -187,5 +187,16 @@ describe('trending tags', () => {
     const database = tagFixture()
     database.run(`INSERT INTO blocks VALUES(1,2); INSERT INTO blocked_hashtags VALUES(1,'busy'),(1,'older');`)
     expect(trendingTags(database, 1, 12, '2026-08-08T00:00:00.000Z')).toEqual([])
+  })
+
+  test('lists meta aliases separately under the spelling each post used', () => {
+    const database = tagFixture()
+    database.run(`INSERT INTO post_hashtags VALUES(1,'tlog'),(2,'textlog'),(3,'meta');
+      INSERT INTO hashtag_follows VALUES(1,'textlog');`)
+    const tags = trendingTags(database, 1, 12, '2026-08-08T00:00:00.000Z')
+    expect(tags.find(tag => tag.tag === 'meta')).toMatchObject({ count: 1, following: 0 })
+    expect(tags.find(tag => tag.tag === 'tlog')).toMatchObject({ count: 1, following: 0 })
+    expect(tags.find(tag => tag.tag === 'textlog')).toMatchObject({ count: 1, following: 1 })
+    expect(trendingTagCount(database, 1, '2026-08-08T00:00:00.000Z')).toBe(6)
   })
 })
