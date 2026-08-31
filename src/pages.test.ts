@@ -2274,6 +2274,9 @@ describe('About', () => {
       expect(html).toContain('href="/hot?_scroll=instant#feed-tabs"')
       expect(html).toContain('href="/all?_scroll=instant#feed-tabs"')
       expect(html).toContain('href="/any?_scroll=instant#feed-tabs"')
+      expect(html).toContain(
+        'class="button feed-tabs-join" href="/enter" rel="nofollow">join the community</a>',
+      )
       expect(html).toContain('?page=2&amp;_scroll=instant#feed-tabs" aria-label="Page 2"')
       expect(html).toContain('?page=2&amp;_scroll=instant#feed-tabs" aria-label="Next page"')
       expect(html.indexOf('about-page feed-about')).toBeLessThan(html.indexOf('id="feed-tabs"'))
@@ -2284,6 +2287,7 @@ describe('About', () => {
       expect(html).toContain('href="/hot"')
       expect(html).toContain('href="/all"')
       expect(html).not.toContain('#feed-tabs')
+      expect(html).not.toContain('class="button feed-tabs-join"')
       expect(html).not.toContain('class="guest-join-row"')
     }
   })

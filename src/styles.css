@@ -1372,6 +1372,12 @@ nav form {
   gap: var(--space-3);
 }
 
+.feed-tabs .feed-tabs-join {
+  margin: var(--space-1) 0 var(--space-1) auto;
+  padding: var(--space-2) var(--space-3);
+  color: var(--button-ink);
+}
+
 .feed-tabs-read-status form { margin: 0; }
 
 .feed-tabs-view-filters {

@@ -620,6 +620,9 @@ export function FeedTabs(
             all
             <TabCount count={latestCount} />
           </a>
+          {!user && (
+            <a className="button feed-tabs-join" href="/enter" rel="nofollow">join the community</a>
+          )}
           {activityReadStatus !== undefined && (
             <span className="feed-tabs-read-status">
               {activityReadStatus !== undefined
