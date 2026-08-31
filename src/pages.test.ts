@@ -863,13 +863,17 @@ test('Any reply links return through the retained sample with their conversation
     created_at, deleted_at: null, handle: `reply${id}`, reply_count: 0, parent: root })
   const html = renderToStaticMarkup(React.createElement(PublicFeed, {
     user,
-    path: '/any',
+    path: '/any?seed=9l',
     feed: { posts: [root, reply(21, '2026-08-20 10:00:00'), reply(22, '2026-08-20 11:00:00'),
       reply(23, '2026-08-20 12:00:00')], page: 1, totalItems: 1, totalPages: 1 },
   }))
 
-  expect(html).toContain('href="/post/20?from=%2Fany%3Fexpand%3D20%23post-22#post-22"')
-  expect(html).toContain('href="/post/20?from=%2Fany%3Fexpand%3D20%23post-23#post-23"')
+  expect(html).toContain(
+    'href="/post/20?from=%2Fany%3Fseed%3D9l%26expand%3D20%23post-22#post-22"',
+  )
+  expect(html).toContain(
+    'href="/post/20?from=%2Fany%3Fseed%3D9l%26expand%3D20%23post-23#post-23"',
+  )
 })
 
 test('folded feed conversations distinguish previews from different depths', () => {
@@ -2361,7 +2365,7 @@ describe('About', () => {
       expect(html).toContain('href="#feed-tabs">browse notes</a>')
       expect(html).toContain('href="/hot?_scroll=instant#feed-tabs"')
       expect(html).toContain('href="/all?_scroll=instant#feed-tabs"')
-      expect(html).toContain('href="/any?refresh&amp;_scroll=instant#feed-tabs"')
+      expect(html).toMatch(/href="\/any\?seed=[0-9a-z]+&amp;_scroll=instant#feed-tabs"/)
       expect(html).toContain(
         'class="button feed-tabs-join" href="/enter" rel="nofollow">join the community</a>',
       )
@@ -2370,7 +2374,7 @@ describe('About', () => {
       expect(html.indexOf('about-page feed-about')).toBeLessThan(html.indexOf('id="feed-tabs"'))
       expect(html.lastIndexOf('aria-label="Pagination"')).toBeLessThan(html.indexOf('class="guest-join-row"'))
     }
-    for (const html of [signedInHot, signedInLatest]) expect(html).toContain('href="/any?refresh"')
+    for (const html of [signedInHot, signedInLatest]) expect(html).toMatch(/href="\/any\?seed=[0-9a-z]+"/)
     for (const html of [signedInHot, signedInLatest]) {
       expect(html).not.toContain('class="static-page about-page feed-about"')
       expect(html).toContain('href="/hot"')

@@ -330,13 +330,13 @@ export function feedPreferenceCookie(value: FeedPreference) {
   return `feed=${value}; Max-Age=${365 * 24 * 60 * 60}; HttpOnly; Path=/; SameSite=Lax${secureCookie()}`
 }
 
-export function retainedAnyFeedPage(request: Request) {
-  const value = request.headers.get('cookie')?.match(/(?:^|;\s*)any_sample_page=(\d+)(?:;|$)/)?.[1]
-  const page = Number(value)
-  return Number.isInteger(page) && page > 0 && page <= 1_000_000 ? page : null
+export function retainedAnyFeedSeed(request: Request) {
+  const value = request.headers.get('cookie')?.match(/(?:^|;\s*)any_sample_seed=([0-9a-z]+)(?:;|$)/)?.[1]
+  const seed = Number.parseInt(value || '', 36)
+  return Number.isSafeInteger(seed) && seed > 0 && seed < 2_147_483_647 ? seed : null
 }
 
-export function retainedAnyFeedPageCookie(page: number) {
-  const safePage = Math.max(1, Math.min(1_000_000, Math.floor(page)))
-  return `any_sample_page=${safePage}; Max-Age=${365 * 24 * 60 * 60}; HttpOnly; Path=/; SameSite=Lax${secureCookie()}`
+export function retainedAnyFeedSeedCookie(seed: number) {
+  const safeSeed = Math.max(1, Math.floor(seed))
+  return `any_sample_seed=${safeSeed.toString(36)}; Max-Age=${365 * 24 * 60 * 60}; HttpOnly; Path=/; SameSite=Lax${secureCookie()}`
 }

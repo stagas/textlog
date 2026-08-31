@@ -158,7 +158,7 @@ test('latest keeps an old root and unread intermediates when recent direct repli
   expect(feed.posts.map(post => post.id)).toEqual([1495, 2956, 2955, 2954, 2953, 2904])
 })
 
-test('Any retains an explicit sample page and refreshes to a different page', async () => {
+test('Any deterministically shuffles the full conversation pool from its seed', async () => {
   const database = new Database(':memory:', { strict: true })
   runMigrations(database)
   database.run("INSERT INTO users(id,handle,email,password) VALUES(1,'writer','writer@example.test','x')")
@@ -166,17 +166,21 @@ test('Any retains an explicit sample page and refreshes to a different page', as
   for (let id = 1; id <= 21; id++) {
     insert.run(id, `post ${id}`, `2026-08-${String(id).padStart(2, '0')} 10:00:00`)
   }
-  cacheDb.query("DELETE FROM feed_snapshots WHERE kind='latest-conversation-heads-v13' AND viewer_id=-120").run()
+  cacheDb.query("DELETE FROM feed_snapshots WHERE kind LIKE 'latest-conversation-heads-v13:any:%' AND viewer_id=-120")
+    .run()
 
-  const retained = await executeDatabaseDomain(database, 'feeds.randomPage', {
-    viewerId: -120, pageSize: 20, samplePage: 2,
+  const first = await executeDatabaseDomain(database, 'feeds.randomPage', {
+    viewerId: -120, pageSize: 20, sampleSeed: 123,
   })
-  const refreshed = await executeDatabaseDomain(database, 'feeds.randomPage', {
-    viewerId: -120, pageSize: 20, excludePage: retained.randomSamplePage,
+  const repeated = await executeDatabaseDomain(database, 'feeds.randomPage', {
+    viewerId: -120, pageSize: 20, sampleSeed: 123,
+  })
+  const reshuffled = await executeDatabaseDomain(database, 'feeds.randomPage', {
+    viewerId: -120, pageSize: 20, sampleSeed: 456,
   })
 
-  expect(retained.randomSamplePage).toBe(2)
-  expect(retained.posts.map(post => post.id)).toEqual([1])
-  expect(refreshed.randomSamplePage).toBe(1)
-  expect(refreshed.posts.map(post => post.id)).not.toEqual(retained.posts.map(post => post.id))
+  expect(first.randomSampleSeed).toBe(123)
+  expect(first.posts).toHaveLength(20)
+  expect(repeated.posts.map(post => post.id)).toEqual(first.posts.map(post => post.id))
+  expect(reshuffled.posts.map(post => post.id)).not.toEqual(first.posts.map(post => post.id))
 })

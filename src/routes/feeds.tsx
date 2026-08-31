@@ -13,6 +13,7 @@ import {
 import { clientAddress, currentPage, page, redirect, rememberFeed } from './shared'
 
 import type { Context, Hono } from 'hono'
+import { randomInt } from 'node:crypto'
 import { instance } from '../../instance.config'
 import { backgroundDatabaseCall, databaseService } from '../database-service'
 import { decodeHotCursor, hotRankingVersion } from '../hot'
@@ -23,8 +24,8 @@ import {
   notificationBannerDismissed,
   notificationUserAgent,
   pwaInstallBannerDismissedCookie,
-  retainedAnyFeedPage,
-  retainedAnyFeedPageCookie,
+  retainedAnyFeedSeed,
+  retainedAnyFeedSeedCookie,
   safeRefererPath,
 } from '../http'
 import { campaignIpPseudonym } from '../ip-privacy'
@@ -71,6 +72,11 @@ const positiveInteger = (value?: string) => {
   if (!value || !/^\d+$/.test(value)) return undefined
   const parsed = Number(value)
   return Number.isSafeInteger(parsed) && parsed > 0 ? parsed : undefined
+}
+const anySeed = (value?: string) => {
+  if (!value || !/^[0-9a-z]+$/.test(value)) return undefined
+  const parsed = Number.parseInt(value, 36)
+  return Number.isSafeInteger(parsed) && parsed > 0 && parsed < 2_147_483_647 ? parsed : undefined
 }
 type RecentFeedVisitor = {
   density: ReturnType<typeof resolvedDensity>
@@ -291,19 +297,25 @@ export function registerFeedsRoutes(app: Hono) {
   app.get('/any', async c => {
     const user = currentUser(c.req.raw)
     const expandedRootId = positiveInteger(c.req.query('expand'))
-    const refresh = c.req.query('refresh') !== undefined
-    const retainedPage = retainedAnyFeedPage(c.req.raw)
+    const requestedSeed = anySeed(c.req.query('seed'))
+    const retainedSeed = retainedAnyFeedSeed(c.req.raw)
+    if (!requestedSeed && !retainedSeed) {
+      const seed = randomInt(1, 2_147_483_647)
+      const guestSuffix = !user && c.req.query('_scroll') === 'instant' ? '&_scroll=instant#feed-tabs' : ''
+      return redirect(`/any?seed=${seed.toString(36)}${guestSuffix}`, retainedAnyFeedSeedCookie(seed))
+    }
+    const seed = requestedSeed || retainedSeed!
     const notificationBanner = await showNotificationBanner(c.req.raw, user)
     const feed = await databaseService().call('feeds.randomPage', {
       viewerId: user?.id ?? -1,
       pageSize: resolvedPageSize(c.req.raw),
-      ...(refresh ? { excludePage: retainedPage || undefined } : { samplePage: retainedPage || undefined }),
+      sampleSeed: seed,
     })
     const response = rememberFeed(page(
-      <PublicFeed user={user} feed={feed} path="/any" notificationBanner={notificationBanner}
+      <PublicFeed user={user} feed={feed} path={`/any?seed=${seed.toString(36)}`} notificationBanner={notificationBanner}
         expandedRootId={expandedRootId} />,
     ), 'random')
-    response.headers.append('set-cookie', retainedAnyFeedPageCookie(feed.randomSamplePage || 1))
+    response.headers.append('set-cookie', retainedAnyFeedSeedCookie(seed))
     return response
   })
 

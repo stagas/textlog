@@ -3,6 +3,7 @@ import { displayBio, linkify } from '../utils'
 import { BioReferenceForms, TagReference, UserReference } from './post'
 
 import React from 'react'
+import { randomInt } from 'node:crypto'
 import { isAdmin } from '../admin'
 import { markdownPlainText } from '../markdown'
 import { moderatedContentDescription } from '../moderation'
@@ -591,6 +592,7 @@ export function FeedTabs(
       readAction?: string
     },
 ) {
+  const anySeed = randomInt(1, 2_147_483_647).toString(36)
   forYouUnread = forYouUnread || toMeUnread
   const hasDistinctLastUnread = !!lastUnreadHref && lastUnreadHref !== unreadHref
   return (
@@ -621,7 +623,7 @@ export function FeedTabs(
           </a>
           <a className={active === 'random' ? 'active' : ''}
             aria-current={active === 'random' ? 'page' : undefined}
-            href={user ? '/any?refresh' : '/any?refresh&_scroll=instant#feed-tabs'}
+            href={user ? `/any?seed=${anySeed}` : `/any?seed=${anySeed}&_scroll=instant#feed-tabs`}
           >
             <TabHighlight active={active === 'random'} />
             any

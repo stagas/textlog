@@ -18,7 +18,7 @@ export function PublicFeed(
     },
 ) {
   const feedPath = path
-  const random = path === '/any'
+  const random = path.startsWith('/any')
   const returnPath = feedPath + (feed.page > 1 ? `?page=${feed.page}` : '')
   const unreadPostIds = new Set(feed.unreadPostIds || [])
   const directedUnreadPostIds = new Set(feed.directedUnreadPostIds || [])
@@ -46,7 +46,7 @@ export function PublicFeed(
       {feed.posts.length
         ? (
           <FeedThreads posts={feed.posts} user={user} returnPath={returnPath} promoteAncestors
-            expandedByDefault={!user && (path === '/all' || path === '/any')}
+            expandedByDefault={!user && (path === '/all' || random)}
             expandedRootId={expandedRootId} contextUnreadPostIds={unreadPostIds}
             contextDirectedUnreadPostIds={directedUnreadPostIds} />
         )

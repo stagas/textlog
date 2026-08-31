@@ -2435,34 +2435,19 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
       return recapPosts(database, -1) as DatabaseDomainOutput<K>
     }
     case 'feeds.randomPage': {
-      const { viewerId, pageSize, samplePage, excludePage } = input as DatabaseDomainInput<'feeds.randomPage'>
-      const first = await executeDatabaseDomain(database, 'feeds.latestPage', {
-        viewerId, page: 1, pageSize, markRead: false,
+      const { viewerId, pageSize, sampleSeed } = input as DatabaseDomainInput<'feeds.randomPage'>
+      const effectiveSeed = sampleSeed || randomInt(1, 2_147_483_647)
+      const sampled = await executeDatabaseDomain(database, 'feeds.latestPage', {
+        viewerId, page: 1, pageSize, markRead: false, sampleSeed: effectiveSeed,
       })
-      const retainedPage = Number.isInteger(samplePage) && samplePage! > 0
-        ? Math.min(samplePage!, first.totalPages)
-        : null
-      const excludedPage = Number.isInteger(excludePage) && excludePage! > 0 && excludePage! <= first.totalPages
-        ? excludePage!
-        : null
-      const randomPage = retainedPage ?? (excludedPage && first.totalPages > 1
-        ? (() => {
-            const candidate = randomInt(1, first.totalPages)
-            return candidate >= excludedPage ? candidate + 1 : candidate
-          })()
-        : randomInt(1, first.totalPages + 1))
-      const sampled = randomPage === 1
-        ? first
-        : await executeDatabaseDomain(database, 'feeds.latestPage', {
-          viewerId, page: randomPage, pageSize, markRead: false,
-        })
       const result: PostFeedPage = {
-        ...sampled, page: 1, totalPages: 1, totalItems: sampled.posts.length, randomSamplePage: randomPage,
+        ...sampled, page: 1, totalPages: 1, totalItems: sampled.posts.length, randomSampleSeed: effectiveSeed,
       }
       return result as DatabaseDomainOutput<K>
     }
     case 'feeds.latestPage': {
-      const { viewerId, page, pageSize, markRead = true } = input as DatabaseDomainInput<'feeds.latestPage'>
+      const { viewerId, page, pageSize, markRead = true, sampleSeed }
+        = input as DatabaseDomainInput<'feeds.latestPage'>
       const state = viewerId >= 0 ? latestUnreadPostState(viewerId, database) : []
       // Whisper ancestry checks are recursive and dominate large public-feed scans. Most installations and most
       // generations have no whisper rows at all, so prove that once and remove thousands of recursive subqueries.
@@ -2471,15 +2456,21 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
         : '1'
       const blockViewerId = viewerIsModerator(database, viewerId) ? -1 : viewerId
       const parameters = [blockViewerId, blockViewerId, blockViewerId, viewerId, viewerId]
-      const snapshotKind = 'latest-conversation-heads-v13'
+      const snapshotKind = sampleSeed
+        ? `latest-conversation-heads-v13:any:${sampleSeed}`
+        : 'latest-conversation-heads-v13'
+      const seededOrder = (ids: number[]) => sampleSeed
+        ? ids.sort((left, right) => createHash('sha256').update(`${sampleSeed}:${left}`).digest()
+          .compare(createHash('sha256').update(`${sampleSeed}:${right}`).digest()))
+        : ids
       const snapshot = feedSnapshotPage<number>(database, snapshotKind, viewerId, page, () => {
         if (viewerId < 0) {
-          return (database.query(`SELECT h.conversation_id FROM conversation_heads h
+          return seededOrder((database.query(`SELECT h.conversation_id FROM conversation_heads h
             WHERE NOT EXISTS (SELECT 1 FROM post_hashtags ph
               WHERE ph.post_id=h.conversation_id AND ph.tag='whisper')
             AND ${excludesMetaPosts('h.conversation_id')}
             ORDER BY h.latest_post_id DESC,h.conversation_id DESC`).all() as Array<{ conversation_id: number }>)
-            .map(row => row.conversation_id)
+            .map(row => row.conversation_id))
         }
         const rows = database.query(
           `SELECT h.conversation_id FROM conversation_heads h WHERE EXISTS (
@@ -2497,7 +2488,7 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
             WHERE ph.post_id=p.id AND bh.user_id=?)) LIMIT 1)
           ORDER BY h.latest_post_id DESC,h.conversation_id DESC`,
         ).all(...parameters) as Array<{ conversation_id: number }>
-        return rows.map(row => row.conversation_id)
+        return seededOrder(rows.map(row => row.conversation_id))
       }, pageSize, cacheDb)
       const conversationIds = snapshot.items
       const rows = conversationIds.length
