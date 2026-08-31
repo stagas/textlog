@@ -78,7 +78,9 @@ test('feed pages reconstruct threads with available off-page ancestors', () => {
   expect(html.indexOf('id="post-99"')).toBeLessThan(html.indexOf('id="post-12"'))
   expect(html.match(/off-page parent/g)).toHaveLength(1)
   expect(html).toContain('class="reply-branch"')
-  expect(html).toContain('class="post-hit-area" href="/post/11?from=%2Flatest%23post-11"')
+  expect(html).toContain(
+    'class="post-hit-area" href="/post/10?from=%2Flatest%23post-11#post-11"',
+  )
   expect(html).not.toContain('id="feed-thread-fold-10"')
   expect(html).not.toContain('for="feed-thread-fold-10"')
   expect(html).not.toContain('post-continuation-marker')

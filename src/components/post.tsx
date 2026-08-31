@@ -552,6 +552,7 @@ export function Post({
   collapsedExpansionControlId,
   highlightTerms = [],
   tappable = false,
+  tappableHref,
   tappableParent = false,
   contextLabel,
   contextUnread = false,
@@ -576,7 +577,7 @@ export function Post({
   showModerateAction?: boolean; showParent?: boolean; showReplyCount?: boolean; replyHref?: string; replyLabel?: string;
   reportHref?: string; bookmarkAction?: boolean; foldControlId?: string; collapsedExpansionControlId?: string;
   highlightTerms?: string[];
-  tappable?: boolean; tappableParent?: boolean;
+  tappable?: boolean; tappableHref?: string; tappableParent?: boolean;
   contextLabel?: React.ReactNode; contextUnread?: boolean; contextParentUnread?: boolean;
   contextDirectedUnread?: boolean; preview?: boolean; returnPath?: string; backHref?: string;
   canonicalTimestamp?: boolean; topHref?: string; flatHref?: string; treeHref?: string;
@@ -695,7 +696,8 @@ export function Post({
       id={`post-${p.id}`}
     >
       {tappable && (
-        <a className="post-hit-area" href={detailPath} rel={navigationRel} aria-label={`open post by @${p.handle}`} />
+        <a className="post-hit-area" href={tappableHref || detailPath} rel={navigationRel}
+          aria-label={`open post by @${p.handle}`} />
       )}
       {collapsedExpansionControlId && (
         <label className="collapsed-post-expander" htmlFor={collapsedExpansionControlId}
@@ -1038,7 +1040,7 @@ type FeedPostProps = React.ComponentProps<typeof Post>
 type FeedPostFragment = { className: string; id: string; innerHtml: string }
 const feedPostFragments = new Map<string, FeedPostFragment>()
 const MAX_FEED_POST_FRAGMENTS = 1_024
-const FEED_POST_FRAGMENT_VERSION = 3
+const FEED_POST_FRAGMENT_VERSION = 4
 
 function FeedPost(props: FeedPostProps) {
   const key = JSON.stringify([FEED_POST_FRAGMENT_VERSION, props])
@@ -1064,7 +1066,8 @@ function FeedPost(props: FeedPostProps) {
 export function ThreadReplies(
   { parentId, replies, user, returnPath, excludePostId, flat = false, showMissingContinuations = false,
     continuationLabel = 'more', continuationReturnPath, contextUnreadPostIds, contextDirectedUnreadPostIds,
-    omissionHref, expansionControlId, highlightTerms = [], hideTopMeta = false, collapsedPreviewPostIds = [] }: {
+    omissionHref, expansionControlId, highlightTerms = [], hideTopMeta = false, collapsedPreviewPostIds = [],
+    anchorReplyNavigation = false }: {
       parentId: number
       replies: PostView[]
       user: User | null
@@ -1081,6 +1084,7 @@ export function ThreadReplies(
       highlightTerms?: string[]
       hideTopMeta?: boolean
       collapsedPreviewPostIds?: number[]
+      anchorReplyNavigation?: boolean
     },
 ) {
   if (!replies.length) return null
@@ -1271,6 +1275,9 @@ export function ThreadReplies(
           omissionMarker('Earlier replies omitted')
         )}
         <FeedPost p={reply} user={user} showParent={false} returnPath={postReturnPath}
+          tappableHref={anchorReplyNavigation
+            ? replyAnchorReturnPath(parentId, reply.id, postReturnPath)
+            : undefined}
           collapsedExpansionControlId={collapsedPreviewPosts.has(reply.id) ? expansionControlId : undefined}
           contextUnread={contextUnreadPostIds?.has(reply.id)}
           contextDirectedUnread={contextDirectedUnreadPostIds?.has(reply.id)} highlightTerms={highlightTerms}
@@ -1522,6 +1529,7 @@ export function FeedThreads(
                 : undefined} continuationLabel="…" />
             </div>
             <ThreadReplies parentId={post.id} replies={treePosts} user={user} returnPath={anchoredReturnPath}
+              anchorReplyNavigation
               showMissingContinuations continuationLabel="…"
               continuationReturnPath={collapsed ? expandedReturnPath : returnPath}
               omissionHref={`/post/${post.id}?from=${encodeURIComponent(`${expandedReturnPath}#post-${post.id}`)}`}

@@ -780,7 +780,9 @@ test('feed conversations stay expanded when all visible replies fit the preview'
   expect(html).not.toContain('class="quiet thread-fold"')
   expect(html).not.toContain('collapsed-preview-post')
   expect(html).not.toContain('aria-label="Earlier replies hidden"')
-  expect(html).toContain('href="/post/2?from=%2Flatest%23post-2"')
+  expect(html).toContain(
+    'class="post-hit-area" href="/post/1?from=%2Flatest%23post-2#post-2"',
+  )
 
   const returned = renderToStaticMarkup(React.createElement(FeedThreads, {
     user: null,
@@ -789,7 +791,9 @@ test('feed conversations stay expanded when all visible replies fit the preview'
     posts: [root, firstReply, secondReply],
   }))
   expect(returned).not.toContain('id="feed-thread-fold-1"')
-  expect(returned).toContain('href="/post/2?from=%2Flatest%23post-2"')
+  expect(returned).toContain(
+    'class="post-hit-area" href="/post/1?from=%2Flatest%23post-2#post-2"',
+  )
 
   const single = renderToStaticMarkup(React.createElement(FeedThreads, {
     user: null,
@@ -834,6 +838,9 @@ test('folded feed conversations preview the two newest replies from a recent bur
   expect(html.match(/class="collapsed-post-expander"/g)).toHaveLength(3)
   expect(html).toContain('aria-label="expand conversation containing post by @newest"')
   expect(html).toMatch(/collapsed-preview-post[^>]*>[\s\S]*?Older deep reply/)
+  expect(html).toContain(
+    'class="post-hit-area" href="/post/1?from=%2Flatest%3Fexpand%3D1%23post-4#post-4"',
+  )
 
   const expanded = renderToStaticMarkup(React.createElement(FeedThreads, {
     user: null,
@@ -843,7 +850,7 @@ test('folded feed conversations preview the two newest replies from a recent bur
   }))
   expect(expanded.match(/class="collapsed-post-expander"/g)).toHaveLength(2)
   expect(expanded).toContain('class="post-hit-area" href="/post/1')
-  expect(expanded).toContain('class="post-hit-area" href="/post/4')
+  expect(expanded).toContain('class="post-hit-area" href="/post/1?from=%2Flatest%23post-4#post-4"')
 })
 
 test('folded feed conversations distinguish previews from different depths', () => {
@@ -3478,6 +3485,43 @@ test('Profile note and reply actions link back to their originating feed entries
   )
   expect(replies).toContain(
     'href="/post/2?reply=1&amp;from=%2Fu%2Fwriter%3Ftab%3Dreplies%26page%3D2%23post-2"',
+  )
+})
+
+test('Profile reply cards open their topmost displayed ancestor thread at the reply anchor', () => {
+  const parent = {
+    id: 1,
+    user_id: 2,
+    parent_id: null,
+    body: 'A conversation parent',
+    handle: 'reader',
+    created_at: '2026-08-03 11:00:00',
+    deleted_at: null,
+    reply_count: 2,
+  }
+  const reply = (id: number) => ({
+    id,
+    user_id: 1,
+    parent_id: parent.id,
+    body: `Profile reply ${id}`,
+    handle: 'writer',
+    created_at: `2026-08-03 1${id}:00:00`,
+    deleted_at: null,
+    parent,
+  })
+  const html = renderToStaticMarkup(React.createElement(Profile, {
+    user: null,
+    profile: { id: 1, handle: 'writer', email: 'writer@example.com', bio: '' },
+    following: false,
+    posts: [reply(2), reply(3)],
+    tab: 'replies',
+  }))
+
+  expect(html).toContain(
+    'class="post-hit-area" href="/post/1?from=%2Fu%2Fwriter%3Ftab%3Dreplies%23post-2#post-2"',
+  )
+  expect(html).toContain(
+    'class="post-hit-area" href="/post/1?from=%2Fu%2Fwriter%3Ftab%3Dreplies%23post-3#post-3"',
   )
 })
 
