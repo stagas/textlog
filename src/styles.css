@@ -1244,7 +1244,7 @@ nav form {
 .feed-tabs-scroll {
   display: flex;
   flex: 1 1 auto;
-  align-items: center;
+  align-items: flex-end;
   gap: 0;
   width: 100%;
   max-width: 100vw;
