@@ -1151,23 +1151,46 @@ export function ThreadReplies(
   const collapsedPreviewDescendantGapPosts = new Set<number>()
   if (collapsedPreviewPostIds.length) {
     const previewHasAncestorGap = [...collapsedPreviewPath].some(id => byId.get(id)?.feed_ancestor_gap)
-    let hiddenPostAbove = false
-    const visit = (id: number) => {
+    const subtreeHasPreview = new Map<number, boolean>()
+    const hasPreviewBelow = (id: number): boolean => {
+      const cached = subtreeHasPreview.get(id)
+      if (cached !== undefined) return cached
+      const hasPreview = (children.get(id) || []).some(reply => collapsedPreviewPosts.has(reply.id)
+        || hasPreviewBelow(reply.id))
+      subtreeHasPreview.set(id, hasPreview)
+      return hasPreview
+    }
+    const subtreeHasVisiblePost = new Map<number, boolean>()
+    const hasVisiblePostBelow = (id: number): boolean => {
+      const cached = subtreeHasVisiblePost.get(id)
+      if (cached !== undefined) return cached
+      const hasVisiblePost = (children.get(id) || []).some(reply => !reply.deleted_at
+        || hasVisiblePostBelow(reply.id))
+      subtreeHasVisiblePost.set(id, hasVisiblePost)
+      return hasVisiblePost
+    }
+    const visit = (id: number, inheritedHidden = false) => {
+      let hiddenPostAbove = inheritedHidden
       for (const reply of children.get(id) || []) {
-        if (!reply.deleted_at) {
-          if (collapsedPreviewPosts.has(reply.id)) {
-            const parent = byId.get(reply.parent_id!)
-            const loadedSiblings = (children.get(reply.parent_id!) || []).filter(sibling => !sibling.deleted_at).length
-            const hasOmittedSiblings = parent?.direct_reply_count != null
-              && parent.direct_reply_count > loadedSiblings
-            if (hiddenPostAbove || hasOmittedSiblings && !previewHasAncestorGap || reply.feed_ancestor_gap) {
-              collapsedPreviewGapPosts.add(reply.id)
-            }
-            hiddenPostAbove = false
+        if (collapsedPreviewPosts.has(reply.id)) {
+          const parent = byId.get(reply.parent_id!)
+          const visibleSiblings = (children.get(reply.parent_id!) || []).filter(sibling => !sibling.deleted_at)
+          const loadedSiblings = visibleSiblings.length
+          const firstPreviewSibling = visibleSiblings.find(sibling => collapsedPreviewPosts.has(sibling.id))
+          const hasOmittedSiblings = parent?.direct_reply_count != null
+            && parent.direct_reply_count > loadedSiblings
+          const startsOmittedSiblingBoundary = hasOmittedSiblings && firstPreviewSibling?.id === reply.id
+          if (hiddenPostAbove || startsOmittedSiblingBoundary && !previewHasAncestorGap || reply.feed_ancestor_gap) {
+            collapsedPreviewGapPosts.add(reply.id)
           }
-          else hiddenPostAbove = true
+          hiddenPostAbove = false
+          visit(reply.id)
         }
-        visit(reply.id)
+        else if (hasPreviewBelow(reply.id)) {
+          visit(reply.id, hiddenPostAbove || !reply.deleted_at)
+          hiddenPostAbove = false
+        }
+        else if (!reply.deleted_at || hasVisiblePostBelow(reply.id)) hiddenPostAbove = true
       }
     }
     visit(parentId)
@@ -1319,10 +1342,17 @@ export function FeedThreads(
       promoteAncestors?: boolean | 'all'; expandedRootId?: number; expandedByDefault?: boolean },
 ) {
   if (!posts.length) return null
-  const treePosts = [...posts]
-  const ids = new Set(posts.map(post => post.id))
+  const belongsToDeletedTopLevel = (post: PostView) => {
+    let ancestor: PostView | ParentPost = post
+    while (ancestor.parent) ancestor = ancestor.parent
+    return ancestor.parent_id === null && !!ancestor.deleted_at
+  }
+  const feedPosts = posts.filter(post => !belongsToDeletedTopLevel(post))
+  if (!feedPosts.length) return null
+  const treePosts = [...feedPosts]
+  const ids = new Set(feedPosts.map(post => post.id))
   const externalChildren = new Map<number, PostView[]>()
-  for (const post of posts) {
+  for (const post of feedPosts) {
     if (!post.parent_id || ids.has(post.parent_id) || post.feed_branch_root || post.feed_ancestor_gap) continue
     externalChildren.set(post.parent_id, [...(externalChildren.get(post.parent_id) || []), post])
   }
@@ -1341,7 +1371,7 @@ export function FeedThreads(
     ids.add(parent.id)
   }
   if (promoteAncestors) {
-    for (const post of posts) {
+    for (const post of feedPosts) {
       if (post.feed_branch_root || post.feed_ancestor_gap) continue
       const immediateParent = post.parent
       if (!immediateParent) continue
@@ -1406,6 +1436,17 @@ export function FeedThreads(
       treePosts[index] = { ...post, parent_id: ancestor?.id ?? null,
         ...(contextUnreadPostIds?.has(post.id) ? { parent: ancestor } : {}),
         feed_ancestor_gap: post.feed_ancestor_gap || !!ancestor }
+    }
+  }
+  let removedDeletedRoot = true
+  while (removedDeletedRoot) {
+    removedDeletedRoot = false
+    for (let index = treePosts.length - 1; index >= 0; index--) {
+      const post = treePosts[index]
+      if (!post.deleted_at || post.parent_id && ids.has(post.parent_id)) continue
+      treePosts.splice(index, 1)
+      ids.delete(post.id)
+      removedDeletedRoot = true
     }
   }
   const positions = new Map(treePosts.map((post, index) => [post.id, index]))

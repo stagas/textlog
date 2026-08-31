@@ -373,6 +373,28 @@ test('feed trees promote a shared parent when only one sibling carries the quote
   expect(html.indexOf('id="post-496"')).toBeLessThan(html.indexOf('id="post-549"'))
 })
 
+test('feed trees suppress deleted top-level post 2878 and all of its children', () => {
+  const deletedRoot = { id: 2878, user_id: 2, parent_id: null, body: 'deleted root',
+    created_at: '2026-08-30 02:48:06', deleted_at: '2026-08-31 15:23:18', handle: 'deleted-453',
+    reply_count: 2 }
+  const child = (id: number, handle: string, created_at: string) => ({
+    id, user_id: id, parent_id: deletedRoot.id, body: `${handle} visible reply`, created_at,
+    deleted_at: null, handle, reply_count: 0, parent: deletedRoot, feed_branch_root: true,
+    feed_collapsed_preview: true,
+  })
+  const html = renderToStaticMarkup(
+    <PublicFeed user={{ id: 1, handle: 'viewer', email: 'viewer@example.com', bio: '' }} path="/all"
+      feed={{ posts: [child(2887, 'paratoner', '2026-08-30 06:30:32'),
+        child(2886, 'stagas', '2026-08-30 05:59:23')], page: 1, totalItems: 1, totalPages: 1 }} />,
+  )
+
+  expect(html).not.toContain('id="post-2878"')
+  expect(html).not.toContain('(deleted post)')
+  expect(html).not.toContain('id="post-2886"')
+  expect(html).not.toContain('id="post-2887"')
+  expect(html).not.toContain('class="post-page-thread feed-thread"')
+})
+
 test('latest joins promoted branches beneath their shared grandparent', () => {
   const root = { id: 494, user_id: 2, parent_id: null, body: 'shared conversation root',
     created_at: '2026-08-08 14:20:43', deleted_at: null, handle: 'alice', reply_count: 2 }

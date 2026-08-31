@@ -985,7 +985,7 @@ test('folded feed conversations show a gap when a same-depth preview path hides 
   expect(html).toMatch(/collapsed-preview-post[^>]*>[\s\S]*?for="feed-thread-fold-30" aria-label="Expand earlier replies">…<\/label>[\s\S]*?id="post-32"/)
 })
 
-test('folded feed conversations show a gap for same-depth replies omitted from the feed', () => {
+test('folded feed conversations place a same-depth omission only before the oldest preview', () => {
   const root = { id: 40, user_id: 1, parent_id: null, body: 'Root', created_at: '2026-08-20 09:00:00',
     deleted_at: null, handle: 'root', reply_count: 4, direct_reply_count: 4 }
   const visible = (id: number, created_at: string) => ({ id, user_id: id, parent_id: root.id, body: `Visible ${id}`,
@@ -997,7 +997,9 @@ test('folded feed conversations show a gap for same-depth replies omitted from t
       visible(45, '2026-08-23 12:00:00')],
   }))
 
-  expect(html).toMatch(/collapsed-preview-post[^>]*>[\s\S]*?for="feed-thread-fold-40" aria-label="Expand earlier replies">…<\/label>[\s\S]*?id="post-45"/)
+  expect(html).toMatch(/for="feed-thread-fold-40" aria-label="Expand earlier replies">…<\/label>[\s\S]*?id="post-44"/)
+  expect(html.slice(html.indexOf('id="post-44"'), html.indexOf('id="post-45"')))
+    .not.toContain('aria-label="Expand earlier replies"')
 })
 
 test('expanded partial feed conversations place sibling omission markers before the oldest visible reply', () => {
@@ -1222,6 +1224,57 @@ test('hot post 925 marks reply 2521 as nested beneath sibling 2445', () => {
 
   expect(html).toMatch(/class="reply-node projected-reply-deeper omitted-parent-reply">[\s\S]*?id="post-2521"/)
   expect(html).toMatch(/class="reply-node"><article[^>]*id="post-2445"/)
+})
+
+test('post 925 does not put omission dots between loaded direct siblings 2902 and 2947', () => {
+  const root = { id: 925, user_id: 321, parent_id: null, body: 'Root', created_at: '2026-08-11 15:07:20',
+    deleted_at: null, handle: 'root', reply_count: 65, direct_reply_count: 37 }
+  const older = { id: 2521, user_id: 558, parent_id: root.id, body: 'Older projected reply',
+    created_at: '2026-08-26 06:58:19', deleted_at: null, handle: 'older', reply_count: 0,
+    parent: { ...root, id: 2331, parent_id: root.id, parent: root }, feed_ancestor_gap: true }
+  const direct = (id: number, created_at: string, reply_count = 0) => ({
+    id, user_id: id, parent_id: root.id, body: `Direct ${id}`, created_at, deleted_at: null,
+    handle: `user${id}`, reply_count, parent: root, feed_collapsed_preview: true,
+  })
+  const newer = direct(2947, '2026-08-31 14:40:17', 1)
+  const child = { id: 2950, user_id: 2950, parent_id: newer.id, body: 'Hidden child',
+    created_at: '2026-08-31 15:35:40', deleted_at: null, handle: 'child', reply_count: 0, parent: newer }
+  const html = renderToStaticMarkup(React.createElement(FeedThreads, {
+    user: null,
+    returnPath: '/all',
+    posts: [root, older, direct(2902, '2026-08-30 13:09:16'), newer, child],
+    promoteAncestors: true,
+  }))
+
+  expect(html.slice(html.indexOf('id="post-2902"'), html.indexOf('id="post-2947"')))
+    .not.toContain('aria-label="Expand earlier replies"')
+  expect(html).toMatch(/id="post-2947"[\s\S]*?aria-label="Expand hidden replies"/)
+})
+
+test('post 2910 keeps hidden descendants from creating gaps before the next direct sibling', () => {
+  const root = { id: 2910, user_id: 1, parent_id: null, body: 'Root', created_at: '2026-08-30 13:42:58',
+    deleted_at: null, handle: 'root', reply_count: 7, direct_reply_count: 4 }
+  const older = { id: 2927, user_id: 2, parent_id: root.id, body: 'Older projected reply',
+    created_at: '2026-08-30 20:37:56', deleted_at: null, handle: 'older', reply_count: 0,
+    parent: { ...root, id: 2923, parent_id: root.id, parent: root }, feed_ancestor_gap: true }
+  const first = { id: 2934, user_id: 3, parent_id: root.id, body: 'First direct preview',
+    created_at: '2026-08-30 23:53:58', deleted_at: null, handle: 'first', reply_count: 1,
+    parent: root, feed_collapsed_preview: true }
+  const hiddenChild = { id: 2935, user_id: 4, parent_id: first.id, body: 'Hidden child',
+    created_at: '2026-08-31 06:41:31', deleted_at: null, handle: 'child', reply_count: 0, parent: first }
+  const second = { id: 2936, user_id: 5, parent_id: root.id, body: 'Second direct preview',
+    created_at: '2026-08-31 07:19:56', deleted_at: null, handle: 'second', reply_count: 0,
+    parent: root, feed_collapsed_preview: true }
+  const html = renderToStaticMarkup(React.createElement(FeedThreads, {
+    user: null,
+    returnPath: '/all',
+    posts: [root, older, first, hiddenChild, second],
+    promoteAncestors: true,
+  }))
+
+  const betweenSiblings = html.slice(html.indexOf('id="post-2934"'), html.indexOf('id="post-2936"'))
+  expect(betweenSiblings).toContain('aria-label="Expand hidden replies"')
+  expect(betweenSiblings).not.toContain('aria-label="Expand earlier replies"')
 })
 
 test('expanded hot post 925 indents both selected replies with omitted parents', () => {
