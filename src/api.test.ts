@@ -46,13 +46,13 @@ function fixture(now?: () => number) {
       (3,'Gone','gone@example.com','hidden','2026-08-02 10:00:00');
     UPDATE users SET deleted_at='2026-08-03 00:00:00' WHERE id=3;
     INSERT INTO posts(id,user_id,parent_id,body,created_at) VALUES
-      (1,1,NULL,'hello #textlog @bob','2026-08-03 10:00:00'),
+      (1,1,NULL,'hello #notes @bob','2026-08-03 10:00:00'),
       (2,2,1,'a reply','2026-08-03 11:00:00'),
       (3,1,NULL,'a latest','2026-08-03 12:00:00'),
       (4,3,NULL,'private by deletion','2026-08-03 13:00:00'),
       (5,1,NULL,'deleted post','2026-08-03 14:00:00');
     UPDATE posts SET deleted_at='2026-08-03 15:00:00' WHERE id=5;
-    INSERT INTO post_hashtags(post_id,tag) VALUES(1,'textlog'),(1,'pin');
+    INSERT INTO post_hashtags(post_id,tag) VALUES(1,'notes'),(1,'pin');
     INSERT INTO post_link_previews(post_id,url,image_url,title) VALUES
       (1,'https://example.com','https://example.com/image.jpg','Example');
     INSERT INTO follows(follower_id,following_id) VALUES(2,1);
@@ -110,10 +110,10 @@ describe('public API', () => {
       .toMatchObject({ imageUrl: 'https://example.com/image.jpg', title: 'Example' })
     expect(payload.data[2]).toMatchObject({
       top_id: null,
-      body: 'hello #textlog @bob',
+      body: 'hello #notes @bob',
       created_at: '2026-08-03T10:00:00.000Z',
       reply_count: 1,
-      tags: ['textlog'],
+      tags: ['notes'],
       mentions: ['bob'],
       url: 'https://textlog.cc/post/1',
       author: { handle: 'alice', url: 'https://textlog.cc/u/alice' },
@@ -261,7 +261,7 @@ describe('public API', () => {
     expect(forYou.data.some((activity: any) => activity.payload.id === 3)).toBe(false)
     expect(forYou.data.find((activity: any) => activity.payload.id === 1)).toMatchObject({
       type: 'post',
-      payload: { body: 'hello #textlog @bob' },
+      payload: { body: 'hello #notes @bob' },
     })
     expect(toMe.data.map((activity: any) => activity.type)).toEqual(['user_follow', 'reply', 'mention'])
     expect(toMe.data.some((activity: any) => activity.payload.id === 8)).toBe(true)
@@ -392,16 +392,16 @@ describe('public API', () => {
     const userPosts = await (await request(app, '/api/v1/users/alice/posts')).json() as any
     const userNotes = await (await request(app, '/api/v1/users/alice/notes')).json() as any
     const userReplies = await (await request(app, '/api/v1/users/alice/replies')).json() as any
-    const tags = await (await request(app, '/api/v1/tags/textlog/posts')).json() as any
+    const tags = await (await request(app, '/api/v1/tags/notes/posts')).json() as any
 
     expect(post.data.id).toBe(1)
     expect(post.data.top_id).toBeNull()
     expect(reply.data.top_id).toBe(1)
-    expect(reply.data.parent).toMatchObject({ id: 1, body: 'hello #textlog @bob' })
+    expect(reply.data.parent).toMatchObject({ id: 1, body: 'hello #notes @bob' })
     expect(replies.data.map((item: any) => item.id)).toEqual([2])
     expect(user.data).toMatchObject({ handle: 'alice', bio: 'builder', post_count: 2, replies_count: 1,
       follower_count: 1, following_user_count: 0, following_tag_count: 0, following_count: 0 })
-    expect(user.data.pinned_note).toMatchObject({ id: 1, body: 'hello #textlog @bob' })
+    expect(user.data.pinned_note).toMatchObject({ id: 1, body: 'hello #notes @bob' })
     expect(user.data.pinned_reply).toMatchObject({ id: 6, body: 'alice replies', top_id: 1 })
     expect(user.data.email).toBeUndefined()
     expect(userPosts.data.map((item: any) => item.id)).toEqual([3, 1])
@@ -450,7 +450,7 @@ describe('public API', () => {
     const user = await (await request(app, '/api/v1/users/alice')).json() as any
     const tag = await (await request(app, '/api/v1/tags/textlog')).json() as any
     expect(user.data).toMatchObject({ following_user_count: 2, following_tag_count: 2, follower_count: 2 })
-    expect(tag.data).toMatchObject({ tag: 'textlog', post_count: 1, follower_count: 3,
+    expect(tag.data).toMatchObject({ tag: 'textlog', post_count: 0, follower_count: 3,
       api_url: 'https://textlog.cc/api/v1/tags/textlog' })
     expect((await request(app, '/api/v1/users/gone/followers')).status).toBe(404)
     expect((await request(app, '/api/v1/tags/invalid-tag/followers')).status).toBe(400)

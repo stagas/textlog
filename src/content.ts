@@ -1,8 +1,9 @@
 import { LinkifyIt } from 'linkify-it'
 import tlds from 'tlds'
+import { canonicalHashtag } from './meta-thread'
 
 export function normalizeHashtag(tag: string) {
-  return tag.normalize('NFC').toLowerCase()
+  return canonicalHashtag(tag.normalize('NFC').toLowerCase())
 }
 
 export function isValidHashtag(tag: string) {

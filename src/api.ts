@@ -8,6 +8,7 @@ import { loadPolls } from './polls'
 import { searchExpression } from './search'
 import type { ApiPost, LinkPreview } from './types'
 import { excludesWhisperPosts } from './whisper'
+import { excludesMetaPosts } from './meta-thread'
 export type { ApiPost } from './types'
 
 export const API_DEFAULT_LIMIT = 20
@@ -277,7 +278,7 @@ export function apiPosts(database: Database, origin: string, options: {
   }
   if (options.repliesOnly) filters.push('p.parent_id IS NOT NULL')
   if (options.topLevelOnly) filters.push('p.parent_id IS NULL')
-  if (options.excludeWhispers) filters.push(excludesWhisperPosts())
+  if (options.excludeWhispers) filters.push(excludesWhisperPosts(), excludesMetaPosts())
   if (options.before !== null) {
     filters.push('p.id < ?')
     parameters.push(options.before)

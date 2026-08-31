@@ -27,6 +27,7 @@ import { getHotPosts, hotFeedProjectionNeedsRefresh, hotRankingVersion,
   refreshHotFeedProjection } from './hot'
 import { getImageUrl, isImageKey } from './image-storage'
 import { LOCATION_MAP_STYLE_VERSION, LOCATION_ZOOM } from './locations'
+import { excludesMetaPosts } from './meta-thread'
 import { interactedEmail } from './interacted-email'
 import { isRecentConversationRoot, recentActiveBranchReplies, recentConversationReplies,
   recentExpandableConversationReplies } from './latest-conversation'
@@ -2460,12 +2461,13 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
         : '1'
       const blockViewerId = viewerIsModerator(database, viewerId) ? -1 : viewerId
       const parameters = [blockViewerId, blockViewerId, blockViewerId, viewerId, viewerId]
-      const snapshotKind = 'latest-conversation-heads-v11'
+      const snapshotKind = 'latest-conversation-heads-v12'
       const snapshot = feedSnapshotPage<number>(database, snapshotKind, viewerId, page, () => {
         if (viewerId < 0) {
           return (database.query(`SELECT h.conversation_id FROM conversation_heads h
             WHERE NOT EXISTS (SELECT 1 FROM post_hashtags ph
               WHERE ph.post_id=h.conversation_id AND ph.tag='whisper')
+            AND ${excludesMetaPosts('h.conversation_id')}
             ORDER BY h.latest_post_id DESC,h.conversation_id DESC`).all() as Array<{ conversation_id: number }>)
             .map(row => row.conversation_id)
         }
@@ -2480,7 +2482,7 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
           ) SELECT 1 FROM ancestors JOIN blocks b ON
             (b.blocker_id=? AND b.blocked_id=ancestors.user_id)
             OR (b.blocker_id=ancestors.user_id AND b.blocked_id=?)))
-          AND ${excludesWhispers}
+          AND ${excludesWhispers} AND ${excludesMetaPosts()}
           AND (? < 0 OR NOT EXISTS (SELECT 1 FROM post_hashtags ph JOIN blocked_hashtags bh ON bh.tag=ph.tag
             WHERE ph.post_id=p.id AND bh.user_id=?)) LIMIT 1)
           ORDER BY h.latest_post_id DESC,h.conversation_id DESC`,
@@ -2499,7 +2501,7 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
           ) SELECT 1 FROM ancestors JOIN blocks b ON
             (b.blocker_id=? AND b.blocked_id=ancestors.user_id)
             OR (b.blocker_id=ancestors.user_id AND b.blocked_id=?)))
-          AND ${excludesWhispers}
+          AND ${excludesWhispers} AND ${excludesMetaPosts()}
           AND (? < 0 OR NOT EXISTS (SELECT 1 FROM post_hashtags ph JOIN blocked_hashtags bh ON bh.tag=ph.tag
             WHERE ph.post_id=p.id AND bh.user_id=?)) ORDER BY p.id DESC`)
           .all(...conversationIds, ...parameters) as Array<PostView & { conversation_id: number }>
@@ -2993,7 +2995,7 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
           ORDER BY p.id DESC LIMIT ?`).all(...parameters, 5) as PostView[], -1)
       let result: import('./types').EmbedData | null
       if (request.kind === 'latest') {
-        result = { posts: latest(excludesWhisperPosts()), title: 'all', href: '/all' }
+        result = { posts: latest(`${excludesWhisperPosts()} AND ${excludesMetaPosts()}`), title: 'all', href: '/all' }
       }
       else if (request.kind === 'hot') {
         result = { posts: enrichPosts(database, getHotPosts(database, 5, null, new Date(), -1, true), -1), title: 'hot',

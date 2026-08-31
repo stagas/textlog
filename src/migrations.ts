@@ -2699,6 +2699,19 @@ export const migrations: Migration[] = [
         BEGIN SELECT RAISE(ABORT,'draft public_id required'); END;`)
     },
   },
+  {
+    version: 167,
+    name: 'include_meta_threads_in_hot',
+    up(database) {
+      if (!database.query("SELECT 1 FROM sqlite_master WHERE type='table' AND name='post_hot'").get()) return
+      if (database.query("SELECT 1 FROM sqlite_master WHERE type='table' AND name='users'").get()) {
+        rebuildHotPosts(database)
+      }
+      if (database.query(
+        "SELECT 1 FROM sqlite_master WHERE type='table' AND name='hot_feed_projection_state'",
+      ).get()) database.run('UPDATE hot_feed_projection_state SET dirty=1')
+    },
+  },
 ]
 
 export const latestMigrationVersion = migrations.at(-1)!.version
