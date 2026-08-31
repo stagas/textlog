@@ -415,6 +415,17 @@ function renderFlags(post: PostView | NonNullable<PostView['parent']>) {
 
 export const MAX_VISIBLE_REPLY_DEPTH = 5
 
+export function postAnchorId(path?: string) {
+  if (!path) return null
+  try {
+    const match = new URL(path, 'http://textlog.local').hash.match(/^#post-([1-9]\d*)$/)
+    return match ? Number(match[1]) : null
+  }
+  catch {
+    return null
+  }
+}
+
 export function replyAnchorReturnPath(threadRootId: number, replyId: number, returnPath?: string) {
   const returnQuery = returnPath ? '?from=' + encodeURIComponent(returnPath) : ''
   return `/post/${threadRootId}${returnQuery}#post-${replyId}`
@@ -1067,7 +1078,7 @@ export function ThreadReplies(
   { parentId, replies, user, returnPath, excludePostId, flat = false, showMissingContinuations = false,
     continuationLabel = 'more', continuationReturnPath, contextUnreadPostIds, contextDirectedUnreadPostIds,
     omissionHref, expansionControlId, highlightTerms = [], hideTopMeta = false, collapsedPreviewPostIds = [],
-    anchorReplyNavigation = false }: {
+    anchorReplyNavigation = false, backHref }: {
       parentId: number
       replies: PostView[]
       user: User | null
@@ -1085,6 +1096,7 @@ export function ThreadReplies(
       hideTopMeta?: boolean
       collapsedPreviewPostIds?: number[]
       anchorReplyNavigation?: boolean
+      backHref?: string
     },
 ) {
   if (!replies.length) return null
@@ -1101,6 +1113,7 @@ export function ThreadReplies(
     siblings.sort((a, b) => conversationCreatedAt(a).localeCompare(conversationCreatedAt(b)) || a.id - b.id)
   }
   const byId = new Map(replies.map(reply => [reply.id, reply]))
+  const backPostId = postAnchorId(backHref)
   const canonicalDepths = new Map<number, number>()
   const canonicalDepth = (postId: number) => {
     const cached = canonicalDepths.get(postId)
@@ -1278,6 +1291,7 @@ export function ThreadReplies(
           tappableHref={anchorReplyNavigation
             ? replyAnchorReturnPath(parentId, reply.id, postReturnPath)
             : undefined}
+          backHref={reply.id === backPostId ? backHref : undefined}
           collapsedExpansionControlId={collapsedPreviewPosts.has(reply.id) ? expansionControlId : undefined}
           contextUnread={contextUnreadPostIds?.has(reply.id)}
           contextDirectedUnread={contextDirectedUnreadPostIds?.has(reply.id)} highlightTerms={highlightTerms}
@@ -1531,7 +1545,9 @@ export function FeedThreads(
             <ThreadReplies parentId={post.id} replies={treePosts} user={user} returnPath={anchoredReturnPath}
               anchorReplyNavigation
               showMissingContinuations continuationLabel="…"
-              continuationReturnPath={collapsed ? expandedReturnPath : returnPath}
+              continuationReturnPath={collapsed || canCollapse && expandedRootId === post.id
+                ? expandedReturnPath
+                : returnPath}
               omissionHref={`/post/${post.id}?from=${encodeURIComponent(`${expandedReturnPath}#post-${post.id}`)}`}
               expansionControlId={foldControlId}
               contextUnreadPostIds={contextUnreadPostIds} contextDirectedUnreadPostIds={contextDirectedUnreadPostIds}

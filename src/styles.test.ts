@@ -157,10 +157,12 @@ describe('in-memory stylesheet', () => {
 
   test('keeps feed anchors below the sticky tabs on desktop and mobile', async () => {
     const css = await Bun.file(new URL('./styles.css', import.meta.url)).text()
-    expect(css).toContain('.post {\n  scroll-margin-top: calc(var(--space-6) + var(--space-1));\n}')
+    expect(css).toContain('.feed-thread .post {\n  scroll-margin-top: calc(var(--space-6) + var(--space-1));\n}')
     expect(css).toContain(
-      '@media (max-width: 600px) {\n  .post,\n  .activity-follow {\n    scroll-margin-top: calc(var(--space-7) + var(--space-1));\n  }\n}',
+      '@media (max-width: 600px) {\n  .feed-thread .post,\n  .activity-follow {\n'
+      + '    scroll-margin-top: calc(var(--space-7) + var(--space-1));\n  }\n}',
     )
+    expect(css).not.toContain('\n.post {\n  scroll-margin-top:')
   })
 
   test('removes the top border from a grouped first activity', async () => {

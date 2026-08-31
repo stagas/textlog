@@ -2323,12 +2323,12 @@ body.corners-round a.button {
   scroll-margin-top: calc(var(--space-6) + var(--space-1));
 }
 
-.post {
+.feed-thread .post {
   scroll-margin-top: calc(var(--space-6) + var(--space-1));
 }
 
 @media (max-width: 600px) {
-  .post,
+  .feed-thread .post,
   .activity-follow {
     scroll-margin-top: calc(var(--space-7) + var(--space-1));
   }

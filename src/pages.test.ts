@@ -850,7 +850,9 @@ test('folded feed conversations preview the two newest replies from a recent bur
   }))
   expect(expanded.match(/class="collapsed-post-expander"/g)).toHaveLength(2)
   expect(expanded).toContain('class="post-hit-area" href="/post/1')
-  expect(expanded).toContain('class="post-hit-area" href="/post/1?from=%2Flatest%23post-4#post-4"')
+  expect(expanded).toContain(
+    'class="post-hit-area" href="/post/1?from=%2Flatest%3Fexpand%3D1%23post-4#post-4"',
+  )
 })
 
 test('folded feed conversations distinguish previews from different depths', () => {
@@ -3788,6 +3790,25 @@ test('Thread pages show approximate wording only on the primary post', () => {
   expect(html).not.toContain('post-context-age')
   expect(html).toContain('>wrote recently</a><span class="post-context post-context-punctuation">:</span>')
   expect(html.match(/wrote recently/g)).toHaveLength(1)
+})
+
+test('Thread pages also place back after the timestamp of its targeted reply', () => {
+  const html = renderToStaticMarkup(React.createElement(Reply, {
+    user: { id: 1, handle: 'reader', email: 'reader@example.com', bio: '', show_timestamps: 1 },
+    post: { id: 10, user_id: 2, parent_id: null, body: 'Root', handle: 'root',
+      created_at: '2026-08-30 11:00:00', deleted_at: null },
+    replies: [{ id: 11, user_id: 3, parent_id: 10, body: 'Target reply', handle: 'writer',
+      created_at: '2026-08-30 12:00:00', deleted_at: null }],
+    showForm: false,
+    returnPath: '/latest?expand=10#post-11',
+  }))
+  const root = html.slice(html.indexOf('id="post-10"'), html.indexOf('id="post-11"'))
+  const reply = html.slice(html.indexOf('id="post-11"'), html.indexOf('</article>', html.indexOf('id="post-11"')))
+
+  expect(root).toContain('class="quiet post-back-link" href="/latest?expand=10#post-11">back</a>')
+  expect(reply).toMatch(
+    /<time class="post-relative-time"[^>]*>.*?<\/time><a class="quiet post-back-link" href="\/latest\?expand=10#post-11">back<\/a>/,
+  )
 })
 
 test('Reply pages show a top link after the linked reply context', () => {

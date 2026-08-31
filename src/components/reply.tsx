@@ -15,7 +15,7 @@ import {
   VerificationRequired,
 } from './page-shared'
 import { Panel } from './panel'
-import { Post, ThreadReplies } from './post'
+import { Post, postAnchorId, ThreadReplies } from './post'
 
 export function ReplyBox(
   { action, body, error, placeholder, hidden, beforeTextarea, secondary, primary, className = 'replybox reply-compose',
@@ -108,6 +108,8 @@ export function Reply(
       previewLocation?: LocationView
     },
 ) {
+  const backPostId = postAnchorId(returnPath)
+  const backTargetsReply = replies.some(reply => reply.id === backPostId && !reply.deleted_at)
   return (
     <Layout user={user} title={postTitle(post.body, post.moderation_category)} social={social}>
       <div className="post-page-thread">
@@ -150,7 +152,8 @@ export function Reply(
             )
             : <VerificationRequired />
         )}
-        <ThreadReplies parentId={post.id} replies={replies} user={user} returnPath={returnPath} flat={flat} />
+        <ThreadReplies parentId={post.id} replies={replies} user={user} returnPath={returnPath} flat={flat}
+          backHref={backTargetsReply ? returnPath : undefined} />
       </div>
     </Layout>
   )
