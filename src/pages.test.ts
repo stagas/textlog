@@ -704,8 +704,8 @@ test('explore renders tag toggles above a full-width people section', () => {
     '<section class="explore-people" id="explore-people"><div class="explore-section-heading">'
       + '<h2>People to follow</h2><nav class="pagination pagination-compact"',
   )
-  expect(html).toContain('href="/explore?tagsPage=2&amp;_scroll=instant#explore-tags"')
-  expect(html).toContain('href="/explore?peoplePage=2&amp;_scroll=instant#explore-people"')
+  expect(html).toContain('href="/explore?tagsPage=2#explore-tags"')
+  expect(html).toContain('href="/explore?peoplePage=2#explore-people"')
   expect(html).toContain(
     '<div class="explore-section-heading"><h2>Trending tags</h2><nav class="pagination pagination-compact"',
   )
@@ -1523,8 +1523,8 @@ test('pagination requests instant scrolling without client-side scripts', () => 
     page: 2,
     totalPages: 3,
   }))
-  expect(html).toContain('name="_scroll" value="instant"')
-  expect(html).toContain('page=1&amp;_scroll=instant')
+  expect(html).not.toContain('name="_scroll"')
+  expect(html).toContain('page=1')
   expect(html).not.toContain('<script')
 })
 
@@ -2389,25 +2389,25 @@ describe('About', () => {
       expect(html).toContain(
         'class="guest-join-row"><a class="button" href="/enter" rel="nofollow">join the community</a>',
       )
-      expect(html).toContain('href="#feed-tabs">browse notes</a>')
-      expect(html).toContain('href="/hot?_scroll=instant#feed-tabs"')
-      expect(html).toContain('href="/all?_scroll=instant#feed-tabs"')
-      expect(html).toMatch(/href="\/any\?seed=[0-9a-z]+&amp;_scroll=instant#feed-tabs"/)
+      expect(html).toContain('href="/hot">browse notes</a>')
+      expect(html).toContain('href="/hot"')
+      expect(html).toContain('href="/all"')
+      expect(html).toMatch(/href="\/any\?seed=[0-9a-z]+"/)
       expect(html).toContain(
         'class="button feed-tabs-join" href="/enter" rel="nofollow">join the community</a>',
       )
-      expect(html).toContain('?page=2&amp;_scroll=instant#feed-tabs" aria-label="Page 2"')
-      expect(html).toContain('?page=2&amp;_scroll=instant#feed-tabs" aria-label="Next page"')
+      expect(html).toContain('?page=2" aria-label="Page 2"')
+      expect(html).toContain('?page=2" aria-label="Next page"')
       expect(html.indexOf('about-page feed-about')).toBeLessThan(html.indexOf('id="feed-tabs"'))
       expect(html.lastIndexOf('aria-label="Pagination"')).toBeLessThan(html.indexOf('class="guest-join-row"'))
     }
     for (const html of [signedInHot, signedInLatest]) {
-      expect(html).toMatch(/href="\/any\?seed=[0-9a-z]+&amp;_scroll=instant#feed-tabs"/)
+      expect(html).toMatch(/href="\/any\?seed=[0-9a-z]+"/)
     }
     for (const html of [signedInHot, signedInLatest]) {
       expect(html).not.toContain('class="static-page about-page feed-about"')
-      expect(html).toContain('href="/hot?_scroll=instant#feed-tabs"')
-      expect(html).toContain('href="/all?_scroll=instant#feed-tabs"')
+      expect(html).toContain('href="/hot"')
+      expect(html).toContain('href="/all"')
       expect(html).not.toContain('class="button feed-tabs-join"')
       expect(html).not.toContain('class="guest-join-row"')
     }
@@ -2931,7 +2931,7 @@ test('Following and followers paginate every 8 people', () => {
       following: false,
     }))
 
-    expect(html).toContain(`href="/u/reader?tab=${kind}&amp;page=2&amp;_scroll=instant#connections-people-heading"`)
+    expect(html).toContain(`href="/u/reader?tab=${kind}&amp;page=2#connections-people-heading"`)
     expect(html.indexOf('aria-label="People pagination"')).toBeLessThan(html.indexOf('connection-people'))
     expect(html.lastIndexOf('aria-label="People pagination"')).toBeGreaterThan(html.indexOf('connection-people'))
   }
@@ -2988,7 +2988,7 @@ test('Connection sorting can only be changed on the viewer’s own profile', () 
   expect(own).toContain('href="/u/reader?tab=followers">recent</a>')
   expect(recent).toContain('href="/u/reader?tab=following&amp;sort=abc&amp;tagsPage=3">abc</a>')
   expect(recent).toContain(
-    'href="/u/reader?tab=following&amp;tagsPage=3&amp;page=1&amp;_scroll=instant#connections-people-heading"',
+    'href="/u/reader?tab=following&amp;tagsPage=3&amp;page=1#connections-people-heading"',
   )
   expect(other).not.toContain('>recent</a>')
   expect(other).not.toContain('>abc</a>')
@@ -3214,7 +3214,7 @@ test('Followed tags paginate every 24 tags', () => {
   }))
 
   expect(html).toContain(
-    'href="/u/reader?tab=following&amp;tagsPage=2&amp;_scroll=instant#connections-tags-heading"',
+    'href="/u/reader?tab=following&amp;tagsPage=2#connections-tags-heading"',
   )
 })
 

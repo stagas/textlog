@@ -32,8 +32,7 @@ export function HotFeed(
       <FeedTabs active="hot" user={user} forYouCount={feed.forYouCount} forYouUnread={feed.forYouUnread}
         toMeCount={feed.toMeCount} toMeUnread={feed.toMeUnread} latestCount={feed.latestCount} />
       {feed.page > 1 && (
-        <Pagination page={feed.page} totalPages={feed.totalPages} path={feedPath}
-          anchor={user ? undefined : 'feed-tabs'} top />
+        <Pagination page={feed.page} totalPages={feed.totalPages} path={feedPath} top />
       )}
       {feed.posts.length
         ? <FeedThreads posts={feed.posts} user={user} returnPath={returnPath} expandedRootId={expandedRootId}
@@ -45,8 +44,7 @@ export function HotFeed(
             No notes on this page. <a href="/hot">Return to the first page</a>.
           </div>
         )}
-      <Pagination page={feed.page} totalPages={feed.totalPages} path={feedPath}
-        anchor={user ? undefined : 'feed-tabs'} />
+      <Pagination page={feed.page} totalPages={feed.totalPages} path={feedPath} />
     </Layout>
   )
 }

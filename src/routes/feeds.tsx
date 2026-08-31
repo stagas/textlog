@@ -301,8 +301,7 @@ export function registerFeedsRoutes(app: Hono) {
     const retainedSeed = retainedAnyFeedSeed(c.req.raw)
     if (!requestedSeed && !retainedSeed) {
       const seed = randomInt(1, 2_147_483_647)
-      const guestSuffix = !user && c.req.query('_scroll') === 'instant' ? '&_scroll=instant#feed-tabs' : ''
-      return redirect(`/any?seed=${seed.toString(36)}${guestSuffix}`, retainedAnyFeedSeedCookie(seed))
+      return redirect(`/any?seed=${seed.toString(36)}`, retainedAnyFeedSeedCookie(seed))
     }
     const seed = requestedSeed || retainedSeed!
     const notificationBanner = await showNotificationBanner(c.req.raw, user)

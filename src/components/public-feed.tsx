@@ -42,8 +42,7 @@ export function PublicFeed(
           : undefined} unreadHref={feed.unreadHref} lastUnreadHref={feed.lastUnreadHref}
         readAction="/all/read-all" />
       {feed.page > 1 && (
-        <Pagination page={feed.page} totalPages={feed.totalPages} path={feedPath}
-          anchor={user ? undefined : 'feed-tabs'} top />
+        <Pagination page={feed.page} totalPages={feed.totalPages} path={feedPath} top />
       )}
       {feed.posts.length
         ? (
@@ -59,8 +58,7 @@ export function PublicFeed(
             No notes on this page. <a href={path}>Return to the first page</a>.
           </div>
         )}
-      <Pagination page={feed.page} totalPages={feed.totalPages} path={feedPath}
-        anchor={user ? undefined : 'feed-tabs'} />
+      <Pagination page={feed.page} totalPages={feed.totalPages} path={feedPath} />
     </Layout>
   )
 }

@@ -504,7 +504,7 @@ export function Pagination(
     >
       {page > 1
         ? (
-          <a className="pagination-edge" href={`${path}${separator}${pageParam}=${page - 1}&_scroll=instant${fragment}`}
+          <a className="pagination-edge" href={`${path}${separator}${pageParam}=${page - 1}${fragment}`}
             aria-label="Previous page"
           >
             ← prev
@@ -521,7 +521,6 @@ export function Pagination(
                 <form className="pagination-current-form" method="get" action={`${formPath}${fragment}`}
                   aria-current="page"
                 >
-                  <input type="hidden" name="_scroll" value="instant" />
                   {formParameters.map(([name, parameterValue]) => (
                     <input key={`${name}:${parameterValue}`} type="hidden" name={name} value={parameterValue} />
                   ))}
@@ -531,7 +530,7 @@ export function Pagination(
                 </form>
               )
               : (
-                <a href={`${path}${separator}${pageParam}=${value}&_scroll=instant${fragment}`}
+                <a href={`${path}${separator}${pageParam}=${value}${fragment}`}
                   aria-label={`Page ${value}`}
                 >
                   {value}
@@ -542,7 +541,7 @@ export function Pagination(
       </div>
       {page < totalPages
         ? (
-          <a className="pagination-edge" href={`${path}${separator}${pageParam}=${page + 1}&_scroll=instant${fragment}`}
+          <a className="pagination-edge" href={`${path}${separator}${pageParam}=${page + 1}${fragment}`}
             aria-label="Next page"
           >
             next →
@@ -565,7 +564,7 @@ export function CursorPagination({ path, previousCursor, nextCursor }: {
       {previousCursor
         ? (
           <a className="pagination-edge"
-            href={`${path}${separator}cursor=${encodeURIComponent(previousCursor)}&_scroll=instant`}
+            href={`${path}${separator}cursor=${encodeURIComponent(previousCursor)}`}
           >
             ← prev
           </a>
@@ -574,7 +573,7 @@ export function CursorPagination({ path, previousCursor, nextCursor }: {
       {nextCursor
         ? (
           <a className="pagination-edge hot-pagination-next"
-            href={`${path}${separator}cursor=${encodeURIComponent(nextCursor)}&_scroll=instant`}
+            href={`${path}${separator}cursor=${encodeURIComponent(nextCursor)}`}
           >
             next →
           </a>
@@ -615,7 +614,7 @@ export function FeedTabs(
         <div className="feed-tabs-scroll">
           {user && (
             <a className={toMe ? 'active' : ''} aria-current={toMe ? 'page' : undefined}
-              href="/@?_scroll=instant#feed-tabs">
+              href="/@">
               <TabHighlight active={toMe} />
               @
               <TabCount count={toMeCount} />
@@ -624,7 +623,7 @@ export function FeedTabs(
           {user && (
             <a className={active === 'following' && !toMe ? 'active' : ''}
               aria-current={active === 'following' && !toMe ? 'page' : undefined}
-              href="/my-feed?_scroll=instant#feed-tabs"
+              href="/my-feed"
             >
               <TabHighlight active={active === 'following' && !toMe} />
               my feed
@@ -632,21 +631,21 @@ export function FeedTabs(
             </a>
           )}
           <a className={active === 'hot' ? 'active' : ''} aria-current={active === 'hot' ? 'page' : undefined}
-            href="/hot?_scroll=instant#feed-tabs"
+            href="/hot"
           >
             <TabHighlight active={active === 'hot'} />
             hot
           </a>
           <a className={active === 'random' ? 'active' : ''}
             aria-current={active === 'random' ? 'page' : undefined}
-            href={`/any?seed=${anySeed}&_scroll=instant#feed-tabs`}
+            href={`/any?seed=${anySeed}`}
           >
             <TabHighlight active={active === 'random'} />
             any
           </a>
           <a className={active === 'latest' ? 'active' : ''}
             aria-current={active === 'latest' ? 'page' : undefined}
-            href="/all?_scroll=instant#feed-tabs"
+            href="/all"
           >
             <TabHighlight active={active === 'latest'} />
             all

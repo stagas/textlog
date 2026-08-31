@@ -732,7 +732,7 @@ test('consequential account, content, reporting, and admin flows work over HTTP'
   expect(hotHome.headers.get('location')).toBe('/hot')
   const activityHomeHtml = await (await request('/my-feed', { cookie: `${aliceCookie}; feed=activity` })).text()
   expect(activityHomeHtml).toContain(
-    'class="active" aria-current="page" href="/my-feed?_scroll=instant#feed-tabs"',
+    'class="active" aria-current="page" href="/my-feed"',
   )
   expect(activityHomeHtml).toContain('<title>my feed · textlog</title>')
   for (const path of ['/my-feed', '/hot', '/all']) {
@@ -1429,7 +1429,7 @@ test('consequential account, content, reporting, and admin flows work over HTTP'
   for (let index = 1; index <= 201; index++) insertFeedPost.run(alice.id, `cursor note ${index}`)
   const latestFirst = await request('/all')
   const latestFirstBody = await latestFirst.text()
-  const latestNext = latestFirstBody.match(/href="(\/all\?page=2&amp;_scroll=instant#feed-tabs)"/)?.[1]
+  const latestNext = latestFirstBody.match(/href="(\/all\?page=2)"/)?.[1]
   expect(latestNext).toBeTruthy()
   expect(latestFirstBody).toContain('cursor note 102')
   expect(latestFirstBody).not.toContain(post.body)
@@ -1446,7 +1446,7 @@ test('consequential account, content, reporting, and admin flows work over HTTP'
   expect(forYouFirstBody).not.toContain('class="for-you-item activity-item-unread"')
 
   const profileFirstBody = await (await request('/u/alice')).text()
-  const profileNext = profileFirstBody.match(/href="(\/u\/alice\?page=2&amp;_scroll=instant)"/)?.[1]
+  const profileNext = profileFirstBody.match(/href="(\/u\/alice\?page=2)"/)?.[1]
   expect(profileNext).toBeTruthy()
   expect(profileFirstBody).not.toContain(post.body)
   expect(await (await request('/u/alice?page=2')).text()).not.toContain(post.body)
@@ -1513,9 +1513,9 @@ test('consequential account, content, reporting, and admin flows work over HTTP'
   database.query('UPDATE users SET bio=\'Bob builds things\' WHERE id=?').run(bob.id)
   const followedPersonFeed = await (await request('/my-feed', { cookie: aliceCookie })).text()
   expect(followedPersonFeed).not.toContain('Bob builds things')
-  expect(followedPersonFeed).toContain('href="/my-feed?_scroll=instant#feed-tabs">')
+  expect(followedPersonFeed).toContain('href="/my-feed">')
   expect(followedPersonFeed).toContain(
-    'href="/@?_scroll=instant#feed-tabs">@<span class="to-me-count">1</span></a>',
+    'href="/@">@<span class="to-me-count">1</span></a>',
   )
   const followedPersonToMe = await (await request('/@', { cookie: aliceCookie })).text()
   expect(followedPersonToMe).toContain('<a class="reference-menu-trigger postauthor" '
@@ -1666,7 +1666,7 @@ test('consequential account, content, reporting, and admin flows work over HTTP'
   expect(latestBeforeForYou).toContain('my feed<span class="to-me-count">1</span></a>')
   await request('/my-feed', { cookie: aliceCookie })
   const latestAfterForYou = await (await request('/all', { cookie: aliceCookie })).text()
-  expect(latestAfterForYou).toContain('href="/my-feed?_scroll=instant#feed-tabs">')
+  expect(latestAfterForYou).toContain('href="/my-feed">')
   expect(database.query('SELECT 1 FROM activity_reads WHERE user_id=? AND event_key=?')
     .get(alice.id, activityReadKey)).toBeTruthy()
   expect(database.query('SELECT 1 FROM for_you_reads WHERE user_id=? AND event_key=?')
@@ -1678,7 +1678,7 @@ test('consequential account, content, reporting, and admin flows work over HTTP'
   expect(unreadToMeHtml).not.toContain('action="/@/read-all"')
   expect(unreadToMeHtml).not.toContain('>first unread</a>')
   expect(unreadToMeHtml).toContain(
-    'class="active" aria-current="page" href="/@?_scroll=instant#feed-tabs">',
+    'class="active" aria-current="page" href="/@">',
   )
   expect(unreadToMeHtml).toContain('@<span class="to-me-count">1</span></a>')
   expect(unreadToMeHtml).not.toContain('>all</a>')
@@ -1687,9 +1687,9 @@ test('consequential account, content, reporting, and admin flows work over HTTP'
   expect(database.query('SELECT 1 FROM for_you_reads WHERE user_id=? AND event_key=?')
     .get(alice.id, forYouReadKey)).toBeTruthy()
   const revisitedToMeHtml = await (await request('/@', { cookie: aliceCookie })).text()
-  expect(revisitedToMeHtml).toContain('href="/my-feed?_scroll=instant#feed-tabs">my feed</a>')
+  expect(revisitedToMeHtml).toContain('href="/my-feed">my feed</a>')
   expect(revisitedToMeHtml).toContain(
-    'class="active" aria-current="page" href="/@?_scroll=instant#feed-tabs">',
+    'class="active" aria-current="page" href="/@">',
   )
   expect(revisitedToMeHtml).not.toContain('class="unread-dot" aria-label="unread"')
 
@@ -1725,7 +1725,7 @@ test('consequential account, content, reporting, and admin flows work over HTTP'
       createdAt)
   }
   const activityFirstBody = await (await request('/@', { cookie: aliceCookie })).text()
-  const activityNext = activityFirstBody.match(/href="(\/@\?page=2&amp;_scroll=instant)"/)?.[1]
+  const activityNext = activityFirstBody.match(/href="(\/@\?page=2)"/)?.[1]
   expect(activityNext).toBeUndefined()
   expect(activityFirstBody).toContain('activity cursor reply 81')
   expect(activityFirstBody).toContain('oldest cursor boundary')

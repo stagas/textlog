@@ -57,7 +57,7 @@ export function AboutContent({ user, embedded = false }: { user: User | null; em
           <h2>What's next?</h2>
           <ActionPair className="about-actions"
             primary={<a className="button" href="/enter" rel="nofollow">join the community</a>}
-            secondary={<a href={embedded ? '#feed-tabs' : '/hot'}>browse notes</a>} />
+            secondary={<a href="/hot">browse notes</a>} />
         </>
       )}
     </article>
