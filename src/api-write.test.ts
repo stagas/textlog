@@ -381,11 +381,11 @@ describe('API writes', () => {
     const oversized = await call(app, '/api/v1/me', {
       method: 'PATCH',
       token: 'alice-token',
-      body: { bio: 'x'.repeat(161) },
+      body: { bio: 'x'.repeat(301) },
     })
     expect(oversized.status).toBe(400)
     expect(await oversized.json()).toMatchObject({
-      error: { code: 'invalid_bio', message: 'The bio exceeds the limit: 161/160 characters.' },
+      error: { code: 'invalid_bio', message: 'The bio exceeds the limit: 301/300 characters.' },
     })
 
     const tooManyLines = await call(app, '/api/v1/me', {

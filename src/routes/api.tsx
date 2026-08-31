@@ -3,6 +3,7 @@ import { API_DEFAULT_REPLY_DEPTH, API_MAX_REPLY_DEPTH, apiOrigin, encodeCursor, 
 import { decodeActivityCursor } from '../api-activity'
 import { subscribeToPosts } from '../api-broker'
 import { appName, clientIpHeaderName } from '../brand'
+import { BIO_MAX } from '../bio-body'
 import { ApiDocs, EmbedExamples } from '../components/pages'
 import { type DatabaseService, databaseService } from '../database-service'
 import { decodeHotCursor } from '../hot'
@@ -382,7 +383,7 @@ function openApiDocument() {
           responses: { ...writeResponses, '200': dataResponse({ $ref: '#/components/schemas/Account' }) } },
         patch: { summary: 'Update your bio', security: authSecurity,
           requestBody: requestBody({ type: 'object', required: ['bio'], properties: {
-            bio: { type: 'string', maxLength: 160 },
+            bio: { type: 'string', maxLength: BIO_MAX },
           } }), responses: { ...writeResponses, '200': dataResponse({ $ref: '#/components/schemas/Account' }) } },
       },
       '/posts': {

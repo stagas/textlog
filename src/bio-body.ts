@@ -1,4 +1,4 @@
-export const BIO_MAX = 160
+export const BIO_MAX = 300
 export const BIO_MAX_LINES = 10
 
 export function normalizeBioBody(body: string) {
