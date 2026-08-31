@@ -22,10 +22,22 @@ export function excludesMetaPosts(postId: MetaPostId = 'p.id') {
   return `NOT ${isMetaThread(postId)}`
 }
 
+function isNestedMetaThread(postId: MetaPostId = 'p.id') {
+  return `EXISTS (WITH RECURSIVE nested_meta_ancestors(id,parent_id) AS (
+    SELECT nested_post.id,nested_post.parent_id FROM posts nested_post WHERE nested_post.id=${postId}
+    UNION ALL
+    SELECT nested_parent.id,nested_parent.parent_id FROM posts nested_parent
+      JOIN nested_meta_ancestors nested_child ON nested_parent.id=nested_child.parent_id
+  ) SELECT 1 FROM nested_meta_ancestors nested
+    JOIN post_hashtags nested_tag ON nested_tag.post_id=nested.id
+    WHERE nested.parent_id IS NOT NULL
+      AND nested_tag.tag IN (${META_HASHTAGS.map(tag => `'${tag}'`).join(',')}))`
+}
+
 /** Visibility for a protected branch outside personalized feeds. */
 export function metaThreadVisibleToViewer(viewerId: number, postId: MetaPostId = 'p.id') {
-  if (viewerId < 0) return excludesMetaPosts(postId)
-  return `(${excludesMetaPosts(postId)} OR EXISTS (
+  if (viewerId < 0) return `NOT ${isNestedMetaThread(postId)}`
+  return `(NOT ${isNestedMetaThread(postId)} OR EXISTS (
     WITH RECURSIVE visible_meta_ancestors(id,user_id,parent_id) AS (
       SELECT visible_post.id,visible_post.user_id,visible_post.parent_id
         FROM posts visible_post WHERE visible_post.id=${postId}

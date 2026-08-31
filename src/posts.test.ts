@@ -757,7 +757,7 @@ describe('post persistence', () => {
     expect(loadThreadReplies(db, 1, 2).map(post => post.id)).toEqual([4])
   })
 
-  test('hides meta branches in threads unless the viewer follows an ancestor author or its exact tag', () => {
+  test('hides nested meta branches in normal threads unless the viewer follows an ancestor author or any tag', () => {
     const db = database()
     db.run(`INSERT INTO users(id,handle) VALUES(3,'other');
       INSERT INTO posts(id,user_id,parent_id,body,created_at) VALUES
@@ -776,6 +776,16 @@ describe('post persistence', () => {
     expect(loadThreadReplies(db, 1, 2).map(post => post.id)).toEqual([2, 3, 4])
     db.run(`DELETE FROM hashtag_follows; INSERT INTO follows VALUES(2,1)`)
     expect(loadThreadReplies(db, 1, 2).map(post => post.id)).toEqual([2, 3, 4])
+  })
+
+  test('does not filter replies merely because the conversation root is meta-tagged', () => {
+    const db = database()
+    db.run(`INSERT INTO users(id,handle) VALUES(3,'other');
+      INSERT INTO posts(id,user_id,parent_id,body,created_at) VALUES
+        (1,1,NULL,'meta root #meta','2026-08-03 10:00:00'),
+        (2,3,1,'ordinary reply','2026-08-03 11:00:00');
+      INSERT INTO post_hashtags VALUES(1,'meta');`)
+    expect(loadThreadReplies(db, 1, -1).map(post => post.id)).toEqual([2])
   })
 
   test('shows blocker replies to moderators and marks who blocked them', () => {

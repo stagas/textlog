@@ -38,6 +38,8 @@ test('meta aliases hide tagged posts and descendants from all and any while pres
   expect(hot.posts.map(post => post.id)).toContain(root.id)
   expect(db.query('SELECT tag FROM post_hashtags WHERE post_id=? AND tag=?').get(root.id, 'tlog'))
     .toEqual({ tag: 'tlog' })
+  expect((await executeDatabaseDomain(db, 'posts.detail', { id: root.id, viewerId: -1 })).status).toBe('ready')
+  expect((await executeDatabaseDomain(db, 'posts.detail', { id: reply.id, viewerId: -1 })).status).toBe('ready')
 
   const reader = db.query('SELECT * FROM users WHERE id=1').get() as User
   const myFeed = await executeDatabaseDomain(db, 'feeds.personalizedPage', {
@@ -45,8 +47,11 @@ test('meta aliases hide tagged posts and descendants from all and any while pres
   })
   expect(myFeed.timeline.some(row => row.id === reply.id)).toBeTrue()
   const tagReader = db.query('SELECT * FROM users WHERE id=3').get() as User
+  expect((await executeDatabaseDomain(db, 'posts.detail', { id: root.id, viewerId: tagReader.id })).status)
+    .toBe('ready')
   const tagFeed = await executeDatabaseDomain(db, 'feeds.personalizedPage', {
     user: tagReader, page: 1, pageSize: 20, toMe: false, path: '/my-feed', markRead: false,
   })
   expect(tagFeed.timeline.some(row => row.id === reply.id)).toBeTrue()
+  cacheDb.query("DELETE FROM feed_snapshots WHERE kind='latest-conversation-heads-v12'").run()
 })
