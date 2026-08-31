@@ -491,7 +491,7 @@ function ageContextLabel(label: string, wording: PostAge['wording']) {
   const mentionSuffix = ' and mentioned you'
   const hasMention = plain.endsWith(mentionSuffix)
   const attribution = hasMention ? plain.slice(0, -mentionSuffix.length) : plain
-  const aged = wording === 'just' ? `just ${attribution}` : `${attribution} ${wording}`
+  const aged = wording === 'just' ? `${attribution} just now` : `${attribution} ${wording}`
   return aged + (hasMention ? mentionSuffix : '') + ':'
 }
 
@@ -730,8 +730,7 @@ export function Post({
               <>
                 <a className="post-context" href={`/post/${p.id}`} title={postPageAgeTitle}>
                   {typeof contextLabel === 'string'
-                    ? (contextTarget && postPageAge?.wording === 'just' ? 'just ' : '')
-                      + contextLabel.replace(/:$/, '')
+                    ? contextLabel.replace(/:$/, '')
                     : contextLabel}
                 </a>
                 {!contextTarget && <span className="post-context post-context-punctuation">:</span>}
@@ -759,10 +758,10 @@ export function Post({
               >
                 {p.viewer_mentioned
                   ? `${
-                    postPageAge && postPageAge.wording !== 'just' ? `\u00a0${postPageAge.wording} ` : ' '
+                    postPageAge ? `\u00a0${postPageAge.wording === 'just' ? 'just now' : postPageAge.wording} ` : ' '
                   }and mentioned you:`
-                  : postPageAge && postPageAge.wording !== 'just'
-                  ? `\u00a0${postPageAge.wording}:`
+                  : postPageAge
+                  ? `\u00a0${postPageAge.wording === 'just' ? 'just now' : postPageAge.wording}:`
                   : ':'}
               </span>
             </>

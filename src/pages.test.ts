@@ -3589,11 +3589,32 @@ test('Post pages use the context text as the canonical permalink', () => {
     canonicalTimestamp: true,
   }))
   expect(html).toContain('<a class="post-context" href="/post/2" title="')
-  expect(html).toContain('just now">just wrote</a>'
+  expect(html).toContain('just now">wrote just now</a>'
     + '<span class="post-context post-context-punctuation">:</span>')
   expect(html).not.toContain('post-context-age')
   expect(html).not.toContain('href="/post/2">wrote:</a>')
   expect(html).not.toContain('>permalink</a>')
+
+  const continuation = renderToStaticMarkup(React.createElement(Post, {
+    p: { id: 3, user_id: 1, parent_id: 2, body: 'More', handle: 'writer', created_at: thirtyMinutesAgo,
+      deleted_at: null,
+      parent: { id: 2, user_id: 1, parent_id: null, body: 'First', handle: 'writer',
+        created_at: thirtyMinutesAgo, deleted_at: null, reply_count: 1 } },
+    user: null,
+    canonicalTimestamp: true,
+  }))
+  expect(continuation).toContain('just now">continued just now</a>')
+
+  const reply = renderToStaticMarkup(React.createElement(Post, {
+    p: { id: 4, user_id: 1, parent_id: 2, body: 'Reply', handle: 'writer', created_at: thirtyMinutesAgo,
+      deleted_at: null,
+      parent: { id: 2, user_id: 2, parent_id: null, body: 'Parent', handle: 'parent',
+        created_at: thirtyMinutesAgo, deleted_at: null, reply_count: 1 } },
+    user: null,
+    canonicalTimestamp: true,
+  }))
+  expect(reply).toContain('just now">replied to</a>')
+  expect(reply).toContain('\u00a0just now:</span>')
 })
 
 test('Post page ages use aligned approximate wording buckets', () => {
