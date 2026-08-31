@@ -600,7 +600,8 @@ export function FeedTabs(
       <nav className="feed-tabs" id="feed-tabs" aria-label="Feed">
         <div className="feed-tabs-scroll">
           {user && (
-            <a className={toMe ? 'active' : ''} aria-current={toMe ? 'page' : undefined} href="/@">
+            <a className={toMe ? 'active' : ''} aria-current={toMe ? 'page' : undefined}
+              href="/@?_scroll=instant#feed-tabs">
               <TabHighlight active={toMe} />
               @
               <TabCount count={toMeCount} />
@@ -608,7 +609,8 @@ export function FeedTabs(
           )}
           {user && (
             <a className={active === 'following' && !toMe ? 'active' : ''}
-              aria-current={active === 'following' && !toMe ? 'page' : undefined} href="/my-feed"
+              aria-current={active === 'following' && !toMe ? 'page' : undefined}
+              href="/my-feed?_scroll=instant#feed-tabs"
             >
               <TabHighlight active={active === 'following' && !toMe} />
               my feed
@@ -616,21 +618,21 @@ export function FeedTabs(
             </a>
           )}
           <a className={active === 'hot' ? 'active' : ''} aria-current={active === 'hot' ? 'page' : undefined}
-            href={user ? '/hot' : '/hot?_scroll=instant#feed-tabs'}
+            href="/hot?_scroll=instant#feed-tabs"
           >
             <TabHighlight active={active === 'hot'} />
             hot
           </a>
           <a className={active === 'random' ? 'active' : ''}
             aria-current={active === 'random' ? 'page' : undefined}
-            href={user ? `/any?seed=${anySeed}` : `/any?seed=${anySeed}&_scroll=instant#feed-tabs`}
+            href={`/any?seed=${anySeed}&_scroll=instant#feed-tabs`}
           >
             <TabHighlight active={active === 'random'} />
             any
           </a>
           <a className={active === 'latest' ? 'active' : ''}
             aria-current={active === 'latest' ? 'page' : undefined}
-            href={user ? '/all' : '/all?_scroll=instant#feed-tabs'}
+            href="/all?_scroll=instant#feed-tabs"
           >
             <TabHighlight active={active === 'latest'} />
             all

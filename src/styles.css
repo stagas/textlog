@@ -1267,6 +1267,7 @@ nav form {
   position: sticky;
   z-index: 40;
   top: calc(-1 * var(--space-4));
+  scroll-margin-top: calc(-1 * var(--space-4));
   background: var(--bg);
 }
 
@@ -1434,6 +1435,7 @@ body.corners-round a.button {
 @media (max-width: 600px) {
   #feed-tabs {
     top: 0;
+    scroll-margin-top: 0;
   }
 
   .feed-tabs {

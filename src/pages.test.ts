@@ -2394,12 +2394,13 @@ describe('About', () => {
       expect(html.indexOf('about-page feed-about')).toBeLessThan(html.indexOf('id="feed-tabs"'))
       expect(html.lastIndexOf('aria-label="Pagination"')).toBeLessThan(html.indexOf('class="guest-join-row"'))
     }
-    for (const html of [signedInHot, signedInLatest]) expect(html).toMatch(/href="\/any\?seed=[0-9a-z]+"/)
+    for (const html of [signedInHot, signedInLatest]) {
+      expect(html).toMatch(/href="\/any\?seed=[0-9a-z]+&amp;_scroll=instant#feed-tabs"/)
+    }
     for (const html of [signedInHot, signedInLatest]) {
       expect(html).not.toContain('class="static-page about-page feed-about"')
-      expect(html).toContain('href="/hot"')
-      expect(html).toContain('href="/all"')
-      expect(html).not.toContain('#feed-tabs')
+      expect(html).toContain('href="/hot?_scroll=instant#feed-tabs"')
+      expect(html).toContain('href="/all?_scroll=instant#feed-tabs"')
       expect(html).not.toContain('class="button feed-tabs-join"')
       expect(html).not.toContain('class="guest-join-row"')
     }
