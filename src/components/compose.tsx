@@ -73,12 +73,21 @@ export function WriteForm(
   },
 ) {
   if (!canPublishPosts(user)) return null
+  const embeddedHelpId = 'embedded-posting-help'
   const controls = (
     <div className="composefoot">
-      <PostingHelp search={suggestionSearch} />
+      <PostingHelp search={suggestionSearch} controlledBy={embedded ? embeddedHelpId : undefined} />
       <FormActions secondary={
         <span className="edit-post-actions">
-          <a className="secondary-action cancel-action edit-post-cancel" href={returnPath}>cancel</a>
+          {embedded ? (
+            <label className="secondary-action posting-help-action" htmlFor={embeddedHelpId}>
+              <input className="posting-help-toggle" id={embeddedHelpId} type="checkbox"
+                aria-controls={`${embeddedHelpId}-content`} defaultChecked={!!suggestionSearch} />
+              help
+            </label>
+          ) : (
+            <a className="secondary-action cancel-action edit-post-cancel" href={returnPath}>cancel</a>
+          )}
           <button className="secondary-action" name="action" value="preview">preview</button>
           <button className="secondary-action" name="action" value="draft"
             formAction={draftId ? `/drafts/${draftId}` : undefined}

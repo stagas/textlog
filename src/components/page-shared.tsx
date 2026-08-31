@@ -391,12 +391,22 @@ function PostingHelpTabs({ search }: { search?: PostingSuggestionSearch | null }
   )
 }
 
-export function PostingHelp({ maxLength = 500, maxLines = 15, search, oneLine = false }: {
+export function PostingHelp({ maxLength = 500, maxLines = 15, search, oneLine = false, controlledBy }: {
   maxLength?: number
   maxLines?: number
   search?: PostingSuggestionSearch | null
   oneLine?: boolean
+  controlledBy?: string
 }) {
+  if (controlledBy) {
+    return (
+      <div className="posting-help posting-help-controlled">
+        <div className="posting-help-content" id={`${controlledBy}-content`}>
+          <PostingHelpTabs search={search} />
+        </div>
+      </div>
+    )
+  }
   return (
     <div className="posting-help">
       <details className="posting-help-details" open={!!search}>

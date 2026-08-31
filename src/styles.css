@@ -4328,6 +4328,36 @@ form.report-panel {
   display: grid;
 }
 
+.posting-help-action {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  color: var(--muted);
+  cursor: pointer;
+  user-select: none;
+}
+
+.posting-help-action:hover {
+  color: var(--tab-hover);
+}
+
+.posting-help-action:has(.posting-help-toggle:focus-visible) {
+  outline: var(--focus-ring-width) solid var(--accent);
+  outline-offset: var(--focus-ring-offset);
+}
+
+.posting-help-toggle {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  opacity: 0;
+}
+
+.embedded-write-compose .composefoot:has(.posting-help-toggle:checked) .posting-help-content {
+  display: grid;
+}
+
 .posting-help-section {
   min-width: 0;
 }

@@ -1913,6 +1913,11 @@ test('signed-in feed pages put the write form before the feed tabs', () => {
     expect(html).toContain('placeholder="What’s on your mind, @reader?"')
     expect(html).not.toContain('class="compose-heading"')
     expect(html).not.toContain('autofocus')
+    expect(html).toContain(
+      '<label class="secondary-action posting-help-action" for="embedded-posting-help"><input class="posting-help-toggle" id="embedded-posting-help" type="checkbox" aria-controls="embedded-posting-help-content"/>help</label>',
+    )
+    expect(html).not.toContain('use #hashtags, @mentions and more')
+    expect(html).not.toContain('>cancel</a>')
     expect(html).toMatch(/class="compose-editor-row"[\s\S]*class="composefoot"[\s\S]*<\/div><\/form>/)
   }
 })
