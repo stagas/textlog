@@ -5,12 +5,13 @@ import { feedSnapshotPage } from './feed-snapshots'
 import { markForYouEntriesRead, unreadForYouCount, unreadToMeCount } from './for-you-state'
 import { resolveHandle } from './handles'
 import { unreadLatestCount } from './latest-state'
-import { recentConversationReplies, recentExpandableConversationReplies } from './latest-conversation'
+import { isRecentConversationRoot, recentActiveBranchReplies,
+  recentExpandableConversationReplies } from './latest-conversation'
 import { enrichPosts, loadBioReferenceData, visibleTagFollowerCounts, visibleUserProfileStats } from './posts'
 import type { PersonalizedFeedData, PersonalizedTimelineRow, User } from './types'
 import { isWhisperThread, whisperThreadRelevantToViewer, whisperThreadTargetsViewer } from './whisper'
 
-export const PERSONALIZED_FEED_SNAPSHOT_VERSION = 31
+export const PERSONALIZED_FEED_SNAPSHOT_VERSION = 32
 const unreadCountProjection = new Map<string, number>()
 const MAX_UNREAD_COUNT_PROJECTIONS = 2_048
 
@@ -273,13 +274,14 @@ export function loadPersonalizedFeed(database: Database, user: User, page: numbe
       const rootRow = byId.get(root!)
       const replies = conversation.filter(candidate => candidate.parent_id !== null)
       const keepsRoot = rootRow?.parent_id === null
-        && (conversation[0]?.id === rootRow.id || replies[0]?.parent_id === rootRow.id)
+        && (conversation[0]?.id === rootRow.id || replies[0]?.parent_id === rootRow.id
+          || isRecentConversationRoot(rootRow, conversation))
       const threadRows = keepsRoot ? [rootRow!] : []
       const previewReplies = toMe
         ? replies
         : keepsRoot
         ? recentExpandableConversationReplies(conversation)
-        : recentConversationReplies(conversation)
+        : recentActiveBranchReplies(conversation)
       threadRows.push(...previewReplies)
       if (!toMe) {
         const includedIds = new Set(threadRows.map(candidate => candidate.id))

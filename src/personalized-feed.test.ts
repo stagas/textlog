@@ -125,7 +125,7 @@ test('a recent deep reply in a followed thread stays included after Latest marks
 
   const feed = loadPersonalizedFeed(database, viewer, 1, 20, false, '/for-you', false)
 
-  expect(feed.timeline.filter(row => row.id).map(row => row.id)).toEqual([3, 2, 1])
+  expect(feed.timeline.filter(row => row.id).map(row => row.id)).toEqual([1, 3, 2])
   expect(feed.timeline.find(row => row.id === 3)?.unread).toBe(1)
   expect(badgeCount).toBe(feed.forYouCount)
 })
@@ -150,7 +150,7 @@ test('personalized pages count conversations rather than their embedded replies'
 
   expect(firstPage.totalPages).toBe(2)
   expect(firstPage.timeline.map(row => row.id)).toEqual([4])
-  expect(secondPage.timeline.map(row => row.id)).toEqual([3, 2, 1])
+  expect(secondPage.timeline.map(row => row.id)).toEqual([1, 3, 2])
 })
 
 test('To Me conversations are ordered by their latest directed activity', () => {
@@ -222,6 +222,33 @@ test('For You keeps expandable parent context using the same two-to-five reply r
 
   expect(feed.timeline.filter(row => row.id).map(row => row.id)).toEqual([370, 2834, 2833, 2829, 2370])
   expect(feed.timeline.find(row => row.id === 2833)?.parent_id).toBe(2829)
+})
+
+test('For You groups fresh sibling branches under the same shared parent as All', () => {
+  const database = new Database(':memory:', { strict: true })
+  runMigrations(database)
+  database.run(`INSERT INTO users(id,handle,email,password,bio) VALUES
+      (1,'viewer','viewer@example.com','!',''),
+      (2,'root','root@example.com','!',''),
+      (3,'branch','branch@example.com','!',''),
+      (4,'reply','reply@example.com','!','');
+    INSERT INTO follows(follower_id,following_id,created_at) VALUES
+      (1,2,'2026-08-01 00:00:00'),(1,3,'2026-08-01 00:00:00'),(1,4,'2026-08-01 00:00:00');
+    INSERT INTO posts(id,user_id,parent_id,body,created_at) VALUES
+      (1,2,NULL,'old root','2026-08-01 09:00:00'),
+      (2,3,1,'shared parent','2026-08-02 09:00:00'),
+      (3,3,2,'first branch','2026-08-03 09:00:00'),
+      (4,3,2,'second branch','2026-08-03 10:00:00'),
+      (5,4,3,'newest reply','2026-08-30 12:00:00'),
+      (6,4,4,'fresh sibling reply','2026-08-30 11:00:00');
+    INSERT INTO for_you_reads(user_id,event_key) VALUES
+      (1,'post:00000000000000000001'),(1,'post:00000000000000000002'),
+      (1,'post:00000000000000000003'),(1,'post:00000000000000000004');`)
+  const viewer: User = { id: 1, handle: 'viewer', email: 'viewer@example.com', bio: '' }
+
+  const feed = loadPersonalizedFeed(database, viewer, 1, 20, false, '/my-feed', false)
+
+  expect(feed.timeline.filter(row => row.id).map(row => row.id)).toEqual([5, 6, 2])
 })
 
 test('For You follow activity can be hidden independently for people and hashtags', () => {
