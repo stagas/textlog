@@ -1258,7 +1258,7 @@ export function ThreadReplies(
       : null
   }
   const renderBranch = (id: number, depth: number): React.ReactNode => {
-    const branch = children.get(id) || []
+    const branch = (children.get(id) || []).filter(reply => !reply.deleted_at || visibleDescendantCount(reply.id) > 0)
     if (!branch.length) return null
     return (
       <div className={`reply-branch${collapsedPreviewPostIds.length && depth === 1
@@ -1273,7 +1273,6 @@ export function ThreadReplies(
               && (reply.reply_count || 0) > descendantCount
             const continuesElsewhere = truncatedByDepth || hasMissingDescendants
             const childBranch = truncatedByDepth ? null : renderBranch(reply.id, depth + 1)
-            if (reply.deleted_at) return <React.Fragment key={reply.id}>{childBranch}</React.Fragment>
             if (reply.id === excludePostId) return <React.Fragment key={reply.id}>{childBranch}</React.Fragment>
             return renderReply(reply, childBranch, continuesElsewhere)
           })}

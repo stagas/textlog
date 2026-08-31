@@ -3761,6 +3761,33 @@ test('Flat thread replies render descendants in depth-first order without nested
   expect(html.indexOf('id="post-4"')).toBeLessThan(html.indexOf('id="post-3"'))
 })
 
+test('Deleted replies render as tombstones above their indented descendants', () => {
+  const reply = (id: number, parentId: number, body: string, deletedAt: string | null = null) => ({
+    id,
+    user_id: 1,
+    parent_id: parentId,
+    body,
+    handle: 'author',
+    created_at: `2026-08-03 1${id}:00:00`,
+    deleted_at: deletedAt,
+  })
+  const html = renderToStaticMarkup(React.createElement(ThreadReplies, {
+    parentId: 1,
+    replies: [
+      reply(2, 1, '(deleted)', '2026-08-03 12:30:00'),
+      reply(3, 2, 'visible child'),
+      reply(4, 1, '(deleted leaf)', '2026-08-03 13:30:00'),
+    ],
+    user: null,
+  }))
+
+  expect(html).toContain('id="post-2"')
+  expect(html).toContain('(deleted post)')
+  expect(html).toContain('post-3')
+  expect(html).not.toContain('post-4')
+  expect(html.match(/class="reply-branch/g)).toHaveLength(2)
+})
+
 test('Post threads show stored translations on replies', () => {
   const html = renderToStaticMarkup(React.createElement(ThreadReplies, {
     parentId: 1,
