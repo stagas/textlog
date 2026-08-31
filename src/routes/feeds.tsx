@@ -78,7 +78,7 @@ type RecentFeedVisitor = {
 }
 
 const recentFeedVisitors = new Map<number, RecentFeedVisitor>()
-const latestFeedCacheVersion = 5
+const latestFeedCacheVersion = 6
 const recentFeedVisitorLimit = 30
 let recentLatestWarmCursor = 0
 

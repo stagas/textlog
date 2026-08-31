@@ -52,26 +52,28 @@ export function recentActiveBranchReplies<
 
   const byId = new Map(conversation.map(post => [post.id, post]))
   const newestAt = Date.parse(`${newest.created_at.replace(' ', 'T')}Z`)
-  const branchId = (post: T) => {
-    let branch = post
-    while (branch.parent_id !== null && branch.parent_id !== root.id) {
-      const parent = byId.get(branch.parent_id)
-      if (!parent) return null
-      branch = parent
+  const fresh = recent.filter(post => Number.isFinite(newestAt)
+    && newestAt - Date.parse(`${post.created_at.replace(' ', 'T')}Z`)
+      <= LATEST_REPLY_BURST_HOURS * 60 * 60_000)
+  const strictAncestors = (post: T) => {
+    const ancestors: T[] = []
+    let parentId = post.parent_id
+    while (parentId !== null) {
+      const parent = byId.get(parentId)
+      if (!parent) break
+      ancestors.push(parent)
+      parentId = parent.parent_id
     }
-    return branch.parent_id === root.id ? branch.id : null
+    return ancestors
   }
-  const activeBranchId = branchId(newest)
-  const newestAncestorIds = new Set<number>()
-  let ancestorId = newest.parent_id
-  while (ancestorId !== null) {
-    newestAncestorIds.add(ancestorId)
-    ancestorId = byId.get(ancestorId)?.parent_id ?? null
+  const ancestorPaths = fresh.map(strictAncestors)
+  const sharedIds = new Set(ancestorPaths[0]?.map(post => post.id) || [])
+  for (const path of ancestorPaths.slice(1)) {
+    const pathIds = new Set(path.map(post => post.id))
+    for (const id of sharedIds) if (!pathIds.has(id)) sharedIds.delete(id)
   }
-  return activeBranchId === null ? recent : recent.filter(post => branchId(post) === activeBranchId
-    && (newestAncestorIds.has(post.id) || Number.isFinite(newestAt)
-      && newestAt - Date.parse(`${post.created_at.replace(' ', 'T')}Z`)
-        <= LATEST_REPLY_BURST_HOURS * 60 * 60_000))
+  const anchor = ancestorPaths[0]?.find(post => sharedIds.has(post.id))
+  return anchor && !fresh.some(post => post.id === anchor.id) ? [...fresh, anchor] : fresh
 }
 
 export function recentExpandableConversationReplies<

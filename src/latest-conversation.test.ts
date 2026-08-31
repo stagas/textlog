@@ -67,7 +67,7 @@ test('Latest prunes older intermediates from a recent nested reply path', () => 
   expect(recentConversationReplies(conversation).map(post => post.id)).toEqual([6, 5, 7])
 })
 
-test('Latest does not promote stale sibling branches with a newly active deep branch', () => {
+test('Latest groups fresh branches under their shared parent without promoting stale siblings', () => {
   const conversation = [
     { id: 2928, parent_id: 1182, created_at: '2026-08-30 21:00:39' },
     { id: 2564, parent_id: 2296, created_at: '2026-08-26 15:31:31' },
@@ -82,7 +82,21 @@ test('Latest does not promote stale sibling branches with a newly active deep br
     { id: 1174, parent_id: null, created_at: '2026-08-14 00:02:46' },
   ]
 
-  expect(recentActiveBranchReplies(conversation).map(post => post.id)).toEqual([2928])
+  expect(recentActiveBranchReplies(conversation).map(post => post.id)).toEqual([2928, 1182])
+})
+
+test('Latest retains fresh sibling branches beneath their nearest shared parent', () => {
+  const conversation = [
+    { id: 10, parent_id: 8, created_at: '2026-08-30 12:00:00' },
+    { id: 9, parent_id: 7, created_at: '2026-08-30 11:00:00' },
+    { id: 8, parent_id: 6, created_at: '2026-08-29 10:00:00' },
+    { id: 7, parent_id: 5, created_at: '2026-08-28 10:00:00' },
+    { id: 6, parent_id: 5, created_at: '2026-08-27 10:00:00' },
+    { id: 5, parent_id: 1, created_at: '2026-08-20 10:00:00' },
+    { id: 1, parent_id: null, created_at: '2026-08-01 10:00:00' },
+  ]
+
+  expect(recentActiveBranchReplies(conversation).map(post => post.id)).toEqual([10, 9, 8, 5])
 })
 
 test('expandable rooted conversations keep two to five replies including needed parent context', () => {
