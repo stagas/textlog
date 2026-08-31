@@ -1897,6 +1897,26 @@ test('signed-in feeds put the mobile write action outside the main scroll bounda
   expect(html.indexOf(writeAction)).toBeLessThan(html.indexOf('<main id="main-content">'))
 })
 
+test('signed-in feed pages put the write form before the feed tabs', () => {
+  const user = { id: 1, handle: 'reader', email: 'reader@example.com', bio: '',
+    email_verified_at: '2026-08-20' }
+  const feed = { posts: [], page: 1, totalItems: 0, totalPages: 1 }
+  const pages = [
+    renderToStaticMarkup(React.createElement(PublicFeed, { user, feed, path: '/all' })),
+    renderToStaticMarkup(React.createElement(HotFeed, { user, feed })),
+  ]
+
+  for (const html of pages) {
+    expect(html).toContain('class="panel panel-surface panel-medium compose write-compose embedded-write-compose"')
+    expect(html.indexOf('compose write-compose')).toBeLessThan(html.indexOf('class="feed-tabs"'))
+    expect(html).toContain('name="from"')
+    expect(html).toContain('placeholder="What’s on your mind, @reader?"')
+    expect(html).not.toContain('class="compose-heading"')
+    expect(html).not.toContain('autofocus')
+    expect(html).toMatch(/class="compose-editor-row"[\s\S]*class="composefoot"[\s\S]*<\/div><\/form>/)
+  }
+})
+
 test('public collection pages advertise their RSS and Atom feeds', () => {
   const hot = renderToStaticMarkup(React.createElement(HotFeed, { user: null, cursor: null }))
   const latest = renderToStaticMarkup(React.createElement(PublicFeed, { user: null, cursor: null, path: '/latest' }))
@@ -2793,7 +2813,7 @@ test('Profile places owner actions in the handle row', () => {
   expect(html).toContain('type="application/atom+xml" title="Notes by @reader (Atom)" href="/u/reader.atom"')
   expect(html).toContain('class="account-nav-row account-nav-primary"')
   expect(html).toContain('class="account-nav-row account-nav-secondary"')
-  expect(html).toContain('</div><a class="button nav-write-action" href="/write">write</a></span>')
+  expect(html).not.toContain('class="button nav-write-action"')
   expect(html).toContain('class="account-menu-handle" href="/u/reader?from=%2F">@reader'
     + '<span class="nav-mood">🤸</span></a>')
   expect(html).toContain('class="account-menu-popover"')
@@ -2801,9 +2821,6 @@ test('Profile places owner actions in the handle row', () => {
   expect(html).toContain('href="/account/edit?from=%2F">account</a>')
   expect(html).not.toContain('href="/admin">admin</a>')
   expect(html).not.toContain('class="mobile-account-footer"')
-  expect(html.indexOf('class="account-menu-handle" href="/u/reader?from=%2F"')).toBeLessThan(
-    html.indexOf('class="button nav-write-action" href="/write"'),
-  )
   expect(html).toContain('<a class="button" href="/write">write a note</a>')
 })
 

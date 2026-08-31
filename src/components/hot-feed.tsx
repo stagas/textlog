@@ -2,6 +2,7 @@ import type { HotCursor } from '../hot'
 import type { User } from '../types'
 import type { PostFeedPage } from '../types'
 import { AboutContent } from './about'
+import { WriteForm } from './compose'
 import { Layout } from './layout'
 import { FeedTabs, GlobalFeedEmpty, Pagination } from './page-shared'
 import { FeedThreads } from './post'
@@ -27,6 +28,7 @@ export function HotFeed(
     >
       {!user && <AboutContent user={null} embedded />}
       <h1 className="visually-hidden">Hot notes</h1>
+      {user && <WriteForm user={user} returnPath={returnPath} embedded />}
       <FeedTabs active="hot" user={user} forYouCount={feed.forYouCount} forYouUnread={feed.forYouUnread}
         toMeCount={feed.toMeCount} toMeUnread={feed.toMeUnread} latestCount={feed.latestCount} />
       {feed.page > 1 && (

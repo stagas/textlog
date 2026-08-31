@@ -54,36 +54,64 @@ export function Compose(
           } satisfies PostView} user={user} replyHref="#" preview />
         </div>
       )}
-      <Panel className="compose write-compose">
+      <WriteForm user={user} error={error} body={body} returnPath={returnPath} suggestionSearch={suggestionSearch}
+        draftId={draftId} autoFocus />
+    </Layout>
+  )
+}
+
+export function WriteForm(
+  { user, error, body = '', returnPath = '/', suggestionSearch, draftId, autoFocus = false, embedded = false }: {
+    user: User
+    error?: string
+    body?: string
+    returnPath?: string
+    suggestionSearch?: PostingSuggestionSearch | null
+    draftId?: string
+    autoFocus?: boolean
+    embedded?: boolean
+  },
+) {
+  if (!canPublishPosts(user)) return null
+  const controls = (
+    <div className="composefoot">
+      <PostingHelp search={suggestionSearch} />
+      <FormActions secondary={
+        <span className="edit-post-actions">
+          <a className="secondary-action cancel-action edit-post-cancel" href={returnPath}>cancel</a>
+          <button className="secondary-action" name="action" value="preview">preview</button>
+          <button className="secondary-action" name="action" value="draft"
+            formAction={draftId ? `/drafts/${draftId}` : undefined}
+          >
+            draft
+          </button>
+        </span>
+      } primary={<button className="button" accessKey="p">post →</button>} />
+    </div>
+  )
+  return (
+    <Panel className={`compose write-compose${embedded ? ' embedded-write-compose' : ''}`}>
+      {!embedded && (
         <h1 className="compose-heading">
           What’s on your mind, <span className="compose-at">@</span>
           {user.handle}?
         </h1>
-        <form method="post" action="/post">
-          <input type="hidden" name="from" value={returnPath} />
-          {draftId && <input type="hidden" name="draft_id" value={draftId} />}
-          <FormMessage error={error} />
-          <div className="compose-editor-row">
-            <textarea className="form-control" name="body" maxLength={POST_MAX} required autoFocus defaultValue={body}
-              autoComplete="off" inputMode="text" enterKeyHint="enter" />
-          </div>
-          <PostingSuggestionResults search={suggestionSearch} />
-          <div className="composefoot">
-            <PostingHelp search={suggestionSearch} />
-            <FormActions secondary={
-              <span className="edit-post-actions">
-                <a className="secondary-action cancel-action edit-post-cancel" href={returnPath}>cancel</a>
-                <button className="secondary-action" name="action" value="preview">preview</button>
-                <button className="secondary-action" name="action" value="draft"
-                  formAction={draftId ? `/drafts/${draftId}` : undefined}
-                >
-                  draft
-                </button>
-              </span>
-            } primary={<button className="button" accessKey="p">post →</button>} />
-          </div>
-        </form>
-      </Panel>
-    </Layout>
+      )}
+      <form method="post" action="/post">
+        <input type="hidden" name="from" value={returnPath} />
+        {draftId && <input type="hidden" name="draft_id" value={draftId} />}
+        <FormMessage error={error} />
+        <div className="compose-editor-row">
+          <textarea className="form-control" name="body" maxLength={POST_MAX} required autoFocus={autoFocus}
+            defaultValue={body} placeholder={embedded ? `What’s on your mind, @${user.handle}?` : undefined}
+            aria-label={embedded ? `What’s on your mind, @${user.handle}?` : undefined}
+            autoComplete="off" inputMode="text" enterKeyHint="enter" />
+          {embedded && <PostingSuggestionResults search={suggestionSearch} />}
+          {embedded && controls}
+        </div>
+        {!embedded && <PostingSuggestionResults search={suggestionSearch} />}
+        {!embedded && controls}
+      </form>
+    </Panel>
   )
 }

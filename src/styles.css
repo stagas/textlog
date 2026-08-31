@@ -3399,7 +3399,7 @@ main:has(> .write-compose) {
   outline: 0;
 }
 
-.reply-compose textarea.form-control::placeholder {
+:is(.write-compose, .reply-compose) textarea.form-control::placeholder {
   color: var(--muted);
   opacity: 1;
 }
@@ -3417,6 +3417,25 @@ main:has(> .write-compose) {
 
 .write-compose .composefoot {
   margin-bottom: var(--space-4);
+}
+
+.embedded-write-compose .composefoot {
+  margin-bottom: 0;
+  padding-inline: 0;
+  border-top: 0;
+}
+
+.embedded-write-compose .compose-editor-row {
+  padding-block: var(--space-4);
+  border-bottom: 1px solid var(--soft);
+}
+
+.embedded-write-compose textarea.form-control {
+  min-height: 3lh;
+}
+
+.embedded-write-compose .posting-suggestion-results {
+  padding-inline: 0;
 }
 
 :is(.write-compose, .reply-compose) .posting-help-summary-link {

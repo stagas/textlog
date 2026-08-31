@@ -1,6 +1,7 @@
 import { activityAnchor } from '../activity-anchor'
 import type { PersonalizedFeedData, PersonalizedTimelineRow, User } from '../types'
 import { displayBio, linkify } from '../utils'
+import { WriteForm } from './compose'
 import { Layout } from './layout'
 import { MetaRow } from './meta'
 import { ActionPair, FeedTabs, Pagination } from './page-shared'
@@ -201,6 +202,7 @@ export function Feed(
   return (
     <Layout user={user} title={title} pageUrl={pageUrl} notificationBanner={notificationBanner} mobileWriteAction>
       <h1 className="visually-hidden">Your feed</h1>
+      <WriteForm user={user} returnPath={returnPath} embedded />
       <FeedTabs active="following" user={user} forYouReadStatus={data.timeline.length
         ? hasUnread && unreadPage !== null && unreadPage > data.page
         : undefined} toMe={toMe} toMeCount={data.toMeCount} forYouCount={data.forYouCount} unreadHref={data.unreadHref}
