@@ -769,7 +769,7 @@ test('hot and latest show the to-me tab with its unread count', () => {
     renderToStaticMarkup(<HotFeed user={user} feed={feed} />),
     renderToStaticMarkup(<PublicFeed user={user} feed={feed} path="/all" />),
   ]) {
-    expect(html).toContain('href="/@">@<span class="to-me-count">3</span></a>')
+    expect(html).toContain('href="/@?_scroll=instant#feed-tabs">@<span class="to-me-count">3</span></a>')
   }
 })
 
@@ -780,7 +780,7 @@ test('tab counters cap counts at 99+', () => {
     forYouCount: 1234, latestCount: 100 }
   const html = renderToStaticMarkup(<HotFeed user={user} feed={feed} />)
 
-  expect(html).toContain('href="/@">@<span class="to-me-count">99+</span></a>')
+  expect(html).toContain('href="/@?_scroll=instant#feed-tabs">@<span class="to-me-count">99+</span></a>')
   expect(html).toContain('my feed<span class="to-me-count">99+</span></a>')
   expect(html).toContain('all<span class="to-me-count">99+</span></a>')
   expect(html).not.toContain('1234')
@@ -795,6 +795,6 @@ test('hot and latest keep the to-me tab without a count when it has no unread co
     renderToStaticMarkup(<HotFeed user={user} feed={feed} />),
     renderToStaticMarkup(<PublicFeed user={user} feed={feed} path="/all" />),
   ]) {
-    expect(html).toContain('href="/@">@</a>')
+    expect(html).toContain('href="/@?_scroll=instant#feed-tabs">@</a>')
   }
 })

@@ -168,9 +168,12 @@ describe('in-memory stylesheet', () => {
   test('removes the top border from a grouped first activity', async () => {
     const css = await Bun.file(new URL('./styles.css', import.meta.url)).text()
     expect(css).toContain(
-      '#feed-tabs {\n  position: sticky;\n  z-index: 40;\n  top: calc(-1 * var(--space-4));\n  background: var(--bg);\n}',
+      '#feed-tabs {\n  position: sticky;\n  z-index: 40;\n  top: calc(-1 * var(--space-4));\n'
+      + '  scroll-margin-top: calc(-1 * var(--space-4));\n  background: var(--bg);\n}',
     )
-    expect(css).toContain('@media (max-width: 600px) {\n  #feed-tabs {\n    top: 0;\n  }')
+    expect(css).toContain(
+      '@media (max-width: 600px) {\n  #feed-tabs {\n    top: 0;\n    scroll-margin-top: 0;\n  }',
+    )
     expect(css).toContain('.feed-tabs {\n    padding-top: 0;\n  }')
     expect(css).toContain('.feed-tabs-scroll > a {\n    padding-top: calc(var(--space-2) + var(--space-4));\n  }')
     expect(css).toContain(
