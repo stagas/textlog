@@ -114,6 +114,7 @@ describe('post persistence', () => {
   })
   test('renders Markdown strikethrough in posts', () => {
     expect(linkify('Keep ~~remove~~ revise')).toBe('Keep <del>remove</del> revise')
+    expect(linkify('Price ~~250~~ now')).toBe('Price <del>250</del> now')
     expect(linkify('hey ~strike through~')).toBe('hey <del>strike through</del>')
     expect(linkify('Keep ~~remove~~ revise', {}, [], undefined, { has_latex: 0, has_links: 0, has_code: 0 }))
       .toBe('Keep <del>remove</del> revise')

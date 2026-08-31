@@ -405,10 +405,15 @@ export function linkTokens(body: string, flags?: PostContentFlags): LinkToken[] 
     }
   }
   if (!flags || flags.has_latex) tokens.push(...mathTokens(body, tokens))
-  for (const match of body.matchAll(/(?<!~)(~{1,2})(?![~0-9])([^~\r\n]*?\S[^~\r\n]*?)\1(?!~)/g)) {
-    if (!escapedAt(body, match.index)) {
-      tokens.push({ index: match.index, lastIndex: match.index + match[0].length, kind: 'strikethrough', raw: match[0],
-        label: match[2] })
+  for (const expression of [
+    /(?<!~)(~~)(?!~)([^~\r\n]*?\S[^~\r\n]*?)\1(?!~)/g,
+    /(?<!~)(~)(?![~0-9])([^~\r\n]*?\S[^~\r\n]*?)\1(?!~)/g,
+  ]) {
+    for (const match of body.matchAll(expression)) {
+      if (!escapedAt(body, match.index)) {
+        tokens.push({ index: match.index, lastIndex: match.index + match[0].length, kind: 'strikethrough', raw: match[0],
+          label: match[2] })
+      }
     }
   }
   for (const [marker, kind] of [['*', 'bold'], ['_', 'underline']] as const) {
