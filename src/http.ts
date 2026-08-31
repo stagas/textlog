@@ -329,3 +329,14 @@ export function feedPreference(request: Request): FeedPreference | null {
 export function feedPreferenceCookie(value: FeedPreference) {
   return `feed=${value}; Max-Age=${365 * 24 * 60 * 60}; HttpOnly; Path=/; SameSite=Lax${secureCookie()}`
 }
+
+export function retainedAnyFeedPage(request: Request) {
+  const value = request.headers.get('cookie')?.match(/(?:^|;\s*)any_sample_page=(\d+)(?:;|$)/)?.[1]
+  const page = Number(value)
+  return Number.isInteger(page) && page > 0 && page <= 1_000_000 ? page : null
+}
+
+export function retainedAnyFeedPageCookie(page: number) {
+  const safePage = Math.max(1, Math.min(1_000_000, Math.floor(page)))
+  return `any_sample_page=${safePage}; Max-Age=${365 * 24 * 60 * 60}; HttpOnly; Path=/; SameSite=Lax${secureCookie()}`
+}

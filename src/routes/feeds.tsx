@@ -23,6 +23,8 @@ import {
   notificationBannerDismissed,
   notificationUserAgent,
   pwaInstallBannerDismissedCookie,
+  retainedAnyFeedPage,
+  retainedAnyFeedPageCookie,
   safeRefererPath,
 } from '../http'
 import { campaignIpPseudonym } from '../ip-privacy'
@@ -289,15 +291,20 @@ export function registerFeedsRoutes(app: Hono) {
   app.get('/any', async c => {
     const user = currentUser(c.req.raw)
     const expandedRootId = positiveInteger(c.req.query('expand'))
+    const refresh = c.req.query('refresh') !== undefined
+    const retainedPage = retainedAnyFeedPage(c.req.raw)
     const notificationBanner = await showNotificationBanner(c.req.raw, user)
     const feed = await databaseService().call('feeds.randomPage', {
       viewerId: user?.id ?? -1,
       pageSize: resolvedPageSize(c.req.raw),
+      ...(refresh ? { excludePage: retainedPage || undefined } : { samplePage: retainedPage || undefined }),
     })
-    return rememberFeed(page(
+    const response = rememberFeed(page(
       <PublicFeed user={user} feed={feed} path="/any" notificationBanner={notificationBanner}
         expandedRootId={expandedRootId} />,
     ), 'random')
+    response.headers.append('set-cookie', retainedAnyFeedPageCookie(feed.randomSamplePage || 1))
+    return response
   })
 
   app.post('/all/read-all', async c => {

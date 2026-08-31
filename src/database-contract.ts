@@ -426,7 +426,8 @@ export type DatabaseDomainOperations = {
   'feeds.aboutTopPosts': { input: Record<string, never>; output: PostView[] }
   'feeds.latestPage': { input: { viewerId: number; page: number; pageSize: PageSizeChoice; markRead?: boolean };
     output: PostFeedPage }
-  'feeds.randomPage': { input: { viewerId: number; pageSize: PageSizeChoice }; output: PostFeedPage }
+  'feeds.randomPage': { input: { viewerId: number; pageSize: PageSizeChoice; samplePage?: number;
+    excludePage?: number }; output: PostFeedPage }
   'feeds.latestUnreadCount': { input: { userId: number }; output: number }
   'feeds.hotPage': { input: { viewerId: number; page: number; pageSize: PageSizeChoice }; output: PostFeedPage }
   'feeds.refreshHotProjection': { input: { force?: boolean; now?: string };

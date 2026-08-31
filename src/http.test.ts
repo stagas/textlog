@@ -2,7 +2,7 @@ import { describe, expect, test } from 'bun:test'
 import { applyHtmlCachePolicy, canonicalizeCrawlerLinks, clearSessionCookie, crawlerCanonicalRedirect, feedPreference,
   feedPreferenceCookie, FORM_REQUEST_BODY_LIMIT, htmlCacheControl, isCrawlerRequest, isSameOriginRequest,
   limitedFormData, RequestBodyError, requiresSameOrigin, safeLocalPath, safeRefererPath, securityHeaders, sessionCookie,
-  stringField } from './http'
+  stringField, retainedAnyFeedPage, retainedAnyFeedPageCookie } from './http'
 
 describe('local redirects', () => {
   test('accepts local paths and rejects ambiguous or external targets', () => {
@@ -173,6 +173,17 @@ describe('request values and cookies', () => {
       .toBe('activity')
     expect(feedPreference(new Request('https://textlog.cc/', { headers: { cookie: 'feed=unknown' } }))).toBeNull()
     expect(feedPreferenceCookie('hot')).toContain('feed=hot; Max-Age=31536000; HttpOnly; Path=/; SameSite=Lax')
+  })
+
+  test('stores and reads the retained Any feed page', () => {
+    expect(retainedAnyFeedPage(new Request('https://textlog.cc/any', {
+      headers: { cookie: 'feed=random; any_sample_page=12' },
+    }))).toBe(12)
+    expect(retainedAnyFeedPage(new Request('https://textlog.cc/any', {
+      headers: { cookie: 'any_sample_page=invalid' },
+    }))).toBeNull()
+    expect(retainedAnyFeedPageCookie(12))
+      .toContain('any_sample_page=12; Max-Age=31536000; HttpOnly; Path=/; SameSite=Lax')
   })
 })
 

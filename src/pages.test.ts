@@ -855,6 +855,23 @@ test('folded feed conversations preview the two newest replies from a recent bur
   )
 })
 
+test('Any reply links return through the retained sample with their conversation expanded', () => {
+  const user = { id: 1, handle: 'reader', email: 'reader@example.com', bio: '' }
+  const root = { id: 20, user_id: 2, parent_id: null, body: 'Root', created_at: '2026-08-20 09:00:00',
+    deleted_at: null, handle: 'root', reply_count: 3 }
+  const reply = (id: number, created_at: string) => ({ id, user_id: id, parent_id: root.id, body: `Reply ${id}`,
+    created_at, deleted_at: null, handle: `reply${id}`, reply_count: 0, parent: root })
+  const html = renderToStaticMarkup(React.createElement(PublicFeed, {
+    user,
+    path: '/any',
+    feed: { posts: [root, reply(21, '2026-08-20 10:00:00'), reply(22, '2026-08-20 11:00:00'),
+      reply(23, '2026-08-20 12:00:00')], page: 1, totalItems: 1, totalPages: 1 },
+  }))
+
+  expect(html).toContain('href="/post/20?from=%2Fany%3Fexpand%3D20%23post-22#post-22"')
+  expect(html).toContain('href="/post/20?from=%2Fany%3Fexpand%3D20%23post-23#post-23"')
+})
+
 test('folded feed conversations distinguish previews from different depths', () => {
   const root = { id: 5, user_id: 1, parent_id: null, body: 'Root', created_at: '2026-08-23 09:00:00',
     deleted_at: null, handle: 'root', reply_count: 3 }
@@ -2344,7 +2361,7 @@ describe('About', () => {
       expect(html).toContain('href="#feed-tabs">browse notes</a>')
       expect(html).toContain('href="/hot?_scroll=instant#feed-tabs"')
       expect(html).toContain('href="/all?_scroll=instant#feed-tabs"')
-      expect(html).toContain('href="/any?_scroll=instant#feed-tabs"')
+      expect(html).toContain('href="/any?refresh&amp;_scroll=instant#feed-tabs"')
       expect(html).toContain(
         'class="button feed-tabs-join" href="/enter" rel="nofollow">join the community</a>',
       )
@@ -2353,6 +2370,7 @@ describe('About', () => {
       expect(html.indexOf('about-page feed-about')).toBeLessThan(html.indexOf('id="feed-tabs"'))
       expect(html.lastIndexOf('aria-label="Pagination"')).toBeLessThan(html.indexOf('class="guest-join-row"'))
     }
+    for (const html of [signedInHot, signedInLatest]) expect(html).toContain('href="/any?refresh"')
     for (const html of [signedInHot, signedInLatest]) {
       expect(html).not.toContain('class="static-page about-page feed-about"')
       expect(html).toContain('href="/hot"')

@@ -621,7 +621,7 @@ export function FeedTabs(
           </a>
           <a className={active === 'random' ? 'active' : ''}
             aria-current={active === 'random' ? 'page' : undefined}
-            href={user ? '/any' : '/any?_scroll=instant#feed-tabs'}
+            href={user ? '/any?refresh' : '/any?refresh&_scroll=instant#feed-tabs'}
           >
             <TabHighlight active={active === 'random'} />
             any

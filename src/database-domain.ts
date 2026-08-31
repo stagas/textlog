@@ -2435,18 +2435,29 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
       return recapPosts(database, -1) as DatabaseDomainOutput<K>
     }
     case 'feeds.randomPage': {
-      const { viewerId, pageSize } = input as DatabaseDomainInput<'feeds.randomPage'>
+      const { viewerId, pageSize, samplePage, excludePage } = input as DatabaseDomainInput<'feeds.randomPage'>
       const first = await executeDatabaseDomain(database, 'feeds.latestPage', {
         viewerId, page: 1, pageSize, markRead: false,
       })
-      const randomPage = randomInt(1, first.totalPages + 1)
+      const retainedPage = Number.isInteger(samplePage) && samplePage! > 0
+        ? Math.min(samplePage!, first.totalPages)
+        : null
+      const excludedPage = Number.isInteger(excludePage) && excludePage! > 0 && excludePage! <= first.totalPages
+        ? excludePage!
+        : null
+      const randomPage = retainedPage ?? (excludedPage && first.totalPages > 1
+        ? (() => {
+            const candidate = randomInt(1, first.totalPages)
+            return candidate >= excludedPage ? candidate + 1 : candidate
+          })()
+        : randomInt(1, first.totalPages + 1))
       const sampled = randomPage === 1
         ? first
         : await executeDatabaseDomain(database, 'feeds.latestPage', {
           viewerId, page: randomPage, pageSize, markRead: false,
         })
       const result: PostFeedPage = {
-        ...sampled, page: 1, totalPages: 1, totalItems: sampled.posts.length,
+        ...sampled, page: 1, totalPages: 1, totalItems: sampled.posts.length, randomSamplePage: randomPage,
       }
       return result as DatabaseDomainOutput<K>
     }
