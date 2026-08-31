@@ -182,9 +182,9 @@ test('latest shows approximate age wording only for unread post metadata', () =>
     directedUnreadPostIds: [],
   }} />)
 
-  expect(html).toContain(`title="${postAgeTitle(createdAt)}">wrote earlier:</span>`)
+  expect(html).toContain(`title="${postAgeTitle(createdAt)}">wrote recently:</span>`)
   expect(html).toContain('id="post-73"')
-  expect(html.match(/wrote earlier/g)).toHaveLength(1)
+  expect(html.match(/wrote recently/g)).toHaveLength(1)
 })
 
 test('latest keeps the arrival count but hides read actions when the rendered page consumes every unread', () => {

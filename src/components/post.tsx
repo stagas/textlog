@@ -434,7 +434,7 @@ export function conversationTopPath(threadRootId: number, replyId: number, retur
   return `/post/${threadRootId}?from=${encodeURIComponent(deepPostPath)}#post-${threadRootId}`
 }
 
-type PostAgeWording = 'just' | 'earlier' | 'not long ago' | 'a while ago' | 'some time ago' | 'a long time ago'
+type PostAgeWording = 'just' | 'recently' | 'earlier' | 'a while ago' | 'some time ago' | 'a long time ago'
 type PostAge = { label: string; wording: PostAgeWording }
 
 export function approximatePostAge(createdAt: string, now = Date.now()): PostAge {
@@ -442,9 +442,9 @@ export function approximatePostAge(createdAt: string, now = Date.now()): PostAge
   const elapsedMinutes = Math.max(0, Math.floor((now - timestamp) / 60_000))
   if (elapsedMinutes < 60) return { label: `${elapsedMinutes}mins`, wording: 'just' }
   const elapsedHours = Math.floor(elapsedMinutes / 60)
-  if (elapsedMinutes < 12 * 60) return { label: `${elapsedHours}h`, wording: 'earlier' }
+  if (elapsedMinutes < 12 * 60) return { label: `${elapsedHours}h`, wording: 'recently' }
   const elapsedDays = Math.max(1, Math.floor(elapsedMinutes / (24 * 60)))
-  if (elapsedMinutes < 3 * 24 * 60) return { label: `${elapsedDays}d`, wording: 'not long ago' }
+  if (elapsedMinutes < 3 * 24 * 60) return { label: `${elapsedDays}d`, wording: 'earlier' }
   if (elapsedMinutes < 14 * 24 * 60) return { label: `${elapsedDays}d`, wording: 'a while ago' }
   if (elapsedMinutes < 90 * 24 * 60) return { label: `${elapsedDays}d`, wording: 'some time ago' }
   return { label: 'older', wording: 'a long time ago' }
