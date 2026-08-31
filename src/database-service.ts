@@ -9,6 +9,7 @@ export interface DatabaseService {
 let configuredService: DatabaseService | null = null
 const feedMutationListeners = new Set<(operation: DatabaseDomainOperation) => void>()
 const feedMutations = new Set<DatabaseDomainOperation>([
+  'auth.claimInitialHandle',
   'admin.deletePost',
   'admin.translatePost',
   'account.updateProfile',
