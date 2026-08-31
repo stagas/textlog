@@ -623,17 +623,17 @@ export function Post({
   const referenceQuery = preview
     ? actionQuery
     : '?from=' + encodeURIComponent(returnPath || `/post/${p.id}#post-${p.id}`)
-  const continued = p.parent_id && p.parent?.user_id === p.user_id
+  const continued = p.parent?.user_id === p.user_id
   const canModerate = showModerateAction && isAdmin(user)
   const contextTarget = !p.poll && contextLabel == null && p.parent_id && !continued && p.viewer_context !== 'reply'
     ? p.parent
     : null
   contextLabel = p.poll
     ? `created a ${p.poll.kind || 'poll'}${p.viewer_mentioned ? ' and mentioned you' : ''}:`
-    : contextLabel ?? (p.parent_id
-      ? continued
-        ? `continued${p.viewer_mentioned ? ' and mentioned you' : ''}:`
-        : p.viewer_context === 'reply'
+    : contextLabel ?? (continued
+      ? `continued${p.viewer_mentioned ? ' and mentioned you' : ''}:`
+      : p.parent_id
+      ? p.viewer_context === 'reply'
         ? `replied to you${p.viewer_mentioned ? ' and mentioned you' : ''}:`
         : contextTarget
         ? 'replied to'
@@ -1031,7 +1031,7 @@ type FeedPostProps = React.ComponentProps<typeof Post>
 type FeedPostFragment = { className: string; id: string; innerHtml: string }
 const feedPostFragments = new Map<string, FeedPostFragment>()
 const MAX_FEED_POST_FRAGMENTS = 1_024
-const FEED_POST_FRAGMENT_VERSION = 2
+const FEED_POST_FRAGMENT_VERSION = 3
 
 function FeedPost(props: FeedPostProps) {
   const key = JSON.stringify([FEED_POST_FRAGMENT_VERSION, props])

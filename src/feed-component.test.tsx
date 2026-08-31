@@ -150,6 +150,23 @@ test('collapsed conversations render unread ancestors as posts instead of hidden
   expect(html).toContain('<div class="reply-node collapsed-preview-path"><a class="quiet thread-ancestor-gap post-continuation-link"')
 })
 
+test('a feed branch root continues when its retained quoted parent has the same author', () => {
+  const parent = { id: 2547, user_id: 490, parent_id: null, body: 'Earlier thought',
+    created_at: '2026-08-19 10:00:00', deleted_at: null, handle: 'jg', reply_count: 1 }
+  const branchRoot = { id: 2553, user_id: 490, parent_id: null, parent, body: 'Upon further reflection',
+    created_at: '2026-08-19 11:00:00', deleted_at: null, handle: 'jg', reply_count: 0,
+    feed_branch_root: true }
+  const html = renderToStaticMarkup(<PublicFeed path="/latest" feed={{
+    posts: [branchRoot], page: 1, totalItems: 1, totalPages: 1,
+  }} />)
+  const quoteStart = html.indexOf('<blockquote class="parent-quote')
+  const quoteEnd = html.indexOf('</blockquote>', quoteStart)
+
+  expect(html.slice(0, quoteStart)).toContain('<span class="post-context">continued:</span>')
+  expect(html.slice(quoteStart, quoteEnd)).toContain('<span class="post-context">wrote:</span>')
+  expect(html.slice(0, quoteStart)).not.toContain('<span class="post-context">wrote:</span>')
+})
+
 test('latest shows approximate age wording only for unread post metadata', () => {
   const createdAt = new Date(Date.now() - 6 * 60 * 60_000).toISOString()
   const unread = { id: 72, user_id: 2, parent_id: null, body: 'unread note', created_at: createdAt, deleted_at: null,
