@@ -25,7 +25,22 @@ const recentReplyCandidates = <T extends ConversationPost>(ordered: T[]) => {
 const recentRoot = <T extends ConversationPost>(root: T | undefined, newest: T | undefined) => root
   && root.parent_id === null && newest && withinReplyBurst(newest, root)
 
-const rootedReplies = <T extends ConversationPost>(ordered: T[], root: T, recent: T[]) => {
+const rootedReplies = <T extends ConversationPost>(ordered: T[], root: T, recent: T[], freshDirectReplies: T[]) => {
+  if (freshDirectReplies.length) {
+    const prioritized = [...freshDirectReplies.slice(0, 2), ...recent]
+    const prioritizedIds = new Set<number>()
+    for (const reply of prioritized) {
+      if (prioritizedIds.size >= LATEST_MAX_RECENT_REPLIES) break
+      prioritizedIds.add(reply.id)
+    }
+    for (const reply of ordered) {
+      if (prioritizedIds.size >= LATEST_MAX_RECENT_REPLIES) break
+      if (reply.parent_id !== null && (reply.parent_id === root.id || prioritizedIds.has(reply.parent_id))) {
+        prioritizedIds.add(reply.id)
+      }
+    }
+    return ordered.filter(reply => prioritizedIds.has(reply.id))
+  }
   const weighted = recent.slice(0, 4)
   const weightedIds = new Set(weighted.map(reply => reply.id))
   const selected = ordered.filter(reply => weightedIds.has(reply.id))
@@ -82,12 +97,12 @@ export function projectRecentConversation<T extends ConversationPost>(
   const root = ordered.find(post => post.parent_id === null)
   const recent = recentReplyCandidates(ordered)
   const newest = recent[0]
-  const recentDirectReplies = root ? recent.filter(reply => reply.parent_id === root.id) : []
-  const freshDirectReplies = recentDirectReplies.filter(reply => withinReplyBurst(newest, reply))
+  const directReplies = root ? ordered.filter(reply => reply.parent_id === root.id) : []
+  const freshDirectReplies = directReplies.filter(reply => withinReplyBurst(newest, reply))
   const keepsRoot = !!root && (forceRoot || ordered[0]?.id === root.id || newest?.parent_id === root.id
     || freshDirectReplies.length > 0 || !!recentRoot(root, newest))
   const replies = root && keepsRoot
-    ? rootedReplies(ordered, root, recent)
+    ? rootedReplies(ordered, root, recent, freshDirectReplies)
     : activeBranchReplies(ordered, root, recent)
   const replyIds = new Set(replies.map(reply => reply.id))
   const weightedDirectReplies = freshDirectReplies.filter(reply => replyIds.has(reply.id)).slice(0, 2)

@@ -162,3 +162,21 @@ test('rooted conversations use the fifth expansion slot for a missing direct anc
   expect(projection.replies.map(post => post.id)).toEqual([2965, 2964, 2963, 2962, 2961])
   expect([...projection.previewReplyIds]).toEqual([2965, 2961])
 })
+
+test('Any favors post 281 recent direct replies before capping deep expansion rows', () => {
+  const conversation = [
+    { id: 568, parent_id: 543, created_at: '2026-08-08 20:31:09' },
+    { id: 543, parent_id: 358, created_at: '2026-08-08 17:50:45' },
+    { id: 461, parent_id: 393, created_at: '2026-08-08 10:08:26' },
+    { id: 460, parent_id: 361, created_at: '2026-08-08 10:05:44' },
+    { id: 393, parent_id: 281, created_at: '2026-08-08 04:31:01' },
+    { id: 361, parent_id: 358, created_at: '2026-08-08 01:57:13' },
+    { id: 358, parent_id: 344, created_at: '2026-08-08 01:32:54' },
+    { id: 344, parent_id: 281, created_at: '2026-08-08 01:01:20' },
+    { id: 281, parent_id: null, created_at: '2026-08-07 22:32:33' },
+  ]
+  const projection = projectRecentConversation(conversation)
+
+  expect(projection.replies.map(post => post.id)).toEqual([568, 543, 461, 393, 344])
+  expect([...projection.previewReplyIds]).toEqual([393, 344])
+})
