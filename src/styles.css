@@ -4371,6 +4371,13 @@ form.report-panel {
   display: none;
 }
 
+@media (max-width: 520px) {
+  .posting-help-controlled-summary {
+    overflow-x: visible;
+    white-space: normal;
+  }
+}
+
 .posting-help-section {
   min-width: 0;
 }
