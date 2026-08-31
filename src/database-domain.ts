@@ -28,7 +28,8 @@ import { getHotPosts, hotFeedProjectionNeedsRefresh, hotRankingVersion,
 import { getImageUrl, isImageKey } from './image-storage'
 import { LOCATION_MAP_STYLE_VERSION, LOCATION_ZOOM } from './locations'
 import { interactedEmail } from './interacted-email'
-import { isRecentConversationRoot, recentConversationReplies, recentExpandableConversationReplies } from './latest-conversation'
+import { isRecentConversationRoot, recentActiveBranchReplies, recentConversationReplies,
+  recentExpandableConversationReplies } from './latest-conversation'
 import { initializeLatestReads, latestUnreadPostState, markAllLatestRead, markLatestPostsRead,
   unreadLatestCount } from './latest-state'
 import { userBioLinkPreviews } from './link-preview'
@@ -2461,7 +2462,7 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
         : '1'
       const blockViewerId = viewerIsModerator(database, viewerId) ? -1 : viewerId
       const parameters = [blockViewerId, blockViewerId, blockViewerId, viewerId, viewerId]
-      const snapshotKind = 'latest-conversation-heads-v10'
+      const snapshotKind = 'latest-conversation-heads-v11'
       const snapshot = feedSnapshotPage<number>(database, snapshotKind, viewerId, page, () => {
         if (viewerId < 0) {
           return (database.query(`SELECT h.conversation_id FROM conversation_heads h
@@ -2527,7 +2528,7 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
           return [root!, ...expandableReplies,
             ...conversation.filter(row => unreadIds.has(row.id) && !expandableIds.has(row.id))]
         }
-        recentReplies = recentConversationReplies(conversation, true)
+        recentReplies = recentActiveBranchReplies(conversation)
         const fullIncludedIds = new Set([root?.id, ...recentReplies.map(reply => reply.id)])
         const fullUnreadReplies = conversation.filter(row => unreadIds.has(row.id) && !fullIncludedIds.has(row.id))
         const selected = [...recentReplies, ...fullUnreadReplies]

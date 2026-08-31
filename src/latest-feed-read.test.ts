@@ -12,7 +12,7 @@ test('latest count remains for the rendered page and is reduced on the next load
     (1,'reader','reader@example.test','x'),(2,'writer','writer@example.test','x');
     INSERT INTO posts(id,user_id,body,created_at) VALUES
     (1,2,'first','2026-08-27 09:00:00'),(2,2,'second','2026-08-27 10:00:00');`)
-  cacheDb.query("DELETE FROM feed_snapshots WHERE kind='latest-conversation-heads-v10' AND viewer_id=1").run()
+  cacheDb.query("DELETE FROM feed_snapshots WHERE kind='latest-conversation-heads-v11' AND viewer_id=1").run()
 
   const feed = await executeDatabaseDomain(database, 'feeds.latestPage', {
     viewerId: 1, page: 1, pageSize: 20,
@@ -42,7 +42,7 @@ test('latest includes unread replies beyond the normal conversation preview', as
     (14,2,10,'reply 4','2026-08-26 13:00:00'),(15,2,10,'reply 5','2026-08-26 14:00:00'),
     (16,2,10,'reply 6','2026-08-26 15:00:00');`)
   markLatestPostsRead(1, [10, 12, 13, 14, 15, 16], database)
-  cacheDb.query("DELETE FROM feed_snapshots WHERE kind='latest-conversation-heads-v10' AND viewer_id=1").run()
+  cacheDb.query("DELETE FROM feed_snapshots WHERE kind='latest-conversation-heads-v11' AND viewer_id=1").run()
 
   const feed = await executeDatabaseDomain(database, 'feeds.latestPage', {
     viewerId: 1, page: 1, pageSize: 20,
@@ -65,7 +65,7 @@ test('latest keeps all reply ancestors available when the recent conversation ro
     (102,2,101,'recent child','2026-08-27 11:00:00'),
     (103,2,102,'newest child','2026-08-27 12:00:00');`)
   markLatestPostsRead(1, [100, 101, 102, 103], database)
-  cacheDb.query("DELETE FROM feed_snapshots WHERE kind='latest-conversation-heads-v10' AND viewer_id=1").run()
+  cacheDb.query("DELETE FROM feed_snapshots WHERE kind='latest-conversation-heads-v11' AND viewer_id=1").run()
 
   const feed = await executeDatabaseDomain(database, 'feeds.latestPage', {
     viewerId: 1, page: 1, pageSize: 20, markRead: false,
@@ -85,7 +85,7 @@ test('latest keeps a rooted conversation available for local expansion', async (
     (201,2,200,'first','2026-08-27 10:00:00'),(202,2,201,'second','2026-08-27 11:00:00'),
     (203,2,202,'third','2026-08-27 12:00:00'),(204,2,203,'fourth','2026-08-27 13:00:00');`)
   markLatestPostsRead(1, [200, 201, 202, 203, 204], database)
-  cacheDb.query("DELETE FROM feed_snapshots WHERE kind='latest-conversation-heads-v10' AND viewer_id=1").run()
+  cacheDb.query("DELETE FROM feed_snapshots WHERE kind='latest-conversation-heads-v11' AND viewer_id=1").run()
 
   const preview = await executeDatabaseDomain(database, 'feeds.latestPage', {
     viewerId: 1, page: 1, pageSize: 20, markRead: false,
@@ -105,7 +105,7 @@ test('latest fills a fifth connected reply slot while retaining unread replies',
     (305,2,300,'five','2026-08-27 14:00:00'),(306,2,300,'six','2026-08-27 15:00:00'),
     (307,2,300,'seven','2026-08-27 16:00:00');`)
   markLatestPostsRead(1, [300, 302, 303, 304, 305, 306, 307], database)
-  cacheDb.query("DELETE FROM feed_snapshots WHERE kind='latest-conversation-heads-v10' AND viewer_id=1").run()
+  cacheDb.query("DELETE FROM feed_snapshots WHERE kind='latest-conversation-heads-v11' AND viewer_id=1").run()
 
   const feed = await executeDatabaseDomain(database, 'feeds.latestPage', {
     viewerId: 1, page: 1, pageSize: 20, markRead: false,
@@ -126,7 +126,7 @@ test('latest anchors an active branch at its oldest recent reply and quotes the 
     (103,2,102,'recent child','2026-08-27 10:00:00'),
     (104,2,103,'newest child','2026-08-27 11:00:00');`)
   markLatestPostsRead(1, [100, 101], database)
-  cacheDb.query("DELETE FROM feed_snapshots WHERE kind='latest-conversation-heads-v10' AND viewer_id=1").run()
+  cacheDb.query("DELETE FROM feed_snapshots WHERE kind='latest-conversation-heads-v11' AND viewer_id=1").run()
 
   const feed = await executeDatabaseDomain(database, 'feeds.latestPage', {
     viewerId: 1, page: 1, pageSize: 20, markRead: false,

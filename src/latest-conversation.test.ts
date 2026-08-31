@@ -1,5 +1,6 @@
 import { expect, test } from 'bun:test'
-import { isRecentConversationRoot, recentConversationReplies, recentExpandableConversationReplies } from './latest-conversation'
+import { isRecentConversationRoot, recentActiveBranchReplies, recentConversationReplies,
+  recentExpandableConversationReplies } from './latest-conversation'
 
 const reply = (id: number, createdAt: string) => ({ id, parent_id: 895, created_at: createdAt })
 
@@ -64,6 +65,24 @@ test('Latest prunes older intermediates from a recent nested reply path', () => 
   ]
 
   expect(recentConversationReplies(conversation).map(post => post.id)).toEqual([6, 5, 7])
+})
+
+test('Latest does not promote stale sibling branches with a newly active deep branch', () => {
+  const conversation = [
+    { id: 2928, parent_id: 1182, created_at: '2026-08-30 21:00:39' },
+    { id: 2564, parent_id: 2296, created_at: '2026-08-26 15:31:31' },
+    { id: 2557, parent_id: 2553, created_at: '2026-08-26 14:37:52' },
+    { id: 2553, parent_id: 2547, created_at: '2026-08-26 13:49:06' },
+    { id: 2547, parent_id: 2537, created_at: '2026-08-26 13:31:10' },
+    { id: 2537, parent_id: 2279, created_at: '2026-08-26 12:51:28' },
+    { id: 2296, parent_id: 1174, created_at: '2026-08-24 20:42:07' },
+    { id: 2279, parent_id: 1309, created_at: '2026-08-24 15:28:04' },
+    { id: 1309, parent_id: 1182, created_at: '2026-08-14 23:17:36' },
+    { id: 1182, parent_id: 1174, created_at: '2026-08-14 06:52:13' },
+    { id: 1174, parent_id: null, created_at: '2026-08-14 00:02:46' },
+  ]
+
+  expect(recentActiveBranchReplies(conversation).map(post => post.id)).toEqual([2928])
 })
 
 test('expandable rooted conversations keep two to five replies including needed parent context', () => {
