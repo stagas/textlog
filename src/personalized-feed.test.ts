@@ -196,6 +196,34 @@ test('For You includes unread replies beyond the recent reply preview', () => {
   expect(feed.timeline.find(row => row.id === 922)?.unread).toBe(1)
 })
 
+test('My Feed keeps five replies for expansion after rebuilding its read snapshot', () => {
+  const database = new Database(':memory:', { strict: true })
+  runMigrations(database)
+  database.run(`INSERT INTO users(id,handle,email,password,bio) VALUES
+      (1,'viewer','viewer@example.com','!',''),
+      (2,'followed','followed@example.com','!','');
+    INSERT INTO follows(follower_id,following_id,created_at) VALUES(1,2,'2026-08-01 08:00:00');
+    INSERT INTO posts(id,user_id,parent_id,body,created_at) VALUES
+      (1495,2,NULL,'root','2026-08-16 14:10:58'),
+      (2904,2,1495,'older recent direct','2026-08-30 13:20:03'),
+      (2953,2,1495,'newer recent direct','2026-08-31 15:42:10'),
+      (2954,2,2953,'deep intermediate one','2026-08-31 15:47:09'),
+      (2955,2,2954,'deep intermediate two','2026-08-31 15:53:24'),
+      (2956,2,2955,'newest deep reply','2026-08-31 15:54:59');`)
+  const viewer: User = { id: 1, handle: 'viewer', email: 'viewer@example.com', bio: '' }
+
+  const unread = loadPersonalizedFeed(database, viewer, 1, 20, false, '/my-feed')
+  expect(unread.timeline.filter(row => row.id).map(row => row.id))
+    .toEqual([1495, 2956, 2955, 2954, 2953, 2904])
+
+  const read = loadPersonalizedFeed(database, viewer, 1, 20, false, '/my-feed', false)
+  expect(read.timeline.filter(row => row.id).map(row => row.id))
+    .toEqual([1495, 2956, 2955, 2954, 2953, 2904])
+  expect(read.timeline.find(row => row.id === 2956)?.renderedPost?.feed_collapsed_preview).toBeUndefined()
+  expect(read.timeline.find(row => row.id === 2953)?.renderedPost?.feed_collapsed_preview).toBeTrue()
+  expect(read.timeline.find(row => row.id === 2904)?.renderedPost?.feed_collapsed_preview).toBeTrue()
+})
+
 test('For You keeps expandable parent context using the same two-to-five reply rule as Latest', () => {
   const database = new Database(':memory:', { strict: true })
   runMigrations(database)

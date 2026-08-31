@@ -415,6 +415,34 @@ test('collapsed latest keeps a visible newest reply nested beneath its visible p
   expect(html).toMatch(/reply-node collapsed-preview-path collapsed-preview-post[^>]*>[\s\S]*?id="post-2516"[\s\S]*?reply-branch[\s\S]*?reply-node collapsed-preview-path collapsed-preview-post[^>]*>[\s\S]*?id="post-2582"/)
 })
 
+test('collapsed latest strongly favors two recent direct replies over a deep run', () => {
+  const root = { id: 1495, user_id: 2, parent_id: null, body: 'conversation root',
+    created_at: '2026-08-16 14:10:58', deleted_at: null, handle: 'alice', reply_count: 5, direct_reply_count: 2 }
+  const directOlder = { id: 2904, user_id: 3, parent_id: root.id, body: 'older direct',
+    created_at: '2026-08-30 13:20:03', deleted_at: null, handle: 'bob', reply_count: 0, parent: root,
+    feed_collapsed_preview: true }
+  const directNewest = { id: 2953, user_id: 4, parent_id: root.id, body: 'newer direct',
+    created_at: '2026-08-31 15:42:10', deleted_at: null, handle: 'cara', reply_count: 3, parent: root,
+    feed_collapsed_preview: true }
+  const intermediateOne = { id: 2954, user_id: 5, parent_id: directNewest.id, body: 'intermediate one',
+    created_at: '2026-08-31 15:47:09', deleted_at: null, handle: 'dan', reply_count: 2, parent: directNewest }
+  const intermediateTwo = { id: 2955, user_id: 6, parent_id: intermediateOne.id, body: 'intermediate two',
+    created_at: '2026-08-31 15:53:24', deleted_at: null, handle: 'erin', reply_count: 1,
+    parent: intermediateOne }
+  const newest = { id: 2956, user_id: 7, parent_id: intermediateTwo.id, body: 'newest deep reply',
+    created_at: '2026-08-31 15:54:59', deleted_at: null, handle: 'dan', reply_count: 0,
+    parent: intermediateTwo }
+  const html = renderToStaticMarkup(
+    <PublicFeed path="/latest"
+      feed={{ posts: [newest, intermediateTwo, intermediateOne, directNewest, directOlder, root],
+        page: 1, totalItems: 1, totalPages: 1 }} />,
+  )
+
+  expect(html.match(/collapsed-preview-post/g)).toHaveLength(2)
+  expect(html.indexOf('id="post-2904"')).toBeLessThan(html.indexOf('id="post-2953"'))
+  expect(html).toMatch(/id="post-2953"[\s\S]*?<div class="reply-branch collapsed-preview-path-branch"[^>]*>[\s\S]*?aria-label="Expand hidden replies"[^>]*>…<\/label>[\s\S]*?id="post-2954"/)
+})
+
 test('threaded feed replies omit redundant footer dots', () => {
   const root = { id: 40, user_id: 2, parent_id: null, body: 'root', created_at: '2026-08-19 09:00:00', deleted_at: null,
     handle: 'alice', reply_count: 3 }

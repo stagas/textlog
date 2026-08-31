@@ -121,6 +121,7 @@ export type PostView = PostRow & {
   thread_locked?: boolean
   feed_ancestor_gap?: boolean
   feed_branch_root?: boolean
+  feed_collapsed_preview?: boolean
   viewer_bookmarked?: boolean
 }
 

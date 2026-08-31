@@ -5,13 +5,12 @@ import { feedSnapshotPage } from './feed-snapshots'
 import { markForYouEntriesRead, unreadForYouCount, unreadToMeCount } from './for-you-state'
 import { resolveHandle } from './handles'
 import { unreadLatestCount } from './latest-state'
-import { isRecentConversationRoot, recentActiveBranchReplies,
-  recentExpandableConversationReplies } from './latest-conversation'
+import { projectRecentConversation } from './latest-conversation'
 import { enrichPosts, loadBioReferenceData, visibleTagFollowerCounts, visibleUserProfileStats } from './posts'
 import type { PersonalizedFeedData, PersonalizedTimelineRow, User } from './types'
 import { isWhisperThread, whisperThreadRelevantToViewer, whisperThreadTargetsViewer } from './whisper'
 
-export const PERSONALIZED_FEED_SNAPSHOT_VERSION = 32
+export const PERSONALIZED_FEED_SNAPSHOT_VERSION = 38
 const unreadCountProjection = new Map<string, number>()
 const MAX_UNREAD_COUNT_PROJECTIONS = 2_048
 
@@ -271,24 +270,25 @@ export function loadPersonalizedFeed(database: Database, user: User, page: numbe
       if (emittedThreads.has(root)) continue
       emittedThreads.add(root)
       const conversation = postRows.filter(candidate => rootId(candidate) === root)
-      const rootRow = byId.get(root!)
       const replies = conversation.filter(candidate => candidate.parent_id !== null)
-      const keepsRoot = rootRow?.parent_id === null
-        && (conversation[0]?.id === rootRow.id || replies[0]?.parent_id === rootRow.id
-          || isRecentConversationRoot(rootRow, conversation))
-      const threadRows = keepsRoot ? [rootRow!] : []
+      const projection = projectRecentConversation(conversation)
+      const threadRows = projection.keepsRoot && projection.root ? [projection.root] : []
       const previewReplies = toMe
         ? replies
-        : keepsRoot
-        ? recentExpandableConversationReplies(conversation)
-        : recentActiveBranchReplies(conversation)
+        : projection.replies.map(candidate => projection.previewReplyIds.has(candidate.id)
+          ? { ...candidate, feed_collapsed_preview: true }
+          : candidate)
       threadRows.push(...previewReplies)
       if (!toMe) {
         const includedIds = new Set(threadRows.map(candidate => candidate.id))
         threadRows.push(...conversation.filter(candidate => candidate.unread && !includedIds.has(candidate.id)))
       }
       if (threadRows.length) {
-        result.push({ rows: threadRows,
+        const visibleIds = new Set(threadRows.map(candidate => candidate.id))
+        const projectedRows = threadRows.map(candidate => candidate.parent_id && !visibleIds.has(candidate.parent_id)
+          ? { ...candidate, feed_ancestor_gap: true }
+          : candidate)
+        result.push({ rows: projectedRows,
           created_at: toMe ? conversation[0]!.created_at : threadActivity.get(root!) || row.created_at,
           order: row.event_key })
       }
@@ -367,7 +367,9 @@ export function loadPersonalizedFeed(database: Database, user: User, page: numbe
   if (markRead) {
     const unreadTimeline = timeline.filter(row => row.unread)
     const eventKeys = unreadTimeline.map(row => row.event_key)
-    markForYouEntriesRead(user.id, eventKeys, toMe, database)
+    if (markForYouEntriesRead(user.id, eventKeys, toMe, database)) {
+      database.query('DELETE FROM feed_snapshots WHERE kind=? AND viewer_id=?').run(snapshotKind, user.id)
+    }
   }
   const toMeCount = toMe ? visitedCount : personalizedUnreadCount(database, user.id, true)
   const forYouCount = toMe ? personalizedUnreadCount(database, user.id, false) : visitedCount

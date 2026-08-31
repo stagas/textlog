@@ -1,60 +1,50 @@
 const LATEST_MIN_RECENT_REPLIES = 4
-const LATEST_UNPRUNED_RECENT_REPLIES = 2
 const LATEST_MAX_RECENT_REPLIES = 5
 const LATEST_REPLY_BURST_HOURS = 48
+const LATEST_REPLY_BURST_MS = LATEST_REPLY_BURST_HOURS * 60 * 60_000
 
-export function isRecentConversationRoot<T extends { parent_id: number | null; created_at: string }>(
-  root: T | undefined,
-  conversation: T[],
-) {
-  if (!root || root.parent_id !== null || !conversation[0]) return false
-  const newestAt = Date.parse(`${conversation[0].created_at.replace(' ', 'T')}Z`)
-  const rootAt = Date.parse(`${root.created_at.replace(' ', 'T')}Z`)
-  return Number.isFinite(newestAt) && Number.isFinite(rootAt)
-    && newestAt - rootAt <= LATEST_REPLY_BURST_HOURS * 60 * 60_000
+type ConversationPost = { id: number; parent_id: number | null; created_at: string }
+
+const timestamp = (createdAt: string) => Date.parse(`${createdAt.replace(' ', 'T')}Z`)
+
+const newestFirst = <T extends ConversationPost>(conversation: T[]) => [...conversation]
+  .sort((a, b) => b.created_at.localeCompare(a.created_at) || b.id - a.id)
+
+const withinReplyBurst = <T extends ConversationPost>(newest: T | undefined, post: T) => {
+  const newestAt = newest ? timestamp(newest.created_at) : Number.NaN
+  const postAt = timestamp(post.created_at)
+  return Number.isFinite(newestAt) && Number.isFinite(postAt) && newestAt - postAt <= LATEST_REPLY_BURST_MS
 }
 
-export function recentConversationReplies<T extends { id: number; parent_id: number | null; created_at: string }>(
-  conversation: T[],
-  keepAncestorChain = false,
-) {
-  const replies = conversation.filter(row => row.parent_id !== null)
-  const newestReplyAt = replies[0]
-    ? Date.parse(`${replies[0].created_at.replace(' ', 'T')}Z`)
-    : Number.NaN
-  const recent = replies.slice(0, LATEST_MAX_RECENT_REPLIES).filter((reply, index) => index < LATEST_MIN_RECENT_REPLIES
-    || Number.isFinite(newestReplyAt)
-      && newestReplyAt - Date.parse(`${reply.created_at.replace(' ', 'T')}Z`)
-        <= LATEST_REPLY_BURST_HOURS * 60 * 60_000)
-  if (keepAncestorChain) return recent
-  const recentById = new Map(recent.map(reply => [reply.id, reply]))
-  return recent.filter((reply, index) => {
-    if (index < LATEST_UNPRUNED_RECENT_REPLIES) return true
-    return !recent.slice(0, index).some(newer => {
-      let ancestorId = newer.parent_id
-      while (ancestorId !== null) {
-        if (ancestorId === reply.id) return true
-        ancestorId = recentById.get(ancestorId)?.parent_id ?? null
-      }
-      return false
-    })
-  })
+const recentReplyCandidates = <T extends ConversationPost>(ordered: T[]) => {
+  const replies = ordered.filter(row => row.parent_id !== null)
+  return replies.slice(0, LATEST_MAX_RECENT_REPLIES)
+    .filter((reply, index) => index < LATEST_MIN_RECENT_REPLIES || withinReplyBurst(replies[0], reply))
 }
 
-/** Keep the recent context on the branch that actually caused an old conversation to resurface. */
-export function recentActiveBranchReplies<
-  T extends { id: number; parent_id: number | null; created_at: string },
->(conversation: T[]) {
-  const recent = recentConversationReplies(conversation, true)
+const recentRoot = <T extends ConversationPost>(root: T | undefined, newest: T | undefined) => root
+  && root.parent_id === null && newest && withinReplyBurst(newest, root)
+
+const rootedReplies = <T extends ConversationPost>(ordered: T[], root: T, recent: T[]) => {
+  const weighted = recent.slice(0, 4)
+  const weightedIds = new Set(weighted.map(reply => reply.id))
+  const selected = ordered.filter(reply => weightedIds.has(reply.id))
+  const selectedIds = new Set([root.id, ...selected.map(reply => reply.id)])
+  const needsParentContext = selected.some(reply => reply.parent_id !== null && !selectedIds.has(reply.parent_id))
+  if (!needsParentContext) {
+    const connectedOlderReply = ordered.find(reply => reply.parent_id !== null
+      && !selectedIds.has(reply.id) && selectedIds.has(reply.parent_id))
+    if (connectedOlderReply) selected.push(connectedOlderReply)
+  }
+  return selected
+}
+
+/** Keep the fresh context on the branch that caused an old conversation to resurface. */
+const activeBranchReplies = <T extends ConversationPost>(ordered: T[], root: T | undefined, recent: T[]) => {
   const newest = recent[0]
-  const root = conversation.find(post => post.parent_id === null)
   if (!newest || !root || newest.parent_id === root.id) return recent
-
-  const byId = new Map(conversation.map(post => [post.id, post]))
-  const newestAt = Date.parse(`${newest.created_at.replace(' ', 'T')}Z`)
-  const fresh = recent.filter(post => Number.isFinite(newestAt)
-    && newestAt - Date.parse(`${post.created_at.replace(' ', 'T')}Z`)
-      <= LATEST_REPLY_BURST_HOURS * 60 * 60_000)
+  const byId = new Map(ordered.map(post => [post.id, post]))
+  const fresh = recent.filter(post => withinReplyBurst(newest, post))
   const strictAncestors = (post: T) => {
     const ancestors: T[] = []
     let parentId = post.parent_id
@@ -76,20 +66,48 @@ export function recentActiveBranchReplies<
   return anchor && !fresh.some(post => post.id === anchor.id) ? [...fresh, anchor] : fresh
 }
 
-export function recentExpandableConversationReplies<
-  T extends { id: number; parent_id: number | null; created_at: string },
->(conversation: T[]) {
-  const expandableReplies = recentConversationReplies(conversation, true).slice(0, 4)
-  const expandableIds = new Set([
-    ...conversation.filter(post => post.parent_id === null).map(post => post.id),
-    ...expandableReplies.map(reply => reply.id),
-  ])
-  const needsParentContext = expandableReplies.some(reply => reply.parent_id !== null
-    && !expandableIds.has(reply.parent_id))
-  if (!needsParentContext) {
-    const connectedOlderReply = conversation.find(reply => reply.parent_id !== null
-      && !expandableIds.has(reply.id) && expandableIds.has(reply.parent_id))
-    if (connectedOlderReply) expandableReplies.push(connectedOlderReply)
-  }
-  return expandableReplies
+/**
+ * Make the single recent-conversation decision used by every threaded feed.
+ * Unread replies are deliberately not handled here: callers append every unread row after this projection.
+ */
+export function projectRecentConversation<T extends ConversationPost>(
+  conversation: T[],
+  { forceRoot = false }: { forceRoot?: boolean } = {},
+) {
+  const ordered = newestFirst(conversation)
+  const root = ordered.find(post => post.parent_id === null)
+  const recent = recentReplyCandidates(ordered)
+  const newest = recent[0]
+  const recentDirectReplies = root ? recent.filter(reply => reply.parent_id === root.id) : []
+  const freshDirectReplies = recentDirectReplies.filter(reply => withinReplyBurst(newest, reply))
+  const keepsRoot = !!root && (forceRoot || ordered[0]?.id === root.id || newest?.parent_id === root.id
+    || freshDirectReplies.length > 0 || !!recentRoot(root, newest))
+  const replies = root && keepsRoot
+    ? rootedReplies(ordered, root, recent)
+    : activeBranchReplies(ordered, root, recent)
+  const replyIds = new Set(replies.map(reply => reply.id))
+  const weightedDirectReplies = freshDirectReplies.filter(reply => replyIds.has(reply.id)).slice(0, 2)
+  const weightedReplyIds = new Set(weightedDirectReplies.map(reply => reply.id))
+  const weightedCandidates = [...weightedDirectReplies,
+    ...replies.filter(reply => !weightedReplyIds.has(reply.id))]
+  const previewCount = weightedCandidates.length > 1 && withinReplyBurst(newest, weightedCandidates[1]) ? 2 : 1
+  const previewIds = new Set(weightedCandidates.slice(0, previewCount).map(reply => reply.id))
+  const previewReplies = replies.filter(reply => previewIds.has(reply.id))
+  return { root, keepsRoot, replies, previewReplyIds: new Set(previewReplies.map(reply => reply.id)) }
+}
+
+/** Select posts visible while a projected conversation is folded. */
+export function collapsedConversationPreview<T extends ConversationPost & { feed_collapsed_preview?: boolean }>(
+  replies: T[],
+  unreadPostIds?: ReadonlySet<number>,
+) {
+  const ordered = newestFirst(replies)
+  const projectedPreview = ordered.filter(post => post.feed_collapsed_preview)
+  const weighted = projectedPreview.length
+    ? projectedPreview
+    : ordered.length > 1 && withinReplyBurst(ordered[0], ordered[1])
+    ? ordered.slice(0, 2)
+    : ordered.slice(0, 1)
+  const previewIds = new Set(weighted.map(post => post.id))
+  return [...weighted, ...ordered.filter(post => unreadPostIds?.has(post.id) && !previewIds.has(post.id))]
 }

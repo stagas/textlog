@@ -205,6 +205,10 @@ describe('post persistence', () => {
     )
     expect(linkify('```text\n- not a list\n```')).toBe('<code class="code-fence">- not a list</code>')
   })
+  test('requires at least two items before formatting numbered or bulleted lists', () => {
+    expect(linkify('1. a')).toBe('1. a')
+    expect(linkify('before\n- a\nafter')).toBe('before\n- a\nafter')
+  })
   test('renders slash-delimited italics in posts without affecting URLs', () => {
     expect(linkify('/italics/ and https://example.com/a/b'))
       .toBe(

@@ -78,7 +78,7 @@ type RecentFeedVisitor = {
 }
 
 const recentFeedVisitors = new Map<number, RecentFeedVisitor>()
-const latestFeedCacheVersion = 6
+const latestFeedCacheVersion = 15
 const recentFeedVisitorLimit = 30
 let recentLatestWarmCursor = 0
 
@@ -224,18 +224,22 @@ export function registerFeedsRoutes(app: Hono) {
           expandedRootId={expandedRootId} />,
       )
     const renderForCache = async () => {
-      const feed = await data()
-      const consumed = new Set(feed.timeline.filter(row => row.unread).map(row => row.event_key)).size
+      const feed = await databaseService().call('feeds.personalizedPage', {
+        user,
+        page: currentPage(c.req.query('page')),
+        pageSize,
+        toMe: false,
+        path: '/my-feed',
+        markRead: false,
+      })
       return page(
-        <Feed user={user}
-          data={{ ...feed, forYouCount: Math.max(0, feed.forYouCount - consumed),
-            timeline: feed.timeline.map(row => ({ ...row, unread: 0 })) }} title="my feed"
+        <Feed user={user} data={feed} title="my feed"
           notificationBanner={notificationBanner} expandedRootId={expandedRootId} />,
       )
     }
     const response = !notificationBanner && currentPage(c.req.query('page')) === 1 && !cursorValue && !expandedRootId
       ? await rpcMaterializedFeedPage(c.req.raw, 'for-you', user.id, render, false,
-        viewerCacheVersion(11, user), false, renderForCache,
+        viewerCacheVersion(12, user), false, renderForCache,
         async () => {
           await databaseService().call('feeds.markPersonalizedSnapshotPageRead', { userId: user.id, pageSize,
             toMe: false })
@@ -264,11 +268,10 @@ export function registerFeedsRoutes(app: Hono) {
       )
     }
     const renderForCache = user ? async () => {
-      const feed = await data()
-      const latestCount = Math.max(0, (feed.latestCount || 0) - new Set(feed.unreadPostIds).size)
+      const feed = await databaseService().call('feeds.latestPage', { viewerId: user.id,
+        page: currentPage(c.req.query('page')), pageSize: resolvedPageSize(c.req.raw), markRead: false })
       return page(
-        <PublicFeed user={user} feed={{ ...feed, latestCount, latestUnread: latestCount > 0,
-          unreadPostIds: [], directedUnreadPostIds: [] }} path="/all"
+        <PublicFeed user={user} feed={feed} path="/all"
           notificationBanner={notificationBanner}
           expandedRootId={expandedRootId} />,
       )

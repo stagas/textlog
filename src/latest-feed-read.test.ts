@@ -12,7 +12,7 @@ test('latest count remains for the rendered page and is reduced on the next load
     (1,'reader','reader@example.test','x'),(2,'writer','writer@example.test','x');
     INSERT INTO posts(id,user_id,body,created_at) VALUES
     (1,2,'first','2026-08-27 09:00:00'),(2,2,'second','2026-08-27 10:00:00');`)
-  cacheDb.query("DELETE FROM feed_snapshots WHERE kind='latest-conversation-heads-v11' AND viewer_id=1").run()
+  cacheDb.query("DELETE FROM feed_snapshots WHERE kind='latest-conversation-heads-v13' AND viewer_id=1").run()
 
   const feed = await executeDatabaseDomain(database, 'feeds.latestPage', {
     viewerId: 1, page: 1, pageSize: 20,
@@ -42,7 +42,7 @@ test('latest includes unread replies beyond the normal conversation preview', as
     (14,2,10,'reply 4','2026-08-26 13:00:00'),(15,2,10,'reply 5','2026-08-26 14:00:00'),
     (16,2,10,'reply 6','2026-08-26 15:00:00');`)
   markLatestPostsRead(1, [10, 12, 13, 14, 15, 16], database)
-  cacheDb.query("DELETE FROM feed_snapshots WHERE kind='latest-conversation-heads-v11' AND viewer_id=1").run()
+  cacheDb.query("DELETE FROM feed_snapshots WHERE kind='latest-conversation-heads-v13' AND viewer_id=1").run()
 
   const feed = await executeDatabaseDomain(database, 'feeds.latestPage', {
     viewerId: 1, page: 1, pageSize: 20,
@@ -54,7 +54,7 @@ test('latest includes unread replies beyond the normal conversation preview', as
   expect(await executeDatabaseDomain(database, 'feeds.latestUnreadCount', { userId: 1 })).toBe(0)
 })
 
-test('latest keeps all reply ancestors available when the recent conversation root is present', async () => {
+test('latest keeps up to five replies available when the recent root is present', async () => {
   const database = new Database(':memory:', { strict: true })
   runMigrations(database)
   database.run(`INSERT INTO users(id,handle,email,password) VALUES
@@ -65,17 +65,16 @@ test('latest keeps all reply ancestors available when the recent conversation ro
     (102,2,101,'recent child','2026-08-27 11:00:00'),
     (103,2,102,'newest child','2026-08-27 12:00:00');`)
   markLatestPostsRead(1, [100, 101, 102, 103], database)
-  cacheDb.query("DELETE FROM feed_snapshots WHERE kind='latest-conversation-heads-v11' AND viewer_id=1").run()
+  cacheDb.query("DELETE FROM feed_snapshots WHERE kind='latest-conversation-heads-v13' AND viewer_id=1").run()
 
   const feed = await executeDatabaseDomain(database, 'feeds.latestPage', {
     viewerId: 1, page: 1, pageSize: 20, markRead: false,
   })
 
   expect(feed.posts.map(post => post.id)).toEqual([100, 103, 102, 101])
-  expect(feed.posts.find(post => post.id === 102)?.parent_id).toBe(101)
 })
 
-test('latest keeps a rooted conversation available for local expansion', async () => {
+test('latest keeps a rooted conversation available for five-reply expansion', async () => {
   const database = new Database(':memory:', { strict: true })
   runMigrations(database)
   database.run(`INSERT INTO users(id,handle,email,password) VALUES
@@ -85,7 +84,7 @@ test('latest keeps a rooted conversation available for local expansion', async (
     (201,2,200,'first','2026-08-27 10:00:00'),(202,2,201,'second','2026-08-27 11:00:00'),
     (203,2,202,'third','2026-08-27 12:00:00'),(204,2,203,'fourth','2026-08-27 13:00:00');`)
   markLatestPostsRead(1, [200, 201, 202, 203, 204], database)
-  cacheDb.query("DELETE FROM feed_snapshots WHERE kind='latest-conversation-heads-v11' AND viewer_id=1").run()
+  cacheDb.query("DELETE FROM feed_snapshots WHERE kind='latest-conversation-heads-v13' AND viewer_id=1").run()
 
   const preview = await executeDatabaseDomain(database, 'feeds.latestPage', {
     viewerId: 1, page: 1, pageSize: 20, markRead: false,
@@ -105,7 +104,7 @@ test('latest fills a fifth connected reply slot while retaining unread replies',
     (305,2,300,'five','2026-08-27 14:00:00'),(306,2,300,'six','2026-08-27 15:00:00'),
     (307,2,300,'seven','2026-08-27 16:00:00');`)
   markLatestPostsRead(1, [300, 302, 303, 304, 305, 306, 307], database)
-  cacheDb.query("DELETE FROM feed_snapshots WHERE kind='latest-conversation-heads-v11' AND viewer_id=1").run()
+  cacheDb.query("DELETE FROM feed_snapshots WHERE kind='latest-conversation-heads-v13' AND viewer_id=1").run()
 
   const feed = await executeDatabaseDomain(database, 'feeds.latestPage', {
     viewerId: 1, page: 1, pageSize: 20, markRead: false,
@@ -126,7 +125,7 @@ test('latest anchors an active branch at its oldest recent reply and quotes the 
     (103,2,102,'recent child','2026-08-27 10:00:00'),
     (104,2,103,'newest child','2026-08-27 11:00:00');`)
   markLatestPostsRead(1, [100, 101], database)
-  cacheDb.query("DELETE FROM feed_snapshots WHERE kind='latest-conversation-heads-v11' AND viewer_id=1").run()
+  cacheDb.query("DELETE FROM feed_snapshots WHERE kind='latest-conversation-heads-v13' AND viewer_id=1").run()
 
   const feed = await executeDatabaseDomain(database, 'feeds.latestPage', {
     viewerId: 1, page: 1, pageSize: 20, markRead: false,
@@ -136,4 +135,25 @@ test('latest anchors an active branch at its oldest recent reply and quotes the 
   expect(feed.posts.find(post => post.id === 101)).toMatchObject({
     parent_id: 100, feed_branch_root: true, parent: { id: 100 },
   })
+})
+
+test('latest keeps an old root and unread intermediates when recent direct replies accompany a newer deep run', async () => {
+  const database = new Database(':memory:', { strict: true })
+  runMigrations(database)
+  database.run(`INSERT INTO users(id,handle,email,password) VALUES
+    (1,'reader','reader@example.test','x'),(2,'writer','writer@example.test','x');
+    INSERT INTO posts(id,user_id,body,created_at) VALUES(1495,2,'old root','2026-08-16 14:10:58');
+    INSERT INTO posts(id,user_id,parent_id,body,created_at) VALUES
+    (2904,2,1495,'older recent direct','2026-08-30 13:20:03'),
+    (2953,2,1495,'newer recent direct','2026-08-31 15:42:10'),
+    (2954,2,2953,'deep intermediate one','2026-08-31 15:47:09'),
+    (2955,2,2954,'deep intermediate two','2026-08-31 15:53:24'),
+    (2956,2,2955,'newest deep reply','2026-08-31 15:54:59');`)
+  cacheDb.query("DELETE FROM feed_snapshots WHERE kind='latest-conversation-heads-v13' AND viewer_id=1").run()
+
+  const feed = await executeDatabaseDomain(database, 'feeds.latestPage', {
+    viewerId: 1, page: 1, pageSize: 20, markRead: false,
+  })
+
+  expect(feed.posts.map(post => post.id)).toEqual([1495, 2956, 2955, 2954, 2953, 2904])
 })

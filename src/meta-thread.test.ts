@@ -26,7 +26,7 @@ test('meta aliases hide tagged posts and descendants from all and any while pres
   await executeDatabaseDomain(db, 'feeds.refreshHotProjection', {
     force: true, now: new Date().toISOString(),
   })
-  cacheDb.query("DELETE FROM feed_snapshots WHERE kind='latest-conversation-heads-v12'").run()
+  cacheDb.query("DELETE FROM feed_snapshots WHERE kind='latest-conversation-heads-v13'").run()
 
   const all = await executeDatabaseDomain(db, 'feeds.latestPage', {
     viewerId: -1, page: 1, pageSize: 20, markRead: false,
@@ -53,5 +53,5 @@ test('meta aliases hide tagged posts and descendants from all and any while pres
     user: tagReader, page: 1, pageSize: 20, toMe: false, path: '/my-feed', markRead: false,
   })
   expect(tagFeed.timeline.some(row => row.id === reply.id)).toBeTrue()
-  cacheDb.query("DELETE FROM feed_snapshots WHERE kind='latest-conversation-heads-v12'").run()
+  cacheDb.query("DELETE FROM feed_snapshots WHERE kind='latest-conversation-heads-v13'").run()
 })

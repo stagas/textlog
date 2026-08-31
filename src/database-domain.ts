@@ -29,8 +29,7 @@ import { getImageUrl, isImageKey } from './image-storage'
 import { LOCATION_MAP_STYLE_VERSION, LOCATION_ZOOM } from './locations'
 import { excludesMetaPosts } from './meta-thread'
 import { interactedEmail } from './interacted-email'
-import { isRecentConversationRoot, recentActiveBranchReplies, recentConversationReplies,
-  recentExpandableConversationReplies } from './latest-conversation'
+import { projectRecentConversation } from './latest-conversation'
 import { initializeLatestReads, latestUnreadPostState, markAllLatestRead, markLatestPostsRead,
   unreadLatestCount } from './latest-state'
 import { userBioLinkPreviews } from './link-preview'
@@ -2461,7 +2460,7 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
         : '1'
       const blockViewerId = viewerIsModerator(database, viewerId) ? -1 : viewerId
       const parameters = [blockViewerId, blockViewerId, blockViewerId, viewerId, viewerId]
-      const snapshotKind = 'latest-conversation-heads-v12'
+      const snapshotKind = 'latest-conversation-heads-v13'
       const snapshot = feedSnapshotPage<number>(database, snapshotKind, viewerId, page, () => {
         if (viewerId < 0) {
           return (database.query(`SELECT h.conversation_id FROM conversation_heads h
@@ -2515,24 +2514,21 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
       const snapshotPosts = conversationIds.flatMap(id => {
         const conversation = byConversation.get(id) || []
         if (!conversation.length) return []
-        const root = conversation.find(row => row.id === id)
-        let recentReplies = recentConversationReplies(conversation)
-        const includedIds = new Set([root?.id, ...recentReplies.map(reply => reply.id)])
-        const unreadReplies = conversation.filter(row => unreadIds.has(row.id) && !includedIds.has(row.id))
-        const keepsRoot = root?.parent_id === null
-          && (conversation[0]?.id === root.id || recentReplies[0]?.parent_id === root.id
-            || isRecentConversationRoot(root, conversation))
-        if (keepsRoot) {
-          const expandableReplies = recentExpandableConversationReplies(conversation)
-          const expandableIds = new Set([root!.id, ...expandableReplies.map(reply => reply.id)])
-          return [root!, ...expandableReplies,
-            ...conversation.filter(row => unreadIds.has(row.id) && !expandableIds.has(row.id))]
-        }
-        recentReplies = recentActiveBranchReplies(conversation)
-        const fullIncludedIds = new Set([root?.id, ...recentReplies.map(reply => reply.id)])
-        const fullUnreadReplies = conversation.filter(row => unreadIds.has(row.id) && !fullIncludedIds.has(row.id))
-        const selected = [...recentReplies, ...fullUnreadReplies]
+        const projection = projectRecentConversation(conversation)
+        const selected = [
+          ...(projection.keepsRoot && projection.root ? [projection.root] : []),
+          ...projection.replies.map(row => projection.previewReplyIds.has(row.id)
+            ? { ...row, feed_collapsed_preview: true }
+            : row),
+        ]
         const selectedIds = new Set(selected.map(row => row.id))
+        selected.push(...conversation.filter(row => unreadIds.has(row.id) && !selectedIds.has(row.id)))
+        for (const row of selected) selectedIds.add(row.id)
+        if (projection.keepsRoot) {
+          return selected.map(row => row.parent_id && !selectedIds.has(row.parent_id)
+            ? { ...row, feed_ancestor_gap: true }
+            : row)
+        }
         return selected.map(row => row.parent_id && !selectedIds.has(row.parent_id)
           ? { ...row, feed_branch_root: true }
           : row)
@@ -2649,9 +2645,9 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
       ])
       const posts = conversationIds.flatMap(conversationId => {
         const conversation = byConversation.get(conversationId) || []
-        const root = conversation.find(post => post.id === conversationId)
-        if (!root) return []
-        return [root, ...recentExpandableConversationReplies(conversation)]
+        const projection = projectRecentConversation(conversation, { forceRoot: true })
+        return projection.root ? [projection.root, ...projection.replies.map(row =>
+          projection.previewReplyIds.has(row.id) ? { ...row, feed_collapsed_preview: true } : row)] : []
       })
       const forYouCount = viewerId >= 0 ? personalizedUnreadCount(database, viewerId, false) : 0
       const toMeCount = viewerId >= 0 ? personalizedUnreadCount(database, viewerId, true) : 0
@@ -2704,8 +2700,11 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
           WHERE item.snapshot_id=? AND item.position<? ORDER BY item.position,entry.key`)
           .all(snapshot.id, pageSize) as Array<{ event_key: string; targeted_to_viewer: number }>
         changed = markForYouEntriesRead(userId, rows.map(row => row.event_key), toMe, database)
-        if (changed) cacheDb.query(`DELETE FROM materialized_feed_pages_v2 WHERE viewer_id=?
-          AND kind IN (${toMe ? "'latest','for-you','to-me'" : "'latest'"})`).run(userId)
+        if (changed) {
+          database.query('DELETE FROM feed_snapshots WHERE id=?').run(snapshot.id)
+          cacheDb.query(`DELETE FROM materialized_feed_pages_v2 WHERE viewer_id=?
+            AND kind IN (${toMe ? "'latest','for-you','to-me'" : "'latest'"})`).run(userId)
+        }
       }
       return changed as DatabaseDomainOutput<K>
     }

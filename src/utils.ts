@@ -628,6 +628,7 @@ function markdownList(body: string): MarkdownList | null {
       if (!item || (item[2] !== undefined) !== ordered) break
       items.push(item[4])
     }
+    if (items.length < 2) continue
     const lastIndex = lines.slice(0, endLine).reduce((length, line) => length + line.length + 1, 0) - 1
     return { index: lineOffset, lastIndex, ordered, start: Number(first[2] || 1), items }
   }
