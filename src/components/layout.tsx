@@ -60,6 +60,7 @@ export function Layout({
   const name = appName()
   const origin = appOrigin()
   const requestUrl = new URL(request.url)
+  const anonymousEnterHref = ['/hot', '/any', '/all'].includes(requestUrl.pathname) ? '/enter' : enterHref()
   const instantScroll = /(?:^|;\s*)textlog_scroll=instant(?:;|$)/.test(request.headers.get('cookie') || '')
   const showGuestJoin = !user && ['/hot', '/all'].includes(requestUrl.pathname)
   const onWritePage = requestUrl.pathname === '/write'
@@ -123,7 +124,7 @@ export function Layout({
     : (
       <>
         <a href="/explore">explore</a>
-        <a className="button" href={enterHref()} rel="nofollow">enter</a>
+        <a className="button" href={anonymousEnterHref} rel="nofollow">enter</a>
       </>
     )
   return (

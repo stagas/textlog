@@ -2344,6 +2344,23 @@ test('Error pages explain client and server failures without exposing details', 
 })
 
 describe('About', () => {
+  test('anonymous discovery pages enter without a next destination', () => {
+    const feed = { posts: [], page: 1, totalItems: 0, totalPages: 1 }
+    const pages = [
+      withAppearance(new Request('https://textlog.test/hot?page=2'),
+        () => renderToStaticMarkup(React.createElement(HotFeed, { user: null, feed }))),
+      withAppearance(new Request('https://textlog.test/any?seed=test'),
+        () => renderToStaticMarkup(React.createElement(PublicFeed, { user: null, feed, path: '/any?seed=test' }))),
+      withAppearance(new Request('https://textlog.test/all?page=2'),
+        () => renderToStaticMarkup(React.createElement(PublicFeed, { user: null, feed, path: '/all' }))),
+    ]
+
+    for (const html of pages) {
+      expect(html).toContain('class="button" href="/enter" rel="nofollow">enter</a>')
+      expect(html).not.toContain('href="/enter?next=')
+    }
+  })
+
   test('offers guest visitors a way to join or browse notes', () => {
     const html = renderToStaticMarkup(React.createElement(About, { user: null }))
 
