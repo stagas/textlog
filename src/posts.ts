@@ -6,6 +6,7 @@ import { resolveHandle } from './handles'
 import { recordHotActivity } from './hot'
 import { getImageUrl, isImageKey } from './image-storage'
 import { markLatestPostsRead } from './latest-state'
+import { metaThreadVisibleToViewer } from './meta-thread'
 import { decodeHtmlEntities, userBioLinkPreviews } from './link-preview'
 import { LOCATION_MAP_STYLE_VERSION, LOCATION_ZOOM, locationMapKey, osmLocationUrl } from './locations'
 import { loadPolls, syncPoll } from './polls'
@@ -657,7 +658,9 @@ export function rewireVisibleAncestorGaps(database: Database, posts: PostView[])
 }
 
 export function loadThreadReplies(database: Database, parentId: number, viewerId = -1) {
-  const blockViewerId = moderatorViewer(database, viewerId) ? -1 : viewerId
+  const moderator = moderatorViewer(database, viewerId)
+  const blockViewerId = moderator ? -1 : viewerId
+  const metaVisibility = moderator ? '1' : metaThreadVisibleToViewer(viewerId)
   const supportsExecutionOutput = !!database.query(
     "SELECT 1 FROM pragma_table_info('posts') WHERE name='execution_output'",
   ).get()
@@ -672,6 +675,7 @@ export function loadThreadReplies(database: Database, parentId: number, viewerId
           OR (b.blocker_id=p.user_id AND b.blocked_id=?)))
         AND (? < 0 OR NOT EXISTS (SELECT 1 FROM post_hashtags ph JOIN blocked_hashtags bh ON bh.tag=ph.tag
           WHERE ph.post_id=p.id AND bh.user_id=?))
+        AND ${metaVisibility}
       UNION ALL
       SELECT p.*,u.handle,thread.depth+1 FROM posts p JOIN users u ON u.id=p.user_id
         JOIN thread ON p.parent_id=thread.id WHERE (? < 0 OR NOT EXISTS
@@ -679,6 +683,7 @@ export function loadThreadReplies(database: Database, parentId: number, viewerId
           OR (b.blocker_id=p.user_id AND b.blocked_id=?)))
         AND (? < 0 OR NOT EXISTS (SELECT 1 FROM post_hashtags ph JOIN blocked_hashtags bh ON bh.tag=ph.tag
           WHERE ph.post_id=p.id AND bh.user_id=?))
+        AND ${metaVisibility}
     ) SELECT id,user_id,parent_id,body,${translationColumn},created_at,deleted_at,
       has_latex,has_links,has_code,${supportsExecutionOutput ? 'execution_output' : 'NULL execution_output'},handle,depth
       FROM thread ORDER BY created_at ASC,id ASC`).all(parentId, blockViewerId, blockViewerId, blockViewerId,

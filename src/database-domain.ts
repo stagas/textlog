@@ -28,6 +28,7 @@ import { getHotPosts, hotFeedProjectionNeedsRefresh, hotRankingVersion,
 import { getImageUrl, isImageKey } from './image-storage'
 import { LOCATION_MAP_STYLE_VERSION, LOCATION_ZOOM } from './locations'
 import { excludesMetaPosts } from './meta-thread'
+import { metaThreadVisibleToViewer } from './meta-thread'
 import { interactedEmail } from './interacted-email'
 import { isRecentConversationRoot, recentActiveBranchReplies, recentConversationReplies,
   recentExpandableConversationReplies } from './latest-conversation'
@@ -1016,6 +1017,9 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
       const found = database.query('SELECT p.*,u.handle FROM posts p JOIN users u ON u.id=p.user_id WHERE p.id=?')
         .get(id) as PostView | null
       if (!found) return { status: 'not_found' } as DatabaseDomainOutput<K>
+      if (!viewerIsModerator(database, viewerId) && !database.query(
+        `SELECT 1 FROM posts p WHERE p.id=? AND ${metaThreadVisibleToViewer(viewerId)}`,
+      ).get(id)) return { status: 'not_found' } as DatabaseDomainOutput<K>
       if (viewerId >= 0 && !viewerIsModerator(database, viewerId)) {
         const blocked = database.query(`WITH RECURSIVE ancestors(user_id,parent_id) AS (
           SELECT user_id,parent_id FROM posts WHERE id=?

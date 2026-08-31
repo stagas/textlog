@@ -12,11 +12,13 @@ test('meta aliases hide tagged posts and descendants from all and any while pres
   const db = new Database(':memory:', { strict: true })
   runMigrations(db)
   db.run(`INSERT INTO users(id,handle,email,password) VALUES
-    (1,'reader','reader@example.test','x'),(2,'writer','writer@example.test','x');
+    (1,'reader','reader@example.test','x'),(2,'writer','writer@example.test','x'),
+    (3,'tagreader','tagreader@example.test','x');
     INSERT INTO follows(follower_id,following_id,created_at)
-      VALUES(1,2,'2026-08-01 08:00:00');`)
+      VALUES(1,2,'2026-08-01 08:00:00');
+    INSERT INTO hashtag_follows(user_id,tag,created_at) VALUES(3,'project','2026-08-01 08:00:00');`)
 
-  const root = createPost(db, 2, 'internal #tlog', null, false)
+  const root = createPost(db, 2, 'internal #tlog #project', null, false)
   if (!('id' in root)) throw new Error('expected root post')
   const reply = createPost(db, 1, 'untagged descendant', root.id, false)
   if (!('id' in reply)) throw new Error('expected reply post')
@@ -34,11 +36,17 @@ test('meta aliases hide tagged posts and descendants from all and any while pres
   expect(all.posts).toEqual([])
   expect(any.posts).toEqual([])
   expect(hot.posts.map(post => post.id)).toContain(root.id)
-  expect(db.query('SELECT tag FROM post_hashtags WHERE post_id=?').get(root.id)).toEqual({ tag: 'tlog' })
+  expect(db.query('SELECT tag FROM post_hashtags WHERE post_id=? AND tag=?').get(root.id, 'tlog'))
+    .toEqual({ tag: 'tlog' })
 
   const reader = db.query('SELECT * FROM users WHERE id=1').get() as User
   const myFeed = await executeDatabaseDomain(db, 'feeds.personalizedPage', {
     user: reader, page: 1, pageSize: 20, toMe: false, path: '/my-feed', markRead: false,
   })
   expect(myFeed.timeline.some(row => row.id === reply.id)).toBeTrue()
+  const tagReader = db.query('SELECT * FROM users WHERE id=3').get() as User
+  const tagFeed = await executeDatabaseDomain(db, 'feeds.personalizedPage', {
+    user: tagReader, page: 1, pageSize: 20, toMe: false, path: '/my-feed', markRead: false,
+  })
+  expect(tagFeed.timeline.some(row => row.id === reply.id)).toBeTrue()
 })

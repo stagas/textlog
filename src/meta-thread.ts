@@ -21,3 +21,24 @@ export function isMetaThread(postId: MetaPostId = 'p.id') {
 export function excludesMetaPosts(postId: MetaPostId = 'p.id') {
   return `NOT ${isMetaThread(postId)}`
 }
+
+/** Visibility for a protected branch outside personalized feeds. */
+export function metaThreadVisibleToViewer(viewerId: number, postId: MetaPostId = 'p.id') {
+  if (viewerId < 0) return excludesMetaPosts(postId)
+  return `(${excludesMetaPosts(postId)} OR EXISTS (
+    WITH RECURSIVE visible_meta_ancestors(id,user_id,parent_id) AS (
+      SELECT visible_post.id,visible_post.user_id,visible_post.parent_id
+        FROM posts visible_post WHERE visible_post.id=${postId}
+      UNION ALL
+      SELECT visible_parent.id,visible_parent.user_id,visible_parent.parent_id FROM posts visible_parent
+        JOIN visible_meta_ancestors visible_child ON visible_parent.id=visible_child.parent_id
+    ) SELECT 1 FROM visible_meta_ancestors visible
+      LEFT JOIN follows visible_follow ON visible_follow.follower_id=${viewerId}
+        AND visible_follow.following_id=visible.user_id
+      LEFT JOIN post_hashtags visible_tag ON visible_tag.post_id=visible.id
+      LEFT JOIN hashtag_follows visible_tag_follow ON visible_tag_follow.user_id=${viewerId}
+        AND visible_tag_follow.tag=visible_tag.tag
+      WHERE visible.user_id=${viewerId} OR visible_follow.follower_id IS NOT NULL
+        OR visible_tag_follow.user_id IS NOT NULL
+  ))`
+}

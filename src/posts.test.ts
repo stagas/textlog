@@ -757,6 +757,27 @@ describe('post persistence', () => {
     expect(loadThreadReplies(db, 1, 2).map(post => post.id)).toEqual([4])
   })
 
+  test('hides meta branches in threads unless the viewer follows an ancestor author or its exact tag', () => {
+    const db = database()
+    db.run(`INSERT INTO users(id,handle) VALUES(3,'other');
+      INSERT INTO posts(id,user_id,parent_id,body,created_at) VALUES
+        (1,1,NULL,'public root','2026-08-03 10:00:00'),
+        (2,1,1,'protected #tlog','2026-08-03 11:00:00'),
+        (3,3,2,'protected descendant','2026-08-03 12:00:00'),
+        (4,3,1,'public sibling','2026-08-03 13:00:00');
+      INSERT INTO post_hashtags VALUES(2,'tlog');`)
+
+    expect(loadThreadReplies(db, 1, -1).map(post => post.id)).toEqual([4])
+    expect(loadThreadReplies(db, 1, 2).map(post => post.id)).toEqual([4])
+    db.run(`INSERT INTO hashtag_follows VALUES(2,'tlog')`)
+    expect(loadThreadReplies(db, 1, 2).map(post => post.id)).toEqual([2, 3, 4])
+    db.run(`DELETE FROM hashtag_follows; INSERT INTO post_hashtags VALUES(2,'project');
+      INSERT INTO hashtag_follows VALUES(2,'project')`)
+    expect(loadThreadReplies(db, 1, 2).map(post => post.id)).toEqual([2, 3, 4])
+    db.run(`DELETE FROM hashtag_follows; INSERT INTO follows VALUES(2,1)`)
+    expect(loadThreadReplies(db, 1, 2).map(post => post.id)).toEqual([2, 3, 4])
+  })
+
   test('shows blocker replies to moderators and marks who blocked them', () => {
     const db = database()
     db.run(`ALTER TABLE users ADD COLUMN email TEXT NOT NULL DEFAULT '';

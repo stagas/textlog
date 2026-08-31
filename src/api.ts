@@ -5,6 +5,7 @@ import { getImageUrl, isImageKey } from './image-storage'
 import { decodeHtmlEntities } from './link-preview'
 import { LOCATION_MAP_STYLE_VERSION, LOCATION_ZOOM, osmLocationUrl } from './locations'
 import { loadPolls } from './polls'
+import { metaThreadVisibleToViewer } from './meta-thread'
 import { searchExpression } from './search'
 import type { ApiPost, LinkPreview } from './types'
 import { excludesWhisperPosts } from './whisper'
@@ -311,6 +312,7 @@ export function apiReplies(database: Database, origin: string, parentId: number,
   depth: number
   viewerId?: number
 }) {
+  const metaVisibility = metaThreadVisibleToViewer(options.viewerId ?? -1)
   const beforeFilter = options.before === null ? '' : 'AND thread.id < ?'
   const parameters = options.before === null
     ? [parentId, options.depth + 1, options.depth, options.limit + 1]
@@ -318,11 +320,11 @@ export function apiReplies(database: Database, origin: string, parentId: number,
   const rows = database.query(`WITH RECURSIVE thread(id,body,parent_id,created_at,handle,depth) AS (
     SELECT p.id,p.body,p.parent_id,p.created_at,u.handle,1
     FROM posts p JOIN users u ON u.id=p.user_id
-    WHERE p.parent_id=? AND p.deleted_at IS NULL AND u.deleted_at IS NULL
+    WHERE p.parent_id=? AND p.deleted_at IS NULL AND u.deleted_at IS NULL AND ${metaVisibility}
     UNION ALL
     SELECT p.id,p.body,p.parent_id,p.created_at,u.handle,thread.depth+1
     FROM posts p JOIN users u ON u.id=p.user_id JOIN thread ON p.parent_id=thread.id
-    WHERE thread.depth < ? AND p.deleted_at IS NULL AND u.deleted_at IS NULL
+    WHERE thread.depth < ? AND p.deleted_at IS NULL AND u.deleted_at IS NULL AND ${metaVisibility}
   ) SELECT id,id top_id,body,parent_id,created_at,handle,0 reply_count,depth
     FROM thread WHERE depth <= ? ${beforeFilter}
     ORDER BY id DESC LIMIT ?`).all(...parameters) as Array<ApiPostRow & { depth: number }>

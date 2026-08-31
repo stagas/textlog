@@ -2712,6 +2712,38 @@ export const migrations: Migration[] = [
       ).get()) database.run('UPDATE hot_feed_projection_state SET dirty=1')
     },
   },
+  {
+    version: 168,
+    name: 'followed_ancestor_tags_in_personalized_feed',
+    up(database) {
+      if (!database.query(
+        "SELECT 1 FROM sqlite_master WHERE type='table' AND name='personalized_post_candidates'",
+      ).get()) return
+      database.run(`WITH RECURSIVE ancestry(post_id,ancestor_id) AS (
+          SELECT id,parent_id FROM posts WHERE parent_id IS NOT NULL
+          UNION ALL SELECT ancestry.post_id,p.parent_id FROM ancestry JOIN posts p ON p.id=ancestry.ancestor_id
+          WHERE p.parent_id IS NOT NULL
+        ) INSERT OR IGNORE INTO personalized_post_candidates(viewer_id,post_id,created_at)
+          SELECT hf.user_id,child.id,child.created_at FROM ancestry
+          JOIN posts child ON child.id=ancestry.post_id
+          JOIN post_hashtags ph ON ph.post_id=ancestry.ancestor_id
+          JOIN hashtag_follows hf ON hf.tag=ph.tag WHERE child.created_at>=hf.created_at;
+
+        DROP TRIGGER IF EXISTS personalized_candidates_hashtag_follows_insert;
+        CREATE TRIGGER personalized_candidates_hashtag_follows_insert AFTER INSERT ON hashtag_follows BEGIN
+          INSERT OR IGNORE INTO personalized_post_candidates(viewer_id,post_id,created_at)
+            SELECT NEW.user_id,p.id,p.created_at FROM posts p WHERE p.created_at>=NEW.created_at AND (
+              EXISTS (SELECT 1 FROM post_hashtags ph WHERE ph.post_id=p.id AND ph.tag=NEW.tag)
+              OR EXISTS (WITH RECURSIVE ancestors(id,parent_id) AS (
+                SELECT parent.id,parent.parent_id FROM posts parent WHERE parent.id=p.parent_id
+                UNION ALL SELECT parent.id,parent.parent_id FROM posts parent
+                  JOIN ancestors child ON parent.id=child.parent_id
+              ) SELECT 1 FROM ancestors JOIN post_hashtags ph ON ph.post_id=ancestors.id
+                WHERE ph.tag=NEW.tag)
+            );
+        END;`)
+    },
+  },
 ]
 
 export const latestMigrationVersion = migrations.at(-1)!.version
