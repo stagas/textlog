@@ -403,7 +403,7 @@ test('posting helpers are searchable details and show copyable highlighted resul
   expect(html).toContain('class="posting-help-tabs" aria-label="Writing help"')
   expect(html).toContain('>emoji</label>')
   expect(html).toContain('>formatting</label>')
-  expect(html).toContain('>modifiers</label>')
+  expect(html).toContain('>tags</label>')
   expect(html).toContain('>search</label>')
   expect(html).toContain('class="posting-help-formatting-panel posting-help-tab-panel"')
   expect(html).toContain('class="posting-help-modifiers-panel posting-help-tab-panel"')
@@ -455,6 +455,11 @@ test('posting helpers are searchable details and show copyable highlighted resul
   )
   expect(html).toContain('No more replies <b>#lock</b>')
   expect(html).toContain('Prevents new replies to this note and every reply beneath it.')
+  expect(html).toContain(
+    '<span class="posting-help-modifier-heading">Meta conversations</span><small>Keeps this note and its replies '
+      + 'out of public discovery feeds. Aliases: #tlog and #textlog.</small>',
+  )
+  expect(html).toContain('About textlog <b>#meta</b>')
   expect(html).toContain(
     '<span class="posting-help-modifier-heading">Whisper conversations</span><small>Keeps the branch out of all and hot.',
   )

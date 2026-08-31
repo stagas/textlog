@@ -99,7 +99,7 @@ function PostingHelpTabs({ search }: { search?: PostingSuggestionSearch | null }
       <nav className="posting-help-tabs" aria-label="Writing help">
         <label htmlFor={`${tabId}-emoji`}>emoji</label>
         <label htmlFor={`${tabId}-formatting`}>formatting</label>
-        <label htmlFor={`${tabId}-modifiers`}>modifiers</label>
+        <label htmlFor={`${tabId}-modifiers`}>tags</label>
         <label htmlFor={`${tabId}-search`}>search</label>
       </nav>
       <div className="posting-help-emoji-panel posting-help-tab-panel" aria-label="Emoji to copy and paste">
@@ -350,6 +350,19 @@ function PostingHelpTabs({ search }: { search?: PostingSuggestionSearch | null }
           <dt>
             <span className="posting-help-modifier-heading">Locked conversations</span>
             <small>Prevents new replies to this note and every reply beneath it.</small>
+          </dt>
+        </div>
+        <div>
+          <dd>
+            <code>
+              About textlog <b>#meta</b>
+            </code>
+          </dd>
+          <dt>
+            <span className="posting-help-modifier-heading">Meta conversations</span>
+            <small>
+              Keeps this note and its replies out of public discovery feeds. Aliases: #tlog and #textlog.
+            </small>
           </dt>
         </div>
         <div>
