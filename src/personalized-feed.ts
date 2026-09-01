@@ -10,7 +10,7 @@ import { enrichPosts, loadBioReferenceData, visibleTagFollowerCounts, visibleUse
 import type { PersonalizedFeedData, PersonalizedTimelineRow, User } from './types'
 import { isWhisperThread, whisperThreadRelevantToViewer, whisperThreadTargetsViewer } from './whisper'
 
-export const PERSONALIZED_FEED_SNAPSHOT_VERSION = 39
+export const PERSONALIZED_FEED_SNAPSHOT_VERSION = 40
 const unreadCountProjection = new Map<string, number>()
 const MAX_UNREAD_COUNT_PROJECTIONS = 2_048
 
@@ -266,6 +266,10 @@ export function loadPersonalizedFeed(database: Database, user: User, page: numbe
         result.push({ rows: [row], created_at: row.created_at, order: row.event_key })
         continue
       }
+      if (toMe) {
+        result.push({ rows: [row], created_at: row.created_at, order: row.event_key })
+        continue
+      }
       const root = rootId(row)
       if (emittedThreads.has(root)) continue
       emittedThreads.add(root)
@@ -273,23 +277,19 @@ export function loadPersonalizedFeed(database: Database, user: User, page: numbe
       const replies = conversation.filter(candidate => candidate.parent_id !== null)
       const projection = projectRecentConversation(conversation)
       const threadRows = projection.keepsRoot && projection.root ? [projection.root] : []
-      const previewReplies = toMe
-        ? replies
-        : projection.replies.map(candidate => projection.previewReplyIds.has(candidate.id)
-          ? { ...candidate, feed_collapsed_preview: true }
-          : candidate)
+      const previewReplies = projection.replies.map(candidate => projection.previewReplyIds.has(candidate.id)
+        ? { ...candidate, feed_collapsed_preview: true }
+        : candidate)
       threadRows.push(...previewReplies)
-      if (!toMe) {
-        const includedIds = new Set(threadRows.map(candidate => candidate.id))
-        threadRows.push(...conversation.filter(candidate => candidate.unread && !includedIds.has(candidate.id)))
-      }
+      const includedIds = new Set(threadRows.map(candidate => candidate.id))
+      threadRows.push(...conversation.filter(candidate => candidate.unread && !includedIds.has(candidate.id)))
       if (threadRows.length) {
         const visibleIds = new Set(threadRows.map(candidate => candidate.id))
         const projectedRows = threadRows.map(candidate => candidate.parent_id && !visibleIds.has(candidate.parent_id)
           ? { ...candidate, feed_ancestor_gap: true }
           : candidate)
         result.push({ rows: projectedRows,
-          created_at: toMe ? conversation[0]!.created_at : threadActivity.get(root!) || row.created_at,
+          created_at: threadActivity.get(root!) || row.created_at,
           order: row.event_key })
       }
     }

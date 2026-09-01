@@ -173,6 +173,26 @@ test('To Me conversations are ordered by their latest directed activity', () => 
   expect(feed.timeline.filter(row => row.id).map(row => row.id)).toEqual([5, 2])
 })
 
+test('To Me interleaves directed activity chronologically instead of grouping conversations', () => {
+  const database = new Database(':memory:', { strict: true })
+  runMigrations(database)
+  database.run(`INSERT INTO users(id,handle,email,password,bio) VALUES
+      (1,'viewer','viewer@example.com','!',''),
+      (2,'first','first@example.com','!',''),
+      (3,'second','second@example.com','!','');
+    INSERT INTO posts(id,user_id,parent_id,body,created_at) VALUES
+      (1,1,NULL,'first root','2026-08-24 09:00:00'),
+      (2,2,1,'older reply','2026-08-24 10:00:00'),
+      (3,1,NULL,'second root','2026-08-24 09:30:00'),
+      (4,3,3,'middle reply','2026-08-24 11:00:00'),
+      (5,2,1,'newest reply','2026-08-24 12:00:00');`)
+  const viewer: User = { id: 1, handle: 'viewer', email: 'viewer@example.com', bio: '' }
+
+  const feed = loadPersonalizedFeed(database, viewer, 1, 20, true, '/@', false)
+
+  expect(feed.timeline.filter(row => row.id).map(row => row.id)).toEqual([5, 4, 2])
+})
+
 test('For You includes unread replies beyond the recent reply preview', () => {
   const database = new Database(':memory:', { strict: true })
   runMigrations(database)

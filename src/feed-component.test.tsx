@@ -294,7 +294,7 @@ test('standalone feed posts with replies omit redundant footer dots', () => {
   expect(html).not.toContain('feed-thread-fold-21')
 })
 
-test('to-me deduplicates the shared parent of sibling reply activities', () => {
+test('to-me renders sibling reply activities as separate chronological entries', () => {
   const parent = { id: 25, user_id: 1, parent_id: null, body: 'one shared parent', created_at: '2026-08-19 09:00:00',
     deleted_at: null, handle: 'reader', reply_count: 2 }
   const activity = (id: number, handle: string): PersonalizedTimelineRow => ({
@@ -311,9 +311,9 @@ test('to-me deduplicates the shared parent of sibling reply activities', () => {
     toMe
   />)
 
-  expect(html.match(/one shared parent/g)).toHaveLength(1)
-  expect(html.match(/class="post-page-thread feed-thread"/g)).toHaveLength(1)
-  expect(html.match(/class="parent-quote/g)).toBeNull()
+  expect(html.match(/one shared parent/g)).toHaveLength(2)
+  expect(html.match(/class="post-page-thread feed-thread"/g)).toHaveLength(2)
+  expect(html.indexOf('note by cara')).toBeLessThan(html.indexOf('note by bob'))
 })
 
 test('threaded activity replies retain their unread dots', () => {
