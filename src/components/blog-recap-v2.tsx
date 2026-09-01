@@ -12,9 +12,10 @@ const highlights = [
     Thread trees, smarter collapsing, anchored replies, backlinks, thread locks, and contextual back links make even
     long conversations easy to enter and leave.
   </>],
-  ['03', 'Feeds with a point of view', '/@', <>
-    Latest, Hot, For You, To Me, Any, All, and Random offer different ways into the community, with unread state and
-    recent activity carried across visits.
+  ['03', 'Feeds with a point of view', null, <>
+    <a href="/@">@</a> keeps direct activity together, <a href="/my-feed">my feed</a> follows your people and tags,
+    {' '}<a href="/hot">hot</a> surfaces active conversations, <a href="/any">any</a> offers a fresh mix, and
+    {' '}<a href="/all">all</a> shows the full public stream.
   </>],
   ['04', 'Discovery with more context', '/explore', <>
     Full-text search, trending tags, profile and post hovercards, tag aliases and display names, and the dedicated meta
