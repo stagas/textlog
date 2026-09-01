@@ -8,26 +8,36 @@ const TRENDING_TAG_WINDOW_DAYS = 30
 export function trendingTags(database: Database, viewerId: number, limit = 12, now = new Date().toISOString(),
   offset = 0)
 {
+  const canonical = database.query("SELECT 1 FROM sqlite_master WHERE type='table' AND name='tag_aliases'").get()
+    ? 'coalesce((SELECT primary_tag FROM tag_aliases WHERE alias=ph.tag),ph.tag)'
+    : 'ph.tag'
   return database.query(
-    `SELECT ph.tag,count(*) count,
-      EXISTS(SELECT 1 FROM hashtag_follows hf WHERE hf.user_id=? AND hf.tag=ph.tag) following,
+    `WITH canonical_tags AS (
+      SELECT DISTINCT ph.post_id,${canonical} tag FROM post_hashtags ph
+    ) SELECT ct.tag,count(*) count,
+      EXISTS(SELECT 1 FROM hashtag_follows hf WHERE hf.user_id=? AND hf.tag=ct.tag) following,
       sum(pow(0.5,max(0,(julianday(?) - julianday(p.created_at))*24)/24.0)) trend_score,
       max(p.created_at) latest_post_at
-      FROM post_hashtags ph JOIN posts p ON p.id=ph.post_id
+      FROM canonical_tags ct JOIN posts p ON p.id=ct.post_id
       WHERE p.deleted_at IS NULL AND p.created_at>=datetime(?,'-${TRENDING_TAG_WINDOW_DAYS} days')
       AND (? < 0 OR NOT EXISTS (SELECT 1 FROM blocks b WHERE
         (b.blocker_id=? AND b.blocked_id=p.user_id) OR (b.blocker_id=p.user_id AND b.blocked_id=?)))
-      AND (? < 0 OR NOT EXISTS (SELECT 1 FROM blocked_hashtags bh WHERE bh.user_id=? AND bh.tag=ph.tag))
-      GROUP BY ph.tag ORDER BY trend_score DESC,latest_post_at DESC,ph.tag LIMIT ? OFFSET ?`,
+      AND (? < 0 OR NOT EXISTS (SELECT 1 FROM blocked_hashtags bh WHERE bh.user_id=? AND bh.tag=ct.tag))
+      GROUP BY ct.tag ORDER BY trend_score DESC,latest_post_at DESC,ct.tag LIMIT ? OFFSET ?`,
   ).all(viewerId, now, now, viewerId, viewerId, viewerId, viewerId, viewerId, limit, offset) as TrendingTag[]
 }
 
 export function trendingTagCount(database: Database, viewerId: number, now = new Date().toISOString()) {
-  return (database.query(`SELECT count(DISTINCT ph.tag) count FROM post_hashtags ph JOIN posts p ON p.id=ph.post_id
+  const canonical = database.query("SELECT 1 FROM sqlite_master WHERE type='table' AND name='tag_aliases'").get()
+    ? 'coalesce((SELECT primary_tag FROM tag_aliases WHERE alias=ph.tag),ph.tag)'
+    : 'ph.tag'
+  return (database.query(`WITH canonical_tags AS (
+      SELECT DISTINCT ph.post_id,${canonical} tag FROM post_hashtags ph
+    ) SELECT count(DISTINCT ct.tag) count FROM canonical_tags ct JOIN posts p ON p.id=ct.post_id
     WHERE p.deleted_at IS NULL AND p.created_at>=datetime(?,'-${TRENDING_TAG_WINDOW_DAYS} days')
     AND (? < 0 OR NOT EXISTS (SELECT 1 FROM blocks b WHERE
       (b.blocker_id=? AND b.blocked_id=p.user_id) OR (b.blocker_id=p.user_id AND b.blocked_id=?)))
-    AND (? < 0 OR NOT EXISTS (SELECT 1 FROM blocked_hashtags bh WHERE bh.user_id=? AND bh.tag=ph.tag))`)
+    AND (? < 0 OR NOT EXISTS (SELECT 1 FROM blocked_hashtags bh WHERE bh.user_id=? AND bh.tag=ct.tag))`)
     .get(now, viewerId, viewerId, viewerId, viewerId, viewerId) as { count: number }).count
 }
 

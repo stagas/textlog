@@ -41,7 +41,9 @@ describe('content metadata extraction', () => {
     expect(splitSpoilerBody(body)).toEqual({ visible: body, hidden: '' })
   })
   test('normalizes and deduplicates hashtags', () => {
-    expect(extractHashtags('#Build something #build #Notes')).toEqual(['build', 'notes'])
+    expect(extractHashtags('#Build something #build #Notes #ascii_art #asciiart')).toEqual([
+      'build', 'notes', 'asciiart',
+    ])
   })
 
   test('preserves distinct meta hashtag aliases', () => {

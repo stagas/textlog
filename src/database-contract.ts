@@ -1,7 +1,7 @@
 import type { DensityChoice, PageSizeChoice } from './request-preferences'
 import type { ApiKeyView, ApiPost, BioReferenceData, BookmarksData, DashboardStats, DraftView, EmbedData, ExploreData, FeedKeyView,
   LinkPreview, PersonalizedFeedData, PersonView, PostFeedPage, PostView, ProfileOverviewData, SearchResultsData,
-  SessionView, TagPageData, User } from './types'
+  SessionView, TagPageData, TagView, User } from './types'
 import type { AdminActionView, AdminReportView, IllegalActivityReportView, PostRow, ProfileRow } from './types'
 
 export type DatabaseHealthResult = {
@@ -182,6 +182,9 @@ export type DatabaseDomainOperations = {
     output: { status: 'ready' } | { status: 'conflict'; tag: string }
   }
   'admin.removeTagAlias': { input: { alias: string }; output: boolean }
+  'admin.tagDisplayNames': { input: Record<string, never>; output: Array<{ tag: string; displayName: string }> }
+  'admin.setTagDisplayName': { input: { tag: string; displayName: string }; output: null }
+  'admin.removeTagDisplayName': { input: { tag: string }; output: boolean }
   'account.securityData': { input: { userId: number; currentSessionHash: string | null; now: number }; output: {
     sessions: SessionView[]
     apiKeys: ApiKeyView[]
@@ -255,12 +258,12 @@ export type DatabaseDomainOperations = {
   'profiles.overview': { input: { profileId: number; viewerId: number }; output: ProfileOverviewData | null }
   'profiles.blockedPage': { input: { profileId: number; page: number }; output: {
     people: PersonView[]
-    tags: { tag: string; count: number; viewerFollowing: boolean }[]
+    tags: TagView[]
   } }
   'profiles.connectionsPage': {
     input: { profileId: number; viewerId: number; page: number; tagsPage: number; kind: 'following' | 'followers';
       sort: 'abc' | 'recent' }
-    output: { people: PersonView[]; tags: { tag: string; count: number; viewerFollowing: boolean }[]; total: number }
+    output: { people: PersonView[]; tags: TagView[]; total: number }
   }
   'profiles.postsPage': {
     input: { profileId: number; viewerId: number; page: number; pageSize: PageSizeChoice; kind: 'notes' | 'replies' }

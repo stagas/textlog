@@ -2783,6 +2783,58 @@ export const migrations: Migration[] = [
       }
     },
   },
+  {
+    version: 170,
+    name: 'underscore_free_hashtags',
+    up(database) {
+      if (database.query("SELECT 1 FROM sqlite_master WHERE type='table' AND name='tag_aliases'").get()) {
+        const aliases = database.query('SELECT alias,primary_tag,created_at FROM tag_aliases').all() as {
+          alias: string; primary_tag: string; created_at: string
+        }[]
+        database.run('DROP TRIGGER IF EXISTS canonicalize_post_hashtag; DELETE FROM tag_aliases;')
+        const insert = database.query(
+          'INSERT OR IGNORE INTO tag_aliases(alias,primary_tag,created_at) VALUES(?,?,?)',
+        )
+        for (const row of aliases) {
+          const alias = row.alias.replaceAll('_', '')
+          const primary = row.primary_tag.replaceAll('_', '')
+          if (alias && primary && alias !== primary) insert.run(alias, primary, row.created_at)
+        }
+      }
+      if (database.query("SELECT 1 FROM sqlite_master WHERE type='table' AND name='post_hashtags'").get()) {
+        rebuildPostHashtags(database)
+        database.run(`CREATE TRIGGER canonicalize_post_hashtag AFTER INSERT ON post_hashtags
+          WHEN EXISTS(SELECT 1 FROM tag_aliases WHERE alias=NEW.tag)
+          BEGIN
+            INSERT OR IGNORE INTO post_hashtags(post_id,tag)
+              SELECT NEW.post_id,primary_tag FROM tag_aliases WHERE alias=NEW.tag;
+            DELETE FROM post_hashtags WHERE post_id=NEW.post_id AND tag=NEW.tag;
+          END;`)
+      }
+      if (database.query("SELECT 1 FROM sqlite_master WHERE type='table' AND name='hashtag_follows'").get()) {
+        database.run(`INSERT OR IGNORE INTO hashtag_follows(user_id,tag,created_at)
+          SELECT user_id,replace(tag,'_',''),created_at FROM hashtag_follows WHERE instr(tag,'_')>0;
+          DELETE FROM hashtag_follows WHERE instr(tag,'_')>0;`)
+      }
+      if (database.query("SELECT 1 FROM sqlite_master WHERE type='table' AND name='blocked_hashtags'").get()) {
+        database.run(`INSERT OR IGNORE INTO blocked_hashtags(user_id,tag,created_at)
+          SELECT user_id,replace(tag,'_',''),created_at FROM blocked_hashtags WHERE instr(tag,'_')>0;
+          DELETE FROM blocked_hashtags WHERE instr(tag,'_')>0;`)
+      }
+    },
+  },
+  {
+    version: 171,
+    name: 'tag_display_names',
+    up(database) {
+      database.run(`CREATE TABLE IF NOT EXISTS tag_display_names (
+        tag TEXT PRIMARY KEY,
+        display_name TEXT NOT NULL,
+        created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+      );
+      INSERT OR IGNORE INTO tag_display_names(tag,display_name) VALUES('asciiart','ascii_art');`)
+    },
+  },
 ]
 
 export const latestMigrationVersion = migrations.at(-1)!.version

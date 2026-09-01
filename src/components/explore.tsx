@@ -66,7 +66,7 @@ export function Explore({ user, welcome = false, tagsPage = 1, peoplePage = 1, d
           <div className={paginationHeadingClass()}>
             <h2>Trending tags</h2>
             <Pagination page={tagsPage} totalPages={Math.ceil(tagsTotal / EXPLORE_TAG_PAGE_SIZE)} path={tagsPath}
-              pageParam="tagsPage" label="Tags pagination" compact anchor="explore-tags" />
+              pageParam="tagsPage" label="Tags pagination" compact anchor="explore-tags" instantScroll />
           </div>
           {tags.length
             ? <TagChips user={user} tags={tags} returnPath={`${explorePath()}#explore-tags`} showTagLinks />
@@ -76,7 +76,7 @@ export function Explore({ user, welcome = false, tagsPage = 1, peoplePage = 1, d
           <div className={paginationHeadingClass()}>
             <h2>{user ? 'People to follow' : 'People'}</h2>
             <Pagination page={peoplePage} totalPages={Math.ceil(peopleTotal / PEOPLE_PAGE_SIZE)} path={peoplePath}
-              pageParam="peoplePage" label="People pagination" compact anchor="explore-people" />
+              pageParam="peoplePage" label="People pagination" compact anchor="explore-people" instantScroll />
           </div>
           <div className="people">
             {people.map(p => (
@@ -121,7 +121,7 @@ export function Explore({ user, welcome = false, tagsPage = 1, peoplePage = 1, d
             {!people.length && <p className="section-empty">No people to suggest.</p>}
           </div>
           <Pagination page={peoplePage} totalPages={Math.ceil(peopleTotal / PEOPLE_PAGE_SIZE)} path={peoplePath}
-            pageParam="peoplePage" label="People pagination" compact anchor="explore-people" />
+            pageParam="peoplePage" label="People pagination" compact anchor="explore-people" instantScroll />
         </section>
       </div>
     </Layout>

@@ -6,6 +6,7 @@ import { PersonalizedFeedLanding } from '../components/personalized-feed-landing
 import { type DatabaseService, databaseService } from '../database-service'
 import { type SyndicationFormat, syndicationResponse } from '../syndication'
 import { currentUser } from '../utils'
+import { isValidHashtag, normalizeHashtag } from '../content'
 import { page } from './shared'
 
 function feedResponse(c: Context, format: SyndicationFormat, appUrl: string | null | undefined, details: {
@@ -80,8 +81,8 @@ export function registerSyndicationRoutes(app: Hono, configuredService?: Databas
     })
   }
   const tag = async (c: Context, requestedTag: string, format: SyndicationFormat, feedPath?: string) => {
-    const normalizedTag = requestedTag.toLowerCase()
-    if (!/^[a-z0-9_]+$/.test(normalizedTag)) return c.text('Not found', 404)
+    const normalizedTag = normalizeHashtag(requestedTag)
+    if (!isValidHashtag(normalizedTag)) return c.text('Not found', 404)
     const origin = apiOrigin(c.req.url, appUrl)
     const pagePath = `/tag/${encodeURIComponent(normalizedTag)}`
     const loaded = await service().call('syndication.load', { kind: 'tag', origin, identifier: normalizedTag })
@@ -171,7 +172,7 @@ export function registerSyndicationRoutes(app: Hono, configuredService?: Databas
   app.get('/api/v1/tags/:tag/:file', async (c, next: Next) => {
     const parsed = suffixed(c.req.param('file'))
     if (!parsed || parsed.name !== 'posts') return next()
-    const feedPath = `/api/v1/tags/${encodeURIComponent(c.req.param('tag').toLowerCase())}/posts.${parsed.format}`
+    const feedPath = `/api/v1/tags/${encodeURIComponent(normalizeHashtag(c.req.param('tag')))}/posts.${parsed.format}`
     return tag(c, c.req.param('tag'), parsed.format, feedPath)
   })
 }

@@ -7,6 +7,32 @@ import { databaseVersion, latestMigrationVersion, migrations, normalizeInternalP
 import { sessionHash } from './sessions'
 
 describe('database migrations', () => {
+  test('removes underscores from indexed tags and merges existing relationships', () => {
+    const database = new Database(':memory:')
+    database.run(`CREATE TABLE posts(id INTEGER PRIMARY KEY,body TEXT NOT NULL,deleted_at TEXT);
+      INSERT INTO posts VALUES(1,'#ascii_art',NULL);
+      CREATE TABLE post_hashtags(post_id INTEGER NOT NULL,tag TEXT NOT NULL,PRIMARY KEY(post_id,tag));
+      INSERT INTO post_hashtags VALUES(1,'ascii_art');
+      CREATE TABLE hashtag_follows(user_id INTEGER NOT NULL,tag TEXT NOT NULL,created_at TEXT,
+        PRIMARY KEY(user_id,tag));
+      INSERT INTO hashtag_follows VALUES(1,'ascii_art','2026-01-01'),(1,'asciiart','2026-01-02');
+      CREATE TABLE blocked_hashtags(user_id INTEGER NOT NULL,tag TEXT NOT NULL,created_at TEXT,
+        PRIMARY KEY(user_id,tag));
+      INSERT INTO blocked_hashtags VALUES(2,'some_tag','2026-01-01');
+      CREATE TABLE tag_aliases(alias TEXT PRIMARY KEY,primary_tag TEXT NOT NULL,created_at TEXT NOT NULL,
+        CHECK(alias != primary_tag));
+      INSERT INTO tag_aliases VALUES('old_name','primary_tag','2026-01-01');
+      PRAGMA user_version=169;`)
+
+    expect(runMigrations(database)).toBe(latestMigrationVersion)
+    expect(database.query('SELECT tag FROM post_hashtags').all()).toEqual([{ tag: 'asciiart' }])
+    expect(database.query('SELECT tag FROM hashtag_follows').all()).toEqual([{ tag: 'asciiart' }])
+    expect(database.query('SELECT tag FROM blocked_hashtags').all()).toEqual([{ tag: 'sometag' }])
+    expect(database.query('SELECT alias,primary_tag FROM tag_aliases').all()).toEqual([
+      { alias: 'oldname', primary_tag: 'primarytag' },
+    ])
+  })
+
   test('repairs location databases created before the miss cache was added', () => {
     const database = new Database(':memory:')
     database.run(`CREATE TABLE posts(id INTEGER PRIMARY KEY);

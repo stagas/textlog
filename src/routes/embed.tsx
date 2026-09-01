@@ -5,6 +5,7 @@ import { databaseService } from '../database-service'
 import { ACCENT_CHOICES, type AccentChoice, EMBED_FONT_CHOICES, type EmbedFontChoice, THEME_CHOICES,
   type ThemeChoice } from '../theme'
 import type { PostView } from '../types'
+import { normalizeHashtag } from '../content'
 
 function choice<T extends readonly string[]>(value: string | undefined, choices: T, fallback: T[number]) {
   return choices.includes(value as T[number]) ? value as T[number] : fallback
@@ -40,7 +41,7 @@ export function registerEmbedRoutes(app: Hono) {
     return response(c.req.raw, data.posts, data.title, data.href)
   })
   app.get('/embed/tag/:tag', async c => {
-    const tag = c.req.param('tag').toLowerCase()
+    const tag = normalizeHashtag(c.req.param('tag'))
     const data = await databaseService().call('embeds.load', { kind: 'tag', tag })
     return response(c.req.raw, data!.posts, data!.title, data!.href)
   })

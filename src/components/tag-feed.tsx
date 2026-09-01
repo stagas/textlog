@@ -7,9 +7,9 @@ import { ConnectionPeople, GuestCommunityActions, Pagination, TabHighlight } fro
 import { FeedThreads } from './post'
 
 export function TagFeed(
-  { user, tag, aliases = [], following, blocked = false, posts, page, total, followerTotal = 0, people = [],
+  { user, tag, displayName, aliases = [], following, blocked = false, posts, page, total, followerTotal = 0, people = [],
     tab = 'notes', social, notePageSize = PAGE_SIZE, returnPath }: { user: User | null; tag: string;
-      aliases?: string[]; following: boolean; blocked?: boolean;
+      displayName?: string | null; aliases?: string[]; following: boolean; blocked?: boolean;
       posts: PostView[]; page: number; total: number; followerTotal?: number; people?: PersonView[];
       tab?: 'notes' | 'followers'; notePageSize?: number; returnPath?: string;
       social?: { description: string; image: string; url: string; type?: 'article' | 'profile' | 'website';
@@ -33,7 +33,7 @@ export function TagFeed(
             <h1>
               <a className="tag-canonical-link" href={tagPath}>
                 <span className="identity-prefix">#</span>
-                {tag}
+                {displayName || tag}
               </a>
             </h1>
             {!!aliases.length && <p className="tag-aliases">{aliases.map(alias => `#${alias}`).join(', ')}</p>}

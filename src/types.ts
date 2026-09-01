@@ -174,6 +174,7 @@ export type ExploreData = {
 }
 export type TagPageData = {
   aliases: string[]
+  displayName: string | null
   following: boolean
   followsViewer: boolean
   blocked: boolean
@@ -339,6 +340,7 @@ export type PersonView = ProfileRow & {
 
 export type TagView = {
   tag: string
+  displayName?: string
   count: number
   following?: boolean
   viewerFollowing?: boolean

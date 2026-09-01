@@ -29,8 +29,12 @@ export function registerAdminRoutes(app: Hono) {
     const signedIn = currentUser(c.req.raw)
     if (!signedIn) return redirect('/enter?next=' + encodeURIComponent(c.req.path))
     if (!isAdmin(signedIn)) return c.text('Forbidden', 403)
-    const groups = await databaseService().call('admin.tagAliases', {})
-    return page(<AdminTags user={signedIn} groups={groups} error={c.req.query('error')} />)
+    const [groups, displayNames] = await Promise.all([
+      databaseService().call('admin.tagAliases', {}),
+      databaseService().call('admin.tagDisplayNames', {}),
+    ])
+    return page(<AdminTags user={signedIn} groups={groups} displayNames={displayNames}
+      error={c.req.query('error')} />)
   })
 
   app.post('/admin/tags', async c => {
@@ -56,6 +60,29 @@ export function registerAdminRoutes(app: Hono) {
     const alias = normalizeHashtag(c.req.param('alias'))
     if (!isValidHashtag(alias)) return c.text('Invalid alias', 400)
     await databaseService().call('admin.removeTagAlias', { alias })
+    return redirect('/admin/tags')
+  })
+
+  app.post('/admin/tags/display-name', async c => {
+    const signedIn = currentUser(c.req.raw)
+    if (!signedIn) return redirect('/enter?next=' + encodeURIComponent('/admin/tags'))
+    if (!isAdmin(signedIn)) return c.text('Forbidden', 403)
+    const fields = await form(c.req.raw)
+    const tag = normalizeHashtag((fields.tag || '').replace(/^#/, '').trim())
+    const displayName = (fields.displayName || '').replace(/^#/, '').trim().normalize('NFC')
+    if (!isValidHashtag(tag) || !/^[\p{L}\p{M}\p{N}_]{1,280}$/u.test(displayName)
+      || normalizeHashtag(displayName) !== tag) return c.text('Invalid tag display name', 400)
+    await databaseService().call('admin.setTagDisplayName', { tag, displayName })
+    return redirect('/admin/tags')
+  })
+
+  app.post('/admin/tags/:tag/display-name/remove', async c => {
+    const signedIn = currentUser(c.req.raw)
+    if (!signedIn) return redirect('/enter?next=' + encodeURIComponent('/admin/tags'))
+    if (!isAdmin(signedIn)) return c.text('Forbidden', 403)
+    const tag = normalizeHashtag(c.req.param('tag'))
+    if (!isValidHashtag(tag)) return c.text('Invalid tag', 400)
+    await databaseService().call('admin.removeTagDisplayName', { tag })
     return redirect('/admin/tags')
   })
 

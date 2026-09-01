@@ -479,7 +479,8 @@ export function VerificationRequired() {
 }
 
 export function Pagination(
-  { page, totalPages, path, pageParam = 'page', label = 'Pagination', compact = false, top = false, anchor }: {
+  { page, totalPages, path, pageParam = 'page', label = 'Pagination', compact = false, top = false, anchor,
+    instantScroll = false }: {
     page: number
     totalPages: number
     path: string
@@ -488,6 +489,7 @@ export function Pagination(
     compact?: boolean
     top?: boolean
     anchor?: string
+    instantScroll?: boolean
   },
 ) {
   if (totalPages <= 1) return null
@@ -495,6 +497,9 @@ export function Pagination(
   const [formPath, formQuery = ''] = path.split('?', 2)
   const formParameters = [...new URLSearchParams(formQuery)].filter(([name]) => name !== pageParam)
   const fragment = anchor ? `#${anchor}` : ''
+  const pageHref = (value: number) => `${path}${separator}${pageParam}=${value}${
+    instantScroll ? '&_scroll=instant' : ''
+  }${fragment}`
   const windowStart = Math.max(1, Math.min(page - 1, totalPages - 2))
   const windowPages = Array.from({ length: Math.min(3, totalPages) }, (_, index) => windowStart + index)
   const pages = [...new Set([1, ...windowPages, totalPages])].sort((a, b) => a - b)
@@ -504,7 +509,7 @@ export function Pagination(
     >
       {page > 1
         ? (
-          <a className="pagination-edge" href={`${path}${separator}${pageParam}=${page - 1}${fragment}`}
+          <a className="pagination-edge" href={pageHref(page - 1)}
             aria-label="Previous page"
           >
             ← prev
@@ -524,13 +529,14 @@ export function Pagination(
                   {formParameters.map(([name, parameterValue]) => (
                     <input key={`${name}:${parameterValue}`} type="hidden" name={name} value={parameterValue} />
                   ))}
+                  {instantScroll && <input type="hidden" name="_scroll" value="instant" />}
                   <input className="current" aria-label={`Current page, ${page} of ${totalPages}`} type="number"
                     name={pageParam} min={1} max={totalPages} defaultValue={value} required autoComplete="off"
                     inputMode="numeric" enterKeyHint="go" />
                 </form>
               )
               : (
-                <a href={`${path}${separator}${pageParam}=${value}${fragment}`}
+                <a href={pageHref(value)}
                   aria-label={`Page ${value}`}
                 >
                   {value}
@@ -541,7 +547,7 @@ export function Pagination(
       </div>
       {page < totalPages
         ? (
-          <a className="pagination-edge" href={`${path}${separator}${pageParam}=${page + 1}${fragment}`}
+          <a className="pagination-edge" href={pageHref(page + 1)}
             aria-label="Next page"
           >
             next →
@@ -905,6 +911,7 @@ export function TagChips(
   return (
     <div className="explore-tag-chips">
       {tags.map(tag => {
+        const label = tag.displayName || tag.tag
         const tagHref = `/tag/${encodeURIComponent(tag.tag)}${
           showTagLinks ? `?from=${encodeURIComponent(returnPath)}` : ''
         }`
@@ -916,7 +923,7 @@ export function TagChips(
                 aria-pressed={tag[followingKey]} title={`${tag[followingKey] ? 'Unfollow' : 'Follow'} #${tag.tag}`}
               >
                 <span>
-                  #<HighlightedText text={tag.tag} terms={highlightTerms} />
+                  #<HighlightedText text={label} terms={highlightTerms} />
                 </span>
               </button>
             </form>
@@ -924,7 +931,7 @@ export function TagChips(
           : (
             <a className="button explore-tag-chip" href={tagHref}>
               <span>
-                #<HighlightedText text={tag.tag} terms={highlightTerms} />
+                #<HighlightedText text={label} terms={highlightTerms} />
               </span>
             </a>
           )
@@ -962,7 +969,7 @@ export function TagPeopleList(
                 following={tag[followingKey]} user={user} showPopover={showPopover}
                 navigationQuery={returnPath ? `?from=${encodeURIComponent(returnPath(tag))}` : ''} label={
                 <>
-                  #<HighlightedText text={tag.tag} terms={highlightTerms} />
+                  #<HighlightedText text={tag.displayName || tag.tag} terms={highlightTerms} />
                 </>
               } />
             </div>
@@ -989,7 +996,8 @@ export function BlockedTagList({ user, tags }: { user: User; tags: TagView[] }) 
           <div>
             <div>
               <TagReference tag={tag.tag} noteCount={tag.count} followerCount={tag.followerCount || 0} user={user}
-                showFollowAction={false} showPopover={false} />
+                showFollowAction={false} showPopover={false}
+                label={<>#{tag.displayName || tag.tag}</>} />
             </div>
             <form method="post" action={`/tag-block/${encodeURIComponent(tag.tag)}`}>
               <button className="button">unblock</button>

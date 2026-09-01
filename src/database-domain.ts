@@ -9,7 +9,7 @@ import { API_DEFAULT_LIMIT, apiHotPosts, apiPost, apiPosts, apiPostsByIds, apiRe
 import { apiActivities } from './api-activity'
 import { issueApiKey } from './api-keys'
 import { consumeAuthAttempt, consumeBucketedAttempt, rateLimitKey } from './auth-rate-limit'
-import { extractHashtags } from './content'
+import { extractHashtags, normalizeHashtag } from './content'
 import { runAutomatedBackup } from './backup-automation'
 import { cacheDb } from './cache-db'
 import { exportUserData } from './data-export'
@@ -74,10 +74,23 @@ function attachPeopleStats(database: Database, people: import('./types').PersonV
 
 function attachTagStats(database: Database, tags: import('./types').TagView[], viewerId: number) {
   const counts = visibleTagFollowerCounts(database, tags.map(tag => tag.tag), viewerId)
-  return tags.map(tag => ({ ...tag, followerCount: counts[tag.tag] || 0 }))
+  return attachTagDisplayNames(database,
+    tags.map(tag => ({ ...tag, followerCount: counts[tag.tag] || 0 })))
+}
+
+function attachTagDisplayNames(database: Database, tags: import('./types').TagView[]) {
+  if (!tags.length || !database.query(
+    "SELECT 1 FROM sqlite_master WHERE type='table' AND name='tag_display_names'",
+  ).get()) return tags
+  const unique = [...new Set(tags.map(tag => tag.tag))]
+  const rows = database.query(`SELECT tag,display_name FROM tag_display_names WHERE tag IN
+    (${unique.map(() => '?').join(',')})`).all(...unique) as { tag: string; display_name: string }[]
+  const names = new Map(rows.map(row => [row.tag, row.display_name]))
+  return tags.map(tag => ({ ...tag, ...(names.has(tag.tag) ? { displayName: names.get(tag.tag) } : {}) }))
 }
 
 function canonicalTag(database: Database, tag: string) {
+  tag = normalizeHashtag(tag)
   if (!database.query("SELECT 1 FROM sqlite_master WHERE type='table' AND name='tag_aliases'").get()) return tag
   return (database.query('SELECT primary_tag FROM tag_aliases WHERE alias=?').get(tag) as {
     primary_tag: string
@@ -89,6 +102,13 @@ function aliasesForTag(database: Database, tag: string) {
   return (database.query('SELECT alias FROM tag_aliases WHERE primary_tag=? ORDER BY alias').all(tag) as {
     alias: string
   }[]).map(row => row.alias)
+}
+
+function displayNameForTag(database: Database, tag: string) {
+  if (!database.query("SELECT 1 FROM sqlite_master WHERE type='table' AND name='tag_display_names'").get()) return null
+  return (database.query('SELECT display_name FROM tag_display_names WHERE tag=?').get(tag) as {
+    display_name: string
+  } | null)?.display_name || null
 }
 
 function reindexPostHashtags(database: Database) {
@@ -1045,6 +1065,23 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
       if (result.changes) cacheDb.run('DELETE FROM materialized_feed_pages_v2')
       return Boolean(result.changes) as DatabaseDomainOutput<K>
     }
+    case 'admin.tagDisplayNames': {
+      const displayNames = database.query(
+        'SELECT tag,display_name displayName FROM tag_display_names ORDER BY tag',
+      ).all()
+      return displayNames as DatabaseDomainOutput<K>
+    }
+    case 'admin.setTagDisplayName': {
+      const { tag, displayName } = input as DatabaseDomainInput<'admin.setTagDisplayName'>
+      database.query(`INSERT INTO tag_display_names(tag,display_name) VALUES(?,?)
+        ON CONFLICT(tag) DO UPDATE SET display_name=excluded.display_name`).run(tag, displayName)
+      return null as DatabaseDomainOutput<K>
+    }
+    case 'admin.removeTagDisplayName': {
+      const result = database.query('DELETE FROM tag_display_names WHERE tag=?')
+        .run((input as DatabaseDomainInput<'admin.removeTagDisplayName'>).tag)
+      return Boolean(result.changes) as DatabaseDomainOutput<K>
+    }
     case 'stats.dashboard':
       return dashboardStats(database) as DatabaseDomainOutput<K>
     case 'stats.recordCampaignVisitor': {
@@ -1274,7 +1311,7 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
         (SELECT count(*) FROM post_hashtags ph JOIN posts p ON p.id=ph.post_id
           WHERE ph.tag=bh.tag AND p.deleted_at IS NULL) count
         FROM blocked_hashtags bh WHERE bh.user_id=? ORDER BY bh.tag`).all(profileId)
-      return { people, tags } as DatabaseDomainOutput<K>
+      return { people, tags: attachTagDisplayNames(database, tags as import('./types').TagView[]) } as DatabaseDomainOutput<K>
     }
     case 'profiles.connectionsPage': {
       const { profileId, viewerId, page, tagsPage, kind, sort } = input as DatabaseDomainInput<
@@ -1316,7 +1353,8 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
         FROM hashtag_follows hf WHERE hf.user_id=? ORDER BY hf.tag LIMIT ? OFFSET ?`)
           .all(viewerId, viewerId, viewerId, viewerId, profileId, TAG_PAGE_SIZE, (tagsPage - 1) * TAG_PAGE_SIZE)
         : []
-      return { people: attachPeopleStats(database, people, viewerId), tags, total } as DatabaseDomainOutput<K>
+      return { people: attachPeopleStats(database, people, viewerId),
+        tags: attachTagDisplayNames(database, tags as import('./types').TagView[]), total } as DatabaseDomainOutput<K>
     }
     case 'profiles.postsPage': {
       const { profileId, viewerId, page, pageSize, kind } = input as DatabaseDomainInput<'profiles.postsPage'>
@@ -3066,7 +3104,8 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
         ).all(viewerId, tag, viewerId, viewerId, viewerId, CONNECTION_PAGE_SIZE,
           (page - 1) * CONNECTION_PAGE_SIZE) as import('./types').PersonView[]
         : []
-      const result = { aliases: aliasesForTag(database, tag), following, blocked,
+      const displayName = displayNameForTag(database, tag)
+      const result = { aliases: aliasesForTag(database, tag), displayName, following, blocked,
         posts: enrichPosts(database, rawPosts, viewerId), total, followerTotal,
         people: attachPeopleStats(database, people, viewerId) }
       return result as DatabaseDomainOutput<K>

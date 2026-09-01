@@ -11,12 +11,14 @@ import { cachedOgResponse, cacheOgResponse } from '../og-response-cache'
 import { CONNECTION_PAGE_SIZE } from '../pagination'
 import { resolvedPageSize } from '../request-preferences'
 import { currentUser } from '../utils'
+import { normalizeHashtag } from '../content'
 
 export function registerTagsRoutes(app: Hono) {
   app.get('/tag/:tag/og.png', async c => {
-    const requestedTag = c.req.param('tag').toLowerCase()
+    const rawTag = c.req.param('tag')
+    const requestedTag = normalizeHashtag(rawTag)
     const tag = await databaseService().call('tags.resolve', { tag: requestedTag })
-    if (tag !== requestedTag) return c.redirect(`/tag/${encodeURIComponent(tag)}/og.png`, 301)
+    if (tag !== rawTag) return c.redirect(`/tag/${encodeURIComponent(tag)}/og.png`, 301)
     const cacheKey = `tag:${tag}`
     const cached = cachedOgResponse(cacheKey)
     if (cached) return cached
@@ -31,7 +33,7 @@ export function registerTagsRoutes(app: Hono) {
 
   app.get('/tag/:tag', async c => {
     const requestedTag = c.req.param('tag')
-    const normalizedTag = requestedTag.toLowerCase()
+    const normalizedTag = normalizeHashtag(requestedTag)
     const tag = await databaseService().call('tags.resolve', { tag: normalizedTag })
     if (requestedTag !== tag) {
       return c.redirect(`/tag/${encodeURIComponent(tag)}${new URL(c.req.url).search}`, 301)
@@ -45,7 +47,7 @@ export function registerTagsRoutes(app: Hono) {
     const notePageSize = resolvedPageSize(c.req.raw)
     const data = await databaseService().call('tags.page', { tag, viewerId, page: tagPage, pageSize: notePageSize,
       tab: tab === 'followers' ? 'followers' : 'notes' })
-    const { aliases, following, blocked, posts, total, followerTotal, people } = data
+    const { aliases, displayName, following, blocked, posts, total, followerTotal, people } = data
     const tabPath = `/tag/${encodeURIComponent(tag)}${tab === 'followers' ? '?tab=followers' : ''}`
     const outOfRange = paginationRedirect(tagPage, tab === 'followers' ? followerTotal : total, tabPath,
       tab === 'followers' ? CONNECTION_PAGE_SIZE : notePageSize)
@@ -62,7 +64,8 @@ export function registerTagsRoutes(app: Hono) {
       imageAlt: `#${tag}: ${description}`,
     }
     return page(
-      <TagFeed user={user} tag={tag} aliases={aliases} following={following} blocked={blocked} posts={posts}
+      <TagFeed user={user} tag={tag} displayName={displayName} aliases={aliases} following={following}
+        blocked={blocked} posts={posts}
         page={tagPage} total={total}
         followerTotal={followerTotal} people={people} tab={tab === 'followers' ? 'followers' : 'notes'}
         notePageSize={notePageSize} social={social} returnPath={returnPath} />,

@@ -2,11 +2,11 @@ import { LinkifyIt } from 'linkify-it'
 import tlds from 'tlds'
 
 export function normalizeHashtag(tag: string) {
-  return tag.normalize('NFC').toLowerCase()
+  return tag.normalize('NFC').toLowerCase().replaceAll('_', '')
 }
 
 export function isValidHashtag(tag: string) {
-  return /^[\p{L}\p{M}\p{N}_]{1,280}$/u.test(tag)
+  return /^[\p{L}\p{M}\p{N}]{1,280}$/u.test(tag)
 }
 
 export const MAX_HASHTAGS_PER_POST = 10
@@ -81,7 +81,7 @@ export function extractHashtags(body: string) {
 }
 
 export function containsAsciiArt(body: string) {
-  return extractHashtags(body).some(tag => tag === 'ascii' || tag === 'ascii_art')
+  return extractHashtags(body).some(tag => tag === 'ascii' || tag === 'asciiart')
 }
 
 export function containsSpoilerTag(body: string) {

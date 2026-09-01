@@ -7,7 +7,8 @@ import python from 'highlight.js/lib/languages/python'
 import tlds from 'tlds'
 import { userForApiKey } from './api-keys'
 import { sessionCookieName } from './brand'
-import { containsAsciiArt, MAX_HASHTAGS_PER_POST, type PostContentFlags, splitSpoilerBody } from './content'
+import { containsAsciiArt, MAX_HASHTAGS_PER_POST, normalizeHashtag, type PostContentFlags,
+  splitSpoilerBody } from './content'
 import { texToMathML } from './math'
 import { requestContext } from './request-context'
 import { locationDestination } from './locations'
@@ -645,7 +646,7 @@ function renderedReference(token: string, mentionBios: Record<string, string>,
   navigationQuery = '', popover?: ReferencePopoverOptions)
 {
   const value = token.slice(1)
-  const normalizedValue = value.normalize('NFC').toLowerCase()
+  const normalizedValue = normalizeHashtag(value)
   const isUser = token[0] === '@'
   const key = isUser ? value.toLowerCase() : normalizedValue
   const href = isUser

@@ -14,6 +14,8 @@ const feedMutations = new Set<DatabaseDomainOperation>([
   'admin.translatePost',
   'admin.addTagAliases',
   'admin.removeTagAlias',
+  'admin.setTagDisplayName',
+  'admin.removeTagDisplayName',
   'account.updateProfile',
   'account.updateProfileFlags',
   'account.delete',

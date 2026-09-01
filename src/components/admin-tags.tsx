@@ -3,9 +3,10 @@ import { PageHeading } from './account-settings-header'
 import { Layout } from './layout'
 import { FormActions, FormMessage } from './page-shared'
 
-export function AdminTags({ user, groups, error }: {
+export function AdminTags({ user, groups, displayNames, error }: {
   user: User
   groups: Array<{ primaryTag: string; aliases: string[] }>
+  displayNames: Array<{ tag: string; displayName: string }>
   error?: string
 }) {
   return (
@@ -29,6 +30,33 @@ export function AdminTags({ user, groups, error }: {
           <small className="admin-tags-hint">Separate multiple aliases with commas or spaces.</small>
           <FormActions primary={<button className="button">add aliases →</button>} />
         </form>
+      </section>
+      <section className="admin-section admin-tag-display-names">
+        <h2>display names <span>{displayNames.length}</span></h2>
+        <form className="admin-tag-display-form" method="post" action="/admin/tags/display-name">
+          <input className="form-control" name="tag" required maxLength={280} placeholder="tag name"
+            aria-label="Canonical tag name" autoComplete="off" />
+          <input className="form-control" name="displayName" required maxLength={280} placeholder="Display_Name"
+            aria-label="Case-sensitive display name" autoComplete="off" />
+          <button className="quiet">save</button>
+        </form>
+        <p className="admin-tag-display-hint">
+          Display names preserve case and underscores, but must normalize to the same tag.
+        </p>
+        <div className="admin-tag-display-list">
+          {displayNames.map(entry => (
+            <form method="post" action="/admin/tags/display-name" key={entry.tag}>
+              <input type="hidden" name="tag" value={entry.tag} />
+              <a href={`/tag/${encodeURIComponent(entry.tag)}`}>#{entry.tag}</a>
+              <input name="displayName" required maxLength={280} defaultValue={entry.displayName}
+                aria-label={`Display name for #${entry.tag}`} autoComplete="off" />
+              <button className="quiet">save</button>
+              <button className="quiet danger" formAction={`/admin/tags/${encodeURIComponent(entry.tag)}/display-name/remove`}>
+                remove
+              </button>
+            </form>
+          ))}
+        </div>
       </section>
       <section className="admin-section admin-tag-groups">
         <h2>tag groups <span>{groups.length}</span></h2>

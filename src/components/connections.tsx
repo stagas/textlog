@@ -1,5 +1,5 @@
 import { CONNECTION_PAGE_SIZE, PAGE_SIZE, TAG_PAGE_SIZE } from '../pagination'
-import type { BioReferenceData, User } from '../types'
+import type { BioReferenceData, TagView, User } from '../types'
 import type { PersonView, ProfileRow } from '../types'
 import { Layout } from './layout'
 import {
@@ -20,7 +20,7 @@ export function Connections(
       user: User | null
       profile: ProfileRow
       people: PersonView[]
-      tags?: { tag: string; count: number; viewerFollowing: boolean }[]
+      tags?: TagView[]
       kind: 'following' | 'followers' | 'blocked'
       sort?: 'abc' | 'recent'
       page: number
@@ -80,7 +80,8 @@ export function Connections(
                     <h2 id="connections-tags-heading">Tags</h2>
                     <Pagination page={tagsPage} totalPages={Math.ceil(tagsTotal / TAG_PAGE_SIZE)} path={withFrom(
                       `/u/${profile.handle}?tab=following${sortQuery}${page > 1 ? `&page=${page}` : ''}`,
-                    )} pageParam="tagsPage" label="Tags pagination" compact anchor="connections-tags-heading" />
+                    )} pageParam="tagsPage" label="Tags pagination" compact anchor="connections-tags-heading"
+                    instantScroll />
                   </div>
                 )
                 : <h2 id="connections-tags-heading">Tags</h2>}
@@ -143,7 +144,8 @@ export function Connections(
                     kind === 'following' && tagsPage > 1
                       ? `&tagsPage=${tagsPage}`
                       : ''
-                  }`)} label="People pagination" compact anchor="connections-people-heading" />
+                  }`)} label="People pagination" compact anchor="connections-people-heading"
+                  instantScroll={kind === 'following'} />
               </div>
               {people.length
                 ? kind === 'blocked'
@@ -167,7 +169,8 @@ export function Connections(
                   kind === 'following' && tagsPage > 1
                     ? `&tagsPage=${tagsPage}`
                     : ''
-                }`)} label="People pagination" compact anchor="connections-people-heading" />
+                }`)} label="People pagination" compact anchor="connections-people-heading"
+                instantScroll={kind === 'following'} />
             </section>
           </div>
         )
@@ -180,13 +183,13 @@ export function Connections(
             </div>
             <Pagination page={page} totalPages={Math.ceil(total / CONNECTION_PAGE_SIZE)}
               path={withFrom(`/u/${profile.handle}?tab=${kind}${sortQuery}`)} label="People pagination"
-              anchor="connections-people-heading" />
+              anchor="connections-people-heading" instantScroll={kind === 'following'} />
             <ConnectionPeople user={user} people={people} className="connections-list connections-list-headed"
               showNoteCount={false} showPopover={false}
               returnPath={person => connectionReturnPath(`#person-${person.id}`)} />
             <Pagination page={page} totalPages={Math.ceil(total / CONNECTION_PAGE_SIZE)}
               path={withFrom(`/u/${profile.handle}?tab=${kind}${sortQuery}`)} label="People pagination"
-              anchor="connections-people-heading" />
+              anchor="connections-people-heading" instantScroll={kind === 'following'} />
           </>
         )
         : (
@@ -208,7 +211,7 @@ export function Connections(
       {kind === 'following' && !people.length && !tags.length && (
         <Pagination page={page} totalPages={Math.ceil(total / CONNECTION_PAGE_SIZE)} path={withFrom(
           `/u/${profile.handle}?tab=following${sortQuery}${tagsPage > 1 ? `&tagsPage=${tagsPage}` : ''}`,
-        )} label="People pagination" compact anchor="connections-people-heading" />
+        )} label="People pagination" compact anchor="connections-people-heading" instantScroll />
       )}
       {!user && <GuestCommunityActions className="post-page-actions" />}
     </Layout>

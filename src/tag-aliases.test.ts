@@ -28,4 +28,22 @@ test('tag aliases resolve, aggregate posts, and can be managed by admins', async
   expect(await executeDatabaseDomain(database, 'tags.resolve', { tag: 'enhancement' })).toBe('feature')
   expect(await executeDatabaseDomain(database, 'admin.removeTagAlias', { alias: 'enhancement' })).toBe(true)
   expect(await executeDatabaseDomain(database, 'tags.resolve', { tag: 'enhancement' })).toBe('enhancement')
+
+  expect(await executeDatabaseDomain(database, 'admin.tagDisplayNames', {})).toEqual([
+    { tag: 'asciiart', displayName: 'ascii_art' },
+  ])
+  await executeDatabaseDomain(database, 'admin.setTagDisplayName', {
+    tag: 'meta', displayName: 'Me_Ta',
+  })
+  expect((await executeDatabaseDomain(database, 'tags.page', {
+    tag: 'meta', viewerId: -1, page: 1, pageSize: 100, tab: 'notes',
+  })).displayName).toBe('Me_Ta')
+  expect((await executeDatabaseDomain(database, 'explore.page', {
+    viewerId: -1, tagsPage: 1, peoplePage: 1,
+  })).tags.find(tag => tag.tag === 'meta')?.displayName).toBe('Me_Ta')
+  await executeDatabaseDomain(database, 'interactions.toggleTagFollow', { userId: 1, tag: 'meta' })
+  expect((await executeDatabaseDomain(database, 'profiles.connectionsPage', {
+    profileId: 1, viewerId: 1, page: 1, tagsPage: 1, kind: 'following', sort: 'abc',
+  })).tags.find(tag => tag.tag === 'meta')?.displayName).toBe('Me_Ta')
+  expect(await executeDatabaseDomain(database, 'admin.removeTagDisplayName', { tag: 'meta' })).toBe(true)
 })

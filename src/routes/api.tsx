@@ -4,6 +4,7 @@ import { decodeActivityCursor } from '../api-activity'
 import { subscribeToPosts } from '../api-broker'
 import { appName, clientIpHeaderName } from '../brand'
 import { BIO_MAX } from '../bio-body'
+import { isValidHashtag, normalizeHashtag } from '../content'
 import { ApiDocs, EmbedExamples } from '../components/pages'
 import { type DatabaseService, databaseService } from '../database-service'
 import { decodeHotCursor } from '../hot'
@@ -1129,8 +1130,8 @@ export function registerApiRoutes(app: Hono, appUrl: string | null | undefined =
   })
 
   app.get('/api/v1/tags/:tag', async c => {
-    const tag = c.req.param('tag').toLowerCase()
-    if (!/^[a-z0-9_]+$/.test(tag)) return apiError('invalid_tag', 'Tag is invalid', 400)
+    const tag = normalizeHashtag(c.req.param('tag'))
+    if (!isValidHashtag(tag)) return apiError('invalid_tag', 'Tag is invalid', 400)
     const origin = apiOrigin(c.req.url, appUrl)
     const result = await service.call('api.tagDetails', { tag, origin,
       viewerId: requestApiUser(c.req.raw)?.id ?? null })
@@ -1138,8 +1139,8 @@ export function registerApiRoutes(app: Hono, appUrl: string | null | undefined =
   })
 
   app.get('/api/v1/tags/:tag/followers', async c => {
-    const tag = c.req.param('tag').toLowerCase()
-    if (!/^[a-z0-9_]+$/.test(tag)) return apiError('invalid_tag', 'Tag is invalid', 400)
+    const tag = normalizeHashtag(c.req.param('tag'))
+    if (!isValidHashtag(tag)) return apiError('invalid_tag', 'Tag is invalid', 400)
     const parsed = parseCollectionParams(c.req.query('limit'), c.req.query('cursor'))
     if (!parsed) return apiError('invalid_pagination', 'limit and cursor are invalid', 400)
     const result = await service.call('api.relationships', { kind: 'tagFollowers', tag,
@@ -1148,8 +1149,8 @@ export function registerApiRoutes(app: Hono, appUrl: string | null | undefined =
   })
 
   app.get('/api/v1/tags/:tag/posts', c => {
-    const tag = c.req.param('tag').toLowerCase()
-    if (!/^[a-z0-9_]+$/.test(tag)) return apiError('invalid_tag', 'Tag is invalid', 400)
+    const tag = normalizeHashtag(c.req.param('tag'))
+    if (!isValidHashtag(tag)) return apiError('invalid_tag', 'Tag is invalid', 400)
     return collection(c, service, { tag }, appUrl, requestApiUser(c.req.raw)?.id)
   })
 

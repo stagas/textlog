@@ -189,14 +189,17 @@ describe('trending tags', () => {
     expect(trendingTags(database, 1, 12, '2026-08-08T00:00:00.000Z')).toEqual([])
   })
 
-  test('lists meta aliases separately under the spelling each post used', () => {
+  test('canonicalizes aliases and counts each post once under the primary tag', () => {
     const database = tagFixture()
-    database.run(`INSERT INTO post_hashtags VALUES(1,'tlog'),(2,'textlog'),(3,'meta');
-      INSERT INTO hashtag_follows VALUES(1,'textlog');`)
+    database.run(`
+      CREATE TABLE tag_aliases (alias TEXT PRIMARY KEY, primary_tag TEXT NOT NULL);
+      INSERT INTO tag_aliases VALUES('tlog','meta'),('textlog','meta');
+      INSERT INTO post_hashtags VALUES(1,'meta'),(1,'tlog'),(2,'textlog'),(3,'meta');
+      INSERT INTO hashtag_follows VALUES(1,'meta');
+    `)
     const tags = trendingTags(database, 1, 12, '2026-08-08T00:00:00.000Z')
-    expect(tags.find(tag => tag.tag === 'meta')).toMatchObject({ count: 1, following: 0 })
-    expect(tags.find(tag => tag.tag === 'tlog')).toMatchObject({ count: 1, following: 0 })
-    expect(tags.find(tag => tag.tag === 'textlog')).toMatchObject({ count: 1, following: 1 })
-    expect(trendingTagCount(database, 1, '2026-08-08T00:00:00.000Z')).toBe(6)
+    expect(tags.find(tag => tag.tag === 'meta')).toMatchObject({ count: 3, following: 1 })
+    expect(tags.some(tag => tag.tag === 'tlog' || tag.tag === 'textlog')).toBe(false)
+    expect(trendingTagCount(database, 1, '2026-08-08T00:00:00.000Z')).toBe(4)
   })
 })

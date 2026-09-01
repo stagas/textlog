@@ -6632,6 +6632,37 @@ form.report-panel {
   border-top: 1px solid var(--soft);
 }
 
+.admin-tag-display-form,
+.admin-tag-display-list form {
+  display: grid;
+  grid-template-columns: minmax(8rem, .7fr) minmax(10rem, 1fr) auto;
+  align-items: center;
+  gap: var(--space-3);
+  margin: 0;
+}
+
+.admin-tag-display-hint {
+  margin: var(--space-2) 0 var(--space-4);
+  color: var(--muted);
+  font-size: .625rem;
+}
+
+.admin-tag-display-list form {
+  grid-template-columns: minmax(8rem, .7fr) minmax(10rem, 1fr) auto auto;
+  padding: var(--space-3) 0;
+  border-top: 1px solid var(--soft);
+  font-size: .6875rem;
+}
+
+.admin-tag-display-list input {
+  min-width: 0;
+  padding: 6px 8px;
+  color: var(--ink);
+  background: var(--panel);
+  border: 1px solid var(--soft);
+  font: inherit;
+}
+
 .admin-tag-primary {
   font-size: .875rem;
   font-weight: 600;
@@ -6685,6 +6716,11 @@ form.report-panel {
 
   .admin-tags-hint {
     grid-column: 1;
+  }
+
+  .admin-tag-display-form,
+  .admin-tag-display-list form {
+    grid-template-columns: 1fr;
   }
 }
 

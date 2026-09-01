@@ -706,8 +706,8 @@ test('explore renders tag toggles above a full-width people section', () => {
     '<section class="explore-people" id="explore-people"><div class="explore-section-heading">'
       + '<h2>People to follow</h2><nav class="pagination pagination-compact"',
   )
-  expect(html).toContain('href="/explore?tagsPage=2#explore-tags"')
-  expect(html).toContain('href="/explore?peoplePage=2#explore-people"')
+  expect(html).toContain('href="/explore?tagsPage=2&amp;_scroll=instant#explore-tags"')
+  expect(html).toContain('href="/explore?peoplePage=2&amp;_scroll=instant#explore-people"')
   expect(html).toContain(
     '<div class="explore-section-heading"><h2>Trending tags</h2><nav class="pagination pagination-compact"',
   )
@@ -2950,7 +2950,9 @@ test('Following and followers paginate every 8 people', () => {
       following: false,
     }))
 
-    expect(html).toContain(`href="/u/reader?tab=${kind}&amp;page=2#connections-people-heading"`)
+    expect(html).toContain(`href="/u/reader?tab=${kind}&amp;page=2${
+      kind === 'following' ? '&amp;_scroll=instant' : ''
+    }#connections-people-heading"`)
     expect(html.indexOf('aria-label="People pagination"')).toBeLessThan(html.indexOf('connection-people'))
     expect(html.lastIndexOf('aria-label="People pagination"')).toBeGreaterThan(html.indexOf('connection-people'))
   }
@@ -3007,7 +3009,7 @@ test('Connection sorting can only be changed on the viewer’s own profile', () 
   expect(own).toContain('href="/u/reader?tab=followers">recent</a>')
   expect(recent).toContain('href="/u/reader?tab=following&amp;sort=abc&amp;tagsPage=3">abc</a>')
   expect(recent).toContain(
-    'href="/u/reader?tab=following&amp;tagsPage=3&amp;page=1#connections-people-heading"',
+    'href="/u/reader?tab=following&amp;tagsPage=3&amp;page=1&amp;_scroll=instant#connections-people-heading"',
   )
   expect(other).not.toContain('>recent</a>')
   expect(other).not.toContain('>abc</a>')
@@ -3233,7 +3235,7 @@ test('Followed tags paginate every 24 tags', () => {
   }))
 
   expect(html).toContain(
-    'href="/u/reader?tab=following&amp;tagsPage=2#connections-tags-heading"',
+    'href="/u/reader?tab=following&amp;tagsPage=2&amp;_scroll=instant#connections-tags-heading"',
   )
 })
 
