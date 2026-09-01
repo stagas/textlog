@@ -1,6 +1,6 @@
 # textlog
 
-### A quieter place for your thoughts.
+### The quieter social microblogging platform.
 
 [textlog](https://textlog.cc) is a simple social text log for sharing short notes, following people and hashtags, and joining conversations—without turning every thought into a performance.
 

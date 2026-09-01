@@ -9,7 +9,7 @@ export function AboutContent({ user, embedded = false }: { user: User | null; em
   return (
     <article className={`static-page about-page${embedded ? ' feed-about' : ''}`}>
       <p className="eyebrow">about</p>
-      <h1>A quieter place for your thoughts.</h1>
+      <h1>The quieter social microblogging platform.</h1>
       <p>
         {name}{' '}
         is a simple social text log: write short notes, follow people and hashtags, and join conversations without

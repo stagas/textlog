@@ -1,4 +1,5 @@
 import { appHost, appName, appOrigin } from '../brand'
+import { pwaInstallBannerDismissed, pwaStandalone } from '../http'
 import {
   activeAppearance,
   activeRequest,
@@ -14,7 +15,6 @@ import { isAdmin } from '../admin'
 import { resolvedDensity } from '../request-preferences'
 import type { User } from '../types'
 import { isMobileRequest } from '../user-agent'
-import { pwaInstallBannerDismissed, pwaStandalone } from '../http'
 import { enterHref } from './auth-links'
 import { LogoutForm } from './logout-form'
 
@@ -77,7 +77,7 @@ export function Layout({
     : currentPath
   const accountHref = '/account/edit?from=' + encodeURIComponent(accountFrom)
   const share = social || {
-    description: 'A quieter place for your thoughts.',
+    description: 'The quieter social microblogging platform.',
     image: `${origin}/og.png?v=2`,
     url: pageUrl || (origin ? `${origin}/` : ''),
     type: 'website' as const,
@@ -107,15 +107,21 @@ export function Layout({
           {mobile
             ? (
               <details className="account-menu">
-                <summary className="account-menu-handle">@{user.handle}{user.mood
-                  && <span className="nav-mood">{user.mood}</span>}</summary>
+                <summary className="account-menu-handle">
+                  @{user.handle}
+                  {user.mood
+                    && <span className="nav-mood">{user.mood}</span>}
+                </summary>
                 {accountMenuPopover}
               </details>
             )
             : (
               <div className="account-menu">
-                <a className="account-menu-handle" href={profileHref}>@{user.handle}{user.mood
-                  && <span className="nav-mood">{user.mood}</span>}</a>
+                <a className="account-menu-handle" href={profileHref}>
+                  @{user.handle}
+                  {user.mood
+                    && <span className="nav-mood">{user.mood}</span>}
+                </a>
                 {accountMenuPopover}
               </div>
             )}
@@ -188,25 +194,27 @@ export function Layout({
       >
         {!fullScreen && user && ready && <a className="skip-link" href={writeShortcutHref} accessKey="w">write</a>}
         {!fullScreen && <a className="skip-link" href="#main-content">skip to content</a>}
-        {!fullScreen && <header className={user ? 'authenticated-header' : undefined}>
-          <a className="brand" href="/" aria-label={`${name} home`}>
-            <span className="brand-logo" aria-hidden="true" dangerouslySetInnerHTML={{ __html: logoSvg }} />
-            <span>{name}</span>
-          </a>
-          {logoutNavigation
-            ? (
-              <nav aria-label="Account">
-                <LogoutForm>
-                  <button className="quiet">logout</button>
-                </LogoutForm>
-              </nav>
-            )
-            : (
-              <nav className={user ? 'account-nav' : 'guest-nav'}>
-                {navigation}
-              </nav>
-            )}
-        </header>}
+        {!fullScreen && (
+          <header className={user ? 'authenticated-header' : undefined}>
+            <a className="brand" href="/" aria-label={`${name} home`}>
+              <span className="brand-logo" aria-hidden="true" dangerouslySetInnerHTML={{ __html: logoSvg }} />
+              <span>{name}</span>
+            </a>
+            {logoutNavigation
+              ? (
+                <nav aria-label="Account">
+                  <LogoutForm>
+                    <button className="quiet">logout</button>
+                  </LogoutForm>
+                </nav>
+              )
+              : (
+                <nav className={user ? 'account-nav' : 'guest-nav'}>
+                  {navigation}
+                </nav>
+              )}
+          </header>
+        )}
         {!fullScreen && showPwaInstallBanner && !notificationBanner && requestUrl.pathname !== '/install' && (
           <aside className="notification-banner install-banner" aria-label="Install app">
             <a href="/install">install to home screen</a>
@@ -269,40 +277,42 @@ export function Layout({
             <a className="button" href="/enter" rel="nofollow">join the community</a>
           </div>
         )}
-        {!fullScreen && <footer className="site-footer">
-          <span>
-            <a className="footer-host-link" href="/">{appHost()}</a> <span aria-hidden="true">/</span>{' '}
-            <a className="footer-host-link" href="/stats">stats</a>
-          </span>
-          {((instance.links.getMobileApp && !standalone) || (user && ready)) && (
-            <div className="footer-mobile-actions">
-              {instance.links.getMobileApp && !standalone && (
-                <a
-                  className="button mobile-app-footer"
-                  href={instance.links.getMobileApp}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                >
-                  get mobile app
-                </a>
+        {!fullScreen && (
+          <footer className="site-footer">
+            <span>
+              <a className="footer-host-link" href="/">{appHost()}</a> <span aria-hidden="true">/</span>{' '}
+              <a className="footer-host-link" href="/stats">stats</a>
+            </span>
+            {((instance.links.getMobileApp && !standalone) || (user && ready)) && (
+              <div className="footer-mobile-actions">
+                {instance.links.getMobileApp && !standalone && (
+                  <a
+                    className="button mobile-app-footer"
+                    href={instance.links.getMobileApp}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    get mobile app
+                  </a>
+                )}
+                {user && ready && <a className="button footer-write-action" href="/write">write a note</a>}
+              </div>
+            )}
+            <nav aria-label="Footer">
+              <a href="/about">about</a>
+              <a href="/api">api</a>
+              {instance.links.irc && <a href={instance.links.irc} target="_blank" rel="noopener noreferrer">irc</a>}
+              {instance.links.github && (
+                <a href={instance.links.github} target="_blank" rel="noopener noreferrer">github</a>
               )}
-              {user && ready && <a className="button footer-write-action" href="/write">write a note</a>}
-            </div>
-          )}
-          <nav aria-label="Footer">
-            <a href="/about">about</a>
-            <a href="/api">api</a>
-            {instance.links.irc && <a href={instance.links.irc} target="_blank" rel="noopener noreferrer">irc</a>}
-            {instance.links.github && (
-              <a href={instance.links.github} target="_blank" rel="noopener noreferrer">github</a>
-            )}
-            {instance.links.donate && (
-              <a href={instance.links.donate} target="_blank" rel="noopener noreferrer">donate</a>
-            )}
-            <a href="/contact">contact</a>
-            <a href="/legal">legal</a>
-          </nav>
-        </footer>}
+              {instance.links.donate && (
+                <a href={instance.links.donate} target="_blank" rel="noopener noreferrer">donate</a>
+              )}
+              <a href="/contact">contact</a>
+              <a href="/legal">legal</a>
+            </nav>
+          </footer>
+        )}
         {devReloadBootId && <DevReload bootId={devReloadBootId} />}
       </body>
     </html>
