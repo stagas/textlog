@@ -37,6 +37,9 @@ const endpoints: ReadonlyArray<readonly [string, string, ReactNode, boolean?]> =
   ['DELETE', '/auth/session', 'Sign out by revoking the token you are using.', true],
   ['GET', '/me', 'Get the signed-in account.', true],
   ['PATCH', '/me', 'Update your bio.', true],
+  ['POST', '/autotags', <>
+    Enrich supplied text with fewer than five hashtags without saving a post.
+  </>, true],
   ['POST', '/posts', <>
     Create a post, or reply by including <code>parent_id</code>.
   </>, true],

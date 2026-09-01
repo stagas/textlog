@@ -6,7 +6,7 @@ import { cacheDb } from './cache-db'
 import { executeDatabaseDomain } from './database-domain'
 import type { DatabaseService } from './database-service'
 import { registerApiRoutes } from './routes/api'
-import { WRITE_LIMIT } from './routes/api-write'
+import { POST_MAX, WRITE_LIMIT } from './routes/api-write'
 import { apiUser, hash } from './utils'
 
 function fixture() {
@@ -143,6 +143,16 @@ describe('API writes', () => {
     const { app } = fixture()
 
     expect((await post(app, 'bob-token', { body: 'hi' })).status).toBe(201)
+  })
+
+  test('autotags requires authentication and validates text before contacting the provider', async () => {
+    const { app } = fixture()
+    expect((await call(app, '/api/v1/autotags', { method: 'POST', body: { body: 'hello' } })).status).toBe(401)
+    const invalid = await call(app, '/api/v1/autotags', {
+      method: 'POST', token: 'alice-token', body: { body: 'x'.repeat(POST_MAX + 1) },
+    })
+    expect(invalid.status).toBe(400)
+    expect(await invalid.json()).toMatchObject({ error: { code: 'invalid_body' } })
   })
 
   test('creates a post and returns it in the read shape', async () => {

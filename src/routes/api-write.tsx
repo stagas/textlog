@@ -13,6 +13,7 @@ import { discoverLinkPreviews } from '../link-preview'
 import { parseLocationQuery, resolveLocation } from '../locations'
 import { logError } from '../log'
 import { moderateText, moderationMessage } from '../moderation'
+import { autotagText } from '../openrouter'
 import { normalizePostBody, POST_MAX, postBodyValidationMessage, validPostBody } from '../post-body'
 import { postRateLimitMessage } from '../post-rate-limit'
 import { canPublishPosts } from '../posting-policy'
@@ -230,6 +231,23 @@ export function registerApiWriteRoutes(app: Hono, service: DatabaseService,
     await service.call('api.updateBio', { userId: guard.user!.id, bio })
     await persistBioPreviews(service, guard.user!.id, await discoverLinkPreviews(bio))
     return json({ data: { ...serialize(guard.user!), bio } })
+  })
+
+  app.post('/api/v1/autotags', async c => {
+    const guard = await writer(service, requestApiUser, c)
+    if (guard.error) return guard.error
+    if (!canPublishPosts(guard.user!)) return fail('email_unverified', 'Verify your email address before posting', 403)
+    const payload = await body(c)
+    const content = normalizePostBody(text(payload?.body))
+    if (!validPostBody(content)) return fail('invalid_body', postBodyValidationMessage(content), 400)
+    const result = await autotagText(content)
+    if (!result.ok) return fail('autotags_unavailable', result.message, 503)
+    const enriched = normalizePostBody(result.body)
+    if (!validPostBody(enriched)) {
+      return fail('autotags_too_large',
+        `The message is too big to autotag within the ${POST_MAX}-character limit. Edit it down and try again.`, 422)
+    }
+    return json({ data: { body: enriched } })
   })
 
   app.post('/api/v1/posts', async c => {

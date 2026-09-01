@@ -541,7 +541,8 @@ describe('public API', () => {
     expect(rss.headers.get('content-type')).toBe('application/rss+xml; charset=utf-8')
     expect(rss.headers.get('access-control-allow-origin')).toBe('*')
     expect(spec.openapi).toBe('3.1.0')
-    expect(Object.keys(spec.paths)).toHaveLength(51)
+    expect(Object.keys(spec.paths)).toHaveLength(52)
+    expect(spec.paths['/autotags'].post.security).toEqual([{ bearerAuth: [] }])
     expect(spec.paths['/bookmarks'].get.responses['401']).toBeDefined()
     expect(spec.paths['/posts/{id}/bookmark'].post).toBeDefined()
     expect(spec.paths['/posts/{id}/bookmark'].delete).toBeDefined()
@@ -588,7 +589,7 @@ describe('public API', () => {
     expect(spec.paths['/users/{handle}'].get.responses['200'].content['application/json'].schema.properties.data.$ref)
       .toBe('#/components/schemas/User')
     expect(spec.security).toEqual([])
-    for (const path of ['/feeds/all/read', '/feeds/all/read-all', '/drafts', '/drafts/{id}',
+    for (const path of ['/feeds/all/read', '/feeds/all/read-all', '/autotags', '/drafts', '/drafts/{id}',
       '/drafts/{id}/publish', '/posts/{id}/unpublish', '/posts/{id}/poll/votes', '/tags/{tag}/follow',
       '/tags/{tag}/block'])
     {
@@ -608,7 +609,8 @@ describe('public API', () => {
           `${method.toUpperCase()} ${path} must document every path parameter`).toEqual(variables.sort())
       }
     }
-    for (const [path, method] of [['/auth/request', 'post'], ['/auth/verify', 'post'], ['/me', 'patch'], ['/posts',
+    for (const [path, method] of [['/auth/request', 'post'], ['/auth/verify', 'post'], ['/me', 'patch'], ['/autotags',
+      'post'], ['/posts',
       'post'], ['/posts/{id}', 'patch'], ['/posts/{id}/report', 'post'], ['/posts/{id}/poll/votes', 'post'], ['/drafts',
       'post'], ['/drafts/{id}', 'patch']] as const)
     {
