@@ -63,6 +63,10 @@ export function EditPost(
           </span>
         } primary={
           <span className="edit-post-primary-actions">
+            <button className="secondary-action compose-autotags-action" name="action" value="autotags"
+              title="Enrich post with hashtags">
+              autotags<span className="new-badge compose-new-badge" aria-hidden="true">NEW</span>
+            </button>
             <button className="secondary-action" name="action" value="preview">preview</button>
             <button className="button">save →</button>
           </span>

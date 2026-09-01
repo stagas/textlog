@@ -562,9 +562,12 @@ test('post edit places draft and delete above the textarea and keeps preview bef
   expect(html).toContain('class="secondary-action cancel-action edit-post-cancel"')
   expect(html).toContain('value="unpublish" formNoValidate="" name="action">draft</button>')
   expect(html).toContain('class="secondary-action danger" href="/post/2/delete">delete</a>')
+  expect(html).toContain('title="Enrich post with hashtags" name="action">autotags')
+  expect(html).toContain('<span class="new-badge compose-new-badge" aria-hidden="true">NEW</span>')
   expect(html.indexOf('>draft</button>')).toBeLessThan(html.indexOf('>delete</a>'))
   expect(html.indexOf('>delete</a>')).toBeLessThan(html.indexOf('<textarea'))
   expect(html.indexOf('<textarea')).toBeLessThan(html.indexOf('>cancel</a>'))
+  expect(html.indexOf('>autotags')).toBeLessThan(html.indexOf('>preview</button>'))
   expect(html.indexOf('>preview</button>')).toBeLessThan(html.indexOf('>save →</button>'))
 })
 

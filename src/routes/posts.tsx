@@ -472,6 +472,15 @@ export function registerPostsRoutes(app: Hono) {
           suggestionSearch={suggestionSearch} />,
       )
     }
+    if (f.action === 'autotags') {
+      const result = await autotagText(body)
+      const enrichedBody = result.ok ? normalizePostBody(result.body) : body
+      const valid = result.ok && validPostBody(enrichedBody)
+      return page(<EditPost user={user} post={post} parent={parent} body={valid ? enrichedBody : body}
+        returnPath={returnPath} moderator={moderating} error={result.ok && !valid
+          ? `The message is too big to autotag within the ${POST_MAX}-character limit. Edit it down and try again.`
+          : result.ok ? undefined : result.message} />, result.ok ? 200 : 503)
+    }
     if (!validPostBody(body)) {
       return page(
         <EditPost user={user} post={post} parent={parent} body={body} returnPath={returnPath} moderator={moderating}
