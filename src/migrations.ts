@@ -2835,6 +2835,14 @@ export const migrations: Migration[] = [
       INSERT OR IGNORE INTO tag_display_names(tag,display_name) VALUES('asciiart','ascii_art');`)
     },
   },
+  {
+    version: 172,
+    name: 'mood_prompt_dismissal',
+    up(database) {
+      if (!database.query("SELECT 1 FROM sqlite_master WHERE type='table' AND name='users'").get()) return
+      addColumn(database, 'users', 'mood_prompt_dismissed_at', 'TEXT')
+    },
+  },
 ]
 
 export const latestMigrationVersion = migrations.at(-1)!.version

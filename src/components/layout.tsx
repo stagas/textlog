@@ -33,6 +33,7 @@ export function Layout({
   notificationBanner = false,
   logoutNavigation = false,
   mobileWriteAction = false,
+  fullScreen = false,
   children,
 }: {
   title?: string
@@ -44,6 +45,7 @@ export function Layout({
   feeds?: { title: string; rss: string; atom: string }
   notificationBanner?: false | 'notifications' | 'appearance' | 'invite' | 'bio' | 'notification-update' | 'donate'
   mobileWriteAction?: boolean
+  fullScreen?: boolean
   children: React.ReactNode
 }) {
   const selectedAppearance = activeAppearance()
@@ -176,17 +178,17 @@ export function Layout({
           </>
         )}
         {mobile && <link href="https://fonts.cdnfonts.com/css/dejavu-sans-mono" rel="stylesheet" />}
-        <link rel="stylesheet" href="/styles.css?v=1204" />
+        <link rel="stylesheet" href="/styles.css?v=1214" />
         <style>{themeCss}</style>
       </head>
       <body
         className={`density-${density}${corners === 'round' ? ' corners-round' : ''}${mobile ? ' mobile-agent' : ''}${
           user?.show_link_previews === 0 ? ' link-previews-disabled' : ''
-        }${mobileWriteAction ? ' has-mobile-write-action' : ''}`}
+        }${mobileWriteAction ? ' has-mobile-write-action' : ''}${fullScreen ? ' full-screen-page' : ''}`}
       >
-        {user && ready && <a className="skip-link" href={writeShortcutHref} accessKey="w">write</a>}
-        <a className="skip-link" href="#main-content">skip to content</a>
-        <header className={user ? 'authenticated-header' : undefined}>
+        {!fullScreen && user && ready && <a className="skip-link" href={writeShortcutHref} accessKey="w">write</a>}
+        {!fullScreen && <a className="skip-link" href="#main-content">skip to content</a>}
+        {!fullScreen && <header className={user ? 'authenticated-header' : undefined}>
           <a className="brand" href="/" aria-label={`${name} home`}>
             <span className="brand-logo" aria-hidden="true" dangerouslySetInnerHTML={{ __html: logoSvg }} />
             <span>{name}</span>
@@ -204,8 +206,8 @@ export function Layout({
                 {navigation}
               </nav>
             )}
-        </header>
-        {showPwaInstallBanner && !notificationBanner && requestUrl.pathname !== '/install' && (
+        </header>}
+        {!fullScreen && showPwaInstallBanner && !notificationBanner && requestUrl.pathname !== '/install' && (
           <aside className="notification-banner install-banner" aria-label="Install app">
             <a href="/install">install to home screen</a>
             <span aria-hidden="true">·</span>
@@ -214,7 +216,7 @@ export function Layout({
             </form>
           </aside>
         )}
-        {notificationBanner && (
+        {!fullScreen && notificationBanner && (
           <aside className="notification-banner" aria-label={notificationBanner === 'notification-update'
             ? 'Notification update'
             : notificationBanner === 'donate'
@@ -260,14 +262,14 @@ export function Layout({
             </form>
           </aside>
         )}
-        {user && ready && mobileWriteAction && <MobileWriteAction />}
+        {!fullScreen && user && ready && mobileWriteAction && <MobileWriteAction />}
         <main id="main-content">{children}</main>
-        {showGuestJoin && (
+        {!fullScreen && showGuestJoin && (
           <div className="guest-join-row">
             <a className="button" href="/enter" rel="nofollow">join the community</a>
           </div>
         )}
-        <footer className="site-footer">
+        {!fullScreen && <footer className="site-footer">
           <span>
             <a className="footer-host-link" href="/">{appHost()}</a> <span aria-hidden="true">/</span>{' '}
             <a className="footer-host-link" href="/stats">stats</a>
@@ -300,7 +302,7 @@ export function Layout({
             <a href="/contact">contact</a>
             <a href="/legal">legal</a>
           </nav>
-        </footer>
+        </footer>}
         {devReloadBootId && <DevReload bootId={devReloadBootId} />}
       </body>
     </html>

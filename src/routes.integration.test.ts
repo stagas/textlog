@@ -88,6 +88,7 @@ async function request(path: string, options: {
   json?: unknown
   userAgent?: string
   ip?: string
+  acceptHtml?: boolean
 } = {}) {
   const method = options.method || 'GET'
   const headers = new Headers()
@@ -95,6 +96,7 @@ async function request(path: string, options: {
   if (options.token) headers.set('authorization', `Bearer ${options.token}`)
   if (options.userAgent) headers.set('user-agent', options.userAgent)
   if (options.ip) headers.set('x-forwarded-for', options.ip)
+  if (options.acceptHtml) headers.set('accept', 'text/html')
   if (method !== 'GET') headers.set('origin', origin)
   if (options.json !== undefined) headers.set('content-type', 'application/json')
   return await fetch(`${origin}${path}`, {
@@ -399,6 +401,13 @@ test('signed-in users can invite a deduplicated list of friends with join magic 
   const joined = await request(`/enter/magic?token=${encodeURIComponent(linkToken(firstMessages[0]!))}`)
   expect(joined.status).toBe(303)
   expect(joined.headers.get('location')).toBe('/choose-handle?next=%2Fexplore')
+  const handleScreen = await request(joined.headers.get('location')!, {
+    cookie: sessionCookie(joined),
+    acceptHtml: true,
+  })
+  const handleHtml = await handleScreen.text()
+  expect(handleHtml).toContain('action="/choose-handle"')
+  expect(handleHtml).not.toContain('action="/pick-mood"')
 })
 
 test('accounts sharing an email can be created, switched, and selected by magic-link login', async () => {

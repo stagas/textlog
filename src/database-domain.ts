@@ -285,9 +285,12 @@ function sessionUser(database: Database, token: string | null): User | null {
   const moodColumn = database.query("SELECT 1 FROM pragma_table_info('users') WHERE name='mood'").get()
     ? 'u.mood'
     : "'' mood"
+  const moodPromptColumn = database.query(
+    "SELECT 1 FROM pragma_table_info('users') WHERE name='mood_prompt_dismissed_at'",
+  ).get() ? 'u.mood_prompt_dismissed_at' : 'NULL mood_prompt_dismissed_at'
   const user = database.query(`SELECT u.id,u.handle,u.email,u.bio,${moodColumn},u.suspended_at,u.email_verified_at,
       u.handle_chosen_at,u.show_link_previews,u.show_moderated_content,u.hide_people_follow_activity,
-      u.hide_hashtag_follow_activity,u.show_note_streak,u.show_timestamps,u.timezone
+      u.hide_hashtag_follow_activity,u.show_note_streak,u.show_timestamps,u.timezone,${moodPromptColumn}
     FROM sessions s JOIN users u ON u.id=s.user_id
     WHERE s.token_hash=? AND s.expires_at>? AND u.deleted_at IS NULL AND u.suspended_at IS NULL`)
     .get(sessionHash(token), Date.now()) as User | null
@@ -636,6 +639,15 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
         }
         return { status: 'unavailable' } as DatabaseDomainOutput<K>
       }
+    }
+    case 'account.answerMoodPrompt': {
+      const { userId, mood } = input as DatabaseDomainInput<'account.answerMoodPrompt'>
+      if (mood) {
+        database.query('UPDATE users SET mood=?,mood_prompt_dismissed_at=CURRENT_TIMESTAMP WHERE id=?')
+          .run(mood, userId)
+      }
+      else database.query('UPDATE users SET mood_prompt_dismissed_at=CURRENT_TIMESTAMP WHERE id=?').run(userId)
+      return null as DatabaseDomainOutput<K>
     }
     case 'account.export': {
       const { userId, currentSession } = input as DatabaseDomainInput<'account.export'>

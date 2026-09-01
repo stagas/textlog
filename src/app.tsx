@@ -8,6 +8,7 @@ import { BACKUP_CHECK_INTERVAL_MS } from './backup-automation'
 import { appName, clientIpHeaderName } from './brand'
 import { BlogRecap } from './components/blog-recap'
 import { NavigationCaptcha } from './components/navigation-captcha'
+import { MOOD_CHOICES, MoodPicker, shouldShowMoodPicker } from './components/mood-picker'
 import { configureDevReload } from './components/layout'
 import { PanelsGallery } from './components/panels-gallery'
 import { compressResponse } from './compression'
@@ -397,6 +398,39 @@ app.use('*', async (c, next) => {
     return c.redirect('/choose-handle?next=' + encodeURIComponent(fallback), 303)
   }
   await next()
+})
+app.use('*', async (c, next) => {
+  const user = currentUser(c.req.raw)
+  const wantsHtml = c.req.header('accept')?.includes('text/html')
+  if (c.req.method === 'GET' && wantsHtml && user && !user.handle_chosen_at
+    && c.req.path !== '/choose-handle' && !c.req.path.startsWith('/enter'))
+  {
+    const url = new URL(c.req.url)
+    const nextPath = safeLocalPath(url.pathname + url.search)
+    return c.redirect('/choose-handle?next=' + encodeURIComponent(nextPath), 303)
+  }
+  if (c.req.method !== 'GET' || !wantsHtml || !shouldShowMoodPicker(user)
+    || c.req.path === '/choose-handle') return next()
+  const url = new URL(c.req.url)
+  return page(<MoodPicker user={user} returnTo={safeLocalPath(url.pathname + url.search)} />)
+})
+app.post('/pick-mood', async c => {
+  const user = currentUser(c.req.raw)
+  if (!user) return c.redirect('/enter', 303)
+  const fields = await limitedFormData(c.req.raw, 4_000)
+  const mood = String(fields.get('mood') || '')
+  const returnTo = safeLocalPath(String(fields.get('returnTo') || '/'))
+  if (!(MOOD_CHOICES as readonly string[]).includes(mood)) return c.text('Invalid mood', 400)
+  await databaseService().call('account.answerMoodPrompt', { userId: user.id, mood })
+  return c.redirect(returnTo, 303)
+})
+app.post('/pick-mood/dismiss', async c => {
+  const user = currentUser(c.req.raw)
+  if (!user) return c.redirect('/enter', 303)
+  const fields = await limitedFormData(c.req.raw, 4_000)
+  const returnTo = safeLocalPath(String(fields.get('returnTo') || '/'))
+  await databaseService().call('account.answerMoodPrompt', { userId: user.id, mood: null })
+  return c.redirect(returnTo, 303)
 })
 app.get('/health', async c => {
   try {

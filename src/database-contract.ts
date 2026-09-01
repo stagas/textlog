@@ -125,6 +125,7 @@ export type DatabaseDomainOperations = {
     output: null }
   'account.updateProfile': { input: { userId: number; handle: string; mood: string; bio: string; timezone: string };
     output: { status: 'ready' | 'unavailable' | 'change-limit' } }
+  'account.answerMoodPrompt': { input: { userId: number; mood: string | null }; output: null }
   'account.export': { input: { userId: number; currentSession: string | null }; output: unknown }
   'account.emailChangeReadiness': { input: { userId: number; email: string };
     output: { status: 'unavailable' } | { status: 'ready'; passwordHash: string } }

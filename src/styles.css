@@ -1767,7 +1767,7 @@ body.corners-round a.button {
   gap: 1px;
   overflow: hidden;
   border: 1px solid var(--soft);
-  background: var(--soft);
+  background: transparent;
 }
 
 .api-endpoint {
@@ -4222,7 +4222,7 @@ form.report-panel {
 }
 
 .posting-help-emoji-panel span:hover {
-  background: var(--background);
+  background: var(--bg);
 }
 
 .posting-help-search label {
@@ -6420,7 +6420,7 @@ form.report-panel {
 }
 
 .admin-stats strong {
-  font-size: 1.5rem;
+  font-size: 2rem;
   font-weight: 500;
 }
 
@@ -7585,4 +7585,63 @@ body.density-relaxed :where(p, li, textarea):not(.ascii-art) {
   width: 2ch;
   min-width: calc(2ch + 28px);
   text-align: center;
+}
+/* Mood gate */
+body.full-screen-page { overflow: hidden; }
+
+.mood-picker {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: grid;
+  place-items: center;
+  box-sizing: border-box;
+  min-height: 100dvh;
+  padding: 1.5rem;
+  background: var(--background);
+}
+
+.mood-picker-card {
+  width: min(100%, 36rem);
+  text-align: center;
+}
+
+.mood-picker-card h1 { margin-bottom: .5rem; }
+.mood-picker-card p { margin: 0 0 1.75rem; color: var(--muted); }
+
+.mood-picker-options {
+  display: grid;
+  grid-template-columns: repeat(8, 1fr);
+  gap: 0;
+}
+
+.mood-picker-option {
+  appearance: none;
+  -webkit-appearance: none;
+  width: 100%;
+  min-height: 3.25rem;
+  margin: 0;
+  padding: 0;
+  background: none;
+  color: var(--ink);
+  box-shadow: none;
+  font-size: 2rem;
+  line-height: 1;
+}
+
+.mood-picker-option:hover,
+.mood-picker-option:active { background: none; box-shadow: none; }
+
+.mood-picker-dismiss { margin-top: 2rem; }
+
+@media (max-width: 30rem) {
+  .mood-picker {
+    align-items: start;
+    overflow-y: auto;
+  }
+
+  .mood-picker-options { grid-template-columns: repeat(4, 1fr); }
+  .mood-picker-card h1 { margin-top: 0; }
+  .mood-picker-card p { font-size: .8125rem; }
+  .mood-picker-option { min-height: 3rem; padding: 0; font-size: 1.875rem; }
 }
