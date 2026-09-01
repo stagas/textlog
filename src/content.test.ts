@@ -46,6 +46,14 @@ describe('content metadata extraction', () => {
     ])
   })
 
+  test('ignores escaped hashtags', () => {
+    expect(extractHashtags('plain \\#notatag and #actual')).toEqual(['actual'])
+    expect(splitSpoilerBody('visible\n\\#spoiler\nstill visible')).toEqual({
+      visible: 'visible\n\\#spoiler\nstill visible',
+      hidden: '',
+    })
+  })
+
   test('preserves distinct meta hashtag aliases', () => {
     expect(extractHashtags('#meta #tlog #textlog')).toEqual(['meta', 'tlog', 'textlog'])
   })

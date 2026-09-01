@@ -1177,12 +1177,12 @@ test('consequential account, content, reporting, and admin flows work over HTTP'
   const createPost = await request('/post', {
     method: 'POST',
     cookie: aliceCookie,
-    form: { body: 'A route-level integration post' },
+    form: { body: 'A route-level integration post', from: '/all' },
   })
   expect(createPost.status).toBe(303)
   const post = database.query('SELECT id,body FROM posts WHERE user_id=? ORDER BY id DESC LIMIT 1')
     .get(alice.id) as { id: number; body: string }
-  expect(createPost.headers.get('location')).toBe(`/post/${post.id}/edit`)
+  expect(createPost.headers.get('location')).toBe('/all')
 
   const unpublishable = database.query(
     'INSERT INTO posts(user_id,parent_id,body,created_at) VALUES(?,NULL,?,datetime(\'now\')) RETURNING id',

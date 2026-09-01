@@ -79,6 +79,20 @@ test('write page omits the redundant header write action', () => {
   expect(html).not.toContain('class="button nav-write-action"')
 })
 
+test('header write action appears outside feed pages', () => {
+  const user = { id: 1, handle: 'reader', email: 'reader@example.com', bio: '', handle_chosen_at: '2026-01-01' }
+  const renderPath = (path: string) => withAppearance(new Request(`https://textlog.test${path}`), () =>
+    renderToStaticMarkup(React.createElement(Layout, {
+      user,
+      children: React.createElement('p', null, 'Page'),
+    })))
+
+  for (const path of ['/@', '/my-feed', '/hot', '/any', '/all']) {
+    expect(renderPath(path)).not.toContain('class="button nav-write-action"')
+  }
+  expect(renderPath('/explore')).toContain('<a class="button nav-write-action" href="/write">write</a>')
+})
+
 test('admin navigation is the first child in the handle menu', () => {
   const html = renderToStaticMarkup(React.createElement(Layout, {
     user: { id: 1, handle: 'admin', mood: '🤸', email: 'gstagas@gmail.com', bio: '' },
@@ -2840,7 +2854,7 @@ test('Profile places owner actions in the handle row', () => {
   expect(html).toContain('type="application/atom+xml" title="Notes by @reader (Atom)" href="/u/reader.atom"')
   expect(html).toContain('class="account-nav-row account-nav-primary"')
   expect(html).toContain('class="account-nav-row account-nav-secondary"')
-  expect(html).not.toContain('class="button nav-write-action"')
+  expect(html).toContain('</div><a class="button nav-write-action" href="/write">write</a></span>')
   expect(html).toContain('class="account-menu-handle" href="/u/reader?from=%2F">@reader'
     + '<span class="nav-mood">🤸</span></a>')
   expect(html).toContain('class="account-menu-popover"')
@@ -2848,6 +2862,9 @@ test('Profile places owner actions in the handle row', () => {
   expect(html).toContain('href="/account/edit?from=%2F">account</a>')
   expect(html).not.toContain('href="/admin">admin</a>')
   expect(html).not.toContain('class="mobile-account-footer"')
+  expect(html.indexOf('class="account-menu-handle" href="/u/reader?from=%2F"')).toBeLessThan(
+    html.indexOf('class="button nav-write-action" href="/write"'),
+  )
   expect(html).toContain('<a class="button" href="/write">write a note</a>')
 })
 

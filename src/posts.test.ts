@@ -30,6 +30,10 @@ function database() {
 }
 
 describe('post persistence', () => {
+  test('renders escaped hashtags as plain text without the escape', () => {
+    expect(linkify('plain \\#hashtag and #linked')).toBe('plain #hashtag and <a href="/tag/linked">#linked</a>')
+  })
+
   test('trims trailing whitespace when displaying post bodies', () => {
     expect(displayPostBody('first line\nsecond line  \n\n')).toBe('first line\nsecond line')
   })

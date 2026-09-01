@@ -12,7 +12,7 @@ import { executePostCode } from '../code-execution'
 import { databaseService } from '../database-service'
 import { moderatedContentDescription, moderateText, moderationMessage } from '../moderation'
 import { canPublishPosts } from '../posting-policy'
-import { form, page, redirect, rememberFeed, safeNext } from './shared'
+import { form, page, redirect, safeNext } from './shared'
 
 import type { Hono } from 'hono'
 import { isAdmin } from '../admin'
@@ -360,7 +360,7 @@ export function registerPostsRoutes(app: Hono) {
       if (!result.duplicate) await persistPreviews(result.id, 'save', body)
       if (!result.duplicate) notifyPost()
       if (editingDraftId) await databaseService().call('drafts.delete', { id: editingDraftId, userId: user.id })
-      return rememberFeed(redirect(`/post/${result.id}/edit`), 'latest')
+      return redirect(returnPath)
     }
     catch (error) {
       logError('POST /post', error)

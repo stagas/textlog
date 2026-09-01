@@ -70,6 +70,9 @@ export function extractHashtags(body: string) {
   const searchableBody = withoutMarkdownCode(body)
   const urls = urlMatcher.match(searchableBody) || []
   for (const match of searchableBody.matchAll(/(?<![\p{L}\p{M}\p{N}_])#([\p{L}\p{M}\p{N}_]+)/gu)) {
+    let slashes = 0
+    while (match.index > slashes && searchableBody[match.index - slashes - 1] === '\\') slashes++
+    if (slashes % 2 === 1) continue
     if (urls.some(url => match.index >= url.index && match.index < url.lastIndex)) continue
     if (count++ === MAX_HASHTAGS_PER_POST) break
     tags.add(normalizeHashtag(match[1]))

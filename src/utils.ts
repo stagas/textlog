@@ -465,6 +465,7 @@ export function linkTokens(body: string, flags?: PostContentFlags): LinkToken[] 
     }
     let hashtagCount = 0
     for (const match of body.matchAll(/(?<![\p{L}\p{M}\p{N}_])#[\p{L}\p{M}\p{N}_]+/gu)) {
+      if (escapedAt(body, match.index)) continue
       if (hashtagCount++ === MAX_HASHTAGS_PER_POST) break
       const lastIndex = match.index + match[0].length
       if (!overlapsUrl(match.index, lastIndex)) {
@@ -510,8 +511,9 @@ function renderedText(value: string, highlightTerms: string[]) {
   let html = ''
   let start = 0
   for (let index = 0; index < value.length - 1; index++) {
-    if (value[index] !== '\\' || value[index + 1] !== '$' || !escapedAt(value, index + 1)) continue
-    html += highlighted(value.slice(start, index), highlightTerms) + '$'
+    if (value[index] !== '\\' || !['$', '#'].includes(value[index + 1]) || !escapedAt(value, index + 1)) continue
+    if (value[index + 1] === '#' && !/[\p{L}\p{M}\p{N}_]/u.test(value[index + 2] || '')) continue
+    html += highlighted(value.slice(start, index), highlightTerms) + value[index + 1]
     start = index + 2
     index++
   }
