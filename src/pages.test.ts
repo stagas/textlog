@@ -10,6 +10,7 @@ import {
   AdminDashboard,
   ApiDocs,
   Auth,
+  BlogBuildingWithoutJavascript,
   BlogRecap,
   ChangeAppearance,
   ChooseHandle,
@@ -142,6 +143,26 @@ test('blog recap uses the site layout and shared post presentation', () => {
   expect(html).toContain('A lot has happened.<br/>Quietly, of course.')
   expect(html).toContain('<a class="button" href="/about">about textlog</a><a class="button" href="/hot">')
   expect(html).toContain('class="site-footer"')
+})
+
+test('building without JavaScript blog post renders its Markdown as an article', () => {
+  const html = renderToStaticMarkup(React.createElement(BlogBuildingWithoutJavascript, {
+    user: null,
+    pageUrl: 'https://textlog.test/blog/building-textlog-without-javascript',
+  }))
+
+  expect(html).toContain(
+    '<article class="static-page blog-article"><div class="blog-article-copy"><h1>Building textlog without JavaScript</h1>',
+  )
+  expect(html).toContain('<blockquote>')
+  expect(html).toContain('<code>UI = f(state)</code>')
+  expect(html).toContain('<em>clarity</em>')
+  expect(html).toContain('<code>&lt;details&gt;</code>')
+  expect(html).toContain('<code class="hljs">app.<span class="hljs-title function_">post</span>')
+  expect(html).toContain('class="button" href="/enter" rel="nofollow">join the community</a>')
+  expect(html).toContain('href="/hot">browse notes</a>')
+  expect(html).toContain('property="og:type" content="article"')
+  expect(html).not.toContain('# Building textlog without JavaScript')
 })
 
 test('locked notes and descendants omit reply controls and reply forms', () => {

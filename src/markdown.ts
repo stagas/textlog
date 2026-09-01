@@ -1,5 +1,7 @@
 import { marked } from 'marked'
 import sanitizeHtml from 'sanitize-html'
+import hljs from 'highlight.js/lib/core'
+import typescript from 'highlight.js/lib/languages/typescript'
 import { decodeHtmlEntities } from './link-preview'
 import { displayPostBody } from './utils'
 
@@ -23,6 +25,8 @@ marked.use({
   }],
 })
 
+hljs.registerLanguage('typescript', typescript)
+
 function xml(value: string) {
   return value.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
 }
@@ -31,7 +35,7 @@ function html(value: string) {
   return xml(value).replace(/"/g, '&quot;').replace(/'/g, '&#39;')
 }
 
-export function sanitizedMarkdownHtml(body: string) {
+export function sanitizedMarkdownHtml(body: string, options: { highlightCode?: boolean } = {}) {
   const renderer = new marked.Renderer()
   renderer.html = ({ text }) =>
     /^<\/?(?:a|abbr|address|article|aside|audio|b|base|bdi|bdo|blockquote|body|br|button|canvas|caption|cite|code|col|colgroup|data|datalist|dd|del|details|dfn|dialog|div|dl|dt|em|embed|fieldset|figcaption|figure|footer|form|h[1-6]|head|header|hgroup|hr|html|i|iframe|img|input|ins|kbd|label|legend|li|link|main|map|mark|menu|meta|meter|nav|noscript|object|ol|optgroup|option|output|p|picture|pre|progress|q|rp|rt|ruby|s|samp|script|search|section|select|slot|small|source|span|strong|style|sub|summary|sup|table|tbody|td|template|textarea|tfoot|th|thead|time|title|tr|track|u|ul|var|video|wbr)(?:\s|\/?>)/i
@@ -50,6 +54,15 @@ export function sanitizedMarkdownHtml(body: string) {
     token.raw.startsWith('__')
       ? `<u>${renderer.parser.parseInline(token.tokens)}</u>`
       : `<strong>${renderer.parser.parseInline(token.tokens)}</strong>`
+  if (options.highlightCode) {
+    renderer.code = ({ text, lang }) => {
+      const language = lang === 'ts' ? 'typescript' : lang
+      const highlighted = language && hljs.getLanguage(language)
+        ? hljs.highlight(text, { language }).value
+        : hljs.highlightAuto(text).value
+      return `<pre><code class="hljs">${highlighted}</code></pre>`
+    }
+  }
   const rendered = marked.parse(displayPostBody(body), { async: false, breaks: true, gfm: true, renderer })
   return sanitizeHtml(rendered, {
     allowedTags: [
@@ -71,6 +84,7 @@ export function sanitizedMarkdownHtml(body: string) {
       'p',
       'pre',
       'strong',
+      ...(options.highlightCode ? ['span'] : []),
       'table',
       'tbody',
       'td',
@@ -80,7 +94,9 @@ export function sanitizedMarkdownHtml(body: string) {
       'u',
       'ul',
     ],
-    allowedAttributes: { a: ['href', 'title'] },
+    allowedAttributes: options.highlightCode
+      ? { a: ['href', 'title'], code: ['class'], span: ['class'] }
+      : { a: ['href', 'title'] },
     allowedSchemes: ['http', 'https', 'mailto'],
     allowProtocolRelative: false,
     enforceHtmlBoundary: true,

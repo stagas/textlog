@@ -6,6 +6,7 @@ import { Hono } from 'hono'
 import { bodyLimit } from 'hono/body-limit'
 import { BACKUP_CHECK_INTERVAL_MS } from './backup-automation'
 import { appName, clientIpHeaderName } from './brand'
+import { BlogBuildingWithoutJavascript } from './components/blog-building-without-javascript'
 import { BlogRecap } from './components/blog-recap'
 import { NavigationCaptcha } from './components/navigation-captcha'
 import { MOOD_CHOICES, MoodPicker, shouldShowMoodPicker } from './components/mood-picker'
@@ -594,6 +595,8 @@ app.get('/blog/recap-v1', async c => {
   const posts = await databaseService().call('blog.recapPosts', { viewerId: user?.id ?? -1 })
   return page(<BlogRecap user={user} posts={posts} pageUrl={c.req.url} />)
 })
+app.get('/blog/building-textlog-without-javascript', c =>
+  page(<BlogBuildingWithoutJavascript user={currentUser(c.req.raw)} pageUrl={c.req.url} />))
 app.get('/recap-email', async c =>
   c.html(await databaseService().call('maintenance.recapPreview', {
     requestUrl: c.req.url,
