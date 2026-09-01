@@ -2895,11 +2895,18 @@ body.corners-round a.button {
   transform-origin: center;
 }
 
-.post-mood:hover {
-  transform: scale(2);
+.post-mood:hover,
+.reference-menu-trigger:hover + .post-mood,
+.post-context-author:hover > .post-mood {
+  transform: translateX(25%) scale(2);
 }
 
 .tappable-post .post-mood {
+  position: relative;
+  z-index: 21;
+}
+
+.tappable-post .post-context-author:has(> .post-mood) {
   position: relative;
   z-index: 21;
 }
@@ -6877,6 +6884,7 @@ a.post-context:hover {
 
 .post-context-author {
   color: var(--muted);
+  user-select: none;
 }
 
 .post-context-author:has(> .post-mood) {
