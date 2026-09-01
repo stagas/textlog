@@ -42,6 +42,7 @@ export type DatabaseDomainOperations = {
   'maintenance.recapPreview': { input: { requestUrl: string }; output: string }
   'maintenance.interactedPreview': { input: { requestUrl: string }; output: string }
   'blog.recapPosts': { input: { viewerId: number }; output: PostView[] }
+  'blog.recapV2Posts': { input: { viewerId: number }; output: PostView[] }
   'auth.sessionUser': { input: { token: string | null }; output: User | null }
   'auth.apiUser': { input: { token: string | null; now: number }; output: User | null }
   'auth.resolve': {

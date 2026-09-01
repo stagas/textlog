@@ -8,6 +8,7 @@ import { BACKUP_CHECK_INTERVAL_MS } from './backup-automation'
 import { appName, clientIpHeaderName } from './brand'
 import { BlogBuildingWithoutJavascript } from './components/blog-building-without-javascript'
 import { BlogRecap } from './components/blog-recap'
+import { BlogRecapV2 } from './components/blog-recap-v2'
 import { NavigationCaptcha } from './components/navigation-captcha'
 import { MOOD_CHOICES, MoodPicker, shouldShowMoodPicker } from './components/mood-picker'
 import { configureDevReload } from './components/layout'
@@ -594,6 +595,11 @@ app.get('/blog/recap-v1', async c => {
   const user = currentUser(c.req.raw)
   const posts = await databaseService().call('blog.recapPosts', { viewerId: user?.id ?? -1 })
   return page(<BlogRecap user={user} posts={posts} pageUrl={c.req.url} />)
+})
+app.get('/blog/recap-v2', async c => {
+  const user = currentUser(c.req.raw)
+  const posts = await databaseService().call('blog.recapV2Posts', { viewerId: user?.id ?? -1 })
+  return page(<BlogRecapV2 user={user} posts={posts} pageUrl={c.req.url} />)
 })
 app.get('/blog/building-textlog-without-javascript', c =>
   page(<BlogBuildingWithoutJavascript user={currentUser(c.req.raw)} pageUrl={c.req.url} />))

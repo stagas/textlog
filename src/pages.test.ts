@@ -12,6 +12,7 @@ import {
   Auth,
   BlogBuildingWithoutJavascript,
   BlogRecap,
+  BlogRecapV2,
   ChangeAppearance,
   ChooseHandle,
   Compose,
@@ -143,6 +144,29 @@ test('blog recap uses the site layout and shared post presentation', () => {
   expect(html).toContain('A lot has happened.<br/>Quietly, of course.')
   expect(html).toContain('<a class="button" href="/about">about textlog</a><a class="button" href="/hot">')
   expect(html).toContain('class="site-footer"')
+})
+
+test('total recap presents the complete feature story and popular conversations', () => {
+  const html = renderToStaticMarkup(React.createElement(BlogRecapV2, {
+    user: null,
+    pageUrl: 'https://textlog.test/blog/recap-v2',
+    posts: [{
+      id: 1200,
+      user_id: 2,
+      parent_id: null,
+      body: 'A conversation starter',
+      created_at: '2026-08-01 12:00:00',
+      deleted_at: null,
+      handle: 'writer',
+      reply_count: 18,
+    }],
+  }))
+
+  expect(html).toContain('What textlog has become')
+  expect(html).toContain('The conversations that grew')
+  expect(html).toContain('href="/post/1200?from=%2Fblog%2Frecap-v2%23post-1200"')
+  expect(html).toContain('join the community')
+  expect(html).toContain('browse notes →')
 })
 
 test('building without JavaScript blog post renders its Markdown as an article', () => {

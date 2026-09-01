@@ -209,6 +209,31 @@ function recapPosts(database: Database, viewerId: number) {
   return enrichPosts(database, RECAP_POPULAR_NOTE_IDS.flatMap(id => byId.has(id) ? [byId.get(id)!] : []), viewerId)
 }
 
+const RECAP_V2_EXCLUDED_NOTE_IDS = [1951, 1274, 2791, 1373, 556, 328, 2361] as const
+
+function recapV2Posts(database: Database, viewerId: number) {
+  const visibility = viewerId < 0 ? '' : `AND NOT EXISTS (SELECT 1 FROM blocks b WHERE
+    (b.blocker_id=? AND b.blocked_id=p.user_id) OR (b.blocker_id=p.user_id AND b.blocked_id=?))
+    AND NOT EXISTS (SELECT 1 FROM post_hashtags ph JOIN blocked_hashtags bh ON bh.tag=ph.tag
+      WHERE ph.post_id=p.id AND bh.user_id=?)`
+  const parameters = viewerId < 0 ? [] : [viewerId, viewerId, viewerId]
+  const rows = database.query(`WITH RECURSIVE descendants(root_id,id,deleted_at) AS (
+      SELECT p.id,p.id,p.deleted_at FROM posts p WHERE p.parent_id IS NULL
+      UNION ALL
+      SELECT descendants.root_id,reply.id,reply.deleted_at FROM posts reply
+        JOIN descendants ON reply.parent_id=descendants.id
+    ), ranked AS (
+      SELECT root_id,sum(CASE WHEN id!=root_id AND deleted_at IS NULL THEN 1 ELSE 0 END) aggregate_replies
+      FROM descendants GROUP BY root_id
+    )
+    SELECT p.*,u.handle FROM ranked JOIN posts p ON p.id=ranked.root_id JOIN users u ON u.id=p.user_id
+    WHERE ranked.aggregate_replies>0 AND p.id NOT IN (${RECAP_V2_EXCLUDED_NOTE_IDS.join(',')})
+      AND p.deleted_at IS NULL AND u.deleted_at IS NULL
+      AND u.suspended_at IS NULL AND ${excludesWhisperPosts('p.id')} AND ${excludesMetaPosts('p.id')} ${visibility}
+    ORDER BY ranked.aggregate_replies DESC,p.created_at DESC LIMIT 12`).all(...parameters) as PostView[]
+  return enrichPosts(database, rows, viewerId)
+}
+
 function invalidateBlockVisibility(userIds: number[]) {
   const ids = [...new Set(userIds)]
   if (!ids.length) return
@@ -416,6 +441,10 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
     case 'blog.recapPosts': {
       const { viewerId } = input as DatabaseDomainInput<'blog.recapPosts'>
       return recapPosts(database, viewerId) as DatabaseDomainOutput<K>
+    }
+    case 'blog.recapV2Posts': {
+      const { viewerId } = input as DatabaseDomainInput<'blog.recapV2Posts'>
+      return recapV2Posts(database, viewerId) as DatabaseDomainOutput<K>
     }
     case 'system.consumeAuthAttempt': {
       const { scope, identity, attempts, windowSeconds, now } = input as DatabaseDomainInput<
