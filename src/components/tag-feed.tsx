@@ -7,8 +7,9 @@ import { ConnectionPeople, GuestCommunityActions, Pagination, TabHighlight } fro
 import { FeedThreads } from './post'
 
 export function TagFeed(
-  { user, tag, following, blocked = false, posts, page, total, followerTotal = 0, people = [], tab = 'notes', social,
-    notePageSize = PAGE_SIZE, returnPath }: { user: User | null; tag: string; following: boolean; blocked?: boolean;
+  { user, tag, aliases = [], following, blocked = false, posts, page, total, followerTotal = 0, people = [],
+    tab = 'notes', social, notePageSize = PAGE_SIZE, returnPath }: { user: User | null; tag: string;
+      aliases?: string[]; following: boolean; blocked?: boolean;
       posts: PostView[]; page: number; total: number; followerTotal?: number; people?: PersonView[];
       tab?: 'notes' | 'followers'; notePageSize?: number; returnPath?: string;
       social?: { description: string; image: string; url: string; type?: 'article' | 'profile' | 'website';
@@ -28,12 +29,15 @@ export function TagFeed(
     }}>
       <section className={`page-header tag-header${returnPath ? ' tag-header-contextual' : ''}`}>
         <div className="tag-title-actions">
-          <h1>
-            <a className="tag-canonical-link" href={tagPath}>
-              <span className="identity-prefix">#</span>
-              {tag}
-            </a>
-          </h1>
+          <div className="tag-heading-block">
+            <h1>
+              <a className="tag-canonical-link" href={tagPath}>
+                <span className="identity-prefix">#</span>
+                {tag}
+              </a>
+            </h1>
+            {!!aliases.length && <p className="tag-aliases">{aliases.map(alias => `#${alias}`).join(', ')}</p>}
+          </div>
           {user
             ? (
               <div className="profile-action tag-handle-actions">

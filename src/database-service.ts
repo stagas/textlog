@@ -12,6 +12,8 @@ const feedMutations = new Set<DatabaseDomainOperation>([
   'auth.claimInitialHandle',
   'admin.deletePost',
   'admin.translatePost',
+  'admin.addTagAliases',
+  'admin.removeTagAlias',
   'account.updateProfile',
   'account.updateProfileFlags',
   'account.delete',

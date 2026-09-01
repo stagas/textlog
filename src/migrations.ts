@@ -2744,6 +2744,45 @@ export const migrations: Migration[] = [
         END;`)
     },
   },
+  {
+    version: 169,
+    name: 'tag_aliases',
+    up(database) {
+      database.run(`CREATE TABLE IF NOT EXISTS tag_aliases (
+        alias TEXT PRIMARY KEY,
+        primary_tag TEXT NOT NULL,
+        created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        CHECK(alias != primary_tag)
+      );
+      CREATE INDEX IF NOT EXISTS tag_aliases_primary ON tag_aliases(primary_tag,alias);
+      INSERT OR IGNORE INTO tag_aliases(alias,primary_tag) VALUES
+        ('tlog','meta'),('textlog','meta'),('features','feature');`)
+      if (database.query("SELECT 1 FROM sqlite_master WHERE type='table' AND name='post_hashtags'").get()) {
+        database.run(`CREATE TRIGGER IF NOT EXISTS canonicalize_post_hashtag AFTER INSERT ON post_hashtags
+        WHEN EXISTS(SELECT 1 FROM tag_aliases WHERE alias=NEW.tag)
+        BEGIN
+          INSERT OR IGNORE INTO post_hashtags(post_id,tag)
+            SELECT NEW.post_id,primary_tag FROM tag_aliases WHERE alias=NEW.tag;
+          DELETE FROM post_hashtags WHERE post_id=NEW.post_id AND tag=NEW.tag;
+        END;
+        INSERT OR IGNORE INTO post_hashtags(post_id,tag)
+          SELECT ph.post_id,ta.primary_tag FROM post_hashtags ph JOIN tag_aliases ta ON ta.alias=ph.tag;
+        DELETE FROM post_hashtags WHERE tag IN (SELECT alias FROM tag_aliases);`)
+      }
+      if (database.query("SELECT 1 FROM sqlite_master WHERE type='table' AND name='hashtag_follows'").get()) {
+        database.run(`INSERT OR IGNORE INTO hashtag_follows(user_id,tag,created_at)
+          SELECT hf.user_id,ta.primary_tag,hf.created_at FROM hashtag_follows hf
+          JOIN tag_aliases ta ON ta.alias=hf.tag;
+          DELETE FROM hashtag_follows WHERE tag IN (SELECT alias FROM tag_aliases);`)
+      }
+      if (database.query("SELECT 1 FROM sqlite_master WHERE type='table' AND name='blocked_hashtags'").get()) {
+        database.run(`INSERT OR IGNORE INTO blocked_hashtags(user_id,tag,created_at)
+          SELECT bh.user_id,ta.primary_tag,bh.created_at FROM blocked_hashtags bh
+          JOIN tag_aliases ta ON ta.alias=bh.tag;
+          DELETE FROM blocked_hashtags WHERE tag IN (SELECT alias FROM tag_aliases);`)
+      }
+    },
+  },
 ]
 
 export const latestMigrationVersion = migrations.at(-1)!.version

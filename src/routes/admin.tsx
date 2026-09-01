@@ -4,6 +4,7 @@ import {
   AdminDashboard,
   AdminEmail,
   AdminPush,
+  AdminTags,
   AdminTranslate,
   AdminUser,
 } from '../components/pages'
@@ -21,8 +22,43 @@ import { cacheBlockedIp, flushIpRequests } from '../request-ip-blocks'
 import { currentUser } from '../utils'
 import { isTranslationLanguage, translateText } from '../translation'
 import { sendPushToAll, sendPushToUser } from '../push'
+import { isValidHashtag, normalizeHashtag } from '../content'
 
 export function registerAdminRoutes(app: Hono) {
+  app.get('/admin/tags', async c => {
+    const signedIn = currentUser(c.req.raw)
+    if (!signedIn) return redirect('/enter?next=' + encodeURIComponent(c.req.path))
+    if (!isAdmin(signedIn)) return c.text('Forbidden', 403)
+    const groups = await databaseService().call('admin.tagAliases', {})
+    return page(<AdminTags user={signedIn} groups={groups} error={c.req.query('error')} />)
+  })
+
+  app.post('/admin/tags', async c => {
+    const signedIn = currentUser(c.req.raw)
+    if (!signedIn) return redirect('/enter?next=' + encodeURIComponent('/admin/tags'))
+    if (!isAdmin(signedIn)) return c.text('Forbidden', 403)
+    const fields = await form(c.req.raw)
+    const primaryTag = normalizeHashtag((fields.primary || '').replace(/^#/, '').trim())
+    const aliases = [...new Set((fields.aliases || '').split(/[\s,]+/)
+      .map(value => normalizeHashtag(value.replace(/^#/, '').trim())).filter(value => value && value !== primaryTag))]
+    if (!isValidHashtag(primaryTag) || !aliases.length || aliases.some(alias => !isValidHashtag(alias))) {
+      return c.text('Invalid primary tag or aliases', 400)
+    }
+    const result = await databaseService().call('admin.addTagAliases', { primaryTag, aliases })
+    if (result.status === 'conflict') return redirect(`/admin/tags?error=${encodeURIComponent(result.tag)}`)
+    return redirect('/admin/tags')
+  })
+
+  app.post('/admin/tags/:alias/remove', async c => {
+    const signedIn = currentUser(c.req.raw)
+    if (!signedIn) return redirect('/enter?next=' + encodeURIComponent('/admin/tags'))
+    if (!isAdmin(signedIn)) return c.text('Forbidden', 403)
+    const alias = normalizeHashtag(c.req.param('alias'))
+    if (!isValidHashtag(alias)) return c.text('Invalid alias', 400)
+    await databaseService().call('admin.removeTagAlias', { alias })
+    return redirect('/admin/tags')
+  })
+
   app.get('/admin/push', c => {
     const signedIn = currentUser(c.req.raw)
     if (!signedIn) return redirect('/enter?next=' + encodeURIComponent(c.req.path))

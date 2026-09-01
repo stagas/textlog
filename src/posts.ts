@@ -21,6 +21,18 @@ function moderatorViewer(database: Database, viewerId: number) {
   return !!viewer && isAdminEmail(viewer.email)
 }
 
+function canonicalTags(database: Database, tags: string[]) {
+  const unique = [...new Set(tags)]
+  const aliases = !unique.length || !database.query(
+    "SELECT 1 FROM sqlite_master WHERE type='table' AND name='tag_aliases'",
+  ).get()
+    ? []
+    : database.query(`SELECT alias,primary_tag FROM tag_aliases WHERE alias IN
+      (${unique.map(() => '?').join(',')})`).all(...unique) as { alias: string; primary_tag: string }[]
+  const primaryByAlias = new Map(aliases.map(row => [row.alias, row.primary_tag]))
+  return new Map(unique.map(tag => [tag, primaryByAlias.get(tag) || tag]))
+}
+
 export function loadBioReferenceData(database: Database, bio: string, profileId: number,
   viewerId = -1): BioReferenceData
 {
@@ -28,9 +40,11 @@ export function loadBioReferenceData(database: Database, bio: string, profileId:
   const handles = extractMentions(bio)
   const hashtagCounts = visibleHashtagCounts(database, [bio], viewerId)
   const hashtagFollowerCounts = visibleTagFollowerCounts(database, tags, viewerId)
+  const canonicalByTag = canonicalTags(database, tags)
+  const canonical = [...new Set(canonicalByTag.values())]
   const followedTags = viewerId < 0 || !tags.length ? new Set<string>() : new Set(
     (database.query(`SELECT tag FROM hashtag_follows WHERE user_id=? AND tag IN
-      (${tags.map(() => '?').join(',')})`).all(viewerId, ...tags) as { tag: string }[]).map(row => row.tag),
+      (${canonical.map(() => '?').join(',')})`).all(viewerId, ...canonical) as { tag: string }[]).map(row => row.tag),
   )
   const mentionBios: Record<string, string> = {}
   const mentionIds: Record<string, number> = {}
@@ -61,7 +75,7 @@ export function loadBioReferenceData(database: Database, bio: string, profileId:
   return {
     hashtagCounts,
     hashtagFollowerCounts,
-    hashtagFollowing: Object.fromEntries(tags.map(tag => [tag, followedTags.has(tag)])),
+    hashtagFollowing: Object.fromEntries(tags.map(tag => [tag, followedTags.has(canonicalByTag.get(tag)!)])),
     mentionBios,
     mentionNoteCounts: Object.fromEntries(
       Object.entries(mentionProfileStats).map(([handle, value]) => [handle, value.notes]),
@@ -80,19 +94,21 @@ export function loadBioReferenceData(database: Database, bio: string, profileId:
 export function visibleHashtagCounts(database: Database, bodies: string[], viewerId = -1) {
   const tags = [...new Set(bodies.flatMap(extractHashtags))]
   if (!tags.length) return {}
-  const placeholders = tags.map(() => '?').join(',')
+  const canonicalByTag = canonicalTags(database, tags)
+  const canonical = [...new Set(canonicalByTag.values())]
+  const placeholders = canonical.map(() => '?').join(',')
   const viewerFilter = viewerId < 0 ? '' : `AND NOT EXISTS (SELECT 1 FROM blocks b WHERE
     (b.blocker_id=? AND b.blocked_id=p.user_id) OR (b.blocker_id=p.user_id AND b.blocked_id=?))
     AND NOT EXISTS (SELECT 1 FROM post_hashtags hidden_ph JOIN blocked_hashtags bh ON bh.tag=hidden_ph.tag
       WHERE hidden_ph.post_id=p.id AND bh.user_id=?)`
-  const parameters = viewerId < 0 ? tags : [...tags, viewerId, viewerId, viewerId]
+  const parameters = viewerId < 0 ? canonical : [...canonical, viewerId, viewerId, viewerId]
   const rows = database.query(`SELECT ph.tag,count(*) count FROM post_hashtags ph
     JOIN posts p ON p.id=ph.post_id JOIN users u ON u.id=p.user_id
     WHERE ph.tag IN (${placeholders}) AND p.deleted_at IS NULL
       AND u.deleted_at IS NULL AND u.suspended_at IS NULL ${viewerFilter}
     GROUP BY ph.tag`).all(...parameters) as { tag: string; count: number }[]
   const counts = new Map(rows.map(row => [row.tag, row.count]))
-  return Object.fromEntries(tags.map(tag => [tag, counts.get(tag) || 0]))
+  return Object.fromEntries(tags.map(tag => [tag, counts.get(canonicalByTag.get(tag)!) || 0]))
 }
 
 export function visibleUserProfileStats(database: Database, userIds: number[], viewerId = -1) {
@@ -118,12 +134,16 @@ export function visibleUserProfileStats(database: Database, userIds: number[], v
 export function visibleTagFollowerCounts(database: Database, tags: string[], viewerId = -1) {
   const unique = [...new Set(tags)]
   if (!unique.length) return {} as Record<string, number>
-  return Object.fromEntries((database.query(`SELECT hf.tag,count(*) count FROM hashtag_follows hf
-    JOIN users u ON u.id=hf.user_id WHERE hf.tag IN (${unique.map(() => '?').join(',')})
+  const canonicalByTag = canonicalTags(database, unique)
+  const canonical = [...new Set(canonicalByTag.values())]
+  const rows = database.query(`SELECT hf.tag,count(*) count FROM hashtag_follows hf
+    JOIN users u ON u.id=hf.user_id WHERE hf.tag IN (${canonical.map(() => '?').join(',')})
     AND u.deleted_at IS NULL AND u.suspended_at IS NULL
     AND (? < 0 OR NOT EXISTS (SELECT 1 FROM blocks b WHERE
       (b.blocker_id=? AND b.blocked_id=u.id) OR (b.blocker_id=u.id AND b.blocked_id=?))) GROUP BY hf.tag`)
-    .all(...unique, viewerId, viewerId, viewerId) as { tag: string; count: number }[]).map(row => [row.tag, row.count]))
+    .all(...canonical, viewerId, viewerId, viewerId) as { tag: string; count: number }[]
+  const counts = new Map(rows.map(row => [row.tag, row.count]))
+  return Object.fromEntries(unique.map(tag => [tag, counts.get(canonicalByTag.get(tag)!) || 0]))
 }
 
 export function syncPostMetadata(database: Database, postId: number, body: string) {
@@ -549,16 +569,18 @@ export function enrichPosts(database: Database, posts: PostView[], viewerId = -1
   const relevantUserIds = [...profileStats.keys()]
   const relevantTags = Object.keys(hashtagCounts)
   const hashtagFollowerCounts = visibleTagFollowerCounts(database, relevantTags, viewerId)
+  const canonicalByTag = canonicalTags(database, relevantTags)
+  const canonicalRelevantTags = [...new Set(canonicalByTag.values())]
   const followedUserIds = viewerId < 0 || !relevantUserIds.length
     ? new Set<number>()
     : new Set((database.query(`SELECT following_id FROM follows WHERE follower_id=? AND following_id IN
       (${relevantUserIds.map(() => '?').join(',')})`).all(viewerId, ...relevantUserIds) as {
       following_id: number
     }[]).map(row => row.following_id))
-  const followedTags = viewerId < 0 || !relevantTags.length
+  const followedTags = viewerId < 0 || !canonicalRelevantTags.length
     ? new Set<string>()
     : new Set((database.query(`SELECT tag FROM hashtag_follows WHERE user_id=? AND tag IN
-      (${relevantTags.map(() => '?').join(',')})`).all(viewerId, ...relevantTags) as { tag: string }[])
+      (${canonicalRelevantTags.map(() => '?').join(',')})`).all(viewerId, ...canonicalRelevantTags) as { tag: string }[])
       .map(row => row.tag))
   const mentionFollowing = Object.fromEntries(Object.entries(mentionUserIds)
     .map(([handle, id]) => [handle, followedUserIds.has(id)]))
@@ -571,7 +593,7 @@ export function enrichPosts(database: Database, posts: PostView[], viewerId = -1
   const mentionFollowsViewer = Object.fromEntries(Object.entries(mentionUserIds)
     .map(([handle, id]) => [handle, followerUserIds.has(id)]))
   const hashtagFollowing = Object.fromEntries(Object.keys(hashtagCounts)
-    .map(tag => [tag, followedTags.has(tag)]))
+    .map(tag => [tag, followedTags.has(canonicalByTag.get(tag)!)]))
   const bioReferences = new Map<number | undefined, BioReferenceData>()
   const bioReference = (userId: number | undefined): BioReferenceData => {
     const cached = bioReferences.get(userId)

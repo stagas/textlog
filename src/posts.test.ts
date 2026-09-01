@@ -845,4 +845,21 @@ describe('post persistence', () => {
     expect(enrichPosts(db, [post], 2)[0]).toMatchObject({ hashtag_counts: { topic: 1 }, note_count: 2,
       viewer_following: true, hashtag_following: { topic: true } })
   })
+
+  test('uses primary tag state in alias hovercards', () => {
+    const db = database()
+    db.run(`CREATE TABLE tag_aliases(alias TEXT PRIMARY KEY,primary_tag TEXT NOT NULL);
+      INSERT INTO tag_aliases VALUES('tlog','meta'),('textlog','meta');
+      INSERT INTO posts(id,user_id,body) VALUES(1,1,'#tlog and #textlog');
+      INSERT INTO post_hashtags VALUES(1,'meta');
+      INSERT INTO hashtag_follows VALUES(2,'meta');`)
+    const post = db.query('SELECT p.*,u.handle FROM posts p JOIN users u ON u.id=p.user_id WHERE p.id=1')
+      .get() as PostView
+
+    expect(enrichPosts(db, [post], 2)[0]).toMatchObject({
+      hashtag_counts: { tlog: 1, textlog: 1 },
+      hashtag_follower_counts: { tlog: 1, textlog: 1 },
+      hashtag_following: { tlog: true, textlog: true },
+    })
+  })
 })

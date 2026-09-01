@@ -14,7 +14,9 @@ import { currentUser } from '../utils'
 
 export function registerTagsRoutes(app: Hono) {
   app.get('/tag/:tag/og.png', async c => {
-    const tag = c.req.param('tag').toLowerCase()
+    const requestedTag = c.req.param('tag').toLowerCase()
+    const tag = await databaseService().call('tags.resolve', { tag: requestedTag })
+    if (tag !== requestedTag) return c.redirect(`/tag/${encodeURIComponent(tag)}/og.png`, 301)
     const cacheKey = `tag:${tag}`
     const cached = cachedOgResponse(cacheKey)
     if (cached) return cached
@@ -29,7 +31,8 @@ export function registerTagsRoutes(app: Hono) {
 
   app.get('/tag/:tag', async c => {
     const requestedTag = c.req.param('tag')
-    const tag = requestedTag.toLowerCase()
+    const normalizedTag = requestedTag.toLowerCase()
+    const tag = await databaseService().call('tags.resolve', { tag: normalizedTag })
     if (requestedTag !== tag) {
       return c.redirect(`/tag/${encodeURIComponent(tag)}${new URL(c.req.url).search}`, 301)
     }
@@ -42,7 +45,7 @@ export function registerTagsRoutes(app: Hono) {
     const notePageSize = resolvedPageSize(c.req.raw)
     const data = await databaseService().call('tags.page', { tag, viewerId, page: tagPage, pageSize: notePageSize,
       tab: tab === 'followers' ? 'followers' : 'notes' })
-    const { following, blocked, posts, total, followerTotal, people } = data
+    const { aliases, following, blocked, posts, total, followerTotal, people } = data
     const tabPath = `/tag/${encodeURIComponent(tag)}${tab === 'followers' ? '?tab=followers' : ''}`
     const outOfRange = paginationRedirect(tagPage, tab === 'followers' ? followerTotal : total, tabPath,
       tab === 'followers' ? CONNECTION_PAGE_SIZE : notePageSize)
@@ -59,7 +62,8 @@ export function registerTagsRoutes(app: Hono) {
       imageAlt: `#${tag}: ${description}`,
     }
     return page(
-      <TagFeed user={user} tag={tag} following={following} blocked={blocked} posts={posts} page={tagPage} total={total}
+      <TagFeed user={user} tag={tag} aliases={aliases} following={following} blocked={blocked} posts={posts}
+        page={tagPage} total={total}
         followerTotal={followerTotal} people={people} tab={tab === 'followers' ? 'followers' : 'notes'}
         notePageSize={notePageSize} social={social} returnPath={returnPath} />,
     )

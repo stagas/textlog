@@ -5241,6 +5241,13 @@ form.report-panel {
   font-weight: 600;
 }
 
+.tag-aliases {
+  margin: var(--space-1) 0 0;
+  color: var(--muted);
+  font-size: .625rem;
+  line-height: 1.5;
+}
+
 @media (max-width: 600px) {
   .tag-header {
     display: grid;
@@ -5253,7 +5260,7 @@ form.report-panel {
     display: contents;
   }
 
-  .tag-header h1 {
+  .tag-heading-block {
     grid-column: 1;
     grid-row: 1;
   }
@@ -6584,6 +6591,101 @@ form.report-panel {
 
 .admin-email form {
   gap: var(--space-5);
+}
+
+.admin-tags-create {
+  padding: 0 var(--gutter) var(--space-7);
+  border-bottom: 1px solid var(--soft);
+}
+
+.admin-tags-create form {
+  display: grid;
+  grid-template-columns: minmax(130px, .65fr) minmax(220px, 1.35fr);
+  gap: var(--space-4);
+  align-items: start;
+}
+
+.admin-tags-create .form-label {
+  align-self: start;
+}
+
+.admin-tags-hint {
+  grid-column: 2;
+  margin-top: calc(-1 * var(--space-3));
+}
+
+.admin-tags-create .form-actions {
+  grid-column: 1 / -1;
+}
+
+.admin-tags-create small {
+  color: var(--muted);
+  font-size: .625rem;
+}
+
+.admin-tag-groups article {
+  display: grid;
+  grid-template-columns: minmax(110px, .4fr) 1fr;
+  gap: var(--space-5);
+  align-items: start;
+  padding: var(--space-4) 0;
+  border-top: 1px solid var(--soft);
+}
+
+.admin-tag-primary {
+  font-size: .875rem;
+  font-weight: 600;
+}
+
+.admin-tag-aliases {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.admin-tag-group-content {
+  display: grid;
+  gap: var(--space-3);
+}
+
+.admin-tag-quick-add {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin: 0;
+}
+
+.admin-tag-quick-add input:not([type="hidden"]) {
+  width: 12ch;
+  min-width: 0;
+  padding: 0;
+  color: var(--ink);
+  background: transparent;
+  border: 0;
+  font: inherit;
+  outline-offset: 3px;
+}
+
+.admin-tag-aliases form {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin: 0;
+  padding: var(--space-2) var(--space-3);
+  background: var(--panel);
+  border: 1px solid var(--soft);
+  font-size: .6875rem;
+}
+
+@media (max-width: 560px) {
+  .admin-tags-create form,
+  .admin-tag-groups article {
+    grid-template-columns: 1fr;
+  }
+
+  .admin-tags-hint {
+    grid-column: 1;
+  }
 }
 
 .admin-confirm form,

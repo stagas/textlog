@@ -36,8 +36,8 @@ test('meta aliases hide tagged posts and descendants from all and any while pres
   expect(all.posts).toEqual([])
   expect(any.posts).toEqual([])
   expect(hot.posts.map(post => post.id)).toContain(root.id)
-  expect(db.query('SELECT tag FROM post_hashtags WHERE post_id=? AND tag=?').get(root.id, 'tlog'))
-    .toEqual({ tag: 'tlog' })
+  expect(db.query('SELECT tag FROM post_hashtags WHERE post_id=? AND tag=?').get(root.id, 'meta'))
+    .toEqual({ tag: 'meta' })
   expect((await executeDatabaseDomain(db, 'posts.detail', { id: root.id, viewerId: -1 })).status).toBe('ready')
   expect((await executeDatabaseDomain(db, 'posts.detail', { id: reply.id, viewerId: -1 })).status).toBe('ready')
 

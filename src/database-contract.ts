@@ -176,6 +176,12 @@ export type DatabaseDomainOperations = {
       | { status: 'not_found' | 'already_suspended' | 'not_suspended' | 'already_banned' }
       | { status: 'ready'; imageKeys: string[] }
   }
+  'admin.tagAliases': { input: Record<string, never>; output: Array<{ primaryTag: string; aliases: string[] }> }
+  'admin.addTagAliases': {
+    input: { primaryTag: string; aliases: string[] }
+    output: { status: 'ready' } | { status: 'conflict'; tag: string }
+  }
+  'admin.removeTagAlias': { input: { alias: string }; output: boolean }
   'account.securityData': { input: { userId: number; currentSessionHash: string | null; now: number }; output: {
     sessions: SessionView[]
     apiKeys: ApiKeyView[]
@@ -489,6 +495,7 @@ export type DatabaseDomainOperations = {
   'explore.page': { input: { viewerId: number; peopleIds?: number[]; tagsPage: number; peoplePage: number };
     output: ExploreData }
   'tags.count': { input: { tag: string }; output: number }
+  'tags.resolve': { input: { tag: string }; output: string }
   'tags.page': {
     input: { tag: string; viewerId: number; page: number; pageSize: PageSizeChoice; tab: 'notes' | 'followers' }
     output: TagPageData

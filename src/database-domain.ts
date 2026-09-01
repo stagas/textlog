@@ -9,6 +9,7 @@ import { API_DEFAULT_LIMIT, apiHotPosts, apiPost, apiPosts, apiPostsByIds, apiRe
 import { apiActivities } from './api-activity'
 import { issueApiKey } from './api-keys'
 import { consumeAuthAttempt, consumeBucketedAttempt, rateLimitKey } from './auth-rate-limit'
+import { extractHashtags } from './content'
 import { runAutomatedBackup } from './backup-automation'
 import { cacheDb } from './cache-db'
 import { exportUserData } from './data-export'
@@ -74,6 +75,31 @@ function attachPeopleStats(database: Database, people: import('./types').PersonV
 function attachTagStats(database: Database, tags: import('./types').TagView[], viewerId: number) {
   const counts = visibleTagFollowerCounts(database, tags.map(tag => tag.tag), viewerId)
   return tags.map(tag => ({ ...tag, followerCount: counts[tag.tag] || 0 }))
+}
+
+function canonicalTag(database: Database, tag: string) {
+  if (!database.query("SELECT 1 FROM sqlite_master WHERE type='table' AND name='tag_aliases'").get()) return tag
+  return (database.query('SELECT primary_tag FROM tag_aliases WHERE alias=?').get(tag) as {
+    primary_tag: string
+  } | null)?.primary_tag || tag
+}
+
+function aliasesForTag(database: Database, tag: string) {
+  if (!database.query("SELECT 1 FROM sqlite_master WHERE type='table' AND name='tag_aliases'").get()) return []
+  return (database.query('SELECT alias FROM tag_aliases WHERE primary_tag=? ORDER BY alias').all(tag) as {
+    alias: string
+  }[]).map(row => row.alias)
+}
+
+function reindexPostHashtags(database: Database) {
+  const posts = database.query('SELECT id,body FROM posts WHERE deleted_at IS NULL').all() as {
+    id: number; body: string
+  }[]
+  const insert = database.query('INSERT OR IGNORE INTO post_hashtags(post_id,tag) VALUES(?,?)')
+  database.run('DELETE FROM post_hashtags')
+  for (const post of posts) {
+    for (const tag of extractHashtags(post.body)) insert.run(post.id, canonicalTag(database, tag))
+  }
 }
 
 export function materializedForYouCount(html: string) {
@@ -974,6 +1000,51 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
       })()
       return { status: 'ready', imageKeys } as DatabaseDomainOutput<K>
     }
+    case 'admin.tagAliases': {
+      const rows = database.query('SELECT primary_tag,alias FROM tag_aliases ORDER BY primary_tag,alias').all() as {
+        primary_tag: string; alias: string
+      }[]
+      const groups = new Map<string, string[]>()
+      for (const row of rows) groups.set(row.primary_tag, [...(groups.get(row.primary_tag) || []), row.alias])
+      return [...groups].map(([primaryTag, aliases]) => ({ primaryTag, aliases })) as DatabaseDomainOutput<K>
+    }
+    case 'admin.addTagAliases': {
+      const { primaryTag, aliases } = input as DatabaseDomainInput<'admin.addTagAliases'>
+      const placeholders = aliases.map(() => '?').join(',')
+      const conflict = database.query(`SELECT alias tag FROM tag_aliases WHERE alias=?
+        UNION SELECT alias tag FROM tag_aliases WHERE alias IN (${placeholders})
+        UNION SELECT primary_tag tag FROM tag_aliases WHERE primary_tag IN (${placeholders}) LIMIT 1`)
+        .get(primaryTag, ...aliases, ...aliases) as { tag: string } | null
+      if (conflict) return { status: 'conflict', tag: conflict.tag } as DatabaseDomainOutput<K>
+      database.transaction(() => {
+        const insert = database.query('INSERT INTO tag_aliases(alias,primary_tag) VALUES(?,?)')
+        for (const alias of aliases) if (alias !== primaryTag) insert.run(alias, primaryTag)
+        for (const alias of aliases) {
+          database.query(`INSERT OR IGNORE INTO post_hashtags(post_id,tag)
+            SELECT post_id,? FROM post_hashtags WHERE tag=?`).run(primaryTag, alias)
+          database.query('DELETE FROM post_hashtags WHERE tag=?').run(alias)
+        }
+        for (const table of ['hashtag_follows', 'blocked_hashtags']) {
+          for (const alias of aliases) {
+            database.query(`INSERT OR IGNORE INTO ${table}(user_id,tag,created_at)
+              SELECT user_id,?,created_at FROM ${table} WHERE tag=?`).run(primaryTag, alias)
+            database.query(`DELETE FROM ${table} WHERE tag=?`).run(alias)
+          }
+        }
+      })()
+      cacheDb.run('DELETE FROM materialized_feed_pages_v2')
+      return { status: 'ready' } as DatabaseDomainOutput<K>
+    }
+    case 'admin.removeTagAlias': {
+      const result = database.transaction(() => {
+        const removed = database.query('DELETE FROM tag_aliases WHERE alias=?')
+          .run((input as DatabaseDomainInput<'admin.removeTagAlias'>).alias)
+        if (removed.changes) reindexPostHashtags(database)
+        return removed
+      })()
+      if (result.changes) cacheDb.run('DELETE FROM materialized_feed_pages_v2')
+      return Boolean(result.changes) as DatabaseDomainOutput<K>
+    }
     case 'stats.dashboard':
       return dashboardStats(database) as DatabaseDomainOutput<K>
     case 'stats.recordCampaignVisitor': {
@@ -1698,7 +1769,9 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
       return result as DatabaseDomainOutput<K>
     }
     case 'api.tagRelationshipMutation': {
-      const { userId, tag, action } = input as DatabaseDomainInput<'api.tagRelationshipMutation'>
+      const request = input as DatabaseDomainInput<'api.tagRelationshipMutation'>
+      const { userId, action } = request
+      const tag = canonicalTag(database, request.tag)
       let changed = false
       if (action === 'follow') {
         changed = database.query(
@@ -2943,12 +3016,18 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
       return result as DatabaseDomainOutput<K>
     }
     case 'tags.count': {
-      const { tag } = input as DatabaseDomainInput<'tags.count'>
-      return (database.query(`SELECT count(*) AS count FROM post_hashtags ph JOIN posts p ON p.id=ph.post_id
-        WHERE ph.tag=? AND p.deleted_at IS NULL`).get(tag) as { count: number }).count as DatabaseDomainOutput<K>
+      const tag = canonicalTag(database, (input as DatabaseDomainInput<'tags.count'>).tag)
+      return (database.query(`SELECT count(DISTINCT ph.post_id) AS count FROM post_hashtags ph
+        JOIN posts p ON p.id=ph.post_id
+        WHERE COALESCE((SELECT primary_tag FROM tag_aliases WHERE alias=ph.tag),ph.tag)=?
+        AND p.deleted_at IS NULL`).get(tag) as { count: number }).count as DatabaseDomainOutput<K>
     }
+    case 'tags.resolve':
+      return canonicalTag(database, (input as DatabaseDomainInput<'tags.resolve'>).tag) as DatabaseDomainOutput<K>
     case 'tags.page': {
-      const { tag, viewerId, page, pageSize, tab } = input as DatabaseDomainInput<'tags.page'>
+      const request = input as DatabaseDomainInput<'tags.page'>
+      const { viewerId, page, pageSize, tab } = request
+      const tag = canonicalTag(database, request.tag)
       const following = viewerId >= 0 && !!database.query(
         'SELECT 1 FROM hashtag_follows WHERE user_id=? AND tag=?',
       ).get(viewerId, tag)
@@ -2956,14 +3035,17 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
         'SELECT 1 FROM blocked_hashtags WHERE user_id=? AND tag=?',
       ).get(viewerId, tag)
       const rawPosts = blocked || tab === 'followers' ? [] : database.query(
-        `SELECT p.*,u.handle FROM posts p JOIN users u ON u.id=p.user_id JOIN post_hashtags ph ON ph.post_id=p.id
-        WHERE ph.tag=? AND p.deleted_at IS NULL AND (? < 0 OR NOT EXISTS (SELECT 1 FROM blocks b WHERE
+        `SELECT p.*,u.handle FROM posts p JOIN users u ON u.id=p.user_id
+        WHERE EXISTS (SELECT 1 FROM post_hashtags ph WHERE ph.post_id=p.id
+          AND COALESCE((SELECT primary_tag FROM tag_aliases WHERE alias=ph.tag),ph.tag)=?)
+        AND p.deleted_at IS NULL AND (? < 0 OR NOT EXISTS (SELECT 1 FROM blocks b WHERE
           (b.blocker_id=? AND b.blocked_id=p.user_id) OR (b.blocker_id=p.user_id AND b.blocked_id=?)))
         ORDER BY p.created_at DESC LIMIT ? OFFSET ?`,
       ).all(tag, viewerId, viewerId, viewerId, pageSize, (page - 1) * pageSize) as PostView[]
       const total = blocked ? 0 : (database.query(
-        `SELECT count(*) AS count FROM post_hashtags ph JOIN posts p ON p.id=ph.post_id
-        WHERE ph.tag=? AND p.deleted_at IS NULL AND (? < 0 OR NOT EXISTS (SELECT 1 FROM blocks b WHERE
+        `SELECT count(DISTINCT ph.post_id) AS count FROM post_hashtags ph JOIN posts p ON p.id=ph.post_id
+        WHERE COALESCE((SELECT primary_tag FROM tag_aliases WHERE alias=ph.tag),ph.tag)=?
+        AND p.deleted_at IS NULL AND (? < 0 OR NOT EXISTS (SELECT 1 FROM blocks b WHERE
           (b.blocker_id=? AND b.blocked_id=p.user_id) OR (b.blocker_id=p.user_id AND b.blocked_id=?)))`,
       ).get(tag, viewerId, viewerId, viewerId) as { count: number }).count
       const followerTotal = (database.query(
@@ -2984,7 +3066,8 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
         ).all(viewerId, tag, viewerId, viewerId, viewerId, CONNECTION_PAGE_SIZE,
           (page - 1) * CONNECTION_PAGE_SIZE) as import('./types').PersonView[]
         : []
-      const result = { following, blocked, posts: enrichPosts(database, rawPosts, viewerId), total, followerTotal,
+      const result = { aliases: aliasesForTag(database, tag), following, blocked,
+        posts: enrichPosts(database, rawPosts, viewerId), total, followerTotal,
         people: attachPeopleStats(database, people, viewerId) }
       return result as DatabaseDomainOutput<K>
     }
@@ -3113,7 +3196,9 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
       return { status: 'reported', post } as DatabaseDomainOutput<K>
     }
     case 'interactions.toggleTagFollow': {
-      const { userId, tag } = input as DatabaseDomainInput<'interactions.toggleTagFollow'>
+      const request = input as DatabaseDomainInput<'interactions.toggleTagFollow'>
+      const { userId } = request
+      const tag = canonicalTag(database, request.tag)
       const exists = !!database.query('SELECT 1 FROM hashtag_follows WHERE user_id=? AND tag=?').get(userId, tag)
       if (exists) database.query('DELETE FROM hashtag_follows WHERE user_id=? AND tag=?').run(userId, tag)
       else {database.query(
@@ -3125,7 +3210,9 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
       return { followed: !exists } as DatabaseDomainOutput<K>
     }
     case 'interactions.toggleTagBlock': {
-      const { userId, tag } = input as DatabaseDomainInput<'interactions.toggleTagBlock'>
+      const request = input as DatabaseDomainInput<'interactions.toggleTagBlock'>
+      const { userId } = request
+      const tag = canonicalTag(database, request.tag)
       const exists = !!database.query('SELECT 1 FROM blocked_hashtags WHERE user_id=? AND tag=?').get(userId, tag)
       database.transaction(() => {
         if (exists) database.query('DELETE FROM blocked_hashtags WHERE user_id=? AND tag=?').run(userId, tag)
