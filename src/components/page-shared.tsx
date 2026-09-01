@@ -627,6 +627,7 @@ export function FeedTabs(
   const hasDistinctLastUnread = !!lastUnreadHref && lastUnreadHref !== unreadHref
   return (
     <>
+      <span className="feed-tabs-scroll-sentinel" aria-hidden="true" />
       <nav className="feed-tabs" id="feed-tabs" aria-label="Feed">
         <div className="feed-tabs-scroll">
           {user && (
@@ -684,6 +685,7 @@ export function FeedTabs(
                   : <span className="activity-side-status">you've seen it all</span>)}
             </span>
           )}
+          <a className="feed-tabs-top" href="#" aria-label="Back to top" title="Back to top">↑</a>
         </div>
       </nav>
       {forYouReadStatus && (

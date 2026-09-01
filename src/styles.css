@@ -363,6 +363,7 @@ main {
   flex: 1;
   min-width: 0;
   margin-block: 0;
+  timeline-scope: --feed-tabs-passed;
 }
 
 header {
@@ -1286,6 +1287,14 @@ nav form {
   background: var(--bg);
 }
 
+.feed-tabs-scroll-sentinel {
+  display: block;
+  height: 1px;
+  margin-bottom: -1px;
+  view-timeline-name: --feed-tabs-passed;
+  view-timeline-axis: block;
+}
+
 .feed-tabs-scroll::-webkit-scrollbar {
   display: none;
 }
@@ -1392,6 +1401,42 @@ nav form {
   color: var(--muted);
   font-size: var(--font-size-11);
   gap: var(--space-3);
+}
+
+.feed-tabs .feed-tabs-top {
+  margin-left: auto;
+  padding-inline: var(--space-3);
+  font-size: var(--font-size-16);
+  line-height: 1;
+}
+
+@supports (animation-timeline: view()) {
+  .feed-tabs .feed-tabs-top {
+    animation: feed-tabs-top-reveal linear both;
+    animation-timeline: --feed-tabs-passed;
+    animation-range: exit-crossing 0% exit-crossing 100%;
+  }
+}
+
+@keyframes feed-tabs-top-reveal {
+  from {
+    visibility: hidden;
+    opacity: 0;
+    transform: translateY(4px);
+    pointer-events: none;
+  }
+
+  to {
+    visibility: visible;
+    opacity: 1;
+    transform: translateY(0);
+    pointer-events: auto;
+  }
+}
+
+.feed-tabs-read-status + .feed-tabs-top,
+.feed-tabs-join + .feed-tabs-top {
+  margin-left: var(--space-2);
 }
 
 .feed-tabs .feed-tabs-join {
@@ -1507,6 +1552,13 @@ body.corners-round a.button {
 
 .feed-tabs-scroll > a:hover {
   background-color: color-mix(in srgb, var(--accent) 5%, transparent);
+}
+
+@media (hover: none) {
+  .feed-tabs .feed-tabs-top:hover {
+    color: var(--muted);
+    background-color: transparent;
+  }
 }
 
 .feed-tabs a.active {
