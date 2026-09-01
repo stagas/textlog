@@ -1461,6 +1461,16 @@ test('consequential account, content, reporting, and admin flows work over HTTP'
   expect(privatePost.headers.get('cache-control')).toBe('private, no-store')
   const privateReplyForm = await request(`/post/${post.id}?reply=1`, { cookie: aliceCookie })
   expect(privateReplyForm.headers.get('cache-control')).toBe('private, no-store')
+  const smallReplyHtml = await (await request(`/post/${post.id}?reply=1`, {
+    cookie: `${aliceCookie}; appearance=light.sage; font-size=small`,
+  })).text()
+  const largerReplyHtml = await (await request(`/post/${post.id}?reply=1`, {
+    cookie: `${aliceCookie}; appearance=dracula.pink; font-size=larger`,
+  })).text()
+  expect(smallReplyHtml).toContain('--bg:#f4f3ee')
+  expect(smallReplyHtml).toContain('font-size:14px')
+  expect(largerReplyHtml).toContain('--bg:#282a36')
+  expect(largerReplyHtml).toContain('font-size:20px')
   const ownThreadReply = database.query('INSERT INTO posts(user_id,parent_id,body) VALUES(?,?,?) RETURNING id')
     .get(alice.id, post.id, 'A reply in my own thread') as { id: number }
   const profileNotes = await (await request('/u/alice')).text()

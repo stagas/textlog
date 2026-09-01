@@ -209,7 +209,7 @@ export function registerPostsRoutes(app: Hono) {
     const requestUrl = new URL(c.req.url)
     const postPageCacheKey = `${user?.id ?? 'anonymous'}\0${
       locationMapProvider(c.req.header('user-agent') || '')}\0${requestUrl.pathname}${requestUrl.search}`
-    const cached = cachedAnonymousPostPage(postPageCacheKey)
+    const cached = user ? null : cachedAnonymousPostPage(postPageCacheKey)
     if (cached) return cached
     const detail = await databaseService().call('posts.detail', { id, viewerId: user?.id ?? -1 })
     if (detail.status === 'not_found') return c.text('Not found', 404)
@@ -246,11 +246,11 @@ export function registerPostsRoutes(app: Hono) {
       url: postUrl,
     }
     if (user) {
-      return materializeAnonymousPostPage(postPageCacheKey, page(
+      return page(
         <Reply user={user} post={post} replies={replies} showForm={c.req.query('reply') === '1'} returnPath={returnPath}
           topHref={topHref} flatHref={flatHref} treeHref={treeHref} flat={flat}
           showReport={c.req.query('report') === '1'} reported={c.req.query('reported') === '1'} social={social} />,
-      ))
+      )
     }
     const rendered = page(
       <PublicThread post={post} replies={replies} social={social} returnPath={returnPath} topHref={topHref}
