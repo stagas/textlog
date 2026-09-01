@@ -663,6 +663,9 @@ test('reply forms offer the same server-rendered preview flow', () => {
   }))
 
   expect(html).toContain('value="preview" name="action">preview</button>')
+  expect(html).toContain('title="Enrich post with hashtags" name="action">autotags')
+  expect(html).toContain('<span class="new-badge compose-new-badge" aria-hidden="true">NEW</span>')
+  expect(html.indexOf('>autotags')).toBeLessThan(html.indexOf('>preview</button>'))
   expect(html).toContain('class="button" accessKey="p">post →</button>')
   expect(html).toContain('class="secondary-action cancel-action edit-post-cancel" href="/post/2">cancel</a>')
   expect(html.indexOf('>cancel</a>')).toBeLessThan(html.indexOf('>preview</button>'))

@@ -141,6 +141,10 @@ export function Reply(
                     >
                       cancel
                     </a>
+                    <button className="secondary-action compose-autotags-action" name="action" value="autotags"
+                      title="Enrich post with hashtags">
+                      autotags<span className="new-badge compose-new-badge" aria-hidden="true">NEW</span>
+                    </button>
                     <button className="secondary-action" name="action" value="preview">preview</button>
                     <button className="secondary-action" name="action" value="draft"
                       formAction={draftId ? `/drafts/${draftId}` : undefined}
