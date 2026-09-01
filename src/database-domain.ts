@@ -210,8 +210,18 @@ function recapPosts(database: Database, viewerId: number) {
 }
 
 const RECAP_V2_EXCLUDED_NOTE_IDS = [1951, 1274, 2791, 1373, 556, 328, 2361] as const
+const recapV2AnonymousMemoryCache = new WeakMap<Database, { generation: string; posts: PostView[] }>()
+
+function recapV2Generation(database: Database) {
+  const global = materializedFeedGeneration(database, 'latest', -1)
+  const strict = materializedStrictGeneration(database, 'latest')
+  return `${global}:${strict}`
+}
 
 function recapV2Posts(database: Database, viewerId: number) {
+  const generation = recapV2Generation(database)
+  const cached = viewerId < 0 ? recapV2AnonymousMemoryCache.get(database) : undefined
+  if (cached?.generation === generation) return cached.posts
   const visibility = viewerId < 0 ? '' : `AND NOT EXISTS (SELECT 1 FROM blocks b WHERE
     (b.blocker_id=? AND b.blocked_id=p.user_id) OR (b.blocker_id=p.user_id AND b.blocked_id=?))
     AND NOT EXISTS (SELECT 1 FROM post_hashtags ph JOIN blocked_hashtags bh ON bh.tag=ph.tag
@@ -238,7 +248,9 @@ function recapV2Posts(database: Database, viewerId: number) {
     return [projection.root, ...projection.replies.map(reply =>
       projection.previewReplyIds.has(reply.id) ? { ...reply, feed_collapsed_preview: true } : reply)]
   })
-  return rewireVisibleAncestorGaps(database, enrichPosts(database, projected, viewerId))
+  const posts = rewireVisibleAncestorGaps(database, enrichPosts(database, projected, viewerId))
+  if (viewerId < 0) recapV2AnonymousMemoryCache.set(database, { generation, posts })
+  return posts
 }
 
 function invalidateBlockVisibility(userIds: number[]) {
