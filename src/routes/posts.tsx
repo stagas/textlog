@@ -27,7 +27,7 @@ import { logError } from '../log'
 import { markdownPlainText } from '../markdown'
 import { renderPostOg } from '../og'
 import { cachedOgResponse, cacheOgResponse } from '../og-response-cache'
-import { normalizePostBody, postBodyValidationMessage, validPostBody } from '../post-body'
+import { normalizePostBody, POST_MAX, postBodyValidationMessage, validPostBody } from '../post-body'
 import { autotagText } from '../openrouter'
 import { postRateLimitMessage } from '../post-rate-limit'
 import { pollDisplayBody } from '../polls'
@@ -297,8 +297,8 @@ export function registerPostsRoutes(app: Hono) {
       const valid = result.ok && validPostBody(enrichedBody)
       return page(<Compose user={user} body={valid ? enrichedBody : body} draftId={editingDraftId}
         returnPath={returnPath} error={result.ok && !valid
-          ? 'Autotagged text exceeded the post limits. Your original text is still here.'
-          : result.ok ? undefined : result.message} />, valid ? 200 : 503)
+          ? `The message is too big to autotag within the ${POST_MAX}-character limit. Edit it down and try again.`
+          : result.ok ? undefined : result.message} />, result.ok ? 200 : 503)
     }
     if (!validPostBody(body)) {
       return page(
