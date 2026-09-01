@@ -8,6 +8,7 @@ import { createServer } from 'node:net'
 import { tmpdir } from 'node:os'
 import { issueInteractedUnsubscribeToken } from './interacted-emails'
 import { issueRecapUnsubscribeToken } from './recap-emails'
+import { insertSession, SESSION_LIFETIME_MS } from './sessions'
 
 setDefaultTimeout(30_000)
 
@@ -240,17 +241,6 @@ async function signup(handle: string, email: string, _password: string, ip?: str
   return cookie
 }
 
-async function signupWithoutHandle(email: string) {
-  const response = await request('/enter', { method: 'POST', form: { email } })
-  expect(response.status).toBe(200)
-  const emailMessage = capturedEmails().filter(message => message.to === email).at(-1)
-  expect(emailMessage).toBeDefined()
-  const magic = await request(`/enter/magic?token=${encodeURIComponent(linkToken(emailMessage!))}`)
-  expect(magic.status).toBe(303)
-  expect(magic.headers.get('location')).toStartWith('/choose-handle')
-  return sessionCookie(magic)
-}
-
 beforeAll(async () => {
   const port = await availablePort()
   origin = `http://127.0.0.1:${port}`
@@ -287,8 +277,12 @@ afterAll(async () => {
 
 test('email unsubscribe links bypass handle selection for unfinished signups', async () => {
   const email = 'unfinished-unsubscribe@example.com'
-  const cookie = await signupWithoutHandle(email)
-  const user = database.query('SELECT id FROM users WHERE email=?').get(email) as { id: number }
+  const user = database.query(`INSERT INTO users(handle,email,password,email_verified_at)
+    VALUES('anon_unsubscribe_test',?,'!',CURRENT_TIMESTAMP) RETURNING id`).get(email) as { id: number }
+  const session = 'unfinished-unsubscribe-session'
+  const now = Date.now()
+  insertSession(database, session, user.id, now + SESSION_LIFETIME_MS, now, 'Integration test')
+  const cookie = `textlog=${session}`
 
   const recapToken = issueRecapUnsubscribeToken(database, user.id)
   const recap = await request(`/account/recap-emails/unsubscribe?token=${encodeURIComponent(recapToken)}`, {
