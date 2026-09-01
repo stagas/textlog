@@ -164,7 +164,9 @@ test('total recap presents the complete feature story and popular conversations'
 
   expect(html).toContain('What textlog has become')
   expect(html).toContain('The conversations that grew')
+  expect(html).toContain('class="post-page-thread feed-thread"')
   expect(html).toContain('href="/post/1200?from=%2Fblog%2Frecap-v2%23post-1200"')
+  expect(html).not.toContain('post-continuation-link')
   expect(html).toContain('join the community')
   expect(html).toContain('browse notes →')
 })

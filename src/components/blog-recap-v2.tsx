@@ -1,7 +1,7 @@
 import { appName } from '../brand'
 import type { PostView, User } from '../types'
 import { Layout } from './layout'
-import { Post } from './post'
+import { FeedThreads } from './post'
 
 const highlights = [
   ['01', 'More ways to write', '/write', <>
@@ -86,10 +86,7 @@ export function BlogRecapV2({ user, posts, pageUrl }: { user: User | null; posts
           <p>These notes started some of textlog’s most active conversations, ranked by replies across the full thread.</p>
         </section>
       </article>
-      {posts.map(post => (
-        <Post key={post.id} p={post} user={user} showReplyCount tappable
-          returnPath={`/blog/recap-v2#post-${post.id}`} />
-      ))}
+      <FeedThreads posts={posts} user={user} returnPath="/blog/recap-v2" promoteAncestors="all" />
       <div className="recap-closing">
         <p>Every feature began with people writing, replying, and making this quiet corner of the web their own.</p>
         <div className="recap-actions">

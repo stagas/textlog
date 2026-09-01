@@ -231,7 +231,14 @@ function recapV2Posts(database: Database, viewerId: number) {
       AND p.deleted_at IS NULL AND u.deleted_at IS NULL
       AND u.suspended_at IS NULL AND ${excludesWhisperPosts('p.id')} AND ${excludesMetaPosts('p.id')} ${visibility}
     ORDER BY ranked.aggregate_replies DESC,p.created_at DESC LIMIT 12`).all(...parameters) as PostView[]
-  return enrichPosts(database, rows, viewerId)
+  const projected = rows.flatMap(root => {
+    const conversation = [root, ...loadThreadReplies(database, root.id, viewerId)]
+    const projection = projectRecentConversation(conversation, { forceRoot: true })
+    if (!projection.root) return []
+    return [projection.root, ...projection.replies.map(reply =>
+      projection.previewReplyIds.has(reply.id) ? { ...reply, feed_collapsed_preview: true } : reply)]
+  })
+  return rewireVisibleAncestorGaps(database, enrichPosts(database, projected, viewerId))
 }
 
 function invalidateBlockVisibility(userIds: number[]) {
