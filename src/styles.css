@@ -7664,14 +7664,19 @@ a.post-continuation-link:hover {
 }
 
 .post .code-fence {
+  position: relative;
+  z-index: 2;
   display: block;
   max-width: 100%;
   margin: 0.5lh 0 -0.5lh;
   padding-left: var(--space-3);
   overflow-x: auto;
+  overscroll-behavior-inline: contain;
   border-left: 3px solid var(--soft);
   scrollbar-width: none;
+  touch-action: pan-x pan-y;
   white-space: pre;
+  -webkit-overflow-scrolling: touch;
 }
 
 .post .code-fence.execution-output {

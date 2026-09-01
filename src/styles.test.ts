@@ -98,6 +98,13 @@ describe('in-memory stylesheet', () => {
     expect(css).toContain('.post .code-fence.execution-output.ascii-art {\n  line-height: 1.15;\n}')
   })
 
+  test('keeps code fences above the tappable post hit area so they can scroll horizontally', async () => {
+    const css = await Bun.file(new URL('./styles.css', import.meta.url)).text()
+    expect(css).toContain('.post .code-fence {\n  position: relative;\n  z-index: 2;')
+    expect(css).toContain('overflow-x: auto;\n  overscroll-behavior-inline: contain;')
+    expect(css).toContain('touch-action: pan-x pan-y;')
+  })
+
   test('preserves ASCII art formatting in internal post hover cards', async () => {
     const css = await Bun.file(new URL('./styles.css', import.meta.url)).text()
     expect(css).toContain('.post.internal-post-card > .post-body.ascii-art {')
@@ -424,7 +431,7 @@ describe('in-memory stylesheet', () => {
 
   test('compensates fenced code spacing for its preserved trailing newline', async () => {
     const css = await Bun.file(new URL('./styles.css', import.meta.url)).text()
-    expect(css).toContain('.post .code-fence {\n  display: block;\n  max-width: 100%;\n  margin: 0.5lh 0 -0.5lh;')
+    expect(css).toContain('display: block;\n  max-width: 100%;\n  margin: 0.5lh 0 -0.5lh;')
   })
 
   test('uses shared component utilities for repeated visual patterns', async () => {
