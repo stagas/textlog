@@ -131,7 +131,7 @@ test('reviewed campaign run freezes its audience and resumes the same run', asyn
     .toEqual({ status: 'completed', completed: 1 })
 })
 
-test('v2 omits users with unread replies predating the v1 campaign', () => {
+test('v2 counts only replies created after the v1 campaign started', () => {
   const database = campaignDatabase()
   database.run(`INSERT INTO interacted_email_deliveries
     (campaign_version,email,user_id,status,run_id,idempotency_key,created_at)
@@ -141,11 +141,20 @@ test('v2 omits users with unread replies predating the v1 campaign', () => {
 
   database.run(`UPDATE posts SET created_at='2026-08-03 10:00:00' WHERE parent_id IS NOT NULL`)
   expect(unreadReplyCandidates(database, { minReplies: 1, version: 'v2' })).toHaveLength(3)
+
+  database.run(`UPDATE posts SET created_at='2026-08-02 10:00:00' WHERE id IN (13,15)`)
+  expect(unreadReplyCandidates(database, { minReplies: 1, version: 'v2' })).toEqual([
+    expect.objectContaining({ handle: 'reader', unread_replies: 1 }),
+  ])
 })
 
-test('v3 only counts unread replies created after the v2 campaign finished', () => {
+test('v3 only counts unread replies created after the v2 campaign started', () => {
   const database = campaignDatabase()
-  database.run(`INSERT INTO interacted_email_deliveries
+  database.run(`INSERT INTO interacted_campaign_runs
+    (id,campaign_version,min_replies,max_days,status,created_at,started_at,completed_at)
+    VALUES ('v2-run','v2',1,NULL,'completed','2026-08-02 11:00:00','2026-08-02 13:00:00',
+      '2026-08-02 14:00:00');
+    INSERT INTO interacted_email_deliveries
     (campaign_version,email,user_id,status,run_id,idempotency_key,created_at,sent_at)
     VALUES
       ('v2','first@example.com',98,'sent','old-run','old-key-1','2026-08-02 11:00:00','2026-08-02 12:00:00'),

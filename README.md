@@ -63,6 +63,7 @@ Interaction campaigns use a reviewed, persistent audience snapshot. Create and i
 review, send that exact audience with `bun run users:unread-replies:v3 --send-email`. If the process stops or a
 retryable delivery fails, rerun `--send-email` or use `--continue`; both continue the same run and reuse delivery
 idempotency keys. Once it completes, use `--new-run` to snapshot newly eligible recipients.
+Creating a new run explicitly abandons any older unfinished snapshot for that campaign version.
 
 Public instance details—operator and fiscal-host information, administrator emails, privacy authority, and optional IRC,
 GitHub, mobile-app, and donation links—live in `instance.config.ts`. Set an optional entry to `null` to omit it from the

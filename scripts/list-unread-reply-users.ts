@@ -16,7 +16,7 @@ export type UnreadReplyUser = Pick<Candidate, 'handle' | 'unread_replies' | 'old
 type Delivery = { id: number; status: 'sending' | 'sent' | 'failed' | 'uncertain'; run_id: string;
   idempotency_key: string }
 type CampaignRun = { id: string; campaign_version: InteractedCampaignVersion; min_replies: number;
-  max_days: number | null; status: 'review' | 'running' | 'completed'; created_at: string }
+  max_days: number | null; status: 'review' | 'running' | 'completed' | 'abandoned'; created_at: string }
 export type InteractedCampaignEnvironment = { APP_URL?: string; EMAIL_FROM?: string; RESEND_API_KEY?: string }
 
 const usage = `Usage: bun run users:unread-replies -- [options]
@@ -54,6 +54,15 @@ export function unreadReplyCandidates(database: Database, options: {
   const ageFilter = options.maxDays === undefined
     ? ''
     : 'AND reply.created_at >= datetime(\'now\', \'-\' || ? || \' days\')'
+  const previousVersion = options.version === 'v3' ? 'v2' : options.version === 'v2' ? 'v1' : null
+  const campaignCutoff = previousVersion
+    ? `AND reply.created_at >= coalesce(
+        (SELECT max(started_at) FROM interacted_campaign_runs
+          WHERE campaign_version='${previousVersion}' AND started_at IS NOT NULL),
+        (SELECT min(created_at) FROM interacted_email_deliveries
+          WHERE campaign_version='${previousVersion}')
+      )`
+    : ''
   return database.query(`
     SELECT recipient.id,recipient.handle,recipient.email,recipient.email_verified_at,
            recipient.interaction_emails,count(*) AS unread_replies,
@@ -62,11 +71,7 @@ export function unreadReplyCandidates(database: Database, options: {
     JOIN posts parent ON parent.id=reply.parent_id
     JOIN users recipient ON recipient.id=parent.user_id
     JOIN users author ON author.id=reply.user_id
-    WHERE reply.deleted_at IS NULL ${ageFilter}
-      ${options.version === 'v3' ? `AND reply.created_at > (
-        SELECT max(sent_at) FROM interacted_email_deliveries
-        WHERE campaign_version='v2' AND status='sent'
-      )` : ''}
+    WHERE reply.deleted_at IS NULL ${ageFilter} ${campaignCutoff}
       AND recipient.deleted_at IS NULL AND recipient.suspended_at IS NULL
       AND author.deleted_at IS NULL AND author.suspended_at IS NULL AND reply.user_id!=recipient.id
       AND NOT EXISTS (SELECT 1 FROM to_me_reads seen WHERE seen.user_id=recipient.id
@@ -78,13 +83,6 @@ export function unreadReplyCandidates(database: Database, options: {
         WHERE ph.post_id=reply.id AND bh.user_id=recipient.id)
     GROUP BY recipient.id,recipient.handle,recipient.email,recipient.email_verified_at,recipient.interaction_emails
     HAVING count(*) >= ?
-      ${
-    options.version === 'v2'
-      ? `AND min(reply.created_at) >= (
-        SELECT min(created_at) FROM interacted_email_deliveries WHERE campaign_version='v1'
-      )`
-      : ''
-  }
     ORDER BY unread_replies DESC,newest_reply_at DESC,recipient.handle COLLATE NOCASE
   `).all(
     ...(options.maxDays === undefined ? [options.minReplies] : [options.maxDays, options.minReplies]),
@@ -121,6 +119,8 @@ export function createInteractedCampaignRun(database: Database, options: {
   const id = crypto.randomUUID()
   const candidates = recipients(database, options)
   database.transaction(() => {
+    database.query(`UPDATE interacted_campaign_runs SET status='abandoned',completed_at=CURRENT_TIMESTAMP
+      WHERE campaign_version=? AND status IN ('review','running')`).run(options.version)
     database.query(`INSERT INTO interacted_campaign_runs
       (id,campaign_version,min_replies,max_days,status) VALUES(?,?,?,?,'review')`)
       .run(id, options.version, options.minReplies, options.maxDays ?? null)
@@ -139,7 +139,7 @@ function campaignRun(database: Database, id: string) {
 
 export function latestInteractedCampaignRun(database: Database, version: InteractedCampaignVersion) {
   return database.query(`SELECT id,campaign_version,min_replies,max_days,status,created_at
-    FROM interacted_campaign_runs WHERE campaign_version=? AND status!='completed'
+    FROM interacted_campaign_runs WHERE campaign_version=? AND status IN ('review','running')
     ORDER BY created_at DESC,rowid DESC LIMIT 1`).get(version) as CampaignRun | null
 }
 
