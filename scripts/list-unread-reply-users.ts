@@ -15,6 +15,8 @@ type Candidate = { id: number; handle: string; email: string; email_verified_at:
 export type UnreadReplyUser = Pick<Candidate, 'handle' | 'unread_replies' | 'oldest_reply_at' | 'newest_reply_at'>
 type Delivery = { id: number; status: 'sending' | 'sent' | 'failed' | 'uncertain'; run_id: string;
   idempotency_key: string }
+type CampaignRun = { id: string; campaign_version: InteractedCampaignVersion; min_replies: number;
+  max_days: number | null; status: 'review' | 'running' | 'completed'; created_at: string }
 export type InteractedCampaignEnvironment = { APP_URL?: string; EMAIL_FROM?: string; RESEND_API_KEY?: string }
 
 const usage = `Usage: bun run users:unread-replies -- [options]
@@ -24,6 +26,8 @@ Options:
   --max-days=N     Only consider replies from the last N days (default: all time)
   --v2             Use campaign v2 and omit users with unread replies predating v1
   --v3             Use campaign v3 and only count replies after campaign v2 finished
+  --new-run        Snapshot a new audience for review (cannot be combined with --send-email)
+  --continue       Continue sending the latest incomplete run
   --send-email     Send the interaction email through Resend (default: list only)
   --help           Show this help`
 
@@ -111,6 +115,41 @@ function recipients(database: Database, options: {
   return [...byEmail.values()]
 }
 
+export function createInteractedCampaignRun(database: Database, options: {
+  minReplies: number; maxDays?: number; version: InteractedCampaignVersion
+}) {
+  const id = crypto.randomUUID()
+  const candidates = recipients(database, options)
+  database.transaction(() => {
+    database.query(`INSERT INTO interacted_campaign_runs
+      (id,campaign_version,min_replies,max_days,status) VALUES(?,?,?,?,'review')`)
+      .run(id, options.version, options.minReplies, options.maxDays ?? null)
+    const insert = database.query(`INSERT INTO interacted_campaign_run_recipients
+      (run_id,user_id,email,handle,unread_replies,oldest_reply_at,newest_reply_at) VALUES(?,?,?,?,?,?,?)`)
+    for (const candidate of candidates) insert.run(id, candidate.id, candidate.email, candidate.handle,
+      candidate.unread_replies, candidate.oldest_reply_at, candidate.newest_reply_at)
+  })()
+  return campaignRun(database, id)!
+}
+
+function campaignRun(database: Database, id: string) {
+  return database.query(`SELECT id,campaign_version,min_replies,max_days,status,created_at
+    FROM interacted_campaign_runs WHERE id=?`).get(id) as CampaignRun | null
+}
+
+export function latestInteractedCampaignRun(database: Database, version: InteractedCampaignVersion) {
+  return database.query(`SELECT id,campaign_version,min_replies,max_days,status,created_at
+    FROM interacted_campaign_runs WHERE campaign_version=? AND status!='completed'
+    ORDER BY created_at DESC,rowid DESC LIMIT 1`).get(version) as CampaignRun | null
+}
+
+function runRecipients(database: Database, runId: string) {
+  return database.query(`SELECT user_id id,email,handle,unread_replies,oldest_reply_at,newest_reply_at,
+    CURRENT_TIMESTAMP email_verified_at,1 interaction_emails
+    FROM interacted_campaign_run_recipients WHERE run_id=? ORDER BY unread_replies DESC,newest_reply_at DESC,handle`)
+    .all(runId) as Candidate[]
+}
+
 function claimDelivery(database: Database, recipient: Candidate, runId: string, version: InteractedCampaignVersion) {
   const key = `interacted-${version}-${crypto.randomUUID()}`
   database.query(`INSERT OR IGNORE INTO interacted_email_deliveries
@@ -152,6 +191,7 @@ export async function sendInteractedCampaign(options: {
   sleep?: (ms: number) => Promise<void>
   stopping?: () => boolean
   log?: (message: string) => void
+  runId?: string
 }) {
   const env = options.env || Bun.env
   const origin = new URL(required(env.APP_URL, 'APP_URL')).origin
@@ -161,12 +201,15 @@ export async function sendInteractedCampaign(options: {
   const sleep = options.sleep || Bun.sleep
   const stopping = options.stopping || (() => false)
   const log = options.log || console.log
-  const runId = crypto.randomUUID()
+  const runId = options.runId || crypto.randomUUID()
   const name = appName()
   const version = options.version || INTERACTED_CAMPAIGN_VERSION
   let sent = 0, skipped = 0, failed = 0, lastRequestAt = 0
 
-  for (const recipient of recipients(options.database, options)) {
+  const audience = options.runId ? runRecipients(options.database, options.runId) : recipients(options.database, options)
+  if (options.runId) options.database.query(`UPDATE interacted_campaign_runs SET status='running',
+    started_at=coalesce(started_at,CURRENT_TIMESTAMP) WHERE id=? AND status!='completed'`).run(options.runId)
+  for (const recipient of audience) {
     if (stopping()) break
     const delivery = claimDelivery(options.database, recipient, runId, version)
     if (!delivery) {
@@ -228,6 +271,10 @@ export async function sendInteractedCampaign(options: {
       break
     }
   }
+  if (options.runId && !stopping() && failed === 0) {
+    options.database.query(`UPDATE interacted_campaign_runs SET status='completed',completed_at=CURRENT_TIMESTAMP
+      WHERE id=?`).run(options.runId)
+  }
   return { version, sent, skipped, failed, stopped: stopping() }
 }
 
@@ -238,18 +285,30 @@ if (import.meta.main) {
     process.exit(0)
   }
   const unknown = args.filter(value =>
-    value !== '--help' && value !== '--send-email' && value !== '--v2' && value !== '--v3'
+    value !== '--help' && value !== '--send-email' && value !== '--new-run' && value !== '--continue'
+    && value !== '--v2' && value !== '--v3'
     && !value.startsWith('--min-replies=') && !value.startsWith('--max-days=')
   )
   if (unknown.length) throw new Error(`Unknown argument: ${unknown[0]}\n\n${usage}`)
   const minReplies = positiveIntegerArgument(args, 'min-replies', 1)!
   const maxDays = positiveIntegerArgument(args, 'max-days')
-  const sendEmail = args.includes('--send-email')
+  const sendEmail = args.includes('--send-email') || args.includes('--continue')
+  const newRun = args.includes('--new-run')
+  if (newRun && sendEmail) throw new Error('--new-run creates a review snapshot; run --send-email separately')
   const version: InteractedCampaignVersion = args.includes('--v3') ? 'v3' : args.includes('--v2') ? 'v2' : 'v1'
-  const database = new Database(Bun.env.DATABASE_PATH || defaultDatabasePath, { readonly: !sendEmail, strict: true })
+  const database = new Database(Bun.env.DATABASE_PATH || defaultDatabasePath, { readonly: false, strict: true })
   try {
+    database.run('PRAGMA foreign_keys=ON; PRAGMA busy_timeout=5000;')
+    runMigrations(database, migration => console.log(`database migrate v${migration.version} ${migration.name}`))
+    const run = newRun
+      ? createInteractedCampaignRun(database, { minReplies, maxDays, version })
+      : latestInteractedCampaignRun(database, version)
+    if (!run) throw new Error(`No incomplete ${version} campaign run. Use --new-run to create one for review.`)
     if (!sendEmail) {
-      const rows = unreadReplyUsers(database, { minReplies, maxDays, version })
+      const rows = runRecipients(database, run.id).map(
+        ({ handle, unread_replies, oldest_reply_at, newest_reply_at }) =>
+          ({ handle, unread_replies, oldest_reply_at, newest_reply_at }))
+      console.log(`interaction campaign ${version} run ${run.id} (${run.status}, created ${run.created_at})`)
       if (!rows.length) console.log('No users found.')
       else {
         console.table(rows)
@@ -260,8 +319,6 @@ if (import.meta.main) {
       }
     }
     else {
-      database.run('PRAGMA foreign_keys=ON; PRAGMA busy_timeout=5000;')
-      runMigrations(database, migration => console.log(`database migrate v${migration.version} ${migration.name}`))
       let stopping = false
       for (const signal of ['SIGINT', 'SIGTERM'] as const) {
         process.on(signal, () => {
@@ -269,7 +326,8 @@ if (import.meta.main) {
           stopping = true
         })
       }
-      const result = await sendInteractedCampaign({ database, minReplies, maxDays, version, stopping: () => stopping })
+      const result = await sendInteractedCampaign({ database, minReplies: run.min_replies,
+        maxDays: run.max_days ?? undefined, version, runId: run.id, stopping: () => stopping })
       console.log(`interaction campaign ${result.version}: sent=${result.sent} skipped=${result.skipped} `
         + `failed=${result.failed}${result.stopped ? ' stopped=true' : ''}`)
       if (result.failed) process.exitCode = 1

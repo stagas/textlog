@@ -58,6 +58,12 @@ Run `bun run email:recap:v1 --test` first to send a `[TEST]` copy only to active
 `instance.administrators`. Test sends deliberately ignore and do not modify campaign delivery history, so the command
 can be repeated and does not prevent the administrators from receiving the real campaign later.
 
+Interaction campaigns use a reviewed, persistent audience snapshot. Create and inspect one with
+`bun run users:unread-replies:v3 --new-run`. Running the command again displays the latest unfinished run. After
+review, send that exact audience with `bun run users:unread-replies:v3 --send-email`. If the process stops or a
+retryable delivery fails, rerun `--send-email` or use `--continue`; both continue the same run and reuse delivery
+idempotency keys. Once it completes, use `--new-run` to snapshot newly eligible recipients.
+
 Public instance details—operator and fiscal-host information, administrator emails, privacy authority, and optional IRC,
 GitHub, mobile-app, and donation links—live in `instance.config.ts`. Set an optional entry to `null` to omit it from the
 rendered pages or footer.

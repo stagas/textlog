@@ -1,6 +1,7 @@
 import { Database } from 'bun:sqlite'
 import { expect, test } from 'bun:test'
-import { sendInteractedCampaign, unreadReplyCandidates } from '../scripts/list-unread-reply-users'
+import { createInteractedCampaignRun, latestInteractedCampaignRun, sendInteractedCampaign,
+  unreadReplyCandidates } from '../scripts/list-unread-reply-users'
 
 function campaignDatabase() {
   const database = new Database(':memory:')
@@ -21,6 +22,14 @@ function campaignDatabase() {
     status TEXT NOT NULL,run_id TEXT NOT NULL,idempotency_key TEXT NOT NULL UNIQUE,attempts INTEGER DEFAULT 0,
     provider_id TEXT,error TEXT,created_at TEXT DEFAULT CURRENT_TIMESTAMP,sent_at TEXT,
     UNIQUE(campaign_version,email)
+  );
+  CREATE TABLE interacted_campaign_runs (
+    id TEXT PRIMARY KEY,campaign_version TEXT,min_replies INTEGER,max_days INTEGER,status TEXT,
+    created_at TEXT DEFAULT CURRENT_TIMESTAMP,started_at TEXT,completed_at TEXT
+  );
+  CREATE TABLE interacted_campaign_run_recipients (
+    run_id TEXT,user_id INTEGER,email TEXT,handle TEXT,unread_replies INTEGER,oldest_reply_at TEXT,
+    newest_reply_at TEXT,PRIMARY KEY(run_id,email)
   );
   INSERT INTO users VALUES
     (1,'reader','reader@example.com',CURRENT_TIMESTAMP,1,NULL,NULL),
@@ -95,6 +104,31 @@ test('interaction campaign does not retry an ambiguous delivery on restart', asy
   expect(await sendInteractedCampaign(options)).toMatchObject({ sent: 0, skipped: 1, failed: 0 })
   expect(requests).toBe(1)
   expect(database.query('SELECT status FROM interacted_email_deliveries').get()).toEqual({ status: 'uncertain' })
+})
+
+test('reviewed campaign run freezes its audience and resumes the same run', async () => {
+  const database = campaignDatabase()
+  const run = createInteractedCampaignRun(database, { minReplies: 1, version: 'v1' })
+  database.run(`INSERT INTO users VALUES
+    (5,'new-reader','new@example.com',CURRENT_TIMESTAMP,1,NULL,NULL);
+    INSERT INTO posts VALUES
+    (20,5,NULL,'2026-08-01 10:00:00',NULL),(21,2,20,'2026-08-02 10:00:00',NULL);`)
+  const sentTo: string[] = []
+  const result = await sendInteractedCampaign({
+    database, minReplies: 1, version: 'v1', runId: run.id,
+    env: { APP_URL: 'https://textlog.test', EMAIL_FROM: 'hello@textlog.test', RESEND_API_KEY: 'secret' },
+    request: (async (_input: string | URL | Request, init?: RequestInit) => {
+      sentTo.push((JSON.parse(String(init?.body)) as { to: string[] }).to[0]!)
+      return Response.json({ id: 'message-1' })
+    }) as typeof fetch,
+    sleep: async () => {}, log: () => {},
+  })
+
+  expect(result).toMatchObject({ sent: 1, failed: 0 })
+  expect(sentTo).toEqual(['reader@example.com'])
+  expect(latestInteractedCampaignRun(database, 'v1')).toBeNull()
+  expect(database.query('SELECT status,completed_at IS NOT NULL completed FROM interacted_campaign_runs').get())
+    .toEqual({ status: 'completed', completed: 1 })
 })
 
 test('v2 omits users with unread replies predating the v1 campaign', () => {

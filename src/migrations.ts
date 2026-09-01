@@ -2843,6 +2843,25 @@ export const migrations: Migration[] = [
       addColumn(database, 'users', 'mood_prompt_dismissed_at', 'TEXT')
     },
   },
+  {
+    version: 173,
+    name: 'interaction_campaign_runs',
+    up(database) {
+      database.run(`CREATE TABLE IF NOT EXISTS interacted_campaign_runs (
+        id TEXT PRIMARY KEY,campaign_version TEXT NOT NULL,min_replies INTEGER NOT NULL,max_days INTEGER,
+        status TEXT NOT NULL CHECK(status IN ('review','running','completed')),
+        created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,started_at TEXT,completed_at TEXT
+      );
+      CREATE TABLE IF NOT EXISTS interacted_campaign_run_recipients (
+        run_id TEXT NOT NULL REFERENCES interacted_campaign_runs(id) ON DELETE CASCADE,
+        user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,email TEXT NOT NULL,handle TEXT NOT NULL,
+        unread_replies INTEGER NOT NULL,oldest_reply_at TEXT NOT NULL,newest_reply_at TEXT NOT NULL,
+        PRIMARY KEY(run_id,email)
+      );
+      CREATE INDEX IF NOT EXISTS interacted_campaign_runs_version_status
+        ON interacted_campaign_runs(campaign_version,status,created_at);`)
+    },
+  },
 ]
 
 export const latestMigrationVersion = migrations.at(-1)!.version
