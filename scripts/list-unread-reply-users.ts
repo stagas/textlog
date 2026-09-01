@@ -5,7 +5,7 @@ import { interactedEmail } from '../src/interacted-email'
 import { issueInteractedUnsubscribeToken } from '../src/interacted-emails'
 import { runMigrations } from '../src/migrations'
 
-export type InteractedCampaignVersion = 'v1' | 'v2'
+export type InteractedCampaignVersion = 'v1' | 'v2' | 'v3'
 export const INTERACTED_CAMPAIGN_VERSION: InteractedCampaignVersion = 'v1'
 const SEND_INTERVAL_MS = 1_000
 const MAX_RATE_LIMIT_RETRIES = 10
@@ -23,6 +23,7 @@ Options:
   --min-replies=N  Only include users with at least N unread replies (default 1)
   --max-days=N     Only consider replies from the last N days (default: all time)
   --v2             Use campaign v2 and omit users with unread replies predating v1
+  --v3             Use campaign v3 and only count replies after campaign v2 finished
   --send-email     Send the interaction email through Resend (default: list only)
   --help           Show this help`
 
@@ -58,6 +59,10 @@ export function unreadReplyCandidates(database: Database, options: {
     JOIN users recipient ON recipient.id=parent.user_id
     JOIN users author ON author.id=reply.user_id
     WHERE reply.deleted_at IS NULL ${ageFilter}
+      ${options.version === 'v3' ? `AND reply.created_at > (
+        SELECT max(sent_at) FROM interacted_email_deliveries
+        WHERE campaign_version='v2' AND status='sent'
+      )` : ''}
       AND recipient.deleted_at IS NULL AND recipient.suspended_at IS NULL
       AND author.deleted_at IS NULL AND author.suspended_at IS NULL AND reply.user_id!=recipient.id
       AND NOT EXISTS (SELECT 1 FROM to_me_reads seen WHERE seen.user_id=recipient.id
@@ -233,14 +238,14 @@ if (import.meta.main) {
     process.exit(0)
   }
   const unknown = args.filter(value =>
-    value !== '--help' && value !== '--send-email' && value !== '--v2'
+    value !== '--help' && value !== '--send-email' && value !== '--v2' && value !== '--v3'
     && !value.startsWith('--min-replies=') && !value.startsWith('--max-days=')
   )
   if (unknown.length) throw new Error(`Unknown argument: ${unknown[0]}\n\n${usage}`)
   const minReplies = positiveIntegerArgument(args, 'min-replies', 1)!
   const maxDays = positiveIntegerArgument(args, 'max-days')
   const sendEmail = args.includes('--send-email')
-  const version: InteractedCampaignVersion = args.includes('--v2') ? 'v2' : 'v1'
+  const version: InteractedCampaignVersion = args.includes('--v3') ? 'v3' : args.includes('--v2') ? 'v2' : 'v1'
   const database = new Database(Bun.env.DATABASE_PATH || defaultDatabasePath, { readonly: !sendEmail, strict: true })
   try {
     if (!sendEmail) {

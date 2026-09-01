@@ -18,6 +18,7 @@
     "email:recap:v2": "bun scripts/send-recap-email.ts",
     "users:unread-replies": "bun scripts/list-unread-reply-users.ts",
     "users:unread-replies:v2": "bun scripts/list-unread-reply-users.ts --v2",
+    "users:unread-replies:v3": "bun scripts/list-unread-reply-users.ts --v3",
     "stress:routes": "bun scripts/stress-routes.ts",
     "benchmark:pages": "bun scripts/benchmark-pages.ts",
     "test": "bun test",

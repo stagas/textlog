@@ -108,3 +108,19 @@ test('v2 omits users with unread replies predating the v1 campaign', () => {
   database.run(`UPDATE posts SET created_at='2026-08-03 10:00:00' WHERE parent_id IS NOT NULL`)
   expect(unreadReplyCandidates(database, { minReplies: 1, version: 'v2' })).toHaveLength(3)
 })
+
+test('v3 only counts unread replies created after the v2 campaign finished', () => {
+  const database = campaignDatabase()
+  database.run(`INSERT INTO interacted_email_deliveries
+    (campaign_version,email,user_id,status,run_id,idempotency_key,created_at,sent_at)
+    VALUES
+      ('v2','first@example.com',98,'sent','old-run','old-key-1','2026-08-02 11:00:00','2026-08-02 12:00:00'),
+      ('v2','last@example.com',99,'sent','old-run','old-key-2','2026-08-02 11:00:00','2026-08-02 13:00:00')`)
+
+  expect(unreadReplyCandidates(database, { minReplies: 1, version: 'v3' })).toHaveLength(0)
+
+  database.run(`UPDATE posts SET created_at='2026-08-02 13:00:01' WHERE id=11`)
+  expect(unreadReplyCandidates(database, { minReplies: 1, version: 'v3' })).toEqual([
+    expect.objectContaining({ handle: 'reader', unread_replies: 1 }),
+  ])
+})
