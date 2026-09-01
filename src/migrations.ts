@@ -2849,7 +2849,7 @@ export const migrations: Migration[] = [
     up(database) {
       database.run(`CREATE TABLE IF NOT EXISTS interacted_campaign_runs (
         id TEXT PRIMARY KEY,campaign_version TEXT NOT NULL,min_replies INTEGER NOT NULL,max_days INTEGER,
-        status TEXT NOT NULL CHECK(status IN ('review','running','completed','abandoned')),
+        status TEXT NOT NULL CHECK(status IN ('review','running','completed')),
         created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,started_at TEXT,completed_at TEXT
       );
       CREATE TABLE IF NOT EXISTS interacted_campaign_run_recipients (

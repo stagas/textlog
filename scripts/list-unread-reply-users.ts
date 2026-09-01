@@ -16,7 +16,7 @@ export type UnreadReplyUser = Pick<Candidate, 'handle' | 'unread_replies' | 'old
 type Delivery = { id: number; status: 'sending' | 'sent' | 'failed' | 'uncertain'; run_id: string;
   idempotency_key: string }
 type CampaignRun = { id: string; campaign_version: InteractedCampaignVersion; min_replies: number;
-  max_days: number | null; status: 'review' | 'running' | 'completed' | 'abandoned'; created_at: string }
+  max_days: number | null; status: 'review' | 'running' | 'completed'; created_at: string }
 export type InteractedCampaignEnvironment = { APP_URL?: string; EMAIL_FROM?: string; RESEND_API_KEY?: string }
 
 const usage = `Usage: bun run users:unread-replies -- [options]
@@ -119,7 +119,7 @@ export function createInteractedCampaignRun(database: Database, options: {
   const id = crypto.randomUUID()
   const candidates = recipients(database, options)
   database.transaction(() => {
-    database.query(`UPDATE interacted_campaign_runs SET status='abandoned',completed_at=CURRENT_TIMESTAMP
+    database.query(`UPDATE interacted_campaign_runs SET status='completed',completed_at=CURRENT_TIMESTAMP
       WHERE campaign_version=? AND status IN ('review','running')`).run(options.version)
     database.query(`INSERT INTO interacted_campaign_runs
       (id,campaign_version,min_replies,max_days,status) VALUES(?,?,?,?,'review')`)
