@@ -230,10 +230,11 @@ test('compose offers a server-rendered post preview', () => {
     preview: true,
   }))
 
-  expect(form).toContain('value="preview" name="action">preview</button>')
-  expect(form).toContain('value="autotags" name="action">autotags</button>')
-  expect(form.indexOf('>autotags</button>')).toBeLessThan(form.indexOf('>preview</button>'))
-  expect(form).toContain('class="button" accessKey="p">post →</button>')
+  expect(form).toContain('title="Preview this post before publishing" name="action">preview</button>')
+  expect(form).toContain('title="Enrich post with hashtags" name="action">autotags')
+  expect(form).toContain('<span class="new-badge compose-new-badge" aria-hidden="true">NEW</span>')
+  expect(form.indexOf('>autotags')).toBeLessThan(form.indexOf('>preview</button>'))
+  expect(form).toContain('class="button" accessKey="p" title="Publish this post">post →</button>')
   expect(form.indexOf('>preview</button>')).toBeLessThan(form.indexOf('>post →</button>'))
   expect(preview).toContain('<h2>preview</h2>')
   expect(preview).toContain('What’s on your mind')
@@ -444,7 +445,7 @@ test('compose carries its originating page through preview and offers cancel bef
 
   expect(html).toContain('name="from" value="/latest?cursor=abc#post-2"')
   expect(html).toContain(
-    'class="secondary-action cancel-action edit-post-cancel" href="/latest?cursor=abc#post-2">cancel</a>',
+    'class="secondary-action cancel-action edit-post-cancel" href="/latest?cursor=abc#post-2" title="Cancel writing and go back">cancel</a>',
   )
   expect(html.indexOf('>cancel</a>')).toBeLessThan(html.indexOf('>preview</button>'))
 })
@@ -1991,8 +1992,9 @@ test('signed-in feed pages put the write form before the feed tabs', () => {
     expect(html).toContain('placeholder="What’s on your mind, @reader?"')
     expect(html).not.toContain('class="compose-heading"')
     expect(html).not.toContain('autofocus')
+    expect(html).toContain('any<span class="new-badge feed-tab-new-badge" aria-hidden="true">NEW</span>')
     expect(html).toContain(
-      '<label class="secondary-action posting-help-action" for="embedded-posting-help"><input class="posting-help-toggle" id="embedded-posting-help" type="checkbox" aria-controls="embedded-posting-help-content"/>help</label>',
+      '<label class="secondary-action posting-help-action" for="embedded-posting-help" title="Show writing and formatting help"><input class="posting-help-toggle" id="embedded-posting-help" type="checkbox" aria-controls="embedded-posting-help-content"/>help</label>',
     )
     expect(html).toContain(
       '<div class="posting-help-controlled-summary"><span class="posting-help-limits">500 chars / 15 lines max</span> · use #hashtags, @mentions and more</div>',
@@ -2824,7 +2826,9 @@ test('Profile edit offers a data download without rendering notes', () => {
   expect(html).toContain('href="/account/edit/notifications?from=%2Flatest%3Fpage%3D2"')
   expect(html).toContain('Handles must be 2–24 characters')
   expect(html).toContain('You can change your handle up to two times per month.')
+  expect(html).toContain('Mood can be any emoji character.')
   expect(html).toContain('aria-describedby="profile-handle-help"')
+  expect(html).toContain('mood<span class="new-badge profile-mood-new-badge" aria-hidden="true">NEW</span>')
   expect(html).toContain('<details class="posting-help-details">')
   expect(html).toContain('<span class="posting-help-limits">300 chars / 10 lines max</span>')
   expect(html).toContain('300 chars / 10 lines max</span> · use #hashtags, @mentions and more</span>')

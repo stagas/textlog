@@ -80,23 +80,30 @@ export function WriteForm(
       <FormActions secondary={
         <span className="edit-post-actions">
           {embedded ? (
-            <label className="secondary-action posting-help-action" htmlFor={embeddedHelpId}>
+            <label className="secondary-action posting-help-action" htmlFor={embeddedHelpId}
+              title="Show writing and formatting help">
               <input className="posting-help-toggle" id={embeddedHelpId} type="checkbox"
                 aria-controls={`${embeddedHelpId}-content`} defaultChecked={!!suggestionSearch} />
               help
             </label>
           ) : (
-            <a className="secondary-action cancel-action edit-post-cancel" href={returnPath}>cancel</a>
+            <a className="secondary-action cancel-action edit-post-cancel" href={returnPath}
+              title="Cancel writing and go back">cancel</a>
           )}
-          <button className="secondary-action" name="action" value="autotags">autotags</button>
-          <button className="secondary-action" name="action" value="preview">preview</button>
+          <button className="secondary-action compose-autotags-action" name="action" value="autotags"
+            title="Enrich post with hashtags">
+            autotags<span className="new-badge compose-new-badge" aria-hidden="true">NEW</span>
+          </button>
+          <button className="secondary-action" name="action" value="preview"
+            title="Preview this post before publishing">preview</button>
           <button className="secondary-action" name="action" value="draft"
+            title="Save this post as a draft"
             formAction={draftId ? `/drafts/${draftId}` : undefined}
           >
             draft
           </button>
         </span>
-      } primary={<button className="button" accessKey="p">post →</button>} />
+      } primary={<button className="button" accessKey="p" title="Publish this post">post →</button>} />
     </div>
   )
   return (

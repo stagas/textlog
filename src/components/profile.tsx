@@ -167,12 +167,15 @@ export function Profile(
                         spellCheck={false} />
                     </label>
                     <label className="profile-mood-field">
-                      mood<input name="mood" aria-label="mood" defaultValue={editMood} autoComplete="off"
+                      <span className="profile-mood-label">mood
+                        <span className="new-badge profile-mood-new-badge" aria-hidden="true">NEW</span>
+                      </span>
+                      <input name="mood" aria-label="mood" defaultValue={editMood} autoComplete="off"
                         inputMode="text" size={2} />
                     </label>
                     <span id="profile-handle-help" className="form-hint">
                       Handles must be 2–24 characters and use only letters, numbers, or underscores.{' '}
-                      You can change your handle up to two times per month.
+                      You can change your handle up to two times per month. Mood can be any emoji character.
                     </span>
                   </div>
                   <div className="bio-field">

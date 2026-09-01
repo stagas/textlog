@@ -648,6 +648,7 @@ export function FeedTabs(
           >
             <TabHighlight active={active === 'random'} />
             any
+            <span className="new-badge feed-tab-new-badge" aria-hidden="true">NEW</span>
           </a>
           <a className={active === 'latest' ? 'active' : ''}
             aria-current={active === 'latest' ? 'page' : undefined}
