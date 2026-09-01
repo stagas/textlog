@@ -50,7 +50,7 @@ import { enrichPosts, rewireVisibleAncestorGaps } from './posts'
 import { visibleTagFollowerCounts, visibleUserProfileStats } from './posts'
 import { createPost, isThreadLocked, updatePost } from './posts'
 import { createPublicArchive, publicArchiveIsCurrent } from './public-archive'
-import { RECAP_POPULAR_NOTE_IDS, recapEmail } from './recap-email'
+import { RECAP_POPULAR_NOTE_IDS, recapEmail, recapEmailV2 } from './recap-email'
 import { searchExpression, searchPeople, searchPosts, searchTags, searchTerms } from './search'
 import { sitemapIndex, sitemapSection } from './seo'
 import { insertSession, markSessionUsed, renewSession, SESSION_LIFETIME_MS, sessionHash } from './sessions'
@@ -452,6 +452,10 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
     case 'maintenance.recapPreview': {
       const { requestUrl } = input as DatabaseDomainInput<'maintenance.recapPreview'>
       return recapEmail(database, requestUrl, 'audit-preview') as DatabaseDomainOutput<K>
+    }
+    case 'maintenance.recapV2Preview': {
+      const { requestUrl } = input as DatabaseDomainInput<'maintenance.recapV2Preview'>
+      return recapEmailV2(database, requestUrl, 'audit-preview') as DatabaseDomainOutput<K>
     }
     case 'maintenance.interactedPreview': {
       const { requestUrl } = input as DatabaseDomainInput<'maintenance.interactedPreview'>

@@ -1,6 +1,6 @@
 import { Database } from 'bun:sqlite'
 import { expect, test } from 'bun:test'
-import { recapEmail } from './recap-email'
+import { recapEmail, recapEmailV2 } from './recap-email'
 
 test('recap email renders the launch highlights as a standalone email document', () => {
   const database = new Database(':memory:')
@@ -44,4 +44,33 @@ test('recap email renders the launch highlights as a standalone email document',
   expect(html).toContain('>Unsubscribe from recap emails</a>')
   expect(html).toContain('/hot"')
   expect(html).not.toContain('Notes we kept thinking about')
+})
+
+test('v2 recap email renders the complete recap and popular conversations', () => {
+  const database = new Database(':memory:')
+  database.run(`CREATE TABLE users (
+    id INTEGER PRIMARY KEY,handle TEXT NOT NULL,deleted_at TEXT,suspended_at TEXT
+  );
+  CREATE TABLE posts (
+    id INTEGER PRIMARY KEY,user_id INTEGER NOT NULL,parent_id INTEGER,body TEXT NOT NULL,
+    created_at TEXT,deleted_at TEXT
+  );
+  CREATE TABLE post_hashtags (post_id INTEGER,tag TEXT);
+  INSERT INTO users VALUES(1,'writer',NULL,NULL);
+  INSERT INTO posts VALUES(10,1,NULL,'A conversation starter','2026-01-01',NULL);
+  INSERT INTO posts VALUES(11,1,10,'A reply','2026-01-02',NULL);`)
+
+  const html = recapEmailV2(database, 'https://preview.textlog.test/recap-email-v2', 'recipient-token')
+
+  expect(html).toStartWith('<!doctype html>')
+  expect(html).toContain('More ways to connect.<br>Still quietly.')
+  expect(html).toContain('What textlog has become')
+  expect(html).toContain('Feeds with a point of view')
+  expect(html).toContain('The conversations that grew')
+  expect(html).toContain('@writer')
+  expect(html).toContain('A reply')
+  expect(html).not.toContain('recent replies')
+  expect(html).toContain('/post/10')
+  expect(html).toContain('/blog/recap-v2')
+  expect(html).toContain('/account/recap-emails/unsubscribe?token=recipient-token')
 })

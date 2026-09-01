@@ -9,7 +9,8 @@ function campaignDatabase() {
     id INTEGER PRIMARY KEY,handle TEXT,email TEXT,bio TEXT,recap_emails INTEGER,
     email_verified_at TEXT,deleted_at TEXT,suspended_at TEXT
   );
-  CREATE TABLE posts (id INTEGER PRIMARY KEY,user_id INTEGER,body TEXT,deleted_at TEXT);
+  CREATE TABLE posts (id INTEGER PRIMARY KEY,user_id INTEGER,parent_id INTEGER,body TEXT,created_at TEXT,deleted_at TEXT);
+  CREATE TABLE post_hashtags (post_id INTEGER,tag TEXT);
   CREATE TABLE recap_unsubscribe_tokens (
     token_hash TEXT PRIMARY KEY,user_id INTEGER NOT NULL,created_at TEXT DEFAULT CURRENT_TIMESTAMP
   );
@@ -49,8 +50,8 @@ test('recap campaign honors rate limits and never resends a completed version', 
     log: () => {},
   }
 
-  expect(await sendRecapCampaign(options)).toMatchObject({ version: 'v1', sent: 1, skipped: 0, failed: 0 })
-  expect(await sendRecapCampaign(options)).toMatchObject({ version: 'v1', sent: 0, skipped: 1, failed: 0 })
+  expect(await sendRecapCampaign(options)).toMatchObject({ version: 'v2', sent: 1, skipped: 0, failed: 0 })
+  expect(await sendRecapCampaign(options)).toMatchObject({ version: 'v2', sent: 0, skipped: 1, failed: 0 })
   expect(requests).toHaveLength(2)
   expect(requests[0].headers.get('idempotency-key')).toBe(requests[1].headers.get('idempotency-key'))
   expect(sleeps.some(ms => ms >= 2_000)).toBe(true)
@@ -65,7 +66,7 @@ test('recap campaign honors rate limits and never resends a completed version', 
   expect(String(requests[1].body.html)).toContain(`token=${unsubscribeToken}`)
   expect(database.query(`SELECT campaign_version,status,attempts,provider_id
     FROM recap_email_deliveries`).get()).toEqual({
-    campaign_version: 'v1',
+    campaign_version: 'v2',
     status: 'sent',
     attempts: 2,
     provider_id: 'resend-message-1',
@@ -98,7 +99,7 @@ test('--test sends only to admins and does not read or write campaign history', 
   expect(await sendRecapCampaign(options)).toMatchObject({ testMode: true, sent: 1, skipped: 0 })
   expect(await sendRecapCampaign(options)).toMatchObject({ testMode: true, sent: 1, skipped: 0 })
   expect(messages).toHaveLength(2)
-  expect(messages.every(message => message.subject === '[TEST] A lot has happened · textlog')).toBe(true)
+  expect(messages.every(message => message.subject === '[TEST] The story so far · textlog')).toBe(true)
   expect(database.query('SELECT count(*) count FROM recap_email_deliveries').get()).toEqual({ count: 1 })
 })
 

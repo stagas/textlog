@@ -3,9 +3,9 @@ import { ADMIN_EMAILS } from '../src/admin'
 import { appName } from '../src/brand'
 import { defaultDatabasePath } from '../src/database-backup'
 import { runMigrations } from '../src/migrations'
-import { recapEmailForUser } from '../src/recap-email'
+import { recapEmailV2ForUser } from '../src/recap-email'
 
-export const RECAP_CAMPAIGN_VERSION = 'v1'
+export const RECAP_CAMPAIGN_VERSION = 'v2'
 const SEND_INTERVAL_MS = 1_000
 const MAX_RATE_LIMIT_RETRIES = 10
 
@@ -67,11 +67,11 @@ function claimDelivery(database: Database, recipient: Recipient, runId: string) 
 }
 
 function plainText(name: string, origin: string, unsubscribeUrl: string) {
-  return `A lot has happened. Quietly, of course.
+  return `More ways to connect. Still quietly.
 
-Since launch, ${name} has added richer writing, better discovery and conversations, appearance controls, notifications, multiple accounts, feeds, embeds, an API, a public archive, and an Android app.
+The complete ${name} recap: richer writing, readable conversations, focused feeds, better discovery, personal controls, translation, notifications, and an open API.
 
-See what's happening: ${new URL('/hot', origin).href}
+Read the complete recap: ${new URL('/blog/recap-v2', origin).href}
 
 Unsubscribe from recap emails: ${unsubscribeUrl}`
 }
@@ -116,7 +116,7 @@ export async function sendRecapCampaign(options: {
       skipped++
       continue
     }
-    const html = recapEmailForUser(options.database, origin, recipient.id)
+    const html = recapEmailV2ForUser(options.database, origin, recipient.id)
     const unsubscribe = html.match(/href="([^"]+)"[^>]*>Unsubscribe from recap emails<\/a>/)?.[1]
       ?.replaceAll('&amp;', '&')
     if (!unsubscribe) throw new Error('Recap email did not contain an unsubscribe URL')
@@ -140,7 +140,7 @@ export async function sendRecapCampaign(options: {
           body: JSON.stringify({
             from,
             to: [recipient.email],
-            subject: `${testMode ? '[TEST] ' : ''}A lot has happened · ${name}`,
+            subject: `${testMode ? '[TEST] ' : ''}The story so far · ${name}`,
             text: plainText(name, origin, unsubscribe),
             html,
             headers: {

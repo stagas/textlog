@@ -40,6 +40,7 @@ export type DatabaseDomainOperations = {
   'maintenance.automatedBackup': { input: { directory: string; now: string }; output: unknown }
   'maintenance.publicArchive': { input: { path: string; now: string }; output: unknown | null }
   'maintenance.recapPreview': { input: { requestUrl: string }; output: string }
+  'maintenance.recapV2Preview': { input: { requestUrl: string }; output: string }
   'maintenance.interactedPreview': { input: { requestUrl: string }; output: string }
   'blog.recapPosts': { input: { viewerId: number }; output: PostView[] }
   'blog.recapV2Posts': { input: { viewerId: number }; output: PostView[] }

@@ -368,7 +368,7 @@ app.use('*', async (c, next) => {
   if (c.req.method !== 'GET' || !c.res.headers.get('content-type')?.includes('text/html')) return
   const url = new URL(c.req.url)
   const privatePath =
-    /^\/(?:enter|forgot-password|reset-password|choose-handle|navigation-check|write|compose|activity|admin|search|account|panels-gallery|recap-email|interacted-email)(?:\/|$)/
+    /^\/(?:enter|forgot-password|reset-password|choose-handle|navigation-check|write|compose|activity|admin|search|account|panels-gallery|recap-email(?:-v2)?|interacted-email)(?:\/|$)/
       .test(url.pathname) || /^\/post\/\d+\/(?:edit|delete)$/.test(url.pathname)
   const transientParameters = ['reply', 'report', 'reported', 'edit', 'reset', 'token']
   const navigationOnly = url.searchParams.has('from')
@@ -605,6 +605,10 @@ app.get('/blog/building-textlog-without-javascript', c =>
   page(<BlogBuildingWithoutJavascript user={currentUser(c.req.raw)} pageUrl={c.req.url} />))
 app.get('/recap-email', async c =>
   c.html(await databaseService().call('maintenance.recapPreview', {
+    requestUrl: c.req.url,
+  }), 200, { 'cache-control': 'private, no-store' }))
+app.get('/recap-email-v2', async c =>
+  c.html(await databaseService().call('maintenance.recapV2Preview', {
     requestUrl: c.req.url,
   }), 200, { 'cache-control': 'private, no-store' }))
 app.get('/interacted-email', async c =>
