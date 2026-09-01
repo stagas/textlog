@@ -1212,13 +1212,14 @@ form:has(> .follows-you) {
 .brand {
   color: var(--ink);
   display: inline-flex;
-  align-self: stretch;
+  align-self: center;
   align-items: baseline;
   gap: var(--space-2);
   font-size: var(--font-size-20);
   font-weight: 800;
   letter-spacing: -1px;
   line-height: 1;
+  transform: translateY(-2.75px);
   border: 0;
 }
 

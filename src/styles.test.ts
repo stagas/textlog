@@ -328,7 +328,7 @@ describe('in-memory stylesheet', () => {
 
   test('makes header navigation actions full-height hit targets', async () => {
     const css = await Bun.file(new URL('./styles.css', import.meta.url)).text()
-    expect(css).toContain('.brand {\n  color: var(--ink);\n  display: inline-flex;\n  align-self: stretch;')
+    expect(css).toContain('.brand {\n  color: var(--ink);\n  display: inline-flex;\n  align-self: center;')
     expect(css).toContain('header>nav {\n  max-width: 100%;\n  margin-left: auto;\n  align-self: stretch;')
     expect(css).toContain('header>nav>a:not(.button),\n.account-nav-row>a:not(.button),\n.account-menu-handle {')
     expect(css).toContain('.account-nav-row {\n  display: flex;\n  align-self: stretch;')
@@ -637,7 +637,8 @@ describe('in-memory stylesheet', () => {
     )
     expect(css).toContain('display: flex;\n    justify-content: flex-end;\n    gap: var(--space-4);')
     expect(css).toContain('.feed-tab-new-badge {\n    top: auto;\n    bottom: calc(1lh + 14px);')
-    expect(css).toContain('align-items: baseline;\n  gap: var(--space-2);')
+    expect(css).toContain('align-self: center;\n  align-items: baseline;\n  gap: var(--space-2);')
+    expect(css).toContain('line-height: 1;\n  transform: translateY(-2.75px);')
     expect(css).toContain('height: 24px;\n  transform: translateY(5.5px);')
     expect(css).toContain(
       '@media (max-width: 520px) {\n  .panel:is(.write-compose, .replybox) {\n'
