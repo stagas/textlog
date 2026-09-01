@@ -151,7 +151,7 @@ export function Connections(
                 ? kind === 'blocked'
                   ? <BlockedPeopleList user={user!} people={people} />
                   : (
-                    <ConnectionPeople user={user} people={people} showNoteCount={false} showPopover={false}
+                    <ConnectionPeople user={user} people={people} showMood showNoteCount={false} showPopover={false}
                       returnPath={person => connectionReturnPath(`#person-${person.id}`)} />
                   )
                 : (
@@ -185,7 +185,7 @@ export function Connections(
               path={withFrom(`/u/${profile.handle}?tab=${kind}${sortQuery}`)} label="People pagination"
               anchor="connections-people-heading" instantScroll={kind === 'following'} />
             <ConnectionPeople user={user} people={people} className="connections-list connections-list-headed"
-              showNoteCount={false} showPopover={false}
+              showMood={kind === 'following'} showNoteCount={false} showPopover={false}
               returnPath={person => connectionReturnPath(`#person-${person.id}`)} />
             <Pagination page={page} totalPages={Math.ceil(total / CONNECTION_PAGE_SIZE)}
               path={withFrom(`/u/${profile.handle}?tab=${kind}${sortQuery}`)} label="People pagination"

@@ -83,7 +83,7 @@ export function Explore({ user, welcome = false, tagsPage = 1, peoplePage = 1, d
               <article key={p.id} id={`person-${p.id}`}>
                 <div>
                   <div>
-                    <UserReference handle={p.handle} bio={p.bio} noteCount={p.posts} stats={profileStats[p.id]}
+                    <UserReference handle={p.handle} mood={p.mood} bio={p.bio} noteCount={p.posts} stats={profileStats[p.id]}
                       following={p.following} user={user} followsViewer={p.followsViewer} showPopover={false}
                       href={`/u/${p.handle}?from=${encodeURIComponent(exploreReturnPath(p.id))}`}
                       navigationQuery={`?from=${encodeURIComponent(exploreReturnPath(p.id))}`} />

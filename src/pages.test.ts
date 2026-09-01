@@ -777,6 +777,21 @@ test('explore renders tag toggles above a full-width people section', () => {
   expect(html.lastIndexOf('aria-label="People pagination"')).toBeGreaterThan(html.indexOf('class="people"'))
 })
 
+test('explore renders a person mood next to their username', () => {
+  const html = renderToStaticMarkup(React.createElement(Explore, {
+    user: null,
+    data: {
+      tags: [],
+      people: [{ id: 2, handle: 'writer', mood: '🌞', email: '', bio: '', posts: 1 }],
+      peopleTotal: 1,
+      tagsTotal: 0,
+      profileStats: {},
+    },
+  }))
+
+  expect(html).toContain('>@writer</a><span class="post-mood">🌞</span>')
+})
+
 test('search post replies return to the originating result and page', () => {
   expect(searchPostReturnPath('ascii art', 1, 42)).toBe('/search?q=ascii%20art#post-42')
   expect(searchPostReturnPath('ascii art', 3, 42)).toBe('/search?q=ascii%20art&page=3#post-42')
@@ -3020,6 +3035,26 @@ test('Following and followers paginate every 8 people', () => {
     expect(html.indexOf('aria-label="People pagination"')).toBeLessThan(html.indexOf('connection-people'))
     expect(html.lastIndexOf('aria-label="People pagination"')).toBeGreaterThan(html.indexOf('connection-people'))
   }
+})
+
+test('following renders a person mood next to their username', () => {
+  const profile = { id: 1, handle: 'reader', email: '', bio: '' }
+  const person = { id: 2, handle: 'writer', mood: '🌞', email: '', bio: '', posts: 1, viewerFollowing: false }
+  const html = renderToStaticMarkup(React.createElement(Connections, {
+    user: null,
+    profile,
+    people: [person],
+    kind: 'following',
+    page: 1,
+    total: 1,
+    noteCount: 0,
+    followerCount: 0,
+    followingCount: 1,
+    followingTagCount: 0,
+    following: false,
+  }))
+
+  expect(html).toContain('>@writer</a><span class="post-mood">🌞</span>')
 })
 
 test('Connection sorting can only be changed on the viewer’s own profile', () => {

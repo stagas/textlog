@@ -1032,12 +1032,14 @@ export function BlockedPeopleList({ user, people }: { user: User; people: Person
 }
 
 export function ConnectionPeople(
-  { user, people, className = '', highlightTerms = [], returnPath, showNoteCount = true, showPopover = true }: {
+  { user, people, className = '', highlightTerms = [], returnPath, showMood = false, showNoteCount = true,
+    showPopover = true }: {
     user: User | null
     people: PersonView[]
     className?: string
     highlightTerms?: string[]
     returnPath?: (person: PersonView) => string
+    showMood?: boolean
     showNoteCount?: boolean
     showPopover?: boolean
   },
@@ -1048,7 +1050,8 @@ export function ConnectionPeople(
         <article key={person.id} id={`person-${person.id}`}>
           <div>
             <div>
-              <UserReference handle={person.handle} bio={person.bio} noteCount={person.posts}
+              <UserReference handle={person.handle} mood={showMood ? person.mood : undefined} bio={person.bio}
+                noteCount={person.posts}
                 stats={person.profileStats} following={person.viewerFollowing} followsViewer={person.followsViewer}
                 user={user}
                 href={`/u/${person.handle}${returnPath ? `?from=${encodeURIComponent(returnPath(person))}` : ''}`}
