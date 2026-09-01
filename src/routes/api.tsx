@@ -258,7 +258,7 @@ function openApiDocument() {
         { name: 'q', in: 'query', schema: { type: 'string', maxLength: MAX_SEARCH_LENGTH } },
         ...collectionParameters,
       ], responses: { ...jsonResponses, '200': collectionResponse, '401': writeResponses['401'] } } },
-      '/autotags': {
+      '/autotag': {
         post: { summary: 'Enrich text with hashtags', security: authSecurity,
           description: 'Returns the complete text enriched with relevant hashtags. It does not save a post.',
           requestBody: requestBody({ type: 'object', required: ['body'], properties: {
@@ -267,7 +267,7 @@ function openApiDocument() {
           responses: { ...writeResponses, '200': dataResponse({ type: 'object', required: ['body'], properties: {
             body: { type: 'string', minLength: 1, maxLength: POST_MAX },
           } }), '422': errorResponse('The autotagged text exceeds the post limits'),
-            '503': errorResponse('Autotags are unavailable') } },
+            '503': errorResponse('Autotag is unavailable') } },
       },
       '/feeds/all.{format}': {
         get: { summary: 'All posts as RSS or Atom', parameters: [formatParameter], responses: syndicationResponses,

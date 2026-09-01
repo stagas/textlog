@@ -1,7 +1,7 @@
 import { describe, expect, test } from 'bun:test'
 import { autotagText } from './openrouter'
 
-describe('OpenRouter autotags', () => {
+describe('OpenRouter autotag', () => {
   test('returns the complete enriched text', async () => {
     const result = await autotagText('A note about Bun and TypeScript', {
       apiKey: 'test',

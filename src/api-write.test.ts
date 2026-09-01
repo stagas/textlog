@@ -145,10 +145,10 @@ describe('API writes', () => {
     expect((await post(app, 'bob-token', { body: 'hi' })).status).toBe(201)
   })
 
-  test('autotags requires authentication and validates text before contacting the provider', async () => {
+  test('autotag requires authentication and validates text before contacting the provider', async () => {
     const { app } = fixture()
-    expect((await call(app, '/api/v1/autotags', { method: 'POST', body: { body: 'hello' } })).status).toBe(401)
-    const invalid = await call(app, '/api/v1/autotags', {
+    expect((await call(app, '/api/v1/autotag', { method: 'POST', body: { body: 'hello' } })).status).toBe(401)
+    const invalid = await call(app, '/api/v1/autotag', {
       method: 'POST', token: 'alice-token', body: { body: 'x'.repeat(POST_MAX + 1) },
     })
     expect(invalid.status).toBe(400)

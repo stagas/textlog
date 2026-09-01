@@ -22,7 +22,7 @@ function enrichedText(text: string) {
   return text.replace(/^\s*```(?:\w+)?\s*/i, '').replace(/\s*```\s*$/i, '').trim()
 }
 
-async function requestAutotags(body: string, model: string, apiKey: string, request: Fetcher) {
+async function requestAutotag(body: string, model: string, apiKey: string, request: Fetcher) {
   return await request(OPENROUTER_URL, {
     method: 'POST',
     headers: { authorization: `Bearer ${apiKey}`, 'content-type': 'application/json' },
@@ -46,22 +46,22 @@ export async function autotagText(body: string, options: {
   fetch?: Fetcher
 } = {}): Promise<AutotagResult> {
   const apiKey = options.apiKey ?? Bun.env.OPENROUTER_API_KEY
-  if (!apiKey) return { ok: false, message: 'Autotags are not configured.' }
+  if (!apiKey) return { ok: false, message: 'Autotag is not configured.' }
   const freeModel = options.freeModel || Bun.env.OPENROUTER_FREE_MODEL || DEFAULT_FREE_MODEL
   const paidModel = options.paidModel || Bun.env.OPENROUTER_PAID_MODEL || DEFAULT_PAID_MODEL
   const request = options.fetch || fetch
   try {
-    let response = await requestAutotags(body, freeModel, apiKey, request)
+    let response = await requestAutotag(body, freeModel, apiKey, request)
     if (response.status === 429 && paidModel !== freeModel) {
-      response = await requestAutotags(body, paidModel, apiKey, request)
+      response = await requestAutotag(body, paidModel, apiKey, request)
     }
-    if (!response.ok) return { ok: false, message: 'Could not add autotags right now. Please try again.' }
+    if (!response.ok) return { ok: false, message: 'Could not autotag right now. Please try again.' }
     const enriched = enrichedText(completionText(await response.json() as OpenRouterCompletion))
     return enriched
       ? { ok: true, body: enriched }
-      : { ok: false, message: 'No useful autotags were found.' }
+      : { ok: false, message: 'No useful autotag result was found.' }
   }
   catch {
-    return { ok: false, message: 'Could not add autotags right now. Please try again.' }
+    return { ok: false, message: 'Could not autotag right now. Please try again.' }
   }
 }

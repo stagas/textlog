@@ -291,7 +291,7 @@ export function registerPostsRoutes(app: Hono) {
           suggestionSearch={suggestionSearch} />,
       )
     }
-    if (f.action === 'autotags') {
+    if (f.action === 'autotag') {
       const result = await autotagText(body)
       const enrichedBody = result.ok ? normalizePostBody(result.body) : body
       const valid = result.ok && validPostBody(enrichedBody)
@@ -478,7 +478,7 @@ export function registerPostsRoutes(app: Hono) {
           suggestionSearch={suggestionSearch} />,
       )
     }
-    if (f.action === 'autotags') {
+    if (f.action === 'autotag') {
       const result = await autotagText(body)
       const enrichedBody = result.ok ? normalizePostBody(result.body) : body
       const valid = result.ok && validPostBody(enrichedBody)
@@ -589,7 +589,7 @@ export function registerPostsRoutes(app: Hono) {
           suggestionSearch={suggestionSearch} />,
       )
     }
-    if (f.action === 'autotags') {
+    if (f.action === 'autotag') {
       const result = await autotagText(body)
       const enrichedBody = result.ok ? normalizePostBody(result.body) : body
       const valid = result.ok && validPostBody(enrichedBody)

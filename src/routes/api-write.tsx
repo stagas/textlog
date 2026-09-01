@@ -233,7 +233,7 @@ export function registerApiWriteRoutes(app: Hono, service: DatabaseService,
     return json({ data: { ...serialize(guard.user!), bio } })
   })
 
-  app.post('/api/v1/autotags', async c => {
+  app.post('/api/v1/autotag', async c => {
     const guard = await writer(service, requestApiUser, c)
     if (guard.error) return guard.error
     if (!canPublishPosts(guard.user!)) return fail('email_unverified', 'Verify your email address before posting', 403)
@@ -241,10 +241,10 @@ export function registerApiWriteRoutes(app: Hono, service: DatabaseService,
     const content = normalizePostBody(text(payload?.body))
     if (!validPostBody(content)) return fail('invalid_body', postBodyValidationMessage(content), 400)
     const result = await autotagText(content)
-    if (!result.ok) return fail('autotags_unavailable', result.message, 503)
+    if (!result.ok) return fail('autotag_unavailable', result.message, 503)
     const enriched = normalizePostBody(result.body)
     if (!validPostBody(enriched)) {
-      return fail('autotags_too_large',
+      return fail('autotag_too_large',
         `The message is too big to autotag within the ${POST_MAX}-character limit. Edit it down and try again.`, 422)
     }
     return json({ data: { body: enriched } })

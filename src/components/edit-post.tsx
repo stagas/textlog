@@ -55,6 +55,9 @@ export function EditPost(
               <a className="secondary-action danger" href={'/post/' + post.id + '/delete' + returnQuery}>
                 delete
               </a>
+              <a className="secondary-action" href={returnPath || '/post/' + post.id}>
+                back
+              </a>
             </div>
           )} secondary={
           <span className="edit-post-actions">
@@ -62,9 +65,9 @@ export function EditPost(
           </span>
         } primary={
           <span className="edit-post-primary-actions">
-            <button className="secondary-action compose-autotags-action" name="action" value="autotags"
+            <button className="secondary-action compose-autotag-action" name="action" value="autotag"
               title="Enrich post with hashtags">
-              autotags<span className="new-badge compose-new-badge" aria-hidden="true">NEW</span>
+              autotag<span className="new-badge compose-new-badge" aria-hidden="true">NEW</span>
             </button>
             <button className="secondary-action" name="action" value="preview">preview</button>
             <button className="button">save →</button>

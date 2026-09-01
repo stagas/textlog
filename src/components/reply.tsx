@@ -139,9 +139,9 @@ export function Reply(
                 secondary={
                   <span className="edit-post-actions">
                     <PostingHelpAction id="reply-posting-help" defaultChecked={!!suggestionSearch} />
-                    <button className="secondary-action compose-autotags-action" name="action" value="autotags"
+                    <button className="secondary-action compose-autotag-action" name="action" value="autotag"
                       title="Enrich post with hashtags">
-                      autotags<span className="new-badge compose-new-badge" aria-hidden="true">NEW</span>
+                      autotag<span className="new-badge compose-new-badge" aria-hidden="true">NEW</span>
                     </button>
                     <button className="secondary-action" name="action" value="preview">preview</button>
                     <button className="secondary-action" name="action" value="draft"
