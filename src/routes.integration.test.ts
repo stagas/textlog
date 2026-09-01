@@ -240,6 +240,17 @@ async function signup(handle: string, email: string, _password: string, ip?: str
   return cookie
 }
 
+async function signupWithoutHandle(email: string) {
+  const response = await request('/enter', { method: 'POST', form: { email } })
+  expect(response.status).toBe(200)
+  const emailMessage = capturedEmails().filter(message => message.to === email).at(-1)
+  expect(emailMessage).toBeDefined()
+  const magic = await request(`/enter/magic?token=${encodeURIComponent(linkToken(emailMessage!))}`)
+  expect(magic.status).toBe(303)
+  expect(magic.headers.get('location')).toStartWith('/choose-handle')
+  return sessionCookie(magic)
+}
+
 beforeAll(async () => {
   const port = await availablePort()
   origin = `http://127.0.0.1:${port}`
@@ -272,6 +283,28 @@ afterAll(async () => {
   if (server && server.exitCode === null) server.kill()
   if (server) await server.exited
   rmSync(temporaryDirectory, { recursive: true, force: true })
+})
+
+test('email unsubscribe links bypass handle selection for unfinished signups', async () => {
+  const email = 'unfinished-unsubscribe@example.com'
+  const cookie = await signupWithoutHandle(email)
+  const user = database.query('SELECT id FROM users WHERE email=?').get(email) as { id: number }
+
+  const recapToken = issueRecapUnsubscribeToken(database, user.id)
+  const recap = await request(`/account/recap-emails/unsubscribe?token=${encodeURIComponent(recapToken)}`, {
+    cookie,
+    acceptHtml: true,
+  })
+  expect(recap.status).toBe(200)
+  expect(await recap.text()).toContain('You have been unsubscribed.')
+
+  const interactedToken = issueInteractedUnsubscribeToken(database, user.id)
+  const interacted = await request(
+    `/account/interacted-emails/unsubscribe?token=${encodeURIComponent(interactedToken)}`,
+    { method: 'POST', cookie },
+  )
+  expect(interacted.status).toBe(200)
+  expect(await interacted.text()).toBe('Unsubscribed')
 })
 
 test('internal identity headers cannot be supplied by clients', async () => {

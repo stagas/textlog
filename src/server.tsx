@@ -63,8 +63,12 @@ const degradedAssets = new Map<string, string>([
   ['/email-logo.png', 'image/png'],
 ])
 
+function requestPath(request: Request) {
+  return new URL(request.url, 'http://localhost').pathname
+}
+
 function unavailableResponse(request: Request) {
-  const path = new URL(request.url).pathname
+  const path = requestPath(request)
   const retryAfter = String(runtime.retryAfterSeconds)
   if (path === '/health') {
     return Response.json({ status: 'unavailable', worker: runtime.state }, {
@@ -85,7 +89,7 @@ function unavailableResponse(request: Request) {
 }
 
 function mainThreadAsset(request: Request) {
-  const path = new URL(request.url).pathname
+  const path = requestPath(request)
   const contentType = degradedAssets.get(path)
   if (!contentType) return null
   return new Response(Bun.file(new URL(`../public${path}`, import.meta.url)), {
@@ -108,7 +112,7 @@ const databaseIndependentPaths = new Set([
 
 function isDatabaseIndependentRequest(request: Request) {
   if (request.method !== 'GET' && request.method !== 'HEAD') return false
-  const path = new URL(request.url).pathname
+  const path = requestPath(request)
   return databaseIndependentPaths.has(path) || path.startsWith('/uploads/')
 }
 
@@ -170,7 +174,7 @@ const server = Bun.serve({
   async fetch(request: Request, server: Bun.Server<unknown>) {
     const asset = mainThreadAsset(request)
     if (asset) return asset
-    const path = new URL(request.url).pathname
+    const path = requestPath(request)
     if (path === '/health' && (runtime.state !== 'ready' || !application || startupError)) {
       return unavailableResponse(request)
     }

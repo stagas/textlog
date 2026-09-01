@@ -58,6 +58,10 @@ const publicArchivePath = Bun.env.PUBLIC_ARCHIVE_PATH || 'public/dump.zip'
 const bootId = crypto.randomUUID()
 configureDevReload(devReloadEnabled ? bootId : undefined)
 const app = new Hono()
+const publicEmailPreferencePaths = new Set([
+  '/account/recap-emails/unsubscribe',
+  '/account/interacted-emails/unsubscribe',
+])
 app.use('*', async (c, next) => {
   const url = new URL(c.req.url)
   if ((c.req.method === 'GET' || c.req.method === 'HEAD') && url.pathname === '/'
@@ -390,7 +394,8 @@ app.use('*', async (c, next) => {
   await next()
 })
 app.use('*', async (c, next) => {
-  if (c.req.method !== 'POST' || ['/enter', '/choose-handle', '/logout'].includes(c.req.path)) return next()
+  if (c.req.method !== 'POST' || ['/enter', '/choose-handle', '/logout'].includes(c.req.path)
+    || publicEmailPreferencePaths.has(c.req.path)) return next()
   const user = currentUser(c.req.raw)
   if (user && !user.handle_chosen_at) {
     const referer = c.req.header('referer')
@@ -405,7 +410,8 @@ app.use('*', async (c, next) => {
   const user = currentUser(c.req.raw)
   const wantsHtml = c.req.header('accept')?.includes('text/html')
   if (c.req.method === 'GET' && wantsHtml && user && !user.handle_chosen_at
-    && c.req.path !== '/choose-handle' && !c.req.path.startsWith('/enter'))
+    && c.req.path !== '/choose-handle' && !c.req.path.startsWith('/enter')
+    && !publicEmailPreferencePaths.has(c.req.path))
   {
     const url = new URL(c.req.url)
     const nextPath = safeLocalPath(url.pathname + url.search)
