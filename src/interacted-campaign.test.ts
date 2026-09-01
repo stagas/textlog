@@ -25,7 +25,7 @@ function campaignDatabase() {
   );
   CREATE TABLE interacted_campaign_runs (
     id TEXT PRIMARY KEY,campaign_version TEXT,min_replies INTEGER,max_days INTEGER,status TEXT,
-    created_at TEXT DEFAULT CURRENT_TIMESTAMP,started_at TEXT,completed_at TEXT
+    created_at TEXT DEFAULT CURRENT_TIMESTAMP,started_at TEXT,completed_at TEXT,abandoned_at TEXT
   );
   CREATE TABLE interacted_campaign_run_recipients (
     run_id TEXT,user_id INTEGER,email TEXT,handle TEXT,unread_replies INTEGER,oldest_reply_at TEXT,
@@ -163,6 +163,20 @@ test('v3 only counts unread replies created after the v2 campaign started', () =
   expect(unreadReplyCandidates(database, { minReplies: 1, version: 'v3' })).toHaveLength(0)
 
   database.run(`UPDATE posts SET created_at='2026-08-02 13:00:01' WHERE id=11`)
+  expect(unreadReplyCandidates(database, { minReplies: 1, version: 'v3' })).toEqual([
+    expect.objectContaining({ handle: 'reader', unread_replies: 1 }),
+  ])
+})
+
+test('a later v3 run starts at the latest successfully sent v3 run', () => {
+  const database = campaignDatabase()
+  database.run(`INSERT INTO interacted_campaign_runs
+    (id,campaign_version,min_replies,status,created_at,started_at,completed_at)
+    VALUES ('v3-finished','v3',1,'completed','2026-08-03 09:00:00','2026-08-03 10:00:00',
+      '2026-08-03 11:00:00')`)
+  database.run(`UPDATE posts SET created_at='2026-08-03 09:59:59' WHERE id IN (13,15);
+    UPDATE posts SET created_at='2026-08-03 10:00:01' WHERE id=11`)
+
   expect(unreadReplyCandidates(database, { minReplies: 1, version: 'v3' })).toEqual([
     expect.objectContaining({ handle: 'reader', unread_replies: 1 }),
   ])

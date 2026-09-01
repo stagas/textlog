@@ -2862,6 +2862,13 @@ export const migrations: Migration[] = [
         ON interacted_campaign_runs(campaign_version,status,created_at);`)
     },
   },
+  {
+    version: 174,
+    name: 'interaction_campaign_run_abandonment',
+    up(database) {
+      addColumn(database, 'interacted_campaign_runs', 'abandoned_at', 'TEXT')
+    },
+  },
 ]
 
 export const latestMigrationVersion = migrations.at(-1)!.version

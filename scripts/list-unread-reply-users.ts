@@ -51,12 +51,18 @@ export function unreadReplyCandidates(database: Database, options: {
   maxDays?: number
   version?: InteractedCampaignVersion
 }) {
+  const version = options.version || INTERACTED_CAMPAIGN_VERSION
   const ageFilter = options.maxDays === undefined
     ? ''
     : 'AND reply.created_at >= datetime(\'now\', \'-\' || ? || \' days\')'
-  const previousVersion = options.version === 'v3' ? 'v2' : options.version === 'v2' ? 'v1' : null
-  const campaignCutoff = previousVersion
+  const previousVersion = version === 'v3' ? 'v2' : version === 'v2' ? 'v1' : null
+  const campaignCutoff = version !== 'v1'
     ? `AND reply.created_at >= coalesce(
+        (SELECT max(started_at) FROM interacted_campaign_runs
+          WHERE campaign_version='${version}' AND status='completed'
+            AND abandoned_at IS NULL AND started_at IS NOT NULL),
+        (SELECT min(created_at) FROM interacted_email_deliveries
+          WHERE campaign_version='${version}' AND status IN ('sent','uncertain')),
         (SELECT max(started_at) FROM interacted_campaign_runs
           WHERE campaign_version='${previousVersion}' AND started_at IS NOT NULL),
         (SELECT min(created_at) FROM interacted_email_deliveries
@@ -119,7 +125,7 @@ export function createInteractedCampaignRun(database: Database, options: {
   const id = crypto.randomUUID()
   const candidates = recipients(database, options)
   database.transaction(() => {
-    database.query(`UPDATE interacted_campaign_runs SET status='completed',completed_at=CURRENT_TIMESTAMP
+    database.query(`UPDATE interacted_campaign_runs SET abandoned_at=CURRENT_TIMESTAMP
       WHERE campaign_version=? AND status IN ('review','running')`).run(options.version)
     database.query(`INSERT INTO interacted_campaign_runs
       (id,campaign_version,min_replies,max_days,status) VALUES(?,?,?,?,'review')`)
@@ -139,7 +145,7 @@ function campaignRun(database: Database, id: string) {
 
 export function latestInteractedCampaignRun(database: Database, version: InteractedCampaignVersion) {
   return database.query(`SELECT id,campaign_version,min_replies,max_days,status,created_at
-    FROM interacted_campaign_runs WHERE campaign_version=? AND status IN ('review','running')
+    FROM interacted_campaign_runs WHERE campaign_version=? AND status IN ('review','running') AND abandoned_at IS NULL
     ORDER BY created_at DESC,rowid DESC LIMIT 1`).get(version) as CampaignRun | null
 }
 
