@@ -45,7 +45,8 @@ export function groupSimilarActivities(timeline: PersonalizedTimelineRow[]): Tim
 }
 
 export function Feed(
-  { user, data, title, path = '/my-feed', pageUrl, notificationBanner = false, toMe = false, expandedRootId }: {
+  { user, data, title, path = '/my-feed', pageUrl, notificationBanner = false, toMe = false, expandedRootId,
+    writeError, writeBody }: {
     user: User
     data: PersonalizedFeedData
     title?: string
@@ -54,6 +55,8 @@ export function Feed(
     notificationBanner?: false | 'notifications' | 'appearance' | 'invite' | 'bio' | 'notification-update' | 'donate'
     toMe?: boolean
     expandedRootId?: number
+    writeError?: string
+    writeBody?: string
   },
 ) {
   const feedPath = path
@@ -204,7 +207,7 @@ export function Feed(
   return (
     <Layout user={user} title={title} pageUrl={pageUrl} notificationBanner={notificationBanner} mobileWriteAction>
       <h1 className="visually-hidden">Your feed</h1>
-      <WriteForm user={user} returnPath={returnPath} embedded />
+      <WriteForm user={user} returnPath={returnPath} embedded error={writeError} body={writeBody} />
       <FeedTabs active="following" user={user} forYouReadStatus={data.timeline.length
         ? hasUnread && unreadPage !== null && unreadPage > data.page
         : undefined} toMe={toMe} toMeCount={data.toMeCount} forYouCount={data.forYouCount} unreadHref={data.unreadHref}

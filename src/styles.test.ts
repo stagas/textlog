@@ -60,7 +60,7 @@ describe('in-memory stylesheet', () => {
 
   test('uses quoted-post text color for polls inside quoted parents', async () => {
     const css = await Bun.file(new URL('./styles.css', import.meta.url)).text()
-    expect(css).toContain('.parent-quote .poll { font-size: 0.75rem; }')
+    expect(css).toContain('.parent-quote .poll { font-size: var(--font-size-12); }')
     expect(css).toContain(
       '.parent-quote .poll-option button,\n.parent-quote .poll-result,\n'
         + '.parent-quote .poll-preview-option { color: var(--quote-ink); }',
@@ -81,8 +81,8 @@ describe('in-memory stylesheet', () => {
 
   test('renders poll options at the surrounding post text size', async () => {
     const css = await Bun.file(new URL('./styles.css', import.meta.url)).text()
-    expect(css).toContain('.thread-root>.post>.poll { font-size: .9375rem;')
-    expect(css).toContain('.feed-thread .thread-root>.post>.poll { font-size: .8125rem;')
+    expect(css).toContain('.thread-root>.post>.poll { font-size: var(--font-size-15);')
+    expect(css).toContain('.feed-thread .thread-root>.post>.poll { font-size: var(--font-size-13);')
   })
 
   test('styles execution output consistently in internal post hover cards', async () => {
@@ -90,7 +90,7 @@ describe('in-memory stylesheet', () => {
     expect(css).toContain('.post.internal-post-card .code-fence.execution-output {')
     expect(css).toContain('color: color-mix(in srgb, var(--quote-ink), var(--muted));')
     expect(css).toContain('font-family: var(--font-monospace);')
-    expect(css).toContain('font-size: 0.75rem;')
+    expect(css).toContain('font-size: var(--font-size-12);')
   })
 
   test('uses ASCII-art line height for execution output', async () => {
@@ -108,10 +108,10 @@ describe('in-memory stylesheet', () => {
   test('lets taps pass through todos that the viewer cannot edit', async () => {
     const css = await Bun.file(new URL('./styles.css', import.meta.url)).text()
     expect(css).toContain(
-      '.todo { position: relative; z-index: 2; display: grid; gap: 0; margin-top: 0; font-size: .8125rem; line-height: 1.35; pointer-events: none; }',
+      '.todo { position: relative; z-index: 2; display: grid; gap: 0; margin-top: 0; font-size: var(--font-size-13); line-height: 1.35; pointer-events: none; }',
     )
-    expect(css).toContain('.thread-root>.post>.todo { font-size: .9375rem;')
-    expect(css).toContain('.feed-thread .thread-root>.post>.todo { font-size: .8125rem;')
+    expect(css).toContain('.thread-root>.post>.todo { font-size: var(--font-size-15);')
+    expect(css).toContain('.feed-thread .thread-root>.post>.todo { font-size: var(--font-size-13);')
     expect(css).toContain('font: inherit; line-height: inherit; text-align: left;')
     expect(css).toContain('.todo-check-checked { color: var(--accent-dark); }')
     expect(css).toContain(
@@ -133,7 +133,7 @@ describe('in-memory stylesheet', () => {
     expect(css).toContain(
       '.todo .post-spoiler:has(.post-spoiler-input:checked) .post-spoiler-content-inner { margin-top: 0; }',
     )
-    expect(css).toContain('.parent-quote .todo { font-size: .75rem; letter-spacing: normal; }')
+    expect(css).toContain('.parent-quote .todo { font-size: var(--font-size-12); letter-spacing: normal; }')
   })
 
   test('highlights a post or activity entry opened through its stable anchor', async () => {
@@ -438,6 +438,9 @@ describe('in-memory stylesheet', () => {
     expect(css).toContain('.activity-follow-main .unread-dot {\n  margin-right: calc(1ch - var(--space-2));')
     expect(css).toContain('.secondary-action {')
     expect(css).toContain('.secondary-action {\n  padding: 0;\n  color: var(--accent);')
+    expect(css).toContain('--form-action-font-size: var(--font-size-12);')
+    expect(css).toContain('background: var(--button-bg);\n  font-size: var(--form-action-font-size);')
+    expect(css).toContain('font: inherit;\n  font-size: var(--form-action-font-size);')
     expect(css).toContain('.form-control {')
     expect(css).toContain('.form-label {')
     expect(css).toContain('.form-panel {')
@@ -460,9 +463,9 @@ describe('in-memory stylesheet', () => {
     )
     expect(css).toContain('.illegal-activity-page .report-panel .form-hint {\n  width: 100%;\n  max-width: none;')
     expect(css).toContain(
-      '.illegal-activity-page .report-panel .identity-exception-hint {\n  color: var(--muted);\n  font-size: 0.6875rem;',
+      '.illegal-activity-page .report-panel .identity-exception-hint {\n  color: var(--muted);\n  font-size: var(--font-size-11);',
     )
-    expect(css).toContain('font-size: 0.8125rem;\n  font-weight: 400;\n  line-height: 1.75;')
+    expect(css).toContain('font-size: var(--font-size-13);\n  font-weight: 400;\n  line-height: 1.75;')
     expect(css).toContain(
       '.illegal-activity-page .report-panel .good-faith span {\n  min-width: 0;\n  flex: 1;\n  font: inherit;',
     )
@@ -491,7 +494,7 @@ describe('in-memory stylesheet', () => {
     expect(css).toContain('color: var(--accent);\n  text-overflow: ellipsis;\n  white-space: nowrap;')
     expect(css).toContain('.post-context {\n  min-width: 0;')
     expect(css).toContain(
-      'overflow: hidden;\n  color: var(--muted);\n  font-size: 0.75rem;\n  text-overflow: ellipsis;',
+      'overflow: hidden;\n  color: var(--muted);\n  font-size: var(--font-size-12);\n  text-overflow: ellipsis;',
     )
   })
 
@@ -499,7 +502,7 @@ describe('in-memory stylesheet', () => {
     const css = await Bun.file(new URL('./styles.css', import.meta.url)).text()
     expect(css).toContain('.activity-follow-main .activity-follow-stats {\n  display: block;\n  min-width: 0;')
     expect(css).toContain(
-      'overflow: hidden;\n  color: var(--accent);\n  font-size: 0.75rem;\n  text-overflow: ellipsis;',
+      'overflow: hidden;\n  color: var(--accent);\n  font-size: var(--font-size-12);\n  text-overflow: ellipsis;',
     )
     expect(css).toContain('.activity-follow-main .activity-follow-stats > * + * {\n  margin-left: var(--space-2);')
   })
@@ -528,7 +531,7 @@ describe('in-memory stylesheet', () => {
     expect(css).toContain('.account-menu summary.account-menu-handle::-webkit-details-marker {\n  display: none;')
     expect(css).toContain('  .reference-menu .reference-menu-popover,\n'
       + '  .reference-menu::after {\n    display: none !important;')
-    expect(css).toContain('font-family: inherit;\n  font-size: 0.6875rem;')
+    expect(css).toContain('font-family: inherit;\n  font-size: var(--font-size-11);')
     expect(css).toContain('max-width: min(760px, calc(100vw - 2 * var(--gutter)));')
     expect(css).toContain('.reference-menu-popover-tag {\n  min-width: 0;')
     expect(css).toContain('.reference-menu-popover-tag > a {\n  justify-self: start;')
@@ -601,7 +604,7 @@ describe('in-memory stylesheet', () => {
       '.link-previews-disabled .remote-link-menu:focus-within .remote-link-popover {\n  display: none;',
     )
     expect(css).toContain('.link-preview-setting {\n  display: flex;')
-    expect(css).toContain('font-size: 0.75rem;')
+    expect(css).toContain('font-size: var(--font-size-12);')
     expect(css).toContain('.link-preview-setting .form-checkbox {\n  width: 16px;\n  height: 16px;')
   })
 
@@ -617,7 +620,25 @@ describe('in-memory stylesheet', () => {
 
   test('gives the mobile edit composer the same posting-help layout as write', async () => {
     const css = await Bun.file(new URL('./styles.css', import.meta.url)).text()
-    expect(css).toContain('grid-template-columns: repeat(5, minmax(0, 1fr));')
+    expect(css).toContain(
+      ':is(.edit-post-compose, .edit-reply-compose) {\n  width: 100%;\n  max-width: none;\n  margin-right: 0;\n  margin-left: 0;',
+    )
+    expect(css).toContain(
+      '.replybox {\n  width: 100%;\n  max-width: none;\n  margin-top: var(--space-5);\n'
+        + '  margin-right: 0;\n  margin-bottom: var(--space-6);\n  margin-left: 0;',
+    )
+    expect(css.indexOf('.panel:is(.edit-post-compose, .edit-reply-compose) {')).toBeGreaterThan(
+      css.indexOf('.replybox {'),
+    )
+    expect(css).toContain(
+      ':is(.write-compose, .reply-compose) .composefoot .form-actions {\n'
+        + '  grid-column: 1;\n  grid-row: 1;\n  display: grid;\n'
+        + '  grid-template-columns: repeat(5, minmax(0, 1fr));',
+    )
+    expect(css).toContain('display: flex;\n    justify-content: flex-end;\n    gap: var(--space-4);')
+    expect(css).toContain('.feed-tab-new-badge {\n    top: auto;\n    bottom: calc(1lh + 14px);')
+    expect(css).toContain('align-items: baseline;\n  gap: var(--space-2);')
+    expect(css).toContain('height: 24px;\n  transform: translateY(5.5px);')
     expect(css).toContain(
       '@media (max-width: 520px) {\n  .panel:is(.write-compose, .replybox) {\n'
         + '    width: 100%;\n    margin-inline: 0;\n    border-inline: 0;',
@@ -637,7 +658,7 @@ describe('in-memory stylesheet', () => {
       ':is(.write-compose, .edit-post-compose, .replybox) .composefoot {\n    grid-template-columns: minmax(0, 1fr) auto;\n    gap: var(--space-2);',
     )
     expect(css).toContain(
-      '.composefoot .posting-help-details {\n    grid-column: 1;\n    grid-row: 1;\n    font-size: 0.5625rem;',
+      '.composefoot .posting-help-details {\n    grid-column: 1;\n    grid-row: 1;\n    font-size: var(--font-size-9);',
     )
     expect(css).toContain(
       '.posting-help-tabs {\n    display: grid;\n    grid-template-columns: repeat(2, minmax(0, 1fr));',
@@ -658,11 +679,11 @@ describe('in-memory stylesheet', () => {
     expect(css).not.toContain('.parent-quote .content-warning-overlay > span {')
     expect(css).toContain('.content-warning-action {\n  color: var(--accent);\n  padding-inline: 0;\n  padding-bottom: 1px;\n  border-bottom: var(--hairline) solid var(--link-border);')
     expect(css).toContain('grid-area: 1 / 1;')
-    expect(css).toContain('font-size: var(--post-body-font-size, 0.8125rem);')
+    expect(css).toContain('font-size: var(--post-body-font-size, var(--font-size-13));')
     expect(css).toContain('.content-warning-toggle:checked + .content-warning-overlay {\n  display: none;')
     expect(css).toContain('.content-warning-toggle:checked ~ .content-warning-mask {\n  display: none;')
     expect(css).not.toContain('Content revealed.')
-    expect(css).toContain('.post.internal-post-card > .content-warning {\n  --post-body-font-size: 0.75rem;\n'
+    expect(css).toContain('.post.internal-post-card > .content-warning {\n  --post-body-font-size: var(--font-size-12);\n'
       + '  --post-body-line-height: 1.55;\n  margin-top: var(--space-2);')
   })
 
@@ -691,6 +712,6 @@ describe('in-memory stylesheet', () => {
     expect(css).toContain('border-radius: var(--corner-radius) 0 0 var(--corner-radius) !important;')
     expect(css).toContain('border-radius: 0 var(--corner-radius) var(--corner-radius) 0;')
     expect(css).toContain('body.corners-round .explore-tag-card {\n  border-radius: var(--corner-radius);\n  overflow: hidden;')
-    expect(css).toContain('.accent-swatch { display: block; width: 30px; height: 30px; padding: 4px; border: 1px solid var(--soft); border-radius: 50%;')
+    expect(css).toContain('.accent-swatch { display: block; width: 30px; height: 30px; padding: var(--space-1); border: 1px solid var(--soft); border-radius: 50%;')
   })
 })

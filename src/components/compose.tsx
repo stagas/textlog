@@ -7,6 +7,7 @@ import {
   FormActions,
   FormMessage,
   PostingHelp,
+  PostingHelpAction,
   PostingSuggestionResults,
   type PostingSuggestionSearch,
   VerificationRequired,
@@ -73,23 +74,13 @@ export function WriteForm(
   },
 ) {
   if (!canPublishPosts(user)) return null
-  const embeddedHelpId = 'embedded-posting-help'
+  const helpId = embedded ? 'embedded-posting-help' : 'write-posting-help'
   const controls = (
     <div className="composefoot">
-      <PostingHelp search={suggestionSearch} controlledBy={embedded ? embeddedHelpId : undefined} />
+      <PostingHelp search={suggestionSearch} controlledBy={helpId} />
       <FormActions secondary={
         <span className="edit-post-actions">
-          {embedded ? (
-            <label className="secondary-action posting-help-action" htmlFor={embeddedHelpId}
-              title="Show writing and formatting help">
-              <input className="posting-help-toggle" id={embeddedHelpId} type="checkbox"
-                aria-controls={`${embeddedHelpId}-content`} defaultChecked={!!suggestionSearch} />
-              help
-            </label>
-          ) : (
-            <a className="secondary-action cancel-action edit-post-cancel" href={returnPath}
-              title="Cancel writing and go back">cancel</a>
-          )}
+          <PostingHelpAction id={helpId} defaultChecked={!!suggestionSearch} />
           <button className="secondary-action compose-autotags-action" name="action" value="autotags"
             title="Enrich post with hashtags">
             autotags<span className="new-badge compose-new-badge" aria-hidden="true">NEW</span>
@@ -108,26 +99,19 @@ export function WriteForm(
   )
   return (
     <Panel className={`compose write-compose${embedded ? ' embedded-write-compose' : ''}`}>
-      {!embedded && (
-        <h1 className="compose-heading">
-          What’s on your mind, <span className="compose-at">@</span>
-          {user.handle}?
-        </h1>
-      )}
       <form method="post" action="/post">
         <input type="hidden" name="from" value={returnPath} />
+        {embedded && <input type="hidden" name="embedded" value="1" />}
         {draftId && <input type="hidden" name="draft_id" value={draftId} />}
         <FormMessage error={error} />
         <div className="compose-editor-row">
-          <textarea className="form-control" name="body" maxLength={POST_MAX} required autoFocus={autoFocus}
-            defaultValue={body} placeholder={embedded ? `What’s on your mind, @${user.handle}?` : undefined}
-            aria-label={embedded ? `What’s on your mind, @${user.handle}?` : undefined}
+          <textarea className="form-control" name="body" maxLength={POST_MAX} autoFocus={autoFocus}
+            defaultValue={body} placeholder={`What’s on your mind, @${user.handle}?`}
+            aria-label={`What’s on your mind, @${user.handle}?`}
             autoComplete="off" inputMode="text" enterKeyHint="enter" />
-          {embedded && <PostingSuggestionResults search={suggestionSearch} />}
-          {embedded && controls}
+          <PostingSuggestionResults search={suggestionSearch} />
+          {controls}
         </div>
-        {!embedded && <PostingSuggestionResults search={suggestionSearch} />}
-        {!embedded && controls}
       </form>
     </Panel>
   )

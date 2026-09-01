@@ -1,7 +1,7 @@
 import type { User } from '../types'
 import type { LocationView, PostRow, PostView } from '../types'
 import { Layout } from './layout'
-import type { PostingSuggestionSearch } from './page-shared'
+import { PostingHelpAction, type PostingSuggestionSearch } from './page-shared'
 import { Post, PreviewPost, ThreadReplies } from './post'
 import { ReplyBox, ReplyPreview } from './reply'
 
@@ -42,6 +42,7 @@ export function EditPost(
           </div>
         )}
         <ReplyBox action={'/post/' + post.id + '/edit'} body={body} error={error} suggestionSearch={suggestionSearch}
+          helpId="edit-posting-help"
           className={post.parent_id && parent
             ? 'replybox reply-compose edit-reply-compose'
             : 'compose edit-post-compose write-compose edit-write-compose'}
@@ -57,9 +58,7 @@ export function EditPost(
             </div>
           )} secondary={
           <span className="edit-post-actions">
-            <a className="secondary-action cancel-action edit-post-cancel" href={'/post/' + post.id + returnQuery}>
-              cancel
-            </a>
+            <PostingHelpAction id="edit-posting-help" defaultChecked={!!suggestionSearch} />
           </span>
         } primary={
           <span className="edit-post-primary-actions">

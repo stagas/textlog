@@ -1294,6 +1294,18 @@ test('consequential account, content, reporting, and admin flows work over HTTP'
   })
   expect(invalidPost.status).toBe(400)
   expect(await invalidPost.text()).toContain(invalidPostBody)
+  const invalidEmbeddedPost = await request('/post', {
+    method: 'POST',
+    cookie: aliceCookie,
+    form: { body: '', embedded: '1', from: '/all' },
+  })
+  expect(invalidEmbeddedPost.status).toBe(303)
+  const embeddedErrorLocation = invalidEmbeddedPost.headers.get('location')!
+  expect(embeddedErrorLocation).toStartWith('/all?write_error=')
+  const embeddedErrorHtml = await (await request(embeddedErrorLocation, { cookie: aliceCookie })).text()
+  expect(embeddedErrorHtml).toContain('class="panel panel-surface panel-medium compose write-compose embedded-write-compose"')
+  expect(embeddedErrorHtml).toContain('The note must contain between 1 and 500 characters.')
+  expect(embeddedErrorHtml).not.toContain('<title>write ·')
   const invalidReplyBody = `remember reply ${'x'.repeat(490)}`
   const invalidReply = await request(`/post/${post.id}/reply`, {
     method: 'POST',
@@ -1387,7 +1399,8 @@ test('consequential account, content, reporting, and admin flows work over HTTP'
   expect(hashtagHelperHtml).toContain('>replay this draft</textarea>')
   expect(hashtagHelperHtml).toContain('name="hashtag_query" value="route"')
   expect(hashtagHelperHtml).toContain('#<mark>route</mark>helper')
-  expect(hashtagHelperHtml).toContain('<details class="posting-help-details" open="">')
+  expect(hashtagHelperHtml).toContain('id="write-posting-help" type="checkbox"')
+  expect(hashtagHelperHtml).toContain('aria-controls="write-posting-help-content" checked=""')
   const mentionHelper = await request(`/post/${post.id}/reply`, {
     method: 'POST',
     cookie: aliceCookie,
@@ -1397,7 +1410,7 @@ test('consequential account, content, reporting, and admin flows work over HTTP'
   const mentionHelperHtml = await mentionHelper.text()
   expect(mentionHelperHtml).toContain('@<mark>ali</mark>ce')
   expect(mentionHelperHtml).toContain('name="mention_query" value="ali"')
-  expect(mentionHelperHtml).toContain('name="body" maxLength="500" required="" autofocus=""')
+  expect(mentionHelperHtml).toContain('name="body" maxLength="500" autofocus=""')
   expect(mentionHelperHtml).not.toContain('name="mention_query" maxLength="100" required=""')
   const implicitMentionHelper = await request(`/post/${post.id}/reply`, {
     method: 'POST',

@@ -78,7 +78,7 @@ test('generated system themes emit the complete static light and dark token cont
   const generatedRoots = [...themeStyles(new Request('http://localhost')).matchAll(/:root\{([^}]+)\}/g)]
     .map(match => declarations(match[1]!))
 
-  const invariantToken = /^(--tap-highlight|--focus-ring-|--hairline|--gutter|--space-)/
+  const invariantToken = /^(--tap-highlight|--focus-ring-|--hairline|--gutter|--space-|--font-size-|--form-action-font-size)/
   for (const [index, staticRoot] of staticRoots.entries()) {
     for (const token of Object.keys(staticRoot).filter(token => !invariantToken.test(token))) {
       expect(generatedRoots[index]).toHaveProperty(token)

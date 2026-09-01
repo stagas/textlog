@@ -301,6 +301,12 @@ export function registerPostsRoutes(app: Hono) {
           : result.ok ? undefined : result.message} />, result.ok ? 200 : 503)
     }
     if (!validPostBody(body)) {
+      if (f.embedded === '1') {
+        const destination = new URL(returnPath, c.req.url)
+        destination.searchParams.set('write_error', postBodyValidationMessage(body))
+        destination.searchParams.set('write_body', body)
+        return redirect(destination.pathname + destination.search)
+      }
       return page(
         <Compose user={user} body={body} draftId={editingDraftId} error={postBodyValidationMessage(body)}
           returnPath={returnPath} />,

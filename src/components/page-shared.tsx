@@ -429,6 +429,17 @@ export function PostingHelp({ maxLength = 500, maxLines = 15, search, oneLine = 
   )
 }
 
+export function PostingHelpAction({ id, defaultChecked = false }: { id: string; defaultChecked?: boolean }) {
+  return (
+    <label className="secondary-action posting-help-action" htmlFor={id}
+      title="Show writing and formatting help">
+      <input className="posting-help-toggle" id={id} type="checkbox"
+        aria-controls={`${id}-content`} defaultChecked={defaultChecked} />
+      help
+    </label>
+  )
+}
+
 export function PostingSuggestionResults({ search }: { search?: PostingSuggestionSearch | null }) {
   if (!search) return null
   const prefix = search.kind === 'hashtags' ? '#' : '@'

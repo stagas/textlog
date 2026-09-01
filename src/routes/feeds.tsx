@@ -78,6 +78,10 @@ const anySeed = (value?: string) => {
   const parsed = Number.parseInt(value, 36)
   return Number.isSafeInteger(parsed) && parsed > 0 && parsed < 2_147_483_647 ? parsed : undefined
 }
+const writeState = (c: Context) => ({
+  writeError: c.req.query('write_error'),
+  writeBody: c.req.query('write_body'),
+})
 type RecentFeedVisitor = {
   density: ReturnType<typeof resolvedDensity>
   pageSize: ReturnType<typeof resolvedPageSize>
@@ -207,6 +211,7 @@ export function registerFeedsRoutes(app: Hono) {
   app.get('/my-feed', async c => {
     const user = currentUser(c.req.raw)
     if (!user) return redirect('/enter?next=' + encodeURIComponent('/my-feed'))
+    const write = writeState(c)
     rememberFeedVisitor(c.req.raw, user)
     const cursorValue = c.req.query('cursor')
     const expandedRootId = positiveInteger(c.req.query('expand'))
@@ -229,7 +234,7 @@ export function registerFeedsRoutes(app: Hono) {
     const render = async () =>
       page(
         <Feed user={user} data={await data()} title="my feed" notificationBanner={notificationBanner}
-          expandedRootId={expandedRootId} />,
+          expandedRootId={expandedRootId} {...write} />,
       )
     const renderForCache = async () => {
       const feed = await databaseService().call('feeds.personalizedPage', {
@@ -245,7 +250,8 @@ export function registerFeedsRoutes(app: Hono) {
           notificationBanner={notificationBanner} expandedRootId={expandedRootId} />,
       )
     }
-    const response = !notificationBanner && currentPage(c.req.query('page')) === 1 && !cursorValue && !expandedRootId
+    const response = !write.writeError && !notificationBanner
+        && currentPage(c.req.query('page')) === 1 && !cursorValue && !expandedRootId
       ? await rpcMaterializedFeedPage(c.req.raw, 'for-you', user.id, render, false,
         viewerCacheVersion(12, user), false, renderForCache,
         async () => {
@@ -259,6 +265,7 @@ export function registerFeedsRoutes(app: Hono) {
 
   app.get('/all', async c => {
     const user = currentUser(c.req.raw)
+    const write = writeState(c)
     rememberFeedVisitor(c.req.raw, user)
     const cursorValue = c.req.query('cursor')
     const expandedRootId = positiveInteger(c.req.query('expand'))
@@ -272,7 +279,7 @@ export function registerFeedsRoutes(app: Hono) {
       const feed = await data()
       return page(
         <PublicFeed user={user} feed={feed} path="/all" notificationBanner={notificationBanner}
-          expandedRootId={expandedRootId} />,
+          expandedRootId={expandedRootId} {...write} />,
       )
     }
     const renderForCache = user ? async () => {
@@ -284,7 +291,7 @@ export function registerFeedsRoutes(app: Hono) {
           expandedRootId={expandedRootId} />,
       )
     } : undefined
-    const response = !notificationBanner
+    const response = !write.writeError && !notificationBanner
         && currentPage(c.req.query('page')) === 1 && !cursorValue && !expandedRootId
       ? await rpcMaterializedFeedPage(c.req.raw, 'latest', user ? user.id : -1, render, false,
         viewerCacheVersion(latestFeedCacheVersion, user), false, renderForCache,
@@ -296,6 +303,7 @@ export function registerFeedsRoutes(app: Hono) {
 
   app.get('/any', async c => {
     const user = currentUser(c.req.raw)
+    const write = writeState(c)
     const expandedRootId = positiveInteger(c.req.query('expand'))
     const requestedSeed = anySeed(c.req.query('seed'))
     const retainedSeed = retainedAnyFeedSeed(c.req.raw)
@@ -312,7 +320,7 @@ export function registerFeedsRoutes(app: Hono) {
     })
     const response = rememberFeed(page(
       <PublicFeed user={user} feed={feed} path={`/any?seed=${seed.toString(36)}`} notificationBanner={notificationBanner}
-        expandedRootId={expandedRootId} />,
+        expandedRootId={expandedRootId} {...write} />,
     ), 'random')
     response.headers.append('set-cookie', retainedAnyFeedSeedCookie(seed))
     return response
@@ -335,6 +343,7 @@ export function registerFeedsRoutes(app: Hono) {
   app.get('/@', async c => {
     const user = currentUser(c.req.raw)
     if (!user) return redirect('/enter?next=' + encodeURIComponent('/@'))
+    const write = writeState(c)
     const cursorValue = c.req.query('cursor')
     const expandedRootId = positiveInteger(c.req.query('expand'))
     if (cursorValue && !decodeForYouCursor(cursorValue)) return c.text('Invalid cursor', 400)
@@ -346,7 +355,7 @@ export function registerFeedsRoutes(app: Hono) {
     const render = async () =>
       page(
         <Feed user={user} data={await data()} title="@" path="/@" toMe notificationBanner={notificationBanner}
-          expandedRootId={expandedRootId} />,
+          expandedRootId={expandedRootId} {...write} />,
       )
     const renderForCache = async () => {
       const feed = await data()
@@ -359,7 +368,8 @@ export function registerFeedsRoutes(app: Hono) {
           notificationBanner={notificationBanner} expandedRootId={expandedRootId} />,
       )
     }
-    const response = !notificationBanner && currentPage(c.req.query('page')) === 1 && !cursorValue && !expandedRootId
+    const response = !write.writeError && !notificationBanner
+        && currentPage(c.req.query('page')) === 1 && !cursorValue && !expandedRootId
       ? await rpcMaterializedFeedPage(c.req.raw, 'to-me', user.id, render, false,
         viewerCacheVersion(0, user), false, renderForCache)
       : await render()
@@ -375,6 +385,7 @@ export function registerFeedsRoutes(app: Hono) {
 
   app.get('/hot', async c => {
     const user = currentUser(c.req.raw)
+    const write = writeState(c)
     rememberFeedVisitor(c.req.raw, user)
     const cursorValue = c.req.query('cursor')
     const expandedRootId = positiveInteger(c.req.query('expand'))
@@ -385,10 +396,11 @@ export function registerFeedsRoutes(app: Hono) {
         page: currentPage(c.req.query('page')), pageSize: resolvedPageSize(c.req.raw) })
       return page(
         <HotFeed user={user} feed={feed} title="hot" notificationBanner={notificationBanner}
-          expandedRootId={expandedRootId} />,
+          expandedRootId={expandedRootId} {...write} />,
       )
     }
-    const response = (!user || !notificationBanner) && currentPage(c.req.query('page')) === 1 && !cursorValue
+    const response = !write.writeError && (!user || !notificationBanner)
+        && currentPage(c.req.query('page')) === 1 && !cursorValue
         && !expandedRootId
       ? await rpcMaterializedFeedPage(c.req.raw, 'hot', user?.id ?? -1, render, false,
         viewerCacheVersion(hotRankingVersion, user))

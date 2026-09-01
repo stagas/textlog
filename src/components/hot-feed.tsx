@@ -9,7 +9,7 @@ import { FeedThreads } from './post'
 
 export function HotFeed(
   { feed = { posts: [], page: 1, totalItems: 0, totalPages: 1 }, user, title, path = '/hot', pageUrl,
-    notificationBanner = false, expandedRootId }: {
+    notificationBanner = false, expandedRootId, writeError, writeBody }: {
       feed?: PostFeedPage
       cursor?: HotCursor | null
       user: User | null
@@ -18,6 +18,8 @@ export function HotFeed(
       pageUrl?: string
       notificationBanner?: false | 'notifications' | 'appearance' | 'invite' | 'bio' | 'notification-update' | 'donate'
       expandedRootId?: number
+      writeError?: string
+      writeBody?: string
     },
 ) {
   const feedPath = path
@@ -28,7 +30,7 @@ export function HotFeed(
     >
       {!user && <AboutContent user={null} embedded />}
       <h1 className="visually-hidden">Hot notes</h1>
-      {user && <WriteForm user={user} returnPath={returnPath} embedded />}
+      {user && <WriteForm user={user} returnPath={returnPath} embedded error={writeError} body={writeBody} />}
       <FeedTabs active="hot" user={user} forYouCount={feed.forYouCount} forYouUnread={feed.forYouUnread}
         toMeCount={feed.toMeCount} toMeUnread={feed.toMeUnread} latestCount={feed.latestCount} />
       {feed.page > 1 && (

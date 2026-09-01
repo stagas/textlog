@@ -8,6 +8,7 @@ import {
   FormActions,
   FormMessage,
   PostingHelp,
+  PostingHelpAction,
   PostingSuggestionResults,
   type PostingSuggestionSearch,
   postTitle,
@@ -19,7 +20,7 @@ import { Post, postAnchorId, ThreadReplies } from './post'
 
 export function ReplyBox(
   { action, body, error, placeholder, hidden, beforeTextarea, secondary, primary, className = 'replybox reply-compose',
-    suggestionSearch, draftId }: {
+    suggestionSearch, draftId, helpId = 'reply-posting-help' }: {
       action: string
       body: string
       error?: string
@@ -31,6 +32,7 @@ export function ReplyBox(
       className?: string
       suggestionSearch?: PostingSuggestionSearch | null
       draftId?: string
+      helpId?: string
     },
 ) {
   return (
@@ -41,13 +43,13 @@ export function ReplyBox(
         <FormMessage error={error} />
         {beforeTextarea}
         <div className="compose-editor-row">
-          <textarea className="form-control" name="body" maxLength={POST_MAX} required autoFocus defaultValue={body}
+          <textarea className="form-control" name="body" maxLength={POST_MAX} autoFocus defaultValue={body}
             placeholder={placeholder} autoComplete="off" inputMode="text" enterKeyHint="enter" />
-        </div>
-        <PostingSuggestionResults search={suggestionSearch} />
-        <div className="composefoot">
-          <PostingHelp search={suggestionSearch} />
-          <FormActions secondary={secondary} primary={primary} />
+          <PostingSuggestionResults search={suggestionSearch} />
+          <div className="composefoot">
+            <PostingHelp search={suggestionSearch} controlledBy={helpId} />
+            <FormActions secondary={secondary} primary={primary} />
+          </div>
         </div>
       </form>
     </Panel>
@@ -136,11 +138,7 @@ export function Reply(
                 hidden={returnPath && <input type="hidden" name="from" value={returnPath} />}
                 secondary={
                   <span className="edit-post-actions">
-                    <a className="secondary-action cancel-action edit-post-cancel"
-                      href={returnPath || `/post/${post.id}`}
-                    >
-                      cancel
-                    </a>
+                    <PostingHelpAction id="reply-posting-help" defaultChecked={!!suggestionSearch} />
                     <button className="secondary-action compose-autotags-action" name="action" value="autotags"
                       title="Enrich post with hashtags">
                       autotags<span className="new-badge compose-new-badge" aria-hidden="true">NEW</span>

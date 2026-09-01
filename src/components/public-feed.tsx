@@ -8,7 +8,7 @@ import { FeedThreads } from './post'
 
 export function PublicFeed(
   { feed = { posts: [], page: 1, totalItems: 0, totalPages: 1 }, user = null, path = '/', pageUrl,
-    notificationBanner = false, expandedRootId }: {
+    notificationBanner = false, expandedRootId, writeError, writeBody }: {
       feed?: PostFeedPage
       cursor?: unknown
       user?: User | null
@@ -16,6 +16,8 @@ export function PublicFeed(
       pageUrl?: string
       notificationBanner?: false | 'notifications' | 'appearance' | 'invite' | 'bio' | 'notification-update' | 'donate'
       expandedRootId?: number
+      writeError?: string
+      writeBody?: string
     },
 ) {
   const feedPath = path
@@ -33,7 +35,7 @@ export function PublicFeed(
     >
       {!user && <AboutContent user={null} embedded />}
       <h1 className="visually-hidden">{random ? 'Any conversation' : 'All notes'}</h1>
-      {user && <WriteForm user={user} returnPath={returnPath} embedded />}
+      {user && <WriteForm user={user} returnPath={returnPath} embedded error={writeError} body={writeBody} />}
       <FeedTabs active={random ? 'random' : 'latest'} user={user} forYouCount={feed.forYouCount}
         forYouUnread={feed.forYouUnread}
         toMeCount={feed.toMeCount} toMeUnread={feed.toMeUnread} latestCount={feed.latestCount}

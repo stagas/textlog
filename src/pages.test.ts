@@ -239,10 +239,8 @@ test('compose offers a server-rendered post preview', () => {
   expect(preview).toContain('<h2>preview</h2>')
   expect(preview).toContain('What’s on your mind')
   expect(preview.indexOf('<h2>preview</h2>')).toBeLessThan(preview.indexOf('<form action="/post" method="post">'))
-  expect(preview.indexOf('<h2>preview</h2>')).toBeLessThan(preview.indexOf('<h1 class="compose-heading">'))
-  expect(preview.indexOf('<h1 class="compose-heading">')).toBeLessThan(
-    preview.indexOf('<form action="/post" method="post">'),
-  )
+  expect(preview).not.toContain('<h1 class="compose-heading">')
+  expect(preview).toContain('placeholder="What’s on your mind, @writer?"')
   expect(preview.indexOf('<form action="/post" method="post">')).toBeLessThan(preview.indexOf('<textarea'))
   expect(preview.indexOf('<div class="compose-post-preview">')).toBeLessThan(
     preview.indexOf('<div class="panel panel-surface panel-medium compose write-compose">'),
@@ -435,7 +433,7 @@ test('draft cards linkify mentions, hashtags, and links', () => {
   expect(html).toContain('<a href="https://example.com" class="raw-link"')
 })
 
-test('compose carries its originating page through preview and offers cancel before preview', () => {
+test('compose carries its originating page without a redundant cancel action', () => {
   const user = { id: 1, handle: 'writer', email: 'writer@example.com', bio: '',
     email_verified_at: '2026-08-12 10:00:00', handle_chosen_at: '2026-08-12 10:00:00' }
   const html = renderToStaticMarkup(React.createElement(Compose, {
@@ -444,13 +442,10 @@ test('compose carries its originating page through preview and offers cancel bef
   }))
 
   expect(html).toContain('name="from" value="/latest?cursor=abc#post-2"')
-  expect(html).toContain(
-    'class="secondary-action cancel-action edit-post-cancel" href="/latest?cursor=abc#post-2" title="Cancel writing and go back">cancel</a>',
-  )
-  expect(html.indexOf('>cancel</a>')).toBeLessThan(html.indexOf('>preview</button>'))
+  expect(html).not.toContain('class="secondary-action cancel-action edit-post-cancel"')
 })
 
-test('posting helpers are searchable details and show copyable highlighted results above actions', () => {
+test('posting helpers use the compact action and show copyable highlighted results above actions', () => {
   const user = { id: 1, handle: 'writer', email: 'writer@example.com', bio: '',
     email_verified_at: '2026-08-12 10:00:00', handle_chosen_at: '2026-08-12 10:00:00' }
   const html = renderToStaticMarkup(React.createElement(Compose, {
@@ -459,9 +454,10 @@ test('posting helpers are searchable details and show copyable highlighted resul
     suggestionSearch: { kind: 'hashtags', query: 'type', results: ['typescript', 'typestyle'], truncated: true },
   }))
 
-  expect(html).toContain('<details class="posting-help-details" open="">')
+  expect(html).toContain('<label class="secondary-action posting-help-action" for="write-posting-help"')
+  expect(html).toContain('id="write-posting-help" type="checkbox" aria-controls="write-posting-help-content" checked=""')
   expect(html).toContain('<span class="posting-help-limits">500 chars / 15 lines max</span>')
-  expect(html).toContain('<br/>use #hashtags, @mentions and more</span>')
+  expect(html).toContain(' · use #hashtags, @mentions and more</div>')
   expect(html).not.toContain('<h2>Find hashtags and people</h2>')
   expect(html).not.toContain('<h2>Formatting</h2>')
   expect(html).toContain('class="posting-help-tabs" aria-label="Writing help"')
@@ -538,7 +534,7 @@ test('posting helpers are searchable details and show copyable highlighted resul
   expect(html).toContain('value="search-hashtags" formNoValidate="" name="action"')
   expect(html).toContain('value="search-mentions" formNoValidate="" name="action"')
   expect(html).toContain(
-    'required="" autofocus="" autoComplete="off" inputMode="text" enterKeyHint="enter">A draft worth keeping</textarea>',
+    'autofocus="" placeholder="What’s on your mind, @writer?" aria-label="What’s on your mind, @writer?" autoComplete="off" inputMode="text" enterKeyHint="enter">A draft worth keeping</textarea>',
   )
   expect(html).toContain('#<mark>type</mark>script')
   expect(html).toContain('class="posting-suggestion-result" title="Select and copy"')
@@ -559,14 +555,13 @@ test('post edit places draft and delete above the textarea and keeps preview bef
   expect(html).toContain('class="edit-post-actions"')
   expect(html).toContain('class="edit-post-primary-actions"')
   expect(html).toContain('class="edit-post-delete-action"')
-  expect(html).toContain('class="secondary-action cancel-action edit-post-cancel"')
+  expect(html).not.toContain('class="secondary-action cancel-action edit-post-cancel"')
   expect(html).toContain('value="unpublish" formNoValidate="" name="action">draft</button>')
   expect(html).toContain('class="secondary-action danger" href="/post/2/delete">delete</a>')
   expect(html).toContain('title="Enrich post with hashtags" name="action">autotags')
   expect(html).toContain('<span class="new-badge compose-new-badge" aria-hidden="true">NEW</span>')
   expect(html.indexOf('>draft</button>')).toBeLessThan(html.indexOf('>delete</a>'))
   expect(html.indexOf('>delete</a>')).toBeLessThan(html.indexOf('<textarea'))
-  expect(html.indexOf('<textarea')).toBeLessThan(html.indexOf('>cancel</a>'))
   expect(html.indexOf('>autotags')).toBeLessThan(html.indexOf('>preview</button>'))
   expect(html.indexOf('>preview</button>')).toBeLessThan(html.indexOf('>save →</button>'))
 })
@@ -623,7 +618,7 @@ test('editing a reply shows its parent context above the textarea', () => {
   expect(html).toContain('class="quiet post-back-link" href="/latest?cursor=abc#post-3">back</a>')
   expect(html).toContain('name="from" value="/latest?cursor=abc#post-3"')
   expect(html).toContain('href="/post/3/delete?from=%2Flatest%3Fcursor%3Dabc%23post-3"')
-  expect(html).toContain('href="/post/3?from=%2Flatest%3Fcursor%3Dabc%23post-3">cancel</a>')
+  expect(html).not.toContain('class="secondary-action cancel-action edit-post-cancel"')
   expect(html.indexOf('Parent note')).toBeLessThan(html.indexOf('<textarea'))
 
   const preview = renderToStaticMarkup(React.createElement(EditPost, {
@@ -670,8 +665,7 @@ test('reply forms offer the same server-rendered preview flow', () => {
   expect(html).toContain('<span class="new-badge compose-new-badge" aria-hidden="true">NEW</span>')
   expect(html.indexOf('>autotags')).toBeLessThan(html.indexOf('>preview</button>'))
   expect(html).toContain('class="button" accessKey="p">post →</button>')
-  expect(html).toContain('class="secondary-action cancel-action edit-post-cancel" href="/post/2">cancel</a>')
-  expect(html.indexOf('>cancel</a>')).toBeLessThan(html.indexOf('>preview</button>'))
+  expect(html).not.toContain('class="secondary-action cancel-action edit-post-cancel"')
   expect(html).toContain('<div class="reply-preview"><p class="eyebrow">preview</p><div class="reply-branch">')
   expect(html).not.toContain('<span class="post-context">preview:</span>')
   expect(html.indexOf('<div class="reply-preview">')).toBeLessThan(
@@ -685,7 +679,7 @@ test('reply forms offer the same server-rendered preview flow', () => {
   expect(html).not.toContain('NaN')
 })
 
-test('reply form cancel returns to the originating feed entry', () => {
+test('reply form relies on the existing back link for its originating feed entry', () => {
   const user = { id: 1, handle: 'writer', email: 'writer@example.com', bio: '',
     email_verified_at: '2026-08-12 10:00:00', handle_chosen_at: '2026-08-12 10:00:00' }
   const post = { id: 2, user_id: 2, parent_id: null, body: 'Original post', created_at: '2026-08-12 09:00:00',
@@ -697,9 +691,8 @@ test('reply form cancel returns to the originating feed entry', () => {
     returnPath: '/u/writer?tab=replies#post-2',
   }))
 
-  expect(html).toContain(
-    'class="secondary-action cancel-action edit-post-cancel" href="/u/writer?tab=replies#post-2">cancel</a>',
-  )
+  expect(html).toContain('class="quiet post-back-link" href="/u/writer?tab=replies#post-2">back</a>')
+  expect(html).not.toContain('class="secondary-action cancel-action edit-post-cancel"')
 })
 
 test('write and reply previews apply ASCII-art spacing rules', () => {
