@@ -259,7 +259,7 @@ function openApiDocument() {
       ], responses: { ...jsonResponses, '200': collectionResponse, '401': writeResponses['401'] } } },
       '/autotags': {
         post: { summary: 'Enrich text with hashtags', security: authSecurity,
-          description: 'Returns the complete text with fewer than five relevant hashtags. It does not save a post.',
+          description: 'Returns the complete text enriched with relevant hashtags. It does not save a post.',
           requestBody: requestBody({ type: 'object', required: ['body'], properties: {
             body: { type: 'string', minLength: 1, maxLength: POST_MAX },
           } }),
