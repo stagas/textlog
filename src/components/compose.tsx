@@ -88,6 +88,7 @@ export function WriteForm(
           ) : (
             <a className="secondary-action cancel-action edit-post-cancel" href={returnPath}>cancel</a>
           )}
+          <button className="secondary-action" name="action" value="autotags">autotags</button>
           <button className="secondary-action" name="action" value="preview">preview</button>
           <button className="secondary-action" name="action" value="draft"
             formAction={draftId ? `/drafts/${draftId}` : undefined}

@@ -1182,7 +1182,7 @@ test('consequential account, content, reporting, and admin flows work over HTTP'
   expect(createPost.status).toBe(303)
   const post = database.query('SELECT id,body FROM posts WHERE user_id=? ORDER BY id DESC LIMIT 1')
     .get(alice.id) as { id: number; body: string }
-  expect(createPost.headers.get('location')).toBe(`/all#post-${post.id}`)
+  expect(createPost.headers.get('location')).toBe(`/post/${post.id}/edit`)
 
   const unpublishable = database.query(
     'INSERT INTO posts(user_id,parent_id,body,created_at) VALUES(?,NULL,?,datetime(\'now\')) RETURNING id',

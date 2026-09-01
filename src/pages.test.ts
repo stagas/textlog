@@ -170,6 +170,8 @@ test('compose offers a server-rendered post preview', () => {
   }))
 
   expect(form).toContain('value="preview" name="action">preview</button>')
+  expect(form).toContain('value="autotags" name="action">autotags</button>')
+  expect(form.indexOf('>autotags</button>')).toBeLessThan(form.indexOf('>preview</button>'))
   expect(form).toContain('class="button" accessKey="p">post →</button>')
   expect(form.indexOf('>preview</button>')).toBeLessThan(form.indexOf('>post →</button>'))
   expect(preview).toContain('<h2>preview</h2>')

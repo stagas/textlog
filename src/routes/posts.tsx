@@ -28,6 +28,7 @@ import { markdownPlainText } from '../markdown'
 import { renderPostOg } from '../og'
 import { cachedOgResponse, cacheOgResponse } from '../og-response-cache'
 import { normalizePostBody, postBodyValidationMessage, validPostBody } from '../post-body'
+import { autotagText } from '../openrouter'
 import { postRateLimitMessage } from '../post-rate-limit'
 import { pollDisplayBody } from '../polls'
 import { wakePostPushWorker } from '../push'
@@ -290,6 +291,15 @@ export function registerPostsRoutes(app: Hono) {
           suggestionSearch={suggestionSearch} />,
       )
     }
+    if (f.action === 'autotags') {
+      const result = await autotagText(body)
+      const enrichedBody = result.ok ? normalizePostBody(result.body) : body
+      const valid = result.ok && validPostBody(enrichedBody)
+      return page(<Compose user={user} body={valid ? enrichedBody : body} draftId={editingDraftId}
+        returnPath={returnPath} error={result.ok && !valid
+          ? 'Autotagged text exceeded the post limits. Your original text is still here.'
+          : result.ok ? undefined : result.message} />, valid ? 200 : 503)
+    }
     if (!validPostBody(body)) {
       return page(
         <Compose user={user} body={body} draftId={editingDraftId} error={postBodyValidationMessage(body)}
@@ -350,7 +360,7 @@ export function registerPostsRoutes(app: Hono) {
       if (!result.duplicate) await persistPreviews(result.id, 'save', body)
       if (!result.duplicate) notifyPost()
       if (editingDraftId) await databaseService().call('drafts.delete', { id: editingDraftId, userId: user.id })
-      return rememberFeed(redirect(`/all#post-${result.id}`), 'latest')
+      return rememberFeed(redirect(`/post/${result.id}/edit`), 'latest')
     }
     catch (error) {
       logError('POST /post', error)

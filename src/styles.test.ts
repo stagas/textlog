@@ -617,6 +617,7 @@ describe('in-memory stylesheet', () => {
 
   test('gives the mobile edit composer the same posting-help layout as write', async () => {
     const css = await Bun.file(new URL('./styles.css', import.meta.url)).text()
+    expect(css).toContain('grid-template-columns: repeat(5, minmax(0, 1fr));')
     expect(css).toContain(
       '@media (max-width: 520px) {\n  .panel:is(.write-compose, .replybox) {\n'
         + '    width: 100%;\n    margin-inline: 0;\n    border-inline: 0;',
