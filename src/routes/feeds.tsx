@@ -326,6 +326,22 @@ export function registerFeedsRoutes(app: Hono) {
     return response
   })
 
+  app.get('/new', async c => {
+    const user = currentUser(c.req.raw)
+    const write = writeState(c)
+    const expandedRootId = positiveInteger(c.req.query('expand'))
+    const notificationBanner = await showNotificationBanner(c.req.raw, user)
+    const feed = await databaseService().call('feeds.newPage', {
+      viewerId: user?.id ?? -1,
+      page: currentPage(c.req.query('page')),
+      pageSize: resolvedPageSize(c.req.raw),
+    })
+    return rememberFeed(page(
+      <PublicFeed user={user} feed={feed} path="/new" notificationBanner={notificationBanner}
+        expandedRootId={expandedRootId} {...write} />,
+    ), 'latest')
+  })
+
   app.post('/all/read-all', async c => {
     const user = currentUser(c.req.raw)
     if (!user) return redirect('/enter?next=' + encodeURIComponent('/all'))

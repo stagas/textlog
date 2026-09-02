@@ -2086,6 +2086,39 @@ test('public collection pages advertise their RSS and Atom feeds', () => {
   expect(tag).toContain('href="/tag/ascii_art.atom"')
 })
 
+test('feed tabs include the chronological top-level new feed', () => {
+  const html = renderToStaticMarkup(React.createElement(PublicFeed, {
+    user: null,
+    feed: { posts: [], page: 1, totalItems: 0, totalPages: 1 },
+    path: '/new',
+  }))
+
+  expect(html).toContain('<a class="active" aria-current="page" href="/new">')
+  expect(html).toContain('<h1 class="visually-hidden">New notes</h1>')
+  expect(html).not.toContain('type="application/rss+xml"')
+})
+
+test('new feed threads load replies but hide every reply while collapsed', () => {
+  const root = { id: 1, user_id: 1, parent_id: null, body: 'root', created_at: '2026-08-20 10:00:00',
+    deleted_at: null, handle: 'writer', reply_count: 2 }
+  const replies = [
+    { id: 2, user_id: 2, parent_id: 1, body: 'first reply', created_at: '2026-08-20 11:00:00',
+      deleted_at: null, handle: 'reader' },
+    { id: 3, user_id: 3, parent_id: 1, body: 'second reply', created_at: '2026-08-20 12:00:00',
+      deleted_at: null, handle: 'another' },
+  ]
+  const html = renderToStaticMarkup(React.createElement(PublicFeed, {
+    user: null,
+    feed: { posts: [root, ...replies], page: 1, totalItems: 1, totalPages: 1 },
+    path: '/new',
+  }))
+
+  expect(html).toContain('class="thread-fold-input" type="checkbox"')
+  expect(html).toContain('checked=""')
+  expect(html).toContain('feed-thread-collapsed-branch')
+  expect(html).not.toContain('collapsed-preview-post')
+})
+
 test('latest and hot feeds label posts addressed to the viewer', () => {
   const user = { id: 2, handle: 'reader', mood: '🤸', email: 'reader@example.com', bio: '' }
   const parent = { id: 4, user_id: user.id, parent_id: null, body: 'parent', created_at: '2026-08-20 11:00:00',

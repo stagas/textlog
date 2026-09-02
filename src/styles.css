@@ -7752,6 +7752,10 @@ a.post-continuation-link:hover {
   margin-bottom: var(--space-5);
 }
 
+.post-page-thread.feed-thread.feed-thread-no-collapsed-previews:has(> .thread-fold-input:checked) {
+  margin-bottom: 0;
+}
+
 .feed-thread>.thread-fold-input:checked~.feed-thread-collapsed-branch .reply-node:not(.collapsed-preview-path) {
   height: 0;
   opacity: 0;

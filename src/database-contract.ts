@@ -449,6 +449,7 @@ export type DatabaseDomainOperations = {
   'feeds.latestPage': { input: { viewerId: number; page: number; pageSize: PageSizeChoice; markRead?: boolean;
     sampleSeed?: number };
     output: PostFeedPage }
+  'feeds.newPage': { input: { viewerId: number; page: number; pageSize: PageSizeChoice }; output: PostFeedPage }
   'feeds.randomPage': { input: { viewerId: number; pageSize: PageSizeChoice; sampleSeed?: number };
     output: PostFeedPage }
   'feeds.latestUnreadCount': { input: { userId: number }; output: number }

@@ -1084,7 +1084,7 @@ export function ThreadReplies(
     continuationLabel = 'more', continuationReturnPath, contextUnreadPostIds, contextDirectedUnreadPostIds,
     omissionHref, expansionControlId, highlightTerms = [], hideTopMeta = false, collapsedPreviewPostIds = [],
     anchorReplyNavigation = false, backHref, backTargetId, replyOnPage = false, replyReturnPath, afterReply,
-    suppressReplyActionId }: {
+    suppressReplyActionId, collapseWithoutPreviews = false }: {
       parentId: number
       replies: PostView[]
       user: User | null
@@ -1108,6 +1108,7 @@ export function ThreadReplies(
       replyReturnPath?: string
       afterReply?: (reply: PostView, depth: number) => React.ReactNode
       suppressReplyActionId?: number
+      collapseWithoutPreviews?: boolean
     },
 ) {
   if (!replies.length) return null
@@ -1345,7 +1346,7 @@ export function ThreadReplies(
     const branch = (children.get(id) || []).filter(reply => !reply.deleted_at || visibleDescendantCount(reply.id) > 0)
     if (!branch.length) return null
     return (
-      <div className={`reply-branch${collapsedPreviewPostIds.length && depth === 1
+      <div className={`reply-branch${(collapsedPreviewPostIds.length || collapseWithoutPreviews) && depth === 1
         ? ' feed-thread-collapsed-branch'
         : ''}${collapsedPreviewPath.has(id) ? ' collapsed-preview-path-branch' : ''}`}>
         <div className="thread-branch-content">
@@ -1377,11 +1378,13 @@ export function ThreadReplies(
 /** Render feed posts as conversations, filling in any available ancestor context. */
 export function FeedThreads(
   { posts, user, returnPath, contextUnreadPostIds, contextDirectedUnreadPostIds, highlightTerms = [],
-    hideTopMeta = false, promoteAncestors = false, expandedRootId, expandedByDefault = false, className }: {
+    hideTopMeta = false, promoteAncestors = false, expandedRootId, expandedByDefault = false,
+    collapseWithoutPreviews = false, className }: {
       posts: PostView[]; user: User | null;
       returnPath: string; contextUnreadPostIds?: ReadonlySet<number>;
       contextDirectedUnreadPostIds?: ReadonlySet<number>; highlightTerms?: string[]; hideTopMeta?: boolean;
-      promoteAncestors?: boolean | 'all'; expandedRootId?: number; expandedByDefault?: boolean; className?: string },
+      promoteAncestors?: boolean | 'all'; expandedRootId?: number; expandedByDefault?: boolean;
+      collapseWithoutPreviews?: boolean; className?: string },
 ) {
   if (!posts.length) return null
   const belongsToDeletedTopLevel = (post: PostView) => {
@@ -1537,7 +1540,7 @@ export function FeedThreads(
       {roots.map(post => {
         const anchoredReturnPath = `${returnPath}#post-${post.id}`
         const visibleReplies = visibleReplyCount(post)
-        const collapsedPreview = visibleReplies > 0 ? collapsedPreviewPosts(post) : []
+        const collapsedPreview = visibleReplies > 0 && !collapseWithoutPreviews ? collapsedPreviewPosts(post) : []
         const continuesElsewhere = (post.reply_count || 0) > visibleReplies
         const canCollapse = visibleReplies > collapsedPreview.length
           || continuesElsewhere && collapsedPreview.length > 2
@@ -1549,7 +1552,9 @@ export function FeedThreads(
           return target.pathname + target.search
         })()
         return (
-          <div className={`post-page-thread feed-thread${className ? ` ${className}` : ''}`} key={post.id}>
+          <div className={`post-page-thread feed-thread${collapseWithoutPreviews
+            ? ' feed-thread-no-collapsed-previews'
+            : ''}${className ? ` ${className}` : ''}`} key={post.id}>
             {foldControlId && (
               <input className="thread-fold-input" type="checkbox" id={foldControlId} defaultChecked={collapsed} />
             )}
@@ -1573,6 +1578,7 @@ export function FeedThreads(
               expansionControlId={foldControlId}
               contextUnreadPostIds={contextUnreadPostIds} contextDirectedUnreadPostIds={contextDirectedUnreadPostIds}
               highlightTerms={highlightTerms} hideTopMeta={hideTopMeta}
+              collapseWithoutPreviews={collapseWithoutPreviews}
               collapsedPreviewPostIds={canCollapse ? collapsedPreview.map(reply => reply.id) : []} />
           </div>
         )

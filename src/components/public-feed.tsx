@@ -22,6 +22,7 @@ export function PublicFeed(
 ) {
   const feedPath = path
   const random = path.startsWith('/any')
+  const newest = path === '/new'
   const returnPath = feedPath + (feed.page > 1 ? `?page=${feed.page}` : '')
   const unreadPostIds = new Set(feed.unreadPostIds || [])
   const directedUnreadPostIds = new Set(feed.directedUnreadPostIds || [])
@@ -29,14 +30,14 @@ export function PublicFeed(
     ? Number(new URL(feed.unreadHref, 'http://localhost').searchParams.get('page') || 1)
     : null
   return (
-    <Layout user={user} title={path === '/all' ? 'all' : random ? 'any' : undefined} pageUrl={pageUrl}
+    <Layout user={user} title={path === '/all' ? 'all' : random ? 'any' : newest ? 'new' : undefined} pageUrl={pageUrl}
       mobileWriteAction={Boolean(user)} notificationBanner={notificationBanner}
-      feeds={random ? undefined : { title: 'All notes', rss: '/all.rss', atom: '/all.atom' }}
+      feeds={random || newest ? undefined : { title: 'All notes', rss: '/all.rss', atom: '/all.atom' }}
     >
       {!user && <AboutContent user={null} embedded />}
-      <h1 className="visually-hidden">{random ? 'Any conversation' : 'All notes'}</h1>
+      <h1 className="visually-hidden">{random ? 'Any conversation' : newest ? 'New notes' : 'All notes'}</h1>
       {user && <WriteForm user={user} returnPath={returnPath} embedded error={writeError} body={writeBody} />}
-      <FeedTabs active={random ? 'random' : 'latest'} user={user} forYouCount={feed.forYouCount}
+      <FeedTabs active={random ? 'random' : newest ? 'new' : 'latest'} user={user} forYouCount={feed.forYouCount}
         forYouUnread={feed.forYouUnread}
         toMeCount={feed.toMeCount} toMeUnread={feed.toMeUnread} latestCount={feed.latestCount}
         forYouReadStatus={user && feed.posts.length
@@ -50,6 +51,7 @@ export function PublicFeed(
         ? (
           <FeedThreads posts={feed.posts} user={user} returnPath={returnPath} promoteAncestors
             expandedByDefault={!user && (path === '/all' || random)}
+            collapseWithoutPreviews={newest}
             expandedRootId={expandedRootId} contextUnreadPostIds={unreadPostIds}
             contextDirectedUnreadPostIds={directedUnreadPostIds} />
         )

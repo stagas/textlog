@@ -2811,6 +2811,39 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
       const { userId } = input as DatabaseDomainInput<'feeds.latestUnreadCount'>
       return unreadLatestCount(userId, database) as DatabaseDomainOutput<K>
     }
+    case 'feeds.newPage': {
+      const { viewerId, page, pageSize } = input as DatabaseDomainInput<'feeds.newPage'>
+      const moderator = viewerIsModerator(database, viewerId)
+      const blockViewerId = moderator ? -1 : viewerId
+      const visibility = viewerId < 0 ? 'p.deleted_at IS NULL' : `p.deleted_at IS NULL
+        AND (? < 0 OR NOT EXISTS (SELECT 1 FROM blocks b WHERE
+          (b.blocker_id=? AND b.blocked_id=p.user_id)
+          OR (b.blocked_id=? AND b.blocker_id=p.user_id)))
+        AND NOT EXISTS (SELECT 1 FROM post_hashtags ph JOIN blocked_hashtags bh ON bh.tag=ph.tag
+          WHERE ph.post_id=p.id AND bh.user_id=?)`
+      const parameters = viewerId < 0 ? [] : [blockViewerId, blockViewerId, blockViewerId, viewerId]
+      const filters = `${visibility} AND p.parent_id IS NULL AND ${excludesWhisperPosts('p.id')}
+        AND ${excludesMetaPosts('p.id')}`
+      const totalItems = (database.query(`SELECT count(*) count FROM posts p WHERE ${filters}`)
+        .get(...parameters) as { count: number }).count
+      const totalPages = Math.max(1, Math.ceil(totalItems / pageSize))
+      const safePage = Math.min(page, totalPages)
+      const rows = database.query(`SELECT p.*,u.handle FROM posts p JOIN users u ON u.id=p.user_id
+        WHERE ${filters} ORDER BY p.created_at DESC,p.id DESC LIMIT ? OFFSET ?`)
+        .all(...parameters, pageSize, (safePage - 1) * pageSize) as PostView[]
+      const projected = rows.flatMap(root => {
+        const projection = projectRecentConversation([root, ...loadThreadReplies(database, root.id, viewerId)], {
+          forceRoot: true,
+        })
+        return projection.root ? [projection.root, ...projection.replies] : []
+      })
+      const forYouCount = viewerId >= 0 ? personalizedUnreadCount(database, viewerId, false) : 0
+      const toMeCount = viewerId >= 0 ? personalizedUnreadCount(database, viewerId, true) : 0
+      const posts = rewireVisibleAncestorGaps(database, enrichPosts(database, projected, viewerId))
+      return { posts, page: safePage, totalItems, totalPages,
+        forYouCount, toMeCount, latestCount: viewerId >= 0 ? unreadLatestCount(viewerId, database) : 0,
+        forYouUnread: forYouCount > 0, toMeUnread: toMeCount > 0 } as DatabaseDomainOutput<K>
+    }
     case 'feeds.flushRelationshipInvalidation': {
       if (!database.query(`SELECT 1 FROM sqlite_master
         WHERE type='table' AND name='pending_relationship_feed_invalidations'`).get()) {

@@ -340,7 +340,7 @@ test('notification banners are hidden from logged-out visitors', async () => {
   const home = await request('/')
   expect(home.status).toBe(303)
   expect(home.headers.get('location')).toBe('/hot')
-  for (const path of ['/hot', '/all']) {
+  for (const path of ['/hot', '/new', '/all']) {
     const response = await request(path)
     expect(response.status).toBe(200)
     const html = await response.text()
