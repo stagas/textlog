@@ -1,6 +1,7 @@
 import { Database } from 'bun:sqlite'
 import { describe, expect, test } from 'bun:test'
-import { anonymousOnlineCount, VisitorBuffer, visitorHash, visitorStats } from './visitors'
+import { anonymousOnlineCount, DailyVisitorAllowlist, shouldRecordVisitor, VisitorBuffer, visitorHash,
+  visitorStats } from './visitors'
 
 function testDatabase() {
   const database = new Database(':memory:')
@@ -14,6 +15,23 @@ function testDatabase() {
 }
 
 describe('visitor analytics', () => {
+  test('uses successful stylesheet fetches as the real-browser signal', () => {
+    expect(shouldRecordVisitor('GET', '/styles.css', 200)).toBe(true)
+    expect(shouldRecordVisitor('GET', '/styles.css', 304)).toBe(true)
+    expect(shouldRecordVisitor('GET', '/latest', 200)).toBe(false)
+    expect(shouldRecordVisitor('HEAD', '/styles.css', 200)).toBe(false)
+    expect(shouldRecordVisitor('GET', '/styles.css', 404)).toBe(false)
+  })
+
+  test('allowlists a stylesheet visitor only for that UTC calendar day', () => {
+    const allowlist = new DailyVisitorAllowlist()
+    const firstDay = new Date('2026-08-04T23:59:59Z')
+    allowlist.add('203.0.113.4', firstDay)
+    expect(allowlist.has('203.0.113.4', firstDay)).toBe(true)
+    expect(allowlist.has('203.0.113.5', firstDay)).toBe(false)
+    expect(allowlist.has('203.0.113.4', new Date('2026-08-05T00:00:00Z'))).toBe(false)
+  })
+
   test('stores only a hash and deduplicates a visitor within a day', () => {
     const database = testDatabase()
     const visitedAt = new Date('2026-08-04T01:00:00Z')

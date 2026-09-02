@@ -6756,7 +6756,7 @@ form.report-panel {
 }
 
 .admin-stats strong {
-  font-size: var(--font-size-32);
+  font-size: calc(var(--font-size-32) * .9);
   font-weight: 500;
 }
 

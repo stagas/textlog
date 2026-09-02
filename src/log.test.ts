@@ -93,12 +93,20 @@ describe('shouldLogHttp', () => {
     expect(shouldLogHttp('/latest', 200, false)).toBe(true)
   })
 
+  test('preserves all activity from a browser-allowlisted address', () => {
+    expect(shouldLogHttp('/latest', 200, true, false, false, true)).toBe(true)
+    expect(shouldLogHttp('/navigation-check', 200, false, false, false, true)).toBe(false)
+    expect(shouldLogHttp('/__dev/restart', 200, false, false, false, true)).toBe(false)
+    expect(shouldLogHttp('/__dev/restart', 500, false, false, false, true)).toBe(true)
+  })
+
   test('can hide anonymous requests while preserving authenticated requests', () => {
     const original = Bun.env.LOG_ANONYMOUS
     Bun.env.LOG_ANONYMOUS = 'false'
     try {
       expect(shouldLogHttp('/latest', 200, false, false)).toBe(false)
       expect(shouldLogHttp('/latest', 200, false, true)).toBe(true)
+      expect(shouldLogHttp('/styles.css', 200, false, false)).toBe(true)
     }
     finally {
       if (original === undefined) delete Bun.env.LOG_ANONYMOUS

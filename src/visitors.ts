@@ -5,6 +5,34 @@ export const VISITOR_RETENTION_DAYS = 7
 export const VISITOR_FLUSH_BATCH_SIZE = 500
 export const ONLINE_VISITOR_WINDOW_MS = 30 * 60 * 1000
 
+export function shouldRecordVisitor(method: string, path: string, status: number) {
+  return method === 'GET' && path === '/styles.css' && status < 400
+}
+
+export class DailyVisitorAllowlist {
+  private hashes = new Set<string>()
+  private day = ''
+
+  add(address: string, visitedAt = new Date()) {
+    if (!address || address === '-') return
+    this.rotate(visitedAt)
+    this.hashes.add(visitorHash(address, visitedAt))
+  }
+
+  has(address: string, visitedAt = new Date()) {
+    if (!address || address === '-') return false
+    this.rotate(visitedAt)
+    return this.hashes.has(visitorHash(address, visitedAt))
+  }
+
+  private rotate(at: Date) {
+    const day = at.toISOString().slice(0, 10)
+    if (day === this.day) return
+    this.day = day
+    this.hashes.clear()
+  }
+}
+
 export function visitorHash(address: string, visitedAt = new Date(), secret?: string) {
   return ipPseudonym(address, 'visitor-count', visitedAt, secret)
 }

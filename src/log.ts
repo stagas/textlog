@@ -63,10 +63,10 @@ export function semanticAction(method: string, path: string) {
 }
 
 export function shouldLogHttp(path: string, status: number, isCrawler = false, authenticated = false,
-  campaign = false)
+  campaign = false, browserAllowlisted = false)
 {
-  return !isCrawler && (authenticated || Bun.env.LOG_ANONYMOUS !== 'false'
-    || campaign && Bun.env.LOG_CAMPAIGN === 'true')
+  return (browserAllowlisted || !isCrawler && (path === '/styles.css' || authenticated || Bun.env.LOG_ANONYMOUS !== 'false'
+    || campaign && Bun.env.LOG_CAMPAIGN === 'true'))
     && (!['/__dev/restart', '/navigation-check'].includes(path) || status >= 400)
 }
 

@@ -53,7 +53,7 @@ import { loadStylesAsset, stylesResponse } from './styles'
 import { themeLogoSvg, themeStyles, versionedAppearance, withAppearance } from './theme'
 import { withTimezone } from './timezone'
 import { apiUser, currentUser } from './utils'
-import { VISITOR_FLUSH_BATCH_SIZE, visitorHash } from './visitors'
+import { DailyVisitorAllowlist, shouldRecordVisitor, VISITOR_FLUSH_BATCH_SIZE, visitorHash } from './visitors'
 
 const devReloadEnabled = Bun.env.DEV_RELOAD === 'true'
 const publicArchivePath = Bun.env.PUBLIC_ARCHIVE_PATH || 'public/dump.zip'
@@ -117,6 +117,7 @@ const defaultOgBody = defaultOgImage.buffer.slice(
   defaultOgImage.byteOffset + defaultOgImage.byteLength,
 ) as ArrayBuffer
 const pendingVisitors = new Map<string, { day: string; hash: string; anonymousLastSeenAt: number | null }>()
+const dailyVisitorAllowlist = new DailyVisitorAllowlist()
 let visitorFlushRunning = false
 function recordVisitor(address: string, visitedAt = new Date(), anonymous = true) {
   if (!address || address === '-') return
@@ -314,9 +315,12 @@ app.use('*', async (c, next) => {
 
 app.use('*', async (c, next) => {
   await next()
-  if (c.req.method !== 'GET' || c.res.status >= 400 || !c.res.headers.get('content-type')?.includes('text/html')) return
+  if (!shouldRecordVisitor(c.req.method, c.req.path, c.res.status)) return
   try {
-    recordVisitor(c.req.header(clientIpHeaderName()) || '-', new Date(), !currentUser(c.req.raw))
+    const visitedAt = new Date()
+    const address = c.req.header(clientIpHeaderName()) || '-'
+    dailyVisitorAllowlist.add(address, visitedAt)
+    recordVisitor(address, visitedAt, !currentUser(c.req.raw))
   }
   catch (error) {
     logError('visitor buffer flush failed', error)
@@ -332,10 +336,12 @@ app.use('*', async (c, next) => {
   finally {
     const url = new URL(c.req.url)
     const path = url.pathname
+    const address = c.req.header(clientIpHeaderName()) || '-'
     const campaign = url.searchParams.has('reddit') || campaignAttribution(c.req.raw) === 'reddit'
-    if (shouldLogHttp(path, c.res.status, isCrawlerRequest(c.req.raw), Boolean(username), campaign)) {
+    if (shouldLogHttp(path, c.res.status, isCrawlerRequest(c.req.raw), Boolean(username), campaign,
+      dailyVisitorAllowlist.has(address))) {
       logHttp(c.req.method, redactHttpPath(`${path}${url.search}`), c.res.status, performance.now() - started,
-        c.req.header(clientIpHeaderName()) || '-', username, c.req.header('user-agent') || '-',
+        address, username, c.req.header('user-agent') || '-',
         c.res.headers.get('x-feed-cache'))
     }
   }
