@@ -1,7 +1,6 @@
 import type { User } from '../types'
 import type { PostFeedPage } from '../types'
-import { AboutContent } from './about'
-import { WriteForm } from './compose'
+import { AnonymousWriteForm, WriteForm } from './compose'
 import { Layout } from './layout'
 import { FeedTabs, GlobalFeedEmpty, Pagination } from './page-shared'
 import { FeedThreads } from './post'
@@ -34,9 +33,10 @@ export function PublicFeed(
       mobileWriteAction notificationBanner={notificationBanner}
       feeds={random || newest ? undefined : { title: 'All notes', rss: '/all.rss', atom: '/all.atom' }}
     >
-      {!user && <AboutContent user={null} embedded />}
       <h1 className="visually-hidden">{random ? 'Any conversation' : newest ? 'New notes' : 'All notes'}</h1>
-      {user && <WriteForm user={user} returnPath={returnPath} embedded error={writeError} body={writeBody} />}
+      {user
+        ? <WriteForm user={user} returnPath={returnPath} embedded error={writeError} body={writeBody} />
+        : <AnonymousWriteForm returnPath={returnPath} error={writeError} body={writeBody} />}
       <FeedTabs active={random ? 'random' : newest ? 'new' : 'latest'} user={user} forYouCount={feed.forYouCount}
         forYouUnread={feed.forYouUnread}
         toMeCount={feed.toMeCount} toMeUnread={feed.toMeUnread} latestCount={feed.latestCount}

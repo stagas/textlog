@@ -133,6 +133,7 @@ export function Layout({
     ? <a className="button" href="/choose-handle">choose handle</a>
     : (
       <>
+        <a href="/about">about</a>
         <a href="/explore">explore</a>
         <a className="button" href={anonymousEnterHref} rel="nofollow">enter</a>
       </>
@@ -184,7 +185,7 @@ export function Layout({
           </>
         )}
         {mobile && <link href="https://fonts.cdnfonts.com/css/dejavu-sans-mono" rel="stylesheet" />}
-        <link rel="stylesheet" href="/styles.css?v=1342" />
+        <link rel="stylesheet" href="/styles.css?v=1343" />
         <style>{themeCss}</style>
       </head>
       <body

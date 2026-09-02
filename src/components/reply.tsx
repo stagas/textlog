@@ -86,6 +86,45 @@ export function ReplyPreview({ parent, user, body, executionOutput, location }: 
   )
 }
 
+export function ReplyComposer({ user, replyParent, replyPageId, returnPath, inline = false, body = '', error,
+  suggestionSearch, draftId, autoFocus = true }: {
+    user: User | null
+    replyParent: PostView
+    replyPageId: number
+    returnPath?: string
+    inline?: boolean
+    body?: string
+    error?: string
+    suggestionSearch?: PostingSuggestionSearch | null
+    draftId?: string
+    autoFocus?: boolean
+  }) {
+  const helpId = user ? 'reply-posting-help' : 'anonymous-reply-posting-help'
+  return (
+    <ReplyBox action={`/post/${replyParent.id}/reply#post-${replyParent.id}`} body={body} error={error}
+      suggestionSearch={suggestionSearch} draftId={draftId}
+      placeholder={user && replyParent.user_id === user.id ? 'Continue writing…' : `Reply to @${replyParent.handle}…`}
+      className={`replybox reply-compose${inline ? '' : ' root-reply-compose'}${user ? '' : ' anonymous-reply-compose'}`}
+      autoFocus={autoFocus}
+      hidden={<>
+        <input type="hidden" name="reply_page_id" value={replyPageId} />
+        {returnPath && <input type="hidden" name="from" value={returnPath} />}
+      </>}
+      helpId={helpId}
+      secondary={<span className="edit-post-actions">
+        <PostingHelpAction id={helpId} defaultChecked={!!suggestionSearch} />
+      </span>}
+      primary={<button className="button" accessKey={user ? 'p' : undefined}>post →</button>}
+      moreActions={<>
+        <button className="secondary-action compose-autotag-action" name="action" value="autotag"
+          title="Enrich post with hashtags">autotag</button>
+        <button className="secondary-action" name="action" value="preview">preview</button>
+        <button className="secondary-action" name="action" value="draft"
+          formAction={draftId ? `/drafts/${draftId}` : undefined}>draft</button>
+      </>} />
+  )
+}
+
 export function Reply(
   { user, post, replies = [], showForm, showReport = false, reported = false, error, body = '', reportReason = '',
     reportError, social, preview = false, returnPath, topHref, flatHref, treeHref, flat = false, suggestionSearch,
@@ -120,31 +159,9 @@ export function Reply(
   const backTargetsReply = replies.some(reply => reply.id === backPostId && !reply.deleted_at)
   const replyParent = replyTo || post
   const replyComposer = canPublishPosts(user)
-    ? (
-      <ReplyBox action={`/post/${replyParent.id}/reply#post-${replyParent.id}`} body={body} error={error}
-        suggestionSearch={suggestionSearch} draftId={draftId}
-        placeholder={replyParent.user_id === user.id ? 'Continue writing…' : 'Reply to @' + replyParent.handle + '…'}
-        className={`replybox reply-compose${replyTo ? '' : ' root-reply-compose'}`}
-        autoFocus={autoFocus}
-        hidden={<>
-          <input type="hidden" name="reply_page_id" value={post.id} />
-          {returnPath && <input type="hidden" name="from" value={returnPath} />}
-        </>}
-        secondary={
-          <span className="edit-post-actions">
-            <PostingHelpAction id="reply-posting-help" defaultChecked={!!suggestionSearch} />
-          </span>
-        } primary={<button className="button" accessKey="p">post →</button>}
-        moreActions={<>
-          <button className="secondary-action compose-autotag-action" name="action" value="autotag"
-            title="Enrich post with hashtags">
-            autotag
-          </button>
-          <button className="secondary-action" name="action" value="preview">preview</button>
-          <button className="secondary-action" name="action" value="draft"
-            formAction={draftId ? `/drafts/${draftId}` : undefined}>draft</button>
-        </>} />
-    )
+    ? <ReplyComposer user={user} replyParent={replyParent} replyPageId={post.id} returnPath={returnPath}
+        inline={!!replyTo} body={body} error={error} suggestionSearch={suggestionSearch} draftId={draftId}
+        autoFocus={autoFocus} />
     : <VerificationRequired />
   return (
     <Layout user={user} title={postTitle(post.body, post.moderation_category)} social={social}>

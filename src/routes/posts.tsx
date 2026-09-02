@@ -1,5 +1,6 @@
 import {
   Compose,
+  AnonymousCompose,
   ConfirmDelete,
   ConfirmDraftDelete,
   Drafts,
@@ -21,6 +22,7 @@ import { cachedAnonymousPostPage, materializeAnonymousPostPage } from '../anonym
 import { publishPost } from '../api-broker'
 import type { PostingSuggestionSearch } from '../components/page-shared'
 import { safeRefererPath } from '../http'
+import { clearPendingPostCookie, pendingPost, pendingPostCookie } from '../http'
 import { deleteImages, deleteImagesAfterCommit } from '../image-storage'
 import { discoverLinkPreviews } from '../link-preview'
 import { locationMapProvider, osmLocationUrl, parseLocationQuery, resolveLocation } from '../locations'
@@ -133,6 +135,57 @@ export function registerPostsRoutes(app: Hono) {
   app.get('/compose', c => c.redirect('/write', 301))
   app.get('/post', c => c.redirect('/write', 303))
 
+  app.get('/pending-post', async c => {
+    const user = currentUser(c.req.raw)
+    if (!user) return redirect('/enter?next=' + encodeURIComponent('/pending-post'))
+    const pending = pendingPost(c.req.raw)
+    if (!pending || !validPostBody(normalizePostBody(pending.body))) {
+      return redirect(pending?.returnPath || '/', clearPendingPostCookie())
+    }
+    const body = normalizePostBody(pending.body)
+    try {
+      const moderation = await moderateText(body)
+      if (!moderation.ok) {
+        const response = page(<Compose user={user} body={body} error={moderationMessage(moderation)}
+          returnPath={pending.returnPath} />, moderation.reason === 'flagged' ? 422 : 503)
+        response.headers.append('set-cookie', clearPendingPostCookie())
+        return response
+      }
+      const result = await databaseService().call('api.createPost', {
+        userId: user.id,
+        body,
+        parentId: pending.parentId,
+        origin: new URL(c.req.url).origin,
+        translation: await postTranslation(body),
+        moderationCategory: moderation.warning?.category,
+        moderationScore: moderation.warning?.score,
+        executionOutput: await executePostCode(body),
+      })
+      if (result.status === 'rate_limited') {
+        const response = page(<Compose user={user} body={body} error={postRateLimitMessage(result.retryAfter)}
+          returnPath={pending.returnPath} />, 429)
+        response.headers.append('set-cookie', clearPendingPostCookie())
+        return response
+      }
+      if (result.status === 'locked') return c.text('This thread is locked', 409)
+      if (result.status === 'not_found') return c.text('Not found', 404)
+      if (!result.duplicate) publishPost(result.id)
+      if (!result.duplicate) await persistPreviews(result.id, 'save', body)
+      if (!result.duplicate) notifyPost()
+      const destination = pending.parentId
+        ? postedReplyPath(pending.replyPageId || pending.parentId, result.id, pending.returnPath || undefined)
+        : pending.returnPath
+      return redirect(destination, clearPendingPostCookie())
+    }
+    catch (error) {
+      logError('GET /pending-post', error)
+      const response = page(<Compose user={user} body={body} error={saveFailureMessage}
+        returnPath={pending.returnPath} />, 500)
+      response.headers.append('set-cookie', clearPendingPostCookie())
+      return response
+    }
+  })
+
   app.get('/drafts', async c => {
     const user = currentUser(c.req.raw)
     if (!user) return redirect('/enter?next=' + encodeURIComponent('/drafts'))
@@ -234,6 +287,11 @@ export function registerPostsRoutes(app: Hono) {
       parentId: post.id,
       viewerId: user?.id ?? -1,
     })
+    const requestedReplyToId = Number(c.req.query('to'))
+    const replyToId = c.req.query('reply_to') === 'post'
+      ? null
+      : Number.isInteger(requestedReplyToId) ? requestedReplyToId : postAnchorId(returnPath)
+    const replyTo = Number.isInteger(replyToId) ? replies.find(reply => reply.id === replyToId) : undefined
     const configuredOrigin = Bun.env.APP_URL?.replace(/\/$/, '')
     const origin = configuredOrigin || new URL(c.req.url).origin
     const postUrl = `${origin}/post/${post.id}`
@@ -263,7 +321,7 @@ export function registerPostsRoutes(app: Hono) {
     }
     const rendered = page(
       <PublicThread post={post} replies={replies} social={social} returnPath={returnPath} topHref={topHref}
-        flatHref={flatHref} treeHref={treeHref} flat={flat} />,
+        flatHref={flatHref} treeHref={treeHref} flat={flat} replyTo={replyTo} />,
     )
     return materializeAnonymousPostPage(postPageCacheKey, rendered)
   })
@@ -287,11 +345,32 @@ export function registerPostsRoutes(app: Hono) {
 
   app.post('/post', async c => {
     const user = currentUser(c.req.raw)
-    if (!user) return redirect('/enter')
-    if (!canPublishPosts(user)) return page(<Compose user={user} />, 403)
     const f = await form(c.req.raw)
     const returnPath = f.from ? safeNext(f.from) : '/'
     const body = normalizePostBody(f.body || '')
+    if (!user) {
+      if (f.action === 'autotag') {
+        const result = await autotagText(body)
+        const enrichedBody = result.ok ? normalizePostBody(result.body) : body
+        const valid = result.ok && validPostBody(enrichedBody)
+        return page(<AnonymousCompose body={valid ? enrichedBody : body} returnPath={returnPath}
+          error={result.ok && !valid
+            ? `The message is too big to autotag within the ${POST_MAX}-character limit. Edit it down and try again.`
+            : result.ok ? undefined : result.message} />, result.ok ? 200 : 503)
+      }
+      if (!validPostBody(body)) {
+        const destination = new URL(returnPath, c.req.url)
+        destination.searchParams.set('write_error', postBodyValidationMessage(body))
+        destination.searchParams.set('write_body', body)
+        return redirect(destination.pathname + destination.search)
+      }
+      if (f.action === 'preview') {
+        return page(<AnonymousCompose body={body} preview returnPath={returnPath}
+          previewExecutionOutput={await executePostCode(body)} previewLocation={await previewLocation(body)} />)
+      }
+      return redirect('/enter?next=' + encodeURIComponent('/pending-post'), pendingPostCookie(body, returnPath))
+    }
+    if (!canPublishPosts(user)) return page(<Compose user={user} />, 403)
     const editingDraftId = draftId(f)
     const suggestionSearch = await postingSuggestionSearch(f, user.id)
     if (suggestionSearch) {
@@ -578,15 +657,7 @@ export function registerPostsRoutes(app: Hono) {
 
   app.post('/post/:id/reply', async c => {
     const user = currentUser(c.req.raw)
-    if (!user) return redirect('/enter')
     const parentId = Number(c.req.param('id'))
-    const loaded = Number.isInteger(parentId)
-      ? await databaseService().call('posts.replyParent', { id: parentId, userId: user.id })
-      : null
-    if (!loaded || loaded.status === 'not_found') return c.text('Not found', 404)
-    if (loaded.status === 'forbidden') return c.text('Forbidden', 403)
-    const parent = loaded.post
-    if (!canPublishPosts(user)) return page(<Reply user={user} post={parent} showForm />, 403)
     const f = await form(c.req.raw)
     const returnPath = f.from ? safeNext(f.from) : undefined
     const requestedReplyPageId = Number(f.reply_page_id)
@@ -594,6 +665,19 @@ export function registerPostsRoutes(app: Hono) {
       ? requestedReplyPageId
       : parentId
     const body = normalizePostBody(f.body || '')
+    if (!user) {
+      if (!Number.isInteger(parentId) || parentId < 1) return c.text('Not found', 404)
+      if (!validPostBody(body)) return c.text(postBodyValidationMessage(body), 400)
+      return redirect('/enter?next=' + encodeURIComponent('/pending-post'),
+        pendingPostCookie(body, returnPath || `/post/${replyPageId}`, parentId, replyPageId))
+    }
+    const loaded = Number.isInteger(parentId)
+      ? await databaseService().call('posts.replyParent', { id: parentId, userId: user.id })
+      : null
+    if (!loaded || loaded.status === 'not_found') return c.text('Not found', 404)
+    if (loaded.status === 'forbidden') return c.text('Forbidden', 403)
+    const parent = loaded.post
+    if (!canPublishPosts(user)) return page(<Reply user={user} post={parent} showForm />, 403)
     const editingDraftId = draftId(f)
     const renderReplyState = async (
       props: Omit<ComponentProps<typeof Reply>, 'user' | 'post' | 'replies' | 'showForm' | 'replyTo'>,

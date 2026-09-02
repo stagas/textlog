@@ -699,10 +699,10 @@ export function Post({
   const navigationRel = returnPath ? 'nofollow' : undefined
   const formPrefix = `post-${p.id}`
   const resolvedReplyHref = replyHref
-    ?? (user ? defaultReplyPath : '/enter?next=' + encodeURIComponent(defaultReplyPath))
+    ?? defaultReplyPath
   const resolvedReplyLabel = replyLabel ?? (user
     ? user.id === p.user_id ? 'continue' : 'reply'
-    : 'enter to reply')
+    : 'reply')
   const translationHtml = p.translation
     ? linkify(displayPostBody(p.translation), p.mention_bios, highlightTerms, undefined, renderFlags(p), referenceQuery,
       p.hashtag_counts, p.mention_note_counts, { signedIn: !!user, currentHandle: user?.handle,
@@ -1316,8 +1316,7 @@ export function ThreadReplies(
                   : returnPath)
                 : ''}#post-${reply.id}`
               : undefined
-            : '/enter?next=' + encodeURIComponent('/post/' + reply.id + '?reply=1'
-              + '&from=' + encodeURIComponent(postReturnPath))} replyLabel={user ? undefined : 'enter to reply'}
+            : `/post/${parentId}?reply=1&to=${reply.id}&from=${encodeURIComponent(postReturnPath)}#post-${reply.id}`}
           continuationHref={continuationHref} continuationLabel={continuationLabel} tappable
           hideTopMeta={hideTopMeta} />
         {afterReply?.(reply, canonicalDepth(reply.id))}

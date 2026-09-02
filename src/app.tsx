@@ -374,7 +374,7 @@ app.use('*', async (c, next) => {
   if (c.req.method !== 'GET' || !c.res.headers.get('content-type')?.includes('text/html')) return
   const url = new URL(c.req.url)
   const privatePath =
-    /^\/(?:enter|forgot-password|reset-password|choose-handle|navigation-check|write|compose|activity|admin|search|account|panels-gallery|recap-email(?:-v2)?|interacted-email)(?:\/|$)/
+    /^\/(?:enter|forgot-password|reset-password|choose-handle|navigation-check|write|compose|pending-post|activity|admin|search|account|panels-gallery|recap-email(?:-v2)?|interacted-email)(?:\/|$)/
       .test(url.pathname) || /^\/post\/\d+\/(?:edit|delete)$/.test(url.pathname)
   const transientParameters = ['reply', 'back', 'report', 'reported', 'edit', 'reset', 'token']
   const navigationOnly = url.searchParams.has('from')
@@ -419,7 +419,7 @@ app.use('*', async (c, next) => {
     const nextPath = safeLocalPath(url.pathname + url.search)
     return c.redirect('/choose-handle?next=' + encodeURIComponent(nextPath), 303)
   }
-  if (c.req.method !== 'GET' || !wantsHtml || c.req.path === '/choose-handle') return next()
+  if (c.req.method !== 'GET' || !wantsHtml || ['/choose-handle', '/pending-post'].includes(c.req.path)) return next()
   const url = new URL(c.req.url)
   const returnTo = safeLocalPath(url.pathname + url.search)
   if (user && shouldShowMoodPicker(user)) return page(<MoodPicker user={user} returnTo={returnTo} />)

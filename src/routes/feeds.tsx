@@ -65,7 +65,8 @@ async function showNotificationBanner(request: Request, user: ReturnType<typeof 
 }
 
 function viewerCacheVersion(base: number, user: ReturnType<typeof currentUser>) {
-  return base * 2 + (user?.show_moderated_content === 1 ? 1 : 0)
+  const feedPresentationVersion = 1
+  return base * 100 + feedPresentationVersion * 2 + (user?.show_moderated_content === 1 ? 1 : 0)
 }
 
 const positiveInteger = (value?: string) => {

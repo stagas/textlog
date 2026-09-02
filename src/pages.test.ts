@@ -2526,7 +2526,7 @@ test('Error pages explain client and server failures without exposing details', 
 })
 
 describe('About', () => {
-  test('anonymous discovery pages enter without a next destination', () => {
+  test('anonymous discovery pages offer a handle-free composer', () => {
     const feed = { posts: [], page: 1, totalItems: 0, totalPages: 1 }
     const pages = [
       withAppearance(new Request('https://textlog.test/hot?page=2'),
@@ -2538,8 +2538,12 @@ describe('About', () => {
     ]
 
     for (const html of pages) {
-      expect(html).toContain('class="button" href="/enter" rel="nofollow">enter</a>')
-      expect(html).not.toContain('href="/enter?next=')
+      const guestNav = html.slice(html.indexOf('<nav class="guest-nav"'), html.indexOf('</nav>'))
+      expect(guestNav.indexOf('href="/about"')).toBeLessThan(guestNav.indexOf('href="/explore"'))
+      expect(html).toContain('anonymous-write-compose')
+      expect(html).toContain('placeholder="What&#x27;s on your mind?"')
+      expect(html).toContain('title="Show more writing actions and help"')
+      expect(html).not.toContain('placeholder="What’s on your mind, @')
     }
   })
 
@@ -2573,7 +2577,7 @@ describe('About', () => {
     expect(html).toContain('<summary><h2>Endpoints</h2></summary><div class="api-base-url"><h3>Base URL</h3>')
   })
 
-  test('appears above public feed tabs only for guest visitors', () => {
+  test('shows a guest composer above public feed tabs', () => {
     const feed = { posts: [], page: 1, totalItems: 20, totalPages: 2 }
     const guestHot = withAppearance(new Request('https://textlog.test/hot'),
       () => renderToStaticMarkup(React.createElement(HotFeed, { user: null, feed })))
@@ -2584,11 +2588,12 @@ describe('About', () => {
     const signedInLatest = renderToStaticMarkup(React.createElement(PublicFeed, { user, path: '/all' }))
 
     for (const html of [guestHot, guestLatest]) {
-      expect(html).toContain('class="static-page about-page feed-about"')
+      expect(html).not.toContain('class="static-page about-page feed-about"')
+      expect(html).toContain('anonymous-write-compose')
+      expect(html).toContain('placeholder="What&#x27;s on your mind?"')
       expect(html).toContain(
         'class="guest-join-row"><a class="button" href="/enter" rel="nofollow">join the community</a>',
       )
-      expect(html).toContain('href="/hot">browse notes</a>')
       expect(html).toContain('href="/hot"')
       expect(html).toContain('href="/all"')
       expect(html).toMatch(/href="\/any\?seed=[0-9a-z]+"/)
@@ -2599,7 +2604,7 @@ describe('About', () => {
       expect(html).not.toContain('class="button feed-tabs-join"')
       expect(html).toContain('?page=2" aria-label="Page 2"')
       expect(html).toContain('?page=2" aria-label="Next page"')
-      expect(html.indexOf('about-page feed-about')).toBeLessThan(html.indexOf('id="feed-tabs"'))
+      expect(html.indexOf('anonymous-write-compose')).toBeLessThan(html.indexOf('id="feed-tabs"'))
       expect(html.lastIndexOf('aria-label="Pagination"')).toBeLessThan(html.indexOf('class="guest-join-row"'))
     }
     for (const html of [signedInHot, signedInLatest]) {
@@ -4037,6 +4042,53 @@ test('Public post pages end with join and browse actions', () => {
   expect(html).toContain('class="action-pair post-page-actions"')
   expect(html).toContain('class="button" href="/enter" rel="nofollow">join the community</a>')
   expect(html).toContain('href="/hot">browse more notes</a>')
+  expect(html).not.toContain('post-reply-link')
+  expect(html).toContain('anonymous-reply-compose')
+})
+
+test('Anonymous post pages show the full reply composer when reply is requested', () => {
+  const html = renderToStaticMarkup(React.createElement(PublicThread, {
+    post: { id: 2, user_id: 1, parent_id: null, body: 'A note', handle: 'writer', created_at: '2026-08-03 12:00:00',
+      deleted_at: null },
+    showForm: true,
+    returnPath: '/hot',
+  }))
+
+  expect(html).toContain('anonymous-reply-compose')
+  expect(html).toContain('action="/post/2/reply#post-2"')
+  expect(html).toContain('placeholder="Reply to @writer…"')
+  expect(html).toContain('title="Show more writing actions and help"')
+})
+
+test('Anonymous reply detail places the composer beneath the clicked reply without a reply link', () => {
+  const reply = { id: 11, user_id: 2, parent_id: 10, body: 'Reply', handle: 'replier',
+    created_at: '2026-08-03 12:01:00', deleted_at: null }
+  const html = renderToStaticMarkup(React.createElement(PublicThread, { post: reply }))
+
+  expect(html).not.toContain('post-reply-link')
+  expect(html).toContain('action="/post/11/reply#post-11"')
+  expect(html).toContain('placeholder="Reply to @replier…"')
+  expect(html.indexOf('id="post-11"')).toBeLessThan(html.indexOf('anonymous-reply-compose'))
+})
+
+test('Anonymous conversation uses the clicked feed reply as the inline composer target', () => {
+  const root = { id: 10, user_id: 1, parent_id: null, body: 'Root', handle: 'root',
+    created_at: '2026-08-03 12:00:00', deleted_at: null }
+  const reply = { id: 11, user_id: 2, parent_id: 10, body: 'Reply', handle: 'replier',
+    created_at: '2026-08-03 12:01:00', deleted_at: null }
+  const html = renderToStaticMarkup(React.createElement(PublicThread, {
+    post: root,
+    replies: [reply],
+    replyTo: reply,
+    returnPath: '/hot#post-11',
+  }))
+
+  expect(html).not.toContain('post-reply-link')
+  expect(html).toContain('class="inline-reply-compose"')
+  expect(html).toContain('replybox reply-compose anonymous-reply-compose')
+  expect(html).not.toContain('reply-compose root-reply-compose anonymous-reply-compose')
+  expect(html).toContain('action="/post/11/reply#post-11"')
+  expect(html.indexOf('id="post-11"')).toBeLessThan(html.indexOf('anonymous-reply-compose'))
 })
 
 test('Anonymous tag and people pages end with join and browse actions', () => {

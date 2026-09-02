@@ -151,10 +151,50 @@ const CAMPAIGN_ATTRIBUTION_COOKIE = 'campaign_attribution'
 const PWA_STANDALONE_COOKIE = 'pwa_standalone'
 const PWA_INSTALL_BANNER_COOKIE = 'pwa_install_banner_dismissed'
 const EXPLORE_WELCOME_COOKIE = 'explore_welcome'
+const PENDING_POST_COOKIE = 'pending_post'
 
 function cookieValue(request: Request, name: string) {
   const escaped = name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
   return request.headers.get('cookie')?.match(new RegExp(`(?:^|;\\s*)${escaped}=([^;]+)`))?.[1] || null
+}
+
+export function pendingPost(request: Request) {
+  const value = cookieValue(request, PENDING_POST_COOKIE)
+  if (!value) return null
+  try {
+    const parsed = JSON.parse(Buffer.from(value, 'base64url').toString('utf8')) as {
+      body?: unknown
+      returnPath?: unknown
+      parentId?: unknown
+      replyPageId?: unknown
+    }
+    return typeof parsed.body === 'string'
+      ? {
+          body: parsed.body,
+          returnPath: safeLocalPath(typeof parsed.returnPath === 'string' ? parsed.returnPath : '/'),
+          parentId: Number.isInteger(parsed.parentId) && Number(parsed.parentId) > 0 ? Number(parsed.parentId) : null,
+          replyPageId: Number.isInteger(parsed.replyPageId) && Number(parsed.replyPageId) > 0
+            ? Number(parsed.replyPageId)
+            : null,
+        }
+      : null
+  }
+  catch {
+    return null
+  }
+}
+
+export function pendingPostCookie(body: string, returnPath: string, parentId: number | null = null,
+  replyPageId: number | null = null, maxAge = 20 * 60,
+  appUrl: string | undefined = Bun.env.APP_URL)
+{
+  const value = Buffer.from(JSON.stringify({ body, returnPath: safeLocalPath(returnPath), parentId, replyPageId }))
+    .toString('base64url')
+  return `${PENDING_POST_COOKIE}=${value}; Max-Age=${maxAge}; HttpOnly; Path=/; SameSite=Lax${secureCookie(appUrl)}`
+}
+
+export function clearPendingPostCookie(appUrl: string | undefined = Bun.env.APP_URL) {
+  return pendingPostCookie('', '/', null, null, 0, appUrl)
 }
 
 export function exploreWelcome(request: Request) {

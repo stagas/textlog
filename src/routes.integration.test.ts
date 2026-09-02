@@ -208,6 +208,122 @@ test('/?reddit attributes a completed signup', async () => {
     .toEqual({ count: 1 })
 })
 
+test('an anonymous feed note is published after signup chooses a handle', async () => {
+  const body = 'A thought carried through signup'
+  const ip = '203.0.113.84'
+  const draftsBeforePreview = (database.query('SELECT count(*) count FROM drafts').get() as { count: number }).count
+  const preview = await request('/post', {
+    method: 'POST',
+    ip,
+    form: { body, from: '/hot', embedded: '1', action: 'preview' },
+  })
+  expect(preview.status).toBe(200)
+  const previewHtml = await preview.text()
+  expect(previewHtml).toContain('<h2>preview</h2>')
+  expect(previewHtml).toContain(body)
+  expect(previewHtml).toContain('anonymous-write-compose')
+  expect(preview.headers.get('set-cookie')).toBeNull()
+  expect((database.query('SELECT count(*) count FROM drafts').get() as { count: number }).count)
+    .toBe(draftsBeforePreview)
+
+  const autotag = await request('/post', {
+    method: 'POST',
+    ip,
+    form: { body, from: '/hot', embedded: '1', action: 'autotag' },
+  })
+  expect(autotag.status).toBe(503)
+  const autotagHtml = await autotag.text()
+  expect(autotagHtml).toContain('Autotag is not configured.')
+  expect(autotagHtml).toContain('anonymous-write-compose')
+  expect(autotag.headers.get('location')).toBeNull()
+
+  const started = await request('/post', {
+    method: 'POST',
+    ip,
+    form: { body, from: '/hot', embedded: '1' },
+  })
+  expect(started.status).toBe(303)
+  expect(started.headers.get('location')).toBe('/enter?next=%2Fpending-post')
+  const pendingCookie = started.headers.get('set-cookie')!.split(';', 1)[0]
+  expect(pendingCookie).toStartWith('pending_post=')
+
+  const email = 'pending-post-signup@example.com'
+  const sent = await request('/enter', {
+    method: 'POST',
+    ip,
+    cookie: pendingCookie,
+    form: { email, next: '/pending-post' },
+  })
+  expect(sent.status).toBe(200)
+  const message = capturedEmails().filter(item => item.to === email).at(-1)!
+  const magic = await request(`/enter/magic?token=${encodeURIComponent(linkToken(message))}`, {
+    cookie: pendingCookie,
+    ip,
+  })
+  const loginCookie = sessionCookie(magic)
+  expect(magic.headers.get('location')).toBe('/choose-handle?next=%2Fpending-post')
+
+  const cookies = `${loginCookie}; ${pendingCookie}`
+  const chosen = await request('/choose-handle', {
+    method: 'POST',
+    cookie: cookies,
+    ip,
+    form: { handle: 'pending_writer', next: '/pending-post' },
+  })
+  expect(chosen.headers.get('location')).toBe('/pending-post')
+
+  const published = await request('/pending-post', { cookie: cookies, acceptHtml: true, ip })
+  expect(published.status).toBe(303)
+  expect(published.headers.get('location')).toBe('/hot')
+  expect(published.headers.get('set-cookie')).toContain('pending_post=')
+  expect(published.headers.get('set-cookie')).toContain('Max-Age=0')
+  const root = database.query('SELECT id,body FROM posts WHERE user_id=(SELECT id FROM users WHERE handle=?) ORDER BY id DESC')
+    .get('pending_writer') as { id: number; body: string }
+  expect(root.body).toBe(body)
+
+  const replyBody = 'A reply carried through signup'
+  const replyIp = '203.0.113.85'
+  const replyStarted = await request(`/post/${root.id}/reply`, {
+    method: 'POST',
+    ip: replyIp,
+    form: { body: replyBody, reply_page_id: String(root.id), from: `/post/${root.id}` },
+  })
+  expect(replyStarted.headers.get('location')).toBe('/enter?next=%2Fpending-post')
+  const replyPendingCookie = replyStarted.headers.get('set-cookie')!.split(';', 1)[0]
+  const replyEmail = 'pending-reply-signup@example.com'
+  await request('/enter', {
+    method: 'POST',
+    ip: replyIp,
+    cookie: replyPendingCookie,
+    form: { email: replyEmail, next: '/pending-post' },
+  })
+  const replyMessage = capturedEmails().filter(item => item.to === replyEmail).at(-1)!
+  const replyMagic = await request(`/enter/magic?token=${encodeURIComponent(linkToken(replyMessage))}`, {
+    cookie: replyPendingCookie,
+    ip: replyIp,
+  })
+  const replyCookies = `${sessionCookie(replyMagic)}; ${replyPendingCookie}`
+  await request('/choose-handle', {
+    method: 'POST',
+    cookie: replyCookies,
+    ip: replyIp,
+    form: { handle: 'pending_replier', next: '/pending-post' },
+  })
+  const replyPublished = await request('/pending-post', { cookie: replyCookies, acceptHtml: true, ip: replyIp })
+  expect(replyPublished.status).toBe(303)
+  expect(replyPublished.headers.get('location')).toContain(`/post/${root.id}`)
+  const reply = database.query('SELECT id,body,parent_id FROM posts WHERE user_id=(SELECT id FROM users WHERE handle=?)')
+    .get('pending_replier') as { id: number; body: string; parent_id: number }
+  expect(reply).toMatchObject({ body: replyBody, parent_id: root.id })
+
+  const clickedReply = await request(`/post/${root.id}?from=${encodeURIComponent(`/hot#post-${reply.id}`)}`)
+  const clickedReplyHtml = await clickedReply.text()
+  expect(clickedReplyHtml).toContain('class="inline-reply-compose"')
+  expect(clickedReplyHtml).toContain(`action="/post/${reply.id}/reply#post-${reply.id}"`)
+  expect(clickedReplyHtml.indexOf(`id="post-${reply.id}"`))
+    .toBeLessThan(clickedReplyHtml.indexOf('anonymous-reply-compose'))
+})
+
 test('instant scroll actions are applied once without client-side scripts', async () => {
   const marked = await request('/about?_scroll=instant')
   expect(marked.status).toBe(303)

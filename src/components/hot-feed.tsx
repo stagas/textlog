@@ -1,8 +1,7 @@
 import type { HotCursor } from '../hot'
 import type { User } from '../types'
 import type { PostFeedPage } from '../types'
-import { AboutContent } from './about'
-import { WriteForm } from './compose'
+import { AnonymousWriteForm, WriteForm } from './compose'
 import { Layout } from './layout'
 import { FeedTabs, GlobalFeedEmpty, Pagination } from './page-shared'
 import { FeedThreads } from './post'
@@ -28,9 +27,10 @@ export function HotFeed(
     <Layout user={user} title={title} pageUrl={pageUrl} notificationBanner={notificationBanner}
       mobileWriteAction feeds={{ title: 'Hot notes', rss: '/hot.rss', atom: '/hot.atom' }}
     >
-      {!user && <AboutContent user={null} embedded />}
       <h1 className="visually-hidden">Hot notes</h1>
-      {user && <WriteForm user={user} returnPath={returnPath} embedded error={writeError} body={writeBody} />}
+      {user
+        ? <WriteForm user={user} returnPath={returnPath} embedded error={writeError} body={writeBody} />
+        : <AnonymousWriteForm returnPath={returnPath} error={writeError} body={writeBody} />}
       <FeedTabs active="hot" user={user} forYouCount={feed.forYouCount} forYouUnread={feed.forYouUnread}
         toMeCount={feed.toMeCount} toMeUnread={feed.toMeUnread} latestCount={feed.latestCount} />
       {feed.page > 1 && (
