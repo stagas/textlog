@@ -74,7 +74,8 @@ test('compact latest state uses a cursor with sparse reads above it', () => {
   INSERT INTO posts(id,user_id,parent_id) VALUES(1,2,NULL),(2,2,NULL),(3,2,NULL),(4,2,NULL);
   INSERT INTO latest_read_state VALUES(1,2);`)
 
-  markLatestPostsRead(1, [4], database)
+  database.query('INSERT INTO latest_read_exceptions(user_id,post_id) VALUES(1,1)').run()
+  markLatestPostsRead(1, [1, 2, 4], database)
   expect(latestPostState(1, database).filter(row => row.unread).map(row => row.id)).toEqual([3])
   expect(database.query('SELECT post_id FROM latest_read_exceptions').all()).toEqual([{ post_id: 4 }])
   markAllLatestRead(1, database)

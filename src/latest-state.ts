@@ -70,8 +70,13 @@ export function markLatestPostsRead(userId: number, postIds: number[], database:
   if (!postIds.length) return
   if (usesCompactReads(database)) {
     const insert = database.query(`INSERT OR IGNORE INTO latest_read_exceptions(user_id,post_id)
-      SELECT ?,id FROM posts WHERE id=?`)
-    database.transaction(() => postIds.forEach(id => insert.run(userId, id)))()
+      SELECT ?,p.id FROM posts p WHERE p.id=? AND p.id>coalesce(
+        (SELECT through_post_id FROM latest_read_state WHERE user_id=?),0)`)
+    database.transaction(() => {
+      postIds.forEach(id => insert.run(userId, id, userId))
+      database.query(`DELETE FROM latest_read_exceptions WHERE user_id=? AND post_id<=coalesce(
+        (SELECT through_post_id FROM latest_read_state WHERE user_id=?),0)`).run(userId, userId)
+    })()
     return
   }
   if (!database.query('SELECT 1 FROM sqlite_master WHERE type=\'table\' AND name=\'latest_reads\'').get()) return
