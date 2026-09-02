@@ -128,6 +128,16 @@ export type DatabaseDomainOperations = {
   'account.updateProfile': { input: { userId: number; handle: string; mood: string; bio: string; timezone: string };
     output: { status: 'ready' | 'unavailable' | 'change-limit' } }
   'account.answerMoodPrompt': { input: { userId: number; mood: string | null }; output: null }
+  'account.popularTags': {
+    input: { limit: number }
+    output: Array<{ tag: string; displayName?: string | null; count: number }>
+  }
+  'account.completeTagPrompt': { input: { userId: number; tags: string[] }; output: null }
+  'account.popularPeople': {
+    input: { userId: number; limit: number }
+    output: Array<{ id: number; handle: string; mood?: string | null; bio: string }>
+  }
+  'account.completePeoplePrompt': { input: { userId: number; people: number[] }; output: null }
   'account.export': { input: { userId: number; currentSession: string | null }; output: unknown }
   'account.emailChangeReadiness': { input: { userId: number; email: string };
     output: { status: 'unavailable' } | { status: 'ready'; passwordHash: string } }

@@ -142,22 +142,24 @@ export function MagicLinkSent({ email, magicUrl, error, handle = false }: {
 
 export function ChooseHandle({ error, handle = '', next }: { error?: string; handle?: string; next?: string }) {
   return (
-    <Layout title="choose your handle" logoutNavigation>
-      <CenteredPanel shellClassName="auth-shell" className="auth-panel choose-handle-panel" width="medium">
-        <h1>Choose your handle</h1>
-        <p>Pick the handle that people will see. You can always change it later.</p>
-        {error && <p className="status-message status-error" role="alert">{error}</p>}
-        <form method="post" action="/choose-handle">
-          {next && <input type="hidden" name="next" value={next} />}
-          <input name="handle" aria-label="handle" aria-describedby="handle-help" autoFocus autoComplete="username"
-            inputMode="text" enterKeyHint="done" autoCapitalize="none" spellCheck={false} defaultValue={handle}
-            placeholder="your_handle" />
-          <p id="handle-help" className="form-hint">
-            Handles must be 2–24 characters and use only letters, numbers, or underscores.
-          </p>
-          <button className="button">continue</button>
-        </form>
-      </CenteredPanel>
+    <Layout title="choose your handle" fullScreen>
+      <section className="handle-picker" aria-labelledby="handle-picker-title">
+        <div className="handle-picker-card">
+          <h1 id="handle-picker-title">Choose a handle</h1>
+          <p>Pick the name people will see.</p>
+          {error && <p className="status-message status-error" role="alert">{error}</p>}
+          <form method="post" action="/choose-handle">
+            {next && <input type="hidden" name="next" value={next} />}
+            <input className="form-control" name="handle" aria-label="handle" aria-describedby="handle-help" autoFocus
+              autoComplete="username" inputMode="text" enterKeyHint="done" autoCapitalize="none" spellCheck={false}
+              defaultValue={handle} placeholder="your_handle" />
+            <p id="handle-help" className="form-hint">
+              Handles must be 2–24 characters and use only letters, numbers, or underscores. You can change it later.
+            </p>
+            <button className="button">continue →</button>
+          </form>
+        </div>
+      </section>
     </Layout>
   )
 }

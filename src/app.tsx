@@ -11,6 +11,8 @@ import { BlogRecap } from './components/blog-recap'
 import { BlogRecapV2 } from './components/blog-recap-v2'
 import { NavigationCaptcha } from './components/navigation-captcha'
 import { MOOD_CHOICES, MoodPicker, shouldShowMoodPicker } from './components/mood-picker'
+import { shouldShowTagPicker, TagPicker } from './components/tag-picker'
+import { PeoplePicker, shouldShowPeoplePicker } from './components/people-picker'
 import { configureDevReload } from './components/layout'
 import { PanelsGallery } from './components/panels-gallery'
 import { compressResponse } from './compression'
@@ -24,7 +26,7 @@ import { NESTED_FROM_MAX_DEPTH, NavigationCaptchaChallenges, NavigationCaptchaGa
 import { renderDefaultOg } from './og'
 import { PUBLIC_ARCHIVE_CHECK_INTERVAL_MS } from './public-archive'
 import { startPostPushWorker } from './push'
-import { resumeRelationshipFeedInvalidation } from './relationship-feed-invalidation'
+import { resumeRelationshipFeedInvalidation, scheduleRelationshipFeedInvalidation } from './relationship-feed-invalidation'
 import { allowNavigationCaptcha, flushIpRequests, isIpBlocked, isNavigationCaptchaAllowed, loadBlockedIps,
   recordIpRequest } from './request-ip-blocks'
 import { ClientErrorRateLimiter, HOURLY_REQUEST_BLOCK_SECONDS, HOURLY_REQUEST_RATE_LIMIT,
@@ -417,10 +419,19 @@ app.use('*', async (c, next) => {
     const nextPath = safeLocalPath(url.pathname + url.search)
     return c.redirect('/choose-handle?next=' + encodeURIComponent(nextPath), 303)
   }
-  if (c.req.method !== 'GET' || !wantsHtml || !shouldShowMoodPicker(user)
-    || c.req.path === '/choose-handle') return next()
+  if (c.req.method !== 'GET' || !wantsHtml || c.req.path === '/choose-handle') return next()
   const url = new URL(c.req.url)
-  return page(<MoodPicker user={user} returnTo={safeLocalPath(url.pathname + url.search)} />)
+  const returnTo = safeLocalPath(url.pathname + url.search)
+  if (user && shouldShowMoodPicker(user)) return page(<MoodPicker user={user} returnTo={returnTo} />)
+  if (user && shouldShowTagPicker(user)) {
+    const tags = await databaseService().call('account.popularTags', { limit: 12 })
+    return page(<TagPicker user={user} tags={tags} returnTo={returnTo} />)
+  }
+  if (user && shouldShowPeoplePicker(user)) {
+    const people = await databaseService().call('account.popularPeople', { userId: user.id, limit: 12 })
+    return page(<PeoplePicker user={user} people={people} returnTo={returnTo} />)
+  }
+  return next()
 })
 app.post('/pick-mood', async c => {
   const user = currentUser(c.req.raw)
@@ -438,6 +449,54 @@ app.post('/pick-mood/dismiss', async c => {
   const fields = await limitedFormData(c.req.raw, 4_000)
   const returnTo = safeLocalPath(String(fields.get('returnTo') || '/'))
   await databaseService().call('account.answerMoodPrompt', { userId: user.id, mood: null })
+  return c.redirect(returnTo, 303)
+})
+app.post('/pick-tags', async c => {
+  const user = currentUser(c.req.raw)
+  if (!user) return c.redirect('/enter', 303)
+  const fields = await limitedFormData(c.req.raw, 8_000)
+  const returnTo = safeLocalPath(String(fields.get('returnTo') || '/'))
+  const popularTags = await databaseService().call('account.popularTags', { limit: 12 })
+  const allowed = new Set(popularTags.map(tag => tag.tag))
+  const tags = [...new Set(fields.getAll('tags').map(String))].filter(tag => allowed.has(tag))
+  if (!tags.length && popularTags.length) {
+    return page(<TagPicker user={user} tags={popularTags} returnTo={returnTo}
+      error="Choose at least one tag to continue." />, 400)
+  }
+  await databaseService().call('account.completeTagPrompt', { userId: user.id, tags })
+  scheduleRelationshipFeedInvalidation()
+  return c.redirect(returnTo, 303)
+})
+app.post('/pick-tags/dismiss', async c => {
+  const user = currentUser(c.req.raw)
+  if (!user) return c.redirect('/enter', 303)
+  const fields = await limitedFormData(c.req.raw, 4_000)
+  const returnTo = safeLocalPath(String(fields.get('returnTo') || '/'))
+  await databaseService().call('account.completeTagPrompt', { userId: user.id, tags: [] })
+  return c.redirect(returnTo, 303)
+})
+app.post('/pick-people', async c => {
+  const user = currentUser(c.req.raw)
+  if (!user) return c.redirect('/enter', 303)
+  const fields = await limitedFormData(c.req.raw, 8_000)
+  const returnTo = safeLocalPath(String(fields.get('returnTo') || '/'))
+  const popularPeople = await databaseService().call('account.popularPeople', { userId: user.id, limit: 12 })
+  const allowed = new Set(popularPeople.map(person => person.id))
+  const people = [...new Set(fields.getAll('people').map(Number))].filter(id => allowed.has(id))
+  if (!people.length && popularPeople.length) {
+    return page(<PeoplePicker user={user} people={popularPeople} returnTo={returnTo}
+      error="Choose at least one person to continue." />, 400)
+  }
+  await databaseService().call('account.completePeoplePrompt', { userId: user.id, people })
+  scheduleRelationshipFeedInvalidation()
+  return c.redirect(returnTo, 303)
+})
+app.post('/pick-people/dismiss', async c => {
+  const user = currentUser(c.req.raw)
+  if (!user) return c.redirect('/enter', 303)
+  const fields = await limitedFormData(c.req.raw, 4_000)
+  const returnTo = safeLocalPath(String(fields.get('returnTo') || '/'))
+  await databaseService().call('account.completePeoplePrompt', { userId: user.id, people: [] })
   return c.redirect(returnTo, 303)
 })
 app.get('/health', async c => {

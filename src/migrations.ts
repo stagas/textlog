@@ -2869,6 +2869,45 @@ export const migrations: Migration[] = [
       addColumn(database, 'interacted_campaign_runs', 'abandoned_at', 'TEXT')
     },
   },
+  {
+    version: 175,
+    name: 'tag_onboarding_prompt',
+    up(database) {
+      if (!database.query("SELECT 1 FROM sqlite_master WHERE type='table' AND name='users'").get()) return
+      addColumn(database, 'users', 'tag_prompt_completed_at', 'TEXT')
+      if (database.query("SELECT 1 FROM sqlite_master WHERE type='table' AND name='hashtag_follows'").get()
+        && database.query("SELECT 1 FROM sqlite_master WHERE type='table' AND name='personalized_feed_generations'").get()) {
+        database.run(`UPDATE users SET tag_prompt_completed_at=CURRENT_TIMESTAMP
+          WHERE EXISTS(SELECT 1 FROM hashtag_follows hf WHERE hf.user_id=users.id)`)
+      }
+    },
+  },
+  {
+    version: 176,
+    name: 'repair_tag_onboarding_prompt_backfill',
+    up(database) {
+      if (!database.query("SELECT 1 FROM pragma_table_info('users') WHERE name='tag_prompt_completed_at'").get()
+        || !database.query("SELECT 1 FROM sqlite_master WHERE type='table' AND name='hashtag_follows'").get()
+        || !database.query(
+          "SELECT 1 FROM sqlite_master WHERE type='table' AND name='personalized_feed_generations'",
+        ).get()) return
+      database.run(`UPDATE users SET tag_prompt_completed_at=NULL
+        WHERE NOT EXISTS(SELECT 1 FROM hashtag_follows hf WHERE hf.user_id=users.id)`)
+    },
+  },
+  {
+    version: 177,
+    name: 'people_onboarding_prompt',
+    up(database) {
+      if (!database.query("SELECT 1 FROM sqlite_master WHERE type='table' AND name='users'").get()) return
+      addColumn(database, 'users', 'people_prompt_completed_at', 'TEXT')
+      if (database.query("SELECT 1 FROM sqlite_master WHERE type='table' AND name='follows'").get()
+        && database.query("SELECT 1 FROM sqlite_master WHERE type='table' AND name='personalized_feed_generations'").get()) {
+        database.run(`UPDATE users SET people_prompt_completed_at=CURRENT_TIMESTAMP
+          WHERE EXISTS(SELECT 1 FROM follows f WHERE f.follower_id=users.id)`)
+      }
+    },
+  },
 ]
 
 export const latestMigrationVersion = migrations.at(-1)!.version

@@ -332,9 +332,16 @@ function sessionUser(database: Database, token: string | null): User | null {
   const moodPromptColumn = database.query(
     "SELECT 1 FROM pragma_table_info('users') WHERE name='mood_prompt_dismissed_at'",
   ).get() ? 'u.mood_prompt_dismissed_at' : 'NULL mood_prompt_dismissed_at'
+  const tagPromptColumn = database.query(
+    "SELECT 1 FROM pragma_table_info('users') WHERE name='tag_prompt_completed_at'",
+  ).get() ? 'u.tag_prompt_completed_at' : 'NULL tag_prompt_completed_at'
+  const peoplePromptColumn = database.query(
+    "SELECT 1 FROM pragma_table_info('users') WHERE name='people_prompt_completed_at'",
+  ).get() ? 'u.people_prompt_completed_at' : 'NULL people_prompt_completed_at'
   const user = database.query(`SELECT u.id,u.handle,u.email,u.bio,${moodColumn},u.suspended_at,u.email_verified_at,
       u.handle_chosen_at,u.show_link_previews,u.show_moderated_content,u.hide_people_follow_activity,
-      u.hide_hashtag_follow_activity,u.show_note_streak,u.show_timestamps,u.timezone,${moodPromptColumn}
+      u.hide_hashtag_follow_activity,u.show_note_streak,u.show_timestamps,u.timezone,${moodPromptColumn},${tagPromptColumn},
+      ${peoplePromptColumn}
     FROM sessions s JOIN users u ON u.id=s.user_id
     WHERE s.token_hash=? AND s.expires_at>? AND u.deleted_at IS NULL AND u.suspended_at IS NULL`)
     .get(sessionHash(token), Date.now()) as User | null
@@ -699,6 +706,52 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
           .run(mood, userId)
       }
       else database.query('UPDATE users SET mood_prompt_dismissed_at=CURRENT_TIMESTAMP WHERE id=?').run(userId)
+      return null as DatabaseDomainOutput<K>
+    }
+    case 'account.popularTags': {
+      const { limit } = input as DatabaseDomainInput<'account.popularTags'>
+      const canonical = database.query("SELECT 1 FROM sqlite_master WHERE type='table' AND name='tag_aliases'").get()
+        ? 'coalesce((SELECT primary_tag FROM tag_aliases WHERE alias=ph.tag),ph.tag)'
+        : 'ph.tag'
+      const displayName = database.query(
+        "SELECT 1 FROM sqlite_master WHERE type='table' AND name='tag_display_names'",
+      ).get() ? '(SELECT display_name FROM tag_display_names WHERE tag=ct.tag)' : 'NULL'
+      return database.query(`WITH canonical_tags AS (
+        SELECT DISTINCT ph.post_id,${canonical} tag FROM post_hashtags ph
+      ) SELECT ct.tag,${displayName} displayName,count(*) count FROM canonical_tags ct JOIN posts p ON p.id=ct.post_id
+        WHERE p.deleted_at IS NULL AND ct.tag NOT IN ('meta','whisper','launch')
+        GROUP BY ct.tag ORDER BY count DESC,ct.tag LIMIT ?`)
+        .all(limit) as DatabaseDomainOutput<K>
+    }
+    case 'account.completeTagPrompt': {
+      const { userId, tags } = input as DatabaseDomainInput<'account.completeTagPrompt'>
+      database.transaction(() => {
+        const insert = database.query('INSERT OR IGNORE INTO hashtag_follows(user_id,tag) VALUES(?,?)')
+        for (const tag of tags) insert.run(userId, tag)
+        database.query('UPDATE users SET tag_prompt_completed_at=CURRENT_TIMESTAMP WHERE id=?').run(userId)
+      })()
+      cacheDb.query('DELETE FROM materialized_feed_pages_v2 WHERE viewer_id=?').run(userId)
+      return null as DatabaseDomainOutput<K>
+    }
+    case 'account.popularPeople': {
+      const { userId, limit } = input as DatabaseDomainInput<'account.popularPeople'>
+      return database.query(`SELECT u.id,u.handle,u.mood,u.bio FROM users u
+        WHERE u.id!=? AND u.deleted_at IS NULL AND u.suspended_at IS NULL AND u.handle_chosen_at IS NOT NULL
+        AND NOT EXISTS(SELECT 1 FROM blocks b WHERE
+          (b.blocker_id=? AND b.blocked_id=u.id) OR (b.blocker_id=u.id AND b.blocked_id=?))
+        ORDER BY (SELECT count(*) FROM posts p WHERE p.user_id=u.id AND p.deleted_at IS NULL) DESC,
+          (SELECT count(*) FROM follows f JOIN users follower ON follower.id=f.follower_id
+            WHERE f.following_id=u.id AND follower.deleted_at IS NULL) DESC,u.id DESC LIMIT ?`)
+        .all(userId, userId, userId, limit) as DatabaseDomainOutput<K>
+    }
+    case 'account.completePeoplePrompt': {
+      const { userId, people } = input as DatabaseDomainInput<'account.completePeoplePrompt'>
+      database.transaction(() => {
+        const insert = database.query('INSERT OR IGNORE INTO follows(follower_id,following_id) VALUES(?,?)')
+        for (const personId of people) insert.run(userId, personId)
+        database.query('UPDATE users SET people_prompt_completed_at=CURRENT_TIMESTAMP WHERE id=?').run(userId)
+      })()
+      cacheDb.query('DELETE FROM materialized_feed_pages_v2 WHERE viewer_id=?').run(userId)
       return null as DatabaseDomainOutput<K>
     }
     case 'account.export': {

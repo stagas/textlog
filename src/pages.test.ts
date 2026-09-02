@@ -2622,10 +2622,16 @@ describe('Auth', () => {
     const html = renderToStaticMarkup(React.createElement(ChooseHandle))
 
     expect(html).toContain('Handles must be 2–24 characters')
-    expect(html).toContain('You can always change it later.')
+    expect(html).toContain('Pick the name people will see.')
+    expect(html).toContain('underscores. You can change it later.')
     expect(html).toContain('aria-describedby="handle-help"')
+    expect(html).toContain('class="form-control"')
     expect(html).not.toContain('pattern=')
     expect(html).toContain('action="/choose-handle"')
+    expect(html).toContain('<button class="button">continue →</button>')
+    expect(html).toContain('class="density-regular full-screen-page"')
+    expect(html).not.toContain('<header')
+    expect(html).not.toContain('<footer')
   })
 
   test('handle choice preserves a rejected submitted handle and character-count error', () => {

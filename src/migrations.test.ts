@@ -7,6 +7,22 @@ import { databaseVersion, latestMigrationVersion, migrations, normalizeInternalP
 import { sessionHash } from './sessions'
 
 describe('database migrations', () => {
+  test('repairs tag onboarding for existing accounts that do not follow tags', () => {
+    const database = new Database(':memory:')
+    runMigrations(database)
+    database.run(`INSERT INTO users(id,handle,email,password,tag_prompt_completed_at) VALUES
+      (1,'alice','alice@example.com','x',CURRENT_TIMESTAMP),
+      (2,'bob','bob@example.com','x',CURRENT_TIMESTAMP);
+      INSERT INTO hashtag_follows(user_id,tag) VALUES(2,'writing');
+      PRAGMA user_version=175;`)
+
+    runMigrations(database)
+    expect(database.query('SELECT id,tag_prompt_completed_at completed FROM users ORDER BY id').all()).toEqual([
+      { id: 1, completed: null },
+      { id: 2, completed: expect.any(String) },
+    ])
+  })
+
   test('removes underscores from indexed tags and merges existing relationships', () => {
     const database = new Database(':memory:')
     database.run(`CREATE TABLE posts(id INTEGER PRIMARY KEY,body TEXT NOT NULL,deleted_at TEXT);

@@ -9,7 +9,7 @@ export const MOOD_CHOICES = [
   '🧚', '🧛', '🥷', '🦸', '🦹', '🧞', '🧜', '🧑‍🚀',
 ] as const
 
-export function shouldShowMoodPicker(user: User | null | undefined): user is User {
+export function shouldShowMoodPicker(user: User | null | undefined) {
   return Boolean(user?.handle_chosen_at && !user.mood && !user.mood_prompt_dismissed_at)
 }
 

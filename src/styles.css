@@ -3325,25 +3325,12 @@ body.corners-round a.button {
   width: min(100%, 560px);
 }
 
-.choose-handle-panel {
-  width: min(100%, 560px);
-}
-
 .auth-panel.magic-sent-panel h1 {
   font-size: clamp(1.25rem, 4vw, 1.625rem);
   letter-spacing: -1px;
 }
 
-.auth-panel.choose-handle-panel h1 {
-  font-size: clamp(1.25rem, 4vw, 1.625rem);
-  letter-spacing: -1px;
-}
-
 .magic-sent-panel>p {
-  font-size: var(--font-size-12);
-}
-
-.choose-handle-panel>p {
   font-size: var(--font-size-12);
 }
 
@@ -7950,10 +7937,10 @@ body.density-relaxed :where(p, li, textarea):not(.ascii-art) {
   top: -0.65em;
   right: calc(-1.35em + 12px);
 }
-/* Mood gate */
+/* Onboarding gates */
 body.full-screen-page { overflow: hidden; }
 
-.mood-picker {
+:is(.handle-picker, .mood-picker, .tag-picker, .people-picker) {
   position: fixed;
   inset: 0;
   z-index: 1000;
@@ -7965,13 +7952,38 @@ body.full-screen-page { overflow: hidden; }
   background: var(--background);
 }
 
-.mood-picker-card {
+.handle-picker-card,
+.mood-picker-card,
+.tag-picker-card,
+.people-picker-card {
   width: min(100%, 36rem);
   text-align: center;
 }
 
-.mood-picker-card h1 { margin-bottom: .5rem; }
-.mood-picker-card p { margin: 0 0 1.75rem; color: var(--muted); }
+:is(.handle-picker-card, .mood-picker-card, .tag-picker-card, .people-picker-card) h1 { margin-bottom: .5rem; }
+:is(.handle-picker-card, .mood-picker-card, .tag-picker-card, .people-picker-card) > h1 + p {
+  margin: 0 0 1.75rem;
+  color: var(--muted);
+}
+
+.handle-picker-card form {
+  display: grid;
+  width: min(100%, 24rem);
+  margin-inline: auto;
+  gap: var(--space-3);
+  text-align: left;
+}
+
+.handle-picker-card .form-control {
+  min-height: 50px;
+  background: var(--panel);
+}
+
+.handle-picker-card .button {
+  justify-self: center;
+  min-height: 48px;
+  margin-top: var(--space-4);
+}
 
 .mood-picker-options {
   display: grid;
@@ -7998,14 +8010,108 @@ body.full-screen-page { overflow: hidden; }
 
 .mood-picker-dismiss { margin-top: 2rem; }
 
+.tag-picker-card form,
+.people-picker-card form { display: grid; justify-items: center; }
+
+.tag-picker,
+.people-picker {
+  overflow-y: auto;
+  place-items: safe center;
+}
+
+.tag-picker-options,
+.people-picker-options {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  width: 100%;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  gap: var(--space-3);
+}
+
+.tag-picker-option,
+.people-picker-option {
+  display: grid;
+  min-width: 0;
+  min-height: 4rem;
+  padding: var(--space-3);
+  background: var(--panel);
+  border: 1px solid var(--soft);
+  border-radius: var(--corner-radius);
+  cursor: pointer;
+  justify-items: center;
+  place-content: center;
+  transition: border-color 120ms ease, background-color 120ms ease, box-shadow 120ms ease;
+}
+
+.tag-picker-option:hover,
+.people-picker-option:hover {
+  border-color: var(--link-border);
+  background: color-mix(in srgb, var(--panel) 88%, var(--accent));
+}
+
+.tag-picker-option:has(input:checked),
+.people-picker-option:has(input:checked) {
+  border-color: transparent;
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
+  box-shadow: 0 0 0 2px var(--accent);
+}
+
+.tag-picker-option:has(input:focus-visible),
+.people-picker-option:has(input:focus-visible) {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.tag-picker-option span,
+.people-picker-option span {
+  overflow-wrap: anywhere;
+  color: var(--ink);
+  font-weight: 700;
+}
+
+.tag-picker-option span b,
+.people-picker-option span b {
+  color: var(--accent-dark);
+  font-weight: inherit;
+}
+.tag-picker-card .button { margin-top: var(--space-6); }
+.tag-picker-card .tag-picker-dismiss { margin-top: var(--space-4); }
+.people-picker-option small { margin-top: var(--space-1); font-size: var(--font-size-16); }
+.people-picker-options { grid-template-columns: minmax(0, 1fr); }
+.people-picker-option {
+  width: 100%;
+  justify-items: start;
+  place-content: center start;
+}
+.people-picker-option span { white-space: nowrap; }
+.people-picker-option span small { margin: 0 0 0 2px; }
+.people-picker-option p {
+  margin: var(--space-2) 0 0;
+  color: var(--muted);
+  font-size: var(--font-size-11);
+  font-weight: 400;
+  line-height: 1.4;
+  text-align: left;
+  white-space: normal;
+}
+.people-picker-option .profile-bio a { pointer-events: none; }
+.people-picker-card .button { margin-top: var(--space-6); }
+.people-picker-card .people-picker-dismiss { margin-top: var(--space-4); }
+
 @media (max-width: 30rem) {
-  .mood-picker {
+  :is(.handle-picker, .mood-picker, .tag-picker, .people-picker) {
     align-items: start;
     overflow-y: auto;
   }
 
   .mood-picker-options { grid-template-columns: repeat(4, 1fr); }
-  .mood-picker-card h1 { margin-top: 0; }
-  .mood-picker-card p { font-size: var(--font-size-13); }
+  :is(.handle-picker-card, .mood-picker-card, .tag-picker-card, .people-picker-card) h1 { margin-top: 0; }
+  :is(.handle-picker-card, .mood-picker-card, .tag-picker-card, .people-picker-card) > h1 + p {
+    font-size: var(--font-size-13);
+  }
   .mood-picker-option { min-height: 3rem; padding: 0; font-size: var(--font-size-30); }
+  .tag-picker-options { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .people-picker-options { grid-template-columns: minmax(0, 1fr); }
 }
