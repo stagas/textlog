@@ -41,7 +41,7 @@ import {
   Reply,
 } from './components/pages'
 import { approximatePostAge, conversationTopPath, FeedThreads, isProbablyNonEnglish, Post, postAgeTitle,
-  postedReplyPath, PreviewPost, replyAnchorReturnPath, shortPostAge, ThreadReplies } from './components/post'
+  postAnchorId, postedReplyPath, PreviewPost, replyAnchorReturnPath, shortPostAge, ThreadReplies } from './components/post'
 import { searchPersonReturnPath, searchPostReturnPath, SearchResults } from './components/search'
 
 import React from 'react'
@@ -200,6 +200,44 @@ test('locked notes and descendants omit reply controls and reply forms', () => {
 
   expect(card).not.toContain('post-reply-link')
   expect(page).not.toContain('class="panel panel-surface panel-medium replybox"')
+})
+
+test('post page reply forms only autofocus when reply was explicitly requested', () => {
+  const user = { id: 1, handle: 'reader', email: 'reader@example.com', bio: '',
+    email_verified_at: '2026-08-01 10:00:00' }
+  const post = { id: 9, user_id: 2, parent_id: null, body: 'Open note', created_at: '2026-08-23 10:00:00',
+    deleted_at: null, handle: 'writer', reply_count: 0 }
+  const passive = renderToStaticMarkup(React.createElement(Reply, { user, post, showForm: true, autoFocus: false }))
+  const requested = renderToStaticMarkup(React.createElement(Reply, { user, post, showForm: true, autoFocus: true }))
+
+  expect(passive).toContain('class="panel panel-surface panel-medium replybox reply-compose"')
+  expect(passive).not.toContain('autofocus=""')
+  expect(requested).toContain('autofocus=""')
+})
+
+test('replying to a threaded reply keeps the root page and places the composer after its target', () => {
+  const user = { id: 1, handle: 'reader', email: 'reader@example.com', bio: '',
+    email_verified_at: '2026-08-01 10:00:00' }
+  const post = { id: 9, user_id: 2, parent_id: null, body: 'Root note', created_at: '2026-08-23 10:00:00',
+    deleted_at: null, handle: 'writer', reply_count: 1 }
+  const target = { id: 10, user_id: 3, parent_id: 9, body: 'Threaded reply',
+    created_at: '2026-08-23 11:00:00', deleted_at: null, handle: 'friend', reply_count: 0, parent: post }
+  const page = renderToStaticMarkup(React.createElement(Reply, {
+    user, post, replies: [target], showForm: true, autoFocus: true, replyTo: target,
+    returnPath: '/all#post-10',
+  }))
+
+  expect(page).not.toContain('href="/post/9?reply=1&amp;to=10#post-10"')
+  expect(page).toContain('href="/post/9?reply=1&amp;from=%2Fall%23post-10"')
+  expect(page).toContain('<form action="/post/10/reply#post-10" method="post">')
+  expect(page.indexOf('id="post-10"')).toBeLessThan(page.indexOf('action="/post/10/reply#post-10"'))
+  expect(page).toContain('placeholder="Reply to @friend…"')
+  expect(page).toContain('class="inline-reply-compose" style="--reply-offset:calc(clamp(18px, 3vw, 28px))"')
+  expect(page).toContain('class="quiet post-back-link" href="/all#post-10">back</a>')
+})
+
+test('post anchors embedded in return paths identify the inline reply target', () => {
+  expect(postAnchorId('/all?expand=209#post-2922')).toBe(2922)
 })
 
 test('account switcher errors use the shared error notice', () => {
@@ -954,6 +992,9 @@ test('Any reply links return through the retained sample with their conversation
   )
   expect(html).toContain(
     'href="/post/20?from=%2Fany%3Fseed%3D9l%26expand%3D20%23post-23#post-23"',
+  )
+  expect(html).toContain(
+    'href="/post/20?reply=1&amp;to=23&amp;from=%2Fany%3Fseed%3D9l%23post-23#post-23"',
   )
 })
 
@@ -4126,9 +4167,9 @@ test('thread replies use their own permanent anchor as the next return path', ()
 test('a posted reply returns to its originating thread and preserves that thread back path', () => {
   const thread = '/post/2?from=%2Flatest%3Fcursor%3Dabc%23post-2#post-7'
   expect(postedReplyPath(7, 9, thread))
-    .toBe('/post/2?from=%2Flatest%3Fcursor%3Dabc%23post-2#post-9')
+    .toBe('/post/2?from=%2Flatest%3Fcursor%3Dabc%23post-2&back=9#post-9')
   expect(postedReplyPath(7, 9, '/latest#post-7'))
-    .toBe('/post/7?from=%2Flatest%23post-7#post-9')
+    .toBe('/post/7?from=%2Flatest%23post-7&back=9#post-9')
 })
 
 test('A quoted post gets its own higher-priority hit area in tappable feeds', () => {

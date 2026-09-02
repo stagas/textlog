@@ -7,7 +7,7 @@ import {
   PublicThread,
   Reply,
 } from '../components/pages'
-import { conversationTopPath, postedReplyPath } from '../components/post'
+import { conversationTopPath, postAnchorId, postedReplyPath } from '../components/post'
 import { executePostCode } from '../code-execution'
 import { databaseService } from '../database-service'
 import { moderatedContentDescription, moderateText, moderationMessage } from '../moderation'
@@ -15,6 +15,7 @@ import { canPublishPosts } from '../posting-policy'
 import { form, page, redirect, safeNext } from './shared'
 
 import type { Hono } from 'hono'
+import type { ComponentProps } from 'react'
 import { isAdmin } from '../admin'
 import { cachedAnonymousPostPage, materializeAnonymousPostPage } from '../anonymous-post-page-cache'
 import { publishPost } from '../api-broker'
@@ -246,8 +247,14 @@ export function registerPostsRoutes(app: Hono) {
       url: postUrl,
     }
     if (user) {
+      const requestedReplyToId = Number(c.req.query('to'))
+      const replyToId = Number.isInteger(requestedReplyToId) ? requestedReplyToId : postAnchorId(returnPath)
+      const replyTo = Number.isInteger(replyToId) ? replies.find(reply => reply.id === replyToId) : undefined
+      const requestedBackTargetId = Number(c.req.query('back'))
+      const backTargetId = Number.isInteger(requestedBackTargetId) ? requestedBackTargetId : undefined
       return page(
-        <Reply user={user} post={post} replies={replies} showForm={c.req.query('reply') === '1'} returnPath={returnPath}
+        <Reply user={user} post={post} replies={replies} showForm autoFocus={c.req.query('reply') === '1'}
+          replyTo={replyTo} backTargetId={backTargetId} returnPath={returnPath}
           topHref={topHref} flatHref={flatHref} treeHref={treeHref} flat={flat}
           showReport={c.req.query('report') === '1'} reported={c.req.query('reported') === '1'} social={social} />,
       )
@@ -582,28 +589,40 @@ export function registerPostsRoutes(app: Hono) {
     const returnPath = f.from ? safeNext(f.from) : undefined
     const body = normalizePostBody(f.body || '')
     const editingDraftId = draftId(f)
+    const renderReplyState = async (
+      props: Omit<ComponentProps<typeof Reply>, 'user' | 'post' | 'replies' | 'showForm' | 'replyTo'>,
+      status = 200,
+    ) => {
+      const detail = await databaseService().call('posts.detail', { id: parentId, viewerId: user.id })
+      const rootId = detail.status === 'ready' ? detail.conversationRootId : null
+      if (!rootId) {
+        const replies = await databaseService().call('posts.threadReplies', { parentId, viewerId: user.id })
+        return page(<Reply {...props} user={user} post={parent} replies={replies} showForm />, status)
+      }
+      const rootDetail = await databaseService().call('posts.detail', { id: rootId, viewerId: user.id })
+      if (rootDetail.status !== 'ready') return c.text('Not found', 404)
+      const replies = await databaseService().call('posts.threadReplies', { parentId: rootId, viewerId: user.id })
+      return page(
+        <Reply {...props} user={user} post={rootDetail.post} replies={replies} showForm replyTo={parent} />,
+        status,
+      )
+    }
     const suggestionSearch = await postingSuggestionSearch(f, user.id)
     if (suggestionSearch) {
-      return page(
-        <Reply user={user} post={parent} showForm body={body} draftId={editingDraftId} returnPath={returnPath}
-          suggestionSearch={suggestionSearch} />,
-      )
+      return renderReplyState({ body, draftId: editingDraftId, returnPath, suggestionSearch })
     }
     if (f.action === 'autotag') {
       const result = await autotagText(body)
       const enrichedBody = result.ok ? normalizePostBody(result.body) : body
       const valid = result.ok && validPostBody(enrichedBody)
-      return page(<Reply user={user} post={parent} showForm body={valid ? enrichedBody : body}
-        draftId={editingDraftId} returnPath={returnPath} error={result.ok && !valid
+      return renderReplyState({ body: valid ? enrichedBody : body,
+        draftId: editingDraftId, returnPath, error: result.ok && !valid
           ? `The message is too big to autotag within the ${POST_MAX}-character limit. Edit it down and try again.`
-          : result.ok ? undefined : result.message} />, result.ok ? 200 : 503)
+          : result.ok ? undefined : result.message }, result.ok ? 200 : 503)
     }
     if (!validPostBody(body)) {
-      return page(
-        <Reply user={user} post={parent} showForm error={postBodyValidationMessage(body)} body={body}
-          draftId={editingDraftId} returnPath={returnPath} />,
-        400,
-      )
+      return renderReplyState({ error: postBodyValidationMessage(body), body,
+        draftId: editingDraftId, returnPath }, 400)
     }
     if (f.action === 'preview') {
       const result = await databaseService().call('drafts.save', {
@@ -614,11 +633,8 @@ export function registerPostsRoutes(app: Hono) {
       })
       if (result.status === 'not_found') return c.text('Not found', 404)
       user.draft_count = Math.max(user.draft_count || 0, 1)
-      return page(
-        <Reply user={user} post={parent} showForm body={body} draftId={result.id} preview
-          previewExecutionOutput={await executePostCode(body)} previewLocation={await previewLocation(body)}
-          returnPath={returnPath} />,
-      )
+      return renderReplyState({ body, draftId: result.id, preview: true,
+        previewExecutionOutput: await executePostCode(body), previewLocation: await previewLocation(body), returnPath })
     }
     if (f.action === 'draft') {
       const result = await databaseService().call('drafts.save', {
@@ -634,11 +650,8 @@ export function registerPostsRoutes(app: Hono) {
     try {
       const moderation = await moderateText(body)
       if (!moderation.ok) {
-        return page(
-          <Reply user={user} post={parent} showForm error={moderationMessage(moderation)} body={body}
-            draftId={editingDraftId} returnPath={returnPath} />,
-          moderation.reason === 'flagged' ? 422 : 503,
-        )
+        return renderReplyState({ error: moderationMessage(moderation), body,
+          draftId: editingDraftId, returnPath }, moderation.reason === 'flagged' ? 422 : 503)
       }
       const result = await databaseService().call('api.createPost', {
         userId: user.id,
@@ -652,11 +665,7 @@ export function registerPostsRoutes(app: Hono) {
       })
       if (result.status === 'locked') return c.text('This thread is locked', 409)
       if (result.status === 'rate_limited') {
-        return page(
-          <Reply user={user} post={parent} showForm error={postRateLimitMessage(result.retryAfter)} body={body}
-            returnPath={returnPath} />,
-          429,
-        )
+        return renderReplyState({ error: postRateLimitMessage(result.retryAfter), body, returnPath }, 429)
       }
       if (result.status === 'not_found') return c.text('Not found', 404)
       if (!result.duplicate) publishPost(result.id)
@@ -667,11 +676,7 @@ export function registerPostsRoutes(app: Hono) {
     }
     catch (error) {
       logError(`POST /post/${parentId}/reply`, error)
-      return page(
-        <Reply user={user} post={parent} showForm error={saveFailureMessage} body={body} draftId={editingDraftId}
-          returnPath={returnPath} />,
-        500,
-      )
+      return renderReplyState({ error: saveFailureMessage, body, draftId: editingDraftId, returnPath }, 500)
     }
   })
 }

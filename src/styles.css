@@ -3468,6 +3468,20 @@ main:has(> .write-compose) {
   border-bottom: 0;
 }
 
+.inline-reply-compose {
+  width: calc(100% + var(--reply-offset));
+  margin-left: calc(-1 * var(--reply-offset));
+}
+
+.inline-reply-compose > .replybox {
+  margin-top: 0;
+}
+
+.thread-branch-content:has(.inline-reply-compose) {
+  overflow: visible;
+  animation: none;
+}
+
 .reply-compose .compose-editor-row {
   border-top: 1px solid var(--soft);
 }
@@ -3892,6 +3906,8 @@ textarea.form-control {
 
 .post-delete-panel blockquote {
   margin-block: var(--space-5);
+  font-size: var(--font-size-13);
+  line-height: 1.6;
   border: 1px solid var(--soft);
 }
 

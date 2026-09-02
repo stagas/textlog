@@ -20,7 +20,7 @@ import { Post, postAnchorId, ThreadReplies } from './post'
 
 export function ReplyBox(
   { action, body, error, placeholder, hidden, beforeTextarea, secondary, primary, className = 'replybox reply-compose',
-    suggestionSearch, draftId, helpId = 'reply-posting-help' }: {
+    suggestionSearch, draftId, helpId = 'reply-posting-help', autoFocus = true }: {
       action: string
       body: string
       error?: string
@@ -33,6 +33,7 @@ export function ReplyBox(
       suggestionSearch?: PostingSuggestionSearch | null
       draftId?: string
       helpId?: string
+      autoFocus?: boolean
     },
 ) {
   return (
@@ -43,7 +44,7 @@ export function ReplyBox(
         <FormMessage error={error} />
         {beforeTextarea}
         <div className="compose-editor-row">
-          <textarea className="form-control" name="body" maxLength={POST_MAX} autoFocus defaultValue={body}
+          <textarea className="form-control" name="body" maxLength={POST_MAX} autoFocus={autoFocus} defaultValue={body}
             placeholder={placeholder} autoComplete="off" inputMode="text" enterKeyHint="enter" />
           <PostingSuggestionResults search={suggestionSearch} />
           <div className="composefoot">
@@ -86,7 +87,7 @@ export function ReplyPreview({ parent, user, body, executionOutput, location }: 
 export function Reply(
   { user, post, replies = [], showForm, showReport = false, reported = false, error, body = '', reportReason = '',
     reportError, social, preview = false, returnPath, topHref, flatHref, treeHref, flat = false, suggestionSearch,
-    draftId, previewExecutionOutput, previewLocation }: {
+    draftId, previewExecutionOutput, previewLocation, autoFocus = true, replyTo, backTargetId }: {
       user: User
       post: PostView
       replies?: PostView[]
@@ -108,15 +109,42 @@ export function Reply(
       draftId?: string
       previewExecutionOutput?: string | null
       previewLocation?: LocationView
+      autoFocus?: boolean
+      replyTo?: PostView
+      backTargetId?: number
     },
 ) {
   const backPostId = postAnchorId(returnPath)
   const backTargetsReply = replies.some(reply => reply.id === backPostId && !reply.deleted_at)
+  const replyParent = replyTo || post
+  const replyComposer = canPublishPosts(user)
+    ? (
+      <ReplyBox action={`/post/${replyParent.id}/reply#post-${replyParent.id}`} body={body} error={error}
+        suggestionSearch={suggestionSearch} draftId={draftId} placeholder={'Reply to @' + replyParent.handle + '…'}
+        autoFocus={autoFocus}
+        hidden={returnPath && <input type="hidden" name="from" value={returnPath} />}
+        secondary={
+          <span className="edit-post-actions">
+            <PostingHelpAction id="reply-posting-help" defaultChecked={!!suggestionSearch} />
+            <button className="secondary-action compose-autotag-action" name="action" value="autotag"
+              title="Enrich post with hashtags">
+              autotag<span className="new-badge compose-new-badge" aria-hidden="true">NEW</span>
+            </button>
+            <button className="secondary-action" name="action" value="preview">preview</button>
+            <button className="secondary-action" name="action" value="draft"
+              formAction={draftId ? `/drafts/${draftId}` : undefined}>
+              draft
+            </button>
+          </span>
+        } primary={<button className="button" accessKey="p">post →</button>} />
+    )
+    : <VerificationRequired />
   return (
     <Layout user={user} title={postTitle(post.body, post.moderation_category)} social={social}>
       <div className="post-page-thread">
         <div className="thread-root">
-          <Post p={post} user={user} showReplyAction={!showForm} showOwnerActions showModerateAction tappableParent
+          <Post p={post} user={user} showReplyAction={!showForm || !!replyTo} showOwnerActions showModerateAction
+            tappableParent
             bookmarkAction
             suppressContentWarning={showForm}
             returnPath={returnPath} backHref={returnPath} canonicalTimestamp topHref={topHref} flatHref={flatHref}
@@ -128,34 +156,23 @@ export function Reply(
           <ReportPanel post={post} showForm={showReport} reported={reported} reason={reportReason}
             error={reportError} />
         )}
-        {preview && <ReplyPreview parent={post} user={user} body={body} executionOutput={previewExecutionOutput}
-          location={previewLocation} />}
-        {showForm && !post.thread_locked && (
-          canPublishPosts(user)
-            ? (
-              <ReplyBox action={'/post/' + post.id + '/reply'} body={body} error={error}
-                suggestionSearch={suggestionSearch} draftId={draftId} placeholder={'Reply to @' + post.handle + '…'}
-                hidden={returnPath && <input type="hidden" name="from" value={returnPath} />}
-                secondary={
-                  <span className="edit-post-actions">
-                    <PostingHelpAction id="reply-posting-help" defaultChecked={!!suggestionSearch} />
-                    <button className="secondary-action compose-autotag-action" name="action" value="autotag"
-                      title="Enrich post with hashtags">
-                      autotag<span className="new-badge compose-new-badge" aria-hidden="true">NEW</span>
-                    </button>
-                    <button className="secondary-action" name="action" value="preview">preview</button>
-                    <button className="secondary-action" name="action" value="draft"
-                      formAction={draftId ? `/drafts/${draftId}` : undefined}
-                    >
-                      draft
-                    </button>
-                  </span>
-                } primary={<button className="button" accessKey="p">post →</button>} />
-            )
-            : <VerificationRequired />
-        )}
+        {preview && !replyTo && <ReplyPreview parent={replyParent} user={user} body={body}
+          executionOutput={previewExecutionOutput} location={previewLocation} />}
+        {showForm && !post.thread_locked && !replyTo && replyComposer}
         <ThreadReplies parentId={post.id} replies={replies} user={user} returnPath={returnPath} flat={flat}
-          backHref={backTargetsReply ? returnPath : undefined} />
+          backHref={backTargetsReply || backTargetId ? returnPath : undefined} backTargetId={backTargetId}
+          replyOnPage suppressReplyActionId={replyTo?.id}
+          afterReply={(reply, depth) => showForm && !post.thread_locked && reply.id === replyTo?.id
+            ? <>
+                {preview && <ReplyPreview parent={replyParent} user={user} body={body}
+                  executionOutput={previewExecutionOutput} location={previewLocation} />}
+                <div className="inline-reply-compose" style={{
+                  '--reply-offset': `calc(${Array(depth).fill('clamp(18px, 3vw, 28px)').join(' + ')})`,
+                } as React.CSSProperties}>
+                  {replyComposer}
+                </div>
+              </>
+            : undefined} />
       </div>
     </Layout>
   )

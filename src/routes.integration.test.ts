@@ -1251,7 +1251,7 @@ test('consequential account, content, reporting, and admin flows work over HTTP'
   expect(replyDraft.parent_id).toBe(post.id)
   const replyDraftEditHtml = await (await request(`/drafts/${replyDraft.public_id}/edit`, { cookie: aliceCookie })).text()
   expect(replyDraftEditHtml).toContain('A saved reply draft')
-  expect(replyDraftEditHtml).toContain(`action="/post/${post.id}/reply"`)
+  expect(replyDraftEditHtml).toContain(`action="/post/${post.id}/reply#post-${post.id}"`)
   const publishedReplyDraft = await request(`/post/${post.id}/reply`, {
     method: 'POST',
     cookie: aliceCookie,
@@ -1337,7 +1337,8 @@ test('consequential account, content, reporting, and admin flows work over HTTP'
   expect(updatedReplyPreview.status).toBe(200)
   expect((database.query('SELECT body FROM drafts WHERE id=?').get(previewedReplyDraft.id) as { body: string }).body)
     .toBe('An updated nested reply preview')
-  expect(replyPreviewHtml).toContain('<blockquote class="parent-quote')
+  expect(replyPreviewHtml).toContain(`id="post-${quotedReply.id}"`)
+  expect(replyPreviewHtml).toContain(`action="/post/${quotedReply.id}/reply#post-${quotedReply.id}"`)
   expect(replyPreviewHtml).toContain('A route-level integration post')
   const invalidEditBody = `remember edit ${'x'.repeat(490)}`
   const invalidEdit = await request(`/post/${post.id}/edit`, {
@@ -1700,7 +1701,7 @@ test('consequential account, content, reporting, and admin flows work over HTTP'
     + await (await request('/my-feed?page=2', { cookie: aliceCookie })).text()
   expect(hashtagForYou).toContain('Bot note discovered through')
   expect(sharedReplyResponse.headers.get('location')).toBe(
-    `/post/${post.id}?from=%2Flatest%3Fcursor%3Dabc%23post-1#post-${sharedReply.id}`,
+    `/post/${post.id}?from=%2Flatest%3Fcursor%3Dabc%23post-1&back=${sharedReply.id}#post-${sharedReply.id}`,
   )
   const sharedReplyPage = await request(sharedReplyResponse.headers.get('location')!, { cookie: bobCookie })
   const sharedReplyHtml = await sharedReplyPage.text()
@@ -1709,7 +1710,7 @@ test('consequential account, content, reporting, and admin flows work over HTTP'
   )
   const threadProfileHref = `/u/bob?from=${
     encodeURIComponent(
-      `/post/${post.id}?from=%2Flatest%3Fcursor%3Dabc%23post-1`,
+      `/post/${post.id}?from=%2Flatest%3Fcursor%3Dabc%23post-1&back=${sharedReply.id}`,
     )
   }`.replaceAll('&', '&amp;')
   expect(sharedReplyHtml).toContain(`class="account-menu-handle" href="${threadProfileHref}">@bob</a>`)

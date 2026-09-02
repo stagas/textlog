@@ -435,10 +435,13 @@ export function postedReplyPath(parentId: number, replyId: number, returnPath?: 
   if (returnPath) {
     const target = new URL(returnPath, 'http://textlog.local')
     if (/^\/post\/[1-9]\d*$/.test(target.pathname)) {
+      target.searchParams.set('back', String(replyId))
       return `${target.pathname}${target.search}#post-${replyId}`
     }
   }
-  return replyAnchorReturnPath(parentId, replyId, returnPath)
+  const target = new URL(replyAnchorReturnPath(parentId, replyId, returnPath), 'http://textlog.local')
+  target.searchParams.set('back', String(replyId))
+  return `${target.pathname}${target.search}#post-${replyId}`
 }
 
 export function conversationTopPath(threadRootId: number, replyId: number, returnPath?: string) {
@@ -1078,7 +1081,8 @@ export function ThreadReplies(
   { parentId, replies, user, returnPath, excludePostId, flat = false, showMissingContinuations = false,
     continuationLabel = 'more', continuationReturnPath, contextUnreadPostIds, contextDirectedUnreadPostIds,
     omissionHref, expansionControlId, highlightTerms = [], hideTopMeta = false, collapsedPreviewPostIds = [],
-    anchorReplyNavigation = false, backHref }: {
+    anchorReplyNavigation = false, backHref, backTargetId, replyOnPage = false, replyReturnPath, afterReply,
+    suppressReplyActionId }: {
       parentId: number
       replies: PostView[]
       user: User | null
@@ -1097,6 +1101,11 @@ export function ThreadReplies(
       collapsedPreviewPostIds?: number[]
       anchorReplyNavigation?: boolean
       backHref?: string
+      backTargetId?: number
+      replyOnPage?: boolean
+      replyReturnPath?: string
+      afterReply?: (reply: PostView, depth: number) => React.ReactNode
+      suppressReplyActionId?: number
     },
 ) {
   if (!replies.length) return null
@@ -1113,7 +1122,7 @@ export function ThreadReplies(
     siblings.sort((a, b) => conversationCreatedAt(a).localeCompare(conversationCreatedAt(b)) || a.id - b.id)
   }
   const byId = new Map(replies.map(reply => [reply.id, reply]))
-  const backPostId = postAnchorId(backHref)
+  const backPostId = backTargetId ?? postAnchorId(backHref)
   const canonicalDepths = new Map<number, number>()
   const canonicalDepth = (postId: number) => {
     const cached = canonicalDepths.get(postId)
@@ -1287,7 +1296,8 @@ export function ThreadReplies(
         {reply.feed_ancestor_gap && (
           omissionMarker('Earlier replies omitted')
         )}
-        <FeedPost p={reply} user={user} showParent={false} returnPath={postReturnPath}
+        <FeedPost p={reply} user={user} showParent={false} showReplyAction={reply.id !== suppressReplyActionId}
+          returnPath={postReturnPath}
           tappableHref={anchorReplyNavigation
             ? replyAnchorReturnPath(parentId, reply.id, postReturnPath)
             : undefined}
@@ -1295,10 +1305,19 @@ export function ThreadReplies(
           collapsedExpansionControlId={collapsedPreviewPosts.has(reply.id) ? expansionControlId : undefined}
           contextUnread={contextUnreadPostIds?.has(reply.id)}
           contextDirectedUnread={contextDirectedUnreadPostIds?.has(reply.id)} highlightTerms={highlightTerms}
-          replyHref={user ? undefined : '/enter?next=' + encodeURIComponent('/post/' + reply.id + '?reply=1'
-            + '&from=' + encodeURIComponent(postReturnPath))} replyLabel={user ? undefined : 'enter to reply'}
+          replyHref={user
+            ? replyOnPage
+              ? `/post/${parentId}?reply=1&to=${reply.id}${returnPath
+                ? '&from=' + encodeURIComponent(replyReturnPath
+                  ? `${replyReturnPath}#post-${reply.id}`
+                  : returnPath)
+                : ''}#post-${reply.id}`
+              : undefined
+            : '/enter?next=' + encodeURIComponent('/post/' + reply.id + '?reply=1'
+              + '&from=' + encodeURIComponent(postReturnPath))} replyLabel={user ? undefined : 'enter to reply'}
           continuationHref={continuationHref} continuationLabel={continuationLabel} tappable
           hideTopMeta={hideTopMeta} />
+        {afterReply?.(reply, canonicalDepth(reply.id))}
         {childBranch}
       </div>
     )
@@ -1543,7 +1562,7 @@ export function FeedThreads(
                 : undefined} continuationLabel="…" />
             </div>
             <ThreadReplies parentId={post.id} replies={treePosts} user={user} returnPath={anchoredReturnPath}
-              anchorReplyNavigation
+              anchorReplyNavigation replyOnPage replyReturnPath={returnPath}
               showMissingContinuations continuationLabel="…"
               continuationReturnPath={collapsed || canCollapse && expandedRootId === post.id
                 ? expandedReturnPath
