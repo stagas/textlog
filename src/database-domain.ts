@@ -2032,7 +2032,8 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
         post: apiPost(database, created.id, request.origin, request.userId)! } as DatabaseDomainOutput<K>
     }
     case 'api.createPost': {
-      const { userId, body, parentId, origin, translation, moderationCategory, moderationScore, executionOutput } =
+      const { userId, body, parentId, origin, translation, moderationCategory, moderationScore, executionOutput,
+        pendingKey } =
         input as DatabaseDomainInput<'api.createPost'>
       if (parentId !== null) {
         const parent = database.query('SELECT user_id FROM posts WHERE id=? AND deleted_at IS NULL')
@@ -2046,7 +2047,7 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
       }
       const created = database.transaction(() => {
         const value = createPost(database, userId, body, parentId, false, translation ?? null,
-          moderationCategory ?? null, moderationScore ?? null, executionOutput ?? null)
+          moderationCategory ?? null, moderationScore ?? null, executionOutput ?? null, pendingKey ?? null)
         if (!('retryAfter' in value) && !value.duplicate && hasPostPushJobs(database)) {
           database.query('INSERT OR IGNORE INTO post_push_jobs(post_id) VALUES(?)').run(value.id)
         }

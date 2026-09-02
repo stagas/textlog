@@ -1,3 +1,4 @@
+import { randomUUID } from 'node:crypto'
 import { sessionCookieName } from './brand'
 
 export function stringField(data: FormData, name: string) {
@@ -167,6 +168,7 @@ export function pendingPost(request: Request) {
       returnPath?: unknown
       parentId?: unknown
       replyPageId?: unknown
+      key?: unknown
     }
     return typeof parsed.body === 'string'
       ? {
@@ -176,6 +178,7 @@ export function pendingPost(request: Request) {
           replyPageId: Number.isInteger(parsed.replyPageId) && Number(parsed.replyPageId) > 0
             ? Number(parsed.replyPageId)
             : null,
+          key: typeof parsed.key === 'string' && /^[0-9a-f-]{36}$/.test(parsed.key) ? parsed.key : null,
         }
       : null
   }
@@ -188,7 +191,8 @@ export function pendingPostCookie(body: string, returnPath: string, parentId: nu
   replyPageId: number | null = null, maxAge = 20 * 60,
   appUrl: string | undefined = Bun.env.APP_URL)
 {
-  const value = Buffer.from(JSON.stringify({ body, returnPath: safeLocalPath(returnPath), parentId, replyPageId }))
+  const value = Buffer.from(JSON.stringify({ body, returnPath: safeLocalPath(returnPath), parentId, replyPageId,
+    key: maxAge > 0 ? randomUUID() : null }))
     .toString('base64url')
   return `${PENDING_POST_COOKIE}=${value}; Max-Age=${maxAge}; HttpOnly; Path=/; SameSite=Lax${secureCookie(appUrl)}`
 }

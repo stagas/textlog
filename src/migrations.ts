@@ -2908,6 +2908,15 @@ export const migrations: Migration[] = [
       }
     },
   },
+  {
+    version: 178,
+    name: 'pending_post_idempotency',
+    up(database) {
+      if (!database.query("SELECT 1 FROM sqlite_master WHERE type='table' AND name='posts'").get()) return
+      addColumn(database, 'posts', 'pending_key', 'TEXT')
+      database.run('CREATE UNIQUE INDEX IF NOT EXISTS posts_pending_key ON posts(pending_key) WHERE pending_key IS NOT NULL')
+    },
+  },
 ]
 
 export const latestMigrationVersion = migrations.at(-1)!.version

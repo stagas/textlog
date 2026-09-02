@@ -160,6 +160,7 @@ export function registerPostsRoutes(app: Hono) {
         moderationCategory: moderation.warning?.category,
         moderationScore: moderation.warning?.score,
         executionOutput: await executePostCode(body),
+        pendingKey: pending.key,
       })
       if (result.status === 'rate_limited') {
         const response = page(<Compose user={user} body={body} error={postRateLimitMessage(result.retryAfter)}

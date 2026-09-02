@@ -358,7 +358,8 @@ export type DatabaseDomainOperations = {
   }
   'api.createPost': {
     input: { userId: number; body: string; parentId: number | null; origin: string; translation?: string | null;
-      moderationCategory?: string | null; moderationScore?: number | null; executionOutput?: string | null }
+      moderationCategory?: string | null; moderationScore?: number | null; executionOutput?: string | null;
+      pendingKey?: string | null }
     output: { status: 'not_found' } | { status: 'locked' } | { status: 'rate_limited'; retryAfter: number } | {
       status: 'ready'
       id: number

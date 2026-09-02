@@ -322,6 +322,15 @@ test('an anonymous feed note is published after signup chooses a handle', async 
     .get('pending_replier') as { id: number; body: string; parent_id: number }
   expect(reply).toMatchObject({ body: replyBody, parent_id: root.id })
 
+  const replayedByAnotherUser = await request('/pending-post', {
+    cookie: `${loginCookie}; ${replyPendingCookie}`,
+    acceptHtml: true,
+    ip,
+  })
+  expect(replayedByAnotherUser.status).toBe(303)
+  expect((database.query('SELECT count(*) count FROM posts WHERE body=? AND parent_id=?')
+    .get(replyBody, root.id) as { count: number }).count).toBe(1)
+
   const clickedReply = await request(`/post/${root.id}?from=${encodeURIComponent(`/hot#post-${reply.id}`)}`)
   const clickedReplyHtml = await clickedReply.text()
   expect(clickedReplyHtml).toContain('class="inline-reply-compose"')

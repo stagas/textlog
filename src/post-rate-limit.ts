@@ -13,8 +13,15 @@ export function insertRateLimitedPost(
   body: string,
   parentId: number | null = null,
   afterInsert?: (postId: number) => void,
+  pendingKey?: string | null,
 ): PostInsert {
   return database.transaction(() => {
+    const supportsPendingKey = !!pendingKey && !!database.query(
+      "SELECT 1 FROM pragma_table_info('posts') WHERE name='pending_key'",
+    ).get()
+    const pendingDuplicate = supportsPendingKey ? database.query('SELECT id FROM posts WHERE pending_key=?')
+      .get(pendingKey) as { id: number } | null : null
+    if (pendingDuplicate) return { id: pendingDuplicate.id, duplicate: true }
     const duplicate = database.query(`
       SELECT id FROM posts
       WHERE user_id=? AND parent_id IS ? AND body=? AND deleted_at IS NULL
@@ -38,8 +45,11 @@ export function insertRateLimitedPost(
 
     if (limited) return { retryAfter: limited.retry_after }
 
-    const inserted = database.query('INSERT INTO posts(user_id,parent_id,body) VALUES(?,?,?) RETURNING id')
-      .get(userId, parentId, body) as { id: number }
+    const inserted = (supportsPendingKey
+      ? database.query('INSERT INTO posts(user_id,parent_id,body,pending_key) VALUES(?,?,?,?) RETURNING id')
+        .get(userId, parentId, body, pendingKey)
+      : database.query('INSERT INTO posts(user_id,parent_id,body) VALUES(?,?,?) RETURNING id')
+        .get(userId, parentId, body)) as { id: number }
     afterInsert?.(inserted.id)
     return { id: inserted.id, duplicate: false }
   })()

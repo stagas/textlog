@@ -173,6 +173,7 @@ export function createPost(
   moderationCategory: string | null = null,
   moderationScore: number | null = null,
   executionOutput: string | null = null,
+  pendingKey: string | null = null,
 ) {
   const supportsTranslation = !!database.query(
     'SELECT 1 FROM pragma_table_info(\'posts\') WHERE name=\'translation\'',
@@ -193,7 +194,7 @@ export function createPost(
     database.query(`INSERT OR IGNORE INTO for_you_reads(user_id,event_key)
       VALUES(?,'post:' || printf('%020d',?))`).run(userId, postId)
     markLatestPostsRead(userId, [postId], database)
-  })
+  }, pendingKey)
   if (publish && 'id' in result && !result.duplicate) publishPost(result.id)
   return result
 }
