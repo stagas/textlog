@@ -746,13 +746,19 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
     }
     case 'account.completePeoplePrompt': {
       const { userId, people } = input as DatabaseDomainInput<'account.completePeoplePrompt'>
-      database.transaction(() => {
+      const followed = database.transaction(() => {
         const insert = database.query('INSERT OR IGNORE INTO follows(follower_id,following_id) VALUES(?,?)')
-        for (const personId of people) insert.run(userId, personId)
+        const insertedIds: number[] = []
+        for (const personId of people) {
+          if (insert.run(userId, personId).changes) insertedIds.push(personId)
+        }
         database.query('UPDATE users SET people_prompt_completed_at=CURRENT_TIMESTAMP WHERE id=?').run(userId)
+        if (!insertedIds.length) return []
+        return database.query(`SELECT id,handle FROM users WHERE id IN (${insertedIds.map(() => '?').join(',')})`)
+          .all(...insertedIds) as Array<{ id: number; handle: string }>
       })()
       cacheDb.query('DELETE FROM materialized_feed_pages_v2 WHERE viewer_id=?').run(userId)
-      return null as DatabaseDomainOutput<K>
+      return { followed } as DatabaseDomainOutput<K>
     }
     case 'account.export': {
       const { userId, currentSession } = input as DatabaseDomainInput<'account.export'>

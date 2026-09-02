@@ -137,7 +137,10 @@ export type DatabaseDomainOperations = {
     input: { userId: number; limit: number }
     output: Array<{ id: number; handle: string; mood?: string | null; bio: string }>
   }
-  'account.completePeoplePrompt': { input: { userId: number; people: number[] }; output: null }
+  'account.completePeoplePrompt': {
+    input: { userId: number; people: number[] }
+    output: { followed: Array<{ id: number; handle: string }> }
+  }
   'account.export': { input: { userId: number; currentSession: string | null }; output: unknown }
   'account.emailChangeReadiness': { input: { userId: number; email: string };
     output: { status: 'unavailable' } | { status: 'ready'; passwordHash: string } }

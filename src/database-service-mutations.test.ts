@@ -11,6 +11,7 @@ test('HTML mutations that change cached feed chrome invalidate in-memory pages',
   const unsubscribe = subscribeToFeedMutations(operation => mutations.push(operation))
 
   await databaseService().call('auth.claimInitialHandle', { userId: 2, handle: 'new_user' })
+  await databaseService().call('account.completePeoplePrompt', { userId: 1, people: [2] })
   await databaseService().call('interactions.toggleFollow', { userId: 1, handle: 'friend' })
   await databaseService().call('interactions.toggleTagFollow', { userId: 1, tag: 'topic' })
   await databaseService().call('interactions.toggleBlock', { userId: 1, handle: 'blocked' })
@@ -25,6 +26,7 @@ test('HTML mutations that change cached feed chrome invalidate in-memory pages',
 
   expect(mutations).toEqual([
     'auth.claimInitialHandle',
+    'account.completePeoplePrompt',
     'interactions.toggleFollow',
     'interactions.toggleTagFollow',
     'interactions.toggleBlock',

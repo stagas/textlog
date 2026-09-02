@@ -26,7 +26,7 @@ import { NESTED_FROM_MAX_DEPTH, NavigationCaptchaChallenges, NavigationCaptchaGa
   nestedFromDepth } from './navigation-captcha'
 import { renderDefaultOg } from './og'
 import { PUBLIC_ARCHIVE_CHECK_INTERVAL_MS } from './public-archive'
-import { startPostPushWorker } from './push'
+import { sendPushForFollow, sendPushForUserFollow, startPostPushWorker } from './push'
 import { resumeRelationshipFeedInvalidation, scheduleRelationshipFeedInvalidation } from './relationship-feed-invalidation'
 import { allowNavigationCaptcha, flushIpRequests, isIpBlocked, isNavigationCaptchaAllowed, loadBlockedIps,
   recordIpRequest } from './request-ip-blocks'
@@ -501,8 +501,14 @@ app.post('/pick-people', async c => {
     return page(<PeoplePicker user={user} people={popularPeople} returnTo={returnTo}
       error="Choose at least one person to continue." />, 400)
   }
-  await databaseService().call('account.completePeoplePrompt', { userId: user.id, people })
+  const result = await databaseService().call('account.completePeoplePrompt', { userId: user.id, people })
   scheduleRelationshipFeedInvalidation()
+  for (const followed of result.followed) {
+    void sendPushForFollow(user.id, user.handle, followed.id)
+      .catch(error => logError('follow push failed', error))
+    void sendPushForUserFollow(user.id, user.handle, followed.id, followed.handle)
+      .catch(error => logError('follow activity push failed', error))
+  }
   return c.redirect(returnTo, 303)
 })
 app.post('/pick-people/dismiss', async c => {

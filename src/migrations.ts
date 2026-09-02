@@ -2917,6 +2917,45 @@ export const migrations: Migration[] = [
       database.run('CREATE UNIQUE INDEX IF NOT EXISTS posts_pending_key ON posts(pending_key) WHERE pending_key IS NOT NULL')
     },
   },
+  {
+    version: 180,
+    name: 'backfill_people_picker_follow_events',
+    up(database) {
+      database.run(`CREATE TABLE IF NOT EXISTS people_picker_follow_push_jobs (
+        actor_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        target_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        kind TEXT NOT NULL CHECK(kind IN ('direct','activity')),
+        created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        PRIMARY KEY(actor_id,target_id,kind));`)
+      if (!database.query(
+        "SELECT 1 FROM sqlite_master WHERE type='table' AND name='pending_relationship_feed_invalidations'",
+      ).get() || !database.query(
+        "SELECT 1 FROM pragma_table_info('users') WHERE name='people_prompt_completed_at'",
+      ).get() || !database.query(
+        "SELECT 1 FROM sqlite_master WHERE type='table' AND name='follows'",
+      ).get()) return
+      // Picker follows and prompt completion are committed together with the same SQLite timestamp. Requeue the
+      // affected feeds so deployments that retained an in-memory pre-picker @ page rebuild those historical events.
+      database.run(`INSERT OR IGNORE INTO pending_relationship_feed_invalidations(viewer_id)
+        SELECT DISTINCT affected.viewer_id FROM (
+          SELECT f.follower_id viewer_id FROM follows f JOIN users actor ON actor.id=f.follower_id
+            WHERE actor.people_prompt_completed_at=f.created_at
+          UNION
+          SELECT f.following_id FROM follows f JOIN users actor ON actor.id=f.follower_id
+            WHERE actor.people_prompt_completed_at=f.created_at
+          UNION
+          SELECT audience.follower_id FROM follows f
+            JOIN users actor ON actor.id=f.follower_id
+            JOIN follows audience ON audience.following_id=f.follower_id
+            WHERE actor.people_prompt_completed_at=f.created_at
+        ) affected;
+        INSERT OR IGNORE INTO people_picker_follow_push_jobs(actor_id,target_id,kind)
+          SELECT f.follower_id,f.following_id,k.kind FROM follows f
+          JOIN users actor ON actor.id=f.follower_id
+          CROSS JOIN (SELECT 'direct' kind UNION ALL SELECT 'activity') k
+          WHERE actor.people_prompt_completed_at=f.created_at;`)
+    },
+  },
 ]
 
 export const latestMigrationVersion = migrations.at(-1)!.version

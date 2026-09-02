@@ -18,6 +18,7 @@ const feedMutations = new Set<DatabaseDomainOperation>([
   'admin.removeTagDisplayName',
   'account.updateProfile',
   'account.updateProfileFlags',
+  'account.completePeoplePrompt',
   'account.delete',
   'api.createPost',
   'api.persistPostLocation',

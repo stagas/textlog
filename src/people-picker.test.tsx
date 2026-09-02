@@ -39,8 +39,11 @@ test('loads popular people and follows all selected people', async () => {
     INSERT INTO posts(user_id,body) VALUES(2,'one'),(2,'two');`)
   const people = await executeDatabaseDomain(database, 'account.popularPeople', { userId: 1, limit: 12 })
   expect(people[0]?.handle).toBe('bob')
-  await executeDatabaseDomain(database, 'account.completePeoplePrompt', { userId: 1, people: [2, 3] })
+  const result = await executeDatabaseDomain(database, 'account.completePeoplePrompt', { userId: 1, people: [2, 3] })
+  expect(result.followed).toEqual([{ id: 2, handle: 'bob' }, { id: 3, handle: 'carol' }])
   expect(database.query('SELECT following_id FROM follows WHERE follower_id=1 ORDER BY following_id').all()).toEqual([
     { following_id: 2 }, { following_id: 3 },
   ])
+  const repeated = await executeDatabaseDomain(database, 'account.completePeoplePrompt', { userId: 1, people: [2] })
+  expect(repeated.followed).toEqual([])
 })

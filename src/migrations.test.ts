@@ -7,6 +7,30 @@ import { databaseVersion, latestMigrationVersion, migrations, normalizeInternalP
 import { sessionHash } from './sessions'
 
 describe('database migrations', () => {
+  test('requeues historical people-picker follows for personalized feeds', () => {
+    const database = new Database(':memory:')
+    runMigrations(database)
+    database.run(`INSERT INTO users(id,handle,email,password,people_prompt_completed_at) VALUES
+      (1,'alice','alice@example.com','x','2026-09-01 10:00:00'),
+      (2,'bob','bob@example.com','x',NULL),
+      (3,'carol','carol@example.com','x',NULL),
+      (4,'reader','reader@example.com','x',NULL);
+      INSERT INTO follows(follower_id,following_id,created_at) VALUES
+        (1,2,'2026-09-01 10:00:00'),(1,3,'2026-08-01 10:00:00'),(4,1,'2026-08-01 10:00:00');
+      DELETE FROM pending_relationship_feed_invalidations;
+      PRAGMA user_version=179;`)
+
+    runMigrations(database)
+
+    expect(database.query(`SELECT viewer_id FROM pending_relationship_feed_invalidations
+      ORDER BY viewer_id`).all()).toEqual([{ viewer_id: 1 }, { viewer_id: 2 }, { viewer_id: 4 }])
+    expect(database.query(`SELECT actor_id,target_id,kind FROM people_picker_follow_push_jobs
+      ORDER BY kind`).all()).toEqual([
+      { actor_id: 1, target_id: 2, kind: 'activity' },
+      { actor_id: 1, target_id: 2, kind: 'direct' },
+    ])
+  })
+
   test('repairs tag onboarding for existing accounts that do not follow tags', () => {
     const database = new Database(':memory:')
     runMigrations(database)
