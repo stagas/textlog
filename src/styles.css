@@ -1615,6 +1615,7 @@ body.corners-round a.button {
 }
 
 .site-footer nav {
+  gap: var(--space-4);
   font-size: var(--font-size-11);
 }
 
