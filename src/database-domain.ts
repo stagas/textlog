@@ -124,13 +124,13 @@ function reindexPostHashtags(database: Database) {
 
 export function materializedForYouCount(html: string) {
   return Number(html.match(
-    /href="\/my-feed"[^>]*>my feed<span class="to-me-count">(\d+)<\/span>/,
+    /href="\/my-feed"[^>]*>my feed<span class="to-me-count">(\d+)\+?<\/span>/,
   )?.[1] || 0)
 }
 
 export function materializedFeedTemplate(html: string) {
   const token = (source: string, path: string, label: string, name: string) => source.replace(
-    new RegExp(`(<a[^>]*href="${path}"[^>]*>${label})(?:<span class="to-me-count">\\d+</span>)?(</a>)`),
+    new RegExp(`(<a[^>]*href="${path}"[^>]*>${label})(?:<span class="to-me-count">\\d+\\+?</span>)?(</a>)`),
     `$1{{${name}-count}}$2`,
   )
   return token(token(token(html, '\/my-feed', 'my feed', 'for-you'), '\/@', '@', 'to-me'),
@@ -3000,7 +3000,7 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
       if (generation !== currentGeneration) return null as DatabaseDomainOutput<K>
       if (viewerId >= 0) {
         const cachedForYouCount = materializedForYouCount(html)
-        if (cachedForYouCount !== personalizedUnreadCount(database, viewerId, false)) {
+        if (cachedForYouCount !== Math.min(personalizedUnreadCount(database, viewerId, false), 99)) {
           return null as DatabaseDomainOutput<K>
         }
       }

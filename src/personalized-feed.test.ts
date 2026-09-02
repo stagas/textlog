@@ -1,6 +1,7 @@
 import { Database } from 'bun:sqlite'
 import { expect, test } from 'bun:test'
 import { apiActivities } from './api-activity'
+import { unreadForYouCount } from './for-you-state'
 import { markLatestPostsRead } from './latest-state'
 import { runMigrations } from './migrations'
 import { loadPersonalizedFeed, personalizedUnreadCount } from './personalized-feed'
@@ -402,6 +403,26 @@ test('personalized snapshots refresh follow state for To Me and For You actions'
     VALUES(1,3,'2026-08-27 11:00:00')`).run()
   const forYouAfter = loadPersonalizedFeed(database, viewer, 1, 20, false, '/for-you', false)
   expect(forYouAfter.timeline.find(row => row.target_handle === 'target')?.following).toBeTrue()
+})
+
+test('the first My Feed visit locates unread entries after the page it marks read', () => {
+  const database = new Database(':memory:', { strict: true })
+  runMigrations(database)
+  database.run(`INSERT INTO users(id,handle,email,password,bio) VALUES
+      (1,'viewer','viewer@example.com','!',''),
+      (2,'writer','writer@example.com','!','');
+    INSERT INTO follows(follower_id,following_id,created_at) VALUES(1,2,'2026-08-01 00:00:00');`)
+  const insert = database.query('INSERT INTO posts(id,user_id,body,created_at) VALUES(?,?,?,?)')
+  for (let id = 1; id <= 21; id++) {
+    insert.run(id, 2, `note ${id}`, `2026-08-${String(id).padStart(2, '0')} 09:00:00`)
+  }
+  const viewer: User = { id: 1, handle: 'viewer', email: 'viewer@example.com', bio: '' }
+
+  const feed = loadPersonalizedFeed(database, viewer, 1, 20, false, '/my-feed')
+
+  expect(feed.forYouCount).toBe(21)
+  expect(unreadForYouCount(1, database)).toBe(1)
+  expect(feed.unreadHref).toMatch(/^\/my-feed\?page=2#post-/)
 })
 
 test('For You only includes activity created after following a person or hashtag', () => {

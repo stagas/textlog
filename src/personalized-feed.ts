@@ -364,11 +364,12 @@ export function loadPersonalizedFeed(database: Database, user: User, page: numbe
     tagFollowerCount: row.target_tag ? tagCounts[row.target_tag] || 0 : undefined })
   )
   const visitedCount = personalizedUnreadCount(database, user.id, toMe)
+  let removeReadSnapshot = false
   if (markRead) {
     const unreadTimeline = timeline.filter(row => row.unread)
     const eventKeys = unreadTimeline.map(row => row.event_key)
     if (markForYouEntriesRead(user.id, eventKeys, toMe, database)) {
-      database.query('DELETE FROM feed_snapshots WHERE kind=? AND viewer_id=?').run(snapshotKind, user.id)
+      removeReadSnapshot = true
     }
   }
   const toMeCount = toMe ? visitedCount : personalizedUnreadCount(database, user.id, true)
@@ -398,6 +399,11 @@ export function loadPersonalizedFeed(database: Database, user: User, page: numbe
       ? `post-${row.id}`
       : activityAnchor(row.event_key)
     return `${path}${page > 1 ? `${path.includes('?') ? '&' : '?'}page=${page}` : ''}#${anchor}`
+  }
+  // The current page may have just been marked read, but its snapshot is still needed to locate unread entries on
+  // later pages. Remove it only after deriving those links so the first response can render the bulk-read action.
+  if (removeReadSnapshot) {
+    database.query('DELETE FROM feed_snapshots WHERE kind=? AND viewer_id=?').run(snapshotKind, user.id)
   }
   return { timeline: resultTimeline, page: snapshot.page, totalPages: snapshot.totalPages, toMeCount, forYouCount,
     latestCount: unreadLatestCount(user.id, database), forYouUnread, toMeUnread, unreadHref: unreadHref(firstUnread),

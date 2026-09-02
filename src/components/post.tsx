@@ -435,11 +435,13 @@ export function postedReplyPath(parentId: number, replyId: number, returnPath?: 
   if (returnPath) {
     const target = new URL(returnPath, 'http://textlog.local')
     if (/^\/post\/[1-9]\d*$/.test(target.pathname)) {
+      target.searchParams.set('to', String(replyId))
       target.searchParams.set('back', String(replyId))
       return `${target.pathname}${target.search}#post-${replyId}`
     }
   }
   const target = new URL(replyAnchorReturnPath(parentId, replyId, returnPath), 'http://textlog.local')
+  target.searchParams.set('to', String(replyId))
   target.searchParams.set('back', String(replyId))
   return `${target.pathname}${target.search}#post-${replyId}`
 }

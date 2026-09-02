@@ -124,7 +124,10 @@ export function Reply(
         placeholder={replyParent.user_id === user.id ? 'Continue writing…' : 'Reply to @' + replyParent.handle + '…'}
         className={`replybox reply-compose${replyTo ? '' : ' root-reply-compose'}`}
         autoFocus={autoFocus}
-        hidden={returnPath && <input type="hidden" name="from" value={returnPath} />}
+        hidden={<>
+          <input type="hidden" name="reply_page_id" value={post.id} />
+          {returnPath && <input type="hidden" name="from" value={returnPath} />}
+        </>}
         secondary={
           <span className="edit-post-actions">
             <PostingHelpAction id="reply-posting-help" defaultChecked={!!suggestionSearch} />

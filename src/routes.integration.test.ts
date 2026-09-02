@@ -1701,7 +1701,8 @@ test('consequential account, content, reporting, and admin flows work over HTTP'
     + await (await request('/my-feed?page=2', { cookie: aliceCookie })).text()
   expect(hashtagForYou).toContain('Bot note discovered through')
   expect(sharedReplyResponse.headers.get('location')).toBe(
-    `/post/${post.id}?from=%2Flatest%3Fcursor%3Dabc%23post-1&back=${sharedReply.id}#post-${sharedReply.id}`,
+    `/post/${post.id}?from=%2Flatest%3Fcursor%3Dabc%23post-1&to=${sharedReply.id}&back=${sharedReply.id}`
+      + `#post-${sharedReply.id}`,
   )
   const sharedReplyPage = await request(sharedReplyResponse.headers.get('location')!, { cookie: bobCookie })
   const sharedReplyHtml = await sharedReplyPage.text()
@@ -1710,11 +1711,13 @@ test('consequential account, content, reporting, and admin flows work over HTTP'
   )
   const threadProfileHref = `/u/bob?from=${
     encodeURIComponent(
-      `/post/${post.id}?from=%2Flatest%3Fcursor%3Dabc%23post-1&back=${sharedReply.id}`,
+      `/post/${post.id}?from=%2Flatest%3Fcursor%3Dabc%23post-1&to=${sharedReply.id}&back=${sharedReply.id}`,
     )
   }`.replaceAll('&', '&amp;')
   expect(sharedReplyHtml).toContain(`class="account-menu-handle" href="${threadProfileHref}">@bob</a>`)
   expect(sharedReplyHtml).toContain(`href="${threadProfileHref}">profile</a>`)
+  expect(sharedReplyHtml).toContain(`action="/post/${sharedReply.id}/reply#post-${sharedReply.id}"`)
+  expect(sharedReplyHtml).toContain('placeholder="Continue writing…"')
   const activityReadKey = `post:${sharedReply.id}`
   const forYouReadKey = `post:${String(sharedReply.id).padStart(20, '0')}`
   const visitedGeneralPost = database.query('INSERT INTO posts(user_id,body) VALUES(?,?) RETURNING id')

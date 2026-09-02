@@ -49,12 +49,26 @@ function rememberMaterialization(key: string, result: MaterializedResponse) {
 
 function materializedBody(html: string) {
   const token = (source: string, path: string, label: string, name: string) => source.replace(
-    new RegExp(`(<a[^>]*href="${path}"[^>]*>${label})(?:<span class="to-me-count">\\d+</span>)?(</a>)`),
+    new RegExp(`(<a[^>]*href="${path}"[^>]*>${label})(?:<span class="to-me-count">\\d+\\+?</span>)?(</a>)`),
     `$1{{${name}-count}}$2`,
   )
   return token(token(token(html, '\/my-feed', 'my feed', 'for-you'), '\/@', '@', 'to-me'),
     '\/all', 'all', 'latest').replace(/<a href="\/drafts">drafts<\/a>|(?=<\/span>\s*<span class="account-nav-row account-nav-primary">)/,
       '{{drafts-link}}')
+}
+
+export function personalizedReadActionOutOfSync(kind: 'for-you' | 'to-me', html: string) {
+  const path = kind === 'to-me' ? '/@' : '/my-feed'
+  const label = kind === 'to-me' ? '@' : 'my feed'
+  const count = Number(html.match(new RegExp(
+    `href="${path.replace('/', '\\/')}"[^>]*>${label}<span class="to-me-count">(\\d+)\\+?</span>`,
+  ))?.[1] || 0)
+  const action = kind === 'to-me' ? '/@/read-all' : '/my-feed/read-all'
+  return (count > 0) !== html.includes(`action="${action}"`)
+}
+
+export function memoryHitNeedsReadAction(kind: MaterializedFeedKind, hitActionDone: boolean, actionStale = false) {
+  return !hitActionDone || actionStale || kind === 'for-you' || kind === 'to-me'
 }
 
 function appearanceVariant(request: Request) {
@@ -82,7 +96,14 @@ export async function rpcMaterializedFeedPage(request: Request, kind: Materializ
     const latestBody = kind === 'latest' && viewerId >= 0
       ? await databaseService().call('cache.hydrateMaterializedFeed', { html: memory.body, viewerId })
       : undefined
-    if (!memory.hitActionDone && onCacheHit) {
+    const hydratedMemoryBody = viewerId >= 0
+      ? await databaseService().call('cache.hydrateMaterializedFeed', { html: memory.body, viewerId })
+      : memory.body
+    const personalizedActionStale = (kind === 'for-you' || kind === 'to-me')
+      && personalizedReadActionOutOfSync(kind, hydratedMemoryBody)
+    // Personalized pages can gain new unread entries without changing this process's memory entry. Consume the
+    // visible page on every visit so reads made in My Feed are reflected in All before the response is returned.
+    if (memoryHitNeedsReadAction(kind, memory.hitActionDone, personalizedActionStale) && onCacheHit) {
       memory.hitActionDone = true
       await onCacheHit()
       if (renderForCache) memory.body = materializedBody(await (await renderForCache()).text())

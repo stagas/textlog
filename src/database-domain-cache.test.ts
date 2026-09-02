@@ -6,4 +6,7 @@ test('reads the My Feed badge count from materialized feed HTML', () => {
   expect(materializedForYouCount(
     '<a class="active" href="/my-feed">my feed<span class="to-me-count">12</span></a>',
   )).toBe(12)
+  expect(materializedForYouCount(
+    '<a class="active" href="/my-feed">my feed<span class="to-me-count">99+</span></a>',
+  )).toBe(99)
 })

@@ -587,23 +587,22 @@ export function registerPostsRoutes(app: Hono) {
     if (!canPublishPosts(user)) return page(<Reply user={user} post={parent} showForm />, 403)
     const f = await form(c.req.raw)
     const returnPath = f.from ? safeNext(f.from) : undefined
+    const requestedReplyPageId = Number(f.reply_page_id)
+    const replyPageId = Number.isInteger(requestedReplyPageId) && requestedReplyPageId > 0
+      ? requestedReplyPageId
+      : parentId
     const body = normalizePostBody(f.body || '')
     const editingDraftId = draftId(f)
     const renderReplyState = async (
       props: Omit<ComponentProps<typeof Reply>, 'user' | 'post' | 'replies' | 'showForm' | 'replyTo'>,
       status = 200,
     ) => {
-      const detail = await databaseService().call('posts.detail', { id: parentId, viewerId: user.id })
-      const rootId = detail.status === 'ready' ? detail.conversationRootId : null
-      if (!rootId) {
-        const replies = await databaseService().call('posts.threadReplies', { parentId, viewerId: user.id })
-        return page(<Reply {...props} user={user} post={parent} replies={replies} showForm />, status)
-      }
-      const rootDetail = await databaseService().call('posts.detail', { id: rootId, viewerId: user.id })
-      if (rootDetail.status !== 'ready') return c.text('Not found', 404)
-      const replies = await databaseService().call('posts.threadReplies', { parentId: rootId, viewerId: user.id })
+      const replyPage = await databaseService().call('posts.detail', { id: replyPageId, viewerId: user.id })
+      if (replyPage.status !== 'ready') return c.text('Not found', 404)
+      const replies = await databaseService().call('posts.threadReplies', { parentId: replyPageId, viewerId: user.id })
       return page(
-        <Reply {...props} user={user} post={rootDetail.post} replies={replies} showForm replyTo={parent} />,
+        <Reply {...props} user={user} post={replyPage.post} replies={replies} showForm
+          replyTo={replyPageId === parentId ? undefined : parent} />,
         status,
       )
     }
@@ -672,7 +671,7 @@ export function registerPostsRoutes(app: Hono) {
       if (!result.duplicate) await persistPreviews(result.id, 'save', body)
       if (!result.duplicate) notifyPost()
       if (editingDraftId) await databaseService().call('drafts.delete', { id: editingDraftId, userId: user.id })
-      return redirect(postedReplyPath(parentId, result.id, returnPath))
+      return redirect(postedReplyPath(replyPageId, result.id, returnPath))
     }
     catch (error) {
       logError(`POST /post/${parentId}/reply`, error)

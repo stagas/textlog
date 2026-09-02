@@ -30,6 +30,30 @@ test('latest count remains for the rendered page and is reduced on the next load
   expect(nextFeed.latestUnread).toBe(false)
 })
 
+test('reading My Feed reduces the All counter before All renders', async () => {
+  const database = new Database(':memory:', { strict: true })
+  runMigrations(database)
+  database.run(`INSERT INTO users(id,handle,email,password) VALUES
+    (1,'reader','reader@example.test','x'),(2,'writer','writer@example.test','x');
+    INSERT INTO follows(follower_id,following_id,created_at) VALUES(1,2,'2026-08-27 08:00:00');
+    INSERT INTO posts(id,user_id,body,created_at) VALUES
+    (1,2,'first','2026-08-27 09:00:00'),(2,2,'second','2026-08-27 10:00:00');`)
+  cacheDb.query("DELETE FROM feed_snapshots WHERE kind='latest-conversation-heads-v13' AND viewer_id=1").run()
+
+  const myFeed = await executeDatabaseDomain(database, 'feeds.personalizedPage', {
+    user: database.query('SELECT * FROM users WHERE id=1').get() as any,
+    page: 1, pageSize: 20, toMe: false, path: '/my-feed',
+  })
+  expect(myFeed.forYouCount).toBe(2)
+  expect(myFeed.latestCount).toBe(0)
+
+  const allFeed = await executeDatabaseDomain(database, 'feeds.latestPage', {
+    viewerId: 1, page: 1, pageSize: 20,
+  })
+  expect(allFeed.latestCount).toBe(0)
+  expect(allFeed.latestUnread).toBe(false)
+})
+
 test('latest includes unread replies beyond the normal conversation preview', async () => {
   const database = new Database(':memory:', { strict: true })
   runMigrations(database)

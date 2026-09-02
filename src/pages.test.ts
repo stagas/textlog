@@ -242,6 +242,7 @@ test('replying to a threaded reply keeps the root page and places the composer a
   expect(page).toContain('href="/post/9?reply=1&amp;from=%2Fall%23post-10"')
   expect(page.match(/post-reply-link/g)).toHaveLength(1)
   expect(page).toContain('<form action="/post/10/reply#post-10" method="post">')
+  expect(page).toContain('<input type="hidden" name="reply_page_id" value="9"/>')
   expect(page.indexOf('id="post-10"')).toBeLessThan(page.indexOf('action="/post/10/reply#post-10"'))
   expect(page).toContain('placeholder="Reply to @friend…"')
   expect(page).toContain('class="inline-reply-compose" style="--reply-offset:calc(clamp(18px, 3vw, 28px))"')
@@ -4174,9 +4175,9 @@ test('thread replies use their own permanent anchor as the next return path', ()
 test('a posted reply returns to its originating thread and preserves that thread back path', () => {
   const thread = '/post/2?from=%2Flatest%3Fcursor%3Dabc%23post-2#post-7'
   expect(postedReplyPath(7, 9, thread))
-    .toBe('/post/2?from=%2Flatest%3Fcursor%3Dabc%23post-2&back=9#post-9')
+    .toBe('/post/2?from=%2Flatest%3Fcursor%3Dabc%23post-2&to=9&back=9#post-9')
   expect(postedReplyPath(7, 9, '/latest#post-7'))
-    .toBe('/post/7?from=%2Flatest%23post-7&back=9#post-9')
+    .toBe('/post/7?from=%2Flatest%23post-7&to=9&back=9#post-9')
 })
 
 test('A quoted post gets its own higher-priority hit area in tappable feeds', () => {
