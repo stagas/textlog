@@ -1416,6 +1416,11 @@ nav form {
   line-height: 1;
 }
 
+.feed-tabs-top-symbol {
+  position: relative;
+  top: -2px;
+}
+
 @supports (animation-timeline: view()) {
   .feed-tabs .feed-tabs-top {
     animation: feed-tabs-top-reveal linear both;

@@ -689,7 +689,9 @@ export function FeedTabs(
                   : <span className="activity-side-status">you've seen it all</span>)}
             </span>
           )}
-          <a className="feed-tabs-top" href="#" aria-label="Back to top" title="Back to top">↑</a>
+          <a className="feed-tabs-top" href="#" aria-label="Back to top" title="Back to top">
+            <span className="feed-tabs-top-symbol" aria-hidden="true">↑</span>
+          </a>
         </div>
       </nav>
       {forYouReadStatus && (
