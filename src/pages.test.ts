@@ -89,7 +89,7 @@ test('header write action appears outside feed pages', () => {
       children: React.createElement('p', null, 'Page'),
     })))
 
-  for (const path of ['/@', '/my-feed', '/hot', '/any', '/all']) {
+  for (const path of ['/@', '/my-feed', '/hot', '/any', '/new', '/all']) {
     expect(renderPath(path)).not.toContain('class="button nav-write-action"')
   }
   expect(renderPath('/explore')).toContain('<a class="button nav-write-action" href="/write">write</a>')

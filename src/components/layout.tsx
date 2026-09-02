@@ -66,7 +66,7 @@ export function Layout({
   const instantScroll = /(?:^|;\s*)textlog_scroll=instant(?:;|$)/.test(request.headers.get('cookie') || '')
   const showGuestJoin = !user && ['/hot', '/all'].includes(requestUrl.pathname)
   const onWritePage = requestUrl.pathname === '/write'
-  const onFeedPage = ['/@', '/my-feed', '/hot', '/any', '/all'].includes(requestUrl.pathname)
+  const onFeedPage = ['/@', '/my-feed', '/hot', '/any', '/new', '/all'].includes(requestUrl.pathname)
   const currentPath = requestUrl.pathname + requestUrl.search
   const writeShortcutHref = onWritePage
     ? '/write'
