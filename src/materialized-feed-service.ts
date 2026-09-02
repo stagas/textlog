@@ -18,7 +18,7 @@ type MemoryMaterialization = MaterializedResponse & {
 }
 const memoryMaterializations = new Map<string, MemoryMaterialization>()
 const MAX_MEMORY_MATERIALIZATIONS = 256
-const MATERIALIZED_HTML_VERSION = 46
+const MATERIALIZED_HTML_VERSION = 47
 let memoryGeneration = 0
 
 export function invalidateMaterializedFeedMemory() {
@@ -36,9 +36,9 @@ function memoryCacheEnabled() {
   return Bun.env.NODE_ENV !== 'test' || Bun.env.ENABLE_MATERIALIZED_MEMORY_CACHE === 'true'
 }
 
-function rememberMaterialization(key: string, result: MaterializedResponse) {
+function rememberMaterialization(key: string, result: MaterializedResponse, viewerId: number) {
   const body = result.memoryBody ?? result.body
-  const entry: MemoryMaterialization = { ...result, body: materializedBody(body), hitActionDone: false }
+  const entry: MemoryMaterialization = { ...result, body: materializedBody(body, viewerId), hitActionDone: false }
   memoryMaterializations.delete(key)
   memoryMaterializations.set(key, entry)
   while (memoryMaterializations.size > MAX_MEMORY_MATERIALIZATIONS) {
@@ -47,7 +47,8 @@ function rememberMaterialization(key: string, result: MaterializedResponse) {
   return entry
 }
 
-function materializedBody(html: string) {
+export function materializedBody(html: string, viewerId: number) {
+  if (viewerId < 0) return html
   const token = (source: string, path: string, label: string, name: string) => source.replace(
     new RegExp(`(<a[^>]*href="${path}"[^>]*>${label})(?:<span class="to-me-count">\\d+\\+?</span>)?(</a>)`),
     `$1{{${name}-count}}$2`,
@@ -106,7 +107,7 @@ export async function rpcMaterializedFeedPage(request: Request, kind: Materializ
     if (memoryHitNeedsReadAction(kind, memory.hitActionDone, personalizedActionStale) && onCacheHit) {
       memory.hitActionDone = true
       await onCacheHit()
-      if (renderForCache) memory.body = materializedBody(await (await renderForCache()).text())
+      if (renderForCache) memory.body = materializedBody(await (await renderForCache()).text(), viewerId)
     }
     const body = latestBody ?? (viewerId >= 0
       ? await databaseService().call('cache.hydrateMaterializedFeed', { html: memory.body, viewerId })
@@ -196,6 +197,6 @@ export async function rpcMaterializedFeedPage(request: Request, kind: Materializ
   if (startedAtMemoryGeneration !== memoryGeneration) {
     return new Response(result.body, { status: result.status, headers: result.headers })
   }
-  rememberMaterialization(key, result)
+  rememberMaterialization(key, result, viewerId)
   return new Response(result.body, { status: result.status, headers: result.headers })
 }

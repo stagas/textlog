@@ -1,6 +1,13 @@
 import { expect, test } from 'bun:test'
 import { hydrateMaterializedFeedCounts, materializedFeedTemplate } from './database-domain'
-import { memoryHitNeedsReadAction, personalizedReadActionOutOfSync } from './materialized-feed-service'
+import { materializedBody, memoryHitNeedsReadAction, personalizedReadActionOutOfSync } from './materialized-feed-service'
+
+test('anonymous feed caches never expose unread-counter template tokens', () => {
+  const html = '<nav><a href="/hot">hot</a><a href="/all">all</a></nav>'
+
+  expect(materializedBody(html, -1)).toBe(html)
+  expect(materializedBody(html, 1)).toContain('all{{latest-count}}')
+})
 
 test('materialized feed templates refresh tab counts without rerendering the page', () => {
   const html = '<header><span class="account-nav-row account-nav-secondary"><a href="/explore">explore</a>'

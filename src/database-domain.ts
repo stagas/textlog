@@ -3095,7 +3095,8 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
           .run(kind, viewerId, generation)
         cacheDb.query(`INSERT OR REPLACE INTO materialized_feed_pages_v2(
           kind,viewer_id,variant,generation,html,strict_generation
-        ) VALUES(?,?,?,?,?,?)`).run(kind, viewerId, variant, generation, materializedFeedTemplate(html),
+        ) VALUES(?,?,?,?,?,?)`).run(kind, viewerId, variant, generation,
+          viewerId >= 0 ? materializedFeedTemplate(html) : html,
           strictGeneration)
         cacheDb.query(`DELETE FROM materialized_feed_pages_v2 WHERE rowid IN (
           SELECT rowid FROM materialized_feed_pages_v2 ORDER BY created_at DESC,rowid DESC LIMIT -1 OFFSET ?

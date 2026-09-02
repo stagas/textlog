@@ -479,10 +479,12 @@ test('new feed first page participates in materialized caching', async () => {
   const firstCacheStatus = first.headers.get('x-feed-cache')
   expect(firstCacheStatus).not.toBeNull()
   expect(['miss', 'durable']).toContain(firstCacheStatus!)
+  expect(await first.text()).not.toContain('{{latest-count}}')
 
   const second = await request('/new')
   expect(second.status).toBe(200)
   expect(second.headers.get('x-feed-cache')).toBe('durable')
+  expect(await second.text()).not.toContain('{{latest-count}}')
 })
 
 test('email code signs up and invalidates its matching magic link', async () => {
