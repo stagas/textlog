@@ -179,7 +179,7 @@ export function AnonymousWriteForm({ returnPath = '/', error, body = '' }: {
           <textarea className="form-control" name="body" maxLength={POST_MAX}
             defaultValue={body}
             placeholder="What's on your mind?" aria-label="What's on your mind?"
-            autoComplete="off" inputMode="text" enterKeyHint="enter" required />
+            autoComplete="off" inputMode="text" enterKeyHint="enter" />
           <div className="composefoot">
             <PostingHelp controlledBy={helpId} actions={moreActions} />
             <FormActions secondary={

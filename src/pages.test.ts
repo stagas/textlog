@@ -2542,6 +2542,7 @@ describe('About', () => {
       expect(guestNav.indexOf('href="/about"')).toBeLessThan(guestNav.indexOf('href="/explore"'))
       expect(html).toContain('anonymous-write-compose')
       expect(html).toContain('placeholder="What&#x27;s on your mind?"')
+      expect(html).not.toMatch(/<textarea[^>]*name="body"[^>]*required/)
       expect(html).toContain('title="Show more writing actions and help"')
       expect(html).not.toContain('placeholder="What’s on your mind, @')
     }
