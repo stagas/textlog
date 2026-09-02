@@ -173,8 +173,14 @@ test('/?reddit counts each IP once', async () => {
   const attributed = await request('/?reddit', { ip: '203.0.113.80' })
   expect(attributed.status).toBe(303)
   expect(attributed.headers.get('set-cookie')).toContain('campaign_attribution=reddit')
-  expect((await request('/?reddit', { ip: '203.0.113.80' })).status).toBe(303)
-  expect((await request('/?reddit', { ip: '203.0.113.81' })).status).toBe(303)
+  const attributionCookie = attributed.headers.get('set-cookie')!.split(';', 1)[0]
+  await request('/styles.css', { ip: '203.0.113.80', cookie: attributionCookie })
+  await request('/styles.css', { ip: '203.0.113.80', cookie: attributionCookie })
+  const second = await request('/?reddit', { ip: '203.0.113.81' })
+  await request('/styles.css', {
+    ip: '203.0.113.81',
+    cookie: second.headers.get('set-cookie')!.split(';', 1)[0],
+  })
   expect((await request('/', { ip: '203.0.113.82' })).status).toBe(303)
 
   expect(database.query(`SELECT count(*) count FROM campaign_visitors WHERE campaign='reddit'`).get())

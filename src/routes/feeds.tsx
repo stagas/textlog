@@ -10,7 +10,7 @@ import {
   Legal,
   PublicFeed,
 } from '../components/pages'
-import { clientAddress, currentPage, page, redirect, rememberFeed } from './shared'
+import { currentPage, page, redirect, rememberFeed } from './shared'
 
 import type { Context, Hono } from 'hono'
 import { randomInt } from 'node:crypto'
@@ -28,7 +28,6 @@ import {
   retainedAnyFeedSeedCookie,
   safeRefererPath,
 } from '../http'
-import { campaignIpPseudonym } from '../ip-privacy'
 import { rpcMaterializedFeedPage } from '../materialized-feed-service'
 import { decodePostCursor } from '../pagination'
 import { resolvedDensity, resolvedPageSize } from '../request-preferences'
@@ -186,12 +185,6 @@ export function registerFeedsRoutes(app: Hono) {
   app.post('/latest/read-all', moved('/all/read-all'))
 
   app.get('/', async c => {
-    if (c.req.query('reddit') !== undefined) {
-      const visitorHash = campaignIpPseudonym(clientAddress(c), 'reddit')
-      if (visitorHash !== '-') {
-        await databaseService().call('stats.recordCampaignVisitor', { campaign: 'reddit', visitorHash })
-      }
-    }
     const user = currentUser(c.req.raw)
     if (!user) {
       return redirect('/hot' + new URL(c.req.url).search,

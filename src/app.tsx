@@ -19,6 +19,7 @@ import { compressResponse } from './compression'
 import { databaseService, subscribeToFeedMutations } from './database-service'
 import { isDevelopment } from './environment'
 import { localImageFile, usesLocalImageStorage } from './image-storage'
+import { campaignIpPseudonym } from './ip-privacy'
 import { clientIp, logError, logHttp, logReady, redactHttpPath, shouldLogHttp } from './log'
 import { MAINTENANCE_INTERVAL_MS } from './maintenance'
 import { NESTED_FROM_MAX_DEPTH, NavigationCaptchaChallenges, NavigationCaptchaGate,
@@ -321,6 +322,13 @@ app.use('*', async (c, next) => {
     const address = c.req.header(clientIpHeaderName()) || '-'
     dailyVisitorAllowlist.add(address, visitedAt)
     recordVisitor(address, visitedAt, !currentUser(c.req.raw))
+    const campaign = campaignAttribution(c.req.raw)
+    if (campaign === 'reddit') {
+      const campaignVisitorHash = campaignIpPseudonym(address, campaign)
+      if (campaignVisitorHash !== '-') {
+        await databaseService().call('stats.recordCampaignVisitor', { campaign, visitorHash: campaignVisitorHash })
+      }
+    }
   }
   catch (error) {
     logError('visitor buffer flush failed', error)
