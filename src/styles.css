@@ -2462,7 +2462,7 @@ body.corners-round a.button {
   scroll-margin-top: calc(var(--space-6) + var(--space-1));
 }
 
-.profile-feed-thread .post {
+.profile-notes-feed-thread .thread-root .post {
   padding-bottom: var(--space-4);
 }
 

@@ -172,11 +172,12 @@ describe('in-memory stylesheet', () => {
     expect(css).not.toContain('\n.post {\n  scroll-margin-top:')
   })
 
-  test('keeps consistent bottom spacing on profile posts with or without footers', async () => {
+  test('sets the notes tab bottom spacing without changing quoted reply cards', async () => {
     const css = await Bun.file(new URL('./styles.css', import.meta.url)).text()
     expect(css).toContain(
-      '.profile-feed-thread .post {\n  padding-bottom: var(--space-4);',
+      '.profile-notes-feed-thread .thread-root .post {\n  padding-bottom: var(--space-4);',
     )
+    expect(css).not.toContain('.profile-replies-feed-thread .post')
   })
 
   test('reveals the floating write action after scrolling past the feed tabs', async () => {

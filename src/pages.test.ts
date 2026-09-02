@@ -3685,7 +3685,12 @@ test('Profile and hashtag feeds show no reply metadata beside post dates', () =>
   expect(profileHtml).not.toContain('3 replies')
   expect(tagHtml).not.toContain('3 replies')
   expect(profileHtml).not.toContain('class="postfoot')
-  expect(profileHtml).toContain('class="post-page-thread feed-thread profile-feed-thread"')
+  expect(profileHtml).toContain(
+    'class="post-page-thread feed-thread profile-feed-thread profile-notes-feed-thread"',
+  )
+  expect(profileRepliesHtml).toContain(
+    'class="post-page-thread feed-thread profile-feed-thread profile-replies-feed-thread"',
+  )
   expect(profileRepliesHtml).not.toContain('class="postfoot')
   expect(tagHtml).not.toContain('class="postfoot')
   expect(profileHtml).not.toContain('class="posttop')
