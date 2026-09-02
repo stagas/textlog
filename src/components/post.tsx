@@ -684,6 +684,7 @@ export function Post({
   const translatePath = '/admin/posts/' + p.id + '/translate?from=' + encodeURIComponent(detailPath)
   const resolvedContinuationHref = continuationHref
     ?? (showReplyCount && (p.reply_count || 0) > 0 ? detailPath : undefined)
+  const hasVisibleContinuation = !!resolvedContinuationHref && continuationLabel !== '…'
   const parentDetailPath = parent
     ? '/post/' + parent.id + '?reply_to=post' + (returnPath ? '&from=' + encodeURIComponent(returnPath) : '')
     : ''
@@ -859,7 +860,7 @@ export function Post({
         {preview ? <PollPreview body={p.body} /> : <Poll p={p} returnPath={returnPath} />}
         <Todo p={p} user={user} preview={preview} returnPath={returnPath} formPrefix={formPrefix} />
       </ContentWarning>
-      {!parent && (showReplyAction && !p.thread_locked || resolvedContinuationHref || canModerate || reportHref
+      {!parent && (showReplyAction && !p.thread_locked || hasVisibleContinuation || canModerate || reportHref
         || bookmarkAction) && (
         <MetaRow className={`postfoot${preview ? ' preview-post-meta' : ''}`}>
           {showReplyAction && !p.thread_locked && (
@@ -1003,7 +1004,7 @@ export function Post({
             )}
         </blockquote>
       )}
-      {parent && (resolvedContinuationHref || canModerate || reportHref || bookmarkAction) && (
+      {parent && (hasVisibleContinuation || canModerate || reportHref || bookmarkAction) && (
         <MetaRow className={`postfoot postfoot-after-quote${preview ? ' preview-post-meta' : ''}`}>
           {resolvedContinuationHref && (
             continuationLabel === '…'
@@ -1368,11 +1369,11 @@ export function ThreadReplies(
 /** Render feed posts as conversations, filling in any available ancestor context. */
 export function FeedThreads(
   { posts, user, returnPath, contextUnreadPostIds, contextDirectedUnreadPostIds, highlightTerms = [],
-    hideTopMeta = false, promoteAncestors = false, expandedRootId, expandedByDefault = false }: {
+    hideTopMeta = false, promoteAncestors = false, expandedRootId, expandedByDefault = false, className }: {
       posts: PostView[]; user: User | null;
       returnPath: string; contextUnreadPostIds?: ReadonlySet<number>;
       contextDirectedUnreadPostIds?: ReadonlySet<number>; highlightTerms?: string[]; hideTopMeta?: boolean;
-      promoteAncestors?: boolean | 'all'; expandedRootId?: number; expandedByDefault?: boolean },
+      promoteAncestors?: boolean | 'all'; expandedRootId?: number; expandedByDefault?: boolean; className?: string },
 ) {
   if (!posts.length) return null
   const belongsToDeletedTopLevel = (post: PostView) => {
@@ -1540,7 +1541,7 @@ export function FeedThreads(
           return target.pathname + target.search
         })()
         return (
-          <div className="post-page-thread feed-thread" key={post.id}>
+          <div className={`post-page-thread feed-thread${className ? ` ${className}` : ''}`} key={post.id}>
             {foldControlId && (
               <input className="thread-fold-input" type="checkbox" id={foldControlId} defaultChecked={collapsed} />
             )}

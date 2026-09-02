@@ -172,6 +172,13 @@ describe('in-memory stylesheet', () => {
     expect(css).not.toContain('\n.post {\n  scroll-margin-top:')
   })
 
+  test('keeps consistent bottom spacing on profile posts with or without footers', async () => {
+    const css = await Bun.file(new URL('./styles.css', import.meta.url)).text()
+    expect(css).toContain(
+      '.profile-feed-thread .post {\n  padding-bottom: var(--space-4);',
+    )
+  })
+
   test('reveals the floating write action after scrolling past the feed tabs', async () => {
     const css = await Bun.file(new URL('./styles.css', import.meta.url)).text()
     expect(css).toContain('body {\n  --corner-radius: 0;')

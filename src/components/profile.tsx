@@ -307,7 +307,8 @@ export function Profile(
       {!editing && !hiddenByBlock && page > 1
         && <Pagination path={paginationPath} page={page} totalPages={totalPages} top />}
       {!editing && !hiddenByBlock
-        && <FeedThreads posts={posts} user={user} returnPath={feedPath} hideTopMeta={tab !== 'replies'} />}
+        && <FeedThreads posts={posts} user={user} returnPath={feedPath} hideTopMeta={tab !== 'replies'}
+          className="profile-feed-thread" />}
       {!editing && !hiddenByBlock && total === 0 && (
         <div className={`empty${user?.id === profile.id ? ' empty-actions' : ''}`}>
           {user?.id === profile.id

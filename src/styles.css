@@ -2462,6 +2462,10 @@ body.corners-round a.button {
   scroll-margin-top: calc(var(--space-6) + var(--space-1));
 }
 
+.profile-feed-thread .post {
+  padding-bottom: var(--space-4);
+}
+
 @media (max-width: 600px) {
   .feed-thread .post,
   .activity-follow {
