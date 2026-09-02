@@ -154,12 +154,12 @@ describe('in-memory stylesheet', () => {
     expect(css).toContain('background: rgb(128 128 128 / 25%);\n    animation: none;')
   })
 
-  test('centers the read-all action on the unread activity highlight', async () => {
+  test('presents unread feed actions as a highlighted action bar', async () => {
     const css = await Bun.file(new URL('./styles.css', import.meta.url)).text()
     expect(css).toContain('.feed-read-action {\n  display: flex;\n  justify-content: center;')
-    expect(css).toContain(
-      'padding: var(--space-2) var(--gutter);\n  background: color-mix(in srgb, var(--accent) 6%, transparent);',
-    )
+    expect(css).toContain('.feed-read-action .activity-side-link {\n  display: inline-flex;')
+    expect(css).toContain('.feed-read-action-form {\n  margin: 0 !important;')
+    expect(css).toContain('background: color-mix(in srgb, var(--accent) 6%, transparent);')
   })
 
   test('keeps feed anchors below the sticky tabs on desktop and mobile', async () => {
@@ -170,6 +170,17 @@ describe('in-memory stylesheet', () => {
       + '    scroll-margin-top: calc(var(--space-7) + var(--space-1));\n  }\n}',
     )
     expect(css).not.toContain('\n.post {\n  scroll-margin-top:')
+  })
+
+  test('reveals the mobile write action after scrolling past the feed tabs', async () => {
+    const css = await Bun.file(new URL('./styles.css', import.meta.url)).text()
+    expect(css).toContain('body {\n  --corner-radius: 0;')
+    expect(css).toContain('timeline-scope: --feed-tabs-passed;')
+    expect(css).toContain(
+      '.mobile-write-action {\n      animation: feed-tabs-top-reveal linear both;\n'
+      + '      animation-timeline: --feed-tabs-passed;\n'
+      + '      animation-range: exit-crossing 0% exit-crossing 100%;',
+    )
   })
 
   test('removes the top border from a grouped first activity', async () => {

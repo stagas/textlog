@@ -2024,7 +2024,7 @@ test('signed-in feeds put the mobile write action outside the main scroll bounda
     feed: { posts: [], page: 1, totalItems: 0, totalPages: 2 },
   }))
 
-  const writeAction = '<div class="mobile-write-action"><a class="button" href="/write">write</a></div>'
+  const writeAction = '<div class="mobile-write-action"><a class="button" href="#">write</a></div>'
   expect(html).toContain('has-mobile-write-action')
   expect(html).toContain(writeAction)
   expect(html.indexOf(writeAction)).toBeLessThan(html.indexOf('<main id="main-content">'))
@@ -2410,7 +2410,9 @@ test('footer offers the mobile app in a mobile-only row', () => {
     'class="button mobile-app-footer" href="https://github.com/Faultless/textlog_flutter/releases"',
   )
   expect(html).toContain('get mobile app</a>')
-  expect(signedInHtml).toContain('<a class="button footer-write-action" href="/write">write a note</a>')
+  expect(signedInHtml).toContain(
+    '<a class="button footer-write-action" href="#main-content">write a note</a>',
+  )
 })
 
 test('footer links to stats next to the app host', () => {

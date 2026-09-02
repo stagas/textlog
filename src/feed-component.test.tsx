@@ -738,7 +738,7 @@ test('for-you offers links to the first and last unread activity', () => {
       lastUnreadHref: '/my-feed?page=3#post-30' }}
   />)
 
-  expect(html).toContain('<span class="activity-side-status">jump to</span>')
+  expect(html).not.toContain('<span class="activity-side-status">jump to</span>')
   expect(html).toContain('href="/my-feed?page=2#post-20">first unread</a>')
   expect(html).toContain('href="/my-feed?page=3#post-30">last unread</a>')
 })

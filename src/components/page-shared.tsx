@@ -690,17 +690,12 @@ export function FeedTabs(
       </nav>
       {forYouReadStatus && (
         <div className="feed-read-action">
-          {unreadHref && <span className="activity-side-status">jump to</span>}
           {unreadHref && (
             <a className="activity-side-link" href={unreadHref}>
               {hasDistinctLastUnread ? 'first unread' : 'unread'}
             </a>
           )}
-          {hasDistinctLastUnread && <span className="feed-tabs-action-separator" aria-hidden="true">·</span>}
           {hasDistinctLastUnread && <a className="activity-side-link" href={lastUnreadHref}>last unread</a>}
-          {unreadHref && (
-            <span className="feed-tabs-action-separator feed-read-action-separator" aria-hidden="true">·</span>
-          )}
           <form className="feed-read-action-form" method="post"
             action={readAction || (toMe ? '/@/read-all' : '/my-feed/read-all')}
           >

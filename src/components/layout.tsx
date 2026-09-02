@@ -184,7 +184,7 @@ export function Layout({
           </>
         )}
         {mobile && <link href="https://fonts.cdnfonts.com/css/dejavu-sans-mono" rel="stylesheet" />}
-        <link rel="stylesheet" href="/styles.css?v=1268" />
+        <link rel="stylesheet" href="/styles.css?v=1280" />
         <style>{themeCss}</style>
       </head>
       <body
@@ -218,7 +218,6 @@ export function Layout({
         {!fullScreen && showPwaInstallBanner && !notificationBanner && requestUrl.pathname !== '/install' && (
           <aside className="notification-banner install-banner" aria-label="Install app">
             <a href="/install">install to home screen</a>
-            <span aria-hidden="true">·</span>
             <form method="post" action="/install/banner/dismiss">
               <button className="quiet">dismiss</button>
             </form>
@@ -253,7 +252,6 @@ export function Layout({
                 ? 'check the improved notifications'
                 : 'enable notifications'}
             </a>
-            <span aria-hidden="true">·</span>
             <form method="post" action={notificationBanner === 'donate'
               ? '/donation/banner/dismiss'
               : notificationBanner === 'appearance'
@@ -295,7 +293,9 @@ export function Layout({
                     get mobile app
                   </a>
                 )}
-                {user && ready && <a className="button footer-write-action" href="/write">write a note</a>}
+                {user && ready && (
+                  <a className="button footer-write-action" href="#main-content">write a note</a>
+                )}
               </div>
             )}
             <nav aria-label="Footer">
@@ -322,7 +322,7 @@ export function Layout({
 export function MobileWriteAction() {
   return (
     <div className="mobile-write-action">
-      <a className="button" href="/write">write</a>
+      <a className="button" href="#">write</a>
     </div>
   )
 }
