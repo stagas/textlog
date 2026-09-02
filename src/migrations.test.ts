@@ -20,7 +20,7 @@ describe('database migrations', () => {
       INSERT INTO follows(follower_id,following_id,created_at) VALUES
         (1,2,NULL),(1,3,'2026-08-01 10:00:00'),(4,1,'2026-08-01 10:00:00'),(5,6,NULL);
       DELETE FROM pending_relationship_feed_invalidations;
-      PRAGMA user_version=179;`)
+      PRAGMA user_version=180;`)
 
     runMigrations(database)
 

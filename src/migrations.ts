@@ -2962,6 +2962,45 @@ export const migrations: Migration[] = [
               AND actor.people_prompt_completed_at>=datetime('now','-1 hour'));`)
     },
   },
+  {
+    version: 181,
+    name: 'repair_recent_undated_people_picker_follow_events',
+    up(database) {
+      if (!database.query(
+        "SELECT 1 FROM sqlite_master WHERE type='table' AND name='pending_relationship_feed_invalidations'",
+      ).get() || !database.query(
+        "SELECT 1 FROM pragma_table_info('users') WHERE name='people_prompt_completed_at'",
+      ).get() || !database.query(
+        "SELECT 1 FROM sqlite_master WHERE type='table' AND name='follows'",
+      ).get()) return
+      database.run(`CREATE TABLE IF NOT EXISTS people_picker_follow_push_jobs (
+        actor_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        target_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        kind TEXT NOT NULL CHECK(kind IN ('direct','activity')),
+        created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        PRIMARY KEY(actor_id,target_id,kind));
+      CREATE TEMP TABLE recent_undated_picker_follows AS
+        SELECT f.follower_id actor_id,f.following_id target_id,actor.people_prompt_completed_at event_at
+        FROM follows f JOIN users actor ON actor.id=f.follower_id
+        WHERE f.created_at IS NULL AND actor.people_prompt_completed_at IS NOT NULL
+          AND actor.people_prompt_completed_at>=datetime((SELECT max(latest.people_prompt_completed_at)
+            FROM follows missing JOIN users latest ON latest.id=missing.follower_id
+            WHERE missing.created_at IS NULL),'-1 hour');
+      INSERT OR IGNORE INTO people_picker_follow_push_jobs(actor_id,target_id,kind)
+        SELECT recent.actor_id,recent.target_id,k.kind FROM recent_undated_picker_follows recent
+        CROSS JOIN (SELECT 'direct' kind UNION ALL SELECT 'activity') k;
+      INSERT OR IGNORE INTO pending_relationship_feed_invalidations(viewer_id)
+        SELECT actor_id FROM recent_undated_picker_follows
+        UNION SELECT target_id FROM recent_undated_picker_follows
+        UNION SELECT audience.follower_id FROM recent_undated_picker_follows recent
+          JOIN follows audience ON audience.following_id=recent.actor_id;
+      UPDATE follows SET created_at=(SELECT recent.event_at FROM recent_undated_picker_follows recent
+        WHERE recent.actor_id=follows.follower_id AND recent.target_id=follows.following_id)
+        WHERE EXISTS (SELECT 1 FROM recent_undated_picker_follows recent
+          WHERE recent.actor_id=follows.follower_id AND recent.target_id=follows.following_id);
+      DROP TABLE recent_undated_picker_follows;`)
+    },
+  },
 ]
 
 export const latestMigrationVersion = migrations.at(-1)!.version
