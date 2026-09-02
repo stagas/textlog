@@ -427,7 +427,24 @@ header>nav>a:not(.button),
 }
 
 .mobile-write-action {
-  display: none;
+  position: fixed;
+  z-index: 30;
+  right: calc(var(--space-5) + env(safe-area-inset-right));
+  bottom: calc(var(--space-5) + env(safe-area-inset-bottom));
+  display: flex;
+}
+
+.mobile-write-action .button {
+  min-height: calc(1.5em + 2 * var(--space-4));
+  padding: var(--space-4) var(--space-5);
+  font-size: var(--font-size-14);
+  box-shadow: 0 4px 16px rgb(0 0 0 / 20%);
+}
+
+.has-mobile-write-action .site-footer {
+  position: relative;
+  z-index: 31;
+  background: var(--bg);
 }
 
 @media (max-width: 600px) {
@@ -441,35 +458,13 @@ header>nav>a:not(.button),
     display: none;
   }
 
-  .mobile-write-action {
-    position: fixed;
-    z-index: 30;
-    right: calc(var(--space-5) + env(safe-area-inset-right));
-    bottom: calc(var(--space-5) + env(safe-area-inset-bottom));
-    display: flex;
-  }
-
-  .mobile-write-action .button {
-    min-height: calc(1.5em + 2 * var(--space-4));
-    padding: var(--space-4) var(--space-5);
-    font-size: var(--font-size-14);
-    box-shadow: 0 4px 16px rgb(0 0 0 / 20%);
-  }
-
-  .has-mobile-write-action .site-footer {
-    position: relative;
-    z-index: 31;
-    background: var(--bg);
-  }
 }
 
 @supports (animation-timeline: view()) {
-  @media (max-width: 600px) {
-    .mobile-write-action {
-      animation: feed-tabs-top-reveal linear both;
-      animation-timeline: --feed-tabs-passed;
-      animation-range: exit-crossing 0% exit-crossing 100%;
-    }
+  .mobile-write-action {
+    animation: feed-tabs-top-reveal linear both;
+    animation-timeline: --feed-tabs-passed;
+    animation-range: exit-crossing 0% exit-crossing 100%;
   }
 }
 
@@ -1656,7 +1651,7 @@ body.corners-round a.button {
     display: flex;
     align-items: stretch;
     justify-content: center;
-    gap: var(--space-3);
+    gap: 2ch;
   }
 }
 
