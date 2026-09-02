@@ -5018,6 +5018,35 @@ form.report-panel {
   }
 }
 
+:is(.write-compose, .reply-compose) .compose-editor-row {
+  --compose-controls-inset: var(--space-8);
+  padding-block: 0;
+}
+
+:is(.write-compose, .reply-compose) textarea.form-control {
+  min-height: calc(3lh + var(--space-4) + var(--compose-controls-inset));
+  max-height: calc(15lh + var(--space-4) + var(--compose-controls-inset));
+  padding: var(--space-4) 0 var(--compose-controls-inset);
+}
+
+:is(.write-compose, .reply-compose) .composefoot {
+  position: relative;
+  z-index: 1;
+  align-content: end;
+  min-height: var(--compose-controls-inset);
+  margin-top: calc(-1 * var(--compose-controls-inset));
+  padding-bottom: var(--space-4);
+  pointer-events: none;
+}
+
+:is(.write-compose, .reply-compose) .composefoot :is(.form-actions, .posting-help-content) {
+  pointer-events: auto;
+}
+
+:is(.write-compose, .reply-compose) .composefoot .form-actions {
+  align-self: end;
+}
+
 .posting-suggestion-results {
   display: flex;
   flex-wrap: wrap;
