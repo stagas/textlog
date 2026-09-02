@@ -4501,12 +4501,12 @@ form.report-panel {
 }
 
 .posting-help-content {
-  container-type: inline-size;
   display: none;
   grid-template-columns: minmax(0, 1fr) auto;
+  align-items: start;
   grid-column: 1 / -1;
   grid-row: 2;
-  gap: var(--space-4);
+  gap: var(--space-4) 20px;
   width: 100%;
   margin-top: var(--space-5);
   padding: var(--space-4);
@@ -4555,10 +4555,11 @@ form.report-panel {
   grid-column: 1;
   grid-row: 1;
   min-width: 0;
-  overflow-x: auto;
+  padding-right: 0;
+  overflow-x: visible;
   color: var(--muted);
   text-align: left;
-  white-space: nowrap;
+  white-space: normal;
   scrollbar-width: none;
 }
 
@@ -4566,6 +4567,7 @@ form.report-panel {
   display: flex;
   grid-column: 2;
   grid-row: 1;
+  align-self: start;
   justify-content: flex-end;
   gap: var(--space-4);
 }
@@ -4579,7 +4581,7 @@ form.report-panel {
   display: none;
 }
 
-@container (max-width: 66rem) {
+@media (max-width: 520px) {
   .posting-help-actions {
     grid-column: 1 / -1;
     grid-row: 1;
@@ -4589,6 +4591,7 @@ form.report-panel {
   .posting-help-controlled-summary {
     grid-column: 1 / -1;
     grid-row: 2;
+    padding-right: 0;
     overflow-x: visible;
     white-space: normal;
   }
