@@ -470,7 +470,9 @@ test('notification banners are hidden from logged-out visitors', async () => {
 test('new feed first page participates in materialized caching', async () => {
   const first = await request('/new')
   expect(first.status).toBe(200)
-  expect(['miss', 'durable']).toContain(first.headers.get('x-feed-cache'))
+  const firstCacheStatus = first.headers.get('x-feed-cache')
+  expect(firstCacheStatus).not.toBeNull()
+  expect(['miss', 'durable']).toContain(firstCacheStatus!)
 
   const second = await request('/new')
   expect(second.status).toBe(200)
