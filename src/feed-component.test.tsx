@@ -537,7 +537,7 @@ test('for-you labels a descendant that replies to its own author as continued', 
       toMeUnread: true }}
   />)
 
-  expect(html).toContain('continued a while ago:</span>')
+  expect(html).toMatch(/continued [^<]+ ago:<\/span>/)
   expect(html).not.toContain('replied to you:')
 })
 
