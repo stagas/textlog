@@ -122,6 +122,7 @@ export function Reply(
       <ReplyBox action={`/post/${replyParent.id}/reply#post-${replyParent.id}`} body={body} error={error}
         suggestionSearch={suggestionSearch} draftId={draftId}
         placeholder={replyParent.user_id === user.id ? 'Continue writing…' : 'Reply to @' + replyParent.handle + '…'}
+        className={`replybox reply-compose${replyTo ? '' : ' root-reply-compose'}`}
         autoFocus={autoFocus}
         hidden={returnPath && <input type="hidden" name="from" value={returnPath} />}
         secondary={

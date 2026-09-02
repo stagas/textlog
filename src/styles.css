@@ -3473,6 +3473,11 @@ main:has(> .write-compose) {
   margin-left: clamp(18px, 3vw, 28px);
 }
 
+.replybox.root-reply-compose {
+  width: calc(100% - clamp(18px, 3vw, 28px));
+  margin-left: clamp(18px, 3vw, 28px);
+}
+
 .inline-reply-compose > .replybox {
   margin-top: 0;
 }
@@ -3486,6 +3491,11 @@ main:has(> .write-compose) {
   .inline-reply-compose {
     width: calc(100% + var(--reply-offset));
     margin-left: calc(-1 * var(--reply-offset));
+  }
+
+  .replybox.root-reply-compose {
+    width: 100%;
+    margin-left: 0;
   }
 }
 

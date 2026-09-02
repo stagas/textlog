@@ -210,7 +210,7 @@ test('post page reply forms only autofocus when reply was explicitly requested',
   const passive = renderToStaticMarkup(React.createElement(Reply, { user, post, showForm: true, autoFocus: false }))
   const requested = renderToStaticMarkup(React.createElement(Reply, { user, post, showForm: true, autoFocus: true }))
 
-  expect(passive).toContain('class="panel panel-surface panel-medium replybox reply-compose"')
+  expect(passive).toContain('class="panel panel-surface panel-medium replybox reply-compose root-reply-compose"')
   expect(passive).not.toContain('autofocus=""')
   expect(requested).toContain('autofocus=""')
 })
@@ -722,7 +722,7 @@ test('reply forms offer the same server-rendered preview flow', () => {
   expect(html).toContain('<div class="reply-preview"><p class="eyebrow">preview</p><div class="reply-branch">')
   expect(html).not.toContain('<span class="post-context">preview:</span>')
   expect(html.indexOf('<div class="reply-preview">')).toBeLessThan(
-    html.indexOf('<div class="panel panel-surface panel-medium replybox reply-compose">'),
+    html.indexOf('<div class="panel panel-surface panel-medium replybox reply-compose root-reply-compose">'),
   )
   expect(html.indexOf('<textarea')).toBeLessThan(html.indexOf('<div class="composefoot">'))
   expect(html).toContain('Reply <a href="/tag/here"')

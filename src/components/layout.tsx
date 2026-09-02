@@ -184,7 +184,7 @@ export function Layout({
           </>
         )}
         {mobile && <link href="https://fonts.cdnfonts.com/css/dejavu-sans-mono" rel="stylesheet" />}
-        <link rel="stylesheet" href="/styles.css?v=1267" />
+        <link rel="stylesheet" href="/styles.css?v=1268" />
         <style>{themeCss}</style>
       </head>
       <body

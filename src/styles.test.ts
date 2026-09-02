@@ -684,6 +684,17 @@ describe('in-memory stylesheet', () => {
     )
   })
 
+  test('indents the root reply composer only on desktop', async () => {
+    const css = await Bun.file(new URL('./styles.css', import.meta.url)).text()
+    expect(css).toContain(
+      '.replybox.root-reply-compose {\n  width: calc(100% - clamp(18px, 3vw, 28px));\n'
+        + '  margin-left: clamp(18px, 3vw, 28px);',
+    )
+    expect(css).toContain(
+      '@media (max-width: 520px) {')
+    expect(css).toContain('.replybox.root-reply-compose {\n    width: 100%;\n    margin-left: 0;')
+  })
+
   test('masks warned content and removes the warning after reveal', async () => {
     const css = await Bun.file(new URL('./styles.css', import.meta.url)).text()
     expect(css).not.toContain('filter: blur(.35rem);')
