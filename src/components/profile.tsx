@@ -167,9 +167,7 @@ export function Profile(
                         spellCheck={false} />
                     </label>
                     <label className="profile-mood-field">
-                      <span className="profile-mood-label">mood
-                        <span className="new-badge profile-mood-new-badge" aria-hidden="true">NEW</span>
-                      </span>
+                      <span className="profile-mood-label">mood</span>
                       <input name="mood" aria-label="mood" defaultValue={editMood} autoComplete="off"
                         inputMode="text" size={2} />
                     </label>

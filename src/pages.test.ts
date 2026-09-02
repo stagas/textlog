@@ -283,7 +283,7 @@ test('compose offers a server-rendered post preview', () => {
 
   expect(form).toContain('title="Preview this post before publishing" name="action">preview</button>')
   expect(form).toContain('title="Enrich post with hashtags" name="action">autotag')
-  expect(form).toContain('<span class="new-badge compose-new-badge" aria-hidden="true">NEW</span>')
+  expect(form).not.toContain('compose-new-badge')
   expect(form.indexOf('>autotag')).toBeLessThan(form.indexOf('>preview</button>'))
   expect(form).toContain('class="button" accessKey="p" title="Publish this post">post →</button>')
   expect(form.indexOf('>preview</button>')).toBeLessThan(form.indexOf('>post →</button>'))
@@ -615,7 +615,7 @@ test('post edit keeps destructive navigation above the textarea and secondary wr
   expect(html).toContain('class="secondary-action danger" href="/post/2/delete">delete</a>')
   expect(html).toContain('class="secondary-action" href="/post/2">back</a>')
   expect(html).toContain('title="Enrich post with hashtags" name="action">autotag')
-  expect(html).toContain('<span class="new-badge compose-new-badge" aria-hidden="true">NEW</span>')
+  expect(html).not.toContain('compose-new-badge')
   expect(html.indexOf('>delete</a>')).toBeLessThan(html.indexOf('>back</a>'))
   expect(html.indexOf('>back</a>')).toBeLessThan(html.indexOf('<textarea'))
   expect(html.indexOf('value="search-hashtags"')).toBeLessThan(html.indexOf('class="posting-help-actions"'))
@@ -722,7 +722,7 @@ test('reply forms offer the same server-rendered preview flow', () => {
 
   expect(html).toContain('value="preview" name="action">preview</button>')
   expect(html).toContain('title="Enrich post with hashtags" name="action">autotag')
-  expect(html).toContain('<span class="new-badge compose-new-badge" aria-hidden="true">NEW</span>')
+  expect(html).not.toContain('compose-new-badge')
   expect(html.indexOf('>autotag')).toBeLessThan(html.indexOf('>preview</button>'))
   expect(html).toContain('class="button" accessKey="p">post →</button>')
   expect(html).not.toContain('class="secondary-action cancel-action edit-post-cancel"')
@@ -2054,7 +2054,7 @@ test('signed-in feed pages put the write form before the feed tabs', () => {
     expect(html).toContain('placeholder="What’s on your mind, @reader?"')
     expect(html).not.toContain('class="compose-heading"')
     expect(html).not.toContain('autofocus')
-    expect(html).toContain('any<span class="new-badge feed-tab-new-badge" aria-hidden="true">NEW</span>')
+    expect(html).not.toContain('feed-tab-new-badge')
     expect(html).toContain(
       '<label class="secondary-action posting-help-action" for="embedded-posting-help" title="Show more writing actions and help"><input class="posting-help-toggle" id="embedded-posting-help" type="checkbox" aria-controls="embedded-posting-help-content"/>more</label>',
     )
@@ -2897,7 +2897,7 @@ test('Profile edit offers a data download without rendering notes', () => {
   expect(html).toContain('You can change your handle up to two times per month.')
   expect(html).toContain('Mood can be any emoji character.')
   expect(html).toContain('aria-describedby="profile-handle-help"')
-  expect(html).toContain('mood<span class="new-badge profile-mood-new-badge" aria-hidden="true">NEW</span>')
+  expect(html).not.toContain('profile-mood-new-badge')
   expect(html).toContain('<details class="posting-help-details">')
   expect(html).toContain('<span class="posting-help-limits">300 chars / 10 lines max</span>')
   expect(html).toContain('300 chars / 10 lines max</span> · use #hashtags, @mentions and more</span>')

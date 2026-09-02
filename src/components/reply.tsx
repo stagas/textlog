@@ -138,7 +138,7 @@ export function Reply(
         moreActions={<>
           <button className="secondary-action compose-autotag-action" name="action" value="autotag"
             title="Enrich post with hashtags">
-            autotag<span className="new-badge compose-new-badge" aria-hidden="true">NEW</span>
+            autotag
           </button>
           <button className="secondary-action" name="action" value="preview">preview</button>
           <button className="secondary-action" name="action" value="draft"
