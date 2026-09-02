@@ -685,7 +685,7 @@ export function Post({
   const resolvedContinuationHref = continuationHref
     ?? (showReplyCount && (p.reply_count || 0) > 0 ? detailPath : undefined)
   const parentDetailPath = parent
-    ? '/post/' + parent.id + (returnPath ? '?from=' + encodeURIComponent(returnPath) : '')
+    ? '/post/' + parent.id + '?reply_to=post' + (returnPath ? '&from=' + encodeURIComponent(returnPath) : '')
     : ''
   const parentReplyPath = parent ? '/post/' + parent.id + '?reply=1' + returnQuery : ''
   const defaultReplyPath = '/post/' + p.id + '?reply=1' + returnQuery

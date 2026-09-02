@@ -4221,7 +4221,9 @@ test('A quoted post gets its own higher-priority hit area in tappable feeds', ()
   expect(html).toContain('parent-quote tappable-parent')
   expect(html).toContain('class="reference-menu-trigger postauthor" '
     + 'href="/u/writer?from=%2Flatest%3Fcursor%3Dabc%23post-2"')
-  expect(html).toContain('class="parent-hit-area" href="/post/1?from=%2Flatest%3Fcursor%3Dabc%23post-2"')
+  expect(html).toContain(
+    'class="parent-hit-area" href="/post/1?reply_to=post&amp;from=%2Flatest%3Fcursor%3Dabc%23post-2"',
+  )
   expect(html).toContain('class="reference-menu-trigger postauthor" '
     + 'href="/u/parent?from=%2Flatest%3Fcursor%3Dabc%23post-2"')
   expect(html).not.toContain('class="postdate" href="/post/1?from=%2Flatest%3Fcursor%3Dabc%23post-2"')
@@ -4287,7 +4289,7 @@ test('Post detail can make only its quoted parent tappable', () => {
     },
   }))
 
-  expect(html).toContain('class="parent-hit-area" href="/post/1"')
+  expect(html).toContain('class="parent-hit-area" href="/post/1?reply_to=post"')
   expect(html).not.toContain('class="post-hit-area"')
 })
 

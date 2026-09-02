@@ -248,7 +248,9 @@ export function registerPostsRoutes(app: Hono) {
     }
     if (user) {
       const requestedReplyToId = Number(c.req.query('to'))
-      const replyToId = Number.isInteger(requestedReplyToId) ? requestedReplyToId : postAnchorId(returnPath)
+      const replyToId = c.req.query('reply_to') === 'post'
+        ? null
+        : Number.isInteger(requestedReplyToId) ? requestedReplyToId : postAnchorId(returnPath)
       const replyTo = Number.isInteger(replyToId) ? replies.find(reply => reply.id === replyToId) : undefined
       const requestedBackTargetId = Number(c.req.query('back'))
       const backTargetId = Number.isInteger(requestedBackTargetId) ? requestedBackTargetId : undefined
