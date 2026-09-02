@@ -2,7 +2,7 @@ import { expect, test } from 'bun:test'
 import { interactedEmail } from './interacted-email'
 
 test('interaction email links to unread activity and its own unsubscribe preference', () => {
-  const html = interactedEmail('https://preview.textlog.test/interacted-email', 'recipient-token')
+  const html = interactedEmail('https://preview.textlog.test/interacted-email', 'recipient-token', null)
 
   expect(html).toStartWith('<!doctype html>')
   expect(html).toContain('People have interacted with you.')

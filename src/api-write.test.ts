@@ -1,7 +1,6 @@
 import { Database } from 'bun:sqlite'
 import { beforeEach, describe, expect, test } from 'bun:test'
 import { Hono } from 'hono'
-import { readFileSync, unlinkSync } from 'node:fs'
 import { cacheDb } from './cache-db'
 import { executeDatabaseDomain } from './database-domain'
 import type { DatabaseService } from './database-service'
@@ -9,7 +8,7 @@ import { registerApiRoutes } from './routes/api'
 import { POST_MAX, WRITE_LIMIT } from './routes/api-write'
 import { apiUser, hash } from './utils'
 
-function fixture() {
+function fixture(sendMagicLinkMessage?: Parameters<typeof registerApiRoutes>[5]) {
   const database = new Database(':memory:')
   database.run(`
     CREATE TABLE users (id INTEGER PRIMARY KEY,handle TEXT NOT NULL,email TEXT,bio TEXT NOT NULL DEFAULT '',
@@ -66,7 +65,8 @@ function fixture() {
   `)
   const app = new Hono()
   const service: DatabaseService = { call: (operation, input) => executeDatabaseDomain(database, operation, input) }
-  registerApiRoutes(app, 'https://textlog.test', Date.now, service, request => apiUser(request, database))
+  registerApiRoutes(app, 'https://textlog.test', Date.now, service, request => apiUser(request, database),
+    sendMagicLinkMessage)
   return { app, database }
 }
 
@@ -533,10 +533,10 @@ describe('API writes', () => {
 
 describe('API sign in', () => {
   test('answers the same whether or not the address has an account', async () => {
-    const { app } = fixture()
-    Bun.env.NODE_ENV = 'test'
-    const capturePath = `/tmp/textlog-api-auth-${Date.now()}.jsonl`
-    Bun.env.EMAIL_CAPTURE_PATH = capturePath
+    const messages: Array<{ email: string; handle?: string }> = []
+    const { app } = fixture(async (email, _url, _code, handle) => {
+      messages.push({ email, handle })
+    })
 
     const known = await call(app, '/api/v1/auth/request', {
       method: 'POST',
@@ -552,11 +552,8 @@ describe('API sign in', () => {
     expect(known.status).toBe(202)
     expect(unknown.status).toBe(202)
     expect(await known.json()).toEqual(await unknown.json())
-    const messages = readFileSync(capturePath, 'utf8').trim().split('\n').map(line => JSON.parse(line))
     expect(messages).toHaveLength(1)
-    expect(messages[0].subject).toBe('Welcome back, @alice · textlog')
-    delete Bun.env.EMAIL_CAPTURE_PATH
-    unlinkSync(capturePath)
+    expect(messages[0]).toEqual({ email: 'alice@example.com', handle: 'alice' })
   })
 
   test('exchanges a code for a token that can write', async () => {

@@ -14,7 +14,7 @@ import { PAGE_SIZE_CHOICES, type PageSizeChoice } from '../request-preferences'
 import { MAX_SEARCH_LENGTH, normalizeSearchQuery, searchExpression } from '../search'
 import type { User } from '../types'
 import { apiUser, currentUser } from '../utils'
-import { registerApiWriteRoutes } from './api-write'
+import { registerApiWriteRoutes, type MagicLinkSender } from './api-write'
 import { page } from './shared'
 import { registerSyndicationRoutes } from './syndication'
 
@@ -736,7 +736,7 @@ function openApiDocument() {
 
 export function registerApiRoutes(app: Hono, appUrl: string | null | undefined = Bun.env.APP_URL,
   now: () => number = Date.now, configuredService?: DatabaseService,
-  configuredApiUser?: (request: Request) => User | null)
+  configuredApiUser?: (request: Request) => User | null, sendMagicLinkMessage?: MagicLinkSender)
 {
   const service = configuredService || databaseService()
   const requestApiUser = configuredApiUser || ((request: Request) => apiUser(request))
@@ -792,7 +792,7 @@ export function registerApiRoutes(app: Hono, appUrl: string | null | undefined =
   app.use('/hot.json', jsonRateLimitMiddleware)
 
   registerSyndicationRoutes(app, service, appUrl)
-  registerApiWriteRoutes(app, service, requestApiUser, appUrl)
+  registerApiWriteRoutes(app, service, requestApiUser, appUrl, sendMagicLinkMessage)
 
   app.get('/api/openapi.json', () => jsonResponse(openApiDocument(), 200, 'public, max-age=3600'))
 

@@ -31,6 +31,7 @@ export const WRITE_LIMIT = 60
 export const WRITE_WINDOW_SECONDS = 60 * 60
 export { BIO_MAX } from '../bio-body'
 export { POST_MAX } from '../post-body'
+export type MagicLinkSender = typeof sendMagicLink
 
 function json(value: unknown, status = 200) {
   return new Response(JSON.stringify(value), {
@@ -123,7 +124,8 @@ async function persistBioPreviews(service: DatabaseService, userId: number,
 }
 
 export function registerApiWriteRoutes(app: Hono, service: DatabaseService,
-  requestApiUser: (request: Request) => User | null, appUrl?: string | null)
+  requestApiUser: (request: Request) => User | null, appUrl?: string | null,
+  sendMagicLinkMessage: MagicLinkSender = sendMagicLink)
 {
   const authenticated = (c: Context) => {
     const user = requestApiUser(c.req.raw)
@@ -166,7 +168,7 @@ export function registerApiWriteRoutes(app: Hono, service: DatabaseService,
       now: Date.now() })
     if (link) {
       try {
-        await sendMagicLink(email, link.url, link.code, link.handle)
+        await sendMagicLinkMessage(email, link.url, link.code, link.handle)
       }
       catch {
         return fail('email_failed', 'The code could not be sent. Please try again later', 503)

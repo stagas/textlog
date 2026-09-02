@@ -5,9 +5,11 @@ function escapeHtml(value: string) {
     .replaceAll('"', '&quot;').replaceAll('\'', '&#39;')
 }
 
-export function interactedEmail(requestOrigin: string, unsubscribeToken: string) {
+export function interactedEmail(requestOrigin: string, unsubscribeToken: string,
+  configuredAppUrl: string | null | undefined = Bun.env.APP_URL)
+{
   const name = appName()
-  const origin = Bun.env.APP_URL ? new URL(Bun.env.APP_URL).origin : new URL(requestOrigin).origin
+  const origin = configuredAppUrl ? new URL(configuredAppUrl).origin : new URL(requestOrigin).origin
   const logoUrl = new URL('/email-logo.png?v=1', origin).href
   const activityUrl = new URL('/@', origin).href
   const unsubscribeUrl = new URL(
