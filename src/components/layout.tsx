@@ -268,7 +268,11 @@ export function Layout({
             </form>
           </aside>
         )}
-        {!fullScreen && user && ready && mobileWriteAction && <MobileWriteAction />}
+        {!fullScreen && mobileWriteAction && (user && ready
+          ? <MobileWriteAction />
+          : !user
+          ? <MobileJoinAction />
+          : null)}
         <main id="main-content">{children}</main>
         {!fullScreen && showGuestJoin && (
           <div className="guest-join-row">
@@ -323,6 +327,14 @@ export function MobileWriteAction() {
   return (
     <div className="mobile-write-action">
       <a className="button" href="#">write</a>
+    </div>
+  )
+}
+
+function MobileJoinAction() {
+  return (
+    <div className="mobile-write-action">
+      <a className="button" href="/enter" rel="nofollow">join</a>
     </div>
   )
 }

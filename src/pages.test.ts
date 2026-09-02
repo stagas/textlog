@@ -2592,9 +2592,11 @@ describe('About', () => {
       expect(html).toContain('href="/hot"')
       expect(html).toContain('href="/all"')
       expect(html).toMatch(/href="\/any\?seed=[0-9a-z]+"/)
-      expect(html).toContain(
-        'class="button feed-tabs-join" href="/enter" rel="nofollow">join the community</a>',
-      )
+      const joinAction = '<div class="mobile-write-action"><a class="button" href="/enter" rel="nofollow">join</a></div>'
+      expect(html).toContain('has-mobile-write-action')
+      expect(html).toContain(joinAction)
+      expect(html.indexOf(joinAction)).toBeLessThan(html.indexOf('<main id="main-content">'))
+      expect(html).not.toContain('class="button feed-tabs-join"')
       expect(html).toContain('?page=2" aria-label="Page 2"')
       expect(html).toContain('?page=2" aria-label="Next page"')
       expect(html.indexOf('about-page feed-about')).toBeLessThan(html.indexOf('id="feed-tabs"'))

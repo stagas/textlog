@@ -26,7 +26,7 @@ export function HotFeed(
   const returnPath = feedPath + (feed.page > 1 ? `?page=${feed.page}` : '')
   return (
     <Layout user={user} title={title} pageUrl={pageUrl} notificationBanner={notificationBanner}
-      mobileWriteAction={Boolean(user)} feeds={{ title: 'Hot notes', rss: '/hot.rss', atom: '/hot.atom' }}
+      mobileWriteAction feeds={{ title: 'Hot notes', rss: '/hot.rss', atom: '/hot.atom' }}
     >
       {!user && <AboutContent user={null} embedded />}
       <h1 className="visually-hidden">Hot notes</h1>

@@ -31,7 +31,7 @@ export function PublicFeed(
     : null
   return (
     <Layout user={user} title={path === '/all' ? 'all' : random ? 'any' : newest ? 'new' : undefined} pageUrl={pageUrl}
-      mobileWriteAction={Boolean(user)} notificationBanner={notificationBanner}
+      mobileWriteAction notificationBanner={notificationBanner}
       feeds={random || newest ? undefined : { title: 'All notes', rss: '/all.rss', atom: '/all.atom' }}
     >
       {!user && <AboutContent user={null} embedded />}
