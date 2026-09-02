@@ -4180,9 +4180,9 @@ test('Post threads show stored translations on replies', () => {
 })
 
 test('conversation top links return to the deep reply and preserve its original back path', () => {
-  expect(conversationTopPath(1, 3)).toBe('/post/1?from=%2Fpost%2F3%23post-3#post-1')
+  expect(conversationTopPath(1, 3)).toBe('/post/1?from=%2Fpost%2F3%23post-3&reply_to=post#post-1')
   expect(conversationTopPath(1, 3, '/latest#post-3'))
-    .toBe('/post/1?from=%2Fpost%2F3%3Ffrom%3D%252Flatest%2523post-3%23post-3#post-1')
+    .toBe('/post/1?from=%2Fpost%2F3%3Ffrom%3D%252Flatest%2523post-3%23post-3&reply_to=post#post-1')
 })
 
 test('thread replies use their own permanent anchor as the next return path', () => {
@@ -4235,7 +4235,7 @@ test('A quoted post gets its own higher-priority hit area in tappable feeds', ()
   expect(html).not.toContain('class="postdate" href="/post/1?from=%2Flatest%3Fcursor%3Dabc%23post-2"')
   expect(html).not.toContain('post-reply-link')
   expect(html).toContain(
-    'href="/post/1?from=%2Flatest%3Fcursor%3Dabc%23post-2#post-1">top</a>',
+    'href="/post/1?from=%2Flatest%3Fcursor%3Dabc%23post-2&amp;reply_to=post#post-1">top</a>',
   )
 })
 
@@ -4266,7 +4266,7 @@ test('Nested feed posts link to the conversation top from the descendant metadat
   }))
 
   expect(html).toContain('<div class="posttop posttop-context"><span class="reference-menu">')
-  const top = 'href="/post/1?from=%2Flatest%23post-3#post-1">top</a>'
+  const top = 'href="/post/1?from=%2Flatest%23post-3&amp;reply_to=post#post-1">top</a>'
   expect(html).toContain(`${top}</div>`)
   expect(html.match(/>top<\/a>/g)).toHaveLength(1)
 })

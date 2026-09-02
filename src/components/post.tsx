@@ -448,7 +448,13 @@ export function postedReplyPath(parentId: number, replyId: number, returnPath?: 
 
 export function conversationTopPath(threadRootId: number, replyId: number, returnPath?: string) {
   const deepPostPath = `/post/${replyId}${returnPath ? '?from=' + encodeURIComponent(returnPath) : ''}#post-${replyId}`
-  return `/post/${threadRootId}?from=${encodeURIComponent(deepPostPath)}#post-${threadRootId}`
+  return `/post/${threadRootId}?from=${encodeURIComponent(deepPostPath)}&reply_to=post#post-${threadRootId}`
+}
+
+function replyAtPagePost(path: string) {
+  const target = new URL(path, 'http://textlog.local')
+  target.searchParams.set('reply_to', 'post')
+  return `${target.pathname}${target.search}${target.hash}`
 }
 
 type PostAgeWording = 'just' | 'recently' | 'earlier' | 'a while ago' | 'some time ago' | 'a long time ago'
@@ -823,7 +829,9 @@ export function Post({
               )}
               {tappable && parent && (
                 <a className="quiet post-top-link"
-                  href={replyAnchorReturnPath(parent.top_id || parent.id, parent.top_id || parent.id, returnPath)}
+                  href={replyAtPagePost(
+                    replyAnchorReturnPath(parent.top_id || parent.id, parent.top_id || parent.id, returnPath),
+                  )}
                 >
                   top
                 </a>
