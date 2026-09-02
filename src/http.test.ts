@@ -171,6 +171,8 @@ describe('request values and cookies', () => {
       .toBe('latest')
     expect(feedPreference(new Request('https://textlog.cc/', { headers: { cookie: 'feed=activity' } })))
       .toBe('activity')
+    expect(feedPreference(new Request('https://textlog.cc/', { headers: { cookie: 'feed=new' } })))
+      .toBe('new')
     expect(feedPreference(new Request('https://textlog.cc/', { headers: { cookie: 'feed=unknown' } }))).toBeNull()
     expect(feedPreferenceCookie('hot')).toContain('feed=hot; Max-Age=31536000; HttpOnly; Path=/; SameSite=Lax')
   })

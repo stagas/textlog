@@ -39,7 +39,7 @@ export function redirect(path: string, cookie?: string) {
   if (cookie) h.append('set-cookie', cookie)
   return new Response(null, { status: 303, headers: h })
 }
-export function rememberFeed(response: Response, feed: 'following' | 'activity' | 'hot' | 'latest' | 'random') {
+export function rememberFeed(response: Response, feed: 'following' | 'activity' | 'hot' | 'latest' | 'new' | 'random') {
   response.headers.append('set-cookie', feedPreferenceCookie(feed))
   return response
 }

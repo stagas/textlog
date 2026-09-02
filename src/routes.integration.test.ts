@@ -485,6 +485,7 @@ test('notification banners are hidden from logged-out visitors', async () => {
 test('new feed first page participates in materialized caching', async () => {
   const first = await request('/new')
   expect(first.status).toBe(200)
+  expect(first.headers.get('set-cookie')).toContain('feed=new')
   const firstCacheStatus = first.headers.get('x-feed-cache')
   expect(firstCacheStatus).not.toBeNull()
   expect(['miss', 'durable']).toContain(firstCacheStatus!)
@@ -908,6 +909,9 @@ test('consequential account, content, reporting, and admin flows work over HTTP'
   const latestHome = await request('/?page=2', { cookie: `${aliceCookie}; feed=latest` })
   expect(latestHome.status).toBe(303)
   expect(latestHome.headers.get('location')).toBe('/all?page=2')
+  const newHome = await request('/', { cookie: `${aliceCookie}; feed=new` })
+  expect(newHome.status).toBe(303)
+  expect(newHome.headers.get('location')).toBe('/new')
   const hotHome = await request('/', { cookie: `${aliceCookie}; feed=hot` })
   expect(hotHome.status).toBe(303)
   expect(hotHome.headers.get('location')).toBe('/hot')

@@ -191,7 +191,9 @@ export function registerFeedsRoutes(app: Hono) {
         c.req.query('reddit') !== undefined ? campaignAttributionCookie('reddit') : undefined)
     }
     const preferredFeed = feedPreference(c.req.raw)
-    const path = preferredFeed === 'latest'
+    const path = preferredFeed === 'new'
+      ? '/new'
+      : preferredFeed === 'latest'
       ? '/all'
       : preferredFeed === 'hot'
       ? '/hot'
@@ -342,7 +344,7 @@ export function registerFeedsRoutes(app: Hono) {
       ? await rpcMaterializedFeedPage(c.req.raw, 'new', user?.id ?? -1, render, false,
         viewerCacheVersion(newFeedCacheVersion, user))
       : await render()
-    return rememberFeed(response, 'latest')
+    return rememberFeed(response, 'new')
   })
 
   app.post('/all/read-all', async c => {

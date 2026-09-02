@@ -363,10 +363,10 @@ export async function canonicalizeCrawlerLinks(request: Request, response: Respo
   return new Response(body, { status: response.status, statusText: response.statusText, headers })
 }
 
-export type FeedPreference = 'following' | 'activity' | 'hot' | 'latest' | 'random'
+export type FeedPreference = 'following' | 'activity' | 'hot' | 'latest' | 'new' | 'random'
 
 export function feedPreference(request: Request): FeedPreference | null {
-  const value = request.headers.get('cookie')?.match(/(?:^|;\s*)feed=(following|activity|hot|latest|random)(?:;|$)/)?.[1]
+  const value = request.headers.get('cookie')?.match(/(?:^|;\s*)feed=(following|activity|hot|latest|new|random)(?:;|$)/)?.[1]
   return value as FeedPreference | undefined || null
 }
 
