@@ -16,7 +16,7 @@ describe('database migrations', () => {
       (3,'carol','carol@example.com','x',NULL),
       (4,'reader','reader@example.com','x',NULL);
       INSERT INTO follows(follower_id,following_id,created_at) VALUES
-        (1,2,'2026-09-01 10:00:00'),(1,3,'2026-08-01 10:00:00'),(4,1,'2026-08-01 10:00:00');
+        (1,2,NULL),(1,3,'2026-08-01 10:00:00'),(4,1,'2026-08-01 10:00:00');
       DELETE FROM pending_relationship_feed_invalidations;
       PRAGMA user_version=179;`)
 
@@ -29,6 +29,8 @@ describe('database migrations', () => {
       { actor_id: 1, target_id: 2, kind: 'activity' },
       { actor_id: 1, target_id: 2, kind: 'direct' },
     ])
+    expect(database.query('SELECT created_at FROM follows WHERE follower_id=1 AND following_id=2').get())
+      .toEqual({ created_at: '2026-09-01 10:00:00' })
   })
 
   test('repairs tag onboarding for existing accounts that do not follow tags', () => {

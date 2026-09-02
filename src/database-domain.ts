@@ -747,7 +747,9 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
     case 'account.completePeoplePrompt': {
       const { userId, people } = input as DatabaseDomainInput<'account.completePeoplePrompt'>
       const followed = database.transaction(() => {
-        const insert = database.query('INSERT OR IGNORE INTO follows(follower_id,following_id) VALUES(?,?)')
+        const insert = database.query(
+          'INSERT OR IGNORE INTO follows(follower_id,following_id,created_at) VALUES(?,?,CURRENT_TIMESTAMP)',
+        )
         const insertedIds: number[] = []
         for (const personId of people) {
           if (insert.run(userId, personId).changes) insertedIds.push(personId)
