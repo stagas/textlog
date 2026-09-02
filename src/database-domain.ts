@@ -874,7 +874,7 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
         database.query(`UPDATE personalized_feed_generations SET generation=generation+1 WHERE viewer_id=?`)
           .run(userId)
         cacheDb.query(`DELETE FROM materialized_feed_pages_v2 WHERE viewer_id=?
-          AND kind IN ('latest','hot','for-you','to-me')`)
+          AND kind IN ('latest','new','hot','for-you','to-me')`)
           .run(userId)
       })()
       return null as DatabaseDomainOutput<K>
@@ -1352,7 +1352,7 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
       const deleted = !!database.query('DELETE FROM drafts WHERE public_id=? AND user_id=?').run(id, userId).changes
       if (deleted) {
         cacheDb.query(`DELETE FROM materialized_feed_pages_v2 WHERE viewer_id=?
-          AND kind IN ('latest','hot','for-you','to-me')`).run(userId)
+          AND kind IN ('latest','new','hot','for-you','to-me')`).run(userId)
       }
       return deleted as DatabaseDomainOutput<K>
     }
@@ -2027,7 +2027,7 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
         return { status: 'rate_limited', retryAfter: created.retryAfter } as DatabaseDomainOutput<K>
       }
       cacheDb.query(`DELETE FROM materialized_feed_pages_v2 WHERE viewer_id=?
-        AND kind IN ('latest','hot','for-you','to-me')`).run(request.userId)
+        AND kind IN ('latest','new','hot','for-you','to-me')`).run(request.userId)
       return { status: 'ready', id: created.id, duplicate: created.duplicate,
         post: apiPost(database, created.id, request.origin, request.userId)! } as DatabaseDomainOutput<K>
     }
@@ -3395,7 +3395,7 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
         )
           .run(userId, tag)}
       cacheDb.query(`DELETE FROM materialized_feed_pages_v2 WHERE viewer_id=?
-        AND kind IN ('latest','hot','for-you','to-me')`).run(userId)
+        AND kind IN ('latest','new','hot','for-you','to-me')`).run(userId)
       return { followed: !exists } as DatabaseDomainOutput<K>
     }
     case 'interactions.toggleTagBlock': {

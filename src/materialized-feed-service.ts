@@ -2,7 +2,7 @@ import { backgroundDatabaseCall, databaseService, subscribeToFeedMutations } fro
 import { isMobileRequest } from './user-agent'
 import { locationMapProvider } from './locations'
 
-type MaterializedFeedKind = 'latest' | 'hot' | 'for-you' | 'to-me' | 'about'
+type MaterializedFeedKind = 'latest' | 'new' | 'hot' | 'for-you' | 'to-me' | 'about'
 
 type MaterializedResponse = {
   body: string

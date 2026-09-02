@@ -91,6 +91,7 @@ type RecentFeedVisitor = {
 
 const recentFeedVisitors = new Map<number, RecentFeedVisitor>()
 const latestFeedCacheVersion = 15
+const newFeedCacheVersion = 1
 const recentFeedVisitorLimit = 30
 let recentLatestWarmCursor = 0
 
@@ -331,15 +332,23 @@ export function registerFeedsRoutes(app: Hono) {
     const write = writeState(c)
     const expandedRootId = positiveInteger(c.req.query('expand'))
     const notificationBanner = await showNotificationBanner(c.req.raw, user)
-    const feed = await databaseService().call('feeds.newPage', {
-      viewerId: user?.id ?? -1,
-      page: currentPage(c.req.query('page')),
-      pageSize: resolvedPageSize(c.req.raw),
-    })
-    return rememberFeed(page(
-      <PublicFeed user={user} feed={feed} path="/new" notificationBanner={notificationBanner}
-        expandedRootId={expandedRootId} {...write} />,
-    ), 'latest')
+    const render = async () => {
+      const feed = await databaseService().call('feeds.newPage', {
+        viewerId: user?.id ?? -1,
+        page: currentPage(c.req.query('page')),
+        pageSize: resolvedPageSize(c.req.raw),
+      })
+      return page(
+        <PublicFeed user={user} feed={feed} path="/new" notificationBanner={notificationBanner}
+          expandedRootId={expandedRootId} {...write} />,
+      )
+    }
+    const response = !write.writeError && (!user || !notificationBanner)
+        && currentPage(c.req.query('page')) === 1 && !expandedRootId
+      ? await rpcMaterializedFeedPage(c.req.raw, 'new', user?.id ?? -1, render, false,
+        viewerCacheVersion(newFeedCacheVersion, user))
+      : await render()
+    return rememberFeed(response, 'latest')
   })
 
   app.post('/all/read-all', async c => {

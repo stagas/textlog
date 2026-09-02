@@ -351,6 +351,16 @@ test('notification banners are hidden from logged-out visitors', async () => {
   }
 })
 
+test('new feed first page participates in materialized caching', async () => {
+  const first = await request('/new')
+  expect(first.status).toBe(200)
+  expect(['miss', 'durable']).toContain(first.headers.get('x-feed-cache'))
+
+  const second = await request('/new')
+  expect(second.status).toBe(200)
+  expect(second.headers.get('x-feed-cache')).toBe('durable')
+})
+
 test('email code signs up and invalidates its matching magic link', async () => {
   const email = 'code-signup@example.com'
   const sent = await request('/enter', { method: 'POST', form: { email, next: '/about' } })

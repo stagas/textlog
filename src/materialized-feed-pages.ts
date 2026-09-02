@@ -9,7 +9,7 @@ function appearanceVariant(request: Request) {
 }
 
 /** Reuse the fully rendered anonymous first page until a database mutation advances the feed generation. */
-export type MaterializedFeedKind = 'latest' | 'hot' | 'for-you' | 'to-me'
+export type MaterializedFeedKind = 'latest' | 'new' | 'hot' | 'for-you' | 'to-me'
 
 export function invalidateMaterializedFeedPages(viewerId: number, kinds: MaterializedFeedKind[], cache: Database) {
   if (!kinds.length) return
