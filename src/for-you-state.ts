@@ -206,15 +206,20 @@ export function markVisibleForYouEntriesRead(userId: number, eventKeys: string[]
 
 export function markAllForYouRead(userId: number, toMe: boolean, database: Database) {
   const events = toMe ? visibleToMeEvents : visibleEvents
+  const parameters = stateParameters(userId, database)
+  const latestPostIds = [...new Set((database.query(`SELECT event_key FROM (${events})
+    WHERE event_key GLOB 'post:[0-9]*'`).all(parameters) as Array<{ event_key: string }>)
+    .map(({ event_key: eventKey }) => Number(eventKey.slice(5))))]
   database.transaction(() => {
     database.query(`INSERT OR IGNORE INTO for_you_reads(user_id,event_key)
-      SELECT $viewer,event_key FROM (${events})`).run(stateParameters(userId, database))
+      SELECT $viewer,event_key FROM (${events})`).run(parameters)
     if (toMe) {
       database.query(`INSERT OR IGNORE INTO to_me_reads(user_id,event_key)
-      SELECT $viewer,event_key FROM (${visibleToMeEvents})`).run(stateParameters(userId, database))
+      SELECT $viewer,event_key FROM (${visibleToMeEvents})`).run(parameters)
     }
     database.query(`INSERT OR IGNORE INTO activity_reads(user_id,event_key)
       SELECT user_id,'post:' || CAST(substr(event_key,6) AS INTEGER)
       FROM for_you_reads WHERE user_id=? AND event_key GLOB 'post:[0-9]*'`).run(userId)
   })()
+  markLatestPostsRead(userId, latestPostIds, database)
 }

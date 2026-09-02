@@ -1775,6 +1775,10 @@ test('consequential account, content, reporting, and admin flows work over HTTP'
     .get(alice.id, bulkGeneralReadKey)).toBeTruthy()
   expect(database.query('SELECT 1 FROM for_you_reads WHERE user_id=? AND event_key=?')
     .get(alice.id, bulkTargetedReadKey)).toBeTruthy()
+  expect(database.query('SELECT 1 FROM latest_read_exceptions WHERE user_id=? AND post_id=?')
+    .get(alice.id, bulkGeneralPost.id)).toBeTruthy()
+  expect(database.query('SELECT 1 FROM latest_read_exceptions WHERE user_id=? AND post_id=?')
+    .get(alice.id, bulkTargetedReply.id)).toBeTruthy()
 
   const insertActivityReply = database.query(
     'INSERT INTO posts(user_id,parent_id,body,created_at) VALUES(?,?,?,?)',

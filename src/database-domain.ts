@@ -2954,7 +2954,7 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
       const { userId, toMe } = input as DatabaseDomainInput<'feeds.markRead'>
       markAllForYouRead(userId, toMe, database)
       cacheDb.query(`DELETE FROM materialized_feed_pages_v2 WHERE viewer_id=?
-        AND kind IN (${toMe ? "'for-you','to-me'" : "'for-you'"})`).run(userId)
+        AND kind IN (${toMe ? "'for-you','to-me','latest'" : "'for-you','latest'"})`).run(userId)
       return null as DatabaseDomainOutput<K>
     }
     case 'feeds.markLatestRead': {
