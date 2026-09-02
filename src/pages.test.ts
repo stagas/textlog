@@ -506,7 +506,11 @@ test('posting helpers use the compact action and show copyable highlighted resul
   }))
 
   expect(html).toContain('<label class="secondary-action posting-help-action" for="write-posting-help"')
+  expect(html).toContain('title="Show more writing actions and help"')
+  expect(html).toContain('/>more</label>')
   expect(html).toContain('id="write-posting-help" type="checkbox" aria-controls="write-posting-help-content" checked=""')
+  expect(html).toContain('class="posting-help-actions"')
+  expect(html.indexOf('value="search-hashtags"')).toBeLessThan(html.indexOf('class="posting-help-actions"'))
   expect(html).toContain('<span class="posting-help-limits">500 chars / 15 lines max</span>')
   expect(html).toContain(' · use #hashtags, @mentions and more</div>')
   expect(html).not.toContain('<h2>Find hashtags and people</h2>')
@@ -594,7 +598,7 @@ test('posting helpers use the compact action and show copyable highlighted resul
   expect(html.indexOf('class="posting-suggestion-results"')).toBeLessThan(html.indexOf('class="composefoot"'))
 })
 
-test('post edit places draft and delete above the textarea and keeps preview before save', () => {
+test('post edit keeps destructive navigation above the textarea and secondary writing actions under more', () => {
   const user = { id: 1, handle: 'writer', email: 'writer@example.com', bio: '' }
   const post = { id: 2, user_id: 1, parent_id: null, body: 'Original', created_at: '2026-08-12 09:00:00',
     deleted_at: null }
@@ -612,11 +616,13 @@ test('post edit places draft and delete above the textarea and keeps preview bef
   expect(html).toContain('class="secondary-action" href="/post/2">back</a>')
   expect(html).toContain('title="Enrich post with hashtags" name="action">autotag')
   expect(html).toContain('<span class="new-badge compose-new-badge" aria-hidden="true">NEW</span>')
-  expect(html.indexOf('>draft</button>')).toBeLessThan(html.indexOf('>delete</a>'))
   expect(html.indexOf('>delete</a>')).toBeLessThan(html.indexOf('>back</a>'))
   expect(html.indexOf('>back</a>')).toBeLessThan(html.indexOf('<textarea'))
+  expect(html.indexOf('value="search-hashtags"')).toBeLessThan(html.indexOf('class="posting-help-actions"'))
   expect(html.indexOf('>autotag')).toBeLessThan(html.indexOf('>preview</button>'))
-  expect(html.indexOf('>preview</button>')).toBeLessThan(html.indexOf('>save →</button>'))
+  expect(html.indexOf('>preview</button>')).toBeLessThan(html.indexOf('>draft</button>'))
+  expect(html.indexOf('>draft</button>')).toBeLessThan(html.indexOf('>more</label>'))
+  expect(html.indexOf('>more</label>')).toBeLessThan(html.indexOf('>save →</button>'))
 })
 
 test('moderator post editing keeps save but hides owner-only actions', () => {
@@ -2048,7 +2054,7 @@ test('signed-in feed pages put the write form before the feed tabs', () => {
     expect(html).not.toContain('autofocus')
     expect(html).toContain('any<span class="new-badge feed-tab-new-badge" aria-hidden="true">NEW</span>')
     expect(html).toContain(
-      '<label class="secondary-action posting-help-action" for="embedded-posting-help" title="Show writing and formatting help"><input class="posting-help-toggle" id="embedded-posting-help" type="checkbox" aria-controls="embedded-posting-help-content"/>help</label>',
+      '<label class="secondary-action posting-help-action" for="embedded-posting-help" title="Show more writing actions and help"><input class="posting-help-toggle" id="embedded-posting-help" type="checkbox" aria-controls="embedded-posting-help-content"/>more</label>',
     )
     expect(html).toContain(
       '<div class="posting-help-controlled-summary"><span class="posting-help-limits">500 chars / 15 lines max</span> · use #hashtags, @mentions and more</div>',

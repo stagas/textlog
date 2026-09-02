@@ -4501,7 +4501,9 @@ form.report-panel {
 }
 
 .posting-help-content {
+  container-type: inline-size;
   display: none;
+  grid-template-columns: minmax(0, 1fr) auto;
   grid-column: 1 / -1;
   grid-row: 2;
   gap: var(--space-4);
@@ -4509,7 +4511,7 @@ form.report-panel {
   margin-top: var(--space-5);
   padding: var(--space-4);
   color: var(--ink);
-  font-size: var(--font-size-11);
+  font-size: var(--form-action-font-size);
   line-height: 1.5;
   background: var(--background);
   border: 1px solid var(--soft);
@@ -4550,7 +4552,9 @@ form.report-panel {
 }
 
 .posting-help-controlled-summary {
-  grid-column: 1 / -1;
+  grid-column: 1;
+  grid-row: 1;
+  min-width: 0;
   overflow-x: auto;
   color: var(--muted);
   text-align: left;
@@ -4558,14 +4562,39 @@ form.report-panel {
   scrollbar-width: none;
 }
 
+.posting-help-actions {
+  display: flex;
+  grid-column: 2;
+  grid-row: 1;
+  justify-content: flex-end;
+  gap: var(--space-4);
+}
+
+.posting-help-tabs-section {
+  grid-column: 1 / -1;
+  grid-row: 2;
+}
+
 .posting-help-controlled-summary::-webkit-scrollbar {
   display: none;
 }
 
-@media (max-width: 520px) {
+@container (max-width: 66rem) {
+  .posting-help-actions {
+    grid-column: 1 / -1;
+    grid-row: 1;
+    margin-left: auto;
+  }
+
   .posting-help-controlled-summary {
+    grid-column: 1 / -1;
+    grid-row: 2;
     overflow-x: visible;
     white-space: normal;
+  }
+
+  .posting-help-tabs-section {
+    grid-row: 3;
   }
 }
 

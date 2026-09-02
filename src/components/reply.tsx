@@ -19,7 +19,8 @@ import { Panel } from './panel'
 import { Post, postAnchorId, ThreadReplies } from './post'
 
 export function ReplyBox(
-  { action, body, error, placeholder, hidden, beforeTextarea, secondary, primary, className = 'replybox reply-compose',
+  { action, body, error, placeholder, hidden, beforeTextarea, secondary, primary, moreActions,
+    className = 'replybox reply-compose',
     suggestionSearch, draftId, helpId = 'reply-posting-help', autoFocus = true }: {
       action: string
       body: string
@@ -29,6 +30,7 @@ export function ReplyBox(
       beforeTextarea?: React.ReactNode
       secondary: React.ReactNode
       primary: React.ReactNode
+      moreActions?: React.ReactNode
       className?: string
       suggestionSearch?: PostingSuggestionSearch | null
       draftId?: string
@@ -48,7 +50,7 @@ export function ReplyBox(
             placeholder={placeholder} autoComplete="off" inputMode="text" enterKeyHint="enter" />
           <PostingSuggestionResults search={suggestionSearch} />
           <div className="composefoot">
-            <PostingHelp search={suggestionSearch} controlledBy={helpId} />
+            <PostingHelp search={suggestionSearch} controlledBy={helpId} actions={moreActions} />
             <FormActions secondary={secondary} primary={primary} />
           </div>
         </div>
@@ -131,17 +133,17 @@ export function Reply(
         secondary={
           <span className="edit-post-actions">
             <PostingHelpAction id="reply-posting-help" defaultChecked={!!suggestionSearch} />
-            <button className="secondary-action compose-autotag-action" name="action" value="autotag"
-              title="Enrich post with hashtags">
-              autotag<span className="new-badge compose-new-badge" aria-hidden="true">NEW</span>
-            </button>
-            <button className="secondary-action" name="action" value="preview">preview</button>
-            <button className="secondary-action" name="action" value="draft"
-              formAction={draftId ? `/drafts/${draftId}` : undefined}>
-              draft
-            </button>
           </span>
-        } primary={<button className="button" accessKey="p">post →</button>} />
+        } primary={<button className="button" accessKey="p">post →</button>}
+        moreActions={<>
+          <button className="secondary-action compose-autotag-action" name="action" value="autotag"
+            title="Enrich post with hashtags">
+            autotag<span className="new-badge compose-new-badge" aria-hidden="true">NEW</span>
+          </button>
+          <button className="secondary-action" name="action" value="preview">preview</button>
+          <button className="secondary-action" name="action" value="draft"
+            formAction={draftId ? `/drafts/${draftId}` : undefined}>draft</button>
+        </>} />
     )
     : <VerificationRequired />
   return (

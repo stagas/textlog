@@ -75,24 +75,26 @@ export function WriteForm(
 ) {
   if (!canPublishPosts(user)) return null
   const helpId = embedded ? 'embedded-posting-help' : 'write-posting-help'
+  const moreActions = (
+    <>
+      <button className="secondary-action compose-autotag-action" name="action" value="autotag"
+        title="Enrich post with hashtags">
+        autotag<span className="new-badge compose-new-badge" aria-hidden="true">NEW</span>
+      </button>
+      <button className="secondary-action" name="action" value="preview"
+        title="Preview this post before publishing">preview</button>
+      <button className="secondary-action" name="action" value="draft"
+        title="Save this post as a draft" formAction={draftId ? `/drafts/${draftId}` : undefined}>
+        draft
+      </button>
+    </>
+  )
   const controls = (
     <div className="composefoot">
-      <PostingHelp search={suggestionSearch} controlledBy={helpId} />
+      <PostingHelp search={suggestionSearch} controlledBy={helpId} actions={moreActions} />
       <FormActions secondary={
         <span className="edit-post-actions">
           <PostingHelpAction id={helpId} defaultChecked={!!suggestionSearch} />
-          <button className="secondary-action compose-autotag-action" name="action" value="autotag"
-            title="Enrich post with hashtags">
-            autotag<span className="new-badge compose-new-badge" aria-hidden="true">NEW</span>
-          </button>
-          <button className="secondary-action" name="action" value="preview"
-            title="Preview this post before publishing">preview</button>
-          <button className="secondary-action" name="action" value="draft"
-            title="Save this post as a draft"
-            formAction={draftId ? `/drafts/${draftId}` : undefined}
-          >
-            draft
-          </button>
         </span>
       } primary={<button className="button" accessKey="p" title="Publish this post">post →</button>} />
     </div>

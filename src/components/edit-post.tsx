@@ -49,9 +49,6 @@ export function EditPost(
           hidden={returnPath && <input type="hidden" name="from" value={returnPath} />} beforeTextarea={!moderator
           && (
             <div className="edit-post-delete-action">
-              <button className="secondary-action unpublish-action" name="action" value="unpublish" formNoValidate>
-                draft
-              </button>
               <a className="secondary-action danger" href={'/post/' + post.id + '/delete' + returnQuery}>
                 delete
               </a>
@@ -65,14 +62,20 @@ export function EditPost(
           </span>
         } primary={
           <span className="edit-post-primary-actions">
-            <button className="secondary-action compose-autotag-action" name="action" value="autotag"
-              title="Enrich post with hashtags">
-              autotag<span className="new-badge compose-new-badge" aria-hidden="true">NEW</span>
-            </button>
-            <button className="secondary-action" name="action" value="preview">preview</button>
             <button className="button">save →</button>
           </span>
-        } />
+        } moreActions={<>
+          <button className="secondary-action compose-autotag-action" name="action" value="autotag"
+            title="Enrich post with hashtags">
+            autotag<span className="new-badge compose-new-badge" aria-hidden="true">NEW</span>
+          </button>
+          <button className="secondary-action" name="action" value="preview">preview</button>
+          {!moderator && (
+            <button className="secondary-action unpublish-action" name="action" value="unpublish" formNoValidate>
+              draft
+            </button>
+          )}
+        </>} />
         {post.parent_id && parent && (
           <ThreadReplies parentId={parent.id} replies={replies} user={user} returnPath={returnPath}
             excludePostId={post.id} />
