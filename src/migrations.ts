@@ -2935,24 +2935,31 @@ export const migrations: Migration[] = [
         "SELECT 1 FROM sqlite_master WHERE type='table' AND name='follows'",
       ).get()) return
       // Migration 42 timestamped every legacy follow. The people picker was the only production writer added later
-      // that omitted created_at, so NULL identifies precisely the follows whose @ and push events were lost.
+      // that omitted created_at. Limit the repair to the recent incident window as an additional safety boundary.
       database.run(`INSERT OR IGNORE INTO people_picker_follow_push_jobs(actor_id,target_id,kind)
           SELECT f.follower_id,f.following_id,k.kind FROM follows f
+          JOIN users actor ON actor.id=f.follower_id
           CROSS JOIN (SELECT 'direct' kind UNION ALL SELECT 'activity') k
-          WHERE f.created_at IS NULL;
+          WHERE f.created_at IS NULL
+            AND actor.people_prompt_completed_at>=datetime('now','-1 hour');
         INSERT OR IGNORE INTO pending_relationship_feed_invalidations(viewer_id)
         SELECT DISTINCT affected.viewer_id FROM (
-          SELECT f.follower_id viewer_id FROM follows f WHERE f.created_at IS NULL
+          SELECT f.follower_id viewer_id FROM follows f JOIN users actor ON actor.id=f.follower_id
+            WHERE f.created_at IS NULL AND actor.people_prompt_completed_at>=datetime('now','-1 hour')
           UNION
-          SELECT f.following_id FROM follows f WHERE f.created_at IS NULL
+          SELECT f.following_id FROM follows f JOIN users actor ON actor.id=f.follower_id
+            WHERE f.created_at IS NULL AND actor.people_prompt_completed_at>=datetime('now','-1 hour')
           UNION
           SELECT audience.follower_id FROM follows f
+            JOIN users actor ON actor.id=f.follower_id
             JOIN follows audience ON audience.following_id=f.follower_id
-            WHERE f.created_at IS NULL
+            WHERE f.created_at IS NULL AND actor.people_prompt_completed_at>=datetime('now','-1 hour')
         ) affected;
         UPDATE follows SET created_at=coalesce(
           (SELECT people_prompt_completed_at FROM users WHERE id=follows.follower_id),CURRENT_TIMESTAMP)
-          WHERE created_at IS NULL;`)
+          WHERE created_at IS NULL AND EXISTS (SELECT 1 FROM users actor
+            WHERE actor.id=follows.follower_id
+              AND actor.people_prompt_completed_at>=datetime('now','-1 hour'));`)
     },
   },
 ]

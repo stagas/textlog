@@ -11,12 +11,14 @@ describe('database migrations', () => {
     const database = new Database(':memory:')
     runMigrations(database)
     database.run(`INSERT INTO users(id,handle,email,password,people_prompt_completed_at) VALUES
-      (1,'alice','alice@example.com','x','2026-09-01 10:00:00'),
+      (1,'alice','alice@example.com','x',CURRENT_TIMESTAMP),
       (2,'bob','bob@example.com','x',NULL),
       (3,'carol','carol@example.com','x',NULL),
-      (4,'reader','reader@example.com','x',NULL);
+      (4,'reader','reader@example.com','x',NULL),
+      (5,'oldpicker','oldpicker@example.com','x',datetime('now','-2 hours')),
+      (6,'oldtarget','oldtarget@example.com','x',NULL);
       INSERT INTO follows(follower_id,following_id,created_at) VALUES
-        (1,2,NULL),(1,3,'2026-08-01 10:00:00'),(4,1,'2026-08-01 10:00:00');
+        (1,2,NULL),(1,3,'2026-08-01 10:00:00'),(4,1,'2026-08-01 10:00:00'),(5,6,NULL);
       DELETE FROM pending_relationship_feed_invalidations;
       PRAGMA user_version=179;`)
 
@@ -29,8 +31,11 @@ describe('database migrations', () => {
       { actor_id: 1, target_id: 2, kind: 'activity' },
       { actor_id: 1, target_id: 2, kind: 'direct' },
     ])
-    expect(database.query('SELECT created_at FROM follows WHERE follower_id=1 AND following_id=2').get())
-      .toEqual({ created_at: '2026-09-01 10:00:00' })
+    expect(database.query(`SELECT f.created_at,u.people_prompt_completed_at completed
+      FROM follows f JOIN users u ON u.id=f.follower_id WHERE f.follower_id=1 AND f.following_id=2`).get())
+      .toEqual({ created_at: expect.any(String), completed: expect.any(String) })
+    expect(database.query('SELECT created_at FROM follows WHERE follower_id=5 AND following_id=6').get())
+      .toEqual({ created_at: null })
   })
 
   test('repairs tag onboarding for existing accounts that do not follow tags', () => {
