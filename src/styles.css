@@ -388,6 +388,7 @@ header>nav {
 
 header>.account-nav {
   align-items: center;
+  gap: var(--space-4);
 }
 
 header>nav>a:not(.button),
