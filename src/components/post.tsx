@@ -1299,7 +1299,8 @@ export function ThreadReplies(
         {reply.feed_ancestor_gap && (
           omissionMarker('Earlier replies omitted')
         )}
-        <FeedPost p={reply} user={user} showParent={false}
+        <FeedPost p={reply} user={user}
+          showParent={collapsedPreviewPosts.has(reply.id) && !!contextUnreadPostIds?.has(reply.id)}
           returnPath={postReturnPath}
           tappableHref={anchorReplyNavigation
             ? replyAnchorReturnPath(parentId, reply.id, postReturnPath)

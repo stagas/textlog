@@ -128,20 +128,5 @@ export function collapsedConversationPreview<T extends ConversationPost & { feed
     ? ordered.slice(0, 2)
     : ordered.slice(0, 1)
   const previewIds = new Set(weighted.map(post => post.id))
-  const selected = [...weighted, ...ordered.filter(post => unreadPostIds?.has(post.id) && !previewIds.has(post.id))]
-  for (const post of selected) previewIds.add(post.id)
-
-  // An unread reply can be appended beyond the normal projection. If folding keeps the reply but hides its
-  // immediate parent, the first unread rendering loses the context that reappears after the page is marked read.
-  // Keep that parent in the folded preview so both renderings describe the same reply relationship.
-  const byId = new Map(replies.map(post => [post.id, post]))
-  for (const post of [...selected]) {
-    if (!unreadPostIds?.has(post.id) || post.parent_id === null || previewIds.has(post.parent_id)) continue
-    const parent = byId.get(post.parent_id)
-    if (parent) {
-      selected.push(parent)
-      previewIds.add(parent.id)
-    }
-  }
-  return selected
+  return [...weighted, ...ordered.filter(post => unreadPostIds?.has(post.id) && !previewIds.has(post.id))]
 }

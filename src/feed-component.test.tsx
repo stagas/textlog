@@ -152,6 +152,24 @@ test('collapsed conversations render unread ancestors as posts instead of hidden
   expect(html).toContain('<div class="reply-node collapsed-preview-path"><a class="quiet thread-ancestor-gap post-continuation-link"')
 })
 
+test('a folded unread reply includes its quoted parent', () => {
+  const root = { id: 300, user_id: 1, parent_id: null, body: 'Root', created_at: '2026-09-02 10:00:00',
+    deleted_at: null, handle: 'root', reply_count: 2 }
+  const parent = { id: 301, user_id: 2, parent_id: root.id, body: 'The replied-to post',
+    created_at: '2026-09-02 11:00:00', deleted_at: null, handle: 'parent', reply_count: 1, parent: root }
+  const unread = { id: 302, user_id: 3, parent_id: parent.id, body: 'New unread reply',
+    created_at: '2026-09-02 12:00:00', deleted_at: null, handle: 'reply', reply_count: 0, parent,
+    feed_collapsed_preview: true }
+  const html = renderToStaticMarkup(<PublicFeed path="/latest" feed={{
+    posts: [root, parent, unread], page: 1, totalItems: 1, totalPages: 1, unreadPostIds: [unread.id],
+  }} />)
+  const replyStart = html.indexOf('id="post-302"')
+  const replyEnd = html.indexOf('</article>', replyStart)
+
+  expect(html.slice(replyStart, replyEnd)).toContain('class="parent-quote')
+  expect(html.slice(replyStart, replyEnd)).toContain('The replied-to post')
+})
+
 test('a feed branch root continues when its retained quoted parent has the same author', () => {
   const parent = { id: 2547, user_id: 490, parent_id: null, body: 'Earlier thought',
     created_at: '2026-08-19 10:00:00', deleted_at: null, handle: 'jg', reply_count: 1 }
