@@ -533,9 +533,6 @@ export function PreviewPost({ p, user }: { p: PostView; user?: User }) {
         <PollPreview body={p.body} />
         <Todo p={p} user={null} preview formPrefix={formPrefix} />
       </ContentWarning>
-      <MetaRow className="postfoot preview-post-meta">
-        <span className="quiet preview-reply">reply</span>
-      </MetaRow>
     </article>
   )
 }
@@ -553,7 +550,7 @@ function endsWithCodeFence(body: string) {
 export function Post({
   p,
   user,
-  showReplyAction = true,
+  showReplyAction = false,
   showOwnerActions = false,
   showModerateAction = false,
   showParent = true,
@@ -845,15 +842,12 @@ export function Post({
       {!parent && (showReplyAction && !p.thread_locked || resolvedContinuationHref || canModerate || reportHref
         || bookmarkAction) && (
         <MetaRow className={`postfoot${preview ? ' preview-post-meta' : ''}`}>
-          {!parent && showReplyAction && !p.thread_locked && (preview
-            ? <span className="quiet preview-reply">{resolvedReplyLabel}</span>
-            : (
-              <a className="quiet post-reply-link" href={resolvedReplyHref} rel="nofollow"
-                aria-label={`${resolvedReplyLabel} to @${p.handle}`}
-              >
-                {resolvedReplyLabel}
-              </a>
-            ))}
+          {showReplyAction && !p.thread_locked && (
+            <a className="quiet post-reply-link" href={resolvedReplyHref} rel="nofollow"
+              aria-label={`${resolvedReplyLabel} to @${p.handle}`}>
+              {resolvedReplyLabel}
+            </a>
+          )}
           {resolvedContinuationHref && (
             continuationLabel === '…'
               ? null
@@ -983,35 +977,14 @@ export function Post({
                   <Todo p={parent} user={user} preview={preview} returnPath={returnPath}
                     formPrefix={`${formPrefix}-parent-${parent.id}`} />
                 </ContentWarning>
-                {!parent.thread_locked && (
-                  <div className="parent-quote-foot">
-                    <a className="quiet" href={user
-                      ? parentReplyPath
-                      : '/enter?next=' + encodeURIComponent(parentReplyPath)} rel="nofollow"
-                      aria-label={`${user && user.id === parent.user_id ? 'continue' : 'reply to'} @${parent.handle}`}
-                    >
-                      {user ? user.id === parent.user_id ? 'continue' : 'reply' : 'enter to reply'}
-                    </a>
-                  </div>
-                )}
                 <ReferenceFollowForms post={parent} prefix={`${formPrefix}-parent-${parent.id}`} user={user}
                   returnPath={returnPath || `/post/${p.id}#post-${p.id}`} />
               </>
             )}
         </blockquote>
       )}
-      {parent && (showReplyAction && !p.thread_locked || resolvedContinuationHref || canModerate || reportHref
-        || bookmarkAction) && (
+      {parent && (resolvedContinuationHref || canModerate || reportHref || bookmarkAction) && (
         <MetaRow className={`postfoot postfoot-after-quote${preview ? ' preview-post-meta' : ''}`}>
-          {showReplyAction && !p.thread_locked && (preview
-            ? <span className="quiet preview-reply">{resolvedReplyLabel}</span>
-            : (
-              <a className="quiet post-reply-link" href={resolvedReplyHref} rel="nofollow"
-                aria-label={`${resolvedReplyLabel} to @${p.handle}`}
-              >
-                {resolvedReplyLabel}
-              </a>
-            ))}
           {resolvedContinuationHref && (
             continuationLabel === '…'
               ? null
@@ -1296,7 +1269,7 @@ export function ThreadReplies(
         {reply.feed_ancestor_gap && (
           omissionMarker('Earlier replies omitted')
         )}
-        <FeedPost p={reply} user={user} showParent={false} showReplyAction={reply.id !== suppressReplyActionId}
+        <FeedPost p={reply} user={user} showParent={false}
           returnPath={postReturnPath}
           tappableHref={anchorReplyNavigation
             ? replyAnchorReturnPath(parentId, reply.id, postReturnPath)

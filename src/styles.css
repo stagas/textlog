@@ -185,7 +185,7 @@ body.corners-round * {
 
 body.corners-round :is(a, .quiet, .reference-menu, .danger, .content-warning-action,
   .activity-side-link, .posting-help-summary-link, .preview-post-meta > *,
-  .reply-preview .postdate, .reply-preview .preview-reply, .activity-follow-stats) {
+  .reply-preview .postdate, .activity-follow-stats) {
   border-radius: 0;
 }
 
@@ -3469,8 +3469,8 @@ main:has(> .write-compose) {
 }
 
 .inline-reply-compose {
-  width: calc(100% + var(--reply-offset));
-  margin-left: calc(-1 * var(--reply-offset));
+  width: calc(100% - clamp(18px, 3vw, 28px));
+  margin-left: clamp(18px, 3vw, 28px);
 }
 
 .inline-reply-compose > .replybox {
@@ -3480,6 +3480,13 @@ main:has(> .write-compose) {
 .thread-branch-content:has(.inline-reply-compose) {
   overflow: visible;
   animation: none;
+}
+
+@media (max-width: 520px) {
+  .inline-reply-compose {
+    width: calc(100% + var(--reply-offset));
+    margin-left: calc(-1 * var(--reply-offset));
+  }
 }
 
 .reply-compose .compose-editor-row {
@@ -7491,8 +7498,7 @@ a.post-context:hover {
   color: var(--accent);
 }
 
-.reply-preview .postdate,
-.reply-preview .preview-reply {
+.reply-preview .postdate {
   color: var(--accent);
   cursor: pointer;
   padding-bottom: 0;
@@ -7500,8 +7506,7 @@ a.post-context:hover {
 }
 
 .reply-preview .postauthor:hover,
-.reply-preview .postdate:hover,
-.reply-preview .preview-reply:hover {
+.reply-preview .postdate:hover {
   color: var(--accent-dark);
 }
 

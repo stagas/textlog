@@ -120,7 +120,8 @@ export function Reply(
   const replyComposer = canPublishPosts(user)
     ? (
       <ReplyBox action={`/post/${replyParent.id}/reply#post-${replyParent.id}`} body={body} error={error}
-        suggestionSearch={suggestionSearch} draftId={draftId} placeholder={'Reply to @' + replyParent.handle + '…'}
+        suggestionSearch={suggestionSearch} draftId={draftId}
+        placeholder={replyParent.user_id === user.id ? 'Continue writing…' : 'Reply to @' + replyParent.handle + '…'}
         autoFocus={autoFocus}
         hidden={returnPath && <input type="hidden" name="from" value={returnPath} />}
         secondary={
@@ -143,7 +144,7 @@ export function Reply(
     <Layout user={user} title={postTitle(post.body, post.moderation_category)} social={social}>
       <div className="post-page-thread">
         <div className="thread-root">
-          <Post p={post} user={user} showReplyAction={!showForm || !!replyTo} showOwnerActions showModerateAction
+          <Post p={post} user={user} showReplyAction={showForm && !!replyTo} showOwnerActions showModerateAction
             tappableParent
             bookmarkAction
             suppressContentWarning={showForm}

@@ -357,10 +357,9 @@ describe('in-memory stylesheet', () => {
     expect(css).toContain('.secondary-action.danger:hover {')
   })
 
-  test('styles span-only preview metadata like links', async () => {
+  test('styles preview metadata context', async () => {
     const css = await Bun.file(new URL('./styles.css', import.meta.url)).text()
-    expect(css).toContain('.reply-preview .preview-reply {\n  color: var(--accent);\n  cursor: pointer;')
-    expect(css).toContain('.reply-preview .preview-reply:hover {\n  color: var(--accent-dark);')
+    expect(css).not.toContain('.preview-reply')
     expect(css).toContain('.compose-post-preview .postauthor:not(.post-context-author) {')
     expect(css).toContain(
       '.preview-post-meta > :not(.reference-menu):not(.post-context):not(.preview-context-target) {',
@@ -374,12 +373,9 @@ describe('in-memory stylesheet', () => {
     )
   })
 
-  test('styles conversation top links like reply actions', async () => {
+  test('styles conversation top links', async () => {
     const css = await Bun.file(new URL('./styles.css', import.meta.url)).text()
     expect(css).toContain('.postfoot .post-reply-link,\n.posttop .post-top-link,')
-    expect(css).toContain(
-      '.postfoot .post-reply-link:hover,\n.posttop .post-top-link:hover,',
-    )
     expect(css).toContain('.posttop > .post-top-link {\n  margin-left: auto;\n}')
   })
 
@@ -673,6 +669,18 @@ describe('in-memory stylesheet', () => {
     )
     expect(css).toContain(
       '.posting-help-tab-panel > div {\n    grid-template-columns: minmax(0, 1fr);',
+    )
+  })
+
+  test('only outdents an inline reply composer on mobile', async () => {
+    const css = await Bun.file(new URL('./styles.css', import.meta.url)).text()
+    expect(css).toContain(
+      '.inline-reply-compose {\n  width: calc(100% - clamp(18px, 3vw, 28px));\n'
+        + '  margin-left: clamp(18px, 3vw, 28px);',
+    )
+    expect(css).toContain(
+      '@media (max-width: 520px) {\n  .inline-reply-compose {\n'
+        + '    width: calc(100% + var(--reply-offset));\n    margin-left: calc(-1 * var(--reply-offset));',
     )
   })
 

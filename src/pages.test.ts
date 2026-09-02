@@ -215,6 +215,17 @@ test('post page reply forms only autofocus when reply was explicitly requested',
   expect(requested).toContain('autofocus=""')
 })
 
+test('replying to your own post invites you to continue writing', () => {
+  const user = { id: 1, handle: 'writer', email: 'writer@example.com', bio: '',
+    email_verified_at: '2026-08-01 10:00:00' }
+  const post = { id: 9, user_id: 1, parent_id: null, body: 'First thought', created_at: '2026-08-23 10:00:00',
+    deleted_at: null, handle: 'writer', reply_count: 0 }
+  const page = renderToStaticMarkup(React.createElement(Reply, { user, post, showForm: true }))
+
+  expect(page).toContain('placeholder="Continue writing…"')
+  expect(page).not.toContain('placeholder="Reply to @writer…"')
+})
+
 test('replying to a threaded reply keeps the root page and places the composer after its target', () => {
   const user = { id: 1, handle: 'reader', email: 'reader@example.com', bio: '',
     email_verified_at: '2026-08-01 10:00:00' }
@@ -229,6 +240,7 @@ test('replying to a threaded reply keeps the root page and places the composer a
 
   expect(page).not.toContain('href="/post/9?reply=1&amp;to=10#post-10"')
   expect(page).toContain('href="/post/9?reply=1&amp;from=%2Fall%23post-10"')
+  expect(page.match(/post-reply-link/g)).toHaveLength(1)
   expect(page).toContain('<form action="/post/10/reply#post-10" method="post">')
   expect(page.indexOf('id="post-10"')).toBeLessThan(page.indexOf('action="/post/10/reply#post-10"'))
   expect(page).toContain('placeholder="Reply to @friend…"')
@@ -295,7 +307,7 @@ test('compose offers a server-rendered post preview', () => {
   expect(preview).toContain('<span class="post-context">wrote:</span>')
   expect(preview).not.toContain('<span class="postdate">read</span>')
   expect(preview).not.toContain('href="/post/0"')
-  expect(preview).toContain('<span class="quiet preview-reply">continue</span>')
+  expect(preview).not.toContain('preview-reply')
   expect(preview).not.toContain('href="#"')
   expect(preview).not.toContain('NaN')
 })
@@ -684,7 +696,7 @@ test('editing a reply shows its parent context above the textarea', () => {
   )
   expect(previewPost).toContain('<span class="post-context post-context-punctuation">:</span>')
   expect(previewPost).not.toContain('<span class="postdate"')
-  expect(previewPost).toContain('<span class="quiet preview-reply">continue</span>')
+  expect(previewPost).not.toContain('preview-reply')
   expect(previewPost).not.toContain('<a ')
 })
 
@@ -714,7 +726,7 @@ test('reply forms offer the same server-rendered preview flow', () => {
   )
   expect(html.indexOf('<textarea')).toBeLessThan(html.indexOf('<div class="composefoot">'))
   expect(html).toContain('Reply <a href="/tag/here"')
-  expect(html).toContain('<span class="quiet preview-reply">continue</span>')
+  expect(html).not.toContain('preview-reply')
   expect(html).not.toContain('href="#"')
   expect(html).not.toContain('href="/post/0"')
   expect(html).not.toContain('NaN')
@@ -974,7 +986,7 @@ test('folded feed conversations preview the two newest replies from a recent bur
   )
 })
 
-test('Any reply links return through the retained sample with their conversation expanded', () => {
+test('Any reply cards return through the retained sample with their conversation expanded', () => {
   const user = { id: 1, handle: 'reader', email: 'reader@example.com', bio: '' }
   const root = { id: 20, user_id: 2, parent_id: null, body: 'Root', created_at: '2026-08-20 09:00:00',
     deleted_at: null, handle: 'root', reply_count: 3 }
@@ -993,9 +1005,7 @@ test('Any reply links return through the retained sample with their conversation
   expect(html).toContain(
     'href="/post/20?from=%2Fany%3Fseed%3D9l%26expand%3D20%23post-23#post-23"',
   )
-  expect(html).toContain(
-    'href="/post/20?reply=1&amp;to=23&amp;from=%2Fany%3Fseed%3D9l%23post-23#post-23"',
-  )
+  expect(html).not.toContain('post-reply-link')
 })
 
 test('folded feed conversations distinguish previews from different depths', () => {
@@ -3458,10 +3468,8 @@ test('Post renders preloaded parent and reply data', () => {
   )
   expect(html).toContain('class="remote-link-popover" href="https://example.com/post"')
   expect(html).toContain('<strong class="remote-link-title">Parent preview</strong>')
-  expect(html).toContain('href="/enter?next=%2Fpost%2F2%3Freply%3D1"')
-  expect(html).toContain('aria-label="enter to reply to @writer">enter to reply</a>')
-  expect(html).toContain('href="/enter?next=%2Fpost%2F1%3Freply%3D1"')
-  expect(html).toContain('aria-label="reply to @author">enter to reply</a>')
+  expect(html).not.toContain('enter to reply')
+  expect(html).not.toContain('post-reply-link')
 })
 
 test('Post uses the full Post component for internal link hover cards', () => {
@@ -3501,8 +3509,7 @@ test('Post uses the full Post component for internal link hover cards', () => {
   expect(card).toContain('<span class="post-context">wrote:</span>')
   expect(card).toContain('The linked note')
   expect(card).toContain('<code class="code-fence execution-output ascii-art">result: 42</code>')
-  expect(card).toContain('href="/post/12?reply=1&amp;from=%2Fpost%2F1%23post-1"')
-  expect(card).toContain('>continue</a>')
+  expect(card).not.toContain('post-reply-link')
   expect(card).toContain('>more</a>')
   expect(card).not.toContain('>read</a>')
 })
@@ -3668,7 +3675,7 @@ test('Profile and hashtag feeds show no reply metadata beside post dates', () =>
   expect(tagHtml).toContain('class="posttop')
 })
 
-test('Profile note and reply actions link back to their originating feed entries', () => {
+test('Profile posts link back to their originating feed entries', () => {
   const post = {
     id: 2,
     user_id: 1,
@@ -3697,10 +3704,10 @@ test('Profile note and reply actions link back to their originating feed entries
   }))
 
   expect(notes).toContain(
-    'href="/post/2?reply=1&amp;from=%2Fu%2Fwriter%3Fpage%3D2%23post-2"',
+    'href="/post/2?from=%2Fu%2Fwriter%3Fpage%3D2%23post-2"',
   )
   expect(replies).toContain(
-    'href="/post/2?reply=1&amp;from=%2Fu%2Fwriter%3Ftab%3Dreplies%26page%3D2%23post-2"',
+    'href="/post/2?from=%2Fu%2Fwriter%3Ftab%3Dreplies%26page%3D2%23post-2"',
   )
 })
 
@@ -3856,7 +3863,7 @@ test('Post renders an opt-in feed hit area without changing detail posts', () =>
   expect(detailHtml).toContain('class="postdate" href="/post/2"')
 })
 
-test('Post carries its originating cursor into detail, reply, and edit links', () => {
+test('Post carries its originating cursor into detail and edit links', () => {
   const html = renderToStaticMarkup(React.createElement(Post, {
     user: { id: 1, handle: 'reader', email: 'reader@example.com', bio: '', email_verified_at: '2026-08-12 10:00:00',
       handle_chosen_at: '2026-08-12 10:00:00' },
@@ -3883,7 +3890,7 @@ test('Post carries its originating cursor into detail, reply, and edit links', (
   }))
 
   expect(html).toContain('href="/post/2?from=%2Flatest%3Fcursor%3Dabc%23post-2"')
-  expect(html).toContain('href="/post/2?reply=1&amp;from=%2Flatest%3Fcursor%3Dabc%23post-2"')
+  expect(html).not.toContain('post-reply-link')
   expect(html).toContain('href="/post/2/edit?from=%2Flatest%3Fcursor%3Dabc%23post-2"')
   expect(html).toContain('<input type="hidden" name="from" value="/latest?cursor=abc#post-2"/>')
   expect(html).toContain('id="post-2-user-friend" action="/follow/friend" method="post"')
@@ -4204,7 +4211,7 @@ test('A quoted post gets its own higher-priority hit area in tappable feeds', ()
   expect(html).toContain('class="reference-menu-trigger postauthor" '
     + 'href="/u/parent?from=%2Flatest%3Fcursor%3Dabc%23post-2"')
   expect(html).not.toContain('class="postdate" href="/post/1?from=%2Flatest%3Fcursor%3Dabc%23post-2"')
-  expect(html).toContain('href="/post/1?reply=1&amp;from=%2Flatest%3Fcursor%3Dabc%23post-2"')
+  expect(html).not.toContain('post-reply-link')
   expect(html).toContain(
     'href="/post/1?from=%2Flatest%3Fcursor%3Dabc%23post-2#post-1">top</a>',
   )
@@ -4270,7 +4277,7 @@ test('Post detail can make only its quoted parent tappable', () => {
   expect(html).not.toContain('class="post-hit-area"')
 })
 
-test('Post detail places report opposite reply in the footer', () => {
+test('Post detail places report in the footer', () => {
   const html = renderToStaticMarkup(React.createElement(Post, {
     user: { id: 3, handle: 'reader', email: 'reader@example.com', bio: '' },
     p: { id: 2, user_id: 1, parent_id: null, body: 'note', handle: 'writer', created_at: '2026-08-03 12:00:00',
@@ -4279,7 +4286,7 @@ test('Post detail places report opposite reply in the footer', () => {
   }))
 
   const footer = html.slice(html.indexOf('<div class="postfoot">'), html.indexOf('</div></article>'))
-  expect(footer).toContain('class="quiet post-reply-link"')
+  expect(footer).not.toContain('post-reply-link')
   expect(footer).toContain('class="quiet report-link" href="/post/2?report=1"')
   expect(html.slice(0, html.indexOf('<div class="postfoot">'))).not.toContain('class="quiet report-link"')
 })
