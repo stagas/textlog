@@ -3007,6 +3007,17 @@ body.corners-round a.button {
   transform: translateX(25%) scale(2);
 }
 
+:is(.posttop, .parent-quote-top) > .reference-menu:has(> :is(.reference-menu-trigger, .post-mood):hover),
+.preview-context-target:has(> .post-mood:hover) {
+  z-index: 22;
+}
+
+.post-context:has(> .post-context-author:hover > .post-mood) {
+  position: relative;
+  z-index: 22;
+  overflow: visible;
+}
+
 .tappable-post .post-mood {
   position: relative;
   z-index: 21;

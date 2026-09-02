@@ -512,6 +512,18 @@ function ageContextLabel(label: string, wording: PostAge['wording']) {
   return aged + (hasMention ? mentionSuffix : '') + ':'
 }
 
+function contextLabelWithViewerMood(label: React.ReactNode, mood?: string) {
+  if (!mood || typeof label !== 'string') return label
+  const marker = 'replied to you'
+  const markerIndex = label.indexOf(marker)
+  if (markerIndex < 0) return label
+  const youIndex = markerIndex + 'replied to '.length
+  const moodIndex = markerIndex + marker.length
+  return <>{label.slice(0, youIndex)}<span className="post-context-author">you
+    <span className="post-mood">{mood}</span>
+  </span>{label.slice(moodIndex)}</>
+}
+
 export function PreviewPost({ p, user }: { p: PostView; user?: User }) {
   const formPrefix = `preview-post-${p.id}`
   return (
@@ -746,13 +758,15 @@ export function Post({
               <>
                 <a className="post-context" href={`/post/${p.id}`} title={postPageAgeTitle}>
                   {typeof contextLabel === 'string'
-                    ? contextLabel.replace(/:$/, '')
+                    ? contextLabelWithViewerMood(contextLabel.replace(/:$/, ''), user?.mood)
                     : contextLabel}
                 </a>
                 {!contextTarget && <span className="post-context post-context-punctuation">:</span>}
               </>
             )
-            : <span className="post-context" title={postPageAgeTitle}>{contextLabel}</span>)}
+            : <span className="post-context" title={postPageAgeTitle}>
+              {contextLabelWithViewerMood(contextLabel, user?.mood)}
+            </span>)}
           {contextTarget && (
             <>
               {isDeletedHandle(contextTarget.handle)
@@ -920,9 +934,9 @@ export function Post({
                     <span className="post-context"
                       title={contextParentUnread ? postAgeTitle(parent.created_at) : undefined}
                     >
-                      {contextParentUnread
+                      {contextLabelWithViewerMood(contextParentUnread
                         ? ageContextLabel(parentContextLabel, approximatePostAge(parent.created_at).wording)
-                        : parentContextLabel}
+                        : parentContextLabel, user?.mood)}
                     </span>
                   )}
                   {parentContextTarget && (

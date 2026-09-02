@@ -2085,7 +2085,7 @@ test('public collection pages advertise their RSS and Atom feeds', () => {
 })
 
 test('latest and hot feeds label posts addressed to the viewer', () => {
-  const user = { id: 2, handle: 'reader', email: 'reader@example.com', bio: '' }
+  const user = { id: 2, handle: 'reader', mood: '🤸', email: 'reader@example.com', bio: '' }
   const parent = { id: 4, user_id: user.id, parent_id: null, body: 'parent', created_at: '2026-08-20 11:00:00',
     deleted_at: null, handle: user.handle, reply_count: 1 }
   const post = { id: 9, user_id: 1, parent_id: 4, body: 'hello', created_at: '2026-08-20 12:00:00', deleted_at: null,
@@ -2095,12 +2095,14 @@ test('latest and hot feeds label posts addressed to the viewer', () => {
   const latest = renderToStaticMarkup(React.createElement(PublicFeed, { user, feed, path: '/latest' }))
   const hot = renderToStaticMarkup(React.createElement(HotFeed, { user, feed }))
 
-  expect(latest).toContain('<span class="post-context">replied to you:</span>')
-  expect(hot).toContain('<span class="post-context">replied to you:</span>')
+  const replyToViewerLabel = '<span class="post-context">replied to <span class="post-context-author">you'
+    + '<span class="post-mood">🤸</span></span>:</span>'
+  expect(latest).toContain(replyToViewerLabel)
+  expect(hot).toContain(replyToViewerLabel)
 })
 
 test('posts describe whether their author wrote or replied', () => {
-  const user = { id: 3, handle: 'reader', email: 'reader@example.com', bio: '' }
+  const user = { id: 3, handle: 'reader', mood: '🤸', email: 'reader@example.com', bio: '' }
   const parent = { id: 4, user_id: 2, parent_id: null, body: 'Parent', created_at: '2026-08-20 11:00:00',
     deleted_at: null, handle: 'foo', mood: '🌞', reply_count: 1 }
   const base = { user_id: 1, body: 'hello', created_at: '2026-08-20 12:00:00', deleted_at: null, handle: 'writer' }
@@ -2140,7 +2142,10 @@ test('posts describe whether their author wrote or replied', () => {
   expect(reply).toContain('class="reference-menu-trigger postauthor" href="/u/foo?from=')
   expect(reply).toContain('>@foo</a><span class="post-mood">🌞</span><span class="reference-menu-popover">')
   expect(reply).toContain('<span class="post-context post-context-punctuation">:</span>')
-  expect(replyToViewer).toContain('<span class="post-context">replied to you:</span>')
+  expect(replyToViewer).toContain(
+    '<span class="post-context">replied to <span class="post-context-author">you'
+      + '<span class="post-mood">🤸</span></span>:</span>',
+  )
   expect(continuation).toContain('<span class="post-context">continued:</span>')
   expect(continuation).not.toContain('replied to')
   expect(poll).toContain('<span class="post-context">created a poll:</span>')
