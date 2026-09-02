@@ -706,6 +706,11 @@ describe('in-memory stylesheet', () => {
     expect(css).toContain('.replybox.root-reply-compose {\n    width: 100%;\n    margin-left: 0;')
   })
 
+  test('spaces a threaded reply preview from its inline composer', async () => {
+    const css = await Bun.file(new URL('./styles.css', import.meta.url)).text()
+    expect(css).toContain('.reply-preview + .inline-reply-compose {\n  margin-top: var(--space-4);')
+  })
+
   test('masks warned content and removes the warning after reveal', async () => {
     const css = await Bun.file(new URL('./styles.css', import.meta.url)).text()
     expect(css).not.toContain('filter: blur(.35rem);')

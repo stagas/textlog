@@ -5156,6 +5156,10 @@ form.report-panel {
   margin-top: var(--space-4);
 }
 
+.reply-preview + .inline-reply-compose {
+  margin-top: var(--space-4);
+}
+
 .page-header {
   display: flex;
   align-items: center;
