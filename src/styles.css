@@ -404,7 +404,7 @@ header>nav>a:not(.button),
   align-self: stretch;
   align-items: center;
   justify-content: flex-end;
-  gap: clamp(12px, 3vw, 22px);
+  gap: var(--space-4);
 }
 
 @media (min-width: 601px) {

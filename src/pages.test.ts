@@ -1915,6 +1915,7 @@ test('notification settings are the only account page that loads their client sc
   }))
   expect(notifications).toContain('src="/notifications.js"')
   expect(notifications).toContain('data-handle="reader"')
+  expect(notifications).toContain('data-return-href="/account/edit?from=%2Flatest%3Fpage%3D2#notifications"')
   expect(notifications).toContain('class="static-page notifications-page"')
   expect(notifications).toContain('class="profile-edit-link" href="/account/edit?from=%2Flatest%3Fpage%3D2">back</a>')
   expect(notifications).toContain('enable notifications')
@@ -1942,6 +1943,7 @@ test('notification settings are the only account page that loads their client sc
   expect(notifications).not.toContain('name="signups"')
   expect(notifications).toContain('save preferences</button>')
   expect(profile).toContain('href="/account/edit/notifications"')
+  expect(profile).toContain('class="account-danger-zone" id="notifications"')
   expect(profile).not.toContain('<script')
 })
 

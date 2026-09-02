@@ -11,6 +11,7 @@ export function NotificationSettings({ user, publicKey, ios = false, returnPath 
   returnPath?: string
 }) {
   const name = appName()
+  const returnHref = `/account/edit${returnPath ? `?from=${encodeURIComponent(returnPath)}` : ''}#notifications`
   return (
     <Layout user={user} title="notifications">
       <article className="static-page notifications-page">
@@ -133,7 +134,8 @@ export function NotificationSettings({ user, publicKey, ios = false, returnPath 
             disable notifications
           </a>
         </div>
-        {publicKey && <script src="/notifications.js" data-vapid-public-key={publicKey} data-handle={user.handle} />}
+        {publicKey && <script src="/notifications.js" data-vapid-public-key={publicKey} data-handle={user.handle}
+          data-return-href={returnHref} />}
       </article>
     </Layout>
   )

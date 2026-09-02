@@ -15,6 +15,7 @@
     ['onlyToMe', 'peopleFollowActivity', 'hashtagFollowActivity'].includes(input.name)
   )
   const handle = script.dataset.handle
+  const returnHref = script.dataset.returnHref
 
   const supported = 'serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window
   const setActions = enabled => {
@@ -142,7 +143,7 @@
       const registration = await navigator.serviceWorker.getRegistration('/')
       const subscription = await registration?.pushManager.getSubscription()
       if (!subscription || !(await save(subscription)).ok) throw new Error('Could not save preferences')
-      status.textContent = `Notification preferences saved for @${handle}.`
+      window.location.assign(returnHref)
     }
     catch {
       status.textContent = 'Preferences could not be saved. Please try again.'

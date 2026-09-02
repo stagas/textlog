@@ -218,7 +218,7 @@ export function Profile(
                   </div>
                   <a className="button" href={`/account/security${fromQuery}`}>manage security</a>
                 </div>
-                <div className="account-danger-zone">
+                <div className="account-danger-zone" id="notifications">
                   <div>
                     <strong>Notifications</strong>
                     <span>Choose browser notifications for new notes, replies, mentions, and follows.</span>
