@@ -393,7 +393,7 @@ header>.account-nav {
 header>nav>a:not(.button),
 .account-nav-row>a:not(.button),
 .account-menu-handle {
-  display: inline-flex;
+  display: inline-flex !important;
   align-items: center;
   align-self: stretch;
 }
@@ -2967,14 +2967,29 @@ body.corners-round a.button {
 }
 
 :is(.posttop, .parent-quote-top) > .reference-menu:has(> .post-mood) {
+  display: inline-flex !important;
+  align-items: baseline;
+  flex-wrap: nowrap;
+  min-width: 0;
+  max-width: 100%;
   border-bottom: 0;
   white-space: nowrap;
 }
 
 :is(.posttop, .parent-quote-top) > .reference-menu:has(> .post-mood) > .reference-menu-trigger {
-  display: inline;
-  padding-bottom: 2px;
+  display: inline-block;
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  padding-bottom: 0;
   border-bottom: var(--hairline) solid var(--link-border);
+  text-overflow: ellipsis;
+  vertical-align: baseline;
+  white-space: nowrap;
+}
+
+:is(.posttop, .parent-quote-top) > .reference-menu:has(> .post-mood) > .post-mood {
+  flex: 0 0 auto;
 }
 
 .post-mood {
@@ -7479,7 +7494,11 @@ a.post-context:hover {
 }
 
 .post-relative-time {
+  min-width: 0;
+  overflow: hidden;
   color: var(--muted);
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .posttop .post-back-link {

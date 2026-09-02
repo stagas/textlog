@@ -2102,7 +2102,7 @@ test('latest and hot feeds label posts addressed to the viewer', () => {
 test('posts describe whether their author wrote or replied', () => {
   const user = { id: 3, handle: 'reader', email: 'reader@example.com', bio: '' }
   const parent = { id: 4, user_id: 2, parent_id: null, body: 'Parent', created_at: '2026-08-20 11:00:00',
-    deleted_at: null, handle: 'foo', reply_count: 1 }
+    deleted_at: null, handle: 'foo', mood: '🌞', reply_count: 1 }
   const base = { user_id: 1, body: 'hello', created_at: '2026-08-20 12:00:00', deleted_at: null, handle: 'writer' }
 
   const topLevel = renderToStaticMarkup(React.createElement(Post, {
@@ -2138,7 +2138,7 @@ test('posts describe whether their author wrote or replied', () => {
   expect(topLevel).toContain('<span class="post-context">wrote:</span>')
   expect(reply).toContain('<span class="post-context">replied to</span><span class="reference-menu">')
   expect(reply).toContain('class="reference-menu-trigger postauthor" href="/u/foo?from=')
-  expect(reply).toContain('>@foo</a><span class="reference-menu-popover">')
+  expect(reply).toContain('>@foo</a><span class="post-mood">🌞</span><span class="reference-menu-popover">')
   expect(reply).toContain('<span class="post-context post-context-punctuation">:</span>')
   expect(replyToViewer).toContain('<span class="post-context">replied to you:</span>')
   expect(continuation).toContain('<span class="post-context">continued:</span>')

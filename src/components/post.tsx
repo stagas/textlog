@@ -758,9 +758,13 @@ export function Post({
               {isDeletedHandle(contextTarget.handle)
                 ? <span className="post-context deleted-context">(deleted account)</span>
                 : preview
-                ? <span className="preview-context-target">@{contextTarget.handle}</span>
+                ? (
+                  <span className="preview-context-target">
+                    @{contextTarget.handle}{contextTarget.mood && <span className="post-mood">{contextTarget.mood}</span>}
+                  </span>
+                )
                 : (
-                  <UserReference handle={contextTarget.handle} bio={contextTarget.bio}
+                  <UserReference handle={contextTarget.handle} mood={contextTarget.mood} bio={contextTarget.bio}
                     noteCount={contextTarget.note_count || 0} stats={contextTarget.profile_stats}
                     following={contextTarget.viewer_following} followsViewer={contextTarget.follows_viewer} user={user}
                     href={`/u/${contextTarget.handle}${referenceQuery}`} rel={navigationRel}
