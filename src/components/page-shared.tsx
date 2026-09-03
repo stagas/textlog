@@ -13,6 +13,7 @@ import type { User } from '../types'
 import { isMobileRequest } from '../user-agent'
 import { enterHref } from './auth-links'
 import { Panel } from './panel'
+import { writeHref } from './write-link'
 
 const postTitleLength = 60
 
@@ -1159,7 +1160,7 @@ export function GlobalFeedEmpty({ user }: { user: User | null }) {
       <p>No notes have been posted yet.</p>
       <ActionPair
         primary={user
-          ? <a className="button" href="/write">write the first note →</a>
+          ? <a className="button" href={writeHref()}>write the first note →</a>
           : <a className="button" href="/enter" rel="nofollow">join and write →</a>}
         secondary={<a href="/explore">explore</a>}
       />

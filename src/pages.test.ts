@@ -81,8 +81,35 @@ test('write page omits the redundant header write action', () => {
   expect(html).not.toContain('class="button nav-write-action"')
 })
 
+test('write page shows a back button above the form when a return path is available', () => {
+  const user = { id: 1, handle: 'reader', email: 'reader@example.com', bio: '',
+    email_verified_at: '2026-01-01', handle_chosen_at: '2026-01-01' }
+  const html = renderToStaticMarkup(React.createElement(Compose, { user, returnPath: '/latest?page=2', showBack: true }))
+
+  expect(html).toContain('class="profile-edit-link compose-back-link" href="/latest?page=2">back</a>')
+  expect(html).toContain('<div class="page-header compose-heading-row compose-heading-row-with-back"><h2>'
+    + 'What’s on your mind, <span class="compose-heading-at">@</span>reader?</h2>'
+    + '<a class="profile-edit-link compose-back-link"')
+  expect(html).toContain('type="hidden" name="show_back" value="1"')
+  expect(html).not.toContain('placeholder="What’s on your mind, @reader?"')
+  expect(html.indexOf('>back</a>')).toBeLessThan(html.indexOf('write-compose'))
+})
+
+test('write preview places its heading and back link in the same row', () => {
+  const user = { id: 1, handle: 'reader', email: 'reader@example.com', bio: '',
+    email_verified_at: '2026-01-01', handle_chosen_at: '2026-01-01' }
+  const html = renderToStaticMarkup(React.createElement(Compose, {
+    user, body: 'Preview me', preview: true, returnPath: '/latest', showBack: true,
+  }))
+
+  expect(html).toContain('<div class="compose-preview-heading"><h2>preview</h2>'
+    + '<a class="profile-edit-link compose-back-link" href="/latest">back</a></div>')
+  expect(html).not.toContain('class="page-header compose-heading-row')
+})
+
 test('header write action appears outside feed pages', () => {
-  const user = { id: 1, handle: 'reader', email: 'reader@example.com', bio: '', handle_chosen_at: '2026-01-01' }
+  const user = { id: 1, handle: 'reader', email: 'reader@example.com', bio: '', handle_chosen_at: '2026-01-01',
+    draft_count: 1 }
   const renderPath = (path: string) => withAppearance(new Request(`https://textlog.test${path}`), () =>
     renderToStaticMarkup(React.createElement(Layout, {
       user,
@@ -92,7 +119,11 @@ test('header write action appears outside feed pages', () => {
   for (const path of ['/@', '/my-feed', '/hot', '/any', '/new', '/all']) {
     expect(renderPath(path)).not.toContain('class="button nav-write-action"')
   }
-  expect(renderPath('/explore')).toContain('<a class="button nav-write-action" href="/write">write</a>')
+  expect(renderPath('/explore')).toContain(
+    '<a class="button nav-write-action" href="/write?from=%2Fexplore">write</a>',
+  )
+  expect(renderPath('/explore')).toContain('<a href="/drafts?from=%2Fexplore">drafts</a>')
+  expect(renderPath('/drafts')).toContain('<a href="/drafts">drafts</a>')
 })
 
 test('admin navigation is the first child in the handle menu', () => {
@@ -295,7 +326,7 @@ test('compose offers a server-rendered post preview', () => {
   expect(preview).toContain('What’s on your mind')
   expect(preview.indexOf('<h2>preview</h2>')).toBeLessThan(preview.indexOf('<form action="/post" method="post">'))
   expect(preview).not.toContain('<h1 class="compose-heading">')
-  expect(preview).toContain('placeholder="What’s on your mind, @writer?"')
+  expect(preview).not.toContain('placeholder="What’s on your mind, @writer?"')
   expect(preview.indexOf('<form action="/post" method="post">')).toBeLessThan(preview.indexOf('<textarea'))
   expect(preview.indexOf('<div class="compose-post-preview">')).toBeLessThan(
     preview.indexOf('<div class="panel panel-surface panel-medium compose write-compose">'),
@@ -594,7 +625,8 @@ test('posting helpers use the compact action and show copyable highlighted resul
   expect(html).toContain('value="search-hashtags" formNoValidate="" name="action"')
   expect(html).toContain('value="search-mentions" formNoValidate="" name="action"')
   expect(html).toContain(
-    'autofocus="" placeholder="What’s on your mind, @writer?" aria-label="What’s on your mind, @writer?" autoComplete="off" inputMode="text" enterKeyHint="enter">A draft worth keeping</textarea>',
+    'autofocus="" aria-label="What’s on your mind, @writer?" autoComplete="off" inputMode="text" '
+      + 'enterKeyHint="enter">A draft worth keeping</textarea>',
   )
   expect(html).toContain('#<mark>type</mark>script')
   expect(html).toContain('class="posting-suggestion-result" title="Select and copy"')
@@ -3053,7 +3085,7 @@ test('Profile places owner actions in the handle row', () => {
   expect(html).toContain('type="application/atom+xml" title="Notes by @reader (Atom)" href="/u/reader.atom"')
   expect(html).toContain('class="account-nav-row account-nav-primary"')
   expect(html).toContain('class="account-nav-row account-nav-secondary"')
-  expect(html).toContain('</div><a class="button nav-write-action" href="/write">write</a></span>')
+  expect(html).toContain('</div><a class="button nav-write-action" href="/write?from=%2F">write</a></span>')
   expect(html).toContain('class="account-menu-handle" href="/u/reader?from=%2F">@reader'
     + '<span class="nav-mood">🤸</span></a>')
   expect(html).toContain('class="account-menu-popover"')
@@ -3062,9 +3094,9 @@ test('Profile places owner actions in the handle row', () => {
   expect(html).not.toContain('href="/admin">admin</a>')
   expect(html).not.toContain('class="mobile-account-footer"')
   expect(html.indexOf('class="account-menu-handle" href="/u/reader?from=%2F"')).toBeLessThan(
-    html.indexOf('class="button nav-write-action" href="/write"'),
+    html.indexOf('class="button nav-write-action" href="/write?from=%2F"'),
   )
-  expect(html).toContain('<a class="button" href="/write">write a note</a>')
+  expect(html).toContain('<a class="button" href="/write?from=%2F">write a note</a>')
 })
 
 test('Profile places a contextual back link in the handle row', () => {
@@ -3111,7 +3143,7 @@ test('An empty profile only offers its owner a way to write a note', () => {
   }))
 
   expect(html).toContain('@reader hasn’t posted any notes yet.')
-  expect(html).not.toContain('<a class="button" href="/write">write a note</a>')
+  expect(html).not.toContain('<a class="button" href="/write?from=%2F">write a note</a>')
 })
 
 test('An empty replies tab offers its owner a way to browse notes', () => {
@@ -3126,7 +3158,7 @@ test('An empty replies tab offers its owner a way to browse notes', () => {
 
   expect(html).toContain('You haven’t posted any replies yet.')
   expect(html).toContain('<a class="button" href="/">browse notes</a>')
-  expect(html).not.toContain('<a class="button" href="/write">write a note</a>')
+  expect(html).not.toContain('<a class="button" href="/write?from=%2F">write a note</a>')
 })
 
 test('An empty following tab offers its owner a way to explore', () => {

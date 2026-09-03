@@ -129,7 +129,7 @@ export function registerPostsRoutes(app: Hono) {
       : safeRefererPath(c.req.header('referer'), c.req.url)
     const resolvedReturnPath = returnPath === '/write' ? '/' : returnPath
     return user
-      ? page(<Compose user={user} returnPath={resolvedReturnPath} />)
+      ? page(<Compose user={user} returnPath={resolvedReturnPath} showBack={!!requestedReturnPath} />)
       : redirect('/enter?next=' + encodeURIComponent('/write'))
   })
   app.get('/compose', c => c.redirect('/write', 301))
@@ -379,11 +379,12 @@ export function registerPostsRoutes(app: Hono) {
     }
     if (!canPublishPosts(user)) return page(<Compose user={user} />, 403)
     const editingDraftId = draftId(f)
+    const showBack = f.show_back === '1'
     const suggestionSearch = await postingSuggestionSearch(f, user.id)
     if (suggestionSearch) {
       return page(
         <Compose user={user} body={body} draftId={editingDraftId} returnPath={returnPath}
-          suggestionSearch={suggestionSearch} />,
+          suggestionSearch={suggestionSearch} showBack={showBack} />,
       )
     }
     if (f.action === 'autotag') {
@@ -391,7 +392,7 @@ export function registerPostsRoutes(app: Hono) {
       const enrichedBody = result.ok ? normalizePostBody(result.body) : body
       const valid = result.ok && validPostBody(enrichedBody)
       return page(<Compose user={user} body={valid ? enrichedBody : body} draftId={editingDraftId}
-        returnPath={returnPath} error={result.ok && !valid
+        returnPath={returnPath} showBack={showBack} error={result.ok && !valid
           ? `The message is too big to autotag within the ${POST_MAX}-character limit. Edit it down and try again.`
           : result.ok ? undefined : result.message} />, result.ok ? 200 : 503)
     }
@@ -404,7 +405,7 @@ export function registerPostsRoutes(app: Hono) {
       }
       return page(
         <Compose user={user} body={body} draftId={editingDraftId} error={postBodyValidationMessage(body)}
-          returnPath={returnPath} />,
+          returnPath={returnPath} showBack={showBack} />,
         400,
       )
     }
@@ -426,7 +427,7 @@ export function registerPostsRoutes(app: Hono) {
       }
       return page(<Compose user={user} body={body} draftId={result.id} preview
         previewExecutionOutput={await executePostCode(body)} previewLocation={await previewLocation(body)}
-        returnPath={returnPath} />)
+        returnPath={returnPath} showBack={showBack} />)
     }
     if (f.action === 'draft') {
       const result = await databaseService().call('drafts.save', {
@@ -442,7 +443,8 @@ export function registerPostsRoutes(app: Hono) {
       const moderation = await moderateText(body)
       if (!moderation.ok) {
         return page(
-          <Compose user={user} body={body} error={moderationMessage(moderation)} returnPath={returnPath} />,
+          <Compose user={user} body={body} error={moderationMessage(moderation)} returnPath={returnPath}
+            showBack={showBack} />,
           moderation.reason === 'flagged' ? 422 : 503,
         )
       }
@@ -459,7 +461,8 @@ export function registerPostsRoutes(app: Hono) {
       if (result.status === 'locked') return c.text('This thread is locked', 409)
       if (result.status === 'rate_limited') {
         return page(
-          <Compose user={user} body={body} error={postRateLimitMessage(result.retryAfter)} returnPath={returnPath} />,
+          <Compose user={user} body={body} error={postRateLimitMessage(result.retryAfter)} returnPath={returnPath}
+            showBack={showBack} />,
           429,
         )
       }
@@ -473,7 +476,8 @@ export function registerPostsRoutes(app: Hono) {
     catch (error) {
       logError('POST /post', error)
       return page(
-        <Compose user={user} body={body} draftId={editingDraftId} error={saveFailureMessage} returnPath={returnPath} />,
+        <Compose user={user} body={body} draftId={editingDraftId} error={saveFailureMessage} returnPath={returnPath}
+          showBack={showBack} />,
         500,
       )
     }

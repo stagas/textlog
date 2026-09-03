@@ -16,7 +16,7 @@ export function Drafts({ user, drafts, returnPath }: { user: User; drafts: Draft
         {drafts.length === 0
           ? (
             <p className="drafts-empty">
-              You don’t have any drafts. <a href="/">Back to the homepage</a>.
+              You don’t have any drafts.
             </p>
           )
           : drafts.map(draft => (

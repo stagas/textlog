@@ -6,6 +6,7 @@ import { Layout } from './layout'
 import { MetaRow } from './meta'
 import { ActionPair, FeedTabs, Pagination } from './page-shared'
 import { BioReferenceForms, FeedThreads, TagReference, UserReference } from './post'
+import { writeHref } from './write-link'
 
 export type ForYouCursor = { createdAt: string; key: string; direction: 'next' | 'previous' }
 
@@ -254,7 +255,7 @@ export function Feed(
               <>
                 <a href="/">browse notes</a>
                 <span className="action-separator">or</span>
-                <a href="/write">write your first note</a>
+                <a href={writeHref()}>write your first note</a>
               </>
             } />
           </div>

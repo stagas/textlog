@@ -7,6 +7,7 @@ import { ActionPair, Pagination, paginationHeadingClass, TagChips } from './page
 import { Panel } from './panel'
 import { BioReferenceForms, UserReference } from './post'
 import { SearchForm } from './search'
+import { writeHref } from './write-link'
 
 const PEOPLE_PAGE_SIZE = 8
 
@@ -41,7 +42,7 @@ export function Explore({ user, welcome = false, tagsPage = 1, peoplePage = 1, d
           <h1>Make this place yours.</h1>
           <p>Follow a few people or hashtags below, or start with a note of your own.</p>
           <ActionPair className="welcome-actions"
-            primary={<a className="button" href="/write">write your first note →</a>}
+            primary={<a className="button" href={writeHref()}>write your first note →</a>}
             secondary={<a href="/">browse notes</a>} />
           <nav className="welcome-settings" aria-label="Set up your account">
             <span>

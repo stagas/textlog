@@ -17,7 +17,7 @@ import { Post } from './post'
 
 export function Compose(
   { user, error, body = '', preview = false, previewExecutionOutput, previewLocation, returnPath = '/',
-    suggestionSearch, draftId }: {
+    suggestionSearch, draftId, showBack = false }: {
     user: User
     error?: string
     body?: string
@@ -27,6 +27,7 @@ export function Compose(
     returnPath?: string
     suggestionSearch?: PostingSuggestionSearch | null
     draftId?: string
+    showBack?: boolean
   },
 ) {
   if (!canPublishPosts(user)) {
@@ -39,9 +40,15 @@ export function Compose(
   return (
     <Layout user={user} title="write">
       {preview && <ComposePreview user={user} body={body} executionOutput={previewExecutionOutput}
-        location={previewLocation} />}
+        location={previewLocation} backPath={showBack ? returnPath : undefined} />}
+      {!preview && (
+        <div className={`page-header compose-heading-row${showBack ? ' compose-heading-row-with-back' : ''}`}>
+          <h2>What’s on your mind, <span className="compose-heading-at">@</span>{user.handle}?</h2>
+          {showBack && <a className="profile-edit-link compose-back-link" href={returnPath}>back</a>}
+        </div>
+      )}
       <WriteForm user={user} error={error} body={body} returnPath={returnPath} suggestionSearch={suggestionSearch}
-        draftId={draftId} autoFocus />
+        draftId={draftId} autoFocus showBack={showBack} />
     </Layout>
   )
 }
@@ -64,15 +71,19 @@ export function AnonymousCompose({ body = '', error, preview = false, previewExe
   )
 }
 
-export function ComposePreview({ user, body, executionOutput, location }: {
+export function ComposePreview({ user, body, executionOutput, location, backPath }: {
   user: User | null
   body: string
   executionOutput?: string | null
   location?: LocationView
+  backPath?: string
 }) {
   return (
-    <div className="compose-post-preview">
-      <h2>preview</h2>
+    <div className={`compose-post-preview${backPath ? ' compose-post-preview-with-back' : ''}`}>
+      <div className="compose-preview-heading">
+        <h2>preview</h2>
+        {backPath && <a className="profile-edit-link compose-back-link" href={backPath}>back</a>}
+      </div>
       <Post p={{
         id: 0,
         user_id: user?.id ?? -1,
@@ -91,7 +102,8 @@ export function ComposePreview({ user, body, executionOutput, location }: {
 }
 
 export function WriteForm(
-  { user, error, body = '', returnPath = '/', suggestionSearch, draftId, autoFocus = false, embedded = false }: {
+  { user, error, body = '', returnPath = '/', suggestionSearch, draftId, autoFocus = false, embedded = false,
+    showBack = false }: {
     user: User
     error?: string
     body?: string
@@ -100,6 +112,7 @@ export function WriteForm(
     draftId?: string
     autoFocus?: boolean
     embedded?: boolean
+    showBack?: boolean
   },
 ) {
   if (!canPublishPosts(user)) return null
@@ -132,13 +145,14 @@ export function WriteForm(
     <Panel className={`compose write-compose${embedded ? ' embedded-write-compose' : ''}`}>
       <form method="post" action="/post">
         <input type="hidden" name="from" value={returnPath} />
+        {showBack && <input type="hidden" name="show_back" value="1" />}
         {embedded && <input type="hidden" name="embedded" value="1" />}
         {draftId && <input type="hidden" name="draft_id" value={draftId} />}
         <FormMessage error={error} />
         <div className="compose-editor-row">
           <textarea className="form-control" name="body" maxLength={POST_MAX} autoFocus={autoFocus}
             accessKey={embedded ? 'w' : undefined}
-            defaultValue={body} placeholder={`What’s on your mind, @${user.handle}?`}
+            defaultValue={body} placeholder={embedded ? `What’s on your mind, @${user.handle}?` : undefined}
             aria-label={`What’s on your mind, @${user.handle}?`}
             autoComplete="off" inputMode="text" enterKeyHint="enter" />
           <PostingSuggestionResults search={suggestionSearch} />

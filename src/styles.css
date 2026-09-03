@@ -5126,13 +5126,27 @@ form.report-panel {
 }
 
 
-.compose-post-preview h2 {
-  margin: 0;
+.compose-preview-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
   padding: var(--space-3) var(--gutter);
-  color: var(--muted);
   border-bottom: 1px solid var(--soft);
+}
+
+.compose-preview-heading h2 {
+  margin: 0;
+  color: var(--muted);
   font-size: var(--font-size-11);
   font-weight: 400;
+}
+
+.compose-post-preview-with-back {
+  margin-top: 0;
+}
+
+.compose-post-preview-with-back .compose-preview-heading {
+  padding: var(--space-6) var(--gutter) var(--space-5);
 }
 
 .replybox {
@@ -5471,6 +5485,26 @@ form.report-panel {
 
 .profile-edit-link:hover {
   color: var(--accent-dark);
+}
+
+.compose-heading-row {
+  align-items: baseline;
+}
+
+.compose-heading-row h2 {
+  margin: 0;
+  color: var(--muted);
+  font-size: var(--font-size-16);
+  font-weight: 400;
+  line-height: 1.4;
+}
+
+.compose-heading-at {
+  color: var(--accent);
+}
+
+.compose-heading-row-with-back {
+  border-bottom: 1px solid var(--soft);
 }
 
 .profile-switch-link {

@@ -17,6 +17,7 @@ import type { User } from '../types'
 import { isMobileRequest } from '../user-agent'
 import { enterHref } from './auth-links'
 import { LogoutForm } from './logout-form'
+import { writeHref } from './write-link'
 
 let devReloadBootId: string | undefined
 
@@ -66,11 +67,11 @@ export function Layout({
   const instantScroll = /(?:^|;\s*)textlog_scroll=instant(?:;|$)/.test(request.headers.get('cookie') || '')
   const showGuestJoin = !user && ['/hot', '/all'].includes(requestUrl.pathname)
   const onWritePage = requestUrl.pathname === '/write'
+  const onDraftsPage = requestUrl.pathname === '/drafts'
   const onFeedPage = ['/@', '/my-feed', '/hot', '/any', '/new', '/all'].includes(requestUrl.pathname)
   const currentPath = requestUrl.pathname + requestUrl.search
-  const writeShortcutHref = onWritePage
-    ? '/write'
-    : '/write?from=' + encodeURIComponent(currentPath)
+  const writeShortcutHref = onWritePage ? '/write' : writeHref()
+  const draftsHref = onDraftsPage ? '/drafts' : '/drafts?from=' + encodeURIComponent(currentPath)
   const profileHref = user ? `/u/${user.handle}?from=${encodeURIComponent(currentPath)}` : ''
   const accountFrom = requestUrl.pathname.startsWith('/account')
     ? requestUrl.searchParams.get('from') || `/u/${user?.handle || ''}`
@@ -101,7 +102,7 @@ export function Layout({
       <>
         <span className="account-nav-row account-nav-secondary">
           <a href="/explore">explore</a>
-          {!!user.draft_count && <a href="/drafts">drafts</a>}
+          {!!user.draft_count && <a href={draftsHref}>drafts</a>}
         </span>
         <span className="account-nav-row account-nav-primary">
           {mobile
@@ -125,7 +126,8 @@ export function Layout({
                 {accountMenuPopover}
               </div>
             )}
-          {!onWritePage && !onFeedPage && <a className="button nav-write-action" href="/write">write</a>}
+          {!onWritePage && !onFeedPage
+            && <a className="button nav-write-action" href={writeShortcutHref}>write</a>}
         </span>
       </>
     )
@@ -185,7 +187,7 @@ export function Layout({
           </>
         )}
         {mobile && <link href="https://fonts.cdnfonts.com/css/dejavu-sans-mono" rel="stylesheet" />}
-        <link rel="stylesheet" href="/styles.css?v=1346" />
+        <link rel="stylesheet" href="/styles.css?v=1352" />
         <style>{themeCss}</style>
       </head>
       <body

@@ -8,6 +8,7 @@ import { Layout } from './layout'
 import { FormMessage, GuestCommunityActions, Pagination, PostingHelp, PostingSuggestionResults,
   type PostingSuggestionSearch, ProfileControls, ProfileHeader, ProfileTabs } from './page-shared'
 import { FeedThreads, Post } from './post'
+import { writeHref } from './write-link'
 
 export function Profile(
   { user, profile, posts, following, followsViewer = false, bio = profile.bio || '', editHandle = profile.handle,
@@ -315,7 +316,7 @@ export function Profile(
                 <p>{tab === 'replies' ? 'You haven’t posted any replies yet.' : 'You haven’t posted any notes yet.'}</p>
                 {tab === 'replies'
                   ? <a className="button" href="/">browse notes</a>
-                  : <a className="button" href="/write">write a note</a>}
+                  : <a className="button" href={writeHref()}>write a note</a>}
               </>
             )
             : tab === 'replies'
