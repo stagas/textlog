@@ -152,6 +152,7 @@ const CAMPAIGN_ATTRIBUTION_COOKIE = 'campaign_attribution'
 const PWA_STANDALONE_COOKIE = 'pwa_standalone'
 const PWA_INSTALL_BANNER_COOKIE = 'pwa_install_banner_dismissed'
 const EXPLORE_WELCOME_COOKIE = 'explore_welcome'
+const RETURNING_VISITOR_COOKIE = 'returning_visitor'
 const PENDING_POST_COOKIE = 'pending_post'
 
 function cookieValue(request: Request, name: string) {
@@ -209,6 +210,16 @@ export function exploreWelcomeCookie(value = '1', maxAge = 365 * 24 * 60 * 60,
   appUrl: string | undefined = Bun.env.APP_URL)
 {
   return `${EXPLORE_WELCOME_COOKIE}=${value}; Max-Age=${maxAge}; HttpOnly; Path=/explore; SameSite=Lax${
+    secureCookie(appUrl)
+  }`
+}
+
+export function returningVisitor(request: Request) {
+  return cookieValue(request, RETURNING_VISITOR_COOKIE) === '1'
+}
+
+export function returningVisitorCookie(appUrl: string | undefined = Bun.env.APP_URL) {
+  return `${RETURNING_VISITOR_COOKIE}=1; Max-Age=${5 * 365 * 24 * 60 * 60}; HttpOnly; Path=/; SameSite=Lax${
     secureCookie(appUrl)
   }`
 }

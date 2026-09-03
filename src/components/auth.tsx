@@ -4,10 +4,16 @@ import { CenteredPanel } from './panel'
 
 export { maskEmail } from './email-address'
 
-export function Auth({ error, email = '', next }: { error?: string; email?: string; next?: string }) {
+export function Auth({ error, email = '', next, returning = false }: {
+  error?: string
+  email?: string
+  next?: string
+  returning?: boolean
+}) {
   return (
     <Layout title="enter">
       <CenteredPanel shellClassName="auth-shell enter-shell" className="auth-panel enter-panel">
+        <h1>{returning ? 'Welcome back.' : 'New here or returning?'}</h1>
         {error && <p className="status-message status-error" role="alert">{error}</p>}
         <form method="post" action="/enter" autoComplete="on">
           {next && <input type="hidden" name="next" value={next} />}

@@ -515,6 +515,10 @@ test('email code signs up and invalidates its matching magic link', async () => 
   expect(entered.status).toBe(303)
   expect(entered.headers.get('location')).toBe('/choose-handle?next=%2Fabout')
   expect(sessionCookie(entered)).toStartWith('textlog=')
+  expect(entered.headers.get('set-cookie')).toContain('returning_visitor=1')
+
+  const returningEntry = await request('/enter', { cookie: 'returning_visitor=1' })
+  expect(await returningEntry.text()).toContain('<h1>Welcome back.</h1>')
 
   const reusedLink = await request(`/enter/magic?token=${encodeURIComponent(value)}`)
   expect(reusedLink.status).toBe(400)
@@ -1219,7 +1223,7 @@ test('consequential account, content, reporting, and admin flows work over HTTP'
     form: { returnTo: '/tag/onboarding?page=2' },
   })
   expect(logout.status).toBe(303)
-  expect(logout.headers.get('location')).toBe('/tag/onboarding?page=2')
+  expect(logout.headers.get('location')).toBe('/')
   expect((database.query('SELECT count(*) count FROM sessions WHERE user_id=?').get(alice.id) as any).count).toBe(0)
 
   aliceCookie = await signup('alice', 'alice@example.com', 'unused')

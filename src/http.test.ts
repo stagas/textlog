@@ -2,7 +2,7 @@ import { describe, expect, test } from 'bun:test'
 import { applyHtmlCachePolicy, canonicalizeCrawlerLinks, clearSessionCookie, crawlerCanonicalRedirect, feedPreference,
   feedPreferenceCookie, FORM_REQUEST_BODY_LIMIT, htmlCacheControl, isCrawlerRequest, isSameOriginRequest,
   limitedFormData, RequestBodyError, requiresSameOrigin, safeLocalPath, safeRefererPath, securityHeaders, sessionCookie,
-  retainedAnyFeedSeed, retainedAnyFeedSeedCookie, stringField } from './http'
+  retainedAnyFeedSeed, retainedAnyFeedSeedCookie, returningVisitor, returningVisitorCookie, stringField } from './http'
 
 describe('local redirects', () => {
   test('accepts local paths and rejects ambiguous or external targets', () => {
@@ -164,6 +164,15 @@ describe('request values and cookies', () => {
 
     expect(sessionCookie('token', undefined, 'https://textlog.cc')).toContain('; Secure')
     expect(clearSessionCookie('https://textlog.cc')).toContain('Max-Age=0')
+  })
+
+  test('remembers a returning visitor without exposing the marker to scripts', () => {
+    expect(returningVisitor(new Request('https://textlog.cc/enter', {
+      headers: { cookie: 'returning_visitor=1' },
+    }))).toBeTrue()
+    expect(returningVisitor(new Request('https://textlog.cc/enter'))).toBeFalse()
+    expect(returningVisitorCookie('https://textlog.cc'))
+      .toContain('returning_visitor=1; Max-Age=157680000; HttpOnly; Path=/; SameSite=Lax; Secure')
   })
 
   test('stores and reads a valid feed preference', () => {

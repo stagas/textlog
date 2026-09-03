@@ -2661,11 +2661,19 @@ describe('Auth', () => {
   test('enter accepts an email address or handle', () => {
     const html = renderToStaticMarkup(React.createElement(Auth))
 
+    expect(html).toContain('<h1>New here or returning?</h1>')
     expect(html).toContain('action="/enter"')
     expect(html).toContain('email address or handle')
     expect(html).toContain('name="identifier"')
     expect(html).toContain('placeholder="you@example.com or your_handle"')
     expect(html).not.toContain('type="password"')
+  })
+
+  test('enter welcomes returning visitors back', () => {
+    const html = renderToStaticMarkup(React.createElement(Auth, { returning: true }))
+
+    expect(html).toContain('<h1>Welcome back.</h1>')
+    expect(html).not.toContain('New here or returning?')
   })
 
   test('handle choice explains validation without blocking the server submission', () => {
@@ -3040,7 +3048,7 @@ test('Profile places owner actions in the handle row', () => {
   expect(html).not.toContain('href="/account/edit">account</a>')
   expect(html).toContain('href="/latest#post-2">back</a>')
   expect(html).toContain('action="/logout"')
-  expect(html).toContain('name="returnTo" value="/"')
+  expect(html).not.toContain('name="returnTo"')
   expect(html).toContain('type="application/rss+xml" title="Notes by @reader (RSS)" href="/u/reader.rss"')
   expect(html).toContain('type="application/atom+xml" title="Notes by @reader (Atom)" href="/u/reader.atom"')
   expect(html).toContain('class="account-nav-row account-nav-primary"')
