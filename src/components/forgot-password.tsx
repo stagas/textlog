@@ -1,3 +1,4 @@
+import { AuthBrand } from './auth'
 import { Layout } from './layout'
 import { FormMessage } from './page-shared'
 import { CenteredPanel } from './panel'
@@ -8,8 +9,9 @@ export function ForgotPassword({ sent = false, error, identifier = '' }: {
   identifier?: string
 }) {
   return (
-    <Layout title="forgot password">
-      <CenteredPanel shellClassName="auth-shell" className="auth-panel password-panel">
+    <Layout title="forgot password" fullScreen fullScreenScrollable>
+      <CenteredPanel shellClassName="auth-shell enter-shell" className="auth-panel enter-panel password-panel">
+        <AuthBrand />
         {sent
           ? (
             <>

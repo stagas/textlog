@@ -3433,6 +3433,11 @@ body.corners-round a.button {
   opacity: .7;
 }
 
+.password-panel input[type="password"]::placeholder {
+  font-weight: 700;
+  letter-spacing: .12em;
+}
+
 .auth-panel input:focus-visible {
   border-color: var(--accent);
   outline: 2px solid var(--accent);

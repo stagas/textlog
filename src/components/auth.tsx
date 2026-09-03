@@ -6,7 +6,7 @@ import { activeThemeLogoSvg } from '../theme'
 
 export { maskEmail } from './email-address'
 
-function AuthBrand() {
+export function AuthBrand() {
   const name = appName()
   const logoSvg = activeThemeLogoSvg()
   return (
@@ -65,8 +65,9 @@ export function PasswordLogin({ nonce, error, identifier = '', next, reset = fal
   captcha?: { token: string; image: string }
 }) {
   return (
-    <Layout title="password login">
-      <CenteredPanel shellClassName="auth-shell" className="auth-panel password-panel">
+    <Layout title="password login" fullScreen fullScreenScrollable>
+      <CenteredPanel shellClassName="auth-shell enter-shell" className="auth-panel enter-panel password-panel">
+        <AuthBrand />
         <h1>Log in</h1>
         {reset && <p className="status-message status-success" role="status">Password reset. You can log in now.</p>}
         {error && <p className="status-message status-error" role="alert">{error}</p>}
@@ -83,7 +84,8 @@ export function PasswordLogin({ nonce, error, identifier = '', next, reset = fal
             <span>password</span>
           </label>
           <input id="login-password" type="password" name="password" required maxLength={128}
-            autoComplete="current-password" enterKeyHint={captcha ? 'next' : 'go'} autoFocus={!!error} />
+            autoComplete="current-password" enterKeyHint={captcha ? 'next' : 'go'} autoFocus={!!error}
+            placeholder="••••••••" />
           {captcha && (
             <div className="captcha-field">
               <label htmlFor="login-captcha">

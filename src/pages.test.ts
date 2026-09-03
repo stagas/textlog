@@ -2692,6 +2692,11 @@ describe('Auth', () => {
     expect(html).toContain('id="forgot-password-identifier"')
     expect(html).toContain('name="identifier"')
     expect(html.indexOf('<h1>')).toBeLessThan(html.indexOf('action="/forgot-password"'))
+    expect(html).toContain('<body class="density-regular full-screen-page full-screen-scrollable">')
+    expect(html).toContain('class="brand enter-brand"')
+    expect(html).toContain('class="panel-shell auth-shell enter-shell"')
+    expect(html).not.toContain('<header')
+    expect(html).not.toContain('<footer')
   })
 
   test('enter accepts an email address or handle', () => {
@@ -2751,7 +2756,13 @@ describe('Auth', () => {
     expect(html).toContain('type="hidden" name="nonce" value="one-time-value"')
     expect(html).toContain('email address or handle')
     expect(html).toContain('placeholder="you@example.com or your_handle"')
+    expect(html).toContain('placeholder="••••••••"')
     expect(html).not.toMatch(/name="password"[^>]+value=/)
+    expect(html).toContain('<body class="density-regular full-screen-page full-screen-scrollable">')
+    expect(html).toContain('class="brand enter-brand"')
+    expect(html).toContain('class="panel-shell auth-shell enter-shell"')
+    expect(html).not.toContain('<header')
+    expect(html).not.toContain('<footer')
   })
 
   test('password login renders a server-issued CAPTCHA when requested', () => {
