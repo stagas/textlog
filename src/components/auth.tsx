@@ -46,10 +46,9 @@ export function Auth({ error, email = '', next, returning = false }: {
           <a href="/legal#terms">Terms of Service</a> and <a href="/legal#privacy">Privacy Notice</a>.
         </p>
         <p className="auth-alternative">
-          Alternatively,{' '}
           <a href={`/enter/password${next ? `?next=${encodeURIComponent(next)}` : ''}`} rel="nofollow">
-            log in using your password
-          </a>.
+            use your password instead
+          </a>
         </p>
       </CenteredPanel>
     </Layout>

@@ -3465,6 +3465,10 @@ body.corners-round a.button {
   text-align: center;
 }
 
+.auth-alternative {
+  text-align: left;
+}
+
 .password-panel h1 {
   margin-bottom: var(--space-5);
   font-size: clamp(1.375rem, 5vw, 1.875rem);
