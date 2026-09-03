@@ -73,17 +73,21 @@ jobs:
           SSH_HOST: ${{ secrets.SSH_HOST }}
           SSH_PORT: ${{ secrets.SSH_PORT }}
         run: |
-          ssh -p "${SSH_PORT:-22}" "$SSH_USER@$SSH_HOST" "bash -lc '
-            export BUN_INSTALL="\${BUN_INSTALL:-\$HOME/.bun}"
-            export PATH="\$BUN_INSTALL/bin:\$HOME/.local/bin:/usr/local/bin:/usr/bin:/bin:\$PATH"
+          ssh -p "${SSH_PORT:-22}" "$SSH_USER@$SSH_HOST" \
+            bash -s -- "$REMOTE_PATH" <<'REMOTE_SCRIPT'
+            set -e
 
-            if ! command -v bun >/dev/null || [ "\$(bun --version)" != "1.4.0" ]; then
+            remote_path=$1
+            export BUN_INSTALL="${BUN_INSTALL:-$HOME/.bun}"
+            export PATH="$BUN_INSTALL/bin:$HOME/.local/bin:/usr/local/bin:/usr/bin:/bin:$PATH"
+
+            if ! command -v bun >/dev/null || [ "$(bun --version)" != "1.4.0" ]; then
               curl -fsSL https://bun.com/install | bash -s "bun-v1.4.0"
             fi
 
-            cd "$REMOTE_PATH"
+            cd "$remote_path"
             bun install --frozen-lockfile
-          '"
+          REMOTE_SCRIPT
 
       - name: Deploy application
         env:
