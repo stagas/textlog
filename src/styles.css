@@ -7996,13 +7996,7 @@ body.density-relaxed :where(p, li, textarea):not(.ascii-art) {
 }
 /* Onboarding gates */
 body.full-screen-page { overflow: hidden; }
-
-.full-screen-brand {
-  position: fixed;
-  top: var(--space-4);
-  left: var(--gutter);
-  z-index: 1001;
-}
+body.full-screen-page.full-screen-scrollable { overflow-y: auto; }
 
 .full-screen-page .enter-shell {
   min-height: 100dvh;
@@ -8014,6 +8008,24 @@ body.full-screen-page { overflow: hidden; }
   padding: 0;
   background: transparent;
   border: 0;
+}
+
+.enter-brand {
+  margin-bottom: var(--space-5);
+}
+
+@media (max-width: 520px) {
+  .full-screen-page .enter-shell {
+    min-height: auto;
+    padding-top: var(--space-5);
+    place-items: start stretch;
+  }
+}
+
+@media (min-width: 521px) {
+  .full-screen-page .enter-panel {
+    transform: translateY(calc(-1 * var(--space-5)));
+  }
 }
 
 :is(.handle-picker, .mood-picker, .tag-picker, .people-picker) {

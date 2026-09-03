@@ -1,6 +1,8 @@
 import { maskEmail } from './email-address'
 import { Layout } from './layout'
 import { CenteredPanel } from './panel'
+import { appName } from '../brand'
+import { activeThemeLogoSvg } from '../theme'
 
 export { maskEmail } from './email-address'
 
@@ -10,9 +12,15 @@ export function Auth({ error, email = '', next, returning = false }: {
   next?: string
   returning?: boolean
 }) {
+  const name = appName()
+  const logoSvg = activeThemeLogoSvg()
   return (
-    <Layout title="enter" fullScreen fullScreenBrand>
+    <Layout title="enter" fullScreen fullScreenScrollable>
       <CenteredPanel shellClassName="auth-shell enter-shell" className="auth-panel enter-panel">
+        <a className="brand enter-brand" href="/" aria-label={`${name} home`}>
+          <span className="brand-logo" aria-hidden="true" dangerouslySetInnerHTML={{ __html: logoSvg }} />
+          <span>{name}</span>
+        </a>
         <h1>{returning ? 'Welcome back.' : 'New here or returning?'}</h1>
         {error && <p className="status-message status-error" role="alert">{error}</p>}
         <form method="post" action="/enter" autoComplete="on">

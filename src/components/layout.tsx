@@ -35,7 +35,7 @@ export function Layout({
   logoutNavigation = false,
   mobileWriteAction = false,
   fullScreen = false,
-  fullScreenBrand = false,
+  fullScreenScrollable = false,
   children,
 }: {
   title?: string
@@ -48,7 +48,7 @@ export function Layout({
   notificationBanner?: false | 'notifications' | 'appearance' | 'invite' | 'bio' | 'notification-update' | 'donate'
   mobileWriteAction?: boolean
   fullScreen?: boolean
-  fullScreenBrand?: boolean
+  fullScreenScrollable?: boolean
   children: React.ReactNode
 }) {
   const selectedAppearance = activeAppearance()
@@ -189,13 +189,15 @@ export function Layout({
           </>
         )}
         {mobile && <link href="https://fonts.cdnfonts.com/css/dejavu-sans-mono" rel="stylesheet" />}
-        <link rel="stylesheet" href="/styles.css?v=1356" />
+        <link rel="stylesheet" href="/styles.css?v=1359" />
         <style>{themeCss}</style>
       </head>
       <body
         className={`density-${density}${corners === 'round' ? ' corners-round' : ''}${mobile ? ' mobile-agent' : ''}${
           user?.show_link_previews === 0 ? ' link-previews-disabled' : ''
-        }${mobileWriteAction ? ' has-mobile-write-action' : ''}${fullScreen ? ' full-screen-page' : ''}`}
+        }${mobileWriteAction ? ' has-mobile-write-action' : ''}${fullScreen ? ' full-screen-page' : ''}${
+          fullScreenScrollable ? ' full-screen-scrollable' : ''
+        }`}
       >
         {!fullScreen && user && ready && !mobileWriteAction
           && <a className="skip-link" href={writeShortcutHref} accessKey="w">write</a>}
@@ -222,12 +224,6 @@ export function Layout({
                 </nav>
               )}
           </header>
-        )}
-        {fullScreen && fullScreenBrand && (
-          <a className="brand full-screen-brand" href="/" aria-label={`${name} home`}>
-            <span className="brand-logo" aria-hidden="true" dangerouslySetInnerHTML={{ __html: logoSvg }} />
-            <span>{name}</span>
-          </a>
         )}
         {!fullScreen && showPwaInstallBanner && !notificationBanner && requestUrl.pathname !== '/install' && (
           <aside className="notification-banner install-banner" aria-label="Install app">
