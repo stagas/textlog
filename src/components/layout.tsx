@@ -95,6 +95,7 @@ export function Layout({
       <a href={profileHref}>profile</a>
       <a href={accountHref}>account</a>
       <a href="/bookmarks">bookmarks</a>
+      {!!user.linked_accounts?.length && <hr className="account-menu-separator" />}
       {user.linked_accounts?.map(account => (
         <form method="post" action="/account/accounts/select" key={account.id}>
           <input type="hidden" name="accountId" value={account.id} />
@@ -105,6 +106,7 @@ export function Layout({
           </button>
         </form>
       ))}
+      <hr className="account-menu-separator" />
       <LogoutForm>
         <button type="submit">logout</button>
       </LogoutForm>
@@ -202,7 +204,7 @@ export function Layout({
           </>
         )}
         {mobile && <link href="https://fonts.cdnfonts.com/css/dejavu-sans-mono" rel="stylesheet" />}
-        <link rel="stylesheet" href="/styles.css?v=1367" />
+        <link rel="stylesheet" href="/styles.css?v=1368" />
         <style>{themeCss}</style>
       </head>
       <body

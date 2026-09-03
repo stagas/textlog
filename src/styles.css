@@ -565,6 +565,13 @@ header>nav>a:not(.button),
   margin: 0;
 }
 
+.account-menu-separator {
+  width: 100%;
+  margin: var(--space-2) 0;
+  border: 0;
+  border-top: 1px solid var(--soft);
+}
+
 .reference-menu {
   position: relative;
   display: inline-block;

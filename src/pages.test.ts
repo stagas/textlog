@@ -160,6 +160,11 @@ test('account menu lists linked accounts immediately before logout for one-click
     + '<button class="account-menu-account" type="submit"><span>@another</span></button></form>'
   expect(html).toContain(switchForm)
   expect(html.indexOf(switchForm)).toBeLessThan(html.indexOf('action="/logout"'))
+  const separators = [...html.matchAll(/<hr class="account-menu-separator"\/>/g)].map(match => match.index!)
+  expect(separators).toHaveLength(2)
+  expect(separators[0]).toBeLessThan(html.indexOf(switchForm))
+  expect(separators[1]).toBeGreaterThan(html.indexOf(switchForm))
+  expect(separators[1]).toBeLessThan(html.indexOf('action="/logout"'))
 })
 
 test('account navigation marks linked accounts with unread activity', () => {
