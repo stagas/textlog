@@ -99,9 +99,16 @@ function canonicalTag(database: Database, tag: string) {
 
 function aliasesForTag(database: Database, tag: string) {
   if (!database.query("SELECT 1 FROM sqlite_master WHERE type='table' AND name='tag_aliases'").get()) return []
-  return (database.query('SELECT alias FROM tag_aliases WHERE primary_tag=? ORDER BY alias').all(tag) as {
-    alias: string
-  }[]).map(row => row.alias)
+  const hasDisplayNames = database.query(
+    "SELECT 1 FROM sqlite_master WHERE type='table' AND name='tag_display_names'",
+  ).get()
+  const displayName = hasDisplayNames
+    ? '(SELECT display_name FROM tag_display_names WHERE tag=ta.alias)'
+    : 'NULL'
+  return database.query(`SELECT ta.alias tag,${displayName} displayName
+    FROM tag_aliases ta WHERE ta.primary_tag=? ORDER BY ta.alias`).all(tag) as {
+    tag: string; displayName: string | null
+  }[]
 }
 
 function displayNameForTag(database: Database, tag: string) {

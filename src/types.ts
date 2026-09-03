@@ -173,7 +173,7 @@ export type ExploreData = {
   profileStats: Record<number, UserProfileStats>
 }
 export type TagPageData = {
-  aliases: string[]
+  aliases: Array<{ tag: string; displayName: string | null }>
   displayName: string | null
   following: boolean
   followsViewer: boolean

@@ -35,9 +35,17 @@ test('tag aliases resolve, aggregate posts, and can be managed by admins', async
   await executeDatabaseDomain(database, 'admin.setTagDisplayName', {
     tag: 'meta', displayName: 'Me_Ta',
   })
-  expect((await executeDatabaseDomain(database, 'tags.page', {
+  await executeDatabaseDomain(database, 'admin.setTagDisplayName', {
+    tag: 'textlog', displayName: 'Text_Log',
+  })
+  const tagPage = await executeDatabaseDomain(database, 'tags.page', {
     tag: 'meta', viewerId: -1, page: 1, pageSize: 100, tab: 'notes',
-  })).displayName).toBe('Me_Ta')
+  })
+  expect(tagPage.displayName).toBe('Me_Ta')
+  expect(tagPage.aliases).toEqual([
+    { tag: 'textlog', displayName: 'Text_Log' },
+    { tag: 'tlog', displayName: null },
+  ])
   expect((await executeDatabaseDomain(database, 'explore.page', {
     viewerId: -1, tagsPage: 1, peoplePage: 1,
   })).tags.find(tag => tag.tag === 'meta')?.displayName).toBe('Me_Ta')
