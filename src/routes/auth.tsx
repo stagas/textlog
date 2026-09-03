@@ -7,6 +7,8 @@ import { campaignAttribution, campaignAttributionCookie, clearSessionCookie, exp
   returningVisitor, returningVisitorCookie, sessionCookie } from '../http'
 import { logError } from '../log'
 import { moderateText, moderationMessage } from '../moderation'
+import { fontSizeCookie } from '../theme'
+import { isMobileRequest } from '../user-agent'
 
 const PASSWORD_LOGIN_FAILURE = 'Login was unsuccessful. Check your details and try again.'
 import { databaseService } from '../database-service'
@@ -360,6 +362,9 @@ export function registerAuthRoutes(app: Hono) {
     void sendPushForSignup(user.id, handle).catch(error => logError('signup push failed', error))
     const response = redirect(next, campaign ? campaignAttributionCookie('', 0) : undefined)
     response.headers.append('set-cookie', exploreWelcomeCookie())
+    if (isMobileRequest(c.req.raw) && !/(?:^|;\s*)font-size=/.test(c.req.header('cookie') || '')) {
+      response.headers.append('set-cookie', fontSizeCookie('small'))
+    }
     return response
   })
 

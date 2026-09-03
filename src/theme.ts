@@ -216,7 +216,9 @@ function preferenceCookie(name: string, value: string, appUrl: string | undefine
 
 export function fontSizeChoice(request: Request): FontSizeChoice {
   const value = request.headers.get('cookie')?.match(/(?:^|;\s*)font-size=([^;]+)/)?.[1] || ''
-  return FONT_SIZE_CHOICES.some(choice => choice.value === value) ? value as FontSizeChoice : 'regular'
+  return FONT_SIZE_CHOICES.some(choice => choice.value === value)
+    ? value as FontSizeChoice
+    : isMobileRequest(request) ? 'small' : 'regular'
 }
 
 export function fontSizeCookie(value: FontSizeChoice, appUrl: string | undefined = Bun.env.APP_URL) {

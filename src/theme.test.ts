@@ -145,6 +145,13 @@ test('font size preference is validated and emitted by the theme stylesheet', ()
   expect(fontSizeChoice(new Request('http://localhost', {
     headers: { cookie: 'font-size=enormous' },
   }))).toBe('regular')
+
+  const mobile = new Request('http://localhost', {
+    headers: { 'user-agent': 'Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) Mobile/15E148' },
+  })
+  expect(fontSizeChoice(mobile)).toBe('small')
+  expect(themeStyles(mobile)).toContain('font-size:14px')
+  expect(fontSizeChoice(new Request('http://localhost'))).toBe('regular')
 })
 
 test('logo SVG follows the selected accent and system brightness', () => {

@@ -364,6 +364,7 @@ describe('in-memory stylesheet', () => {
     expect(css).toContain('header>nav>a:not(.button),\n.account-nav-row>a:not(.button),\n.account-menu-handle {')
     expect(css).toContain('.account-nav-row {\n  display: flex;\n  align-self: stretch;')
     expect(css).toContain('header>.account-nav {\n  align-items: center;\n  gap: var(--space-4);')
+    expect(css).toContain('header>.guest-nav {\n  align-items: center;\n  gap: var(--space-4);')
     expect(css).toContain(
       '.account-nav-row {\n  display: flex;\n  align-self: stretch;\n  align-items: center;\n'
         + '  justify-content: flex-end;\n  gap: var(--space-4);',

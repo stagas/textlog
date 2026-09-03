@@ -392,6 +392,11 @@ header>.account-nav {
   gap: var(--space-4);
 }
 
+header>.guest-nav {
+  align-items: center;
+  gap: var(--space-4);
+}
+
 header>nav>a:not(.button),
 .account-nav-row>a:not(.button),
 .account-menu-handle {
