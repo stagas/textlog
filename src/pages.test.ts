@@ -2402,6 +2402,7 @@ test('Tag follower tabs list people with compact follow controls', () => {
   expect(html).toContain(
     'href="/u/writer?from=%2Ftag%2Fnotes%3Ftab%3Dfollowers%23person-3">@writer</a>',
   )
+  expect(html).not.toContain('<small>14 notes</small>')
   expect(html).toContain('action="/follow/writer"')
 })
 

@@ -80,3 +80,31 @@ test('first use of a PascalCase tag creates its display name without an undersco
   expect(database.query("SELECT display_name displayName FROM tag_display_names WHERE tag='differentdisplay'")
     .get()).toEqual({ displayName: 'DifferentDisplay' })
 })
+
+test('plural tags are stored, resolved, and followed through their singular tag', async () => {
+  const database = new Database(':memory:')
+  database.run('PRAGMA foreign_keys=ON')
+  runMigrations(database)
+  database.query("INSERT INTO users(handle,email,password) VALUES('writer','writer@example.com','x')").run()
+
+  const post = createPost(database, 1, '#developers build tools', null, false)
+  expect('id' in post).toBeTrue()
+  if (!('id' in post)) throw new Error('Expected the test post to be created')
+  expect(database.query('SELECT tag FROM post_hashtags WHERE post_id=?').all(post.id))
+    .toEqual([{ tag: 'developer' }])
+  expect(await executeDatabaseDomain(database, 'tags.resolve', { tag: 'developers' })).toBe('developer')
+  await executeDatabaseDomain(database, 'interactions.toggleTagFollow', { userId: 1, tag: 'developers' })
+  expect(database.query('SELECT tag FROM hashtag_follows WHERE user_id=1').all()).toEqual([{ tag: 'developer' }])
+
+  const classPost = createPost(database, 1, '#class', null, false)
+  expect('id' in classPost).toBeTrue()
+  if (!('id' in classPost)) throw new Error('Expected the test post to be created')
+  expect(database.query('SELECT tag FROM post_hashtags WHERE post_id=?').all(classPost.id))
+    .toEqual([{ tag: 'class' }])
+  expect(database.query("SELECT alias FROM tag_aliases WHERE alias='classs'").get()).toBeNull()
+  expect(await executeDatabaseDomain(database, 'tags.resolve', { tag: 'classes' })).toBe('class')
+
+  const singularPost = createPost(database, 1, '#designer', null, false)
+  expect('id' in singularPost).toBeTrue()
+  expect(await executeDatabaseDomain(database, 'tags.resolve', { tag: 'designers' })).toBe('designer')
+})

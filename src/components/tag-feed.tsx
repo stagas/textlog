@@ -86,6 +86,7 @@ export function TagFeed(
         ? people.length
           ? (
             <ConnectionPeople user={user} people={people} className="connections-list"
+              showNoteCount={false}
               returnPath={person => `${paginationPath}${page > 1 ? '&page=' + page : ''}#person-${person.id}`} />
           )
           : <div className="empty">No one follows this tag yet.</div>

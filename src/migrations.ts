@@ -1,6 +1,6 @@
 import type { Database } from 'bun:sqlite'
 import { extractAuthoredHashtags, extractHashtags, extractMentions, pascalCaseHashtagDisplayName,
-  postContentFlags } from './content'
+  pluralHashtag, postContentFlags, singularHashtag } from './content'
 import { hotRankingVersion, rebuildHotPosts, refreshHotFeedProjection } from './hot'
 import { parsePoll, syncPoll } from './polls'
 import { migrateLegacySessionTokens } from './sessions'
@@ -3046,6 +3046,39 @@ export const migrations: Migration[] = [
     up(database) {
       if (!database.query("SELECT 1 FROM sqlite_master WHERE type='table' AND name='tag_aliases'").get()) return
       database.query("DELETE FROM tag_aliases WHERE instr(alias,'_')>0 OR instr(primary_tag,'_')>0").run()
+    },
+  },
+  {
+    version: 185,
+    name: 'singularize_plural_tags',
+    up(database) {
+      if (!database.query("SELECT 1 FROM sqlite_master WHERE type='table' AND name='tag_aliases'").get()
+        || !database.query("SELECT 1 FROM sqlite_master WHERE type='table' AND name='post_hashtags'").get()) return
+      const tags = database.query(`SELECT tag FROM (SELECT tag FROM post_hashtags UNION SELECT tag FROM hashtag_follows
+        UNION SELECT tag FROM blocked_hashtags) ORDER BY length(tag),tag`).all() as { tag: string }[]
+      const insertAlias = database.query('INSERT OR IGNORE INTO tag_aliases(alias,primary_tag) VALUES(?,?)')
+      for (const { tag } of tags) {
+        const singular = singularHashtag(tag)
+        if (singular === tag || database.query(`SELECT 1 FROM tag_aliases
+          WHERE alias=? OR primary_tag=? OR alias=? LIMIT 1`).get(tag, tag, singular)) continue
+        insertAlias.run(tag, singular)
+      }
+      for (const { tag } of tags) {
+        const primary = singularHashtag(tag)
+        const plural = pluralHashtag(primary)
+        if (plural === primary || database.query(`SELECT 1 FROM tag_aliases
+          WHERE alias=? OR primary_tag=? OR alias=? LIMIT 1`).get(plural, plural, primary)) continue
+        insertAlias.run(plural, primary)
+      }
+      database.run(`INSERT OR IGNORE INTO post_hashtags(post_id,tag)
+          SELECT ph.post_id,ta.primary_tag FROM post_hashtags ph JOIN tag_aliases ta ON ta.alias=ph.tag;
+        DELETE FROM post_hashtags WHERE tag IN (SELECT alias FROM tag_aliases);
+        INSERT OR IGNORE INTO hashtag_follows(user_id,tag,created_at)
+          SELECT hf.user_id,ta.primary_tag,hf.created_at FROM hashtag_follows hf JOIN tag_aliases ta ON ta.alias=hf.tag;
+        DELETE FROM hashtag_follows WHERE tag IN (SELECT alias FROM tag_aliases);
+        INSERT OR IGNORE INTO blocked_hashtags(user_id,tag,created_at)
+          SELECT bh.user_id,ta.primary_tag,bh.created_at FROM blocked_hashtags bh JOIN tag_aliases ta ON ta.alias=bh.tag;
+        DELETE FROM blocked_hashtags WHERE tag IN (SELECT alias FROM tag_aliases);`)
     },
   },
 ]

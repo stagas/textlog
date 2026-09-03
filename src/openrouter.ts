@@ -31,7 +31,7 @@ async function requestAutotag(body: string, model: string, apiKey: string, reque
       temperature: 0.2,
       max_tokens: 700,
       messages: [
-        { role: 'system', content: 'Enrich this text with hashtags, replacing words with their hashtag version (prepending hash) and adding in the end possible new hashtags. Keep the total number of hashtags at 15 or fewer. Return only the complete enriched text, preserving its meaning, formatting, and language. Do not add commentary.' },
+        { role: 'system', content: 'Enrich this text with hashtags, replacing words with their hashtag version (prepending hash) and adding in the end possible new hashtags. When a hashtag needs multiple words and its language supports letter casing, join the words in PascalCase (for example, #WebDevelopment), without underscores. Keep single-word hashtags as single words. Keep the total number of hashtags at 15 or fewer. Return only the complete enriched text, preserving its meaning, formatting, and language. Do not add commentary.' },
         { role: 'user', content: body },
       ],
     }),

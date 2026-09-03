@@ -18,6 +18,15 @@ export function pascalCaseHashtagDisplayName(authored: string) {
   return authored
 }
 
+export function singularHashtag(tag: string) {
+  if (tag.length > 2 && tag.endsWith('ses')) return tag.slice(0, -2)
+  return tag.length > 1 && tag.endsWith('s') && !tag.endsWith('ss') ? tag.slice(0, -1) : tag
+}
+
+export function pluralHashtag(tag: string) {
+  return tag.endsWith('s') ? `${tag}es` : `${tag}s`
+}
+
 export const SPOILER_HASHTAGS = new Set([
   'spoiler',
   'tldr',

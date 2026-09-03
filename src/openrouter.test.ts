@@ -15,6 +15,9 @@ describe('OpenRouter autotag', () => {
     })
     expect(result).toEqual({ ok: true, body: 'A note about #Bun and #TypeScript\n\n#webdev' })
     expect(systemPrompt).toContain('15 or fewer')
+    expect(systemPrompt).toContain('multiple words')
+    expect(systemPrompt).toContain('PascalCase')
+    expect(systemPrompt).toContain('without underscores')
   })
 
   test('falls back to the paid model only after a 429', async () => {

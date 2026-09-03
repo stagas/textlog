@@ -2,7 +2,7 @@ import type { Database } from 'bun:sqlite'
 import { isAdminEmail } from './admin'
 import { publishPost } from './api-broker'
 import { extractAuthoredHashtags, extractHashtags, extractMentions, pascalCaseHashtagDisplayName,
-  postContentFlags } from './content'
+  pluralHashtag, postContentFlags, singularHashtag } from './content'
 import { resolveHandle } from './handles'
 import { recordHotActivity } from './hot'
 import { getImageUrl, isImageKey } from './image-storage'
@@ -150,9 +150,6 @@ export function visibleTagFollowerCounts(database: Database, tags: string[], vie
 export function syncPostMetadata(database: Database, postId: number, body: string) {
   const flags = postContentFlags(body)
   const hashtags = extractAuthoredHashtags(body)
-  const existingTags = new Set(hashtags.filter(({ tag }) => database.query(
-    'SELECT 1 FROM post_hashtags WHERE tag=? LIMIT 1',
-  ).get(tag)).map(({ tag }) => tag))
   const supportsTagPresentation = !!database.query(`SELECT 1 FROM sqlite_master
     WHERE type='table' AND name='tag_aliases'
       AND EXISTS(SELECT 1 FROM sqlite_master WHERE type='table' AND name='tag_display_names')`).get()
@@ -163,9 +160,29 @@ export function syncPostMetadata(database: Database, postId: number, body: strin
   const insertTag = database.query('INSERT OR IGNORE INTO post_hashtags(post_id,tag) VALUES(?,?)')
   const insertMention = database.query('INSERT OR IGNORE INTO post_mentions(post_id,user_id) VALUES(?,?)')
 
-  for (const { tag, authored } of hashtags) {
-    const displayName = pascalCaseHashtagDisplayName(authored)
-    if (supportsTagPresentation && !existingTags.has(tag) && displayName) {
+  for (const { tag: extractedTag, authored } of hashtags) {
+    if (supportsTagPresentation) {
+      const singular = singularHashtag(extractedTag)
+      if (singular !== extractedTag && !database.query(`SELECT 1 FROM tag_aliases
+        WHERE alias=? OR primary_tag=? OR alias=? LIMIT 1`).get(extractedTag, extractedTag, singular)) {
+        database.query('INSERT OR IGNORE INTO tag_aliases(alias,primary_tag) VALUES(?,?)').run(extractedTag, singular)
+      }
+      const primary = singular === extractedTag ? extractedTag : singular
+      const plural = pluralHashtag(primary)
+      if (plural !== primary && !database.query(`SELECT 1 FROM tag_aliases
+        WHERE alias=? OR primary_tag=? OR alias=? LIMIT 1`).get(plural, plural, primary)) {
+        database.query('INSERT OR IGNORE INTO tag_aliases(alias,primary_tag) VALUES(?,?)').run(plural, primary)
+      }
+    }
+    const tag = supportsTagPresentation
+      ? (database.query('SELECT primary_tag FROM tag_aliases WHERE alias=?').get(extractedTag) as {
+        primary_tag: string
+      } | null)?.primary_tag || extractedTag
+      : extractedTag
+    const isNew = !database.query('SELECT 1 FROM post_hashtags WHERE tag=? LIMIT 1').get(tag)
+    let displayName = pascalCaseHashtagDisplayName(authored)
+    if (displayName && tag !== extractedTag && displayName.endsWith('s')) displayName = displayName.slice(0, -1)
+    if (supportsTagPresentation && isNew && displayName) {
       const aliasConflict = database.query('SELECT 1 FROM tag_aliases WHERE alias=? LIMIT 1').get(tag)
       const displayConflict = database.query(`SELECT 1 FROM tag_display_names
         WHERE tag=? AND display_name!=? LIMIT 1`).get(tag, displayName)
