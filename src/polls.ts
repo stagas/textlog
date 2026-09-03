@@ -6,7 +6,7 @@ import type { PollView } from './types'
 export const POLL_LIFETIME_MS = 24 * 60 * 60 * 1000
 
 export type PollDefinition = { question: string; options: string[]; kind?: 'quiz'; correctIndex?: number;
-  explanation?: string }
+  explanation?: string; after?: string }
 
 function pollsAvailable(database: Database) {
   return !!database.query('SELECT 1 FROM sqlite_master WHERE type=\'table\' AND name=\'poll_options\'').get()
@@ -22,16 +22,18 @@ export function parsePoll(body: string): PollDefinition | null {
   const markerStart = markerMatch.index!
   const question = [...lines.slice(0, marker), markerLine.slice(0, markerStart)].join('\n').trim()
   const remainingLines = lines.slice(marker + 1)
-  const separator = kind === 'quiz' ? remainingLines.findIndex(line => !line.trim()) : -1
+  const separator = remainingLines.findIndex(line => !line.trim())
   const answerLines = (separator < 0 ? remainingLines : remainingLines.slice(0, separator))
     .map(option => option.trim()).filter(Boolean)
-  const explanation = separator < 0 ? '' : remainingLines.slice(separator + 1).join('\n').trim()
+  const after = separator < 0 ? '' : remainingLines.slice(separator + 1).join('\n').trim()
   const correct = answerLines.map(option => kind === 'quiz' && /^>\s+/.test(option))
   const options = answerLines.map(option => kind === 'quiz' ? option.replace(/^>\s+/, '').trim() : option)
   if (!question || options.length < 2 || options.length > 8 || new Set(options).size !== options.length) return null
   if (kind === 'quiz' && correct.filter(Boolean).length !== 1) return null
   return { question, options,
-    ...(kind === 'quiz' ? { kind, correctIndex: correct.indexOf(true), ...(explanation ? { explanation } : {}) } : {}) }
+    ...(kind === 'quiz'
+      ? { kind, correctIndex: correct.indexOf(true), ...(after ? { explanation: after } : {}) }
+      : after ? { after } : {}) }
 }
 
 export function pollDisplayBody(body: string) {

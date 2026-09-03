@@ -13,6 +13,11 @@ describe('polls', () => {
       question: 'Best OS?',
       options: ['Windows', 'MacOS', 'Linux'],
     })
+    expect(parsePoll('Tea or coffee? #poll\nTea\nCoffee\n\nI usually drink mine in the morning.')).toEqual({
+      question: 'Tea or coffee?',
+      options: ['Tea', 'Coffee'],
+      after: 'I usually drink mine in the morning.',
+    })
   })
 
   test('does not activate a poll marker inside fenced code', () => {

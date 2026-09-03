@@ -138,6 +138,16 @@ function PollPreview({ body }: { body: string }) {
   )
 }
 
+function PollAfter({ body, p, formPrefix }: { body: string; p: PostView | NonNullable<PostView['parent']>;
+  formPrefix: string }) {
+  const after = parsePoll(body)?.after
+  if (!after) return null
+  return <div className="post-body" dangerouslySetInnerHTML={{
+    __html: linkify(displayPostBody(after), p.mention_bios, [], undefined, renderFlags(p), '', p.hashtag_counts,
+      p.mention_note_counts, { signedIn: false, currentHandle: p.handle, formPrefix }),
+  }} />
+}
+
 function Todo(
   { p, user, preview, returnPath, formPrefix }: { p: PostView | NonNullable<PostView['parent']>; user: User | null;
     preview?: boolean; returnPath?: string; formPrefix: string },
@@ -575,6 +585,7 @@ export function PreviewPost({ p, user }: { p: PostView; user?: User }) {
         }} />
         {p.execution_output !== null && p.execution_output !== undefined && <ExecutionOutput output={p.execution_output} />}
         <PollPreview body={p.body} />
+        <PollAfter body={p.body} p={p} formPrefix={formPrefix} />
         <Todo p={p} user={null} preview formPrefix={formPrefix} />
       </ContentWarning>
     </article>
@@ -890,6 +901,7 @@ export function Post({
         {p.execution_output !== null && p.execution_output !== undefined && <ExecutionOutput output={p.execution_output} />}
         {!preview && <Translation html={translationHtml} />}
         {preview ? <PollPreview body={p.body} /> : <Poll p={p} returnPath={returnPath} />}
+        <PollAfter body={p.body} p={p} formPrefix={formPrefix} />
         <Todo p={p} user={user} preview={preview} returnPath={returnPath} formPrefix={formPrefix} />
       </ContentWarning>
       {!parent && (showReplyAction && !p.thread_locked || hasVisibleContinuation || canModerate || reportHref

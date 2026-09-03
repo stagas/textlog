@@ -357,7 +357,7 @@ test('compose offers a server-rendered post preview', () => {
 test('compose previews inline polls with their visible tag and options', () => {
   const html = renderToStaticMarkup(React.createElement(Compose, {
     user: { id: 1, handle: 'writer', email: 'writer@example.com', bio: '', email_verified_at: '2026-08-20' },
-    body: 'Best OS? #poll\nWindows\nMacOS\nLinux',
+    body: 'Best OS? #poll\nWindows\nMacOS\nLinux\n\nWhy is your choice the best?',
     preview: true,
   }))
   expect(html).toContain('Best OS? <a href="/tag/poll')
@@ -365,6 +365,7 @@ test('compose previews inline polls with their visible tag and options', () => {
   expect(html).toContain('>Windows</div>')
   expect(html).toContain('>MacOS</div>')
   expect(html).toContain('>Linux</div>')
+  expect(html.indexOf('aria-label="Poll preview"')).toBeLessThan(html.indexOf('Why is your choice the best?'))
 })
 
 test('compose previews map locations with the stored-style hovercard', () => {
