@@ -15,14 +15,14 @@ import {
 import { currentPage, form, page, paginationRedirect, redirect } from './shared'
 
 import type { Hono } from 'hono'
+import { isValidHashtag, normalizeHashtag, normalizeHashtagSpelling } from '../content'
 import { databaseService } from '../database-service'
 import { sendAdminEmail, sendReportDecision } from '../email'
 import { deleteImagesAfterCommit } from '../image-storage'
-import { cacheBlockedIp, flushIpRequests } from '../request-ip-blocks'
-import { currentUser } from '../utils'
-import { isTranslationLanguage, translateText } from '../translation'
 import { sendPushToAll, sendPushToUser } from '../push'
-import { isValidHashtag, normalizeHashtag, normalizeHashtagSpelling } from '../content'
+import { cacheBlockedIp, flushIpRequests } from '../request-ip-blocks'
+import { isTranslationLanguage, translateText } from '../translation'
+import { currentUser } from '../utils'
 
 export function registerAdminRoutes(app: Hono) {
   app.get('/admin/tags', async c => {
@@ -34,8 +34,10 @@ export function registerAdminRoutes(app: Hono) {
       databaseService().call('admin.tagDisplayNames', {}),
       databaseService().call('admin.tagInvariants', {}),
     ])
-    return page(<AdminTags user={signedIn} groups={groups} displayNames={displayNames} invariants={invariants}
-      error={c.req.query('error')} />)
+    return page(
+      <AdminTags user={signedIn} groups={groups} displayNames={displayNames} invariants={invariants}
+        error={c.req.query('error')} />,
+    )
   })
 
   app.post('/admin/tags/invariants', async c => {
@@ -128,11 +130,13 @@ export function registerAdminRoutes(app: Hono) {
     if (!title || title.length > 200) return c.text('Invalid title', 400)
     if (!body || body.length > 2_000) return c.text('Invalid body', 400)
     let validUrl = /^\/(?!\/)/.test(url)
-    if (!validUrl) try {
-      const parsed = new URL(url)
-      validUrl = ['http:', 'https:'].includes(parsed.protocol) && !parsed.username && !parsed.password
+    if (!validUrl) {
+      try {
+        const parsed = new URL(url)
+        validUrl = ['http:', 'https:'].includes(parsed.protocol) && !parsed.username && !parsed.password
+      }
+      catch {}
     }
-    catch {}
     if (!validUrl || url.length > 2_048) return c.text('Invalid destination URL', 400)
     if (audience === 'test') {
       await sendPushToUser(signedIn.id, { title, body, url }, undefined, undefined, true)

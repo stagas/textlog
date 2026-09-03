@@ -12,12 +12,10 @@ import { writeHref } from './write-link'
 
 export function Profile(
   { user, profile, posts, following, followsViewer = false, bio = profile.bio || '', editHandle = profile.handle,
-    editMood = profile.mood || '',
-    editEmail = profile.email, error, editing = false, total = posts.length, noteCount = total, replyCount = 0,
-    tab = 'notes', followerCount = 0, followingCount = 0, followingTagCount = 0, blockedPeopleCount = 0,
-    blockedTagCount = 0, blocked = false, blockedByProfile = false, moderatorBypass = false, social, page = 1,
-    totalPages = 1, returnPath,
-    suggestionSearch, bioReference, noteStreakDates = [] }: {
+    editMood = profile.mood || '', editEmail = profile.email, error, editing = false, total = posts.length,
+    noteCount = total, replyCount = 0, tab = 'notes', followerCount = 0, followingCount = 0, followingTagCount = 0,
+    blockedPeopleCount = 0, blockedTagCount = 0, blocked = false, blockedByProfile = false, moderatorBypass = false,
+    social, page = 1, totalPages = 1, returnPath, suggestionSearch, bioReference, noteStreakDates = [] }: {
       user: User | null
       profile: ProfileRow
       posts: PostView[]
@@ -169,8 +167,8 @@ export function Profile(
                     </label>
                     <label className="profile-mood-field">
                       <span className="profile-mood-label">mood</span>
-                      <input name="mood" aria-label="mood" defaultValue={editMood} autoComplete="off"
-                        inputMode="text" size={2} />
+                      <input name="mood" aria-label="mood" defaultValue={editMood} autoComplete="off" inputMode="text"
+                        size={2} />
                     </label>
                     <span id="profile-handle-help" className="form-hint">
                       Handles must be 2–24 characters and use only letters, numbers, or underscores.{' '}
@@ -306,8 +304,10 @@ export function Profile(
       {!editing && !hiddenByBlock && page > 1
         && <Pagination path={paginationPath} page={page} totalPages={totalPages} top />}
       {!editing && !hiddenByBlock
-        && <FeedThreads posts={posts} user={user} returnPath={feedPath} hideTopMeta={tab !== 'replies'}
-          className={`profile-feed-thread profile-${tab === 'replies' ? 'replies' : 'notes'}-feed-thread`} />}
+        && (
+          <FeedThreads posts={posts} user={user} returnPath={feedPath} hideTopMeta={tab !== 'replies'}
+            className={`profile-feed-thread profile-${tab === 'replies' ? 'replies' : 'notes'}-feed-thread`} />
+        )}
       {!editing && !hiddenByBlock && total === 0 && (
         <div className={`empty${user?.id === profile.id ? ' empty-actions' : ''}`}>
           {user?.id === profile.id
@@ -334,7 +334,10 @@ export function Profile(
 function NoteStreak({ activeDates }: { activeDates: string[] }) {
   const active = new Set(activeDates)
   const naturalDate = new Intl.DateTimeFormat('en-GB', {
-    day: '2-digit', month: 'short', year: 'numeric', timeZone: 'UTC',
+    day: '2-digit',
+    month: 'short',
+    year: 'numeric',
+    timeZone: 'UTC',
   })
   const today = new Date()
   today.setUTCHours(0, 0, 0, 0)
@@ -350,8 +353,9 @@ function NoteStreak({ activeDates }: { activeDates: string[] }) {
         {days.map((date, index) => {
           const position = leadingDays + index
           return (
-            <rect key={date} className={active.has(date) ? 'active' : undefined}
-              x={Math.floor(position / 7) * 10 + 1} y={(position % 7) * 10 + 1} width="8" height="8">
+            <rect key={date} className={active.has(date) ? 'active' : undefined} x={Math.floor(position / 7) * 10 + 1}
+              y={(position % 7) * 10 + 1} width="8" height="8"
+            >
               <title>{naturalDate.format(new Date(`${date}T00:00:00Z`))}</title>
             </rect>
           )

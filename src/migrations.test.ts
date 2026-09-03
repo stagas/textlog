@@ -94,7 +94,7 @@ describe('database migrations', () => {
 
     expect(runMigrations(database)).toBe(latestMigrationVersion)
     expect(database.query(
-      "SELECT name FROM sqlite_master WHERE type='table' AND name='location_geocode_misses'",
+      'SELECT name FROM sqlite_master WHERE type=\'table\' AND name=\'location_geocode_misses\'',
     ).get()).toEqual({ name: 'location_geocode_misses' })
   })
 
@@ -496,13 +496,28 @@ describe('database migrations', () => {
     runMigrations(database)
 
     expect(database.query('SELECT tag FROM post_hashtags WHERE post_id=1 ORDER BY rowid').all())
-      .toEqual(['one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine', 'ten', 'eleven', 'twelve',
-        'thirteen', 'fourteen', 'fifteen']
-        .map(tag => ({ tag })))
+      .toEqual(
+        ['one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine', 'ten', 'eleven', 'twelve', 'thirteen',
+          'fourteen', 'fifteen']
+          .map(tag => ({ tag })),
+      )
     const bio = (database.query('SELECT bio FROM users WHERE id=1').get() as { bio: string }).bio
     expect(extractHashtags(bio)).toEqual([
-      'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine', 'ten', 'eleven', 'twelve', 'thirteen',
-      'fourteen', 'fifteen',
+      'one',
+      'two',
+      'three',
+      'four',
+      'five',
+      'six',
+      'seven',
+      'eight',
+      'nine',
+      'ten',
+      'eleven',
+      'twelve',
+      'thirteen',
+      'fourteen',
+      'fifteen',
     ])
   })
 
@@ -525,8 +540,8 @@ describe('database migrations', () => {
 
     runMigrations(database)
 
-    expect(database.query("SELECT alias FROM tag_aliases WHERE instr(alias,'_')>0").all()).toEqual([])
-    expect(database.query("SELECT alias FROM tag_aliases WHERE alias='developers'").get()).toBeNull()
+    expect(database.query('SELECT alias FROM tag_aliases WHERE instr(alias,\'_\')>0').all()).toEqual([])
+    expect(database.query('SELECT alias FROM tag_aliases WHERE alias=\'developers\'').get()).toBeNull()
     expect(database.query(`SELECT tag,display_name displayName FROM tag_display_names
       WHERE tag IN ('thisformcapitalized','lowercasefirst','takenalias','otherdisplay','alreadymapped')
       ORDER BY tag`).all()).toEqual([

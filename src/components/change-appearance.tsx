@@ -1,8 +1,7 @@
 import { DENSITY_CHOICES, type DensityChoice, type PageSizeChoice } from '../request-preferences'
 import { ACCENT_CHOICES, type Appearance, CORNER_CHOICES, type CornerChoice, FONT_CHOICES, FONT_SIZE_CHOICES,
-  type FontChoice, type FontSizeChoice,
-  PRIMARY_FONT_CHOICES, type PrimaryFontChoice, SANS_SERIF_FONT_CHOICES, type SansSerifFontChoice,
-  THEME_CHOICES } from '../theme'
+  type FontChoice, type FontSizeChoice, PRIMARY_FONT_CHOICES, type PrimaryFontChoice, SANS_SERIF_FONT_CHOICES,
+  type SansSerifFontChoice, THEME_CHOICES } from '../theme'
 import type { User } from '../types'
 import { AccountSettingsHeader } from './account-settings-header'
 import { Layout } from './layout'
@@ -11,11 +10,9 @@ export type AppearanceTab = 'theme' | 'font' | 'misc'
 
 export function ChangeAppearance(
   { user, selected, selectedFont, selectedSansSerifFont = 'system-sans', selectedPrimaryFont = 'monospace',
-    selectedSize = 'regular', selectedDensity = 'regular', selectedCorners = 'sharp',
-    selectedLinkPreviews = true,
+    selectedSize = 'regular', selectedDensity = 'regular', selectedCorners = 'sharp', selectedLinkPreviews = true,
     showModeratedContent = false, includePeopleFollowActivity = false, includeHashtagFollowActivity = false,
-    showNoteStreak = true, showTimestamps = false,
-    tab = 'theme', returnPath }: {
+    showNoteStreak = true, showTimestamps = false, tab = 'theme', returnPath }: {
       user: User
       selected: Appearance
       selectedFont: FontChoice
@@ -196,18 +193,18 @@ export function ChangeAppearance(
                   <span>Show link previews</span>
                 </label>
                 <label className="link-preview-setting">
-                  <input className="form-checkbox" type="checkbox" role="switch" name="showNoteStreak"
-                    value="yes" defaultChecked={showNoteStreak} />
+                  <input className="form-checkbox" type="checkbox" role="switch" name="showNoteStreak" value="yes"
+                    defaultChecked={showNoteStreak} />
                   <span>Show note streak</span>
                 </label>
                 <label className="link-preview-setting">
-                  <input className="form-checkbox" type="checkbox" role="switch" name="showTimestamps"
-                    value="yes" defaultChecked={showTimestamps} />
+                  <input className="form-checkbox" type="checkbox" role="switch" name="showTimestamps" value="yes"
+                    defaultChecked={showTimestamps} />
                   <span>Show timestamps</span>
                 </label>
                 <label className="link-preview-setting">
-                  <input className="form-checkbox" type="checkbox" role="switch" name="showModeratedContent"
-                    value="yes" defaultChecked={showModeratedContent} />
+                  <input className="form-checkbox" type="checkbox" role="switch" name="showModeratedContent" value="yes"
+                    defaultChecked={showModeratedContent} />
                   <span>Show moderated content</span>
                 </label>
                 <label className="link-preview-setting">

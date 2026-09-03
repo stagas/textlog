@@ -1,23 +1,23 @@
 import type { Database } from 'bun:sqlite'
-import { LinkifyIt } from 'linkify-it'
-import { createHash, randomBytes } from 'node:crypto'
 import hljs from 'highlight.js/lib/core'
 import javascript from 'highlight.js/lib/languages/javascript'
 import python from 'highlight.js/lib/languages/python'
+import { LinkifyIt } from 'linkify-it'
+import { createHash, randomBytes } from 'node:crypto'
 import tlds from 'tlds'
 import { userForApiKey } from './api-keys'
 import { sessionCookieName } from './brand'
+import { pendingFollowHref } from './components/auth-links'
 import { containsAsciiArt, MAX_HASHTAGS_PER_POST, normalizeHashtagSpelling, type PostContentFlags,
   splitSpoilerBody } from './content'
+import { locationDestination } from './locations'
 import { texToMathML } from './math'
 import { requestContext } from './request-context'
-import { locationDestination } from './locations'
 import { markSessionUsed, sessionHash } from './sessions'
-import { activeTimezone, timezoneLabel } from './timezone'
 import { activeRequest } from './theme'
+import { activeTimezone, timezoneLabel } from './timezone'
 import type { User } from './types'
 import type { LinkPreview, LocationView, UserProfileStats } from './types'
-import { pendingFollowHref } from './components/auth-links'
 
 hljs.registerLanguage('javascript', javascript)
 hljs.registerLanguage('python', python)
@@ -167,9 +167,9 @@ export const bearerToken = (req: Request) => req.headers.get('authorization')?.m
 function userForSession(token: string | null, database: Database): User | null {
   const tokenHash = sessionHash(token)
   if (!tokenHash) return null
-  const moodColumn = database.query("SELECT 1 FROM pragma_table_info('users') WHERE name='mood'").get()
+  const moodColumn = database.query('SELECT 1 FROM pragma_table_info(\'users\') WHERE name=\'mood\'').get()
     ? 'u.mood'
-    : "'' mood"
+    : '\'\' mood'
   const user = database.query(`SELECT u.id,u.handle,u.email,u.bio,${moodColumn},u.suspended_at,u.email_verified_at,
       u.handle_chosen_at
     FROM sessions s JOIN users u ON u.id=s.user_id
@@ -178,9 +178,11 @@ function userForSession(token: string | null, database: Database): User | null {
   if (user) {
     try {
       const preferences = database.query(`SELECT show_link_previews,show_moderated_content,hide_people_follow_activity,
-          hide_hashtag_follow_activity,show_note_streak,show_timestamps,timezone FROM users WHERE id=?`).get(user.id) as Pick<User,
-        'show_link_previews' | 'show_moderated_content' | 'hide_people_follow_activity'
-        | 'hide_hashtag_follow_activity' | 'show_note_streak' | 'show_timestamps' | 'timezone'> | null
+          hide_hashtag_follow_activity,show_note_streak,show_timestamps,timezone FROM users WHERE id=?`).get(user.id) as
+        | Pick<User,
+          'show_link_previews' | 'show_moderated_content' | 'hide_people_follow_activity'
+            | 'hide_hashtag_follow_activity' | 'show_note_streak' | 'show_timestamps' | 'timezone'>
+        | null
       if (preferences) Object.assign(user, preferences)
     }
     catch {}
@@ -398,8 +400,8 @@ export function linkTokens(body: string, flags?: PostContentFlags): LinkToken[] 
     for (const match of body.matchAll(/^```([^\r\n]*)\r?\n([\s\S]*?)\r?\n```(?=\r?$)/gm)) {
       const language = match[1].trim().toLowerCase()
       tokens.push({ index: match.index, lastIndex: match.index + match[0].length,
-        kind: language === 'latex' || language === 'tex' ? 'latex-fence' : 'code-fence', raw: match[0],
-        label: match[2], language })
+        kind: language === 'latex' || language === 'tex' ? 'latex-fence' : 'code-fence', raw: match[0], label: match[2],
+        language })
     }
     for (const match of body.matchAll(/`([^`\r\n]+)`/g)) {
       tokens.push({ index: match.index, lastIndex: match.index + match[0].length, kind: 'code', raw: match[0],
@@ -413,8 +415,8 @@ export function linkTokens(body: string, flags?: PostContentFlags): LinkToken[] 
   ]) {
     for (const match of body.matchAll(expression)) {
       if (!escapedAt(body, match.index)) {
-        tokens.push({ index: match.index, lastIndex: match.index + match[0].length, kind: 'strikethrough', raw: match[0],
-          label: match[2] })
+        tokens.push({ index: match.index, lastIndex: match.index + match[0].length, kind: 'strikethrough',
+          raw: match[0], label: match[2] })
       }
     }
   }
@@ -477,12 +479,13 @@ export function linkTokens(body: string, flags?: PostContentFlags): LinkToken[] 
   for (const match of body.matchAll(/(?<![\p{L}\p{M}\p{N}_&])&[0-9]+/gu)) {
     const lastIndex = match.index + match[0].length
     if (!escapedAt(body, match.index)
-      && !tokens.some(token => token.kind === 'url' && match.index < token.lastIndex && lastIndex > token.index)) {
+      && !tokens.some(token => token.kind === 'url' && match.index < token.lastIndex && lastIndex > token.index))
+    {
       tokens.push({ index: match.index, lastIndex, kind: 'post-reference', raw: match[0] })
     }
   }
-  const priority = { location: -1, 'code-fence': 0, 'latex-fence': 0, code: 1, math: 2, markdown: 3, redacted: 4, strikethrough: 4,
-    bold: 4, italics: 4, underline: 4, url: 5, reference: 6, 'post-reference': 6 }
+  const priority = { location: -1, 'code-fence': 0, 'latex-fence': 0, code: 1, math: 2, markdown: 3, redacted: 4,
+    strikethrough: 4, bold: 4, italics: 4, underline: 4, url: 5, reference: 6, 'post-reference': 6 }
   const result = tokens.sort((a, b) => a.index - b.index || priority[a.kind] - priority[b.kind])
   linkTokenCache.set(cacheKey, result)
   if (linkTokenCache.size > MAX_LINK_TOKEN_CACHE_ENTRIES) linkTokenCache.delete(linkTokenCache.keys().next().value!)
@@ -590,8 +593,15 @@ function markdownTable(body: string): MarkdownTable | null {
       index: headerOffset,
       lastIndex,
       headers,
-      alignments: delimiters.map(cell => cell.startsWith(':') && cell.endsWith(':') ? 'center'
-        : cell.endsWith(':') ? 'right' : cell.startsWith(':') ? 'left' : undefined),
+      alignments: delimiters.map(cell =>
+        cell.startsWith(':') && cell.endsWith(':')
+          ? 'center'
+          : cell.endsWith(':')
+          ? 'right'
+          : cell.startsWith(':')
+          ? 'left'
+          : undefined
+      ),
       rows,
     }
   }
@@ -675,11 +685,13 @@ function renderedReference(token: string, mentionBios: Record<string, string>,
       followsViewer ? '<span class="follows-you">follows you</span>' : ''
     }<button class="button${following ? ' button-muted' : ''}" type="submit" form="${
       esc(referenceFormId(referencePopover.formPrefix, isUser ? 'user' : 'tag', key))
-    }">${
-      following ? 'unfollow' : followsViewer ? 'follow back' : 'follow'
-    }</button></span></span>`
-    : `<a class="button" href="${esc(pendingFollowHref(isUser ? 'user' : 'tag', key,
-      new URLSearchParams(navigationQuery.slice(1)).get('from') || undefined))}" rel="nofollow">follow</a>`
+    }">${following ? 'unfollow' : followsViewer ? 'follow back' : 'follow'}</button></span></span>`
+    : `<a class="button" href="${
+      esc(
+        pendingFollowHref(isUser ? 'user' : 'tag', key,
+          new URLSearchParams(navigationQuery.slice(1)).get('from') || undefined),
+      )
+    }" rel="nofollow">follow</a>`
   return `<span class="reference-menu"><input class="mobile-popover-toggle" type="checkbox" `
     + `aria-label="Toggle reference details"><a class="reference-menu-trigger" href="${href}">${label}</a>`
     + `<span class="reference-menu-popover${isUser ? '' : ' reference-menu-popover-tag'}">`
@@ -706,8 +718,10 @@ function linkifyAsciiReferences(body: string, mentionBios: Record<string, string
   let html = ''
   let end = 0
   const tokens = linkTokens(body, { has_latex: 1, has_links: 1, has_code: 1 })
-  const markupRanges = tokens.filter(token => token.kind !== 'reference' && token.kind !== 'post-reference'
-    && token.kind !== 'url')
+  const markupRanges = tokens.filter(token =>
+    token.kind !== 'reference' && token.kind !== 'post-reference'
+    && token.kind !== 'url'
+  )
   for (const match of tokens) {
     if ((match.kind !== 'reference' && match.kind !== 'post-reference' && match.kind !== 'url') || match.index < end
       || markupRanges.some(range => match.index >= range.index && match.index < range.lastIndex)) continue
@@ -780,7 +794,9 @@ export function linkify(body: string, mentionBios: Record<string, string> = {}, 
       const rendered = linkify(group.join('\n'), mentionBios, highlightTerms, appUrl, flags, navigationQuery,
         hashtagCounts, mentionNoteCounts, popover, false)
       const quoteTag = rendered.includes('<div class="markdown-table-wrap">')
-        || rendered.includes('<div class="markdown-list-wrap">') || rendered.includes('<hr ') ? 'div' : 'span'
+          || rendered.includes('<div class="markdown-list-wrap">') || rendered.includes('<hr ')
+        ? 'div'
+        : 'span'
       html += quoted ? `<${quoteTag} class="post-quote">${rendered}</${quoteTag}>` : rendered
     }
     return html
@@ -798,30 +814,37 @@ export function linkify(body: string, mentionBios: Record<string, string> = {}, 
     const tag = list.ordered ? 'ol' : 'ul'
     const start = list.ordered && list.start !== 1 ? ` start="${list.start}"` : ''
     const renderedList = `<div class="markdown-list-wrap"><${tag} class="markdown-list"${start}>`
-      + list.items.map(item => `<li>${linkify(item, mentionBios, highlightTerms, appUrl, flags, navigationQuery,
-        hashtagCounts, mentionNoteCounts, popover, false, false)}</li>`).join('')
+      + list.items.map(item =>
+        `<li>${
+          linkify(item, mentionBios, highlightTerms, appUrl, flags, navigationQuery, hashtagCounts, mentionNoteCounts,
+            popover, false, false)
+        }</li>`
+      ).join('')
       + `</${tag}></div>`
     const beforeList = list.index > 0 && body[list.index - 1] === '\n' ? list.index - 1 : list.index
     const afterList = body[list.lastIndex] === '\n' ? list.lastIndex + 1 : list.lastIndex
     return linkify(body.slice(0, beforeList), mentionBios, highlightTerms, appUrl, flags, navigationQuery,
       hashtagCounts, mentionNoteCounts, popover, false)
       + renderedList
-      + linkify(body.slice(afterList), mentionBios, highlightTerms, appUrl, flags, navigationQuery,
-        hashtagCounts, mentionNoteCounts, popover, false)
+      + linkify(body.slice(afterList), mentionBios, highlightTerms, appUrl, flags, navigationQuery, hashtagCounts,
+        mentionNoteCounts, popover, false)
   }
   const table = renderBlocks ? markdownTable(body) : null
   if (table) {
-    const renderCell = (cell: string) => linkify(cell, mentionBios, highlightTerms, appUrl, flags, navigationQuery,
-      hashtagCounts, mentionNoteCounts, popover, false, false)
-    const renderedRow = (cells: string[], tag: 'th' | 'td') => '<tr>' + cells.map((cell, index) => {
-      const alignment = table.alignments[index]
-      return `<${tag}${tag === 'th' ? ' scope="col"' : ''}${alignment ? ` class="align-${alignment}"` : ''}>${
-        renderCell(cell)
-      }</${tag}>`
-    }).join('') + '</tr>'
-    const renderedBodyRow = (row: string[]) => row.every(cell => /^-{3,}$/.test(cell))
-      ? `<tr class="markdown-table-separator" aria-hidden="true"><td colspan="${table.headers.length}"></td></tr>`
-      : renderedRow(row, 'td')
+    const renderCell = (cell: string) =>
+      linkify(cell, mentionBios, highlightTerms, appUrl, flags, navigationQuery, hashtagCounts, mentionNoteCounts,
+        popover, false, false)
+    const renderedRow = (cells: string[], tag: 'th' | 'td') =>
+      '<tr>' + cells.map((cell, index) => {
+        const alignment = table.alignments[index]
+        return `<${tag}${tag === 'th' ? ' scope="col"' : ''}${alignment ? ` class="align-${alignment}"` : ''}>${
+          renderCell(cell)
+        }</${tag}>`
+      }).join('') + '</tr>'
+    const renderedBodyRow = (row: string[]) =>
+      row.every(cell => /^-{3,}$/.test(cell))
+        ? `<tr class="markdown-table-separator" aria-hidden="true"><td colspan="${table.headers.length}"></td></tr>`
+        : renderedRow(row, 'td')
     const renderedTable = '<div class="markdown-table-wrap"><table class="markdown-table"><thead>'
       + renderedRow(table.headers, 'th') + '</thead><tbody>'
       + table.rows.map(renderedBodyRow).join('') + '</tbody></table></div>'
@@ -830,8 +853,8 @@ export function linkify(body: string, mentionBios: Record<string, string> = {}, 
     return linkify(body.slice(0, beforeTable), mentionBios, highlightTerms, appUrl, flags, navigationQuery,
       hashtagCounts, mentionNoteCounts, popover, false)
       + renderedTable
-      + linkify(body.slice(afterTable), mentionBios, highlightTerms, appUrl, flags, navigationQuery,
-        hashtagCounts, mentionNoteCounts, popover, false)
+      + linkify(body.slice(afterTable), mentionBios, highlightTerms, appUrl, flags, navigationQuery, hashtagCounts,
+        mentionNoteCounts, popover, false)
   }
   if (flags && !flags.has_latex && !flags.has_links && !flags.has_code && !/[&~*_/|]/.test(body)) {
     return highlighted(body, highlightTerms)
@@ -864,9 +887,11 @@ export function linkify(body: string, mentionBios: Record<string, string> = {}, 
     if (match.kind === 'code' || match.kind === 'code-fence') {
       const language = match.language && highlightedCodeLanguages[match.language]
       const code = language ? hljs.highlight(match.label!, { language }).value : esc(match.label)
-      html += `<code${match.kind === 'code-fence'
-        ? ` class="code-fence${language ? ` hljs language-${language}` : ''}"`
-        : ''}>${code}</code>`
+      html += `<code${
+        match.kind === 'code-fence'
+          ? ` class="code-fence${language ? ` hljs language-${language}` : ''}"`
+          : ''
+      }>${code}</code>`
     }
     else if (match.kind === 'latex-fence') {
       html += renderedMath(match.label!, true) || `<code class="code-fence">${esc(match.label)}</code>`
@@ -918,11 +943,10 @@ export function linkify(body: string, mentionBios: Record<string, string> = {}, 
       html += previewLink(`<a href="${href}">${highlighted(token, highlightTerms)}</a>`, previewUrl, appUrl, popover)
     }
     else if (match.kind === 'location' && popover?.location) {
-      const location = { ...popover.location, url: locationDestination(popover.location,
-        activeRequest().headers.get('user-agent') || '') }
+      const location = { ...popover.location,
+        url: locationDestination(popover.location, activeRequest().headers.get('user-agent') || '') }
       html += locationPreviewLink(`<a href="${esc(location.url)}" target="_blank" `
-        + `rel="nofollow ugc noopener noreferrer">${highlighted(token, highlightTerms)}</a>`,
-      location, appUrl)
+        + `rel="nofollow ugc noopener noreferrer">${highlighted(token, highlightTerms)}</a>`, location, appUrl)
     }
     else {
       html += renderedReference(token, mentionBios, mentionNoteCounts, hashtagCounts, highlightTerms, navigationQuery,

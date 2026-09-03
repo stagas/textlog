@@ -1,7 +1,7 @@
 import { Database } from 'bun:sqlite'
 import { describe, expect, test } from 'bun:test'
-import { explorePivot, preserveSuggestedPeopleOrder, suggestedPeople, suggestedPeopleCount,
-  trendingTagCount, trendingTags } from './explore'
+import { explorePivot, preserveSuggestedPeopleOrder, suggestedPeople, suggestedPeopleCount, trendingTagCount,
+  trendingTags } from './explore'
 
 function fixture() {
   const database = new Database(':memory:')

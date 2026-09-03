@@ -13,9 +13,9 @@ const highlights = [
     long conversations easy to enter and leave.
   </>],
   ['03', 'Feeds with a point of view', null, <>
-    <a href="/@">@</a> keeps direct activity together, <a href="/my-feed">my feed</a> follows your people and tags,
-    {' '}<a href="/hot">hot</a> surfaces active conversations, <a href="/any">any</a> offers a fresh mix, and
-    {' '}<a href="/all">all</a> shows the full public stream.
+    <a href="/@">@</a> keeps direct activity together, <a href="/my-feed">my feed</a> follows your people and tags,{' '}
+    <a href="/hot">hot</a> surfaces active conversations, <a href="/any">any</a> offers a fresh mix, and{' '}
+    <a href="/all">all</a> shows the full public stream.
   </>],
   ['04', 'Discovery with more context', '/explore', <>
     Full-text search, trending tags, profile and post hovercards, tag aliases and display names, and the dedicated meta
@@ -42,8 +42,8 @@ const highlights = [
     make textlog useful beyond its own pages.
   </>],
   ['10', 'Still small by design', '/about', <>
-    Through all of it, textlog remains server-rendered, text-first, free of likes and engagement tricks, and centered
-    on people writing to one another.
+    Through all of it, textlog remains server-rendered, text-first, free of likes and engagement tricks, and centered on
+    people writing to one another.
   </>],
 ] as const
 
@@ -52,7 +52,8 @@ export function BlogRecapV2({ user, posts, pageUrl }: { user: User | null; posts
   return (
     <Layout user={user} title="The story so far" pageUrl={pageUrl} social={{
       title: `The story so far · ${name}`,
-      description: 'A complete recap of how textlog grew: writing, conversations, discovery, identity, portability, and more.',
+      description:
+        'A complete recap of how textlog grew: writing, conversations, discovery, identity, portability, and more.',
       image: new URL('/og.png?v=2', pageUrl).href,
       url: pageUrl,
       type: 'article',
@@ -60,10 +61,13 @@ export function BlogRecapV2({ user, posts, pageUrl }: { user: User | null; posts
     }}>
       <article className="static-page recap-page">
         <p className="eyebrow">the story so far</p>
-        <h1>More ways to connect.<br />Still quietly.</h1>
+        <h1>
+          More ways to connect.<br />Still quietly.
+        </h1>
         <p className="recap-intro">
-          {name} began as a small place for short notes. It has grown into a richer social space without losing the
-          simplicity that made it feel different. Here is the whole story in one place.
+          {name}{' '}
+          began as a small place for short notes. It has grown into a richer social space without losing the simplicity
+          that made it feel different. Here is the whole story in one place.
         </p>
         <section className="recap-highlights" aria-labelledby="recap-v2-highlights-title">
           <p className="eyebrow">the complete recap</p>
@@ -83,7 +87,9 @@ export function BlogRecapV2({ user, posts, pageUrl }: { user: User | null; posts
         <section className="recap-community" aria-labelledby="recap-v2-community-title">
           <p className="eyebrow">from the community</p>
           <h2 id="recap-v2-community-title">The conversations that grew</h2>
-          <p>These notes started some of textlog’s most active conversations, ranked by replies across the full thread.</p>
+          <p>
+            These notes started some of textlog’s most active conversations, ranked by replies across the full thread.
+          </p>
         </section>
       </article>
       <FeedThreads posts={posts} user={user} returnPath="/blog/recap-v2" promoteAncestors="all" />

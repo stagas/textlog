@@ -18,17 +18,17 @@ import { Post } from './post'
 export function Compose(
   { user, error, body = '', preview = false, previewExecutionOutput, previewLocation, returnPath = '/',
     suggestionSearch, draftId, showBack = false }: {
-    user: User
-    error?: string
-    body?: string
-    preview?: boolean
-    previewExecutionOutput?: string | null
-    previewLocation?: LocationView
-    returnPath?: string
-    suggestionSearch?: PostingSuggestionSearch | null
-    draftId?: string
-    showBack?: boolean
-  },
+      user: User
+      error?: string
+      body?: string
+      preview?: boolean
+      previewExecutionOutput?: string | null
+      previewLocation?: LocationView
+      returnPath?: string
+      suggestionSearch?: PostingSuggestionSearch | null
+      draftId?: string
+      showBack?: boolean
+    },
 ) {
   if (!canPublishPosts(user)) {
     return (
@@ -39,11 +39,16 @@ export function Compose(
   }
   return (
     <Layout user={user} title="write">
-      {preview && <ComposePreview user={user} body={body} executionOutput={previewExecutionOutput}
-        location={previewLocation} backPath={showBack ? returnPath : undefined} />}
+      {preview && (
+        <ComposePreview user={user} body={body} executionOutput={previewExecutionOutput} location={previewLocation}
+          backPath={showBack ? returnPath : undefined} />
+      )}
       {!preview && (
         <div className={`page-header compose-heading-row${showBack ? ' compose-heading-row-with-back' : ''}`}>
-          <h2>What’s on your mind, <span className="compose-heading-at">@</span>{user.handle}?</h2>
+          <h2>
+            What’s on your mind, <span className="compose-heading-at">@</span>
+            {user.handle}?
+          </h2>
           {showBack && <a className="profile-edit-link compose-back-link" href={returnPath}>back</a>}
         </div>
       )}
@@ -53,19 +58,21 @@ export function Compose(
   )
 }
 
-export function AnonymousCompose({ body = '', error, preview = false, previewExecutionOutput, previewLocation,
-  returnPath = '/' }: {
+export function AnonymousCompose(
+  { body = '', error, preview = false, previewExecutionOutput, previewLocation, returnPath = '/' }: {
     body?: string
     error?: string
     preview?: boolean
     previewExecutionOutput?: string | null
     previewLocation?: LocationView
     returnPath?: string
-  }) {
+  },
+) {
   return (
     <Layout title="write">
-      {preview && <ComposePreview user={null} body={body} executionOutput={previewExecutionOutput}
-        location={previewLocation} />}
+      {preview && (
+        <ComposePreview user={null} body={body} executionOutput={previewExecutionOutput} location={previewLocation} />
+      )}
       <AnonymousWriteForm body={body} error={error} returnPath={returnPath} />
     </Layout>
   )
@@ -104,29 +111,32 @@ export function ComposePreview({ user, body, executionOutput, location, backPath
 export function WriteForm(
   { user, error, body = '', returnPath = '/', suggestionSearch, draftId, autoFocus = false, embedded = false,
     showBack = false }: {
-    user: User
-    error?: string
-    body?: string
-    returnPath?: string
-    suggestionSearch?: PostingSuggestionSearch | null
-    draftId?: string
-    autoFocus?: boolean
-    embedded?: boolean
-    showBack?: boolean
-  },
+      user: User
+      error?: string
+      body?: string
+      returnPath?: string
+      suggestionSearch?: PostingSuggestionSearch | null
+      draftId?: string
+      autoFocus?: boolean
+      embedded?: boolean
+      showBack?: boolean
+    },
 ) {
   if (!canPublishPosts(user)) return null
   const helpId = embedded ? 'embedded-posting-help' : 'write-posting-help'
   const moreActions = (
     <>
       <button className="secondary-action compose-autotag-action" name="action" value="autotag"
-        title="Enrich post with hashtags">
+        title="Enrich post with hashtags"
+      >
         autotag
       </button>
-      <button className="secondary-action" name="action" value="preview"
-        title="Preview this post before publishing">preview</button>
-      <button className="secondary-action" name="action" value="draft"
-        title="Save this post as a draft" formAction={draftId ? `/drafts/${draftId}` : undefined}>
+      <button className="secondary-action" name="action" value="preview" title="Preview this post before publishing">
+        preview
+      </button>
+      <button className="secondary-action" name="action" value="draft" title="Save this post as a draft"
+        formAction={draftId ? `/drafts/${draftId}` : undefined}
+      >
         draft
       </button>
     </>
@@ -151,10 +161,10 @@ export function WriteForm(
         <FormMessage error={error} />
         <div className="compose-editor-row">
           <textarea className="form-control" name="body" maxLength={POST_MAX} autoFocus={autoFocus}
-            accessKey={embedded ? 'w' : undefined}
-            defaultValue={body} placeholder={embedded ? `What’s on your mind, @${user.handle}?` : undefined}
-            aria-label={`What’s on your mind, @${user.handle}?`}
-            autoComplete="off" inputMode="text" enterKeyHint="enter" />
+            accessKey={embedded ? 'w' : undefined} defaultValue={body}
+            placeholder={embedded ? `What’s on your mind, @${user.handle}?` : undefined}
+            aria-label={`What’s on your mind, @${user.handle}?`} autoComplete="off" inputMode="text"
+            enterKeyHint="enter" />
           <PostingSuggestionResults search={suggestionSearch} />
           {controls}
         </div>
@@ -172,13 +182,14 @@ export function AnonymousWriteForm({ returnPath = '/', error, body = '' }: {
   const moreActions = (
     <>
       <button className="secondary-action compose-autotag-action" name="action" value="autotag"
-        title="Enrich post with hashtags">
+        title="Enrich post with hashtags"
+      >
         autotag
       </button>
-      <button className="secondary-action" name="action" value="preview"
-        title="Preview this post before publishing">preview</button>
-      <button className="secondary-action" name="action" value="draft"
-        title="Save this post as a draft">draft</button>
+      <button className="secondary-action" name="action" value="preview" title="Preview this post before publishing">
+        preview
+      </button>
+      <button className="secondary-action" name="action" value="draft" title="Save this post as a draft">draft</button>
     </>
   )
   return (
@@ -188,14 +199,15 @@ export function AnonymousWriteForm({ returnPath = '/', error, body = '' }: {
         <input type="hidden" name="embedded" value="1" />
         <FormMessage error={error} />
         <div className="compose-editor-row">
-          <textarea className="form-control" name="body" maxLength={POST_MAX}
-            defaultValue={body}
-            placeholder="What's on your mind?" aria-label="What's on your mind?"
-            autoComplete="off" inputMode="text" enterKeyHint="enter" />
+          <textarea className="form-control" name="body" maxLength={POST_MAX} defaultValue={body}
+            placeholder="What's on your mind?" aria-label="What's on your mind?" autoComplete="off" inputMode="text"
+            enterKeyHint="enter" />
           <div className="composefoot">
             <PostingHelp controlledBy={helpId} actions={moreActions} />
             <FormActions secondary={
-              <span className="edit-post-actions"><PostingHelpAction id={helpId} /></span>
+              <span className="edit-post-actions">
+                <PostingHelpAction id={helpId} />
+              </span>
             } primary={<button className="button" title="Join and publish this post">post →</button>} />
           </div>
         </div>

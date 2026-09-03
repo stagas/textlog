@@ -49,9 +49,11 @@ export function displayedExecutionOutput(value: string) {
   const lineLimited = lines.length > MAX_OUTPUT_LINES
     ? [...lines.slice(0, MAX_OUTPUT_LINES - 2), '…', lines.at(-1)!]
     : lines
-  return lineLimited.map(line => line.length <= MAX_OUTPUT_LINE_LENGTH
-    ? line
-    : `${line.slice(0, MAX_OUTPUT_LINE_LENGTH - 1)}…`).join('\n')
+  return lineLimited.map(line =>
+    line.length <= MAX_OUTPUT_LINE_LENGTH
+      ? line
+      : `${line.slice(0, MAX_OUTPUT_LINE_LENGTH - 1)}…`
+  ).join('\n')
 }
 
 async function executeDevelopment(code: ExecutableCode) {
@@ -59,8 +61,8 @@ async function executeDevelopment(code: ExecutableCode) {
     return `Execution error: development mode only supports JavaScript (received ${code.language}).`
   }
   const output: string[] = []
-  const write = (...values: unknown[]) => output.push(values.map(value =>
-    typeof value === 'string' ? value : Bun.inspect(value)).join(' '))
+  const write = (...values: unknown[]) =>
+    output.push(values.map(value => typeof value === 'string' ? value : Bun.inspect(value)).join(' '))
   const context = vm.createContext({
     console: { log: write, info: write, warn: write, error: write },
   }, { codeGeneration: { strings: false, wasm: false } })
@@ -116,7 +118,9 @@ export async function executePostCode(body: string, environment = Bun.env.NODE_E
   const startedAt = performance.now()
   try {
     const output = environment === 'production'
-      ? await executePiston(code, pistonUrl?.trim() || (() => { throw new Error('PISTON_URL is not configured') })())
+      ? await executePiston(code, pistonUrl?.trim() || (() => {
+        throw new Error('PISTON_URL is not configured')
+      })())
       : await executeDevelopment(code)
     logInfo(`code execution language=${code.language} status=succeeded output_bytes=${Buffer.byteLength(output)} `
       + `duration_ms=${Math.round(performance.now() - startedAt)}`)

@@ -81,7 +81,7 @@ export function Connections(
                     <Pagination page={tagsPage} totalPages={Math.ceil(tagsTotal / TAG_PAGE_SIZE)} path={withFrom(
                       `/u/${profile.handle}?tab=following${sortQuery}${page > 1 ? `&page=${page}` : ''}`,
                     )} pageParam="tagsPage" label="Tags pagination" compact anchor="connections-tags-heading"
-                    instantScroll />
+                      instantScroll />
                   </div>
                 )
                 : <h2 id="connections-tags-heading">Tags</h2>}

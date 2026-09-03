@@ -167,8 +167,10 @@ describe('public API', () => {
       expect(response.status).toBe(200)
       expect(apiPosts.map((post: any) => post.id)).toEqual(web.posts.map(post => post.id))
       expect(apiPosts.every((post: any) => ['root', 'reply'].includes(post.classification))).toBeTrue()
-      expect(apiPosts.every((post: any) => Number.isInteger(post.depth) && typeof post.unread === 'boolean'
-        && typeof post.directed_to_viewer === 'boolean')).toBeTrue()
+      expect(apiPosts.every((post: any) =>
+        Number.isInteger(post.depth) && typeof post.unread === 'boolean'
+        && typeof post.directed_to_viewer === 'boolean'
+      )).toBeTrue()
       expect(apiPosts.find((post: any) => post.id === 11)).toMatchObject({ classification: 'reply', depth: 1 })
       expect(payload.pagination).toEqual({ next_cursor: null, previous_cursor: null })
     }
@@ -331,17 +333,29 @@ describe('public API', () => {
 
     for (const toMe of [false, true]) {
       const web = await executeDatabaseDomain(database, 'feeds.personalizedPage', {
-        user, page: 1, pageSize: 20, toMe, path: toMe ? '/to-me' : '/for-you', markRead: false,
+        user,
+        page: 1,
+        pageSize: 20,
+        toMe,
+        path: toMe ? '/to-me' : '/for-you',
+        markRead: false,
       })
       const api = await executeDatabaseDomain(database, 'api.threadedActivityFeed', {
-        user, origin: 'https://textlog.cc', toMe, page: 1, pageSize: 20,
+        user,
+        origin: 'https://textlog.cc',
+        toMe,
+        page: 1,
+        pageSize: 20,
       }) as any
-      const response = await request(app, `/api/v1/activities/${toMe ? 'to-me' : 'for-you'}/conversations?limit=20`,
-        { headers: { authorization: `Bearer ${token}` } })
+      const response = await request(app, `/api/v1/activities/${toMe ? 'to-me' : 'for-you'}/conversations?limit=20`, {
+        headers: { authorization: `Bearer ${token}` },
+      })
       const httpApi = await response.json() as any
-      const eventIds = api.data.flatMap((item: any) => item.type === 'conversation'
-        ? item.conversation.posts.map((post: any) => post.activity_id)
-        : [item.activity.id])
+      const eventIds = api.data.flatMap((item: any) =>
+        item.type === 'conversation'
+          ? item.conversation.posts.map((post: any) => post.activity_id)
+          : [item.activity.id]
+      )
 
       expect(new Set(eventIds)).toEqual(new Set(web.timeline.map(row => row.event_key)))
       expect(response.status).toBe(200)
@@ -610,9 +624,8 @@ describe('public API', () => {
       }
     }
     for (const [path, method] of [['/auth/request', 'post'], ['/auth/verify', 'post'], ['/me', 'patch'], ['/autotag',
-      'post'], ['/posts',
-      'post'], ['/posts/{id}', 'patch'], ['/posts/{id}/report', 'post'], ['/posts/{id}/poll/votes', 'post'], ['/drafts',
-      'post'], ['/drafts/{id}', 'patch']] as const)
+      'post'], ['/posts', 'post'], ['/posts/{id}', 'patch'], ['/posts/{id}/report', 'post'], ['/posts/{id}/poll/votes',
+      'post'], ['/drafts', 'post'], ['/drafts/{id}', 'patch']] as const)
     {
       expect(spec.paths[path][method].requestBody, `${method.toUpperCase()} ${path} needs a JSON request body`)
         .toBeTruthy()

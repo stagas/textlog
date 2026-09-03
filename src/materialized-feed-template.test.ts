@@ -1,6 +1,7 @@
 import { expect, test } from 'bun:test'
 import { hydrateMaterializedFeedCounts, materializedFeedTemplate } from './database-domain'
-import { materializedBody, memoryHitNeedsReadAction, personalizedReadActionOutOfSync } from './materialized-feed-service'
+import { materializedBody, memoryHitNeedsReadAction,
+  personalizedReadActionOutOfSync } from './materialized-feed-service'
 
 test('anonymous feed caches never expose unread-counter template tokens', () => {
   const html = '<nav><a href="/hot">hot</a><a href="/all">all</a></nav>'
@@ -56,8 +57,10 @@ test('personalized cache entries detect stale read-all markup', () => {
   expect(personalizedReadActionOutOfSync('for-you', count)).toBe(true)
   expect(personalizedReadActionOutOfSync('for-you', count
     + '<form action="/my-feed/read-all"></form>')).toBe(false)
-  expect(personalizedReadActionOutOfSync('for-you',
-    '<a href="/my-feed">my feed</a><form action="/my-feed/read-all"></form>')).toBe(true)
+  expect(
+    personalizedReadActionOutOfSync('for-you',
+      '<a href="/my-feed">my feed</a><form action="/my-feed/read-all"></form>'),
+  ).toBe(true)
 })
 
 test('personalized memory hits always run their page-read action', () => {

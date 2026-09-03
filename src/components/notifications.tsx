@@ -134,8 +134,10 @@ export function NotificationSettings({ user, publicKey, ios = false, returnPath 
             disable notifications
           </a>
         </div>
-        {publicKey && <script src="/notifications.js" data-vapid-public-key={publicKey} data-handle={user.handle}
-          data-return-href={returnHref} />}
+        {publicKey && (
+          <script src="/notifications.js" data-vapid-public-key={publicKey} data-handle={user.handle}
+            data-return-href={returnHref} />
+        )}
       </article>
     </Layout>
   )

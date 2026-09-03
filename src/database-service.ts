@@ -69,13 +69,15 @@ export function configureDatabaseService(service: DatabaseService) {
       notifyFeedMutation(operation, input, result)
       return result
     },
-    ...(service.callBackground ? {
-      async callBackground(operation, input) {
-        const result = await service.callBackground!(operation, input)
-        notifyFeedMutation(operation, input, result)
-        return result
-      },
-    } : {}),
+    ...(service.callBackground
+      ? {
+        async callBackground(operation, input) {
+          const result = await service.callBackground!(operation, input)
+          notifyFeedMutation(operation, input, result)
+          return result
+        },
+      }
+      : {}),
   }
 }
 

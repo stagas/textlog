@@ -37,24 +37,29 @@ describe('Google post translation', () => {
     const fetchMock = mock((_input: string | URL | Request, _init?: RequestInit) =>
       Promise.resolve(new Response(JSON.stringify({
         data: { translations: [{ translatedText: 'Already English', detectedSourceLanguage: 'en' }] },
-      }), { status: 200 })))
+      }), { status: 200 }))
+    )
     globalThis.fetch = fetchMock as unknown as typeof fetch
 
     await expect(translateToEnglish('𐑐𐑵𐑯', 'secret key')).resolves.toBeNull()
   })
 
   test('can preserve Google output when a moderator forces translation of English-detected text', async () => {
-    globalThis.fetch = mock(() => Promise.resolve(new Response(JSON.stringify({
-      data: { translations: [{ translatedText: 'Already English', detectedSourceLanguage: 'en' }] },
-    }), { status: 200 }))) as unknown as typeof fetch
+    globalThis.fetch = mock(() =>
+      Promise.resolve(new Response(JSON.stringify({
+        data: { translations: [{ translatedText: 'Already English', detectedSourceLanguage: 'en' }] },
+      }), { status: 200 }))
+    ) as unknown as typeof fetch
 
     await expect(translateToEnglish('Already English', 'secret key', true)).resolves.toBe('Already English')
   })
 
   test('can translate a moderator-selected source language into English', async () => {
-    const fetchMock = mock((_input: string | URL | Request, _init?: RequestInit) => Promise.resolve(new Response(JSON.stringify({
-      data: { translations: [{ translatedText: 'Γειά' }] },
-    }), { status: 200 })))
+    const fetchMock = mock((_input: string | URL | Request, _init?: RequestInit) =>
+      Promise.resolve(new Response(JSON.stringify({
+        data: { translations: [{ translatedText: 'Γειά' }] },
+      }), { status: 200 }))
+    )
     globalThis.fetch = fetchMock as unknown as typeof fetch
 
     await expect(translateText('Γειά', 'en', 'secret key', 'el')).resolves.toMatchObject({ text: 'Γειά' })

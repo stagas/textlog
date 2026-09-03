@@ -1,11 +1,11 @@
 import type { Hono } from 'hono'
 import { renderToStaticMarkup } from 'react-dom/server'
 import { Embed } from '../components/embed'
+import { normalizeHashtag } from '../content'
 import { databaseService } from '../database-service'
 import { ACCENT_CHOICES, type AccentChoice, EMBED_FONT_CHOICES, type EmbedFontChoice, THEME_CHOICES,
   type ThemeChoice } from '../theme'
 import type { PostView } from '../types'
-import { normalizeHashtag } from '../content'
 
 function choice<T extends readonly string[]>(value: string | undefined, choices: T, fallback: T[number]) {
   return choices.includes(value as T[number]) ? value as T[number] : fallback

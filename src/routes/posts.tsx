@@ -1,6 +1,7 @@
+import { executePostCode } from '../code-execution'
 import {
-  Compose,
   AnonymousCompose,
+  Compose,
   ConfirmDelete,
   ConfirmDraftDelete,
   Drafts,
@@ -10,7 +11,6 @@ import {
 } from '../components/pages'
 import { conversationTopPath, MAX_VISIBLE_REPLY_DEPTH, postAnchorId, postedPostPath,
   postedReplyPath } from '../components/post'
-import { executePostCode } from '../code-execution'
 import { databaseService } from '../database-service'
 import { moderatedContentDescription, moderateText, moderationMessage } from '../moderation'
 import { canPublishPosts } from '../posting-policy'
@@ -31,10 +31,10 @@ import { logError } from '../log'
 import { markdownPlainText } from '../markdown'
 import { renderPostOg } from '../og'
 import { cachedOgResponse, cacheOgResponse } from '../og-response-cache'
-import { normalizePostBody, POST_MAX, postBodyValidationMessage, validPostBody } from '../post-body'
 import { autotagText } from '../openrouter'
-import { postRateLimitMessage } from '../post-rate-limit'
 import { pollDisplayBody } from '../polls'
+import { normalizePostBody, POST_MAX, postBodyValidationMessage, validPostBody } from '../post-body'
+import { postRateLimitMessage } from '../post-rate-limit'
 import { wakePostPushWorker } from '../push'
 import { normalizeSearchQuery } from '../search'
 import { toggleTodo } from '../todos'
@@ -131,8 +131,11 @@ export async function previewLocation(body: string) {
       displayName: location.displayName }
     const [title, ...description] = location.displayName.split(',').map(part => part.trim()).filter(Boolean)
     return { ...metadata, url: osmLocationUrl(metadata), preview: {
-      imageUrl: location.imageUrl, imageWidth: location.imageWidth, imageHeight: location.imageHeight,
-      title: title || query, description: description.join(', ') || location.displayName,
+      imageUrl: location.imageUrl,
+      imageWidth: location.imageWidth,
+      imageHeight: location.imageHeight,
+      title: title || query,
+      description: description.join(', ') || location.displayName,
     } }
   }
   catch (error) {
@@ -167,8 +170,10 @@ export function registerPostsRoutes(app: Hono) {
     try {
       const moderation = await moderateText(body)
       if (!moderation.ok) {
-        const response = page(<Compose user={user} body={body} error={moderationMessage(moderation)}
-          returnPath={pending.returnPath} />, moderation.reason === 'flagged' ? 422 : 503)
+        const response = page(
+          <Compose user={user} body={body} error={moderationMessage(moderation)} returnPath={pending.returnPath} />,
+          moderation.reason === 'flagged' ? 422 : 503,
+        )
         response.headers.append('set-cookie', clearPendingPostCookie())
         return response
       }
@@ -184,8 +189,11 @@ export function registerPostsRoutes(app: Hono) {
         pendingKey: pending.key,
       })
       if (result.status === 'rate_limited') {
-        const response = page(<Compose user={user} body={body} error={postRateLimitMessage(result.retryAfter)}
-          returnPath={pending.returnPath} />, 429)
+        const response = page(
+          <Compose user={user} body={body} error={postRateLimitMessage(result.retryAfter)}
+            returnPath={pending.returnPath} />,
+          429,
+        )
         response.headers.append('set-cookie', clearPendingPostCookie())
         return response
       }
@@ -205,8 +213,10 @@ export function registerPostsRoutes(app: Hono) {
     }
     catch (error) {
       logError('GET /pending-post', error)
-      const response = page(<Compose user={user} body={body} error={saveFailureMessage}
-        returnPath={pending.returnPath} />, 500)
+      const response = page(
+        <Compose user={user} body={body} error={saveFailureMessage} returnPath={pending.returnPath} />,
+        500,
+      )
       response.headers.append('set-cookie', clearPendingPostCookie())
       return response
     }
@@ -237,7 +247,8 @@ export function registerPostsRoutes(app: Hono) {
         loaded.status === 'forbidden' ? 403 : 404)
     }
     return page(
-      <Reply user={user} post={loaded.post} showForm body={draft.body} draftId={draft.public_id} returnPath={draftsPath} />,
+      <Reply user={user} post={loaded.post} showForm body={draft.body} draftId={draft.public_id}
+        returnPath={draftsPath} />,
     )
   })
 
@@ -288,7 +299,8 @@ export function registerPostsRoutes(app: Hono) {
     const user = currentUser(c.req.raw)
     const requestUrl = new URL(c.req.url)
     const postPageCacheKey = `${user?.id ?? 'anonymous'}\0${
-      locationMapProvider(c.req.header('user-agent') || '')}\0${requestUrl.pathname}${requestUrl.search}`
+      locationMapProvider(c.req.header('user-agent') || '')
+    }\0${requestUrl.pathname}${requestUrl.search}`
     const cached = user ? null : cachedAnonymousPostPage(postPageCacheKey)
     if (cached) return cached
     const detail = await databaseService().call('posts.detail', { id, viewerId: user?.id ?? -1 })
@@ -316,7 +328,9 @@ export function registerPostsRoutes(app: Hono) {
     const requestedReplyToId = Number(c.req.query('to'))
     const replyToId = c.req.query('reply_to') === 'post'
       ? null
-      : Number.isInteger(requestedReplyToId) ? requestedReplyToId : postAnchorId(returnPath)
+      : Number.isInteger(requestedReplyToId)
+      ? requestedReplyToId
+      : postAnchorId(returnPath)
     const replyTo = Number.isInteger(replyToId) ? replies.find(reply => reply.id === replyToId) : undefined
     const configuredOrigin = Bun.env.APP_URL?.replace(/\/$/, '')
     const origin = configuredOrigin || new URL(c.req.url).origin
@@ -334,15 +348,17 @@ export function registerPostsRoutes(app: Hono) {
       const requestedReplyToId = Number(c.req.query('to'))
       const replyToId = c.req.query('reply_to') === 'post'
         ? null
-        : Number.isInteger(requestedReplyToId) ? requestedReplyToId : postAnchorId(returnPath)
+        : Number.isInteger(requestedReplyToId)
+        ? requestedReplyToId
+        : postAnchorId(returnPath)
       const replyTo = Number.isInteger(replyToId) ? replies.find(reply => reply.id === replyToId) : undefined
       const requestedBackTargetId = Number(c.req.query('back'))
       const backTargetId = Number.isInteger(requestedBackTargetId) ? requestedBackTargetId : undefined
       return page(
         <Reply user={user} post={post} replies={replies} showForm autoFocus={c.req.query('reply') === '1'}
-          replyTo={replyTo} backTargetId={backTargetId} returnPath={returnPath}
-          topHref={topHref} flatHref={flatHref} treeHref={treeHref} flat={flat}
-          showReport={c.req.query('report') === '1'} reported={c.req.query('reported') === '1'} social={social} />,
+          replyTo={replyTo} backTargetId={backTargetId} returnPath={returnPath} topHref={topHref} flatHref={flatHref}
+          treeHref={treeHref} flat={flat} showReport={c.req.query('report') === '1'}
+          reported={c.req.query('reported') === '1'} social={social} />,
       )
     }
     const rendered = page(
@@ -379,10 +395,14 @@ export function registerPostsRoutes(app: Hono) {
         const result = await autotagText(body)
         const enrichedBody = result.ok ? normalizePostBody(result.body) : body
         const valid = result.ok && validPostBody(enrichedBody)
-        return page(<AnonymousCompose body={valid ? enrichedBody : body} returnPath={returnPath}
-          error={result.ok && !valid
+        return page(
+          <AnonymousCompose body={valid ? enrichedBody : body} returnPath={returnPath} error={result.ok && !valid
             ? `The message is too big to autotag within the ${POST_MAX}-character limit. Edit it down and try again.`
-            : result.ok ? undefined : result.message} />, result.ok ? 200 : 503)
+            : result.ok
+            ? undefined
+            : result.message} />,
+          result.ok ? 200 : 503,
+        )
       }
       if (!validPostBody(body)) {
         const destination = new URL(returnPath, c.req.url)
@@ -397,8 +417,10 @@ export function registerPostsRoutes(app: Hono) {
           destination.searchParams.set('write_body', body)
           return redirect(destination.pathname + destination.search)
         }
-        return page(<AnonymousCompose body={body} preview returnPath={returnPath}
-          previewExecutionOutput={await executePostCode(body)} previewLocation={await previewLocation(body)} />)
+        return page(
+          <AnonymousCompose body={body} preview returnPath={returnPath}
+            previewExecutionOutput={await executePostCode(body)} previewLocation={await previewLocation(body)} />,
+        )
       }
       return redirect('/enter?next=' + encodeURIComponent('/pending-post'), pendingPostCookie(body, returnPath))
     }
@@ -416,10 +438,15 @@ export function registerPostsRoutes(app: Hono) {
       const result = await autotagText(body)
       const enrichedBody = result.ok ? normalizePostBody(result.body) : body
       const valid = result.ok && validPostBody(enrichedBody)
-      return page(<Compose user={user} body={valid ? enrichedBody : body} draftId={editingDraftId}
-        returnPath={returnPath} showBack={showBack} error={result.ok && !valid
+      return page(
+        <Compose user={user} body={valid ? enrichedBody : body} draftId={editingDraftId} returnPath={returnPath}
+          showBack={showBack} error={result.ok && !valid
           ? `The message is too big to autotag within the ${POST_MAX}-character limit. Edit it down and try again.`
-          : result.ok ? undefined : result.message} />, result.ok ? 200 : 503)
+          : result.ok
+          ? undefined
+          : result.message} />,
+        result.ok ? 200 : 503,
+      )
     }
     if (!validPostBody(body)) {
       if (f.embedded === '1') {
@@ -450,9 +477,11 @@ export function registerPostsRoutes(app: Hono) {
         destination.searchParams.set('write_draft_id', result.id)
         return redirect(destination.pathname + destination.search)
       }
-      return page(<Compose user={user} body={body} draftId={result.id} preview
-        previewExecutionOutput={await executePostCode(body)} previewLocation={await previewLocation(body)}
-        returnPath={returnPath} showBack={showBack} />)
+      return page(
+        <Compose user={user} body={body} draftId={result.id} preview
+          previewExecutionOutput={await executePostCode(body)} previewLocation={await previewLocation(body)}
+          returnPath={returnPath} showBack={showBack} />,
+      )
     }
     if (f.action === 'draft') {
       const result = await databaseService().call('drafts.save', {
@@ -613,10 +642,15 @@ export function registerPostsRoutes(app: Hono) {
       const result = await autotagText(body)
       const enrichedBody = result.ok ? normalizePostBody(result.body) : body
       const valid = result.ok && validPostBody(enrichedBody)
-      return page(<EditPost user={user} post={post} parent={parent} body={valid ? enrichedBody : body}
-        returnPath={returnPath} moderator={moderating} error={result.ok && !valid
+      return page(
+        <EditPost user={user} post={post} parent={parent} body={valid ? enrichedBody : body} returnPath={returnPath}
+          moderator={moderating} error={result.ok && !valid
           ? `The message is too big to autotag within the ${POST_MAX}-character limit. Edit it down and try again.`
-          : result.ok ? undefined : result.message} />, result.ok ? 200 : 503)
+          : result.ok
+          ? undefined
+          : result.message} />,
+        result.ok ? 200 : 503,
+      )
     }
     if (!validPostBody(body)) {
       return page(
@@ -743,14 +777,16 @@ export function registerPostsRoutes(app: Hono) {
       const result = await autotagText(body)
       const enrichedBody = result.ok ? normalizePostBody(result.body) : body
       const valid = result.ok && validPostBody(enrichedBody)
-      return renderReplyState({ body: valid ? enrichedBody : body,
-        draftId: editingDraftId, returnPath, error: result.ok && !valid
+      return renderReplyState({ body: valid ? enrichedBody : body, draftId: editingDraftId, returnPath,
+        error: result.ok && !valid
           ? `The message is too big to autotag within the ${POST_MAX}-character limit. Edit it down and try again.`
-          : result.ok ? undefined : result.message }, result.ok ? 200 : 503)
+          : result.ok
+          ? undefined
+          : result.message }, result.ok ? 200 : 503)
     }
     if (!validPostBody(body)) {
-      return renderReplyState({ error: postBodyValidationMessage(body), body,
-        draftId: editingDraftId, returnPath }, 400)
+      return renderReplyState({ error: postBodyValidationMessage(body), body, draftId: editingDraftId, returnPath },
+        400)
     }
     if (f.action === 'preview') {
       const result = await databaseService().call('drafts.save', {
@@ -778,8 +814,8 @@ export function registerPostsRoutes(app: Hono) {
     try {
       const moderation = await moderateText(body)
       if (!moderation.ok) {
-        return renderReplyState({ error: moderationMessage(moderation), body,
-          draftId: editingDraftId, returnPath }, moderation.reason === 'flagged' ? 422 : 503)
+        return renderReplyState({ error: moderationMessage(moderation), body, draftId: editingDraftId, returnPath },
+          moderation.reason === 'flagged' ? 422 : 503)
       }
       const result = await databaseService().call('api.createPost', {
         userId: user.id,

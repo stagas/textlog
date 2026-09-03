@@ -40,8 +40,8 @@ import {
   RecapEmails,
   Reply,
 } from './components/pages'
-import { approximatePostAge, conversationTopPath, FeedThreads, isProbablyNonEnglish, Post, postAgeTitle,
-  postAnchorId, postedPostPath, postedReplyPath, PreviewPost, replyAnchorReturnPath, shortPostAge,
+import { approximatePostAge, conversationTopPath, FeedThreads, isProbablyNonEnglish, Post, postAgeTitle, postAnchorId,
+  postedPostPath, postedReplyPath, PreviewPost, replyAnchorReturnPath, shortPostAge,
   ThreadReplies } from './components/post'
 import { searchPersonReturnPath, searchPostReturnPath, SearchResults } from './components/search'
 
@@ -83,9 +83,11 @@ test('write page omits the redundant header write action', () => {
 })
 
 test('write page shows a back button above the form when a return path is available', () => {
-  const user = { id: 1, handle: 'reader', email: 'reader@example.com', bio: '',
-    email_verified_at: '2026-01-01', handle_chosen_at: '2026-01-01' }
-  const html = renderToStaticMarkup(React.createElement(Compose, { user, returnPath: '/latest?page=2', showBack: true }))
+  const user = { id: 1, handle: 'reader', email: 'reader@example.com', bio: '', email_verified_at: '2026-01-01',
+    handle_chosen_at: '2026-01-01' }
+  const html = renderToStaticMarkup(
+    React.createElement(Compose, { user, returnPath: '/latest?page=2', showBack: true }),
+  )
 
   expect(html).toContain('class="profile-edit-link compose-back-link" href="/latest?page=2">back</a>')
   expect(html).toContain('<div class="page-header compose-heading-row compose-heading-row-with-back"><h2>'
@@ -97,10 +99,14 @@ test('write page shows a back button above the form when a return path is availa
 })
 
 test('write preview places its heading and back link in the same row', () => {
-  const user = { id: 1, handle: 'reader', email: 'reader@example.com', bio: '',
-    email_verified_at: '2026-01-01', handle_chosen_at: '2026-01-01' }
+  const user = { id: 1, handle: 'reader', email: 'reader@example.com', bio: '', email_verified_at: '2026-01-01',
+    handle_chosen_at: '2026-01-01' }
   const html = renderToStaticMarkup(React.createElement(Compose, {
-    user, body: 'Preview me', preview: true, returnPath: '/latest', showBack: true,
+    user,
+    body: 'Preview me',
+    preview: true,
+    returnPath: '/latest',
+    showBack: true,
   }))
 
   expect(html).toContain('<div class="compose-preview-heading"><h2>preview</h2>'
@@ -111,11 +117,12 @@ test('write preview places its heading and back link in the same row', () => {
 test('header write action appears outside feed pages', () => {
   const user = { id: 1, handle: 'reader', email: 'reader@example.com', bio: '', handle_chosen_at: '2026-01-01',
     draft_count: 1 }
-  const renderPath = (path: string) => withAppearance(new Request(`https://textlog.test${path}`), () =>
-    renderToStaticMarkup(React.createElement(Layout, {
-      user,
-      children: React.createElement('p', null, 'Page'),
-    })))
+  const renderPath = (path: string) =>
+    withAppearance(new Request(`https://textlog.test${path}`), () =>
+      renderToStaticMarkup(React.createElement(Layout, {
+        user,
+        children: React.createElement('p', null, 'Page'),
+      })))
 
   for (const path of ['/@', '/my-feed', '/hot', '/any', '/new', '/all']) {
     expect(renderPath(path)).not.toContain('class="button nav-write-action"')
@@ -263,10 +270,15 @@ test('replying to a threaded reply keeps the root page and places the composer a
     email_verified_at: '2026-08-01 10:00:00' }
   const post = { id: 9, user_id: 2, parent_id: null, body: 'Root note', created_at: '2026-08-23 10:00:00',
     deleted_at: null, handle: 'writer', reply_count: 1 }
-  const target = { id: 10, user_id: 3, parent_id: 9, body: 'Threaded reply #topic',
-    created_at: '2026-08-23 11:00:00', deleted_at: null, handle: 'friend', reply_count: 0, parent: post }
+  const target = { id: 10, user_id: 3, parent_id: 9, body: 'Threaded reply #topic', created_at: '2026-08-23 11:00:00',
+    deleted_at: null, handle: 'friend', reply_count: 0, parent: post }
   const page = renderToStaticMarkup(React.createElement(Reply, {
-    user, post, replies: [target], showForm: true, autoFocus: true, replyTo: target,
+    user,
+    post,
+    replies: [target],
+    showForm: true,
+    autoFocus: true,
+    replyTo: target,
     returnPath: '/all#post-10',
   }))
 
@@ -377,8 +389,8 @@ test('compose previews map locations with the stored-style hovercard', () => {
     previewLocation: { query: 'Kallikratis, Crete', latitude: 35.2, longitude: 24.2,
       displayName: 'Kallikratis, Crete, Greece',
       url: 'https://www.openstreetmap.org/?mlat=35.2&mlon=24.2#map=3/35.2/24.2',
-      preview: { imageUrl: '/uploads/location-maps/test.png', title: 'Kallikratis',
-        description: 'Crete, Greece', imageWidth: 600, imageHeight: 315 } },
+      preview: { imageUrl: '/uploads/location-maps/test.png', title: 'Kallikratis', description: 'Crete, Greece',
+        imageWidth: 600, imageHeight: 315 } },
   }))
   expect(html).toContain('href="/tag/map')
   expect(html).toContain('noopener noreferrer">Kallikratis, Crete</a><a class="remote-link-popover"')
@@ -518,8 +530,8 @@ test('draft cards linkify mentions, hashtags, and links', () => {
   const user = { id: 1, handle: 'writer', email: 'writer@example.com', bio: '' }
   const html = renderToStaticMarkup(React.createElement(Drafts, {
     user,
-    drafts: [{ id: 7, public_id: 'draft-public-id', parent_id: null, body: '@reader #world https://example.com', created_at: '2026-08-23 10:00:00',
-      updated_at: '2026-08-23 10:00:00' }],
+    drafts: [{ id: 7, public_id: 'draft-public-id', parent_id: null, body: '@reader #world https://example.com',
+      created_at: '2026-08-23 10:00:00', updated_at: '2026-08-23 10:00:00' }],
   }))
 
   expect(html).toContain('<a href="/u/reader?from=%2Fpost%2F-7%23post--7">@reader</a>')
@@ -551,7 +563,9 @@ test('posting helpers use the compact action and show copyable highlighted resul
   expect(html).toContain('<label class="secondary-action posting-help-action" for="write-posting-help"')
   expect(html).toContain('title="Show more writing actions and help"')
   expect(html).toContain('/>more</label>')
-  expect(html).toContain('id="write-posting-help" type="checkbox" aria-controls="write-posting-help-content" checked=""')
+  expect(html).toContain(
+    'id="write-posting-help" type="checkbox" aria-controls="write-posting-help-content" checked=""',
+  )
   expect(html).toContain('class="posting-help-actions"')
   expect(html.indexOf('value="search-hashtags"')).toBeLessThan(html.indexOf('class="posting-help-actions"'))
   expect(html).toContain('<span class="posting-help-limits">500 chars / 15 lines max</span>')
@@ -737,10 +751,9 @@ test('editing a reply shows its parent context above the textarea', () => {
   expect(preview).toContain('<div class="reply-preview"><p class="eyebrow">preview</p>')
   expect(preview).toContain('Edited reply')
   expect(preview.indexOf('<div class="reply-preview">')).toBeLessThan(preview.indexOf('<textarea'))
-  const previewPost = preview.slice(preview.indexOf('<div class="reply-preview">'),
-    preview.indexOf(
-      '<div class="panel panel-surface panel-medium replybox reply-compose edit-reply-compose">',
-    ))
+  const previewPost = preview.slice(preview.indexOf('<div class="reply-preview">'), preview.indexOf(
+    '<div class="panel panel-surface panel-medium replybox reply-compose edit-reply-compose">',
+  ))
   expect(previewPost).toContain('<span class="post-context post-context-author">you</span>')
   expect(previewPost).toContain(
     '<span class="post-context">replied to</span><span class="preview-context-target">@author</span>',
@@ -1039,15 +1052,20 @@ test('folded feed conversations preview the two newest replies from a recent bur
 
 test('Any reply cards return through the retained sample with their conversation expanded', () => {
   const user = { id: 1, handle: 'reader', email: 'reader@example.com', bio: '' }
-  const root = { id: 20, user_id: 2, parent_id: null, body: 'Root', created_at: '2026-08-20 09:00:00',
-    deleted_at: null, handle: 'root', reply_count: 3 }
+  const root = { id: 20, user_id: 2, parent_id: null, body: 'Root', created_at: '2026-08-20 09:00:00', deleted_at: null,
+    handle: 'root', reply_count: 3 }
   const reply = (id: number, created_at: string) => ({ id, user_id: id, parent_id: root.id, body: `Reply ${id}`,
     created_at, deleted_at: null, handle: `reply${id}`, reply_count: 0, parent: root })
   const html = renderToStaticMarkup(React.createElement(PublicFeed, {
     user,
     path: '/any?seed=9l',
-    feed: { posts: [root, reply(21, '2026-08-20 10:00:00'), reply(22, '2026-08-20 11:00:00'),
-      reply(23, '2026-08-20 12:00:00')], page: 1, totalItems: 1, totalPages: 1 },
+    feed: {
+      posts: [root, reply(21, '2026-08-20 10:00:00'), reply(22, '2026-08-20 11:00:00'),
+        reply(23, '2026-08-20 12:00:00')],
+      page: 1,
+      totalItems: 1,
+      totalPages: 1,
+    },
   }))
 
   expect(html).toContain(
@@ -1060,8 +1078,8 @@ test('Any reply cards return through the retained sample with their conversation
 })
 
 test('folded feed conversations distinguish previews from different depths', () => {
-  const root = { id: 5, user_id: 1, parent_id: null, body: 'Root', created_at: '2026-08-23 09:00:00',
-    deleted_at: null, handle: 'root', reply_count: 3 }
+  const root = { id: 5, user_id: 1, parent_id: null, body: 'Root', created_at: '2026-08-23 09:00:00', deleted_at: null,
+    handle: 'root', reply_count: 3 }
   const shallow = { id: 6, user_id: 2, parent_id: 5, body: 'Shallow preview', created_at: '2026-08-23 12:00:00',
     deleted_at: null, handle: 'shallow', reply_count: 0, parent: root }
   const hidden = { id: 7, user_id: 3, parent_id: 5, body: 'Hidden branch', created_at: '2026-08-20 10:00:00',
@@ -1081,14 +1099,14 @@ test('folded feed conversations distinguish previews from different depths', () 
 })
 
 test('folded feed conversations do not double-indent a preview below another preview', () => {
-  const root = { id: 50, user_id: 1, parent_id: null, body: 'Root', created_at: '2026-08-20 09:00:00',
-    deleted_at: null, handle: 'root', reply_count: 3 }
+  const root = { id: 50, user_id: 1, parent_id: null, body: 'Root', created_at: '2026-08-20 09:00:00', deleted_at: null,
+    handle: 'root', reply_count: 3 }
   const hidden = { id: 51, user_id: 2, parent_id: 50, body: 'Hidden', created_at: '2026-08-20 10:00:00',
     deleted_at: null, handle: 'hidden', reply_count: 0, parent: root }
-  const parentPreview = { id: 52, user_id: 3, parent_id: 50, body: 'Parent preview',
-    created_at: '2026-08-23 11:00:00', deleted_at: null, handle: 'parent', reply_count: 1, parent: root }
-  const childPreview = { id: 53, user_id: 4, parent_id: 52, body: 'Child preview',
-    created_at: '2026-08-23 12:00:00', deleted_at: null, handle: 'child', reply_count: 0, parent: parentPreview }
+  const parentPreview = { id: 52, user_id: 3, parent_id: 50, body: 'Parent preview', created_at: '2026-08-23 11:00:00',
+    deleted_at: null, handle: 'parent', reply_count: 1, parent: root }
+  const childPreview = { id: 53, user_id: 4, parent_id: 52, body: 'Child preview', created_at: '2026-08-23 12:00:00',
+    deleted_at: null, handle: 'child', reply_count: 0, parent: parentPreview }
   const html = renderToStaticMarkup(React.createElement(FeedThreads, {
     user: null,
     returnPath: '/hot',
@@ -1104,15 +1122,14 @@ test('folded feed conversations flatten a deleted ancestor on a collapsed previe
     deleted_at: null, handle: 'root', reply_count: 4 }
   const branch = { id: 177, user_id: 2, parent_id: root.id, body: 'Branch', created_at: '2026-08-07 19:36:41',
     deleted_at: null, handle: 'branch', reply_count: 3, parent: root }
-  const deleted = { id: 200, user_id: 3, parent_id: branch.id, body: '(deleted)',
-    created_at: '2026-08-07 20:10:08', deleted_at: '2026-08-19 19:23:45', handle: 'deleted',
-    reply_count: 1, parent: branch }
-  const deep = { id: 211, user_id: 4, parent_id: deleted.id, body: 'Deep preview',
-    created_at: '2026-08-07 20:36:19', deleted_at: null, handle: 'deep', reply_count: 0, parent: deleted }
+  const deleted = { id: 200, user_id: 3, parent_id: branch.id, body: '(deleted)', created_at: '2026-08-07 20:10:08',
+    deleted_at: '2026-08-19 19:23:45', handle: 'deleted', reply_count: 1, parent: branch }
+  const deep = { id: 211, user_id: 4, parent_id: deleted.id, body: 'Deep preview', created_at: '2026-08-07 20:36:19',
+    deleted_at: null, handle: 'deep', reply_count: 0, parent: deleted }
   const shallow = { id: 360, user_id: 5, parent_id: branch.id, body: 'Shallow preview',
     created_at: '2026-08-08 01:56:40', deleted_at: null, handle: 'shallow', reply_count: 0, parent: branch }
-  const older = { id: 191, user_id: 6, parent_id: branch.id, body: 'Older reply',
-    created_at: '2026-08-07 19:58:33', deleted_at: null, handle: 'older', reply_count: 0, parent: branch }
+  const older = { id: 191, user_id: 6, parent_id: branch.id, body: 'Older reply', created_at: '2026-08-07 19:58:33',
+    deleted_at: null, handle: 'older', reply_count: 0, parent: branch }
   const html = renderToStaticMarkup(React.createElement(FeedThreads, {
     user: null,
     returnPath: '/hot',
@@ -1124,8 +1141,8 @@ test('folded feed conversations flatten a deleted ancestor on a collapsed previe
 })
 
 test('folded feed conversations render previews beyond the normal thread depth limit', () => {
-  const root = { id: 60, user_id: 1, parent_id: null, body: 'Root', created_at: '2026-08-20 09:00:00',
-    deleted_at: null, handle: 'root', reply_count: 1 }
+  const root = { id: 60, user_id: 1, parent_id: null, body: 'Root', created_at: '2026-08-20 09:00:00', deleted_at: null,
+    handle: 'root', reply_count: 1 }
   const replies: any[] = []
   let parent: any = root
   for (let id = 61; id <= 67; id++) {
@@ -1148,8 +1165,8 @@ test('folded feed conversations render previews beyond the normal thread depth l
 })
 
 test('new unread replies use the normal feed conversation folding rules', () => {
-  const root = { id: 10, user_id: 1, parent_id: null, body: 'Root', created_at: '2026-08-23 09:00:00',
-    deleted_at: null, handle: 'root', reply_count: 3 }
+  const root = { id: 10, user_id: 1, parent_id: null, body: 'Root', created_at: '2026-08-23 09:00:00', deleted_at: null,
+    handle: 'root', reply_count: 3 }
   const reply = (id: number, created_at: string) => ({ id, user_id: 2, parent_id: root.id, body: `Reply ${id}`,
     created_at, deleted_at: null, handle: 'reply', reply_count: 0, parent: root })
   const newest = reply(13, '2026-08-23 12:00:00')
@@ -1165,24 +1182,26 @@ test('new unread replies use the normal feed conversation folding rules', () => 
 })
 
 test('folded feed conversations show a gap above a preview when same-depth replies are hidden', () => {
-  const root = { id: 20, user_id: 1, parent_id: null, body: 'Root', created_at: '2026-08-20 09:00:00',
-    deleted_at: null, handle: 'root', reply_count: 2 }
-  const older = { id: 21, user_id: 2, parent_id: root.id, body: 'Hidden sibling',
-    created_at: '2026-08-20 10:00:00', deleted_at: null, handle: 'older', reply_count: 0, parent: root }
-  const newest = { id: 22, user_id: 3, parent_id: root.id, body: 'Visible preview',
-    created_at: '2026-08-23 11:00:01', deleted_at: null, handle: 'newest', reply_count: 0, parent: root }
+  const root = { id: 20, user_id: 1, parent_id: null, body: 'Root', created_at: '2026-08-20 09:00:00', deleted_at: null,
+    handle: 'root', reply_count: 2 }
+  const older = { id: 21, user_id: 2, parent_id: root.id, body: 'Hidden sibling', created_at: '2026-08-20 10:00:00',
+    deleted_at: null, handle: 'older', reply_count: 0, parent: root }
+  const newest = { id: 22, user_id: 3, parent_id: root.id, body: 'Visible preview', created_at: '2026-08-23 11:00:01',
+    deleted_at: null, handle: 'newest', reply_count: 0, parent: root }
   const html = renderToStaticMarkup(React.createElement(FeedThreads, {
     user: null,
     returnPath: '/latest',
     posts: [root, older, newest],
   }))
 
-  expect(html).toMatch(/collapsed-preview-post[^>]*>[\s\S]*?for="feed-thread-fold-20" aria-label="Expand earlier replies">…<\/label>[\s\S]*?id="post-22"/)
+  expect(html).toMatch(
+    /collapsed-preview-post[^>]*>[\s\S]*?for="feed-thread-fold-20" aria-label="Expand earlier replies">…<\/label>[\s\S]*?id="post-22"/,
+  )
 })
 
 test('folded feed conversations show a gap when a same-depth preview path hides its post above', () => {
-  const root = { id: 30, user_id: 1, parent_id: null, body: 'Root', created_at: '2026-08-20 09:00:00',
-    deleted_at: null, handle: 'root', reply_count: 3 }
+  const root = { id: 30, user_id: 1, parent_id: null, body: 'Root', created_at: '2026-08-20 09:00:00', deleted_at: null,
+    handle: 'root', reply_count: 3 }
   const branch = { id: 31, user_id: 2, parent_id: root.id, body: 'Hidden same-depth branch',
     created_at: '2026-08-20 10:00:00', deleted_at: null, handle: 'branch', reply_count: 1, parent: root }
   const deepPreview = { id: 32, user_id: 3, parent_id: branch.id, body: 'Deep preview',
@@ -1195,12 +1214,14 @@ test('folded feed conversations show a gap when a same-depth preview path hides 
     posts: [root, branch, deepPreview, siblingPreview],
   }))
 
-  expect(html).toMatch(/collapsed-preview-post[^>]*>[\s\S]*?for="feed-thread-fold-30" aria-label="Expand earlier replies">…<\/label>[\s\S]*?id="post-32"/)
+  expect(html).toMatch(
+    /collapsed-preview-post[^>]*>[\s\S]*?for="feed-thread-fold-30" aria-label="Expand earlier replies">…<\/label>[\s\S]*?id="post-32"/,
+  )
 })
 
 test('folded feed conversations place a same-depth omission only before the oldest preview', () => {
-  const root = { id: 40, user_id: 1, parent_id: null, body: 'Root', created_at: '2026-08-20 09:00:00',
-    deleted_at: null, handle: 'root', reply_count: 4, direct_reply_count: 4 }
+  const root = { id: 40, user_id: 1, parent_id: null, body: 'Root', created_at: '2026-08-20 09:00:00', deleted_at: null,
+    handle: 'root', reply_count: 4, direct_reply_count: 4 }
   const visible = (id: number, created_at: string) => ({ id, user_id: id, parent_id: root.id, body: `Visible ${id}`,
     created_at, deleted_at: null, handle: `user${id}`, reply_count: 0, parent: root })
   const html = renderToStaticMarkup(React.createElement(FeedThreads, {
@@ -1228,20 +1249,20 @@ test('expanded partial feed conversations place sibling omission markers before 
       visible(2602, '2026-08-26 22:10:21'), visible(2607, '2026-08-26 23:28:22')],
   }))
 
-  expect(html).toMatch(/href="\/post\/895\?from=%2Ffor-you%3Fexpand%3D895%23post-895" aria-label="Earlier replies omitted" rel="nofollow">…<\/a>[\s\S]*?id="post-2599"/)
+  expect(html).toMatch(
+    /href="\/post\/895\?from=%2Ffor-you%3Fexpand%3D895%23post-895" aria-label="Earlier replies omitted" rel="nofollow">…<\/a>[\s\S]*?id="post-2599"/,
+  )
 })
 
 test('expanded complete deep threads remove feed-projection ancestor omission markers', () => {
-  const root = { id: 60, user_id: 1, parent_id: null, body: 'Root', created_at: '2026-08-20 09:00:00',
-    deleted_at: null, handle: 'root', reply_count: 3, direct_reply_count: 2 }
+  const root = { id: 60, user_id: 1, parent_id: null, body: 'Root', created_at: '2026-08-20 09:00:00', deleted_at: null,
+    handle: 'root', reply_count: 3, direct_reply_count: 2 }
   const branch = { id: 61, user_id: 2, parent_id: root.id, body: 'Branch', created_at: '2026-08-20 10:00:00',
     deleted_at: null, handle: 'branch', reply_count: 1, direct_reply_count: 1, parent: root }
-  const deep = { id: 62, user_id: 3, parent_id: branch.id, body: 'Deep reply',
-    created_at: '2026-08-23 11:00:00', deleted_at: null, handle: 'deep', reply_count: 0,
-    direct_reply_count: 0, parent: branch, feed_ancestor_gap: true }
-  const sibling = { id: 63, user_id: 4, parent_id: root.id, body: 'Sibling',
-    created_at: '2026-08-23 12:00:00', deleted_at: null, handle: 'sibling', reply_count: 0,
-    direct_reply_count: 0, parent: root }
+  const deep = { id: 62, user_id: 3, parent_id: branch.id, body: 'Deep reply', created_at: '2026-08-23 11:00:00',
+    deleted_at: null, handle: 'deep', reply_count: 0, direct_reply_count: 0, parent: branch, feed_ancestor_gap: true }
+  const sibling = { id: 63, user_id: 4, parent_id: root.id, body: 'Sibling', created_at: '2026-08-23 12:00:00',
+    deleted_at: null, handle: 'sibling', reply_count: 0, direct_reply_count: 0, parent: root }
   const html = renderToStaticMarkup(React.createElement(FeedThreads, {
     user: null,
     returnPath: '/for-you',
@@ -1297,20 +1318,19 @@ test('locally collapsible complete conversations only render the collapsed-previ
 })
 
 test('partial conversations place sibling omission markers at the newest visible boundary', () => {
-  const root = { id: 35, user_id: 1, parent_id: null, body: 'Root', created_at: '2026-08-07 15:44:34',
-    deleted_at: null, handle: 'root', reply_count: 5, direct_reply_count: 3 }
-  const branch = { id: 37, user_id: 2, parent_id: root.id, body: 'Older branch',
-    created_at: '2026-08-07 15:45:17', deleted_at: null, handle: 'branch', reply_count: 1,
-    direct_reply_count: 2, parent: root }
+  const root = { id: 35, user_id: 1, parent_id: null, body: 'Root', created_at: '2026-08-07 15:44:34', deleted_at: null,
+    handle: 'root', reply_count: 5, direct_reply_count: 3 }
+  const branch = { id: 37, user_id: 2, parent_id: root.id, body: 'Older branch', created_at: '2026-08-07 15:45:17',
+    deleted_at: null, handle: 'branch', reply_count: 1, direct_reply_count: 2, parent: root }
   const branchReply = { id: 47, user_id: 1, parent_id: branch.id, body: 'Visible branch reply',
-    created_at: '2026-08-07 15:53:52', deleted_at: null, handle: 'reply', reply_count: 0,
-    direct_reply_count: 0, parent: branch }
+    created_at: '2026-08-07 15:53:52', deleted_at: null, handle: 'reply', reply_count: 0, direct_reply_count: 0,
+    parent: branch }
   const newest = { id: 2716, user_id: 3, parent_id: root.id, body: 'Newest visible reply',
-    created_at: '2026-08-28 03:51:52', deleted_at: null, handle: 'newest', reply_count: 0,
-    direct_reply_count: 0, parent: root }
+    created_at: '2026-08-28 03:51:52', deleted_at: null, handle: 'newest', reply_count: 0, direct_reply_count: 0,
+    parent: root }
   const newerOlderReply = { id: 41, user_id: 4, parent_id: root.id, body: 'Newer older reply',
-    created_at: '2026-08-07 15:46:39', deleted_at: null, handle: 'newer', reply_count: 0,
-    direct_reply_count: 0, parent: root }
+    created_at: '2026-08-07 15:46:39', deleted_at: null, handle: 'newer', reply_count: 0, direct_reply_count: 0,
+    parent: root }
   const html = renderToStaticMarkup(React.createElement(FeedThreads, {
     user: null,
     returnPath: '/latest',
@@ -1320,7 +1340,9 @@ test('partial conversations place sibling omission markers at the newest visible
   }))
 
   expect(html).not.toContain('id="post-37"')
-  expect(html).toMatch(/class="reply-node projected-reply-deeper omitted-parent-reply"[\s\S]*?aria-label="Earlier replies omitted" rel="nofollow">…<\/a>[\s\S]*?id="post-47"[\s\S]*?id="post-41"[\s\S]*?id="post-2716"/)
+  expect(html).toMatch(
+    /class="reply-node projected-reply-deeper omitted-parent-reply"[\s\S]*?aria-label="Earlier replies omitted" rel="nofollow">…<\/a>[\s\S]*?id="post-47"[\s\S]*?id="post-41"[\s\S]*?id="post-2716"/,
+  )
   expect(html.match(/aria-label="Earlier replies omitted"/g)).toHaveLength(1)
 })
 
@@ -1329,15 +1351,14 @@ test('collapsed nested previews mark an omitted path without adding preview inde
     deleted_at: null, handle: 'root', reply_count: 7, direct_reply_count: 2 }
   const omittedParent = { id: 2687, user_id: 1, parent_id: root.id, body: 'Omitted parent',
     created_at: '2026-08-27 18:00:52', deleted_at: null, handle: 'root', reply_count: 5 }
-  const path = { id: 2689, user_id: 1, parent_id: root.id, body: 'Rewired path',
-    created_at: '2026-08-27 18:03:46', deleted_at: null, handle: 'root', reply_count: 4,
-    parent: omittedParent, feed_ancestor_gap: true }
+  const path = { id: 2689, user_id: 1, parent_id: root.id, body: 'Rewired path', created_at: '2026-08-27 18:03:46',
+    deleted_at: null, handle: 'root', reply_count: 4, parent: omittedParent, feed_ancestor_gap: true }
   const parentPreview = { id: 2725, user_id: 1, parent_id: path.id, body: 'Parent preview',
     created_at: '2026-08-28 07:35:50', deleted_at: null, handle: 'root', reply_count: 1, parent: path }
   const childPreview = { id: 2727, user_id: 1, parent_id: parentPreview.id, body: 'Child preview',
     created_at: '2026-08-28 07:51:56', deleted_at: null, handle: 'root', reply_count: 0, parent: parentPreview }
-  const sibling = { id: 2712, user_id: 2, parent_id: root.id, body: 'Older sibling',
-    created_at: '2026-08-28 01:50:52', deleted_at: null, handle: 'sibling', reply_count: 0, parent: root }
+  const sibling = { id: 2712, user_id: 2, parent_id: root.id, body: 'Older sibling', created_at: '2026-08-28 01:50:52',
+    deleted_at: null, handle: 'sibling', reply_count: 0, parent: root }
   const html = renderToStaticMarkup(React.createElement(FeedThreads, {
     user: null,
     returnPath: '/latest',
@@ -1352,14 +1373,13 @@ test('expanded direct-sibling omissions appear before the oldest loaded sibling'
   const root = { id: 875, user_id: 1, parent_id: null, body: 'Root', created_at: '2026-08-10 20:52:39',
     deleted_at: null, handle: 'root', reply_count: 4, direct_reply_count: 3 }
   const older = { id: 2604, user_id: 2, parent_id: root.id, body: 'Older loaded sibling',
-    created_at: '2026-08-26 22:37:34', deleted_at: null, handle: 'older', reply_count: 0,
-    direct_reply_count: 0, parent: root }
+    created_at: '2026-08-26 22:37:34', deleted_at: null, handle: 'older', reply_count: 0, direct_reply_count: 0,
+    parent: root }
   const newer = { id: 2615, user_id: 3, parent_id: root.id, body: 'Newer loaded sibling',
-    created_at: '2026-08-27 01:27:01', deleted_at: null, handle: 'newer', reply_count: 1,
-    direct_reply_count: 1, parent: root }
-  const child = { id: 2718, user_id: 1, parent_id: newer.id, body: 'Newest child',
-    created_at: '2026-08-28 06:13:09', deleted_at: null, handle: 'root', reply_count: 0,
-    direct_reply_count: 0, parent: newer }
+    created_at: '2026-08-27 01:27:01', deleted_at: null, handle: 'newer', reply_count: 1, direct_reply_count: 1,
+    parent: root }
+  const child = { id: 2718, user_id: 1, parent_id: newer.id, body: 'Newest child', created_at: '2026-08-28 06:13:09',
+    deleted_at: null, handle: 'root', reply_count: 0, direct_reply_count: 0, parent: newer }
   const html = renderToStaticMarkup(React.createElement(FeedThreads, {
     user: null,
     returnPath: '/latest',
@@ -1367,8 +1387,12 @@ test('expanded direct-sibling omissions appear before the oldest loaded sibling'
     posts: [root, older, newer, child],
   }))
 
-  expect(html).toMatch(/aria-label="Earlier replies omitted" rel="nofollow">…<\/a>[\s\S]*?id="post-2604"[\s\S]*?id="post-2615"/)
-  expect(html).not.toMatch(/id="post-2604"[\s\S]*?aria-label="Earlier replies omitted" rel="nofollow">…<\/a>[\s\S]*?id="post-2615"/)
+  expect(html).toMatch(
+    /aria-label="Earlier replies omitted" rel="nofollow">…<\/a>[\s\S]*?id="post-2604"[\s\S]*?id="post-2615"/,
+  )
+  expect(html).not.toMatch(
+    /id="post-2604"[\s\S]*?aria-label="Earlier replies omitted" rel="nofollow">…<\/a>[\s\S]*?id="post-2615"/,
+  )
 })
 
 test('collapsed previews retain extra depth when the preview itself has an omitted parent', () => {
@@ -1376,21 +1400,24 @@ test('collapsed previews retain extra depth when the preview itself has an omitt
     deleted_at: null, handle: 'root', reply_count: 14, direct_reply_count: 6 }
   const omittedParent = { id: 2701, user_id: 2, parent_id: root.id, body: 'Omitted parent',
     created_at: '2026-08-27 20:45:37', deleted_at: null, handle: 'parent', reply_count: 1 }
-  const deeper = { id: 2706, user_id: 1, parent_id: root.id, body: 'Deeper preview',
-    created_at: '2026-08-27 22:16:52', deleted_at: null, handle: 'root', reply_count: 0,
-    parent: omittedParent, feed_ancestor_gap: true }
+  const deeper = { id: 2706, user_id: 1, parent_id: root.id, body: 'Deeper preview', created_at: '2026-08-27 22:16:52',
+    deleted_at: null, handle: 'root', reply_count: 0, parent: omittedParent, feed_ancestor_gap: true }
   const sibling = { id: 2717, user_id: 3, parent_id: root.id, body: 'Sibling preview',
     created_at: '2026-08-28 05:30:19', deleted_at: null, handle: 'sibling', reply_count: 0, parent: root }
-  const older = { id: 2705, user_id: 4, parent_id: root.id, body: 'Older reply',
-    created_at: '2026-08-27 22:14:39', deleted_at: null, handle: 'older', reply_count: 0, parent: root }
+  const older = { id: 2705, user_id: 4, parent_id: root.id, body: 'Older reply', created_at: '2026-08-27 22:14:39',
+    deleted_at: null, handle: 'older', reply_count: 0, parent: root }
   const html = renderToStaticMarkup(React.createElement(FeedThreads, {
     user: null,
     returnPath: '/latest',
     posts: [root, deeper, sibling, older],
   }))
 
-  expect(html).toMatch(/collapsed-preview-post collapsed-preview-deeper projected-reply-deeper omitted-parent-reply[^>]*>[\s\S]*?id="post-2706"/)
-  expect(html).toMatch(/collapsed-preview-post collapsed-preview-deeper projected-reply-deeper omitted-parent-reply[^>]*>[\s\S]*?aria-label="Expand earlier replies">…<\/label>[\s\S]*?id="post-2706"/)
+  expect(html).toMatch(
+    /collapsed-preview-post collapsed-preview-deeper projected-reply-deeper omitted-parent-reply[^>]*>[\s\S]*?id="post-2706"/,
+  )
+  expect(html).toMatch(
+    /collapsed-preview-post collapsed-preview-deeper projected-reply-deeper omitted-parent-reply[^>]*>[\s\S]*?aria-label="Expand earlier replies">…<\/label>[\s\S]*?id="post-2706"/,
+  )
   expect(html).toMatch(/collapsed-preview-post[^>]*>[\s\S]*?id="post-2717"/)
   expect(html).toContain('collapsed-preview-post collapsed-preview-deeper projected-reply-deeper omitted-parent-reply')
 })
@@ -1401,19 +1428,21 @@ test('collapsed feed previews indent a reply whose immediate parent was omitted'
   const omittedParent = { id: 2829, user_id: 1, parent_id: root.id, body: 'Omitted parent',
     created_at: '2026-08-29 10:49:12', deleted_at: null, handle: 'viewer', reply_count: 1, parent: root }
   const nested = { id: 2833, user_id: 275, parent_id: root.id, body: 'Nested preview',
-    created_at: '2026-08-29 11:22:11', deleted_at: null, handle: 'reply', reply_count: 0,
-    parent: omittedParent, feed_ancestor_gap: true }
+    created_at: '2026-08-29 11:22:11', deleted_at: null, handle: 'reply', reply_count: 0, parent: omittedParent,
+    feed_ancestor_gap: true }
   const sibling = { id: 2834, user_id: 275, parent_id: root.id, body: 'Sibling preview',
     created_at: '2026-08-29 11:25:06', deleted_at: null, handle: 'reply', reply_count: 0, parent: root }
-  const older = { id: 2370, user_id: 501, parent_id: root.id, body: 'Older reply',
-    created_at: '2026-08-25 03:11:23', deleted_at: null, handle: 'older', reply_count: 0, parent: root }
+  const older = { id: 2370, user_id: 501, parent_id: root.id, body: 'Older reply', created_at: '2026-08-25 03:11:23',
+    deleted_at: null, handle: 'older', reply_count: 0, parent: root }
   const html = renderToStaticMarkup(React.createElement(FeedThreads, {
     user: null,
     returnPath: '/my-feed',
     posts: [root, nested, sibling, older],
   }))
 
-  expect(html).toMatch(/collapsed-preview-post collapsed-preview-deeper projected-reply-deeper omitted-parent-reply[^>]*>[\s\S]*?id="post-2833"/)
+  expect(html).toMatch(
+    /collapsed-preview-post collapsed-preview-deeper projected-reply-deeper omitted-parent-reply[^>]*>[\s\S]*?id="post-2833"/,
+  )
   expect(html).toMatch(/collapsed-preview-post[^>]*>[\s\S]*?id="post-2834"/)
   expect(html).toMatch(/class="reply-node collapsed-preview-path collapsed-preview-post"><article[^>]*id="post-2834"/)
 })
@@ -1424,8 +1453,8 @@ test('hot post 925 marks reply 2521 as nested beneath sibling 2445', () => {
   const omittedParent = { id: 2331, user_id: 447, parent_id: root.id, body: 'Omitted parent',
     created_at: '2026-08-24 23:15:20', deleted_at: null, handle: 'parent', reply_count: 1, parent: root }
   const nested = { id: 2521, user_id: 558, parent_id: root.id, body: 'Nested preview',
-    created_at: '2026-08-26 06:58:19', deleted_at: null, handle: 'nested', reply_count: 0,
-    parent: omittedParent, feed_ancestor_gap: true }
+    created_at: '2026-08-26 06:58:19', deleted_at: null, handle: 'nested', reply_count: 0, parent: omittedParent,
+    feed_ancestor_gap: true }
   const sibling = { id: 2445, user_id: 545, parent_id: root.id, body: 'Sibling preview',
     created_at: '2026-08-25 16:09:47', deleted_at: null, handle: 'sibling', reply_count: 0, parent: root }
   const html = renderToStaticMarkup(React.createElement(FeedThreads, {
@@ -1446,12 +1475,20 @@ test('post 925 does not put omission dots between loaded direct siblings 2902 an
     created_at: '2026-08-26 06:58:19', deleted_at: null, handle: 'older', reply_count: 0,
     parent: { ...root, id: 2331, parent_id: root.id, parent: root }, feed_ancestor_gap: true }
   const direct = (id: number, created_at: string, reply_count = 0) => ({
-    id, user_id: id, parent_id: root.id, body: `Direct ${id}`, created_at, deleted_at: null,
-    handle: `user${id}`, reply_count, parent: root, feed_collapsed_preview: true,
+    id,
+    user_id: id,
+    parent_id: root.id,
+    body: `Direct ${id}`,
+    created_at,
+    deleted_at: null,
+    handle: `user${id}`,
+    reply_count,
+    parent: root,
+    feed_collapsed_preview: true,
   })
   const newer = direct(2947, '2026-08-31 14:40:17', 1)
-  const child = { id: 2950, user_id: 2950, parent_id: newer.id, body: 'Hidden child',
-    created_at: '2026-08-31 15:35:40', deleted_at: null, handle: 'child', reply_count: 0, parent: newer }
+  const child = { id: 2950, user_id: 2950, parent_id: newer.id, body: 'Hidden child', created_at: '2026-08-31 15:35:40',
+    deleted_at: null, handle: 'child', reply_count: 0, parent: newer }
   const html = renderToStaticMarkup(React.createElement(FeedThreads, {
     user: null,
     returnPath: '/all',
@@ -1471,13 +1508,13 @@ test('post 2910 keeps hidden descendants from creating gaps before the next dire
     created_at: '2026-08-30 20:37:56', deleted_at: null, handle: 'older', reply_count: 0,
     parent: { ...root, id: 2923, parent_id: root.id, parent: root }, feed_ancestor_gap: true }
   const first = { id: 2934, user_id: 3, parent_id: root.id, body: 'First direct preview',
-    created_at: '2026-08-30 23:53:58', deleted_at: null, handle: 'first', reply_count: 1,
-    parent: root, feed_collapsed_preview: true }
+    created_at: '2026-08-30 23:53:58', deleted_at: null, handle: 'first', reply_count: 1, parent: root,
+    feed_collapsed_preview: true }
   const hiddenChild = { id: 2935, user_id: 4, parent_id: first.id, body: 'Hidden child',
     created_at: '2026-08-31 06:41:31', deleted_at: null, handle: 'child', reply_count: 0, parent: first }
   const second = { id: 2936, user_id: 5, parent_id: root.id, body: 'Second direct preview',
-    created_at: '2026-08-31 07:19:56', deleted_at: null, handle: 'second', reply_count: 0,
-    parent: root, feed_collapsed_preview: true }
+    created_at: '2026-08-31 07:19:56', deleted_at: null, handle: 'second', reply_count: 0, parent: root,
+    feed_collapsed_preview: true }
   const html = renderToStaticMarkup(React.createElement(FeedThreads, {
     user: null,
     returnPath: '/all',
@@ -1494,14 +1531,28 @@ test('expanded hot post 925 indents both selected replies with omitted parents',
   const root = { id: 925, user_id: 321, parent_id: null, body: 'Root', created_at: '2026-08-11 15:07:20',
     deleted_at: null, handle: 'root', reply_count: 4 }
   const nested = (id: number, parentId: number, created_at: string) => ({
-    id, user_id: id, parent_id: root.id, body: `Nested ${id}`, created_at, deleted_at: null,
-    handle: `user${id}`, reply_count: 0, feed_ancestor_gap: true,
-    parent: { id: parentId, user_id: 2, parent_id: root.id, body: 'Omitted parent',
-      created_at: '2026-08-20 10:00:00', deleted_at: null, handle: 'parent', reply_count: 1, parent: root },
+    id,
+    user_id: id,
+    parent_id: root.id,
+    body: `Nested ${id}`,
+    created_at,
+    deleted_at: null,
+    handle: `user${id}`,
+    reply_count: 0,
+    feed_ancestor_gap: true,
+    parent: { id: parentId, user_id: 2, parent_id: root.id, body: 'Omitted parent', created_at: '2026-08-20 10:00:00',
+      deleted_at: null, handle: 'parent', reply_count: 1, parent: root },
   })
   const direct = (id: number, created_at: string) => ({
-    id, user_id: id, parent_id: root.id, body: `Direct ${id}`, created_at, deleted_at: null,
-    handle: `user${id}`, reply_count: 0, parent: root,
+    id,
+    user_id: id,
+    parent_id: root.id,
+    body: `Direct ${id}`,
+    created_at,
+    deleted_at: null,
+    handle: `user${id}`,
+    reply_count: 0,
+    parent: root,
   })
   const html = renderToStaticMarkup(React.createElement(FeedThreads, {
     user: null,
@@ -1523,14 +1574,14 @@ test('hot post 1174 keeps omitted branches on one baseline when no direct reply 
   const shallowParent = { id: 2296, user_id: 2, parent_id: root.id, body: 'Shallow omitted parent',
     created_at: '2026-08-24 20:42:07', deleted_at: null, handle: 'shallow-parent', reply_count: 1, parent: root }
   const shallow = { id: 2564, user_id: 3, parent_id: root.id, body: 'Shallow projected reply',
-    created_at: '2026-08-26 15:31:31', deleted_at: null, handle: 'shallow', reply_count: 0,
-    parent: shallowParent, feed_ancestor_gap: true }
+    created_at: '2026-08-26 15:31:31', deleted_at: null, handle: 'shallow', reply_count: 0, parent: shallowParent,
+    feed_ancestor_gap: true }
   const deepParent = { id: 2553, user_id: 4, parent_id: 2547, body: 'Deep omitted parent',
     created_at: '2026-08-26 13:49:06', deleted_at: null, handle: 'deep-parent', reply_count: 1,
     parent: { ...shallowParent, id: 2547, parent: root } }
   const deep = { id: 2557, user_id: 5, parent_id: root.id, body: 'Deep projected reply',
-    created_at: '2026-08-26 14:37:52', deleted_at: null, handle: 'deep', reply_count: 0,
-    parent: deepParent, feed_ancestor_gap: true }
+    created_at: '2026-08-26 14:37:52', deleted_at: null, handle: 'deep', reply_count: 0, parent: deepParent,
+    feed_ancestor_gap: true }
   const html = renderToStaticMarkup(React.createElement(FeedThreads, {
     user: null,
     returnPath: '/hot',
@@ -1545,16 +1596,21 @@ test('hot post 1174 keeps omitted branches on one baseline when no direct reply 
 test('deep projected feed replies open at fixed visible-depth chunk boundaries', () => {
   const user = { id: 9, handle: 'reader', email: 'reader@example.com', bio: '',
     email_verified_at: '2026-08-20 08:00:00' }
-  const root = { id: 1, user_id: 1, parent_id: null, body: 'Root', created_at: '2026-08-20 09:00:00',
-    deleted_at: null, handle: 'root', reply_count: 1 }
+  const root = { id: 1, user_id: 1, parent_id: null, body: 'Root', created_at: '2026-08-20 09:00:00', deleted_at: null,
+    handle: 'root', reply_count: 1 }
   let parent: any = root
-  for (let id = 2; id <= 9; id++) parent = { id, user_id: id, parent_id: parent.id, body: `Reply ${id}`,
-    created_at: `2026-08-20 0${id}:00:00`, deleted_at: null, handle: `reply${id}`, reply_count: 1, parent }
+  for (let id = 2; id <= 9; id++) {
+    parent = { id, user_id: id, parent_id: parent.id, body: `Reply ${id}`, created_at: `2026-08-20 0${id}:00:00`,
+      deleted_at: null, handle: `reply${id}`, reply_count: 1, parent }
+  }
   const deep = { id: 10, user_id: 10, parent_id: root.id, body: 'Projected deep reply',
-    created_at: '2026-08-20 10:00:00', deleted_at: null, handle: 'deep', reply_count: 0,
-    parent, feed_ancestor_gap: true }
+    created_at: '2026-08-20 10:00:00', deleted_at: null, handle: 'deep', reply_count: 0, parent,
+    feed_ancestor_gap: true }
   const html = renderToStaticMarkup(React.createElement(FeedThreads, {
-    user, returnPath: '/hot', expandedRootId: root.id, posts: [root, deep],
+    user,
+    returnPath: '/hot',
+    expandedRootId: root.id,
+    posts: [root, deep],
   }))
 
   expect(html).toContain('class="post-hit-area" href="/post/6?from=%2Fhot%23post-10#post-10"')
@@ -1564,16 +1620,14 @@ test('expanded hot post 2737 does not double-indent parallel omitted branches', 
   const root = { id: 2737, user_id: 1, parent_id: null, body: 'Root', created_at: '2026-08-28 09:47:07',
     deleted_at: null, handle: 'root', reply_count: 4 }
   const omitted = (id: number, parentId: number) => ({ id: parentId, user_id: 2, parent_id: root.id,
-    body: 'Omitted parent', created_at: '2026-08-28 16:00:00', deleted_at: null, handle: 'parent',
-    reply_count: 1, parent: root })
-  const first = { id: 2806, user_id: 3, parent_id: root.id, body: 'First branch',
-    created_at: '2026-08-28 21:15:31', deleted_at: null, handle: 'first', reply_count: 1,
-    parent: omitted(2806, 2778), feed_ancestor_gap: true }
+    body: 'Omitted parent', created_at: '2026-08-28 16:00:00', deleted_at: null, handle: 'parent', reply_count: 1,
+    parent: root })
+  const first = { id: 2806, user_id: 3, parent_id: root.id, body: 'First branch', created_at: '2026-08-28 21:15:31',
+    deleted_at: null, handle: 'first', reply_count: 1, parent: omitted(2806, 2778), feed_ancestor_gap: true }
   const firstChild = { id: 2809, user_id: 3, parent_id: first.id, body: 'First child',
     created_at: '2026-08-28 21:17:43', deleted_at: null, handle: 'first', reply_count: 0, parent: first }
-  const second = { id: 2779, user_id: 4, parent_id: root.id, body: 'Second branch',
-    created_at: '2026-08-28 16:30:08', deleted_at: null, handle: 'second', reply_count: 1,
-    parent: omitted(2779, 2777), feed_ancestor_gap: true }
+  const second = { id: 2779, user_id: 4, parent_id: root.id, body: 'Second branch', created_at: '2026-08-28 16:30:08',
+    deleted_at: null, handle: 'second', reply_count: 1, parent: omitted(2779, 2777), feed_ancestor_gap: true }
   const secondChild = { id: 2789, user_id: 1, parent_id: second.id, body: 'Second child',
     created_at: '2026-08-28 17:14:28', deleted_at: null, handle: 'root', reply_count: 0, parent: second }
   const html = renderToStaticMarkup(React.createElement(FeedThreads, {
@@ -1589,13 +1643,13 @@ test('expanded hot post 2737 does not double-indent parallel omitted branches', 
 })
 
 test('expanded feed conversations do not mark omissions when every reply at that depth is visible', () => {
-  const root = { id: 50, user_id: 1, parent_id: null, body: 'Root', created_at: '2026-08-20 09:00:00',
-    deleted_at: null, handle: 'root', reply_count: 2, direct_reply_count: 1 }
+  const root = { id: 50, user_id: 1, parent_id: null, body: 'Root', created_at: '2026-08-20 09:00:00', deleted_at: null,
+    handle: 'root', reply_count: 2, direct_reply_count: 1 }
   const child = { id: 51, user_id: 2, parent_id: root.id, body: 'Only child', created_at: '2026-08-20 10:00:00',
     deleted_at: null, handle: 'child', reply_count: 1, direct_reply_count: 1, parent: root }
   const grandchild = { id: 52, user_id: 3, parent_id: child.id, body: 'Only grandchild',
-    created_at: '2026-08-20 11:00:00', deleted_at: null, handle: 'grandchild', reply_count: 0,
-    direct_reply_count: 0, parent: child }
+    created_at: '2026-08-20 11:00:00', deleted_at: null, handle: 'grandchild', reply_count: 0, direct_reply_count: 0,
+    parent: child }
   const html = renderToStaticMarkup(React.createElement(ThreadReplies, {
     parentId: root.id,
     replies: [root, child, grandchild],
@@ -1752,14 +1806,14 @@ test('latest renders conversations only as trees', () => {
 })
 
 test('hot feed conversations preserve selected ancestor context', () => {
-  const root = { id: 494, user_id: 4, parent_id: null, body: 'Conversation root',
-    created_at: '2026-08-08 14:20:43', deleted_at: null, handle: 'root', reply_count: 3 }
+  const root = { id: 494, user_id: 4, parent_id: null, body: 'Conversation root', created_at: '2026-08-08 14:20:43',
+    deleted_at: null, handle: 'root', reply_count: 3 }
   const ancestor = { id: 496, user_id: 1, parent_id: root.id, body: 'Earlier context',
     created_at: '2026-08-08 14:25:42', deleted_at: null, handle: 'ancestor', reply_count: 2, parent: root }
   const parent = { id: 2516, user_id: 2, parent_id: ancestor.id, body: 'Quoted parent',
     created_at: '2026-08-26 05:27:01', deleted_at: null, handle: 'parent', reply_count: 1, parent: ancestor }
-  const reply = { id: 2582, user_id: 3, parent_id: parent.id, body: 'Current reply',
-    created_at: '2026-08-26 18:34:27', deleted_at: null, handle: 'reply', reply_count: 0, parent }
+  const reply = { id: 2582, user_id: 3, parent_id: parent.id, body: 'Current reply', created_at: '2026-08-26 18:34:27',
+    deleted_at: null, handle: 'reply', reply_count: 0, parent }
   const html = renderToStaticMarkup(React.createElement(HotFeed, {
     user: null,
     feed: { posts: [reply, parent], page: 1, totalItems: 1, totalPages: 1 },
@@ -2101,8 +2155,7 @@ test('signed-in feeds put the mobile write action outside the main scroll bounda
 })
 
 test('signed-in feed pages put the write form before the feed tabs', () => {
-  const user = { id: 1, handle: 'reader', email: 'reader@example.com', bio: '',
-    email_verified_at: '2026-08-20' }
+  const user = { id: 1, handle: 'reader', email: 'reader@example.com', bio: '', email_verified_at: '2026-08-20' }
   const feed = { posts: [], page: 1, totalItems: 0, totalPages: 1 }
   const pages = [
     renderToStaticMarkup(React.createElement(PublicFeed, { user, feed, path: '/all' })),
@@ -2165,13 +2218,13 @@ test('feed tabs include the chronological top-level new feed', () => {
 })
 
 test('new feed threads load replies but hide every reply while collapsed', () => {
-  const root = { id: 1, user_id: 1, parent_id: null, body: 'root', created_at: '2026-08-20 10:00:00',
-    deleted_at: null, handle: 'writer', reply_count: 2 }
+  const root = { id: 1, user_id: 1, parent_id: null, body: 'root', created_at: '2026-08-20 10:00:00', deleted_at: null,
+    handle: 'writer', reply_count: 2 }
   const replies = [
-    { id: 2, user_id: 2, parent_id: 1, body: 'first reply', created_at: '2026-08-20 11:00:00',
-      deleted_at: null, handle: 'reader' },
-    { id: 3, user_id: 3, parent_id: 1, body: 'second reply', created_at: '2026-08-20 12:00:00',
-      deleted_at: null, handle: 'another' },
+    { id: 2, user_id: 2, parent_id: 1, body: 'first reply', created_at: '2026-08-20 11:00:00', deleted_at: null,
+      handle: 'reader' },
+    { id: 3, user_id: 3, parent_id: 1, body: 'second reply', created_at: '2026-08-20 12:00:00', deleted_at: null,
+      handle: 'another' },
   ]
   const html = renderToStaticMarkup(React.createElement(PublicFeed, {
     user: null,
@@ -2289,9 +2342,9 @@ test('quoted parents use the same attribution wording', () => {
 test('reply detail renders a placeholder for an unavailable quoted parent', () => {
   const html = renderToStaticMarkup(React.createElement(Post, {
     p: { id: 2582, user_id: 3, parent_id: 2516, body: 'Current reply', created_at: '2026-08-26 18:34:27',
-      deleted_at: null, handle: 'reply', parent: { id: 2516, body: '', translation: null,
-        created_at: '2026-08-26 18:34:27', deleted_at: null, has_latex: 0, has_links: 0, has_code: 0,
-        handle: '', reply_count: 0, unavailable: true } },
+      deleted_at: null, handle: 'reply',
+      parent: { id: 2516, body: '', translation: null, created_at: '2026-08-26 18:34:27', deleted_at: null,
+        has_latex: 0, has_links: 0, has_code: 0, handle: '', reply_count: 0, unavailable: true } },
     user: { id: 3, handle: 'reply', email: 'reply@example.com', bio: '' },
   }))
 
@@ -2301,8 +2354,8 @@ test('reply detail renders a placeholder for an unavailable quoted parent', () =
 
 test('post metadata places the author mood directly after the handle', () => {
   const html = renderToStaticMarkup(React.createElement(Post, {
-    p: { id: 1, user_id: 2, parent_id: null, body: 'Moving', created_at: '2026-08-20 10:00:00',
-      deleted_at: null, handle: 'stagas', mood: '🤸' },
+    p: { id: 1, user_id: 2, parent_id: null, body: 'Moving', created_at: '2026-08-20 10:00:00', deleted_at: null,
+      handle: 'stagas', mood: '🤸' },
     user: null,
   }))
 
@@ -2332,8 +2385,8 @@ test('posts by the viewer use plain you instead of a linked handle', () => {
 
 test('moderators see when a post author has blocked them', () => {
   const html = renderToStaticMarkup(React.createElement(Post, {
-    p: { id: 2, user_id: 2, parent_id: null, body: 'Visible for moderation',
-      created_at: '2026-08-20 11:00:00', deleted_at: null, handle: 'blocker', blocked_viewer: true },
+    p: { id: 2, user_id: 2, parent_id: null, body: 'Visible for moderation', created_at: '2026-08-20 11:00:00',
+      deleted_at: null, handle: 'blocker', blocked_viewer: true },
     user: { id: 1, handle: 'admin', email: 'gstagas@gmail.com', bio: '' },
   }))
 
@@ -2344,8 +2397,8 @@ test('moderators can view posts on a profile that blocked them', () => {
   const html = renderToStaticMarkup(React.createElement(Profile, {
     user: { id: 1, handle: 'admin', email: 'gstagas@gmail.com', bio: '' },
     profile: { id: 2, handle: 'blocker', email: 'blocker@example.com', bio: '' },
-    posts: [{ id: 2, user_id: 2, parent_id: null, body: 'Visible for moderation',
-      created_at: '2026-08-20 11:00:00', deleted_at: null, handle: 'blocker', blocked_viewer: true }],
+    posts: [{ id: 2, user_id: 2, parent_id: null, body: 'Visible for moderation', created_at: '2026-08-20 11:00:00',
+      deleted_at: null, handle: 'blocker', blocked_viewer: true }],
     following: false,
     blockedByProfile: true,
     moderatorBypass: true,
@@ -2665,7 +2718,8 @@ describe('About', () => {
       expect(html).toContain('href="/hot"')
       expect(html).toContain('href="/all"')
       expect(html).toMatch(/href="\/any\?seed=[0-9a-z]+"/)
-      const joinAction = '<div class="mobile-write-action"><a class="button" href="/enter" rel="nofollow">join</a></div>'
+      const joinAction =
+        '<div class="mobile-write-action"><a class="button" href="/enter" rel="nofollow">join</a></div>'
       expect(html).toContain('has-mobile-write-action')
       expect(html).toContain(joinAction)
       expect(html.indexOf(joinAction)).toBeLessThan(html.indexOf('<main id="main-content">'))
@@ -3240,9 +3294,11 @@ test('Following and followers paginate every 8 people', () => {
       following: false,
     }))
 
-    expect(html).toContain(`href="/u/reader?tab=${kind}&amp;page=2${
-      kind === 'following' ? '&amp;_scroll=instant' : ''
-    }#connections-people-heading"`)
+    expect(html).toContain(
+      `href="/u/reader?tab=${kind}&amp;page=2${
+        kind === 'following' ? '&amp;_scroll=instant' : ''
+      }#connections-people-heading"`,
+    )
     expect(html.indexOf('aria-label="People pagination"')).toBeLessThan(html.indexOf('connection-people'))
     expect(html.lastIndexOf('aria-label="People pagination"')).toBeGreaterThan(html.indexOf('connection-people'))
   }
@@ -3707,11 +3763,23 @@ test('Post renders internal link hover cards inside quoted parents', () => {
 test('internal post hover cards preserve moderation consent masks', () => {
   const url = 'https://textlog.test/post/12'
   const html = renderToStaticMarkup(React.createElement(Post, { user: null, p: {
-    id: 1, user_id: 2, parent_id: null, body: url, handle: 'linker',
-    created_at: '2026-08-24 10:00:00', deleted_at: null,
+    id: 1,
+    user_id: 2,
+    parent_id: null,
+    body: url,
+    handle: 'linker',
+    created_at: '2026-08-24 10:00:00',
+    deleted_at: null,
     link_previews: { [url]: { imageUrl: url, linkedPost: {
-      id: 12, user_id: 1, parent_id: null, body: 'Sensitive hovercard', handle: 'writer',
-      reply_count: 0, thread_locked: false, moderation_category: 'violence', moderation_score: 0.8,
+      id: 12,
+      user_id: 1,
+      parent_id: null,
+      body: 'Sensitive hovercard',
+      handle: 'writer',
+      reply_count: 0,
+      thread_locked: false,
+      moderation_category: 'violence',
+      moderation_score: 0.8,
     } } },
   } }))
   const card = html.slice(html.indexOf('class="remote-link-popover internal-post-popover"'))
@@ -4081,8 +4149,8 @@ test('Post pages use the context text as the canonical permalink', () => {
   const continuation = renderToStaticMarkup(React.createElement(Post, {
     p: { id: 3, user_id: 1, parent_id: 2, body: 'More', handle: 'writer', created_at: thirtyMinutesAgo,
       deleted_at: null,
-      parent: { id: 2, user_id: 1, parent_id: null, body: 'First', handle: 'writer',
-        created_at: thirtyMinutesAgo, deleted_at: null, reply_count: 1 } },
+      parent: { id: 2, user_id: 1, parent_id: null, body: 'First', handle: 'writer', created_at: thirtyMinutesAgo,
+        deleted_at: null, reply_count: 1 } },
     user: null,
     canonicalTimestamp: true,
   }))
@@ -4091,8 +4159,8 @@ test('Post pages use the context text as the canonical permalink', () => {
   const reply = renderToStaticMarkup(React.createElement(Post, {
     p: { id: 4, user_id: 1, parent_id: 2, body: 'Reply', handle: 'writer', created_at: thirtyMinutesAgo,
       deleted_at: null,
-      parent: { id: 2, user_id: 2, parent_id: null, body: 'Parent', handle: 'parent',
-        created_at: thirtyMinutesAgo, deleted_at: null, reply_count: 1 } },
+      parent: { id: 2, user_id: 2, parent_id: null, body: 'Parent', handle: 'parent', created_at: thirtyMinutesAgo,
+        deleted_at: null, reply_count: 1 } },
     user: null,
     canonicalTimestamp: true,
   }))
@@ -4164,8 +4232,8 @@ test('Anonymous reply detail places the composer beneath the clicked reply witho
 })
 
 test('Anonymous conversation uses the clicked feed reply as the inline composer target', () => {
-  const root = { id: 10, user_id: 1, parent_id: null, body: 'Root', handle: 'root',
-    created_at: '2026-08-03 12:00:00', deleted_at: null }
+  const root = { id: 10, user_id: 1, parent_id: null, body: 'Root', handle: 'root', created_at: '2026-08-03 12:00:00',
+    deleted_at: null }
   const reply = { id: 11, user_id: 2, parent_id: 10, body: 'Reply', handle: 'replier',
     created_at: '2026-08-03 12:01:00', deleted_at: null }
   const html = renderToStaticMarkup(React.createElement(PublicThread, {
@@ -4185,18 +4253,39 @@ test('Anonymous conversation uses the clicked feed reply as the inline composer 
 
 test('Anonymous tag and people pages end with join and browse actions', () => {
   const profile = {
-    id: 1, handle: 'writer', email: 'writer@example.com', bio: '', created_at: '2026-08-03 12:00:00',
+    id: 1,
+    handle: 'writer',
+    email: 'writer@example.com',
+    bio: '',
+    created_at: '2026-08-03 12:00:00',
   }
   const pages = [
     React.createElement(TagFeed, {
-      user: null, tag: 'writing', following: false, posts: [], page: 1, total: 0,
+      user: null,
+      tag: 'writing',
+      following: false,
+      posts: [],
+      page: 1,
+      total: 0,
     }),
     React.createElement(Profile, {
-      user: null, profile, posts: [], following: false,
+      user: null,
+      profile,
+      posts: [],
+      following: false,
     }),
     React.createElement(Connections, {
-      user: null, profile, people: [], kind: 'followers', page: 1, total: 0, noteCount: 0,
-      followerCount: 0, followingCount: 0, followingTagCount: 0, following: false,
+      user: null,
+      profile,
+      people: [],
+      kind: 'followers',
+      page: 1,
+      total: 0,
+      noteCount: 0,
+      followerCount: 0,
+      followingCount: 0,
+      followingTagCount: 0,
+      following: false,
     }),
   ]
 
@@ -4226,8 +4315,8 @@ test('Thread pages show approximate wording only on the primary post', () => {
 test('Thread pages also place back after the timestamp of its targeted reply', () => {
   const html = renderToStaticMarkup(React.createElement(Reply, {
     user: { id: 1, handle: 'reader', email: 'reader@example.com', bio: '', show_timestamps: 1 },
-    post: { id: 10, user_id: 2, parent_id: null, body: 'Root', handle: 'root',
-      created_at: '2026-08-30 11:00:00', deleted_at: null },
+    post: { id: 10, user_id: 2, parent_id: null, body: 'Root', handle: 'root', created_at: '2026-08-30 11:00:00',
+      deleted_at: null },
     replies: [{ id: 11, user_id: 3, parent_id: 10, body: 'Target reply', handle: 'writer',
       created_at: '2026-08-30 12:00:00', deleted_at: null }],
     showForm: false,
@@ -4268,12 +4357,14 @@ test('opt-in timestamps are compact, muted, localized, and precede top actions',
   expect(shortPostAge('2026-08-16 12:00:00', Date.parse('2026-08-30T12:00:00Z'))).toBe('2w')
 
   const html = renderToStaticMarkup(React.createElement(Post, {
-    p: { id: 3, user_id: 2, parent_id: null, body: 'A note', handle: 'writer',
-      created_at: '2026-08-30 12:00:00', deleted_at: null },
+    p: { id: 3, user_id: 2, parent_id: null, body: 'A note', handle: 'writer', created_at: '2026-08-30 12:00:00',
+      deleted_at: null },
     user: { id: 1, handle: 'reader', email: 'reader@example.com', bio: '', show_timestamps: 1 },
     topHref: '/post/1',
   }))
-  expect(html).toMatch(/<time class="post-relative-time"[^>]*title="Aug 30, 2026, 12:00 PM \(UTC \+00\)"[^>]*>.*?<\/time><a class="quiet post-top-link"/)
+  expect(html).toMatch(
+    /<time class="post-relative-time"[^>]*title="Aug 30, 2026, 12:00 PM \(UTC \+00\)"[^>]*>.*?<\/time><a class="quiet post-top-link"/,
+  )
 })
 
 test('opt-in timestamps tolerate feed entries without a creation time', () => {
@@ -4570,13 +4661,13 @@ test('moderated replies and quoted parents suppress consent screens only while r
   const warning = { moderation_category: 'self-harm/intent', moderation_score: 0.72 }
   const reply = renderToStaticMarkup(React.createElement(Post, {
     user: null,
-    p: { id: 3, user_id: 2, parent_id: 1, body: 'Moderated reply', handle: 'writer',
-      created_at: '2026-08-03 12:00:00', deleted_at: null, ...warning },
+    p: { id: 3, user_id: 2, parent_id: 1, body: 'Moderated reply', handle: 'writer', created_at: '2026-08-03 12:00:00',
+      deleted_at: null, ...warning },
   }))
   const quoted = renderToStaticMarkup(React.createElement(Post, {
     user: null,
-    p: { id: 4, user_id: 2, parent_id: 1, body: 'Ordinary reply', handle: 'writer',
-      created_at: '2026-08-03 12:00:00', deleted_at: null,
+    p: { id: 4, user_id: 2, parent_id: 1, body: 'Ordinary reply', handle: 'writer', created_at: '2026-08-03 12:00:00',
+      deleted_at: null,
       parent: { id: 1, user_id: 1, parent_id: null, body: 'Moderated parent', handle: 'parent',
         created_at: '2026-08-03 11:00:00', deleted_at: null, reply_count: 1, ...warning } },
   }))
@@ -4584,8 +4675,8 @@ test('moderated replies and quoted parents suppress consent screens only while r
   const replying = renderToStaticMarkup(React.createElement(Post, {
     user: null,
     suppressContentWarning: true,
-    p: { id: 4, user_id: 2, parent_id: 1, body: 'Ordinary reply', handle: 'writer',
-      created_at: '2026-08-03 12:00:00', deleted_at: null, ...warning,
+    p: { id: 4, user_id: 2, parent_id: 1, body: 'Ordinary reply', handle: 'writer', created_at: '2026-08-03 12:00:00',
+      deleted_at: null, ...warning,
       parent: { id: 1, user_id: 1, parent_id: null, body: 'Moderated parent', handle: 'parent',
         created_at: '2026-08-03 11:00:00', deleted_at: null, reply_count: 1, ...warning } },
   }))
@@ -4651,8 +4742,8 @@ test('Post detail places moderate immediately before report for admins', () => {
 test('Post detail shows translation moderation for a reply opened as the primary post', () => {
   const html = renderToStaticMarkup(React.createElement(Post, {
     user: { id: 1, handle: 'admin', email: 'GSTAGAS@gmail.com', bio: '' },
-    p: { id: 2716, user_id: 2, parent_id: 20, body: 'reply', handle: 'writer',
-      created_at: '2026-08-03 12:00:00', deleted_at: null,
+    p: { id: 2716, user_id: 2, parent_id: 20, body: 'reply', handle: 'writer', created_at: '2026-08-03 12:00:00',
+      deleted_at: null,
       parent: { id: 20, user_id: 3, parent_id: null, body: 'parent', handle: 'parent-author',
         created_at: '2026-08-03 11:00:00', deleted_at: null, reply_count: 1 } },
     showModerateAction: true,

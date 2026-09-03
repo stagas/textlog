@@ -26,7 +26,10 @@ describe('bookmarks', () => {
       WHEN 2 THEN '2026-02-02 10:00:00' ELSE '2026-02-01 10:00:00' END WHERE user_id=1`)
 
     const page = await executeDatabaseDomain(database, 'bookmarks.page', {
-      userId: 1, query: '', page: 1, pageSize: 20,
+      userId: 1,
+      query: '',
+      page: 1,
+      pageSize: 20,
     })
     expect(page.posts.map(post => post.id)).toEqual([2, 3])
     expect(page.posts[0]?.parent).toMatchObject({ id: 1, body: 'A quoted parent' })
@@ -41,7 +44,10 @@ describe('bookmarks', () => {
     await executeDatabaseDomain(database, 'interactions.toggleBookmark', { userId: 2, postId: 3 })
 
     const matching = await executeDatabaseDomain(database, 'bookmarks.page', {
-      userId: 1, query: 'searchable', page: 1, pageSize: 20,
+      userId: 1,
+      query: 'searchable',
+      page: 1,
+      pageSize: 20,
     })
     expect(matching.posts.map(post => post.id)).toEqual([2])
     expect(matching.highlights).toEqual(['searchable'])

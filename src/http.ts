@@ -174,14 +174,14 @@ export function pendingPost(request: Request) {
     }
     return typeof parsed.body === 'string'
       ? {
-          body: parsed.body,
-          returnPath: safeLocalPath(typeof parsed.returnPath === 'string' ? parsed.returnPath : '/'),
-          parentId: Number.isInteger(parsed.parentId) && Number(parsed.parentId) > 0 ? Number(parsed.parentId) : null,
-          replyPageId: Number.isInteger(parsed.replyPageId) && Number(parsed.replyPageId) > 0
-            ? Number(parsed.replyPageId)
-            : null,
-          key: typeof parsed.key === 'string' && /^[0-9a-f-]{36}$/.test(parsed.key) ? parsed.key : null,
-        }
+        body: parsed.body,
+        returnPath: safeLocalPath(typeof parsed.returnPath === 'string' ? parsed.returnPath : '/'),
+        parentId: Number.isInteger(parsed.parentId) && Number(parsed.parentId) > 0 ? Number(parsed.parentId) : null,
+        replyPageId: Number.isInteger(parsed.replyPageId) && Number(parsed.replyPageId) > 0
+          ? Number(parsed.replyPageId)
+          : null,
+        key: typeof parsed.key === 'string' && /^[0-9a-f-]{36}$/.test(parsed.key) ? parsed.key : null,
+      }
       : null
   }
   catch {
@@ -190,11 +190,12 @@ export function pendingPost(request: Request) {
 }
 
 export function pendingPostCookie(body: string, returnPath: string, parentId: number | null = null,
-  replyPageId: number | null = null, maxAge = 20 * 60,
-  appUrl: string | undefined = Bun.env.APP_URL)
+  replyPageId: number | null = null, maxAge = 20 * 60, appUrl: string | undefined = Bun.env.APP_URL)
 {
-  const value = Buffer.from(JSON.stringify({ body, returnPath: safeLocalPath(returnPath), parentId, replyPageId,
-    key: maxAge > 0 ? randomUUID() : null }))
+  const value = Buffer.from(
+    JSON.stringify({ body, returnPath: safeLocalPath(returnPath), parentId, replyPageId,
+      key: maxAge > 0 ? randomUUID() : null }),
+  )
     .toString('base64url')
   return `${PENDING_POST_COOKIE}=${value}; Max-Age=${maxAge}; HttpOnly; Path=/; SameSite=Lax${secureCookie(appUrl)}`
 }
@@ -227,7 +228,9 @@ export function pendingFollow(request: Request) {
 export function pendingFollowCookie(kind: 'user' | 'tag', target: string, returnPath: string, maxAge = 20 * 60,
   appUrl: string | undefined = Bun.env.APP_URL)
 {
-  const value = Buffer.from(JSON.stringify({ kind, target, returnPath: safeLocalPath(returnPath) })).toString('base64url')
+  const value = Buffer.from(JSON.stringify({ kind, target, returnPath: safeLocalPath(returnPath) })).toString(
+    'base64url',
+  )
   return `${PENDING_FOLLOW_COOKIE}=${value}; Max-Age=${maxAge}; HttpOnly; Path=/; SameSite=Lax${secureCookie(appUrl)}`
 }
 
@@ -410,7 +413,8 @@ export async function canonicalizeCrawlerLinks(request: Request, response: Respo
 export type FeedPreference = 'following' | 'activity' | 'hot' | 'latest' | 'new' | 'random'
 
 export function feedPreference(request: Request): FeedPreference | null {
-  const value = request.headers.get('cookie')?.match(/(?:^|;\s*)feed=(following|activity|hot|latest|new|random)(?:;|$)/)?.[1]
+  const value = request.headers.get('cookie')?.match(/(?:^|;\s*)feed=(following|activity|hot|latest|new|random)(?:;|$)/)
+    ?.[1]
   return value as FeedPreference | undefined || null
 }
 
@@ -426,5 +430,7 @@ export function retainedAnyFeedSeed(request: Request) {
 
 export function retainedAnyFeedSeedCookie(seed: number) {
   const safeSeed = Math.max(1, Math.floor(seed))
-  return `any_sample_seed=${safeSeed.toString(36)}; Max-Age=${365 * 24 * 60 * 60}; HttpOnly; Path=/; SameSite=Lax${secureCookie()}`
+  return `any_sample_seed=${safeSeed.toString(36)}; Max-Age=${
+    365 * 24 * 60 * 60
+  }; HttpOnly; Path=/; SameSite=Lax${secureCookie()}`
 }

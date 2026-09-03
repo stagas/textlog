@@ -120,7 +120,9 @@ function recipients(database: Database, options: {
 }
 
 export function createInteractedCampaignRun(database: Database, options: {
-  minReplies: number; maxDays?: number; version: InteractedCampaignVersion
+  minReplies: number
+  maxDays?: number
+  version: InteractedCampaignVersion
 }) {
   const id = crypto.randomUUID()
   const candidates = recipients(database, options)
@@ -132,8 +134,10 @@ export function createInteractedCampaignRun(database: Database, options: {
       .run(id, options.version, options.minReplies, options.maxDays ?? null)
     const insert = database.query(`INSERT INTO interacted_campaign_run_recipients
       (run_id,user_id,email,handle,unread_replies,oldest_reply_at,newest_reply_at) VALUES(?,?,?,?,?,?,?)`)
-    for (const candidate of candidates) insert.run(id, candidate.id, candidate.email, candidate.handle,
-      candidate.unread_replies, candidate.oldest_reply_at, candidate.newest_reply_at)
+    for (const candidate of candidates) {
+      insert.run(id, candidate.id, candidate.email, candidate.handle, candidate.unread_replies,
+        candidate.oldest_reply_at, candidate.newest_reply_at)
+    }
   })()
   return campaignRun(database, id)!
 }
@@ -212,9 +216,13 @@ export async function sendInteractedCampaign(options: {
   const version = options.version || INTERACTED_CAMPAIGN_VERSION
   let sent = 0, skipped = 0, failed = 0, lastRequestAt = 0
 
-  const audience = options.runId ? runRecipients(options.database, options.runId) : recipients(options.database, options)
-  if (options.runId) options.database.query(`UPDATE interacted_campaign_runs SET status='running',
+  const audience = options.runId
+    ? runRecipients(options.database, options.runId)
+    : recipients(options.database, options)
+  if (options.runId) {
+    options.database.query(`UPDATE interacted_campaign_runs SET status='running',
     started_at=coalesce(started_at,CURRENT_TIMESTAMP) WHERE id=? AND status!='completed'`).run(options.runId)
+  }
   for (const recipient of audience) {
     if (stopping()) break
     const delivery = claimDelivery(options.database, recipient, runId, version)
@@ -312,8 +320,9 @@ if (import.meta.main) {
     if (!run) throw new Error(`No incomplete ${version} campaign run. Use --new-run to create one for review.`)
     if (!sendEmail) {
       const rows = runRecipients(database, run.id).map(
-        ({ handle, unread_replies, oldest_reply_at, newest_reply_at }) =>
-          ({ handle, unread_replies, oldest_reply_at, newest_reply_at }))
+        ({ handle, unread_replies, oldest_reply_at, newest_reply_at }) => ({ handle, unread_replies, oldest_reply_at,
+          newest_reply_at }),
+      )
       console.log(`interaction campaign ${version} run ${run.id} (${run.status}, created ${run.created_at})`)
       if (!rows.length) console.log('No users found.')
       else {

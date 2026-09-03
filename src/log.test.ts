@@ -25,8 +25,7 @@ test.serial('HTTP logs include the username, query parameters, and a safe bounde
   }
   Bun.env.LOG_USER_AGENT = 'true'
   try {
-    logHttp('GET', '/latest?limit=20&cursor=next', 200, 12, '203.0.113.4', 'alice',
-      'ExampleBot/1.0\nforged', 'stale')
+    logHttp('GET', '/latest?limit=20&cursor=next', 200, 12, '203.0.113.4', 'alice', 'ExampleBot/1.0\nforged', 'stale')
   }
   finally {
     console.log = original

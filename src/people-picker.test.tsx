@@ -7,8 +7,13 @@ import { runMigrations } from './migrations'
 import type { User } from './types'
 
 const user = {
-  id: 1, handle: 'alice', email: 'alice@example.com', bio: '', handle_chosen_at: '2026-09-01',
-  mood_prompt_dismissed_at: '2026-09-01', tag_prompt_completed_at: '2026-09-01',
+  id: 1,
+  handle: 'alice',
+  email: 'alice@example.com',
+  bio: '',
+  handle_chosen_at: '2026-09-01',
+  mood_prompt_dismissed_at: '2026-09-01',
+  tag_prompt_completed_at: '2026-09-01',
 } as User
 
 test('people prompt follows the tag prompt and stops after completion or dismissal', () => {
@@ -42,7 +47,8 @@ test('loads popular people and follows all selected people', async () => {
   const result = await executeDatabaseDomain(database, 'account.completePeoplePrompt', { userId: 1, people: [2, 3] })
   expect(result.followed).toEqual([{ id: 2, handle: 'bob' }, { id: 3, handle: 'carol' }])
   expect(database.query('SELECT following_id FROM follows WHERE follower_id=1 ORDER BY following_id').all()).toEqual([
-    { following_id: 2 }, { following_id: 3 },
+    { following_id: 2 },
+    { following_id: 3 },
   ])
   const repeated = await executeDatabaseDomain(database, 'account.completePeoplePrompt', { userId: 1, people: [2] })
   expect(repeated.followed).toEqual([])

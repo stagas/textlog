@@ -4,12 +4,12 @@ import { encodeHotCursor, getHotPosts, type HotCursor, hotCursor } from './hot'
 import { getImageUrl, isImageKey } from './image-storage'
 import { decodeHtmlEntities } from './link-preview'
 import { LOCATION_MAP_STYLE_VERSION, LOCATION_ZOOM, osmLocationUrl } from './locations'
-import { loadPolls } from './polls'
 import { metaThreadVisibleToViewer } from './meta-thread'
+import { excludesMetaPosts } from './meta-thread'
+import { loadPolls } from './polls'
 import { searchExpression } from './search'
 import type { ApiPost, LinkPreview } from './types'
 import { excludesWhisperPosts } from './whisper'
-import { excludesMetaPosts } from './meta-thread'
 export type { ApiPost } from './types'
 
 export const API_DEFAULT_LIMIT = 20
@@ -166,20 +166,25 @@ function apiExtras(database: Database, postIds: number[], viewerId: number) {
     }
   }
   if (postIds.length && database.query(
-    "SELECT 1 FROM sqlite_master WHERE type='table' AND name='post_locations'",
+    'SELECT 1 FROM sqlite_master WHERE type=\'table\' AND name=\'post_locations\'',
   ).get()) {
     const rows = database.query(`SELECT l.post_id,l.query,l.latitude,l.longitude,l.display_name,
       m.image_key,m.width,m.height FROM post_locations l JOIN location_map_previews m ON m.cache_key=
       printf('${LOCATION_ZOOM}:${LOCATION_MAP_STYLE_VERSION}:%.6f:%.6f',l.latitude,l.longitude) WHERE l.post_id IN
-      (${postIds.map(() => '?').join(',')})`).all(...postIds) as Array<{ post_id: number; query: string;
-      latitude: number; longitude: number; display_name: string; image_key: string; width: number; height: number }>
+      (${postIds.map(() => '?').join(',')})`).all(...postIds) as Array<
+      { post_id: number; query: string; latitude: number; longitude: number; display_name: string; image_key: string;
+        width: number; height: number }
+    >
     for (const row of rows) {
       const metadata = { query: row.query, latitude: row.latitude, longitude: row.longitude,
         displayName: row.display_name }
       const [title, ...description] = row.display_name.split(',').map(part => part.trim()).filter(Boolean)
       locations.set(row.post_id, { ...metadata, url: osmLocationUrl(metadata), preview: {
-        imageUrl: getImageUrl(row.image_key), title: title || row.query,
-        description: description.join(', ') || row.display_name, imageWidth: row.width, imageHeight: row.height,
+        imageUrl: getImageUrl(row.image_key),
+        title: title || row.query,
+        description: description.join(', ') || row.display_name,
+        imageWidth: row.width,
+        imageHeight: row.height,
       } })
     }
   }
@@ -189,8 +194,7 @@ function apiExtras(database: Database, postIds: number[], viewerId: number) {
 function withApiExtras(post: ApiPost, extras: ReturnType<typeof apiExtras>, id: number): ApiPost {
   const poll = extras.polls.get(id)
   const reveal = !!poll && (poll.expired || poll.viewerVoted)
-  return { ...post, link_previews: extras.previews.get(id) || {}, location: extras.locations.get(id) || null,
-    poll: poll
+  return { ...post, link_previews: extras.previews.get(id) || {}, location: extras.locations.get(id) || null, poll: poll
     ? {
       options: poll.options.map(option => ({ id: option.id, label: option.label, votes: reveal ? option.votes : null,
         selected: option.selected, ...(poll.kind === 'quiz' ? { correct: reveal ? !!option.correct : null } : {}) })

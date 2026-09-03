@@ -46,23 +46,23 @@ export function groupSimilarActivities(timeline: PersonalizedTimelineRow[]): Tim
 }
 
 export function Feed(
-  { user, data, title, path = '/my-feed', pageUrl, notificationBanner = false, toMe = false, expandedRootId,
-    writeError, writeBody, writePreview, writePreviewExecutionOutput, writePreviewLocation, writeDraftId }: {
-    user: User
-    data: PersonalizedFeedData
-    title?: string
-    path?: string
-    pageUrl?: string
-    notificationBanner?: false | 'notifications' | 'appearance' | 'invite' | 'bio' | 'notification-update' | 'donate'
-    toMe?: boolean
-    expandedRootId?: number
-    writeError?: string
-    writeBody?: string
-    writePreview?: boolean
-    writePreviewExecutionOutput?: string | null
-    writePreviewLocation?: import('../types').LocationView
-    writeDraftId?: string
-  },
+  { user, data, title, path = '/my-feed', pageUrl, notificationBanner = false, toMe = false, expandedRootId, writeError,
+    writeBody, writePreview, writePreviewExecutionOutput, writePreviewLocation, writeDraftId }: {
+      user: User
+      data: PersonalizedFeedData
+      title?: string
+      path?: string
+      pageUrl?: string
+      notificationBanner?: false | 'notifications' | 'appearance' | 'invite' | 'bio' | 'notification-update' | 'donate'
+      toMe?: boolean
+      expandedRootId?: number
+      writeError?: string
+      writeBody?: string
+      writePreview?: boolean
+      writePreviewExecutionOutput?: string | null
+      writePreviewLocation?: import('../types').LocationView
+      writeDraftId?: string
+    },
 ) {
   const feedPath = path
   const returnPath = feedPath + (data.page > 1 ? `?page=${data.page}` : '')
@@ -212,8 +212,10 @@ export function Feed(
   return (
     <Layout user={user} title={title} pageUrl={pageUrl} notificationBanner={notificationBanner} mobileWriteAction>
       <h1 className="visually-hidden">Your feed</h1>
-      {writePreview && <ComposePreview user={user} body={writeBody || ''}
-        executionOutput={writePreviewExecutionOutput} location={writePreviewLocation} />}
+      {writePreview && (
+        <ComposePreview user={user} body={writeBody || ''} executionOutput={writePreviewExecutionOutput}
+          location={writePreviewLocation} />
+      )}
       <WriteForm user={user} returnPath={returnPath} embedded error={writeError} body={writeBody}
         draftId={writeDraftId} />
       <FeedTabs active="following" user={user} forYouReadStatus={data.timeline.length

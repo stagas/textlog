@@ -36,7 +36,9 @@ export function Explore({ user, welcome = false, tagsPage = 1, peoplePage = 1, d
       {user && welcome && (
         <Panel as="section" width="fluid" className="welcome-panel" role="status">
           <form className="welcome-dismiss" method="post" action="/explore/welcome/dismiss">
-            <button type="submit" aria-label="Dismiss welcome"><span aria-hidden="true" /></button>
+            <button type="submit" aria-label="Dismiss welcome">
+              <span aria-hidden="true" />
+            </button>
           </form>
           <p className="eyebrow">welcome to {appName()}</p>
           <h1>Make this place yours.</h1>
@@ -84,9 +86,9 @@ export function Explore({ user, welcome = false, tagsPage = 1, peoplePage = 1, d
               <article key={p.id} id={`person-${p.id}`}>
                 <div>
                   <div>
-                    <UserReference handle={p.handle} mood={p.mood} bio={p.bio} noteCount={p.posts} stats={profileStats[p.id]}
-                      following={p.following} user={user} followsViewer={p.followsViewer} showPopover={false}
-                      href={`/u/${p.handle}?from=${encodeURIComponent(exploreReturnPath(p.id))}`}
+                    <UserReference handle={p.handle} mood={p.mood} bio={p.bio} noteCount={p.posts}
+                      stats={profileStats[p.id]} following={p.following} user={user} followsViewer={p.followsViewer}
+                      showPopover={false} href={`/u/${p.handle}?from=${encodeURIComponent(exploreReturnPath(p.id))}`}
                       navigationQuery={`?from=${encodeURIComponent(exploreReturnPath(p.id))}`} />
                     {p.bio?.trim() && (
                       <p className="profile-bio" dangerouslySetInnerHTML={{

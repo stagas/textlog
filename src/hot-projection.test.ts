@@ -61,12 +61,16 @@ test('hot enriches ranked roots with the same two-to-five recent replies as late
   })
 
   const latest = await executeDatabaseDomain(db, 'feeds.latestPage', {
-    viewerId: -1, page: 1, pageSize: 20, markRead: false,
+    viewerId: -1,
+    page: 1,
+    pageSize: 20,
+    markRead: false,
   })
   const hot = await executeDatabaseDomain(db, 'feeds.hotPage', { viewerId: -1, page: 1, pageSize: 20 })
-  const conversationIds = (posts: typeof latest.posts) => posts
-    .filter(post => post.id === 100 || post.parent?.id === 100 || post.parent_id === 100)
-    .map(post => post.id)
+  const conversationIds = (posts: typeof latest.posts) =>
+    posts
+      .filter(post => post.id === 100 || post.parent?.id === 100 || post.parent_id === 100)
+      .map(post => post.id)
 
   expect(conversationIds(hot.posts)).toEqual(conversationIds(latest.posts))
   expect(conversationIds(hot.posts)).toEqual([100, 106, 105, 104, 103, 102])
@@ -94,7 +98,7 @@ test('upgrades a deployed version 151 hot projection state', () => {
     PRAGMA user_version=151;`)
 
   expect(runMigrations(db)).toBe(latestMigrationVersion)
-  expect(db.query("SELECT 1 FROM pragma_table_info('hot_feed_projection_state') WHERE name='generation'").get())
+  expect(db.query('SELECT 1 FROM pragma_table_info(\'hot_feed_projection_state\') WHERE name=\'generation\'').get())
     .toEqual({ 1: 1 })
   db.run('INSERT INTO post_hot(post_id) VALUES(1)')
   expect(db.query('SELECT dirty,generation FROM hot_feed_projection_state').get())

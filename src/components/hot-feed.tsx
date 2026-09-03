@@ -29,24 +29,28 @@ export function HotFeed(
   const feedPath = path
   const returnPath = feedPath + (feed.page > 1 ? `?page=${feed.page}` : '')
   return (
-    <Layout user={user} title={title} pageUrl={pageUrl} notificationBanner={notificationBanner}
-      mobileWriteAction feeds={{ title: 'Hot notes', rss: '/hot.rss', atom: '/hot.atom' }}
+    <Layout user={user} title={title} pageUrl={pageUrl} notificationBanner={notificationBanner} mobileWriteAction
+      feeds={{ title: 'Hot notes', rss: '/hot.rss', atom: '/hot.atom' }}
     >
       <h1 className="visually-hidden">Hot notes</h1>
-      {writePreview && <ComposePreview user={user} body={writeBody || ''}
-        executionOutput={writePreviewExecutionOutput} location={writePreviewLocation} />}
+      {writePreview && (
+        <ComposePreview user={user} body={writeBody || ''} executionOutput={writePreviewExecutionOutput}
+          location={writePreviewLocation} />
+      )}
       {user
-        ? <WriteForm user={user} returnPath={returnPath} embedded error={writeError} body={writeBody}
-          draftId={writeDraftId} />
+        ? (
+          <WriteForm user={user} returnPath={returnPath} embedded error={writeError} body={writeBody}
+            draftId={writeDraftId} />
+        )
         : <AnonymousWriteForm returnPath={returnPath} error={writeError} body={writeBody} />}
       <FeedTabs active="hot" user={user} forYouCount={feed.forYouCount} forYouUnread={feed.forYouUnread}
         toMeCount={feed.toMeCount} toMeUnread={feed.toMeUnread} latestCount={feed.latestCount} />
-      {feed.page > 1 && (
-        <Pagination page={feed.page} totalPages={feed.totalPages} path={feedPath} top />
-      )}
+      {feed.page > 1 && <Pagination page={feed.page} totalPages={feed.totalPages} path={feedPath} top />}
       {feed.posts.length
-        ? <FeedThreads posts={feed.posts} user={user} returnPath={returnPath} expandedRootId={expandedRootId}
-          expandedByDefault={!user && path === '/hot'} promoteAncestors />
+        ? (
+          <FeedThreads posts={feed.posts} user={user} returnPath={returnPath} expandedRootId={expandedRootId}
+            expandedByDefault={!user && path === '/hot'} promoteAncestors />
+        )
         : feed.page === 1
         ? <GlobalFeedEmpty user={user} />
         : (

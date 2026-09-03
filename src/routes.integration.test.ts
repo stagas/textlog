@@ -293,7 +293,9 @@ test('an anonymous feed note is published after signup chooses a handle', async 
   expect(published.status).toBe(303)
   expect(published.headers.get('set-cookie')).toContain('pending_post=')
   expect(published.headers.get('set-cookie')).toContain('Max-Age=0')
-  const root = database.query('SELECT id,body FROM posts WHERE user_id=(SELECT id FROM users WHERE handle=?) ORDER BY id DESC')
+  const root = database.query(
+    'SELECT id,body FROM posts WHERE user_id=(SELECT id FROM users WHERE handle=?) ORDER BY id DESC',
+  )
     .get('pending_writer') as { id: number; body: string }
   const publishedPath = `/post/${root.id}?from=${encodeURIComponent(`/hot?expand=${root.id}#post-${root.id}`)}`
     + `&to=${root.id}#post-${root.id}`
@@ -306,7 +308,9 @@ test('an anonymous feed note is published after signup chooses a handle', async 
     `name="returnTo" value="${publishedPath.replaceAll('&', '&amp;')}"`,
   )
   const continuedToPost = await request('/pick-mood/dismiss', {
-    method: 'POST', cookie: cookies, ip,
+    method: 'POST',
+    cookie: cookies,
+    ip,
     form: { returnTo: publishedPath },
   })
   expect(continuedToPost.headers.get('location')).toBe(publishedPath)
@@ -342,7 +346,9 @@ test('an anonymous feed note is published after signup chooses a handle', async 
   const replyPublished = await request('/pending-post', { cookie: replyCookies, acceptHtml: true, ip: replyIp })
   expect(replyPublished.status).toBe(303)
   expect(replyPublished.headers.get('location')).toContain(`/post/${root.id}`)
-  const reply = database.query('SELECT id,body,parent_id FROM posts WHERE user_id=(SELECT id FROM users WHERE handle=?)')
+  const reply = database.query(
+    'SELECT id,body,parent_id FROM posts WHERE user_id=(SELECT id FROM users WHERE handle=?)',
+  )
     .get('pending_replier') as { id: number; body: string; parent_id: number }
   expect(reply).toMatchObject({ body: replyBody, parent_id: root.id })
 
@@ -375,7 +381,9 @@ test('an anonymous hovercard follow survives signup and completes before onboard
   expect(guestPost).toContain('>follow</a>')
   expect(guestPost).toContain('/pending-follow/user/pending_follow_target?from=')
   expect(guestPost).not.toContain('enter to follow')
-  const started = await request(`/pending-follow/user/pending_follow_target?from=${encodeURIComponent(returnPath)}`, { ip })
+  const started = await request(`/pending-follow/user/pending_follow_target?from=${encodeURIComponent(returnPath)}`, {
+    ip,
+  })
   expect(started.status).toBe(303)
   expect(started.headers.get('location')).toBe('/enter?next=%2Fpending-follow')
   const pendingCookie = started.headers.get('set-cookie')!.split(';', 1)[0]
@@ -383,15 +391,22 @@ test('an anonymous hovercard follow survives signup and completes before onboard
 
   const email = 'pending-follow-signup@example.com'
   await request('/enter', {
-    method: 'POST', cookie: pendingCookie, ip, form: { email, next: '/pending-follow' },
+    method: 'POST',
+    cookie: pendingCookie,
+    ip,
+    form: { email, next: '/pending-follow' },
   })
   const message = capturedEmails().filter(item => item.to === email).at(-1)!
-  const magic = await request(`/enter/magic?token=${encodeURIComponent(linkToken(message))}`, { cookie: pendingCookie, ip })
+  const magic = await request(`/enter/magic?token=${encodeURIComponent(linkToken(message))}`, { cookie: pendingCookie,
+    ip })
   const loginCookie = sessionCookie(magic)
   expect(magic.headers.get('location')).toBe('/choose-handle?next=%2Fpending-follow')
   const cookies = `${loginCookie}; ${pendingCookie}`
   const chosen = await request('/choose-handle', {
-    method: 'POST', cookie: cookies, ip, form: { handle: 'pending_follower', next: '/pending-follow' },
+    method: 'POST',
+    cookie: cookies,
+    ip,
+    form: { handle: 'pending_follower', next: '/pending-follow' },
   })
   expect(chosen.headers.get('location')).toBe('/pending-follow')
 
@@ -1479,14 +1494,15 @@ test('consequential account, content, reporting, and admin flows work over HTTP'
     parent_id: number
   }
   expect(replyDraft.parent_id).toBe(post.id)
-  const replyDraftEditHtml = await (await request(`/drafts/${replyDraft.public_id}/edit`, { cookie: aliceCookie })).text()
+  const replyDraftEditHtml = await (await request(`/drafts/${replyDraft.public_id}/edit`, { cookie: aliceCookie }))
+    .text()
   expect(replyDraftEditHtml).toContain('A saved reply draft')
   expect(replyDraftEditHtml).toContain(`action="/post/${post.id}/reply#post-${post.id}"`)
   const publishedReplyDraft = await request(`/post/${post.id}/reply`, {
     method: 'POST',
     cookie: aliceCookie,
-    form: { body: 'Published reply draft', draft_id: replyDraft.public_id,
-      from: `/all#post-${post.id}`, reply_page_id: String(post.id) },
+    form: { body: 'Published reply draft', draft_id: replyDraft.public_id, from: `/all#post-${post.id}`,
+      reply_page_id: String(post.id) },
   })
   expect(publishedReplyDraft.status).toBe(303)
   expect(database.query('SELECT 1 FROM drafts WHERE id=?').get(replyDraft.id)).toBeNull()
@@ -1540,7 +1556,9 @@ test('consequential account, content, reporting, and admin flows work over HTTP'
   const embeddedErrorLocation = invalidEmbeddedPost.headers.get('location')!
   expect(embeddedErrorLocation).toStartWith('/all?write_error=')
   const embeddedErrorHtml = await (await request(embeddedErrorLocation, { cookie: aliceCookie })).text()
-  expect(embeddedErrorHtml).toContain('class="panel panel-surface panel-medium compose write-compose embedded-write-compose"')
+  expect(embeddedErrorHtml).toContain(
+    'class="panel panel-surface panel-medium compose write-compose embedded-write-compose"',
+  )
   expect(embeddedErrorHtml).toContain('The note must contain between 1 and 500 characters.')
   expect(embeddedErrorHtml).not.toContain('<title>write ·')
   const embeddedPreviewBody = 'Preview this note without leaving the feed'
@@ -1555,7 +1573,9 @@ test('consequential account, content, reporting, and admin flows work over HTTP'
   const embeddedPreviewHtml = await (await request(embeddedPreviewLocation, { cookie: aliceCookie })).text()
   expect(embeddedPreviewHtml).toContain('<h2>preview</h2>')
   expect(embeddedPreviewHtml).toContain(embeddedPreviewBody)
-  expect(embeddedPreviewHtml).toContain('class="panel panel-surface panel-medium compose write-compose embedded-write-compose"')
+  expect(embeddedPreviewHtml).toContain(
+    'class="panel panel-surface panel-medium compose write-compose embedded-write-compose"',
+  )
   expect(embeddedPreviewHtml).not.toContain('<title>write ·')
   const invalidReplyBody = `remember reply ${'x'.repeat(490)}`
   const invalidReply = await request(`/post/${post.id}/reply`, {
@@ -1576,7 +1596,9 @@ test('consequential account, content, reporting, and admin flows work over HTTP'
   expect(replyPreview.status).toBe(200)
   const replyPreviewHtml = await replyPreview.text()
   expect(replyPreviewHtml).toContain('A nested reply preview')
-  const previewedReplyDraft = database.query('SELECT id,public_id,body,parent_id FROM drafts WHERE user_id=? AND body=?')
+  const previewedReplyDraft = database.query(
+    'SELECT id,public_id,body,parent_id FROM drafts WHERE user_id=? AND body=?',
+  )
     .get(alice.id, 'A nested reply preview') as { id: number; public_id: string; body: string; parent_id: number }
   expect(previewedReplyDraft.parent_id).toBe(quotedReply.id)
   expect(replyPreviewHtml).toContain(`name="draft_id" value="${previewedReplyDraft.public_id}"`)
@@ -1618,7 +1640,7 @@ test('consequential account, content, reporting, and admin flows work over HTTP'
   const invalidMoodHtml = await invalidMood.text()
   expect(invalidMoodHtml).toContain('Mood should be an emoji.')
   expect(invalidMoodHtml).toContain('name="mood" value="hi"')
-  database.query("UPDATE users SET mood='🤸' WHERE handle='alice'").run()
+  database.query('UPDATE users SET mood=\'🤸\' WHERE handle=\'alice\'').run()
   const moodSettingsHtml = await (await request('/account/edit', { cookie: aliceCookie })).text()
   expect(moodSettingsHtml).toContain('name="mood" value="🤸"')
   const multilineBio = Array(11).fill('bio line').join('\n')
@@ -1952,9 +1974,11 @@ test('consequential account, content, reporting, and admin flows work over HTTP'
     + await (await request('/my-feed?page=2', { cookie: aliceCookie })).text()
   expect(hashtagForYou).toContain('Bot note discovered through')
   expect(sharedReplyResponse.headers.get('location')).toBe(
-    `/post/${post.id}?from=${encodeURIComponent(
-      `/latest?cursor=abc&expand=${post.id}#post-${sharedReply.id}`,
-    )}&to=${sharedReply.id}&back=${sharedReply.id}`
+    `/post/${post.id}?from=${
+      encodeURIComponent(
+        `/latest?cursor=abc&expand=${post.id}#post-${sharedReply.id}`,
+      )
+    }&to=${sharedReply.id}&back=${sharedReply.id}`
       + `#post-${sharedReply.id}`,
   )
   const sharedReplyPage = await request(sharedReplyResponse.headers.get('location')!, { cookie: bobCookie })
@@ -1964,9 +1988,11 @@ test('consequential account, content, reporting, and admin flows work over HTTP'
   )
   const threadProfileHref = `/u/bob?from=${
     encodeURIComponent(
-      `/post/${post.id}?from=${encodeURIComponent(
-        `/latest?cursor=abc&expand=${post.id}#post-${sharedReply.id}`,
-      )}&to=${sharedReply.id}&back=${sharedReply.id}`,
+      `/post/${post.id}?from=${
+        encodeURIComponent(
+          `/latest?cursor=abc&expand=${post.id}#post-${sharedReply.id}`,
+        )
+      }&to=${sharedReply.id}&back=${sharedReply.id}`,
     )
   }`.replaceAll('&', '&amp;')
   expect(sharedReplyHtml).toContain(`class="account-menu-handle" href="${threadProfileHref}">@bob</a>`)
@@ -2304,17 +2330,22 @@ test('signed-in users can follow deeply nested backlinks without a navigation ch
   const magic = await request(`/enter/magic?token=${encodeURIComponent(linkToken(message))}`, { ip })
   const cookie = sessionCookie(magic)
   expect((await request('/choose-handle', {
-    method: 'POST', cookie, form: { handle: 'nested_user', next: '/' }, ip,
+    method: 'POST',
+    cookie,
+    form: { handle: 'nested_user', next: '/' },
+    ip,
   })).status).toBe(303)
 
-  const nested = '/about?from=%2Fpost%2F1%3Ffrom%3D%252Fpost%252F2%253Ffrom%253D%25252Fpost%25252F3%25253Ffrom%25253D%2525252Flatest'
+  const nested =
+    '/about?from=%2Fpost%2F1%3Ffrom%3D%252Fpost%252F2%253Ffrom%253D%25252Fpost%25252F3%25253Ffrom%25253D%2525252Flatest'
   const response = await request(nested, { cookie, ip })
   expect(response.status).toBe(200)
   expect(response.headers.get('location')).toBeNull()
 })
 
 test('a nested navigation challenge gates every subsequent page for the resolved socket IP', async () => {
-  const nested = '/?from=%2Fpost%2F1%3Ffrom%3D%252Fpost%252F2%253Ffrom%253D%25252Fpost%25252F3%25253Ffrom%25253D%2525252Flatest'
+  const nested =
+    '/?from=%2Fpost%2F1%3Ffrom%3D%252Fpost%252F2%253Ffrom%253D%25252Fpost%25252F3%25253Ffrom%25253D%2525252Flatest'
   const challenge = await request(nested)
   expect(challenge.status).toBe(303)
   expect(challenge.headers.get('location')).toStartWith('/navigation-check?target=')

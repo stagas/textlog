@@ -41,7 +41,7 @@ test('conversation heads recover when activity is deleted or rethreaded', () => 
   expect(db.query('SELECT conversation_id,latest_post_id FROM conversation_heads ORDER BY conversation_id').all())
     .toEqual([{ conversation_id: 10, latest_post_id: 21 }, { conversation_id: 20, latest_post_id: 20 }])
 
-  db.run("UPDATE posts SET deleted_at='2026-08-01 12:00:00' WHERE id=21")
+  db.run('UPDATE posts SET deleted_at=\'2026-08-01 12:00:00\' WHERE id=21')
   expect(db.query('SELECT latest_post_id FROM conversation_heads WHERE conversation_id=10').get())
     .toEqual({ latest_post_id: 10 })
 })

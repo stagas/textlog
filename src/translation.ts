@@ -10,10 +10,30 @@ type TranslateResponse = {
 }
 
 export const translationLanguages = [
-  ['en', 'English'], ['ar', 'Arabic'], ['bn', 'Bengali'], ['zh', 'Chinese'], ['nl', 'Dutch'], ['fr', 'French'],
-  ['de', 'German'], ['el', 'Greek'], ['he', 'Hebrew'], ['hi', 'Hindi'], ['id', 'Indonesian'], ['it', 'Italian'],
-  ['ja', 'Japanese'], ['ko', 'Korean'], ['fa', 'Persian'], ['pl', 'Polish'], ['pt', 'Portuguese'], ['ru', 'Russian'],
-  ['es', 'Spanish'], ['th', 'Thai'], ['tr', 'Turkish'], ['uk', 'Ukrainian'], ['ur', 'Urdu'], ['vi', 'Vietnamese'],
+  ['en', 'English'],
+  ['ar', 'Arabic'],
+  ['bn', 'Bengali'],
+  ['zh', 'Chinese'],
+  ['nl', 'Dutch'],
+  ['fr', 'French'],
+  ['de', 'German'],
+  ['el', 'Greek'],
+  ['he', 'Hebrew'],
+  ['hi', 'Hindi'],
+  ['id', 'Indonesian'],
+  ['it', 'Italian'],
+  ['ja', 'Japanese'],
+  ['ko', 'Korean'],
+  ['fa', 'Persian'],
+  ['pl', 'Polish'],
+  ['pt', 'Portuguese'],
+  ['ru', 'Russian'],
+  ['es', 'Spanish'],
+  ['th', 'Thai'],
+  ['tr', 'Turkish'],
+  ['uk', 'Ukrainian'],
+  ['ur', 'Urdu'],
+  ['vi', 'Vietnamese'],
 ] as const
 
 export type TranslationLanguage = typeof translationLanguages[number][0]

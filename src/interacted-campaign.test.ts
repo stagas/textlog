@@ -115,13 +115,17 @@ test('reviewed campaign run freezes its audience and resumes the same run', asyn
     (20,5,NULL,'2026-08-01 10:00:00',NULL),(21,2,20,'2026-08-02 10:00:00',NULL);`)
   const sentTo: string[] = []
   const result = await sendInteractedCampaign({
-    database, minReplies: 1, version: 'v1', runId: run.id,
+    database,
+    minReplies: 1,
+    version: 'v1',
+    runId: run.id,
     env: { APP_URL: 'https://textlog.test', EMAIL_FROM: 'hello@textlog.test', RESEND_API_KEY: 'secret' },
     request: (async (_input: string | URL | Request, init?: RequestInit) => {
       sentTo.push((JSON.parse(String(init?.body)) as { to: string[] }).to[0]!)
       return Response.json({ id: 'message-1' })
     }) as typeof fetch,
-    sleep: async () => {}, log: () => {},
+    sleep: async () => {},
+    log: () => {},
   })
 
   expect(result).toMatchObject({ sent: 1, failed: 0 })

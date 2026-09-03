@@ -1,6 +1,6 @@
 import { backgroundDatabaseCall, databaseService, subscribeToFeedMutations } from './database-service'
-import { isMobileRequest } from './user-agent'
 import { locationMapProvider } from './locations'
+import { isMobileRequest } from './user-agent'
 
 type MaterializedFeedKind = 'latest' | 'new' | 'hot' | 'for-you' | 'to-me' | 'about'
 
@@ -49,12 +49,13 @@ function rememberMaterialization(key: string, result: MaterializedResponse, view
 
 export function materializedBody(html: string, viewerId: number) {
   if (viewerId < 0) return html
-  const token = (source: string, path: string, label: string, name: string) => source.replace(
-    new RegExp(`(<a[^>]*href="${path}"[^>]*>${label})(?:<span class="to-me-count">\\d+\\+?</span>)?(</a>)`),
-    `$1{{${name}-count}}$2`,
-  )
-  return token(token(token(html, '\/my-feed', 'my feed', 'for-you'), '\/@', '@', 'to-me'),
-    '\/all', 'all', 'latest').replace(/<a href="\/drafts">drafts<\/a>|(?=<\/span>\s*<span class="account-nav-row account-nav-primary">)/,
+  const token = (source: string, path: string, label: string, name: string) =>
+    source.replace(
+      new RegExp(`(<a[^>]*href="${path}"[^>]*>${label})(?:<span class="to-me-count">\\d+\\+?</span>)?(</a>)`),
+      `$1{{${name}-count}}$2`,
+    )
+  return token(token(token(html, '\/my-feed', 'my feed', 'for-you'), '\/@', '@', 'to-me'), '\/all', 'all', 'latest')
+    .replace(/<a href="\/drafts">drafts<\/a>|(?=<\/span>\s*<span class="account-nav-row account-nav-primary">)/,
       '{{drafts-link}}')
 }
 
@@ -77,9 +78,8 @@ function appearanceVariant(request: Request) {
   const names = ['appearance', 'font', 'sans-serif-font', 'primary-font', 'font-size', 'notification_device',
     'donation_banner_dismissed', 'pwa_standalone', 'pwa_install_banner_dismissed']
   return `${isMobileRequest(request) ? 'mobile' : 'desktop'}|${
-    locationMapProvider(request.headers.get('user-agent') || '')}|${
-    names.map(name => cookie.match(new RegExp(`(?:^|;\\s*)${name}=([^;]*)`))?.[1] || '').join('|')
-  }`
+    locationMapProvider(request.headers.get('user-agent') || '')
+  }|${names.map(name => cookie.match(new RegExp(`(?:^|;\\s*)${name}=([^;]*)`))?.[1] || '').join('|')}`
 }
 
 export async function rpcMaterializedFeedPage(request: Request, kind: MaterializedFeedKind, viewerId: number,
@@ -159,8 +159,10 @@ export async function rpcMaterializedFeedPage(request: Request, kind: Materializ
           }).catch(error => console.error(`Could not refresh stale ${kind} feed`, error))
         }
         return { body: kind === 'latest' ? cached.html : cachedHtml, status: 200,
-          headers: [['content-type', 'text/html;charset=utf-8'], ['cache-control', 'private, no-store'],
-            ['x-feed-cache', cached.stale ? 'stale' : 'durable']] }
+          headers: [['content-type', 'text/html;charset=utf-8'], ['cache-control', 'private, no-store'], [
+            'x-feed-cache',
+            cached.stale ? 'stale' : 'durable',
+          ]] }
       }
       const response = await render()
       const html = await response.text()

@@ -21,14 +21,14 @@ describe('mood prompt', () => {
     expect(html).toContain('What&#x27;s up?')
     expect(html).toContain('name="mood" value="😊"')
     expect(html).toContain('name="returnTo" value="/@?page=2"')
-    expect(html).toContain("I&#x27;ll do it later, thanks")
+    expect(html).toContain('I&#x27;ll do it later, thanks')
     expect(html).toContain('action="/pick-mood/dismiss"')
   })
 
   test('stores either the selected mood or a permanent dismissal', async () => {
     const database = new Database(':memory:')
     runMigrations(database)
-    database.run("INSERT INTO users(id,handle,email,password) VALUES(1,'alice','alice@example.com','x')")
+    database.run('INSERT INTO users(id,handle,email,password) VALUES(1,\'alice\',\'alice@example.com\',\'x\')')
 
     await executeDatabaseDomain(database, 'account.answerMoodPrompt', { userId: 1, mood: '😌' })
     const selected = database.query(
@@ -37,7 +37,7 @@ describe('mood prompt', () => {
     expect(selected.mood).toBe('😌')
     expect(selected.dismissed).not.toBeNull()
 
-    database.run("UPDATE users SET mood='' WHERE id=1")
+    database.run('UPDATE users SET mood=\'\' WHERE id=1')
     expect((database.query('SELECT mood_prompt_dismissed_at dismissed FROM users WHERE id=1').get() as {
       dismissed: string | null
     }).dismissed).not.toBeNull()

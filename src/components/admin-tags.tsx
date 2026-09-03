@@ -25,20 +25,20 @@ export function AdminTags({ user, groups, displayNames, invariants, error }: {
           </label>
           <label className="form-label">
             aliases
-            <input className="form-control" name="aliases" required placeholder="tlog, textlog"
-              autoComplete="off" />
+            <input className="form-control" name="aliases" required placeholder="tlog, textlog" autoComplete="off" />
           </label>
           <small className="admin-tags-hint">Separate multiple aliases with commas or spaces.</small>
           <FormActions primary={<button className="button">add aliases →</button>} />
         </form>
       </section>
       <section className="admin-section admin-tag-invariants">
-        <h2>singularization invariants <span>{invariants.length}</span></h2>
+        <h2>
+          singularization invariants <span>{invariants.length}</span>
+        </h2>
         <form method="post" action="/admin/tags/invariants">
           <label className="form-label">
             invariant tag
-            <input className="form-control" name="tag" required maxLength={280} placeholder="news"
-              autoComplete="off" />
+            <input className="form-control" name="tag" required maxLength={280} placeholder="news" autoComplete="off" />
           </label>
           <small>Tags listed here keep their trailing s and are never singularized.</small>
           <FormActions primary={<button className="button">add invariant →</button>} />
@@ -53,7 +53,9 @@ export function AdminTags({ user, groups, displayNames, invariants, error }: {
         </div>
       </section>
       <section className="admin-section admin-tag-display-names">
-        <h2>display names <span>{displayNames.length}</span></h2>
+        <h2>
+          display names <span>{displayNames.length}</span>
+        </h2>
         <form className="admin-tag-display-form" method="post" action="/admin/tags/display-name">
           <input className="form-control" name="tag" required maxLength={280} placeholder="tag name"
             aria-label="Canonical tag name" autoComplete="off" />
@@ -72,7 +74,9 @@ export function AdminTags({ user, groups, displayNames, invariants, error }: {
               <input name="displayName" required maxLength={280} defaultValue={entry.displayName}
                 aria-label={`Display name for #${entry.tag}`} autoComplete="off" />
               <button className="quiet">save</button>
-              <button className="quiet danger" formAction={`/admin/tags/${encodeURIComponent(entry.tag)}/display-name/remove`}>
+              <button className="quiet danger"
+                formAction={`/admin/tags/${encodeURIComponent(entry.tag)}/display-name/remove`}
+              >
                 remove
               </button>
             </form>
@@ -80,7 +84,9 @@ export function AdminTags({ user, groups, displayNames, invariants, error }: {
         </div>
       </section>
       <section className="admin-section admin-tag-groups">
-        <h2>tag groups <span>{groups.length}</span></h2>
+        <h2>
+          tag groups <span>{groups.length}</span>
+        </h2>
         {groups.length
           ? groups.map(group => (
             <article key={group.primaryTag}>

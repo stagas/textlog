@@ -128,44 +128,58 @@ test('a deep unread reply moves its root first and compresses read ancestors', (
 
   expect(html.indexOf('active root')).toBeLessThan(html.indexOf('other root'))
   expect(html).not.toContain('read ancestor')
-  expect(html).toContain('href="/post/100?from=%2Flatest%3Fexpand%3D100%23post-100" aria-label="Earlier replies omitted" rel="nofollow">…</a>')
+  expect(html).toContain(
+    'href="/post/100?from=%2Flatest%3Fexpand%3D100%23post-100" aria-label="Earlier replies omitted" rel="nofollow">…</a>',
+  )
   expect(html.indexOf('immediate parent')).toBeLessThan(html.indexOf('new unread reply'))
 })
 
 test('collapsed conversations render unread ancestors as posts instead of hidden quote paths', () => {
   const root = { id: 200, user_id: 2, parent_id: null, body: 'top level', created_at: '2026-08-19 08:00:00',
     deleted_at: null, handle: 'alice', reply_count: 4 }
-  const unread = { ...root, id: 201, parent_id: 200, body: 'actual unread reply',
-    created_at: '2026-08-19 09:00:00', parent: root }
-  const quotedPath = { ...root, id: 202, parent_id: 201, body: 'quoted path',
-    created_at: '2026-08-19 10:00:00', parent: unread }
-  const recent = { ...root, id: 203, parent_id: 202, body: 'recent reply',
-    created_at: '2026-08-19 11:00:00', parent: quotedPath }
+  const unread = { ...root, id: 201, parent_id: 200, body: 'actual unread reply', created_at: '2026-08-19 09:00:00',
+    parent: root }
+  const quotedPath = { ...root, id: 202, parent_id: 201, body: 'quoted path', created_at: '2026-08-19 10:00:00',
+    parent: unread }
+  const recent = { ...root, id: 203, parent_id: 202, body: 'recent reply', created_at: '2026-08-19 11:00:00',
+    parent: quotedPath }
   const newest = { ...root, id: 204, parent_id: 203, body: 'newest reply', reply_count: 0,
     created_at: '2026-08-19 12:00:00', parent: recent }
   const html = renderToStaticMarkup(<PublicFeed path="/latest" feed={{
-    posts: [newest, recent, unread, root], page: 1, totalItems: 1, totalPages: 1, unreadPostIds: [201],
+    posts: [newest, recent, unread, root],
+    page: 1,
+    totalItems: 1,
+    totalPages: 1,
+    unreadPostIds: [201],
   }} />)
 
   expect(html.match(/collapsed-preview-post/g)).toHaveLength(3)
   expect(html).toMatch(/collapsed-preview-post[^>]*>.*?id="post-201"/s)
-  expect(html).toContain('<div class="reply-node collapsed-preview-path"><a class="quiet thread-ancestor-gap post-continuation-link"')
+  expect(html).toContain(
+    '<div class="reply-node collapsed-preview-path"><a class="quiet thread-ancestor-gap post-continuation-link"',
+  )
 })
 
 test('a folded unread reply promotes its parent into the tree', () => {
   const root = { id: 300, user_id: 1, parent_id: null, body: 'Root', created_at: '2026-09-02 10:00:00',
     deleted_at: null, handle: 'root', reply_count: 3 }
-  const older = { id: 299, user_id: 4, parent_id: root.id, body: 'Older sibling',
-    created_at: '2026-09-02 10:30:00', deleted_at: null, handle: 'older', reply_count: 0, parent: root }
+  const older = { id: 299, user_id: 4, parent_id: root.id, body: 'Older sibling', created_at: '2026-09-02 10:30:00',
+    deleted_at: null, handle: 'older', reply_count: 0, parent: root }
   const parent = { id: 301, user_id: 2, parent_id: root.id, body: 'The replied-to post',
     created_at: '2026-09-02 11:00:00', deleted_at: null, handle: 'parent', reply_count: 1, parent: root }
   const unread = { id: 302, user_id: 3, parent_id: parent.id, body: 'New unread reply',
     created_at: '2026-09-02 12:00:00', deleted_at: null, handle: 'reply', reply_count: 0, parent,
     feed_collapsed_preview: true, feed_ancestor_gap: true }
   const html = renderToStaticMarkup(<PublicFeed path="/latest" feed={{
-    posts: [root, older, unread], page: 1, totalItems: 1, totalPages: 1, unreadPostIds: [unread.id],
+    posts: [root, older, unread],
+    page: 1,
+    totalItems: 1,
+    totalPages: 1,
+    unreadPostIds: [unread.id],
   }} />)
-  expect(html).toMatch(/collapsed-preview-post[^>]*>[\s\S]*?id="post-301"[\s\S]*?collapsed-preview-post[^>]*>[\s\S]*?id="post-302"/)
+  expect(html).toMatch(
+    /collapsed-preview-post[^>]*>[\s\S]*?id="post-301"[\s\S]*?collapsed-preview-post[^>]*>[\s\S]*?id="post-302"/,
+  )
   expect(html).toMatch(/class="reply-node collapsed-preview-path collapsed-preview-post"><article[^>]*id="post-302"/)
   expect(html).not.toContain('class="parent-quote')
 })
@@ -173,11 +187,14 @@ test('a folded unread reply promotes its parent into the tree', () => {
 test('an unread reply keeps a root parent in the tree without quoting it', () => {
   const root = { id: 310, user_id: 1, parent_id: null, body: 'Visible parent', created_at: '2026-09-02 10:00:00',
     deleted_at: null, handle: 'root', reply_count: 1 }
-  const unread = { id: 311, user_id: 2, parent_id: root.id, body: 'New unread reply',
-    created_at: '2026-09-02 11:00:00', deleted_at: null, handle: 'reply', reply_count: 0, parent: root,
-    feed_collapsed_preview: true }
+  const unread = { id: 311, user_id: 2, parent_id: root.id, body: 'New unread reply', created_at: '2026-09-02 11:00:00',
+    deleted_at: null, handle: 'reply', reply_count: 0, parent: root, feed_collapsed_preview: true }
   const html = renderToStaticMarkup(<PublicFeed path="/latest" feed={{
-    posts: [root, unread], page: 1, totalItems: 1, totalPages: 1, unreadPostIds: [unread.id],
+    posts: [root, unread],
+    page: 1,
+    totalItems: 1,
+    totalPages: 1,
+    unreadPostIds: [unread.id],
   }} />)
 
   expect(html).not.toContain('class="parent-quote')
@@ -185,13 +202,15 @@ test('an unread reply keeps a root parent in the tree without quoting it', () =>
 })
 
 test('a feed branch root continues when its retained quoted parent has the same author', () => {
-  const parent = { id: 2547, user_id: 490, parent_id: null, body: 'Earlier thought',
-    created_at: '2026-08-19 10:00:00', deleted_at: null, handle: 'jg', reply_count: 1 }
+  const parent = { id: 2547, user_id: 490, parent_id: null, body: 'Earlier thought', created_at: '2026-08-19 10:00:00',
+    deleted_at: null, handle: 'jg', reply_count: 1 }
   const branchRoot = { id: 2553, user_id: 490, parent_id: null, parent, body: 'Upon further reflection',
-    created_at: '2026-08-19 11:00:00', deleted_at: null, handle: 'jg', reply_count: 0,
-    feed_branch_root: true }
+    created_at: '2026-08-19 11:00:00', deleted_at: null, handle: 'jg', reply_count: 0, feed_branch_root: true }
   const html = renderToStaticMarkup(<PublicFeed path="/latest" feed={{
-    posts: [branchRoot], page: 1, totalItems: 1, totalPages: 1,
+    posts: [branchRoot],
+    page: 1,
+    totalItems: 1,
+    totalPages: 1,
   }} />)
   const quoteStart = html.indexOf('<blockquote class="parent-quote')
   const quoteEnd = html.indexOf('</blockquote>', quoteStart)
@@ -280,9 +299,9 @@ test('anonymous public feeds omit view toggles', () => {
 })
 
 test('anonymous hot, all, and any feeds expand conversations by default', () => {
-  const root = { id: 1, user_id: 2, parent_id: null, body: 'root', created_at: '2026-08-19 09:00:00',
-    deleted_at: null, handle: 'alice', reply_count: 3 }
-  const replies = [1, 2, 3].map((offset) => ({
+  const root = { id: 1, user_id: 2, parent_id: null, body: 'root', created_at: '2026-08-19 09:00:00', deleted_at: null,
+    handle: 'alice', reply_count: 3 }
+  const replies = [1, 2, 3].map(offset => ({
     id: offset + 1,
     user_id: offset + 2,
     parent_id: root.id,
@@ -304,8 +323,9 @@ test('anonymous hot, all, and any feeds expand conversations by default', () => 
     expect(html).not.toContain('id="feed-thread-fold-1" checked=""')
   }
 
-  const signedIn = renderToStaticMarkup(<PublicFeed user={{ id: 1, handle: 'reader', email: 'reader@example.com',
-    bio: '' }} path="/all" feed={feed} />)
+  const signedIn = renderToStaticMarkup(
+    <PublicFeed user={{ id: 1, handle: 'reader', email: 'reader@example.com', bio: '' }} path="/all" feed={feed} />,
+  )
   expect(signedIn).toContain('id="feed-thread-fold-1" checked=""')
 })
 
@@ -390,12 +410,12 @@ test('feed trees render a shared off-page parent once for sibling replies', () =
 })
 
 test('feed trees promote a shared parent when only one sibling carries the quoted record', () => {
-  const parent = { id: 494, user_id: 2, parent_id: null, body: 'shared parent 494',
-    created_at: '2026-08-08 14:20:43', deleted_at: null, handle: 'alice', reply_count: 2 }
-  const older = { id: 496, user_id: 3, parent_id: parent.id, body: 'older reply',
-    created_at: '2026-08-08 14:25:42', deleted_at: null, handle: 'bob', reply_count: 0, parent: null }
-  const newer = { id: 549, user_id: 4, parent_id: parent.id, body: 'newer reply',
-    created_at: '2026-08-08 18:55:52', deleted_at: null, handle: 'cara', reply_count: 0, parent }
+  const parent = { id: 494, user_id: 2, parent_id: null, body: 'shared parent 494', created_at: '2026-08-08 14:20:43',
+    deleted_at: null, handle: 'alice', reply_count: 2 }
+  const older = { id: 496, user_id: 3, parent_id: parent.id, body: 'older reply', created_at: '2026-08-08 14:25:42',
+    deleted_at: null, handle: 'bob', reply_count: 0, parent: null }
+  const newer = { id: 549, user_id: 4, parent_id: parent.id, body: 'newer reply', created_at: '2026-08-08 18:55:52',
+    deleted_at: null, handle: 'cara', reply_count: 0, parent }
   const html = renderToStaticMarkup(
     <FeedThreads posts={[newer, older]} user={null} returnPath="/tag/example" />,
   )
@@ -408,18 +428,25 @@ test('feed trees promote a shared parent when only one sibling carries the quote
 })
 
 test('feed trees suppress deleted top-level post 2878 and all of its children', () => {
-  const deletedRoot = { id: 2878, user_id: 2, parent_id: null, body: 'deleted root',
-    created_at: '2026-08-30 02:48:06', deleted_at: '2026-08-31 15:23:18', handle: 'deleted-453',
-    reply_count: 2 }
+  const deletedRoot = { id: 2878, user_id: 2, parent_id: null, body: 'deleted root', created_at: '2026-08-30 02:48:06',
+    deleted_at: '2026-08-31 15:23:18', handle: 'deleted-453', reply_count: 2 }
   const child = (id: number, handle: string, created_at: string) => ({
-    id, user_id: id, parent_id: deletedRoot.id, body: `${handle} visible reply`, created_at,
-    deleted_at: null, handle, reply_count: 0, parent: deletedRoot, feed_branch_root: true,
+    id,
+    user_id: id,
+    parent_id: deletedRoot.id,
+    body: `${handle} visible reply`,
+    created_at,
+    deleted_at: null,
+    handle,
+    reply_count: 0,
+    parent: deletedRoot,
+    feed_branch_root: true,
     feed_collapsed_preview: true,
   })
   const html = renderToStaticMarkup(
     <PublicFeed user={{ id: 1, handle: 'viewer', email: 'viewer@example.com', bio: '' }} path="/all"
-      feed={{ posts: [child(2887, 'paratoner', '2026-08-30 06:30:32'),
-        child(2886, 'stagas', '2026-08-30 05:59:23')], page: 1, totalItems: 1, totalPages: 1 }} />,
+      feed={{ posts: [child(2887, 'paratoner', '2026-08-30 06:30:32'), child(2886, 'stagas', '2026-08-30 05:59:23')],
+        page: 1, totalItems: 1, totalPages: 1 }} />,
   )
 
   expect(html).not.toContain('id="post-2878"')
@@ -432,17 +459,16 @@ test('feed trees suppress deleted top-level post 2878 and all of its children', 
 test('latest joins promoted branches beneath their shared grandparent', () => {
   const root = { id: 494, user_id: 2, parent_id: null, body: 'shared conversation root',
     created_at: '2026-08-08 14:20:43', deleted_at: null, handle: 'alice', reply_count: 2 }
-  const left = { id: 496, user_id: 3, parent_id: root.id, body: 'left branch',
-    created_at: '2026-08-08 14:25:42', deleted_at: null, handle: 'bob', reply_count: 1, parent: root }
-  const right = { id: 549, user_id: 4, parent_id: root.id, body: 'right branch',
-    created_at: '2026-08-08 18:55:52', deleted_at: null, handle: 'cara', reply_count: 1, parent: root }
+  const left = { id: 496, user_id: 3, parent_id: root.id, body: 'left branch', created_at: '2026-08-08 14:25:42',
+    deleted_at: null, handle: 'bob', reply_count: 1, parent: root }
+  const right = { id: 549, user_id: 4, parent_id: root.id, body: 'right branch', created_at: '2026-08-08 18:55:52',
+    deleted_at: null, handle: 'cara', reply_count: 1, parent: root }
   const leftReply = { id: 2516, user_id: 5, parent_id: left.id, body: 'new left reply',
     created_at: '2026-08-26 05:27:01', deleted_at: null, handle: 'dan', reply_count: 0, parent: left }
   const rightReply = { id: 2432, user_id: 6, parent_id: right.id, body: 'new right reply',
     created_at: '2026-08-25 13:30:21', deleted_at: null, handle: 'erin', reply_count: 0, parent: right }
   const html = renderToStaticMarkup(
-    <PublicFeed path="/latest"
-      feed={{ posts: [leftReply, rightReply], page: 1, totalItems: 1, totalPages: 1 }} />,
+    <PublicFeed path="/latest" feed={{ posts: [leftReply, rightReply], page: 1, totalItems: 1, totalPages: 1 }} />,
   )
 
   expect(html.match(/shared conversation root/g)).toHaveLength(1)
@@ -454,26 +480,28 @@ test('latest joins promoted branches beneath their shared grandparent', () => {
 })
 
 test('collapsed latest keeps a visible newest reply nested beneath its visible parent', () => {
-  const root = { id: 494, user_id: 2, parent_id: null, body: 'conversation root',
-    created_at: '2026-08-08 14:20:43', deleted_at: null, handle: 'alice', reply_count: 3 }
-  const branch = { id: 496, user_id: 3, parent_id: root.id, body: 'branch',
-    created_at: '2026-08-08 14:25:42', deleted_at: null, handle: 'bob', reply_count: 2, parent: root }
+  const root = { id: 494, user_id: 2, parent_id: null, body: 'conversation root', created_at: '2026-08-08 14:20:43',
+    deleted_at: null, handle: 'alice', reply_count: 3 }
+  const branch = { id: 496, user_id: 3, parent_id: root.id, body: 'branch', created_at: '2026-08-08 14:25:42',
+    deleted_at: null, handle: 'bob', reply_count: 2, parent: root }
   const parent = { id: 2516, user_id: 4, parent_id: branch.id, body: 'visible parent',
     created_at: '2026-08-26 05:27:01', deleted_at: null, handle: 'cara', reply_count: 1, parent: branch }
-  const child = { id: 2582, user_id: 5, parent_id: parent.id, body: 'visible child',
-    created_at: '2026-08-26 18:34:27', deleted_at: null, handle: 'dan', reply_count: 0, parent }
+  const child = { id: 2582, user_id: 5, parent_id: parent.id, body: 'visible child', created_at: '2026-08-26 18:34:27',
+    deleted_at: null, handle: 'dan', reply_count: 0, parent }
   const html = renderToStaticMarkup(
     <PublicFeed path="/latest"
       feed={{ posts: [child, parent, branch, root], page: 1, totalItems: 1, totalPages: 1 }} />,
   )
 
   expect(html).toContain('id="feed-thread-fold-494" checked=""')
-  expect(html).toMatch(/reply-node collapsed-preview-path collapsed-preview-post[^>]*>[\s\S]*?id="post-2516"[\s\S]*?reply-branch[\s\S]*?reply-node collapsed-preview-path collapsed-preview-post[^>]*>[\s\S]*?id="post-2582"/)
+  expect(html).toMatch(
+    /reply-node collapsed-preview-path collapsed-preview-post[^>]*>[\s\S]*?id="post-2516"[\s\S]*?reply-branch[\s\S]*?reply-node collapsed-preview-path collapsed-preview-post[^>]*>[\s\S]*?id="post-2582"/,
+  )
 })
 
 test('collapsed latest strongly favors two recent direct replies over a deep run', () => {
-  const root = { id: 1495, user_id: 2, parent_id: null, body: 'conversation root',
-    created_at: '2026-08-16 14:10:58', deleted_at: null, handle: 'alice', reply_count: 5, direct_reply_count: 2 }
+  const root = { id: 1495, user_id: 2, parent_id: null, body: 'conversation root', created_at: '2026-08-16 14:10:58',
+    deleted_at: null, handle: 'alice', reply_count: 5, direct_reply_count: 2 }
   const directOlder = { id: 2904, user_id: 3, parent_id: root.id, body: 'older direct',
     created_at: '2026-08-30 13:20:03', deleted_at: null, handle: 'bob', reply_count: 0, parent: root,
     feed_collapsed_preview: true }
@@ -483,20 +511,20 @@ test('collapsed latest strongly favors two recent direct replies over a deep run
   const intermediateOne = { id: 2954, user_id: 5, parent_id: directNewest.id, body: 'intermediate one',
     created_at: '2026-08-31 15:47:09', deleted_at: null, handle: 'dan', reply_count: 2, parent: directNewest }
   const intermediateTwo = { id: 2955, user_id: 6, parent_id: intermediateOne.id, body: 'intermediate two',
-    created_at: '2026-08-31 15:53:24', deleted_at: null, handle: 'erin', reply_count: 1,
-    parent: intermediateOne }
+    created_at: '2026-08-31 15:53:24', deleted_at: null, handle: 'erin', reply_count: 1, parent: intermediateOne }
   const newest = { id: 2956, user_id: 7, parent_id: intermediateTwo.id, body: 'newest deep reply',
-    created_at: '2026-08-31 15:54:59', deleted_at: null, handle: 'dan', reply_count: 0,
-    parent: intermediateTwo }
+    created_at: '2026-08-31 15:54:59', deleted_at: null, handle: 'dan', reply_count: 0, parent: intermediateTwo }
   const html = renderToStaticMarkup(
     <PublicFeed path="/latest"
-      feed={{ posts: [newest, intermediateTwo, intermediateOne, directNewest, directOlder, root],
-        page: 1, totalItems: 1, totalPages: 1 }} />,
+      feed={{ posts: [newest, intermediateTwo, intermediateOne, directNewest, directOlder, root], page: 1,
+        totalItems: 1, totalPages: 1 }} />,
   )
 
   expect(html.match(/collapsed-preview-post/g)).toHaveLength(2)
   expect(html.indexOf('id="post-2904"')).toBeLessThan(html.indexOf('id="post-2953"'))
-  expect(html).toMatch(/id="post-2953"[\s\S]*?<div class="reply-branch collapsed-preview-path-branch"[^>]*>[\s\S]*?aria-label="Expand hidden replies"[^>]*>…<\/label>[\s\S]*?id="post-2954"/)
+  expect(html).toMatch(
+    /id="post-2953"[\s\S]*?<div class="reply-branch collapsed-preview-path-branch"[^>]*>[\s\S]*?aria-label="Expand hidden replies"[^>]*>…<\/label>[\s\S]*?id="post-2954"/,
+  )
 })
 
 test('threaded feed replies omit redundant footer dots', () => {
@@ -808,8 +836,8 @@ test('hot and latest show the to-me tab with its unread count', () => {
 test('tab counters cap counts at 99+', () => {
   const user = { id: 1, handle: 'reader', email: 'reader@example.com', bio: '',
     handle_chosen_at: '2026-08-19 09:00:00' }
-  const feed = { posts: [], page: 1, totalItems: 0, totalPages: 1, toMeUnread: true, toMeCount: 99,
-    forYouCount: 1234, latestCount: 100 }
+  const feed = { posts: [], page: 1, totalItems: 0, totalPages: 1, toMeUnread: true, toMeCount: 99, forYouCount: 1234,
+    latestCount: 100 }
   const html = renderToStaticMarkup(<HotFeed user={user} feed={feed} />)
 
   expect(html).toContain('href="/@">@<span class="to-me-count">99+</span></a>')

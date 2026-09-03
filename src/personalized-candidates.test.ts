@@ -42,6 +42,9 @@ test('mentions and followed ancestor tags extend candidate delivery', () => {
 
   expect(db.query(`SELECT viewer_id FROM personalized_post_candidates
     WHERE post_id=11 ORDER BY viewer_id`).all()).toEqual([
-    { viewer_id: 1 }, { viewer_id: 2 }, { viewer_id: 3 }, { viewer_id: 4 },
+    { viewer_id: 1 },
+    { viewer_id: 2 },
+    { viewer_id: 3 },
+    { viewer_id: 4 },
   ])
 })

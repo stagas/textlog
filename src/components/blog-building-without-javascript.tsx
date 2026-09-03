@@ -6,7 +6,8 @@ import { Layout } from './layout'
 import { ActionPair } from './page-shared'
 
 const title = 'Building textlog without JavaScript'
-const description = 'How textlog uses server-rendered React, plain HTML, forms and URLs to build a quiet social web app.'
+const description =
+  'How textlog uses server-rendered React, plain HTML, forms and URLs to build a quiet social web app.'
 const articleHtml = sanitizedMarkdownHtml(articleMarkdown, { highlightCode: true })
 
 export function BlogBuildingWithoutJavascript({ user, pageUrl }: { user: User | null; pageUrl: string }) {

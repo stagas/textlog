@@ -2,8 +2,8 @@ import type { BioReferenceData, PersonView, PostView, ProfileRow, TagView } from
 import { displayBio, linkify } from '../utils'
 import { BioReferenceForms, TagReference, UserReference } from './post'
 
-import React from 'react'
 import { randomInt } from 'node:crypto'
+import React from 'react'
 import { isAdmin } from '../admin'
 import { markdownPlainText } from '../markdown'
 import { moderatedContentDescription } from '../moderation'
@@ -24,8 +24,8 @@ export function paginationHeadingClass() {
 export function TabHighlight({ active }: { active: boolean }) {
   if (!active) return null
   return (
-    <svg className="feed-tab-highlight" viewBox="0 0 100 2" preserveAspectRatio="none"
-      shapeRendering="crispEdges" aria-hidden="true" focusable="false"
+    <svg className="feed-tab-highlight" viewBox="0 0 100 2" preserveAspectRatio="none" shapeRendering="crispEdges"
+      aria-hidden="true" focusable="false"
     >
       <rect width="100" height="2" />
     </svg>
@@ -434,10 +434,9 @@ export function PostingHelp({ maxLength = 500, maxLines = 15, search, oneLine = 
 
 export function PostingHelpAction({ id, defaultChecked = false }: { id: string; defaultChecked?: boolean }) {
   return (
-    <label className="secondary-action posting-help-action" htmlFor={id}
-      title="Show more writing actions and help">
-      <input className="posting-help-toggle" id={id} type="checkbox"
-        aria-controls={`${id}-content`} defaultChecked={defaultChecked} />
+    <label className="secondary-action posting-help-action" htmlFor={id} title="Show more writing actions and help">
+      <input className="posting-help-toggle" id={id} type="checkbox" aria-controls={`${id}-content`}
+        defaultChecked={defaultChecked} />
       more
     </label>
   )
@@ -495,25 +494,24 @@ export function VerificationRequired() {
 export function Pagination(
   { page, totalPages, path, pageParam = 'page', label = 'Pagination', compact = false, top = false, anchor,
     instantScroll = false }: {
-    page: number
-    totalPages: number
-    path: string
-    pageParam?: string
-    label?: string
-    compact?: boolean
-    top?: boolean
-    anchor?: string
-    instantScroll?: boolean
-  },
+      page: number
+      totalPages: number
+      path: string
+      pageParam?: string
+      label?: string
+      compact?: boolean
+      top?: boolean
+      anchor?: string
+      instantScroll?: boolean
+    },
 ) {
   if (totalPages <= 1) return null
   const separator = path.includes('?') ? '&' : '?'
   const [formPath, formQuery = ''] = path.split('?', 2)
   const formParameters = [...new URLSearchParams(formQuery)].filter(([name]) => name !== pageParam)
   const fragment = anchor ? `#${anchor}` : ''
-  const pageHref = (value: number) => `${path}${separator}${pageParam}=${value}${
-    instantScroll ? '&_scroll=instant' : ''
-  }${fragment}`
+  const pageHref = (value: number) =>
+    `${path}${separator}${pageParam}=${value}${instantScroll ? '&_scroll=instant' : ''}${fragment}`
   const windowStart = Math.max(1, Math.min(page - 1, totalPages - 2))
   const windowPages = Array.from({ length: Math.min(3, totalPages) }, (_, index) => windowStart + index)
   const pages = [...new Set([1, ...windowPages, totalPages])].sort((a, b) => a - b)
@@ -523,9 +521,7 @@ export function Pagination(
     >
       {page > 1
         ? (
-          <a className="pagination-edge" href={pageHref(page - 1)}
-            aria-label="Previous page"
-          >
+          <a className="pagination-edge" href={pageHref(page - 1)} aria-label="Previous page">
             ← prev
           </a>
         )
@@ -550,9 +546,7 @@ export function Pagination(
                 </form>
               )
               : (
-                <a href={pageHref(value)}
-                  aria-label={`Page ${value}`}
-                >
+                <a href={pageHref(value)} aria-label={`Page ${value}`}>
                   {value}
                 </a>
               )}
@@ -561,9 +555,7 @@ export function Pagination(
       </div>
       {page < totalPages
         ? (
-          <a className="pagination-edge" href={pageHref(page + 1)}
-            aria-label="Next page"
-          >
+          <a className="pagination-edge" href={pageHref(page + 1)} aria-label="Next page">
             next →
           </a>
         )
@@ -583,9 +575,7 @@ export function CursorPagination({ path, previousCursor, nextCursor }: {
     <nav className="pagination hot-pagination" aria-label="Pagination">
       {previousCursor
         ? (
-          <a className="pagination-edge"
-            href={`${path}${separator}cursor=${encodeURIComponent(previousCursor)}`}
-          >
+          <a className="pagination-edge" href={`${path}${separator}cursor=${encodeURIComponent(previousCursor)}`}>
             ← prev
           </a>
         )
@@ -634,8 +624,7 @@ export function FeedTabs(
       <nav className="feed-tabs" id="feed-tabs" aria-label="Feed">
         <div className="feed-tabs-scroll">
           {user && (
-            <a className={toMe ? 'active' : ''} aria-current={toMe ? 'page' : undefined}
-              href="/@">
+            <a className={toMe ? 'active' : ''} aria-current={toMe ? 'page' : undefined} href="/@">
               <TabHighlight active={toMe} />
               @
               <TabCount count={toMeCount} />
@@ -643,8 +632,7 @@ export function FeedTabs(
           )}
           {user && (
             <a className={active === 'following' && !toMe ? 'active' : ''}
-              aria-current={active === 'following' && !toMe ? 'page' : undefined}
-              href="/my-feed"
+              aria-current={active === 'following' && !toMe ? 'page' : undefined} href="/my-feed"
             >
               <TabHighlight active={active === 'following' && !toMe} />
               my feed
@@ -657,8 +645,7 @@ export function FeedTabs(
             <TabHighlight active={active === 'hot'} />
             hot
           </a>
-          <a className={active === 'random' ? 'active' : ''}
-            aria-current={active === 'random' ? 'page' : undefined}
+          <a className={active === 'random' ? 'active' : ''} aria-current={active === 'random' ? 'page' : undefined}
             href={`/any?seed=${anySeed}`}
           >
             <TabHighlight active={active === 'random'} />
@@ -670,8 +657,7 @@ export function FeedTabs(
             <TabHighlight active={active === 'new'} />
             new
           </a>
-          <a className={active === 'latest' ? 'active' : ''}
-            aria-current={active === 'latest' ? 'page' : undefined}
+          <a className={active === 'latest' ? 'active' : ''} aria-current={active === 'latest' ? 'page' : undefined}
             href="/all"
           >
             <TabHighlight active={active === 'latest'} />
@@ -870,23 +856,20 @@ export function ProfileTabs(
           <TabHighlight active={active === 'replies'} />
           replies
         </a>
-        <a className={active === 'following' ? 'active' : ''}
-          aria-current={active === 'following' ? 'page' : undefined}
+        <a className={active === 'following' ? 'active' : ''} aria-current={active === 'following' ? 'page' : undefined}
           href={tabHref('following')}
         >
           <TabHighlight active={active === 'following'} />
           following
         </a>
-        <a className={active === 'followers' ? 'active' : ''}
-          aria-current={active === 'followers' ? 'page' : undefined}
+        <a className={active === 'followers' ? 'active' : ''} aria-current={active === 'followers' ? 'page' : undefined}
           href={tabHref('followers')}
         >
           <TabHighlight active={active === 'followers'} />
           followers
         </a>
         {showBlocked && (
-          <a className={active === 'blocked' ? 'active' : ''}
-            aria-current={active === 'blocked' ? 'page' : undefined}
+          <a className={active === 'blocked' ? 'active' : ''} aria-current={active === 'blocked' ? 'page' : undefined}
             href={tabHref('blocked')}
           >
             <TabHighlight active={active === 'blocked'} />
@@ -1012,8 +995,7 @@ export function BlockedTagList({ user, tags }: { user: User; tags: TagView[] }) 
           <div>
             <div>
               <TagReference tag={tag.tag} noteCount={tag.count} followerCount={tag.followerCount || 0} user={user}
-                showFollowAction={false} showPopover={false}
-                label={<>#{tag.displayName || tag.tag}</>} />
+                showFollowAction={false} showPopover={false} label={<>#{tag.displayName || tag.tag}</>} />
             </div>
             <form method="post" action={`/tag-block/${encodeURIComponent(tag.tag)}`}>
               <button className="button">unblock</button>
@@ -1050,15 +1032,15 @@ export function BlockedPeopleList({ user, people }: { user: User; people: Person
 export function ConnectionPeople(
   { user, people, className = '', highlightTerms = [], returnPath, showMood = false, showNoteCount = true,
     showPopover = true }: {
-    user: User | null
-    people: PersonView[]
-    className?: string
-    highlightTerms?: string[]
-    returnPath?: (person: PersonView) => string
-    showMood?: boolean
-    showNoteCount?: boolean
-    showPopover?: boolean
-  },
+      user: User | null
+      people: PersonView[]
+      className?: string
+      highlightTerms?: string[]
+      returnPath?: (person: PersonView) => string
+      showMood?: boolean
+      showNoteCount?: boolean
+      showPopover?: boolean
+    },
 ) {
   return (
     <div className={`people connection-people ${className}`.trim()}>
@@ -1067,9 +1049,8 @@ export function ConnectionPeople(
           <div>
             <div>
               <UserReference handle={person.handle} mood={showMood ? person.mood : undefined} bio={person.bio}
-                noteCount={person.posts}
-                stats={person.profileStats} following={person.viewerFollowing} followsViewer={person.followsViewer}
-                user={user}
+                noteCount={person.posts} stats={person.profileStats} following={person.viewerFollowing}
+                followsViewer={person.followsViewer} user={user}
                 href={`/u/${person.handle}${returnPath ? `?from=${encodeURIComponent(returnPath(person))}` : ''}`}
                 showPopover={showPopover} referenceData={person.bioReference} label={
                 <>

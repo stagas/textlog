@@ -179,7 +179,7 @@ describe('in-memory stylesheet', () => {
     expect(css).toContain('.feed-thread .post {\n  scroll-margin-top: calc(var(--space-6) + var(--space-1));\n}')
     expect(css).toContain(
       '@media (max-width: 600px) {\n  .feed-thread .post,\n  .activity-follow {\n'
-      + '    scroll-margin-top: calc(var(--space-7) + var(--space-1));\n  }\n}',
+        + '    scroll-margin-top: calc(var(--space-7) + var(--space-1));\n  }\n}',
     )
     expect(css).not.toContain('\n.post {\n  scroll-margin-top:')
   })
@@ -198,8 +198,8 @@ describe('in-memory stylesheet', () => {
     expect(css).toContain('timeline-scope: --feed-tabs-passed;')
     expect(css).toContain(
       '.mobile-write-action {\n    animation: feed-tabs-top-reveal linear both;\n'
-      + '    animation-timeline: --feed-tabs-passed;\n'
-      + '    animation-range: exit-crossing 0% exit-crossing 100%;',
+        + '    animation-timeline: --feed-tabs-passed;\n'
+        + '    animation-range: exit-crossing 0% exit-crossing 100%;',
     )
   })
 
@@ -207,7 +207,7 @@ describe('in-memory stylesheet', () => {
     const css = await Bun.file(new URL('./styles.css', import.meta.url)).text()
     expect(css).toContain(
       '#feed-tabs {\n  position: sticky;\n  z-index: 40;\n  top: calc(-1 * var(--space-4));\n'
-      + '  scroll-margin-top: calc(-1 * var(--space-4));\n  background: var(--bg);\n}',
+        + '  scroll-margin-top: calc(-1 * var(--space-4));\n  background: var(--bg);\n}',
     )
     expect(css).toContain(
       '@media (max-width: 600px) {\n  #feed-tabs {\n    top: 0;\n    scroll-margin-top: 0;\n  }',
@@ -220,11 +220,11 @@ describe('in-memory stylesheet', () => {
     expect(css).toContain('.reference-menu-popover {\n  position: absolute;\n  z-index: 50;')
     expect(css).toContain(
       '#connections-tags-heading,\n#connections-people-heading {\n'
-      + '  scroll-margin-top: calc(var(--space-7) + var(--space-1));\n}',
+        + '  scroll-margin-top: calc(var(--space-7) + var(--space-1));\n}',
     )
     expect(css).toContain(
       '@media (max-width: 600px) {\n  #connections-tags-heading,\n  #connections-people-heading {\n'
-      + '    scroll-margin-top: calc(var(--space-8) + var(--space-1) + 2px);\n  }\n}',
+        + '    scroll-margin-top: calc(var(--space-8) + var(--space-1) + 2px);\n  }\n}',
     )
     expect(css).toContain('.profile:has(\n  .profile-bio :is(.reference-menu, .remote-link-menu)'
       + ':is(:hover, :focus-within),\n  .profile-bio .mobile-popover-toggle:checked\n) {\n'
@@ -235,13 +235,15 @@ describe('in-memory stylesheet', () => {
 
   test('animates thread folding with a collapsible grid track', async () => {
     const css = await Bun.file(new URL('./styles.css', import.meta.url)).text()
-    expect(css).toContain('.post-page-thread.feed-thread {\n  margin-bottom: 0;\n  border-top: 1px solid var(--soft);\n  overflow-anchor: none;')
-    expect(css).toContain('.thread-fold-input {\n  position: fixed;\n  top: 0;\n  left: 0;')
-    expect(css).toContain('.reply-branch {\n  display: grid;\n  grid-template-columns: minmax(0, 1fr);\n' +
-      '  grid-template-rows: 1fr;\n  min-width: 0;')
     expect(css).toContain(
-      '.thread-branch-content {\n  min-width: 0;\n  min-height: 0;\n  overflow: hidden;\n' +
-      '  animation: disclosure-overflow 0s 200ms forwards;',
+      '.post-page-thread.feed-thread {\n  margin-bottom: 0;\n  border-top: 1px solid var(--soft);\n  overflow-anchor: none;',
+    )
+    expect(css).toContain('.thread-fold-input {\n  position: fixed;\n  top: 0;\n  left: 0;')
+    expect(css).toContain('.reply-branch {\n  display: grid;\n  grid-template-columns: minmax(0, 1fr);\n'
+      + '  grid-template-rows: 1fr;\n  min-width: 0;')
+    expect(css).toContain(
+      '.thread-branch-content {\n  min-width: 0;\n  min-height: 0;\n  overflow: hidden;\n'
+        + '  animation: disclosure-overflow 0s 200ms forwards;',
     )
     expect(css).toContain(
       '.thread-fold-input:checked~.reply-branch .thread-branch-content {\n  overflow: hidden;\n  animation: none;',
@@ -585,17 +587,17 @@ describe('in-memory stylesheet', () => {
     )
     expect(css).toContain(
       '.reference-menu-popover:has(> .reference-popover-actions .follows-you) > .reference-popover-bio {\n'
-      + '  margin-top: calc(var(--space-2) + 2px);',
+        + '  margin-top: calc(var(--space-2) + 2px);',
     )
     expect(css).toContain('margin-top: var(--space-2);\n  margin-bottom: var(--space-2);\n'
       + '  padding-bottom: var(--space-2);\n  border-bottom: 1px solid var(--soft);\n  color: var(--quote-ink);')
     expect(css).toContain(
       '.reference-menu-popover:has(> .reference-popover-actions):has(> .reference-popover-bio) {\n'
-      + '  grid-template-columns: max-content minmax(12rem, 1fr);',
+        + '  grid-template-columns: max-content minmax(12rem, 1fr);',
     )
     expect(css).toContain(
       '.reference-menu-popover:has(> .reference-popover-actions) > .reference-popover-bio {\n'
-      + '  margin: 0;\n  padding: 0;',
+        + '  margin: 0;\n  padding: 0;',
     )
     const bioColumnRule = css.slice(
       css.indexOf('.reference-menu-popover:has(> .reference-popover-actions) > .reference-popover-bio {'),
@@ -728,7 +730,8 @@ describe('in-memory stylesheet', () => {
         + '  margin-left: clamp(18px, 3vw, 28px);',
     )
     expect(css).toContain(
-      '@media (max-width: 520px) {')
+      '@media (max-width: 520px) {',
+    )
     expect(css).toContain('.replybox.root-reply-compose {\n    width: 100%;\n    margin-left: 0;')
   })
 
@@ -746,14 +749,18 @@ describe('in-memory stylesheet', () => {
     expect(css).toContain('.content-warning-overlay > span {')
     expect(css).toContain('background: transparent;')
     expect(css).not.toContain('.parent-quote .content-warning-overlay > span {')
-    expect(css).toContain('.content-warning-action {\n  color: var(--accent);\n  padding-inline: 0;\n  padding-bottom: 1px;\n  border-bottom: var(--hairline) solid var(--link-border);')
+    expect(css).toContain(
+      '.content-warning-action {\n  color: var(--accent);\n  padding-inline: 0;\n  padding-bottom: 1px;\n  border-bottom: var(--hairline) solid var(--link-border);',
+    )
     expect(css).toContain('grid-area: 1 / 1;')
     expect(css).toContain('font-size: var(--post-body-font-size, var(--font-size-13));')
     expect(css).toContain('.content-warning-toggle:checked + .content-warning-overlay {\n  display: none;')
     expect(css).toContain('.content-warning-toggle:checked ~ .content-warning-mask {\n  display: none;')
     expect(css).not.toContain('Content revealed.')
-    expect(css).toContain('.post.internal-post-card > .content-warning {\n  --post-body-font-size: var(--font-size-12);\n'
-      + '  --post-body-line-height: 1.55;\n  margin-top: var(--space-2);')
+    expect(css).toContain(
+      '.post.internal-post-card > .content-warning {\n  --post-body-font-size: var(--font-size-12);\n'
+        + '  --post-body-line-height: 1.55;\n  margin-top: var(--space-2);',
+    )
   })
 
   test('round corners use global surface tokens while preserving intentional circles', async () => {
@@ -764,23 +771,39 @@ describe('in-memory stylesheet', () => {
     expect(css).toContain('body.corners-round :is(a, .quiet, .reference-menu, .danger, .content-warning-action,')
     expect(css).toContain('body.corners-round :is(button, .button) {\n  border-radius: var(--corner-radius);')
     expect(css).toContain('body.corners-round table :is(th, td) {\n  border-radius: 0;')
-    expect(css).toContain('body.corners-round table thead:first-child tr:first-child th:first-child {\n  border-top-left-radius: var(--corner-radius);')
-    expect(css).toContain('body.corners-round table thead:first-child tr:first-child th:last-child {\n  border-top-right-radius: var(--corner-radius);')
+    expect(css).toContain(
+      'body.corners-round table thead:first-child tr:first-child th:first-child {\n  border-top-left-radius: var(--corner-radius);',
+    )
+    expect(css).toContain(
+      'body.corners-round table thead:first-child tr:first-child th:last-child {\n  border-top-right-radius: var(--corner-radius);',
+    )
     expect(css).not.toContain('body.corners-round button.quiet')
-    expect(css).toContain('body.corners-round .account-menu-popover :is(a, button) {\n  border-radius: var(--corner-radius-small);')
-    expect(css).toContain('body.corners-round .pagination :is(a, span, input) {\n  border-radius: var(--corner-radius);')
+    expect(css).toContain(
+      'body.corners-round .account-menu-popover :is(a, button) {\n  border-radius: var(--corner-radius-small);',
+    )
+    expect(css).toContain(
+      'body.corners-round .pagination :is(a, span, input) {\n  border-radius: var(--corner-radius);',
+    )
     expect(css).toContain('body.corners-round .notification-toggle {\n  border-radius: 0;')
-    expect(css).toContain('.pagination, .guest-join-row, .post, .activity-follow, .security-section, .api-key-lifetime,')
+    expect(css).toContain(
+      '.pagination, .guest-join-row, .post, .activity-follow, .security-section, .api-key-lifetime,',
+    )
     expect(css).toContain('.tags, .people article, .feed-thread, .reference-popover-bio')
     expect(css).toContain('body.corners-round :is(.posttop, .parent-quote-top, .postfoot) > :is(a, .reference-menu),')
     expect(css).toContain('.thread-root.profile-pinned-surround) {\n  border-radius: 0;')
     expect(css).toContain('body.corners-round :is(.post, .reply-preview, .internal-post-card,')
     expect(css).toContain('body.corners-round .parent-quote {\n  border-radius: var(--corner-radius);')
-    expect(css).toContain('body.corners-round button,\nbody.corners-round a.button {\n  border-radius: var(--corner-radius) !important;')
+    expect(css).toContain(
+      'body.corners-round button,\nbody.corners-round a.button {\n  border-radius: var(--corner-radius) !important;',
+    )
     expect(css).toContain('body.corners-round :is(.feed-tabs, .appearance-tabs, .posting-help-tabs,')
     expect(css).toContain('border-radius: var(--corner-radius) 0 0 var(--corner-radius) !important;')
     expect(css).toContain('border-radius: 0 var(--corner-radius) var(--corner-radius) 0;')
-    expect(css).toContain('body.corners-round .explore-tag-card {\n  border-radius: var(--corner-radius);\n  overflow: hidden;')
-    expect(css).toContain('.accent-swatch { display: block; width: 30px; height: 30px; padding: var(--space-1); border: 1px solid var(--soft); border-radius: 50%;')
+    expect(css).toContain(
+      'body.corners-round .explore-tag-card {\n  border-radius: var(--corner-radius);\n  overflow: hidden;',
+    )
+    expect(css).toContain(
+      '.accent-swatch { display: block; width: 30px; height: 30px; padding: var(--space-1); border: 1px solid var(--soft); border-radius: 50%;',
+    )
   })
 })

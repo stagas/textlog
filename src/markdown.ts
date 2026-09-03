@@ -1,7 +1,7 @@
-import { marked } from 'marked'
-import sanitizeHtml from 'sanitize-html'
 import hljs from 'highlight.js/lib/core'
 import typescript from 'highlight.js/lib/languages/typescript'
+import { marked } from 'marked'
+import sanitizeHtml from 'sanitize-html'
 import { decodeHtmlEntities } from './link-preview'
 import { displayPostBody } from './utils'
 

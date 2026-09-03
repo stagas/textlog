@@ -1,7 +1,7 @@
 import { Database } from 'bun:sqlite'
 import { describe, expect, test } from 'bun:test'
-import { executeDatabaseDomain } from './database-domain'
 import { apiPost } from './api'
+import { executeDatabaseDomain } from './database-domain'
 import { geocodeLocation, locationDestination, locationMapProvider, mapTilerRasterTileUrl,
   parseLocationQuery } from './locations'
 import type { LocationView } from './types'
@@ -29,15 +29,15 @@ describe('#map', () => {
       location: { query: 'Kallikratis, Crete', latitude: 35.2, longitude: 24.2,
         displayName: 'Kallikratis, Sfakia, Crete, Greece', imageKey: 'location-maps/test.png',
         imageUrl: '/uploads/location-maps/test.png', imageWidth: 600, imageHeight: 315 } })
-    expect(database.query('SELECT * FROM post_locations').get()).toEqual({ post_id: 1,
-      query: 'Kallikratis, Crete', latitude: 35.2, longitude: 24.2,
-      display_name: 'Kallikratis, Sfakia, Crete, Greece' })
+    expect(database.query('SELECT * FROM post_locations').get()).toEqual({ post_id: 1, query: 'Kallikratis, Crete',
+      latitude: 35.2, longitude: 24.2, display_name: 'Kallikratis, Sfakia, Crete, Greece' })
   })
 
   test('handles an empty geocoding result without throwing', async () => {
-    const fetcher = (() => Promise.resolve(new Response('[]', {
-      headers: { 'content-type': 'application/json' },
-    }))) as unknown as typeof fetch
+    const fetcher = (() =>
+      Promise.resolve(new Response('[]', {
+        headers: { 'content-type': 'application/json' },
+      }))) as unknown as typeof fetch
     expect(await geocodeLocation('Nowhere', fetcher)).toBeNull()
   })
 
@@ -91,7 +91,9 @@ describe('#map', () => {
         display_name TEXT);`)
     expect(await executeDatabaseDomain(database, 'api.cachedLocation', { query: 'Nowhere' })).toBeNull()
     expect(await executeDatabaseDomain(database, 'api.persistPostLocation', {
-      postId: 1, query: 'Nowhere', location: null,
+      postId: 1,
+      query: 'Nowhere',
+      location: null,
     })).toBeNull()
   })
 
@@ -99,11 +101,17 @@ describe('#map', () => {
     const location: LocationView = { query: 'Kallikratis, Crete', latitude: 35.2, longitude: 24.2,
       displayName: 'Kallikratis, Sfakia, Crete, Greece',
       url: 'https://www.openstreetmap.org/?mlat=35.2&mlon=24.2#map=3/35.2/24.2', preview: {
-        imageUrl: '/uploads/location-maps/test.png', title: 'Kallikratis',
-        description: 'Sfakia, Crete, Greece', imageWidth: 600, imageHeight: 315,
+        imageUrl: '/uploads/location-maps/test.png',
+        title: 'Kallikratis',
+        description: 'Sfakia, Crete, Greece',
+        imageWidth: 600,
+        imageHeight: 315,
       } }
-    const html = linkify('Going hiking #map\nKallikratis, Crete', {}, [], undefined, undefined, '',
-      { map: 1 }, {}, { signedIn: false, formPrefix: 'post-1', location })
+    const html = linkify('Going hiking #map\nKallikratis, Crete', {}, [], undefined, undefined, '', { map: 1 }, {}, {
+      signedIn: false,
+      formPrefix: 'post-1',
+      location,
+    })
     expect(html).toContain('<a class="reference-menu-trigger" href="/tag/map">#map</a>')
     expect(html).toContain('noopener noreferrer">Kallikratis, Crete</a><a class="remote-link-popover"')
     expect(html).toContain('class="remote-link-popover"')
@@ -130,7 +138,9 @@ describe('#map', () => {
       INSERT INTO location_map_previews VALUES('3:3:35.200000:24.200000','location-maps/test.png',600,315);`)
     const apiLocation = apiPost(database, 1, 'https://textlog.example')?.location
     expect(apiLocation).toMatchObject({
-      query: 'Kallikratis, Crete', latitude: 35.2, longitude: 24.2,
+      query: 'Kallikratis, Crete',
+      latitude: 35.2,
+      longitude: 24.2,
       preview: { imageUrl: '/uploads/location-maps/test.png', title: 'Kallikratis' },
     })
     expect(apiLocation?.preview.siteName).toBeUndefined()

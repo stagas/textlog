@@ -1,7 +1,7 @@
 import { Database } from 'bun:sqlite'
 import { expect, test } from 'bun:test'
 import { renderToStaticMarkup } from 'react-dom/server'
-import { TagPicker, shouldShowTagPicker } from './components/tag-picker'
+import { shouldShowTagPicker, TagPicker } from './components/tag-picker'
 import { executeDatabaseDomain } from './database-domain'
 import { runMigrations } from './migrations'
 import type { User } from './types'
@@ -31,7 +31,7 @@ test('tag prompt renders popular tags as a multi-select and can be dismissed', (
   expect(html).not.toContain('12 notes')
   expect(html).toContain('class="visually-hidden">Popular hashtags</legend>')
   expect(html).toContain('action="/pick-tags/dismiss"')
-  expect(html).toContain("I&#x27;ll do it later, thanks")
+  expect(html).toContain('I&#x27;ll do it later, thanks')
 })
 
 test('loads the most-used tags and follows all selected tags when completed', async () => {

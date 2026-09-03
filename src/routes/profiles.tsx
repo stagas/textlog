@@ -175,13 +175,13 @@ export function registerProfilesRoutes(app: Hono) {
       page: profilePage, pageSize: resolvedPageSize(c.req.raw), kind: tab === 'replies' ? 'replies' : 'notes' })
     return page(
       <Profile user={user} profile={profile} posts={(blocked || blockedByProfile) && !moderatorBypass
-        ? [] : snapshot.posts}
-        following={following} followsViewer={followsViewer} blocked={blocked} total={total} noteCount={noteCount}
-        replyCount={replyCount} tab={tab === 'replies' ? 'replies' : 'notes'} followerCount={followerCount}
-        followingCount={followingCount} followingTagCount={followingTagCount} blockedPeopleCount={blockedPeopleCount}
-        blockedTagCount={blockedTagCount} social={social} page={snapshot.page} totalPages={snapshot.totalPages}
-        returnPath={returnPath} bioReference={bioReference} moderatorBypass={moderatorBypass}
-        noteStreakDates={noteStreakDates} />,
+        ? []
+        : snapshot.posts} following={following} followsViewer={followsViewer} blocked={blocked} total={total}
+        noteCount={noteCount} replyCount={replyCount} tab={tab === 'replies' ? 'replies' : 'notes'}
+        followerCount={followerCount} followingCount={followingCount} followingTagCount={followingTagCount}
+        blockedPeopleCount={blockedPeopleCount} blockedTagCount={blockedTagCount} social={social} page={snapshot.page}
+        totalPages={snapshot.totalPages} returnPath={returnPath} bioReference={bioReference}
+        moderatorBypass={moderatorBypass} noteStreakDates={noteStreakDates} />,
     )
   })
 }

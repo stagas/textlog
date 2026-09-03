@@ -32,20 +32,22 @@ export function EditPost(
               returnPath={returnPath} backHref={returnPath} showReadAction={false} />
           </div>
         )}
-        {preview && post.parent_id && parent && <ReplyPreview parent={parent} user={user} body={body}
-          executionOutput={previewExecutionOutput} location={previewLocation} />}
+        {preview && post.parent_id && parent && (
+          <ReplyPreview parent={parent} user={user} body={body} executionOutput={previewExecutionOutput}
+            location={previewLocation} />
+        )}
         {preview && !post.parent_id && (
           <div className="compose-post-preview">
             <h2>preview</h2>
-            <PreviewPost user={user} p={{ ...post, body, execution_output: previewExecutionOutput,
-              location: previewLocation, handle: post.handle || user.handle, bio: moderator ? '' : user.bio }} />
+            <PreviewPost user={user}
+              p={{ ...post, body, execution_output: previewExecutionOutput, location: previewLocation,
+                handle: post.handle || user.handle, bio: moderator ? '' : user.bio }} />
           </div>
         )}
         <ReplyBox action={'/post/' + post.id + '/edit'} body={body} error={error} suggestionSearch={suggestionSearch}
-          helpId="edit-posting-help"
-          className={post.parent_id && parent
-            ? 'replybox reply-compose edit-reply-compose'
-            : 'compose edit-post-compose write-compose edit-write-compose'}
+          helpId="edit-posting-help" className={post.parent_id && parent
+          ? 'replybox reply-compose edit-reply-compose'
+          : 'compose edit-post-compose write-compose edit-write-compose'}
           hidden={returnPath && <input type="hidden" name="from" value={returnPath} />} beforeTextarea={!moderator
           && (
             <div className="edit-post-delete-action">
@@ -64,18 +66,21 @@ export function EditPost(
           <span className="edit-post-primary-actions">
             <button className="button">save →</button>
           </span>
-        } moreActions={<>
-          <button className="secondary-action compose-autotag-action" name="action" value="autotag"
-            title="Enrich post with hashtags">
-            autotag
-          </button>
-          <button className="secondary-action" name="action" value="preview">preview</button>
-          {!moderator && (
-            <button className="secondary-action unpublish-action" name="action" value="unpublish" formNoValidate>
-              draft
+        } moreActions={
+          <>
+            <button className="secondary-action compose-autotag-action" name="action" value="autotag"
+              title="Enrich post with hashtags"
+            >
+              autotag
             </button>
-          )}
-        </>} />
+            <button className="secondary-action" name="action" value="preview">preview</button>
+            {!moderator && (
+              <button className="secondary-action unpublish-action" name="action" value="unpublish" formNoValidate>
+                draft
+              </button>
+            )}
+          </>
+        } />
         {post.parent_id && parent && (
           <ThreadReplies parentId={parent.id} replies={replies} user={user} returnPath={returnPath}
             excludePostId={post.id} />

@@ -43,7 +43,9 @@ describe('polls', () => {
   })
 
   test('keeps quiz answers and explanations out of the display body', () => {
-    expect(pollDisplayBody('Capital of Greece? #quiz\nRome\n> Athens\nParis\n\nAthens has been the capital since 1834.'))
+    expect(
+      pollDisplayBody('Capital of Greece? #quiz\nRome\n> Athens\nParis\n\nAthens has been the capital since 1834.'),
+    )
       .toBe('Capital of Greece? #quiz')
   })
 

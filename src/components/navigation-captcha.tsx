@@ -17,13 +17,17 @@ export function NavigationCaptcha({ user, target, captcha, error }: {
         <form method="post" action="/navigation-check">
           <input type="hidden" name="target" value={target} />
           <div className="captcha-field">
-            <label htmlFor="navigation-captcha"><span>security check</span></label>
+            <label htmlFor="navigation-captcha">
+              <span>security check</span>
+            </label>
             <img src={captcha.image} alt="CAPTCHA: enter the characters shown" />
             <input type="hidden" name="captchaToken" value={captcha.token} />
             <input id="navigation-captcha" name="captchaAnswer" required maxLength={12} autoComplete="off"
               autoCapitalize="none" spellCheck={false} inputMode="text" enterKeyHint="go" autoFocus />
           </div>
-          <button className="button">continue <span aria-hidden="true">→</span></button>
+          <button className="button">
+            continue <span aria-hidden="true">→</span>
+          </button>
         </form>
       </CenteredPanel>
     </Layout>

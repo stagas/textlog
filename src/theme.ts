@@ -87,24 +87,20 @@ const appearanceContext = new AsyncLocalStorage<{ appearance: Appearance; reques
 const palettes = {
   light: { bg: '#f4f3ee', ink: '#20231f', muted: '#8a9085', soft: '#d9dbd4', accent: '#749668', accentDark: '#55734a',
     panel: '#ffffff', tagBg: '#e6e9df', quoteInk: '#6f766c', quoteBg: 'rgb(116 150 104 / 6%)',
-    quoteSurface: 'color-mix(in srgb, rgb(116 150 104) 6%, var(--bg))', errorInk: '#7a3f39',
-    linkBorder: '#afb4a9', buttonBg: '#273126', buttonInk: '#ffffff', buttonHoverBg: '#55734a',
-    buttonActiveBg: '#405c38' },
+    quoteSurface: 'color-mix(in srgb, rgb(116 150 104) 6%, var(--bg))', errorInk: '#7a3f39', linkBorder: '#afb4a9',
+    buttonBg: '#273126', buttonInk: '#ffffff', buttonHoverBg: '#55734a', buttonActiveBg: '#405c38' },
   dark: { bg: '#171a17', ink: '#e5e8e1', muted: '#747c72', soft: '#343a33', accent: '#9abd8e', accentDark: '#b2d1a8',
     panel: '#20241f', tagBg: '#292f28', quoteInk: '#a8afa4', quoteBg: 'rgb(154 189 142 / 8%)',
-    quoteSurface: 'color-mix(in srgb, rgb(154 189 142) 8%, var(--bg))', errorInk: '#efb3aa',
-    linkBorder: '#50594d', buttonBg: '#3b503d', buttonInk: '#e5e8e1', buttonHoverBg: '#4b664d',
-    buttonActiveBg: '#314434' },
+    quoteSurface: 'color-mix(in srgb, rgb(154 189 142) 8%, var(--bg))', errorInk: '#efb3aa', linkBorder: '#50594d',
+    buttonBg: '#3b503d', buttonInk: '#e5e8e1', buttonHoverBg: '#4b664d', buttonActiveBg: '#314434' },
   sepia: { bg: '#f4ecd8', ink: '#433422', muted: '#8c7a5e', soft: '#e0d4b8', accent: '#8a6d3b', accentDark: '#6b5228',
     panel: '#fbf6e9', tagBg: '#eae0c6', quoteInk: '#6b5a42', quoteBg: 'rgb(138 109 59 / 7%)',
-    quoteSurface: 'color-mix(in srgb, rgb(138 109 59) 7%, var(--bg))', errorInk: '#8a3f39',
-    linkBorder: '#c4b593', buttonBg: '#59482d', buttonInk: '#fbf6e9', buttonHoverBg: '#6b5228',
-    buttonActiveBg: '#4b3a21' },
+    quoteSurface: 'color-mix(in srgb, rgb(138 109 59) 7%, var(--bg))', errorInk: '#8a3f39', linkBorder: '#c4b593',
+    buttonBg: '#59482d', buttonInk: '#fbf6e9', buttonHoverBg: '#6b5228', buttonActiveBg: '#4b3a21' },
   dracula: { bg: '#282a36', ink: '#f8f8f2', muted: '#6272a4', soft: '#44475a', accent: '#bd93f9', accentDark: '#d6b3ff',
     panel: '#21222c', tagBg: '#343746', quoteInk: '#b9bcd0', quoteBg: 'rgb(189 147 249 / 10%)',
-    quoteSurface: 'color-mix(in srgb, rgb(189 147 249) 10%, var(--bg))', errorInk: '#ff5555',
-    linkBorder: '#4b4f6b', buttonBg: '#554276', buttonInk: '#f8f8f2', buttonHoverBg: '#684f91',
-    buttonActiveBg: '#463660' },
+    quoteSurface: 'color-mix(in srgb, rgb(189 147 249) 10%, var(--bg))', errorInk: '#ff5555', linkBorder: '#4b4f6b',
+    buttonBg: '#554276', buttonInk: '#f8f8f2', buttonHoverBg: '#684f91', buttonActiveBg: '#463660' },
 } as const
 
 const accents = {
@@ -218,7 +214,9 @@ export function fontSizeChoice(request: Request): FontSizeChoice {
   const value = request.headers.get('cookie')?.match(/(?:^|;\s*)font-size=([^;]+)/)?.[1] || ''
   return FONT_SIZE_CHOICES.some(choice => choice.value === value)
     ? value as FontSizeChoice
-    : isMobileRequest(request) ? 'small' : 'regular'
+    : isMobileRequest(request)
+    ? 'small'
+    : 'regular'
 }
 
 export function fontSizeCookie(value: FontSizeChoice, appUrl: string | undefined = Bun.env.APP_URL) {

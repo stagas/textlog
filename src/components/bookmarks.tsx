@@ -26,8 +26,10 @@ export function Bookmarks({ user, query, page, data }: {
       </section>
       <Pagination page={page} totalPages={data.totalPages} path={path} top />
       <div className="bookmarks-list">
-        {data.posts.map(post => <Post key={post.id} p={post} user={user} showReplyAction={false}
-          showReadAction={false} tappable returnPath={returnPath} highlightTerms={data.highlights} />)}
+        {data.posts.map(post => (
+          <Post key={post.id} p={post} user={user} showReplyAction={false} showReadAction={false} tappable
+            returnPath={returnPath} highlightTerms={data.highlights} />
+        ))}
       </div>
       {!data.posts.length && <div className="empty">{query ? 'No matching bookmarks.' : 'No bookmarks yet.'}</div>}
       <Pagination page={page} totalPages={data.totalPages} path={path} />

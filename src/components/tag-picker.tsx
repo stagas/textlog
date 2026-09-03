@@ -27,7 +27,10 @@ export function TagPicker({ user, tags, returnTo, error }: {
               <legend className="visually-hidden">Popular hashtags</legend>
               {tags.map(({ tag, displayName }) => (
                 <label className="tag-picker-option" key={tag}>
-                  <span><b aria-hidden="true">#</b>{displayName || tag}</span>
+                  <span>
+                    <b aria-hidden="true">#</b>
+                    {displayName || tag}
+                  </span>
                   <input className="visually-hidden" type="checkbox" name="tags" value={tag} />
                 </label>
               ))}

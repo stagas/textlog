@@ -8,7 +8,7 @@ const TRENDING_TAG_WINDOW_DAYS = 30
 export function trendingTags(database: Database, viewerId: number, limit = 12, now = new Date().toISOString(),
   offset = 0)
 {
-  const canonical = database.query("SELECT 1 FROM sqlite_master WHERE type='table' AND name='tag_aliases'").get()
+  const canonical = database.query('SELECT 1 FROM sqlite_master WHERE type=\'table\' AND name=\'tag_aliases\'').get()
     ? 'coalesce((SELECT primary_tag FROM tag_aliases WHERE alias=ph.tag),ph.tag)'
     : 'ph.tag'
   return database.query(
@@ -28,7 +28,7 @@ export function trendingTags(database: Database, viewerId: number, limit = 12, n
 }
 
 export function trendingTagCount(database: Database, viewerId: number, now = new Date().toISOString()) {
-  const canonical = database.query("SELECT 1 FROM sqlite_master WHERE type='table' AND name='tag_aliases'").get()
+  const canonical = database.query('SELECT 1 FROM sqlite_master WHERE type=\'table\' AND name=\'tag_aliases\'').get()
     ? 'coalesce((SELECT primary_tag FROM tag_aliases WHERE alias=ph.tag),ph.tag)'
     : 'ph.tag'
   return (database.query(`WITH canonical_tags AS (

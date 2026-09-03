@@ -28,11 +28,17 @@ export function PeoplePicker({ user, people, returnTo, error }: {
               <legend className="visually-hidden">Popular people</legend>
               {people.map(person => (
                 <label className="people-picker-option" key={person.id}>
-                  <span><b aria-hidden="true">@</b>{person.handle}{person.mood
-                    && <small className="emoji">{person.mood}</small>}</span>
-                  {person.bio && <p className="profile-bio" dangerouslySetInnerHTML={{
-                    __html: linkify(displayBio(person.bio)),
-                  }} />}
+                  <span>
+                    <b aria-hidden="true">@</b>
+                    {person.handle}
+                    {person.mood
+                      && <small className="emoji">{person.mood}</small>}
+                  </span>
+                  {person.bio && (
+                    <p className="profile-bio" dangerouslySetInnerHTML={{
+                      __html: linkify(displayBio(person.bio)),
+                    }} />
+                  )}
                   <input className="visually-hidden" type="checkbox" name="people" value={person.id} />
                 </label>
               ))}

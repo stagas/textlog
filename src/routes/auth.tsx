@@ -3,8 +3,8 @@ import { sessionCookieName } from '../brand'
 import { Auth, ChooseHandle, ForgotPassword, MagicLinkSent, PasswordLogin, ResetPassword } from '../components/pages'
 import { sendMagicLink, sendPasswordReset } from '../email'
 import { isDevelopment } from '../environment'
-import { campaignAttribution, campaignAttributionCookie, clearSessionCookie, exploreWelcomeCookie,
-  returningVisitor, returningVisitorCookie, sessionCookie } from '../http'
+import { campaignAttribution, campaignAttributionCookie, clearSessionCookie, exploreWelcomeCookie, returningVisitor,
+  returningVisitorCookie, sessionCookie } from '../http'
 import { logError } from '../log'
 import { moderateText, moderationMessage } from '../moderation'
 import { fontSizeCookie } from '../theme'
@@ -216,8 +216,11 @@ export function registerAuthRoutes(app: Hono) {
         || await authLimit(c, 'enter-email', identifier || '(blank)', AUTH_LIMITS.forgotAccount)
     if (limited) {
       return retryPage(
-        page(<Auth email={identifier} next={next} returning={returningVisitor(c.req.raw)}
-          error={authRateLimitMessage(limited.retryAfter)} />, 429),
+        page(
+          <Auth email={identifier} next={next} returning={returningVisitor(c.req.raw)}
+            error={authRateLimitMessage(limited.retryAfter)} />,
+          429,
+        ),
         limited.retryAfter,
       )
     }
@@ -230,8 +233,11 @@ export function registerAuthRoutes(app: Hono) {
         isEmail: emailPattern.test(identifier),
       })
     if ((!account && !emailPattern.test(identifier)) || identifier.length > 254) {
-      return page(<Auth email={identifier} next={next} returning={returningVisitor(c.req.raw)}
-        error="Enter a valid email address or handle." />, 400)
+      return page(
+        <Auth email={identifier} next={next} returning={returningVisitor(c.req.raw)}
+          error="Enter a valid email address or handle." />,
+        400,
+      )
     }
     const email = account?.email || identifier
     const origin = Bun.env.APP_URL?.replace(/\/$/, '') || new URL(c.req.url).origin
@@ -284,8 +290,10 @@ export function registerAuthRoutes(app: Hono) {
     })
     if (result.status === 'invalid') return invalid()
     if (result.status === 'unavailable') {
-      return page(<Auth returning={returningVisitor(c.req.raw)}
-        error="That account is unavailable. Request a new magic link." />, 400)
+      return page(
+        <Auth returning={returningVisitor(c.req.raw)} error="That account is unavailable. Request a new magic link." />,
+        400,
+      )
     }
     const response = redirect(result.destination, sessionCookie(result.session))
     response.headers.append('set-cookie', returningVisitorCookie())
@@ -294,8 +302,13 @@ export function registerAuthRoutes(app: Hono) {
 
   app.get('/enter/magic', async c => {
     const value = c.req.query('token') || ''
-    if (!value) return page(<Auth returning={returningVisitor(c.req.raw)}
-      error="That magic link is invalid or has expired. Request a new one." />, 400)
+    if (!value) {
+      return page(
+        <Auth returning={returningVisitor(c.req.raw)}
+          error="That magic link is invalid or has expired. Request a new one." />,
+        400,
+      )
+    }
     const result = await databaseService().call('auth.consumeMagicLink', {
       selector: { tokenHash: hash(value) },
       userAgent: c.req.header('user-agent') || '',
@@ -303,12 +316,17 @@ export function registerAuthRoutes(app: Hono) {
       currentUserId: currentUser(c.req.raw)?.id,
     })
     if (result.status === 'invalid') {
-      return page(<Auth returning={returningVisitor(c.req.raw)}
-        error="That magic link is invalid or has expired. Request a new one." />, 400)
+      return page(
+        <Auth returning={returningVisitor(c.req.raw)}
+          error="That magic link is invalid or has expired. Request a new one." />,
+        400,
+      )
     }
     if (result.status === 'unavailable') {
-      return page(<Auth returning={returningVisitor(c.req.raw)}
-        error="That account is unavailable. Request a new magic link." />, 400)
+      return page(
+        <Auth returning={returningVisitor(c.req.raw)} error="That account is unavailable. Request a new magic link." />,
+        400,
+      )
     }
     const response = redirect(result.destination, sessionCookie(result.session))
     response.headers.append('set-cookie', returningVisitorCookie())

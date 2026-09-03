@@ -1,8 +1,8 @@
 import { createCanvas, loadImage } from 'canvas'
 import { createHash } from 'node:crypto'
 import { appName } from './brand'
-import { getImageUrl, uploadImage } from './image-storage'
 import { withoutMarkdownCode } from './content'
+import { getImageUrl, uploadImage } from './image-storage'
 
 export const LOCATION_ZOOM = 3
 export const LOCATION_MAP_STYLE_VERSION = 3
@@ -37,7 +37,9 @@ export async function geocodeLocation(query: string, fetcher: typeof fetch = fet
     url.searchParams.set('limit', '1')
     url.searchParams.set('accept-language', 'en')
     const response = await fetcher(url, { signal: AbortSignal.timeout(TIMEOUT_MS), headers: {
-      accept: 'application/json', 'accept-language': 'en', 'user-agent': `${appName()} location preview/1.0`,
+      accept: 'application/json',
+      'accept-language': 'en',
+      'user-agent': `${appName()} location preview/1.0`,
     } })
     if (!response.ok || !response.headers.get('content-type')?.includes('json')) return null
     const bytes = await limitedBytes(response, 64 * 1024)
@@ -64,8 +66,7 @@ function tilePosition(latitude: number, longitude: number, zoom: number) {
 }
 
 export function locationMapKey(location: LocationMetadata, zoom = LOCATION_ZOOM) {
-  const value = `${zoom}:${LOCATION_MAP_STYLE_VERSION}:${location.latitude.toFixed(6)}:${
-    location.longitude.toFixed(6)}`
+  const value = `${zoom}:${LOCATION_MAP_STYLE_VERSION}:${location.latitude.toFixed(6)}:${location.longitude.toFixed(6)}`
   return `location-maps/${createHash('sha256').update(value).digest('hex')}.png`
 }
 
@@ -90,15 +91,19 @@ export async function generateLocationMap(location: LocationMetadata, fetcher: t
   const lastY = Math.floor((originY + height - 1) / 256)
   try {
     const tiles = [] as Array<{ x: number; y: number; data: Uint8Array }>
-    for (let y = firstY; y <= lastY; y++) for (let x = firstX; x <= lastX; x++) {
-      const url = mapTilerRasterTileUrl(x, y, apiKey)
-      const response = await fetcher(url, { signal: AbortSignal.timeout(TIMEOUT_MS), headers: {
-        accept: 'image/png', 'accept-language': 'en', 'user-agent': `${appName()} location preview/1.0`,
-      } })
-      if (!response.ok || !response.headers.get('content-type')?.includes('image/png')) return null
-      const data = await limitedBytes(response)
-      if (!data) return null
-      tiles.push({ x, y, data })
+    for (let y = firstY; y <= lastY; y++) {
+      for (let x = firstX; x <= lastX; x++) {
+        const url = mapTilerRasterTileUrl(x, y, apiKey)
+        const response = await fetcher(url, { signal: AbortSignal.timeout(TIMEOUT_MS), headers: {
+          accept: 'image/png',
+          'accept-language': 'en',
+          'user-agent': `${appName()} location preview/1.0`,
+        } })
+        if (!response.ok || !response.headers.get('content-type')?.includes('image/png')) return null
+        const data = await limitedBytes(response)
+        if (!data) return null
+        tiles.push({ x, y, data })
+      }
     }
     const canvas = createCanvas(width, height)
     const context = canvas.getContext('2d')

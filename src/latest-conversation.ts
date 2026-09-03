@@ -7,8 +7,9 @@ type ConversationPost = { id: number; parent_id: number | null; created_at: stri
 
 const timestamp = (createdAt: string) => Date.parse(`${createdAt.replace(' ', 'T')}Z`)
 
-const newestFirst = <T extends ConversationPost>(conversation: T[]) => [...conversation]
-  .sort((a, b) => b.created_at.localeCompare(a.created_at) || b.id - a.id)
+const newestFirst = <T extends ConversationPost>(conversation: T[]) =>
+  [...conversation]
+    .sort((a, b) => b.created_at.localeCompare(a.created_at) || b.id - a.id)
 
 const withinReplyBurst = <T extends ConversationPost>(newest: T | undefined, post: T) => {
   const newestAt = newest ? timestamp(newest.created_at) : Number.NaN
@@ -22,7 +23,8 @@ const recentReplyCandidates = <T extends ConversationPost>(ordered: T[]) => {
     .filter((reply, index) => index < LATEST_MIN_RECENT_REPLIES || withinReplyBurst(replies[0], reply))
 }
 
-const recentRoot = <T extends ConversationPost>(root: T | undefined, newest: T | undefined) => root
+const recentRoot = <T extends ConversationPost>(root: T | undefined, newest: T | undefined) =>
+  root
   && root.parent_id === null && newest && withinReplyBurst(newest, root)
 
 const rootedReplies = <T extends ConversationPost>(ordered: T[], root: T, recent: T[], freshDirectReplies: T[]) => {
@@ -45,14 +47,17 @@ const rootedReplies = <T extends ConversationPost>(ordered: T[], root: T, recent
   const weightedIds = new Set(weighted.map(reply => reply.id))
   const selected = ordered.filter(reply => weightedIds.has(reply.id))
   const selectedIds = new Set([root.id, ...selected.map(reply => reply.id)])
-  const missingParentId = selected.find(reply => reply.parent_id !== null && !selectedIds.has(reply.parent_id))?.parent_id
+  const missingParentId = selected.find(reply => reply.parent_id !== null && !selectedIds.has(reply.parent_id))
+    ?.parent_id
   if (missingParentId != null) {
     const missingParent = ordered.find(reply => reply.id === missingParentId && reply.parent_id !== null)
     if (missingParent) selected.push(missingParent)
   }
   else {
-    const connectedOlderReply = ordered.find(reply => reply.parent_id !== null
-      && !selectedIds.has(reply.id) && selectedIds.has(reply.parent_id))
+    const connectedOlderReply = ordered.find(reply =>
+      reply.parent_id !== null
+      && !selectedIds.has(reply.id) && selectedIds.has(reply.parent_id)
+    )
     if (connectedOlderReply) selected.push(connectedOlderReply)
   }
   return selected
@@ -107,8 +112,7 @@ export function projectRecentConversation<T extends ConversationPost>(
   const replyIds = new Set(replies.map(reply => reply.id))
   const weightedDirectReplies = freshDirectReplies.filter(reply => replyIds.has(reply.id)).slice(0, 2)
   const weightedReplyIds = new Set(weightedDirectReplies.map(reply => reply.id))
-  const weightedCandidates = [...weightedDirectReplies,
-    ...replies.filter(reply => !weightedReplyIds.has(reply.id))]
+  const weightedCandidates = [...weightedDirectReplies, ...replies.filter(reply => !weightedReplyIds.has(reply.id))]
   const previewCount = weightedCandidates.length > 1 && withinReplyBurst(newest, weightedCandidates[1]) ? 2 : 1
   const previewIds = new Set(weightedCandidates.slice(0, previewCount).map(reply => reply.id))
   const previewReplies = replies.filter(reply => previewIds.has(reply.id))

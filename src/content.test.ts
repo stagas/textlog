@@ -42,7 +42,9 @@ describe('content metadata extraction', () => {
   })
   test('normalizes and deduplicates hashtags', () => {
     expect(extractHashtags('#Build something #build #Notes #ascii_art #asciiart')).toEqual([
-      'build', 'note', 'asciiart',
+      'build',
+      'note',
+      'asciiart',
     ])
   })
 
@@ -61,22 +63,22 @@ describe('content metadata extraction', () => {
   test('extracts only the first fifteen hashtag occurrences', () => {
     expect(extractHashtags('#one #two #three #four #five #six #seven #eight #nine #ten #eleven #twelve #thirteen '
       + '#fourteen #fifteen #sixteen')).toEqual([
-      'one',
-      'two',
-      'three',
-      'four',
-      'five',
-      'six',
-      'seven',
-      'eight',
-      'nine',
-      'ten',
-      'eleven',
-      'twelve',
-      'thirteen',
-      'fourteen',
-      'fifteen',
-    ])
+        'one',
+        'two',
+        'three',
+        'four',
+        'five',
+        'six',
+        'seven',
+        'eight',
+        'nine',
+        'ten',
+        'eleven',
+        'twelve',
+        'thirteen',
+        'fourteen',
+        'fifteen',
+      ])
   })
 
   test('supports hashtags written in other scripts and with combining marks', () => {

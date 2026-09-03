@@ -7,11 +7,10 @@ import { ConnectionPeople, GuestCommunityActions, Pagination, TabHighlight } fro
 import { FeedThreads } from './post'
 
 export function TagFeed(
-  { user, tag, displayName, aliases = [], following, blocked = false, posts, page, total, followerTotal = 0, people = [],
-    tab = 'notes', social, notePageSize = PAGE_SIZE, returnPath }: { user: User | null; tag: string;
-      displayName?: string | null; aliases?: Array<{ tag: string; displayName: string | null }>;
-      following: boolean; blocked?: boolean;
-      posts: PostView[]; page: number; total: number; followerTotal?: number; people?: PersonView[];
+  { user, tag, displayName, aliases = [], following, blocked = false, posts, page, total, followerTotal = 0,
+    people = [], tab = 'notes', social, notePageSize = PAGE_SIZE, returnPath }: { user: User | null; tag: string;
+      displayName?: string | null; aliases?: Array<{ tag: string; displayName: string | null }>; following: boolean;
+      blocked?: boolean; posts: PostView[]; page: number; total: number; followerTotal?: number; people?: PersonView[];
       tab?: 'notes' | 'followers'; notePageSize?: number; returnPath?: string;
       social?: { description: string; image: string; url: string; type?: 'article' | 'profile' | 'website';
         imageAlt?: string } },
@@ -68,8 +67,7 @@ export function TagFeed(
             <TabHighlight active={tab === 'notes'} />
             notes
           </a>
-          <a className={tab === 'followers' ? 'active' : ''}
-            aria-current={tab === 'followers' ? 'page' : undefined}
+          <a className={tab === 'followers' ? 'active' : ''} aria-current={tab === 'followers' ? 'page' : undefined}
             href={`${tagPath}?tab=followers${returnPath ? `&from=${encodeURIComponent(returnPath)}` : ''}`}
           >
             <TabHighlight active={tab === 'followers'} />
@@ -85,8 +83,7 @@ export function TagFeed(
       {tab === 'followers'
         ? people.length
           ? (
-            <ConnectionPeople user={user} people={people} className="connections-list"
-              showNoteCount={false}
+            <ConnectionPeople user={user} people={people} className="connections-list" showNoteCount={false}
               returnPath={person => `${paginationPath}${page > 1 ? '&page=' + page : ''}#person-${person.id}`} />
           )
           : <div className="empty">No one follows this tag yet.</div>

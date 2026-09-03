@@ -1,8 +1,7 @@
 import { expect, test } from 'bun:test'
 import { activeAppearance, activeThemeBackgrounds, appearance, appearanceCookie, cornerChoice, cornerCookie, fontChoice,
   fontCookie, fontSizeChoice, fontSizeCookie, primaryFontChoice, primaryFontCookie, sansSerifFontChoice,
-  sansSerifFontCookie, themeLogoSvg,
-  themeStyles, versionedAppearance, withAppearance } from './theme'
+  sansSerifFontCookie, themeLogoSvg, themeStyles, versionedAppearance, withAppearance } from './theme'
 
 test('appearance reads valid choices and falls back safely', () => {
   expect(appearance(new Request('http://localhost', { headers: { cookie: 'appearance=sepia.amber' } })))
@@ -78,7 +77,8 @@ test('generated system themes emit the complete static light and dark token cont
   const generatedRoots = [...themeStyles(new Request('http://localhost')).matchAll(/:root\{([^}]+)\}/g)]
     .map(match => declarations(match[1]!))
 
-  const invariantToken = /^(--tap-highlight|--focus-ring-|--hairline|--gutter|--space-|--font-size-|--form-action-font-size)/
+  const invariantToken =
+    /^(--tap-highlight|--focus-ring-|--hairline|--gutter|--space-|--font-size-|--form-action-font-size)/
   for (const [index, staticRoot] of staticRoots.entries()) {
     for (const token of Object.keys(staticRoot).filter(token => !invariantToken.test(token))) {
       expect(generatedRoots[index]).toHaveProperty(token)

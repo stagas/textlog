@@ -32,11 +32,13 @@ export function AdminDashboard(
         className="admin-header"
         eyebrow="operations"
         title="admin dashboard"
-        action={<span className="admin-header-actions">
-          <a className="profile-edit-link" href="/admin/tags">tags</a>
-          <a className="profile-edit-link" href="/admin/push">send push</a>
-          <a className="profile-edit-link" href="/admin/email">send email</a>
-        </span>}
+        action={
+          <span className="admin-header-actions">
+            <a className="profile-edit-link" href="/admin/tags">tags</a>
+            <a className="profile-edit-link" href="/admin/push">send push</a>
+            <a className="profile-edit-link" href="/admin/email">send email</a>
+          </span>
+        }
       />
       <StatsGrid stats={stats} />
       <section className="admin-section admin-ip-requests">

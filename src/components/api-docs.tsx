@@ -174,18 +174,21 @@ export function ApiDocs({ user }: { user: User | null }) {
         <ApiSection title="Bookmarks" id="bookmarks">
           <p>
             Bookmark mutations are idempotent. The private collection is ordered by when each post was bookmarked,
-            newest first. Pass an optional <code>q</code> for full-text search and use the returned cursor for the next
-            page.
+            newest first. Pass an optional <code>q</code>{' '}
+            for full-text search and use the returned cursor for the next page.
           </p>
-          <CodeBlock language="bash">{`curl -X POST '${origin}/api/v1/posts/123/bookmark' \
+          <CodeBlock language="bash">
+            {`curl -X POST '${origin}/api/v1/posts/123/bookmark' \
   -H "authorization: Bearer $TOKEN"
 
 curl '${origin}/api/v1/bookmarks?q=sqlite&limit=20' \
   -H "authorization: Bearer $TOKEN"
 
 curl -X DELETE '${origin}/api/v1/posts/123/bookmark' \
-  -H "authorization: Bearer $TOKEN"`}</CodeBlock>
-          <CodeBlock language="json">{`{
+  -H "authorization: Bearer $TOKEN"`}
+          </CodeBlock>
+          <CodeBlock language="json">
+            {`{
   "data": [{
     "id": 123,
     "body": "A saved note",
@@ -193,30 +196,34 @@ curl -X DELETE '${origin}/api/v1/posts/123/bookmark' \
     "parent": null
   }],
   "pagination": { "next_cursor": null }
-}`}</CodeBlock>
+}`}
+          </CodeBlock>
         </ApiSection>
 
         <ApiSection title="Web-compatible threaded feeds" id="threaded-feeds">
           <p>
-            Use the <code>/conversations</code> variants when a client should render the same feed structure as the web
-            app. The original endpoints remain flat, post- or activity-paginated collections for existing clients.
-            Threaded feeds paginate conversations using the web page sizes <code>20</code>, <code>40</code>,{' '}
-            <code>80</code>, or <code>100</code>.
+            Use the <code>/conversations</code>{' '}
+            variants when a client should render the same feed structure as the web app. The original endpoints remain
+            flat, post- or activity-paginated collections for existing clients. Threaded feeds paginate conversations
+            using the web page sizes <code>20</code>, <code>40</code>, <code>80</code>, or <code>100</code>.
           </p>
-          <CodeBlock language="bash">{`curl '${origin}/api/v1/feeds/all/conversations?limit=20'
+          <CodeBlock language="bash">
+            {`curl '${origin}/api/v1/feeds/all/conversations?limit=20'
 curl '${origin}/api/v1/feeds/hot/conversations?limit=20'
 
 curl '${origin}/api/v1/activities/my-feed/conversations?limit=20' \\
   -H "authorization: Bearer $TOKEN"
 curl '${origin}/api/v1/activities/@/conversations?limit=20' \\
-  -H "authorization: Bearer $TOKEN"`}</CodeBlock>
+  -H "authorization: Bearer $TOKEN"`}
+          </CodeBlock>
           <p>
             Public threaded feeds return conversation objects containing the exact posts selected for that web feed
             page. Posts include <code>parent_id</code>, absolute <code>depth</code>, <code>classification</code>{' '}
             (<code>root</code> or <code>reply</code>), <code>feed_ancestor_gap</code>, <code>unread</code>, and{' '}
             <code>directed_to_viewer</code>. Follow each post’s parent relationship to build the visible reply tree.
           </p>
-          <CodeBlock language="json">{`{
+          <CodeBlock language="json">
+            {`{
   "data": [{
     "id": 123,
     "posts": [
@@ -225,13 +232,15 @@ curl '${origin}/api/v1/activities/@/conversations?limit=20' \\
     ]
   }],
   "pagination": { "next_cursor": "opaque", "previous_cursor": null }
-}`}</CodeBlock>
+}`}
+          </CodeBlock>
           <p>
             Personalized conversation feeds require a bearer token. Their ordered <code>data</code> array mixes{' '}
-            <code>conversation</code> items with standalone typed <code>activity</code> items for user follows, hashtag
-            follows, and signups. Conversation posts retain <code>activity_id</code> and <code>activity_type</code>{' '}
-            (<code>post</code>, <code>reply</code>, or <code>mention</code>), so the existing activity read endpoints can
-            mark them read.
+            <code>conversation</code> items with standalone typed <code>activity</code>{' '}
+            items for user follows, hashtag follows, and signups. Conversation posts retain <code>activity_id</code> and
+            {' '}
+            <code>activity_type</code> (<code>post</code>, <code>reply</code>, or{' '}
+            <code>mention</code>), so the existing activity read endpoints can mark them read.
           </p>
           <p>
             Pass <code>pagination.next_cursor</code> or <code>pagination.previous_cursor</code> back as{' '}
@@ -266,8 +275,8 @@ curl '${origin}/api/v1/activities/@/conversations?limit=20' \\
           <pre><code>{`/feeds/my-feed/:key.rss
 /feeds/my-feed/:key.atom`}</code></pre>
           <p>
-            The former <code>latest</code>, <code>for-you</code>, and <code>to-me</code> API and feed addresses remain
-            available as backward-compatible aliases.
+            The former <code>latest</code>, <code>for-you</code>, and <code>to-me</code>{' '}
+            API and feed addresses remain available as backward-compatible aliases.
           </p>
         </ApiSection>
 
@@ -275,9 +284,9 @@ curl '${origin}/api/v1/activities/@/conversations?limit=20' \\
           <p>
             Download the latest daily, read-only snapshot as{' '}
             <a href="/dump.zip">dump.zip</a>. It contains paginated JSON files for public handles and bios, posts and
-            reply links, translations, code execution outputs, locations, mentions, hashtags, and follow relationships. The accounts are
-            frozen: the archive contains no bookmarks, login credentials, contact details, record timestamps, blocks,
-            reports, deleted content, or other private data.
+            reply links, translations, code execution outputs, locations, mentions, hashtags, and follow relationships.
+            The accounts are frozen: the archive contains no bookmarks, login credentials, contact details, record
+            timestamps, blocks, reports, deleted content, or other private data.
           </p>
           <CodeBlock language="bash">{`curl -O ${origin}/dump.zip`}</CodeBlock>
         </ApiSection>

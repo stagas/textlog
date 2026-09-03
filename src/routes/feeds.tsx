@@ -15,6 +15,7 @@ import { currentPage, page, redirect, rememberFeed } from './shared'
 import type { Context, Hono } from 'hono'
 import { randomInt } from 'node:crypto'
 import { instance } from '../../instance.config'
+import { executePostCode } from '../code-execution'
 import { backgroundDatabaseCall, databaseService } from '../database-service'
 import { decodeHotCursor, hotRankingVersion } from '../hot'
 import {
@@ -30,12 +31,11 @@ import {
 } from '../http'
 import { rpcMaterializedFeedPage } from '../materialized-feed-service'
 import { decodePostCursor } from '../pagination'
-import { resolvedDensity, resolvedPageSize } from '../request-preferences'
 import { withRequestContext } from '../request-context'
+import { resolvedDensity, resolvedPageSize } from '../request-preferences'
 import { withAppearance } from '../theme'
 import type { PersonalizedFeedData, PostFeedPage } from '../types'
 import { currentUser } from '../utils'
-import { executePostCode } from '../code-execution'
 import { previewLocation } from './posts'
 
 async function showNotificationBanner(request: Request, user: ReturnType<typeof currentUser>) {
@@ -153,17 +153,18 @@ export async function warmNextRecentLatestFeed() {
   if (!visitors.length) return
   const visitor = visitors[recentLatestWarmCursor++ % visitors.length]
   await withRequestContext({ sessionUser: visitor.user, apiUser: null, pageSize: visitor.pageSize,
-    density: visitor.density }, () => withAppearance(visitor.request, async () => {
-    await rpcMaterializedFeedPage(visitor.request, 'latest', visitor.user.id, async () => {
-      const feed = await backgroundDatabaseCall('feeds.latestPage', {
-        viewerId: visitor.user.id,
-        page: 1,
-        pageSize: visitor.pageSize,
-        markRead: false,
-      })
-      return page(<PublicFeed user={visitor.user} feed={feed} path="/all" />)
-    }, false, viewerCacheVersion(latestFeedCacheVersion, visitor.user), true)
-  }))
+    density: visitor.density }, () =>
+    withAppearance(visitor.request, async () => {
+      await rpcMaterializedFeedPage(visitor.request, 'latest', visitor.user.id, async () => {
+        const feed = await backgroundDatabaseCall('feeds.latestPage', {
+          viewerId: visitor.user.id,
+          page: 1,
+          pageSize: visitor.pageSize,
+          markRead: false,
+        })
+        return page(<PublicFeed user={visitor.user} feed={feed} path="/all" />)
+      }, false, viewerCacheVersion(latestFeedCacheVersion, visitor.user), true)
+    }))
 }
 
 export async function warmRecentLatestFeeds(limit = 5) {
@@ -184,8 +185,7 @@ export async function loadRecentFeedVisitors() {
 }
 
 export function registerFeedsRoutes(app: Hono) {
-  const moved = (path: string) => (c: Context) =>
-    c.redirect(path + new URL(c.req.url).search, 308)
+  const moved = (path: string) => (c: Context) => c.redirect(path + new URL(c.req.url).search, 308)
   app.get('/for-you', moved('/my-feed'))
   app.get('/to-me', moved('/@'))
   app.get('/random', moved('/any'))
@@ -253,18 +253,17 @@ export function registerFeedsRoutes(app: Hono) {
         markRead: false,
       })
       return page(
-        <Feed user={user} data={feed} title="my feed"
-          notificationBanner={notificationBanner} expandedRootId={expandedRootId} />,
+        <Feed user={user} data={feed} title="my feed" notificationBanner={notificationBanner}
+          expandedRootId={expandedRootId} />,
       )
     }
     const response = !write.writeError && !write.writePreview && !notificationBanner
         && currentPage(c.req.query('page')) === 1 && !cursorValue && !expandedRootId
-      ? await rpcMaterializedFeedPage(c.req.raw, 'for-you', user.id, render, false,
-        viewerCacheVersion(12, user), false, renderForCache,
-        async () => {
-          await databaseService().call('feeds.markPersonalizedSnapshotPageRead', { userId: user.id, pageSize,
-            toMe: false })
-        })
+      ? await rpcMaterializedFeedPage(c.req.raw, 'for-you', user.id, render, false, viewerCacheVersion(12, user), false,
+        renderForCache, async () => {
+        await databaseService().call('feeds.markPersonalizedSnapshotPageRead', { userId: user.id, pageSize,
+          toMe: false })
+      })
       : await render()
     const remembered = rememberFeed(response, 'following')
     return remembered
@@ -280,8 +279,9 @@ export function registerFeedsRoutes(app: Hono) {
     if (cursorValue && !cursor) return c.text('Invalid cursor', 400)
     const notificationBanner = await showNotificationBanner(c.req.raw, user)
     let dataPromise: Promise<PostFeedPage> | undefined
-    const data = () => dataPromise ||= databaseService().call('feeds.latestPage', { viewerId: user?.id ?? -1,
-      page: currentPage(c.req.query('page')), pageSize: resolvedPageSize(c.req.raw) })
+    const data = () =>
+      dataPromise ||= databaseService().call('feeds.latestPage', { viewerId: user?.id ?? -1,
+        page: currentPage(c.req.query('page')), pageSize: resolvedPageSize(c.req.raw) })
     const render = async () => {
       const feed = await data()
       return page(
@@ -289,20 +289,24 @@ export function registerFeedsRoutes(app: Hono) {
           expandedRootId={expandedRootId} {...write} />,
       )
     }
-    const renderForCache = user ? async () => {
-      const feed = await databaseService().call('feeds.latestPage', { viewerId: user.id,
-        page: currentPage(c.req.query('page')), pageSize: resolvedPageSize(c.req.raw), markRead: false })
-      return page(
-        <PublicFeed user={user} feed={feed} path="/all"
-          notificationBanner={notificationBanner}
-          expandedRootId={expandedRootId} />,
-      )
-    } : undefined
+    const renderForCache = user
+      ? async () => {
+        const feed = await databaseService().call('feeds.latestPage', { viewerId: user.id,
+          page: currentPage(c.req.query('page')), pageSize: resolvedPageSize(c.req.raw), markRead: false })
+        return page(
+          <PublicFeed user={user} feed={feed} path="/all" notificationBanner={notificationBanner}
+            expandedRootId={expandedRootId} />,
+        )
+      }
+      : undefined
     const response = !write.writeError && !write.writePreview && !notificationBanner
         && currentPage(c.req.query('page')) === 1 && !cursorValue && !expandedRootId
       ? await rpcMaterializedFeedPage(c.req.raw, 'latest', user ? user.id : -1, render, false,
-        viewerCacheVersion(latestFeedCacheVersion, user), false, renderForCache,
-        user ? async () => { await data() } : undefined)
+        viewerCacheVersion(latestFeedCacheVersion, user), false, renderForCache, user
+        ? async () => {
+          await data()
+        }
+        : undefined)
       : await render()
     const remembered = rememberFeed(response, 'latest')
     return remembered
@@ -326,8 +330,8 @@ export function registerFeedsRoutes(app: Hono) {
       sampleSeed: seed,
     })
     const response = rememberFeed(page(
-      <PublicFeed user={user} feed={feed} path={`/any?seed=${seed.toString(36)}`} notificationBanner={notificationBanner}
-        expandedRootId={expandedRootId} {...write} />,
+      <PublicFeed user={user} feed={feed} path={`/any?seed=${seed.toString(36)}`}
+        notificationBanner={notificationBanner} expandedRootId={expandedRootId} {...write} />,
     ), 'random')
     response.headers.append('set-cookie', retainedAnyFeedSeedCookie(seed))
     return response
@@ -380,9 +384,14 @@ export function registerFeedsRoutes(app: Hono) {
     if (cursorValue && !decodeForYouCursor(cursorValue)) return c.text('Invalid cursor', 400)
     const notificationBanner = await showNotificationBanner(c.req.raw, user)
     let dataPromise: Promise<PersonalizedFeedData> | undefined
-    const data = () => dataPromise ||= databaseService().call('feeds.personalizedPage', {
-      user, page: currentPage(c.req.query('page')), pageSize: resolvedPageSize(c.req.raw), toMe: true, path: '/@',
-    })
+    const data = () =>
+      dataPromise ||= databaseService().call('feeds.personalizedPage', {
+        user,
+        page: currentPage(c.req.query('page')),
+        pageSize: resolvedPageSize(c.req.raw),
+        toMe: true,
+        path: '/@',
+      })
     const render = async () =>
       page(
         <Feed user={user} data={await data()} title="@" path="/@" toMe notificationBanner={notificationBanner}
@@ -401,8 +410,8 @@ export function registerFeedsRoutes(app: Hono) {
     }
     const response = !write.writeError && !write.writePreview && !notificationBanner
         && currentPage(c.req.query('page')) === 1 && !cursorValue && !expandedRootId
-      ? await rpcMaterializedFeedPage(c.req.raw, 'to-me', user.id, render, false,
-        viewerCacheVersion(0, user), false, renderForCache)
+      ? await rpcMaterializedFeedPage(c.req.raw, 'to-me', user.id, render, false, viewerCacheVersion(0, user), false,
+        renderForCache)
       : await render()
     return rememberFeed(response, 'activity')
   })
@@ -532,13 +541,15 @@ export function registerFeedsRoutes(app: Hono) {
     if (user) return page(<About user={user} />)
     return await rpcMaterializedFeedPage(c.req.raw, 'about', -1, async () => page(<About user={null} />))
   })
-  app.get('/install', c => page(
-    <InstallGuide user={currentUser(c.req.raw)} platform={installPlatform(c.req.raw)} />,
-  ))
-  app.post('/install/banner/dismiss', c => redirect(
-    safeRefererPath(c.req.header('referer'), c.req.url),
-    pwaInstallBannerDismissedCookie(),
-  ))
+  app.get('/install', c =>
+    page(
+      <InstallGuide user={currentUser(c.req.raw)} platform={installPlatform(c.req.raw)} />,
+    ))
+  app.post('/install/banner/dismiss', c =>
+    redirect(
+      safeRefererPath(c.req.header('referer'), c.req.url),
+      pwaInstallBannerDismissedCookie(),
+    ))
   app.get('/contact', c => page(<Contact user={currentUser(c.req.raw)} />))
   app.get('/dmca', c => page(<Dmca user={currentUser(c.req.raw)} />))
   app.get('/legal', c => page(<Legal user={currentUser(c.req.raw)} />))

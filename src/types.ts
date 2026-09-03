@@ -2,8 +2,8 @@ export type LinkPreview = { imageUrl: string; imageKey?: string; title?: string;
   siteName?: string; imageWidth?: number; imageHeight?: number; mimeType?: string; linkedPostId?: number;
   renderedPostHtml?: string; linkedPostReturnPath?: string;
   linkedPost?: Pick<PostView,
-    'id' | 'user_id' | 'parent_id' | 'body' | 'handle' | 'reply_count' | 'thread_locked' | 'poll'
-    | 'execution_output' | 'moderation_category' | 'moderation_score'> & {
+    'id' | 'user_id' | 'parent_id' | 'body' | 'handle' | 'reply_count' | 'thread_locked' | 'poll' | 'execution_output'
+      | 'moderation_category' | 'moderation_score'> & {
     parent?: { user_id: number; handle: string } | null
   } }
 
@@ -60,8 +60,7 @@ export type BioReferenceData = {
 
 export type ParentPost = Pick<PostRow,
   'id' | 'body' | 'translation' | 'created_at' | 'deleted_at' | 'has_latex' | 'has_links' | 'has_code'
-  | 'execution_output'
-  | 'moderation_category' | 'moderation_score'> & {
+    | 'execution_output' | 'moderation_category' | 'moderation_score'> & {
   handle: string
   mood?: string
   unavailable?: boolean
@@ -347,15 +346,11 @@ export type TagView = {
   followerCount?: number
 }
 export type User = { id: number; handle: string; email: string; bio: string; suspended_at?: string | null;
-  mood?: string;
-  mood_prompt_dismissed_at?: string | null;
-  tag_prompt_completed_at?: string | null;
-  people_prompt_completed_at?: string | null;
-  email_verified_at?: string | null; activity_read_at?: string | null; handle_chosen_at?: string | null;
-  timezone?: string | null; show_link_previews?: number; recap_emails?: number; interaction_emails?: number;
-  show_moderated_content?: number; hide_people_follow_activity?: number; hide_hashtag_follow_activity?: number;
-  show_note_streak?: number; show_timestamps?: number;
-  draft_count?: number }
+  mood?: string; mood_prompt_dismissed_at?: string | null; tag_prompt_completed_at?: string | null;
+  people_prompt_completed_at?: string | null; email_verified_at?: string | null; activity_read_at?: string | null;
+  handle_chosen_at?: string | null; timezone?: string | null; show_link_previews?: number; recap_emails?: number;
+  interaction_emails?: number; show_moderated_content?: number; hide_people_follow_activity?: number;
+  hide_hashtag_follow_activity?: number; show_note_streak?: number; show_timestamps?: number; draft_count?: number }
 
-export type DraftView = { id: number; public_id: string; body: string; parent_id: number | null; created_at: string; updated_at: string;
-  parent_handle?: string | null; parent?: ParentPost | null }
+export type DraftView = { id: number; public_id: string; body: string; parent_id: number | null; created_at: string;
+  updated_at: string; parent_handle?: string | null; parent?: ParentPost | null }

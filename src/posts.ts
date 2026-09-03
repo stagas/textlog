@@ -1,15 +1,15 @@
 import type { Database } from 'bun:sqlite'
 import { isAdminEmail } from './admin'
 import { publishPost } from './api-broker'
-import { extractAuthoredHashtags, extractHashtags, extractMentions, pascalCaseHashtagDisplayName,
-  normalizeHashtag, normalizeHashtagSpelling, postContentFlags } from './content'
+import { extractAuthoredHashtags, extractHashtags, extractMentions, normalizeHashtag, normalizeHashtagSpelling,
+  pascalCaseHashtagDisplayName, postContentFlags } from './content'
 import { resolveHandle } from './handles'
 import { recordHotActivity } from './hot'
 import { getImageUrl, isImageKey } from './image-storage'
 import { markLatestPostsRead } from './latest-state'
-import { metaThreadVisibleToViewer } from './meta-thread'
 import { decodeHtmlEntities, userBioLinkPreviews } from './link-preview'
 import { LOCATION_MAP_STYLE_VERSION, LOCATION_ZOOM, locationMapKey, osmLocationUrl } from './locations'
+import { metaThreadVisibleToViewer } from './meta-thread'
 import { loadPolls, syncPoll } from './polls'
 import { insertRateLimitedPost } from './post-rate-limit'
 import type { BioReferenceData, LinkPreview, ParentPost, PostView, UserProfileStats } from './types'
@@ -17,7 +17,7 @@ import { postReferenceIds } from './utils'
 
 function moderatorViewer(database: Database, viewerId: number) {
   if (viewerId < 0) return false
-  if (!database.query("SELECT 1 FROM pragma_table_info('users') WHERE name='email'").get()) return false
+  if (!database.query('SELECT 1 FROM pragma_table_info(\'users\') WHERE name=\'email\'').get()) return false
   const viewer = database.query('SELECT email FROM users WHERE id=?').get(viewerId) as { email: string } | null
   return !!viewer && isAdminEmail(viewer.email)
 }
@@ -25,13 +25,15 @@ function moderatorViewer(database: Database, viewerId: number) {
 function canonicalTags(database: Database, tags: string[]) {
   const unique = [...new Set(tags.map(normalizeHashtagSpelling))]
   const invariants = !unique.length || !database.query(
-    "SELECT 1 FROM sqlite_master WHERE type='table' AND name='tag_invariants'",
-  ).get() ? new Set<string>() : new Set((database.query(`SELECT tag FROM tag_invariants WHERE tag IN
+      'SELECT 1 FROM sqlite_master WHERE type=\'table\' AND name=\'tag_invariants\'',
+    ).get()
+    ? new Set<string>()
+    : new Set((database.query(`SELECT tag FROM tag_invariants WHERE tag IN
     (${unique.map(() => '?').join(',')})`).all(...unique) as { tag: string }[]).map(row => row.tag))
   const normalized = unique.map(tag => invariants.has(tag) ? tag : normalizeHashtag(tag))
   const aliases = !unique.length || !database.query(
-    "SELECT 1 FROM sqlite_master WHERE type='table' AND name='tag_aliases'",
-  ).get()
+      'SELECT 1 FROM sqlite_master WHERE type=\'table\' AND name=\'tag_aliases\'',
+    ).get()
     ? []
     : database.query(`SELECT alias,primary_tag FROM tag_aliases WHERE alias IN
       (${normalized.map(() => '?').join(',')})`).all(...normalized) as { alias: string; primary_tag: string }[]
@@ -169,7 +171,9 @@ export function syncPostMetadata(database: Database, postId: number, body: strin
   for (const { tag: normalizedTag, authored } of hashtags) {
     const spelling = normalizeHashtagSpelling(authored)
     const extractedTag = supportsTagPresentation && database.query('SELECT 1 FROM tag_invariants WHERE tag=?')
-      .get(spelling) ? spelling : normalizedTag
+        .get(spelling)
+      ? spelling
+      : normalizedTag
     const tag = supportsTagPresentation
       ? (database.query('SELECT primary_tag FROM tag_aliases WHERE alias=?').get(extractedTag) as {
         primary_tag: string
@@ -216,10 +220,12 @@ export function createPost(
     const supportsModerationWarning = !!database.query(
       'SELECT 1 FROM pragma_table_info(\'posts\') WHERE name=\'moderation_category\'',
     ).get()
-    if (supportsModerationWarning) database.query(
-      'UPDATE posts SET moderation_category=?,moderation_score=? WHERE id=?',
-    ).run(moderationCategory, moderationScore, postId)
-    if (database.query("SELECT 1 FROM pragma_table_info('posts') WHERE name='execution_output'").get()) {
+    if (supportsModerationWarning) {
+      database.query(
+        'UPDATE posts SET moderation_category=?,moderation_score=? WHERE id=?',
+      ).run(moderationCategory, moderationScore, postId)
+    }
+    if (database.query('SELECT 1 FROM pragma_table_info(\'posts\') WHERE name=\'execution_output\'').get()) {
       database.query('UPDATE posts SET execution_output=? WHERE id=?').run(executionOutput, postId)
     }
     syncPostMetadata(database, postId, body)
@@ -257,10 +263,12 @@ export function updatePost(database: Database, postId: number, body: string, tra
     const supportsModerationWarning = !!database.query(
       'SELECT 1 FROM pragma_table_info(\'posts\') WHERE name=\'moderation_category\'',
     ).get()
-    if (supportsModerationWarning) database.query(
-      'UPDATE posts SET moderation_category=?,moderation_score=? WHERE id=?',
-    ).run(moderationCategory, moderationScore, postId)
-    if (database.query("SELECT 1 FROM pragma_table_info('posts') WHERE name='execution_output'").get()) {
+    if (supportsModerationWarning) {
+      database.query(
+        'UPDATE posts SET moderation_category=?,moderation_score=? WHERE id=?',
+      ).run(moderationCategory, moderationScore, postId)
+    }
+    if (database.query('SELECT 1 FROM pragma_table_info(\'posts\') WHERE name=\'execution_output\'').get()) {
       database.query('UPDATE posts SET execution_output=? WHERE id=?').run(executionOutput, postId)
     }
     syncPostMetadata(database, postId, body)
@@ -268,7 +276,7 @@ export function updatePost(database: Database, postId: number, body: string, tra
 }
 
 export function enrichPosts(database: Database, posts: PostView[], viewerId = -1) {
-  const supportsMood = !!database.query("SELECT 1 FROM pragma_table_info('users') WHERE name='mood'").get()
+  const supportsMood = !!database.query('SELECT 1 FROM pragma_table_info(\'users\') WHERE name=\'mood\'').get()
   const moodUserIds = [...new Set(posts.map(post => post.user_id))]
   const moods = supportsMood && moodUserIds.length
     ? new Map((database.query(`SELECT id,mood FROM users WHERE id IN (${moodUserIds.map(() => '?').join(',')})`)
@@ -280,8 +288,8 @@ export function enrichPosts(database: Database, posts: PostView[], viewerId = -1
   const blockers = moderator && viewerId >= 0
     ? new Set((database.query(`SELECT blocker_id FROM blocks WHERE blocked_id=?
       AND blocker_id IN (${posts.map(() => '?').join(',')})`).all(viewerId, ...posts.map(post => post.user_id)) as {
-        blocker_id: number
-      }[]).map(row => row.blocker_id))
+      blocker_id: number
+    }[]).map(row => row.blocker_id))
     : new Set<number>()
   const supportsTranslations = !!database.query(
     'SELECT 1 FROM pragma_table_info(\'posts\') WHERE name=\'translation\'',
@@ -290,7 +298,7 @@ export function enrichPosts(database: Database, posts: PostView[], viewerId = -1
     'SELECT 1 FROM pragma_table_info(\'posts\') WHERE name=\'moderation_category\'',
   ).get()
   const supportsExecutionOutput = !!database.query(
-    "SELECT 1 FROM pragma_table_info('posts') WHERE name='execution_output'",
+    'SELECT 1 FROM pragma_table_info(\'posts\') WHERE name=\'execution_output\'',
   ).get()
   const ids = posts.map(post => post.id)
   const viewerContextByPostId = new Map<number, 'reply' | 'mention'>()
@@ -420,9 +428,9 @@ export function enrichPosts(database: Database, posts: PostView[], viewerId = -1
     : []
   const nativeReferenceSources = database.query(`SELECT id,body FROM posts
     WHERE id IN (${previewPostIds.map(() => '?').join(',')})`).all(...previewPostIds) as Array<{
-      id: number
-      body: string
-    }>
+    id: number
+    body: string
+  }>
   const nativeReferenceIdsByPost = new Map(nativeReferenceSources.map(source => [
     source.id,
     postReferenceIds(source.body),
@@ -446,9 +454,9 @@ export function enrichPosts(database: Database, posts: PostView[], viewerId = -1
       linkedPost: row.linked_post_id && row.linked_user_id && row.linked_body !== null && row.linked_handle
         ? { id: row.linked_post_id, user_id: row.linked_user_id, parent_id: row.linked_parent_id, body: row.linked_body,
           moderation_category: row.linked_moderation_category, moderation_score: row.linked_moderation_score,
-          execution_output: row.linked_execution_output, handle: row.linked_handle,
-          reply_count: row.linked_reply_count, thread_locked: !!row.linked_locked,
-          poll: linkedPolls.get(row.linked_post_id), parent: row.linked_parent_user_id && row.linked_parent_handle
+          execution_output: row.linked_execution_output, handle: row.linked_handle, reply_count: row.linked_reply_count,
+          thread_locked: !!row.linked_locked, poll: linkedPolls.get(row.linked_post_id),
+          parent: row.linked_parent_user_id && row.linked_parent_handle
             ? { user_id: row.linked_parent_user_id, handle: row.linked_parent_handle }
             : null }
         : undefined }
@@ -466,10 +474,11 @@ export function enrichPosts(database: Database, posts: PostView[], viewerId = -1
       LEFT JOIN users parent_user ON parent_user.id=parent.user_id
       WHERE p.id IN (${nativeReferenceIds.map(() => '?').join(',')})
       AND p.deleted_at IS NULL AND u.deleted_at IS NULL AND u.suspended_at IS NULL`)
-      .all(...nativeReferenceIds) as Array<{ id: number; user_id: number; parent_id: number | null; body: string;
-        moderation_category: string | null; moderation_score: number | null; execution_output: string | null;
-        handle: string; parent_user_id: number | null; parent_handle: string | null;
-        reply_count: number; locked: number }>
+      .all(...nativeReferenceIds) as Array<
+        { id: number; user_id: number; parent_id: number | null; body: string; moderation_category: string | null;
+          moderation_score: number | null; execution_output: string | null; handle: string;
+          parent_user_id: number | null; parent_handle: string | null; reply_count: number; locked: number }
+      >
     const nativeById = new Map(nativeRows.map(row => [row.id, row]))
     let origin = ''
     try {
@@ -484,10 +493,17 @@ export function enrichPosts(database: Database, posts: PostView[], viewerId = -1
         const url = `${origin}/post/${referenceId}`
         if (previews[url]) continue
         previews[url] = { imageUrl: url, linkedPostId: referenceId, linkedPost: {
-          id: row.id, user_id: row.user_id, parent_id: row.parent_id, body: row.body,
-          moderation_category: row.moderation_category, moderation_score: row.moderation_score,
-          execution_output: row.execution_output, handle: row.handle, reply_count: row.reply_count,
-          thread_locked: !!row.locked, poll: linkedPolls.get(row.id),
+          id: row.id,
+          user_id: row.user_id,
+          parent_id: row.parent_id,
+          body: row.body,
+          moderation_category: row.moderation_category,
+          moderation_score: row.moderation_score,
+          execution_output: row.execution_output,
+          handle: row.handle,
+          reply_count: row.reply_count,
+          thread_locked: !!row.locked,
+          poll: linkedPolls.get(row.id),
           parent: row.parent_user_id && row.parent_handle
             ? { user_id: row.parent_user_id, handle: row.parent_handle }
             : null,
@@ -497,19 +513,24 @@ export function enrichPosts(database: Database, posts: PostView[], viewerId = -1
     }
   }
   const locationsByPost = new Map<number, NonNullable<PostView['location']>>()
-  if (database.query("SELECT 1 FROM sqlite_master WHERE type='table' AND name='post_locations'").get()) {
+  if (database.query('SELECT 1 FROM sqlite_master WHERE type=\'table\' AND name=\'post_locations\'').get()) {
     const locationRows = database.query(`SELECT l.post_id,l.query,l.latitude,l.longitude,l.display_name,
       m.image_key,m.width,m.height FROM post_locations l JOIN location_map_previews m ON m.cache_key=
       printf('${LOCATION_ZOOM}:${LOCATION_MAP_STYLE_VERSION}:%.6f:%.6f',l.latitude,l.longitude) WHERE l.post_id IN
-      (${previewPostIds.map(() => '?').join(',')})`).all(...previewPostIds) as Array<{ post_id: number; query: string;
-      latitude: number; longitude: number; display_name: string; image_key: string; width: number; height: number }>
+      (${previewPostIds.map(() => '?').join(',')})`).all(...previewPostIds) as Array<
+      { post_id: number; query: string; latitude: number; longitude: number; display_name: string; image_key: string;
+        width: number; height: number }
+    >
     for (const row of locationRows) {
       const location = { query: row.query, latitude: row.latitude, longitude: row.longitude,
         displayName: row.display_name }
       const [title, ...description] = row.display_name.split(',').map(part => part.trim()).filter(Boolean)
       locationsByPost.set(row.post_id, { ...location, url: osmLocationUrl(location), preview: {
-        imageUrl: getImageUrl(row.image_key || locationMapKey(location)), title: title || row.query,
-        description: description.join(', ') || row.display_name, imageWidth: row.width, imageHeight: row.height,
+        imageUrl: getImageUrl(row.image_key || locationMapKey(location)),
+        title: title || row.query,
+        description: description.join(', ') || row.display_name,
+        imageWidth: row.width,
+        imageHeight: row.height,
       } })
     }
   }
@@ -550,9 +571,11 @@ export function enrichPosts(database: Database, posts: PostView[], viewerId = -1
       `SELECT p.id,p.user_id,p.parent_id,p.body,${supportsTranslations ? 'p.translation' : 'NULL translation'},
         p.created_at,p.deleted_at,p.has_latex,p.has_links,p.has_code,
         ${supportsExecutionOutput ? 'p.execution_output' : 'NULL execution_output'},
-        ${supportsModerationWarnings
+        ${
+        supportsModerationWarnings
           ? 'p.moderation_category,p.moderation_score'
-          : 'NULL moderation_category,NULL moderation_score'},u.handle,u.bio,
+          : 'NULL moderation_category,NULL moderation_score'
+      },u.handle,u.bio,
         0 reply_count
         FROM posts p JOIN users u ON u.id=p.user_id WHERE p.id IN (${parentPlaceholders}) ${parentFilter}`,
     ).all(...parentParameters) as ParentPost[]
@@ -580,11 +603,17 @@ export function enrichPosts(database: Database, posts: PostView[], viewerId = -1
     parents = new Map(rows.map(parent => [parent.id, parent]))
   }
   if (supportsMood) {
-    const missingMoodUserIds = [...new Set([...parents.values()].flatMap(parent =>
-      parent.user_id == null || moods.has(parent.user_id) ? [] : [parent.user_id]))]
+    const missingMoodUserIds = [
+      ...new Set(
+        [...parents.values()].flatMap(parent =>
+          parent.user_id == null || moods.has(parent.user_id) ? [] : [parent.user_id]
+        ),
+      ),
+    ]
     if (missingMoodUserIds.length) {
-      for (const row of database.query(`SELECT id,mood FROM users WHERE id IN (${
-        missingMoodUserIds.map(() => '?').join(',')})`).all(...missingMoodUserIds) as Array<{ id: number; mood: string }>) {
+      for (const row of database.query(
+        `SELECT id,mood FROM users WHERE id IN (${missingMoodUserIds.map(() => '?').join(',')})`,
+      ).all(...missingMoodUserIds) as Array<{ id: number; mood: string }>) {
         moods.set(row.id, row.mood)
       }
     }
@@ -614,7 +643,9 @@ export function enrichPosts(database: Database, posts: PostView[], viewerId = -1
   const followedTags = viewerId < 0 || !canonicalRelevantTags.length
     ? new Set<string>()
     : new Set((database.query(`SELECT tag FROM hashtag_follows WHERE user_id=? AND tag IN
-      (${canonicalRelevantTags.map(() => '?').join(',')})`).all(viewerId, ...canonicalRelevantTags) as { tag: string }[])
+      (${canonicalRelevantTags.map(() => '?').join(',')})`).all(viewerId, ...canonicalRelevantTags) as {
+      tag: string
+    }[])
       .map(row => row.tag))
   const mentionFollowing = Object.fromEntries(Object.entries(mentionUserIds)
     .map(([handle, id]) => [handle, followedUserIds.has(id)]))
@@ -713,7 +744,9 @@ export function rewireVisibleAncestorGaps(database: Database, posts: PostView[])
   }>
   const nearestVisibleAncestor = new Map<number, number>()
   for (const row of rows) {
-    if (visibleIds.has(row.id) && !nearestVisibleAncestor.has(row.origin)) nearestVisibleAncestor.set(row.origin, row.id)
+    if (visibleIds.has(row.id) && !nearestVisibleAncestor.has(row.origin)) {
+      nearestVisibleAncestor.set(row.origin, row.id)
+    }
   }
   return posts.map(post => {
     const ancestorId = nearestVisibleAncestor.get(post.id)
@@ -726,7 +759,7 @@ export function loadThreadReplies(database: Database, parentId: number, viewerId
   const blockViewerId = moderator ? -1 : viewerId
   const metaVisibility = moderator ? '1' : metaThreadVisibleToViewer(viewerId)
   const supportsExecutionOutput = !!database.query(
-    "SELECT 1 FROM pragma_table_info('posts') WHERE name='execution_output'",
+    'SELECT 1 FROM pragma_table_info(\'posts\') WHERE name=\'execution_output\'',
   ).get()
   const translationColumn = database.query(
       'SELECT 1 FROM pragma_table_info(\'posts\') WHERE name=\'translation\'',
@@ -749,8 +782,10 @@ export function loadThreadReplies(database: Database, parentId: number, viewerId
           WHERE ph.post_id=p.id AND bh.user_id=?))
         AND ${metaVisibility}
     ) SELECT id,user_id,parent_id,body,${translationColumn},created_at,deleted_at,
-      has_latex,has_links,has_code,${supportsExecutionOutput ? 'execution_output' : 'NULL execution_output'},handle,depth
-      FROM thread ORDER BY created_at ASC,id ASC`).all(parentId, blockViewerId, blockViewerId, blockViewerId,
-    viewerId, viewerId, blockViewerId, blockViewerId, blockViewerId, viewerId, viewerId) as (PostView & { depth: number })[]
+      has_latex,has_links,has_code,${
+    supportsExecutionOutput ? 'execution_output' : 'NULL execution_output'
+  },handle,depth
+      FROM thread ORDER BY created_at ASC,id ASC`).all(parentId, blockViewerId, blockViewerId, blockViewerId, viewerId,
+    viewerId, blockViewerId, blockViewerId, blockViewerId, viewerId, viewerId) as (PostView & { depth: number })[]
   return enrichPosts(database, rows, viewerId) as Array<PostView & { depth: number }>
 }

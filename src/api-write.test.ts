@@ -149,7 +149,9 @@ describe('API writes', () => {
     const { app } = fixture()
     expect((await call(app, '/api/v1/autotag', { method: 'POST', body: { body: 'hello' } })).status).toBe(401)
     const invalid = await call(app, '/api/v1/autotag', {
-      method: 'POST', token: 'alice-token', body: { body: 'x'.repeat(POST_MAX + 1) },
+      method: 'POST',
+      token: 'alice-token',
+      body: { body: 'x'.repeat(POST_MAX + 1) },
     })
     expect(invalid.status).toBe(400)
     expect(await invalid.json()).toMatchObject({ error: { code: 'invalid_body' } })
@@ -451,11 +453,14 @@ describe('API writes', () => {
     expect(draft.id).toMatch(/^[0-9a-f]{8}-[0-9a-f-]{27}$/)
     expect((await call(app, '/api/v1/drafts/1', { token: 'alice-token' })).status).toBe(404)
     expect((await call(app, `/api/v1/drafts/${draft.id}`, { token: 'bob-token' })).status).toBe(404)
-    expect((await call(app, `/api/v1/drafts/${draft.id}`, { method: 'PATCH', token: 'bob-token',
-      body: { body: 'stolen' } })).status).toBe(404)
+    expect(
+      (await call(app, `/api/v1/drafts/${draft.id}`, { method: 'PATCH', token: 'bob-token', body: { body: 'stolen' } }))
+        .status,
+    ).toBe(404)
     expect((await call(app, `/api/v1/drafts/${draft.id}`, { method: 'DELETE', token: 'bob-token' })).status).toBe(404)
     expect((await call(app, `/api/v1/drafts/${draft.id}/publish`, {
-      method: 'POST', token: 'bob-token',
+      method: 'POST',
+      token: 'bob-token',
     })).status).toBe(404)
     expect(
       (await call(app, `/api/v1/drafts/${draft.id}`, { method: 'PATCH', token: 'alice-token',

@@ -25,7 +25,9 @@ describe('OpenRouter autotag', () => {
   test('falls back to the paid model only after a 429', async () => {
     const models: string[] = []
     const result = await autotagText('A garden note', {
-      apiKey: 'test', freeModel: 'example/free', paidModel: 'example/paid',
+      apiKey: 'test',
+      freeModel: 'example/free',
+      paidModel: 'example/paid',
       fetch: (async (_url: string | URL | Request, init?: RequestInit) => {
         models.push(JSON.parse(String(init?.body)).model)
         return models.length === 1
@@ -41,7 +43,10 @@ describe('OpenRouter autotag', () => {
     let calls = 0
     const result = await autotagText('A note', {
       apiKey: 'test',
-      fetch: async () => { calls++; return new Response('bad request', { status: 400 }) },
+      fetch: async () => {
+        calls++
+        return new Response('bad request', { status: 400 })
+      },
     })
     expect(calls).toBe(1)
     expect(result.ok).toBe(false)

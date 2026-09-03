@@ -30,10 +30,11 @@ export function parsePoll(body: string): PollDefinition | null {
   const options = answerLines.map(option => kind === 'quiz' ? option.replace(/^>\s+/, '').trim() : option)
   if (!question || options.length < 2 || options.length > 8 || new Set(options).size !== options.length) return null
   if (kind === 'quiz' && correct.filter(Boolean).length !== 1) return null
-  return { question, options,
-    ...(kind === 'quiz'
-      ? { kind, correctIndex: correct.indexOf(true), ...(after ? { explanation: after } : {}) }
-      : after ? { after } : {}) }
+  return { question, options, ...(kind === 'quiz'
+    ? { kind, correctIndex: correct.indexOf(true), ...(after ? { explanation: after } : {}) }
+    : after
+    ? { after }
+    : {}) }
 }
 
 export function pollDisplayBody(body: string) {

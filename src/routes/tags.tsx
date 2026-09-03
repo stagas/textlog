@@ -5,13 +5,13 @@ import { appName } from '../brand'
 import {
   TagFeed,
 } from '../components/pages'
+import { normalizeHashtagSpelling } from '../content'
 import { databaseService } from '../database-service'
 import { renderTagOg } from '../og'
 import { cachedOgResponse, cacheOgResponse } from '../og-response-cache'
 import { CONNECTION_PAGE_SIZE } from '../pagination'
 import { resolvedPageSize } from '../request-preferences'
 import { currentUser } from '../utils'
-import { normalizeHashtagSpelling } from '../content'
 
 export function registerTagsRoutes(app: Hono) {
   app.get('/tag/:tag/og.png', async c => {
@@ -64,11 +64,10 @@ export function registerTagsRoutes(app: Hono) {
       imageAlt: `#${tag}: ${description}`,
     }
     return page(
-      <TagFeed user={user} tag={tag} displayName={displayName} aliases={aliases} following={following}
-        blocked={blocked} posts={posts}
-        page={tagPage} total={total}
-        followerTotal={followerTotal} people={people} tab={tab === 'followers' ? 'followers' : 'notes'}
-        notePageSize={notePageSize} social={social} returnPath={returnPath} />,
+      <TagFeed user={user} tag={tag} displayName={displayName} aliases={aliases} following={following} blocked={blocked}
+        posts={posts} page={tagPage} total={total} followerTotal={followerTotal} people={people}
+        tab={tab === 'followers' ? 'followers' : 'notes'} notePageSize={notePageSize} social={social}
+        returnPath={returnPath} />,
     )
   })
 }

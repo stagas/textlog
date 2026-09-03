@@ -6,9 +6,10 @@ export const NAVIGATION_CAPTCHA_LIFETIME_MS = 5 * 60 * 1000
 
 type Challenge = { address: string; answerHash: string; expiresAt: number }
 
-const answerHash = (token: string, answer: string) => createHash('sha256')
-  .update(`textlog navigation captcha\0${token}\0${answer.trim().toLowerCase()}`)
-  .digest('hex')
+const answerHash = (token: string, answer: string) =>
+  createHash('sha256')
+    .update(`textlog navigation captcha\0${token}\0${answer.trim().toLowerCase()}`)
+    .digest('hex')
 
 /** Counts local navigation links nested through `from`, including a `/enter` `next` destination. */
 export function nestedFromDepth(requestUrl: string, maximum = NESTED_FROM_MAX_DEPTH) {
@@ -38,8 +39,10 @@ export function nestedFromDepth(requestUrl: string, maximum = NESTED_FROM_MAX_DE
 export class NavigationCaptchaChallenges {
   private readonly challenges = new Map<string, Challenge>()
 
-  constructor(private readonly generate: () => { text: string; data: string } = () =>
-    svgCaptcha.create({ size: 6, noise: 3, color: true, background: '#f4f1ea' })) {}
+  constructor(
+    private readonly generate: () => { text: string; data: string } = () =>
+      svgCaptcha.create({ size: 6, noise: 3, color: true, background: '#f4f1ea' }),
+  ) {}
 
   issue(address: string, now = Date.now()) {
     this.removeExpired(now)

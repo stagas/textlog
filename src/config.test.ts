@@ -152,9 +152,12 @@ describe('startup configuration', () => {
       NODE_ENV: 'development',
       MODERATION_CATEGORY_THRESHOLDS: 'violence=0.95, violence/graphic=0.8',
     }, { checkFilesystem: false }).moderationCategoryThresholds).toBe('violence=0.95, violence/graphic=0.8')
-    expect(() => validateStartupConfiguration({
-      NODE_ENV: 'development', MODERATION_CATEGORY_THRESHOLDS: 'violence=high',
-    }, { checkFilesystem: false })).toThrow('MODERATION_CATEGORY_THRESHOLDS')
+    expect(() =>
+      validateStartupConfiguration({
+        NODE_ENV: 'development',
+        MODERATION_CATEGORY_THRESHOLDS: 'violence=high',
+      }, { checkFilesystem: false })
+    ).toThrow('MODERATION_CATEGORY_THRESHOLDS')
   })
 
   test('allows CAPTCHA to be required for every password login', () => {

@@ -12,10 +12,12 @@ test('latest count remains for the rendered page and is reduced on the next load
     (1,'reader','reader@example.test','x'),(2,'writer','writer@example.test','x');
     INSERT INTO posts(id,user_id,body,created_at) VALUES
     (1,2,'first','2026-08-27 09:00:00'),(2,2,'second','2026-08-27 10:00:00');`)
-  cacheDb.query("DELETE FROM feed_snapshots WHERE kind='latest-conversation-heads-v13' AND viewer_id=1").run()
+  cacheDb.query('DELETE FROM feed_snapshots WHERE kind=\'latest-conversation-heads-v13\' AND viewer_id=1').run()
 
   const feed = await executeDatabaseDomain(database, 'feeds.latestPage', {
-    viewerId: 1, page: 1, pageSize: 20,
+    viewerId: 1,
+    page: 1,
+    pageSize: 20,
   })
 
   expect(feed.unreadPostIds).toEqual([2, 1])
@@ -24,7 +26,9 @@ test('latest count remains for the rendered page and is reduced on the next load
   expect(await executeDatabaseDomain(database, 'feeds.latestUnreadCount', { userId: 1 })).toBe(0)
 
   const nextFeed = await executeDatabaseDomain(database, 'feeds.latestPage', {
-    viewerId: 1, page: 1, pageSize: 20,
+    viewerId: 1,
+    page: 1,
+    pageSize: 20,
   })
   expect(nextFeed.latestCount).toBe(0)
   expect(nextFeed.latestUnread).toBe(false)
@@ -38,17 +42,22 @@ test('reading My Feed reduces the All counter before All renders', async () => {
     INSERT INTO follows(follower_id,following_id,created_at) VALUES(1,2,'2026-08-27 08:00:00');
     INSERT INTO posts(id,user_id,body,created_at) VALUES
     (1,2,'first','2026-08-27 09:00:00'),(2,2,'second','2026-08-27 10:00:00');`)
-  cacheDb.query("DELETE FROM feed_snapshots WHERE kind='latest-conversation-heads-v13' AND viewer_id=1").run()
+  cacheDb.query('DELETE FROM feed_snapshots WHERE kind=\'latest-conversation-heads-v13\' AND viewer_id=1').run()
 
   const myFeed = await executeDatabaseDomain(database, 'feeds.personalizedPage', {
     user: database.query('SELECT * FROM users WHERE id=1').get() as any,
-    page: 1, pageSize: 20, toMe: false, path: '/my-feed',
+    page: 1,
+    pageSize: 20,
+    toMe: false,
+    path: '/my-feed',
   })
   expect(myFeed.forYouCount).toBe(2)
   expect(myFeed.latestCount).toBe(0)
 
   const allFeed = await executeDatabaseDomain(database, 'feeds.latestPage', {
-    viewerId: 1, page: 1, pageSize: 20,
+    viewerId: 1,
+    page: 1,
+    pageSize: 20,
   })
   expect(allFeed.latestCount).toBe(0)
   expect(allFeed.latestUnread).toBe(false)
@@ -66,10 +75,12 @@ test('latest includes unread replies beyond the normal conversation preview', as
     (14,2,10,'reply 4','2026-08-26 13:00:00'),(15,2,10,'reply 5','2026-08-26 14:00:00'),
     (16,2,10,'reply 6','2026-08-26 15:00:00');`)
   markLatestPostsRead(1, [10, 12, 13, 14, 15, 16], database)
-  cacheDb.query("DELETE FROM feed_snapshots WHERE kind='latest-conversation-heads-v13' AND viewer_id=1").run()
+  cacheDb.query('DELETE FROM feed_snapshots WHERE kind=\'latest-conversation-heads-v13\' AND viewer_id=1').run()
 
   const feed = await executeDatabaseDomain(database, 'feeds.latestPage', {
-    viewerId: 1, page: 1, pageSize: 20,
+    viewerId: 1,
+    page: 1,
+    pageSize: 20,
   })
 
   expect(feed.posts.map(post => post.id)).toContain(11)
@@ -89,10 +100,13 @@ test('latest keeps up to five replies available when the recent root is present'
     (102,2,101,'recent child','2026-08-27 11:00:00'),
     (103,2,102,'newest child','2026-08-27 12:00:00');`)
   markLatestPostsRead(1, [100, 101, 102, 103], database)
-  cacheDb.query("DELETE FROM feed_snapshots WHERE kind='latest-conversation-heads-v13' AND viewer_id=1").run()
+  cacheDb.query('DELETE FROM feed_snapshots WHERE kind=\'latest-conversation-heads-v13\' AND viewer_id=1').run()
 
   const feed = await executeDatabaseDomain(database, 'feeds.latestPage', {
-    viewerId: 1, page: 1, pageSize: 20, markRead: false,
+    viewerId: 1,
+    page: 1,
+    pageSize: 20,
+    markRead: false,
   })
 
   expect(feed.posts.map(post => post.id)).toEqual([100, 103, 102, 101])
@@ -108,10 +122,13 @@ test('latest keeps a rooted conversation available for five-reply expansion', as
     (201,2,200,'first','2026-08-27 10:00:00'),(202,2,201,'second','2026-08-27 11:00:00'),
     (203,2,202,'third','2026-08-27 12:00:00'),(204,2,203,'fourth','2026-08-27 13:00:00');`)
   markLatestPostsRead(1, [200, 201, 202, 203, 204], database)
-  cacheDb.query("DELETE FROM feed_snapshots WHERE kind='latest-conversation-heads-v13' AND viewer_id=1").run()
+  cacheDb.query('DELETE FROM feed_snapshots WHERE kind=\'latest-conversation-heads-v13\' AND viewer_id=1').run()
 
   const preview = await executeDatabaseDomain(database, 'feeds.latestPage', {
-    viewerId: 1, page: 1, pageSize: 20, markRead: false,
+    viewerId: 1,
+    page: 1,
+    pageSize: 20,
+    markRead: false,
   })
   expect(preview.posts.map(post => post.id)).toEqual([200, 204, 203, 202, 201])
 })
@@ -128,10 +145,13 @@ test('latest fills a fifth connected reply slot while retaining unread replies',
     (305,2,300,'five','2026-08-27 14:00:00'),(306,2,300,'six','2026-08-27 15:00:00'),
     (307,2,300,'seven','2026-08-27 16:00:00');`)
   markLatestPostsRead(1, [300, 302, 303, 304, 305, 306, 307], database)
-  cacheDb.query("DELETE FROM feed_snapshots WHERE kind='latest-conversation-heads-v13' AND viewer_id=1").run()
+  cacheDb.query('DELETE FROM feed_snapshots WHERE kind=\'latest-conversation-heads-v13\' AND viewer_id=1').run()
 
   const feed = await executeDatabaseDomain(database, 'feeds.latestPage', {
-    viewerId: 1, page: 1, pageSize: 20, markRead: false,
+    viewerId: 1,
+    page: 1,
+    pageSize: 20,
+    markRead: false,
   })
 
   expect(feed.posts.map(post => post.id)).toEqual([300, 307, 306, 305, 304, 303, 301])
@@ -149,15 +169,20 @@ test('latest anchors an active branch at its oldest recent reply and quotes the 
     (103,2,102,'recent child','2026-08-27 10:00:00'),
     (104,2,103,'newest child','2026-08-27 11:00:00');`)
   markLatestPostsRead(1, [100, 101], database)
-  cacheDb.query("DELETE FROM feed_snapshots WHERE kind='latest-conversation-heads-v13' AND viewer_id=1").run()
+  cacheDb.query('DELETE FROM feed_snapshots WHERE kind=\'latest-conversation-heads-v13\' AND viewer_id=1').run()
 
   const feed = await executeDatabaseDomain(database, 'feeds.latestPage', {
-    viewerId: 1, page: 1, pageSize: 20, markRead: false,
+    viewerId: 1,
+    page: 1,
+    pageSize: 20,
+    markRead: false,
   })
 
   expect(feed.posts.map(post => post.id)).toEqual([104, 103, 102, 101])
   expect(feed.posts.find(post => post.id === 101)).toMatchObject({
-    parent_id: 100, feed_branch_root: true, parent: { id: 100 },
+    parent_id: 100,
+    feed_branch_root: true,
+    parent: { id: 100 },
   })
 })
 
@@ -173,10 +198,13 @@ test('latest keeps an old root and unread intermediates when recent direct repli
     (2954,2,2953,'deep intermediate one','2026-08-31 15:47:09'),
     (2955,2,2954,'deep intermediate two','2026-08-31 15:53:24'),
     (2956,2,2955,'newest deep reply','2026-08-31 15:54:59');`)
-  cacheDb.query("DELETE FROM feed_snapshots WHERE kind='latest-conversation-heads-v13' AND viewer_id=1").run()
+  cacheDb.query('DELETE FROM feed_snapshots WHERE kind=\'latest-conversation-heads-v13\' AND viewer_id=1').run()
 
   const feed = await executeDatabaseDomain(database, 'feeds.latestPage', {
-    viewerId: 1, page: 1, pageSize: 20, markRead: false,
+    viewerId: 1,
+    page: 1,
+    pageSize: 20,
+    markRead: false,
   })
 
   expect(feed.posts.map(post => post.id)).toEqual([1495, 2956, 2955, 2954, 2953, 2904])
@@ -185,22 +213,28 @@ test('latest keeps an old root and unread intermediates when recent direct repli
 test('Any deterministically shuffles the full conversation pool from its seed', async () => {
   const database = new Database(':memory:', { strict: true })
   runMigrations(database)
-  database.run("INSERT INTO users(id,handle,email,password) VALUES(1,'writer','writer@example.test','x')")
+  database.run('INSERT INTO users(id,handle,email,password) VALUES(1,\'writer\',\'writer@example.test\',\'x\')')
   const insert = database.query('INSERT INTO posts(id,user_id,body,created_at) VALUES(?,1,?,?)')
   for (let id = 1; id <= 21; id++) {
     insert.run(id, `post ${id}`, `2026-08-${String(id).padStart(2, '0')} 10:00:00`)
   }
-  cacheDb.query("DELETE FROM feed_snapshots WHERE kind LIKE 'latest-conversation-heads-v13:any:%' AND viewer_id=-120")
+  cacheDb.query('DELETE FROM feed_snapshots WHERE kind LIKE \'latest-conversation-heads-v13:any:%\' AND viewer_id=-120')
     .run()
 
   const first = await executeDatabaseDomain(database, 'feeds.randomPage', {
-    viewerId: -120, pageSize: 20, sampleSeed: 123,
+    viewerId: -120,
+    pageSize: 20,
+    sampleSeed: 123,
   })
   const repeated = await executeDatabaseDomain(database, 'feeds.randomPage', {
-    viewerId: -120, pageSize: 20, sampleSeed: 123,
+    viewerId: -120,
+    pageSize: 20,
+    sampleSeed: 123,
   })
   const reshuffled = await executeDatabaseDomain(database, 'feeds.randomPage', {
-    viewerId: -120, pageSize: 20, sampleSeed: 456,
+    viewerId: -120,
+    pageSize: 20,
+    sampleSeed: 456,
   })
 
   expect(first.randomSampleSeed).toBe(123)

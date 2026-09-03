@@ -3,10 +3,10 @@ import React from 'react'
 import { apiOrigin } from '../api'
 import { appName } from '../brand'
 import { PersonalizedFeedLanding } from '../components/personalized-feed-landing'
+import { isValidHashtag, normalizeHashtag } from '../content'
 import { type DatabaseService, databaseService } from '../database-service'
 import { type SyndicationFormat, syndicationResponse } from '../syndication'
 import { currentUser } from '../utils'
-import { isValidHashtag, normalizeHashtag } from '../content'
 import { page } from './shared'
 
 function feedResponse(c: Context, format: SyndicationFormat, appUrl: string | null | undefined, details: {
@@ -101,7 +101,8 @@ export function registerSyndicationRoutes(app: Hono, configuredService?: Databas
     const loaded = await service().call('syndication.load', { kind: 'personalized', origin, identifier: key })
     if (loaded.status !== 'ready') return c.text('Not found', 404)
     const feedPath = `${c.req.path.startsWith('/feeds/for-you/') ? '/feeds/for-you' : '/feeds/my-feed'}/${
-      encodeURIComponent(key)}.${format}`
+      encodeURIComponent(key)
+    }.${format}`
     const response = syndicationResponse(format, {
       title: `My Feed on ${name}`,
       description: `The personalized My Feed notes for @${loaded.viewerHandle}.`,

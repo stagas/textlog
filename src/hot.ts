@@ -105,7 +105,7 @@ export function recordHotActivity(database: Database, postId: number) {
 }
 
 export function refreshHotFeedProjection(database: Database, now = new Date()) {
-  if (!database.query("SELECT 1 FROM sqlite_master WHERE type='table' AND name='hot_feed_projection'").get()) {
+  if (!database.query('SELECT 1 FROM sqlite_master WHERE type=\'table\' AND name=\'hot_feed_projection\'').get()) {
     return { conversations: 0, posts: 0 }
   }
   const tracksGeneration = (database.query('PRAGMA table_info(hot_feed_projection_state)').all() as Array<{
@@ -117,11 +117,13 @@ export function refreshHotFeedProjection(database: Database, now = new Date()) {
     }).generation
     : 0
   const ranked = getHotPosts(database, 1_000_000, null, now, -1, false, 2, false)
-  const roots = ranked.length ? database.query(`SELECT pc.post_id,pc.conversation_id FROM post_conversations pc
+  const roots = ranked.length
+    ? database.query(`SELECT pc.post_id,pc.conversation_id FROM post_conversations pc
     WHERE pc.post_id IN (${ranked.map(() => '?').join(',')})`).all(...ranked.map(post => post.id)) as Array<{
       post_id: number
       conversation_id: number
-    }> : []
+    }>
+    : []
   const conversationByPost = new Map(roots.map(row => [row.post_id, row.conversation_id]))
   const conversationRanks = new Map<number, number>()
   const rows = ranked.map((post, rank) => {
@@ -134,13 +136,17 @@ export function refreshHotFeedProjection(database: Database, now = new Date()) {
     const insert = database.query(`INSERT INTO hot_feed_projection(
       post_id,conversation_id,conversation_rank,post_rank,hot_score,latest_activity_at
     ) VALUES(?,?,?,?,?,?)`)
-    for (const row of rows) insert.run(row.post.id, row.conversationId, row.conversationRank, row.rank,
-      row.post.hot_score, row.post.latest_activity_at)
-    if (tracksGeneration) database.query(`UPDATE hot_feed_projection_state SET
+    for (const row of rows) {
+      insert.run(row.post.id, row.conversationId, row.conversationRank, row.rank, row.post.hot_score,
+        row.post.latest_activity_at)
+    }
+    if (tracksGeneration) {
+      database.query(`UPDATE hot_feed_projection_state SET
         dirty=CASE WHEN generation=? THEN 0 ELSE 1 END,ranking_version=?,refreshed_at=? WHERE id=1`)
-      .run(generation, hotRankingVersion, now.toISOString())
-    else database.query(`UPDATE hot_feed_projection_state SET dirty=0,ranking_version=?,refreshed_at=? WHERE id=1`)
-      .run(hotRankingVersion, now.toISOString())
+        .run(generation, hotRankingVersion, now.toISOString())
+    }
+    else {database.query(`UPDATE hot_feed_projection_state SET dirty=0,ranking_version=?,refreshed_at=? WHERE id=1`)
+        .run(hotRankingVersion, now.toISOString())}
   })()
   return { conversations: conversationRanks.size, posts: rows.length }
 }

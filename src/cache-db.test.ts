@@ -32,7 +32,8 @@ test('clears every durable cache', () => {
     clearCacheDatabase(database)
 
     for (const table of ['feed_snapshots', 'feed_snapshot_items', 'materialized_feed_pages_v2',
-      'recent_feed_visitors']) {
+      'recent_feed_visitors'])
+    {
       expect(database.query(`SELECT count(*) count FROM ${table}`).get()).toEqual({ count: 0 })
     }
   }

@@ -42,18 +42,18 @@ import {
 import { deleteImages, deleteImagesAfterCommit } from '../image-storage'
 import { deleteBioLinkPreviewImages, deleteLinkPreviewImages, discoverLinkPreviews } from '../link-preview'
 import { moderateText, moderationMessage } from '../moderation'
-import { accountForPasswordEnableToken, issuePasswordEnableToken } from '../password-enable'
 import { PAGE_SIZE } from '../pagination'
+import { accountForPasswordEnableToken, issuePasswordEnableToken } from '../password-enable'
 import { vapidPublicKey } from '../push'
 import { DENSITY_CHOICES, type DensityChoice, PAGE_SIZE_CHOICES, type PageSizeChoice, resolvedDensity,
   resolvedPageSize } from '../request-preferences'
 import { normalizeSearchQuery } from '../search'
 import { sessionHash } from '../sessions'
 import { ACCENT_CHOICES, type AccentChoice, appearance, appearanceCookie, CORNER_CHOICES, type CornerChoice,
-  cornerChoice, cornerCookie, FONT_CHOICES, FONT_SIZE_CHOICES,
-  type FontChoice, fontChoice, fontCookie, type FontSizeChoice, fontSizeChoice, fontSizeCookie, PRIMARY_FONT_CHOICES,
-  type PrimaryFontChoice, primaryFontChoice, primaryFontCookie, SANS_SERIF_FONT_CHOICES, type SansSerifFontChoice,
-  sansSerifFontChoice, sansSerifFontCookie, THEME_CHOICES, type ThemeChoice } from '../theme'
+  cornerChoice, cornerCookie, FONT_CHOICES, FONT_SIZE_CHOICES, type FontChoice, fontChoice, fontCookie,
+  type FontSizeChoice, fontSizeChoice, fontSizeCookie, PRIMARY_FONT_CHOICES, type PrimaryFontChoice, primaryFontChoice,
+  primaryFontCookie, SANS_SERIF_FONT_CHOICES, type SansSerifFontChoice, sansSerifFontChoice, sansSerifFontCookie,
+  THEME_CHOICES, type ThemeChoice } from '../theme'
 import { DEFAULT_TIMEZONE, validTimezone } from '../timezone'
 import { emailPattern } from './auth'
 
@@ -230,8 +230,7 @@ export function registerAccountRoutes(app: Hono) {
     await databaseService().call('account.savePushSubscription', { userId: user.id, endpoint, p256dh, auth, deviceId,
       userAgent, preferencesProvided: Boolean(value.preferences),
       preferences: { latest, replies, mentions, follows, signups, followActivity, broadcasts, followingNotes,
-        followingOnlyToMe,
-        peopleFollowActivity, hashtagFollowActivity } })
+        followingOnlyToMe, peopleFollowActivity, hashtagFollowActivity } })
     c.header('Set-Cookie', notificationDeviceCookie(deviceId), { append: true })
     return c.json({ saved: true })
   })
@@ -438,8 +437,7 @@ export function registerAccountRoutes(app: Hono) {
         selectedSansSerifFont={sansSerifFontChoice(c.req.raw)} selectedPrimaryFont={primaryFontChoice(c.req.raw)}
         selectedSize={fontSizeChoice(c.req.raw)} selectedPageSize={resolvedPageSize(c.req.raw)} tab={tab}
         selectedDensity={resolvedDensity(c.req.raw)} selectedLinkPreviews={user.show_link_previews !== 0}
-        selectedCorners={cornerChoice(c.req.raw)}
-        showModeratedContent={user.show_moderated_content === 1}
+        selectedCorners={cornerChoice(c.req.raw)} showModeratedContent={user.show_moderated_content === 1}
         includePeopleFollowActivity={user.hide_people_follow_activity !== 1}
         includeHashtagFollowActivity={user.hide_hashtag_follow_activity !== 1}
         showNoteStreak={user.show_note_streak === 1} showTimestamps={user.show_timestamps === 1}
@@ -459,7 +457,8 @@ export function registerAccountRoutes(app: Hono) {
       const selectedDensity = f.density as DensityChoice
       const selectedCorners = (f.corners || cornerChoice(c.req.raw)) as CornerChoice
       if (!PAGE_SIZE_CHOICES.includes(selectedPageSize) || !DENSITY_CHOICES.includes(selectedDensity)
-        || !CORNER_CHOICES.includes(selectedCorners)) {
+        || !CORNER_CHOICES.includes(selectedCorners))
+      {
         return page(
           <ChangeAppearance user={user} selected={appearance(c.req.raw)} selectedFont={fontChoice(c.req.raw)}
             selectedSize={fontSizeChoice(c.req.raw)} selectedPageSize={resolvedPageSize(c.req.raw)}

@@ -69,8 +69,8 @@ describe('executable notes', () => {
       return Response.json({ run: { output: '42\n' } })
     }) as typeof fetch
     try {
-      expect(await executePostCode('#exec\n```js\nconsole.log(6 * 7)\n```', 'production',
-        'http://localhost:2000')).toBe('42\n')
+      expect(await executePostCode('#exec\n```js\nconsole.log(6 * 7)\n```', 'production', 'http://localhost:2000'))
+        .toBe('42\n')
       expect(requestBody).toMatchObject({ language: 'javascript', version: '*' })
     }
     finally {
@@ -83,7 +83,8 @@ describe('executable notes', () => {
     const responses = [
       { run: { output: '  \n' }, message: 'runtime failed' },
       { compile: { output: ' \n' }, run: {
-        output: '//\\//Sandbox keeper received fatal signal 6\n', stderr: 'sandbox failed',
+        output: '//\\//Sandbox keeper received fatal signal 6\n',
+        stderr: 'sandbox failed',
       } },
       { compile: { output: '\n' }, run: { output: '', message: 'stage failed' } },
       { run: {
@@ -92,8 +93,8 @@ describe('executable notes', () => {
         message: 'stdout length exceeded',
       } },
     ]
-    globalThis.fetch = (async (_input: string | URL | Request, _init?: RequestInit) =>
-      Response.json(responses.shift())) as typeof fetch
+    globalThis.fetch =
+      (async (_input: string | URL | Request, _init?: RequestInit) => Response.json(responses.shift())) as typeof fetch
     try {
       const body = '#exec\n```js\nthrow new Error("oops")\n```'
       expect(await executePostCode(body, 'production', 'http://localhost:2000')).toBe('runtime failed')

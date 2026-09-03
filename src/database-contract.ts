@@ -1,7 +1,7 @@
 import type { DensityChoice, PageSizeChoice } from './request-preferences'
-import type { ApiKeyView, ApiPost, BioReferenceData, BookmarksData, DashboardStats, DraftView, EmbedData, ExploreData, FeedKeyView,
-  LinkPreview, PersonalizedFeedData, PersonView, PostFeedPage, PostView, ProfileOverviewData, SearchResultsData,
-  SessionView, TagPageData, TagView, User } from './types'
+import type { ApiKeyView, ApiPost, BioReferenceData, BookmarksData, DashboardStats, DraftView, EmbedData, ExploreData,
+  FeedKeyView, LinkPreview, PersonalizedFeedData, PersonView, PostFeedPage, PostView, ProfileOverviewData,
+  SearchResultsData, SessionView, TagPageData, TagView, User } from './types'
 import type { AdminActionView, AdminReportView, IllegalActivityReportView, PostRow, ProfileRow } from './types'
 
 export type DatabaseHealthResult = {
@@ -305,10 +305,14 @@ export type DatabaseDomainOperations = {
     | { kind: 'post'; origin: string; id: number; viewerId?: number }
     | { kind: 'replies'; origin: string; id: number; limit: number; before: number | null; depth: number;
       viewerId?: number }; output: { status: 'ready'; value: unknown } | { status: 'not_found' } }
-  'api.threadedFeed': { input: { kind: 'latest' | 'hot'; origin: string; viewerId: number; page: number;
-    pageSize: PageSizeChoice }; output: unknown }
-  'api.threadedActivityFeed': { input: { user: User; origin: string; toMe: boolean; page: number;
-    pageSize: PageSizeChoice }; output: unknown }
+  'api.threadedFeed': {
+    input: { kind: 'latest' | 'hot'; origin: string; viewerId: number; page: number; pageSize: PageSizeChoice }
+    output: unknown
+  }
+  'api.threadedActivityFeed': {
+    input: { user: User; origin: string; toMe: boolean; page: number; pageSize: PageSizeChoice }
+    output: unknown
+  }
   'api.activities': {
     input: { user: User; origin: string; limit: number; cursor: { createdAt: string; key: string } | null;
       toMe: boolean }
@@ -374,9 +378,8 @@ export type DatabaseDomainOperations = {
     }
   }
   'api.updatePost': {
-    input: { userId: number; id: number; body: string; origin: string; moderator?: boolean;
-      translation?: string | null; moderationCategory?: string | null; moderationScore?: number | null;
-      executionOutput?: string | null }
+    input: { userId: number; id: number; body: string; origin: string; moderator?: boolean; translation?: string | null;
+      moderationCategory?: string | null; moderationScore?: number | null; executionOutput?: string | null }
     output: { status: 'not_found' | 'forbidden' } | { status: 'ready'; post: ApiPost }
   }
   'api.deletePost': { input: { userId: number; id: number };
@@ -435,10 +438,14 @@ export type DatabaseDomainOperations = {
   }> }
   'push.removeEndpoint': { input: { endpoint: string }; output: null }
   'push.claimPostJobs': { input: { now: number; limit: number; leaseMs: number }; output: Array<{
-    postId: number; actorId: number; actorHandle: string; attempts: number
+    postId: number
+    actorId: number
+    actorHandle: string
+    attempts: number
   }> }
   'push.completePostJob': { input: { postId: number }; output: null }
-  'push.retryPostJob': { input: { postId: number; attempts: number; nextAttemptAt: number; error: string }; output: null }
+  'push.retryPostJob': { input: { postId: number; attempts: number; nextAttemptAt: number; error: string };
+    output: null }
   'push.userDelivery': { input: { userId: number };
     output: Array<{ endpoint: string; p256dh: string; auth: string; username: string }> }
   'push.allDelivery': { input: Record<string, never>;
@@ -453,9 +460,10 @@ export type DatabaseDomainOperations = {
     bio: string
   } } | null }
   'feeds.aboutTopPosts': { input: Record<string, never>; output: PostView[] }
-  'feeds.latestPage': { input: { viewerId: number; page: number; pageSize: PageSizeChoice; markRead?: boolean;
-    sampleSeed?: number };
-    output: PostFeedPage }
+  'feeds.latestPage': {
+    input: { viewerId: number; page: number; pageSize: PageSizeChoice; markRead?: boolean; sampleSeed?: number }
+    output: PostFeedPage
+  }
   'feeds.newPage': { input: { viewerId: number; page: number; pageSize: PageSizeChoice }; output: PostFeedPage }
   'feeds.randomPage': { input: { viewerId: number; pageSize: PageSizeChoice; sampleSeed?: number };
     output: PostFeedPage }

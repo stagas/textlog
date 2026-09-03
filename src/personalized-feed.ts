@@ -4,8 +4,8 @@ import { isAdmin } from './admin'
 import { feedSnapshotPage } from './feed-snapshots'
 import { markForYouEntriesRead, unreadForYouCount, unreadToMeCount } from './for-you-state'
 import { resolveHandle } from './handles'
-import { unreadLatestCount } from './latest-state'
 import { projectRecentConversation } from './latest-conversation'
+import { unreadLatestCount } from './latest-state'
 import { enrichPosts, loadBioReferenceData, visibleTagFollowerCounts, visibleUserProfileStats } from './posts'
 import type { PersonalizedFeedData, PersonalizedTimelineRow, User } from './types'
 import { isWhisperThread, whisperThreadRelevantToViewer, whisperThreadTargetsViewer } from './whisper'
@@ -256,8 +256,9 @@ export function loadPersonalizedFeed(database: Database, user: User, page: numbe
           AND NOT EXISTS (SELECT 1 FROM post_hashtags ph JOIN blocked_hashtags bh ON bh.tag=ph.tag
             WHERE ph.post_id=d.id AND bh.user_id=?)
         GROUP BY d.root_id`).all(...roots, Number(isAdmin(user)), user.id, user.id, user.id) as {
-          root_id: number; created_at: string
-        }[]
+        root_id: number
+        created_at: string
+      }[]
       for (const row of activity) threadActivity.set(row.root_id, row.created_at)
     }
     const result: { rows: PersonalizedTimelineRow[]; created_at: string; order: string }[] = []
@@ -277,19 +278,22 @@ export function loadPersonalizedFeed(database: Database, user: User, page: numbe
       const replies = conversation.filter(candidate => candidate.parent_id !== null)
       const projection = projectRecentConversation(conversation)
       const threadRows = projection.keepsRoot && projection.root ? [projection.root] : []
-      const previewReplies = projection.replies.map(candidate => projection.previewReplyIds.has(candidate.id)
-        ? { ...candidate, feed_collapsed_preview: true }
-        : candidate)
+      const previewReplies = projection.replies.map(candidate =>
+        projection.previewReplyIds.has(candidate.id)
+          ? { ...candidate, feed_collapsed_preview: true }
+          : candidate
+      )
       threadRows.push(...previewReplies)
       const includedIds = new Set(threadRows.map(candidate => candidate.id))
       threadRows.push(...conversation.filter(candidate => candidate.unread && !includedIds.has(candidate.id)))
       if (threadRows.length) {
         const visibleIds = new Set(threadRows.map(candidate => candidate.id))
-        const projectedRows = threadRows.map(candidate => candidate.parent_id && !visibleIds.has(candidate.parent_id)
-          ? { ...candidate, feed_ancestor_gap: true }
-          : candidate)
-        result.push({ rows: projectedRows,
-          created_at: threadActivity.get(root!) || row.created_at,
+        const projectedRows = threadRows.map(candidate =>
+          candidate.parent_id && !visibleIds.has(candidate.parent_id)
+            ? { ...candidate, feed_ancestor_gap: true }
+            : candidate
+        )
+        result.push({ rows: projectedRows, created_at: threadActivity.get(root!) || row.created_at,
           order: row.event_key })
       }
     }
@@ -308,28 +312,31 @@ export function loadPersonalizedFeed(database: Database, user: User, page: numbe
     const target = resolveHandle(database, row.target_handle)
     return target ? [[row.event_key, target.id] as const] : []
   }))
-  const followIds = [...new Set(snapshotRows.flatMap(row => row.activity_kind === 'tag_follow'
-    ? []
-    : [targetUserIds.get(row.event_key) || row.actor_id]))]
+  const followIds = [...new Set(snapshotRows.flatMap(row =>
+    row.activity_kind === 'tag_follow'
+      ? []
+      : [targetUserIds.get(row.event_key) || row.actor_id]
+  ))]
   const followedIds = followIds.length
     ? new Set((database.query(`SELECT following_id FROM follows WHERE follower_id=?
       AND following_id IN (${followIds.map(() => '?').join(',')})`).all(user.id, ...followIds) as Array<{
-        following_id: number
-      }>).map(row => row.following_id))
+      following_id: number
+    }>).map(row => row.following_id))
     : new Set<number>()
-  const followTags = [...new Set(snapshotRows.flatMap(row => row.activity_kind === 'tag_follow' && row.target_tag
-    ? [row.target_tag]
-    : []))]
+  const followTags = [...new Set(snapshotRows.flatMap(row =>
+    row.activity_kind === 'tag_follow' && row.target_tag
+      ? [row.target_tag]
+      : []
+  ))]
   const followedTags = followTags.length
     ? new Set((database.query(`SELECT tag FROM hashtag_follows WHERE user_id=?
       AND tag IN (${followTags.map(() => '?').join(',')})`).all(user.id, ...followTags) as Array<{ tag: string }>)
       .map(row => row.tag))
     : new Set<string>()
-  const timeline = snapshotRows.map(row => ({ ...row,
-    following: row.activity_kind === 'tag_follow'
-      ? !!row.target_tag && followedTags.has(row.target_tag)
-      : followedIds.has(targetUserIds.get(row.event_key) || row.actor_id),
-    unread: Number(!readKeys.has(row.event_key)) }))
+  const timeline = snapshotRows.map(row => ({ ...row, following: row.activity_kind === 'tag_follow'
+    ? !!row.target_tag && followedTags.has(row.target_tag)
+    : followedIds.has(targetUserIds.get(row.event_key) || row.actor_id), unread: Number(!readKeys.has(row.event_key)) })
+  )
   const actorStats = visibleUserProfileStats(database, timeline.map(row => row.actor_id), user.id)
   const targets = new Map(timeline.flatMap(row => {
     if (!row.target_handle) return []

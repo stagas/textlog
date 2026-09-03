@@ -648,8 +648,8 @@ describe('post persistence', () => {
         created_at: '2026-08-26 18:34:27', deleted_at: null, parent: null },
       { id: 496, user_id: 1, parent_id: 494, body: 'visible ancestor', handle: 'author',
         created_at: '2026-08-08 14:25:42', deleted_at: null },
-      { id: 494, user_id: 1, parent_id: null, body: 'root', handle: 'author',
-        created_at: '2026-08-08 14:20:43', deleted_at: null },
+      { id: 494, user_id: 1, parent_id: null, body: 'root', handle: 'author', created_at: '2026-08-08 14:20:43',
+        deleted_at: null },
     ] as PostView[]
 
     expect(rewireVisibleAncestorGaps(db, visible)[0]).toMatchObject({

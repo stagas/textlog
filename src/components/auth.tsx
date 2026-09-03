@@ -1,8 +1,8 @@
+import { appName } from '../brand'
+import { activeThemeLogoSvg } from '../theme'
 import { maskEmail } from './email-address'
 import { Layout } from './layout'
 import { CenteredPanel } from './panel'
-import { appName } from '../brand'
-import { activeThemeLogoSvg } from '../theme'
 
 export { maskEmail } from './email-address'
 
@@ -119,8 +119,9 @@ export function MagicLinkSent({ email, magicUrl, error, handle = false }: {
 }) {
   return (
     <Layout title="check your email" fullScreen fullScreenScrollable>
-      <CenteredPanel shellClassName="auth-shell enter-shell"
-        className="auth-panel enter-panel magic-sent-panel" width="medium">
+      <CenteredPanel shellClassName="auth-shell enter-shell" className="auth-panel enter-panel magic-sent-panel"
+        width="medium"
+      >
         <AuthBrand />
         <h1>Check your email</h1>
         <p>

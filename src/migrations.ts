@@ -1,6 +1,6 @@
 import type { Database } from 'bun:sqlite'
-import { extractAuthoredHashtags, extractHashtags, extractMentions, pascalCaseHashtagDisplayName,
-  normalizeHashtag, pluralHashtag, postContentFlags, singularHashtag } from './content'
+import { extractAuthoredHashtags, extractHashtags, extractMentions, normalizeHashtag, pascalCaseHashtagDisplayName,
+  pluralHashtag, postContentFlags, singularHashtag } from './content'
 import { hotRankingVersion, rebuildHotPosts, refreshHotFeedProjection } from './hot'
 import { parsePoll, syncPoll } from './polls'
 import { migrateLegacySessionTokens } from './sessions'
@@ -2275,7 +2275,8 @@ export const migrations: Migration[] = [
         );
         CREATE INDEX IF NOT EXISTS post_conversations_conversation
           ON post_conversations(conversation_id,post_id DESC);`)
-      if (postColumns.includes('parent_id')) database.run(`WITH RECURSIVE conversations(id,conversation_id) AS (
+      if (postColumns.includes('parent_id')) {
+        database.run(`WITH RECURSIVE conversations(id,conversation_id) AS (
           SELECT id,id FROM posts WHERE parent_id IS NULL
           UNION ALL
           SELECT child.id,conversations.conversation_id FROM posts child
@@ -2284,6 +2285,7 @@ export const migrations: Migration[] = [
         INSERT OR REPLACE INTO post_conversations(post_id,conversation_id)
           SELECT posts.id,coalesce(conversations.conversation_id,posts.id) FROM posts
           LEFT JOIN conversations ON conversations.id=posts.id;`)
+      }
       else database.run('INSERT OR REPLACE INTO post_conversations SELECT id,id FROM posts')
       const visible = postColumns.includes('deleted_at') ? 'p.deleted_at IS NULL AND ' : ''
       const activityAt = postColumns.includes('created_at') ? 'p.created_at' : 'CURRENT_TIMESTAMP'
@@ -2298,8 +2300,11 @@ export const migrations: Migration[] = [
           SELECT pc.conversation_id,p.id,${activityAt} FROM post_conversations pc JOIN posts p ON p.id=pc.post_id
           WHERE ${visible}p.id=(SELECT max(member.post_id) FROM post_conversations member
             JOIN posts visible_post ON visible_post.id=member.post_id
-            WHERE member.conversation_id=pc.conversation_id${postColumns.includes('deleted_at')
-    ? ' AND visible_post.deleted_at IS NULL' : ''});`)
+            WHERE member.conversation_id=pc.conversation_id${
+        postColumns.includes('deleted_at')
+          ? ' AND visible_post.deleted_at IS NULL'
+          : ''
+      });`)
       if (!postColumns.includes('parent_id') || !postColumns.includes('deleted_at')
         || !postColumns.includes('created_at')) return
       database.run(`CREATE TRIGGER IF NOT EXISTS conversation_heads_posts_insert AFTER INSERT ON posts BEGIN
@@ -2456,8 +2461,11 @@ export const migrations: Migration[] = [
     version: 151,
     name: 'background_hot_feed_projection',
     up(database) {
-      if (!database.query("SELECT 1 FROM sqlite_master WHERE type='table' AND name='post_hot'").get()
-        || !database.query("SELECT 1 FROM sqlite_master WHERE type='table' AND name='post_conversations'").get()) return
+      if (!database.query('SELECT 1 FROM sqlite_master WHERE type=\'table\' AND name=\'post_hot\'').get()
+        || !database.query('SELECT 1 FROM sqlite_master WHERE type=\'table\' AND name=\'post_conversations\'').get())
+      {
+        return
+      }
       database.run(`CREATE TABLE IF NOT EXISTS hot_feed_projection (
           post_id INTEGER PRIMARY KEY REFERENCES posts(id) ON DELETE CASCADE,
           conversation_id INTEGER NOT NULL REFERENCES posts(id) ON DELETE CASCADE,
@@ -2490,7 +2498,7 @@ export const migrations: Migration[] = [
     version: 152,
     name: 'hot_projection_generation_guard',
     up(database) {
-      if (!database.query("SELECT 1 FROM sqlite_master WHERE type='table' AND name='hot_feed_projection_state'")
+      if (!database.query('SELECT 1 FROM sqlite_master WHERE type=\'table\' AND name=\'hot_feed_projection_state\'')
         .get()) return
       addColumn(database, 'hot_feed_projection_state', 'generation', 'INTEGER NOT NULL DEFAULT 0')
       database.run(`DROP TRIGGER IF EXISTS hot_projection_post_hot_insert;
@@ -2512,8 +2520,10 @@ export const migrations: Migration[] = [
     version: 153,
     name: 'safe_feed_publication_generations',
     up(database) {
-      if (!database.query("SELECT 1 FROM sqlite_master WHERE type='table' AND name='posts'").get()
-        || !database.query("SELECT 1 FROM sqlite_master WHERE type='table' AND name='feed_snapshot_generation'").get()) {
+      if (!database.query('SELECT 1 FROM sqlite_master WHERE type=\'table\' AND name=\'posts\'').get()
+        || !database.query('SELECT 1 FROM sqlite_master WHERE type=\'table\' AND name=\'feed_snapshot_generation\'')
+          .get())
+      {
         return
       }
       const generation = (database.query('SELECT generation FROM feed_snapshot_generation WHERE id=1').get() as {
@@ -2560,7 +2570,7 @@ export const migrations: Migration[] = [
           UPDATE feed_publication_state SET additive_generation=additive_generation+1,
             strict_generation=strict_generation+1 WHERE id=1;
         END;`)
-      if (database.query("SELECT 1 FROM sqlite_master WHERE type='table' AND name='poll_votes'").get()) {
+      if (database.query('SELECT 1 FROM sqlite_master WHERE type=\'table\' AND name=\'poll_votes\'').get()) {
         database.run(`CREATE TRIGGER IF NOT EXISTS feed_publication_poll_votes_insert AFTER INSERT ON poll_votes BEGIN
           UPDATE feed_publication_state SET additive_generation=additive_generation+1 WHERE id=1;
         END;`)
@@ -2571,7 +2581,7 @@ export const migrations: Migration[] = [
     version: 154,
     name: 'post_execution_output',
     up(database) {
-      if (database.query("SELECT 1 FROM sqlite_master WHERE type='table' AND name='posts'").get()) {
+      if (database.query('SELECT 1 FROM sqlite_master WHERE type=\'table\' AND name=\'posts\'').get()) {
         addColumn(database, 'posts', 'execution_output', 'TEXT')
       }
     },
@@ -2580,18 +2590,17 @@ export const migrations: Migration[] = [
     version: 155,
     name: 'show_note_streak_preference',
     up(database) {
-      if (!database.query("SELECT 1 FROM sqlite_master WHERE type='table' AND name='users'").get()) return
-      addColumn(database, 'users', 'show_note_streak',
-        'INTEGER NOT NULL DEFAULT 1 CHECK(show_note_streak IN (0,1))')
+      if (!database.query('SELECT 1 FROM sqlite_master WHERE type=\'table\' AND name=\'users\'').get()) return
+      addColumn(database, 'users', 'show_note_streak', 'INTEGER NOT NULL DEFAULT 1 CHECK(show_note_streak IN (0,1))')
     },
   },
   {
     version: 156,
     name: 'enable_note_streak_by_default',
     up(database) {
-      if (!database.query("SELECT 1 FROM sqlite_master WHERE type='table' AND name='users'").get()) return
+      if (!database.query('SELECT 1 FROM sqlite_master WHERE type=\'table\' AND name=\'users\'').get()) return
       if (!database.query(
-        "SELECT 1 FROM sqlite_master WHERE type='table' AND name='personalized_feed_generations'",
+        'SELECT 1 FROM sqlite_master WHERE type=\'table\' AND name=\'personalized_feed_generations\'',
       ).get()) return
       database.run(`UPDATE users SET show_note_streak=1;
         CREATE TRIGGER IF NOT EXISTS users_enable_note_streak_after_insert
@@ -2604,8 +2613,8 @@ export const migrations: Migration[] = [
     version: 157,
     name: 'increase_hashtag_limit',
     up(database) {
-      if (!database.query("SELECT 1 FROM sqlite_master WHERE type='table' AND name='posts'").get()
-        || !database.query("SELECT 1 FROM sqlite_master WHERE type='table' AND name='post_hashtags'").get()) return
+      if (!database.query('SELECT 1 FROM sqlite_master WHERE type=\'table\' AND name=\'posts\'').get()
+        || !database.query('SELECT 1 FROM sqlite_master WHERE type=\'table\' AND name=\'post_hashtags\'').get()) return
       rebuildPostHashtags(database)
     },
   },
@@ -2613,7 +2622,9 @@ export const migrations: Migration[] = [
     version: 158,
     name: 'daily_navigation_captcha_passes',
     up(database) {
-      if (!database.query("SELECT 1 FROM sqlite_master WHERE type='table' AND name='daily_ip_requests'").get()) return
+      if (!database.query('SELECT 1 FROM sqlite_master WHERE type=\'table\' AND name=\'daily_ip_requests\'').get()) {
+        return
+      }
       addColumn(database, 'daily_ip_requests', 'navigation_captcha_passed_at', 'TEXT')
     },
   },
@@ -2621,7 +2632,9 @@ export const migrations: Migration[] = [
     version: 159,
     name: 'push_broadcast_preferences',
     up(database) {
-      if (!database.query("SELECT 1 FROM sqlite_master WHERE type='table' AND name='push_subscriptions'").get()) return
+      if (!database.query('SELECT 1 FROM sqlite_master WHERE type=\'table\' AND name=\'push_subscriptions\'').get()) {
+        return
+      }
       addColumn(database, 'push_subscriptions', 'notify_broadcasts',
         'INTEGER NOT NULL DEFAULT 1 CHECK(notify_broadcasts IN (0,1))')
     },
@@ -2651,16 +2664,15 @@ export const migrations: Migration[] = [
     version: 162,
     name: 'location_geocode_language',
     up(database) {
-      addColumn(database, 'location_geocodes', 'language', "TEXT NOT NULL DEFAULT ''")
+      addColumn(database, 'location_geocodes', 'language', 'TEXT NOT NULL DEFAULT \'\'')
     },
   },
   {
     version: 163,
     name: 'show_timestamps_preference',
     up(database) {
-      if (!database.query("SELECT 1 FROM sqlite_master WHERE type='table' AND name='users'").get()) return
-      addColumn(database, 'users', 'show_timestamps',
-        'INTEGER NOT NULL DEFAULT 0 CHECK(show_timestamps IN (0,1))')
+      if (!database.query('SELECT 1 FROM sqlite_master WHERE type=\'table\' AND name=\'users\'').get()) return
+      addColumn(database, 'users', 'show_timestamps', 'INTEGER NOT NULL DEFAULT 0 CHECK(show_timestamps IN (0,1))')
     },
   },
   {
@@ -2680,17 +2692,17 @@ export const migrations: Migration[] = [
     version: 165,
     name: 'profile_mood',
     up(database) {
-      if (!database.query("SELECT 1 FROM sqlite_master WHERE type='table' AND name='users'").get()) return
-      addColumn(database, 'users', 'mood', "TEXT NOT NULL DEFAULT ''")
+      if (!database.query('SELECT 1 FROM sqlite_master WHERE type=\'table\' AND name=\'users\'').get()) return
+      addColumn(database, 'users', 'mood', 'TEXT NOT NULL DEFAULT \'\'')
     },
   },
   {
     version: 166,
     name: 'opaque_draft_ids',
     up(database) {
-      if (!database.query("SELECT 1 FROM sqlite_master WHERE type='table' AND name='drafts'").get()) return
+      if (!database.query('SELECT 1 FROM sqlite_master WHERE type=\'table\' AND name=\'drafts\'').get()) return
       addColumn(database, 'drafts', 'public_id', 'TEXT')
-      database.run("UPDATE drafts SET public_id=lower(hex(randomblob(16))) WHERE public_id IS NULL")
+      database.run('UPDATE drafts SET public_id=lower(hex(randomblob(16))) WHERE public_id IS NULL')
       database.run(`CREATE UNIQUE INDEX IF NOT EXISTS drafts_public_id ON drafts(public_id);
         CREATE TRIGGER IF NOT EXISTS drafts_require_public_id_insert BEFORE INSERT ON drafts
         WHEN NEW.public_id IS NULL OR length(NEW.public_id)<32
@@ -2704,12 +2716,12 @@ export const migrations: Migration[] = [
     version: 167,
     name: 'include_meta_threads_in_hot',
     up(database) {
-      if (!database.query("SELECT 1 FROM sqlite_master WHERE type='table' AND name='post_hot'").get()) return
-      if (database.query("SELECT 1 FROM sqlite_master WHERE type='table' AND name='users'").get()) {
+      if (!database.query('SELECT 1 FROM sqlite_master WHERE type=\'table\' AND name=\'post_hot\'').get()) return
+      if (database.query('SELECT 1 FROM sqlite_master WHERE type=\'table\' AND name=\'users\'').get()) {
         rebuildHotPosts(database)
       }
       if (database.query(
-        "SELECT 1 FROM sqlite_master WHERE type='table' AND name='hot_feed_projection_state'",
+        'SELECT 1 FROM sqlite_master WHERE type=\'table\' AND name=\'hot_feed_projection_state\'',
       ).get()) database.run('UPDATE hot_feed_projection_state SET dirty=1')
     },
   },
@@ -2718,7 +2730,7 @@ export const migrations: Migration[] = [
     name: 'followed_ancestor_tags_in_personalized_feed',
     up(database) {
       if (!database.query(
-        "SELECT 1 FROM sqlite_master WHERE type='table' AND name='personalized_post_candidates'",
+        'SELECT 1 FROM sqlite_master WHERE type=\'table\' AND name=\'personalized_post_candidates\'',
       ).get()) return
       database.run(`WITH RECURSIVE ancestry(post_id,ancestor_id) AS (
           SELECT id,parent_id FROM posts WHERE parent_id IS NOT NULL
@@ -2758,7 +2770,7 @@ export const migrations: Migration[] = [
       CREATE INDEX IF NOT EXISTS tag_aliases_primary ON tag_aliases(primary_tag,alias);
       INSERT OR IGNORE INTO tag_aliases(alias,primary_tag) VALUES
         ('tlog','meta'),('textlog','meta'),('features','feature');`)
-      if (database.query("SELECT 1 FROM sqlite_master WHERE type='table' AND name='post_hashtags'").get()) {
+      if (database.query('SELECT 1 FROM sqlite_master WHERE type=\'table\' AND name=\'post_hashtags\'').get()) {
         database.run(`CREATE TRIGGER IF NOT EXISTS canonicalize_post_hashtag AFTER INSERT ON post_hashtags
         WHEN EXISTS(SELECT 1 FROM tag_aliases WHERE alias=NEW.tag)
         BEGIN
@@ -2770,13 +2782,13 @@ export const migrations: Migration[] = [
           SELECT ph.post_id,ta.primary_tag FROM post_hashtags ph JOIN tag_aliases ta ON ta.alias=ph.tag;
         DELETE FROM post_hashtags WHERE tag IN (SELECT alias FROM tag_aliases);`)
       }
-      if (database.query("SELECT 1 FROM sqlite_master WHERE type='table' AND name='hashtag_follows'").get()) {
+      if (database.query('SELECT 1 FROM sqlite_master WHERE type=\'table\' AND name=\'hashtag_follows\'').get()) {
         database.run(`INSERT OR IGNORE INTO hashtag_follows(user_id,tag,created_at)
           SELECT hf.user_id,ta.primary_tag,hf.created_at FROM hashtag_follows hf
           JOIN tag_aliases ta ON ta.alias=hf.tag;
           DELETE FROM hashtag_follows WHERE tag IN (SELECT alias FROM tag_aliases);`)
       }
-      if (database.query("SELECT 1 FROM sqlite_master WHERE type='table' AND name='blocked_hashtags'").get()) {
+      if (database.query('SELECT 1 FROM sqlite_master WHERE type=\'table\' AND name=\'blocked_hashtags\'').get()) {
         database.run(`INSERT OR IGNORE INTO blocked_hashtags(user_id,tag,created_at)
           SELECT bh.user_id,ta.primary_tag,bh.created_at FROM blocked_hashtags bh
           JOIN tag_aliases ta ON ta.alias=bh.tag;
@@ -2788,9 +2800,11 @@ export const migrations: Migration[] = [
     version: 170,
     name: 'underscore_free_hashtags',
     up(database) {
-      if (database.query("SELECT 1 FROM sqlite_master WHERE type='table' AND name='tag_aliases'").get()) {
+      if (database.query('SELECT 1 FROM sqlite_master WHERE type=\'table\' AND name=\'tag_aliases\'').get()) {
         const aliases = database.query('SELECT alias,primary_tag,created_at FROM tag_aliases').all() as {
-          alias: string; primary_tag: string; created_at: string
+          alias: string
+          primary_tag: string
+          created_at: string
         }[]
         database.run('DROP TRIGGER IF EXISTS canonicalize_post_hashtag; DELETE FROM tag_aliases;')
         const insert = database.query(
@@ -2802,7 +2816,7 @@ export const migrations: Migration[] = [
           if (alias && primary && alias !== primary) insert.run(alias, primary, row.created_at)
         }
       }
-      if (database.query("SELECT 1 FROM sqlite_master WHERE type='table' AND name='post_hashtags'").get()) {
+      if (database.query('SELECT 1 FROM sqlite_master WHERE type=\'table\' AND name=\'post_hashtags\'').get()) {
         rebuildPostHashtags(database)
         database.run(`CREATE TRIGGER canonicalize_post_hashtag AFTER INSERT ON post_hashtags
           WHEN EXISTS(SELECT 1 FROM tag_aliases WHERE alias=NEW.tag)
@@ -2812,12 +2826,12 @@ export const migrations: Migration[] = [
             DELETE FROM post_hashtags WHERE post_id=NEW.post_id AND tag=NEW.tag;
           END;`)
       }
-      if (database.query("SELECT 1 FROM sqlite_master WHERE type='table' AND name='hashtag_follows'").get()) {
+      if (database.query('SELECT 1 FROM sqlite_master WHERE type=\'table\' AND name=\'hashtag_follows\'').get()) {
         database.run(`INSERT OR IGNORE INTO hashtag_follows(user_id,tag,created_at)
           SELECT user_id,replace(tag,'_',''),created_at FROM hashtag_follows WHERE instr(tag,'_')>0;
           DELETE FROM hashtag_follows WHERE instr(tag,'_')>0;`)
       }
-      if (database.query("SELECT 1 FROM sqlite_master WHERE type='table' AND name='blocked_hashtags'").get()) {
+      if (database.query('SELECT 1 FROM sqlite_master WHERE type=\'table\' AND name=\'blocked_hashtags\'').get()) {
         database.run(`INSERT OR IGNORE INTO blocked_hashtags(user_id,tag,created_at)
           SELECT user_id,replace(tag,'_',''),created_at FROM blocked_hashtags WHERE instr(tag,'_')>0;
           DELETE FROM blocked_hashtags WHERE instr(tag,'_')>0;`)
@@ -2840,7 +2854,7 @@ export const migrations: Migration[] = [
     version: 172,
     name: 'mood_prompt_dismissal',
     up(database) {
-      if (!database.query("SELECT 1 FROM sqlite_master WHERE type='table' AND name='users'").get()) return
+      if (!database.query('SELECT 1 FROM sqlite_master WHERE type=\'table\' AND name=\'users\'').get()) return
       addColumn(database, 'users', 'mood_prompt_dismissed_at', 'TEXT')
     },
   },
@@ -2874,10 +2888,12 @@ export const migrations: Migration[] = [
     version: 175,
     name: 'tag_onboarding_prompt',
     up(database) {
-      if (!database.query("SELECT 1 FROM sqlite_master WHERE type='table' AND name='users'").get()) return
+      if (!database.query('SELECT 1 FROM sqlite_master WHERE type=\'table\' AND name=\'users\'').get()) return
       addColumn(database, 'users', 'tag_prompt_completed_at', 'TEXT')
-      if (database.query("SELECT 1 FROM sqlite_master WHERE type='table' AND name='hashtag_follows'").get()
-        && database.query("SELECT 1 FROM sqlite_master WHERE type='table' AND name='personalized_feed_generations'").get()) {
+      if (database.query('SELECT 1 FROM sqlite_master WHERE type=\'table\' AND name=\'hashtag_follows\'').get()
+        && database.query('SELECT 1 FROM sqlite_master WHERE type=\'table\' AND name=\'personalized_feed_generations\'')
+          .get())
+      {
         database.run(`UPDATE users SET tag_prompt_completed_at=CURRENT_TIMESTAMP
           WHERE EXISTS(SELECT 1 FROM hashtag_follows hf WHERE hf.user_id=users.id)`)
       }
@@ -2887,10 +2903,10 @@ export const migrations: Migration[] = [
     version: 176,
     name: 'repair_tag_onboarding_prompt_backfill',
     up(database) {
-      if (!database.query("SELECT 1 FROM pragma_table_info('users') WHERE name='tag_prompt_completed_at'").get()
-        || !database.query("SELECT 1 FROM sqlite_master WHERE type='table' AND name='hashtag_follows'").get()
+      if (!database.query('SELECT 1 FROM pragma_table_info(\'users\') WHERE name=\'tag_prompt_completed_at\'').get()
+        || !database.query('SELECT 1 FROM sqlite_master WHERE type=\'table\' AND name=\'hashtag_follows\'').get()
         || !database.query(
-          "SELECT 1 FROM sqlite_master WHERE type='table' AND name='personalized_feed_generations'",
+          'SELECT 1 FROM sqlite_master WHERE type=\'table\' AND name=\'personalized_feed_generations\'',
         ).get()) return
       database.run(`UPDATE users SET tag_prompt_completed_at=NULL
         WHERE NOT EXISTS(SELECT 1 FROM hashtag_follows hf WHERE hf.user_id=users.id)`)
@@ -2900,10 +2916,12 @@ export const migrations: Migration[] = [
     version: 177,
     name: 'people_onboarding_prompt',
     up(database) {
-      if (!database.query("SELECT 1 FROM sqlite_master WHERE type='table' AND name='users'").get()) return
+      if (!database.query('SELECT 1 FROM sqlite_master WHERE type=\'table\' AND name=\'users\'').get()) return
       addColumn(database, 'users', 'people_prompt_completed_at', 'TEXT')
-      if (database.query("SELECT 1 FROM sqlite_master WHERE type='table' AND name='follows'").get()
-        && database.query("SELECT 1 FROM sqlite_master WHERE type='table' AND name='personalized_feed_generations'").get()) {
+      if (database.query('SELECT 1 FROM sqlite_master WHERE type=\'table\' AND name=\'follows\'').get()
+        && database.query('SELECT 1 FROM sqlite_master WHERE type=\'table\' AND name=\'personalized_feed_generations\'')
+          .get())
+      {
         database.run(`UPDATE users SET people_prompt_completed_at=CURRENT_TIMESTAMP
           WHERE EXISTS(SELECT 1 FROM follows f WHERE f.follower_id=users.id)`)
       }
@@ -2913,9 +2931,11 @@ export const migrations: Migration[] = [
     version: 178,
     name: 'pending_post_idempotency',
     up(database) {
-      if (!database.query("SELECT 1 FROM sqlite_master WHERE type='table' AND name='posts'").get()) return
+      if (!database.query('SELECT 1 FROM sqlite_master WHERE type=\'table\' AND name=\'posts\'').get()) return
       addColumn(database, 'posts', 'pending_key', 'TEXT')
-      database.run('CREATE UNIQUE INDEX IF NOT EXISTS posts_pending_key ON posts(pending_key) WHERE pending_key IS NOT NULL')
+      database.run(
+        'CREATE UNIQUE INDEX IF NOT EXISTS posts_pending_key ON posts(pending_key) WHERE pending_key IS NOT NULL',
+      )
     },
   },
   {
@@ -2929,11 +2949,11 @@ export const migrations: Migration[] = [
         created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
         PRIMARY KEY(actor_id,target_id,kind));`)
       if (!database.query(
-        "SELECT 1 FROM sqlite_master WHERE type='table' AND name='pending_relationship_feed_invalidations'",
+        'SELECT 1 FROM sqlite_master WHERE type=\'table\' AND name=\'pending_relationship_feed_invalidations\'',
       ).get() || !database.query(
-        "SELECT 1 FROM pragma_table_info('users') WHERE name='people_prompt_completed_at'",
+        'SELECT 1 FROM pragma_table_info(\'users\') WHERE name=\'people_prompt_completed_at\'',
       ).get() || !database.query(
-        "SELECT 1 FROM sqlite_master WHERE type='table' AND name='follows'",
+        'SELECT 1 FROM sqlite_master WHERE type=\'table\' AND name=\'follows\'',
       ).get()) return
       // Migration 42 timestamped every legacy follow. The people picker was the only production writer added later
       // that omitted created_at. Limit the repair to the recent incident window as an additional safety boundary.
@@ -2968,11 +2988,11 @@ export const migrations: Migration[] = [
     name: 'repair_recent_undated_people_picker_follow_events',
     up(database) {
       if (!database.query(
-        "SELECT 1 FROM sqlite_master WHERE type='table' AND name='pending_relationship_feed_invalidations'",
+        'SELECT 1 FROM sqlite_master WHERE type=\'table\' AND name=\'pending_relationship_feed_invalidations\'',
       ).get() || !database.query(
-        "SELECT 1 FROM pragma_table_info('users') WHERE name='people_prompt_completed_at'",
+        'SELECT 1 FROM pragma_table_info(\'users\') WHERE name=\'people_prompt_completed_at\'',
       ).get() || !database.query(
-        "SELECT 1 FROM sqlite_master WHERE type='table' AND name='follows'",
+        'SELECT 1 FROM sqlite_master WHERE type=\'table\' AND name=\'follows\'',
       ).get()) return
       database.run(`CREATE TABLE IF NOT EXISTS people_picker_follow_push_jobs (
         actor_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
@@ -3006,8 +3026,8 @@ export const migrations: Migration[] = [
     version: 182,
     name: 'increase_hashtag_limit_to_fifteen',
     up(database) {
-      if (!database.query("SELECT 1 FROM sqlite_master WHERE type='table' AND name='posts'").get()
-        || !database.query("SELECT 1 FROM sqlite_master WHERE type='table' AND name='post_hashtags'").get()) return
+      if (!database.query('SELECT 1 FROM sqlite_master WHERE type=\'table\' AND name=\'posts\'').get()
+        || !database.query('SELECT 1 FROM sqlite_master WHERE type=\'table\' AND name=\'post_hashtags\'').get()) return
       rebuildPostHashtags(database)
     },
   },
@@ -3015,14 +3035,19 @@ export const migrations: Migration[] = [
     version: 183,
     name: 'backfill_pascal_case_tag_display_names',
     up(database) {
-      if (!database.query("SELECT 1 FROM sqlite_master WHERE type='table' AND name='posts'").get()
-        || !database.query("SELECT 1 FROM sqlite_master WHERE type='table' AND name='tag_aliases'").get()
-        || !database.query("SELECT 1 FROM sqlite_master WHERE type='table' AND name='tag_display_names'").get()) return
+      if (!database.query('SELECT 1 FROM sqlite_master WHERE type=\'table\' AND name=\'posts\'').get()
+        || !database.query('SELECT 1 FROM sqlite_master WHERE type=\'table\' AND name=\'tag_aliases\'').get()
+        || !database.query('SELECT 1 FROM sqlite_master WHERE type=\'table\' AND name=\'tag_display_names\'').get())
+      {
+        return
+      }
       const postColumns = columns(database, 'posts')
       if (!postColumns.includes('body')) return
       const order = postColumns.includes('created_at')
         ? `created_at${postColumns.includes('id') ? ',id' : ''}`
-        : postColumns.includes('id') ? 'id' : 'rowid'
+        : postColumns.includes('id')
+        ? 'id'
+        : 'rowid'
       const posts = database.query(`SELECT body FROM posts ORDER BY ${order}`).all() as { body: string }[]
       const seen = new Set<string>()
       const aliasConflict = database.query('SELECT 1 FROM tag_aliases WHERE alias=? LIMIT 1')
@@ -3044,16 +3069,16 @@ export const migrations: Migration[] = [
     version: 184,
     name: 'remove_underscore_tag_aliases',
     up(database) {
-      if (!database.query("SELECT 1 FROM sqlite_master WHERE type='table' AND name='tag_aliases'").get()) return
-      database.query("DELETE FROM tag_aliases WHERE instr(alias,'_')>0 OR instr(primary_tag,'_')>0").run()
+      if (!database.query('SELECT 1 FROM sqlite_master WHERE type=\'table\' AND name=\'tag_aliases\'').get()) return
+      database.query('DELETE FROM tag_aliases WHERE instr(alias,\'_\')>0 OR instr(primary_tag,\'_\')>0').run()
     },
   },
   {
     version: 185,
     name: 'singularize_plural_tags',
     up(database) {
-      if (!database.query("SELECT 1 FROM sqlite_master WHERE type='table' AND name='tag_aliases'").get()
-        || !database.query("SELECT 1 FROM sqlite_master WHERE type='table' AND name='post_hashtags'").get()) return
+      if (!database.query('SELECT 1 FROM sqlite_master WHERE type=\'table\' AND name=\'tag_aliases\'').get()
+        || !database.query('SELECT 1 FROM sqlite_master WHERE type=\'table\' AND name=\'post_hashtags\'').get()) return
       const tags = database.query(`SELECT tag FROM (SELECT tag FROM post_hashtags UNION SELECT tag FROM hashtag_follows
         UNION SELECT tag FROM blocked_hashtags) ORDER BY length(tag),tag`).all() as { tag: string }[]
       const insertAlias = database.query('INSERT OR IGNORE INTO tag_aliases(alias,primary_tag) VALUES(?,?)')
@@ -3085,17 +3110,19 @@ export const migrations: Migration[] = [
     version: 186,
     name: 'transparent_plural_tags',
     up(database) {
-      if (database.query("SELECT 1 FROM sqlite_master WHERE type='table' AND name='tag_aliases'").get()) {
+      if (database.query('SELECT 1 FROM sqlite_master WHERE type=\'table\' AND name=\'tag_aliases\'').get()) {
         database.run(`DELETE FROM tag_aliases WHERE alias=CASE
           WHEN substr(primary_tag,-1)='s' THEN primary_tag || 'es' ELSE primary_tag || 's' END`)
       }
-      if (database.query("SELECT 1 FROM sqlite_master WHERE type='table' AND name='post_hashtags'").get()
-        && database.query("SELECT 1 FROM sqlite_master WHERE type='table' AND name='posts'").get()
+      if (database.query('SELECT 1 FROM sqlite_master WHERE type=\'table\' AND name=\'post_hashtags\'').get()
+        && database.query('SELECT 1 FROM sqlite_master WHERE type=\'table\' AND name=\'posts\'').get()
         && columns(database, 'posts').includes('body')) rebuildPostHashtags(database)
       for (const table of ['hashtag_follows', 'blocked_hashtags']) {
-        if (!database.query("SELECT 1 FROM sqlite_master WHERE type='table' AND name=?").get(table)) continue
+        if (!database.query('SELECT 1 FROM sqlite_master WHERE type=\'table\' AND name=?').get(table)) continue
         const rows = database.query(`SELECT user_id,tag,created_at FROM ${table}`).all() as Array<{
-          user_id: number; tag: string; created_at: string
+          user_id: number
+          tag: string
+          created_at: string
         }>
         const insert = database.query(`INSERT OR IGNORE INTO ${table}(user_id,tag,created_at) VALUES(?,?,?)`)
         for (const row of rows) {
@@ -3122,20 +3149,20 @@ export const migrations: Migration[] = [
     version: 188,
     name: 'preserve_treat_warnings_as_errors_tag',
     up(database) {
-      if (!database.query("SELECT 1 FROM sqlite_master WHERE type='table' AND name='tag_invariants'").get()) return
-      database.run("INSERT OR IGNORE INTO tag_invariants(tag) VALUES('treatwarningsaserrors')")
-      if (database.query("SELECT 1 FROM sqlite_master WHERE type='table' AND name='post_hashtags'").get()) {
+      if (!database.query('SELECT 1 FROM sqlite_master WHERE type=\'table\' AND name=\'tag_invariants\'').get()) return
+      database.run('INSERT OR IGNORE INTO tag_invariants(tag) VALUES(\'treatwarningsaserrors\')')
+      if (database.query('SELECT 1 FROM sqlite_master WHERE type=\'table\' AND name=\'post_hashtags\'').get()) {
         database.run(`INSERT OR IGNORE INTO post_hashtags(post_id,tag)
           SELECT post_id,'treatwarningsaserrors' FROM post_hashtags WHERE tag='treatwarningsaserror';
           DELETE FROM post_hashtags WHERE tag='treatwarningsaserror';`)
       }
       for (const table of ['hashtag_follows', 'blocked_hashtags']) {
-        if (!database.query("SELECT 1 FROM sqlite_master WHERE type='table' AND name=?").get(table)) continue
+        if (!database.query('SELECT 1 FROM sqlite_master WHERE type=\'table\' AND name=?').get(table)) continue
         database.run(`INSERT OR IGNORE INTO ${table}(user_id,tag,created_at)
           SELECT user_id,'treatwarningsaserrors',created_at FROM ${table} WHERE tag='treatwarningsaserror';
           DELETE FROM ${table} WHERE tag='treatwarningsaserror';`)
       }
-      if (database.query("SELECT 1 FROM sqlite_master WHERE type='table' AND name='tag_display_names'").get()) {
+      if (database.query('SELECT 1 FROM sqlite_master WHERE type=\'table\' AND name=\'tag_display_names\'').get()) {
         database.run(`INSERT INTO tag_display_names(tag,display_name)
           SELECT 'treatwarningsaserrors','TreatWarningsAsErrors'
           WHERE EXISTS(SELECT 1 FROM tag_display_names WHERE tag='treatwarningsaserror')

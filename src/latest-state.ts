@@ -1,13 +1,13 @@
 import type { Database } from 'bun:sqlite'
-import { excludesWhisperPosts } from './whisper'
 import { excludesMetaPosts } from './meta-thread'
+import { excludesWhisperPosts } from './whisper'
 
 function usesCompactReads(database: Database) {
   return !!database.query('SELECT 1 FROM sqlite_master WHERE type=\'table\' AND name=\'latest_read_state\'').get()
 }
 
 function excludesExistingWhispers(database: Database) {
-  return database.query("SELECT 1 FROM post_hashtags WHERE tag='whisper' LIMIT 1").get()
+  return database.query('SELECT 1 FROM post_hashtags WHERE tag=\'whisper\' LIMIT 1').get()
     ? excludesWhisperPosts()
     : '1'
 }

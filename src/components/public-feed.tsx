@@ -39,27 +39,26 @@ export function PublicFeed(
       feeds={random || newest ? undefined : { title: 'All notes', rss: '/all.rss', atom: '/all.atom' }}
     >
       <h1 className="visually-hidden">{random ? 'Any conversation' : newest ? 'New notes' : 'All notes'}</h1>
-      {writePreview && <ComposePreview user={user} body={writeBody || ''}
-        executionOutput={writePreviewExecutionOutput} location={writePreviewLocation} />}
+      {writePreview && (
+        <ComposePreview user={user} body={writeBody || ''} executionOutput={writePreviewExecutionOutput}
+          location={writePreviewLocation} />
+      )}
       {user
-        ? <WriteForm user={user} returnPath={returnPath} embedded error={writeError} body={writeBody}
-          draftId={writeDraftId} />
+        ? (
+          <WriteForm user={user} returnPath={returnPath} embedded error={writeError} body={writeBody}
+            draftId={writeDraftId} />
+        )
         : <AnonymousWriteForm returnPath={returnPath} error={writeError} body={writeBody} />}
       <FeedTabs active={random ? 'random' : newest ? 'new' : 'latest'} user={user} forYouCount={feed.forYouCount}
-        forYouUnread={feed.forYouUnread}
-        toMeCount={feed.toMeCount} toMeUnread={feed.toMeUnread} latestCount={feed.latestCount}
-        forYouReadStatus={user && feed.posts.length
-          ? !!feed.latestUnread && unreadPage !== null && unreadPage > feed.page
-          : undefined} unreadHref={feed.unreadHref} lastUnreadHref={feed.lastUnreadHref}
-        readAction="/all/read-all" />
-      {feed.page > 1 && (
-        <Pagination page={feed.page} totalPages={feed.totalPages} path={feedPath} top />
-      )}
+        forYouUnread={feed.forYouUnread} toMeCount={feed.toMeCount} toMeUnread={feed.toMeUnread}
+        latestCount={feed.latestCount} forYouReadStatus={user && feed.posts.length
+        ? !!feed.latestUnread && unreadPage !== null && unreadPage > feed.page
+        : undefined} unreadHref={feed.unreadHref} lastUnreadHref={feed.lastUnreadHref} readAction="/all/read-all" />
+      {feed.page > 1 && <Pagination page={feed.page} totalPages={feed.totalPages} path={feedPath} top />}
       {feed.posts.length
         ? (
           <FeedThreads posts={feed.posts} user={user} returnPath={returnPath} promoteAncestors
-            expandedByDefault={!user && (path === '/all' || random)}
-            collapseWithoutPreviews={newest}
+            expandedByDefault={!user && (path === '/all' || random)} collapseWithoutPreviews={newest}
             expandedRootId={expandedRootId} contextUnreadPostIds={unreadPostIds}
             contextDirectedUnreadPostIds={directedUnreadPostIds} />
         )

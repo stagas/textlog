@@ -30,7 +30,8 @@ function ContentWarning({ p, body, controlId, showImmediately = false, children 
       <input className="content-warning-toggle" id={controlId} type="checkbox"
         aria-label={`Reveal post that might contain ${p.moderation_category}`} />
       <label className="content-warning-overlay" htmlFor={controlId}>
-        <span><span className="content-warning-label">warning:</span> possible {p.moderation_category} content<br />
+        <span>
+          <span className="content-warning-label">warning:</span> possible {p.moderation_category} content<br />
           <span className="content-warning-action">click to view anyway</span>
         </span>
       </label>
@@ -139,17 +140,21 @@ function PollPreview({ body }: { body: string }) {
   )
 }
 
-function PollAfter({ body, p, user, formPrefix }: { body: string; p: PostView | NonNullable<PostView['parent']>;
-  user: User | null; formPrefix: string }) {
+function PollAfter(
+  { body, p, user, formPrefix }: { body: string; p: PostView | NonNullable<PostView['parent']>; user: User | null;
+    formPrefix: string },
+) {
   const after = parsePoll(body)?.after
   if (!after) return null
-  return <div className="post-body" dangerouslySetInnerHTML={{
-    __html: linkify(displayPostBody(after), p.mention_bios, [], undefined, renderFlags(p), '', p.hashtag_counts,
-      p.mention_note_counts, { signedIn: !!user, currentHandle: user?.handle, formPrefix,
+  return (
+    <div className="post-body" dangerouslySetInnerHTML={{
+      __html: linkify(displayPostBody(after), p.mention_bios, [], undefined, renderFlags(p), '', p.hashtag_counts,
+        p.mention_note_counts, { signedIn: !!user, currentHandle: user?.handle, formPrefix,
         mentionFollowing: p.mention_following, mentionFollowsViewer: p.mention_follows_viewer,
         mentionProfileStats: p.mention_profile_stats, hashtagFollowing: p.hashtag_following,
         hashtagFollowerCounts: p.hashtag_follower_counts }),
-  }} />
+    }} />
+  )
 }
 
 function Todo(
@@ -278,7 +283,9 @@ export function UserReference(
                 {extraAction}
               </span>
             )
-            : <a className="button" href={pendingFollowHref('user', handle, followReturnPath)} rel="nofollow">follow</a>)}
+            : (
+              <a className="button" href={pendingFollowHref('user', handle, followReturnPath)} rel="nofollow">follow</a>
+            ))}
           {(bio?.trim() || ownUser) && (
             <span
               className={`reference-popover-bio${ownUser ? ' reference-popover-bio-own' : ''}${
@@ -563,9 +570,16 @@ function contextLabelWithViewerMood(label: React.ReactNode, mood?: string) {
   if (markerIndex < 0) return label
   const youIndex = markerIndex + 'replied to '.length
   const moodIndex = markerIndex + marker.length
-  return <>{label.slice(0, youIndex)}<span className="post-context-author">you
-    <span className="post-mood">{mood}</span>
-  </span>{label.slice(moodIndex)}</>
+  return (
+    <>
+      {label.slice(0, youIndex)}
+      <span className="post-context-author">
+        you
+        <span className="post-mood">{mood}</span>
+      </span>
+      {label.slice(moodIndex)}
+    </>
+  )
 }
 
 export function PreviewPost({ p, user }: { p: PostView; user?: User }) {
@@ -574,20 +588,32 @@ export function PreviewPost({ p, user }: { p: PostView; user?: User }) {
     <article className="post" id={`post-${p.id}`}>
       <MetaRow className="posttop posttop-context preview-post-meta">
         {user?.id === p.user_id
-          ? <span className="post-context post-context-author">you{p.mood
-            && <span className="post-mood">{p.mood}</span>}</span>
-          : <UserReference handle={p.handle} mood={p.mood} bio={p.bio} noteCount={p.note_count || 0} stats={p.profile_stats}
-            user={user || null} currentHandle={user?.handle} referenceData={p.bio_reference} />}
+          ? (
+            <span className="post-context post-context-author">
+              you{p.mood
+                && <span className="post-mood">{p.mood}</span>}
+            </span>
+          )
+          : (
+            <UserReference handle={p.handle} mood={p.mood} bio={p.bio} noteCount={p.note_count || 0}
+              stats={p.profile_stats} user={user || null} currentHandle={user?.handle}
+              referenceData={p.bio_reference} />
+          )}
         <span className="post-context">wrote:</span>
       </MetaRow>
       <ContentWarning p={p} body={p.body} controlId={`${formPrefix}-content-warning`}>
-        <div className={`post-body${containsAsciiArt(p.body) ? ' ascii-art' : ''}${endsWithCodeFence(p.body)
-          ? ' ends-code-fence' : ''}`} dangerouslySetInnerHTML={{
+        <div className={`post-body${containsAsciiArt(p.body) ? ' ascii-art' : ''}${
+          endsWithCodeFence(p.body)
+            ? ' ends-code-fence'
+            : ''
+        }`} dangerouslySetInnerHTML={{
           __html: linkify(displayPostBody(renderedPollBody(p.body)), p.mention_bios, [], undefined, renderFlags(p), '',
             p.hashtag_counts, p.mention_note_counts, { signedIn: false, currentHandle: p.handle, formPrefix,
             hashtagFollowerCounts: p.hashtag_follower_counts, linkPreviews: p.link_previews, location: p.location }),
         }} />
-        {p.execution_output !== null && p.execution_output !== undefined && <ExecutionOutput output={p.execution_output} />}
+        {p.execution_output !== null && p.execution_output !== undefined && (
+          <ExecutionOutput output={p.execution_output} />
+        )}
         <PollPreview body={p.body} />
         <PollAfter body={p.body} p={p} user={user || null} formPrefix={formPrefix} />
         <Todo p={p} user={null} preview formPrefix={formPrefix} />
@@ -646,8 +672,7 @@ export function Post({
 }: { p: PostView; user: User | null; showReplyAction?: boolean; showOwnerActions?: boolean;
   showModerateAction?: boolean; showParent?: boolean; showReplyCount?: boolean; replyHref?: string; replyLabel?: string;
   reportHref?: string; bookmarkAction?: boolean; foldControlId?: string; collapsedExpansionControlId?: string;
-  highlightTerms?: string[];
-  tappable?: boolean; tappableHref?: string; tappableParent?: boolean;
+  highlightTerms?: string[]; tappable?: boolean; tappableHref?: string; tappableParent?: boolean;
   contextLabel?: React.ReactNode; contextUnread?: boolean; contextParentUnread?: boolean;
   contextDirectedUnread?: boolean; preview?: boolean; returnPath?: string; backHref?: string;
   canonicalTimestamp?: boolean; topHref?: string; flatHref?: string; treeHref?: string;
@@ -655,23 +680,23 @@ export function Post({
   topActions?: React.ReactNode; showReadAction?: boolean; hideTopMeta?: boolean; suppressContentWarning?: boolean })
 {
   const linkedPostReturnPath = returnPath || `/post/${p.id}#post-${p.id}`
-  const renderLinkedPostPreviews = (linkPreviews: PostView['link_previews']) => linkPreviews
-    && Object.values(linkPreviews).some(preview => preview.linkedPost)
-    ? Object.fromEntries(Object.entries(linkPreviews).map(([url, preview]) => [url, preview.linkedPost
+  const renderLinkedPostPreviews = (linkPreviews: PostView['link_previews']) =>
+    linkPreviews
+      && Object.values(linkPreviews).some(preview => preview.linkedPost)
+      ? Object.fromEntries(Object.entries(linkPreviews).map(([url, preview]) => [url, preview.linkedPost
         ? { ...preview, renderedPostHtml: renderToStaticMarkup(
           <Post p={preview.linkedPost as PostView} user={user} showParent={false} showReplyCount tappable
             showReadAction={false} className="internal-post-card" returnPath={linkedPostReturnPath} />,
         ), linkedPostReturnPath }
         : preview]
       ))
-    : linkPreviews
+      : linkPreviews
   const linkPreviews = renderLinkedPostPreviews(p.link_previews)
   const parentLinkPreviews = renderLinkedPostPreviews(p.parent?.link_previews)
   if (linkPreviews !== p.link_previews || parentLinkPreviews !== p.parent?.link_previews) {
-    p = { ...p, link_previews: linkPreviews,
-      parent: p.parent && parentLinkPreviews !== p.parent.link_previews
-        ? { ...p.parent, link_previews: parentLinkPreviews }
-        : p.parent }
+    p = { ...p, link_previews: linkPreviews, parent: p.parent && parentLinkPreviews !== p.parent.link_previews
+      ? { ...p.parent, link_previews: parentLinkPreviews }
+      : p.parent }
   }
   const parent = showParent ? p.parent : null
   const showApproximateAge = canonicalTimestamp || contextUnread
@@ -772,7 +797,8 @@ export function Post({
       )}
       {collapsedExpansionControlId && (
         <label className="collapsed-post-expander" htmlFor={collapsedExpansionControlId}
-          aria-label={`expand conversation containing post by @${p.handle}`}>
+          aria-label={`expand conversation containing post by @${p.handle}`}
+        >
           <span className="visually-hidden">expand conversation</span>
         </label>
       )}
@@ -788,13 +814,13 @@ export function Post({
             )
             : preview
             ? (
-              <UserReference handle={p.handle} mood={p.mood} bio={p.bio} noteCount={p.note_count || 0} stats={p.profile_stats}
-                following={p.viewer_following} followsViewer={p.follows_viewer} user={user}
+              <UserReference handle={p.handle} mood={p.mood} bio={p.bio} noteCount={p.note_count || 0}
+                stats={p.profile_stats} following={p.viewer_following} followsViewer={p.follows_viewer} user={user}
                 referenceData={p.bio_reference} extraAction={authorPopoverAction} />
             )
             : (
-              <UserReference handle={p.handle} mood={p.mood} bio={p.bio} noteCount={p.note_count || 0} stats={p.profile_stats}
-                following={p.viewer_following} followsViewer={p.follows_viewer} user={user}
+              <UserReference handle={p.handle} mood={p.mood} bio={p.bio} noteCount={p.note_count || 0}
+                stats={p.profile_stats} following={p.viewer_following} followsViewer={p.follows_viewer} user={user}
                 href={'/u/' + p.handle + referenceQuery} rel={navigationRel} navigationQuery={referenceQuery}
                 referenceData={p.bio_reference} extraAction={authorPopoverAction} />
             )}
@@ -810,9 +836,11 @@ export function Post({
                 {!contextTarget && <span className="post-context post-context-punctuation">:</span>}
               </>
             )
-            : <span className="post-context" title={postPageAgeTitle}>
-              {contextLabelWithViewerMood(contextLabel, user?.mood)}
-            </span>)}
+            : (
+              <span className="post-context" title={postPageAgeTitle}>
+                {contextLabelWithViewerMood(contextLabel, user?.mood)}
+              </span>
+            ))}
           {contextTarget && (
             <>
               {isDeletedHandle(contextTarget.handle)
@@ -820,7 +848,8 @@ export function Post({
                 : preview
                 ? (
                   <span className="preview-context-target">
-                    @{contextTarget.handle}{contextTarget.mood && <span className="post-mood">{contextTarget.mood}</span>}
+                    @{contextTarget.handle}
+                    {contextTarget.mood && <span className="post-mood">{contextTarget.mood}</span>}
                   </span>
                 )
                 : (
@@ -867,11 +896,9 @@ export function Post({
                 </time>
               )}
               {tappable && parent && (
-                <a className="quiet post-top-link"
-                  href={replyAtPagePost(
-                    replyAnchorReturnPath(parent.top_id || parent.id, parent.top_id || parent.id, returnPath),
-                  )}
-                >
+                <a className="quiet post-top-link" href={replyAtPagePost(
+                  replyAnchorReturnPath(parent.top_id || parent.id, parent.top_id || parent.id, returnPath),
+                )}>
                   top
                 </a>
               )}
@@ -892,9 +919,13 @@ export function Post({
         </MetaRow>
       )}
       <ContentWarning p={p} body={p.body} controlId={`${formPrefix}-content-warning`}
-        showImmediately={user?.show_moderated_content === 1 || suppressContentWarning}>
-        <div className={`post-body${isAsciiArt ? ' ascii-art' : ''}${endsWithCodeFence(p.body)
-          ? ' ends-code-fence' : ''}`} dangerouslySetInnerHTML={{
+        showImmediately={user?.show_moderated_content === 1 || suppressContentWarning}
+      >
+        <div className={`post-body${isAsciiArt ? ' ascii-art' : ''}${
+          endsWithCodeFence(p.body)
+            ? ' ends-code-fence'
+            : ''
+        }`} dangerouslySetInnerHTML={{
           __html: linkify(displayPostBody(renderedPollBody(p.body)), p.mention_bios, highlightTerms, undefined,
             renderFlags(p), referenceQuery, p.hashtag_counts, p.mention_note_counts, { signedIn: !!user,
             currentHandle: user?.handle, formPrefix, mentionFollowing: p.mention_following,
@@ -902,55 +933,65 @@ export function Post({
             hashtagFollowing: p.hashtag_following, hashtagFollowerCounts: p.hashtag_follower_counts,
             linkPreviews: p.link_previews, location: p.location, linkUnknownMentions: preview || p.id < 0 }),
         }} />
-        {p.execution_output !== null && p.execution_output !== undefined && <ExecutionOutput output={p.execution_output} />}
+        {p.execution_output !== null && p.execution_output !== undefined && (
+          <ExecutionOutput output={p.execution_output} />
+        )}
         {!preview && <Translation html={translationHtml} />}
         {preview ? <PollPreview body={p.body} /> : <Poll p={p} returnPath={returnPath} />}
         <PollAfter body={p.body} p={p} user={user} formPrefix={formPrefix} />
         <Todo p={p} user={user} preview={preview} returnPath={returnPath} formPrefix={formPrefix} />
       </ContentWarning>
       {!parent && (showReplyAction && !p.thread_locked || hasVisibleContinuation || canModerate || reportHref
-        || bookmarkAction) && (
-        <MetaRow className={`postfoot${preview ? ' preview-post-meta' : ''}`}>
-          {showReplyAction && !p.thread_locked && (
-            <a className="quiet post-reply-link" href={resolvedReplyHref} rel="nofollow"
-              aria-label={`${resolvedReplyLabel} to @${p.handle}`}>
-              {resolvedReplyLabel}
-            </a>
-          )}
-          {resolvedContinuationHref && (
-            continuationLabel === '…'
-              ? null
-              : <a className="quiet post-continuation-link" href={resolvedContinuationHref} rel="nofollow">
-                  {continuationLabel}
-                </a>
-          )}
-          {(canModerate || reportHref || bookmarkAction) && (
-            <span className="post-actions">
-              {canModerate && (
-                <>
-                  <a className="quiet" href={translatePath}
-                    aria-label="translate this post with Google">translate</a>
-                  <a className="quiet danger" href={'/admin/posts/' + p.id + '/delete'} aria-label="moderate this post">
-                    moderate
+        || bookmarkAction)
+        && (
+          <MetaRow className={`postfoot${preview ? ' preview-post-meta' : ''}`}>
+            {showReplyAction && !p.thread_locked && (
+              <a className="quiet post-reply-link" href={resolvedReplyHref} rel="nofollow"
+                aria-label={`${resolvedReplyLabel} to @${p.handle}`}
+              >
+                {resolvedReplyLabel}
+              </a>
+            )}
+            {resolvedContinuationHref && (
+              continuationLabel === '…'
+                ? null
+                : (
+                  <a className="quiet post-continuation-link" href={resolvedContinuationHref} rel="nofollow">
+                    {continuationLabel}
                   </a>
-                </>
-              )}
-              {reportHref && (
-                <a className="quiet report-link" href={reportHref} aria-label={`report post by @${p.handle}`}>report</a>
-              )}
-              {bookmarkAction && (
-                <form method="post" action={`/post/${p.id}/bookmark`}>
-                  <input type="hidden" name="from" value={detailPath} />
-                  <button className="quiet bookmark-link" type="submit"
-                    aria-label={`${p.viewer_bookmarked ? 'remove' : 'add'} bookmark`}>
-                    {p.viewer_bookmarked ? 'unbookmark' : 'bookmark'}
-                  </button>
-                </form>
-              )}
-            </span>
-          )}
-        </MetaRow>
-      )}
+                )
+            )}
+            {(canModerate || reportHref || bookmarkAction) && (
+              <span className="post-actions">
+                {canModerate && (
+                  <>
+                    <a className="quiet" href={translatePath} aria-label="translate this post with Google">translate</a>
+                    <a className="quiet danger" href={'/admin/posts/' + p.id + '/delete'}
+                      aria-label="moderate this post"
+                    >
+                      moderate
+                    </a>
+                  </>
+                )}
+                {reportHref && (
+                  <a className="quiet report-link" href={reportHref} aria-label={`report post by @${p.handle}`}>
+                    report
+                  </a>
+                )}
+                {bookmarkAction && (
+                  <form method="post" action={`/post/${p.id}/bookmark`}>
+                    <input type="hidden" name="from" value={detailPath} />
+                    <button className="quiet bookmark-link" type="submit"
+                      aria-label={`${p.viewer_bookmarked ? 'remove' : 'add'} bookmark`}
+                    >
+                      {p.viewer_bookmarked ? 'unbookmark' : 'bookmark'}
+                    </button>
+                  </form>
+                )}
+              </span>
+            )}
+          </MetaRow>
+        )}
       <ReferenceFollowForms post={p} prefix={formPrefix} user={user}
         returnPath={returnPath || `/post/${p.id}#post-${p.id}`} />
       {parent && (
@@ -970,14 +1011,18 @@ export function Post({
               <>
                 <MetaRow className="parent-quote-top" unread={contextParentUnread}>
                   {user?.id === parent.user_id
-                    ? <span className="postauthor post-context-author">you{parent.mood
-                      && <span className="post-mood">{parent.mood}</span>}</span>
+                    ? (
+                      <span className="postauthor post-context-author">
+                        you{parent.mood
+                          && <span className="post-mood">{parent.mood}</span>}
+                      </span>
+                    )
                     : (
                       <UserReference handle={parent.handle} mood={parent.mood} bio={parent.bio}
-                        noteCount={parent.note_count || 0}
-                        stats={parent.profile_stats} following={parent.viewer_following}
-                        followsViewer={parent.follows_viewer} user={user} href={'/u/' + parent.handle + referenceQuery}
-                        rel={navigationRel} navigationQuery={referenceQuery} referenceData={parent.bio_reference} />
+                        noteCount={parent.note_count || 0} stats={parent.profile_stats}
+                        following={parent.viewer_following} followsViewer={parent.follows_viewer} user={user}
+                        href={'/u/' + parent.handle + referenceQuery} rel={navigationRel}
+                        navigationQuery={referenceQuery} referenceData={parent.bio_reference} />
                     )}
                   {parentContextLabel && (
                     <span className="post-context"
@@ -1009,38 +1054,43 @@ export function Post({
                 </MetaRow>
                 <ContentWarning p={parent} body={parent.body}
                   controlId={`${formPrefix}-parent-${parent.id}-content-warning`}
-                  showImmediately={user?.show_moderated_content === 1 || suppressContentWarning}>
-                  <div className={`post-body${containsAsciiArt(parent.body) ? ' ascii-art' : ''}${
-                    endsWithCodeFence(parent.body) ? ' ends-code-fence' : ''}`}
+                  showImmediately={user?.show_moderated_content === 1 || suppressContentWarning}
+                >
+                  <div
+                    className={`post-body${containsAsciiArt(parent.body) ? ' ascii-art' : ''}${
+                      endsWithCodeFence(parent.body) ? ' ends-code-fence' : ''
+                    }`}
                     dangerouslySetInnerHTML={{
-                    __html: linkify(displayPostBody(renderedPollBody(parent.body)), parent.mention_bios, [], undefined,
+                      __html: linkify(displayPostBody(renderedPollBody(parent.body)), parent.mention_bios, [],
+                        undefined, renderFlags(parent), referenceQuery, parent.hashtag_counts,
+                        parent.mention_note_counts, {
+                        signedIn: !!user,
+                        currentHandle: user?.handle,
+                        formPrefix: `${formPrefix}-parent-${parent.id}`,
+                        mentionFollowing: parent.mention_following,
+                        mentionFollowsViewer: parent.mention_follows_viewer,
+                        mentionProfileStats: parent.mention_profile_stats,
+                        hashtagFollowing: parent.hashtag_following,
+                        hashtagFollowerCounts: parent.hashtag_follower_counts,
+                        linkPreviews: parent.link_previews,
+                      }),
+                    }}
+                  />
+                  {parent.execution_output !== null && parent.execution_output !== undefined
+                    && <ExecutionOutput output={parent.execution_output} />}
+                  <Translation html={parent.translation
+                    ? linkify(displayPostBody(parent.translation), parent.mention_bios, [], undefined,
                       renderFlags(parent), referenceQuery, parent.hashtag_counts, parent.mention_note_counts, {
                       signedIn: !!user,
                       currentHandle: user?.handle,
-                      formPrefix: `${formPrefix}-parent-${parent.id}`,
+                      formPrefix: `${formPrefix}-parent-${parent.id}-translation`,
                       mentionFollowing: parent.mention_following,
                       mentionFollowsViewer: parent.mention_follows_viewer,
                       mentionProfileStats: parent.mention_profile_stats,
                       hashtagFollowing: parent.hashtag_following,
                       hashtagFollowerCounts: parent.hashtag_follower_counts,
                       linkPreviews: parent.link_previews,
-                    }),
-                    }} />
-                  {parent.execution_output !== null && parent.execution_output !== undefined
-                    && <ExecutionOutput output={parent.execution_output} />}
-                  <Translation html={parent.translation
-                    ? linkify(displayPostBody(parent.translation), parent.mention_bios, [], undefined,
-                    renderFlags(parent), referenceQuery, parent.hashtag_counts, parent.mention_note_counts, {
-                    signedIn: !!user,
-                    currentHandle: user?.handle,
-                    formPrefix: `${formPrefix}-parent-${parent.id}-translation`,
-                    mentionFollowing: parent.mention_following,
-                    mentionFollowsViewer: parent.mention_follows_viewer,
-                    mentionProfileStats: parent.mention_profile_stats,
-                    hashtagFollowing: parent.hashtag_following,
-                    hashtagFollowerCounts: parent.hashtag_follower_counts,
-                    linkPreviews: parent.link_previews,
-                  })
+                    })
                     : undefined} />
                   <Poll p={parent} returnPath={returnPath} />
                   <Todo p={parent} user={user} preview={preview} returnPath={returnPath}
@@ -1057,16 +1107,17 @@ export function Post({
           {resolvedContinuationHref && (
             continuationLabel === '…'
               ? null
-              : <a className="quiet post-continuation-link" href={resolvedContinuationHref} rel="nofollow">
+              : (
+                <a className="quiet post-continuation-link" href={resolvedContinuationHref} rel="nofollow">
                   {continuationLabel}
                 </a>
+              )
           )}
           {(canModerate || reportHref || bookmarkAction) && (
             <span className="post-actions">
               {canModerate && (
                 <>
-                  <a className="quiet" href={translatePath}
-                    aria-label="translate this post with Google">translate</a>
+                  <a className="quiet" href={translatePath} aria-label="translate this post with Google">translate</a>
                   <a className="quiet danger" href={'/admin/posts/' + p.id + '/delete'} aria-label="moderate this post">
                     moderate
                   </a>
@@ -1079,7 +1130,8 @@ export function Post({
                 <form method="post" action={`/post/${p.id}/bookmark`}>
                   <input type="hidden" name="from" value={detailPath} />
                   <button className="quiet bookmark-link" type="submit"
-                    aria-label={`${p.viewer_bookmarked ? 'remove' : 'add'} bookmark`}>
+                    aria-label={`${p.viewer_bookmarked ? 'remove' : 'add'} bookmark`}
+                  >
                     {p.viewer_bookmarked ? 'unbookmark' : 'bookmark'}
                   </button>
                 </form>
@@ -1115,8 +1167,9 @@ function FeedPost(props: FeedPostProps) {
       feedPostFragments.delete(feedPostFragments.keys().next().value!)
     }
   }
-  return <article className={fragment.className} id={fragment.id}
-    dangerouslySetInnerHTML={{ __html: fragment.innerHtml }} />
+  return (
+    <article className={fragment.className} id={fragment.id} dangerouslySetInnerHTML={{ __html: fragment.innerHtml }} />
+  )
 }
 
 export function ThreadReplies(
@@ -1160,9 +1213,10 @@ export function ThreadReplies(
     children.set(reply.parent_id!, siblings)
   }
   for (const siblings of children.values()) {
-    const conversationCreatedAt = (reply: PostView) => reply.feed_ancestor_gap && reply.parent?.id !== reply.parent_id
-      ? reply.parent?.created_at || reply.created_at
-      : reply.created_at
+    const conversationCreatedAt = (reply: PostView) =>
+      reply.feed_ancestor_gap && reply.parent?.id !== reply.parent_id
+        ? reply.parent?.created_at || reply.created_at
+        : reply.created_at
     siblings.sort((a, b) => conversationCreatedAt(a).localeCompare(conversationCreatedAt(b)) || a.id - b.id)
   }
   const byId = new Map(replies.map(reply => [reply.id, reply]))
@@ -1205,7 +1259,8 @@ export function ThreadReplies(
     .filter(reply => !reply.deleted_at)
     .map(reply => canonicalDepth(reply.id))
   const shallowestTopLevelDepth = Math.min(...topLevelDepths)
-  const needsProjectedReplyIndent = (reply: PostView) => reply.parent_id === parentId
+  const needsProjectedReplyIndent = (reply: PostView) =>
+    reply.parent_id === parentId
     && shallowestTopLevelDepth === 1 && canonicalDepth(reply.id) > 1
   const shallowestCollapsedPreviewDepth = Math.min(...collapsedPreviewDepths.values())
   const needsCollapsedPreviewIndent = (postId: number) => {
@@ -1225,8 +1280,10 @@ export function ThreadReplies(
     const hasPreviewBelow = (id: number): boolean => {
       const cached = subtreeHasPreview.get(id)
       if (cached !== undefined) return cached
-      const hasPreview = (children.get(id) || []).some(reply => collapsedPreviewPosts.has(reply.id)
-        || hasPreviewBelow(reply.id))
+      const hasPreview = (children.get(id) || []).some(reply =>
+        collapsedPreviewPosts.has(reply.id)
+        || hasPreviewBelow(reply.id)
+      )
       subtreeHasPreview.set(id, hasPreview)
       return hasPreview
     }
@@ -1234,8 +1291,10 @@ export function ThreadReplies(
     const hasVisiblePostBelow = (id: number): boolean => {
       const cached = subtreeHasVisiblePost.get(id)
       if (cached !== undefined) return cached
-      const hasVisiblePost = (children.get(id) || []).some(reply => !reply.deleted_at
-        || hasVisiblePostBelow(reply.id))
+      const hasVisiblePost = (children.get(id) || []).some(reply =>
+        !reply.deleted_at
+        || hasVisiblePostBelow(reply.id)
+      )
       subtreeHasVisiblePost.set(id, hasVisiblePost)
       return hasVisiblePost
     }
@@ -1288,9 +1347,12 @@ export function ThreadReplies(
     if (branchParentId !== parentId) continue
     const parent = byId.get(branchParentId)
     const visibleSiblings = siblings.filter(sibling => !sibling.deleted_at)
-    const loadedDirectSiblings = visibleSiblings.filter(sibling => (sibling.parent?.id || sibling.parent_id) === branchParentId)
+    const loadedDirectSiblings = visibleSiblings.filter(sibling =>
+      (sibling.parent?.id || sibling.parent_id) === branchParentId
+    )
     if (parent?.direct_reply_count != null && parent.direct_reply_count > loadedDirectSiblings.length
-      && visibleSiblings.length && !visibleSiblings.some(sibling => sibling.feed_ancestor_gap)) {
+      && visibleSiblings.length && !visibleSiblings.some(sibling => sibling.feed_ancestor_gap))
+    {
       omittedSiblingGapPosts.add((loadedDirectSiblings[0] || visibleSiblings[0]).id)
     }
   }
@@ -1332,26 +1394,39 @@ export function ThreadReplies(
         continuationReturnPath ? `${continuationReturnPath}#post-${reply.id}` : anchoredReturnPath,
       )
       : undefined
-    const omissionMarker = (label: string) => omissionHref
-      ? <a className="quiet thread-ancestor-gap post-continuation-link" href={omissionHref}
-          aria-label={label} rel="nofollow">…</a>
-      : <div className="quiet thread-ancestor-gap" aria-label={label}>…</div>
+    const omissionMarker = (label: string) =>
+      omissionHref
+        ? (
+          <a className="quiet thread-ancestor-gap post-continuation-link" href={omissionHref} aria-label={label}
+            rel="nofollow"
+          >
+            …
+          </a>
+        )
+        : <div className="quiet thread-ancestor-gap" aria-label={label}>…</div>
     return (
       <div
         className={`reply-node${collapsedPreviewPath.has(reply.id) ? ' collapsed-preview-path' : ''}${
           collapsedPreviewPosts.has(reply.id) ? ' collapsed-preview-post' : ''
-        }${needsCollapsedPreviewIndent(reply.id) ? ' collapsed-preview-deeper' : ''
-        }${needsProjectedReplyIndent(reply) ? ' projected-reply-deeper' : ''
-        }${reply.feed_ancestor_gap && reply.parent?.id !== reply.parent_id ? ' omitted-parent-reply' : ''
-        }`}
+        }${needsCollapsedPreviewIndent(reply.id) ? ' collapsed-preview-deeper' : ''}${
+          needsProjectedReplyIndent(reply) ? ' projected-reply-deeper' : ''
+        }${reply.feed_ancestor_gap && reply.parent?.id !== reply.parent_id ? ' omitted-parent-reply' : ''}`}
         key={reply.id}
       >
         {collapsedPreviewGapPosts.has(reply.id) && (
           expansionControlId
-            ? <label className="quiet thread-ancestor-gap collapsed-preview-gap thread-fold-expander"
-                htmlFor={expansionControlId} aria-label="Expand earlier replies">…</label>
-            : <div className="quiet thread-ancestor-gap collapsed-preview-gap"
-                aria-label="Earlier replies hidden">…</div>
+            ? (
+              <label className="quiet thread-ancestor-gap collapsed-preview-gap thread-fold-expander"
+                htmlFor={expansionControlId} aria-label="Expand earlier replies"
+              >
+                …
+              </label>
+            )
+            : (
+              <div className="quiet thread-ancestor-gap collapsed-preview-gap" aria-label="Earlier replies hidden">
+                …
+              </div>
+            )
         )}
         {omittedSiblingGapPosts.has(reply.id) && (
           omissionMarker('Earlier replies omitted')
@@ -1359,22 +1434,22 @@ export function ThreadReplies(
         {reply.feed_ancestor_gap && (
           omissionMarker('Earlier replies omitted')
         )}
-        <FeedPost p={reply} user={user} showParent={false}
-          returnPath={postReturnPath}
+        <FeedPost p={reply} user={user} showParent={false} returnPath={postReturnPath}
           tappableHref={anchorReplyNavigation
             ? replyAnchorReturnPath(replyPageId, reply.id, postReturnPath)
-            : undefined}
-          backHref={reply.id === backPostId ? backHref : undefined}
+            : undefined} backHref={reply.id === backPostId ? backHref : undefined}
           collapsedExpansionControlId={collapsedPreviewPosts.has(reply.id) ? expansionControlId : undefined}
           contextUnread={contextUnreadPostIds?.has(reply.id)}
           contextDirectedUnread={contextDirectedUnreadPostIds?.has(reply.id)} highlightTerms={highlightTerms}
           replyHref={user
             ? replyOnPage
-              ? `/post/${replyPageId}?reply=1&to=${reply.id}${returnPath
-                ? '&from=' + encodeURIComponent(replyReturnPath
-                  ? `${replyReturnPath}#post-${reply.id}`
-                  : returnPath)
-                : ''}#post-${reply.id}`
+              ? `/post/${replyPageId}?reply=1&to=${reply.id}${
+                returnPath
+                  ? '&from=' + encodeURIComponent(replyReturnPath
+                    ? `${replyReturnPath}#post-${reply.id}`
+                    : returnPath)
+                  : ''
+              }#post-${reply.id}`
               : undefined
             : `/post/${replyPageId}?reply=1&to=${reply.id}&from=${encodeURIComponent(postReturnPath)}#post-${reply.id}`}
           continuationHref={continuationHref} continuationLabel={continuationLabel} tappable
@@ -1405,16 +1480,22 @@ export function ThreadReplies(
     const branch = (children.get(id) || []).filter(reply => !reply.deleted_at || visibleDescendantCount(reply.id) > 0)
     if (!branch.length) return null
     return (
-      <div className={`reply-branch${(collapsedPreviewPostIds.length || collapseWithoutPreviews) && depth === 1
-        ? ' feed-thread-collapsed-branch'
-        : ''}${collapsedPreviewPath.has(id) ? ' collapsed-preview-path-branch' : ''}`}>
+      <div className={`reply-branch${
+        (collapsedPreviewPostIds.length || collapseWithoutPreviews) && depth === 1
+          ? ' feed-thread-collapsed-branch'
+          : ''
+      }${collapsedPreviewPath.has(id) ? ' collapsed-preview-path-branch' : ''}`}>
         <div className="thread-branch-content">
           {collapsedPreviewDescendantGapPosts.has(id) && (
             expansionControlId
-              ? <label className="quiet thread-ancestor-gap collapsed-preview-gap thread-fold-expander"
-                  htmlFor={expansionControlId} aria-label="Expand hidden replies">…</label>
-              : <div className="quiet thread-ancestor-gap collapsed-preview-gap"
-                  aria-label="Replies hidden">…</div>
+              ? (
+                <label className="quiet thread-ancestor-gap collapsed-preview-gap thread-fold-expander"
+                  htmlFor={expansionControlId} aria-label="Expand hidden replies"
+                >
+                  …
+                </label>
+              )
+              : <div className="quiet thread-ancestor-gap collapsed-preview-gap" aria-label="Replies hidden">…</div>
           )}
           {branch.map(reply => {
             const descendantCount = visibleDescendantCount(reply.id)
@@ -1439,11 +1520,19 @@ export function FeedThreads(
   { posts, user, returnPath, contextUnreadPostIds, contextDirectedUnreadPostIds, highlightTerms = [],
     hideTopMeta = false, promoteAncestors = false, expandedRootId, expandedByDefault = false,
     collapseWithoutPreviews = false, className }: {
-      posts: PostView[]; user: User | null;
-      returnPath: string; contextUnreadPostIds?: ReadonlySet<number>;
-      contextDirectedUnreadPostIds?: ReadonlySet<number>; highlightTerms?: string[]; hideTopMeta?: boolean;
-      promoteAncestors?: boolean | 'all'; expandedRootId?: number; expandedByDefault?: boolean;
-      collapseWithoutPreviews?: boolean; className?: string },
+      posts: PostView[]
+      user: User | null
+      returnPath: string
+      contextUnreadPostIds?: ReadonlySet<number>
+      contextDirectedUnreadPostIds?: ReadonlySet<number>
+      highlightTerms?: string[]
+      hideTopMeta?: boolean
+      promoteAncestors?: boolean | 'all'
+      expandedRootId?: number
+      expandedByDefault?: boolean
+      collapseWithoutPreviews?: boolean
+      className?: string
+    },
 ) {
   if (!posts.length) return null
   const belongsToDeletedTopLevel = (post: PostView) => {
@@ -1466,10 +1555,10 @@ export function FeedThreads(
     if (!promoteAncestors && children.length < 2) continue
     if (children.length < 2 && parent.parent_id && ids.has(parent.parent_id)
       && !contextUnreadPostIds?.has(parent.parent_id)) continue
-    treePosts.push({ ...parent, user_id: parent.user_id ?? -1,
-      parent_id: parent.parent_id ?? null, reply_count: parent.reply_count || 0,
+    treePosts.push({ ...parent, user_id: parent.user_id ?? -1, parent_id: parent.parent_id ?? null,
+      reply_count: parent.reply_count || 0,
       ...(promoteAncestors && promoteAncestors !== 'all' && parent.parent_id != null
-        && (!ids.has(parent.parent_id) || contextUnreadPostIds?.has(parent.parent_id))
+          && (!ids.has(parent.parent_id) || contextUnreadPostIds?.has(parent.parent_id))
         ? { feed_ancestor_gap: true }
         : {}) })
     ids.add(parent.id)
@@ -1499,8 +1588,8 @@ export function FeedThreads(
         while (ancestor) {
           if (ids.has(ancestor.id)) break
           if (!ids.has(ancestor.id)) {
-            treePosts.push({ ...ancestor, user_id: ancestor.user_id ?? -1,
-              parent_id: ancestor.parent_id ?? null, reply_count: ancestor.reply_count || 0 })
+            treePosts.push({ ...ancestor, user_id: ancestor.user_id ?? -1, parent_id: ancestor.parent_id ?? null,
+              reply_count: ancestor.reply_count || 0 })
             ids.add(ancestor.id)
           }
           ancestor = ancestor.parent
@@ -1530,8 +1619,8 @@ export function FeedThreads(
           if (children.length < 2) continue
           const parent = children.find(child => child.parent?.id === parentId)?.parent
           if (!parent || ids.has(parent.id)) continue
-          treePosts.push({ ...parent, user_id: parent.user_id ?? -1,
-            parent_id: parent.parent_id ?? null, reply_count: parent.reply_count || 0 })
+          treePosts.push({ ...parent, user_id: parent.user_id ?? -1, parent_id: parent.parent_id ?? null,
+            reply_count: parent.reply_count || 0 })
           ids.add(parent.id)
           promotedSharedParent = true
         }
@@ -1616,33 +1705,32 @@ export function FeedThreads(
           return target.pathname + target.search
         })()
         return (
-          <div className={`post-page-thread feed-thread${collapseWithoutPreviews
-            ? ' feed-thread-no-collapsed-previews'
-            : ''}${className ? ` ${className}` : ''}`} key={post.id}>
+          <div className={`post-page-thread feed-thread${
+            collapseWithoutPreviews
+              ? ' feed-thread-no-collapsed-previews'
+              : ''
+          }${className ? ` ${className}` : ''}`} key={post.id}>
             {foldControlId && (
               <input className="thread-fold-input" type="checkbox" id={foldControlId} defaultChecked={collapsed} />
             )}
             <div className={`thread-root${post.profile_pinned ? ' profile-pinned-surround' : ''}`}>
               <FeedPost p={post} user={user} tappable returnPath={anchoredReturnPath} highlightTerms={highlightTerms}
                 hideTopMeta={hideTopMeta} contextUnread={contextUnreadPostIds?.has(post.id)}
-                foldControlId={foldControlId}
-                collapsedExpansionControlId={collapsed ? foldControlId : undefined}
+                foldControlId={foldControlId} collapsedExpansionControlId={collapsed ? foldControlId : undefined}
                 contextParentUnread={!!post.parent && contextUnreadPostIds?.has(post.parent.id)}
                 contextDirectedUnread={contextDirectedUnreadPostIds?.has(post.id)} continuationHref={continuesElsewhere
                 ? `/post/${post.id}?from=${encodeURIComponent(anchoredReturnPath)}`
                 : undefined} continuationLabel="…" />
             </div>
             <ThreadReplies parentId={post.id} replies={treePosts} user={user} returnPath={anchoredReturnPath}
-              anchorReplyNavigation replyOnPage replyReturnPath={returnPath}
-              showMissingContinuations continuationLabel="…"
-              continuationReturnPath={collapsed || canCollapse && expandedRootId === post.id
-                ? expandedReturnPath
-                : returnPath}
+              anchorReplyNavigation replyOnPage replyReturnPath={returnPath} showMissingContinuations
+              continuationLabel="…" continuationReturnPath={collapsed || canCollapse && expandedRootId === post.id
+              ? expandedReturnPath
+              : returnPath}
               omissionHref={`/post/${post.id}?from=${encodeURIComponent(`${expandedReturnPath}#post-${post.id}`)}`}
-              expansionControlId={foldControlId}
-              contextUnreadPostIds={contextUnreadPostIds} contextDirectedUnreadPostIds={contextDirectedUnreadPostIds}
-              highlightTerms={highlightTerms} hideTopMeta={hideTopMeta}
-              collapseWithoutPreviews={collapseWithoutPreviews}
+              expansionControlId={foldControlId} contextUnreadPostIds={contextUnreadPostIds}
+              contextDirectedUnreadPostIds={contextDirectedUnreadPostIds} highlightTerms={highlightTerms}
+              hideTopMeta={hideTopMeta} collapseWithoutPreviews={collapseWithoutPreviews}
               collapsedPreviewPostIds={canCollapse ? collapsedPreview.map(reply => reply.id) : []} />
           </div>
         )

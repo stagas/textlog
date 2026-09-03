@@ -188,14 +188,22 @@ describe('RSS and Atom feeds', () => {
     const database = (app as any).database as Database
     for (const kind of ['latest', 'hot'] as const) {
       const syndication = await executeDatabaseDomain(database, 'syndication.load', {
-        kind, origin: 'https://textlog.cc',
+        kind,
+        origin: 'https://textlog.cc',
       })
       const api = kind === 'latest'
         ? await executeDatabaseDomain(database, 'api.publicRead', {
-          kind: 'collection', origin: 'https://textlog.cc', limit: 20, before: null, excludeWhispers: true,
+          kind: 'collection',
+          origin: 'https://textlog.cc',
+          limit: 20,
+          before: null,
+          excludeWhispers: true,
         })
         : await executeDatabaseDomain(database, 'api.publicRead', {
-          kind: 'hot', origin: 'https://textlog.cc', limit: 20, cursor: null,
+          kind: 'hot',
+          origin: 'https://textlog.cc',
+          limit: 20,
+          cursor: null,
         })
 
       expect(syndication.status).toBe('ready')
@@ -211,10 +219,17 @@ describe('RSS and Atom feeds', () => {
     const app = fixture()
     const database = (app as any).database as Database
     const syndication = await executeDatabaseDomain(database, 'syndication.load', {
-      kind: 'user', origin: 'https://textlog.cc', identifier: 'Bob',
+      kind: 'user',
+      origin: 'https://textlog.cc',
+      identifier: 'Bob',
     })
     const api = await executeDatabaseDomain(database, 'api.publicRead', {
-      kind: 'collection', origin: 'https://textlog.cc', limit: 20, before: null, handle: 'Bob', topLevelOnly: true,
+      kind: 'collection',
+      origin: 'https://textlog.cc',
+      limit: 20,
+      before: null,
+      handle: 'Bob',
+      topLevelOnly: true,
     })
     const feed = await (await app.request('https://textlog.cc/api/v1/users/Bob/posts.atom')).text()
 

@@ -1,6 +1,7 @@
 import { clientErrorPage, currentPage, form, instantScrollPath, page, redirect, safeNext } from './shared'
 
 import type { Hono } from 'hono'
+import { clearAnonymousPostPageCache } from '../anonymous-post-page-cache'
 import {
   Explore,
   Reply,
@@ -8,9 +9,9 @@ import {
 import { isValidHashtag, normalizeHashtag, normalizeHashtagSpelling } from '../content'
 import { databaseService } from '../database-service'
 import {
+  clearPendingFollowCookie,
   exploreWelcome,
   exploreWelcomeCookie,
-  clearPendingFollowCookie,
   pendingFollow,
   pendingFollowCookie,
   safeRefererPath,
@@ -19,7 +20,6 @@ import { logError } from '../log'
 import { sendPushForFollow, sendPushForTagFollow, sendPushForUserFollow } from '../push'
 import { scheduleRelationshipFeedInvalidation } from '../relationship-feed-invalidation'
 import { currentUser } from '../utils'
-import { clearAnonymousPostPageCache } from '../anonymous-post-page-cache'
 
 function guardedPendingFollowReturnPath(returnPath: string) {
   const url = new URL(returnPath, 'http://textlog.local')
@@ -49,7 +49,9 @@ export function registerInteractionsRoutes(app: Hono) {
       const handle = pending.target.toLowerCase()
       if (/^[a-z0-9_]{2,24}$/.test(handle)) {
         const result = await databaseService().call('api.relationshipMutation', {
-          userId: user.id, handle, action: 'follow',
+          userId: user.id,
+          handle,
+          action: 'follow',
         })
         if (result.status === 'ready' && result.changed) followed = { id: result.targetId, handle: result.targetHandle }
       }
@@ -58,7 +60,9 @@ export function registerInteractionsRoutes(app: Hono) {
       const tag = normalizeHashtag(pending.target)
       if (isValidHashtag(tag)) {
         const result = await databaseService().call('api.tagRelationshipMutation', {
-          userId: user.id, tag, action: 'follow',
+          userId: user.id,
+          tag,
+          action: 'follow',
         })
         if (result.changed) {
           void sendPushForTagFollow(user.id, user.handle, tag)
@@ -85,7 +89,8 @@ export function registerInteractionsRoutes(app: Hono) {
     const result = await databaseService().call('interactions.toggleBookmark', { userId: user.id, postId })
     if (result.status === 'not_found') return c.text('Not found', 404)
     clearAnonymousPostPageCache()
-    return redirect(instantScrollPath(f.from ? safeNext(f.from)
+    return redirect(instantScrollPath(f.from
+      ? safeNext(f.from)
       : safeRefererPath(c.req.header('referer'), c.req.url, `/post/${postId}`)))
   })
 

@@ -2,8 +2,8 @@ import { describe, expect, test } from 'bun:test'
 import { NAVIGATION_CAPTCHA_LIFETIME_MS, NavigationCaptchaChallenges, NavigationCaptchaGate,
   nestedFromDepth } from './navigation-captcha'
 import { CLIENT_ERROR_RATE_LIMIT, CLIENT_ERROR_RATE_WINDOW_SECONDS, ClientErrorRateLimiter,
-  HOURLY_REQUEST_BLOCK_SECONDS, HOURLY_REQUEST_RATE_LIMIT, HOURLY_REQUEST_RATE_WINDOW_SECONDS,
-  rateLimitedResponse, rateLimitMessage, REQUEST_RATE_LIMIT, RequestRateLimiter } from './request-rate-limit'
+  HOURLY_REQUEST_BLOCK_SECONDS, HOURLY_REQUEST_RATE_LIMIT, HOURLY_REQUEST_RATE_WINDOW_SECONDS, rateLimitedResponse,
+  rateLimitMessage, REQUEST_RATE_LIMIT, RequestRateLimiter } from './request-rate-limit'
 
 describe('in-memory request rate limiter', () => {
   test('allows a modestly higher site-wide request burst', () => {
@@ -113,8 +113,9 @@ describe('nested navigation CAPTCHA', () => {
     expect(challenges.consume('203.0.113.20', second.token, ' abc123 ', 2_000)).toBe(true)
     expect(challenges.consume('203.0.113.20', second.token, 'abc123', 2_000)).toBe(false)
     const expired = challenges.issue('203.0.113.20', 1_000)
-    expect(challenges.consume('203.0.113.20', expired.token, 'abc123',
-      1_000 + NAVIGATION_CAPTCHA_LIFETIME_MS)).toBe(false)
+    expect(challenges.consume('203.0.113.20', expired.token, 'abc123', 1_000 + NAVIGATION_CAPTCHA_LIFETIME_MS)).toBe(
+      false,
+    )
   })
 
   test('keeps the triggering address gated until it passes or the UTC day changes', () => {

@@ -154,10 +154,9 @@ try {
   seedDatabase(databasePath, users, posts, fullParsing)
   server = Bun.spawn([process.execPath, 'src/server.tsx'], { cwd: join(import.meta.dir, '..'),
     env: { ...process.env, NODE_ENV: 'test', DEV_RELOAD: 'false', ENABLE_MATERIALIZED_MEMORY_CACHE: 'true',
-      HOST: '127.0.0.1', PORT: String(port),
-      DATABASE_PATH: databasePath, DATABASE_BACKUP_DIR: join(directory, 'backups'), MODERATION_DISABLED: 'true',
-      LOG_COLOR: 'false', IP_PSEUDONYM_SECRET: 'offline-stress-test-secret-not-for-production' }, stdout: 'ignore',
-    stderr: 'inherit' })
+      HOST: '127.0.0.1', PORT: String(port), DATABASE_PATH: databasePath,
+      DATABASE_BACKUP_DIR: join(directory, 'backups'), MODERATION_DISABLED: 'true', LOG_COLOR: 'false',
+      IP_PSEUDONYM_SECRET: 'offline-stress-test-secret-not-for-production' }, stdout: 'ignore', stderr: 'inherit' })
   await waitForServer(origin, server)
   const results: Result[] = []
   for (const route of routes) {

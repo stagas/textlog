@@ -17,10 +17,12 @@ export function insertRateLimitedPost(
 ): PostInsert {
   return database.transaction(() => {
     const supportsPendingKey = !!pendingKey && !!database.query(
-      "SELECT 1 FROM pragma_table_info('posts') WHERE name='pending_key'",
+      'SELECT 1 FROM pragma_table_info(\'posts\') WHERE name=\'pending_key\'',
     ).get()
-    const pendingDuplicate = supportsPendingKey ? database.query('SELECT id FROM posts WHERE pending_key=?')
-      .get(pendingKey) as { id: number } | null : null
+    const pendingDuplicate = supportsPendingKey
+      ? database.query('SELECT id FROM posts WHERE pending_key=?')
+        .get(pendingKey) as { id: number } | null
+      : null
     if (pendingDuplicate) return { id: pendingDuplicate.id, duplicate: true }
     const duplicate = database.query(`
       SELECT id FROM posts

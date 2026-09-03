@@ -2,10 +2,10 @@ import type { Context, Hono, MiddlewareHandler } from 'hono'
 import { API_DEFAULT_REPLY_DEPTH, API_MAX_REPLY_DEPTH, apiOrigin, encodeCursor, parseCollectionParams } from '../api'
 import { decodeActivityCursor } from '../api-activity'
 import { subscribeToPosts } from '../api-broker'
-import { appName, clientIpHeaderName } from '../brand'
 import { BIO_MAX } from '../bio-body'
-import { isValidHashtag, normalizeHashtag } from '../content'
+import { appName, clientIpHeaderName } from '../brand'
 import { ApiDocs, EmbedExamples } from '../components/pages'
+import { isValidHashtag, normalizeHashtag } from '../content'
 import { type DatabaseService, databaseService } from '../database-service'
 import { decodeHotCursor } from '../hot'
 import { logError } from '../log'
@@ -14,7 +14,7 @@ import { PAGE_SIZE_CHOICES, type PageSizeChoice } from '../request-preferences'
 import { MAX_SEARCH_LENGTH, normalizeSearchQuery, searchExpression } from '../search'
 import type { User } from '../types'
 import { apiUser, currentUser } from '../utils'
-import { registerApiWriteRoutes, type MagicLinkSender } from './api-write'
+import { type MagicLinkSender, registerApiWriteRoutes } from './api-write'
 import { page } from './shared'
 import { registerSyndicationRoutes } from './syndication'
 
@@ -73,12 +73,17 @@ function openApiDocument() {
       tags: { type: 'array', items: { type: 'string' } },
       mentions: { type: 'array', items: { type: 'string' } },
       link_previews: { type: 'object', additionalProperties: { $ref: '#/components/schemas/LinkPreview' } },
-      location: { anyOf: [{ type: 'object', required: ['query', 'latitude', 'longitude', 'displayName', 'url',
-        'preview'], properties: {
-        query: { type: 'string' }, latitude: { type: 'number' }, longitude: { type: 'number' },
-        displayName: { type: 'string' }, url: { type: 'string', format: 'uri' },
-        preview: { $ref: '#/components/schemas/LinkPreview' },
-      } }, { type: 'null' }] },
+      location: {
+        anyOf: [{ type: 'object', required: ['query', 'latitude', 'longitude', 'displayName', 'url', 'preview'],
+          properties: {
+            query: { type: 'string' },
+            latitude: { type: 'number' },
+            longitude: { type: 'number' },
+            displayName: { type: 'string' },
+            url: { type: 'string', format: 'uri' },
+            preview: { $ref: '#/components/schemas/LinkPreview' },
+          } }, { type: 'null' }],
+      },
       poll: { anyOf: [{ $ref: '#/components/schemas/Poll' }, { type: 'null' }] },
       url: { type: 'string', format: 'uri' },
       api_url: { type: 'string', format: 'uri' },
@@ -153,8 +158,7 @@ function openApiDocument() {
   const formatParameter = { name: 'format', in: 'path', required: true,
     schema: { type: 'string', enum: ['rss', 'atom'] } }
   const postIdParameter = { name: 'id', in: 'path', required: true, schema: { type: 'integer', minimum: 1 } }
-  const draftIdParameter = { name: 'id', in: 'path', required: true,
-    schema: { type: 'string', format: 'uuid' } }
+  const draftIdParameter = { name: 'id', in: 'path', required: true, schema: { type: 'string', format: 'uuid' } }
   const handleParameter = { name: 'handle', in: 'path', required: true, schema: { type: 'string' } }
   const tagParameter = { name: 'tag', in: 'path', required: true,
     schema: { type: 'string', pattern: '^[a-zA-Z0-9_]+$' } }
@@ -174,8 +178,8 @@ function openApiDocument() {
         get: { summary: 'All posts', security: optionalAuthSecurity,
           description: 'Bearer authentication is optional. Authenticated responses add unread state to each post and '
             + 'include has_unread and unread_count.', parameters: collectionParameters,
-          responses: { ...jsonResponses, '200': collectionResponse },
-          'x-root-aliases': ['/all.json'], 'x-backward-compatible-aliases': ['/feeds/latest', '/latest.json'] },
+          responses: { ...jsonResponses, '200': collectionResponse }, 'x-root-aliases': ['/all.json'],
+          'x-backward-compatible-aliases': ['/feeds/latest', '/latest.json'] },
       },
       '/feeds/all/read': {
         'x-backward-compatible-aliases': ['/feeds/latest/read'],
@@ -208,15 +212,17 @@ function openApiDocument() {
         'x-backward-compatible-aliases': ['/activities/for-you/conversations'],
         get: { summary: 'My Feed activity grouped like the web feed', security: authSecurity,
           parameters: threadedFeedParameters,
-          responses: { ...activityResponses, '200': { description: 'A web-compatible threaded activity feed',
-            content: { 'application/json': { schema: { $ref: '#/components/schemas/ThreadedActivityFeed' } } } } } },
+          responses: { ...activityResponses,
+            '200': { description: 'A web-compatible threaded activity feed',
+              content: { 'application/json': { schema: { $ref: '#/components/schemas/ThreadedActivityFeed' } } } } } },
       },
       '/activities/@/conversations': {
         'x-backward-compatible-aliases': ['/activities/to-me/conversations'],
         get: { summary: '@ activity grouped like the web feed', security: authSecurity,
           parameters: threadedFeedParameters,
-          responses: { ...activityResponses, '200': { description: 'A web-compatible threaded activity feed',
-            content: { 'application/json': { schema: { $ref: '#/components/schemas/ThreadedActivityFeed' } } } } } },
+          responses: { ...activityResponses,
+            '200': { description: 'A web-compatible threaded activity feed',
+              content: { 'application/json': { schema: { $ref: '#/components/schemas/ThreadedActivityFeed' } } } } } },
       },
       '/activities/my-feed/read': {
         'x-backward-compatible-aliases': ['/activities/for-you/read'],
@@ -263,8 +269,7 @@ function openApiDocument() {
           description: 'Returns the complete text enriched with relevant hashtags. It does not save a post.',
           requestBody: requestBody({ type: 'object', required: ['body'], properties: {
             body: { type: 'string', minLength: 1, maxLength: POST_MAX },
-          } }),
-          responses: { ...writeResponses, '200': dataResponse({ type: 'object', required: ['body'], properties: {
+          } }), responses: { ...writeResponses, '200': dataResponse({ type: 'object', required: ['body'], properties: {
             body: { type: 'string', minLength: 1, maxLength: POST_MAX },
           } }), '422': errorResponse('The autotagged text exceeds the post limits'),
             '503': errorResponse('Autotag is unavailable') } },
@@ -551,30 +556,40 @@ function openApiDocument() {
               description: 'Whether this unread latest-feed post is directed to the viewer.' },
           } }],
       }, ThreadedConversation: {
-        type: 'object', required: ['id', 'posts'], properties: {
+        type: 'object',
+        required: ['id', 'posts'],
+        properties: {
           id: { type: 'integer', description: 'Canonical top-level conversation post ID.' },
           posts: { type: 'array', items: { $ref: '#/components/schemas/ThreadedFeedPost' } },
         },
       }, ThreadedFeed: {
-        type: 'object', required: ['data', 'pagination'], properties: {
+        type: 'object',
+        required: ['data', 'pagination'],
+        properties: {
           data: { type: 'array', items: { $ref: '#/components/schemas/ThreadedConversation' } },
           pagination: { type: 'object', required: ['next_cursor', 'previous_cursor'], properties: {
-            next_cursor: { type: ['string', 'null'] }, previous_cursor: { type: ['string', 'null'] },
+            next_cursor: { type: ['string', 'null'] },
+            previous_cursor: { type: ['string', 'null'] },
           } },
         },
       }, ThreadedActivityFeed: {
-        type: 'object', required: ['data', 'has_unread', 'pagination'], properties: {
+        type: 'object',
+        required: ['data', 'has_unread', 'pagination'],
+        properties: {
           data: { type: 'array', items: { oneOf: [
             { type: 'object', required: ['type', 'conversation'], properties: {
-              type: { const: 'conversation' }, conversation: { $ref: '#/components/schemas/ThreadedConversation' },
+              type: { const: 'conversation' },
+              conversation: { $ref: '#/components/schemas/ThreadedConversation' },
             } },
             { type: 'object', required: ['type', 'activity'], properties: {
-              type: { const: 'activity' }, activity: { $ref: '#/components/schemas/Activity' },
+              type: { const: 'activity' },
+              activity: { $ref: '#/components/schemas/Activity' },
             } },
           ] } },
           has_unread: { type: 'boolean' },
           pagination: { type: 'object', required: ['next_cursor', 'previous_cursor'], properties: {
-            next_cursor: { type: ['string', 'null'] }, previous_cursor: { type: ['string', 'null'] },
+            next_cursor: { type: ['string', 'null'] },
+            previous_cursor: { type: ['string', 'null'] },
           } },
         },
       }, ActivityReadRequest: {
@@ -850,7 +865,10 @@ export function registerApiRoutes(app: Hono, appUrl: string | null | undefined =
   app.post('/api/v1/feeds/latest/read-all', markAllFeedRead)
 
   for (const [path, kind] of [
-    ['my-feed', 'personalizedFor'], ['for-you', 'personalizedFor'], ['@', 'toMeFor'], ['to-me', 'toMeFor'],
+    ['my-feed', 'personalizedFor'],
+    ['for-you', 'personalizedFor'],
+    ['@', 'toMeFor'],
+    ['to-me', 'toMeFor'],
   ] as const) {
     app.get(`/api/v1/activities/${path}`, async c => {
       const user = requestApiUser(c.req.raw)
@@ -907,7 +925,10 @@ export function registerApiRoutes(app: Hono, appUrl: string | null | undefined =
           `limit must be one of ${PAGE_SIZE_CHOICES.join(', ')} and cursor must be a valid opaque cursor`, 400)
       }
       return jsonResponse(await service.call('api.threadedActivityFeed', {
-        user, origin: apiOrigin(c.req.url, appUrl), toMe, page: parsed.before || 1,
+        user,
+        origin: apiOrigin(c.req.url, appUrl),
+        toMe,
+        page: parsed.before || 1,
         pageSize: parsed.limit as PageSizeChoice,
       }), 200, 'no-store')
     })
@@ -940,8 +961,12 @@ export function registerApiRoutes(app: Hono, appUrl: string | null | undefined =
     if (!parsed) {
       return apiError('invalid_pagination', 'limit must be 1–100 and cursor must be a valid opaque cursor', 400)
     }
-    return jsonResponse(await service.call('api.bookmarks', { userId: user.id, origin: apiOrigin(c.req.url, appUrl),
-      query, limit: parsed.limit, before: parsed.before }), 200, 'no-store')
+    return jsonResponse(
+      await service.call('api.bookmarks', { userId: user.id, origin: apiOrigin(c.req.url, appUrl), query,
+        limit: parsed.limit, before: parsed.before }),
+      200,
+      'no-store',
+    )
   })
 
   const hotFeed = async (c: Context) => {

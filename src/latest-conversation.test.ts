@@ -60,8 +60,10 @@ test('Latest retains a root when a fresh direct reply anchors the newest nested 
   ]
 
   expect(projectRecentConversation(conversation).keepsRoot).toBeTrue()
-  expect(projectRecentConversation([conversation[0], conversation[1],
-    { ...root, created_at: '2026-08-24 17:34:29' }]).keepsRoot).toBeTrue()
+  expect(
+    projectRecentConversation([conversation[0], conversation[1], { ...root, created_at: '2026-08-24 17:34:29' }])
+      .keepsRoot,
+  ).toBeTrue()
   expect(projectRecentConversation([
     conversation[0],
     { ...conversation[1], created_at: '2026-08-24 18:20:32' },

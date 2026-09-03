@@ -7,8 +7,19 @@ type ModerationResult =
   | ModerationFailure
 
 const moderationCategories = [
-  'sexual', 'sexual/minors', 'harassment', 'harassment/threatening', 'hate', 'hate/threatening', 'illicit',
-  'illicit/violent', 'self-harm', 'self-harm/intent', 'self-harm/instructions', 'violence', 'violence/graphic',
+  'sexual',
+  'sexual/minors',
+  'harassment',
+  'harassment/threatening',
+  'hate',
+  'hate/threatening',
+  'illicit',
+  'illicit/violent',
+  'self-harm',
+  'self-harm/intent',
+  'self-harm/instructions',
+  'violence',
+  'violence/graphic',
 ] as const
 
 type ModerationCategory = typeof moderationCategories[number]
@@ -44,9 +55,10 @@ export function isModerationFlagged(result: ModerationApiResult, thresholds: Mod
   return decision === null ? null : decision !== false
 }
 
-function moderationMatch(result: ModerationApiResult, thresholds: ModerationThresholds):
-  false | { category: ModerationCategory; score: number } | null
-{
+function moderationMatch(result: ModerationApiResult, thresholds: ModerationThresholds): false | {
+  category: ModerationCategory
+  score: number
+} | null {
   if (!Object.keys(thresholds).length && result.flagged !== true) return false
 
   const matches: { category: ModerationCategory; score: number }[] = []
@@ -126,8 +138,8 @@ export async function moderateText(input: string): Promise<ModerationResult> {
     if (match === null) return { ok: false, reason: 'unavailable' }
     return match
       ? { ok: false, reason: 'flagged', ...match }
-      : { ok: true, warning: moderationWarning(data.results[0],
-        parseModerationThresholds(Bun.env.MODERATION_CATEGORY_THRESHOLDS)) }
+      : { ok: true,
+        warning: moderationWarning(data.results[0], parseModerationThresholds(Bun.env.MODERATION_CATEGORY_THRESHOLDS)) }
   }
   catch (error) {
     console.error('Moderation request failed', error)
@@ -137,9 +149,13 @@ export async function moderateText(input: string): Promise<ModerationResult> {
 
 export function moderationMessage(result: ModerationFailure) {
   if (result.reason === 'flagged') {
-    return `This text may violate our content rules (${result.category}: ${result.score.toFixed(4)}). Please revise it and try again.`
+    return `This text may violate our content rules (${result.category}: ${
+      result.score.toFixed(4)
+    }). Please revise it and try again.`
   }
-  if (result.reason === 'rate_limited') return 'Content verification is busy right now. Please wait a moment and try again.'
+  if (result.reason === 'rate_limited') {
+    return 'Content verification is busy right now. Please wait a moment and try again.'
+  }
   return 'We could not verify this text right now. Please try again in a moment.'
 }
 

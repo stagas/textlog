@@ -9,12 +9,12 @@ import { appName, clientIpHeaderName } from './brand'
 import { BlogBuildingWithoutJavascript } from './components/blog-building-without-javascript'
 import { BlogRecap } from './components/blog-recap'
 import { BlogRecapV2 } from './components/blog-recap-v2'
-import { NavigationCaptcha } from './components/navigation-captcha'
-import { MOOD_CHOICES, MoodPicker, shouldShowMoodPicker } from './components/mood-picker'
-import { shouldShowTagPicker, TagPicker } from './components/tag-picker'
-import { PeoplePicker, shouldShowPeoplePicker } from './components/people-picker'
 import { configureDevReload } from './components/layout'
+import { MOOD_CHOICES, MoodPicker, shouldShowMoodPicker } from './components/mood-picker'
+import { NavigationCaptcha } from './components/navigation-captcha'
 import { PanelsGallery } from './components/panels-gallery'
+import { PeoplePicker, shouldShowPeoplePicker } from './components/people-picker'
+import { shouldShowTagPicker, TagPicker } from './components/tag-picker'
 import { compressResponse } from './compression'
 import { databaseService, subscribeToFeedMutations } from './database-service'
 import { isDevelopment } from './environment'
@@ -22,12 +22,13 @@ import { localImageFile, usesLocalImageStorage } from './image-storage'
 import { campaignIpPseudonym } from './ip-privacy'
 import { clientIp, logError, logHttp, logReady, redactHttpPath, shouldLogHttp } from './log'
 import { MAINTENANCE_INTERVAL_MS } from './maintenance'
-import { NESTED_FROM_MAX_DEPTH, NavigationCaptchaChallenges, NavigationCaptchaGate,
+import { NavigationCaptchaChallenges, NavigationCaptchaGate, NESTED_FROM_MAX_DEPTH,
   nestedFromDepth } from './navigation-captcha'
 import { renderDefaultOg } from './og'
 import { PUBLIC_ARCHIVE_CHECK_INTERVAL_MS } from './public-archive'
 import { sendPushForFollow, sendPushForUserFollow, startPostPushWorker } from './push'
-import { resumeRelationshipFeedInvalidation, scheduleRelationshipFeedInvalidation } from './relationship-feed-invalidation'
+import { resumeRelationshipFeedInvalidation,
+  scheduleRelationshipFeedInvalidation } from './relationship-feed-invalidation'
 import { allowNavigationCaptcha, flushIpRequests, isIpBlocked, isNavigationCaptchaAllowed, loadBlockedIps,
   recordIpRequest } from './request-ip-blocks'
 import { ClientErrorRateLimiter, HOURLY_REQUEST_BLOCK_SECONDS, HOURLY_REQUEST_RATE_LIMIT,
@@ -38,7 +39,8 @@ import { registerApiRoutes } from './routes/api'
 import { registerAuthRoutes } from './routes/auth'
 import { registerBookmarksRoutes } from './routes/bookmarks'
 import { registerEmbedRoutes } from './routes/embed'
-import { loadRecentFeedVisitors, registerFeedsRoutes, warmNextRecentLatestFeed, warmRecentLatestFeeds } from './routes/feeds'
+import { loadRecentFeedVisitors, registerFeedsRoutes, warmNextRecentLatestFeed,
+  warmRecentLatestFeeds } from './routes/feeds'
 import { registerIllegalActivityRoutes } from './routes/illegal-activity'
 import { registerInteractionsRoutes } from './routes/interactions'
 import { registerMediaRoutes } from './routes/media'
@@ -165,8 +167,8 @@ await loadRecentFeedVisitors()
 let publicationWarmScheduled = false
 subscribeToFeedMutations(operation => {
   if (Bun.env.DISABLE_FEED_WARMING === 'true') return
-  if (!['api.createPost', 'api.publishDraft', 'api.updatePost', 'api.deletePost', 'api.unpublishPost',
-    'posts.votePoll'].includes(operation) || publicationWarmScheduled) return
+  if (!['api.createPost', 'api.publishDraft', 'api.updatePost', 'api.deletePost', 'api.unpublishPost', 'posts.votePoll']
+    .includes(operation) || publicationWarmScheduled) return
   publicationWarmScheduled = true
   setTimeout(() => {
     publicationWarmScheduled = false
@@ -188,8 +190,10 @@ hotProjectionWorker.onmessage = async event => {
     finishInitialHotProjection = undefined
     return
   }
-  if (result.refreshed) await databaseService().call('feeds.hotProjectionChanged', {})
-    .catch(error => logError('hot feed cache invalidation failed', error))
+  if (result.refreshed) {
+    await databaseService().call('feeds.hotProjectionChanged', {})
+      .catch(error => logError('hot feed cache invalidation failed', error))
+  }
   finishInitialHotProjection?.()
   finishInitialHotProjection = undefined
 }
@@ -347,10 +351,10 @@ app.use('*', async (c, next) => {
     const address = c.req.header(clientIpHeaderName()) || '-'
     const campaign = url.searchParams.has('reddit') || campaignAttribution(c.req.raw) === 'reddit'
     if (shouldLogHttp(path, c.res.status, isCrawlerRequest(c.req.raw), Boolean(username), campaign,
-      dailyVisitorAllowlist.has(address))) {
-      logHttp(c.req.method, redactHttpPath(`${path}${url.search}`), c.res.status, performance.now() - started,
-        address, username, c.req.header('user-agent') || '-',
-        c.res.headers.get('x-feed-cache'))
+      dailyVisitorAllowlist.has(address)))
+    {
+      logHttp(c.req.method, redactHttpPath(`${path}${url.search}`), c.res.status, performance.now() - started, address,
+        username, c.req.header('user-agent') || '-', c.res.headers.get('x-feed-cache'))
     }
   }
 })
@@ -433,7 +437,8 @@ app.use('*', async (c, next) => {
     const nextPath = safeLocalPath(url.pathname + url.search)
     return c.redirect('/choose-handle?next=' + encodeURIComponent(nextPath), 303)
   }
-  if (c.req.method !== 'GET' || !wantsHtml || ['/choose-handle', '/pending-post', '/pending-follow'].includes(c.req.path)) return next()
+  if (c.req.method !== 'GET' || !wantsHtml
+    || ['/choose-handle', '/pending-post', '/pending-follow'].includes(c.req.path)) return next()
   const url = new URL(c.req.url)
   const postPage = /^\/post\/[1-9]\d*$/.test(url.pathname)
   const targetPostId = /^[1-9]\d*$/.test(url.searchParams.get('to') || '') ? url.searchParams.get('to') : null
@@ -477,8 +482,10 @@ app.post('/pick-tags', async c => {
   const allowed = new Set(popularTags.map(tag => tag.tag))
   const tags = [...new Set(fields.getAll('tags').map(String))].filter(tag => allowed.has(tag))
   if (!tags.length && popularTags.length) {
-    return page(<TagPicker user={user} tags={popularTags} returnTo={returnTo}
-      error="Choose at least one tag to continue." />, 400)
+    return page(
+      <TagPicker user={user} tags={popularTags} returnTo={returnTo} error="Choose at least one tag to continue." />,
+      400,
+    )
   }
   await databaseService().call('account.completeTagPrompt', { userId: user.id, tags })
   scheduleRelationshipFeedInvalidation()
@@ -501,8 +508,11 @@ app.post('/pick-people', async c => {
   const allowed = new Set(popularPeople.map(person => person.id))
   const people = [...new Set(fields.getAll('people').map(Number))].filter(id => allowed.has(id))
   if (!people.length && popularPeople.length) {
-    return page(<PeoplePicker user={user} people={popularPeople} returnTo={returnTo}
-      error="Choose at least one person to continue." />, 400)
+    return page(
+      <PeoplePicker user={user} people={popularPeople} returnTo={returnTo}
+        error="Choose at least one person to continue." />,
+      400,
+    )
   }
   const result = await databaseService().call('account.completePeoplePrompt', { userId: user.id, people })
   scheduleRelationshipFeedInvalidation()
@@ -661,8 +671,10 @@ app.get('/client-error', c => clientErrorPage(c.req.raw))
 app.get('/navigation-check', c => {
   const target = safeLocalPath(c.req.query('target'))
   const address = c.req.header(clientIpHeaderName()) || '-'
-  return page(<NavigationCaptcha user={currentUser(c.req.raw)} target={target}
-    captcha={navigationCaptchaChallenges.issue(address)} />)
+  return page(
+    <NavigationCaptcha user={currentUser(c.req.raw)} target={target}
+      captcha={navigationCaptchaChallenges.issue(address)} />,
+  )
 })
 app.post('/navigation-check', async c => {
   const form = await limitedFormData(c.req.raw)
@@ -671,8 +683,11 @@ app.post('/navigation-check', async c => {
   const answer = typeof form.get('captchaAnswer') === 'string' ? form.get('captchaAnswer') as string : ''
   const address = c.req.header(clientIpHeaderName()) || '-'
   if (!navigationCaptchaChallenges.consume(address, token, answer)) {
-    return page(<NavigationCaptcha user={currentUser(c.req.raw)} target={target}
-      captcha={navigationCaptchaChallenges.issue(address)} error="That answer was not correct. Please try again." />, 400)
+    return page(
+      <NavigationCaptcha user={currentUser(c.req.raw)} target={target}
+        captcha={navigationCaptchaChallenges.issue(address)} error="That answer was not correct. Please try again." />,
+      400,
+    )
   }
   await allowNavigationCaptcha(address)
   navigationCaptchaGate.allow(address)
@@ -689,8 +704,8 @@ app.get('/blog/recap-v2', async c => {
   const posts = await databaseService().call('blog.recapV2Posts', { viewerId: user?.id ?? -1 })
   return page(<BlogRecapV2 user={user} posts={posts} pageUrl={c.req.url} />)
 })
-app.get('/blog/building-textlog-without-javascript', c =>
-  page(<BlogBuildingWithoutJavascript user={currentUser(c.req.raw)} pageUrl={c.req.url} />))
+app.get('/blog/building-textlog-without-javascript',
+  c => page(<BlogBuildingWithoutJavascript user={currentUser(c.req.raw)} pageUrl={c.req.url} />))
 app.get('/recap-email', async c =>
   c.html(await databaseService().call('maintenance.recapPreview', {
     requestUrl: c.req.url,
@@ -745,13 +760,13 @@ export default {
   async fetch(request: Request, server: Bun.Server<unknown>) {
     // server.tsx sanitizes and sets this header before cloning the original Bun request.
     // requestIP() may no longer resolve the cloned Request, so prefer the trusted handoff.
-    const address = clientIp(request,
-      request.headers.get(clientIpHeaderName()) || server.requestIP(request)?.address)
+    const address = clientIp(request, request.headers.get(clientIpHeaderName()) || server.requestIP(request)?.address)
     recordIpRequest(address)
     const url = new URL(request.url)
     const authenticated = Boolean(currentUser(request))
-    const navigationChallengeAsset = /^(?:\/styles\.css|\/theme\.css|\/textlog\.svg|\/favicon-theme\.svg|\/favicon\.ico|\/favicon-\d+x\d+\.png|\/apple-touch-icon\.png|\/android-chrome-\d+x\d+\.png|\/maskable-icon-\d+x\d+\.png|\/uploads\/)/
-      .test(url.pathname)
+    const navigationChallengeAsset =
+      /^(?:\/styles\.css|\/theme\.css|\/textlog\.svg|\/favicon-theme\.svg|\/favicon\.ico|\/favicon-\d+x\d+\.png|\/apple-touch-icon\.png|\/android-chrome-\d+x\d+\.png|\/maskable-icon-\d+x\d+\.png|\/uploads\/)/
+        .test(url.pathname)
     if (!authenticated && navigationCaptchaGate.check(address) && url.pathname !== '/navigation-check'
       && !navigationChallengeAsset)
     {

@@ -19,7 +19,9 @@ export function AdminPush({ user, sent, values }: {
       <section className="admin-email">
         <FormMessage success={sent === 'test'
           ? 'Test notification sent.'
-          : sent === 'all' ? 'Notification sent to all subscribers.' : undefined} />
+          : sent === 'all'
+          ? 'Notification sent to all subscribers.'
+          : undefined} />
         <form method="post" action="/admin/push">
           <label className="form-label">
             title
@@ -34,8 +36,7 @@ export function AdminPush({ user, sent, values }: {
           <label className="form-label">
             destination URL
             <input className="form-control" name="url" defaultValue={values?.url} maxLength={2_048} required
-              autoComplete="off"
-              inputMode="url" placeholder="/latest or https://textlog.cc/" />
+              autoComplete="off" inputMode="url" placeholder="/latest or https://textlog.cc/" />
           </label>
           <FormActions
             secondary={<button className="quiet" name="audience" value="test">Test</button>}

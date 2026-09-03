@@ -75,8 +75,10 @@ async function sendToSubscriptions<T extends PushSubscriptionRow>(subscriptions:
       }
       else {
         transientErrors.push(error)
-        logError(`${logDelivery ? 'admin ' : ''}push delivery status=failed status_code=${statusCode || 'unknown'} ${target}`,
-          error)
+        logError(
+          `${logDelivery ? 'admin ' : ''}push delivery status=failed status_code=${statusCode || 'unknown'} ${target}`,
+          error,
+        )
       }
     }
   }))
@@ -102,7 +104,9 @@ export async function drainPostPushJobs(service: DatabaseService = databaseServi
   postPushRunning = true
   try {
     const jobs = await service.call('push.claimPostJobs', {
-      now, limit: postPushBatchSize, leaseMs: postPushLeaseMs,
+      now,
+      limit: postPushBatchSize,
+      leaseMs: postPushLeaseMs,
     })
     for (const job of jobs) {
       try {
@@ -230,8 +234,8 @@ export async function sendPushForPost(postId: number, actorId: number, actorHand
     : null
   const loaded = database ? null : await (service || databaseService()).call('push.postDelivery', { postId, actorId })
   const post = directPost
-    ? { body: directPost.body, moderationCategory: directPost.moderation_category,
-      parentId: directPost.parent_id, parentHandle: directPost.parent_handle }
+    ? { body: directPost.body, moderationCategory: directPost.moderation_category, parentId: directPost.parent_id,
+      parentHandle: directPost.parent_handle }
     : loaded?.post
   if (!post) return
   const directSubscriptions = database

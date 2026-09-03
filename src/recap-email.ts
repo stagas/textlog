@@ -75,16 +75,26 @@ const milestones = [
 ] as const
 
 const v2Milestones = [
-  ['01', 'More ways to write', '/write', 'Tables, lists, highlighted and executable code, LaTeX, maps, polls, quizzes, todos, previews, drafts, and embedded writing.'],
-  ['02', 'Conversations that stay readable', '/hot', 'Thread trees, smarter collapsing, anchored replies, backlinks, locks, and contextual navigation for conversations of every size.'],
-  ['03', 'Feeds with a point of view', null, 'Direct activity in @, followed people and tags in my feed, active conversations in hot, a fresh mix in any, and the full stream in all.'],
-  ['04', 'Discovery with more context', '/explore', 'Search, trending tags, hovercards, tag aliases and display names make people and ideas easier to find.'],
-  ['05', 'A more personal textlog', '/account/edit/appearance', 'Moods, pinned notes, bookmarks, streaks, themes, accents, fonts, density, corners, timestamps, and preview controls.'],
-  ['06', 'Words across boundaries', null, 'Translation, Unicode hashtags, location cards, audio links, ASCII art, and thoughtful content warnings.'],
-  ['07', 'Control without lock-in', '/account/security', 'Multiple accounts, password or magic-link entry, private feeds, export, unpublishing, and deletion keep your writing yours.'],
-  ['08', 'Connected on your terms', '/account/edit/notifications', 'Push notifications, interaction and recap emails, broadcast controls, and installable-app support without extra noise.'],
-  ['09', 'Built for the wider web', '/api', 'RSS, Atom, embeds, a public archive, and a read/write API for conversations, drafts, bookmarks, and automatic tags.'],
-  ['10', 'Still small by design', '/about', 'Server-rendered, text-first, free of likes and engagement tricks, and centered on people writing to one another.'],
+  ['01', 'More ways to write', '/write',
+    'Tables, lists, highlighted and executable code, LaTeX, maps, polls, quizzes, todos, previews, drafts, and embedded writing.'],
+  ['02', 'Conversations that stay readable', '/hot',
+    'Thread trees, smarter collapsing, anchored replies, backlinks, locks, and contextual navigation for conversations of every size.'],
+  ['03', 'Feeds with a point of view', null,
+    'Direct activity in @, followed people and tags in my feed, active conversations in hot, a fresh mix in any, and the full stream in all.'],
+  ['04', 'Discovery with more context', '/explore',
+    'Search, trending tags, hovercards, tag aliases and display names make people and ideas easier to find.'],
+  ['05', 'A more personal textlog', '/account/edit/appearance',
+    'Moods, pinned notes, bookmarks, streaks, themes, accents, fonts, density, corners, timestamps, and preview controls.'],
+  ['06', 'Words across boundaries', null,
+    'Translation, Unicode hashtags, location cards, audio links, ASCII art, and thoughtful content warnings.'],
+  ['07', 'Control without lock-in', '/account/security',
+    'Multiple accounts, password or magic-link entry, private feeds, export, unpublishing, and deletion keep your writing yours.'],
+  ['08', 'Connected on your terms', '/account/edit/notifications',
+    'Push notifications, interaction and recap emails, broadcast controls, and installable-app support without extra noise.'],
+  ['09', 'Built for the wider web', '/api',
+    'RSS, Atom, embeds, a public archive, and a read/write API for conversations, drafts, bookmarks, and automatic tags.'],
+  ['10', 'Still small by design', '/about',
+    'Server-rendered, text-first, free of likes and engagement tricks, and centered on people writing to one another.'],
 ] as const
 
 const RECAP_V2_EXCLUDED_NOTE_IDS = [1951, 1274, 2791, 1373, 556, 328, 2361] as const
@@ -150,7 +160,8 @@ function recapV2Notes(database: Database) {
     ) SELECT thread.id,thread.body,u.handle FROM thread JOIN users u ON u.id=thread.user_id
       WHERE thread.deleted_at IS NULL AND u.deleted_at IS NULL AND u.suspended_at IS NULL
       ORDER BY thread.created_at DESC,thread.id DESC LIMIT 2`).all(note.id) as RecapReply[]
-    return { id: note.id, body: note.body, handle: note.handle, replyCount: note.reply_count, replies: replies.reverse() }
+    return { id: note.id, body: note.body, handle: note.handle, replyCount: note.reply_count,
+      replies: replies.reverse() }
   })
 }
 
@@ -178,7 +189,8 @@ function featureRowsV2(origin: string) {
         <div style="margin:0 0 4px;color:#20231f;font-size:14px;font-weight:700">${
       path ? emailLink(title, path, origin) : escapeHtml(title)
     }</div><div style="color:#60665e;font-size:12px;line-height:1.6">${escapeHtml(copy)}</div>
-      </td></tr></table></td></tr>`).join('')
+      </td></tr></table></td></tr>`
+  ).join('')
 }
 
 function popularNotes(notes: RecapNote[], origin: string) {
@@ -188,18 +200,20 @@ function popularNotes(notes: RecapNote[], origin: string) {
     const shortened = excerpt.length > 240 ? `${excerpt.slice(0, 237).trimEnd()}…` : excerpt
     const url = new URL(`/post/${note.id}`, origin).href
     const replyPreviews = note.replies?.length
-      ? `<div style="margin:12px 0 0 12px;padding-left:11px;border-left:1px solid #d9dbd4">${note.replies.map(reply => {
-        const text = markdownPlainText(reply.body)
-        const shortenedReply = text.length > 120 ? `${text.slice(0, 117).trimEnd()}…` : text
-        return `<div style="padding:7px 0;border-top:1px solid #e4e6df;color:#60665e;font-size:11px;line-height:1.5"><span style="color:#55734a;font-weight:700">@${
-          escapeHtml(reply.handle)
-        }</span> ${escapeHtml(shortenedReply)}</div>`
-      }).join('')}</div>`
+      ? `<div style="margin:12px 0 0 12px;padding-left:11px;border-left:1px solid #d9dbd4">${
+        note.replies.map(reply => {
+          const text = markdownPlainText(reply.body)
+          const shortenedReply = text.length > 120 ? `${text.slice(0, 117).trimEnd()}…` : text
+          return `<div style="padding:7px 0;border-top:1px solid #e4e6df;color:#60665e;font-size:11px;line-height:1.5"><span style="color:#55734a;font-weight:700">@${
+            escapeHtml(reply.handle)
+          }</span> ${escapeHtml(shortenedReply)}</div>`
+        }).join('')
+      }</div>`
       : ''
     return `<tr><td style="padding:0 0 12px">
       <a href="${
       escapeHtml(url)
-      }" class="note-card" style="display:block;padding:14px 2px;color:#20231f;background:transparent;border:0;border-top:1px solid #d9dbd4;text-decoration:none">
+    }" class="note-card" style="display:block;padding:14px 2px;color:#20231f;background:transparent;border:0;border-top:1px solid #d9dbd4;text-decoration:none">
         <div style="padding:0 0 9px;color:#55734a;font-size:11px;font-weight:700">@${escapeHtml(note.handle)}</div>
         <div style="font-size:13px;line-height:1.65">${escapeHtml(shortened)}</div>
         ${replyPreviews}
@@ -225,7 +239,9 @@ export function recapEmail(database: Database, requestOrigin: string, unsubscrib
   const notes = recapNotes(database)
   return `<!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<meta name="color-scheme" content="light"><title>A lot has happened · ${escapeHtml(name)}</title>${responsiveEmailStyles}</head>
+<meta name="color-scheme" content="light"><title>A lot has happened · ${
+    escapeHtml(name)
+  }</title>${responsiveEmailStyles}</head>
 <body style="margin:0;padding:0;background:#e9eee6;color:#20231f">
 <div style="display:none;max-height:0;overflow:hidden;opacity:0;color:transparent">A launch recap: better writing, discovery, conversations, notifications, feeds, and more.</div>
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="#e9eee6"><tr><td class="email-outer" align="center" style="padding:24px 12px">
@@ -293,36 +309,54 @@ export function recapEmailV2(database: Database, requestOrigin: string, unsubscr
   const notes = recapV2Notes(database)
   return `<!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<meta name="color-scheme" content="light"><title>The story so far · ${escapeHtml(name)}</title>${responsiveEmailStyles}</head>
+<meta name="color-scheme" content="light"><title>The story so far · ${
+    escapeHtml(name)
+  }</title>${responsiveEmailStyles}</head>
 <body style="margin:0;padding:0;background:#e9eee6;color:#20231f">
 <div style="display:none;max-height:0;overflow:hidden;opacity:0;color:transparent">The complete textlog recap: writing, conversations, feeds, discovery, identity, and the wider web.</div>
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="#e9eee6"><tr><td class="email-outer" align="center" style="padding:24px 12px">
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="width:100%;max-width:600px;font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace">
-  <tr><td class="email-brand" align="center" style="padding:0 0 14px"><a href="${escapeHtml(origin)}" style="display:inline-block;color:#20231f;text-decoration:none">
-    <img src="${escapeHtml(logoUrl)}" width="24" height="24" alt="" style="display:inline-block;width:24px;height:24px;margin-right:5px;border:0;vertical-align:-6px"><span style="font-size:18px;font-weight:800;letter-spacing:-1px">${escapeHtml(name)}</span>
+  <tr><td class="email-brand" align="center" style="padding:0 0 14px"><a href="${
+    escapeHtml(origin)
+  }" style="display:inline-block;color:#20231f;text-decoration:none">
+    <img src="${
+    escapeHtml(logoUrl)
+  }" width="24" height="24" alt="" style="display:inline-block;width:24px;height:24px;margin-right:5px;border:0;vertical-align:-6px"><span style="font-size:18px;font-weight:800;letter-spacing:-1px">${
+    escapeHtml(name)
+  }</span>
   </a></td></tr>
   <tr><td class="email-panel" bgcolor="#f1f5ee" style="border:1px solid #d9dbd4"><table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
     <tr><td class="email-pad email-hero" style="padding:34px 30px 30px;border-bottom:1px solid #d9dbd4">
       <div style="margin-bottom:10px;color:#749668;font-size:10px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase">The story so far</div>
       <h1 class="email-heading" style="margin:0 0 14px;color:#55734a;font-size:25px;line-height:1.25;letter-spacing:-1px">More ways to connect.<br>Still quietly.</h1>
-      <p style="margin:0;color:#3f443d;font-size:13px;line-height:1.7">${escapeHtml(name)} began as a small place for short notes. It has grown into a richer social space without losing the simplicity that made it feel different.</p>
+      <p style="margin:0;color:#3f443d;font-size:13px;line-height:1.7">${
+    escapeHtml(name)
+  } began as a small place for short notes. It has grown into a richer social space without losing the simplicity that made it feel different.</p>
     </td></tr>
     <tr><td class="email-pad" style="padding:26px 30px 10px">
       <div style="margin-bottom:5px;color:#8a9085;font-size:10px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase">The complete recap</div>
       <h2 style="margin:0 0 17px;color:#20231f;font-size:17px;line-height:1.35">What textlog has become</h2>
-      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">${featureRowsV2(origin)}</table>
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">${
+    featureRowsV2(origin)
+  }</table>
     </td></tr>
     ${popularNotes(notes, origin).replace('Notes we kept thinking about', 'The conversations that grew')}
     <tr><td class="email-pad" align="center" style="padding:22px 30px 32px">
       <p style="margin:0 0 16px;color:#60665e;font-size:12px;line-height:1.65">Every feature began with people writing, replying, and making this quiet corner of the web their own.</p>
       <table role="presentation" align="center" cellpadding="0" cellspacing="0" border="0"><tr><td align="center" bgcolor="#749668">
-        <a href="${escapeHtml(recapUrl)}" class="email-cta" style="display:inline-block;padding:11px 15px;color:#ffffff;font-size:12px;font-weight:700;text-decoration:none;border:1px solid #749668">Read the complete recap →</a>
+        <a href="${
+    escapeHtml(recapUrl)
+  }" class="email-cta" style="display:inline-block;padding:11px 15px;color:#ffffff;font-size:12px;font-weight:700;text-decoration:none;border:1px solid #749668">Read the complete recap →</a>
       </td></tr></table>
     </td></tr>
   </table></td></tr>
   <tr><td align="center" style="padding:14px 0 0;color:#8a9085;font-size:11px;line-height:1.8">
-    <a href="${escapeHtml(unsubscribeUrl)}" style="color:#55734a;text-decoration:underline">Unsubscribe from recap emails</a><br>
-    Sent by ${escapeHtml(name)} · <a href="${escapeHtml(origin)}" style="color:#55734a;text-decoration:none">${escapeHtml(new URL(origin).host)}</a>
+    <a href="${
+    escapeHtml(unsubscribeUrl)
+  }" style="color:#55734a;text-decoration:underline">Unsubscribe from recap emails</a><br>
+    Sent by ${escapeHtml(name)} · <a href="${escapeHtml(origin)}" style="color:#55734a;text-decoration:none">${
+    escapeHtml(new URL(origin).host)
+  }</a>
   </td></tr>
 </table></td></tr></table></body></html>`
 }
