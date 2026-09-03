@@ -18,11 +18,11 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  rsync:
+  deploy:
     if: ${{ github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success' }}
     runs-on: ubuntu-latest
+
     env:
-      # Remote paths without a leading slash resolve from the SSH user's home.
       REMOTE_PATH: apps/textlog
 
     steps:
@@ -41,15 +41,6 @@ jobs:
           printf '%s\n' "$SSH_PRIVATE_KEY" > ~/.ssh/id_ed25519
           chmod 600 ~/.ssh/id_ed25519
           ssh-keyscan -p "${SSH_PORT:-22}" -H "$SSH_HOST" >> ~/.ssh/known_hosts
-
-      - name: Stop application
-        env:
-          SSH_USER: ${{ secrets.SSH_USER }}
-          SSH_HOST: ${{ secrets.SSH_HOST }}
-          SSH_PORT: ${{ secrets.SSH_PORT }}
-        run: |
-          ssh -p "${SSH_PORT:-22}" "$SSH_USER@$SSH_HOST" \
-            "sudo -n systemctl stop textlog"
 
       - name: Create deployment directory
         env:
@@ -85,21 +76,20 @@ jobs:
           ssh -p "${SSH_PORT:-22}" "$SSH_USER@$SSH_HOST" "bash -lc '
             export BUN_INSTALL="\${BUN_INSTALL:-\$HOME/.bun}"
             export PATH="\$BUN_INSTALL/bin:\$HOME/.local/bin:/usr/local/bin:/usr/bin:/bin:\$PATH"
+
             if ! command -v bun >/dev/null || [ "\$(bun --version)" != "1.4.0" ]; then
               curl -fsSL https://bun.com/install | bash -s "bun-v1.4.0"
             fi
+
             cd "$REMOTE_PATH"
-            command -v bun
-            test "\$(bun --version)" = "1.4.0"
             bun install --frozen-lockfile
           '"
 
-      - name: Start application
-        if: ${{ always() }}
+      - name: Deploy application
         env:
           SSH_USER: ${{ secrets.SSH_USER }}
           SSH_HOST: ${{ secrets.SSH_HOST }}
           SSH_PORT: ${{ secrets.SSH_PORT }}
         run: |
           ssh -p "${SSH_PORT:-22}" "$SSH_USER@$SSH_HOST" \
-            "sudo -n systemctl start textlog"
+            "/usr/local/bin/deploy-textlog"

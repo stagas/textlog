@@ -4,7 +4,7 @@
   "type": "module",
   "scripts": {
     "dev": "DEV_RELOAD=true bun --watch src/server.tsx",
-    "start": "PORT=3003 bun src/server.tsx",
+    "start": "bun src/server.tsx",
     "seed": "bun src/seed.ts",
     "db:backup": "bun scripts/backup-database.ts",
     "db:restore": "bun scripts/restore-database.ts",
