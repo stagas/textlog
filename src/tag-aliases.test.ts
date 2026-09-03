@@ -57,7 +57,7 @@ test('tag aliases resolve, aggregate posts, and can be managed by admins', async
   expect(await executeDatabaseDomain(database, 'admin.removeTagDisplayName', { tag: 'meta' })).toBe(true)
 })
 
-test('first use of a PascalCase tag creates its snake-case alias and display name', async () => {
+test('first use of a PascalCase tag creates its display name without an underscore alias', async () => {
   const database = new Database(':memory:')
   database.run('PRAGMA foreign_keys=ON')
   runMigrations(database)
@@ -69,10 +69,7 @@ test('first use of a PascalCase tag creates its snake-case alias and display nam
   expect(database.query('SELECT tag FROM post_hashtags WHERE post_id=?').all(post.id)).toEqual([
     { tag: 'thisformcapitalized' },
   ])
-  expect(database.query(`SELECT alias,primary_tag primaryTag FROM tag_aliases
-    WHERE alias='this_form_capitalized'`).get()).toEqual({
-    alias: 'this_form_capitalized', primaryTag: 'thisformcapitalized',
-  })
+  expect(database.query("SELECT alias FROM tag_aliases WHERE instr(alias,'_')>0").get()).toBeNull()
   expect(database.query("SELECT display_name displayName FROM tag_display_names WHERE tag='thisformcapitalized'")
     .get()).toEqual({ displayName: 'ThisFormCapitalized' })
   expect(await executeDatabaseDomain(database, 'tags.resolve', { tag: 'this_form_capitalized' }))

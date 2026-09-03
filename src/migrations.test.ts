@@ -506,7 +506,7 @@ describe('database migrations', () => {
     ])
   })
 
-  test('backfills conflict-free PascalCase tag aliases and display names from first use', () => {
+  test('backfills conflict-free PascalCase display names and removes underscore aliases', () => {
     const database = new Database(':memory:')
     database.run('PRAGMA foreign_keys=ON')
     runMigrations(database)
@@ -525,17 +525,13 @@ describe('database migrations', () => {
 
     runMigrations(database)
 
-    expect(database.query(`SELECT alias,primary_tag primaryTag FROM tag_aliases
-      WHERE primary_tag IN ('thisformcapitalized','lowercasefirst','takenalias','otherdisplay','alreadymapped')
-      ORDER BY alias`).all()).toEqual([
-      { alias: 'already_mapped', primaryTag: 'alreadymapped' },
-      { alias: 'this_form_capitalized', primaryTag: 'thisformcapitalized' },
-    ])
+    expect(database.query("SELECT alias FROM tag_aliases WHERE instr(alias,'_')>0").all()).toEqual([])
     expect(database.query(`SELECT tag,display_name displayName FROM tag_display_names
       WHERE tag IN ('thisformcapitalized','lowercasefirst','takenalias','otherdisplay','alreadymapped')
       ORDER BY tag`).all()).toEqual([
       { tag: 'alreadymapped', displayName: 'AlreadyMapped' },
       { tag: 'otherdisplay', displayName: 'Other_Display' },
+      { tag: 'takenalias', displayName: 'TakenAlias' },
       { tag: 'thisformcapitalized', displayName: 'ThisFormCapitalized' },
     ])
   })

@@ -1,7 +1,7 @@
 import type { Database } from 'bun:sqlite'
 import { isAdminEmail } from './admin'
 import { publishPost } from './api-broker'
-import { extractAuthoredHashtags, extractHashtags, extractMentions, pascalCaseHashtagPresentation,
+import { extractAuthoredHashtags, extractHashtags, extractMentions, pascalCaseHashtagDisplayName,
   postContentFlags } from './content'
 import { resolveHandle } from './handles'
 import { recordHotActivity } from './hot'
@@ -164,18 +164,14 @@ export function syncPostMetadata(database: Database, postId: number, body: strin
   const insertMention = database.query('INSERT OR IGNORE INTO post_mentions(post_id,user_id) VALUES(?,?)')
 
   for (const { tag, authored } of hashtags) {
-    const presentation = pascalCaseHashtagPresentation(authored)
-    if (supportsTagPresentation && !existingTags.has(tag) && presentation) {
-      const aliasConflict = database.query(`SELECT 1 FROM tag_aliases
-        WHERE (alias=? AND primary_tag!=?) OR primary_tag=? OR alias=? LIMIT 1`)
-        .get(presentation.alias, tag, presentation.alias, tag)
+    const displayName = pascalCaseHashtagDisplayName(authored)
+    if (supportsTagPresentation && !existingTags.has(tag) && displayName) {
+      const aliasConflict = database.query('SELECT 1 FROM tag_aliases WHERE alias=? LIMIT 1').get(tag)
       const displayConflict = database.query(`SELECT 1 FROM tag_display_names
-        WHERE tag=? AND display_name!=? LIMIT 1`).get(tag, presentation.displayName)
+        WHERE tag=? AND display_name!=? LIMIT 1`).get(tag, displayName)
       if (!aliasConflict && !displayConflict) {
-        database.query('INSERT OR IGNORE INTO tag_aliases(alias,primary_tag) VALUES(?,?)')
-          .run(presentation.alias, tag)
         database.query(`INSERT OR IGNORE INTO tag_display_names(tag,display_name)
-          VALUES(?,?)`).run(tag, presentation.displayName)
+          VALUES(?,?)`).run(tag, displayName)
       }
     }
     insertTag.run(postId, tag)

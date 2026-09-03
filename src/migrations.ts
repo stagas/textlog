@@ -1,5 +1,5 @@
 import type { Database } from 'bun:sqlite'
-import { extractAuthoredHashtags, extractHashtags, extractMentions, pascalCaseHashtagPresentation,
+import { extractAuthoredHashtags, extractHashtags, extractMentions, pascalCaseHashtagDisplayName,
   postContentFlags } from './content'
 import { hotRankingVersion, rebuildHotPosts, refreshHotFeedProjection } from './hot'
 import { parsePoll, syncPoll } from './polls'
@@ -3013,7 +3013,7 @@ export const migrations: Migration[] = [
   },
   {
     version: 183,
-    name: 'backfill_pascal_case_tag_presentations',
+    name: 'backfill_pascal_case_tag_display_names',
     up(database) {
       if (!database.query("SELECT 1 FROM sqlite_master WHERE type='table' AND name='posts'").get()
         || !database.query("SELECT 1 FROM sqlite_master WHERE type='table' AND name='tag_aliases'").get()
@@ -3025,24 +3025,27 @@ export const migrations: Migration[] = [
         : postColumns.includes('id') ? 'id' : 'rowid'
       const posts = database.query(`SELECT body FROM posts ORDER BY ${order}`).all() as { body: string }[]
       const seen = new Set<string>()
-      const aliasConflict = database.query(`SELECT 1 FROM tag_aliases
-        WHERE (alias=? AND primary_tag!=?) OR primary_tag=? OR alias=? LIMIT 1`)
+      const aliasConflict = database.query('SELECT 1 FROM tag_aliases WHERE alias=? LIMIT 1')
       const displayConflict = database.query(`SELECT 1 FROM tag_display_names
         WHERE tag=? AND display_name!=? LIMIT 1`)
-      const insertAlias = database.query('INSERT OR IGNORE INTO tag_aliases(alias,primary_tag) VALUES(?,?)')
       const insertDisplay = database.query(`INSERT OR IGNORE INTO tag_display_names(tag,display_name) VALUES(?,?)`)
       for (const post of posts) {
         for (const { tag, authored } of extractAuthoredHashtags(post.body)) {
           if (seen.has(tag)) continue
           seen.add(tag)
-          const presentation = pascalCaseHashtagPresentation(authored)
-          if (!presentation
-            || aliasConflict.get(presentation.alias, tag, presentation.alias, tag)
-            || displayConflict.get(tag, presentation.displayName)) continue
-          insertAlias.run(presentation.alias, tag)
-          insertDisplay.run(tag, presentation.displayName)
+          const displayName = pascalCaseHashtagDisplayName(authored)
+          if (!displayName || aliasConflict.get(tag) || displayConflict.get(tag, displayName)) continue
+          insertDisplay.run(tag, displayName)
         }
       }
+    },
+  },
+  {
+    version: 184,
+    name: 'remove_underscore_tag_aliases',
+    up(database) {
+      if (!database.query("SELECT 1 FROM sqlite_master WHERE type='table' AND name='tag_aliases'").get()) return
+      database.query("DELETE FROM tag_aliases WHERE instr(alias,'_')>0 OR instr(primary_tag,'_')>0").run()
     },
   },
 ]

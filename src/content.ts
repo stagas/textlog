@@ -13,12 +13,9 @@ export const MAX_HASHTAGS_PER_POST = 15
 
 export type ExtractedHashtag = { tag: string; authored: string }
 
-export function pascalCaseHashtagPresentation(authored: string) {
+export function pascalCaseHashtagDisplayName(authored: string) {
   if (!/^[A-Z][a-z\d]+(?:[A-Z][a-z\d]+)+$/.test(authored)) return null
-  return {
-    alias: authored.replace(/([a-z\d])([A-Z])/g, '$1_$2').toLowerCase(),
-    displayName: authored,
-  }
+  return authored
 }
 
 export const SPOILER_HASHTAGS = new Set([
