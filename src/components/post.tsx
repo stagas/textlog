@@ -138,13 +138,16 @@ function PollPreview({ body }: { body: string }) {
   )
 }
 
-function PollAfter({ body, p, formPrefix }: { body: string; p: PostView | NonNullable<PostView['parent']>;
-  formPrefix: string }) {
+function PollAfter({ body, p, user, formPrefix }: { body: string; p: PostView | NonNullable<PostView['parent']>;
+  user: User | null; formPrefix: string }) {
   const after = parsePoll(body)?.after
   if (!after) return null
   return <div className="post-body" dangerouslySetInnerHTML={{
     __html: linkify(displayPostBody(after), p.mention_bios, [], undefined, renderFlags(p), '', p.hashtag_counts,
-      p.mention_note_counts, { signedIn: false, currentHandle: p.handle, formPrefix }),
+      p.mention_note_counts, { signedIn: !!user, currentHandle: user?.handle, formPrefix,
+        mentionFollowing: p.mention_following, mentionFollowsViewer: p.mention_follows_viewer,
+        mentionProfileStats: p.mention_profile_stats, hashtagFollowing: p.hashtag_following,
+        hashtagFollowerCounts: p.hashtag_follower_counts }),
   }} />
 }
 
@@ -585,7 +588,7 @@ export function PreviewPost({ p, user }: { p: PostView; user?: User }) {
         }} />
         {p.execution_output !== null && p.execution_output !== undefined && <ExecutionOutput output={p.execution_output} />}
         <PollPreview body={p.body} />
-        <PollAfter body={p.body} p={p} formPrefix={formPrefix} />
+        <PollAfter body={p.body} p={p} user={user || null} formPrefix={formPrefix} />
         <Todo p={p} user={null} preview formPrefix={formPrefix} />
       </ContentWarning>
     </article>
@@ -901,7 +904,7 @@ export function Post({
         {p.execution_output !== null && p.execution_output !== undefined && <ExecutionOutput output={p.execution_output} />}
         {!preview && <Translation html={translationHtml} />}
         {preview ? <PollPreview body={p.body} /> : <Poll p={p} returnPath={returnPath} />}
-        <PollAfter body={p.body} p={p} formPrefix={formPrefix} />
+        <PollAfter body={p.body} p={p} user={user} formPrefix={formPrefix} />
         <Todo p={p} user={user} preview={preview} returnPath={returnPath} formPrefix={formPrefix} />
       </ContentWarning>
       {!parent && (showReplyAction && !p.thread_locked || hasVisibleContinuation || canModerate || reportHref

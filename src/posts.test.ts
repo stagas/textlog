@@ -594,10 +594,11 @@ describe('post persistence', () => {
       + '<a href="https://example.com" class="raw-link" target="_blank" rel="nofollow ugc noopener noreferrer">example.com</a></span>')
   })
 
-  test('linkifies only the first ten hashtags', () => {
-    const html = linkify('#one #two #three #four #five #six #seven #eight #nine #ten #eleven')
-    expect(html.match(/href="\/tag\//g)).toHaveLength(10)
-    expect(html).toContain('</a> #eleven')
+  test('linkifies only the first fifteen hashtags', () => {
+    const html = linkify('#one #two #three #four #five #six #seven #eight #nine #ten #eleven #twelve #thirteen '
+      + '#fourteen #fifteen #sixteen')
+    expect(html.match(/href="\/tag\//g)).toHaveLength(15)
+    expect(html).toContain('</a> #sixteen')
   })
 
   test('writes content and metadata atomically', () => {

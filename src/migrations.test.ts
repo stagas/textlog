@@ -481,14 +481,14 @@ describe('database migrations', () => {
     expect(database.query('SELECT tag FROM tag_search WHERE tag_search MATCH \'inline\'').get()).toBeNull()
   })
 
-  test('rebuilds posts with the increased hashtag limit', () => {
+  test('rebuilds posts with the increased hashtag limits', () => {
     const database = new Database(':memory:')
     database.run('PRAGMA foreign_keys=ON')
     runMigrations(database)
     database.run(`INSERT INTO users(id,handle,email,password,bio)
-        VALUES(1,'author','author@example.com','x','#one #two #three #four #five #six #seven #eight #nine #ten #eleven');
+        VALUES(1,'author','author@example.com','x','#one #two #three #four #five #six #seven #eight #nine #ten #eleven #twelve #thirteen #fourteen #fifteen #sixteen');
       INSERT INTO posts(id,user_id,body) VALUES
-        (1,1,'#one #two #three #four #five #six #seven #eight #nine #ten #eleven');
+        (1,1,'#one #two #three #four #five #six #seven #eight #nine #ten #eleven #twelve #thirteen #fourteen #fifteen #sixteen');
       INSERT INTO post_hashtags(post_id,tag) VALUES
         (1,'one'),(1,'two'),(1,'three'),(1,'four'),(1,'five');
       PRAGMA user_version=156;`)
@@ -496,11 +496,13 @@ describe('database migrations', () => {
     runMigrations(database)
 
     expect(database.query('SELECT tag FROM post_hashtags WHERE post_id=1 ORDER BY rowid').all())
-      .toEqual(['one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine', 'ten']
+      .toEqual(['one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine', 'ten', 'eleven', 'twelve',
+        'thirteen', 'fourteen', 'fifteen']
         .map(tag => ({ tag })))
     const bio = (database.query('SELECT bio FROM users WHERE id=1').get() as { bio: string }).bio
     expect(extractHashtags(bio)).toEqual([
-      'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine', 'ten',
+      'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine', 'ten', 'eleven', 'twelve', 'thirteen',
+      'fourteen', 'fifteen',
     ])
   })
 

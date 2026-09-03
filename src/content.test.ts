@@ -58,8 +58,9 @@ describe('content metadata extraction', () => {
     expect(extractHashtags('#meta #tlog #textlog')).toEqual(['meta', 'tlog', 'textlog'])
   })
 
-  test('extracts only the first ten hashtag occurrences', () => {
-    expect(extractHashtags('#one #two #three #four #five #six #seven #eight #nine #ten #eleven')).toEqual([
+  test('extracts only the first fifteen hashtag occurrences', () => {
+    expect(extractHashtags('#one #two #three #four #five #six #seven #eight #nine #ten #eleven #twelve #thirteen '
+      + '#fourteen #fifteen #sixteen')).toEqual([
       'one',
       'two',
       'three',
@@ -70,6 +71,11 @@ describe('content metadata extraction', () => {
       'eight',
       'nine',
       'ten',
+      'eleven',
+      'twelve',
+      'thirteen',
+      'fourteen',
+      'fifteen',
     ])
   })
 

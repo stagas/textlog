@@ -1157,6 +1157,10 @@ header>nav>a:not(.button),
   white-space: nowrap;
 }
 
+.reference-menu .reference-menu-popover > .mobile-reference-destination + .button {
+  margin-top: 0;
+}
+
 .reference-popover-actions {
   display: flex;
   align-items: center;

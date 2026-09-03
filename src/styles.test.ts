@@ -7,6 +7,13 @@ describe('in-memory stylesheet', () => {
     expect(css).toContain('text-align: start;\n  unicode-bidi: plaintext;\n  white-space: pre-wrap;')
   })
 
+  test('does not add top margin to the guest follow action in reference popovers', async () => {
+    const css = await Bun.file(new URL('./styles.css', import.meta.url)).text()
+    expect(css).toContain(
+      '.reference-menu .reference-menu-popover > .mobile-reference-destination + .button {\n  margin-top: 0;\n}',
+    )
+  })
+
   test('negotiates the best supported encoding', () => {
     expect(preferredStylesEncoding('gzip, br')).toBe('br')
     expect(preferredStylesEncoding('br;q=0, gzip;q=0.8')).toBe('gzip')

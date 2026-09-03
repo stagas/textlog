@@ -3001,6 +3001,15 @@ export const migrations: Migration[] = [
       DROP TABLE recent_undated_picker_follows;`)
     },
   },
+  {
+    version: 182,
+    name: 'increase_hashtag_limit_to_fifteen',
+    up(database) {
+      if (!database.query("SELECT 1 FROM sqlite_master WHERE type='table' AND name='posts'").get()
+        || !database.query("SELECT 1 FROM sqlite_master WHERE type='table' AND name='post_hashtags'").get()) return
+      rebuildPostHashtags(database)
+    },
+  },
 ]
 
 export const latestMigrationVersion = migrations.at(-1)!.version

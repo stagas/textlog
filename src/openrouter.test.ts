@@ -3,13 +3,18 @@ import { autotagText } from './openrouter'
 
 describe('OpenRouter autotag', () => {
   test('returns the complete enriched text', async () => {
+    let systemPrompt = ''
     const result = await autotagText('A note about Bun and TypeScript', {
       apiKey: 'test',
-      fetch: (async () => Response.json({ choices: [{ message: {
-        content: '```text\nA note about #Bun and #TypeScript\n\n#webdev\n```',
-      } }] })),
+      fetch: (async (_url, init) => {
+        systemPrompt = JSON.parse(String(init?.body)).messages[0].content
+        return Response.json({ choices: [{ message: {
+          content: '```text\nA note about #Bun and #TypeScript\n\n#webdev\n```',
+        } }] })
+      }),
     })
     expect(result).toEqual({ ok: true, body: 'A note about #Bun and #TypeScript\n\n#webdev' })
+    expect(systemPrompt).toContain('15 or fewer')
   })
 
   test('falls back to the paid model only after a 429', async () => {
