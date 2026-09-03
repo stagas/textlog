@@ -2,7 +2,7 @@ import type { Database } from 'bun:sqlite'
 import { isAdminEmail } from './admin'
 import { publishPost } from './api-broker'
 import { extractAuthoredHashtags, extractHashtags, extractMentions, pascalCaseHashtagDisplayName,
-  pluralHashtag, postContentFlags, singularHashtag } from './content'
+  postContentFlags } from './content'
 import { resolveHandle } from './handles'
 import { recordHotActivity } from './hot'
 import { getImageUrl, isImageKey } from './image-storage'
@@ -161,19 +161,6 @@ export function syncPostMetadata(database: Database, postId: number, body: strin
   const insertMention = database.query('INSERT OR IGNORE INTO post_mentions(post_id,user_id) VALUES(?,?)')
 
   for (const { tag: extractedTag, authored } of hashtags) {
-    if (supportsTagPresentation) {
-      const singular = singularHashtag(extractedTag)
-      if (singular !== extractedTag && !database.query(`SELECT 1 FROM tag_aliases
-        WHERE alias=? OR primary_tag=? OR alias=? LIMIT 1`).get(extractedTag, extractedTag, singular)) {
-        database.query('INSERT OR IGNORE INTO tag_aliases(alias,primary_tag) VALUES(?,?)').run(extractedTag, singular)
-      }
-      const primary = singular === extractedTag ? extractedTag : singular
-      const plural = pluralHashtag(primary)
-      if (plural !== primary && !database.query(`SELECT 1 FROM tag_aliases
-        WHERE alias=? OR primary_tag=? OR alias=? LIMIT 1`).get(plural, plural, primary)) {
-        database.query('INSERT OR IGNORE INTO tag_aliases(alias,primary_tag) VALUES(?,?)').run(plural, primary)
-      }
-    }
     const tag = supportsTagPresentation
       ? (database.query('SELECT primary_tag FROM tag_aliases WHERE alias=?').get(extractedTag) as {
         primary_tag: string

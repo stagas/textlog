@@ -1,6 +1,6 @@
 import type { Database } from 'bun:sqlite'
 import { extractAuthoredHashtags, extractHashtags, extractMentions, pascalCaseHashtagDisplayName,
-  pluralHashtag, postContentFlags, singularHashtag } from './content'
+  normalizeHashtag, pluralHashtag, postContentFlags, singularHashtag } from './content'
 import { hotRankingVersion, rebuildHotPosts, refreshHotFeedProjection } from './hot'
 import { parsePoll, syncPoll } from './polls'
 import { migrateLegacySessionTokens } from './sessions'
@@ -3079,6 +3079,32 @@ export const migrations: Migration[] = [
         INSERT OR IGNORE INTO blocked_hashtags(user_id,tag,created_at)
           SELECT bh.user_id,ta.primary_tag,bh.created_at FROM blocked_hashtags bh JOIN tag_aliases ta ON ta.alias=bh.tag;
         DELETE FROM blocked_hashtags WHERE tag IN (SELECT alias FROM tag_aliases);`)
+    },
+  },
+  {
+    version: 186,
+    name: 'transparent_plural_tags',
+    up(database) {
+      if (database.query("SELECT 1 FROM sqlite_master WHERE type='table' AND name='tag_aliases'").get()) {
+        database.run(`DELETE FROM tag_aliases WHERE alias=CASE
+          WHEN substr(primary_tag,-1)='s' THEN primary_tag || 'es' ELSE primary_tag || 's' END`)
+      }
+      if (database.query("SELECT 1 FROM sqlite_master WHERE type='table' AND name='post_hashtags'").get()
+        && database.query("SELECT 1 FROM sqlite_master WHERE type='table' AND name='posts'").get()
+        && columns(database, 'posts').includes('body')) rebuildPostHashtags(database)
+      for (const table of ['hashtag_follows', 'blocked_hashtags']) {
+        if (!database.query("SELECT 1 FROM sqlite_master WHERE type='table' AND name=?").get(table)) continue
+        const rows = database.query(`SELECT user_id,tag,created_at FROM ${table}`).all() as Array<{
+          user_id: number; tag: string; created_at: string
+        }>
+        const insert = database.query(`INSERT OR IGNORE INTO ${table}(user_id,tag,created_at) VALUES(?,?,?)`)
+        for (const row of rows) {
+          const tag = normalizeHashtag(row.tag)
+          if (tag === row.tag) continue
+          insert.run(row.user_id, tag, row.created_at)
+          database.query(`DELETE FROM ${table} WHERE user_id=? AND tag=?`).run(row.user_id, row.tag)
+        }
+      }
     },
   },
 ]

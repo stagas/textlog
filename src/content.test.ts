@@ -42,7 +42,7 @@ describe('content metadata extraction', () => {
   })
   test('normalizes and deduplicates hashtags', () => {
     expect(extractHashtags('#Build something #build #Notes #ascii_art #asciiart')).toEqual([
-      'build', 'notes', 'asciiart',
+      'build', 'note', 'asciiart',
     ])
   })
 

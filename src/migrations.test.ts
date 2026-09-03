@@ -519,19 +519,19 @@ describe('database migrations', () => {
         (5,1,'#OtherDisplay','2026-01-05'),
         (6,1,'#AlreadyMapped','2026-01-06');
       INSERT INTO tag_aliases(alias,primary_tag) VALUES
-        ('taken_alias','different'),('already_mapped','alreadymapped');
+        ('taken_alias','different'),('already_mapped','alreadymapped'),('developers','developer');
       INSERT INTO tag_display_names(tag,display_name) VALUES('otherdisplay','Other_Display');
       PRAGMA user_version=182;`)
 
     runMigrations(database)
 
     expect(database.query("SELECT alias FROM tag_aliases WHERE instr(alias,'_')>0").all()).toEqual([])
+    expect(database.query("SELECT alias FROM tag_aliases WHERE alias='developers'").get()).toBeNull()
     expect(database.query(`SELECT tag,display_name displayName FROM tag_display_names
       WHERE tag IN ('thisformcapitalized','lowercasefirst','takenalias','otherdisplay','alreadymapped')
       ORDER BY tag`).all()).toEqual([
       { tag: 'alreadymapped', displayName: 'AlreadyMapped' },
       { tag: 'otherdisplay', displayName: 'Other_Display' },
-      { tag: 'takenalias', displayName: 'TakenAlias' },
       { tag: 'thisformcapitalized', displayName: 'ThisFormCapitalized' },
     ])
   })

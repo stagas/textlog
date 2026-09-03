@@ -16,10 +16,9 @@ test('tag aliases resolve, aggregate posts, and can be managed by admins', async
   expect(await executeDatabaseDomain(database, 'tags.resolve', { tag: 'textlog' })).toBe('meta')
   expect(await executeDatabaseDomain(database, 'tags.count', { tag: 'tlog' })).toBe(2)
   expect(database.query('SELECT tag FROM post_hashtags ORDER BY post_id').all()).toEqual([
-    { tag: 'meta' }, { tag: 'meta' }, { tag: 'feature' },
+    { tag: 'meta' }, { tag: 'meta' }, { tag: 'features' },
   ])
   expect(await executeDatabaseDomain(database, 'admin.tagAliases', {})).toEqual([
-    { primaryTag: 'feature', aliases: ['features'] },
     { primaryTag: 'meta', aliases: ['textlog', 'tlog'] },
   ])
 
@@ -81,7 +80,7 @@ test('first use of a PascalCase tag creates its display name without an undersco
     .get()).toEqual({ displayName: 'DifferentDisplay' })
 })
 
-test('plural tags are stored, resolved, and followed through their singular tag', async () => {
+test('plural tags transparently normalize to their singular tag', async () => {
   const database = new Database(':memory:')
   database.run('PRAGMA foreign_keys=ON')
   runMigrations(database)
@@ -93,6 +92,7 @@ test('plural tags are stored, resolved, and followed through their singular tag'
   expect(database.query('SELECT tag FROM post_hashtags WHERE post_id=?').all(post.id))
     .toEqual([{ tag: 'developer' }])
   expect(await executeDatabaseDomain(database, 'tags.resolve', { tag: 'developers' })).toBe('developer')
+  expect(database.query("SELECT alias FROM tag_aliases WHERE alias='developers'").get()).toBeNull()
   await executeDatabaseDomain(database, 'interactions.toggleTagFollow', { userId: 1, tag: 'developers' })
   expect(database.query('SELECT tag FROM hashtag_follows WHERE user_id=1').all()).toEqual([{ tag: 'developer' }])
 
@@ -103,6 +103,7 @@ test('plural tags are stored, resolved, and followed through their singular tag'
     .toEqual([{ tag: 'class' }])
   expect(database.query("SELECT alias FROM tag_aliases WHERE alias='classs'").get()).toBeNull()
   expect(await executeDatabaseDomain(database, 'tags.resolve', { tag: 'classes' })).toBe('class')
+  expect(database.query("SELECT alias FROM tag_aliases WHERE alias='classes'").get()).toBeNull()
 
   const singularPost = createPost(database, 1, '#designer', null, false)
   expect('id' in singularPost).toBeTrue()

@@ -2,7 +2,7 @@ import { LinkifyIt } from 'linkify-it'
 import tlds from 'tlds'
 
 export function normalizeHashtag(tag: string) {
-  return tag.normalize('NFC').toLowerCase().replaceAll('_', '')
+  return singularHashtag(tag.normalize('NFC').toLowerCase().replaceAll('_', ''))
 }
 
 export function isValidHashtag(tag: string) {
