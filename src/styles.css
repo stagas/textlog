@@ -3338,11 +3338,6 @@ body.corners-round a.button {
   width: min(100%, 560px);
 }
 
-.auth-panel.magic-sent-panel h1 {
-  font-size: clamp(1.25rem, 4vw, 1.625rem);
-  letter-spacing: -1px;
-}
-
 .magic-sent-panel>p {
   font-size: var(--font-size-12);
 }

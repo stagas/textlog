@@ -2800,6 +2800,11 @@ describe('Auth', () => {
     expect(html).toContain('placeholder="123456"')
     expect(html).not.toContain('autofocus=""')
     expect(html).toContain('expire in 15 minutes')
+    expect(html).toContain('<body class="density-regular full-screen-page full-screen-scrollable">')
+    expect(html).toContain('class="brand enter-brand"')
+    expect(html).toContain('class="panel-shell auth-shell enter-shell"')
+    expect(html).not.toContain('<header')
+    expect(html).not.toContain('<footer')
   })
 
   test('email masking preserves only the first character and domain', () => {

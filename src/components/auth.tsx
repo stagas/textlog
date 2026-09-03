@@ -6,21 +6,27 @@ import { activeThemeLogoSvg } from '../theme'
 
 export { maskEmail } from './email-address'
 
+function AuthBrand() {
+  const name = appName()
+  const logoSvg = activeThemeLogoSvg()
+  return (
+    <a className="brand enter-brand" href="/" aria-label={`${name} home`}>
+      <span className="brand-logo" aria-hidden="true" dangerouslySetInnerHTML={{ __html: logoSvg }} />
+      <span>{name}</span>
+    </a>
+  )
+}
+
 export function Auth({ error, email = '', next, returning = false }: {
   error?: string
   email?: string
   next?: string
   returning?: boolean
 }) {
-  const name = appName()
-  const logoSvg = activeThemeLogoSvg()
   return (
     <Layout title="enter" fullScreen fullScreenScrollable>
       <CenteredPanel shellClassName="auth-shell enter-shell" className="auth-panel enter-panel">
-        <a className="brand enter-brand" href="/" aria-label={`${name} home`}>
-          <span className="brand-logo" aria-hidden="true" dangerouslySetInnerHTML={{ __html: logoSvg }} />
-          <span>{name}</span>
-        </a>
+        <AuthBrand />
         <h1>{returning ? 'Welcome back.' : 'New here or returning?'}</h1>
         {error && <p className="status-message status-error" role="alert">{error}</p>}
         <form method="post" action="/enter" autoComplete="on">
@@ -111,8 +117,10 @@ export function MagicLinkSent({ email, magicUrl, error, handle = false }: {
   handle?: boolean
 }) {
   return (
-    <Layout title="check your email">
-      <CenteredPanel shellClassName="auth-shell" className="auth-panel magic-sent-panel" width="medium">
+    <Layout title="check your email" fullScreen fullScreenScrollable>
+      <CenteredPanel shellClassName="auth-shell enter-shell"
+        className="auth-panel enter-panel magic-sent-panel" width="medium">
+        <AuthBrand />
         <h1>Check your email</h1>
         <p>
           {handle
