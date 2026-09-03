@@ -223,11 +223,14 @@ test('an anonymous feed note is published after signup chooses a handle', async 
     ip,
     form: { body, from: '/hot', embedded: '1', action: 'preview' },
   })
-  expect(preview.status).toBe(200)
-  const previewHtml = await preview.text()
+  expect(preview.status).toBe(303)
+  const previewLocation = preview.headers.get('location')!
+  expect(previewLocation).toStartWith('/hot?write_preview=1&write_body=')
+  const previewHtml = await (await request(previewLocation, { ip })).text()
   expect(previewHtml).toContain('<h2>preview</h2>')
   expect(previewHtml).toContain(body)
   expect(previewHtml).toContain('anonymous-write-compose')
+  expect(previewHtml).not.toContain('<title>write ·')
   expect(preview.headers.get('set-cookie')).toBeNull()
   expect((database.query('SELECT count(*) count FROM drafts').get() as { count: number }).count)
     .toBe(draftsBeforePreview)
