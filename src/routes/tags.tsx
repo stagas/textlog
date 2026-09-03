@@ -11,12 +11,12 @@ import { cachedOgResponse, cacheOgResponse } from '../og-response-cache'
 import { CONNECTION_PAGE_SIZE } from '../pagination'
 import { resolvedPageSize } from '../request-preferences'
 import { currentUser } from '../utils'
-import { normalizeHashtag } from '../content'
+import { normalizeHashtagSpelling } from '../content'
 
 export function registerTagsRoutes(app: Hono) {
   app.get('/tag/:tag/og.png', async c => {
     const rawTag = c.req.param('tag')
-    const requestedTag = normalizeHashtag(rawTag)
+    const requestedTag = normalizeHashtagSpelling(rawTag)
     const tag = await databaseService().call('tags.resolve', { tag: requestedTag })
     if (tag !== rawTag) return c.redirect(`/tag/${encodeURIComponent(tag)}/og.png`, 301)
     const cacheKey = `tag:${tag}`
@@ -33,7 +33,7 @@ export function registerTagsRoutes(app: Hono) {
 
   app.get('/tag/:tag', async c => {
     const requestedTag = c.req.param('tag')
-    const normalizedTag = normalizeHashtag(requestedTag)
+    const normalizedTag = normalizeHashtagSpelling(requestedTag)
     const tag = await databaseService().call('tags.resolve', { tag: normalizedTag })
     if (requestedTag !== tag) {
       return c.redirect(`/tag/${encodeURIComponent(tag)}${new URL(c.req.url).search}`, 301)

@@ -198,6 +198,9 @@ export type DatabaseDomainOperations = {
     output: { status: 'ready' } | { status: 'conflict'; tag: string }
   }
   'admin.removeTagAlias': { input: { alias: string }; output: boolean }
+  'admin.tagInvariants': { input: Record<string, never>; output: string[] }
+  'admin.addTagInvariant': { input: { tag: string }; output: null }
+  'admin.removeTagInvariant': { input: { tag: string }; output: boolean }
   'admin.tagDisplayNames': { input: Record<string, never>; output: Array<{ tag: string; displayName: string }> }
   'admin.setTagDisplayName': { input: { tag: string; displayName: string }; output: null }
   'admin.removeTagDisplayName': { input: { tag: string }; output: boolean }

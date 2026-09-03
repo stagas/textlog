@@ -2,7 +2,7 @@ import type { Database } from 'bun:sqlite'
 import { isAdminEmail } from './admin'
 import { publishPost } from './api-broker'
 import { extractAuthoredHashtags, extractHashtags, extractMentions, pascalCaseHashtagDisplayName,
-  postContentFlags } from './content'
+  normalizeHashtagSpelling, postContentFlags } from './content'
 import { resolveHandle } from './handles'
 import { recordHotActivity } from './hot'
 import { getImageUrl, isImageKey } from './image-storage'
@@ -160,7 +160,10 @@ export function syncPostMetadata(database: Database, postId: number, body: strin
   const insertTag = database.query('INSERT OR IGNORE INTO post_hashtags(post_id,tag) VALUES(?,?)')
   const insertMention = database.query('INSERT OR IGNORE INTO post_mentions(post_id,user_id) VALUES(?,?)')
 
-  for (const { tag: extractedTag, authored } of hashtags) {
+  for (const { tag: normalizedTag, authored } of hashtags) {
+    const spelling = normalizeHashtagSpelling(authored)
+    const extractedTag = supportsTagPresentation && database.query('SELECT 1 FROM tag_invariants WHERE tag=?')
+      .get(spelling) ? spelling : normalizedTag
     const tag = supportsTagPresentation
       ? (database.query('SELECT primary_tag FROM tag_aliases WHERE alias=?').get(extractedTag) as {
         primary_tag: string

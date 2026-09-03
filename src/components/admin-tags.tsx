@@ -3,10 +3,11 @@ import { PageHeading } from './account-settings-header'
 import { Layout } from './layout'
 import { FormActions, FormMessage } from './page-shared'
 
-export function AdminTags({ user, groups, displayNames, error }: {
+export function AdminTags({ user, groups, displayNames, invariants, error }: {
   user: User
   groups: Array<{ primaryTag: string; aliases: string[] }>
   displayNames: Array<{ tag: string; displayName: string }>
+  invariants: string[]
   error?: string
 }) {
   return (
@@ -30,6 +31,26 @@ export function AdminTags({ user, groups, displayNames, error }: {
           <small className="admin-tags-hint">Separate multiple aliases with commas or spaces.</small>
           <FormActions primary={<button className="button">add aliases →</button>} />
         </form>
+      </section>
+      <section className="admin-section admin-tag-invariants">
+        <h2>singularization invariants <span>{invariants.length}</span></h2>
+        <form method="post" action="/admin/tags/invariants">
+          <label className="form-label">
+            invariant tag
+            <input className="form-control" name="tag" required maxLength={280} placeholder="news"
+              autoComplete="off" />
+          </label>
+          <small>Tags listed here keep their trailing s and are never singularized.</small>
+          <FormActions primary={<button className="button">add invariant →</button>} />
+        </form>
+        <div className="admin-tag-display-list">
+          {invariants.map(tag => (
+            <form method="post" action={`/admin/tags/invariants/${encodeURIComponent(tag)}/remove`} key={tag}>
+              <a href={`/tag/${encodeURIComponent(tag)}`}>#{tag}</a>
+              <button className="quiet danger">remove</button>
+            </form>
+          ))}
+        </div>
       </section>
       <section className="admin-section admin-tag-display-names">
         <h2>display names <span>{displayNames.length}</span></h2>

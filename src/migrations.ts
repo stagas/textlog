@@ -3107,6 +3107,17 @@ export const migrations: Migration[] = [
       }
     },
   },
+  {
+    version: 187,
+    name: 'tag_singularization_invariants',
+    up(database) {
+      database.run(`CREATE TABLE IF NOT EXISTS tag_invariants (
+        tag TEXT PRIMARY KEY,
+        created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+      );
+      INSERT OR IGNORE INTO tag_invariants(tag) VALUES('news');`)
+    },
+  },
 ]
 
 export const latestMigrationVersion = migrations.at(-1)!.version

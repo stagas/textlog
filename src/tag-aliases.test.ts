@@ -109,3 +109,21 @@ test('plural tags transparently normalize to their singular tag', async () => {
   expect('id' in singularPost).toBeTrue()
   expect(await executeDatabaseDomain(database, 'tags.resolve', { tag: 'designers' })).toBe('designer')
 })
+
+test('admin invariants preserve tags that must not be singularized', async () => {
+  const database = new Database(':memory:')
+  database.run('PRAGMA foreign_keys=ON')
+  runMigrations(database)
+  database.query("INSERT INTO users(handle,email,password) VALUES('writer','writer@example.com','x')").run()
+
+  await executeDatabaseDomain(database, 'admin.addTagInvariant', { tag: 'status' })
+  expect(await executeDatabaseDomain(database, 'admin.tagInvariants', {})).toContain('status')
+  expect(await executeDatabaseDomain(database, 'tags.resolve', { tag: 'status' })).toBe('status')
+  const post = createPost(database, 1, '#status update', null, false)
+  expect('id' in post).toBeTrue()
+  if (!('id' in post)) throw new Error('Expected the test post to be created')
+  expect(database.query('SELECT tag FROM post_hashtags WHERE post_id=?').get(post.id)).toEqual({ tag: 'status' })
+
+  expect(await executeDatabaseDomain(database, 'admin.removeTagInvariant', { tag: 'status' })).toBeTrue()
+  expect(await executeDatabaseDomain(database, 'tags.resolve', { tag: 'status' })).toBe('statu')
+})

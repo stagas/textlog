@@ -9,7 +9,7 @@ import { API_DEFAULT_LIMIT, apiHotPosts, apiPost, apiPosts, apiPostsByIds, apiRe
 import { apiActivities } from './api-activity'
 import { issueApiKey } from './api-keys'
 import { consumeAuthAttempt, consumeBucketedAttempt, rateLimitKey } from './auth-rate-limit'
-import { extractHashtags, normalizeHashtag } from './content'
+import { extractHashtags, normalizeHashtag, normalizeHashtagSpelling } from './content'
 import { runAutomatedBackup } from './backup-automation'
 import { cacheDb } from './cache-db'
 import { exportUserData } from './data-export'
@@ -90,7 +90,10 @@ function attachTagDisplayNames(database: Database, tags: import('./types').TagVi
 }
 
 function canonicalTag(database: Database, tag: string) {
-  tag = normalizeHashtag(tag)
+  const spelling = normalizeHashtagSpelling(tag)
+  const invariant = database.query("SELECT 1 FROM sqlite_master WHERE type='table' AND name='tag_invariants'").get()
+    && database.query('SELECT 1 FROM tag_invariants WHERE tag=?').get(spelling)
+  tag = invariant ? spelling : normalizeHashtag(spelling)
   if (!database.query("SELECT 1 FROM sqlite_master WHERE type='table' AND name='tag_aliases'").get()) return tag
   return (database.query('SELECT primary_tag FROM tag_aliases WHERE alias=?').get(tag) as {
     primary_tag: string
@@ -1159,6 +1162,42 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
       const groups = new Map<string, string[]>()
       for (const row of rows) groups.set(row.primary_tag, [...(groups.get(row.primary_tag) || []), row.alias])
       return [...groups].map(([primaryTag, aliases]) => ({ primaryTag, aliases })) as DatabaseDomainOutput<K>
+    }
+    case 'admin.tagInvariants': {
+      return (database.query('SELECT tag FROM tag_invariants ORDER BY tag').all() as { tag: string }[])
+        .map(row => row.tag) as DatabaseDomainOutput<K>
+    }
+    case 'admin.addTagInvariant': {
+      const tag = (input as DatabaseDomainInput<'admin.addTagInvariant'>).tag
+      const previouslyNormalized = normalizeHashtag(tag)
+      database.transaction(() => {
+        database.query('INSERT OR IGNORE INTO tag_invariants(tag) VALUES(?)').run(tag)
+        reindexPostHashtags(database)
+        for (const table of previouslyNormalized === tag ? [] : ['hashtag_follows', 'blocked_hashtags']) {
+          database.query(`INSERT OR IGNORE INTO ${table}(user_id,tag,created_at)
+            SELECT user_id,?,created_at FROM ${table} WHERE tag=?`).run(tag, previouslyNormalized)
+          database.query(`DELETE FROM ${table} WHERE tag=?`).run(previouslyNormalized)
+        }
+      })()
+      cacheDb.run('DELETE FROM materialized_feed_pages_v2')
+      return null as DatabaseDomainOutput<K>
+    }
+    case 'admin.removeTagInvariant': {
+      const tag = (input as DatabaseDomainInput<'admin.removeTagInvariant'>).tag
+      const normalized = normalizeHashtag(tag)
+      const result = database.transaction(() => {
+        const removed = database.query('DELETE FROM tag_invariants WHERE tag=?').run(tag)
+        if (!removed.changes) return removed
+        reindexPostHashtags(database)
+        for (const table of normalized === tag ? [] : ['hashtag_follows', 'blocked_hashtags']) {
+          database.query(`INSERT OR IGNORE INTO ${table}(user_id,tag,created_at)
+            SELECT user_id,?,created_at FROM ${table} WHERE tag=?`).run(normalized, tag)
+          database.query(`DELETE FROM ${table} WHERE tag=?`).run(tag)
+        }
+        return removed
+      })()
+      if (result.changes) cacheDb.run('DELETE FROM materialized_feed_pages_v2')
+      return Boolean(result.changes) as DatabaseDomainOutput<K>
     }
     case 'admin.addTagAliases': {
       const { primaryTag, aliases } = input as DatabaseDomainInput<'admin.addTagAliases'>

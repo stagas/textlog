@@ -5,7 +5,7 @@ import {
   Explore,
   Reply,
 } from '../components/pages'
-import { isValidHashtag, normalizeHashtag } from '../content'
+import { isValidHashtag, normalizeHashtag, normalizeHashtagSpelling } from '../content'
 import { databaseService } from '../database-service'
 import {
   exploreWelcome,
@@ -153,7 +153,7 @@ export function registerInteractionsRoutes(app: Hono) {
   app.post('/tag-follow/:tag', async c => {
     const user = currentUser(c.req.raw)
     if (!user) return redirect('/enter')
-    const tag = normalizeHashtag(c.req.param('tag'))
+    const tag = normalizeHashtagSpelling(c.req.param('tag'))
     if (!isValidHashtag(tag)) return clientErrorPage(c.req.raw)
     const contentType = c.req.header('content-type') || ''
     const f = /^(application\/x-www-form-urlencoded|multipart\/form-data)(?:;|$)/i.test(contentType)
@@ -173,7 +173,7 @@ export function registerInteractionsRoutes(app: Hono) {
   app.post('/tag-block/:tag', async c => {
     const user = currentUser(c.req.raw)
     if (!user) return redirect('/enter')
-    const tag = normalizeHashtag(c.req.param('tag'))
+    const tag = normalizeHashtagSpelling(c.req.param('tag'))
     if (!isValidHashtag(tag)) return clientErrorPage(c.req.raw)
     await databaseService().call('interactions.toggleTagBlock', { userId: user.id, tag })
     return redirect(safeRefererPath(c.req.header('referer'), c.req.url, '/tag/' + encodeURIComponent(tag)))

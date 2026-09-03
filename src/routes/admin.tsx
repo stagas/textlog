@@ -22,19 +22,41 @@ import { cacheBlockedIp, flushIpRequests } from '../request-ip-blocks'
 import { currentUser } from '../utils'
 import { isTranslationLanguage, translateText } from '../translation'
 import { sendPushToAll, sendPushToUser } from '../push'
-import { isValidHashtag, normalizeHashtag } from '../content'
+import { isValidHashtag, normalizeHashtag, normalizeHashtagSpelling } from '../content'
 
 export function registerAdminRoutes(app: Hono) {
   app.get('/admin/tags', async c => {
     const signedIn = currentUser(c.req.raw)
     if (!signedIn) return redirect('/enter?next=' + encodeURIComponent(c.req.path))
     if (!isAdmin(signedIn)) return c.text('Forbidden', 403)
-    const [groups, displayNames] = await Promise.all([
+    const [groups, displayNames, invariants] = await Promise.all([
       databaseService().call('admin.tagAliases', {}),
       databaseService().call('admin.tagDisplayNames', {}),
+      databaseService().call('admin.tagInvariants', {}),
     ])
-    return page(<AdminTags user={signedIn} groups={groups} displayNames={displayNames}
+    return page(<AdminTags user={signedIn} groups={groups} displayNames={displayNames} invariants={invariants}
       error={c.req.query('error')} />)
+  })
+
+  app.post('/admin/tags/invariants', async c => {
+    const signedIn = currentUser(c.req.raw)
+    if (!signedIn) return redirect('/enter?next=' + encodeURIComponent('/admin/tags'))
+    if (!isAdmin(signedIn)) return c.text('Forbidden', 403)
+    const fields = await form(c.req.raw)
+    const tag = normalizeHashtagSpelling((fields.tag || '').replace(/^#/, '').trim())
+    if (!isValidHashtag(tag)) return c.text('Invalid invariant tag', 400)
+    await databaseService().call('admin.addTagInvariant', { tag })
+    return redirect('/admin/tags')
+  })
+
+  app.post('/admin/tags/invariants/:tag/remove', async c => {
+    const signedIn = currentUser(c.req.raw)
+    if (!signedIn) return redirect('/enter?next=' + encodeURIComponent('/admin/tags'))
+    if (!isAdmin(signedIn)) return c.text('Forbidden', 403)
+    const tag = normalizeHashtagSpelling(c.req.param('tag'))
+    if (!isValidHashtag(tag)) return c.text('Invalid invariant tag', 400)
+    await databaseService().call('admin.removeTagInvariant', { tag })
+    return redirect('/admin/tags')
   })
 
   app.post('/admin/tags', async c => {
