@@ -11,6 +11,16 @@ export function isValidHashtag(tag: string) {
 
 export const MAX_HASHTAGS_PER_POST = 15
 
+export type ExtractedHashtag = { tag: string; authored: string }
+
+export function pascalCaseHashtagPresentation(authored: string) {
+  if (!/^[A-Z][a-z\d]+(?:[A-Z][a-z\d]+)+$/.test(authored)) return null
+  return {
+    alias: authored.replace(/([a-z\d])([A-Z])/g, '$1_$2').toLowerCase(),
+    displayName: authored,
+  }
+}
+
 export const SPOILER_HASHTAGS = new Set([
   'spoiler',
   'tldr',
@@ -62,10 +72,8 @@ export function withoutMarkdownCode(body: string) {
   return characters.join('')
 }
 
-export function extractHashtags(body: string) {
-  const cached = hashtagCache.get(body)
-  if (cached) return cached
-  const tags = new Set<string>()
+export function extractAuthoredHashtags(body: string) {
+  const tags = new Map<string, string>()
   let count = 0
   const searchableBody = withoutMarkdownCode(body)
   const urls = urlMatcher.match(searchableBody) || []
@@ -75,9 +83,16 @@ export function extractHashtags(body: string) {
     if (slashes % 2 === 1) continue
     if (urls.some(url => match.index >= url.index && match.index < url.lastIndex)) continue
     if (count++ === MAX_HASHTAGS_PER_POST) break
-    tags.add(normalizeHashtag(match[1]))
+    const tag = normalizeHashtag(match[1])
+    if (!tags.has(tag)) tags.set(tag, match[1].normalize('NFC'))
   }
-  const result = [...tags]
+  return [...tags].map(([tag, authored]) => ({ tag, authored }))
+}
+
+export function extractHashtags(body: string) {
+  const cached = hashtagCache.get(body)
+  if (cached) return cached
+  const result = extractAuthoredHashtags(body).map(({ tag }) => tag)
   hashtagCache.set(body, result)
   if (hashtagCache.size > MAX_HASHTAG_CACHE_ENTRIES) hashtagCache.delete(hashtagCache.keys().next().value!)
   return result

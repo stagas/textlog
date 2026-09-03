@@ -506,6 +506,40 @@ describe('database migrations', () => {
     ])
   })
 
+  test('backfills conflict-free PascalCase tag aliases and display names from first use', () => {
+    const database = new Database(':memory:')
+    database.run('PRAGMA foreign_keys=ON')
+    runMigrations(database)
+    database.run(`INSERT INTO users(id,handle,email,password) VALUES(1,'author','author@example.com','x');
+      INSERT INTO posts(id,user_id,body,created_at) VALUES
+        (1,1,'#ThisFormCapitalized','2026-01-01'),
+        (2,1,'#lowercasefirst','2026-01-02'),
+        (3,1,'#LowercaseFirst','2026-01-03'),
+        (4,1,'#TakenAlias','2026-01-04'),
+        (5,1,'#OtherDisplay','2026-01-05'),
+        (6,1,'#AlreadyMapped','2026-01-06');
+      INSERT INTO tag_aliases(alias,primary_tag) VALUES
+        ('taken_alias','different'),('already_mapped','alreadymapped');
+      INSERT INTO tag_display_names(tag,display_name) VALUES('otherdisplay','Other_Display');
+      PRAGMA user_version=182;`)
+
+    runMigrations(database)
+
+    expect(database.query(`SELECT alias,primary_tag primaryTag FROM tag_aliases
+      WHERE primary_tag IN ('thisformcapitalized','lowercasefirst','takenalias','otherdisplay','alreadymapped')
+      ORDER BY alias`).all()).toEqual([
+      { alias: 'already_mapped', primaryTag: 'alreadymapped' },
+      { alias: 'this_form_capitalized', primaryTag: 'thisformcapitalized' },
+    ])
+    expect(database.query(`SELECT tag,display_name displayName FROM tag_display_names
+      WHERE tag IN ('thisformcapitalized','lowercasefirst','takenalias','otherdisplay','alreadymapped')
+      ORDER BY tag`).all()).toEqual([
+      { tag: 'alreadymapped', displayName: 'AlreadyMapped' },
+      { tag: 'otherdisplay', displayName: 'Other_Display' },
+      { tag: 'thisformcapitalized', displayName: 'ThisFormCapitalized' },
+    ])
+  })
+
   test('repairs account deletion tables created by the original version 30 migration', () => {
     const database = new Database(':memory:')
     database.run('PRAGMA foreign_keys=ON')

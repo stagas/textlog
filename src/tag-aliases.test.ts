@@ -2,6 +2,7 @@ import { Database } from 'bun:sqlite'
 import { expect, test } from 'bun:test'
 import { executeDatabaseDomain } from './database-domain'
 import { runMigrations } from './migrations'
+import { createPost, updatePost } from './posts'
 
 test('tag aliases resolve, aggregate posts, and can be managed by admins', async () => {
   const database = new Database(':memory:')
@@ -54,4 +55,31 @@ test('tag aliases resolve, aggregate posts, and can be managed by admins', async
     profileId: 1, viewerId: 1, page: 1, tagsPage: 1, kind: 'following', sort: 'abc',
   })).tags.find(tag => tag.tag === 'meta')?.displayName).toBe('Me_Ta')
   expect(await executeDatabaseDomain(database, 'admin.removeTagDisplayName', { tag: 'meta' })).toBe(true)
+})
+
+test('first use of a PascalCase tag creates its snake-case alias and display name', async () => {
+  const database = new Database(':memory:')
+  database.run('PRAGMA foreign_keys=ON')
+  runMigrations(database)
+  database.query("INSERT INTO users(handle,email,password) VALUES('writer','writer@example.com','x')").run()
+
+  const post = createPost(database, 1, 'A note about #ThisFormCapitalized', null, false)
+  expect('id' in post).toBeTrue()
+  if (!('id' in post)) throw new Error('Expected the test post to be created')
+  expect(database.query('SELECT tag FROM post_hashtags WHERE post_id=?').all(post.id)).toEqual([
+    { tag: 'thisformcapitalized' },
+  ])
+  expect(database.query(`SELECT alias,primary_tag primaryTag FROM tag_aliases
+    WHERE alias='this_form_capitalized'`).get()).toEqual({
+    alias: 'this_form_capitalized', primaryTag: 'thisformcapitalized',
+  })
+  expect(database.query("SELECT display_name displayName FROM tag_display_names WHERE tag='thisformcapitalized'")
+    .get()).toEqual({ displayName: 'ThisFormCapitalized' })
+  expect(await executeDatabaseDomain(database, 'tags.resolve', { tag: 'this_form_capitalized' }))
+    .toBe('thisformcapitalized')
+
+  updatePost(database, post.id, 'Changed spelling: #DifferentDisplay')
+  updatePost(database, post.id, 'Changed spelling again: #differentdisplay')
+  expect(database.query("SELECT display_name displayName FROM tag_display_names WHERE tag='differentdisplay'")
+    .get()).toEqual({ displayName: 'DifferentDisplay' })
 })
