@@ -140,6 +140,7 @@ export function WriteForm(
         <FormMessage error={error} />
         <div className="compose-editor-row">
           <textarea className="form-control" name="body" maxLength={POST_MAX} autoFocus={autoFocus}
+            accessKey={embedded ? 'w' : undefined}
             defaultValue={body} placeholder={`What’s on your mind, @${user.handle}?`}
             aria-label={`What’s on your mind, @${user.handle}?`}
             autoComplete="off" inputMode="text" enterKeyHint="enter" />

@@ -193,7 +193,8 @@ export function Layout({
           user?.show_link_previews === 0 ? ' link-previews-disabled' : ''
         }${mobileWriteAction ? ' has-mobile-write-action' : ''}${fullScreen ? ' full-screen-page' : ''}`}
       >
-        {!fullScreen && user && ready && <a className="skip-link" href={writeShortcutHref} accessKey="w">write</a>}
+        {!fullScreen && user && ready && !mobileWriteAction
+          && <a className="skip-link" href={writeShortcutHref} accessKey="w">write</a>}
         {!fullScreen && <a className="skip-link" href="#main-content">skip to content</a>}
         {!fullScreen && (
           <header className={user ? 'authenticated-header' : undefined}>
