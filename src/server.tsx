@@ -1,3 +1,4 @@
+import './console-timestamps'
 import { clientIpHeaderName, sessionCookieName } from './brand'
 import { validateStartupConfiguration } from './config'
 import { configureDatabaseService } from './database-service'

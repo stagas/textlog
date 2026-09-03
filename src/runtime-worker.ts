@@ -1,3 +1,4 @@
+import './console-timestamps'
 import { cacheDb, clearCacheDatabase } from './cache-db'
 import { executeDatabaseDomain, normalizeExistingWordNetTags } from './database-domain'
 import { configureDatabaseService } from './database-service'
