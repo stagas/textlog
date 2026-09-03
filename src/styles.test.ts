@@ -2,6 +2,11 @@ import { describe, expect, test } from 'bun:test'
 import { loadStylesAsset, preferredStylesEncoding, stylesResponse } from './styles'
 
 describe('in-memory stylesheet', () => {
+  test('aligns each post paragraph from its detected writing direction', async () => {
+    const css = await Bun.file(new URL('./styles.css', import.meta.url)).text()
+    expect(css).toContain('text-align: start;\n  unicode-bidi: plaintext;\n  white-space: pre-wrap;')
+  })
+
   test('negotiates the best supported encoding', () => {
     expect(preferredStylesEncoding('gzip, br')).toBe('br')
     expect(preferredStylesEncoding('br;q=0, gzip;q=0.8')).toBe('gzip')

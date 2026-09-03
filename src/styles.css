@@ -2728,6 +2728,8 @@ body.corners-round a.button {
   font-size: var(--post-body-font-size, var(--font-size-13));
   line-height: var(--post-body-line-height, 1.65);
   letter-spacing: var(--post-body-letter-spacing, normal);
+  text-align: start;
+  unicode-bidi: plaintext;
   white-space: pre-wrap;
   overflow-wrap: anywhere;
 }

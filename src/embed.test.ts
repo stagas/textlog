@@ -11,6 +11,11 @@ test('embed appearance query parameters select known themes and accents', () => 
   expect(css).toContain('--font-monospace:"DejaVu Sans Mono", monospace')
 })
 
+test('embed post paragraphs use their detected writing direction', async () => {
+  const css = await Bun.file(new URL('./embed.css', import.meta.url)).text()
+  expect(css).toContain('text-align:start;unicode-bidi:plaintext;white-space:pre-wrap')
+})
+
 test('embed font short names are optional and invalid values fall back safely', () => {
   const invalid = themeStyles(new Request('https://textlog.cc/theme.css?theme=light&font=not-a-font'))
   expect(invalid).toContain('--font-monospace:ui-monospace, SFMono-Regular, Menlo, Consolas, monospace')
