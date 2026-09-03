@@ -128,5 +128,19 @@ export function collapsedConversationPreview<T extends ConversationPost & { feed
     ? ordered.slice(0, 2)
     : ordered.slice(0, 1)
   const previewIds = new Set(weighted.map(post => post.id))
-  return [...weighted, ...ordered.filter(post => unreadPostIds?.has(post.id) && !previewIds.has(post.id))]
+  const selected = [...weighted, ...ordered.filter(post => unreadPostIds?.has(post.id) && !previewIds.has(post.id))]
+  for (const post of selected) previewIds.add(post.id)
+
+  // Unread replies are retained beyond the normal projection. Retain their immediate parent too when it is
+  // available, so a folded feed renders the relationship as a tree instead of losing the parent context.
+  const byId = new Map(replies.map(post => [post.id, post]))
+  for (const post of [...selected]) {
+    if (!unreadPostIds?.has(post.id) || post.parent_id === null || previewIds.has(post.parent_id)) continue
+    const parent = byId.get(post.parent_id)
+    if (parent) {
+      selected.push(parent)
+      previewIds.add(parent.id)
+    }
+  }
+  return selected
 }

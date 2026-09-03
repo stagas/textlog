@@ -152,25 +152,25 @@ test('collapsed conversations render unread ancestors as posts instead of hidden
   expect(html).toContain('<div class="reply-node collapsed-preview-path"><a class="quiet thread-ancestor-gap post-continuation-link"')
 })
 
-test('a folded unread reply includes its quoted parent', () => {
+test('a folded unread reply promotes its parent into the tree', () => {
   const root = { id: 300, user_id: 1, parent_id: null, body: 'Root', created_at: '2026-09-02 10:00:00',
-    deleted_at: null, handle: 'root', reply_count: 2 }
+    deleted_at: null, handle: 'root', reply_count: 3 }
+  const older = { id: 299, user_id: 4, parent_id: root.id, body: 'Older sibling',
+    created_at: '2026-09-02 10:30:00', deleted_at: null, handle: 'older', reply_count: 0, parent: root }
   const parent = { id: 301, user_id: 2, parent_id: root.id, body: 'The replied-to post',
     created_at: '2026-09-02 11:00:00', deleted_at: null, handle: 'parent', reply_count: 1, parent: root }
   const unread = { id: 302, user_id: 3, parent_id: parent.id, body: 'New unread reply',
     created_at: '2026-09-02 12:00:00', deleted_at: null, handle: 'reply', reply_count: 0, parent,
-    feed_collapsed_preview: true }
+    feed_collapsed_preview: true, feed_ancestor_gap: true }
   const html = renderToStaticMarkup(<PublicFeed path="/latest" feed={{
-    posts: [root, parent, unread], page: 1, totalItems: 1, totalPages: 1, unreadPostIds: [unread.id],
+    posts: [root, older, unread], page: 1, totalItems: 1, totalPages: 1, unreadPostIds: [unread.id],
   }} />)
-  const replyStart = html.indexOf('id="post-302"')
-  const replyEnd = html.indexOf('</article>', replyStart)
-
-  expect(html.slice(replyStart, replyEnd)).toMatch(/class="parent-quote[^"]* collapsed-parent-only"/)
-  expect(html.slice(replyStart, replyEnd)).toContain('The replied-to post')
+  expect(html).toMatch(/collapsed-preview-post[^>]*>[\s\S]*?id="post-301"[\s\S]*?collapsed-preview-post[^>]*>[\s\S]*?id="post-302"/)
+  expect(html).toMatch(/class="reply-node collapsed-preview-path collapsed-preview-post"><article[^>]*id="post-302"/)
+  expect(html).not.toContain('class="parent-quote')
 })
 
-test('an unread reply does not quote a parent already visible in the folded tree', () => {
+test('an unread reply keeps a root parent in the tree without quoting it', () => {
   const root = { id: 310, user_id: 1, parent_id: null, body: 'Visible parent', created_at: '2026-09-02 10:00:00',
     deleted_at: null, handle: 'root', reply_count: 1 }
   const unread = { id: 311, user_id: 2, parent_id: root.id, body: 'New unread reply',
@@ -180,7 +180,7 @@ test('an unread reply does not quote a parent already visible in the folded tree
     posts: [root, unread], page: 1, totalItems: 1, totalPages: 1, unreadPostIds: [unread.id],
   }} />)
 
-  expect(html).not.toContain('collapsed-parent-only')
+  expect(html).not.toContain('class="parent-quote')
   expect(html.match(/Visible parent/g)).toHaveLength(1)
 })
 

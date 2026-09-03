@@ -1,7 +1,17 @@
 import { expect, test } from 'bun:test'
-import { projectRecentConversation } from './latest-conversation'
+import { collapsedConversationPreview, projectRecentConversation } from './latest-conversation'
 
 const reply = (id: number, createdAt: string) => ({ id, parent_id: 895, created_at: createdAt })
+
+test('folded previews retain the immediate parent of an unread reply', () => {
+  const replies = [
+    { id: 3, parent_id: 2, created_at: '2026-09-02 14:35:48', feed_collapsed_preview: true },
+    { id: 2, parent_id: 1, created_at: '2026-09-02 14:24:47' },
+    { id: 4, parent_id: 1, created_at: '2026-09-02 14:30:05', feed_collapsed_preview: true },
+  ]
+
+  expect(collapsedConversationPreview(replies, new Set([3])).map(post => post.id)).toEqual([3, 4, 2])
+})
 
 test('Latest includes a recent reply burst plus one connected older reply', () => {
   const conversation = [

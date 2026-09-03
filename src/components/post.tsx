@@ -604,7 +604,6 @@ export function Post({
   showReadAction = true,
   hideTopMeta = false,
   suppressContentWarning = false,
-  collapsedParentOnly = false,
 }: { p: PostView; user: User | null; showReplyAction?: boolean; showOwnerActions?: boolean;
   showModerateAction?: boolean; showParent?: boolean; showReplyCount?: boolean; replyHref?: string; replyLabel?: string;
   reportHref?: string; bookmarkAction?: boolean; foldControlId?: string; collapsedExpansionControlId?: string;
@@ -614,8 +613,7 @@ export function Post({
   contextDirectedUnread?: boolean; preview?: boolean; returnPath?: string; backHref?: string;
   canonicalTimestamp?: boolean; topHref?: string; flatHref?: string; treeHref?: string;
   authorPopoverAction?: React.ReactNode; continuationHref?: string; continuationLabel?: string; className?: string;
-  topActions?: React.ReactNode; showReadAction?: boolean; hideTopMeta?: boolean; suppressContentWarning?: boolean;
-  collapsedParentOnly?: boolean })
+  topActions?: React.ReactNode; showReadAction?: boolean; hideTopMeta?: boolean; suppressContentWarning?: boolean })
 {
   const linkedPostReturnPath = returnPath || `/post/${p.id}#post-${p.id}`
   const renderLinkedPostPreviews = (linkPreviews: PostView['link_previews']) => linkPreviews
@@ -918,8 +916,7 @@ export function Post({
       {parent && (
         <blockquote className={'parent-quote' + (containsAsciiArt(parent.body) ? ' ascii-art' : '')
           + (parent.deleted_at || parent.unavailable ? ' deleted-parent' : '')
-          + (hasTappableParent && !parent.unavailable ? ' tappable-parent' : '')
-          + (collapsedParentOnly ? ' collapsed-parent-only' : '')}
+          + (hasTappableParent && !parent.unavailable ? ' tappable-parent' : '')}
         >
           {hasTappableParent && !parent.unavailable && (
             <a className="parent-hit-area" href={parentDetailPath} rel={navigationRel}
@@ -1305,10 +1302,7 @@ export function ThreadReplies(
         {reply.feed_ancestor_gap && (
           omissionMarker('Earlier replies omitted')
         )}
-        <FeedPost p={reply} user={user}
-          showParent={collapsedPreviewPosts.has(reply.id) && !!contextUnreadPostIds?.has(reply.id)
-            && reply.parent_id !== parentId && !collapsedPreviewPosts.has(reply.parent_id!)}
-          collapsedParentOnly
+        <FeedPost p={reply} user={user} showParent={false}
           returnPath={postReturnPath}
           tappableHref={anchorReplyNavigation
             ? replyAnchorReturnPath(parentId, reply.id, postReturnPath)
@@ -1425,10 +1419,11 @@ export function FeedThreads(
   }
   if (promoteAncestors) {
     for (const post of feedPosts) {
-      if (post.feed_branch_root || post.feed_ancestor_gap) continue
+      if (post.feed_branch_root || post.feed_ancestor_gap && !contextUnreadPostIds?.has(post.id)) continue
       const immediateParent = post.parent
       if (!immediateParent) continue
-      const shouldPromoteImmediate = promoteAncestors === 'all' || immediateParent.parent_id == null
+      const shouldPromoteImmediate = promoteAncestors === 'all' || !!contextUnreadPostIds?.has(post.id)
+        || immediateParent.parent_id == null
         || !ids.has(immediateParent.parent_id)
         || contextUnreadPostIds?.has(immediateParent.parent_id)
       if (!ids.has(immediateParent.id) && shouldPromoteImmediate) {
@@ -1437,6 +1432,10 @@ export function FeedThreads(
           feed_ancestor_gap: promoteAncestors !== 'all' && immediateParent.parent_id != null
             && !ids.has(immediateParent.parent_id) })
         ids.add(immediateParent.id)
+        if (post.feed_ancestor_gap && contextUnreadPostIds?.has(post.id)) {
+          const postIndex = treePosts.findIndex(candidate => candidate.id === post.id)
+          treePosts[postIndex] = { ...treePosts[postIndex], feed_ancestor_gap: undefined }
+        }
       }
       if (promoteAncestors === 'all') {
         let ancestor = immediateParent.parent
