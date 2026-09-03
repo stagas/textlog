@@ -79,6 +79,7 @@ export function Layout({
     ? requestUrl.searchParams.get('from') || `/u/${user?.handle || ''}`
     : currentPath
   const accountHref = '/account/edit?from=' + encodeURIComponent(accountFrom)
+  const linkedAccountHasUnread = !!user?.linked_accounts?.some(account => account.has_unread)
   const share = social || {
     description: 'The quieter social microblogging platform.',
     image: `${origin}/og.png?v=2`,
@@ -98,7 +99,10 @@ export function Layout({
         <form method="post" action="/account/accounts/select" key={account.id}>
           <input type="hidden" name="accountId" value={account.id} />
           <input type="hidden" name="next" value={currentPath} />
-          <button type="submit">@{account.handle}</button>
+          <button className="account-menu-account" type="submit">
+            {account.has_unread && <span className="unread-dot" aria-label="unread activity" />}
+            <span>@{account.handle}</span>
+          </button>
         </form>
       ))}
       <LogoutForm>
@@ -118,6 +122,7 @@ export function Layout({
             ? (
               <details className="account-menu">
                 <summary className="account-menu-handle">
+                  {linkedAccountHasUnread && <span className="unread-dot" aria-label="unread account activity" />}
                   @{user.handle}
                   {user.mood
                     && <span className="nav-mood">{user.mood}</span>}
@@ -128,6 +133,7 @@ export function Layout({
             : (
               <div className="account-menu">
                 <a className="account-menu-handle" href={profileHref}>
+                  {linkedAccountHasUnread && <span className="unread-dot" aria-label="unread account activity" />}
                   @{user.handle}
                   {user.mood
                     && <span className="nav-mood">{user.mood}</span>}
@@ -196,7 +202,7 @@ export function Layout({
           </>
         )}
         {mobile && <link href="https://fonts.cdnfonts.com/css/dejavu-sans-mono" rel="stylesheet" />}
-        <link rel="stylesheet" href="/styles.css?v=1365" />
+        <link rel="stylesheet" href="/styles.css?v=1367" />
         <style>{themeCss}</style>
       </head>
       <body

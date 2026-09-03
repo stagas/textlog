@@ -551,6 +551,16 @@ header>nav>a:not(.button),
   background: var(--pagination-hover-bg);
 }
 
+.account-menu-handle,
+.account-menu-popover button.account-menu-account {
+  gap: 5px;
+}
+
+.account-menu-popover button.account-menu-account {
+  display: flex;
+  align-items: center;
+}
+
 .account-menu-popover form {
   margin: 0;
 }

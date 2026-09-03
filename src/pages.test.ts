@@ -156,9 +156,26 @@ test('account menu lists linked accounts immediately before logout for one-click
     })))
 
   const switchForm = '<form action="/account/accounts/select" method="post"><input type="hidden" name="accountId" value="2"/>'
-    + '<input type="hidden" name="next" value="/latest?page=2"/><button type="submit">@another</button></form>'
+    + '<input type="hidden" name="next" value="/latest?page=2"/>'
+    + '<button class="account-menu-account" type="submit"><span>@another</span></button></form>'
   expect(html).toContain(switchForm)
   expect(html.indexOf(switchForm)).toBeLessThan(html.indexOf('action="/logout"'))
+})
+
+test('account navigation marks linked accounts with unread activity', () => {
+  const html = withAppearance(new Request('https://textlog.test/explore'), () =>
+    renderToStaticMarkup(React.createElement(Layout, {
+      user: { id: 1, handle: 'reader', email: 'reader@example.com', bio: '', handle_chosen_at: '2026-01-01',
+        linked_accounts: [
+          { id: 2, handle: 'waiting', handle_chosen_at: '2026-02-01', has_unread: true },
+          { id: 3, handle: 'quiet', handle_chosen_at: '2026-02-02', has_unread: false },
+        ] },
+      children: React.createElement('p', null, 'Hello'),
+    })))
+
+  expect(html).toContain('<span class="unread-dot" aria-label="unread account activity"></span>@reader')
+  expect(html).toContain('<span class="unread-dot" aria-label="unread activity"></span><span>@waiting</span>')
+  expect(html).toContain('<span>@quiet</span></button>')
 })
 
 test('panels gallery renders every shared panel variation', () => {
