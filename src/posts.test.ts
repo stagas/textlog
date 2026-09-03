@@ -46,7 +46,7 @@ describe('post persistence', () => {
         + '<span class="post-spoiler-content-inner">hidden <a href="https://example.com" class="raw-link" '
         + 'title="https://example.com" target="_blank" rel="nofollow ugc noopener noreferrer">example.com</a>'
         + '</span></span></span>')
-    expect(linkify('visible #spoilers\nstill visible')).not.toContain('class="post-spoiler"')
+    expect(linkify('visible #spoilers\nstill visible')).toContain('class="post-spoiler"')
     expect(linkify('https://example.com/#spoiler\nstill visible')).not.toContain('class="post-spoiler"')
     expect(linkify('#SPOILER')).not.toContain('class="post-spoiler"')
   })
@@ -146,7 +146,7 @@ describe('post persistence', () => {
   test('renders consecutive greater-than lines as a quote while preserving inline formatting', () => {
     expect(linkify('before\n> quoted *bold*\n> with #notes\nafter')).toBe(
       'before<span class="post-quote">quoted <strong>bold</strong>\nwith '
-        + '<a href="/tag/notes">#notes</a></span>after',
+        + '<a href="/tag/note">#notes</a></span>after',
     )
   })
   test('renders GFM tables with alignment and rich post content in cells', () => {

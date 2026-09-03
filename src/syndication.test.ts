@@ -34,14 +34,14 @@ function fixture(firstPostBody?: string) {
       (3,'Gone','gone@example.com','','2026-08-03 00:00:00'),(4,'Reader','reader@example.com','',NULL);
     INSERT INTO follows VALUES(4,1,'2026-08-01 00:00:00');
     INSERT INTO follows VALUES(1,2,'2026-08-03 09:00:00');
-    INSERT INTO hashtag_follows VALUES(4,'notes','2026-08-01 00:00:00');
+    INSERT INTO hashtag_follows VALUES(4,'note','2026-08-01 00:00:00');
     INSERT INTO handle_history VALUES('oldalice',1);
     INSERT INTO posts VALUES
       (1,1,NULL,'hello & <friends> #notes','2026-08-03 10:00:00',NULL),
       (2,2,1,'a reply','2026-08-03 11:00:00',NULL),
       (3,1,NULL,'deleted','2026-08-03 12:00:00','2026-08-03 13:00:00'),
       (4,3,NULL,'gone author','2026-08-03 14:00:00',NULL);
-    INSERT INTO post_hashtags VALUES(1,'notes');
+    INSERT INTO post_hashtags VALUES(1,'note');
     INSERT INTO post_hot SELECT id,0,0,0,created_at,created_at FROM posts;
   `)
   if (firstPostBody !== undefined) database.query('UPDATE posts SET body=? WHERE id=1').run(firstPostBody)

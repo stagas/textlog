@@ -52,7 +52,7 @@ function fixture(now?: () => number) {
       (4,3,NULL,'private by deletion','2026-08-03 13:00:00'),
       (5,1,NULL,'deleted post','2026-08-03 14:00:00');
     UPDATE posts SET deleted_at='2026-08-03 15:00:00' WHERE id=5;
-    INSERT INTO post_hashtags(post_id,tag) VALUES(1,'notes'),(1,'pin');
+    INSERT INTO post_hashtags(post_id,tag) VALUES(1,'note'),(1,'pin');
     INSERT INTO post_link_previews(post_id,url,image_url,title) VALUES
       (1,'https://example.com','https://example.com/image.jpg','Example');
     INSERT INTO follows(follower_id,following_id) VALUES(2,1);
@@ -113,7 +113,7 @@ describe('public API', () => {
       body: 'hello #notes @bob',
       created_at: '2026-08-03T10:00:00.000Z',
       reply_count: 1,
-      tags: ['notes'],
+      tags: ['note'],
       mentions: ['bob'],
       url: 'https://textlog.cc/post/1',
       author: { handle: 'alice', url: 'https://textlog.cc/u/alice' },

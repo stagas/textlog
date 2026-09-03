@@ -467,7 +467,7 @@ test('todo text and labels render links, Markdown, and LaTeX', () => {
   const author = { id: 1, handle: 'writer', email: 'writer@example.com', bio: '' }
   const html = renderToStaticMarkup(React.createElement(Post, { p: post, user: author }))
 
-  expect(html).toContain('<a href="/tag/notes?from=')
+  expect(html).toContain('<a href="/tag/note?from=')
   expect(html).toContain('<a href="https://example.com/docs" title="https://example.com/docs"')
   expect(html).toContain('>the docs</a>')
   expect(html).toContain('<math')
@@ -478,15 +478,15 @@ test('todo text and labels render links, Markdown, and LaTeX', () => {
 test('todo references and links render the same hover cards as post text', () => {
   const body = '#todo\n[ ] Read #notes with @reader at https://example.com/docs'
   const post = { id: 7, user_id: 1, parent_id: null, body, created_at: '2026-08-23 10:00:00', deleted_at: null,
-    handle: 'writer', reply_count: 0, mention_bios: { reader: 'A reader' }, hashtag_counts: { notes: 3 },
-    hashtag_follower_counts: { notes: 2 }, link_previews: {
+    handle: 'writer', reply_count: 0, mention_bios: { reader: 'A reader' }, hashtag_counts: { note: 3 },
+    hashtag_follower_counts: { note: 2 }, link_previews: {
       'https://example.com/docs': { imageUrl: 'https://example.com/preview.png', title: 'Example docs',
         description: 'Documentation' },
     } }
   const author = { id: 1, handle: 'writer', email: 'writer@example.com', bio: '' }
   const html = renderToStaticMarkup(React.createElement(Post, { p: post, user: author }))
 
-  expect(html).toContain('href="/tag/notes?from=')
+  expect(html).toContain('href="/tag/note?from=')
   expect(html).toContain('class="reference-menu-popover reference-menu-popover-tag"')
   expect(html).toContain('class="reference-menu"')
   expect(html).toContain('class="remote-link-menu"')
@@ -2421,7 +2421,7 @@ test('Hashtags in posts carry their originating post into the tag page', () => {
     },
   }))
 
-  expect(html).toContain('href="/tag/notes?from=%2Flatest%23post-2">#notes</a>')
+  expect(html).toContain('href="/tag/note?from=%2Flatest%23post-2">#notes</a>')
 })
 
 test('root feed variants use the unqualified site title', () => {
@@ -3399,9 +3399,9 @@ test('Connection bios render enriched mention and hashtag hover cards', () => {
         mentionProfileStats: { friend: { notes: 3, replies: 1, followers: 2, following: 4, followingTags: 1 } },
         mentionFollowing: { friend: false },
         mentionFollowsViewer: { friend: false },
-        hashtagCounts: { notes: 5 },
-        hashtagFollowerCounts: { notes: 2 },
-        hashtagFollowing: { notes: false },
+        hashtagCounts: { note: 5 },
+        hashtagFollowerCounts: { note: 2 },
+        hashtagFollowing: { note: false },
       },
     }],
   }))
