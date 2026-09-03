@@ -643,6 +643,7 @@ test('signed-in users can invite a deduplicated list of friends with join magic 
   expect(inviteHtml).toContain('class="secondary-action cancel-action"')
   expect(inviteHtml).not.toContain('>back</a>')
   expect(inviteHtml).toContain('Your friends will get a magic link to join textlog.')
+  expect(inviteHtml).not.toContain('up to 20')
   expect(inviteHtml).toContain('name="emails"')
 
   const invited = await request('/account/edit/invite', {
@@ -663,6 +664,17 @@ test('signed-in users can invite a deduplicated list of friends with join magic 
   const invitationExpiry = database.query('SELECT expires_at,created_at FROM magic_links WHERE email=?')
     .get('first.invite@example.com') as { expires_at: number; created_at: number }
   expect(invitationExpiry.expires_at - invitationExpiry.created_at).toBe(7 * 24 * 60 * 60 * 1000)
+
+  const tooManyEmails = Array.from({ length: 101 }, (_, index) => `friend-${index}@example.com`).join(',')
+  const tooMany = await request('/account/edit/invite', {
+    method: 'POST',
+    cookie,
+    form: { emails: tooManyEmails },
+  })
+  expect(tooMany.status).toBe(400)
+  const tooManyHtml = await tooMany.text()
+  expect(tooManyHtml).toContain('The invitations could not be sent. Check the addresses and try again.')
+  expect(tooManyHtml).not.toContain('up to 100')
 
   const joined = await request(`/enter/magic?token=${encodeURIComponent(linkToken(firstMessages[0]!))}`)
   expect(joined.status).toBe(303)

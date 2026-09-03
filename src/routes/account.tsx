@@ -57,6 +57,9 @@ import { ACCENT_CHOICES, type AccentChoice, appearance, appearanceCookie, CORNER
 import { DEFAULT_TIMEZONE, validTimezone } from '../timezone'
 import { emailPattern } from './auth'
 
+const FRIEND_INVITE_LIMIT = 100
+const FRIEND_INVITE_SPACING_MS = 1_000
+
 async function markAppearanceBannerHandled(request: Request, userId: number) {
   const userAgent = notificationUserAgent(request)
   if (!userAgent) return
@@ -92,14 +95,16 @@ export function registerAccountRoutes(app: Hono) {
   app.post('/account/edit/invite', async c => {
     const user = currentUser(c.req.raw)
     if (!user) return redirect('/enter?next=' + encodeURIComponent('/account/edit/invite'))
-    const f = await form(c.req.raw, 8_000)
+    const f = await form(c.req.raw, 32_000)
     const submitted = f.emails || ''
     const returnPath = f.from ? safeNext(f.from) : undefined
     const emails = [...new Set(submitted.split(/[\s,]+/u).map(value => value.trim().toLowerCase()).filter(Boolean))]
     const renderError = (error: string, status = 400) =>
       page(<InviteFriends user={user} emails={submitted} error={error} returnPath={returnPath} />, status)
     if (!emails.length) return renderError('Enter at least one email address.')
-    if (emails.length > 20) return renderError('You can invite up to 20 friends at a time.')
+    if (emails.length > FRIEND_INVITE_LIMIT) {
+      return renderError('The invitations could not be sent. Check the addresses and try again.')
+    }
     if (emails.some(email => email.length > 254 || !emailPattern.test(email))) {
       return renderError('Check the email addresses and try again. Separate each address with a space or comma.')
     }
@@ -109,11 +114,13 @@ export function registerAccountRoutes(app: Hono) {
     }
     const origin = Bun.env.APP_URL?.replace(/\/$/, '') || new URL(c.req.url).origin
     try {
-      for (const email of emails) {
+      for (const [index, email] of emails.entries()) {
+        if (index > 0) await Bun.sleep(FRIEND_INVITE_SPACING_MS)
         const account = await databaseService().call('auth.accountForIdentifier', { identifier: email, isEmail: true })
         const link = await issueMagicLink(email, account?.id ?? null, '/', origin, INVITATION_LINK_LIFETIME_MS)
         try {
           await sendFriendInvitation(email, link.url, user.handle)
+          console.log(`Sent friend invitation to ${email}`)
         }
         catch (error) {
           await databaseService().call('auth.deleteMagicLink', { tokenHash: link.tokenHash })

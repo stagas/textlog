@@ -17,7 +17,7 @@ export function InviteFriends({ user, emails = '', error, sent = 0, returnPath }
         <PanelHeading>Bring your friends along</PanelHeading>
         <PanelCopy>
           Your friends will get a magic link to join textlog.<br />
-          Enter up to 20 email addresses, separated by spaces or commas.
+          Enter email addresses separated by spaces or commas.
         </PanelCopy>
         <FormMessage error={error} success={sent
           ? `${sent} ${sent === 1 ? 'invitation' : 'invitations'} sent.`
@@ -26,7 +26,7 @@ export function InviteFriends({ user, emails = '', error, sent = 0, returnPath }
           {returnPath && <input type="hidden" name="from" value={returnPath} />}
           <label className="form-label">
             email addresses
-            <textarea className="form-control" name="emails" required maxLength={5_100} defaultValue={emails}
+            <textarea className="form-control" name="emails" required maxLength={25_500} defaultValue={emails}
               placeholder="friend@example.com, another@example.com" autoComplete="off" inputMode="email"
               enterKeyHint="enter" aria-describedby="invite-email-help" autoFocus />
             <span className="form-hint" id="invite-email-help">Separate addresses with a space or comma.</span>
