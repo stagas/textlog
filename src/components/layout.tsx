@@ -35,6 +35,7 @@ export function Layout({
   logoutNavigation = false,
   mobileWriteAction = false,
   fullScreen = false,
+  fullScreenBrand = false,
   children,
 }: {
   title?: string
@@ -47,6 +48,7 @@ export function Layout({
   notificationBanner?: false | 'notifications' | 'appearance' | 'invite' | 'bio' | 'notification-update' | 'donate'
   mobileWriteAction?: boolean
   fullScreen?: boolean
+  fullScreenBrand?: boolean
   children: React.ReactNode
 }) {
   const selectedAppearance = activeAppearance()
@@ -54,7 +56,7 @@ export function Layout({
   const density = resolvedDensity(request)
   const mobile = isMobileRequest(request)
   const standalone = pwaStandalone(request)
-  const showPwaInstallBanner = mobile && !standalone && !pwaInstallBannerDismissed(request)
+  const showPwaInstallBanner = Boolean(user) && mobile && !standalone && !pwaInstallBannerDismissed(request)
   const corners = cornerChoice(request)
   const appearanceVersion = `${selectedAppearance.theme}.${selectedAppearance.accent}`
   const themeCss = activeThemeStyles()
@@ -187,7 +189,7 @@ export function Layout({
           </>
         )}
         {mobile && <link href="https://fonts.cdnfonts.com/css/dejavu-sans-mono" rel="stylesheet" />}
-        <link rel="stylesheet" href="/styles.css?v=1353" />
+        <link rel="stylesheet" href="/styles.css?v=1356" />
         <style>{themeCss}</style>
       </head>
       <body
@@ -220,6 +222,12 @@ export function Layout({
                 </nav>
               )}
           </header>
+        )}
+        {fullScreen && fullScreenBrand && (
+          <a className="brand full-screen-brand" href="/" aria-label={`${name} home`}>
+            <span className="brand-logo" aria-hidden="true" dangerouslySetInnerHTML={{ __html: logoSvg }} />
+            <span>{name}</span>
+          </a>
         )}
         {!fullScreen && showPwaInstallBanner && !notificationBanner && requestUrl.pathname !== '/install' && (
           <aside className="notification-banner install-banner" aria-label="Install app">

@@ -132,14 +132,22 @@ test('PWA launch marks the client standalone and removes the launch parameter', 
   expect(response.headers.get('set-cookie')).toContain('pwa_standalone=1')
 })
 
-test('mobile browsers see an install banner and can dismiss it', async () => {
+test('only signed-in mobile browsers see an install banner and can dismiss it', async () => {
   const userAgent = 'Mozilla/5.0 (Linux; Android 15) AppleWebKit/537.36 Chrome/140 Mobile'
   const mobile = await request('/about', { userAgent })
   const mobileHtml = await mobile.text()
-  expect(mobileHtml).toContain('install to home screen')
+  expect(mobileHtml).not.toContain('install to home screen')
   expect(mobileHtml).toContain('get mobile app')
 
-  const standalone = await request('/about', { userAgent, cookie: 'pwa_standalone=1' })
+  const now = Date.now()
+  const user = database.query(`INSERT INTO users(handle,email,password,email_verified_at,handle_chosen_at)
+    VALUES(?,?,?,?,?) RETURNING id`).get('install_tester', 'install@example.com', '', now, now) as { id: number }
+  const session = 'install-banner-session'
+  insertSession(database, session, user.id, now + SESSION_LIFETIME_MS, now, 'Integration test')
+  const signedIn = await request('/about', { userAgent, cookie: `textlog=${session}` })
+  expect(await signedIn.text()).toContain('install to home screen')
+
+  const standalone = await request('/about', { userAgent, cookie: `textlog=${session}; pwa_standalone=1` })
   const standaloneHtml = await standalone.text()
   expect(standaloneHtml).not.toContain('install to home screen')
   expect(standaloneHtml).not.toContain('get mobile app')

@@ -3486,12 +3486,14 @@ body.corners-round a.button {
 @media (max-width: 520px) {
   .auth-shell {
     min-height: auto;
+    padding-top: 0;
     padding-inline: 0;
     place-items: start stretch;
   }
 
   .auth-panel {
     width: 100%;
+    border-top: 0;
     border-inline: 0;
   }
 }
@@ -7994,6 +7996,25 @@ body.density-relaxed :where(p, li, textarea):not(.ascii-art) {
 }
 /* Onboarding gates */
 body.full-screen-page { overflow: hidden; }
+
+.full-screen-brand {
+  position: fixed;
+  top: var(--space-4);
+  left: var(--gutter);
+  z-index: 1001;
+}
+
+.full-screen-page .enter-shell {
+  min-height: 100dvh;
+  padding: max(var(--space-8), 72px) var(--gutter) var(--space-8);
+  place-items: center;
+}
+
+.full-screen-page .enter-panel {
+  padding: 0;
+  background: transparent;
+  border: 0;
+}
 
 :is(.handle-picker, .mood-picker, .tag-picker, .people-picker) {
   position: fixed;

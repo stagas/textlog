@@ -302,8 +302,12 @@ test('account switcher errors use the shared error notice', () => {
 
 test('auth pages render through the shared centered panel', () => {
   const html = renderToStaticMarkup(React.createElement(Auth, {}))
+  expect(html).toContain('<body class="density-regular full-screen-page">')
+  expect(html).toContain('class="brand full-screen-brand"')
   expect(html).toContain('class="panel-shell auth-shell enter-shell"')
   expect(html).toContain('class="panel panel-surface panel-narrow auth-panel enter-panel"')
+  expect(html).not.toContain('<header')
+  expect(html).not.toContain('<footer')
 })
 
 test('compose offers a server-rendered post preview', () => {

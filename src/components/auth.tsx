@@ -11,7 +11,7 @@ export function Auth({ error, email = '', next, returning = false }: {
   returning?: boolean
 }) {
   return (
-    <Layout title="enter">
+    <Layout title="enter" fullScreen fullScreenBrand>
       <CenteredPanel shellClassName="auth-shell enter-shell" className="auth-panel enter-panel">
         <h1>{returning ? 'Welcome back.' : 'New here or returning?'}</h1>
         {error && <p className="status-message status-error" role="alert">{error}</p>}
