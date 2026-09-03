@@ -795,6 +795,7 @@ export function ProfileHeader(
                 mentionProfileStats: bioReference?.mentionProfileStats,
                 hashtagFollowing: bioReference?.hashtagFollowing,
                 hashtagFollowerCounts: bioReference?.hashtagFollowerCounts,
+                hashtagTargets: bioReference?.hashtagTargets,
                 linkPreviews: bioReference?.linkPreviews,
               }),
             }} />
@@ -1072,6 +1073,7 @@ export function ConnectionPeople(
                     mentionProfileStats: person.bioReference?.mentionProfileStats,
                     hashtagFollowing: person.bioReference?.hashtagFollowing,
                     hashtagFollowerCounts: person.bioReference?.hashtagFollowerCounts,
+                    hashtagTargets: person.bioReference?.hashtagTargets,
                   }),
                 }} />
               )}

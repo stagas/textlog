@@ -50,6 +50,7 @@ export type BioReferenceData = {
   hashtagCounts: Record<string, number>
   hashtagFollowerCounts: Record<string, number>
   hashtagFollowing: Record<string, boolean>
+  hashtagTargets?: Record<string, string>
   mentionBios: Record<string, string>
   mentionNoteCounts: Record<string, number>
   mentionProfileStats: Record<string, UserProfileStats>
@@ -80,6 +81,7 @@ export type ParentPost = Pick<PostRow,
   hashtag_counts?: Record<string, number>
   hashtag_follower_counts?: Record<string, number>
   hashtag_following?: Record<string, boolean>
+  hashtag_targets?: Record<string, string>
   link_previews?: Record<string, LinkPreview>
   location?: LocationView
   poll?: PollView
@@ -112,6 +114,7 @@ export type PostView = PostRow & {
   hashtag_counts?: Record<string, number>
   hashtag_follower_counts?: Record<string, number>
   hashtag_following?: Record<string, boolean>
+  hashtag_targets?: Record<string, string>
   bio_reference?: BioReferenceData
   poll?: PollView
   reply_count?: number

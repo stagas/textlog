@@ -3171,6 +3171,17 @@ export const migrations: Migration[] = [
       }
     },
   },
+  {
+    version: 189,
+    name: 'wordnet_tag_normalization',
+    up(database) {
+      database.run(`CREATE TABLE IF NOT EXISTS wordnet_normalizations (
+        word TEXT PRIMARY KEY,
+        normalized_word TEXT NOT NULL,
+        checked_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+      )`)
+    },
+  },
 ]
 
 export const latestMigrationVersion = migrations.at(-1)!.version

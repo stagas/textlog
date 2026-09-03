@@ -30,7 +30,18 @@ function canonicalTags(database: Database, tags: string[]) {
     ? new Set<string>()
     : new Set((database.query(`SELECT tag FROM tag_invariants WHERE tag IN
     (${unique.map(() => '?').join(',')})`).all(...unique) as { tag: string }[]).map(row => row.tag))
-  const normalized = unique.map(tag => invariants.has(tag) ? tag : normalizeHashtag(tag))
+  const hasWordNet = !!database.query(
+    'SELECT 1 FROM sqlite_master WHERE type=\'table\' AND name=\'wordnet_normalizations\'',
+  ).get()
+  const normalized = unique.map(tag => {
+    if (invariants.has(tag)) return tag
+    const cached = hasWordNet
+      ? database.query('SELECT normalized_word FROM wordnet_normalizations WHERE word=?').get(tag) as {
+        normalized_word: string
+      } | null
+      : null
+    return cached?.normalized_word || normalizeHashtag(tag)
+  })
   const aliases = !unique.length || !database.query(
       'SELECT 1 FROM sqlite_master WHERE type=\'table\' AND name=\'tag_aliases\'',
     ).get()
@@ -49,6 +60,7 @@ export function loadBioReferenceData(database: Database, bio: string, profileId:
   const hashtagCounts = visibleHashtagCounts(database, [bio], viewerId)
   const hashtagFollowerCounts = visibleTagFollowerCounts(database, tags, viewerId)
   const canonicalByTag = canonicalTags(database, tags)
+  const hashtagTargets = Object.fromEntries(canonicalByTag)
   const canonical = [...new Set(canonicalByTag.values())]
   const followedTags = viewerId < 0 || !tags.length ? new Set<string>() : new Set(
     (database.query(`SELECT tag FROM hashtag_follows WHERE user_id=? AND tag IN
@@ -84,6 +96,7 @@ export function loadBioReferenceData(database: Database, bio: string, profileId:
     hashtagCounts,
     hashtagFollowerCounts,
     hashtagFollowing: Object.fromEntries(tags.map(tag => [tag, followedTags.has(canonicalByTag.get(tag)!)])),
+    hashtagTargets,
     mentionBios,
     mentionNoteCounts: Object.fromEntries(
       Object.entries(mentionProfileStats).map(([handle, value]) => [handle, value.notes]),
@@ -161,6 +174,9 @@ export function syncPostMetadata(database: Database, postId: number, body: strin
   const supportsTagPresentation = !!database.query(`SELECT 1 FROM sqlite_master
     WHERE type='table' AND name='tag_aliases'
       AND EXISTS(SELECT 1 FROM sqlite_master WHERE type='table' AND name='tag_display_names')`).get()
+  const supportsWordNet = !!database.query(
+    'SELECT 1 FROM sqlite_master WHERE type=\'table\' AND name=\'wordnet_normalizations\'',
+  ).get()
   database.query('UPDATE posts SET has_latex=?,has_links=?,has_code=? WHERE id=?')
     .run(flags.has_latex, flags.has_links, flags.has_code, postId)
   database.query('DELETE FROM post_hashtags WHERE post_id=?').run(postId)
@@ -170,10 +186,15 @@ export function syncPostMetadata(database: Database, postId: number, body: strin
 
   for (const { tag: normalizedTag, authored } of hashtags) {
     const spelling = normalizeHashtagSpelling(authored)
+    const wordnetTag = supportsWordNet
+      ? (database.query('SELECT normalized_word FROM wordnet_normalizations WHERE word=?').get(spelling) as {
+        normalized_word: string
+      } | null)?.normalized_word
+      : undefined
     const extractedTag = supportsTagPresentation && database.query('SELECT 1 FROM tag_invariants WHERE tag=?')
         .get(spelling)
       ? spelling
-      : normalizedTag
+      : wordnetTag || normalizedTag
     const tag = supportsTagPresentation
       ? (database.query('SELECT primary_tag FROM tag_aliases WHERE alias=?').get(extractedTag) as {
         primary_tag: string
@@ -659,6 +680,7 @@ export function enrichPosts(database: Database, posts: PostView[], viewerId = -1
     .map(([handle, id]) => [handle, followerUserIds.has(id)]))
   const hashtagFollowing = Object.fromEntries(Object.keys(hashtagCounts)
     .map(tag => [tag, followedTags.has(canonicalByTag.get(tag)!)]))
+  const hashtagTargets = Object.fromEntries(canonicalByTag)
   const bioReferences = new Map<number | undefined, BioReferenceData>()
   const bioReference = (userId: number | undefined): BioReferenceData => {
     const cached = bioReferences.get(userId)
@@ -667,6 +689,7 @@ export function enrichPosts(database: Database, posts: PostView[], viewerId = -1
       hashtagCounts,
       hashtagFollowerCounts,
       hashtagFollowing,
+      hashtagTargets,
       mentionBios,
       mentionNoteCounts,
       mentionProfileStats,
@@ -691,6 +714,7 @@ export function enrichPosts(database: Database, posts: PostView[], viewerId = -1
     parent.hashtag_counts = hashtagCounts
     parent.hashtag_follower_counts = hashtagFollowerCounts
     parent.hashtag_following = hashtagFollowing
+    parent.hashtag_targets = hashtagTargets
     parent.bio_reference = bioReference(parent.user_id)
     parent.poll = polls.get(parent.id)
     parent.viewer_mentioned = viewerMentionedPostIds.has(parent.id)
@@ -715,6 +739,7 @@ export function enrichPosts(database: Database, posts: PostView[], viewerId = -1
     hashtag_counts: hashtagCounts,
     hashtag_follower_counts: hashtagFollowerCounts,
     hashtag_following: hashtagFollowing,
+    hashtag_targets: hashtagTargets,
     bio_reference: bioReference(post.user_id),
     link_previews: previewsByPost.get(post.id),
     location: locationsByPost.get(post.id),

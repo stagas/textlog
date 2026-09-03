@@ -103,6 +103,7 @@ export function Explore({ user, welcome = false, tagsPage = 1, peoplePage = 1, d
                           mentionProfileStats: p.bioReference?.mentionProfileStats,
                           hashtagFollowing: p.bioReference?.hashtagFollowing,
                           hashtagFollowerCounts: p.bioReference?.hashtagFollowerCounts,
+                          hashtagTargets: p.bioReference?.hashtagTargets,
                         }),
                       }} />
                     )}

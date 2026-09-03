@@ -152,7 +152,7 @@ function PollAfter(
         p.mention_note_counts, { signedIn: !!user, currentHandle: user?.handle, formPrefix,
         mentionFollowing: p.mention_following, mentionFollowsViewer: p.mention_follows_viewer,
         mentionProfileStats: p.mention_profile_stats, hashtagFollowing: p.hashtag_following,
-        hashtagFollowerCounts: p.hashtag_follower_counts }),
+        hashtagFollowerCounts: p.hashtag_follower_counts, hashtagTargets: p.hashtag_targets }),
     }} />
   )
 }
@@ -170,7 +170,7 @@ function Todo(
       p.mention_note_counts, { signedIn: !!user, currentHandle: user?.handle, formPrefix,
       mentionFollowing: p.mention_following, mentionFollowsViewer: p.mention_follows_viewer,
       mentionProfileStats: p.mention_profile_stats, hashtagFollowing: p.hashtag_following,
-      hashtagFollowerCounts: p.hashtag_follower_counts, linkPreviews: p.link_previews,
+      hashtagFollowerCounts: p.hashtag_follower_counts, hashtagTargets: p.hashtag_targets, linkPreviews: p.link_previews,
       linkUnknownMentions: preview || p.id < 0 }, false),
   })
   const spoilerEntry = todo.entries.findIndex(entry =>
@@ -303,6 +303,7 @@ export function UserReference(
                     mentionProfileStats: bioMentionProfileStats,
                     hashtagFollowing: referenceData?.hashtagFollowing,
                     hashtagFollowerCounts: bioTagFollowerCounts,
+                    hashtagTargets: referenceData?.hashtagTargets,
                     linkPreviews: referenceData?.linkPreviews,
                   })
                   : 'No bio yet',
@@ -609,7 +610,8 @@ export function PreviewPost({ p, user }: { p: PostView; user?: User }) {
         }`} dangerouslySetInnerHTML={{
           __html: linkify(displayPostBody(renderedPollBody(p.body)), p.mention_bios, [], undefined, renderFlags(p), '',
             p.hashtag_counts, p.mention_note_counts, { signedIn: false, currentHandle: p.handle, formPrefix,
-            hashtagFollowerCounts: p.hashtag_follower_counts, linkPreviews: p.link_previews, location: p.location }),
+            hashtagFollowerCounts: p.hashtag_follower_counts, hashtagTargets: p.hashtag_targets,
+            linkPreviews: p.link_previews, location: p.location }),
         }} />
         {p.execution_output !== null && p.execution_output !== undefined && (
           <ExecutionOutput output={p.execution_output} />
@@ -773,6 +775,7 @@ export function Post({
       formPrefix: `${formPrefix}-translation`, mentionFollowing: p.mention_following,
       mentionFollowsViewer: p.mention_follows_viewer, mentionProfileStats: p.mention_profile_stats,
       hashtagFollowing: p.hashtag_following, hashtagFollowerCounts: p.hashtag_follower_counts,
+      hashtagTargets: p.hashtag_targets,
       linkPreviews: p.link_previews, linkUnknownMentions: preview || p.id < 0 })
     : undefined
   if (p.deleted_at) {
@@ -931,6 +934,7 @@ export function Post({
             currentHandle: user?.handle, formPrefix, mentionFollowing: p.mention_following,
             mentionFollowsViewer: p.mention_follows_viewer, mentionProfileStats: p.mention_profile_stats,
             hashtagFollowing: p.hashtag_following, hashtagFollowerCounts: p.hashtag_follower_counts,
+            hashtagTargets: p.hashtag_targets,
             linkPreviews: p.link_previews, location: p.location, linkUnknownMentions: preview || p.id < 0 }),
         }} />
         {p.execution_output !== null && p.execution_output !== undefined && (
@@ -1072,6 +1076,7 @@ export function Post({
                         mentionProfileStats: parent.mention_profile_stats,
                         hashtagFollowing: parent.hashtag_following,
                         hashtagFollowerCounts: parent.hashtag_follower_counts,
+                        hashtagTargets: parent.hashtag_targets,
                         linkPreviews: parent.link_previews,
                       }),
                     }}
@@ -1089,6 +1094,7 @@ export function Post({
                       mentionProfileStats: parent.mention_profile_stats,
                       hashtagFollowing: parent.hashtag_following,
                       hashtagFollowerCounts: parent.hashtag_follower_counts,
+                      hashtagTargets: parent.hashtag_targets,
                       linkPreviews: parent.link_previews,
                     })
                     : undefined} />

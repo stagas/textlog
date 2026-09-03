@@ -176,6 +176,7 @@ export function Feed(
                         mentionProfileStats: references?.mentionProfileStats,
                         hashtagFollowing: references?.hashtagFollowing,
                         hashtagFollowerCounts: references?.hashtagFollowerCounts,
+                        hashtagTargets: references?.hashtagTargets,
                         linkPreviews: references?.linkPreviews,
                       }),
                     }} />

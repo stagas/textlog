@@ -45,6 +45,7 @@ export type ReferencePopoverOptions = {
   mentionFollowsViewer?: Record<string, boolean>
   mentionProfileStats?: Record<string, UserProfileStats>
   hashtagFollowing?: Record<string, boolean>
+  hashtagTargets?: Record<string, string>
   hashtagFollowerCounts?: Record<string, number>
   linkPreviews?: Record<string, LinkPreview>
   location?: LocationView
@@ -662,9 +663,10 @@ function renderedReference(token: string, mentionBios: Record<string, string>,
   const normalizedValue = normalizeHashtagSpelling(value)
   const isUser = token[0] === '@'
   const key = isUser ? value.toLowerCase() : normalizedValue
+  const destination = isUser ? key : popover?.hashtagTargets?.[key] || key
   const href = isUser
     ? `/u/${key}${navigationQuery}`
-    : `/tag/${encodeURIComponent(key)}${navigationQuery}`
+    : `/tag/${encodeURIComponent(destination)}${navigationQuery}`
   const label = highlighted(`${token[0]}${value}`, highlightTerms)
   const hasData = isUser ? mentionBios[key] !== undefined : hashtagCounts[key] !== undefined
   if (isUser && !hasData) return popover?.linkUnknownMentions ? `<a href="${href}">${label}</a>` : label

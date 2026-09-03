@@ -11,7 +11,7 @@ import { issueApiKey } from './api-keys'
 import { consumeAuthAttempt, consumeBucketedAttempt, rateLimitKey } from './auth-rate-limit'
 import { runAutomatedBackup } from './backup-automation'
 import { cacheDb } from './cache-db'
-import { extractHashtags, normalizeHashtag, normalizeHashtagSpelling } from './content'
+import { extractAuthoredHashtags, extractHashtags, normalizeHashtag, normalizeHashtagSpelling } from './content'
 import { exportUserData } from './data-export'
 import { createBootDatabaseBackup } from './database-backup'
 import type { DatabaseDomainInput, DatabaseDomainOperation, DatabaseDomainOutput } from './database-contract'
@@ -48,6 +48,7 @@ import { loadBioReferenceData, loadThreadReplies } from './posts'
 import { enrichPosts, rewireVisibleAncestorGaps } from './posts'
 import { visibleTagFollowerCounts, visibleUserProfileStats } from './posts'
 import { createPost, isThreadLocked, updatePost } from './posts'
+import { normalizeWord } from './wordnet'
 import { createPublicArchive, publicArchiveIsCurrent } from './public-archive'
 import { RECAP_POPULAR_NOTE_IDS, recapEmail, recapEmailV2 } from './recap-email'
 import { searchExpression, searchPeople, searchPosts, searchTags, searchTerms } from './search'
@@ -87,11 +88,102 @@ function attachTagDisplayNames(database: Database, tags: import('./types').TagVi
   return tags.map(tag => ({ ...tag, ...(names.has(tag.tag) ? { displayName: names.get(tag.tag) } : {}) }))
 }
 
+function inputHashtagWords(input: unknown) {
+  if (!input || typeof input !== 'object') return []
+  const record = input as Record<string, unknown>
+  const words: string[] = []
+  for (const key of ['body', 'bio']) {
+    if (typeof record[key] === 'string') {
+      words.push(...extractAuthoredHashtags(record[key]).map(tag => normalizeHashtagSpelling(tag.authored)))
+    }
+  }
+  for (const key of ['tag', 'primaryTag']) {
+    if (typeof record[key] === 'string') words.push(normalizeHashtagSpelling(record[key].replace(/^#/, '')))
+  }
+  for (const key of ['tags', 'aliases']) {
+    if (Array.isArray(record[key])) {
+      words.push(...record[key].filter((value): value is string => typeof value === 'string')
+        .map(value => normalizeHashtagSpelling(value.replace(/^#/, ''))))
+    }
+  }
+  return [...new Set(words.filter(Boolean))]
+}
+
+async function learnWordNetTagAliases(database: Database, words: string[]) {
+  if (!words.length) return
+  const hasCache = !!database.query(
+    'SELECT 1 FROM sqlite_master WHERE type=\'table\' AND name=\'wordnet_normalizations\'',
+  ).get()
+  if (!hasCache) return
+  const hasManualAliases = !!database.query(
+    'SELECT 1 FROM sqlite_master WHERE type=\'table\' AND name=\'tag_aliases\'',
+  ).get()
+  for (const spelling of words) {
+    const cached = hasCache
+      ? database.query('SELECT normalized_word FROM wordnet_normalizations WHERE word=?').get(spelling) as {
+        normalized_word: string
+      } | null
+      : null
+    const invariant = database.query(
+      'SELECT 1 FROM sqlite_master WHERE type=\'table\' AND name=\'tag_invariants\'',
+    ).get() && database.query('SELECT 1 FROM tag_invariants WHERE tag=?').get(spelling)
+    const source = invariant ? spelling : normalizeHashtag(spelling)
+    const noun = invariant ? source : normalizeHashtag(cached?.normalized_word || await normalizeWord(spelling))
+    if (hasCache && !cached) {
+      database.query('INSERT OR IGNORE INTO wordnet_normalizations(word,normalized_word) VALUES(?,?)')
+        .run(spelling, noun)
+    }
+    // Remove mappings written by the initial implementation. WordNet mappings
+    // live only in their private cache; tag_aliases is reserved for admins.
+    if (hasManualAliases && source !== noun) {
+      database.query('DELETE FROM tag_aliases WHERE alias=? AND primary_tag=?').run(source, noun)
+    }
+    const manualAlias = hasManualAliases
+      ? database.query('SELECT primary_tag FROM tag_aliases WHERE alias=?').get(noun) as {
+        primary_tag: string
+      } | null
+      : null
+    const target = manualAlias?.primary_tag || noun
+    if (source !== target) {
+      for (const table of ['post_hashtags', 'hashtag_follows', 'blocked_hashtags']) {
+        if (!database.query('SELECT 1 FROM sqlite_master WHERE type=\'table\' AND name=?').get(table)) continue
+        if (table === 'post_hashtags') {
+          database.query(`INSERT OR IGNORE INTO post_hashtags(post_id,tag)
+            SELECT post_id,? FROM post_hashtags WHERE tag=?`).run(target, source)
+          database.query('DELETE FROM post_hashtags WHERE tag=?').run(source)
+        }
+        else {
+          database.query(`INSERT OR IGNORE INTO ${table}(user_id,tag,created_at)
+            SELECT user_id,?,created_at FROM ${table} WHERE tag=?`).run(target, source)
+          database.query(`DELETE FROM ${table} WHERE tag=?`).run(source)
+        }
+      }
+    }
+  }
+}
+
+export async function normalizeExistingWordNetTags(database: Database) {
+  if (!database.query('SELECT 1 FROM sqlite_master WHERE type=\'table\' AND name=\'post_hashtags\'').get()) return
+  const rows = database.query(`SELECT tag FROM post_hashtags UNION SELECT tag FROM hashtag_follows
+    UNION SELECT tag FROM blocked_hashtags`).all() as { tag: string }[]
+  const authored = (database.query(`SELECT body text FROM posts WHERE deleted_at IS NULL
+    UNION ALL SELECT bio text FROM users WHERE deleted_at IS NULL`).all() as { text: string }[])
+    .flatMap(row => extractAuthoredHashtags(row.text).map(tag => normalizeHashtagSpelling(tag.authored)))
+  await learnWordNetTagAliases(database, [...rows.map(row => row.tag), ...authored])
+}
+
 function canonicalTag(database: Database, tag: string) {
   const spelling = normalizeHashtagSpelling(tag)
   const invariant = database.query('SELECT 1 FROM sqlite_master WHERE type=\'table\' AND name=\'tag_invariants\'').get()
     && database.query('SELECT 1 FROM tag_invariants WHERE tag=?').get(spelling)
-  tag = invariant ? spelling : normalizeHashtag(spelling)
+  const wordnet = !invariant && database.query(
+    'SELECT 1 FROM sqlite_master WHERE type=\'table\' AND name=\'wordnet_normalizations\'',
+  ).get()
+    ? (database.query('SELECT normalized_word FROM wordnet_normalizations WHERE word=?').get(spelling) as {
+      normalized_word: string
+    } | null)?.normalized_word
+    : null
+  tag = invariant ? spelling : wordnet || normalizeHashtag(spelling)
   if (!database.query('SELECT 1 FROM sqlite_master WHERE type=\'table\' AND name=\'tag_aliases\'').get()) return tag
   return (database.query('SELECT primary_tag FROM tag_aliases WHERE alias=?').get(tag) as {
     primary_tag: string
@@ -399,6 +491,12 @@ async function serialized(response: Response) {
 export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(database: Database, operation: K,
   input: DatabaseDomainInput<K>): Promise<DatabaseDomainOutput<K>>
 {
+  // These operations define explicit exceptions/canonical forms and must not be
+  // influenced by automatic normalization before their changes are applied.
+  if (operation !== 'admin.addTagInvariant' && operation !== 'admin.removeTagInvariant'
+    && operation !== 'admin.addTagAliases') {
+    await learnWordNetTagAliases(database, inputHashtagWords(input))
+  }
   switch (operation) {
     case 'system.health': {
       const { databasePath } = input as DatabaseDomainInput<'system.health'>
@@ -1190,6 +1288,7 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
       const tag = (input as DatabaseDomainInput<'admin.addTagInvariant'>).tag
       const previouslyNormalized = normalizeHashtag(tag)
       database.transaction(() => {
+        database.query('DELETE FROM tag_aliases WHERE alias=?').run(tag)
         database.query('INSERT OR IGNORE INTO tag_invariants(tag) VALUES(?)').run(tag)
         reindexPostHashtags(database)
         for (const table of previouslyNormalized === tag ? [] : ['hashtag_follows', 'blocked_hashtags']) {

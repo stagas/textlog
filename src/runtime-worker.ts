@@ -1,5 +1,5 @@
 import { cacheDb, clearCacheDatabase } from './cache-db'
-import { executeDatabaseDomain } from './database-domain'
+import { executeDatabaseDomain, normalizeExistingWordNetTags } from './database-domain'
 import { configureDatabaseService } from './database-service'
 import { db } from './db'
 import { logInfo } from './log'
@@ -70,6 +70,7 @@ db.query('SELECT 1').get()
 cacheDb.query('SELECT 1').get()
 db.query('DELETE FROM feed_snapshots').run()
 clearCacheDatabase(cacheDb)
+await normalizeExistingWordNetTags(db)
 
 self.onmessage = event => {
   const message = event.data as MainToRuntimeMessage

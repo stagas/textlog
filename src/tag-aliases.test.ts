@@ -126,6 +126,33 @@ test('plural tags transparently normalize to their singular tag', async () => {
   expect(await executeDatabaseDomain(database, 'tags.resolve', { tag: 'designers' })).toBe('designer')
 })
 
+test('WordNet forms share a cached noun topic across posts and tag routes', async () => {
+  const database = new Database(':memory:')
+  database.run('PRAGMA foreign_keys=ON')
+  runMigrations(database)
+  database.query('INSERT INTO users(handle,email,password) VALUES(\'writer\',\'writer@example.com\',\'x\')').run()
+
+  const created = await executeDatabaseDomain(database, 'api.createPost', {
+    userId: 1,
+    body: '#philosophically and #philosophical',
+    parentId: null,
+    origin: 'https://example.com',
+  })
+  expect(created.status).toBe('ready')
+  expect(database.query('SELECT tag FROM post_hashtags').all()).toEqual([{ tag: 'philosophy' }])
+  expect(await executeDatabaseDomain(database, 'tags.resolve', { tag: 'philosophically' })).toBe('philosophy')
+  expect(await executeDatabaseDomain(database, 'tags.resolve', { tag: 'philosophical' })).toBe('philosophy')
+  expect(await executeDatabaseDomain(database, 'admin.tagAliases', {})).not.toContainEqual({
+    primaryTag: 'philosophy',
+    aliases: expect.anything(),
+  })
+  expect(database.query(`SELECT word,normalized_word normalizedWord FROM wordnet_normalizations
+    WHERE word LIKE 'philosoph%' ORDER BY word`).all()).toEqual([
+    { word: 'philosophical', normalizedWord: 'philosophy' },
+    { word: 'philosophically', normalizedWord: 'philosophy' },
+  ])
+})
+
 test('admin invariants preserve tags that must not be singularized', async () => {
   const database = new Database(':memory:')
   database.run('PRAGMA foreign_keys=ON')
@@ -141,7 +168,28 @@ test('admin invariants preserve tags that must not be singularized', async () =>
   expect(database.query('SELECT tag FROM post_hashtags WHERE post_id=?').get(post.id)).toEqual({ tag: 'status' })
 
   expect(await executeDatabaseDomain(database, 'admin.removeTagInvariant', { tag: 'status' })).toBeTrue()
-  expect(await executeDatabaseDomain(database, 'tags.resolve', { tag: 'status' })).toBe('statu')
+  // Once the exception is removed, WordNet still recognizes "status" as a noun.
+  expect(await executeDatabaseDomain(database, 'tags.resolve', { tag: 'status' })).toBe('status')
+})
+
+test('admin invariants bypass WordNet normalization', async () => {
+  const database = new Database(':memory:')
+  database.run('PRAGMA foreign_keys=ON')
+  runMigrations(database)
+  database.query('INSERT INTO users(handle,email,password) VALUES(\'writer\',\'writer@example.com\',\'x\')').run()
+
+  await executeDatabaseDomain(database, 'admin.addTagInvariant', { tag: 'running' })
+  const created = await executeDatabaseDomain(database, 'api.createPost', {
+    userId: 1,
+    body: '#running',
+    parentId: null,
+    origin: 'https://example.com',
+  })
+  expect(created.status).toBe('ready')
+  expect(database.query('SELECT tag FROM post_hashtags').all()).toEqual([{ tag: 'running' }])
+  expect(await executeDatabaseDomain(database, 'tags.resolve', { tag: 'running' })).toBe('running')
+  expect(database.query(`SELECT normalized_word normalizedWord FROM wordnet_normalizations
+    WHERE word='running'`).get()).toEqual({ normalizedWord: 'running' })
 })
 
 test('TreatWarningsAsErrors keeps the complete compound phrase', async () => {
