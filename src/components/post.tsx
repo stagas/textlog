@@ -604,6 +604,7 @@ export function Post({
   showReadAction = true,
   hideTopMeta = false,
   suppressContentWarning = false,
+  collapsedParentOnly = false,
 }: { p: PostView; user: User | null; showReplyAction?: boolean; showOwnerActions?: boolean;
   showModerateAction?: boolean; showParent?: boolean; showReplyCount?: boolean; replyHref?: string; replyLabel?: string;
   reportHref?: string; bookmarkAction?: boolean; foldControlId?: string; collapsedExpansionControlId?: string;
@@ -613,7 +614,8 @@ export function Post({
   contextDirectedUnread?: boolean; preview?: boolean; returnPath?: string; backHref?: string;
   canonicalTimestamp?: boolean; topHref?: string; flatHref?: string; treeHref?: string;
   authorPopoverAction?: React.ReactNode; continuationHref?: string; continuationLabel?: string; className?: string;
-  topActions?: React.ReactNode; showReadAction?: boolean; hideTopMeta?: boolean; suppressContentWarning?: boolean })
+  topActions?: React.ReactNode; showReadAction?: boolean; hideTopMeta?: boolean; suppressContentWarning?: boolean;
+  collapsedParentOnly?: boolean })
 {
   const linkedPostReturnPath = returnPath || `/post/${p.id}#post-${p.id}`
   const renderLinkedPostPreviews = (linkPreviews: PostView['link_previews']) => linkPreviews
@@ -916,7 +918,8 @@ export function Post({
       {parent && (
         <blockquote className={'parent-quote' + (containsAsciiArt(parent.body) ? ' ascii-art' : '')
           + (parent.deleted_at || parent.unavailable ? ' deleted-parent' : '')
-          + (hasTappableParent && !parent.unavailable ? ' tappable-parent' : '')}
+          + (hasTappableParent && !parent.unavailable ? ' tappable-parent' : '')
+          + (collapsedParentOnly ? ' collapsed-parent-only' : '')}
         >
           {hasTappableParent && !parent.unavailable && (
             <a className="parent-hit-area" href={parentDetailPath} rel={navigationRel}
@@ -1300,7 +1303,9 @@ export function ThreadReplies(
           omissionMarker('Earlier replies omitted')
         )}
         <FeedPost p={reply} user={user}
-          showParent={collapsedPreviewPosts.has(reply.id) && !!contextUnreadPostIds?.has(reply.id)}
+          showParent={collapsedPreviewPosts.has(reply.id) && !!contextUnreadPostIds?.has(reply.id)
+            && reply.parent_id !== parentId && !collapsedPreviewPosts.has(reply.parent_id!)}
+          collapsedParentOnly
           returnPath={postReturnPath}
           tappableHref={anchorReplyNavigation
             ? replyAnchorReturnPath(parentId, reply.id, postReturnPath)

@@ -166,8 +166,22 @@ test('a folded unread reply includes its quoted parent', () => {
   const replyStart = html.indexOf('id="post-302"')
   const replyEnd = html.indexOf('</article>', replyStart)
 
-  expect(html.slice(replyStart, replyEnd)).toContain('class="parent-quote')
+  expect(html.slice(replyStart, replyEnd)).toMatch(/class="parent-quote[^"]* collapsed-parent-only"/)
   expect(html.slice(replyStart, replyEnd)).toContain('The replied-to post')
+})
+
+test('an unread reply does not quote a parent already visible in the folded tree', () => {
+  const root = { id: 310, user_id: 1, parent_id: null, body: 'Visible parent', created_at: '2026-09-02 10:00:00',
+    deleted_at: null, handle: 'root', reply_count: 1 }
+  const unread = { id: 311, user_id: 2, parent_id: root.id, body: 'New unread reply',
+    created_at: '2026-09-02 11:00:00', deleted_at: null, handle: 'reply', reply_count: 0, parent: root,
+    feed_collapsed_preview: true }
+  const html = renderToStaticMarkup(<PublicFeed path="/latest" feed={{
+    posts: [root, unread], page: 1, totalItems: 1, totalPages: 1, unreadPostIds: [unread.id],
+  }} />)
+
+  expect(html).not.toContain('collapsed-parent-only')
+  expect(html.match(/Visible parent/g)).toHaveLength(1)
 })
 
 test('a feed branch root continues when its retained quoted parent has the same author', () => {

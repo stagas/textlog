@@ -7754,6 +7754,10 @@ a.post-continuation-link:hover {
   border-left: 1px solid var(--soft);
 }
 
+.feed-thread>.thread-fold-input:not(:checked)~.feed-thread-collapsed-branch .collapsed-parent-only {
+  display: none;
+}
+
 .post-page-thread.feed-thread:has(> .thread-fold-input:checked):has(> .feed-thread-collapsed-branch) {
   margin-bottom: var(--space-5);
 }
