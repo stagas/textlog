@@ -623,6 +623,9 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
     case 'auth.resolve': {
       const { sessionToken: cookieToken, bearerToken, deviceId, now } = input as DatabaseDomainInput<'auth.resolve'>
       const signedIn = sessionUser(database, cookieToken)
+      if (signedIn) signedIn.linked_accounts = accountChoices(database, signedIn.id)
+        .filter(account => account.id !== signedIn.id && account.handle_chosen_at !== null)
+        .map(({ id, handle, handle_chosen_at }) => ({ id, handle, handle_chosen_at }))
       const bearerUser = apiUser(database, bearerToken, now) || sessionUser(database, bearerToken)
       const row = signedIn && deviceId
         ? database.query('SELECT page_size pageSize,density FROM device_settings WHERE user_id=? AND device_id=?')

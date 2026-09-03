@@ -154,7 +154,7 @@ export function registerAccountRoutes(app: Hono) {
       sessionHash: sessionHash(sessionToken(c.req.raw)) || '',
     })
     if (selected.status === 'not_found') return redirect('/account/accounts')
-    return redirect(selected.handleChosen ? '/account/edit' : '/choose-handle?next=%2Faccount%2Faccounts')
+    return redirect(selected.handleChosen ? safeNext(f.next) : '/choose-handle?next=%2Faccount%2Faccounts')
   })
 
   app.post('/account/accounts/new', async c => {

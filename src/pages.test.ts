@@ -147,6 +147,20 @@ test('admin navigation is the first child in the handle menu', () => {
   expect(html.indexOf('href="/admin">admin</a>')).toBeLessThan(html.indexOf('action="/logout"'))
 })
 
+test('account menu lists linked accounts immediately before logout for one-click switching', () => {
+  const html = withAppearance(new Request('https://textlog.test/latest?page=2'), () =>
+    renderToStaticMarkup(React.createElement(Layout, {
+      user: { id: 1, handle: 'reader', email: 'reader@example.com', bio: '', handle_chosen_at: '2026-01-01',
+        linked_accounts: [{ id: 2, handle: 'another', handle_chosen_at: '2026-02-01' }] },
+      children: React.createElement('p', null, 'Hello'),
+    })))
+
+  const switchForm = '<form action="/account/accounts/select" method="post"><input type="hidden" name="accountId" value="2"/>'
+    + '<input type="hidden" name="next" value="/latest?page=2"/><button type="submit">@another</button></form>'
+  expect(html).toContain(switchForm)
+  expect(html.indexOf(switchForm)).toBeLessThan(html.indexOf('action="/logout"'))
+})
+
 test('panels gallery renders every shared panel variation', () => {
   const html = renderToStaticMarkup(React.createElement(PanelsGallery))
 

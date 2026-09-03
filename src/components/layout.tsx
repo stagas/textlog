@@ -94,6 +94,13 @@ export function Layout({
       <a href={profileHref}>profile</a>
       <a href={accountHref}>account</a>
       <a href="/bookmarks">bookmarks</a>
+      {user.linked_accounts?.map(account => (
+        <form method="post" action="/account/accounts/select" key={account.id}>
+          <input type="hidden" name="accountId" value={account.id} />
+          <input type="hidden" name="next" value={currentPath} />
+          <button type="submit">@{account.handle}</button>
+        </form>
+      ))}
       <LogoutForm>
         <button type="submit">logout</button>
       </LogoutForm>
