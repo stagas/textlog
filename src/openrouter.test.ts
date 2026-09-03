@@ -18,6 +18,8 @@ describe('OpenRouter autotag', () => {
     expect(systemPrompt).toContain('multiple words')
     expect(systemPrompt).toContain('PascalCase')
     expect(systemPrompt).toContain('without underscores')
+    expect(systemPrompt).toContain('synonyms or represent the same concept')
+    expect(systemPrompt).toContain('Choose only the shortest hashtag')
   })
 
   test('falls back to the paid model only after a 429', async () => {
