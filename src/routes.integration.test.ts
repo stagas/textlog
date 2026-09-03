@@ -363,6 +363,56 @@ test('an anonymous feed note is published after signup chooses a handle', async 
     .toBeLessThan(clickedReplyHtml.indexOf('anonymous-reply-compose'))
 })
 
+test('an anonymous hovercard follow survives signup and completes before onboarding guards', async () => {
+  const ip = '203.0.113.86'
+  const target = database.query(`INSERT INTO users(handle,email,password,bio,handle_chosen_at)
+    VALUES('pending_follow_target','pending-follow-target@example.com','!','',CURRENT_TIMESTAMP) RETURNING id`)
+    .get() as { id: number }
+  const post = database.query(`INSERT INTO posts(user_id,body) VALUES(?,'Follow me') RETURNING id`)
+    .get(target.id) as { id: number }
+  const returnPath = `/post/${post.id}?from=%2Fhot%23post-${post.id}#post-${post.id}`
+  const guestPost = await (await request(returnPath, { acceptHtml: true, ip })).text()
+  expect(guestPost).toContain('>follow</a>')
+  expect(guestPost).toContain('/pending-follow/user/pending_follow_target?from=')
+  expect(guestPost).not.toContain('enter to follow')
+  const started = await request(`/pending-follow/user/pending_follow_target?from=${encodeURIComponent(returnPath)}`, { ip })
+  expect(started.status).toBe(303)
+  expect(started.headers.get('location')).toBe('/enter?next=%2Fpending-follow')
+  const pendingCookie = started.headers.get('set-cookie')!.split(';', 1)[0]
+  expect(pendingCookie).toStartWith('pending_follow=')
+
+  const email = 'pending-follow-signup@example.com'
+  await request('/enter', {
+    method: 'POST', cookie: pendingCookie, ip, form: { email, next: '/pending-follow' },
+  })
+  const message = capturedEmails().filter(item => item.to === email).at(-1)!
+  const magic = await request(`/enter/magic?token=${encodeURIComponent(linkToken(message))}`, { cookie: pendingCookie, ip })
+  const loginCookie = sessionCookie(magic)
+  expect(magic.headers.get('location')).toBe('/choose-handle?next=%2Fpending-follow')
+  const cookies = `${loginCookie}; ${pendingCookie}`
+  const chosen = await request('/choose-handle', {
+    method: 'POST', cookie: cookies, ip, form: { handle: 'pending_follower', next: '/pending-follow' },
+  })
+  expect(chosen.headers.get('location')).toBe('/pending-follow')
+
+  const followed = await request('/pending-follow', { cookie: cookies, acceptHtml: true, ip })
+  expect(followed.status).toBe(303)
+  const guardedReturnPath = `/post/${post.id}?from=%2Fhot%23post-${post.id}&to=${post.id}#post-${post.id}`
+  expect(followed.headers.get('location')).toBe(guardedReturnPath)
+  expect(followed.headers.get('set-cookie')).toContain('Max-Age=0')
+  const follower = database.query('SELECT id FROM users WHERE handle=?').get('pending_follower') as { id: number }
+  expect(database.query('SELECT count(*) count FROM follows WHERE follower_id=? AND following_id=?')
+    .get(follower.id, target.id)).toEqual({ count: 1 })
+
+  const guardedPost = await request(guardedReturnPath, { cookie: cookies, acceptHtml: true, ip })
+  const guardedPostHtml = await guardedPost.text()
+  expect(guardedPostHtml).toContain('action="/pick-mood"')
+  expect(guardedPostHtml).toContain(`name="returnTo" value="${guardedReturnPath.replaceAll('&', '&amp;')}"`)
+  await request('/pending-follow', { cookie: cookies, acceptHtml: true, ip })
+  expect(database.query('SELECT count(*) count FROM follows WHERE follower_id=? AND following_id=?')
+    .get(follower.id, target.id)).toEqual({ count: 1 })
+})
+
 test('instant scroll actions are applied once without client-side scripts', async () => {
   const marked = await request('/about?_scroll=instant')
   expect(marked.status).toBe(303)

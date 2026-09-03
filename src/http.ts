@@ -154,6 +154,7 @@ const PWA_INSTALL_BANNER_COOKIE = 'pwa_install_banner_dismissed'
 const EXPLORE_WELCOME_COOKIE = 'explore_welcome'
 const RETURNING_VISITOR_COOKIE = 'returning_visitor'
 const PENDING_POST_COOKIE = 'pending_post'
+const PENDING_FOLLOW_COOKIE = 'pending_follow'
 
 function cookieValue(request: Request, name: string) {
   const escaped = name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
@@ -200,6 +201,38 @@ export function pendingPostCookie(body: string, returnPath: string, parentId: nu
 
 export function clearPendingPostCookie(appUrl: string | undefined = Bun.env.APP_URL) {
   return pendingPostCookie('', '/', null, null, 0, appUrl)
+}
+
+export function pendingFollow(request: Request) {
+  const value = cookieValue(request, PENDING_FOLLOW_COOKIE)
+  if (!value) return null
+  try {
+    const parsed = JSON.parse(Buffer.from(value, 'base64url').toString('utf8')) as {
+      kind?: unknown
+      target?: unknown
+      returnPath?: unknown
+    }
+    if ((parsed.kind !== 'user' && parsed.kind !== 'tag') || typeof parsed.target !== 'string') return null
+    return {
+      kind: parsed.kind,
+      target: parsed.target,
+      returnPath: safeLocalPath(typeof parsed.returnPath === 'string' ? parsed.returnPath : '/'),
+    }
+  }
+  catch {
+    return null
+  }
+}
+
+export function pendingFollowCookie(kind: 'user' | 'tag', target: string, returnPath: string, maxAge = 20 * 60,
+  appUrl: string | undefined = Bun.env.APP_URL)
+{
+  const value = Buffer.from(JSON.stringify({ kind, target, returnPath: safeLocalPath(returnPath) })).toString('base64url')
+  return `${PENDING_FOLLOW_COOKIE}=${value}; Max-Age=${maxAge}; HttpOnly; Path=/; SameSite=Lax${secureCookie(appUrl)}`
+}
+
+export function clearPendingFollowCookie(appUrl: string | undefined = Bun.env.APP_URL) {
+  return pendingFollowCookie('user', '', '/', 0, appUrl)
 }
 
 export function exploreWelcome(request: Request) {

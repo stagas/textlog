@@ -9,7 +9,7 @@ import { parseTodo, todoDisplayBody } from '../todos'
 import type { User } from '../types'
 import type { BioReferenceData, ParentPost, PostView, UserProfileStats } from '../types'
 import { displayBio, displayPostBody, fmtFull, linkify, referenceFormId } from '../utils'
-import { enterHref } from './auth-links'
+import { enterHref, pendingFollowHref } from './auth-links'
 import { MetaRow } from './meta'
 
 function maskedContent(body: string) {
@@ -277,7 +277,7 @@ export function UserReference(
                 {extraAction}
               </span>
             )
-            : <a className="button" href={enterHref()} rel="nofollow">enter to follow</a>)}
+            : <a className="button" href={pendingFollowHref('user', handle, followReturnPath)} rel="nofollow">follow</a>)}
           {(bio?.trim() || ownUser) && (
             <span
               className={`reference-popover-bio${ownUser ? ' reference-popover-bio-own' : ''}${
@@ -358,7 +358,7 @@ export function TagReference(
                 </form>
               </span>
             )
-            : <a className="button" href={enterHref()} rel="nofollow">enter to follow</a>}
+            : <a className="button" href={pendingFollowHref('tag', tag, followReturnPath)} rel="nofollow">follow</a>}
         </span>
       )}
     </span>

@@ -10,6 +10,9 @@ import { databaseService } from '../database-service'
 import {
   exploreWelcome,
   exploreWelcomeCookie,
+  clearPendingFollowCookie,
+  pendingFollow,
+  pendingFollowCookie,
   safeRefererPath,
 } from '../http'
 import { logError } from '../log'
@@ -18,7 +21,61 @@ import { scheduleRelationshipFeedInvalidation } from '../relationship-feed-inval
 import { currentUser } from '../utils'
 import { clearAnonymousPostPageCache } from '../anonymous-post-page-cache'
 
+function guardedPendingFollowReturnPath(returnPath: string) {
+  const url = new URL(returnPath, 'http://textlog.local')
+  const postPage = /^\/post\/[1-9]\d*$/.test(url.pathname)
+  const anchorPostId = url.hash.match(/^#post-([1-9]\d*)$/)?.[1]
+  if (postPage && anchorPostId) url.searchParams.set('to', anchorPostId)
+  return url.pathname + url.search + url.hash
+}
+
 export function registerInteractionsRoutes(app: Hono) {
+  app.get('/pending-follow/:kind/:target', c => {
+    const kind = c.req.param('kind')
+    if (kind !== 'user' && kind !== 'tag') return c.text('Not found', 404)
+    const target = c.req.param('target')
+    const returnPath = c.req.query('from') ? safeNext(c.req.query('from')) : '/'
+    const next = currentUser(c.req.raw) ? '/pending-follow' : '/enter?next=' + encodeURIComponent('/pending-follow')
+    return redirect(next, pendingFollowCookie(kind, target, returnPath))
+  })
+
+  app.get('/pending-follow', async c => {
+    const user = currentUser(c.req.raw)
+    if (!user) return redirect('/enter?next=' + encodeURIComponent('/pending-follow'))
+    const pending = pendingFollow(c.req.raw)
+    if (!pending) return redirect('/', clearPendingFollowCookie())
+    let followed: { id: number; handle: string } | null = null
+    if (pending.kind === 'user') {
+      const handle = pending.target.toLowerCase()
+      if (/^[a-z0-9_]{2,24}$/.test(handle)) {
+        const result = await databaseService().call('api.relationshipMutation', {
+          userId: user.id, handle, action: 'follow',
+        })
+        if (result.status === 'ready' && result.changed) followed = { id: result.targetId, handle: result.targetHandle }
+      }
+    }
+    else {
+      const tag = normalizeHashtag(pending.target)
+      if (isValidHashtag(tag)) {
+        const result = await databaseService().call('api.tagRelationshipMutation', {
+          userId: user.id, tag, action: 'follow',
+        })
+        if (result.changed) {
+          void sendPushForTagFollow(user.id, user.handle, tag)
+            .catch(error => logError('pending tag follow activity push failed', error))
+        }
+      }
+    }
+    if (followed) {
+      void sendPushForFollow(user.id, user.handle, followed.id)
+        .catch(error => logError('pending follow push failed', error))
+      void sendPushForUserFollow(user.id, user.handle, followed.id, followed.handle)
+        .catch(error => logError('pending follow activity push failed', error))
+    }
+    scheduleRelationshipFeedInvalidation()
+    return redirect(guardedPendingFollowReturnPath(pending.returnPath), clearPendingFollowCookie())
+  })
+
   app.post('/post/:id/bookmark', async c => {
     const user = currentUser(c.req.raw)
     if (!user) return redirect('/enter')

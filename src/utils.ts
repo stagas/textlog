@@ -17,6 +17,7 @@ import { activeTimezone, timezoneLabel } from './timezone'
 import { activeRequest } from './theme'
 import type { User } from './types'
 import type { LinkPreview, LocationView, UserProfileStats } from './types'
+import { pendingFollowHref } from './components/auth-links'
 
 hljs.registerLanguage('javascript', javascript)
 hljs.registerLanguage('python', python)
@@ -677,7 +678,8 @@ function renderedReference(token: string, mentionBios: Record<string, string>,
     }">${
       following ? 'unfollow' : followsViewer ? 'follow back' : 'follow'
     }</button></span></span>`
-    : '<a class="button" href="/enter" rel="nofollow">enter to follow</a>'
+    : `<a class="button" href="${esc(pendingFollowHref(isUser ? 'user' : 'tag', key,
+      new URLSearchParams(navigationQuery.slice(1)).get('from') || undefined))}" rel="nofollow">follow</a>`
   return `<span class="reference-menu"><input class="mobile-popover-toggle" type="checkbox" `
     + `aria-label="Toggle reference details"><a class="reference-menu-trigger" href="${href}">${label}</a>`
     + `<span class="reference-menu-popover${isUser ? '' : ' reference-menu-popover-tag'}">`
