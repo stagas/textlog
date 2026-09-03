@@ -1,7 +1,7 @@
 import { activityAnchor } from '../activity-anchor'
 import type { PersonalizedFeedData, PersonalizedTimelineRow, User } from '../types'
 import { displayBio, linkify } from '../utils'
-import { WriteForm } from './compose'
+import { ComposePreview, WriteForm } from './compose'
 import { Layout } from './layout'
 import { MetaRow } from './meta'
 import { ActionPair, FeedTabs, Pagination } from './page-shared'
@@ -46,7 +46,7 @@ export function groupSimilarActivities(timeline: PersonalizedTimelineRow[]): Tim
 
 export function Feed(
   { user, data, title, path = '/my-feed', pageUrl, notificationBanner = false, toMe = false, expandedRootId,
-    writeError, writeBody }: {
+    writeError, writeBody, writePreview, writePreviewExecutionOutput, writePreviewLocation, writeDraftId }: {
     user: User
     data: PersonalizedFeedData
     title?: string
@@ -57,6 +57,10 @@ export function Feed(
     expandedRootId?: number
     writeError?: string
     writeBody?: string
+    writePreview?: boolean
+    writePreviewExecutionOutput?: string | null
+    writePreviewLocation?: import('../types').LocationView
+    writeDraftId?: string
   },
 ) {
   const feedPath = path
@@ -207,7 +211,10 @@ export function Feed(
   return (
     <Layout user={user} title={title} pageUrl={pageUrl} notificationBanner={notificationBanner} mobileWriteAction>
       <h1 className="visually-hidden">Your feed</h1>
-      <WriteForm user={user} returnPath={returnPath} embedded error={writeError} body={writeBody} />
+      {writePreview && <ComposePreview user={user} body={writeBody || ''}
+        executionOutput={writePreviewExecutionOutput} location={writePreviewLocation} />}
+      <WriteForm user={user} returnPath={returnPath} embedded error={writeError} body={writeBody}
+        draftId={writeDraftId} />
       <FeedTabs active="following" user={user} forYouReadStatus={data.timeline.length
         ? hasUnread && unreadPage !== null && unreadPage > data.page
         : undefined} toMe={toMe} toMeCount={data.toMeCount} forYouCount={data.forYouCount} unreadHref={data.unreadHref}

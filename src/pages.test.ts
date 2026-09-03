@@ -276,7 +276,7 @@ test('auth pages render through the shared centered panel', () => {
 })
 
 test('compose offers a server-rendered post preview', () => {
-  const user = { id: 1, handle: 'writer', email: 'writer@example.com', bio: 'Writes things',
+  const user = { id: 1, handle: 'writer', mood: '🌞', email: 'writer@example.com', bio: 'Writes things',
     email_verified_at: '2026-08-12 10:00:00', handle_chosen_at: '2026-08-12 10:00:00' }
   const form = renderToStaticMarkup(React.createElement(Compose, { user }))
   const preview = renderToStaticMarkup(React.createElement(Compose, {
@@ -306,7 +306,8 @@ test('compose offers a server-rendered post preview', () => {
   expect(preview).toContain('Hello <a href="/u/reader">@reader</a>, see <a href="/tag/world"')
   expect(preview).toContain('<a href="https://example.com" class="raw-link"')
   expect(preview).toContain(
-    '<div class="posttop posttop-context preview-post-meta"><span class="post-context post-context-author">you</span>',
+    '<div class="posttop posttop-context preview-post-meta"><span class="post-context post-context-author">you'
+      + '<span class="post-mood">🌞</span></span>',
   )
   expect(preview).not.toContain('<span class="postauthor post-context-author">you</span>')
   expect(preview).toContain('<span class="post-context">wrote:</span>')

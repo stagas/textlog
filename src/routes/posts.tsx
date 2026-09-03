@@ -97,7 +97,7 @@ async function persistPreviews(postId: number, mode: 'save' | 'replace', body: s
   }
 }
 
-async function previewLocation(body: string) {
+export async function previewLocation(body: string) {
   const query = parseLocationQuery(body)
   if (!query) return undefined
   try {
@@ -366,6 +366,12 @@ export function registerPostsRoutes(app: Hono) {
         return redirect(destination.pathname + destination.search)
       }
       if (f.action === 'preview') {
+        if (f.embedded === '1') {
+          const destination = new URL(returnPath, c.req.url)
+          destination.searchParams.set('write_preview', '1')
+          destination.searchParams.set('write_body', body)
+          return redirect(destination.pathname + destination.search)
+        }
         return page(<AnonymousCompose body={body} preview returnPath={returnPath}
           previewExecutionOutput={await executePostCode(body)} previewLocation={await previewLocation(body)} />)
       }
@@ -411,6 +417,13 @@ export function registerPostsRoutes(app: Hono) {
       })
       if (result.status === 'not_found') return c.text('Not found', 404)
       user.draft_count = Math.max(user.draft_count || 0, 1)
+      if (f.embedded === '1') {
+        const destination = new URL(returnPath, c.req.url)
+        destination.searchParams.set('write_preview', '1')
+        destination.searchParams.set('write_body', body)
+        destination.searchParams.set('write_draft_id', result.id)
+        return redirect(destination.pathname + destination.search)
+      }
       return page(<Compose user={user} body={body} draftId={result.id} preview
         previewExecutionOutput={await executePostCode(body)} previewLocation={await previewLocation(body)}
         returnPath={returnPath} />)

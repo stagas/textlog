@@ -38,23 +38,8 @@ export function Compose(
   }
   return (
     <Layout user={user} title="write">
-      {preview && (
-        <div className="compose-post-preview">
-          <h2>preview</h2>
-          <Post p={{
-            id: 0,
-            user_id: user.id,
-            parent_id: null,
-            body,
-            execution_output: previewExecutionOutput,
-            location: previewLocation,
-            created_at: new Date().toISOString().slice(0, 19).replace('T', ' '),
-            deleted_at: null,
-            handle: user.handle,
-            bio: user.bio,
-          } satisfies PostView} user={user} replyHref="#" preview />
-        </div>
-      )}
+      {preview && <ComposePreview user={user} body={body} executionOutput={previewExecutionOutput}
+        location={previewLocation} />}
       <WriteForm user={user} error={error} body={body} returnPath={returnPath} suggestionSearch={suggestionSearch}
         draftId={draftId} autoFocus />
     </Layout>
@@ -72,24 +57,36 @@ export function AnonymousCompose({ body = '', error, preview = false, previewExe
   }) {
   return (
     <Layout title="write">
-      {preview && (
-        <div className="compose-post-preview">
-          <h2>preview</h2>
-          <Post p={{
-            id: 0,
-            user_id: -1,
-            parent_id: null,
-            body,
-            execution_output: previewExecutionOutput,
-            location: previewLocation,
-            created_at: new Date().toISOString().slice(0, 19).replace('T', ' '),
-            deleted_at: null,
-            handle: '',
-          } satisfies PostView} user={null} preview hideTopMeta />
-        </div>
-      )}
+      {preview && <ComposePreview user={null} body={body} executionOutput={previewExecutionOutput}
+        location={previewLocation} />}
       <AnonymousWriteForm body={body} error={error} returnPath={returnPath} />
     </Layout>
+  )
+}
+
+export function ComposePreview({ user, body, executionOutput, location }: {
+  user: User | null
+  body: string
+  executionOutput?: string | null
+  location?: LocationView
+}) {
+  return (
+    <div className="compose-post-preview">
+      <h2>preview</h2>
+      <Post p={{
+        id: 0,
+        user_id: user?.id ?? -1,
+        parent_id: null,
+        body,
+        execution_output: executionOutput,
+        location,
+        created_at: new Date().toISOString().slice(0, 19).replace('T', ' '),
+        deleted_at: null,
+        handle: user?.handle ?? '',
+        bio: user?.bio,
+        mood: user?.mood,
+      } satisfies PostView} user={user} replyHref={user ? '#' : undefined} preview hideTopMeta={!user} />
+    </div>
   )
 }
 

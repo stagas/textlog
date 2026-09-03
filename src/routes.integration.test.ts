@@ -1455,6 +1455,20 @@ test('consequential account, content, reporting, and admin flows work over HTTP'
   expect(embeddedErrorHtml).toContain('class="panel panel-surface panel-medium compose write-compose embedded-write-compose"')
   expect(embeddedErrorHtml).toContain('The note must contain between 1 and 500 characters.')
   expect(embeddedErrorHtml).not.toContain('<title>write ·')
+  const embeddedPreviewBody = 'Preview this note without leaving the feed'
+  const embeddedPreview = await request('/post', {
+    method: 'POST',
+    cookie: aliceCookie,
+    form: { body: embeddedPreviewBody, action: 'preview', embedded: '1', from: '/all' },
+  })
+  expect(embeddedPreview.status).toBe(303)
+  const embeddedPreviewLocation = embeddedPreview.headers.get('location')!
+  expect(embeddedPreviewLocation).toStartWith('/all?write_preview=1&write_body=')
+  const embeddedPreviewHtml = await (await request(embeddedPreviewLocation, { cookie: aliceCookie })).text()
+  expect(embeddedPreviewHtml).toContain('<h2>preview</h2>')
+  expect(embeddedPreviewHtml).toContain(embeddedPreviewBody)
+  expect(embeddedPreviewHtml).toContain('class="panel panel-surface panel-medium compose write-compose embedded-write-compose"')
+  expect(embeddedPreviewHtml).not.toContain('<title>write ·')
   const invalidReplyBody = `remember reply ${'x'.repeat(490)}`
   const invalidReply = await request(`/post/${post.id}/reply`, {
     method: 'POST',

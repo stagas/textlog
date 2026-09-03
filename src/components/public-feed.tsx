@@ -1,13 +1,14 @@
 import type { User } from '../types'
 import type { PostFeedPage } from '../types'
-import { AnonymousWriteForm, WriteForm } from './compose'
+import { AnonymousWriteForm, ComposePreview, WriteForm } from './compose'
 import { Layout } from './layout'
 import { FeedTabs, GlobalFeedEmpty, Pagination } from './page-shared'
 import { FeedThreads } from './post'
 
 export function PublicFeed(
   { feed = { posts: [], page: 1, totalItems: 0, totalPages: 1 }, user = null, path = '/', pageUrl,
-    notificationBanner = false, expandedRootId, writeError, writeBody }: {
+    notificationBanner = false, expandedRootId, writeError, writeBody, writePreview, writePreviewExecutionOutput,
+    writePreviewLocation, writeDraftId }: {
       feed?: PostFeedPage
       cursor?: unknown
       user?: User | null
@@ -17,6 +18,10 @@ export function PublicFeed(
       expandedRootId?: number
       writeError?: string
       writeBody?: string
+      writePreview?: boolean
+      writePreviewExecutionOutput?: string | null
+      writePreviewLocation?: import('../types').LocationView
+      writeDraftId?: string
     },
 ) {
   const feedPath = path
@@ -34,8 +39,11 @@ export function PublicFeed(
       feeds={random || newest ? undefined : { title: 'All notes', rss: '/all.rss', atom: '/all.atom' }}
     >
       <h1 className="visually-hidden">{random ? 'Any conversation' : newest ? 'New notes' : 'All notes'}</h1>
+      {writePreview && <ComposePreview user={user} body={writeBody || ''}
+        executionOutput={writePreviewExecutionOutput} location={writePreviewLocation} />}
       {user
-        ? <WriteForm user={user} returnPath={returnPath} embedded error={writeError} body={writeBody} />
+        ? <WriteForm user={user} returnPath={returnPath} embedded error={writeError} body={writeBody}
+          draftId={writeDraftId} />
         : <AnonymousWriteForm returnPath={returnPath} error={writeError} body={writeBody} />}
       <FeedTabs active={random ? 'random' : newest ? 'new' : 'latest'} user={user} forYouCount={feed.forYouCount}
         forYouUnread={feed.forYouUnread}

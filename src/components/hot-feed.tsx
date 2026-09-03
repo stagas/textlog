@@ -1,14 +1,15 @@
 import type { HotCursor } from '../hot'
 import type { User } from '../types'
 import type { PostFeedPage } from '../types'
-import { AnonymousWriteForm, WriteForm } from './compose'
+import { AnonymousWriteForm, ComposePreview, WriteForm } from './compose'
 import { Layout } from './layout'
 import { FeedTabs, GlobalFeedEmpty, Pagination } from './page-shared'
 import { FeedThreads } from './post'
 
 export function HotFeed(
   { feed = { posts: [], page: 1, totalItems: 0, totalPages: 1 }, user, title, path = '/hot', pageUrl,
-    notificationBanner = false, expandedRootId, writeError, writeBody }: {
+    notificationBanner = false, expandedRootId, writeError, writeBody, writePreview, writePreviewExecutionOutput,
+    writePreviewLocation, writeDraftId }: {
       feed?: PostFeedPage
       cursor?: HotCursor | null
       user: User | null
@@ -19,6 +20,10 @@ export function HotFeed(
       expandedRootId?: number
       writeError?: string
       writeBody?: string
+      writePreview?: boolean
+      writePreviewExecutionOutput?: string | null
+      writePreviewLocation?: import('../types').LocationView
+      writeDraftId?: string
     },
 ) {
   const feedPath = path
@@ -28,8 +33,11 @@ export function HotFeed(
       mobileWriteAction feeds={{ title: 'Hot notes', rss: '/hot.rss', atom: '/hot.atom' }}
     >
       <h1 className="visually-hidden">Hot notes</h1>
+      {writePreview && <ComposePreview user={user} body={writeBody || ''}
+        executionOutput={writePreviewExecutionOutput} location={writePreviewLocation} />}
       {user
-        ? <WriteForm user={user} returnPath={returnPath} embedded error={writeError} body={writeBody} />
+        ? <WriteForm user={user} returnPath={returnPath} embedded error={writeError} body={writeBody}
+          draftId={writeDraftId} />
         : <AnonymousWriteForm returnPath={returnPath} error={writeError} body={writeBody} />}
       <FeedTabs active="hot" user={user} forYouCount={feed.forYouCount} forYouUnread={feed.forYouUnread}
         toMeCount={feed.toMeCount} toMeUnread={feed.toMeUnread} latestCount={feed.latestCount} />
