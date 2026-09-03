@@ -2,7 +2,7 @@ import type { Database } from 'bun:sqlite'
 import { isAdminEmail } from './admin'
 import { publishPost } from './api-broker'
 import { extractAuthoredHashtags, extractHashtags, extractMentions, pascalCaseHashtagDisplayName,
-  normalizeHashtagSpelling, postContentFlags } from './content'
+  normalizeHashtag, normalizeHashtagSpelling, postContentFlags } from './content'
 import { resolveHandle } from './handles'
 import { recordHotActivity } from './hot'
 import { getImageUrl, isImageKey } from './image-storage'
@@ -23,21 +23,26 @@ function moderatorViewer(database: Database, viewerId: number) {
 }
 
 function canonicalTags(database: Database, tags: string[]) {
-  const unique = [...new Set(tags)]
+  const unique = [...new Set(tags.map(normalizeHashtagSpelling))]
+  const invariants = !unique.length || !database.query(
+    "SELECT 1 FROM sqlite_master WHERE type='table' AND name='tag_invariants'",
+  ).get() ? new Set<string>() : new Set((database.query(`SELECT tag FROM tag_invariants WHERE tag IN
+    (${unique.map(() => '?').join(',')})`).all(...unique) as { tag: string }[]).map(row => row.tag))
+  const normalized = unique.map(tag => invariants.has(tag) ? tag : normalizeHashtag(tag))
   const aliases = !unique.length || !database.query(
     "SELECT 1 FROM sqlite_master WHERE type='table' AND name='tag_aliases'",
   ).get()
     ? []
     : database.query(`SELECT alias,primary_tag FROM tag_aliases WHERE alias IN
-      (${unique.map(() => '?').join(',')})`).all(...unique) as { alias: string; primary_tag: string }[]
+      (${normalized.map(() => '?').join(',')})`).all(...normalized) as { alias: string; primary_tag: string }[]
   const primaryByAlias = new Map(aliases.map(row => [row.alias, row.primary_tag]))
-  return new Map(unique.map(tag => [tag, primaryByAlias.get(tag) || tag]))
+  return new Map(unique.map((tag, index) => [tag, primaryByAlias.get(normalized[index]) || normalized[index]]))
 }
 
 export function loadBioReferenceData(database: Database, bio: string, profileId: number,
   viewerId = -1): BioReferenceData
 {
-  const tags = extractHashtags(bio)
+  const tags = extractAuthoredHashtags(bio).map(({ authored }) => normalizeHashtagSpelling(authored))
   const handles = extractMentions(bio)
   const hashtagCounts = visibleHashtagCounts(database, [bio], viewerId)
   const hashtagFollowerCounts = visibleTagFollowerCounts(database, tags, viewerId)
@@ -93,7 +98,8 @@ export function loadBioReferenceData(database: Database, bio: string, profileId:
 }
 
 export function visibleHashtagCounts(database: Database, bodies: string[], viewerId = -1) {
-  const tags = [...new Set(bodies.flatMap(extractHashtags))]
+  const tags = [...new Set(bodies.flatMap(extractAuthoredHashtags)
+    .map(({ authored }) => normalizeHashtagSpelling(authored)))]
   if (!tags.length) return {}
   const canonicalByTag = canonicalTags(database, tags)
   const canonical = [...new Set(canonicalByTag.values())]

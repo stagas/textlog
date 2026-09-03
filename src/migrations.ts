@@ -3115,7 +3115,33 @@ export const migrations: Migration[] = [
         tag TEXT PRIMARY KEY,
         created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
       );
-      INSERT OR IGNORE INTO tag_invariants(tag) VALUES('news');`)
+      INSERT OR IGNORE INTO tag_invariants(tag) VALUES('news'),('treatwarningsaserrors');`)
+    },
+  },
+  {
+    version: 188,
+    name: 'preserve_treat_warnings_as_errors_tag',
+    up(database) {
+      if (!database.query("SELECT 1 FROM sqlite_master WHERE type='table' AND name='tag_invariants'").get()) return
+      database.run("INSERT OR IGNORE INTO tag_invariants(tag) VALUES('treatwarningsaserrors')")
+      if (database.query("SELECT 1 FROM sqlite_master WHERE type='table' AND name='post_hashtags'").get()) {
+        database.run(`INSERT OR IGNORE INTO post_hashtags(post_id,tag)
+          SELECT post_id,'treatwarningsaserrors' FROM post_hashtags WHERE tag='treatwarningsaserror';
+          DELETE FROM post_hashtags WHERE tag='treatwarningsaserror';`)
+      }
+      for (const table of ['hashtag_follows', 'blocked_hashtags']) {
+        if (!database.query("SELECT 1 FROM sqlite_master WHERE type='table' AND name=?").get(table)) continue
+        database.run(`INSERT OR IGNORE INTO ${table}(user_id,tag,created_at)
+          SELECT user_id,'treatwarningsaserrors',created_at FROM ${table} WHERE tag='treatwarningsaserror';
+          DELETE FROM ${table} WHERE tag='treatwarningsaserror';`)
+      }
+      if (database.query("SELECT 1 FROM sqlite_master WHERE type='table' AND name='tag_display_names'").get()) {
+        database.run(`INSERT INTO tag_display_names(tag,display_name)
+          SELECT 'treatwarningsaserrors','TreatWarningsAsErrors'
+          WHERE EXISTS(SELECT 1 FROM tag_display_names WHERE tag='treatwarningsaserror')
+          ON CONFLICT(tag) DO NOTHING;
+          DELETE FROM tag_display_names WHERE tag='treatwarningsaserror';`)
+      }
     },
   },
 ]

@@ -23,7 +23,7 @@ export function pascalCaseHashtagDisplayName(authored: string) {
 }
 
 export function singularHashtag(tag: string) {
-  if (tag === 'news') return tag
+  if (tag === 'news' || tag === 'treatwarningsaserrors') return tag
   if (tag.length > 2 && tag.endsWith('ses')) return tag.slice(0, -2)
   return tag.length > 1 && tag.endsWith('s') && !tag.endsWith('ss') ? tag.slice(0, -1) : tag
 }

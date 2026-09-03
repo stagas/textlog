@@ -1,6 +1,6 @@
 import { Fragment } from 'react'
 import { BIO_MAX, BIO_MAX_LINES } from '../bio-body'
-import { extractHashtags, extractMentions } from '../content'
+import { extractAuthoredHashtags, extractMentions, normalizeHashtagSpelling } from '../content'
 import { DEFAULT_TIMEZONE, TIMEZONE_CHOICES } from '../timezone'
 import type { BioReferenceData, PostView, ProfileRow, User } from '../types'
 import { displayBio, linkify, referenceFormId } from '../utils'
@@ -60,7 +60,7 @@ export function Profile(
   if (returnPath) paginationQuery.set('from', returnPath)
   const paginationPath = `/u/${profile.handle}${paginationQuery.size ? `?${paginationQuery}` : ''}`
   const fromQuery = returnPath ? `?from=${encodeURIComponent(returnPath)}` : ''
-  const bioTags = extractHashtags(profile.bio)
+  const bioTags = extractAuthoredHashtags(profile.bio).map(({ authored }) => normalizeHashtagSpelling(authored))
   const bioHandles = extractMentions(profile.bio)
   const references = bioReference
     || { hashtagCounts: {}, hashtagFollowerCounts: {}, hashtagFollowing: {}, mentionBios: {}, mentionNoteCounts: {},

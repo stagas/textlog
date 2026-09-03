@@ -127,3 +127,18 @@ test('admin invariants preserve tags that must not be singularized', async () =>
   expect(await executeDatabaseDomain(database, 'admin.removeTagInvariant', { tag: 'status' })).toBeTrue()
   expect(await executeDatabaseDomain(database, 'tags.resolve', { tag: 'status' })).toBe('statu')
 })
+
+test('TreatWarningsAsErrors keeps the complete compound phrase', async () => {
+  const database = new Database(':memory:')
+  database.run('PRAGMA foreign_keys=ON')
+  runMigrations(database)
+  database.query("INSERT INTO users(handle,email,password) VALUES('writer','writer@example.com','x')").run()
+
+  const post = createPost(database, 1, '#TreatWarningsAsErrors', null, false)
+  expect('id' in post).toBeTrue()
+  if (!('id' in post)) throw new Error('Expected the test post to be created')
+  expect(database.query('SELECT tag FROM post_hashtags WHERE post_id=?').get(post.id))
+    .toEqual({ tag: 'treatwarningsaserrors' })
+  expect(database.query("SELECT display_name displayName FROM tag_display_names WHERE tag='treatwarningsaserrors'")
+    .get()).toEqual({ displayName: 'TreatWarningsAsErrors' })
+})

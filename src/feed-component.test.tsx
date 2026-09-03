@@ -677,9 +677,9 @@ test('activity bios enrich hashtag and mention references with hovercards', () =
     target_handle: 'dave',
     target_bio: 'Builds #tools with @alice',
     targetBioReferences: {
-      hashtagCounts: { tool: 3 },
-      hashtagFollowerCounts: { tool: 2 },
-      hashtagFollowing: { tool: false },
+      hashtagCounts: { tools: 3 },
+      hashtagFollowerCounts: { tools: 2 },
+      hashtagFollowing: { tools: false },
       mentionBios: { alice: 'Makes useful things' },
       mentionNoteCounts: { alice: 4 },
       mentionProfileStats: { alice: { notes: 4, replies: 0, followers: 2, following: 1, followingTags: 0 } },
@@ -699,7 +699,7 @@ test('activity bios enrich hashtag and mention references with hovercards', () =
 
   expect(html).toContain('class="reference-menu-popover reference-menu-popover-tag"')
   expect(html).toContain('Makes useful things')
-  expect(html).toContain('action="/tag-follow/tool"')
+  expect(html).toContain('action="/tag-follow/tools"')
   expect(html).toContain('action="/follow/alice"')
 })
 

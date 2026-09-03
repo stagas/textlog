@@ -2,7 +2,8 @@ import React from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
 import { isAdmin } from '../admin'
 import { displayedExecutionOutput } from '../code-execution'
-import { containsAsciiArt, containsSpoilerTag, extractHashtags, extractMentions } from '../content'
+import { containsAsciiArt, containsSpoilerTag, extractAuthoredHashtags, extractHashtags, extractMentions,
+  normalizeHashtagSpelling } from '../content'
 import { collapsedConversationPreview } from '../latest-conversation'
 import { parsePoll, pollDisplayBody } from '../polls'
 import { parseTodo, todoDisplayBody } from '../todos'
@@ -245,7 +246,7 @@ export function UserReference(
 ) {
   const ownUser = (user?.handle || currentHandle)?.toLowerCase() === handle.toLowerCase()
   const followReturnPath = new URLSearchParams(navigationQuery.slice(1)).get('from') || undefined
-  const bioTags = extractHashtags(bio || '')
+  const bioTags = extractAuthoredHashtags(bio || '').map(({ authored }) => normalizeHashtagSpelling(authored))
   const bioTagCounts = referenceData?.hashtagCounts || {}
   const bioTagFollowerCounts = referenceData?.hashtagFollowerCounts || {}
   const bioMentionBios = referenceData?.mentionBios || {}
@@ -395,7 +396,7 @@ function ReferenceFollowForms(
 ) {
   if (!user) return null
   const handles = extractMentions(post.body).filter(handle => handle !== user.handle.toLowerCase())
-  const tags = extractHashtags(post.body)
+  const tags = extractAuthoredHashtags(post.body).map(({ authored }) => normalizeHashtagSpelling(authored))
   return (
     <>
       {handles.map(handle => (

@@ -146,7 +146,7 @@ describe('post persistence', () => {
   test('renders consecutive greater-than lines as a quote while preserving inline formatting', () => {
     expect(linkify('before\n> quoted *bold*\n> with #notes\nafter')).toBe(
       'before<span class="post-quote">quoted <strong>bold</strong>\nwith '
-        + '<a href="/tag/note">#notes</a></span>after',
+        + '<a href="/tag/notes">#notes</a></span>after',
     )
   })
   test('renders GFM tables with alignment and rich post content in cells', () => {
