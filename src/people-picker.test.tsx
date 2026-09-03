@@ -1,7 +1,7 @@
 import { Database } from 'bun:sqlite'
 import { expect, test } from 'bun:test'
 import { renderToStaticMarkup } from 'react-dom/server'
-import { PeoplePicker, shouldShowPeoplePicker } from './components/people-picker'
+import { PeoplePicker, shouldShowPeoplePicker, shuffledPeople } from './components/people-picker'
 import { executeDatabaseDomain } from './database-domain'
 import { runMigrations } from './migrations'
 import type { User } from './types'
@@ -30,6 +30,20 @@ test('people prompt renders whole-card multi-select choices and dismissal', () =
   expect(html).toContain('type="checkbox" name="people" value="2"')
   expect(html).toContain('action="/pick-people/dismiss"')
   expect(html).toContain('Writes about <strong>small</strong>, useful things.')
+})
+
+test('people prompt shuffles ten people from the top thirty candidates', () => {
+  const people = Array.from({ length: 30 }, (_, index) => ({
+    id: index + 1,
+    handle: `person${index + 1}`,
+    bio: '',
+  }))
+  const displayed = shuffledPeople(people, 10, () => 0)
+
+  expect(displayed).toHaveLength(10)
+  expect(new Set(displayed.map(person => person.id)).size).toBe(10)
+  expect(displayed.map(person => person.id)).not.toEqual(people.slice(0, 10).map(person => person.id))
+  expect(people.map(person => person.id)).toEqual(Array.from({ length: 30 }, (_, index) => index + 1))
 })
 
 test('loads popular people and follows all selected people', async () => {

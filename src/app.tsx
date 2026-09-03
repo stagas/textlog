@@ -450,7 +450,7 @@ app.use('*', async (c, next) => {
     return page(<TagPicker user={user} tags={tags} returnTo={returnTo} />)
   }
   if (user && shouldShowPeoplePicker(user)) {
-    const people = await databaseService().call('account.popularPeople', { userId: user.id, limit: 12 })
+    const people = await databaseService().call('account.popularPeople', { userId: user.id, limit: 30 })
     return page(<PeoplePicker user={user} people={people} returnTo={returnTo} />)
   }
   return next()
@@ -504,7 +504,7 @@ app.post('/pick-people', async c => {
   if (!user) return c.redirect('/enter', 303)
   const fields = await limitedFormData(c.req.raw, 8_000)
   const returnTo = safeLocalPath(String(fields.get('returnTo') || '/'))
-  const popularPeople = await databaseService().call('account.popularPeople', { userId: user.id, limit: 12 })
+  const popularPeople = await databaseService().call('account.popularPeople', { userId: user.id, limit: 30 })
   const allowed = new Set(popularPeople.map(person => person.id))
   const people = [...new Set(fields.getAll('people').map(Number))].filter(id => allowed.has(id))
   if (!people.length && popularPeople.length) {

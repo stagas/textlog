@@ -9,12 +9,22 @@ export function shouldShowPeoplePicker(user: User | null | undefined) {
   return Boolean(user?.handle_chosen_at && user.tag_prompt_completed_at && !user.people_prompt_completed_at)
 }
 
+export function shuffledPeople(people: PopularPerson[], limit = 10, random = Math.random) {
+  const shuffled = [...people]
+  for (let index = shuffled.length - 1; index > 0; index--) {
+    const swapIndex = Math.floor(random() * (index + 1))
+    ;[shuffled[index], shuffled[swapIndex]] = [shuffled[swapIndex]!, shuffled[index]!]
+  }
+  return shuffled.slice(0, limit)
+}
+
 export function PeoplePicker({ user, people, returnTo, error }: {
   user: User
   people: PopularPerson[]
   returnTo: string
   error?: string
 }) {
+  const displayedPeople = shuffledPeople(people)
   return (
     <Layout user={user} title="pick some people" fullScreen>
       <section className="people-picker" aria-labelledby="people-picker-title">
@@ -26,7 +36,7 @@ export function PeoplePicker({ user, people, returnTo, error }: {
             <input type="hidden" name="returnTo" value={returnTo} />
             <fieldset className="people-picker-options">
               <legend className="visually-hidden">Popular people</legend>
-              {people.map(person => (
+              {displayedPeople.map(person => (
                 <label className="people-picker-option" key={person.id}>
                   <span>
                     <b aria-hidden="true">@</b>
