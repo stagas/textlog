@@ -1087,7 +1087,7 @@ export function ThreadReplies(
     continuationLabel = 'more', continuationReturnPath, contextUnreadPostIds, contextDirectedUnreadPostIds,
     omissionHref, expansionControlId, highlightTerms = [], hideTopMeta = false, collapsedPreviewPostIds = [],
     anchorReplyNavigation = false, backHref, backTargetId, replyOnPage = false, replyReturnPath, afterReply,
-    suppressReplyActionId, collapseWithoutPreviews = false }: {
+    suppressReplyActionId, activeReplyReturnPath, collapseWithoutPreviews = false }: {
       parentId: number
       replies: PostView[]
       user: User | null
@@ -1111,6 +1111,7 @@ export function ThreadReplies(
       replyReturnPath?: string
       afterReply?: (reply: PostView, depth: number) => React.ReactNode
       suppressReplyActionId?: number
+      activeReplyReturnPath?: string
       collapseWithoutPreviews?: boolean
     },
 ) {
@@ -1267,7 +1268,9 @@ export function ThreadReplies(
   }
   const renderReply = (reply: PostView, childBranch?: React.ReactNode, continuesElsewhere = false) => {
     const anchoredReturnPath = replyAnchorReturnPath(parentId, reply.id, returnPath)
-    const postReturnPath = continuationReturnPath
+    const postReturnPath = reply.id === suppressReplyActionId && activeReplyReturnPath
+      ? `${activeReplyReturnPath}#post-${reply.id}`
+      : continuationReturnPath
       ? `${continuationReturnPath}#post-${reply.id}`
       : anchoredReturnPath
     const continuationHref = continuesElsewhere

@@ -158,6 +158,10 @@ export function Reply(
   const backPostId = postAnchorId(returnPath)
   const backTargetsReply = replies.some(reply => reply.id === backPostId && !reply.deleted_at)
   const replyParent = replyTo || post
+  const activeReplyReturnPath = replyTo
+    ? `/post/${post.id}?to=${replyTo.id}${backTargetId ? `&back=${backTargetId}` : ''}${
+      returnPath ? '&from=' + encodeURIComponent(returnPath) : ''}`
+    : undefined
   const replyComposer = canPublishPosts(user)
     ? <ReplyComposer user={user} replyParent={replyParent} replyPageId={post.id} returnPath={returnPath}
         inline={!!replyTo} body={body} error={error} suggestionSearch={suggestionSearch} draftId={draftId}
@@ -186,6 +190,7 @@ export function Reply(
         <ThreadReplies parentId={post.id} replies={replies} user={user} returnPath={returnPath} flat={flat}
           backHref={backTargetsReply || backTargetId ? returnPath : undefined} backTargetId={backTargetId}
           replyOnPage suppressReplyActionId={replyTo?.id}
+          activeReplyReturnPath={activeReplyReturnPath}
           afterReply={(reply, depth) => showForm && !post.thread_locked && reply.id === replyTo?.id
             ? <>
                 {preview && <ReplyPreview parent={replyParent} user={user} body={body}

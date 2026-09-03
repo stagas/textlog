@@ -231,7 +231,7 @@ test('replying to a threaded reply keeps the root page and places the composer a
     email_verified_at: '2026-08-01 10:00:00' }
   const post = { id: 9, user_id: 2, parent_id: null, body: 'Root note', created_at: '2026-08-23 10:00:00',
     deleted_at: null, handle: 'writer', reply_count: 1 }
-  const target = { id: 10, user_id: 3, parent_id: 9, body: 'Threaded reply',
+  const target = { id: 10, user_id: 3, parent_id: 9, body: 'Threaded reply #topic',
     created_at: '2026-08-23 11:00:00', deleted_at: null, handle: 'friend', reply_count: 0, parent: post }
   const page = renderToStaticMarkup(React.createElement(Reply, {
     user, post, replies: [target], showForm: true, autoFocus: true, replyTo: target,
@@ -247,6 +247,10 @@ test('replying to a threaded reply keeps the root page and places the composer a
   expect(page).toContain('placeholder="Reply to @friend…"')
   expect(page).toContain('class="inline-reply-compose" style="--reply-offset:calc(clamp(18px, 3vw, 28px))"')
   expect(page).toContain('class="quiet post-back-link" href="/all#post-10">back</a>')
+  expect(page).toContain(
+    '<form class="reference-follow-form" id="post-10-tag-topic" action="/tag-follow/topic" method="post">'
+      + '<input type="hidden" name="from" value="/post/9?to=10&amp;from=%2Fall%23post-10#post-10"/>',
+  )
 })
 
 test('post anchors embedded in return paths identify the inline reply target', () => {
