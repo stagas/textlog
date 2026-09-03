@@ -195,7 +195,9 @@ export function Layout({
       >
         {!fullScreen && user && ready && !mobileWriteAction
           && <a className="skip-link" href={writeShortcutHref} accessKey="w">write</a>}
-        {!fullScreen && <a className="skip-link" href="#main-content">skip to content</a>}
+        {!fullScreen && <a className="skip-link" href={mobileWriteAction ? '#feed-tabs' : '#main-content'}>
+          skip to content
+        </a>}
         {!fullScreen && (
           <header className={user ? 'authenticated-header' : undefined}>
             <a className="brand" href="/" aria-label={`${name} home`}>

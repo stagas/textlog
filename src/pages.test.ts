@@ -2058,6 +2058,8 @@ test('signed-in feed pages put the write form before the feed tabs', () => {
     expect(html).toContain('placeholder="What’s on your mind, @reader?"')
     expect(html).toContain('name="body" maxLength="500" accessKey="w"')
     expect(html).not.toContain('class="skip-link" href="/write')
+    expect(html).toContain('<a class="skip-link" href="#feed-tabs">skip to content</a>')
+    expect(html).not.toContain('<a class="skip-link" href="#main-content">skip to content</a>')
     expect(html).not.toContain('class="compose-heading"')
     expect(html).not.toContain('autofocus')
     expect(html).not.toContain('feed-tab-new-badge')
