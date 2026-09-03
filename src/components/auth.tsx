@@ -42,7 +42,7 @@ export function Auth({ error, email = '', next, returning = false }: {
           </button>
         </form>
         <p className="auth-legal">
-          The link and code expire in 15 minutes. By entering, you agree to the{' '}
+          The link and code expire in 15 minutes. By continuing, you agree to the{' '}
           <a href="/legal#terms">Terms of Service</a> and <a href="/legal#privacy">Privacy Notice</a>.
         </p>
         <p className="auth-alternative">
